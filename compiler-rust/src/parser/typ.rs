@@ -217,6 +217,34 @@ pub fn parse_poly_type_expr(p: &mut Parser<'_>) -> CoreType {
     parse_type_alias(p, typ)
 }
 
+/// Parse a locally abstract type: `type a b c. SomeType`
+/// This is called from let-binding sites when `Token::Typ` is encountered after `:`.
+/// Returns a `Ptyp_poly(vars, body)` where body has `Ptyp_constr` for the type vars
+/// (the caller is responsible for substituting to `Ptyp_var`).
+pub fn parse_locally_abstract_type(p: &mut Parser<'_>) -> CoreType {
+    let start_pos = p.start_pos.clone();
+    p.expect(Token::Typ);
+    let mut vars: Vec<StringLoc> = vec![];
+
+    // Collect all type variable names until we see a dot
+    while let Token::Lident(name) = &p.token {
+        let var_start = p.start_pos.clone();
+        let name = name.clone();
+        p.next();
+        let var_loc = p.mk_loc_to_prev_end(&var_start);
+        vars.push(with_loc(name, var_loc));
+    }
+
+    p.expect(Token::Dot);
+    let body = parse_typ_expr(p);
+    let loc = p.mk_loc_to_end_of(&start_pos, body.ptyp_loc);
+    CoreType {
+        ptyp_desc: CoreTypeDesc::Ptyp_poly(vars, Box::new(body)),
+        ptyp_loc: loc,
+        ptyp_attributes: vec![],
+    }
+}
+
 /// Parse a type expression without allowing arrow types at the top level.
 /// Used for return type annotations like `(x): int => body`.
 pub fn parse_typ_expr_no_arrow(p: &mut Parser<'_>) -> CoreType {
@@ -475,32 +503,6 @@ fn parse_atomic_typ_expr(p: &mut Parser<'_>, attrs: Attributes, es6_arrow: bool)
     let start_pos = p.start_pos.clone();
 
     let mut typ = match &p.token {
-        Token::Typ => {
-            // Locally abstract types: type a b c. SomeType
-            // This creates a Ptyp_poly with the type names as string variables
-            // NOTE: We don't substitute Ptyp_constr -> Ptyp_var here. That's done
-            // in module.rs where we have the full context of how the type is used.
-            p.next();
-            let mut vars: Vec<StringLoc> = vec![];
-
-            // Collect all type variable names until we see a dot
-            while let Token::Lident(name) = &p.token {
-                let var_start = p.start_pos.clone();
-                let name = name.clone();
-                p.next();
-                let var_loc = p.mk_loc_to_prev_end(&var_start);
-                vars.push(with_loc(name, var_loc));
-            }
-
-            p.expect(Token::Dot);
-            let body = parse_typ_expr(p);
-            let loc = p.mk_loc_to_end_of(&start_pos, body.ptyp_loc);
-            CoreType {
-                ptyp_desc: CoreTypeDesc::Ptyp_poly(vars, Box::new(body)),
-                ptyp_loc: loc,
-                ptyp_attributes: vec![],
-            }
-        }
         Token::SingleQuote => {
             // Type variable: 'a
             // Polytype: 'a 'b. T

@@ -2074,7 +2074,11 @@ fn parse_let_bindings(
 
             // OCaml uses parse_poly_type_expr here (not parse_typ_expr)
             // This has special handling for `'a => T` to exclude the `'` from arrow location
-            let typ = typ::parse_poly_type_expr(p);
+            let typ = if is_locally_abstract {
+                typ::parse_locally_abstract_type(p)
+            } else {
+                typ::parse_poly_type_expr(p)
+            };
 
             // Extract type variables and inner type if this is a Ptyp_poly from `type a.` syntax
             // The inner type is used directly for Pexp_constraint (with Ptyp_constr for type vars)

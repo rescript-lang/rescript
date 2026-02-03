@@ -4051,7 +4051,11 @@ fn parse_let_in_block_with_continuation_and_attrs(
         // Check if this is `type a.` syntax (locally abstract types)
         let is_locally_abstract = p.token == Token::Typ;
 
-        let typ = super::typ::parse_typ_expr(p);
+        let typ = if is_locally_abstract {
+            super::typ::parse_locally_abstract_type(p)
+        } else {
+            super::typ::parse_typ_expr(p)
+        };
 
         // Extract type variables and inner type if this is a Ptyp_poly from `type a.` syntax
         let (final_typ, newtype_info) = match typ.ptyp_desc {
