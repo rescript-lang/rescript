@@ -2437,7 +2437,12 @@ fn parse_type_declaration_with_context(
     let current_type_name_path = vec![name.txt.clone()];
 
     // Parse optional manifest and/or kind (and ReScript's `type t = T = ...` equation form).
-    let (manifest, kind, private) = if p.token == Token::Equal {
+    // OCaml: if token is Bar, call expect Equal to generate "Did you forget a `=` here?" error
+    let (manifest, kind, private) = if p.token == Token::Equal || p.token == Token::Bar {
+        if p.token == Token::Bar {
+            // Generate error about missing `=` before variant constructors
+            p.expect(Token::Equal);
+        }
         // Heuristic: `{...}` after `=` can be a record type *or* a bs-object/object type.
         // Disambiguate by looking at the first significant token inside the braces.
         let looks_like_object_type_after_lbrace = |p: &mut Parser<'_>| -> bool {
