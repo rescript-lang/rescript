@@ -3170,9 +3170,12 @@ fn print_payload<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, payload: &P
     match payload {
         Payload::PStr(items) => {
             // Special case: single Pstr_eval prints just the expression
+            // OCaml: pp f "@[<2>%a@]%a" (expression ctxt) e (item_attributes ctxt) attrs
             if items.len() == 1 {
                 if let StructureItemDesc::Pstr_eval(expr, attrs) = &items[0].pstr_desc {
+                    f.open_box(BoxKind::Box, 2);
                     print_expression(f, arena, expr);
+                    f.close_box();
                     print_item_attributes(f, arena, attrs);
                     return;
                 }
