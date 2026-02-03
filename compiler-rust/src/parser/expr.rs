@@ -3676,9 +3676,13 @@ fn parse_braced_arrow_ident(p: &mut Parser<'_>, start_pos: Position) -> Expressi
 /// Note: This does NOT consume the closing Rbrace - the caller must do that.
 fn parse_expr_block(p: &mut Parser<'_>) -> Expression {
     let start_pos = p.start_pos.clone();
+    // OCaml: leave_breadcrumb ExprBlock - critical for error recovery
+    // This allows should_abort_list_parse to detect } as a block terminator
+    p.leave_breadcrumb(Grammar::ExprBlock);
     // Parse the block body - this handles building the proper nesting for let/module/open/exception
     let body = parse_block_body(p);
 
+    p.eat_breadcrumb();
     // Don't expect Rbrace here - caller will do that
     // Use current position for empty block, or body's end position
     // OCaml: when the block is empty, use exprhole (not unit) so that
@@ -3690,9 +3694,12 @@ fn parse_expr_block(p: &mut Parser<'_>) -> Expression {
 /// This is used for standalone braced expressions where res.braces is needed
 /// to preserve the bracing information.
 fn parse_block_expr(p: &mut Parser<'_>, start_pos: Position) -> Expression {
+    // OCaml: leave_breadcrumb ExprBlock - critical for error recovery
+    p.leave_breadcrumb(Grammar::ExprBlock);
     // Parse the block body - this handles building the proper nesting for let/module/open/exception
     let body = parse_block_body(p);
 
+    p.eat_breadcrumb();
     p.expect(Token::Rbrace);
     let loc = p.mk_loc_to_prev_end(&start_pos);
 
