@@ -3734,6 +3734,15 @@ fn parse_record_fields(p: &mut Parser<'_>) -> Vec<ExpressionRecordField> {
     while p.token != Token::Rbrace && p.token != Token::Eof {
         let field_start = p.start_pos.clone();
 
+        // Check for additional spread (second spread is an error)
+        // OCaml: parse_record_expr_row checks for DotDotDot and emits error
+        if p.token == Token::DotDotDot {
+            p.err(DiagnosticCategory::Message(
+                super::core::error_messages::RECORD_EXPR_SPREAD.to_string(),
+            ));
+            p.next();
+        }
+
         // Check for optional field punning: { ? name, ... }
         let opt_punning = p.token == Token::Question;
         if opt_punning {
