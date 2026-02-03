@@ -467,6 +467,19 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
                 let expr = expr::parse_expr(p);
                 parse_newline_or_semicolon_structure(p);
                 Some(StructureItemDesc::Pstr_eval(expr, attrs.clone()))
+            } else if let Some(attr) = attrs.first() {
+                // OCaml: when attrs are present but no valid item follows,
+                // report the "Did you forget to attach" error and produce exprhole
+                let attr_name = &attr.0.txt;
+                let attr_loc = p.to_location(attr.0.loc);
+                p.err_at(
+                    attr_loc.loc_start.clone(),
+                    attr_loc.loc_end.clone(),
+                    DiagnosticCategory::message(&error_messages::attribute_without_node(attr_name)),
+                );
+                let expr = expr::parse_expr(p);
+                parse_newline_or_semicolon_structure(p);
+                Some(StructureItemDesc::Pstr_eval(expr, attrs.clone()))
             } else if p.token != Token::Eof {
                 // Use err_unexpected which creates a proper Unexpected diagnostic
                 // with breadcrumbs, matching OCaml's parse_region behavior
@@ -1337,6 +1350,10 @@ fn parse_functor_module_expr(p: &mut Parser<'_>) -> ModuleExpr {
 
 /// Parse structure items within braces.
 fn parse_structure_in_braces(p: &mut Parser<'_>) -> Vec<StructureItem> {
+    // OCaml uses parse_delimited_region ~grammar:Grammar.Structure ~closing:Rbrace
+    // The Structure breadcrumb is needed so that error recovery (skip_tokens_and_maybe_retry)
+    // knows that Rbrace is a list terminator and shouldn't be consumed
+    p.leave_breadcrumb(Grammar::Structure);
     let mut items = vec![];
 
     while p.token != Token::Rbrace && p.token != Token::Eof {
@@ -1354,6 +1371,7 @@ fn parse_structure_in_braces(p: &mut Parser<'_>) -> Vec<StructureItem> {
         }
     }
 
+    p.eat_breadcrumb();
     items
 }
 
