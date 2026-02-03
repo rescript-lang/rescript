@@ -3094,6 +3094,9 @@ fn parse_braced_or_record_expr(p: &mut Parser<'_>) -> Expression {
     // Check if this looks like a record (name followed by : or ,)
     // or a JS object (string key followed by :)
     // Also check for optional field syntax: { ? name, ... }
+    // Also check for error case: {ident1 ident2:...} where we have two identifiers
+    // and the second one is followed by colon (this is a record field error case).
+    // OCaml res_core.ml line 3229-3247 handles this case specially.
     let is_record = p.lookahead(|state| {
         // Optional field punning: { ? name, ... }
         if state.token == Token::Question {
@@ -3124,6 +3127,18 @@ fn parse_braced_or_record_expr(p: &mut Parser<'_>) -> Expression {
         if started_with_uident || parts > 1 {
             matches!(state.token, Token::Colon | Token::Comma)
         } else {
+            // Also check for error case: {ident1 ident2:...}
+            // This is when first identifier is followed by another identifier (on a different line)
+            // or followed by another identifier and then a colon (on same line)
+            // OCaml handles this specially to give good error messages for record fields
+            if matches!(state.token, Token::Lident(_)) {
+                // Skip the second identifier
+                state.next();
+                // If colon follows, this is likely {ident1 ident2: value} - missing comma
+                // If another identifier follows or something else, might be a record error case
+                // We'll return true to let the record field parsing handle the error
+                return matches!(state.token, Token::Colon | Token::Lident(_));
+            }
             matches!(state.token, Token::Colon | Token::Comma)
         }
     });
@@ -4050,6 +4065,30 @@ fn parse_record_fields(p: &mut Parser<'_>) -> Vec<ExpressionRecordField> {
             }
             let expr = parse_expr(p);
             (with_loc(lid_idx, lid_loc), expr, opt)
+        } else if matches!(p.token, Token::Lident(_)) {
+            // OCaml res_core.ml line 3229-3247: Error case where ident is followed by another ident
+            // Example: {updateF value:...} where updateF and value are separate identifiers
+            // If they are on different lines, emit "Did you forget a `,`?"
+            // If they are on the same line, emit "Did you forget a `:`?"
+            let prev_line = p.prev_end_pos.line;
+            let curr_line = p.start_pos.line;
+
+            // Punning: this field is punned (value is same as name)
+            let loc = p.mk_loc_to_prev_end(&expr_start);
+            let pun_idx = p.arena_mut().push_string(pun_name);
+            let punned_expr = ast_helper::make_ident(p, Longident::Lident(pun_idx), loc.clone());
+            let lid = with_loc(lid_idx, loc);
+
+            // Emit appropriate error and expect comma or colon
+            if prev_line < curr_line {
+                // Different lines - expect comma
+                p.expect(Token::Comma);
+            } else {
+                // Same line - expect colon
+                p.expect(Token::Colon);
+            }
+
+            (lid, punned_expr, opt_punning)
         } else {
             // Punning: field is same as variable
             // For optional punned fields, the expression location is just the identifier (using expr_start)
