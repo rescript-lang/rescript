@@ -320,17 +320,24 @@ run_syntax_tests() {
         local expected=$(exp "$file")
         local actual="$TEMP_DIR/syntax/$(echo "$file" | tr '/' '_').txt"
 
-        if timeout "$TIMEOUT_SECONDS" "$RUST_PARSER" -print ml "$file" > "$actual" 2>&1; then
-            if diff -q "$expected" "$actual" > /dev/null 2>&1; then
-                pass_count=$((pass_count + 1))
-            else
-                fail_count=$((fail_count + 1))
-                failed_files="$failed_files$file (output differs)\n"
-                diff -u "$expected" "$actual" > "$DIFF_DIR/syntax_$(echo "$file" | tr '/' '_').diff" 2>&1 || true
-            fi
+        # Run parser (may exit non-zero for files with syntax errors, which is expected)
+        # Capture exit code without triggering set -e
+        local exit_code=0
+        timeout "$TIMEOUT_SECONDS" "$RUST_PARSER" -print ml "$file" > "$actual" 2>&1 || exit_code=$?
+
+        if [[ $exit_code -eq 124 ]]; then
+            # Timeout
+            fail_count=$((fail_count + 1))
+            failed_files="$failed_files$file (timeout)\n"
+            continue
+        fi
+        # Compare output regardless of parser exit code (files with syntax errors exit non-zero)
+        if diff -q "$expected" "$actual" > /dev/null 2>&1; then
+            pass_count=$((pass_count + 1))
         else
             fail_count=$((fail_count + 1))
-            failed_files="$failed_files$file (parse error/timeout)\n"
+            failed_files="$failed_files$file (output differs)\n"
+            diff -u "$expected" "$actual" > "$DIFF_DIR/syntax_$(echo "$file" | tr '/' '_').diff" 2>&1 || true
         fi
     done < "$TEMP_DIR/syntax_parsing_grammar.txt"
 
