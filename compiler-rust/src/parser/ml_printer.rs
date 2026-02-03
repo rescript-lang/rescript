@@ -2694,58 +2694,58 @@ fn print_core_type_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, typ
             f.string(")");
         }
         CoreTypeDesc::Ptyp_constr(lid, args) => {
-            // OCaml format: list ~first:"(" ~last:")@;" (core_type ctxt) ~sep:",@;" f l
-            // On single line: (type , type ) constructor
+            // OCaml: | [x] -> pp f "%a@;" (core_type1 ctxt) x
+            //        | _ -> list ~first:"(" ~last:")@;" (core_type ctxt) ~sep:",@;" f l
             if !args.is_empty() {
                 if args.len() == 1 {
-                    print_core_type(f, arena, &args[0]);
-                    // Single arg has @; after = space
-                    f.string(" ");
+                    // Single arg uses core_type1 (no extra Box wrapping)
+                    print_core_type_inner(f, arena, &args[0]);
+                    f.space(); // @;
                 } else {
                     f.string("(");
                     for (i, t) in args.iter().enumerate() {
                         if i > 0 {
-                            // Separator is ,@; = comma + break = ", "
-                            f.string(", ");
+                            f.string(",");
+                            f.space(); // ,@;
                         }
                         print_core_type(f, arena, t);
                     }
-                    // last is ")@;" = ) + break = ") "
-                    f.string(") ");
+                    f.string(")");
+                    f.space(); // )@;
                 }
             }
             print_longident_idx(f, arena, lid.txt);
         }
         CoreTypeDesc::Ptyp_object(fields, closed) => {
-            // OCaml format: @[<hov2><@ %a%a@ > @]
-            // Field format: @[<hov2>%s: %a@ %a@ @]
-            f.string("< ");
+            // OCaml: pp f "@[<hov2><@ %a%a@ > @]"
+            f.open_box(BoxKind::HOV, 2);
+            f.string("<");
+            f.space(); // @ after <
             for (i, field) in fields.iter().enumerate() {
                 if i > 0 {
                     f.string(";");
                 }
                 match field {
                     ObjectField::Otag(name, attrs, typ) => {
-                        // OCaml format: @[<hov2>%s: %a@ %a@ @]
-                        // = name: type (break) attrs (break) close_box
-                        // On single line: name: type<space>attrs<space>
+                        // OCaml: pp f "@[<hov2>%s: %a@ %a@ @]"
+                        f.open_box(BoxKind::HOV, 2);
                         f.string(&name.txt);
                         f.string(": ");
                         print_core_type(f, arena, typ);
-                        // After type: @ (break = space)
-                        f.string(" ");
-                        // Attributes: %a then @ (break)
+                        f.space(); // @ after type
                         let printable = printable_attributes(attrs);
                         if !printable.is_empty() {
                             print_attributes(f, arena, attrs);
                         }
-                        // Final break from @ before @]
-                        f.string(" ");
+                        f.space(); // @ before close
+                        f.close_box();
                     }
                     ObjectField::Oinherit(typ) => {
-                        // OCaml format: @[<hov2>%a@ @]
+                        // OCaml: pp f "@[<hov2>%a@ @]"
+                        f.open_box(BoxKind::HOV, 2);
                         print_core_type(f, arena, typ);
-                        f.string(" ");
+                        f.space(); // @ after type
+                        f.close_box();
                     }
                 }
             }
@@ -2755,11 +2755,13 @@ fn print_core_type_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, typ
                 if fields.is_empty() {
                     f.string("..");
                 } else {
-                    // Note: leading space before ;.. (combines with field's trailing space)
                     f.string(" ;..");
                 }
             }
-            f.string(" > ");
+            f.space(); // @ before >
+            f.string(">");
+            f.space(); // @ after >
+            f.close_box();
         }
         CoreTypeDesc::Ptyp_alias(t, name) => {
             // OCaml: pp f "@[<2>%a@;as@;'%s@]" (core_type1 ctxt) ct s
