@@ -249,8 +249,9 @@ pub fn print(src: &str, start_pos: &Position, end_pos: &Position) -> String {
 
 /// Format a location as "filename:line:col" or "filename:line:col-endcol"
 pub fn format_location(filename: &str, start_pos: &Position, end_pos: &Position) -> String {
+    // OCaml uses 1-indexed columns: col = pos_cnum - pos_bol + 1
     let start_col = start_pos.cnum - start_pos.bol + 1;
-    let end_col = end_pos.cnum - end_pos.bol;
+    let end_col = end_pos.cnum - end_pos.bol;  // OCaml doesn't add +1 for end (it's exclusive)
 
     if start_pos.line == end_pos.line && end_col > start_col {
         format!("{}:{}:{}-{}", filename, start_pos.line, start_col, end_col)

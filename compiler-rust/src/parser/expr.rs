@@ -1896,11 +1896,12 @@ pub fn parse_atomic_expr(p: &mut Parser<'_>) -> Expression {
         _ => {
             // Use err_unexpected which creates a proper Unexpected diagnostic
             // with breadcrumbs, matching OCaml's parse_region behavior
-            // OCaml uses prev_end_pos as the error position
-            let err_pos = p.prev_end_pos.clone();
+            // OCaml uses prev_end_pos as start, but p.end_pos as end
+            let err_start = p.prev_end_pos.clone();
+            let err_end = p.end_pos.clone();
             p.err_at(
-                err_pos.clone(),
-                err_pos,
+                err_start,
+                err_end,
                 DiagnosticCategory::unexpected(p.token.clone(), p.breadcrumbs().to_vec()),
             );
 
