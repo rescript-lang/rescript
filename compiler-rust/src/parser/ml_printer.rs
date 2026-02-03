@@ -978,20 +978,12 @@ fn print_expression<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, expr: &E
 
     if has_attrs {
         // OCaml Format: pp f "((%a)@,%a)" (expression ctxt) {x with pexp_attributes = []} (attributes ctxt) x.pexp_attributes
-        // No explicit box - the cut allows breaking before attributes
+        // One cut before ALL attributes (not per-attribute), then attributes are concatenated
         f.string("((");
         print_expression_inner(f, arena, expr, false);
         f.string(")");
-        for (name, payload) in attrs {
-            f.cut();
-            f.string("[@");
-            f.string(&name.txt);
-            if !payload_is_empty(payload) {
-                f.string(" ");
-                print_payload(f, arena, payload);
-            }
-            f.string(" ]");
-        }
+        f.cut(); // Single cut before all attributes
+        print_attributes(f, arena, &expr.pexp_attributes);
         f.string(")");
     } else {
         print_expression_inner(f, arena, expr, false);
@@ -1003,20 +995,12 @@ fn print_expression_no_outer_parens<W: Write>(f: &mut Formatter<W>, arena: &Pars
     let has_attrs = !attrs.is_empty();
 
     if has_attrs {
-        // OCaml Format: pp f "((%a)@,%a)" - double parens with inner around expr
+        // OCaml Format: pp f "((%a)@,%a)" - one cut before all attributes
         f.string("((");
         print_expression_inner(f, arena, expr, false);
         f.string(")");
-        for (name, payload) in attrs {
-            f.cut(); // Allow break before attribute
-            f.string("[@");
-            f.string(&name.txt);
-            if !payload_is_empty(payload) {
-                f.string(" ");
-                print_payload(f, arena, payload);
-            }
-            f.string(" ]");
-        }
+        f.cut(); // Single cut before all attributes
+        print_attributes(f, arena, &expr.pexp_attributes);
         f.string(")");
     } else {
         print_expression_inner(f, arena, expr, false);
@@ -1071,16 +1055,8 @@ fn print_expression_semi_context<W: Write>(f: &mut Formatter<W>, arena: &ParseAr
         f.string("((");
         print_expression_inner(f, arena, expr, false);
         f.string(")");
-        for (name, payload) in attrs {
-            f.cut(); // Allow break before attribute
-            f.string("[@");
-            f.string(&name.txt);
-            if !payload_is_empty(payload) {
-                f.string(" ");
-                print_payload(f, arena, payload);
-            }
-            f.string(" ]");
-        }
+        f.cut(); // Single cut before all attributes
+        print_attributes(f, arena, &expr.pexp_attributes);
         f.string(")");
     } else if needs_semi_parens {
         f.string("((");
@@ -1103,16 +1079,8 @@ fn print_expression_list_context<W: Write>(f: &mut Formatter<W>, arena: &ParseAr
     if has_attrs {
         f.string("(");
         print_expression_inner(f, arena, expr, false);
-        for (name, payload) in attrs {
-            f.cut(); // Allow break before attribute
-            f.string("[@");
-            f.string(&name.txt);
-            if !payload_is_empty(payload) {
-                f.string(" ");
-                print_payload(f, arena, payload);
-            }
-            f.string(" ]");
-        }
+        f.cut(); // Single cut before all attributes
+        print_attributes(f, arena, &expr.pexp_attributes);
         f.string(")");
     } else if needs_semi_parens {
         f.string("(");
@@ -1144,35 +1112,19 @@ fn print_expression_parens_if_complex<W: Write>(f: &mut Formatter<W>, arena: &Pa
     let has_own_parens = expression_has_own_parens(expr);
 
     if has_attrs {
-        // OCaml Format: pp f "((%a)@,%a)" - cut before attributes allows line break there
+        // OCaml Format: pp f "((%a)@,%a)" - one cut before all attributes
         if has_own_parens {
             f.string("(");
             print_expression_inner(f, arena, expr, false);
-            for (name, payload) in attrs {
-                f.cut(); // Allow break before attribute
-                f.string("[@");
-                f.string(&name.txt);
-                if !payload_is_empty(payload) {
-                    f.string(" ");
-                    print_payload(f, arena, payload);
-                }
-                f.string(" ]");
-            }
+            f.cut(); // Single cut before all attributes
+            print_attributes(f, arena, &expr.pexp_attributes);
             f.string(")");
         } else {
             f.string("((");
             print_expression_inner(f, arena, expr, false);
             f.string(")");
-            for (name, payload) in attrs {
-                f.cut(); // Allow break before attribute
-                f.string("[@");
-                f.string(&name.txt);
-                if !payload_is_empty(payload) {
-                    f.string(" ");
-                    print_payload(f, arena, payload);
-                }
-                f.string(" ]");
-            }
+            f.cut(); // Single cut before all attributes
+            print_attributes(f, arena, &expr.pexp_attributes);
             f.string(")");
         }
     } else if needs_parens && !has_own_parens {
@@ -2026,16 +1978,8 @@ fn print_pattern<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, pat: &Patte
     print_pattern_inner(f, arena, pat);
     if has_attrs {
         f.string(")");
-        for (name, payload) in &pat.ppat_attributes {
-            f.cut(); // Allow break before attribute
-            f.string("[@");
-            f.string(&name.txt);
-            if !payload_is_empty(payload) {
-                f.string(" ");
-                print_payload(f, arena, payload);
-            }
-            f.string(" ]");
-        }
+        f.cut(); // Single cut before all attributes
+        print_attributes(f, arena, &pat.ppat_attributes);
         f.string(")");
     }
 }
