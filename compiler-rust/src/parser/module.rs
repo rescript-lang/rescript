@@ -3422,14 +3422,14 @@ fn parse_constructor_impl(p: &mut Parser<'_>, start_pos: Position) -> Option<Con
                         }
                     }
                 }
-                // If we see string, ".", "..", or "}" it's an object type, not inline record
+                // If we see string, ".", "..", or "..." it's an object type, not inline record
+                // Note: {} (empty) is an inline record, NOT an object type
                 !matches!(
                     state.token,
                     Token::String(_)
                         | Token::Dot
                         | Token::DotDot
                         | Token::DotDotDot
-                        | Token::Rbrace
                 )
             });
         if is_inline_record {
@@ -3472,9 +3472,10 @@ fn parse_constructor_impl(p: &mut Parser<'_>, start_pos: Position) -> Option<Con
                                 }
                             }
                         }
+                        // String, ".", "..", or "..." indicate object type (NOT empty record)
                         matches!(
                             state.token,
-                            Token::String(_) | Token::Dot | Token::DotDot | Token::DotDotDot | Token::Rbrace
+                            Token::String(_) | Token::Dot | Token::DotDot | Token::DotDotDot
                         )
                     });
                     if is_object {

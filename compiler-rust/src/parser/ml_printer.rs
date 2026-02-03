@@ -2808,11 +2808,13 @@ fn print_type_declaration<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, de
                         }
                     }
                     ConstructorArguments::Pcstr_record(fields) => {
-                        f.string(" of {\n  ");
+                        f.string(" of {");
+                        f.newline();
                         let mut last_field_has_attrs = false;
                         for (j, field) in fields.iter().enumerate() {
                             if j > 0 {
-                                f.string(";\n  ");
+                                f.string(";");
+                                f.newline();
                             }
                             if matches!(field.pld_mutable, MutableFlag::Mutable) {
                                 f.string("mutable ");
@@ -2829,8 +2831,12 @@ fn print_type_declaration<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, de
                                 print_attributes(f, arena, &field.pld_attributes);
                             }
                         }
-                        // If last field has attributes, no space before }
-                        if last_field_has_attrs {
+                        // Closing brace: if empty, just }, no trailing space (attributes add one)
+                        // If last field has attrs, no space before }
+                        // Otherwise, add space before }
+                        if fields.is_empty() {
+                            f.string("}");
+                        } else if last_field_has_attrs {
                             f.string("}");
                         } else {
                             f.string(" }");

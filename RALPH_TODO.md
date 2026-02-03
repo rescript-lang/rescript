@@ -1,7 +1,7 @@
 # Syntax Parity TODO
 
 **Last Updated:** 2026-02-03
-**Overall Status:** 410/506 tests passing (81%)
+**Overall Status:** 411/506 tests passing (81%)
 
 **Category Breakdown:**
 | Category | Passed | Failed | Total | Percent |
@@ -13,10 +13,10 @@
 | parsing/grammar | 93 | 42 | 135 | 68% |
 | parsing/other | 12 | 2 | 14 | 85% |
 | parsing/recovery | 13 | 7 | 20 | 65% |
-| parsing/errors | 43 | 41 | 84 | 51% |
+| parsing/errors | 44 | 40 | 84 | 52% |
 | parsing/infiniteLoops | 1 | 4 | 5 | 20% |
 
-**Remaining:** 96 tests to fix
+**Remaining:** 95 tests to fix
 
 **Recent Fixes (this session):**
 - **Added dict spread error message**: When `...` is used in a dict literal, emit "Dict literals do not
@@ -49,6 +49,9 @@
   to get the full span of the type definition for accurate error location.
 - **Added external missing JS value name error**: When `external foo: T =` is not followed by a
   string, emit "An external requires the name of the JS value you're referring to, like \"foo\"."
+- **Fixed empty inline record parsing**: Empty constructor arguments like `Node({})` were being
+  parsed as object types (`< >`) instead of inline records (`{ }`). Removed `Token::Rbrace` from
+  the object type detection heuristic. Also fixed ML printer indentation for empty inline records.
 - **Fixed pattern error recovery with skip_tokens_and_maybe_retry**: When an unexpected token is seen
   where a pattern is expected, call `skip_tokens_and_maybe_retry` to try to find a valid pattern start
   token. For example, `let = 2` now recovers to `let 2 = [%rescript.exprhole]` matching OCaml (skips `=`,
