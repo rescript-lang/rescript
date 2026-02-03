@@ -247,6 +247,53 @@ pub mod error_messages {
 }
 
 // ============================================================================
+// Identifier Parsing
+// ============================================================================
+
+/// Parse an identifier (lident or uident) with custom error message.
+/// OCaml: parse_ident ~msg ~start_pos p
+///
+/// Logic:
+/// 1. If token is Lident/Uident: return it
+/// 2. If token is a keyword on the same line: emit "keyword reserved" error, return keyword
+/// 3. Otherwise: emit the custom msg, advance and return empty string
+pub fn parse_ident(p: &mut Parser<'_>, msg: &str, start_pos: Position) -> (String, LocIdx) {
+    match &p.token {
+        Token::Lident(ident) | Token::Uident(ident) => {
+            let ident = ident.clone();
+            p.next();
+            let loc = p.mk_loc_to_prev_end(&start_pos);
+            (ident, loc)
+        }
+        token if token.is_keyword() && p.prev_end_pos.line == p.start_pos.line => {
+            let token_txt = format!("{}", p.token);
+            let err_msg = format!(
+                "`{}` is a reserved keyword. Keywords need to be escaped: \\\"{}\"",
+                token_txt, token_txt
+            );
+            p.err_at(
+                start_pos.clone(),
+                p.end_pos.clone(),
+                DiagnosticCategory::Message(err_msg),
+            );
+            p.next();
+            let loc = p.mk_loc_to_prev_end(&start_pos);
+            (token_txt, loc)
+        }
+        _ => {
+            p.err_at(
+                start_pos.clone(),
+                p.end_pos.clone(),
+                DiagnosticCategory::Message(msg.to_string()),
+            );
+            p.next();
+            let loc = p.mk_loc_to_prev_end(&start_pos);
+            (String::new(), loc)
+        }
+    }
+}
+
+// ============================================================================
 // Special Attributes
 // ============================================================================
 

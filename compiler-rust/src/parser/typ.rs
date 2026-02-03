@@ -509,20 +509,17 @@ fn parse_atomic_typ_expr(p: &mut Parser<'_>, attrs: Attributes, es6_arrow: bool)
             while p.token == Token::SingleQuote {
                 p.next(); // consume the single quote first
                 let var_start = p.start_pos.clone(); // capture start position AFTER the quote
-                let name = match &p.token {
-                    Token::Lident(name) | Token::Uident(name) => {
-                        let name = name.clone();
-                        p.next();
-                        name
-                    }
-                    _ => {
-                        p.err(DiagnosticCategory::Message(
-                            super::core::error_messages::TYPE_VAR.to_string(),
-                        ));
-                        "a".to_string()
-                    }
+                // OCaml: special case for EOF - emit unexpected token error
+                let (name, var_loc) = if p.token == Token::Eof {
+                    p.err(DiagnosticCategory::Unexpected {
+                        token: p.token.clone(),
+                        context: vec![],
+                    });
+                    (String::new(), p.mk_loc_to_prev_end(&var_start))
+                } else {
+                    // OCaml: parse_ident checks for keywords first
+                    super::core::parse_ident(p, super::core::error_messages::TYPE_VAR, var_start.clone())
                 };
-                let var_loc = p.mk_loc_to_prev_end(&var_start);
                 vars.push(with_loc(name, var_loc));
             }
 
