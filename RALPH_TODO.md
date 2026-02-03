@@ -1,7 +1,7 @@
 # Syntax Parity TODO
 
 **Last Updated:** 2026-02-03
-**Overall Status:** 394/506 tests passing (77%)
+**Overall Status:** 397/506 tests passing (78%)
 
 **Category Breakdown:**
 | Category | Passed | Failed | Total | Percent |
@@ -13,10 +13,10 @@
 | parsing/grammar | 93 | 42 | 135 | 68% |
 | parsing/other | 12 | 2 | 14 | 85% |
 | parsing/recovery | 11 | 9 | 20 | 55% |
-| parsing/errors | 29 | 55 | 84 | 34% |
+| parsing/errors | 32 | 52 | 84 | 38% |
 | parsing/infiniteLoops | 1 | 4 | 5 | 20% |
 
-**Remaining:** 112 tests to fix
+**Remaining:** 109 tests to fix
 
 **Recent Fixes (this session):**
 - **Added skip_tokens_and_maybe_retry to type expression parsing**: When encountering an unexpected
