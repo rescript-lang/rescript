@@ -65,6 +65,26 @@ fn leading_space_count(s: &str) -> usize {
     s.chars().take_while(|&c| c == ' ').count()
 }
 
+/// Break a long line into chunks of max_width characters.
+/// Matches OCaml's `break_long_line` in code_frame.ml.
+fn break_long_line(max_width: usize, line: &str) -> Vec<&str> {
+    if max_width == 0 || line.is_empty() {
+        return vec![line];
+    }
+    let mut result = Vec::new();
+    let mut pos = 0;
+    let len = line.len();
+    while pos < len {
+        let chunk_length = max_width.min(len - pos);
+        result.push(&line[pos..pos + chunk_length]);
+        pos += chunk_length;
+    }
+    if result.is_empty() {
+        result.push(line);
+    }
+    result
+}
+
 /// Gutter content - either a line number or elided marker.
 #[derive(Clone)]
 enum Gutter {
@@ -104,7 +124,7 @@ pub fn print(src: &str, start_pos: &Position, end_pos: &Position) -> String {
     let max_line_digits = digits_count(last_shown_line);
 
     // 3 for separator + the 2 spaces around it
-    let _line_width = 78 - max_line_digits - indent - 3;
+    let line_width = 78 - max_line_digits - indent - 3;
 
     // Extract the relevant portion of source
     let lines: Vec<(Gutter, &str)> = if start_offset < end_offset && end_offset <= src.len() {
@@ -149,7 +169,7 @@ pub fn print(src: &str, start_pos: &Position, end_pos: &Position) -> String {
 
     let separator = if leading_space_to_cut == 0 { "│" } else { "┆" };
 
-    // Process lines with highlighting info
+    // Process lines with highlighting info, breaking long lines into chunks
     let processed_lines: Vec<Line> = lines
         .iter()
         .map(|(gutter, line)| {
@@ -159,48 +179,58 @@ pub fn print(src: &str, start_pos: &Position, end_pos: &Position) -> String {
                 ""
             };
 
-            let content = match gutter {
-                Gutter::Elided => vec![HighlightedString {
-                    s: stripped.to_string(),
-                    start: 0,
-                    end: 0,
-                }],
-                Gutter::Number(line_number) => {
-                    let highlight_start_col =
-                        (start_pos.cnum - start_pos.bol) as usize;
-                    let highlight_end_col = (end_pos.cnum - end_pos.bol) as usize;
+            // Break long lines into chunks matching OCaml's break_long_line
+            let chunks = break_long_line(line_width, stripped);
 
-                    let start = if *line_number == highlight_line_start {
-                        highlight_start_col.saturating_sub(leading_space_to_cut)
-                    } else {
-                        0
-                    };
+            let content: Vec<HighlightedString> = chunks
+                .iter()
+                .enumerate()
+                .map(|(i, chunk)| {
+                    match gutter {
+                        Gutter::Elided => HighlightedString {
+                            s: chunk.to_string(),
+                            start: 0,
+                            end: 0,
+                        },
+                        Gutter::Number(line_number) => {
+                            let highlight_start_col =
+                                (start_pos.cnum - start_pos.bol) as usize;
+                            let highlight_end_col = (end_pos.cnum - end_pos.bol) as usize;
 
-                    let end = if *line_number < highlight_line_start {
-                        0
-                    } else if *line_number == highlight_line_start
-                        && *line_number == highlight_line_end
-                    {
-                        highlight_end_col.saturating_sub(leading_space_to_cut)
-                    } else if *line_number == highlight_line_start {
-                        stripped.len()
-                    } else if *line_number > highlight_line_start
-                        && *line_number < highlight_line_end
-                    {
-                        stripped.len()
-                    } else if *line_number == highlight_line_end {
-                        highlight_end_col.saturating_sub(leading_space_to_cut)
-                    } else {
-                        0
-                    };
+                            // OCaml: start only applies to first chunk (i = 0)
+                            let start = if i == 0 && *line_number == highlight_line_start {
+                                highlight_start_col.saturating_sub(leading_space_to_cut)
+                            } else {
+                                0
+                            };
 
-                    vec![HighlightedString {
-                        s: stripped.to_string(),
-                        start,
-                        end,
-                    }]
-                }
-            };
+                            let end = if *line_number < highlight_line_start {
+                                0
+                            } else if *line_number == highlight_line_start
+                                && *line_number == highlight_line_end
+                            {
+                                highlight_end_col.saturating_sub(leading_space_to_cut)
+                            } else if *line_number == highlight_line_start {
+                                chunk.len()
+                            } else if *line_number > highlight_line_start
+                                && *line_number < highlight_line_end
+                            {
+                                chunk.len()
+                            } else if *line_number == highlight_line_end {
+                                highlight_end_col.saturating_sub(leading_space_to_cut)
+                            } else {
+                                0
+                            };
+
+                            HighlightedString {
+                                s: chunk.to_string(),
+                                start,
+                                end,
+                            }
+                        }
+                    }
+                })
+                .collect();
 
             Line {
                 gutter: gutter.clone(),
@@ -225,13 +255,17 @@ pub fn print(src: &str, start_pos: &Position, end_pos: &Position) -> String {
                 buf.push_str(" ...\n");
             }
             Gutter::Number(line_number) => {
-                for hs in &line.content {
-                    // Draw gutter with line number
-                    let num_str = line_number.to_string();
-                    for _ in 0..(max_line_digits + indent - num_str.len()) {
+                for (i, hs) in line.content.iter().enumerate() {
+                    // OCaml: first chunk shows line number, continuation chunks show empty gutter
+                    let gutter_content = if i == 0 {
+                        line_number.to_string()
+                    } else {
+                        String::new()
+                    };
+                    for _ in 0..(max_line_digits + indent - gutter_content.len()) {
                         buf.push(' ');
                     }
-                    buf.push_str(&num_str);
+                    buf.push_str(&gutter_content);
                     buf.push(' ');
                     buf.push_str(separator);
                     buf.push(' ');
