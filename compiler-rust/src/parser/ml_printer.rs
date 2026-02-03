@@ -2152,34 +2152,29 @@ fn print_pattern_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, pat: 
                     }
                 }
             }
-            print_longident_idx(f, arena, lid.txt);
             if let Some(a) = arg {
-                f.string(" ");
-                // Alias patterns in constructor arguments need parentheses
-                let needs_parens = matches!(a.ppat_desc, PatternDesc::Ppat_alias(..));
-                if needs_parens {
-                    f.string("(");
-                }
-                print_pattern(f, arena, a);
-                if needs_parens {
-                    f.string(")");
-                }
+                // OCaml: %a@;%a with simple_pattern for arg
+                f.open_box(BoxKind::HOV, 2);
+                print_longident_idx(f, arena, lid.txt);
+                f.space();
+                print_simple_pattern(f, arena, a);
+                f.close_box();
+            } else {
+                print_longident_idx(f, arena, lid.txt);
             }
         }
         PatternDesc::Ppat_variant(label, arg) => {
-            f.string("`");
-            f.string(label);
             if let Some(a) = arg {
-                f.string(" ");
-                // OCaml uses simple_pattern here - wrap alias/or patterns in parens
-                let needs_parens = !pattern_is_simple(a, arena);
-                if needs_parens {
-                    f.string("(");
-                }
-                print_pattern(f, arena, a);
-                if needs_parens {
-                    f.string(")");
-                }
+                // OCaml: @[<2>`%s@;%a@] with simple_pattern
+                f.open_box(BoxKind::HOV, 2);
+                f.string("`");
+                f.string(label);
+                f.space();
+                print_simple_pattern(f, arena, a);
+                f.close_box();
+            } else {
+                f.string("`");
+                f.string(label);
             }
         }
         PatternDesc::Ppat_record(fields, closed) => {
