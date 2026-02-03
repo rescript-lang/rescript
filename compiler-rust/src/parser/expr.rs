@@ -2596,6 +2596,11 @@ fn parse_array_expr(p: &mut Parser<'_>) -> Expression {
         }
     }
 
+    // OCaml: the old Reason syntax [|...|] leaves a trailing | before ].
+    // Skip it so we can properly close the array.
+    if p.token == Token::Bar {
+        p.next();
+    }
     p.expect(Token::Rbracket);
     let loc = p.mk_loc_to_prev_end(&start_pos);
 
