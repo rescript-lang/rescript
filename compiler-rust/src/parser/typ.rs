@@ -739,15 +739,67 @@ fn parse_type_constr(p: &mut Parser<'_>) -> CoreType {
 }
 
 /// Parse type arguments.
+/// Parse a single type constructor argument, matching OCaml's parse_type_constructor_arg_region.
+/// Handles the special case where `<` tokens are silently skipped (e.g., `option(<node<int>>)`).
+fn parse_type_constructor_arg_region(p: &mut Parser<'_>) -> Option<CoreType> {
+    if super::grammar::is_typ_expr_start(&p.token) {
+        Some(parse_typ_expr(p))
+    } else if p.token == Token::LessThan {
+        // OCaml: skip the < and retry
+        p.next();
+        parse_type_constructor_arg_region(p)
+    } else {
+        None
+    }
+}
+
 fn parse_type_args(p: &mut Parser<'_>) -> Vec<CoreType> {
+    // OCaml: parse_comma_delimited_region ~grammar:TypExprList ~closing:GreaterThan
+    //        ~f:parse_type_constructor_arg_region
     let mut args = vec![];
 
-    while p.token != Token::GreaterThan && p.token != Token::Eof {
-        args.push(parse_typ_expr(p));
-        if !p.optional(&Token::Comma) {
-            break;
+    p.leave_breadcrumb(Grammar::TypExprList);
+    loop {
+        match parse_type_constructor_arg_region(p) {
+            Some(typ) => {
+                if p.token == Token::Comma {
+                    p.next();
+                    args.push(typ);
+                } else if p.token == Token::GreaterThan || p.token == Token::Eof {
+                    args.push(typ);
+                    break;
+                } else if super::grammar::is_typ_expr_start(&p.token) || p.token == Token::LessThan {
+                    // Missing comma - report and continue
+                    p.expect(Token::Comma);
+                    args.push(typ);
+                } else {
+                    args.push(typ);
+                    if !(p.token == Token::Eof || p.token == Token::GreaterThan
+                        || super::core::recover::should_abort_list_parse(p))
+                    {
+                        p.expect(Token::Comma);
+                    }
+                    if p.token == Token::Semicolon {
+                        p.next();
+                    }
+                }
+            }
+            None => {
+                if p.token == Token::Eof || p.token == Token::GreaterThan
+                    || super::core::recover::should_abort_list_parse(p)
+                {
+                    break;
+                } else {
+                    p.err(DiagnosticCategory::unexpected(
+                        p.token.clone(),
+                        p.breadcrumbs().to_vec(),
+                    ));
+                    p.next();
+                }
+            }
         }
     }
+    p.eat_breadcrumb();
 
     args
 }
