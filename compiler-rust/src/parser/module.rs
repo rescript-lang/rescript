@@ -2115,6 +2115,8 @@ fn parse_let_bindings(
 
         p.expect(Token::Equal);
         let mut expr = expr::parse_expr(p);
+        // OCaml: over_parse_constrained_or_coerced_or_arrow_expression on the let binding value
+        expr = expr::over_parse_constrained_or_coerced_or_arrow_expression(p, expr);
 
         // Compute binding location BEFORE wrapping (OCaml uses this for locally abstract type locations)
         // Use PosIdx-based location to enable sharing with structure_item

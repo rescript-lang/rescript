@@ -2040,6 +2040,190 @@ pub fn parse_constrained_or_coerced_expr(p: &mut Parser<'_>) -> Expression {
     }
 }
 
+/// OCaml's over_parse_constrained_or_coerced_or_arrow_expression.
+/// After parsing a block expression or let binding value, check if `:` follows
+/// and handle the constraint/coercion/arrow overparse with appropriate error messages.
+pub fn over_parse_constrained_or_coerced_or_arrow_expression(
+    p: &mut Parser<'_>,
+    expr: Expression,
+) -> Expression {
+    match &p.token {
+        Token::ColonGreaterThan => {
+            // Coercion: expr :> type
+            p.next();
+            let typ = super::typ::parse_typ_expr(p);
+            let loc = p.mk_loc_spanning(expr.pexp_loc, typ.ptyp_loc);
+            Expression {
+                pexp_desc: ExpressionDesc::Pexp_coerce(Box::new(expr), None, typ),
+                pexp_loc: loc,
+                pexp_attributes: vec![],
+            }
+        }
+        Token::Colon => {
+            p.next();
+            let typ = super::typ::parse_typ_expr_no_arrow(p);
+            match &p.token {
+                Token::EqualGreater => {
+                    // Ambiguous arrow: expr: type => body
+                    p.next();
+                    let body = parse_expr(p);
+
+                    // Convert expression to pattern
+                    let (pat, expr_is_unit) = match &expr.pexp_desc {
+                        ExpressionDesc::Pexp_ident(longident) => {
+                            // Longident.flatten |> String.concat "."
+                            let lid = p.arena().get_longident(longident.txt);
+                            let parts: Vec<&str> = lid.flatten_idx().iter()
+                                .map(|idx| p.arena().get_string(*idx))
+                                .collect();
+                            let name = parts.join(".");
+                            let name_loc = with_loc(name, longident.loc);
+                            (Pattern {
+                                ppat_desc: PatternDesc::Ppat_var(name_loc),
+                                ppat_loc: expr.pexp_loc,
+                                ppat_attributes: vec![],
+                            }, false)
+                        }
+                        ExpressionDesc::Pexp_construct(lid, None) => {
+                            let longident = p.arena().get_longident(lid.txt);
+                            let is_unit = matches!(longident, Longident::Lident(s) if p.arena().get_string(*s) == "()");
+                            if is_unit {
+                                (Pattern {
+                                    ppat_desc: PatternDesc::Ppat_construct(lid.clone(), None),
+                                    ppat_loc: expr.pexp_loc,
+                                    ppat_attributes: vec![],
+                                }, true)
+                            } else {
+                                let name_loc = with_loc("pattern".to_string(), expr.pexp_loc);
+                                (Pattern {
+                                    ppat_desc: PatternDesc::Ppat_var(name_loc),
+                                    ppat_loc: expr.pexp_loc,
+                                    ppat_attributes: vec![],
+                                }, false)
+                            }
+                        }
+                        _ => {
+                            let name_loc = with_loc("pattern".to_string(), expr.pexp_loc);
+                            (Pattern {
+                                ppat_desc: PatternDesc::Ppat_var(name_loc),
+                                ppat_loc: expr.pexp_loc,
+                                ppat_attributes: vec![],
+                            }, false)
+                        }
+                    };
+
+                    let arrow_loc = p.mk_loc_spanning(expr.pexp_loc, body.pexp_loc);
+
+                    // Interpretation 1: (param) => (body : type)
+                    let arrow1 = Expression {
+                        pexp_desc: ExpressionDesc::Pexp_fun {
+                            arity: Arity::Unknown,
+                            arg_label: ArgLabel::Nolabel,
+                            default: None,
+                            lhs: pat.clone(),
+                            rhs: Box::new(Expression {
+                                pexp_desc: ExpressionDesc::Pexp_constraint(Box::new(body.clone()), typ.clone()),
+                                pexp_loc: p.mk_loc_spanning(body.pexp_loc, typ.ptyp_loc),
+                                pexp_attributes: vec![],
+                            }),
+                            is_async: false,
+                        },
+                        pexp_loc: arrow_loc,
+                        pexp_attributes: vec![],
+                    };
+
+                    if expr_is_unit {
+                        arrow1
+                    } else {
+                        // Interpretation 2: (param: type) => body
+                        let arrow2 = Expression {
+                            pexp_desc: ExpressionDesc::Pexp_fun {
+                                arity: Arity::Unknown,
+                                arg_label: ArgLabel::Nolabel,
+                                default: None,
+                                lhs: Pattern {
+                                    ppat_desc: PatternDesc::Ppat_constraint(Box::new(pat), typ.clone()),
+                                    ppat_loc: p.mk_loc_spanning(expr.pexp_loc, typ.ptyp_loc),
+                                    ppat_attributes: vec![],
+                                },
+                                rhs: Box::new(body.clone()),
+                                is_async: false,
+                            },
+                            pexp_loc: arrow_loc,
+                            pexp_attributes: vec![],
+                        };
+
+                        // Use ResPrinter to render both interpretations
+                        use super::doc::Doc;
+                        use super::printer2;
+                        use super::comment_table::CommentTable;
+                        let state = printer2::PrinterState::init();
+                        let mut cmt_tbl = CommentTable::new();
+                        let msg = Doc::breakable_group(
+                            Doc::concat(vec![
+                                Doc::text("Did you mean to annotate the parameter type or the return type?"),
+                                Doc::indent(Doc::concat(vec![
+                                    Doc::line(),
+                                    Doc::text("1) "),
+                                    printer2::print_expression(&state, &arrow1, &mut cmt_tbl, p.arena()),
+                                    Doc::line(),
+                                    Doc::text("2) "),
+                                    printer2::print_expression(&state, &arrow2, &mut cmt_tbl, p.arena()),
+                                ])),
+                            ]),
+                            true,
+                        ).to_string(80);
+
+                        p.err_at(
+                            p.loc_start(expr.pexp_loc),
+                            p.loc_end(body.pexp_loc),
+                            DiagnosticCategory::message(&msg),
+                        );
+                        arrow1
+                    }
+                }
+                _ => {
+                    // Simple constraint: expr : type
+                    let loc = p.mk_loc_spanning(expr.pexp_loc, typ.ptyp_loc);
+                    let constrained = Expression {
+                        pexp_desc: ExpressionDesc::Pexp_constraint(Box::new(expr), typ.clone()),
+                        pexp_loc: loc,
+                        pexp_attributes: vec![],
+                    };
+
+                    // Use ResPrinter to render the constrained expression in parens
+                    use super::doc::Doc;
+                    use super::printer2;
+                    use super::comment_table::CommentTable;
+                    let state = printer2::PrinterState::init();
+                    let mut cmt_tbl = CommentTable::new();
+                    let printed = printer2::add_parens(
+                        printer2::print_expression(&state, &constrained, &mut cmt_tbl, p.arena()),
+                    );
+                    let msg = Doc::breakable_group(
+                        Doc::concat(vec![
+                            Doc::text("Expressions with type constraints need to be wrapped in parens:"),
+                            Doc::indent(Doc::concat(vec![
+                                Doc::line(),
+                                printed,
+                            ])),
+                        ]),
+                        true,
+                    ).to_string(80);
+
+                    p.err_at(
+                        p.loc_start(constrained.pexp_loc),
+                        p.loc_end(typ.ptyp_loc),
+                        DiagnosticCategory::message(&msg),
+                    );
+                    constrained
+                }
+            }
+        }
+        _ => expr,
+    }
+}
+
 /// Parse an expression with optional type constraint for function arguments.
 /// Used in labeled argument contexts like `~compare=?intCompare: (int, int) => int`.
 fn parse_constrained_expr_in_arg(p: &mut Parser<'_>) -> Expression {
@@ -3721,6 +3905,7 @@ fn parse_block_body(p: &mut Parser<'_>) -> Option<Expression> {
                     pexp_attributes: vec![],
                 });
             } else {
+                let expr = over_parse_constrained_or_coerced_or_arrow_expression(p, expr);
                 return Some(expr);
             }
         }

@@ -915,14 +915,9 @@ fn print_value_binding<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, pat: 
                 f.string("async ");
             }
 
-            // Print arity annotation
+            // Print arity annotation (only when explicitly set, matching OCaml's pprintast)
             if let Arity::Full(n) = arity {
                 f.string(&format!("[arity:{}]", n));
-            } else {
-                let computed_arity = count_function_arity(expr);
-                if computed_arity > 0 {
-                    f.string(&format!("[arity:{}]", computed_arity));
-                }
             }
 
             print_inline_param(f, arena, arg_label, default, lhs);
@@ -1224,15 +1219,9 @@ fn print_remaining_inline_params_with_arity<'a, W: Write>(
             ..
         } => {
             // Print arity for each Pexp_fun that has an arity annotation
-            // (In uncurried-by-default mode, there can be multiple arity markers)
+            // (matching OCaml's pprintast: only print when explicitly set)
             if let Arity::Full(n) = arity {
                 f.string(&format!("[arity:{}]", n));
-            } else if need_arity {
-                // Only compute arity for the first function if no explicit arity
-                let computed_arity = count_function_arity(expr);
-                if computed_arity > 0 {
-                    f.string(&format!("[arity:{}]", computed_arity));
-                }
             }
             print_inline_param(f, arena, arg_label, default, lhs);
             f.space(); // @ between param and next recursive call
