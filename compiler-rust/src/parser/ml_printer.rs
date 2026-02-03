@@ -1308,19 +1308,28 @@ fn print_expression_no_outer_parens<W: Write>(f: &mut Formatter<W>, arena: &Pars
 }
 
 fn print_expression_simple<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, expr: &Expression) {
+    print_expression_simple_ctx(f, arena, expr, PrintCtx::reset());
+}
+
+/// Context-aware version of print_expression_simple.
+/// In OCaml, `simple_expr ctxt` passes the context through, so when it falls through
+/// to `expression ctxt`, context-dependent parenthesization (pipe, semi, ifthenelse) is applied.
+fn print_expression_simple_ctx<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, expr: &Expression, ctx: PrintCtx) {
     // OCaml's simple_expr wraps non-simple expressions in parens
     // BUT: attributed expressions already produce ((expr)[@attr]) structure
     // so we don't add extra parens for them
     let has_attrs = !printable_attributes(&expr.pexp_attributes).is_empty();
 
-    if is_simple_expression_with_arena(expr, arena) {
-        print_expression(f, arena, expr);
-    } else if has_attrs {
-        // Attributed expressions already produce their own parens structure
-        print_expression(f, arena, expr);
+    if has_attrs {
+        // OCaml: simple_expr for attributed exprs -> expression ctxt -> handles attrs
+        print_expression_with_ctx(f, arena, expr, ctx);
+    } else if is_simple_expression_with_arena(expr, arena) {
+        // Simple expressions print directly (no context needed - they don't produce parens)
+        print_expression_with_ctx(f, arena, expr, ctx);
     } else {
+        // Non-simple: wrap in parens and call expression with context
         f.string("(");
-        print_expression(f, arena, expr);
+        print_expression_with_ctx(f, arena, expr, ctx);
         f.string(")");
     }
 }
@@ -1328,16 +1337,23 @@ fn print_expression_simple<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, e
 /// Print expression as simple_expr with under_semi context.
 /// Used for array elements: OCaml uses `simple_expr (under_semi ctxt)`.
 fn print_expression_simple_under_semi<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, expr: &Expression) {
+    print_expression_simple_under_semi_ctx(f, arena, expr, PrintCtx::reset());
+}
+
+/// Context-aware version of print_expression_simple_under_semi.
+/// OCaml: `simple_expr (under_semi ctxt)` - applies under_semi to the inherited context.
+fn print_expression_simple_under_semi_ctx<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, expr: &Expression, ctx: PrintCtx) {
+    let semi_ctx = ctx.under_semi();
     let has_attrs = !printable_attributes(&expr.pexp_attributes).is_empty();
 
-    if is_simple_expression_with_arena(expr, arena) {
-        print_expression(f, arena, expr);
-    } else if has_attrs {
+    if has_attrs {
         // OCaml: expression (under_semi ctxt) for attributed non-simple expressions
-        print_expression_under_semi(f, arena, expr);
+        print_expression_with_ctx(f, arena, expr, semi_ctx);
+    } else if is_simple_expression_with_arena(expr, arena) {
+        print_expression_with_ctx(f, arena, expr, semi_ctx);
     } else {
         f.string("(");
-        print_expression_under_semi(f, arena, expr);
+        print_expression_with_ctx(f, arena, expr, semi_ctx);
         f.string(")");
     }
 }
@@ -1346,18 +1362,24 @@ fn print_expression_simple_under_semi<W: Write>(f: &mut Formatter<W>, arena: &Pa
 /// OCaml's under_app: if x.pexp_attributes <> [] then expression ctxt f x else expression2 ctxt f x
 /// Expression2 includes Pexp_field and Pexp_send without parens, other exprs use simple_expr.
 fn print_expression2<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, expr: &Expression) {
+    print_expression2_ctx(f, arena, expr, PrintCtx::reset());
+}
+
+/// Context-aware version of print_expression2.
+/// In OCaml, `expression2 ctxt` passes the context through.
+fn print_expression2_ctx<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, expr: &Expression, ctx: PrintCtx) {
     let has_attrs = !printable_attributes(&expr.pexp_attributes).is_empty();
 
     if has_attrs {
-        // Attributed expressions go through full expression printing
-        print_expression(f, arena, expr);
+        // Attributed expressions go through full expression printing with context
+        print_expression_with_ctx(f, arena, expr, ctx);
     } else if is_expression2(expr, arena) {
         // Expression2-level expressions don't need parens
-        print_expression(f, arena, expr);
+        print_expression_with_ctx(f, arena, expr, ctx);
     } else {
         // Everything else needs parens (falls through from simple_expr)
         f.string("(");
-        print_expression(f, arena, expr);
+        print_expression_with_ctx(f, arena, expr, ctx);
         f.string(")");
     }
 }
@@ -1753,7 +1775,7 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                     f.string("(");
                 }
                 // OCaml: (simple_expr ctxt) a for the array expression
-                print_expression_simple(f, arena, arr);
+                print_expression_simple_ctx(f, arena, arr, ctx);
                 f.string(".(");
                 print_expression(f, arena, idx);
                 f.string(")");
@@ -1772,12 +1794,12 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                     f.string("(");
                 }
                 // OCaml: (simple_expr ctxt) a for the array expression
-                print_expression_simple(f, arena, arr);
+                print_expression_simple_ctx(f, arena, arr, ctx);
                 f.string(".(");
                 print_expression(f, arena, idx);
                 f.string(") <- ");
                 // OCaml: (simple_expr ctxt) v for the value expression
-                print_expression_simple(f, arena, val);
+                print_expression_simple_ctx(f, arena, val, ctx);
                 if use_parens {
                     f.string(")");
                 }
@@ -1793,12 +1815,12 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                         f.string("(");
                     }
                     f.open_box(BoxKind::Box, 2);
-                    // OCaml uses label_x_expression_param which calls expression2 for Nolabel args
-                    print_expression2(f, arena, lhs);
+                    // OCaml: arg1 uses (label_x_expression_param reset_ctxt), arg2 uses (label_x_expression_param ctxt)
+                    print_expression2_ctx(f, arena, lhs, PrintCtx::reset());
                     f.space();
                     f.string(op_name);
                     f.space();
-                    print_expression2(f, arena, rhs);
+                    print_expression2_ctx(f, arena, rhs, ctx);
                     if *partial {
                         f.string(" ...");
                     }
@@ -1821,11 +1843,11 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                         }
                         _ => op_name,
                     };
-                    // OCaml: @[<2>%s@;%a@] - no outer parens
+                    // OCaml: @[<2>%s@;%a@] - no outer parens, uses (simple_expr ctxt)
                     f.open_box(BoxKind::Box, 2);
                     f.string(shortened_op);
                     f.space();
-                    print_expression_simple(f, arena, arg);
+                    print_expression_simple_ctx(f, arena, arg, ctx);
                     if *partial {
                         f.string(" ...");
                     }
@@ -1835,16 +1857,17 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
             }
 
             // Default: prefix application
-            // OCaml: pp f "%a@ %a" (expression2 ctxt) e (list (label_x_expression_param ...)) l
+            // OCaml: pp f "%a@ %a" (expression2 ctxt) e (list (label_x_expression_param reset_ctxt)) l
             if use_parens {
                 f.string("(");
             }
             f.open_box(BoxKind::HOV, 2);
-            // OCaml uses expression2 for the function expression
-            print_expression2(f, arena, funct);
+            // OCaml uses (expression2 ctxt) for the function expression
+            print_expression2_ctx(f, arena, funct, ctx);
             for (label, arg) in args {
                 f.space(); // Break hint between func and args
-                print_arg_with_label(f, arena, label, arg);
+                // OCaml uses (label_x_expression_param reset_ctxt) for all args in normal apply
+                print_arg_with_label_ctx(f, arena, label, arg, PrintCtx::reset());
             }
             if *partial {
                 f.string(" ...");
@@ -1938,7 +1961,7 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                     f.string(",");
                     f.space();
                 }
-                print_expression_simple(f, arena, e);
+                print_expression_simple_ctx(f, arena, e, ctx);
             }
             f.string(")");
             f.close_box();
@@ -1973,7 +1996,7 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                             f.string("::");
                             f.space();
                         }
-                        print_expression_simple(f, arena, elem);
+                        print_expression_simple_ctx(f, arena, elem, ctx);
                     }
                     return;
                 } else if name == "[]" {
@@ -1985,11 +2008,11 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                 }
             }
             if let Some(a) = arg {
-                // OCaml: @[<2>%a@;%a@] with simple_expr for arg
+                // OCaml: @[<2>%a@;%a@] with (simple_expr ctxt) for arg
                 f.open_box(BoxKind::Box, 2);
                 print_longident_idx(f, arena, lid.txt);
                 f.space();
-                print_expression_simple(f, arena, a);
+                print_expression_simple_ctx(f, arena, a, ctx);
                 f.close_box();
             } else {
                 print_longident_idx(f, arena, lid.txt);
@@ -1997,12 +2020,12 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
         }
         ExpressionDesc::Pexp_variant(label, arg) => {
             if let Some(a) = arg {
-                // OCaml: @[<2>`%s@;%a@] with simple_expr for arg
+                // OCaml: @[<2>`%s@;%a@] with (simple_expr ctxt) for arg
                 f.open_box(BoxKind::Box, 2);
                 f.string("`");
                 f.string(label);
                 f.space();
-                print_expression_simple(f, arena, a);
+                print_expression_simple_ctx(f, arena, a, ctx);
                 f.close_box();
             } else {
                 f.string("`");
@@ -2016,7 +2039,7 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
             f.string("{");
             f.space(); // @; after {
             if let Some(b) = base {
-                print_expression_simple(f, arena, b);
+                print_expression_simple_ctx(f, arena, b, ctx);
                 f.string(" with");
                 f.space(); // @; after "with"
             }
@@ -2061,8 +2084,8 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                     if field.opt {
                         f.string("?");  // Optional field: name = ?value
                     }
-                    // OCaml uses simple_expr for record field values
-                    print_expression_simple(f, arena, &field.expr);
+                    // OCaml uses (simple_expr ctxt) for record field values
+                    print_expression_simple_ctx(f, arena, &field.expr, ctx);
                     f.close_box();
                 }
             }
@@ -2072,21 +2095,22 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
             f.close_box();
         }
         ExpressionDesc::Pexp_field(obj, field) => {
-            print_expression_simple(f, arena, obj);
+            // OCaml: (simple_expr ctxt) for the object
+            print_expression_simple_ctx(f, arena, obj, ctx);
             f.string(".");
             print_longident_idx(f, arena, field.txt);
         }
         ExpressionDesc::Pexp_setfield(obj, field, value) => {
             // OCaml: pp f "@[<2>%a.%a@ <-@ %a@]" (simple_expr ctxt) e1 longident_loc li (simple_expr ctxt) e2
-            // Note: uses simple_expr for both object and value
-            print_expression_simple(f, arena, obj);
+            // Note: uses simple_expr ctxt for both object and value
+            print_expression_simple_ctx(f, arena, obj, ctx);
             f.string(".");
             print_longident_idx(f, arena, field.txt);
             f.string(" <- ");
-            print_expression_simple(f, arena, value);
+            print_expression_simple_ctx(f, arena, value, ctx);
         }
         ExpressionDesc::Pexp_array(elems) => {
-            // OCaml: @[<0>@[<2>[|%a|]@]@] with (list (simple_expr (under_semi)) ~sep:";")
+            // OCaml: @[<0>@[<2>[|%a|]@]@] with (list (simple_expr (under_semi ctxt)) ~sep:";")
             f.open_box(BoxKind::Box, 0);
             f.open_box(BoxKind::Box, 2);
             f.string("[|");
@@ -2094,7 +2118,7 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                 if i > 0 {
                     f.string(";");
                 }
-                print_expression_simple_under_semi(f, arena, e);
+                print_expression_simple_under_semi_ctx(f, arena, e, ctx);
             }
             f.string("|]");
             f.close_box();
@@ -2244,8 +2268,8 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
         }
         ExpressionDesc::Pexp_send(e, meth) => {
             // OCaml: pp f "@[<hov2>%a#%s@]" (simple_expr ctxt) e s.txt
-            // Note: uses simple_expr for the object, not expression
-            print_expression_simple(f, arena, e);
+            // Note: uses (simple_expr ctxt) for the object, not expression
+            print_expression_simple_ctx(f, arena, e, ctx);
             f.string("#");
             f.string(&meth.txt);
         }
@@ -2295,10 +2319,10 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
         }
         ExpressionDesc::Pexp_assert(e) => {
             // OCaml: @[<hov2>assert@ %a@] - no parens
-            // Parens come from simple_expr when needed
+            // Parens come from (simple_expr ctxt) when needed
             f.open_box(BoxKind::HOV, 2);
             f.string("assert ");
-            print_expression_simple(f, arena, e);
+            print_expression_simple_ctx(f, arena, e, ctx);
             f.close_box();
         }
         ExpressionDesc::Pexp_newtype(name, body) => {
@@ -3202,6 +3226,12 @@ fn print_arg_label_expr<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, labe
 }
 
 fn print_arg_with_label<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, label: &ArgLabel, arg: &Expression) {
+    print_arg_with_label_ctx(f, arena, label, arg, PrintCtx::reset());
+}
+
+/// Context-aware version of print_arg_with_label.
+/// OCaml's `label_x_expression_param ctxt` passes context through to simple_expr and expression2.
+fn print_arg_with_label_ctx<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, label: &ArgLabel, arg: &Expression, ctx: PrintCtx) {
     match label {
         ArgLabel::Labelled(name) => {
             let name_str = arena.get_string(name.txt);
@@ -3218,8 +3248,8 @@ fn print_arg_with_label<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, labe
             f.string("~");
             f.string(name_str);
             f.string(":");
-            // OCaml uses simple_expr for labeled args
-            print_expression_simple(f, arena, arg);
+            // OCaml uses simple_expr ctxt for labeled args
+            print_expression_simple_ctx(f, arena, arg, ctx);
         }
         ArgLabel::Optional(name) => {
             let name_str = arena.get_string(name.txt);
@@ -3236,12 +3266,12 @@ fn print_arg_with_label<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, labe
             f.string("?");
             f.string(name_str);
             f.string(":");
-            // OCaml uses simple_expr for optional args
-            print_expression_simple(f, arena, arg);
+            // OCaml uses simple_expr ctxt for optional args
+            print_expression_simple_ctx(f, arena, arg, ctx);
         }
         ArgLabel::Nolabel => {
-            // OCaml uses expression2 for unlabeled args (label_x_expression_param -> Nolabel -> expression2)
-            print_expression2(f, arena, arg);
+            // OCaml uses expression2 ctxt for unlabeled args (label_x_expression_param -> Nolabel -> expression2)
+            print_expression2_ctx(f, arena, arg, ctx);
         }
     }
 }
