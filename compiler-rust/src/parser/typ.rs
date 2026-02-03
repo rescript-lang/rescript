@@ -733,6 +733,28 @@ fn parse_type_constr(p: &mut Parser<'_>) -> CoreType {
         vec![]
     };
 
+    // Check for multiple inline records in type constructor args (OCaml line 4462)
+    if let Some(ref inline_types) = p.inline_types_found {
+        // Collect inline type names first to avoid borrow conflict
+        let inline_names: Vec<String> = inline_types.iter().map(|(n, _, _)| n.clone()).collect();
+        let count = args.iter().filter(|arg| {
+            if let CoreTypeDesc::Ptyp_constr(lid, _) = &arg.ptyp_desc {
+                inline_names.iter().any(|iname| p.arena().is_lident(lid.txt, iname))
+            } else {
+                false
+            }
+        }).count();
+        if count > 1 {
+            p.err_at(
+                start_pos.clone(),
+                p.prev_end_pos.clone(),
+                DiagnosticCategory::Message(
+                    "Only one inline record definition is allowed per record field. This defines more than one inline record.".to_string(),
+                ),
+            );
+        }
+    }
+
     // ptyp_loc includes the full extent (identifier + type args)
     // Note: For Ldot types in certain contexts (type manifests, arrow parameters),
     // the location is adjusted later to exclude type args.
@@ -1339,7 +1361,7 @@ fn parse_record_or_object_type(p: &mut Parser<'_>) -> CoreType {
     p.expect(Token::Lbrace);
 
     // Check for object type: {. ... } or {.. ... }
-    let is_object = p.token == Token::Dot || p.token == Token::DotDot;
+    let _is_object = p.token == Token::Dot || p.token == Token::DotDot;
     let closed = if p.token == Token::DotDot {
         p.next();
         ClosedFlag::Open
@@ -1350,27 +1372,64 @@ fn parse_record_or_object_type(p: &mut Parser<'_>) -> CoreType {
         ClosedFlag::Closed
     };
 
-    // Check for inline record syntax in wrong position: { name: ... } where object type expected
-    // OCaml: when inline_types_context is None and token is Lident, emit error
-    if matches!(p.token, Token::Lident(_)) {
-        p.err(DiagnosticCategory::Message(
-            "An inline record type declaration is only allowed in a variant constructor's declaration or nested inside of a record type declaration".to_string(),
-        ));
-    }
+    // Check if we should extract this as an inline record type
+    let has_inline_context = p.inline_types_found.is_some() && p.current_type_name_path.is_some();
+    let is_record_start = matches!(p.token, Token::Lident(_) | Token::Mutable | Token::At | Token::DotDotDot);
 
-    let fields = parse_object_fields(p);
-    p.expect(Token::Rbrace);
-    let loc = p.mk_loc_to_prev_end(&start_pos);
-    let typ = CoreType {
-        ptyp_desc: CoreTypeDesc::Ptyp_object(fields, closed),
-        ptyp_loc: loc,
-        ptyp_attributes: vec![],
-    };
-    // Handle type alias: {...} as 'name
-    let typ = parse_type_alias(p, typ);
-    // Note: Don't parse arrow rest here - let the caller (parse_typ_expr_inner) handle it.
-    // This is important for correct precedence of arrows in function return types.
-    typ
+    if has_inline_context && is_record_start {
+        // Extract as inline record type - mimics OCaml's parse_record_or_object_type
+        // when inline_types_context is present
+        let current_path = p.current_type_name_path.clone().unwrap();
+        let params = p.inline_types_params.clone();
+        let labels = super::module::parse_label_declarations_for_inline(p, Some(start_pos.clone()));
+        p.expect(Token::Rbrace);
+        let loc = p.mk_loc_to_prev_end(&start_pos);
+
+        let inline_type_name = current_path.join(".");
+
+        // Register this inline type (insert at front to match OCaml's prepend order)
+        if let Some(ref mut found) = p.inline_types_found {
+            found.insert(0, (
+                inline_type_name.clone(),
+                loc.clone(),
+                TypeKind::Ptype_record(labels),
+            ));
+        }
+
+        // Return a Ptyp_constr pointing to the inline type
+        let type_args: Vec<CoreType> = params.into_iter().map(|(t, _)| t).collect();
+        let lid_idx = p.push_lident(&inline_type_name);
+        CoreType {
+            ptyp_desc: CoreTypeDesc::Ptyp_constr(
+                with_loc(lid_idx, loc.clone()),
+                type_args,
+            ),
+            ptyp_loc: loc,
+            ptyp_attributes: vec![],
+        }
+    } else {
+        // Check for inline record syntax in wrong position: { name: ... } where object type expected
+        // OCaml: when inline_types_context is None and token is Lident, emit error
+        if !has_inline_context && matches!(p.token, Token::Lident(_)) {
+            p.err(DiagnosticCategory::Message(
+                "An inline record type declaration is only allowed in a variant constructor's declaration or nested inside of a record type declaration".to_string(),
+            ));
+        }
+
+        let fields = parse_object_fields(p);
+        p.expect(Token::Rbrace);
+        let loc = p.mk_loc_to_prev_end(&start_pos);
+        let typ = CoreType {
+            ptyp_desc: CoreTypeDesc::Ptyp_object(fields, closed),
+            ptyp_loc: loc,
+            ptyp_attributes: vec![],
+        };
+        // Handle type alias: {...} as 'name
+        let typ = parse_type_alias(p, typ);
+        // Note: Don't parse arrow rest here - let the caller (parse_typ_expr_inner) handle it.
+        // This is important for correct precedence of arrows in function return types.
+        typ
+    }
 }
 
 /// Parse object type body after `{` has been consumed.

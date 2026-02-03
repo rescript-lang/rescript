@@ -111,6 +111,36 @@ impl InlineTypesContext {
     }
 }
 
+/// Parse label declarations using the parser's inline types context fields.
+/// This is called from typ.rs when extracting inline records inside type constructor args.
+pub fn parse_label_declarations_for_inline(
+    p: &mut Parser<'_>,
+    lbrace_pos: Option<Position>,
+) -> Vec<LabelDeclaration> {
+    // Create a temporary RefCell<InlineTypesContext> from parser fields
+    // to reuse the existing parse_label_declarations logic
+    let inline_ctx = RefCell::new(InlineTypesContext {
+        found_inline_types: p.inline_types_found.take().unwrap_or_default(),
+        params: p.inline_types_params.clone(),
+        outer_name_loc: Location::none(),
+    });
+    let current_path = p.current_type_name_path.clone();
+
+    let labels = parse_label_declarations(
+        p,
+        Some(&inline_ctx),
+        current_path.as_ref(),
+        lbrace_pos,
+        false,
+    );
+
+    // Copy back any found inline types to the parser fields
+    let ctx = inline_ctx.into_inner();
+    p.inline_types_found = Some(ctx.found_inline_types);
+
+    labels
+}
+
 // ============================================================================
 // Helper Functions
 // ============================================================================
@@ -4086,10 +4116,12 @@ fn parse_label_declaration(
             }
         } else {
             // Not a record - parse as regular type (object type)
-            typ::parse_poly_type_expr(p)
+            // But still thread inline context through parser fields for nested extraction
+            parse_poly_type_with_inline_context(p, inline_ctx, extended_path.as_ref())
         }
     } else {
-        typ::parse_poly_type_expr(p)
+        // Thread inline context through parser fields if available
+        parse_poly_type_with_inline_context(p, inline_ctx, extended_path.as_ref())
     };
 
     // OCaml uses typ.ptyp_loc.loc_end for label declaration's end, not p.prev_end_pos
@@ -4102,6 +4134,42 @@ fn parse_label_declaration(
         pld_attributes: attrs,
         pld_optional: is_optional,
     })
+}
+
+/// Parse a poly type expression, threading inline context through parser fields
+/// so that nested `{...}` in type constructor args can be extracted as inline records.
+fn parse_poly_type_with_inline_context(
+    p: &mut Parser<'_>,
+    inline_ctx: Option<&RefCell<InlineTypesContext>>,
+    extended_path: Option<&Vec<String>>,
+) -> CoreType {
+    if let (Some(ctx), Some(path)) = (inline_ctx, extended_path) {
+        // Save old parser fields
+        let old_path = p.current_type_name_path.take();
+        let old_found = p.inline_types_found.take();
+        let old_params = std::mem::take(&mut p.inline_types_params);
+
+        // Set parser fields for inline record extraction
+        p.current_type_name_path = Some(path.clone());
+        p.inline_types_found = Some(ctx.borrow().found_inline_types.clone());
+        p.inline_types_params = ctx.borrow().params.clone();
+
+        let typ = typ::parse_poly_type_expr(p);
+
+        // Copy found inline types back to the RefCell context
+        if let Some(found) = p.inline_types_found.take() {
+            ctx.borrow_mut().found_inline_types = found;
+        }
+
+        // Restore old parser fields
+        p.current_type_name_path = old_path;
+        p.inline_types_found = old_found;
+        p.inline_types_params = old_params;
+
+        typ
+    } else {
+        typ::parse_poly_type_expr(p)
+    }
 }
 
 /// Parse a value description (for external).

@@ -108,6 +108,14 @@ pub struct Parser<'src> {
     /// General parse depth counter to prevent stack overflow from deeply nested parsing.
     /// Incremented at major parsing entry points like parse_expr, parse_typ_expr, etc.
     pub parse_depth: usize,
+    /// Current type name path for inline record extraction (e.g., ["options", "extra"]).
+    /// Set during type equation parsing to enable nested inline record extraction.
+    pub current_type_name_path: Option<Vec<String>>,
+    /// Collected inline types during type parsing.
+    /// When Some, `{...}` in type positions will be extracted as inline record types.
+    pub inline_types_found: Option<Vec<(String, LocIdx, super::ast::TypeKind)>>,
+    /// Type parameters from the outer type declaration for inline types.
+    pub inline_types_params: Vec<(super::ast::CoreType, super::ast::Variance)>,
 }
 
 impl<'src> Parser<'src> {
@@ -140,6 +148,9 @@ impl<'src> Parser<'src> {
             cached_prev_end_pos_idx: None,
             jsx_depth: 0,
             parse_depth: 0,
+            current_type_name_path: None,
+            inline_types_found: None,
+            inline_types_params: vec![],
         };
         // Scan the first token
         parser.next();
