@@ -5316,6 +5316,7 @@ fn jsx_tag_names_match(opening: &JsxTagName, closing: &JsxTagName, p: &Parser<'_
 
 /// Parse a JSX element.
 fn parse_jsx(p: &mut Parser<'_>) -> Expression {
+    p.leave_breadcrumb(Grammar::Jsx);
     let start_pos = p.start_pos.clone();
 
     // Check for excessive nesting depth to prevent stack overflow
@@ -5334,6 +5335,7 @@ fn parse_jsx(p: &mut Parser<'_>) -> Expression {
     // Check for fragment <>
     if p.token == Token::GreaterThan {
         let result = parse_jsx_fragment(p, start_pos);
+        p.eat_breadcrumb();
         p.jsx_depth -= 1;
         return result;
     }
@@ -5346,12 +5348,30 @@ fn parse_jsx(p: &mut Parser<'_>) -> Expression {
     // Parse props
     let props = parse_jsx_props(p);
 
-    // Self-closing or container?
+    // Self-closing, container, or error recovery?
+    // OCaml has three cases: Forwardslash, GreaterThan, or token (unexpected)
     if p.token == Token::Forwardslash {
         p.next();
         p.expect(Token::GreaterThan);
         let loc = p.mk_loc_to_prev_end(&start_pos);
 
+        p.eat_breadcrumb();
+        p.jsx_depth -= 1;
+        Expression {
+            pexp_desc: ExpressionDesc::Pexp_jsx_element(JsxElement::Unary(JsxUnaryElement {
+                tag_name: with_loc(tag_name, tag_name_loc),
+                props,
+            })),
+            pexp_loc: loc,
+            pexp_attributes: vec![],
+        }
+    } else if p.token != Token::GreaterThan {
+        // OCaml: | token -> Parser.err p (Diagnostics.unexpected token p.breadcrumbs);
+        //        Ast_helper.Exp.jsx_unary_element ~loc name jsx_props
+        p.err(DiagnosticCategory::unexpected(p.token.clone(), p.breadcrumbs().to_vec()));
+        let loc = p.mk_loc_to_prev_end(&start_pos);
+
+        p.eat_breadcrumb();
         p.jsx_depth -= 1;
         Expression {
             pexp_desc: ExpressionDesc::Pexp_jsx_element(JsxElement::Unary(JsxUnaryElement {
@@ -5456,6 +5476,7 @@ fn parse_jsx(p: &mut Parser<'_>) -> Expression {
 
         let loc = p.mk_loc_to_prev_end(&start_pos);
 
+        p.eat_breadcrumb();
         p.jsx_depth -= 1;
         Expression {
             pexp_desc: ExpressionDesc::Pexp_jsx_element(JsxElement::Container(
@@ -5509,7 +5530,8 @@ fn read_hyphen_chain(p: &mut Parser<'_>, initial: String) -> String {
             matches!(&state.token, Token::Lident(_) | Token::Uident(_))
         });
         if !has_ident_after {
-            // OCaml emits this error when a JSX identifier ends with a hyphen
+            // OCaml: advances past '-' THEN emits error at the next token position
+            p.next(); // consume '-'
             p.err(DiagnosticCategory::Message(
                 "JSX identifier cannot end with a hyphen".to_string(),
             ));
@@ -5560,10 +5582,12 @@ fn parse_jsx_tag_name(p: &mut Parser<'_>) -> JsxTagName {
                     }
                     _ => {
                         // OCaml: "expected identifier after '.' in JSX tag name"
+                        // OCaml returns Error "Foo." which becomes JsxTagInvalid "Foo."
                         p.err(DiagnosticCategory::Message(
                             "expected identifier after '.' in JSX tag name".to_string(),
                         ));
-                        break;
+                        let name_with_dot = parts.join(".") + ".";
+                        return JsxTagName::Invalid(name_with_dot);
                     }
                 }
             }
@@ -5581,7 +5605,9 @@ fn parse_jsx_tag_name(p: &mut Parser<'_>) -> JsxTagName {
 }
 
 /// Parse JSX props.
+/// Matches OCaml: parse_region ~grammar:Grammar.JsxAttribute ~f:parse_jsx_prop p
 fn parse_jsx_props(p: &mut Parser<'_>) -> Vec<JsxProp> {
+    p.leave_breadcrumb(Grammar::JsxAttribute);
     let mut props = vec![];
 
     loop {
@@ -5674,10 +5700,19 @@ fn parse_jsx_props(p: &mut Parser<'_>) -> Vec<JsxProp> {
                     });
                 }
             }
-            _ => break,
+            _ => {
+                // OCaml parse_region recovery: if token is EOF or should_abort_list_parse, stop.
+                // Otherwise, emit error, skip token, and continue.
+                if p.token == Token::Eof || recover::should_abort_list_parse(p) {
+                    break;
+                }
+                p.err(DiagnosticCategory::unexpected(p.token.clone(), p.breadcrumbs().to_vec()));
+                p.next();
+            }
         }
     }
 
+    p.eat_breadcrumb();
     props
 }
 
