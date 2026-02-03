@@ -1496,6 +1496,12 @@ impl<'src> Scanner<'src> {
                         return Token::Lident("\\\"\"".to_string());
                     }
 
+                    // OCaml preserves exotic form for uppercase identifiers
+                    // (to avoid confusion in OCaml parsetree where uppercase = module)
+                    if ident.chars().next().map_or(false, |c| c.is_ascii_uppercase()) {
+                        return Token::Lident(format!("\\\"{}\"", ident));
+                    }
+
                     return Token::Lident(ident);
                 }
                 '\n' | '\r' => {
@@ -1507,8 +1513,12 @@ impl<'src> Scanner<'src> {
                             "A quoted identifier can't contain line breaks.",
                         ),
                     );
-                    let ident = self.substring(content_start, self.offset).to_string();
-                    self.next();
+                    // OCaml includes the \" prefix plus the linebreak in the identifier
+                    // e.g. \"a followed by newline becomes \"a\n in the AST
+                    let content = self.substring(content_start, self.offset);
+                    self.next(); // consume the linebreak
+                    // Build full exotic form: \" + content + actual newline
+                    let ident = format!("\\\"{}\n", content);
                     return Token::Lident(ident);
                 }
                 c if c == EOF_CHAR => {
@@ -1518,7 +1528,9 @@ impl<'src> Scanner<'src> {
                         end_pos,
                         DiagnosticCategory::message("Did you forget a \" here?"),
                     );
-                    let ident = self.substring(content_start, self.offset).to_string();
+                    // OCaml includes the \" prefix in the identifier for error recovery
+                    let content = self.substring(content_start, self.offset);
+                    let ident = format!("\\\"{}\"", content);
                     return Token::Lident(ident);
                 }
                 _ => self.next(),

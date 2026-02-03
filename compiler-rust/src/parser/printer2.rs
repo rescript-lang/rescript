@@ -786,10 +786,12 @@ pub fn print_poly_var_ident(txt: &str) -> Doc {
     match classify_ident_content(txt, true, false) {
         IdentifierStyle::UppercaseExoticIdent => {
             // UppercaseExoticIdent follows the \"..." format
-            // but the first char is \ which we need to skip
+            // OCaml just strips the leading backslash and outputs the rest
+            // (which already includes the surrounding quotes)
             if txt.starts_with('\\') && txt.len() > 1 {
-                Doc::concat(vec![Doc::text("\""), Doc::text(&txt[1..]), Doc::text("\"")])
+                Doc::text(&txt[1..])
             } else {
+                // Fallback: wrap with quotes if format doesn't match
                 Doc::concat(vec![Doc::text("\""), Doc::text(txt), Doc::text("\"")])
             }
         }
