@@ -1,7 +1,7 @@
 # Syntax Parity TODO
 
 **Last Updated:** 2026-02-03
-**Overall Status:** 404/506 tests passing (79%)
+**Overall Status:** 407/506 tests passing (80%)
 
 **Category Breakdown:**
 | Category | Passed | Failed | Total | Percent |
@@ -13,12 +13,19 @@
 | parsing/grammar | 93 | 42 | 135 | 68% |
 | parsing/other | 12 | 2 | 14 | 85% |
 | parsing/recovery | 13 | 7 | 20 | 65% |
-| parsing/errors | 37 | 47 | 84 | 44% |
+| parsing/errors | 40 | 44 | 84 | 47% |
 | parsing/infiniteLoops | 1 | 4 | 5 | 20% |
 
-**Remaining:** 102 tests to fix
+**Remaining:** 99 tests to fix
 
 **Recent Fixes (this session):**
+- **Added `let?` error messages for signatures and rec**: Added two checks matching OCaml:
+  1. `let?` is not allowed in signatures - emit error and recover
+  2. `let? rec` combination is not allowed - emit error and recover
+- **Added second record spread error in expressions**: When a record has more than one `...` spread
+  (e.g., `{...x, ...y}`), emit "Records can only have one `...` spread, at the beginning."
+- **Added missing tilde error for labeled type parameters**: When parsing function type parameters
+  like `(name: type)` without the tilde, emit "A labeled parameter starts with a `~`. Did you mean: `~name`?"
 - **Fixed if-expression error recovery with regions/breadcrumbs**: Added proper `begin_region`/`end_region`
   and breadcrumbs (`ExprIf`, `IfCondition`, `IfBranch`, `ElseBranch`) to if-expression parsing.
   This matches OCaml's region-based error suppression: first error in then-branch silences subsequent
