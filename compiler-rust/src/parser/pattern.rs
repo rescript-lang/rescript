@@ -1301,50 +1301,40 @@ fn parse_template_literal_pattern(p: &mut Parser<'_>, start_pos: crate::location
         p.next_template_literal_token();
     }
 
-    loop {
-        match &p.token {
-            Token::TemplatePart { text: chunk, .. } => {
-                // Copy the chunk before mutating p
-                let chunk = chunk.clone();
-                // String interpolation is not supported in pattern matching
-                p.err(DiagnosticCategory::Message(
-                    super::core::error_messages::STRING_INTERPOLATION_IN_PATTERN.to_string(),
-                ));
-                text.push_str(&chunk);
+    // Check if this is a simple template (no interpolation)
+    let delimiter = if let Token::TemplateTail { text: chunk, .. } = &p.token {
+        text.push_str(chunk);
+        p.next();
+        Some("js".to_string())
+    } else {
+        // Has interpolation - skip all tokens and report error at original start_pos
+        // OCaml: Parser.err ~start_pos ~end_pos:p.prev_end_pos p (message ...)
+        fn skip_tokens(p: &mut Parser<'_>) {
+            if p.token != Token::Eof {
                 p.next();
-                // Consume interpolation expression.
-                let _ = super::expr::parse_expr(p);
-                p.next_template_literal_token();
-            }
-            Token::TemplateTail { text: chunk, .. } => {
-                text.push_str(chunk);
-                p.next();
-                break;
-            }
-            Token::Backtick => {
-                // Empty template string
-                p.next();
-                break;
-            }
-            Token::Eof => {
-                p.err(DiagnosticCategory::Message(
-                    "Unterminated template literal".to_string(),
-                ));
-                break;
-            }
-            _ => {
-                // Use err_unexpected for proper error message with breadcrumbs
-                p.err_unexpected();
-                p.next();
-                break;
+                if p.token == Token::Backtick {
+                    p.next();
+                } else {
+                    skip_tokens(p);
+                }
             }
         }
-    }
+        skip_tokens(p);
+        p.err_at(
+            start_pos.clone(),
+            p.prev_end_pos.clone(),
+            DiagnosticCategory::Message(
+                super::core::error_messages::STRING_INTERPOLATION_IN_PATTERN.to_string(),
+            ),
+        );
+        // OCaml returns Pconst_string ("", None) in error case
+        None
+    };
 
     let loc = p.mk_loc_to_prev_end(&start_pos);
 
     Pattern {
-        ppat_desc: PatternDesc::Ppat_constant(Constant::String(text, Some("js".to_string()))),
+        ppat_desc: PatternDesc::Ppat_constant(Constant::String(text, delimiter)),
         ppat_loc: loc,
         ppat_attributes: vec![template_literal_attr()],
     }
