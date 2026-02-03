@@ -1810,7 +1810,8 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                 f.open_box(BoxKind::Box, 2);
                 f.string("else");
                 f.space();  // @; break between else and body
-                print_expression(f, arena, e);
+                // OCaml: expression (under_semi ctxt) for else body
+                print_expression_under_semi(f, arena, e);
                 f.close_box();
             }
             f.close_box();
