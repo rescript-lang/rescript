@@ -4257,9 +4257,11 @@ fn parse_first_class_module_expr_inner(p: &mut Parser<'_>, start_pos: Position) 
 fn parse_switch_case_block(p: &mut Parser<'_>) -> Expression {
     // Use the new recursive parser that properly nests let/module/open/exception
     parse_switch_case_body(p).unwrap_or_else(|| {
-        // OCaml uses mk_loc p.start_pos p.end_pos for synthesized unit
-        let loc = p.mk_loc_current();
-        ast_helper::make_unit(p, loc)
+        // OCaml: When case body is missing (token is | or }), return exprhole.
+        // This matches OCaml's behavior where parse_expr_block -> parse_expr_block_item ->
+        // parse_expr -> parse_atomic_expr returns exprhole via skip_tokens_and_maybe_retry
+        // when token is not a valid expression start.
+        recover::default_expr()
     })
 }
 

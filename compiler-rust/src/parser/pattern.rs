@@ -6,6 +6,7 @@
 use super::ast::*;
 use super::core::{ast_helper, mknoloc, recover, template_literal_attr, with_loc};
 use super::diagnostics::DiagnosticCategory;
+use super::grammar;
 use super::longident::Longident;
 use super::state::Parser;
 use super::token::Token;
@@ -786,12 +787,22 @@ fn parse_atomic_pattern(p: &mut Parser<'_>) -> Pattern {
                 }
             }
         }
-        _ => {
-            // Use err_unexpected for proper error message with breadcrumbs
-            p.err_unexpected();
-            // Advance to prevent infinite loops
-            p.next();
+        Token::Eof => {
+            // EOF: just report error and return default (no skip_tokens_and_maybe_retry)
+            // OCaml: | Eof -> Parser.err ~start_pos:p.prev_end_pos p ...; Recover.default_pattern ()
+            p.err_unexpected_at(p.prev_end_pos.clone());
             recover::default_pattern()
+        }
+        _ => {
+            // Other unexpected tokens: report error and try to skip/retry
+            // OCaml: | token -> Parser.err p ...; match skip_tokens_and_maybe_retry ...
+            p.err_unexpected();
+            if recover::skip_tokens_and_maybe_retry(p, grammar::is_atomic_pattern_start) {
+                // Found a valid pattern start after skipping, retry parsing
+                parse_atomic_pattern(p)
+            } else {
+                recover::default_pattern()
+            }
         }
     }
 }

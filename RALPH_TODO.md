@@ -1,7 +1,7 @@
 # Syntax Parity TODO
 
 **Last Updated:** 2026-02-03
-**Overall Status:** 400/506 tests passing (79%)
+**Overall Status:** 403/506 tests passing (79%)
 
 **Category Breakdown:**
 | Category | Passed | Failed | Total | Percent |
@@ -12,13 +12,22 @@
 | conversion | 27 | 0 | 27 | 100% ✅ |
 | parsing/grammar | 93 | 42 | 135 | 68% |
 | parsing/other | 12 | 2 | 14 | 85% |
-| parsing/recovery | 11 | 9 | 20 | 55% |
-| parsing/errors | 35 | 49 | 84 | 41% |
+| parsing/recovery | 12 | 8 | 20 | 60% |
+| parsing/errors | 37 | 47 | 84 | 44% |
 | parsing/infiniteLoops | 1 | 4 | 5 | 20% |
 
-**Remaining:** 106 tests to fix
+**Remaining:** 103 tests to fix
 
 **Recent Fixes (this session):**
+- **Fixed pattern error recovery with skip_tokens_and_maybe_retry**: When an unexpected token is seen
+  where a pattern is expected, call `skip_tokens_and_maybe_retry` to try to find a valid pattern start
+  token. For example, `let = 2` now recovers to `let 2 = [%rescript.exprhole]` matching OCaml (skips `=`,
+  finds `2` as valid pattern start, parses `2` as pattern, then RHS is missing so returns exprhole).
+- **Fixed switch case body to use exprhole for missing RHS**: When a switch case has a missing RHS
+  (pattern parsed but no expression after `=>`), return `[%rescript.exprhole]` instead of `()`. This
+  matches OCaml's behavior where `parse_expr_block` always tries to parse an expression, and
+  `parse_atomic_expr` returns exprhole via `skip_tokens_and_maybe_retry` when the token is `}`.
+
 - **Fixed type declaration error recovery**: When parsing `type` without a name (EOF or invalid token),
   create a placeholder type declaration with name `_` instead of producing nothing. This matches OCaml's
   `parse_lident` which returns `("_", loc)` for error recovery.
