@@ -915,6 +915,159 @@ fn print_inline_param<W: Write>(
     }
 }
 
+/// Print label_exp matching OCaml's label_exp function (without trailing break).
+/// Used in print_fun_body where the caller adds " -> " after.
+fn print_label_exp<W: Write>(
+    f: &mut Formatter<W>,
+    arena: &ParseArena,
+    label: &ArgLabel,
+    default: &Option<Box<Expression>>,
+    pat: &Pattern,
+) {
+    match label {
+        ArgLabel::Nolabel => {
+            // OCaml: simple_pattern ctxt p followed by "@ "
+            print_simple_pattern(f, arena, pat);
+        }
+        ArgLabel::Labelled(name) => {
+            let name_str = arena.get_string(name.txt);
+            if pattern_is_simple_var(pat, name_str) {
+                // Punned: ~foo
+                f.string("~");
+                f.string(name_str);
+            } else {
+                // Explicit: ~foo:pattern
+                f.string("~");
+                f.string(name_str);
+                f.string(":");
+                print_simple_pattern(f, arena, pat);
+            }
+        }
+        ArgLabel::Optional(name) => {
+            let name_str = arena.get_string(name.txt);
+            if pattern_is_simple_var(pat, name_str) {
+                match default {
+                    Some(def) => {
+                        // ?(%s=@;%a)
+                        f.string("?(");
+                        f.string(name_str);
+                        f.string("=");
+                        f.space();
+                        print_expression(f, arena, def);
+                        f.string(")");
+                    }
+                    None => {
+                        // ?%s
+                        f.string("?");
+                        f.string(name_str);
+                    }
+                }
+            } else {
+                match default {
+                    Some(def) => {
+                        // ?%s:(%a=@;%a)
+                        f.string("?");
+                        f.string(name_str);
+                        f.string(":(");
+                        print_pattern(f, arena, pat);
+                        f.string("=");
+                        f.space();
+                        print_expression(f, arena, def);
+                        f.string(")");
+                    }
+                    None => {
+                        // ?%s:%a
+                        f.string("?");
+                        f.string(name_str);
+                        f.string(":");
+                        print_simple_pattern(f, arena, pat);
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Print label_exp with trailing break/space, matching OCaml's label_exp.
+/// Used in Pexp_fun expression printing where format breaks are used.
+fn print_label_exp_with_break<W: Write>(
+    f: &mut Formatter<W>,
+    arena: &ParseArena,
+    label: &ArgLabel,
+    default: &Option<Box<Expression>>,
+    pat: &Pattern,
+) {
+    match label {
+        ArgLabel::Nolabel => {
+            // OCaml: %a@ (simple_pattern + break hint with space)
+            print_simple_pattern(f, arena, pat);
+            f.space();
+        }
+        ArgLabel::Labelled(name) => {
+            let name_str = arena.get_string(name.txt);
+            if pattern_is_simple_var(pat, name_str) {
+                // Punned: ~foo@;
+                f.string("~");
+                f.string(name_str);
+                f.space();
+            } else {
+                // Explicit: ~foo:pattern@;
+                f.string("~");
+                f.string(name_str);
+                f.string(":");
+                print_simple_pattern(f, arena, pat);
+                f.space();
+            }
+        }
+        ArgLabel::Optional(name) => {
+            let name_str = arena.get_string(name.txt);
+            if pattern_is_simple_var(pat, name_str) {
+                match default {
+                    Some(def) => {
+                        // ?(%s=@;%a)@;
+                        f.string("?(");
+                        f.string(name_str);
+                        f.string("=");
+                        f.space();
+                        print_expression(f, arena, def);
+                        f.string(")");
+                        f.space();
+                    }
+                    None => {
+                        // ?%s@ (note: OCaml uses @ not @; for punned optional)
+                        f.string("?");
+                        f.string(name_str);
+                        f.space();
+                    }
+                }
+            } else {
+                match default {
+                    Some(def) => {
+                        // ?%s:(%a=@;%a)@;
+                        f.string("?");
+                        f.string(name_str);
+                        f.string(":(");
+                        print_pattern(f, arena, pat);
+                        f.string("=");
+                        f.space();
+                        print_expression(f, arena, def);
+                        f.string(")");
+                        f.space();
+                    }
+                    None => {
+                        // ?%s:%a@;
+                        f.string("?");
+                        f.string(name_str);
+                        f.string(":");
+                        print_simple_pattern(f, arena, pat);
+                        f.space();
+                    }
+                }
+            }
+        }
+    }
+}
+
 fn print_remaining_inline_params<'a, W: Write>(
     f: &mut Formatter<W>,
     arena: &ParseArena,
@@ -1146,16 +1299,8 @@ fn print_fun_body<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, expr: &Exp
             ..
         } if expr.pexp_attributes.is_empty() => {
             f.string("fun ");
-            print_arg_label_expr(f, arena, arg_label);
-            if let Some(def) = default {
-                f.string("?(");
-                print_pattern(f, arena, lhs);
-                f.string(" = ");
-                print_expression(f, arena, def);
-                f.string(")");
-            } else {
-                print_pattern(f, arena, lhs);
-            }
+            // OCaml label_exp: handles punning for labeled args
+            print_label_exp(f, arena, arg_label, default, lhs);
             f.string(" -> ");
             print_fun_body(f, arena, rhs);
         }
@@ -1249,18 +1394,7 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                 f.string(&format!("[arity:{}]", n));
             }
             // OCaml's label_exp prints param + trailing break/space
-            print_arg_label_expr(f, arena, arg_label);
-            if let Some(def) = default {
-                f.string("?(");
-                print_pattern(f, arena, lhs);
-                f.string(" = ");
-                print_expression(f, arena, def);
-                f.string(")");
-                f.space(); // trailing break after optional param
-            } else {
-                print_pattern(f, arena, lhs);
-                f.space(); // trailing break after pattern (OCaml label_exp: %a@ )
-            }
+            print_label_exp_with_break(f, arena, arg_label, default, lhs);
             f.string("->");
             f.space();
             print_expression(f, arena, rhs);
