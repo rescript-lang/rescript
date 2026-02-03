@@ -696,11 +696,35 @@ fn parse_type_constr(p: &mut Parser<'_>) -> CoreType {
     let lid_loc = p.mk_loc(&start_pos, &lid_end_pos);
 
     // Parse optional type arguments
-    let args = if p.token == Token::LessThan {
+    // OCaml: parse_type_constructor_args handles both < and ( as opening tokens
+    let args = if p.token == Token::LessThan || p.token == Token::Lparen {
+        let opening = p.token.clone();
+        let opening_start_pos = p.start_pos.clone();
         p.set_diamond_mode();
         p.next();
         let args = parse_type_args(p);
-        p.expect(Token::GreaterThan);
+        if p.token == Token::Rparen && opening == Token::Lparen {
+            // User wrote parens instead of angle brackets - emit helpful error
+            let path_str = path_parts.join(".");
+            let args_str: Vec<String> = args.iter().map(|t| match &t.ptyp_desc {
+                CoreTypeDesc::Ptyp_var(v) => format!("'{}", v),
+                _ => "_".to_string(),
+            }).collect();
+            let type_str = if args_str.is_empty() {
+                path_str
+            } else {
+                format!("{}<{}>", path_str, args_str.join(", "))
+            };
+            let msg = format!("Type parameters require angle brackets:\n  {}", type_str);
+            p.err_at(
+                opening_start_pos,
+                p.end_pos.clone(),
+                DiagnosticCategory::message(&msg),
+            );
+            p.next(); // consume )
+        } else {
+            p.expect(Token::GreaterThan);
+        }
         p.pop_diamond_mode();
         args
     } else {
