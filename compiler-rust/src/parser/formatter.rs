@@ -155,22 +155,13 @@ impl<W: Write> Formatter<W> {
     /// Also marks the current box as broken if string contains newlines
     fn write_raw(&mut self, s: &str) {
         let _ = self.out.write_all(s.as_bytes());
-        // Update column, accounting for newlines
-        if let Some(pos) = s.rfind('\n') {
-            self.col = s.len() - pos - 1;
-            // Mark content newline flag - actual newlines in content
-            if let Some(flag) = self.content_newline_stack.last_mut() {
-                *flag = true;
-            }
-            // Note: content newlines do NOT set is_new_line.
-            // In OCaml, pp_is_new_line is only set by break_new_line (format breaks),
-            // not by literal newlines in content strings.
-            // However, we DO set is_new_line = false after non-empty text.
-        } else {
-            self.col += s.chars().count();
-            if !s.is_empty() {
-                self.is_new_line = false;
-            }
+        // OCaml's pp_print_string advances the position counter by the string length,
+        // WITHOUT tracking newlines within the string. This means multiline strings
+        // "consume" space from the remaining margin, making subsequent breaks more
+        // likely to fire. We match this behavior for parity.
+        self.col += s.chars().count();
+        if !s.is_empty() {
+            self.is_new_line = false;
         }
     }
 
@@ -575,21 +566,14 @@ impl<W: Write> Formatter<W> {
                 }
                 Token::Break { nspaces, offset } => {
                     // In HOV packing: each break is evaluated independently based on fitness.
-                    // Content newlines (e.g., multiline strings) cause cuts to break,
-                    // but formatter-generated line breaks do NOT propagate to cuts.
-                    if *nspaces == 0 && self.has_content_newline() {
-                        // Cut after multiline content - break
-                        self.write_newline_indent(*offset);
+                    // Check if next segment (until break at same level) fits
+                    let size_ahead = self.size_until_break(tokens, i + 1);
+                    if self.col + nspaces + size_ahead <= self.margin {
+                        // Fits - use spaces
+                        self.write_spaces(*nspaces);
                     } else {
-                        // Check if next segment (until break at same level) fits
-                        let size_ahead = self.size_until_break(tokens, i + 1);
-                        if self.col + nspaces + size_ahead <= self.margin {
-                            // Fits - use spaces
-                            self.write_spaces(*nspaces);
-                        } else {
-                            // Doesn't fit - break
-                            self.write_newline_indent(*offset);
-                        }
+                        // Doesn't fit - break
+                        self.write_newline_indent(*offset);
                     }
                     i += 1;
                 }
@@ -655,12 +639,7 @@ impl<W: Write> Formatter<W> {
                     //
                     // Note: margin - width + off = col_at_box_open + box_indent + off
                     // which equals current_indent + off (what write_newline_indent computes)
-                    // Content newlines in cuts force a break (same as HOV packing).
-                    // This approximates OCaml's scan-stack-based size computation
-                    // which would produce a large size for multiline content.
-                    if *nspaces == 0 && self.has_content_newline() {
-                        self.write_newline_indent(*offset);
-                    } else if self.is_new_line {
+                    if self.is_new_line {
                         // 1. Line was just broken - stay on same line
                         self.write_spaces(*nspaces);
                     } else {
