@@ -2002,7 +2002,8 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
             }
         }
         ExpressionDesc::Pexp_extension((name, payload)) => {
-            f.open_box(BoxKind::H, 2);
+            // OCaml: @[<2>[%%%s@ %a]@] — structural box with indent 2
+            f.open_box(BoxKind::Box, 2);
             f.string("[%");
             f.string(&name.txt);
             f.space();
@@ -2011,7 +2012,10 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
             f.close_box();
         }
         ExpressionDesc::Pexp_await(e) => {
-            f.string("await ");
+            // OCaml: @[<hov2>await@ %a@]
+            f.open_box(BoxKind::HOV, 2);
+            f.string("await");
+            f.space();  // @ break between await and expression
             // Check if expression is "simple" enough to not need parens
             // Note: attributed expressions will get their own parens from print_expression
             let has_attrs = !printable_attributes(&e.pexp_attributes).is_empty();
@@ -2034,6 +2038,7 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
             if needs_parens {
                 f.string(")");
             }
+            f.close_box();
         }
         ExpressionDesc::Pexp_jsx_element(jsx) => {
             print_jsx_element(f, arena, jsx);
@@ -3283,12 +3288,15 @@ fn print_module_expr_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, m
             f.string(")");
         }
         ModuleExprDesc::Pmod_unpack(e) => {
-            f.string("(val ");
+            // OCaml: (val@ %a) — break hint between val and expression
+            f.string("(val");
+            f.space();
             print_expression(f, arena, e);
             f.string(")");
         }
         ModuleExprDesc::Pmod_extension((name, payload)) => {
-            f.open_box(BoxKind::H, 2);
+            // OCaml: @[<2>[%%%s@ %a]@]
+            f.open_box(BoxKind::Box, 2);
             f.string("[%");
             f.string(&name.txt);
             f.space();
