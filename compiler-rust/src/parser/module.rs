@@ -2568,8 +2568,10 @@ fn parse_type_declaration_with_context(
         let paren_end = p.prev_end_pos.clone();
 
         // Emit helpful error about angle bracket syntax
+        // Use err_at (not err_multiple) so the region is silenced after this error,
+        // matching OCaml's behavior where only one error per region is reported.
         let suggested = format_type_with_angle_brackets(&name.txt, &params);
-        p.err_multiple(
+        p.err_at(
             paren_start,
             paren_end,
             DiagnosticCategory::Message(format!(
