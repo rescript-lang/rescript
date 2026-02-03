@@ -948,15 +948,52 @@ fn parse_constructor_pattern(p: &mut Parser<'_>) -> Pattern {
 // ============================================================================
 
 /// Parse an array pattern [p1, p2, ...].
+/// Parse a pattern that does NOT allow spread (`...`).
+/// If spread is encountered, emit the provided error message and skip over it,
+/// then continue parsing the pattern normally.
+/// This matches OCaml's `parse_non_spread_pattern`.
+fn parse_non_spread_pattern(p: &mut Parser<'_>, error_msg: &str) -> Option<Pattern> {
+    // Check for spread and emit error if found
+    if p.token == Token::DotDotDot {
+        p.err(DiagnosticCategory::Message(error_msg.to_string()));
+        p.next(); // Skip past the ...
+    }
+
+    // Now parse the pattern if we can
+    if super::grammar::is_pattern_start(&p.token) {
+        let pat = parse_pattern(p);
+        // Check for type constraint: pat : typ
+        if p.token == Token::Colon {
+            p.next();
+            let typ = super::typ::parse_typ_expr(p);
+            let loc = p.mk_loc_spanning(pat.ppat_loc, typ.ptyp_loc);
+            Some(Pattern {
+                ppat_desc: PatternDesc::Ppat_constraint(Box::new(pat), typ),
+                ppat_loc: loc,
+                ppat_attributes: vec![],
+            })
+        } else {
+            Some(pat)
+        }
+    } else {
+        None
+    }
+}
+
 fn parse_array_pattern(p: &mut Parser<'_>) -> Pattern {
     let start_pos = p.start_pos.clone();
     p.expect(Token::Lbracket);
 
     let mut patterns = vec![];
     while p.token != Token::Rbracket && p.token != Token::Eof {
-        // Use parse_constrained_pattern to support [1 : int, 2 : int] syntax
-        patterns.push(parse_constrained_pattern(p));
-        if !p.optional(&Token::Comma) {
+        // Use parse_non_spread_pattern to disallow spread in array patterns
+        // and emit appropriate error message
+        if let Some(pat) = parse_non_spread_pattern(p, super::core::error_messages::ARRAY_PATTERN_SPREAD) {
+            patterns.push(pat);
+            if !p.optional(&Token::Comma) {
+                break;
+            }
+        } else {
             break;
         }
     }
@@ -1008,6 +1045,7 @@ fn parse_record_pattern(p: &mut Parser<'_>) -> Pattern {
 
     let mut fields = vec![];
     let mut closed = ClosedFlag::Closed;
+    let mut saw_spread = false;
 
     while p.token != Token::Rbrace && p.token != Token::Eof {
         if p.token == Token::Underscore {
@@ -1016,6 +1054,24 @@ fn parse_record_pattern(p: &mut Parser<'_>) -> Pattern {
             // Allow trailing comma after underscore: {a, _,}
             p.optional(&Token::Comma);
             break;
+        }
+
+        // Check for spread pattern - not allowed in record patterns
+        if p.token == Token::DotDotDot {
+            // Emit error for record pattern spread
+            p.err(DiagnosticCategory::Message(
+                super::core::error_messages::RECORD_PATTERN_SPREAD.to_string(),
+            ));
+            saw_spread = true;
+            p.next(); // Skip the ...
+            // Try to parse what follows as a pattern (will be ignored)
+            if super::grammar::is_pattern_start(&p.token) {
+                let _ = parse_pattern(p);
+            }
+            if !p.optional(&Token::Comma) {
+                break;
+            }
+            continue;
         }
 
         let field_start = p.start_pos.clone();
