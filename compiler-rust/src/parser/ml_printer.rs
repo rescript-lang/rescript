@@ -2386,6 +2386,22 @@ fn print_pattern_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, pat: 
 // Types
 // ============================================================================
 
+/// Print core_type at level 1 (wraps arrow and alias types in parens).
+/// Matches OCaml's core_type1 which falls through to paren true (core_type ctxt) for those.
+fn print_core_type1<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, typ: &CoreType) {
+    let needs_parens = matches!(
+        typ.ptyp_desc,
+        CoreTypeDesc::Ptyp_arrow { .. } | CoreTypeDesc::Ptyp_alias(..)
+    );
+    if needs_parens {
+        f.string("(");
+        print_core_type(f, arena, typ);
+        f.string(")");
+    } else {
+        print_core_type(f, arena, typ);
+    }
+}
+
 fn print_core_type<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, typ: &CoreType) {
     // Types with attributes are wrapped: ((type)[@attr ])
     let has_attrs = printable_attributes(&typ.ptyp_attributes).len() > 0;
@@ -2981,6 +2997,7 @@ fn print_type_declaration<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, de
                 match &ctor.pcd_res {
                     None => {
                         // Non-GADT: Name of args @; attrs
+                        // OCaml uses core_type1 for tuple elements (wraps arrows/aliases in parens)
                         match &ctor.pcd_args {
                             ConstructorArguments::Pcstr_tuple(args) if !args.is_empty() => {
                                 f.string(" of ");
@@ -2988,7 +3005,7 @@ fn print_type_declaration<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, de
                                     if j > 0 {
                                         f.string(" * ");
                                     }
-                                    print_core_type(f, arena, arg);
+                                    print_core_type1(f, arena, arg);
                                 }
                             }
                             ConstructorArguments::Pcstr_record(fields) => {
@@ -3000,29 +3017,27 @@ fn print_type_declaration<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, de
                     }
                     Some(res) => {
                         // GADT: Name: args -> return_type @; attrs
-                        // OCaml: pp f "%s:@;%a@;%a" name (fun f -> ...) args (attributes ctxt) attrs
+                        // OCaml uses core_type1 for all elements
                         f.string(": ");
                         match &ctor.pcd_args {
                             ConstructorArguments::Pcstr_tuple(args) if !args.is_empty() => {
-                                // pp f "%a@;->@;%a" (list (core_type1 ctxt) ~sep:"@;*@;") l (core_type1 ctxt) r
                                 for (j, arg) in args.iter().enumerate() {
                                     if j > 0 {
                                         f.string(" * ");
                                     }
-                                    print_core_type(f, arena, arg);
+                                    print_core_type1(f, arena, arg);
                                 }
                                 f.string(" -> ");
-                                print_core_type(f, arena, res);
+                                print_core_type1(f, arena, res);
                             }
                             ConstructorArguments::Pcstr_record(fields) => {
-                                // pp f "%a@;->@;%a" (record_declaration ctxt) l (core_type1 ctxt) r
                                 print_record_declaration(f, arena, fields);
                                 f.string(" -> ");
-                                print_core_type(f, arena, res);
+                                print_core_type1(f, arena, res);
                             }
                             _ => {
                                 // No args: just the return type
-                                print_core_type(f, arena, res);
+                                print_core_type1(f, arena, res);
                             }
                         }
                     }
@@ -3109,7 +3124,7 @@ fn print_extension_constructor<W: Write>(f: &mut Formatter<W>, arena: &ParseAren
             // Same GADT format as variant constructors
             match res {
                 None => {
-                    // Non-GADT: Name of args
+                    // Non-GADT: Name of args (core_type1 for tuple elems)
                     match args {
                         ConstructorArguments::Pcstr_tuple(args) if !args.is_empty() => {
                             f.string(" of ");
@@ -3117,7 +3132,7 @@ fn print_extension_constructor<W: Write>(f: &mut Formatter<W>, arena: &ParseAren
                                 if i > 0 {
                                     f.string(" * ");
                                 }
-                                print_core_type(f, arena, arg);
+                                print_core_type1(f, arena, arg);
                             }
                             f.string(" ");
                         }
@@ -3132,7 +3147,7 @@ fn print_extension_constructor<W: Write>(f: &mut Formatter<W>, arena: &ParseAren
                     }
                 }
                 Some(r) => {
-                    // GADT: Name: args -> return_type
+                    // GADT: Name: args -> return_type (core_type1 for all)
                     f.string(": ");
                     match args {
                         ConstructorArguments::Pcstr_tuple(args) if !args.is_empty() => {
@@ -3140,20 +3155,20 @@ fn print_extension_constructor<W: Write>(f: &mut Formatter<W>, arena: &ParseAren
                                 if i > 0 {
                                     f.string(" * ");
                                 }
-                                print_core_type(f, arena, arg);
+                                print_core_type1(f, arena, arg);
                             }
                             f.string(" -> ");
-                            print_core_type(f, arena, r);
+                            print_core_type1(f, arena, r);
                             f.string(" ");
                         }
                         ConstructorArguments::Pcstr_record(fields) => {
                             print_record_declaration(f, arena, fields);
                             f.string(" -> ");
-                            print_core_type(f, arena, r);
+                            print_core_type1(f, arena, r);
                             f.string(" ");
                         }
                         _ => {
-                            print_core_type(f, arena, r);
+                            print_core_type1(f, arena, r);
                             f.string(" ");
                         }
                     }
