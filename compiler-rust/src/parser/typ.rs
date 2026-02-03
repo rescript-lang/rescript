@@ -806,6 +806,46 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
             let typ = parse_typ_expr(p);
             let name_idx = p.arena_mut().intern_string(&name);
             (ArgLabel::Labelled(Located::new(name_idx, name_loc)), typ)
+        } else if matches!(p.token, Token::Lident(_)) {
+            // Check if this is `name: type` (missing tilde)
+            // OCaml: parse Lident first, then check for Colon
+            let lookahead_is_labeled = p.lookahead(|state| {
+                if matches!(state.token, Token::Lident(_)) {
+                    state.next();
+                    state.token == Token::Colon
+                } else {
+                    false
+                }
+            });
+            if lookahead_is_labeled {
+                // This is `name: type` but missing the tilde
+                let (name, name_loc) = parse_lident(p);
+                // Emit "missing tilde" error at the identifier location
+                let error_msg = super::core::error_messages::missing_tilde_labeled_parameter(&name);
+                let start_pos = p.loc_start(name_loc);
+                let end_pos = p.loc_end(name_loc);
+                p.err_at(
+                    start_pos,
+                    end_pos,
+                    DiagnosticCategory::Message(error_msg),
+                );
+                // Consume the colon
+                p.next();
+                let typ = parse_typ_expr(p);
+                let name_idx = p.arena_mut().intern_string(&name);
+                // Check for `=?` (optional without default)
+                if p.token == Token::Equal {
+                    p.next();
+                    p.expect(Token::Question);
+                    (ArgLabel::Optional(Located::new(name_idx, name_loc)), typ)
+                } else {
+                    (ArgLabel::Labelled(Located::new(name_idx, name_loc)), typ)
+                }
+            } else {
+                // Regular type expression
+                let typ = parse_typ_expr(p);
+                (ArgLabel::Nolabel, typ)
+            }
         } else {
             let typ = parse_typ_expr(p);
             (ArgLabel::Nolabel, typ)
