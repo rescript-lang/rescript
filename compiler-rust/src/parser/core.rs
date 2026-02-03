@@ -754,13 +754,29 @@ pub fn make_unary_expr(
 }
 
 /// Create an infix operator expression.
+/// When `=` is used as a binary operator (which is likely a mistake - should be `==`),
+/// emit a helpful error message.
 pub fn make_infix_operator(
     p: &mut Parser<'_>,
     token: Token,
     start_pos: Position,
     end_pos: Position,
 ) -> Expression {
-    let stringified_token = token.to_string();
+    // Special handling for = used as binary operator
+    // This is likely a mistake - user probably meant ==
+    let stringified_token = if token == Token::Equal {
+        // TODO: could have a totally different meaning like x->fooSet(y)
+        p.err_at(
+            start_pos.clone(),
+            end_pos.clone(),
+            super::diagnostics::DiagnosticCategory::Message(
+                "Did you mean `==` here?".to_string(),
+            ),
+        );
+        "=".to_string()
+    } else {
+        token.to_string()
+    };
 
     let loc = p.mk_loc(&start_pos, &end_pos);
     let op_lid = make_lident_static(p.arena_mut(), &stringified_token);

@@ -1497,11 +1497,10 @@ pub fn parse_binary_expr(
         let right = parse_binary_expr(p, right, next_prec, context);
 
         let loc = p.mk_loc_spanning(left.pexp_loc, right.pexp_loc);
-        let op_loc = p.mk_loc_from_positions(&op_start, &op_end);
 
         // Build application expression
-        let op_lid = super::core::make_lident_static(p.arena_mut(), &token.to_string());
-        let op_expr = ast_helper::make_ident(p, op_lid, op_loc);
+        // Use make_infix_operator to handle special cases like `=` (should be `==`)
+        let op_expr = super::core::make_infix_operator(p, token.clone(), op_start, op_end);
         left = ast_helper::make_apply(
             op_expr,
             vec![(ArgLabel::Nolabel, left), (ArgLabel::Nolabel, right)],
