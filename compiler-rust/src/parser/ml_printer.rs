@@ -619,6 +619,8 @@ fn print_structure_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
             f.close_box();
         }
         StructureItemDesc::Pstr_module(mb) => {
+            // OCaml: @[<hov2>module %s%a@]%a
+            f.open_box(BoxKind::HOV, 2);
             f.string("module ");
             f.string(&mb.pmb_name.txt);
             // OCaml: module_helper unwraps Pmod_functor with no attributes
@@ -657,13 +659,17 @@ fn print_structure_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
                     print_module_expr(f, arena, inner_me);
                     f.space();  // OCaml: trailing @; produces space
                 } else {
-                    f.string(" = ");
+                    f.string(" =");
+                    f.space();
                     print_module_expr(f, arena, me);
                 }
             } else {
-                f.string(" = ");
+                f.string(" =");
+                f.space();
                 print_module_expr(f, arena, me);
             }
+            f.close_box();
+            print_item_attributes(f, arena, &mb.pmb_attributes);
         }
         StructureItemDesc::Pstr_recmodule(mbs) => {
             for (i, mb) in mbs.iter().enumerate() {
@@ -1236,27 +1242,28 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
             }
         }
         ExpressionDesc::Pexp_let(rec_flag, bindings, body) => {
-            let rec_str = match rec_flag {
-                RecFlag::Recursive => " rec",
-                RecFlag::Nonrecursive => "",
-            };
+            // OCaml: @[<2>%a in@;<1 -2>%a@]
+            // where %a is (bindings reset_ctxt) (rf, l) and (expression ctxt) e
             if use_parens {
                 f.string("(");
             }
             f.open_box(BoxKind::HOV, 2);
-            f.string("let");
-            f.string(rec_str);
+            // Print bindings using the same format as structure-level bindings
+            let rec_str = match rec_flag {
+                RecFlag::Recursive => "let rec ",
+                RecFlag::Nonrecursive => "let ",
+            };
             for (i, binding) in bindings.iter().enumerate() {
                 if i > 0 {
-                    f.string(" and");
+                    f.newline();
+                    f.string("and ");
+                } else {
+                    f.string(rec_str);
                 }
-                f.string(" ");
-                print_pattern(f, arena, &binding.pvb_pat);
-                f.string(" = ");
-                print_expression(f, arena, &binding.pvb_expr);
+                print_value_binding(f, arena, &binding.pvb_pat, &binding.pvb_expr);
             }
             f.string(" in");
-            f.space();
+            f.break_(1, -2); // @;<1 -2> - space or newline with -2 indent offset
             print_expression(f, arena, body);
             f.close_box();
             if use_parens {
@@ -1271,23 +1278,25 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
             arity,
             is_async,
         } => {
+            // OCaml: arity is only printed when explicitly set, not computed
             let arity_value = match arity {
                 Arity::Full(n) => Some(*n),
-                Arity::Unknown => {
-                    let computed = count_function_arity(expr);
-                    if computed > 0 { Some(computed) } else { None }
-                }
+                Arity::Unknown => None,
             };
             if use_parens {
                 f.string("(");
             }
+            // OCaml: @[<2>%sfun@;%s%a->@;%a@]
+            f.open_box(BoxKind::HOV, 2);
             if *is_async {
                 f.string("async ");
             }
-            f.string("fun ");
+            f.string("fun");
+            f.space();
             if let Some(n) = arity_value {
                 f.string(&format!("[arity:{}]", n));
             }
+            // OCaml's label_exp prints param + trailing break/space
             print_arg_label_expr(f, arena, arg_label);
             if let Some(def) = default {
                 f.string("?(");
@@ -1295,11 +1304,15 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                 f.string(" = ");
                 print_expression(f, arena, def);
                 f.string(")");
+                f.space(); // trailing break after optional param
             } else {
                 print_pattern(f, arena, lhs);
+                f.space(); // trailing break after pattern (OCaml label_exp: %a@ )
             }
-            f.string(" -> ");
-            print_fun_body(f, arena, rhs);
+            f.string("->");
+            f.space();
+            print_expression(f, arena, rhs);
+            f.close_box();
             if use_parens {
                 f.string(")");
             }
