@@ -1,7 +1,7 @@
 # Syntax Parity TODO
 
 **Last Updated:** 2026-02-03
-**Overall Status:** 407/506 tests passing (80%)
+**Overall Status:** 408/506 tests passing (80%)
 
 **Category Breakdown:**
 | Category | Passed | Failed | Total | Percent |
@@ -13,12 +13,14 @@
 | parsing/grammar | 93 | 42 | 135 | 68% |
 | parsing/other | 12 | 2 | 14 | 85% |
 | parsing/recovery | 13 | 7 | 20 | 65% |
-| parsing/errors | 40 | 44 | 84 | 47% |
+| parsing/errors | 41 | 43 | 84 | 48% |
 | parsing/infiniteLoops | 1 | 4 | 5 | 20% |
 
-**Remaining:** 99 tests to fix
+**Remaining:** 98 tests to fix
 
 **Recent Fixes (this session):**
+- **Added dict spread error message**: When `...` is used in a dict literal, emit "Dict literals do not
+  support spread (`...`) yet." instead of the generic "Dict keys must be strings" error.
 - **Added `let?` error messages for signatures and rec**: Added two checks matching OCaml:
   1. `let?` is not allowed in signatures - emit error and recover
   2. `let? rec` combination is not allowed - emit error and recover
