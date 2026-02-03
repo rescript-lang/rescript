@@ -245,7 +245,7 @@ impl<W: Write> Formatter<W> {
             if let Some(box_) = self.current_box.take() {
                 // Calculate if box fits on one line
                 let size = self.calculate_size(&box_.tokens);
-                let fits = self.col + size <= self.margin;
+                let fits = self.col + size < self.margin;
 
                 // Push new indent level and broken state for this box
                 let box_indent = (self.col as i32 + box_.indent).max(0) as usize;
@@ -448,7 +448,7 @@ impl<W: Write> Formatter<W> {
 
                     // Calculate if nested box fits
                     let size = self.calculate_size(&nested_tokens);
-                    let fits = self.col + size <= self.margin;
+                    let fits = self.col + size < self.margin;
 
                     // Render based on box kind
                     match kind {
@@ -493,7 +493,7 @@ impl<W: Write> Formatter<W> {
 
                     // Calculate if nested box fits
                     let size = self.calculate_size(&nested_tokens);
-                    let fits = self.col + size <= self.margin;
+                    let fits = self.col + size < self.margin;
 
                     // Render based on box kind
                     match kind {

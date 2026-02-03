@@ -494,8 +494,11 @@ pub fn print_signature_ml(signature: &[SignatureItem], arena: &ParseArena, out: 
 fn print_structure_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item: &StructureItem) {
     match &item.pstr_desc {
         StructureItemDesc::Pstr_eval(expr, attrs) => {
+            // OCaml: pp f "@[<hov2>;;%a@]%a"
+            f.open_box(BoxKind::HOV, 2);
             f.string(";;");
             print_expression_no_outer_parens(f, arena, expr);
+            f.close_box();
             print_item_attributes(f, arena, attrs);
         }
         StructureItemDesc::Pstr_value(rec_flag, bindings) => {
