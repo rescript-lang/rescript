@@ -2347,7 +2347,8 @@ fn print_pattern<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, pat: &Patte
     print_pattern_inner(f, arena, pat);
     if has_attrs {
         f.string(")");
-        f.cut(); // Single cut before all attributes
+        // OCaml: pp f "((%a)%a)" — NO cut/break between ) and attributes for patterns
+        // (Unlike expressions which use @, = Cut between ) and attributes)
         print_attributes(f, arena, &pat.ppat_attributes);
         f.string(")");
     }
