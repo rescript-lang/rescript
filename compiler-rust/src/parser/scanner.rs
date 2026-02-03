@@ -55,7 +55,8 @@ pub struct Scanner<'src> {
     src_char_count: usize,
     /// Current character.
     ch: char,
-    /// Current character offset in source (= byte offset in original Latin-1 file).
+    /// Current character offset in source (char index, not byte offset).
+    /// In Latin-1 mode, this equals the original byte offset since each byte is one char.
     offset: usize,
     /// UTF-16 code units since line start (for OCaml-compatible column counting).
     offset16: usize,
@@ -1266,7 +1267,7 @@ impl<'src> Scanner<'src> {
     }
 
     fn is_jsx_close_slash(&self) -> bool {
-        self.offset > 0 && self.src_bytes.get(self.offset - 1) == Some(&b'<')
+        self.offset > 0 && self.src.chars().nth(self.offset - 1) == Some('<')
     }
 
     fn can_start_regex_literal(&self) -> bool {
@@ -1346,7 +1347,7 @@ impl<'src> Scanner<'src> {
                     in_char_class = true;
                     self.next();
                 }
-                ']' if !escaped => {
+                ']' if !escaped && in_char_class => {
                     in_char_class = false;
                     self.next();
                 }
@@ -1620,17 +1621,22 @@ impl<'src> Scanner<'src> {
     }
 
     /// Check if an operator has whitespace on both sides (making it binary).
+    ///
+    /// Uses char-based indexing since `cnum` values are char indices (which equal
+    /// original byte offsets in Latin-1 mode). We cannot use `src.as_bytes()` because
+    /// the Rust string's UTF-8 representation has different byte offsets for non-ASCII
+    /// Latin-1 chars (each Latin-1 char 128-255 becomes 2 UTF-8 bytes).
     pub fn is_binary_op(src: &str, start_cnum: usize, end_cnum: usize) -> bool {
         if start_cnum == 0 {
             return false;
         }
 
-        let bytes = src.as_bytes();
+        let src_chars: Vec<char> = src.chars().collect();
         let left_ok = start_cnum > 0
-            && start_cnum <= bytes.len()
-            && Self::is_whitespace(bytes[start_cnum - 1] as char);
+            && start_cnum <= src_chars.len()
+            && Self::is_whitespace(src_chars[start_cnum - 1]);
 
-        let right_ok = end_cnum >= bytes.len() || Self::is_whitespace(bytes[end_cnum] as char);
+        let right_ok = end_cnum >= src_chars.len() || Self::is_whitespace(src_chars[end_cnum]);
 
         left_ok && right_ok
     }

@@ -132,10 +132,13 @@ fn run() -> Result<()> {
 }
 
 fn generate_ast(input: &Path, output: Option<PathBuf>) -> Result<()> {
-    // Use lossy UTF-8 conversion (like OCaml) to handle files with invalid bytes
+    // Read file as raw bytes, converting each byte to a char (Latin-1 encoding).
+    // This matches OCaml's byte-level string handling where each byte is a character.
+    // In Latin-1 mode, char offset == original byte offset, which is critical for
+    // correct position tracking in the scanner.
     let bytes =
         fs::read(input).with_context(|| format!("Failed to read {}", input.display()))?;
-    let source = String::from_utf8_lossy(&bytes).into_owned();
+    let source: String = bytes.iter().map(|&b| b as char).collect();
 
     // Use the original path as provided (matching OCaml's behavior)
     // OCaml does not canonicalize paths - it uses them as-is

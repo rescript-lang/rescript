@@ -263,6 +263,7 @@ pub fn is_atomic_expr_start(token: &Token) -> bool {
             | Token::Percent
             | Token::Forwardslash
             | Token::ForwardslashDot
+            | Token::Regex { .. }
             | Token::Dict
     )
 }
@@ -322,6 +323,7 @@ pub fn is_expr_start(token: &Token) -> bool {
             | Token::While
             | Token::Forwardslash
             | Token::ForwardslashDot
+            | Token::Regex { .. }
             | Token::Dict
     )
 }
@@ -368,6 +370,7 @@ pub fn is_block_expr_start(token: &Token) -> bool {
             | Token::Uident(_)
             | Token::Underscore
             | Token::While
+            | Token::Regex { .. }
             | Token::Dict
     )
 }

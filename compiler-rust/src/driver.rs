@@ -105,10 +105,13 @@ pub fn compile_file_to_js_with_options(
     path: &std::path::Path,
     options: &CompilerOptions,
 ) -> Result<String> {
-    // Use lossy UTF-8 conversion (like OCaml) to handle files with invalid bytes
+    // Read file as raw bytes, converting each byte to a char (Latin-1 encoding).
+    // This matches OCaml's byte-level string handling where each byte is a character.
+    // In Latin-1 mode, char offset == original byte offset, which is critical for
+    // correct position tracking in the scanner.
     let bytes = std::fs::read(path)
         .with_context(|| format!("Failed to read {}", path.display()))?;
-    let source = String::from_utf8_lossy(&bytes).into_owned();
+    let source: String = bytes.iter().map(|&b| b as char).collect();
     let filename = path.to_string_lossy();
     compile_source_to_js_with_options(&source, &filename, options)
 }
