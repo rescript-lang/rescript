@@ -849,7 +849,9 @@ impl<'src> Scanner<'src> {
                         end_pos.clone(),
                         DiagnosticCategory::unclosed_template(),
                     );
-                    let contents = self.substring(start_off, self.offset).to_string();
+                    // OCaml uses (max (scanner.offset - 1 - start_off) 0) to exclude the last char
+                    let end_off = if self.offset > start_off { self.offset - 1 } else { start_off };
+                    let contents = self.substring(start_off, end_off).to_string();
                     return ScanResult {
                         start_pos,
                         end_pos,
