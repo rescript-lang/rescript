@@ -2011,8 +2011,11 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
 
                         // Check for field assignment: expr.field = value
                         if p.token == Token::Equal {
+                            // OCaml: leave_breadcrumb ExprSetField
+                            p.leave_breadcrumb(Grammar::ExprSetField);
                             p.next();
                             let value = parse_expr(p);
+                            p.eat_breadcrumb();
                             let loc = p.mk_loc_to_prev_end(&start_pos);
                             expr = Expression {
                                 pexp_desc: ExpressionDesc::Pexp_setfield(
@@ -2044,8 +2047,11 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
 
                         // Check for field assignment: expr."field" = value
                         if p.token == Token::Equal {
+                            // OCaml: leave_breadcrumb ExprSetField
+                            p.leave_breadcrumb(Grammar::ExprSetField);
                             p.next();
                             let value = parse_expr(p);
+                            p.eat_breadcrumb();
                             let loc = p.mk_loc_to_prev_end(&start_pos);
                             expr = Expression {
                                 pexp_desc: ExpressionDesc::Pexp_setfield(
