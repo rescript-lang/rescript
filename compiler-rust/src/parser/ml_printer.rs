@@ -789,6 +789,61 @@ fn print_value_binding<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, pat: 
         return;
     }
 
+    // Check for desugared locally abstract types (GADT sugar):
+    // let f : 'a 'b . type_expr = fun (type a) -> fun (type b) -> (body : type_expr')
+    // This gets printed as: let f : type a b. type_expr' = body
+    // OCaml pprintast.ml is_desugared_gadt function (lines 1054-1081)
+    if let PatternDesc::Ppat_constraint(inner_pat, typ) = &pat.ppat_desc {
+        if pat.ppat_attributes.is_empty() {
+            if let CoreTypeDesc::Ptyp_poly(tyvars, _) = &typ.ptyp_desc {
+                if !tyvars.is_empty() && typ.ptyp_attributes.is_empty() {
+                    // Try to match the desugared GADT pattern
+                    // Collect Pexp_newtype chain from expression
+                    let mut e_tyvars = Vec::new();
+                    let mut curr_expr = expr;
+                    while let ExpressionDesc::Pexp_newtype(tyvar, inner) = &curr_expr.pexp_desc {
+                        if !curr_expr.pexp_attributes.is_empty() {
+                            break;
+                        }
+                        e_tyvars.push(&tyvar.txt);
+                        curr_expr = inner;
+                    }
+                    // Check if we end with Pexp_constraint(body, ct) and tyvars match
+                    if let ExpressionDesc::Pexp_constraint(body, ct) = &curr_expr.pexp_desc {
+                        if curr_expr.pexp_attributes.is_empty() && e_tyvars.len() == tyvars.len() {
+                            // Check that tyvar names match (pattern has 'a, expr has a -> same base name)
+                            let tyvars_match = tyvars.iter().zip(e_tyvars.iter()).all(|(pt, et)| {
+                                pt.txt == **et
+                            });
+                            if tyvars_match {
+                                // Print sugared form: name : type t u v. ct = body
+                                // OCaml: %a@;: type@;%a.@;%a@;=@;%a
+                                print_simple_pattern(f, arena, inner_pat);
+                                f.space();
+                                f.string(": type");
+                                f.space();
+                                for (i, tv) in e_tyvars.iter().enumerate() {
+                                    if i > 0 {
+                                        f.space();
+                                    }
+                                    f.string(tv);
+                                }
+                                f.string(".");
+                                f.space();
+                                print_core_type(f, arena, ct);
+                                f.space();
+                                f.string("=");
+                                f.space();
+                                print_expression(f, arena, body);
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // Special case: Ppat_constraint - different handling based on type
     // OCaml pprintast.ml lines 1096-1103
     if let PatternDesc::Ppat_constraint(inner_pat, typ) = &pat.ppat_desc {
