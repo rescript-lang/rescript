@@ -242,6 +242,19 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
             } else {
                 RecFlag::Nonrecursive
             };
+            // Check for let? rec combination - not allowed
+            // OCaml: if rec_flag = Asttypes.Recursive && unwrap then emit error
+            if rec_flag == RecFlag::Recursive && unwrap {
+                // Error location: from start of `let?` to start of next token after `rec`
+                p.err_at(
+                    start_pos.clone(),
+                    p.start_pos.clone(),
+                    DiagnosticCategory::Message(
+                        "let? is not allowed to be recursive. Use a regular `let` or remove `rec`."
+                            .to_string(),
+                    ),
+                );
+            }
             // Pass start_pos_idx to enable position sharing with structure_item
             let (bindings, _binding_loc_idx) = parse_let_bindings(p, start_pos_idx, let_end_pos, rec_flag, attrs.clone(), unwrap);
             parse_newline_or_semicolon_structure(p);
@@ -557,11 +570,23 @@ pub fn parse_signature_item(p: &mut Parser<'_>) -> Option<SignatureItem> {
                 popen_attributes: attrs.clone(),
             }))
         }
-        Token::Let { .. } => {
+        Token::Let { unwrap } => {
+            let unwrap = *unwrap;
             // For signature let declarations, OCaml uses regions
             p.begin_region();
             // OCaml's value_description location starts at 'let', not at the attributes
             let let_pos = p.start_pos.clone();
+            // If unwrap (let?), emit error - not allowed in signatures
+            if unwrap {
+                p.err_at(
+                    start_pos.clone(),
+                    p.end_pos.clone(),
+                    DiagnosticCategory::Message(
+                        "let? is not allowed in signatures. Use a regular `let` instead."
+                            .to_string(),
+                    ),
+                );
+            }
             p.next();
             let vd = parse_value_description(p, attrs.clone(), let_pos);
             parse_newline_or_semicolon_signature(p);
