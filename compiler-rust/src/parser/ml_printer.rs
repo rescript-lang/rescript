@@ -2098,14 +2098,22 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
             f.close_box();
         }
         ExpressionDesc::Pexp_newtype(name, body) => {
-            // OCaml: pp f "fun@;(type@;%s)@;->@;%a" - no wrapping parens
-            f.string("fun (type ");
+            // OCaml: pp f "fun@;(type@;%s)@;->@;%a"
+            f.string("fun");
+            f.space(); // @; after "fun"
+            f.string("(type");
+            f.space(); // @; after "(type"
             f.string(&name.txt);
-            f.string(") -> ");
+            f.string(")");
+            f.space(); // @; after ")"
+            f.string("->");
+            f.space(); // @; after "->"
             print_expression(f, arena, body);
         }
         ExpressionDesc::Pexp_pack(mexpr) => {
-            f.string("(module ");
+            // OCaml: pp f "(module@;%a)" (module_expr ctxt) me
+            f.string("(module");
+            f.space(); // @; after "(module"
             print_module_expr(f, arena, mexpr);
             f.string(")");
         }
@@ -2536,10 +2544,12 @@ fn print_pattern_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, pat: 
             print_longident_idx(f, arena, lid.txt);
         }
         PatternDesc::Ppat_unpack(name) => {
-            // OCaml: pp f "(module@ %s)@ " s.txt - trailing space via @
-            f.string("(module ");
+            // OCaml: pp f "(module@ %s)@ " s.txt
+            f.string("(module");
+            f.space(); // @ after "(module"
             f.string(&name.txt);
-            f.string(") ");  // Trailing space after unpack pattern
+            f.string(")");
+            f.space(); // @ trailing break
         }
         PatternDesc::Ppat_exception(p) => {
             f.string("exception ");
