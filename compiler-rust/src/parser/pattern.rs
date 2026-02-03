@@ -1294,9 +1294,11 @@ fn parse_record_pattern(p: &mut Parser<'_>) -> Pattern {
         raw_fields.remove(0);
     }
 
-    // Process remaining fields, emitting errors for spreads
+    // Process fields in reversed order (matching OCaml's fold_left on reversed list).
+    // Prepend each field to build the correct forward order.
+    // This ensures the LAST spread field's error is emitted first (region silencing).
     let mut fields = vec![];
-    for (has_spread, field_opt) in raw_fields.into_iter().rev() {
+    for (has_spread, field_opt) in raw_fields.into_iter() {
         match field_opt {
             Some(field) => {
                 if has_spread {
@@ -1310,7 +1312,8 @@ fn parse_record_pattern(p: &mut Parser<'_>) -> Pattern {
                         ),
                     );
                 }
-                fields.push(field);
+                // OCaml: field :: fields (prepend to maintain correct order)
+                fields.insert(0, field);
             }
             None => {
                 // PatUnderscore in middle - just skip (OCaml: (fields, flag))
