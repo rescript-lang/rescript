@@ -2820,6 +2820,19 @@ fn parse_dict_expr(p: &mut Parser<'_>, start_pos: Position) -> Expression {
 
     let mut key_value_pairs: Vec<Expression> = vec![];
     while p.token != Token::Rbrace && p.token != Token::Eof {
+        // Check for spread syntax (not supported in dicts)
+        if p.token == Token::DotDotDot {
+            p.err(DiagnosticCategory::Message(
+                super::core::error_messages::DICT_EXPR_SPREAD.to_string(),
+            ));
+            p.next(); // consume the ...
+            // Skip the spread expression
+            let _ = parse_unary_expr(p);
+            if !p.optional(&Token::Comma) {
+                break;
+            }
+            continue;
+        }
         // Parse key (string)
         match &p.token {
             Token::String(s) => {
