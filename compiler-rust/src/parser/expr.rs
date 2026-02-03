@@ -4234,6 +4234,16 @@ fn parse_switch_expr(p: &mut Parser<'_>) -> Expression {
         }
     }
 
+    // OCaml: emit error if switch has no cases
+    // OCaml uses end_pos (end of current token) as the error end, not start_pos
+    if cases.is_empty() {
+        p.err_at(
+            p.prev_end_pos.clone(),
+            p.end_pos.clone(),
+            DiagnosticCategory::Message("Pattern matching needs at least one case".to_string()),
+        );
+    }
+
     p.expect(Token::Rbrace);
     let loc = p.mk_loc_to_prev_end(&start_pos);
 
