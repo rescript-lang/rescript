@@ -1952,11 +1952,11 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
             f.close_box();
         }
         ExpressionDesc::Pexp_newtype(name, body) => {
-            f.string("(fun (type ");
+            // OCaml: pp f "fun@;(type@;%s)@;->@;%a" - no wrapping parens
+            f.string("fun (type ");
             f.string(&name.txt);
             f.string(") -> ");
             print_expression(f, arena, body);
-            f.string(")");
         }
         ExpressionDesc::Pexp_pack(mexpr) => {
             f.string("(module ");
