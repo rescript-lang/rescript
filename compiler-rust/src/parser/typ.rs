@@ -1355,6 +1355,8 @@ pub fn parse_object_type_body(p: &mut Parser<'_>, start_pos: Position) -> CoreTy
 
 /// Parse object fields.
 fn parse_object_fields(p: &mut Parser<'_>) -> Vec<ObjectField> {
+    // Leave breadcrumb matching OCaml's parse_comma_delimited_region ~grammar:StringFieldDeclarations
+    p.leave_breadcrumb(Grammar::StringFieldDeclarations);
     let mut fields = vec![];
 
     while p.token != Token::Rbrace && p.token != Token::Eof {
@@ -1414,6 +1416,7 @@ fn parse_object_fields(p: &mut Parser<'_>) -> Vec<ObjectField> {
         }
     }
 
+    p.eat_breadcrumb();
     fields
 }
 
