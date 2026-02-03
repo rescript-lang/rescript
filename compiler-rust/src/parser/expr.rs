@@ -1834,10 +1834,11 @@ pub fn parse_atomic_expr(p: &mut Parser<'_>) -> Expression {
             parse_first_class_module_expr(p, start_pos)
         }
         Token::Underscore => {
+            // OCaml: Underscore is not a valid expression operand, emit an error
+            // This matches OCaml's parse_atomic_expr which uses Diagnostics.lident
+            p.err(DiagnosticCategory::Lident(Token::Underscore));
             p.next();
-            let loc = p.mk_loc_to_prev_end(&start_pos);
-            let lid = super::core::make_lident_static(p.arena_mut(), "_");
-            ast_helper::make_ident(p, lid, loc)
+            recover::default_expr()
         }
         Token::Eof => {
             p.err(DiagnosticCategory::Message(
@@ -1925,6 +1926,16 @@ pub fn parse_constrained_or_coerced_expr(p: &mut Parser<'_>) -> Expression {
 /// Parse an expression with optional type constraint for function arguments.
 /// Used in labeled argument contexts like `~compare=?intCompare: (int, int) => int`.
 fn parse_constrained_expr_in_arg(p: &mut Parser<'_>) -> Expression {
+    // OCaml: _ is valid in labeled argument position (~label=_)
+    // BUT NOT if it's the start of an arrow function: (~onClick=_ => ...)
+    // This must be checked before parse_constrained_or_coerced_expr
+    if p.token == Token::Underscore && !super::core::is_es6_arrow_expression(p, false) {
+        let start_pos = p.start_pos.clone();
+        p.next();
+        let loc = p.mk_loc_to_prev_end(&start_pos);
+        let lid = super::core::make_lident_static(p.arena_mut(), "_");
+        return ast_helper::make_ident(p, lid, loc);
+    }
     parse_constrained_or_coerced_expr(p)
 }
 
@@ -2325,6 +2336,17 @@ fn parse_argument(p: &mut Parser<'_>) -> (ArgLabel, Expression) {
             let expr = ast_helper::make_ident(p, Longident::Lident(name_str_idx), name_loc.clone());
             (ArgLabel::Labelled(name_located), expr)
         }
+    } else if p.token == Token::Underscore && !super::core::is_es6_arrow_expression(p, false) {
+        // OCaml: _ as argument is valid (placeholder for partial application)
+        // BUT NOT if it's the start of an arrow function: f(_ => ...)
+        // This must be checked before parse_constrained_or_coerced_expr which
+        // would now treat _ as an error in parse_atomic_expr
+        let start_pos = p.start_pos.clone();
+        p.next();
+        let loc = p.mk_loc_to_prev_end(&start_pos);
+        let lid = super::core::make_lident_static(p.arena_mut(), "_");
+        let expr = ast_helper::make_ident(p, lid, loc);
+        (ArgLabel::Nolabel, expr)
     } else {
         // Unlabeled argument - may have type constraint like f({}:t)
         (ArgLabel::Nolabel, parse_constrained_or_coerced_expr(p))
