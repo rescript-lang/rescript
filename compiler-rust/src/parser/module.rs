@@ -489,23 +489,41 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
 // ============================================================================
 
 /// Parse a signature (list of signature items).
+///
+/// This matches OCaml's `parse_region p ~grammar:Grammar.Specification ~f:parse_signature_item_region`.
+/// When a signature item cannot be parsed (returns None), we emit an "unexpected" error and
+/// advance the token to avoid infinite loops.
 pub fn parse_signature(p: &mut Parser<'_>) -> Signature {
+    use super::core::recover::should_abort_list_parse;
+    use super::grammar::Grammar;
+
+    // OCaml: Parser.leave_breadcrumb p Grammar.Specification
+    p.leave_breadcrumb(Grammar::Specification);
+
     let mut items = vec![];
 
-    while p.token != Token::Eof && p.token != Token::Rbrace {
+    loop {
         // Skip semicolons
         while p.token == Token::Semicolon {
             p.next();
         }
 
-        if p.token == Token::Eof || p.token == Token::Rbrace {
-            break;
-        }
-
-        if let Some(item) = parse_signature_item(p) {
-            items.push(item);
+        match parse_signature_item(p) {
+            Some(item) => items.push(item),
+            None => {
+                // OCaml's parse_region: when f returns None, check if we should abort
+                if p.token == Token::Eof || should_abort_list_parse(p) {
+                    break;
+                }
+                // Emit unexpected token error and advance to avoid infinite loop
+                p.err_unexpected();
+                p.next();
+            }
         }
     }
+
+    // OCaml: Parser.eat_breadcrumb p
+    p.eat_breadcrumb();
 
     items
 }
@@ -1662,23 +1680,43 @@ fn parse_primary_module_type(p: &mut Parser<'_>) -> ModuleType {
 }
 
 /// Parse signature items within braces.
+///
+/// Like parse_signature, this matches OCaml's parse_region behavior.
+/// When a signature item cannot be parsed, we emit an error and advance.
+///
+/// Note: Uses Grammar::Signature (not Specification) because Signature terminates on Rbrace.
 fn parse_signature_in_braces(p: &mut Parser<'_>) -> Vec<SignatureItem> {
+    use super::core::recover::should_abort_list_parse;
+    use super::grammar::Grammar;
+
+    // OCaml: Parser.leave_breadcrumb p Grammar.Signature (not Specification!)
+    // Grammar.Signature terminates on Rbrace, while Specification doesn't.
+    p.leave_breadcrumb(Grammar::Signature);
+
     let mut items = vec![];
 
-    while p.token != Token::Rbrace && p.token != Token::Eof {
+    loop {
         // Skip semicolons
         while p.token == Token::Semicolon {
             p.next();
         }
 
-        if p.token == Token::Rbrace || p.token == Token::Eof {
-            break;
-        }
-
-        if let Some(item) = parse_signature_item(p) {
-            items.push(item);
+        match parse_signature_item(p) {
+            Some(item) => items.push(item),
+            None => {
+                // OCaml's parse_region: when f returns None, check if we should abort
+                if p.token == Token::Eof || should_abort_list_parse(p) {
+                    break;
+                }
+                // Emit unexpected token error and advance to avoid infinite loop
+                p.err_unexpected();
+                p.next();
+            }
         }
     }
+
+    // OCaml: Parser.eat_breadcrumb p
+    p.eat_breadcrumb();
 
     items
 }

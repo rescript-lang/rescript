@@ -1,7 +1,7 @@
 # Syntax Parity TODO
 
-**Last Updated:** 2026-02-02
-**Overall Status:** 390/506 tests passing (77%)
+**Last Updated:** 2026-02-03
+**Overall Status:** 393/506 tests passing (77%)
 
 **Category Breakdown:**
 | Category | Passed | Failed | Total | Percent |
@@ -11,19 +11,19 @@
 | ppx/react | 31 | 0 | 31 | 100% ✅ |
 | conversion | 27 | 0 | 27 | 100% ✅ |
 | parsing/grammar | 93 | 42 | 135 | 68% |
-| parsing/other | 11 | 3 | 14 | 78% |
+| parsing/other | 12 | 2 | 14 | 85% |
 | parsing/recovery | 11 | 9 | 20 | 55% |
-| parsing/errors | 26 | 58 | 84 | 30% |
+| parsing/errors | 28 | 56 | 84 | 33% |
 | parsing/infiniteLoops | 1 | 4 | 5 | 20% |
 
-**Remaining:** 116 tests to fix
-
-**Known Crashing Files (stack overflow):**
-- tests/syntax_tests/data/parsing/errors/expressions/typeDefInFunction.res
-- tests/syntax_tests/data/parsing/errors/typexpr/bsObjSugar.res
-- tests/syntax_tests/data/printer/expr/braced.res
+**Remaining:** 113 tests to fix
 
 **Recent Fixes (this session):**
+- **Fixed infinite loop in signature parsing**: When `parse_signature_item` returns None for unexpected
+  tokens (like `export type`), the parser now emits an "unexpected" error and advances the token, matching
+  OCaml's `parse_region` behavior. Also added proper breadcrumbs: `Grammar::Specification` for file-level
+  signatures and `Grammar::Signature` for braced signatures (inside module types). The key difference is
+  that `Signature` terminates on `Rbrace` but `Specification` doesn't.
 - **Added PatternMatchCase and Pattern breadcrumbs for switch/try cases**: OCaml sets PatternMatchCase
   breadcrumb before parsing each case, and Pattern breadcrumb before parsing the pattern. This enables
   proper context-aware error messages like "I was expecting a pattern to match on before the `=>`".
