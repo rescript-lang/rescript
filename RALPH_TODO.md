@@ -29,6 +29,11 @@
   helper that checks for `...` and emits "Array spread (`...`) is not supported in pattern matches"
   with the full explanation. Also added spread detection in record pattern parsing. This fixes
   error messages in tests like parsing/recovery/expression/list.res.
+- **Added 'Did you mean ==?' error for = as binary operator**: When `=` is used as a binary operator
+  (e.g., `if a = b { ... }`), emit "Did you mean `==` here?" error. This matches OCaml's
+  `make_infix_operator` function which detects this common mistake.
+- **Added string interpolation error in pattern matching**: When template literal patterns contain
+  interpolation (`${...}`), emit "String interpolation is not supported in pattern matching" error.
 - **Fixed pattern error recovery with skip_tokens_and_maybe_retry**: When an unexpected token is seen
   where a pattern is expected, call `skip_tokens_and_maybe_retry` to try to find a valid pattern start
   token. For example, `let = 2` now recovers to `let 2 = [%rescript.exprhole]` matching OCaml (skips `=`,
