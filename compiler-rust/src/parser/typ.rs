@@ -10,6 +10,7 @@ use crate::parse_arena::{Located, LocIdx};
 use super::ast::*;
 use super::core::{ast_helper, mknoloc, recover, with_loc};
 use super::diagnostics::DiagnosticCategory;
+use super::grammar;
 use super::grammar::Grammar;
 use super::longident::Longident;
 use super::state::{Parser, ParserMode};
@@ -636,6 +637,14 @@ fn parse_atomic_typ_expr(p: &mut Parser<'_>, attrs: Attributes, es6_arrow: bool)
         }
         _ => {
             p.err_unexpected();
+            // Try to skip tokens and retry parsing if we find a valid start token
+            // This matches OCaml's skip_tokens_and_maybe_retry behavior
+            if recover::skip_tokens_and_maybe_retry(p, grammar::is_atomic_typ_expr_start) {
+                // Eat our breadcrumb first, then recurse
+                // OCaml returns from match, then eat_breadcrumb runs
+                p.eat_breadcrumb();
+                return parse_atomic_typ_expr(p, attrs, es6_arrow);
+            }
             recover::default_type()
         }
     };
