@@ -1,7 +1,7 @@
 # Syntax Parity TODO
 
 **Last Updated:** 2026-02-03
-**Overall Status:** 418/506 tests passing (82%)
+**Overall Status:** 422/506 tests passing (83%)
 
 **Category Breakdown:**
 | Category | Passed | Failed | Total | Percent |
@@ -12,13 +12,24 @@
 | conversion | 27 | 0 | 27 | 100% ✅ |
 | parsing/grammar | 93 | 42 | 135 | 68% |
 | parsing/other | 12 | 2 | 14 | 85% |
-| parsing/recovery | 13 | 7 | 20 | 65% |
-| parsing/errors | 51 | 33 | 84 | 60% |
+| parsing/recovery | 14 | 6 | 20 | 70% |
+| parsing/errors | 54 | 30 | 84 | 64% |
 | parsing/infiniteLoops | 1 | 4 | 5 | 20% |
 
-**Remaining:** 88 tests to fix
+**Remaining:** 84 tests to fix
 
 **Recent Fixes (this session):**
+- **Fixed error location span in parse_atomic_expr**: OCaml uses `prev_end_pos` for start and `end_pos`
+  for end when reporting unexpected token errors. Rust was using `prev_end_pos` for both, causing spans
+  like "1:10" instead of "1:10-11". Now correctly matches OCaml's error location format.
+- **Fixed scanner to preserve start_pos when skipping bad characters**: When the scanner encounters an
+  unknown character (like `$`), it reports an error and recursively scans. OCaml preserves the original
+  `start_pos` from before the bad character for the returned ScanResult, but Rust was returning the
+  recursive result directly. This caused error locations like "1:7" instead of "1:5-7".
+- **Fixed exotic identifier handling to match OCaml**: For uppercase exotic identifiers, preserve the
+  full `\"...\"` wrapper in the scanner. For exotic identifiers with linebreaks, include the `\"` prefix
+  and actual newline character. Fixed `print_poly_var_ident` to just strip the leading backslash
+  (not add extra quotes) since the identifier already has quotes.
 - **Used Lident diagnostic in parse_lident functions**: Changed pattern.rs and typ.rs parse_lident
   functions to use Lident diagnostic instead of generic Message. This produces the correct
   context-sensitive error message: "I'm expecting a lowercase name like \`user or \`age\`".
