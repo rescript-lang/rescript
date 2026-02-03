@@ -575,7 +575,8 @@ fn print_structure_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
                 }
                 print_type_declaration(f, arena, decl);
                 f.close_box();
-                // NOTE: print_type_declaration already prints ptype_attributes
+                // OCaml: item attributes (%a) are printed OUTSIDE the @[<2>...@] box
+                print_item_attributes(f, arena, &decl.ptype_attributes);
             }
         }
         StructureItemDesc::Pstr_typext(ext) => {
@@ -3152,8 +3153,9 @@ fn print_type_declaration<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, de
         print_core_type(f, arena, ct2);
     }
 
-    // Type attributes
-    print_item_attributes(f, arena, &decl.ptype_attributes);
+    // NOTE: Type attributes (ptype_attributes) are NOT printed here.
+    // In OCaml, item attributes are printed OUTSIDE the @[<2>...@] box
+    // by the caller (Pstr_type/Psig_type).
 }
 
 fn print_extension_constructor<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ext: &ExtensionConstructor) {
@@ -3579,7 +3581,8 @@ fn print_signature_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
                 }
                 print_type_declaration(f, arena, decl);
                 f.close_box();
-                // NOTE: print_type_declaration already prints ptype_attributes
+                // OCaml: item attributes printed OUTSIDE the box
+                print_item_attributes(f, arena, &decl.ptype_attributes);
             }
         }
         SignatureItemDesc::Psig_typext(ext) => {
