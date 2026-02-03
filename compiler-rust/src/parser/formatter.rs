@@ -386,8 +386,13 @@ impl<W: Write> Formatter<W> {
     /// Calculate the horizontal size of tokens (if all on one line)
     /// This includes breaks at ALL nesting levels since we're calculating
     /// the size if everything was rendered horizontally.
+    /// In OCaml's Format, forced newlines (pp_force_newline) have size=0 and length=0,
+    /// meaning they don't affect the parent box's "does it fit" calculation.
+    /// We track box nesting depth so that Newlines inside nested boxes have size 0
+    /// (matching OCaml behavior) while Newlines at the top level force the box to break.
     fn calculate_size(&self, tokens: &[Token]) -> usize {
         let mut size = 0;
+        let mut depth = 0;
 
         for token in tokens {
             match token {
@@ -400,14 +405,19 @@ impl<W: Write> Formatter<W> {
                     size += nspaces;
                 }
                 Token::OpenBox { .. } => {
-                    // OpenBox has no horizontal size
+                    depth += 1;
                 }
                 Token::CloseBox => {
-                    // CloseBox has no horizontal size
+                    if depth > 0 {
+                        depth -= 1;
+                    }
                 }
                 Token::Newline => {
-                    // Newline forces break - return large value
-                    return usize::MAX / 2;
+                    if depth == 0 {
+                        // Top-level newline forces this box to break
+                        return usize::MAX / 2;
+                    }
+                    // Nested newline: size 0, matching OCaml's pp_force_newline behavior
                 }
             }
         }
@@ -440,7 +450,11 @@ impl<W: Write> Formatter<W> {
                     }
                 }
                 Token::Newline => {
-                    return usize::MAX / 2;
+                    if depth == 0 {
+                        // Top-level newline forces break
+                        return usize::MAX / 2;
+                    }
+                    // Nested newline: size 0 (OCaml behavior)
                 }
             }
         }
