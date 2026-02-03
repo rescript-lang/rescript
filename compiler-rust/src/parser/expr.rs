@@ -248,7 +248,13 @@ fn parse_value_path_after_dot(p: &mut Parser<'_>) -> Located<LidentIdx> {
                         p.next();
                         break;
                     }
-                    _ => break,
+                    _ => {
+                        // OCaml: parse_value_path_tail emits error and adds "_" for missing ident
+                        p.err_unexpected();
+                        let underscore_idx = p.arena_mut().push_string("_".to_string());
+                        path = Longident::Ldot(Box::new(path), underscore_idx);
+                        break;
+                    }
                 }
             }
 
