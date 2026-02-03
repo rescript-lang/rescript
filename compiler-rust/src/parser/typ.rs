@@ -1434,8 +1434,17 @@ fn parse_poly_variant_type_simple(p: &mut Parser<'_>) -> CoreType {
             p.next();
             name
         }
-        Token::Int { i, .. } => {
+        Token::Int { i, suffix } => {
+            // Clone values before borrowing p mutably
             let tag = i.clone();
+            let has_suffix = suffix.is_some();
+            // OCaml: emit error if numeric poly variant has a suffix
+            if has_suffix {
+                p.err(DiagnosticCategory::Message(format!(
+                    "A numeric polymorphic variant cannot be followed by a letter. Did you mean `#{}`?",
+                    tag
+                )));
+            }
             p.next();
             tag
         }
@@ -1692,9 +1701,18 @@ fn parse_single_row_field_with_attrs(p: &mut Parser<'_>, attrs: Attributes) -> O
                 p.next();
                 with_loc(name, loc)
             }
-            Token::Int { i, .. } => {
+            Token::Int { i, suffix } => {
+                // Clone values before borrowing p mutably
                 let tag = i.clone();
+                let has_suffix = suffix.is_some();
                 let loc = p.mk_loc_to_end(&hash_start);
+                // OCaml: emit error if numeric poly variant has a suffix
+                if has_suffix {
+                    p.err(DiagnosticCategory::Message(format!(
+                        "A numeric polymorphic variant cannot be followed by a letter. Did you mean `#{}`?",
+                        tag
+                    )));
+                }
                 p.next();
                 with_loc(tag, loc)
             }
@@ -1810,9 +1828,18 @@ fn parse_row_fields(p: &mut Parser<'_>) -> Vec<RowField> {
                     p.next();
                     with_loc(name, loc)
                 }
-                Token::Int { i, .. } => {
+                Token::Int { i, suffix } => {
+                    // Clone values before borrowing p mutably
                     let tag = i.clone();
+                    let has_suffix = suffix.is_some();
                     let loc = p.mk_loc_to_end(&hash_start);
+                    // OCaml: emit error if numeric poly variant has a suffix
+                    if has_suffix {
+                        p.err(DiagnosticCategory::Message(format!(
+                            "A numeric polymorphic variant cannot be followed by a letter. Did you mean `#{}`?",
+                            tag
+                        )));
+                    }
                     p.next();
                     with_loc(tag, loc)
                 }

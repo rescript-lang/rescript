@@ -1700,8 +1700,17 @@ pub fn parse_atomic_expr(p: &mut Parser<'_>) -> Expression {
                     p.next();
                     name
                 }
-                Token::Int { i, .. } => {
+                Token::Int { i, suffix } => {
+                    // Clone values before borrowing p mutably
                     let tag = i.clone();
+                    let has_suffix = suffix.is_some();
+                    // OCaml: emit error if numeric poly variant has a suffix
+                    if has_suffix {
+                        p.err(DiagnosticCategory::Message(format!(
+                            "A numeric polymorphic variant cannot be followed by a letter. Did you mean `#{}`?",
+                            tag
+                        )));
+                    }
                     p.next();
                     tag
                 }
