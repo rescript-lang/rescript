@@ -7,7 +7,7 @@ use crate::location::Position;
 use crate::parse_arena::{LidentIdx, Located, LocIdx, ParseArena};
 
 use super::ast::*;
-use super::core::{ExprContext, ast_helper, make_braces_attr, mknoloc, recover, with_loc};
+use super::core::{ExprContext, ast_helper, if_let_attr, make_braces_attr, mknoloc, recover, with_loc};
 use super::diagnostics::DiagnosticCategory;
 use super::grammar;
 use super::grammar::Grammar;
@@ -4542,12 +4542,139 @@ fn parse_if_or_if_let_expression(p: &mut Parser<'_>) -> Expression {
     let start_pos = p.start_pos.clone();
     p.expect(Token::If);
 
-    // Note: OCaml has special handling for `if let` here, but ReScript
-    // deprecated if-let syntax, so we just parse as regular if
-    let expr = parse_if_expr_body(p, start_pos);
+    let expr = match &p.token {
+        Token::Let { .. } => {
+            // if-let expression: parse as match with @res.iflet attribute
+            p.next(); // consume `let`
+            parse_if_let_expr(p, start_pos)
+        }
+        _ => parse_if_expr_body(p, start_pos),
+    };
 
     p.eat_breadcrumb();
     expr
+}
+
+/// Parse an if-let expression (after `if` and `let` are consumed).
+/// OCaml: parse_if_let_expr
+///
+/// Produces a Pexp_match with @res.iflet and @warning "-4" attributes,
+/// and emits an experimental if-let error message.
+fn parse_if_let_expr(p: &mut Parser<'_>, start_pos: Position) -> Expression {
+    let pattern = super::pattern::parse_pattern(p);
+    p.expect(Token::Equal);
+    let condition_expr = parse_if_condition(p);
+    let then_expr = parse_then_branch(p);
+
+    let else_expr = match &p.token {
+        Token::Else => {
+            p.end_region();
+            p.leave_breadcrumb(Grammar::ElseBranch);
+            p.next(); // consume `else`
+            p.begin_region();
+            let else_expr = match &p.token {
+                Token::If => parse_if_or_if_let_expression(p),
+                _ => parse_else_branch(p),
+            };
+            p.eat_breadcrumb();
+            p.end_region();
+            else_expr
+        }
+        _ => {
+            p.end_region();
+            // No else: use () as the else expression
+            let loc = p.mk_loc_to_prev_end(&p.start_pos.clone());
+            ast_helper::make_unit(p, loc)
+        }
+    };
+
+    let loc = p.mk_loc_to_prev_end(&start_pos);
+
+    // Build the match expression: match condition { | pattern => then | _ => else }
+    let if_let_expr = Expression {
+        pexp_desc: ExpressionDesc::Pexp_match(
+            Box::new(condition_expr),
+            vec![
+                Case {
+                    pc_bar: None,
+                    pc_lhs: pattern,
+                    pc_guard: None,
+                    pc_rhs: then_expr,
+                },
+                Case {
+                    pc_bar: None,
+                    pc_lhs: Pattern {
+                        ppat_desc: PatternDesc::Ppat_any,
+                        ppat_loc: loc,
+                        ppat_attributes: vec![],
+                    },
+                    pc_guard: None,
+                    pc_rhs: else_expr,
+                },
+            ],
+        ),
+        pexp_loc: loc,
+        pexp_attributes: vec![
+            if_let_attr(),
+            suppress_fragile_match_warning_attr(p),
+        ],
+    };
+
+    // Emit the experimental if-let error message using ResPrinter
+    {
+        use super::doc::Doc;
+        use super::printer2;
+        use super::comment_table::CommentTable;
+
+        // Create a copy without attributes for printing
+        let switch_expr = Expression {
+            pexp_attributes: vec![],
+            ..if_let_expr.clone()
+        };
+
+        let state = printer2::PrinterState::init();
+        let mut cmt_tbl = CommentTable::new();
+        let msg = Doc::concat(vec![
+            Doc::text("If-let is currently highly experimental."),
+            Doc::line(),
+            Doc::text("Use a regular `switch` with pattern matching instead:"),
+            Doc::concat(vec![
+                Doc::hard_line(),
+                Doc::hard_line(),
+                printer2::print_expression(&state, &switch_expr, &mut cmt_tbl, p.arena()),
+            ]),
+        ]).to_string(80);
+
+        p.err_at(
+            p.loc_start(if_let_expr.pexp_loc),
+            p.loc_end(if_let_expr.pexp_loc),
+            DiagnosticCategory::message(&msg),
+        );
+    }
+
+    if_let_expr
+}
+
+/// Create the @warning "-4" attribute to suppress fragile match warnings.
+fn suppress_fragile_match_warning_attr(p: &mut Parser<'_>) -> Attribute {
+    use super::ast::*;
+    let loc = p.mk_loc_to_prev_end(&p.start_pos.clone());
+    (
+        mknoloc("warning".to_string()),
+        Payload::PStr(vec![
+            StructureItem {
+                pstr_desc: StructureItemDesc::Pstr_eval(
+                    Expression {
+                        pexp_desc: ExpressionDesc::Pexp_constant(Constant::String("-4".to_string(), None)),
+                        pexp_loc: loc,
+                        pexp_attributes: vec![],
+                    },
+                    vec![],
+                ),
+                pstr_loc: loc,
+            },
+        ]),
+    )
 }
 
 /// Legacy entry point for if expressions - wraps parse_if_or_if_let_expression.
