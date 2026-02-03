@@ -1,7 +1,7 @@
 # Syntax Parity TODO
 
 **Last Updated:** 2026-02-03
-**Overall Status:** 397/506 tests passing (78%)
+**Overall Status:** 399/506 tests passing (78%)
 
 **Category Breakdown:**
 | Category | Passed | Failed | Total | Percent |
@@ -13,12 +13,24 @@
 | parsing/grammar | 93 | 42 | 135 | 68% |
 | parsing/other | 12 | 2 | 14 | 85% |
 | parsing/recovery | 11 | 9 | 20 | 55% |
-| parsing/errors | 32 | 52 | 84 | 38% |
+| parsing/errors | 34 | 50 | 84 | 40% |
 | parsing/infiniteLoops | 1 | 4 | 5 | 20% |
 
-**Remaining:** 109 tests to fix
+**Remaining:** 107 tests to fix
 
 **Recent Fixes (this session):**
+- **Added single-element tuple error**: Emit "A tuple needs at least two elements" when a tuple has
+  only one element (detected by trailing comma). Added to all three contexts: pattern, expression,
+  and type tuples. Fixed error location to use start_pos and prev_end_pos matching OCaml.
+- **Added missing tilde labeled parameter error**: When a function parameter has `name=value` without
+  a `~` prefix, emit "A labeled parameter starts with a `~`. Did you mean: `~name`?" and recover by
+  treating it as an optional parameter.
+- **Fixed Lident diagnostic message**: Match OCaml's typo in the error message for expected lowercase
+  identifiers: "I'm expecting a lowercase name like `user or `age`" (missing backtick after "user").
+- **Added parse_ident helper**: Replicate OCaml's parse_ident behavior which checks for keywords on
+  same line before emitting custom error message. Used for type variable parsing after `'`.
+- **Fixed type variable keyword error**: For `'let`, emit "`let` is a reserved keyword. Keywords
+  need to be escaped: \"let\"" instead of generic type variable error.
 - **Added skip_tokens_and_maybe_retry to type expression parsing**: When encountering an unexpected
   token in parse_atomic_typ_expr, try to skip tokens and retry parsing if we find a valid type
   expression start. This matches OCaml's error recovery behavior. Fixes garbage.res test.
