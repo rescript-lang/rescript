@@ -1087,15 +1087,12 @@ fn parse_record_pattern(p: &mut Parser<'_>) -> Pattern {
 
         // Support qualified record labels in patterns: {Module.label: pat}
         // (also needed for ambiguity disambiguation, mirroring OCaml syntax).
+        // OCaml: Lident/Uident case in parse_record_pattern_row
         let mut parts: Vec<String> = vec![];
         loop {
             match &p.token {
                 Token::Lident(name) | Token::Uident(name) => {
                     parts.push(name.clone());
-                    p.next();
-                }
-                _ if p.token.is_keyword() => {
-                    parts.push(p.token.to_string());
                     p.next();
                 }
                 _ => break,
@@ -1107,7 +1104,36 @@ fn parse_record_pattern(p: &mut Parser<'_>) -> Pattern {
             }
         }
 
+        // If parts is empty, check for keyword field
+        // OCaml: Token.is_keyword p.token case in parse_record_pattern_row
         if parts.is_empty() {
+            if p.token.is_keyword() {
+                // Try to recover keyword as field name if followed by colon
+                if let Some((recovered_name, loc)) = super::core::recover_keyword_field_name_if_probably_field(
+                    p,
+                    super::core::error_messages::keyword_field_in_pattern,
+                ) {
+                    // OCaml: Parser.expect Colon p
+                    p.expect(Token::Colon);
+                    // Check for optional marker after colon: name: ? pat
+                    let opt = p.token == Token::Question;
+                    if opt {
+                        p.next();
+                    }
+                    let pat = parse_pattern(p);
+                    let lid_idx = p.push_lident(&recovered_name);
+                    let lid = with_loc(lid_idx, loc);
+                    fields.push(PatternRecordField { lid, pat, opt });
+                    if !p.optional(&Token::Comma) {
+                        break;
+                    }
+                    continue;
+                } else {
+                    // Just emit the error and break
+                    super::core::emit_keyword_field_error(p, super::core::error_messages::keyword_field_in_pattern);
+                    break;
+                }
+            }
             break;
         }
 

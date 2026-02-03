@@ -3632,6 +3632,20 @@ fn parse_label_declaration(
             p.next();
             with_loc(n, loc)
         }
+        _ if p.token.is_keyword() => {
+            // OCaml: Token.is_keyword p.token
+            // Check if the keyword is followed by a colon - if so, recover by renaming
+            if let Some((recovered_name, loc)) = super::core::recover_keyword_field_name_if_probably_field(
+                p,
+                error_messages::keyword_field_in_type,
+            ) {
+                with_loc(recovered_name, loc)
+            } else {
+                // Just emit the error without recovery
+                super::core::emit_keyword_field_error(p, error_messages::keyword_field_in_type);
+                return None;
+            }
+        }
         _ => {
             // Match OCaml's error handling: give specific messages for dangling attrs/mutable
             // OCaml uses p.end_pos as the end position (not p.start_pos)

@@ -243,6 +243,77 @@ pub mod error_messages {
             attr_name, attr_name
         )
     }
+
+    /// Generate error message for keyword used as record field name in expressions.
+    pub fn keyword_field_in_expr(keyword_txt: &str) -> String {
+        format!(
+            "Cannot use keyword `{}` as a record field name. Suggestion: rename it (e.g. `{}_`)",
+            keyword_txt, keyword_txt
+        )
+    }
+
+    /// Generate error message for keyword used as record field name in patterns.
+    pub fn keyword_field_in_pattern(keyword_txt: &str) -> String {
+        format!(
+            "Cannot use keyword `{}` here. Keywords are not allowed as record field names.",
+            keyword_txt
+        )
+    }
+
+    /// Generate error message for keyword used as record field name in type declarations.
+    pub fn keyword_field_in_type(keyword_txt: &str) -> String {
+        format!(
+            "Cannot use keyword `{}` as a record field name. Suggestion: rename it (e.g. `{}_`)\n  \
+             If you need the field to be \"{}\" at runtime, annotate the field: `@as(\"{}\") {}_ : ...`",
+            keyword_txt, keyword_txt, keyword_txt, keyword_txt, keyword_txt
+        )
+    }
+}
+
+// ============================================================================
+// Keyword Field Error Handling
+// ============================================================================
+
+/// Emit an error for keyword used as record field name.
+/// OCaml: emit_keyword_field_error
+pub fn emit_keyword_field_error<F>(p: &mut Parser<'_>, mk_message: F)
+where
+    F: Fn(&str) -> String,
+{
+    let keyword_txt = format!("{}", p.token);
+    let keyword_start = p.start_pos.clone();
+    let keyword_end = p.end_pos.clone();
+    p.err_at(
+        keyword_start,
+        keyword_end,
+        DiagnosticCategory::Message(mk_message(&keyword_txt)),
+    );
+}
+
+/// Recover a keyword used as field name if it's probably a full field name (not punning).
+/// Checks if there's a colon after it, in which case we recover by appending "_" to the name.
+/// OCaml: recover_keyword_field_name_if_probably_field
+pub fn recover_keyword_field_name_if_probably_field<F>(
+    p: &mut Parser<'_>,
+    mk_message: F,
+) -> Option<(String, LocIdx)>
+where
+    F: Fn(&str) -> String,
+{
+    if p.token.is_keyword()
+        && p.lookahead(|st| {
+            st.next();
+            st.token == Token::Colon
+        })
+    {
+        emit_keyword_field_error(p, mk_message);
+        let loc = p.mk_loc_current();
+        let recovered_field_name = format!("{}_", p.token);
+        p.next();
+        Some((recovered_field_name, loc))
+    } else {
+        None
+    }
 }
 
 // ============================================================================

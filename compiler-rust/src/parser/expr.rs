@@ -2961,6 +2961,40 @@ fn parse_braced_or_record_expr(p: &mut Parser<'_>) -> Expression {
         };
     }
 
+    // OCaml: Token.is_keyword token case in parse_braced_or_record_expr
+    // Check for keyword as first token (before block expression check)
+    if p.token.is_keyword() {
+        if let Some((recovered_name, loc)) = super::core::recover_keyword_field_name_if_probably_field(
+            p,
+            super::core::error_messages::keyword_field_in_expr,
+        ) {
+            // OCaml: Parser.expect Colon p
+            p.expect(Token::Colon);
+            // Check for optional marker
+            let opt = p.token == Token::Question;
+            if opt {
+                p.next();
+            }
+            let field_expr = parse_expr(p);
+            let lid_idx = p.push_lident(&recovered_name);
+            let lid = with_loc(lid_idx, loc);
+            let first_field = ExpressionRecordField { lid, expr: field_expr, opt };
+            p.optional(&Token::Comma);
+            let mut fields = parse_record_fields(p);
+            fields.insert(0, first_field);
+            p.expect(Token::Rbrace);
+            let loc = p.mk_loc_to_prev_end(&start_pos);
+            return Expression {
+                pexp_desc: ExpressionDesc::Pexp_record(fields, None),
+                pexp_loc: loc,
+                pexp_attributes: vec![],
+            };
+        } else {
+            // Not followed by colon - parse as block expression
+            return parse_block_expr(p, start_pos);
+        }
+    }
+
     // Check if this looks like a block expression (module-level constructs or let/expressions)
     if is_block_expression_start(&p.token) {
         return parse_block_expr(p, start_pos);
@@ -3825,15 +3859,12 @@ fn parse_record_fields(p: &mut Parser<'_>) -> Vec<ExpressionRecordField> {
         let expr_start = if opt_punning { p.start_pos.clone() } else { field_start.clone() };
 
         // Support qualified record labels: {Module.label: value}
+        // OCaml: Lident/Uident case in parse_record_expr_row
         let mut parts: Vec<String> = vec![];
         loop {
             match &p.token {
                 Token::Lident(name) | Token::Uident(name) => {
                     parts.push(name.clone());
-                    p.next();
-                }
-                _ if p.token.is_keyword() => {
-                    parts.push(p.token.to_string());
                     p.next();
                 }
                 _ => break,
@@ -3845,7 +3876,36 @@ fn parse_record_fields(p: &mut Parser<'_>) -> Vec<ExpressionRecordField> {
             }
         }
 
+        // If parts is empty, check for keyword field
+        // OCaml: Token.is_keyword p.token case in parse_record_expr_row
         if parts.is_empty() {
+            if p.token.is_keyword() {
+                // Try to recover keyword as field name if followed by colon
+                if let Some((recovered_name, loc)) = super::core::recover_keyword_field_name_if_probably_field(
+                    p,
+                    super::core::error_messages::keyword_field_in_expr,
+                ) {
+                    // OCaml: Parser.expect Colon p
+                    p.expect(Token::Colon);
+                    // Check for optional marker after colon: name: ? value
+                    let opt = p.token == Token::Question;
+                    if opt {
+                        p.next();
+                    }
+                    let expr = parse_expr(p);
+                    let lid_idx = p.push_lident(&recovered_name);
+                    let lid = with_loc(lid_idx, loc);
+                    fields.push(ExpressionRecordField { lid, expr, opt });
+                    if !p.optional(&Token::Comma) {
+                        break;
+                    }
+                    continue;
+                } else {
+                    // Just emit the error and break
+                    super::core::emit_keyword_field_error(p, super::core::error_messages::keyword_field_in_expr);
+                    break;
+                }
+            }
             break;
         }
 
