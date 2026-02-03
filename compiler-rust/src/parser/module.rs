@@ -2300,20 +2300,45 @@ fn parse_type_extension(p: &mut Parser<'_>, attrs: Attributes) -> TypeExtension 
     let start_pos = p.start_pos.clone();
 
     // Parse the extended type path (e.g. t or M.t).
+    // OCaml's parse_value_path expects the last segment to be lowercase.
+    // If an Uident is seen without a following dot, emit Lident diagnostic.
     let mut parts: Vec<String> = vec![];
+    let mut last_was_uident = false;
+    let mut last_uident_name = String::new();
+    let mut last_uident_start = p.start_pos.clone();
+    let mut last_uident_end = p.end_pos.clone();
     loop {
         match &p.token {
-            Token::Lident(name) | Token::Uident(name) => {
+            Token::Lident(name) => {
                 parts.push(name.clone());
+                last_was_uident = false;
+                p.next();
+            }
+            Token::Uident(name) => {
+                last_uident_name = name.clone();
+                last_uident_start = p.start_pos.clone();
+                last_uident_end = p.end_pos.clone();
+                parts.push(name.clone());
+                last_was_uident = true;
                 p.next();
             }
             _ => break,
         }
         if p.token == Token::Dot {
+            last_was_uident = false; // After a dot, the Uident is fine (it's a module)
             p.next();
             continue;
         }
         break;
+    }
+
+    // If the last segment was an Uident (not followed by a dot), emit error
+    if last_was_uident && !parts.is_empty() {
+        p.err_at(
+            last_uident_start,
+            last_uident_end,
+            DiagnosticCategory::Lident(Token::Uident(last_uident_name)),
+        );
     }
 
     if parts.is_empty() {
