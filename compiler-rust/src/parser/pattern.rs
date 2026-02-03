@@ -350,9 +350,9 @@ pub fn parse_constrained_pattern(p: &mut Parser<'_>) -> Pattern {
 
     if p.token == Token::Colon {
         p.next();
-        // Use no-arrow parsing so the `=>` token isn't consumed as part of a type
-        // when we're in contexts like switch cases: `| pat: t => expr`.
-        let typ = super::typ::parse_typ_expr_no_arrow(p);
+        // OCaml uses parse_typ_expr (with es6_arrow=true) here, not no-arrow.
+        // Switch cases use parse_pattern (not constrained), so => is safe here.
+        let typ = super::typ::parse_typ_expr(p);
         let loc = p.mk_loc(&p.loc_start(pat.ppat_loc), &p.loc_end(typ.ptyp_loc));
         Pattern {
             ppat_desc: PatternDesc::Ppat_constraint(Box::new(pat), typ),
