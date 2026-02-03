@@ -2491,6 +2491,11 @@ fn parse_type_declaration_with_context(
             let lower = last_name.chars().next().map(|c| c.to_lowercase().collect::<String>() + &last_name[1..]).unwrap_or(last_name);
             with_loc(lower, loc)
         }
+        Token::Eof => {
+            // EOF uses Unexpected diagnostic like OCaml's parse_lident
+            p.err_unexpected();
+            return None;
+        }
         _ => {
             p.err(DiagnosticCategory::Lident(p.token.clone()));
             return None;
