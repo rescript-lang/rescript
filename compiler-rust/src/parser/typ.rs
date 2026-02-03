@@ -331,7 +331,8 @@ fn parse_es6_arrow_type(p: &mut Parser<'_>, attrs: Attributes) -> CoreType {
     if p.token == Token::Tilde {
         p.next();
         let (name, name_loc) = parse_lident(p);
-        p.expect(Token::Colon);
+        // Pass grammar context for error message: "Did you forget a `:` here? It signals the start of a type"
+        p.expect_with_grammar(Token::Colon, Some(Grammar::TypeExpression));
 
         let typ = parse_typ_expr_inner(p, false);
         let name_idx = p.arena_mut().intern_string(&name);
@@ -803,7 +804,8 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
         let (mut label, mut typ) = if p.token == Token::Tilde {
             p.next();
             let (name, name_loc) = parse_lident(p);
-            p.expect(Token::Colon);
+            // Pass grammar context for error message: "Did you forget a `:` here? It signals the start of a type"
+            p.expect_with_grammar(Token::Colon, Some(Grammar::TypeExpression));
             let typ = parse_typ_expr(p);
             let name_idx = p.arena_mut().intern_string(&name);
             (ArgLabel::Labelled(Located::new(name_idx, name_loc)), typ)
@@ -1293,7 +1295,8 @@ fn parse_object_fields(p: &mut Parser<'_>) -> Vec<ObjectField> {
                 let name_loc = p.mk_loc_to_prev_end(&field_start);
                 // Check for optional field marker
                 let _is_optional = p.optional(&Token::Question);
-                p.expect(Token::Colon);
+                // Pass grammar context for error message: "Did you forget a `:` here? It signals the start of a type"
+                p.expect_with_grammar(Token::Colon, Some(Grammar::TypeExpression));
                 // OCaml uses parse_poly_type_expr for object field types
                 let typ = parse_poly_type_expr(p);
                 fields.push(ObjectField::Otag(with_loc(name, name_loc), field_attrs, typ));
