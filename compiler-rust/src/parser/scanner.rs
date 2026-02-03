@@ -1240,8 +1240,15 @@ impl<'src> Scanner<'src> {
                     end_pos,
                     DiagnosticCategory::unknown_uchar(ch),
                 );
-                // Continue scanning
-                return self.scan();
+                // Continue scanning - but preserve the original start_pos
+                // OCaml: let _, _, token = scan scanner in token
+                // (start_pos, end_pos, token) - uses outer start_pos, not recursive one
+                let scan_result = self.scan();
+                return ScanResult {
+                    start_pos,  // Use the outer start_pos (before the bad character)
+                    end_pos: scan_result.end_pos,
+                    token: scan_result.token,
+                };
             }
         };
 
