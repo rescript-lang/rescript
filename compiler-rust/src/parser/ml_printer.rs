@@ -3089,54 +3089,14 @@ fn print_type_declaration<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, de
             }
         }
         TypeKind::Ptype_record(fields) => {
+            // OCaml: pp f "%t%t@;%a" intro priv (record_declaration ctxt) l
+            // record_declaration: pp f "{@\n%a}" outputs { then forced newline then fields then }
             f.string(" =");
             if matches!(decl.ptype_private, PrivateFlag::Private) {
                 f.string(" private");
             }
-            if fields.is_empty() {
-                f.string(" {\n  }");
-            } else {
-                // OCaml: pp f "%t%t@;%a" intro priv (record_declaration ctxt) l
-                // record_declaration: pp f "{@\n%a}" (list type_record_field ~sep:";@\n") lbls
-                // The @; before { is a break hint, but since the record contains forced newlines
-                // the parent box always goes vertical. Use hardcoded format to work around
-                // our formatter's lack of size-0 forced newlines.
-                if decl.ptype_params.len() > 1 {
-                    f.string("\n  {\n");
-                } else {
-                    f.string(" {\n");
-                }
-                for (i, field) in fields.iter().enumerate() {
-                    f.string("  ");
-                    if matches!(field.pld_mutable, MutableFlag::Mutable) {
-                        f.string("mutable ");
-                    }
-                    f.string(&field.pld_name.txt);
-                    if field.pld_optional {
-                        f.string("?");
-                    }
-                    f.string(": ");
-                    print_core_type(f, arena, &field.pld_type);
-                    let has_attrs = !field.pld_attributes.is_empty();
-                    if has_attrs {
-                        f.string(" ");
-                        print_attributes(f, arena, &field.pld_attributes);
-                    }
-                    if i < fields.len() - 1 {
-                        if has_attrs {
-                            f.string(";\n");
-                        } else {
-                            f.string(" ;\n");
-                        }
-                    } else {
-                        if has_attrs {
-                            f.string("}");
-                        } else {
-                            f.string(" }");
-                        }
-                    }
-                }
-            }
+            f.space(); // @; break hint
+            print_record_declaration(f, arena, fields);
         }
         TypeKind::Ptype_open => {
             f.string(" =");

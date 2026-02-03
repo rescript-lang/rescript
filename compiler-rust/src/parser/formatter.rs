@@ -413,11 +413,9 @@ impl<W: Write> Formatter<W> {
                     }
                 }
                 Token::Newline => {
-                    if depth == 0 {
-                        // Top-level newline forces this box to break
-                        return usize::MAX / 2;
-                    }
-                    // Nested newline: size 0, matching OCaml's pp_force_newline behavior
+                    // In OCaml's Format, pp_force_newline has size=0 and length=0.
+                    // Forced newlines always render as newlines but don't affect
+                    // the box's "does it fit" calculation.
                 }
             }
         }
@@ -450,11 +448,7 @@ impl<W: Write> Formatter<W> {
                     }
                 }
                 Token::Newline => {
-                    if depth == 0 {
-                        // Top-level newline forces break
-                        return usize::MAX / 2;
-                    }
-                    // Nested newline: size 0 (OCaml behavior)
+                    // Forced newlines have size 0 for measurement (OCaml behavior)
                 }
             }
         }
