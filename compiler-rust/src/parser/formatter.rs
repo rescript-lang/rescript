@@ -337,9 +337,10 @@ impl<W: Write> Formatter<W> {
     // ========================================================================
 
     /// Calculate the horizontal size of tokens (if all on one line)
+    /// This includes breaks at ALL nesting levels since we're calculating
+    /// the size if everything was rendered horizontally.
     fn calculate_size(&self, tokens: &[Token]) -> usize {
         let mut size = 0;
-        let mut depth = 0;
 
         for token in tokens {
             match token {
@@ -347,17 +348,15 @@ impl<W: Write> Formatter<W> {
                     size += s.chars().count();
                 }
                 Token::Break { nspaces, .. } => {
-                    if depth == 0 {
-                        size += nspaces;
-                    }
+                    // Count break spaces at all levels since we're measuring
+                    // the horizontal (non-breaking) size
+                    size += nspaces;
                 }
                 Token::OpenBox { .. } => {
-                    depth += 1;
+                    // OpenBox has no horizontal size
                 }
                 Token::CloseBox => {
-                    if depth > 0 {
-                        depth -= 1;
-                    }
+                    // CloseBox has no horizontal size
                 }
                 Token::Newline => {
                     // Newline forces break - return large value

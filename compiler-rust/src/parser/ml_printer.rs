@@ -1682,22 +1682,35 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
             }
         }
         ExpressionDesc::Pexp_for(pat, start, end, dir, body) => {
+            // OCaml: @[<hv0>@[<hv2>@[<2>for %a =@;%a@;%a%a@;do@]@;%a@]@;done@]
             if use_parens {
                 f.string("(");
             }
+            f.open_box(BoxKind::HV, 0);
+            f.open_box(BoxKind::HV, 2);
+            f.open_box(BoxKind::HOV, 2);
             f.string("for ");
             print_pattern(f, arena, pat);
-            f.string(" = ");
+            f.string(" =");
+            f.space();
             print_expression(f, arena, start);
+            f.space();
             let dir_str = match dir {
-                DirectionFlag::Upto => " to ",
-                DirectionFlag::Downto => " downto ",
+                DirectionFlag::Upto => "to",
+                DirectionFlag::Downto => "downto",
             };
             f.string(dir_str);
+            f.space();
             print_expression(f, arena, end);
-            f.string(" do ");
+            f.space();
+            f.string("do");
+            f.close_box();
+            f.space();
             print_expression(f, arena, body);
-            f.string(" done");
+            f.close_box();
+            f.space();
+            f.string("done");
+            f.close_box();
             if use_parens {
                 f.string(")");
             }
