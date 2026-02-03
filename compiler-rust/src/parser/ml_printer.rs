@@ -1557,8 +1557,10 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                 f.open_box(BoxKind::Box, 2);
                 print_pattern(f, arena, &case.pc_lhs);
                 if let Some(guard) = &case.pc_guard {
-                    f.space();
-                    f.string("when ");
+                    // OCaml: (option (expression ctxt) ~first:"@;when@;")
+                    f.space();  // @; before "when"
+                    f.string("when");
+                    f.space();  // @; after "when"
                     print_expression(f, arena, guard);
                 }
                 f.space();
@@ -1592,7 +1594,9 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                 f.open_box(BoxKind::Box, 2);
                 print_pattern(f, arena, &case.pc_lhs);
                 if let Some(guard) = &case.pc_guard {
-                    f.string(" when ");
+                    f.space();  // @; before "when"
+                    f.string("when");
+                    f.space();  // @; after "when"
                     print_expression(f, arena, guard);
                 }
                 f.string(" -> ");
