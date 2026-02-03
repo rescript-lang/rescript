@@ -19,6 +19,11 @@
 **Remaining:** 83 tests to fix
 
 **Recent Fixes (this session):**
+- **Added proper comma error handling in parameter and argument lists**: Added Grammar::ParameterList
+  and Grammar::ArgumentList breadcrumbs to parse_parameters and parse_call_args. When an unexpected
+  token (like `]`) is encountered in a comma-delimited list, now correctly generates "Did you forget
+  a `,` here?" instead of "Did you forget a `)` here?". Added handle_record_field_comma helper for
+  record field parsing. This matches OCaml's parse_comma_delimited_region behavior.
 - **Fixed template literal pattern parsing for string interpolation errors**: Use start_pos from backtick
   when reporting string interpolation error, matching OCaml's error location (3:5-7 instead of 3:6-7).
   Skip all tokens then report one error, instead of reporting multiple errors. Use None delimiter in
