@@ -1500,13 +1500,6 @@ pub fn parse_binary_expr(
             break;
         }
 
-        // Disambiguate `<` between binary operator and JSX start.
-        // If `<` is immediately followed by JSX tokens (`<div`, `</div`, `<>`),
-        // treat it as the start of a new JSX expression, not as a binary operator.
-        if p.token == Token::LessThan && is_jsx_start_after_less_than(p) {
-            break;
-        }
-
         // Disambiguate `-`, `-.`, `<`, and `%` between binary and unary/new expression.
         // When on a new line AND not surrounded by whitespace on both sides,
         // these tokens start a new expression rather than being binary operators.
