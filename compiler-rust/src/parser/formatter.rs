@@ -647,7 +647,9 @@ impl<W: Write> Formatter<W> {
                     //
                     // Note: margin - width + off = col_at_box_open + box_indent + off
                     // which equals current_indent + off (what write_newline_indent computes)
-                    // Content newlines in cuts force a break (same as HOV packing)
+                    // Content newlines in cuts force a break (same as HOV packing).
+                    // This approximates OCaml's scan-stack-based size computation
+                    // which would produce a large size for multiline content.
                     if *nspaces == 0 && self.has_content_newline() {
                         self.write_newline_indent(*offset);
                     } else if self.is_new_line {
