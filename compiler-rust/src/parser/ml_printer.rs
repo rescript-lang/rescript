@@ -2883,6 +2883,43 @@ fn print_payload<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, payload: &P
 // Type declarations
 // ============================================================================
 
+/// Print inline record declaration: {field1: type; field2: type}
+/// Matches OCaml's record_declaration: pp f "{@\n%a}" (list type_record_field ~sep:";@\n") lbls
+fn print_record_declaration<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, fields: &[LabelDeclaration]) {
+    f.string("{");
+    f.newline();
+    if fields.is_empty() {
+        f.string("}");
+        return;
+    }
+    for (i, field) in fields.iter().enumerate() {
+        if matches!(field.pld_mutable, MutableFlag::Mutable) {
+            f.string("mutable ");
+        }
+        f.string(&field.pld_name.txt);
+        if field.pld_optional {
+            f.string("?");
+        }
+        f.string(": ");
+        print_core_type(f, arena, &field.pld_type);
+        let has_attrs = !field.pld_attributes.is_empty();
+        if has_attrs {
+            f.string(" ");
+            print_attributes(f, arena, &field.pld_attributes);
+        }
+        if i < fields.len() - 1 {
+            f.string(" ;");
+            f.newline();
+        } else {
+            if has_attrs {
+                f.string("}");
+            } else {
+                f.string(" }");
+            }
+        }
+    }
+}
+
 fn print_type_declaration<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, decl: &TypeDeclaration) {
     if !decl.ptype_params.is_empty() {
         if decl.ptype_params.len() == 1 {
@@ -2940,63 +2977,57 @@ fn print_type_declaration<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, de
                 f.newline();  // Force newline with current indentation
                 f.string("| ");
                 f.string(&ctor.pcd_name.txt);
-                match &ctor.pcd_args {
-                    ConstructorArguments::Pcstr_tuple(args) if !args.is_empty() => {
-                        f.string(" of ");
-                        for (j, arg) in args.iter().enumerate() {
-                            if j > 0 {
-                                f.string(" * ");
+                // OCaml constructor_declaration: different format for GADT vs non-GADT
+                match &ctor.pcd_res {
+                    None => {
+                        // Non-GADT: Name of args @; attrs
+                        match &ctor.pcd_args {
+                            ConstructorArguments::Pcstr_tuple(args) if !args.is_empty() => {
+                                f.string(" of ");
+                                for (j, arg) in args.iter().enumerate() {
+                                    if j > 0 {
+                                        f.string(" * ");
+                                    }
+                                    print_core_type(f, arena, arg);
+                                }
                             }
-                            print_core_type(f, arena, arg);
+                            ConstructorArguments::Pcstr_record(fields) => {
+                                f.string(" of ");
+                                print_record_declaration(f, arena, fields);
+                            }
+                            _ => {}
                         }
                     }
-                    ConstructorArguments::Pcstr_record(fields) => {
-                        f.string(" of {");
-                        f.newline();
-                        let mut last_field_has_attrs = false;
-                        for (i, field) in fields.iter().enumerate() {
-                            if matches!(field.pld_mutable, MutableFlag::Mutable) {
-                                f.string("mutable ");
+                    Some(res) => {
+                        // GADT: Name: args -> return_type @; attrs
+                        // OCaml: pp f "%s:@;%a@;%a" name (fun f -> ...) args (attributes ctxt) attrs
+                        f.string(": ");
+                        match &ctor.pcd_args {
+                            ConstructorArguments::Pcstr_tuple(args) if !args.is_empty() => {
+                                // pp f "%a@;->@;%a" (list (core_type1 ctxt) ~sep:"@;*@;") l (core_type1 ctxt) r
+                                for (j, arg) in args.iter().enumerate() {
+                                    if j > 0 {
+                                        f.string(" * ");
+                                    }
+                                    print_core_type(f, arena, arg);
+                                }
+                                f.string(" -> ");
+                                print_core_type(f, arena, res);
                             }
-                            f.string(&field.pld_name.txt);
-                            if field.pld_optional {
-                                f.string("?");
+                            ConstructorArguments::Pcstr_record(fields) => {
+                                // pp f "%a@;->@;%a" (record_declaration ctxt) l (core_type1 ctxt) r
+                                print_record_declaration(f, arena, fields);
+                                f.string(" -> ");
+                                print_core_type(f, arena, res);
                             }
-                            f.string(": ");
-                            print_core_type(f, arena, &field.pld_type);
-                            last_field_has_attrs = !field.pld_attributes.is_empty();
-                            if last_field_has_attrs {
-                                f.string(" ");
-                                print_attributes(f, arena, &field.pld_attributes);
+                            _ => {
+                                // No args: just the return type
+                                print_core_type(f, arena, res);
                             }
-                            // OCaml uses sep:";@\n" - semicolon then break then newline
-                            // The trailing space before ; comes from the field's break hints
-                            if i < fields.len() - 1 {
-                                f.string(" ;");
-                                f.newline();
-                            }
-                        }
-                        // Closing brace: if empty, just }, no trailing space (attributes add one)
-                        // If last field has attrs, no space before }
-                        // Otherwise, add space before }
-                        if fields.is_empty() {
-                            f.string("}");
-                        } else if last_field_has_attrs {
-                            f.string("}");
-                        } else {
-                            f.string(" }");
                         }
                     }
-                    _ => {}
-                }
-                if let Some(res) = &ctor.pcd_res {
-                    f.string(": ");
-                    print_core_type(f, arena, res);
                 }
                 // Print constructor attributes (like @as) with leading space
-                // OCaml: pp f "%s%a@;%a" name args (attributes ctxt) attrs
-                // The @; before attributes is a break hint that becomes a space
-                // When attrs is empty, still outputs a trailing space
                 f.string(" ");
                 print_attributes(f, arena, &ctor.pcd_attributes);
             }
@@ -3074,61 +3105,59 @@ fn print_extension_constructor<W: Write>(f: &mut Formatter<W>, arena: &ParseAren
     f.string(&ext.pext_name.txt);
     match &ext.pext_kind {
         ExtensionConstructorKind::Pext_decl(args, res) => {
-            match args {
-                ConstructorArguments::Pcstr_tuple(args) if !args.is_empty() => {
-                    f.string(" of ");
-                    for (i, arg) in args.iter().enumerate() {
-                        if i > 0 {
-                            f.string(" * ");
-                        }
-                        print_core_type(f, arena, arg);
-                    }
-                    f.string(" ");
-                }
-                ConstructorArguments::Pcstr_record(fields) => {
-                    // OCaml: pp f "@;of@;%a" (record_declaration ctxt) l
-                    // where record_declaration is: pp f "{@\n%a}" (list ... ~sep:";@\n") fields
-                    // Fields print at current indentation level (not extra indented)
-                    f.string(" of {");
-                    f.newline();
-                    let mut last_field_has_attrs = false;
-                    for (i, field) in fields.iter().enumerate() {
-                        if matches!(field.pld_mutable, MutableFlag::Mutable) {
-                            f.string("mutable ");
-                        }
-                        f.string(&field.pld_name.txt);
-                        if field.pld_optional {
-                            f.string("?");
-                        }
-                        f.string(": ");
-                        print_core_type(f, arena, &field.pld_type);
-                        last_field_has_attrs = !field.pld_attributes.is_empty();
-                        if last_field_has_attrs {
-                            f.string(" ");
-                            print_attributes(f, arena, &field.pld_attributes);
-                        }
-                        if i < fields.len() - 1 {
-                            f.string(" ;");
-                            f.newline();
-                        } else {
-                            // If last field has attributes, no space before }
-                            if last_field_has_attrs {
-                                f.string("} ");
-                            } else {
-                                f.string(" } ");
+            // OCaml: extension_constructor delegates to constructor_declaration
+            // Same GADT format as variant constructors
+            match res {
+                None => {
+                    // Non-GADT: Name of args
+                    match args {
+                        ConstructorArguments::Pcstr_tuple(args) if !args.is_empty() => {
+                            f.string(" of ");
+                            for (i, arg) in args.iter().enumerate() {
+                                if i > 0 {
+                                    f.string(" * ");
+                                }
+                                print_core_type(f, arena, arg);
                             }
+                            f.string(" ");
+                        }
+                        ConstructorArguments::Pcstr_record(fields) => {
+                            f.string(" of ");
+                            print_record_declaration(f, arena, fields);
+                            f.string(" ");
+                        }
+                        _ => {
+                            f.string(" ");
                         }
                     }
                 }
-                _ => {
-                    // No args - add trailing space
-                    f.string(" ");
+                Some(r) => {
+                    // GADT: Name: args -> return_type
+                    f.string(": ");
+                    match args {
+                        ConstructorArguments::Pcstr_tuple(args) if !args.is_empty() => {
+                            for (i, arg) in args.iter().enumerate() {
+                                if i > 0 {
+                                    f.string(" * ");
+                                }
+                                print_core_type(f, arena, arg);
+                            }
+                            f.string(" -> ");
+                            print_core_type(f, arena, r);
+                            f.string(" ");
+                        }
+                        ConstructorArguments::Pcstr_record(fields) => {
+                            print_record_declaration(f, arena, fields);
+                            f.string(" -> ");
+                            print_core_type(f, arena, r);
+                            f.string(" ");
+                        }
+                        _ => {
+                            print_core_type(f, arena, r);
+                            f.string(" ");
+                        }
+                    }
                 }
-            }
-            if let Some(r) = res {
-                f.string(": ");
-                print_core_type(f, arena, r);
-                f.string(" ");
             }
         }
         ExtensionConstructorKind::Pext_rebind(lid) => {
