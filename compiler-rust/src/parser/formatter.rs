@@ -116,6 +116,9 @@ pub struct Formatter<W: Write> {
     /// Maximum indentation (OCaml's pp_max_indent = pp_margin - pp_min_space_left)
     /// Default: 68 (78 - 10)
     pp_max_indent: usize,
+    /// Stack tracking whether each box level is in "fits" mode (Pp_fits in OCaml).
+    /// When a box fits on one line, pp_force_break_line should not break inside it.
+    fits_stack: Vec<bool>,
 }
 
 impl<W: Write> Formatter<W> {
@@ -133,6 +136,7 @@ impl<W: Write> Formatter<W> {
             is_new_line: true,
             pp_current_indent: 0,
             pp_max_indent: DEFAULT_MARGIN - 10, // OCaml: pp_margin - pp_min_space_left = 78 - 10 = 68
+            fits_stack: vec![false],
         }
     }
 
@@ -213,6 +217,36 @@ impl<W: Write> Formatter<W> {
         *self.content_newline_stack.last().unwrap_or(&false)
     }
 
+    /// OCaml's pp_force_break_line: if the current column exceeds pp_max_indent,
+    /// force a line break in the parent box to prevent boxes from opening too far right.
+    /// Only breaks if the parent box has room (width > space_left) and the parent
+    /// box type supports breaking (not hbox or fits).
+    fn pp_force_break_line(&mut self) {
+        // Don't force break if parent box is in "fits" mode (Pp_fits or Pp_hbox)
+        if *self.fits_stack.last().unwrap_or(&false) {
+            return;
+        }
+        let insertion_point = self.col;
+        if insertion_point > self.pp_max_indent {
+            // Get the parent box's width from the stack
+            if let Some(&width) = self.width_stack.last() {
+                let space_left = self.margin.saturating_sub(self.col);
+                if width > space_left {
+                    // Force a break using the parent box's width
+                    let _ = self.out.write_all(b"\n");
+                    let indent = self.margin.saturating_sub(width);
+                    let real_indent = indent.min(self.pp_max_indent);
+                    for _ in 0..real_indent {
+                        let _ = self.out.write_all(b" ");
+                    }
+                    self.col = real_indent;
+                    self.is_new_line = true;
+                    self.pp_current_indent = real_indent;
+                }
+            }
+        }
+    }
+
     // ========================================================================
     // Token handling
     // ========================================================================
@@ -291,6 +325,9 @@ impl<W: Write> Formatter<W> {
                 self.content_newline_stack.push(false);
                 self.width_stack.push(width);
 
+                let is_fits = fits || matches!(box_.kind, BoxKind::H);
+                self.fits_stack.push(is_fits);
+
                 // Render based on box kind and whether it fits
                 match box_.kind {
                     BoxKind::H => {
@@ -315,6 +352,7 @@ impl<W: Write> Formatter<W> {
                     }
                 }
 
+                self.fits_stack.pop();
                 // Pop indent level and broken state
                 self.indent_stack.pop();
                 self.content_newline_stack.pop();
@@ -497,6 +535,9 @@ impl<W: Write> Formatter<W> {
                     // Find matching close and render nested box
                     let (nested_tokens, end_idx) = self.extract_nested_box(tokens, i + 1);
 
+                    // OCaml: force break if opening box beyond pp_max_indent
+                    self.pp_force_break_line();
+
                     // Push indent, broken state, and width for nested box
                     let box_indent = (self.col as i32 + indent).max(0) as usize;
                     let width = self.margin.saturating_sub(self.col);
@@ -508,6 +549,11 @@ impl<W: Write> Formatter<W> {
                     let size = self.calculate_size(&nested_tokens);
                     let fits = self.col + size <= self.margin;
 
+                    // OCaml: if box fits, it becomes Pp_fits (except Vbox)
+                    // H boxes are always "fits" (they never break)
+                    let is_fits = fits || matches!(kind, BoxKind::H);
+                    self.fits_stack.push(is_fits);
+
                     // Render based on box kind
                     match kind {
                         BoxKind::H => self.render_tokens(&nested_tokens, false),
@@ -517,6 +563,7 @@ impl<W: Write> Formatter<W> {
                         BoxKind::Box => self.render_tokens_structural(&nested_tokens),
                     }
 
+                    self.fits_stack.pop();
                     self.indent_stack.pop();
                     self.content_newline_stack.pop();
                     self.width_stack.pop();
@@ -546,6 +593,9 @@ impl<W: Write> Formatter<W> {
                     // Find matching close and render nested box
                     let (nested_tokens, end_idx) = self.extract_nested_box(tokens, i + 1);
 
+                    // OCaml: force break if opening box beyond pp_max_indent
+                    self.pp_force_break_line();
+
                     // Push indent, broken state, and width for nested box
                     let box_indent = (self.col as i32 + indent).max(0) as usize;
                     let width = self.margin.saturating_sub(self.col);
@@ -557,6 +607,9 @@ impl<W: Write> Formatter<W> {
                     let size = self.calculate_size(&nested_tokens);
                     let fits = self.col + size <= self.margin;
 
+                    let is_fits = fits || matches!(kind, BoxKind::H);
+                    self.fits_stack.push(is_fits);
+
                     // Render based on box kind
                     match kind {
                         BoxKind::H => self.render_tokens(&nested_tokens, false),
@@ -566,6 +619,7 @@ impl<W: Write> Formatter<W> {
                         BoxKind::Box => self.render_tokens_structural(&nested_tokens),
                     }
 
+                    self.fits_stack.pop();
                     self.indent_stack.pop();
                     self.content_newline_stack.pop();
                     self.width_stack.pop();
@@ -619,6 +673,10 @@ impl<W: Write> Formatter<W> {
             match token {
                 Token::OpenBox { kind, indent } => {
                     let (nested_tokens, end_idx) = self.extract_nested_box(tokens, i + 1);
+
+                    // OCaml: force break if opening box beyond pp_max_indent
+                    self.pp_force_break_line();
+
                     let box_indent = (self.col as i32 + indent).max(0) as usize;
                     let width = self.margin.saturating_sub(self.col);
                     self.indent_stack.push(box_indent);
@@ -628,6 +686,9 @@ impl<W: Write> Formatter<W> {
                     let size = self.calculate_size(&nested_tokens);
                     let fits = self.col + size <= self.margin;
 
+                    let is_fits = fits || matches!(kind, BoxKind::H);
+                    self.fits_stack.push(is_fits);
+
                     match kind {
                         BoxKind::H => self.render_tokens(&nested_tokens, false),
                         BoxKind::V => self.render_tokens(&nested_tokens, true),
@@ -636,6 +697,7 @@ impl<W: Write> Formatter<W> {
                         BoxKind::Box => self.render_tokens_structural(&nested_tokens),
                     }
 
+                    self.fits_stack.pop();
                     self.indent_stack.pop();
                     self.content_newline_stack.pop();
                     self.width_stack.pop();
