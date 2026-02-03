@@ -742,8 +742,12 @@ fn print_structure_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
             print_item_attributes(f, arena, &od.popen_attributes);
         }
         StructureItemDesc::Pstr_include(incl) => {
-            f.string("include ");
+            // OCaml: @[<hov2>include@ %a@]%a
+            f.open_box(BoxKind::HOV, 2);
+            f.string("include");
+            f.space();
             print_module_expr(f, arena, &incl.pincl_mod);
+            f.close_box();
             print_item_attributes(f, arena, &incl.pincl_attributes);
         }
         StructureItemDesc::Pstr_attribute((name, payload)) => {
@@ -3697,8 +3701,12 @@ fn print_signature_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
             print_item_attributes(f, arena, &od.popen_attributes);
         }
         SignatureItemDesc::Psig_include(incl) => {
-            f.string("include ");
+            // OCaml: @[<hov2>include@ %a@]%a
+            f.open_box(BoxKind::HOV, 2);
+            f.string("include");
+            f.space();
             print_module_type(f, arena, &incl.pincl_mod);
+            f.close_box();
             print_item_attributes(f, arena, &incl.pincl_attributes);
         }
         SignatureItemDesc::Psig_attribute((name, payload)) => {
