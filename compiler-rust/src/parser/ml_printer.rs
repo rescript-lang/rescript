@@ -2538,6 +2538,8 @@ fn print_pattern_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, pat: 
             f.close_box();
         }
         PatternDesc::Ppat_array(pats) => {
+            // OCaml: pp f "@[<2>[|%a|]@]" with sep ";"
+            f.open_box(BoxKind::Box, 2);
             f.string("[|");
             for (i, p) in pats.iter().enumerate() {
                 if i > 0 {
@@ -2546,6 +2548,7 @@ fn print_pattern_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, pat: 
                 print_pattern(f, arena, p);
             }
             f.string("|]");
+            f.close_box();
         }
         PatternDesc::Ppat_or(p1, p2) => {
             print_pattern(f, arena, p1);
@@ -2553,9 +2556,8 @@ fn print_pattern_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, pat: 
             print_pattern(f, arena, p2);
         }
         PatternDesc::Ppat_constraint(p, t) => {
-            // OCaml simple_pattern: pp f "@[<2>(%a@;:@;%a)@]" (pattern1 ctxt) p
-            // pattern1 handles alias/or by falling through to simple_pattern which wraps in parens
-            // pattern1 handles cons directly via pattern_list_helper without parens
+            // OCaml: pp f "@[<2>(%a@;:@;%a)@]" (pattern1 ctxt) p (core_type ctxt) ct
+            f.open_box(BoxKind::Box, 2);
             f.string("(");
             // Only alias and or patterns need extra parens (cons is handled by pattern1 without parens)
             let needs_inner_parens = matches!(
@@ -2569,9 +2571,12 @@ fn print_pattern_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, pat: 
             if needs_inner_parens {
                 f.string(")");
             }
-            f.string(" : ");
+            f.space(); // @; before :
+            f.string(":");
+            f.space(); // @; after :
             print_core_type(f, arena, t);
             f.string(")");
+            f.close_box();
         }
         PatternDesc::Ppat_type(lid) => {
             f.string("#");
