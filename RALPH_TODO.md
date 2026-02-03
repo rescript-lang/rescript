@@ -244,40 +244,37 @@
 - Fixed module functor sugar (`module F(A:X) = ...`) and module application printing (`(F)(A)`)
 - Fixed unit functor printing (`functor () ->` instead of `functor (*) ->`)
 
-**Root Causes of Remaining Failures (144 tests):**
+**Root Causes of Remaining Failures (83 tests):**
 
-1. **parsing/grammar (47 failing)**: Almost entirely 80-column line wrapping differences.
-   OCaml's Format module wraps long lines at 80 columns with specific indentation rules.
+1. **parsing/grammar (42 failing)**: Almost entirely ML printer line wrapping differences.
+   OCaml's Format module wraps long lines at 78 columns with specific indentation rules.
    The Rust Formatter doesn't match this behavior exactly. The actual AST content is correct.
-   Note: Adding HOV boxes to item_attributes for proper line-breaking caused other regressions
-   (different break points chosen in complex nested structures). Needs deeper investigation of
-   how OCaml's Format module chooses break points.
+   Key issue: OCaml uses `@[<hv2>` boxes with break hints (`@;`) that cause "all or nothing"
+   line breaking. The Rust formatter implements box-based formatting but the break decisions
+   don't always match. Example: for-loops should break after `do` with body indented, but
+   Rust keeps everything on one line until forced to break.
 
-2. **parsing/errors (74 failing)**: Multiple issues:
-   - Error message wording differs ("I'm missing a type here" vs "Unexpected token")
-   - Error location format differs (`:16-18` vs `:16`) - OCaml tracks start AND end pos for errors
-   - OCaml's breadcrumb-based error messages provide context-specific hints
-     **PARTIALLY FIXED**: DiagnosticCategory now uses Grammar enum, enabling pattern matching on
-     breadcrumbs. Need to implement `explain_unexpected` logic matching OCaml's res_diagnostics.ml
-   - Error recovery produces different recovered AST structures
-   - OCaml's `skip_tokens_and_maybe_retry` advances past errors more aggressively
-   - `_` as expression: OCaml detects `_` in non-function-argument context and generates error,
-     replacing with `[%rescript.exprhole]`. Rust keeps `_` as-is. Complex to fix because
-     need to distinguish `foo(_, bar)` (valid partial application) from `_ + 1` (invalid).
+2. **parsing/errors (29 failing)**: Multiple issues:
+   - Error message wording sometimes differs
+   - Error location spans differ in some cases
+   - Some errors report different context (e.g., different line numbers shown)
+   - ML printer line wrapping causes AST output formatting differences
+   - Record/braced expression disambiguation: OCaml has special case at line 3229-3247 of
+     res_core.ml that detects `{updateF value:...}` and generates "Did you forget a `,` here?"
+     when `Lident Lident` pattern appears on different lines vs "Did you forget a `:` here?"
+     when on same line. Rust's lookahead-based approach doesn't handle this case.
 
-3. **parsing/recovery (16 failing)**: Error recovery output differs from OCaml.
+3. **parsing/recovery (6 failing)**: Error recovery output differs from OCaml.
    Both error messages and recovered AST formatting differ.
 
 4. **parsing/infiniteLoops (4 failing)**: Actually doesn't loop infinitely, but error messages
    and AST output format differ from OCaml.
 
-5. **parsing/other (3 failing)**: Mixed issues:
-   - Error message differences
-   - Line wrapping differences
+5. **parsing/other (2 failing)**: Mixed issues including line wrapping differences.
 
-**Note:** Most non-printer failures are NOT simple formatting issues - they require implementing
-missing parser error checking logic (for "consecutive statements" errors) or matching OCaml's
-exact Format module line-breaking algorithm.
+**Note:** The vast majority of failures (42/83 = 51%) are parsing/grammar tests which fail solely
+due to ML printer line wrapping. If the Format module behavior matched OCaml exactly, many of
+these would pass. The error message content itself is often correct, just the formatting differs.
 
 ---
 
