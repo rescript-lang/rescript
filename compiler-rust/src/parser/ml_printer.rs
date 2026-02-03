@@ -2357,10 +2357,14 @@ fn print_pattern_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, pat: 
             f.string(&name.txt);
         }
         PatternDesc::Ppat_alias(p, name) => {
-            // OCaml: @[<2>%a@;as@;%a@] - no outer parens
+            // OCaml: @[<2>%a@;as@;%a@]
+            f.open_box(BoxKind::Box, 2);
             print_pattern(f, arena, p);
-            f.string(" as ");
+            f.space(); // @; before as
+            f.string("as");
+            f.space(); // @; after as
             f.string(&name.txt);
+            f.close_box();
         }
         PatternDesc::Ppat_constant(c) => {
             // Negative numbers need parentheses in patterns
