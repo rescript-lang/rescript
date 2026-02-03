@@ -1833,14 +1833,20 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
             }
         }
         ExpressionDesc::Pexp_record(fields, base) => {
-            f.string("{ ");
+            // OCaml: pp f "@[<hv0>@[<hv2>{@;%a%a@]@;}@]"
+            f.open_box(BoxKind::HV, 0);
+            f.open_box(BoxKind::HV, 2);
+            f.string("{");
+            f.space(); // @; after {
             if let Some(b) = base {
-                print_expression(f, arena, b);
-                f.string(" with ");
+                print_expression_simple(f, arena, b);
+                f.string(" with");
+                f.space(); // @; after "with"
             }
             for (i, field) in fields.iter().enumerate() {
                 if i > 0 {
-                    f.string("; ");
+                    f.string(";");
+                    f.space(); // ;@; separator
                 }
                 // Check for punning: { a } is shorthand for { a = a }
                 // OCaml only uses punning when field is Lident (not qualified)
@@ -1861,21 +1867,32 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                 };
 
                 if is_punned {
+                    // OCaml: pp f "@[<hov2>%a%s@]"
+                    f.open_box(BoxKind::HOV, 2);
                     print_longident_idx(f, arena, field.lid.txt);
                     if field.opt {
                         f.string("?");  // Optional punned field: name?
                     }
+                    f.close_box();
                 } else {
+                    // OCaml: pp f "@[<hov2>%a@;=@;%s%a@]"
+                    f.open_box(BoxKind::HOV, 2);
                     print_longident_idx(f, arena, field.lid.txt);
-                    f.string(" = ");
+                    f.space(); // @; before =
+                    f.string("=");
+                    f.space(); // @; after =
                     if field.opt {
                         f.string("?");  // Optional field: name = ?value
                     }
                     // OCaml uses simple_expr for record field values
                     print_expression_simple(f, arena, &field.expr);
+                    f.close_box();
                 }
             }
-            f.string(" }");
+            f.close_box();
+            f.space(); // @; before }
+            f.string("}");
+            f.close_box();
         }
         ExpressionDesc::Pexp_field(obj, field) => {
             print_expression_simple(f, arena, obj);
@@ -2376,10 +2393,13 @@ fn print_pattern_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, pat: 
             }
         }
         PatternDesc::Ppat_tuple(pats) => {
+            // OCaml: @[<1>(%a)@] with sep ",@;"
+            f.open_box(BoxKind::Box, 1);
             f.string("(");
             for (i, p) in pats.iter().enumerate() {
                 if i > 0 {
-                    f.string(", ");
+                    f.string(",");
+                    f.space(); // ,@; separator
                 }
                 // Alias patterns inside tuples need parentheses
                 let needs_parens = matches!(p.ppat_desc, PatternDesc::Ppat_alias(..));
@@ -2392,6 +2412,7 @@ fn print_pattern_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, pat: 
                 }
             }
             f.string(")");
+            f.close_box();
         }
         PatternDesc::Ppat_construct(lid, arg) => {
             // Special case for cons pattern - no outer parens by default
@@ -2456,17 +2477,20 @@ fn print_pattern_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, pat: 
             }
         }
         PatternDesc::Ppat_record(fields, closed) => {
-            f.string("{ ");
+            // OCaml closed: @[<2>{@;%a@;}@]  with sep ";@;"
+            // OCaml open:   @[<2>{@;%a;_}@]  with sep ";@;"
+            f.open_box(BoxKind::Box, 2);
+            f.string("{");
+            f.space(); // @; after {
             for (i, field) in fields.iter().enumerate() {
                 if i > 0 {
-                    f.string("; ");
+                    f.string(";");
+                    f.space(); // ;@; separator
                 }
                 // OCaml only punns for simple Lident fields, not qualified Ldot fields
-                // Pattern: { Lident s, Ppat_var { txt } } when s = txt -> punning
                 let is_punned = match arena.get_longident(field.lid.txt) {
                     Longident::Lident(name_idx) => {
                         let fname = arena.get_string(*name_idx);
-                        // Also require no attributes on the pattern
                         field.pat.ppat_attributes.is_empty() &&
                             matches!(&field.pat.ppat_desc, PatternDesc::Ppat_var(var) if var.txt == fname)
                     }
@@ -2474,16 +2498,23 @@ fn print_pattern_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, pat: 
                 };
 
                 if is_punned {
+                    // OCaml: @[<2>%a%s@]
+                    f.open_box(BoxKind::Box, 2);
                     print_longident_idx(f, arena, field.lid.txt);
                     if field.opt {
-                        f.string("?");  // Optional punned field: name?
+                        f.string("?");
                     }
+                    f.close_box();
                 } else {
+                    // OCaml: @[<2>%a%s@;=@;%a@]
+                    f.open_box(BoxKind::Box, 2);
                     print_longident_idx(f, arena, field.lid.txt);
                     if field.opt {
-                        f.string("?");  // Optional field: name? = pattern
+                        f.string("?");
                     }
-                    f.string(" = ");
+                    f.space(); // @; before =
+                    f.string("=");
+                    f.space(); // @; after =
                     // Print with parens for alias patterns (pattern1 context)
                     let needs_parens = matches!(&field.pat.ppat_desc,
                         PatternDesc::Ppat_alias(..) | PatternDesc::Ppat_or(..)
@@ -2495,13 +2526,16 @@ fn print_pattern_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, pat: 
                     if needs_parens {
                         f.string(")");
                     }
+                    f.close_box();
                 }
             }
             if matches!(closed, ClosedFlag::Open) {
                 f.string(";_}");
             } else {
-                f.string(" }");
+                f.space(); // @; before }
+                f.string("}");
             }
+            f.close_box();
         }
         PatternDesc::Ppat_array(pats) => {
             f.string("[|");
