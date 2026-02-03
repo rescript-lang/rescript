@@ -1,7 +1,7 @@
 # Syntax Parity TODO
 
 **Last Updated:** 2026-02-03
-**Overall Status:** 403/506 tests passing (79%)
+**Overall Status:** 404/506 tests passing (79%)
 
 **Category Breakdown:**
 | Category | Passed | Failed | Total | Percent |
@@ -12,13 +12,23 @@
 | conversion | 27 | 0 | 27 | 100% ✅ |
 | parsing/grammar | 93 | 42 | 135 | 68% |
 | parsing/other | 12 | 2 | 14 | 85% |
-| parsing/recovery | 12 | 8 | 20 | 60% |
+| parsing/recovery | 13 | 7 | 20 | 65% |
 | parsing/errors | 37 | 47 | 84 | 44% |
 | parsing/infiniteLoops | 1 | 4 | 5 | 20% |
 
-**Remaining:** 103 tests to fix
+**Remaining:** 102 tests to fix
 
 **Recent Fixes (this session):**
+- **Fixed if-expression error recovery with regions/breadcrumbs**: Added proper `begin_region`/`end_region`
+  and breadcrumbs (`ExprIf`, `IfCondition`, `IfBranch`, `ElseBranch`) to if-expression parsing.
+  This matches OCaml's region-based error suppression: first error in then-branch silences subsequent
+  errors in that region, but else-branch starts a new region so its errors are reported.
+  Also fixed `parse_block_body` to check `is_block_expr_start` before continuing, which is critical
+  for error recovery (prevents `else` from being parsed as a block expression).
+- **Added spread pattern error messages for array and record patterns**: Implemented `parse_non_spread_pattern`
+  helper that checks for `...` and emits "Array spread (`...`) is not supported in pattern matches"
+  with the full explanation. Also added spread detection in record pattern parsing. This fixes
+  error messages in tests like parsing/recovery/expression/list.res.
 - **Fixed pattern error recovery with skip_tokens_and_maybe_retry**: When an unexpected token is seen
   where a pattern is expected, call `skip_tokens_and_maybe_retry` to try to find a valid pattern start
   token. For example, `let = 2` now recovers to `let 2 = [%rescript.exprhole]` matching OCaml (skips `=`,
