@@ -816,9 +816,9 @@ fn parse_lident(p: &mut Parser<'_>) -> String {
             name
         }
         _ => {
-            p.err(DiagnosticCategory::Message(
-                "Expected lowercase identifier".to_string(),
-            ));
+            // OCaml uses Lident diagnostic here which produces context-sensitive error
+            p.err(DiagnosticCategory::Lident(p.token.clone()));
+            p.next(); // Consume the invalid token
             "_".to_string()
         }
     }

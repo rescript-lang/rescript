@@ -1083,10 +1083,11 @@ fn parse_lident(p: &mut Parser<'_>) -> (String, Location) {
             (name, loc)
         }
         _ => {
-            p.err(DiagnosticCategory::Message(
-                "Expected lowercase identifier".to_string(),
-            ));
-            ("_".to_string(), LocIdx::none())
+            // OCaml uses Lident diagnostic here which produces context-sensitive error
+            p.err(DiagnosticCategory::Lident(p.token.clone()));
+            p.next(); // Consume the invalid token
+            let loc = p.mk_loc_to_prev_end(&start_pos);
+            ("_".to_string(), loc)
         }
     }
 }
