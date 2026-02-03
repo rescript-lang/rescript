@@ -2312,14 +2312,22 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                 if p.prev_end_pos.line < p.start_pos.line {
                     break;
                 }
-                // Tagged templates can be any expression: (foo ? bar : baz)`...`
                 match &expr.pexp_desc {
                     ExpressionDesc::Pexp_ident(lid) => {
                         let prefix = (lid.txt.clone(), lid.loc.clone());
                         expr = parse_template_literal_with_prefix(p, Some(prefix));
                     }
                     _ => {
-                        expr = parse_tagged_template_literal_with_tag_expr(p, expr);
+                        // OCaml: only bare names are valid as tagged template tags
+                        p.err_at(
+                            p.loc_start(expr.pexp_loc).clone(),
+                            p.loc_end(expr.pexp_loc).clone(),
+                            DiagnosticCategory::message(
+                                "Tagged template literals are currently restricted to names like: \
+                                 myTagFunction`foo ${bar}`.",
+                            ),
+                        );
+                        expr = parse_template_literal_with_prefix(p, None);
                     }
                 }
             }
