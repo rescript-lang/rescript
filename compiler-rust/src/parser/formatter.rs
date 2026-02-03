@@ -316,7 +316,7 @@ impl<W: Write> Formatter<W> {
             if let Some(box_) = self.current_box.take() {
                 // Calculate if box fits on one line
                 let size = self.calculate_size(&box_.tokens);
-                let fits = self.col + size <= self.margin;
+                let fits = self.col + size < self.margin;
 
                 // Push new indent level and broken state for this box
                 let box_indent = (self.col as i32 + box_.indent).max(0) as usize;
@@ -551,7 +551,7 @@ impl<W: Write> Formatter<W> {
 
                     // Calculate if nested box fits
                     let size = self.calculate_size(&nested_tokens);
-                    let fits = self.col + size <= self.margin;
+                    let fits = self.col + size < self.margin;
 
                     // OCaml: if box fits, it becomes Pp_fits (except Vbox)
                     // H boxes are always "fits" (they never break)
@@ -611,7 +611,7 @@ impl<W: Write> Formatter<W> {
 
                     // Calculate if nested box fits
                     let size = self.calculate_size(&nested_tokens);
-                    let fits = self.col + size <= self.margin;
+                    let fits = self.col + size < self.margin;
 
                     let is_fits = fits || matches!(kind, BoxKind::H);
                     self.fits_stack.push(is_fits);
@@ -637,10 +637,6 @@ impl<W: Write> Formatter<W> {
                 Token::Break { nspaces, offset } => {
                     // In HOV packing: each break is evaluated independently based on fitness.
                     // OCaml: if size > state.pp_space_left then break_new_line else break_same_line
-                    // where size = this_break.nspaces + content + next_break.nspaces
-                    // (OCaml's scan_push includes the break's own length in the size computation)
-                    // size_until_break already includes the next break's nspaces, so we add
-                    // the current break's nspaces to match OCaml's size computation.
                     let size_ahead = self.size_until_break(tokens, i + 1);
                     let space_left = self.margin.saturating_sub(self.col);
                     if nspaces + size_ahead > space_left {
@@ -692,7 +688,7 @@ impl<W: Write> Formatter<W> {
                     self.width_stack.push(width);
 
                     let size = self.calculate_size(&nested_tokens);
-                    let fits = self.col + size <= self.margin;
+                    let fits = self.col + size < self.margin;
 
                     let is_fits = fits || matches!(kind, BoxKind::H);
                     self.fits_stack.push(is_fits);
