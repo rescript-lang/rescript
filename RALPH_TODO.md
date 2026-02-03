@@ -1,7 +1,7 @@
 # Syntax Parity TODO
 
 **Last Updated:** 2026-02-03
-**Overall Status:** 393/506 tests passing (77%)
+**Overall Status:** 394/506 tests passing (77%)
 
 **Category Breakdown:**
 | Category | Passed | Failed | Total | Percent |
@@ -13,12 +13,21 @@
 | parsing/grammar | 93 | 42 | 135 | 68% |
 | parsing/other | 12 | 2 | 14 | 85% |
 | parsing/recovery | 11 | 9 | 20 | 55% |
-| parsing/errors | 28 | 56 | 84 | 33% |
+| parsing/errors | 29 | 55 | 84 | 34% |
 | parsing/infiniteLoops | 1 | 4 | 5 | 20% |
 
-**Remaining:** 113 tests to fix
+**Remaining:** 112 tests to fix
 
 **Recent Fixes (this session):**
+- **Added skip_tokens_and_maybe_retry to type expression parsing**: When encountering an unexpected
+  token in parse_atomic_typ_expr, try to skip tokens and retry parsing if we find a valid type
+  expression start. This matches OCaml's error recovery behavior. Fixes garbage.res test.
+- **Added MinusGreater error recovery in arrow types**: When -> is used instead of => in type
+  expressions, generate "Did you forget a `=>` here?" and continue parsing. Matches OCaml's
+  res_core.ml parse_arrow_type_rest behavior.
+- **Added grammar context to expect(Colon) for type hints**: Pass Grammar::TypeExpression context
+  when expecting a colon in labeled parameters and object fields, adding the hint "It signals
+  the start of a type" to error messages.
 - **Fixed type definition parsing - Bar before Equal**: When parsing type definitions, if Bar (`|`) is
   seen instead of Equal, call expect(Equal) to generate "Did you forget a `=` here?" with proper
   location span (from end of name to the Bar token).
