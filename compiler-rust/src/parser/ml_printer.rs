@@ -510,6 +510,7 @@ fn print_structure_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
                 if i > 0 {
                     f.newline();
                 }
+                // OCaml: @[<2>%s %a%a@]%a
                 f.open_box(BoxKind::HOV, 2);
                 if i > 0 {
                     f.string("and ");
@@ -517,9 +518,9 @@ fn print_structure_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
                     f.string(rec_str);
                 }
                 print_value_binding(f, arena, &binding.pvb_pat, &binding.pvb_expr);
-                // Value binding attributes
-                print_item_attributes(f, arena, &binding.pvb_attributes);
                 f.close_box();
+                // Item attributes are OUTSIDE the box in OCaml
+                print_item_attributes(f, arena, &binding.pvb_attributes);
             }
         }
         StructureItemDesc::Pstr_primitive(vd) => {
@@ -1485,14 +1486,18 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
             }
         }
         ExpressionDesc::Pexp_tuple(exprs) => {
+            // OCaml: @[<hov2>(%a)@] with (list (simple_expr ctxt) ~sep:",@;")
+            f.open_box(BoxKind::HOV, 2);
             f.string("(");
             for (i, e) in exprs.iter().enumerate() {
                 if i > 0 {
-                    f.string(", ");
+                    f.string(",");
+                    f.space();
                 }
-                print_expression(f, arena, e);
+                print_expression_simple(f, arena, e);
             }
             f.string(")");
+            f.close_box();
         }
         ExpressionDesc::Pexp_construct(lid, arg) => {
             // Special handling for list syntax
@@ -1501,21 +1506,29 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                 if name == "::" {
                     let (elements, is_complete) = collect_list_elements(expr, arena);
                     if is_complete && !elements.is_empty() {
+                        // OCaml: @[<hv0>[%a]@] with (expression (under_semi)) and sep ";@;"
+                        f.open_box(BoxKind::HV, 0);
                         f.string("[");
                         for (i, elem) in elements.iter().enumerate() {
                             if i > 0 {
-                                f.string("; ");
+                                f.string(";");
+                                f.space();
                             }
-                            print_expression_list_context(f, arena, elem);
+                            print_expression_semi_context(f, arena, elem);
                         }
                         f.string("]");
+                        f.close_box();
                         return;
                     }
+                    // Non-complete list: a :: b :: expr
+                    // OCaml: list (simple_expr ctxt) ~sep:"@;::@;"
                     for (i, elem) in elements.iter().enumerate() {
                         if i > 0 {
-                            f.string(" :: ");
+                            f.space();
+                            f.string("::");
+                            f.space();
                         }
-                        print_expression(f, arena, elem);
+                        print_expression_simple(f, arena, elem);
                     }
                     return;
                 } else if name == "[]" {
@@ -1526,18 +1539,29 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                     return;
                 }
             }
-            print_longident_idx(f, arena, lid.txt);
             if let Some(a) = arg {
-                f.string(" ");
-                print_expression(f, arena, a);
+                // OCaml: @[<2>%a@;%a@] with simple_expr for arg
+                f.open_box(BoxKind::HOV, 2);
+                print_longident_idx(f, arena, lid.txt);
+                f.space();
+                print_expression_simple(f, arena, a);
+                f.close_box();
+            } else {
+                print_longident_idx(f, arena, lid.txt);
             }
         }
         ExpressionDesc::Pexp_variant(label, arg) => {
-            f.string("`");
-            f.string(label);
             if let Some(a) = arg {
-                f.string(" ");
-                print_expression(f, arena, a);
+                // OCaml: @[<2>`%s@;%a@] with simple_expr for arg
+                f.open_box(BoxKind::HOV, 2);
+                f.string("`");
+                f.string(label);
+                f.space();
+                print_expression_simple(f, arena, a);
+                f.close_box();
+            } else {
+                f.string("`");
+                f.string(label);
             }
         }
         ExpressionDesc::Pexp_record(fields, base) => {
@@ -1600,6 +1624,7 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
             print_expression_simple(f, arena, value);
         }
         ExpressionDesc::Pexp_array(elems) => {
+            // OCaml: @[<0>@[<2>[|%a|]@]@] with (list (simple_expr (under_semi)) ~sep:";")
             f.open_box(BoxKind::HOV, 0);
             f.open_box(BoxKind::HOV, 2);
             f.string("[|");
@@ -1607,7 +1632,7 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                 if i > 0 {
                     f.string(";");
                 }
-                print_expression_semi_context(f, arena, e);
+                print_expression_simple(f, arena, e);
             }
             f.string("|]");
             f.close_box();
