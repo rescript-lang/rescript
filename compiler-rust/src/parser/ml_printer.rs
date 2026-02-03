@@ -586,14 +586,20 @@ fn print_structure_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
             f.string("type ");
             // Print type params if present
             if !ext.ptyext_params.is_empty() {
-                f.string("(");
-                for (i, (ty, _variance)) in ext.ptyext_params.iter().enumerate() {
-                    if i > 0 {
-                        f.string(",");
+                if ext.ptyext_params.len() == 1 {
+                    // Single param: no parens, like OCaml's "type _ Tid.t +="
+                    print_core_type(f, arena, &ext.ptyext_params[0].0);
+                    f.string(" ");
+                } else {
+                    f.string("(");
+                    for (i, (ty, _variance)) in ext.ptyext_params.iter().enumerate() {
+                        if i > 0 {
+                            f.string(",");
+                        }
+                        print_core_type(f, arena, ty);
                     }
-                    print_core_type(f, arena, ty);
+                    f.string(") ");
                 }
-                f.string(") ");
             }
             print_longident_idx(f, arena, ext.ptyext_path.txt);
             f.string(" += ");
@@ -673,11 +679,20 @@ fn print_structure_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
             print_item_attributes(f, arena, &mb.pmb_attributes);
         }
         StructureItemDesc::Pstr_recmodule(mbs) => {
+            // OCaml: @[<hv>@[<hov2>module rec name:mt = me@]%a @ aux_list@]
+            // Outer HV box ensures and-bindings break onto separate lines
+            f.open_box(BoxKind::HV, 0);
             for (i, mb) in mbs.iter().enumerate() {
                 if i == 0 {
+                    f.open_box(BoxKind::HOV, 2);
                     f.string("module rec ");
                 } else {
-                    f.string("  and ");  // Two spaces before "and"
+                    // Outer @ break: newline in HV box
+                    f.space();
+                    // OCaml: @[<hov2>@ and@ ...@] — HOV2 box starting with @ before "and"
+                    f.open_box(BoxKind::HOV, 2);
+                    f.space(); // @ before "and" — gives 1 space in packing mode
+                    f.string("and ");
                 }
                 f.string(&mb.pmb_name.txt);
                 // Check for constraint sugar: `A:Mt = Me` instead of `A = (Me : Mt)`
@@ -690,9 +705,11 @@ fn print_structure_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
                     f.string(" = ");
                     print_module_expr(f, arena, &mb.pmb_expr);
                 }
+                f.close_box();
                 // Print module binding attributes
                 print_item_attributes(f, arena, &mb.pmb_attributes);
             }
+            f.close_box();
         }
         StructureItemDesc::Pstr_modtype(mtd) => {
             // OCaml: pp f "@[<hov2>module@ type@ %s%a@]%a"
@@ -3553,14 +3570,20 @@ fn print_signature_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
             f.string("type ");
             // Print type params if present
             if !ext.ptyext_params.is_empty() {
-                f.string("(");
-                for (i, (ty, _variance)) in ext.ptyext_params.iter().enumerate() {
-                    if i > 0 {
-                        f.string(",");
+                if ext.ptyext_params.len() == 1 {
+                    // Single param: no parens, like OCaml's "type _ Tid.t +="
+                    print_core_type(f, arena, &ext.ptyext_params[0].0);
+                    f.string(" ");
+                } else {
+                    f.string("(");
+                    for (i, (ty, _variance)) in ext.ptyext_params.iter().enumerate() {
+                        if i > 0 {
+                            f.string(",");
+                        }
+                        print_core_type(f, arena, ty);
                     }
-                    print_core_type(f, arena, ty);
+                    f.string(") ");
                 }
-                f.string(") ");
             }
             print_longident_idx(f, arena, ext.ptyext_path.txt);
             f.string(" += ");
