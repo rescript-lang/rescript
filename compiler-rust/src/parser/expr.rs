@@ -2371,10 +2371,13 @@ fn parse_tuple_expr(p: &mut Parser<'_>, start_pos: Position, first: Expression) 
     p.expect(Token::Rparen);
     let loc = p.mk_loc_to_prev_end(&start_pos);
 
+    // OCaml: A tuple needs at least two elements
     if elements.len() < 2 {
-        p.err(DiagnosticCategory::Message(
-            super::core::error_messages::TUPLE_SINGLE_ELEMENT.to_string(),
-        ));
+        p.err_at(
+            start_pos.clone(),
+            p.prev_end_pos.clone(),
+            DiagnosticCategory::Message("A tuple needs at least two elements".to_string()),
+        );
     }
 
     Expression {

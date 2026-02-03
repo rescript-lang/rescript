@@ -438,6 +438,16 @@ pub fn parse_tuple_pattern(
     }
 
     p.expect(Token::Rparen);
+
+    // OCaml: A tuple needs at least two elements
+    if patterns.len() == 1 {
+        p.err_at(
+            start_pos.clone(),
+            p.prev_end_pos.clone(),
+            DiagnosticCategory::Message("A tuple needs at least two elements".to_string()),
+        );
+    }
+
     let loc = p.mk_loc_to_prev_end(&start_pos);
 
     Pattern {
