@@ -2494,11 +2494,19 @@ fn parse_type_declaration_with_context(
         Token::Eof => {
             // EOF uses Unexpected diagnostic like OCaml's parse_lident
             p.err_unexpected();
-            return None;
+            // OCaml: returns ("_", loc) for error recovery, creating a placeholder type
+            let loc = p.mk_loc_to_prev_end(&start_pos);
+            with_loc("_".to_string(), loc)
         }
         _ => {
+            // OCaml: parse_lident emits Lident diagnostic and returns ("_", loc)
             p.err(DiagnosticCategory::Lident(p.token.clone()));
-            return None;
+            // Try to recover - if there's something on the same line, skip it
+            if p.token.is_keyword() && p.prev_end_pos.line == p.start_pos.line {
+                p.next();
+            }
+            let loc = p.mk_loc_to_prev_end(&start_pos);
+            with_loc("_".to_string(), loc)
         }
     };
 
