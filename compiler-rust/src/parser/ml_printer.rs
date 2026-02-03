@@ -65,9 +65,10 @@ fn pattern_needs_parens_as_param(pat: &Pattern, arena: &ParseArena) -> bool {
 /// Simple patterns can appear as arguments to variants/constructors without parens.
 /// Based on pprintast.ml's simple_pattern function.
 fn pattern_is_simple(pat: &Pattern, arena: &ParseArena) -> bool {
-    // If pattern has attributes, it needs to go through full pattern printing
+    // In OCaml, simple_pattern delegates to pattern when attributes are present.
+    // pattern adds ((...)attrs) wrapping, so no extra parens needed.
     if !pat.ppat_attributes.is_empty() {
-        return false;
+        return true;
     }
     match &pat.ppat_desc {
         // These are all handled directly by simple_pattern:
@@ -1200,6 +1201,23 @@ fn print_expression_simple<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, e
     }
 }
 
+/// Print expression as simple_expr with under_semi context.
+/// Used for array elements: OCaml uses `simple_expr (under_semi ctxt)`.
+fn print_expression_simple_under_semi<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, expr: &Expression) {
+    let has_attrs = !printable_attributes(&expr.pexp_attributes).is_empty();
+
+    if is_simple_expression_with_arena(expr, arena) {
+        print_expression(f, arena, expr);
+    } else if has_attrs {
+        // OCaml: expression (under_semi ctxt) for attributed non-simple expressions
+        print_expression_under_semi(f, arena, expr);
+    } else {
+        f.string("(");
+        print_expression_under_semi(f, arena, expr);
+        f.string(")");
+    }
+}
+
 /// Print expression at "expression2" level - used for binary operands and function arguments.
 /// OCaml's under_app: if x.pexp_attributes <> [] then expression ctxt f x else expression2 ctxt f x
 /// Expression2 includes Pexp_field and Pexp_send without parens, other exprs use simple_expr.
@@ -1782,7 +1800,7 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                 if i > 0 {
                     f.string(";");
                 }
-                print_expression_simple(f, arena, e);
+                print_expression_simple_under_semi(f, arena, e);
             }
             f.string("|]");
             f.close_box();
