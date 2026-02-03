@@ -6,7 +6,7 @@
 use super::ast::*;
 use super::core::{ast_helper, mknoloc, recover, template_literal_attr, with_loc};
 use super::diagnostics::DiagnosticCategory;
-use super::grammar;
+use super::grammar::{self, Grammar};
 use super::longident::Longident;
 use super::state::Parser;
 use super::token::Token;
@@ -1022,31 +1022,113 @@ fn parse_array_pattern(p: &mut Parser<'_>) -> Pattern {
 /// Parse a list pattern list{p1, p2, ...spread}.
 fn parse_list_pattern(p: &mut Parser<'_>, start_pos: crate::location::Position) -> Pattern {
     // Token::List already includes the opening '{'
+    // OCaml: uses parse_comma_delimited_reversed_list with parse_pattern_region
+    // which collects (has_spread, pattern) tuples, then validates spreads after.
 
-    let mut patterns = vec![];
-    let mut spread = None;
+    // Collect items using OCaml's parse_pattern_region approach
+    let mut items: Vec<(bool, Pattern)> = vec![];
 
-    while p.token != Token::Rbrace && p.token != Token::Eof {
-        if p.token == Token::DotDotDot {
-            // OCaml does NOT include ... in the spread pattern location
+    p.leave_breadcrumb(Grammar::PatternOcamlList);
+    loop {
+        // parse_pattern_region: check what token we have
+        let item = if p.token == Token::DotDotDot {
             p.next();
-            let spread_pat = parse_constrained_pattern(p);
-            spread = Some(spread_pat);
-            // Allow trailing comma after spread: list{a, ...rest,}
-            p.optional(&Token::Comma);
-            break;
-        }
-        // Use parse_constrained_pattern to support (pat: type) inside list patterns
-        patterns.push(parse_constrained_pattern(p));
-        if !p.optional(&Token::Comma) {
-            break;
+            Some((true, parse_constrained_pattern(p)))
+        } else if super::grammar::is_pattern_start(&p.token) {
+            Some((false, parse_constrained_pattern(p)))
+        } else {
+            None
+        };
+
+        match item {
+            Some(node) => {
+                if p.token == Token::Comma {
+                    p.next();
+                    items.push(node);
+                } else if p.token == Token::Rbrace || p.token == Token::Eof {
+                    items.push(node);
+                    break;
+                } else if super::grammar::is_pattern_start(&p.token) || p.token == Token::DotDotDot {
+                    // Missing comma - report and continue
+                    p.expect(Token::Comma);
+                    items.push(node);
+                } else {
+                    items.push(node);
+                    if !(p.token == Token::Eof || p.token == Token::Rbrace
+                        || super::core::recover::should_abort_list_parse(p))
+                    {
+                        p.expect(Token::Comma);
+                        p.next();
+                    }
+                    break;
+                }
+            }
+            None => {
+                if p.token == Token::Eof || p.token == Token::Rbrace
+                    || super::core::recover::should_abort_list_parse(p)
+                {
+                    break;
+                } else {
+                    p.err(DiagnosticCategory::unexpected(
+                        p.token.clone(),
+                        p.breadcrumbs().to_vec(),
+                    ));
+                    p.next();
+                }
+            }
         }
     }
+    p.eat_breadcrumb();
 
     p.expect(Token::Rbrace);
     let loc = p.mk_loc_to_prev_end(&start_pos);
 
-    ast_helper::make_list_pattern(p, loc, patterns, spread)
+    // OCaml: items collected in reverse order, first reversed item with spread = tail.
+    // We collected in forward order. Reverse to match OCaml's processing.
+    items.reverse();
+
+    match items.as_slice() {
+        [(true, _), ..] => {
+            let (_, spread_pat) = items.remove(0);
+            // Remaining items: report any that also have spread
+            let patterns: Vec<Pattern> = items
+                .into_iter()
+                .map(|(has_spread, pat)| {
+                    if has_spread {
+                        p.err_at(
+                            p.loc_start(pat.ppat_loc),
+                            p.end_pos.clone(),
+                            DiagnosticCategory::Message(
+                                super::core::error_messages::LIST_PATTERN_SPREAD.to_string(),
+                            ),
+                        );
+                    }
+                    pat
+                })
+                .rev()
+                .collect();
+            ast_helper::make_list_pattern(p, loc, patterns, Some(spread_pat))
+        }
+        _ => {
+            let patterns: Vec<Pattern> = items
+                .into_iter()
+                .map(|(has_spread, pat)| {
+                    if has_spread {
+                        p.err_at(
+                            p.loc_start(pat.ppat_loc),
+                            p.end_pos.clone(),
+                            DiagnosticCategory::Message(
+                                super::core::error_messages::LIST_PATTERN_SPREAD.to_string(),
+                            ),
+                        );
+                    }
+                    pat
+                })
+                .rev()
+                .collect();
+            ast_helper::make_list_pattern(p, loc, patterns, None)
+        }
+    }
 }
 
 /// Parse a record pattern {field: pat, ...}.
@@ -1054,36 +1136,28 @@ fn parse_record_pattern(p: &mut Parser<'_>) -> Pattern {
     let start_pos = p.start_pos.clone();
     p.expect(Token::Lbrace);
 
-    let mut fields = vec![];
+    // OCaml: collects (has_spread, PatField|PatUnderscore) tuples via
+    // parse_comma_delimited_reversed_list, then validates spreads after parsing.
+    let mut raw_fields: Vec<(bool, Option<PatternRecordField>)> = vec![];
     let mut closed = ClosedFlag::Closed;
-    let mut saw_spread = false;
 
     while p.token != Token::Rbrace && p.token != Token::Eof {
         if p.token == Token::Underscore {
             p.next();
-            closed = ClosedFlag::Open;
+            raw_fields.push((false, None)); // PatUnderscore
             // Allow trailing comma after underscore: {a, _,}
             p.optional(&Token::Comma);
-            break;
-        }
-
-        // Check for spread pattern - not allowed in record patterns
-        if p.token == Token::DotDotDot {
-            // Emit error for record pattern spread
-            p.err(DiagnosticCategory::Message(
-                super::core::error_messages::RECORD_PATTERN_SPREAD.to_string(),
-            ));
-            saw_spread = true;
-            p.next(); // Skip the ...
-            // Try to parse what follows as a pattern (will be ignored)
-            if super::grammar::is_pattern_start(&p.token) {
-                let _ = parse_pattern(p);
-            }
-            if !p.optional(&Token::Comma) {
-                break;
-            }
             continue;
         }
+
+        // Check for spread pattern - OCaml: DotDotDot case in parse_record_pattern_row
+        // Parse as a regular field with has_spread=true, validate after
+        let has_spread = if p.token == Token::DotDotDot {
+            p.next();
+            true
+        } else {
+            false
+        };
 
         let field_start = p.start_pos.clone();
 
@@ -1134,7 +1208,7 @@ fn parse_record_pattern(p: &mut Parser<'_>) -> Pattern {
                     let pat = parse_pattern(p);
                     let lid_idx = p.push_lident(&recovered_name);
                     let lid = with_loc(lid_idx, loc);
-                    fields.push(PatternRecordField { lid, pat, opt });
+                    raw_fields.push((false, Some(PatternRecordField { lid, pat, opt })));
                     if !p.optional(&Token::Comma) {
                         break;
                     }
@@ -1199,7 +1273,7 @@ fn parse_record_pattern(p: &mut Parser<'_>) -> Pattern {
             (with_loc(lid_idx, loc), pat, opt_punning)
         };
 
-        fields.push(PatternRecordField { lid, pat, opt });
+        raw_fields.push((has_spread, Some(PatternRecordField { lid, pat, opt })));
 
         if !p.optional(&Token::Comma) {
             break;
@@ -1208,6 +1282,41 @@ fn parse_record_pattern(p: &mut Parser<'_>) -> Pattern {
 
     p.expect(Token::Rbrace);
     let loc = p.mk_loc_to_prev_end(&start_pos);
+
+    // OCaml: process raw_fields in reverse order.
+    // Last PatUnderscore becomes Open flag, spread fields emit errors.
+    // Reverse to match OCaml's reversed list processing.
+    raw_fields.reverse();
+
+    // Check if first (last parsed) item is Underscore
+    if let Some((false, None)) = raw_fields.first() {
+        closed = ClosedFlag::Open;
+        raw_fields.remove(0);
+    }
+
+    // Process remaining fields, emitting errors for spreads
+    let mut fields = vec![];
+    for (has_spread, field_opt) in raw_fields.into_iter().rev() {
+        match field_opt {
+            Some(field) => {
+                if has_spread {
+                    // OCaml: Parser.err ~start_pos:pattern.ppat_loc.loc_start p
+                    // end_pos defaults to p.end_pos (current token end)
+                    p.err_at(
+                        p.loc_start(field.pat.ppat_loc),
+                        p.end_pos.clone(),
+                        DiagnosticCategory::Message(
+                            super::core::error_messages::RECORD_PATTERN_SPREAD.to_string(),
+                        ),
+                    );
+                }
+                fields.push(field);
+            }
+            None => {
+                // PatUnderscore in middle - just skip (OCaml: (fields, flag))
+            }
+        }
+    }
 
     Pattern {
         ppat_desc: PatternDesc::Ppat_record(fields, closed),
