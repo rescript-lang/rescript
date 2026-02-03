@@ -2610,7 +2610,23 @@ fn print_core_type<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, typ: &Cor
     if has_attrs {
         f.string("((");
     }
+    // OCaml's core_type wraps fallthrough types (those handled by core_type1) in @[<2>...@]
+    // Types that already handle their own Box(2): Ptyp_arrow, Ptyp_alias, Ptyp_poly (non-empty vars)
+    // Ptyp_poly with empty vars just recurses into core_type, so no extra box needed
+    let needs_box = match &typ.ptyp_desc {
+        CoreTypeDesc::Ptyp_arrow { .. } => false,
+        CoreTypeDesc::Ptyp_alias(..) => false,
+        CoreTypeDesc::Ptyp_poly(vars, _) if !vars.is_empty() => false,
+        CoreTypeDesc::Ptyp_poly(_, _) => false, // empty vars recurses into core_type
+        _ => true,
+    };
+    if needs_box {
+        f.open_box(BoxKind::Box, 2);
+    }
     print_core_type_inner(f, arena, typ);
+    if needs_box {
+        f.close_box();
+    }
     if has_attrs {
         f.string(")");
         print_attributes(f, arena, &typ.ptyp_attributes);
@@ -2746,6 +2762,8 @@ fn print_core_type_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, typ
             f.string(" > ");
         }
         CoreTypeDesc::Ptyp_alias(t, name) => {
+            // OCaml: pp f "@[<2>%a@;as@;'%s@]" (core_type1 ctxt) ct s
+            f.open_box(BoxKind::Box, 2);
             // Arrow types inside alias need parens for precedence
             let needs_parens = matches!(t.ptyp_desc, CoreTypeDesc::Ptyp_arrow { .. });
             if needs_parens {
@@ -2755,8 +2773,12 @@ fn print_core_type_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, typ
             if needs_parens {
                 f.string(")");
             }
-            f.string(" as '");
+            f.space();
+            f.string("as");
+            f.space();
+            f.string("'");
             f.string(name);
+            f.close_box();
         }
         CoreTypeDesc::Ptyp_variant(rows, closed, labels) => {
             // OCaml: pp f "@[<2>[%a%a]@]" ...
