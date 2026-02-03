@@ -1631,7 +1631,7 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                 if name == "::" {
                     let (elements, is_complete) = collect_list_elements(expr, arena);
                     if is_complete && !elements.is_empty() {
-                        // OCaml: @[<hv0>[%a]@] with (expression (under_semi)) and sep ";@;"
+                        // OCaml: @[<hv0>[%a]@] with expression (under_semi ctxt) and sep ";@;"
                         f.open_box(BoxKind::HV, 0);
                         f.string("[");
                         for (i, elem) in elements.iter().enumerate() {
@@ -1639,7 +1639,8 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                                 f.string(";");
                                 f.space();
                             }
-                            print_expression_semi_context(f, arena, elem);
+                            // OCaml uses expression (under_semi), NOT simple_expr
+                            print_expression_under_semi(f, arena, elem);
                         }
                         f.string("]");
                         f.close_box();
