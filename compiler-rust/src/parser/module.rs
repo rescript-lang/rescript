@@ -3442,15 +3442,34 @@ fn parse_constructor_impl(p: &mut Parser<'_>, start_pos: Position) -> Option<Con
                         }
                     }
                 }
-                // If we see string, ".", "..", or "..." it's an object type, not inline record
+                // If we see string, ".", or ".." it's an object type, not inline record
                 // Note: {} (empty) is an inline record, NOT an object type
-                !matches!(
-                    state.token,
-                    Token::String(_)
-                        | Token::Dot
-                        | Token::DotDot
-                        | Token::DotDotDot
-                )
+                // DotDotDot (spread) could be either - scan past it looking for string fields
+                if matches!(state.token, Token::String(_) | Token::Dot | Token::DotDot) {
+                    return false; // Object type, not inline record
+                }
+                if state.token == Token::DotDotDot {
+                    // Scan past spread to check if subsequent fields have string keys
+                    // If all fields are identifiers, it's an inline record
+                    let mut depth = 0;
+                    loop {
+                        match state.token {
+                            Token::String(_) if depth == 0 => return false, // String field = object type
+                            Token::Rbrace if depth == 0 => return true, // End without string = record
+                            Token::Eof => return true,
+                            Token::Lparen | Token::Lbrace | Token::Lbracket => depth += 1,
+                            Token::Rparen | Token::Rbracket => {
+                                if depth > 0 { depth -= 1; }
+                            }
+                            Token::Rbrace => {
+                                if depth > 0 { depth -= 1; } else { return true; }
+                            }
+                            _ => {}
+                        }
+                        state.next();
+                    }
+                }
+                true // Not object type → inline record
             });
         if is_inline_record {
             let lbrace_pos = p.start_pos.clone();
@@ -3492,11 +3511,32 @@ fn parse_constructor_impl(p: &mut Parser<'_>, start_pos: Position) -> Option<Con
                                 }
                             }
                         }
-                        // String, ".", "..", or "..." indicate object type (NOT empty record)
-                        matches!(
-                            state.token,
-                            Token::String(_) | Token::Dot | Token::DotDot | Token::DotDotDot
-                        )
+                        // String, ".", or ".." indicate object type (NOT empty record)
+                        // DotDotDot (spread) needs further scanning to check for string fields
+                        if matches!(state.token, Token::String(_) | Token::Dot | Token::DotDot) {
+                            return true;
+                        }
+                        if state.token == Token::DotDotDot {
+                            // Scan past spread to check for string fields
+                            let mut depth = 0;
+                            loop {
+                                match state.token {
+                                    Token::String(_) if depth == 0 => return true,
+                                    Token::Rbrace if depth == 0 => return false,
+                                    Token::Eof => return false,
+                                    Token::Lparen | Token::Lbrace | Token::Lbracket => depth += 1,
+                                    Token::Rparen | Token::Rbracket => {
+                                        if depth > 0 { depth -= 1; }
+                                    }
+                                    Token::Rbrace => {
+                                        if depth > 0 { depth -= 1; } else { return false; }
+                                    }
+                                    _ => {}
+                                }
+                                state.next();
+                            }
+                        }
+                        false
                     });
                     if is_object {
                         // Consume `{` and capture start_pos AFTER (like OCaml)
