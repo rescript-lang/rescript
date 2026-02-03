@@ -3829,13 +3829,26 @@ fn parse_value_description(
 
     // Parse optional primitive
     let prim = if p.token == Token::Equal {
+        let equal_start = p.start_pos.clone();
+        let equal_end = p.end_pos.clone();
         p.next();
-        let mut prims = vec![];
-        while let Token::String(s) = &p.token {
-            prims.push(s.clone());
-            p.next();
+        match &p.token {
+            Token::String(s) => {
+                let s = s.clone();
+                p.next();
+                // OCaml only parses a single string here
+                vec![s]
+            }
+            _ => {
+                // OCaml: emit error when = is not followed by a string
+                let msg = format!(
+                    "An external requires the name of the JS value you're referring to, like \"{}\".",
+                    name.txt
+                );
+                p.err_at(equal_start, equal_end, DiagnosticCategory::Message(msg));
+                vec![]
+            }
         }
-        prims
     } else {
         vec![]
     };
