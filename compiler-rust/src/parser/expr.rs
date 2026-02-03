@@ -972,27 +972,79 @@ fn parse_parameters(p: &mut Parser<'_>) -> Vec<super::core::FundefParameter> {
                 ));
             } else if had_dot {
                 // We had a dot but there are more tokens - parse parameters
+                p.leave_breadcrumb(Grammar::ParameterList);
                 while p.token != Token::Rparen && p.token != Token::Eof {
                     if let Some(param) = parse_parameter(p) {
                         params.push(param);
+                    } else {
+                        // No param parsed - check if we should continue or stop
+                        if recover::should_abort_list_parse(p) {
+                            break;
+                        }
+                        // Unexpected token - report error and skip
+                        p.err_unexpected();
+                        p.next();
+                        continue;
                     }
-                    if !p.optional(&Token::Comma) {
+
+                    // Check for comma or handle missing comma like OCaml
+                    if p.token == Token::Comma {
+                        p.next();
+                    } else if p.token == Token::Rparen || p.token == Token::Eof {
+                        break;
+                    } else if grammar::is_parameter_start(&p.token) {
+                        // Token looks like another param but no comma - missing comma case
+                        p.expect(Token::Comma);
+                    } else if !recover::should_abort_list_parse(p) {
+                        // Unexpected token, not closing/EOF/abort - expect comma
+                        p.expect(Token::Comma);
+                        if p.token == Token::Semicolon {
+                            p.next();
+                        }
+                    } else {
                         break;
                     }
                 }
+                p.eat_breadcrumb();
                 p.expect(Token::Rparen);
                 let rparen_end_pos = p.prev_end_pos.clone();
                 // Set paren positions on the first type param (if any)
                 set_first_type_param_paren_pos(&mut params, &lparen_pos, &rparen_end_pos);
             } else {
+                p.leave_breadcrumb(Grammar::ParameterList);
                 while p.token != Token::Rparen && p.token != Token::Eof {
                     if let Some(param) = parse_parameter(p) {
                         params.push(param);
+                    } else {
+                        // No param parsed - check if we should continue or stop
+                        if recover::should_abort_list_parse(p) {
+                            break;
+                        }
+                        // Unexpected token - report error and skip
+                        p.err_unexpected();
+                        p.next();
+                        continue;
                     }
-                    if !p.optional(&Token::Comma) {
+
+                    // Check for comma or handle missing comma like OCaml
+                    if p.token == Token::Comma {
+                        p.next();
+                    } else if p.token == Token::Rparen || p.token == Token::Eof {
+                        break;
+                    } else if grammar::is_parameter_start(&p.token) {
+                        // Token looks like another param but no comma - missing comma case
+                        p.expect(Token::Comma);
+                    } else if !recover::should_abort_list_parse(p) {
+                        // Unexpected token, not closing/EOF/abort - expect comma
+                        p.expect(Token::Comma);
+                        if p.token == Token::Semicolon {
+                            p.next();
+                        }
+                    } else {
                         break;
                     }
                 }
+                p.eat_breadcrumb();
                 p.expect(Token::Rparen);
                 let rparen_end_pos = p.prev_end_pos.clone();
                 // Set paren positions on the first type param (if any)
@@ -2271,6 +2323,9 @@ fn parse_call_args(p: &mut Parser<'_>) -> (Vec<(ArgLabel, Expression)>, bool) {
     // OCaml's start_pos for empty args is the position after '(' is consumed
     let start_pos = p.start_pos.clone();
 
+    // Leave breadcrumb for ArgumentList (matching OCaml's parse_comma_delimited_region)
+    p.leave_breadcrumb(Grammar::ArgumentList);
+
     // Uncurried call syntax: f(. x, y) or f(. x, y, . z)
     // The dots are handled by parse_argument which consumes them
 
@@ -2285,11 +2340,34 @@ fn parse_call_args(p: &mut Parser<'_>) -> (Vec<(ArgLabel, Expression)>, bool) {
         let (label, expr) = parse_argument(p);
         args.push((label, expr));
 
-        if !p.optional(&Token::Comma) {
+        if p.token == Token::Comma {
+            // Consume the comma and continue
+            p.next();
+        } else if p.token == Token::Rparen || p.token == Token::Eof {
+            // At closing token, done
+            break;
+        } else if grammar::is_argument_start(&p.token) {
+            // Token looks like another argument but no comma - missing comma case
+            // This matches OCaml: "is_list_element grammar p.token" check
+            p.expect(Token::Comma);
+            // Continue parsing (don't break)
+        } else if !recover::should_abort_list_parse(p) {
+            // Token is not argument start, not closing, not EOF,
+            // and should_abort_list_parse is false - expect comma
+            // This matches OCaml's behavior for unexpected tokens like ']' in arg list
+            p.expect(Token::Comma);
+            // Skip semicolons if present (OCaml does this)
+            if p.token == Token::Semicolon {
+                p.next();
+            }
+            // Continue parsing (don't break)
+        } else {
+            // should_abort_list_parse returned true - stop parsing
             break;
         }
     }
 
+    p.eat_breadcrumb();
     p.expect(Token::Rparen);
     // Get prev_end_pos AFTER consuming ')' to match OCaml behavior
     let rparen_end = p.prev_end_pos.clone();
@@ -3846,9 +3924,35 @@ fn parse_module_longident(p: &mut Parser<'_>) -> Located<LidentIdx> {
     with_loc(lid_idx, loc)
 }
 
+/// Handle comma after parsing a record field, matching OCaml's parse_comma_delimited_region.
+/// Returns true if parsing should continue, false if it should stop.
+fn handle_record_field_comma(p: &mut Parser<'_>) -> bool {
+    if p.token == Token::Comma {
+        p.next();
+        true
+    } else if p.token == Token::Rbrace || p.token == Token::Eof {
+        false
+    } else if grammar::is_record_row_start(&p.token) {
+        // Token looks like another field but no comma - missing comma case
+        p.expect(Token::Comma);
+        true
+    } else if !recover::should_abort_list_parse(p) {
+        // Unexpected token, not closing/EOF/abort - expect comma
+        p.expect(Token::Comma);
+        if p.token == Token::Semicolon {
+            p.next();
+        }
+        true
+    } else {
+        false
+    }
+}
+
 /// Parse record fields.
 fn parse_record_fields(p: &mut Parser<'_>) -> Vec<ExpressionRecordField> {
     let mut fields = vec![];
+
+    p.leave_breadcrumb(Grammar::RecordRows);
 
     while p.token != Token::Rbrace && p.token != Token::Eof {
         let field_start = p.start_pos.clone();
@@ -3909,7 +4013,7 @@ fn parse_record_fields(p: &mut Parser<'_>) -> Vec<ExpressionRecordField> {
                     let lid_idx = p.push_lident(&recovered_name);
                     let lid = with_loc(lid_idx, loc);
                     fields.push(ExpressionRecordField { lid, expr, opt });
-                    if !p.optional(&Token::Comma) {
+                    if !handle_record_field_comma(p) {
                         break;
                     }
                     continue;
@@ -3919,7 +4023,14 @@ fn parse_record_fields(p: &mut Parser<'_>) -> Vec<ExpressionRecordField> {
                     break;
                 }
             }
-            break;
+            // Token is not a valid field start - check if we should continue or stop
+            if p.token == Token::Rbrace || p.token == Token::Eof || recover::should_abort_list_parse(p) {
+                break;
+            }
+            // Unexpected token - report error and skip
+            p.err_unexpected();
+            p.next();
+            continue;
         }
 
         let lid_unloc = super::core::build_longident(p.arena_mut(), &parts);
@@ -3950,11 +4061,12 @@ fn parse_record_fields(p: &mut Parser<'_>) -> Vec<ExpressionRecordField> {
 
         fields.push(ExpressionRecordField { lid, expr, opt });
 
-        if !p.optional(&Token::Comma) {
+        if !handle_record_field_comma(p) {
             break;
         }
     }
 
+    p.eat_breadcrumb();
     fields
 }
 
