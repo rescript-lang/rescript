@@ -520,18 +520,34 @@ fn print_structure_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
             }
         }
         StructureItemDesc::Pstr_primitive(vd) => {
+            // OCaml: pp f "@[<hov2>external@ %a@ :@ %a@]%a"
             f.open_box(BoxKind::HOV, 2);
-            f.string("external ");
+            f.string("external");
+            f.space();
             f.string(&vd.pval_name.txt);
-            f.string(" : ");
+            f.space();
+            f.string(":");
+            f.space();
+            // OCaml value_description: pp f "@[<hov2>%a%a@]"
+            // where %a%a = core_type followed by optional "@ =@ primitives"
+            f.open_box(BoxKind::HOV, 2);
             print_core_type(f, arena, &vd.pval_type);
-            for prim in &vd.pval_prim {
-                f.string(" = \"");
-                f.string(prim);
-                f.string("\"");
+            if !vd.pval_prim.is_empty() {
+                f.space();
+                f.string("=");
+                f.space();
+                for (i, prim) in vd.pval_prim.iter().enumerate() {
+                    if i > 0 {
+                        f.space();
+                    }
+                    f.string("\"");
+                    f.string(prim);
+                    f.string("\"");
+                }
             }
-            print_item_attributes(f, arena, &vd.pval_attributes);
             f.close_box();
+            f.close_box();
+            print_item_attributes(f, arena, &vd.pval_attributes);
         }
         StructureItemDesc::Pstr_type(rec_flag, decls) => {
             // OCaml: @[<2>type %a%a%s%s%a@]%a for first, @[<2>and %a@]%a for others
@@ -3310,12 +3326,23 @@ fn print_signature_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
             f.space();
             f.string(":");
             f.space();
+            // OCaml value_description: pp f "@[<hov2>%a%a@]"
+            f.open_box(BoxKind::HOV, 2);
             print_core_type(f, arena, &vd.pval_type);
-            for prim in &vd.pval_prim {
-                f.string(" = \"");
-                f.string(prim);
-                f.string("\"");
+            if !vd.pval_prim.is_empty() {
+                f.space();
+                f.string("=");
+                f.space();
+                for (i, prim) in vd.pval_prim.iter().enumerate() {
+                    if i > 0 {
+                        f.space();
+                    }
+                    f.string("\"");
+                    f.string(prim);
+                    f.string("\"");
+                }
             }
+            f.close_box();
             f.close_box();
             print_item_attributes(f, arena, &vd.pval_attributes);
         }
