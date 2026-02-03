@@ -3417,15 +3417,26 @@ fn print_module_expr_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, m
             f.close_box();
         }
         ModuleExprDesc::Pmod_functor(name, mtype, body) => {
-            // OCaml: functor () -> ... for unit, functor (Name : Type) -> ... otherwise
             if let Some(mt) = mtype {
-                f.string("functor (");
+                // OCaml: pp f "functor@ (%s@ :@ %a)@;->@;%a"
+                f.string("functor");
+                f.space(); // @ after "functor"
+                f.string("(");
                 f.string(&name.txt);
-                f.string(" : ");
+                f.space(); // @ after name
+                f.string(":");
+                f.space(); // @ after ":"
                 print_module_type(f, arena, mt);
-                f.string(") -> ");
+                f.string(")");
+                f.space(); // @; after ")"
+                f.string("->");
+                f.space(); // @; after "->"
             } else {
-                f.string("functor () -> ");
+                // OCaml: pp f "functor ()@;->@;%a"
+                f.string("functor ()");
+                f.space(); // @; after "()"
+                f.string("->");
+                f.space(); // @; after "->"
             }
             print_module_expr(f, arena, body);
         }
@@ -3438,11 +3449,16 @@ fn print_module_expr_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, m
             f.string(")");
         }
         ModuleExprDesc::Pmod_constraint(m, mt) => {
+            // OCaml: pp f "@[<hov2>(%a@ :@ %a)@]"
+            f.open_box(BoxKind::HOV, 2);
             f.string("(");
             print_module_expr(f, arena, m);
-            f.string(" : ");
+            f.space(); // @ before ":"
+            f.string(":");
+            f.space(); // @ after ":"
             print_module_type(f, arena, mt);
             f.string(")");
+            f.close_box();
         }
         ModuleExprDesc::Pmod_unpack(e) => {
             // OCaml: (val@ %a) — break hint between val and expression
