@@ -61,6 +61,7 @@ and expression = {
   exp_extra: (exp_extra * Location.t * attribute list) list;
   exp_type: type_expr;
   exp_env: Env.t;
+  mutable exp_is_return: bool;
   exp_attributes: attribute list;
 }
 

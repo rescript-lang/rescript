@@ -277,6 +277,7 @@ let rec exprToContextPathInner ~(inJsxContext : bool) (e : Parsetree.expression)
             {funct = d; args = (Nolabel, lhs) :: args; partial; transformed_jsx};
         pexp_loc;
         pexp_attributes;
+        pexp_is_return = false;
       }
   | Pexp_apply
       ({
@@ -294,11 +295,18 @@ let rec exprToContextPathInner ~(inJsxContext : bool) (e : Parsetree.expression)
           Pexp_apply
             {
               app with
-              funct = {pexp_desc = Pexp_ident id; pexp_loc; pexp_attributes};
+              funct =
+                {
+                  pexp_desc = Pexp_ident id;
+                  pexp_loc;
+                  pexp_attributes;
+                  pexp_is_return = false;
+                };
               args = [(Nolabel, lhs)];
             };
         pexp_loc;
         pexp_attributes;
+        pexp_is_return = false;
       }
   | Pexp_apply {funct = e1; args} -> (
     match exprToContextPath ~inJsxContext e1 with

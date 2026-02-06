@@ -52,6 +52,7 @@ let parsing_engine =
       (fun ~for_printer ~filename ->
         let engine = setup ~filename ~for_printer () in
         let structure = Res_core.parse_implementation engine in
+        Res_return_marker.structure structure;
         let invalid, diagnostics =
           match engine.diagnostics with
           | [] as diagnostics -> (false, diagnostics)
@@ -69,6 +70,7 @@ let parsing_engine =
       (fun ~for_printer ~filename ->
         let engine = setup ~filename ~for_printer () in
         let signature = Res_core.parse_specification engine in
+        Res_return_marker.signature signature;
         let invalid, diagnostics =
           match engine.diagnostics with
           | [] as diagnostics -> (false, diagnostics)
@@ -90,6 +92,7 @@ let parsing_engine =
 let parse_implementation_from_source ~for_printer ~display_filename ~source =
   let engine = setup_from_source ~display_filename ~source ~for_printer () in
   let structure = Res_core.parse_implementation engine in
+  Res_return_marker.structure structure;
   let invalid, diagnostics =
     match engine.diagnostics with
     | [] as diagnostics -> (false, diagnostics)
@@ -107,6 +110,7 @@ let parse_implementation_from_source ~for_printer ~display_filename ~source =
 let parse_interface_from_source ~for_printer ~display_filename ~source =
   let engine = setup_from_source ~display_filename ~source ~for_printer () in
   let signature = Res_core.parse_specification engine in
+  Res_return_marker.signature signature;
   let invalid, diagnostics =
     match engine.diagnostics with
     | [] as diagnostics -> (false, diagnostics)
