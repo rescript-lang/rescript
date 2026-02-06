@@ -1,1 +1,0 @@
-let hello: unit => unit

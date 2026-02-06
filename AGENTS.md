@@ -387,21 +387,7 @@ make test-rewatch     # Run integration tests
 
 **Note**: The rewatch project is located in the `rewatch/` directory with its own `Cargo.toml` file. All cargo commands should be run from the project root using the `--manifest-path rewatch/Cargo.toml` flag, as shown in the CI workflow.
 
-**Integration Tests**: The `make test-rewatch` command runs bash-based integration tests located in `rewatch/tests/suite.sh`. These tests use the `rewatch/testrepo/` directory as a test workspace with various package configurations to verify rewatch's behavior across different scenarios.
-
-**Running Individual Integration Tests**: You can run individual test scripts directly by setting up the environment manually:
-
-```bash
-cd rewatch/tests
-export REWATCH_EXECUTABLE="$(realpath ../target/debug/rescript)"
-eval $(node ./get_bin_paths.js)
-export RESCRIPT_BSC_EXE
-export RESCRIPT_RUNTIME
-source ./utils.sh
-bash ./watch/06-watch-missing-source-folder.sh
-```
-
-This is useful for iterating on a specific test without running the full suite.
+**Integration Tests**: The `make test-rewatch` command runs Vitest-based integration tests located in `tests/rewatch_tests/`. These tests use a sandbox copy of `tests/rewatch_tests/fixture/` to verify rewatch's behavior across different scenarios (build, watch, clean, format, etc.).
 
 #### Debugging
 
@@ -493,5 +479,3 @@ When clippy suggests refactoring that could impact performance, consider the tra
 ## CI Gotchas
 
 - **`sleep` is fragile** — Prefer polling (e.g., `wait_for_file`) over fixed sleeps. CI runners are slower than local machines.
-- **`exit_watcher` is async** — It only signals the watcher to stop (removes the lock file), it doesn't wait for the process to exit. Avoid triggering config-change events before exiting, as the watcher may start a concurrent rebuild.
-- **`sed -i` differs across platforms** — macOS requires `sed -i '' ...`, Linux does not. Use the `replace` / `normalize_paths` helpers from `rewatch/tests/utils.sh` instead of raw `sed`.
