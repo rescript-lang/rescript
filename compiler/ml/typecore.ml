@@ -2841,20 +2841,22 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
         exp_env = env;
       }
   | Pexp_index (scontainer, sindex) ->
-    (* Read access: arr[i] -> array<'a> -> int -> 'a *)
+    (* Read access: arr[i] -> array<'a> -> int -> option<'a>
+       Returns option because JS bracket access returns undefined for
+       out-of-bounds indices, which maps to None in ReScript's option type. *)
     let container = type_exp ~context:None env scontainer in
     let index =
       type_expect ~context:None env sindex (instance_def Predef.type_int)
     in
-    let element_type = newgenvar () in
-    let array_type = instance_def (Predef.type_array element_type) in
+    let element_type = newvar () in
+    let array_type = Predef.type_array element_type in
     unify_exp ~context:None env container array_type;
     rue
       {
         exp_desc = Texp_index (container, index);
         exp_loc = loc;
         exp_extra = [];
-        exp_type = instance env element_type;
+        exp_type = type_option element_type;
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
       }
