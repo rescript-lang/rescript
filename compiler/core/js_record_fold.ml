@@ -245,6 +245,11 @@ let statement_desc : 'a. ('a, statement_desc) fn =
     let st = for_direction _self st _x3 in
     let st = _self.block _self st _x4 in
     st
+  | ForOf (_x0, _x1, _x2) ->
+    let st = _self.for_ident _self st _x0 in
+    let st = _self.expression _self st _x1 in
+    let st = _self.block _self st _x2 in
+    st
   | Continue -> st
   | Break -> st
   | Return _x0 ->

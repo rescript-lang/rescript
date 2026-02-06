@@ -259,6 +259,7 @@ let deep_flatten (lam : Lam.t) : Lam.t =
     | Lwhile (l1, l2) -> Lam.while_ (aux l1) (aux l2)
     | Lfor (flag, l1, l2, dir, l3) ->
       Lam.for_ flag (aux l1) (aux l2) dir (aux l3)
+    | Lfor_of (flag, l1, l2) -> Lam.for_of flag (aux l1) (aux l2)
     | Lassign (v, l) ->
       (* Lalias-bound variables are never assigned, so don't increase
          v's refaux *)

@@ -194,10 +194,10 @@ let rec classify_expression : Typedtree.expression -> sd =
   | Texp_sequence (_, e)
   | Texp_letexception (_, e) ->
     classify_expression e
-  | Texp_ident _ | Texp_for _ | Texp_constant _ | Texp_tuple _ | Texp_array _
-  | Texp_construct _ | Texp_variant _ | Texp_record _ | Texp_setfield _
-  | Texp_while _ | Texp_pack _ | Texp_function _ | Texp_extension_constructor _
-    ->
+  | Texp_ident _ | Texp_for _ | Texp_for_of _ | Texp_constant _ | Texp_tuple _
+  | Texp_array _ | Texp_construct _ | Texp_variant _ | Texp_record _
+  | Texp_setfield _ | Texp_while _ | Texp_pack _ | Texp_function _
+  | Texp_extension_constructor _ ->
     Static
   | Texp_apply {funct = {exp_desc = Texp_ident (_, _, vd)}} when is_ref vd ->
     Static
@@ -224,13 +224,20 @@ let rec expression : Env.env -> Typedtree.expression -> Use.t =
     let cs = list (case ~scrutinee:t) env val_cases
     and es = list exn_case env exn_cases in
     Use.(join cs es)
-  | Texp_for (_, _, e1, e2, _, e3) ->
+  | Texp_for (_, _, e1, e2, _, body) ->
     Use.(
       join
         (join (inspect (expression env e1)) (inspect (expression env e2)))
         (* The body is evaluated, but not used, and not available
            for inclusion in another value *)
-        (discard (expression env e3)))
+        (discard (expression env body)))
+  | Texp_for_of (_, _, e1, body) ->
+    Use.(
+      join
+        (inspect (expression env e1))
+        (* The body is evaluated, but not used, and not available
+           for inclusion in another value *)
+        (discard (expression env body)))
   | Texp_constant _ -> Use.empty
   | Texp_apply
       {funct = {exp_desc = Texp_ident (_, _, vd)}; args = [(_, Some arg)]}

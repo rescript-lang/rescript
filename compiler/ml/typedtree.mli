@@ -218,6 +218,7 @@ and expression_desc =
       * expression
       * direction_flag
       * expression
+  | Texp_for_of of Ident.t * Parsetree.pattern * expression * expression
   | Texp_send of expression * meth * expression option
   | Texp_letmodule of Ident.t * string loc * module_expr * expression
   | Texp_letexception of extension_constructor * expression
