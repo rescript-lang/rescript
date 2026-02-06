@@ -1,0 +1,26 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`lock > prevents concurrent builds while watch is running 1`] = `
+[
+  "rewatch.watch[working_dir=.]",
+  "  initialize_build",
+  "    packages.make",
+  "      build.load_package_sources[package=@rewatch-test/app]",
+  "      build.load_package_sources[package=@rewatch-test/library]",
+  "      build.load_package_sources[package=rewatch-test-fixture]",
+  "    packages.parse_packages",
+  "    clean.cleanup_previous_build",
+  "  incremental_build[module_count=3]",
+  "    build.parse[dirty_modules=3]",
+  "      build.parse_file[module=App, package=@rewatch-test/app]",
+  "      build.parse_file[module=Library, package=@rewatch-test/library]",
+  "      build.parse_file[module=Root, package=rewatch-test-fixture]",
+  "    build.compile",
+  "      build.compile_wave[file_count=1]",
+  "        build.compile_file[module=Library, package=@rewatch-test/library, suffix=.mjs, module_system=esmodule]",
+  "      build.compile_wave[file_count=1]",
+  "        build.compile_file[module=App, package=@rewatch-test/app, suffix=.mjs, module_system=esmodule]",
+  "      build.compile_wave[file_count=1]",
+  "        build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
+]
+`;
