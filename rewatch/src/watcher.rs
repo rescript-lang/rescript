@@ -13,9 +13,11 @@ use anyhow::{Context, Result};
 use futures_timer::Delay;
 use notify::event::ModifyKind;
 use notify::{Config, Error, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
+use std::io::{IsTerminal, Read};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
@@ -180,10 +182,23 @@ async fn async_watch(
     })
     .expect("Error setting Ctrl-C handler");
 
+    // When stdin is a pipe (not a TTY), monitor it for EOF so that the
+    // parent process can signal a graceful shutdown by closing stdin.
+    let stdin_closed = Arc::new(AtomicBool::new(false));
+    let stdin_closed_clone = Arc::clone(&stdin_closed);
+    if !std::io::stdin().is_terminal() {
+        std::thread::spawn(move || {
+            let mut buf = [0u8; 1];
+            // This blocks until EOF (Ok(0)) or an error occurs.
+            let _ = std::io::stdin().read(&mut buf);
+            stdin_closed.store(true, Ordering::Relaxed);
+        });
+    }
+
     let mut initial_build = true;
 
     loop {
-        if *ctrlc_pressed_clone.lock().unwrap() {
+        if *ctrlc_pressed_clone.lock().unwrap() || stdin_closed_clone.load(Ordering::Relaxed) {
             if show_progress {
                 println!("\nExiting...");
             }
