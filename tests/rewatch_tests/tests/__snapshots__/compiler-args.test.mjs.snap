@@ -1,5 +1,18 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`compiler-args > includes warning flags in both parser and compiler args 1`] = `
+[
+  "rewatch.compiler_args[file_path=packages/library/src/Library.res]",
+]
+`;
+
+exports[`compiler-args > produces identical output regardless of working directory 1`] = `
+[
+  "rewatch.compiler_args[file_path=packages/library/src/Library.res]",
+  "rewatch.compiler_args[file_path=src/Library.res]",
+]
+`;
+
 exports[`compiler-args > returns compiler arguments for a source file 1`] = `
 "{
   "compiler_args": [
@@ -25,26 +38,6 @@ exports[`compiler-args > returns compiler arguments for a source file 1`] = `
 
 exports[`compiler-args > returns compiler arguments for a source file 2`] = `
 [
-  "rewatch.build[working_dir=.]",
-  "  initialize_build",
-  "    packages.make",
-  "      build.load_package_sources[package=@rewatch-test/app]",
-  "      build.load_package_sources[package=@rewatch-test/library]",
-  "      build.load_package_sources[package=rewatch-test-fixture]",
-  "    packages.parse_packages",
-  "    clean.cleanup_previous_build",
-  "  incremental_build[module_count=3]",
-  "    build.parse[dirty_modules=3]",
-  "      build.parse_file[module=App, package=@rewatch-test/app]",
-  "      build.parse_file[module=Library, package=@rewatch-test/library]",
-  "      build.parse_file[module=Root, package=rewatch-test-fixture]",
-  "    build.compile",
-  "      build.compile_wave[file_count=1]",
-  "        build.compile_file[module=Library, package=@rewatch-test/library, suffix=.mjs, module_system=esmodule]",
-  "      build.compile_wave[file_count=1]",
-  "        build.compile_file[module=App, package=@rewatch-test/app, suffix=.mjs, module_system=esmodule]",
-  "      build.compile_wave[file_count=1]",
-  "        build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
   "rewatch.compiler_args[file_path=packages/library/src/Library.res]",
 ]
 `;
