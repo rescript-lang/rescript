@@ -10,7 +10,7 @@
  */
 
 import { existsSync } from "node:fs";
-import { rename, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { expect } from "vitest";
 import { createOtelReceiver } from "./otel-receiver.mjs";
@@ -27,8 +27,10 @@ import { createSandbox, removeSandbox } from "./sandbox.mjs";
 /**
  * @typedef {object} TestContext
  * @property {string} sandbox - Path to the test sandbox
- * @property {ReturnType<typeof createRescriptCli>} cli - CLI helper
- * @property {(filePath: string, content: string) => Promise<void>} writeFile - Write a file
+ * @property {ReturnType<typeof createRescriptCli>} cli - CLI helper scoped to sandbox root
+ * @property {(relativePath: string) => ReturnType<typeof createRescriptCli>} createCli - Create a CLI helper scoped to a subdirectory of the sandbox
+ * @property {(relativePath: string, content: string) => Promise<void>} writeFileInSandbox - Write a file in the sandbox (relative path resolved against sandbox root, uses atomic writes)
+ * @property {(relativePath: string) => Promise<string>} readFileInSandbox - Read a file from the sandbox (relative path resolved against sandbox root)
  * @property {(filePath: string) => Promise<void>} deleteFile - Delete a file
  * @property {(filePath: string) => boolean} fileExists - Check if file exists
  */
@@ -119,6 +121,7 @@ const SUMMARY_SPAN_NAMES = new Set([
   "packages.parse_packages",
   "build.load_package_sources",
   "build.parse",
+  "build.parse_file",
   "build.parse_error",
   "build.compile",
   "build.compile_wave",
@@ -146,8 +149,22 @@ const SUMMARY_ATTRS = {
   incremental_build: ["module_count"],
   "build.load_package_sources": ["package"],
   "build.parse": ["dirty_modules"],
+  "build.parse_file": [
+    "module",
+    "package",
+    "ppx",
+    "experimental",
+    "jsx",
+    "bsc_flags",
+  ],
   "build.compile_wave": ["file_count"],
-  "build.compile_file": ["module"],
+  "build.compile_file": [
+    "module",
+    "package",
+    "suffix",
+    "module_system",
+    "namespace",
+  ],
   "build.js_post_build": ["command", "js_file"],
   "format.write_file": ["file"],
 };
@@ -215,6 +232,7 @@ function treeToSummary(tree) {
  */
 const PARALLEL_SPAN_PATTERNS = [
   "build.load_package_sources",
+  "build.parse_file",
   "build.compile_file",
   "format.write_file",
 ];
@@ -341,28 +359,33 @@ export async function runRewatchTest(scenario, options = {}) {
     otelReceiver = await createOtelReceiver();
     sandbox = await createSandbox();
 
-    // Create CLI helper with OTEL endpoint
-    const baseCli = createRescriptCli(sandbox, otelReceiver.endpoint);
+    // Create a CLI helper that tracks watch handles for automatic cleanup
+    function createTrackedCli(cwd) {
+      const inner = createRescriptCli(cwd, otelReceiver.endpoint);
+      return {
+        ...inner,
+        spawnWatch(args) {
+          const handle = inner.spawnWatch(args);
+          watchHandles.push(handle);
+          return handle;
+        },
+      };
+    }
 
-    // Wrap CLI to track watch handles for automatic cleanup
-    const cli = {
-      ...baseCli,
-      spawnWatch(args) {
-        const handle = baseCli.spawnWatch(args);
-        watchHandles.push(handle);
-        return handle;
-      },
-    };
+    const cli = createTrackedCli(sandbox);
 
     // Create test context
     const ctx = {
       sandbox,
       cli,
+      createCli(relativePath) {
+        return createTrackedCli(path.join(sandbox, relativePath));
+      },
 
-      async writeFile(filePath, content) {
-        const fullPath = path.isAbsolute(filePath)
-          ? filePath
-          : path.join(sandbox, filePath);
+      async writeFileInSandbox(relativePath, content) {
+        const fullPath = path.join(sandbox, relativePath);
+        // Ensure parent directory exists
+        await mkdir(path.dirname(fullPath), { recursive: true });
         // Use atomic write (temp file + rename) to prevent the watcher from
         // seeing a truncated file. On Linux, fs.writeFile generates two
         // inotify IN_MODIFY events (truncate + write) which can cause the
@@ -370,6 +393,11 @@ export async function runRewatchTest(scenario, options = {}) {
         const tmpPath = fullPath + ".__atomic_tmp";
         await writeFile(tmpPath, content);
         await rename(tmpPath, fullPath);
+      },
+
+      async readFileInSandbox(relativePath) {
+        const fullPath = path.join(sandbox, relativePath);
+        return readFile(fullPath, "utf8");
       },
 
       async deleteFile(filePath) {

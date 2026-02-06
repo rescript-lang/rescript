@@ -26,7 +26,7 @@ async function assertFixtureClean() {
         } else if (entry.name !== "node_modules" && entry.name !== ".yarn") {
           await checkDir(fullPath);
         }
-      } else if (entry.name.endsWith(".mjs")) {
+      } else if (entry.name.endsWith(".mjs") || entry.name.endsWith(".bs.js")) {
         artifacts.push(path.relative(fixtureDir, fullPath));
       }
     }
@@ -37,7 +37,7 @@ async function assertFixtureClean() {
   if (artifacts.length > 0) {
     throw new Error(
       `Fixture directory contains build artifacts. Please clean before running tests:\n` +
-        `  cd tests/rewatch_tests/fixture && rm -rf packages/*/lib src/*.mjs packages/*/src/*.mjs\n\n` +
+        `  cd tests/rewatch_tests/fixture && rm -rf packages/*/lib src/*.mjs packages/*/src/*.mjs packages/*/src/*.bs.js\n\n` +
         `Found:\n  ${artifacts.join("\n  ")}`,
     );
   }
@@ -51,8 +51,12 @@ export async function createSandbox() {
   // Use realpath to resolve symlinks (e.g., /var -> /private/var on macOS)
   // so path.relative() works correctly when comparing with absolute paths
   const realDir = await realpath(dir);
-  // Copy the fixture directory to the sandbox
-  await cp(fixtureDir, realDir, { recursive: true });
+  // Copy the fixture directory to the sandbox, excluding node_modules
+  // (yarn install --immutable below will recreate it from cache)
+  await cp(fixtureDir, realDir, {
+    recursive: true,
+    filter: src => !src.includes("node_modules"),
+  });
 
   // Run yarn install to create proper node_modules workspace symlinks.
   // rewatch resolves dependencies via node_modules/<pkgName> and checks if

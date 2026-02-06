@@ -229,8 +229,12 @@ function run(command, args, options) {
     proc.once("close", exitCode => {
       resolve({
         status: exitCode ?? 1,
-        stdout: Buffer.concat(stdoutChunks).toString("utf8"),
-        stderr: Buffer.concat(stderrChunks).toString("utf8"),
+        stdout: Buffer.concat(stdoutChunks)
+          .toString("utf8")
+          .replaceAll("\r\n", "\n"),
+        stderr: Buffer.concat(stderrChunks)
+          .toString("utf8")
+          .replaceAll("\r\n", "\n"),
       });
     });
   });
@@ -261,8 +265,12 @@ function runWithStdin(command, args, input, options) {
     proc.once("close", exitCode => {
       resolve({
         status: exitCode ?? 1,
-        stdout: Buffer.concat(stdoutChunks).toString("utf8"),
-        stderr: Buffer.concat(stderrChunks).toString("utf8"),
+        stdout: Buffer.concat(stdoutChunks)
+          .toString("utf8")
+          .replaceAll("\r\n", "\n"),
+        stderr: Buffer.concat(stderrChunks)
+          .toString("utf8")
+          .replaceAll("\r\n", "\n"),
       });
     });
 

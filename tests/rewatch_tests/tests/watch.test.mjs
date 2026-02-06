@@ -3,20 +3,15 @@ import { runRewatchTest } from "../helpers/test-context.mjs";
 
 describe("watch", () => {
   it("watches for file changes and rebuilds", () =>
-    runRewatchTest(async ({ cli, writeFile }) => {
-      // Start watch mode
+    runRewatchTest(async ({ cli, writeFileInSandbox }) => {
       const watch = cli.spawnWatch();
-
-      // Wait for initial build to complete
       await watch.waitForOutput(/Finished initial compilation/i, 15000);
 
-      // Modify a source file to trigger rebuild
-      await writeFile(
+      await writeFileInSandbox(
         "packages/library/src/Library.res",
         'let greeting = "modified"\n',
       );
 
-      // Wait for rebuild to complete
       await watch.waitForOutput(/Finished.*compilation/i, 10000);
     }));
 });

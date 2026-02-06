@@ -122,7 +122,7 @@ Each test uses `runRewatchTest()` which:
 2. **Test Phase**
    - Your test code runs commands via `ctx.cli.build()`, `ctx.cli.clean()`, etc.
    - Each command sets `OTEL_EXPORTER_OTLP_ENDPOINT` to send traces to the receiver
-   - Tests can also manipulate files via `ctx.writeFile()` and `ctx.deleteFile()`
+   - Tests can also manipulate files via `ctx.writeFileInSandbox()`, `ctx.readFileInSandbox()`, and `ctx.deleteFile()`
 
 3. **Assertion Phase**
    - Waits 500ms for spans to be exported (batch exporter delay)
@@ -142,12 +142,15 @@ import { runRewatchTest } from "../helpers/test-context.mjs";
 
 describe("my-feature", () => {
   it("does something", () =>
-    runRewatchTest(async ({ cli, sandbox, writeFile, deleteFile, fileExists }) => {
+    runRewatchTest(async ({ cli, writeFileInSandbox, readFileInSandbox, deleteFile, fileExists }) => {
       // Run a build
       await cli.build();
 
       // Modify a file
-      await writeFile("src/Root.res", 'let x = 1\n');
+      await writeFileInSandbox("src/Root.res", 'let x = 1\n');
+
+      // Read a file back
+      const content = await readFileInSandbox("src/Root.res");
 
       // Run another command
       await cli.clean();
@@ -212,6 +215,12 @@ To add new spans or attributes in rewatch:
 ## Important Rules
 
 - **Never add arbitrary sleeps/timeouts to fix flaky tests.** If a test is flaky, find the root cause (e.g., missing synchronization, race condition in the code under test) and fix it properly. Adding `setTimeout` delays masks the real problem and makes tests unreliable.
+
+- **Never use dynamic imports in tests.** All imports must be static top-level imports. Do not use `await import("node:fs/promises")` or similar patterns inside test bodies.
+
+- **Use the context's `writeFileInSandbox` and `readFileInSandbox` for sandbox file operations.** Do not import `writeFile` or `readFile` from `node:fs/promises` for sandbox file operations. The context's `writeFileInSandbox(relativePath, content)` uses atomic writes (temp file + rename) to prevent watcher race conditions, and `readFileInSandbox(relativePath)` reads files as UTF-8. Both accept paths relative to the sandbox root.
+
+- **Use `createCli(relativePath)` for subdirectory-scoped CLI instances.** When a test needs to run commands from a subdirectory (e.g., `createCli("packages/library")`), use the context's `createCli` which accepts a path relative to the sandbox. Do not construct absolute paths manually.
 
 ## Debugging
 

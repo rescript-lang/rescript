@@ -1,0 +1,13 @@
+{
+  "name": "@rewatch-test/with-ppx",
+  "sources": {
+    "dir": "src",
+    "subdirs": true
+  },
+  "package-specs": {
+    "module": "esmodule",
+    "in-source": true
+  },
+  "suffix": ".mjs",
+  "ppx-flags": ["@rewatch-test/noop-ppx/bin"]
+}

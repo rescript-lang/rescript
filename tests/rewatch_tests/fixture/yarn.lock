@@ -5,9 +5,25 @@ __metadata:
   version: 8
   cacheKey: 10c0
 
+"@rescript/react@npm:0.14.1":
+  version: 0.14.1
+  resolution: "@rescript/react@npm:0.14.1"
+  peerDependencies:
+    react: ">=19.1.0"
+    react-dom: ">=19.1.0"
+  checksum: 10c0/3a0b35547c3ea0061d04b40f0325a9aa8fb63d1cdb244f5a6c584eeceb1e8ef2ec70242b3d0bac6329587b2f7835b755ebd5a1f5e0bbeb4cf30ba55345f5ceb9
+  languageName: node
+  linkType: hard
+
 "@rewatch-test/app@workspace:packages/app":
   version: 0.0.0-use.local
   resolution: "@rewatch-test/app@workspace:packages/app"
+  languageName: unknown
+  linkType: soft
+
+"@rewatch-test/commonjs@workspace:packages/commonjs":
+  version: 0.0.0-use.local
+  resolution: "@rewatch-test/commonjs@workspace:packages/commonjs"
   languageName: unknown
   linkType: soft
 
@@ -17,8 +33,84 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@rewatch-test/namespaced@workspace:packages/namespaced":
+  version: 0.0.0-use.local
+  resolution: "@rewatch-test/namespaced@workspace:packages/namespaced"
+  languageName: unknown
+  linkType: soft
+
+"@rewatch-test/noop-ppx@workspace:packages/noop-ppx":
+  version: 0.0.0-use.local
+  resolution: "@rewatch-test/noop-ppx@workspace:packages/noop-ppx"
+  languageName: unknown
+  linkType: soft
+
+"@rewatch-test/with-deps@workspace:packages/with-deps":
+  version: 0.0.0-use.local
+  resolution: "@rewatch-test/with-deps@workspace:packages/with-deps"
+  dependencies:
+    rescript-bun: "npm:2.1.0"
+  languageName: unknown
+  linkType: soft
+
+"@rewatch-test/with-dev-deps@workspace:packages/with-dev-deps":
+  version: 0.0.0-use.local
+  resolution: "@rewatch-test/with-dev-deps@workspace:packages/with-dev-deps"
+  languageName: unknown
+  linkType: soft
+
+"@rewatch-test/with-jsx@workspace:packages/with-jsx":
+  version: 0.0.0-use.local
+  resolution: "@rewatch-test/with-jsx@workspace:packages/with-jsx"
+  dependencies:
+    "@rescript/react": "npm:0.14.1"
+    react: "npm:19.1.0"
+    react-dom: "npm:19.1.0"
+  languageName: unknown
+  linkType: soft
+
+"@rewatch-test/with-ppx@workspace:packages/with-ppx":
+  version: 0.0.0-use.local
+  resolution: "@rewatch-test/with-ppx@workspace:packages/with-ppx"
+  languageName: unknown
+  linkType: soft
+
+"react-dom@npm:19.1.0":
+  version: 19.1.0
+  resolution: "react-dom@npm:19.1.0"
+  dependencies:
+    scheduler: "npm:^0.26.0"
+  peerDependencies:
+    react: ^19.1.0
+  checksum: 10c0/3e26e89bb6c67c9a6aa86cb888c7a7f8258f2e347a6d2a15299c17eb16e04c19194e3452bc3255bd34000a61e45e2cb51e46292392340432f133e5a5d2dfb5fc
+  languageName: node
+  linkType: hard
+
+"react@npm:19.1.0":
+  version: 19.1.0
+  resolution: "react@npm:19.1.0"
+  checksum: 10c0/530fb9a62237d54137a13d2cfb67a7db6a2156faed43eecc423f4713d9b20c6f2728b026b45e28fcd72e8eadb9e9ed4b089e99f5e295d2f0ad3134251bdd3698
+  languageName: node
+  linkType: hard
+
+"rescript-bun@npm:2.1.0":
+  version: 2.1.0
+  resolution: "rescript-bun@npm:2.1.0"
+  peerDependencies:
+    rescript: ">= 12.0.0-alpha.4"
+  checksum: 10c0/f76fd4dffdd90b13d1d61642fa5eabb26828c85b9eb71e945ffac9c84e81b9a6b68d20d9e68096156243bc543197a15906b606572db7d8c50a554d50652d3143
+  languageName: node
+  linkType: hard
+
 "rewatch-test-fixture@workspace:.":
   version: 0.0.0-use.local
   resolution: "rewatch-test-fixture@workspace:."
   languageName: unknown
   linkType: soft
+
+"scheduler@npm:^0.26.0":
+  version: 0.26.0
+  resolution: "scheduler@npm:0.26.0"
+  checksum: 10c0/5b8d5bfddaae3513410eda54f2268e98a376a429931921a81b5c3a2873aab7ca4d775a8caac5498f8cbc7d0daeab947cf923dbd8e215d61671f9f4e392d34356
+  languageName: node
+  linkType: hard

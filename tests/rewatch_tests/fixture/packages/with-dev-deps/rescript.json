@@ -1,0 +1,10 @@
+{
+  "name": "@rewatch-test/with-dev-deps",
+  "sources": [{ "dir": "src" }, { "dir": "test", "type": "dev" }],
+  "package-specs": {
+    "module": "esmodule",
+    "in-source": true
+  },
+  "suffix": ".mjs",
+  "dev-dependencies": ["@rewatch-test/library"]
+}
