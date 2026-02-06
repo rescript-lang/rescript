@@ -98,7 +98,25 @@ fn format_files(bsc_exe: &Path, files: Vec<String>, check: bool) -> Result<()> {
 
             if output.status.success() {
                 let original_content = fs::read_to_string(file)?;
-                let formatted_content = String::from_utf8_lossy(&output.stdout);
+                let formatted_content = {
+                    let raw = String::from_utf8_lossy(&output.stdout);
+                    // On Windows, bsc writes CRLF to stdout (text mode).
+                    // Match the line ending style of the original file so we
+                    // don't introduce unwanted conversions.
+                    #[cfg(windows)]
+                    {
+                        let original_has_crlf = original_content.contains("\r\n");
+                        if !original_has_crlf && raw.contains("\r\n") {
+                            std::borrow::Cow::Owned(raw.replace("\r\n", "\n"))
+                        } else {
+                            raw
+                        }
+                    }
+                    #[cfg(not(windows))]
+                    {
+                        raw
+                    }
+                };
                 if original_content != formatted_content {
                     if check {
                         eprintln!("[format check] {file}");
