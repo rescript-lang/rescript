@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`build > builds all packages from root 1`] = `
+exports[`build errors > detects circular dependencies 1`] = `
 [
   "rewatch.build[working_dir=.]",
   "  initialize_build",
@@ -10,76 +10,19 @@ exports[`build > builds all packages from root 1`] = `
   "      build.load_package_sources[package=rewatch-test-fixture]",
   "    packages.parse_packages",
   "    clean.cleanup_previous_build",
-  "  incremental_build[module_count=3]",
-  "    build.parse[dirty_modules=3]",
+  "  incremental_build[module_count=4]",
+  "    build.parse[dirty_modules=4]",
   "      build.parse_file[module=App, package=@rewatch-test/app]",
+  "      build.parse_file[module=LibHelper, package=@rewatch-test/library]",
   "      build.parse_file[module=Library, package=@rewatch-test/library]",
   "      build.parse_file[module=Root, package=rewatch-test-fixture]",
-  "    build.compile",
-  "      build.compile_wave[file_count=1]",
-  "        build.compile_file[module=Library, package=@rewatch-test/library, suffix=.mjs, module_system=esmodule]",
-  "      build.compile_wave[file_count=1]",
-  "        build.compile_file[module=App, package=@rewatch-test/app, suffix=.mjs, module_system=esmodule]",
-  "      build.compile_wave[file_count=1]",
-  "        build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
-]
-`;
-
-exports[`build > builds from a package subdirectory 1`] = `
-[
-  "rewatch.build[working_dir=.]",
-  "  initialize_build",
-  "    packages.make",
-  "      build.load_package_sources[package=@rewatch-test/library]",
-  "    packages.parse_packages",
-  "    clean.cleanup_previous_build",
-  "  incremental_build[module_count=1]",
-  "    build.parse[dirty_modules=1]",
-  "      build.parse_file[module=Library, package=@rewatch-test/library]",
-  "    build.compile",
-  "      build.compile_wave[file_count=1]",
-  "        build.compile_file[module=Library, package=@rewatch-test/library, suffix=.mjs, module_system=esmodule]",
-]
-`;
-
-exports[`build > does not produce new artifacts on a second build 1`] = `
-[
-  "rewatch.build[working_dir=.]",
-  "  initialize_build",
-  "    packages.make",
-  "      build.load_package_sources[package=@rewatch-test/app]",
-  "      build.load_package_sources[package=@rewatch-test/library]",
-  "      build.load_package_sources[package=rewatch-test-fixture]",
-  "    packages.parse_packages",
-  "    clean.cleanup_previous_build",
-  "  incremental_build[module_count=3]",
-  "    build.parse[dirty_modules=3]",
-  "      build.parse_file[module=App, package=@rewatch-test/app]",
-  "      build.parse_file[module=Library, package=@rewatch-test/library]",
-  "      build.parse_file[module=Root, package=rewatch-test-fixture]",
-  "    build.compile",
-  "      build.compile_wave[file_count=1]",
-  "        build.compile_file[module=Library, package=@rewatch-test/library, suffix=.mjs, module_system=esmodule]",
-  "      build.compile_wave[file_count=1]",
-  "        build.compile_file[module=App, package=@rewatch-test/app, suffix=.mjs, module_system=esmodule]",
-  "      build.compile_wave[file_count=1]",
-  "        build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
-  "rewatch.build[working_dir=.]",
-  "  initialize_build",
-  "    packages.make",
-  "      build.load_package_sources[package=@rewatch-test/app]",
-  "      build.load_package_sources[package=@rewatch-test/library]",
-  "      build.load_package_sources[package=rewatch-test-fixture]",
-  "    packages.parse_packages",
-  "    clean.cleanup_previous_build",
-  "  incremental_build[module_count=3]",
-  "    build.parse[dirty_modules=0]",
   "    build.compile",
   "      build.compile_wave[file_count=0]",
+  "    build.compile_error",
 ]
 `;
 
-exports[`build > only compiles files matching the filter regex 1`] = `
+exports[`build errors > reports errors when a dependency is deleted 1`] = `
 [
   "rewatch.build[working_dir=.]",
   "  initialize_build",
@@ -89,11 +32,72 @@ exports[`build > only compiles files matching the filter regex 1`] = `
   "      build.load_package_sources[package=rewatch-test-fixture]",
   "    packages.parse_packages",
   "    clean.cleanup_previous_build",
-  "  incremental_build[module_count=1]",
-  "    build.parse[dirty_modules=1]",
+  "  incremental_build[module_count=3]",
+  "    build.parse[dirty_modules=3]",
+  "      build.parse_file[module=App, package=@rewatch-test/app]",
   "      build.parse_file[module=Library, package=@rewatch-test/library]",
+  "      build.parse_file[module=Root, package=rewatch-test-fixture]",
   "    build.compile",
   "      build.compile_wave[file_count=1]",
   "        build.compile_file[module=Library, package=@rewatch-test/library, suffix=.mjs, module_system=esmodule]",
+  "      build.compile_wave[file_count=1]",
+  "        build.compile_file[module=App, package=@rewatch-test/app, suffix=.mjs, module_system=esmodule]",
+  "      build.compile_wave[file_count=1]",
+  "        build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
+  "rewatch.build[working_dir=.]",
+  "  initialize_build",
+  "    packages.make",
+  "      build.load_package_sources[package=@rewatch-test/app]",
+  "      build.load_package_sources[package=@rewatch-test/library]",
+  "      build.load_package_sources[package=rewatch-test-fixture]",
+  "    packages.parse_packages",
+  "    clean.cleanup_previous_build",
+  "  incremental_build[module_count=2]",
+  "    build.parse[dirty_modules=0]",
+  "    build.compile",
+  "      build.compile_wave[file_count=1]",
+  "        build.compile_file[module=App, package=@rewatch-test/app, suffix=.mjs, module_system=esmodule]",
+  "    build.compile_error",
+]
+`;
+
+exports[`build errors > reports parse errors 1`] = `
+[
+  "rewatch.build[working_dir=.]",
+  "  initialize_build",
+  "    packages.make",
+  "      build.load_package_sources[package=@rewatch-test/app]",
+  "      build.load_package_sources[package=@rewatch-test/library]",
+  "      build.load_package_sources[package=rewatch-test-fixture]",
+  "    packages.parse_packages",
+  "    clean.cleanup_previous_build",
+  "  incremental_build[module_count=3]",
+  "    build.parse[dirty_modules=3]",
+  "      build.parse_file[module=App, package=@rewatch-test/app]",
+  "      build.parse_file[module=Library, package=@rewatch-test/library]",
+  "      build.parse_file[module=Root, package=rewatch-test-fixture]",
+  "    build.parse_error",
+]
+`;
+
+exports[`build errors > reports type errors 1`] = `
+[
+  "rewatch.build[working_dir=.]",
+  "  initialize_build",
+  "    packages.make",
+  "      build.load_package_sources[package=@rewatch-test/app]",
+  "      build.load_package_sources[package=@rewatch-test/library]",
+  "      build.load_package_sources[package=rewatch-test-fixture]",
+  "    packages.parse_packages",
+  "    clean.cleanup_previous_build",
+  "  incremental_build[module_count=3]",
+  "    build.parse[dirty_modules=3]",
+  "      build.parse_file[module=App, package=@rewatch-test/app]",
+  "      build.parse_file[module=Library, package=@rewatch-test/library]",
+  "      build.parse_file[module=Root, package=rewatch-test-fixture]",
+  "    build.compile",
+  "      build.compile_wave[file_count=1]",
+  "        build.compile_file[module=Library, package=@rewatch-test/library, suffix=.mjs, module_system=esmodule]",
+  "    build.compile_error",
 ]
 `;
