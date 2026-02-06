@@ -19,6 +19,7 @@ import {
   node,
   rescript,
   shell,
+  yarn,
 } from "#dev/process";
 
 let ounitTest = false;
@@ -26,6 +27,7 @@ let mochaTest = false;
 let buildTest = false;
 let formatTest = false;
 let runtimeDocstrings = false;
+let rewatchTest = false;
 
 if (process.argv.includes("-ounit")) {
   ounitTest = true;
@@ -47,12 +49,17 @@ if (process.argv.includes("-docstrings")) {
   runtimeDocstrings = true;
 }
 
+if (process.argv.includes("-rewatch")) {
+  rewatchTest = true;
+}
+
 if (process.argv.includes("-all")) {
   ounitTest = true;
   mochaTest = true;
   buildTest = true;
   formatTest = true;
   runtimeDocstrings = true;
+  rewatchTest = true;
 }
 
 if (formatTest) {
@@ -201,4 +208,12 @@ if (runtimeDocstrings) {
       stdio: "inherit",
     });
   }
+}
+
+if (rewatchTest) {
+  console.log("Running rewatch tests");
+  await yarn("workspace rewatch-tests test", [], {
+    cwd: projectDir,
+    stdio: "inherit",
+  });
 }

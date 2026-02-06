@@ -224,6 +224,12 @@ async fn async_watch(
                 )
             {
                 log::debug!("rescript.json changed -> full compile");
+                tracing::debug!(
+                    reason = "rescript.json changed",
+                    event_kind = ?event.kind,
+                    paths = ?event.paths,
+                    "watcher.full_compile_triggered"
+                );
                 needs_compile_type = CompileType::Full;
                 continue;
             }
@@ -402,13 +408,17 @@ async fn async_watch(
                 build::write_build_ninja(&build_state);
 
                 let timing_total_elapsed = timing_total.elapsed();
-                if !plain_output && show_progress {
-                    println!(
-                        "\n{}{}Finished compilation in {:.2}s\n",
-                        LINE_CLEAR,
-                        SPARKLES,
-                        timing_total_elapsed.as_secs_f64()
-                    );
+                if show_progress {
+                    if plain_output {
+                        println!("Finished compilation")
+                    } else {
+                        println!(
+                            "\n{}{}Finished compilation in {:.2}s\n",
+                            LINE_CLEAR,
+                            SPARKLES,
+                            timing_total_elapsed.as_secs_f64()
+                        );
+                    }
                 }
                 needs_compile_type = CompileType::None;
                 initial_build = false;

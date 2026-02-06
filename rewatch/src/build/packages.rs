@@ -18,6 +18,7 @@ use std::fs::{self};
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
+use tracing::{info_span, instrument};
 
 #[derive(Debug, Clone)]
 pub struct SourceFileMeta {
@@ -591,6 +592,7 @@ fn extend_with_children(
     mut build: AHashMap<String, Package>,
 ) -> AHashMap<String, Package> {
     for (_key, package) in build.iter_mut() {
+        let _span = info_span!("build.load_package_sources", package = %package.name).entered();
         let mut map: AHashMap<PathBuf, SourceFileMeta> = AHashMap::new();
         package
             .source_folders
@@ -640,6 +642,7 @@ fn extend_with_children(
 ///    interface files.
 ///
 /// The two step process is there to reduce IO overhead.
+#[instrument(name = "packages.make", skip_all)]
 pub fn make(
     filter: &Option<regex::Regex>,
     project_context: &ProjectContext,
@@ -654,6 +657,7 @@ pub fn make(
     Ok(result)
 }
 
+#[instrument(name = "packages.parse_packages", skip_all)]
 pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
     let packages = build_state.packages.clone();
     for (package_name, package) in packages.iter() {

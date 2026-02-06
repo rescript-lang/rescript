@@ -105,6 +105,7 @@
     "tests/gentype_tests/**",
     "tests/tools_tests",
     "tests/commonjs_tests",
+    "tests/rewatch_tests",
     "scripts/res"
   ],
   "packageManager": "yarn@4.12.0",

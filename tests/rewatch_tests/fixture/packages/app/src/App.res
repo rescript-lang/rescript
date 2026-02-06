@@ -1,0 +1,1 @@
+let run = () => Library.greeting

@@ -12,6 +12,7 @@ use log::debug;
 use rayon::prelude::*;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use tracing::info_span;
 
 pub fn generate_asts(
     build_state: &mut BuildCommandState,
@@ -19,6 +20,20 @@ pub fn generate_asts(
 ) -> anyhow::Result<String> {
     let mut has_failure = false;
     let mut stderr = "".to_string();
+
+    // Count dirty modules for the span
+    let dirty_modules = build_state
+        .modules
+        .values()
+        .filter(|m| match &m.source_type {
+            SourceType::SourceFile(sf) => {
+                sf.implementation.parse_dirty || sf.interface.as_ref().is_some_and(|i| i.parse_dirty)
+            }
+            SourceType::MlMap(mlmap) => mlmap.parse_dirty,
+        })
+        .count();
+
+    let _span = info_span!("build.parse", dirty_modules = dirty_modules).entered();
 
     build_state
         .modules

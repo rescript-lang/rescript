@@ -1,0 +1,12 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`format > does not rewrite already formatted files 1`] = `
+[
+  "rewatch.format",
+  "  format.format",
+  "    packages.make",
+  "      build.load_package_sources[package=@rewatch-test/app]",
+  "      build.load_package_sources[package=@rewatch-test/library]",
+  "      build.load_package_sources[package=rewatch-test-fixture]",
+]
+`;

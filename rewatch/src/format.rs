@@ -7,11 +7,13 @@ use std::io::{self, Write};
 use std::path::Path;
 use std::process::Command;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use tracing::{info_span, instrument};
 
 use crate::build::packages;
 use crate::cli::FileExtension;
 use clap::ValueEnum;
 
+#[instrument(name = "format.format", skip_all)]
 pub fn format(stdin_extension: Option<FileExtension>, check: bool, files: Vec<String>) -> Result<()> {
     let bsc_path = helpers::get_bsc();
 
@@ -102,6 +104,7 @@ fn format_files(bsc_exe: &Path, files: Vec<String>, check: bool) -> Result<()> {
                         eprintln!("[format check] {file}");
                         incorrectly_formatted_files.fetch_add(1, Ordering::SeqCst);
                     } else {
+                        let _file_span = info_span!("format.write_file", file = %file).entered();
                         // Only write if content actually changed
                         fs::write(file, &*formatted_content)?;
                     }

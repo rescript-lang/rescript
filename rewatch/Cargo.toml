@@ -12,7 +12,7 @@ clap = { version = "4.3", features = ["derive"] }
 clap-verbosity-flag = "2.2"
 console = "0.15.5"
 convert_case = "0.6.0"
-ctrlc = "3.4.4"
+ctrlc = { version = "3.4.4", features = ["termination"] }
 env_logger = "0.10"
 futures = "0.3.25"
 futures-timer = "3.0.2"
@@ -29,6 +29,14 @@ serde_path_to_error = "0.1.16"
 sysinfo = "0.29.10"
 tempfile = "3.10.1"
 
+# OpenTelemetry for tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-opentelemetry = "0.25"
+opentelemetry = "0.24"
+opentelemetry_sdk = { version = "0.24", features = ["rt-tokio"] }
+opentelemetry-otlp = { version = "0.17", features = ["http-proto", "reqwest-client"] }
+tokio = { version = "1", features = ["rt-multi-thread"] }
 
 [profile.release]
 codegen-units = 1

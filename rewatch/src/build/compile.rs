@@ -20,12 +20,20 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::sync::OnceLock;
 use std::time::SystemTime;
+use tracing::{info_span, instrument};
 
 /// Execute js-post-build command for a compiled JavaScript file.
 /// The command runs in the directory containing the rescript.json that defines it.
 /// The absolute path to the JS file is passed as an argument.
 fn execute_post_build_command(cmd: &str, js_file_path: &Path, working_dir: &Path) -> Result<()> {
     let full_command = format!("{} {}", cmd, js_file_path.display());
+
+    let _span = info_span!(
+        "build.js_post_build",
+        command = %cmd,
+        js_file = %js_file_path.display(),
+    )
+    .entered();
 
     debug!(
         "Executing js-post-build: {} (in {})",
@@ -72,6 +80,7 @@ fn execute_post_build_command(cmd: &str, js_file_path: &Path, working_dir: &Path
     }
 }
 
+#[instrument(name = "build.compile", skip_all)]
 pub fn compile(
     build_state: &mut BuildCommandState,
     show_progress: bool,
@@ -164,6 +173,21 @@ pub fn compile(
 
         let current_in_progres_modules = in_progress_modules.clone();
 
+        // Count files that will be compiled in this wave
+        let wave_file_count = current_in_progres_modules
+            .iter()
+            .filter(|module_name| {
+                let module = build_state.get_module(module_name).unwrap();
+                module
+                    .deps
+                    .intersection(&compile_universe)
+                    .all(|dep| compiled_modules.contains(dep))
+                    && module.compile_dirty
+            })
+            .count();
+
+        let _wave_span = info_span!("build.compile_wave", file_count = wave_file_count).entered();
+
         let results = current_in_progres_modules
             .par_iter()
             .filter_map(|module_name| {
@@ -196,6 +220,9 @@ pub fn compile(
                             ))
                         }
                         SourceType::SourceFile(source_file) => {
+                            let _file_span =
+                                info_span!("build.compile_file", module = %module_name).entered();
+
                             let cmi_path = helpers::get_compiler_asset(
                                 package,
                                 &package.namespace,
