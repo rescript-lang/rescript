@@ -439,6 +439,24 @@ module E = struct
       field ~loc ~attrs (sub.expr sub e) (map_loc sub lid)
     | Pexp_setfield (e1, lid, e2) ->
       setfield ~loc ~attrs (sub.expr sub e1) (map_loc sub lid) (sub.expr sub e2)
+    | Pexp_index (e1, e2) ->
+      (* Map back to Array.get for parsetree0 compatibility *)
+      let container = sub.expr sub e1 in
+      let index = sub.expr sub e2 in
+      let array_get =
+        ident ~loc (mknoloc (Longident.Ldot (Longident.Lident "Array", "get")))
+      in
+      apply ~loc ~attrs array_get [(Nolabel, container); (Nolabel, index)]
+    | Pexp_setindex (e1, e2, e3) ->
+      (* Map back to Array.set for parsetree0 compatibility *)
+      let container = sub.expr sub e1 in
+      let index = sub.expr sub e2 in
+      let value_expr = sub.expr sub e3 in
+      let array_set =
+        ident ~loc (mknoloc (Longident.Ldot (Longident.Lident "Array", "set")))
+      in
+      apply ~loc ~attrs array_set
+        [(Nolabel, container); (Nolabel, index); (Nolabel, value_expr)]
     | Pexp_array el -> array ~loc ~attrs (List.map (sub.expr sub) el)
     | Pexp_ifthenelse (e1, e2, e3) ->
       ifthenelse ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)

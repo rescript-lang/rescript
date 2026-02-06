@@ -641,6 +641,16 @@ module SexpAst = struct
             longident longident_loc.Asttypes.txt;
             expression expr2;
           ]
+      | Pexp_index (e1, e2) ->
+        Sexp.list [Sexp.atom "Pexp_index"; expression e1; expression e2]
+      | Pexp_setindex (e1, e2, e3) ->
+        Sexp.list
+          [
+            Sexp.atom "Pexp_setindex";
+            expression e1;
+            expression e2;
+            expression e3;
+          ]
       | Pexp_array exprs ->
         Sexp.list
           [Sexp.atom "Pexp_array"; Sexp.list (map_empty ~f:expression exprs)]

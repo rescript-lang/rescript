@@ -196,8 +196,8 @@ let rec classify_expression : Typedtree.expression -> sd =
     classify_expression e
   | Texp_ident _ | Texp_for _ | Texp_constant _ | Texp_tuple _ | Texp_array _
   | Texp_construct _ | Texp_variant _ | Texp_record _ | Texp_setfield _
-  | Texp_while _ | Texp_pack _ | Texp_function _ | Texp_extension_constructor _
-    ->
+  | Texp_index _ | Texp_setindex _ | Texp_while _ | Texp_pack _
+  | Texp_function _ | Texp_extension_constructor _ ->
     Static
   | Texp_apply {funct = {exp_desc = Texp_ident (_, _, vd)}} when is_ref vd ->
     Static
@@ -273,6 +273,13 @@ let rec expression : Env.env -> Typedtree.expression -> Use.t =
         (join (expression env ifso) (option expression env ifnot)))
   | Texp_setfield (e1, _, _, e2) ->
     Use.(join (inspect (expression env e1)) (inspect (expression env e2)))
+  | Texp_index (e1, e2) ->
+    Use.(join (inspect (expression env e1)) (inspect (expression env e2)))
+  | Texp_setindex (e1, e2, e3) ->
+    Use.(
+      join
+        (join (inspect (expression env e1)) (inspect (expression env e2)))
+        (inspect (expression env e3)))
   | Texp_sequence (e1, e2) ->
     Use.(join (discard (expression env e1)) (expression env e2))
   | Texp_while (e1, e2) ->

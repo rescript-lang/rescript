@@ -261,6 +261,13 @@ end = struct
     | Texp_setfield (exp1, _, _label, exp2) ->
       iter_expression exp1;
       iter_expression exp2
+    | Texp_index (exp1, exp2) ->
+      iter_expression exp1;
+      iter_expression exp2
+    | Texp_setindex (exp1, exp2, exp3) ->
+      iter_expression exp1;
+      iter_expression exp2;
+      iter_expression exp3
     | Texp_array list -> List.iter iter_expression list
     | Texp_ifthenelse (exp1, exp2, expo) -> (
       iter_expression exp1;

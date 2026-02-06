@@ -248,6 +248,13 @@ let rec add_expr bv exp =
     add_expr bv e1;
     add bv fld;
     add_expr bv e2
+  | Pexp_index (e1, e2) ->
+    add_expr bv e1;
+    add_expr bv e2
+  | Pexp_setindex (e1, e2, e3) ->
+    add_expr bv e1;
+    add_expr bv e2;
+    add_expr bv e3
   | Pexp_array el -> List.iter (add_expr bv) el
   | Pexp_ifthenelse (e1, e2, opte3) ->
     add_expr bv e1;

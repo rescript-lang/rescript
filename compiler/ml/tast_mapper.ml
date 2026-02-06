@@ -232,6 +232,16 @@ let expr sub x =
     | Texp_field (exp, lid, ld) -> Texp_field (sub.expr sub exp, lid, ld)
     | Texp_setfield (exp1, lid, ld, exp2) ->
       Texp_setfield (sub.expr sub exp1, lid, ld, sub.expr sub exp2)
+    | Texp_index (exp1, exp2) ->
+      (* Use let bindings to ensure left-to-right evaluation order *)
+      let exp1 = sub.expr sub exp1 in
+      let exp2 = sub.expr sub exp2 in
+      Texp_index (exp1, exp2)
+    | Texp_setindex (exp1, exp2, exp3) ->
+      let exp1 = sub.expr sub exp1 in
+      let exp2 = sub.expr sub exp2 in
+      let exp3 = sub.expr sub exp3 in
+      Texp_setindex (exp1, exp2, exp3)
     | Texp_array list -> Texp_array (List.map (sub.expr sub) list)
     | Texp_ifthenelse (exp1, exp2, expo) ->
       Texp_ifthenelse

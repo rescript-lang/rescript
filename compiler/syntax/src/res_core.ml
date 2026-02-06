@@ -2156,7 +2156,6 @@ and parse_first_class_module_expr ~start_pos p =
 
 and parse_bracket_access p expr start_pos =
   Parser.leave_breadcrumb p Grammar.ExprArrayAccess;
-  let lbracket = p.start_pos in
   Parser.expect Lbracket p;
   let string_start = p.start_pos in
   match p.Parser.token with
@@ -2189,38 +2188,22 @@ and parse_bracket_access p expr start_pos =
     let access_expr = parse_constrained_or_coerced_expr p in
     Parser.expect Rbracket p;
     Parser.eat_breadcrumb p;
-    let rbracket = p.prev_end_pos in
-    let array_loc = mk_loc lbracket rbracket in
     match p.token with
     | Equal ->
       Parser.leave_breadcrumb p ExprArrayMutation;
       Parser.next p;
       let rhs_expr = parse_expr p in
-      (* FIXME: Do not implicitly rely on specific module name, even primitive one
-
-         This can be abused like
-           module Array = MyModule
-
-         Find better mechanism to support it
-      *)
-      let array_set =
-        Location.mkloc (Longident.Ldot (Lident "Array", "set")) array_loc
-      in
       let end_pos = p.prev_end_pos in
-      let array_set =
-        Ast_helper.Exp.apply ~loc:(mk_loc start_pos end_pos)
-          (Ast_helper.Exp.ident ~loc:array_loc array_set)
-          [(Nolabel, expr); (Nolabel, access_expr); (Nolabel, rhs_expr)]
+      let setindex_expr =
+        Ast_helper.Exp.setindex ~loc:(mk_loc start_pos end_pos) expr access_expr
+          rhs_expr
       in
       Parser.eat_breadcrumb p;
-      array_set
+      setindex_expr
     | _ ->
       let end_pos = p.prev_end_pos in
       let e =
-        Ast_helper.Exp.apply ~loc:(mk_loc start_pos end_pos)
-          (Ast_helper.Exp.ident ~loc:array_loc
-             (Location.mkloc (Longident.Ldot (Lident "Array", "get")) array_loc))
-          [(Nolabel, expr); (Nolabel, access_expr)]
+        Ast_helper.Exp.index ~loc:(mk_loc start_pos end_pos) expr access_expr
       in
       parse_primary_expr ~operand:e p)
 

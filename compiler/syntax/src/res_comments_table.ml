@@ -476,6 +476,8 @@ let rec is_block_expr expr =
   | Pexp_constraint (expr, _) when is_block_expr expr -> true
   | Pexp_field (expr, _) when is_block_expr expr -> true
   | Pexp_setfield (expr, _, _) when is_block_expr expr -> true
+  | Pexp_index (expr, _) when is_block_expr expr -> true
+  | Pexp_setindex (expr, _, _) when is_block_expr expr -> true
   | _ -> false
 
 let is_if_then_else_expr expr =
@@ -1313,6 +1315,75 @@ and walk_expression expr t comments =
       attach t.leading expr2.pexp_loc leading;
       walk_expression expr2 t inside;
       attach t.trailing expr2.pexp_loc trailing
+  | Pexp_index (container, index) ->
+    let leading, inside, trailing =
+      partition_by_loc comments container.pexp_loc
+    in
+    let rest =
+      if is_block_expr container then (
+        let after_expr, rest =
+          partition_adjacent_trailing container.pexp_loc trailing
+        in
+        walk_expression container t (List.concat [leading; inside; after_expr]);
+        rest)
+      else
+        let after_expr, rest =
+          partition_adjacent_trailing container.pexp_loc trailing
+        in
+        attach t.leading container.pexp_loc leading;
+        walk_expression container t inside;
+        attach t.trailing container.pexp_loc after_expr;
+        rest
+    in
+    if is_block_expr index then walk_expression index t rest
+    else
+      let leading, inside, trailing = partition_by_loc rest index.pexp_loc in
+      attach t.leading index.pexp_loc leading;
+      walk_expression index t inside;
+      attach t.trailing index.pexp_loc trailing
+  | Pexp_setindex (container, index, value) ->
+    let leading, inside, trailing =
+      partition_by_loc comments container.pexp_loc
+    in
+    let rest =
+      if is_block_expr container then (
+        let after_expr, rest =
+          partition_adjacent_trailing container.pexp_loc trailing
+        in
+        walk_expression container t (List.concat [leading; inside; after_expr]);
+        rest)
+      else
+        let after_expr, rest =
+          partition_adjacent_trailing container.pexp_loc trailing
+        in
+        attach t.leading container.pexp_loc leading;
+        walk_expression container t inside;
+        attach t.trailing container.pexp_loc after_expr;
+        rest
+    in
+    let leading, inside, trailing = partition_by_loc rest index.pexp_loc in
+    let rest =
+      if is_block_expr index then (
+        let after_expr, rest =
+          partition_adjacent_trailing index.pexp_loc trailing
+        in
+        walk_expression index t (List.concat [leading; inside; after_expr]);
+        rest)
+      else
+        let after_expr, rest =
+          partition_adjacent_trailing index.pexp_loc trailing
+        in
+        attach t.leading index.pexp_loc leading;
+        walk_expression index t inside;
+        attach t.trailing index.pexp_loc after_expr;
+        rest
+    in
+    if is_block_expr value then walk_expression value t rest
+    else
+      let leading, inside, trailing = partition_by_loc rest value.pexp_loc in
+      attach t.leading value.pexp_loc leading;
+      walk_expression value t inside;
+      attach t.trailing value.pexp_loc trailing
   | Pexp_ifthenelse (if_expr, then_expr, else_expr) -> (
     let leading, rest = partition_leading_trailing comments expr.pexp_loc in
     attach t.leading expr.pexp_loc leading;
