@@ -1,0 +1,81 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`namespace packages > builds a namespaced package 1`] = `
+[
+  "rewatch.build[working_dir=.]",
+  "  initialize_build",
+  "    packages.make",
+  "      build.load_package_sources[package=@rewatch-test/namespaced]",
+  "    packages.parse_packages",
+  "    clean.cleanup_previous_build",
+  "  incremental_build[module_count=3]",
+  "    build.parse[dirty_modules=2]",
+  "      build.parse_file[module=Consumer-TestNS, package=@rewatch-test/namespaced]",
+  "      build.parse_file[module=Helper-TestNS, package=@rewatch-test/namespaced]",
+  "    build.compile",
+  "      build.compile_wave[file_count=1]",
+  "        build.compile_file[module=Helper-TestNS, package=@rewatch-test/namespaced, suffix=.mjs, module_system=esmodule, namespace=TestNS]",
+  "      build.compile_wave[file_count=1]",
+  "      build.compile_wave[file_count=1]",
+  "build.compile_file[module=Consumer-TestNS, package=@rewatch-test/namespaced, suffix=.mjs, module_system=esmodule, namespace=TestNS]",
+]
+`;
+
+exports[`namespace packages > cleans up old artifacts when a file is renamed in a namespaced package 1`] = `
+[
+  "rewatch.build[working_dir=.]",
+  "  initialize_build",
+  "    packages.make",
+  "      build.load_package_sources[package=@rewatch-test/namespaced]",
+  "    packages.parse_packages",
+  "    clean.cleanup_previous_build",
+  "  incremental_build[module_count=3]",
+  "    build.parse[dirty_modules=2]",
+  "      build.parse_file[module=Consumer-TestNS, package=@rewatch-test/namespaced]",
+  "      build.parse_file[module=Helper-TestNS, package=@rewatch-test/namespaced]",
+  "    build.compile",
+  "      build.compile_wave[file_count=1]",
+  "        build.compile_file[module=Helper-TestNS, package=@rewatch-test/namespaced, suffix=.mjs, module_system=esmodule, namespace=TestNS]",
+  "      build.compile_wave[file_count=1]",
+  "      build.compile_wave[file_count=1]",
+  "build.compile_file[module=Consumer-TestNS, package=@rewatch-test/namespaced, suffix=.mjs, module_system=esmodule, namespace=TestNS]",
+  "rewatch.build[working_dir=.]",
+  "  initialize_build",
+  "    packages.make",
+  "      build.load_package_sources[package=@rewatch-test/namespaced]",
+  "    packages.parse_packages",
+  "    clean.cleanup_previous_build",
+  "  incremental_build[module_count=3]",
+  "    build.parse[dirty_modules=2]",
+  "      build.parse_file[module=Consumer-TestNS, package=@rewatch-test/namespaced]",
+  "      build.parse_file[module=HelperRenamed-TestNS, package=@rewatch-test/namespaced]",
+  "    build.compile",
+  "      build.compile_wave[file_count=1]",
+  "        build.compile_file[module=HelperRenamed-TestNS, package=@rewatch-test/namespaced, suffix=.mjs, module_system=esmodule, namespace=TestNS]",
+  "      build.compile_wave[file_count=1]",
+  "      build.compile_wave[file_count=1]",
+  "build.compile_file[module=Consumer-TestNS, package=@rewatch-test/namespaced, suffix=.mjs, module_system=esmodule, namespace=TestNS]",
+]
+`;
+
+exports[`namespace packages > includes namespace flag in compiler args 1`] = `
+[
+  "rewatch.build[working_dir=.]",
+  "  initialize_build",
+  "    packages.make",
+  "      build.load_package_sources[package=@rewatch-test/namespaced]",
+  "    packages.parse_packages",
+  "    clean.cleanup_previous_build",
+  "  incremental_build[module_count=3]",
+  "    build.parse[dirty_modules=2]",
+  "      build.parse_file[module=Consumer-TestNS, package=@rewatch-test/namespaced]",
+  "      build.parse_file[module=Helper-TestNS, package=@rewatch-test/namespaced]",
+  "    build.compile",
+  "      build.compile_wave[file_count=1]",
+  "        build.compile_file[module=Helper-TestNS, package=@rewatch-test/namespaced, suffix=.mjs, module_system=esmodule, namespace=TestNS]",
+  "      build.compile_wave[file_count=1]",
+  "      build.compile_wave[file_count=1]",
+  "build.compile_file[module=Consumer-TestNS, package=@rewatch-test/namespaced, suffix=.mjs, module_system=esmodule, namespace=TestNS]",
+  "rewatch.compiler_args[file_path=src/Helper.res]",
+]
+`;
