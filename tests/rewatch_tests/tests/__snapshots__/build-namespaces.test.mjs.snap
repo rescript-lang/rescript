@@ -15,9 +15,9 @@ exports[`namespace packages > builds a namespaced package 1`] = `
   "    build.compile",
   "      build.compile_wave[file_count=1]",
   "        build.compile_file[module=Helper-TestNS, package=@rewatch-test/namespaced, suffix=.mjs, module_system=esmodule, namespace=TestNS]",
+  "      build.compile_wave[file_count=2]",
+  "        build.compile_file[module=Consumer-TestNS, package=@rewatch-test/namespaced, suffix=.mjs, module_system=esmodule, namespace=TestNS]",
   "      build.compile_wave[file_count=1]",
-  "      build.compile_wave[file_count=1]",
-  "build.compile_file[module=Consumer-TestNS, package=@rewatch-test/namespaced, suffix=.mjs, module_system=esmodule, namespace=TestNS]",
 ]
 `;
 
@@ -36,9 +36,9 @@ exports[`namespace packages > cleans up old artifacts when a file is renamed in 
   "    build.compile",
   "      build.compile_wave[file_count=1]",
   "        build.compile_file[module=Helper-TestNS, package=@rewatch-test/namespaced, suffix=.mjs, module_system=esmodule, namespace=TestNS]",
+  "      build.compile_wave[file_count=2]",
+  "        build.compile_file[module=Consumer-TestNS, package=@rewatch-test/namespaced, suffix=.mjs, module_system=esmodule, namespace=TestNS]",
   "      build.compile_wave[file_count=1]",
-  "      build.compile_wave[file_count=1]",
-  "build.compile_file[module=Consumer-TestNS, package=@rewatch-test/namespaced, suffix=.mjs, module_system=esmodule, namespace=TestNS]",
   "rewatch.build[working_dir=.]",
   "  initialize_build",
   "    packages.make",
@@ -52,9 +52,9 @@ exports[`namespace packages > cleans up old artifacts when a file is renamed in 
   "    build.compile",
   "      build.compile_wave[file_count=1]",
   "        build.compile_file[module=HelperRenamed-TestNS, package=@rewatch-test/namespaced, suffix=.mjs, module_system=esmodule, namespace=TestNS]",
+  "      build.compile_wave[file_count=2]",
+  "        build.compile_file[module=Consumer-TestNS, package=@rewatch-test/namespaced, suffix=.mjs, module_system=esmodule, namespace=TestNS]",
   "      build.compile_wave[file_count=1]",
-  "      build.compile_wave[file_count=1]",
-  "build.compile_file[module=Consumer-TestNS, package=@rewatch-test/namespaced, suffix=.mjs, module_system=esmodule, namespace=TestNS]",
 ]
 `;
 
@@ -73,9 +73,9 @@ exports[`namespace packages > includes namespace flag in compiler args 1`] = `
   "    build.compile",
   "      build.compile_wave[file_count=1]",
   "        build.compile_file[module=Helper-TestNS, package=@rewatch-test/namespaced, suffix=.mjs, module_system=esmodule, namespace=TestNS]",
+  "      build.compile_wave[file_count=2]",
+  "        build.compile_file[module=Consumer-TestNS, package=@rewatch-test/namespaced, suffix=.mjs, module_system=esmodule, namespace=TestNS]",
   "      build.compile_wave[file_count=1]",
-  "      build.compile_wave[file_count=1]",
-  "build.compile_file[module=Consumer-TestNS, package=@rewatch-test/namespaced, suffix=.mjs, module_system=esmodule, namespace=TestNS]",
   "rewatch.compiler_args[file_path=src/Helper.res]",
 ]
 `;

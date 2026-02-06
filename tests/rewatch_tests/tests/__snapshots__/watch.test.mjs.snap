@@ -72,9 +72,9 @@ exports[`watch > handles file rename during watch 1`] = `
   "      build.parse_file[module=LibRenamed, package=@rewatch-test/library]",
   "    build.compile",
   "      build.compile_wave[file_count=2]",
+  "        build.compile_file[module=App, package=@rewatch-test/app, suffix=.mjs, module_system=esmodule]",
+  "        build.compile_file[module=LibRenamed, package=@rewatch-test/library, suffix=.mjs, module_system=esmodule]",
   "    build.compile_error",
-  "build.compile_file[module=App, package=@rewatch-test/app, suffix=.mjs, module_system=esmodule]",
-  "build.compile_file[module=LibRenamed, package=@rewatch-test/library, suffix=.mjs, module_system=esmodule]",
 ]
 `;
 
@@ -294,7 +294,7 @@ exports[`watch > warnings persist across incremental builds 1`] = `
   "    build.compile",
   "      build.compile_wave[file_count=1]",
   "        build.compile_file[module=App, package=@rewatch-test/app, suffix=.mjs, module_system=esmodule]",
-  "      build.compile_wave[file_count=0]",
+  "      build.compile_wave[file_count=1]",
 ]
 `;
 
@@ -326,7 +326,7 @@ exports[`watch > watches for file changes and rebuilds 1`] = `
   "    build.compile",
   "      build.compile_wave[file_count=1]",
   "        build.compile_file[module=Library, package=@rewatch-test/library, suffix=.mjs, module_system=esmodule]",
-  "      build.compile_wave[file_count=0]",
-  "      build.compile_wave[file_count=0]",
+  "      build.compile_wave[file_count=1]",
+  "      build.compile_wave[file_count=1]",
 ]
 `;

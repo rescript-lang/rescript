@@ -16,9 +16,9 @@ exports[`dev dependencies > cleans dev source artifacts 1`] = `
   "      build.parse_file[module=Test, package=@rewatch-test/with-dev-deps]",
   "    build.compile",
   "      build.compile_wave[file_count=2]",
+  "        build.compile_file[module=Library, package=@rewatch-test/library, suffix=.mjs, module_system=esmodule]",
+  "        build.compile_file[module=Main, package=@rewatch-test/with-dev-deps, suffix=.mjs, module_system=esmodule]",
   "      build.compile_wave[file_count=1]",
-  "build.compile_file[module=Library, package=@rewatch-test/library, suffix=.mjs, module_system=esmodule]",
-  "build.compile_file[module=Main, package=@rewatch-test/with-dev-deps, suffix=.mjs, module_system=esmodule]",
   "        build.compile_file[module=Test, package=@rewatch-test/with-dev-deps, suffix=.mjs, module_system=esmodule]",
   "rewatch.clean[working_dir=.]",
   "  clean.clean",
@@ -45,9 +45,9 @@ exports[`dev dependencies > compiles dev source files with dev dependencies 1`] 
   "      build.parse_file[module=Test, package=@rewatch-test/with-dev-deps]",
   "    build.compile",
   "      build.compile_wave[file_count=2]",
+  "        build.compile_file[module=Library, package=@rewatch-test/library, suffix=.mjs, module_system=esmodule]",
+  "        build.compile_file[module=Main, package=@rewatch-test/with-dev-deps, suffix=.mjs, module_system=esmodule]",
   "      build.compile_wave[file_count=1]",
-  "build.compile_file[module=Library, package=@rewatch-test/library, suffix=.mjs, module_system=esmodule]",
-  "build.compile_file[module=Main, package=@rewatch-test/with-dev-deps, suffix=.mjs, module_system=esmodule]",
   "        build.compile_file[module=Test, package=@rewatch-test/with-dev-deps, suffix=.mjs, module_system=esmodule]",
 ]
 `;
@@ -69,8 +69,8 @@ exports[`dev dependencies > reports error when non-dev source uses a dev depende
   "    build.compile",
   "      build.compile_wave[file_count=1]",
   "        build.compile_file[module=Library, package=@rewatch-test/library, suffix=.mjs, module_system=esmodule]",
-  "      build.compile_wave[file_count=1]",
+  "      build.compile_wave[file_count=2]",
+  "        build.compile_file[module=Main, package=@rewatch-test/with-dev-deps, suffix=.mjs, module_system=esmodule]",
   "    build.compile_error",
-  "build.compile_file[module=Main, package=@rewatch-test/with-dev-deps, suffix=.mjs, module_system=esmodule]",
 ]
 `;

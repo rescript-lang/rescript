@@ -171,22 +171,14 @@ pub fn compile(
             loop_count,
         );
 
+        let wave_span = info_span!(
+            "build.compile_wave",
+            wave = loop_count,
+            file_count = in_progress_modules.len(),
+        );
+        let _wave_entered = wave_span.enter();
+
         let current_in_progres_modules = in_progress_modules.clone();
-
-        // Count files that will be compiled in this wave
-        let wave_file_count = current_in_progres_modules
-            .iter()
-            .filter(|module_name| {
-                let module = build_state.get_module(module_name).unwrap();
-                module
-                    .deps
-                    .intersection(&compile_universe)
-                    .all(|dep| compiled_modules.contains(dep))
-                    && module.compile_dirty
-            })
-            .count();
-
-        let _wave_span = info_span!("build.compile_wave", file_count = wave_file_count).entered();
 
         let results = current_in_progres_modules
             .par_iter()
@@ -226,7 +218,7 @@ pub fn compile(
                             let module_system = first_spec.as_ref().map(|s| s.module.as_str()).unwrap_or("esmodule");
                             let namespace = package.namespace.to_suffix().unwrap_or_default();
                             let _file_span =
-                                info_span!("build.compile_file", module = %module_name, package = %package.name, suffix, module_system, namespace).entered();
+                                info_span!(parent: &wave_span, "build.compile_file", module = %module_name, package = %package.name, suffix, module_system, namespace).entered();
 
                             let cmi_path = helpers::get_compiler_asset(
                                 package,
