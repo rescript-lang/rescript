@@ -1,0 +1,72 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`module system and suffix > builds a CommonJS package with .bs.js suffix 1`] = `
+[
+  "rewatch.build[working_dir=.]",
+  "  initialize_build",
+  "    packages.make",
+  "      build.load_package_sources[package=@rewatch-test/commonjs]",
+  "    packages.parse_packages",
+  "    clean.cleanup_previous_build",
+  "  incremental_build[module_count=1]",
+  "    build.parse[dirty_modules=1]",
+  "      build.parse_file[module=CjsModule, package=@rewatch-test/commonjs]",
+  "    build.compile",
+  "      build.compile_wave[file_count=1]",
+  "        build.compile_file[module=CjsModule, package=@rewatch-test/commonjs, suffix=.bs.js, module_system=commonjs]",
+]
+`;
+
+exports[`module system and suffix > includes commonjs module in compiler args 1`] = `
+[
+  "rewatch.build[working_dir=.]",
+  "  initialize_build",
+  "    packages.make",
+  "      build.load_package_sources[package=@rewatch-test/commonjs]",
+  "    packages.parse_packages",
+  "    clean.cleanup_previous_build",
+  "  incremental_build[module_count=1]",
+  "    build.parse[dirty_modules=1]",
+  "      build.parse_file[module=CjsModule, package=@rewatch-test/commonjs]",
+  "    build.compile",
+  "      build.compile_wave[file_count=1]",
+  "        build.compile_file[module=CjsModule, package=@rewatch-test/commonjs, suffix=.bs.js, module_system=commonjs]",
+  "rewatch.compiler_args[file_path=src/CjsModule.res]",
+]
+`;
+
+exports[`module system and suffix > rebuilds with new suffix when config changes 1`] = `
+[
+  "rewatch.build[working_dir=.]",
+  "  initialize_build",
+  "    packages.make",
+  "      build.load_package_sources[package=@rewatch-test/commonjs]",
+  "    packages.parse_packages",
+  "    clean.cleanup_previous_build",
+  "  incremental_build[module_count=1]",
+  "    build.parse[dirty_modules=1]",
+  "      build.parse_file[module=CjsModule, package=@rewatch-test/commonjs]",
+  "    build.compile",
+  "      build.compile_wave[file_count=1]",
+  "        build.compile_file[module=CjsModule, package=@rewatch-test/commonjs, suffix=.bs.js, module_system=commonjs]",
+  "rewatch.build[working_dir=.]",
+  "  initialize_build",
+  "    packages.make",
+  "      build.load_package_sources[package=@rewatch-test/commonjs]",
+  "    packages.parse_packages",
+  "    clean.cleanup_previous_build",
+  "  incremental_build[module_count=1]",
+  "    build.parse[dirty_modules=1]",
+  "      build.parse_file[module=CjsModule, package=@rewatch-test/commonjs]",
+  "    build.compile",
+  "      build.compile_wave[file_count=1]",
+  "        build.compile_file[module=CjsModule, package=@rewatch-test/commonjs, suffix=.res.js, module_system=commonjs]",
+]
+`;
+
+exports[`module system and suffix > reports error for duplicate package-spec suffixes 1`] = `
+[
+  "rewatch.build[working_dir=.]",
+  "  initialize_build",
+]
+`;
