@@ -13,10 +13,14 @@ use anyhow::{Context, Result};
 use futures_timer::Delay;
 use notify::event::ModifyKind;
 use notify::{Config, Error, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
+use std::collections::HashMap;
+use std::hash::{DefaultHasher, Hasher};
+use std::io::{IsTerminal, Read};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::time::{Duration, Instant};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::{Duration, Instant, SystemTime};
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
 enum CompileType {
@@ -56,6 +60,42 @@ fn matches_filter(path_buf: &Path, filter: &Option<regex::Regex>) -> bool {
         .map(|x| x.to_string_lossy().to_string())
         .unwrap_or("".to_string());
     filter.as_ref().map(|re| !re.is_match(&name)).unwrap_or(true)
+}
+
+/// Compute a hash of a file's content for deduplication purposes.
+/// Returns None if the file cannot be read.
+fn hash_file_content(path: &Path) -> Option<u64> {
+    let content = std::fs::read(path).ok()?;
+    let mut hasher = DefaultHasher::new();
+    hasher.write(&content);
+    Some(hasher.finish())
+}
+
+/// Populate the mtime cache with all known source files from the build state.
+/// This is called after builds complete to ensure we track all source files,
+/// so that subsequent Create events (from atomic writes) can be correctly
+/// identified as modifications to existing files.
+fn populate_mtime_cache(build_state: &BuildCommandState, last_mtime: &mut HashMap<PathBuf, SystemTime>) {
+    for (_, module) in build_state.build_state.modules.iter() {
+        if let SourceType::SourceFile(ref source_file) = module.source_type {
+            // Get the package to resolve the full path
+            if let Some(package) = build_state.build_state.packages.get(&module.package_name) {
+                // Track implementation file
+                let impl_path = package.path.join(&source_file.implementation.path);
+                if let Ok(mtime) = impl_path.metadata().and_then(|m| m.modified()) {
+                    last_mtime.insert(impl_path, mtime);
+                }
+
+                // Track interface file if present
+                if let Some(ref interface) = source_file.interface {
+                    let iface_path = package.path.join(&interface.path);
+                    if let Ok(mtime) = iface_path.metadata().and_then(|m| m.modified()) {
+                        last_mtime.insert(iface_path, mtime);
+                    }
+                }
+            }
+        }
+    }
 }
 
 /// Computes the list of paths to watch based on the build state.
@@ -180,10 +220,34 @@ async fn async_watch(
     })
     .expect("Error setting Ctrl-C handler");
 
+    // When stdin is a pipe (not a TTY), monitor it for EOF so that the
+    // parent process can signal a graceful shutdown by closing stdin.
+    let stdin_closed = Arc::new(AtomicBool::new(false));
+    let stdin_closed_clone = Arc::clone(&stdin_closed);
+    if !std::io::stdin().is_terminal() {
+        std::thread::spawn(move || {
+            let mut buf = [0u8; 1];
+            // This blocks until EOF (Ok(0)) or an error occurs.
+            let _ = std::io::stdin().read(&mut buf);
+            stdin_closed.store(true, Ordering::Relaxed);
+        });
+    }
+
     let mut initial_build = true;
 
+    // Track file mtimes to deduplicate events.
+    // On macOS, atomic writes (e.g., Node.js writeFile) show up as Create events
+    // even though the file already existed. We use mtime to detect this and treat
+    // it as a Modify instead.
+    let mut last_mtime: HashMap<PathBuf, SystemTime> = HashMap::new();
+
+    // Track file content hashes to deduplicate events where mtime changed but
+    // content didn't. This catches duplicate inotify events on Linux where a
+    // single file write can generate multiple IN_MODIFY events.
+    let mut last_content_hash: HashMap<PathBuf, u64> = HashMap::new();
+
     loop {
-        if *ctrlc_pressed_clone.lock().unwrap() {
+        if *ctrlc_pressed_clone.lock().unwrap() || stdin_closed_clone.load(Ordering::Relaxed) {
             if show_progress {
                 println!("\nExiting...");
             }
@@ -224,6 +288,12 @@ async fn async_watch(
                 )
             {
                 log::debug!("rescript.json changed -> full compile");
+                tracing::debug!(
+                    reason = "rescript.json changed",
+                    event_kind = ?event.kind,
+                    paths = ?event.paths,
+                    "watcher.full_compile_triggered"
+                );
                 needs_compile_type = CompileType::Full;
                 continue;
             }
@@ -237,7 +307,75 @@ async fn async_watch(
             for path in paths {
                 let path_buf = path.to_path_buf();
 
-                match (needs_compile_type, event.kind) {
+                // Get the current mtime to check if file actually changed
+                let current_mtime = path_buf.metadata().ok().and_then(|m| m.modified().ok());
+
+                // Skip events where mtime hasn't changed (phantom events)
+                if let Some(mtime) = current_mtime
+                    && last_mtime.get(&path_buf) == Some(&mtime)
+                {
+                    log::debug!(
+                        "File change (skipped, same mtime): {:?} {:?}",
+                        event.kind,
+                        path_buf
+                    );
+                    continue;
+                }
+
+                // Skip events where mtime changed but file content is identical.
+                // This catches duplicate inotify events on Linux where a single
+                // file write can generate multiple IN_MODIFY events that escape
+                // the debounce window (e.g., one arrives during an ongoing build).
+                if let Some(content_hash) = hash_file_content(&path_buf) {
+                    if last_content_hash.get(&path_buf) == Some(&content_hash) {
+                        log::debug!(
+                            "File change (skipped, same content): {:?} {:?}",
+                            event.kind,
+                            path_buf
+                        );
+                        // Update mtime cache to prevent future mtime-based false positives
+                        if let Some(mtime) = current_mtime {
+                            last_mtime.insert(path_buf.clone(), mtime);
+                        }
+                        continue;
+                    }
+                    last_content_hash.insert(path_buf.clone(), content_hash);
+                }
+
+                // Normalize event kinds that result from atomic writes
+                // (temp file + rename) so they are treated as content modifications.
+                let effective_kind = match event.kind {
+                    // Atomic writes (e.g. Node.js writeFile) show up as Create even
+                    // though the file already existed.
+                    EventKind::Create(_) if last_mtime.contains_key(&path_buf) => {
+                        EventKind::Modify(ModifyKind::Data(notify::event::DataChange::Content))
+                    }
+                    // Rename-based atomic writes show up as Modify(Name).
+                    EventKind::Modify(ModifyKind::Name(_)) if last_mtime.contains_key(&path_buf) => {
+                        EventKind::Modify(ModifyKind::Data(notify::event::DataChange::Content))
+                    }
+                    // On Windows, atomic writes generate Remove(Any) followed by
+                    // Modify(Name(To)). If the file still exists the rename already
+                    // completed — not a real deletion.
+                    EventKind::Remove(_) if last_mtime.contains_key(&path_buf) && current_mtime.is_some() => {
+                        EventKind::Modify(ModifyKind::Data(notify::event::DataChange::Content))
+                    }
+                    _ => event.kind,
+                };
+
+                tracing::debug!(
+                    original_kind = ?event.kind,
+                    effective_kind = ?effective_kind,
+                    path = %path_buf.display(),
+                    "watcher.file_change"
+                );
+
+                // Update mtime cache
+                if let Some(mtime) = current_mtime {
+                    last_mtime.insert(path_buf.clone(), mtime);
+                }
+
+                match (needs_compile_type, effective_kind) {
                     (
                         CompileType::Incremental | CompileType::None,
                         // when we have a name change, create or remove event we need to do a full compile
@@ -246,9 +384,22 @@ async fn async_watch(
                         | EventKind::Create(_)
                         | EventKind::Modify(ModifyKind::Name(_)),
                     ) => {
+                        // For Remove events, clear from caches
+                        if matches!(effective_kind, EventKind::Remove(_)) {
+                            last_mtime.remove(&path_buf);
+                            last_content_hash.remove(&path_buf);
+                        }
                         // if we are going to do a full compile, we don't need to bother marking
                         // files dirty because we do a full scan anyway
-                        log::debug!("received {:?} while needs_compile_type was {needs_compile_type:?} -> full compile", event.kind);
+                        log::debug!("received {:?} while needs_compile_type was {needs_compile_type:?} -> full compile", effective_kind);
+                        tracing::debug!(
+                            reason = "file event requires full compile",
+                            effective_kind = ?effective_kind,
+                            original_kind = ?event.kind,
+                            path = ?path_buf,
+                            in_mtime_cache = last_mtime.contains_key(&path_buf),
+                            "watcher.full_compile_triggered"
+                        );
                         needs_compile_type = CompileType::Full;
                     }
 
@@ -261,7 +412,7 @@ async fn async_watch(
                     ) => {
                         // if we are going to compile incrementally, we need to mark the exact files
                         // dirty
-                        log::debug!("received {:?} while needs_compile_type was {needs_compile_type:?} -> incremental compile", event.kind);
+                        log::debug!("received {:?} while needs_compile_type was {needs_compile_type:?} -> incremental compile", effective_kind);
                         if let Ok(canonicalized_path_buf) = path_buf
                             .canonicalize()
                             .map(StrippedVerbatimPath::to_stripped_verbatim_path)
@@ -365,53 +516,77 @@ async fn async_watch(
                             );
                         }
                     }
+
+                    // Populate mtime cache after build completes
+                    populate_mtime_cache(&build_state, &mut last_mtime);
                 }
                 needs_compile_type = CompileType::None;
                 initial_build = false;
             }
             CompileType::Full => {
                 let timing_total = Instant::now();
-                build_state = build::initialize_build(
+                match build::initialize_build(
                     None,
                     filter,
                     show_progress,
                     path,
                     plain_output,
                     build_state.get_warn_error_override(),
-                )
-                .expect("Could not initialize build");
+                ) {
+                    Ok(new_build_state) => {
+                        build_state = new_build_state;
 
-                // Re-register watches based on the new build state
-                unregister_watches(watcher, &current_watch_paths);
-                current_watch_paths = compute_watch_paths(&build_state, path);
-                register_watches(watcher, &current_watch_paths);
+                        // Re-register watches based on the new build state
+                        unregister_watches(watcher, &current_watch_paths);
+                        current_watch_paths = compute_watch_paths(&build_state, path);
+                        register_watches(watcher, &current_watch_paths);
 
-                let _ = build::incremental_build(
-                    &mut build_state,
-                    None,
-                    initial_build,
-                    show_progress,
-                    false,
-                    create_sourcedirs,
-                    plain_output,
-                );
-                if let Some(a) = after_build.clone() {
-                    cmd::run(a)
+                        let _ = build::incremental_build(
+                            &mut build_state,
+                            None,
+                            initial_build,
+                            show_progress,
+                            false,
+                            create_sourcedirs,
+                            plain_output,
+                        );
+                        if let Some(a) = after_build.clone() {
+                            cmd::run(a)
+                        }
+
+                        build::write_build_ninja(&build_state);
+
+                        let timing_total_elapsed = timing_total.elapsed();
+                        if show_progress {
+                            if plain_output {
+                                println!("Finished compilation")
+                            } else {
+                                println!(
+                                    "\n{}{}Finished compilation in {:.2}s\n",
+                                    LINE_CLEAR,
+                                    SPARKLES,
+                                    timing_total_elapsed.as_secs_f64()
+                                );
+                            }
+                        }
+
+                        // Populate mtime cache after build completes
+                        populate_mtime_cache(&build_state, &mut last_mtime);
+                        initial_build = false;
+                    }
+                    Err(e) => {
+                        if show_progress {
+                            if plain_output {
+                                println!("Error: {e}");
+                            } else {
+                                println!("\n{}Error: {e}\n", LINE_CLEAR);
+                            }
+                        }
+                        log::error!("Could not initialize build: {e}");
+                    }
                 }
 
-                build::write_build_ninja(&build_state);
-
-                let timing_total_elapsed = timing_total.elapsed();
-                if !plain_output && show_progress {
-                    println!(
-                        "\n{}{}Finished compilation in {:.2}s\n",
-                        LINE_CLEAR,
-                        SPARKLES,
-                        timing_total_elapsed.as_secs_f64()
-                    );
-                }
                 needs_compile_type = CompileType::None;
-                initial_build = false;
             }
             CompileType::None => {
                 // We want to sleep for a little while so the CPU can schedule other work. That way we end

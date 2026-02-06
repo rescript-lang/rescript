@@ -1,0 +1,9 @@
+{
+  "name": "@rewatch-test/with-jsx",
+  "private": true,
+  "dependencies": {
+    "@rescript/react": "0.14.1",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  }
+}

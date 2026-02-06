@@ -1,0 +1,43 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`compiler-args > includes warning flags in both parser and compiler args 1`] = `
+[
+  "rewatch.compiler_args[file_path=packages/library/src/Library.res]",
+]
+`;
+
+exports[`compiler-args > produces identical output regardless of working directory 1`] = `
+[
+  "rewatch.compiler_args[file_path=packages/library/src/Library.res]",
+  "rewatch.compiler_args[file_path=src/Library.res]",
+]
+`;
+
+exports[`compiler-args > returns compiler arguments for a source file 1`] = `
+"{
+  "compiler_args": [
+    "-I",
+    "../ocaml",
+    "-runtime-path",
+    "<RUNTIME>",
+    "-bs-package-name",
+    "@rewatch-test/library",
+    "-bs-package-output",
+    "esmodule:src:.mjs",
+    "src/Library.ast"
+  ],
+  "parser_args": [
+    "-absname",
+    "-bs-ast",
+    "-o",
+    "src/Library.ast",
+    "../../src/Library.res"
+  ]
+}"
+`;
+
+exports[`compiler-args > returns compiler arguments for a source file 2`] = `
+[
+  "rewatch.compiler_args[file_path=packages/library/src/Library.res]",
+]
+`;

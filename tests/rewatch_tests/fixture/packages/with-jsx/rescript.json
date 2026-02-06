@@ -1,0 +1,16 @@
+{
+  "name": "@rewatch-test/with-jsx",
+  "sources": {
+    "dir": "src",
+    "subdirs": true
+  },
+  "package-specs": {
+    "module": "esmodule",
+    "in-source": true
+  },
+  "suffix": ".mjs",
+  "dependencies": ["@rescript/react"],
+  "jsx": {
+    "version": 4
+  }
+}

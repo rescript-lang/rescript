@@ -1,0 +1,12 @@
+{
+  "name": "@rewatch-test/commonjs",
+  "sources": {
+    "dir": "src",
+    "subdirs": true
+  },
+  "package-specs": {
+    "module": "commonjs",
+    "in-source": true
+  },
+  "suffix": ".bs.js"
+}

@@ -1,0 +1,76 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`dev dependencies > cleans dev source artifacts 1`] = `
+[
+  "rewatch.build[working_dir=.]",
+  "  initialize_build",
+  "    packages.make",
+  "      build.load_package_sources[package=@rewatch-test/library]",
+  "      build.load_package_sources[package=@rewatch-test/with-dev-deps]",
+  "    packages.parse_packages",
+  "    clean.cleanup_previous_build",
+  "  incremental_build[module_count=3]",
+  "    build.parse[dirty_modules=3]",
+  "      build.parse_file[module=Library, package=@rewatch-test/library]",
+  "      build.parse_file[module=Main, package=@rewatch-test/with-dev-deps]",
+  "      build.parse_file[module=Test, package=@rewatch-test/with-dev-deps]",
+  "    build.compile",
+  "      build.compile_wave[file_count=2]",
+  "        build.compile_file[module=Library, package=@rewatch-test/library, suffix=.mjs, module_system=esmodule]",
+  "        build.compile_file[module=Main, package=@rewatch-test/with-dev-deps, suffix=.mjs, module_system=esmodule]",
+  "      build.compile_wave[file_count=1]",
+  "        build.compile_file[module=Test, package=@rewatch-test/with-dev-deps, suffix=.mjs, module_system=esmodule]",
+  "rewatch.clean[working_dir=.]",
+  "  clean.clean",
+  "    packages.make",
+  "      build.load_package_sources[package=@rewatch-test/library]",
+  "      build.load_package_sources[package=@rewatch-test/with-dev-deps]",
+  "    packages.parse_packages",
+]
+`;
+
+exports[`dev dependencies > compiles dev source files with dev dependencies 1`] = `
+[
+  "rewatch.build[working_dir=.]",
+  "  initialize_build",
+  "    packages.make",
+  "      build.load_package_sources[package=@rewatch-test/library]",
+  "      build.load_package_sources[package=@rewatch-test/with-dev-deps]",
+  "    packages.parse_packages",
+  "    clean.cleanup_previous_build",
+  "  incremental_build[module_count=3]",
+  "    build.parse[dirty_modules=3]",
+  "      build.parse_file[module=Library, package=@rewatch-test/library]",
+  "      build.parse_file[module=Main, package=@rewatch-test/with-dev-deps]",
+  "      build.parse_file[module=Test, package=@rewatch-test/with-dev-deps]",
+  "    build.compile",
+  "      build.compile_wave[file_count=2]",
+  "        build.compile_file[module=Library, package=@rewatch-test/library, suffix=.mjs, module_system=esmodule]",
+  "        build.compile_file[module=Main, package=@rewatch-test/with-dev-deps, suffix=.mjs, module_system=esmodule]",
+  "      build.compile_wave[file_count=1]",
+  "        build.compile_file[module=Test, package=@rewatch-test/with-dev-deps, suffix=.mjs, module_system=esmodule]",
+]
+`;
+
+exports[`dev dependencies > reports error when non-dev source uses a dev dependency 1`] = `
+[
+  "rewatch.build[working_dir=.]",
+  "  initialize_build",
+  "    packages.make",
+  "      build.load_package_sources[package=@rewatch-test/library]",
+  "      build.load_package_sources[package=@rewatch-test/with-dev-deps]",
+  "    packages.parse_packages",
+  "    clean.cleanup_previous_build",
+  "  incremental_build[module_count=3]",
+  "    build.parse[dirty_modules=3]",
+  "      build.parse_file[module=Library, package=@rewatch-test/library]",
+  "      build.parse_file[module=Main, package=@rewatch-test/with-dev-deps]",
+  "      build.parse_file[module=Test, package=@rewatch-test/with-dev-deps]",
+  "    build.compile",
+  "      build.compile_wave[file_count=1]",
+  "        build.compile_file[module=Library, package=@rewatch-test/library, suffix=.mjs, module_system=esmodule]",
+  "      build.compile_wave[file_count=2]",
+  "        build.compile_file[module=Main, package=@rewatch-test/with-dev-deps, suffix=.mjs, module_system=esmodule]",
+  "    build.compile_error",
+]
+`;

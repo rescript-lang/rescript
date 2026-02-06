@@ -13,6 +13,7 @@ use rayon::prelude::*;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
+use tracing::instrument;
 
 fn remove_ast(package: &packages::Package, source_file: &Path) {
     let _ = std::fs::remove_file(helpers::get_compiler_asset(
@@ -102,6 +103,7 @@ fn clean_source_files(build_state: &BuildState, root_config: &Config) {
 // TODO: change to scan_previous_build => CompileAssetsState
 // and then do cleanup on that state (for instance remove all .mjs files that are not in the state)
 
+#[instrument(name = "clean.cleanup_previous_build", skip_all)]
 pub fn cleanup_previous_build(
     build_state: &mut BuildCommandState,
     compile_assets_state: CompileAssetsState,
@@ -332,6 +334,7 @@ pub fn cleanup_after_build(build_state: &BuildCommandState) {
     });
 }
 
+#[instrument(name = "clean.clean", skip_all)]
 pub fn clean(path: &Path, show_progress: bool, plain_output: bool) -> Result<()> {
     let project_context = ProjectContext::new(path)?;
     let compiler_info = build::get_compiler_info(&project_context)?;

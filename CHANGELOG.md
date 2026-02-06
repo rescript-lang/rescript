@@ -25,10 +25,12 @@
 #### :nail_care: Polish
 
 - Build system: Watch only source folders from build state instead of the entire project directory, and report missing configured source folders. https://github.com/rescript-lang/rescript/pull/8219
+- Build system: Add OpenTelemetry tracing support for cli commands. https://github.com/rescript-lang/rescript/pull/8241
 
 #### :house: Internal
 
 - speed up dev container test by installing ocaml in docker image instead of in `postCreate.sh`. https://github.com/rescript-lang/rescript/pull/8230
+- Migrate rewatch integration tests from bash scripts to Vitest and remove old test infrastructure. https://github.com/rescript-lang/rescript/pull/8241
 
 # 13.0.0-alpha.1
 
