@@ -220,8 +220,13 @@ pub fn compile(
                             ))
                         }
                         SourceType::SourceFile(source_file) => {
+                            let root_config = build_state.get_root_config();
+                            let first_spec = root_config.get_package_specs().into_iter().next();
+                            let suffix = first_spec.as_ref().map(|s| root_config.get_suffix(s)).unwrap_or_default();
+                            let module_system = first_spec.as_ref().map(|s| s.module.as_str()).unwrap_or("esmodule");
+                            let namespace = package.namespace.to_suffix().unwrap_or_default();
                             let _file_span =
-                                info_span!("build.compile_file", module = %module_name).entered();
+                                info_span!("build.compile_file", module = %module_name, package = %package.name, suffix, module_system, namespace).entered();
 
                             let cmi_path = helpers::get_compiler_asset(
                                 package,

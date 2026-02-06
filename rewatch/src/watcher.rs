@@ -525,55 +525,68 @@ async fn async_watch(
             }
             CompileType::Full => {
                 let timing_total = Instant::now();
-                build_state = build::initialize_build(
+                match build::initialize_build(
                     None,
                     filter,
                     show_progress,
                     path,
                     plain_output,
                     build_state.get_warn_error_override(),
-                )
-                .expect("Could not initialize build");
+                ) {
+                    Ok(new_build_state) => {
+                        build_state = new_build_state;
 
-                // Re-register watches based on the new build state
-                unregister_watches(watcher, &current_watch_paths);
-                current_watch_paths = compute_watch_paths(&build_state, path);
-                register_watches(watcher, &current_watch_paths);
+                        // Re-register watches based on the new build state
+                        unregister_watches(watcher, &current_watch_paths);
+                        current_watch_paths = compute_watch_paths(&build_state, path);
+                        register_watches(watcher, &current_watch_paths);
 
-                let _ = build::incremental_build(
-                    &mut build_state,
-                    None,
-                    initial_build,
-                    show_progress,
-                    false,
-                    create_sourcedirs,
-                    plain_output,
-                );
-                if let Some(a) = after_build.clone() {
-                    cmd::run(a)
-                }
-
-                build::write_build_ninja(&build_state);
-
-                let timing_total_elapsed = timing_total.elapsed();
-                if show_progress {
-                    if plain_output {
-                        println!("Finished compilation")
-                    } else {
-                        println!(
-                            "\n{}{}Finished compilation in {:.2}s\n",
-                            LINE_CLEAR,
-                            SPARKLES,
-                            timing_total_elapsed.as_secs_f64()
+                        let _ = build::incremental_build(
+                            &mut build_state,
+                            None,
+                            initial_build,
+                            show_progress,
+                            false,
+                            create_sourcedirs,
+                            plain_output,
                         );
+                        if let Some(a) = after_build.clone() {
+                            cmd::run(a)
+                        }
+
+                        build::write_build_ninja(&build_state);
+
+                        let timing_total_elapsed = timing_total.elapsed();
+                        if show_progress {
+                            if plain_output {
+                                println!("Finished compilation")
+                            } else {
+                                println!(
+                                    "\n{}{}Finished compilation in {:.2}s\n",
+                                    LINE_CLEAR,
+                                    SPARKLES,
+                                    timing_total_elapsed.as_secs_f64()
+                                );
+                            }
+                        }
+
+                        // Populate mtime cache after build completes
+                        populate_mtime_cache(&build_state, &mut last_mtime);
+                        initial_build = false;
+                    }
+                    Err(e) => {
+                        if show_progress {
+                            if plain_output {
+                                println!("Error: {e}");
+                            } else {
+                                println!("\n{}Error: {e}\n", LINE_CLEAR);
+                            }
+                        }
+                        log::error!("Could not initialize build: {e}");
                     }
                 }
 
-                // Populate mtime cache after build completes
-                populate_mtime_cache(&build_state, &mut last_mtime);
-
                 needs_compile_type = CompileType::None;
-                initial_build = false;
             }
             CompileType::None => {
                 // We want to sleep for a little while so the CPU can schedule other work. That way we end
