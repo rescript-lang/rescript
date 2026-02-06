@@ -13,12 +13,14 @@ use anyhow::{Context, Result};
 use futures_timer::Delay;
 use notify::event::ModifyKind;
 use notify::{Config, Error, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
+use std::collections::HashMap;
+use std::hash::{DefaultHasher, Hasher};
 use std::io::{IsTerminal, Read};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime};
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
 enum CompileType {
@@ -58,6 +60,42 @@ fn matches_filter(path_buf: &Path, filter: &Option<regex::Regex>) -> bool {
         .map(|x| x.to_string_lossy().to_string())
         .unwrap_or("".to_string());
     filter.as_ref().map(|re| !re.is_match(&name)).unwrap_or(true)
+}
+
+/// Compute a hash of a file's content for deduplication purposes.
+/// Returns None if the file cannot be read.
+fn hash_file_content(path: &Path) -> Option<u64> {
+    let content = std::fs::read(path).ok()?;
+    let mut hasher = DefaultHasher::new();
+    hasher.write(&content);
+    Some(hasher.finish())
+}
+
+/// Populate the mtime cache with all known source files from the build state.
+/// This is called after builds complete to ensure we track all source files,
+/// so that subsequent Create events (from atomic writes) can be correctly
+/// identified as modifications to existing files.
+fn populate_mtime_cache(build_state: &BuildCommandState, last_mtime: &mut HashMap<PathBuf, SystemTime>) {
+    for (_, module) in build_state.build_state.modules.iter() {
+        if let SourceType::SourceFile(ref source_file) = module.source_type {
+            // Get the package to resolve the full path
+            if let Some(package) = build_state.build_state.packages.get(&module.package_name) {
+                // Track implementation file
+                let impl_path = package.path.join(&source_file.implementation.path);
+                if let Ok(mtime) = impl_path.metadata().and_then(|m| m.modified()) {
+                    last_mtime.insert(impl_path, mtime);
+                }
+
+                // Track interface file if present
+                if let Some(ref interface) = source_file.interface {
+                    let iface_path = package.path.join(&interface.path);
+                    if let Ok(mtime) = iface_path.metadata().and_then(|m| m.modified()) {
+                        last_mtime.insert(iface_path, mtime);
+                    }
+                }
+            }
+        }
+    }
 }
 
 /// Computes the list of paths to watch based on the build state.
@@ -197,6 +235,17 @@ async fn async_watch(
 
     let mut initial_build = true;
 
+    // Track file mtimes to deduplicate events.
+    // On macOS, atomic writes (e.g., Node.js writeFile) show up as Create events
+    // even though the file already existed. We use mtime to detect this and treat
+    // it as a Modify instead.
+    let mut last_mtime: HashMap<PathBuf, SystemTime> = HashMap::new();
+
+    // Track file content hashes to deduplicate events where mtime changed but
+    // content didn't. This catches duplicate inotify events on Linux where a
+    // single file write can generate multiple IN_MODIFY events.
+    let mut last_content_hash: HashMap<PathBuf, u64> = HashMap::new();
+
     loop {
         if *ctrlc_pressed_clone.lock().unwrap() || stdin_closed_clone.load(Ordering::Relaxed) {
             if show_progress {
@@ -258,7 +307,75 @@ async fn async_watch(
             for path in paths {
                 let path_buf = path.to_path_buf();
 
-                match (needs_compile_type, event.kind) {
+                // Get the current mtime to check if file actually changed
+                let current_mtime = path_buf.metadata().ok().and_then(|m| m.modified().ok());
+
+                // Skip events where mtime hasn't changed (phantom events)
+                if let Some(mtime) = current_mtime
+                    && last_mtime.get(&path_buf) == Some(&mtime)
+                {
+                    log::debug!(
+                        "File change (skipped, same mtime): {:?} {:?}",
+                        event.kind,
+                        path_buf
+                    );
+                    continue;
+                }
+
+                // Skip events where mtime changed but file content is identical.
+                // This catches duplicate inotify events on Linux where a single
+                // file write can generate multiple IN_MODIFY events that escape
+                // the debounce window (e.g., one arrives during an ongoing build).
+                if let Some(content_hash) = hash_file_content(&path_buf) {
+                    if last_content_hash.get(&path_buf) == Some(&content_hash) {
+                        log::debug!(
+                            "File change (skipped, same content): {:?} {:?}",
+                            event.kind,
+                            path_buf
+                        );
+                        // Update mtime cache to prevent future mtime-based false positives
+                        if let Some(mtime) = current_mtime {
+                            last_mtime.insert(path_buf.clone(), mtime);
+                        }
+                        continue;
+                    }
+                    last_content_hash.insert(path_buf.clone(), content_hash);
+                }
+
+                // Normalize event kinds that result from atomic writes
+                // (temp file + rename) so they are treated as content modifications.
+                let effective_kind = match event.kind {
+                    // Atomic writes (e.g. Node.js writeFile) show up as Create even
+                    // though the file already existed.
+                    EventKind::Create(_) if last_mtime.contains_key(&path_buf) => {
+                        EventKind::Modify(ModifyKind::Data(notify::event::DataChange::Content))
+                    }
+                    // Rename-based atomic writes show up as Modify(Name).
+                    EventKind::Modify(ModifyKind::Name(_)) if last_mtime.contains_key(&path_buf) => {
+                        EventKind::Modify(ModifyKind::Data(notify::event::DataChange::Content))
+                    }
+                    // On Windows, atomic writes generate Remove(Any) followed by
+                    // Modify(Name(To)). If the file still exists the rename already
+                    // completed — not a real deletion.
+                    EventKind::Remove(_) if last_mtime.contains_key(&path_buf) && current_mtime.is_some() => {
+                        EventKind::Modify(ModifyKind::Data(notify::event::DataChange::Content))
+                    }
+                    _ => event.kind,
+                };
+
+                tracing::debug!(
+                    original_kind = ?event.kind,
+                    effective_kind = ?effective_kind,
+                    path = %path_buf.display(),
+                    "watcher.file_change"
+                );
+
+                // Update mtime cache
+                if let Some(mtime) = current_mtime {
+                    last_mtime.insert(path_buf.clone(), mtime);
+                }
+
+                match (needs_compile_type, effective_kind) {
                     (
                         CompileType::Incremental | CompileType::None,
                         // when we have a name change, create or remove event we need to do a full compile
@@ -267,9 +384,22 @@ async fn async_watch(
                         | EventKind::Create(_)
                         | EventKind::Modify(ModifyKind::Name(_)),
                     ) => {
+                        // For Remove events, clear from caches
+                        if matches!(effective_kind, EventKind::Remove(_)) {
+                            last_mtime.remove(&path_buf);
+                            last_content_hash.remove(&path_buf);
+                        }
                         // if we are going to do a full compile, we don't need to bother marking
                         // files dirty because we do a full scan anyway
-                        log::debug!("received {:?} while needs_compile_type was {needs_compile_type:?} -> full compile", event.kind);
+                        log::debug!("received {:?} while needs_compile_type was {needs_compile_type:?} -> full compile", effective_kind);
+                        tracing::debug!(
+                            reason = "file event requires full compile",
+                            effective_kind = ?effective_kind,
+                            original_kind = ?event.kind,
+                            path = ?path_buf,
+                            in_mtime_cache = last_mtime.contains_key(&path_buf),
+                            "watcher.full_compile_triggered"
+                        );
                         needs_compile_type = CompileType::Full;
                     }
 
@@ -282,7 +412,7 @@ async fn async_watch(
                     ) => {
                         // if we are going to compile incrementally, we need to mark the exact files
                         // dirty
-                        log::debug!("received {:?} while needs_compile_type was {needs_compile_type:?} -> incremental compile", event.kind);
+                        log::debug!("received {:?} while needs_compile_type was {needs_compile_type:?} -> incremental compile", effective_kind);
                         if let Ok(canonicalized_path_buf) = path_buf
                             .canonicalize()
                             .map(StrippedVerbatimPath::to_stripped_verbatim_path)
@@ -386,6 +516,9 @@ async fn async_watch(
                             );
                         }
                     }
+
+                    // Populate mtime cache after build completes
+                    populate_mtime_cache(&build_state, &mut last_mtime);
                 }
                 needs_compile_type = CompileType::None;
                 initial_build = false;
@@ -435,6 +568,10 @@ async fn async_watch(
                         );
                     }
                 }
+
+                // Populate mtime cache after build completes
+                populate_mtime_cache(&build_state, &mut last_mtime);
+
                 needs_compile_type = CompileType::None;
                 initial_build = false;
             }
