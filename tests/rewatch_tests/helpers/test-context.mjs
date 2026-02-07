@@ -124,6 +124,7 @@ const SUMMARY_SPAN_NAMES = new Set([
   "lsp.did_save",
   "lsp.did_save.compile_dependencies",
   "lsp.did_save.typecheck_dependents",
+  "lsp.completion",
   "lsp.did_change",
   // Build pipeline spans
   "initialize_build",
@@ -163,6 +164,7 @@ const SUMMARY_ATTRS = {
   "lsp.did_save": ["file"],
   "lsp.did_save.compile_dependencies": ["module"],
   "lsp.did_save.typecheck_dependents": ["module", "dependent_count"],
+  "lsp.completion": ["file"],
   "lsp.did_change": ["file"],
   incremental_build: ["module_count"],
   "build.load_package_sources": ["package"],

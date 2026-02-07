@@ -3,6 +3,7 @@ import { realpathSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import {
+  CompletionRequest,
   createProtocolConnection,
   DidChangeTextDocumentNotification,
   DidSaveTextDocumentNotification,
@@ -231,6 +232,25 @@ export function createLspClient(cwd, otelEndpoint) {
         textDocument: { uri, version: nextVersion++ },
         contentChanges: [{ text: content }],
       });
+    },
+
+    /**
+     * Send a completion request for a position in a file.
+     * @param {string} relativePath - Path relative to the sandbox root
+     * @param {number} line - Zero-based line number
+     * @param {number} character - Zero-based character offset
+     * @returns {Promise<import("vscode-languageserver-protocol").CompletionItem[]>}
+     */
+    async completeFor(relativePath, line, character) {
+      const uri = pathToFileURL(
+        path.join(realpathSync(cwd), relativePath),
+      ).href;
+      const result = await sendRequest(CompletionRequest.type, {
+        textDocument: { uri },
+        position: { line, character },
+      });
+      if (!result) return [];
+      return Array.isArray(result) ? result : result.items;
     },
 
     /** The exit code (null if still running). */

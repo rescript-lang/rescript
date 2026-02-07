@@ -132,6 +132,7 @@ let main () =
         Cache.deleteCache (Cache.targetFileFromLibBs libBs);
         print_endline "\"OK\"")
     | _ -> print_endline "\"ERR: Did not find root \"")
+  | [_; "completion-rewatch"] -> CommandsRewatch.completionRewatch ()
   | [_; "completion"; path; line; col; currentFile] ->
     printHeaderInfo path line col;
     Commands.completion ~debug ~path

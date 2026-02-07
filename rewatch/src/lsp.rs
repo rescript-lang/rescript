@@ -1,3 +1,4 @@
+mod completion;
 mod dependency_closure;
 mod did_change;
 mod did_save;
@@ -24,6 +25,9 @@ struct Backend {
     /// Files that had diagnostics published in the last build cycle.
     /// Used to clear stale diagnostics when errors are fixed.
     last_diagnostics_files: Mutex<HashSet<Url>>,
+    /// Unsaved buffer contents keyed by document URI.
+    /// Updated on `didChange`, used by completion to get the latest editor buffer.
+    open_buffers: Mutex<HashMap<Url, String>>,
 }
 
 #[tower_lsp::async_trait]
@@ -67,16 +71,15 @@ impl LanguageServer for Backend {
                 //     work_done_progress_options: WorkDoneProgressOptions::default(),
                 // })),
                 // document_symbol_provider: Some(OneOf::Left(true)),
-                // completion_provider: Some(CompletionOptions {
-                //     trigger_characters: Some(
-                //         [".", ">", "@", "~", "\"", "=", "("]
-                //             .iter()
-                //             .map(|s| s.to_string())
-                //             .collect(),
-                //     ),
-                //     resolve_provider: Some(true),
-                //     ..Default::default()
-                // }),
+                completion_provider: Some(CompletionOptions {
+                    trigger_characters: Some(
+                        [".", ">", "@", "~", "\"", "=", "("]
+                            .iter()
+                            .map(|s| s.to_string())
+                            .collect(),
+                    ),
+                    ..Default::default()
+                }),
                 // document_formatting_provider: Some(OneOf::Left(true)),
                 // inlay_hint_provider: Some(OneOf::Left(true)),
                 // signature_help_provider: Some(SignatureHelpOptions {
@@ -137,6 +140,11 @@ impl LanguageServer for Backend {
             None => return,
         };
 
+        // Store the latest buffer content for completion requests.
+        if let Ok(mut buffers) = self.open_buffers.lock() {
+            buffers.insert(params.text_document.uri.clone(), content.clone());
+        }
+
         let diagnostics = {
             let guard = match self.build_state.lock() {
                 Ok(g) => g,
@@ -181,6 +189,25 @@ impl LanguageServer for Backend {
         self.client
             .send_notification::<notifications::BuildFinished>(notifications::BuildFinishedParams {})
             .await;
+    }
+
+    async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
+        let uri = &params.text_document_position.text_document.uri;
+        let file_path = match uri.to_file_path() {
+            Ok(p) => p,
+            Err(_) => {
+                tracing::warn!(uri = %uri, "completion: could not convert URI to file path");
+                return Ok(None);
+            }
+        };
+
+        Ok(completion::handle(
+            &self.open_buffers,
+            &self.build_state,
+            &file_path,
+            uri,
+            params.text_document_position.position,
+        ))
     }
 
     async fn shutdown(&self) -> Result<()> {
@@ -269,6 +296,7 @@ pub async fn run_stdio() {
         workspace_folders: RwLock::new(Vec::new()),
         build_state: Mutex::new(None),
         last_diagnostics_files: Mutex::new(HashSet::new()),
+        open_buffers: Mutex::new(HashMap::new()),
     });
     Server::new(stdin, stdout, socket).serve(service).await;
 }
