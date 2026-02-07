@@ -80,6 +80,10 @@ pub fn get_esmodule_path(canonical_path: &Path) -> PathBuf {
     canonical_path.join("lib").join("es6")
 }
 
+pub fn get_lsp_build_path(canonical_path: &Path) -> PathBuf {
+    canonical_path.join("lib").join("lsp")
+}
+
 pub fn get_ocaml_build_path(canonical_path: &Path) -> PathBuf {
     canonical_path.join("lib").join("ocaml")
 }
@@ -93,8 +97,25 @@ impl Package {
         get_build_path(&self.path)
     }
 
+    pub fn get_lsp_build_path(&self) -> PathBuf {
+        get_lsp_build_path(&self.path)
+    }
+
+    /// Returns the build artifact path for the given profile.
+    pub fn get_build_path_for_profile(&self, profile: BuildProfile) -> PathBuf {
+        match profile {
+            BuildProfile::Standard => self.get_build_path(),
+            BuildProfile::Lsp => self.get_lsp_build_path(),
+        }
+    }
+
     pub fn get_compiler_info_path(&self) -> PathBuf {
         self.get_build_path().join("compiler-info.json")
+    }
+
+    pub fn get_compiler_info_path_for_profile(&self, profile: BuildProfile) -> PathBuf {
+        self.get_build_path_for_profile(profile)
+            .join("compiler-info.json")
     }
 
     pub fn get_js_path(&self) -> PathBuf {
@@ -113,12 +134,30 @@ impl Package {
         self.get_build_path().join(format!("{suffix}.mlmap"))
     }
 
+    pub fn get_mlmap_path_for_profile(&self, profile: BuildProfile) -> PathBuf {
+        let suffix = self
+            .namespace
+            .to_suffix()
+            .expect("namespace should be set for mlmap module");
+        self.get_build_path_for_profile(profile)
+            .join(format!("{suffix}.mlmap"))
+    }
+
     pub fn get_mlmap_compile_path(&self) -> PathBuf {
         let suffix = self
             .namespace
             .to_suffix()
             .expect("namespace should be set for mlmap module");
         self.get_build_path().join(format!("{suffix}.cmi"))
+    }
+
+    pub fn get_mlmap_compile_path_for_profile(&self, profile: BuildProfile) -> PathBuf {
+        let suffix = self
+            .namespace
+            .to_suffix()
+            .expect("namespace should be set for mlmap module");
+        self.get_build_path_for_profile(profile)
+            .join(format!("{suffix}.cmi"))
     }
 
     pub fn is_source_file_type_dev(&self, path: &Path) -> bool {
@@ -590,7 +629,7 @@ pub fn get_source_files(
 
 /// This takes the tree of packages, and finds all the source files for each, adding them to the
 /// respective packages.
-fn extend_with_children(
+pub fn extend_with_children(
     filter: &Option<regex::Regex>,
     mut build: AHashMap<String, Package>,
 ) -> AHashMap<String, Package> {
@@ -661,49 +700,49 @@ pub fn make(
 }
 
 #[instrument(name = "packages.parse_packages", skip_all)]
-pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
+pub fn parse_packages(build_state: &mut BuildState, build_profile: BuildProfile) -> Result<()> {
     let packages = build_state.packages.clone();
     for (package_name, package) in packages.iter() {
         debug!("Parsing package: {package_name}");
         if let Some(package_modules) = package.modules.to_owned() {
             build_state.module_names.extend(package_modules)
         }
-        let build_path_abs = package.get_build_path();
+        let build_path_abs = package.get_build_path_for_profile(build_profile);
         let bs_build_path = package.get_ocaml_build_path();
         helpers::create_path(&build_path_abs);
         helpers::create_path(&bs_build_path);
-        let root_config = build_state.get_root_config();
 
-        root_config.get_package_specs().iter().for_each(|spec| {
-            if !spec.in_source {
-                // we don't want to calculate this if we don't have out of source specs
-                // we do this twice, but we almost never have multiple package specs
-                // so this optimization is less important
-                let relative_dirs: AHashSet<PathBuf> = match &package.source_files {
-                    Some(source_files) => source_files
-                        .keys()
-                        .map(|source_file| {
-                            Path::new(source_file)
-                                .parent()
-                                .expect("parent dir not found")
-                                .to_owned()
+        // LSP profile only needs lib/lsp + lib/ocaml — no JS output directories
+        if build_profile == BuildProfile::Standard {
+            let root_config = build_state.get_root_config();
+            root_config.get_package_specs().iter().for_each(|spec| {
+                if !spec.in_source {
+                    let relative_dirs: AHashSet<PathBuf> = match &package.source_files {
+                        Some(source_files) => source_files
+                            .keys()
+                            .map(|source_file| {
+                                Path::new(source_file)
+                                    .parent()
+                                    .expect("parent dir not found")
+                                    .to_owned()
+                            })
+                            .collect(),
+                        _ => AHashSet::new(),
+                    };
+                    if spec.is_common_js() {
+                        helpers::create_path(&package.get_js_path());
+                        relative_dirs.iter().for_each(|path_buf| {
+                            helpers::create_path_for_path(&Path::join(&package.get_js_path(), path_buf))
                         })
-                        .collect(),
-                    _ => AHashSet::new(),
-                };
-                if spec.is_common_js() {
-                    helpers::create_path(&package.get_js_path());
-                    relative_dirs.iter().for_each(|path_buf| {
-                        helpers::create_path_for_path(&Path::join(&package.get_js_path(), path_buf))
-                    })
-                } else {
-                    helpers::create_path(&package.get_esmodule_path());
-                    relative_dirs.iter().for_each(|path_buf| {
-                        helpers::create_path_for_path(&Path::join(&package.get_esmodule_path(), path_buf))
-                    })
+                    } else {
+                        helpers::create_path(&package.get_esmodule_path());
+                        relative_dirs.iter().for_each(|path_buf| {
+                            helpers::create_path_for_path(&Path::join(&package.get_esmodule_path(), path_buf))
+                        })
+                    }
                 }
-            }
-        });
+            });
+        }
 
         package.namespace.to_suffix().iter().for_each(|namespace| {
             // generate the mlmap "AST" file for modules that have a namespace configured
@@ -732,7 +771,7 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
                 .filter(|module_name| helpers::is_non_exotic_module_name(module_name))
                 .collect::<AHashSet<String>>();
 
-            let mlmap = namespaces::gen_mlmap(package, namespace, &depending_modules);
+            let mlmap = namespaces::gen_mlmap(package, namespace, &depending_modules, build_profile);
 
             // mlmap will be compiled in the AST generation step
             // compile_mlmap(&package, namespace, &project_root);

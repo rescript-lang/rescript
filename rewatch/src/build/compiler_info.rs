@@ -1,6 +1,6 @@
 use crate::helpers;
 
-use super::build_types::{BuildCommandState, CompilerInfo};
+use super::build_types::{BuildCommandState, BuildProfile, CompilerInfo};
 use super::packages;
 use super::{clean, logs};
 use ahash::AHashMap;
@@ -34,11 +34,12 @@ fn get_rescript_config_hash(package: &packages::Package) -> Option<String> {
 pub fn verify_compiler_info(
     packages: &AHashMap<String, packages::Package>,
     compiler: &CompilerInfo,
+    build_profile: BuildProfile,
 ) -> CompilerCheckResult {
     let mismatched_packages = packages
         .values()
         .filter(|package| {
-            let info_path = package.get_compiler_info_path();
+            let info_path = package.get_compiler_info_path_for_profile(build_profile);
             let Ok(contents) = std::fs::read_to_string(&info_path) else {
                 // Can't read the compiler-info.json file, maybe there is no current build.
                 // We check if the ocaml build folder exists, if not, we assume the compiler is not installed
@@ -157,7 +158,7 @@ pub fn write_compiler_info(build_state: &BuildCommandState) {
                     return;
                 }
             };
-            let info_path = package.get_compiler_info_path();
+            let info_path = package.get_compiler_info_path_for_profile(build_state.build_profile);
             let should_write = match std::fs::read_to_string(&info_path) {
                 Ok(existing) => existing != contents,
                 Err(_) => true,

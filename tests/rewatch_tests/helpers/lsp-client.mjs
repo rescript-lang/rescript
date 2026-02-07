@@ -1,9 +1,12 @@
 import child_process from "node:child_process";
+import { realpathSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 import {
   createProtocolConnection,
   ExitNotification,
   InitializedNotification,
   InitializeRequest,
+  PublishDiagnosticsNotification,
   RegistrationRequest,
   ShutdownRequest,
 } from "vscode-languageserver-protocol/node.js";
@@ -88,6 +91,26 @@ export function createLspClient(cwd, otelEndpoint) {
     registrations.push(...params.registrations);
     onNotification("client/registerCapability", params);
     return undefined;
+  });
+
+  // Collect publishDiagnostics notifications keyed by sandbox-relative path.
+  // Each new notification for a path replaces the previous one (same as LSP semantics).
+  // URIs are normalized to relative paths so tests don't depend on absolute sandbox paths.
+  const cwdUri = pathToFileURL(realpathSync(cwd)).href;
+  /** @type {Map<string, import("vscode-languageserver-protocol").Diagnostic[]>} */
+  const diagnosticsByPath = new Map();
+
+  connection.onNotification(PublishDiagnosticsNotification.type, params => {
+    const relativePath = params.uri.startsWith(cwdUri + "/")
+      ? params.uri.slice(cwdUri.length + 1)
+      : params.uri;
+    diagnosticsByPath.set(relativePath, params.diagnostics);
+    onNotification("textDocument/publishDiagnostics", params);
+  });
+
+  // Catch-all for custom notifications (e.g. rescript/buildFinished).
+  connection.onNotification((method, params) => {
+    onNotification(method, params);
   });
 
   connection.onError(([error]) => {
@@ -188,6 +211,24 @@ export function createLspClient(cwd, otelEndpoint) {
     /** Registrations received from the server via client/registerCapability. */
     get registrations() {
       return registrations;
+    },
+
+    /**
+     * Get all diagnostics collected so far (non-blocking).
+     * Returns a sorted array of { file, diagnostics } with sandbox-relative paths.
+     * @returns {Array<{file: string, diagnostics: Array<{range: any, severity: number, message: string}>}>}
+     */
+    getDiagnostics() {
+      return [...diagnosticsByPath.entries()]
+        .map(([file, diagnostics]) => ({
+          file,
+          diagnostics: diagnostics.map(d => ({
+            range: d.range,
+            severity: d.severity,
+            message: d.message,
+          })),
+        }))
+        .sort((a, b) => a.file.localeCompare(b.file));
     },
 
     /**

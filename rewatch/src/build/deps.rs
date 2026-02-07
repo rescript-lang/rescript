@@ -11,9 +11,10 @@ fn get_dep_modules(
     valid_modules: &AHashSet<String>,
     package: &packages::Package,
     build_state: &BuildState,
+    build_profile: BuildProfile,
 ) -> AHashSet<String> {
     let mut deps = AHashSet::new();
-    let ast_file = package.get_build_path().join(ast_file);
+    let ast_file = package.get_build_path_for_profile(build_profile).join(ast_file);
     match helpers::read_lines(&ast_file) {
         Ok(lines) => {
             // we skip the first line with is some null characters
@@ -96,7 +97,11 @@ fn get_dep_modules(
         .collect::<AHashSet<String>>()
 }
 
-pub fn get_deps(build_state: &mut BuildState, deleted_modules: &AHashSet<String>) {
+pub fn get_deps(
+    build_state: &mut BuildState,
+    deleted_modules: &AHashSet<String>,
+    build_profile: BuildProfile,
+) {
     let all_mod = &build_state.module_names.union(deleted_modules).cloned().collect();
     build_state
         .modules
@@ -116,6 +121,7 @@ pub fn get_deps(build_state: &mut BuildState, deleted_modules: &AHashSet<String>
                         all_mod,
                         package,
                         build_state,
+                        build_profile,
                     );
 
                     if let Some(interface) = &source_file.interface {
@@ -128,6 +134,7 @@ pub fn get_deps(build_state: &mut BuildState, deleted_modules: &AHashSet<String>
                             all_mod,
                             package,
                             build_state,
+                            build_profile,
                         ))
                     }
                     match &package.namespace {

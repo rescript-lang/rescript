@@ -3,6 +3,7 @@ pub mod clean;
 pub mod compile;
 pub mod compiler_info;
 pub mod deps;
+pub mod diagnostics;
 pub mod logs;
 pub mod namespaces;
 pub mod packages;
@@ -16,6 +17,7 @@ use crate::helpers::emojis::*;
 use crate::helpers::{self};
 use crate::project_context::ProjectContext;
 use crate::sourcedirs;
+use ahash::AHashMap;
 use anyhow::{Context, Result, anyhow};
 use build_types::*;
 use console::style;
@@ -103,6 +105,7 @@ pub fn get_compiler_args(rescript_file_path: &Path) -> Result<String> {
         is_type_dev,
         true,
         None, // No warn_error_override for compiler-args command
+        BuildProfile::Standard,
     )?;
 
     let result = serde_json::to_string_pretty(&CompilerArgs {
@@ -127,29 +130,34 @@ pub fn get_compiler_info(project_context: &ProjectContext) -> Result<CompilerInf
     })
 }
 
-#[instrument(name = "initialize_build", skip_all)]
-pub fn initialize_build(
+/// Prepare a build from already-discovered packages.
+///
+/// Takes a `ProjectContext` and a fully-populated package map (with source files),
+/// then performs compiler validation, dependency checking, cleanup of stale artifacts,
+/// and directory creation — everything needed before `incremental_build`.
+#[instrument(name = "prepare_build", skip_all)]
+pub fn prepare_build(
+    project_context: ProjectContext,
+    packages: AHashMap<String, packages::Package>,
     default_timing: Option<Duration>,
-    filter: &Option<regex::Regex>,
     show_progress: bool,
-    path: &Path,
     plain_output: bool,
     warn_error: Option<String>,
+    build_profile: BuildProfile,
 ) -> Result<BuildCommandState> {
-    let project_context = ProjectContext::new(path)?;
     let compiler = get_compiler_info(&project_context)?;
 
     let timing_clean_start = Instant::now();
-    let packages = packages::make(filter, &project_context, show_progress)?;
 
-    let compiler_check = verify_compiler_info(&packages, &compiler);
+    let compiler_check = verify_compiler_info(&packages, &compiler, build_profile);
 
     if !packages::validate_packages_dependencies(&packages) {
         return Err(anyhow!("Failed to validate package dependencies"));
     }
 
-    let mut build_state = BuildCommandState::new(project_context, packages, compiler, warn_error);
-    packages::parse_packages(&mut build_state)?;
+    let mut build_state =
+        BuildCommandState::new(project_context, packages, compiler, warn_error, build_profile);
+    packages::parse_packages(&mut build_state, build_profile)?;
 
     let compile_assets_state = read_compile_state::read(&mut build_state)?;
 
@@ -187,6 +195,29 @@ pub fn initialize_build(
     Ok(build_state)
 }
 
+#[instrument(name = "initialize_build", skip_all)]
+pub fn initialize_build(
+    default_timing: Option<Duration>,
+    filter: &Option<regex::Regex>,
+    show_progress: bool,
+    path: &Path,
+    plain_output: bool,
+    warn_error: Option<String>,
+) -> Result<BuildCommandState> {
+    let project_context = ProjectContext::new(path)?;
+    let packages = packages::make(filter, &project_context, show_progress)?;
+
+    prepare_build(
+        project_context,
+        packages,
+        default_timing,
+        show_progress,
+        plain_output,
+        warn_error,
+        BuildProfile::Standard,
+    )
+}
+
 fn format_step(current: usize, total: usize) -> console::StyledObject<String> {
     style(format!("[{current}/{total}]")).bold().dim()
 }
@@ -201,6 +232,12 @@ pub enum IncrementalBuildErrorKind {
 pub struct IncrementalBuildError {
     pub plain_output: bool,
     pub kind: IncrementalBuildErrorKind,
+    pub diagnostics: Vec<diagnostics::BscDiagnostic>,
+}
+
+#[derive(Debug, Clone)]
+pub struct IncrementalBuildResult {
+    pub diagnostics: Vec<diagnostics::BscDiagnostic>,
 }
 
 impl fmt::Display for IncrementalBuildError {
@@ -240,8 +277,10 @@ pub fn incremental_build(
     only_incremental: bool,
     create_sourcedirs: bool,
     plain_output: bool,
-) -> Result<(), IncrementalBuildError> {
-    logs::initialize(&build_state.packages);
+) -> Result<IncrementalBuildResult, IncrementalBuildError> {
+    if build_state.build_profile == BuildProfile::Standard {
+        logs::initialize(&build_state.packages);
+    }
     let num_dirty_modules = build_state.modules.values().filter(|m| is_dirty(m)).count() as u64;
     let pb = if !plain_output && show_progress {
         ProgressBar::new(num_dirty_modules)
@@ -271,7 +310,9 @@ pub fn incremental_build(
         }
         Err(err) => {
             let _error_span = info_span!("build.parse_error").entered();
-            logs::finalize(&build_state.packages);
+            if build_state.build_profile == BuildProfile::Standard {
+                logs::finalize(&build_state.packages);
+            }
 
             if !plain_output && show_progress {
                 eprintln!(
@@ -284,15 +325,19 @@ pub fn incremental_build(
                 pb.finish();
             }
 
-            eprintln!("{}", &err);
+            let err_str = err.to_string();
+            eprintln!("{}", &err_str);
+            let parse_diagnostics = diagnostics::parse_compiler_output(&err_str);
             return Err(IncrementalBuildError {
                 kind: IncrementalBuildErrorKind::SourceFileParseError,
                 plain_output,
+                diagnostics: parse_diagnostics,
             });
         }
     };
     let deleted_modules = build_state.deleted_modules.clone();
-    deps::get_deps(build_state, &deleted_modules);
+    let build_profile = build_state.build_profile;
+    deps::get_deps(build_state, &deleted_modules, build_profile);
     let timing_parse_total = timing_parse_start.elapsed();
 
     if show_progress {
@@ -350,12 +395,15 @@ pub fn incremental_build(
     .map_err(|e| IncrementalBuildError {
         kind: IncrementalBuildErrorKind::CompileError(Some(e.to_string())),
         plain_output,
+        diagnostics: vec![],
     })?;
 
     let compile_duration = start_compiling.elapsed();
 
-    logs::finalize(&build_state.packages);
-    if create_sourcedirs {
+    if build_state.build_profile == BuildProfile::Standard {
+        logs::finalize(&build_state.packages);
+    }
+    if create_sourcedirs && build_state.build_profile == BuildProfile::Standard {
         sourcedirs::print(build_state);
     }
     pb.finish();
@@ -385,9 +433,16 @@ pub fn incremental_build(
         if helpers::contains_ascii_characters(&compile_errors) {
             eprintln!("{}", &compile_errors);
         }
+        let mut all_output = String::new();
+        if helpers::contains_ascii_characters(&parse_warnings) {
+            all_output.push_str(&parse_warnings);
+        }
+        all_output.push_str(&compile_warnings);
+        all_output.push_str(&compile_errors);
         Err(IncrementalBuildError {
             kind: IncrementalBuildErrorKind::CompileError(None),
             plain_output,
+            diagnostics: diagnostics::parse_compiler_output(&all_output),
         })
     } else {
         if show_progress {
@@ -415,7 +470,14 @@ pub fn incremental_build(
         // Write per-package compiler metadata to `lib/bs/compiler-info.json` (idempotent)
         write_compiler_info(build_state);
 
-        Ok(())
+        let mut all_output = String::new();
+        if helpers::contains_ascii_characters(&parse_warnings) {
+            all_output.push_str(&parse_warnings);
+        }
+        all_output.push_str(&compile_warnings);
+        Ok(IncrementalBuildResult {
+            diagnostics: diagnostics::parse_compiler_output(&all_output),
+        })
     }
 }
 

@@ -47,11 +47,17 @@ fn package_watcher_patterns(package: &packages::Package, project_root: &Path) ->
     patterns
 }
 
+/// A discovered workspace: a project context and its packages.
+pub struct DiscoveredWorkspace {
+    pub project_context: ProjectContext,
+    pub packages: AHashMap<String, packages::Package>,
+}
+
 /// Discover all packages in the workspace and build scoped watcher patterns.
 ///
 /// Emits OTEL spans per package and per source directory so the snapshot
 /// shows exactly what was found.
-fn discover_workspace(project_root: &Path) -> (Vec<String>, AHashMap<String, packages::Package>) {
+fn discover_workspace(project_root: &Path) -> (Vec<String>, Option<DiscoveredWorkspace>) {
     let mut all_patterns = vec!["**/rescript.json".to_string()];
 
     let project_context = match ProjectContext::new(project_root) {
@@ -61,7 +67,7 @@ fn discover_workspace(project_root: &Path) -> (Vec<String>, AHashMap<String, pac
                 "Could not create project context for {}: {e}",
                 project_root.display()
             );
-            return (all_patterns, AHashMap::new());
+            return (all_patterns, None);
         }
     };
 
@@ -69,7 +75,7 @@ fn discover_workspace(project_root: &Path) -> (Vec<String>, AHashMap<String, pac
         Ok(p) => p,
         Err(e) => {
             tracing::warn!("Could not read packages in {}: {e}", project_root.display());
-            return (all_patterns, AHashMap::new());
+            return (all_patterns, None);
         }
     };
 
@@ -85,7 +91,13 @@ fn discover_workspace(project_root: &Path) -> (Vec<String>, AHashMap<String, pac
 
     all_patterns.sort();
     all_patterns.dedup();
-    (all_patterns, packages)
+    (
+        all_patterns,
+        Some(DiscoveredWorkspace {
+            project_context,
+            packages,
+        }),
+    )
 }
 
 /// Build watcher patterns from workspace folders and register them with the client.
@@ -104,17 +116,19 @@ fn discover_workspace(project_root: &Path) -> (Vec<String>, AHashMap<String, pac
 pub async fn register_file_watchers(
     client: &tower_lsp::Client,
     workspace_folders: &[String],
-) -> AHashMap<String, packages::Package> {
-    let mut all_packages = AHashMap::new();
+) -> Vec<DiscoveredWorkspace> {
+    let mut workspaces = Vec::new();
 
     async {
         async {
             let mut watcher_patterns: Vec<String> = Vec::new();
 
             for folder in workspace_folders {
-                let (patterns, packages) = discover_workspace(Path::new(folder));
+                let (patterns, workspace) = discover_workspace(Path::new(folder));
                 watcher_patterns.extend(patterns);
-                all_packages.extend(packages);
+                if let Some(ws) = workspace {
+                    workspaces.push(ws);
+                }
             }
 
             let watcher_count = watcher_patterns.len();
@@ -156,5 +170,5 @@ pub async fn register_file_watchers(
     .instrument(tracing::info_span!("lsp.initialized"))
     .await;
 
-    all_packages
+    workspaces
 }

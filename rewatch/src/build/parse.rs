@@ -45,7 +45,7 @@ pub fn generate_asts(
                 .expect("Package not found");
             match &module.source_type {
                 SourceType::MlMap(_mlmap) => {
-                    let path = package.get_mlmap_path();
+                    let path = package.get_mlmap_path_for_profile(build_state.build_profile);
                     (
                         module_name.to_owned(),
                         Ok((Path::new(&path).to_path_buf(), None)),
@@ -70,6 +70,7 @@ pub fn generate_asts(
                             build_state,
                             build_state.get_warn_error_override(),
                             &parse_span,
+                            build_state.build_profile,
                         )
                         .map_err(|e| e.to_string());
 
@@ -81,6 +82,7 @@ pub fn generate_asts(
                                     build_state,
                                     build_state.get_warn_error_override(),
                                     &parse_span,
+                                    build_state.build_profile,
                                 ) {
                                     Ok(v) => Ok(Some(v)),
                                     Err(e) => Err(e.to_string()),
@@ -233,13 +235,15 @@ pub fn generate_asts(
                             .expect("Package not found");
                         // probably better to do this in a different function
                         // specific to compiling mlmaps
-                        let compile_path = package.get_mlmap_compile_path();
+                        let compile_path =
+                            package.get_mlmap_compile_path_for_profile(build_state.build_profile);
                         let mlmap_hash = helpers::compute_file_hash(Path::new(&compile_path));
                         if let Err(err) = namespaces::compile_mlmap(
                             &build_state.build_state.project_context,
                             package,
                             &module_name,
                             &build_state.build_state.compiler_info.bsc_path,
+                            build_state.build_profile,
                         ) {
                             has_failure = true;
                             stderr.push_str(&format!("{err}\n"));
@@ -250,7 +254,9 @@ pub fn generate_asts(
                             .namespace
                             .to_suffix()
                             .expect("namespace should be set for mlmap module");
-                        let base_build_path = package.get_build_path().join(&suffix);
+                        let base_build_path = package
+                            .get_build_path_for_profile(build_state.build_profile)
+                            .join(&suffix);
                         let base_ocaml_build_path = package.get_ocaml_build_path().join(&suffix);
                         let _ = std::fs::copy(
                             base_build_path.with_extension("cmi"),
@@ -382,11 +388,12 @@ fn generate_ast(
     build_state: &BuildState,
     warn_error_override: Option<String>,
     parent_span: &tracing::Span,
+    build_profile: BuildProfile,
 ) -> anyhow::Result<(PathBuf, Option<helpers::StdErr>)> {
     let file_path = PathBuf::from(&package.path).join(filename);
     let contents = helpers::read_file(&file_path).expect("Error reading file");
 
-    let build_path_abs = package.get_build_path();
+    let build_path_abs = package.get_build_path_for_profile(build_profile);
     let (ast_path, parser_args) = parser_args(
         &build_state.project_context,
         &package.config,
@@ -403,7 +410,7 @@ fn generate_ast(
     };
 
     // generate the dir of the ast_path (it mirrors the source file dir)
-    let ast_parent_path = package.get_build_path().join(ast_path.parent().unwrap());
+    let ast_parent_path = build_path_abs.join(ast_path.parent().unwrap());
     helpers::create_path(&ast_parent_path);
 
     /* Create .ast */

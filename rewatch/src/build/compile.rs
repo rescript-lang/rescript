@@ -242,6 +242,7 @@ pub fn compile(
                                         true,
                                         build_state,
                                         build_state.get_warn_error_override(),
+                                        build_state.build_profile,
                                     );
                                     Some(result)
                                 }
@@ -254,6 +255,7 @@ pub fn compile(
                                 false,
                                 build_state,
                                 build_state.get_warn_error_override(),
+                                build_state.build_profile,
                             );
                             let cmi_digest_after = helpers::compute_file_hash(Path::new(&cmi_path));
 
@@ -544,6 +546,7 @@ pub fn compiler_args(
     is_local_dep: bool,
     // Command-line --warn-error flag override (takes precedence over rescript.json config)
     warn_error_override: Option<String>,
+    build_profile: BuildProfile,
 ) -> Result<Vec<String>> {
     let bsc_flags = config::flatten_flags(&config.compiler_flags);
     let dependency_paths = get_dependency_paths(config, project_context, packages, is_type_dev);
@@ -597,33 +600,40 @@ pub fn compiler_args(
         vec![]
     } else {
         debug!("Compiling file: {}", &module_name);
-        let specs = root_config.get_package_specs();
-
-        specs
-            .iter()
-            .flat_map(|spec| {
-                vec![
-                    "-bs-package-output".to_string(),
-                    format!(
-                        "{}:{}:{}",
-                        spec.module.as_str(),
-                        if spec.in_source {
-                            file_path.parent().unwrap().to_str().unwrap().to_string()
-                        } else {
-                            Path::new("lib")
-                                .join(Path::join(
-                                    Path::new(&spec.get_out_of_source_dir()),
-                                    file_path.parent().unwrap(),
-                                ))
-                                .to_str()
-                                .unwrap()
-                                .to_string()
-                        },
-                        root_config.get_suffix(spec),
-                    ),
-                ]
-            })
-            .collect()
+        match build_profile {
+            BuildProfile::Lsp => {
+                // LSP only needs type info — skip JS generation entirely
+                vec!["-bs-cmi-only".to_string()]
+            }
+            BuildProfile::Standard => {
+                let specs = root_config.get_package_specs();
+                specs
+                    .iter()
+                    .flat_map(|spec| {
+                        vec![
+                            "-bs-package-output".to_string(),
+                            format!(
+                                "{}:{}:{}",
+                                spec.module.as_str(),
+                                if spec.in_source {
+                                    file_path.parent().unwrap().to_str().unwrap().to_string()
+                                } else {
+                                    Path::new("lib")
+                                        .join(Path::join(
+                                            Path::new(&spec.get_out_of_source_dir()),
+                                            file_path.parent().unwrap(),
+                                        ))
+                                        .to_str()
+                                        .unwrap()
+                                        .to_string()
+                                },
+                                root_config.get_suffix(spec),
+                            ),
+                        ]
+                    })
+                    .collect()
+            }
+        }
     };
 
     let runtime_path_args = get_runtime_path_args(config, project_context)?;
@@ -754,6 +764,7 @@ fn compile_file(
     is_interface: bool,
     build_state: &BuildState,
     warn_error_override: Option<String>,
+    build_profile: BuildProfile,
 ) -> Result<Option<String>> {
     let BuildState {
         packages,
@@ -763,7 +774,7 @@ fn compile_file(
     } = build_state;
     let root_config = build_state.get_root_config();
     let ocaml_build_path_abs = package.get_ocaml_build_path();
-    let build_path_abs = package.get_build_path();
+    let build_path_abs = package.get_build_path_for_profile(build_profile);
     let implementation_file_path = match &module.source_type {
         SourceType::SourceFile(source_file) => Ok(&source_file.implementation.path),
         sourcetype => Err(format!(
@@ -788,6 +799,7 @@ fn compile_file(
         is_type_dev,
         package.is_local_dep,
         warn_error_override,
+        build_profile,
     )?;
 
     let to_mjs = Command::new(&compiler_info.bsc_path)
@@ -817,147 +829,116 @@ fn compile_file(
 
             let dir = Path::new(implementation_file_path).parent().unwrap();
 
-            // perhaps we can do this copying somewhere else
+            // Copy type-checking artifacts to lib/ocaml (needed by both profiles)
             if !is_interface {
                 let _ = std::fs::copy(
-                    package
-                        .get_build_path()
-                        .join(dir)
-                        // because editor tooling doesn't support namespace entries yet
-                        // we just remove the @ for now. This makes sure the editor support
-                        // doesn't break
-                        .join(format!("{basename}.cmi")),
+                    build_path_abs.join(dir).join(format!("{basename}.cmi")),
                     ocaml_build_path_abs.join(format!("{basename}.cmi")),
                 );
                 let _ = std::fs::copy(
-                    package.get_build_path().join(dir).join(format!("{basename}.cmj")),
-                    ocaml_build_path_abs.join(format!("{basename}.cmj")),
-                );
-                let _ = std::fs::copy(
-                    package
-                        .get_build_path()
-                        .join(dir)
-                        // because editor tooling doesn't support namespace entries yet
-                        // we just remove the @ for now. This makes sure the editor support
-                        // doesn't break
-                        .join(format!("{basename}.cmt")),
+                    build_path_abs.join(dir).join(format!("{basename}.cmt")),
                     ocaml_build_path_abs.join(format!("{basename}.cmt")),
                 );
+                // .cmj is only produced by standard builds (LSP uses -bs-cmi-only)
+                if build_profile == BuildProfile::Standard {
+                    let _ = std::fs::copy(
+                        build_path_abs.join(dir).join(format!("{basename}.cmj")),
+                        ocaml_build_path_abs.join(format!("{basename}.cmj")),
+                    );
+                }
             } else {
                 let _ = std::fs::copy(
-                    package
-                        .get_build_path()
-                        .join(dir)
-                        .join(format!("{basename}.cmti")),
+                    build_path_abs.join(dir).join(format!("{basename}.cmti")),
                     ocaml_build_path_abs.join(format!("{basename}.cmti")),
                 );
                 let _ = std::fs::copy(
-                    package.get_build_path().join(dir).join(format!("{basename}.cmi")),
+                    build_path_abs.join(dir).join(format!("{basename}.cmi")),
                     ocaml_build_path_abs.join(format!("{basename}.cmi")),
                 );
             }
 
-            if let SourceType::SourceFile(SourceFile {
-                interface: Some(Interface { path, .. }),
-                ..
-            }) = &module.source_type
-            {
-                // we need to copy the source file to the build directory.
-                // editor tools expects the source file in lib/bs for finding the current package
-                // and in lib/ocaml when referencing modules in other packages
-                let _ = std::fs::copy(
-                    Path::new(&package.path).join(path),
-                    package.get_build_path().join(path),
-                )
-                .expect("copying source file failed");
+            // Source file copies, JS output copies, and post-build commands
+            // are only needed for standard builds
+            if build_profile == BuildProfile::Standard {
+                if let SourceType::SourceFile(SourceFile {
+                    interface: Some(Interface { path, .. }),
+                    ..
+                }) = &module.source_type
+                {
+                    let _ = std::fs::copy(Path::new(&package.path).join(path), build_path_abs.join(path))
+                        .expect("copying source file failed");
 
-                let _ = std::fs::copy(
-                    Path::new(&package.path).join(path),
-                    package
-                        .get_ocaml_build_path()
-                        .join(std::path::Path::new(path).file_name().unwrap()),
-                )
-                .expect("copying source file failed");
-            }
-            if let SourceType::SourceFile(SourceFile {
-                implementation: Implementation { path, .. },
-                ..
-            }) = &module.source_type
-            {
-                // we need to copy the source file to the build directory.
-                // editor tools expects the source file in lib/bs for finding the current package
-                // and in lib/ocaml when referencing modules in other packages
-                let _ = std::fs::copy(
-                    Path::new(&package.path).join(path),
-                    package.get_build_path().join(path),
-                )
-                .expect("copying source file failed");
+                    let _ = std::fs::copy(
+                        Path::new(&package.path).join(path),
+                        ocaml_build_path_abs.join(std::path::Path::new(path).file_name().unwrap()),
+                    )
+                    .expect("copying source file failed");
+                }
+                if let SourceType::SourceFile(SourceFile {
+                    implementation: Implementation { path, .. },
+                    ..
+                }) = &module.source_type
+                {
+                    let _ = std::fs::copy(Path::new(&package.path).join(path), build_path_abs.join(path))
+                        .expect("copying source file failed");
 
-                let _ = std::fs::copy(
-                    Path::new(&package.path).join(path),
-                    package
-                        .get_ocaml_build_path()
-                        .join(std::path::Path::new(path).file_name().unwrap()),
-                )
-                .expect("copying source file failed");
-            }
+                    let _ = std::fs::copy(
+                        Path::new(&package.path).join(path),
+                        ocaml_build_path_abs.join(std::path::Path::new(path).file_name().unwrap()),
+                    )
+                    .expect("copying source file failed");
+                }
 
-            // copy js file
-            root_config.get_package_specs().iter().for_each(|spec| {
-                if spec.in_source
+                // copy js file
+                root_config.get_package_specs().iter().for_each(|spec| {
+                    if spec.in_source
+                        && let SourceType::SourceFile(SourceFile {
+                            implementation: Implementation { path, .. },
+                            ..
+                        }) = &module.source_type
+                    {
+                        let source = helpers::get_source_file_from_rescript_file(
+                            &Path::new(&package.path).join(path),
+                            &root_config.get_suffix(spec),
+                        );
+                        let destination = helpers::get_source_file_from_rescript_file(
+                            &build_path_abs.join(path),
+                            &root_config.get_suffix(spec),
+                        );
+
+                        if source.exists() {
+                            let _ = std::fs::copy(&source, &destination).expect("copying source file failed");
+                        }
+                    }
+                });
+
+                // Execute js-post-build command if configured
+                if !is_interface
+                    && let Some(js_post_build) = &package.config.js_post_build
                     && let SourceType::SourceFile(SourceFile {
                         implementation: Implementation { path, .. },
                         ..
                     }) = &module.source_type
                 {
-                    let source = helpers::get_source_file_from_rescript_file(
-                        &Path::new(&package.path).join(path),
-                        &root_config.get_suffix(spec),
-                    );
-                    let destination = helpers::get_source_file_from_rescript_file(
-                        &package.get_build_path().join(path),
-                        &root_config.get_suffix(spec),
-                    );
+                    for spec in root_config.get_package_specs() {
+                        let js_file = if spec.in_source {
+                            helpers::get_source_file_from_rescript_file(
+                                &Path::new(&package.path).join(path),
+                                &root_config.get_suffix(&spec),
+                            )
+                        } else {
+                            helpers::get_source_file_from_rescript_file(
+                                &Path::new(&package.path)
+                                    .join("lib")
+                                    .join(spec.get_out_of_source_dir())
+                                    .join(path),
+                                &root_config.get_suffix(&spec),
+                            )
+                        };
 
-                    if source.exists() {
-                        let _ = std::fs::copy(&source, &destination).expect("copying source file failed");
-                    }
-                }
-            });
-
-            // Execute js-post-build command if configured
-            // Only run for implementation files (not interfaces)
-            if !is_interface
-                && let Some(js_post_build) = &package.config.js_post_build
-                && let SourceType::SourceFile(SourceFile {
-                    implementation: Implementation { path, .. },
-                    ..
-                }) = &module.source_type
-            {
-                // Execute post-build command for each package spec (each output format)
-                for spec in root_config.get_package_specs() {
-                    // Determine the correct JS file path based on in-source setting:
-                    // - in-source: true  -> next to the source file (e.g., src/Foo.js)
-                    // - in-source: false -> in lib/<module>/ directory (e.g., lib/es6/src/Foo.js)
-                    let js_file = if spec.in_source {
-                        helpers::get_source_file_from_rescript_file(
-                            &Path::new(&package.path).join(path),
-                            &root_config.get_suffix(&spec),
-                        )
-                    } else {
-                        helpers::get_source_file_from_rescript_file(
-                            &Path::new(&package.path)
-                                .join("lib")
-                                .join(spec.get_out_of_source_dir())
-                                .join(path),
-                            &root_config.get_suffix(&spec),
-                        )
-                    };
-
-                    if js_file.exists() {
-                        // Fail the build if post-build command fails (matches bsb behavior with &&)
-                        // Run in the package's directory (where rescript.json is defined)
-                        execute_post_build_command(&js_post_build.cmd, &js_file, &package.path)?;
+                        if js_file.exists() {
+                            execute_post_build_command(&js_post_build.cmd, &js_file, &package.path)?;
+                        }
                     }
                 }
             }

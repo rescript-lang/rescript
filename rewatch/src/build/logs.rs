@@ -62,16 +62,12 @@ pub fn initialize(packages: &AHashMap<String, Package>) {
 }
 
 pub fn append(package: &packages::Package, str: &str) {
-    File::options()
-        .append(true)
-        .open(get_log_file_path(package, Location::Bs))
-        .map(|file| write_to_log_file(file, &package.name, str))
-        .unwrap_or_else(|err| {
-            panic!(
-                "Cannot write compilerlog: {} ({err})",
-                get_log_file_path(package, Location::Bs).to_string_lossy()
-            );
-        });
+    let log_path = get_log_file_path(package, Location::Bs);
+    // If the log file doesn't exist (e.g. LSP profile skips logs::initialize),
+    // silently skip rather than panicking.
+    if let Ok(file) = File::options().append(true).open(&log_path) {
+        write_to_log_file(file, &package.name, str);
+    }
 }
 
 pub fn finalize(packages: &AHashMap<String, Package>) {

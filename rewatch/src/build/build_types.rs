@@ -112,6 +112,15 @@ pub struct BuildState {
     pub deps_initialized: bool,
 }
 
+/// Controls which artifacts the build produces and where they go.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum BuildProfile {
+    /// Normal build: emit JS to lib/bs, lib/js, lib/es6
+    Standard,
+    /// LSP mode: emit only .cmi/.cmt to lib/lsp, skip JS generation
+    Lsp,
+}
+
 /// Extended build state that includes command-line specific overrides.
 /// Wraps `BuildState` and adds command-specific data like warning overrides.
 /// Used by commands that need to respect CLI flags (e.g., `build`, `watch`).
@@ -125,6 +134,7 @@ pub struct BuildCommandState {
     pub build_state: BuildState,
     // Command-line --warn-error flag override (takes precedence over rescript.json config)
     pub warn_error_override: Option<String>,
+    pub build_profile: BuildProfile,
 }
 
 #[derive(Debug, Clone)]
@@ -175,10 +185,12 @@ impl BuildCommandState {
         packages: AHashMap<String, Package>,
         compiler: CompilerInfo,
         warn_error_override: Option<String>,
+        build_profile: BuildProfile,
     ) -> Self {
         Self {
             build_state: BuildState::new(project_context, packages, compiler),
             warn_error_override,
+            build_profile,
         }
     }
 

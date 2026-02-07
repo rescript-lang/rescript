@@ -1,3 +1,4 @@
+use crate::build::build_types::BuildProfile;
 use crate::build::compile::get_runtime_path_args;
 use crate::build::packages;
 use crate::helpers::StrippedVerbatimPath;
@@ -27,8 +28,9 @@ pub fn gen_mlmap(
     package: &packages::Package,
     namespace: &str,
     depending_modules: &AHashSet<String>,
+    build_profile: BuildProfile,
 ) -> PathBuf {
-    let build_path_abs = package.get_build_path();
+    let build_path_abs = package.get_build_path_for_profile(build_profile);
     // we don't really need to create a digest, because we track if we need to
     // recompile in a different way but we need to put it in the file for it to
     // be readable.
@@ -58,8 +60,9 @@ pub fn compile_mlmap(
     package: &packages::Package,
     namespace: &str,
     bsc_path: &Path,
+    build_profile: BuildProfile,
 ) -> Result<()> {
-    let build_path_abs = package.get_build_path();
+    let build_path_abs = package.get_build_path_for_profile(build_profile);
     let mlmap_name = format!("{namespace}.mlmap");
     let mut args: Vec<String> = vec![];
     // include `-runtime-path` arg
