@@ -295,7 +295,7 @@ The following are described in earlier design discussions but not yet implemente
 | `textDocument/inlayHint` | Not implemented |
 | `textDocument/codeLens` | Not implemented |
 | `textDocument/signatureHelp` | Not implemented |
-| `textDocument/didOpen` | No handler (buffers tracked via didChange) |
+| `textDocument/didOpen` | No handler — should store buffer content in `open_buffers` so completion works after LSP restart without saving (the editor sends `didOpen` with full text for all open files on connect) |
 | `textDocument/didClose` | No handler (buffers not cleaned up) |
 | `workspace/didChangeWatchedFiles` | Registered but handler not implemented — needs to mark dirty modules and trigger rebuild |
 | Monorepo multi-workspace | Single BuildState only |

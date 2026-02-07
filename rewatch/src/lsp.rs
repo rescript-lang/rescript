@@ -99,6 +99,13 @@ impl LanguageServer for Backend {
             .map(|wf| wf.clone())
             .unwrap_or_default();
 
+        self.client
+            .log_message(
+                MessageType::INFO,
+                format!("rescript-lsp initialized with workspace folders: {workspace_folders:?}"),
+            )
+            .await;
+
         let workspaces = initialize::register_file_watchers(&self.client, &workspace_folders).await;
 
         let mut all_diagnostics: Vec<BscDiagnostic> = Vec::new();

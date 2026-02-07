@@ -242,8 +242,56 @@ fn build_opens(namespace: &Namespace, config: &config::Config) -> Value {
 }
 
 /// Build the `pathsForModule` object mapping module names to their .cmt/.res paths.
+///
+/// Includes both project/dependency modules from the build state and runtime
+/// modules from `lib/ocaml/` (which are pre-built and not in the build state).
 fn build_paths_for_module(build_state: &BuildCommandState) -> Value {
     let mut result = serde_json::Map::new();
+
+    // Add runtime modules from lib/ocaml/. These are pre-built and not
+    // discovered as regular packages in the build state.
+    let ocaml_dir = build_state
+        .build_state
+        .compiler_info
+        .runtime_path
+        .join("lib")
+        .join("ocaml");
+    if let Ok(entries) = std::fs::read_dir(&ocaml_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()) == Some("cmt") {
+                let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
+                // Check for a matching .cmti (interface)
+                let cmti_path = path.with_extension("cmti");
+                let res_path = ocaml_dir.join(format!("{stem}.res"));
+                let resi_path = ocaml_dir.join(format!("{stem}.resi"));
+
+                if cmti_path.exists() && resi_path.exists() {
+                    result.insert(
+                        stem.to_string(),
+                        json!({
+                            "intfAndImpl": {
+                                "cmti": cmti_path.to_string_lossy(),
+                                "resi": resi_path.to_string_lossy(),
+                                "cmt": path.to_string_lossy(),
+                                "res": res_path.to_string_lossy(),
+                            }
+                        }),
+                    );
+                } else if res_path.exists() {
+                    result.insert(
+                        stem.to_string(),
+                        json!({
+                            "impl": {
+                                "cmt": path.to_string_lossy(),
+                                "res": res_path.to_string_lossy(),
+                            }
+                        }),
+                    );
+                }
+            }
+        }
+    }
 
     for (module_name, module) in &build_state.build_state.modules {
         let Some(package) = build_state.build_state.packages.get(&module.package_name) else {
@@ -314,6 +362,8 @@ fn build_paths_for_module(build_state: &BuildCommandState) -> Value {
 }
 
 /// Partition module names into project files and dependency files.
+///
+/// Runtime modules from `lib/ocaml/` are included in dependency files.
 fn build_file_sets(build_state: &BuildCommandState) -> (Value, Value) {
     let root_package_name = &build_state.build_state.get_root_config().name;
 
@@ -325,6 +375,24 @@ fn build_file_sets(build_state: &BuildCommandState) -> (Value, Value) {
             project_files.push(Value::String(module_name.clone()));
         } else {
             dependencies_files.push(Value::String(module_name.clone()));
+        }
+    }
+
+    // Add runtime modules as dependencies
+    let ocaml_dir = build_state
+        .build_state
+        .compiler_info
+        .runtime_path
+        .join("lib")
+        .join("ocaml");
+    if let Ok(entries) = std::fs::read_dir(&ocaml_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()) == Some("cmt")
+                && let Some(stem) = path.file_stem().and_then(|s| s.to_str())
+            {
+                dependencies_files.push(Value::String(stem.to_string()));
+            }
         }
     }
 
