@@ -3,9 +3,9 @@ use anyhow::{Result, bail};
 use num_cpus;
 use rayon::prelude::*;
 use std::fs;
-use std::io::{self, Write};
+use std::io::{self, Read, Write};
 use std::path::Path;
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use tracing::{info_span, instrument};
 
@@ -63,16 +63,24 @@ fn format_stdin(bsc_exe: &Path, extension: FileExtension) -> Result<()> {
         .to_possible_value()
         .ok_or(anyhow::anyhow!("Could not get extension arg value"))?;
 
-    let mut temp_file = tempfile::Builder::new()
-        .suffix(extension_value.get_name())
-        .tempfile()?;
-    io::copy(&mut io::stdin(), &mut temp_file)?;
-    let temp_path = temp_file.path();
+    // Use a dummy filename with the right extension so bsc knows the language.
+    let dummy_filename = format!("stdin{}", extension_value.get_name());
 
-    let mut cmd = Command::new(bsc_exe);
-    cmd.arg("-format").arg(temp_path);
+    let mut source = String::new();
+    io::stdin().read_to_string(&mut source)?;
 
-    let output = cmd.output()?;
+    let mut child = Command::new(bsc_exe)
+        .args(["-bs-read-stdin", "-format", &dummy_filename])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()?;
+
+    if let Some(mut stdin) = child.stdin.take() {
+        stdin.write_all(source.as_bytes())?;
+    }
+
+    let output = child.wait_with_output()?;
 
     if output.status.success() {
         io::stdout().write_all(&output.stdout)?;

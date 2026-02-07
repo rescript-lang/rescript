@@ -1,12 +1,14 @@
 import child_process from "node:child_process";
-import { realpathSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   CompletionRequest,
   createProtocolConnection,
   DidChangeTextDocumentNotification,
+  DidOpenTextDocumentNotification,
   DidSaveTextDocumentNotification,
+  DocumentFormattingRequest,
   ExitNotification,
   InitializedNotification,
   InitializeRequest,
@@ -251,6 +253,41 @@ export function createLspClient(cwd, otelEndpoint) {
       });
       if (!result) return [];
       return Array.isArray(result) ? result : result.items;
+    },
+
+    /**
+     * Notify the LSP server that a file was opened.
+     * @param {string} relativePath - Path relative to the sandbox root
+     * @param {string} [content] - The full file content (reads from disk if omitted)
+     */
+    openFile(relativePath, content) {
+      const fullPath = path.join(realpathSync(cwd), relativePath);
+      const text = content ?? readFileSync(fullPath, "utf8");
+      const uri = pathToFileURL(fullPath).href;
+      connection.sendNotification(DidOpenTextDocumentNotification.type, {
+        textDocument: {
+          uri,
+          languageId: "rescript",
+          version: nextVersion++,
+          text,
+        },
+      });
+    },
+
+    /**
+     * Send a formatting request for a file.
+     * @param {string} relativePath - Path relative to the sandbox root
+     * @returns {Promise<import("vscode-languageserver-protocol").TextEdit[]>}
+     */
+    async formatFor(relativePath) {
+      const uri = pathToFileURL(
+        path.join(realpathSync(cwd), relativePath),
+      ).href;
+      const result = await sendRequest(DocumentFormattingRequest.type, {
+        textDocument: { uri },
+        options: { tabSize: 2, insertSpaces: true },
+      });
+      return result || [];
     },
 
     /** The exit code (null if still running). */

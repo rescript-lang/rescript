@@ -2,11 +2,13 @@ mod completion;
 mod dependency_closure;
 mod did_change;
 mod did_save;
+mod formatting;
 mod initial_build;
 pub mod initialize;
 mod notifications;
 
 use std::collections::{HashMap, HashSet};
+use std::path::PathBuf;
 use std::sync::{Mutex, RwLock};
 
 use crate::build::build_types::BuildCommandState;
@@ -14,6 +16,17 @@ use crate::build::diagnostics::{BscDiagnostic, Severity};
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer, LspService, Server};
+
+/// Convert a URI to a file path, logging a warning on failure.
+fn uri_to_file_path(uri: &Url, context: &str) -> Option<PathBuf> {
+    match uri.to_file_path() {
+        Ok(p) => Some(p),
+        Err(_) => {
+            tracing::warn!(uri = %uri, "{context}: could not convert URI to file path");
+            None
+        }
+    }
+}
 
 struct Backend {
     client: Client,
@@ -80,7 +93,7 @@ impl LanguageServer for Backend {
                     ),
                     ..Default::default()
                 }),
-                // document_formatting_provider: Some(OneOf::Left(true)),
+                document_formatting_provider: Some(OneOf::Left(true)),
                 // inlay_hint_provider: Some(OneOf::Left(true)),
                 // signature_help_provider: Some(SignatureHelpOptions {
                 //     trigger_characters: Some(vec!["(".to_string()]),
@@ -130,16 +143,15 @@ impl LanguageServer for Backend {
             .await;
     }
 
+    async fn did_open(&self, params: DidOpenTextDocumentParams) {
+        if let Ok(mut buffers) = self.open_buffers.lock() {
+            buffers.insert(params.text_document.uri, params.text_document.text);
+        }
+    }
+
     async fn did_change(&self, params: DidChangeTextDocumentParams) {
-        let file_path = match params.text_document.uri.to_file_path() {
-            Ok(p) => p,
-            Err(_) => {
-                tracing::warn!(
-                    uri = %params.text_document.uri,
-                    "didChange: could not convert URI to file path"
-                );
-                return;
-            }
+        let Some(file_path) = uri_to_file_path(&params.text_document.uri, "didChange") else {
+            return;
         };
 
         let content = match params.content_changes.into_iter().last() {
@@ -168,15 +180,8 @@ impl LanguageServer for Backend {
     }
 
     async fn did_save(&self, params: DidSaveTextDocumentParams) {
-        let file_path = match params.text_document.uri.to_file_path() {
-            Ok(p) => p,
-            Err(_) => {
-                tracing::warn!(
-                    uri = %params.text_document.uri,
-                    "didSave: could not convert URI to file path"
-                );
-                return;
-            }
+        let Some(file_path) = uri_to_file_path(&params.text_document.uri, "didSave") else {
+            return;
         };
 
         let diagnostics = {
@@ -200,12 +205,8 @@ impl LanguageServer for Backend {
 
     async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
         let uri = &params.text_document_position.text_document.uri;
-        let file_path = match uri.to_file_path() {
-            Ok(p) => p,
-            Err(_) => {
-                tracing::warn!(uri = %uri, "completion: could not convert URI to file path");
-                return Ok(None);
-            }
+        let Some(file_path) = uri_to_file_path(uri, "completion") else {
+            return Ok(None);
         };
 
         Ok(completion::handle(
@@ -215,6 +216,26 @@ impl LanguageServer for Backend {
             uri,
             params.text_document_position.position,
         ))
+    }
+
+    async fn formatting(&self, params: DocumentFormattingParams) -> Result<Option<Vec<TextEdit>>> {
+        let uri = &params.text_document.uri;
+        let Some(file_path) = uri_to_file_path(uri, "formatting") else {
+            return Ok(None);
+        };
+
+        let bsc_path = match self.build_state.lock() {
+            Ok(guard) => match guard.as_ref() {
+                Some(state) => state.build_state.compiler_info.bsc_path.clone(),
+                None => {
+                    tracing::warn!("formatting: no build state available");
+                    return Ok(None);
+                }
+            },
+            Err(_) => return Ok(None),
+        };
+
+        Ok(formatting::run(&bsc_path, &self.open_buffers, &file_path, uri))
     }
 
     async fn shutdown(&self) -> Result<()> {

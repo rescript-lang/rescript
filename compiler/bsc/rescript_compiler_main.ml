@@ -191,17 +191,29 @@ let format_file input =
   let ext =
     Ext_file_extensions.classify_input (Ext_filename.get_extension_maybe input)
   in
-  (match ext with
-  | Res | Resi -> ()
-  | _ -> Bsc_args.bad_arg ("don't know what to do with " ^ input));
-  let formatted =
-    Res_multi_printer.print
-      ~ignore_parse_errors:!Clflags.ignore_parse_errors
-      input
+  let is_interface =
+    match ext with
+    | Resi -> true
+    | Res -> false
+    | _ -> Bsc_args.bad_arg ("don't know what to do with " ^ input)
   in
-  match !Clflags.output_name with
-  | None -> output_string stdout formatted
-  | Some fname -> Ext_io.write_file fname formatted
+  if !Js_config.read_stdin then
+    let source = Res_io.read_stdin () in
+    let formatted =
+      Res_multi_printer.print_source
+        ~ignore_parse_errors:!Clflags.ignore_parse_errors
+        ~is_interface ~filename:input source
+    in
+    output_string stdout formatted
+  else
+    let formatted =
+      Res_multi_printer.print
+        ~ignore_parse_errors:!Clflags.ignore_parse_errors
+        input
+    in
+    match !Clflags.output_name with
+    | None -> output_string stdout formatted
+    | Some fname -> Ext_io.write_file fname formatted
 
 let set_color_option option =
   match Clflags.parse_color_setting option with
