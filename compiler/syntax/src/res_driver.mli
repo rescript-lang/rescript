@@ -53,6 +53,16 @@ val parsing_engine : Res_diagnostics.t list parsing_engine
 
 val print_engine : print_engine
 
+(* Parse ReScript source from a string, using filename for error locations.
+   Used by the LSP server to typecheck unsaved buffer content via stdin. *)
+val parse_implementation_from_stdin :
+  ?ignore_parse_errors:bool -> filename:string -> string -> Parsetree.structure
+[@@live] [@@raises exit]
+
+val parse_interface_from_stdin :
+  ?ignore_parse_errors:bool -> filename:string -> string -> Parsetree.signature
+[@@live] [@@raises exit]
+
 (* ReScript implementation parsing compatible with ocaml pparse driver. Used by the compiler. *)
 val parse_implementation :
   ?ignore_parse_errors:bool -> string -> Parsetree.structure

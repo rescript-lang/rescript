@@ -70,18 +70,40 @@ let process_file sourcefile ?kind ppf =
     match kind with
     | Res ->
       let sourcefile = set_abs_input_name sourcefile in
-      Js_implementation.implementation
-        ~parser:
-          (Res_driver.parse_implementation
-             ~ignore_parse_errors:!Clflags.ignore_parse_errors)
-        ppf sourcefile
+      if !Js_config.read_stdin then (
+        (* Disable .cmt generation — Cmt_format.save_cmt would try to
+           Digest.file the source, which doesn't exist on disk. *)
+        Clflags.binary_annotations := false;
+        let source = Res_io.read_stdin () in
+        Js_implementation.implementation
+          ~parser:(fun _fname ->
+            Res_driver.parse_implementation_from_stdin
+              ~ignore_parse_errors:!Clflags.ignore_parse_errors
+              ~filename:sourcefile source)
+          ppf sourcefile)
+      else
+        Js_implementation.implementation
+          ~parser:
+            (Res_driver.parse_implementation
+               ~ignore_parse_errors:!Clflags.ignore_parse_errors)
+          ppf sourcefile
     | Resi ->
       let sourcefile = set_abs_input_name sourcefile in
-      Js_implementation.interface
-        ~parser:
-          (Res_driver.parse_interface
-             ~ignore_parse_errors:!Clflags.ignore_parse_errors)
-        ppf sourcefile
+      if !Js_config.read_stdin then (
+        Clflags.binary_annotations := false;
+        let source = Res_io.read_stdin () in
+        Js_implementation.interface
+          ~parser:(fun _fname ->
+            Res_driver.parse_interface_from_stdin
+              ~ignore_parse_errors:!Clflags.ignore_parse_errors
+              ~filename:sourcefile source)
+          ppf sourcefile)
+      else
+        Js_implementation.interface
+          ~parser:
+            (Res_driver.parse_interface
+               ~ignore_parse_errors:!Clflags.ignore_parse_errors)
+          ppf sourcefile
     | Intf_ast -> Js_implementation.interface_mliast ppf sourcefile
     (* The printer setup is done in the runtime depends on
        the content of ast
@@ -308,6 +330,9 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
     ( "-e",
       string_call (fun s -> eval s ~suffix:Literals.suffix_res),
       "(experimental) set the string to be evaluated in ReScript syntax" );
+    ( "-bs-read-stdin",
+      set Js_config.read_stdin,
+      "*internal* Read source from stdin instead of from the file argument" );
     ( "-bs-cmi-only",
       set Js_config.cmi_only,
       "*internal* Stop after generating cmi file" );

@@ -3,6 +3,9 @@
 (* reads the contents of "filename" into a string *)
 val read_file : filename:string -> string
 
+(* reads all of stdin into a string *)
+val read_stdin : unit -> string
+
 (* writes "content" into file with name "filename" *)
 val write_file : filename:string -> contents:string -> unit
 [@@dead "+write_file"]

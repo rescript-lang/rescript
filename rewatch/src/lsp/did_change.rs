@@ -1,5 +1,6 @@
+use std::io::Write;
 use std::path::Path;
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 use tracing::instrument;
 
@@ -9,10 +10,10 @@ use crate::build::diagnostics::{self, BscDiagnostic};
 
 /// Run a single-file typecheck after an unsaved edit (didChange).
 ///
-/// Writes the unsaved buffer content to a temp `.res` file in the package's
-/// LSP build directory, invokes `bsc` directly with `-bs-cmi-only`, and parses
-/// diagnostics from stderr. No JS output is produced. Dependents are not
-/// recompiled — that happens on `didSave`.
+/// Pipes the unsaved buffer content to `bsc -bs-read-stdin` which reads
+/// source from stdin instead of from the file argument. The file argument
+/// is still passed for error locations and module naming. No JS output is
+/// produced. Dependents are not recompiled — that happens on `didSave`.
 #[instrument(name = "lsp.did_change", skip_all, fields(file = %file_path.display()))]
 pub fn run(build_state: &BuildCommandState, file_path: &Path, content: &str) -> Vec<BscDiagnostic> {
     let (module_name, package_name, is_interface) = match build_state.find_module_for_file(file_path) {
@@ -41,11 +42,6 @@ pub fn run(build_state: &BuildCommandState, file_path: &Path, content: &str) -> 
         _ => return Vec::new(),
     };
 
-    let build_path = package.get_build_path_for_profile(BuildProfile::TypecheckOnly);
-
-    // Write unsaved content to a temp file in the build directory.
-    // Use the source's relative path so that `-I` includes resolve correctly
-    // when bsc runs with current_dir set to the build path.
     let source_path = if is_interface {
         source_file.interface.as_ref().map(|i| &i.path)
     } else {
@@ -56,22 +52,15 @@ pub fn run(build_state: &BuildCommandState, file_path: &Path, content: &str) -> 
         None => return Vec::new(),
     };
 
-    let temp_file = build_path.join(source_path);
-    if let Some(parent) = temp_file.parent() {
-        let _ = std::fs::create_dir_all(parent);
-    }
-    if std::fs::write(&temp_file, content).is_err() {
-        tracing::warn!("didChange: failed to write temp file {}", temp_file.display());
-        return Vec::new();
-    }
-
     let has_interface = source_file.interface.is_some();
+    let build_path = package.get_build_path_for_profile(BuildProfile::TypecheckOnly);
 
-    // Build compiler args — the temp file path goes as the last arg (replaces ast_path).
-    // bsc accepts .res files directly (parses + typechecks in one shot).
+    // Build compiler args. The source_path is passed as the last arg — bsc
+    // uses it for file kind classification, module naming, and error locations,
+    // but with -bs-read-stdin it reads source from stdin instead of from disk.
     let args = match compile::compiler_args(
         &package.config,
-        &temp_file,
+        source_path,
         &source_file.implementation.path,
         is_interface,
         has_interface,
@@ -97,34 +86,55 @@ pub fn run(build_state: &BuildCommandState, file_path: &Path, content: &str) -> 
         }
     };
 
-    let result = Command::new(&build_state.build_state.compiler_info.bsc_path)
+    // Insert -bs-read-stdin before the last argument (the source file path).
+    // bsc reads source from stdin and uses the file path only for error
+    // reporting and output prefix derivation.
+    let mut full_args = args;
+    let source_arg = full_args.pop();
+    full_args.push("-bs-read-stdin".into());
+    if let Some(arg) = source_arg {
+        full_args.push(arg);
+    }
+
+    let mut child = match Command::new(&build_state.build_state.compiler_info.bsc_path)
         .current_dir(&build_path_abs)
-        .args(&args)
-        .output();
-
-    // Clean up temp file
-    let _ = std::fs::remove_file(&temp_file);
-
-    // The original source file path (absolute) for remapping diagnostics.
-    let original_file = package.path.join(source_path);
-
-    match result {
-        Ok(output) => {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            let mut diags = diagnostics::parse_compiler_output(&stderr);
-            // bsc outputs diagnostics with the temp file path. Remap them
-            // back to the original source file so the editor highlights the
-            // correct buffer.
-            for diag in &mut diags {
-                if diag.file == temp_file || diag.file == *source_path {
-                    diag.file = original_file.clone();
-                }
-            }
-            diags
+        .args(&full_args)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+    {
+        Ok(child) => child,
+        Err(e) => {
+            tracing::warn!("didChange: failed to spawn bsc: {e}");
+            return Vec::new();
         }
+    };
+
+    // Write content to bsc's stdin and close it so bsc can proceed.
+    if let Some(mut stdin) = child.stdin.take() {
+        let _ = stdin.write_all(content.as_bytes());
+    }
+
+    let output = match child.wait_with_output() {
+        Ok(output) => output,
         Err(e) => {
             tracing::warn!("didChange: bsc invocation failed: {e}");
-            Vec::new()
+            return Vec::new();
+        }
+    };
+
+    // The original source file path (absolute) for remapping diagnostics.
+    // bsc reports errors using the source_path we passed as the last arg,
+    // which is relative. Remap to the absolute path for the editor.
+    let original_file = package.path.join(source_path);
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let mut diags = diagnostics::parse_compiler_output(&stderr);
+    for diag in &mut diags {
+        if diag.file == *source_path {
+            diag.file = original_file.clone();
         }
     }
+    diags
 }
