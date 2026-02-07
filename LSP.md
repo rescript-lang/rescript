@@ -709,6 +709,18 @@ This maps cleanly: dev mode is interactive and benefits from the warm LSP, produ
 
 ## Implementation Guide
 
+### Code isolation principle
+
+The LSP module (`lsp.rs` + `lsp/`) should be the *only* new code that knows about LSP. Existing build code (`build/`, `cli.rs`, `main.rs`) should gain at most one or two new parameters (like output directory), never LSP-specific types or imports. If a change to existing code is needed, it should make the code more general (e.g., "return diagnostics as data" instead of "print to stderr"), not more LSP-specific.
+
+This keeps changes to the existing codebase minimal and reviewable:
+- `watcher.rs`, `lock.rs` — untouched. The LSP doesn't use them.
+- `build/` modules — may gain a parameter (e.g., build output path on `BuildState`), but never import from `lsp/`.
+- `logs.rs` — diagnostics should be extractable as structured data via a general-purpose change, not an LSP-aware one.
+- `compiler_args()` — already pure, no changes needed.
+
+The goal is a large "here is an LSP" PR where almost all new code lives under `lsp/`, and changes to existing files are small, obvious, and easy to review independently.
+
 ### Dependencies to add
 
 Rewatch already uses `tokio` with multi-thread runtime. Add `tower-lsp` which builds on tokio:
