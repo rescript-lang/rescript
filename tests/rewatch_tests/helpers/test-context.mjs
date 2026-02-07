@@ -336,7 +336,7 @@ export function normalizePaths(summary, sandboxPath) {
   return summary.map(line => {
     return line.replace(attrValueRegex, (match, attrName, value) => {
       // Check if this looks like an absolute path
-      if (value.startsWith("/") || value.match(/^[A-Z]:\\/)) {
+      if (value.startsWith("/") || value.match(/^[A-Z]:[/\\]/)) {
         let relativePath = path
           .relative(sandboxPath, value)
           .split(path.sep)
