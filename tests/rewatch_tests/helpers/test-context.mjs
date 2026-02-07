@@ -248,6 +248,7 @@ const PARALLEL_SPAN_PATTERNS = [
   "build.compile_file",
   "format.write_file",
   "lsp.discover_package",
+  "lsp.source_dir",
 ];
 
 /**
@@ -503,11 +504,12 @@ export async function runRewatchTest(scenario, options = {}) {
 
 /**
  * @typedef {object} LspTestContext
- * @property {string} sandbox - Path to the test sandbox
+ * @property {string} sandbox - Path to the test sandbox (fixture root)
+ * @property {string} lspCwd - Working directory for the LSP server (same as sandbox unless options.cwd is set)
  * @property {ReturnType<typeof createLspClient>} lsp - LSP client connected to the server
- * @property {(relativePath: string, content: string) => Promise<void>} writeFile - Write a file in the sandbox
- * @property {(relativePath: string) => Promise<string>} readFile - Read a file from the sandbox
- * @property {(relativePath: string) => Promise<void>} deleteFile - Delete a file in the sandbox
+ * @property {(relativePath: string, content: string) => Promise<void>} writeFile - Write a file relative to lspCwd
+ * @property {(relativePath: string) => Promise<string>} readFile - Read a file relative to lspCwd
+ * @property {(relativePath: string) => Promise<void>} deleteFile - Delete a file relative to lspCwd
  */
 
 /**
@@ -522,6 +524,7 @@ export async function runRewatchTest(scenario, options = {}) {
  *
  * @param {(ctx: LspTestContext) => Promise<void>} scenario - The test scenario to execute
  * @param {object} [options] - Options for the test
+ * @param {string} [options.cwd] - Subdirectory within the sandbox to use as LSP working directory (relative to sandbox root)
  * @param {(summary: string[], sandboxPath: string) => string[]} [options.processSpans] - Transform the span summary before snapshot
  * @returns {Promise<void>}
  */
@@ -534,15 +537,17 @@ export async function runLspTest(scenario, options = {}) {
     // Setup
     otelReceiver = await createOtelReceiver();
     sandbox = await createSandbox();
-    lsp = createLspClient(sandbox, otelReceiver.endpoint);
+    const lspCwd = options.cwd ? path.join(sandbox, options.cwd) : sandbox;
+    lsp = createLspClient(lspCwd, otelReceiver.endpoint);
 
     // Create test context
     const ctx = {
       sandbox,
+      lspCwd,
       lsp,
 
       async writeFile(relativePath, content) {
-        const fullPath = path.join(sandbox, relativePath);
+        const fullPath = path.join(lspCwd, relativePath);
         await mkdir(path.dirname(fullPath), { recursive: true });
         const tmpPath = fullPath + ".__atomic_tmp";
         await writeFile(tmpPath, content);
@@ -551,12 +556,12 @@ export async function runLspTest(scenario, options = {}) {
       },
 
       async readFile(relativePath) {
-        const fullPath = path.join(sandbox, relativePath);
+        const fullPath = path.join(lspCwd, relativePath);
         return readFile(fullPath, "utf8");
       },
 
       async deleteFile(relativePath) {
-        const fullPath = path.join(sandbox, relativePath);
+        const fullPath = path.join(lspCwd, relativePath);
         await unlink(fullPath);
       },
     };

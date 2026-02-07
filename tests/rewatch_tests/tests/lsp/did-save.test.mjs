@@ -42,20 +42,34 @@ describe("lsp didSave", { timeout: 60_000 }, () => {
       await lsp.initialize(rootUri);
       await lsp.waitForNotification("rescript/buildFinished", 30000);
 
-      // Save Root.res — triggers TypecheckAndEmit build
+      const appMjs = path.join(sandbox, "packages", "app", "src", "App.mjs");
+      const libraryMjs = path.join(
+        sandbox,
+        "packages",
+        "library",
+        "src",
+        "Library.mjs",
+      );
+
+      // No JS in dependency packages after initial type-check-only build
+      expect(existsSync(appMjs), "App.mjs should not exist before save").toBe(
+        false,
+      );
+      expect(
+        existsSync(libraryMjs),
+        "Library.mjs should not exist before save",
+      ).toBe(false);
+
+      // Save Root.res — its dependency closure spans across packages:
+      // Root (rewatch-test-fixture) → App (@rewatch-test/app) → Library (@rewatch-test/library)
       lsp.saveFile("src/Root.res");
       await lsp.waitForNotification("rescript/buildFinished", 30000);
 
-      // Dependencies should also have JS output
+      // JS should be produced in each dependency package
+      expect(existsSync(appMjs), "App.mjs should exist after save").toBe(true);
       expect(
-        existsSync(path.join(sandbox, "packages", "app", "src", "App.mjs")),
-        "App.mjs should exist after saving Root.res",
-      ).toBe(true);
-      expect(
-        existsSync(
-          path.join(sandbox, "packages", "library", "src", "Library.mjs"),
-        ),
-        "Library.mjs should exist after saving Root.res",
+        existsSync(libraryMjs),
+        "Library.mjs should exist after save",
       ).toBe(true);
     }));
 
@@ -135,6 +149,63 @@ describe("lsp didSave", { timeout: 60_000 }, () => {
       expect(rootDiag.diagnostics.length).toBeGreaterThan(0);
       expect(rootDiag.diagnostics[0].severity).toBe(1); // Error
     }));
+
+  it("compiles files from external npm packages in the dependency closure", () =>
+    runLspTest(
+      async ({ lsp, sandbox, lspCwd }) => {
+        const rootUri = pathToFileURL(lspCwd).href;
+        await lsp.initialize(rootUri);
+        await lsp.waitForNotification("rescript/buildFinished", 30000);
+
+        const bunPkg = path.join(sandbox, "node_modules", "rescript-bun");
+        const bunCmj = path.join(
+          bunPkg,
+          "lib",
+          "lsp",
+          "src",
+          "Bun-RescriptBun.cmj",
+        );
+
+        // Initial type-check-only build does not produce .cmj files
+        expect(
+          existsSync(bunCmj),
+          "Bun .cmj should not exist after initial build",
+        ).toBe(false);
+
+        // Save UsesBun.res — it imports RescriptBun.Bun.version,
+        // so the dependency closure spans into the rescript-bun npm package
+        lsp.saveFile("src/UsesBun.res");
+        await lsp.waitForNotification("rescript/buildFinished", 30000);
+
+        // After save, TypecheckAndEmit produces .cmj in lib/lsp
+        expect(existsSync(bunCmj), "Bun .cmj should exist after save").toBe(
+          true,
+        );
+      },
+      { cwd: "packages/with-deps" },
+    ));
+
+  it("does not recompile npm package modules on subsequent saves", () =>
+    runLspTest(
+      async ({ lsp, lspCwd, writeFile }) => {
+        const rootUri = pathToFileURL(lspCwd).href;
+        await lsp.initialize(rootUri);
+        await lsp.waitForNotification("rescript/buildFinished", 30000);
+
+        // First save compiles UsesBun + the entire rescript-bun namespace
+        lsp.saveFile("src/UsesBun.res");
+        await lsp.waitForNotification("rescript/buildFinished", 30000);
+
+        // Second save — rescript-bun modules are already at Built,
+        // so only UsesBun should be recompiled
+        await writeFile(
+          "src/UsesBun.res",
+          "let version = RescriptBun.Bun.version\nlet x = 1\n",
+        );
+        await lsp.waitForNotification("rescript/buildFinished", 30000);
+      },
+      { cwd: "packages/with-deps" },
+    ));
 
   it("clears diagnostics when error is fixed and file is saved", () =>
     runLspTest(async ({ lsp, sandbox, writeFile }) => {
