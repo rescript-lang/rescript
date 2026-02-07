@@ -181,7 +181,7 @@ pub fn cleanup_previous_build(
                 && cmt_last_modified > ast_last_modified
                 && !deleted_interfaces.contains(module_name)
             {
-                module.compile_dirty = false;
+                module.compilation_stage = CompilationStage::Built;
             }
 
             match &mut module.source_type {

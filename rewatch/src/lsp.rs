@@ -1,10 +1,13 @@
+mod dependency_closure;
+mod did_save;
 mod initial_build;
 pub mod initialize;
 mod notifications;
 
-use std::collections::HashMap;
-use std::sync::RwLock;
+use std::collections::{HashMap, HashSet};
+use std::sync::{Mutex, RwLock};
 
+use crate::build::build_types::BuildCommandState;
 use crate::build::diagnostics::{BscDiagnostic, Severity};
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::*;
@@ -15,6 +18,11 @@ struct Backend {
     /// Workspace folder paths received during `initialize`.
     /// Stored so that `initialized` can read rescript.json and register scoped file watchers.
     workspace_folders: RwLock<Vec<String>>,
+    /// Build state persisted across LSP requests for incremental builds.
+    build_state: Mutex<Option<BuildCommandState>>,
+    /// Files that had diagnostics published in the last build cycle.
+    /// Used to clear stale diagnostics when errors are fixed.
+    last_diagnostics_files: Mutex<HashSet<Url>>,
 }
 
 #[tower_lsp::async_trait]
@@ -41,9 +49,12 @@ impl LanguageServer for Backend {
                 version: None,
             }),
             capabilities: ServerCapabilities {
-                // text_document_sync: Some(TextDocumentSyncCapability::Kind(
-                //     TextDocumentSyncKind::FULL,
-                // )),
+                text_document_sync: Some(TextDocumentSyncCapability::Options(TextDocumentSyncOptions {
+                    save: Some(TextDocumentSyncSaveOptions::SaveOptions(SaveOptions {
+                        include_text: Some(false),
+                    })),
+                    ..Default::default()
+                })),
                 // hover_provider: Some(HoverProviderCapability::Simple(true)),
                 // definition_provider: Some(OneOf::Left(true)),
                 // type_definition_provider: Some(TypeDefinitionProviderCapability::Simple(true)),
@@ -88,8 +99,11 @@ impl LanguageServer for Backend {
         let mut all_diagnostics: Vec<BscDiagnostic> = Vec::new();
         for workspace in workspaces {
             match initial_build::run(workspace) {
-                Ok(diagnostics) => {
+                Ok((state, diagnostics)) => {
                     all_diagnostics.extend(diagnostics);
+                    if let Ok(mut bs) = self.build_state.lock() {
+                        *bs = Some(state);
+                    }
                 }
                 Err(e) => {
                     tracing::error!("Initial build failed: {e}");
@@ -97,22 +111,38 @@ impl LanguageServer for Backend {
             }
         }
 
-        // Group diagnostics by file. Only files with actual diagnostics get a
-        // notification — the editor starts with a clean slate so empty
-        // publishDiagnostics are unnecessary for the initial build.
-        let mut by_file: HashMap<Url, Vec<Diagnostic>> = HashMap::new();
-        for diag in all_diagnostics {
-            let path = &diag.file;
-            let Some(uri) = Url::from_file_path(path).ok() else {
-                tracing::warn!("Could not convert path to URI: {}", path.display());
-                continue;
+        self.publish_diagnostics(&all_diagnostics, true).await;
+
+        self.client
+            .send_notification::<notifications::BuildFinished>(notifications::BuildFinishedParams {})
+            .await;
+    }
+
+    async fn did_save(&self, params: DidSaveTextDocumentParams) {
+        let file_path = match params.text_document.uri.to_file_path() {
+            Ok(p) => p,
+            Err(_) => {
+                tracing::warn!(
+                    uri = %params.text_document.uri,
+                    "didSave: could not convert URI to file path"
+                );
+                return;
+            }
+        };
+
+        let diagnostics = {
+            let mut guard = match self.build_state.lock() {
+                Ok(g) => g,
+                Err(_) => return,
             };
-            let lsp_diag = to_lsp_diagnostic(&diag);
-            by_file.entry(uri).or_default().push(lsp_diag);
-        }
-        for (uri, diagnostics) in by_file {
-            self.client.publish_diagnostics(uri, diagnostics, None).await;
-        }
+            let Some(build_state) = guard.as_mut() else {
+                tracing::warn!("didSave: no build state available");
+                return;
+            };
+            did_save::run(build_state, &file_path)
+        };
+
+        self.publish_diagnostics(&diagnostics, false).await;
 
         self.client
             .send_notification::<notifications::BuildFinished>(notifications::BuildFinishedParams {})
@@ -121,6 +151,54 @@ impl LanguageServer for Backend {
 
     async fn shutdown(&self) -> Result<()> {
         Ok(())
+    }
+}
+
+impl Backend {
+    /// Publish diagnostics grouped by file. Clears stale diagnostics from
+    /// files that had errors in the previous cycle but not in the current one.
+    ///
+    /// When `is_initial` is true, no stale diagnostics are cleared (the editor
+    /// starts with a clean slate).
+    async fn publish_diagnostics(&self, diagnostics: &[BscDiagnostic], is_initial: bool) {
+        let mut by_file: HashMap<Url, Vec<Diagnostic>> = HashMap::new();
+        for diag in diagnostics {
+            let Some(uri) = Url::from_file_path(&diag.file).ok() else {
+                tracing::warn!("Could not convert path to URI: {}", diag.file.display());
+                continue;
+            };
+            by_file.entry(uri).or_default().push(to_lsp_diagnostic(diag));
+        }
+
+        let current_files: HashSet<Url> = by_file.keys().cloned().collect();
+
+        // Collect stale URIs that need clearing (must drop lock before awaiting)
+        let stale_uris: Vec<Url> = if !is_initial {
+            self.last_diagnostics_files
+                .lock()
+                .ok()
+                .map(|prev| prev.difference(&current_files).cloned().collect())
+                .unwrap_or_default()
+        } else {
+            Vec::new()
+        };
+
+        // Clear diagnostics for files that no longer have errors
+        for uri in stale_uris {
+            self.client.publish_diagnostics(uri, Vec::new(), None).await;
+        }
+
+        // Publish current diagnostics
+        for (uri, diags) in &by_file {
+            self.client
+                .publish_diagnostics(uri.clone(), diags.clone(), None)
+                .await;
+        }
+
+        // Update tracking set
+        if let Ok(mut prev) = self.last_diagnostics_files.lock() {
+            *prev = current_files;
+        }
     }
 }
 
@@ -155,6 +233,8 @@ pub async fn run_stdio() {
     let (service, socket) = LspService::new(|client| Backend {
         client,
         workspace_folders: RwLock::new(Vec::new()),
+        build_state: Mutex::new(None),
+        last_diagnostics_files: Mutex::new(HashSet::new()),
     });
     Server::new(stdin, stdout, socket).serve(service).await;
 }

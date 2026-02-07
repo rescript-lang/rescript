@@ -1,8 +1,10 @@
 import child_process from "node:child_process";
 import { realpathSync } from "node:fs";
+import path from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   createProtocolConnection,
+  DidSaveTextDocumentNotification,
   ExitNotification,
   InitializedNotification,
   InitializeRequest,
@@ -196,6 +198,19 @@ export function createLspClient(cwd, otelEndpoint) {
       if (!exited) {
         proc.kill("SIGTERM");
       }
+    },
+
+    /**
+     * Notify the LSP server that a file was saved.
+     * @param {string} relativePath - Path relative to the sandbox root
+     */
+    saveFile(relativePath) {
+      const uri = pathToFileURL(
+        path.join(realpathSync(cwd), relativePath),
+      ).href;
+      connection.sendNotification(DidSaveTextDocumentNotification.type, {
+        textDocument: { uri },
+      });
     },
 
     /** The exit code (null if still running). */

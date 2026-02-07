@@ -155,8 +155,7 @@ pub fn prepare_build(
         return Err(anyhow!("Failed to validate package dependencies"));
     }
 
-    let mut build_state =
-        BuildCommandState::new(project_context, packages, compiler, warn_error, build_profile);
+    let mut build_state = BuildCommandState::new(project_context, packages, compiler, warn_error);
     packages::parse_packages(&mut build_state, build_profile)?;
 
     let compile_assets_state = read_compile_state::read(&mut build_state)?;
@@ -268,9 +267,11 @@ impl fmt::Display for IncrementalBuildError {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 #[instrument(name = "incremental_build", skip_all, fields(module_count = build_state.modules.len()))]
 pub fn incremental_build(
     build_state: &mut BuildCommandState,
+    build_profile: BuildProfile,
     default_timing: Option<Duration>,
     initial_build: bool,
     show_progress: bool,
@@ -278,7 +279,7 @@ pub fn incremental_build(
     create_sourcedirs: bool,
     plain_output: bool,
 ) -> Result<IncrementalBuildResult, IncrementalBuildError> {
-    if build_state.build_profile == BuildProfile::Standard {
+    if build_profile == BuildProfile::Standard {
         logs::initialize(&build_state.packages);
     }
     let num_dirty_modules = build_state.modules.values().filter(|m| is_dirty(m)).count() as u64;
@@ -300,7 +301,7 @@ pub fn incremental_build(
 
     let timing_parse_start = Instant::now();
     let timing_ast = Instant::now();
-    let result_asts = parse::generate_asts(build_state, || pb.inc(1));
+    let result_asts = parse::generate_asts(build_state, build_profile, || pb.inc(1));
     let timing_ast_elapsed = timing_ast.elapsed();
 
     let parse_warnings = match result_asts {
@@ -310,7 +311,7 @@ pub fn incremental_build(
         }
         Err(err) => {
             let _error_span = info_span!("build.parse_error").entered();
-            if build_state.build_profile == BuildProfile::Standard {
+            if build_profile == BuildProfile::Standard {
                 logs::finalize(&build_state.packages);
             }
 
@@ -336,7 +337,6 @@ pub fn incremental_build(
         }
     };
     let deleted_modules = build_state.deleted_modules.clone();
-    let build_profile = build_state.build_profile;
     deps::get_deps(build_state, &deleted_modules, build_profile);
     let timing_parse_total = timing_parse_start.elapsed();
 
@@ -362,11 +362,15 @@ pub fn incremental_build(
     mark_modules_with_deleted_deps_dirty(&mut build_state.build_state);
     current_step += 1;
 
-    //print all the compile_dirty modules
+    //print all the modules that need compilation
     if log_enabled!(log::Level::Trace) {
+        let target_stage = CompilationStage::target_for(build_profile);
         for (module_name, module) in build_state.modules.iter() {
-            if module.compile_dirty {
-                println!("compile dirty: {module_name}");
+            if module.compilation_stage.needs_compile(target_stage) {
+                println!(
+                    "needs compile: {module_name} (stage: {:?})",
+                    module.compilation_stage
+                );
             }
         }
     };
@@ -388,6 +392,7 @@ pub fn incremental_build(
 
     let (compile_errors, compile_warnings, num_compiled_modules) = compile::compile(
         build_state,
+        build_profile,
         show_progress,
         || pb.inc(1),
         |size| pb.set_length(size),
@@ -400,10 +405,10 @@ pub fn incremental_build(
 
     let compile_duration = start_compiling.elapsed();
 
-    if build_state.build_profile == BuildProfile::Standard {
+    if build_profile == BuildProfile::Standard {
         logs::finalize(&build_state.packages);
     }
-    if create_sourcedirs && build_state.build_profile == BuildProfile::Standard {
+    if create_sourcedirs && build_profile == BuildProfile::Standard {
         sourcedirs::print(build_state);
     }
     pb.finish();
@@ -468,7 +473,7 @@ pub fn incremental_build(
         }
 
         // Write per-package compiler metadata to `lib/bs/compiler-info.json` (idempotent)
-        write_compiler_info(build_state);
+        write_compiler_info(build_state, build_profile);
 
         let mut all_output = String::new();
         if helpers::contains_ascii_characters(&parse_warnings) {
@@ -555,6 +560,7 @@ pub fn build(
 
     match incremental_build(
         &mut build_state,
+        BuildProfile::Standard,
         default_timing,
         true,
         show_progress,

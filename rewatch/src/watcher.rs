@@ -1,10 +1,9 @@
 use crate::build;
-use crate::build::build_types::{BuildCommandState, SourceType};
+use crate::build::build_types::{BuildCommandState, BuildProfile, SourceType};
 use crate::build::clean;
 use crate::cmd;
 use crate::config;
 use crate::helpers;
-use crate::helpers::StrippedVerbatimPath;
 use crate::helpers::emojis::*;
 use crate::lock::LOCKFILE;
 use crate::queue::FifoQueue;
@@ -413,57 +412,8 @@ async fn async_watch(
                         // if we are going to compile incrementally, we need to mark the exact files
                         // dirty
                         log::debug!("received {:?} while needs_compile_type was {needs_compile_type:?} -> incremental compile", effective_kind);
-                        if let Ok(canonicalized_path_buf) = path_buf
-                            .canonicalize()
-                            .map(StrippedVerbatimPath::to_stripped_verbatim_path)
-                        {
-                            // Collect package names first to avoid borrow checker issues
-                            let module_package_pairs = build_state.module_name_package_pairs();
-
-                            for (module_name, package_name) in module_package_pairs {
-                                let package = build_state
-                                    .build_state
-                                    .packages
-                                    .get(&package_name)
-                                    .expect("Package not found");
-
-                                if let Some(module) = build_state.build_state.modules.get_mut(&module_name) {
-                                    match module.source_type {
-                                        SourceType::SourceFile(ref mut source_file) => {
-                                        let canonicalized_implementation_file =
-                                            package.path.join(&source_file.implementation.path);
-                                        if canonicalized_path_buf == canonicalized_implementation_file {
-                                            if let Ok(modified) =
-                                                canonicalized_path_buf.metadata().and_then(|x| x.modified())
-                                            {
-                                                source_file.implementation.last_modified = modified;
-                                            };
-                                            source_file.implementation.parse_dirty = true;
-                                            break;
-                                        }
-
-                                        // mark the interface file dirty
-                                        if let Some(ref mut interface) = source_file.interface {
-                                            let canonicalized_interface_file =
-                                                package.path.join(&interface.path);
-                                            if canonicalized_path_buf == canonicalized_interface_file {
-                                                if let Ok(modified) = canonicalized_path_buf
-                                                    .metadata()
-                                                    .and_then(|x| x.modified())
-                                                {
-                                                    interface.last_modified = modified;
-                                                }
-                                                interface.parse_dirty = true;
-                                                break;
-                                            }
-                                        }
-                                        }
-                                        SourceType::MlMap(_) => (),
-                                    }
-                                }
-                            }
-                            needs_compile_type = CompileType::Incremental;
-                        }
+                        build_state.mark_file_parse_dirty(&path_buf);
+                        needs_compile_type = CompileType::Incremental;
                     }
 
                     (
@@ -489,6 +439,7 @@ async fn async_watch(
                 let timing_total = Instant::now();
                 if build::incremental_build(
                     &mut build_state,
+                    BuildProfile::Standard,
                     None,
                     initial_build,
                     show_progress,
@@ -543,6 +494,7 @@ async fn async_watch(
 
                         let _ = build::incremental_build(
                             &mut build_state,
+                            BuildProfile::Standard,
                             None,
                             initial_build,
                             show_progress,

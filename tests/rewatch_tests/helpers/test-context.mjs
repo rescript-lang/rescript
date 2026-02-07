@@ -117,9 +117,11 @@ const SUMMARY_SPAN_NAMES = new Set([
   "rewatch.compiler_args",
   "rewatch.lsp",
   "lsp.initialized",
+  "lsp.initial_build",
   "lsp.discover_package",
   "lsp.source_dir",
   "lsp.register_watchers",
+  "lsp.did_save",
   // Build pipeline spans
   "initialize_build",
   "incremental_build",
@@ -155,6 +157,7 @@ const SUMMARY_ATTRS = {
   "lsp.discover_package": ["name"],
   "lsp.source_dir": ["dir", "recursive"],
   "lsp.register_watchers": ["watcher_count"],
+  "lsp.did_save": ["file"],
   incremental_build: ["module_count"],
   "build.load_package_sources": ["package"],
   "build.parse": ["dirty_modules"],
@@ -544,6 +547,7 @@ export async function runLspTest(scenario, options = {}) {
         const tmpPath = fullPath + ".__atomic_tmp";
         await writeFile(tmpPath, content);
         await rename(tmpPath, fullPath);
+        lsp.saveFile(relativePath);
       },
 
       async readFile(relativePath) {

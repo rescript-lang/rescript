@@ -103,9 +103,10 @@ impl Package {
 
     /// Returns the build artifact path for the given profile.
     pub fn get_build_path_for_profile(&self, profile: BuildProfile) -> PathBuf {
-        match profile {
-            BuildProfile::Standard => self.get_build_path(),
-            BuildProfile::Lsp => self.get_lsp_build_path(),
+        if profile.is_lsp() {
+            self.get_lsp_build_path()
+        } else {
+            self.get_build_path()
         }
     }
 
@@ -712,8 +713,8 @@ pub fn parse_packages(build_state: &mut BuildState, build_profile: BuildProfile)
         helpers::create_path(&build_path_abs);
         helpers::create_path(&bs_build_path);
 
-        // LSP profile only needs lib/lsp + lib/ocaml — no JS output directories
-        if build_profile == BuildProfile::Standard {
+        // TypecheckOnly profile only needs lib/lsp + lib/ocaml — no JS output directories
+        if build_profile.emits_js() {
             let root_config = build_state.get_root_config();
             root_config.get_package_specs().iter().for_each(|spec| {
                 if !spec.in_source {
@@ -801,7 +802,7 @@ pub fn parse_packages(build_state: &mut BuildState, build_profile: BuildProfile)
                     deps,
                     dependents: AHashSet::new(),
                     package_name: package.name.to_owned(),
-                    compile_dirty: false,
+                    compilation_stage: CompilationStage::Built,
                     last_compiled_cmt: None,
                     last_compiled_cmi: None,
                     // Not sure if this is correct
@@ -853,7 +854,7 @@ pub fn parse_packages(build_state: &mut BuildState, build_profile: BuildProfile)
                                 deps: AHashSet::new(),
                                 dependents: AHashSet::new(),
                                 package_name: package.name.to_owned(),
-                                compile_dirty: true,
+                                compilation_stage: CompilationStage::Dirty,
                                 last_compiled_cmt: None,
                                 last_compiled_cmi: None,
                                 is_type_dev: metadata.is_type_dev,
@@ -946,7 +947,7 @@ pub fn parse_packages(build_state: &mut BuildState, build_profile: BuildProfile)
                                     deps: AHashSet::new(),
                                     dependents: AHashSet::new(),
                                     package_name: package.name.to_owned(),
-                                    compile_dirty: true,
+                                    compilation_stage: CompilationStage::Dirty,
                                     last_compiled_cmt: None,
                                     last_compiled_cmi: None,
                                     is_type_dev: metadata.is_type_dev,

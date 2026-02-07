@@ -16,6 +16,7 @@ use tracing::info_span;
 
 pub fn generate_asts(
     build_state: &mut BuildCommandState,
+    build_profile: BuildProfile,
     inc: impl Fn() + std::marker::Sync,
 ) -> anyhow::Result<String> {
     let mut has_failure = false;
@@ -45,7 +46,7 @@ pub fn generate_asts(
                 .expect("Package not found");
             match &module.source_type {
                 SourceType::MlMap(_mlmap) => {
-                    let path = package.get_mlmap_path_for_profile(build_state.build_profile);
+                    let path = package.get_mlmap_path_for_profile(build_profile);
                     (
                         module_name.to_owned(),
                         Ok((Path::new(&path).to_path_buf(), None)),
@@ -70,7 +71,7 @@ pub fn generate_asts(
                             build_state,
                             build_state.get_warn_error_override(),
                             &parse_span,
-                            build_state.build_profile,
+                            build_profile,
                         )
                         .map_err(|e| e.to_string());
 
@@ -82,7 +83,7 @@ pub fn generate_asts(
                                     build_state,
                                     build_state.get_warn_error_override(),
                                     &parse_span,
-                                    build_state.build_profile,
+                                    build_profile,
                                 ) {
                                     Ok(v) => Ok(Some(v)),
                                     Err(e) => Err(e.to_string()),
@@ -139,11 +140,11 @@ pub fn generate_asts(
                 .expect("Package not found");
 
             if let Some(module) = build_state.build_state.modules.get_mut(&module_name) {
-                // if the module is dirty, mark it also compile_dirty
-                // do NOT set to false if the module is not parse_dirty, it needs to keep
-                // the compile_dirty flag if it was set before
+                // if the module is dirty, mark it for recompilation
+                // do NOT change if the module is not parse_dirty, it needs to keep
+                // its compilation_stage if it was set before
                 if is_dirty {
-                    module.compile_dirty = true;
+                    module.compilation_stage = CompilationStage::Dirty;
                     module.deps_dirty = true;
                 }
                 if let SourceType::SourceFile(ref mut source_file) = module.source_type {
@@ -216,7 +217,11 @@ pub fn generate_asts(
     let dirty_packages = build_state
         .modules
         .iter()
-        .filter(|(_, module)| module.compile_dirty)
+        .filter(|(_, module)| {
+            module
+                .compilation_stage
+                .needs_compile(CompilationStage::target_for(build_profile))
+        })
         .map(|(_, module)| module.package_name.clone())
         .collect::<AHashSet<String>>();
 
@@ -235,15 +240,14 @@ pub fn generate_asts(
                             .expect("Package not found");
                         // probably better to do this in a different function
                         // specific to compiling mlmaps
-                        let compile_path =
-                            package.get_mlmap_compile_path_for_profile(build_state.build_profile);
+                        let compile_path = package.get_mlmap_compile_path_for_profile(build_profile);
                         let mlmap_hash = helpers::compute_file_hash(Path::new(&compile_path));
                         if let Err(err) = namespaces::compile_mlmap(
                             &build_state.build_state.project_context,
                             package,
                             &module_name,
                             &build_state.build_state.compiler_info.bsc_path,
-                            build_state.build_profile,
+                            build_profile,
                         ) {
                             has_failure = true;
                             stderr.push_str(&format!("{err}\n"));
@@ -254,9 +258,7 @@ pub fn generate_asts(
                             .namespace
                             .to_suffix()
                             .expect("namespace should be set for mlmap module");
-                        let base_build_path = package
-                            .get_build_path_for_profile(build_state.build_profile)
-                            .join(&suffix);
+                        let base_build_path = package.get_build_path_for_profile(build_profile).join(&suffix);
                         let base_ocaml_build_path = package.get_ocaml_build_path().join(&suffix);
                         let _ = std::fs::copy(
                             base_build_path.with_extension("cmi"),
@@ -285,7 +287,7 @@ pub fn generate_asts(
                 _ => false,
             };
             if is_dirty {
-                module.compile_dirty = is_dirty;
+                module.compilation_stage = CompilationStage::Dirty;
             }
         }
     }

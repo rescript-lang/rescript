@@ -114,7 +114,7 @@ pub fn verify_compiler_info(
     }
 }
 
-pub fn write_compiler_info(build_state: &BuildCommandState) {
+pub fn write_compiler_info(build_state: &BuildCommandState, build_profile: BuildProfile) {
     let bsc_path = build_state.compiler_info.bsc_path.to_string_lossy().to_string();
     let bsc_hash = build_state.compiler_info.bsc_hash.to_hex().to_string();
     let runtime_path = build_state
@@ -158,7 +158,7 @@ pub fn write_compiler_info(build_state: &BuildCommandState) {
                     return;
                 }
             };
-            let info_path = package.get_compiler_info_path_for_profile(build_state.build_profile);
+            let info_path = package.get_compiler_info_path_for_profile(build_profile);
             let should_write = match std::fs::read_to_string(&info_path) {
                 Ok(existing) => existing != contents,
                 Err(_) => true,

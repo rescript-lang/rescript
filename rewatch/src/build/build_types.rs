@@ -1,9 +1,10 @@
 use crate::build::packages::{Namespace, Package};
 use crate::config::Config;
+use crate::helpers::StrippedVerbatimPath;
 use crate::project_context::ProjectContext;
 use ahash::{AHashMap, AHashSet};
 use blake3::Hash;
-use std::{fmt::Display, ops::Deref, path::PathBuf, time::SystemTime};
+use std::{fmt::Display, ops::Deref, path::Path, path::PathBuf, time::SystemTime};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ParseState {
@@ -20,6 +21,36 @@ pub enum CompileState {
     Warning,
     Success,
 }
+/// Tracks how far a module has progressed through compilation.
+///
+/// The ordering matters: `Dirty < TypeChecked < Built`. A module needs
+/// compilation when its stage is below the target stage for the current
+/// `BuildProfile`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum CompilationStage {
+    /// Not yet compiled, or source changed — needs full pipeline.
+    Dirty,
+    /// Type-checked only (.cmi/.cmt produced, no .cmj).
+    TypeChecked,
+    /// Fully compiled (.cmi/.cmt/.cmj + JS produced).
+    Built,
+}
+
+impl CompilationStage {
+    /// The target stage for a given build profile.
+    pub fn target_for(profile: BuildProfile) -> Self {
+        match profile {
+            BuildProfile::Standard | BuildProfile::TypecheckAndEmit => CompilationStage::Built,
+            BuildProfile::TypecheckOnly => CompilationStage::TypeChecked,
+        }
+    }
+
+    /// Whether this module needs compilation to reach the given target stage.
+    pub fn needs_compile(self, target: CompilationStage) -> bool {
+        self < target
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Interface {
     pub path: PathBuf,
@@ -78,7 +109,7 @@ pub struct Module {
     pub deps: AHashSet<String>,
     pub dependents: AHashSet<String>,
     pub package_name: String,
-    pub compile_dirty: bool,
+    pub compilation_stage: CompilationStage,
     pub last_compiled_cmi: Option<SystemTime>,
     pub last_compiled_cmt: Option<SystemTime>,
     pub deps_dirty: bool,
@@ -117,8 +148,22 @@ pub struct BuildState {
 pub enum BuildProfile {
     /// Normal build: emit JS to lib/bs, lib/js, lib/es6
     Standard,
-    /// LSP mode: emit only .cmi/.cmt to lib/lsp, skip JS generation
-    Lsp,
+    /// LSP: only type information (.cmi/.cmt) to lib/lsp, skip JS generation
+    TypecheckOnly,
+    /// LSP: type information + JS output, artifacts in lib/lsp
+    TypecheckAndEmit,
+}
+
+impl BuildProfile {
+    /// Whether this profile emits JavaScript output.
+    pub fn emits_js(self) -> bool {
+        matches!(self, BuildProfile::Standard | BuildProfile::TypecheckAndEmit)
+    }
+
+    /// Whether this profile uses the LSP build path (lib/lsp).
+    pub fn is_lsp(self) -> bool {
+        matches!(self, BuildProfile::TypecheckOnly | BuildProfile::TypecheckAndEmit)
+    }
 }
 
 /// Extended build state that includes command-line specific overrides.
@@ -134,7 +179,6 @@ pub struct BuildCommandState {
     pub build_state: BuildState,
     // Command-line --warn-error flag override (takes precedence over rescript.json config)
     pub warn_error_override: Option<String>,
-    pub build_profile: BuildProfile,
 }
 
 #[derive(Debug, Clone)]
@@ -185,12 +229,10 @@ impl BuildCommandState {
         packages: AHashMap<String, Package>,
         compiler: CompilerInfo,
         warn_error_override: Option<String>,
-        build_profile: BuildProfile,
     ) -> Self {
         Self {
             build_state: BuildState::new(project_context, packages, compiler),
             warn_error_override,
-            build_profile,
         }
     }
 
@@ -204,6 +246,57 @@ impl BuildCommandState {
             .iter()
             .map(|(name, module)| (name.clone(), module.package_name.clone()))
             .collect()
+    }
+
+    /// Find the module matching the given file path and mark it as parse-dirty.
+    /// Updates `last_modified` from the file's metadata.
+    /// Returns the module name if found and marked, `None` otherwise.
+    pub fn mark_file_parse_dirty(&mut self, file_path: &Path) -> Option<String> {
+        let canonicalized = match file_path
+            .canonicalize()
+            .map(StrippedVerbatimPath::to_stripped_verbatim_path)
+        {
+            Ok(p) => p,
+            Err(_) => return None,
+        };
+
+        let module_package_pairs = self.module_name_package_pairs();
+
+        for (module_name, package_name) in module_package_pairs {
+            let package = match self.build_state.packages.get(&package_name) {
+                Some(p) => p,
+                None => continue,
+            };
+
+            let module = match self.build_state.modules.get_mut(&module_name) {
+                Some(m) => m,
+                None => continue,
+            };
+
+            if let SourceType::SourceFile(ref mut source_file) = module.source_type {
+                let impl_path = package.path.join(&source_file.implementation.path);
+                if canonicalized == impl_path {
+                    if let Ok(modified) = canonicalized.metadata().and_then(|m| m.modified()) {
+                        source_file.implementation.last_modified = modified;
+                    }
+                    source_file.implementation.parse_dirty = true;
+                    return Some(module_name);
+                }
+
+                if let Some(ref mut interface) = source_file.interface {
+                    let iface_path = package.path.join(&interface.path);
+                    if canonicalized == iface_path {
+                        if let Ok(modified) = canonicalized.metadata().and_then(|m| m.modified()) {
+                            interface.last_modified = modified;
+                        }
+                        interface.parse_dirty = true;
+                        return Some(module_name);
+                    }
+                }
+            }
+        }
+
+        None
     }
 }
 

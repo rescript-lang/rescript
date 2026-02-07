@@ -83,16 +83,18 @@ fn execute_post_build_command(cmd: &str, js_file_path: &Path, working_dir: &Path
 #[instrument(name = "build.compile", skip_all)]
 pub fn compile(
     build_state: &mut BuildCommandState,
+    build_profile: BuildProfile,
     show_progress: bool,
     inc: impl Fn() + std::marker::Sync,
     set_length: impl Fn(u64),
 ) -> anyhow::Result<(String, String, usize)> {
+    let target_stage = CompilationStage::target_for(build_profile);
     let mut compiled_modules = AHashSet::<String>::new();
     let dirty_modules = build_state
         .modules
         .iter()
         .filter_map(|(module_name, module)| {
-            if module.compile_dirty {
+            if module.compilation_stage.needs_compile(target_stage) {
                 Some(module_name.to_owned())
             } else {
                 None
@@ -193,7 +195,7 @@ pub fn compile(
                     .intersection(&compile_universe)
                     .all(|dep| compiled_modules.contains(dep))
                 {
-                    if !module.compile_dirty {
+                    if !module.compilation_stage.needs_compile(target_stage) {
                         // we are sure we don't have to compile this, so we can mark it as compiled and clean
                         return Some((module_name.to_string(), Ok(None), Some(Ok(None)), true, false));
                     }
@@ -242,7 +244,7 @@ pub fn compile(
                                         true,
                                         build_state,
                                         build_state.get_warn_error_override(),
-                                        build_state.build_profile,
+                                        build_profile,
                                     );
                                     Some(result)
                                 }
@@ -255,7 +257,7 @@ pub fn compile(
                                 false,
                                 build_state,
                                 build_state.get_warn_error_override(),
-                                build_state.build_profile,
+                                build_profile,
                             );
                             let cmi_digest_after = helpers::compute_file_hash(Path::new(&cmi_path));
 
@@ -315,7 +317,7 @@ pub fn compile(
                 if !*is_clean {
                     let dep_module = build_state.modules.get_mut(dep).unwrap();
                     //  mark the reverse dep as dirty when the source is not clean
-                    dep_module.compile_dirty = true;
+                    dep_module.compilation_stage = CompilationStage::Dirty;
                 }
                 if !compiled_modules.contains(dep) {
                     in_progress_modules.insert(dep.to_string());
@@ -347,7 +349,7 @@ pub fn compile(
 
                 let (compile_warning, compile_error) = match module.source_type {
                     SourceType::MlMap(ref mut mlmap) => {
-                        module.compile_dirty = false;
+                        module.compilation_stage = CompilationStage::Built;
                         mlmap.parse_dirty = false;
                         (None, None)
                     }
@@ -401,7 +403,7 @@ pub fn compile(
 
                 // Update compilation timestamps for successful compilation
                 if result.is_ok() && interface_result.as_ref().is_none_or(|r| r.is_ok()) {
-                    module.compile_dirty = false;
+                    module.compilation_stage = target_stage;
                     module.last_compiled_cmi = Some(SystemTime::now());
                     module.last_compiled_cmt = Some(SystemTime::now());
                 }
@@ -601,11 +603,11 @@ pub fn compiler_args(
     } else {
         debug!("Compiling file: {}", &module_name);
         match build_profile {
-            BuildProfile::Lsp => {
-                // LSP only needs type info — skip JS generation entirely
+            BuildProfile::TypecheckOnly => {
+                // LSP type-check only — skip JS generation entirely
                 vec!["-bs-cmi-only".to_string()]
             }
-            BuildProfile::Standard => {
+            BuildProfile::Standard | BuildProfile::TypecheckAndEmit => {
                 let specs = root_config.get_package_specs();
                 specs
                     .iter()
@@ -839,8 +841,8 @@ fn compile_file(
                     build_path_abs.join(dir).join(format!("{basename}.cmt")),
                     ocaml_build_path_abs.join(format!("{basename}.cmt")),
                 );
-                // .cmj is only produced by standard builds (LSP uses -bs-cmi-only)
-                if build_profile == BuildProfile::Standard {
+                // .cmj is only produced when JS is emitted (TypecheckOnly uses -bs-cmi-only)
+                if build_profile.emits_js() {
                     let _ = std::fs::copy(
                         build_path_abs.join(dir).join(format!("{basename}.cmj")),
                         ocaml_build_path_abs.join(format!("{basename}.cmj")),
@@ -858,8 +860,8 @@ fn compile_file(
             }
 
             // Source file copies, JS output copies, and post-build commands
-            // are only needed for standard builds
-            if build_profile == BuildProfile::Standard {
+            // are needed when JS is emitted
+            if build_profile.emits_js() {
                 if let SourceType::SourceFile(SourceFile {
                     interface: Some(Interface { path, .. }),
                     ..
@@ -960,7 +962,7 @@ fn compile_file(
 pub fn mark_modules_with_deleted_deps_dirty(build_state: &mut BuildState) {
     build_state.modules.iter_mut().for_each(|(_, module)| {
         if !module.deps.is_disjoint(&build_state.deleted_modules) {
-            module.compile_dirty = true;
+            module.compilation_stage = CompilationStage::Dirty;
         }
     });
 }
@@ -1049,7 +1051,7 @@ pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildCommandState)
         });
     build_state.modules.iter_mut().for_each(|(module_name, module)| {
         if modules_with_expired_deps.contains(module_name) {
-            module.compile_dirty = true;
+            module.compilation_stage = CompilationStage::Dirty;
         }
     });
 }
