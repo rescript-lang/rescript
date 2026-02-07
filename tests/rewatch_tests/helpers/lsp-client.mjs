@@ -4,6 +4,7 @@ import {
   ExitNotification,
   InitializedNotification,
   InitializeRequest,
+  RegistrationRequest,
   ShutdownRequest,
 } from "vscode-languageserver-protocol/node.js";
 import { bsc_exe, rescript_exe, runtimePath } from "./bins.mjs";
@@ -57,6 +58,38 @@ export function createLspClient(cwd, otelEndpoint) {
   });
 
   const connection = createProtocolConnection(proc.stdout, proc.stdin);
+
+  // Notification collection and waiting infrastructure.
+  // Listeners are checked in order: pending waiters first, then stored for later.
+  /** @type {Map<string, Array<{params: any}>>} */
+  const notifications = new Map();
+  /** @type {Array<{method: string, resolve: (params: any) => void}>} */
+  const notificationWaiters = [];
+
+  function onNotification(method, params) {
+    // Check if anyone is waiting for this notification
+    const idx = notificationWaiters.findIndex(w => w.method === method);
+    if (idx !== -1) {
+      const [waiter] = notificationWaiters.splice(idx, 1);
+      waiter.resolve(params);
+      return;
+    }
+    // Otherwise store for later retrieval
+    if (!notifications.has(method)) {
+      notifications.set(method, []);
+    }
+    notifications.get(method).push({ params });
+  }
+
+  // Collect server-to-client registration requests.
+  /** @type {import("vscode-languageserver-protocol").Registration[]} */
+  const registrations = [];
+  connection.onRequest(RegistrationRequest.type, params => {
+    registrations.push(...params.registrations);
+    onNotification("client/registerCapability", params);
+    return undefined;
+  });
+
   connection.onError(([error]) => {
     console.error("[lsp-client] Connection error:", error);
   });
@@ -105,8 +138,15 @@ export function createLspClient(cwd, otelEndpoint) {
         processId: process.pid,
         rootUri,
         capabilities: {},
+        workspaceFolders: [{ uri: rootUri, name: "root" }],
       });
+      // Start waiting for the registration before sending initialized,
+      // so we don't miss it if the server responds immediately.
+      const registrationDone = this.waitForNotification(
+        "client/registerCapability",
+      );
       connection.sendNotification(InitializedNotification.type, {});
+      await registrationDone;
       return result;
     },
 
@@ -143,6 +183,56 @@ export function createLspClient(cwd, otelEndpoint) {
     /** All stderr output from the LSP server process. */
     getStderr() {
       return stderrAll;
+    },
+
+    /** Registrations received from the server via client/registerCapability. */
+    get registrations() {
+      return registrations;
+    },
+
+    /**
+     * Wait for a notification from the server.
+     * If a matching notification already arrived, resolves immediately.
+     * @param {string} method - The notification method to wait for
+     * @param {number} [timeoutMs=5000] - Timeout in milliseconds
+     * @returns {Promise<any>} The notification params
+     */
+    waitForNotification(method, timeoutMs = 5000) {
+      // Check if we already have one stored
+      const stored = notifications.get(method);
+      if (stored && stored.length > 0) {
+        const { params } = stored.shift();
+        return Promise.resolve(params);
+      }
+
+      return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+          const idx = notificationWaiters.findIndex(w => w.resolve === resolve);
+          if (idx !== -1) notificationWaiters.splice(idx, 1);
+          reject(
+            new Error(
+              `Timeout waiting for notification "${method}" after ${timeoutMs}ms.\n\nServer stderr:\n${stderrAll}`,
+            ),
+          );
+        }, timeoutMs);
+
+        notificationWaiters.push({
+          method,
+          resolve: params => {
+            clearTimeout(timer);
+            resolve(params);
+          },
+        });
+      });
+    },
+
+    /**
+     * Get all collected notifications for a method (non-blocking).
+     * @param {string} method
+     * @returns {Array<{params: any}>}
+     */
+    getNotifications(method) {
+      return notifications.get(method) ?? [];
     },
 
     /** The underlying JSON-RPC connection. */

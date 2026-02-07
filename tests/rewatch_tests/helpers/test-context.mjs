@@ -116,6 +116,10 @@ const SUMMARY_SPAN_NAMES = new Set([
   "rewatch.format",
   "rewatch.compiler_args",
   "rewatch.lsp",
+  "lsp.initialized",
+  "lsp.discover_package",
+  "lsp.source_dir",
+  "lsp.register_watchers",
   // Build pipeline spans
   "initialize_build",
   "incremental_build",
@@ -148,6 +152,9 @@ const SUMMARY_ATTRS = {
   "rewatch.watch": ["working_dir"],
   "rewatch.format": ["check", "is_stdin"],
   "rewatch.compiler_args": ["file_path"],
+  "lsp.discover_package": ["name"],
+  "lsp.source_dir": ["dir", "recursive"],
+  "lsp.register_watchers": ["watcher_count"],
   incremental_build: ["module_count"],
   "build.load_package_sources": ["package"],
   "build.parse": ["dirty_modules"],
@@ -237,6 +244,7 @@ const PARALLEL_SPAN_PATTERNS = [
   "build.parse_file",
   "build.compile_file",
   "format.write_file",
+  "lsp.discover_package",
 ];
 
 /**

@@ -1,0 +1,15 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`lsp > initializes and shuts down cleanly 1`] = `
+[
+  "rewatch.lsp",
+  "  lsp.initialized",
+  "    lsp.register_watchers[watcher_count=7]",
+  "      lsp.discover_package[name=@rewatch-test/app]",
+  "        lsp.source_dir[dir=packages/app/src, recursive=true]",
+  "      lsp.discover_package[name=@rewatch-test/library]",
+  "        lsp.source_dir[dir=packages/library/src, recursive=true]",
+  "      lsp.discover_package[name=rewatch-test-fixture]",
+  "        lsp.source_dir[dir=src, recursive=true]",
+]
+`;

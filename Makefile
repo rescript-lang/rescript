@@ -176,6 +176,9 @@ test-gentype: lib
 test-rewatch: lib
 	node scripts/test.js -rewatch
 
+test-lsp: lib
+	npx vitest run tests/rewatch_tests/tests/lsp/
+
 test-all: test test-gentype test-analysis test-tools test-rewatch
 
 # Playground
@@ -232,4 +235,4 @@ dev-container:
 
 .DEFAULT_GOAL := build
 
-.PHONY: yarn-install build rewatch compiler lib artifacts bench test test-analysis test-reanalyze benchmark-reanalyze test-tools test-syntax test-syntax-roundtrip test-gentype test-rewatch test-all playground playground-compiler playground-test playground-cmijs playground-release format checkformat clean-rewatch clean-compiler clean-lib clean-gentype clean-tests clean dev-container
+.PHONY: yarn-install build rewatch compiler lib artifacts bench test test-analysis test-reanalyze benchmark-reanalyze test-tools test-syntax test-syntax-roundtrip test-gentype test-rewatch test-lsp test-all playground playground-compiler playground-test playground-cmijs playground-release format checkformat clean-rewatch clean-compiler clean-lib clean-gentype clean-tests clean dev-container

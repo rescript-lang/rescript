@@ -89,8 +89,8 @@ Today, three independent components each parse `rescript.json`, discover package
 │  - workspace/didChangeWatchedFiles (all file events,  │
 │    including external changes like git checkout)       │
 │                                                       │
-│  The server registers interest in **/*.res, **/*.resi,│
-│  and **/rescript.json via client/registerCapability.   │
+│  The server reads rescript.json source dirs and        │
+│  registers scoped watchers via client/registerCapability│
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -615,7 +615,7 @@ When both `rescript watch` and `rescript lsp` are running on the same project:
 
 - Add `Lsp` variant to `cli.rs`
 - Implement basic LSP protocol handling in Rust (initialize, shutdown, didOpen, didChange, didSave)
-- Register watched file patterns (`**/*.res`, `**/*.resi`, `**/rescript.json`) via `client/registerCapability`
+- Register watched file patterns via `client/registerCapability` (`**/rescript.json` initially, source-dir-scoped `*.res`/`*.resi` after build init)
 - Wire `didSave` and `didChangeWatchedFiles` to the existing build engine (rewatch's `build::build()`)
 - LSP writes artifacts to `lib/lsp/`, not `lib/bs/`
 - Push diagnostics directly from build results
@@ -721,6 +721,30 @@ This keeps changes to the existing codebase minimal and reviewable:
 
 The goal is a large "here is an LSP" PR where almost all new code lives under `lsp/`, and changes to existing files are small, obvious, and easy to review independently.
 
+### Why we register file watchers
+
+The LSP protocol provides two channels for the server to learn about file changes:
+
+1. **`textDocument/didOpen`, `didChange`, `didSave`** — the editor sends these for files that are *open in editor tabs*. If a user has `src/App.res` open and types, the server gets `didChange`. When they save, the server gets `didSave`. But a file that is not open in any tab produces none of these notifications.
+
+2. **`workspace/didChangeWatchedFiles`** — the editor watches the filesystem for patterns the server registered (via `client/registerCapability`) and sends notifications for *any* matching file that changes on disk, whether it is open in the editor or not.
+
+Channel 2 is essential because many file mutations happen outside the editor's open buffers:
+- **`git checkout` / `git rebase`** — switches branches, rewrites files on disk
+- **LLM coding agents** (Claude Code, Cursor, etc.) — write `.res` files directly via filesystem APIs
+- **Terminal commands** — `mv`, `cp`, `touch`, bulk renames
+- **Other tools** — formatters, code generators, `sed` scripts
+
+Without channel 2, the server would only see changes to files the user happens to have open. A `git checkout` that modifies 50 files would be invisible to the LSP — the `BuildState` would be stale, diagnostics wrong, and the user would have to manually reopen files to trigger updates.
+
+On `initialized`, the server reads `rescript.json` from each workspace folder, extracts the declared source directories, and registers scoped watchers. For a project with `"sources": {"dir": "src", "subdirs": true}`, the registered patterns are:
+
+- `**/rescript.json` — config changes (always registered)
+- `src/**/*.res` — source files (recursive because `"subdirs": true`)
+- `src/**/*.resi` — interface files
+
+We deliberately avoid blanket `**/*.res` globs because they match files in `node_modules/` and `lib/bs/`, putting unnecessary load on the editor's file watcher and triggering spurious events for copied build artifacts. This mirrors how `watcher.rs` watches specific `source_folders` from the config rather than the entire workspace.
+
 ### Dependencies to add
 
 Rewatch already uses `tokio` with multi-thread runtime. Add `tower-lsp` which builds on tokio:
@@ -803,8 +827,8 @@ Editor                          rescript lsp
   │◀─── initialize result ─────────│
   │                                 │
   │──── initialized ───────────────▶│
-  │                                 │  Register watched files:
-  │                                 │    **/*.res, **/*.resi, **/rescript.json
+  │                                 │  Register watched files: **/rescript.json
+  │                                 │  (source-dir watchers added after build init)
   │                                 │
   │◀─── publishDiagnostics ────────│  (for any errors/warnings from initial build)
   │                                 │

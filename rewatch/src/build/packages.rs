@@ -210,7 +210,7 @@ pub fn read_folders(
 /// sources in a flat list. In the process, it removes the children, as they are being resolved
 /// because of the recursiveness. So you get a flat list of files back, retaining the type_ and
 /// whether it needs to recurse into all structures
-fn get_source_dirs(source: config::Source, sub_path: Option<PathBuf>) -> AHashSet<config::PackageSource> {
+pub fn get_source_dirs(source: config::Source, sub_path: Option<PathBuf>) -> AHashSet<config::PackageSource> {
     let mut source_folders: AHashSet<config::PackageSource> = AHashSet::new();
 
     let source_folder = source.to_qualified_without_children(sub_path.to_owned());
@@ -505,7 +505,10 @@ This inconsistency will cause issues with package resolution.\n",
     }
 }
 
-fn read_packages(project_context: &ProjectContext, show_progress: bool) -> Result<AHashMap<String, Package>> {
+pub fn read_packages(
+    project_context: &ProjectContext,
+    show_progress: bool,
+) -> Result<AHashMap<String, Package>> {
     // Store all packages and completely deduplicate them
     let mut map: AHashMap<String, Package> = AHashMap::new();
 
