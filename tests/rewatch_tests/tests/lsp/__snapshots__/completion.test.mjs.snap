@@ -32,7 +32,9 @@ exports[`lsp completion > returns completions for a module dot access 1`] = `
   "        build.compile_wave[file_count=1]",
   "          build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
   "  lsp.did_change[file=src/Root.res]",
-  "  lsp.completion[file=src/Root.res]",
+  "  lsp.completion[file=src/Root.res, module=Root, package=rewatch-test-fixture, items_count=1]",
+  "    lsp.completion.build_context",
+  "    lsp.completion.analysis_binary",
 ]
 `;
 
@@ -68,6 +70,8 @@ exports[`lsp completion > returns completions for stdlib modules like Console 1`
   "        build.compile_wave[file_count=1]",
   "          build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
   "  lsp.did_change[file=src/Root.res]",
-  "  lsp.completion[file=src/Root.res]",
+  "  lsp.completion[file=src/Root.res, module=Root, package=rewatch-test-fixture, items_count=55]",
+  "    lsp.completion.build_context",
+  "    lsp.completion.analysis_binary",
 ]
 `;

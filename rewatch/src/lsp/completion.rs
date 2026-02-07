@@ -47,7 +47,12 @@ pub fn handle(
 ///
 /// Builds a JSON blob with all the package/module context the analysis binary needs,
 /// pipes it to stdin, and parses the JSON completion items from stdout.
-#[instrument(name = "lsp.completion", skip_all, fields(file = %file_path.display()))]
+#[instrument(name = "lsp.completion", skip_all, fields(
+    file = %file_path.display(),
+    module = tracing::field::Empty,
+    package = tracing::field::Empty,
+    items_count = tracing::field::Empty,
+))]
 fn run(
     build_state: &BuildCommandState,
     file_path: &Path,
@@ -55,6 +60,10 @@ fn run(
     position: Position,
 ) -> Option<Vec<CompletionItem>> {
     let (module_name, package_name, _is_interface) = build_state.find_module_for_file(file_path)?;
+
+    let span = tracing::Span::current();
+    span.record("module", &module_name);
+    span.record("package", &package_name);
 
     let package = build_state.build_state.packages.get(&package_name)?;
 
@@ -76,24 +85,26 @@ fn run(
     let dir = impl_path.parent().unwrap_or(Path::new(""));
     let cmt_path = build_path.join(dir).join(format!("{}.cmt", basename));
     if !cmt_path.exists() {
-        tracing::debug!("completion: .cmt missing, running typecheck first");
+        let _guard = tracing::info_span!("lsp.completion.ensure_cmt").entered();
         did_change::run(build_state, file_path, source);
     }
 
     let root_path = package.path.to_string_lossy();
-
     let root_config = build_state.build_state.get_root_config();
 
-    let json_blob = build_completion_json(
-        build_state,
-        source,
-        &path_str,
-        position,
-        &root_path,
-        &package.namespace,
-        &package.config,
-        root_config,
-    );
+    let json_blob = {
+        let _guard = tracing::info_span!("lsp.completion.build_context").entered();
+        build_completion_json(
+            build_state,
+            source,
+            &path_str,
+            position,
+            &root_path,
+            &package.namespace,
+            &package.config,
+            root_config,
+        )
+    };
 
     let analysis_path = build_state
         .build_state
@@ -102,39 +113,46 @@ fn run(
         .parent()?
         .join("rescript-editor-analysis.exe");
 
-    let mut child = match Command::new(&analysis_path)
-        .args(["completion-rewatch"])
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-    {
-        Ok(child) => child,
-        Err(e) => {
-            tracing::warn!("completion: failed to spawn analysis binary: {e}");
-            return None;
+    let items = {
+        let _guard = tracing::info_span!("lsp.completion.analysis_binary").entered();
+
+        let mut child = match Command::new(&analysis_path)
+            .args(["completion-rewatch"])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+        {
+            Ok(child) => child,
+            Err(e) => {
+                tracing::warn!("completion: failed to spawn analysis binary: {e}");
+                return None;
+            }
+        };
+
+        if let Some(mut stdin) = child.stdin.take() {
+            let _ = stdin.write_all(json_blob.to_string().as_bytes());
         }
+
+        let output = match child.wait_with_output() {
+            Ok(output) => output,
+            Err(e) => {
+                tracing::warn!("completion: analysis binary invocation failed: {e}");
+                return None;
+            }
+        };
+
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        if !stderr.is_empty() {
+            tracing::debug!(stderr = %stderr, "completion: analysis stderr");
+        }
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        parse_completion_response(&stdout)
     };
 
-    if let Some(mut stdin) = child.stdin.take() {
-        let _ = stdin.write_all(json_blob.to_string().as_bytes());
-    }
-
-    let output = match child.wait_with_output() {
-        Ok(output) => output,
-        Err(e) => {
-            tracing::warn!("completion: analysis binary invocation failed: {e}");
-            return None;
-        }
-    };
-
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    if !stderr.is_empty() {
-        tracing::debug!(stderr = %stderr, "completion: analysis stderr");
-    }
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    parse_completion_response(&stdout)
+    span.record("items_count", items.as_ref().map_or(0, |v| v.len()));
+    items
 }
 
 /// Build the JSON blob to send to `rescript-editor-analysis.exe completion-rewatch`.
