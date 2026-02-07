@@ -1,0 +1,7 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`lsp > initializes and shuts down cleanly 1`] = `
+[
+  "rewatch.lsp",
+]
+`;

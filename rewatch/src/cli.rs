@@ -416,6 +416,8 @@ pub enum Command {
         #[arg(group = "format_input_mode")]
         files: Vec<String>,
     },
+    /// Start the language server (communicates over stdio)
+    Lsp,
     /// Print the compiler arguments for a ReScript source file.
     CompilerArgs {
         /// Path to a ReScript source file (.res or .resi)

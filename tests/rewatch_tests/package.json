@@ -9,6 +9,7 @@
   },
   "devDependencies": {
     "protobufjs": "^7.4.0",
-    "vitest": "^3.0.0"
+    "vitest": "^3.0.0",
+    "vscode-languageserver-protocol": "3.17.5"
   }
 }

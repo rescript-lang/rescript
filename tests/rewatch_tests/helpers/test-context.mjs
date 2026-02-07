@@ -13,6 +13,7 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { expect } from "vitest";
+import { createLspClient } from "./lsp-client.mjs";
 import { createOtelReceiver } from "./otel-receiver.mjs";
 import { createRescriptCli } from "./process.mjs";
 import { createSandbox, removeSandbox } from "./sandbox.mjs";
@@ -114,6 +115,7 @@ const SUMMARY_SPAN_NAMES = new Set([
   "rewatch.watch",
   "rewatch.format",
   "rewatch.compiler_args",
+  "rewatch.lsp",
   // Build pipeline spans
   "initialize_build",
   "incremental_build",
@@ -464,6 +466,137 @@ export async function runRewatchTest(scenario, options = {}) {
           console.error(`\n--- Watch process ${i} stderr (-vv) ---`);
           console.error(stderr);
         }
+      }
+      console.error("\n--- Raw spans (%d total) ---", spans.length);
+      for (const span of spans) {
+        console.error(JSON.stringify(span, null, 2));
+      }
+      console.error("\n--- Span tree ---");
+      console.error(JSON.stringify(tree, null, 2));
+      console.error("\n--- Summary (actual) ---");
+      for (const line of summary) {
+        console.error(`  ${JSON.stringify(line)}`);
+      }
+      console.error("=== END DEBUG INFO ===\n");
+      throw err;
+    }
+  } finally {
+    if (sandbox) {
+      await removeSandbox(sandbox);
+    }
+    if (otelReceiver) {
+      await otelReceiver.stop();
+    }
+  }
+}
+
+/**
+ * @typedef {object} LspTestContext
+ * @property {string} sandbox - Path to the test sandbox
+ * @property {ReturnType<typeof createLspClient>} lsp - LSP client connected to the server
+ * @property {(relativePath: string, content: string) => Promise<void>} writeFile - Write a file in the sandbox
+ * @property {(relativePath: string) => Promise<string>} readFile - Read a file from the sandbox
+ * @property {(relativePath: string) => Promise<void>} deleteFile - Delete a file in the sandbox
+ */
+
+/**
+ * Run an LSP test with snapshot-based span assertions.
+ *
+ * Mirrors `runRewatchTest` but boots an LSP client instead of a CLI.
+ * The test flow is:
+ * 1. Setup: Create sandbox, start OTEL receiver, spawn LSP server
+ * 2. Scenario: Execute your test operations (initialize, open, save, hover, etc.)
+ * 3. Assert: Snapshot the OTEL span tree summary
+ * 4. Cleanup: Shutdown LSP, remove sandbox, stop OTEL receiver
+ *
+ * @param {(ctx: LspTestContext) => Promise<void>} scenario - The test scenario to execute
+ * @param {object} [options] - Options for the test
+ * @param {(summary: string[], sandboxPath: string) => string[]} [options.processSpans] - Transform the span summary before snapshot
+ * @returns {Promise<void>}
+ */
+export async function runLspTest(scenario, options = {}) {
+  let otelReceiver = null;
+  let sandbox = null;
+  let lsp = null;
+
+  try {
+    // Setup
+    otelReceiver = await createOtelReceiver();
+    sandbox = await createSandbox();
+    lsp = createLspClient(sandbox, otelReceiver.endpoint);
+
+    // Create test context
+    const ctx = {
+      sandbox,
+      lsp,
+
+      async writeFile(relativePath, content) {
+        const fullPath = path.join(sandbox, relativePath);
+        await mkdir(path.dirname(fullPath), { recursive: true });
+        const tmpPath = fullPath + ".__atomic_tmp";
+        await writeFile(tmpPath, content);
+        await rename(tmpPath, fullPath);
+      },
+
+      async readFile(relativePath) {
+        const fullPath = path.join(sandbox, relativePath);
+        return readFile(fullPath, "utf8");
+      },
+
+      async deleteFile(relativePath) {
+        const fullPath = path.join(sandbox, relativePath);
+        await unlink(fullPath);
+      },
+    };
+
+    // Execute scenario
+    await scenario(ctx);
+  } finally {
+    // Shutdown LSP to flush telemetry
+    if (lsp) {
+      try {
+        await lsp.shutdown();
+      } catch {
+        // Shutdown may fail if the server crashed — force kill
+        try {
+          lsp.process.kill("SIGKILL");
+        } catch {}
+      }
+    }
+  }
+
+  try {
+    // Get spans and build tree
+    const spans = otelReceiver.getSpans();
+    const tree = buildSpanTree(spans);
+    let summary = treeToSummary(tree);
+
+    // Always normalize absolute paths to sandbox-relative paths
+    summary = normalizePaths(summary, sandbox);
+
+    // Apply any additional processing callback
+    if (options.processSpans) {
+      summary = options.processSpans(summary, sandbox);
+    }
+
+    if (process.env.DEBUG_OTEL) {
+      console.log(`[runLspTest] Span summary:`);
+      for (const line of summary) {
+        console.log(`  ${line}`);
+      }
+    }
+
+    // Snapshot assertion
+    try {
+      expect(summary).toMatchSnapshot();
+    } catch (err) {
+      console.error("\n=== LSP SNAPSHOT ASSERTION FAILED ===");
+      console.error("Platform:", process.platform);
+      console.error("Sandbox path:", sandbox);
+      const stderr = lsp?.getStderr?.();
+      if (stderr) {
+        console.error("\n--- LSP server stderr ---");
+        console.error(stderr);
       }
       console.error("\n--- Raw spans (%d total) ---", spans.length);
       for (const span of spans) {

@@ -3,7 +3,7 @@ use log::LevelFilter;
 use std::{io::Write, path::Path};
 use tracing::instrument;
 
-use rescript::{build, cli, cmd, format, lock, telemetry, watcher};
+use rescript::{build, cli, cmd, format, lock, lsp, telemetry, watcher};
 
 fn main() {
     // Initialize telemetry (only active if OTEL_EXPORTER_OTLP_ENDPOINT is set)
@@ -74,6 +74,7 @@ fn run_main(telemetry_guard: &telemetry::TelemetryGuard) -> i32 {
             };
             run_clean(&folder, show_progress, plain_output)
         }
+        cli::Command::Lsp => run_lsp(),
         cli::Command::Format { stdin, check, files } => run_format(stdin, check, files),
     }
 }
@@ -141,6 +142,20 @@ fn run_clean(folder: &str, show_progress: bool, plain_output: bool) -> i32 {
         Ok(_) => 0,
         Err(e) => {
             eprintln!("{:#}", e);
+            1
+        }
+    }
+}
+
+#[instrument(name = "rewatch.lsp", skip_all)]
+fn run_lsp() -> i32 {
+    match tokio::runtime::Runtime::new() {
+        Ok(rt) => {
+            rt.block_on(lsp::run_stdio());
+            0
+        }
+        Err(e) => {
+            eprintln!("Failed to create tokio runtime: {e}");
             1
         }
     }
