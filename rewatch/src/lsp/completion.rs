@@ -117,7 +117,7 @@ fn run(
         let _guard = tracing::info_span!("lsp.completion.analysis_binary").entered();
 
         let mut child = match Command::new(&analysis_path)
-            .args(["completion-rewatch"])
+            .args(["rewatch", "completion"])
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
