@@ -1,3 +1,5 @@
+use tracing::instrument;
+
 use crate::build;
 use crate::build::build_types::{BuildCommandState, BuildProfile, CompilationStage};
 use crate::build::diagnostics::BscDiagnostic;
@@ -11,9 +13,8 @@ use super::initialize::DiscoveredWorkspace;
 /// populates source files, then runs the full build pipeline.
 /// Returns the build state (for reuse in subsequent incremental builds)
 /// and structured diagnostics from the build (errors and warnings).
+#[instrument(name = "lsp.initial_build", skip_all)]
 pub fn run(workspace: DiscoveredWorkspace) -> Result<(BuildCommandState, Vec<BscDiagnostic>), String> {
-    let _span = tracing::info_span!("lsp.initial_build").entered();
-
     let DiscoveredWorkspace {
         project_context,
         packages: discovered_packages,

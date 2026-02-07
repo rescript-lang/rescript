@@ -4,6 +4,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   createProtocolConnection,
+  DidChangeTextDocumentNotification,
   DidSaveTextDocumentNotification,
   ExitNotification,
   InitializedNotification,
@@ -125,6 +126,9 @@ export function createLspClient(cwd, otelEndpoint) {
   });
   connection.listen();
 
+  // Version counter for didChange notifications
+  let nextVersion = 1;
+
   /**
    * Send a request with a timeout. If the server doesn't respond in time
    * (e.g. due to a panic), reject with a descriptive error including stderr.
@@ -210,6 +214,22 @@ export function createLspClient(cwd, otelEndpoint) {
       ).href;
       connection.sendNotification(DidSaveTextDocumentNotification.type, {
         textDocument: { uri },
+      });
+    },
+
+    /**
+     * Notify the LSP server that a file's content changed (unsaved edit).
+     * Sends full document content (TextDocumentSyncKind.Full).
+     * @param {string} relativePath - Path relative to the sandbox root
+     * @param {string} content - The full updated file content
+     */
+    editFile(relativePath, content) {
+      const uri = pathToFileURL(
+        path.join(realpathSync(cwd), relativePath),
+      ).href;
+      connection.sendNotification(DidChangeTextDocumentNotification.type, {
+        textDocument: { uri, version: nextVersion++ },
+        contentChanges: [{ text: content }],
       });
     },
 

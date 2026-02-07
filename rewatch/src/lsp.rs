@@ -1,4 +1,5 @@
 mod dependency_closure;
+mod did_change;
 mod did_save;
 mod initial_build;
 pub mod initialize;
@@ -50,6 +51,7 @@ impl LanguageServer for Backend {
             }),
             capabilities: ServerCapabilities {
                 text_document_sync: Some(TextDocumentSyncCapability::Options(TextDocumentSyncOptions {
+                    change: Some(TextDocumentSyncKind::FULL),
                     save: Some(TextDocumentSyncSaveOptions::SaveOptions(SaveOptions {
                         include_text: Some(false),
                     })),
@@ -116,6 +118,38 @@ impl LanguageServer for Backend {
         self.client
             .send_notification::<notifications::BuildFinished>(notifications::BuildFinishedParams {})
             .await;
+    }
+
+    async fn did_change(&self, params: DidChangeTextDocumentParams) {
+        let file_path = match params.text_document.uri.to_file_path() {
+            Ok(p) => p,
+            Err(_) => {
+                tracing::warn!(
+                    uri = %params.text_document.uri,
+                    "didChange: could not convert URI to file path"
+                );
+                return;
+            }
+        };
+
+        let content = match params.content_changes.into_iter().last() {
+            Some(change) => change.text,
+            None => return,
+        };
+
+        let diagnostics = {
+            let guard = match self.build_state.lock() {
+                Ok(g) => g,
+                Err(_) => return,
+            };
+            let Some(build_state) = guard.as_ref() else {
+                tracing::warn!("didChange: no build state available");
+                return;
+            };
+            did_change::run(build_state, &file_path, &content)
+        };
+
+        self.publish_diagnostics(&diagnostics, false).await;
     }
 
     async fn did_save(&self, params: DidSaveTextDocumentParams) {

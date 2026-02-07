@@ -240,4 +240,30 @@ describe("lsp didSave", { timeout: 60_000 }, () => {
         "Root.mjs should exist after fix",
       ).toBe(true);
     }));
+
+  it("publishes diagnostics for dependent files when a used API changes on save", () =>
+    runLspTest(async ({ lsp, sandbox, writeFile }) => {
+      const rootUri = pathToFileURL(sandbox).href;
+      await lsp.initialize(rootUri);
+      await lsp.waitForNotification("rescript/buildFinished", 30000);
+
+      // Break the API: rename greeting → greetingRenamed in Library.res.
+      // App.res uses Library.greeting, so saving Library.res should
+      // typecheck its dependents and surface the error in App.res —
+      // without needing to save Root.res or App.res.
+      await writeFile(
+        "packages/library/src/Library.res",
+        'let greetingRenamed = "hello from library"\n',
+      );
+      await lsp.waitForNotification("rescript/buildFinished", 30000);
+
+      // App.res should have diagnostics (unbound value Library.greeting)
+      const diagnostics = lsp.getDiagnostics();
+      const appDiag = diagnostics.find(
+        d => d.file === "packages/app/src/App.res",
+      );
+      expect(appDiag, "Expected diagnostics for App.res").toBeDefined();
+      expect(appDiag.diagnostics.length).toBeGreaterThan(0);
+      expect(appDiag.diagnostics[0].severity).toBe(1); // Error
+    }));
 });

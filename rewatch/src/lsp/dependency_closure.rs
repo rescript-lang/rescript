@@ -39,3 +39,35 @@ pub fn get_dependency_closure(modules: &AHashMap<String, Module>, start: &str) -
     }
     closure
 }
+
+/// Calculate the transitive closure of all **dependents** for a given module.
+///
+/// This performs an upward traversal through `module.dependents`:
+/// - Module C is imported by B
+/// - B is imported by A
+/// - Result: {B, A}
+///
+/// The starting module is **excluded** from the result — it is handled
+/// separately by the caller (e.g. compiled with `TypecheckAndEmit`).
+///
+/// ## Why this matters for LSP `did_save`
+///
+/// When a file is saved, its public API (.cmi) may have changed. Modules
+/// that import the saved file need to be re-typechecked to surface errors
+/// caused by the API change. However, they do NOT need JS output — only
+/// diagnostics matter. JS emission happens when those files are themselves
+/// saved.
+pub fn get_dependent_closure(modules: &AHashMap<String, Module>, start: &str) -> AHashSet<String> {
+    let mut closure = AHashSet::new();
+    let mut stack = vec![start.to_string()];
+    while let Some(name) = stack.pop() {
+        if let Some(module) = modules.get(&name) {
+            for dep in &module.dependents {
+                if closure.insert(dep.clone()) {
+                    stack.push(dep.clone());
+                }
+            }
+        }
+    }
+    closure
+}

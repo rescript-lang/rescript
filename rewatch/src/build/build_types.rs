@@ -248,50 +248,67 @@ impl BuildCommandState {
             .collect()
     }
 
+    /// Find the module and package name for a given file path.
+    /// Returns `(module_name, package_name, is_interface)` if found.
+    pub fn find_module_for_file(&self, file_path: &Path) -> Option<(String, String, bool)> {
+        let canonicalized = file_path
+            .canonicalize()
+            .map(StrippedVerbatimPath::to_stripped_verbatim_path)
+            .ok()?;
+
+        for (module_name, module) in &self.build_state.modules {
+            let package = self.build_state.packages.get(&module.package_name)?;
+
+            if let SourceType::SourceFile(source_file) = &module.source_type {
+                let impl_path = package.path.join(&source_file.implementation.path);
+                if canonicalized == impl_path {
+                    return Some((module_name.clone(), module.package_name.clone(), false));
+                }
+
+                if let Some(interface) = &source_file.interface {
+                    let iface_path = package.path.join(&interface.path);
+                    if canonicalized == iface_path {
+                        return Some((module_name.clone(), module.package_name.clone(), true));
+                    }
+                }
+            }
+        }
+
+        None
+    }
+
     /// Find the module matching the given file path and mark it as parse-dirty.
     /// Updates `last_modified` from the file's metadata.
     /// Returns the module name if found and marked, `None` otherwise.
     pub fn mark_file_parse_dirty(&mut self, file_path: &Path) -> Option<String> {
-        let canonicalized = match file_path
+        let (module_name, _, _) = self.find_module_for_file(file_path)?;
+
+        let canonicalized = file_path
             .canonicalize()
             .map(StrippedVerbatimPath::to_stripped_verbatim_path)
-        {
-            Ok(p) => p,
-            Err(_) => return None,
-        };
+            .ok()?;
 
-        let module_package_pairs = self.module_name_package_pairs();
+        let module = self.build_state.modules.get_mut(&module_name)?;
 
-        for (module_name, package_name) in module_package_pairs {
-            let package = match self.build_state.packages.get(&package_name) {
-                Some(p) => p,
-                None => continue,
-            };
-
-            let module = match self.build_state.modules.get_mut(&module_name) {
-                Some(m) => m,
-                None => continue,
-            };
-
-            if let SourceType::SourceFile(ref mut source_file) = module.source_type {
-                let impl_path = package.path.join(&source_file.implementation.path);
-                if canonicalized == impl_path {
-                    if let Ok(modified) = canonicalized.metadata().and_then(|m| m.modified()) {
-                        source_file.implementation.last_modified = modified;
-                    }
-                    source_file.implementation.parse_dirty = true;
-                    return Some(module_name);
+        if let SourceType::SourceFile(ref mut source_file) = module.source_type {
+            let package = self.build_state.packages.get(&module.package_name)?;
+            let impl_path = package.path.join(&source_file.implementation.path);
+            if canonicalized == impl_path {
+                if let Ok(modified) = canonicalized.metadata().and_then(|m| m.modified()) {
+                    source_file.implementation.last_modified = modified;
                 }
+                source_file.implementation.parse_dirty = true;
+                return Some(module_name);
+            }
 
-                if let Some(ref mut interface) = source_file.interface {
-                    let iface_path = package.path.join(&interface.path);
-                    if canonicalized == iface_path {
-                        if let Ok(modified) = canonicalized.metadata().and_then(|m| m.modified()) {
-                            interface.last_modified = modified;
-                        }
-                        interface.parse_dirty = true;
-                        return Some(module_name);
+            if let Some(ref mut interface) = source_file.interface {
+                let iface_path = package.path.join(&interface.path);
+                if canonicalized == iface_path {
+                    if let Ok(modified) = canonicalized.metadata().and_then(|m| m.modified()) {
+                        interface.last_modified = modified;
                     }
+                    interface.parse_dirty = true;
+                    return Some(module_name);
                 }
             }
         }
