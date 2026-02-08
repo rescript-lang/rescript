@@ -1,13 +1,60 @@
+use std::collections::HashMap;
 use std::io::Write;
 use std::path::Path;
 use std::process::{Command, Stdio};
 
 use serde_json::{Value, json};
+use std::sync::Mutex;
+use tower_lsp::lsp_types::Url;
 
-use crate::build::build_types::{BuildCommandState, BuildProfile, SourceType};
-use crate::build::packages::Namespace;
+use crate::build::build_types::{BuildCommandState, BuildProfile, SourceFile, SourceType};
+use crate::build::packages::{Namespace, Package};
 use crate::config;
 use crate::helpers;
+use crate::lsp::did_change;
+
+/// Resolve the source content for a file from open buffers (unsaved edits) or disk.
+///
+/// Prefers the in-memory buffer so analysis works on the latest editor content.
+pub fn resolve_source(
+    open_buffers: &Mutex<HashMap<Url, String>>,
+    file_path: &Path,
+    uri: &Url,
+    label: &str,
+) -> Option<String> {
+    let source = open_buffers
+        .lock()
+        .ok()
+        .and_then(|buffers| buffers.get(uri).cloned())
+        .or_else(|| std::fs::read_to_string(file_path).ok());
+    if source.is_none() {
+        tracing::warn!("{label}: no buffer content available");
+    }
+    source
+}
+
+/// Resolve the module, package, and source file for a given file path.
+///
+/// Returns the module name, package name, package reference, and source file reference.
+/// This is the common first step in completion, hover, and definition handlers.
+pub fn resolve_module<'a>(
+    build_state: &'a BuildCommandState,
+    file_path: &Path,
+) -> Option<(String, String, &'a Package, &'a SourceFile)> {
+    let (module_name, package_name, _is_interface) = build_state.find_module_for_file(file_path)?;
+    let package = build_state.build_state.packages.get(&package_name)?;
+    let module = build_state.build_state.modules.get(&module_name)?;
+    let source_file = match &module.source_type {
+        SourceType::SourceFile(sf) => sf,
+        _ => return None,
+    };
+    Some((module_name, package_name, package, source_file))
+}
+
+/// Compute the original source file path by joining the package root with the implementation path.
+pub fn original_path(package: &Package, source_file: &SourceFile) -> std::path::PathBuf {
+    package.path.join(&source_file.implementation.path)
+}
 
 /// Build the JSON context blob sent to `rescript-editor-analysis.exe rewatch <subcommand>`.
 ///
@@ -109,6 +156,31 @@ pub fn spawn_analysis_binary(
     }
 
     Some(String::from_utf8_lossy(&output.stdout).into_owned())
+}
+
+/// Check whether a `.cmt` file exists for the given module. If missing,
+/// run a single-file typecheck to produce it.
+///
+/// This is needed because the editor may request hover/completion/definition
+/// before any `didChange` has produced the `.cmt` in `lib/lsp/`.
+///
+/// Callers should wrap this in their own `tracing::info_span!` (e.g.
+/// `"lsp.hover.ensure_cmt"`) since the span name must be a string literal.
+pub fn ensure_cmt(
+    build_state: &BuildCommandState,
+    package: &Package,
+    source_file: &SourceFile,
+    file_path: &Path,
+    source: &str,
+) {
+    let build_path = package.get_build_path_for_profile(BuildProfile::TypecheckOnly);
+    let impl_path = &source_file.implementation.path;
+    let basename = helpers::file_path_to_compiler_asset_basename(impl_path, &package.namespace);
+    let dir = impl_path.parent().unwrap_or(Path::new(""));
+    let cmt_path = build_path.join(dir).join(format!("{}.cmt", basename));
+    if !cmt_path.exists() {
+        did_change::run(build_state, file_path, source);
+    }
 }
 
 /// Build the `opens` list matching the analysis binary's expectations.

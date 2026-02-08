@@ -5,10 +5,8 @@ use std::sync::Mutex;
 use tower_lsp::lsp_types::{CompletionItem, CompletionResponse, Position, Url};
 use tracing::instrument;
 
-use crate::build::build_types::{BuildCommandState, BuildProfile, SourceType};
-use crate::helpers;
+use crate::build::build_types::BuildCommandState;
 use crate::lsp::analysis;
-use crate::lsp::did_change;
 
 /// Handle a completion request: resolve the source buffer, lock build state,
 /// and delegate to the analysis binary.
@@ -19,19 +17,7 @@ pub fn handle(
     uri: &Url,
     position: Position,
 ) -> Option<CompletionResponse> {
-    let source = open_buffers
-        .lock()
-        .ok()
-        .and_then(|buffers| buffers.get(uri).cloned())
-        .or_else(|| std::fs::read_to_string(file_path).ok());
-
-    let source = match source {
-        Some(s) => s,
-        None => {
-            tracing::warn!("completion: no buffer content available");
-            return None;
-        }
-    };
+    let source = analysis::resolve_source(open_buffers, file_path, uri, "completion")?;
 
     let guard = build_state.lock().ok()?;
     let build_state = guard.as_ref()?;
@@ -55,34 +41,18 @@ fn run(
     source: &str,
     position: Position,
 ) -> Option<Vec<CompletionItem>> {
-    let (module_name, package_name, _is_interface) = build_state.find_module_for_file(file_path)?;
+    let (module_name, package_name, package, source_file) = analysis::resolve_module(build_state, file_path)?;
 
     let span = tracing::Span::current();
     span.record("module", &module_name);
     span.record("package", &package_name);
 
-    let package = build_state.build_state.packages.get(&package_name)?;
-
-    let module = build_state.build_state.modules.get(&module_name)?;
-    let source_file = match &module.source_type {
-        SourceType::SourceFile(sf) => sf,
-        _ => return None,
-    };
-
-    // Determine the original file path (absolute) for the analysis binary.
-    let original_file = package.path.join(&source_file.implementation.path);
+    let original_file = analysis::original_path(package, source_file);
     let path_str = original_file.to_string_lossy();
 
-    // Ensure a .cmt exists for this module. If the editor triggers completion
-    // before any didChange, lib/lsp may not have the .cmt yet.
-    let build_path = package.get_build_path_for_profile(BuildProfile::TypecheckOnly);
-    let impl_path = &source_file.implementation.path;
-    let basename = helpers::file_path_to_compiler_asset_basename(impl_path, &package.namespace);
-    let dir = impl_path.parent().unwrap_or(Path::new(""));
-    let cmt_path = build_path.join(dir).join(format!("{}.cmt", basename));
-    if !cmt_path.exists() {
+    {
         let _guard = tracing::info_span!("lsp.completion.ensure_cmt").entered();
-        did_change::run(build_state, file_path, source);
+        analysis::ensure_cmt(build_state, package, source_file, file_path, source);
     }
 
     let root_path = package.path.to_string_lossy();

@@ -282,27 +282,33 @@ Implementation: `lsp/initialize.rs`
 
 ## What Is NOT Implemented Yet
 
-The following are described in earlier design discussions but not yet implemented:
+Comparison with the old Node.js LSP (`rescript-vscode/server/src/server.ts`). Features marked with "(analysis)" shell out to `rescript-editor-analysis.exe`.
 
-| Feature | Status |
-|---------|--------|
-| `textDocument/hover` | Implemented — shells out to analysis binary via `rewatch hover` |
-| `textDocument/definition` | Not implemented |
-| `textDocument/typeDefinition` | Not implemented |
-| `textDocument/references` | Not implemented |
-| `textDocument/rename` / `prepareRename` | Not implemented |
-| `textDocument/documentSymbol` | Not implemented |
-| `textDocument/formatting` | Not implemented |
-| `textDocument/codeAction` | Not implemented |
-| `textDocument/semanticTokens` | Not implemented |
-| `textDocument/inlayHint` | Not implemented |
-| `textDocument/codeLens` | Not implemented |
-| `textDocument/signatureHelp` | Not implemented |
-| `textDocument/didOpen` | Implemented — stores buffer content in `open_buffers` for completion and formatting |
-| `textDocument/didClose` | Implemented — removes buffer from `open_buffers` |
-| `workspace/didChangeWatchedFiles` | Registered but handler not implemented — needs to mark dirty modules and trigger rebuild |
-| Monorepo multi-workspace | Single BuildState only |
-| `lib/lsp/` artifact separation | Uses existing build path parameterization |
+| Feature | Status | Worth it? |
+|---------|--------|-----------|
+| `textDocument/didOpen` | Implemented | - |
+| `textDocument/didClose` | Implemented | - |
+| `textDocument/didChange` | Implemented | - |
+| `textDocument/didSave` | Implemented | - |
+| `textDocument/completion` | Implemented (analysis) | - |
+| `textDocument/hover` | Implemented (analysis) | - |
+| `textDocument/formatting` | Implemented | - |
+| `textDocument/definition` | Implemented (analysis) | - |
+| `textDocument/typeDefinition` | TODO (analysis) | Yes — core navigation |
+| `textDocument/references` | TODO (analysis) | Yes — core navigation |
+| `textDocument/rename` / `prepareRename` | TODO (analysis) | Yes — core refactoring |
+| `textDocument/completion/resolve` | TODO (analysis) | Yes — populates documentation for selected completion item |
+| `textDocument/documentSymbol` | TODO (analysis) | Yes — powers outline view and breadcrumbs |
+| `textDocument/codeAction` | TODO (analysis) | Yes — quick fixes from diagnostics and analysis |
+| `textDocument/signatureHelp` | TODO (analysis) | Yes — shows function parameter info while typing |
+| `textDocument/semanticTokens` | TODO (analysis) | Nice to have — enhanced syntax highlighting |
+| `textDocument/inlayHint` | TODO (analysis) | Nice to have — inline type annotations, off by default in old LSP |
+| `textDocument/codeLens` | TODO (analysis) | Nice to have — off by default in old LSP |
+| `textDocument/createInterface` | TODO (analysis) | Low priority — niche feature, generates `.resi` from `.res` |
+| `textDocument/openCompiled` | TODO | Low priority — niche feature, opens compiled `.js` output |
+| `diagnosticSyntax` on `didChange` | TODO (analysis) | Low priority — old LSP ran syntax diagnostics on every keystroke via analysis binary. Our `didChange` already runs `bsc` which catches syntax errors. |
+| `workspace/didChangeWatchedFiles` | Registered but handler not implemented | Yes — needs to handle external file changes (git checkout, etc.) |
+| Monorepo multi-workspace | Single BuildState only | Yes eventually — needed for monorepo setups |
 
 ## Relationship to `rescript build`
 

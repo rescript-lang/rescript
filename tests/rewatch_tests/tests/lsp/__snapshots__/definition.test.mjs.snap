@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`lsp completion > returns completions for a module dot access 1`] = `
+exports[`lsp definition > jumps to definition of a module 1`] = `
 [
   "rewatch.lsp",
   "  lsp.initialized",
@@ -32,15 +32,14 @@ exports[`lsp completion > returns completions for a module dot access 1`] = `
   "        build.compile_wave[file_count=1]",
   "          build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
   "  lsp.did_open[file=src/Root.res]",
-  "  lsp.did_change[file=src/Root.res]",
-  "  lsp.completion[file=src/Root.res, module=Root, package=rewatch-test-fixture, items_count=1]",
-  "    lsp.completion.ensure_cmt",
-  "    lsp.completion.build_context",
-  "    lsp.completion.analysis_binary",
+  "  lsp.definition[file=src/Root.res, module=Root, package=rewatch-test-fixture]",
+  "    lsp.definition.ensure_cmt",
+  "    lsp.definition.build_context",
+  "    lsp.definition.analysis_binary",
 ]
 `;
 
-exports[`lsp completion > returns completions for stdlib modules like Console 1`] = `
+exports[`lsp definition > jumps to definition of a module value 1`] = `
 [
   "rewatch.lsp",
   "  lsp.initialized",
@@ -72,10 +71,9 @@ exports[`lsp completion > returns completions for stdlib modules like Console 1`
   "        build.compile_wave[file_count=1]",
   "          build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
   "  lsp.did_open[file=src/Root.res]",
-  "  lsp.did_change[file=src/Root.res]",
-  "  lsp.completion[file=src/Root.res, module=Root, package=rewatch-test-fixture, items_count=55]",
-  "    lsp.completion.ensure_cmt",
-  "    lsp.completion.build_context",
-  "    lsp.completion.analysis_binary",
+  "  lsp.definition[file=src/Root.res, module=Root, package=rewatch-test-fixture]",
+  "    lsp.definition.ensure_cmt",
+  "    lsp.definition.build_context",
+  "    lsp.definition.analysis_binary",
 ]
 `;

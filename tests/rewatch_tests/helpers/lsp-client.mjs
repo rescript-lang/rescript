@@ -5,6 +5,7 @@ import { pathToFileURL } from "node:url";
 import {
   CompletionRequest,
   createProtocolConnection,
+  DefinitionRequest,
   DidChangeTextDocumentNotification,
   DidCloseTextDocumentNotification,
   DidOpenTextDocumentNotification,
@@ -278,6 +279,22 @@ export function createLspClient(cwd, otelEndpoint) {
       const uri = toUri(relativePath);
       assertOpen(relativePath, uri);
       return sendRequest(HoverRequest.type, {
+        textDocument: { uri },
+        position: { line, character },
+      });
+    },
+
+    /**
+     * Send a definition request for a position in a file.
+     * @param {string} relativePath - Path relative to the sandbox root
+     * @param {number} line - Zero-based line number
+     * @param {number} character - Zero-based character offset
+     * @returns {Promise<import("vscode-languageserver-protocol").Location | null>}
+     */
+    async definitionFor(relativePath, line, character) {
+      const uri = toUri(relativePath);
+      assertOpen(relativePath, uri);
+      return sendRequest(DefinitionRequest.type, {
         textDocument: { uri },
         position: { line, character },
       });

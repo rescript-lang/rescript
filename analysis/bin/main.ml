@@ -136,6 +136,7 @@ let main () =
     match rewatchArgs with
     | ["completion"] -> CommandsRewatch.completion ()
     | ["hover"] -> CommandsRewatch.hover ()
+    | ["definition"] -> CommandsRewatch.definition ()
     | _ -> prerr_endline "Unknown rewatch subcommand")
   | [_; "completion"; path; line; col; currentFile] ->
     printHeaderInfo path line col;

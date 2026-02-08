@@ -1,5 +1,6 @@
 mod analysis;
 mod completion;
+mod definition;
 mod dependency_closure;
 mod did_change;
 mod did_save;
@@ -78,7 +79,7 @@ impl LanguageServer for Backend {
                     ..Default::default()
                 })),
                 hover_provider: Some(HoverProviderCapability::Simple(true)),
-                // definition_provider: Some(OneOf::Left(true)),
+                definition_provider: Some(OneOf::Left(true)),
                 // type_definition_provider: Some(TypeDefinitionProviderCapability::Simple(true)),
                 // references_provider: Some(OneOf::Left(true)),
                 // code_action_provider: Some(CodeActionProviderCapability::Simple(true)),
@@ -244,6 +245,21 @@ impl LanguageServer for Backend {
         };
 
         Ok(hover::handle(
+            &self.open_buffers,
+            &self.build_state,
+            &file_path,
+            uri,
+            params.text_document_position_params.position,
+        ))
+    }
+
+    async fn goto_definition(&self, params: GotoDefinitionParams) -> Result<Option<GotoDefinitionResponse>> {
+        let uri = &params.text_document_position_params.text_document.uri;
+        let Some(file_path) = uri_to_file_path(uri, "definition") else {
+            return Ok(None);
+        };
+
+        Ok(definition::handle(
             &self.open_buffers,
             &self.build_state,
             &file_path,

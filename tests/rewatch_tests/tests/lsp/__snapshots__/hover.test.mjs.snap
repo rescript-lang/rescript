@@ -33,6 +33,7 @@ exports[`lsp hover > returns hover info for a let binding 1`] = `
   "          build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
   "  lsp.did_open[file=src/Root.res]",
   "  lsp.hover[file=src/Root.res, module=Root, package=rewatch-test-fixture]",
+  "    lsp.hover.ensure_cmt",
   "    lsp.hover.build_context",
   "    lsp.hover.analysis_binary",
 ]
@@ -71,6 +72,7 @@ exports[`lsp hover > returns hover info for a module value access 1`] = `
   "          build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
   "  lsp.did_open[file=src/Root.res]",
   "  lsp.hover[file=src/Root.res, module=Root, package=rewatch-test-fixture]",
+  "    lsp.hover.ensure_cmt",
   "    lsp.hover.build_context",
   "    lsp.hover.analysis_binary",
 ]

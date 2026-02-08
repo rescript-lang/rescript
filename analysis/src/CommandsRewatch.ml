@@ -129,36 +129,35 @@ let parseRewatchContext json =
   in
   {source; path; pos; package}
 
-let completion () =
+let withRewatchContext ~name ~default f =
   let input = In_channel.input_all In_channel.stdin in
   match Json.parse input with
   | None ->
-    prerr_endline "completion-rewatch: failed to parse JSON from stdin";
-    print_endline "[]"
+    prerr_endline (name ^ ": failed to parse JSON from stdin");
+    print_endline default
   | Some json ->
-    let {source; path; pos; package} = parseRewatchContext json in
-    let completions =
-      match
-        Completions.getCompletionsFromSource ~debug:false ~path ~pos ~source
-          ~package ()
-      with
-      | None -> []
-      | Some (completions, full, _) ->
-        completions
-        |> List.map (CompletionBackEnd.completionToItem ~full)
-        |> List.map Protocol.stringifyCompletionItem
-    in
-    completions |> Protocol.array |> print_endline
+    let ctx = parseRewatchContext json in
+    print_endline (f ctx)
+
+let completion () =
+  withRewatchContext ~name:"completion" ~default:"[]"
+    (fun {source; path; pos; package; _} ->
+      let completions =
+        match
+          Completions.getCompletionsFromSource ~debug:false ~path ~pos ~source
+            ~package ()
+        with
+        | None -> []
+        | Some (completions, full, _) ->
+          completions
+          |> List.map (CompletionBackEnd.completionToItem ~full)
+          |> List.map Protocol.stringifyCompletionItem
+      in
+      completions |> Protocol.array)
 
 let hover () =
-  let input = In_channel.input_all In_channel.stdin in
-  match Json.parse input with
-  | None ->
-    prerr_endline "hover-rewatch: failed to parse JSON from stdin";
-    print_endline Protocol.null
-  | Some json ->
-    let {source; path; pos; package} = parseRewatchContext json in
-    let result =
+  withRewatchContext ~name:"hover" ~default:Protocol.null
+    (fun {source; path; pos; package} ->
       match Cmt.loadFullCmtWithPackage ~path ~package with
       | None -> Protocol.null
       | Some full -> (
@@ -198,6 +197,43 @@ let hover () =
                 in
                 Protocol.stringifyHover typeString
               | None -> Protocol.null)
-            | _ -> Protocol.null)))
-    in
-    print_endline result
+            | _ -> Protocol.null))))
+
+let definition () =
+  withRewatchContext ~name:"definition" ~default:Protocol.null
+    (fun {path; pos; package; _} ->
+      let locationOpt =
+        match Cmt.loadFullCmtWithPackage ~path ~package with
+        | None -> None
+        | Some full -> (
+          match References.getLocItem ~full ~pos ~debug:false with
+          | None -> None
+          | Some locItem -> (
+            match References.definitionForLocItem ~full locItem with
+            | None -> None
+            | Some (uri, loc) when not loc.loc_ghost ->
+              let isInterface = full.file.uri |> Uri.isInterface in
+              let posIsZero {Lexing.pos_lnum; pos_bol; pos_cnum} =
+                pos_lnum = 1 && pos_cnum - pos_bol = 0
+              in
+              let isModule =
+                match locItem.locType with
+                | LModule _ | TopLevelModule _ -> true
+                | TypeDefinition _ | Typed _ | Constant _ -> false
+              in
+              let skipLoc =
+                (not isModule) && (not isInterface) && posIsZero loc.loc_start
+                && posIsZero loc.loc_end
+              in
+              if skipLoc then None
+              else
+                Some
+                  {
+                    Protocol.uri = Files.canonicalizeUri uri;
+                    range = Utils.cmtLocToRange loc;
+                  }
+            | Some _ -> None))
+      in
+      match locationOpt with
+      | None -> Protocol.null
+      | Some location -> location |> Protocol.stringifyLocation)
