@@ -240,6 +240,38 @@ let definition () =
       | None -> Protocol.null
       | Some location -> location |> Protocol.stringifyLocation)
 
+let references () =
+  withRewatchContext ~name:"references" ~default:Protocol.null (fun ctx ->
+      let locations =
+        match
+          withLocItem ctx (fun full locItem ->
+              let allReferences =
+                References.allReferencesForLocItem ~full locItem
+              in
+              match allReferences with
+              | [] -> None
+              | refs ->
+                Some
+                  (refs
+                  |> List.map (fun {References.uri; locOpt} ->
+                         let loc =
+                           match locOpt with
+                           | Some loc -> loc
+                           | None -> Uri.toTopLevelLoc uri
+                         in
+                         Protocol.stringifyLocation
+                           {
+                             Protocol.uri = Uri.toString uri;
+                             range = Utils.cmtLocToRange loc;
+                           })))
+        with
+        | None | Some [] -> None
+        | Some locations -> Some locations
+      in
+      match locations with
+      | None -> Protocol.null
+      | Some locs -> Protocol.array locs)
+
 let typeDefinition () =
   withRewatchContext ~name:"typeDefinition" ~default:Protocol.null (fun ctx ->
       let locationOpt =

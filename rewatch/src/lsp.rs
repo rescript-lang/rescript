@@ -9,6 +9,7 @@ mod hover;
 mod initial_build;
 pub mod initialize;
 mod notifications;
+mod references;
 mod type_definition;
 
 use std::collections::{HashMap, HashSet};
@@ -82,7 +83,7 @@ impl LanguageServer for Backend {
                 hover_provider: Some(HoverProviderCapability::Simple(true)),
                 definition_provider: Some(OneOf::Left(true)),
                 type_definition_provider: Some(TypeDefinitionProviderCapability::Simple(true)),
-                // references_provider: Some(OneOf::Left(true)),
+                references_provider: Some(OneOf::Left(true)),
                 // code_action_provider: Some(CodeActionProviderCapability::Simple(true)),
                 // rename_provider: Some(OneOf::Right(RenameOptions {
                 //     prepare_provider: Some(true),
@@ -290,6 +291,21 @@ impl LanguageServer for Backend {
             &file_path,
             uri,
             params.text_document_position_params.position,
+        ))
+    }
+
+    async fn references(&self, params: ReferenceParams) -> Result<Option<Vec<Location>>> {
+        let uri = &params.text_document_position.text_document.uri;
+        let Some(file_path) = uri_to_file_path(uri, "references") else {
+            return Ok(None);
+        };
+
+        Ok(references::handle(
+            &self.open_buffers,
+            &self.build_state,
+            &file_path,
+            uri,
+            params.text_document_position.position,
         ))
     }
 

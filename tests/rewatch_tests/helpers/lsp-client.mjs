@@ -16,6 +16,7 @@ import {
   InitializedNotification,
   InitializeRequest,
   PublishDiagnosticsNotification,
+  ReferencesRequest,
   RegistrationRequest,
   ShutdownRequest,
   TypeDefinitionRequest,
@@ -314,6 +315,23 @@ export function createLspClient(cwd, otelEndpoint) {
       return sendRequest(TypeDefinitionRequest.type, {
         textDocument: { uri },
         position: { line, character },
+      });
+    },
+
+    /**
+     * Send a references request for a position in a file.
+     * @param {string} relativePath - Path relative to the sandbox root
+     * @param {number} line - Zero-based line number
+     * @param {number} character - Zero-based character offset
+     * @returns {Promise<import("vscode-languageserver-protocol").Location[] | null>}
+     */
+    async referencesFor(relativePath, line, character) {
+      const uri = toUri(relativePath);
+      assertOpen(relativePath, uri);
+      return sendRequest(ReferencesRequest.type, {
+        textDocument: { uri },
+        position: { line, character },
+        context: { includeDeclaration: true },
       });
     },
 

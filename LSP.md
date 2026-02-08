@@ -294,7 +294,7 @@ Comparison with the old Node.js LSP (`rescript-vscode/server/src/server.ts`). Fe
 | `textDocument/hover` | Implemented (analysis) | - |
 | `textDocument/formatting` | Implemented | - |
 | `textDocument/definition` | Implemented (analysis) | - |
-| `textDocument/typeDefinition` | TODO (analysis) | Yes — core navigation |
+| `textDocument/typeDefinition` | Done | Yes — core navigation |
 | `textDocument/references` | TODO (analysis) | Yes — core navigation |
 | `textDocument/rename` / `prepareRename` | TODO (analysis) | Yes — core refactoring |
 | `textDocument/completion/resolve` | TODO (analysis) | Yes — populates documentation for selected completion item |

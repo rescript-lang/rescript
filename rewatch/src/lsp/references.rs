@@ -2,13 +2,13 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Mutex;
 
-use tower_lsp::lsp_types::{GotoDefinitionResponse, Position, Url};
+use tower_lsp::lsp_types::{Location, Position, Url};
 use tracing::instrument;
 
 use crate::build::build_types::BuildCommandState;
 use crate::lsp::analysis;
 
-/// Handle a definition request: resolve the source buffer, lock build state,
+/// Handle a references request: resolve the source buffer, lock build state,
 /// and delegate to the analysis binary.
 pub fn handle(
     open_buffers: &Mutex<HashMap<Url, String>>,
@@ -16,8 +16,8 @@ pub fn handle(
     file_path: &Path,
     uri: &Url,
     position: Position,
-) -> Option<GotoDefinitionResponse> {
-    let source = analysis::resolve_source(open_buffers, file_path, uri, "definition")?;
+) -> Option<Vec<Location>> {
+    let source = analysis::resolve_source(open_buffers, file_path, uri, "references")?;
 
     let guard = build_state.lock().ok()?;
     let build_state = guard.as_ref()?;
@@ -25,11 +25,11 @@ pub fn handle(
     run(build_state, file_path, &source, position)
 }
 
-/// Run a definition request by shelling out to `rescript-editor-analysis.exe rewatch definition`.
+/// Run a references request by shelling out to `rescript-editor-analysis.exe rewatch references`.
 ///
 /// Builds a JSON blob with all the package/module context the analysis binary needs,
-/// pipes it to stdin, and parses the JSON location response from stdout.
-#[instrument(name = "lsp.definition", skip_all, fields(
+/// pipes it to stdin, and parses the JSON locations array from stdout.
+#[instrument(name = "lsp.references", skip_all, fields(
     file = %file_path.display(),
     module = tracing::field::Empty,
     package = tracing::field::Empty,
@@ -39,7 +39,7 @@ fn run(
     file_path: &Path,
     source: &str,
     position: Position,
-) -> Option<GotoDefinitionResponse> {
+) -> Option<Vec<Location>> {
     let (module_name, package_name, package, source_file) = analysis::resolve_module(build_state, file_path)?;
 
     let span = tracing::Span::current();
@@ -50,7 +50,7 @@ fn run(
     let path_str = original_file.to_string_lossy();
 
     {
-        let _guard = tracing::info_span!("lsp.definition.ensure_cmt").entered();
+        let _guard = tracing::info_span!("lsp.references.ensure_cmt").entered();
         analysis::ensure_cmt(build_state, package, source_file, file_path, source);
     }
 
@@ -58,7 +58,7 @@ fn run(
     let root_config = build_state.build_state.get_root_config();
 
     let json_blob = {
-        let _guard = tracing::info_span!("lsp.definition.build_context").entered();
+        let _guard = tracing::info_span!("lsp.references.build_context").entered();
         analysis::build_context_json(
             build_state,
             source,
@@ -71,18 +71,22 @@ fn run(
         )
     };
 
-    let _guard = tracing::info_span!("lsp.definition.analysis_binary").entered();
+    let _guard = tracing::info_span!("lsp.references.analysis_binary").entered();
 
-    let stdout = analysis::spawn_analysis_binary(build_state, &["rewatch", "definition"], &json_blob)?;
+    let stdout = analysis::spawn_analysis_binary(build_state, &["rewatch", "references"], &json_blob)?;
 
-    parse_definition_response(&stdout)
+    parse_references_response(&stdout)
 }
 
-/// Parse the JSON output from the analysis binary into an LSP GotoDefinitionResponse.
+/// Parse the JSON output from the analysis binary into a list of LSP Locations.
 ///
 /// The analysis binary outputs LSP-conformant JSON:
-/// `{"uri": "...", "range": {"start": {...}, "end": {...}}}` or `"null"`.
-pub fn parse_definition_response(stdout: &str) -> Option<GotoDefinitionResponse> {
-    let location: tower_lsp::lsp_types::Location = serde_json::from_str(stdout).ok()?;
-    Some(GotoDefinitionResponse::Scalar(location))
+/// `[{"uri": "...", "range": {...}}, ...]` or `"null"`.
+fn parse_references_response(stdout: &str) -> Option<Vec<Location>> {
+    let locations: Vec<Location> = serde_json::from_str(stdout).ok()?;
+    if locations.is_empty() {
+        None
+    } else {
+        Some(locations)
+    }
 }
