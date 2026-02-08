@@ -9,9 +9,10 @@ describe("lsp formatting", { timeout: 60_000 }, () => {
       await lsp.initialize(rootUri);
       await lsp.waitForNotification("rescript/buildFinished", 30000);
 
-      // Open a file with poor formatting (extra spaces)
+      // Open the file, then edit with poor formatting (extra spaces)
+      lsp.openFile("src/Root.res");
       const unformatted = "let    x   =    1\n";
-      lsp.openFile("src/Root.res", unformatted);
+      lsp.editFile("src/Root.res", unformatted);
 
       const edits = await lsp.formatFor("src/Root.res");
       expect(edits.length).toBe(1);

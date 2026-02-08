@@ -9,7 +9,8 @@ describe("lsp completion", { timeout: 60_000 }, () => {
       await lsp.initialize(rootUri);
       await lsp.waitForNotification("rescript/buildFinished", 30000);
 
-      // Type "App." to trigger module completion on an unsaved buffer
+      // Open the file, then type "App." to trigger module completion
+      lsp.openFile("src/Root.res");
       lsp.editFile("src/Root.res", "let x = App.\n");
 
       // Wait for didChange typecheck to complete (produces .cmt)
@@ -27,7 +28,8 @@ describe("lsp completion", { timeout: 60_000 }, () => {
       await lsp.initialize(rootUri);
       await lsp.waitForNotification("rescript/buildFinished", 30000);
 
-      // Type "Console." to trigger completion on a stdlib module
+      // Open the file, then type "Console." to trigger completion on a stdlib module
+      lsp.openFile("src/Root.res");
       lsp.editFile("src/Root.res", "Console.\n");
 
       // Wait for didChange typecheck to complete

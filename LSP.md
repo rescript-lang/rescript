@@ -295,8 +295,8 @@ The following are described in earlier design discussions but not yet implemente
 | `textDocument/inlayHint` | Not implemented |
 | `textDocument/codeLens` | Not implemented |
 | `textDocument/signatureHelp` | Not implemented |
-| `textDocument/didOpen` | No handler — should store buffer content in `open_buffers` so completion works after LSP restart without saving (the editor sends `didOpen` with full text for all open files on connect) |
-| `textDocument/didClose` | No handler (buffers not cleaned up) |
+| `textDocument/didOpen` | Implemented — stores buffer content in `open_buffers` for completion and formatting |
+| `textDocument/didClose` | Implemented — removes buffer from `open_buffers` |
 | `workspace/didChangeWatchedFiles` | Registered but handler not implemented — needs to mark dirty modules and trigger rebuild |
 | Monorepo multi-workspace | Single BuildState only |
 | `lib/lsp/` artifact separation | Uses existing build path parameterization |
@@ -339,13 +339,11 @@ export function activate(context: ExtensionContext) {
 
 ## Open Questions
 
-1. **`didOpen` / `didClose` lifecycle**: Buffers are only tracked via `didChange`. There is no `didOpen` handler and no cleanup on `didClose`, so the `open_buffers` map grows unboundedly. This may not matter in practice — the number of files a user edits in a session is small, and the memory per buffer is negligible.
+1. **Monorepo support**: Only a single `BuildState` is stored. Multiple workspace folders each trigger a build, but only the last one's state is retained.
 
-2. **Monorepo support**: Only a single `BuildState` is stored. Multiple workspace folders each trigger a build, but only the last one's state is retained.
+2. **Remaining analysis features**: Hover, definition, references, rename, formatting, etc. need to be wired up to the analysis binary (same pattern as completion).
 
-3. **Remaining analysis features**: Hover, definition, references, rename, formatting, etc. need to be wired up to the analysis binary (same pattern as completion).
-
-4. **Cold start performance**: The initial build blocks the `initialized` handler. Large projects may experience a delay before diagnostics appear.
+3. **Cold start performance**: The initial build blocks the `initialized` handler. Large projects may experience a delay before diagnostics appear.
 
 ## Prior Art
 

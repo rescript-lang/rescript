@@ -11,7 +11,8 @@ describe("lsp didChange", { timeout: 60_000 }, () => {
       await lsp.initialize(rootUri);
       await lsp.waitForNotification("rescript/buildFinished", 30000);
 
-      // Send unsaved change with a type error: App.run() returns string, not int
+      // Open the file, then send unsaved change with a type error
+      lsp.openFile("src/Root.res");
       lsp.editFile("src/Root.res", "let main: int = App.run()\n");
 
       // Wait for diagnostics to be published
@@ -30,7 +31,8 @@ describe("lsp didChange", { timeout: 60_000 }, () => {
       await lsp.initialize(rootUri);
       await lsp.waitForNotification("rescript/buildFinished", 30000);
 
-      // Introduce a type error
+      // Open the file, then introduce a type error
+      lsp.openFile("src/Root.res");
       lsp.editFile("src/Root.res", "let main: int = App.run()\n");
       await lsp.waitForNotification("textDocument/publishDiagnostics", 10000);
 
@@ -56,8 +58,9 @@ describe("lsp didChange", { timeout: 60_000 }, () => {
       await lsp.initialize(rootUri);
       await lsp.waitForNotification("rescript/buildFinished", 30000);
 
-      // Send an unsaved change with a type error so we get diagnostics back
-      // (confirms the typecheck ran) — then verify no JS was produced.
+      // Open the file, then send an unsaved change with a type error so we get
+      // diagnostics back (confirms the typecheck ran) — then verify no JS was produced.
+      lsp.openFile("src/Root.res");
       lsp.editFile("src/Root.res", "let main: int = App.run()\n");
       await lsp.waitForNotification("textDocument/publishDiagnostics", 10000);
 
@@ -73,7 +76,8 @@ describe("lsp didChange", { timeout: 60_000 }, () => {
       await lsp.initialize(rootUri);
       await lsp.waitForNotification("rescript/buildFinished", 30000);
 
-      // Incomplete expression — syntax error
+      // Open the file, then send incomplete expression — syntax error
+      lsp.openFile("src/Root.res");
       lsp.editFile("src/Root.res", "let main = \n");
       await lsp.waitForNotification("textDocument/publishDiagnostics", 10000);
 

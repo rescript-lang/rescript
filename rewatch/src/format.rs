@@ -122,9 +122,7 @@ fn format_files(bsc_exe: &Path, files: Vec<String>, check: bool) -> Result<()> {
         batch.iter().try_for_each(|file| -> Result<()> {
             let original_content = fs::read_to_string(file)?;
 
-            let output = Command::new(bsc_exe)
-                .args(["-format", file])
-                .output()?;
+            let output = Command::new(bsc_exe).args(["-format", file]).output()?;
 
             if !output.status.success() {
                 let stderr_str = String::from_utf8_lossy(&output.stderr);

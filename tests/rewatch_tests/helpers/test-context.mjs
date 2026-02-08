@@ -128,6 +128,8 @@ const SUMMARY_SPAN_NAMES = new Set([
   "lsp.completion.ensure_cmt",
   "lsp.completion.build_context",
   "lsp.completion.analysis_binary",
+  "lsp.did_open",
+  "lsp.did_close",
   "lsp.did_change",
   "lsp.formatting",
   // Build pipeline spans
@@ -169,6 +171,8 @@ const SUMMARY_ATTRS = {
   "lsp.did_save.compile_dependencies": ["module"],
   "lsp.did_save.typecheck_dependents": ["module", "dependent_count"],
   "lsp.completion": ["file", "module", "package", "items_count"],
+  "lsp.did_open": ["file"],
+  "lsp.did_close": ["file"],
   "lsp.did_change": ["file"],
   "lsp.formatting": ["file"],
   incremental_build: ["module_count"],

@@ -68,6 +68,7 @@ impl LanguageServer for Backend {
             }),
             capabilities: ServerCapabilities {
                 text_document_sync: Some(TextDocumentSyncCapability::Options(TextDocumentSyncOptions {
+                    open_close: Some(true),
                     change: Some(TextDocumentSyncKind::FULL),
                     save: Some(TextDocumentSyncSaveOptions::SaveOptions(SaveOptions {
                         include_text: Some(false),
@@ -144,8 +145,24 @@ impl LanguageServer for Backend {
     }
 
     async fn did_open(&self, params: DidOpenTextDocumentParams) {
+        let _guard = tracing::info_span!(
+            "lsp.did_open",
+            file = %params.text_document.uri.path()
+        )
+        .entered();
         if let Ok(mut buffers) = self.open_buffers.lock() {
             buffers.insert(params.text_document.uri, params.text_document.text);
+        }
+    }
+
+    async fn did_close(&self, params: DidCloseTextDocumentParams) {
+        let _guard = tracing::info_span!(
+            "lsp.did_close",
+            file = %params.text_document.uri.path()
+        )
+        .entered();
+        if let Ok(mut buffers) = self.open_buffers.lock() {
+            buffers.remove(&params.text_document.uri);
         }
     }
 

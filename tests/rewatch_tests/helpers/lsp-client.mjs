@@ -6,6 +6,7 @@ import {
   CompletionRequest,
   createProtocolConnection,
   DidChangeTextDocumentNotification,
+  DidCloseTextDocumentNotification,
   DidOpenTextDocumentNotification,
   DidSaveTextDocumentNotification,
   DocumentFormattingRequest,
@@ -129,6 +130,10 @@ export function createLspClient(cwd, otelEndpoint) {
   });
   connection.listen();
 
+  // Track opened files to enforce open-before-edit ordering
+  /** @type {Set<string>} */
+  const openedFiles = new Set();
+
   // Version counter for didChange notifications
   let nextVersion = 1;
 
@@ -230,6 +235,11 @@ export function createLspClient(cwd, otelEndpoint) {
       const uri = pathToFileURL(
         path.join(realpathSync(cwd), relativePath),
       ).href;
+      if (!openedFiles.has(uri)) {
+        throw new Error(
+          `editFile("${relativePath}") called before openFile. Call openFile first.`,
+        );
+      }
       connection.sendNotification(DidChangeTextDocumentNotification.type, {
         textDocument: { uri, version: nextVersion++ },
         contentChanges: [{ text: content }],
@@ -264,6 +274,7 @@ export function createLspClient(cwd, otelEndpoint) {
       const fullPath = path.join(realpathSync(cwd), relativePath);
       const text = content ?? readFileSync(fullPath, "utf8");
       const uri = pathToFileURL(fullPath).href;
+      openedFiles.add(uri);
       connection.sendNotification(DidOpenTextDocumentNotification.type, {
         textDocument: {
           uri,
@@ -271,6 +282,20 @@ export function createLspClient(cwd, otelEndpoint) {
           version: nextVersion++,
           text,
         },
+      });
+    },
+
+    /**
+     * Notify the LSP server that a file was closed.
+     * @param {string} relativePath - Path relative to the sandbox root
+     */
+    closeFile(relativePath) {
+      const uri = pathToFileURL(
+        path.join(realpathSync(cwd), relativePath),
+      ).href;
+      openedFiles.delete(uri);
+      connection.sendNotification(DidCloseTextDocumentNotification.type, {
+        textDocument: { uri },
       });
     },
 
