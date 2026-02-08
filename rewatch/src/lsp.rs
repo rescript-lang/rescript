@@ -149,9 +149,12 @@ impl LanguageServer for Backend {
     }
 
     async fn did_open(&self, params: DidOpenTextDocumentParams) {
+        let file_display = uri_to_file_path(&params.text_document.uri, "didOpen")
+            .map(|p| p.display().to_string())
+            .unwrap_or_default();
         let _guard = tracing::info_span!(
             "lsp.did_open",
-            file = %params.text_document.uri.path()
+            file = %file_display
         )
         .entered();
         if let Ok(mut buffers) = self.open_buffers.lock() {
@@ -160,9 +163,12 @@ impl LanguageServer for Backend {
     }
 
     async fn did_close(&self, params: DidCloseTextDocumentParams) {
+        let file_display = uri_to_file_path(&params.text_document.uri, "didClose")
+            .map(|p| p.display().to_string())
+            .unwrap_or_default();
         let _guard = tracing::info_span!(
             "lsp.did_close",
-            file = %params.text_document.uri.path()
+            file = %file_display
         )
         .entered();
         if let Ok(mut buffers) = self.open_buffers.lock() {
