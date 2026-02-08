@@ -11,6 +11,7 @@ import {
   DidSaveTextDocumentNotification,
   DocumentFormattingRequest,
   ExitNotification,
+  HoverRequest,
   InitializedNotification,
   InitializeRequest,
   PublishDiagnosticsNotification,
@@ -134,6 +135,16 @@ export function createLspClient(cwd, otelEndpoint) {
   /** @type {Set<string>} */
   const openedFiles = new Set();
 
+  function toUri(relativePath) {
+    return pathToFileURL(path.join(realpathSync(cwd), relativePath)).href;
+  }
+
+  function assertOpen(relativePath, uri) {
+    if (!openedFiles.has(uri)) {
+      throw new Error(`"${relativePath}" was not opened. Call openFile first.`);
+    }
+  }
+
   // Version counter for didChange notifications
   let nextVersion = 1;
 
@@ -217,9 +228,7 @@ export function createLspClient(cwd, otelEndpoint) {
      * @param {string} relativePath - Path relative to the sandbox root
      */
     saveFile(relativePath) {
-      const uri = pathToFileURL(
-        path.join(realpathSync(cwd), relativePath),
-      ).href;
+      const uri = toUri(relativePath);
       connection.sendNotification(DidSaveTextDocumentNotification.type, {
         textDocument: { uri },
       });
@@ -232,14 +241,8 @@ export function createLspClient(cwd, otelEndpoint) {
      * @param {string} content - The full updated file content
      */
     editFile(relativePath, content) {
-      const uri = pathToFileURL(
-        path.join(realpathSync(cwd), relativePath),
-      ).href;
-      if (!openedFiles.has(uri)) {
-        throw new Error(
-          `editFile("${relativePath}") called before openFile. Call openFile first.`,
-        );
-      }
+      const uri = toUri(relativePath);
+      assertOpen(relativePath, uri);
       connection.sendNotification(DidChangeTextDocumentNotification.type, {
         textDocument: { uri, version: nextVersion++ },
         contentChanges: [{ text: content }],
@@ -254,9 +257,8 @@ export function createLspClient(cwd, otelEndpoint) {
      * @returns {Promise<import("vscode-languageserver-protocol").CompletionItem[]>}
      */
     async completeFor(relativePath, line, character) {
-      const uri = pathToFileURL(
-        path.join(realpathSync(cwd), relativePath),
-      ).href;
+      const uri = toUri(relativePath);
+      assertOpen(relativePath, uri);
       const result = await sendRequest(CompletionRequest.type, {
         textDocument: { uri },
         position: { line, character },
@@ -266,14 +268,31 @@ export function createLspClient(cwd, otelEndpoint) {
     },
 
     /**
+     * Send a hover request for a position in a file.
+     * @param {string} relativePath - Path relative to the sandbox root
+     * @param {number} line - Zero-based line number
+     * @param {number} character - Zero-based character offset
+     * @returns {Promise<import("vscode-languageserver-protocol").Hover | null>}
+     */
+    async hoverFor(relativePath, line, character) {
+      const uri = toUri(relativePath);
+      assertOpen(relativePath, uri);
+      return sendRequest(HoverRequest.type, {
+        textDocument: { uri },
+        position: { line, character },
+      });
+    },
+
+    /**
      * Notify the LSP server that a file was opened.
      * @param {string} relativePath - Path relative to the sandbox root
-     * @param {string} [content] - The full file content (reads from disk if omitted)
      */
-    openFile(relativePath, content) {
-      const fullPath = path.join(realpathSync(cwd), relativePath);
-      const text = content ?? readFileSync(fullPath, "utf8");
-      const uri = pathToFileURL(fullPath).href;
+    openFile(relativePath) {
+      const uri = toUri(relativePath);
+      const text = readFileSync(
+        path.join(realpathSync(cwd), relativePath),
+        "utf8",
+      );
       openedFiles.add(uri);
       connection.sendNotification(DidOpenTextDocumentNotification.type, {
         textDocument: {
@@ -290,9 +309,7 @@ export function createLspClient(cwd, otelEndpoint) {
      * @param {string} relativePath - Path relative to the sandbox root
      */
     closeFile(relativePath) {
-      const uri = pathToFileURL(
-        path.join(realpathSync(cwd), relativePath),
-      ).href;
+      const uri = toUri(relativePath);
       openedFiles.delete(uri);
       connection.sendNotification(DidCloseTextDocumentNotification.type, {
         textDocument: { uri },
@@ -305,9 +322,8 @@ export function createLspClient(cwd, otelEndpoint) {
      * @returns {Promise<import("vscode-languageserver-protocol").TextEdit[]>}
      */
     async formatFor(relativePath) {
-      const uri = pathToFileURL(
-        path.join(realpathSync(cwd), relativePath),
-      ).href;
+      const uri = toUri(relativePath);
+      assertOpen(relativePath, uri);
       const result = await sendRequest(DocumentFormattingRequest.type, {
         textDocument: { uri },
         options: { tabSize: 2, insertSpaces: true },

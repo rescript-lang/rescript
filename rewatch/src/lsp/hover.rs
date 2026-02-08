@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Mutex;
 
-use tower_lsp::lsp_types::{CompletionItem, CompletionResponse, Position, Url};
+use tower_lsp::lsp_types::{Hover, HoverContents, MarkupContent, MarkupKind, Position, Url};
 use tracing::instrument;
 
 use crate::build::build_types::{BuildCommandState, BuildProfile, SourceType};
@@ -10,7 +10,7 @@ use crate::helpers;
 use crate::lsp::analysis;
 use crate::lsp::did_change;
 
-/// Handle a completion request: resolve the source buffer, lock build state,
+/// Handle a hover request: resolve the source buffer, lock build state,
 /// and delegate to the analysis binary.
 pub fn handle(
     open_buffers: &Mutex<HashMap<Url, String>>,
@@ -18,7 +18,7 @@ pub fn handle(
     file_path: &Path,
     uri: &Url,
     position: Position,
-) -> Option<CompletionResponse> {
+) -> Option<Hover> {
     let source = open_buffers
         .lock()
         .ok()
@@ -28,7 +28,7 @@ pub fn handle(
     let source = match source {
         Some(s) => s,
         None => {
-            tracing::warn!("completion: no buffer content available");
+            tracing::warn!("hover: no buffer content available");
             return None;
         }
     };
@@ -36,25 +36,19 @@ pub fn handle(
     let guard = build_state.lock().ok()?;
     let build_state = guard.as_ref()?;
 
-    run(build_state, file_path, &source, position).map(CompletionResponse::Array)
+    run(build_state, file_path, &source, position)
 }
 
-/// Run a completion request by shelling out to `rescript-editor-analysis.exe rewatch completion`.
+/// Run a hover request by shelling out to `rescript-editor-analysis.exe rewatch hover`.
 ///
 /// Builds a JSON blob with all the package/module context the analysis binary needs,
-/// pipes it to stdin, and parses the JSON completion items from stdout.
-#[instrument(name = "lsp.completion", skip_all, fields(
+/// pipes it to stdin, and parses the JSON hover response from stdout.
+#[instrument(name = "lsp.hover", skip_all, fields(
     file = %file_path.display(),
     module = tracing::field::Empty,
     package = tracing::field::Empty,
-    items_count = tracing::field::Empty,
 ))]
-fn run(
-    build_state: &BuildCommandState,
-    file_path: &Path,
-    source: &str,
-    position: Position,
-) -> Option<Vec<CompletionItem>> {
+fn run(build_state: &BuildCommandState, file_path: &Path, source: &str, position: Position) -> Option<Hover> {
     let (module_name, package_name, _is_interface) = build_state.find_module_for_file(file_path)?;
 
     let span = tracing::Span::current();
@@ -73,7 +67,7 @@ fn run(
     let original_file = package.path.join(&source_file.implementation.path);
     let path_str = original_file.to_string_lossy();
 
-    // Ensure a .cmt exists for this module. If the editor triggers completion
+    // Ensure a .cmt exists for this module. If the editor triggers hover
     // before any didChange, lib/lsp may not have the .cmt yet.
     let build_path = package.get_build_path_for_profile(BuildProfile::TypecheckOnly);
     let impl_path = &source_file.implementation.path;
@@ -81,7 +75,7 @@ fn run(
     let dir = impl_path.parent().unwrap_or(Path::new(""));
     let cmt_path = build_path.join(dir).join(format!("{}.cmt", basename));
     if !cmt_path.exists() {
-        let _guard = tracing::info_span!("lsp.completion.ensure_cmt").entered();
+        let _guard = tracing::info_span!("lsp.hover.ensure_cmt").entered();
         did_change::run(build_state, file_path, source);
     }
 
@@ -89,7 +83,7 @@ fn run(
     let root_config = build_state.build_state.get_root_config();
 
     let json_blob = {
-        let _guard = tracing::info_span!("lsp.completion.build_context").entered();
+        let _guard = tracing::info_span!("lsp.hover.build_context").entered();
         analysis::build_context_json(
             build_state,
             source,
@@ -102,22 +96,28 @@ fn run(
         )
     };
 
-    let items = {
-        let _guard = tracing::info_span!("lsp.completion.analysis_binary").entered();
+    let _guard = tracing::info_span!("lsp.hover.analysis_binary").entered();
 
-        let stdout = analysis::spawn_analysis_binary(build_state, &["rewatch", "completion"], &json_blob)?;
+    let stdout = analysis::spawn_analysis_binary(build_state, &["rewatch", "hover"], &json_blob)?;
 
-        parse_completion_response(&stdout)
-    };
-
-    span.record("items_count", items.as_ref().map_or(0, |v| v.len()));
-    items
+    parse_hover_response(&stdout)
 }
 
-/// Parse the JSON output from the analysis binary into CompletionItems.
+/// Parse the JSON output from the analysis binary into an LSP Hover.
 ///
-/// The analysis binary already outputs LSP-conformant completion items,
-/// so we deserialize directly.
-fn parse_completion_response(stdout: &str) -> Option<Vec<CompletionItem>> {
-    serde_json::from_str(stdout).ok()
+/// The analysis binary outputs: `{"contents": {"kind": "markdown", "value": "..."}}`
+/// or `"null"` when no hover info is available.
+fn parse_hover_response(stdout: &str) -> Option<Hover> {
+    let json: serde_json::Value = serde_json::from_str(stdout).ok()?;
+
+    let contents = json.get("contents")?;
+    let value = contents.get("value")?.as_str()?;
+
+    Some(Hover {
+        contents: HoverContents::Markup(MarkupContent {
+            kind: MarkupKind::Markdown,
+            value: value.to_string(),
+        }),
+        range: None,
+    })
 }

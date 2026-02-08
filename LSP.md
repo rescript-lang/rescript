@@ -62,11 +62,13 @@ rescript build          # One-shot build (unchanged, for CI)
 rewatch/src/
 ├── lsp.rs                       # Backend struct, LanguageServer impl, diagnostics publishing, run_stdio()
 └── lsp/
+    ├── analysis.rs              # Shared context-building and analysis binary spawning
     ├── initialize.rs            # Workspace discovery, file watcher registration
     ├── initial_build.rs         # Full TypecheckOnly build on startup
     ├── did_save.rs              # Two-phase incremental build on save
     ├── did_change.rs            # Single-file typecheck via bsc stdin piping
     ├── completion.rs            # Completion via analysis binary subprocess
+    ├── hover.rs                 # Hover via analysis binary subprocess
     ├── dependency_closure.rs    # Dependency/dependent graph traversal
     └── notifications.rs         # Custom rescript/buildFinished notification
 ```
@@ -86,16 +88,17 @@ rescript -vv lsp --stdio
 The LSP server currently advertises these capabilities during `initialize`:
 
 ```
-textDocumentSync:   Full (with save notifications, no include_text)
+textDocumentSync:   Full (with open_close, save notifications, no include_text)
 completionProvider: { triggerCharacters: [".", ">", "@", "~", "\"", "=", "("] }
+hoverProvider:      true
 ```
 
 The following are planned but commented out in the code:
 
 ```
-hoverProvider, definitionProvider, typeDefinitionProvider,
+definitionProvider, typeDefinitionProvider,
 referencesProvider, codeActionProvider, renameProvider (with prepare),
-documentSymbolProvider, documentFormattingProvider,
+documentSymbolProvider,
 inlayHintProvider, signatureHelpProvider
 ```
 
@@ -283,7 +286,7 @@ The following are described in earlier design discussions but not yet implemente
 
 | Feature | Status |
 |---------|--------|
-| `textDocument/hover` | Not implemented |
+| `textDocument/hover` | Implemented — shells out to analysis binary via `rewatch hover` |
 | `textDocument/definition` | Not implemented |
 | `textDocument/typeDefinition` | Not implemented |
 | `textDocument/references` | Not implemented |

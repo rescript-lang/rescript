@@ -1,8 +1,10 @@
+mod analysis;
 mod completion;
 mod dependency_closure;
 mod did_change;
 mod did_save;
 mod formatting;
+mod hover;
 mod initial_build;
 pub mod initialize;
 mod notifications;
@@ -75,7 +77,7 @@ impl LanguageServer for Backend {
                     })),
                     ..Default::default()
                 })),
-                // hover_provider: Some(HoverProviderCapability::Simple(true)),
+                hover_provider: Some(HoverProviderCapability::Simple(true)),
                 // definition_provider: Some(OneOf::Left(true)),
                 // type_definition_provider: Some(TypeDefinitionProviderCapability::Simple(true)),
                 // references_provider: Some(OneOf::Left(true)),
@@ -232,6 +234,21 @@ impl LanguageServer for Backend {
             &file_path,
             uri,
             params.text_document_position.position,
+        ))
+    }
+
+    async fn hover(&self, params: HoverParams) -> Result<Option<Hover>> {
+        let uri = &params.text_document_position_params.text_document.uri;
+        let Some(file_path) = uri_to_file_path(uri, "hover") else {
+            return Ok(None);
+        };
+
+        Ok(hover::handle(
+            &self.open_buffers,
+            &self.build_state,
+            &file_path,
+            uri,
+            params.text_document_position_params.position,
         ))
     }
 

@@ -29,7 +29,8 @@ let getCompletions ~debug ~path ~pos ~currentFile ~forHover =
         in
         Some (completables, full, scope)))
 
-let getCompletionsFromSource ~debug ~path ~pos ~source ~package =
+let getCompletionsFromSource ~debug ~path ~pos ~source ~package
+    ?(forHover = false) () =
   match
     CompletionFrontEnd.completionWithParserFromSource ~debug ~path
       ~posCursor:pos ~source
@@ -43,6 +44,6 @@ let getCompletionsFromSource ~debug ~path ~pos ~source ~package =
       let completables =
         completable
         |> CompletionBackEnd.processCompletable ~debug ~full ~pos ~scope ~env
-             ~forHover:false
+             ~forHover
       in
       Some (completables, full, scope))

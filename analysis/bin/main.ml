@@ -134,7 +134,8 @@ let main () =
     | _ -> print_endline "\"ERR: Did not find root \"")
   | _ :: "rewatch" :: rewatchArgs -> (
     match rewatchArgs with
-    | ["completion"] -> CommandsRewatch.completionRewatch ()
+    | ["completion"] -> CommandsRewatch.completion ()
+    | ["hover"] -> CommandsRewatch.hover ()
     | _ -> prerr_endline "Unknown rewatch subcommand")
   | [_; "completion"; path; line; col; currentFile] ->
     printHeaderInfo path line col;
