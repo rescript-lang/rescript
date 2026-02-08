@@ -65,10 +65,8 @@ exports[`interface files > reports error when implementation is renamed but inte
   "    build.parse[dirty_modules=1]",
   "      build.parse_file[module=LibRenamed, package=@rewatch-test/library]",
   "    build.compile",
-  "      build.compile_wave[file_count=2]",
-  "        build.compile_file[module=App, package=@rewatch-test/app, suffix=.mjs, module_system=esmodule]",
+  "      build.compile_wave[file_count=1]",
   "        build.compile_file[module=LibRenamed, package=@rewatch-test/library, suffix=.mjs, module_system=esmodule]",
-  "    build.compile_error",
 ]
 `;
 

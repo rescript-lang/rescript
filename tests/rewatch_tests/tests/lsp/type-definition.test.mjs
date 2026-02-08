@@ -9,12 +9,12 @@ describe("lsp type definition", { timeout: 60_000 }, () => {
       await lsp.initialize(rootUri);
       await lsp.waitForNotification("rescript/buildFinished", 30000);
 
-      // App.res line 1: let appAdmin = Library.admin
-      // Library.admin has type Library.user, defined at line 2 of Library.res
-      await lsp.openFile("packages/app/src/App.res");
+      // Library.res line 3: let admin: user = {name: "admin"}
+      // admin has type user, defined at line 2 of Library.res
+      await lsp.openFile("packages/library/src/Library.res");
       const result = await lsp.typeDefinitionFor(
-        "packages/app/src/App.res",
-        1,
+        "packages/library/src/Library.res",
+        3,
         4,
       );
       expect(result).not.toBeNull();

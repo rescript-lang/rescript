@@ -345,6 +345,8 @@ exports[`watch > watches for file changes and rebuilds 1`] = `
   "      build.compile_wave[file_count=1]",
   "        build.compile_file[module=Library, package=@rewatch-test/library, suffix=.mjs, module_system=esmodule]",
   "      build.compile_wave[file_count=1]",
+  "        build.compile_file[module=App, package=@rewatch-test/app, suffix=.mjs, module_system=esmodule]",
   "      build.compile_wave[file_count=1]",
+  "        build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
 ]
 `;
