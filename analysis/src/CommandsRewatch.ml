@@ -139,6 +139,14 @@ let withRewatchContext ~name ~default f =
     let ctx = parseRewatchContext json in
     print_endline (f ctx)
 
+let withLocItem {path; pos; package; _} f =
+  match Cmt.loadFullCmtWithPackage ~path ~package with
+  | None -> None
+  | Some full -> (
+    match References.getLocItem ~full ~pos ~debug:false with
+    | None -> None
+    | Some locItem -> f full locItem)
+
 let completion () =
   withRewatchContext ~name:"completion" ~default:"[]"
     (fun {source; path; pos; package; _} ->
@@ -200,15 +208,9 @@ let hover () =
             | _ -> Protocol.null))))
 
 let definition () =
-  withRewatchContext ~name:"definition" ~default:Protocol.null
-    (fun {path; pos; package; _} ->
+  withRewatchContext ~name:"definition" ~default:Protocol.null (fun ctx ->
       let locationOpt =
-        match Cmt.loadFullCmtWithPackage ~path ~package with
-        | None -> None
-        | Some full -> (
-          match References.getLocItem ~full ~pos ~debug:false with
-          | None -> None
-          | Some locItem -> (
+        withLocItem ctx (fun full locItem ->
             match References.definitionForLocItem ~full locItem with
             | None -> None
             | Some (uri, loc) when not loc.loc_ghost ->
@@ -232,7 +234,24 @@ let definition () =
                     Protocol.uri = Files.canonicalizeUri uri;
                     range = Utils.cmtLocToRange loc;
                   }
-            | Some _ -> None))
+            | Some _ -> None)
+      in
+      match locationOpt with
+      | None -> Protocol.null
+      | Some location -> location |> Protocol.stringifyLocation)
+
+let typeDefinition () =
+  withRewatchContext ~name:"typeDefinition" ~default:Protocol.null (fun ctx ->
+      let locationOpt =
+        withLocItem ctx (fun full locItem ->
+            match References.typeDefinitionForLocItem ~full locItem with
+            | None -> None
+            | Some (uri, loc) ->
+              Some
+                {
+                  Protocol.uri = Files.canonicalizeUri uri;
+                  range = Utils.cmtLocToRange loc;
+                })
       in
       match locationOpt with
       | None -> Protocol.null

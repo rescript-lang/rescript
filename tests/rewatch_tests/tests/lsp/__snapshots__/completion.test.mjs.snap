@@ -33,7 +33,7 @@ exports[`lsp completion > returns completions for a module dot access 1`] = `
   "          build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
   "  lsp.did_open[file=src/Root.res]",
   "  lsp.did_change[file=src/Root.res]",
-  "  lsp.completion[file=src/Root.res, module=Root, package=rewatch-test-fixture, items_count=1]",
+  "  lsp.completion[file=src/Root.res, module=Root, package=rewatch-test-fixture, items_count=2]",
   "    lsp.completion.ensure_cmt",
   "    lsp.completion.build_context",
   "    lsp.completion.analysis_binary",

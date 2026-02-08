@@ -82,7 +82,7 @@ fn run(
 ///
 /// The analysis binary outputs: `{"uri": "...", "range": {"start": {...}, "end": {...}}}`
 /// or `"null"` when no definition is found.
-fn parse_definition_response(stdout: &str) -> Option<GotoDefinitionResponse> {
+pub fn parse_definition_response(stdout: &str) -> Option<GotoDefinitionResponse> {
     let json: serde_json::Value = serde_json::from_str(stdout).ok()?;
 
     let uri_str = json.get("uri")?.as_str()?;

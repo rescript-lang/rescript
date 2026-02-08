@@ -18,6 +18,7 @@ import {
   PublishDiagnosticsNotification,
   RegistrationRequest,
   ShutdownRequest,
+  TypeDefinitionRequest,
 } from "vscode-languageserver-protocol/node.js";
 import { bsc_exe, rescript_exe, runtimePath } from "./bins.mjs";
 
@@ -295,6 +296,22 @@ export function createLspClient(cwd, otelEndpoint) {
       const uri = toUri(relativePath);
       assertOpen(relativePath, uri);
       return sendRequest(DefinitionRequest.type, {
+        textDocument: { uri },
+        position: { line, character },
+      });
+    },
+
+    /**
+     * Send a type definition request for a position in a file.
+     * @param {string} relativePath - Path relative to the sandbox root
+     * @param {number} line - Zero-based line number
+     * @param {number} character - Zero-based character offset
+     * @returns {Promise<import("vscode-languageserver-protocol").Location | null>}
+     */
+    async typeDefinitionFor(relativePath, line, character) {
+      const uri = toUri(relativePath);
+      assertOpen(relativePath, uri);
+      return sendRequest(TypeDefinitionRequest.type, {
         textDocument: { uri },
         position: { line, character },
       });
