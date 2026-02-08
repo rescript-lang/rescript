@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Mutex;
 
-use tower_lsp::lsp_types::{Hover, HoverContents, MarkupContent, MarkupKind, Position, Url};
+use tower_lsp::lsp_types::{Hover, Position, Url};
 use tracing::instrument;
 
 use crate::build::build_types::BuildCommandState;
@@ -75,19 +75,8 @@ fn run(build_state: &BuildCommandState, file_path: &Path, source: &str, position
 
 /// Parse the JSON output from the analysis binary into an LSP Hover.
 ///
-/// The analysis binary outputs: `{"contents": {"kind": "markdown", "value": "..."}}`
-/// or `"null"` when no hover info is available.
+/// The analysis binary outputs LSP-conformant JSON:
+/// `{"contents": {"kind": "markdown", "value": "..."}}` or `"null"`.
 fn parse_hover_response(stdout: &str) -> Option<Hover> {
-    let json: serde_json::Value = serde_json::from_str(stdout).ok()?;
-
-    let contents = json.get("contents")?;
-    let value = contents.get("value")?.as_str()?;
-
-    Some(Hover {
-        contents: HoverContents::Markup(MarkupContent {
-            kind: MarkupKind::Markdown,
-            value: value.to_string(),
-        }),
-        range: None,
-    })
+    serde_json::from_str(stdout).ok()
 }

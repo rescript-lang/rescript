@@ -261,7 +261,7 @@ let references () =
                          in
                          Protocol.stringifyLocation
                            {
-                             Protocol.uri = Uri.toString uri;
+                             Protocol.uri = Files.canonicalizeUri uri;
                              range = Utils.cmtLocToRange loc;
                            })))
         with
