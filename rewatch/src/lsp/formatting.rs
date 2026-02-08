@@ -1,11 +1,11 @@
 use std::collections::HashMap;
-use std::io::Write;
 use std::path::Path;
-use std::process::{Command, Stdio};
 use std::sync::Mutex;
 
 use tower_lsp::lsp_types::{Position, Range, TextEdit, Url};
 use tracing::instrument;
+
+use crate::format::format_source;
 
 /// Handle a formatting request: get the source buffer, run `bsc -format -bs-read-stdin`,
 /// and return a full-document TextEdit with the formatted output.
@@ -30,39 +30,13 @@ pub fn run(
         }
     };
 
-    let mut child = match Command::new(bsc_path)
-        .args(["-bs-read-stdin", "-format", &file_path.to_string_lossy()])
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-    {
-        Ok(child) => child,
+    let formatted = match format_source(bsc_path, &source, &file_path.to_string_lossy()) {
+        Ok(f) => f,
         Err(e) => {
-            tracing::warn!("formatting: failed to spawn bsc: {e}");
+            tracing::debug!("formatting: {e}");
             return None;
         }
     };
-
-    if let Some(mut stdin) = child.stdin.take() {
-        let _ = stdin.write_all(source.as_bytes());
-    }
-
-    let output = match child.wait_with_output() {
-        Ok(output) => output,
-        Err(e) => {
-            tracing::warn!("formatting: bsc invocation failed: {e}");
-            return None;
-        }
-    };
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        tracing::debug!(stderr = %stderr, "formatting: bsc -format failed");
-        return None;
-    }
-
-    let formatted = String::from_utf8_lossy(&output.stdout).into_owned();
 
     Some(vec![TextEdit {
         range: Range {
