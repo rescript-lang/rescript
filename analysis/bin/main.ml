@@ -160,7 +160,13 @@ let main () =
     Commands.typeDefinition ~path
       ~pos:(int_of_string line, int_of_string col)
       ~debug
-  | [_; "documentSymbol"; path] -> print_endline (DocumentSymbol.command ~path)
+  | [_; "documentSymbol"; path] ->
+    let source =
+      match Files.readFile path with
+      | Some s -> s
+      | None -> ""
+    in
+    print_endline (DocumentSymbol.command ~path ~source)
   | [_; "hover"; path; line; col; currentFile; supportsMarkdownLinks] ->
     Commands.hover ~path
       ~pos:(int_of_string line, int_of_string col)

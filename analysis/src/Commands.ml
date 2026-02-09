@@ -410,7 +410,7 @@ let test ~path =
             DceCommand.command ()
           | "doc" ->
             print_endline ("DocumentSymbol " ^ path);
-            print_endline (DocumentSymbol.command ~path)
+            print_endline (DocumentSymbol.command ~path ~source:text)
           | "hig" ->
             print_endline ("Highlight " ^ path);
             SemanticTokens.command ~debug:true

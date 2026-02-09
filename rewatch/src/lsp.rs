@@ -422,11 +422,7 @@ impl Backend {
     /// Publish diagnostics after a didChange or didSave. Clears stale
     /// diagnostics from files that had errors previously but not anymore,
     /// and always notifies for `origin_uri` even when it compiled cleanly.
-    async fn publish_diagnostics_for_file(
-        &self,
-        diagnostics: &[BscDiagnostic],
-        origin_uri: &Url,
-    ) {
+    async fn publish_diagnostics_for_file(&self, diagnostics: &[BscDiagnostic], origin_uri: &Url) {
         let by_file = Self::group_by_file(diagnostics);
         let current_files: HashSet<Url> = by_file.keys().cloned().collect();
 

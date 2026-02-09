@@ -349,8 +349,8 @@ let rename () =
       | Some result -> result)
 
 let documentSymbol () =
-  withRewatchContext ~name:"documentSymbol" ~default:"[]" (fun {path; _} ->
-      DocumentSymbol.command ~path)
+  withRewatchContext ~name:"documentSymbol" ~default:"[]"
+    (fun {source; path; _} -> DocumentSymbol.command ~path ~source)
 
 let references () =
   withRewatchContext ~name:"references" ~default:Protocol.null (fun ctx ->
