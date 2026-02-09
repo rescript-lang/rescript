@@ -93,6 +93,7 @@ impl LanguageServer for Backend {
                 })),
                 document_symbol_provider: Some(OneOf::Left(true)),
                 completion_provider: Some(CompletionOptions {
+                    resolve_provider: Some(true),
                     trigger_characters: Some(
                         [".", ">", "@", "~", "\"", "=", "("]
                             .iter()
@@ -246,6 +247,10 @@ impl LanguageServer for Backend {
             uri,
             params.text_document_position.position,
         ))
+    }
+
+    async fn completion_resolve(&self, item: CompletionItem) -> Result<CompletionItem> {
+        Ok(completion::handle_resolve(&self.build_state, item))
     }
 
     async fn hover(&self, params: HoverParams) -> Result<Option<Hover>> {

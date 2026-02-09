@@ -135,6 +135,7 @@ let main () =
   | _ :: "rewatch" :: rewatchArgs -> (
     match rewatchArgs with
     | ["completion"] -> CommandsRewatch.completion ()
+    | ["completionResolve"] -> CommandsRewatch.completionResolve ()
     | ["hover"] -> CommandsRewatch.hover ()
     | ["definition"] -> CommandsRewatch.definition ()
     | ["typeDefinition"] -> CommandsRewatch.typeDefinition ()

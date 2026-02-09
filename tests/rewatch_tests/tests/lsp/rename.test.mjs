@@ -9,12 +9,12 @@ describe("lsp rename", { timeout: 60_000 }, () => {
       await lsp.initialize(rootUri);
       await lsp.waitForNotification("rescript/buildFinished", 30000);
 
-      // Library.res line 0: let greeting = "hello from library"
+      // Library.res line 1: let greeting = "hello from library"
       // Cursor on `greeting` at col 4
       await lsp.openFile("packages/library/src/Library.res");
       const result = await lsp.prepareRenameFor(
         "packages/library/src/Library.res",
-        0,
+        1,
         4,
       );
       expect(result).not.toBeNull();
@@ -28,12 +28,12 @@ describe("lsp rename", { timeout: 60_000 }, () => {
       await lsp.initialize(rootUri);
       await lsp.waitForNotification("rescript/buildFinished", 30000);
 
-      // Library.res line 0: let greeting = "hello from library"
+      // Library.res line 1: let greeting = "hello from library"
       // Rename `greeting` to `hello`
       await lsp.openFile("packages/library/src/Library.res");
       const result = await lsp.renameFor(
         "packages/library/src/Library.res",
-        0,
+        1,
         4,
         "hello",
       );

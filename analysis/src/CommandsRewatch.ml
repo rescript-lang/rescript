@@ -72,6 +72,7 @@ type rewatch_context = {
   path: string;
   pos: int * int;
   newName: string;
+  modulePath: string;
   package: SharedTypes.package;
 }
 
@@ -129,7 +130,8 @@ let parseRewatchContext json =
     }
   in
   let newName = getString "newName" json in
-  {source; path; pos; newName; package}
+  let modulePath = getString "modulePath" json in
+  {source; path; pos; newName; modulePath; package}
 
 let withRewatchContext ~name ~default f =
   let input = In_channel.input_all In_channel.stdin in
@@ -164,6 +166,25 @@ let completion () =
           |> List.map Protocol.stringifyCompletionItem
       in
       completions |> Protocol.array)
+
+let completionResolve () =
+  withRewatchContext ~name:"completionResolve" ~default:Protocol.null
+    (fun {path; package; modulePath; _} ->
+      let moduleName =
+        match modulePath |> String.split_on_char '.' with
+        | moduleName :: _ -> moduleName
+        | [] -> ""
+      in
+      if moduleName = "" then Protocol.null
+      else
+        match Cmt.loadFullCmtWithPackage ~path ~package with
+        | None -> Protocol.null
+        | Some full -> (
+          match ProcessCmt.fileForModule ~package:full.package moduleName with
+          | None -> Protocol.null
+          | Some file ->
+            file.structure.docstring |> String.concat "\n\n"
+            |> Protocol.wrapInQuotes))
 
 let hover () =
   withRewatchContext ~name:"hover" ~default:Protocol.null

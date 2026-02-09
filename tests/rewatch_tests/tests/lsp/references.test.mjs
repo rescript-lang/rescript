@@ -16,7 +16,7 @@ describe("lsp references", { timeout: 60_000 }, () => {
       await lsp.openFile("packages/library/src/Library.res");
       const result = await lsp.referencesFor(
         "packages/library/src/Library.res",
-        0,
+        1,
         4,
       );
       expect(result).not.toBeNull();

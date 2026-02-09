@@ -4,6 +4,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   CompletionRequest,
+  CompletionResolveRequest,
   createProtocolConnection,
   DefinitionRequest,
   DidChangeTextDocumentNotification,
@@ -271,6 +272,15 @@ export function createLspClient(cwd, otelEndpoint) {
       });
       if (!result) return [];
       return Array.isArray(result) ? result : result.items;
+    },
+
+    /**
+     * Send a completionItem/resolve request to enrich a completion item.
+     * @param {import("vscode-languageserver-protocol").CompletionItem} item - The completion item to resolve
+     * @returns {Promise<import("vscode-languageserver-protocol").CompletionItem>}
+     */
+    async resolveCompletion(item) {
+      return sendRequest(CompletionResolveRequest.type, item);
     },
 
     /**

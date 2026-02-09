@@ -294,11 +294,11 @@ Comparison with the old Node.js LSP (`rescript-vscode/server/src/server.ts`). Fe
 | `textDocument/hover` | Implemented (analysis) | - |
 | `textDocument/formatting` | Implemented | - |
 | `textDocument/definition` | Implemented (analysis) | - |
-| `textDocument/typeDefinition` | Done | Yes — core navigation |
-| `textDocument/references` | TODO (analysis) | Yes — core navigation |
-| `textDocument/rename` / `prepareRename` | TODO (analysis) | Yes — core refactoring |
-| `textDocument/completion/resolve` | TODO (analysis) | Yes — populates documentation for selected completion item |
-| `textDocument/documentSymbol` | TODO (analysis) | Yes — powers outline view and breadcrumbs |
+| `textDocument/typeDefinition` | Implemented (analysis) | - |
+| `textDocument/references` | Implemented (analysis) | - |
+| `textDocument/rename` / `prepareRename` | Implemented (analysis) | - |
+| `textDocument/completion/resolve` | Implemented (analysis) | - |
+| `textDocument/documentSymbol` | Implemented (analysis) | - |
 | `textDocument/codeAction` | TODO (analysis) | Yes — quick fixes from diagnostics and analysis |
 | `textDocument/signatureHelp` | TODO (analysis) | Yes — shows function parameter info while typing |
 | `textDocument/semanticTokens` | TODO (analysis) | Nice to have — enhanced syntax highlighting |

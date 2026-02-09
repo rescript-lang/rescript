@@ -40,4 +40,30 @@ describe("lsp completion", { timeout: 60_000 }, () => {
       expect(labels.length).toBeGreaterThan(1);
       expect(labels).toContain("log");
     }));
+
+  it("resolves documentation for a file module completion", () =>
+    runLspTest(async ({ lsp, sandbox }) => {
+      const rootUri = pathToFileURL(sandbox).href;
+      await lsp.initialize(rootUri);
+      await lsp.waitForNotification("rescript/buildFinished", 30000);
+
+      // Open App.res and type "Lib" to get Library as a FileModule completion
+      lsp.openFile("packages/app/src/App.res");
+      lsp.editFile("packages/app/src/App.res", "Lib\n");
+
+      // Wait for didChange typecheck
+      await lsp.waitForNotification("textDocument/publishDiagnostics", 10000);
+
+      const items = await lsp.completeFor("packages/app/src/App.res", 0, 3);
+      // Find the Library completion item — it should have data with modulePath
+      const libraryItem = items.find(
+        i => i.label === "Library" && i.data?.modulePath,
+      );
+      expect(libraryItem).toBeDefined();
+      expect(libraryItem.data.modulePath).toBe("Library");
+
+      // Resolve it — should populate documentation
+      const resolved = await lsp.resolveCompletion(libraryItem);
+      expect(resolved.documentation).toBe("A library for greetings and users.");
+    }));
 });
