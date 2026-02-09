@@ -3,6 +3,7 @@ import { readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import {
+  CodeActionRequest,
   CodeLensRequest,
   CompletionRequest,
   CompletionResolveRequest,
@@ -374,6 +375,28 @@ export function createLspClient(cwd, otelEndpoint) {
       assertOpen(relativePath, uri);
       return sendRequest(CodeLensRequest.type, {
         textDocument: { uri },
+      });
+    },
+
+    /**
+     * Request code actions for a range in an open file.
+     * @param {string} relativePath - Path relative to the sandbox root
+     * @param {number} startLine - Zero-based start line
+     * @param {number} startChar - Zero-based start character
+     * @param {number} endLine - Zero-based end line
+     * @param {number} endChar - Zero-based end character
+     * @returns {Promise<import("vscode-languageserver-protocol").CodeAction[] | null>}
+     */
+    async codeActionFor(relativePath, startLine, startChar, endLine, endChar) {
+      const uri = toUri(relativePath);
+      assertOpen(relativePath, uri);
+      return sendRequest(CodeActionRequest.type, {
+        textDocument: { uri },
+        range: {
+          start: { line: startLine, character: startChar },
+          end: { line: endLine, character: endChar },
+        },
+        context: { diagnostics: [] },
       });
     },
 

@@ -1,4 +1,5 @@
 mod analysis;
+mod code_action;
 mod code_lens;
 mod completion;
 mod definition;
@@ -90,7 +91,7 @@ impl LanguageServer for Backend {
                 definition_provider: Some(OneOf::Left(true)),
                 type_definition_provider: Some(TypeDefinitionProviderCapability::Simple(true)),
                 references_provider: Some(OneOf::Left(true)),
-                // code_action_provider: Some(CodeActionProviderCapability::Simple(true)),
+                code_action_provider: Some(CodeActionProviderCapability::Simple(true)),
                 rename_provider: Some(OneOf::Right(RenameOptions {
                     prepare_provider: Some(true),
                     work_done_progress_options: WorkDoneProgressOptions::default(),
@@ -424,6 +425,21 @@ impl LanguageServer for Backend {
         };
 
         Ok(inlay_hint::handle(
+            &self.open_buffers,
+            &self.build_state,
+            &file_path,
+            uri,
+            params.range,
+        ))
+    }
+
+    async fn code_action(&self, params: CodeActionParams) -> Result<Option<CodeActionResponse>> {
+        let uri = &params.text_document.uri;
+        let Some(file_path) = uri_to_file_path(uri, "code_action") else {
+            return Ok(None);
+        };
+
+        Ok(code_action::handle(
             &self.open_buffers,
             &self.build_state,
             &file_path,

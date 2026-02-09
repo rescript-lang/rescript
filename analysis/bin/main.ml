@@ -147,6 +147,7 @@ let main () =
     | ["codeLens"] -> CommandsRewatch.codeLens ()
     | ["inlayHint"] -> CommandsRewatch.inlayHint ()
     | ["semanticTokens"] -> CommandsRewatch.semanticTokens ()
+    | ["codeAction"] -> CommandsRewatch.codeAction ()
     | _ -> prerr_endline "Unknown rewatch subcommand")
   | [_; "completion"; path; line; col; currentFile] ->
     printHeaderInfo path line col;

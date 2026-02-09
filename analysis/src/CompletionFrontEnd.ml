@@ -1856,3 +1856,10 @@ let findTypeOfExpressionAtLoc ~debug ~path ~posCursor ~currentFile loc =
       completionWithParser1 ~findThisExprLoc:loc ~currentFile ~debug ~offset
         ~path ~posCursor text
     | None -> None)
+
+let findTypeOfExpressionAtLocFromSource ~debug ~path ~posCursor ~source loc =
+  match Pos.positionToOffset source posCursor with
+  | Some offset ->
+    completionWithParser1 ~findThisExprLoc:loc ~currentFile:path ~debug ~offset
+      ~path ~posCursor ~source source
+  | None -> None

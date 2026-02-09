@@ -71,6 +71,7 @@ type rewatch_context = {
   source: string;
   path: string;
   pos: int * int;
+  endPos: int * int;
   newName: string;
   modulePath: string;
   maxLength: string;
@@ -130,10 +131,16 @@ let parseRewatchContext json =
       autocomplete = Misc.StringMap.empty;
     }
   in
+  let endPos =
+    match Json.get "endPos" json with
+    | Some (Json.Array [Json.Number line; Json.Number col]) ->
+      (int_of_float line, int_of_float col)
+    | _ -> (0, 0)
+  in
   let newName = getString "newName" json in
   let modulePath = getString "modulePath" json in
   let maxLength = getString "maxLength" json in
-  {source; path; pos; newName; modulePath; maxLength; package}
+  {source; path; pos; endPos; newName; modulePath; maxLength; package}
 
 let withRewatchContext ~name ~default f =
   let input = In_channel.input_all In_channel.stdin in
@@ -374,6 +381,13 @@ let semanticTokens () =
   withRewatchContext ~name:"semanticTokens" ~default:"{\"data\":[]}"
     (fun {source; path; _} ->
       SemanticTokens.semanticTokensFromSource ~path ~source)
+
+let codeAction () =
+  withRewatchContext ~name:"codeAction" ~default:"[]"
+    (fun {source; path; pos; endPos; package; _} ->
+      Xform.extractCodeActionsFromSource ~path ~startPos:pos ~endPos ~source
+        ~package ~debug:false
+      |> CodeActions.stringifyCodeActions)
 
 let references () =
   withRewatchContext ~name:"references" ~default:Protocol.null (fun ctx ->
