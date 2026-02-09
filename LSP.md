@@ -299,11 +299,11 @@ Comparison with the old Node.js LSP (`rescript-vscode/server/src/server.ts`). Fe
 | `textDocument/rename` / `prepareRename` | Implemented (analysis) | - |
 | `textDocument/completion/resolve` | Implemented (analysis) | - |
 | `textDocument/documentSymbol` | Implemented (analysis) | - |
-| `textDocument/codeAction` | TODO (analysis) | Yes — quick fixes from diagnostics and analysis |
-| `textDocument/signatureHelp` | TODO (analysis) | Yes — shows function parameter info while typing |
-| `textDocument/semanticTokens` | TODO (analysis) | Nice to have — enhanced syntax highlighting |
-| `textDocument/inlayHint` | TODO (analysis) | Nice to have — inline type annotations, off by default in old LSP |
-| `textDocument/codeLens` | TODO (analysis) | Nice to have — off by default in old LSP |
+| `textDocument/codeAction` | Implemented (analysis) | - |
+| `textDocument/signatureHelp` | Implemented (analysis) | - |
+| `textDocument/semanticTokens` | Implemented (analysis) | - |
+| `textDocument/inlayHint` | Implemented (analysis) | - |
+| `textDocument/codeLens` | Implemented (analysis) | - |
 | `textDocument/createInterface` | TODO (analysis) | Low priority — niche feature, generates `.resi` from `.res` |
 | `textDocument/openCompiled` | TODO | Low priority — niche feature, opens compiled `.js` output |
 | `diagnosticSyntax` on `didChange` | TODO (analysis) | Low priority — old LSP ran syntax diagnostics on every keystroke via analysis binary. Our `didChange` already runs `bsc` which catches syntax errors. |
