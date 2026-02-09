@@ -1,12 +1,43 @@
-use std::path::Path;
+use std::collections::HashSet;
+use std::path::{Path, PathBuf};
 
+use ahash::AHashSet;
 use tracing::instrument;
 
 use crate::build;
-use crate::build::build_types::{BuildCommandState, BuildProfile, CompilationStage};
+use crate::build::build_types::{BuildCommandState, BuildProfile, CompilationStage, SourceType};
 use crate::build::diagnostics::BscDiagnostic;
 
 use super::dependency_closure;
+
+/// Result of a save operation, including diagnostics and which files were touched.
+pub struct SaveResult {
+    pub diagnostics: Vec<BscDiagnostic>,
+    /// Absolute paths of all source files that were compiled or typechecked.
+    /// Used by the caller to publish diagnostics (or empty `[]`) for each file.
+    pub touched_files: HashSet<PathBuf>,
+}
+
+/// Map a set of module names to their absolute source file paths.
+fn module_names_to_paths(build_state: &BuildCommandState, names: &AHashSet<String>) -> HashSet<PathBuf> {
+    let mut paths = HashSet::new();
+    for name in names {
+        let Some(module) = build_state.build_state.modules.get(name) else {
+            continue;
+        };
+        let SourceType::SourceFile(source_file) = &module.source_type else {
+            continue;
+        };
+        let Some(package) = build_state.build_state.packages.get(&module.package_name) else {
+            continue;
+        };
+        paths.insert(package.path.join(&source_file.implementation.path));
+        if let Some(interface) = &source_file.interface {
+            paths.insert(package.path.join(&interface.path));
+        }
+    }
+    paths
+}
 
 /// Run an incremental build after a file was saved.
 ///
@@ -21,7 +52,7 @@ use super::dependency_closure;
 ///    changes. No JS is emitted for dependents — they get JS when they are
 ///    themselves saved.
 #[instrument(name = "lsp.did_save", skip_all, fields(file = %file_path.display()))]
-pub fn run(build_state: &mut BuildCommandState, file_path: &Path) -> Vec<BscDiagnostic> {
+pub fn run(build_state: &mut BuildCommandState, file_path: &Path) -> SaveResult {
     let module_name = match build_state.mark_file_parse_dirty(file_path) {
         Some(name) => name,
         None => {
@@ -29,13 +60,22 @@ pub fn run(build_state: &mut BuildCommandState, file_path: &Path) -> Vec<BscDiag
                 path = %file_path.display(),
                 "didSave: no module found for file"
             );
-            return Vec::new();
+            return SaveResult {
+                diagnostics: Vec::new(),
+                touched_files: HashSet::new(),
+            };
         }
     };
 
-    let mut diagnostics = compile_dependencies(build_state, &module_name);
-    diagnostics.extend(typecheck_dependents(build_state, &module_name));
-    diagnostics
+    let (mut diagnostics, mut touched_files) = compile_dependencies(build_state, &module_name);
+    let (dep_diagnostics, dep_touched) = typecheck_dependents(build_state, &module_name);
+    diagnostics.extend(dep_diagnostics);
+    touched_files.extend(dep_touched);
+
+    SaveResult {
+        diagnostics,
+        touched_files,
+    }
 }
 
 /// Phase 1: Compile the saved file and its transitive dependencies to JS.
@@ -50,8 +90,12 @@ pub fn run(build_state: &mut BuildCommandState, file_path: &Path) -> Vec<BscDiag
 /// 3. Run the incremental build — only closure modules compile
 /// 4. Restore promoted modules back to `TypeChecked`
 #[instrument(name = "lsp.did_save.compile_dependencies", skip_all, fields(module = module_name))]
-fn compile_dependencies(build_state: &mut BuildCommandState, module_name: &str) -> Vec<BscDiagnostic> {
+fn compile_dependencies(
+    build_state: &mut BuildCommandState,
+    module_name: &str,
+) -> (Vec<BscDiagnostic>, HashSet<PathBuf>) {
     let closure = dependency_closure::get_dependency_closure(&build_state.build_state.modules, module_name);
+    let touched_files = module_names_to_paths(build_state, &closure);
 
     // Temporarily promote modules outside the closure to `Built` so they
     // are excluded from the compile universe.
@@ -63,7 +107,7 @@ fn compile_dependencies(build_state: &mut BuildCommandState, module_name: &str) 
         }
     }
 
-    let result = match build::incremental_build(
+    let diagnostics = match build::incremental_build(
         build_state,
         BuildProfile::TypecheckAndEmit,
         Some(std::time::Duration::ZERO),
@@ -90,7 +134,7 @@ fn compile_dependencies(build_state: &mut BuildCommandState, module_name: &str) 
         }
     }
 
-    result
+    (diagnostics, touched_files)
 }
 
 /// Phase 2: Re-typecheck modules that transitively depend on the saved file.
@@ -108,12 +152,17 @@ fn compile_dependencies(build_state: &mut BuildCommandState, module_name: &str) 
 /// 4. Run an incremental build with `TypecheckOnly`
 /// 5. Restore promoted modules
 #[instrument(name = "lsp.did_save.typecheck_dependents", skip_all, fields(module = module_name, dependent_count = tracing::field::Empty))]
-fn typecheck_dependents(build_state: &mut BuildCommandState, module_name: &str) -> Vec<BscDiagnostic> {
+fn typecheck_dependents(
+    build_state: &mut BuildCommandState,
+    module_name: &str,
+) -> (Vec<BscDiagnostic>, HashSet<PathBuf>) {
     let dependents = dependency_closure::get_dependent_closure(&build_state.build_state.modules, module_name);
 
     if dependents.is_empty() {
-        return Vec::new();
+        return (Vec::new(), HashSet::new());
     }
+
+    let touched_files = module_names_to_paths(build_state, &dependents);
 
     tracing::Span::current().record("dependent_count", dependents.len());
 
@@ -136,7 +185,7 @@ fn typecheck_dependents(build_state: &mut BuildCommandState, module_name: &str) 
         }
     }
 
-    let result = match build::incremental_build(
+    let diagnostics = match build::incremental_build(
         build_state,
         BuildProfile::TypecheckOnly,
         Some(std::time::Duration::ZERO),
@@ -162,5 +211,5 @@ fn typecheck_dependents(build_state: &mut BuildCommandState, module_name: &str) 
         }
     }
 
-    result
+    (diagnostics, touched_files)
 }

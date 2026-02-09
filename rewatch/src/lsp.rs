@@ -19,7 +19,7 @@ mod semantic_tokens;
 mod signature_help;
 mod type_definition;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Mutex, RwLock};
 
@@ -47,9 +47,6 @@ struct Backend {
     workspace_folders: RwLock<Vec<String>>,
     /// Build state persisted across LSP requests for incremental builds.
     build_state: Mutex<Option<BuildCommandState>>,
-    /// Files that had diagnostics published in the last build cycle.
-    /// Used to clear stale diagnostics when errors are fixed.
-    last_diagnostics_files: Mutex<HashSet<Url>>,
     /// Unsaved buffer contents keyed by document URI.
     /// Updated on `didChange`, used by completion to get the latest editor buffer.
     open_buffers: Mutex<HashMap<Url, String>>,
@@ -235,8 +232,10 @@ impl LanguageServer for Backend {
             did_change::run(build_state, &file_path, &content)
         };
 
-        self.publish_diagnostics_for_file(&diagnostics, &params.text_document.uri)
-            .await;
+        let by_file = Self::group_by_file(&diagnostics);
+        let uri = &params.text_document.uri;
+        let diags = by_file.get(uri).cloned().unwrap_or_default();
+        self.client.publish_diagnostics(uri.clone(), diags, None).await;
     }
 
     async fn did_save(&self, params: DidSaveTextDocumentParams) {
@@ -244,7 +243,7 @@ impl LanguageServer for Backend {
             return;
         };
 
-        let diagnostics = {
+        let result = {
             let mut guard = match self.build_state.lock() {
                 Ok(g) => g,
                 Err(_) => return,
@@ -256,8 +255,13 @@ impl LanguageServer for Backend {
             did_save::run(build_state, &file_path)
         };
 
-        self.publish_diagnostics_for_file(&diagnostics, &params.text_document.uri)
-            .await;
+        let by_file = Self::group_by_file(&result.diagnostics);
+        for touched in &result.touched_files {
+            if let Ok(uri) = Url::from_file_path(touched) {
+                let diags = by_file.get(&uri).cloned().unwrap_or_default();
+                self.client.publish_diagnostics(uri, diags, None).await;
+            }
+        }
 
         self.client
             .send_notification::<notifications::BuildFinished>(notifications::BuildFinishedParams {})
@@ -491,8 +495,7 @@ impl LanguageServer for Backend {
 }
 
 impl Backend {
-    /// Publish diagnostics from the initial build. No stale diagnostics are
-    /// cleared because the editor starts with a clean slate.
+    /// Publish diagnostics grouped by file.
     async fn publish_diagnostics(&self, diagnostics: &[BscDiagnostic]) {
         let by_file = Self::group_by_file(diagnostics);
 
@@ -500,48 +503,6 @@ impl Backend {
             self.client
                 .publish_diagnostics(uri.clone(), diags.clone(), None)
                 .await;
-        }
-
-        if let Ok(mut prev) = self.last_diagnostics_files.lock() {
-            *prev = by_file.keys().cloned().collect();
-        }
-    }
-
-    /// Publish diagnostics after a didChange or didSave. Clears stale
-    /// diagnostics from files that had errors previously but not anymore,
-    /// and always notifies for `origin_uri` even when it compiled cleanly.
-    async fn publish_diagnostics_for_file(&self, diagnostics: &[BscDiagnostic], origin_uri: &Url) {
-        let by_file = Self::group_by_file(diagnostics);
-        let current_files: HashSet<Url> = by_file.keys().cloned().collect();
-
-        // Clear diagnostics for files that no longer have errors
-        let stale_uris: Vec<Url> = self
-            .last_diagnostics_files
-            .lock()
-            .ok()
-            .map(|prev| prev.difference(&current_files).cloned().collect())
-            .unwrap_or_default();
-
-        for uri in stale_uris {
-            self.client.publish_diagnostics(uri, Vec::new(), None).await;
-        }
-
-        // Publish current diagnostics
-        for (uri, diags) in &by_file {
-            self.client
-                .publish_diagnostics(uri.clone(), diags.clone(), None)
-                .await;
-        }
-
-        // Always notify for the origin file, even when it compiled cleanly
-        if !by_file.contains_key(origin_uri) {
-            self.client
-                .publish_diagnostics(origin_uri.clone(), Vec::new(), None)
-                .await;
-        }
-
-        if let Ok(mut prev) = self.last_diagnostics_files.lock() {
-            *prev = current_files;
         }
     }
 
@@ -590,7 +551,6 @@ pub async fn run_stdio() {
         client,
         workspace_folders: RwLock::new(Vec::new()),
         build_state: Mutex::new(None),
-        last_diagnostics_files: Mutex::new(HashSet::new()),
         open_buffers: Mutex::new(HashMap::new()),
     });
     Server::new(stdin, stdout, socket).serve(service).await;
