@@ -1,17 +1,135 @@
 use std::collections::HashMap;
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 use serde_json::{Value, json};
 use std::sync::Mutex;
-use tower_lsp::lsp_types::Url;
+use tower_lsp::lsp_types::{Position, Url};
 
 use crate::build::build_types::{BuildCommandState, BuildProfile, SourceFile, SourceType};
 use crate::build::packages::{Namespace, Package};
 use crate::config;
 use crate::helpers;
 use crate::lsp::did_change;
+
+type ExtraFieldsFn<'a> = &'a dyn Fn(&mut serde_json::Map<String, Value>);
+
+/// Pre-built analysis context that holds everything needed to run the analysis
+/// binary. Built while holding the `ProjectMap` lock, then used after releasing it.
+///
+/// This decouples subprocess execution from lock lifetime: the expensive
+/// `spawn()` call runs without holding any locks.
+pub struct AnalysisContext {
+    pub module_name: String,
+    pub package_name: String,
+    analysis_binary_path: PathBuf,
+    context_json: Value,
+}
+
+impl AnalysisContext {
+    /// Build an `AnalysisContext` from the current build state.
+    ///
+    /// This performs module resolution, optional `.cmt` generation, and JSON
+    /// context building — all while the caller holds the `ProjectMap` lock.
+    /// The returned context can then be used after the lock is released.
+    ///
+    /// Set `do_ensure_cmt` to `false` for purely syntactic operations
+    /// (document_symbol, semantic_tokens) that don't need type information.
+    ///
+    /// Use `extra_fields` to add handler-specific fields to the JSON blob
+    /// (e.g. `endPos` for code_action, `newName` for rename).
+    pub fn new(
+        build_state: &BuildCommandState,
+        file_path: &Path,
+        source: &str,
+        position: Position,
+        do_ensure_cmt: bool,
+        extra_fields: Option<ExtraFieldsFn<'_>>,
+    ) -> Option<Self> {
+        let (module_name, package_name, package, source_file) = resolve_module(build_state, file_path)?;
+        let original_file = original_path(package, source_file);
+        let path_str = original_file.to_string_lossy();
+
+        if do_ensure_cmt {
+            ensure_cmt(build_state, package, source_file, file_path, source);
+        }
+
+        let root_path = package.path.to_string_lossy();
+        let root_config = build_state.build_state.get_root_config();
+
+        let mut context_json = build_context_json(
+            build_state,
+            source,
+            &path_str,
+            position,
+            &root_path,
+            &package.namespace,
+            &package.config,
+            root_config,
+        );
+
+        if let Some(add_fields) = extra_fields
+            && let Value::Object(ref mut map) = context_json
+        {
+            add_fields(map);
+        }
+
+        let analysis_binary_path = build_state
+            .build_state
+            .compiler_info
+            .bsc_path
+            .parent()?
+            .join("rescript-editor-analysis.exe");
+
+        Some(AnalysisContext {
+            module_name,
+            package_name,
+            analysis_binary_path,
+            context_json,
+        })
+    }
+
+    /// Spawn the analysis binary with the pre-built context.
+    ///
+    /// This is the expensive operation — subprocess creation, stdin write,
+    /// and stdout read. Designed to run **after** the `ProjectMap` lock
+    /// has been released.
+    pub fn spawn(&self, args: &[&str]) -> Option<String> {
+        let mut child = match Command::new(&self.analysis_binary_path)
+            .args(args)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+        {
+            Ok(child) => child,
+            Err(e) => {
+                tracing::warn!(args = ?args, "analysis: failed to spawn binary: {e}");
+                return None;
+            }
+        };
+
+        if let Some(mut stdin) = child.stdin.take() {
+            let _ = stdin.write_all(self.context_json.to_string().as_bytes());
+        }
+
+        let output = match child.wait_with_output() {
+            Ok(output) => output,
+            Err(e) => {
+                tracing::warn!(args = ?args, "analysis: binary invocation failed: {e}");
+                return None;
+            }
+        };
+
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        if !stderr.is_empty() {
+            tracing::debug!(stderr = %stderr, args = ?args, "analysis: stderr");
+        }
+
+        Some(String::from_utf8_lossy(&output.stdout).into_owned())
+    }
+}
 
 /// Resolve the source content for a file from open buffers (unsaved edits) or disk.
 ///
@@ -37,7 +155,7 @@ pub fn resolve_source(
 ///
 /// Returns the module name, package name, package reference, and source file reference.
 /// This is the common first step in completion, hover, and definition handlers.
-pub fn resolve_module<'a>(
+fn resolve_module<'a>(
     build_state: &'a BuildCommandState,
     file_path: &Path,
 ) -> Option<(String, String, &'a Package, &'a SourceFile)> {
@@ -52,7 +170,7 @@ pub fn resolve_module<'a>(
 }
 
 /// Compute the original source file path by joining the package root with the implementation path.
-pub fn original_path(package: &Package, source_file: &SourceFile) -> std::path::PathBuf {
+fn original_path(package: &Package, source_file: &SourceFile) -> std::path::PathBuf {
     package.path.join(&source_file.implementation.path)
 }
 
@@ -61,7 +179,7 @@ pub fn original_path(package: &Package, source_file: &SourceFile) -> std::path::
 /// This contains all the package/module context the analysis binary needs,
 /// shared by completion, hover, and other analysis endpoints.
 #[allow(clippy::too_many_arguments)]
-pub fn build_context_json(
+fn build_context_json(
     build_state: &BuildCommandState,
     source: &str,
     path: &str,
@@ -108,56 +226,6 @@ pub fn build_context_json(
     })
 }
 
-/// Spawn the analysis binary with the given subcommand args and JSON input.
-///
-/// Pipes `json_blob` to stdin and returns the stdout output as a String.
-/// Returns `None` if the binary fails to spawn or execute.
-pub fn spawn_analysis_binary(
-    build_state: &BuildCommandState,
-    args: &[&str],
-    json_blob: &Value,
-) -> Option<String> {
-    let analysis_path = build_state
-        .build_state
-        .compiler_info
-        .bsc_path
-        .parent()?
-        .join("rescript-editor-analysis.exe");
-
-    let mut child = match Command::new(&analysis_path)
-        .args(args)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-    {
-        Ok(child) => child,
-        Err(e) => {
-            tracing::warn!(args = ?args, "analysis: failed to spawn binary: {e}");
-            return None;
-        }
-    };
-
-    if let Some(mut stdin) = child.stdin.take() {
-        let _ = stdin.write_all(json_blob.to_string().as_bytes());
-    }
-
-    let output = match child.wait_with_output() {
-        Ok(output) => output,
-        Err(e) => {
-            tracing::warn!(args = ?args, "analysis: binary invocation failed: {e}");
-            return None;
-        }
-    };
-
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    if !stderr.is_empty() {
-        tracing::debug!(stderr = %stderr, args = ?args, "analysis: stderr");
-    }
-
-    Some(String::from_utf8_lossy(&output.stdout).into_owned())
-}
-
 /// Check whether a `.cmt` file exists for the given module. If missing,
 /// run a single-file typecheck to produce it.
 ///
@@ -166,7 +234,7 @@ pub fn spawn_analysis_binary(
 ///
 /// Callers should wrap this in their own `tracing::info_span!` (e.g.
 /// `"lsp.hover.ensure_cmt"`) since the span name must be a string literal.
-pub fn ensure_cmt(
+fn ensure_cmt(
     build_state: &BuildCommandState,
     package: &Package,
     source_file: &SourceFile,

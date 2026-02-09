@@ -1,20 +1,24 @@
 use console::Term;
 use log::LevelFilter;
+use std::process::ExitCode;
 use std::{io::Write, path::Path};
 use tracing::instrument;
 
 use rescript::{build, cli, cmd, format, lock, lsp, telemetry, watcher};
 
-fn main() {
+fn main() -> ExitCode {
     // Initialize telemetry (only active if OTEL_EXPORTER_OTLP_ENDPOINT is set)
     let telemetry_guard = telemetry::init_telemetry();
 
     let exit_code = run_main(&telemetry_guard);
 
-    // Drop the telemetry guard explicitly to ensure spans are flushed before exit
+    // Drop the telemetry guard explicitly to ensure spans are flushed before exit.
+    // By returning ExitCode instead of calling std::process::exit(), we allow
+    // the process to exit naturally — giving background threads (e.g. the OTEL
+    // HTTP exporter) time to complete their work.
     drop(telemetry_guard);
 
-    std::process::exit(exit_code);
+    ExitCode::from(exit_code as u8)
 }
 
 fn run_main(telemetry_guard: &telemetry::TelemetryGuard) -> i32 {

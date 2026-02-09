@@ -23,6 +23,8 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Mutex, RwLock};
 
+use rayon::prelude::*;
+
 use crate::build::build_types::BuildCommandState;
 use crate::build::diagnostics::{BscDiagnostic, Severity};
 use tower_lsp::jsonrpc::Result;
@@ -40,13 +42,58 @@ fn uri_to_file_path(uri: &Url, context: &str) -> Option<PathBuf> {
     }
 }
 
+/// Maps project roots to their build states, with a cached URI-to-root lookup.
+pub(crate) struct ProjectMap {
+    /// One `BuildCommandState` per project root (directory containing `rescript.json`).
+    states: HashMap<PathBuf, BuildCommandState>,
+    /// Cached mapping from file URI to its project root. Populated lazily.
+    uri_cache: HashMap<Url, PathBuf>,
+}
+
+impl ProjectMap {
+    fn new() -> Self {
+        ProjectMap {
+            states: HashMap::new(),
+            uri_cache: HashMap::new(),
+        }
+    }
+
+    /// Find the project root for a file URI. Checks the cache first, then
+    /// walks ancestor directories looking for a `rescript.json` whose
+    /// directory is a known project root in `states`.
+    fn project_root_for(&mut self, uri: &Url) -> Option<PathBuf> {
+        if let Some(root) = self.uri_cache.get(uri) {
+            return Some(root.clone());
+        }
+        let file_path = uri.to_file_path().ok()?;
+        let root = file_path
+            .ancestors()
+            .find(|dir| self.states.contains_key(*dir))?
+            .to_path_buf();
+        self.uri_cache.insert(uri.clone(), root.clone());
+        Some(root)
+    }
+
+    /// Get the build state for a file URI (immutable).
+    pub(crate) fn get_for_uri(&mut self, uri: &Url) -> Option<&BuildCommandState> {
+        let root = self.project_root_for(uri)?;
+        self.states.get(&root)
+    }
+
+    /// Get the build state for a file URI (mutable).
+    fn get_mut_for_uri(&mut self, uri: &Url) -> Option<&mut BuildCommandState> {
+        let root = self.project_root_for(uri)?;
+        self.states.get_mut(&root)
+    }
+}
+
 struct Backend {
     client: Client,
     /// Workspace folder paths received during `initialize`.
     /// Stored so that `initialized` can read rescript.json and register scoped file watchers.
     workspace_folders: RwLock<Vec<String>>,
-    /// Build state persisted across LSP requests for incremental builds.
-    build_state: Mutex<Option<BuildCommandState>>,
+    /// Build states for all discovered projects, keyed by project root.
+    projects: Mutex<ProjectMap>,
     /// Unsaved buffer contents keyed by document URI.
     /// Updated on `didChange`, used by completion to get the latest editor buffer.
     open_buffers: Mutex<HashMap<Url, String>>,
@@ -155,22 +202,57 @@ impl LanguageServer for Backend {
 
         let workspaces = initialize::register_file_watchers(&self.client, &workspace_folders).await;
 
+        // Partition workspaces into conflict groups. Workspaces sharing a
+        // package path must build sequentially (they write to the same
+        // lib/lsp/ directory). Independent groups run in parallel.
+        let groups = Self::partition_workspaces(workspaces);
+
+        // Capture the current tracing span so rayon tasks can use it as an
+        // explicit parent.  Without this, rayon work-stealing causes spans to
+        // randomly nest under whichever span was last entered on that thread.
+        let parent_span = tracing::Span::current();
+
+        // Each group builds its members sequentially, but groups run in
+        // parallel with each other via rayon.
+        let all_results: Vec<_> = groups
+            .into_par_iter()
+            .flat_map(|group| {
+                group
+                    .into_iter()
+                    .filter_map(|workspace| match initial_build::run(workspace, &parent_span) {
+                        Ok((state, diagnostics)) => Some((state, diagnostics)),
+                        Err(e) => {
+                            tracing::error!("Initial build failed: {e}");
+                            None
+                        }
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .collect();
+
         let mut all_diagnostics: Vec<BscDiagnostic> = Vec::new();
-        for workspace in workspaces {
-            match initial_build::run(workspace) {
-                Ok((state, diagnostics)) => {
-                    all_diagnostics.extend(diagnostics);
-                    if let Ok(mut bs) = self.build_state.lock() {
-                        *bs = Some(state);
-                    }
-                }
-                Err(e) => {
-                    tracing::error!("Initial build failed: {e}");
-                }
+        for (state, diagnostics) in all_results {
+            all_diagnostics.extend(diagnostics);
+            if let Ok(mut map) = self.projects.lock() {
+                let root = state.build_state.project_context.get_root_path().to_path_buf();
+                map.states.insert(root, state);
             }
         }
 
         self.publish_diagnostics(&all_diagnostics).await;
+
+        let roots: Vec<_> = self
+            .projects
+            .lock()
+            .ok()
+            .map(|map| map.states.keys().map(|p| p.display().to_string()).collect())
+            .unwrap_or_default();
+        self.client
+            .log_message(
+                MessageType::INFO,
+                format!("rescript-lsp build states for project roots: {roots:?}"),
+            )
+            .await;
 
         self.client
             .send_notification::<notifications::BuildFinished>(notifications::BuildFinishedParams {})
@@ -221,11 +303,11 @@ impl LanguageServer for Backend {
         }
 
         let diagnostics = {
-            let guard = match self.build_state.lock() {
+            let mut guard = match self.projects.lock() {
                 Ok(g) => g,
                 Err(_) => return,
             };
-            let Some(build_state) = guard.as_ref() else {
+            let Some(build_state) = guard.get_for_uri(&params.text_document.uri) else {
                 tracing::warn!("didChange: no build state available");
                 return;
             };
@@ -244,11 +326,11 @@ impl LanguageServer for Backend {
         };
 
         let result = {
-            let mut guard = match self.build_state.lock() {
+            let mut guard = match self.projects.lock() {
                 Ok(g) => g,
                 Err(_) => return,
             };
-            let Some(build_state) = guard.as_mut() else {
+            let Some(build_state) = guard.get_mut_for_uri(&params.text_document.uri) else {
                 tracing::warn!("didSave: no build state available");
                 return;
             };
@@ -276,7 +358,7 @@ impl LanguageServer for Backend {
 
         Ok(completion::handle(
             &self.open_buffers,
-            &self.build_state,
+            &self.projects,
             &file_path,
             uri,
             params.text_document_position.position,
@@ -284,7 +366,7 @@ impl LanguageServer for Backend {
     }
 
     async fn completion_resolve(&self, item: CompletionItem) -> Result<CompletionItem> {
-        Ok(completion::handle_resolve(&self.build_state, item))
+        Ok(completion::handle_resolve(&self.projects, item))
     }
 
     async fn hover(&self, params: HoverParams) -> Result<Option<Hover>> {
@@ -295,7 +377,7 @@ impl LanguageServer for Backend {
 
         Ok(hover::handle(
             &self.open_buffers,
-            &self.build_state,
+            &self.projects,
             &file_path,
             uri,
             params.text_document_position_params.position,
@@ -310,7 +392,7 @@ impl LanguageServer for Backend {
 
         Ok(signature_help::handle(
             &self.open_buffers,
-            &self.build_state,
+            &self.projects,
             &file_path,
             uri,
             params.text_document_position_params.position,
@@ -328,7 +410,7 @@ impl LanguageServer for Backend {
 
         Ok(type_definition::handle(
             &self.open_buffers,
-            &self.build_state,
+            &self.projects,
             &file_path,
             uri,
             params.text_document_position_params.position,
@@ -343,7 +425,7 @@ impl LanguageServer for Backend {
 
         Ok(definition::handle(
             &self.open_buffers,
-            &self.build_state,
+            &self.projects,
             &file_path,
             uri,
             params.text_document_position_params.position,
@@ -358,7 +440,7 @@ impl LanguageServer for Backend {
 
         Ok(references::handle(
             &self.open_buffers,
-            &self.build_state,
+            &self.projects,
             &file_path,
             uri,
             params.text_document_position.position,
@@ -376,7 +458,7 @@ impl LanguageServer for Backend {
 
         Ok(rename::handle_prepare_rename(
             &self.open_buffers,
-            &self.build_state,
+            &self.projects,
             &file_path,
             uri,
             params.position,
@@ -391,7 +473,7 @@ impl LanguageServer for Backend {
 
         Ok(rename::handle_rename(
             &self.open_buffers,
-            &self.build_state,
+            &self.projects,
             &file_path,
             uri,
             params.text_document_position.position,
@@ -405,7 +487,12 @@ impl LanguageServer for Backend {
             return Ok(None);
         };
 
-        Ok(document_symbol::handle(&self.build_state, &file_path))
+        Ok(document_symbol::handle(
+            &self.open_buffers,
+            &self.projects,
+            &file_path,
+            uri,
+        ))
     }
 
     async fn code_lens(&self, params: CodeLensParams) -> Result<Option<Vec<CodeLens>>> {
@@ -416,7 +503,7 @@ impl LanguageServer for Backend {
 
         Ok(code_lens::handle(
             &self.open_buffers,
-            &self.build_state,
+            &self.projects,
             &file_path,
             uri,
         ))
@@ -430,7 +517,7 @@ impl LanguageServer for Backend {
 
         Ok(inlay_hint::handle(
             &self.open_buffers,
-            &self.build_state,
+            &self.projects,
             &file_path,
             uri,
             params.range,
@@ -445,7 +532,7 @@ impl LanguageServer for Backend {
 
         Ok(code_action::handle(
             &self.open_buffers,
-            &self.build_state,
+            &self.projects,
             &file_path,
             uri,
             params.range,
@@ -463,7 +550,7 @@ impl LanguageServer for Backend {
 
         Ok(semantic_tokens::handle(
             &self.open_buffers,
-            &self.build_state,
+            &self.projects,
             &file_path,
             uri,
         ))
@@ -475,8 +562,8 @@ impl LanguageServer for Backend {
             return Ok(None);
         };
 
-        let bsc_path = match self.build_state.lock() {
-            Ok(guard) => match guard.as_ref() {
+        let bsc_path = match self.projects.lock() {
+            Ok(mut guard) => match guard.get_for_uri(uri) {
                 Some(state) => state.build_state.compiler_info.bsc_path.clone(),
                 None => {
                     tracing::warn!("formatting: no build state available");
@@ -504,6 +591,87 @@ impl Backend {
                 .publish_diagnostics(uri.clone(), diags.clone(), None)
                 .await;
         }
+    }
+
+    /// Partition workspaces into groups that can be built in parallel.
+    ///
+    /// Two workspaces conflict when they share a package path — both would write
+    /// to the same `lib/lsp/` directory, causing a race. We use union-find to
+    /// merge conflicting workspaces into the same group. Groups are sorted by
+    /// the project name of their first workspace so the build order is deterministic.
+    /// Within each group, workspaces are also sorted by project name.
+    fn partition_workspaces(
+        workspaces: Vec<initialize::DiscoveredWorkspace>,
+    ) -> Vec<Vec<initialize::DiscoveredWorkspace>> {
+        use std::collections::HashSet;
+
+        let n = workspaces.len();
+        if n <= 1 {
+            return vec![workspaces];
+        }
+
+        // Collect the set of package paths for each workspace.
+        let pkg_paths: Vec<HashSet<PathBuf>> = workspaces
+            .iter()
+            .map(|ws| ws.packages.values().map(|p| p.path.clone()).collect())
+            .collect();
+
+        // Union-find: parent[i] is the representative of workspace i's group.
+        let mut parent: Vec<usize> = (0..n).collect();
+        fn find(parent: &mut [usize], mut i: usize) -> usize {
+            while parent[i] != i {
+                parent[i] = parent[parent[i]];
+                i = parent[i];
+            }
+            i
+        }
+        fn union(parent: &mut [usize], a: usize, b: usize) {
+            let ra = find(parent, a);
+            let rb = find(parent, b);
+            if ra != rb {
+                parent[rb] = ra;
+            }
+        }
+
+        // Merge workspaces that share any package path.
+        for i in 0..n {
+            for j in (i + 1)..n {
+                if !pkg_paths[i].is_disjoint(&pkg_paths[j]) {
+                    union(&mut parent, i, j);
+                }
+            }
+        }
+
+        // Group workspaces by their root representative.
+        let mut group_map: HashMap<usize, Vec<usize>> = HashMap::new();
+        for i in 0..n {
+            group_map.entry(find(&mut parent, i)).or_default().push(i);
+        }
+
+        // Sort groups deterministically by first workspace's project name.
+        let mut groups: Vec<Vec<usize>> = group_map.into_values().collect();
+        for group in &mut groups {
+            group.sort_by(|a, b| {
+                let name_a = &workspaces[*a].project_context.get_root_config().name;
+                let name_b = &workspaces[*b].project_context.get_root_config().name;
+                name_a.cmp(name_b)
+            });
+        }
+        groups.sort_by(|a, b| {
+            let name_a = &workspaces[a[0]].project_context.get_root_config().name;
+            let name_b = &workspaces[b[0]].project_context.get_root_config().name;
+            name_a.cmp(name_b)
+        });
+
+        // Convert indices to actual workspaces. We need to consume the vec,
+        // so we move workspaces into an indexed vec of Options first.
+        let mut slots: Vec<Option<initialize::DiscoveredWorkspace>> =
+            workspaces.into_iter().map(Some).collect();
+
+        groups
+            .into_iter()
+            .map(|indices| indices.into_iter().filter_map(|i| slots[i].take()).collect())
+            .collect()
     }
 
     fn group_by_file(diagnostics: &[BscDiagnostic]) -> HashMap<Url, Vec<Diagnostic>> {
@@ -550,7 +718,7 @@ pub async fn run_stdio() {
     let (service, socket) = LspService::new(|client| Backend {
         client,
         workspace_folders: RwLock::new(Vec::new()),
-        build_state: Mutex::new(None),
+        projects: Mutex::new(ProjectMap::new()),
         open_buffers: Mutex::new(HashMap::new()),
     });
     Server::new(stdin, stdout, socket).serve(service).await;

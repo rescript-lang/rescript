@@ -268,10 +268,12 @@ pub fn generate_asts(
                             base_build_path.with_extension("cmt"),
                             base_ocaml_build_path.with_extension("cmt"),
                         );
-                        let _ = std::fs::copy(
-                            base_build_path.with_extension("cmj"),
-                            base_ocaml_build_path.with_extension("cmj"),
-                        );
+                        if build_profile.emits_js() {
+                            let _ = std::fs::copy(
+                                base_build_path.with_extension("cmj"),
+                                base_ocaml_build_path.with_extension("cmj"),
+                            );
+                        }
                         let _ = std::fs::copy(
                             base_build_path.with_extension("mlmap"),
                             base_ocaml_build_path.with_extension("mlmap"),

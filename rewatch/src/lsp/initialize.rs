@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use ahash::AHashMap;
 use tower_lsp::lsp_types::notification::Notification;
@@ -100,6 +100,50 @@ fn discover_workspace(project_root: &Path) -> (Vec<String>, Option<DiscoveredWor
     )
 }
 
+/// Find independent `rescript.json` projects under a workspace folder that are NOT
+/// already covered by the root workspace's packages.
+///
+/// Walks the directory tree (skipping `node_modules/` and `lib/`) looking for
+/// `rescript.json` files. Any project whose directory is not already in `covered_paths`
+/// is returned as an independent project root.
+fn find_independent_projects(
+    workspace_root: &Path,
+    covered_paths: &std::collections::HashSet<PathBuf>,
+) -> Vec<PathBuf> {
+    let mut independent = Vec::new();
+
+    fn walk(dir: &Path, covered: &std::collections::HashSet<PathBuf>, results: &mut Vec<PathBuf>) {
+        let entries = match std::fs::read_dir(dir) {
+            Ok(e) => e,
+            Err(_) => return,
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_dir() {
+                continue;
+            }
+            let dir_name = entry.file_name();
+            if dir_name == "node_modules" || dir_name == "lib" || dir_name == ".git" {
+                continue;
+            }
+            if path.join("rescript.json").exists() {
+                let canonical = path.canonicalize().unwrap_or_else(|_| path.clone());
+                if !covered.contains(&canonical) {
+                    results.push(canonical);
+                }
+                // Don't recurse into discovered projects — their subdirectories
+                // are handled by their own package discovery.
+                continue;
+            }
+            walk(&path, covered, results);
+        }
+    }
+
+    walk(workspace_root, covered_paths, &mut independent);
+    independent.sort();
+    independent
+}
+
 /// Build watcher patterns from workspace folders and register them with the client.
 ///
 /// File watchers cover changes that happen *outside* the editor's open buffers.
@@ -124,10 +168,31 @@ pub async fn register_file_watchers(
             let mut watcher_patterns: Vec<String> = Vec::new();
 
             for folder in workspace_folders {
-                let (patterns, workspace) = discover_workspace(Path::new(folder));
+                let folder_path = Path::new(folder);
+                let (patterns, workspace) = discover_workspace(folder_path);
                 watcher_patterns.extend(patterns);
+
+                // Collect paths already covered by the root workspace's packages
+                let mut covered_paths = std::collections::HashSet::new();
+                if let Some(ref ws) = workspace {
+                    for pkg in ws.packages.values() {
+                        covered_paths.insert(pkg.path.clone());
+                    }
+                }
+
                 if let Some(ws) = workspace {
                     workspaces.push(ws);
+                }
+
+                // Discover independent projects not covered by the root
+                let independent = find_independent_projects(folder_path, &covered_paths);
+                for project_root in independent {
+                    tracing::info!("Discovered independent project: {}", project_root.display());
+                    let (ind_patterns, ind_workspace) = discover_workspace(&project_root);
+                    watcher_patterns.extend(ind_patterns);
+                    if let Some(ws) = ind_workspace {
+                        workspaces.push(ws);
+                    }
                 }
             }
 

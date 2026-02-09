@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`lsp definition > jumps to definition of a module 1`] = `
+exports[`lsp multi-workspace > provides hover for an independent package not in root dependencies 1`] = `
 [
   "rewatch.lsp",
   "  lsp.initialized",
@@ -253,12 +253,12 @@ exports[`lsp definition > jumps to definition of a module 1`] = `
   "          build.compile_file[module=App, package=@rewatch-test/app, suffix=.mjs, module_system=esmodule]",
   "        build.compile_wave[file_count=1]",
   "          build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
-  "  lsp.did_open[file=src/Root.res]",
-  "  lsp.definition[file=src/Root.res, module=Root, package=rewatch-test-fixture]",
+  "  lsp.did_open[file=packages/commonjs/src/CjsModule.res]",
+  "  lsp.hover[file=packages/commonjs/src/CjsModule.res, module=CjsModule, package=@rewatch-test/commonjs]",
 ]
 `;
 
-exports[`lsp definition > jumps to definition of a module value 1`] = `
+exports[`lsp multi-workspace > provides hover for both root monorepo and independent package 1`] = `
 [
   "rewatch.lsp",
   "  lsp.initialized",
@@ -512,6 +512,8 @@ exports[`lsp definition > jumps to definition of a module value 1`] = `
   "        build.compile_wave[file_count=1]",
   "          build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
   "  lsp.did_open[file=src/Root.res]",
-  "  lsp.definition[file=src/Root.res, module=Root, package=rewatch-test-fixture]",
+  "  lsp.hover[file=src/Root.res, module=Root, package=rewatch-test-fixture]",
+  "  lsp.did_open[file=packages/commonjs/src/CjsModule.res]",
+  "  lsp.hover[file=packages/commonjs/src/CjsModule.res, module=CjsModule, package=@rewatch-test/commonjs]",
 ]
 `;

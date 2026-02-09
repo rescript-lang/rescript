@@ -1,81 +1,50 @@
+use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Mutex;
 
-use tower_lsp::lsp_types::{DocumentSymbol, DocumentSymbolResponse, Position};
-use tracing::instrument;
+use tower_lsp::lsp_types::{DocumentSymbolResponse, Position, Url};
 
-use crate::build::build_types::BuildCommandState;
-use crate::lsp::analysis;
+use crate::lsp::ProjectMap;
+use crate::lsp::analysis::{self, AnalysisContext};
 
-/// Handle a document symbol request: lock build state and delegate to the analysis binary.
+/// Handle a document symbol request.
 ///
-/// Unlike other endpoints, documentSymbol is purely syntactic — it only needs
-/// the file path, not source content or cursor position.
+/// Document symbols are purely syntactic — the analysis binary parses the
+/// source to extract symbols, so no `.cmt` is needed.
 pub fn handle(
-    build_state: &Mutex<Option<BuildCommandState>>,
+    open_buffers: &Mutex<HashMap<Url, String>>,
+    projects: &Mutex<ProjectMap>,
     file_path: &Path,
+    uri: &Url,
 ) -> Option<DocumentSymbolResponse> {
-    let source = std::fs::read_to_string(file_path).ok()?;
+    let source = analysis::resolve_source(open_buffers, file_path, uri, "document_symbol")?;
 
-    let guard = build_state.lock().ok()?;
-    let build_state = guard.as_ref()?;
-
-    run(build_state, file_path, &source)
-}
-
-/// Run a document symbol request by shelling out to
-/// `rescript-editor-analysis.exe rewatch documentSymbol`.
-///
-/// The analysis binary parses the `.res` file directly and returns a
-/// hierarchical list of symbols (types, values, modules, etc.).
-#[instrument(name = "lsp.document_symbol", skip_all, fields(
-    file = %file_path.display(),
-    module = tracing::field::Empty,
-    package = tracing::field::Empty,
-))]
-fn run(build_state: &BuildCommandState, file_path: &Path, source: &str) -> Option<DocumentSymbolResponse> {
-    let (module_name, package_name, package, source_file) = analysis::resolve_module(build_state, file_path)?;
-
-    let span = tracing::Span::current();
-    span.record("module", &module_name);
-    span.record("package", &package_name);
-
-    let original_file = analysis::original_path(package, source_file);
-    let path_str = original_file.to_string_lossy();
-
-    let root_path = package.path.to_string_lossy();
-    let root_config = build_state.build_state.get_root_config();
-
-    let json_blob = {
-        let _guard = tracing::info_span!("lsp.document_symbol.build_context").entered();
-        analysis::build_context_json(
+    let ctx = {
+        let mut guard = projects.lock().ok()?;
+        let build_state = guard.get_for_uri(uri)?;
+        AnalysisContext::new(
             build_state,
-            source,
-            &path_str,
+            file_path,
+            &source,
             Position {
                 line: 0,
                 character: 0,
             },
-            &root_path,
-            &package.namespace,
-            &package.config,
-            root_config,
-        )
+            false,
+            None,
+        )?
     };
 
-    let _guard = tracing::info_span!("lsp.document_symbol.analysis_binary").entered();
+    let _span = tracing::info_span!(
+        "lsp.document_symbol",
+        file = %file_path.display(),
+        module = %ctx.module_name,
+        package = %ctx.package_name,
+    )
+    .entered();
 
-    let stdout = analysis::spawn_analysis_binary(build_state, &["rewatch", "documentSymbol"], &json_blob)?;
-
-    parse_document_symbol_response(&stdout)
-}
-
-/// Parse the JSON output from the analysis binary into a DocumentSymbolResponse.
-///
-/// The analysis binary outputs LSP-conformant JSON:
-/// `[{"name": "...", "kind": N, "range": {...}, "selectionRange": {...}, "children": [...]}, ...]`
-fn parse_document_symbol_response(stdout: &str) -> Option<DocumentSymbolResponse> {
-    let symbols: Vec<DocumentSymbol> = serde_json::from_str(stdout).ok()?;
+    let stdout = ctx.spawn(&["rewatch", "documentSymbol"])?;
+    let symbols: Vec<tower_lsp::lsp_types::DocumentSymbol> = serde_json::from_str(&stdout).ok()?;
     if symbols.is_empty() {
         None
     } else {

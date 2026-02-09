@@ -41,6 +41,17 @@ import { createSandbox, removeSandbox } from "./sandbox.mjs";
  * @param {Array<object>} spans - Flat array of spans
  * @returns {SpanNode[]} - Tree of span nodes
  */
+/**
+ * Convert a timestamp value to BigInt. Handles both plain numbers/strings
+ * and protobufjs Long objects (which have low/high/unsigned properties).
+ */
+function toBigInt(value) {
+  if (!value) return 0n;
+  if (typeof value === "bigint") return value;
+  if (typeof value.toBigInt === "function") return value.toBigInt();
+  return BigInt(value);
+}
+
 function buildSpanTree(spans) {
   // Create a map of spanId -> span
   const spanMap = new Map();
@@ -67,8 +78,8 @@ function buildSpanTree(spans) {
   // Sort children by start time
   for (const children of childrenMap.values()) {
     children.sort((a, b) => {
-      const aStart = BigInt(a.startTimeUnixNano || 0);
-      const bStart = BigInt(b.startTimeUnixNano || 0);
+      const aStart = toBigInt(a.startTimeUnixNano);
+      const bStart = toBigInt(b.startTimeUnixNano);
       if (aStart < bStart) return -1;
       if (aStart > bStart) return 1;
       return 0;
@@ -77,8 +88,8 @@ function buildSpanTree(spans) {
 
   // Sort roots by start time
   roots.sort((a, b) => {
-    const aStart = BigInt(a.startTimeUnixNano || 0);
-    const bStart = BigInt(b.startTimeUnixNano || 0);
+    const aStart = toBigInt(a.startTimeUnixNano);
+    const bStart = toBigInt(b.startTimeUnixNano);
     if (aStart < bStart) return -1;
     if (aStart > bStart) return 1;
     return 0;
@@ -215,6 +226,7 @@ const SUMMARY_ATTRS = {
   "rewatch.compiler_args": ["file_path"],
   "lsp.discover_package": ["name"],
   "lsp.source_dir": ["dir", "recursive"],
+  "lsp.initial_build": ["project"],
   "lsp.register_watchers": ["watcher_count"],
   "lsp.did_save": ["file"],
   "lsp.did_save.compile_dependencies": ["module"],
@@ -327,6 +339,7 @@ const PARALLEL_SPAN_PATTERNS = [
   "build.compile_file",
   "format.write_file",
   "lsp.discover_package",
+  "lsp.initial_build",
   "lsp.source_dir",
 ];
 
@@ -350,7 +363,14 @@ function sortParallelSpans(lines) {
     if (collectedBlocks.length > 0) {
       collectedBlocks.sort((a, b) => a.key.localeCompare(b.key));
       for (const block of collectedBlocks) {
-        result.push(...block.lines);
+        // Recursively sort parallel spans within each block's children
+        if (block.lines.length > 1) {
+          const [header, ...children] = block.lines;
+          result.push(header);
+          result.push(...sortParallelSpans(children));
+        } else {
+          result.push(...block.lines);
+        }
       }
       collectedBlocks = [];
     }
@@ -361,12 +381,10 @@ function sortParallelSpans(lines) {
     const indent = line.search(/\S/);
 
     // If we're collecting blocks and this line is a deeper-indented child,
-    // append it to the current block
-    if (
-      collectedBlocks.length > 0 &&
-      !matchedPattern &&
-      indent > currentBlockIndent
-    ) {
+    // append it to the current block (even if the child itself matches a
+    // parallel pattern — e.g. build.load_package_sources inside
+    // lsp.initial_build).
+    if (collectedBlocks.length > 0 && indent > currentBlockIndent) {
       collectedBlocks[collectedBlocks.length - 1].lines.push(line);
       continue;
     }
@@ -522,6 +540,12 @@ export async function runRewatchTest(scenario, options = {}) {
   }
 
   try {
+    // Wait for a root rewatch span to arrive at the receiver.
+    // These top-level spans (rewatch.build, rewatch.clean, rewatch.format, etc.)
+    // close last, right before TelemetryGuard::drop calls force_flush().
+    // If one has arrived, all child spans have been exported too.
+    await otelReceiver.waitForSpan(s => s.name.startsWith("rewatch."));
+
     // Get spans and build tree
     const spans = otelReceiver.getSpans();
     const tree = buildSpanTree(spans);
@@ -662,6 +686,12 @@ export async function runLspTest(scenario, options = {}) {
   }
 
   try {
+    // Wait for the root `rewatch.lsp` span to arrive at the receiver.
+    // This is the outermost instrumented span — it closes last, right before
+    // TelemetryGuard::drop calls force_flush(). If this span has arrived,
+    // all other spans have been exported too.
+    await otelReceiver.waitForSpan(s => s.name === "rewatch.lsp");
+
     // Get spans and build tree
     const spans = otelReceiver.getSpans();
     const tree = buildSpanTree(spans);

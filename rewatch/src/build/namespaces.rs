@@ -75,6 +75,9 @@ pub fn compile_mlmap(
         "always".to_string(),
         "-no-alias-deps".to_string(),
     ]);
+    if !build_profile.emits_js() {
+        args.push("-bs-cmi-only".to_string());
+    }
     args.push(mlmap_name.clone());
 
     let output = Command::new(bsc_path)

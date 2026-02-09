@@ -1,5 +1,3 @@
-use tracing::instrument;
-
 use crate::build;
 use crate::build::build_types::{BuildCommandState, BuildProfile, CompilationStage};
 use crate::build::diagnostics::BscDiagnostic;
@@ -13,12 +11,25 @@ use super::initialize::DiscoveredWorkspace;
 /// populates source files, then runs the full build pipeline.
 /// Returns the build state (for reuse in subsequent incremental builds)
 /// and structured diagnostics from the build (errors and warnings).
-#[instrument(name = "lsp.initial_build", skip_all)]
-pub fn run(workspace: DiscoveredWorkspace) -> Result<(BuildCommandState, Vec<BscDiagnostic>), String> {
+pub fn run(
+    workspace: DiscoveredWorkspace,
+    parent_span: &tracing::Span,
+) -> Result<(BuildCommandState, Vec<BscDiagnostic>), String> {
     let DiscoveredWorkspace {
         project_context,
         packages: discovered_packages,
     } = workspace;
+
+    // Explicit parent prevents inheriting an ambient span from the rayon
+    // thread pool.  Without this, rayon work-stealing can cause one
+    // workspace's initial_build span to be recorded as a child of another
+    // workspace's span that happened to run on the same thread.
+    let _span = tracing::info_span!(
+        parent: parent_span,
+        "lsp.initial_build",
+        project = %project_context.get_root_config().name,
+    )
+    .entered();
 
     // Populate source files, modules, and dirs for each package
     let packages = packages::extend_with_children(&None, discovered_packages);
