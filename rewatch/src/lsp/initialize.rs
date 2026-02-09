@@ -7,6 +7,7 @@ use tracing::Instrument;
 
 use crate::build::packages;
 use crate::config;
+use crate::helpers::StrippedVerbatimPath;
 use crate::project_context::ProjectContext;
 
 /// Normalize a path to always use forward slashes (LSP glob patterns use forward slashes).
@@ -127,7 +128,10 @@ fn find_independent_projects(
                 continue;
             }
             if path.join("rescript.json").exists() {
-                let canonical = path.canonicalize().unwrap_or_else(|_| path.clone());
+                let canonical = path
+                    .canonicalize()
+                    .map(StrippedVerbatimPath::to_stripped_verbatim_path)
+                    .unwrap_or_else(|_| path.clone());
                 if !covered.contains(&canonical) {
                     results.push(canonical);
                 }
@@ -172,7 +176,8 @@ pub async fn register_file_watchers(
                 let (patterns, workspace) = discover_workspace(folder_path);
                 watcher_patterns.extend(patterns);
 
-                // Collect paths already covered by the root workspace's packages
+                // Collect paths already covered by the root workspace's packages.
+                // pkg.path is already canonicalized + verbatim-stripped by read_packages.
                 let mut covered_paths = std::collections::HashSet::new();
                 if let Some(ref ws) = workspace {
                     for pkg in ws.packages.values() {
