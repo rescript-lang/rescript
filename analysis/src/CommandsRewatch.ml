@@ -240,6 +240,10 @@ let definition () =
       | None -> Protocol.null
       | Some location -> location |> Protocol.stringifyLocation)
 
+let documentSymbol () =
+  withRewatchContext ~name:"documentSymbol" ~default:"[]" (fun {path; _} ->
+      DocumentSymbol.command ~path)
+
 let references () =
   withRewatchContext ~name:"references" ~default:Protocol.null (fun ctx ->
       let locations =

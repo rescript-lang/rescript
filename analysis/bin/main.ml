@@ -139,6 +139,7 @@ let main () =
     | ["definition"] -> CommandsRewatch.definition ()
     | ["typeDefinition"] -> CommandsRewatch.typeDefinition ()
     | ["references"] -> CommandsRewatch.references ()
+    | ["documentSymbol"] -> CommandsRewatch.documentSymbol ()
     | _ -> prerr_endline "Unknown rewatch subcommand")
   | [_; "completion"; path; line; col; currentFile] ->
     printHeaderInfo path line col;
@@ -155,7 +156,7 @@ let main () =
     Commands.typeDefinition ~path
       ~pos:(int_of_string line, int_of_string col)
       ~debug
-  | [_; "documentSymbol"; path] -> DocumentSymbol.command ~path
+  | [_; "documentSymbol"; path] -> print_endline (DocumentSymbol.command ~path)
   | [_; "hover"; path; line; col; currentFile; supportsMarkdownLinks] ->
     Commands.hover ~path
       ~pos:(int_of_string line, int_of_string col)

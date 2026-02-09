@@ -11,6 +11,7 @@ import {
   DidOpenTextDocumentNotification,
   DidSaveTextDocumentNotification,
   DocumentFormattingRequest,
+  DocumentSymbolRequest,
   ExitNotification,
   HoverRequest,
   InitializedNotification,
@@ -332,6 +333,18 @@ export function createLspClient(cwd, otelEndpoint) {
         textDocument: { uri },
         position: { line, character },
         context: { includeDeclaration: true },
+      });
+    },
+
+    /**
+     * Request document symbols for an open file.
+     * @param {string} relativePath - Path relative to the sandbox root
+     */
+    async documentSymbolsFor(relativePath) {
+      const uri = toUri(relativePath);
+      assertOpen(relativePath, uri);
+      return sendRequest(DocumentSymbolRequest.type, {
+        textDocument: { uri },
       });
     },
 

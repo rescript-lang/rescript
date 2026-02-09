@@ -198,4 +198,4 @@ let command ~path =
   in
   let sortedSymbols = !symbols |> List.sort compareSymbol in
   let symbolsWithChildren = [] |> addSortedSymbolsToChildren ~sortedSymbols in
-  print_endline (Protocol.stringifyDocumentSymbolItems symbolsWithChildren)
+  Protocol.stringifyDocumentSymbolItems symbolsWithChildren

@@ -4,6 +4,7 @@ mod definition;
 mod dependency_closure;
 mod did_change;
 mod did_save;
+mod document_symbol;
 mod formatting;
 mod hover;
 mod initial_build;
@@ -89,7 +90,7 @@ impl LanguageServer for Backend {
                 //     prepare_provider: Some(true),
                 //     work_done_progress_options: WorkDoneProgressOptions::default(),
                 // })),
-                // document_symbol_provider: Some(OneOf::Left(true)),
+                document_symbol_provider: Some(OneOf::Left(true)),
                 completion_provider: Some(CompletionOptions {
                     trigger_characters: Some(
                         [".", ">", "@", "~", "\"", "=", "("]
@@ -307,6 +308,15 @@ impl LanguageServer for Backend {
             uri,
             params.text_document_position.position,
         ))
+    }
+
+    async fn document_symbol(&self, params: DocumentSymbolParams) -> Result<Option<DocumentSymbolResponse>> {
+        let uri = &params.text_document.uri;
+        let Some(file_path) = uri_to_file_path(uri, "document_symbol") else {
+            return Ok(None);
+        };
+
+        Ok(document_symbol::handle(&self.build_state, &file_path))
     }
 
     async fn formatting(&self, params: DocumentFormattingParams) -> Result<Option<Vec<TextEdit>>> {
