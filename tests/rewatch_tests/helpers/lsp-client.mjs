@@ -18,6 +18,7 @@ import {
   HoverRequest,
   InitializedNotification,
   InitializeRequest,
+  InlayHintRequest,
   PrepareRenameRequest,
   PublishDiagnosticsNotification,
   ReferencesRequest,
@@ -372,6 +373,25 @@ export function createLspClient(cwd, otelEndpoint) {
       assertOpen(relativePath, uri);
       return sendRequest(CodeLensRequest.type, {
         textDocument: { uri },
+      });
+    },
+
+    /**
+     * Request inlay hints for a range in an open file.
+     * @param {string} relativePath - Path relative to the sandbox root
+     * @param {number} startLine - Zero-based start line
+     * @param {number} endLine - Zero-based end line
+     * @returns {Promise<import("vscode-languageserver-protocol").InlayHint[] | null>}
+     */
+    async inlayHintFor(relativePath, startLine, endLine) {
+      const uri = toUri(relativePath);
+      assertOpen(relativePath, uri);
+      return sendRequest(InlayHintRequest.type, {
+        textDocument: { uri },
+        range: {
+          start: { line: startLine, character: 0 },
+          end: { line: endLine, character: 0 },
+        },
       });
     },
 

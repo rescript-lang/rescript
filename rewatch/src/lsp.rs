@@ -10,6 +10,7 @@ mod formatting;
 mod hover;
 mod initial_build;
 pub mod initialize;
+mod inlay_hint;
 mod notifications;
 mod references;
 mod rename;
@@ -108,7 +109,7 @@ impl LanguageServer for Backend {
                     ..Default::default()
                 }),
                 document_formatting_provider: Some(OneOf::Left(true)),
-                // inlay_hint_provider: Some(OneOf::Left(true)),
+                inlay_hint_provider: Some(OneOf::Left(true)),
                 signature_help_provider: Some(SignatureHelpOptions {
                     trigger_characters: Some(vec!["(".to_string()]),
                     retrigger_characters: Some(vec!["=".to_string(), ",".to_string()]),
@@ -392,6 +393,21 @@ impl LanguageServer for Backend {
             &self.build_state,
             &file_path,
             uri,
+        ))
+    }
+
+    async fn inlay_hint(&self, params: InlayHintParams) -> Result<Option<Vec<InlayHint>>> {
+        let uri = &params.text_document.uri;
+        let Some(file_path) = uri_to_file_path(uri, "inlay_hint") else {
+            return Ok(None);
+        };
+
+        Ok(inlay_hint::handle(
+            &self.open_buffers,
+            &self.build_state,
+            &file_path,
+            uri,
+            params.range,
         ))
     }
 

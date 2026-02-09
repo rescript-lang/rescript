@@ -145,6 +145,7 @@ let main () =
     | ["rename"] -> CommandsRewatch.rename ()
     | ["signatureHelp"] -> CommandsRewatch.signatureHelp ()
     | ["codeLens"] -> CommandsRewatch.codeLens ()
+    | ["inlayHint"] -> CommandsRewatch.inlayHint ()
     | _ -> prerr_endline "Unknown rewatch subcommand")
   | [_; "completion"; path; line; col; currentFile] ->
     printHeaderInfo path line col;

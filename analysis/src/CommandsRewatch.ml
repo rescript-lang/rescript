@@ -73,6 +73,7 @@ type rewatch_context = {
   pos: int * int;
   newName: string;
   modulePath: string;
+  maxLength: string;
   package: SharedTypes.package;
 }
 
@@ -131,7 +132,8 @@ let parseRewatchContext json =
   in
   let newName = getString "newName" json in
   let modulePath = getString "modulePath" json in
-  {source; path; pos; newName; modulePath; package}
+  let maxLength = getString "maxLength" json in
+  {source; path; pos; newName; modulePath; maxLength; package}
 
 let withRewatchContext ~name ~default f =
   let input = In_channel.input_all In_channel.stdin in
@@ -357,6 +359,15 @@ let codeLens () =
     (fun {source; path; package; _} ->
       match Hint.codeLensFromSource ~path ~source ~package ~debug:false with
       | Some lenses -> lenses |> Protocol.array
+      | None -> Protocol.null)
+
+let inlayHint () =
+  withRewatchContext ~name:"inlayHint" ~default:"[]"
+    (fun {source; path; pos; maxLength; package; _} ->
+      match
+        Hint.inlayFromSource ~path ~source ~pos ~maxLength ~package ~debug:false
+      with
+      | Some hints -> hints |> Protocol.array
       | None -> Protocol.null)
 
 let references () =
