@@ -140,6 +140,8 @@ let main () =
     | ["typeDefinition"] -> CommandsRewatch.typeDefinition ()
     | ["references"] -> CommandsRewatch.references ()
     | ["documentSymbol"] -> CommandsRewatch.documentSymbol ()
+    | ["prepareRename"] -> CommandsRewatch.prepareRename ()
+    | ["rename"] -> CommandsRewatch.rename ()
     | _ -> prerr_endline "Unknown rewatch subcommand")
   | [_; "completion"; path; line; col; currentFile] ->
     printHeaderInfo path line col;

@@ -11,6 +11,7 @@ mod initial_build;
 pub mod initialize;
 mod notifications;
 mod references;
+mod rename;
 mod type_definition;
 
 use std::collections::{HashMap, HashSet};
@@ -86,10 +87,10 @@ impl LanguageServer for Backend {
                 type_definition_provider: Some(TypeDefinitionProviderCapability::Simple(true)),
                 references_provider: Some(OneOf::Left(true)),
                 // code_action_provider: Some(CodeActionProviderCapability::Simple(true)),
-                // rename_provider: Some(OneOf::Right(RenameOptions {
-                //     prepare_provider: Some(true),
-                //     work_done_progress_options: WorkDoneProgressOptions::default(),
-                // })),
+                rename_provider: Some(OneOf::Right(RenameOptions {
+                    prepare_provider: Some(true),
+                    work_done_progress_options: WorkDoneProgressOptions::default(),
+                })),
                 document_symbol_provider: Some(OneOf::Left(true)),
                 completion_provider: Some(CompletionOptions {
                     trigger_characters: Some(
@@ -307,6 +308,40 @@ impl LanguageServer for Backend {
             &file_path,
             uri,
             params.text_document_position.position,
+        ))
+    }
+
+    async fn prepare_rename(
+        &self,
+        params: TextDocumentPositionParams,
+    ) -> Result<Option<PrepareRenameResponse>> {
+        let uri = &params.text_document.uri;
+        let Some(file_path) = uri_to_file_path(uri, "prepare_rename") else {
+            return Ok(None);
+        };
+
+        Ok(rename::handle_prepare_rename(
+            &self.open_buffers,
+            &self.build_state,
+            &file_path,
+            uri,
+            params.position,
+        ))
+    }
+
+    async fn rename(&self, params: RenameParams) -> Result<Option<WorkspaceEdit>> {
+        let uri = &params.text_document_position.text_document.uri;
+        let Some(file_path) = uri_to_file_path(uri, "rename") else {
+            return Ok(None);
+        };
+
+        Ok(rename::handle_rename(
+            &self.open_buffers,
+            &self.build_state,
+            &file_path,
+            uri,
+            params.text_document_position.position,
+            &params.new_name,
         ))
     }
 

@@ -16,9 +16,11 @@ import {
   HoverRequest,
   InitializedNotification,
   InitializeRequest,
+  PrepareRenameRequest,
   PublishDiagnosticsNotification,
   ReferencesRequest,
   RegistrationRequest,
+  RenameRequest,
   ShutdownRequest,
   TypeDefinitionRequest,
 } from "vscode-languageserver-protocol/node.js";
@@ -345,6 +347,40 @@ export function createLspClient(cwd, otelEndpoint) {
       assertOpen(relativePath, uri);
       return sendRequest(DocumentSymbolRequest.type, {
         textDocument: { uri },
+      });
+    },
+
+    /**
+     * Send a prepareRename request for a position in a file.
+     * @param {string} relativePath - Path relative to the sandbox root
+     * @param {number} line - Zero-based line number
+     * @param {number} character - Zero-based character offset
+     * @returns {Promise<import("vscode-languageserver-protocol").PrepareRenameResult | null>}
+     */
+    async prepareRenameFor(relativePath, line, character) {
+      const uri = toUri(relativePath);
+      assertOpen(relativePath, uri);
+      return sendRequest(PrepareRenameRequest.type, {
+        textDocument: { uri },
+        position: { line, character },
+      });
+    },
+
+    /**
+     * Send a rename request for a position in a file.
+     * @param {string} relativePath - Path relative to the sandbox root
+     * @param {number} line - Zero-based line number
+     * @param {number} character - Zero-based character offset
+     * @param {string} newName - The new name for the symbol
+     * @returns {Promise<import("vscode-languageserver-protocol").WorkspaceEdit | null>}
+     */
+    async renameFor(relativePath, line, character, newName) {
+      const uri = toUri(relativePath);
+      assertOpen(relativePath, uri);
+      return sendRequest(RenameRequest.type, {
+        textDocument: { uri },
+        position: { line, character },
+        newName,
       });
     },
 

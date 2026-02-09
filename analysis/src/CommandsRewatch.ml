@@ -71,6 +71,7 @@ type rewatch_context = {
   source: string;
   path: string;
   pos: int * int;
+  newName: string;
   package: SharedTypes.package;
 }
 
@@ -127,7 +128,8 @@ let parseRewatchContext json =
       autocomplete = Misc.StringMap.empty;
     }
   in
-  {source; path; pos; package}
+  let newName = getString "newName" json in
+  {source; path; pos; newName; package}
 
 let withRewatchContext ~name ~default f =
   let input = In_channel.input_all In_channel.stdin in
@@ -239,6 +241,91 @@ let definition () =
       match locationOpt with
       | None -> Protocol.null
       | Some location -> location |> Protocol.stringifyLocation)
+
+let prepareRename () =
+  withRewatchContext ~name:"prepareRename" ~default:Protocol.null (fun ctx ->
+      match
+        withLocItem ctx (fun _full locItem ->
+            let range = Utils.cmtLocToRange locItem.loc in
+            let placeholderOpt =
+              match locItem.locType with
+              | Typed (name, _, _)
+              | TopLevelModule name
+              | TypeDefinition (name, _, _) ->
+                Some name
+              | _ -> None
+            in
+            Some (range, placeholderOpt))
+      with
+      | None -> Protocol.null
+      | Some (range, placeholderOpt) ->
+        let fields =
+          [("range", Some (Protocol.stringifyRange range))]
+          @
+          match placeholderOpt with
+          | None -> []
+          | Some s -> [("placeholder", Some (Protocol.wrapInQuotes s))]
+        in
+        Protocol.stringifyObject fields)
+
+let rename () =
+  withRewatchContext ~name:"rename" ~default:Protocol.null
+    (fun ({newName; _} as ctx) ->
+      match
+        withLocItem ctx (fun full locItem ->
+            let allReferences =
+              References.allReferencesForLocItem ~full locItem
+            in
+            let module StringMap = Misc.StringMap in
+            let fileRenames, textEditsByUri =
+              List.fold_left
+                (fun (renames, editsMap) {References.uri; locOpt} ->
+                  match locOpt with
+                  | None ->
+                    let path = Uri.toPath uri in
+                    let dir = Filename.dirname path in
+                    let newPath =
+                      Filename.concat dir (newName ^ Filename.extension path)
+                    in
+                    let newUri = Uri.fromPath newPath in
+                    let rename =
+                      Protocol.stringifyRenameFile
+                        {
+                          oldUri = Files.canonicalizeUri uri;
+                          newUri = newUri |> Uri.toString;
+                        }
+                    in
+                    (rename :: renames, editsMap)
+                  | Some loc ->
+                    let canonUri = Files.canonicalizeUri uri in
+                    let textEdit =
+                      Protocol.
+                        {range = Utils.cmtLocToRange loc; newText = newName}
+                    in
+                    let editsMap =
+                      match StringMap.find_opt canonUri editsMap with
+                      | None -> StringMap.add canonUri [textEdit] editsMap
+                      | Some prev ->
+                        StringMap.add canonUri (textEdit :: prev) editsMap
+                    in
+                    (renames, editsMap))
+                ([], StringMap.empty) allReferences
+            in
+            let textDocumentEdits =
+              StringMap.fold
+                (fun uri edits acc ->
+                  Protocol.stringifyTextDocumentEdit
+                    {textDocument = {uri; version = None}; edits}
+                  :: acc)
+                textEditsByUri []
+            in
+            let documentChanges =
+              fileRenames @ textDocumentEdits |> Protocol.array
+            in
+            Some (Printf.sprintf {|{"documentChanges": %s}|} documentChanges))
+      with
+      | None -> Protocol.null
+      | Some result -> result)
 
 let documentSymbol () =
   withRewatchContext ~name:"documentSymbol" ~default:"[]" (fun {path; _} ->
