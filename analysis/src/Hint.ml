@@ -113,7 +113,7 @@ let inlay ~path ~pos ~maxLength ~debug =
     in
     Some result
 
-let codeLens ~path ~debug =
+let collectCodeLensLenses ~path ~source =
   let lenses = ref [] in
   let push loc =
     let range = Utils.cmtLocToRange loc in
@@ -136,39 +136,58 @@ let codeLens ~path ~debug =
   (* We only print code lenses in implementation files. This is because they'd be redundant in interface files,
      where the definition itself will be the same thing as what would've been printed in the code lens. *)
   (if Files.classifySourceFile path = Res then
-     let parser =
-       Res_driver.parsing_engine.parse_implementation ~for_printer:false
-     in
-     let {Res_driver.parsetree = structure} = parser ~filename:path in
-     iterator.structure iterator structure |> ignore);
+     match source with
+     | Some src ->
+       let {Res_driver.parsetree = structure} =
+         Res_driver.parse_implementation_from_source ~for_printer:false
+           ~display_filename:path ~source:src
+       in
+       iterator.structure iterator structure |> ignore
+     | None ->
+       let parser =
+         Res_driver.parsing_engine.parse_implementation ~for_printer:false
+       in
+       let {Res_driver.parsetree = structure} = parser ~filename:path in
+       iterator.structure iterator structure |> ignore);
+  !lenses
+
+let codeLensForFull ~lenses ~full ~debug =
+  let result =
+    lenses
+    |> List.filter_map (fun (range : Protocol.range) ->
+           match
+             References.getLocItem ~full
+               ~pos:(range.start.line, range.start.character + 1)
+               ~debug
+           with
+           | Some {locType = Typed (_, typeExpr, _)} ->
+             Some
+               (Protocol.stringifyCodeLens
+                  {
+                    range;
+                    command =
+                      Some
+                        {
+                          (* Code lenses can run commands. An empty command string means we just want the editor
+                             to print the text, not link to running a command. *)
+                          command = "";
+                          (* Print the type with a huge line width, because the code lens always prints on a
+                             single line in the editor. *)
+                          title = typeExpr |> Shared.typeToString ~lineWidth:400;
+                        };
+                  })
+           | _ -> None)
+  in
+  Some result
+
+let codeLens ~path ~debug =
+  let lenses = collectCodeLensLenses ~path ~source:None in
   match Cmt.loadFullCmtFromPath ~path with
   | None -> None
-  | Some full ->
-    let result =
-      !lenses
-      |> List.filter_map (fun (range : Protocol.range) ->
-             match
-               References.getLocItem ~full
-                 ~pos:(range.start.line, range.start.character + 1)
-                 ~debug
-             with
-             | Some {locType = Typed (_, typeExpr, _)} ->
-               Some
-                 (Protocol.stringifyCodeLens
-                    {
-                      range;
-                      command =
-                        Some
-                          {
-                            (* Code lenses can run commands. An empty command string means we just want the editor
-                               to print the text, not link to running a command. *)
-                            command = "";
-                            (* Print the type with a huge line width, because the code lens always prints on a
-                               single line in the editor. *)
-                            title =
-                              typeExpr |> Shared.typeToString ~lineWidth:400;
-                          };
-                    })
-             | _ -> None)
-    in
-    Some result
+  | Some full -> codeLensForFull ~lenses ~full ~debug
+
+let codeLensFromSource ~path ~source ~package ~debug =
+  let lenses = collectCodeLensLenses ~path ~source:(Some source) in
+  match Cmt.loadFullCmtWithPackage ~path ~package with
+  | None -> None
+  | Some full -> codeLensForFull ~lenses ~full ~debug

@@ -1,4 +1,5 @@
 mod analysis;
+mod code_lens;
 mod completion;
 mod definition;
 mod dependency_closure;
@@ -92,6 +93,9 @@ impl LanguageServer for Backend {
                     prepare_provider: Some(true),
                     work_done_progress_options: WorkDoneProgressOptions::default(),
                 })),
+                code_lens_provider: Some(CodeLensOptions {
+                    resolve_provider: Some(false),
+                }),
                 document_symbol_provider: Some(OneOf::Left(true)),
                 completion_provider: Some(CompletionOptions {
                     resolve_provider: Some(true),
@@ -375,6 +379,20 @@ impl LanguageServer for Backend {
         };
 
         Ok(document_symbol::handle(&self.build_state, &file_path))
+    }
+
+    async fn code_lens(&self, params: CodeLensParams) -> Result<Option<Vec<CodeLens>>> {
+        let uri = &params.text_document.uri;
+        let Some(file_path) = uri_to_file_path(uri, "code_lens") else {
+            return Ok(None);
+        };
+
+        Ok(code_lens::handle(
+            &self.open_buffers,
+            &self.build_state,
+            &file_path,
+            uri,
+        ))
     }
 
     async fn formatting(&self, params: DocumentFormattingParams) -> Result<Option<Vec<TextEdit>>> {

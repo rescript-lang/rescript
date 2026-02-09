@@ -3,6 +3,7 @@ import { readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import {
+  CodeLensRequest,
   CompletionRequest,
   CompletionResolveRequest,
   createProtocolConnection,
@@ -357,6 +358,19 @@ export function createLspClient(cwd, otelEndpoint) {
       const uri = toUri(relativePath);
       assertOpen(relativePath, uri);
       return sendRequest(DocumentSymbolRequest.type, {
+        textDocument: { uri },
+      });
+    },
+
+    /**
+     * Request code lenses for an open file.
+     * @param {string} relativePath - Path relative to the sandbox root
+     * @returns {Promise<import("vscode-languageserver-protocol").CodeLens[] | null>}
+     */
+    async codeLensFor(relativePath) {
+      const uri = toUri(relativePath);
+      assertOpen(relativePath, uri);
+      return sendRequest(CodeLensRequest.type, {
         textDocument: { uri },
       });
     },

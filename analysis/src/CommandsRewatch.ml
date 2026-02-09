@@ -352,6 +352,13 @@ let documentSymbol () =
   withRewatchContext ~name:"documentSymbol" ~default:"[]"
     (fun {source; path; _} -> DocumentSymbol.command ~path ~source)
 
+let codeLens () =
+  withRewatchContext ~name:"codeLens" ~default:"[]"
+    (fun {source; path; package; _} ->
+      match Hint.codeLensFromSource ~path ~source ~package ~debug:false with
+      | Some lenses -> lenses |> Protocol.array
+      | None -> Protocol.null)
+
 let references () =
   withRewatchContext ~name:"references" ~default:Protocol.null (fun ctx ->
       let locations =
