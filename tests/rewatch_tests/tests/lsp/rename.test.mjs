@@ -43,8 +43,8 @@ describe("lsp rename", { timeout: 60_000 }, () => {
       expect(result.documentChanges.length).toBeGreaterThan(0);
 
       // Check that at least one edit contains the new name
-      const hasNewName = result.documentChanges.some(
-        dc => dc.edits && dc.edits.some(edit => edit.newText === "hello"),
+      const hasNewName = result.documentChanges.some(dc =>
+        dc.edits?.some(edit => edit.newText === "hello"),
       );
       expect(hasNewName).toBe(true);
     }));

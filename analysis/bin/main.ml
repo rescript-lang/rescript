@@ -143,6 +143,7 @@ let main () =
     | ["documentSymbol"] -> CommandsRewatch.documentSymbol ()
     | ["prepareRename"] -> CommandsRewatch.prepareRename ()
     | ["rename"] -> CommandsRewatch.rename ()
+    | ["signatureHelp"] -> CommandsRewatch.signatureHelp ()
     | _ -> prerr_endline "Unknown rewatch subcommand")
   | [_; "completion"; path; line; col; currentFile] ->
     printHeaderInfo path line col;

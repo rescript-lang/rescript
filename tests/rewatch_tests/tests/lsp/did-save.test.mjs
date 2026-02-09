@@ -31,9 +31,11 @@ describe("lsp didSave", { timeout: 60_000 }, () => {
         "Root.mjs should exist after save",
       ).toBe(true);
 
-      // Diagnostics should be clean
+      // Diagnostics should be clean (no errors for any file)
       const diagnostics = lsp.getDiagnostics();
-      expect(diagnostics).toEqual([]);
+      for (const entry of diagnostics) {
+        expect(entry.diagnostics).toEqual([]);
+      }
     }));
 
   it("produces JS output for dependent files when a file is saved", () =>

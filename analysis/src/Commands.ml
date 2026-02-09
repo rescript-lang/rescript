@@ -102,13 +102,21 @@ let hover ~path ~pos ~currentFile ~debug ~supportsMarkdownLinks =
 
 let signatureHelp ~path ~pos ~currentFile ~debug ~allowForConstructorPayloads =
   let result =
-    match
-      SignatureHelp.signatureHelp ~path ~pos ~currentFile ~debug
-        ~allowForConstructorPayloads
-    with
-    | None ->
+    match Files.readFile currentFile with
+    | None | Some "" ->
       {Protocol.signatures = []; activeSignature = None; activeParameter = None}
-    | Some res -> res
+    | Some text -> (
+      match
+        SignatureHelp.signatureHelp ~path ~pos ~currentFile ~text ~debug
+          ~allowForConstructorPayloads ()
+      with
+      | None ->
+        {
+          Protocol.signatures = [];
+          activeSignature = None;
+          activeParameter = None;
+        }
+      | Some res -> res)
   in
   print_endline (Protocol.stringifySignatureHelp result)
 

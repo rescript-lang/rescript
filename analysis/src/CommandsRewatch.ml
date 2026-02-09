@@ -384,6 +384,18 @@ let references () =
       | None -> Protocol.null
       | Some locs -> Protocol.array locs)
 
+let signatureHelp () =
+  withRewatchContext ~name:"signatureHelp" ~default:Protocol.null
+    (fun {source; path; pos; package; _} ->
+      match
+        SignatureHelp.signatureHelp ~path ~pos ~currentFile:path ~text:source
+          ~debug:false ~allowForConstructorPayloads:true ~package ()
+      with
+      | None ->
+        Protocol.stringifySignatureHelp
+          {signatures = []; activeSignature = None; activeParameter = None}
+      | Some res -> Protocol.stringifySignatureHelp res)
+
 let typeDefinition () =
   withRewatchContext ~name:"typeDefinition" ~default:Protocol.null (fun ctx ->
       let locationOpt =

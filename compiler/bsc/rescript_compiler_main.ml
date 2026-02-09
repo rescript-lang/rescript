@@ -71,9 +71,7 @@ let process_file sourcefile ?kind ppf =
     | Res ->
       let sourcefile = set_abs_input_name sourcefile in
       if !Js_config.read_stdin then (
-        (* Disable .cmt generation — Cmt_format.save_cmt would try to
-           Digest.file the source, which doesn't exist on disk. *)
-        Clflags.binary_annotations := false;
+        Clflags.skip_source_digest := true;
         let source = Res_io.read_stdin () in
         Js_implementation.implementation
           ~parser:(fun _fname ->
@@ -90,7 +88,7 @@ let process_file sourcefile ?kind ppf =
     | Resi ->
       let sourcefile = set_abs_input_name sourcefile in
       if !Js_config.read_stdin then (
-        Clflags.binary_annotations := false;
+        Clflags.skip_source_digest := true;
         let source = Res_io.read_stdin () in
         Js_implementation.interface
           ~parser:(fun _fname ->

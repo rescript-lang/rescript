@@ -12,6 +12,7 @@ pub mod initialize;
 mod notifications;
 mod references;
 mod rename;
+mod signature_help;
 mod type_definition;
 
 use std::collections::{HashMap, HashSet};
@@ -104,11 +105,11 @@ impl LanguageServer for Backend {
                 }),
                 document_formatting_provider: Some(OneOf::Left(true)),
                 // inlay_hint_provider: Some(OneOf::Left(true)),
-                // signature_help_provider: Some(SignatureHelpOptions {
-                //     trigger_characters: Some(vec!["(".to_string()]),
-                //     retrigger_characters: Some(vec!["=".to_string(), ",".to_string()]),
-                //     ..Default::default()
-                // }),
+                signature_help_provider: Some(SignatureHelpOptions {
+                    trigger_characters: Some(vec!["(".to_string()]),
+                    retrigger_characters: Some(vec!["=".to_string(), ",".to_string()]),
+                    ..Default::default()
+                }),
                 ..Default::default()
             },
         })
@@ -145,7 +146,7 @@ impl LanguageServer for Backend {
             }
         }
 
-        self.publish_diagnostics(&all_diagnostics, true).await;
+        self.publish_diagnostics(&all_diagnostics).await;
 
         self.client
             .send_notification::<notifications::BuildFinished>(notifications::BuildFinishedParams {})
@@ -207,7 +208,8 @@ impl LanguageServer for Backend {
             did_change::run(build_state, &file_path, &content)
         };
 
-        self.publish_diagnostics(&diagnostics, false).await;
+        self.publish_diagnostics_for_file(&diagnostics, &params.text_document.uri)
+            .await;
     }
 
     async fn did_save(&self, params: DidSaveTextDocumentParams) {
@@ -227,7 +229,8 @@ impl LanguageServer for Backend {
             did_save::run(build_state, &file_path)
         };
 
-        self.publish_diagnostics(&diagnostics, false).await;
+        self.publish_diagnostics_for_file(&diagnostics, &params.text_document.uri)
+            .await;
 
         self.client
             .send_notification::<notifications::BuildFinished>(notifications::BuildFinishedParams {})
@@ -260,6 +263,21 @@ impl LanguageServer for Backend {
         };
 
         Ok(hover::handle(
+            &self.open_buffers,
+            &self.build_state,
+            &file_path,
+            uri,
+            params.text_document_position_params.position,
+        ))
+    }
+
+    async fn signature_help(&self, params: SignatureHelpParams) -> Result<Option<SignatureHelp>> {
+        let uri = &params.text_document_position_params.text_document.uri;
+        let Some(file_path) = uri_to_file_path(uri, "signature_help") else {
+            return Ok(None);
+        };
+
+        Ok(signature_help::handle(
             &self.open_buffers,
             &self.build_state,
             &file_path,
@@ -385,35 +403,41 @@ impl LanguageServer for Backend {
 }
 
 impl Backend {
-    /// Publish diagnostics grouped by file. Clears stale diagnostics from
-    /// files that had errors in the previous cycle but not in the current one.
-    ///
-    /// When `is_initial` is true, no stale diagnostics are cleared (the editor
-    /// starts with a clean slate).
-    async fn publish_diagnostics(&self, diagnostics: &[BscDiagnostic], is_initial: bool) {
-        let mut by_file: HashMap<Url, Vec<Diagnostic>> = HashMap::new();
-        for diag in diagnostics {
-            let Some(uri) = Url::from_file_path(&diag.file).ok() else {
-                tracing::warn!("Could not convert path to URI: {}", diag.file.display());
-                continue;
-            };
-            by_file.entry(uri).or_default().push(to_lsp_diagnostic(diag));
+    /// Publish diagnostics from the initial build. No stale diagnostics are
+    /// cleared because the editor starts with a clean slate.
+    async fn publish_diagnostics(&self, diagnostics: &[BscDiagnostic]) {
+        let by_file = Self::group_by_file(diagnostics);
+
+        for (uri, diags) in &by_file {
+            self.client
+                .publish_diagnostics(uri.clone(), diags.clone(), None)
+                .await;
         }
 
+        if let Ok(mut prev) = self.last_diagnostics_files.lock() {
+            *prev = by_file.keys().cloned().collect();
+        }
+    }
+
+    /// Publish diagnostics after a didChange or didSave. Clears stale
+    /// diagnostics from files that had errors previously but not anymore,
+    /// and always notifies for `origin_uri` even when it compiled cleanly.
+    async fn publish_diagnostics_for_file(
+        &self,
+        diagnostics: &[BscDiagnostic],
+        origin_uri: &Url,
+    ) {
+        let by_file = Self::group_by_file(diagnostics);
         let current_files: HashSet<Url> = by_file.keys().cloned().collect();
 
-        // Collect stale URIs that need clearing (must drop lock before awaiting)
-        let stale_uris: Vec<Url> = if !is_initial {
-            self.last_diagnostics_files
-                .lock()
-                .ok()
-                .map(|prev| prev.difference(&current_files).cloned().collect())
-                .unwrap_or_default()
-        } else {
-            Vec::new()
-        };
-
         // Clear diagnostics for files that no longer have errors
+        let stale_uris: Vec<Url> = self
+            .last_diagnostics_files
+            .lock()
+            .ok()
+            .map(|prev| prev.difference(&current_files).cloned().collect())
+            .unwrap_or_default();
+
         for uri in stale_uris {
             self.client.publish_diagnostics(uri, Vec::new(), None).await;
         }
@@ -425,10 +449,28 @@ impl Backend {
                 .await;
         }
 
-        // Update tracking set
+        // Always notify for the origin file, even when it compiled cleanly
+        if !by_file.contains_key(origin_uri) {
+            self.client
+                .publish_diagnostics(origin_uri.clone(), Vec::new(), None)
+                .await;
+        }
+
         if let Ok(mut prev) = self.last_diagnostics_files.lock() {
             *prev = current_files;
         }
+    }
+
+    fn group_by_file(diagnostics: &[BscDiagnostic]) -> HashMap<Url, Vec<Diagnostic>> {
+        let mut by_file: HashMap<Url, Vec<Diagnostic>> = HashMap::new();
+        for diag in diagnostics {
+            let Some(uri) = Url::from_file_path(&diag.file).ok() else {
+                tracing::warn!("Could not convert path to URI: {}", diag.file.display());
+                continue;
+            };
+            by_file.entry(uri).or_default().push(to_lsp_diagnostic(diag));
+        }
+        by_file
     }
 }
 
