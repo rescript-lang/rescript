@@ -24,6 +24,7 @@ import {
   ReferencesRequest,
   RegistrationRequest,
   RenameRequest,
+  SemanticTokensRequest,
   ShutdownRequest,
   SignatureHelpRequest,
   TypeDefinitionRequest,
@@ -392,6 +393,19 @@ export function createLspClient(cwd, otelEndpoint) {
           start: { line: startLine, character: 0 },
           end: { line: endLine, character: 0 },
         },
+      });
+    },
+
+    /**
+     * Request semantic tokens for an open file.
+     * @param {string} relativePath - Path relative to the sandbox root
+     * @returns {Promise<import("vscode-languageserver-protocol").SemanticTokens | null>}
+     */
+    async semanticTokensFor(relativePath) {
+      const uri = toUri(relativePath);
+      assertOpen(relativePath, uri);
+      return sendRequest(SemanticTokensRequest.type, {
+        textDocument: { uri },
       });
     },
 

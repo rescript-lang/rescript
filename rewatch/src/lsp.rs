@@ -14,6 +14,7 @@ mod inlay_hint;
 mod notifications;
 mod references;
 mod rename;
+mod semantic_tokens;
 mod signature_help;
 mod type_definition;
 
@@ -110,6 +111,26 @@ impl LanguageServer for Backend {
                 }),
                 document_formatting_provider: Some(OneOf::Left(true)),
                 inlay_hint_provider: Some(OneOf::Left(true)),
+                semantic_tokens_provider: Some(SemanticTokensServerCapabilities::SemanticTokensOptions(
+                    SemanticTokensOptions {
+                        legend: SemanticTokensLegend {
+                            token_types: vec![
+                                SemanticTokenType::OPERATOR,            // 0
+                                SemanticTokenType::VARIABLE,            // 1
+                                SemanticTokenType::TYPE,                // 2
+                                SemanticTokenType::new("jsxTag"),       // 3
+                                SemanticTokenType::NAMESPACE,           // 4
+                                SemanticTokenType::ENUM_MEMBER,         // 5
+                                SemanticTokenType::PROPERTY,            // 6
+                                SemanticTokenType::new("jsxLowercase"), // 7
+                            ],
+                            token_modifiers: vec![],
+                        },
+                        full: Some(SemanticTokensFullOptions::Bool(true)),
+                        range: None,
+                        ..Default::default()
+                    },
+                )),
                 signature_help_provider: Some(SignatureHelpOptions {
                     trigger_characters: Some(vec!["(".to_string()]),
                     retrigger_characters: Some(vec!["=".to_string(), ",".to_string()]),
@@ -408,6 +429,23 @@ impl LanguageServer for Backend {
             &file_path,
             uri,
             params.range,
+        ))
+    }
+
+    async fn semantic_tokens_full(
+        &self,
+        params: SemanticTokensParams,
+    ) -> Result<Option<SemanticTokensResult>> {
+        let uri = &params.text_document.uri;
+        let Some(file_path) = uri_to_file_path(uri, "semantic_tokens") else {
+            return Ok(None);
+        };
+
+        Ok(semantic_tokens::handle(
+            &self.open_buffers,
+            &self.build_state,
+            &file_path,
+            uri,
         ))
     }
 

@@ -370,6 +370,11 @@ let inlayHint () =
       | Some hints -> hints |> Protocol.array
       | None -> Protocol.null)
 
+let semanticTokens () =
+  withRewatchContext ~name:"semanticTokens" ~default:"{\"data\":[]}"
+    (fun {source; path; _} ->
+      SemanticTokens.semanticTokensFromSource ~path ~source)
+
 let references () =
   withRewatchContext ~name:"references" ~default:Protocol.null (fun ctx ->
       let locations =

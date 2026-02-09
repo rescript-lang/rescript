@@ -203,7 +203,7 @@ let emitVariant ~(name : Longident.t Location.loc) ~debug emitter =
     |> emitLongident ~lastToken:(Some Token.EnumMember)
          ~pos:(Loc.start name.loc) ~lid:name.txt ~debug
 
-let command ~debug ~emitter ~path =
+let makeIterator ~debug ~emitter =
   let processTypeArg (coreType : Parsetree.core_type) =
     if debug then Printf.printf "TypeArg: %s\n" (Loc.toString coreType.ptyp_loc)
   in
@@ -479,7 +479,10 @@ let command ~debug ~emitter ~path =
       signature_item;
     }
   in
+  iterator
 
+let command ~debug ~emitter ~path =
+  let iterator = makeIterator ~debug ~emitter in
   if Files.classifySourceFile path = Res then (
     let parser =
       Res_driver.parsing_engine.parse_implementation ~for_printer:false
@@ -501,7 +504,27 @@ let command ~debug ~emitter ~path =
         (List.length signature) (List.length diagnostics);
     iterator.signature iterator signature |> ignore
 
+let commandFromSource ~debug ~emitter ~path ~source =
+  let iterator = makeIterator ~debug ~emitter in
+  if Filename.check_suffix path ".res" then
+    let {Res_driver.parsetree = structure} =
+      Res_driver.parse_implementation_from_source ~for_printer:false
+        ~display_filename:path ~source
+    in
+    iterator.structure iterator structure |> ignore
+  else
+    let {Res_driver.parsetree = signature} =
+      Res_driver.parse_interface_from_source ~for_printer:false
+        ~display_filename:path ~source
+    in
+    iterator.signature iterator signature |> ignore
+
 let semanticTokens ~currentFile =
   let emitter = Token.createEmitter () in
   command ~emitter ~debug:false ~path:currentFile;
   Printf.printf "{\"data\":[%s]}" (Token.emit emitter)
+
+let semanticTokensFromSource ~path ~source =
+  let emitter = Token.createEmitter () in
+  commandFromSource ~emitter ~debug:false ~path ~source;
+  Printf.sprintf "{\"data\":[%s]}" (Token.emit emitter)
