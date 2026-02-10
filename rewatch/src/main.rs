@@ -151,7 +151,6 @@ fn run_clean(folder: &str, show_progress: bool, plain_output: bool) -> i32 {
     }
 }
 
-#[instrument(name = "rewatch.lsp", skip_all)]
 fn run_lsp() -> i32 {
     match tokio::runtime::Runtime::new() {
         Ok(rt) => {

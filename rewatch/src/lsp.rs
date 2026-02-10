@@ -99,6 +99,9 @@ struct Backend {
     open_buffers: Mutex<HashMap<Url, String>>,
     /// Debounced build queue. `None` until the initial build completes.
     build_queue: Mutex<Option<build_queue::BuildQueue>>,
+    /// The `rewatch.lsp` root span, captured at construction so spawned tasks
+    /// can set it as their explicit parent.
+    root_span: tracing::Span,
 }
 
 #[tower_lsp::async_trait]
@@ -211,6 +214,7 @@ impl LanguageServer for Backend {
             *bq = Some(build_queue::BuildQueue::new(
                 Arc::clone(&self.projects),
                 self.client.clone(),
+                self.root_span.clone(),
             ));
         }
 
@@ -278,6 +282,29 @@ impl LanguageServer for Backend {
             && let Some(ref queue) = *bq
         {
             queue.queue_file(file_path);
+        }
+    }
+
+    async fn did_change_watched_files(&self, params: DidChangeWatchedFilesParams) {
+        let _span =
+            tracing::info_span!("lsp.did_change_watched_files", file_count = params.changes.len()).entered();
+        if let Ok(bq) = self.build_queue.lock()
+            && let Some(ref queue) = *bq
+        {
+            for event in &params.changes {
+                if event.typ != FileChangeType::CHANGED {
+                    continue;
+                }
+                let Some(file_path) = uri_to_file_path(&event.uri, "didChangeWatchedFiles") else {
+                    continue;
+                };
+                if matches!(
+                    file_path.extension().and_then(|e| e.to_str()),
+                    Some("res" | "resi")
+                ) {
+                    queue.queue_file(file_path);
+                }
+            }
         }
     }
 
@@ -627,6 +654,7 @@ fn to_lsp_diagnostic(diag: &BscDiagnostic) -> Diagnostic {
     }
 }
 
+#[tracing::instrument(name = "rewatch.lsp", skip_all)]
 pub async fn run_stdio() {
     let stdin = tokio::io::stdin();
     let stdout = tokio::io::stdout();
@@ -637,6 +665,7 @@ pub async fn run_stdio() {
         projects: Arc::new(Mutex::new(ProjectMap::new())),
         open_buffers: Mutex::new(HashMap::new()),
         build_queue: Mutex::new(None),
+        root_span: tracing::Span::current(),
     });
     Server::new(stdin, stdout, socket).serve(service).await;
 }

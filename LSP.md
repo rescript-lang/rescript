@@ -291,7 +291,7 @@ On `initialized`, the server discovers packages and registers scoped file watche
 
 Patterns use forward slashes and are scoped to declared source directories to avoid matching `node_modules/` or `lib/bs/`.
 
-**Note**: File watcher events (`workspace/didChangeWatchedFiles`) are registered but **not yet handled** — see plan below.
+File watcher events (`workspace/didChangeWatchedFiles`) for `Changed` events are fed into the same debounced build queue as `didSave`. Created/Deleted events are not yet handled — see plan below.
 
 Implementation: `lsp/initialize.rs`
 
@@ -336,7 +336,7 @@ This gives 2 incremental builds total instead of 2N. The same batched function s
 
 1. ~~Generalize `did_save::run` to accept `&[&Path]` instead of `&Path`~~ Done
 2. ~~Add debounced build queue (`build_queue.rs`) with 150ms timer~~ Done
-3. Implement `didChangeWatchedFiles` handler — send Changed events into the same build queue
+3. ~~Implement `didChangeWatchedFiles` handler — send Changed events into the same build queue~~ Done
 4. Handle Created/Deleted events (module graph updates)
 5. Add `didChange` per-file debounce timer (independent)
 
@@ -367,7 +367,7 @@ Comparison with the old Node.js LSP (`rescript-vscode/server/src/server.ts`). Fe
 | `textDocument/createInterface` | TODO (analysis) | Low priority — niche feature, generates `.resi` from `.res` |
 | `textDocument/openCompiled` | TODO | Low priority — niche feature, opens compiled `.js` output |
 | `diagnosticSyntax` on `didChange` | TODO (analysis) | Low priority — old LSP ran syntax diagnostics on every keystroke via analysis binary. Our `didChange` already runs `bsc` which catches syntax errors. |
-| `workspace/didChangeWatchedFiles` | Registered but handler not implemented | Yes — needs to handle external file changes (git checkout, etc.) |
+| `workspace/didChangeWatchedFiles` | Implemented (Changed events only) | Created/Deleted events need module graph updates |
 | Monorepo multi-workspace | Implemented | - |
 
 ## Relationship to `rescript build`

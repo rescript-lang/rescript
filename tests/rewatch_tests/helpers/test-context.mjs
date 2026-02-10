@@ -133,6 +133,7 @@ const SUMMARY_SPAN_NAMES = new Set([
   "lsp.source_dir",
   "lsp.register_watchers",
   "lsp.did_save",
+  "lsp.did_change_watched_files",
   "lsp.build_batch",
   "lsp.build_batch.compile_dependencies",
   "lsp.build_batch.typecheck_dependents",
@@ -230,6 +231,7 @@ const SUMMARY_ATTRS = {
   "lsp.initial_build": ["project"],
   "lsp.register_watchers": ["watcher_count"],
   "lsp.did_save": ["file"],
+  "lsp.did_change_watched_files": ["file_count"],
   "lsp.build_batch": ["file_count"],
   "lsp.build_batch.typecheck_dependents": ["dependent_count"],
   "lsp.completion": ["file", "module", "package", "items_count"],
@@ -658,6 +660,15 @@ export async function runLspTest(scenario, options = {}) {
         await writeFile(tmpPath, content);
         await rename(tmpPath, fullPath);
         lsp.saveFile(relativePath);
+      },
+
+      async writeFileExternal(relativePath, content) {
+        const fullPath = path.join(lspCwd, relativePath);
+        await mkdir(path.dirname(fullPath), { recursive: true });
+        const tmpPath = fullPath + ".__atomic_tmp";
+        await writeFile(tmpPath, content);
+        await rename(tmpPath, fullPath);
+        lsp.notifyWatchedFilesChanged([{ relativePath }]);
       },
 
       async readFile(relativePath) {

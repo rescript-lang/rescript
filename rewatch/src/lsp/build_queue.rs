@@ -15,7 +15,7 @@ use tokio::sync::mpsc;
 use tokio::time::Instant;
 use tower_lsp::Client;
 use tower_lsp::lsp_types::Url;
-use tracing::instrument;
+use tracing::{Instrument, instrument};
 
 use ahash::AHashSet;
 
@@ -37,9 +37,12 @@ pub struct BuildQueue {
 
 impl BuildQueue {
     /// Create the queue and spawn the background consumer task.
-    pub fn new(projects: Arc<Mutex<ProjectMap>>, client: Client) -> Self {
+    ///
+    /// `root_span` is the `rewatch.lsp` span so that `lsp.build_batch`
+    /// spans appear as direct children of it.
+    pub fn new(projects: Arc<Mutex<ProjectMap>>, client: Client, root_span: tracing::Span) -> Self {
         let (tx, rx) = mpsc::unbounded_channel();
-        tokio::spawn(build_consumer(rx, projects, client));
+        tokio::spawn(build_consumer(rx, projects, client).instrument(root_span));
         BuildQueue { tx }
     }
 
@@ -99,7 +102,9 @@ async fn flush_build(pending: &mut HashSet<PathBuf>, projects: &Arc<Mutex<Projec
     let file_paths: Vec<PathBuf> = pending.drain().collect();
     let projects = Arc::clone(projects);
 
+    let parent_span = tracing::Span::current();
     let results = tokio::task::spawn_blocking(move || {
+        let _entered = parent_span.enter();
         let mut guard = match projects.lock() {
             Ok(g) => g,
             Err(_) => return Vec::new(),

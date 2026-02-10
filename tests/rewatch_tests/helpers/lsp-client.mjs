@@ -10,6 +10,7 @@ import {
   createProtocolConnection,
   DefinitionRequest,
   DidChangeTextDocumentNotification,
+  DidChangeWatchedFilesNotification,
   DidCloseTextDocumentNotification,
   DidOpenTextDocumentNotification,
   DidSaveTextDocumentNotification,
@@ -243,6 +244,19 @@ export function createLspClient(cwd, otelEndpoint) {
       const uri = toUri(relativePath);
       connection.sendNotification(DidSaveTextDocumentNotification.type, {
         textDocument: { uri },
+      });
+    },
+
+    /**
+     * Notify the LSP server that watched files changed (external edits).
+     * @param {Array<{relativePath: string, type?: number}>} files - Files that changed. type: 1=Created, 2=Changed, 3=Deleted. Defaults to 2 (Changed).
+     */
+    notifyWatchedFilesChanged(files) {
+      connection.sendNotification(DidChangeWatchedFilesNotification.type, {
+        changes: files.map(f => ({
+          uri: toUri(f.relativePath),
+          type: f.type ?? 2,
+        })),
       });
     },
 
