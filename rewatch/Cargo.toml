@@ -36,7 +36,7 @@ tracing-opentelemetry = "0.25"
 opentelemetry = "0.24"
 opentelemetry_sdk = { version = "0.24", features = ["rt-tokio"] }
 opentelemetry-otlp = { version = "0.17", features = ["http-proto", "reqwest-client"] }
-tokio = { version = "1", features = ["rt-multi-thread", "io-std"] }
+tokio = { version = "1", features = ["rt-multi-thread", "io-std", "sync", "time"] }
 tower-lsp = "0.20"
 
 [profile.release]

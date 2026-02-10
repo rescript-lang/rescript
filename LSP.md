@@ -157,6 +157,12 @@ Implementation: `lsp/initial_build.rs`
 
 Single-file typecheck using `bsc -bs-read-stdin`. The unsaved buffer content is piped to bsc's stdin. No JS output, no dependent recompilation — just diagnostics for the edited file.
 
+**Future optimization — debounced typechecking**: Currently every `didChange` immediately spawns bsc. During fast typing this creates wasted work since intermediate keystrokes produce incomplete code that will be superseded milliseconds later.
+
+Gleam solves this with a `MessageBuffer` that collects incoming notifications and uses a **100ms debounce timer** — when 100ms passes with no new messages, it flushes the batch and appends a compile request. Only the latest buffer content for each file is compiled. For LSP requests (hover, completion), compilation is triggered immediately before handling the request so responses always reflect the current state.
+
+Our approach could be simpler since we typecheck single files rather than the whole project: store the latest `didChange` content in `open_buffers` immediately (for completion/hover), but delay the bsc typecheck spawn behind a per-file debounce timer (e.g. 100-200ms). If a new `didChange` arrives for the same file before the timer fires, reset the timer. A `tokio::time::sleep` future that gets cancelled/replaced on each new change would work. Requests like hover/completion that need fresh diagnostics could force an immediate flush.
+
 ```
 didChange notification (full document content)
     │
@@ -174,39 +180,45 @@ Implementation: `lsp/did_change.rs`
 
 ### On `didSave` (saved file)
 
-Two-phase incremental build:
-
-**Phase 1 — Compile dependencies** (`TypecheckAndEmit`): Compile the saved file and its transitive imports to produce JS output. Only the dependency closure is compiled — modules outside it are temporarily promoted to `Built` so they are excluded from the compile universe.
-
-**Phase 2 — Typecheck dependents** (`TypecheckOnly`): Re-typecheck modules that transitively import the saved file to surface errors caused by API changes. No JS is emitted for dependents — they get JS when they are themselves saved.
+The `didSave` handler sends the file path into a debounced build queue and returns immediately. A background consumer task collects paths, deduplicates them, and after 150ms of silence flushes one batched build per project.
 
 ```
-didSave notification
-    │
-    ├── mark_file_parse_dirty(file_path)
-    │
-    ├── Phase 1: compile_dependencies
-    │   ├── get_dependency_closure (DFS downward through module.deps)
-    │   ├── Temporarily promote non-closure TypeChecked modules → Built
-    │   ├── incremental_build(TypecheckAndEmit, only_incremental=true)
-    │   └── Restore promoted modules → TypeChecked
-    │
-    ├── Phase 2: typecheck_dependents
-    │   ├── get_dependent_closure (DFS upward through module.dependents)
-    │   ├── Mark each dependent as Dirty
-    │   ├── Temporarily promote non-dependent TypeChecked modules → Built
-    │   ├── incremental_build(TypecheckOnly, only_incremental=true)
-    │   └── Restore promoted modules → TypeChecked
-    │
-    ├── Publish combined diagnostics from both phases
-    └── Send rescript/buildFinished notification
+didSave notification ──► queue file path ──► return immediately
+                              │
+                    background consumer task
+                              │
+                    ┌─────────▼──────────┐
+                    │ collect into HashSet │
+                    │ reset 150ms timer    │
+                    └─────────┬──────────┘
+                              │ timer expires
+                              ▼
+                    group files by project root
+                              │
+                    for each project (sequential):
+                    ├── mark_file_parse_dirty per file
+                    ├── Phase 1: compile_dependencies
+                    │   ├── get_dependency_closure (DFS downward through module.deps)
+                    │   ├── Temporarily promote non-closure TypeChecked modules → Built
+                    │   ├── incremental_build(TypecheckAndEmit, only_incremental=true)
+                    │   └── Restore promoted modules → TypeChecked
+                    ├── Phase 2: typecheck_dependents
+                    │   ├── get_dependent_closure (DFS upward through module.dependents)
+                    │   ├── Mark each dependent as Dirty
+                    │   ├── Temporarily promote non-dependent TypeChecked modules → Built
+                    │   ├── incremental_build(TypecheckOnly, only_incremental=true)
+                    │   └── Restore promoted modules → TypeChecked
+                    ├── Publish combined diagnostics from both phases
+                    └── Send rescript/buildFinished notification
 ```
 
-Implementation: `lsp/did_save.rs`, `lsp/dependency_closure.rs`
+**TODO**: When multiple projects are affected by a single flush, builds currently run sequentially because they share a `Mutex<ProjectMap>`. Per-project locks would enable parallel builds across projects.
+
+Implementation: `lsp/build_queue.rs`, `lsp/dependency_closure.rs`
 
 ### Build Artifacts
 
-The LSP writes build artifacts to `lib/lsp/` (not `lib/bs/`), keeping it independent from `rescript build`. Both produce identical `.js` output to the configured output directory.
+The LSP writes build artifacts to `lib/lsp/` (not `lib/bs/`), keeping it independent from `rescript build`. Both produce identical `.js` output to the configured output directory. This separation is the same approach used by Gleam (`build/lsp/` vs `build/dev/`), ensuring the LSP and CLI never interfere with each other's cached state.
 
 ## Completion Integration
 
@@ -279,9 +291,54 @@ On `initialized`, the server discovers packages and registers scoped file watche
 
 Patterns use forward slashes and are scoped to declared source directories to avoid matching `node_modules/` or `lib/bs/`.
 
-**Note**: File watcher events (`workspace/didChangeWatchedFiles`) are registered but **not yet handled** — the notification handler has not been implemented. External file changes (e.g., `git checkout`) are not yet picked up by the LSP.
+**Note**: File watcher events (`workspace/didChangeWatchedFiles`) are registered but **not yet handled** — see plan below.
 
 Implementation: `lsp/initialize.rs`
+
+### Plan: `workspace/didChangeWatchedFiles` + debounced `didSave`
+
+External file changes (git checkout, terminal edits, LLM agents, formatters) arrive as `workspace/didChangeWatchedFiles` notifications. These carry a batch of `FileEvent`s, each with a URI and a change type (Created, Changed, Deleted).
+
+These events require the same work as `didSave`: mark modules dirty, compile dependency closures, typecheck dependent closures. The key difference is that multiple files change at once, and they should be handled as a single batch for efficiency.
+
+#### Batched save/rebuild
+
+Generalize `did_save::run` to accept multiple files:
+
+1. Mark all changed files as parse-dirty (call `mark_file_parse_dirty` for each)
+2. Compute the **union** of all dependency closures → one `TypecheckAndEmit` build
+3. Compute the **union** of all dependent closures → one `TypecheckOnly` build
+4. Publish diagnostics for all touched files
+5. Recheck open buffers whose on-disk dependencies may have changed
+
+This gives 2 incremental builds total instead of 2N. The same batched function serves both:
+- `didSave` — batch of one (or multiple with "Save All")
+- `didChangeWatchedFiles` — batch of N from the editor's file watcher
+
+#### Debouncing watched file events
+
+`didChangeWatchedFiles` can fire rapidly during a `git checkout` (one event per file). Debounce with a short timer (e.g. 100-200ms): collect events, and when the timer expires with no new events, flush the batch and run the batched build.
+
+`didSave` could also participate in this debounce window. When a save arrives, start/reset the timer. If more saves or watched-file events arrive within the window, they join the batch. This handles "Save All" and "format-on-save writes multiple files" efficiently.
+
+#### File creation and deletion
+
+`didChangeWatchedFiles` also reports Created and Deleted events. These require updating the build state's module graph:
+- **Created**: A new `.res` file needs to be added as a module. This may require re-running source discovery (`build::load_package_sources`) for the affected package to pick up the new file and establish its dependencies.
+- **Deleted**: The module should be removed from the build state. Dependents need to be re-typechecked (they will now have "unbound module" errors).
+- **`rescript.json` changed**: If the watcher picks up a `rescript.json` change (we register `**/rescript.json`), the project likely needs a full re-initialization (re-read config, re-discover packages).
+
+#### `didChange` debouncing (separate concern)
+
+`didChange` (unsaved buffer edits) works differently — it runs a single-file bsc stdin typecheck without touching the build state graph. Debounce independently with a per-file timer: store content in `open_buffers` immediately, delay the bsc spawn. Cancel/reset the timer on each new change for the same file.
+
+#### Implementation order
+
+1. ~~Generalize `did_save::run` to accept `&[&Path]` instead of `&Path`~~ Done
+2. ~~Add debounced build queue (`build_queue.rs`) with 150ms timer~~ Done
+3. Implement `didChangeWatchedFiles` handler — send Changed events into the same build queue
+4. Handle Created/Deleted events (module graph updates)
+5. Add `didChange` per-file debounce timer (independent)
 
 ## What Is NOT Implemented Yet
 

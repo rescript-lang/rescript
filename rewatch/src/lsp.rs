@@ -1,11 +1,11 @@
 mod analysis;
+mod build_queue;
 mod code_action;
 mod code_lens;
 mod completion;
 mod definition;
 mod dependency_closure;
 mod did_change;
-mod did_save;
 mod document_symbol;
 mod formatting;
 mod hover;
@@ -21,7 +21,7 @@ mod type_definition;
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::{Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 
 use crate::build::build_types::BuildCommandState;
 use crate::build::diagnostics::{BscDiagnostic, Severity};
@@ -72,16 +72,18 @@ impl ProjectMap {
         Some(root)
     }
 
+    /// Find the project root for a file path (no URI conversion needed).
+    /// Used by the build queue to group files by project.
+    fn project_root_for_path(&self, path: &Path) -> Option<PathBuf> {
+        path.ancestors()
+            .find(|dir| self.states.contains_key(*dir))
+            .map(|dir| dir.to_path_buf())
+    }
+
     /// Get the build state for a file URI (immutable).
     pub(crate) fn get_for_uri(&mut self, uri: &Url) -> Option<&BuildCommandState> {
         let root = self.project_root_for(uri)?;
         self.states.get(&root)
-    }
-
-    /// Get the build state for a file URI (mutable).
-    fn get_mut_for_uri(&mut self, uri: &Url) -> Option<&mut BuildCommandState> {
-        let root = self.project_root_for(uri)?;
-        self.states.get_mut(&root)
     }
 }
 
@@ -91,10 +93,12 @@ struct Backend {
     /// Stored so that `initialized` can read rescript.json and register scoped file watchers.
     workspace_folders: RwLock<Vec<String>>,
     /// Build states for all discovered projects, keyed by project root.
-    projects: Mutex<ProjectMap>,
+    projects: Arc<Mutex<ProjectMap>>,
     /// Unsaved buffer contents keyed by document URI.
     /// Updated on `didChange`, used by completion to get the latest editor buffer.
     open_buffers: Mutex<HashMap<Url, String>>,
+    /// Debounced build queue. `None` until the initial build completes.
+    build_queue: Mutex<Option<build_queue::BuildQueue>>,
 }
 
 #[tower_lsp::async_trait]
@@ -202,6 +206,14 @@ impl LanguageServer for Backend {
         self.initial_build(workspaces).await;
         self.recheck_open_buffers().await;
 
+        // Start the debounced build queue now that initial build state is available.
+        if let Ok(mut bq) = self.build_queue.lock() {
+            *bq = Some(build_queue::BuildQueue::new(
+                Arc::clone(&self.projects),
+                self.client.clone(),
+            ));
+        }
+
         self.client
             .send_notification::<notifications::BuildFinished>(notifications::BuildFinishedParams {})
             .await;
@@ -261,30 +273,12 @@ impl LanguageServer for Backend {
         let Some(file_path) = uri_to_file_path(&params.text_document.uri, "didSave") else {
             return;
         };
-
-        let result = {
-            let mut guard = match self.projects.lock() {
-                Ok(g) => g,
-                Err(_) => return,
-            };
-            let Some(build_state) = guard.get_mut_for_uri(&params.text_document.uri) else {
-                tracing::warn!("didSave: no build state available");
-                return;
-            };
-            did_save::run(build_state, &file_path)
-        };
-
-        let by_file = Self::group_by_file(&result.diagnostics);
-        for touched in &result.touched_files {
-            if let Ok(uri) = Url::from_file_path(touched) {
-                let diags = by_file.get(&uri).cloned().unwrap_or_default();
-                self.client.publish_diagnostics(uri, diags, None).await;
-            }
+        let _span = tracing::info_span!("lsp.did_save", file = %file_path.display()).entered();
+        if let Ok(bq) = self.build_queue.lock()
+            && let Some(ref queue) = *bq
+        {
+            queue.queue_file(file_path);
         }
-
-        self.client
-            .send_notification::<notifications::BuildFinished>(notifications::BuildFinishedParams {})
-            .await;
     }
 
     async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
@@ -587,7 +581,7 @@ impl Backend {
 
     /// Publish diagnostics grouped by file.
     async fn publish_diagnostics(&self, diagnostics: &[BscDiagnostic]) {
-        let by_file = Self::group_by_file(diagnostics);
+        let by_file = group_by_file(diagnostics);
 
         for (uri, diags) in &by_file {
             self.client
@@ -595,18 +589,18 @@ impl Backend {
                 .await;
         }
     }
+}
 
-    fn group_by_file(diagnostics: &[BscDiagnostic]) -> HashMap<Url, Vec<Diagnostic>> {
-        let mut by_file: HashMap<Url, Vec<Diagnostic>> = HashMap::new();
-        for diag in diagnostics {
-            let Some(uri) = Url::from_file_path(&diag.file).ok() else {
-                tracing::warn!("Could not convert path to URI: {}", diag.file.display());
-                continue;
-            };
-            by_file.entry(uri).or_default().push(to_lsp_diagnostic(diag));
-        }
-        by_file
+fn group_by_file(diagnostics: &[BscDiagnostic]) -> HashMap<Url, Vec<Diagnostic>> {
+    let mut by_file: HashMap<Url, Vec<Diagnostic>> = HashMap::new();
+    for diag in diagnostics {
+        let Some(uri) = Url::from_file_path(&diag.file).ok() else {
+            tracing::warn!("Could not convert path to URI: {}", diag.file.display());
+            continue;
+        };
+        by_file.entry(uri).or_default().push(to_lsp_diagnostic(diag));
     }
+    by_file
 }
 
 /// Convert a build-layer `BscDiagnostic` (1-based positions) to an LSP `Diagnostic` (0-based).
@@ -640,8 +634,9 @@ pub async fn run_stdio() {
     let (service, socket) = LspService::new(|client| Backend {
         client,
         workspace_folders: RwLock::new(Vec::new()),
-        projects: Mutex::new(ProjectMap::new()),
+        projects: Arc::new(Mutex::new(ProjectMap::new())),
         open_buffers: Mutex::new(HashMap::new()),
+        build_queue: Mutex::new(None),
     });
     Server::new(stdin, stdout, socket).serve(service).await;
 }
