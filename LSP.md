@@ -126,12 +126,15 @@ Editor starts ──▶ rescript lsp --stdio
                        │   ├── Downgrade any Built modules → TypeChecked
                        │   └── incremental_build(TypecheckOnly)
                        ├── Publish diagnostics from build results
+                       ├── Recheck open buffers (typecheck against buffer content)
                        └── Send rescript/buildFinished notification
                        │
                        ▼
               ┌─────────────────────────────┐
               │   Event Loop                │
               │                             │
+              │  didOpen                 ──┼──▶ Single-file typecheck (bsc stdin)
+              │                             │    → Publish diagnostics
               │  didChange               ──┼──▶ Single-file typecheck (bsc stdin)
               │                             │    → Publish diagnostics
               │  didSave                 ──┼──▶ Two-phase incremental build
@@ -308,7 +311,7 @@ Comparison with the old Node.js LSP (`rescript-vscode/server/src/server.ts`). Fe
 | `textDocument/openCompiled` | TODO | Low priority — niche feature, opens compiled `.js` output |
 | `diagnosticSyntax` on `didChange` | TODO (analysis) | Low priority — old LSP ran syntax diagnostics on every keystroke via analysis binary. Our `didChange` already runs `bsc` which catches syntax errors. |
 | `workspace/didChangeWatchedFiles` | Registered but handler not implemented | Yes — needs to handle external file changes (git checkout, etc.) |
-| Monorepo multi-workspace | Single BuildState only | Yes eventually — needed for monorepo setups |
+| Monorepo multi-workspace | Implemented | - |
 
 ## Relationship to `rescript build`
 
@@ -348,11 +351,7 @@ export function activate(context: ExtensionContext) {
 
 ## Open Questions
 
-1. **Monorepo support**: Only a single `BuildState` is stored. Multiple workspace folders each trigger a build, but only the last one's state is retained.
-
-2. **Remaining analysis features**: Hover, definition, references, rename, formatting, etc. need to be wired up to the analysis binary (same pattern as completion).
-
-3. **Cold start performance**: The initial build blocks the `initialized` handler. Large projects may experience a delay before diagnostics appear.
+1. **Cold start performance**: The initial build blocks the `initialized` handler. Large projects may experience a delay before diagnostics appear.
 
 ## Prior Art
 
