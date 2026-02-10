@@ -1,23 +1,24 @@
 mod analysis;
-mod build_queue;
 mod code_action;
 mod code_lens;
 mod completion;
 mod definition;
 mod dependency_closure;
-mod did_change;
 mod document_symbol;
+mod file_args;
 mod formatting;
 mod hover;
 mod initial_build;
 pub mod initialize;
 mod inlay_hint;
 mod notifications;
+mod queue;
 mod references;
 mod rename;
 mod semantic_tokens;
 mod signature_help;
 mod type_definition;
+mod typecheck;
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -97,8 +98,9 @@ struct Backend {
     /// Unsaved buffer contents keyed by document URI.
     /// Updated on `didChange`, used by completion to get the latest editor buffer.
     open_buffers: Mutex<HashMap<Url, String>>,
-    /// Debounced build queue. `None` until the initial build completes.
-    build_queue: Mutex<Option<build_queue::BuildQueue>>,
+    /// Unified debounced queue for all file events (didChange, didOpen,
+    /// didSave, didChangeWatchedFiles). `None` until the initial build completes.
+    queue: Mutex<Option<queue::Queue>>,
     /// The `rewatch.lsp` root span, captured at construction so spawned tasks
     /// can set it as their explicit parent.
     root_span: tracing::Span,
@@ -209,9 +211,9 @@ impl LanguageServer for Backend {
         self.initial_build(workspaces).await;
         self.recheck_open_buffers().await;
 
-        // Start the debounced build queue now that initial build state is available.
-        if let Ok(mut bq) = self.build_queue.lock() {
-            *bq = Some(build_queue::BuildQueue::new(
+        // Start the unified queue now that initial build state is available.
+        if let Ok(mut q) = self.queue.lock() {
+            *q = Some(queue::Queue::new(
                 Arc::clone(&self.projects),
                 self.client.clone(),
                 self.root_span.clone(),
@@ -229,15 +231,33 @@ impl LanguageServer for Backend {
         };
 
         let content = params.text_document.text;
-        if let Ok(mut buffers) = self.open_buffers.lock() {
-            buffers.insert(params.text_document.uri.clone(), content.clone());
-        }
+        let needs_fallback = {
+            let _span = tracing::info_span!("lsp.did_open", file = %file_path.display()).entered();
 
-        // Typecheck the buffer if the build state is already available.
-        // If opened before the initial build, diagnostics will be updated
-        // after the build finishes (see the recheck loop in `initialized`).
-        self.typecheck_buffer(&params.text_document.uri, &file_path, &content)
-            .await;
+            if let Ok(mut buffers) = self.open_buffers.lock() {
+                buffers.insert(params.text_document.uri.clone(), content.clone());
+            }
+
+            // Enqueue into the queue if available (post-initial-build).
+            if let Ok(q) = self.queue.lock()
+                && let Some(ref queue) = *q
+            {
+                queue.enqueue_typecheck(
+                    params.text_document.uri.clone(),
+                    file_path.clone(),
+                    content.clone(),
+                );
+                false
+            } else {
+                true
+            }
+        };
+
+        // Fall back to synchronous typecheck if opened before the initial build.
+        if needs_fallback {
+            self.typecheck_buffer(&params.text_document.uri, &file_path, &content)
+                .await;
+        }
     }
 
     async fn did_close(&self, params: DidCloseTextDocumentParams) {
@@ -259,18 +279,35 @@ impl LanguageServer for Backend {
             return;
         };
 
-        let content = match params.content_changes.into_iter().last() {
-            Some(change) => change.text,
-            None => return,
+        let needs_fallback = {
+            let _span = tracing::info_span!("lsp.did_change", file = %file_path.display()).entered();
+
+            let content = match params.content_changes.into_iter().last() {
+                Some(change) => change.text,
+                None => return,
+            };
+
+            // Store the latest buffer content for completion requests.
+            if let Ok(mut buffers) = self.open_buffers.lock() {
+                buffers.insert(params.text_document.uri.clone(), content.clone());
+            }
+
+            // Enqueue into the unified queue (debounced, batched).
+            if let Ok(q) = self.queue.lock()
+                && let Some(ref queue) = *q
+            {
+                queue.enqueue_typecheck(params.text_document.uri.clone(), file_path.clone(), content);
+                None
+            } else {
+                Some(content)
+            }
         };
 
-        // Store the latest buffer content for completion requests.
-        if let Ok(mut buffers) = self.open_buffers.lock() {
-            buffers.insert(params.text_document.uri.clone(), content.clone());
+        // Fall back to synchronous typecheck if changed before the initial build.
+        if let Some(content) = needs_fallback {
+            self.typecheck_buffer(&params.text_document.uri, &file_path, &content)
+                .await;
         }
-
-        self.typecheck_buffer(&params.text_document.uri, &file_path, &content)
-            .await;
     }
 
     async fn did_save(&self, params: DidSaveTextDocumentParams) {
@@ -278,18 +315,18 @@ impl LanguageServer for Backend {
             return;
         };
         let _span = tracing::info_span!("lsp.did_save", file = %file_path.display()).entered();
-        if let Ok(bq) = self.build_queue.lock()
-            && let Some(ref queue) = *bq
+        if let Ok(q) = self.queue.lock()
+            && let Some(ref queue) = *q
         {
-            queue.queue_file(file_path);
+            queue.enqueue_build(params.text_document.uri, file_path);
         }
     }
 
     async fn did_change_watched_files(&self, params: DidChangeWatchedFilesParams) {
         let _span =
             tracing::info_span!("lsp.did_change_watched_files", file_count = params.changes.len()).entered();
-        if let Ok(bq) = self.build_queue.lock()
-            && let Some(ref queue) = *bq
+        if let Ok(q) = self.queue.lock()
+            && let Some(ref queue) = *q
         {
             for event in &params.changes {
                 if event.typ != FileChangeType::CHANGED {
@@ -302,7 +339,7 @@ impl LanguageServer for Backend {
                     file_path.extension().and_then(|e| e.to_str()),
                     Some("res" | "resi")
                 ) {
-                    queue.queue_file(file_path);
+                    queue.enqueue_build(event.uri.clone(), file_path);
                 }
             }
         }
@@ -571,6 +608,9 @@ impl Backend {
     ///
     /// The initial build diagnostics come from the on-disk file, but the buffer
     /// content may differ. This brings diagnostics in sync with the actual buffer.
+    ///
+    /// Uses `typecheck_buffer()` (synchronous, pre-queue) because this runs
+    /// before the typecheck queue is started in `initialized()`.
     async fn recheck_open_buffers(&self) {
         let open_buffers: Vec<(Url, String)> = self
             .open_buffers
@@ -599,7 +639,7 @@ impl Backend {
             let Some(build_state) = guard.get_for_uri(uri) else {
                 return;
             };
-            did_change::run(build_state, file_path, content)
+            typecheck::run(build_state, file_path, content)
         };
 
         let diags: Vec<Diagnostic> = diagnostics.iter().map(to_lsp_diagnostic).collect();
@@ -664,7 +704,7 @@ pub async fn run_stdio() {
         workspace_folders: RwLock::new(Vec::new()),
         projects: Arc::new(Mutex::new(ProjectMap::new())),
         open_buffers: Mutex::new(HashMap::new()),
-        build_queue: Mutex::new(None),
+        queue: Mutex::new(None),
         root_span: tracing::Span::current(),
     });
     Server::new(stdin, stdout, socket).serve(service).await;

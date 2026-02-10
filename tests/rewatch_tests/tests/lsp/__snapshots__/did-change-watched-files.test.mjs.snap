@@ -254,8 +254,8 @@ exports[`lsp didChangeWatchedFiles > triggers a build when an external file chan
   "        build.compile_wave[file_count=1]",
   "          build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
   "  lsp.did_change_watched_files[file_count=1]",
-  "  lsp.build_batch[file_count=1]",
-  "    lsp.build_batch.compile_dependencies",
+  "  lsp.build[file_count=1]",
+  "    lsp.build.compile_dependencies",
   "      incremental_build[module_count=4]",
   "        build.parse[dirty_modules=1]",
   "          build.parse_file[module=Root, package=rewatch-test-fixture]",
@@ -266,6 +266,6 @@ exports[`lsp didChangeWatchedFiles > triggers a build when an external file chan
   "            build.compile_file[module=App, package=@rewatch-test/app, suffix=.mjs, module_system=esmodule]",
   "          build.compile_wave[file_count=1]",
   "            build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
-  "    lsp.build_batch.typecheck_dependents",
+  "    lsp.build.typecheck_dependents",
 ]
 `;

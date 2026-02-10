@@ -1,8 +1,36 @@
+use std::path::Path;
+
 use super::build_types::*;
 use super::packages;
 use crate::helpers;
 use ahash::AHashSet;
 use rayon::prelude::*;
+
+/// Read raw module dependency names from a `.ast` file.
+///
+/// The `.ast` binary format has a binary header on line 1, followed by
+/// dependency module names (one per line), terminated by a line containing
+/// an absolute path (the source file path). This function returns the raw
+/// names before any namespace resolution or filtering.
+pub fn read_raw_deps(ast_file: &Path) -> Vec<String> {
+    let mut deps = Vec::new();
+    match helpers::read_lines(ast_file) {
+        Ok(lines) => {
+            for line in lines.skip(1).flatten() {
+                let line = line.trim().to_string();
+                if Path::new(&line).is_absolute() {
+                    break;
+                } else if !line.is_empty() {
+                    deps.push(line);
+                }
+            }
+        }
+        _ => {
+            panic!("Could not read file {}", ast_file.to_string_lossy());
+        }
+    }
+    deps
+}
 
 fn get_dep_modules(
     ast_file: &str,
@@ -13,27 +41,9 @@ fn get_dep_modules(
     build_state: &BuildState,
     build_profile: BuildProfile,
 ) -> AHashSet<String> {
-    let mut deps = AHashSet::new();
     let ast_file = package.get_build_path_for_profile(build_profile).join(ast_file);
-    match helpers::read_lines(&ast_file) {
-        Ok(lines) => {
-            // we skip the first line with is some null characters
-            // the following lines in the AST are the dependency modules
-            // we stop when we hit a line that is an absolute path, this is the path of the file.
-            // this is the point where the dependencies end and the actual AST starts
-            for line in lines.skip(1).flatten() {
-                let line = line.trim().to_string();
-                if std::path::Path::new(&line).is_absolute() {
-                    break;
-                } else if !line.is_empty() {
-                    deps.insert(line);
-                }
-            }
-        }
-        _ => {
-            panic!("Could not read file {}", ast_file.to_string_lossy());
-        }
-    }
+    let raw_deps = read_raw_deps(&ast_file);
+    let deps: AHashSet<String> = raw_deps.into_iter().collect();
 
     // Get the list of allowed dependency packages for this package
     let allowed_dependencies: AHashSet<String> = package

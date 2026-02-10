@@ -539,10 +539,7 @@ pub fn compiler_args(
     is_interface: bool,
     has_interface: bool,
     project_context: &ProjectContext,
-    // if packages are known, we pass a reference here
-    // this saves us a scan to find their paths.
-    // This is None when called by build::get_compiler_args
-    packages: &Option<&AHashMap<String, packages::Package>>,
+    packages: &AHashMap<String, packages::Package>,
     // Is the file listed as "type":"dev"?
     is_type_dev: bool,
     is_local_dep: bool,
@@ -551,7 +548,7 @@ pub fn compiler_args(
     build_profile: BuildProfile,
 ) -> Result<Vec<String>> {
     let bsc_flags = config::flatten_flags(&config.compiler_flags);
-    let dependency_paths = get_dependency_paths(config, project_context, packages, is_type_dev);
+    let dependency_paths = get_dependency_paths(config, packages, is_type_dev);
     let module_name = helpers::file_path_to_module_name(file_path, &config.get_namespace());
 
     let namespace_args = match &config.get_namespace() {
@@ -697,8 +694,7 @@ impl DependentPackage {
 
 fn get_dependency_paths(
     config: &config::Config,
-    project_context: &ProjectContext,
-    packages: &Option<&AHashMap<String, packages::Package>>,
+    packages: &AHashMap<String, packages::Package>,
     is_file_type_dev: bool,
 ) -> Vec<String> {
     let normal_deps = config
@@ -727,24 +723,17 @@ fn get_dependency_paths(
         .par_iter()
         .filter_map(|dependent_package| {
             let package_name = dependent_package.name();
-            let dependency_path = if let Some(packages) = packages {
-                packages
-                    .get(package_name)
-                    .as_ref()
-                    .map(|package| package.path.clone())
-            } else {
-                // packages will only be None when called by build::get_compiler_args
-                // in that case we can safely pass config as the package config.
-                packages::read_dependency(package_name, config, project_context).ok()
-            }
-            .map(|canonicalized_path| {
-                vec![
-                    "-I".to_string(),
-                    packages::get_ocaml_build_path(&canonicalized_path)
-                        .to_string_lossy()
-                        .to_string(),
-                ]
-            });
+            let dependency_path = packages
+                .get(package_name)
+                .map(|package| package.path.clone())
+                .map(|canonicalized_path| {
+                    vec![
+                        "-I".to_string(),
+                        packages::get_ocaml_build_path(&canonicalized_path)
+                            .to_string_lossy()
+                            .to_string(),
+                    ]
+                });
 
             if !dependent_package.is_dev() && dependency_path.is_none() {
                 panic!(
@@ -797,7 +786,7 @@ fn compile_file(
         is_interface,
         has_interface,
         project_context,
-        &Some(packages),
+        packages,
         is_type_dev,
         package.is_local_dep,
         warn_error_override,

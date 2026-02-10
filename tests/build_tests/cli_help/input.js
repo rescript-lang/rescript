@@ -183,5 +183,3 @@ await test(["format", "-h"], {
   stderr: "",
   status: 0,
 });
-
-

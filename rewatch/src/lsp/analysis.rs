@@ -11,7 +11,7 @@ use crate::build::build_types::{BuildCommandState, BuildProfile, SourceFile, Sou
 use crate::build::packages::{Namespace, Package};
 use crate::config;
 use crate::helpers;
-use crate::lsp::did_change;
+use crate::lsp::typecheck;
 
 type ExtraFieldsFn<'a> = &'a dyn Fn(&mut serde_json::Map<String, Value>);
 
@@ -247,7 +247,7 @@ fn ensure_cmt(
     let dir = impl_path.parent().unwrap_or(Path::new(""));
     let cmt_path = build_path.join(dir).join(format!("{}.cmt", basename));
     if !cmt_path.exists() {
-        did_change::run(build_state, file_path, source);
+        typecheck::run(build_state, file_path, source);
     }
 }
 

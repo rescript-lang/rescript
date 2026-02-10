@@ -253,8 +253,10 @@ exports[`lsp rename > prepareRename returns range and placeholder 1`] = `
   "          build.compile_file[module=App, package=@rewatch-test/app, suffix=.mjs, module_system=esmodule]",
   "        build.compile_wave[file_count=1]",
   "          build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
-  "  lsp.did_change[file=packages/library/src/Library.res]",
+  "  lsp.did_open[file=packages/library/src/Library.res]",
   "  lsp.prepare_rename[file=packages/library/src/Library.res, module=Library, package=@rewatch-test/library]",
+  "  lsp.typecheck[file_count=1]",
+  "    lsp.typecheck.file[module=Library]",
 ]
 `;
 
@@ -511,7 +513,9 @@ exports[`lsp rename > rename renames a value across the file 1`] = `
   "          build.compile_file[module=App, package=@rewatch-test/app, suffix=.mjs, module_system=esmodule]",
   "        build.compile_wave[file_count=1]",
   "          build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
-  "  lsp.did_change[file=packages/library/src/Library.res]",
+  "  lsp.did_open[file=packages/library/src/Library.res]",
   "  lsp.rename[file=packages/library/src/Library.res, module=Library, package=@rewatch-test/library]",
+  "  lsp.typecheck[file_count=1]",
+  "    lsp.typecheck.file[module=Library]",
 ]
 `;

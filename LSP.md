@@ -42,8 +42,8 @@ rescript build          # One-shot build (unchanged, for CI)
 │  Backend {                                            │
 │    client: Client,                                    │
 │    workspace_folders: RwLock<Vec<String>>,             │
-│    build_state: Mutex<Option<BuildCommandState>>,      │
-│    last_diagnostics_files: Mutex<HashSet<Url>>,        │
+│    projects: Arc<Mutex<ProjectMap>>,                   │
+│    queue: Mutex<Option<Queue>>,                        │
 │    open_buffers: Mutex<HashMap<Url, String>>,          │
 │  }                                                    │
 │                                                       │
@@ -51,8 +51,7 @@ rescript build          # One-shot build (unchanged, for CI)
 │  The editor watches the filesystem and notifies       │
 │  the server via LSP:                                  │
 │  - didChange / didSave (open documents)               │
-│  - workspace/didChangeWatchedFiles (registered but    │
-│    not yet handled — see Open Questions)               │
+│  - workspace/didChangeWatchedFiles (external changes) │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -65,8 +64,9 @@ rewatch/src/
     ├── analysis.rs              # Shared context-building and analysis binary spawning
     ├── initialize.rs            # Workspace discovery, file watcher registration
     ├── initial_build.rs         # Full TypecheckOnly build on startup
-    ├── did_save.rs              # Two-phase incremental build on save
-    ├── did_change.rs            # Single-file typecheck via bsc stdin piping
+    ├── queue.rs                 # Unified debounced queue for all file events (didChange, didSave, didChangeWatchedFiles)
+    ├── typecheck.rs             # Single-file typecheck via bsc stdin piping (used by queue and pre-queue fallback)
+    ├── file_args.rs             # TypecheckArgs extraction from BuildCommandState
     ├── completion.rs            # Completion via analysis binary subprocess
     ├── hover.rs                 # Hover via analysis binary subprocess
     ├── dependency_closure.rs    # Dependency/dependent graph traversal
@@ -85,21 +85,23 @@ rescript -vv lsp --stdio
 
 ## Capabilities
 
-The LSP server currently advertises these capabilities during `initialize`:
+The LSP server advertises these capabilities during `initialize`:
 
 ```
-textDocumentSync:   Full (with open_close, save notifications, no include_text)
-completionProvider: { triggerCharacters: [".", ">", "@", "~", "\"", "=", "("] }
-hoverProvider:      true
-```
-
-The following are planned but commented out in the code:
-
-```
-definitionProvider, typeDefinitionProvider,
-referencesProvider, codeActionProvider, renameProvider (with prepare),
-documentSymbolProvider,
-inlayHintProvider, signatureHelpProvider
+textDocumentSync:       Full (with open_close, save notifications, no include_text)
+completionProvider:     { triggerCharacters: [".", ">", "@", "~", "\"", "=", "("] }
+hoverProvider:          true
+definitionProvider:     true
+typeDefinitionProvider: true
+referencesProvider:     true
+codeActionProvider:     true
+renameProvider:         { prepareProvider: true }
+documentSymbolProvider: true
+inlayHintProvider:      true
+signatureHelpProvider:  { triggerCharacters: ["(", ","] }
+semanticTokensProvider: full
+codeLensProvider:       true
+documentFormattingProvider: true
 ```
 
 ## Lifecycle
@@ -127,22 +129,20 @@ Editor starts ──▶ rescript lsp --stdio
                        │   └── incremental_build(TypecheckOnly)
                        ├── Publish diagnostics from build results
                        ├── Recheck open buffers (typecheck against buffer content)
+                       ├── Start unified queue (queue::Queue::new)
                        └── Send rescript/buildFinished notification
                        │
                        ▼
-              ┌─────────────────────────────┐
-              │   Event Loop                │
-              │                             │
-              │  didOpen                 ──┼──▶ Single-file typecheck (bsc stdin)
-              │                             │    → Publish diagnostics
-              │  didChange               ──┼──▶ Single-file typecheck (bsc stdin)
-              │                             │    → Publish diagnostics
-              │  didSave                 ──┼──▶ Two-phase incremental build
-              │                             │    → Publish diagnostics
-              │                             │    → Send rescript/buildFinished
-              │  completion              ──┼──▶ Shell out to analysis binary
-              │  shutdown                ──┼──▶ Ok(())
-              └─────────────────────────────┘
+              ┌─────────────────────────────────┐
+              │   Event Loop                    │
+              │                                 │
+              │  didOpen                     ──┼──▶ Enqueue typecheck into unified queue
+              │  didChange                   ──┼──▶ Enqueue typecheck into unified queue
+              │  didSave                     ──┼──▶ Enqueue build into unified queue
+              │  didChangeWatchedFiles       ──┼──▶ Enqueue build into unified queue
+              │  completion / hover / etc.   ──┼──▶ Shell out to analysis binary
+              │  shutdown                    ──┼──▶ Ok(())
+              └─────────────────────────────────┘
 ```
 
 ## Build Integration
@@ -153,68 +153,126 @@ The initial build runs `TypecheckOnly` — it produces `.cmi` and `.cmt` files b
 
 Implementation: `lsp/initial_build.rs`
 
-### On `didChange` (unsaved edits)
+### Unified Queue
 
-Single-file typecheck using `bsc -bs-read-stdin`. The unsaved buffer content is piped to bsc's stdin. No JS output, no dependent recompilation — just diagnostics for the edited file.
+All file events flow into a single unified queue (`lsp/queue.rs`). The queue accepts two kinds of events:
 
-**Future optimization — debounced typechecking**: Currently every `didChange` immediately spawns bsc. During fast typing this creates wasted work since intermediate keystrokes produce incomplete code that will be superseded milliseconds later.
+- **Typecheck** (from `didChange` / `didOpen`) — unsaved buffer content, lightweight typecheck only
+- **Build** (from `didSave` / `didChangeWatchedFiles`) — saved file, full incremental build from disk
 
-Gleam solves this with a `MessageBuffer` that collects incoming notifications and uses a **100ms debounce timer** — when 100ms passes with no new messages, it flushes the batch and appends a compile request. Only the latest buffer content for each file is compiled. For LSP requests (hover, completion), compilation is triggered immediately before handling the request so responses always reflect the current state.
+A single background consumer task collects events into a `HashMap<Url, PendingFile>`, applying promotion rules to consolidate per-file state. After 100ms of silence the batch is flushed sequentially:
 
-Our approach could be simpler since we typecheck single files rather than the whole project: store the latest `didChange` content in `open_buffers` immediately (for completion/hover), but delay the bsc typecheck spawn behind a per-file debounce timer (e.g. 100-200ms). If a new `didChange` arrives for the same file before the timer fires, reset the timer. A `tokio::time::sleep` future that gets cancelled/replaced on each new change would work. Requests like hover/completion that need fresh diagnostics could force an immediate flush.
+1. **Builds first** — saved files get a full incremental build (compile dependencies + typecheck dependents), holding the projects lock.
+2. **Typechecks second** — unsaved edits get a lightweight typecheck via `bsc -bs-read-stdin`, with brief lock for arg extraction only.
+3. **Post-build recheck** — if a saved file also had unsaved buffer content (didChange + didSave in the same debounce window), a typecheck pass runs from the buffer so diagnostics match the editor.
+4. **`buildFinished` notification** — sent only when builds ran.
+
+Sequential execution within one consumer eliminates all races on `lib/lsp/` artifacts.
+
+#### Event promotion rules
+
+When multiple events arrive for the same file within a debounce window:
+
+| Existing | New event | Result |
+|----------|-----------|--------|
+| Typecheck | Typecheck | Keep latest buffer content |
+| Typecheck | Build | Promote to Build, stash buffer for post-build recheck |
+| Build | Typecheck | Stay Build, update stashed buffer |
+| Build | Build | No-op |
+
+#### Staleness detection
+
+A generation counter (`AtomicU64`) detects stale typecheck results — if a newer `didChange` for the same file arrived while the batch was running, the old result is discarded. Build results are authoritative and always published. Generation entries are pruned after publishing to prevent unbounded growth.
+
+### On `didChange` / `didOpen` (unsaved edits)
+
+Buffer content is stored in `open_buffers` immediately (for completion/hover), then the file is enqueued as a Typecheck event into the unified queue.
+
+**Single-file fast path**: For a single file (the common keystroke case), one `bsc -bs-read-stdin -bs-cmi-only` invocation runs — identical to a direct bsc call. No JS output, no dependent recompilation.
+
+**Multi-file batch**: When multiple files are edited within the debounce window (e.g. LLM agents editing several files at once), the batch runs in three phases:
+
+1. **Parse in parallel** — `bsc -bs-ast -bs-read-stdin` produces `.ast` files with dependency information.
+2. **Compute in-batch deps** — Read module names from `.ast` files (via `deps::read_raw_deps`) and intersect with the batch to find ordering constraints.
+3. **Typecheck in waves** — Files with no in-batch deps go first (parallel via rayon), then files whose deps are satisfied, etc. Each wave writes `.cmi` to `lib/lsp/` so the next wave sees updated types.
+
+**Pre-queue fallback**: Before the initial build completes (queue not yet created), `didOpen` and `didChange` fall back to a synchronous single-file typecheck via `typecheck::run`.
 
 ```
-didChange notification (full document content)
+didChange/didOpen notification
     │
     ├── Store content in open_buffers[uri]
-    ├── find_module_for_file(file_path)
-    ├── compiler_args() for the module (TypecheckOnly profile)
-    ├── Insert -bs-read-stdin before last arg (source file path)
-    ├── Spawn bsc, pipe content to stdin
-    ├── Parse stderr → Vec<BscDiagnostic>
-    ├── Remap relative paths to absolute
-    └── Publish diagnostics
+    └── Enqueue Typecheck event into unified queue
+                    │
+          background consumer task
+                    │
+          ┌─────────▼──────────┐
+          │ collect into HashMap │  (latest content per file, with promotion)
+          │ reset 100ms timer    │
+          └─────────┬──────────┘
+                    │ timer expires
+                    ▼
+          lock projects briefly → extract FileContext per file → release lock
+                    │
+          ┌─────────▼──────────┐
+          │ single file?        │──yes──► typecheck_single_file (one bsc, stdin)
+          └─────────┬──────────┘
+                    │ no (multi-file batch)
+                    ▼
+          Phase 1: Parse all files in parallel (bsc -bs-ast -bs-read-stdin)
+          Phase 2: Read deps from .ast, find in-batch edges
+          Phase 3: Typecheck in waves (dependency order, parallel within wave)
+                    │
+                    ▼
+          Publish diagnostics (skip stale results via generation counter)
 ```
 
-Implementation: `lsp/did_change.rs`
+Implementation: `lsp/queue.rs` (queue, batch logic, build/typecheck flush), `lsp/typecheck.rs` (single-file bsc invocation), `lsp/file_args.rs` (compiler arg extraction)
 
-### On `didSave` (saved file)
+### On `didSave` / `didChangeWatchedFiles` (saved files)
 
-The `didSave` handler sends the file path into a debounced build queue and returns immediately. A background consumer task collects paths, deduplicates them, and after 150ms of silence flushes one batched build per project.
+The `didSave` and `didChangeWatchedFiles` handlers enqueue Build events into the unified queue and return immediately. The consumer groups files by project root and runs a batched build per project:
 
 ```
-didSave notification ──► queue file path ──► return immediately
-                              │
-                    background consumer task
-                              │
-                    ┌─────────▼──────────┐
-                    │ collect into HashSet │
-                    │ reset 150ms timer    │
-                    └─────────┬──────────┘
-                              │ timer expires
-                              ▼
-                    group files by project root
-                              │
-                    for each project (sequential):
-                    ├── mark_file_parse_dirty per file
-                    ├── Phase 1: compile_dependencies
-                    │   ├── get_dependency_closure (DFS downward through module.deps)
-                    │   ├── Temporarily promote non-closure TypeChecked modules → Built
-                    │   ├── incremental_build(TypecheckAndEmit, only_incremental=true)
-                    │   └── Restore promoted modules → TypeChecked
-                    ├── Phase 2: typecheck_dependents
-                    │   ├── get_dependent_closure (DFS upward through module.dependents)
-                    │   ├── Mark each dependent as Dirty
-                    │   ├── Temporarily promote non-dependent TypeChecked modules → Built
-                    │   ├── incremental_build(TypecheckOnly, only_incremental=true)
-                    │   └── Restore promoted modules → TypeChecked
-                    ├── Publish combined diagnostics from both phases
-                    └── Send rescript/buildFinished notification
+didSave / didChangeWatchedFiles notification
+    │
+    └── Enqueue Build event(s) into unified queue
+                    │
+          background consumer task
+                    │
+          ┌─────────▼──────────┐
+          │ collect into HashMap │  (deduplicate per URI, apply promotion)
+          │ reset 100ms timer    │
+          └─────────┬──────────┘
+                    │ timer expires
+                    ▼
+          group files by project root
+                    │
+          for each project (sequential):
+          ├── mark_file_parse_dirty per file
+          ├── Phase 1: compile_dependencies
+          │   ├── get_dependency_closure (DFS downward through module.deps)
+          │   ├── Temporarily promote non-closure TypeChecked modules → Built
+          │   ├── incremental_build(TypecheckAndEmit, only_incremental=true)
+          │   └── Restore promoted modules → TypeChecked
+          ├── Phase 2: typecheck_dependents
+          │   ├── get_dependent_closure (DFS upward through module.dependents)
+          │   ├── Mark each dependent as Dirty
+          │   ├── Temporarily promote non-dependent TypeChecked modules → Built
+          │   ├── incremental_build(TypecheckOnly, only_incremental=true)
+          │   └── Restore promoted modules → TypeChecked
+          └── Publish combined diagnostics from both phases
+                    │
+                    ▼
+          Post-build recheck (if any Build file had stashed buffer content)
+                    │
+                    ▼
+          Send rescript/buildFinished notification
 ```
 
-**TODO**: When multiple projects are affected by a single flush, builds currently run sequentially because they share a `Mutex<ProjectMap>`. Per-project locks would enable parallel builds across projects.
+`didChangeWatchedFiles` filters for `Changed` events on `.res`/`.resi` files only. Created/Deleted events are not yet handled — they need module graph updates.
 
-Implementation: `lsp/build_queue.rs`, `lsp/dependency_closure.rs`
+Implementation: `lsp/queue.rs`, `lsp/dependency_closure.rs`
 
 ### Build Artifacts
 
@@ -261,23 +319,17 @@ Implementation: `lsp/completion.rs`
 
 ## Diagnostics Publishing
 
-Diagnostics are published via `textDocument/publishDiagnostics`. The `Backend::publish_diagnostics` method:
+Diagnostics are published via `textDocument/publishDiagnostics`. Build diagnostics are grouped by file URI, converted from 1-based bsc positions to 0-based LSP positions, and published for all touched files (including empty diagnostics to clear stale errors).
 
-1. Groups `BscDiagnostic` items by file URI
-2. Converts 1-based bsc positions to 0-based LSP positions
-3. Computes stale URIs (had diagnostics before, don't now) and publishes empty diagnostics to clear them
-4. Publishes current diagnostics for all affected files
-5. Updates the tracking set (`last_diagnostics_files`) for the next cycle
+Typecheck diagnostics go through a staleness check: if a newer `didChange` arrived for the same file while the typecheck was running, the result is discarded.
 
-On initial build, no stale clearing is performed (the editor starts with a clean slate).
-
-Implementation: `lsp.rs` — `Backend::publish_diagnostics()` and `to_lsp_diagnostic()`
+Implementation: `lsp.rs` — `group_by_file()` and `to_lsp_diagnostic()`
 
 ## Custom Notifications
 
 ### `rescript/buildFinished`
 
-Sent after the initial build completes and after each `didSave` incremental build. Clients can use this to update UI (e.g., disable loading spinners). Not sent after `didChange` (which is a lightweight single-file typecheck).
+Sent after the initial build completes and after each unified queue flush that included builds. Clients can use this to update UI (e.g., disable loading spinners). Not sent after typecheck-only flushes.
 
 Implementation: `lsp/notifications.rs`
 
@@ -291,84 +343,44 @@ On `initialized`, the server discovers packages and registers scoped file watche
 
 Patterns use forward slashes and are scoped to declared source directories to avoid matching `node_modules/` or `lib/bs/`.
 
-File watcher events (`workspace/didChangeWatchedFiles`) for `Changed` events are fed into the same debounced build queue as `didSave`. Created/Deleted events are not yet handled — see plan below.
+File watcher events (`workspace/didChangeWatchedFiles`) for `Changed` events are fed into the unified queue as Build events, just like `didSave`. Created/Deleted events are not yet handled — see below.
 
 Implementation: `lsp/initialize.rs`
 
-### Plan: `workspace/didChangeWatchedFiles` + debounced `didSave`
+### Not yet implemented
 
-External file changes (git checkout, terminal edits, LLM agents, formatters) arrive as `workspace/didChangeWatchedFiles` notifications. These carry a batch of `FileEvent`s, each with a URI and a change type (Created, Changed, Deleted).
-
-These events require the same work as `didSave`: mark modules dirty, compile dependency closures, typecheck dependent closures. The key difference is that multiple files change at once, and they should be handled as a single batch for efficiency.
-
-#### Batched save/rebuild
-
-Generalize `did_save::run` to accept multiple files:
-
-1. Mark all changed files as parse-dirty (call `mark_file_parse_dirty` for each)
-2. Compute the **union** of all dependency closures → one `TypecheckAndEmit` build
-3. Compute the **union** of all dependent closures → one `TypecheckOnly` build
-4. Publish diagnostics for all touched files
-5. Recheck open buffers whose on-disk dependencies may have changed
-
-This gives 2 incremental builds total instead of 2N. The same batched function serves both:
-- `didSave` — batch of one (or multiple with "Save All")
-- `didChangeWatchedFiles` — batch of N from the editor's file watcher
-
-#### Debouncing watched file events
-
-`didChangeWatchedFiles` can fire rapidly during a `git checkout` (one event per file). Debounce with a short timer (e.g. 100-200ms): collect events, and when the timer expires with no new events, flush the batch and run the batched build.
-
-`didSave` could also participate in this debounce window. When a save arrives, start/reset the timer. If more saves or watched-file events arrive within the window, they join the batch. This handles "Save All" and "format-on-save writes multiple files" efficiently.
-
-#### File creation and deletion
-
-`didChangeWatchedFiles` also reports Created and Deleted events. These require updating the build state's module graph:
-- **Created**: A new `.res` file needs to be added as a module. This may require re-running source discovery (`build::load_package_sources`) for the affected package to pick up the new file and establish its dependencies.
-- **Deleted**: The module should be removed from the build state. Dependents need to be re-typechecked (they will now have "unbound module" errors).
-- **`rescript.json` changed**: If the watcher picks up a `rescript.json` change (we register `**/rescript.json`), the project likely needs a full re-initialization (re-read config, re-discover packages).
-
-#### `didChange` debouncing (separate concern)
-
-`didChange` (unsaved buffer edits) works differently — it runs a single-file bsc stdin typecheck without touching the build state graph. Debounce independently with a per-file timer: store content in `open_buffers` immediately, delay the bsc spawn. Cancel/reset the timer on each new change for the same file.
-
-#### Implementation order
-
-1. ~~Generalize `did_save::run` to accept `&[&Path]` instead of `&Path`~~ Done
-2. ~~Add debounced build queue (`build_queue.rs`) with 150ms timer~~ Done
-3. ~~Implement `didChangeWatchedFiles` handler — send Changed events into the same build queue~~ Done
-4. Handle Created/Deleted events (module graph updates)
-5. Add `didChange` per-file debounce timer (independent)
+- **File creation** (`Created` events): New `.res` files need to be added as modules, requiring re-running source discovery for the affected package.
+- **File deletion** (`Deleted` events): Modules should be removed from the build state, and dependents re-typechecked.
+- **`rescript.json` changes**: Config changes likely need a full re-initialization (re-read config, re-discover packages).
 
 ## What Is NOT Implemented Yet
 
-Comparison with the old Node.js LSP (`rescript-vscode/server/src/server.ts`). Features marked with "(analysis)" shell out to `rescript-editor-analysis.exe`.
-
-| Feature | Status | Worth it? |
-|---------|--------|-----------|
-| `textDocument/didOpen` | Implemented | - |
-| `textDocument/didClose` | Implemented | - |
-| `textDocument/didChange` | Implemented | - |
-| `textDocument/didSave` | Implemented | - |
-| `textDocument/completion` | Implemented (analysis) | - |
-| `textDocument/hover` | Implemented (analysis) | - |
-| `textDocument/formatting` | Implemented | - |
-| `textDocument/definition` | Implemented (analysis) | - |
-| `textDocument/typeDefinition` | Implemented (analysis) | - |
-| `textDocument/references` | Implemented (analysis) | - |
-| `textDocument/rename` / `prepareRename` | Implemented (analysis) | - |
-| `textDocument/completion/resolve` | Implemented (analysis) | - |
-| `textDocument/documentSymbol` | Implemented (analysis) | - |
-| `textDocument/codeAction` | Implemented (analysis) | - |
-| `textDocument/signatureHelp` | Implemented (analysis) | - |
-| `textDocument/semanticTokens` | Implemented (analysis) | - |
-| `textDocument/inlayHint` | Implemented (analysis) | - |
-| `textDocument/codeLens` | Implemented (analysis) | - |
-| `textDocument/createInterface` | TODO (analysis) | Low priority — niche feature, generates `.resi` from `.res` |
-| `textDocument/openCompiled` | TODO | Low priority — niche feature, opens compiled `.js` output |
-| `diagnosticSyntax` on `didChange` | TODO (analysis) | Low priority — old LSP ran syntax diagnostics on every keystroke via analysis binary. Our `didChange` already runs `bsc` which catches syntax errors. |
-| `workspace/didChangeWatchedFiles` | Implemented (Changed events only) | Created/Deleted events need module graph updates |
-| Monorepo multi-workspace | Implemented | - |
+| Feature | Status |
+|---------|--------|
+| `textDocument/didOpen` | Implemented |
+| `textDocument/didClose` | Implemented |
+| `textDocument/didChange` | Implemented |
+| `textDocument/didSave` | Implemented |
+| `textDocument/completion` | Implemented (analysis) |
+| `textDocument/completion/resolve` | Implemented (analysis) |
+| `textDocument/hover` | Implemented (analysis) |
+| `textDocument/formatting` | Implemented |
+| `textDocument/definition` | Implemented (analysis) |
+| `textDocument/typeDefinition` | Implemented (analysis) |
+| `textDocument/references` | Implemented (analysis) |
+| `textDocument/rename` / `prepareRename` | Implemented (analysis) |
+| `textDocument/documentSymbol` | Implemented (analysis) |
+| `textDocument/codeAction` | Implemented (analysis) |
+| `textDocument/signatureHelp` | Implemented (analysis) |
+| `textDocument/semanticTokens` | Implemented (analysis) |
+| `textDocument/inlayHint` | Implemented (analysis) |
+| `textDocument/codeLens` | Implemented (analysis) |
+| `workspace/didChangeWatchedFiles` | Implemented (Changed events only) |
+| Monorepo multi-workspace | Implemented |
+| `textDocument/createInterface` | TODO — niche feature, generates `.resi` from `.res` |
+| `textDocument/openCompiled` | TODO — niche feature, opens compiled `.js` output |
+| File creation/deletion handling | TODO — needs module graph updates |
+| `rescript.json` change handling | TODO — needs full re-initialization |
 
 ## Relationship to `rescript build`
 

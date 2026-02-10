@@ -77,6 +77,44 @@ describe("lsp didChange", { timeout: 60_000 }, () => {
       ).toBe(false);
     }));
 
+  it("typechecks multiple files with cross-file consistency", () =>
+    runLspTest(async ({ lsp, sandbox }) => {
+      const rootUri = pathToFileURL(sandbox).href;
+      await lsp.initialize(rootUri);
+      await lsp.waitForNotification("rescript/buildFinished", 30000);
+
+      // Open both files in the same package (library)
+      lsp.openFile("packages/library/src/Library.res");
+      await lsp.waitForNotification("textDocument/publishDiagnostics", 10000);
+      lsp.openFile("packages/library/src/Unrelated.res");
+      await lsp.waitForNotification("textDocument/publishDiagnostics", 10000);
+
+      // Edit both files rapidly (within debounce window).
+      // Library adds a new export, Unrelated uses it.
+      lsp.editFile(
+        "packages/library/src/Library.res",
+        'let greeting = "hello from library"\nlet newExport = 42\n',
+      );
+      lsp.editFile(
+        "packages/library/src/Unrelated.res",
+        "let value = Library.newExport\n",
+      );
+
+      // Wait for diagnostics from the batch
+      await lsp.waitForNotification("textDocument/publishDiagnostics", 10000);
+      await lsp.waitForNotification("textDocument/publishDiagnostics", 10000);
+
+      // Both files should have no errors — Library was typechecked first
+      // (Unrelated depends on it), so Unrelated sees the updated .cmi.
+      const diagnostics = lsp.getDiagnostics();
+      for (const entry of diagnostics) {
+        expect(
+          entry.diagnostics,
+          `Expected no errors in ${entry.file}`,
+        ).toEqual([]);
+      }
+    }));
+
   it("publishes syntax error diagnostics for unsaved changes", () =>
     runLspTest(async ({ lsp, sandbox }) => {
       const rootUri = pathToFileURL(sandbox).href;

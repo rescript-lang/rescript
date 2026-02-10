@@ -10,17 +10,6 @@ describe("module system and suffix", () => {
       expect(fileExists("packages/commonjs/src/CjsModule.bs.js")).toBe(true);
     }));
 
-  it("includes commonjs module in compiler args", () =>
-    runRewatchTest(async ({ createCli }) => {
-      const cjsCli = createCli("packages/commonjs");
-      await cjsCli.build();
-      const result = await cjsCli.compilerArgs("src/CjsModule.res");
-      expect(result.status).toBe(0);
-      expect(result.stdout).toContain("-bs-package-output");
-      expect(result.stdout).toContain("commonjs");
-      expect(result.stdout).toContain(".bs.js");
-    }));
-
   it("rebuilds with new suffix when config changes", () =>
     runRewatchTest(
       async ({

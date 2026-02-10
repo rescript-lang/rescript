@@ -105,34 +105,6 @@ exports[`deprecated and unknown config fields > warns about unsupported config f
 ]
 `;
 
-exports[`experimental features > passes valid experimental feature flags to compiler 1`] = `
-[
-  "rewatch.build[working_dir=.]",
-  "  initialize_build",
-  "    packages.make",
-  "      build.load_package_sources[package=@rewatch-test/app]",
-  "      build.load_package_sources[package=@rewatch-test/library]",
-  "      build.load_package_sources[package=rewatch-test-fixture]",
-  "    packages.parse_packages",
-  "    clean.cleanup_previous_build",
-  "  incremental_build[module_count=4]",
-  "    build.parse[dirty_modules=4]",
-  "      build.parse_file[module=App, package=@rewatch-test/app, experimental=LetUnwrap]",
-  "      build.parse_file[module=Library, package=@rewatch-test/library, experimental=LetUnwrap]",
-  "      build.parse_file[module=Root, package=rewatch-test-fixture, experimental=LetUnwrap]",
-  "      build.parse_file[module=Unrelated, package=@rewatch-test/library, experimental=LetUnwrap]",
-  "    build.compile",
-  "      build.compile_wave[file_count=2]",
-  "        build.compile_file[module=Library, package=@rewatch-test/library, suffix=.mjs, module_system=esmodule]",
-  "        build.compile_file[module=Unrelated, package=@rewatch-test/library, suffix=.mjs, module_system=esmodule]",
-  "      build.compile_wave[file_count=1]",
-  "        build.compile_file[module=App, package=@rewatch-test/app, suffix=.mjs, module_system=esmodule]",
-  "      build.compile_wave[file_count=1]",
-  "        build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
-  "rewatch.compiler_args[file_path=packages/library/src/Library.res]",
-]
-`;
-
 exports[`experimental features > reports error for unknown experimental feature key 1`] = `
 [
   "rewatch.build[working_dir=.]",
@@ -144,34 +116,6 @@ exports[`experimental features > reports parse error for invalid experimental fe
 [
   "rewatch.build[working_dir=.]",
   "  initialize_build",
-]
-`;
-
-exports[`warning configuration > includes warning flags from rescript.json in compiler args 1`] = `
-[
-  "rewatch.build[working_dir=.]",
-  "  initialize_build",
-  "    packages.make",
-  "      build.load_package_sources[package=@rewatch-test/app]",
-  "      build.load_package_sources[package=@rewatch-test/library]",
-  "      build.load_package_sources[package=rewatch-test-fixture]",
-  "    packages.parse_packages",
-  "    clean.cleanup_previous_build",
-  "  incremental_build[module_count=4]",
-  "    build.parse[dirty_modules=4]",
-  "      build.parse_file[module=App, package=@rewatch-test/app]",
-  "      build.parse_file[module=Library, package=@rewatch-test/library]",
-  "      build.parse_file[module=Root, package=rewatch-test-fixture]",
-  "      build.parse_file[module=Unrelated, package=@rewatch-test/library]",
-  "    build.compile",
-  "      build.compile_wave[file_count=2]",
-  "        build.compile_file[module=Library, package=@rewatch-test/library, suffix=.mjs, module_system=esmodule]",
-  "        build.compile_file[module=Unrelated, package=@rewatch-test/library, suffix=.mjs, module_system=esmodule]",
-  "      build.compile_wave[file_count=1]",
-  "        build.compile_file[module=App, package=@rewatch-test/app, suffix=.mjs, module_system=esmodule]",
-  "      build.compile_wave[file_count=1]",
-  "        build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
-  "rewatch.compiler_args[file_path=src/Root.res]",
 ]
 `;
 

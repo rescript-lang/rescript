@@ -102,7 +102,6 @@ tests/rewatch_tests/
     ├── build.test.mjs
     ├── clean.test.mjs
     ├── format.test.mjs
-    ├── compiler-args.test.mjs
     ├── watch.test.mjs
     └── __snapshots__/     # Auto-generated vitest snapshots
 ```
@@ -164,7 +163,6 @@ describe("my-feature", () => {
 - `cli.clean(args?)` - Run `rescript clean`
 - `cli.format(args?)` - Run `rescript format`
 - `cli.formatStdin(ext, input)` - Run `rescript format --stdin <ext>` with input
-- `cli.compilerArgs(filePath)` - Run `rescript compiler-args <file>`
 - `cli.spawnWatch(args?)` - Spawn `rescript watch` (returns handle with `stop()` and `waitForOutput()`)
 
 ### Span Summary
@@ -174,7 +172,6 @@ The snapshot captures spans matching these names:
 - `rewatch.clean`
 - `rewatch.watch`
 - `rewatch.format`
-- `rewatch.compiler_args`
 
 Each span includes relevant attributes (working_dir, check, is_stdin, etc.) and paths are normalized to be sandbox-relative.
 
@@ -182,7 +179,7 @@ Each span includes relevant attributes (working_dir, check, is_stdin, etc.) and 
 
 ### Span Collection for Commands Using `std::process::exit()`
 
-Some commands (build, compiler-args) call `std::process::exit()` which doesn't run destructors. This means the telemetry guard's `Drop` implementation doesn't get called, and spans may not be flushed. Commands that return normally (clean, format) work correctly.
+Some commands (build) call `std::process::exit()` which doesn't run destructors. This means the telemetry guard's `Drop` implementation doesn't get called, and spans may not be flushed. Commands that return normally (clean, format) work correctly.
 
 To fully capture spans for all commands, the rewatch code would need to be modified to avoid `std::process::exit()` and return from main properly.
 
@@ -232,5 +229,5 @@ To add new spans or attributes in rewatch:
 ## Prerequisites
 
 - Node.js 20+
-- The rewatch binary must be built: `cargo build --manifest-path rewatch/Cargo.toml`
+- The rewatch binary must be built: `cargo build --manifest-path rewatch/Cargo.toml` (a **debug** build is sufficient — the test harness uses the `debug` profile locally, see `helpers/bins.mjs`)
 - The ReScript compiler and runtime must be built: `make lib`

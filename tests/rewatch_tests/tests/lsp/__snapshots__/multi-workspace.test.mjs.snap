@@ -253,8 +253,10 @@ exports[`lsp multi-workspace > provides hover for an independent package not in 
   "          build.compile_file[module=App, package=@rewatch-test/app, suffix=.mjs, module_system=esmodule]",
   "        build.compile_wave[file_count=1]",
   "          build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
-  "  lsp.did_change[file=packages/commonjs/src/CjsModule.res]",
+  "  lsp.did_open[file=packages/commonjs/src/CjsModule.res]",
   "  lsp.hover[file=packages/commonjs/src/CjsModule.res, module=CjsModule, package=@rewatch-test/commonjs]",
+  "  lsp.typecheck[file_count=1]",
+  "    lsp.typecheck.file[module=CjsModule]",
 ]
 `;
 
@@ -511,9 +513,16 @@ exports[`lsp multi-workspace > provides hover for both root monorepo and indepen
   "          build.compile_file[module=App, package=@rewatch-test/app, suffix=.mjs, module_system=esmodule]",
   "        build.compile_wave[file_count=1]",
   "          build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
-  "  lsp.did_change[file=src/Root.res]",
+  "  lsp.did_open[file=src/Root.res]",
   "  lsp.hover[file=src/Root.res, module=Root, package=rewatch-test-fixture]",
-  "  lsp.did_change[file=packages/commonjs/src/CjsModule.res]",
+  "  lsp.did_open[file=packages/commonjs/src/CjsModule.res]",
   "  lsp.hover[file=packages/commonjs/src/CjsModule.res, module=CjsModule, package=@rewatch-test/commonjs]",
+  "  lsp.typecheck[file_count=2]",
+  "    lsp.typecheck.parse[file_count=2]",
+  "      lsp.typecheck.parse_file[module=CjsModule]",
+  "      lsp.typecheck.parse_file[module=Root]",
+  "    lsp.typecheck.wave[file_count=2]",
+  "      lsp.typecheck.file[module=CjsModule]",
+  "      lsp.typecheck.file[module=Root]",
 ]
 `;

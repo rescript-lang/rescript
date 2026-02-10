@@ -2,23 +2,6 @@ import { describe, expect, it } from "vitest";
 import { runRewatchTest } from "../helpers/test-context.mjs";
 
 describe("experimental features", () => {
-  it("passes valid experimental feature flags to compiler", () =>
-    runRewatchTest(async ({ cli, readFileInSandbox, writeFileInSandbox }) => {
-      const config = JSON.parse(await readFileInSandbox("rescript.json"));
-      config["experimental-features"] = { LetUnwrap: true };
-      await writeFileInSandbox(
-        "rescript.json",
-        JSON.stringify(config, null, 2) + "\n",
-      );
-
-      await cli.build();
-      const result = await cli.compilerArgs("packages/library/src/Library.res");
-
-      expect(result.status).toBe(0);
-      expect(result.stdout).toContain("-enable-experimental");
-      expect(result.stdout).toContain("LetUnwrap");
-    }));
-
   it("reports error for unknown experimental feature key", () =>
     runRewatchTest(async ({ cli, readFileInSandbox, writeFileInSandbox }) => {
       const config = JSON.parse(await readFileInSandbox("rescript.json"));
@@ -78,26 +61,6 @@ describe("after-build hook", () => {
 });
 
 describe("warning configuration", () => {
-  it("includes warning flags from rescript.json in compiler args", () =>
-    runRewatchTest(async ({ cli, readFileInSandbox, writeFileInSandbox }) => {
-      const config = JSON.parse(await readFileInSandbox("rescript.json"));
-      config.warnings = { number: "+8+27", error: "+27" };
-      await writeFileInSandbox(
-        "rescript.json",
-        JSON.stringify(config, null, 2) + "\n",
-      );
-
-      await cli.build();
-      // Use root source file since warnings only apply to local packages
-      const result = await cli.compilerArgs("src/Root.res");
-
-      expect(result.status).toBe(0);
-      expect(result.stdout).toContain("-w");
-      expect(result.stdout).toContain("+8+27");
-      expect(result.stdout).toContain("-warn-error");
-      expect(result.stdout).toContain("+27");
-    }));
-
   it("overrides warning config with --warn-error flag", () =>
     runRewatchTest(async ({ cli, readFileInSandbox, writeFileInSandbox }) => {
       const config = JSON.parse(await readFileInSandbox("rescript.json"));

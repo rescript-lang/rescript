@@ -23,7 +23,7 @@ and out-of-bounds string indexing in `code_frame.ml`.
 
 ### Pattern for temporary logging
 
-Since `did_change::run` executes under a `Mutex` lock and cannot `.await`, you can return
+Since `typecheck::run` executes under a `Mutex` lock and cannot `.await`, you can return
 log messages alongside the result:
 
 ```rust
@@ -54,6 +54,65 @@ scope so the guard cannot be held across an await point.
 - **`did_save`**: Runs a full incremental build. Compiles the saved file and its dependency
   closure to produce JS, then typechecks dependents. Diagnostics are published for all
   touched files.
+
+## Tracing spans with rayon (parallel iteration)
+
+Rayon threads do **not** inherit the tracing subscriber's thread-local span context.
+If you create an `info_span!` inside a `par_iter` closure without an explicit parent,
+it will have no parent and won't appear in the span tree.
+
+Use the `parent:` argument to set the parent explicitly:
+
+```rust
+let wave_span = tracing::info_span!("lsp.typecheck.wave", file_count = wave.len());
+let results: Vec<_> = {
+    let _entered = wave_span.enter();
+    wave
+        .par_iter()
+        .map(|&idx| {
+            let _span = tracing::info_span!(parent: &wave_span, "lsp.typecheck.file", module = %name).entered();
+            // ...
+        })
+        .collect()
+};
+```
+
+The wrapping span (`wave_span`) is entered on the calling thread so it appears in the
+tree. Each per-item span uses `parent: &wave_span` so it becomes a child despite running
+on a different rayon thread.
+
+This is the same pattern used by `build.compile_wave` / `build.compile_file` in
+`compile.rs`.
+
+### `spawn_blocking` and parent spans
+
+`tokio::task::spawn_blocking` runs on a separate thread pool that also lacks
+tracing context. A common but **broken** pattern is:
+
+```rust
+let parent_span = tracing::Span::current();
+tokio::task::spawn_blocking(move || {
+    let _entered = parent_span.enter();  // sets context on this thread
+    do_work();  // spans created here may NOT be exported
+})
+```
+
+Even though `parent_span.enter()` sets the current span, child spans created
+inside `do_work()` are sometimes not exported to the OTEL collector. Instead,
+pass the parent span explicitly and use `parent:` at every level:
+
+```rust
+let parent_span = tracing::Span::current();
+tokio::task::spawn_blocking(move || {
+    do_work(&parent_span);
+})
+
+fn do_work(parent: &tracing::Span) {
+    let span = tracing::info_span!(parent: parent, "my_span");
+    let _entered = span.enter();
+    // child spans also need parent: &span
+}
+```
 
 ## `-bs-read-stdin` and `Location.stdin_source`
 

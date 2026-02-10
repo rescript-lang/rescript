@@ -12,18 +12,6 @@ describe("namespace packages", () => {
       expect(fileExists("packages/namespaced/src/Consumer.mjs")).toBe(true);
     }));
 
-  it("includes namespace flag in compiler args", () =>
-    runRewatchTest(async ({ createCli }) => {
-      const nsCli = createCli("packages/namespaced");
-      await nsCli.build();
-
-      const result = await nsCli.compilerArgs("src/Helper.res");
-
-      expect(result.status).toBe(0);
-      expect(result.stdout).toContain("-bs-ns");
-      expect(result.stdout).toContain("TestNS");
-    }));
-
   it("cleans up old artifacts when a file is renamed in a namespaced package", () =>
     runRewatchTest(
       async ({ createCli, writeFileInSandbox, deleteFile, fileExists }) => {
