@@ -227,8 +227,12 @@ async fn async_watch(
     if !std::io::stdin().is_terminal() {
         std::thread::spawn(move || {
             let mut buf = [0u8; 1];
-            // This blocks until EOF (Ok(0)) or an error occurs.
-            let _ = std::io::stdin().read(&mut buf);
+            loop {
+                match std::io::stdin().read(&mut buf) {
+                    Ok(0) | Err(_) => break,
+                    Ok(_) => continue,
+                }
+            }
             stdin_closed.store(true, Ordering::Relaxed);
         });
     }
