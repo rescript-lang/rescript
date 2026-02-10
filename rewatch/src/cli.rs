@@ -418,12 +418,6 @@ pub enum Command {
     },
     /// Start the language server (communicates over stdio)
     Lsp,
-    /// Print the compiler arguments for a ReScript source file.
-    CompilerArgs {
-        /// Path to a ReScript source file (.res or .resi)
-        #[command()]
-        path: String,
-    },
 }
 
 impl Deref for FolderArg {

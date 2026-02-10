@@ -56,7 +56,6 @@ fn run_main(telemetry_guard: &telemetry::TelemetryGuard) -> i32 {
     let show_progress = log_level_filter >= LevelFilter::Info;
 
     match cli.command {
-        cli::Command::CompilerArgs { path } => run_compiler_args(&path),
         cli::Command::Build(build_args) => {
             let _lock = match get_lock(&build_args.folder) {
                 Ok(lock) => lock,
@@ -80,20 +79,6 @@ fn run_main(telemetry_guard: &telemetry::TelemetryGuard) -> i32 {
         }
         cli::Command::Lsp => run_lsp(),
         cli::Command::Format { stdin, check, files } => run_format(stdin, check, files),
-    }
-}
-
-#[instrument(name = "rewatch.compiler_args", skip_all, fields(file_path = %path))]
-fn run_compiler_args(path: &str) -> i32 {
-    match build::get_compiler_args(Path::new(path)) {
-        Ok(args) => {
-            println!("{}", args);
-            0
-        }
-        Err(e) => {
-            eprintln!("{:#}", e);
-            1
-        }
     }
 }
 

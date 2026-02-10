@@ -10,7 +10,6 @@ pub mod packages;
 pub mod parse;
 pub mod read_compile_state;
 
-use self::parse::parser_args;
 use crate::build::compile::{mark_modules_with_deleted_deps_dirty, mark_modules_with_expired_deps_dirty};
 use crate::build::compiler_info::{CompilerCheckResult, verify_compiler_info, write_compiler_info};
 use crate::helpers::emojis::*;
@@ -23,11 +22,10 @@ use build_types::*;
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
 use log::log_enabled;
-use serde::Serialize;
 use std::fmt;
 use std::fs::File;
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::time::{Duration, Instant};
 use tracing::{info_span, instrument};
 
@@ -50,70 +48,6 @@ fn is_dirty(module: &Module) -> bool {
             parse_dirty: dirty, ..
         }) => dirty,
     }
-}
-
-#[derive(Serialize, Debug, Clone)]
-pub struct CompilerArgs {
-    pub compiler_args: Vec<String>,
-    pub parser_args: Vec<String>,
-}
-
-pub fn get_compiler_args(rescript_file_path: &Path) -> Result<String> {
-    let filename = &helpers::get_abs_path(rescript_file_path);
-    let current_package = helpers::get_abs_path(
-        &helpers::get_nearest_config(rescript_file_path).expect("Couldn't find package root"),
-    );
-    let project_context = ProjectContext::new(&current_package)?;
-
-    let is_type_dev = match filename.strip_prefix(&current_package) {
-        Err(_) => false,
-        Ok(relative_path) => project_context
-            .current_config
-            .find_is_type_dev_for_path(relative_path),
-    };
-
-    // make PathBuf from package root and get the relative path for filename
-    let relative_filename = filename.strip_prefix(PathBuf::from(&current_package)).unwrap();
-
-    let file_path = PathBuf::from(&current_package).join(filename);
-    let contents = helpers::read_file(&file_path).expect("Error reading file");
-
-    let (ast_path, parser_args) = parser_args(
-        &project_context,
-        &project_context.current_config,
-        relative_filename,
-        &contents,
-        /* is_local_dep */ true,
-        /* warn_error_override */ None,
-    )?;
-    let is_interface = filename.to_string_lossy().ends_with('i');
-    let has_interface = if is_interface {
-        true
-    } else {
-        let mut interface_filename = filename.to_string_lossy().to_string();
-        interface_filename.push('i');
-        PathBuf::from(&interface_filename).exists()
-    };
-    let compiler_args = compile::compiler_args(
-        &project_context.current_config,
-        &ast_path,
-        relative_filename,
-        is_interface,
-        has_interface,
-        &project_context,
-        &None,
-        is_type_dev,
-        true,
-        None, // No warn_error_override for compiler-args command
-        BuildProfile::Standard,
-    )?;
-
-    let result = serde_json::to_string_pretty(&CompilerArgs {
-        compiler_args,
-        parser_args,
-    })?;
-
-    Ok(result)
 }
 
 pub fn get_compiler_info(project_context: &ProjectContext) -> Result<CompilerInfo> {
