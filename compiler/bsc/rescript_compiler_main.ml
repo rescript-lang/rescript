@@ -73,6 +73,7 @@ let process_file sourcefile ?kind ppf =
       if !Js_config.read_stdin then (
         Clflags.skip_source_digest := true;
         let source = Res_io.read_stdin () in
+        Location.stdin_source := Some source;
         Js_implementation.implementation
           ~parser:(fun _fname ->
             Res_driver.parse_implementation_from_stdin
@@ -90,6 +91,7 @@ let process_file sourcefile ?kind ppf =
       if !Js_config.read_stdin then (
         Clflags.skip_source_digest := true;
         let source = Res_io.read_stdin () in
+        Location.stdin_source := Some source;
         Js_implementation.interface
           ~parser:(fun _fname ->
             Res_driver.parse_interface_from_stdin

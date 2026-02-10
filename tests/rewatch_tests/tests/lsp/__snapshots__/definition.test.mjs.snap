@@ -253,7 +253,7 @@ exports[`lsp definition > jumps to definition of a module 1`] = `
   "          build.compile_file[module=App, package=@rewatch-test/app, suffix=.mjs, module_system=esmodule]",
   "        build.compile_wave[file_count=1]",
   "          build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
-  "  lsp.did_open[file=src/Root.res]",
+  "  lsp.did_change[file=src/Root.res]",
   "  lsp.definition[file=src/Root.res, module=Root, package=rewatch-test-fixture]",
 ]
 `;
@@ -511,7 +511,7 @@ exports[`lsp definition > jumps to definition of a module value 1`] = `
   "          build.compile_file[module=App, package=@rewatch-test/app, suffix=.mjs, module_system=esmodule]",
   "        build.compile_wave[file_count=1]",
   "          build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
-  "  lsp.did_open[file=src/Root.res]",
+  "  lsp.did_change[file=src/Root.res]",
   "  lsp.definition[file=src/Root.res, module=Root, package=rewatch-test-fixture]",
 ]
 `;

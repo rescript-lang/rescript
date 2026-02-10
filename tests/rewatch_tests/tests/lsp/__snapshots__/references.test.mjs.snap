@@ -253,7 +253,7 @@ exports[`lsp references > finds all references to a value 1`] = `
   "          build.compile_file[module=App, package=@rewatch-test/app, suffix=.mjs, module_system=esmodule]",
   "        build.compile_wave[file_count=1]",
   "          build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
-  "  lsp.did_open[file=packages/library/src/Library.res]",
+  "  lsp.did_change[file=packages/library/src/Library.res]",
   "  lsp.references[file=packages/library/src/Library.res, module=Library, package=@rewatch-test/library]",
 ]
 `;

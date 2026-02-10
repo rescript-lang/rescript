@@ -20,10 +20,8 @@ mod signature_help;
 mod type_definition;
 
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Mutex, RwLock};
-
-use rayon::prelude::*;
 
 use crate::build::build_types::BuildCommandState;
 use crate::build::diagnostics::{BscDiagnostic, Severity};
@@ -201,58 +199,8 @@ impl LanguageServer for Backend {
             .await;
 
         let workspaces = initialize::register_file_watchers(&self.client, &workspace_folders).await;
-
-        // Partition workspaces into conflict groups. Workspaces sharing a
-        // package path must build sequentially (they write to the same
-        // lib/lsp/ directory). Independent groups run in parallel.
-        let groups = Self::partition_workspaces(workspaces);
-
-        // Capture the current tracing span so rayon tasks can use it as an
-        // explicit parent.  Without this, rayon work-stealing causes spans to
-        // randomly nest under whichever span was last entered on that thread.
-        let parent_span = tracing::Span::current();
-
-        // Each group builds its members sequentially, but groups run in
-        // parallel with each other via rayon.
-        let all_results: Vec<_> = groups
-            .into_par_iter()
-            .flat_map(|group| {
-                group
-                    .into_iter()
-                    .filter_map(|workspace| match initial_build::run(workspace, &parent_span) {
-                        Ok((state, diagnostics)) => Some((state, diagnostics)),
-                        Err(e) => {
-                            tracing::error!("Initial build failed: {e}");
-                            None
-                        }
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .collect();
-
-        let mut all_diagnostics: Vec<BscDiagnostic> = Vec::new();
-        for (state, diagnostics) in all_results {
-            all_diagnostics.extend(diagnostics);
-            if let Ok(mut map) = self.projects.lock() {
-                let root = state.build_state.project_context.get_root_path().to_path_buf();
-                map.states.insert(root, state);
-            }
-        }
-
-        self.publish_diagnostics(&all_diagnostics).await;
-
-        let roots: Vec<_> = self
-            .projects
-            .lock()
-            .ok()
-            .map(|map| map.states.keys().map(|p| p.display().to_string()).collect())
-            .unwrap_or_default();
-        self.client
-            .log_message(
-                MessageType::INFO,
-                format!("rescript-lsp build states for project roots: {roots:?}"),
-            )
-            .await;
+        self.initial_build(workspaces).await;
+        self.recheck_open_buffers().await;
 
         self.client
             .send_notification::<notifications::BuildFinished>(notifications::BuildFinishedParams {})
@@ -260,17 +208,20 @@ impl LanguageServer for Backend {
     }
 
     async fn did_open(&self, params: DidOpenTextDocumentParams) {
-        let file_display = uri_to_file_path(&params.text_document.uri, "didOpen")
-            .map(|p| p.display().to_string())
-            .unwrap_or_default();
-        let _guard = tracing::info_span!(
-            "lsp.did_open",
-            file = %file_display
-        )
-        .entered();
+        let Some(file_path) = uri_to_file_path(&params.text_document.uri, "didOpen") else {
+            return;
+        };
+
+        let content = params.text_document.text;
         if let Ok(mut buffers) = self.open_buffers.lock() {
-            buffers.insert(params.text_document.uri, params.text_document.text);
+            buffers.insert(params.text_document.uri.clone(), content.clone());
         }
+
+        // Typecheck the buffer if the build state is already available.
+        // If opened before the initial build, diagnostics will be updated
+        // after the build finishes (see the recheck loop in `initialized`).
+        self.typecheck_buffer(&params.text_document.uri, &file_path, &content)
+            .await;
     }
 
     async fn did_close(&self, params: DidCloseTextDocumentParams) {
@@ -302,22 +253,8 @@ impl LanguageServer for Backend {
             buffers.insert(params.text_document.uri.clone(), content.clone());
         }
 
-        let diagnostics = {
-            let mut guard = match self.projects.lock() {
-                Ok(g) => g,
-                Err(_) => return,
-            };
-            let Some(build_state) = guard.get_for_uri(&params.text_document.uri) else {
-                tracing::warn!("didChange: no build state available");
-                return;
-            };
-            did_change::run(build_state, &file_path, &content)
-        };
-
-        let by_file = Self::group_by_file(&diagnostics);
-        let uri = &params.text_document.uri;
-        let diags = by_file.get(uri).cloned().unwrap_or_default();
-        self.client.publish_diagnostics(uri.clone(), diags, None).await;
+        self.typecheck_buffer(&params.text_document.uri, &file_path, &content)
+            .await;
     }
 
     async fn did_save(&self, params: DidSaveTextDocumentParams) {
@@ -582,6 +519,72 @@ impl LanguageServer for Backend {
 }
 
 impl Backend {
+    /// Run the initial build for all workspaces and publish diagnostics.
+    async fn initial_build(&self, workspaces: Vec<initialize::DiscoveredWorkspace>) {
+        let mut all_diagnostics: Vec<BscDiagnostic> = Vec::new();
+        for (state, diagnostics) in initial_build::run_all(workspaces) {
+            all_diagnostics.extend(diagnostics);
+            if let Ok(mut map) = self.projects.lock() {
+                let root = state.build_state.project_context.get_root_path().to_path_buf();
+                map.states.insert(root, state);
+            }
+        }
+
+        self.publish_diagnostics(&all_diagnostics).await;
+
+        let roots: Vec<_> = self
+            .projects
+            .lock()
+            .ok()
+            .map(|map| map.states.keys().map(|p| p.display().to_string()).collect())
+            .unwrap_or_default();
+        self.client
+            .log_message(
+                MessageType::INFO,
+                format!("rescript-lsp build states for project roots: {roots:?}"),
+            )
+            .await;
+    }
+
+    /// Re-typecheck any buffers that were already open before the build finished.
+    ///
+    /// The initial build diagnostics come from the on-disk file, but the buffer
+    /// content may differ. This brings diagnostics in sync with the actual buffer.
+    async fn recheck_open_buffers(&self) {
+        let open_buffers: Vec<(Url, String)> = self
+            .open_buffers
+            .lock()
+            .ok()
+            .map(|buffers| buffers.iter().map(|(u, c)| (u.clone(), c.clone())).collect())
+            .unwrap_or_default();
+
+        for (uri, content) in open_buffers {
+            let Some(file_path) = uri_to_file_path(&uri, "recheck_open_buffers") else {
+                continue;
+            };
+            self.typecheck_buffer(&uri, &file_path, &content).await;
+        }
+    }
+
+    /// Typecheck a single buffer against the current build state and publish diagnostics.
+    ///
+    /// Does nothing if the build state is not yet available for this URI.
+    async fn typecheck_buffer(&self, uri: &Url, file_path: &Path, content: &str) {
+        let diagnostics = {
+            let mut guard = match self.projects.lock() {
+                Ok(g) => g,
+                Err(_) => return,
+            };
+            let Some(build_state) = guard.get_for_uri(uri) else {
+                return;
+            };
+            did_change::run(build_state, file_path, content)
+        };
+
+        let diags: Vec<Diagnostic> = diagnostics.iter().map(to_lsp_diagnostic).collect();
+        self.client.publish_diagnostics(uri.clone(), diags, None).await;
+    }
+
     /// Publish diagnostics grouped by file.
     async fn publish_diagnostics(&self, diagnostics: &[BscDiagnostic]) {
         let by_file = Self::group_by_file(diagnostics);
@@ -591,87 +594,6 @@ impl Backend {
                 .publish_diagnostics(uri.clone(), diags.clone(), None)
                 .await;
         }
-    }
-
-    /// Partition workspaces into groups that can be built in parallel.
-    ///
-    /// Two workspaces conflict when they share a package path — both would write
-    /// to the same `lib/lsp/` directory, causing a race. We use union-find to
-    /// merge conflicting workspaces into the same group. Groups are sorted by
-    /// the project name of their first workspace so the build order is deterministic.
-    /// Within each group, workspaces are also sorted by project name.
-    fn partition_workspaces(
-        workspaces: Vec<initialize::DiscoveredWorkspace>,
-    ) -> Vec<Vec<initialize::DiscoveredWorkspace>> {
-        use std::collections::HashSet;
-
-        let n = workspaces.len();
-        if n <= 1 {
-            return vec![workspaces];
-        }
-
-        // Collect the set of package paths for each workspace.
-        let pkg_paths: Vec<HashSet<PathBuf>> = workspaces
-            .iter()
-            .map(|ws| ws.packages.values().map(|p| p.path.clone()).collect())
-            .collect();
-
-        // Union-find: parent[i] is the representative of workspace i's group.
-        let mut parent: Vec<usize> = (0..n).collect();
-        fn find(parent: &mut [usize], mut i: usize) -> usize {
-            while parent[i] != i {
-                parent[i] = parent[parent[i]];
-                i = parent[i];
-            }
-            i
-        }
-        fn union(parent: &mut [usize], a: usize, b: usize) {
-            let ra = find(parent, a);
-            let rb = find(parent, b);
-            if ra != rb {
-                parent[rb] = ra;
-            }
-        }
-
-        // Merge workspaces that share any package path.
-        for i in 0..n {
-            for j in (i + 1)..n {
-                if !pkg_paths[i].is_disjoint(&pkg_paths[j]) {
-                    union(&mut parent, i, j);
-                }
-            }
-        }
-
-        // Group workspaces by their root representative.
-        let mut group_map: HashMap<usize, Vec<usize>> = HashMap::new();
-        for i in 0..n {
-            group_map.entry(find(&mut parent, i)).or_default().push(i);
-        }
-
-        // Sort groups deterministically by first workspace's project name.
-        let mut groups: Vec<Vec<usize>> = group_map.into_values().collect();
-        for group in &mut groups {
-            group.sort_by(|a, b| {
-                let name_a = &workspaces[*a].project_context.get_root_config().name;
-                let name_b = &workspaces[*b].project_context.get_root_config().name;
-                name_a.cmp(name_b)
-            });
-        }
-        groups.sort_by(|a, b| {
-            let name_a = &workspaces[a[0]].project_context.get_root_config().name;
-            let name_b = &workspaces[b[0]].project_context.get_root_config().name;
-            name_a.cmp(name_b)
-        });
-
-        // Convert indices to actual workspaces. We need to consume the vec,
-        // so we move workspaces into an indexed vec of Options first.
-        let mut slots: Vec<Option<initialize::DiscoveredWorkspace>> =
-            workspaces.into_iter().map(Some).collect();
-
-        groups
-            .into_iter()
-            .map(|indices| indices.into_iter().filter_map(|i| slots[i].take()).collect())
-            .collect()
     }
 
     fn group_by_file(diagnostics: &[BscDiagnostic]) -> HashMap<Url, Vec<Diagnostic>> {

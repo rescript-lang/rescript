@@ -485,13 +485,13 @@ export function createLspClient(cwd, otelEndpoint) {
     /**
      * Notify the LSP server that a file was opened.
      * @param {string} relativePath - Path relative to the sandbox root
+     * @param {string} [text] - Optional buffer content. When provided, uses this instead of reading from disk.
      */
-    openFile(relativePath) {
+    openFile(relativePath, text) {
       const uri = toUri(relativePath);
-      const text = readFileSync(
-        path.join(realpathSync(cwd), relativePath),
-        "utf8",
-      );
+      if (text === undefined) {
+        text = readFileSync(path.join(realpathSync(cwd), relativePath), "utf8");
+      }
       openedFiles.add(uri);
       connection.sendNotification(DidOpenTextDocumentNotification.type, {
         textDocument: {

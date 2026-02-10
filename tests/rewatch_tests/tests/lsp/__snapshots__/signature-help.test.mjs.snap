@@ -253,7 +253,7 @@ exports[`lsp signatureHelp > returns signature help for a function call 1`] = `
   "          build.compile_file[module=App, package=@rewatch-test/app, suffix=.mjs, module_system=esmodule]",
   "        build.compile_wave[file_count=1]",
   "          build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
-  "  lsp.did_open[file=packages/app/src/App.res]",
+  "  lsp.did_change[file=packages/app/src/App.res]",
   "  lsp.did_change[file=packages/app/src/App.res]",
   "  lsp.signature_help[file=packages/app/src/App.res, module=App, package=@rewatch-test/app]",
 ]

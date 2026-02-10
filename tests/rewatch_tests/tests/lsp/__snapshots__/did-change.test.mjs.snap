@@ -253,7 +253,7 @@ exports[`lsp didChange > clears diagnostics when unsaved change is fixed 1`] = `
   "          build.compile_file[module=App, package=@rewatch-test/app, suffix=.mjs, module_system=esmodule]",
   "        build.compile_wave[file_count=1]",
   "          build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
-  "  lsp.did_open[file=src/Root.res]",
+  "  lsp.did_change[file=src/Root.res]",
   "  lsp.did_change[file=src/Root.res]",
   "  lsp.did_change[file=src/Root.res]",
 ]
@@ -512,7 +512,7 @@ exports[`lsp didChange > does not produce JS output on didChange 1`] = `
   "          build.compile_file[module=App, package=@rewatch-test/app, suffix=.mjs, module_system=esmodule]",
   "        build.compile_wave[file_count=1]",
   "          build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
-  "  lsp.did_open[file=src/Root.res]",
+  "  lsp.did_change[file=src/Root.res]",
   "  lsp.did_change[file=src/Root.res]",
 ]
 `;
@@ -770,7 +770,7 @@ exports[`lsp didChange > publishes syntax error diagnostics for unsaved changes 
   "          build.compile_file[module=App, package=@rewatch-test/app, suffix=.mjs, module_system=esmodule]",
   "        build.compile_wave[file_count=1]",
   "          build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
-  "  lsp.did_open[file=src/Root.res]",
+  "  lsp.did_change[file=src/Root.res]",
   "  lsp.did_change[file=src/Root.res]",
 ]
 `;
@@ -1028,7 +1028,7 @@ exports[`lsp didChange > publishes type diagnostics for unsaved changes 1`] = `
   "          build.compile_file[module=App, package=@rewatch-test/app, suffix=.mjs, module_system=esmodule]",
   "        build.compile_wave[file_count=1]",
   "          build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
-  "  lsp.did_open[file=src/Root.res]",
+  "  lsp.did_change[file=src/Root.res]",
   "  lsp.did_change[file=src/Root.res]",
 ]
 `;

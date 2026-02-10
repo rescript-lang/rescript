@@ -389,4 +389,55 @@ mod tests {
         assert!(d.message.contains("Use `Array.map` instead."));
         assert!(d.message.contains("rescript-tools migrate"));
     }
+
+    #[test]
+    fn test_parse_truncated_output_from_crash() {
+        // When bsc crashes mid-output (e.g. "index out of bounds" when
+        // -bs-read-stdin source doesn't match disk file), the diagnostic
+        // header and location are printed but the message body is replaced
+        // by a fatal error. The parser should gracefully return 0 diagnostics.
+        let stderr = r#"
+  We've found a bug for you!
+  src/Log.res:52:15-33
+Fatal error: exception Invalid_argument("index out of bounds")
+"#;
+
+        let diagnostics = parse_compiler_output(stderr);
+        assert_eq!(diagnostics.len(), 0);
+    }
+
+    #[test]
+    fn test_parse_type_error_with_conversion_hint() {
+        // Full output from bsc -bs-read-stdin for a type mismatch, including
+        // the code frame and conversion hint. This is the output produced
+        // after fixing the crash (Location.stdin_source provides the correct
+        // source for code frame display).
+        let stderr = r#"
+  We've found a bug for you!
+  src/Log.res:52:15-35
+
+  50 │ }
+  51 │ 
+  52 │ let x : int = "eeeebtteeeebleeee  "
+  53 │ 
+
+  This has type: string
+  But it's expected to have type: int
+  
+  You can convert string to int with Int.fromString.
+"#;
+
+        let diagnostics = parse_compiler_output(stderr);
+        assert_eq!(diagnostics.len(), 1);
+        let d = &diagnostics[0];
+        assert_eq!(d.file, PathBuf::from("src/Log.res"));
+        assert_eq!(d.severity, Severity::Error);
+        assert_eq!(d.range.start.line, 52);
+        assert_eq!(d.range.start.character, 15);
+        assert_eq!(d.range.end.line, 52);
+        assert_eq!(d.range.end.character, 35);
+        assert!(d.message.contains("This has type: string"));
+        assert!(d.message.contains("But it's expected to have type: int"));
+        assert!(d.message.contains("Int.fromString"));
+    }
 }

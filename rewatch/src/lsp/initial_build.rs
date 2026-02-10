@@ -1,9 +1,36 @@
+use rayon::prelude::*;
+
 use crate::build;
 use crate::build::build_types::{BuildCommandState, BuildProfile, CompilationStage};
 use crate::build::diagnostics::BscDiagnostic;
 use crate::build::packages;
 
-use super::initialize::DiscoveredWorkspace;
+use super::initialize::{self, DiscoveredWorkspace};
+
+/// Run initial builds for all discovered workspaces in parallel.
+///
+/// Partitions workspaces into conflict groups (workspaces sharing a package
+/// path must build sequentially), then builds groups in parallel via rayon.
+pub fn run_all(workspaces: Vec<DiscoveredWorkspace>) -> Vec<(BuildCommandState, Vec<BscDiagnostic>)> {
+    let groups = initialize::partition_workspaces(workspaces);
+    let parent_span = tracing::Span::current();
+
+    groups
+        .into_par_iter()
+        .flat_map(|group| {
+            group
+                .into_iter()
+                .filter_map(|workspace| match run(workspace, &parent_span) {
+                    Ok(result) => Some(result),
+                    Err(e) => {
+                        tracing::error!("Initial build failed: {e}");
+                        None
+                    }
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect()
+}
 
 /// Run the initial build for a discovered workspace.
 ///

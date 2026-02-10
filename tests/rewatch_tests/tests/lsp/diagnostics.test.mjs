@@ -69,4 +69,33 @@ describe("lsp diagnostics", () => {
       }),
     45_000,
   );
+
+  it(
+    "publishes type error diagnostics for buffer content before initial build finishes",
+    () =>
+      runLspTest(async ({ lsp, sandbox }) => {
+        const rootUri = pathToFileURL(sandbox).href;
+        await lsp.initialize(rootUri);
+
+        // Open the file with a type error in the buffer — the file on disk is clean.
+        // Do NOT wait for rescript/buildFinished: the LSP should typecheck
+        // the buffer immediately (via did_open) or after the initial build
+        // rechecks open buffers.
+        lsp.openFile("src/Root.res", "let main: int = App.run()\n");
+
+        // Wait for diagnostics — the LSP will typecheck the buffer via
+        // did_open or recheck open buffers after the initial build.
+        const params = await lsp.waitForNotification(
+          "textDocument/publishDiagnostics",
+          30000,
+        );
+
+        expect(params.diagnostics.length).toBeGreaterThan(0);
+        const diag = params.diagnostics[0];
+        expect(diag.severity).toBe(1); // Error
+        expect(diag.message).toContain("This has type: string");
+        expect(diag.message).toContain("But it's expected to have type: int");
+      }),
+    45_000,
+  );
 });

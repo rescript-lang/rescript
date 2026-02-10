@@ -11,11 +11,12 @@ describe("lsp didChange", { timeout: 60_000 }, () => {
       await lsp.initialize(rootUri);
       await lsp.waitForNotification("rescript/buildFinished", 30000);
 
-      // Open the file, then send unsaved change with a type error
+      // Open the file (did_open typechecks the clean buffer)
       lsp.openFile("src/Root.res");
-      lsp.editFile("src/Root.res", "let main: int = App.run()\n");
+      await lsp.waitForNotification("textDocument/publishDiagnostics", 10000);
 
-      // Wait for diagnostics to be published
+      // Send unsaved change with a type error
+      lsp.editFile("src/Root.res", "let main: int = App.run()\n");
       await lsp.waitForNotification("textDocument/publishDiagnostics", 10000);
 
       const diagnostics = lsp.getDiagnostics();
@@ -31,8 +32,11 @@ describe("lsp didChange", { timeout: 60_000 }, () => {
       await lsp.initialize(rootUri);
       await lsp.waitForNotification("rescript/buildFinished", 30000);
 
-      // Open the file, then introduce a type error
+      // Open the file (did_open typechecks the clean buffer)
       lsp.openFile("src/Root.res");
+      await lsp.waitForNotification("textDocument/publishDiagnostics", 10000);
+
+      // Introduce a type error
       lsp.editFile("src/Root.res", "let main: int = App.run()\n");
       await lsp.waitForNotification("textDocument/publishDiagnostics", 10000);
 
@@ -58,9 +62,12 @@ describe("lsp didChange", { timeout: 60_000 }, () => {
       await lsp.initialize(rootUri);
       await lsp.waitForNotification("rescript/buildFinished", 30000);
 
-      // Open the file, then send an unsaved change with a type error so we get
-      // diagnostics back (confirms the typecheck ran) — then verify no JS was produced.
+      // Open the file (did_open typechecks the clean buffer)
       lsp.openFile("src/Root.res");
+      await lsp.waitForNotification("textDocument/publishDiagnostics", 10000);
+
+      // Send an unsaved change with a type error so we get diagnostics back
+      // (confirms the typecheck ran) — then verify no JS was produced.
       lsp.editFile("src/Root.res", "let main: int = App.run()\n");
       await lsp.waitForNotification("textDocument/publishDiagnostics", 10000);
 
@@ -76,8 +83,11 @@ describe("lsp didChange", { timeout: 60_000 }, () => {
       await lsp.initialize(rootUri);
       await lsp.waitForNotification("rescript/buildFinished", 30000);
 
-      // Open the file, then send incomplete expression — syntax error
+      // Open the file (did_open typechecks the clean buffer)
       lsp.openFile("src/Root.res");
+      await lsp.waitForNotification("textDocument/publishDiagnostics", 10000);
+
+      // Send incomplete expression — syntax error
       lsp.editFile("src/Root.res", "let main = \n");
       await lsp.waitForNotification("textDocument/publishDiagnostics", 10000);
 

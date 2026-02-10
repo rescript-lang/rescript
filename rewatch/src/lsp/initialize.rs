@@ -1,3 +1,4 @@
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 use ahash::AHashMap;
@@ -241,4 +242,80 @@ pub async fn register_file_watchers(
     .await;
 
     workspaces
+}
+
+/// Partition workspaces into groups that can be built in parallel.
+///
+/// Two workspaces conflict when they share a package path — both would write
+/// to the same `lib/lsp/` directory, causing a race. We use union-find to
+/// merge conflicting workspaces into the same group. Groups are sorted by
+/// the project name of their first workspace so the build order is deterministic.
+/// Within each group, workspaces are also sorted by project name.
+pub fn partition_workspaces(workspaces: Vec<DiscoveredWorkspace>) -> Vec<Vec<DiscoveredWorkspace>> {
+    let n = workspaces.len();
+    if n <= 1 {
+        return vec![workspaces];
+    }
+
+    // Collect the set of package paths for each workspace.
+    let pkg_paths: Vec<HashSet<PathBuf>> = workspaces
+        .iter()
+        .map(|ws| ws.packages.values().map(|p| p.path.clone()).collect())
+        .collect();
+
+    // Union-find: parent[i] is the representative of workspace i's group.
+    let mut parent: Vec<usize> = (0..n).collect();
+    fn find(parent: &mut [usize], mut i: usize) -> usize {
+        while parent[i] != i {
+            parent[i] = parent[parent[i]];
+            i = parent[i];
+        }
+        i
+    }
+    fn union(parent: &mut [usize], a: usize, b: usize) {
+        let ra = find(parent, a);
+        let rb = find(parent, b);
+        if ra != rb {
+            parent[rb] = ra;
+        }
+    }
+
+    // Merge workspaces that share any package path.
+    for i in 0..n {
+        for j in (i + 1)..n {
+            if !pkg_paths[i].is_disjoint(&pkg_paths[j]) {
+                union(&mut parent, i, j);
+            }
+        }
+    }
+
+    // Group workspaces by their root representative.
+    let mut group_map: HashMap<usize, Vec<usize>> = HashMap::new();
+    for i in 0..n {
+        group_map.entry(find(&mut parent, i)).or_default().push(i);
+    }
+
+    // Sort groups deterministically by first workspace's project name.
+    let mut groups: Vec<Vec<usize>> = group_map.into_values().collect();
+    for group in &mut groups {
+        group.sort_by(|a, b| {
+            let name_a = &workspaces[*a].project_context.get_root_config().name;
+            let name_b = &workspaces[*b].project_context.get_root_config().name;
+            name_a.cmp(name_b)
+        });
+    }
+    groups.sort_by(|a, b| {
+        let name_a = &workspaces[a[0]].project_context.get_root_config().name;
+        let name_b = &workspaces[b[0]].project_context.get_root_config().name;
+        name_a.cmp(name_b)
+    });
+
+    // Convert indices to actual workspaces. We need to consume the vec,
+    // so we move workspaces into an indexed vec of Options first.
+    let mut slots: Vec<Option<DiscoveredWorkspace>> = workspaces.into_iter().map(Some).collect();
+
+    groups
+        .into_iter()
+        .map(|indices| indices.into_iter().filter_map(|i| slots[i].take()).collect())
+        .collect()
 }
