@@ -278,35 +278,23 @@ impl LanguageServer for Backend {
         let Some(file_path) = uri_to_file_path(&params.text_document.uri, "didChange") else {
             return;
         };
+        let _span = tracing::info_span!("lsp.did_change", file = %file_path.display()).entered();
 
-        let needs_fallback = {
-            let _span = tracing::info_span!("lsp.did_change", file = %file_path.display()).entered();
-
-            let content = match params.content_changes.into_iter().last() {
-                Some(change) => change.text,
-                None => return,
-            };
-
-            // Store the latest buffer content for completion requests.
-            if let Ok(mut buffers) = self.open_buffers.lock() {
-                buffers.insert(params.text_document.uri.clone(), content.clone());
-            }
-
-            // Enqueue into the unified queue (debounced, batched).
-            if let Ok(q) = self.queue.lock()
-                && let Some(ref queue) = *q
-            {
-                queue.enqueue_typecheck(params.text_document.uri.clone(), file_path.clone(), content);
-                None
-            } else {
-                Some(content)
-            }
+        let content = match params.content_changes.into_iter().last() {
+            Some(change) => change.text,
+            None => return,
         };
 
-        // Fall back to synchronous typecheck if changed before the initial build.
-        if let Some(content) = needs_fallback {
-            self.typecheck_buffer(&params.text_document.uri, &file_path, &content)
-                .await;
+        // Store the latest buffer content for completion requests.
+        if let Ok(mut buffers) = self.open_buffers.lock() {
+            buffers.insert(params.text_document.uri.clone(), content.clone());
+        }
+
+        // Enqueue into the unified queue (debounced, batched).
+        if let Ok(q) = self.queue.lock()
+            && let Some(ref queue) = *q
+        {
+            queue.enqueue_typecheck(params.text_document.uri, file_path, content);
         }
     }
 

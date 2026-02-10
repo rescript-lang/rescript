@@ -11,7 +11,8 @@ describe("lsp rename", { timeout: 60_000 }, () => {
 
       // Library.res line 1: let greeting = "hello from library"
       // Cursor on `greeting` at col 4
-      await lsp.openFile("packages/library/src/Library.res");
+      lsp.openFile("packages/library/src/Library.res");
+      await lsp.waitForNotification("textDocument/publishDiagnostics");
       const result = await lsp.prepareRenameFor(
         "packages/library/src/Library.res",
         1,
@@ -30,7 +31,8 @@ describe("lsp rename", { timeout: 60_000 }, () => {
 
       // Library.res line 1: let greeting = "hello from library"
       // Rename `greeting` to `hello`
-      await lsp.openFile("packages/library/src/Library.res");
+      lsp.openFile("packages/library/src/Library.res");
+      await lsp.waitForNotification("textDocument/publishDiagnostics");
       const result = await lsp.renameFor(
         "packages/library/src/Library.res",
         1,
