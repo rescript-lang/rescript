@@ -14,7 +14,8 @@ describe("lsp semantic tokens", { timeout: 60_000 }, () => {
       //   type user = {name: string}
       //   let admin: user = {name: "admin"}
       //   let greet = (name: string) => "hello " ++ name
-      await lsp.openFile("packages/library/src/Library.res");
+      lsp.openFile("packages/library/src/Library.res");
+      await lsp.waitForNotification("textDocument/publishDiagnostics");
       const result = await lsp.semanticTokensFor(
         "packages/library/src/Library.res",
       );

@@ -14,7 +14,8 @@ describe("lsp code lens", { timeout: 60_000 }, () => {
       //   type user = {name: string}
       //   let admin: user = {name: "admin"}
       //   let greet = (name: string) => "hello " ++ name
-      await lsp.openFile("packages/library/src/Library.res");
+      lsp.openFile("packages/library/src/Library.res");
+      await lsp.waitForNotification("textDocument/publishDiagnostics");
       const result = await lsp.codeLensFor("packages/library/src/Library.res");
       expect(result).not.toBeNull();
       expect(Array.isArray(result)).toBe(true);

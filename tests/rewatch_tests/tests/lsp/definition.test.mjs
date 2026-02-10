@@ -10,7 +10,8 @@ describe("lsp definition", { timeout: 60_000 }, () => {
       await lsp.waitForNotification("rescript/buildFinished", 30000);
 
       // Root.res contains: let main = App.run()
-      await lsp.openFile("src/Root.res");
+      lsp.openFile("src/Root.res");
+      await lsp.waitForNotification("textDocument/publishDiagnostics");
       // Hover over `run` in `App.run()` at column 15
       const result = await lsp.definitionFor("src/Root.res", 0, 15);
       expect(result).not.toBeNull();
@@ -25,7 +26,8 @@ describe("lsp definition", { timeout: 60_000 }, () => {
       await lsp.waitForNotification("rescript/buildFinished", 30000);
 
       // Root.res contains: let main = App.run()
-      await lsp.openFile("src/Root.res");
+      lsp.openFile("src/Root.res");
+      await lsp.waitForNotification("textDocument/publishDiagnostics");
       // Cursor on `App` in `App.run()` at column 11
       const result = await lsp.definitionFor("src/Root.res", 0, 11);
       expect(result).not.toBeNull();

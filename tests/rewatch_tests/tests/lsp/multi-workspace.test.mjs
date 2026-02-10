@@ -12,7 +12,8 @@ describe("lsp multi-workspace", { timeout: 60_000 }, () => {
       // CjsModule.res is in packages/commonjs — an independent project
       // not referenced by the root rescript.json's dependencies.
       // Multi-project discovery should find it and build it.
-      await lsp.openFile("packages/commonjs/src/CjsModule.res");
+      lsp.openFile("packages/commonjs/src/CjsModule.res");
+      await lsp.waitForNotification("textDocument/publishDiagnostics");
       const result = await lsp.hoverFor(
         "packages/commonjs/src/CjsModule.res",
         0,
@@ -29,13 +30,15 @@ describe("lsp multi-workspace", { timeout: 60_000 }, () => {
       await lsp.waitForNotification("rescript/buildFinished", 30000);
 
       // Hover on a monorepo file (Root.res depends on App from @rewatch-test/app)
-      await lsp.openFile("src/Root.res");
+      lsp.openFile("src/Root.res");
+      await lsp.waitForNotification("textDocument/publishDiagnostics");
       const rootResult = await lsp.hoverFor("src/Root.res", 0, 4);
       expect(rootResult).not.toBeNull();
       expect(rootResult.contents.value).toContain("string");
 
       // Hover on an independent package file
-      await lsp.openFile("packages/commonjs/src/CjsModule.res");
+      lsp.openFile("packages/commonjs/src/CjsModule.res");
+      await lsp.waitForNotification("textDocument/publishDiagnostics");
       const cjsResult = await lsp.hoverFor(
         "packages/commonjs/src/CjsModule.res",
         0,

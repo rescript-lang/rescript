@@ -9,7 +9,8 @@ describe("lsp code action", { timeout: 60_000 }, () => {
       await lsp.initialize(rootUri);
       await lsp.waitForNotification("rescript/buildFinished", 30000);
 
-      await lsp.openFile("packages/library/src/Library.res");
+      lsp.openFile("packages/library/src/Library.res");
+      await lsp.waitForNotification("textDocument/publishDiagnostics");
 
       // Request code actions on the `greet` function (line 5, 0-indexed)
       // let greet = (name: string) => "hello " ++ name

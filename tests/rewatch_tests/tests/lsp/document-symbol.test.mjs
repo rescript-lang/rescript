@@ -13,7 +13,8 @@ describe("lsp document symbol", { timeout: 60_000 }, () => {
       //   let greeting = "hello from library"
       //   type user = {name: string}
       //   let admin: user = {name: "admin"}
-      await lsp.openFile("packages/library/src/Library.res");
+      lsp.openFile("packages/library/src/Library.res");
+      await lsp.waitForNotification("textDocument/publishDiagnostics");
       const result = await lsp.documentSymbolsFor(
         "packages/library/src/Library.res",
       );

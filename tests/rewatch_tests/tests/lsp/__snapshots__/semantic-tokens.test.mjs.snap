@@ -254,8 +254,8 @@ exports[`lsp semantic tokens > returns semantic tokens for a file 1`] = `
   "        build.compile_wave[file_count=1]",
   "          build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
   "  lsp.did_open[file=packages/library/src/Library.res]",
-  "  lsp.semantic_tokens[file=packages/library/src/Library.res, module=Library, package=@rewatch-test/library]",
   "  lsp.typecheck[file_count=1]",
   "    lsp.typecheck.file[module=Library]",
+  "  lsp.semantic_tokens[file=packages/library/src/Library.res, module=Library, package=@rewatch-test/library]",
 ]
 `;

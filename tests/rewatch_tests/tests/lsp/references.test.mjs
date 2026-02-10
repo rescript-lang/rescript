@@ -13,7 +13,8 @@ describe("lsp references", { timeout: 60_000 }, () => {
       // App.res has: let run = () => Library.greeting
       // Both are in the same dependency chain
       // Request references for `greeting` from Library.res itself
-      await lsp.openFile("packages/library/src/Library.res");
+      lsp.openFile("packages/library/src/Library.res");
+      await lsp.waitForNotification("textDocument/publishDiagnostics");
       const result = await lsp.referencesFor(
         "packages/library/src/Library.res",
         1,

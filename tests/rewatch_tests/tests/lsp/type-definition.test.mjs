@@ -11,7 +11,8 @@ describe("lsp type definition", { timeout: 60_000 }, () => {
 
       // Library.res line 4: let admin: user = {name: "admin"}
       // admin has type user, defined at line 3 of Library.res
-      await lsp.openFile("packages/library/src/Library.res");
+      lsp.openFile("packages/library/src/Library.res");
+      await lsp.waitForNotification("textDocument/publishDiagnostics");
       const result = await lsp.typeDefinitionFor(
         "packages/library/src/Library.res",
         4,

@@ -14,7 +14,8 @@ describe("lsp inlay hint", { timeout: 60_000 }, () => {
       //   type user = {name: string}            (line 3)
       //   let admin: user = {name: "admin"}     (line 4)
       //   let greet = (name: string) => ...     (line 5)
-      await lsp.openFile("packages/library/src/Library.res");
+      lsp.openFile("packages/library/src/Library.res");
+      await lsp.waitForNotification("textDocument/publishDiagnostics");
       const result = await lsp.inlayHintFor(
         "packages/library/src/Library.res",
         0,
