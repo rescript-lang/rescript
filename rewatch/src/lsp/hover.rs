@@ -5,7 +5,7 @@ use std::sync::Mutex;
 use tower_lsp::lsp_types::{Hover, Position, Url};
 
 use crate::lsp::ProjectMap;
-use crate::lsp::analysis::{self, AnalysisContext};
+use crate::lsp::analysis;
 
 /// Handle a hover request: resolve the source buffer, build analysis context
 /// under lock, then spawn the analysis binary after releasing the lock.
@@ -20,10 +20,8 @@ pub fn handle(
 
     let ctx = {
         let mut guard = projects.lock().ok()?;
-        let build_state = guard.get_for_uri(uri)?;
-        AnalysisContext::new(build_state, file_path, &source, position, true, None)?
+        guard.build_analysis_context(uri, file_path, &source, position, true, None)?
     };
-    // Lock released — subprocess runs without holding the lock
 
     let _span = tracing::info_span!(
         "lsp.hover",

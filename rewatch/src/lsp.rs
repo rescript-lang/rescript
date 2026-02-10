@@ -47,6 +47,9 @@ pub(crate) struct ProjectMap {
     states: HashMap<PathBuf, BuildCommandState>,
     /// Cached mapping from file URI to its project root. Populated lazily.
     uri_cache: HashMap<Url, PathBuf>,
+    /// Cached runtime module data from `lib/ocaml/`. Populated lazily on first
+    /// analysis request, never invalidated (runtime doesn't change during a session).
+    runtime_module_data: Option<analysis::RuntimeModuleData>,
 }
 
 impl ProjectMap {
@@ -54,6 +57,7 @@ impl ProjectMap {
         ProjectMap {
             states: HashMap::new(),
             uri_cache: HashMap::new(),
+            runtime_module_data: None,
         }
     }
 
@@ -85,6 +89,37 @@ impl ProjectMap {
     pub(crate) fn get_for_uri(&mut self, uri: &Url) -> Option<&BuildCommandState> {
         let root = self.project_root_for(uri)?;
         self.states.get(&root)
+    }
+
+    /// Build an `AnalysisContext` for a file URI, using cached runtime module data.
+    ///
+    /// This is the single entry point for all analysis handlers. It resolves the
+    /// project, ensures the runtime module cache is populated, and delegates to
+    /// `AnalysisContext::new()`.
+    pub(crate) fn build_analysis_context(
+        &mut self,
+        uri: &Url,
+        file_path: &std::path::Path,
+        source: &str,
+        position: Position,
+        do_ensure_cmt: bool,
+        extra_fields: Option<analysis::ExtraFieldsFn<'_>>,
+    ) -> Option<analysis::AnalysisContext> {
+        let root = self.project_root_for(uri)?;
+        let build_state = self.states.get(&root)?;
+        let runtime_path = build_state.build_state.compiler_info.runtime_path.clone();
+        let runtime = self
+            .runtime_module_data
+            .get_or_insert_with(|| analysis::scan_runtime_modules(&runtime_path));
+        analysis::AnalysisContext::new(
+            build_state,
+            runtime,
+            file_path,
+            source,
+            position,
+            do_ensure_cmt,
+            extra_fields,
+        )
     }
 }
 

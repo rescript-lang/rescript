@@ -4,9 +4,8 @@ use std::sync::Mutex;
 
 use tower_lsp::lsp_types::{CompletionItem, CompletionResponse, Documentation, Position, Url};
 
-use crate::build::build_types::BuildCommandState;
 use crate::lsp::ProjectMap;
-use crate::lsp::analysis::{self, AnalysisContext};
+use crate::lsp::analysis;
 
 /// Handle a completion request: resolve the source buffer, build analysis context
 /// under lock, then spawn the analysis binary after releasing the lock.
@@ -21,8 +20,7 @@ pub fn handle(
 
     let ctx = {
         let mut guard = projects.lock().ok()?;
-        let build_state = guard.get_for_uri(uri)?;
-        AnalysisContext::new(build_state, file_path, &source, position, true, None)?
+        guard.build_analysis_context(uri, file_path, &source, position, true, None)?
     };
 
     let _span = tracing::info_span!(
@@ -64,10 +62,22 @@ pub fn handle_resolve(projects: &Mutex<ProjectMap>, mut item: CompletionItem) ->
             Ok(g) => g,
             Err(_) => return item,
         };
-        let Some(build_state) = guard.get_for_uri(&uri) else {
-            return item;
-        };
-        match build_resolve_context(build_state, file_path, &module_path_owned) {
+        match guard.build_analysis_context(
+            &uri,
+            file_path,
+            "",
+            Position {
+                line: 0,
+                character: 0,
+            },
+            false,
+            Some(&|map: &mut serde_json::Map<String, serde_json::Value>| {
+                map.insert(
+                    "modulePath".to_string(),
+                    serde_json::Value::String(module_path_owned.clone()),
+                );
+            }),
+        ) {
             Some(ctx) => ctx,
             None => return item,
         }
@@ -87,31 +97,4 @@ pub fn handle_resolve(projects: &Mutex<ProjectMap>, mut item: CompletionItem) ->
         item.documentation = Some(Documentation::String(doc));
     }
     item
-}
-
-/// Build an AnalysisContext for completion resolve.
-/// This is different from the normal path: no ensure_cmt, empty source,
-/// position 0:0, and adds the `modulePath` extra field.
-fn build_resolve_context(
-    build_state: &BuildCommandState,
-    file_path: &Path,
-    module_path: &str,
-) -> Option<AnalysisContext> {
-    let module_path = module_path.to_string();
-    AnalysisContext::new(
-        build_state,
-        file_path,
-        "",
-        Position {
-            line: 0,
-            character: 0,
-        },
-        false,
-        Some(&|map: &mut serde_json::Map<String, serde_json::Value>| {
-            map.insert(
-                "modulePath".to_string(),
-                serde_json::Value::String(module_path.clone()),
-            );
-        }),
-    )
 }

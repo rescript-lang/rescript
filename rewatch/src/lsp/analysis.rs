@@ -13,7 +13,65 @@ use crate::config;
 use crate::helpers;
 use crate::lsp::typecheck;
 
-type ExtraFieldsFn<'a> = &'a dyn Fn(&mut serde_json::Map<String, Value>);
+pub(crate) type ExtraFieldsFn<'a> = &'a dyn Fn(&mut serde_json::Map<String, Value>);
+
+/// Cached results of scanning `lib/ocaml/` for runtime modules.
+/// Populated once on first analysis request, never invalidated (runtime doesn't change).
+pub(crate) struct RuntimeModuleData {
+    /// `pathsForModule` entries for runtime modules (module_name -> JSON value).
+    pub paths: serde_json::Map<String, Value>,
+    /// Module names for the `dependenciesFiles` list.
+    pub module_names: Vec<String>,
+}
+
+/// Scan `runtime_path/lib/ocaml/` for `.cmt` files and build both the
+/// `pathsForModule` entries and dependency module name list in a single pass.
+pub(crate) fn scan_runtime_modules(runtime_path: &Path) -> RuntimeModuleData {
+    let mut paths = serde_json::Map::new();
+    let mut module_names = Vec::new();
+
+    let ocaml_dir = runtime_path.join("lib").join("ocaml");
+    if let Ok(entries) = std::fs::read_dir(&ocaml_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()) != Some("cmt") {
+                continue;
+            }
+            let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
+            module_names.push(stem.to_string());
+
+            let cmti_path = path.with_extension("cmti");
+            let res_path = ocaml_dir.join(format!("{stem}.res"));
+            let resi_path = ocaml_dir.join(format!("{stem}.resi"));
+
+            if cmti_path.exists() && resi_path.exists() {
+                paths.insert(
+                    stem.to_string(),
+                    json!({
+                        "intfAndImpl": {
+                            "cmti": cmti_path.to_string_lossy(),
+                            "resi": resi_path.to_string_lossy(),
+                            "cmt": path.to_string_lossy(),
+                            "res": res_path.to_string_lossy(),
+                        }
+                    }),
+                );
+            } else if res_path.exists() {
+                paths.insert(
+                    stem.to_string(),
+                    json!({
+                        "impl": {
+                            "cmt": path.to_string_lossy(),
+                            "res": res_path.to_string_lossy(),
+                        }
+                    }),
+                );
+            }
+        }
+    }
+
+    RuntimeModuleData { paths, module_names }
+}
 
 /// Pre-built analysis context that holds everything needed to run the analysis
 /// binary. Built while holding the `ProjectMap` lock, then used after releasing it.
@@ -41,6 +99,7 @@ impl AnalysisContext {
     /// (e.g. `endPos` for code_action, `newName` for rename).
     pub fn new(
         build_state: &BuildCommandState,
+        runtime: &RuntimeModuleData,
         file_path: &Path,
         source: &str,
         position: Position,
@@ -60,6 +119,7 @@ impl AnalysisContext {
 
         let mut context_json = build_context_json(
             build_state,
+            runtime,
             source,
             &path_str,
             position,
@@ -181,6 +241,7 @@ fn original_path(package: &Package, source_file: &SourceFile) -> std::path::Path
 #[allow(clippy::too_many_arguments)]
 fn build_context_json(
     build_state: &BuildCommandState,
+    runtime: &RuntimeModuleData,
     source: &str,
     path: &str,
     position: tower_lsp::lsp_types::Position,
@@ -207,8 +268,8 @@ fn build_context_json(
     };
 
     let opens = build_opens(namespace, package_config);
-    let paths_for_module = build_paths_for_module(build_state);
-    let (project_files, dependencies_files) = build_file_sets(build_state);
+    let paths_for_module = build_paths_for_module(build_state, runtime);
+    let (project_files, dependencies_files) = build_file_sets(build_state, runtime);
 
     json!({
         "source": source,
@@ -309,53 +370,13 @@ fn build_opens(namespace: &Namespace, config: &config::Config) -> Value {
 /// Build the `pathsForModule` object mapping module names to their .cmt/.res paths.
 ///
 /// Includes both project/dependency modules from the build state and runtime
-/// modules from `lib/ocaml/` (which are pre-built and not in the build state).
-fn build_paths_for_module(build_state: &BuildCommandState) -> Value {
+/// modules from the cached `RuntimeModuleData`.
+fn build_paths_for_module(build_state: &BuildCommandState, runtime: &RuntimeModuleData) -> Value {
     let mut result = serde_json::Map::new();
 
-    // Add runtime modules from lib/ocaml/. These are pre-built and not
-    // discovered as regular packages in the build state.
-    let ocaml_dir = build_state
-        .build_state
-        .compiler_info
-        .runtime_path
-        .join("lib")
-        .join("ocaml");
-    if let Ok(entries) = std::fs::read_dir(&ocaml_dir) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.extension().and_then(|e| e.to_str()) == Some("cmt") {
-                let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
-                // Check for a matching .cmti (interface)
-                let cmti_path = path.with_extension("cmti");
-                let res_path = ocaml_dir.join(format!("{stem}.res"));
-                let resi_path = ocaml_dir.join(format!("{stem}.resi"));
-
-                if cmti_path.exists() && resi_path.exists() {
-                    result.insert(
-                        stem.to_string(),
-                        json!({
-                            "intfAndImpl": {
-                                "cmti": cmti_path.to_string_lossy(),
-                                "resi": resi_path.to_string_lossy(),
-                                "cmt": path.to_string_lossy(),
-                                "res": res_path.to_string_lossy(),
-                            }
-                        }),
-                    );
-                } else if res_path.exists() {
-                    result.insert(
-                        stem.to_string(),
-                        json!({
-                            "impl": {
-                                "cmt": path.to_string_lossy(),
-                                "res": res_path.to_string_lossy(),
-                            }
-                        }),
-                    );
-                }
-            }
-        }
+    // Add cached runtime modules from lib/ocaml/
+    for (name, value) in &runtime.paths {
+        result.insert(name.clone(), value.clone());
     }
 
     for (module_name, module) in &build_state.build_state.modules {
@@ -428,8 +449,8 @@ fn build_paths_for_module(build_state: &BuildCommandState) -> Value {
 
 /// Partition module names into project files and dependency files.
 ///
-/// Runtime modules from `lib/ocaml/` are included in dependency files.
-fn build_file_sets(build_state: &BuildCommandState) -> (Value, Value) {
+/// Runtime modules from the cached `RuntimeModuleData` are included in dependency files.
+fn build_file_sets(build_state: &BuildCommandState, runtime: &RuntimeModuleData) -> (Value, Value) {
     let root_package_name = &build_state.build_state.get_root_config().name;
 
     let mut project_files = Vec::new();
@@ -443,22 +464,9 @@ fn build_file_sets(build_state: &BuildCommandState) -> (Value, Value) {
         }
     }
 
-    // Add runtime modules as dependencies
-    let ocaml_dir = build_state
-        .build_state
-        .compiler_info
-        .runtime_path
-        .join("lib")
-        .join("ocaml");
-    if let Ok(entries) = std::fs::read_dir(&ocaml_dir) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.extension().and_then(|e| e.to_str()) == Some("cmt")
-                && let Some(stem) = path.file_stem().and_then(|s| s.to_str())
-            {
-                dependencies_files.push(Value::String(stem.to_string()));
-            }
-        }
+    // Add cached runtime modules as dependencies
+    for name in &runtime.module_names {
+        dependencies_files.push(Value::String(name.clone()));
     }
 
     (Value::Array(project_files), Value::Array(dependencies_files))

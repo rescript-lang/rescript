@@ -5,7 +5,7 @@ use std::sync::Mutex;
 use tower_lsp::lsp_types::{InlayHint, Position, Range, Url};
 
 use crate::lsp::ProjectMap;
-use crate::lsp::analysis::{self, AnalysisContext};
+use crate::lsp::analysis;
 
 /// Handle an inlay hint request.
 pub fn handle(
@@ -19,11 +19,10 @@ pub fn handle(
 
     let ctx = {
         let mut guard = projects.lock().ok()?;
-        let build_state = guard.get_for_uri(uri)?;
         // Pass the line range as pos: [start_line, end_line].
         // The OCaml side interprets pos as (start_line, end_line) for inlay hints.
-        AnalysisContext::new(
-            build_state,
+        guard.build_analysis_context(
+            uri,
             file_path,
             &source,
             Position {

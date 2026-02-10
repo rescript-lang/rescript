@@ -5,7 +5,7 @@ use std::sync::Mutex;
 use tower_lsp::lsp_types::{Position, SemanticTokens, SemanticTokensResult, Url};
 
 use crate::lsp::ProjectMap;
-use crate::lsp::analysis::{self, AnalysisContext};
+use crate::lsp::analysis;
 
 /// Handle a semantic tokens request.
 ///
@@ -20,9 +20,8 @@ pub fn handle(
 
     let ctx = {
         let mut guard = projects.lock().ok()?;
-        let build_state = guard.get_for_uri(uri)?;
-        AnalysisContext::new(
-            build_state,
+        guard.build_analysis_context(
+            uri,
             file_path,
             &source,
             Position {

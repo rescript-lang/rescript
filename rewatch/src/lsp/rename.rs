@@ -6,7 +6,7 @@ use serde_json::json;
 use tower_lsp::lsp_types::{Position, PrepareRenameResponse, Url, WorkspaceEdit};
 
 use crate::lsp::ProjectMap;
-use crate::lsp::analysis::{self, AnalysisContext};
+use crate::lsp::analysis;
 
 /// Handle a prepareRename request.
 pub fn handle_prepare_rename(
@@ -20,8 +20,7 @@ pub fn handle_prepare_rename(
 
     let ctx = {
         let mut guard = projects.lock().ok()?;
-        let build_state = guard.get_for_uri(uri)?;
-        AnalysisContext::new(build_state, file_path, &source, position, true, None)?
+        guard.build_analysis_context(uri, file_path, &source, position, true, None)?
     };
 
     let _span = tracing::info_span!(
@@ -50,9 +49,8 @@ pub fn handle_rename(
     let new_name = new_name.to_string();
     let ctx = {
         let mut guard = projects.lock().ok()?;
-        let build_state = guard.get_for_uri(uri)?;
-        AnalysisContext::new(
-            build_state,
+        guard.build_analysis_context(
+            uri,
             file_path,
             &source,
             position,
