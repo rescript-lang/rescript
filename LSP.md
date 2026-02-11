@@ -64,7 +64,11 @@ rewatch/src/
     ├── analysis.rs              # Shared context-building and analysis binary spawning
     ├── initialize.rs            # Workspace discovery, file watcher registration
     ├── initial_build.rs         # Full TypecheckOnly build on startup
-    ├── queue.rs                 # Unified debounced queue for all file events (didChange, didSave, didChangeWatchedFiles)
+    ├── queue.rs                 # Unified debounced queue: types, public API, consumer, merge, flush orchestration
+    ├── queue/
+    │   ├── file_build.rs        # Per-file incremental build (dependency + dependent closure)
+    │   ├── file_typecheck.rs    # Per-file typecheck (parallel, wave-based, staleness-aware)
+    │   └── project_build.rs     # Per-project full rebuild + artifact cleanup on file creation/deletion
     ├── typecheck.rs             # Single-file typecheck via bsc stdin piping (used by queue and pre-queue fallback)
     ├── file_args.rs             # TypecheckArgs extraction from BuildCommandState
     ├── completion.rs            # Completion via analysis binary subprocess
@@ -136,10 +140,10 @@ Editor starts ──▶ rescript lsp --stdio
               ┌─────────────────────────────────┐
               │   Event Loop                    │
               │                                 │
-              │  didOpen                     ──┼──▶ Enqueue typecheck into unified queue
-              │  didChange                   ──┼──▶ Enqueue typecheck into unified queue
-              │  didSave                     ──┼──▶ Enqueue build into unified queue
-              │  didChangeWatchedFiles       ──┼──▶ Enqueue build into unified queue
+              │  didOpen                     ──┼──▶ Enqueue BufferOpened into unified queue
+              │  didChange                   ──┼──▶ Enqueue BufferChanged into unified queue
+              │  didSave                     ──┼──▶ Enqueue FileChangedOnDisk into unified queue
+              │  didChangeWatchedFiles       ──┼──▶ Enqueue FileChangedOnDisk / FileCreated / FileDeleted
               │  completion / hover / etc.   ──┼──▶ Shell out to analysis binary
               │  shutdown                    ──┼──▶ Ok(())
               └─────────────────────────────────┘
@@ -155,13 +159,19 @@ Implementation: `lsp/initial_build.rs`
 
 ### Unified Queue
 
-All file events flow into a single unified queue (`lsp/queue.rs`). The queue accepts three kinds of events:
+All file events flow into a single unified queue (`lsp/queue.rs`). The queue accepts fact-based events describing what happened — the merge logic derives the correct build actions:
 
-- **Typecheck** (from `didChange` / `didOpen`) — unsaved buffer content, lightweight typecheck only
-- **Build** (from `didSave` / `didChangeWatchedFiles` Changed) — saved file, full incremental build from disk
-- **FullBuild** (from `didChangeWatchedFiles` Created/Deleted) — re-initialize the affected project (re-read packages, re-scan sources, rebuild)
+- **BufferOpened / BufferChanged** (from `didOpen` / `didChange`) — unsaved buffer content
+- **FileChangedOnDisk** (from `didSave` / `didChangeWatchedFiles` Changed) — file changed on disk
+- **FileCreated / FileDeleted** (from `didChangeWatchedFiles` Created/Deleted) — structural change requiring full project rebuild
 
-A single background consumer task collects events into a `PendingState` (per-file map + per-project full-build map), applying merge rules to consolidate state. After 100ms of silence the batch is flushed sequentially:
+A single background consumer task collects events into a `PendingState` with three action-oriented fields:
+
+- `typechecks` — files needing typecheck (unsaved buffer content)
+- `compile_files` — files needing incremental build (saved to disk)
+- `build_projects` — file paths whose creation/deletion requires a full project rebuild
+
+The merge function applies promotion rules to consolidate per-file state. When a `FileCreated` or `FileDeleted` event arrives, any pending per-file typecheck or build for that same file is removed since the full rebuild will cover it. After 100ms of silence the batch is flushed sequentially:
 
 1. **Full builds first** — re-initialize affected projects from scratch (same flow as the initial build), replacing the old `BuildCommandState`. Clears stale diagnostics for files that no longer exist.
 2. **Incremental builds second** — saved files get a full incremental build (compile dependencies + typecheck dependents), holding the projects lock.
@@ -175,12 +185,13 @@ Sequential execution within one consumer eliminates all races on `lib/lsp/` arti
 
 When multiple events arrive for the same file within a debounce window:
 
-| Existing | New event | Result |
-|----------|-----------|--------|
-| Typecheck | Typecheck | Keep latest buffer content |
-| Typecheck | Build | Promote to Build, stash buffer for post-build recheck |
-| Build | Typecheck | Stay Build, update stashed buffer |
-| Build | Build | No-op |
+| Existing state | New event | Result |
+|----------------|-----------|--------|
+| typechecks | BufferChanged | Update content and generation |
+| typechecks | FileChangedOnDisk | Promote to compile_files, stash buffer for post-build recheck |
+| compile_files | BufferChanged | Stay in compile_files, update stashed buffer |
+| compile_files | FileChangedOnDisk | No-op |
+| any | FileCreated/FileDeleted | Remove from typechecks/compile_files, add to build_projects |
 
 #### Staleness detection
 
@@ -229,33 +240,36 @@ didChange/didOpen notification
           Publish diagnostics (skip stale results via generation counter)
 ```
 
-Implementation: `lsp/queue.rs` (queue, batch logic, build/typecheck flush), `lsp/typecheck.rs` (single-file bsc invocation), `lsp/file_args.rs` (compiler arg extraction)
+Implementation: `lsp/queue.rs` (queue, merge, flush orchestration), `lsp/queue/file_typecheck.rs` (batch typecheck logic), `lsp/typecheck.rs` (single-file bsc invocation), `lsp/file_args.rs` (compiler arg extraction)
 
 ### On `didSave` / `didChangeWatchedFiles` (saved files)
 
-`didSave` enqueues Build events. `didChangeWatchedFiles` classifies by event type: `Changed` → Build, `Created`/`Deleted` → FullBuild (grouped by project root). The consumer flushes sequentially:
+`didSave` enqueues a `FileChangedOnDisk` event. `didChangeWatchedFiles` classifies by event type: `Changed` → `FileChangedOnDisk`, `Created` → `FileCreated`, `Deleted` → `FileDeleted`. The consumer flushes sequentially:
 
 ```
 didSave / didChangeWatchedFiles notification
     │
-    ├── Changed  → Enqueue Build event
-    └── Created/Deleted → Enqueue FullBuild event (by project root)
+    ├── Changed  → Enqueue FileChangedOnDisk event
+    ├── Created  → Enqueue FileCreated event (file_path only)
+    └── Deleted  → Enqueue FileDeleted event (file_path only)
                     │
           background consumer task
                     │
           ┌─────────▼──────────┐
           │ merge into           │
-          │ PendingState         │  (per-file map + per-project full-build map)
+          │ PendingState         │  (typechecks + compile_files + build_projects)
           │ reset 100ms timer    │
           └─────────┬──────────┘
                     │ timer expires
                     ▼
           Step 1: Full builds (per project root)
+          ├── Group build_projects paths by project root (resolved at flush time)
+          ├── Clean up associated files for deleted .res files (.resi + compiled JS)
           ├── Re-initialize project (re-read packages, re-scan sources)
           ├── Replace old BuildCommandState
           ├── Invalidate uri_cache entries
           ├── Publish diagnostics from new build
-          └── Clear diagnostics for files that no longer exist
+          └── Clear diagnostics for files that no longer exist (old/new URI diff)
                     │
                     ▼
           Step 2: Incremental builds (per project)
@@ -281,9 +295,9 @@ didSave / didChangeWatchedFiles notification
           Send rescript/buildFinished notification
 ```
 
-`didChangeWatchedFiles` filters for `.res`/`.resi` files. `Changed` events trigger incremental builds. `Created` and `Deleted` events trigger a full project re-initialization via `FullBuild` queue events.
+`didChangeWatchedFiles` filters for `.res`/`.resi` files. `Changed` events trigger incremental builds via `FileChangedOnDisk`. `Created` and `Deleted` events trigger a full project re-initialization via `FileCreated`/`FileDeleted` events — project root resolution happens at flush time, not at enqueue time. When a `.res` file is deleted, its associated `.resi` and compiled JS files are also cleaned up; deleting a `.resi` alone does not remove the `.res` or JS.
 
-Implementation: `lsp/queue.rs`, `lsp/dependency_closure.rs`
+Implementation: `lsp/queue.rs`, `lsp/queue/file_build.rs`, `lsp/queue/project_build.rs`, `lsp/dependency_closure.rs`
 
 ### Build Artifacts
 
@@ -354,15 +368,13 @@ On `initialized`, the server discovers packages and registers scoped file watche
 
 Patterns use forward slashes and are scoped to declared source directories to avoid matching `node_modules/` or `lib/bs/`.
 
-File watcher events (`workspace/didChangeWatchedFiles`) for `Changed` events are fed into the unified queue as Build events, just like `didSave`. Created/Deleted events are not yet handled — see below.
+File watcher events (`workspace/didChangeWatchedFiles`) are classified by event type and fed into the unified queue: `Changed` → `FileChangedOnDisk`, `Created` → `FileCreated`, `Deleted` → `FileDeleted`.
 
 Implementation: `lsp/initialize.rs`
 
 ### Not yet implemented
 
-- **File creation** (`Created` events): New `.res` files need to be added as modules, requiring re-running source discovery for the affected package.
-- **File deletion** (`Deleted` events): Modules should be removed from the build state, and dependents re-typechecked.
-- **`rescript.json` changes**: Config changes likely need a full re-initialization (re-read config, re-discover packages).
+- **`rescript.json` changes**: Config changes likely need a full re-initialization (re-read config, re-discover packages, re-register file watchers).
 
 ## What Is NOT Implemented Yet
 
@@ -390,7 +402,7 @@ Implementation: `lsp/initialize.rs`
 | Monorepo multi-workspace | Implemented |
 | `textDocument/createInterface` | TODO — niche feature, generates `.resi` from `.res` (already exists in analysis binary) |
 | `textDocument/openCompiled` | TODO — niche feature, opens compiled `.js` output |
-| File creation/deletion handling | Implemented (FullBuild queue event) |
+| File creation/deletion handling | Implemented (FileCreated/FileDeleted queue events) |
 | `rescript.json` change handling | TODO — needs full re-initialization |
 | `workspace/symbol` | TODO — project-wide symbol search |
 | `textDocument/documentHighlight` | TODO — highlight all occurrences of a symbol in current file |
@@ -452,17 +464,11 @@ The initial build blocks the `initialized` handler. Large projects may experienc
 - **`createInterface`**: Already exists in the analysis binary. Expose as an LSP command or code action.
 - **`openCompiled`**: Open the compiled `.js` output for a `.res` file. Useful for debugging.
 
-### 4. File Deletion Cleanup
-
-When a `.res` file is deleted, the corresponding `.res.jsx` file (generated by the build) should also be removed. Currently only compiler artifacts (`.cmi`, `.cmt`, `.cmj`, `.ast`) are cleaned up.
-
-Additionally, verify that `didChangeWatchedFiles` with `FileChangeType::DELETED` reliably triggers a full rebuild across editors (VS Code, Zed, Neovim). If an editor doesn't send the notification, the LSP has no way to detect the deletion until restart.
-
-### 5. File Operation Notifications (LSP 3.16)
+### 4. File Operation Notifications (LSP 3.16)
 
 Register support for `workspace/didDeleteFiles`, `workspace/didCreateFiles`, and `workspace/didRenameFiles` via `fileOperations` in server capabilities. These are sent by the editor when it performs file operations itself (e.g., delete from file tree, rename via UI), unlike `didChangeWatchedFiles` which relies on the editor's file watcher. Zed, for example, does not fire `didChangeWatchedFiles` for deletions, but may support `didDeleteFiles`. Supporting both provides redundant coverage across editors.
 
-### 6. Additional LSP Features
+### 5. Additional LSP Features
 
 Lower priority, but would improve the editing experience:
 
