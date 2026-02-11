@@ -297,11 +297,6 @@ let lambda_as_module
     Js_dump_program.dump_deps_program ~output_prefix Commonjs (lambda_output) stdout
   end else
     Js_packages_info.iter package_info (fun {module_system; path; suffix} -> 
-        let output_chan chan  = 
-          Js_dump_program.dump_deps_program ~output_prefix
-            module_system 
-            (lambda_output)
-            chan in
         let basename =  
           Ext_namespace.change_ext_ns_suffix (Filename.basename output_prefix) suffix
         in
@@ -312,8 +307,17 @@ let lambda_as_module
            (* #913 only generate little-case js file *)
           ) in     
         (if not !Clflags.dont_write_files then 
-           Ext_pervasives.with_file_as_chan
-             target_file output_chan );
+           let buf = Buffer.create 10000 in
+           Js_dump_program.pp_deps_program ~output_prefix
+             module_system lambda_output (Ext_pp.from_buffer buf);
+           let new_content = Buffer.contents buf in
+           let needs_write =
+             not (Sys.file_exists target_file) ||
+             Ext_io.load_file target_file <> new_content
+           in
+           if needs_write then
+             Ext_pervasives.with_file_as_chan target_file (fun oc ->
+               output_string oc new_content));
         if !Warnings.has_warnings  then begin 
           Warnings.has_warnings := false ;
 #ifndef BROWSER
