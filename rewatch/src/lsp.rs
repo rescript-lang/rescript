@@ -647,10 +647,18 @@ impl Backend {
         let mut all_diagnostics: Vec<BscDiagnostic> = Vec::new();
         for (state, diagnostics) in initial_build::run_all(workspaces) {
             all_diagnostics.extend(diagnostics);
+            let bsc_path = state.build_state.compiler_info.bsc_path.display().to_string();
+            let runtime_path = state.build_state.compiler_info.runtime_path.display().to_string();
             if let Ok(mut map) = self.projects.lock() {
                 let root = state.build_state.project_context.get_root_path().to_path_buf();
                 map.states.insert(root, state);
             }
+            self.client
+                .log_message(MessageType::INFO, format!("bsc_path: {bsc_path}"))
+                .await;
+            self.client
+                .log_message(MessageType::INFO, format!("runtime_path: {runtime_path}"))
+                .await;
         }
 
         self.publish_diagnostics(&all_diagnostics).await;
