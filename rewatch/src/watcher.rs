@@ -250,7 +250,7 @@ async fn async_watch(
             if show_progress {
                 println!("\nExiting...");
             }
-            clean::cleanup_after_build(&build_state);
+            clean::cleanup_after_build(&build_state, BuildProfile::Standard);
             break Ok(());
         }
         let mut events: Vec<Event> = vec![];
@@ -272,7 +272,7 @@ async fn async_watch(
                 if show_progress {
                     println!("\nExiting... (lockfile removed)");
                 }
-                clean::cleanup_after_build(&build_state);
+                clean::cleanup_after_build(&build_state, BuildProfile::Standard);
                 return Ok(());
             }
 

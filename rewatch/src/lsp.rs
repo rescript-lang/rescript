@@ -346,6 +346,21 @@ impl LanguageServer for Backend {
     }
 
     async fn did_change_watched_files(&self, params: DidChangeWatchedFilesParams) {
+        for event in &params.changes {
+            let kind = match event.typ {
+                FileChangeType::CREATED => "created",
+                FileChangeType::CHANGED => "changed",
+                FileChangeType::DELETED => "deleted",
+                _ => "unknown",
+            };
+            self.client
+                .log_message(
+                    MessageType::INFO,
+                    format!("didChangeWatchedFiles: {} {}", kind, event.uri),
+                )
+                .await;
+        }
+
         let _span =
             tracing::info_span!("lsp.did_change_watched_files", file_count = params.changes.len()).entered();
         if let Ok(q) = self.queue.lock()

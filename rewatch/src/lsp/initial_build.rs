@@ -2,6 +2,7 @@ use rayon::prelude::*;
 
 use crate::build;
 use crate::build::build_types::{BuildCommandState, BuildProfile, CompilationStage};
+use crate::build::clean;
 use crate::build::diagnostics::BscDiagnostic;
 use crate::build::packages;
 
@@ -60,6 +61,13 @@ pub fn run(
 
     // Populate source files, modules, and dirs for each package
     let packages = packages::extend_with_children(&None, discovered_packages);
+
+    // Clean stale LSP build artifacts before building. This avoids problems
+    // where orphaned .cmt files from deleted modules make dependents appear
+    // up-to-date when they actually need recompilation.
+    for package in packages.values() {
+        clean::clean_package_for_profile(package, BuildProfile::TypecheckOnly);
+    }
 
     // Prepare the build state (compiler info, validation, cleanup)
     let mut build_state = build::prepare_build(

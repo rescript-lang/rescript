@@ -40,6 +40,25 @@ fn remove_mjs_file(source_file: &Path, suffix: &str) {
     ));
 }
 
+/// Remove stale source file copies (.res/.resi) from the flat build dir (e.g. lib/lsp-ocaml/)
+/// and the nested build dir (e.g. lib/lsp/src/). These copies are created during
+/// TypecheckAndEmit builds but are not tracked by the compile assets scan.
+fn remove_source_copies(
+    package: &packages::Package,
+    ocaml_build_path: &Path,
+    source_file: &Path,
+    build_profile: BuildProfile,
+) {
+    if let Some(filename) = source_file.file_name() {
+        // Flat dir: lib/lsp-ocaml/App.res
+        let _ = std::fs::remove_file(ocaml_build_path.join(filename));
+    }
+    // Nested dir: lib/lsp/src/App.res (relative to package root)
+    if let Ok(relative) = source_file.strip_prefix(&package.path) {
+        let _ = std::fs::remove_file(package.get_build_path_for_profile(build_profile).join(relative));
+    }
+}
+
 fn remove_compile_asset(
     package: &packages::Package,
     ocaml_build_path: &Path,
@@ -150,6 +169,7 @@ pub fn cleanup_previous_build(
             remove_mjs_file(res_file_location, suffix);
             remove_iast(&ocaml_build_path, res_file_location);
             remove_ast(&ocaml_build_path, res_file_location);
+            remove_source_copies(package, &ocaml_build_path, res_file_location, build_profile);
             match helpers::get_extension(ast_file_path).as_str() {
                 "iast" => Some(module_name.to_owned()),
                 "ast" => None,
@@ -309,10 +329,10 @@ fn has_compile_warnings(module: &Module) -> bool {
     )
 }
 
-pub fn cleanup_after_build(build_state: &BuildCommandState) {
+pub fn cleanup_after_build(build_state: &BuildCommandState, build_profile: BuildProfile) {
     build_state.modules.par_iter().for_each(|(_module_name, module)| {
         let package = build_state.get_package(&module.package_name).unwrap();
-        let ocaml_build_path = package.get_ocaml_build_path();
+        let ocaml_build_path = package.get_ocaml_build_path_for_profile(build_profile);
         if has_parse_warnings(module)
             && let SourceType::SourceFile(source_file) = &module.source_type
         {

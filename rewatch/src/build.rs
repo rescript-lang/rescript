@@ -513,12 +513,12 @@ pub fn build(
                     default_timing.unwrap_or(timing_total_elapsed).as_secs_f64()
                 );
             }
-            clean::cleanup_after_build(&build_state);
+            clean::cleanup_after_build(&build_state, BuildProfile::Standard);
             write_build_ninja(&build_state);
             Ok(build_state)
         }
         Err(e) => {
-            clean::cleanup_after_build(&build_state);
+            clean::cleanup_after_build(&build_state, BuildProfile::Standard);
             write_build_ninja(&build_state);
             Err(anyhow!("Incremental build failed. Error: {e}"))
         }
