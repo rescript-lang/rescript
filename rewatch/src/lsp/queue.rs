@@ -363,12 +363,16 @@ async fn flush(
 mod tests {
     use super::*;
 
-    fn test_uri(name: &str) -> Url {
-        Url::from_file_path(format!("/tmp/{name}")).unwrap()
+    fn test_path(name: &str) -> PathBuf {
+        if cfg!(windows) {
+            PathBuf::from(format!("C:\\tmp\\{name}"))
+        } else {
+            PathBuf::from(format!("/tmp/{name}"))
+        }
     }
 
-    fn test_path(name: &str) -> PathBuf {
-        PathBuf::from(format!("/tmp/{name}"))
+    fn test_uri(name: &str) -> Url {
+        Url::from_file_path(test_path(name)).unwrap()
     }
 
     // -- Buffer events on empty state --
