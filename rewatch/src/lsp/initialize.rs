@@ -24,17 +24,15 @@ fn package_watcher_patterns(package: &packages::Package) -> Vec<String> {
     for source in &package.source_folders {
         let dir = to_forward_slashes(&package.path.join(&source.dir).to_string_lossy());
 
-        // Mirror watcher.rs logic: subdirs with Recurse(true) get recursive globs,
-        // everything else (including explicitly listed subdirs, which get_source_dirs
-        // already flattened) gets a flat glob.
         let is_recursive = matches!(source.subdirs, Some(config::Subdirs::Recurse(true)));
-        // Always watch the directory itself for files directly in it
-        patterns.push(format!("{dir}/*.res"));
-        patterns.push(format!("{dir}/*.resi"));
         if is_recursive {
-            // Also watch all subdirectories
+            // ** matches zero or more path segments, so this covers both
+            // files directly in `dir` and in any subdirectory.
             patterns.push(format!("{dir}/**/*.res"));
             patterns.push(format!("{dir}/**/*.resi"));
+        } else {
+            patterns.push(format!("{dir}/*.res"));
+            patterns.push(format!("{dir}/*.resi"));
         }
 
         tracing::info_span!("lsp.source_dir", dir = %dir, recursive = %is_recursive).in_scope(|| {});

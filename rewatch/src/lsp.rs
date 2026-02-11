@@ -337,7 +337,7 @@ impl LanguageServer for Backend {
             if let Ok(q) = self.queue.lock()
                 && let Some(ref queue) = *q
             {
-                queue.enqueue_typecheck(
+                queue.notify_buffer_opened(
                     params.text_document.uri.clone(),
                     file_path.clone(),
                     content.clone(),
@@ -389,7 +389,7 @@ impl LanguageServer for Backend {
         if let Ok(q) = self.queue.lock()
             && let Some(ref queue) = *q
         {
-            queue.enqueue_typecheck(params.text_document.uri, file_path, content);
+            queue.notify_buffer_changed(params.text_document.uri, file_path, content);
         }
     }
 
@@ -401,7 +401,7 @@ impl LanguageServer for Backend {
         if let Ok(q) = self.queue.lock()
             && let Some(ref queue) = *q
         {
-            queue.enqueue_build(params.text_document.uri, file_path);
+            queue.notify_file_changed_on_disk(params.text_document.uri, file_path);
         }
     }
 
@@ -426,10 +426,6 @@ impl LanguageServer for Backend {
         if let Ok(q) = self.queue.lock()
             && let Some(ref queue) = *q
         {
-            // Collect full-build requests grouped by project root to avoid
-            // sending redundant FullBuild events for the same project.
-            let mut full_build_requests: HashMap<PathBuf, Vec<Url>> = HashMap::new();
-
             for event in &params.changes {
                 let Some(file_path) = uri_to_file_path(&event.uri, "didChangeWatchedFiles") else {
                     continue;
@@ -443,72 +439,17 @@ impl LanguageServer for Backend {
 
                 match event.typ {
                     FileChangeType::CHANGED => {
-                        let _span =
-                            tracing::info_span!("lsp.enqueue_build", file = %file_path.display()).entered();
-                        queue.enqueue_build(event.uri.clone(), file_path);
+                        queue.notify_file_changed_on_disk(event.uri.clone(), file_path);
                     }
-                    FileChangeType::CREATED | FileChangeType::DELETED => {
-                        let event_kind = if event.typ == FileChangeType::CREATED {
-                            "created"
-                        } else {
-                            "deleted"
-                        };
-                        let _span = tracing::info_span!("lsp.enqueue_full_build", file = %file_path.display(), kind = event_kind).entered();
-                        // Look up which project this file belongs to
-                        let project_root = self
-                            .projects
-                            .lock()
-                            .ok()
-                            .and_then(|guard| guard.project_root_for_path(&file_path));
-
-                        if let Some(root) = project_root {
-                            let deleted_uri = if event.typ == FileChangeType::DELETED {
-                                vec![event.uri.clone()]
-                            } else {
-                                vec![]
-                            };
-                            full_build_requests.entry(root).or_default().extend(deleted_uri);
-                        } else {
-                            tracing::debug!(
-                                file = %file_path.display(),
-                                "File does not belong to any known project, ignoring"
-                            );
-                        }
+                    FileChangeType::CREATED => {
+                        queue.notify_file_created(file_path);
+                    }
+                    FileChangeType::DELETED => {
+                        queue.notify_file_deleted(file_path);
                     }
                     _ => {}
                 }
             }
-
-            for (root, deleted_uris) in full_build_requests {
-                queue.enqueue_full_build(root, deleted_uris);
-            }
-        }
-    }
-
-    async fn did_create_files(&self, params: CreateFilesParams) {
-        for file in &params.files {
-            self.client
-                .log_message(MessageType::INFO, format!("didCreateFiles: {}", file.uri))
-                .await;
-        }
-    }
-
-    async fn did_rename_files(&self, params: RenameFilesParams) {
-        for file in &params.files {
-            self.client
-                .log_message(
-                    MessageType::INFO,
-                    format!("didRenameFiles: {} -> {}", file.old_uri, file.new_uri),
-                )
-                .await;
-        }
-    }
-
-    async fn did_delete_files(&self, params: DeleteFilesParams) {
-        for file in &params.files {
-            self.client
-                .log_message(MessageType::INFO, format!("didDeleteFiles: {}", file.uri))
-                .await;
         }
     }
 

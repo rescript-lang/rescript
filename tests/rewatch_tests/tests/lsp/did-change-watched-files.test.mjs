@@ -96,4 +96,91 @@ describe("lsp didChangeWatchedFiles", { timeout: 60_000 }, () => {
         expect(temporaryDiags.diagnostics).toEqual([]);
       }
     }));
+
+  it("deleting a .res file also removes its .resi and compiled JS", () =>
+    runLspTest(async ({ lsp, sandbox, writeFileExternal }) => {
+      const rootUri = pathToFileURL(sandbox).href;
+      await lsp.initialize(rootUri);
+      await lsp.waitForNotification("rescript/buildFinished", 30000);
+
+      const resPath = path.join(sandbox, "src", "Foo.res");
+      const resiPath = path.join(sandbox, "src", "Foo.resi");
+      const mjsPath = path.join(sandbox, "src", "Foo.mjs");
+
+      // Create Foo.res and Foo.resi on disk
+      writeFileSync(
+        resPath,
+        `let greet = (name: string) => "hello " ++ name\n`,
+      );
+      writeFileSync(resiPath, `let greet: string => string\n`);
+
+      // Notify Created for both files → triggers full rebuild
+      lsp.notifyWatchedFilesChanged([
+        { relativePath: "src/Foo.res", type: 1 },
+        { relativePath: "src/Foo.resi", type: 1 },
+      ]);
+      await lsp.waitForNotification("rescript/buildFinished", 30000);
+
+      // Trigger an incremental build to produce JS output
+      await writeFileExternal(
+        "src/Foo.res",
+        `let greet = (name: string) => "hello " ++ name\n`,
+      );
+      await lsp.waitForNotification("rescript/buildFinished", 30000);
+
+      // Verify the JS output was produced
+      expect(existsSync(mjsPath), "Foo.mjs should exist after build").toBe(
+        true,
+      );
+      expect(existsSync(resiPath), "Foo.resi should exist").toBe(true);
+
+      // Delete Foo.res and notify
+      unlinkSync(resPath);
+      lsp.notifyWatchedFilesChanged([{ relativePath: "src/Foo.res", type: 3 }]);
+      await lsp.waitForNotification("rescript/buildFinished", 30000);
+
+      // The .resi and .mjs should both be cleaned up
+      expect(
+        existsSync(resiPath),
+        "Foo.resi should be deleted when Foo.res is deleted",
+      ).toBe(false);
+      expect(
+        existsSync(mjsPath),
+        "Foo.mjs should be deleted when Foo.res is deleted",
+      ).toBe(false);
+    }));
+
+  it("deleting a .resi file does not remove the .res", () =>
+    runLspTest(async ({ lsp, sandbox }) => {
+      const rootUri = pathToFileURL(sandbox).href;
+      await lsp.initialize(rootUri);
+      await lsp.waitForNotification("rescript/buildFinished", 30000);
+
+      const resPath = path.join(sandbox, "src", "Bar.res");
+      const resiPath = path.join(sandbox, "src", "Bar.resi");
+
+      // Create Bar.res and Bar.resi on disk
+      writeFileSync(resPath, `let value = 42\n`);
+      writeFileSync(resiPath, `let value: int\n`);
+
+      // Notify Created → full rebuild
+      lsp.notifyWatchedFilesChanged([
+        { relativePath: "src/Bar.res", type: 1 },
+        { relativePath: "src/Bar.resi", type: 1 },
+      ]);
+      await lsp.waitForNotification("rescript/buildFinished", 30000);
+
+      // Delete only the .resi and notify
+      unlinkSync(resiPath);
+      lsp.notifyWatchedFilesChanged([
+        { relativePath: "src/Bar.resi", type: 3 },
+      ]);
+      await lsp.waitForNotification("rescript/buildFinished", 30000);
+
+      // The .res should still exist — deleting .resi does not cascade
+      expect(
+        existsSync(resPath),
+        "Bar.res should NOT be deleted when only Bar.resi is deleted",
+      ).toBe(true);
+    }));
 });
