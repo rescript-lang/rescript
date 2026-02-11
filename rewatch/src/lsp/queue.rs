@@ -19,7 +19,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
@@ -39,6 +39,8 @@ use crate::build;
 use crate::build::build_types::{BuildCommandState, BuildProfile, CompilationStage, SourceType};
 use crate::build::deps;
 use crate::build::diagnostics::BscDiagnostic;
+use crate::build::packages;
+use crate::project_context::ProjectContext;
 
 /// Monotonically increasing generation counter for staleness detection.
 static GENERATION: AtomicU64 = AtomicU64::new(0);
@@ -68,6 +70,11 @@ enum QueueEvent {
     },
     /// File saved to disk (didSave / didChangeWatchedFiles).
     Build { uri: Url, file_path: PathBuf },
+    /// File created or deleted — requires full project re-initialization.
+    FullBuild {
+        project_root: PathBuf,
+        deleted_uris: Vec<Url>,
+    },
 }
 
 /// Per-file pending state accumulated between flushes.
@@ -76,6 +83,15 @@ struct PendingFile {
     file_path: PathBuf,
     action: FileAction,
     generation: u64,
+}
+
+/// All pending state accumulated between flushes.
+struct PendingState {
+    /// Per-file events (typecheck / incremental build).
+    files: HashMap<Url, PendingFile>,
+    /// Per-project full rebuilds (file creation / deletion).
+    /// Maps project root → accumulated deleted URIs.
+    full_builds: HashMap<PathBuf, Vec<Url>>,
 }
 
 /// Result of a batched build for one project.
@@ -142,6 +158,14 @@ impl Queue {
     pub fn enqueue_build(&self, uri: Url, file_path: PathBuf) {
         let _ = self.tx.send(QueueEvent::Build { uri, file_path });
     }
+
+    /// Enqueue a full project re-initialization (file created / deleted).
+    pub fn enqueue_full_build(&self, project_root: PathBuf, deleted_uris: Vec<Url>) {
+        let _ = self.tx.send(QueueEvent::FullBuild {
+            project_root,
+            deleted_uris,
+        });
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -155,12 +179,15 @@ async fn consumer(
     client: Client,
 ) {
     const DEBOUNCE: Duration = Duration::from_millis(100);
-    let mut pending: HashMap<Url, PendingFile> = HashMap::new();
+    let mut state = PendingState {
+        files: HashMap::new(),
+        full_builds: HashMap::new(),
+    };
 
     loop {
         // Phase 1: wait for at least one event
         match rx.recv().await {
-            Some(event) => merge_event(&mut pending, event),
+            Some(event) => state.merge(event),
             None => break,
         }
 
@@ -172,11 +199,11 @@ async fn consumer(
                 event = rx.recv() => {
                     match event {
                         Some(event) => {
-                            merge_event(&mut pending, event);
+                            state.merge(event);
                             deadline.as_mut().reset(Instant::now() + DEBOUNCE);
                         }
                         None => {
-                            flush(&mut pending, &projects, &generations, &client).await;
+                            flush(&mut state, &projects, &generations, &client).await;
                             return;
                         }
                     }
@@ -186,71 +213,82 @@ async fn consumer(
         }
 
         // Phase 3: flush
-        flush(&mut pending, &projects, &generations, &client).await;
+        flush(&mut state, &projects, &generations, &client).await;
     }
 }
 
-/// Merge a new event into the pending map, applying promotion rules.
-fn merge_event(pending: &mut HashMap<Url, PendingFile>, event: QueueEvent) {
-    match event {
-        QueueEvent::Typecheck {
-            uri,
-            file_path,
-            content,
-            generation,
-        } => {
-            match pending.get_mut(&uri) {
-                Some(existing) => {
-                    existing.generation = generation;
-                    match &mut existing.action {
-                        // Typecheck + Typecheck → keep latest content
-                        FileAction::Typecheck { content: c } => {
-                            *c = content;
-                        }
-                        // Build + Typecheck → stay Build, update buffer_content
-                        FileAction::Build { buffer_content } => {
-                            *buffer_content = Some(content);
+impl PendingState {
+    /// Merge a new event into the pending state, applying promotion rules.
+    fn merge(&mut self, event: QueueEvent) {
+        match event {
+            QueueEvent::Typecheck {
+                uri,
+                file_path,
+                content,
+                generation,
+            } => {
+                match self.files.get_mut(&uri) {
+                    Some(existing) => {
+                        existing.generation = generation;
+                        match &mut existing.action {
+                            // Typecheck + Typecheck → keep latest content
+                            FileAction::Typecheck { content: c } => {
+                                *c = content;
+                            }
+                            // Build + Typecheck → stay Build, update buffer_content
+                            FileAction::Build { buffer_content } => {
+                                *buffer_content = Some(content);
+                            }
                         }
                     }
-                }
-                None => {
-                    pending.insert(
-                        uri.clone(),
-                        PendingFile {
-                            uri,
-                            file_path,
-                            action: FileAction::Typecheck { content },
-                            generation,
-                        },
-                    );
+                    None => {
+                        self.files.insert(
+                            uri.clone(),
+                            PendingFile {
+                                uri,
+                                file_path,
+                                action: FileAction::Typecheck { content },
+                                generation,
+                            },
+                        );
+                    }
                 }
             }
-        }
-        QueueEvent::Build { uri, file_path } => {
-            match pending.get_mut(&uri) {
-                Some(existing) => {
-                    match &mut existing.action {
-                        // Typecheck + Build → promote to Build, stash content
-                        FileAction::Typecheck { content } => {
-                            existing.action = FileAction::Build {
-                                buffer_content: Some(std::mem::take(content)),
-                            };
+            QueueEvent::Build { uri, file_path } => {
+                match self.files.get_mut(&uri) {
+                    Some(existing) => {
+                        match &mut existing.action {
+                            // Typecheck + Build → promote to Build, stash content
+                            FileAction::Typecheck { content } => {
+                                existing.action = FileAction::Build {
+                                    buffer_content: Some(std::mem::take(content)),
+                                };
+                            }
+                            // Build + Build → stay Build
+                            FileAction::Build { .. } => {}
                         }
-                        // Build + Build → stay Build
-                        FileAction::Build { .. } => {}
+                    }
+                    None => {
+                        self.files.insert(
+                            uri.clone(),
+                            PendingFile {
+                                uri,
+                                file_path,
+                                action: FileAction::Build { buffer_content: None },
+                                generation: 0,
+                            },
+                        );
                     }
                 }
-                None => {
-                    pending.insert(
-                        uri.clone(),
-                        PendingFile {
-                            uri,
-                            file_path,
-                            action: FileAction::Build { buffer_content: None },
-                            generation: 0,
-                        },
-                    );
-                }
+            }
+            QueueEvent::FullBuild {
+                project_root,
+                deleted_uris,
+            } => {
+                self.full_builds
+                    .entry(project_root)
+                    .or_default()
+                    .extend(deleted_uris);
             }
         }
     }
@@ -261,16 +299,23 @@ fn merge_event(pending: &mut HashMap<Url, PendingFile>, event: QueueEvent) {
 // ---------------------------------------------------------------------------
 
 async fn flush(
-    pending: &mut HashMap<Url, PendingFile>,
+    state: &mut PendingState,
     projects: &Arc<Mutex<ProjectMap>>,
     generations: &Arc<Mutex<HashMap<Url, u64>>>,
     client: &Client,
 ) {
-    if pending.is_empty() {
+    if state.files.is_empty() && state.full_builds.is_empty() {
         return;
     }
 
-    let entries: Vec<PendingFile> = pending.drain().map(|(_, pf)| pf).collect();
+    // Step 0: Run full builds (file creation / deletion).
+    // This also drops redundant incremental Build events from `state.files`.
+    let has_full_builds = !state.full_builds.is_empty();
+    if has_full_builds {
+        run_full_build_flush(state, projects, client).await;
+    }
+
+    let entries: Vec<PendingFile> = state.files.drain().map(|(_, pf)| pf).collect();
 
     // Partition into build files and typecheck-only files
     let mut build_files: Vec<PendingFile> = Vec::new();
@@ -282,10 +327,10 @@ async fn flush(
         }
     }
 
-    let has_builds = !build_files.is_empty();
+    let has_incremental_builds = !build_files.is_empty();
 
-    // Step 1: Run builds (saved files)
-    if has_builds {
+    // Step 1: Run incremental builds (saved files)
+    if has_incremental_builds {
         run_build_flush(&build_files, projects, client).await;
     }
 
@@ -317,11 +362,195 @@ async fn flush(
         run_typecheck_flush(recheck_files, projects, generations, client).await;
     }
 
-    // Step 4: Notify buildFinished (only if builds ran)
-    if has_builds {
+    // Step 4: Notify buildFinished (only if any builds ran)
+    if has_full_builds || has_incremental_builds {
         client
             .send_notification::<notifications::BuildFinished>(notifications::BuildFinishedParams {})
             .await;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Full build flush (file creation / deletion)
+// ---------------------------------------------------------------------------
+
+/// Collect all source file URIs from a build state, for diagnostic clearing.
+fn collect_source_uris(build_state: &BuildCommandState) -> HashSet<Url> {
+    let mut uris = HashSet::new();
+    for module in build_state.build_state.modules.values() {
+        let SourceType::SourceFile(ref source_file) = module.source_type else {
+            continue;
+        };
+        let Some(package) = build_state.build_state.packages.get(&module.package_name) else {
+            continue;
+        };
+        let impl_path = package.path.join(&source_file.implementation.path);
+        if let Ok(uri) = Url::from_file_path(&impl_path) {
+            uris.insert(uri);
+        }
+        if let Some(ref interface) = source_file.interface {
+            let iface_path = package.path.join(&interface.path);
+            if let Ok(uri) = Url::from_file_path(&iface_path) {
+                uris.insert(uri);
+            }
+        }
+    }
+    uris
+}
+
+/// Re-initialize a project from scratch (re-read packages, re-scan sources, rebuild).
+/// Mirrors `initial_build::run()`.
+#[instrument(name = "lsp.full_build", skip_all, fields(project = tracing::field::Empty))]
+fn reinitialize_project(
+    project_root: &Path,
+    old_warn_error: Option<String>,
+) -> Result<(BuildCommandState, Vec<BscDiagnostic>), String> {
+    let project_context =
+        ProjectContext::new(project_root).map_err(|e| format!("ProjectContext::new failed: {e}"))?;
+
+    tracing::Span::current().record("project", project_context.get_root_config().name.as_str());
+
+    let discovered_packages =
+        packages::read_packages(&project_context, false).map_err(|e| format!("read_packages failed: {e}"))?;
+    let packages_with_sources = packages::extend_with_children(&None, discovered_packages);
+
+    let mut build_state = build::prepare_build(
+        project_context,
+        packages_with_sources,
+        Some(std::time::Duration::ZERO),
+        false,
+        true,
+        old_warn_error,
+        BuildProfile::TypecheckOnly,
+    )
+    .map_err(|e| format!("prepare_build failed: {e}"))?;
+
+    // TypecheckOnly doesn't produce .cmj files. Downgrade any Built modules.
+    for module in build_state.build_state.modules.values_mut() {
+        if module.compilation_stage == CompilationStage::Built {
+            module.compilation_stage = CompilationStage::TypeChecked;
+        }
+    }
+
+    let diagnostics = match build::incremental_build(
+        &mut build_state,
+        BuildProfile::TypecheckOnly,
+        Some(std::time::Duration::ZERO),
+        true,
+        false,
+        false,
+        false,
+        true,
+    ) {
+        Ok(result) => result.diagnostics,
+        Err(e) => {
+            tracing::warn!("Full build completed with errors: {e}");
+            e.diagnostics
+        }
+    };
+
+    Ok((build_state, diagnostics))
+}
+
+/// Result of a full build for one project.
+struct FullBuildResult {
+    diagnostics: Vec<BscDiagnostic>,
+    old_uris: HashSet<Url>,
+    new_uris: HashSet<Url>,
+    deleted_uris: Vec<Url>,
+}
+
+async fn run_full_build_flush(state: &mut PendingState, projects: &Arc<Mutex<ProjectMap>>, client: &Client) {
+    let entries: Vec<(PathBuf, Vec<Url>)> = state.full_builds.drain().collect();
+    let projects_clone = Arc::clone(projects);
+
+    let parent_span = tracing::Span::current();
+    let results: Vec<FullBuildResult> = tokio::task::spawn_blocking(move || {
+        let _entered = parent_span.enter();
+        let mut results = Vec::new();
+
+        for (project_root, deleted_uris) in entries {
+            // Collect old URIs and warn_error under lock, then release
+            let (old_uris, old_warn_error) = {
+                let guard = match projects_clone.lock() {
+                    Ok(g) => g,
+                    Err(e) => {
+                        tracing::error!("projects mutex poisoned in full build flush: {e}");
+                        continue;
+                    }
+                };
+                match guard.states.get(&project_root) {
+                    Some(old_state) => (
+                        collect_source_uris(old_state),
+                        old_state.get_warn_error_override().clone(),
+                    ),
+                    None => {
+                        tracing::warn!(
+                            "No existing state for project root {}, skipping full build",
+                            project_root.display()
+                        );
+                        continue;
+                    }
+                }
+            };
+
+            match reinitialize_project(&project_root, old_warn_error) {
+                Ok((new_state, diagnostics)) => {
+                    let new_uris = collect_source_uris(&new_state);
+
+                    // Replace state under lock
+                    if let Ok(mut guard) = projects_clone.lock() {
+                        guard.states.insert(project_root.clone(), new_state);
+                        // Invalidate uri_cache entries for this project
+                        guard.uri_cache.retain(|_, root| root != &project_root);
+                    }
+
+                    results.push(FullBuildResult {
+                        diagnostics,
+                        old_uris,
+                        new_uris,
+                        deleted_uris,
+                    });
+                }
+                Err(e) => {
+                    tracing::error!("Full build failed for {}: {e}", project_root.display());
+                }
+            }
+        }
+
+        results
+    })
+    .await
+    .unwrap_or_else(|e| {
+        tracing::error!("full build flush task panicked: {e}");
+        Vec::new()
+    });
+
+    // Publish diagnostics and clear stale ones
+    for result in &results {
+        let by_file = group_by_file(&result.diagnostics);
+
+        // Publish diagnostics for all files in the new state
+        for uri in &result.new_uris {
+            let diags = by_file.get(uri).cloned().unwrap_or_default();
+            client.publish_diagnostics(uri.clone(), diags, None).await;
+        }
+
+        // Clear diagnostics for files that existed in the old state but not the new
+        for uri in &result.old_uris {
+            if !result.new_uris.contains(uri) {
+                client.publish_diagnostics(uri.clone(), vec![], None).await;
+            }
+        }
+
+        // Clear diagnostics for explicitly deleted files
+        for uri in &result.deleted_uris {
+            client.publish_diagnostics(uri.clone(), vec![], None).await;
+        }
+
+        // Keep pending incremental Build events — the full build only does
+        // TypecheckOnly, so saved files still need an incremental build to
+        // emit JS output.
     }
 }
 

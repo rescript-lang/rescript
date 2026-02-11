@@ -351,19 +351,61 @@ impl LanguageServer for Backend {
         if let Ok(q) = self.queue.lock()
             && let Some(ref queue) = *q
         {
+            // Collect full-build requests grouped by project root to avoid
+            // sending redundant FullBuild events for the same project.
+            let mut full_build_requests: HashMap<PathBuf, Vec<Url>> = HashMap::new();
+
             for event in &params.changes {
-                if event.typ != FileChangeType::CHANGED {
-                    continue;
-                }
                 let Some(file_path) = uri_to_file_path(&event.uri, "didChangeWatchedFiles") else {
                     continue;
                 };
-                if matches!(
+                if !matches!(
                     file_path.extension().and_then(|e| e.to_str()),
                     Some("res" | "resi")
                 ) {
-                    queue.enqueue_build(event.uri.clone(), file_path);
+                    continue;
                 }
+
+                match event.typ {
+                    FileChangeType::CHANGED => {
+                        let _span =
+                            tracing::info_span!("lsp.enqueue_build", file = %file_path.display()).entered();
+                        queue.enqueue_build(event.uri.clone(), file_path);
+                    }
+                    FileChangeType::CREATED | FileChangeType::DELETED => {
+                        let event_kind = if event.typ == FileChangeType::CREATED {
+                            "created"
+                        } else {
+                            "deleted"
+                        };
+                        let _span = tracing::info_span!("lsp.enqueue_full_build", file = %file_path.display(), kind = event_kind).entered();
+                        // Look up which project this file belongs to
+                        let project_root = self
+                            .projects
+                            .lock()
+                            .ok()
+                            .and_then(|guard| guard.project_root_for_path(&file_path));
+
+                        if let Some(root) = project_root {
+                            let deleted_uri = if event.typ == FileChangeType::DELETED {
+                                vec![event.uri.clone()]
+                            } else {
+                                vec![]
+                            };
+                            full_build_requests.entry(root).or_default().extend(deleted_uri);
+                        } else {
+                            tracing::debug!(
+                                file = %file_path.display(),
+                                "File does not belong to any known project, ignoring"
+                            );
+                        }
+                    }
+                    _ => {}
+                }
+            }
+
+            for (root, deleted_uris) in full_build_requests {
+                queue.enqueue_full_build(root, deleted_uris);
             }
         }
     }

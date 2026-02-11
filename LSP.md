@@ -155,17 +155,19 @@ Implementation: `lsp/initial_build.rs`
 
 ### Unified Queue
 
-All file events flow into a single unified queue (`lsp/queue.rs`). The queue accepts two kinds of events:
+All file events flow into a single unified queue (`lsp/queue.rs`). The queue accepts three kinds of events:
 
 - **Typecheck** (from `didChange` / `didOpen`) — unsaved buffer content, lightweight typecheck only
-- **Build** (from `didSave` / `didChangeWatchedFiles`) — saved file, full incremental build from disk
+- **Build** (from `didSave` / `didChangeWatchedFiles` Changed) — saved file, full incremental build from disk
+- **FullBuild** (from `didChangeWatchedFiles` Created/Deleted) — re-initialize the affected project (re-read packages, re-scan sources, rebuild)
 
-A single background consumer task collects events into a `HashMap<Url, PendingFile>`, applying promotion rules to consolidate per-file state. After 100ms of silence the batch is flushed sequentially:
+A single background consumer task collects events into a `PendingState` (per-file map + per-project full-build map), applying merge rules to consolidate state. After 100ms of silence the batch is flushed sequentially:
 
-1. **Builds first** — saved files get a full incremental build (compile dependencies + typecheck dependents), holding the projects lock.
-2. **Typechecks second** — unsaved edits get a lightweight typecheck via `bsc -bs-read-stdin`, with brief lock for arg extraction only.
-3. **Post-build recheck** — if a saved file also had unsaved buffer content (didChange + didSave in the same debounce window), a typecheck pass runs from the buffer so diagnostics match the editor.
-4. **`buildFinished` notification** — sent only when builds ran.
+1. **Full builds first** — re-initialize affected projects from scratch (same flow as the initial build), replacing the old `BuildCommandState`. Clears stale diagnostics for files that no longer exist.
+2. **Incremental builds second** — saved files get a full incremental build (compile dependencies + typecheck dependents), holding the projects lock.
+3. **Typechecks third** — unsaved edits get a lightweight typecheck via `bsc -bs-read-stdin`, with brief lock for arg extraction only.
+4. **Post-build recheck** — if a saved file also had unsaved buffer content (didChange + didSave in the same debounce window), a typecheck pass runs from the buffer so diagnostics match the editor.
+5. **`buildFinished` notification** — sent when full builds or incremental builds ran.
 
 Sequential execution within one consumer eliminates all races on `lib/lsp/` artifacts.
 
@@ -231,24 +233,33 @@ Implementation: `lsp/queue.rs` (queue, batch logic, build/typecheck flush), `lsp
 
 ### On `didSave` / `didChangeWatchedFiles` (saved files)
 
-The `didSave` and `didChangeWatchedFiles` handlers enqueue Build events into the unified queue and return immediately. The consumer groups files by project root and runs a batched build per project:
+`didSave` enqueues Build events. `didChangeWatchedFiles` classifies by event type: `Changed` → Build, `Created`/`Deleted` → FullBuild (grouped by project root). The consumer flushes sequentially:
 
 ```
 didSave / didChangeWatchedFiles notification
     │
-    └── Enqueue Build event(s) into unified queue
+    ├── Changed  → Enqueue Build event
+    └── Created/Deleted → Enqueue FullBuild event (by project root)
                     │
           background consumer task
                     │
           ┌─────────▼──────────┐
-          │ collect into HashMap │  (deduplicate per URI, apply promotion)
+          │ merge into           │
+          │ PendingState         │  (per-file map + per-project full-build map)
           │ reset 100ms timer    │
           └─────────┬──────────┘
                     │ timer expires
                     ▼
-          group files by project root
+          Step 1: Full builds (per project root)
+          ├── Re-initialize project (re-read packages, re-scan sources)
+          ├── Replace old BuildCommandState
+          ├── Invalidate uri_cache entries
+          ├── Publish diagnostics from new build
+          └── Clear diagnostics for files that no longer exist
                     │
-          for each project (sequential):
+                    ▼
+          Step 2: Incremental builds (per project)
+          ├── group files by project root
           ├── mark_file_parse_dirty per file
           ├── Phase 1: compile_dependencies
           │   ├── get_dependency_closure (DFS downward through module.deps)
@@ -270,7 +281,7 @@ didSave / didChangeWatchedFiles notification
           Send rescript/buildFinished notification
 ```
 
-`didChangeWatchedFiles` filters for `Changed` events on `.res`/`.resi` files only. Created/Deleted events are not yet handled — they need module graph updates.
+`didChangeWatchedFiles` filters for `.res`/`.resi` files. `Changed` events trigger incremental builds. `Created` and `Deleted` events trigger a full project re-initialization via `FullBuild` queue events.
 
 Implementation: `lsp/queue.rs`, `lsp/dependency_closure.rs`
 
@@ -375,12 +386,17 @@ Implementation: `lsp/initialize.rs`
 | `textDocument/semanticTokens` | Implemented (analysis) |
 | `textDocument/inlayHint` | Implemented (analysis) |
 | `textDocument/codeLens` | Implemented (analysis) |
-| `workspace/didChangeWatchedFiles` | Implemented (Changed events only) |
+| `workspace/didChangeWatchedFiles` | Implemented (Changed, Created, Deleted) |
 | Monorepo multi-workspace | Implemented |
-| `textDocument/createInterface` | TODO — niche feature, generates `.resi` from `.res` |
+| `textDocument/createInterface` | TODO — niche feature, generates `.resi` from `.res` (already exists in analysis binary) |
 | `textDocument/openCompiled` | TODO — niche feature, opens compiled `.js` output |
-| File creation/deletion handling | TODO — needs module graph updates |
+| File creation/deletion handling | Implemented (FullBuild queue event) |
 | `rescript.json` change handling | TODO — needs full re-initialization |
+| `workspace/symbol` | TODO — project-wide symbol search |
+| `textDocument/documentHighlight` | TODO — highlight all occurrences of a symbol in current file |
+| `textDocument/foldingRange` | TODO — code folding regions |
+| `textDocument/selectionRange` | TODO — smart expand/shrink selection |
+| `window/workDoneProgress` | TODO — progress indicator during initial build |
 
 ## Relationship to `rescript build`
 
@@ -418,9 +434,32 @@ export function activate(context: ExtensionContext) {
 }
 ```
 
-## Open Questions
+## Next Up
 
-1. **Cold start performance**: The initial build blocks the `initialized` handler. Large projects may experience a delay before diagnostics appear.
+### 1. `rescript.json` Change Handling
+
+Config changes (adding source directories, changing compiler flags, enabling namespaces) require an LSP restart. A full re-initialization path — re-read config, re-discover packages, re-register file watchers — would improve the experience.
+
+### 2. Cold Start Performance
+
+The initial build blocks the `initialized` handler. Large projects may experience a delay before diagnostics appear. Options:
+
+- Add `window/workDoneProgress` notifications so the editor shows a loading indicator.
+- Explore making the initial build non-blocking (serve analysis from partial state, then refresh).
+
+### 3. `createInterface` / `openCompiled` Commands
+
+- **`createInterface`**: Already exists in the analysis binary. Expose as an LSP command or code action.
+- **`openCompiled`**: Open the compiled `.js` output for a `.res` file. Useful for debugging.
+
+### 4. Additional LSP Features
+
+Lower priority, but would improve the editing experience:
+
+- **`workspace/symbol`** — project-wide symbol search
+- **`textDocument/documentHighlight`** — highlight all occurrences of a symbol in the current file
+- **`textDocument/foldingRange`** — code folding regions
+- **`textDocument/selectionRange`** — smart expand/shrink selection
 
 ## Prior Art
 
