@@ -586,7 +586,7 @@ export function createLspClient(cwd, otelEndpoint) {
      * @param {number} [timeoutMs=5000] - Timeout in milliseconds
      * @returns {Promise<any>} The notification params
      */
-    waitForNotification(method, timeoutMs = 5000, predicate) {
+    waitForNotification(method, timeoutMs = 10000, predicate) {
       // Check if we already have one stored
       const stored = notifications.get(method);
       if (stored && stored.length > 0) {

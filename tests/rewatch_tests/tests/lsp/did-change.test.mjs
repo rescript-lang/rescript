@@ -100,9 +100,18 @@ describe("lsp didChange", { timeout: 60_000 }, () => {
         "let value = Library.newExport\n",
       );
 
-      // Wait for diagnostics from the batch
-      await lsp.waitForNotification("textDocument/publishDiagnostics", 10000);
-      await lsp.waitForNotification("textDocument/publishDiagnostics", 10000);
+      // Wait for diagnostics from the batch — use predicates to ensure we
+      // receive one notification per file regardless of arrival order.
+      await lsp.waitForNotification(
+        "textDocument/publishDiagnostics",
+        10000,
+        p => p.uri?.includes("Library.res"),
+      );
+      await lsp.waitForNotification(
+        "textDocument/publishDiagnostics",
+        10000,
+        p => p.uri?.includes("Unrelated.res"),
+      );
 
       // Both files should have no errors — Library was typechecked first
       // (Unrelated depends on it), so Unrelated sees the updated .cmi.
