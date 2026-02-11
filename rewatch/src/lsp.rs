@@ -4,10 +4,12 @@ mod code_lens;
 mod completion;
 mod definition;
 mod dependency_closure;
+pub(crate) mod diagnostic_store;
 mod document_symbol;
 mod file_args;
 mod formatting;
 mod hover;
+mod http;
 mod initial_build;
 pub mod initialize;
 mod inlay_hint;
@@ -27,6 +29,7 @@ use std::time::Duration;
 
 use crate::build::build_types::BuildCommandState;
 use crate::build::diagnostics::{BscDiagnostic, Severity};
+use diagnostic_store::DiagnosticStore;
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer, LspService, Server};
@@ -143,6 +146,9 @@ struct Backend {
     /// Debounce timeout in milliseconds for the LSP queue.
     /// Configurable via `initializationOptions.queue_debounce_ms` (default: 100).
     queue_debounce_ms: Mutex<u64>,
+    /// Shared diagnostic store for the HTTP diagnostics endpoint.
+    /// `None` until `initialize` is called with `diagnostics_http: true`.
+    diagnostic_store: Mutex<Option<Arc<DiagnosticStore>>>,
 }
 
 #[tower_lsp::async_trait]
@@ -166,6 +172,17 @@ impl LanguageServer for Backend {
             tracing::info!(queue_debounce_ms = ms, "Using custom queue debounce timeout");
             if let Ok(mut d) = self.queue_debounce_ms.lock() {
                 *d = ms;
+            }
+        }
+
+        // Extract diagnostics_http from initializationOptions if provided.
+        if let Some(opts) = &params.initialization_options
+            && let Some(enabled) = opts.get("diagnostics_http").and_then(|v| v.as_bool())
+            && enabled
+        {
+            tracing::info!("HTTP diagnostics endpoint enabled");
+            if let Ok(mut store) = self.diagnostic_store.lock() {
+                *store = Some(Arc::new(DiagnosticStore::new()));
             }
         }
 
@@ -320,6 +337,31 @@ impl LanguageServer for Backend {
         self.initial_build(workspaces).await;
         self.recheck_open_buffers().await;
 
+        // Get the diagnostic store (if HTTP diagnostics is enabled).
+        let diagnostic_store = self.diagnostic_store.lock().ok().and_then(|s| s.clone());
+
+        // Start the HTTP diagnostics server if enabled.
+        if let Some(ref store) = diagnostic_store {
+            match http::start(Arc::clone(store)).await {
+                Ok(port) => {
+                    self.client
+                        .log_message(
+                            MessageType::INFO,
+                            format!("rescript-lsp HTTP diagnostics server listening on http://127.0.0.1:{port}/diagnostics"),
+                        )
+                        .await;
+                }
+                Err(e) => {
+                    self.client
+                        .log_message(
+                            MessageType::WARNING,
+                            format!("Failed to start HTTP diagnostics server: {e}"),
+                        )
+                        .await;
+                }
+            }
+        }
+
         // Start the unified queue now that initial build state is available.
         let debounce = Duration::from_millis(self.queue_debounce_ms.lock().map(|g| *g).unwrap_or(100));
         if let Ok(mut q) = self.queue.lock() {
@@ -328,6 +370,7 @@ impl LanguageServer for Backend {
                 self.client.clone(),
                 self.root_span.clone(),
                 debounce,
+                diagnostic_store.clone(),
             ));
         }
 
@@ -775,19 +818,32 @@ impl Backend {
         };
 
         let diags: Vec<Diagnostic> = diagnostics.iter().map(to_lsp_diagnostic).collect();
-        self.client.publish_diagnostics(uri.clone(), diags, None).await;
+        let store = self.diagnostic_store.lock().ok().and_then(|s| s.clone());
+        publish_and_store(&self.client, store.as_deref(), uri.clone(), diags).await;
     }
 
     /// Publish diagnostics grouped by file.
     async fn publish_diagnostics(&self, diagnostics: &[BscDiagnostic]) {
         let by_file = group_by_file(diagnostics);
+        let store = self.diagnostic_store.lock().ok().and_then(|s| s.clone());
 
         for (uri, diags) in &by_file {
-            self.client
-                .publish_diagnostics(uri.clone(), diags.clone(), None)
-                .await;
+            publish_and_store(&self.client, store.as_deref(), uri.clone(), diags.clone()).await;
         }
     }
+}
+
+/// Publish diagnostics to the LSP client and optionally store them in the diagnostic store.
+async fn publish_and_store(
+    client: &Client,
+    store: Option<&DiagnosticStore>,
+    uri: Url,
+    diagnostics: Vec<Diagnostic>,
+) {
+    if let Some(store) = store {
+        store.publish(uri.clone(), diagnostics.clone());
+    }
+    client.publish_diagnostics(uri, diagnostics, None).await;
 }
 
 fn group_by_file(diagnostics: &[BscDiagnostic]) -> HashMap<Url, Vec<Diagnostic>> {
@@ -839,6 +895,7 @@ pub async fn run_stdio() {
         queue: Mutex::new(None),
         root_span: tracing::Span::current(),
         queue_debounce_ms: Mutex::new(100),
+        diagnostic_store: Mutex::new(None),
     });
     Server::new(stdin, stdout, socket).serve(service).await;
 }

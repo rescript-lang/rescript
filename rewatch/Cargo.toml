@@ -39,6 +39,11 @@ opentelemetry-otlp = { version = "0.17", features = ["http-proto", "reqwest-clie
 tokio = { version = "1", features = ["rt-multi-thread", "io-std", "sync", "time"] }
 tower-lsp = "0.20"
 
+# HTTP diagnostics endpoint
+hyper = { version = "1", features = ["http1", "server"] }
+hyper-util = { version = "0.1", features = ["tokio"] }
+http-body-util = "0.1"
+
 [profile.release]
 codegen-units = 1
 lto = true

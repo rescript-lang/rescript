@@ -9,11 +9,12 @@ use tower_lsp::Client;
 use tower_lsp::lsp_types::Url;
 
 use super::super::file_args::{BuildCommandStateExt, TypecheckArgs};
-use super::super::{ProjectMap, to_lsp_diagnostic};
+use super::super::{ProjectMap, publish_and_store, to_lsp_diagnostic};
 use super::PendingFileTypecheck;
 use crate::build::build_types::BuildProfile;
 use crate::build::deps;
 use crate::build::diagnostics::BscDiagnostic;
+use crate::lsp::diagnostic_store::DiagnosticStore;
 
 /// Per-file metadata extracted from the build state under lock.
 struct FileContext {
@@ -38,6 +39,7 @@ pub(super) async fn run(
     projects: &Arc<Mutex<ProjectMap>>,
     generations: &Arc<Mutex<HashMap<Url, u64>>>,
     client: &Client,
+    diagnostic_store: Option<&DiagnosticStore>,
 ) {
     let requests: Vec<(Url, PathBuf, String, u64)> = typechecks
         .into_iter()
@@ -74,7 +76,7 @@ pub(super) async fn run(
 
         if !is_stale {
             let diags: Vec<_> = result.diagnostics.iter().map(to_lsp_diagnostic).collect();
-            client.publish_diagnostics(result.uri.clone(), diags, None).await;
+            publish_and_store(client, diagnostic_store, result.uri.clone(), diags).await;
 
             // Prune the generation entry if it still matches, so the map
             // doesn't grow unboundedly over long editing sessions.

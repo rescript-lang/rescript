@@ -7,11 +7,12 @@ use tower_lsp::Client;
 use tower_lsp::lsp_types::Url;
 use tracing::instrument;
 
-use super::super::{ProjectMap, dependency_closure, group_by_file};
+use super::super::{ProjectMap, dependency_closure, group_by_file, publish_and_store};
 use super::PendingFileBuild;
 use crate::build;
 use crate::build::build_types::{BuildCommandState, BuildProfile, CompilationStage, SourceType};
 use crate::build::diagnostics::BscDiagnostic;
+use crate::lsp::diagnostic_store::DiagnosticStore;
 
 /// Result of a batched build for one project.
 struct BatchBuildResult {
@@ -28,6 +29,7 @@ pub(super) async fn run(
     compile_files: &HashMap<Url, PendingFileBuild>,
     projects: &Arc<Mutex<ProjectMap>>,
     client: &Client,
+    diagnostic_store: Option<&DiagnosticStore>,
 ) {
     let file_paths: Vec<PathBuf> = compile_files.values().map(|b| b.file_path.clone()).collect();
     let projects = Arc::clone(projects);
@@ -78,7 +80,7 @@ pub(super) async fn run(
         for touched in &result.touched_files {
             if let Ok(uri) = Url::from_file_path(touched) {
                 let diags = by_file.get(&uri).cloned().unwrap_or_default();
-                client.publish_diagnostics(uri, diags, None).await;
+                publish_and_store(client, diagnostic_store, uri, diags).await;
             }
         }
     }

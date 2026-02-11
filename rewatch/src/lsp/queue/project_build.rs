@@ -6,13 +6,14 @@ use tower_lsp::Client;
 use tower_lsp::lsp_types::Url;
 use tracing::instrument;
 
-use super::super::{ProjectMap, group_by_file};
+use super::super::{ProjectMap, group_by_file, publish_and_store};
 use super::PendingState;
 use crate::build;
 use crate::build::build_types::{BuildCommandState, BuildProfile, CompilationStage, SourceType};
 use crate::build::diagnostics::BscDiagnostic;
 use crate::build::packages;
 use crate::helpers;
+use crate::lsp::diagnostic_store::DiagnosticStore;
 use crate::project_context::ProjectContext;
 
 /// Collect all source file URIs from a build state, for diagnostic clearing.
@@ -104,7 +105,12 @@ struct FullBuildResult {
 /// changed paths by project root, cleans up associated artifacts for
 /// deleted files, reinitializes each affected project from scratch, and
 /// publishes diagnostics (clearing stale ones for removed files).
-pub(super) async fn run(state: &mut PendingState, projects: &Arc<Mutex<ProjectMap>>, client: &Client) {
+pub(super) async fn run(
+    state: &mut PendingState,
+    projects: &Arc<Mutex<ProjectMap>>,
+    client: &Client,
+    diagnostic_store: Option<&DiagnosticStore>,
+) {
     let pending_paths = std::mem::take(&mut state.build_projects);
     let projects_clone = Arc::clone(projects);
 
@@ -240,13 +246,13 @@ pub(super) async fn run(state: &mut PendingState, projects: &Arc<Mutex<ProjectMa
         // Publish diagnostics for all files in the new state
         for uri in &result.new_uris {
             let diags = by_file.get(uri).cloned().unwrap_or_default();
-            client.publish_diagnostics(uri.clone(), diags, None).await;
+            publish_and_store(client, diagnostic_store, uri.clone(), diags).await;
         }
 
         // Clear diagnostics for files that existed in the old state but not the new
         for uri in &result.old_uris {
             if !result.new_uris.contains(uri) {
-                client.publish_diagnostics(uri.clone(), vec![], None).await;
+                publish_and_store(client, diagnostic_store, uri.clone(), vec![]).await;
             }
         }
     }

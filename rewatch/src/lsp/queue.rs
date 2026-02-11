@@ -36,6 +36,7 @@ use tower_lsp::lsp_types::Url;
 use tracing::Instrument;
 
 use super::ProjectMap;
+use super::diagnostic_store::{DiagnosticStore, FlushGuard};
 use super::notifications;
 
 /// Monotonically increasing generation counter for staleness detection.
@@ -107,6 +108,8 @@ pub struct Queue {
     tx: mpsc::UnboundedSender<QueueEvent>,
     /// Latest generation sent per URI, for staleness detection on typecheck results.
     generations: Arc<Mutex<HashMap<Url, u64>>>,
+    /// Optional diagnostic store for the HTTP diagnostics endpoint.
+    diagnostic_store: Option<Arc<DiagnosticStore>>,
 }
 
 impl Queue {
@@ -116,17 +119,33 @@ impl Queue {
         client: Client,
         root_span: tracing::Span,
         debounce: Duration,
+        diagnostic_store: Option<Arc<DiagnosticStore>>,
     ) -> Self {
         let (tx, rx) = mpsc::unbounded_channel();
         let generations = Arc::new(Mutex::new(HashMap::new()));
         tokio::spawn(
-            consumer(rx, projects, Arc::clone(&generations), client, debounce).instrument(root_span),
+            consumer(
+                rx,
+                projects,
+                Arc::clone(&generations),
+                client,
+                debounce,
+                diagnostic_store.clone(),
+            )
+            .instrument(root_span),
         );
-        Queue { tx, generations }
+        Queue {
+            tx,
+            generations,
+            diagnostic_store,
+        }
     }
 
     /// A buffer was opened in the editor (didOpen).
     pub fn notify_buffer_opened(&self, uri: Url, file_path: PathBuf, content: String) {
+        if let Some(ref store) = self.diagnostic_store {
+            store.mark_pending();
+        }
         let generation = self.next_generation(&uri);
         let _ = self.tx.send(QueueEvent::BufferOpened {
             uri,
@@ -138,6 +157,9 @@ impl Queue {
 
     /// A buffer's content changed in the editor (didChange).
     pub fn notify_buffer_changed(&self, uri: Url, file_path: PathBuf, content: String) {
+        if let Some(ref store) = self.diagnostic_store {
+            store.mark_pending();
+        }
         let generation = self.next_generation(&uri);
         let _ = self.tx.send(QueueEvent::BufferChanged {
             uri,
@@ -149,16 +171,25 @@ impl Queue {
 
     /// A file changed on disk (didSave or didChangeWatchedFiles CHANGED).
     pub fn notify_file_changed_on_disk(&self, uri: Url, file_path: PathBuf) {
+        if let Some(ref store) = self.diagnostic_store {
+            store.mark_pending();
+        }
         let _ = self.tx.send(QueueEvent::FileChangedOnDisk { uri, file_path });
     }
 
     /// A file was created on disk (didChangeWatchedFiles CREATED).
     pub fn notify_file_created(&self, file_path: PathBuf) {
+        if let Some(ref store) = self.diagnostic_store {
+            store.mark_pending();
+        }
         let _ = self.tx.send(QueueEvent::FileCreated { file_path });
     }
 
     /// A file was deleted from disk (didChangeWatchedFiles DELETED).
     pub fn notify_file_deleted(&self, file_path: PathBuf) {
+        if let Some(ref store) = self.diagnostic_store {
+            store.mark_pending();
+        }
         let _ = self.tx.send(QueueEvent::FileDeleted { file_path });
     }
 
@@ -184,6 +215,7 @@ async fn consumer(
     generations: Arc<Mutex<HashMap<Url, u64>>>,
     client: Client,
     debounce: Duration,
+    diagnostic_store: Option<Arc<DiagnosticStore>>,
 ) {
     let mut state = PendingState::new();
 
@@ -206,7 +238,7 @@ async fn consumer(
                             deadline.as_mut().reset(Instant::now() + debounce);
                         }
                         None => {
-                            flush(&mut state, &projects, &generations, &client).await;
+                            flush(&mut state, &projects, &generations, &client, &diagnostic_store).await;
                             return;
                         }
                     }
@@ -216,7 +248,7 @@ async fn consumer(
         }
 
         // Phase 3: flush
-        flush(&mut state, &projects, &generations, &client).await;
+        flush(&mut state, &projects, &generations, &client, &diagnostic_store).await;
     }
 }
 
@@ -310,15 +342,20 @@ async fn flush(
     projects: &Arc<Mutex<ProjectMap>>,
     generations: &Arc<Mutex<HashMap<Url, u64>>>,
     client: &Client,
+    diagnostic_store: &Option<Arc<DiagnosticStore>>,
 ) {
     if state.typechecks.is_empty() && state.compile_files.is_empty() && state.build_projects.is_empty() {
         return;
     }
 
+    // Create a FlushGuard that calls end_flush on drop (even on panic).
+    let _flush_guard = diagnostic_store.as_ref().map(|s| FlushGuard::new(s));
+    let store_ref = diagnostic_store.as_deref();
+
     // Step 0: Run full builds (file creation / deletion).
     let has_full_builds = !state.build_projects.is_empty();
     if has_full_builds {
-        project_build::run(state, projects, client).await;
+        project_build::run(state, projects, client, store_ref).await;
     }
 
     let compile_files: HashMap<Url, PendingFileBuild> = std::mem::take(&mut state.compile_files);
@@ -328,12 +365,12 @@ async fn flush(
 
     // Step 1: Run incremental builds (saved files)
     if has_incremental_builds {
-        file_build::run(&compile_files, projects, client).await;
+        file_build::run(&compile_files, projects, client, store_ref).await;
     }
 
     // Step 2: Run typechecks (unsaved edits)
     if !typechecks.is_empty() {
-        file_typecheck::run(typechecks, projects, generations, client).await;
+        file_typecheck::run(typechecks, projects, generations, client, store_ref).await;
     }
 
     // Step 3: Post-build recheck for files with buffer_content
@@ -353,7 +390,7 @@ async fn flush(
         })
         .collect();
     if !rechecks.is_empty() {
-        file_typecheck::run(rechecks, projects, generations, client).await;
+        file_typecheck::run(rechecks, projects, generations, client, store_ref).await;
     }
 
     // Step 4: Notify buildFinished (only if any builds ran)

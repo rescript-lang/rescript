@@ -91,9 +91,10 @@ rescript -vv lsp --stdio
 
 The server accepts optional configuration via `initializationOptions` in the `initialize` request:
 
-| Key | Type | Default | Description |
-|-----|------|---------|-------------|
-| `queue_debounce_ms` | `number` | `100` | Debounce timeout in milliseconds for the unified queue. Lower values give faster feedback; higher values batch more events. |
+| Key                 | Type      | Default | Description                                                                                                                                         |
+| ------------------- | --------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `queue_debounce_ms` | `number`  | `100`   | Debounce timeout in milliseconds for the unified queue. Lower values give faster feedback; higher values batch more events.                         |
+| `diagnostics_http`  | `boolean` | `false` | **(Experimental)** Start an HTTP server that exposes current diagnostics. See [HTTP Diagnostics Endpoint](#http-diagnostics-endpoint-experimental). |
 
 Example (Zed `settings.json`):
 
@@ -207,13 +208,13 @@ Sequential execution within one consumer eliminates all races on `lib/lsp/` arti
 
 When multiple events arrive for the same file within a debounce window:
 
-| Existing state | New event | Result |
-|----------------|-----------|--------|
-| typechecks | BufferChanged | Update content and generation |
-| typechecks | FileChangedOnDisk | Promote to compile_files, stash buffer for post-build recheck |
-| compile_files | BufferChanged | Stay in compile_files, update stashed buffer |
-| compile_files | FileChangedOnDisk | No-op |
-| any | FileCreated/FileDeleted | Remove from typechecks/compile_files, add to build_projects |
+| Existing state | New event               | Result                                                        |
+| -------------- | ----------------------- | ------------------------------------------------------------- |
+| typechecks     | BufferChanged           | Update content and generation                                 |
+| typechecks     | FileChangedOnDisk       | Promote to compile_files, stash buffer for post-build recheck |
+| compile_files  | BufferChanged           | Stay in compile_files, update stashed buffer                  |
+| compile_files  | FileChangedOnDisk       | No-op                                                         |
+| any            | FileCreated/FileDeleted | Remove from typechecks/compile_files, add to build_projects   |
 
 #### Staleness detection
 
@@ -356,6 +357,7 @@ completion request
 ```
 
 The `opens` list includes:
+
 1. `["Stdlib", "place holder"]` and `["Pervasives", "JsxModules", "place holder"]` (unless `-nopervasives`)
 2. `[namespace_name, "place holder"]` if there's a namespace
 3. From `-open Foo.Bar` in compiler_flags: `["Foo", "Bar", "place holder"]`
@@ -371,6 +373,49 @@ Diagnostics are published via `textDocument/publishDiagnostics`. Build diagnosti
 Typecheck diagnostics go through a staleness check: if a newer `didChange` arrived for the same file while the typecheck was running, the result is discarded.
 
 Implementation: `lsp.rs` — `group_by_file()` and `to_lsp_diagnostic()`
+
+## HTTP Diagnostics Endpoint (Experimental)
+
+> **Status:** Experimental. This feature may change or be removed. It exists to explore whether external tools (e.g. LLM agents like Claude Code) can leverage the running LSP to verify code changes without triggering a separate build.
+
+When `diagnostics_http: true` is set in `initializationOptions`, the LSP spawns a lightweight HTTP server on `127.0.0.1` using an OS-assigned free port. The port is logged via `window/logMessage` so you can find it in the editor's LSP log:
+
+```
+rescript-lsp HTTP diagnostics server listening on http://127.0.0.1:54321/diagnostics
+```
+
+### Endpoint
+
+`GET /diagnostics` — returns the current diagnostics as JSON. Files with no diagnostics are omitted. An empty `{}` response means the project is clean.
+
+The endpoint **blocks** until the LSP is idle (no pending events, no flush in progress) or until a 30-second timeout expires. This means you can save a file and immediately curl — the response will wait for the build to finish before returning. The `X-Build-Status` response header is `idle` on success or `timeout` if the deadline was reached.
+
+```json
+{
+  "/absolute/path/to/File.res": [
+    {
+      "range": {
+        "start": { "line": 5, "character": 10 },
+        "end": { "line": 5, "character": 20 }
+      },
+      "severity": "error",
+      "message": "This has type: string\nBut it's expected to have type: int"
+    }
+  ]
+}
+```
+
+### Usage
+
+```bash
+curl -s http://127.0.0.1:54321/diagnostics | jq .
+```
+
+### Idle tracking
+
+The store uses a pending-ID model: each queue event increments a monotonic ID. When a flush completes, it only signals "idle" if no newer events arrived during the flush. A `FlushGuard` ensures the signal fires even if the flush panics. This prevents the HTTP endpoint from returning stale results when rapid edits overlap with builds.
+
+Implementation: `lsp/diagnostic_store.rs`, `lsp/http.rs`
 
 ## Custom Notifications
 
@@ -400,37 +445,37 @@ Implementation: `lsp/initialize.rs`
 
 ## What Is NOT Implemented Yet
 
-| Feature | Status |
-|---------|--------|
-| `textDocument/didOpen` | Implemented |
-| `textDocument/didClose` | Implemented |
-| `textDocument/didChange` | Implemented |
-| `textDocument/didSave` | Implemented |
-| `textDocument/completion` | Implemented (analysis) |
-| `textDocument/completion/resolve` | Implemented (analysis) |
-| `textDocument/hover` | Implemented (analysis) |
-| `textDocument/formatting` | Implemented |
-| `textDocument/definition` | Implemented (analysis) |
-| `textDocument/typeDefinition` | Implemented (analysis) |
-| `textDocument/references` | Implemented (analysis) |
-| `textDocument/rename` / `prepareRename` | Implemented (analysis) |
-| `textDocument/documentSymbol` | Implemented (analysis) |
-| `textDocument/codeAction` | Implemented (analysis) |
-| `textDocument/signatureHelp` | Implemented (analysis) |
-| `textDocument/semanticTokens` | Implemented (analysis) |
-| `textDocument/inlayHint` | Implemented (analysis) |
-| `textDocument/codeLens` | Implemented (analysis) |
-| `workspace/didChangeWatchedFiles` | Implemented (Changed, Created, Deleted) |
-| Monorepo multi-workspace | Implemented |
-| `textDocument/createInterface` | TODO — niche feature, generates `.resi` from `.res` (already exists in analysis binary) |
-| `textDocument/openCompiled` | TODO — niche feature, opens compiled `.js` output |
-| File creation/deletion handling | Implemented (FileCreated/FileDeleted queue events) |
-| `rescript.json` change handling | TODO — needs full re-initialization |
-| `workspace/symbol` | TODO — project-wide symbol search |
-| `textDocument/documentHighlight` | TODO — highlight all occurrences of a symbol in current file |
-| `textDocument/foldingRange` | TODO — code folding regions |
-| `textDocument/selectionRange` | TODO — smart expand/shrink selection |
-| `window/workDoneProgress` | TODO — progress indicator during initial build |
+| Feature                                 | Status                                                                                  |
+| --------------------------------------- | --------------------------------------------------------------------------------------- |
+| `textDocument/didOpen`                  | Implemented                                                                             |
+| `textDocument/didClose`                 | Implemented                                                                             |
+| `textDocument/didChange`                | Implemented                                                                             |
+| `textDocument/didSave`                  | Implemented                                                                             |
+| `textDocument/completion`               | Implemented (analysis)                                                                  |
+| `textDocument/completion/resolve`       | Implemented (analysis)                                                                  |
+| `textDocument/hover`                    | Implemented (analysis)                                                                  |
+| `textDocument/formatting`               | Implemented                                                                             |
+| `textDocument/definition`               | Implemented (analysis)                                                                  |
+| `textDocument/typeDefinition`           | Implemented (analysis)                                                                  |
+| `textDocument/references`               | Implemented (analysis)                                                                  |
+| `textDocument/rename` / `prepareRename` | Implemented (analysis)                                                                  |
+| `textDocument/documentSymbol`           | Implemented (analysis)                                                                  |
+| `textDocument/codeAction`               | Implemented (analysis)                                                                  |
+| `textDocument/signatureHelp`            | Implemented (analysis)                                                                  |
+| `textDocument/semanticTokens`           | Implemented (analysis)                                                                  |
+| `textDocument/inlayHint`                | Implemented (analysis)                                                                  |
+| `textDocument/codeLens`                 | Implemented (analysis)                                                                  |
+| `workspace/didChangeWatchedFiles`       | Implemented (Changed, Created, Deleted)                                                 |
+| Monorepo multi-workspace                | Implemented                                                                             |
+| `textDocument/createInterface`          | TODO — niche feature, generates `.resi` from `.res` (already exists in analysis binary) |
+| `textDocument/openCompiled`             | TODO — niche feature, opens compiled `.js` output                                       |
+| File creation/deletion handling         | Implemented (FileCreated/FileDeleted queue events)                                      |
+| `rescript.json` change handling         | TODO — needs full re-initialization                                                     |
+| `workspace/symbol`                      | TODO — project-wide symbol search                                                       |
+| `textDocument/documentHighlight`        | TODO — highlight all occurrences of a symbol in current file                            |
+| `textDocument/foldingRange`             | TODO — code folding regions                                                             |
+| `textDocument/selectionRange`           | TODO — smart expand/shrink selection                                                    |
+| `window/workDoneProgress`               | TODO — progress indicator during initial build                                          |
 
 ## Relationship to `rescript build`
 
@@ -452,9 +497,7 @@ export function activate(context: ExtensionContext) {
   };
 
   const clientOptions: ClientOptions = {
-    documentSelector: [
-      { scheme: "file", language: "rescript" },
-    ],
+    documentSelector: [{ scheme: "file", language: "rescript" }],
   };
 
   const client = new LanguageClient(
@@ -543,10 +586,10 @@ Used by the LSP to pipe unsaved buffer content directly to bsc without writing t
 
 ## Prior Art
 
-| Language | CLI build | LSP | Architecture |
-|----------|-----------|-----|--------------|
-| **Gleam** | `gleam build` | `gleam lsp` (same binary) | Single binary, LSP is the watcher |
-| **Rust** | `cargo build` | `rust-analyzer` (separate) | LSP does its own analysis |
-| **TypeScript** | `tsc` | `tsserver` (same package) | LSP and CLI share code but no runtime state |
-| **Zig** | `zig build` | `zls` (separate) | LSP uses compiler as library |
-| **Go** | `go build` | `gopls` (same module) | LSP wraps the compiler toolchain |
+| Language       | CLI build     | LSP                        | Architecture                                |
+| -------------- | ------------- | -------------------------- | ------------------------------------------- |
+| **Gleam**      | `gleam build` | `gleam lsp` (same binary)  | Single binary, LSP is the watcher           |
+| **Rust**       | `cargo build` | `rust-analyzer` (separate) | LSP does its own analysis                   |
+| **TypeScript** | `tsc`         | `tsserver` (same package)  | LSP and CLI share code but no runtime state |
+| **Zig**        | `zig build`   | `zls` (separate)           | LSP uses compiler as library                |
+| **Go**         | `go build`    | `gopls` (same module)      | LSP wraps the compiler toolchain            |
