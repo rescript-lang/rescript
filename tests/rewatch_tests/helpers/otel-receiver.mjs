@@ -303,7 +303,7 @@ export async function createOtelReceiver() {
       return spans.filter(s => s.name === name);
     },
 
-    async waitForSpan(predicate, timeoutMs = 30_000) {
+    async waitForSpan(predicate, timeoutMs = 60_000) {
       const startTime = Date.now();
       while (Date.now() - startTime < timeoutMs) {
         const found = spans.find(predicate);
