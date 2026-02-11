@@ -461,6 +461,48 @@ Lower priority, but would improve the editing experience:
 - **`textDocument/foldingRange`** — code folding regions
 - **`textDocument/selectionRange`** — smart expand/shrink selection
 
+## Potential Carve-Outs
+
+The following changes on this branch are self-contained and could be sent as separate PRs ahead of merging the full LSP branch:
+
+### Rewatch test infrastructure
+
+`f56353869`..`d78103524` — introduces OpenTelemetry tracing in rewatch, a Vitest-based integration test framework with OTEL span snapshots, sandbox isolation, and fixture-based test projects. Foundation for all LSP tests but independently valuable for testing build/watch/clean/format. See also [#8241](https://github.com/rescript-lang/rescript/pull/8241).
+
+### `-bs-read-stdin` flag for bsc
+
+`05398ce52`, `88e4b8678` — adds a `-bs-read-stdin` flag to bsc that reads source from stdin instead of from the file on disk. The filename argument is still required for error locations and output path derivation. Touches the compiler across several layers:
+
+- `Js_config.read_stdin` flag and `-bs-read-stdin` CLI option
+- `Res_io.read_stdin` and `Res_driver.parse_*_from_stdin` for parsing from stdin
+- `Res_multi_printer.print_source` for formatting source provided as a string (used by `-format -bs-read-stdin`)
+- `Clflags.skip_source_digest` to skip `Digest.file` when the source file doesn't match stdin content
+- `Location.stdin_source` to hold stdin content for accurate error reporting code frames
+
+Used by the LSP to pipe unsaved buffer content directly to bsc without writing temporary files.
+
+### Skip JS write when content is unchanged
+
+`compiler/core/lam_compile_main.ml` — render JS output to a buffer, compare with the existing file on disk, and only write when the content differs. Avoids unnecessary file writes that trigger bundler HMR, file watchers, and editor reload events.
+
+### Remove `compiler-args` CLI subcommand
+
+`b0f7dc034` — the `compiler-args` subcommand was unused and removed. Clean standalone deletion.
+
+### Rewatch build profiles (`lib/lsp-ocaml/` isolation)
+
+`d56f92c36` — introduces `BuildProfile` (Standard / TypecheckOnly / TypecheckAndEmit) and a dedicated `lib/lsp-ocaml/` flat artifact directory so LSP and CLI builds don't interfere with each other. Threads the profile through all artifact path resolution in packages, compile, parse, clean, and compiler-info modules.
+
+### Watcher improvements
+
+- `e63278313` — graceful shutdown via stdin EOF (allows parent process to signal shutdown by closing stdin)
+- `a4db5edb6` — deduplicate and normalize file watch events (mtime/content-hash dedup, atomic write normalization across macOS/Linux/Windows)
+- `9ba38d7d6`, `5b536cf7d` — preserve original line endings in format output on Windows
+
+### OTEL trace fix
+
+`bd3b38beb` — fix compile_file spans not nested under compile_wave in OTEL traces (thread-local spans need explicit parent when using Rayon's par_iter).
+
 ## Prior Art
 
 | Language | CLI build | LSP | Architecture |
