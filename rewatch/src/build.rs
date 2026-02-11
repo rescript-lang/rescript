@@ -92,9 +92,10 @@ pub fn prepare_build(
     let mut build_state = BuildCommandState::new(project_context, packages, compiler, warn_error);
     packages::parse_packages(&mut build_state, build_profile)?;
 
-    let compile_assets_state = read_compile_state::read(&mut build_state)?;
+    let compile_assets_state = read_compile_state::read(&mut build_state, build_profile)?;
 
-    let (diff_cleanup, total_cleanup) = clean::cleanup_previous_build(&mut build_state, compile_assets_state);
+    let (diff_cleanup, total_cleanup) =
+        clean::cleanup_previous_build(&mut build_state, compile_assets_state, build_profile);
     let timing_clean_total = timing_clean_start.elapsed();
 
     if show_progress {

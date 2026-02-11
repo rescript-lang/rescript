@@ -88,9 +88,27 @@ pub fn get_ocaml_build_path(canonical_path: &Path) -> PathBuf {
     canonical_path.join("lib").join("ocaml")
 }
 
+pub fn get_lsp_ocaml_build_path(canonical_path: &Path) -> PathBuf {
+    canonical_path.join("lib").join("lsp-ocaml")
+}
+
 impl Package {
     pub fn get_ocaml_build_path(&self) -> PathBuf {
         get_ocaml_build_path(&self.path)
+    }
+
+    pub fn get_lsp_ocaml_build_path(&self) -> PathBuf {
+        get_lsp_ocaml_build_path(&self.path)
+    }
+
+    /// Returns the flat artifact directory for the given profile.
+    /// Standard builds use `lib/ocaml/`, LSP builds use `lib/lsp-ocaml/`.
+    pub fn get_ocaml_build_path_for_profile(&self, profile: BuildProfile) -> PathBuf {
+        if profile.is_lsp() {
+            self.get_lsp_ocaml_build_path()
+        } else {
+            self.get_ocaml_build_path()
+        }
     }
 
     pub fn get_build_path(&self) -> PathBuf {
@@ -709,9 +727,9 @@ pub fn parse_packages(build_state: &mut BuildState, build_profile: BuildProfile)
             build_state.module_names.extend(package_modules)
         }
         let build_path_abs = package.get_build_path_for_profile(build_profile);
-        let bs_build_path = package.get_ocaml_build_path();
+        let ocaml_build_path = package.get_ocaml_build_path_for_profile(build_profile);
         helpers::create_path(&build_path_abs);
-        helpers::create_path(&bs_build_path);
+        helpers::create_path(&ocaml_build_path);
 
         // TypecheckOnly profile only needs lib/lsp + lib/ocaml — no JS output directories
         if build_profile.emits_js() {

@@ -24,8 +24,15 @@ fn get_log_file_path(package: &packages::Package, subfolder: Location) -> PathBu
     build_folder.join(".compiler.log")
 }
 
-pub fn does_ocaml_build_compiler_log_exist(package: &packages::Package) -> bool {
-    get_log_file_path(package, Location::Ocaml).exists()
+pub fn does_flat_build_dir_have_artifacts(
+    package: &packages::Package,
+    build_profile: super::build_types::BuildProfile,
+) -> bool {
+    let flat_dir = package.get_ocaml_build_path_for_profile(build_profile);
+    flat_dir.exists()
+        && std::fs::read_dir(&flat_dir)
+            .map(|mut entries| entries.next().is_some())
+            .unwrap_or(false)
 }
 
 fn escape_colours(str: &str) -> String {

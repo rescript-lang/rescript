@@ -7,7 +7,10 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-pub fn read(build_state: &mut BuildCommandState) -> anyhow::Result<CompileAssetsState> {
+pub fn read(
+    build_state: &mut BuildCommandState,
+    build_profile: BuildProfile,
+) -> anyhow::Result<CompileAssetsState> {
     let mut ast_modules: AHashMap<PathBuf, AstModule> = AHashMap::new();
     let mut cmi_modules: AHashMap<String, SystemTime> = AHashMap::new();
     let mut cmt_modules: AHashMap<String, SystemTime> = AHashMap::new();
@@ -45,7 +48,7 @@ pub fn read(build_state: &mut BuildCommandState) -> anyhow::Result<CompileAssets
         .packages
         .par_iter()
         .map(|(_, package)| {
-            let read_dir = fs::read_dir(package.get_ocaml_build_path()).unwrap();
+            let read_dir = fs::read_dir(package.get_ocaml_build_path_for_profile(build_profile)).unwrap();
             read_dir
                 .filter_map(|entry| match entry {
                     Ok(entry) => {

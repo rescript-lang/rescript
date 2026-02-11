@@ -259,7 +259,9 @@ pub fn generate_asts(
                             .to_suffix()
                             .expect("namespace should be set for mlmap module");
                         let base_build_path = package.get_build_path_for_profile(build_profile).join(&suffix);
-                        let base_ocaml_build_path = package.get_ocaml_build_path().join(&suffix);
+                        let base_ocaml_build_path = package
+                            .get_ocaml_build_path_for_profile(build_profile)
+                            .join(&suffix);
                         let _ = std::fs::copy(
                             base_build_path.with_extension("cmi"),
                             base_ocaml_build_path.with_extension("cmi"),
@@ -457,7 +459,9 @@ fn generate_ast(
     if let Ok((ast_path, _)) = &result {
         let _ = std::fs::copy(
             Path::new(&build_path_abs).join(ast_path),
-            package.get_ocaml_build_path().join(ast_path.file_name().unwrap()),
+            package
+                .get_ocaml_build_path_for_profile(build_profile)
+                .join(ast_path.file_name().unwrap()),
         );
     }
     result

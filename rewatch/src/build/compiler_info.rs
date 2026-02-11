@@ -42,8 +42,8 @@ pub fn verify_compiler_info(
             let info_path = package.get_compiler_info_path_for_profile(build_profile);
             let Ok(contents) = std::fs::read_to_string(&info_path) else {
                 // Can't read the compiler-info.json file, maybe there is no current build.
-                // We check if the ocaml build folder exists, if not, we assume the compiler is not installed
-                return logs::does_ocaml_build_compiler_log_exist(package);
+                // We check if the flat build folder has artifacts — if not, there's nothing to clean.
+                return logs::does_flat_build_dir_have_artifacts(package, build_profile);
             };
 
             let parsed: Result<CompilerInfoFile, _> = serde_json::from_str(&contents);
@@ -104,8 +104,7 @@ pub fn verify_compiler_info(
 
     let cleaned_count = mismatched_packages.len();
     mismatched_packages.par_iter().for_each(|package| {
-        // suppress progress printing during init to avoid breaking step output
-        clean::clean_package(false, true, package);
+        clean::clean_package_for_profile(package, build_profile);
     });
     if cleaned_count == 0 {
         CompilerCheckResult::SameCompilerAsLastRun

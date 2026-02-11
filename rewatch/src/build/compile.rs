@@ -222,8 +222,8 @@ pub fn compile(
                             let _file_span =
                                 info_span!(parent: &wave_span, "build.compile_file", module = %module_name, package = %package.name, suffix, module_system, namespace).entered();
 
-                            let cmi_path = helpers::get_compiler_asset(
-                                package,
+                            let cmi_path = helpers::get_compiler_asset_in(
+                                &package.get_ocaml_build_path_for_profile(build_profile),
                                 &package.namespace,
                                 &source_file.implementation.path,
                                 "cmi",
@@ -548,7 +548,7 @@ pub fn compiler_args(
     build_profile: BuildProfile,
 ) -> Result<Vec<String>> {
     let bsc_flags = config::flatten_flags(&config.compiler_flags);
-    let dependency_paths = get_dependency_paths(config, packages, is_type_dev);
+    let dependency_paths = get_dependency_paths(config, packages, is_type_dev, build_profile);
     let module_name = helpers::file_path_to_module_name(file_path, &config.get_namespace());
 
     let namespace_args = match &config.get_namespace() {
@@ -642,7 +642,11 @@ pub fn compiler_args(
         read_cmi_args,
         vec![
             "-I".to_string(),
-            Path::new("..").join("ocaml").to_string_lossy().to_string(),
+            if build_profile.is_lsp() {
+                Path::new("..").join("lsp-ocaml").to_string_lossy().to_string()
+            } else {
+                Path::new("..").join("ocaml").to_string_lossy().to_string()
+            },
         ],
         runtime_path_args,
         dependency_paths,
@@ -696,6 +700,7 @@ fn get_dependency_paths(
     config: &config::Config,
     packages: &AHashMap<String, packages::Package>,
     is_file_type_dev: bool,
+    build_profile: BuildProfile,
 ) -> Vec<String> {
     let normal_deps = config
         .dependencies
@@ -723,17 +728,15 @@ fn get_dependency_paths(
         .par_iter()
         .filter_map(|dependent_package| {
             let package_name = dependent_package.name();
-            let dependency_path = packages
-                .get(package_name)
-                .map(|package| package.path.clone())
-                .map(|canonicalized_path| {
-                    vec![
-                        "-I".to_string(),
-                        packages::get_ocaml_build_path(&canonicalized_path)
-                            .to_string_lossy()
-                            .to_string(),
-                    ]
-                });
+            let dependency_path = packages.get(package_name).map(|package| {
+                vec![
+                    "-I".to_string(),
+                    package
+                        .get_ocaml_build_path_for_profile(build_profile)
+                        .to_string_lossy()
+                        .to_string(),
+                ]
+            });
 
             if !dependent_package.is_dev() && dependency_path.is_none() {
                 panic!(
@@ -764,7 +767,7 @@ fn compile_file(
         ..
     } = build_state;
     let root_config = build_state.get_root_config();
-    let ocaml_build_path_abs = package.get_ocaml_build_path();
+    let ocaml_build_path_abs = package.get_ocaml_build_path_for_profile(build_profile);
     let build_path_abs = package.get_build_path_for_profile(build_profile);
     let implementation_file_path = match &module.source_type {
         SourceType::SourceFile(source_file) => Ok(&source_file.implementation.path),
