@@ -23,6 +23,7 @@ mod typecheck;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, RwLock};
+use std::time::Duration;
 
 use crate::build::build_types::BuildCommandState;
 use crate::build::diagnostics::{BscDiagnostic, Severity};
@@ -139,6 +140,9 @@ struct Backend {
     /// The `rewatch.lsp` root span, captured at construction so spawned tasks
     /// can set it as their explicit parent.
     root_span: tracing::Span,
+    /// Debounce timeout in milliseconds for the LSP queue.
+    /// Configurable via `initializationOptions.queue_debounce_ms` (default: 100).
+    queue_debounce_ms: Mutex<u64>,
 }
 
 #[tower_lsp::async_trait]
@@ -154,6 +158,16 @@ impl LanguageServer for Backend {
             .collect();
 
         tracing::info!(workspace_folders = ?folders, "LSP initialized with workspace folders");
+
+        // Extract queue_debounce_ms from initializationOptions if provided.
+        if let Some(opts) = &params.initialization_options
+            && let Some(ms) = opts.get("queue_debounce_ms").and_then(|v| v.as_u64())
+        {
+            tracing::info!(queue_debounce_ms = ms, "Using custom queue debounce timeout");
+            if let Ok(mut d) = self.queue_debounce_ms.lock() {
+                *d = ms;
+            }
+        }
 
         if let Ok(mut wf) = self.workspace_folders.write() {
             *wf = folders;
@@ -307,11 +321,13 @@ impl LanguageServer for Backend {
         self.recheck_open_buffers().await;
 
         // Start the unified queue now that initial build state is available.
+        let debounce = Duration::from_millis(self.queue_debounce_ms.lock().map(|g| *g).unwrap_or(100));
         if let Ok(mut q) = self.queue.lock() {
             *q = Some(queue::Queue::new(
                 Arc::clone(&self.projects),
                 self.client.clone(),
                 self.root_span.clone(),
+                debounce,
             ));
         }
 
@@ -822,6 +838,7 @@ pub async fn run_stdio() {
         open_buffers: Mutex::new(HashMap::new()),
         queue: Mutex::new(None),
         root_span: tracing::Span::current(),
+        queue_debounce_ms: Mutex::new(100),
     });
     Server::new(stdin, stdout, socket).serve(service).await;
 }

@@ -87,6 +87,28 @@ rescript lsp --stdio
 rescript -vv lsp --stdio
 ```
 
+## Initialization Options
+
+The server accepts optional configuration via `initializationOptions` in the `initialize` request:
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `queue_debounce_ms` | `number` | `100` | Debounce timeout in milliseconds for the unified queue. Lower values give faster feedback; higher values batch more events. |
+
+Example (Zed `settings.json`):
+
+```json
+{
+  "lsp": {
+    "rescript-lsp": {
+      "initialization_options": {
+        "queue_debounce_ms": 50
+      }
+    }
+  }
+}
+```
+
 ## Capabilities
 
 The LSP server advertises these capabilities during `initialize`:

@@ -3,7 +3,9 @@
 //! All file events (didChange, didOpen, didSave, didChangeWatchedFiles) go
 //! into a single unbounded channel. A background consumer task collects
 //! events into a `HashMap<Url, PendingFile>`, applying promotion rules to
-//! consolidate per-file state. After 100ms of silence the batch is flushed:
+//! consolidate per-file state. After a configurable debounce period
+//! (default 100ms, set via `initializationOptions.queue_debounce_ms`) the batch
+//! is flushed:
 //!
 //! 1. **Builds first** — saved files get a full incremental build (compile
 //!    dependencies + typecheck dependents), holding the projects lock.
@@ -109,10 +111,17 @@ pub struct Queue {
 
 impl Queue {
     /// Create the queue and spawn the single background consumer task.
-    pub fn new(projects: Arc<Mutex<ProjectMap>>, client: Client, root_span: tracing::Span) -> Self {
+    pub fn new(
+        projects: Arc<Mutex<ProjectMap>>,
+        client: Client,
+        root_span: tracing::Span,
+        debounce: Duration,
+    ) -> Self {
         let (tx, rx) = mpsc::unbounded_channel();
         let generations = Arc::new(Mutex::new(HashMap::new()));
-        tokio::spawn(consumer(rx, projects, Arc::clone(&generations), client).instrument(root_span));
+        tokio::spawn(
+            consumer(rx, projects, Arc::clone(&generations), client, debounce).instrument(root_span),
+        );
         Queue { tx, generations }
     }
 
@@ -174,8 +183,8 @@ async fn consumer(
     projects: Arc<Mutex<ProjectMap>>,
     generations: Arc<Mutex<HashMap<Url, u64>>>,
     client: Client,
+    debounce: Duration,
 ) {
-    const DEBOUNCE: Duration = Duration::from_millis(100);
     let mut state = PendingState::new();
 
     loop {
@@ -185,8 +194,8 @@ async fn consumer(
             None => break,
         }
 
-        // Phase 2: debounce — collect more events until 100ms of silence
-        let deadline = tokio::time::sleep(DEBOUNCE);
+        // Phase 2: debounce — collect more events until silence
+        let deadline = tokio::time::sleep(debounce);
         tokio::pin!(deadline);
         loop {
             tokio::select! {
@@ -194,7 +203,7 @@ async fn consumer(
                     match event {
                         Some(event) => {
                             state.merge(event);
-                            deadline.as_mut().reset(Instant::now() + DEBOUNCE);
+                            deadline.as_mut().reset(Instant::now() + debounce);
                         }
                         None => {
                             flush(&mut state, &projects, &generations, &client).await;
