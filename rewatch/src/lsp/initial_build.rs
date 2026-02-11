@@ -1,5 +1,3 @@
-use rayon::prelude::*;
-
 use crate::build;
 use crate::build::build_types::{BuildCommandState, BuildProfile, CompilationStage};
 use crate::build::clean;
@@ -8,29 +6,48 @@ use crate::build::packages;
 
 use super::initialize::{self, DiscoveredWorkspace};
 
-/// Run initial builds for all discovered workspaces in parallel.
+/// Run initial builds for all discovered workspaces, parallelising across
+/// independent conflict groups.
 ///
-/// Partitions workspaces into conflict groups (workspaces sharing a package
-/// path must build sequentially), then builds groups in parallel via rayon.
+/// Workspaces that share a package path (conflict group) must build
+/// sequentially, but independent groups can safely overlap. We use
+/// `std::thread::scope` to spawn one OS thread per group instead of
+/// rayon's `par_iter`, because each build already uses rayon internally
+/// for file-level parallelism (parse, compile). Nesting `par_iter` inside
+/// `par_iter` on the same global thread pool risks starvation: the outer
+/// tasks occupy rayon threads while inner tasks block on `bsc` subprocess
+/// I/O, leaving no threads to make progress. Dedicated OS threads for
+/// the outer level avoid this — they block independently while rayon's
+/// work-stealing pool stays fully available for the inner parallelism.
 pub fn run_all(workspaces: Vec<DiscoveredWorkspace>) -> Vec<(BuildCommandState, Vec<BscDiagnostic>)> {
     let groups = initialize::partition_workspaces(workspaces);
     let parent_span = tracing::Span::current();
 
-    groups
-        .into_par_iter()
-        .flat_map(|group| {
-            group
-                .into_iter()
-                .filter_map(|workspace| match run(workspace, &parent_span) {
-                    Ok(result) => Some(result),
-                    Err(e) => {
-                        tracing::error!("Initial build failed: {e}");
-                        None
-                    }
+    std::thread::scope(|s| {
+        let handles: Vec<_> = groups
+            .into_iter()
+            .map(|group| {
+                let span = &parent_span;
+                s.spawn(move || {
+                    group
+                        .into_iter()
+                        .filter_map(|workspace| match run(workspace, span) {
+                            Ok(result) => Some(result),
+                            Err(e) => {
+                                tracing::error!("Initial build failed: {e}");
+                                None
+                            }
+                        })
+                        .collect::<Vec<_>>()
                 })
-                .collect::<Vec<_>>()
-        })
-        .collect()
+            })
+            .collect();
+
+        handles
+            .into_iter()
+            .flat_map(|h| h.join().unwrap_or_default())
+            .collect()
+    })
 }
 
 /// Run the initial build for a discovered workspace.
