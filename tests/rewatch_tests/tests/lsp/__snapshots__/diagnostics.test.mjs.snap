@@ -762,8 +762,6 @@ exports[`lsp diagnostics > publishes type error diagnostics for buffer content b
   "        build.compile_wave[file_count=1]",
   "          build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
   "  lsp.did_open[file=src/Root.res]",
-  "  lsp.typecheck[file_count=1]",
-  "    lsp.typecheck.file[module=Root]",
 ]
 `;
 

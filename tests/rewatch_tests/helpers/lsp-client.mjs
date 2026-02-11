@@ -92,7 +92,9 @@ export function createLspClient(cwd, otelEndpoint) {
 
   function onNotification(method, params) {
     // Check if anyone is waiting for this notification
-    const idx = notificationWaiters.findIndex(w => w.method === method);
+    const idx = notificationWaiters.findIndex(
+      w => w.method === method && (!w.predicate || w.predicate(params)),
+    );
     if (idx !== -1) {
       const [waiter] = notificationWaiters.splice(idx, 1);
       waiter.resolve(params);
@@ -584,12 +586,15 @@ export function createLspClient(cwd, otelEndpoint) {
      * @param {number} [timeoutMs=5000] - Timeout in milliseconds
      * @returns {Promise<any>} The notification params
      */
-    waitForNotification(method, timeoutMs = 5000) {
+    waitForNotification(method, timeoutMs = 5000, predicate) {
       // Check if we already have one stored
       const stored = notifications.get(method);
       if (stored && stored.length > 0) {
-        const { params } = stored.shift();
-        return Promise.resolve(params);
+        const idx = predicate ? stored.findIndex(n => predicate(n.params)) : 0;
+        if (idx !== -1) {
+          const [{ params }] = stored.splice(idx, 1);
+          return Promise.resolve(params);
+        }
       }
 
       return new Promise((resolve, reject) => {
@@ -605,6 +610,7 @@ export function createLspClient(cwd, otelEndpoint) {
 
         notificationWaiters.push({
           method,
+          predicate,
           resolve: params => {
             clearTimeout(timer);
             resolve(params);

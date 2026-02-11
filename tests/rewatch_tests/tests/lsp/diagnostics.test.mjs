@@ -83,11 +83,16 @@ describe("lsp diagnostics", () => {
         // rechecks open buffers.
         lsp.openFile("src/Root.res", "let main: int = App.run()\n");
 
-        // Wait for diagnostics — the LSP will typecheck the buffer via
-        // did_open or recheck open buffers after the initial build.
+        // Wait for diagnostics that contain the type error — skip empty
+        // diagnostics that may arrive from the initial build of the clean
+        // on-disk file.
         const params = await lsp.waitForNotification(
           "textDocument/publishDiagnostics",
           30000,
+          p =>
+            p.uri?.includes("Root.res") &&
+            p.diagnostics &&
+            p.diagnostics.length > 0,
         );
 
         expect(params.diagnostics.length).toBeGreaterThan(0);
