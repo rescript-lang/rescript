@@ -223,6 +223,66 @@ impl LanguageServer for Backend {
                     retrigger_characters: Some(vec!["=".to_string(), ",".to_string()]),
                     ..Default::default()
                 }),
+                workspace: Some(WorkspaceServerCapabilities {
+                    file_operations: Some(WorkspaceFileOperationsServerCapabilities {
+                        did_create: Some(FileOperationRegistrationOptions {
+                            filters: vec![
+                                FileOperationFilter {
+                                    scheme: Some("file".to_string()),
+                                    pattern: FileOperationPattern {
+                                        glob: "**/*.res".to_string(),
+                                        ..Default::default()
+                                    },
+                                },
+                                FileOperationFilter {
+                                    scheme: Some("file".to_string()),
+                                    pattern: FileOperationPattern {
+                                        glob: "**/*.resi".to_string(),
+                                        ..Default::default()
+                                    },
+                                },
+                            ],
+                        }),
+                        did_rename: Some(FileOperationRegistrationOptions {
+                            filters: vec![
+                                FileOperationFilter {
+                                    scheme: Some("file".to_string()),
+                                    pattern: FileOperationPattern {
+                                        glob: "**/*.res".to_string(),
+                                        ..Default::default()
+                                    },
+                                },
+                                FileOperationFilter {
+                                    scheme: Some("file".to_string()),
+                                    pattern: FileOperationPattern {
+                                        glob: "**/*.resi".to_string(),
+                                        ..Default::default()
+                                    },
+                                },
+                            ],
+                        }),
+                        did_delete: Some(FileOperationRegistrationOptions {
+                            filters: vec![
+                                FileOperationFilter {
+                                    scheme: Some("file".to_string()),
+                                    pattern: FileOperationPattern {
+                                        glob: "**/*.res".to_string(),
+                                        ..Default::default()
+                                    },
+                                },
+                                FileOperationFilter {
+                                    scheme: Some("file".to_string()),
+                                    pattern: FileOperationPattern {
+                                        glob: "**/*.resi".to_string(),
+                                        ..Default::default()
+                                    },
+                                },
+                            ],
+                        }),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                }),
                 ..Default::default()
             },
         })
@@ -422,6 +482,33 @@ impl LanguageServer for Backend {
             for (root, deleted_uris) in full_build_requests {
                 queue.enqueue_full_build(root, deleted_uris);
             }
+        }
+    }
+
+    async fn did_create_files(&self, params: CreateFilesParams) {
+        for file in &params.files {
+            self.client
+                .log_message(MessageType::INFO, format!("didCreateFiles: {}", file.uri))
+                .await;
+        }
+    }
+
+    async fn did_rename_files(&self, params: RenameFilesParams) {
+        for file in &params.files {
+            self.client
+                .log_message(
+                    MessageType::INFO,
+                    format!("didRenameFiles: {} -> {}", file.old_uri, file.new_uri),
+                )
+                .await;
+        }
+    }
+
+    async fn did_delete_files(&self, params: DeleteFilesParams) {
+        for file in &params.files {
+            self.client
+                .log_message(MessageType::INFO, format!("didDeleteFiles: {}", file.uri))
+                .await;
         }
     }
 

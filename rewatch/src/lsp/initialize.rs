@@ -18,29 +18,24 @@ fn to_forward_slashes(s: &str) -> String {
 
 /// For a single package, compute watcher glob patterns from its source_folders.
 /// Emits an OTEL span per source directory entry.
-fn package_watcher_patterns(package: &packages::Package, project_root: &Path) -> Vec<String> {
-    let rel_prefix = package.path.strip_prefix(project_root).unwrap_or(&package.path);
-
+fn package_watcher_patterns(package: &packages::Package) -> Vec<String> {
     let mut patterns = Vec::new();
 
     for source in &package.source_folders {
-        let dir = if rel_prefix == Path::new("") {
-            source.dir.clone()
-        } else {
-            to_forward_slashes(&format!("{}/{}", rel_prefix.display(), source.dir))
-        };
+        let dir = to_forward_slashes(&package.path.join(&source.dir).to_string_lossy());
 
         // Mirror watcher.rs logic: subdirs with Recurse(true) get recursive globs,
         // everything else (including explicitly listed subdirs, which get_source_dirs
         // already flattened) gets a flat glob.
         let is_recursive = matches!(source.subdirs, Some(config::Subdirs::Recurse(true)));
-        let glob = if is_recursive {
-            format!("{dir}/**")
-        } else {
-            dir.clone()
-        };
-        patterns.push(format!("{glob}/*.res"));
-        patterns.push(format!("{glob}/*.resi"));
+        // Always watch the directory itself for files directly in it
+        patterns.push(format!("{dir}/*.res"));
+        patterns.push(format!("{dir}/*.resi"));
+        if is_recursive {
+            // Also watch all subdirectories
+            patterns.push(format!("{dir}/**/*.res"));
+            patterns.push(format!("{dir}/**/*.resi"));
+        }
 
         tracing::info_span!("lsp.source_dir", dir = %dir, recursive = %is_recursive).in_scope(|| {});
     }
@@ -87,7 +82,7 @@ fn discover_workspace(project_root: &Path) -> (Vec<String>, Option<DiscoveredWor
 
     for package in sorted_packages {
         let patterns = tracing::info_span!("lsp.discover_package", name = %package.name)
-            .in_scope(|| package_watcher_patterns(package, project_root));
+            .in_scope(|| package_watcher_patterns(package));
         all_patterns.extend(patterns);
     }
 
@@ -204,6 +199,21 @@ pub async fn register_file_watchers(
 
             let watcher_count = watcher_patterns.len();
             tracing::Span::current().record("watcher_count", watcher_count);
+
+            client
+                .log_message(
+                    tower_lsp::lsp_types::MessageType::INFO,
+                    format!("Workspace folders: {workspace_folders:?}"),
+                )
+                .await;
+            for pattern in &watcher_patterns {
+                client
+                    .log_message(
+                        tower_lsp::lsp_types::MessageType::INFO,
+                        format!("Watch pattern: {pattern}"),
+                    )
+                    .await;
+            }
 
             let watchers = watcher_patterns
                 .into_iter()
