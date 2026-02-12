@@ -428,7 +428,15 @@ impl LanguageServer for Backend {
         let Some(file_path) = uri_to_file_path(&params.text_document.uri, "didSave") else {
             return;
         };
+
+        self.client
+            .log_message(
+                MessageType::INFO,
+                format!("did_save: {}", &params.text_document.uri),
+            )
+            .await;
         let _span = tracing::info_span!("lsp.did_save", file = %file_path.display()).entered();
+
         if let Ok(q) = self.queue.lock()
             && let Some(ref queue) = *q
         {
