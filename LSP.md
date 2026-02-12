@@ -110,6 +110,53 @@ Example (Zed `settings.json`):
 }
 ```
 
+### Diagnostic Server endpoint
+
+The clue of the diagnostic server endpoint is that it exposes current diagnostics from the IDE.
+You could wire this up in a Claude hook, example `.claude/settings.local.json`:
+
+```json
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -s http://127.0.0.1:12303/diagnostics"
+          }
+        ]
+      }
+    ],
+    "Edit": [
+      {
+        "matcher": "\\.res$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -s http://127.0.0.1:12303/diagnostics"
+          }
+        ]
+      }
+    ],
+    "Write": [
+      {
+        "matcher": "\\.res$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -s http://127.0.0.1:12303/diagnostics"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+(assuming `diagnostics_http` is `12303`).
+I did wish that IDEs just exposed all diagnostics to LLMs but that does not seem to be a thing in Zed.
+
 ## Capabilities
 
 The LSP server advertises these capabilities during `initialize`:
