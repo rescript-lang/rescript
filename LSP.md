@@ -91,10 +91,10 @@ rescript -vv lsp --stdio
 
 The server accepts optional configuration via `initializationOptions` in the `initialize` request:
 
-| Key                 | Type      | Default | Description                                                                                                                                         |
-| ------------------- | --------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `queue_debounce_ms` | `number`  | `100`   | Debounce timeout in milliseconds for the unified queue. Lower values give faster feedback; higher values batch more events.                         |
-| `diagnostics_http`  | `boolean` | `false` | **(Experimental)** Start an HTTP server that exposes current diagnostics. See [HTTP Diagnostics Endpoint](#http-diagnostics-endpoint-experimental). |
+| Key                 | Type     | Default | Description                                                                                                                                                                                                                                                          |
+| ------------------- | -------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `queue_debounce_ms` | `number` | `100`   | Debounce timeout in milliseconds for the unified queue. Lower values give faster feedback; higher values batch more events.                                                                                                                                          |
+| `diagnostics_http`  | `number` | —       | **(Experimental)** Port for the HTTP diagnostics server. When set, starts an HTTP server on this port that exposes current diagnostics. Use a fixed port per project for predictable URLs. See [HTTP Diagnostics Endpoint](#http-diagnostics-endpoint-experimental). |
 
 Example (Zed `settings.json`):
 
@@ -378,7 +378,7 @@ Implementation: `lsp.rs` — `group_by_file()` and `to_lsp_diagnostic()`
 
 > **Status:** Experimental. This feature may change or be removed. It exists to explore whether external tools (e.g. LLM agents like Claude Code) can leverage the running LSP to verify code changes without triggering a separate build.
 
-When `diagnostics_http: true` is set in `initializationOptions`, the LSP spawns a lightweight HTTP server on `127.0.0.1` using an OS-assigned free port. The port is logged via `window/logMessage` so you can find it in the editor's LSP log:
+When `diagnostics_http` is set to a port number in `initializationOptions`, the LSP spawns a lightweight HTTP server on `127.0.0.1` using that port. This lets you assign a predictable port per project. The port is logged via `window/logMessage` so you can confirm it in the editor's LSP log:
 
 ```
 rescript-lsp HTTP diagnostics server listening on http://127.0.0.1:54321/diagnostics

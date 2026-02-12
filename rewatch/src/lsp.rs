@@ -147,7 +147,7 @@ struct Backend {
     /// Configurable via `initializationOptions.queue_debounce_ms` (default: 100).
     queue_debounce_ms: Mutex<u64>,
     /// Shared diagnostic store for the HTTP diagnostics endpoint.
-    /// `None` until `initialize` is called with `diagnostics_http: true`.
+    /// Created in `initialize` when a `diagnostics_http` port is configured.
     diagnostic_store: Mutex<Option<Arc<DiagnosticStore>>>,
 }
 
@@ -175,15 +175,11 @@ impl LanguageServer for Backend {
             }
         }
 
-        // Extract diagnostics_http from initializationOptions if provided.
+        // Extract diagnostics_http port and start the HTTP server if provided.
         if let Some(opts) = &params.initialization_options
-            && let Some(enabled) = opts.get("diagnostics_http").and_then(|v| v.as_bool())
-            && enabled
+            && let Some(port) = opts.get("diagnostics_http").and_then(|v| v.as_u64())
         {
-            tracing::info!("HTTP diagnostics endpoint enabled");
-            if let Ok(mut store) = self.diagnostic_store.lock() {
-                *store = Some(Arc::new(DiagnosticStore::new()));
-            }
+            self.start_diagnostics_http(port as u16).await;
         }
 
         if let Ok(mut wf) = self.workspace_folders.write() {
@@ -337,32 +333,8 @@ impl LanguageServer for Backend {
         self.initial_build(workspaces).await;
         self.recheck_open_buffers().await;
 
-        // Get the diagnostic store (if HTTP diagnostics is enabled).
-        let diagnostic_store = self.diagnostic_store.lock().ok().and_then(|s| s.clone());
-
-        // Start the HTTP diagnostics server if enabled.
-        if let Some(ref store) = diagnostic_store {
-            match http::start(Arc::clone(store)).await {
-                Ok(port) => {
-                    self.client
-                        .log_message(
-                            MessageType::INFO,
-                            format!("rescript-lsp HTTP diagnostics server listening on http://127.0.0.1:{port}/diagnostics"),
-                        )
-                        .await;
-                }
-                Err(e) => {
-                    self.client
-                        .log_message(
-                            MessageType::WARNING,
-                            format!("Failed to start HTTP diagnostics server: {e}"),
-                        )
-                        .await;
-                }
-            }
-        }
-
         // Start the unified queue now that initial build state is available.
+        let diagnostic_store = self.diagnostic_store.lock().ok().and_then(|s| s.clone());
         let debounce = Duration::from_millis(self.queue_debounce_ms.lock().map(|g| *g).unwrap_or(100));
         if let Ok(mut q) = self.queue.lock() {
             *q = Some(queue::Queue::new(
@@ -370,7 +342,7 @@ impl LanguageServer for Backend {
                 self.client.clone(),
                 self.root_span.clone(),
                 debounce,
-                diagnostic_store.clone(),
+                diagnostic_store,
             ));
         }
 
@@ -744,6 +716,34 @@ impl LanguageServer for Backend {
 }
 
 impl Backend {
+    /// Create a `DiagnosticStore`, start the HTTP server on `port`, and store
+    /// the result so that `publish_diagnostics` / `typecheck_buffer` can use it.
+    async fn start_diagnostics_http(&self, port: u16) {
+        tracing::info!(port, "HTTP diagnostics endpoint enabled");
+        let store = Arc::new(DiagnosticStore::new());
+        match http::start(Arc::clone(&store), port).await {
+            Ok(()) => {
+                self.client
+                    .log_message(
+                        MessageType::INFO,
+                        format!("rescript-lsp HTTP diagnostics server listening on http://127.0.0.1:{port}/diagnostics"),
+                    )
+                    .await;
+            }
+            Err(e) => {
+                self.client
+                    .log_message(
+                        MessageType::WARNING,
+                        format!("Failed to start HTTP diagnostics server on port {port}: {e}"),
+                    )
+                    .await;
+            }
+        }
+        if let Ok(mut s) = self.diagnostic_store.lock() {
+            *s = Some(store);
+        }
+    }
+
     /// Run the initial build for all workspaces and publish diagnostics.
     async fn initial_build(&self, workspaces: Vec<initialize::DiscoveredWorkspace>) {
         let mut all_diagnostics: Vec<BscDiagnostic> = Vec::new();

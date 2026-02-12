@@ -42,11 +42,9 @@ async fn handle_request(
     Ok(response)
 }
 
-/// Start the HTTP diagnostics server on a random free port.
-/// Returns the port number the server is bound to.
-pub async fn start(store: Arc<DiagnosticStore>) -> anyhow::Result<u16> {
-    let listener = TcpListener::bind(SocketAddr::from(([127, 0, 0, 1], 0))).await?;
-    let port = listener.local_addr()?.port();
+/// Start the HTTP diagnostics server on the given port.
+pub async fn start(store: Arc<DiagnosticStore>, port: u16) -> anyhow::Result<()> {
+    let listener = TcpListener::bind(SocketAddr::from(([127, 0, 0, 1], port))).await?;
 
     tokio::spawn(async move {
         loop {
@@ -72,5 +70,5 @@ pub async fn start(store: Arc<DiagnosticStore>) -> anyhow::Result<u16> {
         }
     });
 
-    Ok(port)
+    Ok(())
 }
