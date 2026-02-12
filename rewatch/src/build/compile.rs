@@ -129,23 +129,30 @@ pub fn compile(
 
     // this is the whole "compile universe" all modules that might be dirty
     // we get this by expanding the dependents from the dirty modules
+    //
+    // For TypecheckAndEmit (used by the LSP file-build), skip the dependent
+    // expansion. The LSP handles dependents separately via typecheck_dependents,
+    // and expanding here would pull in modules from other packages that may
+    // fail compilation, aborting the loop before the target module compiles.
 
     let mut compile_universe = dirty_modules.clone();
-    let mut current_step_modules = compile_universe.clone();
-    loop {
-        let mut dependents: AHashSet<String> = AHashSet::new();
-        for dirty_module in current_step_modules.iter() {
-            dependents.extend(build_state.get_module(dirty_module).unwrap().dependents.clone());
-        }
+    if build_profile != BuildProfile::TypecheckAndEmit {
+        let mut current_step_modules = compile_universe.clone();
+        loop {
+            let mut dependents: AHashSet<String> = AHashSet::new();
+            for dirty_module in current_step_modules.iter() {
+                dependents.extend(build_state.get_module(dirty_module).unwrap().dependents.clone());
+            }
 
-        current_step_modules = dependents
-            .difference(&compile_universe)
-            .map(|s| s.to_string())
-            .collect::<AHashSet<String>>();
+            current_step_modules = dependents
+                .difference(&compile_universe)
+                .map(|s| s.to_string())
+                .collect::<AHashSet<String>>();
 
-        compile_universe.extend(current_step_modules.to_owned());
-        if current_step_modules.is_empty() {
-            break;
+            compile_universe.extend(current_step_modules.to_owned());
+            if current_step_modules.is_empty() {
+                break;
+            }
         }
     }
 
@@ -313,6 +320,12 @@ pub fn compile(
 
             // if not clean -- compile modules that depend on this module
             for dep in module_dependents.iter() {
+                // For TypecheckAndEmit, only process dependents within the
+                // compile universe. The LSP handles dependents outside the
+                // universe separately via typecheck_dependents.
+                if build_profile == BuildProfile::TypecheckAndEmit && !compile_universe.contains(dep) {
+                    continue;
+                }
                 //  mark the reverse dep as dirty when the source is not clean
                 if !*is_clean {
                     let dep_module = build_state.modules.get_mut(dep).unwrap();

@@ -105,13 +105,37 @@ struct FullBuildResult {
 /// changed paths by project root, cleans up associated artifacts for
 /// deleted files, reinitializes each affected project from scratch, and
 /// publishes diagnostics (clearing stale ones for removed files).
+/// Per-project grouping of created and deleted files.
+struct ProjectBuildGroup {
+    created_files: HashSet<PathBuf>,
+    deleted_files: HashSet<PathBuf>,
+}
+
+impl ProjectBuildGroup {
+    fn new() -> Self {
+        ProjectBuildGroup {
+            created_files: HashSet::new(),
+            deleted_files: HashSet::new(),
+        }
+    }
+
+    /// All changed paths (union of created + deleted).
+    fn all_paths(&self) -> HashSet<PathBuf> {
+        self.created_files
+            .iter()
+            .chain(&self.deleted_files)
+            .cloned()
+            .collect()
+    }
+}
+
 pub(super) async fn run(
     state: &mut PendingState,
     projects: &Arc<Mutex<ProjectMap>>,
     client: &Client,
     diagnostic_store: Option<&DiagnosticStore>,
 ) {
-    let pending_paths = std::mem::take(&mut state.build_projects);
+    let pending_builds = std::mem::take(&mut state.build_projects);
     let projects_clone = Arc::clone(projects);
 
     let parent_span = tracing::Span::current();
@@ -120,7 +144,7 @@ pub(super) async fn run(
         let mut results = Vec::new();
 
         // Group paths by project root, resolving roots under lock.
-        let grouped: HashMap<PathBuf, HashSet<PathBuf>> = {
+        let grouped: HashMap<PathBuf, ProjectBuildGroup> = {
             let guard = match projects_clone.lock() {
                 Ok(g) => g,
                 Err(e) => {
@@ -128,10 +152,26 @@ pub(super) async fn run(
                     return results;
                 }
             };
-            let mut map: HashMap<PathBuf, HashSet<PathBuf>> = HashMap::new();
-            for path in pending_paths {
+            let mut map: HashMap<PathBuf, ProjectBuildGroup> = HashMap::new();
+            for path in pending_builds.created_files {
                 if let Some(root) = guard.project_root_for_path(&path) {
-                    map.entry(root).or_default().insert(path);
+                    map.entry(root)
+                        .or_insert_with(ProjectBuildGroup::new)
+                        .created_files
+                        .insert(path);
+                } else {
+                    tracing::debug!(
+                        file = %path.display(),
+                        "File does not belong to any known project, ignoring"
+                    );
+                }
+            }
+            for path in pending_builds.deleted_files {
+                if let Some(root) = guard.project_root_for_path(&path) {
+                    map.entry(root)
+                        .or_insert_with(ProjectBuildGroup::new)
+                        .deleted_files
+                        .insert(path);
                 } else {
                     tracing::debug!(
                         file = %path.display(),
@@ -142,7 +182,8 @@ pub(super) async fn run(
             map
         };
 
-        for (project_root, changed_paths) in grouped {
+        for (project_root, group) in grouped {
+            let changed_paths = group.all_paths();
             // Collect old URIs and warn_error under lock, then release.
             // Also check whether any of the triggering files are still
             // relevant to the current build state — if none are, a prior

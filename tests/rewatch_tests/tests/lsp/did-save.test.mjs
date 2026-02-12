@@ -243,6 +243,37 @@ describe("lsp didSave", { timeout: 60_000 }, () => {
       ).toBe(true);
     }));
 
+  it("produces JS when another package has errors", () =>
+    runLspTest(async ({ lsp, sandbox, writeFile }) => {
+      const rootUri = pathToFileURL(sandbox).href;
+      await lsp.initialize(rootUri);
+      await lsp.waitForNotification("rescript/buildFinished", 30000);
+
+      // Introduce an error in Root.res. Root and App both depend on
+      // Library. When App.res is saved, its dependency closure includes
+      // Library. Without the fix, the compile loop would expand the
+      // universe from Library to all of Library's importers (including
+      // Root), Root would fail, and the loop would abort before App
+      // gets compiled.
+      await writeFile("src/Root.res", "let main = Library.nonExistent\n");
+      await lsp.waitForNotification("rescript/buildFinished", 30000);
+
+      // Root.res should have diagnostics
+      const diagnostics = lsp.getDiagnostics();
+      const rootDiag = diagnostics.find(d => d.file === "src/Root.res");
+      expect(rootDiag, "Expected diagnostics for Root.res").toBeDefined();
+      expect(rootDiag.diagnostics.length).toBeGreaterThan(0);
+
+      // Save App.res (no errors) — Root's error must not block App's JS.
+      lsp.saveFile("packages/app/src/App.res");
+      await lsp.waitForNotification("rescript/buildFinished", 30000);
+
+      expect(
+        existsSync(path.join(sandbox, "packages", "app", "src", "App.mjs")),
+        "App.mjs should exist despite errors in another package",
+      ).toBe(true);
+    }));
+
   it("publishes diagnostics for dependent files when a used API changes on save", () =>
     runLspTest(async ({ lsp, sandbox, writeFile }) => {
       const rootUri = pathToFileURL(sandbox).href;

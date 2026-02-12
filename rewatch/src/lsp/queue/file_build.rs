@@ -86,6 +86,32 @@ pub(super) async fn run(
     }
 }
 
+/// Build one or more saved files and propagate diagnostics.
+///
+/// This is the core LSP save-build flow, executed in two steps:
+///
+/// ## Step 1: `compile_dependencies` — produce JS for the saved file
+///
+/// Compiles the saved file and every module it imports (recursively).
+/// Imports compile first, the saved file compiles last — producing `.js`
+/// output. This is the minimal set of modules needed to generate correct
+/// JavaScript for the saved file.
+///
+/// ## Step 2: `typecheck_dependents` — check files that import the saved file
+///
+/// Finds every module that imports the saved file (and everything that
+/// imports *those*, recursively). Re-typechecks them to surface errors
+/// caused by API changes (e.g. a function signature changed). No
+/// JavaScript is emitted — that happens when those files are saved.
+///
+/// ## Why two steps?
+///
+/// Keeping imports and importers as separate builds prevents the compile
+/// loop from pulling in unrelated modules. For example, if the saved
+/// file imports a shared library module, and an unrelated package also
+/// imports that library, a single combined build would drag in that
+/// unrelated package. If it has errors, the compile loop aborts before
+/// the saved file gets compiled.
 #[instrument(name = "lsp.build", skip_all, fields(file_count = module_names.len()))]
 fn build_batch(build_state: &mut BuildCommandState, module_names: Vec<String>) -> BatchBuildResult {
     let (mut diagnostics, mut touched_files) = compile_dependencies(build_state, &module_names);
@@ -99,6 +125,23 @@ fn build_batch(build_state: &mut BuildCommandState, module_names: Vec<String>) -
     }
 }
 
+/// Compile the saved modules and all their transitive imports to JS.
+///
+/// Collects every module the saved files import (recursively) and runs
+/// `incremental_build` with `TypecheckAndEmit`, which produces type
+/// information and JavaScript output.
+///
+/// ### Why we temporarily mark other modules as `Built`
+///
+/// The initial LSP build only typechecks (no JS), so most modules are at
+/// `TypeChecked` stage. When we now request `TypecheckAndEmit` (which
+/// targets `Built`), the build system sees every `TypeChecked` module as
+/// needing compilation — it would compile the entire codebase on the
+/// first save.
+///
+/// To avoid this, we temporarily mark all modules *outside* the import
+/// set as `Built` so the build system skips them. After the build
+/// finishes, we restore them back to `TypeChecked`.
 #[instrument(name = "lsp.build.compile_dependencies", skip_all)]
 fn compile_dependencies(
     build_state: &mut BuildCommandState,
@@ -108,6 +151,8 @@ fn compile_dependencies(
         dependency_closure::get_dependency_closure(&build_state.build_state.modules, module_names.to_vec());
     let touched_files = module_names_to_paths(build_state, &closure);
 
+    // Temporarily promote modules outside the closure so they don't enter
+    // the compile universe (see doc comment above).
     let mut promoted: Vec<String> = Vec::new();
     for (name, module) in build_state.build_state.modules.iter_mut() {
         if !closure.contains(name) && module.compilation_stage == CompilationStage::TypeChecked {
@@ -144,6 +189,15 @@ fn compile_dependencies(
     (diagnostics, touched_files)
 }
 
+/// Re-typecheck all modules that import the saved modules (recursively).
+///
+/// When a file's public API changes, modules that import it may now have
+/// type errors. This step finds all such importers and re-typechecks them
+/// to surface those errors as diagnostics. No JavaScript is emitted —
+/// that happens when those files are themselves saved.
+///
+/// Uses the same temporary `Built` marking as `compile_dependencies` to
+/// keep the build scoped to only the relevant modules.
 #[instrument(name = "lsp.build.typecheck_dependents", skip_all, fields(dependent_count = tracing::field::Empty))]
 fn typecheck_dependents(
     build_state: &mut BuildCommandState,
@@ -160,12 +214,15 @@ fn typecheck_dependents(
 
     tracing::Span::current().record("dependent_count", dependents.len());
 
+    // Mark dependents as Dirty so they enter the compile universe.
     for name in &dependents {
         if let Some(module) = build_state.build_state.modules.get_mut(name) {
             module.compilation_stage = CompilationStage::Dirty;
         }
     }
 
+    // Temporarily promote modules outside the dependent closure (see
+    // compile_dependencies doc comment for explanation).
     let mut promoted: Vec<String> = Vec::new();
     for (name, module) in build_state.build_state.modules.iter_mut() {
         if !dependents.contains(name) && module.compilation_stage == CompilationStage::TypeChecked {

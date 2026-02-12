@@ -87,15 +87,43 @@ struct PendingFileBuild {
     generation: u64,
 }
 
+/// Tracks file changes that require full project rebuilds.
+/// Created and deleted files are tracked separately so that recreated files
+/// (deleted then created in the same batch, e.g. git checkout) can be
+/// identified and promoted to incremental builds for JS emission.
+struct PendingProjectBuilds {
+    created_files: HashSet<PathBuf>,
+    deleted_files: HashSet<PathBuf>,
+}
+
+impl Default for PendingProjectBuilds {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl PendingProjectBuilds {
+    fn new() -> Self {
+        PendingProjectBuilds {
+            created_files: HashSet::new(),
+            deleted_files: HashSet::new(),
+        }
+    }
+
+    fn is_empty(&self) -> bool {
+        self.created_files.is_empty() && self.deleted_files.is_empty()
+    }
+}
+
 /// All pending state accumulated between flushes.
 struct PendingState {
     /// Files that need typechecking (unsaved buffer content).
     typechecks: HashMap<Url, PendingFileTypecheck>,
     /// Files that need an incremental build (saved to disk).
     compile_files: HashMap<Url, PendingFileBuild>,
-    /// File paths whose creation or deletion requires a full project rebuild.
+    /// File changes that require full project rebuilds.
     /// Flush resolves project roots and groups these into per-project sets.
-    build_projects: HashSet<PathBuf>,
+    build_projects: PendingProjectBuilds,
 }
 
 // ---------------------------------------------------------------------------
@@ -257,7 +285,7 @@ impl PendingState {
         PendingState {
             typechecks: HashMap::new(),
             compile_files: HashMap::new(),
-            build_projects: HashSet::new(),
+            build_projects: PendingProjectBuilds::new(),
         }
     }
 
@@ -321,13 +349,32 @@ impl PendingState {
                     },
                 );
             }
-            QueueEvent::FileCreated { file_path } | QueueEvent::FileDeleted { file_path } => {
-                // A full rebuild covers this file, so drop any per-file work.
+            QueueEvent::FileCreated { file_path } => {
+                if let Ok(uri) = Url::from_file_path(&file_path) {
+                    self.typechecks.remove(&uri);
+                    self.compile_files.remove(&uri);
+                    // If this file was previously deleted in the same batch,
+                    // it was recreated (e.g. git checkout). Schedule an
+                    // incremental build to emit JS after the full rebuild.
+                    if self.build_projects.deleted_files.contains(&file_path) {
+                        self.compile_files.insert(
+                            uri,
+                            PendingFileBuild {
+                                file_path: file_path.clone(),
+                                buffer_content: None,
+                                generation: 0,
+                            },
+                        );
+                    }
+                }
+                self.build_projects.created_files.insert(file_path);
+            }
+            QueueEvent::FileDeleted { file_path } => {
                 if let Ok(uri) = Url::from_file_path(&file_path) {
                     self.typechecks.remove(&uri);
                     self.compile_files.remove(&uri);
                 }
-                self.build_projects.insert(file_path);
+                self.build_projects.deleted_files.insert(file_path);
             }
         }
     }
@@ -347,6 +394,19 @@ async fn flush(
     if state.typechecks.is_empty() && state.compile_files.is_empty() && state.build_projects.is_empty() {
         return;
     }
+
+    client
+        .log_message(
+            tower_lsp::lsp_types::MessageType::INFO,
+            format!(
+                "flush: {} created + {} deleted file(s) (full rebuild), {} incremental build(s), {} typecheck(s)",
+                state.build_projects.created_files.len(),
+                state.build_projects.deleted_files.len(),
+                state.compile_files.len(),
+                state.typechecks.len(),
+            ),
+        )
+        .await;
 
     // Create a FlushGuard that calls end_flush on drop (even on panic).
     let _flush_guard = diagnostic_store.as_ref().map(|s| FlushGuard::new(s));
@@ -564,7 +624,7 @@ mod tests {
             file_path: test_path("New.res"),
         });
 
-        assert!(state.build_projects.contains(&test_path("New.res")));
+        assert!(state.build_projects.created_files.contains(&test_path("New.res")));
     }
 
     #[test]
@@ -574,7 +634,7 @@ mod tests {
             file_path: test_path("Old.res"),
         });
 
-        assert!(state.build_projects.contains(&test_path("Old.res")));
+        assert!(state.build_projects.deleted_files.contains(&test_path("Old.res")));
     }
 
     #[test]
@@ -591,7 +651,7 @@ mod tests {
         });
 
         assert!(state.typechecks.is_empty());
-        assert!(state.build_projects.contains(&test_path("A.res")));
+        assert!(state.build_projects.deleted_files.contains(&test_path("A.res")));
     }
 
     #[test]
@@ -606,7 +666,7 @@ mod tests {
         });
 
         assert!(state.compile_files.is_empty());
-        assert!(state.build_projects.contains(&test_path("A.res")));
+        assert!(state.build_projects.created_files.contains(&test_path("A.res")));
     }
 
     // -- Multiple files stay independent --
@@ -646,7 +706,7 @@ mod tests {
             generation: 1,
         });
 
-        assert!(state.build_projects.contains(&test_path("New.res")));
+        assert!(state.build_projects.created_files.contains(&test_path("New.res")));
         assert_eq!(state.typechecks.len(), 1);
         assert!(state.typechecks.contains_key(&test_uri("Existing.res")));
     }
@@ -662,7 +722,12 @@ mod tests {
             file_path: test_path("Other.res"),
         });
 
-        assert!(state.build_projects.contains(&test_path("Removed.res")));
+        assert!(
+            state
+                .build_projects
+                .deleted_files
+                .contains(&test_path("Removed.res"))
+        );
         assert_eq!(state.compile_files.len(), 1);
         let build = state.compile_files.get(&test_uri("Other.res")).unwrap();
         assert!(build.buffer_content.is_none());
@@ -681,10 +746,11 @@ mod tests {
             file_path: test_path("C.res"),
         });
 
-        assert_eq!(state.build_projects.len(), 3);
-        assert!(state.build_projects.contains(&test_path("A.res")));
-        assert!(state.build_projects.contains(&test_path("B.res")));
-        assert!(state.build_projects.contains(&test_path("C.res")));
+        assert_eq!(state.build_projects.created_files.len(), 2);
+        assert!(state.build_projects.created_files.contains(&test_path("A.res")));
+        assert!(state.build_projects.created_files.contains(&test_path("C.res")));
+        assert_eq!(state.build_projects.deleted_files.len(), 1);
+        assert!(state.build_projects.deleted_files.contains(&test_path("B.res")));
     }
 
     #[test]
@@ -716,6 +782,67 @@ mod tests {
         assert!(state.typechecks.is_empty());
 
         // New.res triggers a full build
-        assert!(state.build_projects.contains(&test_path("New.res")));
+        assert!(state.build_projects.created_files.contains(&test_path("New.res")));
+    }
+
+    // -- Recreated files (delete + create) → promoted to compile_files --
+
+    #[test]
+    fn delete_then_create_promotes_to_compile_files() {
+        let mut state = PendingState::new();
+
+        // File deleted (e.g. git checkout starts)
+        state.merge(QueueEvent::FileDeleted {
+            file_path: test_path("Pkmn.res"),
+        });
+
+        // Same file recreated (git checkout completes)
+        state.merge(QueueEvent::FileCreated {
+            file_path: test_path("Pkmn.res"),
+        });
+
+        // Should be in both build_projects sets
+        assert!(
+            state
+                .build_projects
+                .deleted_files
+                .contains(&test_path("Pkmn.res"))
+        );
+        assert!(
+            state
+                .build_projects
+                .created_files
+                .contains(&test_path("Pkmn.res"))
+        );
+        // AND promoted to compile_files for JS emission
+        assert!(state.compile_files.contains_key(&test_uri("Pkmn.res")));
+        let build = state.compile_files.get(&test_uri("Pkmn.res")).unwrap();
+        assert!(build.buffer_content.is_none());
+    }
+
+    #[test]
+    fn create_without_prior_delete_not_in_compile_files() {
+        let mut state = PendingState::new();
+
+        // Brand new file, no prior delete
+        state.merge(QueueEvent::FileCreated {
+            file_path: test_path("New.res"),
+        });
+
+        assert!(state.build_projects.created_files.contains(&test_path("New.res")));
+        // Should NOT be in compile_files — it's genuinely new
+        assert!(state.compile_files.is_empty());
+    }
+
+    #[test]
+    fn delete_without_create_not_in_compile_files() {
+        let mut state = PendingState::new();
+
+        state.merge(QueueEvent::FileDeleted {
+            file_path: test_path("Old.res"),
+        });
+
+        assert!(state.build_projects.deleted_files.contains(&test_path("Old.res")));
+        assert!(state.compile_files.is_empty());
     }
 }

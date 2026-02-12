@@ -2,10 +2,18 @@
 
 ## Debugging with `client.log_message`
 
-When debugging LSP handlers, the most effective approach is to add temporary
-`client.log_message(MessageType::INFO, ...)` calls at each step of the handler.
+When debugging LSP handlers, the most effective approach is to add
+`client.log_message(MessageType::INFO, ...)` calls at key points in the handler.
 These messages appear directly in the IDE's output panel (e.g. "Output > ReScript Language Server"
 in VS Code), making them much easier to observe than OTEL traces or `tracing::debug!` events.
+
+Some `client.log_message` calls are **permanent and intentional** — they provide
+valuable runtime visibility into what the LSP server is doing (e.g. the flush summary
+in `queue.rs` that logs how many full builds, incremental builds, and typechecks are
+being dispatched). Don't remove these just because they look like debug leftovers.
+
+Other `client.log_message` calls are temporary and added during active debugging. These
+should be removed once the issue is resolved.
 
 This technique was crucial for diagnosing a bug where `did_change` diagnostics were silently
 empty. By adding log messages at every step — module resolution, compiler arg construction,
@@ -122,6 +130,7 @@ so that error reporting can use it for code frame display instead of re-reading 
 (potentially stale) file from disk. This prevents position mismatches and crashes.
 
 Key locations in the compiler:
+
 - `compiler/bsc/rescript_compiler_main.ml` — sets `Location.stdin_source` after reading stdin
 - `compiler/ml/location.ml` — `print` function uses `stdin_source` as fallback for code frames
 - `compiler/ml/error_message_utils.ml` — `extract_text_at_loc` uses `stdin_source` as fallback
