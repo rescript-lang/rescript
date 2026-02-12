@@ -73,34 +73,51 @@ describe("lsp diagnostics", () => {
   it(
     "publishes type error diagnostics for buffer content before initial build finishes",
     () =>
-      runLspTest(async ({ lsp, sandbox }) => {
-        const rootUri = pathToFileURL(sandbox).href;
-        await lsp.initialize(rootUri);
+      runLspTest(
+        async ({ lsp, sandbox }) => {
+          const rootUri = pathToFileURL(sandbox).href;
+          await lsp.initialize(rootUri);
 
-        // Open the file with a type error in the buffer — the file on disk is clean.
-        // Do NOT wait for rescript/buildFinished: the LSP should typecheck
-        // the buffer immediately (via did_open) or after the initial build
-        // rechecks open buffers.
-        lsp.openFile("src/Root.res", "let main: int = App.run()\n");
+          // Open the file with a type error in the buffer — the file on disk is clean.
+          // Do NOT wait for rescript/buildFinished: the LSP should typecheck
+          // the buffer immediately (via typecheck_buffer fallback) or after
+          // the initial build rechecks open buffers.
+          lsp.openFile("src/Root.res", "let main: int = App.run()\n");
 
-        // Wait for diagnostics that contain the type error — skip empty
-        // diagnostics that may arrive from the initial build of the clean
-        // on-disk file.
-        const params = await lsp.waitForNotification(
-          "textDocument/publishDiagnostics",
-          30000,
-          p =>
-            p.uri?.includes("Root.res") &&
-            p.diagnostics &&
-            p.diagnostics.length > 0,
-        );
+          // Wait for both the diagnostics and the build to finish,
+          // regardless of which completes first. Promise.all returns
+          // results in declaration order, so `params` is always the
+          // diagnostics notification.
+          const [params] = await Promise.all([
+            lsp.waitForNotification(
+              "textDocument/publishDiagnostics",
+              30000,
+              p =>
+                p.uri?.includes("Root.res") &&
+                p.diagnostics &&
+                p.diagnostics.length > 0,
+            ),
+            lsp.waitForNotification("rescript/buildFinished", 30000),
+          ]);
 
-        expect(params.diagnostics.length).toBeGreaterThan(0);
-        const diag = params.diagnostics[0];
-        expect(diag.severity).toBe(1); // Error
-        expect(diag.message).toContain("This has type: string");
-        expect(diag.message).toContain("But it's expected to have type: int");
-      }),
+          expect(params.diagnostics.length).toBeGreaterThan(0);
+          const diag = params.diagnostics[0];
+          expect(diag.severity).toBe(1); // Error
+          expect(diag.message).toContain("This has type: string");
+          expect(diag.message).toContain("But it's expected to have type: int");
+        },
+        {
+          // The didOpen may arrive before or after the initial build finishes,
+          // producing different typecheck spans depending on timing. Strip
+          // them for a deterministic snapshot.
+          processSpans: summary =>
+            summary.filter(
+              line =>
+                !line.includes("lsp.typecheck[") &&
+                !line.includes("lsp.typecheck.file["),
+            ),
+        },
+      ),
     45_000,
   );
 });
