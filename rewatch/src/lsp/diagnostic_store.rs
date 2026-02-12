@@ -42,11 +42,14 @@ impl DiagnosticStore {
     }
 
     /// Store diagnostics for a URI. Removes the entry if diagnostics are empty.
-    pub fn publish(&self, uri: Url, diagnostics: Vec<Diagnostic>) {
+    /// Duplicates are removed so that multiple build phases producing the same
+    /// diagnostic don't cause repeated entries in the HTTP snapshot.
+    pub fn publish(&self, uri: Url, mut diagnostics: Vec<Diagnostic>) {
         if let Ok(mut state) = self.state.lock() {
             if diagnostics.is_empty() {
                 state.diagnostics.remove(&uri);
             } else {
+                diagnostics.dedup();
                 state.diagnostics.insert(uri, diagnostics);
             }
         }
@@ -332,6 +335,22 @@ mod tests {
             assert!(!store.is_idle());
         }
         assert!(store.is_idle());
+    }
+
+    #[test]
+    fn publish_deduplicates() {
+        let store = DiagnosticStore::new();
+        let uri = test_uri("A.res");
+        let d = make_diagnostic("type error");
+        store.publish(uri.clone(), vec![d.clone(), d]);
+
+        let snap = store.snapshot();
+        let path = if cfg!(windows) {
+            "C:\\tmp\\A.res"
+        } else {
+            "/tmp/A.res"
+        };
+        assert_eq!(snap.get(path).unwrap().len(), 1);
     }
 
     #[test]

@@ -155,7 +155,7 @@ You could wire this up in a Claude hook, example `.claude/settings.local.json`:
 ```
 
 (assuming `diagnostics_http` is `12303`).
-I did wish that IDEs just exposed all diagnostics to LLMs but that does not seem to be a thing in Zed.
+This workaround exists because IDEs like Zed don't expose LSP diagnostics to LLM agents yet. See [agentclientprotocol/discussions#495](https://github.com/orgs/agentclientprotocol/discussions/495) for the upstream discussion.
 
 ## Capabilities
 
