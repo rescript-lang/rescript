@@ -45,6 +45,16 @@ fn uri_to_file_path(uri: &Url, context: &str) -> Option<PathBuf> {
     }
 }
 
+/// Returns `true` when the path points to a file the LSP should process:
+/// `.res`, `.resi` sources or `rescript.json` config.
+fn is_rescript_file(path: &Path) -> bool {
+    matches!(path.extension().and_then(|e| e.to_str()), Some("res" | "resi"))
+        || path
+            .file_name()
+            .and_then(|f| f.to_str())
+            .is_some_and(|f| f == "rescript.json")
+}
+
 /// Maps project roots to their build states, with a cached URI-to-root lookup.
 pub(crate) struct ProjectMap {
     /// One `BuildCommandState` per project root (directory containing `rescript.json`).
@@ -355,6 +365,9 @@ impl LanguageServer for Backend {
         let Some(file_path) = uri_to_file_path(&params.text_document.uri, "didOpen") else {
             return;
         };
+        if !is_rescript_file(&file_path) {
+            return;
+        }
 
         let content = params.text_document.text;
         let needs_fallback = {
@@ -404,6 +417,9 @@ impl LanguageServer for Backend {
         let Some(file_path) = uri_to_file_path(&params.text_document.uri, "didChange") else {
             return;
         };
+        if !is_rescript_file(&file_path) {
+            return;
+        }
         let _span = tracing::info_span!("lsp.did_change", file = %file_path.display()).entered();
 
         let content = match params.content_changes.into_iter().last() {
@@ -428,6 +444,9 @@ impl LanguageServer for Backend {
         let Some(file_path) = uri_to_file_path(&params.text_document.uri, "didSave") else {
             return;
         };
+        if !is_rescript_file(&file_path) {
+            return;
+        }
 
         self.client
             .log_message(
@@ -469,10 +488,7 @@ impl LanguageServer for Backend {
                 let Some(file_path) = uri_to_file_path(&event.uri, "didChangeWatchedFiles") else {
                     continue;
                 };
-                if !matches!(
-                    file_path.extension().and_then(|e| e.to_str()),
-                    Some("res" | "resi")
-                ) {
+                if !is_rescript_file(&file_path) {
                     continue;
                 }
 
