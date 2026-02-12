@@ -109,6 +109,7 @@ struct FullBuildResult {
 struct ProjectBuildGroup {
     created_files: HashSet<PathBuf>,
     deleted_files: HashSet<PathBuf>,
+    config_changed: bool,
 }
 
 impl ProjectBuildGroup {
@@ -116,6 +117,7 @@ impl ProjectBuildGroup {
         ProjectBuildGroup {
             created_files: HashSet::new(),
             deleted_files: HashSet::new(),
+            config_changed: false,
         }
     }
 
@@ -179,6 +181,22 @@ pub(super) async fn run(
                     );
                 }
             }
+            // Config changes: the rescript.json's parent directory is the project root.
+            for path in pending_builds.config_changed {
+                if let Some(root) = path.parent() {
+                    let root = root.to_path_buf();
+                    if guard.states.contains_key(&root) {
+                        map.entry(root)
+                            .or_insert_with(ProjectBuildGroup::new)
+                            .config_changed = true;
+                    } else {
+                        tracing::debug!(
+                            file = %path.display(),
+                            "Config file does not belong to any known project, ignoring"
+                        );
+                    }
+                }
+            }
             map
         };
 
@@ -200,15 +218,16 @@ pub(super) async fn run(
                 };
                 match guard.states.get(&project_root) {
                     Some(old_state) => {
-                        let any_relevant = changed_paths.iter().any(|path| {
-                            // Created files won't be in the state yet,
-                            // so they are always relevant.
-                            if path.exists() {
-                                return true;
-                            }
-                            // Deleted files: relevant only if still known.
-                            find_module_by_path(old_state, path).is_some()
-                        });
+                        let any_relevant = group.config_changed
+                            || changed_paths.iter().any(|path| {
+                                // Created files won't be in the state yet,
+                                // so they are always relevant.
+                                if path.exists() {
+                                    return true;
+                                }
+                                // Deleted files: relevant only if still known.
+                                find_module_by_path(old_state, path).is_some()
+                            });
                         if !any_relevant {
                             tracing::debug!(
                                 project = %project_root.display(),

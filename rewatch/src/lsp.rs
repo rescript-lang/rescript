@@ -30,6 +30,7 @@ use std::time::Duration;
 use crate::build::build_types::BuildCommandState;
 use crate::build::diagnostics::{BscDiagnostic, Severity};
 use diagnostic_store::DiagnosticStore;
+use file_args::{is_rescript_file, is_rescript_source};
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer, LspService, Server};
@@ -43,16 +44,6 @@ fn uri_to_file_path(uri: &Url, context: &str) -> Option<PathBuf> {
             None
         }
     }
-}
-
-/// Returns `true` when the path points to a file the LSP should process:
-/// `.res`, `.resi` sources or `rescript.json` config.
-fn is_rescript_file(path: &Path) -> bool {
-    matches!(path.extension().and_then(|e| e.to_str()), Some("res" | "resi"))
-        || path
-            .file_name()
-            .and_then(|f| f.to_str())
-            .is_some_and(|f| f == "rescript.json")
 }
 
 /// Maps project roots to their build states, with a cached URI-to-root lookup.
@@ -488,7 +479,7 @@ impl LanguageServer for Backend {
                 let Some(file_path) = uri_to_file_path(&event.uri, "didChangeWatchedFiles") else {
                     continue;
                 };
-                if !is_rescript_file(&file_path) {
+                if !is_rescript_source(&file_path) {
                     continue;
                 }
 

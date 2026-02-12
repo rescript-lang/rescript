@@ -37,6 +37,7 @@ use tracing::Instrument;
 
 use super::ProjectMap;
 use super::diagnostic_store::{DiagnosticStore, FlushGuard};
+use super::file_args::{is_rescript_config, is_rescript_source};
 use super::notifications;
 
 /// Monotonically increasing generation counter for staleness detection.
@@ -69,6 +70,8 @@ enum QueueEvent {
     FileCreated { file_path: PathBuf },
     /// A file was deleted from disk (didChangeWatchedFiles DELETED).
     FileDeleted { file_path: PathBuf },
+    /// A `rescript.json` config file was saved — triggers a full project rebuild.
+    ConfigChanged { file_path: PathBuf },
 }
 
 /// A file that needs typechecking (unsaved buffer content).
@@ -94,6 +97,8 @@ struct PendingFileBuild {
 struct PendingProjectBuilds {
     created_files: HashSet<PathBuf>,
     deleted_files: HashSet<PathBuf>,
+    /// `rescript.json` files that were saved, triggering a full rebuild.
+    config_changed: HashSet<PathBuf>,
 }
 
 impl Default for PendingProjectBuilds {
@@ -107,11 +112,12 @@ impl PendingProjectBuilds {
         PendingProjectBuilds {
             created_files: HashSet::new(),
             deleted_files: HashSet::new(),
+            config_changed: HashSet::new(),
         }
     }
 
     fn is_empty(&self) -> bool {
-        self.created_files.is_empty() && self.deleted_files.is_empty()
+        self.created_files.is_empty() && self.deleted_files.is_empty() && self.config_changed.is_empty()
     }
 }
 
@@ -198,15 +204,23 @@ impl Queue {
     }
 
     /// A file changed on disk (didSave or didChangeWatchedFiles CHANGED).
+    /// Config files (`rescript.json`) are routed to a full project rebuild.
     pub fn notify_file_changed_on_disk(&self, uri: Url, file_path: PathBuf) {
         if let Some(ref store) = self.diagnostic_store {
             store.mark_pending();
         }
-        let _ = self.tx.send(QueueEvent::FileChangedOnDisk { uri, file_path });
+        if is_rescript_config(&file_path) {
+            let _ = self.tx.send(QueueEvent::ConfigChanged { file_path });
+        } else {
+            let _ = self.tx.send(QueueEvent::FileChangedOnDisk { uri, file_path });
+        }
     }
 
     /// A file was created on disk (didChangeWatchedFiles CREATED).
     pub fn notify_file_created(&self, file_path: PathBuf) {
+        if !is_rescript_source(&file_path) {
+            return;
+        }
         if let Some(ref store) = self.diagnostic_store {
             store.mark_pending();
         }
@@ -215,6 +229,9 @@ impl Queue {
 
     /// A file was deleted from disk (didChangeWatchedFiles DELETED).
     pub fn notify_file_deleted(&self, file_path: PathBuf) {
+        if !is_rescript_source(&file_path) {
+            return;
+        }
         if let Some(ref store) = self.diagnostic_store {
             store.mark_pending();
         }
@@ -375,6 +392,9 @@ impl PendingState {
                     self.compile_files.remove(&uri);
                 }
                 self.build_projects.deleted_files.insert(file_path);
+            }
+            QueueEvent::ConfigChanged { file_path } => {
+                self.build_projects.config_changed.insert(file_path);
             }
         }
     }

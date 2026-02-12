@@ -560,9 +560,9 @@ export function activate(context: ExtensionContext) {
 
 ## Next Up
 
-### 1. `rescript.json` Change Handling
+### 1. Prompt for Full JS Rebuild
 
-Config changes (adding source directories, changing compiler flags, enabling namespaces) require an LSP restart. A full re-initialization path — re-read config, re-discover packages, re-register file watchers — would improve the experience.
+After certain events (initial build, `rescript.json` config change), only a typecheck-only build runs. The user must save a source file to trigger JS emission. We could use `window/showMessageRequest` to ask the user if they want a full JS rebuild — similar to what the old VS Code extension did. This would improve the experience for config changes like suffix or package-spec modifications where the user expects all JS output to be regenerated.
 
 ### 2. Cold Start Performance
 

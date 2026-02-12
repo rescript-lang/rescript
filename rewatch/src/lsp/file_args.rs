@@ -3,6 +3,24 @@ use crate::build::compile;
 use crate::build::parse;
 use std::path::{Path, PathBuf};
 
+/// Returns `true` for `.res` or `.resi` source files.
+pub fn is_rescript_source(path: &Path) -> bool {
+    matches!(path.extension().and_then(|e| e.to_str()), Some("res" | "resi"))
+}
+
+/// Returns `true` for `rescript.json` config files.
+pub fn is_rescript_config(path: &Path) -> bool {
+    path.file_name()
+        .and_then(|f| f.to_str())
+        .is_some_and(|f| f == "rescript.json")
+}
+
+/// Returns `true` when the path points to a file the LSP should process:
+/// `.res`, `.resi` sources or `rescript.json` config.
+pub fn is_rescript_file(path: &Path) -> bool {
+    is_rescript_source(path) || is_rescript_config(path)
+}
+
 /// All bsc arguments needed to typecheck a file.
 ///
 /// Contains pre-computed compiler and parser args so callers don't need to
