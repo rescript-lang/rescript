@@ -37,6 +37,9 @@ yarn test -t "builds all packages from root"
 
 # Debug with OTEL output
 DEBUG_OTEL=1 yarn test
+
+# Run from the project root (using yarn workspace)
+yarn workspace rewatch-tests test tests/build.test.mjs
 ```
 
 ## Testing with a Published Package (pkg.pr.new)

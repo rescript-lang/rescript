@@ -7,6 +7,7 @@ describe("lsp", { timeout: 120_000 }, () => {
     runLspTest(async ({ lsp, sandbox }) => {
       const rootUri = pathToFileURL(sandbox).href;
       const result = await lsp.initialize(rootUri);
+      await lsp.waitForNotification("rescript/buildFinished");
 
       expect(result.serverInfo).toEqual({
         name: "rescript-lsp",
