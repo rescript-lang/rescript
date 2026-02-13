@@ -512,6 +512,7 @@ let extract_fields omegas arg =
 
 let all_record_args lbls =
   match lbls with
+  | [] -> []
   | (_, {lbl_all}, _, opt) :: _ ->
     let t =
       Array.map
@@ -560,7 +561,6 @@ let all_record_args lbls =
         t.(lbl.lbl_pos) <- x)
       lbls;
     Array.to_list t
-  | _ -> fatal_error "Parmatch.all_record_args"
 
 (* Build argument list when p2 >= p1, where p1 is a simple pattern *)
 let rec simple_match_args p1 p2 =
