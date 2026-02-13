@@ -3,7 +3,7 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 
 use super::file_args::{BuildCommandStateExt, TypecheckArgs};
-use crate::build::build_types::{BuildCommandState, BuildProfile};
+use crate::build::build_types::{BuildCommandState, CompileMode, OutputTarget};
 use crate::build::diagnostics::{self, BscDiagnostic};
 
 /// Typecheck a single file by piping unsaved content to `bsc -bs-read-stdin`.
@@ -11,7 +11,12 @@ use crate::build::diagnostics::{self, BscDiagnostic};
 /// Looks up the module in `build_state`, computes compiler args, then
 /// delegates to [`typecheck_with_args`].
 pub fn run(build_state: &BuildCommandState, file_path: &Path, content: &str) -> Vec<BscDiagnostic> {
-    let args = match build_state.get_typecheck_args(file_path, content, BuildProfile::TypecheckOnly) {
+    let args = match build_state.get_typecheck_args(
+        file_path,
+        content,
+        OutputTarget::Lsp,
+        CompileMode::TypecheckOnly,
+    ) {
         Some(args) => args,
         None => {
             tracing::warn!(

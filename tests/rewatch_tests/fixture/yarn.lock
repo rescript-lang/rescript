@@ -27,6 +27,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@rewatch-test/dep-chain@workspace:packages/dep-chain":
+  version: 0.0.0-use.local
+  resolution: "@rewatch-test/dep-chain@workspace:packages/dep-chain"
+  languageName: unknown
+  linkType: soft
+
 "@rewatch-test/library@workspace:packages/library":
   version: 0.0.0-use.local
   resolution: "@rewatch-test/library@workspace:packages/library"

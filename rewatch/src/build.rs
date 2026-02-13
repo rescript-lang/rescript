@@ -16,7 +16,7 @@ use crate::helpers::emojis::*;
 use crate::helpers::{self};
 use crate::project_context::ProjectContext;
 use crate::sourcedirs;
-use ahash::AHashMap;
+use ahash::{AHashMap, AHashSet};
 use anyhow::{Context, Result, anyhow};
 use build_types::*;
 use console::style;
@@ -77,25 +77,25 @@ pub fn prepare_build(
     show_progress: bool,
     plain_output: bool,
     warn_error: Option<String>,
-    build_profile: BuildProfile,
+    build_config: &BuildConfig,
 ) -> Result<BuildCommandState> {
     let compiler = get_compiler_info(&project_context)?;
 
     let timing_clean_start = Instant::now();
 
-    let compiler_check = verify_compiler_info(&packages, &compiler, build_profile);
+    let compiler_check = verify_compiler_info(&packages, &compiler, build_config.output);
 
     if !packages::validate_packages_dependencies(&packages) {
         return Err(anyhow!("Failed to validate package dependencies"));
     }
 
     let mut build_state = BuildCommandState::new(project_context, packages, compiler, warn_error);
-    packages::parse_packages(&mut build_state, build_profile)?;
+    packages::parse_packages(&mut build_state, build_config.output, build_config.scope.mode())?;
 
-    let compile_assets_state = read_compile_state::read(&mut build_state, build_profile)?;
+    let compile_assets_state = read_compile_state::read(&mut build_state, build_config.output)?;
 
     let (diff_cleanup, total_cleanup) =
-        clean::cleanup_previous_build(&mut build_state, compile_assets_state, build_profile);
+        clean::cleanup_previous_build(&mut build_state, compile_assets_state, build_config.output);
     let timing_clean_total = timing_clean_start.elapsed();
 
     if show_progress {
@@ -148,7 +148,10 @@ pub fn initialize_build(
         show_progress,
         plain_output,
         warn_error,
-        BuildProfile::Standard,
+        &BuildConfig {
+            output: OutputTarget::Standard,
+            scope: CompileScope::FullBuild,
+        },
     )
 }
 
@@ -202,19 +205,23 @@ impl fmt::Display for IncrementalBuildError {
     }
 }
 
+/// Parse dirty source files and resolve module dependencies.
+///
+/// Returns parse warnings on success, or a build error if parsing fails.
+/// After this call, all module compilation stages and dependency graphs
+/// are up to date — ready for universe computation and compilation.
 #[allow(clippy::too_many_arguments)]
-#[instrument(name = "incremental_build", skip_all, fields(module_count = build_state.modules.len()))]
-pub fn incremental_build(
+#[instrument(name = "parse_and_resolve", skip_all)]
+pub fn parse_and_resolve(
     build_state: &mut BuildCommandState,
-    build_profile: BuildProfile,
-    default_timing: Option<Duration>,
-    initial_build: bool,
+    output: OutputTarget,
+    mode: CompileMode,
     show_progress: bool,
-    only_incremental: bool,
-    create_sourcedirs: bool,
     plain_output: bool,
-) -> Result<IncrementalBuildResult, IncrementalBuildError> {
-    if build_profile == BuildProfile::Standard {
+    default_timing: Option<Duration>,
+    only_incremental: bool,
+) -> Result<String, IncrementalBuildError> {
+    if output == OutputTarget::Standard {
         logs::initialize(&build_state.packages);
     }
     let num_dirty_modules = build_state.modules.values().filter(|m| is_dirty(m)).count() as u64;
@@ -223,7 +230,7 @@ pub fn incremental_build(
     } else {
         ProgressBar::hidden()
     };
-    let mut current_step = if only_incremental { 1 } else { 2 };
+    let current_step = if only_incremental { 1 } else { 2 };
     let total_steps = if only_incremental { 2 } else { 3 };
     pb.set_style(
         ProgressStyle::with_template(&format!(
@@ -236,7 +243,7 @@ pub fn incremental_build(
 
     let timing_parse_start = Instant::now();
     let timing_ast = Instant::now();
-    let result_asts = parse::generate_asts(build_state, build_profile, || pb.inc(1));
+    let result_asts = parse::generate_asts(build_state, output, mode, || pb.inc(1));
     let timing_ast_elapsed = timing_ast.elapsed();
 
     let parse_warnings = match result_asts {
@@ -246,7 +253,7 @@ pub fn incremental_build(
         }
         Err(err) => {
             let _error_span = info_span!("build.parse_error").entered();
-            if build_profile == BuildProfile::Standard {
+            if output == OutputTarget::Standard {
                 logs::finalize(&build_state.packages);
             }
 
@@ -272,7 +279,7 @@ pub fn incremental_build(
         }
     };
     let deleted_modules = build_state.deleted_modules.clone();
-    deps::get_deps(build_state, &deleted_modules, build_profile);
+    deps::get_deps(build_state, &deleted_modules, output);
     let timing_parse_total = timing_parse_start.elapsed();
 
     if show_progress {
@@ -295,11 +302,30 @@ pub fn incremental_build(
 
     mark_modules_with_expired_deps_dirty(build_state);
     mark_modules_with_deleted_deps_dirty(&mut build_state.build_state);
-    current_step += 1;
+
+    Ok(parse_warnings)
+}
+
+#[allow(clippy::too_many_arguments)]
+#[instrument(name = "incremental_build", skip_all, fields(module_count = build_state.modules.len()))]
+pub fn incremental_build(
+    build_state: &mut BuildCommandState,
+    build_config: BuildConfig,
+    compile_universe: AHashSet<String>,
+    parse_warnings: String,
+    default_timing: Option<Duration>,
+    initial_build: bool,
+    show_progress: bool,
+    only_incremental: bool,
+    create_sourcedirs: bool,
+    plain_output: bool,
+) -> Result<IncrementalBuildResult, IncrementalBuildError> {
+    let current_step = if only_incremental { 2 } else { 3 };
+    let total_steps = if only_incremental { 2 } else { 3 };
 
     //print all the modules that need compilation
     if log_enabled!(log::Level::Trace) {
-        let target_stage = CompilationStage::target_for(build_profile);
+        let target_stage = build_config.scope.mode().target_stage();
         for (module_name, module) in build_state.modules.iter() {
             if module.compilation_stage.needs_compile(target_stage) {
                 println!(
@@ -327,7 +353,8 @@ pub fn incremental_build(
 
     let (compile_errors, compile_warnings, num_compiled_modules) = compile::compile(
         build_state,
-        build_profile,
+        &build_config,
+        compile_universe,
         show_progress,
         || pb.inc(1),
         |size| pb.set_length(size),
@@ -340,10 +367,10 @@ pub fn incremental_build(
 
     let compile_duration = start_compiling.elapsed();
 
-    if build_profile == BuildProfile::Standard {
+    if build_config.output == OutputTarget::Standard {
         logs::finalize(&build_state.packages);
     }
-    if create_sourcedirs && build_profile == BuildProfile::Standard {
+    if create_sourcedirs && build_config.output == OutputTarget::Standard {
         sourcedirs::print(build_state);
     }
     pb.finish();
@@ -408,7 +435,7 @@ pub fn incremental_build(
         }
 
         // Write per-package compiler metadata to `lib/bs/compiler-info.json` (idempotent)
-        write_compiler_info(build_state, build_profile);
+        write_compiler_info(build_state, build_config.output);
 
         let mut all_output = String::new();
         if helpers::contains_ascii_characters(&parse_warnings) {
@@ -493,9 +520,30 @@ pub fn build(
     )
     .with_context(|| "Could not initialize build")?;
 
+    let build_config = BuildConfig {
+        output: OutputTarget::Standard,
+        scope: CompileScope::FullBuild,
+    };
+
+    let parse_warnings = parse_and_resolve(
+        &mut build_state,
+        build_config.output,
+        build_config.scope.mode(),
+        show_progress,
+        plain_output,
+        default_timing,
+        false,
+    )
+    .map_err(|e| anyhow!("Parsing failed: {e}"))?;
+
+    let compile_universe =
+        compile::compute_compile_universe(&build_state, build_config.scope.mode().target_stage());
+
     match incremental_build(
         &mut build_state,
-        BuildProfile::Standard,
+        build_config,
+        compile_universe,
+        parse_warnings,
         default_timing,
         true,
         show_progress,
@@ -513,12 +561,12 @@ pub fn build(
                     default_timing.unwrap_or(timing_total_elapsed).as_secs_f64()
                 );
             }
-            clean::cleanup_after_build(&build_state, BuildProfile::Standard);
+            clean::cleanup_after_build(&build_state, OutputTarget::Standard);
             write_build_ninja(&build_state);
             Ok(build_state)
         }
         Err(e) => {
-            clean::cleanup_after_build(&build_state, BuildProfile::Standard);
+            clean::cleanup_after_build(&build_state, OutputTarget::Standard);
             write_build_ninja(&build_state);
             Err(anyhow!("Incremental build failed. Error: {e}"))
         }

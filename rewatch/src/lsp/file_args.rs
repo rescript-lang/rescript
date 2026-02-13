@@ -1,4 +1,4 @@
-use crate::build::build_types::{BuildCommandState, BuildProfile, SourceType};
+use crate::build::build_types::{BuildCommandState, CompileMode, OutputTarget, SourceType};
 use crate::build::compile;
 use crate::build::parse;
 use std::path::{Path, PathBuf};
@@ -52,7 +52,8 @@ pub trait BuildCommandStateExt {
         &self,
         file_path: &Path,
         content: &str,
-        build_profile: BuildProfile,
+        output: OutputTarget,
+        mode: CompileMode,
     ) -> Option<TypecheckArgs>;
 }
 
@@ -66,7 +67,8 @@ impl BuildCommandStateExt for BuildCommandState {
         &self,
         file_path: &Path,
         content: &str,
-        build_profile: BuildProfile,
+        output: OutputTarget,
+        mode: CompileMode,
     ) -> Option<TypecheckArgs> {
         let (module_name, package_name, is_interface) = self.find_module_for_file(file_path)?;
         let module = self.build_state.modules.get(&module_name)?;
@@ -84,7 +86,7 @@ impl BuildCommandStateExt for BuildCommandState {
         };
 
         let has_interface = source_file.interface.is_some();
-        let build_path = package.get_build_path_for_profile(build_profile);
+        let build_path = package.get_build_path_for_output(output);
         let build_path_abs = build_path.canonicalize().ok()?;
 
         let compiler_args = compile::compiler_args(
@@ -98,7 +100,8 @@ impl BuildCommandStateExt for BuildCommandState {
             module.is_type_dev,
             package.is_local_dep,
             self.get_warn_error_override(),
-            build_profile,
+            output,
+            mode,
         )
         .ok()?;
 
@@ -123,7 +126,8 @@ impl BuildCommandStateExt for BuildCommandState {
             module.is_type_dev,
             package.is_local_dep,
             self.get_warn_error_override(),
-            build_profile,
+            output,
+            mode,
         )
         .ok()?;
 

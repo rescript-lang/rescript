@@ -25,7 +25,7 @@ pub enum CompileState {
 ///
 /// The ordering matters: `Dirty < TypeChecked < Built`. A module needs
 /// compilation when its stage is below the target stage for the current
-/// `BuildProfile`.
+/// build mode.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum CompilationStage {
     /// Not yet compiled, or source changed — needs full pipeline.
@@ -37,18 +37,92 @@ pub enum CompilationStage {
 }
 
 impl CompilationStage {
-    /// The target stage for a given build profile.
-    pub fn target_for(profile: BuildProfile) -> Self {
-        match profile {
-            BuildProfile::Standard | BuildProfile::TypecheckAndEmit => CompilationStage::Built,
-            BuildProfile::TypecheckOnly => CompilationStage::TypeChecked,
-        }
-    }
-
     /// Whether this module needs compilation to reach the given target stage.
     pub fn needs_compile(self, target: CompilationStage) -> bool {
         self < target
     }
+}
+
+/// Where build artifacts are written.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum OutputTarget {
+    /// CLI builds: lib/bs, lib/ocaml
+    Standard,
+    /// LSP builds: lib/lsp, lib/lsp-ocaml
+    Lsp,
+}
+
+impl OutputTarget {
+    /// Whether this output target uses the LSP build path (lib/lsp).
+    pub fn is_lsp(self) -> bool {
+        matches!(self, OutputTarget::Lsp)
+    }
+}
+
+/// What the compiler produces.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum CompileMode {
+    /// Typecheck only: .cmi/.cmt, uses -bs-cmi-only, no JS output.
+    TypecheckOnly,
+    /// Full compile: .cmi/.cmt/.cmj + JS output.
+    FullCompile,
+}
+
+impl CompileMode {
+    /// Whether this mode emits JavaScript output.
+    pub fn emits_js(self) -> bool {
+        matches!(self, CompileMode::FullCompile)
+    }
+
+    /// The compilation stage a module reaches under this mode.
+    pub fn target_stage(self) -> CompilationStage {
+        match self {
+            CompileMode::FullCompile => CompilationStage::Built,
+            CompileMode::TypecheckOnly => CompilationStage::TypeChecked,
+        }
+    }
+}
+
+/// Which modules participate in compilation and how.
+///
+/// Each variant encodes the compile mode and scoping behavior.
+/// The actual set of modules (compile universe) is passed separately.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum CompileScope {
+    /// CLI/watcher: all dirty modules with dependent expansion, full compile with JS output.
+    FullBuild,
+    /// LSP initial/project build: all dirty modules with dependent expansion, typecheck only.
+    FullTypecheck,
+    /// LSP save (step 1): compile the dependency closure to JS.
+    CompileDependencies,
+    /// LSP save (step 2): typecheck the dependent closure, no JS.
+    TypecheckDependents,
+}
+
+impl CompileScope {
+    /// The compile mode implied by this scope variant.
+    pub fn mode(&self) -> CompileMode {
+        match self {
+            CompileScope::FullBuild | CompileScope::CompileDependencies => CompileMode::FullCompile,
+            CompileScope::FullTypecheck | CompileScope::TypecheckDependents => CompileMode::TypecheckOnly,
+        }
+    }
+
+    /// Whether this is a scoped build (restricted to a specific set of modules).
+    pub fn is_scoped(&self) -> bool {
+        matches!(
+            self,
+            CompileScope::CompileDependencies | CompileScope::TypecheckDependents
+        )
+    }
+}
+
+/// Bundles the build concerns: where artifacts go and which modules
+/// participate (the compile mode is derived from the scope).
+#[derive(Debug, Clone)]
+pub struct BuildConfig {
+    pub output: OutputTarget,
+    pub scope: CompileScope,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -141,29 +215,6 @@ pub struct BuildState {
     pub deleted_modules: AHashSet<String>,
     pub compiler_info: CompilerInfo,
     pub deps_initialized: bool,
-}
-
-/// Controls which artifacts the build produces and where they go.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum BuildProfile {
-    /// Normal build: emit JS to lib/bs, lib/js, lib/es6
-    Standard,
-    /// LSP: only type information (.cmi/.cmt) to lib/lsp, skip JS generation
-    TypecheckOnly,
-    /// LSP: type information + JS output, artifacts in lib/lsp
-    TypecheckAndEmit,
-}
-
-impl BuildProfile {
-    /// Whether this profile emits JavaScript output.
-    pub fn emits_js(self) -> bool {
-        matches!(self, BuildProfile::Standard | BuildProfile::TypecheckAndEmit)
-    }
-
-    /// Whether this profile uses the LSP build path (lib/lsp).
-    pub fn is_lsp(self) -> bool {
-        matches!(self, BuildProfile::TypecheckOnly | BuildProfile::TypecheckAndEmit)
-    }
 }
 
 /// Extended build state that includes command-line specific overrides.

@@ -1,6 +1,6 @@
 use crate::helpers;
 
-use super::build_types::{BuildCommandState, BuildProfile, CompilerInfo};
+use super::build_types::{BuildCommandState, CompilerInfo, OutputTarget};
 use super::packages;
 use super::{clean, logs};
 use ahash::AHashMap;
@@ -34,16 +34,16 @@ fn get_rescript_config_hash(package: &packages::Package) -> Option<String> {
 pub fn verify_compiler_info(
     packages: &AHashMap<String, packages::Package>,
     compiler: &CompilerInfo,
-    build_profile: BuildProfile,
+    output: OutputTarget,
 ) -> CompilerCheckResult {
     let mismatched_packages = packages
         .values()
         .filter(|package| {
-            let info_path = package.get_compiler_info_path_for_profile(build_profile);
+            let info_path = package.get_compiler_info_path_for_output(output);
             let Ok(contents) = std::fs::read_to_string(&info_path) else {
                 // Can't read the compiler-info.json file, maybe there is no current build.
                 // We check if the flat build folder has artifacts — if not, there's nothing to clean.
-                return logs::does_flat_build_dir_have_artifacts(package, build_profile);
+                return logs::does_flat_build_dir_have_artifacts(package, output);
             };
 
             let parsed: Result<CompilerInfoFile, _> = serde_json::from_str(&contents);
@@ -104,7 +104,7 @@ pub fn verify_compiler_info(
 
     let cleaned_count = mismatched_packages.len();
     mismatched_packages.par_iter().for_each(|package| {
-        clean::clean_package_for_profile(package, build_profile);
+        clean::clean_package_for_output(package, output);
     });
     if cleaned_count == 0 {
         CompilerCheckResult::SameCompilerAsLastRun
@@ -113,7 +113,7 @@ pub fn verify_compiler_info(
     }
 }
 
-pub fn write_compiler_info(build_state: &BuildCommandState, build_profile: BuildProfile) {
+pub fn write_compiler_info(build_state: &BuildCommandState, output: OutputTarget) {
     let bsc_path = build_state.compiler_info.bsc_path.to_string_lossy().to_string();
     let bsc_hash = build_state.compiler_info.bsc_hash.to_hex().to_string();
     let runtime_path = build_state
@@ -157,7 +157,7 @@ pub fn write_compiler_info(build_state: &BuildCommandState, build_profile: Build
                     return;
                 }
             };
-            let info_path = package.get_compiler_info_path_for_profile(build_profile);
+            let info_path = package.get_compiler_info_path_for_output(output);
             let should_write = match std::fs::read_to_string(&info_path) {
                 Ok(existing) => existing != contents,
                 Err(_) => true,

@@ -1,4 +1,4 @@
-use crate::build::build_types::BuildProfile;
+use crate::build::build_types::{CompileMode, OutputTarget};
 use crate::build::compile::get_runtime_path_args;
 use crate::build::packages;
 use crate::helpers::StrippedVerbatimPath;
@@ -28,9 +28,9 @@ pub fn gen_mlmap(
     package: &packages::Package,
     namespace: &str,
     depending_modules: &AHashSet<String>,
-    build_profile: BuildProfile,
+    output: OutputTarget,
 ) -> PathBuf {
-    let build_path_abs = package.get_build_path_for_profile(build_profile);
+    let build_path_abs = package.get_build_path_for_output(output);
     // we don't really need to create a digest, because we track if we need to
     // recompile in a different way but we need to put it in the file for it to
     // be readable.
@@ -60,9 +60,10 @@ pub fn compile_mlmap(
     package: &packages::Package,
     namespace: &str,
     bsc_path: &Path,
-    build_profile: BuildProfile,
+    output: OutputTarget,
+    mode: CompileMode,
 ) -> Result<()> {
-    let build_path_abs = package.get_build_path_for_profile(build_profile);
+    let build_path_abs = package.get_build_path_for_output(output);
     let mlmap_name = format!("{namespace}.mlmap");
     let mut args: Vec<String> = vec![];
     // include `-runtime-path` arg
@@ -75,7 +76,7 @@ pub fn compile_mlmap(
         "always".to_string(),
         "-no-alias-deps".to_string(),
     ]);
-    if !build_profile.emits_js() {
+    if !mode.emits_js() {
         args.push("-bs-cmi-only".to_string());
     }
     args.push(mlmap_name.clone());

@@ -1,6 +1,7 @@
 use crate::build;
-use crate::build::build_types::{BuildCommandState, BuildProfile, SourceType};
+use crate::build::build_types::{BuildCommandState, BuildConfig, CompileScope, OutputTarget, SourceType};
 use crate::build::clean;
+use crate::build::compile;
 use crate::cmd;
 use crate::config;
 use crate::helpers;
@@ -250,7 +251,7 @@ async fn async_watch(
             if show_progress {
                 println!("\nExiting...");
             }
-            clean::cleanup_after_build(&build_state, BuildProfile::Standard);
+            clean::cleanup_after_build(&build_state, OutputTarget::Standard);
             break Ok(());
         }
         let mut events: Vec<Event> = vec![];
@@ -272,7 +273,7 @@ async fn async_watch(
                 if show_progress {
                     println!("\nExiting... (lockfile removed)");
                 }
-                clean::cleanup_after_build(&build_state, BuildProfile::Standard);
+                clean::cleanup_after_build(&build_state, OutputTarget::Standard);
                 return Ok(());
             }
 
@@ -437,18 +438,39 @@ async fn async_watch(
         match needs_compile_type {
             CompileType::Incremental => {
                 let timing_total = Instant::now();
-                if build::incremental_build(
+                let build_config = BuildConfig {
+                    output: OutputTarget::Standard,
+                    scope: CompileScope::FullBuild,
+                };
+                let only_incremental = !initial_build;
+                let build_ok = build::parse_and_resolve(
                     &mut build_state,
-                    BuildProfile::Standard,
-                    None,
-                    initial_build,
+                    build_config.output,
+                    build_config.scope.mode(),
                     show_progress,
-                    !initial_build,
-                    create_sourcedirs,
                     plain_output,
+                    None,
+                    only_incremental,
                 )
-                .is_ok()
-                {
+                .and_then(|parse_warnings| {
+                    let compile_universe = compile::compute_compile_universe(
+                        &build_state,
+                        build_config.scope.mode().target_stage(),
+                    );
+                    build::incremental_build(
+                        &mut build_state,
+                        build_config,
+                        compile_universe,
+                        parse_warnings,
+                        None,
+                        initial_build,
+                        show_progress,
+                        only_incremental,
+                        create_sourcedirs,
+                        plain_output,
+                    )
+                });
+                if build_ok.is_ok() {
                     if let Some(a) = after_build.clone() {
                         cmd::run(a)
                     }
@@ -492,16 +514,37 @@ async fn async_watch(
                         current_watch_paths = compute_watch_paths(&build_state, path);
                         register_watches(watcher, &current_watch_paths);
 
-                        let _ = build::incremental_build(
+                        let build_config = BuildConfig {
+                            output: OutputTarget::Standard,
+                            scope: CompileScope::FullBuild,
+                        };
+                        let _ = build::parse_and_resolve(
                             &mut build_state,
-                            BuildProfile::Standard,
-                            None,
-                            initial_build,
+                            build_config.output,
+                            build_config.scope.mode(),
                             show_progress,
-                            false,
-                            create_sourcedirs,
                             plain_output,
-                        );
+                            None,
+                            false,
+                        )
+                        .and_then(|parse_warnings| {
+                            let compile_universe = compile::compute_compile_universe(
+                                &build_state,
+                                build_config.scope.mode().target_stage(),
+                            );
+                            build::incremental_build(
+                                &mut build_state,
+                                build_config,
+                                compile_universe,
+                                parse_warnings,
+                                None,
+                                initial_build,
+                                show_progress,
+                                false,
+                                create_sourcedirs,
+                                plain_output,
+                            )
+                        });
                         if let Some(a) = after_build.clone() {
                             cmd::run(a)
                         }

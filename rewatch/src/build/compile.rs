@@ -80,44 +80,53 @@ fn execute_post_build_command(cmd: &str, js_file_path: &Path, working_dir: &Path
     }
 }
 
+/// Expand dirty modules through their transitive dependents to compute
+/// the full set of modules that may need (re)compilation.
+pub fn compute_compile_universe(
+    build_state: &BuildCommandState,
+    target_stage: CompilationStage,
+) -> AHashSet<String> {
+    let dirty_modules: AHashSet<String> = build_state
+        .modules
+        .iter()
+        .filter(|(_, module)| module.compilation_stage.needs_compile(target_stage))
+        .map(|(name, _)| name.to_owned())
+        .collect();
+
+    let mut universe = dirty_modules.clone();
+    let mut frontier = universe.clone();
+    loop {
+        let mut dependents = AHashSet::new();
+        for name in &frontier {
+            if let Some(module) = build_state.get_module(name) {
+                dependents.extend(module.dependents.clone());
+            }
+        }
+        frontier = dependents.difference(&universe).cloned().collect();
+        universe.extend(frontier.clone());
+        if frontier.is_empty() {
+            break;
+        }
+    }
+    universe
+}
+
 #[instrument(name = "build.compile", skip_all)]
 pub fn compile(
     build_state: &mut BuildCommandState,
-    build_profile: BuildProfile,
+    build_config: &BuildConfig,
+    compile_universe: AHashSet<String>,
     show_progress: bool,
     inc: impl Fn() + std::marker::Sync,
     set_length: impl Fn(u64),
 ) -> anyhow::Result<(String, String, usize)> {
-    let target_stage = CompilationStage::target_for(build_profile);
+    let mode = build_config.scope.mode();
+    let target_stage = mode.target_stage();
     let mut compiled_modules = AHashSet::<String>::new();
-    let dirty_modules = build_state
-        .modules
-        .iter()
-        .filter_map(|(module_name, module)| {
-            if module.compilation_stage.needs_compile(target_stage) {
-                Some(module_name.to_owned())
-            } else {
-                None
-            }
-        })
-        .collect::<AHashSet<String>>();
-
-    // dirty_modules.iter().for_each(|m| println!("dirty module: {}", m));
-    // println!("{} dirty modules", dirty_modules.len());
-    let mut sorted_dirty_modules = dirty_modules.iter().collect::<Vec<&String>>();
-    sorted_dirty_modules.sort();
-    // dirty_modules.iter().for_each(|m| println!("dirty module: {}", m));
-    // sorted_dirty_modules
-    //     .iter()
-    //     .for_each(|m| println!("dirty module: {}", m));
 
     // for sure clean modules -- after checking the hash of the cmi
     let mut clean_modules = AHashSet::<String>::new();
 
-    // TODO: calculate the real dirty modules from the original dirty modules in each iteration
-    // taken into account the modules that we know are clean, so they don't propagate through the
-    // deps graph
-    // create a hashset of all clean modules from the file-hashes
     let mut loop_count = 0;
     let mut files_total_count = compiled_modules.len();
     let mut files_current_loop_count;
@@ -126,35 +135,6 @@ pub fn compile(
     let mut num_compiled_modules = 0;
     let mut sorted_modules = build_state.module_names.iter().collect::<Vec<&String>>();
     sorted_modules.sort();
-
-    // this is the whole "compile universe" all modules that might be dirty
-    // we get this by expanding the dependents from the dirty modules
-    //
-    // For TypecheckAndEmit (used by the LSP file-build), skip the dependent
-    // expansion. The LSP handles dependents separately via typecheck_dependents,
-    // and expanding here would pull in modules from other packages that may
-    // fail compilation, aborting the loop before the target module compiles.
-
-    let mut compile_universe = dirty_modules.clone();
-    if build_profile != BuildProfile::TypecheckAndEmit {
-        let mut current_step_modules = compile_universe.clone();
-        loop {
-            let mut dependents: AHashSet<String> = AHashSet::new();
-            for dirty_module in current_step_modules.iter() {
-                dependents.extend(build_state.get_module(dirty_module).unwrap().dependents.clone());
-            }
-
-            current_step_modules = dependents
-                .difference(&compile_universe)
-                .map(|s| s.to_string())
-                .collect::<AHashSet<String>>();
-
-            compile_universe.extend(current_step_modules.to_owned());
-            if current_step_modules.is_empty() {
-                break;
-            }
-        }
-    }
 
     let compile_universe_count = compile_universe.len();
     set_length(compile_universe_count as u64);
@@ -168,6 +148,16 @@ pub fn compile(
         })
         .map(|module_name| module_name.to_string())
         .collect::<AHashSet<String>>();
+
+    // Snapshot pre-loop stages so we can restore modules that the loop
+    // dirtied but never compiled (e.g. when the loop aborts due to errors).
+    let pre_loop_stages: AHashMap<String, CompilationStage> = compile_universe
+        .iter()
+        .filter_map(|name| {
+            let module = build_state.modules.get(name)?;
+            Some((name.clone(), module.compilation_stage))
+        })
+        .collect();
 
     loop {
         files_current_loop_count = 0;
@@ -230,7 +220,7 @@ pub fn compile(
                                 info_span!(parent: &wave_span, "build.compile_file", module = %module_name, package = %package.name, suffix, module_system, namespace).entered();
 
                             let cmi_path = helpers::get_compiler_asset_in(
-                                &package.get_ocaml_build_path_for_profile(build_profile),
+                                &package.get_ocaml_build_path_for_output(build_config.output),
                                 &package.namespace,
                                 &source_file.implementation.path,
                                 "cmi",
@@ -251,7 +241,8 @@ pub fn compile(
                                         true,
                                         build_state,
                                         build_state.get_warn_error_override(),
-                                        build_profile,
+                                        build_config.output,
+                                        mode,
                                     );
                                     Some(result)
                                 }
@@ -264,7 +255,8 @@ pub fn compile(
                                 false,
                                 build_state,
                                 build_state.get_warn_error_override(),
-                                build_profile,
+                                build_config.output,
+                                mode,
                             );
                             let cmi_digest_after = helpers::compute_file_hash(Path::new(&cmi_path));
 
@@ -318,18 +310,20 @@ pub fn compile(
 
             let module_dependents = build_state.get_module(module_name).unwrap().dependents.clone();
 
-            // if not clean -- compile modules that depend on this module
+            // Only propagate dirtiness when this module compiled successfully
+            // and its output changed. A failed module's output didn't change,
+            // so its dependents don't need recompilation.
+            let compiled_ok = result.is_ok() && interface_result.as_ref().is_none_or(|r| r.is_ok());
+
             for dep in module_dependents.iter() {
-                // For TypecheckAndEmit, only process dependents within the
-                // compile universe. The LSP handles dependents outside the
-                // universe separately via typecheck_dependents.
-                if build_profile == BuildProfile::TypecheckAndEmit && !compile_universe.contains(dep) {
+                // For scoped builds, only process dependents within the universe.
+                if build_config.scope.is_scoped() && !compile_universe.contains(dep) {
                     continue;
                 }
-                //  mark the reverse dep as dirty when the source is not clean
-                if !*is_clean {
-                    let dep_module = build_state.modules.get_mut(dep).unwrap();
-                    //  mark the reverse dep as dirty when the source is not clean
+                if !*is_clean
+                    && compiled_ok
+                    && let Some(dep_module) = build_state.modules.get_mut(dep)
+                {
                     dep_module.compilation_stage = CompilationStage::Dirty;
                 }
                 if !compiled_modules.contains(dep) {
@@ -484,6 +478,18 @@ pub fn compile(
         };
     }
 
+    // Restore modules that the loop dirtied (or that entered dirty) but
+    // never successfully compiled. Without this, they leak into the next
+    // compile universe and cause "module not found" errors.
+    for (name, original_stage) in &pre_loop_stages {
+        if let Some(module) = build_state.modules.get_mut(name)
+            && module.compilation_stage == CompilationStage::Dirty
+            && *original_stage != CompilationStage::Dirty
+        {
+            module.compilation_stage = *original_stage;
+        }
+    }
+
     // Collect warnings from modules that were not recompiled in this build
     // but still have stored warnings from a previous compilation.
     // This ensures warnings are not lost during incremental builds in watch mode.
@@ -558,10 +564,11 @@ pub fn compiler_args(
     is_local_dep: bool,
     // Command-line --warn-error flag override (takes precedence over rescript.json config)
     warn_error_override: Option<String>,
-    build_profile: BuildProfile,
+    output: OutputTarget,
+    mode: CompileMode,
 ) -> Result<Vec<String>> {
     let bsc_flags = config::flatten_flags(&config.compiler_flags);
-    let dependency_paths = get_dependency_paths(config, packages, is_type_dev, build_profile);
+    let dependency_paths = get_dependency_paths(config, packages, is_type_dev, output);
     let module_name = helpers::file_path_to_module_name(file_path, &config.get_namespace());
 
     let namespace_args = match &config.get_namespace() {
@@ -612,12 +619,12 @@ pub fn compiler_args(
         vec![]
     } else {
         debug!("Compiling file: {}", &module_name);
-        match build_profile {
-            BuildProfile::TypecheckOnly => {
-                // LSP type-check only — skip JS generation entirely
+        match mode {
+            CompileMode::TypecheckOnly => {
+                // Type-check only — skip JS generation entirely
                 vec!["-bs-cmi-only".to_string()]
             }
-            BuildProfile::Standard | BuildProfile::TypecheckAndEmit => {
+            CompileMode::FullCompile => {
                 let specs = root_config.get_package_specs();
                 specs
                     .iter()
@@ -655,7 +662,7 @@ pub fn compiler_args(
         read_cmi_args,
         vec![
             "-I".to_string(),
-            if build_profile.is_lsp() {
+            if output.is_lsp() {
                 Path::new("..").join("lsp-ocaml").to_string_lossy().to_string()
             } else {
                 Path::new("..").join("ocaml").to_string_lossy().to_string()
@@ -713,7 +720,7 @@ fn get_dependency_paths(
     config: &config::Config,
     packages: &AHashMap<String, packages::Package>,
     is_file_type_dev: bool,
-    build_profile: BuildProfile,
+    output: OutputTarget,
 ) -> Vec<String> {
     let normal_deps = config
         .dependencies
@@ -745,7 +752,7 @@ fn get_dependency_paths(
                 vec![
                     "-I".to_string(),
                     package
-                        .get_ocaml_build_path_for_profile(build_profile)
+                        .get_ocaml_build_path_for_output(output)
                         .to_string_lossy()
                         .to_string(),
                 ]
@@ -771,7 +778,8 @@ fn compile_file(
     is_interface: bool,
     build_state: &BuildState,
     warn_error_override: Option<String>,
-    build_profile: BuildProfile,
+    output: OutputTarget,
+    mode: CompileMode,
 ) -> Result<Option<String>> {
     let BuildState {
         packages,
@@ -780,8 +788,8 @@ fn compile_file(
         ..
     } = build_state;
     let root_config = build_state.get_root_config();
-    let ocaml_build_path_abs = package.get_ocaml_build_path_for_profile(build_profile);
-    let build_path_abs = package.get_build_path_for_profile(build_profile);
+    let ocaml_build_path_abs = package.get_ocaml_build_path_for_output(output);
+    let build_path_abs = package.get_build_path_for_output(output);
     let implementation_file_path = match &module.source_type {
         SourceType::SourceFile(source_file) => Ok(&source_file.implementation.path),
         sourcetype => Err(format!(
@@ -806,7 +814,8 @@ fn compile_file(
         is_type_dev,
         package.is_local_dep,
         warn_error_override,
-        build_profile,
+        output,
+        mode,
     )?;
 
     let to_mjs = Command::new(&compiler_info.bsc_path)
@@ -847,7 +856,7 @@ fn compile_file(
                     ocaml_build_path_abs.join(format!("{basename}.cmt")),
                 );
                 // .cmj is only produced when JS is emitted (TypecheckOnly uses -bs-cmi-only)
-                if build_profile.emits_js() {
+                if mode.emits_js() {
                     let _ = std::fs::copy(
                         build_path_abs.join(dir).join(format!("{basename}.cmj")),
                         ocaml_build_path_abs.join(format!("{basename}.cmj")),
@@ -866,7 +875,7 @@ fn compile_file(
 
             // Source file copies, JS output copies, and post-build commands
             // are needed when JS is emitted
-            if build_profile.emits_js() {
+            if mode.emits_js() {
                 if let SourceType::SourceFile(SourceFile {
                     interface: Some(Interface { path, .. }),
                     ..

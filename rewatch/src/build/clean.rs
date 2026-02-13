@@ -47,7 +47,7 @@ fn remove_source_copies(
     package: &packages::Package,
     ocaml_build_path: &Path,
     source_file: &Path,
-    build_profile: BuildProfile,
+    output: OutputTarget,
 ) {
     if let Some(filename) = source_file.file_name() {
         // Flat dir: lib/lsp-ocaml/App.res
@@ -55,7 +55,7 @@ fn remove_source_copies(
     }
     // Nested dir: lib/lsp/src/App.res (relative to package root)
     if let Ok(relative) = source_file.strip_prefix(&package.path) {
-        let _ = std::fs::remove_file(package.get_build_path_for_profile(build_profile).join(relative));
+        let _ = std::fs::remove_file(package.get_build_path_for_output(output).join(relative));
     }
 }
 
@@ -131,7 +131,7 @@ fn clean_source_files(build_state: &BuildState, root_config: &Config) {
 pub fn cleanup_previous_build(
     build_state: &mut BuildCommandState,
     compile_assets_state: CompileAssetsState,
-    build_profile: BuildProfile,
+    output: OutputTarget,
 ) -> (usize, usize) {
     // delete the .mjs file which appear in our previous compile assets
     // but does not exists anymore
@@ -164,12 +164,12 @@ pub fn cleanup_previous_build(
                 .packages
                 .get(package_name)
                 .expect("Could not find package");
-            let ocaml_build_path = package.get_ocaml_build_path_for_profile(build_profile);
+            let ocaml_build_path = package.get_ocaml_build_path_for_output(output);
             remove_compile_assets(package, &ocaml_build_path, res_file_location);
             remove_mjs_file(res_file_location, suffix);
             remove_iast(&ocaml_build_path, res_file_location);
             remove_ast(&ocaml_build_path, res_file_location);
-            remove_source_copies(package, &ocaml_build_path, res_file_location, build_profile);
+            remove_source_copies(package, &ocaml_build_path, res_file_location, output);
             match helpers::get_extension(ast_file_path).as_str() {
                 "iast" => Some(module_name.to_owned()),
                 "ast" => None,
@@ -329,10 +329,10 @@ fn has_compile_warnings(module: &Module) -> bool {
     )
 }
 
-pub fn cleanup_after_build(build_state: &BuildCommandState, build_profile: BuildProfile) {
+pub fn cleanup_after_build(build_state: &BuildCommandState, output: OutputTarget) {
     build_state.modules.par_iter().for_each(|(_module_name, module)| {
         let package = build_state.get_package(&module.package_name).unwrap();
-        let ocaml_build_path = package.get_ocaml_build_path_for_profile(build_profile);
+        let ocaml_build_path = package.get_ocaml_build_path_for_output(output);
         if has_parse_warnings(module)
             && let SourceType::SourceFile(source_file) = &module.source_type
         {
@@ -397,7 +397,7 @@ pub fn clean(path: &Path, show_progress: bool, plain_output: bool) -> Result<()>
 
     let timing_clean_mjs = Instant::now();
     let mut build_state = BuildState::new(project_context, packages, compiler_info);
-    packages::parse_packages(&mut build_state, BuildProfile::Standard)?;
+    packages::parse_packages(&mut build_state, OutputTarget::Standard, CompileMode::FullCompile)?;
     let root_config = build_state.get_root_config();
     let suffix_for_print = match root_config.package_specs {
         None => match &root_config.suffix {
@@ -471,10 +471,10 @@ pub fn clean_package(show_progress: bool, plain_output: bool, package: &Package)
     let _ = std::fs::remove_file(package.get_compiler_info_path());
 }
 
-/// Clean only the build artifacts for a specific profile.
-/// Used by verify_compiler_info to avoid destroying the other profile's artifacts.
-pub fn clean_package_for_profile(package: &Package, build_profile: BuildProfile) {
-    let _ = std::fs::remove_dir_all(package.get_build_path_for_profile(build_profile));
-    let _ = std::fs::remove_dir_all(package.get_ocaml_build_path_for_profile(build_profile));
-    let _ = std::fs::remove_file(package.get_compiler_info_path_for_profile(build_profile));
+/// Clean only the build artifacts for a specific output target.
+/// Used by verify_compiler_info to avoid destroying the other target's artifacts.
+pub fn clean_package_for_output(package: &Package, output: OutputTarget) {
+    let _ = std::fs::remove_dir_all(package.get_build_path_for_output(output));
+    let _ = std::fs::remove_dir_all(package.get_ocaml_build_path_for_output(output));
+    let _ = std::fs::remove_file(package.get_compiler_info_path_for_output(output));
 }

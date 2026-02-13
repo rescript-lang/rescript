@@ -437,6 +437,52 @@ async fn flush(
         )
         .await;
 
+    // Log details of each pending category
+    for (uri, build) in &state.compile_files {
+        client
+            .log_message(
+                tower_lsp::lsp_types::MessageType::INFO,
+                format!(
+                    "flush: incremental build: {} (has buffer: {})",
+                    uri,
+                    build.buffer_content.is_some()
+                ),
+            )
+            .await;
+    }
+    for uri in state.typechecks.keys() {
+        client
+            .log_message(
+                tower_lsp::lsp_types::MessageType::INFO,
+                format!("flush: typecheck: {}", uri),
+            )
+            .await;
+    }
+    for path in &state.build_projects.created_files {
+        client
+            .log_message(
+                tower_lsp::lsp_types::MessageType::INFO,
+                format!("flush: created file: {}", path.display()),
+            )
+            .await;
+    }
+    for path in &state.build_projects.deleted_files {
+        client
+            .log_message(
+                tower_lsp::lsp_types::MessageType::INFO,
+                format!("flush: deleted file: {}", path.display()),
+            )
+            .await;
+    }
+    for path in &state.build_projects.config_changed {
+        client
+            .log_message(
+                tower_lsp::lsp_types::MessageType::INFO,
+                format!("flush: config changed: {}", path.display()),
+            )
+            .await;
+    }
+
     // Create a FlushGuard that calls end_flush on drop (even on panic).
     let _flush_guard = diagnostic_store.as_ref().map(|s| FlushGuard::new(s));
     let store_ref = diagnostic_store.as_deref();

@@ -371,18 +371,15 @@ didSave / didChangeWatchedFiles notification
           ├── group files by project root
           ├── mark_file_parse_dirty per file
           ├── Phase 1: compile_dependencies
-          │   ├── Pre-parse dirty files (generate_asts) to refresh module deps
-          │   ├── Resolve deps (get_deps) so closure reflects saved content
+          │   ├── parse_and_resolve (parse dirty files, resolve deps)
           │   ├── get_dependency_closure (DFS downward through module.deps)
-          │   ├── Temporarily promote non-closure TypeChecked modules → Built
-          │   ├── incremental_build(TypecheckAndEmit, only_incremental=true)
-          │   └── Restore promoted modules → TypeChecked
+          │   ├── incremental_build with closure as compile universe
+          │   └── (compile loop restores any orphan dirty modules on exit)
           ├── Phase 2: typecheck_dependents
           │   ├── get_dependent_closure (DFS upward through module.dependents)
           │   ├── Mark each dependent as Dirty
-          │   ├── Temporarily promote non-dependent TypeChecked modules → Built
-          │   ├── incremental_build(TypecheckOnly, only_incremental=true)
-          │   └── Restore promoted modules → TypeChecked
+          │   ├── incremental_build with dependents as compile universe
+          │   └── (compile loop restores any orphan dirty modules on exit)
           └── Publish combined diagnostics from both phases
                     │
                     ▼

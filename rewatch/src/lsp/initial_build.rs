@@ -1,6 +1,9 @@
 use crate::build;
-use crate::build::build_types::{BuildCommandState, BuildProfile, CompilationStage};
+use crate::build::build_types::{
+    BuildCommandState, BuildConfig, CompilationStage, CompileScope, OutputTarget,
+};
 use crate::build::clean;
+use crate::build::compile;
 use crate::build::diagnostics::BscDiagnostic;
 use crate::build::packages;
 
@@ -83,10 +86,15 @@ pub fn run(
     // where orphaned .cmt files from deleted modules make dependents appear
     // up-to-date when they actually need recompilation.
     for package in packages.values() {
-        clean::clean_package_for_profile(package, BuildProfile::TypecheckOnly);
+        clean::clean_package_for_output(package, OutputTarget::Lsp);
     }
 
     // Prepare the build state (compiler info, validation, cleanup)
+    let build_config = BuildConfig {
+        output: OutputTarget::Lsp,
+        scope: CompileScope::FullTypecheck,
+    };
+
     let mut build_state = build::prepare_build(
         project_context,
         packages,
@@ -94,7 +102,7 @@ pub fn run(
         false,                           // no progress output
         true,                            // plain output
         None,                            // no warn_error override
-        BuildProfile::TypecheckOnly,
+        &build_config,
     )
     .map_err(|e| e.to_string())?;
 
@@ -107,10 +115,32 @@ pub fn run(
         }
     }
 
-    // Run the actual build (parse, deps, compile)
+    // Parse source files and resolve dependencies
+    let parse_warnings = match build::parse_and_resolve(
+        &mut build_state,
+        build_config.output,
+        build_config.scope.mode(),
+        false, // show_progress
+        true,  // plain_output
+        Some(std::time::Duration::ZERO),
+        false, // only_incremental
+    ) {
+        Ok(warnings) => warnings,
+        Err(e) => {
+            tracing::warn!("Initial build parse failed: {e}");
+            return Ok((build_state, e.diagnostics));
+        }
+    };
+
+    // Compute the compile universe and run compilation
+    let compile_universe =
+        compile::compute_compile_universe(&build_state, build_config.scope.mode().target_stage());
+
     let diagnostics = match build::incremental_build(
         &mut build_state,
-        BuildProfile::TypecheckOnly,
+        build_config,
+        compile_universe,
+        parse_warnings,
         Some(std::time::Duration::ZERO),
         true,  // initial_build
         false, // show_progress
@@ -124,9 +154,6 @@ pub fn run(
         }
         Err(e) => {
             tracing::warn!("Initial build completed with errors: {e}");
-            // Build errors are expected (e.g. type errors in user code).
-            // We still consider this a successful build cycle — return
-            // diagnostics so they can be published to the client.
             e.diagnostics
         }
     };

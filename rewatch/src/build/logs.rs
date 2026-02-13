@@ -26,9 +26,9 @@ fn get_log_file_path(package: &packages::Package, subfolder: Location) -> PathBu
 
 pub fn does_flat_build_dir_have_artifacts(
     package: &packages::Package,
-    build_profile: super::build_types::BuildProfile,
+    output: super::build_types::OutputTarget,
 ) -> bool {
-    let flat_dir = package.get_ocaml_build_path_for_profile(build_profile);
+    let flat_dir = package.get_ocaml_build_path_for_output(output);
     flat_dir.exists()
         && std::fs::read_dir(&flat_dir)
             .map(|mut entries| entries.next().is_some())

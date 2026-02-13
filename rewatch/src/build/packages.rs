@@ -101,10 +101,10 @@ impl Package {
         get_lsp_ocaml_build_path(&self.path)
     }
 
-    /// Returns the flat artifact directory for the given profile.
+    /// Returns the flat artifact directory for the given output target.
     /// Standard builds use `lib/ocaml/`, LSP builds use `lib/lsp-ocaml/`.
-    pub fn get_ocaml_build_path_for_profile(&self, profile: BuildProfile) -> PathBuf {
-        if profile.is_lsp() {
+    pub fn get_ocaml_build_path_for_output(&self, output: OutputTarget) -> PathBuf {
+        if output.is_lsp() {
             self.get_lsp_ocaml_build_path()
         } else {
             self.get_ocaml_build_path()
@@ -119,9 +119,9 @@ impl Package {
         get_lsp_build_path(&self.path)
     }
 
-    /// Returns the build artifact path for the given profile.
-    pub fn get_build_path_for_profile(&self, profile: BuildProfile) -> PathBuf {
-        if profile.is_lsp() {
+    /// Returns the build artifact path for the given output target.
+    pub fn get_build_path_for_output(&self, output: OutputTarget) -> PathBuf {
+        if output.is_lsp() {
             self.get_lsp_build_path()
         } else {
             self.get_build_path()
@@ -132,9 +132,8 @@ impl Package {
         self.get_build_path().join("compiler-info.json")
     }
 
-    pub fn get_compiler_info_path_for_profile(&self, profile: BuildProfile) -> PathBuf {
-        self.get_build_path_for_profile(profile)
-            .join("compiler-info.json")
+    pub fn get_compiler_info_path_for_output(&self, output: OutputTarget) -> PathBuf {
+        self.get_build_path_for_output(output).join("compiler-info.json")
     }
 
     pub fn get_js_path(&self) -> PathBuf {
@@ -153,12 +152,12 @@ impl Package {
         self.get_build_path().join(format!("{suffix}.mlmap"))
     }
 
-    pub fn get_mlmap_path_for_profile(&self, profile: BuildProfile) -> PathBuf {
+    pub fn get_mlmap_path_for_output(&self, output: OutputTarget) -> PathBuf {
         let suffix = self
             .namespace
             .to_suffix()
             .expect("namespace should be set for mlmap module");
-        self.get_build_path_for_profile(profile)
+        self.get_build_path_for_output(output)
             .join(format!("{suffix}.mlmap"))
     }
 
@@ -170,12 +169,12 @@ impl Package {
         self.get_build_path().join(format!("{suffix}.cmi"))
     }
 
-    pub fn get_mlmap_compile_path_for_profile(&self, profile: BuildProfile) -> PathBuf {
+    pub fn get_mlmap_compile_path_for_output(&self, output: OutputTarget) -> PathBuf {
         let suffix = self
             .namespace
             .to_suffix()
             .expect("namespace should be set for mlmap module");
-        self.get_build_path_for_profile(profile)
+        self.get_build_path_for_output(output)
             .join(format!("{suffix}.cmi"))
     }
 
@@ -719,20 +718,20 @@ pub fn make(
 }
 
 #[instrument(name = "packages.parse_packages", skip_all)]
-pub fn parse_packages(build_state: &mut BuildState, build_profile: BuildProfile) -> Result<()> {
+pub fn parse_packages(build_state: &mut BuildState, output: OutputTarget, mode: CompileMode) -> Result<()> {
     let packages = build_state.packages.clone();
     for (package_name, package) in packages.iter() {
         debug!("Parsing package: {package_name}");
         if let Some(package_modules) = package.modules.to_owned() {
             build_state.module_names.extend(package_modules)
         }
-        let build_path_abs = package.get_build_path_for_profile(build_profile);
-        let ocaml_build_path = package.get_ocaml_build_path_for_profile(build_profile);
+        let build_path_abs = package.get_build_path_for_output(output);
+        let ocaml_build_path = package.get_ocaml_build_path_for_output(output);
         helpers::create_path(&build_path_abs);
         helpers::create_path(&ocaml_build_path);
 
-        // TypecheckOnly profile only needs lib/lsp + lib/ocaml — no JS output directories
-        if build_profile.emits_js() {
+        // TypecheckOnly mode only needs lib/lsp + lib/ocaml — no JS output directories
+        if mode.emits_js() {
             let root_config = build_state.get_root_config();
             root_config.get_package_specs().iter().for_each(|spec| {
                 if !spec.in_source {
@@ -790,7 +789,7 @@ pub fn parse_packages(build_state: &mut BuildState, build_profile: BuildProfile)
                 .filter(|module_name| helpers::is_non_exotic_module_name(module_name))
                 .collect::<AHashSet<String>>();
 
-            let mlmap = namespaces::gen_mlmap(package, namespace, &depending_modules, build_profile);
+            let mlmap = namespaces::gen_mlmap(package, namespace, &depending_modules, output);
 
             // mlmap will be compiled in the AST generation step
             // compile_mlmap(&package, namespace, &project_root);

@@ -7,7 +7,7 @@ use serde_json::{Value, json};
 use std::sync::Mutex;
 use tower_lsp::lsp_types::{Position, Url};
 
-use crate::build::build_types::{BuildCommandState, BuildProfile, SourceFile, SourceType};
+use crate::build::build_types::{BuildCommandState, OutputTarget, SourceFile, SourceType};
 use crate::build::packages::{Namespace, Package};
 use crate::config;
 use crate::helpers;
@@ -302,7 +302,7 @@ fn ensure_cmt(
     file_path: &Path,
     source: &str,
 ) {
-    let build_path = package.get_build_path_for_profile(BuildProfile::TypecheckOnly);
+    let build_path = package.get_build_path_for_output(OutputTarget::Lsp);
     let impl_path = &source_file.implementation.path;
     let basename = helpers::file_path_to_compiler_asset_basename(impl_path, &package.namespace);
     let dir = impl_path.parent().unwrap_or(Path::new(""));
@@ -386,7 +386,7 @@ fn build_paths_for_module(build_state: &BuildCommandState, runtime: &RuntimeModu
 
         match &module.source_type {
             SourceType::SourceFile(source_file) => {
-                let build_path = package.get_build_path_for_profile(BuildProfile::TypecheckOnly);
+                let build_path = package.get_build_path_for_output(OutputTarget::Lsp);
 
                 let impl_path = &source_file.implementation.path;
                 let basename = helpers::file_path_to_compiler_asset_basename(impl_path, &package.namespace);
@@ -430,7 +430,7 @@ fn build_paths_for_module(build_state: &BuildCommandState, runtime: &RuntimeModu
                 }
             }
             SourceType::MlMap(_) => {
-                let build_path = package.get_build_path_for_profile(BuildProfile::TypecheckOnly);
+                let build_path = package.get_build_path_for_output(OutputTarget::Lsp);
                 let cmt = build_path.join(format!("{}.cmt", module_name));
                 result.insert(
                     module_name.clone(),

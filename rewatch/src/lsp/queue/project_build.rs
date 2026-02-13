@@ -9,7 +9,10 @@ use tracing::instrument;
 use super::super::{ProjectMap, group_by_file, publish_and_store};
 use super::PendingState;
 use crate::build;
-use crate::build::build_types::{BuildCommandState, BuildProfile, CompilationStage, SourceType};
+use crate::build::build_types::{
+    BuildCommandState, BuildConfig, CompilationStage, CompileScope, OutputTarget, SourceType,
+};
+use crate::build::compile;
 use crate::build::diagnostics::BscDiagnostic;
 use crate::build::packages;
 use crate::helpers;
@@ -56,6 +59,11 @@ fn reinitialize_project(
         packages::read_packages(&project_context, false).map_err(|e| format!("read_packages failed: {e}"))?;
     let packages_with_sources = packages::extend_with_children(&None, discovered_packages);
 
+    let build_config = BuildConfig {
+        output: OutputTarget::Lsp,
+        scope: CompileScope::FullTypecheck,
+    };
+
     let mut build_state = build::prepare_build(
         project_context,
         packages_with_sources,
@@ -63,7 +71,7 @@ fn reinitialize_project(
         false,
         true,
         old_warn_error,
-        BuildProfile::TypecheckOnly,
+        &build_config,
     )
     .map_err(|e| format!("prepare_build failed: {e}"))?;
 
@@ -74,9 +82,30 @@ fn reinitialize_project(
         }
     }
 
+    let parse_warnings = match build::parse_and_resolve(
+        &mut build_state,
+        build_config.output,
+        build_config.scope.mode(),
+        false,
+        true,
+        Some(std::time::Duration::ZERO),
+        false,
+    ) {
+        Ok(warnings) => warnings,
+        Err(e) => {
+            tracing::warn!("Project build parse failed: {e}");
+            return Ok((build_state, e.diagnostics));
+        }
+    };
+
+    let compile_universe =
+        compile::compute_compile_universe(&build_state, build_config.scope.mode().target_stage());
+
     let diagnostics = match build::incremental_build(
         &mut build_state,
-        BuildProfile::TypecheckOnly,
+        build_config,
+        compile_universe,
+        parse_warnings,
         Some(std::time::Duration::ZERO),
         true,
         false,

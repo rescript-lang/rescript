@@ -10,10 +10,10 @@ use tracing::instrument;
 use super::super::{ProjectMap, dependency_closure, group_by_file, publish_and_store};
 use super::PendingFileBuild;
 use crate::build;
-use crate::build::build_types::{BuildCommandState, BuildProfile, CompilationStage, SourceType};
-use crate::build::deps;
+use crate::build::build_types::{
+    BuildCommandState, BuildConfig, CompilationStage, CompileScope, OutputTarget, SourceType,
+};
 use crate::build::diagnostics::BscDiagnostic;
-use crate::build::parse;
 use crate::lsp::diagnostic_store::DiagnosticStore;
 
 /// Result of a batched build for one project.
@@ -117,7 +117,9 @@ pub(super) async fn run(
 #[instrument(name = "lsp.build", skip_all, fields(file_count = module_names.len()))]
 fn build_batch(build_state: &mut BuildCommandState, module_names: Vec<String>) -> BatchBuildResult {
     let (mut diagnostics, mut touched_files) = compile_dependencies(build_state, &module_names);
+
     let (dep_diagnostics, dep_touched) = typecheck_dependents(build_state, &module_names);
+
     diagnostics.extend(dep_diagnostics);
     touched_files.extend(dep_touched);
 
@@ -130,67 +132,58 @@ fn build_batch(build_state: &mut BuildCommandState, module_names: Vec<String>) -
 /// Compile the saved modules and all their transitive imports to JS.
 ///
 /// Collects every module the saved files import (recursively) and runs
-/// `incremental_build` with `TypecheckAndEmit`, which produces type
-/// information and JavaScript output.
-///
-/// ### Why we temporarily mark other modules as `Built`
-///
-/// The initial LSP build only typechecks (no JS), so most modules are at
-/// `TypeChecked` stage. When we now request `TypecheckAndEmit` (which
-/// targets `Built`), the build system sees every `TypeChecked` module as
-/// needing compilation — it would compile the entire codebase on the
-/// first save.
-///
-/// To avoid this, we temporarily mark all modules *outside* the import
-/// set as `Built` so the build system skips them. After the build
-/// finishes, we restore them back to `TypeChecked`.
+/// `incremental_build` with `CompileScope::Scoped(closure)`, which
+/// restricts the compile universe to only the dependency closure.
+/// This produces type information and JavaScript output for just the
+/// saved file and its imports, without touching the rest of the codebase.
 #[instrument(name = "lsp.build.compile_dependencies", skip_all)]
 fn compile_dependencies(
     build_state: &mut BuildCommandState,
     module_names: &[String],
 ) -> (Vec<BscDiagnostic>, HashSet<PathBuf>) {
-    // Pre-parse dirty files and resolve their deps so the dependency
-    // closure below reflects the saved content, not stale state.
-    // Without this, a file that starts importing a new module would
-    // compute a closure from its old deps, excluding the new dependency
-    // from the compile universe and causing a "module not found" error.
-    let parse_warnings = parse::generate_asts(build_state, BuildProfile::TypecheckAndEmit, || {});
-    let mut parse_diagnostics = Vec::new();
-    match parse_warnings {
+    let build_config = BuildConfig {
+        output: OutputTarget::Lsp,
+        scope: CompileScope::CompileDependencies,
+    };
+
+    // Parse dirty files and resolve deps so the dependency closure
+    // reflects the saved content, not stale state.
+    let parse_result = build::parse_and_resolve(
+        build_state,
+        build_config.output,
+        build_config.scope.mode(),
+        false,
+        true,
+        Some(std::time::Duration::ZERO),
+        true,
+    );
+
+    let (parse_warnings, parse_diagnostics) = match parse_result {
         Ok(warnings) => {
-            if !warnings.is_empty() {
-                parse_diagnostics = build::diagnostics::parse_compiler_output(&warnings);
-            }
+            let diags = if warnings.is_empty() {
+                Vec::new()
+            } else {
+                build::diagnostics::parse_compiler_output(&warnings)
+            };
+            (warnings, diags)
         }
         Err(e) => {
-            let err_str = e.to_string();
-            parse_diagnostics = build::diagnostics::parse_compiler_output(&err_str);
+            // Parse failure — return diagnostics for the affected files, skip compilation
+            let touched: HashSet<PathBuf> = e.diagnostics.iter().map(|d| d.file.clone()).collect();
+            return (e.diagnostics, touched);
         }
-    }
-    let deleted_modules = build_state.build_state.deleted_modules.clone();
-    deps::get_deps(
-        &mut build_state.build_state,
-        &deleted_modules,
-        BuildProfile::TypecheckAndEmit,
-    );
+    };
 
     let closure =
         dependency_closure::get_dependency_closure(&build_state.build_state.modules, module_names.to_vec());
-    let touched_files = module_names_to_paths(build_state, &closure);
 
-    // Temporarily promote modules outside the closure so they don't enter
-    // the compile universe (see doc comment above).
-    let mut promoted: Vec<String> = Vec::new();
-    for (name, module) in build_state.build_state.modules.iter_mut() {
-        if !closure.contains(name) && module.compilation_stage == CompilationStage::TypeChecked {
-            module.compilation_stage = CompilationStage::Built;
-            promoted.push(name.clone());
-        }
-    }
+    let touched_files = module_names_to_paths(build_state, &closure);
 
     let diagnostics = match build::incremental_build(
         build_state,
-        BuildProfile::TypecheckAndEmit,
+        build_config,
+        closure.clone(),
+        parse_warnings,
         Some(std::time::Duration::ZERO),
         false,
         false,
@@ -205,14 +198,6 @@ fn compile_dependencies(
         }
     };
 
-    for name in &promoted {
-        if let Some(module) = build_state.build_state.modules.get_mut(name)
-            && module.compilation_stage == CompilationStage::Built
-        {
-            module.compilation_stage = CompilationStage::TypeChecked;
-        }
-    }
-
     let mut all_diagnostics = parse_diagnostics;
     all_diagnostics.extend(diagnostics);
     (all_diagnostics, touched_files)
@@ -225,8 +210,8 @@ fn compile_dependencies(
 /// to surface those errors as diagnostics. No JavaScript is emitted —
 /// that happens when those files are themselves saved.
 ///
-/// Uses the same temporary `Built` marking as `compile_dependencies` to
-/// keep the build scoped to only the relevant modules.
+/// Uses `CompileScope::TypecheckDependents` to restrict the build to only
+/// the relevant modules.
 #[instrument(name = "lsp.build.typecheck_dependents", skip_all, fields(dependent_count = tracing::field::Empty))]
 fn typecheck_dependents(
     build_state: &mut BuildCommandState,
@@ -250,19 +235,14 @@ fn typecheck_dependents(
         }
     }
 
-    // Temporarily promote modules outside the dependent closure (see
-    // compile_dependencies doc comment for explanation).
-    let mut promoted: Vec<String> = Vec::new();
-    for (name, module) in build_state.build_state.modules.iter_mut() {
-        if !dependents.contains(name) && module.compilation_stage == CompilationStage::TypeChecked {
-            module.compilation_stage = CompilationStage::Built;
-            promoted.push(name.clone());
-        }
-    }
-
     let diagnostics = match build::incremental_build(
         build_state,
-        BuildProfile::TypecheckOnly,
+        BuildConfig {
+            output: OutputTarget::Lsp,
+            scope: CompileScope::TypecheckDependents,
+        },
+        dependents.clone(),
+        String::new(),
         Some(std::time::Duration::ZERO),
         false,
         false,
@@ -276,14 +256,6 @@ fn typecheck_dependents(
             e.diagnostics
         }
     };
-
-    for name in &promoted {
-        if let Some(module) = build_state.build_state.modules.get_mut(name)
-            && module.compilation_stage == CompilationStage::Built
-        {
-            module.compilation_stage = CompilationStage::TypeChecked;
-        }
-    }
 
     (diagnostics, touched_files)
 }

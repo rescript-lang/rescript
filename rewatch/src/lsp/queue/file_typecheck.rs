@@ -11,7 +11,7 @@ use tower_lsp::lsp_types::Url;
 use super::super::file_args::{BuildCommandStateExt, TypecheckArgs};
 use super::super::{ProjectMap, publish_and_store, to_lsp_diagnostic};
 use super::PendingFileTypecheck;
-use crate::build::build_types::BuildProfile;
+use crate::build::build_types::{CompileMode, OutputTarget};
 use crate::build::deps;
 use crate::build::diagnostics::BscDiagnostic;
 use crate::lsp::diagnostic_store::DiagnosticStore;
@@ -153,7 +153,12 @@ fn extract_file_context(
 ) -> Option<FileContext> {
     let project_root = project_map.project_root_for(&uri)?;
     let build_state = project_map.states.get(&project_root)?;
-    let file_args = build_state.get_typecheck_args(&file_path, &content, BuildProfile::TypecheckOnly)?;
+    let file_args = build_state.get_typecheck_args(
+        &file_path,
+        &content,
+        OutputTarget::Lsp,
+        CompileMode::TypecheckOnly,
+    )?;
 
     Some(FileContext {
         uri,
