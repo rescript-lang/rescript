@@ -394,6 +394,15 @@ impl PendingState {
                 self.build_projects.deleted_files.insert(file_path);
             }
             QueueEvent::ConfigChanged { file_path } => {
+                // The full project rebuild does a TypecheckOnly build of all
+                // modules, so pending per-file typechecks are redundant.
+                // Keep compile_files — the full build doesn't emit JS.
+                // Only clear typechecks for files under this project root
+                // to avoid discarding work for unrelated projects in a monorepo.
+                if let Some(project_root) = file_path.parent() {
+                    self.typechecks
+                        .retain(|_, tc| !tc.file_path.starts_with(project_root));
+                }
                 self.build_projects.config_changed.insert(file_path);
             }
         }
@@ -864,5 +873,114 @@ mod tests {
 
         assert!(state.build_projects.deleted_files.contains(&test_path("Old.res")));
         assert!(state.compile_files.is_empty());
+    }
+
+    // -- ConfigChanged clears typechecks but keeps compile_files --
+
+    #[test]
+    fn config_changed_clears_pending_typechecks() {
+        let mut state = PendingState::new();
+
+        // Unsaved edits in two files
+        state.merge(QueueEvent::BufferChanged {
+            uri: test_uri("A.res"),
+            file_path: test_path("A.res"),
+            content: "let a = 1".into(),
+            generation: 1,
+        });
+        state.merge(QueueEvent::BufferChanged {
+            uri: test_uri("B.res"),
+            file_path: test_path("B.res"),
+            content: "let b = 2".into(),
+            generation: 2,
+        });
+        assert_eq!(state.typechecks.len(), 2);
+
+        // Config change — full rebuild will typecheck everything
+        state.merge(QueueEvent::ConfigChanged {
+            file_path: test_path("rescript.json"),
+        });
+
+        // Typechecks cleared — full build covers them
+        assert!(state.typechecks.is_empty());
+        assert!(
+            state
+                .build_projects
+                .config_changed
+                .contains(&test_path("rescript.json"))
+        );
+    }
+
+    #[test]
+    fn config_changed_keeps_pending_compile_files() {
+        let mut state = PendingState::new();
+
+        // A file was saved
+        state.merge(QueueEvent::FileChangedOnDisk {
+            uri: test_uri("A.res"),
+            file_path: test_path("A.res"),
+        });
+        assert_eq!(state.compile_files.len(), 1);
+
+        // Config change — full rebuild is TypecheckOnly, doesn't emit JS
+        state.merge(QueueEvent::ConfigChanged {
+            file_path: test_path("rescript.json"),
+        });
+
+        // compile_files kept — still need incremental build for JS output
+        assert_eq!(state.compile_files.len(), 1);
+        assert!(state.compile_files.contains_key(&test_uri("A.res")));
+        assert!(
+            state
+                .build_projects
+                .config_changed
+                .contains(&test_path("rescript.json"))
+        );
+    }
+
+    #[test]
+    fn config_changed_only_clears_typechecks_for_same_project() {
+        let mut state = PendingState::new();
+
+        let project_a = if cfg!(windows) {
+            PathBuf::from("C:\\repo\\packages\\a")
+        } else {
+            PathBuf::from("/repo/packages/a")
+        };
+        let project_b = if cfg!(windows) {
+            PathBuf::from("C:\\repo\\packages\\b")
+        } else {
+            PathBuf::from("/repo/packages/b")
+        };
+
+        let file_a = project_a.join("src").join("A.res");
+        let file_b = project_b.join("src").join("B.res");
+        let uri_a = Url::from_file_path(&file_a).unwrap();
+        let uri_b = Url::from_file_path(&file_b).unwrap();
+
+        // Unsaved edits in both projects
+        state.merge(QueueEvent::BufferChanged {
+            uri: uri_a.clone(),
+            file_path: file_a,
+            content: "let a = 1".into(),
+            generation: 1,
+        });
+        state.merge(QueueEvent::BufferChanged {
+            uri: uri_b.clone(),
+            file_path: file_b,
+            content: "let b = 2".into(),
+            generation: 2,
+        });
+        assert_eq!(state.typechecks.len(), 2);
+
+        // Config change in project A only
+        state.merge(QueueEvent::ConfigChanged {
+            file_path: project_a.join("rescript.json"),
+        });
+
+        // Only project A's typecheck is cleared
+        assert_eq!(state.typechecks.len(), 1);
+        assert!(state.typechecks.contains_key(&uri_b));
+        assert!(!state.typechecks.contains_key(&uri_a));
     }
 }
