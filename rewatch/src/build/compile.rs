@@ -872,28 +872,24 @@ fn compile_file(
                     ..
                 }) = &module.source_type
                 {
-                    let _ = std::fs::copy(Path::new(&package.path).join(path), build_path_abs.join(path))
-                        .expect("copying source file failed");
+                    let _ = std::fs::copy(Path::new(&package.path).join(path), build_path_abs.join(path));
 
                     let _ = std::fs::copy(
                         Path::new(&package.path).join(path),
                         ocaml_build_path_abs.join(std::path::Path::new(path).file_name().unwrap()),
-                    )
-                    .expect("copying source file failed");
+                    );
                 }
                 if let SourceType::SourceFile(SourceFile {
                     implementation: Implementation { path, .. },
                     ..
                 }) = &module.source_type
                 {
-                    let _ = std::fs::copy(Path::new(&package.path).join(path), build_path_abs.join(path))
-                        .expect("copying source file failed");
+                    let _ = std::fs::copy(Path::new(&package.path).join(path), build_path_abs.join(path));
 
                     let _ = std::fs::copy(
                         Path::new(&package.path).join(path),
                         ocaml_build_path_abs.join(std::path::Path::new(path).file_name().unwrap()),
-                    )
-                    .expect("copying source file failed");
+                    );
                 }
 
                 // copy js file
@@ -914,7 +910,7 @@ fn compile_file(
                         );
 
                         if source.exists() {
-                            let _ = std::fs::copy(&source, &destination).expect("copying source file failed");
+                            let _ = std::fs::copy(&source, &destination);
                         }
                     }
                 });
