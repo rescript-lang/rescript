@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -298,5 +298,46 @@ describe("lsp didSave", { timeout: 60_000 }, () => {
       expect(appDiag, "Expected diagnostics for App.res").toBeDefined();
       expect(appDiag.diagnostics.length).toBeGreaterThan(0);
       expect(appDiag.diagnostics[0].severity).toBe(1); // Error
+    }));
+
+  it("compiles correctly when saving a file that uses a newly created module", () =>
+    runLspTest(async ({ lsp, sandbox, writeFile }) => {
+      const rootUri = pathToFileURL(sandbox).href;
+      await lsp.initialize(rootUri);
+      await lsp.waitForNotification("rescript/buildFinished", 30000);
+
+      // Create a new module externally (simulates shell command, LLM agent, etc.)
+      const newModulePath = path.join(sandbox, "src", "MathHelper.res");
+      writeFileSync(newModulePath, "let increase = x => x + 1\n");
+
+      // Notify the LSP that a file was created (type: 1 = Created)
+      lsp.notifyWatchedFilesChanged([
+        { relativePath: "src/MathHelper.res", type: 1 },
+      ]);
+      await lsp.waitForNotification("rescript/buildFinished", 30000);
+
+      // Now save Root.res with content that uses the new module.
+      // Before the fix, the dependency closure was computed from stale
+      // deps (before re-parsing Root.res), so MathHelper was excluded
+      // from the compile universe, causing a "module not found" error.
+      await writeFile("src/Root.res", "let main = MathHelper.increase(1)\n");
+      await lsp.waitForNotification("rescript/buildFinished", 30000);
+
+      // JS should be produced for the saved file and its new dependency
+      expect(
+        existsSync(path.join(sandbox, "src", "Root.mjs")),
+        "Root.mjs should exist after save",
+      ).toBe(true);
+      expect(
+        existsSync(path.join(sandbox, "src", "MathHelper.mjs")),
+        "MathHelper.mjs should exist after save (dependency closure)",
+      ).toBe(true);
+
+      // Diagnostics should be clean (no errors)
+      const diagnostics = lsp.getDiagnostics();
+      const rootDiag = diagnostics.find(d => d.file === "src/Root.res");
+      if (rootDiag) {
+        expect(rootDiag.diagnostics).toEqual([]);
+      }
     }));
 });

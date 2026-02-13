@@ -11,7 +11,9 @@ use super::super::{ProjectMap, dependency_closure, group_by_file, publish_and_st
 use super::PendingFileBuild;
 use crate::build;
 use crate::build::build_types::{BuildCommandState, BuildProfile, CompilationStage, SourceType};
+use crate::build::deps;
 use crate::build::diagnostics::BscDiagnostic;
+use crate::build::parse;
 use crate::lsp::diagnostic_store::DiagnosticStore;
 
 /// Result of a batched build for one project.
@@ -147,6 +149,31 @@ fn compile_dependencies(
     build_state: &mut BuildCommandState,
     module_names: &[String],
 ) -> (Vec<BscDiagnostic>, HashSet<PathBuf>) {
+    // Pre-parse dirty files and resolve their deps so the dependency
+    // closure below reflects the saved content, not stale state.
+    // Without this, a file that starts importing a new module would
+    // compute a closure from its old deps, excluding the new dependency
+    // from the compile universe and causing a "module not found" error.
+    let parse_warnings = parse::generate_asts(build_state, BuildProfile::TypecheckAndEmit, || {});
+    let mut parse_diagnostics = Vec::new();
+    match parse_warnings {
+        Ok(warnings) => {
+            if !warnings.is_empty() {
+                parse_diagnostics = build::diagnostics::parse_compiler_output(&warnings);
+            }
+        }
+        Err(e) => {
+            let err_str = e.to_string();
+            parse_diagnostics = build::diagnostics::parse_compiler_output(&err_str);
+        }
+    }
+    let deleted_modules = build_state.build_state.deleted_modules.clone();
+    deps::get_deps(
+        &mut build_state.build_state,
+        &deleted_modules,
+        BuildProfile::TypecheckAndEmit,
+    );
+
     let closure =
         dependency_closure::get_dependency_closure(&build_state.build_state.modules, module_names.to_vec());
     let touched_files = module_names_to_paths(build_state, &closure);
@@ -186,7 +213,9 @@ fn compile_dependencies(
         }
     }
 
-    (diagnostics, touched_files)
+    let mut all_diagnostics = parse_diagnostics;
+    all_diagnostics.extend(diagnostics);
+    (all_diagnostics, touched_files)
 }
 
 /// Re-typecheck all modules that import the saved modules (recursively).
