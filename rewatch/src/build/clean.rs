@@ -462,13 +462,10 @@ pub fn clean_package(show_progress: bool, plain_output: bool, package: &Package)
         let _ = std::io::stdout().flush();
     }
 
-    // Clean standard build artifacts
+    // Clean standard build artifacts (not LSP — a running LSP server
+    // manages its own lib/lsp/ and lib/lsp-ocaml/ directories).
     let _ = std::fs::remove_dir_all(package.get_build_path());
     let _ = std::fs::remove_dir_all(package.get_ocaml_build_path());
-
-    // Clean LSP build artifacts
-    let _ = std::fs::remove_dir_all(package.get_lsp_build_path());
-    let _ = std::fs::remove_dir_all(package.get_lsp_ocaml_build_path());
 
     // remove the per-package compiler metadata file so that a subsequent build writes fresh metadata
     let _ = std::fs::remove_file(package.get_compiler_info_path());

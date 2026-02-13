@@ -2,9 +2,7 @@ import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
-import { createLspClient } from "../../helpers/lsp-client.mjs";
-import { createRescriptCli } from "../../helpers/process.mjs";
-import { createSandbox, removeSandbox } from "../../helpers/sandbox.mjs";
+import { runLspTest } from "../../helpers/test-context.mjs";
 
 /**
  * Collect all file basenames (no path) in a directory (non-recursive).
@@ -25,14 +23,8 @@ function getExtensions(dir) {
 }
 
 describe("concurrent LSP and CLI build", { timeout: 120_000 }, () => {
-  it("LSP and standard build use separate flat artifact directories", async () => {
-    let sandbox = null;
-    let lsp = null;
-
-    try {
-      sandbox = await createSandbox();
-      const cli = createRescriptCli(sandbox);
-
+  it("LSP and standard build use separate flat artifact directories", () =>
+    runLspTest(async ({ lsp, sandbox, cli }) => {
       // 1. Run a standard CLI build first — populates lib/bs/ and lib/ocaml/
       const buildResult = await cli.build();
       expect(buildResult.status).toBe(0);
@@ -57,7 +49,6 @@ describe("concurrent LSP and CLI build", { timeout: 120_000 }, () => {
       const ocamlFilesBefore = listFiles(ocamlDir);
 
       // 2. Start LSP — runs initial TypecheckOnly build, populates lib/lsp/ and lib/lsp-ocaml/
-      lsp = createLspClient(sandbox);
       const rootUri = pathToFileURL(sandbox).href;
       await lsp.initialize(rootUri);
       await lsp.waitForNotification("rescript/buildFinished", 30000);
@@ -115,36 +106,15 @@ describe("concurrent LSP and CLI build", { timeout: 120_000 }, () => {
       for (const entry of diagnostics) {
         expect(entry.diagnostics).toEqual([]);
       }
-    } finally {
-      if (lsp) {
-        try {
-          await lsp.shutdown();
-        } catch {
-          try {
-            lsp.process.kill("SIGKILL");
-          } catch {}
-        }
-      }
-      if (sandbox) {
-        await removeSandbox(sandbox);
-      }
-    }
-  });
+    }));
 
-  it("LSP build after clean does not use stale lib/ocaml artifacts", async () => {
-    let sandbox = null;
-    let lsp = null;
-
-    try {
-      sandbox = await createSandbox();
-      const cli = createRescriptCli(sandbox);
-
+  it("LSP build after clean does not use stale lib/ocaml artifacts", () =>
+    runLspTest(async ({ lsp, sandbox, cli }) => {
       // 1. Run a standard build to populate lib/ocaml/
       const buildResult = await cli.build();
       expect(buildResult.status).toBe(0);
 
       // 2. Start LSP — initial build populates lib/lsp-ocaml/
-      lsp = createLspClient(sandbox);
       const rootUri = pathToFileURL(sandbox).href;
       await lsp.initialize(rootUri);
       await lsp.waitForNotification("rescript/buildFinished", 30000);
@@ -163,19 +133,5 @@ describe("concurrent LSP and CLI build", { timeout: 120_000 }, () => {
       for (const entry of diagnostics) {
         expect(entry.diagnostics).toEqual([]);
       }
-    } finally {
-      if (lsp) {
-        try {
-          await lsp.shutdown();
-        } catch {
-          try {
-            lsp.process.kill("SIGKILL");
-          } catch {}
-        }
-      }
-      if (sandbox) {
-        await removeSandbox(sandbox);
-      }
-    }
-  });
+    }));
 });

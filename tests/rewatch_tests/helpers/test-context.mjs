@@ -666,11 +666,15 @@ export async function runLspTest(scenario, options = {}) {
     const lspCwd = options.cwd ? path.join(sandbox, options.cwd) : sandbox;
     lsp = createLspClient(lspCwd, otelReceiver.endpoint);
 
+    // CLI helper without OTEL — CLI spans should not pollute LSP snapshots
+    const cli = createRescriptCli(lspCwd);
+
     // Create test context
     const ctx = {
       sandbox,
       lspCwd,
       lsp,
+      cli,
 
       async writeFile(relativePath, content) {
         const fullPath = path.join(lspCwd, relativePath);
