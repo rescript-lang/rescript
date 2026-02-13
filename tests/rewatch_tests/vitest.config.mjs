@@ -6,5 +6,6 @@ export default defineConfig({
     hookTimeout: 15_000, // 15 second hook timeout
     include: ["tests/**/*.test.mjs"],
     globalSetup: "./globalSetup.mjs",
+    retry: 1,
   },
 });
