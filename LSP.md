@@ -62,19 +62,32 @@ rewatch/src/
 ├── lsp.rs                       # Backend struct, LanguageServer impl, diagnostics publishing, run_stdio()
 └── lsp/
     ├── analysis.rs              # Shared context-building and analysis binary spawning
-    ├── initialize.rs            # Workspace discovery, file watcher registration
+    ├── code_action.rs           # Code actions via analysis binary subprocess
+    ├── code_lens.rs             # Code lens via analysis binary subprocess
+    ├── completion.rs            # Completion via analysis binary subprocess
+    ├── definition.rs            # Go-to-definition via analysis binary subprocess
+    ├── dependency_closure.rs    # Dependency/dependent graph traversal
+    ├── diagnostic_store.rs      # Diagnostic storage and idle tracking for HTTP endpoint
+    ├── document_symbol.rs       # Document symbols via analysis binary subprocess
+    ├── file_args.rs             # TypecheckArgs extraction from BuildCommandState
+    ├── formatting.rs            # Document formatting via bsc
+    ├── hover.rs                 # Hover via analysis binary subprocess
+    ├── http.rs                  # HTTP diagnostics endpoint server
     ├── initial_build.rs         # Full TypecheckOnly build on startup
+    ├── initialize.rs            # Workspace discovery, file watcher registration
+    ├── inlay_hint.rs            # Inlay hints via analysis binary subprocess
+    ├── notifications.rs         # Custom rescript/buildFinished notification
     ├── queue.rs                 # Unified debounced queue: types, public API, consumer, merge, flush orchestration
     ├── queue/
     │   ├── file_build.rs        # Per-file incremental build (dependency + dependent closure)
     │   ├── file_typecheck.rs    # Per-file typecheck (parallel, wave-based, staleness-aware)
     │   └── project_build.rs     # Per-project full rebuild + artifact cleanup on file creation/deletion
-    ├── typecheck.rs             # Single-file typecheck via bsc stdin piping (used by queue and pre-queue fallback)
-    ├── file_args.rs             # TypecheckArgs extraction from BuildCommandState
-    ├── completion.rs            # Completion via analysis binary subprocess
-    ├── hover.rs                 # Hover via analysis binary subprocess
-    ├── dependency_closure.rs    # Dependency/dependent graph traversal
-    └── notifications.rs         # Custom rescript/buildFinished notification
+    ├── references.rs            # Find references via analysis binary subprocess
+    ├── rename.rs                # Rename via analysis binary subprocess
+    ├── semantic_tokens.rs       # Semantic tokens via analysis binary subprocess
+    ├── signature_help.rs        # Signature help via analysis binary subprocess
+    ├── type_definition.rs       # Go-to-type-definition via analysis binary subprocess
+    └── typecheck.rs             # Single-file typecheck via bsc stdin piping (used by queue and pre-queue fallback)
 ```
 
 ## Invocation
@@ -212,7 +225,7 @@ Editor starts ──▶ rescript lsp --stdio
               │                                 │
               │  didOpen                     ──┼──▶ Enqueue BufferOpened into unified queue
               │  didChange                   ──┼──▶ Enqueue BufferChanged into unified queue
-              │  didSave                     ──┼──▶ Enqueue FileChangedOnDisk into unified queue
+              │  didSave                     ──┼──▶ Enqueue FileChangedOnDisk or ConfigChanged
               │  didChangeWatchedFiles       ──┼──▶ Enqueue FileChangedOnDisk / FileCreated / FileDeleted
               │  completion / hover / etc.   ──┼──▶ Shell out to analysis binary
               │  shutdown                    ──┼──▶ Ok(())
@@ -234,14 +247,16 @@ All file events flow into a single unified queue (`lsp/queue.rs`). The queue acc
 - **BufferOpened / BufferChanged** (from `didOpen` / `didChange`) — unsaved buffer content
 - **FileChangedOnDisk** (from `didSave` / `didChangeWatchedFiles` Changed) — file changed on disk
 - **FileCreated / FileDeleted** (from `didChangeWatchedFiles` Created/Deleted) — structural change requiring full project rebuild
+- **ConfigChanged** (from `didSave` / `didChangeWatchedFiles` for `rescript.json`) — config change requiring full project rebuild
 
 A single background consumer task collects events into a `PendingState` with three action-oriented fields:
 
 - `typechecks` — files needing typecheck (unsaved buffer content)
 - `compile_files` — files needing incremental build (saved to disk)
 - `build_projects` — file paths whose creation/deletion requires a full project rebuild
+- `config_changed` — `rescript.json` paths requiring full project re-initialization
 
-The merge function applies promotion rules to consolidate per-file state. When a `FileCreated` or `FileDeleted` event arrives, any pending per-file typecheck or build for that same file is removed since the full rebuild will cover it. After 100ms of silence the batch is flushed sequentially:
+The merge function applies promotion rules to consolidate per-file state. When a `FileCreated` or `FileDeleted` event arrives, any pending per-file typecheck or build for that same file is removed since the full rebuild will cover it. A `ConfigChanged` event clears pending typechecks for the same project (since the rebuild will produce fresh type information) but keeps pending compile_files. After 100ms of silence the batch is flushed sequentially:
 
 1. **Full builds first** — re-initialize affected projects from scratch (same flow as the initial build), replacing the old `BuildCommandState`. Clears stale diagnostics for files that no longer exist.
 2. **Incremental builds second** — saved files get a full incremental build (compile dependencies + typecheck dependents), holding the projects lock.
@@ -255,13 +270,15 @@ Sequential execution within one consumer eliminates all races on `lib/lsp/` arti
 
 When multiple events arrive for the same file within a debounce window:
 
-| Existing state | New event               | Result                                                        |
-| -------------- | ----------------------- | ------------------------------------------------------------- |
-| typechecks     | BufferChanged           | Update content and generation                                 |
-| typechecks     | FileChangedOnDisk       | Promote to compile_files, stash buffer for post-build recheck |
-| compile_files  | BufferChanged           | Stay in compile_files, update stashed buffer                  |
-| compile_files  | FileChangedOnDisk       | No-op                                                         |
-| any            | FileCreated/FileDeleted | Remove from typechecks/compile_files, add to build_projects   |
+| Existing state | New event               | Result                                                                          |
+| -------------- | ----------------------- | ------------------------------------------------------------------------------- |
+| typechecks     | BufferChanged           | Update content and generation                                                   |
+| typechecks     | FileChangedOnDisk       | Promote to compile_files, stash buffer for post-build recheck                   |
+| compile_files  | BufferChanged           | Stay in compile_files, update stashed buffer                                    |
+| compile_files  | FileChangedOnDisk       | No-op                                                                           |
+| any            | FileCreated/FileDeleted | Remove from typechecks/compile_files, add to build_projects                     |
+| typechecks     | ConfigChanged           | Clear typechecks for same project (rebuild produces fresh types), add to config |
+| compile_files  | ConfigChanged           | Keep compile_files, add to config                                               |
 
 #### Staleness detection
 
@@ -314,11 +331,12 @@ Implementation: `lsp/queue.rs` (queue, merge, flush orchestration), `lsp/queue/f
 
 ### On `didSave` / `didChangeWatchedFiles` (saved files)
 
-`didSave` enqueues a `FileChangedOnDisk` event. `didChangeWatchedFiles` classifies by event type: `Changed` → `FileChangedOnDisk`, `Created` → `FileCreated`, `Deleted` → `FileDeleted`. The consumer flushes sequentially:
+`didSave` enqueues a `FileChangedOnDisk` event for source files, or a `ConfigChanged` event for `rescript.json`. `didChangeWatchedFiles` classifies by event type: `Changed` → `FileChangedOnDisk` (or `ConfigChanged` for `rescript.json`), `Created` → `FileCreated`, `Deleted` → `FileDeleted` (source files only). The consumer flushes sequentially:
 
 ```
 didSave / didChangeWatchedFiles notification
     │
+    ├── rescript.json → Enqueue ConfigChanged event (via didSave)
     ├── Changed  → Enqueue FileChangedOnDisk event
     ├── Created  → Enqueue FileCreated event (file_path only)
     └── Deleted  → Enqueue FileDeleted event (file_path only)
@@ -327,10 +345,17 @@ didSave / didChangeWatchedFiles notification
                     │
           ┌─────────▼──────────┐
           │ merge into           │
-          │ PendingState         │  (typechecks + compile_files + build_projects)
+          │ PendingState         │  (typechecks + compile_files + build_projects + config_changed)
           │ reset 100ms timer    │
           └─────────┬──────────┘
                     │ timer expires
+                    ▼
+          Step 0: Config change builds (per rescript.json)
+          ├── Resolve project root from rescript.json path
+          ├── Re-initialize project (re-read packages, re-scan sources)
+          ├── Replace old BuildCommandState
+          └── Publish diagnostics from new build
+                    │
                     ▼
           Step 1: Full builds (per project root)
           ├── Group build_projects paths by project root (resolved at flush time)
@@ -346,6 +371,8 @@ didSave / didChangeWatchedFiles notification
           ├── group files by project root
           ├── mark_file_parse_dirty per file
           ├── Phase 1: compile_dependencies
+          │   ├── Pre-parse dirty files (generate_asts) to refresh module deps
+          │   ├── Resolve deps (get_deps) so closure reflects saved content
           │   ├── get_dependency_closure (DFS downward through module.deps)
           │   ├── Temporarily promote non-closure TypeChecked modules → Built
           │   ├── incremental_build(TypecheckAndEmit, only_incremental=true)
@@ -365,7 +392,7 @@ didSave / didChangeWatchedFiles notification
           Send rescript/buildFinished notification
 ```
 
-`didChangeWatchedFiles` filters for `.res`/`.resi` files. `Changed` events trigger incremental builds via `FileChangedOnDisk`. `Created` and `Deleted` events trigger a full project re-initialization via `FileCreated`/`FileDeleted` events — project root resolution happens at flush time, not at enqueue time. When a `.res` file is deleted, its associated `.resi` and compiled JS files are also cleaned up; deleting a `.resi` alone does not remove the `.res` or JS.
+`didChangeWatchedFiles` filters for `.res`/`.resi` files and `rescript.json`. For source files: `Changed` events trigger incremental builds via `FileChangedOnDisk`, `Created` and `Deleted` events trigger a full project re-initialization via `FileCreated`/`FileDeleted` events — project root resolution happens at flush time, not at enqueue time. When a `.res` file is deleted, its associated `.resi` and compiled JS files are also cleaned up; deleting a `.resi` alone does not remove the `.res` or JS. For `rescript.json` files: `Changed` events trigger a `ConfigChanged` event that re-initializes the affected project (creation/deletion of `rescript.json` is not handled).
 
 Implementation: `lsp/queue.rs`, `lsp/queue/file_build.rs`, `lsp/queue/project_build.rs`, `lsp/dependency_closure.rs`
 
@@ -486,9 +513,9 @@ File watcher events (`workspace/didChangeWatchedFiles`) are classified by event 
 
 Implementation: `lsp/initialize.rs`
 
-### Not yet implemented
+### `rescript.json` changes
 
-- **`rescript.json` changes**: Config changes likely need a full re-initialization (re-read config, re-discover packages, re-register file watchers).
+Config changes (e.g. suffix, package-spec) trigger a full project re-initialization: the affected project is re-read from disk, packages are re-discovered, and a fresh `TypecheckOnly` build runs. Any pending typechecks scoped to that project are cleared to avoid stale results. The `rescript.json` watcher pattern is already registered alongside source file patterns.
 
 ## What Is NOT Implemented Yet
 
@@ -517,7 +544,7 @@ Implementation: `lsp/initialize.rs`
 | `textDocument/createInterface`          | TODO — niche feature, generates `.resi` from `.res` (already exists in analysis binary) |
 | `textDocument/openCompiled`             | TODO — niche feature, opens compiled `.js` output                                       |
 | File creation/deletion handling         | Implemented (FileCreated/FileDeleted queue events)                                      |
-| `rescript.json` change handling         | TODO — needs full re-initialization                                                     |
+| `rescript.json` change handling         | Implemented (full re-initialization on config change)                                   |
 | `workspace/symbol`                      | TODO — project-wide symbol search                                                       |
 | `textDocument/documentHighlight`        | TODO — highlight all occurrences of a symbol in current file                            |
 | `textDocument/foldingRange`             | TODO — code folding regions                                                             |

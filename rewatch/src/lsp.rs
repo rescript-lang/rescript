@@ -30,7 +30,7 @@ use std::time::Duration;
 use crate::build::build_types::BuildCommandState;
 use crate::build::diagnostics::{BscDiagnostic, Severity};
 use diagnostic_store::DiagnosticStore;
-use file_args::{is_rescript_file, is_rescript_source};
+use file_args::is_rescript_file;
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer, LspService, Server};
@@ -479,7 +479,7 @@ impl LanguageServer for Backend {
                 let Some(file_path) = uri_to_file_path(&event.uri, "didChangeWatchedFiles") else {
                     continue;
                 };
-                if !is_rescript_source(&file_path) {
+                if !is_rescript_file(&file_path) {
                     continue;
                 }
 
