@@ -164,6 +164,13 @@ impl LanguageServer for Backend {
             .map(|p| p.to_string_lossy().into_owned())
             .collect();
 
+        self.client
+            .log_message(
+                MessageType::INFO,
+                format!("rescript LSP server version: {}", env!("CARGO_PKG_VERSION")),
+            )
+            .await;
+
         tracing::info!(workspace_folders = ?folders, "LSP initialized with workspace folders");
 
         // Extract queue_debounce_ms from initializationOptions if provided.
