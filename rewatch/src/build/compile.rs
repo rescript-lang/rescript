@@ -22,6 +22,47 @@ use std::sync::OnceLock;
 use std::time::SystemTime;
 use tracing::{info_span, instrument};
 
+/// The result of compiling a single file (implementation or interface).
+enum CompileFileOutcome {
+    /// Compilation succeeded with no warnings.
+    Success,
+    /// Compilation succeeded but produced warnings.
+    Warning(String),
+    /// Compilation failed.
+    Error(String),
+}
+
+impl CompileFileOutcome {
+    fn is_error(&self) -> bool {
+        matches!(self, CompileFileOutcome::Error(_))
+    }
+}
+
+impl From<Result<Option<String>>> for CompileFileOutcome {
+    fn from(result: Result<Option<String>>) -> Self {
+        match result {
+            Ok(None) => CompileFileOutcome::Success,
+            Ok(Some(warning)) => CompileFileOutcome::Warning(warning),
+            Err(err) => CompileFileOutcome::Error(err.to_string()),
+        }
+    }
+}
+
+/// The result of processing one module in a compile wave.
+struct CompileModuleResult {
+    /// The name of the module that was processed.
+    module_name: String,
+    /// Result of compiling the implementation file.
+    implementation: CompileFileOutcome,
+    /// Result of compiling the interface file, if one exists.
+    interface: Option<CompileFileOutcome>,
+    /// Whether the .cmi file was unchanged after compilation.
+    is_clean_cmi: bool,
+    /// Whether the module was actually sent to the compiler.
+    /// False for skipped modules and MlMap entries.
+    was_compiled: bool,
+}
+
 /// Execute js-post-build command for a compiled JavaScript file.
 /// The command runs in the directory containing the rescript.json that defines it.
 /// The absolute path to the JS file is passed as an argument.
@@ -85,37 +126,54 @@ fn execute_post_build_command(cmd: &str, js_file_path: &Path, working_dir: &Path
 pub fn compute_compile_universe(
     build_state: &BuildCommandState,
     target_stage: CompilationStage,
-) -> AHashSet<String> {
-    let dirty_modules: AHashSet<String> = build_state
+) -> CompileUniverse {
+    let originally_dirty: AHashSet<String> = build_state
         .modules
         .iter()
         .filter(|(_, module)| module.compilation_stage.needs_compile(target_stage))
         .map(|(name, _)| name.to_owned())
         .collect();
 
-    let mut universe = dirty_modules.clone();
-    let mut frontier = universe.clone();
+    // Walk the dependency graph outward from the dirty modules to find
+    // every module that might need recompilation.
+    //
+    // `all` accumulates every module we have visited so far.
+    // `frontier` holds the modules we discovered in the previous round
+    // whose dependents we have not yet inspected.
+    //
+    // Each iteration collects the direct dependents of the current
+    // frontier, keeps only the ones we have not seen before (the new
+    // frontier), and adds them to `all`. The loop stops when no new
+    // modules are found.
+    let mut all = originally_dirty.clone();
+    let mut frontier = all.clone();
     loop {
         let mut dependents = AHashSet::new();
         for name in &frontier {
             if let Some(module) = build_state.get_module(name) {
-                dependents.extend(module.dependents.clone());
+                dependents.extend(module.dependents.iter().cloned());
             }
         }
-        frontier = dependents.difference(&universe).cloned().collect();
-        universe.extend(frontier.clone());
+
+        // Keep only modules we have not visited yet.
+        frontier = dependents.difference(&all).cloned().collect();
+        all.extend(frontier.iter().cloned());
+
         if frontier.is_empty() {
             break;
         }
     }
-    universe
+    CompileUniverse {
+        all,
+        originally_dirty,
+    }
 }
 
 #[instrument(name = "build.compile", skip_all)]
 pub fn compile(
     build_state: &mut BuildCommandState,
     build_config: &BuildConfig,
-    compile_universe: AHashSet<String>,
+    compile_universe: CompileUniverse,
     show_progress: bool,
     inc: impl Fn() + std::marker::Sync,
     set_length: impl Fn(u64),
@@ -124,8 +182,10 @@ pub fn compile(
     let target_stage = mode.target_stage();
     let mut compiled_modules = AHashSet::<String>::new();
 
-    // for sure clean modules -- after checking the hash of the cmi
+    // Modules whose .cmi did not change after compilation.
     let mut clean_modules = AHashSet::<String>::new();
+    // Modules that compiled successfully — stage/timestamps updated post-loop.
+    let mut successfully_compiled = AHashSet::<String>::new();
 
     let mut loop_count = 0;
     let mut files_total_count = compiled_modules.len();
@@ -136,28 +196,19 @@ pub fn compile(
     let mut sorted_modules = build_state.module_names.iter().collect::<Vec<&String>>();
     sorted_modules.sort();
 
-    let compile_universe_count = compile_universe.len();
+    let compile_universe_count = compile_universe.all.len();
     set_length(compile_universe_count as u64);
 
     // start off with all modules that have no deps in this compile universe
     let mut in_progress_modules = compile_universe
+        .all
         .iter()
         .filter(|module_name| {
             let module = build_state.get_module(module_name).unwrap();
-            module.deps.intersection(&compile_universe).count() == 0
+            module.deps.intersection(&compile_universe.all).count() == 0
         })
         .map(|module_name| module_name.to_string())
         .collect::<AHashSet<String>>();
-
-    // Snapshot pre-loop stages so we can restore modules that the loop
-    // dirtied but never compiled (e.g. when the loop aborts due to errors).
-    let pre_loop_stages: AHashMap<String, CompilationStage> = compile_universe
-        .iter()
-        .filter_map(|name| {
-            let module = build_state.modules.get(name)?;
-            Some((name.clone(), module.compilation_stage))
-        })
-        .collect();
 
     loop {
         files_current_loop_count = 0;
@@ -166,7 +217,7 @@ pub fn compile(
         trace!(
             "Compiled: {} out of {}. Compile loop: {}",
             files_total_count,
-            compile_universe.len(),
+            compile_universe.all.len(),
             loop_count,
         );
 
@@ -186,29 +237,42 @@ pub fn compile(
                 let package = build_state
                     .get_package(&module.package_name)
                     .expect("Package not found");
+                // Dependencies of this module that are part of the compile universe.
+                let in_universe_deps: Vec<&String> =
+                    module.deps.intersection(&compile_universe.all).collect();
+
                 // all dependencies that we care about are compiled
-                if module
-                    .deps
-                    .intersection(&compile_universe)
-                    .all(|dep| compiled_modules.contains(dep))
+                if in_universe_deps
+                    .iter()
+                    .all(|dep| compiled_modules.contains(*dep))
                 {
-                    if !module.compilation_stage.needs_compile(target_stage) {
-                        // we are sure we don't have to compile this, so we can mark it as compiled and clean
-                        return Some((module_name.to_string(), Ok(None), Some(Ok(None)), true, false));
+                    if !compile_universe.originally_dirty.contains(module_name)
+                        && in_universe_deps
+                            .iter()
+                            .all(|dep| clean_modules.contains(*dep))
+                    {
+                        // This module was not originally dirty and all its
+                        // in-universe dependencies had unchanged output (.cmi).
+                        // No compilation needed.
+                        return Some(CompileModuleResult {
+                            module_name: module_name.to_string(),
+                            implementation: CompileFileOutcome::Success,
+                            interface: Some(CompileFileOutcome::Success),
+                            is_clean_cmi: true,
+                            was_compiled: false,
+                        });
                     }
                     match module.source_type.to_owned() {
                         SourceType::MlMap(_) => {
-                            // the mlmap needs to be compiled before the files are compiled
-                            // in the same namespace, otherwise we get a compile error
-                            // this is why mlmap is compiled in the AST generation stage
-                            // compile_mlmap(&module.package, module_name, &project_root);
-                            Some((
-                                package.namespace.to_suffix().unwrap(),
-                                Ok(None),
-                                Some(Ok(None)),
-                                false,
-                                false,
-                            ))
+                            // The mlmap is compiled during AST generation,
+                            // so we just mark it as processed here.
+                            Some(CompileModuleResult {
+                                module_name: package.namespace.to_suffix().unwrap(),
+                                implementation: CompileFileOutcome::Success,
+                                interface: Some(CompileFileOutcome::Success),
+                                is_clean_cmi: false,
+                                was_compiled: false,
+                            })
                         }
                         SourceType::SourceFile(source_file) => {
                             let root_config = build_state.get_root_config();
@@ -272,13 +336,13 @@ pub fn compile(
                                 _ => false,
                             };
 
-                            Some((
-                                module_name.to_string(),
-                                result,
-                                interface_result,
+                            Some(CompileModuleResult {
+                                module_name: module_name.to_string(),
+                                implementation: result.into(),
+                                interface: interface_result.map(|r| r.into()),
                                 is_clean_cmi,
-                                true,
-                            ))
+                                was_compiled: true,
+                            })
                         }
                     }
                 } else {
@@ -292,39 +356,30 @@ pub fn compile(
             })
             .collect::<Vec<_>>();
 
-        for result in results.iter() {
-            let (module_name, result, interface_result, is_clean, is_compiled) = result;
-            in_progress_modules.remove(module_name);
+        for entry in results.iter() {
+            in_progress_modules.remove(&entry.module_name);
 
-            if *is_compiled {
+            if entry.was_compiled {
                 num_compiled_modules += 1;
             }
 
             files_current_loop_count += 1;
-            compiled_modules.insert(module_name.to_string());
+            compiled_modules.insert(entry.module_name.clone());
 
-            if *is_clean {
-                // actually add it to a list of clean modules
-                clean_modules.insert(module_name.to_string());
+            if entry.is_clean_cmi {
+                clean_modules.insert(entry.module_name.clone());
             }
 
-            let module_dependents = build_state.get_module(module_name).unwrap().dependents.clone();
-
-            // Only propagate dirtiness when this module compiled successfully
-            // and its output changed. A failed module's output didn't change,
-            // so its dependents don't need recompilation.
-            let compiled_ok = result.is_ok() && interface_result.as_ref().is_none_or(|r| r.is_ok());
+            let module_dependents = build_state
+                .get_module(&entry.module_name)
+                .unwrap()
+                .dependents
+                .clone();
 
             for dep in module_dependents.iter() {
                 // For scoped builds, only process dependents within the universe.
-                if build_config.scope.is_scoped() && !compile_universe.contains(dep) {
+                if build_config.scope.is_scoped() && !compile_universe.all.contains(dep) {
                     continue;
-                }
-                if !*is_clean
-                    && compiled_ok
-                    && let Some(dep_module) = build_state.modules.get_mut(dep)
-                {
-                    dep_module.compilation_stage = CompilationStage::Dirty;
                 }
                 if !compiled_modules.contains(dep) {
                     in_progress_modules.insert(dep.to_string());
@@ -335,7 +390,7 @@ pub fn compile(
                 let module = build_state
                     .build_state
                     .modules
-                    .get(module_name)
+                    .get(&entry.module_name)
                     .ok_or(anyhow!("Module not found"))?;
                 module.package_name.clone()
             };
@@ -351,68 +406,63 @@ pub fn compile(
                 let module = build_state
                     .build_state
                     .modules
-                    .get_mut(module_name)
+                    .get_mut(&entry.module_name)
                     .ok_or(anyhow!("Module not found"))?;
 
                 let (compile_warning, compile_error) = match module.source_type {
                     SourceType::MlMap(ref mut mlmap) => {
-                        module.compilation_stage = CompilationStage::Built;
                         mlmap.parse_dirty = false;
                         (None, None)
                     }
-                    SourceType::SourceFile(ref mut source_file) => match result {
-                        Ok(Some(err)) => {
-                            let warning_text = err.to_string();
+                    SourceType::SourceFile(ref mut source_file) => match &entry.implementation {
+                        CompileFileOutcome::Warning(warning) => {
                             source_file.implementation.compile_state = CompileState::Warning;
-                            source_file.implementation.compile_warnings = Some(warning_text.clone());
-                            (Some(warning_text), None)
+                            source_file.implementation.compile_warnings = Some(warning.clone());
+                            (Some(warning.clone()), None)
                         }
-                        Ok(None) => {
+                        CompileFileOutcome::Success => {
                             source_file.implementation.compile_state = CompileState::Success;
                             source_file.implementation.compile_warnings = None;
                             (None, None)
                         }
-                        Err(err) => {
+                        CompileFileOutcome::Error(error) => {
                             source_file.implementation.compile_state = CompileState::Error;
                             source_file.implementation.compile_warnings = None;
-                            (None, Some(err.to_string()))
+                            (None, Some(error.clone()))
                         }
                     },
                 };
 
                 let (interface_warning, interface_error) =
                     if let SourceType::SourceFile(ref mut source_file) = module.source_type {
-                        match interface_result {
-                            Some(Ok(Some(err))) => {
-                                let warning_text = err.to_string();
+                        match &entry.interface {
+                            Some(CompileFileOutcome::Warning(warning)) => {
                                 source_file.interface.as_mut().unwrap().compile_state = CompileState::Warning;
                                 source_file.interface.as_mut().unwrap().compile_warnings =
-                                    Some(warning_text.clone());
-                                (Some(warning_text), None)
+                                    Some(warning.clone());
+                                (Some(warning.clone()), None)
                             }
-                            Some(Ok(None)) => {
+                            Some(CompileFileOutcome::Success) => {
                                 if let Some(interface) = source_file.interface.as_mut() {
                                     interface.compile_state = CompileState::Success;
                                     interface.compile_warnings = None;
                                 }
                                 (None, None)
                             }
-                            Some(Err(err)) => {
+                            Some(CompileFileOutcome::Error(error)) => {
                                 source_file.interface.as_mut().unwrap().compile_state = CompileState::Error;
                                 source_file.interface.as_mut().unwrap().compile_warnings = None;
-                                (None, Some(err.to_string()))
+                                (None, Some(error.clone()))
                             }
-                            _ => (None, None),
+                            None => (None, None),
                         }
                     } else {
                         (None, None)
                     };
 
-                // Update compilation timestamps for successful compilation
-                if result.is_ok() && interface_result.as_ref().is_none_or(|r| r.is_ok()) {
-                    module.compilation_stage = target_stage;
-                    module.last_compiled_cmi = Some(SystemTime::now());
-                    module.last_compiled_cmt = Some(SystemTime::now());
+                if !entry.implementation.is_error() && entry.interface.as_ref().is_none_or(|r| !r.is_error())
+                {
+                    successfully_compiled.insert(entry.module_name.clone());
                 }
 
                 (compile_warning, compile_error, interface_warning, interface_error)
@@ -446,6 +496,7 @@ pub fn compile(
             // find the dependency cycle
             let cycle = dependency_cycle::find(
                 &compile_universe
+                    .all
                     .iter()
                     .map(|s| (s, build_state.get_module(s).unwrap()))
                     .collect::<Vec<(&String, &Module)>>(),
@@ -478,15 +529,16 @@ pub fn compile(
         };
     }
 
-    // Restore modules that the loop dirtied (or that entered dirty) but
-    // never successfully compiled. Without this, they leak into the next
-    // compile universe and cause "module not found" errors.
-    for (name, original_stage) in &pre_loop_stages {
-        if let Some(module) = build_state.modules.get_mut(name)
-            && module.compilation_stage == CompilationStage::Dirty
-            && *original_stage != CompilationStage::Dirty
-        {
-            module.compilation_stage = *original_stage;
+    // Update compilation stage and timestamps for all modules that compiled
+    // successfully. This runs even when the loop broke early due to errors,
+    // so modules that succeeded before the error are not unnecessarily
+    // recompiled in the next build cycle.
+    let now = SystemTime::now();
+    for name in &successfully_compiled {
+        if let Some(module) = build_state.modules.get_mut(name) {
+            module.compilation_stage = target_stage;
+            module.last_compiled_cmi = Some(now);
+            module.last_compiled_cmt = Some(now);
         }
     }
 
@@ -494,7 +546,7 @@ pub fn compile(
     // but still have stored warnings from a previous compilation.
     // This ensures warnings are not lost during incremental builds in watch mode.
     for (module_name, module) in build_state.modules.iter() {
-        if compile_universe.contains(module_name) {
+        if compile_universe.all.contains(module_name) {
             continue;
         }
         if let SourceType::SourceFile(ref source_file) = module.source_type {

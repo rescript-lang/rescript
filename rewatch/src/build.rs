@@ -16,7 +16,7 @@ use crate::helpers::emojis::*;
 use crate::helpers::{self};
 use crate::project_context::ProjectContext;
 use crate::sourcedirs;
-use ahash::{AHashMap, AHashSet};
+use ahash::AHashMap;
 use anyhow::{Context, Result, anyhow};
 use build_types::*;
 use console::style;
@@ -311,7 +311,7 @@ pub fn parse_and_resolve(
 pub fn incremental_build(
     build_state: &mut BuildCommandState,
     build_config: BuildConfig,
-    compile_universe: AHashSet<String>,
+    compile_universe: CompileUniverse,
     parse_warnings: String,
     default_timing: Option<Duration>,
     initial_build: bool,

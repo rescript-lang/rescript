@@ -1,7 +1,5 @@
 use crate::build;
-use crate::build::build_types::{
-    BuildCommandState, BuildConfig, CompilationStage, CompileScope, OutputTarget,
-};
+use crate::build::build_types::{BuildCommandState, BuildConfig, CompileScope, OutputTarget};
 use crate::build::clean;
 use crate::build::compile;
 use crate::build::diagnostics::BscDiagnostic;
@@ -105,15 +103,6 @@ pub fn run(
         &build_config,
     )
     .map_err(|e| e.to_string())?;
-
-    // TypecheckOnly doesn't produce .cmj files. Downgrade any modules marked
-    // Built by cleanup_previous_build to TypeChecked, so the first
-    // TypecheckAndEmit build (on save) will emit JS for them.
-    for module in build_state.build_state.modules.values_mut() {
-        if module.compilation_stage == CompilationStage::Built {
-            module.compilation_stage = CompilationStage::TypeChecked;
-        }
-    }
 
     // Parse source files and resolve dependencies
     let parse_warnings = match build::parse_and_resolve(

@@ -11,7 +11,7 @@ use super::super::{ProjectMap, dependency_closure, group_by_file, publish_and_st
 use super::PendingFileBuild;
 use crate::build;
 use crate::build::build_types::{
-    BuildCommandState, BuildConfig, CompilationStage, CompileScope, OutputTarget, SourceType,
+    BuildCommandState, BuildConfig, CompileScope, CompileUniverse, OutputTarget, SourceType,
 };
 use crate::build::diagnostics::BscDiagnostic;
 use crate::lsp::diagnostic_store::DiagnosticStore;
@@ -179,10 +179,30 @@ fn compile_dependencies(
 
     let touched_files = module_names_to_paths(build_state, &closure);
 
+    // Find which modules in the closure actually need compilation.
+    // The saved files are always dirty, but transitive imports may also
+    // need compilation — e.g. npm packages that were only typechecked
+    // during the initial build but now need JS output.
+    let target_stage = build_config.scope.mode().target_stage();
+    let originally_dirty: AHashSet<String> = closure
+        .iter()
+        .filter(|name| {
+            build_state
+                .get_module(name)
+                .is_some_and(|m| m.compilation_stage.needs_compile(target_stage))
+        })
+        .cloned()
+        .collect();
+
+    let compile_universe = CompileUniverse {
+        originally_dirty,
+        all: closure,
+    };
+
     let diagnostics = match build::incremental_build(
         build_state,
         build_config,
-        closure.clone(),
+        compile_universe,
         parse_warnings,
         Some(std::time::Duration::ZERO),
         false,
@@ -228,12 +248,10 @@ fn typecheck_dependents(
 
     tracing::Span::current().record("dependent_count", dependents.len());
 
-    // Mark dependents as Dirty so they enter the compile universe.
-    for name in &dependents {
-        if let Some(module) = build_state.build_state.modules.get_mut(name) {
-            module.compilation_stage = CompilationStage::Dirty;
-        }
-    }
+    let compile_universe = CompileUniverse {
+        originally_dirty: dependents.clone(),
+        all: dependents,
+    };
 
     let diagnostics = match build::incremental_build(
         build_state,
@@ -241,7 +259,7 @@ fn typecheck_dependents(
             output: OutputTarget::Lsp,
             scope: CompileScope::TypecheckDependents,
         },
-        dependents.clone(),
+        compile_universe,
         String::new(),
         Some(std::time::Duration::ZERO),
         false,

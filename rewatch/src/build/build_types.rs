@@ -117,6 +117,23 @@ impl CompileScope {
     }
 }
 
+/// The set of modules participating in a compile cycle.
+///
+/// `originally_dirty` are modules whose source changed (parse-dirty,
+/// expired deps, deleted deps). `all` is the full set: originally dirty
+/// modules plus their transitive dependents. A module in `all` but not
+/// in `originally_dirty` only needs recompilation if one of its
+/// in-universe dependencies produced a changed `.cmi`.
+#[derive(Debug)]
+pub struct CompileUniverse {
+    /// All modules that participate in this compile cycle
+    /// (dirty modules + their transitive dependents).
+    pub all: AHashSet<String>,
+    /// The subset of `all` that were directly dirty
+    /// (source changed, deps expired/deleted).
+    pub originally_dirty: AHashSet<String>,
+}
+
 /// Bundles the build concerns: where artifacts go and which modules
 /// participate (the compile mode is derived from the scope).
 #[derive(Debug, Clone)]

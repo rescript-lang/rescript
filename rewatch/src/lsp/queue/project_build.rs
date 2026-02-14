@@ -9,9 +9,7 @@ use tracing::instrument;
 use super::super::{ProjectMap, group_by_file, publish_and_store};
 use super::PendingState;
 use crate::build;
-use crate::build::build_types::{
-    BuildCommandState, BuildConfig, CompilationStage, CompileScope, OutputTarget, SourceType,
-};
+use crate::build::build_types::{BuildCommandState, BuildConfig, CompileScope, OutputTarget, SourceType};
 use crate::build::compile;
 use crate::build::diagnostics::BscDiagnostic;
 use crate::build::packages;
@@ -74,13 +72,6 @@ fn reinitialize_project(
         &build_config,
     )
     .map_err(|e| format!("prepare_build failed: {e}"))?;
-
-    // TypecheckOnly doesn't produce .cmj files. Downgrade any Built modules.
-    for module in build_state.build_state.modules.values_mut() {
-        if module.compilation_stage == CompilationStage::Built {
-            module.compilation_stage = CompilationStage::TypeChecked;
-        }
-    }
 
     let parse_warnings = match build::parse_and_resolve(
         &mut build_state,
