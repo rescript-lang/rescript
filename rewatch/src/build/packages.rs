@@ -814,7 +814,7 @@ pub fn parse_packages(build_state: &mut BuildState, output: OutputTarget, mode: 
             build_state.insert_module(
                 &helpers::file_path_to_module_name(&mlmap.to_owned(), &packages::Namespace::NoNamespace),
                 Module {
-                    deps_dirty: false,
+                    needs_dependencies_rescan: false,
                     source_type: SourceType::MlMap(MlMap { parse_dirty: false }),
                     deps,
                     dependents: AHashSet::new(),
@@ -856,7 +856,7 @@ pub fn parse_packages(build_state: &mut BuildState, output: OutputTarget, mode: 
                         }
                         Entry::Vacant(entry) => {
                             entry.insert(Module {
-                                deps_dirty: true,
+                                needs_dependencies_rescan: true,
                                 source_type: SourceType::SourceFile(SourceFile {
                                     implementation: Implementation {
                                         path: file.to_owned(),
@@ -941,7 +941,7 @@ pub fn parse_packages(build_state: &mut BuildState, output: OutputTarget, mode: 
                                     }
                                 })
                                 .or_insert(Module {
-                                    deps_dirty: true,
+                                    needs_dependencies_rescan: true,
                                     source_type: SourceType::SourceFile(SourceFile {
                                         // this will be overwritten later
                                         implementation: Implementation {

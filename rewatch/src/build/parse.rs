@@ -146,7 +146,7 @@ pub fn generate_asts(
                 // its compilation_stage if it was set before
                 if is_dirty {
                     module.compilation_stage = CompilationStage::Dirty;
-                    module.deps_dirty = true;
+                    module.needs_dependencies_rescan = true;
                 }
                 if let SourceType::SourceFile(ref mut source_file) = module.source_type {
                     // We get Err(x) when there is a parse error. When it's Ok(_, Some(

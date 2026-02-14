@@ -119,7 +119,7 @@ pub fn get_deps(build_state: &mut BuildState, deleted_modules: &AHashSet<String>
                     .get_package(&module.package_name)
                     .expect("Package not found");
                 let ast_path = helpers::get_ast_path(&source_file.implementation.path);
-                if module.deps_dirty || !build_state.deps_initialized {
+                if module.needs_dependencies_rescan || !build_state.deps_initialized {
                     let mut deps = get_dep_modules(
                         &ast_path.to_string_lossy(),
                         package.namespace.to_suffix(),
@@ -163,7 +163,7 @@ pub fn get_deps(build_state: &mut BuildState, deleted_modules: &AHashSet<String>
         .for_each(|(module_name, deps)| {
             if let Some(module) = build_state.modules.get_mut(&module_name) {
                 module.deps = deps.clone();
-                module.deps_dirty = false;
+                module.needs_dependencies_rescan = false;
             }
             deps.iter().for_each(|dep_name| {
                 if let Some(module) = build_state.modules.get_mut(dep_name) {

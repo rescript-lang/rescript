@@ -96,7 +96,7 @@ mod tests {
             compilation_stage: CompilationStage::Built,
             last_compiled_cmi: None,
             last_compiled_cmt: None,
-            deps_dirty: false,
+            needs_dependencies_rescan: false,
             is_type_dev: false,
         }
     }

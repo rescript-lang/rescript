@@ -196,15 +196,51 @@ impl Display for SourceType {
 
 #[derive(Debug, Clone)]
 pub struct Module {
-    pub source_type: SourceType,
-    pub deps: AHashSet<String>,
-    pub dependents: AHashSet<String>,
+    // -- Module identity (immutable after construction) --
+    /// The package this module belongs to, used to look up package-specific
+    /// configuration such as namespace, compiler flags, and source paths.
     pub package_name: String,
-    pub compilation_stage: CompilationStage,
-    pub last_compiled_cmi: Option<SystemTime>,
-    pub last_compiled_cmt: Option<SystemTime>,
-    pub deps_dirty: bool,
+    /// Discriminates between regular source files (.res/.resi) and generated
+    /// namespace map files (.mlmap). Drives branching in parsing, dependency
+    /// scanning, compilation, and cleanup.
+    pub source_type: SourceType,
+    /// Whether this module lives under a `"type": "dev"` source directory.
+    /// Dev modules are excluded from dependency include paths during compilation
+    /// of non-dev consumers.
     pub is_type_dev: bool,
+
+    // -- Dependency graph (mutated in `deps.rs` after each AST rescan) --
+    /// Modules this module needs (forward dependencies). Reassigned in
+    /// `deps.rs` when the AST is rescanned. Used for compilation ordering,
+    /// cycle detection, and marking modules dirty when a dependency is removed.
+    pub deps: AHashSet<String>,
+    /// Modules that use this module (reverse dependencies). Grown via
+    /// `insert` in `deps.rs` as the inverse of `deps`. Used to expand the
+    /// compile universe: when this module changes, every dependent needs
+    /// recompilation.
+    pub dependents: AHashSet<String>,
+    /// Whether this module's dependency list needs to be re-scanned from
+    /// its AST. Set to `true` in `parse.rs` when the source changes,
+    /// and reset to `false` in `deps.rs` after dependencies are resolved.
+    pub needs_dependencies_rescan: bool,
+
+    // -- Build status (mutated throughout the build pipeline) --
+    /// How far this module has progressed through the build pipeline
+    /// (Dirty → TypeChecked → Built). Set to `Dirty` in `parse.rs` and
+    /// `compile.rs` (when dependencies are invalidated), advanced to the
+    /// target stage in `compile.rs` after successful compilation, and
+    /// restored to `Built` in `clean.rs` when existing artifacts are fresh.
+    pub compilation_stage: CompilationStage,
+    /// Timestamp of the last produced .cmi (compiled interface) file.
+    /// Updated in `compile.rs` after compilation and in `clean.rs` from
+    /// existing artifact timestamps.
+    pub last_compiled_cmi: Option<SystemTime>,
+    /// Timestamp of the last produced .cmt (compiled typed tree) file.
+    /// Updated in `compile.rs` after compilation and in `clean.rs` from
+    /// existing artifact timestamps. Used for incremental staleness checks:
+    /// if a dependency's .cmt is newer than a dependent's .cmt, the
+    /// dependent must be recompiled.
+    pub last_compiled_cmt: Option<SystemTime>,
 }
 
 impl Module {
