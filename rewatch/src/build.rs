@@ -248,7 +248,8 @@ pub fn parse_and_resolve(
             warnings
         }
         Err(err) => {
-            let _error_span = info_span!("build.parse_error").entered();
+            let err_str = err.to_string();
+            let _error_span = info_span!("build.parse_error", error = %err_str).entered();
             if !build_config.output_mode.is_silent() {
                 logs::finalize(&build_state.packages);
             }
@@ -263,8 +264,6 @@ pub fn parse_and_resolve(
                 );
                 pb.finish();
             }
-
-            let err_str = err.to_string();
             if !build_config.output_mode.is_silent() {
                 eprintln!("{}", &err_str);
             }
@@ -377,7 +376,7 @@ pub fn incremental_build(
     }
     pb.finish();
     if !compile_errors.is_empty() {
-        let _error_span = info_span!("build.compile_error").entered();
+        let _error_span = info_span!("build.compile_error", error = %compile_errors).entered();
         if show_progress {
             if plain_output {
                 eprintln!("Compiled {num_compiled_modules} modules")
@@ -393,7 +392,7 @@ pub fn incremental_build(
             }
         }
         if !output_mode.is_silent() && helpers::contains_ascii_characters(&compile_warnings) {
-            let _warning_span = info_span!("build.compile_warning").entered();
+            let _warning_span = info_span!("build.compile_warning", warning = %compile_warnings).entered();
             eprintln!("{}", &compile_warnings);
         }
         if initial_build {
