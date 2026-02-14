@@ -305,6 +305,22 @@ pub(super) async fn run(
     // appear in old_uris but not new_uris, so their diagnostics get cleared
     // by the old/new diff below.
     for result in &results {
+        if !result.diagnostics.is_empty() {
+            for diag in &result.diagnostics {
+                let first_line = diag.message.lines().next().unwrap_or("");
+                client
+                    .log_message(
+                        tower_lsp::lsp_types::MessageType::INFO,
+                        format!(
+                            "project_build: diagnostic {:?} in {} — {}",
+                            diag.severity,
+                            diag.file.display(),
+                            first_line,
+                        ),
+                    )
+                    .await;
+            }
+        }
         let by_file = group_by_file(&result.diagnostics);
 
         // Publish diagnostics for all files in the new state

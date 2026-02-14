@@ -63,7 +63,18 @@ pub(super) async fn run(
                     .iter()
                     .filter_map(|p| build_state.mark_file_parse_dirty(p))
                     .collect();
-                if !module_names.is_empty() {
+                if module_names.is_empty() {
+                    tracing::warn!(
+                        project = %root.display(),
+                        "file_build: no modules resolved from {} dirty file(s)",
+                        paths.len()
+                    );
+                } else {
+                    tracing::debug!(
+                        project = %root.display(),
+                        modules = ?module_names,
+                        "file_build: building modules"
+                    );
                     results.push(build_batch(build_state, module_names));
                 }
             }
@@ -78,6 +89,22 @@ pub(super) async fn run(
 
     // Publish diagnostics for all touched files
     for result in &results {
+        if !result.diagnostics.is_empty() {
+            for diag in &result.diagnostics {
+                let first_line = diag.message.lines().next().unwrap_or("");
+                client
+                    .log_message(
+                        tower_lsp::lsp_types::MessageType::INFO,
+                        format!(
+                            "file_build: diagnostic {:?} in {} — {}",
+                            diag.severity,
+                            diag.file.display(),
+                            first_line,
+                        ),
+                    )
+                    .await;
+            }
+        }
         let by_file = group_by_file(&result.diagnostics);
         for touched in &result.touched_files {
             if let Ok(uri) = Url::from_file_path(touched) {
@@ -173,10 +200,16 @@ fn compile_dependencies(
         parse_warnings,
         Some(std::time::Duration::ZERO),
     ) {
-        Ok(result) => (
-            result.diagnostics,
-            module_names_to_paths(build_state, &result.modules),
-        ),
+        Ok(result) => {
+            tracing::debug!(
+                compiled_modules = ?result.modules.iter().collect::<Vec<_>>(),
+                "compile_dependencies: compiled module closure"
+            );
+            (
+                result.diagnostics,
+                module_names_to_paths(build_state, &result.modules),
+            )
+        }
         Err(e) => {
             tracing::warn!("Incremental build completed with errors: {e}");
             (e.diagnostics, module_names_to_paths(build_state, &e.modules))
@@ -216,6 +249,10 @@ fn typecheck_dependents(
     ) {
         Ok(result) => {
             tracing::Span::current().record("dependent_count", result.modules.len());
+            tracing::debug!(
+                dependent_modules = ?result.modules.iter().collect::<Vec<_>>(),
+                "typecheck_dependents: typechecked dependent closure"
+            );
             (
                 result.diagnostics,
                 module_names_to_paths(build_state, &result.modules),
@@ -224,6 +261,10 @@ fn typecheck_dependents(
         Err(e) => {
             tracing::warn!("Typecheck of dependents completed with errors: {e}");
             tracing::Span::current().record("dependent_count", e.modules.len());
+            tracing::debug!(
+                dependent_modules = ?e.modules.iter().collect::<Vec<_>>(),
+                "typecheck_dependents: typechecked dependent closure (with errors)"
+            );
             (e.diagnostics, module_names_to_paths(build_state, &e.modules))
         }
     };

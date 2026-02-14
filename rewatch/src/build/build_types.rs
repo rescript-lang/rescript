@@ -430,7 +430,23 @@ impl BuildCommandState {
     /// Updates `last_modified` from the file's metadata.
     /// Returns the module name if found and marked, `None` otherwise.
     pub fn mark_file_parse_dirty(&mut self, file_path: &Path) -> Option<String> {
-        let (module_name, _, _) = self.find_module_for_file(file_path)?;
+        let (module_name, _, _) = match self.find_module_for_file(file_path) {
+            Some(result) => {
+                tracing::debug!(
+                    file = %file_path.display(),
+                    module = %result.0,
+                    "mark_file_parse_dirty: resolved file to module"
+                );
+                result
+            }
+            None => {
+                tracing::warn!(
+                    file = %file_path.display(),
+                    "mark_file_parse_dirty: could not resolve file to any module"
+                );
+                return None;
+            }
+        };
 
         let canonicalized = file_path
             .canonicalize()
