@@ -27,9 +27,12 @@ use crate::build::build_types::Module;
 /// By computing the dependency closure, we can limit compilation to only the
 /// modules that the saved files transitively import — the minimal set needed
 /// to produce correct JS output for those files.
-pub fn get_dependency_closure(modules: &AHashMap<String, Module>, starts: Vec<String>) -> AHashSet<String> {
+pub fn get_dependency_closure(
+    modules: &AHashMap<String, Module>,
+    starts: AHashSet<String>,
+) -> AHashSet<String> {
     let mut closure = AHashSet::new();
-    let mut stack = starts;
+    let mut stack: Vec<String> = starts.into_iter().collect();
     while let Some(name) = stack.pop() {
         if closure.insert(name.clone())
             && let Some(module) = modules.get(&name)
@@ -65,14 +68,16 @@ pub fn get_dependency_closure(modules: &AHashMap<String, Module>, starts: Vec<St
 /// caused by API changes. However, they do NOT need JS output — only
 /// diagnostics matter. JS emission happens when those files are themselves
 /// saved.
-pub fn get_dependent_closure(modules: &AHashMap<String, Module>, starts: Vec<String>) -> AHashSet<String> {
-    let start_set: AHashSet<String> = starts.iter().cloned().collect();
+pub fn get_dependent_closure(
+    modules: &AHashMap<String, Module>,
+    starts: AHashSet<String>,
+) -> AHashSet<String> {
     let mut closure = AHashSet::new();
-    let mut stack = starts;
+    let mut stack: Vec<String> = starts.iter().cloned().collect();
     while let Some(name) = stack.pop() {
         if let Some(module) = modules.get(&name) {
             for dep in &module.dependents {
-                if !start_set.contains(dep) && closure.insert(dep.clone()) {
+                if !starts.contains(dep) && closure.insert(dep.clone()) {
                     stack.push(dep.clone());
                 }
             }
@@ -126,7 +131,7 @@ mod tests {
     #[test]
     fn dependency_single_start() {
         let modules = sample_graph();
-        let closure = get_dependency_closure(&modules, vec!["A".into()]);
+        let closure = get_dependency_closure(&modules, AHashSet::from_iter(["A".into()]));
         assert_eq!(
             closure,
             ["A", "B", "C", "D"].iter().map(|s| s.to_string()).collect()
@@ -136,7 +141,7 @@ mod tests {
     #[test]
     fn dependency_leaf_module() {
         let modules = sample_graph();
-        let closure = get_dependency_closure(&modules, vec!["D".into()]);
+        let closure = get_dependency_closure(&modules, AHashSet::from_iter(["D".into()]));
         assert_eq!(closure, ["D"].iter().map(|s| s.to_string()).collect());
     }
 
@@ -145,7 +150,7 @@ mod tests {
         let modules = sample_graph();
         // A's closure = {A, B, C, D}, E's closure = {E, B, D}
         // Union = {A, B, C, D, E}
-        let closure = get_dependency_closure(&modules, vec!["A".into(), "E".into()]);
+        let closure = get_dependency_closure(&modules, AHashSet::from_iter(["A".into(), "E".into()]));
         assert_eq!(
             closure,
             ["A", "B", "C", "D", "E"].iter().map(|s| s.to_string()).collect()
@@ -155,7 +160,7 @@ mod tests {
     #[test]
     fn dependency_empty_starts() {
         let modules = sample_graph();
-        let closure = get_dependency_closure(&modules, vec![]);
+        let closure = get_dependency_closure(&modules, AHashSet::new());
         assert!(closure.is_empty());
     }
 
@@ -163,7 +168,7 @@ mod tests {
     fn dependency_unknown_start_module() {
         let modules = sample_graph();
         // Unknown module is included in the closure but has no deps to follow
-        let closure = get_dependency_closure(&modules, vec!["Unknown".into()]);
+        let closure = get_dependency_closure(&modules, AHashSet::from_iter(["Unknown".into()]));
         assert_eq!(closure, ["Unknown"].iter().map(|s| s.to_string()).collect());
     }
 
@@ -173,7 +178,7 @@ mod tests {
     fn dependent_single_start() {
         let modules = sample_graph();
         // D's dependents: B, and B's dependents: A, E
-        let closure = get_dependent_closure(&modules, vec!["D".into()]);
+        let closure = get_dependent_closure(&modules, AHashSet::from_iter(["D".into()]));
         assert_eq!(closure, ["B", "A", "E"].iter().map(|s| s.to_string()).collect());
     }
 
@@ -181,7 +186,7 @@ mod tests {
     fn dependent_excludes_start_modules() {
         let modules = sample_graph();
         // B's dependents: A, E. Neither A nor E should include B itself.
-        let closure = get_dependent_closure(&modules, vec!["B".into()]);
+        let closure = get_dependent_closure(&modules, AHashSet::from_iter(["B".into()]));
         assert_eq!(closure, ["A", "E"].iter().map(|s| s.to_string()).collect());
         assert!(!closure.contains("B"));
     }
@@ -193,7 +198,7 @@ mod tests {
         // D's dependents = {B}, but B is a start → excluded from closure.
         // B's dependents = {A, E}.
         // Result should be {A, E} — neither B nor D appears.
-        let closure = get_dependent_closure(&modules, vec!["B".into(), "D".into()]);
+        let closure = get_dependent_closure(&modules, AHashSet::from_iter(["B".into(), "D".into()]));
         assert_eq!(closure, ["A", "E"].iter().map(|s| s.to_string()).collect());
         assert!(!closure.contains("B"));
         assert!(!closure.contains("D"));
@@ -202,34 +207,15 @@ mod tests {
     #[test]
     fn dependent_root_module_has_no_dependents() {
         let modules = sample_graph();
-        let closure = get_dependent_closure(&modules, vec!["A".into()]);
+        let closure = get_dependent_closure(&modules, AHashSet::from_iter(["A".into()]));
         assert!(closure.is_empty());
     }
 
     #[test]
     fn dependent_empty_starts() {
         let modules = sample_graph();
-        let closure = get_dependent_closure(&modules, vec![]);
+        let closure = get_dependent_closure(&modules, AHashSet::new());
         assert!(closure.is_empty());
-    }
-
-    // ── duplicate starts ────────────────────────────────────────────
-
-    #[test]
-    fn dependency_duplicate_starts() {
-        let modules = sample_graph();
-        let closure = get_dependency_closure(&modules, vec!["A".into(), "A".into()]);
-        assert_eq!(
-            closure,
-            ["A", "B", "C", "D"].iter().map(|s| s.to_string()).collect()
-        );
-    }
-
-    #[test]
-    fn dependent_duplicate_starts() {
-        let modules = sample_graph();
-        let closure = get_dependent_closure(&modules, vec!["D".into(), "D".into()]);
-        assert_eq!(closure, ["B", "A", "E"].iter().map(|s| s.to_string()).collect());
     }
 
     // ── overlap between dependency and dependent closures ────────────
@@ -241,8 +227,9 @@ mod tests {
         // Dependency closure of {A, D} = {A, B, C, D}
         // Dependent closure of {A, D} = {B (from D), A (from B) — but A is start → skip}
         //   then B's dependents: A (start, skip), E → {B, E}
-        let dep_closure = get_dependency_closure(&modules, vec!["A".into(), "D".into()]);
-        let dependent_closure = get_dependent_closure(&modules, vec!["A".into(), "D".into()]);
+        let starts = AHashSet::from_iter(["A".into(), "D".into()]);
+        let dep_closure = get_dependency_closure(&modules, starts.clone());
+        let dependent_closure = get_dependent_closure(&modules, starts);
 
         // B appears in BOTH closures — this is the key scenario for batched saves
         assert!(dep_closure.contains("B"));

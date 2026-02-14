@@ -7,12 +7,10 @@ use tower_lsp::Client;
 use tower_lsp::lsp_types::Url;
 use tracing::instrument;
 
-use super::super::{ProjectMap, dependency_closure, group_by_file, publish_and_store};
+use super::super::{ProjectMap, group_by_file, publish_and_store};
 use super::PendingFileBuild;
 use crate::build;
-use crate::build::build_types::{
-    BuildCommandState, BuildConfig, CompileScope, CompileUniverse, OutputTarget, SourceType,
-};
+use crate::build::build_types::{BuildCommandState, BuildConfig, CompileScope, OutputTarget, SourceType};
 use crate::build::diagnostics::BscDiagnostic;
 use crate::lsp::diagnostic_store::DiagnosticStore;
 
@@ -141,9 +139,11 @@ fn compile_dependencies(
     build_state: &mut BuildCommandState,
     module_names: &[String],
 ) -> (Vec<BscDiagnostic>, HashSet<PathBuf>) {
+    let scope = CompileScope::CompileDependencies(module_names.iter().cloned().collect());
+    let mode = scope.mode();
     let build_config = BuildConfig {
         output: OutputTarget::Lsp,
-        scope: CompileScope::CompileDependencies,
+        scope,
     };
 
     // Parse dirty files and resolve deps so the dependency closure
@@ -151,7 +151,7 @@ fn compile_dependencies(
     let parse_result = build::parse_and_resolve(
         build_state,
         build_config.output,
-        build_config.scope.mode(),
+        mode,
         false,
         true,
         Some(std::time::Duration::ZERO),
@@ -174,35 +174,9 @@ fn compile_dependencies(
         }
     };
 
-    let closure =
-        dependency_closure::get_dependency_closure(&build_state.build_state.modules, module_names.to_vec());
-
-    let touched_files = module_names_to_paths(build_state, &closure);
-
-    // Find which modules in the closure actually need compilation.
-    // The saved files are always dirty, but transitive imports may also
-    // need compilation — e.g. npm packages that were only typechecked
-    // during the initial build but now need JS output.
-    let target_stage = build_config.scope.mode().target_stage();
-    let originally_dirty: AHashSet<String> = closure
-        .iter()
-        .filter(|name| {
-            build_state
-                .get_module(name)
-                .is_some_and(|m| m.compilation_stage.needs_compile(target_stage))
-        })
-        .cloned()
-        .collect();
-
-    let compile_universe = CompileUniverse {
-        originally_dirty,
-        all: closure,
-    };
-
-    let diagnostics = match build::incremental_build(
+    let (diagnostics, touched_files) = match build::incremental_build(
         build_state,
         build_config,
-        compile_universe,
         parse_warnings,
         Some(std::time::Duration::ZERO),
         false,
@@ -211,10 +185,13 @@ fn compile_dependencies(
         false,
         true,
     ) {
-        Ok(result) => result.diagnostics,
+        Ok(result) => (
+            result.diagnostics,
+            module_names_to_paths(build_state, &result.modules),
+        ),
         Err(e) => {
             tracing::warn!("Incremental build completed with errors: {e}");
-            e.diagnostics
+            (e.diagnostics, module_names_to_paths(build_state, &e.modules))
         }
     };
 
@@ -237,29 +214,14 @@ fn typecheck_dependents(
     build_state: &mut BuildCommandState,
     module_names: &[String],
 ) -> (Vec<BscDiagnostic>, HashSet<PathBuf>) {
-    let dependents =
-        dependency_closure::get_dependent_closure(&build_state.build_state.modules, module_names.to_vec());
-
-    if dependents.is_empty() {
-        return (Vec::new(), HashSet::new());
-    }
-
-    let touched_files = module_names_to_paths(build_state, &dependents);
-
-    tracing::Span::current().record("dependent_count", dependents.len());
-
-    let compile_universe = CompileUniverse {
-        originally_dirty: dependents.clone(),
-        all: dependents,
+    let build_config = BuildConfig {
+        output: OutputTarget::Lsp,
+        scope: CompileScope::TypecheckDependents(module_names.iter().cloned().collect()),
     };
 
-    let diagnostics = match build::incremental_build(
+    let (diagnostics, touched_files) = match build::incremental_build(
         build_state,
-        BuildConfig {
-            output: OutputTarget::Lsp,
-            scope: CompileScope::TypecheckDependents,
-        },
-        compile_universe,
+        build_config,
         String::new(),
         Some(std::time::Duration::ZERO),
         false,
@@ -268,10 +230,17 @@ fn typecheck_dependents(
         false,
         true,
     ) {
-        Ok(result) => result.diagnostics,
+        Ok(result) => {
+            tracing::Span::current().record("dependent_count", result.modules.len());
+            (
+                result.diagnostics,
+                module_names_to_paths(build_state, &result.modules),
+            )
+        }
         Err(e) => {
             tracing::warn!("Typecheck of dependents completed with errors: {e}");
-            e.diagnostics
+            tracing::Span::current().record("dependent_count", e.modules.len());
+            (e.diagnostics, module_names_to_paths(build_state, &e.modules))
         }
     };
 

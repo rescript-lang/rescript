@@ -121,51 +121,83 @@ fn execute_post_build_command(cmd: &str, js_file_path: &Path, working_dir: &Path
     }
 }
 
-/// Expand dirty modules through their transitive dependents to compute
-/// the full set of modules that may need (re)compilation.
-pub fn compute_compile_universe(
-    build_state: &BuildCommandState,
-    target_stage: CompilationStage,
-) -> CompileUniverse {
-    let originally_dirty: AHashSet<String> = build_state
-        .modules
-        .iter()
-        .filter(|(_, module)| module.compilation_stage.needs_compile(target_stage))
-        .map(|(name, _)| name.to_owned())
-        .collect();
+/// Compute the compile universe from the scope and current build state.
+///
+/// This is the single source of truth for universe construction.
+/// For full builds, it expands dirty modules through transitive dependents.
+/// For scoped builds, it computes the appropriate closure from the anchor modules
+/// carried in the scope variant.
+pub fn compute_universe_for_scope(scope: &CompileScope, build_state: &BuildCommandState) -> CompileUniverse {
+    match scope {
+        CompileScope::FullBuild | CompileScope::FullTypecheck => {
+            let target_stage = scope.mode().target_stage();
+            let originally_dirty: AHashSet<String> = build_state
+                .modules
+                .iter()
+                .filter(|(_, module)| module.compilation_stage.needs_compile(target_stage))
+                .map(|(name, _)| name.to_owned())
+                .collect();
 
-    // Walk the dependency graph outward from the dirty modules to find
-    // every module that might need recompilation.
-    //
-    // `all` accumulates every module we have visited so far.
-    // `frontier` holds the modules we discovered in the previous round
-    // whose dependents we have not yet inspected.
-    //
-    // Each iteration collects the direct dependents of the current
-    // frontier, keeps only the ones we have not seen before (the new
-    // frontier), and adds them to `all`. The loop stops when no new
-    // modules are found.
-    let mut all = originally_dirty.clone();
-    let mut frontier = all.clone();
-    loop {
-        let mut dependents = AHashSet::new();
-        for name in &frontier {
-            if let Some(module) = build_state.get_module(name) {
-                dependents.extend(module.dependents.iter().cloned());
+            // Walk the dependency graph outward from the dirty modules to find
+            // every module that might need recompilation.
+            //
+            // `all` accumulates every module we have visited so far.
+            // `frontier` holds the modules we discovered in the previous round
+            // whose dependents we have not yet inspected.
+            //
+            // Each iteration collects the direct dependents of the current
+            // frontier, keeps only the ones we have not seen before (the new
+            // frontier), and adds them to `all`. The loop stops when no new
+            // modules are found.
+            let mut all = originally_dirty.clone();
+            let mut frontier = all.clone();
+            loop {
+                let mut dependents = AHashSet::new();
+                for name in &frontier {
+                    if let Some(module) = build_state.get_module(name) {
+                        dependents.extend(module.dependents.iter().cloned());
+                    }
+                }
+
+                // Keep only modules we have not visited yet.
+                frontier = dependents.difference(&all).cloned().collect();
+                all.extend(frontier.iter().cloned());
+
+                if frontier.is_empty() {
+                    break;
+                }
+            }
+            CompileUniverse {
+                all,
+                originally_dirty,
             }
         }
-
-        // Keep only modules we have not visited yet.
-        frontier = dependents.difference(&all).cloned().collect();
-        all.extend(frontier.iter().cloned());
-
-        if frontier.is_empty() {
-            break;
+        CompileScope::CompileDependencies(module_names) => {
+            let closure =
+                super::dependency_closure::get_dependency_closure(&build_state.modules, module_names.clone());
+            let target_stage = scope.mode().target_stage();
+            let originally_dirty: AHashSet<String> = closure
+                .iter()
+                .filter(|name| {
+                    build_state
+                        .get_module(name)
+                        .is_some_and(|m| m.compilation_stage.needs_compile(target_stage))
+                })
+                .cloned()
+                .collect();
+            CompileUniverse {
+                all: closure,
+                originally_dirty,
+            }
         }
-    }
-    CompileUniverse {
-        all,
-        originally_dirty,
+        CompileScope::TypecheckDependents(module_names) => {
+            let dependents =
+                super::dependency_closure::get_dependent_closure(&build_state.modules, module_names.clone());
+            CompileUniverse {
+                originally_dirty: dependents.clone(),
+                all: dependents,
+            }
+        }
     }
 }
 
@@ -173,7 +205,7 @@ pub fn compute_compile_universe(
 pub fn compile(
     build_state: &mut BuildCommandState,
     build_config: &BuildConfig,
-    compile_universe: CompileUniverse,
+    compile_universe: &CompileUniverse,
     show_progress: bool,
     inc: impl Fn() + std::marker::Sync,
     set_length: impl Fn(u64),

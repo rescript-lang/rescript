@@ -1,7 +1,6 @@
 use crate::build;
 use crate::build::build_types::{BuildCommandState, BuildConfig, CompileScope, OutputTarget, SourceType};
 use crate::build::clean;
-use crate::build::compile;
 use crate::cmd;
 use crate::config;
 use crate::helpers;
@@ -453,14 +452,9 @@ async fn async_watch(
                     only_incremental,
                 )
                 .and_then(|parse_warnings| {
-                    let compile_universe = compile::compute_compile_universe(
-                        &build_state,
-                        build_config.scope.mode().target_stage(),
-                    );
                     build::incremental_build(
                         &mut build_state,
                         build_config,
-                        compile_universe,
                         parse_warnings,
                         None,
                         initial_build,
@@ -528,14 +522,9 @@ async fn async_watch(
                             false,
                         )
                         .and_then(|parse_warnings| {
-                            let compile_universe = compile::compute_compile_universe(
-                                &build_state,
-                                build_config.scope.mode().target_stage(),
-                            );
                             build::incremental_build(
                                 &mut build_state,
                                 build_config,
-                                compile_universe,
                                 parse_warnings,
                                 None,
                                 initial_build,

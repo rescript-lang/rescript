@@ -86,25 +86,27 @@ impl CompileMode {
 /// Which modules participate in compilation and how.
 ///
 /// Each variant encodes the compile mode and scoping behavior.
-/// The actual set of modules (compile universe) is passed separately.
-#[derive(Debug, Clone, Copy, PartialEq)]
+/// For full builds, the compile universe is derived from all dirty modules.
+/// For scoped builds, the anchor module names are carried in the variant and
+/// the universe is derived from their dependency/dependent closure.
+#[derive(Debug, Clone, PartialEq)]
 pub enum CompileScope {
     /// CLI/watcher: all dirty modules with dependent expansion, full compile with JS output.
     FullBuild,
     /// LSP initial/project build: all dirty modules with dependent expansion, typecheck only.
     FullTypecheck,
-    /// LSP save (step 1): compile the dependency closure to JS.
-    CompileDependencies,
-    /// LSP save (step 2): typecheck the dependent closure, no JS.
-    TypecheckDependents,
+    /// LSP save (step 1): compile the dependency closure of these modules to JS.
+    CompileDependencies(AHashSet<String>),
+    /// LSP save (step 2): typecheck the dependent closure of these modules, no JS.
+    TypecheckDependents(AHashSet<String>),
 }
 
 impl CompileScope {
     /// The compile mode implied by this scope variant.
     pub fn mode(&self) -> CompileMode {
         match self {
-            CompileScope::FullBuild | CompileScope::CompileDependencies => CompileMode::FullCompile,
-            CompileScope::FullTypecheck | CompileScope::TypecheckDependents => CompileMode::TypecheckOnly,
+            CompileScope::FullBuild | CompileScope::CompileDependencies(_) => CompileMode::FullCompile,
+            CompileScope::FullTypecheck | CompileScope::TypecheckDependents(_) => CompileMode::TypecheckOnly,
         }
     }
 
@@ -112,7 +114,7 @@ impl CompileScope {
     pub fn is_scoped(&self) -> bool {
         matches!(
             self,
-            CompileScope::CompileDependencies | CompileScope::TypecheckDependents
+            CompileScope::CompileDependencies(_) | CompileScope::TypecheckDependents(_)
         )
     }
 }

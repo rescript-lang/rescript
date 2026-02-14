@@ -26,7 +26,10 @@ exports[`lsp config change > changing suffix in rescript.json produces JS with t
   "        build.compile",
   "          build.compile_wave[file_count=1]",
   "            build.compile_file[module=CjsModule, package=@rewatch-test/commonjs, suffix=.bs.js, module_system=commonjs]",
-  "    lsp.build.typecheck_dependents",
+  "    lsp.build.typecheck_dependents[dependent_count=0]",
+  "      incremental_build[module_count=1]",
+  "        build.compile",
+  "          build.compile_wave[file_count=0]",
   "  lsp.did_save[file=packages/commonjs/rescript.json]",
   "  lsp.full_build[project=@rewatch-test/commonjs]",
   "    build.load_package_sources[package=@rewatch-test/commonjs]",
@@ -47,7 +50,10 @@ exports[`lsp config change > changing suffix in rescript.json produces JS with t
   "        build.compile",
   "          build.compile_wave[file_count=1]",
   "            build.compile_file[module=CjsModule, package=@rewatch-test/commonjs, suffix=.js, module_system=commonjs]",
-  "    lsp.build.typecheck_dependents",
+  "    lsp.build.typecheck_dependents[dependent_count=0]",
+  "      incremental_build[module_count=1]",
+  "        build.compile",
+  "          build.compile_wave[file_count=0]",
 ]
 `;
 

@@ -1,7 +1,6 @@
 use crate::build;
 use crate::build::build_types::{BuildCommandState, BuildConfig, CompileScope, OutputTarget};
 use crate::build::clean;
-use crate::build::compile;
 use crate::build::diagnostics::BscDiagnostic;
 use crate::build::packages;
 
@@ -121,14 +120,9 @@ pub fn run(
         }
     };
 
-    // Compute the compile universe and run compilation
-    let compile_universe =
-        compile::compute_compile_universe(&build_state, build_config.scope.mode().target_stage());
-
     let diagnostics = match build::incremental_build(
         &mut build_state,
         build_config,
-        compile_universe,
         parse_warnings,
         Some(std::time::Duration::ZERO),
         true,  // initial_build

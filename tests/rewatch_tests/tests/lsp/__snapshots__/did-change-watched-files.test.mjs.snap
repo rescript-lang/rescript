@@ -608,7 +608,10 @@ exports[`lsp didChangeWatchedFiles > deleting a .res file also removes its .resi
   "        build.compile",
   "          build.compile_wave[file_count=1]",
   "            build.compile_file[module=Foo, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
-  "    lsp.build.typecheck_dependents",
+  "    lsp.build.typecheck_dependents[dependent_count=0]",
+  "      incremental_build[module_count=5]",
+  "        build.compile",
+  "          build.compile_wave[file_count=0]",
   "  lsp.did_change_watched_files[file_count=1]",
   "  lsp.full_build[project=rewatch-test-fixture]",
   "    build.load_package_sources[package=@rewatch-test/app]",
@@ -1517,6 +1520,9 @@ exports[`lsp didChangeWatchedFiles > triggers a build when an external file chan
   "            build.compile_file[module=App, package=@rewatch-test/app, suffix=.mjs, module_system=esmodule]",
   "          build.compile_wave[file_count=1]",
   "            build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
-  "    lsp.build.typecheck_dependents",
+  "    lsp.build.typecheck_dependents[dependent_count=0]",
+  "      incremental_build[module_count=4]",
+  "        build.compile",
+  "          build.compile_wave[file_count=0]",
 ]
 `;

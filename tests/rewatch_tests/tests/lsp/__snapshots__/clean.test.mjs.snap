@@ -291,7 +291,10 @@ exports[`rescript clean does not break running LSP > LSP continues to work after
   "            build.compile_file[module=App, package=@rewatch-test/app, suffix=.mjs, module_system=esmodule]",
   "          build.compile_wave[file_count=1]",
   "            build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
-  "    lsp.build.typecheck_dependents",
+  "    lsp.build.typecheck_dependents[dependent_count=0]",
+  "      incremental_build[module_count=4]",
+  "        build.compile",
+  "          build.compile_wave[file_count=0]",
   "  lsp.did_save[file=src/Root.res]",
   "  lsp.build[file_count=1]",
   "    lsp.build.compile_dependencies",
@@ -303,6 +306,9 @@ exports[`rescript clean does not break running LSP > LSP continues to work after
   "          build.compile_wave[file_count=1]",
   "          build.compile_wave[file_count=1]",
   "            build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
-  "    lsp.build.typecheck_dependents",
+  "    lsp.build.typecheck_dependents[dependent_count=0]",
+  "      incremental_build[module_count=4]",
+  "        build.compile",
+  "          build.compile_wave[file_count=0]",
 ]
 `;

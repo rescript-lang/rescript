@@ -2,6 +2,7 @@ pub mod build_types;
 pub mod clean;
 pub mod compile;
 pub mod compiler_info;
+pub mod dependency_closure;
 pub mod deps;
 pub mod diagnostics;
 pub mod logs;
@@ -16,7 +17,7 @@ use crate::helpers::emojis::*;
 use crate::helpers::{self};
 use crate::project_context::ProjectContext;
 use crate::sourcedirs;
-use ahash::AHashMap;
+use ahash::{AHashMap, AHashSet};
 use anyhow::{Context, Result, anyhow};
 use build_types::*;
 use console::style;
@@ -170,11 +171,15 @@ pub struct IncrementalBuildError {
     pub plain_output: bool,
     pub kind: IncrementalBuildErrorKind,
     pub diagnostics: Vec<diagnostics::BscDiagnostic>,
+    /// The set of module names that participated in this compile cycle.
+    pub modules: AHashSet<String>,
 }
 
 #[derive(Debug, Clone)]
 pub struct IncrementalBuildResult {
     pub diagnostics: Vec<diagnostics::BscDiagnostic>,
+    /// The set of module names that participated in this compile cycle.
+    pub modules: AHashSet<String>,
 }
 
 impl fmt::Display for IncrementalBuildError {
@@ -275,6 +280,7 @@ pub fn parse_and_resolve(
                 kind: IncrementalBuildErrorKind::SourceFileParseError,
                 plain_output,
                 diagnostics: parse_diagnostics,
+                modules: AHashSet::new(),
             });
         }
     };
@@ -311,7 +317,6 @@ pub fn parse_and_resolve(
 pub fn incremental_build(
     build_state: &mut BuildCommandState,
     build_config: BuildConfig,
-    compile_universe: CompileUniverse,
     parse_warnings: String,
     default_timing: Option<Duration>,
     initial_build: bool,
@@ -320,6 +325,7 @@ pub fn incremental_build(
     create_sourcedirs: bool,
     plain_output: bool,
 ) -> Result<IncrementalBuildResult, IncrementalBuildError> {
+    let compile_universe = compile::compute_universe_for_scope(&build_config.scope, build_state);
     let current_step = if only_incremental { 2 } else { 3 };
     let total_steps = if only_incremental { 2 } else { 3 };
 
@@ -351,19 +357,24 @@ pub fn incremental_build(
         .unwrap(),
     );
 
-    let (compile_errors, compile_warnings, num_compiled_modules) = compile::compile(
+    let (compile_errors, compile_warnings, num_compiled_modules) = match compile::compile(
         build_state,
         &build_config,
-        compile_universe,
+        &compile_universe,
         show_progress,
         || pb.inc(1),
         |size| pb.set_length(size),
-    )
-    .map_err(|e| IncrementalBuildError {
-        kind: IncrementalBuildErrorKind::CompileError(Some(e.to_string())),
-        plain_output,
-        diagnostics: vec![],
-    })?;
+    ) {
+        Ok(result) => result,
+        Err(e) => {
+            return Err(IncrementalBuildError {
+                kind: IncrementalBuildErrorKind::CompileError(Some(e.to_string())),
+                plain_output,
+                diagnostics: vec![],
+                modules: compile_universe.all,
+            });
+        }
+    };
 
     let compile_duration = start_compiling.elapsed();
 
@@ -410,6 +421,7 @@ pub fn incremental_build(
             kind: IncrementalBuildErrorKind::CompileError(None),
             plain_output,
             diagnostics: diagnostics::parse_compiler_output(&all_output),
+            modules: compile_universe.all,
         })
     } else {
         if show_progress {
@@ -444,6 +456,7 @@ pub fn incremental_build(
         all_output.push_str(&compile_warnings);
         Ok(IncrementalBuildResult {
             diagnostics: diagnostics::parse_compiler_output(&all_output),
+            modules: compile_universe.all,
         })
     }
 }
@@ -536,13 +549,9 @@ pub fn build(
     )
     .map_err(|e| anyhow!("Parsing failed: {e}"))?;
 
-    let compile_universe =
-        compile::compute_compile_universe(&build_state, build_config.scope.mode().target_stage());
-
     match incremental_build(
         &mut build_state,
         build_config,
-        compile_universe,
         parse_warnings,
         default_timing,
         true,

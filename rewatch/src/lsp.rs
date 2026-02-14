@@ -3,7 +3,6 @@ mod code_action;
 mod code_lens;
 mod completion;
 mod definition;
-mod dependency_closure;
 pub(crate) mod diagnostic_store;
 mod document_symbol;
 mod file_args;

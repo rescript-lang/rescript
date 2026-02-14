@@ -10,7 +10,6 @@ use super::super::{ProjectMap, group_by_file, publish_and_store};
 use super::PendingState;
 use crate::build;
 use crate::build::build_types::{BuildCommandState, BuildConfig, CompileScope, OutputTarget, SourceType};
-use crate::build::compile;
 use crate::build::diagnostics::BscDiagnostic;
 use crate::build::packages;
 use crate::helpers;
@@ -89,13 +88,9 @@ fn reinitialize_project(
         }
     };
 
-    let compile_universe =
-        compile::compute_compile_universe(&build_state, build_config.scope.mode().target_stage());
-
     let diagnostics = match build::incremental_build(
         &mut build_state,
         build_config,
-        compile_universe,
         parse_warnings,
         Some(std::time::Duration::ZERO),
         true,
