@@ -1,5 +1,7 @@
 use crate::build;
-use crate::build::build_types::{BuildCommandState, BuildConfig, CompileScope, OutputTarget, SourceType};
+use crate::build::build_types::{
+    BuildCommandState, BuildConfig, CompileScope, OutputMode, OutputTarget, SourceType,
+};
 use crate::build::clean;
 use crate::cmd;
 use crate::config;
@@ -188,7 +190,6 @@ struct AsyncWatchArgs<'a> {
     show_progress: bool,
     filter: &'a Option<regex::Regex>,
     after_build: Option<String>,
-    create_sourcedirs: bool,
     plain_output: bool,
 }
 
@@ -202,7 +203,6 @@ async fn async_watch(
         show_progress,
         filter,
         after_build,
-        create_sourcedirs,
         plain_output,
     }: AsyncWatchArgs<'_>,
 ) -> Result<()> {
@@ -440,30 +440,17 @@ async fn async_watch(
                 let build_config = BuildConfig {
                     output: OutputTarget::Standard,
                     scope: CompileScope::FullBuild,
-                };
-                let only_incremental = !initial_build;
-                let build_ok = build::parse_and_resolve(
-                    &mut build_state,
-                    build_config.output,
-                    build_config.scope.mode(),
-                    show_progress,
-                    plain_output,
-                    None,
-                    only_incremental,
-                )
-                .and_then(|parse_warnings| {
-                    build::incremental_build(
-                        &mut build_state,
-                        build_config,
-                        parse_warnings,
-                        None,
-                        initial_build,
+                    output_mode: OutputMode::Standard {
                         show_progress,
-                        only_incremental,
-                        create_sourcedirs,
                         plain_output,
-                    )
-                });
+                        initial_build,
+                    },
+                };
+                let build_ok = build::parse_and_resolve(&mut build_state, &build_config, None).and_then(
+                    |parse_warnings| {
+                        build::incremental_build(&mut build_state, build_config, parse_warnings, None)
+                    },
+                );
                 if build_ok.is_ok() {
                     if let Some(a) = after_build.clone() {
                         cmd::run(a)
@@ -492,12 +479,20 @@ async fn async_watch(
             }
             CompileType::Full => {
                 let timing_total = Instant::now();
+                let build_config = BuildConfig {
+                    output: OutputTarget::Standard,
+                    scope: CompileScope::FullBuild,
+                    output_mode: OutputMode::Standard {
+                        show_progress,
+                        plain_output,
+                        initial_build,
+                    },
+                };
                 match build::initialize_build(
                     None,
                     filter,
-                    show_progress,
                     path,
-                    plain_output,
+                    &build_config,
                     build_state.get_warn_error_override(),
                 ) {
                     Ok(new_build_state) => {
@@ -507,33 +502,11 @@ async fn async_watch(
                         unregister_watches(watcher, &current_watch_paths);
                         current_watch_paths = compute_watch_paths(&build_state, path);
                         register_watches(watcher, &current_watch_paths);
-
-                        let build_config = BuildConfig {
-                            output: OutputTarget::Standard,
-                            scope: CompileScope::FullBuild,
-                        };
-                        let _ = build::parse_and_resolve(
-                            &mut build_state,
-                            build_config.output,
-                            build_config.scope.mode(),
-                            show_progress,
-                            plain_output,
-                            None,
-                            false,
-                        )
-                        .and_then(|parse_warnings| {
-                            build::incremental_build(
-                                &mut build_state,
-                                build_config,
-                                parse_warnings,
-                                None,
-                                initial_build,
-                                show_progress,
-                                false,
-                                create_sourcedirs,
-                                plain_output,
-                            )
-                        });
+                        let _ = build::parse_and_resolve(&mut build_state, &build_config, None).and_then(
+                            |parse_warnings| {
+                                build::incremental_build(&mut build_state, build_config, parse_warnings, None)
+                            },
+                        );
                         if let Some(a) = after_build.clone() {
                             cmd::run(a)
                         }
@@ -581,13 +554,11 @@ async fn async_watch(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 pub fn start(
     filter: &Option<regex::Regex>,
     show_progress: bool,
     folder: &str,
     after_build: Option<String>,
-    create_sourcedirs: bool,
     plain_output: bool,
     warn_error: Option<String>,
 ) -> Result<()> {
@@ -602,15 +573,18 @@ pub fn start(
         let path = Path::new(folder);
 
         // Do an initial build to discover packages and source folders
-        let build_state: BuildCommandState = build::initialize_build(
-            None,
-            filter,
-            show_progress,
-            path,
-            plain_output,
-            warn_error.clone(),
-        )
-        .with_context(|| "Could not initialize build")?;
+        let initial_build_config = BuildConfig {
+            output: OutputTarget::Standard,
+            scope: CompileScope::FullBuild,
+            output_mode: OutputMode::Standard {
+                show_progress,
+                plain_output,
+                initial_build: true,
+            },
+        };
+        let build_state: BuildCommandState =
+            build::initialize_build(None, filter, path, &initial_build_config, warn_error.clone())
+                .with_context(|| "Could not initialize build")?;
 
         // Compute and register targeted watches based on source folders
         let current_watch_paths = compute_watch_paths(&build_state, path);
@@ -625,7 +599,6 @@ pub fn start(
             show_progress,
             filter,
             after_build,
-            create_sourcedirs,
             plain_output,
         })
         .await

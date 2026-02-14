@@ -75,8 +75,6 @@ pub fn prepare_build(
     project_context: ProjectContext,
     packages: AHashMap<String, packages::Package>,
     default_timing: Option<Duration>,
-    show_progress: bool,
-    plain_output: bool,
     warn_error: Option<String>,
     build_config: &BuildConfig,
 ) -> Result<BuildCommandState> {
@@ -99,8 +97,8 @@ pub fn prepare_build(
         clean::cleanup_previous_build(&mut build_state, compile_assets_state, build_config.output);
     let timing_clean_total = timing_clean_start.elapsed();
 
-    if show_progress {
-        if plain_output {
+    if build_config.output_mode.show_progress() {
+        if build_config.output_mode.plain_output() {
             if let CompilerCheckResult::CleanedPackagesDueToCompiler = compiler_check {
                 // Snapshot-friendly output (no progress prefixes or emojis)
                 println!("Cleaned previous build due to compiler update");
@@ -134,25 +132,19 @@ pub fn prepare_build(
 pub fn initialize_build(
     default_timing: Option<Duration>,
     filter: &Option<regex::Regex>,
-    show_progress: bool,
     path: &Path,
-    plain_output: bool,
+    build_config: &BuildConfig,
     warn_error: Option<String>,
 ) -> Result<BuildCommandState> {
     let project_context = ProjectContext::new(path)?;
-    let packages = packages::make(filter, &project_context, show_progress)?;
+    let packages = packages::make(filter, &project_context, build_config.output_mode.show_progress())?;
 
     prepare_build(
         project_context,
         packages,
         default_timing,
-        show_progress,
-        plain_output,
         warn_error,
-        &BuildConfig {
-            output: OutputTarget::Standard,
-            scope: CompileScope::FullBuild,
-        },
+        build_config,
     )
 }
 
@@ -168,7 +160,7 @@ pub enum IncrementalBuildErrorKind {
 
 #[derive(Debug, Clone)]
 pub struct IncrementalBuildError {
-    pub plain_output: bool,
+    pub output_mode: OutputMode,
     pub kind: IncrementalBuildErrorKind,
     pub diagnostics: Vec<diagnostics::BscDiagnostic>,
     /// The set of module names that participated in this compile cycle.
@@ -184,23 +176,24 @@ pub struct IncrementalBuildResult {
 
 impl fmt::Display for IncrementalBuildError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let plain = self.output_mode.plain_output();
         match &self.kind {
             IncrementalBuildErrorKind::SourceFileParseError => {
-                if self.plain_output {
+                if plain {
                     write!(f, "{LINE_CLEAR}  Could not parse Source Files",)
                 } else {
                     write!(f, "{LINE_CLEAR}  {CROSS}Could not parse Source Files",)
                 }
             }
             IncrementalBuildErrorKind::CompileError(Some(e)) => {
-                if self.plain_output {
+                if plain {
                     write!(f, "{LINE_CLEAR}  Failed to Compile. Error: {e}",)
                 } else {
                     write!(f, "{LINE_CLEAR}  {CROSS}Failed to Compile. Error: {e}",)
                 }
             }
             IncrementalBuildErrorKind::CompileError(None) => {
-                if self.plain_output {
+                if plain {
                     write!(f, "{LINE_CLEAR}  Failed to Compile. See Errors Above",)
                 } else {
                     write!(f, "{LINE_CLEAR}  {CROSS}Failed to Compile. See Errors Above",)
@@ -215,17 +208,17 @@ impl fmt::Display for IncrementalBuildError {
 /// Returns parse warnings on success, or a build error if parsing fails.
 /// After this call, all module compilation stages and dependency graphs
 /// are up to date — ready for universe computation and compilation.
-#[allow(clippy::too_many_arguments)]
 #[instrument(name = "parse_and_resolve", skip_all)]
 pub fn parse_and_resolve(
     build_state: &mut BuildCommandState,
-    output: OutputTarget,
-    mode: CompileMode,
-    show_progress: bool,
-    plain_output: bool,
+    build_config: &BuildConfig,
     default_timing: Option<Duration>,
-    only_incremental: bool,
 ) -> Result<String, IncrementalBuildError> {
+    let show_progress = build_config.output_mode.show_progress();
+    let plain_output = build_config.output_mode.plain_output();
+    let only_incremental = !build_config.output_mode.initial_build();
+    let output = build_config.output;
+    let mode = build_config.scope.mode();
     if output == OutputTarget::Standard {
         logs::initialize(&build_state.packages);
     }
@@ -278,7 +271,7 @@ pub fn parse_and_resolve(
             let parse_diagnostics = diagnostics::parse_compiler_output(&err_str);
             return Err(IncrementalBuildError {
                 kind: IncrementalBuildErrorKind::SourceFileParseError,
-                plain_output,
+                output_mode: build_config.output_mode.clone(),
                 diagnostics: parse_diagnostics,
                 modules: AHashSet::new(),
             });
@@ -312,19 +305,17 @@ pub fn parse_and_resolve(
     Ok(parse_warnings)
 }
 
-#[allow(clippy::too_many_arguments)]
 #[instrument(name = "incremental_build", skip_all, fields(module_count = build_state.modules.len()))]
 pub fn incremental_build(
     build_state: &mut BuildCommandState,
     build_config: BuildConfig,
     parse_warnings: String,
     default_timing: Option<Duration>,
-    initial_build: bool,
-    show_progress: bool,
-    only_incremental: bool,
-    create_sourcedirs: bool,
-    plain_output: bool,
 ) -> Result<IncrementalBuildResult, IncrementalBuildError> {
+    let show_progress = build_config.output_mode.show_progress();
+    let plain_output = build_config.output_mode.plain_output();
+    let initial_build = build_config.output_mode.initial_build();
+    let only_incremental = !initial_build;
     let compile_universe = compile::compute_universe_for_scope(&build_config.scope, build_state);
     let current_step = if only_incremental { 2 } else { 3 };
     let total_steps = if only_incremental { 2 } else { 3 };
@@ -369,7 +360,7 @@ pub fn incremental_build(
         Err(e) => {
             return Err(IncrementalBuildError {
                 kind: IncrementalBuildErrorKind::CompileError(Some(e.to_string())),
-                plain_output,
+                output_mode: build_config.output_mode.clone(),
                 diagnostics: vec![],
                 modules: compile_universe.all,
             });
@@ -381,9 +372,7 @@ pub fn incremental_build(
     if build_config.output == OutputTarget::Standard {
         logs::finalize(&build_state.packages);
     }
-    if create_sourcedirs && build_config.output == OutputTarget::Standard {
-        sourcedirs::print(build_state);
-    }
+    sourcedirs::print(build_state, build_config.output);
     pb.finish();
     if !compile_errors.is_empty() {
         let _error_span = info_span!("build.compile_error").entered();
@@ -419,7 +408,7 @@ pub fn incremental_build(
         all_output.push_str(&compile_errors);
         Err(IncrementalBuildError {
             kind: IncrementalBuildErrorKind::CompileError(None),
-            plain_output,
+            output_mode: build_config.output_mode,
             diagnostics: diagnostics::parse_compiler_output(&all_output),
             modules: compile_universe.all,
         })
@@ -507,13 +496,11 @@ pub fn write_build_ninja(build_state: &BuildCommandState) {
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 pub fn build(
     filter: &Option<regex::Regex>,
     path: &Path,
     show_progress: bool,
     no_timing: bool,
-    create_sourcedirs: bool,
     plain_output: bool,
     warn_error: Option<String>,
 ) -> Result<BuildCommandState> {
@@ -523,43 +510,22 @@ pub fn build(
         None
     };
     let timing_total = Instant::now();
-    let mut build_state = initialize_build(
-        default_timing,
-        filter,
-        show_progress,
-        path,
-        plain_output,
-        warn_error,
-    )
-    .with_context(|| "Could not initialize build")?;
-
     let build_config = BuildConfig {
         output: OutputTarget::Standard,
         scope: CompileScope::FullBuild,
+        output_mode: OutputMode::Standard {
+            show_progress,
+            plain_output,
+            initial_build: true,
+        },
     };
+    let mut build_state = initialize_build(default_timing, filter, path, &build_config, warn_error)
+        .with_context(|| "Could not initialize build")?;
 
-    let parse_warnings = parse_and_resolve(
-        &mut build_state,
-        build_config.output,
-        build_config.scope.mode(),
-        show_progress,
-        plain_output,
-        default_timing,
-        false,
-    )
-    .map_err(|e| anyhow!("Parsing failed: {e}"))?;
+    let parse_warnings = parse_and_resolve(&mut build_state, &build_config, default_timing)
+        .map_err(|e| anyhow!("Parsing failed: {e}"))?;
 
-    match incremental_build(
-        &mut build_state,
-        build_config,
-        parse_warnings,
-        default_timing,
-        true,
-        show_progress,
-        false,
-        create_sourcedirs,
-        plain_output,
-    ) {
+    match incremental_build(&mut build_state, build_config, parse_warnings, default_timing) {
         Ok(_) => {
             if !plain_output && show_progress {
                 let timing_total_elapsed = timing_total.elapsed();

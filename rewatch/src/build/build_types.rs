@@ -136,12 +136,51 @@ pub struct CompileUniverse {
     pub originally_dirty: AHashSet<String>,
 }
 
-/// Bundles the build concerns: where artifacts go and which modules
-/// participate (the compile mode is derived from the scope).
+/// How the build reports progress to the user.
+#[derive(Debug, Clone)]
+pub enum OutputMode {
+    /// CLI/watcher: show progress bars and compilation summaries.
+    Standard {
+        show_progress: bool,
+        plain_output: bool,
+        /// Show config warnings (unsupported fields, etc.) on this build.
+        /// Typically true for the first build, false for subsequent rebuilds.
+        initial_build: bool,
+    },
+    /// LSP: no user-facing output.
+    Silent,
+}
+
+impl OutputMode {
+    pub fn show_progress(&self) -> bool {
+        match self {
+            OutputMode::Standard { show_progress, .. } => *show_progress,
+            OutputMode::Silent => false,
+        }
+    }
+
+    pub fn plain_output(&self) -> bool {
+        match self {
+            OutputMode::Standard { plain_output, .. } => *plain_output,
+            OutputMode::Silent => true,
+        }
+    }
+
+    pub fn initial_build(&self) -> bool {
+        match self {
+            OutputMode::Standard { initial_build, .. } => *initial_build,
+            OutputMode::Silent => false,
+        }
+    }
+}
+
+/// Bundles the build concerns: where artifacts go, which modules
+/// participate, and how progress is reported.
 #[derive(Debug, Clone)]
 pub struct BuildConfig {
     pub output: OutputTarget,
     pub scope: CompileScope,
+    pub output_mode: OutputMode,
 }
 
 #[derive(Debug, Clone, PartialEq)]

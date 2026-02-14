@@ -9,7 +9,9 @@ use tracing::instrument;
 use super::super::{ProjectMap, group_by_file, publish_and_store};
 use super::PendingState;
 use crate::build;
-use crate::build::build_types::{BuildCommandState, BuildConfig, CompileScope, OutputTarget, SourceType};
+use crate::build::build_types::{
+    BuildCommandState, BuildConfig, CompileScope, OutputMode, OutputTarget, SourceType,
+};
 use crate::build::diagnostics::BscDiagnostic;
 use crate::build::packages;
 use crate::helpers;
@@ -59,45 +61,32 @@ fn reinitialize_project(
     let build_config = BuildConfig {
         output: OutputTarget::Lsp,
         scope: CompileScope::FullTypecheck,
+        output_mode: OutputMode::Silent,
     };
 
     let mut build_state = build::prepare_build(
         project_context,
         packages_with_sources,
         Some(std::time::Duration::ZERO),
-        false,
-        true,
         old_warn_error,
         &build_config,
     )
     .map_err(|e| format!("prepare_build failed: {e}"))?;
 
-    let parse_warnings = match build::parse_and_resolve(
-        &mut build_state,
-        build_config.output,
-        build_config.scope.mode(),
-        false,
-        true,
-        Some(std::time::Duration::ZERO),
-        false,
-    ) {
-        Ok(warnings) => warnings,
-        Err(e) => {
-            tracing::warn!("Project build parse failed: {e}");
-            return Ok((build_state, e.diagnostics));
-        }
-    };
+    let parse_warnings =
+        match build::parse_and_resolve(&mut build_state, &build_config, Some(std::time::Duration::ZERO)) {
+            Ok(warnings) => warnings,
+            Err(e) => {
+                tracing::warn!("Project build parse failed: {e}");
+                return Ok((build_state, e.diagnostics));
+            }
+        };
 
     let diagnostics = match build::incremental_build(
         &mut build_state,
         build_config,
         parse_warnings,
         Some(std::time::Duration::ZERO),
-        true,
-        false,
-        false,
-        false,
-        true,
     ) {
         Ok(result) => result.diagnostics,
         Err(e) => {

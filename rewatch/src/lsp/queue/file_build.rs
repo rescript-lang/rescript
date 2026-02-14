@@ -10,7 +10,9 @@ use tracing::instrument;
 use super::super::{ProjectMap, group_by_file, publish_and_store};
 use super::PendingFileBuild;
 use crate::build;
-use crate::build::build_types::{BuildCommandState, BuildConfig, CompileScope, OutputTarget, SourceType};
+use crate::build::build_types::{
+    BuildCommandState, BuildConfig, CompileScope, OutputMode, OutputTarget, SourceType,
+};
 use crate::build::diagnostics::BscDiagnostic;
 use crate::lsp::diagnostic_store::DiagnosticStore;
 
@@ -139,24 +141,15 @@ fn compile_dependencies(
     build_state: &mut BuildCommandState,
     module_names: &[String],
 ) -> (Vec<BscDiagnostic>, HashSet<PathBuf>) {
-    let scope = CompileScope::CompileDependencies(module_names.iter().cloned().collect());
-    let mode = scope.mode();
     let build_config = BuildConfig {
         output: OutputTarget::Lsp,
-        scope,
+        scope: CompileScope::CompileDependencies(module_names.iter().cloned().collect()),
+        output_mode: OutputMode::Silent,
     };
 
     // Parse dirty files and resolve deps so the dependency closure
     // reflects the saved content, not stale state.
-    let parse_result = build::parse_and_resolve(
-        build_state,
-        build_config.output,
-        mode,
-        false,
-        true,
-        Some(std::time::Duration::ZERO),
-        true,
-    );
+    let parse_result = build::parse_and_resolve(build_state, &build_config, Some(std::time::Duration::ZERO));
 
     let (parse_warnings, parse_diagnostics) = match parse_result {
         Ok(warnings) => {
@@ -179,11 +172,6 @@ fn compile_dependencies(
         build_config,
         parse_warnings,
         Some(std::time::Duration::ZERO),
-        false,
-        false,
-        true,
-        false,
-        true,
     ) {
         Ok(result) => (
             result.diagnostics,
@@ -217,6 +205,7 @@ fn typecheck_dependents(
     let build_config = BuildConfig {
         output: OutputTarget::Lsp,
         scope: CompileScope::TypecheckDependents(module_names.iter().cloned().collect()),
+        output_mode: OutputMode::Silent,
     };
 
     let (diagnostics, touched_files) = match build::incremental_build(
@@ -224,11 +213,6 @@ fn typecheck_dependents(
         build_config,
         String::new(),
         Some(std::time::Duration::ZERO),
-        false,
-        false,
-        true,
-        false,
-        true,
     ) {
         Ok(result) => {
             tracing::Span::current().record("dependent_count", result.modules.len());

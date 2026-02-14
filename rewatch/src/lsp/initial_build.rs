@@ -1,5 +1,5 @@
 use crate::build;
-use crate::build::build_types::{BuildCommandState, BuildConfig, CompileScope, OutputTarget};
+use crate::build::build_types::{BuildCommandState, BuildConfig, CompileScope, OutputMode, OutputTarget};
 use crate::build::clean;
 use crate::build::diagnostics::BscDiagnostic;
 use crate::build::packages;
@@ -90,46 +90,33 @@ pub fn run(
     let build_config = BuildConfig {
         output: OutputTarget::Lsp,
         scope: CompileScope::FullTypecheck,
+        output_mode: OutputMode::Silent,
     };
 
     let mut build_state = build::prepare_build(
         project_context,
         packages,
         Some(std::time::Duration::ZERO), // no timing
-        false,                           // no progress output
-        true,                            // plain output
         None,                            // no warn_error override
         &build_config,
     )
     .map_err(|e| e.to_string())?;
 
     // Parse source files and resolve dependencies
-    let parse_warnings = match build::parse_and_resolve(
-        &mut build_state,
-        build_config.output,
-        build_config.scope.mode(),
-        false, // show_progress
-        true,  // plain_output
-        Some(std::time::Duration::ZERO),
-        false, // only_incremental
-    ) {
-        Ok(warnings) => warnings,
-        Err(e) => {
-            tracing::warn!("Initial build parse failed: {e}");
-            return Ok((build_state, e.diagnostics));
-        }
-    };
+    let parse_warnings =
+        match build::parse_and_resolve(&mut build_state, &build_config, Some(std::time::Duration::ZERO)) {
+            Ok(warnings) => warnings,
+            Err(e) => {
+                tracing::warn!("Initial build parse failed: {e}");
+                return Ok((build_state, e.diagnostics));
+            }
+        };
 
     let diagnostics = match build::incremental_build(
         &mut build_state,
         build_config,
         parse_warnings,
         Some(std::time::Duration::ZERO),
-        true,  // initial_build
-        false, // show_progress
-        false, // only_incremental
-        false, // create_sourcedirs
-        true,  // plain_output
     ) {
         Ok(result) => {
             tracing::info!("Initial build succeeded");
