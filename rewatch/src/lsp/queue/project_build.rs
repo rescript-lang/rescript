@@ -84,7 +84,7 @@ fn reinitialize_project(
 
     let diagnostics = match build::incremental_build(
         &mut build_state,
-        build_config,
+        &build_config,
         parse_warnings,
         Some(std::time::Duration::ZERO),
     ) {

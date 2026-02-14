@@ -24,8 +24,6 @@ use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
 use log::log_enabled;
 use std::fmt;
-use std::fs::File;
-use std::io::Write;
 use std::path::Path;
 use std::time::{Duration, Instant};
 use tracing::{info_span, instrument};
@@ -219,7 +217,7 @@ pub fn parse_and_resolve(
     let only_incremental = !build_config.output_mode.initial_build();
     let output = build_config.output;
     let mode = build_config.scope.mode();
-    if output == OutputTarget::Standard {
+    if !build_config.output_mode.is_silent() {
         logs::initialize(&build_state.packages);
     }
     let num_dirty_modules = build_state.modules.values().filter(|m| is_dirty(m)).count() as u64;
@@ -251,7 +249,7 @@ pub fn parse_and_resolve(
         }
         Err(err) => {
             let _error_span = info_span!("build.parse_error").entered();
-            if output == OutputTarget::Standard {
+            if !build_config.output_mode.is_silent() {
                 logs::finalize(&build_state.packages);
             }
 
@@ -267,7 +265,9 @@ pub fn parse_and_resolve(
             }
 
             let err_str = err.to_string();
-            eprintln!("{}", &err_str);
+            if !build_config.output_mode.is_silent() {
+                eprintln!("{}", &err_str);
+            }
             let parse_diagnostics = diagnostics::parse_compiler_output(&err_str);
             return Err(IncrementalBuildError {
                 kind: IncrementalBuildErrorKind::SourceFileParseError,
@@ -295,7 +295,7 @@ pub fn parse_and_resolve(
             );
         }
     }
-    if helpers::contains_ascii_characters(&parse_warnings) {
+    if !build_config.output_mode.is_silent() && helpers::contains_ascii_characters(&parse_warnings) {
         eprintln!("{}", &parse_warnings);
     }
 
@@ -308,13 +308,14 @@ pub fn parse_and_resolve(
 #[instrument(name = "incremental_build", skip_all, fields(module_count = build_state.modules.len()))]
 pub fn incremental_build(
     build_state: &mut BuildCommandState,
-    build_config: BuildConfig,
+    build_config: &BuildConfig,
     parse_warnings: String,
     default_timing: Option<Duration>,
 ) -> Result<IncrementalBuildResult, IncrementalBuildError> {
-    let show_progress = build_config.output_mode.show_progress();
-    let plain_output = build_config.output_mode.plain_output();
-    let initial_build = build_config.output_mode.initial_build();
+    let output_mode = build_config.output_mode.clone();
+    let show_progress = output_mode.show_progress();
+    let plain_output = output_mode.plain_output();
+    let initial_build = output_mode.initial_build();
     let only_incremental = !initial_build;
     let compile_universe = compile::compute_universe_for_scope(&build_config.scope, build_state);
     let current_step = if only_incremental { 2 } else { 3 };
@@ -350,9 +351,8 @@ pub fn incremental_build(
 
     let (compile_errors, compile_warnings, num_compiled_modules) = match compile::compile(
         build_state,
-        &build_config,
+        build_config,
         &compile_universe,
-        show_progress,
         || pb.inc(1),
         |size| pb.set_length(size),
     ) {
@@ -360,7 +360,7 @@ pub fn incremental_build(
         Err(e) => {
             return Err(IncrementalBuildError {
                 kind: IncrementalBuildErrorKind::CompileError(Some(e.to_string())),
-                output_mode: build_config.output_mode.clone(),
+                output_mode: output_mode.clone(),
                 diagnostics: vec![],
                 modules: compile_universe.all,
             });
@@ -369,10 +369,12 @@ pub fn incremental_build(
 
     let compile_duration = start_compiling.elapsed();
 
-    if build_config.output == OutputTarget::Standard {
+    if !output_mode.is_silent() {
         logs::finalize(&build_state.packages);
     }
-    sourcedirs::print(build_state, build_config.output);
+    if !build_config.scope.is_scoped() {
+        sourcedirs::print(build_state, build_config.output);
+    }
     pb.finish();
     if !compile_errors.is_empty() {
         let _error_span = info_span!("build.compile_error").entered();
@@ -390,14 +392,14 @@ pub fn incremental_build(
                 );
             }
         }
-        if helpers::contains_ascii_characters(&compile_warnings) {
+        if !output_mode.is_silent() && helpers::contains_ascii_characters(&compile_warnings) {
             let _warning_span = info_span!("build.compile_warning").entered();
             eprintln!("{}", &compile_warnings);
         }
         if initial_build {
             log_config_warnings(build_state);
         }
-        if helpers::contains_ascii_characters(&compile_errors) {
+        if !output_mode.is_silent() && helpers::contains_ascii_characters(&compile_errors) {
             eprintln!("{}", &compile_errors);
         }
         let mut all_output = String::new();
@@ -408,7 +410,7 @@ pub fn incremental_build(
         all_output.push_str(&compile_errors);
         Err(IncrementalBuildError {
             kind: IncrementalBuildErrorKind::CompileError(None),
-            output_mode: build_config.output_mode,
+            output_mode,
             diagnostics: diagnostics::parse_compiler_output(&all_output),
             modules: compile_universe.all,
         })
@@ -428,7 +430,7 @@ pub fn incremental_build(
             }
         }
 
-        if helpers::contains_ascii_characters(&compile_warnings) {
+        if !output_mode.is_silent() && helpers::contains_ascii_characters(&compile_warnings) {
             eprintln!("{}", &compile_warnings);
         }
         if initial_build {
@@ -483,19 +485,6 @@ fn log_unknown_config_field(package_name: &str, field_name: &str) {
     eprintln!("\n{}", style(warning).yellow());
 }
 
-// write build.ninja files in the packages after a non-incremental build
-// this is necessary to bust the editor tooling cache. The editor tooling
-// is watching this file.
-// we don't need to do this in an incremental build because there are no file
-// changes (deletes / additions)
-pub fn write_build_ninja(build_state: &BuildCommandState) {
-    for package in build_state.packages.values() {
-        // write empty file:
-        let mut f = File::create(package.get_build_path().join("build.ninja")).expect("Unable to write file");
-        f.write_all(b"").expect("unable to write to ninja file");
-    }
-}
-
 pub fn build(
     filter: &Option<regex::Regex>,
     path: &Path,
@@ -525,7 +514,7 @@ pub fn build(
     let parse_warnings = parse_and_resolve(&mut build_state, &build_config, default_timing)
         .map_err(|e| anyhow!("Parsing failed: {e}"))?;
 
-    match incremental_build(&mut build_state, build_config, parse_warnings, default_timing) {
+    match incremental_build(&mut build_state, &build_config, parse_warnings, default_timing) {
         Ok(_) => {
             if !plain_output && show_progress {
                 let timing_total_elapsed = timing_total.elapsed();
@@ -537,12 +526,10 @@ pub fn build(
                 );
             }
             clean::cleanup_after_build(&build_state, OutputTarget::Standard);
-            write_build_ninja(&build_state);
             Ok(build_state)
         }
         Err(e) => {
             clean::cleanup_after_build(&build_state, OutputTarget::Standard);
-            write_build_ninja(&build_state);
             Err(anyhow!("Incremental build failed. Error: {e}"))
         }
     }

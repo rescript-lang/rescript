@@ -152,6 +152,10 @@ pub enum OutputMode {
 }
 
 impl OutputMode {
+    pub fn is_silent(&self) -> bool {
+        matches!(self, OutputMode::Silent)
+    }
+
     pub fn show_progress(&self) -> bool {
         match self {
             OutputMode::Standard { show_progress, .. } => *show_progress,

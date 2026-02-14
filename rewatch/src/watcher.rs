@@ -448,7 +448,7 @@ async fn async_watch(
                 };
                 let build_ok = build::parse_and_resolve(&mut build_state, &build_config, None).and_then(
                     |parse_warnings| {
-                        build::incremental_build(&mut build_state, build_config, parse_warnings, None)
+                        build::incremental_build(&mut build_state, &build_config, parse_warnings, None)
                     },
                 );
                 if build_ok.is_ok() {
@@ -504,14 +504,17 @@ async fn async_watch(
                         register_watches(watcher, &current_watch_paths);
                         let _ = build::parse_and_resolve(&mut build_state, &build_config, None).and_then(
                             |parse_warnings| {
-                                build::incremental_build(&mut build_state, build_config, parse_warnings, None)
+                                build::incremental_build(
+                                    &mut build_state,
+                                    &build_config,
+                                    parse_warnings,
+                                    None,
+                                )
                             },
                         );
                         if let Some(a) = after_build.clone() {
                             cmd::run(a)
                         }
-
-                        build::write_build_ninja(&build_state);
 
                         let timing_total_elapsed = timing_total.elapsed();
                         if show_progress {

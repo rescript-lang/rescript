@@ -169,7 +169,7 @@ fn compile_dependencies(
 
     let (diagnostics, touched_files) = match build::incremental_build(
         build_state,
-        build_config,
+        &build_config,
         parse_warnings,
         Some(std::time::Duration::ZERO),
     ) {
@@ -210,7 +210,7 @@ fn typecheck_dependents(
 
     let (diagnostics, touched_files) = match build::incremental_build(
         build_state,
-        build_config,
+        &build_config,
         String::new(),
         Some(std::time::Duration::ZERO),
     ) {

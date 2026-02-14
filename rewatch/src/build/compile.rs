@@ -206,10 +206,10 @@ pub fn compile(
     build_state: &mut BuildCommandState,
     build_config: &BuildConfig,
     compile_universe: &CompileUniverse,
-    show_progress: bool,
     inc: impl Fn() + std::marker::Sync,
     set_length: impl Fn(u64),
 ) -> anyhow::Result<(String, String, usize)> {
+    let show_progress = build_config.output_mode.show_progress();
     let mode = build_config.scope.mode();
     let target_stage = mode.target_stage();
     let mut compiled_modules = AHashSet::<String>::new();
