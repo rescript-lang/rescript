@@ -658,6 +658,7 @@ pub fn compile(
                         cmi_hash: cmi,
                         cmt_hash: cmt,
                         cmj_hash: cmj,
+                        compiled_at: now,
                     },
                     None => CompilationStage::Dirty,
                 }
@@ -667,13 +668,13 @@ pub fn compile(
                 ast_hash,
                 cmi_hash: cmi,
                 cmt_hash: cmt,
+                compiled_at: now,
             },
             _ => CompilationStage::Dirty,
         };
 
         if let Some(Module::SourceFile(sf)) = build_state.build_state.modules.get_mut(name) {
             sf.compilation_stage = new_stage;
-            sf.last_compiled_cmt = Some(now);
         }
     }
 
@@ -1179,14 +1180,15 @@ pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildCommandState)
                 let dependent_module = build_state.modules.get(dependent).unwrap();
                 match dependent_module {
                     Module::SourceFile(dep_sf) => {
-                        if sf_module.last_compiled_cmt.is_none() {
+                        let compiled_at = sf_module.compilation_stage.compiled_at();
+                        if compiled_at.is_none() {
                             modules_with_expired_deps.insert(module_name.to_string());
                         }
 
                         // we compare the last compiled time of the dependent module with the last
                         // compile of the interface of the module it depends on, if the interface
                         // didn't change it doesn't matter
-                        match (dep_sf.last_compiled_cmt, sf_module.last_compiled_cmt) {
+                        match (dep_sf.compilation_stage.compiled_at(), compiled_at) {
                             (Some(last_compiled_dependent), Some(last_compiled)) => {
                                 if last_compiled_dependent < last_compiled {
                                     modules_with_expired_deps.insert(dependent.to_string());
@@ -1205,8 +1207,10 @@ pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildCommandState)
                             let dependent_module = build_state.modules.get(dependent_of_namespace).unwrap();
 
                             if let Module::SourceFile(dep_sf) = dependent_module
-                                && let (Some(last_compiled_dependent), Some(last_compiled)) =
-                                    (dep_sf.last_compiled_cmt, sf_module.last_compiled_cmt)
+                                && let (Some(last_compiled_dependent), Some(last_compiled)) = (
+                                    dep_sf.compilation_stage.compiled_at(),
+                                    sf_module.compilation_stage.compiled_at(),
+                                )
                                 && last_compiled_dependent < last_compiled
                             {
                                 modules_with_expired_deps.insert(dependent.to_string());

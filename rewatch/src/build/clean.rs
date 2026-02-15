@@ -262,6 +262,7 @@ pub fn cleanup_previous_build(
                                     cmi_hash: cmi,
                                     cmt_hash: cmt,
                                     cmj_hash: cmj,
+                                    compiled_at: *cmt_last_modified,
                                 },
                                 None => CompilationStage::Dirty,
                             }
@@ -271,6 +272,7 @@ pub fn cleanup_previous_build(
                                 ast_hash: ah,
                                 cmi_hash: cmi,
                                 cmt_hash: cmt,
+                                compiled_at: *cmt_last_modified,
                             }
                         }
                     }
@@ -300,15 +302,6 @@ pub fn cleanup_previous_build(
                 if ast_last_modified > &source_last_modified && !deleted_interfaces.contains(module_name) {
                     implementation.parse_dirty = false;
                 }
-            }
-        });
-
-    compile_assets_state
-        .cmt_modules
-        .iter()
-        .for_each(|(module_name, last_modified)| {
-            if let Some(Module::SourceFile(sf)) = build_state.modules.get_mut(module_name) {
-                sf.last_compiled_cmt = Some(*last_modified);
             }
         });
 

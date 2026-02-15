@@ -41,6 +41,7 @@ pub enum CompilationStage {
         ast_hash: Hash,
         cmi_hash: Hash,
         cmt_hash: Hash,
+        compiled_at: SystemTime,
     },
     /// Fully compiled (.cmi/.cmt/.cmj + JS produced).
     /// Accumulates all prior hashes + build artifact hashes.
@@ -50,6 +51,7 @@ pub enum CompilationStage {
         cmi_hash: Hash,
         cmt_hash: Hash,
         cmj_hash: Hash,
+        compiled_at: SystemTime,
     },
 }
 
@@ -91,6 +93,17 @@ impl CompilationStage {
             CompilationStage::TypeChecked { cmi_hash, .. } | CompilationStage::Built { cmi_hash, .. } => {
                 Some(*cmi_hash)
             }
+            _ => None,
+        }
+    }
+
+    /// When this module was last compiled, if typechecked or built.
+    /// Used for incremental staleness checks: if a dependency was compiled
+    /// more recently than a dependent, the dependent must be recompiled.
+    pub fn compiled_at(&self) -> Option<SystemTime> {
+        match self {
+            CompilationStage::TypeChecked { compiled_at, .. }
+            | CompilationStage::Built { compiled_at, .. } => Some(*compiled_at),
             _ => None,
         }
     }
@@ -333,12 +346,6 @@ pub struct SourceFileModule {
     /// target stage in `compile.rs` after successful compilation, and
     /// restored to `Built` in `clean.rs` when existing artifacts are fresh.
     pub compilation_stage: CompilationStage,
-    /// Timestamp of the last produced .cmt (compiled typed tree) file.
-    /// Updated in `compile.rs` after compilation and in `clean.rs` from
-    /// existing artifact timestamps. Used for incremental staleness checks:
-    /// if a dependency's .cmt is newer than a dependent's .cmt, the
-    /// dependent must be recompiled.
-    pub last_compiled_cmt: Option<SystemTime>,
 }
 
 /// A synthetic namespace map module (.mlmap). Compiled during the parse phase,
