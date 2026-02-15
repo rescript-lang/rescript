@@ -130,11 +130,11 @@ fn execute_post_build_command(cmd: &str, js_file_path: &Path, working_dir: &Path
 pub fn compute_universe_for_scope(scope: &CompileScope, build_state: &BuildCommandState) -> CompileUniverse {
     match scope {
         CompileScope::FullBuild | CompileScope::FullTypecheck => {
-            let target_stage = scope.mode().target_stage();
+            let mode = scope.mode();
             let originally_dirty: AHashSet<String> = build_state
                 .modules
                 .iter()
-                .filter(|(_, module)| module.compilation_stage.needs_compile(target_stage))
+                .filter(|(_, module)| module.compilation_stage.needs_compile_for_mode(mode))
                 .map(|(name, _)| name.to_owned())
                 .collect();
 
@@ -175,13 +175,12 @@ pub fn compute_universe_for_scope(scope: &CompileScope, build_state: &BuildComma
         CompileScope::CompileDependencies(module_names) => {
             let closure =
                 super::dependency_closure::get_dependency_closure(&build_state.modules, module_names.clone());
-            let target_stage = scope.mode().target_stage();
             let originally_dirty: AHashSet<String> = closure
                 .iter()
                 .filter(|name| {
                     build_state
                         .get_module(name)
-                        .is_some_and(|m| m.compilation_stage.needs_compile(target_stage))
+                        .is_some_and(|m| m.compilation_stage.is_dirty())
                 })
                 .cloned()
                 .collect();
@@ -216,7 +215,6 @@ pub fn compile(
     } else {
         info_span!("build.typecheck").entered()
     };
-    let target_stage = mode.target_stage();
     let mut compiled_modules = AHashSet::<String>::new();
 
     // Modules whose .cmi did not change after compilation.
@@ -292,13 +290,14 @@ pub fn compile(
                     .all(|dep| compiled_modules.contains(*dep))
                 {
                     if !compile_universe.originally_dirty.contains(module_name)
+                        && !module.compilation_stage.needs_compile_for_mode(mode)
                         && in_universe_deps
                             .iter()
                             .all(|dep| clean_modules.contains(*dep))
                     {
-                        // This module was not originally dirty and all its
-                        // in-universe dependencies had unchanged output (.cmi).
-                        // No compilation needed.
+                        // This module was not originally dirty, already at the
+                        // target stage, and all its in-universe dependencies
+                        // had unchanged output (.cmi). No compilation needed.
                         return Some(CompileModuleResult {
                             module_name: module_name.to_string(),
                             implementation: CompileFileOutcome::Success,
@@ -583,8 +582,105 @@ pub fn compile(
     // recompiled in the next build cycle.
     let now = SystemTime::now();
     for name in &successfully_compiled {
-        if let Some(module) = build_state.modules.get_mut(name) {
-            module.compilation_stage = target_stage;
+        // Collect info without holding mutable borrow on modules
+        let module_info = {
+            let module = match build_state.build_state.modules.get(name) {
+                Some(m) => m,
+                None => continue,
+            };
+            let impl_path = match &module.source_type {
+                SourceType::SourceFile(sf) => Some(sf.implementation.path.clone()),
+                _ => None,
+            };
+            (module.package_name.clone(), impl_path, module.compilation_stage)
+        };
+        let (package_name, impl_path, prev_stage) = module_info;
+
+        let new_stage = if let Some(impl_path) = impl_path {
+            let pkg = build_state.build_state.packages.get(&package_name).unwrap();
+            let ocaml_path = pkg.get_ocaml_build_path_for_output(build_config.output);
+
+            // Get source + ast hashes from previous stage, or compute them
+            let (source_hash, ast_hash) = match prev_stage {
+                CompilationStage::Parsed {
+                    source_hash,
+                    ast_hash,
+                }
+                | CompilationStage::TypeChecked {
+                    source_hash,
+                    ast_hash,
+                    ..
+                }
+                | CompilationStage::Built {
+                    source_hash,
+                    ast_hash,
+                    ..
+                } => (source_hash, ast_hash),
+                CompilationStage::Dirty => {
+                    // Fallback: compute from disk
+                    let build_path = pkg.get_build_path_for_output(build_config.output);
+                    let sh = helpers::compute_file_hash(&pkg.path.join(&impl_path));
+                    let ah = helpers::compute_file_hash(&build_path.join(helpers::get_ast_path(&impl_path)));
+                    match (sh, ah) {
+                        (Some(s), Some(a)) => (s, a),
+                        _ => continue,
+                    }
+                }
+            };
+
+            let cmi_hash = helpers::compute_file_hash(&helpers::get_compiler_asset_in(
+                &ocaml_path,
+                &pkg.namespace,
+                &impl_path,
+                "cmi",
+            ));
+            let cmt_hash = helpers::compute_file_hash(&helpers::get_compiler_asset_in(
+                &ocaml_path,
+                &pkg.namespace,
+                &impl_path,
+                "cmt",
+            ));
+
+            match (mode.emits_js(), cmi_hash, cmt_hash) {
+                (true, Some(cmi), Some(cmt)) => {
+                    let cmj_hash = helpers::compute_file_hash(&helpers::get_compiler_asset_in(
+                        &ocaml_path,
+                        &pkg.namespace,
+                        &impl_path,
+                        "cmj",
+                    ));
+                    match cmj_hash {
+                        Some(cmj) => CompilationStage::Built {
+                            source_hash,
+                            ast_hash,
+                            cmi_hash: cmi,
+                            cmt_hash: cmt,
+                            cmj_hash: cmj,
+                        },
+                        None => CompilationStage::Dirty,
+                    }
+                }
+                (false, Some(cmi), Some(cmt)) => CompilationStage::TypeChecked {
+                    source_hash,
+                    ast_hash,
+                    cmi_hash: cmi,
+                    cmt_hash: cmt,
+                },
+                _ => CompilationStage::Dirty,
+            }
+        } else {
+            // MlMap modules — set Built with zero hashes (they don't have real artifacts)
+            CompilationStage::Built {
+                source_hash: blake3::hash(b"mlmap"),
+                ast_hash: blake3::hash(b"mlmap"),
+                cmi_hash: blake3::hash(b"mlmap"),
+                cmt_hash: blake3::hash(b"mlmap"),
+                cmj_hash: blake3::hash(b"mlmap"),
+            }
+        };
+
+        if let Some(module) = build_state.build_state.modules.get_mut(name) {
+            module.compilation_stage = new_stage;
             module.last_compiled_cmi = Some(now);
             module.last_compiled_cmt = Some(now);
         }
@@ -1102,7 +1198,7 @@ pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildCommandState)
                 let dependent_module = build_state.modules.get(dependent).unwrap();
                 match dependent_module.source_type {
                     SourceType::SourceFile(_) => {
-                        match (module.last_compiled_cmt, module.last_compiled_cmt) {
+                        match (module.last_compiled_cmi, module.last_compiled_cmt) {
                             (None, None) | (Some(_), None) | (None, Some(_)) => {
                                 // println!(
                                 //     "🛑 {} is a dependent of {} but has no cmt/cmi",

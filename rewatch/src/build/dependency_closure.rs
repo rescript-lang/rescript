@@ -98,7 +98,7 @@ mod tests {
             deps: deps.iter().map(|s| s.to_string()).collect(),
             dependents: dependents.iter().map(|s| s.to_string()).collect(),
             package_name: "test".to_string(),
-            compilation_stage: CompilationStage::Built,
+            compilation_stage: CompilationStage::Dirty,
             last_compiled_cmi: None,
             last_compiled_cmt: None,
             needs_dependencies_rescan: false,

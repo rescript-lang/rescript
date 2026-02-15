@@ -148,6 +148,8 @@ pub fn generate_asts(
                     module.compilation_stage = CompilationStage::Dirty;
                     module.needs_dependencies_rescan = true;
                 }
+                let mut impl_parse_ok = false;
+                let mut iface_parse_ok = true; // true when no interface
                 if let SourceType::SourceFile(ref mut source_file) = module.source_type {
                     // We get Err(x) when there is a parse error. When it's Ok(_, Some(
                     // stderr_warnings )), the outputs are warnings
@@ -160,10 +162,12 @@ pub fn generate_asts(
                             source_file.implementation.parse_dirty = true;
                             logs::append(package, &stderr_warnings);
                             stderr.push_str(&stderr_warnings);
+                            impl_parse_ok = true;
                         }
                         Ok((_path, Some(_))) | Ok((_path, None)) => {
                             source_file.implementation.parse_state = ParseState::Success;
                             source_file.implementation.parse_dirty = false;
+                            impl_parse_ok = true;
                         }
                         Err(err) => {
                             // Some compilation error
@@ -204,9 +208,26 @@ pub fn generate_asts(
                             logs::append(package, &err);
                             has_failure = true;
                             stderr.push_str(&err);
+                            iface_parse_ok = false;
                         }
                         Ok(None) => {
                             // The file had no interface file associated
+                        }
+                    }
+
+                    // If parsing succeeded, upgrade from Dirty to Parsed with hashes
+                    if is_dirty && impl_parse_ok && iface_parse_ok {
+                        let source_path = package.path.join(&source_file.implementation.path);
+                        let build_path = package.get_build_path_for_output(output);
+                        let ast_path =
+                            build_path.join(helpers::get_ast_path(&source_file.implementation.path));
+                        let source_hash = helpers::compute_file_hash(&source_path);
+                        let ast_hash = helpers::compute_file_hash(&ast_path);
+                        if let (Some(sh), Some(ah)) = (source_hash, ast_hash) {
+                            module.compilation_stage = CompilationStage::Parsed {
+                                source_hash: sh,
+                                ast_hash: ah,
+                            };
                         }
                     }
                 };
@@ -218,7 +239,7 @@ pub fn generate_asts(
     let dirty_packages = build_state
         .modules
         .iter()
-        .filter(|(_, module)| module.compilation_stage.needs_compile(mode.target_stage()))
+        .filter(|(_, module)| module.compilation_stage.needs_compile_for_mode(mode))
         .map(|(_, module)| module.package_name.clone())
         .collect::<AHashSet<String>>();
 

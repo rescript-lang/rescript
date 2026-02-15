@@ -829,7 +829,13 @@ pub fn parse_packages(build_state: &mut BuildState, output: OutputTarget, mode: 
                     deps,
                     dependents: AHashSet::new(),
                     package_name: package.name.to_owned(),
-                    compilation_stage: CompilationStage::Built,
+                    compilation_stage: CompilationStage::Built {
+                        source_hash: blake3::hash(b"mlmap"),
+                        ast_hash: blake3::hash(b"mlmap"),
+                        cmi_hash: blake3::hash(b"mlmap"),
+                        cmt_hash: blake3::hash(b"mlmap"),
+                        cmj_hash: blake3::hash(b"mlmap"),
+                    },
                     last_compiled_cmt: None,
                     last_compiled_cmi: None,
                     // Not sure if this is correct

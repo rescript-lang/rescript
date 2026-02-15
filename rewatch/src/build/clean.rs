@@ -195,6 +195,7 @@ pub fn cleanup_previous_build(
                 .get(res_file_location)
                 .expect("Could not find module name for ast file");
             let module = build_state
+                .build_state
                 .modules
                 .get_mut(module_name)
                 .expect("Could not find module for ast file");
@@ -209,15 +210,71 @@ pub fn cleanup_previous_build(
                 && cmt_last_modified > ast_last_modified
                 && !deleted_interfaces.contains(module_name)
             {
-                // Only mark as Built if the .cmj also exists — that proves a
-                // full compile ran.  When only .cmi/.cmt are present (from a
-                // TypecheckOnly build) the module still needs compilation to
-                // produce .cmj, so we mark it TypeChecked instead.
-                module.compilation_stage = if cmj_exists {
-                    CompilationStage::Built
-                } else {
-                    CompilationStage::TypeChecked
+                // Compute hashes from existing artifacts on disk to restore
+                // the compilation stage with full artifact identity.
+                let source_hash = helpers::compute_file_hash(res_file_location);
+                let ast_hash = helpers::compute_file_hash(ast_file_path);
+
+                let (cmi_hash, cmt_hash, cmj_hash) =
+                    if let Some(pkg) = build_state.build_state.packages.get(&module.package_name) {
+                        let ocaml_path = pkg.get_ocaml_build_path_for_output(output);
+                        let impl_path = match &module.source_type {
+                            SourceType::SourceFile(sf) => &sf.implementation.path,
+                            _ => unreachable!("MlMap is not matched with a ReScript file"),
+                        };
+                        (
+                            helpers::compute_file_hash(&helpers::get_compiler_asset_in(
+                                &ocaml_path,
+                                &pkg.namespace,
+                                impl_path,
+                                "cmi",
+                            )),
+                            helpers::compute_file_hash(&helpers::get_compiler_asset_in(
+                                &ocaml_path,
+                                &pkg.namespace,
+                                impl_path,
+                                "cmt",
+                            )),
+                            if cmj_exists {
+                                helpers::compute_file_hash(&helpers::get_compiler_asset_in(
+                                    &ocaml_path,
+                                    &pkg.namespace,
+                                    impl_path,
+                                    "cmj",
+                                ))
+                            } else {
+                                None
+                            },
+                        )
+                    } else {
+                        (None, None, None)
+                    };
+
+                let new_stage = match (source_hash, ast_hash, cmi_hash, cmt_hash) {
+                    (Some(sh), Some(ah), Some(cmi), Some(cmt)) => {
+                        if cmj_exists {
+                            match cmj_hash {
+                                Some(cmj) => CompilationStage::Built {
+                                    source_hash: sh,
+                                    ast_hash: ah,
+                                    cmi_hash: cmi,
+                                    cmt_hash: cmt,
+                                    cmj_hash: cmj,
+                                },
+                                None => CompilationStage::Dirty,
+                            }
+                        } else {
+                            CompilationStage::TypeChecked {
+                                source_hash: sh,
+                                ast_hash: ah,
+                                cmi_hash: cmi,
+                                cmt_hash: cmt,
+                            }
+                        }
+                    }
+                    _ => CompilationStage::Dirty,
                 };
+                module.compilation_stage = new_stage;
             }
 
             match &mut module.source_type {

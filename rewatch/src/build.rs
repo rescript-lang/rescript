@@ -326,9 +326,9 @@ pub fn incremental_build(
 
     //print all the modules that need compilation
     if log_enabled!(log::Level::Trace) {
-        let target_stage = build_config.scope.mode().target_stage();
+        let mode = build_config.scope.mode();
         for (module_name, module) in build_state.modules.iter() {
-            if module.compilation_stage.needs_compile(target_stage) {
+            if module.compilation_stage.needs_compile_for_mode(mode) {
                 println!(
                     "needs compile: {module_name} (stage: {:?})",
                     module.compilation_stage

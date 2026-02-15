@@ -23,23 +23,86 @@ pub enum CompileState {
 }
 /// Tracks how far a module has progressed through compilation.
 ///
-/// The ordering matters: `Dirty < TypeChecked < Built`. A module needs
-/// compilation when its stage is below the target stage for the current
-/// build mode.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+/// Each variant accumulates blake3 hashes of all artifacts produced up to
+/// that stage, enabling the compile loop to make data-driven decisions
+/// about what work is needed and whether output will affect dependents.
+///
+/// Lifecycle: `Dirty → Parsed → TypeChecked → Built`
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CompilationStage {
     /// Not yet compiled, or source changed — needs full pipeline.
     Dirty,
+    /// AST generated. Carries hashes of source + AST artifacts.
+    Parsed { source_hash: Hash, ast_hash: Hash },
     /// Type-checked only (.cmi/.cmt produced, no .cmj).
-    TypeChecked,
+    /// Accumulates parse hashes + typecheck artifact hashes.
+    TypeChecked {
+        source_hash: Hash,
+        ast_hash: Hash,
+        cmi_hash: Hash,
+        cmt_hash: Hash,
+    },
     /// Fully compiled (.cmi/.cmt/.cmj + JS produced).
-    Built,
+    /// Accumulates all prior hashes + build artifact hashes.
+    Built {
+        source_hash: Hash,
+        ast_hash: Hash,
+        cmi_hash: Hash,
+        cmt_hash: Hash,
+        cmj_hash: Hash,
+    },
 }
 
 impl CompilationStage {
-    /// Whether this module needs compilation to reach the given target stage.
+    /// Whether this module's source has changed and needs recompilation.
+    pub fn is_dirty(self) -> bool {
+        matches!(self, CompilationStage::Dirty)
+    }
+
+    /// Numeric ordering for stage comparison: Dirty(0) < Parsed(1) < TypeChecked(2) < Built(3).
+    fn ordinal(self) -> u8 {
+        match self {
+            CompilationStage::Dirty => 0,
+            CompilationStage::Parsed { .. } => 1,
+            CompilationStage::TypeChecked { .. } => 2,
+            CompilationStage::Built { .. } => 3,
+        }
+    }
+
+    /// Whether this module needs work to reach the given target stage.
     pub fn needs_compile(self, target: CompilationStage) -> bool {
-        self < target
+        self.ordinal() < target.ordinal()
+    }
+
+    /// Whether this module needs work for the given compile mode.
+    pub fn needs_compile_for_mode(self, mode: CompileMode) -> bool {
+        match (self, mode) {
+            (CompilationStage::Built { .. }, _) => false,
+            (CompilationStage::TypeChecked { .. }, CompileMode::FullCompile) => true,
+            (CompilationStage::TypeChecked { .. }, CompileMode::TypecheckOnly) => false,
+            (CompilationStage::Parsed { .. }, _) => true,
+            (CompilationStage::Dirty, _) => true,
+        }
+    }
+
+    /// The CMI hash, if typechecked or built.
+    pub fn cmi_hash(&self) -> Option<Hash> {
+        match self {
+            CompilationStage::TypeChecked { cmi_hash, .. } | CompilationStage::Built { cmi_hash, .. } => {
+                Some(*cmi_hash)
+            }
+            _ => None,
+        }
+    }
+
+    /// The source hash, if any compilation has happened.
+    pub fn source_hash(&self) -> Option<Hash> {
+        match self {
+            CompilationStage::Parsed { source_hash, .. }
+            | CompilationStage::TypeChecked { source_hash, .. }
+            | CompilationStage::Built { source_hash, .. } => Some(*source_hash),
+            _ => None,
+        }
     }
 }
 
@@ -90,14 +153,6 @@ impl CompileMode {
     /// Whether this mode emits JavaScript output.
     pub fn emits_js(self) -> bool {
         matches!(self, CompileMode::FullCompile)
-    }
-
-    /// The compilation stage a module reaches under this mode.
-    pub fn target_stage(self) -> CompilationStage {
-        match self {
-            CompileMode::FullCompile => CompilationStage::Built,
-            CompileMode::TypecheckOnly => CompilationStage::TypeChecked,
-        }
     }
 }
 

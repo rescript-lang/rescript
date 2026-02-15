@@ -613,6 +613,14 @@ Lower priority, but would improve the editing experience:
 - **`textDocument/foldingRange`** — code folding regions
 - **`textDocument/selectionRange`** — smart expand/shrink selection
 
+### 6. Leverage `CompilationStage` Hashes for Smarter Builds
+
+`CompilationStage` now carries blake3 hashes of all artifacts produced at each stage (`Dirty → Parsed { source_hash, ast_hash } → TypeChecked { +cmi_hash, +cmt_hash } → Built { +cmj_hash }`). This data model enables several optimizations that are not yet implemented:
+
+- **No-op save detection**: Compare the on-disk `source_hash` against the hash stored in the module's stage. If they match, the file hasn't actually changed (e.g., user hit save without editing). Parsing and compilation can be skipped entirely.
+- **CMI-based skip in `TypecheckDependents`**: After compiling a saved file, compare its new `cmi_hash` against the pre-save value from the stage. If the interface is unchanged, no dependents need re-typechecking — saving an entire typecheck pass over the dependent closure.
+- **Whitespace-only change detection**: If `source_hash` changes but `ast_hash` remains the same (only whitespace or comments changed), compilation can be skipped since the AST is identical.
+
 ## Potential Carve-Outs
 
 The following changes on this branch are self-contained and could be sent as separate PRs ahead of merging the full LSP branch:
