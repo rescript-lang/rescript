@@ -27,6 +27,13 @@ struct BatchBuildResult {
 /// Run incremental builds for saved files. Groups files by project,
 /// marks them dirty, compiles their dependency closure and typechecks
 /// their dependent closure, then publishes diagnostics for all touched files.
+///
+/// Uses a take-build-replace pattern to minimize lock contention: each
+/// project's `BuildCommandState` is removed from the `ProjectMap` under a
+/// brief lock, built without holding the mutex, then inserted back. This
+/// keeps the lock held only for HashMap bookkeeping rather than for the
+/// entire duration of bsc subprocess invocations, so LSP handlers (hover,
+/// completions, etc.) are not blocked during compilation.
 pub(super) async fn run(
     compile_files: &HashMap<Url, PendingFileBuild>,
     projects: &Arc<Mutex<ProjectMap>>,
@@ -39,46 +46,63 @@ pub(super) async fn run(
     let parent_span = tracing::Span::current();
     let results = tokio::task::spawn_blocking(move || {
         let _entered = parent_span.enter();
-        let mut guard = match projects.lock() {
-            Ok(g) => g,
-            Err(e) => {
-                tracing::error!("projects mutex poisoned in build flush: {e}");
-                return Vec::new();
-            }
-        };
 
-        // Group files by project root
-        let mut by_project: HashMap<PathBuf, Vec<PathBuf>> = HashMap::new();
-        for path in &file_paths {
-            if let Some(root) = guard.project_root_for_path(path) {
-                by_project.entry(root).or_default().push(path.clone());
-            }
-        }
-
-        // Mark dirty + build per project
-        let mut results = Vec::new();
-        for (root, paths) in &by_project {
-            if let Some(build_state) = guard.states.get_mut(root) {
-                let module_names: Vec<String> = paths
-                    .iter()
-                    .filter_map(|p| build_state.mark_file_parse_dirty(p))
-                    .collect();
-                if module_names.is_empty() {
-                    tracing::warn!(
-                        project = %root.display(),
-                        "file_build: no modules resolved from {} dirty file(s)",
-                        paths.len()
-                    );
-                } else {
-                    tracing::debug!(
-                        project = %root.display(),
-                        modules = ?module_names,
-                        "file_build: building modules"
-                    );
-                    results.push(build_batch(build_state, module_names));
+        // Phase 1: group files by project and take states out (brief lock).
+        // While the states are removed, LSP handlers for these projects
+        // will get empty responses instead of blocking on the mutex.
+        let mut project_work: Vec<(PathBuf, BuildCommandState, Vec<PathBuf>)> = Vec::new();
+        {
+            let mut guard = match projects.lock() {
+                Ok(g) => g,
+                Err(e) => {
+                    tracing::error!("projects mutex poisoned in build flush: {e}");
+                    return Vec::new();
+                }
+            };
+            let mut by_project: HashMap<PathBuf, Vec<PathBuf>> = HashMap::new();
+            for path in &file_paths {
+                if let Some(root) = guard.project_root_for_path(path) {
+                    by_project.entry(root).or_default().push(path.clone());
                 }
             }
+            for (root, paths) in by_project {
+                if let Some(state) = guard.states.remove(&root) {
+                    project_work.push((root, state, paths));
+                }
+            }
+        } // lock released
+
+        // Phase 2: build without holding the lock.
+        let mut results = Vec::new();
+        for (root, build_state, paths) in &mut project_work {
+            let module_names: Vec<String> = paths
+                .iter()
+                .filter_map(|p| build_state.mark_file_parse_dirty(p))
+                .collect();
+            if module_names.is_empty() {
+                tracing::warn!(
+                    project = %root.display(),
+                    "file_build: no modules resolved from {} dirty file(s)",
+                    paths.len()
+                );
+            } else {
+                tracing::debug!(
+                    project = %root.display(),
+                    modules = ?module_names,
+                    "file_build: building modules"
+                );
+                results.push(build_batch(build_state, module_names));
+            }
         }
+
+        // Phase 3: put states back (brief lock).
+        if let Ok(mut guard) = projects.lock() {
+            for (root, state, _) in project_work {
+                guard.uri_cache.retain(|_, r| *r != root);
+                guard.states.insert(root, state);
+            }
+        }
+
         results
     })
     .await
