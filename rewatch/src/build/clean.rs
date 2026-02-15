@@ -304,15 +304,6 @@ pub fn cleanup_previous_build(
         });
 
     compile_assets_state
-        .cmi_modules
-        .iter()
-        .for_each(|(module_name, last_modified)| {
-            if let Some(Module::SourceFile(sf)) = build_state.modules.get_mut(module_name) {
-                sf.last_compiled_cmi = Some(*last_modified);
-            }
-        });
-
-    compile_assets_state
         .cmt_modules
         .iter()
         .for_each(|(module_name, last_modified)| {

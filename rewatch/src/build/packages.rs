@@ -878,7 +878,6 @@ pub fn parse_packages(build_state: &mut BuildState, output: OutputTarget, mode: 
                                 dependents: AHashSet::new(),
                                 needs_dependencies_rescan: true,
                                 compilation_stage: CompilationStage::Dirty,
-                                last_compiled_cmi: None,
                                 last_compiled_cmt: None,
                             }));
                         }
@@ -970,7 +969,6 @@ pub fn parse_packages(build_state: &mut BuildState, output: OutputTarget, mode: 
                                     dependents: AHashSet::new(),
                                     needs_dependencies_rescan: true,
                                     compilation_stage: CompilationStage::Dirty,
-                                    last_compiled_cmi: None,
                                     last_compiled_cmt: None,
                                 }));
                         }

@@ -333,10 +333,6 @@ pub struct SourceFileModule {
     /// target stage in `compile.rs` after successful compilation, and
     /// restored to `Built` in `clean.rs` when existing artifacts are fresh.
     pub compilation_stage: CompilationStage,
-    /// Timestamp of the last produced .cmi (compiled interface) file.
-    /// Updated in `compile.rs` after compilation and in `clean.rs` from
-    /// existing artifact timestamps.
-    pub last_compiled_cmi: Option<SystemTime>,
     /// Timestamp of the last produced .cmt (compiled typed tree) file.
     /// Updated in `compile.rs` after compilation and in `clean.rs` from
     /// existing artifact timestamps. Used for incremental staleness checks:
@@ -648,15 +644,14 @@ pub struct AstModule {
 /// which modules need recompilation. Each map tracks the last-modified time of a
 /// specific artifact kind, keyed by module name (or source path for AST files).
 ///
-/// The distinction between `cmi_modules` (type interfaces) and `cmj_modules`
-/// (compiled JS) is important: a TypecheckOnly build produces `.cmi`/`.cmt` but
+/// The distinction between `cmj_modules` (compiled JS) and `cmt_modules`
+/// (typed trees) is important: a TypecheckOnly build produces `.cmi`/`.cmt` but
 /// no `.cmj`. When resuming from such a build, modules with `.cmi` but no `.cmj`
 /// must be marked as `TypeChecked` rather than `Built` so they get fully compiled
 /// on the next save.
 #[derive(Debug)]
 pub struct CompileAssetsState {
     pub ast_modules: AHashMap<PathBuf, AstModule>,
-    pub cmi_modules: AHashMap<String, SystemTime>,
     pub cmj_modules: AHashMap<String, SystemTime>,
     pub cmt_modules: AHashMap<String, SystemTime>,
     pub ast_rescript_file_locations: AHashSet<PathBuf>,

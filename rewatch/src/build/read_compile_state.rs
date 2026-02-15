@@ -10,7 +10,6 @@ use std::time::SystemTime;
 #[tracing::instrument(name = "read_compile_state", skip_all)]
 pub fn read(build_state: &mut BuildCommandState, output: OutputTarget) -> anyhow::Result<CompileAssetsState> {
     let mut ast_modules: AHashMap<PathBuf, AstModule> = AHashMap::new();
-    let mut cmi_modules: AHashMap<String, SystemTime> = AHashMap::new();
     let mut cmj_modules: AHashMap<String, SystemTime> = AHashMap::new();
     let mut cmt_modules: AHashMap<String, SystemTime> = AHashMap::new();
     let mut ast_rescript_file_locations = AHashSet::new();
@@ -54,7 +53,7 @@ pub fn read(build_state: &mut BuildCommandState, output: OutputTarget) -> anyhow
                         let extension = path.extension().and_then(|e| e.to_str());
                         match extension {
                             Some(ext) => match ext {
-                                "iast" | "ast" | "cmi" | "cmj" | "cmt" => Some((
+                                "iast" | "ast" | "cmj" | "cmt" => Some((
                                     path.to_owned(),
                                     entry.metadata().unwrap().modified().unwrap(),
                                     ext.to_owned(),
@@ -99,15 +98,6 @@ pub fn read(build_state: &mut BuildCommandState, output: OutputTarget) -> anyhow
                         let _ = ast_rescript_file_locations.insert(res_file_path_buf);
                     }
                 }
-                "cmi" => {
-                    let module_name = helpers::file_path_to_module_name(
-                        path,
-                        // we don't want to include a namespace here because the CMI file
-                        // already includes a namespace
-                        &packages::Namespace::NoNamespace,
-                    );
-                    cmi_modules.insert(module_name, last_modified.to_owned());
-                }
                 "cmj" => {
                     let module_name =
                         helpers::file_path_to_module_name(path, &packages::Namespace::NoNamespace);
@@ -131,7 +121,6 @@ pub fn read(build_state: &mut BuildCommandState, output: OutputTarget) -> anyhow
 
     Ok(CompileAssetsState {
         ast_modules,
-        cmi_modules,
         cmj_modules,
         cmt_modules,
         ast_rescript_file_locations,

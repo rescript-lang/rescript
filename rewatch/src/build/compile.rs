@@ -673,7 +673,6 @@ pub fn compile(
 
         if let Some(Module::SourceFile(sf)) = build_state.build_state.modules.get_mut(name) {
             sf.compilation_stage = new_stage;
-            sf.last_compiled_cmi = Some(now);
             sf.last_compiled_cmt = Some(now);
         }
     }
@@ -1180,11 +1179,8 @@ pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildCommandState)
                 let dependent_module = build_state.modules.get(dependent).unwrap();
                 match dependent_module {
                     Module::SourceFile(dep_sf) => {
-                        match (sf_module.last_compiled_cmi, sf_module.last_compiled_cmt) {
-                            (None, None) | (Some(_), None) | (None, Some(_)) => {
-                                modules_with_expired_deps.insert(module_name.to_string());
-                            }
-                            (Some(_), Some(_)) => (),
+                        if sf_module.last_compiled_cmt.is_none() {
+                            modules_with_expired_deps.insert(module_name.to_string());
                         }
 
                         // we compare the last compiled time of the dependent module with the last
