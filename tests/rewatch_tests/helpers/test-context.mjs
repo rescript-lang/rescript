@@ -515,7 +515,9 @@ export async function runRewatchTest(scenario, options = {}) {
 
   try {
     // Setup
-    otelReceiver = await createOtelReceiver();
+    otelReceiver = await createOtelReceiver({
+      forwardEndpoint: process.env.OTEL_VIEWER_ENDPOINT,
+    });
     sandbox = await createSandbox();
 
     // Create a CLI helper that tracks watch handles for automatic cleanup
@@ -686,7 +688,9 @@ export async function runLspTest(scenario, options = {}) {
 
   try {
     // Setup
-    otelReceiver = await createOtelReceiver();
+    otelReceiver = await createOtelReceiver({
+      forwardEndpoint: process.env.OTEL_VIEWER_ENDPOINT,
+    });
     sandbox = await createSandbox();
     const lspCwd = options.cwd ? path.join(sandbox, options.cwd) : sandbox;
     lsp = createLspClient(lspCwd, otelReceiver.endpoint);

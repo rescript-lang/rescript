@@ -398,21 +398,21 @@ make test-rewatch     # Run integration tests
 
 #### OpenTelemetry Tracing
 
-Rewatch supports OpenTelemetry (OTEL) tracing for build and watch commands. To visualize traces locally, run a Jaeger all-in-one container:
+Rewatch supports OpenTelemetry (OTEL) tracing for build, watch, and LSP commands. Any OTLP-compatible viewer (Jaeger, Grafana, etc.) will work. For a lightweight option tailored to rewatch development, see `rewatch/otel-viewer/` — it requires only `uv` (no Docker) and includes features like LLM export.
 
 ```bash
-docker run -d --name jaeger \
-  -p 4317:4317 -p 4318:4318 -p 16686:16686 \
-  jaegertracing/all-in-one
+# Start the viewer (see rewatch/otel-viewer/README.md for setup)
+cd rewatch/otel-viewer
+uv run python server.py
 ```
 
 Then run rewatch with the OTLP endpoint set:
 
 ```bash
-OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 cargo run --manifest-path rewatch/Cargo.toml -- build
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4707 cargo run --manifest-path rewatch/Cargo.toml -- build
 ```
 
-Open http://localhost:16686 to view traces in the Jaeger UI.
+Open http://localhost:4707 to browse traces.
 
 Note: Use `tracing::debug!` (not `log::debug!`) for events you want to appear in OTEL traces — they use separate logging systems.
 

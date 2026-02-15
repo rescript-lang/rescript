@@ -170,6 +170,8 @@ message PartialSuccess {
 /**
  * Create an OTLP HTTP receiver for testing.
  *
+ * @param {object} [options]
+ * @param {string} [options.forwardEndpoint] - Optional endpoint to forward raw trace data to (e.g. otel-viewer at http://localhost:4707)
  * @returns {Promise<{
  *   endpoint: string,
  *   port: number,
@@ -180,7 +182,8 @@ message PartialSuccess {
  *   stop: () => Promise<void>
  * }>}
  */
-export async function createOtelReceiver() {
+export async function createOtelReceiver(options = {}) {
+  const { forwardEndpoint } = options;
   const spans = [];
 
   // Parse the proto definition
@@ -269,6 +272,15 @@ export async function createOtelReceiver() {
         } else {
           res.writeHead(200, { "Content-Type": "application/json" });
           res.end(JSON.stringify({}));
+        }
+
+        // Forward raw request to otel-viewer (fire-and-forget)
+        if (forwardEndpoint) {
+          fetch(`${forwardEndpoint}/v1/traces`, {
+            method: "POST",
+            headers: { "Content-Type": contentType },
+            body,
+          }).catch(() => {});
         }
       } catch (err) {
         console.error("[otel-receiver] Error parsing request:", err.message);

@@ -224,7 +224,13 @@ To add new spans or attributes in rewatch:
 
 ## Debugging
 
-- Set `DEBUG_OTEL=1` to print span summaries during test execution
+- The tests use their own in-process OTEL receiver (`helpers/otel-receiver.mjs`) that collects spans in memory for snapshot assertions.
+- Set `DEBUG_OTEL=1` to print span summaries to the console during test execution
+- Set `OTEL_VIEWER_ENDPOINT=http://localhost:4707` to forward test traces to the otel-viewer UI. Start otel-viewer first (`cd rewatch/otel-viewer && uv run python server.py`), then run tests:
+  ```bash
+  OTEL_VIEWER_ENDPOINT=http://localhost:4707 yarn test tests/build.test.mjs
+  ```
+  Traces appear in the viewer at http://localhost:4707 alongside any manually triggered builds. The forwarding is fire-and-forget — if otel-viewer isn't running, tests still pass normally.
 - Check `result.stdout` and `result.stderr` for command output
 - For watch tests, use `watch.waitForOutput(pattern, timeout)` to wait for specific output
 - If tests timeout, increase the timeout in `vitest.config.mjs`
