@@ -719,11 +719,19 @@ pub fn make(
 
 #[instrument(name = "packages.parse_packages", skip_all)]
 pub fn parse_packages(build_state: &mut BuildState, output: OutputTarget, mode: CompileMode) -> Result<()> {
-    let packages = build_state.packages.clone();
+    // Destructure to allow simultaneous immutable borrows of `packages` /
+    // `project_context` and mutable borrows of `modules` / `module_names`.
+    let BuildState {
+        packages,
+        modules,
+        module_names,
+        project_context,
+        ..
+    } = build_state;
     for (package_name, package) in packages.iter() {
         debug!("Parsing package: {package_name}");
         if let Some(package_modules) = package.modules.to_owned() {
-            build_state.module_names.extend(package_modules)
+            module_names.extend(package_modules)
         }
         let build_path_abs = package.get_build_path_for_output(output);
         let ocaml_build_path = package.get_ocaml_build_path_for_output(output);
@@ -732,7 +740,7 @@ pub fn parse_packages(build_state: &mut BuildState, output: OutputTarget, mode: 
 
         // TypecheckOnly mode only needs lib/lsp + lib/ocaml — no JS output directories
         if mode.emits_js() {
-            let root_config = build_state.get_root_config();
+            let root_config = project_context.get_root_config();
             root_config.get_package_specs().iter().for_each(|spec| {
                 if !spec.in_source {
                     let relative_dirs: AHashSet<PathBuf> = match &package.source_files {
@@ -811,8 +819,10 @@ pub fn parse_packages(build_state: &mut BuildState, output: OutputTarget, mode: 
                 })
                 .collect::<AHashSet<String>>();
 
-            build_state.insert_module(
-                &helpers::file_path_to_module_name(&mlmap.to_owned(), &packages::Namespace::NoNamespace),
+            let mlmap_module_name =
+                helpers::file_path_to_module_name(&mlmap.to_owned(), &packages::Namespace::NoNamespace);
+            modules.insert(
+                mlmap_module_name.clone(),
                 Module {
                     needs_dependencies_rescan: false,
                     source_type: SourceType::MlMap(MlMap { parse_dirty: false }),
@@ -826,6 +836,7 @@ pub fn parse_packages(build_state: &mut BuildState, output: OutputTarget, mode: 
                     is_type_dev: false,
                 },
             );
+            module_names.insert(mlmap_module_name);
         });
 
         debug!("Building source file-tree for package: {}", package.name);
@@ -839,7 +850,7 @@ pub fn parse_packages(build_state: &mut BuildState, output: OutputTarget, mode: 
                 if helpers::is_implementation_file(extension) {
                     // Store duplicate paths in an Option so we can build the error after the entry borrow ends.
                     let mut duplicate_paths: Option<(PathBuf, PathBuf)> = None;
-                    match build_state.modules.entry(module_name.to_string()) {
+                    match modules.entry(module_name.to_string()) {
                         Entry::Occupied(mut entry) => {
                             let module = entry.get_mut();
                             if let SourceType::SourceFile(ref mut source_file) = module.source_type {
@@ -879,7 +890,7 @@ pub fn parse_packages(build_state: &mut BuildState, output: OutputTarget, mode: 
                         }
                     }
                     if let Some((existing_path, duplicate_path)) = duplicate_paths {
-                        let root_path = build_state.get_root_config().path.clone();
+                        let root_path = project_context.get_root_config().path.clone();
                         let root = root_path.parent().map(PathBuf::from).unwrap_or(root_path);
                         let existing_display = existing_path.strip_prefix(&root).unwrap_or(&existing_path);
                         let duplicate_display = duplicate_path.strip_prefix(&root).unwrap_or(&duplicate_path);
@@ -925,8 +936,7 @@ pub fn parse_packages(build_state: &mut BuildState, output: OutputTarget, mode: 
                             )
                         }
                         Some(_) => {
-                            build_state
-                                .modules
+                            modules
                                 .entry(module_name.to_string())
                                 .and_modify(|module| {
                                     if let SourceType::SourceFile(ref mut source_file) = module.source_type {
