@@ -152,6 +152,14 @@ pub fn get_deps(build_state: &mut BuildState, deleted_modules: &AHashSet<String>
                         _ => (),
                     }
                     deps.remove(module_name);
+                    if module.needs_dependencies_rescan {
+                        tracing::debug!(
+                            module = %module_name,
+                            deps_initialized = build_state.deps_initialized,
+                            resolved_deps = ?deps.iter().collect::<Vec<_>>(),
+                            "get_deps: rescanned module dependencies"
+                        );
+                    }
                     (module_name.to_string(), deps)
                 } else {
                     (module_name.to_string(), module.deps.to_owned())

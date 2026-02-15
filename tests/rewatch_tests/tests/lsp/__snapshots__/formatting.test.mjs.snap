@@ -281,7 +281,8 @@ exports[`lsp formatting > formats a ReScript file 1`] = `
   "  lsp.did_open[file=src/Root.res]",
   "  lsp.did_change[file=src/Root.res]",
   "  lsp.formatting[file=src/Root.res]",
-  "  lsp.typecheck[file_count=1]",
-  "    lsp.typecheck.file[module=Root]",
+  "  lsp.flush[typechecks=src/Root.res]",
+  "    lsp.flush.file_typecheck[file_count=1]",
+  "      lsp.flush.file_typecheck.file[module=Root]",
 ]
 `;

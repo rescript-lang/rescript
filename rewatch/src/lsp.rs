@@ -461,33 +461,26 @@ impl LanguageServer for Backend {
     }
 
     async fn did_change_watched_files(&self, params: DidChangeWatchedFilesParams) {
-        for event in &params.changes {
-            let kind = match event.typ {
-                FileChangeType::CREATED => "created",
-                FileChangeType::CHANGED => "changed",
-                FileChangeType::DELETED => "deleted",
-                _ => "unknown",
-            };
-            self.client
-                .log_message(
-                    MessageType::INFO,
-                    format!("didChangeWatchedFiles: {} {}", kind, event.uri),
-                )
-                .await;
-        }
-
         let _span =
             tracing::info_span!("lsp.did_change_watched_files", file_count = params.changes.len()).entered();
         if let Ok(q) = self.queue.lock()
             && let Some(ref queue) = *q
         {
             for event in &params.changes {
+                let kind = match event.typ {
+                    FileChangeType::CREATED => "created",
+                    FileChangeType::CHANGED => "changed",
+                    FileChangeType::DELETED => "deleted",
+                    _ => "unknown",
+                };
                 let Some(file_path) = uri_to_file_path(&event.uri, "didChangeWatchedFiles") else {
                     continue;
                 };
                 if !is_rescript_file(&file_path) {
                     continue;
                 }
+
+                tracing::info!(kind, file = %file_path.display(), "file_change");
 
                 match event.typ {
                     FileChangeType::CHANGED => {
@@ -918,5 +911,34 @@ pub async fn run_stdio() {
         queue_debounce_ms: Mutex::new(100),
         diagnostic_store: Mutex::new(None),
     });
-    Server::new(stdin, stdout, socket).serve(service).await;
+
+    let server = Server::new(stdin, stdout, socket).serve(service);
+
+    tokio::select! {
+        _ = server => {},
+        _ = shutdown_signal() => {
+            tracing::info!("LSP server received shutdown signal");
+        },
+    }
+}
+
+/// Wait for a termination signal (SIGINT, SIGTERM on Unix; Ctrl+C on all platforms).
+/// Returns when any signal is received, allowing the caller to perform cleanup.
+async fn shutdown_signal() {
+    let ctrl_c = tokio::signal::ctrl_c();
+
+    #[cfg(unix)]
+    {
+        let mut sigterm = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("failed to install SIGTERM handler");
+        tokio::select! {
+            _ = ctrl_c => {},
+            _ = sigterm.recv() => {},
+        }
+    }
+
+    #[cfg(not(unix))]
+    {
+        ctrl_c.await.ok();
+    }
 }

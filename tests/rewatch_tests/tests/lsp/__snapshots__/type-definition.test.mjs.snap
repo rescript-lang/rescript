@@ -279,8 +279,9 @@ exports[`lsp type definition > jumps to type definition of a value 1`] = `
   "        build.compile_wave[file_count=1]",
   "          build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
   "  lsp.did_open[file=packages/library/src/Library.res]",
-  "  lsp.typecheck[file_count=1]",
-  "    lsp.typecheck.file[module=Library]",
+  "  lsp.flush[typechecks=packages/library/src/Library.res]",
+  "    lsp.flush.file_typecheck[file_count=1]",
+  "      lsp.flush.file_typecheck.file[module=Library]",
   "  lsp.type_definition[file=packages/library/src/Library.res, module=Library, package=@rewatch-test/library]",
 ]
 `;

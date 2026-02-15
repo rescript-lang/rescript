@@ -200,6 +200,7 @@ pub fn cleanup_previous_build(
                 .expect("Could not find module for ast file");
 
             let cmt_last_modified = compile_assets_state.cmt_modules.get(module_name);
+            let cmj_exists = compile_assets_state.cmj_modules.contains_key(module_name);
             // if there is a new AST but it has not been compiled yet, we mark the module as compile dirty
             // we do this by checking if the cmt file is newer than the AST file. We always compile the
             // interface AND implementation. For some reason the CMI file is not always rewritten if it
@@ -208,7 +209,15 @@ pub fn cleanup_previous_build(
                 && cmt_last_modified > ast_last_modified
                 && !deleted_interfaces.contains(module_name)
             {
-                module.compilation_stage = CompilationStage::Built;
+                // Only mark as Built if the .cmj also exists — that proves a
+                // full compile ran.  When only .cmi/.cmt are present (from a
+                // TypecheckOnly build) the module still needs compilation to
+                // produce .cmj, so we mark it TypeChecked instead.
+                module.compilation_stage = if cmj_exists {
+                    CompilationStage::Built
+                } else {
+                    CompilationStage::TypeChecked
+                };
             }
 
             match &mut module.source_type {

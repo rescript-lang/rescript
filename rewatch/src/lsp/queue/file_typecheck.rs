@@ -96,7 +96,7 @@ fn batch_typecheck(
 ) -> Vec<TypecheckResult> {
     let batch_span = tracing::info_span!(
         parent: parent_span,
-        "lsp.typecheck",
+        "lsp.flush.file_typecheck",
         file_count = requests.len()
     );
     let _batch_entered = batch_span.enter();
@@ -128,7 +128,7 @@ fn batch_typecheck(
         let ctx = &file_contexts[0];
         let child = tracing::info_span!(
             parent: &batch_span,
-            "lsp.typecheck.file",
+            "lsp.flush.file_typecheck.file",
             module = %ctx.file_args.module_name
         );
         let _entered = child.enter();
@@ -176,7 +176,7 @@ fn batch_typecheck_multi(file_contexts: Vec<FileContext>) -> Vec<TypecheckResult
     let mut results: Vec<TypecheckResult> = Vec::new();
 
     // Phase 1: Parse all files in parallel to produce .ast files
-    let parse_span = tracing::info_span!("lsp.typecheck.parse", file_count = file_contexts.len());
+    let parse_span = tracing::info_span!("lsp.flush.file_typecheck.parse", file_count = file_contexts.len());
     let parse_results: Vec<(usize, Result<(), Vec<BscDiagnostic>>)> = {
         let _entered = parse_span.enter();
         file_contexts
@@ -217,7 +217,7 @@ fn batch_typecheck_multi(file_contexts: Vec<FileContext>) -> Vec<TypecheckResult
 fn parse_file_to_ast(ctx: &FileContext, parent: &tracing::Span) -> Result<(), Vec<BscDiagnostic>> {
     let _span = tracing::info_span!(
         parent: parent,
-        "lsp.typecheck.parse_file",
+        "lsp.flush.file_typecheck.parse_file",
         module = %ctx.file_args.module_name
     )
     .entered();
@@ -336,7 +336,8 @@ fn typecheck_in_waves(
             if stuck.is_empty() {
                 break;
             }
-            let fallback_span = tracing::info_span!("lsp.typecheck.wave", file_count = stuck.len());
+            let fallback_span =
+                tracing::info_span!("lsp.flush.file_typecheck.wave", file_count = stuck.len());
             let wave_results: Vec<TypecheckResult> = {
                 let _entered = fallback_span.enter();
                 stuck
@@ -348,7 +349,7 @@ fn typecheck_in_waves(
             break;
         }
 
-        let wave_span = tracing::info_span!("lsp.typecheck.wave", file_count = wave.len());
+        let wave_span = tracing::info_span!("lsp.flush.file_typecheck.wave", file_count = wave.len());
         let wave_results: Vec<TypecheckResult> = {
             let _entered = wave_span.enter();
             wave.par_iter()
@@ -368,7 +369,7 @@ fn typecheck_in_waves(
 fn typecheck_from_ast(ctx: &FileContext, parent: &tracing::Span) -> TypecheckResult {
     let _span = tracing::info_span!(
         parent: parent,
-        "lsp.typecheck.file",
+        "lsp.flush.file_typecheck.file",
         module = %ctx.file_args.module_name
     )
     .entered();

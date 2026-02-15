@@ -280,8 +280,9 @@ exports[`lsp completion > resolves documentation for a file module completion 1`
   "          build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
   "  lsp.did_open[file=packages/app/src/App.res]",
   "  lsp.did_change[file=packages/app/src/App.res]",
-  "  lsp.typecheck[file_count=1]",
-  "    lsp.typecheck.file[module=App]",
+  "  lsp.flush[typechecks=packages/app/src/App.res]",
+  "    lsp.flush.file_typecheck[file_count=1]",
+  "      lsp.flush.file_typecheck.file[module=App]",
   "  lsp.completion[file=packages/app/src/App.res, module=App, package=@rewatch-test/app]",
   "  lsp.completion_resolve[file=packages/app/src/App.res, module=App, package=@rewatch-test/app]",
 ]
@@ -567,8 +568,9 @@ exports[`lsp completion > returns completions for a module dot access 1`] = `
   "          build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
   "  lsp.did_open[file=src/Root.res]",
   "  lsp.did_change[file=src/Root.res]",
-  "  lsp.typecheck[file_count=1]",
-  "    lsp.typecheck.file[module=Root]",
+  "  lsp.flush[typechecks=src/Root.res]",
+  "    lsp.flush.file_typecheck[file_count=1]",
+  "      lsp.flush.file_typecheck.file[module=Root]",
   "  lsp.completion[file=src/Root.res, module=Root, package=rewatch-test-fixture]",
 ]
 `;
@@ -853,8 +855,9 @@ exports[`lsp completion > returns completions for stdlib modules like Console 1`
   "          build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
   "  lsp.did_open[file=src/Root.res]",
   "  lsp.did_change[file=src/Root.res]",
-  "  lsp.typecheck[file_count=1]",
-  "    lsp.typecheck.file[module=Root]",
+  "  lsp.flush[typechecks=src/Root.res]",
+  "    lsp.flush.file_typecheck[file_count=1]",
+  "      lsp.flush.file_typecheck.file[module=Root]",
   "  lsp.completion[file=src/Root.res, module=Root, package=rewatch-test-fixture]",
 ]
 `;

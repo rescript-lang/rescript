@@ -185,6 +185,7 @@ pub fn compute_universe_for_scope(scope: &CompileScope, build_state: &BuildComma
                 })
                 .cloned()
                 .collect();
+
             CompileUniverse {
                 all: closure,
                 originally_dirty,

@@ -132,6 +132,60 @@ struct PendingState {
     build_projects: PendingProjectBuilds,
 }
 
+/// Debug summary of what a flush is about to process.
+struct FlushSummary {
+    project_builds: String,
+    incremental_builds: String,
+    typechecks: String,
+}
+
+impl PendingState {
+    fn summary(&self) -> FlushSummary {
+        let mut project_parts: Vec<String> = Vec::new();
+        if !self.build_projects.created_files.is_empty() {
+            let mut files: Vec<String> = self
+                .build_projects
+                .created_files
+                .iter()
+                .map(|p| p.display().to_string())
+                .collect();
+            files.sort();
+            project_parts.push(format!("created: {}", files.join(", ")));
+        }
+        if !self.build_projects.deleted_files.is_empty() {
+            let mut files: Vec<String> = self
+                .build_projects
+                .deleted_files
+                .iter()
+                .map(|p| p.display().to_string())
+                .collect();
+            files.sort();
+            project_parts.push(format!("deleted: {}", files.join(", ")));
+        }
+        if !self.build_projects.config_changed.is_empty() {
+            let mut files: Vec<String> = self
+                .build_projects
+                .config_changed
+                .iter()
+                .map(|p| p.display().to_string())
+                .collect();
+            files.sort();
+            project_parts.push(format!("config: {}", files.join(", ")));
+        }
+        let mut incremental_builds: Vec<&str> = self.compile_files.keys().map(|u| u.as_str()).collect();
+        incremental_builds.sort();
+
+        let mut typechecks: Vec<&str> = self.typechecks.keys().map(|u| u.as_str()).collect();
+        typechecks.sort();
+
+        FlushSummary {
+            project_builds: project_parts.join("; "),
+            incremental_builds: incremental_builds.join(", "),
+            typechecks: typechecks.join(", "),
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -424,15 +478,34 @@ async fn flush(
         return;
     }
 
+    flush_inner(state, projects, generations, client, diagnostic_store).await;
+}
+
+#[tracing::instrument(
+    name = "lsp.flush",
+    skip_all,
+    fields(project_builds, incremental_builds, typechecks,)
+)]
+async fn flush_inner(
+    state: &mut PendingState,
+    projects: &Arc<Mutex<ProjectMap>>,
+    generations: &Arc<Mutex<HashMap<Url, u64>>>,
+    client: &Client,
+    diagnostic_store: &Option<Arc<DiagnosticStore>>,
+) {
+    let summary = state.summary();
+
+    let span = tracing::Span::current();
+    span.record("project_builds", summary.project_builds.as_str());
+    span.record("incremental_builds", summary.incremental_builds.as_str());
+    span.record("typechecks", summary.typechecks.as_str());
+
     client
         .log_message(
             tower_lsp::lsp_types::MessageType::INFO,
             format!(
-                "flush: {} created + {} deleted file(s) (full rebuild), {} incremental build(s), {} typecheck(s)",
-                state.build_projects.created_files.len(),
-                state.build_projects.deleted_files.len(),
-                state.compile_files.len(),
-                state.typechecks.len(),
+                "flush: project_builds=[{}], incremental_builds=[{}], typechecks=[{}]",
+                summary.project_builds, summary.incremental_builds, summary.typechecks,
             ),
         )
         .await;

@@ -12,6 +12,7 @@
 import { existsSync } from "node:fs";
 import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { expect } from "vitest";
 import { createLspClient } from "./lsp-client.mjs";
 import { createOtelReceiver } from "./otel-receiver.mjs";
@@ -137,6 +138,16 @@ const SUMMARY_SPAN_NAMES = new Set([
   "lsp.did_change_watched_files",
   "lsp.enqueue_build",
   "lsp.enqueue_full_build",
+  "lsp.flush",
+  "lsp.flush.file_build.batch",
+  "lsp.flush.file_build.compile_deps",
+  "lsp.flush.file_build.typecheck_deps",
+  "lsp.flush.project_build",
+  "lsp.flush.file_typecheck",
+  "lsp.flush.file_typecheck.parse",
+  "lsp.flush.file_typecheck.parse_file",
+  "lsp.flush.file_typecheck.wave",
+  "lsp.flush.file_typecheck.file",
   "lsp.full_build",
   "lsp.build",
   "lsp.build.compile_dependencies",
@@ -242,6 +253,16 @@ const SUMMARY_ATTRS = {
   "lsp.did_change_watched_files": ["file_count"],
   "lsp.enqueue_build": ["file"],
   "lsp.enqueue_full_build": ["file", "kind"],
+  "lsp.flush": ["project_builds", "incremental_builds", "typechecks"],
+  "lsp.flush.file_build.batch": ["modules", "error_count"],
+  "lsp.flush.file_build.compile_deps": ["error_count"],
+  "lsp.flush.file_build.typecheck_deps": ["dependent_count", "error_count"],
+  "lsp.flush.project_build": ["project"],
+  "lsp.flush.file_typecheck": ["file_count"],
+  "lsp.flush.file_typecheck.parse": ["file_count"],
+  "lsp.flush.file_typecheck.parse_file": ["module"],
+  "lsp.flush.file_typecheck.wave": ["file_count"],
+  "lsp.flush.file_typecheck.file": ["module"],
   "lsp.full_build": ["project"],
   "lsp.build": ["file_count"],
   "lsp.typecheck": ["file_count"],
@@ -358,6 +379,10 @@ const PARALLEL_SPAN_PATTERNS = [
   "build.compile_file",
   "format.write_file",
   "lsp.build",
+  "lsp.flush.file_build.batch",
+  "lsp.flush.file_typecheck",
+  "lsp.flush.file_typecheck.parse_file",
+  "lsp.flush.file_typecheck.file",
   "lsp.typecheck",
   "lsp.typecheck.parse_file",
   "lsp.typecheck.file",
@@ -444,28 +469,28 @@ function sortParallelSpans(lines) {
  * @returns {string[]} - Summary with normalized paths
  */
 export function normalizePaths(summary, sandboxPath) {
-  // Match individual attr=value pairs
-  const attrValueRegex = /(\w+)=([^,\]]+)/g;
+  const sandboxUri = pathToFileURL(sandboxPath).href;
+  // Ensure the URI prefix ends with / for clean stripping
+  const sandboxUriPrefix = sandboxUri.endsWith("/")
+    ? sandboxUri
+    : sandboxUri + "/";
 
   return summary.map(line => {
-    return line.replace(attrValueRegex, (match, attrName, value) => {
-      // Check if this looks like an absolute path
-      if (value.startsWith("/") || value.match(/^[A-Z]:[/\\]/)) {
-        let relativePath = path
-          .relative(sandboxPath, value)
-          .split(path.sep)
-          .join("/");
-        // Use "." for the sandbox root itself
-        if (relativePath === "") {
-          relativePath = ".";
-        } else if (relativePath.startsWith("..")) {
-          // Path is outside sandbox, keep original
-          return match;
-        }
-        return `${attrName}=${relativePath}`;
-      }
-      return match;
-    });
+    // Replace file:// URIs pointing into the sandbox
+    line = line.replaceAll(sandboxUriPrefix, "");
+    // Also handle the root URI without trailing slash (exact match)
+    line = line.replaceAll(sandboxUri, ".");
+
+    // Replace remaining absolute filesystem paths
+    const absPathRegex = new RegExp(
+      sandboxPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "/",
+      "g",
+    );
+    line = line.replace(absPathRegex, "");
+    // Exact match for sandbox root without trailing slash
+    line = line.replaceAll(sandboxPath, ".");
+
+    return line;
   });
 }
 

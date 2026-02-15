@@ -44,7 +44,7 @@ fn collect_source_uris(build_state: &BuildCommandState) -> HashSet<Url> {
 
 /// Re-initialize a project from scratch (re-read packages, re-scan sources, rebuild).
 /// Mirrors `initial_build::run()`.
-#[instrument(name = "lsp.full_build", skip_all, fields(project = tracing::field::Empty))]
+#[instrument(name = "lsp.flush.project_build", skip_all, fields(project = tracing::field::Empty))]
 fn reinitialize_project(
     project_root: &Path,
     old_warn_error: Option<String>,

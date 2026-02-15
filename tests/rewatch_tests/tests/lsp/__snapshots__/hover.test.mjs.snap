@@ -279,8 +279,9 @@ exports[`lsp hover > returns hover info for a let binding 1`] = `
   "        build.compile_wave[file_count=1]",
   "          build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
   "  lsp.did_open[file=src/Root.res]",
-  "  lsp.typecheck[file_count=1]",
-  "    lsp.typecheck.file[module=Root]",
+  "  lsp.flush[typechecks=src/Root.res]",
+  "    lsp.flush.file_typecheck[file_count=1]",
+  "      lsp.flush.file_typecheck.file[module=Root]",
   "  lsp.hover[file=src/Root.res, module=Root, package=rewatch-test-fixture]",
 ]
 `;
@@ -564,8 +565,9 @@ exports[`lsp hover > returns hover info for a module value access 1`] = `
   "        build.compile_wave[file_count=1]",
   "          build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
   "  lsp.did_open[file=src/Root.res]",
-  "  lsp.typecheck[file_count=1]",
-  "    lsp.typecheck.file[module=Root]",
+  "  lsp.flush[typechecks=src/Root.res]",
+  "    lsp.flush.file_typecheck[file_count=1]",
+  "      lsp.flush.file_typecheck.file[module=Root]",
   "  lsp.hover[file=src/Root.res, module=Root, package=rewatch-test-fixture]",
 ]
 `;

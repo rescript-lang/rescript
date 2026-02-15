@@ -13,7 +13,7 @@ use crate::build;
 use crate::build::build_types::{
     BuildCommandState, BuildConfig, CompileScope, OutputMode, OutputTarget, SourceType,
 };
-use crate::build::diagnostics::BscDiagnostic;
+use crate::build::diagnostics::{BscDiagnostic, Severity};
 use crate::lsp::diagnostic_store::DiagnosticStore;
 
 /// Result of a batched build for one project.
@@ -141,7 +141,7 @@ pub(super) async fn run(
 /// imports that library, a single combined build would drag in that
 /// unrelated package. If it has errors, the compile loop aborts before
 /// the saved file gets compiled.
-#[instrument(name = "lsp.build", skip_all, fields(file_count = module_names.len()))]
+#[instrument(name = "lsp.flush.file_build.batch", skip_all, fields(modules = ?module_names, error_count = tracing::field::Empty))]
 fn build_batch(build_state: &mut BuildCommandState, module_names: Vec<String>) -> BatchBuildResult {
     let (mut diagnostics, mut touched_files) = compile_dependencies(build_state, &module_names);
 
@@ -149,6 +149,14 @@ fn build_batch(build_state: &mut BuildCommandState, module_names: Vec<String>) -
 
     diagnostics.extend(dep_diagnostics);
     touched_files.extend(dep_touched);
+
+    let error_count = diagnostics
+        .iter()
+        .filter(|d| d.severity == Severity::Error)
+        .count();
+    if error_count > 0 {
+        tracing::Span::current().record("error_count", error_count);
+    }
 
     BatchBuildResult {
         diagnostics,
@@ -163,7 +171,7 @@ fn build_batch(build_state: &mut BuildCommandState, module_names: Vec<String>) -
 /// restricts the compile universe to only the dependency closure.
 /// This produces type information and JavaScript output for just the
 /// saved file and its imports, without touching the rest of the codebase.
-#[instrument(name = "lsp.build.compile_dependencies", skip_all)]
+#[instrument(name = "lsp.flush.file_build.compile_deps", skip_all, fields(error_count = tracing::field::Empty))]
 fn compile_dependencies(
     build_state: &mut BuildCommandState,
     module_names: &[String],
@@ -218,6 +226,15 @@ fn compile_dependencies(
 
     let mut all_diagnostics = parse_diagnostics;
     all_diagnostics.extend(diagnostics);
+
+    let error_count = all_diagnostics
+        .iter()
+        .filter(|d| d.severity == Severity::Error)
+        .count();
+    if error_count > 0 {
+        tracing::Span::current().record("error_count", error_count);
+    }
+
     (all_diagnostics, touched_files)
 }
 
@@ -230,7 +247,7 @@ fn compile_dependencies(
 ///
 /// Uses `CompileScope::TypecheckDependents` to restrict the build to only
 /// the relevant modules.
-#[instrument(name = "lsp.build.typecheck_dependents", skip_all, fields(dependent_count = tracing::field::Empty))]
+#[instrument(name = "lsp.flush.file_build.typecheck_deps", skip_all, fields(dependent_count = tracing::field::Empty, error_count = tracing::field::Empty))]
 fn typecheck_dependents(
     build_state: &mut BuildCommandState,
     module_names: &[String],
@@ -268,6 +285,14 @@ fn typecheck_dependents(
             (e.diagnostics, module_names_to_paths(build_state, &e.modules))
         }
     };
+
+    let error_count = diagnostics
+        .iter()
+        .filter(|d| d.severity == Severity::Error)
+        .count();
+    if error_count > 0 {
+        tracing::Span::current().record("error_count", error_count);
+    }
 
     (diagnostics, touched_files)
 }

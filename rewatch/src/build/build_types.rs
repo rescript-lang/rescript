@@ -509,10 +509,20 @@ pub struct AstModule {
     pub suffix: String,
 }
 
+/// Snapshot of build artifacts on disk, read at the start of a build to determine
+/// which modules need recompilation. Each map tracks the last-modified time of a
+/// specific artifact kind, keyed by module name (or source path for AST files).
+///
+/// The distinction between `cmi_modules` (type interfaces) and `cmj_modules`
+/// (compiled JS) is important: a TypecheckOnly build produces `.cmi`/`.cmt` but
+/// no `.cmj`. When resuming from such a build, modules with `.cmi` but no `.cmj`
+/// must be marked as `TypeChecked` rather than `Built` so they get fully compiled
+/// on the next save.
 #[derive(Debug)]
 pub struct CompileAssetsState {
     pub ast_modules: AHashMap<PathBuf, AstModule>,
     pub cmi_modules: AHashMap<String, SystemTime>,
+    pub cmj_modules: AHashMap<String, SystemTime>,
     pub cmt_modules: AHashMap<String, SystemTime>,
     pub ast_rescript_file_locations: AHashSet<PathBuf>,
     pub rescript_file_locations: AHashSet<PathBuf>,
