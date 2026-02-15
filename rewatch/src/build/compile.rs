@@ -20,7 +20,7 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::sync::OnceLock;
 use std::time::SystemTime;
-use tracing::{info_span, instrument};
+use tracing::info_span;
 
 /// The result of compiling a single file (implementation or interface).
 enum CompileFileOutcome {
@@ -202,7 +202,6 @@ pub fn compute_universe_for_scope(scope: &CompileScope, build_state: &BuildComma
     }
 }
 
-#[instrument(name = "build.compile", skip_all)]
 pub fn compile(
     build_state: &mut BuildCommandState,
     build_config: &BuildConfig,
@@ -212,6 +211,11 @@ pub fn compile(
 ) -> anyhow::Result<(String, String, usize)> {
     let show_progress = build_config.output_mode.show_progress();
     let mode = build_config.scope.mode();
+    let _compile_span = if mode.emits_js() {
+        info_span!("build.compile").entered()
+    } else {
+        info_span!("build.typecheck").entered()
+    };
     let target_stage = mode.target_stage();
     let mut compiled_modules = AHashSet::<String>::new();
 
@@ -254,11 +258,19 @@ pub fn compile(
             loop_count,
         );
 
-        let wave_span = info_span!(
-            "build.compile_wave",
-            wave = loop_count,
-            file_count = in_progress_modules.len(),
-        );
+        let wave_span = if mode.emits_js() {
+            info_span!(
+                "build.compile_wave",
+                wave = loop_count,
+                file_count = in_progress_modules.len(),
+            )
+        } else {
+            info_span!(
+                "build.typecheck_wave",
+                wave = loop_count,
+                file_count = in_progress_modules.len(),
+            )
+        };
         let _wave_entered = wave_span.enter();
 
         let current_in_progres_modules = in_progress_modules.clone();
@@ -313,8 +325,11 @@ pub fn compile(
                             let suffix = first_spec.as_ref().map(|s| root_config.get_suffix(s)).unwrap_or_default();
                             let module_system = first_spec.as_ref().map(|s| s.module.as_str()).unwrap_or("esmodule");
                             let namespace = package.namespace.to_suffix().unwrap_or_default();
-                            let _file_span =
-                                info_span!(parent: &wave_span, "build.compile_file", module = %module_name, package = %package.name, suffix, module_system, namespace).entered();
+                            let _file_span = if mode.emits_js() {
+                                info_span!(parent: &wave_span, "build.compile_file", module = %module_name, package = %package.name, suffix, module_system, namespace).entered()
+                            } else {
+                                info_span!(parent: &wave_span, "build.typecheck_file", module = %module_name, package = %package.name, namespace).entered()
+                            };
 
                             let cmi_path = helpers::get_compiler_asset_in(
                                 &package.get_ocaml_build_path_for_output(build_config.output),

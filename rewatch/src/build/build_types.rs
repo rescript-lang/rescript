@@ -77,6 +77,15 @@ pub enum CompileMode {
     FullCompile,
 }
 
+impl std::fmt::Display for CompileMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CompileMode::TypecheckOnly => write!(f, "typecheck_only"),
+            CompileMode::FullCompile => write!(f, "full_compile"),
+        }
+    }
+}
+
 impl CompileMode {
     /// Whether this mode emits JavaScript output.
     pub fn emits_js(self) -> bool {
