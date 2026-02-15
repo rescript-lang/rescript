@@ -481,20 +481,26 @@ export function normalizePaths(summary, sandboxPath) {
     ? sandboxUri
     : sandboxUri + "/";
 
+  // On Windows, paths may use backslashes. Build a forward-slash variant
+  // of the sandbox path so we can strip both styles.
+  const sandboxForward = sandboxPath.replaceAll("\\", "/");
+
   return summary.map(line => {
+    // Normalize all backslashes to forward slashes for consistent snapshots
+    line = line.replaceAll("\\", "/");
+
     // Replace file:// URIs pointing into the sandbox
     line = line.replaceAll(sandboxUriPrefix, "");
     // Also handle the root URI without trailing slash (exact match)
     line = line.replaceAll(sandboxUri, ".");
 
-    // Replace remaining absolute filesystem paths
-    const absPathRegex = new RegExp(
-      sandboxPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "/",
-      "g",
-    );
-    line = line.replace(absPathRegex, "");
+    // Replace absolute filesystem paths (with trailing slash)
+    line = line.replaceAll(sandboxForward + "/", "");
     // Exact match for sandbox root without trailing slash
-    line = line.replaceAll(sandboxPath, ".");
+    line = line.replaceAll(sandboxForward, ".");
+
+    // Strip leading ./ from relative paths (e.g. ./packages/... -> packages/...)
+    line = line.replace(/=\.\//g, "=");
 
     return line;
   });
