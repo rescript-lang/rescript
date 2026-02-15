@@ -3,6 +3,33 @@ import { renderTraceList } from "./trace-list.js";
 import { openTrace, clearSelection } from "./span-tree.js";
 import { exportSelected } from "./export.js";
 
+let pollInterval = null;
+
+function onSelectTrace(traceId) {
+  navigation.navigate(`/traces/${traceId}`);
+}
+
+function updateLastPolled() {
+  const el = document.getElementById("last-polled");
+  el.textContent = `Last updated ${new Date().toLocaleTimeString()}`;
+  el.classList.remove("hidden");
+}
+
+function startPolling() {
+  stopPolling();
+  pollInterval = setInterval(async () => {
+    await renderTraceList(onSelectTrace);
+    updateLastPolled();
+  }, 30_000);
+}
+
+function stopPolling() {
+  if (pollInterval !== null) {
+    clearInterval(pollInterval);
+    pollInterval = null;
+  }
+}
+
 function showTraceList() {
   state.view = "traces";
   state.currentTraceId = null;
@@ -10,12 +37,14 @@ function showTraceList() {
   document.getElementById("trace-detail-view").classList.add("hidden");
   document.getElementById("back-btn").classList.add("hidden");
   document.getElementById("export-bar").classList.add("hidden");
-  renderTraceList((traceId) => {
-    navigation.navigate(`/traces/${traceId}`);
-  });
+  updateLastPolled();
+  renderTraceList(onSelectTrace).then(updateLastPolled);
+  startPolling();
 }
 
 function showTrace(traceId) {
+  stopPolling();
+  document.getElementById("last-polled").classList.add("hidden");
   openTrace(traceId);
 }
 
