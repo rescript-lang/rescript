@@ -59,6 +59,15 @@ impl OutputTarget {
     }
 }
 
+impl std::fmt::Display for OutputTarget {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OutputTarget::Standard => write!(f, "standard"),
+            OutputTarget::Lsp => write!(f, "lsp"),
+        }
+    }
+}
+
 /// What the compiler produces.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum CompileMode {
@@ -102,6 +111,16 @@ pub enum CompileScope {
 }
 
 impl CompileScope {
+    /// Short label for tracing attributes.
+    pub fn label(&self) -> &'static str {
+        match self {
+            CompileScope::FullBuild => "full_build",
+            CompileScope::FullTypecheck => "full_typecheck",
+            CompileScope::CompileDependencies(_) => "compile_dependencies",
+            CompileScope::TypecheckDependents(_) => "typecheck_dependents",
+        }
+    }
+
     /// The compile mode implied by this scope variant.
     pub fn mode(&self) -> CompileMode {
         match self {

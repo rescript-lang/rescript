@@ -289,7 +289,7 @@ const SUMMARY_ATTRS = {
   "lsp.did_close": ["file"],
   "lsp.did_change": ["file"],
   "lsp.formatting": ["file"],
-  incremental_build: ["module_count"],
+  incremental_build: ["module_count", "scope", "output"],
   "build.load_package_sources": ["package"],
   "build.parse": ["dirty_modules"],
   "build.parse_file": [

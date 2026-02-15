@@ -304,7 +304,11 @@ pub fn parse_and_resolve(
     Ok(parse_warnings)
 }
 
-#[instrument(name = "incremental_build", skip_all, fields(module_count = build_state.modules.len()))]
+#[instrument(name = "incremental_build", skip_all, fields(
+    module_count = build_state.modules.len(),
+    scope = build_config.scope.label(),
+    output = %build_config.output,
+))]
 pub fn incremental_build(
     build_state: &mut BuildCommandState,
     build_config: &BuildConfig,

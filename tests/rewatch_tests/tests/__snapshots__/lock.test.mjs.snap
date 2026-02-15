@@ -15,7 +15,7 @@ exports[`lock > prevents concurrent builds while watch is running 1`] = `
   "    build.parse_file[module=Library, package=@rewatch-test/library]",
   "    build.parse_file[module=Root, package=rewatch-test-fixture]",
   "    build.parse_file[module=Unrelated, package=@rewatch-test/library]",
-  "  incremental_build[module_count=4]",
+  "  incremental_build[module_count=4, scope=full_build, output=standard]",
   "    build.compile",
   "      build.compile_wave[file_count=2]",
   "        build.compile_file[module=Library, package=@rewatch-test/library, suffix=.mjs, module_system=esmodule]",
