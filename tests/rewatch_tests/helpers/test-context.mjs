@@ -312,11 +312,7 @@ const SUMMARY_ATTRS = {
     "module_system",
     "namespace",
   ],
-  "build.typecheck_file": [
-    "module",
-    "package",
-    "namespace",
-  ],
+  "build.typecheck_file": ["module", "package", "namespace"],
   "build.js_post_build": ["command", "js_file"],
   "format.write_file": ["file"],
 };
