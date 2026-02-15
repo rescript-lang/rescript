@@ -94,12 +94,12 @@ fn get_dep_modules(
 
             if let Some(dep_module) = build_state.modules.get(dep) {
                 // If the module exists, check if it's in the same package (always allowed)
-                if dep_module.package_name == package.name {
+                if dep_module.package_name() == package.name {
                     return true;
                 }
 
                 // If it's in a different package, check if that package is a declared dependency
-                return allowed_dependencies.contains(&dep_module.package_name);
+                return allowed_dependencies.contains(dep_module.package_name());
             }
 
             true
@@ -112,14 +112,14 @@ pub fn get_deps(build_state: &mut BuildState, deleted_modules: &AHashSet<String>
     build_state
         .modules
         .par_iter()
-        .map(|(module_name, module)| match &module.source_type {
-            SourceType::MlMap(_) => (module_name.to_string(), module.deps.to_owned()),
-            SourceType::SourceFile(source_file) => {
+        .map(|(module_name, module)| match module {
+            Module::MlMap(m) => (module_name.to_string(), m.deps.to_owned()),
+            Module::SourceFile(sf_module) => {
                 let package = build_state
-                    .get_package(&module.package_name)
+                    .get_package(&sf_module.package_name)
                     .expect("Package not found");
-                let ast_path = helpers::get_ast_path(&source_file.implementation.path);
-                if module.needs_dependencies_rescan || !build_state.deps_initialized {
+                let ast_path = helpers::get_ast_path(&sf_module.source_file.implementation.path);
+                if sf_module.needs_dependencies_rescan || !build_state.deps_initialized {
                     let mut deps = get_dep_modules(
                         &ast_path.to_string_lossy(),
                         package.namespace.to_suffix(),
@@ -130,7 +130,7 @@ pub fn get_deps(build_state: &mut BuildState, deleted_modules: &AHashSet<String>
                         output,
                     );
 
-                    if let Some(interface) = &source_file.interface {
+                    if let Some(interface) = &sf_module.source_file.interface {
                         let iast_path = helpers::get_ast_path(&interface.path);
 
                         deps.extend(get_dep_modules(
@@ -152,7 +152,7 @@ pub fn get_deps(build_state: &mut BuildState, deleted_modules: &AHashSet<String>
                         _ => (),
                     }
                     deps.remove(module_name);
-                    if module.needs_dependencies_rescan {
+                    if sf_module.needs_dependencies_rescan {
                         tracing::debug!(
                             module = %module_name,
                             deps_initialized = build_state.deps_initialized,
@@ -162,7 +162,7 @@ pub fn get_deps(build_state: &mut BuildState, deleted_modules: &AHashSet<String>
                     }
                     (module_name.to_string(), deps)
                 } else {
-                    (module_name.to_string(), module.deps.to_owned())
+                    (module_name.to_string(), sf_module.deps.to_owned())
                 }
             }
         })
@@ -170,12 +170,14 @@ pub fn get_deps(build_state: &mut BuildState, deleted_modules: &AHashSet<String>
         .into_iter()
         .for_each(|(module_name, deps)| {
             if let Some(module) = build_state.modules.get_mut(&module_name) {
-                module.deps = deps.clone();
-                module.needs_dependencies_rescan = false;
+                *module.deps_mut() = deps.clone();
+                if let Module::SourceFile(sf) = module {
+                    sf.needs_dependencies_rescan = false;
+                }
             }
             deps.iter().for_each(|dep_name| {
                 if let Some(module) = build_state.modules.get_mut(dep_name) {
-                    module.dependents.insert(module_name.to_string());
+                    module.dependents_mut().insert(module_name.to_string());
                 }
             });
         });

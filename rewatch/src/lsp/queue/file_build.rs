@@ -11,7 +11,7 @@ use super::super::{ProjectMap, group_by_file, publish_and_store};
 use super::PendingFileBuild;
 use crate::build;
 use crate::build::build_types::{
-    BuildCommandState, BuildConfig, CompileScope, OutputMode, OutputTarget, SourceType,
+    BuildCommandState, BuildConfig, CompileScope, Module, OutputMode, OutputTarget,
 };
 use crate::build::diagnostics::{BscDiagnostic, Severity};
 use crate::lsp::diagnostic_store::DiagnosticStore;
@@ -327,14 +327,14 @@ fn module_names_to_paths(build_state: &BuildCommandState, names: &AHashSet<Strin
         let Some(module) = build_state.build_state.modules.get(name) else {
             continue;
         };
-        let SourceType::SourceFile(source_file) = &module.source_type else {
+        let Module::SourceFile(sf_module) = module else {
             continue;
         };
-        let Some(package) = build_state.build_state.packages.get(&module.package_name) else {
+        let Some(package) = build_state.build_state.packages.get(&sf_module.package_name) else {
             continue;
         };
-        paths.insert(package.path.join(&source_file.implementation.path));
-        if let Some(interface) = &source_file.interface {
+        paths.insert(package.path.join(&sf_module.source_file.implementation.path));
+        if let Some(interface) = &sf_module.source_file.interface {
             paths.insert(package.path.join(&interface.path));
         }
     }

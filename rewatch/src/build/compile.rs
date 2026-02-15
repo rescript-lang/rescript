@@ -134,7 +134,7 @@ pub fn compute_universe_for_scope(scope: &CompileScope, build_state: &BuildComma
             let originally_dirty: AHashSet<String> = build_state
                 .modules
                 .iter()
-                .filter(|(_, module)| module.compilation_stage.needs_compile_for_mode(mode))
+                .filter(|(_, module)| module.needs_compile_for_mode(mode))
                 .map(|(name, _)| name.to_owned())
                 .collect();
 
@@ -155,7 +155,7 @@ pub fn compute_universe_for_scope(scope: &CompileScope, build_state: &BuildComma
                 let mut dependents = AHashSet::new();
                 for name in &frontier {
                     if let Some(module) = build_state.get_module(name) {
-                        dependents.extend(module.dependents.iter().cloned());
+                        dependents.extend(module.dependents().iter().cloned());
                     }
                 }
 
@@ -178,9 +178,10 @@ pub fn compute_universe_for_scope(scope: &CompileScope, build_state: &BuildComma
             let originally_dirty: AHashSet<String> = closure
                 .iter()
                 .filter(|name| {
-                    build_state
-                        .get_module(name)
-                        .is_some_and(|m| m.compilation_stage.is_dirty())
+                    build_state.get_module(name).is_some_and(|m| match m {
+                        Module::SourceFile(sf) => sf.compilation_stage.is_dirty(),
+                        Module::MlMap(_) => false,
+                    })
                 })
                 .cloned()
                 .collect();
@@ -240,7 +241,7 @@ pub fn compile(
         .iter()
         .filter(|module_name| {
             let module = build_state.get_module(module_name).unwrap();
-            module.deps.intersection(&compile_universe.all).count() == 0
+            module.deps().intersection(&compile_universe.all).count() == 0
         })
         .map(|module_name| module_name.to_string())
         .collect::<AHashSet<String>>();
@@ -278,11 +279,11 @@ pub fn compile(
             .filter_map(|module_name| {
                 let module = build_state.get_module(module_name).unwrap();
                 let package = build_state
-                    .get_package(&module.package_name)
+                    .get_package(module.package_name())
                     .expect("Package not found");
                 // Dependencies of this module that are part of the compile universe.
                 let in_universe_deps: Vec<&String> =
-                    module.deps.intersection(&compile_universe.all).collect();
+                    module.deps().intersection(&compile_universe.all).collect();
 
                 // all dependencies that we care about are compiled
                 if in_universe_deps
@@ -290,7 +291,7 @@ pub fn compile(
                     .all(|dep| compiled_modules.contains(*dep))
                 {
                     if !compile_universe.originally_dirty.contains(module_name)
-                        && !module.compilation_stage.needs_compile_for_mode(mode)
+                        && !module.needs_compile_for_mode(mode)
                         && in_universe_deps
                             .iter()
                             .all(|dep| clean_modules.contains(*dep))
@@ -306,8 +307,8 @@ pub fn compile(
                             was_compiled: false,
                         });
                     }
-                    match module.source_type.to_owned() {
-                        SourceType::MlMap(_) => {
+                    match module {
+                        Module::MlMap(_) => {
                             // The mlmap is compiled during AST generation,
                             // so we just mark it as processed here.
                             Some(CompileModuleResult {
@@ -318,7 +319,8 @@ pub fn compile(
                                 was_compiled: false,
                             })
                         }
-                        SourceType::SourceFile(source_file) => {
+                        Module::SourceFile(source_file_module) => {
+                            let source_file = source_file_module.source_file.clone();
                             let root_config = build_state.get_root_config();
                             let first_spec = root_config.get_package_specs().into_iter().next();
                             let suffix = first_spec.as_ref().map(|s| root_config.get_suffix(s)).unwrap_or_default();
@@ -340,7 +342,7 @@ pub fn compile(
                             let cmi_digest = helpers::compute_file_hash(Path::new(&cmi_path));
 
                             let package = build_state
-                                .get_package(&module.package_name)
+                                .get_package(module.package_name())
                                 .expect("Package not found");
 
                             let interface_result = match source_file.interface.to_owned() {
@@ -420,7 +422,7 @@ pub fn compile(
             let module_dependents = build_state
                 .get_module(&entry.module_name)
                 .unwrap()
-                .dependents
+                .dependents()
                 .clone();
 
             for dep in module_dependents.iter() {
@@ -439,7 +441,7 @@ pub fn compile(
                     .modules
                     .get(&entry.module_name)
                     .ok_or(anyhow!("Module not found"))?;
-                module.package_name.clone()
+                module.package_name().to_owned()
             };
 
             let package = build_state
@@ -456,56 +458,57 @@ pub fn compile(
                     .get_mut(&entry.module_name)
                     .ok_or(anyhow!("Module not found"))?;
 
-                let (compile_warning, compile_error) = match module.source_type {
-                    SourceType::MlMap(ref mut mlmap) => {
+                let (compile_warning, compile_error) = match module {
+                    Module::MlMap(mlmap) => {
                         mlmap.parse_dirty = false;
                         (None, None)
                     }
-                    SourceType::SourceFile(ref mut source_file) => match &entry.implementation {
+                    Module::SourceFile(sf_module) => match &entry.implementation {
                         CompileFileOutcome::Warning(warning) => {
-                            source_file.implementation.compile_state = CompileState::Warning;
-                            source_file.implementation.compile_warnings = Some(warning.clone());
+                            sf_module.source_file.implementation.compile_state = CompileState::Warning;
+                            sf_module.source_file.implementation.compile_warnings = Some(warning.clone());
                             (Some(warning.clone()), None)
                         }
                         CompileFileOutcome::Success => {
-                            source_file.implementation.compile_state = CompileState::Success;
-                            source_file.implementation.compile_warnings = None;
+                            sf_module.source_file.implementation.compile_state = CompileState::Success;
+                            sf_module.source_file.implementation.compile_warnings = None;
                             (None, None)
                         }
                         CompileFileOutcome::Error(error) => {
-                            source_file.implementation.compile_state = CompileState::Error;
-                            source_file.implementation.compile_warnings = None;
+                            sf_module.source_file.implementation.compile_state = CompileState::Error;
+                            sf_module.source_file.implementation.compile_warnings = None;
                             (None, Some(error.clone()))
                         }
                     },
                 };
 
-                let (interface_warning, interface_error) =
-                    if let SourceType::SourceFile(ref mut source_file) = module.source_type {
-                        match &entry.interface {
-                            Some(CompileFileOutcome::Warning(warning)) => {
-                                source_file.interface.as_mut().unwrap().compile_state = CompileState::Warning;
-                                source_file.interface.as_mut().unwrap().compile_warnings =
-                                    Some(warning.clone());
-                                (Some(warning.clone()), None)
-                            }
-                            Some(CompileFileOutcome::Success) => {
-                                if let Some(interface) = source_file.interface.as_mut() {
-                                    interface.compile_state = CompileState::Success;
-                                    interface.compile_warnings = None;
-                                }
-                                (None, None)
-                            }
-                            Some(CompileFileOutcome::Error(error)) => {
-                                source_file.interface.as_mut().unwrap().compile_state = CompileState::Error;
-                                source_file.interface.as_mut().unwrap().compile_warnings = None;
-                                (None, Some(error.clone()))
-                            }
-                            None => (None, None),
+                let (interface_warning, interface_error) = if let Module::SourceFile(sf_module) = module {
+                    match &entry.interface {
+                        Some(CompileFileOutcome::Warning(warning)) => {
+                            sf_module.source_file.interface.as_mut().unwrap().compile_state =
+                                CompileState::Warning;
+                            sf_module.source_file.interface.as_mut().unwrap().compile_warnings =
+                                Some(warning.clone());
+                            (Some(warning.clone()), None)
                         }
-                    } else {
-                        (None, None)
-                    };
+                        Some(CompileFileOutcome::Success) => {
+                            if let Some(interface) = sf_module.source_file.interface.as_mut() {
+                                interface.compile_state = CompileState::Success;
+                                interface.compile_warnings = None;
+                            }
+                            (None, None)
+                        }
+                        Some(CompileFileOutcome::Error(error)) => {
+                            sf_module.source_file.interface.as_mut().unwrap().compile_state =
+                                CompileState::Error;
+                            sf_module.source_file.interface.as_mut().unwrap().compile_warnings = None;
+                            (None, Some(error.clone()))
+                        }
+                        None => (None, None),
+                    }
+                } else {
+                    (None, None)
+                };
 
                 if !entry.implementation.is_error() && entry.interface.as_ref().is_none_or(|r| !r.is_error())
                 {
@@ -562,8 +565,8 @@ pub fn compile(
             let mut touched_packages = AHashSet::<String>::new();
             for module_name in cycle.iter() {
                 if let Some(module) = build_state.get_module(module_name)
-                    && touched_packages.insert(module.package_name.clone())
-                    && let Some(package) = build_state.get_package(&module.package_name)
+                    && touched_packages.insert(module.package_name().to_owned())
+                    && let Some(package) = build_state.get_package(module.package_name())
                 {
                     logs::append(package, &message);
                 }
@@ -582,107 +585,96 @@ pub fn compile(
     // recompiled in the next build cycle.
     let now = SystemTime::now();
     for name in &successfully_compiled {
-        // Collect info without holding mutable borrow on modules
-        let module_info = {
-            let module = match build_state.build_state.modules.get(name) {
-                Some(m) => m,
-                None => continue,
-            };
-            let impl_path = match &module.source_type {
-                SourceType::SourceFile(sf) => Some(sf.implementation.path.clone()),
-                _ => None,
-            };
-            (module.package_name.clone(), impl_path, module.compilation_stage)
+        let module = match build_state.build_state.modules.get(name) {
+            Some(m) => m,
+            None => continue,
         };
-        let (package_name, impl_path, prev_stage) = module_info;
 
-        let new_stage = if let Some(impl_path) = impl_path {
-            let pkg = build_state.build_state.packages.get(&package_name).unwrap();
-            let ocaml_path = pkg.get_ocaml_build_path_for_output(build_config.output);
+        // MlMap modules have no compilation stage to update — skip them.
+        let Module::SourceFile(sf) = module else {
+            continue;
+        };
 
-            // Get source + ast hashes from previous stage, or compute them
-            let (source_hash, ast_hash) = match prev_stage {
-                CompilationStage::Parsed {
-                    source_hash,
-                    ast_hash,
-                }
-                | CompilationStage::TypeChecked {
-                    source_hash,
-                    ast_hash,
-                    ..
-                }
-                | CompilationStage::Built {
-                    source_hash,
-                    ast_hash,
-                    ..
-                } => (source_hash, ast_hash),
-                CompilationStage::Dirty => {
-                    // Fallback: compute from disk
-                    let build_path = pkg.get_build_path_for_output(build_config.output);
-                    let sh = helpers::compute_file_hash(&pkg.path.join(&impl_path));
-                    let ah = helpers::compute_file_hash(&build_path.join(helpers::get_ast_path(&impl_path)));
-                    match (sh, ah) {
-                        (Some(s), Some(a)) => (s, a),
-                        _ => continue,
-                    }
-                }
-            };
+        let impl_path = sf.source_file.implementation.path.clone();
+        let package_name = sf.package_name.clone();
+        let prev_stage = sf.compilation_stage;
 
-            let cmi_hash = helpers::compute_file_hash(&helpers::get_compiler_asset_in(
-                &ocaml_path,
-                &pkg.namespace,
-                &impl_path,
-                "cmi",
-            ));
-            let cmt_hash = helpers::compute_file_hash(&helpers::get_compiler_asset_in(
-                &ocaml_path,
-                &pkg.namespace,
-                &impl_path,
-                "cmt",
-            ));
+        let pkg = build_state.build_state.packages.get(&package_name).unwrap();
+        let ocaml_path = pkg.get_ocaml_build_path_for_output(build_config.output);
 
-            match (mode.emits_js(), cmi_hash, cmt_hash) {
-                (true, Some(cmi), Some(cmt)) => {
-                    let cmj_hash = helpers::compute_file_hash(&helpers::get_compiler_asset_in(
-                        &ocaml_path,
-                        &pkg.namespace,
-                        &impl_path,
-                        "cmj",
-                    ));
-                    match cmj_hash {
-                        Some(cmj) => CompilationStage::Built {
-                            source_hash,
-                            ast_hash,
-                            cmi_hash: cmi,
-                            cmt_hash: cmt,
-                            cmj_hash: cmj,
-                        },
-                        None => CompilationStage::Dirty,
-                    }
-                }
-                (false, Some(cmi), Some(cmt)) => CompilationStage::TypeChecked {
-                    source_hash,
-                    ast_hash,
-                    cmi_hash: cmi,
-                    cmt_hash: cmt,
-                },
-                _ => CompilationStage::Dirty,
+        // Get source + ast hashes from previous stage, or compute them
+        let (source_hash, ast_hash) = match prev_stage {
+            CompilationStage::Parsed {
+                source_hash,
+                ast_hash,
             }
-        } else {
-            // MlMap modules — set Built with zero hashes (they don't have real artifacts)
-            CompilationStage::Built {
-                source_hash: blake3::hash(b"mlmap"),
-                ast_hash: blake3::hash(b"mlmap"),
-                cmi_hash: blake3::hash(b"mlmap"),
-                cmt_hash: blake3::hash(b"mlmap"),
-                cmj_hash: blake3::hash(b"mlmap"),
+            | CompilationStage::TypeChecked {
+                source_hash,
+                ast_hash,
+                ..
+            }
+            | CompilationStage::Built {
+                source_hash,
+                ast_hash,
+                ..
+            } => (source_hash, ast_hash),
+            CompilationStage::Dirty => {
+                // Fallback: compute from disk
+                let build_path = pkg.get_build_path_for_output(build_config.output);
+                let sh = helpers::compute_file_hash(&pkg.path.join(&impl_path));
+                let ah = helpers::compute_file_hash(&build_path.join(helpers::get_ast_path(&impl_path)));
+                match (sh, ah) {
+                    (Some(s), Some(a)) => (s, a),
+                    _ => continue,
+                }
             }
         };
 
-        if let Some(module) = build_state.build_state.modules.get_mut(name) {
-            module.compilation_stage = new_stage;
-            module.last_compiled_cmi = Some(now);
-            module.last_compiled_cmt = Some(now);
+        let cmi_hash = helpers::compute_file_hash(&helpers::get_compiler_asset_in(
+            &ocaml_path,
+            &pkg.namespace,
+            &impl_path,
+            "cmi",
+        ));
+        let cmt_hash = helpers::compute_file_hash(&helpers::get_compiler_asset_in(
+            &ocaml_path,
+            &pkg.namespace,
+            &impl_path,
+            "cmt",
+        ));
+
+        let new_stage = match (mode.emits_js(), cmi_hash, cmt_hash) {
+            (true, Some(cmi), Some(cmt)) => {
+                let cmj_hash = helpers::compute_file_hash(&helpers::get_compiler_asset_in(
+                    &ocaml_path,
+                    &pkg.namespace,
+                    &impl_path,
+                    "cmj",
+                ));
+                match cmj_hash {
+                    Some(cmj) => CompilationStage::Built {
+                        source_hash,
+                        ast_hash,
+                        cmi_hash: cmi,
+                        cmt_hash: cmt,
+                        cmj_hash: cmj,
+                    },
+                    None => CompilationStage::Dirty,
+                }
+            }
+            (false, Some(cmi), Some(cmt)) => CompilationStage::TypeChecked {
+                source_hash,
+                ast_hash,
+                cmi_hash: cmi,
+                cmt_hash: cmt,
+            },
+            _ => CompilationStage::Dirty,
+        };
+
+        if let Some(Module::SourceFile(sf)) = build_state.build_state.modules.get_mut(name) {
+            sf.compilation_stage = new_stage;
+            sf.last_compiled_cmi = Some(now);
+            sf.last_compiled_cmt = Some(now);
         }
     }
 
@@ -693,15 +685,15 @@ pub fn compile(
         if compile_universe.all.contains(module_name) {
             continue;
         }
-        if let SourceType::SourceFile(ref source_file) = module.source_type {
-            let package = build_state.get_package(&module.package_name);
-            if let Some(ref warning) = source_file.implementation.compile_warnings {
+        if let Module::SourceFile(sf_module) = module {
+            let package = build_state.get_package(&sf_module.package_name);
+            if let Some(ref warning) = sf_module.source_file.implementation.compile_warnings {
                 if let Some(package) = package {
                     logs::append(package, warning);
                 }
                 compile_warnings.push_str(warning);
             }
-            if let Some(ref interface) = source_file.interface
+            if let Some(ref interface) = sf_module.source_file.interface
                 && let Some(ref warning) = interface.compile_warnings
             {
                 if let Some(package) = package {
@@ -986,19 +978,20 @@ fn compile_file(
     let root_config = build_state.get_root_config();
     let ocaml_build_path_abs = package.get_ocaml_build_path_for_output(output);
     let build_path_abs = package.get_build_path_for_output(output);
-    let implementation_file_path = match &module.source_type {
-        SourceType::SourceFile(source_file) => Ok(&source_file.implementation.path),
-        sourcetype => Err(format!(
-            "Tried to compile a file that is not a source file ({}). Path to AST: {}. ",
-            sourcetype,
-            ast_path.to_string_lossy()
-        )),
-    }
-    .map_err(|e| anyhow!(e))?;
+    let sf_module = match module {
+        Module::SourceFile(sf) => sf,
+        Module::MlMap(_) => {
+            return Err(anyhow!(
+                "Tried to compile a file that is not a source file (MlMap). Path to AST: {}.",
+                ast_path.to_string_lossy()
+            ));
+        }
+    };
+    let implementation_file_path = &sf_module.source_file.implementation.path;
     let basename =
         helpers::file_path_to_compiler_asset_basename(implementation_file_path, &package.namespace);
-    let has_interface = module.get_interface().is_some();
-    let is_type_dev = module.is_type_dev;
+    let has_interface = sf_module.source_file.interface.is_some();
+    let is_type_dev = sf_module.is_type_dev;
     let to_mjs_args = compiler_args(
         &package.config,
         ast_path,
@@ -1072,11 +1065,7 @@ fn compile_file(
             // Source file copies, JS output copies, and post-build commands
             // are needed when JS is emitted
             if mode.emits_js() {
-                if let SourceType::SourceFile(SourceFile {
-                    interface: Some(Interface { path, .. }),
-                    ..
-                }) = &module.source_type
-                {
+                if let Some(Interface { path, .. }) = &sf_module.source_file.interface {
                     let _ = std::fs::copy(Path::new(&package.path).join(path), build_path_abs.join(path));
 
                     let _ = std::fs::copy(
@@ -1084,11 +1073,8 @@ fn compile_file(
                         ocaml_build_path_abs.join(std::path::Path::new(path).file_name().unwrap()),
                     );
                 }
-                if let SourceType::SourceFile(SourceFile {
-                    implementation: Implementation { path, .. },
-                    ..
-                }) = &module.source_type
                 {
+                    let path = &sf_module.source_file.implementation.path;
                     let _ = std::fs::copy(Path::new(&package.path).join(path), build_path_abs.join(path));
 
                     let _ = std::fs::copy(
@@ -1099,12 +1085,8 @@ fn compile_file(
 
                 // copy js file
                 root_config.get_package_specs().iter().for_each(|spec| {
-                    if spec.in_source
-                        && let SourceType::SourceFile(SourceFile {
-                            implementation: Implementation { path, .. },
-                            ..
-                        }) = &module.source_type
-                    {
+                    if spec.in_source {
+                        let path = &sf_module.source_file.implementation.path;
                         let source = helpers::get_source_file_from_rescript_file(
                             &Path::new(&package.path).join(path),
                             &root_config.get_suffix(spec),
@@ -1121,13 +1103,8 @@ fn compile_file(
                 });
 
                 // Execute js-post-build command if configured
-                if !is_interface
-                    && let Some(js_post_build) = &package.config.js_post_build
-                    && let SourceType::SourceFile(SourceFile {
-                        implementation: Implementation { path, .. },
-                        ..
-                    }) = &module.source_type
-                {
+                if !is_interface && let Some(js_post_build) = &package.config.js_post_build {
+                    let path = &sf_module.source_file.implementation.path;
                     for spec in root_config.get_package_specs() {
                         let js_file = if spec.in_source {
                             helpers::get_source_file_from_rescript_file(
@@ -1167,8 +1144,10 @@ fn compile_file(
 
 pub fn mark_modules_with_deleted_deps_dirty(build_state: &mut BuildState) {
     build_state.modules.iter_mut().for_each(|(_, module)| {
-        if !module.deps.is_disjoint(&build_state.deleted_modules) {
-            module.compilation_stage = CompilationStage::Dirty;
+        if let Module::SourceFile(sf) = module
+            && !sf.deps.is_disjoint(&build_state.deleted_modules)
+        {
+            sf.compilation_stage = CompilationStage::Dirty;
         }
     });
 }
@@ -1192,18 +1171,17 @@ pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildCommandState)
     build_state
         .modules
         .iter()
-        .filter(|m| !m.1.is_mlmap())
-        .for_each(|(module_name, module)| {
-            for dependent in module.dependents.iter() {
+        .filter_map(|(name, module)| match module {
+            Module::SourceFile(sf) => Some((name, sf)),
+            Module::MlMap(_) => None,
+        })
+        .for_each(|(module_name, sf_module)| {
+            for dependent in sf_module.dependents.iter() {
                 let dependent_module = build_state.modules.get(dependent).unwrap();
-                match dependent_module.source_type {
-                    SourceType::SourceFile(_) => {
-                        match (module.last_compiled_cmi, module.last_compiled_cmt) {
+                match dependent_module {
+                    Module::SourceFile(dep_sf) => {
+                        match (sf_module.last_compiled_cmi, sf_module.last_compiled_cmt) {
                             (None, None) | (Some(_), None) | (None, Some(_)) => {
-                                // println!(
-                                //     "🛑 {} is a dependent of {} but has no cmt/cmi",
-                                //     module_name, dependent
-                                // );
                                 modules_with_expired_deps.insert(module_name.to_string());
                             }
                             (Some(_), Some(_)) => (),
@@ -1212,27 +1190,13 @@ pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildCommandState)
                         // we compare the last compiled time of the dependent module with the last
                         // compile of the interface of the module it depends on, if the interface
                         // didn't change it doesn't matter
-                        match (dependent_module.last_compiled_cmt, module.last_compiled_cmt) {
+                        match (dep_sf.last_compiled_cmt, sf_module.last_compiled_cmt) {
                             (Some(last_compiled_dependent), Some(last_compiled)) => {
                                 if last_compiled_dependent < last_compiled {
-                                    // println!(
-                                    //     "✅ {} is a dependent of {} ({:?} / {:?})",
-                                    //     module_name, dependent, last_compiled_dependent, last_compiled
-                                    // );
-
                                     modules_with_expired_deps.insert(dependent.to_string());
-                                } else {
-                                    // println!(
-                                    //     "🛑 {} is a dependent of {} ({:?} / {:?})",
-                                    //     module_name, dependent, last_compiled_dependent, last_compiled
-                                    // );
                                 }
                             }
                             (None, _) => {
-                                // println!(
-                                //     "🛑 {} is a dependent of {} (no last compiled time)",
-                                //     module_name, dependent
-                                // );
                                 modules_with_expired_deps.insert(dependent.to_string());
                             }
                             _ => (),
@@ -1240,12 +1204,13 @@ pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildCommandState)
                     }
                     // a namespace is never a dependent of a module (it can be a dependency, but not the other
                     // way around)
-                    SourceType::MlMap(_) => {
-                        for dependent_of_namespace in dependent_module.dependents.iter() {
+                    Module::MlMap(mlmap_module) => {
+                        for dependent_of_namespace in mlmap_module.dependents.iter() {
                             let dependent_module = build_state.modules.get(dependent_of_namespace).unwrap();
 
-                            if let (Some(last_compiled_dependent), Some(last_compiled)) =
-                                (dependent_module.last_compiled_cmt, module.last_compiled_cmt)
+                            if let Module::SourceFile(dep_sf) = dependent_module
+                                && let (Some(last_compiled_dependent), Some(last_compiled)) =
+                                    (dep_sf.last_compiled_cmt, sf_module.last_compiled_cmt)
                                 && last_compiled_dependent < last_compiled
                             {
                                 modules_with_expired_deps.insert(dependent.to_string());
@@ -1256,8 +1221,10 @@ pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildCommandState)
             }
         });
     build_state.modules.iter_mut().for_each(|(module_name, module)| {
-        if modules_with_expired_deps.contains(module_name) {
-            module.compilation_stage = CompilationStage::Dirty;
+        if let Module::SourceFile(sf) = module
+            && modules_with_expired_deps.contains(module_name)
+        {
+            sf.compilation_stage = CompilationStage::Dirty;
         }
     });
 }

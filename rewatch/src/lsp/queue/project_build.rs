@@ -10,7 +10,7 @@ use super::super::{ProjectMap, group_by_file, publish_and_store};
 use super::PendingState;
 use crate::build;
 use crate::build::build_types::{
-    BuildCommandState, BuildConfig, CompileScope, OutputMode, OutputTarget, SourceType,
+    BuildCommandState, BuildConfig, CompileScope, Module, OutputMode, OutputTarget,
 };
 use crate::build::diagnostics::BscDiagnostic;
 use crate::build::packages;
@@ -22,17 +22,17 @@ use crate::project_context::ProjectContext;
 fn collect_source_uris(build_state: &BuildCommandState) -> HashSet<Url> {
     let mut uris = HashSet::new();
     for module in build_state.build_state.modules.values() {
-        let SourceType::SourceFile(ref source_file) = module.source_type else {
+        let Module::SourceFile(sf_module) = module else {
             continue;
         };
-        let Some(package) = build_state.build_state.packages.get(&module.package_name) else {
+        let Some(package) = build_state.build_state.packages.get(&sf_module.package_name) else {
             continue;
         };
-        let impl_path = package.path.join(&source_file.implementation.path);
+        let impl_path = package.path.join(&sf_module.source_file.implementation.path);
         if let Ok(uri) = Url::from_file_path(&impl_path) {
             uris.insert(uri);
         }
-        if let Some(ref interface) = source_file.interface {
+        if let Some(ref interface) = sf_module.source_file.interface {
             let iface_path = package.path.join(&interface.path);
             if let Ok(uri) = Url::from_file_path(&iface_path) {
                 uris.insert(uri);
@@ -345,19 +345,20 @@ pub(super) async fn run(
 /// Returns `(module_name, package_name, is_interface)`.
 fn find_module_by_path(state: &BuildCommandState, file_path: &Path) -> Option<(String, String, bool)> {
     for (module_name, module) in &state.build_state.modules {
-        let package = state.build_state.packages.get(&module.package_name)?;
+        let Module::SourceFile(sf_module) = module else {
+            continue;
+        };
+        let package = state.build_state.packages.get(&sf_module.package_name)?;
 
-        if let SourceType::SourceFile(source_file) = &module.source_type {
-            let impl_path = package.path.join(&source_file.implementation.path);
-            if file_path == impl_path {
-                return Some((module_name.clone(), module.package_name.clone(), false));
-            }
+        let impl_path = package.path.join(&sf_module.source_file.implementation.path);
+        if file_path == impl_path {
+            return Some((module_name.clone(), sf_module.package_name.clone(), false));
+        }
 
-            if let Some(interface) = &source_file.interface {
-                let iface_path = package.path.join(&interface.path);
-                if file_path == iface_path {
-                    return Some((module_name.clone(), module.package_name.clone(), true));
-                }
+        if let Some(interface) = &sf_module.source_file.interface {
+            let iface_path = package.path.join(&interface.path);
+            if file_path == iface_path {
+                return Some((module_name.clone(), sf_module.package_name.clone(), true));
             }
         }
     }
@@ -385,10 +386,11 @@ fn get_files_to_cleanup_on_delete(state: &BuildCommandState, file_path: &Path) -
     let Some(module) = state.build_state.modules.get(&module_name) else {
         return Vec::new();
     };
-    let SourceType::SourceFile(ref source_file) = module.source_type else {
+    let Module::SourceFile(sf_module) = module else {
         return Vec::new();
     };
-    let Some(package) = state.build_state.packages.get(&module.package_name) else {
+    let source_file = &sf_module.source_file;
+    let Some(package) = state.build_state.packages.get(&sf_module.package_name) else {
         return Vec::new();
     };
 

@@ -27,11 +27,12 @@ pub fn generate_asts(
     let dirty_modules = build_state
         .modules
         .values()
-        .filter(|m| match &m.source_type {
-            SourceType::SourceFile(sf) => {
-                sf.implementation.parse_dirty || sf.interface.as_ref().is_some_and(|i| i.parse_dirty)
+        .filter(|m| match m {
+            Module::SourceFile(sf) => {
+                sf.source_file.implementation.parse_dirty
+                    || sf.source_file.interface.as_ref().is_some_and(|i| i.parse_dirty)
             }
-            SourceType::MlMap(mlmap) => mlmap.parse_dirty,
+            Module::MlMap(mlmap) => mlmap.parse_dirty,
         })
         .count();
 
@@ -43,10 +44,10 @@ pub fn generate_asts(
         .par_iter()
         .map(|(module_name, module)| {
             let package = build_state
-                .get_package(&module.package_name)
+                .get_package(module.package_name())
                 .expect("Package not found");
-            match &module.source_type {
-                SourceType::MlMap(_mlmap) => {
+            match module {
+                Module::MlMap(_) => {
                     let path = package.get_mlmap_path_for_output(output);
                     (
                         module_name.to_owned(),
@@ -56,7 +57,8 @@ pub fn generate_asts(
                     )
                 }
 
-                SourceType::SourceFile(source_file) => {
+                Module::SourceFile(sf_module) => {
+                    let source_file = &sf_module.source_file;
                     let (ast_result, iast_result, dirty) = if source_file.implementation.parse_dirty
                         || source_file
                             .interface
@@ -128,7 +130,7 @@ pub fn generate_asts(
                 .build_state
                 .modules
                 .get(&module_name)
-                .map(|module| module.package_name.clone())
+                .map(|module| module.package_name().to_owned())
                 .unwrap_or_else(|| {
                     eprintln!("Module not found: {module_name}");
                     String::new()
@@ -140,17 +142,19 @@ pub fn generate_asts(
                 .get(&package_name)
                 .expect("Package not found");
 
-            if let Some(module) = build_state.build_state.modules.get_mut(&module_name) {
+            if let Some(Module::SourceFile(sf_module)) = build_state.build_state.modules.get_mut(&module_name)
+            {
                 // if the module is dirty, mark it for recompilation
                 // do NOT change if the module is not parse_dirty, it needs to keep
                 // its compilation_stage if it was set before
                 if is_dirty {
-                    module.compilation_stage = CompilationStage::Dirty;
-                    module.needs_dependencies_rescan = true;
+                    sf_module.compilation_stage = CompilationStage::Dirty;
+                    sf_module.needs_dependencies_rescan = true;
                 }
                 let mut impl_parse_ok = false;
                 let mut iface_parse_ok = true; // true when no interface
-                if let SourceType::SourceFile(ref mut source_file) = module.source_type {
+                {
+                    let source_file = &mut sf_module.source_file;
                     // We get Err(x) when there is a parse error. When it's Ok(_, Some(
                     // stderr_warnings )), the outputs are warnings
                     match ast_result {
@@ -224,92 +228,100 @@ pub fn generate_asts(
                         let source_hash = helpers::compute_file_hash(&source_path);
                         let ast_hash = helpers::compute_file_hash(&ast_path);
                         if let (Some(sh), Some(ah)) = (source_hash, ast_hash) {
-                            module.compilation_stage = CompilationStage::Parsed {
+                            sf_module.compilation_stage = CompilationStage::Parsed {
                                 source_hash: sh,
                                 ast_hash: ah,
                             };
                         }
                     }
-                };
+                }
             }
         });
 
-    // compile the mlmaps of dirty modules
-    // first collect dirty packages
+    // compile the mlmaps of dirty packages
     let dirty_packages = build_state
         .modules
         .iter()
-        .filter(|(_, module)| module.compilation_stage.needs_compile_for_mode(mode))
-        .map(|(_, module)| module.package_name.clone())
+        .filter(|(_, module)| module.needs_compile_for_mode(mode))
+        .map(|(_, module)| module.package_name().to_owned())
         .collect::<AHashSet<String>>();
 
-    // Collect package names first to avoid borrow checker issues
-    let module_package_pairs = build_state.module_name_package_pairs();
+    // Collect mlmap module names and their package names
+    let mlmap_pairs: Vec<(String, String)> = build_state
+        .modules
+        .iter()
+        .filter_map(|(name, module)| match module {
+            Module::MlMap(m) => Some((name.clone(), m.package_name.clone())),
+            _ => None,
+        })
+        .collect();
 
-    for (module_name, package_name) in module_package_pairs {
-        if let Some(module) = build_state.build_state.modules.get_mut(&module_name) {
-            let is_dirty = match &module.source_type {
-                SourceType::MlMap(_) => {
-                    if dirty_packages.contains(&package_name) {
-                        let package = build_state
-                            .build_state
-                            .packages
-                            .get(&package_name)
-                            .expect("Package not found");
-                        // probably better to do this in a different function
-                        // specific to compiling mlmaps
-                        let compile_path = package.get_mlmap_compile_path_for_output(output);
-                        let mlmap_hash = helpers::compute_file_hash(Path::new(&compile_path));
-                        if let Err(err) = namespaces::compile_mlmap(
-                            &build_state.build_state.project_context,
-                            package,
-                            &module_name,
-                            &build_state.build_state.compiler_info.bsc_path,
-                            output,
-                            mode,
-                        ) {
-                            has_failure = true;
-                            stderr.push_str(&format!("{err}\n"));
-                        }
-                        let mlmap_hash_after = helpers::compute_file_hash(Path::new(&compile_path));
+    for (module_name, package_name) in mlmap_pairs {
+        if !dirty_packages.contains(&package_name) {
+            continue;
+        }
+        let package = build_state
+            .build_state
+            .packages
+            .get(&package_name)
+            .expect("Package not found");
 
-                        let suffix = package
-                            .namespace
-                            .to_suffix()
-                            .expect("namespace should be set for mlmap module");
-                        let base_build_path = package.get_build_path_for_output(output).join(&suffix);
-                        let base_ocaml_build_path =
-                            package.get_ocaml_build_path_for_output(output).join(&suffix);
-                        let _ = std::fs::copy(
-                            base_build_path.with_extension("cmi"),
-                            base_ocaml_build_path.with_extension("cmi"),
-                        );
-                        let _ = std::fs::copy(
-                            base_build_path.with_extension("cmt"),
-                            base_ocaml_build_path.with_extension("cmt"),
-                        );
-                        if mode.emits_js() {
-                            let _ = std::fs::copy(
-                                base_build_path.with_extension("cmj"),
-                                base_ocaml_build_path.with_extension("cmj"),
-                            );
-                        }
-                        let _ = std::fs::copy(
-                            base_build_path.with_extension("mlmap"),
-                            base_ocaml_build_path.with_extension("mlmap"),
-                        );
-                        match (mlmap_hash, mlmap_hash_after) {
-                            (Some(digest), Some(digest_after)) => !digest.eq(&digest_after),
-                            _ => true,
-                        }
-                    } else {
-                        false
-                    }
+        let compile_path = package.get_mlmap_compile_path_for_output(output);
+        let mlmap_hash = helpers::compute_file_hash(Path::new(&compile_path));
+        if let Err(err) = namespaces::compile_mlmap(
+            &build_state.build_state.project_context,
+            package,
+            &module_name,
+            &build_state.build_state.compiler_info.bsc_path,
+            output,
+            mode,
+        ) {
+            has_failure = true;
+            stderr.push_str(&format!("{err}\n"));
+        }
+        let mlmap_hash_after = helpers::compute_file_hash(Path::new(&compile_path));
+
+        let suffix = package
+            .namespace
+            .to_suffix()
+            .expect("namespace should be set for mlmap module");
+        let base_build_path = package.get_build_path_for_output(output).join(&suffix);
+        let base_ocaml_build_path = package.get_ocaml_build_path_for_output(output).join(&suffix);
+        let _ = std::fs::copy(
+            base_build_path.with_extension("cmi"),
+            base_ocaml_build_path.with_extension("cmi"),
+        );
+        let _ = std::fs::copy(
+            base_build_path.with_extension("cmt"),
+            base_ocaml_build_path.with_extension("cmt"),
+        );
+        if mode.emits_js() {
+            let _ = std::fs::copy(
+                base_build_path.with_extension("cmj"),
+                base_ocaml_build_path.with_extension("cmj"),
+            );
+        }
+        let _ = std::fs::copy(
+            base_build_path.with_extension("mlmap"),
+            base_ocaml_build_path.with_extension("mlmap"),
+        );
+
+        // If the mlmap output changed, mark all its dependents (source file modules) as dirty
+        let mlmap_changed = match (mlmap_hash, mlmap_hash_after) {
+            (Some(digest), Some(digest_after)) => !digest.eq(&digest_after),
+            _ => true,
+        };
+        if mlmap_changed {
+            let dependents: Vec<String> = build_state
+                .build_state
+                .modules
+                .get(&module_name)
+                .map(|m| m.dependents().iter().cloned().collect())
+                .unwrap_or_default();
+            for dep_name in dependents {
+                if let Some(Module::SourceFile(sf)) = build_state.build_state.modules.get_mut(&dep_name) {
+                    sf.compilation_stage = CompilationStage::Dirty;
                 }
-                _ => false,
-            };
-            if is_dirty {
-                module.compilation_stage = CompilationStage::Dirty;
             }
         }
     }

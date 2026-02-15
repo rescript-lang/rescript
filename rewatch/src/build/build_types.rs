@@ -302,42 +302,18 @@ pub struct SourceFile {
     pub interface: Option<Interface>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct MlMap {
-    pub parse_dirty: bool,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum SourceType {
-    SourceFile(SourceFile),
-    MlMap(MlMap),
-}
-
-impl Display for SourceType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            SourceType::SourceFile(_) => write!(f, "SourceFile"),
-            SourceType::MlMap(_) => write!(f, "MlMap"),
-        }
-    }
-}
-
+/// A regular source file module (.res/.resi) that goes through the full
+/// compilation pipeline: Dirty → Parsed → TypeChecked → Built.
 #[derive(Debug, Clone)]
-pub struct Module {
-    // -- Module identity (immutable after construction) --
+pub struct SourceFileModule {
     /// The package this module belongs to, used to look up package-specific
     /// configuration such as namespace, compiler flags, and source paths.
     pub package_name: String,
-    /// Discriminates between regular source files (.res/.resi) and generated
-    /// namespace map files (.mlmap). Drives branching in parsing, dependency
-    /// scanning, compilation, and cleanup.
-    pub source_type: SourceType,
+    pub source_file: SourceFile,
     /// Whether this module lives under a `"type": "dev"` source directory.
     /// Dev modules are excluded from dependency include paths during compilation
     /// of non-dev consumers.
     pub is_type_dev: bool,
-
-    // -- Dependency graph (mutated in `deps.rs` after each AST rescan) --
     /// Modules this module needs (forward dependencies). Reassigned in
     /// `deps.rs` when the AST is rescanned. Used for compilation ordering,
     /// cycle detection, and marking modules dirty when a dependency is removed.
@@ -351,8 +327,6 @@ pub struct Module {
     /// its AST. Set to `true` in `parse.rs` when the source changes,
     /// and reset to `false` in `deps.rs` after dependencies are resolved.
     pub needs_dependencies_rescan: bool,
-
-    // -- Build status (mutated throughout the build pipeline) --
     /// How far this module has progressed through the build pipeline
     /// (Dirty → TypeChecked → Built). Set to `Dirty` in `parse.rs` and
     /// `compile.rs` (when dependencies are invalidated), advanced to the
@@ -371,15 +345,93 @@ pub struct Module {
     pub last_compiled_cmt: Option<SystemTime>,
 }
 
+/// A synthetic namespace map module (.mlmap). Compiled during the parse phase,
+/// not through the regular compilation pipeline.
+#[derive(Debug, Clone)]
+pub struct MlMapModule {
+    /// The package this module belongs to.
+    pub package_name: String,
+    /// Whether the mlmap file needs to be regenerated.
+    pub parse_dirty: bool,
+    /// Forward dependencies (modules listed in the namespace map).
+    pub deps: AHashSet<String>,
+    /// Modules that depend on this namespace map.
+    pub dependents: AHashSet<String>,
+}
+
+/// A module in the build graph — either a real source file or a synthetic
+/// namespace map. The enum-level split ensures that compilation-stage fields
+/// only exist on source file modules, making it a compile error to access
+/// them on mlmap modules.
+#[derive(Debug, Clone)]
+#[allow(clippy::large_enum_variant)]
+pub enum Module {
+    SourceFile(SourceFileModule),
+    MlMap(MlMapModule),
+}
+
+impl Display for Module {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Module::SourceFile(_) => write!(f, "SourceFile"),
+            Module::MlMap(_) => write!(f, "MlMap"),
+        }
+    }
+}
+
 impl Module {
     pub fn is_mlmap(&self) -> bool {
-        matches!(self.source_type, SourceType::MlMap(_))
+        matches!(self, Module::MlMap(_))
     }
 
-    pub fn get_interface(&self) -> &Option<Interface> {
-        match &self.source_type {
-            SourceType::SourceFile(source_file) => &source_file.interface,
-            _ => &None,
+    pub fn package_name(&self) -> &str {
+        match self {
+            Module::SourceFile(m) => &m.package_name,
+            Module::MlMap(m) => &m.package_name,
+        }
+    }
+
+    pub fn deps(&self) -> &AHashSet<String> {
+        match self {
+            Module::SourceFile(m) => &m.deps,
+            Module::MlMap(m) => &m.deps,
+        }
+    }
+
+    pub fn deps_mut(&mut self) -> &mut AHashSet<String> {
+        match self {
+            Module::SourceFile(m) => &mut m.deps,
+            Module::MlMap(m) => &mut m.deps,
+        }
+    }
+
+    pub fn dependents(&self) -> &AHashSet<String> {
+        match self {
+            Module::SourceFile(m) => &m.dependents,
+            Module::MlMap(m) => &m.dependents,
+        }
+    }
+
+    pub fn dependents_mut(&mut self) -> &mut AHashSet<String> {
+        match self {
+            Module::SourceFile(m) => &mut m.dependents,
+            Module::MlMap(m) => &mut m.dependents,
+        }
+    }
+
+    pub fn get_interface(&self) -> Option<&Interface> {
+        match self {
+            Module::SourceFile(m) => m.source_file.interface.as_ref(),
+            Module::MlMap(_) => None,
+        }
+    }
+
+    /// Whether this module needs work for the given compile mode.
+    /// MlMap modules never need compilation (they're handled in the parse phase).
+    pub fn needs_compile_for_mode(&self, mode: CompileMode) -> bool {
+        match self {
+            Module::SourceFile(m) => m.compilation_stage.needs_compile_for_mode(mode),
+            Module::MlMap(_) => false,
         }
     }
 }
@@ -476,7 +528,7 @@ impl BuildCommandState {
         self.build_state
             .modules
             .iter()
-            .map(|(name, module)| (name.clone(), module.package_name.clone()))
+            .map(|(name, module)| (name.clone(), module.package_name().to_owned()))
             .collect()
     }
 
@@ -489,18 +541,18 @@ impl BuildCommandState {
             .ok()?;
 
         for (module_name, module) in &self.build_state.modules {
-            let package = self.build_state.packages.get(&module.package_name)?;
+            if let Module::SourceFile(m) = module {
+                let package = self.build_state.packages.get(&m.package_name)?;
 
-            if let SourceType::SourceFile(source_file) = &module.source_type {
-                let impl_path = package.path.join(&source_file.implementation.path);
+                let impl_path = package.path.join(&m.source_file.implementation.path);
                 if canonicalized == impl_path {
-                    return Some((module_name.clone(), module.package_name.clone(), false));
+                    return Some((module_name.clone(), m.package_name.clone(), false));
                 }
 
-                if let Some(interface) = &source_file.interface {
+                if let Some(interface) = &m.source_file.interface {
                     let iface_path = package.path.join(&interface.path);
                     if canonicalized == iface_path {
-                        return Some((module_name.clone(), module.package_name.clone(), true));
+                        return Some((module_name.clone(), m.package_name.clone(), true));
                     }
                 }
             }
@@ -538,21 +590,21 @@ impl BuildCommandState {
 
         let module = self.build_state.modules.get_mut(&module_name)?;
 
-        if let SourceType::SourceFile(ref mut source_file) = module.source_type {
-            let package = self.build_state.packages.get(&module.package_name)?;
-            let impl_path = package.path.join(&source_file.implementation.path);
+        if let Module::SourceFile(m) = module {
+            let package = self.build_state.packages.get(&m.package_name)?;
+            let impl_path = package.path.join(&m.source_file.implementation.path);
             if canonicalized == impl_path {
-                if let Ok(modified) = canonicalized.metadata().and_then(|m| m.modified()) {
-                    source_file.implementation.last_modified = modified;
+                if let Ok(modified) = canonicalized.metadata().and_then(|md| md.modified()) {
+                    m.source_file.implementation.last_modified = modified;
                 }
-                source_file.implementation.parse_dirty = true;
+                m.source_file.implementation.parse_dirty = true;
                 return Some(module_name);
             }
 
-            if let Some(ref mut interface) = source_file.interface {
+            if let Some(ref mut interface) = m.source_file.interface {
                 let iface_path = package.path.join(&interface.path);
                 if canonicalized == iface_path {
-                    if let Ok(modified) = canonicalized.metadata().and_then(|m| m.modified()) {
+                    if let Ok(modified) = canonicalized.metadata().and_then(|md| md.modified()) {
                         interface.last_modified = modified;
                     }
                     interface.parse_dirty = true;

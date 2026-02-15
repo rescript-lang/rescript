@@ -823,24 +823,12 @@ pub fn parse_packages(build_state: &mut BuildState, output: OutputTarget, mode: 
                 helpers::file_path_to_module_name(&mlmap.to_owned(), &packages::Namespace::NoNamespace);
             modules.insert(
                 mlmap_module_name.clone(),
-                Module {
-                    needs_dependencies_rescan: false,
-                    source_type: SourceType::MlMap(MlMap { parse_dirty: false }),
+                Module::MlMap(MlMapModule {
+                    package_name: package.name.to_owned(),
+                    parse_dirty: false,
                     deps,
                     dependents: AHashSet::new(),
-                    package_name: package.name.to_owned(),
-                    compilation_stage: CompilationStage::Built {
-                        source_hash: blake3::hash(b"mlmap"),
-                        ast_hash: blake3::hash(b"mlmap"),
-                        cmi_hash: blake3::hash(b"mlmap"),
-                        cmt_hash: blake3::hash(b"mlmap"),
-                        cmj_hash: blake3::hash(b"mlmap"),
-                    },
-                    last_compiled_cmt: None,
-                    last_compiled_cmi: None,
-                    // Not sure if this is correct
-                    is_type_dev: false,
-                },
+                }),
             );
             module_names.insert(mlmap_module_name);
         });
@@ -859,22 +847,22 @@ pub fn parse_packages(build_state: &mut BuildState, output: OutputTarget, mode: 
                     match modules.entry(module_name.to_string()) {
                         Entry::Occupied(mut entry) => {
                             let module = entry.get_mut();
-                            if let SourceType::SourceFile(ref mut source_file) = module.source_type {
-                                if &source_file.implementation.path != file {
+                            if let Module::SourceFile(m) = module {
+                                if &m.source_file.implementation.path != file {
                                     duplicate_paths = Some((
-                                        Path::new(&package.path).join(&source_file.implementation.path),
+                                        Path::new(&package.path).join(&m.source_file.implementation.path),
                                         Path::new(&package.path).join(file),
                                     ));
                                 }
-                                source_file.implementation.path = file.to_owned();
-                                source_file.implementation.last_modified = metadata.modified;
-                                source_file.implementation.parse_dirty = true;
+                                m.source_file.implementation.path = file.to_owned();
+                                m.source_file.implementation.last_modified = metadata.modified;
+                                m.source_file.implementation.parse_dirty = true;
                             }
                         }
                         Entry::Vacant(entry) => {
-                            entry.insert(Module {
-                                needs_dependencies_rescan: true,
-                                source_type: SourceType::SourceFile(SourceFile {
+                            entry.insert(Module::SourceFile(SourceFileModule {
+                                package_name: package.name.to_owned(),
+                                source_file: SourceFile {
                                     implementation: Implementation {
                                         path: file.to_owned(),
                                         parse_state: ParseState::Pending,
@@ -884,15 +872,15 @@ pub fn parse_packages(build_state: &mut BuildState, output: OutputTarget, mode: 
                                         compile_warnings: None,
                                     },
                                     interface: None,
-                                }),
+                                },
+                                is_type_dev: metadata.is_type_dev,
                                 deps: AHashSet::new(),
                                 dependents: AHashSet::new(),
-                                package_name: package.name.to_owned(),
+                                needs_dependencies_rescan: true,
                                 compilation_stage: CompilationStage::Dirty,
-                                last_compiled_cmt: None,
                                 last_compiled_cmi: None,
-                                is_type_dev: metadata.is_type_dev,
-                            });
+                                last_compiled_cmt: None,
+                            }));
                         }
                     }
                     if let Some((existing_path, duplicate_path)) = duplicate_paths {
@@ -945,8 +933,8 @@ pub fn parse_packages(build_state: &mut BuildState, output: OutputTarget, mode: 
                             modules
                                 .entry(module_name.to_string())
                                 .and_modify(|module| {
-                                    if let SourceType::SourceFile(ref mut source_file) = module.source_type {
-                                        source_file.interface = Some(Interface {
+                                    if let Module::SourceFile(m) = module {
+                                        m.source_file.interface = Some(Interface {
                                             path: file.to_owned(),
                                             parse_state: ParseState::Pending,
                                             compile_state: CompileState::Pending,
@@ -956,9 +944,9 @@ pub fn parse_packages(build_state: &mut BuildState, output: OutputTarget, mode: 
                                         });
                                     }
                                 })
-                                .or_insert(Module {
-                                    needs_dependencies_rescan: true,
-                                    source_type: SourceType::SourceFile(SourceFile {
+                                .or_insert(Module::SourceFile(SourceFileModule {
+                                    package_name: package.name.to_owned(),
+                                    source_file: SourceFile {
                                         // this will be overwritten later
                                         implementation: Implementation {
                                             path: implementation_filename,
@@ -976,15 +964,15 @@ pub fn parse_packages(build_state: &mut BuildState, output: OutputTarget, mode: 
                                             parse_dirty: true,
                                             compile_warnings: None,
                                         }),
-                                    }),
+                                    },
+                                    is_type_dev: metadata.is_type_dev,
                                     deps: AHashSet::new(),
                                     dependents: AHashSet::new(),
-                                    package_name: package.name.to_owned(),
+                                    needs_dependencies_rescan: true,
                                     compilation_stage: CompilationStage::Dirty,
-                                    last_compiled_cmt: None,
                                     last_compiled_cmi: None,
-                                    is_type_dev: metadata.is_type_dev,
-                                });
+                                    last_compiled_cmt: None,
+                                }));
                         }
                     }
                 }

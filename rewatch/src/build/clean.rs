@@ -92,9 +92,10 @@ fn clean_source_files(build_state: &BuildState, root_config: &Config) {
     let rescript_file_locations = build_state
         .modules
         .values()
-        .filter_map(|module| match &module.source_type {
-            SourceType::SourceFile(source_file) => {
-                build_state.packages.get(&module.package_name).map(|package| {
+        .filter_map(|module| match module {
+            Module::SourceFile(sf_module) => {
+                build_state.packages.get(&sf_module.package_name).map(|package| {
+                    let source_file = &sf_module.source_file;
                     root_config
                         .get_package_specs()
                         .into_iter()
@@ -215,13 +216,14 @@ pub fn cleanup_previous_build(
                 let source_hash = helpers::compute_file_hash(res_file_location);
                 let ast_hash = helpers::compute_file_hash(ast_file_path);
 
+                let sf_module = match module {
+                    Module::SourceFile(sf) => sf,
+                    Module::MlMap(_) => unreachable!("MlMap is not matched with a ReScript file"),
+                };
                 let (cmi_hash, cmt_hash, cmj_hash) =
-                    if let Some(pkg) = build_state.build_state.packages.get(&module.package_name) {
+                    if let Some(pkg) = build_state.build_state.packages.get(&sf_module.package_name) {
                         let ocaml_path = pkg.get_ocaml_build_path_for_output(output);
-                        let impl_path = match &module.source_type {
-                            SourceType::SourceFile(sf) => &sf.implementation.path,
-                            _ => unreachable!("MlMap is not matched with a ReScript file"),
-                        };
+                        let impl_path = &sf_module.source_file.implementation.path;
                         (
                             helpers::compute_file_hash(&helpers::get_compiler_asset_in(
                                 &ocaml_path,
@@ -274,31 +276,29 @@ pub fn cleanup_previous_build(
                     }
                     _ => CompilationStage::Dirty,
                 };
-                module.compilation_stage = new_stage;
+                sf_module.compilation_stage = new_stage;
             }
 
-            match &mut module.source_type {
-                SourceType::MlMap(_) => unreachable!("MlMap is not matched with a ReScript file"),
-                SourceType::SourceFile(source_file) => {
-                    if helpers::is_interface_ast_file(ast_file_path) {
-                        let interface = source_file
-                            .interface
-                            .as_mut()
-                            .expect("Could not find interface for module");
+            let sf_module = match module {
+                Module::SourceFile(sf) => sf,
+                Module::MlMap(_) => unreachable!("MlMap is not matched with a ReScript file"),
+            };
+            let source_file = &mut sf_module.source_file;
+            if helpers::is_interface_ast_file(ast_file_path) {
+                let interface = source_file
+                    .interface
+                    .as_mut()
+                    .expect("Could not find interface for module");
 
-                        let source_last_modified = interface.last_modified;
-                        if ast_last_modified > &source_last_modified {
-                            interface.parse_dirty = false;
-                        }
-                    } else {
-                        let implementation = &mut source_file.implementation;
-                        let source_last_modified = implementation.last_modified;
-                        if ast_last_modified > &source_last_modified
-                            && !deleted_interfaces.contains(module_name)
-                        {
-                            implementation.parse_dirty = false;
-                        }
-                    }
+                let source_last_modified = interface.last_modified;
+                if ast_last_modified > &source_last_modified {
+                    interface.parse_dirty = false;
+                }
+            } else {
+                let implementation = &mut source_file.implementation;
+                let source_last_modified = implementation.last_modified;
+                if ast_last_modified > &source_last_modified && !deleted_interfaces.contains(module_name) {
+                    implementation.parse_dirty = false;
                 }
             }
         });
@@ -307,8 +307,8 @@ pub fn cleanup_previous_build(
         .cmi_modules
         .iter()
         .for_each(|(module_name, last_modified)| {
-            if let Some(module) = build_state.modules.get_mut(module_name) {
-                module.last_compiled_cmi = Some(*last_modified);
+            if let Some(Module::SourceFile(sf)) = build_state.modules.get_mut(module_name) {
+                sf.last_compiled_cmi = Some(*last_modified);
             }
         });
 
@@ -316,8 +316,8 @@ pub fn cleanup_previous_build(
         .cmt_modules
         .iter()
         .for_each(|(module_name, last_modified)| {
-            if let Some(module) = build_state.modules.get_mut(module_name) {
-                module.last_compiled_cmt = Some(*last_modified);
+            if let Some(Module::SourceFile(sf)) = build_state.modules.get_mut(module_name) {
+                sf.last_compiled_cmt = Some(*last_modified);
             }
         });
 
@@ -357,73 +357,56 @@ pub fn cleanup_previous_build(
     (diff_len, compile_assets_state.ast_rescript_file_locations.len())
 }
 
-fn has_parse_warnings(module: &Module) -> bool {
+fn has_parse_warnings(sf_module: &SourceFileModule) -> bool {
     matches!(
-        &module.source_type,
-        SourceType::SourceFile(SourceFile {
-            implementation: Implementation {
-                parse_state: ParseState::Warning,
-                ..
-            },
-            ..
-        }) | SourceType::SourceFile(SourceFile {
-            interface: Some(Interface {
-                parse_state: ParseState::Warning,
-                ..
-            }),
-            ..
-        })
-    )
+        sf_module.source_file.implementation.parse_state,
+        ParseState::Warning
+    ) || sf_module
+        .source_file
+        .interface
+        .as_ref()
+        .is_some_and(|i| matches!(i.parse_state, ParseState::Warning))
 }
 
-fn has_compile_warnings(module: &Module) -> bool {
+fn has_compile_warnings(sf_module: &SourceFileModule) -> bool {
     matches!(
-        &module.source_type,
-        SourceType::SourceFile(SourceFile {
-            implementation: Implementation {
-                compile_state: CompileState::Warning,
-                ..
-            },
-            ..
-        }) | SourceType::SourceFile(SourceFile {
-            interface: Some(Interface {
-                compile_state: CompileState::Warning,
-                ..
-            }),
-            ..
-        })
-    )
+        sf_module.source_file.implementation.compile_state,
+        CompileState::Warning
+    ) || sf_module
+        .source_file
+        .interface
+        .as_ref()
+        .is_some_and(|i| matches!(i.compile_state, CompileState::Warning))
 }
 
 pub fn cleanup_after_build(build_state: &BuildCommandState, output: OutputTarget) {
     build_state.modules.par_iter().for_each(|(_module_name, module)| {
-        let package = build_state.get_package(&module.package_name).unwrap();
+        let Module::SourceFile(sf_module) = module else {
+            return;
+        };
+        let package = build_state.get_package(&sf_module.package_name).unwrap();
         let ocaml_build_path = package.get_ocaml_build_path_for_output(output);
-        if has_parse_warnings(module)
-            && let SourceType::SourceFile(source_file) = &module.source_type
-        {
-            remove_iast(&ocaml_build_path, &source_file.implementation.path);
-            remove_ast(&ocaml_build_path, &source_file.implementation.path);
+        if has_parse_warnings(sf_module) {
+            remove_iast(&ocaml_build_path, &sf_module.source_file.implementation.path);
+            remove_ast(&ocaml_build_path, &sf_module.source_file.implementation.path);
         }
-        if has_compile_warnings(module) {
-            // only retain AST file if the compilation doesn't have warnings, we remove the AST in favor
-            // of the CMI/CMT/CMJ files because if we delete these, the editor tooling doesn't
-            // work anymore. If we remove the intermediate AST file, the editor tooling will
-            // work, and we have an indication that we need to recompile the file.
+        if has_compile_warnings(sf_module) {
+            // Only retain AST file if the compilation doesn't have warnings.
+            // We remove the AST in favor of the CMI/CMT/CMJ files because if
+            // we delete these, the editor tooling doesn't work anymore. If we
+            // remove the intermediate AST file, the editor tooling will work,
+            // and we have an indication that we need to recompile the file.
             //
-            // Recompiling this takes a bit more time, because we have to parse again, but
-            // if we have warnings it's usually not a lot of files so the additional
-            // latency shouldn't be too bad
-            match &module.source_type {
-                SourceType::SourceFile(source_file) => {
-                    // we only clean the ast here, this will cause the file to be recompiled
-                    // (and thus keep showing the warning), but it will keep the cmi file, so that we don't
-                    // unecessary mark all the dependents as dirty, when there is no change in the interface
-                    remove_ast(&ocaml_build_path, &source_file.implementation.path);
-                    remove_iast(&ocaml_build_path, &source_file.implementation.path);
-                }
-                SourceType::MlMap(_) => (),
-            }
+            // Recompiling this takes a bit more time, because we have to parse
+            // again, but if we have warnings it's usually not a lot of files
+            // so the additional latency shouldn't be too bad.
+            //
+            // We only clean the ast here — this will cause the file to be
+            // recompiled (and thus keep showing the warning), but it will keep
+            // the cmi file so that we don't unnecessarily mark all the
+            // dependents as dirty when there is no change in the interface.
+            remove_ast(&ocaml_build_path, &sf_module.source_file.implementation.path);
+            remove_iast(&ocaml_build_path, &sf_module.source_file.implementation.path);
         }
     });
 }

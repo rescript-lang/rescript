@@ -1,4 +1,4 @@
-use crate::build::build_types::{BuildCommandState, CompileMode, OutputTarget, SourceType};
+use crate::build::build_types::{BuildCommandState, CompileMode, Module, OutputTarget};
 use crate::build::compile;
 use crate::build::parse;
 use std::path::{Path, PathBuf};
@@ -74,10 +74,10 @@ impl BuildCommandStateExt for BuildCommandState {
         let module = self.build_state.modules.get(&module_name)?;
         let package = self.build_state.packages.get(&package_name)?;
 
-        let source_file = match &module.source_type {
-            SourceType::SourceFile(sf) => sf,
-            _ => return None,
+        let Module::SourceFile(sf_module) = module else {
+            return None;
         };
+        let source_file = &sf_module.source_file;
 
         let source_path = if is_interface {
             source_file.interface.as_ref().map(|i| i.path.clone())?
@@ -97,7 +97,7 @@ impl BuildCommandStateExt for BuildCommandState {
             has_interface,
             &self.build_state.project_context,
             &self.build_state.packages,
-            module.is_type_dev,
+            sf_module.is_type_dev,
             package.is_local_dep,
             self.get_warn_error_override(),
             output,
@@ -123,7 +123,7 @@ impl BuildCommandStateExt for BuildCommandState {
             has_interface,
             &self.build_state.project_context,
             &self.build_state.packages,
-            module.is_type_dev,
+            sf_module.is_type_dev,
             package.is_local_dep,
             self.get_warn_error_override(),
             output,

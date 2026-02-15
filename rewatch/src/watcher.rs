@@ -1,6 +1,6 @@
 use crate::build;
 use crate::build::build_types::{
-    BuildCommandState, BuildConfig, CompileScope, OutputMode, OutputTarget, SourceType,
+    BuildCommandState, BuildConfig, CompileScope, Module, OutputMode, OutputTarget,
 };
 use crate::build::clean;
 use crate::cmd;
@@ -78,17 +78,17 @@ fn hash_file_content(path: &Path) -> Option<u64> {
 /// identified as modifications to existing files.
 fn populate_mtime_cache(build_state: &BuildCommandState, last_mtime: &mut HashMap<PathBuf, SystemTime>) {
     for (_, module) in build_state.build_state.modules.iter() {
-        if let SourceType::SourceFile(ref source_file) = module.source_type {
+        if let Module::SourceFile(sf_module) = module {
             // Get the package to resolve the full path
-            if let Some(package) = build_state.build_state.packages.get(&module.package_name) {
+            if let Some(package) = build_state.build_state.packages.get(&sf_module.package_name) {
                 // Track implementation file
-                let impl_path = package.path.join(&source_file.implementation.path);
+                let impl_path = package.path.join(&sf_module.source_file.implementation.path);
                 if let Ok(mtime) = impl_path.metadata().and_then(|m| m.modified()) {
                     last_mtime.insert(impl_path, mtime);
                 }
 
                 // Track interface file if present
-                if let Some(ref interface) = source_file.interface {
+                if let Some(ref interface) = sf_module.source_file.interface {
                     let iface_path = package.path.join(&interface.path);
                     if let Ok(mtime) = iface_path.metadata().and_then(|m| m.modified()) {
                         last_mtime.insert(iface_path, mtime);

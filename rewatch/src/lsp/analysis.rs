@@ -7,7 +7,7 @@ use serde_json::{Value, json};
 use std::sync::Mutex;
 use tower_lsp::lsp_types::{Position, Url};
 
-use crate::build::build_types::{BuildCommandState, OutputTarget, SourceFile, SourceType};
+use crate::build::build_types::{BuildCommandState, Module, OutputTarget, SourceFile};
 use crate::build::packages::{Namespace, Package};
 use crate::config;
 use crate::helpers;
@@ -222,9 +222,9 @@ fn resolve_module<'a>(
     let (module_name, package_name, _is_interface) = build_state.find_module_for_file(file_path)?;
     let package = build_state.build_state.packages.get(&package_name)?;
     let module = build_state.build_state.modules.get(&module_name)?;
-    let source_file = match &module.source_type {
-        SourceType::SourceFile(sf) => sf,
-        _ => return None,
+    let source_file = match module {
+        Module::SourceFile(sf) => &sf.source_file,
+        Module::MlMap(_) => return None,
     };
     Some((module_name, package_name, package, source_file))
 }
@@ -380,12 +380,13 @@ fn build_paths_for_module(build_state: &BuildCommandState, runtime: &RuntimeModu
     }
 
     for (module_name, module) in &build_state.build_state.modules {
-        let Some(package) = build_state.build_state.packages.get(&module.package_name) else {
+        let Some(package) = build_state.build_state.packages.get(module.package_name()) else {
             continue;
         };
 
-        match &module.source_type {
-            SourceType::SourceFile(source_file) => {
+        match module {
+            Module::SourceFile(sf_module) => {
+                let source_file = &sf_module.source_file;
                 let build_path = package.get_build_path_for_output(OutputTarget::Lsp);
 
                 let impl_path = &source_file.implementation.path;
@@ -429,7 +430,7 @@ fn build_paths_for_module(build_state: &BuildCommandState, runtime: &RuntimeModu
                     );
                 }
             }
-            SourceType::MlMap(_) => {
+            Module::MlMap(_) => {
                 let build_path = package.get_build_path_for_output(OutputTarget::Lsp);
                 let cmt = build_path.join(format!("{}.cmt", module_name));
                 result.insert(
@@ -457,7 +458,7 @@ fn build_file_sets(build_state: &BuildCommandState, runtime: &RuntimeModuleData)
     let mut dependencies_files = Vec::new();
 
     for (module_name, module) in &build_state.build_state.modules {
-        if &module.package_name == root_package_name {
+        if module.package_name() == root_package_name {
             project_files.push(Value::String(module_name.clone()));
         } else {
             dependencies_files.push(Value::String(module_name.clone()));

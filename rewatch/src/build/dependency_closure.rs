@@ -37,7 +37,7 @@ pub fn get_dependency_closure(
         if closure.insert(name.clone())
             && let Some(module) = modules.get(&name)
         {
-            for dep in &module.deps {
+            for dep in module.deps() {
                 if !closure.contains(dep) {
                     stack.push(dep.clone());
                 }
@@ -76,7 +76,7 @@ pub fn get_dependent_closure(
     let mut stack: Vec<String> = starts.iter().cloned().collect();
     while let Some(name) = stack.pop() {
         if let Some(module) = modules.get(&name) {
-            for dep in &module.dependents {
+            for dep in module.dependents() {
                 if !starts.contains(dep) && closure.insert(dep.clone()) {
                     stack.push(dep.clone());
                 }
@@ -89,21 +89,16 @@ pub fn get_dependent_closure(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::build::build_types::{CompilationStage, MlMap, Module, SourceType};
+    use crate::build::build_types::{MlMapModule, Module};
 
     /// Create a minimal Module with given deps and dependents.
     fn make_module(deps: &[&str], dependents: &[&str]) -> Module {
-        Module {
-            source_type: SourceType::MlMap(MlMap { parse_dirty: false }),
+        Module::MlMap(MlMapModule {
+            package_name: "test".to_string(),
+            parse_dirty: false,
             deps: deps.iter().map(|s| s.to_string()).collect(),
             dependents: dependents.iter().map(|s| s.to_string()).collect(),
-            package_name: "test".to_string(),
-            compilation_stage: CompilationStage::Dirty,
-            last_compiled_cmi: None,
-            last_compiled_cmt: None,
-            needs_dependencies_rescan: false,
-            is_type_dev: false,
-        }
+        })
     }
 
     /// Build a module graph:

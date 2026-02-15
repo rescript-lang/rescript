@@ -18,13 +18,13 @@ pub fn read(build_state: &mut BuildCommandState, output: OutputTarget) -> anyhow
     let mut rescript_file_locations = build_state
         .modules
         .values()
-        .filter_map(|module| match &module.source_type {
-            SourceType::SourceFile(source_file) => {
-                let package = build_state.packages.get(&module.package_name).unwrap();
+        .filter_map(|module| match module {
+            Module::SourceFile(sf_module) => {
+                let package = build_state.packages.get(&sf_module.package_name).unwrap();
 
-                Some(PathBuf::from(&package.path).join(&source_file.implementation.path))
+                Some(PathBuf::from(&package.path).join(&sf_module.source_file.implementation.path))
             }
-            _ => None,
+            Module::MlMap(_) => None,
         })
         .collect::<AHashSet<PathBuf>>();
 
@@ -33,10 +33,9 @@ pub fn read(build_state: &mut BuildCommandState, output: OutputTarget) -> anyhow
             .modules
             .values()
             .filter_map(|module| {
-                let package = build_state.packages.get(&module.package_name).unwrap();
+                let package = build_state.packages.get(module.package_name()).unwrap();
                 module
                     .get_interface()
-                    .as_ref()
                     .map(|interface| package.path.join(&interface.path))
             })
             .collect::<AHashSet<PathBuf>>(),

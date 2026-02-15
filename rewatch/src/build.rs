@@ -29,23 +29,12 @@ use std::time::{Duration, Instant};
 use tracing::{info_span, instrument};
 
 fn is_dirty(module: &Module) -> bool {
-    match module.source_type {
-        SourceType::SourceFile(SourceFile {
-            implementation: Implementation {
-                parse_dirty: true, ..
-            },
-            ..
-        }) => true,
-        SourceType::SourceFile(SourceFile {
-            interface: Some(Interface {
-                parse_dirty: true, ..
-            }),
-            ..
-        }) => true,
-        SourceType::SourceFile(_) => false,
-        SourceType::MlMap(MlMap {
-            parse_dirty: dirty, ..
-        }) => dirty,
+    match module {
+        Module::SourceFile(sf) => {
+            sf.source_file.implementation.parse_dirty
+                || sf.source_file.interface.as_ref().is_some_and(|i| i.parse_dirty)
+        }
+        Module::MlMap(m) => m.parse_dirty,
     }
 }
 
@@ -328,11 +317,10 @@ pub fn incremental_build(
     if log_enabled!(log::Level::Trace) {
         let mode = build_config.scope.mode();
         for (module_name, module) in build_state.modules.iter() {
-            if module.compilation_stage.needs_compile_for_mode(mode) {
-                println!(
-                    "needs compile: {module_name} (stage: {:?})",
-                    module.compilation_stage
-                );
+            if module.needs_compile_for_mode(mode)
+                && let Module::SourceFile(sf) = module
+            {
+                println!("needs compile: {module_name} (stage: {:?})", sf.compilation_stage);
             }
         }
     };
