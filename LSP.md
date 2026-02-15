@@ -259,7 +259,7 @@ A single background consumer task collects events into a `PendingState` with thr
 The merge function applies promotion rules to consolidate per-file state. When a `FileCreated` or `FileDeleted` event arrives, any pending per-file typecheck or build for that same file is removed since the full rebuild will cover it. A `ConfigChanged` event clears pending typechecks for the same project (since the rebuild will produce fresh type information) but keeps pending compile_files. After 100ms of silence the batch is flushed sequentially:
 
 1. **Full builds first** — re-initialize affected projects from scratch (same flow as the initial build), replacing the old `BuildCommandState`. Clears stale diagnostics for files that no longer exist.
-2. **Incremental builds second** — saved files get a full incremental build (compile dependencies + typecheck dependents), holding the projects lock.
+2. **Incremental builds second** — saved files get a full incremental build (compile dependencies + typecheck dependents). Uses a take-build-replace pattern: each project's `BuildCommandState` is removed from the `ProjectMap` under a brief lock, built without holding the mutex, then inserted back. This keeps LSP handlers (hover, completions, etc.) unblocked during compilation.
 3. **Typechecks third** — unsaved edits get a lightweight typecheck via `bsc -bs-read-stdin`, with brief lock for arg extraction only.
 4. **Post-build recheck** — if a saved file also had unsaved buffer content (didChange + didSave in the same debounce window), a typecheck pass runs from the buffer so diagnostics match the editor.
 5. **`buildFinished` notification** — sent when full builds or incremental builds ran.
@@ -643,7 +643,7 @@ Used by the LSP to pipe unsaved buffer content directly to bsc without writing t
 
 ### Rewatch build profiles (`lib/lsp-ocaml/` isolation)
 
-`d56f92c36` — introduces `BuildProfile` (Standard / TypecheckOnly / TypecheckAndEmit) and a dedicated `lib/lsp-ocaml/` flat artifact directory so LSP and CLI builds don't interfere with each other. Threads the profile through all artifact path resolution in packages, compile, parse, clean, and compiler-info modules.
+`d56f92c36` — introduces `OutputTarget` (Standard / Lsp), `CompileMode` (TypecheckOnly / FullCompile), and `CompileScope` (FullBuild / FullTypecheck / CompileDependencies / TypecheckDependents), plus a dedicated `lib/lsp-ocaml/` flat artifact directory so LSP and CLI builds don't interfere with each other. Threads these through all artifact path resolution in packages, compile, parse, clean, and compiler-info modules.
 
 ### Watcher improvements
 
