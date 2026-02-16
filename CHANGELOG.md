@@ -20,6 +20,8 @@
 
 #### :bug: Bug fix
 
+- Fix compiler crash (`Fatal error: Parmatch.all_record_args`) when matching empty dict/record patterns. https://github.com/rescript-lang/rescript/pull/8246
+
 #### :memo: Documentation
 
 #### :nail_care: Polish
