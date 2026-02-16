@@ -3,9 +3,10 @@ let docHelp =
 
 Output documentation to standard output
 
-Usage: rescript-tools doc <FILE>
+Usage: rescript-tools doc <FILE> [--lib-dir <DIR>]
 
-Example: rescript-tools doc ./path/to/EntryPointLib.res|}
+Example: rescript-tools doc ./path/to/EntryPointLib.res
+Example: rescript-tools doc ./path/to/EntryPointLib.res --lib-dir lib/lsp|}
 
 let formatCodeblocksHelp =
   {|ReScript Tools
@@ -60,13 +61,21 @@ let main () =
   | "doc" :: rest -> (
     match rest with
     | ["-h"] | ["--help"] -> logAndExit (Ok docHelp)
-    | [path] ->
+    | path :: args ->
       (* NOTE: Internal use to generate docs from compiler *)
       let () =
         match Sys.getenv_opt "FROM_COMPILER" with
         | Some "true" -> Analysis.Cfg.isDocGenFromCompiler := true
         | _ -> ()
       in
+      let rec parseArgs = function
+        | "--lib-dir" :: dir :: remaining ->
+          Analysis.Cfg.libDir := Some dir;
+          parseArgs remaining
+        | _ :: remaining -> parseArgs remaining
+        | [] -> ()
+      in
+      parseArgs args;
       logAndExit (Tools.extractDocs ~entryPointFile:path ~debug:false)
     | _ -> logAndExit (Error docHelp))
   | "migrate" :: file :: opts -> (

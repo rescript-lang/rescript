@@ -2,6 +2,8 @@ let debugFollowCtxPath = ref false
 
 let isDocGenFromCompiler = ref false
 
+let libDir : string option ref = ref None
+
 let inIncrementalTypecheckingMode =
   ref
     (try
