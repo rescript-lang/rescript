@@ -69,10 +69,11 @@ struct CompileModuleResult {
 fn execute_post_build_command(cmd: &str, js_file_path: &Path, working_dir: &Path) -> Result<()> {
     let full_command = format!("{} {}", cmd, js_file_path.display());
 
-    let _span = info_span!(
+    let span = info_span!(
         "build.js_post_build",
         command = %cmd,
         js_file = %js_file_path.display(),
+        exit_code = tracing::field::Empty,
     )
     .entered();
 
@@ -96,11 +97,12 @@ fn execute_post_build_command(cmd: &str, js_file_path: &Path, working_dir: &Path
 
     match output {
         Ok(output) => {
+            let exit_code = output.status.code().unwrap_or(-1);
+            span.record("exit_code", exit_code);
+
             let stderr = String::from_utf8_lossy(&output.stderr);
             let stdout = String::from_utf8_lossy(&output.stdout);
 
-            // Always log stdout/stderr - the user explicitly configured this command
-            // and likely cares about its output
             if !stdout.is_empty() {
                 info!("{}", stdout.trim());
             }
@@ -109,6 +111,11 @@ fn execute_post_build_command(cmd: &str, js_file_path: &Path, working_dir: &Path
             }
 
             if !output.status.success() {
+                tracing::error!(
+                    exit_code,
+                    "js-post-build command failed for {}",
+                    js_file_path.display()
+                );
                 Err(anyhow!(
                     "js-post-build command failed for {}",
                     js_file_path.display()
