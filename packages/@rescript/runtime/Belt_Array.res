@@ -1,15 +1,8 @@
-/* ********************************************************************* */
-/*  */
-/* OCaml */
-/*  */
-/* Xavier Leroy, projet Cristal, INRIA Rocquencourt */
-/*  */
-/* Copyright 1996 Institut National de Recherche en Informatique et */
-/* en Automatique.  All rights reserved.  This file is distributed */
-/* under the terms of the GNU Library General Public License, with */
-/* the special exception on linking described in file ../LICENSE. */
-/*  */
-/* ********************************************************************* */
+/* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * Copyright (C) 2017- Hongbo Zhang, Authors of ReScript
+ *
+ * SPDX-License-Identifier: MIT
+ */
 
 /* Array operations */
 type t<'a> = array<'a>
