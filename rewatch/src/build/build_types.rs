@@ -37,17 +37,30 @@ pub enum CompileState {
 pub enum CompilationStage {
     /// Not yet compiled, or source changed — needs full pipeline.
     Dirty,
-    /// AST generated. Carries hashes of source + AST artifacts.
-    Parsed { source_hash: Hash, ast_hash: Hash },
+    /// AST generated. Carries hashes of implementation (and optional interface)
+    /// source + AST artifacts.
+    Parsed {
+        implementation_source_hash: Hash,
+        implementation_ast_hash: Hash,
+        interface_source_hash: Option<Hash>,
+        interface_ast_hash: Option<Hash>,
+    },
     /// Compilation was attempted but failed (type error, etc.).
     /// Preserves parse hashes so the module can be recompiled when the
     /// error is resolved (e.g. a dependency fix).
-    CompileError { source_hash: Hash, ast_hash: Hash },
+    CompileError {
+        implementation_source_hash: Hash,
+        implementation_ast_hash: Hash,
+        interface_source_hash: Option<Hash>,
+        interface_ast_hash: Option<Hash>,
+    },
     /// Type-checked only (.cmi/.cmt produced, no .cmj).
     /// Accumulates parse hashes + typecheck artifact hashes.
     TypeChecked {
-        source_hash: Hash,
-        ast_hash: Hash,
+        implementation_source_hash: Hash,
+        implementation_ast_hash: Hash,
+        interface_source_hash: Option<Hash>,
+        interface_ast_hash: Option<Hash>,
         cmi_hash: Hash,
         cmt_hash: Hash,
         compiled_at: SystemTime,
@@ -55,8 +68,10 @@ pub enum CompilationStage {
     /// Fully compiled (.cmi/.cmt/.cmj + JS produced).
     /// Accumulates all prior hashes + build artifact hashes.
     Built {
-        source_hash: Hash,
-        ast_hash: Hash,
+        implementation_source_hash: Hash,
+        implementation_ast_hash: Hash,
+        interface_source_hash: Option<Hash>,
+        interface_ast_hash: Option<Hash>,
         cmi_hash: Hash,
         cmt_hash: Hash,
         cmj_hash: Hash,
@@ -168,13 +183,25 @@ impl CompilationStage {
         }
     }
 
-    /// The source hash, if any compilation has happened.
-    pub fn source_hash(&self) -> Option<Hash> {
+    /// The implementation source hash, if any compilation has happened.
+    pub fn implementation_source_hash(&self) -> Option<Hash> {
         match self {
-            CompilationStage::Parsed { source_hash, .. }
-            | CompilationStage::CompileError { source_hash, .. }
-            | CompilationStage::TypeChecked { source_hash, .. }
-            | CompilationStage::Built { source_hash, .. } => Some(*source_hash),
+            CompilationStage::Parsed {
+                implementation_source_hash,
+                ..
+            }
+            | CompilationStage::CompileError {
+                implementation_source_hash,
+                ..
+            }
+            | CompilationStage::TypeChecked {
+                implementation_source_hash,
+                ..
+            }
+            | CompilationStage::Built {
+                implementation_source_hash,
+                ..
+            } => Some(*implementation_source_hash),
             _ => None,
         }
     }
@@ -350,7 +377,6 @@ pub struct Interface {
     pub parse_state: ParseState,
     pub compile_state: CompileState,
     pub last_modified: SystemTime,
-    pub parse_dirty: bool,
     /// Compiler warning output (from bsc stderr) stored for re-emission
     /// during incremental builds when this module is not recompiled.
     /// Written to `.compiler.log` on each build cycle.
@@ -363,7 +389,6 @@ pub struct Implementation {
     pub parse_state: ParseState,
     pub compile_state: CompileState,
     pub last_modified: SystemTime,
-    pub parse_dirty: bool,
     /// Compiler warning output (from bsc stderr) stored for re-emission
     /// during incremental builds when this module is not recompiled.
     /// Written to `.compiler.log` on each build cycle.
@@ -709,23 +734,24 @@ impl BuildCommandState {
         if let Module::SourceFile(m) = module {
             let package = self.build_state.packages.get(&m.package_name)?;
             let impl_path = package.path.join(&m.source_file.implementation.path);
+            let mut matched = false;
             if canonicalized == impl_path {
                 if let Ok(modified) = canonicalized.metadata().and_then(|md| md.modified()) {
                     m.source_file.implementation.last_modified = modified;
                 }
-                m.source_file.implementation.parse_dirty = true;
-                return Some(module_name);
-            }
-
-            if let Some(ref mut interface) = m.source_file.interface {
+                matched = true;
+            } else if let Some(ref mut interface) = m.source_file.interface {
                 let iface_path = package.path.join(&interface.path);
                 if canonicalized == iface_path {
                     if let Ok(modified) = canonicalized.metadata().and_then(|md| md.modified()) {
                         interface.last_modified = modified;
                     }
-                    interface.parse_dirty = true;
-                    return Some(module_name);
+                    matched = true;
                 }
+            }
+            if matched {
+                m.set_compilation_stage(CompilationStage::Dirty);
+                return Some(module_name);
             }
         }
 

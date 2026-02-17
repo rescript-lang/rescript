@@ -856,7 +856,6 @@ pub fn parse_packages(build_state: &mut BuildState, output: OutputTarget, mode: 
                                 }
                                 m.source_file.implementation.path = file.to_owned();
                                 m.source_file.implementation.last_modified = metadata.modified;
-                                m.source_file.implementation.parse_dirty = true;
                             }
                         }
                         Entry::Vacant(entry) => {
@@ -869,7 +868,6 @@ pub fn parse_packages(build_state: &mut BuildState, output: OutputTarget, mode: 
                                         parse_state: ParseState::Pending,
                                         compile_state: CompileState::Pending,
                                         last_modified: metadata.modified,
-                                        parse_dirty: true,
                                         compile_warnings: None,
                                     },
                                     interface: None,
@@ -934,7 +932,6 @@ pub fn parse_packages(build_state: &mut BuildState, output: OutputTarget, mode: 
                                             parse_state: ParseState::Pending,
                                             compile_state: CompileState::Pending,
                                             last_modified: metadata.modified,
-                                            parse_dirty: true,
                                             compile_warnings: None,
                                         });
                                     }
@@ -949,7 +946,6 @@ pub fn parse_packages(build_state: &mut BuildState, output: OutputTarget, mode: 
                                             parse_state: ParseState::Pending,
                                             compile_state: CompileState::Pending,
                                             last_modified: metadata.modified,
-                                            parse_dirty: true,
                                             compile_warnings: None,
                                         },
                                         interface: Some(Interface {
@@ -957,7 +953,6 @@ pub fn parse_packages(build_state: &mut BuildState, output: OutputTarget, mode: 
                                             parse_state: ParseState::Pending,
                                             compile_state: CompileState::Pending,
                                             last_modified: metadata.modified,
-                                            parse_dirty: true,
                                             compile_warnings: None,
                                         }),
                                     },

@@ -28,10 +28,7 @@ pub fn generate_asts(
         .modules
         .values()
         .filter(|m| match m {
-            Module::SourceFile(sf) => {
-                sf.source_file.implementation.parse_dirty
-                    || sf.source_file.interface.as_ref().is_some_and(|i| i.parse_dirty)
-            }
+            Module::SourceFile(sf) => sf.compilation_stage().is_dirty(),
             Module::MlMap(mlmap) => mlmap.parse_dirty,
         })
         .count();
@@ -59,13 +56,7 @@ pub fn generate_asts(
 
                 Module::SourceFile(sf_module) => {
                     let source_file = &sf_module.source_file;
-                    let (ast_result, iast_result, dirty) = if source_file.implementation.parse_dirty
-                        || source_file
-                            .interface
-                            .as_ref()
-                            .map(|i| i.parse_dirty)
-                            .unwrap_or(false)
-                    {
+                    let (ast_result, iast_result, dirty) = if sf_module.compilation_stage().is_dirty() {
                         debug!("Generating AST for module: {module_name}");
                         inc();
                         let ast_result = generate_ast(
@@ -145,7 +136,7 @@ pub fn generate_asts(
             if let Some(Module::SourceFile(sf_module)) = build_state.build_state.modules.get_mut(&module_name)
             {
                 // if the module is dirty, mark it for recompilation
-                // do NOT change if the module is not parse_dirty, it needs to keep
+                // do NOT change if the module is not dirty, it needs to keep
                 // its compilation_stage if it was set before
                 if is_dirty {
                     sf_module.set_compilation_stage(CompilationStage::Dirty);
@@ -160,23 +151,21 @@ pub fn generate_asts(
                     match ast_result {
                         // In case of an internal dependency, we want to keep on
                         // propagating the warning with every compile. So we mark it as dirty for
-                        // the next round
+                        // the next round (cleanup_after_build removes AST files for
+                        // modules with ParseState::Warning, forcing re-parse next cycle).
                         Ok((_path, Some(stderr_warnings))) if package.is_local_dep => {
                             source_file.implementation.parse_state = ParseState::Warning;
-                            source_file.implementation.parse_dirty = true;
                             logs::append(package, &stderr_warnings);
                             stderr.push_str(&stderr_warnings);
                             impl_parse_ok = true;
                         }
                         Ok((_path, Some(_))) | Ok((_path, None)) => {
                             source_file.implementation.parse_state = ParseState::Success;
-                            source_file.implementation.parse_dirty = false;
                             impl_parse_ok = true;
                         }
                         Err(err) => {
                             // Some compilation error
                             source_file.implementation.parse_state = ParseState::ParseError;
-                            source_file.implementation.parse_dirty = true;
                             logs::append(package, &err);
                             has_failure = true;
                             stderr.push_str(&err);
@@ -187,12 +176,11 @@ pub fn generate_asts(
                     // stderr_warnings ))), the outputs are warnings
                     match iast_result {
                         // In case of an internal dependency, we want to keep on
-                        // propagating the warning with every compile. So we mark it as dirty for
-                        // the next round
+                        // propagating the warning with every compile (cleanup_after_build
+                        // removes AST files for modules with ParseState::Warning).
                         Ok(Some((_path, Some(stderr_warnings)))) if package.is_local_dep => {
                             if let Some(interface) = source_file.interface.as_mut() {
                                 interface.parse_state = ParseState::Warning;
-                                interface.parse_dirty = true;
                             }
                             logs::append(package, &stderr_warnings);
                             stderr.push_str(&stderr_warnings);
@@ -200,14 +188,12 @@ pub fn generate_asts(
                         Ok(Some((_, None))) | Ok(Some((_, Some(_)))) => {
                             if let Some(interface) = source_file.interface.as_mut() {
                                 interface.parse_state = ParseState::Success;
-                                interface.parse_dirty = false;
                             }
                         }
                         Err(err) => {
                             // Some compilation error
                             if let Some(interface) = source_file.interface.as_mut() {
                                 interface.parse_state = ParseState::ParseError;
-                                interface.parse_dirty = true;
                             }
                             logs::append(package, &err);
                             has_failure = true;
@@ -221,16 +207,33 @@ pub fn generate_asts(
 
                     // If parsing succeeded, upgrade from Dirty to Parsed with hashes
                     if is_dirty && impl_parse_ok && iface_parse_ok {
-                        let source_path = package.path.join(&source_file.implementation.path);
                         let build_path = package.get_build_path_for_output(output);
-                        let ast_path =
+
+                        let impl_source_path = package.path.join(&source_file.implementation.path);
+                        let impl_ast_path =
                             build_path.join(helpers::get_ast_path(&source_file.implementation.path));
-                        let source_hash = helpers::compute_file_hash(&source_path);
-                        let ast_hash = helpers::compute_file_hash(&ast_path);
-                        if let (Some(sh), Some(ah)) = (source_hash, ast_hash) {
+                        let implementation_source_hash = helpers::compute_file_hash(&impl_source_path);
+                        let implementation_ast_hash = helpers::compute_file_hash(&impl_ast_path);
+
+                        let (interface_source_hash, interface_ast_hash) =
+                            if let Some(interface) = &source_file.interface {
+                                let iface_source_path = package.path.join(&interface.path);
+                                let iface_ast_path = build_path.join(helpers::get_ast_path(&interface.path));
+                                (
+                                    helpers::compute_file_hash(&iface_source_path),
+                                    helpers::compute_file_hash(&iface_ast_path),
+                                )
+                            } else {
+                                (None, None)
+                            };
+
+                        if let (Some(ish), Some(iah)) = (implementation_source_hash, implementation_ast_hash)
+                        {
                             sf_module.set_compilation_stage(CompilationStage::Parsed {
-                                source_hash: sh,
-                                ast_hash: ah,
+                                implementation_source_hash: ish,
+                                implementation_ast_hash: iah,
+                                interface_source_hash,
+                                interface_ast_hash,
                             });
                         }
                     }

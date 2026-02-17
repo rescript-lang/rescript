@@ -30,10 +30,7 @@ use tracing::{info_span, instrument};
 
 fn is_dirty(module: &Module) -> bool {
     match module {
-        Module::SourceFile(sf) => {
-            sf.source_file.implementation.parse_dirty
-                || sf.source_file.interface.as_ref().is_some_and(|i| i.parse_dirty)
-        }
+        Module::SourceFile(sf) => sf.compilation_stage().is_dirty(),
         Module::MlMap(m) => m.parse_dirty,
     }
 }

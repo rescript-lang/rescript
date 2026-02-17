@@ -614,36 +614,50 @@ pub fn compile(
         let ocaml_path = pkg.get_ocaml_build_path_for_output(build_config.output);
 
         // Get source + ast hashes from previous stage, or compute them
-        let (source_hash, ast_hash) = match prev_stage {
-            CompilationStage::Parsed {
-                source_hash,
-                ast_hash,
-            }
-            | CompilationStage::CompileError {
-                source_hash,
-                ast_hash,
-            }
-            | CompilationStage::TypeChecked {
-                source_hash,
-                ast_hash,
-                ..
-            }
-            | CompilationStage::Built {
-                source_hash,
-                ast_hash,
-                ..
-            } => (source_hash, ast_hash),
-            CompilationStage::Dirty => {
-                // Fallback: compute from disk
-                let build_path = pkg.get_build_path_for_output(build_config.output);
-                let sh = helpers::compute_file_hash(&pkg.path.join(&impl_path));
-                let ah = helpers::compute_file_hash(&build_path.join(helpers::get_ast_path(&impl_path)));
-                match (sh, ah) {
-                    (Some(s), Some(a)) => (s, a),
-                    _ => continue,
+        let (implementation_source_hash, implementation_ast_hash, interface_source_hash, interface_ast_hash) =
+            match prev_stage {
+                CompilationStage::Parsed {
+                    implementation_source_hash,
+                    implementation_ast_hash,
+                    interface_source_hash,
+                    interface_ast_hash,
                 }
-            }
-        };
+                | CompilationStage::CompileError {
+                    implementation_source_hash,
+                    implementation_ast_hash,
+                    interface_source_hash,
+                    interface_ast_hash,
+                }
+                | CompilationStage::TypeChecked {
+                    implementation_source_hash,
+                    implementation_ast_hash,
+                    interface_source_hash,
+                    interface_ast_hash,
+                    ..
+                }
+                | CompilationStage::Built {
+                    implementation_source_hash,
+                    implementation_ast_hash,
+                    interface_source_hash,
+                    interface_ast_hash,
+                    ..
+                } => (
+                    implementation_source_hash,
+                    implementation_ast_hash,
+                    interface_source_hash,
+                    interface_ast_hash,
+                ),
+                CompilationStage::Dirty => {
+                    // Fallback: compute from disk
+                    let build_path = pkg.get_build_path_for_output(build_config.output);
+                    let sh = helpers::compute_file_hash(&pkg.path.join(&impl_path));
+                    let ah = helpers::compute_file_hash(&build_path.join(helpers::get_ast_path(&impl_path)));
+                    match (sh, ah) {
+                        (Some(s), Some(a)) => (s, a, None, None),
+                        _ => continue,
+                    }
+                }
+            };
 
         let cmi_hash = helpers::compute_file_hash(&helpers::get_compiler_asset_in(
             &ocaml_path,
@@ -662,8 +676,10 @@ pub fn compile(
             match (mode.emits_js(), cmi_hash, cmt_hash) {
                 (true, Some(cmi), Some(cmt)) => {
                     sf.set_compilation_stage(CompilationStage::TypeChecked {
-                        source_hash,
-                        ast_hash,
+                        implementation_source_hash,
+                        implementation_ast_hash,
+                        interface_source_hash,
+                        interface_ast_hash,
                         cmi_hash: cmi,
                         cmt_hash: cmt,
                         compiled_at: now,
@@ -676,8 +692,10 @@ pub fn compile(
                     ));
                     if let Some(cmj) = cmj_hash {
                         sf.set_compilation_stage(CompilationStage::Built {
-                            source_hash,
-                            ast_hash,
+                            implementation_source_hash,
+                            implementation_ast_hash,
+                            interface_source_hash,
+                            interface_ast_hash,
                             cmi_hash: cmi,
                             cmt_hash: cmt,
                             cmj_hash: cmj,
@@ -687,8 +705,10 @@ pub fn compile(
                 }
                 (false, Some(cmi), Some(cmt)) => {
                     sf.set_compilation_stage(CompilationStage::TypeChecked {
-                        source_hash,
-                        ast_hash,
+                        implementation_source_hash,
+                        implementation_ast_hash,
+                        interface_source_hash,
+                        interface_ast_hash,
                         cmi_hash: cmi,
                         cmt_hash: cmt,
                         compiled_at: now,
@@ -708,21 +728,37 @@ pub fn compile(
             let prev_stage = sf.compilation_stage();
             let hashes = match prev_stage {
                 CompilationStage::Parsed {
-                    source_hash,
-                    ast_hash,
+                    implementation_source_hash,
+                    implementation_ast_hash,
+                    interface_source_hash,
+                    interface_ast_hash,
                 }
                 | CompilationStage::CompileError {
-                    source_hash,
-                    ast_hash,
-                } => Some((source_hash, ast_hash)),
+                    implementation_source_hash,
+                    implementation_ast_hash,
+                    interface_source_hash,
+                    interface_ast_hash,
+                } => Some((
+                    implementation_source_hash,
+                    implementation_ast_hash,
+                    interface_source_hash,
+                    interface_ast_hash,
+                )),
                 _ => None,
             };
-            if let Some((source_hash, ast_hash)) = hashes
+            if let Some((
+                implementation_source_hash,
+                implementation_ast_hash,
+                interface_source_hash,
+                interface_ast_hash,
+            )) = hashes
                 && let Some(Module::SourceFile(sf)) = build_state.build_state.modules.get_mut(name)
             {
                 sf.set_compilation_stage(CompilationStage::CompileError {
-                    source_hash,
-                    ast_hash,
+                    implementation_source_hash,
+                    implementation_ast_hash,
+                    interface_source_hash,
+                    interface_ast_hash,
                 });
             }
         }
