@@ -79,20 +79,21 @@ describe("warning configuration", () => {
   it("warn-error flag causes recompilation and is not sticky across builds", () =>
     runRewatchTest(async ({ cli, writeFileInSandbox }) => {
       // Write a file that triggers warning 110 (%todo)
-      await writeFileInSandbox(
-        "src/Root.res",
-        "let todo = _ => %todo\n",
-      );
+      await writeFileInSandbox("src/Root.res", "let todo = _ => %todo\n");
 
       // Build 1: normal build — should succeed with warning 110
       const b1 = await cli.build();
       expect(b1.status).toBe(0);
-      expect(stripVTControlCharacters(b1.stderr)).toContain("Warning number 110");
+      expect(stripVTControlCharacters(b1.stderr)).toContain(
+        "Warning number 110",
+      );
 
       // Build 2: --warn-error +110 — should recompile and fail
       const b2 = await cli.build(["--warn-error", "+110"]);
       expect(b2.status).toBe(1);
-      expect(stripVTControlCharacters(b2.stderr)).toContain("Warning number 110 (configured as error)");
+      expect(stripVTControlCharacters(b2.stderr)).toContain(
+        "Warning number 110 (configured as error)",
+      );
 
       // Build 3: normal build again — should succeed (warn-error not sticky)
       const b3 = await cli.build();
