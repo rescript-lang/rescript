@@ -593,7 +593,8 @@ pub fn compile(
         let ocaml_path = pkg.get_ocaml_build_path_for_output(build_config.output);
 
         // Get source + ast hashes and parse warnings from previous stage, or compute them
-        let has_parse_warnings = prev_stage.has_parse_warnings();
+        let implementation_parse_warnings = prev_stage.implementation_parse_warnings().map(str::to_owned);
+        let interface_parse_warnings = prev_stage.interface_parse_warnings().map(str::to_owned);
         let (implementation_source_hash, implementation_ast_hash, interface_source_hash, interface_ast_hash) =
             match prev_stage {
                 CompilationStage::Parsed {
@@ -658,17 +659,6 @@ pub fn compile(
             let compile_warnings = module_compile_warnings.remove(name);
             match (mode.emits_js(), cmi_hash, cmt_hash) {
                 (true, Some(cmi), Some(cmt)) => {
-                    sf.set_compilation_stage(CompilationStage::TypeChecked {
-                        implementation_source_hash,
-                        implementation_ast_hash,
-                        interface_source_hash,
-                        interface_ast_hash,
-                        cmi_hash: cmi,
-                        cmt_hash: cmt,
-                        compiled_at: now,
-                        has_parse_warnings,
-                        compile_warnings: compile_warnings.clone(),
-                    });
                     let cmj_hash = helpers::compute_file_hash(&helpers::get_compiler_asset_in(
                         &ocaml_path,
                         &pkg.namespace,
@@ -676,6 +666,18 @@ pub fn compile(
                         "cmj",
                     ));
                     if let Some(cmj) = cmj_hash {
+                        sf.set_compilation_stage(CompilationStage::TypeChecked {
+                            implementation_source_hash,
+                            implementation_ast_hash,
+                            interface_source_hash,
+                            interface_ast_hash,
+                            cmi_hash: cmi,
+                            cmt_hash: cmt,
+                            compiled_at: now,
+                            implementation_parse_warnings: None,
+                            interface_parse_warnings: None,
+                            compile_warnings: None,
+                        });
                         sf.set_compilation_stage(CompilationStage::Built {
                             implementation_source_hash,
                             implementation_ast_hash,
@@ -685,7 +687,21 @@ pub fn compile(
                             cmt_hash: cmt,
                             cmj_hash: cmj,
                             compiled_at: now,
-                            has_parse_warnings,
+                            implementation_parse_warnings,
+                            interface_parse_warnings,
+                            compile_warnings,
+                        });
+                    } else {
+                        sf.set_compilation_stage(CompilationStage::TypeChecked {
+                            implementation_source_hash,
+                            implementation_ast_hash,
+                            interface_source_hash,
+                            interface_ast_hash,
+                            cmi_hash: cmi,
+                            cmt_hash: cmt,
+                            compiled_at: now,
+                            implementation_parse_warnings,
+                            interface_parse_warnings,
                             compile_warnings,
                         });
                     }
@@ -699,7 +715,8 @@ pub fn compile(
                         cmi_hash: cmi,
                         cmt_hash: cmt,
                         compiled_at: now,
-                        has_parse_warnings,
+                        implementation_parse_warnings,
+                        interface_parse_warnings,
                         compile_warnings,
                     });
                 }
@@ -715,7 +732,8 @@ pub fn compile(
     for name in &errored_modules {
         if let Some(Module::SourceFile(sf)) = build_state.build_state.modules.get(name) {
             let prev_stage = sf.compilation_stage();
-            let has_parse_warnings = prev_stage.has_parse_warnings();
+            let implementation_parse_warnings = prev_stage.implementation_parse_warnings().map(str::to_owned);
+            let interface_parse_warnings = prev_stage.interface_parse_warnings().map(str::to_owned);
             let hashes = match prev_stage {
                 CompilationStage::Parsed {
                     implementation_source_hash,
@@ -751,7 +769,8 @@ pub fn compile(
                     implementation_ast_hash,
                     interface_source_hash,
                     interface_ast_hash,
-                    has_parse_warnings,
+                    implementation_parse_warnings,
+                    interface_parse_warnings,
                 });
             }
         }
@@ -764,13 +783,26 @@ pub fn compile(
         if compile_universe.all.contains(module_name) {
             continue;
         }
-        if let Module::SourceFile(sf_module) = module
-            && let Some(warning) = sf_module.compilation_stage().compile_warnings()
-        {
-            if let Some(package) = build_state.get_package(&sf_module.package_name) {
-                logs::append(package, warning);
+        if let Module::SourceFile(sf_module) = module {
+            let stage = sf_module.compilation_stage();
+            if let Some(warning) = stage.implementation_parse_warnings() {
+                if let Some(package) = build_state.get_package(&sf_module.package_name) {
+                    logs::append(package, warning);
+                }
+                compile_warnings.push_str(warning);
             }
-            compile_warnings.push_str(warning);
+            if let Some(warning) = stage.interface_parse_warnings() {
+                if let Some(package) = build_state.get_package(&sf_module.package_name) {
+                    logs::append(package, warning);
+                }
+                compile_warnings.push_str(warning);
+            }
+            if let Some(warning) = stage.compile_warnings() {
+                if let Some(package) = build_state.get_package(&sf_module.package_name) {
+                    logs::append(package, warning);
+                }
+                compile_warnings.push_str(warning);
+            }
         }
     }
 

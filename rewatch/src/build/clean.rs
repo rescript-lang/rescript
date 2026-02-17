@@ -259,7 +259,8 @@ pub fn cleanup_previous_build(
                         implementation_ast_hash: iah,
                         interface_source_hash,
                         interface_ast_hash,
-                        has_parse_warnings: false,
+                        implementation_parse_warnings: None,
+                        interface_parse_warnings: None,
                     });
 
                     // If compilation artifacts are also fresh (.cmt newer
@@ -311,7 +312,8 @@ pub fn cleanup_previous_build(
                                 cmi_hash: cmi,
                                 cmt_hash: cmt,
                                 compiled_at: *cmt_last_modified,
-                                has_parse_warnings: false,
+                                implementation_parse_warnings: None,
+                                interface_parse_warnings: None,
                                 compile_warnings: None,
                             });
                             if cmj_exists && let Some(cmj) = cmj_hash {
@@ -324,7 +326,8 @@ pub fn cleanup_previous_build(
                                     cmt_hash: cmt,
                                     cmj_hash: cmj,
                                     compiled_at: *cmt_last_modified,
-                                    has_parse_warnings: false,
+                                    implementation_parse_warnings: None,
+                                    interface_parse_warnings: None,
                                     compile_warnings: None,
                                 });
                             }
@@ -370,10 +373,6 @@ pub fn cleanup_previous_build(
     (diff_len, compile_assets_state.ast_rescript_file_locations.len())
 }
 
-fn has_parse_warnings(sf_module: &SourceFileModule) -> bool {
-    sf_module.compilation_stage().has_parse_warnings()
-}
-
 fn has_compile_warnings(sf_module: &SourceFileModule) -> bool {
     sf_module.compilation_stage().has_compile_warnings()
 }
@@ -385,10 +384,6 @@ pub fn cleanup_after_build(build_state: &BuildCommandState, output: OutputTarget
         };
         let package = build_state.get_package(&sf_module.package_name).unwrap();
         let ocaml_build_path = package.get_ocaml_build_path_for_output(output);
-        if has_parse_warnings(sf_module) {
-            remove_iast(&ocaml_build_path, &sf_module.source_file.implementation.path);
-            remove_ast(&ocaml_build_path, &sf_module.source_file.implementation.path);
-        }
         if has_compile_warnings(sf_module) {
             // Only retain AST file if the compilation doesn't have warnings.
             // We remove the AST in favor of the CMI/CMT/CMJ files because if

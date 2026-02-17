@@ -35,7 +35,8 @@ pub enum CompilationStage {
         implementation_ast_hash: Hash,
         interface_source_hash: Option<Hash>,
         interface_ast_hash: Option<Hash>,
-        has_parse_warnings: bool,
+        implementation_parse_warnings: Option<String>,
+        interface_parse_warnings: Option<String>,
     },
     /// Compilation was attempted but failed (type error, etc.).
     /// Preserves parse hashes so the module can be recompiled when the
@@ -45,7 +46,8 @@ pub enum CompilationStage {
         implementation_ast_hash: Hash,
         interface_source_hash: Option<Hash>,
         interface_ast_hash: Option<Hash>,
-        has_parse_warnings: bool,
+        implementation_parse_warnings: Option<String>,
+        interface_parse_warnings: Option<String>,
     },
     /// Type-checked only (.cmi/.cmt produced, no .cmj).
     /// Accumulates parse hashes + typecheck artifact hashes.
@@ -57,7 +59,8 @@ pub enum CompilationStage {
         cmi_hash: Hash,
         cmt_hash: Hash,
         compiled_at: SystemTime,
-        has_parse_warnings: bool,
+        implementation_parse_warnings: Option<String>,
+        interface_parse_warnings: Option<String>,
         compile_warnings: Option<String>,
     },
     /// Fully compiled (.cmi/.cmt/.cmj + JS produced).
@@ -71,7 +74,8 @@ pub enum CompilationStage {
         cmt_hash: Hash,
         cmj_hash: Hash,
         compiled_at: SystemTime,
-        has_parse_warnings: bool,
+        implementation_parse_warnings: Option<String>,
+        interface_parse_warnings: Option<String>,
         compile_warnings: Option<String>,
     },
 }
@@ -96,18 +100,72 @@ impl CompilationStage {
     pub fn has_parse_warnings(&self) -> bool {
         match self {
             CompilationStage::Parsed {
-                has_parse_warnings, ..
+                implementation_parse_warnings,
+                interface_parse_warnings,
+                ..
             }
             | CompilationStage::CompileError {
-                has_parse_warnings, ..
+                implementation_parse_warnings,
+                interface_parse_warnings,
+                ..
             }
             | CompilationStage::TypeChecked {
-                has_parse_warnings, ..
+                implementation_parse_warnings,
+                interface_parse_warnings,
+                ..
             }
             | CompilationStage::Built {
-                has_parse_warnings, ..
-            } => *has_parse_warnings,
+                implementation_parse_warnings,
+                interface_parse_warnings,
+                ..
+            } => implementation_parse_warnings.is_some() || interface_parse_warnings.is_some(),
             _ => false,
+        }
+    }
+
+    /// The implementation parse warning text, if any.
+    pub fn implementation_parse_warnings(&self) -> Option<&str> {
+        match self {
+            CompilationStage::Parsed {
+                implementation_parse_warnings,
+                ..
+            }
+            | CompilationStage::CompileError {
+                implementation_parse_warnings,
+                ..
+            }
+            | CompilationStage::TypeChecked {
+                implementation_parse_warnings,
+                ..
+            }
+            | CompilationStage::Built {
+                implementation_parse_warnings,
+                ..
+            } => implementation_parse_warnings.as_deref(),
+            _ => None,
+        }
+    }
+
+    /// The interface parse warning text, if any.
+    pub fn interface_parse_warnings(&self) -> Option<&str> {
+        match self {
+            CompilationStage::Parsed {
+                interface_parse_warnings,
+                ..
+            }
+            | CompilationStage::CompileError {
+                interface_parse_warnings,
+                ..
+            }
+            | CompilationStage::TypeChecked {
+                interface_parse_warnings,
+                ..
+            }
+            | CompilationStage::Built {
+                interface_parse_warnings,
+                ..
+            } => interface_parse_warnings.as_deref(),
+            _ => None,
         }
     }
 
