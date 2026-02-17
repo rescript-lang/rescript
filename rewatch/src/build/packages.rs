@@ -860,9 +860,10 @@ pub fn parse_packages(build_state: &mut BuildState, output: OutputTarget, mode: 
                             }
                         }
                         Entry::Vacant(entry) => {
-                            entry.insert(Module::SourceFile(SourceFileModule {
-                                package_name: package.name.to_owned(),
-                                source_file: SourceFile {
+                            entry.insert(Module::SourceFile(SourceFileModule::new(
+                                module_name.clone(),
+                                package.name.to_owned(),
+                                SourceFile {
                                     implementation: Implementation {
                                         path: file.to_owned(),
                                         parse_state: ParseState::Pending,
@@ -873,12 +874,8 @@ pub fn parse_packages(build_state: &mut BuildState, output: OutputTarget, mode: 
                                     },
                                     interface: None,
                                 },
-                                is_type_dev: metadata.is_type_dev,
-                                deps: AHashSet::new(),
-                                dependents: AHashSet::new(),
-                                needs_dependencies_rescan: true,
-                                compilation_stage: CompilationStage::Dirty,
-                            }));
+                                metadata.is_type_dev,
+                            )));
                         }
                     }
                     if let Some((existing_path, duplicate_path)) = duplicate_paths {
@@ -942,9 +939,10 @@ pub fn parse_packages(build_state: &mut BuildState, output: OutputTarget, mode: 
                                         });
                                     }
                                 })
-                                .or_insert(Module::SourceFile(SourceFileModule {
-                                    package_name: package.name.to_owned(),
-                                    source_file: SourceFile {
+                                .or_insert(Module::SourceFile(SourceFileModule::new(
+                                    module_name.clone(),
+                                    package.name.to_owned(),
+                                    SourceFile {
                                         // this will be overwritten later
                                         implementation: Implementation {
                                             path: implementation_filename,
@@ -963,12 +961,8 @@ pub fn parse_packages(build_state: &mut BuildState, output: OutputTarget, mode: 
                                             compile_warnings: None,
                                         }),
                                     },
-                                    is_type_dev: metadata.is_type_dev,
-                                    deps: AHashSet::new(),
-                                    dependents: AHashSet::new(),
-                                    needs_dependencies_rescan: true,
-                                    compilation_stage: CompilationStage::Dirty,
-                                }));
+                                    metadata.is_type_dev,
+                                )));
                         }
                     }
                 }

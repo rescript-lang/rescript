@@ -148,7 +148,7 @@ pub fn generate_asts(
                 // do NOT change if the module is not parse_dirty, it needs to keep
                 // its compilation_stage if it was set before
                 if is_dirty {
-                    sf_module.compilation_stage = CompilationStage::Dirty;
+                    sf_module.set_compilation_stage(CompilationStage::Dirty);
                     sf_module.needs_dependencies_rescan = true;
                 }
                 let mut impl_parse_ok = false;
@@ -228,10 +228,10 @@ pub fn generate_asts(
                         let source_hash = helpers::compute_file_hash(&source_path);
                         let ast_hash = helpers::compute_file_hash(&ast_path);
                         if let (Some(sh), Some(ah)) = (source_hash, ast_hash) {
-                            sf_module.compilation_stage = CompilationStage::Parsed {
+                            sf_module.set_compilation_stage(CompilationStage::Parsed {
                                 source_hash: sh,
                                 ast_hash: ah,
-                            };
+                            });
                         }
                     }
                 }
@@ -320,7 +320,7 @@ pub fn generate_asts(
                 .unwrap_or_default();
             for dep_name in dependents {
                 if let Some(Module::SourceFile(sf)) = build_state.build_state.modules.get_mut(&dep_name) {
-                    sf.compilation_stage = CompilationStage::Dirty;
+                    sf.set_compilation_stage(CompilationStage::Dirty);
                 }
             }
         }

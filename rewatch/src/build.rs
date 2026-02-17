@@ -320,7 +320,10 @@ pub fn incremental_build(
             if module.needs_compile_for_mode(mode)
                 && let Module::SourceFile(sf) = module
             {
-                println!("needs compile: {module_name} (stage: {:?})", sf.compilation_stage);
+                println!(
+                    "needs compile: {module_name} (stage: {:?})",
+                    sf.compilation_stage()
+                );
             }
         }
     };

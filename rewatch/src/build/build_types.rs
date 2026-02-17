@@ -75,6 +75,61 @@ impl CompilationStage {
         matches!(self, CompilationStage::CompileError { .. })
     }
 
+    /// Whether `self → new_stage` is a valid compilation stage transition.
+    ///
+    /// Valid transitions:
+    /// ```text
+    /// Dirty        → Dirty, Parsed, TypeChecked, Built
+    /// Parsed       → Dirty, Parsed, CompileError, TypeChecked, Built
+    /// CompileError → Dirty, CompileError, TypeChecked, Built
+    /// TypeChecked  → Dirty, CompileError, TypeChecked, Built
+    /// Built        → Dirty, CompileError, TypeChecked, Built
+    /// ```
+    pub fn can_transition_to(self, new_stage: CompilationStage) -> bool {
+        use CompilationStage::*;
+        matches!(
+            (self, new_stage),
+            // Any stage can reset to Dirty:
+            //   parse.rs     — source changed on disk, or mlmap changed
+            //   compile.rs   — deleted/expired deps, or hash computation failed
+            (_, Dirty)
+            // Dirty → Parsed: parse.rs — AST successfully generated
+            | (Dirty, Parsed { .. })
+            // Dirty → TypeChecked: clean.rs — .cmi/.cmt exist on disk but no
+            //   .cmj (e.g. after an LSP TypecheckOnly build that was interrupted)
+            | (Dirty, TypeChecked { .. })
+            // Dirty → Built: clean.rs — all artifacts (.cmi/.cmt/.cmj) exist on
+            //   disk and .cmt is newer than .ast (previous build completed fully)
+            | (Dirty, Built { .. })
+            // Parsed → Parsed: parse.rs — re-parsed (e.g. re-entered parse phase)
+            | (Parsed { .. }, Parsed { .. })
+            // Parsed → CompileError: compile.rs — compilation failed (type error)
+            | (Parsed { .. }, CompileError { .. })
+            // Parsed → TypeChecked: compile.rs — TypecheckOnly build succeeded
+            | (Parsed { .. }, TypeChecked { .. })
+            // Parsed → Built: compile.rs — FullCompile build succeeded
+            | (Parsed { .. }, Built { .. })
+            // CompileError → CompileError: compile.rs — still failing after retry
+            | (CompileError { .. }, CompileError { .. })
+            // CompileError → TypeChecked: compile.rs — dependency fix, TypecheckOnly
+            | (CompileError { .. }, TypeChecked { .. })
+            // CompileError → Built: compile.rs — dependency fix, FullCompile
+            | (CompileError { .. }, Built { .. })
+            // TypeChecked → CompileError: compile.rs — dependency API change broke it
+            | (TypeChecked { .. }, CompileError { .. })
+            // TypeChecked → TypeChecked: compile.rs — re-typechecked successfully
+            | (TypeChecked { .. }, TypeChecked { .. })
+            // TypeChecked → Built: compile.rs — FullCompile after TypecheckOnly
+            | (TypeChecked { .. }, Built { .. })
+            // Built → CompileError: compile.rs — dependency API change broke it
+            | (Built { .. }, CompileError { .. })
+            // Built → TypeChecked: compile.rs — TypecheckOnly re-build
+            | (Built { .. }, TypeChecked { .. })
+            // Built → Built: compile.rs — recompiled, all artifacts still present
+            | (Built { .. }, Built { .. })
+        )
+    }
+
     /// Numeric ordering for stage comparison: Dirty(0) < Parsed(1) < CompileError(1) < TypeChecked(2) < Built(3).
     fn ordinal(self) -> u8 {
         match self {
@@ -334,6 +389,10 @@ pub struct SourceFile {
 /// compilation pipeline: Dirty → Parsed → TypeChecked → Built.
 #[derive(Debug, Clone)]
 pub struct SourceFileModule {
+    /// The module name (HashMap key), stored here so that methods like
+    /// [`set_compilation_stage`] can include it in diagnostics and tracing
+    /// without needing it passed in at every call site.
+    pub module_name: String,
     /// The package this module belongs to, used to look up package-specific
     /// configuration such as namespace, compiler flags, and source paths.
     pub package_name: String,
@@ -356,11 +415,59 @@ pub struct SourceFileModule {
     /// and reset to `false` in `deps.rs` after dependencies are resolved.
     pub needs_dependencies_rescan: bool,
     /// How far this module has progressed through the build pipeline
-    /// (Dirty → TypeChecked → Built). Set to `Dirty` in `parse.rs` and
-    /// `compile.rs` (when dependencies are invalidated), advanced to the
-    /// target stage in `compile.rs` after successful compilation, and
-    /// restored to `Built` in `clean.rs` when existing artifacts are fresh.
-    pub compilation_stage: CompilationStage,
+    /// (Dirty → Parsed → CompileError / TypeChecked → Built).
+    ///
+    /// Private — use [`compilation_stage()`] to read and
+    /// [`set_compilation_stage()`] to write, which logs every transition
+    /// via `tracing::debug!` for OTEL observability.
+    compilation_stage: CompilationStage,
+}
+
+impl SourceFileModule {
+    /// Create a new module in the `Dirty` stage.
+    pub fn new(
+        module_name: String,
+        package_name: String,
+        source_file: SourceFile,
+        is_type_dev: bool,
+    ) -> Self {
+        Self {
+            module_name,
+            package_name,
+            source_file,
+            is_type_dev,
+            deps: AHashSet::new(),
+            dependents: AHashSet::new(),
+            needs_dependencies_rescan: true,
+            compilation_stage: CompilationStage::Dirty,
+        }
+    }
+
+    /// Current compilation stage.
+    pub fn compilation_stage(&self) -> CompilationStage {
+        self.compilation_stage
+    }
+
+    /// Advance (or reset) the compilation stage, logging the transition.
+    ///
+    /// Panics in debug builds if the transition is invalid (see
+    /// [`CompilationStage::can_transition_to`]).
+    pub fn set_compilation_stage(&mut self, new_stage: CompilationStage) {
+        debug_assert!(
+            self.compilation_stage.can_transition_to(new_stage),
+            "invalid compilation_stage transition for {}: {:?} → {:?}",
+            self.module_name,
+            self.compilation_stage,
+            new_stage,
+        );
+        tracing::debug!(
+            module = %self.module_name,
+            from = ?self.compilation_stage,
+            to = ?new_stage,
+            "compilation_stage transition"
+        );
+        self.compilation_stage = new_stage;
+    }
 }
 
 /// A synthetic namespace map module (.mlmap). Compiled during the parse phase,
@@ -448,7 +555,7 @@ impl Module {
     /// MlMap modules never need compilation (they're handled in the parse phase).
     pub fn needs_compile_for_mode(&self, mode: CompileMode) -> bool {
         match self {
-            Module::SourceFile(m) => m.compilation_stage.needs_compile_for_mode(mode),
+            Module::SourceFile(m) => m.compilation_stage().needs_compile_for_mode(mode),
             Module::MlMap(_) => false,
         }
     }

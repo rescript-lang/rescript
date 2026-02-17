@@ -188,7 +188,7 @@ fn build_batch(build_state: &mut BuildCommandState, module_names: Vec<String>) -
         .modules
         .iter()
         .filter_map(|(name, module)| match module {
-            Module::SourceFile(sf) if sf.compilation_stage.is_compile_error() => Some(name.clone()),
+            Module::SourceFile(sf) if sf.compilation_stage().is_compile_error() => Some(name.clone()),
             _ => None,
         })
         .collect();
@@ -371,7 +371,7 @@ fn compile_resolved_errors(
                 .build_state
                 .modules
                 .get(*name)
-                .is_some_and(|m| matches!(m, Module::SourceFile(sf) if matches!(sf.compilation_stage, crate::build::build_types::CompilationStage::TypeChecked { .. })))
+                .is_some_and(|m| matches!(m, Module::SourceFile(sf) if matches!(sf.compilation_stage(), crate::build::build_types::CompilationStage::TypeChecked { .. })))
         })
         .cloned()
         .collect();

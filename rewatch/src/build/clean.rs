@@ -278,7 +278,7 @@ pub fn cleanup_previous_build(
                     }
                     _ => CompilationStage::Dirty,
                 };
-                sf_module.compilation_stage = new_stage;
+                sf_module.set_compilation_stage(new_stage);
             }
 
             let sf_module = match module {

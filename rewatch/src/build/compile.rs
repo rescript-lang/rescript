@@ -186,7 +186,7 @@ pub fn compute_universe_for_scope(scope: &CompileScope, build_state: &BuildComma
                 .iter()
                 .filter(|name| {
                     build_state.get_module(name).is_some_and(|m| match m {
-                        Module::SourceFile(sf) => sf.compilation_stage.is_dirty(),
+                        Module::SourceFile(sf) => sf.compilation_stage().is_dirty(),
                         Module::MlMap(_) => false,
                     })
                 })
@@ -608,7 +608,7 @@ pub fn compile(
 
         let impl_path = sf.source_file.implementation.path.clone();
         let package_name = sf.package_name.clone();
-        let prev_stage = sf.compilation_stage;
+        let prev_stage = sf.compilation_stage();
 
         let pkg = build_state.build_state.packages.get(&package_name).unwrap();
         let ocaml_path = pkg.get_ocaml_build_path_for_output(build_config.output);
@@ -689,7 +689,7 @@ pub fn compile(
         };
 
         if let Some(Module::SourceFile(sf)) = build_state.build_state.modules.get_mut(name) {
-            sf.compilation_stage = new_stage;
+            sf.set_compilation_stage(new_stage);
         }
     }
 
@@ -697,7 +697,7 @@ pub fn compile(
     // their AST hashes so they can be recompiled when the error is resolved.
     for name in &errored_modules {
         if let Some(Module::SourceFile(sf)) = build_state.build_state.modules.get(name) {
-            let prev_stage = sf.compilation_stage;
+            let prev_stage = sf.compilation_stage();
             let hashes = match prev_stage {
                 CompilationStage::Parsed {
                     source_hash,
@@ -712,17 +712,10 @@ pub fn compile(
             if let Some((source_hash, ast_hash)) = hashes
                 && let Some(Module::SourceFile(sf)) = build_state.build_state.modules.get_mut(name)
             {
-                let new_stage = CompilationStage::CompileError {
+                sf.set_compilation_stage(CompilationStage::CompileError {
                     source_hash,
                     ast_hash,
-                };
-                tracing::debug!(
-                    module = %name,
-                    from = ?sf.compilation_stage,
-                    to = ?new_stage,
-                    "compile.rs: error post-loop stage update"
-                );
-                sf.compilation_stage = new_stage;
+                });
             }
         }
     }
@@ -1192,11 +1185,11 @@ fn compile_file(
 }
 
 pub fn mark_modules_with_deleted_deps_dirty(build_state: &mut BuildState) {
-    build_state.modules.iter_mut().for_each(|(_module_name, module)| {
+    build_state.modules.iter_mut().for_each(|(_, module)| {
         if let Module::SourceFile(sf) = module
             && !sf.deps.is_disjoint(&build_state.deleted_modules)
         {
-            sf.compilation_stage = CompilationStage::Dirty;
+            sf.set_compilation_stage(CompilationStage::Dirty);
         }
     });
 }
@@ -1229,7 +1222,7 @@ pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildCommandState)
                 let dependent_module = build_state.modules.get(dependent).unwrap();
                 match dependent_module {
                     Module::SourceFile(dep_sf) => {
-                        let compiled_at = sf_module.compilation_stage.compiled_at();
+                        let compiled_at = sf_module.compilation_stage().compiled_at();
                         if compiled_at.is_none() {
                             modules_with_expired_deps.insert(module_name.to_string());
                         }
@@ -1237,7 +1230,7 @@ pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildCommandState)
                         // we compare the last compiled time of the dependent module with the last
                         // compile of the interface of the module it depends on, if the interface
                         // didn't change it doesn't matter
-                        match (dep_sf.compilation_stage.compiled_at(), compiled_at) {
+                        match (dep_sf.compilation_stage().compiled_at(), compiled_at) {
                             (Some(last_compiled_dependent), Some(last_compiled)) => {
                                 if last_compiled_dependent < last_compiled {
                                     modules_with_expired_deps.insert(dependent.to_string());
@@ -1257,8 +1250,8 @@ pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildCommandState)
 
                             if let Module::SourceFile(dep_sf) = dependent_module
                                 && let (Some(last_compiled_dependent), Some(last_compiled)) = (
-                                    dep_sf.compilation_stage.compiled_at(),
-                                    sf_module.compilation_stage.compiled_at(),
+                                    dep_sf.compilation_stage().compiled_at(),
+                                    sf_module.compilation_stage().compiled_at(),
                                 )
                                 && last_compiled_dependent < last_compiled
                             {
@@ -1279,15 +1272,10 @@ pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildCommandState)
             // Parsed modules were just parsed in this cycle and resetting them
             // to Dirty loses their source/AST hashes, which prevents
             // CompileError from being set if compilation fails.
-            && !sf.compilation_stage.is_compile_error()
-            && !matches!(sf.compilation_stage, CompilationStage::Parsed { .. })
+            && !sf.compilation_stage().is_compile_error()
+            && !matches!(sf.compilation_stage(), CompilationStage::Parsed { .. })
         {
-            tracing::debug!(
-                module = %module_name,
-                from = ?sf.compilation_stage,
-                "compile.rs: mark_modules_with_expired_deps_dirty"
-            );
-            sf.compilation_stage = CompilationStage::Dirty;
+            sf.set_compilation_stage(CompilationStage::Dirty);
         }
     });
 }
