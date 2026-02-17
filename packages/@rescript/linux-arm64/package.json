@@ -3,6 +3,7 @@
   "version": "12.2.0",
   "description": "ReScript binaries for Linux ARM64",
   "type": "module",
+  "license": "(LGPL-3.0-or-later AND MIT)",
   "homepage": "https://rescript-lang.org",
   "bugs": "https://github.com/rescript-lang/rescript/issues",
   "repository": {
