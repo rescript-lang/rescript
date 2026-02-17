@@ -866,7 +866,6 @@ pub fn parse_packages(build_state: &mut BuildState, output: OutputTarget, mode: 
                                     implementation: Implementation {
                                         path: file.to_owned(),
                                         last_modified: metadata.modified,
-                                        compile_warnings: None,
                                     },
                                     interface: None,
                                 },
@@ -928,7 +927,6 @@ pub fn parse_packages(build_state: &mut BuildState, output: OutputTarget, mode: 
                                         m.source_file.interface = Some(Interface {
                                             path: file.to_owned(),
                                             last_modified: metadata.modified,
-                                            compile_warnings: None,
                                         });
                                     }
                                 })
@@ -940,12 +938,10 @@ pub fn parse_packages(build_state: &mut BuildState, output: OutputTarget, mode: 
                                         implementation: Implementation {
                                             path: implementation_filename,
                                             last_modified: metadata.modified,
-                                            compile_warnings: None,
                                         },
                                         interface: Some(Interface {
                                             path: file.to_owned(),
                                             last_modified: metadata.modified,
-                                            compile_warnings: None,
                                         }),
                                     },
                                     metadata.is_type_dev,

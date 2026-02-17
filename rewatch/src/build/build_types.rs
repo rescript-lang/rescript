@@ -21,7 +21,7 @@ use std::{fmt::Display, ops::Deref, path::Path, path::PathBuf, time::SystemTime}
 ///   to a dependency's API not matching). The AST hashes are preserved so
 ///   that when a dependency fix makes the module valid again, we know
 ///   full recompilation is needed.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum CompilationStage {
     /// Not yet compiled, or source changed — needs full pipeline.
     Dirty,
@@ -58,7 +58,7 @@ pub enum CompilationStage {
         cmt_hash: Hash,
         compiled_at: SystemTime,
         has_parse_warnings: bool,
-        has_compile_warnings: bool,
+        compile_warnings: Option<String>,
     },
     /// Fully compiled (.cmi/.cmt/.cmj + JS produced).
     /// Accumulates all prior hashes + build artifact hashes.
@@ -72,28 +72,28 @@ pub enum CompilationStage {
         cmj_hash: Hash,
         compiled_at: SystemTime,
         has_parse_warnings: bool,
-        has_compile_warnings: bool,
+        compile_warnings: Option<String>,
     },
 }
 
 impl CompilationStage {
     /// Whether this module's source has changed and needs recompilation.
-    pub fn is_dirty(self) -> bool {
+    pub fn is_dirty(&self) -> bool {
         matches!(self, CompilationStage::Dirty)
     }
 
     /// Whether this module failed compilation (type error, etc.).
-    pub fn is_compile_error(self) -> bool {
+    pub fn is_compile_error(&self) -> bool {
         matches!(self, CompilationStage::CompileError { .. })
     }
 
     /// Whether this module failed parsing (syntax error, etc.).
-    pub fn is_parse_error(self) -> bool {
+    pub fn is_parse_error(&self) -> bool {
         matches!(self, CompilationStage::ParseError)
     }
 
     /// Whether parsing produced warnings (e.g. local dependency warnings).
-    pub fn has_parse_warnings(self) -> bool {
+    pub fn has_parse_warnings(&self) -> bool {
         match self {
             CompilationStage::Parsed {
                 has_parse_warnings, ..
@@ -106,21 +106,26 @@ impl CompilationStage {
             }
             | CompilationStage::Built {
                 has_parse_warnings, ..
-            } => has_parse_warnings,
+            } => *has_parse_warnings,
             _ => false,
         }
     }
 
     /// Whether compilation produced warnings.
-    pub fn has_compile_warnings(self) -> bool {
+    pub fn has_compile_warnings(&self) -> bool {
         match self {
-            CompilationStage::TypeChecked {
-                has_compile_warnings, ..
-            }
-            | CompilationStage::Built {
-                has_compile_warnings, ..
-            } => has_compile_warnings,
+            CompilationStage::TypeChecked { compile_warnings, .. }
+            | CompilationStage::Built { compile_warnings, .. } => compile_warnings.is_some(),
             _ => false,
+        }
+    }
+
+    /// The compile warning text, if any.
+    pub fn compile_warnings(&self) -> Option<&str> {
+        match self {
+            CompilationStage::TypeChecked { compile_warnings, .. }
+            | CompilationStage::Built { compile_warnings, .. } => compile_warnings.as_deref(),
+            _ => None,
         }
     }
 
@@ -135,7 +140,7 @@ impl CompilationStage {
     /// TypeChecked  → Dirty, CompileError, TypeChecked, Built
     /// Built        → Dirty, CompileError, TypeChecked
     /// ```
-    pub fn can_transition_to(self, new_stage: CompilationStage) -> bool {
+    pub fn can_transition_to(&self, new_stage: &CompilationStage) -> bool {
         use CompilationStage::*;
         matches!(
             (self, new_stage),
@@ -176,7 +181,7 @@ impl CompilationStage {
     }
 
     /// Numeric ordering for stage comparison: Dirty/ParseError(0) < Parsed(1) < CompileError(1) < TypeChecked(2) < Built(3).
-    fn ordinal(self) -> u8 {
+    fn ordinal(&self) -> u8 {
         match self {
             CompilationStage::Dirty | CompilationStage::ParseError => 0,
             CompilationStage::Parsed { .. } | CompilationStage::CompileError { .. } => 1,
@@ -186,13 +191,13 @@ impl CompilationStage {
     }
 
     /// Whether this module needs work to reach the given target stage.
-    pub fn needs_compile(self, target: CompilationStage) -> bool {
+    pub fn needs_compile(&self, target: &CompilationStage) -> bool {
         self.ordinal() < target.ordinal()
     }
 
     /// Whether this module needs work for the given compile mode.
     /// `ParseError` returns `false` — the module can't compile without a successful parse.
-    pub fn needs_compile_for_mode(self, mode: CompileMode) -> bool {
+    pub fn needs_compile_for_mode(&self, mode: CompileMode) -> bool {
         match (self, mode) {
             (CompilationStage::Built { .. }, _) => false,
             (CompilationStage::ParseError, _) => false,
@@ -416,20 +421,12 @@ pub struct BuildConfig {
 pub struct Interface {
     pub path: PathBuf,
     pub last_modified: SystemTime,
-    /// Compiler warning output (from bsc stderr) stored for re-emission
-    /// during incremental builds when this module is not recompiled.
-    /// Written to `.compiler.log` on each build cycle.
-    pub compile_warnings: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Implementation {
     pub path: PathBuf,
     pub last_modified: SystemTime,
-    /// Compiler warning output (from bsc stderr) stored for re-emission
-    /// during incremental builds when this module is not recompiled.
-    /// Written to `.compiler.log` on each build cycle.
-    pub compile_warnings: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -440,7 +437,7 @@ pub struct SourceFile {
 
 /// A regular source file module (.res/.resi) that goes through the full
 /// compilation pipeline: Dirty → Parsed → TypeChecked → Built.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct SourceFileModule {
     /// The module name (HashMap key), stored here so that methods like
     /// [`set_compilation_stage`] can include it in diagnostics and tracing
@@ -497,8 +494,8 @@ impl SourceFileModule {
     }
 
     /// Current compilation stage.
-    pub fn compilation_stage(&self) -> CompilationStage {
-        self.compilation_stage
+    pub fn compilation_stage(&self) -> &CompilationStage {
+        &self.compilation_stage
     }
 
     /// Advance (or reset) the compilation stage, logging the transition.
@@ -507,7 +504,7 @@ impl SourceFileModule {
     /// [`CompilationStage::can_transition_to`]).
     pub fn set_compilation_stage(&mut self, new_stage: CompilationStage) {
         debug_assert!(
-            self.compilation_stage.can_transition_to(new_stage),
+            self.compilation_stage.can_transition_to(&new_stage),
             "invalid compilation_stage transition for {}: {:?} → {:?}",
             self.module_name,
             self.compilation_stage,
@@ -525,7 +522,7 @@ impl SourceFileModule {
 
 /// A synthetic namespace map module (.mlmap). Compiled during the parse phase,
 /// not through the regular compilation pipeline.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct MlMapModule {
     /// The package this module belongs to.
     pub package_name: String,
@@ -541,7 +538,7 @@ pub struct MlMapModule {
 /// namespace map. The enum-level split ensures that compilation-stage fields
 /// only exist on source file modules, making it a compile error to access
 /// them on mlmap modules.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 #[allow(clippy::large_enum_variant)]
 pub enum Module {
     SourceFile(SourceFileModule),

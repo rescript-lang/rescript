@@ -312,7 +312,7 @@ pub fn cleanup_previous_build(
                                 cmt_hash: cmt,
                                 compiled_at: *cmt_last_modified,
                                 has_parse_warnings: false,
-                                has_compile_warnings: false,
+                                compile_warnings: None,
                             });
                             if cmj_exists && let Some(cmj) = cmj_hash {
                                 sf_module.set_compilation_stage(CompilationStage::Built {
@@ -325,7 +325,7 @@ pub fn cleanup_previous_build(
                                     cmj_hash: cmj,
                                     compiled_at: *cmt_last_modified,
                                     has_parse_warnings: false,
-                                    has_compile_warnings: false,
+                                    compile_warnings: None,
                                 });
                             }
                         }

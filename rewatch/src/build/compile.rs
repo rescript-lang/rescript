@@ -229,6 +229,8 @@ pub fn compile(
     let mut clean_modules = AHashSet::<String>::new();
     // Modules that compiled successfully — stage/timestamps updated post-loop.
     let mut successfully_compiled = AHashSet::<String>::new();
+    // Merged compile warning text per module (impl + interface warnings concatenated).
+    let mut module_compile_warnings = AHashMap::<String, String>::new();
     // Modules that were compiled but failed — set to CompileError post-loop.
     let mut errored_modules = AHashSet::<String>::new();
 
@@ -472,43 +474,18 @@ pub fn compile(
                         mlmap.parse_dirty = false;
                         (None, None)
                     }
-                    Module::SourceFile(sf_module) => match &entry.implementation {
-                        CompileFileOutcome::Warning(warning) => {
-                            sf_module.source_file.implementation.compile_warnings = Some(warning.clone());
-                            (Some(warning.clone()), None)
-                        }
-                        CompileFileOutcome::Success => {
-                            sf_module.source_file.implementation.compile_warnings = None;
-                            (None, None)
-                        }
-                        CompileFileOutcome::Error(error) => {
-                            sf_module.source_file.implementation.compile_warnings = None;
-                            (None, Some(error.clone()))
-                        }
+                    Module::SourceFile(_) => match &entry.implementation {
+                        CompileFileOutcome::Warning(warning) => (Some(warning.clone()), None),
+                        CompileFileOutcome::Success => (None, None),
+                        CompileFileOutcome::Error(error) => (None, Some(error.clone())),
                     },
                 };
 
-                let (interface_warning, interface_error) = if let Module::SourceFile(sf_module) = module {
-                    match &entry.interface {
-                        Some(CompileFileOutcome::Warning(warning)) => {
-                            sf_module.source_file.interface.as_mut().unwrap().compile_warnings =
-                                Some(warning.clone());
-                            (Some(warning.clone()), None)
-                        }
-                        Some(CompileFileOutcome::Success) => {
-                            if let Some(interface) = sf_module.source_file.interface.as_mut() {
-                                interface.compile_warnings = None;
-                            }
-                            (None, None)
-                        }
-                        Some(CompileFileOutcome::Error(error)) => {
-                            sf_module.source_file.interface.as_mut().unwrap().compile_warnings = None;
-                            (None, Some(error.clone()))
-                        }
-                        None => (None, None),
-                    }
-                } else {
-                    (None, None)
+                let (interface_warning, interface_error) = match &entry.interface {
+                    Some(CompileFileOutcome::Warning(warning)) => (Some(warning.clone()), None),
+                    Some(CompileFileOutcome::Success) => (None, None),
+                    Some(CompileFileOutcome::Error(error)) => (None, Some(error.clone())),
+                    None => (None, None),
                 };
 
                 if !entry.implementation.is_error() && entry.interface.as_ref().is_none_or(|r| !r.is_error())
@@ -522,21 +499,31 @@ pub fn compile(
             };
 
             // Handle logging outside the mutable borrow
-            if let Some(warning) = compile_warning {
-                logs::append(package, &warning);
-                compile_warnings.push_str(&warning);
+            if let Some(ref warning) = compile_warning {
+                logs::append(package, warning);
+                compile_warnings.push_str(warning);
             }
             if let Some(error) = compile_error {
                 logs::append(package, &error);
                 compile_errors.push_str(&error);
             }
-            if let Some(warning) = interface_warning {
-                logs::append(package, &warning);
-                compile_warnings.push_str(&warning);
+            if let Some(ref warning) = interface_warning {
+                logs::append(package, warning);
+                compile_warnings.push_str(warning);
             }
             if let Some(error) = interface_error {
                 logs::append(package, &error);
                 compile_errors.push_str(&error);
+            }
+
+            // Merge impl + interface warnings and store per-module for stage construction
+            let merged = match (compile_warning, interface_warning) {
+                (Some(w1), Some(w2)) => Some(format!("{}{}", w1, w2)),
+                (Some(w), None) | (None, Some(w)) => Some(w),
+                (None, None) => None,
+            };
+            if let Some(text) = merged {
+                module_compile_warnings.insert(entry.module_name.clone(), text);
             }
         }
 
@@ -637,10 +624,10 @@ pub fn compile(
                     interface_ast_hash,
                     ..
                 } => (
-                    implementation_source_hash,
-                    implementation_ast_hash,
-                    interface_source_hash,
-                    interface_ast_hash,
+                    *implementation_source_hash,
+                    *implementation_ast_hash,
+                    *interface_source_hash,
+                    *interface_ast_hash,
                 ),
                 CompilationStage::Dirty | CompilationStage::ParseError => {
                     // Fallback: compute from disk
@@ -668,12 +655,7 @@ pub fn compile(
         ));
 
         if let Some(Module::SourceFile(sf)) = build_state.build_state.modules.get_mut(name) {
-            let has_compile_warnings = sf.source_file.implementation.compile_warnings.is_some()
-                || sf
-                    .source_file
-                    .interface
-                    .as_ref()
-                    .is_some_and(|i| i.compile_warnings.is_some());
+            let compile_warnings = module_compile_warnings.remove(name);
             match (mode.emits_js(), cmi_hash, cmt_hash) {
                 (true, Some(cmi), Some(cmt)) => {
                     sf.set_compilation_stage(CompilationStage::TypeChecked {
@@ -685,7 +667,7 @@ pub fn compile(
                         cmt_hash: cmt,
                         compiled_at: now,
                         has_parse_warnings,
-                        has_compile_warnings,
+                        compile_warnings: compile_warnings.clone(),
                     });
                     let cmj_hash = helpers::compute_file_hash(&helpers::get_compiler_asset_in(
                         &ocaml_path,
@@ -704,7 +686,7 @@ pub fn compile(
                             cmj_hash: cmj,
                             compiled_at: now,
                             has_parse_warnings,
-                            has_compile_warnings,
+                            compile_warnings,
                         });
                     }
                 }
@@ -718,7 +700,7 @@ pub fn compile(
                         cmt_hash: cmt,
                         compiled_at: now,
                         has_parse_warnings,
-                        has_compile_warnings,
+                        compile_warnings,
                     });
                 }
                 _ => {
@@ -749,10 +731,10 @@ pub fn compile(
                     interface_ast_hash,
                     ..
                 } => Some((
-                    implementation_source_hash,
-                    implementation_ast_hash,
-                    interface_source_hash,
-                    interface_ast_hash,
+                    *implementation_source_hash,
+                    *implementation_ast_hash,
+                    *interface_source_hash,
+                    *interface_ast_hash,
                 )),
                 _ => None,
             };
@@ -782,22 +764,13 @@ pub fn compile(
         if compile_universe.all.contains(module_name) {
             continue;
         }
-        if let Module::SourceFile(sf_module) = module {
-            let package = build_state.get_package(&sf_module.package_name);
-            if let Some(ref warning) = sf_module.source_file.implementation.compile_warnings {
-                if let Some(package) = package {
-                    logs::append(package, warning);
-                }
-                compile_warnings.push_str(warning);
+        if let Module::SourceFile(sf_module) = module
+            && let Some(warning) = sf_module.compilation_stage().compile_warnings()
+        {
+            if let Some(package) = build_state.get_package(&sf_module.package_name) {
+                logs::append(package, warning);
             }
-            if let Some(ref interface) = sf_module.source_file.interface
-                && let Some(ref warning) = interface.compile_warnings
-            {
-                if let Some(package) = package {
-                    logs::append(package, warning);
-                }
-                compile_warnings.push_str(warning);
-            }
+            compile_warnings.push_str(warning);
         }
     }
 
