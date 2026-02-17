@@ -201,106 +201,113 @@ pub fn cleanup_previous_build(
                 .get_mut(module_name)
                 .expect("Could not find module for ast file");
 
-            let cmt_last_modified = compile_assets_state.cmt_modules.get(module_name);
-            let cmj_exists = compile_assets_state.cmj_modules.contains_key(module_name);
-            // if there is a new AST but it has not been compiled yet, we mark the module as compile dirty
-            // we do this by checking if the cmt file is newer than the AST file. We always compile the
-            // interface AND implementation. For some reason the CMI file is not always rewritten if it
-            // doesn't have any changes, that's why we just look at the CMT file.
-            if let Some(cmt_last_modified) = cmt_last_modified
-                && cmt_last_modified > ast_last_modified
-                && !deleted_interfaces.contains(module_name)
-            {
-                // Compute hashes from existing artifacts on disk to restore
-                // the compilation stage with full artifact identity.
-                let source_hash = helpers::compute_file_hash(res_file_location);
-                let ast_hash = helpers::compute_file_hash(ast_file_path);
-
-                let sf_module = match module {
-                    Module::SourceFile(sf) => sf,
-                    Module::MlMap(_) => unreachable!("MlMap is not matched with a ReScript file"),
-                };
-                let (cmi_hash, cmt_hash, cmj_hash) =
-                    if let Some(pkg) = build_state.build_state.packages.get(&sf_module.package_name) {
-                        let ocaml_path = pkg.get_ocaml_build_path_for_output(output);
-                        let impl_path = &sf_module.source_file.implementation.path;
-                        (
-                            helpers::compute_file_hash(&helpers::get_compiler_asset_in(
-                                &ocaml_path,
-                                &pkg.namespace,
-                                impl_path,
-                                "cmi",
-                            )),
-                            helpers::compute_file_hash(&helpers::get_compiler_asset_in(
-                                &ocaml_path,
-                                &pkg.namespace,
-                                impl_path,
-                                "cmt",
-                            )),
-                            if cmj_exists {
-                                helpers::compute_file_hash(&helpers::get_compiler_asset_in(
-                                    &ocaml_path,
-                                    &pkg.namespace,
-                                    impl_path,
-                                    "cmj",
-                                ))
-                            } else {
-                                None
-                            },
-                        )
-                    } else {
-                        (None, None, None)
-                    };
-
-                let new_stage = match (source_hash, ast_hash, cmi_hash, cmt_hash) {
-                    (Some(sh), Some(ah), Some(cmi), Some(cmt)) => {
-                        if cmj_exists {
-                            match cmj_hash {
-                                Some(cmj) => CompilationStage::Built {
-                                    source_hash: sh,
-                                    ast_hash: ah,
-                                    cmi_hash: cmi,
-                                    cmt_hash: cmt,
-                                    cmj_hash: cmj,
-                                    compiled_at: *cmt_last_modified,
-                                },
-                                None => CompilationStage::Dirty,
-                            }
-                        } else {
-                            CompilationStage::TypeChecked {
-                                source_hash: sh,
-                                ast_hash: ah,
-                                cmi_hash: cmi,
-                                cmt_hash: cmt,
-                                compiled_at: *cmt_last_modified,
-                            }
-                        }
-                    }
-                    _ => CompilationStage::Dirty,
-                };
-                sf_module.set_compilation_stage(new_stage);
-            }
-
             let sf_module = match module {
                 Module::SourceFile(sf) => sf,
                 Module::MlMap(_) => unreachable!("MlMap is not matched with a ReScript file"),
             };
-            let source_file = &mut sf_module.source_file;
-            if helpers::is_interface_ast_file(ast_file_path) {
-                let interface = source_file
-                    .interface
-                    .as_mut()
-                    .expect("Could not find interface for module");
 
-                let source_last_modified = interface.last_modified;
-                if ast_last_modified > &source_last_modified {
-                    interface.parse_dirty = false;
-                }
+            // Determine source timestamp and whether the AST is fresh relative to source.
+            // For interface AST files (.iast) we check the interface's timestamp;
+            // for implementation AST files (.ast) we check the implementation's timestamp.
+            let is_iast = helpers::is_interface_ast_file(ast_file_path);
+            let ast_is_fresh = if is_iast {
+                let iface = sf_module
+                    .source_file
+                    .interface
+                    .as_ref()
+                    .expect("Could not find interface for module");
+                ast_last_modified > &iface.last_modified
             } else {
-                let implementation = &mut source_file.implementation;
-                let source_last_modified = implementation.last_modified;
-                if ast_last_modified > &source_last_modified && !deleted_interfaces.contains(module_name) {
-                    implementation.parse_dirty = false;
+                let impl_modified = sf_module.source_file.implementation.last_modified;
+                ast_last_modified > &impl_modified && !deleted_interfaces.contains(module_name)
+            };
+
+            if ast_is_fresh {
+                // AST is newer than source — no need to re-parse this file.
+                if is_iast {
+                    sf_module
+                        .source_file
+                        .interface
+                        .as_mut()
+                        .expect("Could not find interface for module")
+                        .parse_dirty = false;
+                } else {
+                    sf_module.source_file.implementation.parse_dirty = false;
+                }
+
+                // Promote from Dirty → Parsed since the AST on disk is fresh.
+                // Guard on is_dirty() so a second .ast/.iast pass for the same
+                // module doesn't overwrite a stage that was already restored.
+                if sf_module.compilation_stage().is_dirty() && !deleted_interfaces.contains(module_name) {
+                    let source_hash = helpers::compute_file_hash(res_file_location);
+                    let ast_hash = helpers::compute_file_hash(ast_file_path);
+                    if let (Some(sh), Some(ah)) = (source_hash, ast_hash) {
+                        sf_module.set_compilation_stage(CompilationStage::Parsed {
+                            source_hash: sh,
+                            ast_hash: ah,
+                        });
+
+                        // If compilation artifacts are also fresh (.cmt newer
+                        // than .ast), restore through TypeChecked and Built.
+                        let cmt_last_modified = compile_assets_state.cmt_modules.get(module_name);
+                        let cmj_exists = compile_assets_state.cmj_modules.contains_key(module_name);
+                        if let Some(cmt_last_modified) = cmt_last_modified
+                            && cmt_last_modified > ast_last_modified
+                        {
+                            let (cmi_hash, cmt_hash, cmj_hash) = if let Some(pkg) =
+                                build_state.build_state.packages.get(&sf_module.package_name)
+                            {
+                                let ocaml_path = pkg.get_ocaml_build_path_for_output(output);
+                                let impl_path = &sf_module.source_file.implementation.path;
+                                (
+                                    helpers::compute_file_hash(&helpers::get_compiler_asset_in(
+                                        &ocaml_path,
+                                        &pkg.namespace,
+                                        impl_path,
+                                        "cmi",
+                                    )),
+                                    helpers::compute_file_hash(&helpers::get_compiler_asset_in(
+                                        &ocaml_path,
+                                        &pkg.namespace,
+                                        impl_path,
+                                        "cmt",
+                                    )),
+                                    if cmj_exists {
+                                        helpers::compute_file_hash(&helpers::get_compiler_asset_in(
+                                            &ocaml_path,
+                                            &pkg.namespace,
+                                            impl_path,
+                                            "cmj",
+                                        ))
+                                    } else {
+                                        None
+                                    },
+                                )
+                            } else {
+                                (None, None, None)
+                            };
+
+                            if let (Some(cmi), Some(cmt)) = (cmi_hash, cmt_hash) {
+                                sf_module.set_compilation_stage(CompilationStage::TypeChecked {
+                                    source_hash: sh,
+                                    ast_hash: ah,
+                                    cmi_hash: cmi,
+                                    cmt_hash: cmt,
+                                    compiled_at: *cmt_last_modified,
+                                });
+                                if cmj_exists && let Some(cmj) = cmj_hash {
+                                    sf_module.set_compilation_stage(CompilationStage::Built {
+                                        source_hash: sh,
+                                        ast_hash: ah,
+                                        cmi_hash: cmi,
+                                        cmt_hash: cmt,
+                                        cmj_hash: cmj,
+                                        compiled_at: *cmt_last_modified,
+                                    });
+                                }
+                            }
+                        }
+                    }
                 }
             }
         });

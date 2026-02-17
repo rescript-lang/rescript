@@ -79,11 +79,11 @@ impl CompilationStage {
     ///
     /// Valid transitions:
     /// ```text
-    /// Dirty        → Dirty, Parsed, TypeChecked, Built
-    /// Parsed       → Dirty, Parsed, CompileError, TypeChecked, Built
-    /// CompileError → Dirty, CompileError, TypeChecked, Built
+    /// Dirty        → Dirty, Parsed
+    /// Parsed       → Dirty, Parsed, CompileError, TypeChecked
+    /// CompileError → Dirty, CompileError, TypeChecked
     /// TypeChecked  → Dirty, CompileError, TypeChecked, Built
-    /// Built        → Dirty, CompileError, TypeChecked, Built
+    /// Built        → Dirty, CompileError, TypeChecked
     /// ```
     pub fn can_transition_to(self, new_stage: CompilationStage) -> bool {
         use CompilationStage::*;
@@ -94,39 +94,30 @@ impl CompilationStage {
             //   compile.rs   — deleted/expired deps, or hash computation failed
             (_, Dirty)
             // Dirty → Parsed: parse.rs — AST successfully generated
+            //                  clean.rs — AST on disk is fresh, restoring from artifacts
             | (Dirty, Parsed { .. })
-            // Dirty → TypeChecked: clean.rs — .cmi/.cmt exist on disk but no
-            //   .cmj (e.g. after an LSP TypecheckOnly build that was interrupted)
-            | (Dirty, TypeChecked { .. })
-            // Dirty → Built: clean.rs — all artifacts (.cmi/.cmt/.cmj) exist on
-            //   disk and .cmt is newer than .ast (previous build completed fully)
-            | (Dirty, Built { .. })
             // Parsed → Parsed: parse.rs — re-parsed (e.g. re-entered parse phase)
             | (Parsed { .. }, Parsed { .. })
             // Parsed → CompileError: compile.rs — compilation failed (type error)
             | (Parsed { .. }, CompileError { .. })
-            // Parsed → TypeChecked: compile.rs — TypecheckOnly build succeeded
+            // Parsed → TypeChecked: compile.rs — compilation succeeded (typecheck or full)
+            //                       clean.rs — restoring from artifacts
             | (Parsed { .. }, TypeChecked { .. })
-            // Parsed → Built: compile.rs — FullCompile build succeeded
-            | (Parsed { .. }, Built { .. })
             // CompileError → CompileError: compile.rs — still failing after retry
             | (CompileError { .. }, CompileError { .. })
-            // CompileError → TypeChecked: compile.rs — dependency fix, TypecheckOnly
+            // CompileError → TypeChecked: compile.rs — dependency fix resolved the error
             | (CompileError { .. }, TypeChecked { .. })
-            // CompileError → Built: compile.rs — dependency fix, FullCompile
-            | (CompileError { .. }, Built { .. })
             // TypeChecked → CompileError: compile.rs — dependency API change broke it
             | (TypeChecked { .. }, CompileError { .. })
             // TypeChecked → TypeChecked: compile.rs — re-typechecked successfully
             | (TypeChecked { .. }, TypeChecked { .. })
             // TypeChecked → Built: compile.rs — FullCompile after TypecheckOnly
+            //                      clean.rs — restoring from artifacts
             | (TypeChecked { .. }, Built { .. })
-            // Built → CompileError: compile.rs — dependency API change broke it
+            // Built → CompileError: compile.rs — LSP save recompile, dependency broke it
             | (Built { .. }, CompileError { .. })
-            // Built → TypeChecked: compile.rs — TypecheckOnly re-build
+            // Built → TypeChecked: compile.rs — LSP save recompile in TypecheckOnly mode
             | (Built { .. }, TypeChecked { .. })
-            // Built → Built: compile.rs — recompiled, all artifacts still present
-            | (Built { .. }, Built { .. })
         )
     }
 

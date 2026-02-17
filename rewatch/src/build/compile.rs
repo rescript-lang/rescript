@@ -658,38 +658,46 @@ pub fn compile(
             "cmt",
         ));
 
-        let new_stage = match (mode.emits_js(), cmi_hash, cmt_hash) {
-            (true, Some(cmi), Some(cmt)) => {
-                let cmj_hash = helpers::compute_file_hash(&helpers::get_compiler_asset_in(
-                    &ocaml_path,
-                    &pkg.namespace,
-                    &impl_path,
-                    "cmj",
-                ));
-                match cmj_hash {
-                    Some(cmj) => CompilationStage::Built {
+        if let Some(Module::SourceFile(sf)) = build_state.build_state.modules.get_mut(name) {
+            match (mode.emits_js(), cmi_hash, cmt_hash) {
+                (true, Some(cmi), Some(cmt)) => {
+                    sf.set_compilation_stage(CompilationStage::TypeChecked {
                         source_hash,
                         ast_hash,
                         cmi_hash: cmi,
                         cmt_hash: cmt,
-                        cmj_hash: cmj,
                         compiled_at: now,
-                    },
-                    None => CompilationStage::Dirty,
+                    });
+                    let cmj_hash = helpers::compute_file_hash(&helpers::get_compiler_asset_in(
+                        &ocaml_path,
+                        &pkg.namespace,
+                        &impl_path,
+                        "cmj",
+                    ));
+                    if let Some(cmj) = cmj_hash {
+                        sf.set_compilation_stage(CompilationStage::Built {
+                            source_hash,
+                            ast_hash,
+                            cmi_hash: cmi,
+                            cmt_hash: cmt,
+                            cmj_hash: cmj,
+                            compiled_at: now,
+                        });
+                    }
+                }
+                (false, Some(cmi), Some(cmt)) => {
+                    sf.set_compilation_stage(CompilationStage::TypeChecked {
+                        source_hash,
+                        ast_hash,
+                        cmi_hash: cmi,
+                        cmt_hash: cmt,
+                        compiled_at: now,
+                    });
+                }
+                _ => {
+                    sf.set_compilation_stage(CompilationStage::Dirty);
                 }
             }
-            (false, Some(cmi), Some(cmt)) => CompilationStage::TypeChecked {
-                source_hash,
-                ast_hash,
-                cmi_hash: cmi,
-                cmt_hash: cmt,
-                compiled_at: now,
-            },
-            _ => CompilationStage::Dirty,
-        };
-
-        if let Some(Module::SourceFile(sf)) = build_state.build_state.modules.get_mut(name) {
-            sf.set_compilation_stage(new_stage);
         }
     }
 
