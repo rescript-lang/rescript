@@ -236,6 +236,12 @@ pub fn cleanup_previous_build(
                 && iface_ast_is_fresh
                 && sf_module.compilation_stage().is_dirty()
                 && !deleted_interfaces.contains(&module_name)
+                // When --warn-error is passed, keep modules Dirty so the
+                // parse phase re-runs them with the overridden warning flags.
+                // Warning 110 (%todo) and others are emitted during parsing,
+                // not compilation, so the parse phase must run for
+                // --warn-error to take effect.
+                && build_state.warn_error_override.is_none()
             {
                 // Both AST files are fresh. Compute hashes directly from absolute paths.
                 // res_file_location is the absolute .res path (extracted from the .ast file).
