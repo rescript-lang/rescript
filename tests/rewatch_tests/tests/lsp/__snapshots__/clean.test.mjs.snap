@@ -296,6 +296,7 @@ exports[`rescript clean does not break running LSP > LSP continues to work after
   "        incremental_build[module_count=4, scope=typecheck_dependents, output=lsp]",
   "          build.typecheck",
   "            build.typecheck_wave[file_count=0]",
+  "      lsp.flush.file_build.compile_resolved",
   "  lsp.did_save[file=src/Root.res]",
   "  lsp.flush[incremental_builds=src/Root.res]",
   "    lsp.flush.file_build.batch[modules=["Root"]]",
@@ -312,5 +313,6 @@ exports[`rescript clean does not break running LSP > LSP continues to work after
   "        incremental_build[module_count=4, scope=typecheck_dependents, output=lsp]",
   "          build.typecheck",
   "            build.typecheck_wave[file_count=0]",
+  "      lsp.flush.file_build.compile_resolved",
 ]
 `;

@@ -44,5 +44,6 @@ exports[`lsp initial save compiles dependencies without cmj > compiles the full 
   "        incremental_build[module_count=4, scope=typecheck_dependents, output=lsp]",
   "          build.typecheck",
   "            build.typecheck_wave[file_count=0]",
+  "      lsp.flush.file_build.compile_resolved",
 ]
 `;

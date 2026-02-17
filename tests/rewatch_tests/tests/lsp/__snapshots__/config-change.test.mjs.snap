@@ -31,6 +31,7 @@ exports[`lsp config change > changing suffix in rescript.json produces JS with t
   "        incremental_build[module_count=1, scope=typecheck_dependents, output=lsp]",
   "          build.typecheck",
   "            build.typecheck_wave[file_count=0]",
+  "      lsp.flush.file_build.compile_resolved",
   "  lsp.did_save[file=packages/commonjs/rescript.json]",
   "  lsp.flush[project_builds=config: packages/commonjs/rescript.json]",
   "    lsp.flush.project_build[project=@rewatch-test/commonjs]",
@@ -57,6 +58,7 @@ exports[`lsp config change > changing suffix in rescript.json produces JS with t
   "        incremental_build[module_count=1, scope=typecheck_dependents, output=lsp]",
   "          build.typecheck",
   "            build.typecheck_wave[file_count=0]",
+  "      lsp.flush.file_build.compile_resolved",
 ]
 `;
 

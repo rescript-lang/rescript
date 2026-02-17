@@ -28,12 +28,21 @@ pub enum CompileState {
 /// about what work is needed and whether output will affect dependents.
 ///
 /// Lifecycle: `Dirty → Parsed → TypeChecked → Built`
+///
+/// Error path: `Parsed → CompileError` when compilation fails (e.g. due
+/// to a dependency's API not matching). The AST hashes are preserved so
+/// that when a dependency fix makes the module valid again, we know
+/// full recompilation is needed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CompilationStage {
     /// Not yet compiled, or source changed — needs full pipeline.
     Dirty,
     /// AST generated. Carries hashes of source + AST artifacts.
     Parsed { source_hash: Hash, ast_hash: Hash },
+    /// Compilation was attempted but failed (type error, etc.).
+    /// Preserves parse hashes so the module can be recompiled when the
+    /// error is resolved (e.g. a dependency fix).
+    CompileError { source_hash: Hash, ast_hash: Hash },
     /// Type-checked only (.cmi/.cmt produced, no .cmj).
     /// Accumulates parse hashes + typecheck artifact hashes.
     TypeChecked {
@@ -61,11 +70,16 @@ impl CompilationStage {
         matches!(self, CompilationStage::Dirty)
     }
 
-    /// Numeric ordering for stage comparison: Dirty(0) < Parsed(1) < TypeChecked(2) < Built(3).
+    /// Whether this module failed compilation (type error, etc.).
+    pub fn is_compile_error(self) -> bool {
+        matches!(self, CompilationStage::CompileError { .. })
+    }
+
+    /// Numeric ordering for stage comparison: Dirty(0) < Parsed(1) < CompileError(1) < TypeChecked(2) < Built(3).
     fn ordinal(self) -> u8 {
         match self {
             CompilationStage::Dirty => 0,
-            CompilationStage::Parsed { .. } => 1,
+            CompilationStage::Parsed { .. } | CompilationStage::CompileError { .. } => 1,
             CompilationStage::TypeChecked { .. } => 2,
             CompilationStage::Built { .. } => 3,
         }
@@ -82,7 +96,7 @@ impl CompilationStage {
             (CompilationStage::Built { .. }, _) => false,
             (CompilationStage::TypeChecked { .. }, CompileMode::FullCompile) => true,
             (CompilationStage::TypeChecked { .. }, CompileMode::TypecheckOnly) => false,
-            (CompilationStage::Parsed { .. }, _) => true,
+            (CompilationStage::Parsed { .. } | CompilationStage::CompileError { .. }, _) => true,
             (CompilationStage::Dirty, _) => true,
         }
     }
@@ -112,6 +126,7 @@ impl CompilationStage {
     pub fn source_hash(&self) -> Option<Hash> {
         match self {
             CompilationStage::Parsed { source_hash, .. }
+            | CompilationStage::CompileError { source_hash, .. }
             | CompilationStage::TypeChecked { source_hash, .. }
             | CompilationStage::Built { source_hash, .. } => Some(*source_hash),
             _ => None,

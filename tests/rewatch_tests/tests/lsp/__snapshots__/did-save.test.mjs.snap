@@ -289,6 +289,7 @@ exports[`lsp didSave > clears diagnostics when error is fixed and file is saved 
   "        incremental_build[module_count=4, scope=typecheck_dependents, output=lsp]",
   "          build.typecheck",
   "            build.typecheck_wave[file_count=0]",
+  "      lsp.flush.file_build.compile_resolved",
   "  lsp.did_save[file=src/Root.res]",
   "  lsp.flush[incremental_builds=src/Root.res]",
   "    lsp.flush.file_build.batch[modules=["Root"]]",
@@ -307,6 +308,7 @@ exports[`lsp didSave > clears diagnostics when error is fixed and file is saved 
   "        incremental_build[module_count=4, scope=typecheck_dependents, output=lsp]",
   "          build.typecheck",
   "            build.typecheck_wave[file_count=0]",
+  "      lsp.flush.file_build.compile_resolved",
 ]
 `;
 
@@ -618,6 +620,7 @@ exports[`lsp didSave > compiles correctly when saving a file that uses a newly c
   "        incremental_build[module_count=5, scope=typecheck_dependents, output=lsp]",
   "          build.typecheck",
   "            build.typecheck_wave[file_count=0]",
+  "      lsp.flush.file_build.compile_resolved",
 ]
 `;
 
@@ -822,6 +825,7 @@ exports[`lsp didSave > compiles files from external npm packages in the dependen
   "        incremental_build[module_count=53, scope=typecheck_dependents, output=lsp]",
   "          build.typecheck",
   "            build.typecheck_wave[file_count=0]",
+  "      lsp.flush.file_build.compile_resolved",
 ]
 `;
 
@@ -1117,6 +1121,7 @@ exports[`lsp didSave > does not compile unrelated files when a file is saved 1`]
   "        incremental_build[module_count=4, scope=typecheck_dependents, output=lsp]",
   "          build.typecheck",
   "            build.typecheck_wave[file_count=0]",
+  "      lsp.flush.file_build.compile_resolved",
 ]
 `;
 
@@ -1321,6 +1326,7 @@ exports[`lsp didSave > does not recompile npm package modules on subsequent save
   "        incremental_build[module_count=53, scope=typecheck_dependents, output=lsp]",
   "          build.typecheck",
   "            build.typecheck_wave[file_count=0]",
+  "      lsp.flush.file_build.compile_resolved",
   "  lsp.did_save[file=packages/with-deps/src/UsesBun.res]",
   "  lsp.flush[incremental_builds=packages/with-deps/src/UsesBun.res]",
   "    lsp.flush.file_build.batch[modules=["UsesBun"]]",
@@ -1342,6 +1348,7 @@ exports[`lsp didSave > does not recompile npm package modules on subsequent save
   "        incremental_build[module_count=53, scope=typecheck_dependents, output=lsp]",
   "          build.typecheck",
   "            build.typecheck_wave[file_count=0]",
+  "      lsp.flush.file_build.compile_resolved",
 ]
 `;
 
@@ -1641,6 +1648,7 @@ exports[`lsp didSave > preserves JS output from previous saves when saving an un
   "        incremental_build[module_count=4, scope=typecheck_dependents, output=lsp]",
   "          build.typecheck",
   "            build.typecheck_wave[file_count=0]",
+  "      lsp.flush.file_build.compile_resolved",
   "  lsp.did_save[file=packages/library/src/Unrelated.res]",
   "  lsp.flush[incremental_builds=packages/library/src/Unrelated.res]",
   "    lsp.flush.file_build.batch[modules=["Unrelated"]]",
@@ -1655,6 +1663,7 @@ exports[`lsp didSave > preserves JS output from previous saves when saving an un
   "        incremental_build[module_count=4, scope=typecheck_dependents, output=lsp]",
   "          build.typecheck",
   "            build.typecheck_wave[file_count=0]",
+  "      lsp.flush.file_build.compile_resolved",
 ]
 `;
 
@@ -1954,6 +1963,7 @@ exports[`lsp didSave > produces JS output for dependent files when a file is sav
   "        incremental_build[module_count=4, scope=typecheck_dependents, output=lsp]",
   "          build.typecheck",
   "            build.typecheck_wave[file_count=0]",
+  "      lsp.flush.file_build.compile_resolved",
 ]
 `;
 
@@ -2253,6 +2263,7 @@ exports[`lsp didSave > produces JS output when a file is saved 1`] = `
   "        incremental_build[module_count=4, scope=typecheck_dependents, output=lsp]",
   "          build.typecheck",
   "            build.typecheck_wave[file_count=0]",
+  "      lsp.flush.file_build.compile_resolved",
 ]
 `;
 
@@ -2551,6 +2562,7 @@ exports[`lsp didSave > produces JS when another package has errors 1`] = `
   "        incremental_build[module_count=4, scope=typecheck_dependents, output=lsp]",
   "          build.typecheck",
   "            build.typecheck_wave[file_count=0]",
+  "      lsp.flush.file_build.compile_resolved",
   "  lsp.did_save[file=packages/app/src/App.res]",
   "  lsp.flush[incremental_builds=packages/app/src/App.res]",
   "    lsp.flush.file_build.batch[modules=["App"], error_count=1]",
@@ -2568,6 +2580,7 @@ exports[`lsp didSave > produces JS when another package has errors 1`] = `
   "            build.typecheck_wave[file_count=1]",
   "              build.typecheck_file[module=Root, package=rewatch-test-fixture]",
   "          build.compile_error",
+  "      lsp.flush.file_build.compile_resolved",
 ]
 `;
 
@@ -2865,6 +2878,7 @@ exports[`lsp didSave > publishes diagnostics for dependent files when a used API
   "            build.typecheck_wave[file_count=1]",
   "              build.typecheck_file[module=App, package=@rewatch-test/app]",
   "          build.compile_error",
+  "      lsp.flush.file_build.compile_resolved",
 ]
 `;
 
@@ -3165,5 +3179,6 @@ exports[`lsp didSave > publishes diagnostics when saving a file with an error 1`
   "        incremental_build[module_count=4, scope=typecheck_dependents, output=lsp]",
   "          build.typecheck",
   "            build.typecheck_wave[file_count=0]",
+  "      lsp.flush.file_build.compile_resolved",
 ]
 `;

@@ -41,6 +41,7 @@ exports[`lsp stale dirty modules > does not leak stale dirty dependents into sub
   "            build.typecheck_wave[file_count=1]",
   "              build.typecheck_file[module=App, package=@rewatch-test/dep-chain]",
   "          build.compile_error",
+  "      lsp.flush.file_build.compile_resolved",
   "  lsp.did_save[file=packages/dep-chain/src/Leaf.res]",
   "  lsp.flush[incremental_builds=packages/dep-chain/src/Leaf.res]",
   "    lsp.flush.file_build.batch[modules=["Leaf"]]",
@@ -58,5 +59,6 @@ exports[`lsp stale dirty modules > does not leak stale dirty dependents into sub
   "              build.typecheck_file[module=App, package=@rewatch-test/dep-chain]",
   "            build.typecheck_wave[file_count=1]",
   "              build.typecheck_file[module=Main, package=@rewatch-test/dep-chain]",
+  "      lsp.flush.file_build.compile_resolved",
 ]
 `;

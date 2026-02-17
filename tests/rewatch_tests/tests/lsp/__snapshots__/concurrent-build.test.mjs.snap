@@ -296,6 +296,7 @@ exports[`concurrent LSP and CLI build > LSP and standard build use separate flat
   "        incremental_build[module_count=4, scope=typecheck_dependents, output=lsp]",
   "          build.typecheck",
   "            build.typecheck_wave[file_count=0]",
+  "      lsp.flush.file_build.compile_resolved",
 ]
 `;
 
@@ -595,5 +596,6 @@ exports[`concurrent LSP and CLI build > LSP build after clean does not use stale
   "        incremental_build[module_count=4, scope=typecheck_dependents, output=lsp]",
   "          build.typecheck",
   "            build.typecheck_wave[file_count=0]",
+  "      lsp.flush.file_build.compile_resolved",
 ]
 `;

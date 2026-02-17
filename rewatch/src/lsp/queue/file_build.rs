@@ -141,7 +141,7 @@ pub(super) async fn run(
 
 /// Build one or more saved files and propagate diagnostics.
 ///
-/// This is the core LSP save-build flow, executed in two steps:
+/// This is the core LSP save-build flow, executed in three steps:
 ///
 /// ## Step 1: `compile_dependencies` — produce JS for the saved file
 ///
@@ -157,7 +157,15 @@ pub(super) async fn run(
 /// caused by API changes (e.g. a function signature changed). No
 /// JavaScript is emitted — that happens when those files are saved.
 ///
-/// ## Why two steps?
+/// ## Step 3: `compile_errored` — produce JS for previously-errored dependents
+///
+/// If step 2 successfully typechecked modules that were previously at
+/// `CompileError` (from a prior build where their dependency had a broken
+/// API), those modules now need full compilation to produce JS output.
+/// Without this step, they'd be stuck at `TypeChecked` with stale or
+/// missing JavaScript.
+///
+/// ## Why three steps?
 ///
 /// Keeping imports and importers as separate builds prevents the compile
 /// loop from pulling in unrelated modules. For example, if the saved
@@ -165,14 +173,37 @@ pub(super) async fn run(
 /// imports that library, a single combined build would drag in that
 /// unrelated package. If it has errors, the compile loop aborts before
 /// the saved file gets compiled.
+///
+/// Step 3 exists because step 2 only typechecks (no JS). When a
+/// dependency fix resolves a prior compile error in a dependent, that
+/// dependent needs full recompilation to produce its JS output.
 #[instrument(name = "lsp.flush.file_build.batch", skip_all, fields(modules = ?module_names, error_count = tracing::field::Empty))]
 fn build_batch(build_state: &mut BuildCommandState, module_names: Vec<String>) -> BatchBuildResult {
     let (mut diagnostics, mut touched_files) = compile_dependencies(build_state, &module_names);
+
+    // Snapshot modules at CompileError before typechecking dependents.
+    // After typecheck, any that moved to TypeChecked need full compilation.
+    let errored_before_typecheck: AHashSet<String> = build_state
+        .build_state
+        .modules
+        .iter()
+        .filter_map(|(name, module)| match module {
+            Module::SourceFile(sf) if sf.compilation_stage.is_compile_error() => Some(name.clone()),
+            _ => None,
+        })
+        .collect();
 
     let (dep_diagnostics, dep_touched) = typecheck_dependents(build_state, &module_names);
 
     diagnostics.extend(dep_diagnostics);
     touched_files.extend(dep_touched);
+
+    // Step 3: compile modules that were at CompileError but are now TypeChecked
+    // (meaning the typecheck succeeded after a dependency fix). These need
+    // full compilation to produce JS output.
+    let (err_diagnostics, err_touched) = compile_resolved_errors(build_state, &errored_before_typecheck);
+    diagnostics.extend(err_diagnostics);
+    touched_files.extend(err_touched);
 
     let error_count = diagnostics
         .iter()
@@ -306,6 +337,77 @@ fn typecheck_dependents(
                 dependent_modules = ?e.modules.iter().collect::<Vec<_>>(),
                 "typecheck_dependents: typechecked dependent closure (with errors)"
             );
+            (e.diagnostics, module_names_to_paths(build_state, &e.modules))
+        }
+    };
+
+    let error_count = diagnostics
+        .iter()
+        .filter(|d| d.severity == Severity::Error)
+        .count();
+    if error_count > 0 {
+        tracing::Span::current().record("error_count", error_count);
+    }
+
+    (diagnostics, touched_files)
+}
+
+/// Fully compile modules that were previously at `CompileError` and have
+/// now been successfully typechecked (moved to `TypeChecked` by step 2).
+///
+/// Filters `errored_before_typecheck` down to modules that are now at
+/// `TypeChecked`, then runs a full compile for those modules to produce
+/// JS output. If none were resolved, this is a no-op (but the span is
+/// still emitted for observability).
+#[instrument(name = "lsp.flush.file_build.compile_resolved", skip_all, fields(modules = tracing::field::Empty, error_count = tracing::field::Empty))]
+fn compile_resolved_errors(
+    build_state: &mut BuildCommandState,
+    errored_before_typecheck: &AHashSet<String>,
+) -> (Vec<BscDiagnostic>, HashSet<PathBuf>) {
+    let resolved: Vec<String> = errored_before_typecheck
+        .iter()
+        .filter(|name| {
+            build_state
+                .build_state
+                .modules
+                .get(*name)
+                .is_some_and(|m| matches!(m, Module::SourceFile(sf) if matches!(sf.compilation_stage, crate::build::build_types::CompilationStage::TypeChecked { .. })))
+        })
+        .cloned()
+        .collect();
+
+    if !resolved.is_empty() {
+        tracing::Span::current().record("modules", tracing::field::debug(&resolved));
+    }
+
+    if resolved.is_empty() {
+        return (Vec::new(), HashSet::new());
+    }
+
+    let build_config = BuildConfig {
+        output: OutputTarget::Lsp,
+        scope: CompileScope::CompileDependencies(resolved.iter().cloned().collect()),
+        output_mode: OutputMode::Silent,
+    };
+
+    let (diagnostics, touched_files) = match build::incremental_build(
+        build_state,
+        &build_config,
+        String::new(),
+        Some(std::time::Duration::ZERO),
+    ) {
+        Ok(result) => {
+            tracing::debug!(
+                compiled_modules = ?result.modules.iter().collect::<Vec<_>>(),
+                "compile_resolved_errors: compiled previously-errored modules"
+            );
+            (
+                result.diagnostics,
+                module_names_to_paths(build_state, &result.modules),
+            )
+        }
+        Err(e) => {
+            tracing::warn!("Compilation of resolved errors completed with errors: {e}");
             (e.diagnostics, module_names_to_paths(build_state, &e.modules))
         }
     };

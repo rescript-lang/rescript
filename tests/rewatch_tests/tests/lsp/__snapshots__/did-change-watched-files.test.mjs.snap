@@ -616,6 +616,7 @@ exports[`lsp didChangeWatchedFiles > deleting a .res file also removes its .resi
   "        incremental_build[module_count=5, scope=typecheck_dependents, output=lsp]",
   "          build.typecheck",
   "            build.typecheck_wave[file_count=0]",
+  "      lsp.flush.file_build.compile_resolved",
   "  lsp.did_change_watched_files[file_count=1]",
   "  lsp.flush[project_builds=deleted: src/Foo.res]",
   "    lsp.flush.project_build[project=rewatch-test-fixture]",
@@ -1533,5 +1534,6 @@ exports[`lsp didChangeWatchedFiles > triggers a build when an external file chan
   "        incremental_build[module_count=4, scope=typecheck_dependents, output=lsp]",
   "          build.typecheck",
   "            build.typecheck_wave[file_count=0]",
+  "      lsp.flush.file_build.compile_resolved",
 ]
 `;

@@ -229,6 +229,8 @@ pub fn compile(
     let mut clean_modules = AHashSet::<String>::new();
     // Modules that compiled successfully — stage/timestamps updated post-loop.
     let mut successfully_compiled = AHashSet::<String>::new();
+    // Modules that were compiled but failed — set to CompileError post-loop.
+    let mut errored_modules = AHashSet::<String>::new();
 
     let mut loop_count = 0;
     let mut files_total_count = compiled_modules.len();
@@ -520,6 +522,8 @@ pub fn compile(
                 if !entry.implementation.is_error() && entry.interface.as_ref().is_none_or(|r| !r.is_error())
                 {
                     successfully_compiled.insert(entry.module_name.clone());
+                } else if entry.was_compiled {
+                    errored_modules.insert(entry.module_name.clone());
                 }
 
                 (compile_warning, compile_error, interface_warning, interface_error)
@@ -615,6 +619,10 @@ pub fn compile(
                 source_hash,
                 ast_hash,
             }
+            | CompilationStage::CompileError {
+                source_hash,
+                ast_hash,
+            }
             | CompilationStage::TypeChecked {
                 source_hash,
                 ast_hash,
@@ -682,6 +690,40 @@ pub fn compile(
 
         if let Some(Module::SourceFile(sf)) = build_state.build_state.modules.get_mut(name) {
             sf.compilation_stage = new_stage;
+        }
+    }
+
+    // Mark modules that failed compilation as CompileError, preserving
+    // their AST hashes so they can be recompiled when the error is resolved.
+    for name in &errored_modules {
+        if let Some(Module::SourceFile(sf)) = build_state.build_state.modules.get(name) {
+            let prev_stage = sf.compilation_stage;
+            let hashes = match prev_stage {
+                CompilationStage::Parsed {
+                    source_hash,
+                    ast_hash,
+                }
+                | CompilationStage::CompileError {
+                    source_hash,
+                    ast_hash,
+                } => Some((source_hash, ast_hash)),
+                _ => None,
+            };
+            if let Some((source_hash, ast_hash)) = hashes
+                && let Some(Module::SourceFile(sf)) = build_state.build_state.modules.get_mut(name)
+            {
+                let new_stage = CompilationStage::CompileError {
+                    source_hash,
+                    ast_hash,
+                };
+                tracing::debug!(
+                    module = %name,
+                    from = ?sf.compilation_stage,
+                    to = ?new_stage,
+                    "compile.rs: error post-loop stage update"
+                );
+                sf.compilation_stage = new_stage;
+            }
         }
     }
 
@@ -1150,7 +1192,7 @@ fn compile_file(
 }
 
 pub fn mark_modules_with_deleted_deps_dirty(build_state: &mut BuildState) {
-    build_state.modules.iter_mut().for_each(|(_, module)| {
+    build_state.modules.iter_mut().for_each(|(_module_name, module)| {
         if let Module::SourceFile(sf) = module
             && !sf.deps.is_disjoint(&build_state.deleted_modules)
         {
@@ -1230,7 +1272,21 @@ pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildCommandState)
     build_state.modules.iter_mut().for_each(|(module_name, module)| {
         if let Module::SourceFile(sf) = module
             && modules_with_expired_deps.contains(module_name)
+            // Preserve CompileError and Parsed — both already signal "needs
+            // compilation". CompileError carries semantic meaning for the LSP
+            // flow (step 3 in file_build::build_batch uses it to detect
+            // modules that need full compilation after a dependency fix).
+            // Parsed modules were just parsed in this cycle and resetting them
+            // to Dirty loses their source/AST hashes, which prevents
+            // CompileError from being set if compilation fails.
+            && !sf.compilation_stage.is_compile_error()
+            && !matches!(sf.compilation_stage, CompilationStage::Parsed { .. })
         {
+            tracing::debug!(
+                module = %module_name,
+                from = ?sf.compilation_stage,
+                "compile.rs: mark_modules_with_expired_deps_dirty"
+            );
             sf.compilation_stage = CompilationStage::Dirty;
         }
     });
