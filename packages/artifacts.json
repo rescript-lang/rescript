@@ -5,6 +5,7 @@
     "COPYING.LESSER",
     "CREDITS.md",
     "LICENSE",
+    "LICENSE.MIT",
     "README.md",
     "cli/bsc.js",
     "cli/common/args.js",
