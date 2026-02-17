@@ -61,10 +61,9 @@ describe("lsp stale JS output", { timeout: 60_000 }, () => {
         }
 
         // Both files should have JS output
-        expect(
-          existsSync(buttonMjs),
-          "Button.mjs should exist after fix",
-        ).toBe(true);
+        expect(existsSync(buttonMjs), "Button.mjs should exist after fix").toBe(
+          true,
+        );
         expect(
           existsSync(appMjs),
           "App.mjs should exist after fix (dependent JS should be regenerated)",
