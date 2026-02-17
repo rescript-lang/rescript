@@ -474,17 +474,14 @@ pub fn compile(
                     }
                     Module::SourceFile(sf_module) => match &entry.implementation {
                         CompileFileOutcome::Warning(warning) => {
-                            sf_module.source_file.implementation.compile_state = CompileState::Warning;
                             sf_module.source_file.implementation.compile_warnings = Some(warning.clone());
                             (Some(warning.clone()), None)
                         }
                         CompileFileOutcome::Success => {
-                            sf_module.source_file.implementation.compile_state = CompileState::Success;
                             sf_module.source_file.implementation.compile_warnings = None;
                             (None, None)
                         }
                         CompileFileOutcome::Error(error) => {
-                            sf_module.source_file.implementation.compile_state = CompileState::Error;
                             sf_module.source_file.implementation.compile_warnings = None;
                             (None, Some(error.clone()))
                         }
@@ -494,22 +491,17 @@ pub fn compile(
                 let (interface_warning, interface_error) = if let Module::SourceFile(sf_module) = module {
                     match &entry.interface {
                         Some(CompileFileOutcome::Warning(warning)) => {
-                            sf_module.source_file.interface.as_mut().unwrap().compile_state =
-                                CompileState::Warning;
                             sf_module.source_file.interface.as_mut().unwrap().compile_warnings =
                                 Some(warning.clone());
                             (Some(warning.clone()), None)
                         }
                         Some(CompileFileOutcome::Success) => {
                             if let Some(interface) = sf_module.source_file.interface.as_mut() {
-                                interface.compile_state = CompileState::Success;
                                 interface.compile_warnings = None;
                             }
                             (None, None)
                         }
                         Some(CompileFileOutcome::Error(error)) => {
-                            sf_module.source_file.interface.as_mut().unwrap().compile_state =
-                                CompileState::Error;
                             sf_module.source_file.interface.as_mut().unwrap().compile_warnings = None;
                             (None, Some(error.clone()))
                         }
@@ -613,7 +605,8 @@ pub fn compile(
         let pkg = build_state.build_state.packages.get(&package_name).unwrap();
         let ocaml_path = pkg.get_ocaml_build_path_for_output(build_config.output);
 
-        // Get source + ast hashes from previous stage, or compute them
+        // Get source + ast hashes and parse warnings from previous stage, or compute them
+        let has_parse_warnings = prev_stage.has_parse_warnings();
         let (implementation_source_hash, implementation_ast_hash, interface_source_hash, interface_ast_hash) =
             match prev_stage {
                 CompilationStage::Parsed {
@@ -621,12 +614,14 @@ pub fn compile(
                     implementation_ast_hash,
                     interface_source_hash,
                     interface_ast_hash,
+                    ..
                 }
                 | CompilationStage::CompileError {
                     implementation_source_hash,
                     implementation_ast_hash,
                     interface_source_hash,
                     interface_ast_hash,
+                    ..
                 }
                 | CompilationStage::TypeChecked {
                     implementation_source_hash,
@@ -647,7 +642,7 @@ pub fn compile(
                     interface_source_hash,
                     interface_ast_hash,
                 ),
-                CompilationStage::Dirty => {
+                CompilationStage::Dirty | CompilationStage::ParseError => {
                     // Fallback: compute from disk
                     let build_path = pkg.get_build_path_for_output(build_config.output);
                     let sh = helpers::compute_file_hash(&pkg.path.join(&impl_path));
@@ -673,6 +668,12 @@ pub fn compile(
         ));
 
         if let Some(Module::SourceFile(sf)) = build_state.build_state.modules.get_mut(name) {
+            let has_compile_warnings = sf.source_file.implementation.compile_warnings.is_some()
+                || sf
+                    .source_file
+                    .interface
+                    .as_ref()
+                    .is_some_and(|i| i.compile_warnings.is_some());
             match (mode.emits_js(), cmi_hash, cmt_hash) {
                 (true, Some(cmi), Some(cmt)) => {
                     sf.set_compilation_stage(CompilationStage::TypeChecked {
@@ -683,6 +684,8 @@ pub fn compile(
                         cmi_hash: cmi,
                         cmt_hash: cmt,
                         compiled_at: now,
+                        has_parse_warnings,
+                        has_compile_warnings,
                     });
                     let cmj_hash = helpers::compute_file_hash(&helpers::get_compiler_asset_in(
                         &ocaml_path,
@@ -700,6 +703,8 @@ pub fn compile(
                             cmt_hash: cmt,
                             cmj_hash: cmj,
                             compiled_at: now,
+                            has_parse_warnings,
+                            has_compile_warnings,
                         });
                     }
                 }
@@ -712,6 +717,8 @@ pub fn compile(
                         cmi_hash: cmi,
                         cmt_hash: cmt,
                         compiled_at: now,
+                        has_parse_warnings,
+                        has_compile_warnings,
                     });
                 }
                 _ => {
@@ -726,18 +733,21 @@ pub fn compile(
     for name in &errored_modules {
         if let Some(Module::SourceFile(sf)) = build_state.build_state.modules.get(name) {
             let prev_stage = sf.compilation_stage();
+            let has_parse_warnings = prev_stage.has_parse_warnings();
             let hashes = match prev_stage {
                 CompilationStage::Parsed {
                     implementation_source_hash,
                     implementation_ast_hash,
                     interface_source_hash,
                     interface_ast_hash,
+                    ..
                 }
                 | CompilationStage::CompileError {
                     implementation_source_hash,
                     implementation_ast_hash,
                     interface_source_hash,
                     interface_ast_hash,
+                    ..
                 } => Some((
                     implementation_source_hash,
                     implementation_ast_hash,
@@ -759,6 +769,7 @@ pub fn compile(
                     implementation_ast_hash,
                     interface_source_hash,
                     interface_ast_hash,
+                    has_parse_warnings,
                 });
             }
         }

@@ -865,8 +865,6 @@ pub fn parse_packages(build_state: &mut BuildState, output: OutputTarget, mode: 
                                 SourceFile {
                                     implementation: Implementation {
                                         path: file.to_owned(),
-                                        parse_state: ParseState::Pending,
-                                        compile_state: CompileState::Pending,
                                         last_modified: metadata.modified,
                                         compile_warnings: None,
                                     },
@@ -929,8 +927,6 @@ pub fn parse_packages(build_state: &mut BuildState, output: OutputTarget, mode: 
                                     if let Module::SourceFile(m) = module {
                                         m.source_file.interface = Some(Interface {
                                             path: file.to_owned(),
-                                            parse_state: ParseState::Pending,
-                                            compile_state: CompileState::Pending,
                                             last_modified: metadata.modified,
                                             compile_warnings: None,
                                         });
@@ -943,15 +939,11 @@ pub fn parse_packages(build_state: &mut BuildState, output: OutputTarget, mode: 
                                         // this will be overwritten later
                                         implementation: Implementation {
                                             path: implementation_filename,
-                                            parse_state: ParseState::Pending,
-                                            compile_state: CompileState::Pending,
                                             last_modified: metadata.modified,
                                             compile_warnings: None,
                                         },
                                         interface: Some(Interface {
                                             path: file.to_owned(),
-                                            parse_state: ParseState::Pending,
-                                            compile_state: CompileState::Pending,
                                             last_modified: metadata.modified,
                                             compile_warnings: None,
                                         }),

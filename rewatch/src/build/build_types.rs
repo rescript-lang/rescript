@@ -6,21 +6,6 @@ use ahash::{AHashMap, AHashSet};
 use blake3::Hash;
 use std::{fmt::Display, ops::Deref, path::Path, path::PathBuf, time::SystemTime};
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum ParseState {
-    Pending,
-    ParseError,
-    Warning,
-    Success,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum CompileState {
-    Pending,
-    Error,
-    Warning,
-    Success,
-}
 /// Tracks how far a module has progressed through compilation.
 ///
 /// Each variant accumulates blake3 hashes of all artifacts produced up to
@@ -29,14 +14,20 @@ pub enum CompileState {
 ///
 /// Lifecycle: `Dirty → Parsed → TypeChecked → Built`
 ///
-/// Error path: `Parsed → CompileError` when compilation fails (e.g. due
-/// to a dependency's API not matching). The AST hashes are preserved so
-/// that when a dependency fix makes the module valid again, we know
-/// full recompilation is needed.
+/// Error paths:
+/// - `Dirty → ParseError` when parsing fails (syntax error, etc.).
+///   The module stays here until its source changes.
+/// - `Parsed → CompileError` when compilation fails (e.g. due
+///   to a dependency's API not matching). The AST hashes are preserved so
+///   that when a dependency fix makes the module valid again, we know
+///   full recompilation is needed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CompilationStage {
     /// Not yet compiled, or source changed — needs full pipeline.
     Dirty,
+    /// Parsing failed (syntax error, etc.). The module is inert until
+    /// its source changes and resets it to `Dirty`.
+    ParseError,
     /// AST generated. Carries hashes of implementation (and optional interface)
     /// source + AST artifacts.
     Parsed {
@@ -44,6 +35,7 @@ pub enum CompilationStage {
         implementation_ast_hash: Hash,
         interface_source_hash: Option<Hash>,
         interface_ast_hash: Option<Hash>,
+        has_parse_warnings: bool,
     },
     /// Compilation was attempted but failed (type error, etc.).
     /// Preserves parse hashes so the module can be recompiled when the
@@ -53,6 +45,7 @@ pub enum CompilationStage {
         implementation_ast_hash: Hash,
         interface_source_hash: Option<Hash>,
         interface_ast_hash: Option<Hash>,
+        has_parse_warnings: bool,
     },
     /// Type-checked only (.cmi/.cmt produced, no .cmj).
     /// Accumulates parse hashes + typecheck artifact hashes.
@@ -64,6 +57,8 @@ pub enum CompilationStage {
         cmi_hash: Hash,
         cmt_hash: Hash,
         compiled_at: SystemTime,
+        has_parse_warnings: bool,
+        has_compile_warnings: bool,
     },
     /// Fully compiled (.cmi/.cmt/.cmj + JS produced).
     /// Accumulates all prior hashes + build artifact hashes.
@@ -76,6 +71,8 @@ pub enum CompilationStage {
         cmt_hash: Hash,
         cmj_hash: Hash,
         compiled_at: SystemTime,
+        has_parse_warnings: bool,
+        has_compile_warnings: bool,
     },
 }
 
@@ -90,11 +87,49 @@ impl CompilationStage {
         matches!(self, CompilationStage::CompileError { .. })
     }
 
+    /// Whether this module failed parsing (syntax error, etc.).
+    pub fn is_parse_error(self) -> bool {
+        matches!(self, CompilationStage::ParseError)
+    }
+
+    /// Whether parsing produced warnings (e.g. local dependency warnings).
+    pub fn has_parse_warnings(self) -> bool {
+        match self {
+            CompilationStage::Parsed {
+                has_parse_warnings, ..
+            }
+            | CompilationStage::CompileError {
+                has_parse_warnings, ..
+            }
+            | CompilationStage::TypeChecked {
+                has_parse_warnings, ..
+            }
+            | CompilationStage::Built {
+                has_parse_warnings, ..
+            } => has_parse_warnings,
+            _ => false,
+        }
+    }
+
+    /// Whether compilation produced warnings.
+    pub fn has_compile_warnings(self) -> bool {
+        match self {
+            CompilationStage::TypeChecked {
+                has_compile_warnings, ..
+            }
+            | CompilationStage::Built {
+                has_compile_warnings, ..
+            } => has_compile_warnings,
+            _ => false,
+        }
+    }
+
     /// Whether `self → new_stage` is a valid compilation stage transition.
     ///
     /// Valid transitions:
     /// ```text
-    /// Dirty        → Dirty, Parsed
+    /// Dirty        → Dirty, ParseError, Parsed
+    /// ParseError   → Dirty, ParseError
     /// Parsed       → Dirty, Parsed, CompileError, TypeChecked
     /// CompileError → Dirty, CompileError, TypeChecked
     /// TypeChecked  → Dirty, CompileError, TypeChecked, Built
@@ -108,6 +143,10 @@ impl CompilationStage {
             //   parse.rs     — source changed on disk, or mlmap changed
             //   compile.rs   — deleted/expired deps, or hash computation failed
             (_, Dirty)
+            // Dirty → ParseError: parse.rs — AST generation failed (syntax error)
+            | (Dirty, ParseError)
+            // ParseError → ParseError: parse.rs — re-parsed but still fails
+            | (ParseError, ParseError)
             // Dirty → Parsed: parse.rs — AST successfully generated
             //                  clean.rs — AST on disk is fresh, restoring from artifacts
             | (Dirty, Parsed { .. })
@@ -136,10 +175,10 @@ impl CompilationStage {
         )
     }
 
-    /// Numeric ordering for stage comparison: Dirty(0) < Parsed(1) < CompileError(1) < TypeChecked(2) < Built(3).
+    /// Numeric ordering for stage comparison: Dirty/ParseError(0) < Parsed(1) < CompileError(1) < TypeChecked(2) < Built(3).
     fn ordinal(self) -> u8 {
         match self {
-            CompilationStage::Dirty => 0,
+            CompilationStage::Dirty | CompilationStage::ParseError => 0,
             CompilationStage::Parsed { .. } | CompilationStage::CompileError { .. } => 1,
             CompilationStage::TypeChecked { .. } => 2,
             CompilationStage::Built { .. } => 3,
@@ -152,9 +191,11 @@ impl CompilationStage {
     }
 
     /// Whether this module needs work for the given compile mode.
+    /// `ParseError` returns `false` — the module can't compile without a successful parse.
     pub fn needs_compile_for_mode(self, mode: CompileMode) -> bool {
         match (self, mode) {
             (CompilationStage::Built { .. }, _) => false,
+            (CompilationStage::ParseError, _) => false,
             (CompilationStage::TypeChecked { .. }, CompileMode::FullCompile) => true,
             (CompilationStage::TypeChecked { .. }, CompileMode::TypecheckOnly) => false,
             (CompilationStage::Parsed { .. } | CompilationStage::CompileError { .. }, _) => true,
@@ -374,8 +415,6 @@ pub struct BuildConfig {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Interface {
     pub path: PathBuf,
-    pub parse_state: ParseState,
-    pub compile_state: CompileState,
     pub last_modified: SystemTime,
     /// Compiler warning output (from bsc stderr) stored for re-emission
     /// during incremental builds when this module is not recompiled.
@@ -386,8 +425,6 @@ pub struct Interface {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Implementation {
     pub path: PathBuf,
-    pub parse_state: ParseState,
-    pub compile_state: CompileState,
     pub last_modified: SystemTime,
     /// Compiler warning output (from bsc stderr) stored for re-emission
     /// during incremental builds when this module is not recompiled.

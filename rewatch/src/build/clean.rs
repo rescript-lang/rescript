@@ -259,6 +259,7 @@ pub fn cleanup_previous_build(
                         implementation_ast_hash: iah,
                         interface_source_hash,
                         interface_ast_hash,
+                        has_parse_warnings: false,
                     });
 
                     // If compilation artifacts are also fresh (.cmt newer
@@ -310,6 +311,8 @@ pub fn cleanup_previous_build(
                                 cmi_hash: cmi,
                                 cmt_hash: cmt,
                                 compiled_at: *cmt_last_modified,
+                                has_parse_warnings: false,
+                                has_compile_warnings: false,
                             });
                             if cmj_exists && let Some(cmj) = cmj_hash {
                                 sf_module.set_compilation_stage(CompilationStage::Built {
@@ -321,6 +324,8 @@ pub fn cleanup_previous_build(
                                     cmt_hash: cmt,
                                     cmj_hash: cmj,
                                     compiled_at: *cmt_last_modified,
+                                    has_parse_warnings: false,
+                                    has_compile_warnings: false,
                                 });
                             }
                         }
@@ -366,25 +371,11 @@ pub fn cleanup_previous_build(
 }
 
 fn has_parse_warnings(sf_module: &SourceFileModule) -> bool {
-    matches!(
-        sf_module.source_file.implementation.parse_state,
-        ParseState::Warning
-    ) || sf_module
-        .source_file
-        .interface
-        .as_ref()
-        .is_some_and(|i| matches!(i.parse_state, ParseState::Warning))
+    sf_module.compilation_stage().has_parse_warnings()
 }
 
 fn has_compile_warnings(sf_module: &SourceFileModule) -> bool {
-    matches!(
-        sf_module.source_file.implementation.compile_state,
-        CompileState::Warning
-    ) || sf_module
-        .source_file
-        .interface
-        .as_ref()
-        .is_some_and(|i| matches!(i.compile_state, CompileState::Warning))
+    sf_module.compilation_stage().has_compile_warnings()
 }
 
 pub fn cleanup_after_build(build_state: &BuildCommandState, output: OutputTarget) {

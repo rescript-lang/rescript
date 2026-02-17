@@ -144,6 +144,8 @@ pub fn generate_asts(
                 }
                 let mut impl_parse_ok = false;
                 let mut iface_parse_ok = true; // true when no interface
+                let mut impl_has_parse_warnings = false;
+                let mut iface_has_parse_warnings = false;
                 {
                     let source_file = &mut sf_module.source_file;
                     // We get Err(x) when there is a parse error. When it's Ok(_, Some(
@@ -152,20 +154,17 @@ pub fn generate_asts(
                         // In case of an internal dependency, we want to keep on
                         // propagating the warning with every compile. So we mark it as dirty for
                         // the next round (cleanup_after_build removes AST files for
-                        // modules with ParseState::Warning, forcing re-parse next cycle).
+                        // modules with has_parse_warnings, forcing re-parse next cycle).
                         Ok((_path, Some(stderr_warnings))) if package.is_local_dep => {
-                            source_file.implementation.parse_state = ParseState::Warning;
+                            impl_has_parse_warnings = true;
                             logs::append(package, &stderr_warnings);
                             stderr.push_str(&stderr_warnings);
                             impl_parse_ok = true;
                         }
                         Ok((_path, Some(_))) | Ok((_path, None)) => {
-                            source_file.implementation.parse_state = ParseState::Success;
                             impl_parse_ok = true;
                         }
                         Err(err) => {
-                            // Some compilation error
-                            source_file.implementation.parse_state = ParseState::ParseError;
                             logs::append(package, &err);
                             has_failure = true;
                             stderr.push_str(&err);
@@ -177,24 +176,14 @@ pub fn generate_asts(
                     match iast_result {
                         // In case of an internal dependency, we want to keep on
                         // propagating the warning with every compile (cleanup_after_build
-                        // removes AST files for modules with ParseState::Warning).
+                        // removes AST files for modules with has_parse_warnings).
                         Ok(Some((_path, Some(stderr_warnings)))) if package.is_local_dep => {
-                            if let Some(interface) = source_file.interface.as_mut() {
-                                interface.parse_state = ParseState::Warning;
-                            }
+                            iface_has_parse_warnings = true;
                             logs::append(package, &stderr_warnings);
                             stderr.push_str(&stderr_warnings);
                         }
-                        Ok(Some((_, None))) | Ok(Some((_, Some(_)))) => {
-                            if let Some(interface) = source_file.interface.as_mut() {
-                                interface.parse_state = ParseState::Success;
-                            }
-                        }
+                        Ok(Some((_, None))) | Ok(Some((_, Some(_)))) => {}
                         Err(err) => {
-                            // Some compilation error
-                            if let Some(interface) = source_file.interface.as_mut() {
-                                interface.parse_state = ParseState::ParseError;
-                            }
                             logs::append(package, &err);
                             has_failure = true;
                             stderr.push_str(&err);
@@ -234,8 +223,11 @@ pub fn generate_asts(
                                 implementation_ast_hash: iah,
                                 interface_source_hash,
                                 interface_ast_hash,
+                                has_parse_warnings: impl_has_parse_warnings || iface_has_parse_warnings,
                             });
                         }
+                    } else if is_dirty && (!impl_parse_ok || !iface_parse_ok) {
+                        sf_module.set_compilation_stage(CompilationStage::ParseError);
                     }
                 }
             }
