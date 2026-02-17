@@ -185,26 +185,36 @@ pub fn cleanup_previous_build(
     compile_assets_state
         .ast_rescript_file_locations
         .intersection(&compile_assets_state.rescript_file_locations)
-        .for_each(|res_file_location| {
-            let AstModule {
-                module_name,
-                last_modified: ast_last_modified,
-                ast_file_path,
-                package_name: ast_package_name,
-                ..
-            } = compile_assets_state
+        // Skip .resi entries — they are handled when we process the .res entry for
+        // the same module. This gives us per-module iteration instead of per-file.
+        .filter(|res_file_location| {
+            let ast_module = compile_assets_state
                 .ast_modules
-                .get(res_file_location)
+                .get(*res_file_location)
                 .expect("Could not find module name for ast file");
-            let package_path = build_state
-                .build_state
-                .packages
-                .get(ast_package_name)
-                .map(|pkg| pkg.path.clone());
+            !helpers::is_interface_ast_file(&ast_module.ast_file_path)
+        })
+        .cloned()
+        .collect::<Vec<_>>()
+        .into_iter()
+        .for_each(|res_file_location| {
+            let ast_module = compile_assets_state
+                .ast_modules
+                .get(&res_file_location)
+                .expect("Could not find module name for ast file");
+            let module_name = ast_module.module_name.clone();
+            let ast_last_modified = ast_module.last_modified;
+            let ast_file_path = ast_module.ast_file_path.clone();
+
+            // Look up matching .iast entry for this module (if it has an interface).
+            let iast_entry = compile_assets_state.ast_modules.iter().find(|(_, m)| {
+                m.module_name == module_name && helpers::is_interface_ast_file(&m.ast_file_path)
+            });
+
             let module = build_state
                 .build_state
                 .modules
-                .get_mut(module_name)
+                .get_mut(&module_name)
                 .expect("Could not find module for ast file");
 
             let sf_module = match module {
@@ -212,149 +222,106 @@ pub fn cleanup_previous_build(
                 Module::MlMap(_) => unreachable!("MlMap is not matched with a ReScript file"),
             };
 
-            // Determine source timestamp and whether the AST is fresh relative to source.
-            // For interface AST files (.iast) we check the interface's timestamp;
-            // for implementation AST files (.ast) we check the implementation's timestamp.
-            let is_iast = helpers::is_interface_ast_file(ast_file_path);
-            let ast_is_fresh = if is_iast {
-                let iface = sf_module
-                    .source_file
-                    .interface
-                    .as_ref()
-                    .expect("Could not find interface for module");
-                ast_last_modified > &iface.last_modified
-            } else {
-                let impl_modified = sf_module.source_file.implementation.last_modified;
-                ast_last_modified > &impl_modified && !deleted_interfaces.contains(module_name)
+            // Check freshness: .ast must be newer than source, and .iast (if present)
+            // must be newer than the interface source.
+            let impl_ast_is_fresh = ast_last_modified > sf_module.source_file.implementation.last_modified
+                && !deleted_interfaces.contains(&module_name);
+            let iface_ast_is_fresh = match (&sf_module.source_file.interface, &iast_entry) {
+                (Some(iface), Some((_, iast_module))) => iast_module.last_modified > iface.last_modified,
+                (None, _) => true,        // no interface → trivially fresh
+                (Some(_), None) => false, // interface exists but no .iast → stale
             };
 
-            if ast_is_fresh {
-                // Promote from Dirty → Parsed since the AST on disk is fresh.
-                // Guard on is_dirty() so a second .ast/.iast pass for the same
-                // module doesn't overwrite a stage that was already restored.
-                if sf_module.compilation_stage().is_dirty() && !deleted_interfaces.contains(module_name) {
-                    // Compute implementation hashes.
-                    // res_file_location is an absolute path. When we're processing the .iast,
-                    // it points to the .resi — resolve the .res path via the package root.
-                    let implementation_source_hash = if is_iast {
-                        package_path.as_ref().and_then(|pp| {
-                            helpers::compute_file_hash(&pp.join(&sf_module.source_file.implementation.path))
-                        })
+            if impl_ast_is_fresh
+                && iface_ast_is_fresh
+                && sf_module.compilation_stage().is_dirty()
+                && !deleted_interfaces.contains(&module_name)
+            {
+                // Both AST files are fresh. Compute hashes directly from absolute paths.
+                // res_file_location is the absolute .res path (extracted from the .ast file).
+                let implementation_source_hash = helpers::compute_file_hash(&res_file_location);
+                let implementation_ast_hash = helpers::compute_file_hash(&ast_file_path);
+
+                // For the interface, the .iast entry's key is the absolute .resi path.
+                let (interface_source_hash, interface_ast_hash) =
+                    if let Some((resi_path, iast_module)) = &iast_entry {
+                        (
+                            helpers::compute_file_hash(resi_path.as_path()),
+                            helpers::compute_file_hash(&iast_module.ast_file_path),
+                        )
                     } else {
-                        helpers::compute_file_hash(res_file_location)
-                    };
-                    let implementation_ast_hash = if is_iast {
-                        // We're processing the .iast; find the .ast file path
-                        compile_assets_state
-                            .ast_modules
-                            .iter()
-                            .find(|(_, m)| {
-                                &m.module_name == module_name
-                                    && !helpers::is_interface_ast_file(&m.ast_file_path)
-                            })
-                            .and_then(|(_, m)| helpers::compute_file_hash(&m.ast_file_path))
-                    } else {
-                        helpers::compute_file_hash(ast_file_path)
+                        (None, None)
                     };
 
-                    // Compute interface hashes (if this module has an interface).
-                    // When we're processing the .ast, resolve the .resi path via the package root.
-                    let (interface_source_hash, interface_ast_hash) =
-                        if let Some(interface) = &sf_module.source_file.interface {
-                            let interface_source_hash = if is_iast {
-                                helpers::compute_file_hash(res_file_location)
-                            } else {
-                                package_path
-                                    .as_ref()
-                                    .and_then(|pp| helpers::compute_file_hash(&pp.join(&interface.path)))
-                            };
-                            let interface_ast_hash = if is_iast {
-                                helpers::compute_file_hash(ast_file_path)
-                            } else {
-                                compile_assets_state
-                                    .ast_modules
-                                    .iter()
-                                    .find(|(_, m)| {
-                                        &m.module_name == module_name
-                                            && helpers::is_interface_ast_file(&m.ast_file_path)
-                                    })
-                                    .and_then(|(_, m)| helpers::compute_file_hash(&m.ast_file_path))
-                            };
-                            (interface_source_hash, interface_ast_hash)
+                if let (Some(ish), Some(iah)) = (implementation_source_hash, implementation_ast_hash) {
+                    sf_module.set_compilation_stage(CompilationStage::Parsed {
+                        implementation_source_hash: ish,
+                        implementation_ast_hash: iah,
+                        interface_source_hash,
+                        interface_ast_hash,
+                    });
+
+                    // If compilation artifacts are also fresh (.cmt newer
+                    // than .ast), restore through TypeChecked and Built.
+                    let cmt_last_modified = compile_assets_state.cmt_modules.get(&module_name);
+                    let cmj_exists = compile_assets_state.cmj_modules.contains_key(&module_name);
+                    if let Some(cmt_last_modified) = cmt_last_modified
+                        && cmt_last_modified > &ast_last_modified
+                    {
+                        let (cmi_hash, cmt_hash, cmj_hash) = if let Some(pkg) =
+                            build_state.build_state.packages.get(&sf_module.package_name)
+                        {
+                            let ocaml_path = pkg.get_ocaml_build_path_for_output(output);
+                            let impl_path = &sf_module.source_file.implementation.path;
+                            (
+                                helpers::compute_file_hash(&helpers::get_compiler_asset_in(
+                                    &ocaml_path,
+                                    &pkg.namespace,
+                                    impl_path,
+                                    "cmi",
+                                )),
+                                helpers::compute_file_hash(&helpers::get_compiler_asset_in(
+                                    &ocaml_path,
+                                    &pkg.namespace,
+                                    impl_path,
+                                    "cmt",
+                                )),
+                                if cmj_exists {
+                                    helpers::compute_file_hash(&helpers::get_compiler_asset_in(
+                                        &ocaml_path,
+                                        &pkg.namespace,
+                                        impl_path,
+                                        "cmj",
+                                    ))
+                                } else {
+                                    None
+                                },
+                            )
                         } else {
-                            (None, None)
+                            (None, None, None)
                         };
 
-                    if let (Some(ish), Some(iah)) = (implementation_source_hash, implementation_ast_hash) {
-                        sf_module.set_compilation_stage(CompilationStage::Parsed {
-                            implementation_source_hash: ish,
-                            implementation_ast_hash: iah,
-                            interface_source_hash,
-                            interface_ast_hash,
-                        });
-
-                        // If compilation artifacts are also fresh (.cmt newer
-                        // than .ast), restore through TypeChecked and Built.
-                        let cmt_last_modified = compile_assets_state.cmt_modules.get(module_name);
-                        let cmj_exists = compile_assets_state.cmj_modules.contains_key(module_name);
-                        if let Some(cmt_last_modified) = cmt_last_modified
-                            && cmt_last_modified > ast_last_modified
-                        {
-                            let (cmi_hash, cmt_hash, cmj_hash) = if let Some(pkg) =
-                                build_state.build_state.packages.get(&sf_module.package_name)
-                            {
-                                let ocaml_path = pkg.get_ocaml_build_path_for_output(output);
-                                let impl_path = &sf_module.source_file.implementation.path;
-                                (
-                                    helpers::compute_file_hash(&helpers::get_compiler_asset_in(
-                                        &ocaml_path,
-                                        &pkg.namespace,
-                                        impl_path,
-                                        "cmi",
-                                    )),
-                                    helpers::compute_file_hash(&helpers::get_compiler_asset_in(
-                                        &ocaml_path,
-                                        &pkg.namespace,
-                                        impl_path,
-                                        "cmt",
-                                    )),
-                                    if cmj_exists {
-                                        helpers::compute_file_hash(&helpers::get_compiler_asset_in(
-                                            &ocaml_path,
-                                            &pkg.namespace,
-                                            impl_path,
-                                            "cmj",
-                                        ))
-                                    } else {
-                                        None
-                                    },
-                                )
-                            } else {
-                                (None, None, None)
-                            };
-
-                            if let (Some(cmi), Some(cmt)) = (cmi_hash, cmt_hash) {
-                                sf_module.set_compilation_stage(CompilationStage::TypeChecked {
+                        if let (Some(cmi), Some(cmt)) = (cmi_hash, cmt_hash) {
+                            sf_module.set_compilation_stage(CompilationStage::TypeChecked {
+                                implementation_source_hash: ish,
+                                implementation_ast_hash: iah,
+                                interface_source_hash,
+                                interface_ast_hash,
+                                cmi_hash: cmi,
+                                cmt_hash: cmt,
+                                compiled_at: *cmt_last_modified,
+                            });
+                            if cmj_exists && let Some(cmj) = cmj_hash {
+                                sf_module.set_compilation_stage(CompilationStage::Built {
                                     implementation_source_hash: ish,
                                     implementation_ast_hash: iah,
                                     interface_source_hash,
                                     interface_ast_hash,
                                     cmi_hash: cmi,
                                     cmt_hash: cmt,
+                                    cmj_hash: cmj,
                                     compiled_at: *cmt_last_modified,
                                 });
-                                if cmj_exists && let Some(cmj) = cmj_hash {
-                                    sf_module.set_compilation_stage(CompilationStage::Built {
-                                        implementation_source_hash: ish,
-                                        implementation_ast_hash: iah,
-                                        interface_source_hash,
-                                        interface_ast_hash,
-                                        cmi_hash: cmi,
-                                        cmt_hash: cmt,
-                                        cmj_hash: cmj,
-                                        compiled_at: *cmt_last_modified,
-                                    });
-                                }
                             }
                         }
                     }
