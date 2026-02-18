@@ -43,8 +43,11 @@ rescript build          # One-shot build (unchanged, for CI)
 │    client: Client,                                    │
 │    workspace_folders: RwLock<Vec<String>>,             │
 │    projects: Arc<Mutex<ProjectMap>>,                   │
-│    queue: Mutex<Option<Queue>>,                        │
 │    open_buffers: Mutex<HashMap<Url, String>>,          │
+│    queue: Mutex<Option<Queue>>,                        │
+│    root_span: tracing::Span,                           │
+│    queue_debounce_ms: Mutex<u64>,                      │
+│    diagnostic_store: Mutex<Option<Arc<DiagnosticStore>>│
 │  }                                                    │
 │                                                       │
 │  No server-side file watcher needed.                  │
@@ -66,7 +69,6 @@ rewatch/src/
     ├── code_lens.rs             # Code lens via analysis binary subprocess
     ├── completion.rs            # Completion via analysis binary subprocess
     ├── definition.rs            # Go-to-definition via analysis binary subprocess
-    ├── dependency_closure.rs    # Dependency/dependent graph traversal
     ├── diagnostic_store.rs      # Diagnostic storage and idle tracking for HTTP endpoint
     ├── document_symbol.rs       # Document symbols via analysis binary subprocess
     ├── file_args.rs             # TypecheckArgs extraction from BuildCommandState
@@ -176,7 +178,7 @@ The LSP server advertises these capabilities during `initialize`:
 
 ```
 textDocumentSync:       Full (with open_close, save notifications, no include_text)
-completionProvider:     { triggerCharacters: [".", ">", "@", "~", "\"", "=", "("] }
+completionProvider:     { triggerCharacters: [".", ">", "@", "~", "\"", "=", "("], resolveProvider: true }
 hoverProvider:          true
 definitionProvider:     true
 typeDefinitionProvider: true
@@ -185,10 +187,11 @@ codeActionProvider:     true
 renameProvider:         { prepareProvider: true }
 documentSymbolProvider: true
 inlayHintProvider:      true
-signatureHelpProvider:  { triggerCharacters: ["(", ","] }
+signatureHelpProvider:  { triggerCharacters: ["("], retriggerCharacters: ["=", ","] }
 semanticTokensProvider: full
 codeLensProvider:       true
 documentFormattingProvider: true
+fileOperations:         didCreate, didRename, didDelete (for **/*.res, **/*.resi — advertised but handlers not yet wired up)
 ```
 
 ## Lifecycle
@@ -212,8 +215,8 @@ Editor starts ──▶ rescript lsp --stdio
                        ├── Run initial build (TypecheckOnly)
                        │   ├── extend_with_children (scan source folders)
                        │   ├── prepare_build (compiler info, validation, cleanup)
-                       │   ├── Downgrade any Built modules → TypeChecked
-                       │   └── incremental_build(TypecheckOnly)
+                       │   ├── parse_and_resolve (parse sources, resolve deps)
+                       │   └── full_typecheck (TypecheckOnly)
                        ├── Publish diagnostics from build results
                        ├── Recheck open buffers (typecheck against buffer content)
                        ├── Start unified queue (queue::Queue::new)
@@ -253,8 +256,10 @@ A single background consumer task collects events into a `PendingState` with thr
 
 - `typechecks` — files needing typecheck (unsaved buffer content)
 - `compile_files` — files needing incremental build (saved to disk)
-- `build_projects` — file paths whose creation/deletion requires a full project rebuild
-- `config_changed` — `rescript.json` paths requiring full project re-initialization
+- `build_projects` — a `PendingProjectBuilds` struct containing:
+  - `created_files` — file paths whose creation requires a full project rebuild
+  - `deleted_files` — file paths whose deletion requires a full project rebuild
+  - `config_changed` — `rescript.json` paths requiring full project re-initialization
 
 The merge function applies promotion rules to consolidate per-file state. When a `FileCreated` or `FileDeleted` event arrives, any pending per-file typecheck or build for that same file is removed since the full rebuild will cover it. A `ConfigChanged` event clears pending typechecks for the same project (since the rebuild will produce fresh type information) but keeps pending compile_files. After 100ms of silence the batch is flushed sequentially:
 
@@ -345,7 +350,7 @@ didSave / didChangeWatchedFiles notification
                     │
           ┌─────────▼──────────┐
           │ merge into           │
-          │ PendingState         │  (typechecks + compile_files + build_projects + config_changed)
+          │ PendingState         │  (typechecks + compile_files + build_projects)
           │ reset 100ms timer    │
           └─────────┬──────────┘
                     │ timer expires
@@ -370,17 +375,18 @@ didSave / didChangeWatchedFiles notification
           Step 2: Incremental builds (per project)
           ├── group files by project root
           ├── mark_file_parse_dirty per file
-          ├── Phase 1: compile_dependencies
+          ├── Step 2a: compile_dependencies
           │   ├── parse_and_resolve (parse dirty files, resolve deps)
           │   ├── get_dependency_closure (DFS downward through module.deps)
-          │   ├── incremental_build with closure as compile universe
-          │   └── (compile loop restores any orphan dirty modules on exit)
-          ├── Phase 2: typecheck_dependents
+          │   └── FullCompile build with closure (produces JS)
+          ├── Step 2b: typecheck_dependents
           │   ├── get_dependent_closure (DFS upward through module.dependents)
-          │   ├── Mark each dependent as Dirty
-          │   ├── incremental_build with dependents as compile universe
-          │   └── (compile loop restores any orphan dirty modules on exit)
-          └── Publish combined diagnostics from both phases
+          │   └── TypecheckOnly build with dependents (no JS, surfaces type errors)
+          ├── Step 2c: compile_resolved_errors
+          │   ├── Snapshot modules at CompileError(FullCompile) before step 2b
+          │   ├── After step 2b, find modules now at TypeChecked (error resolved)
+          │   └── FullCompile build for those modules (produces missing JS)
+          └── Publish combined diagnostics from all phases
                     │
                     ▼
           Post-build recheck (if any Build file had stashed buffer content)
@@ -391,7 +397,7 @@ didSave / didChangeWatchedFiles notification
 
 `didChangeWatchedFiles` filters for `.res`/`.resi` files and `rescript.json`. For source files: `Changed` events trigger incremental builds via `FileChangedOnDisk`, `Created` and `Deleted` events trigger a full project re-initialization via `FileCreated`/`FileDeleted` events — project root resolution happens at flush time, not at enqueue time. When a `.res` file is deleted, its associated `.resi` and compiled JS files are also cleaned up; deleting a `.resi` alone does not remove the `.res` or JS. For `rescript.json` files: `Changed` events trigger a `ConfigChanged` event that re-initializes the affected project (creation/deletion of `rescript.json` is not handled).
 
-Implementation: `lsp/queue.rs`, `lsp/queue/file_build.rs`, `lsp/queue/project_build.rs`, `lsp/dependency_closure.rs`
+Implementation: `lsp/queue.rs`, `lsp/queue/file_build.rs`, `lsp/queue/project_build.rs`, `build/dependency_closure.rs`, `build/compile_dependencies.rs`, `build/typecheck_dependents.rs`
 
 ### Build Artifacts
 
@@ -399,7 +405,7 @@ The LSP writes build artifacts to `lib/lsp/` (not `lib/bs/`), keeping it indepen
 
 ## Completion Integration
 
-Completion shells out to `rescript-editor-analysis.exe completion-rewatch`, passing a JSON blob over stdin with all the context the analysis binary needs. This avoids redundant project discovery in the analysis binary.
+Completion shells out to `rescript-editor-analysis.exe rewatch completion`, passing a JSON blob over stdin with all the context the analysis binary needs. This avoids redundant project discovery in the analysis binary.
 
 ```
 completion request
@@ -422,7 +428,7 @@ completion request
     │     "projectFiles": [...],
     │     "dependenciesFiles": [...]
     │   }
-    ├── Spawn rescript-editor-analysis.exe completion-rewatch
+    ├── Spawn rescript-editor-analysis.exe rewatch completion
     ├── Pipe JSON to stdin
     └── Parse JSON completion items from stdout
 ```
@@ -540,7 +546,8 @@ Config changes (e.g. suffix, package-spec) trigger a full project re-initializat
 | Monorepo multi-workspace                | Implemented                                                                             |
 | `textDocument/createInterface`          | TODO — niche feature, generates `.resi` from `.res` (already exists in analysis binary) |
 | `textDocument/openCompiled`             | TODO — niche feature, opens compiled `.js` output                                       |
-| File creation/deletion handling         | Implemented (FileCreated/FileDeleted queue events)                                      |
+| File creation/deletion handling         | Implemented (FileCreated/FileDeleted queue events via didChangeWatchedFiles)            |
+| File operation notifications            | Partially implemented (capabilities advertised, handlers not yet wired up)              |
 | `rescript.json` change handling         | Implemented (full re-initialization on config change)                                   |
 | `workspace/symbol`                      | TODO — project-wide symbol search                                                       |
 | `textDocument/documentHighlight`        | TODO — highlight all occurrences of a symbol in current file                            |
@@ -600,9 +607,9 @@ The initial build blocks the `initialized` handler. Large projects may experienc
 - **`createInterface`**: Already exists in the analysis binary. Expose as an LSP command or code action.
 - **`openCompiled`**: Open the compiled `.js` output for a `.res` file. Useful for debugging.
 
-### 4. File Operation Notifications (LSP 3.16)
+### 4. File Operation Notification Handlers (LSP 3.16)
 
-Register support for `workspace/didDeleteFiles`, `workspace/didCreateFiles`, and `workspace/didRenameFiles` via `fileOperations` in server capabilities. These are sent by the editor when it performs file operations itself (e.g., delete from file tree, rename via UI), unlike `didChangeWatchedFiles` which relies on the editor's file watcher. Zed, for example, does not fire `didChangeWatchedFiles` for deletions, but may support `didDeleteFiles`. Supporting both provides redundant coverage across editors.
+The server already advertises `fileOperations` capabilities (`didCreate`, `didRename`, `didDelete` for `**/*.res` and `**/*.resi`), but the corresponding `LanguageServer` trait handlers (`did_create_files`, `did_rename_files`, `did_delete_files`) are not yet wired up. These notifications are sent by the editor when it performs file operations itself (e.g., delete from file tree, rename via UI), unlike `didChangeWatchedFiles` which relies on the editor's file watcher. Zed, for example, does not fire `didChangeWatchedFiles` for deletions, but may support `didDeleteFiles`. Implementing the handlers would provide redundant coverage across editors.
 
 ### 5. Additional LSP Features
 
@@ -615,7 +622,19 @@ Lower priority, but would improve the editing experience:
 
 ### 6. Leverage `CompilationStage` Hashes for Smarter Builds
 
-`CompilationStage` now carries blake3 hashes of all artifacts produced at each stage (`Dirty → Parsed { source_hash, ast_hash } → TypeChecked { +cmi_hash, +cmt_hash } → Built { +cmj_hash }`). This data model enables several optimizations that are not yet implemented:
+`CompilationStage` carries blake3 hashes of all artifacts produced at each stage. The full enum has seven variants:
+
+```
+SourceDirty                          — needs full pipeline
+ParseError                           — syntax error, inert until source changes
+Parsed       { source_hash, ast_hash, interface_source_hash?, interface_ast_hash? }
+CompileError { ...same hashes as Parsed..., compile_mode }
+DependencyDirty { ...same hashes as Parsed... }   — dep changed, skip reparse
+TypeChecked  { ...Parsed hashes + cmi_hash, cmt_hash, compiled_at }
+Built        { ...TypeChecked hashes + cmj_hash }
+```
+
+Each stage from `Parsed` onward also carries optional parse/compile warnings and optional interface hashes. This data model enables several optimizations that are not yet implemented:
 
 - **No-op save detection**: Compare the on-disk `source_hash` against the hash stored in the module's stage. If they match, the file hasn't actually changed (e.g., user hit save without editing). Parsing and compilation can be skipped entirely.
 - **CMI-based skip in `TypecheckDependents`**: After compiling a saved file, compare its new `cmi_hash` against the pre-save value from the stage. If the interface is unchanged, no dependents need re-typechecking — saving an entire typecheck pass over the dependent closure.
@@ -651,7 +670,7 @@ Used by the LSP to pipe unsaved buffer content directly to bsc without writing t
 
 ### Rewatch build profiles (`lib/lsp-ocaml/` isolation)
 
-`d56f92c36` — introduces `OutputTarget` (Standard / Lsp), `CompileMode` (TypecheckOnly / FullCompile), and `CompileScope` (FullBuild / FullTypecheck / CompileDependencies / TypecheckDependents), plus a dedicated `lib/lsp-ocaml/` flat artifact directory so LSP and CLI builds don't interfere with each other. Threads these through all artifact path resolution in packages, compile, parse, clean, and compiler-info modules.
+`d56f92c36` — introduces `OutputTarget` (Standard / Lsp) and `CompileMode` (TypecheckOnly / FullCompile), plus a dedicated `lib/lsp-ocaml/` flat artifact directory so LSP and CLI builds don't interfere with each other. Build scenarios are handled by dedicated modules (`build/compile_dependencies.rs`, `build/typecheck_dependents.rs`, `build/full_typecheck.rs`). Threads these through all artifact path resolution in packages, compile, parse, clean, and compiler-info modules.
 
 ### Watcher improvements
 
