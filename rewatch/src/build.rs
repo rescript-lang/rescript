@@ -1,31 +1,32 @@
 pub mod build_types;
 pub mod clean;
 pub mod compile;
+pub mod compile_dependencies;
 pub mod compiler_info;
 pub mod dependency_closure;
 pub mod deps;
 pub mod diagnostics;
+pub mod full_build;
+pub mod full_typecheck;
 pub mod logs;
 pub mod namespaces;
 pub mod packages;
 pub mod parse;
 pub mod read_compile_state;
+pub mod typecheck_dependents;
 
 use crate::build::compile::{
     mark_modules_with_deleted_deps_source_dirty, mark_modules_with_expired_deps_for_recompile,
 };
-use crate::build::compiler_info::{CompilerCheckResult, verify_compiler_info, write_compiler_info};
+use crate::build::compiler_info::{CompilerCheckResult, verify_compiler_info};
 use crate::helpers::emojis::*;
 use crate::helpers::{self};
 use crate::project_context::ProjectContext;
-use crate::sourcedirs;
 use ahash::{AHashMap, AHashSet};
 use anyhow::{Context, Result, anyhow};
 use build_types::*;
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
-use log::log_enabled;
-use std::fmt;
 use std::path::Path;
 use std::time::{Duration, Instant};
 use tracing::{info_span, instrument};
@@ -75,7 +76,7 @@ pub fn prepare_build(
     }
 
     let mut build_state = BuildCommandState::new(project_context, packages, compiler, warn_error);
-    packages::parse_packages(&mut build_state, build_config.output, build_config.scope.mode())?;
+    packages::parse_packages(&mut build_state, build_config.output, build_config.mode)?;
 
     let compile_assets_state = read_compile_state::read(&mut build_state, build_config.output)?;
 
@@ -138,55 +139,56 @@ fn format_step(current: usize, total: usize) -> console::StyledObject<String> {
     style(format!("[{current}/{total}]")).bold().dim()
 }
 
-#[derive(Debug, Clone)]
-pub enum IncrementalBuildErrorKind {
-    SourceFileParseError,
-    CompileError(Option<String>),
-}
-
-#[derive(Debug, Clone)]
-pub struct IncrementalBuildError {
-    pub output_mode: OutputMode,
-    pub kind: IncrementalBuildErrorKind,
-    pub diagnostics: Vec<diagnostics::BscDiagnostic>,
-    /// The set of module names that participated in this compile cycle.
-    pub modules: AHashSet<String>,
-}
-
-#[derive(Debug, Clone)]
-pub struct IncrementalBuildResult {
-    pub diagnostics: Vec<diagnostics::BscDiagnostic>,
-    /// The set of module names that participated in this compile cycle.
-    pub modules: AHashSet<String>,
-}
-
-impl fmt::Display for IncrementalBuildError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let plain = self.output_mode.plain_output();
-        match &self.kind {
-            IncrementalBuildErrorKind::SourceFileParseError => {
-                if plain {
-                    write!(f, "{LINE_CLEAR}  Could not parse Source Files",)
-                } else {
-                    write!(f, "{LINE_CLEAR}  {CROSS}Could not parse Source Files",)
-                }
-            }
-            IncrementalBuildErrorKind::CompileError(Some(e)) => {
-                if plain {
-                    write!(f, "{LINE_CLEAR}  Failed to Compile. Error: {e}",)
-                } else {
-                    write!(f, "{LINE_CLEAR}  {CROSS}Failed to Compile. Error: {e}",)
-                }
-            }
-            IncrementalBuildErrorKind::CompileError(None) => {
-                if plain {
-                    write!(f, "{LINE_CLEAR}  Failed to Compile. See Errors Above",)
-                } else {
-                    write!(f, "{LINE_CLEAR}  {CROSS}Failed to Compile. See Errors Above",)
-                }
+/// Expand a seed set of modules through their transitive dependents.
+///
+/// Returns the union of `seeds` and every module reachable via `dependents()`.
+fn expand_dependents(build_state: &BuildCommandState, seeds: &AHashSet<String>) -> AHashSet<String> {
+    let mut all = seeds.clone();
+    let mut frontier = all.clone();
+    loop {
+        let mut dependents = AHashSet::new();
+        for name in &frontier {
+            if let Some(module) = build_state.get_module(name) {
+                dependents.extend(module.dependents().iter().cloned());
             }
         }
+        frontier = dependents.difference(&all).cloned().collect();
+        all.extend(frontier.iter().cloned());
+        if frontier.is_empty() {
+            break;
+        }
     }
+    all
+}
+
+/// Modules that need a full compile, plus all their transitive dependents.
+///
+/// Returns `(all, needs_compile)` where `all` is the full compile universe
+/// and `needs_compile` is the subset that actually changed.
+pub fn dirty_modules_for_compile(build_state: &BuildCommandState) -> (AHashSet<String>, AHashSet<String>) {
+    let needs_compile: AHashSet<String> = build_state
+        .modules
+        .iter()
+        .filter(|(_, module)| module.needs_compile_for_mode(CompileMode::FullCompile))
+        .map(|(name, _)| name.to_owned())
+        .collect();
+    let all = expand_dependents(build_state, &needs_compile);
+    (all, needs_compile)
+}
+
+/// Modules that need typechecking, plus all their transitive dependents.
+///
+/// Returns `(all, needs_typecheck)` where `all` is the full typecheck universe
+/// and `needs_typecheck` is the subset that actually changed.
+pub fn dirty_modules_for_typecheck(build_state: &BuildCommandState) -> (AHashSet<String>, AHashSet<String>) {
+    let needs_typecheck: AHashSet<String> = build_state
+        .modules
+        .iter()
+        .filter(|(_, module)| module.needs_compile_for_mode(CompileMode::TypecheckOnly))
+        .map(|(name, _)| name.to_owned())
+        .collect();
+    let all = expand_dependents(build_state, &needs_typecheck);
+    (all, needs_typecheck)
 }
 
 /// Parse dirty source files and resolve module dependencies.
@@ -204,7 +206,7 @@ pub fn parse_and_resolve(
     let plain_output = build_config.output_mode.plain_output();
     let only_incremental = !build_config.output_mode.initial_build();
     let output = build_config.output;
-    let mode = build_config.scope.mode();
+    let mode = build_config.mode;
     if !build_config.output_mode.is_silent() {
         logs::initialize(&build_state.packages);
     }
@@ -296,160 +298,7 @@ pub fn parse_and_resolve(
     Ok(parse_warnings)
 }
 
-#[instrument(name = "incremental_build", skip_all, fields(
-    module_count = build_state.modules.len(),
-    scope = build_config.scope.label(),
-    output = %build_config.output,
-))]
-pub fn incremental_build(
-    build_state: &mut BuildCommandState,
-    build_config: &BuildConfig,
-    parse_warnings: String,
-    default_timing: Option<Duration>,
-) -> Result<IncrementalBuildResult, IncrementalBuildError> {
-    let output_mode = build_config.output_mode.clone();
-    let show_progress = output_mode.show_progress();
-    let plain_output = output_mode.plain_output();
-    let initial_build = output_mode.initial_build();
-    let only_incremental = !initial_build;
-    let compile_universe = compile::compute_universe_for_scope(&build_config.scope, build_state);
-    let current_step = if only_incremental { 2 } else { 3 };
-    let total_steps = if only_incremental { 2 } else { 3 };
-
-    //print all the modules that need compilation
-    if log_enabled!(log::Level::Trace) {
-        let mode = build_config.scope.mode();
-        for (module_name, module) in build_state.modules.iter() {
-            if module.needs_compile_for_mode(mode)
-                && let Module::SourceFile(sf) = module
-            {
-                println!(
-                    "needs compile: {module_name} (stage: {:?})",
-                    sf.compilation_stage()
-                );
-            }
-        }
-    };
-
-    let start_compiling = Instant::now();
-    let pb = if !plain_output && show_progress {
-        ProgressBar::new(build_state.modules.len().try_into().unwrap())
-    } else {
-        ProgressBar::hidden()
-    };
-    pb.set_style(
-        ProgressStyle::with_template(&format!(
-            "{} {}Compiling... {{spinner}} {{pos}}/{{len}} {{msg}}",
-            format_step(current_step, total_steps),
-            SWORDS
-        ))
-        .unwrap(),
-    );
-
-    let (compile_errors, compile_warnings, num_compiled_modules) = match compile::compile(
-        build_state,
-        build_config,
-        &compile_universe,
-        || pb.inc(1),
-        |size| pb.set_length(size),
-    ) {
-        Ok(result) => result,
-        Err(e) => {
-            return Err(IncrementalBuildError {
-                kind: IncrementalBuildErrorKind::CompileError(Some(e.to_string())),
-                output_mode: output_mode.clone(),
-                diagnostics: vec![],
-                modules: compile_universe.into_all(),
-            });
-        }
-    };
-
-    let compile_duration = start_compiling.elapsed();
-
-    if !output_mode.is_silent() {
-        logs::finalize(&build_state.packages);
-    }
-    if !build_config.scope.is_scoped() {
-        sourcedirs::print(build_state, build_config.output);
-    }
-    pb.finish();
-    if !compile_errors.is_empty() {
-        let _error_span = info_span!("build.compile_error", error = %compile_errors).entered();
-        if show_progress {
-            if plain_output {
-                eprintln!("Compiled {num_compiled_modules} modules")
-            } else {
-                eprintln!(
-                    "{}{} {}Compiled {} modules in {:.2}s",
-                    LINE_CLEAR,
-                    format_step(current_step, total_steps),
-                    CROSS,
-                    num_compiled_modules,
-                    default_timing.unwrap_or(compile_duration).as_secs_f64()
-                );
-            }
-        }
-        if !output_mode.is_silent() && helpers::contains_ascii_characters(&compile_warnings) {
-            let _warning_span = info_span!("build.compile_warning", warning = %compile_warnings).entered();
-            eprintln!("{}", &compile_warnings);
-        }
-        if initial_build {
-            log_config_warnings(build_state);
-        }
-        if !output_mode.is_silent() && helpers::contains_ascii_characters(&compile_errors) {
-            eprintln!("{}", &compile_errors);
-        }
-        let mut all_output = String::new();
-        if helpers::contains_ascii_characters(&parse_warnings) {
-            all_output.push_str(&parse_warnings);
-        }
-        all_output.push_str(&compile_warnings);
-        all_output.push_str(&compile_errors);
-        Err(IncrementalBuildError {
-            kind: IncrementalBuildErrorKind::CompileError(None),
-            output_mode,
-            diagnostics: diagnostics::parse_compiler_output(&all_output),
-            modules: compile_universe.into_all(),
-        })
-    } else {
-        if show_progress {
-            if plain_output {
-                println!("Compiled {num_compiled_modules} modules")
-            } else {
-                println!(
-                    "{}{} {}Compiled {} modules in {:.2}s",
-                    LINE_CLEAR,
-                    format_step(current_step, total_steps),
-                    SWORDS,
-                    num_compiled_modules,
-                    default_timing.unwrap_or(compile_duration).as_secs_f64()
-                );
-            }
-        }
-
-        if !output_mode.is_silent() && helpers::contains_ascii_characters(&compile_warnings) {
-            eprintln!("{}", &compile_warnings);
-        }
-        if initial_build {
-            log_config_warnings(build_state);
-        }
-
-        // Write per-package compiler metadata to `lib/bs/compiler-info.json` (idempotent)
-        write_compiler_info(build_state, build_config.output);
-
-        let mut all_output = String::new();
-        if helpers::contains_ascii_characters(&parse_warnings) {
-            all_output.push_str(&parse_warnings);
-        }
-        all_output.push_str(&compile_warnings);
-        Ok(IncrementalBuildResult {
-            diagnostics: diagnostics::parse_compiler_output(&all_output),
-            modules: compile_universe.into_all(),
-        })
-    }
-}
-
-fn log_config_warnings(build_state: &BuildCommandState) {
+pub fn log_config_warnings(build_state: &BuildCommandState) {
     build_state.packages.iter().for_each(|(_, package)| {
         // Only warn for local dependencies, not external packages
         if package.is_local_dep {
@@ -498,7 +347,7 @@ pub fn build(
     let timing_total = Instant::now();
     let build_config = BuildConfig {
         output: OutputTarget::Standard,
-        scope: CompileScope::FullBuild,
+        mode: CompileMode::FullCompile,
         output_mode: OutputMode::Standard {
             show_progress,
             plain_output,
@@ -508,10 +357,10 @@ pub fn build(
     let mut build_state = initialize_build(default_timing, filter, path, &build_config, warn_error)
         .with_context(|| "Could not initialize build")?;
 
-    let parse_warnings = parse_and_resolve(&mut build_state, &build_config, default_timing)
+    parse_and_resolve(&mut build_state, &build_config, default_timing)
         .map_err(|e| anyhow!("Parsing failed: {e}"))?;
 
-    match incremental_build(&mut build_state, &build_config, parse_warnings, default_timing) {
+    match full_build::full_build(&mut build_state, &build_config.output_mode, default_timing) {
         Ok(_) => {
             if !plain_output && show_progress {
                 let timing_total_elapsed = timing_total.elapsed();
@@ -527,7 +376,7 @@ pub fn build(
         }
         Err(e) => {
             clean::cleanup_after_build(&build_state, OutputTarget::Standard);
-            Err(anyhow!("Incremental build failed. Error: {e}"))
+            Err(anyhow!("Build failed. Error: {e}"))
         }
     }
 }

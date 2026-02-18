@@ -10,9 +10,7 @@ use tracing::instrument;
 use super::super::{ProjectMap, group_by_file, publish_and_store};
 use super::PendingFileBuild;
 use crate::build;
-use crate::build::build_types::{
-    BuildCommandState, BuildConfig, CompileScope, Module, OutputMode, OutputTarget,
-};
+use crate::build::build_types::{BuildCommandState, CompileMode, Module, OutputMode, OutputTarget};
 use crate::build::diagnostics::{BscDiagnostic, Severity};
 use crate::lsp::diagnostic_store::DiagnosticStore;
 
@@ -221,9 +219,8 @@ fn build_batch(build_state: &mut BuildCommandState, module_names: Vec<String>) -
 
 /// Compile the saved modules and all their transitive imports to JS.
 ///
-/// Collects every module the saved files import (recursively) and runs
-/// `incremental_build` with `CompileScope::Scoped(closure)`, which
-/// restricts the compile universe to only the dependency closure.
+/// Collects every module the saved files import (recursively) and compiles
+/// them, restricting to only the dependency closure.
 /// This produces type information and JavaScript output for just the
 /// saved file and its imports, without touching the rest of the codebase.
 #[instrument(name = "lsp.flush.file_build.compile_deps", skip_all, fields(error_count = tracing::field::Empty))]
@@ -231,9 +228,11 @@ fn compile_dependencies(
     build_state: &mut BuildCommandState,
     module_names: &[String],
 ) -> (Vec<BscDiagnostic>, HashSet<PathBuf>) {
+    use crate::build::build_types::BuildConfig;
+
     let build_config = BuildConfig {
         output: OutputTarget::Lsp,
-        scope: CompileScope::CompileDependencies(module_names.iter().cloned().collect()),
+        mode: CompileMode::FullCompile,
         output_mode: OutputMode::Silent,
     };
 
@@ -241,14 +240,13 @@ fn compile_dependencies(
     // reflects the saved content, not stale state.
     let parse_result = build::parse_and_resolve(build_state, &build_config, Some(std::time::Duration::ZERO));
 
-    let (parse_warnings, parse_diagnostics) = match parse_result {
+    let parse_diagnostics = match parse_result {
         Ok(warnings) => {
-            let diags = if warnings.is_empty() {
+            if warnings.is_empty() {
                 Vec::new()
             } else {
                 build::diagnostics::parse_compiler_output(&warnings)
-            };
-            (warnings, diags)
+            }
         }
         Err(e) => {
             // Parse failure — return diagnostics for the affected files, skip compilation
@@ -257,27 +255,24 @@ fn compile_dependencies(
         }
     };
 
-    let (diagnostics, touched_files) = match build::incremental_build(
-        build_state,
-        &build_config,
-        parse_warnings,
-        Some(std::time::Duration::ZERO),
-    ) {
-        Ok(result) => {
-            tracing::debug!(
-                compiled_modules = ?result.modules.iter().collect::<Vec<_>>(),
-                "compile_dependencies: compiled module closure"
-            );
-            (
-                result.diagnostics,
-                module_names_to_paths(build_state, &result.modules),
-            )
-        }
-        Err(e) => {
-            tracing::warn!("Incremental build completed with errors: {e}");
-            (e.diagnostics, module_names_to_paths(build_state, &e.modules))
-        }
-    };
+    let module_set: AHashSet<String> = module_names.iter().cloned().collect();
+    let (diagnostics, touched_files) =
+        match build::compile_dependencies::compile_dependencies(build_state, &module_set) {
+            Ok(result) => {
+                tracing::debug!(
+                    compiled_modules = ?result.modules.iter().collect::<Vec<_>>(),
+                    "compile_dependencies: compiled module closure"
+                );
+                (
+                    result.diagnostics,
+                    module_names_to_paths(build_state, &result.modules),
+                )
+            }
+            Err(e) => {
+                tracing::warn!("Incremental build completed with errors: {e}");
+                (e.diagnostics, module_names_to_paths(build_state, &e.modules))
+            }
+        };
 
     let mut all_diagnostics = parse_diagnostics;
     all_diagnostics.extend(diagnostics);
@@ -299,47 +294,36 @@ fn compile_dependencies(
 /// type errors. This step finds all such importers and re-typechecks them
 /// to surface those errors as diagnostics. No JavaScript is emitted —
 /// that happens when those files are themselves saved.
-///
-/// Uses `CompileScope::TypecheckDependents` to restrict the build to only
-/// the relevant modules.
 #[instrument(name = "lsp.flush.file_build.typecheck_deps", skip_all, fields(dependent_count = tracing::field::Empty, error_count = tracing::field::Empty))]
 fn typecheck_dependents(
     build_state: &mut BuildCommandState,
     module_names: &[String],
 ) -> (Vec<BscDiagnostic>, HashSet<PathBuf>) {
-    let build_config = BuildConfig {
-        output: OutputTarget::Lsp,
-        scope: CompileScope::TypecheckDependents(module_names.iter().cloned().collect()),
-        output_mode: OutputMode::Silent,
-    };
+    let module_set: AHashSet<String> = module_names.iter().cloned().collect();
 
-    let (diagnostics, touched_files) = match build::incremental_build(
-        build_state,
-        &build_config,
-        String::new(),
-        Some(std::time::Duration::ZERO),
-    ) {
-        Ok(result) => {
-            tracing::Span::current().record("dependent_count", result.modules.len());
-            tracing::debug!(
-                dependent_modules = ?result.modules.iter().collect::<Vec<_>>(),
-                "typecheck_dependents: typechecked dependent closure"
-            );
-            (
-                result.diagnostics,
-                module_names_to_paths(build_state, &result.modules),
-            )
-        }
-        Err(e) => {
-            tracing::warn!("Typecheck of dependents completed with errors: {e}");
-            tracing::Span::current().record("dependent_count", e.modules.len());
-            tracing::debug!(
-                dependent_modules = ?e.modules.iter().collect::<Vec<_>>(),
-                "typecheck_dependents: typechecked dependent closure (with errors)"
-            );
-            (e.diagnostics, module_names_to_paths(build_state, &e.modules))
-        }
-    };
+    let (diagnostics, touched_files) =
+        match build::typecheck_dependents::typecheck_dependents(build_state, &module_set) {
+            Ok(result) => {
+                tracing::Span::current().record("dependent_count", result.modules.len());
+                tracing::debug!(
+                    dependent_modules = ?result.modules.iter().collect::<Vec<_>>(),
+                    "typecheck_dependents: typechecked dependent closure"
+                );
+                (
+                    result.diagnostics,
+                    module_names_to_paths(build_state, &result.modules),
+                )
+            }
+            Err(e) => {
+                tracing::warn!("Typecheck of dependents completed with errors: {e}");
+                tracing::Span::current().record("dependent_count", e.modules.len());
+                tracing::debug!(
+                    dependent_modules = ?e.modules.iter().collect::<Vec<_>>(),
+                    "typecheck_dependents: typechecked dependent closure (with errors)"
+                );
+                (e.diagnostics, module_names_to_paths(build_state, &e.modules))
+            }
+        };
 
     let error_count = diagnostics
         .iter()
@@ -384,33 +368,25 @@ fn compile_resolved_errors(
         return (Vec::new(), HashSet::new());
     }
 
-    let build_config = BuildConfig {
-        output: OutputTarget::Lsp,
-        scope: CompileScope::CompileDependencies(resolved.iter().cloned().collect()),
-        output_mode: OutputMode::Silent,
-    };
+    let module_set: AHashSet<String> = resolved.iter().cloned().collect();
 
-    let (diagnostics, touched_files) = match build::incremental_build(
-        build_state,
-        &build_config,
-        String::new(),
-        Some(std::time::Duration::ZERO),
-    ) {
-        Ok(result) => {
-            tracing::debug!(
-                compiled_modules = ?result.modules.iter().collect::<Vec<_>>(),
-                "compile_resolved_errors: compiled previously-errored modules"
-            );
-            (
-                result.diagnostics,
-                module_names_to_paths(build_state, &result.modules),
-            )
-        }
-        Err(e) => {
-            tracing::warn!("Compilation of resolved errors completed with errors: {e}");
-            (e.diagnostics, module_names_to_paths(build_state, &e.modules))
-        }
-    };
+    let (diagnostics, touched_files) =
+        match build::compile_dependencies::compile_dependencies(build_state, &module_set) {
+            Ok(result) => {
+                tracing::debug!(
+                    compiled_modules = ?result.modules.iter().collect::<Vec<_>>(),
+                    "compile_resolved_errors: compiled previously-errored modules"
+                );
+                (
+                    result.diagnostics,
+                    module_names_to_paths(build_state, &result.modules),
+                )
+            }
+            Err(e) => {
+                tracing::warn!("Compilation of resolved errors completed with errors: {e}");
+                (e.diagnostics, module_names_to_paths(build_state, &e.modules))
+            }
+        };
 
     let error_count = diagnostics
         .iter()

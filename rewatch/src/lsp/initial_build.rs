@@ -1,5 +1,5 @@
 use crate::build;
-use crate::build::build_types::{BuildCommandState, BuildConfig, CompileScope, OutputMode, OutputTarget};
+use crate::build::build_types::{BuildCommandState, BuildConfig, CompileMode, OutputMode, OutputTarget};
 use crate::build::clean;
 use crate::build::diagnostics::BscDiagnostic;
 use crate::build::packages;
@@ -89,7 +89,7 @@ pub fn run(
     // Prepare the build state (compiler info, validation, cleanup)
     let build_config = BuildConfig {
         output: OutputTarget::Lsp,
-        scope: CompileScope::FullTypecheck,
+        mode: CompileMode::TypecheckOnly,
         output_mode: OutputMode::Silent,
     };
 
@@ -103,21 +103,15 @@ pub fn run(
     .map_err(|e| e.to_string())?;
 
     // Parse source files and resolve dependencies
-    let parse_warnings =
-        match build::parse_and_resolve(&mut build_state, &build_config, Some(std::time::Duration::ZERO)) {
-            Ok(warnings) => warnings,
-            Err(e) => {
-                tracing::warn!("Initial build parse failed: {e}");
-                return Ok((build_state, e.diagnostics));
-            }
-        };
+    match build::parse_and_resolve(&mut build_state, &build_config, Some(std::time::Duration::ZERO)) {
+        Ok(_) => {}
+        Err(e) => {
+            tracing::warn!("Initial build parse failed: {e}");
+            return Ok((build_state, e.diagnostics));
+        }
+    };
 
-    let diagnostics = match build::incremental_build(
-        &mut build_state,
-        &build_config,
-        parse_warnings,
-        Some(std::time::Duration::ZERO),
-    ) {
+    let diagnostics = match build::full_typecheck::full_typecheck(&mut build_state) {
         Ok(result) => {
             tracing::info!("Initial build succeeded");
             result.diagnostics

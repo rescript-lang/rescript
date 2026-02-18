@@ -1,10 +1,11 @@
 use crate::build::packages::{Namespace, Package};
 use crate::config::Config;
 use crate::helpers::StrippedVerbatimPath;
+use crate::helpers::emojis::*;
 use crate::project_context::ProjectContext;
 use ahash::{AHashMap, AHashSet};
 use blake3::Hash;
-use std::{fmt::Display, ops::Deref, path::Path, path::PathBuf, time::SystemTime};
+use std::{fmt, fmt::Display, ops::Deref, path::Path, path::PathBuf, time::SystemTime};
 
 /// Tracks how far a module has progressed through compilation.
 ///
@@ -410,103 +411,6 @@ impl CompileMode {
     }
 }
 
-/// Which modules participate in compilation and how.
-///
-/// Each variant encodes the compile mode and scoping behavior.
-/// For full builds, the compile universe is derived from all dirty modules.
-/// For scoped builds, the anchor module names are carried in the variant and
-/// the universe is derived from their dependency/dependent closure.
-#[derive(Debug, Clone, PartialEq)]
-pub enum CompileScope {
-    /// CLI/watcher: all dirty modules with dependent expansion, full compile with JS output.
-    FullBuild,
-    /// LSP initial/project build: all dirty modules with dependent expansion, typecheck only.
-    FullTypecheck,
-    /// LSP save (step 1): compile the dependency closure of these modules to JS.
-    CompileDependencies(AHashSet<String>),
-    /// LSP save (step 2): typecheck the dependent closure of these modules, no JS.
-    TypecheckDependents(AHashSet<String>),
-}
-
-impl CompileScope {
-    /// Short label for tracing attributes.
-    pub fn label(&self) -> &'static str {
-        match self {
-            CompileScope::FullBuild => "full_build",
-            CompileScope::FullTypecheck => "full_typecheck",
-            CompileScope::CompileDependencies(_) => "compile_dependencies",
-            CompileScope::TypecheckDependents(_) => "typecheck_dependents",
-        }
-    }
-
-    /// The compile mode implied by this scope variant.
-    pub fn mode(&self) -> CompileMode {
-        match self {
-            CompileScope::FullBuild | CompileScope::CompileDependencies(_) => CompileMode::FullCompile,
-            CompileScope::FullTypecheck | CompileScope::TypecheckDependents(_) => CompileMode::TypecheckOnly,
-        }
-    }
-
-    /// Whether this is a scoped build (restricted to a specific set of modules).
-    pub fn is_scoped(&self) -> bool {
-        matches!(
-            self,
-            CompileScope::CompileDependencies(_) | CompileScope::TypecheckDependents(_)
-        )
-    }
-}
-
-/// The set of modules participating in a compile cycle.
-///
-/// - `AllNeedCompile`: every module must be compiled unconditionally.
-///   Used for `TypecheckDependents` where all dependents need
-///   re-typechecking regardless.
-///
-/// - `DirtyWithDependents`: contains both the modules that need
-///   compilation (`needs_compile`) and their transitive dependents.
-///   A dependent that doesn't need compilation itself can be skipped
-///   if none of its dependencies produced a different `.cmi`. Used for
-///   `FullBuild`, `FullTypecheck`, and `CompileDependencies`.
-#[derive(Debug)]
-pub enum CompileUniverse {
-    AllNeedCompile(AHashSet<String>),
-    DirtyWithDependents {
-        /// Every module in this compile cycle: the modules that need
-        /// compilation plus all their transitive dependents.
-        all: AHashSet<String>,
-        /// The subset of `all` that actually needs compilation (source
-        /// changed, dependency changed, or has unresolved errors).
-        /// Modules in `all` but not here are transitive dependents that
-        /// may be skippable if their dependencies' `.cmi` didn't change.
-        needs_compile: AHashSet<String>,
-    },
-}
-
-impl CompileUniverse {
-    pub fn all(&self) -> &AHashSet<String> {
-        match self {
-            CompileUniverse::AllNeedCompile(all) | CompileUniverse::DirtyWithDependents { all, .. } => all,
-        }
-    }
-
-    pub fn into_all(self) -> AHashSet<String> {
-        match self {
-            CompileUniverse::AllNeedCompile(all) | CompileUniverse::DirtyWithDependents { all, .. } => all,
-        }
-    }
-
-    /// Whether a module itself needs compilation (as opposed to being
-    /// a transitive dependent that may be skippable).
-    /// For `AllNeedCompile`, every module needs compilation.
-    /// For `DirtyWithDependents`, only modules in the `needs_compile` subset.
-    pub fn needs_compile(&self, name: &str) -> bool {
-        match self {
-            CompileUniverse::AllNeedCompile(all) => all.contains(name),
-            CompileUniverse::DirtyWithDependents { needs_compile, .. } => needs_compile.contains(name),
-        }
-    }
-}
-
 /// How the build reports progress to the user.
 #[derive(Debug, Clone)]
 pub enum OutputMode {
@@ -549,13 +453,69 @@ impl OutputMode {
     }
 }
 
-/// Bundles the build concerns: where artifacts go, which modules
-/// participate, and how progress is reported.
+/// Bundles the build concerns: where artifacts go, what compile mode,
+/// and how progress is reported.
 #[derive(Debug, Clone)]
 pub struct BuildConfig {
     pub output: OutputTarget,
-    pub scope: CompileScope,
+    pub mode: CompileMode,
     pub output_mode: OutputMode,
+}
+
+/// Which modules in the compile universe actually need recompilation.
+#[derive(Debug)]
+pub enum CompileFilter {
+    /// Every module in the universe must be compiled unconditionally.
+    All,
+    /// Only the modules in this set definitely need compilation.
+    /// Modules outside this set may be skipped when all their
+    /// in-universe dependencies produced unchanged `.cmi` files.
+    DirtyOnly(AHashSet<String>),
+}
+
+impl CompileFilter {
+    /// Whether a specific module definitely needs compilation.
+    pub fn needs_compile(&self, name: &str) -> bool {
+        match self {
+            CompileFilter::All => true,
+            CompileFilter::DirtyOnly(set) => set.contains(name),
+        }
+    }
+}
+
+/// Parameters for `process_in_waves`: the module set, how to filter them,
+/// and output configuration. Every field is consumed directly by the
+/// compile loop — no scenario dispatch happens on these values.
+#[derive(Debug)]
+pub struct CompileParams {
+    /// All modules in this compile cycle.
+    pub modules: AHashSet<String>,
+    /// Which modules need compilation vs. which may be skippable.
+    pub filter: CompileFilter,
+    /// TypecheckOnly vs FullCompile.
+    pub mode: CompileMode,
+    /// Whether to restrict dependent expansion to within the universe.
+    pub scoped: bool,
+    /// Where artifacts are written.
+    pub output: OutputTarget,
+    /// Whether to show progress bar ticks.
+    pub show_progress: bool,
+}
+
+/// The raw output of a single `process_in_waves` run.
+pub struct ProcessResult {
+    pub compile_errors: String,
+    pub compile_warnings: String,
+    pub num_compiled_modules: usize,
+}
+
+impl ProcessResult {
+    pub fn to_diagnostics(&self) -> Vec<super::diagnostics::BscDiagnostic> {
+        let mut output = String::new();
+        output.push_str(&self.compile_warnings);
+        output.push_str(&self.compile_errors);
+        super::diagnostics::parse_compiler_output(&output)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -977,4 +937,55 @@ pub struct CompileAssetsState {
     pub cmt_modules: AHashMap<String, SystemTime>,
     pub ast_rescript_file_locations: AHashSet<PathBuf>,
     pub rescript_file_locations: AHashSet<PathBuf>,
+}
+
+#[derive(Debug, Clone)]
+pub enum IncrementalBuildErrorKind {
+    SourceFileParseError,
+    CompileError(Option<String>),
+}
+
+#[derive(Debug, Clone)]
+pub struct IncrementalBuildError {
+    pub output_mode: OutputMode,
+    pub kind: IncrementalBuildErrorKind,
+    pub diagnostics: Vec<super::diagnostics::BscDiagnostic>,
+    /// The set of module names that participated in this compile cycle.
+    pub modules: AHashSet<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct IncrementalBuildResult {
+    pub diagnostics: Vec<super::diagnostics::BscDiagnostic>,
+    /// The set of module names that participated in this compile cycle.
+    pub modules: AHashSet<String>,
+}
+
+impl fmt::Display for IncrementalBuildError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let plain = self.output_mode.plain_output();
+        match &self.kind {
+            IncrementalBuildErrorKind::SourceFileParseError => {
+                if plain {
+                    write!(f, "{LINE_CLEAR}  Could not parse Source Files",)
+                } else {
+                    write!(f, "{LINE_CLEAR}  {CROSS}Could not parse Source Files",)
+                }
+            }
+            IncrementalBuildErrorKind::CompileError(Some(e)) => {
+                if plain {
+                    write!(f, "{LINE_CLEAR}  Failed to Compile. Error: {e}",)
+                } else {
+                    write!(f, "{LINE_CLEAR}  {CROSS}Failed to Compile. Error: {e}",)
+                }
+            }
+            IncrementalBuildErrorKind::CompileError(None) => {
+                if plain {
+                    write!(f, "{LINE_CLEAR}  Failed to Compile. See Errors Above",)
+                } else {
+                    write!(f, "{LINE_CLEAR}  {CROSS}Failed to Compile. See Errors Above",)
+                }
+            }
+        }
+    }
 }

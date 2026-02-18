@@ -217,7 +217,10 @@ const SUMMARY_SPAN_NAMES = new Set([
   "lsp.formatting",
   // Build pipeline spans
   "initialize_build",
-  "incremental_build",
+  "full_build",
+  "full_typecheck",
+  "compile_dependencies",
+  "typecheck_dependents",
   "packages.make",
   "packages.parse_packages",
   "build.load_package_sources",
@@ -294,7 +297,10 @@ const SUMMARY_ATTRS = {
   "lsp.did_close": ["file"],
   "lsp.did_change": ["file"],
   "lsp.formatting": ["file"],
-  incremental_build: ["module_count", "scope", "output"],
+  full_build: ["module_count", "output"],
+  full_typecheck: ["module_count", "output"],
+  compile_dependencies: ["module_count", "output"],
+  typecheck_dependents: ["module_count", "output"],
   "build.load_package_sources": ["package"],
   "build.parse": ["dirty_modules"],
   "build.parse_file": [

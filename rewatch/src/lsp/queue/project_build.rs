@@ -10,7 +10,7 @@ use super::super::{ProjectMap, group_by_file, publish_and_store};
 use super::PendingState;
 use crate::build;
 use crate::build::build_types::{
-    BuildCommandState, BuildConfig, CompileScope, Module, OutputMode, OutputTarget,
+    BuildCommandState, BuildConfig, CompileMode, Module, OutputMode, OutputTarget,
 };
 use crate::build::diagnostics::BscDiagnostic;
 use crate::build::packages;
@@ -60,7 +60,7 @@ fn reinitialize_project(
 
     let build_config = BuildConfig {
         output: OutputTarget::Lsp,
-        scope: CompileScope::FullTypecheck,
+        mode: CompileMode::TypecheckOnly,
         output_mode: OutputMode::Silent,
     };
 
@@ -73,21 +73,15 @@ fn reinitialize_project(
     )
     .map_err(|e| format!("prepare_build failed: {e}"))?;
 
-    let parse_warnings =
-        match build::parse_and_resolve(&mut build_state, &build_config, Some(std::time::Duration::ZERO)) {
-            Ok(warnings) => warnings,
-            Err(e) => {
-                tracing::warn!("Project build parse failed: {e}");
-                return Ok((build_state, e.diagnostics));
-            }
-        };
+    match build::parse_and_resolve(&mut build_state, &build_config, Some(std::time::Duration::ZERO)) {
+        Ok(_) => {}
+        Err(e) => {
+            tracing::warn!("Project build parse failed: {e}");
+            return Ok((build_state, e.diagnostics));
+        }
+    };
 
-    let diagnostics = match build::incremental_build(
-        &mut build_state,
-        &build_config,
-        parse_warnings,
-        Some(std::time::Duration::ZERO),
-    ) {
+    let diagnostics = match build::full_typecheck::full_typecheck(&mut build_state) {
         Ok(result) => result.diagnostics,
         Err(e) => {
             tracing::warn!("Full build completed with errors: {e}");

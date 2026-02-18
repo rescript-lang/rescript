@@ -128,106 +128,21 @@ fn execute_post_build_command(cmd: &str, js_file_path: &Path, working_dir: &Path
     }
 }
 
-/// Compute the compile universe from the scope and current build state.
+/// Process modules in dependency-ordered parallel waves.
 ///
-/// This is the single source of truth for universe construction.
-/// For full builds, it expands modules that need compilation through transitive dependents.
-/// For scoped builds, it computes the appropriate closure from the anchor modules
-/// carried in the scope variant.
-pub fn compute_universe_for_scope(scope: &CompileScope, build_state: &BuildCommandState) -> CompileUniverse {
-    match scope {
-        CompileScope::FullBuild | CompileScope::FullTypecheck => {
-            let mode = scope.mode();
-            let needs_compile: AHashSet<String> = build_state
-                .modules
-                .iter()
-                .filter(|(_, module)| module.needs_compile_for_mode(mode))
-                .map(|(name, _)| name.to_owned())
-                .collect();
-
-            // Walk the dependency graph outward from the modules that need
-            // compilation to find every module that might need recompilation.
-            //
-            // `all` accumulates every module we have visited so far.
-            // `frontier` holds the modules we discovered in the previous round
-            // whose dependents we have not yet inspected.
-            //
-            // Each iteration collects the direct dependents of the current
-            // frontier, keeps only the ones we have not seen before (the new
-            // frontier), and adds them to `all`. The loop stops when no new
-            // modules are found.
-            let mut all = needs_compile.clone();
-            let mut frontier = all.clone();
-            loop {
-                let mut dependents = AHashSet::new();
-                for name in &frontier {
-                    if let Some(module) = build_state.get_module(name) {
-                        dependents.extend(module.dependents().iter().cloned());
-                    }
-                }
-
-                // Keep only modules we have not visited yet.
-                frontier = dependents.difference(&all).cloned().collect();
-                all.extend(frontier.iter().cloned());
-
-                if frontier.is_empty() {
-                    break;
-                }
-            }
-            CompileUniverse::DirtyWithDependents { all, needs_compile }
-        }
-        CompileScope::CompileDependencies(module_names) => {
-            let closure =
-                super::dependency_closure::get_dependency_closure(&build_state.modules, module_names.clone());
-            let needs_compile: AHashSet<String> = closure
-                .iter()
-                .filter(|name| {
-                    build_state.get_module(name).is_some_and(|m| match m {
-                        Module::SourceFile(sf) => sf.compilation_stage().is_source_dirty(),
-                        Module::MlMap(_) => false,
-                    })
-                })
-                .cloned()
-                .collect();
-
-            CompileUniverse::DirtyWithDependents {
-                all: closure,
-                needs_compile,
-            }
-        }
-        CompileScope::TypecheckDependents(module_names) => {
-            let all_dependents =
-                super::dependency_closure::get_dependent_closure(&build_state.modules, module_names.clone());
-            // Exclude modules at SourceDirty or ParseError — they need
-            // parse_and_resolve before they can be compiled (their AST is
-            // invalid or missing). DependencyDirty modules pass through
-            // because their AST is still valid — they only need recompilation.
-            let typecheckable: AHashSet<String> = all_dependents
-                .into_iter()
-                .filter(|name| {
-                    build_state.get_module(name).is_some_and(|m| match m {
-                        Module::SourceFile(sf) => {
-                            !sf.compilation_stage().is_source_dirty()
-                                && !sf.compilation_stage().is_parse_error()
-                        }
-                        Module::MlMap(_) => true,
-                    })
-                })
-                .collect();
-            CompileUniverse::AllNeedCompile(typecheckable)
-        }
-    }
-}
-
-pub fn compile(
+/// Repeatedly finds modules whose in-universe dependencies have all been
+/// processed, then compiles or typechecks them in parallel via `rayon`.
+/// Modules whose `.cmi` output is unchanged are marked "clean" so downstream
+/// dependents can skip reprocessing.
+///
+pub fn process_in_waves(
     build_state: &mut BuildCommandState,
-    build_config: &BuildConfig,
-    compile_universe: &CompileUniverse,
+    compile_params: &CompileParams,
     inc: impl Fn() + std::marker::Sync,
     set_length: impl Fn(u64),
-) -> anyhow::Result<(String, String, usize)> {
-    let show_progress = build_config.output_mode.show_progress();
-    let mode = build_config.scope.mode();
+) -> anyhow::Result<ProcessResult> {
+    let show_progress = compile_params.show_progress;
+    let mode = compile_params.mode;
     let _compile_span = if mode.emits_js() {
         info_span!("build.compile").entered()
     } else {
@@ -253,16 +168,16 @@ pub fn compile(
     let mut sorted_modules = build_state.module_names.iter().collect::<Vec<&String>>();
     sorted_modules.sort();
 
-    let compile_universe_count = compile_universe.all().len();
+    let compile_universe_count = compile_params.modules.len();
     set_length(compile_universe_count as u64);
 
     // start off with all modules that have no deps in this compile universe
-    let mut in_progress_modules = compile_universe
-        .all()
+    let mut in_progress_modules = compile_params
+        .modules
         .iter()
         .filter(|module_name| {
             let module = build_state.get_module(module_name).unwrap();
-            module.deps().intersection(compile_universe.all()).count() == 0
+            module.deps().intersection(&compile_params.modules).count() == 0
         })
         .map(|module_name| module_name.to_string())
         .collect::<AHashSet<String>>();
@@ -274,7 +189,7 @@ pub fn compile(
         trace!(
             "Compiled: {} out of {}. Compile loop: {}",
             files_total_count,
-            compile_universe.all().len(),
+            compile_params.modules.len(),
             loop_count,
         );
 
@@ -304,14 +219,14 @@ pub fn compile(
                     .expect("Package not found");
                 // Dependencies of this module that are part of the compile universe.
                 let in_universe_deps: Vec<&String> =
-                    module.deps().intersection(compile_universe.all()).collect();
+                    module.deps().intersection(&compile_params.modules).collect();
 
                 // all dependencies that we care about are compiled
                 if in_universe_deps
                     .iter()
                     .all(|dep| compiled_modules.contains(*dep))
                 {
-                    if !compile_universe.needs_compile(module_name)
+                    if !compile_params.filter.needs_compile(module_name)
                         && !module.needs_compile_for_mode(mode)
                         && in_universe_deps
                             .iter()
@@ -354,7 +269,7 @@ pub fn compile(
                             };
 
                             let cmi_path = helpers::get_compiler_asset_in(
-                                &package.get_ocaml_build_path_for_output(build_config.output),
+                                &package.get_ocaml_build_path_for_output(compile_params.output),
                                 &package.namespace,
                                 &source_file.implementation.path,
                                 "cmi",
@@ -375,7 +290,7 @@ pub fn compile(
                                         true,
                                         build_state,
                                         build_state.get_warn_error_override(),
-                                        build_config.output,
+                                        compile_params.output,
                                         mode,
                                     );
                                     Some(result)
@@ -389,7 +304,7 @@ pub fn compile(
                                 false,
                                 build_state,
                                 build_state.get_warn_error_override(),
-                                build_config.output,
+                                compile_params.output,
                                 mode,
                             );
                             let cmi_digest_after = helpers::compute_file_hash(Path::new(&cmi_path));
@@ -448,7 +363,7 @@ pub fn compile(
 
             for dep in module_dependents.iter() {
                 // For scoped builds, only process dependents within the universe.
-                if build_config.scope.is_scoped() && !compile_universe.all().contains(dep) {
+                if compile_params.scoped && !compile_params.modules.contains(dep) {
                     continue;
                 }
                 if !compiled_modules.contains(dep) {
@@ -545,8 +460,8 @@ pub fn compile(
         if in_progress_modules.is_empty() || in_progress_modules.eq(&current_in_progres_modules) {
             // find the dependency cycle
             let cycle = dependency_cycle::find(
-                &compile_universe
-                    .all()
+                &compile_params
+                    .modules
                     .iter()
                     .map(|s| (s, build_state.get_module(s).unwrap()))
                     .collect::<Vec<(&String, &Module)>>(),
@@ -600,7 +515,7 @@ pub fn compile(
         let prev_stage = sf.compilation_stage();
 
         let pkg = build_state.build_state.packages.get(&package_name).unwrap();
-        let ocaml_path = pkg.get_ocaml_build_path_for_output(build_config.output);
+        let ocaml_path = pkg.get_ocaml_build_path_for_output(compile_params.output);
 
         // Get source + ast hashes and parse warnings from previous stage, or compute them
         let implementation_parse_warnings = prev_stage.implementation_parse_warnings().map(str::to_owned);
@@ -649,7 +564,7 @@ pub fn compile(
                 ),
                 CompilationStage::SourceDirty | CompilationStage::ParseError => {
                     // Fallback: compute from disk
-                    let build_path = pkg.get_build_path_for_output(build_config.output);
+                    let build_path = pkg.get_build_path_for_output(compile_params.output);
                     let sh = helpers::compute_file_hash(&pkg.path.join(&impl_path));
                     let ah = helpers::compute_file_hash(&build_path.join(helpers::get_ast_path(&impl_path)));
                     match (sh, ah) {
@@ -804,7 +719,7 @@ pub fn compile(
     // but still have stored warnings from a previous compilation.
     // This ensures warnings are not lost during incremental builds in watch mode.
     for (module_name, module) in build_state.modules.iter() {
-        if compile_universe.all().contains(module_name) {
+        if compile_params.modules.contains(module_name) {
             continue;
         }
         if let Module::SourceFile(sf_module) = module {
@@ -830,7 +745,11 @@ pub fn compile(
         }
     }
 
-    Ok((compile_errors, compile_warnings, num_compiled_modules))
+    Ok(ProcessResult {
+        compile_errors,
+        compile_warnings,
+        num_compiled_modules,
+    })
 }
 
 static RUNTIME_PATH_MEMO: OnceLock<PathBuf> = OnceLock::new();

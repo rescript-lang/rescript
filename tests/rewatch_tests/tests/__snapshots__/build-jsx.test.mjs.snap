@@ -24,7 +24,7 @@ exports[`jsx > builds a package with JSX components 1`] = `
   "    build.parse_file[module=RescriptReactErrorBoundary, package=@rescript/react, jsx=4]",
   "    build.parse_file[module=RescriptReactRouter, package=@rescript/react, jsx=4]",
   "    build.parse_file[module=RescriptReactRouter, package=@rescript/react, jsx=4]",
-  "  incremental_build[module_count=10, scope=full_build, output=standard]",
+  "  full_build[module_count=10, output=standard]",
   "    build.compile",
   "      build.compile_wave[file_count=3]",
   "        build.compile_file[module=React, package=@rescript/react, suffix=.mjs, module_system=esmodule]",
