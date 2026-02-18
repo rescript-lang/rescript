@@ -666,6 +666,16 @@ pub fn process_in_waves(
             let prev_stage = sf.compilation_stage();
             let implementation_parse_warnings = prev_stage.implementation_parse_warnings().map(str::to_owned);
             let interface_parse_warnings = prev_stage.interface_parse_warnings().map(str::to_owned);
+            // Preserve FullCompile if the module was previously at
+            // CompileError(FullCompile) — a TypecheckOnly pass must not
+            // downgrade the user's intent to have JS emitted.
+            let effective_mode = match prev_stage {
+                CompilationStage::CompileError {
+                    compile_mode: CompileMode::FullCompile,
+                    ..
+                } => CompileMode::FullCompile,
+                _ => mode,
+            };
             let hashes = match prev_stage {
                 CompilationStage::Parsed {
                     implementation_source_hash,
@@ -687,13 +697,27 @@ pub fn process_in_waves(
                     interface_source_hash,
                     interface_ast_hash,
                     ..
+                }
+                | CompilationStage::TypeChecked {
+                    implementation_source_hash,
+                    implementation_ast_hash,
+                    interface_source_hash,
+                    interface_ast_hash,
+                    ..
+                }
+                | CompilationStage::Built {
+                    implementation_source_hash,
+                    implementation_ast_hash,
+                    interface_source_hash,
+                    interface_ast_hash,
+                    ..
                 } => Some((
                     *implementation_source_hash,
                     *implementation_ast_hash,
                     *interface_source_hash,
                     *interface_ast_hash,
                 )),
-                _ => None,
+                CompilationStage::SourceDirty | CompilationStage::ParseError => None,
             };
             if let Some((
                 implementation_source_hash,
@@ -710,6 +734,7 @@ pub fn process_in_waves(
                     interface_ast_hash,
                     implementation_parse_warnings,
                     interface_parse_warnings,
+                    compile_mode: effective_mode,
                 });
             }
         }

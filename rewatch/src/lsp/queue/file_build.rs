@@ -10,7 +10,9 @@ use tracing::instrument;
 use super::super::{ProjectMap, group_by_file, publish_and_store};
 use super::PendingFileBuild;
 use crate::build;
-use crate::build::build_types::{BuildCommandState, CompileMode, Module, OutputMode, OutputTarget};
+use crate::build::build_types::{
+    BuildCommandState, CompilationStage, CompileMode, Module, OutputMode, OutputTarget,
+};
 use crate::build::diagnostics::{BscDiagnostic, Severity};
 use crate::lsp::diagnostic_store::DiagnosticStore;
 
@@ -155,13 +157,17 @@ pub(super) async fn run(
 /// caused by API changes (e.g. a function signature changed). No
 /// JavaScript is emitted — that happens when those files are saved.
 ///
-/// ## Step 3: `compile_errored` — produce JS for previously-errored dependents
+/// ## Step 3: `compile_resolved_errors` — produce JS for resolved errors
 ///
 /// If step 2 successfully typechecked modules that were previously at
-/// `CompileError` (from a prior build where their dependency had a broken
-/// API), those modules now need full compilation to produce JS output.
-/// Without this step, they'd be stuck at `TypeChecked` with stale or
+/// `CompileError` from a `FullCompile` (i.e. the user saved that file
+/// but it failed), those modules now need full compilation to produce
+/// JS output. Without this step, they'd be stuck at `TypeChecked` with
 /// missing JavaScript.
+///
+/// Modules whose `CompileError` came from `TypecheckOnly` (they were
+/// only typechecked as dependents, never saved) are not snapshotted —
+/// reaching `TypeChecked` in step 2 is already their intended state.
 ///
 /// ## Why three steps?
 ///
@@ -172,21 +178,34 @@ pub(super) async fn run(
 /// unrelated package. If it has errors, the compile loop aborts before
 /// the saved file gets compiled.
 ///
-/// Step 3 exists because step 2 only typechecks (no JS). When a
-/// dependency fix resolves a prior compile error in a dependent, that
-/// dependent needs full recompilation to produce its JS output.
+/// Step 3 exists because step 2 only typechecks (no JS). Modules that
+/// previously had JS or that the user had saved need full recompilation
+/// to restore or produce their JavaScript output.
 #[instrument(name = "lsp.flush.file_build.batch", skip_all, fields(modules = ?module_names, error_count = tracing::field::Empty))]
 fn build_batch(build_state: &mut BuildCommandState, module_names: Vec<String>) -> BatchBuildResult {
     let (mut diagnostics, mut touched_files) = compile_dependencies(build_state, &module_names);
 
-    // Snapshot modules at CompileError before typechecking dependents.
-    // After typecheck, any that moved to TypeChecked need full compilation.
-    let errored_before_typecheck: AHashSet<String> = build_state
+    // Snapshot modules at CompileError(FullCompile) before typechecking
+    // dependents. These are modules the user saved but that failed to
+    // compile. If step 2 resolves the error, step 3 needs to emit JS.
+    // Modules whose CompileError came from TypecheckOnly were never
+    // saved — reaching TypeChecked in step 2 is their intended state.
+    let needs_rebuild_after_typecheck: AHashSet<String> = build_state
         .build_state
         .modules
         .iter()
         .filter_map(|(name, module)| match module {
-            Module::SourceFile(sf) if sf.compilation_stage().is_compile_error() => Some(name.clone()),
+            Module::SourceFile(sf)
+                if matches!(
+                    sf.compilation_stage(),
+                    CompilationStage::CompileError {
+                        compile_mode: CompileMode::FullCompile,
+                        ..
+                    }
+                ) =>
+            {
+                Some(name.clone())
+            }
             _ => None,
         })
         .collect();
@@ -196,12 +215,13 @@ fn build_batch(build_state: &mut BuildCommandState, module_names: Vec<String>) -
     diagnostics.extend(dep_diagnostics);
     touched_files.extend(dep_touched);
 
-    // Step 3: compile modules that were at CompileError but are now TypeChecked
-    // (meaning the typecheck succeeded after a dependency fix). These need
-    // full compilation to produce JS output.
-    let (err_diagnostics, err_touched) = compile_resolved_errors(build_state, &errored_before_typecheck);
-    diagnostics.extend(err_diagnostics);
-    touched_files.extend(err_touched);
+    // Step 3: re-compile modules that were at CompileError(FullCompile) and are
+    // now at TypeChecked after step 2 (meaning a dependency fix resolved the
+    // error). These need full compilation to produce the JS the user requested.
+    let (rebuild_diagnostics, rebuild_touched) =
+        compile_resolved_errors(build_state, &needs_rebuild_after_typecheck);
+    diagnostics.extend(rebuild_diagnostics);
+    touched_files.extend(rebuild_touched);
 
     let error_count = diagnostics
         .iter()
@@ -223,7 +243,7 @@ fn build_batch(build_state: &mut BuildCommandState, module_names: Vec<String>) -
 /// them, restricting to only the dependency closure.
 /// This produces type information and JavaScript output for just the
 /// saved file and its imports, without touching the rest of the codebase.
-#[instrument(name = "lsp.flush.file_build.compile_deps", skip_all, fields(error_count = tracing::field::Empty))]
+#[instrument(name = "lsp.flush.file_build.compile_dependencies", skip_all, fields(error_count = tracing::field::Empty))]
 fn compile_dependencies(
     build_state: &mut BuildCommandState,
     module_names: &[String],
@@ -294,7 +314,7 @@ fn compile_dependencies(
 /// type errors. This step finds all such importers and re-typechecks them
 /// to surface those errors as diagnostics. No JavaScript is emitted —
 /// that happens when those files are themselves saved.
-#[instrument(name = "lsp.flush.file_build.typecheck_deps", skip_all, fields(dependent_count = tracing::field::Empty, error_count = tracing::field::Empty))]
+#[instrument(name = "lsp.flush.file_build.typecheck_dependents", skip_all, fields(dependent_count = tracing::field::Empty, error_count = tracing::field::Empty))]
 fn typecheck_dependents(
     build_state: &mut BuildCommandState,
     module_names: &[String],
@@ -336,13 +356,13 @@ fn typecheck_dependents(
     (diagnostics, touched_files)
 }
 
-/// Fully compile modules that were previously at `CompileError` and have
-/// now been successfully typechecked (moved to `TypeChecked` by step 2).
+/// Compile modules whose errors were resolved by step 2.
 ///
-/// Filters `errored_before_typecheck` down to modules that are now at
-/// `TypeChecked`, then runs a full compile for those modules to produce
-/// JS output. If none were resolved, this is a no-op (but the span is
-/// still emitted for observability).
+/// The caller passes modules that were at `CompileError(FullCompile)`
+/// before step 2 ran. This function filters to those now at `TypeChecked`
+/// (meaning the typecheck succeeded after a dependency fix), then runs a
+/// full compile to produce JS output. If none were resolved, this is a
+/// no-op (but the span is still emitted for observability).
 #[instrument(name = "lsp.flush.file_build.compile_resolved", skip_all, fields(modules = tracing::field::Empty, error_count = tracing::field::Empty))]
 fn compile_resolved_errors(
     build_state: &mut BuildCommandState,

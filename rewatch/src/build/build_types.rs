@@ -43,6 +43,9 @@ pub enum CompilationStage {
     /// Compilation was attempted but failed (type error, etc.).
     /// Preserves parse hashes so the module can be recompiled when the
     /// error is resolved (e.g. a dependency fix).
+    /// `compile_mode` records whether the failure occurred during a full
+    /// compile (JS emission) or typecheck-only pass, so the LSP knows
+    /// what to do when the error is resolved.
     CompileError {
         implementation_source_hash: Hash,
         implementation_ast_hash: Hash,
@@ -50,6 +53,7 @@ pub enum CompilationStage {
         interface_ast_hash: Option<Hash>,
         implementation_parse_warnings: Option<String>,
         interface_parse_warnings: Option<String>,
+        compile_mode: CompileMode,
     },
     /// A dependency's interface changed but this module's source and AST are
     /// still valid. Only needs recompilation, NOT reparsing. Carries the same
@@ -387,7 +391,7 @@ impl std::fmt::Display for OutputTarget {
 }
 
 /// What the compiler produces.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CompileMode {
     /// Typecheck only: .cmi/.cmt, uses -bs-cmi-only, no JS output.
     TypecheckOnly,
