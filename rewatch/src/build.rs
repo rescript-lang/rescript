@@ -11,7 +11,9 @@ pub mod packages;
 pub mod parse;
 pub mod read_compile_state;
 
-use crate::build::compile::{mark_modules_with_deleted_deps_dirty, mark_modules_with_expired_deps_dirty};
+use crate::build::compile::{
+    mark_modules_with_deleted_deps_source_dirty, mark_modules_with_expired_deps_for_recompile,
+};
 use crate::build::compiler_info::{CompilerCheckResult, verify_compiler_info, write_compiler_info};
 use crate::helpers::emojis::*;
 use crate::helpers::{self};
@@ -28,9 +30,9 @@ use std::path::Path;
 use std::time::{Duration, Instant};
 use tracing::{info_span, instrument};
 
-fn is_dirty(module: &Module) -> bool {
+fn is_source_dirty(module: &Module) -> bool {
     match module {
-        Module::SourceFile(sf) => sf.compilation_stage().is_dirty(),
+        Module::SourceFile(sf) => sf.compilation_stage().is_source_dirty(),
         Module::MlMap(m) => m.parse_dirty,
     }
 }
@@ -206,9 +208,13 @@ pub fn parse_and_resolve(
     if !build_config.output_mode.is_silent() {
         logs::initialize(&build_state.packages);
     }
-    let num_dirty_modules = build_state.modules.values().filter(|m| is_dirty(m)).count() as u64;
+    let num_source_dirty_modules = build_state
+        .modules
+        .values()
+        .filter(|m| is_source_dirty(m))
+        .count() as u64;
     let pb = if !plain_output && show_progress {
-        ProgressBar::new(num_dirty_modules)
+        ProgressBar::new(num_source_dirty_modules)
     } else {
         ProgressBar::hidden()
     };
@@ -268,14 +274,14 @@ pub fn parse_and_resolve(
 
     if show_progress {
         if plain_output {
-            println!("Parsed {num_dirty_modules} source files")
+            println!("Parsed {num_source_dirty_modules} source files")
         } else {
             println!(
                 "{}{} {}Parsed {} source files in {:.2}s",
                 LINE_CLEAR,
                 format_step(current_step, total_steps),
                 CODE,
-                num_dirty_modules,
+                num_source_dirty_modules,
                 default_timing.unwrap_or(timing_parse_total).as_secs_f64()
             );
         }
@@ -284,8 +290,8 @@ pub fn parse_and_resolve(
         eprintln!("{}", &parse_warnings);
     }
 
-    mark_modules_with_expired_deps_dirty(build_state);
-    mark_modules_with_deleted_deps_dirty(&mut build_state.build_state);
+    mark_modules_with_expired_deps_for_recompile(build_state);
+    mark_modules_with_deleted_deps_source_dirty(&mut build_state.build_state);
 
     Ok(parse_warnings)
 }
@@ -353,7 +359,7 @@ pub fn incremental_build(
                 kind: IncrementalBuildErrorKind::CompileError(Some(e.to_string())),
                 output_mode: output_mode.clone(),
                 diagnostics: vec![],
-                modules: compile_universe.all,
+                modules: compile_universe.into_all(),
             });
         }
     };
@@ -403,7 +409,7 @@ pub fn incremental_build(
             kind: IncrementalBuildErrorKind::CompileError(None),
             output_mode,
             diagnostics: diagnostics::parse_compiler_output(&all_output),
-            modules: compile_universe.all,
+            modules: compile_universe.into_all(),
         })
     } else {
         if show_progress {
@@ -438,7 +444,7 @@ pub fn incremental_build(
         all_output.push_str(&compile_warnings);
         Ok(IncrementalBuildResult {
             diagnostics: diagnostics::parse_compiler_output(&all_output),
-            modules: compile_universe.all,
+            modules: compile_universe.into_all(),
         })
     }
 }

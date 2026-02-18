@@ -234,9 +234,9 @@ pub fn cleanup_previous_build(
 
             if impl_ast_is_fresh
                 && iface_ast_is_fresh
-                && sf_module.compilation_stage().is_dirty()
+                && sf_module.compilation_stage().is_source_dirty()
                 && !deleted_interfaces.contains(&module_name)
-                // When --warn-error is passed, keep modules Dirty so the
+                // When --warn-error is passed, keep modules SourceDirty so the
                 // parse phase re-runs them with the overridden warning flags.
                 // Warning 110 (%todo) and others are emitted during parsing,
                 // not compilation, so the parse phase must run for

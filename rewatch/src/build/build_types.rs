@@ -12,10 +12,11 @@ use std::{fmt::Display, ops::Deref, path::Path, path::PathBuf, time::SystemTime}
 /// that stage, enabling the compile loop to make data-driven decisions
 /// about what work is needed and whether output will affect dependents.
 ///
-/// Lifecycle: `Dirty → Parsed → TypeChecked → Built`
+/// Lifecycle: `SourceDirty → Parsed → TypeChecked → Built`
+///            `Built/TypeChecked → DependencyDirty → TypeChecked → Built`
 ///
 /// Error paths:
-/// - `Dirty → ParseError` when parsing fails (syntax error, etc.).
+/// - `SourceDirty → ParseError` when parsing fails (syntax error, etc.).
 ///   The module stays here until its source changes.
 /// - `Parsed → CompileError` when compilation fails (e.g. due
 ///   to a dependency's API not matching). The AST hashes are preserved so
@@ -23,10 +24,10 @@ use std::{fmt::Display, ops::Deref, path::Path, path::PathBuf, time::SystemTime}
 ///   full recompilation is needed.
 #[derive(Debug, PartialEq, Eq)]
 pub enum CompilationStage {
-    /// Not yet compiled, or source changed — needs full pipeline.
-    Dirty,
+    /// Source changed or not yet compiled — needs full pipeline (reparse + recompile).
+    SourceDirty,
     /// Parsing failed (syntax error, etc.). The module is inert until
-    /// its source changes and resets it to `Dirty`.
+    /// its source changes and resets it to `SourceDirty`.
     ParseError,
     /// AST generated. Carries hashes of implementation (and optional interface)
     /// source + AST artifacts.
@@ -42,6 +43,17 @@ pub enum CompilationStage {
     /// Preserves parse hashes so the module can be recompiled when the
     /// error is resolved (e.g. a dependency fix).
     CompileError {
+        implementation_source_hash: Hash,
+        implementation_ast_hash: Hash,
+        interface_source_hash: Option<Hash>,
+        interface_ast_hash: Option<Hash>,
+        implementation_parse_warnings: Option<String>,
+        interface_parse_warnings: Option<String>,
+    },
+    /// A dependency's interface changed but this module's source and AST are
+    /// still valid. Only needs recompilation, NOT reparsing. Carries the same
+    /// parse hashes as `Parsed` so the compile loop can use them directly.
+    DependencyDirty {
         implementation_source_hash: Hash,
         implementation_ast_hash: Hash,
         interface_source_hash: Option<Hash>,
@@ -81,9 +93,9 @@ pub enum CompilationStage {
 }
 
 impl CompilationStage {
-    /// Whether this module's source has changed and needs recompilation.
-    pub fn is_dirty(&self) -> bool {
-        matches!(self, CompilationStage::Dirty)
+    /// Whether this module's source has changed and needs reparsing + recompilation.
+    pub fn is_source_dirty(&self) -> bool {
+        matches!(self, CompilationStage::SourceDirty)
     }
 
     /// Whether this module failed compilation (type error, etc.).
@@ -105,6 +117,11 @@ impl CompilationStage {
                 ..
             }
             | CompilationStage::CompileError {
+                implementation_parse_warnings,
+                interface_parse_warnings,
+                ..
+            }
+            | CompilationStage::DependencyDirty {
                 implementation_parse_warnings,
                 interface_parse_warnings,
                 ..
@@ -134,6 +151,10 @@ impl CompilationStage {
                 implementation_parse_warnings,
                 ..
             }
+            | CompilationStage::DependencyDirty {
+                implementation_parse_warnings,
+                ..
+            }
             | CompilationStage::TypeChecked {
                 implementation_parse_warnings,
                 ..
@@ -154,6 +175,10 @@ impl CompilationStage {
                 ..
             }
             | CompilationStage::CompileError {
+                interface_parse_warnings,
+                ..
+            }
+            | CompilationStage::DependencyDirty {
                 interface_parse_warnings,
                 ..
             }
@@ -191,28 +216,29 @@ impl CompilationStage {
     ///
     /// Valid transitions:
     /// ```text
-    /// Dirty        → Dirty, ParseError, Parsed
-    /// ParseError   → Dirty, ParseError
-    /// Parsed       → Dirty, Parsed, CompileError, TypeChecked
-    /// CompileError → Dirty, CompileError, TypeChecked
-    /// TypeChecked  → Dirty, CompileError, TypeChecked, Built
-    /// Built        → Dirty, CompileError, TypeChecked
+    /// SourceDirty     → SourceDirty, ParseError, Parsed
+    /// ParseError      → SourceDirty, ParseError
+    /// Parsed          → SourceDirty, Parsed, CompileError, TypeChecked
+    /// CompileError    → SourceDirty, CompileError, TypeChecked
+    /// DependencyDirty → SourceDirty, DependencyDirty, CompileError, TypeChecked
+    /// TypeChecked     → SourceDirty, CompileError, TypeChecked, Built, DependencyDirty
+    /// Built           → SourceDirty, CompileError, TypeChecked, DependencyDirty
     /// ```
     pub fn can_transition_to(&self, new_stage: &CompilationStage) -> bool {
         use CompilationStage::*;
         matches!(
             (self, new_stage),
-            // Any stage can reset to Dirty:
+            // Any stage can reset to SourceDirty:
             //   parse.rs     — source changed on disk, or mlmap changed
-            //   compile.rs   — deleted/expired deps, or hash computation failed
-            (_, Dirty)
-            // Dirty → ParseError: parse.rs — AST generation failed (syntax error)
-            | (Dirty, ParseError)
+            //   compile.rs   — deleted deps, or hash computation failed
+            (_, SourceDirty)
+            // SourceDirty → ParseError: parse.rs — AST generation failed (syntax error)
+            | (SourceDirty, ParseError)
             // ParseError → ParseError: parse.rs — re-parsed but still fails
             | (ParseError, ParseError)
-            // Dirty → Parsed: parse.rs — AST successfully generated
-            //                  clean.rs — AST on disk is fresh, restoring from artifacts
-            | (Dirty, Parsed { .. })
+            // SourceDirty → Parsed: parse.rs — AST successfully generated
+            //                       clean.rs — AST on disk is fresh, restoring from artifacts
+            | (SourceDirty, Parsed { .. })
             // Parsed → Parsed: parse.rs — re-parsed (e.g. re-entered parse phase)
             | (Parsed { .. }, Parsed { .. })
             // Parsed → CompileError: compile.rs — compilation failed (type error)
@@ -224,6 +250,12 @@ impl CompilationStage {
             | (CompileError { .. }, CompileError { .. })
             // CompileError → TypeChecked: compile.rs — dependency fix resolved the error
             | (CompileError { .. }, TypeChecked { .. })
+            // DependencyDirty → DependencyDirty: compile.rs — re-marking (idempotent)
+            | (DependencyDirty { .. }, DependencyDirty { .. })
+            // DependencyDirty → CompileError: compile.rs — compilation failed
+            | (DependencyDirty { .. }, CompileError { .. })
+            // DependencyDirty → TypeChecked: compile.rs — typecheck succeeded
+            | (DependencyDirty { .. }, TypeChecked { .. })
             // TypeChecked → CompileError: compile.rs — dependency API change broke it
             | (TypeChecked { .. }, CompileError { .. })
             // TypeChecked → TypeChecked: compile.rs — re-typechecked successfully
@@ -231,18 +263,24 @@ impl CompilationStage {
             // TypeChecked → Built: compile.rs — FullCompile after TypecheckOnly
             //                      clean.rs — restoring from artifacts
             | (TypeChecked { .. }, Built { .. })
+            // TypeChecked → DependencyDirty: compile.rs — dependency interface changed
+            | (TypeChecked { .. }, DependencyDirty { .. })
             // Built → CompileError: compile.rs — LSP save recompile, dependency broke it
             | (Built { .. }, CompileError { .. })
             // Built → TypeChecked: compile.rs — LSP save recompile in TypecheckOnly mode
             | (Built { .. }, TypeChecked { .. })
+            // Built → DependencyDirty: compile.rs — dependency interface changed
+            | (Built { .. }, DependencyDirty { .. })
         )
     }
 
-    /// Numeric ordering for stage comparison: Dirty/ParseError(0) < Parsed(1) < CompileError(1) < TypeChecked(2) < Built(3).
+    /// Numeric ordering for stage comparison: SourceDirty/ParseError(0) < Parsed/CompileError/DependencyDirty(1) < TypeChecked(2) < Built(3).
     fn ordinal(&self) -> u8 {
         match self {
-            CompilationStage::Dirty | CompilationStage::ParseError => 0,
-            CompilationStage::Parsed { .. } | CompilationStage::CompileError { .. } => 1,
+            CompilationStage::SourceDirty | CompilationStage::ParseError => 0,
+            CompilationStage::Parsed { .. }
+            | CompilationStage::CompileError { .. }
+            | CompilationStage::DependencyDirty { .. } => 1,
             CompilationStage::TypeChecked { .. } => 2,
             CompilationStage::Built { .. } => 3,
         }
@@ -255,14 +293,21 @@ impl CompilationStage {
 
     /// Whether this module needs work for the given compile mode.
     /// `ParseError` returns `false` — the module can't compile without a successful parse.
+    /// `SourceDirty` returns `true` — should not normally appear in a compile universe
+    /// (it needs parsing first), but is kept for safety.
     pub fn needs_compile_for_mode(&self, mode: CompileMode) -> bool {
         match (self, mode) {
             (CompilationStage::Built { .. }, _) => false,
             (CompilationStage::ParseError, _) => false,
             (CompilationStage::TypeChecked { .. }, CompileMode::FullCompile) => true,
             (CompilationStage::TypeChecked { .. }, CompileMode::TypecheckOnly) => false,
-            (CompilationStage::Parsed { .. } | CompilationStage::CompileError { .. }, _) => true,
-            (CompilationStage::Dirty, _) => true,
+            (
+                CompilationStage::Parsed { .. }
+                | CompilationStage::CompileError { .. }
+                | CompilationStage::DependencyDirty { .. },
+                _,
+            ) => true,
+            (CompilationStage::SourceDirty, _) => true,
         }
     }
 
@@ -295,6 +340,10 @@ impl CompilationStage {
                 ..
             }
             | CompilationStage::CompileError {
+                implementation_source_hash,
+                ..
+            }
+            | CompilationStage::DependencyDirty {
                 implementation_source_hash,
                 ..
             }
@@ -409,19 +458,53 @@ impl CompileScope {
 
 /// The set of modules participating in a compile cycle.
 ///
-/// `originally_dirty` are modules whose source changed (parse-dirty,
-/// expired deps, deleted deps). `all` is the full set: originally dirty
-/// modules plus their transitive dependents. A module in `all` but not
-/// in `originally_dirty` only needs recompilation if one of its
-/// in-universe dependencies produced a changed `.cmi`.
+/// - `AllNeedCompile`: every module must be compiled unconditionally.
+///   Used for `TypecheckDependents` where all dependents need
+///   re-typechecking regardless.
+///
+/// - `DirtyWithDependents`: contains both the modules that need
+///   compilation (`needs_compile`) and their transitive dependents.
+///   A dependent that doesn't need compilation itself can be skipped
+///   if none of its dependencies produced a different `.cmi`. Used for
+///   `FullBuild`, `FullTypecheck`, and `CompileDependencies`.
 #[derive(Debug)]
-pub struct CompileUniverse {
-    /// All modules that participate in this compile cycle
-    /// (dirty modules + their transitive dependents).
-    pub all: AHashSet<String>,
-    /// The subset of `all` that were directly dirty
-    /// (source changed, deps expired/deleted).
-    pub originally_dirty: AHashSet<String>,
+pub enum CompileUniverse {
+    AllNeedCompile(AHashSet<String>),
+    DirtyWithDependents {
+        /// Every module in this compile cycle: the modules that need
+        /// compilation plus all their transitive dependents.
+        all: AHashSet<String>,
+        /// The subset of `all` that actually needs compilation (source
+        /// changed, dependency changed, or has unresolved errors).
+        /// Modules in `all` but not here are transitive dependents that
+        /// may be skippable if their dependencies' `.cmi` didn't change.
+        needs_compile: AHashSet<String>,
+    },
+}
+
+impl CompileUniverse {
+    pub fn all(&self) -> &AHashSet<String> {
+        match self {
+            CompileUniverse::AllNeedCompile(all) | CompileUniverse::DirtyWithDependents { all, .. } => all,
+        }
+    }
+
+    pub fn into_all(self) -> AHashSet<String> {
+        match self {
+            CompileUniverse::AllNeedCompile(all) | CompileUniverse::DirtyWithDependents { all, .. } => all,
+        }
+    }
+
+    /// Whether a module itself needs compilation (as opposed to being
+    /// a transitive dependent that may be skippable).
+    /// For `AllNeedCompile`, every module needs compilation.
+    /// For `DirtyWithDependents`, only modules in the `needs_compile` subset.
+    pub fn needs_compile(&self, name: &str) -> bool {
+        match self {
+            CompileUniverse::AllNeedCompile(all) => all.contains(name),
+            CompileUniverse::DirtyWithDependents { needs_compile, .. } => needs_compile.contains(name),
+        }
+    }
 }
 
 /// How the build reports progress to the user.
@@ -494,7 +577,7 @@ pub struct SourceFile {
 }
 
 /// A regular source file module (.res/.resi) that goes through the full
-/// compilation pipeline: Dirty → Parsed → TypeChecked → Built.
+/// compilation pipeline: SourceDirty → Parsed → TypeChecked → Built.
 #[derive(Debug)]
 pub struct SourceFileModule {
     /// The module name (HashMap key), stored here so that methods like
@@ -523,7 +606,7 @@ pub struct SourceFileModule {
     /// and reset to `false` in `deps.rs` after dependencies are resolved.
     pub needs_dependencies_rescan: bool,
     /// How far this module has progressed through the build pipeline
-    /// (Dirty → Parsed → CompileError / TypeChecked → Built).
+    /// (SourceDirty → Parsed → CompileError / TypeChecked → Built).
     ///
     /// Private — use [`compilation_stage()`] to read and
     /// [`set_compilation_stage()`] to write, which logs every transition
@@ -532,7 +615,7 @@ pub struct SourceFileModule {
 }
 
 impl SourceFileModule {
-    /// Create a new module in the `Dirty` stage.
+    /// Create a new module in the `SourceDirty` stage.
     pub fn new(
         module_name: String,
         package_name: String,
@@ -547,7 +630,7 @@ impl SourceFileModule {
             deps: AHashSet::new(),
             dependents: AHashSet::new(),
             needs_dependencies_rescan: true,
-            compilation_stage: CompilationStage::Dirty,
+            compilation_stage: CompilationStage::SourceDirty,
         }
     }
 
@@ -842,7 +925,7 @@ impl BuildCommandState {
                 }
             }
             if matched {
-                m.set_compilation_stage(CompilationStage::Dirty);
+                m.set_compilation_stage(CompilationStage::SourceDirty);
                 return Some(module_name);
             }
         }

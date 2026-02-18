@@ -131,22 +131,22 @@ fn execute_post_build_command(cmd: &str, js_file_path: &Path, working_dir: &Path
 /// Compute the compile universe from the scope and current build state.
 ///
 /// This is the single source of truth for universe construction.
-/// For full builds, it expands dirty modules through transitive dependents.
+/// For full builds, it expands modules that need compilation through transitive dependents.
 /// For scoped builds, it computes the appropriate closure from the anchor modules
 /// carried in the scope variant.
 pub fn compute_universe_for_scope(scope: &CompileScope, build_state: &BuildCommandState) -> CompileUniverse {
     match scope {
         CompileScope::FullBuild | CompileScope::FullTypecheck => {
             let mode = scope.mode();
-            let originally_dirty: AHashSet<String> = build_state
+            let needs_compile: AHashSet<String> = build_state
                 .modules
                 .iter()
                 .filter(|(_, module)| module.needs_compile_for_mode(mode))
                 .map(|(name, _)| name.to_owned())
                 .collect();
 
-            // Walk the dependency graph outward from the dirty modules to find
-            // every module that might need recompilation.
+            // Walk the dependency graph outward from the modules that need
+            // compilation to find every module that might need recompilation.
             //
             // `all` accumulates every module we have visited so far.
             // `frontier` holds the modules we discovered in the previous round
@@ -156,7 +156,7 @@ pub fn compute_universe_for_scope(scope: &CompileScope, build_state: &BuildComma
             // frontier, keeps only the ones we have not seen before (the new
             // frontier), and adds them to `all`. The loop stops when no new
             // modules are found.
-            let mut all = originally_dirty.clone();
+            let mut all = needs_compile.clone();
             let mut frontier = all.clone();
             loop {
                 let mut dependents = AHashSet::new();
@@ -174,37 +174,47 @@ pub fn compute_universe_for_scope(scope: &CompileScope, build_state: &BuildComma
                     break;
                 }
             }
-            CompileUniverse {
-                all,
-                originally_dirty,
-            }
+            CompileUniverse::DirtyWithDependents { all, needs_compile }
         }
         CompileScope::CompileDependencies(module_names) => {
             let closure =
                 super::dependency_closure::get_dependency_closure(&build_state.modules, module_names.clone());
-            let originally_dirty: AHashSet<String> = closure
+            let needs_compile: AHashSet<String> = closure
                 .iter()
                 .filter(|name| {
                     build_state.get_module(name).is_some_and(|m| match m {
-                        Module::SourceFile(sf) => sf.compilation_stage().is_dirty(),
+                        Module::SourceFile(sf) => sf.compilation_stage().is_source_dirty(),
                         Module::MlMap(_) => false,
                     })
                 })
                 .cloned()
                 .collect();
 
-            CompileUniverse {
+            CompileUniverse::DirtyWithDependents {
                 all: closure,
-                originally_dirty,
+                needs_compile,
             }
         }
         CompileScope::TypecheckDependents(module_names) => {
-            let dependents =
+            let all_dependents =
                 super::dependency_closure::get_dependent_closure(&build_state.modules, module_names.clone());
-            CompileUniverse {
-                originally_dirty: dependents.clone(),
-                all: dependents,
-            }
+            // Exclude modules at SourceDirty or ParseError — they need
+            // parse_and_resolve before they can be compiled (their AST is
+            // invalid or missing). DependencyDirty modules pass through
+            // because their AST is still valid — they only need recompilation.
+            let typecheckable: AHashSet<String> = all_dependents
+                .into_iter()
+                .filter(|name| {
+                    build_state.get_module(name).is_some_and(|m| match m {
+                        Module::SourceFile(sf) => {
+                            !sf.compilation_stage().is_source_dirty()
+                                && !sf.compilation_stage().is_parse_error()
+                        }
+                        Module::MlMap(_) => true,
+                    })
+                })
+                .collect();
+            CompileUniverse::AllNeedCompile(typecheckable)
         }
     }
 }
@@ -243,16 +253,16 @@ pub fn compile(
     let mut sorted_modules = build_state.module_names.iter().collect::<Vec<&String>>();
     sorted_modules.sort();
 
-    let compile_universe_count = compile_universe.all.len();
+    let compile_universe_count = compile_universe.all().len();
     set_length(compile_universe_count as u64);
 
     // start off with all modules that have no deps in this compile universe
     let mut in_progress_modules = compile_universe
-        .all
+        .all()
         .iter()
         .filter(|module_name| {
             let module = build_state.get_module(module_name).unwrap();
-            module.deps().intersection(&compile_universe.all).count() == 0
+            module.deps().intersection(compile_universe.all()).count() == 0
         })
         .map(|module_name| module_name.to_string())
         .collect::<AHashSet<String>>();
@@ -264,7 +274,7 @@ pub fn compile(
         trace!(
             "Compiled: {} out of {}. Compile loop: {}",
             files_total_count,
-            compile_universe.all.len(),
+            compile_universe.all().len(),
             loop_count,
         );
 
@@ -294,22 +304,22 @@ pub fn compile(
                     .expect("Package not found");
                 // Dependencies of this module that are part of the compile universe.
                 let in_universe_deps: Vec<&String> =
-                    module.deps().intersection(&compile_universe.all).collect();
+                    module.deps().intersection(compile_universe.all()).collect();
 
                 // all dependencies that we care about are compiled
                 if in_universe_deps
                     .iter()
                     .all(|dep| compiled_modules.contains(*dep))
                 {
-                    if !compile_universe.originally_dirty.contains(module_name)
+                    if !compile_universe.needs_compile(module_name)
                         && !module.needs_compile_for_mode(mode)
                         && in_universe_deps
                             .iter()
                             .all(|dep| clean_modules.contains(*dep))
                     {
-                        // This module was not originally dirty, already at the
-                        // target stage, and all its in-universe dependencies
-                        // had unchanged output (.cmi). No compilation needed.
+                        // This module doesn't need compilation itself, is already
+                        // at the target stage, and all its in-universe
+                        // dependencies had unchanged output (.cmi). Skip it.
                         return Some(CompileModuleResult {
                             module_name: module_name.to_string(),
                             implementation: CompileFileOutcome::Success,
@@ -438,7 +448,7 @@ pub fn compile(
 
             for dep in module_dependents.iter() {
                 // For scoped builds, only process dependents within the universe.
-                if build_config.scope.is_scoped() && !compile_universe.all.contains(dep) {
+                if build_config.scope.is_scoped() && !compile_universe.all().contains(dep) {
                     continue;
                 }
                 if !compiled_modules.contains(dep) {
@@ -536,7 +546,7 @@ pub fn compile(
             // find the dependency cycle
             let cycle = dependency_cycle::find(
                 &compile_universe
-                    .all
+                    .all()
                     .iter()
                     .map(|s| (s, build_state.get_module(s).unwrap()))
                     .collect::<Vec<(&String, &Module)>>(),
@@ -611,6 +621,13 @@ pub fn compile(
                     interface_ast_hash,
                     ..
                 }
+                | CompilationStage::DependencyDirty {
+                    implementation_source_hash,
+                    implementation_ast_hash,
+                    interface_source_hash,
+                    interface_ast_hash,
+                    ..
+                }
                 | CompilationStage::TypeChecked {
                     implementation_source_hash,
                     implementation_ast_hash,
@@ -630,7 +647,7 @@ pub fn compile(
                     *interface_source_hash,
                     *interface_ast_hash,
                 ),
-                CompilationStage::Dirty | CompilationStage::ParseError => {
+                CompilationStage::SourceDirty | CompilationStage::ParseError => {
                     // Fallback: compute from disk
                     let build_path = pkg.get_build_path_for_output(build_config.output);
                     let sh = helpers::compute_file_hash(&pkg.path.join(&impl_path));
@@ -721,7 +738,7 @@ pub fn compile(
                     });
                 }
                 _ => {
-                    sf.set_compilation_stage(CompilationStage::Dirty);
+                    sf.set_compilation_stage(CompilationStage::SourceDirty);
                 }
             }
         }
@@ -743,6 +760,13 @@ pub fn compile(
                     ..
                 }
                 | CompilationStage::CompileError {
+                    implementation_source_hash,
+                    implementation_ast_hash,
+                    interface_source_hash,
+                    interface_ast_hash,
+                    ..
+                }
+                | CompilationStage::DependencyDirty {
                     implementation_source_hash,
                     implementation_ast_hash,
                     interface_source_hash,
@@ -780,7 +804,7 @@ pub fn compile(
     // but still have stored warnings from a previous compilation.
     // This ensures warnings are not lost during incremental builds in watch mode.
     for (module_name, module) in build_state.modules.iter() {
-        if compile_universe.all.contains(module_name) {
+        if compile_universe.all().contains(module_name) {
             continue;
         }
         if let Module::SourceFile(sf_module) = module {
@@ -1244,12 +1268,12 @@ fn compile_file(
     }
 }
 
-pub fn mark_modules_with_deleted_deps_dirty(build_state: &mut BuildState) {
+pub fn mark_modules_with_deleted_deps_source_dirty(build_state: &mut BuildState) {
     build_state.modules.iter_mut().for_each(|(_, module)| {
         if let Module::SourceFile(sf) = module
             && !sf.deps.is_disjoint(&build_state.deleted_modules)
         {
-            sf.set_compilation_stage(CompilationStage::Dirty);
+            sf.set_compilation_stage(CompilationStage::SourceDirty);
         }
     });
 }
@@ -1268,7 +1292,7 @@ pub fn mark_modules_with_deleted_deps_dirty(build_state: &mut BuildState) {
 //
 // We could clean up the build after errors. But I think we probably still need
 // to do this, because people can also force quit the watcher of
-pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildCommandState) {
+pub fn mark_modules_with_expired_deps_for_recompile(build_state: &mut BuildCommandState) {
     let mut modules_with_expired_deps: AHashSet<String> = AHashSet::new();
     build_state
         .modules
@@ -1330,12 +1354,65 @@ pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildCommandState)
             // flow (step 3 in file_build::build_batch uses it to detect
             // modules that need full compilation after a dependency fix).
             // Parsed modules were just parsed in this cycle and resetting them
-            // to Dirty loses their source/AST hashes, which prevents
-            // CompileError from being set if compilation fails.
+            // loses their source/AST hashes.
             && !sf.compilation_stage().is_compile_error()
             && !matches!(sf.compilation_stage(), CompilationStage::Parsed { .. })
         {
-            sf.set_compilation_stage(CompilationStage::Dirty);
+            // Extract parse hashes from the current stage when available.
+            // Modules at Built/TypeChecked/DependencyDirty have valid ASTs
+            // and only need recompilation, not reparsing → DependencyDirty.
+            // Modules at SourceDirty/ParseError have no valid hashes → SourceDirty.
+            let hashes = match sf.compilation_stage() {
+                CompilationStage::TypeChecked {
+                    implementation_source_hash,
+                    implementation_ast_hash,
+                    interface_source_hash,
+                    interface_ast_hash,
+                    implementation_parse_warnings,
+                    interface_parse_warnings,
+                    ..
+                }
+                | CompilationStage::Built {
+                    implementation_source_hash,
+                    implementation_ast_hash,
+                    interface_source_hash,
+                    interface_ast_hash,
+                    implementation_parse_warnings,
+                    interface_parse_warnings,
+                    ..
+                }
+                | CompilationStage::DependencyDirty {
+                    implementation_source_hash,
+                    implementation_ast_hash,
+                    interface_source_hash,
+                    interface_ast_hash,
+                    implementation_parse_warnings,
+                    interface_parse_warnings,
+                } => Some((
+                    *implementation_source_hash,
+                    *implementation_ast_hash,
+                    *interface_source_hash,
+                    *interface_ast_hash,
+                    implementation_parse_warnings.clone(),
+                    interface_parse_warnings.clone(),
+                )),
+                _ => None,
+            };
+            match hashes {
+                Some((ish, iah, ifs, ifa, ipw, ifpw)) => {
+                    sf.set_compilation_stage(CompilationStage::DependencyDirty {
+                        implementation_source_hash: ish,
+                        implementation_ast_hash: iah,
+                        interface_source_hash: ifs,
+                        interface_ast_hash: ifa,
+                        implementation_parse_warnings: ipw,
+                        interface_parse_warnings: ifpw,
+                    });
+                }
+                None => {
+                    sf.set_compilation_stage(CompilationStage::SourceDirty);
+                }
+            }
         }
     });
 }
