@@ -113,38 +113,6 @@ impl CompilationStage {
         matches!(self, CompilationStage::ParseError)
     }
 
-    /// Whether parsing produced warnings (e.g. local dependency warnings).
-    pub fn has_parse_warnings(&self) -> bool {
-        match self {
-            CompilationStage::Parsed {
-                implementation_parse_warnings,
-                interface_parse_warnings,
-                ..
-            }
-            | CompilationStage::CompileError {
-                implementation_parse_warnings,
-                interface_parse_warnings,
-                ..
-            }
-            | CompilationStage::DependencyDirty {
-                implementation_parse_warnings,
-                interface_parse_warnings,
-                ..
-            }
-            | CompilationStage::TypeChecked {
-                implementation_parse_warnings,
-                interface_parse_warnings,
-                ..
-            }
-            | CompilationStage::Built {
-                implementation_parse_warnings,
-                interface_parse_warnings,
-                ..
-            } => implementation_parse_warnings.is_some() || interface_parse_warnings.is_some(),
-            _ => false,
-        }
-    }
-
     /// The implementation parse warning text, if any.
     pub fn implementation_parse_warnings(&self) -> Option<&str> {
         match self {
@@ -279,23 +247,6 @@ impl CompilationStage {
         )
     }
 
-    /// Numeric ordering for stage comparison: SourceDirty/ParseError(0) < Parsed/CompileError/DependencyDirty(1) < TypeChecked(2) < Built(3).
-    fn ordinal(&self) -> u8 {
-        match self {
-            CompilationStage::SourceDirty | CompilationStage::ParseError => 0,
-            CompilationStage::Parsed { .. }
-            | CompilationStage::CompileError { .. }
-            | CompilationStage::DependencyDirty { .. } => 1,
-            CompilationStage::TypeChecked { .. } => 2,
-            CompilationStage::Built { .. } => 3,
-        }
-    }
-
-    /// Whether this module needs work to reach the given target stage.
-    pub fn needs_compile(&self, target: &CompilationStage) -> bool {
-        self.ordinal() < target.ordinal()
-    }
-
     /// Whether this module needs work for the given compile mode.
     /// `ParseError` returns `false` — the module can't compile without a successful parse.
     /// `SourceDirty` returns `true` — should not normally appear in a compile universe
@@ -316,16 +267,6 @@ impl CompilationStage {
         }
     }
 
-    /// The CMI hash, if typechecked or built.
-    pub fn cmi_hash(&self) -> Option<Hash> {
-        match self {
-            CompilationStage::TypeChecked { cmi_hash, .. } | CompilationStage::Built { cmi_hash, .. } => {
-                Some(*cmi_hash)
-            }
-            _ => None,
-        }
-    }
-
     /// When this module was last compiled, if typechecked or built.
     /// Used for incremental staleness checks: if a dependency was compiled
     /// more recently than a dependent, the dependent must be recompiled.
@@ -333,33 +274,6 @@ impl CompilationStage {
         match self {
             CompilationStage::TypeChecked { compiled_at, .. }
             | CompilationStage::Built { compiled_at, .. } => Some(*compiled_at),
-            _ => None,
-        }
-    }
-
-    /// The implementation source hash, if any compilation has happened.
-    pub fn implementation_source_hash(&self) -> Option<Hash> {
-        match self {
-            CompilationStage::Parsed {
-                implementation_source_hash,
-                ..
-            }
-            | CompilationStage::CompileError {
-                implementation_source_hash,
-                ..
-            }
-            | CompilationStage::DependencyDirty {
-                implementation_source_hash,
-                ..
-            }
-            | CompilationStage::TypeChecked {
-                implementation_source_hash,
-                ..
-            }
-            | CompilationStage::Built {
-                implementation_source_hash,
-                ..
-            } => Some(*implementation_source_hash),
             _ => None,
         }
     }

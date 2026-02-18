@@ -42,7 +42,7 @@ fn remove_mjs_file(source_file: &Path, suffix: &str) {
 
 /// Remove stale source file copies (.res/.resi) from the flat build dir (e.g. lib/lsp-ocaml/)
 /// and the nested build dir (e.g. lib/lsp/src/). These copies are created during
-/// TypecheckAndEmit builds but are not tracked by the compile assets scan.
+/// compilation but are not tracked by the compile assets scan.
 fn remove_source_copies(
     package: &packages::Package,
     ocaml_build_path: &Path,

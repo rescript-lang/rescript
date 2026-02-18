@@ -340,7 +340,7 @@ pub fn build(
     warn_error: Option<String>,
 ) -> Result<BuildCommandState> {
     let default_timing: Option<std::time::Duration> = if no_timing {
-        Some(std::time::Duration::new(0.0 as u64, 0.0 as u32))
+        Some(std::time::Duration::ZERO)
     } else {
         None
     };

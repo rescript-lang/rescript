@@ -20,8 +20,8 @@ use crate::build::build_types::Module;
 ///
 /// After the initial LSP build (`TypecheckOnly`), every module sits at
 /// `CompilationStage::TypeChecked`. When a file is saved, we switch to
-/// `TypecheckAndEmit` (target = `Built`), which means every `TypeChecked`
-/// module would satisfy `needs_compile(Built)` and enter the compile universe.
+/// `FullCompile`, which means every `TypeChecked` module would satisfy
+/// `needs_compile_for_mode(FullCompile)` and enter the compile universe.
 /// In a large project, this compiles the **entire** codebase on the first save.
 ///
 /// By computing the dependency closure, we can limit compilation to only the
@@ -56,7 +56,7 @@ pub fn get_dependency_closure(
 /// - Result: {B, A}
 ///
 /// The starting modules are **excluded** from the result — they are handled
-/// separately by the caller (e.g. compiled with `TypecheckAndEmit`).
+/// separately by the caller (e.g. compiled with `FullCompile`).
 ///
 /// When multiple start modules are given, the result is the union of their
 /// individual dependent closures (minus all start modules).

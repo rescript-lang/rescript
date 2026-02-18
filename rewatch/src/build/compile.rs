@@ -208,9 +208,9 @@ pub fn process_in_waves(
         };
         let _wave_entered = wave_span.enter();
 
-        let current_in_progres_modules = in_progress_modules.clone();
+        let current_in_progress_modules = in_progress_modules.clone();
 
-        let results = current_in_progres_modules
+        let results = current_in_progress_modules
             .par_iter()
             .filter_map(|module_name| {
                 let module = build_state.get_module(module_name).unwrap();
@@ -310,7 +310,7 @@ pub fn process_in_waves(
                             let cmi_digest_after = helpers::compute_file_hash(Path::new(&cmi_path));
 
                             // we want to compare both the hash of interface and the implementation
-                            // compile assets to verify that nothing changed. We also need to checke the interface
+                            // compile assets to verify that nothing changed. We also need to check the interface
                             // because we can include MyModule, so the modules that depend on this module might
                             // change when this modules interface does not change, but the implementation does
                             let is_clean_cmi = match (cmi_digest, cmi_digest_after) {
@@ -457,7 +457,7 @@ pub fn process_in_waves(
         if files_total_count == compile_universe_count {
             break;
         }
-        if in_progress_modules.is_empty() || in_progress_modules.eq(&current_in_progres_modules) {
+        if in_progress_modules.is_empty() || in_progress_modules.eq(&current_in_progress_modules) {
             // find the dependency cycle
             let cycle = dependency_cycle::find(
                 &compile_params
@@ -936,17 +936,8 @@ pub fn compiler_args(
         warning_args,
         gentype_arg,
         experimental_args,
-        // vec!["-warn-error".to_string(), "A".to_string()],
-        // ^^ this one fails for bisect-ppx
-        // this is the default
-        // we should probably parse the right ones from the package config
-        // vec!["-w".to_string(), "a".to_string()],
         package_name_arg,
         implementation_args,
-        // vec![
-        //     "-I".to_string(),
-        //     abs_node_modules_path.to_string() + "/rescript/ocaml",
-        // ],
         vec![ast_path.to_string_lossy().to_string()],
     ]
     .concat())
@@ -1099,7 +1090,7 @@ fn compile_file(
         )),
         Ok(x) => {
             let err = std::str::from_utf8(&x.stderr)
-                .expect("stdout should be non-null")
+                .expect("stderr should be valid utf-8")
                 .to_string();
 
             let dir = Path::new(implementation_file_path).parent().unwrap();
