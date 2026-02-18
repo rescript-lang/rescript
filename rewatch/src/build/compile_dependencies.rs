@@ -20,10 +20,9 @@ pub fn compile_dependencies(
     let needs_compile: AHashSet<String> = closure
         .iter()
         .filter(|name| {
-            build_state.get_module(name).is_some_and(|m| match m {
-                Module::SourceFile(sf) => sf.compilation_stage().is_source_dirty(),
-                Module::MlMap(_) => false,
-            })
+            build_state
+                .get_module(name)
+                .is_some_and(|m| m.needs_compile_for_mode(CompileMode::FullCompile))
         })
         .cloned()
         .collect();
