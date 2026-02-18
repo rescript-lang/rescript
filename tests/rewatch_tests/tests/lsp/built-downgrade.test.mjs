@@ -45,7 +45,7 @@ describe("lsp compile mode preservation", { timeout: 60_000 }, () => {
 
         // App.res should have diagnostics
         let diagnostics = lsp.getDiagnostics();
-        let appDiag = diagnostics.find((d) => d.file === "src/App.res");
+        let appDiag = diagnostics.find(d => d.file === "src/App.res");
         expect(appDiag, "Expected diagnostics for App.res").toBeDefined();
         expect(appDiag.diagnostics.length).toBeGreaterThan(0);
 
@@ -63,7 +63,7 @@ describe("lsp compile mode preservation", { timeout: 60_000 }, () => {
 
         // App.res should still have diagnostics
         diagnostics = lsp.getDiagnostics();
-        appDiag = diagnostics.find((d) => d.file === "src/App.res");
+        appDiag = diagnostics.find(d => d.file === "src/App.res");
         expect(
           appDiag,
           "Expected App.res to still have diagnostics after unrelated save",

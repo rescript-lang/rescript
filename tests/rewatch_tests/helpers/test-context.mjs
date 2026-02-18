@@ -263,7 +263,10 @@ const SUMMARY_ATTRS = {
   "lsp.flush": ["project_builds", "incremental_builds", "typechecks"],
   "lsp.flush.file_build.batch": ["modules", "error_count"],
   "lsp.flush.file_build.compile_dependencies": ["error_count"],
-  "lsp.flush.file_build.typecheck_dependents": ["dependent_count", "error_count"],
+  "lsp.flush.file_build.typecheck_dependents": [
+    "dependent_count",
+    "error_count",
+  ],
   "lsp.flush.file_build.compile_resolved": ["modules", "error_count"],
   "lsp.flush.project_build": ["project"],
   "lsp.flush.file_typecheck": ["file_count"],
