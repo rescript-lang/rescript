@@ -196,6 +196,22 @@ async def api_export(request: Request):
     return {"trace_id": trace_id, "exported_spans": exported}
 
 
+@app.get("/api/spans/{span_id}/context")
+async def api_span_context(span_id: str):
+    result = db.get_context_spans(span_id)
+    if result is None:
+        return Response(status_code=404)
+    return result
+
+
+@app.get("/api/spans/{span_id}/flush")
+async def api_span_flush(span_id: str):
+    result = db.get_flush_summary(span_id)
+    if result is None:
+        return Response(status_code=404)
+    return result
+
+
 if __name__ == "__main__":
     import sys
 

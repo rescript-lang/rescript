@@ -1,6 +1,6 @@
 import { fetchRootSpans, fetchChildren, fetchSpanDetail } from "./api.js";
 import { state, resetTraceState } from "./state.js";
-import { esc, formatDuration } from "./utils.js";
+import { esc, formatDuration, formatTimestamp, showToast } from "./utils.js";
 import { updateExportBar } from "./export.js";
 
 export async function openTrace(traceId) {
@@ -37,12 +37,19 @@ function createSpanRow(span, depth) {
   const isSelected = state.selectedSpanIds.has(span.span_id);
 
   const row = document.createElement("div");
-  row.className = `flex items-center py-1.5 px-2 hover:bg-gray-50 border-b border-gray-200 ${isSelected ? "bg-blue-50" : ""}`;
+  row.className = `flex items-center py-1.5 px-2 hover:bg-gray-50 border-b border-gray-200 ${isSelected ? "bg-blue-50" : span.name === "lsp.llm_report" ? "bg-teal-50" : ""}`;
   row.style.paddingLeft = `${depth * 24 + 8}px`;
 
-  const errorDot = span.has_error
+  const isReport = span.name === "lsp.llm_report";
+
+  const statusDot = span.has_error
     ? `<span class="w-2 h-2 rounded-full bg-red-500 shrink-0 mr-1.5" title="Contains errors"></span>`
-    : "";
+    : isReport
+      ? `<span class="w-2 h-2 rounded-full bg-teal-500 shrink-0 mr-1.5" title="LLM problem report"></span>`
+      : "";
+
+  const nameColor = span.has_error ? "text-red-700" : isReport ? "text-teal-700" : "text-gray-900";
+  const rowBg = isReport ? "bg-teal-50 " : "";
 
   row.innerHTML = `
     <input type="checkbox" ${isSelected ? "checked" : ""}
@@ -53,14 +60,20 @@ function createSpanRow(span, depth) {
       data-expand-btn="${span.span_id}" data-depth="${depth}">
       ${state.expandedSpans.has(span.span_id) ? "&#9660;" : "&#9654;"}
     </button>
-    ${errorDot}
-    <span class="${span.has_error ? "text-red-700" : "text-gray-900"} truncate">${esc(span.name)}</span>
+    ${statusDot}
+    <span class="${nameColor} truncate">${esc(span.name)}</span>
     <button class="ml-2 text-xs text-gray-400 hover:text-blue-600 cursor-pointer shrink-0"
       data-detail-btn="${span.span_id}"
       title="Show attributes and events">
       info
     </button>
-    <span class="ml-auto text-xs text-gray-400 shrink-0 pl-4">${formatDuration(span.duration_ms)}</span>
+    <button class="ml-2 text-xs text-gray-300 hover:text-blue-600 cursor-pointer shrink-0 font-mono"
+      data-copy-id="${span.span_id}"
+      title="Copy span ID to clipboard">
+      ${esc(span.span_id.slice(0, 8))}
+    </button>
+    <span class="ml-auto text-xs text-gray-400 shrink-0 pl-4 whitespace-nowrap">${formatTimestamp(span.start_time_ns)}</span>
+    <span class="text-xs text-gray-400 shrink-0 pl-3 whitespace-nowrap">${formatDuration(span.duration_ms)}</span>
   `;
 
   // Event listeners
@@ -78,6 +91,13 @@ function createSpanRow(span, depth) {
 
   const detailBtn = row.querySelector(`[data-detail-btn="${span.span_id}"]`);
   detailBtn.addEventListener("click", () => toggleDetail(span.span_id));
+
+  const copyBtn = row.querySelector(`[data-copy-id="${span.span_id}"]`);
+  copyBtn.addEventListener("click", () => {
+    navigator.clipboard.writeText(span.span_id).then(() => {
+      showToast(`Copied span ID: ${span.span_id}`);
+    });
+  });
 
   container.appendChild(row);
 

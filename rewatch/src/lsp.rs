@@ -735,7 +735,7 @@ impl Backend {
     async fn start_diagnostics_http(&self, port: u16) {
         tracing::info!(port, "HTTP diagnostics endpoint enabled");
         let store = Arc::new(DiagnosticStore::new());
-        match http::start(Arc::clone(&store), port).await {
+        match http::start(Arc::clone(&store), self.root_span.clone(), port).await {
             Ok(()) => {
                 self.client
                     .log_message(

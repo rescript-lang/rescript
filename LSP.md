@@ -494,6 +494,20 @@ The store uses a pending-ID model: each queue event increments a monotonic ID. W
 
 Implementation: `lsp/diagnostic_store.rs`, `lsp/http.rs`
 
+### Problem Reporting
+
+`POST /report` — allows an LLM agent to report a problem it observed. The request body is plain text describing the issue (e.g., "File Foo.res was not compiled to JS after save"). The LSP creates an `lsp.llm_report` OTEL span with the message, making it visible in trace viewers alongside the LSP's own build/typecheck spans.
+
+```bash
+curl -X POST http://127.0.0.1:54321/report -d "File Foo.res was not compiled to JS after save"
+```
+
+Response: `{"status": "recorded"}`
+
+This span can then be used with the OTEL viewer's `/api/spans/{span_id}/context` endpoint to see what the LSP was doing around the time of the report (which files were changed/saved, which flushes ran, whether any had errors). See `rewatch/otel-viewer/` for the viewer endpoints.
+
+Implementation: `lsp/http.rs`
+
 ## Custom Notifications
 
 ### `rescript/buildFinished`

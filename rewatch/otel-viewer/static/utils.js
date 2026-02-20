@@ -4,6 +4,15 @@ export function formatDuration(ms) {
   return `${(ms / 1000).toFixed(2)}s`;
 }
 
+export function formatTimestamp(startTimeNs) {
+  if (!startTimeNs) return "";
+  // startTimeNs is nanoseconds since epoch. Dividing by 1e6 gives milliseconds.
+  // Precision loss from Number is sub-millisecond, which is fine for display.
+  const ms = startTimeNs / 1e6;
+  const d = new Date(ms);
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
+
 export function esc(str) {
   const d = document.createElement("div");
   d.textContent = str;
