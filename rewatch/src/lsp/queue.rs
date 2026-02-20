@@ -130,6 +130,10 @@ struct PendingState {
     /// File changes that require full project rebuilds.
     /// Flush resolves project roots and groups these into per-project sets.
     build_projects: PendingProjectBuilds,
+    /// Files deleted in a recent flush that haven't been matched by a create.
+    /// Used to detect cross-flush delete+create (file overwrite) patterns
+    /// from LLMs and git operations.
+    recently_deleted: HashSet<PathBuf>,
 }
 
 /// Debug summary of what a flush is about to process.
@@ -357,6 +361,7 @@ impl PendingState {
             typechecks: HashMap::new(),
             compile_files: HashMap::new(),
             build_projects: PendingProjectBuilds::new(),
+            recently_deleted: HashSet::new(),
         }
     }
 
@@ -424,27 +429,37 @@ impl PendingState {
                 if let Ok(uri) = Url::from_file_path(&file_path) {
                     self.typechecks.remove(&uri);
                     self.compile_files.remove(&uri);
-                    // If this file was previously deleted in the same batch,
-                    // it was recreated (e.g. git checkout). Schedule an
-                    // incremental build to emit JS after the full rebuild.
-                    if self.build_projects.deleted_files.contains(&file_path) {
+                }
+                // Check both same-flush (build_projects.deleted_files) and
+                // cross-flush (recently_deleted) for the delete+create pattern.
+                let same_flush_delete = self.build_projects.deleted_files.remove(&file_path);
+                let cross_flush_delete = self.recently_deleted.remove(&file_path);
+                if same_flush_delete || cross_flush_delete {
+                    // Delete + create = content overwrite (LLM, git checkout).
+                    // Still need project_build to re-add the module to state,
+                    // plus file_build to emit JS with FullCompile.
+                    self.build_projects.created_files.insert(file_path.clone());
+                    if let Ok(uri) = Url::from_file_path(&file_path) {
                         self.compile_files.insert(
                             uri,
                             PendingFileBuild {
-                                file_path: file_path.clone(),
+                                file_path,
                                 buffer_content: None,
                                 generation: 0,
                             },
                         );
                     }
+                } else {
+                    // Genuinely new file — needs full project rebuild.
+                    self.build_projects.created_files.insert(file_path);
                 }
-                self.build_projects.created_files.insert(file_path);
             }
             QueueEvent::FileDeleted { file_path } => {
                 if let Ok(uri) = Url::from_file_path(&file_path) {
                     self.typechecks.remove(&uri);
                     self.compile_files.remove(&uri);
                 }
+                self.recently_deleted.insert(file_path.clone());
                 self.build_projects.deleted_files.insert(file_path);
             }
             QueueEvent::ConfigChanged { file_path } => {
@@ -559,6 +574,14 @@ async fn flush_inner(
     // Create a FlushGuard that calls end_flush on drop (even on panic).
     let _flush_guard = diagnostic_store.as_ref().map(|s| FlushGuard::new(s));
     let store_ref = diagnostic_store.as_deref();
+
+    // Rotate recently_deleted: clear old entries from previous flushes,
+    // carry forward this flush's deletes for cross-flush detection.
+    // Must happen before project_build::run takes build_projects.
+    state.recently_deleted.clear();
+    state
+        .recently_deleted
+        .extend(state.build_projects.deleted_files.iter().cloned());
 
     // Step 0: Run full builds (file creation / deletion).
     let has_full_builds = !state.build_projects.is_empty();
@@ -933,10 +956,10 @@ mod tests {
         assert!(state.build_projects.created_files.contains(&test_path("New.res")));
     }
 
-    // -- Recreated files (delete + create) → promoted to compile_files --
+    // -- Recreated files (delete + create) → treated as save --
 
     #[test]
-    fn delete_then_create_promotes_to_compile_files() {
+    fn delete_then_create_treated_as_overwrite() {
         let mut state = PendingState::new();
 
         // File deleted (e.g. git checkout starts)
@@ -949,9 +972,10 @@ mod tests {
             file_path: test_path("Pkmn.res"),
         });
 
-        // Should be in both build_projects sets
+        // Delete+create = overwrite. Removed from deleted_files,
+        // but still in created_files (project_build re-adds the module).
         assert!(
-            state
+            !state
                 .build_projects
                 .deleted_files
                 .contains(&test_path("Pkmn.res"))
@@ -1101,5 +1125,68 @@ mod tests {
         assert_eq!(state.typechecks.len(), 1);
         assert!(state.typechecks.contains_key(&uri_b));
         assert!(!state.typechecks.contains_key(&uri_a));
+    }
+
+    // -- Cross-flush delete+create detection --
+
+    /// Simulate the recently_deleted rotation that flush_inner performs.
+    fn simulate_flush_rotation(state: &mut PendingState) {
+        state.recently_deleted.clear();
+        state
+            .recently_deleted
+            .extend(state.build_projects.deleted_files.iter().cloned());
+        // Simulate project_build taking build_projects
+        state.build_projects = PendingProjectBuilds::new();
+        // Simulate file_build/file_typecheck taking their maps
+        state.compile_files.clear();
+        state.typechecks.clear();
+    }
+
+    #[test]
+    fn cross_flush_delete_then_create_treated_as_overwrite() {
+        let mut state = PendingState::new();
+
+        // Flush N: file is deleted
+        state.merge(QueueEvent::FileDeleted {
+            file_path: test_path("Pkmn.res"),
+        });
+
+        // Simulate flush N completing
+        simulate_flush_rotation(&mut state);
+
+        // Flush N+1: same file is created (cross-flush overwrite)
+        state.merge(QueueEvent::FileCreated {
+            file_path: test_path("Pkmn.res"),
+        });
+
+        // Should be in created_files (project_build re-adds module to state)
+        // AND in compile_files (file_build emits JS)
+        assert!(
+            state
+                .build_projects
+                .created_files
+                .contains(&test_path("Pkmn.res"))
+        );
+        assert!(state.compile_files.contains_key(&test_uri("Pkmn.res")));
+    }
+
+    #[test]
+    fn recently_deleted_cleared_after_rotation_without_create() {
+        let mut state = PendingState::new();
+
+        // Flush N: file is deleted
+        state.merge(QueueEvent::FileDeleted {
+            file_path: test_path("Gone.res"),
+        });
+
+        // Simulate flush N completing — recently_deleted carries {Gone.res}
+        simulate_flush_rotation(&mut state);
+        assert!(state.recently_deleted.contains(&test_path("Gone.res")));
+
+        // Flush N+1: no create arrives, flush completes
+        simulate_flush_rotation(&mut state);
+
+        // recently_deleted should now be empty (no new deletes to carry forward)
+        assert!(state.recently_deleted.is_empty());
     }
 }

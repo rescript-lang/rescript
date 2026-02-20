@@ -587,6 +587,18 @@ pub fn process_in_waves(
             "cmt",
         ));
 
+        // Extract Built hashes before taking the mutable borrow below.
+        // Used to preserve Built state when TypecheckOnly produces identical artifacts.
+        let prev_built_hashes = match prev_stage {
+            CompilationStage::Built {
+                cmi_hash,
+                cmt_hash,
+                cmj_hash,
+                ..
+            } => Some((*cmi_hash, *cmt_hash, *cmj_hash)),
+            _ => None,
+        };
+
         if let Some(Module::SourceFile(sf)) = build_state.build_state.modules.get_mut(name) {
             let compile_warnings = module_compile_warnings.remove(name);
             match (mode.emits_js(), cmi_hash, cmt_hash) {
@@ -639,18 +651,26 @@ pub fn process_in_waves(
                     }
                 }
                 (false, Some(cmi), Some(cmt)) => {
-                    sf.set_compilation_stage(CompilationStage::TypeChecked {
-                        implementation_source_hash,
-                        implementation_ast_hash,
-                        interface_source_hash,
-                        interface_ast_hash,
-                        cmi_hash: cmi,
-                        cmt_hash: cmt,
-                        compiled_at: now,
-                        implementation_parse_warnings,
-                        interface_parse_warnings,
-                        compile_warnings,
-                    });
+                    // If the module was already Built and the type artifacts
+                    // didn't change, skip — the .cmj and JS on disk are still
+                    // valid. This prevents TypecheckOnly passes from losing
+                    // the JS-produced marker.
+                    if !prev_built_hashes
+                        .is_some_and(|(old_cmi, old_cmt, _)| old_cmi == cmi && old_cmt == cmt)
+                    {
+                        sf.set_compilation_stage(CompilationStage::TypeChecked {
+                            implementation_source_hash,
+                            implementation_ast_hash,
+                            interface_source_hash,
+                            interface_ast_hash,
+                            cmi_hash: cmi,
+                            cmt_hash: cmt,
+                            compiled_at: now,
+                            implementation_parse_warnings,
+                            interface_parse_warnings,
+                            compile_warnings,
+                        });
+                    }
                 }
                 _ => {
                     sf.set_compilation_stage(CompilationStage::SourceDirty);

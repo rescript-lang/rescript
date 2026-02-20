@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -93,6 +93,65 @@ describe("lsp compile mode preservation", { timeout: 60_000 }, () => {
           existsSync(appMjs),
           "App.mjs should exist — FullCompile intent must survive intervening typecheck",
         ).toBe(true);
+      },
+      { cwd: "packages/dep-chain" },
+    ));
+
+  // Regression test: cross-flush delete+create (LLM file overwrite) must
+  // produce JS output, not trigger two TypecheckOnly project rebuilds.
+  //
+  // Scenario:
+  // 1. Save Leaf.res to produce Leaf.mjs (initial build is TypecheckOnly).
+  // 2. Delete Leaf.res and notify as Deleted — triggers project_build flush.
+  // 3. Wait for the delete to land in a separate flush (200ms > debounce).
+  // 4. Write new content and notify as Created — should be treated as save.
+  // 5. Verify Leaf.mjs exists with the updated content.
+  it("external file overwrite via delete+create still produces JS", () =>
+    runLspTest(
+      async ({ lsp, lspCwd, writeFile, deleteFile }) => {
+        const rootUri = pathToFileURL(lspCwd).href;
+        await lsp.initialize(rootUri);
+        await lsp.waitForNotification("rescript/buildFinished", 30000);
+
+        // Save Leaf.res to produce Leaf.mjs (initial build is TypecheckOnly, no JS yet)
+        await writeFile("src/Leaf.res", 'let value = "hello"\n');
+        await lsp.waitForNotification("rescript/buildFinished", 30000);
+
+        const leafMjs = path.join(lspCwd, "src", "Leaf.mjs");
+        expect(existsSync(leafMjs), "Leaf.mjs should exist after save").toBe(
+          true,
+        );
+
+        // Simulate LLM-style file overwrite: delete then create in separate flushes.
+        await deleteFile("src/Leaf.res");
+        lsp.notifyWatchedFilesChanged([
+          { relativePath: "src/Leaf.res", type: 3 }, // Deleted
+        ]);
+
+        // Wait for the delete flush to complete
+        await lsp.waitForNotification("rescript/buildFinished", 30000);
+
+        // Write new content and notify as created
+        const fullPath = path.join(lspCwd, "src", "Leaf.res");
+        writeFileSync(fullPath, 'let value = "updated"\n');
+        lsp.notifyWatchedFilesChanged([
+          { relativePath: "src/Leaf.res", type: 1 }, // Created
+        ]);
+
+        // Wait for the create flush to complete
+        await lsp.waitForNotification("rescript/buildFinished", 30000);
+
+        // Leaf.mjs should exist with updated content.
+        // Without the fix, the delete triggers project_build (TypecheckOnly),
+        // and the create triggers another project_build — neither emits JS.
+        // With the fix, the cross-flush delete+create is detected and treated
+        // as a save, which goes through file_build (FullCompile) → JS emitted.
+        expect(
+          existsSync(leafMjs),
+          "Leaf.mjs must exist after delete+create overwrite",
+        ).toBe(true);
+        const content = readFileSync(leafMjs, "utf8");
+        expect(content).toContain("updated");
       },
       { cwd: "packages/dep-chain" },
     ));
