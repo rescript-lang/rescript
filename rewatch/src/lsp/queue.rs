@@ -450,8 +450,20 @@ impl PendingState {
                         );
                     }
                 } else {
-                    // Genuinely new file — needs full project rebuild.
-                    self.build_projects.created_files.insert(file_path);
+                    // Genuinely new file — needs full project rebuild
+                    // plus file_build to emit JS (no didSave will follow
+                    // for files created by LLMs or external tools).
+                    self.build_projects.created_files.insert(file_path.clone());
+                    if let Ok(uri) = Url::from_file_path(&file_path) {
+                        self.compile_files.insert(
+                            uri,
+                            PendingFileBuild {
+                                file_path,
+                                buffer_content: None,
+                                generation: 0,
+                            },
+                        );
+                    }
                 }
             }
             QueueEvent::FileDeleted { file_path } => {
@@ -826,7 +838,7 @@ mod tests {
     }
 
     #[test]
-    fn file_created_removes_pending_build() {
+    fn file_created_supersedes_pending_save() {
         let mut state = PendingState::new();
         state.merge(QueueEvent::FileChangedOnDisk {
             uri: test_uri("A.res"),
@@ -836,7 +848,17 @@ mod tests {
             file_path: test_path("A.res"),
         });
 
-        assert!(state.compile_files.is_empty());
+        // FileCreated clears the old save entry and re-adds a fresh one
+        // (no buffer_content), plus triggers project_build.
+        assert!(state.compile_files.contains_key(&test_uri("A.res")));
+        assert!(
+            state
+                .compile_files
+                .get(&test_uri("A.res"))
+                .unwrap()
+                .buffer_content
+                .is_none()
+        );
         assert!(state.build_projects.created_files.contains(&test_path("A.res")));
     }
 
@@ -993,7 +1015,7 @@ mod tests {
     }
 
     #[test]
-    fn create_without_prior_delete_not_in_compile_files() {
+    fn create_without_prior_delete_also_in_compile_files() {
         let mut state = PendingState::new();
 
         // Brand new file, no prior delete
@@ -1002,8 +1024,9 @@ mod tests {
         });
 
         assert!(state.build_projects.created_files.contains(&test_path("New.res")));
-        // Should NOT be in compile_files — it's genuinely new
-        assert!(state.compile_files.is_empty());
+        // Also in compile_files — LLMs and external tools won't send
+        // didSave, so file_build must emit JS after project_build.
+        assert!(state.compile_files.contains_key(&test_uri("New.res")));
     }
 
     #[test]
