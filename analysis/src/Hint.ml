@@ -60,7 +60,7 @@ let inlay ~path ~pos ~maxLength ~debug =
            ( Pexp_constant _ | Pexp_tuple _ | Pexp_record _ | Pexp_variant _
            | Pexp_apply _ | Pexp_match _ | Pexp_construct _ | Pexp_ifthenelse _
            | Pexp_array _ | Pexp_ident _ | Pexp_try _ | Pexp_send _
-           | Pexp_field _ | Pexp_open _
+           | Pexp_index _ | Pexp_field _ | Pexp_open _
            | Pexp_fun {arity = Some _} );
        };
     } ->
