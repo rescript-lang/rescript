@@ -632,6 +632,7 @@ module Completable = struct
             (** Whether this field access was found in a JSX context. *)
       }
     | CPObj of contextPath * string
+    | CPIndex of contextPath
     | CPAwait of contextPath
     | CPPipe of {
         synthetic: bool;  (** Whether this pipe completion is synthetic. *)
@@ -718,6 +719,7 @@ module Completable = struct
     | CPField {contextPath = cp; fieldName = s} ->
       contextPathToString cp ^ "." ^ str s
     | CPObj (cp, s) -> contextPathToString cp ^ "[\"" ^ s ^ "\"]"
+    | CPIndex cp -> contextPathToString cp ^ "[]"
     | CPPipe {contextPath; id; inJsx} ->
       contextPathToString contextPath
       ^ "->" ^ id

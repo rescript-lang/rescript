@@ -999,6 +999,21 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
           ~kind:
             (Completion.ExtractedType (Toption (env, ExtractedType typ), `Type));
       ])
+  | CPIndex cp -> (
+    if Debug.verbose () then print_endline "[ctx_path]--> CPIndex";
+    match
+      cp
+      |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
+           ~exact:true ~scope
+      |> completionsGetCompletionType ~full
+    with
+    | Some (Tarray (env, elementType), _) ->
+      [
+        Completion.create "dummy" ~env
+          ~kind:
+            (Completion.ExtractedType (Toption (env, elementType), `Type));
+      ]
+    | _ -> [])
   | CPAwait cp -> (
     if Debug.verbose () then print_endline "[ctx_path]--> CPAwait";
     match
