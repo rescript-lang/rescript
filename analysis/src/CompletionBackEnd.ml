@@ -1007,7 +1007,15 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
            ~exact:true ~scope
       |> completionsGetCompletionType ~full
     with
+    | Some (Tarray (env, TypeExpr elementType), _) ->
+      (* Return Value so completionsGetTypeEnv2 (used by CPPipe) can resolve it,
+         enabling pipe completion on arr[n]-> *)
+      [
+        Completion.create "dummy" ~env
+          ~kind:(Completion.Value (Predef.type_option elementType));
+      ]
     | Some (Tarray (env, elementType), _) ->
+      (* Fallback when element type is itself an extracted type *)
       [
         Completion.create "dummy" ~env
           ~kind:
