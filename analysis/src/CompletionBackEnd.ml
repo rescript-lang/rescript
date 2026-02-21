@@ -1018,8 +1018,7 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
       (* Fallback when element type is itself an extracted type *)
       [
         Completion.create "dummy" ~env
-          ~kind:
-            (Completion.ExtractedType (Toption (env, elementType), `Type));
+          ~kind:(Completion.ExtractedType (Toption (env, elementType), `Type));
       ]
     | _ -> [])
   | CPAwait cp -> (
