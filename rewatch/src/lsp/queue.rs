@@ -134,6 +134,11 @@ struct PendingState {
     /// Used to detect cross-flush delete+create (file overwrite) patterns
     /// from LLMs and git operations.
     recently_deleted: HashSet<PathBuf>,
+    /// Module names that need FullCompile (JS emission), keyed by project root.
+    /// Populated when project_build replaces a BuildCommandState and hash-based
+    /// promotion couldn't restore Built status. Drained by file_build on flushes
+    /// that include file saves or project builds.
+    pub(super) full_compile_intent: HashMap<PathBuf, HashSet<String>>,
 }
 
 /// Debug summary of what a flush is about to process.
@@ -362,6 +367,7 @@ impl PendingState {
             compile_files: HashMap::new(),
             build_projects: PendingProjectBuilds::new(),
             recently_deleted: HashSet::new(),
+            full_compile_intent: HashMap::new(),
         }
     }
 
@@ -605,21 +611,38 @@ async fn flush_inner(
     let typechecks: HashMap<Url, PendingFileTypecheck> = std::mem::take(&mut state.typechecks);
 
     let has_incremental_builds = !compile_files.is_empty();
+    let has_pending_intents = !state.full_compile_intent.is_empty();
 
-    // Step 1: Run incremental builds (saved files)
-    if has_incremental_builds {
-        file_build::run(&compile_files, projects, client, store_ref).await;
-    }
+    // Step 1: Run incremental builds (saved files) and drain pending
+    // full_compile_intent. Intent drain piggybacks on the same
+    // take-build-replace cycle — no extra locking needed.
+    let errored_files = if has_incremental_builds || (has_full_builds && has_pending_intents) {
+        file_build::run(
+            &compile_files,
+            &mut state.full_compile_intent,
+            projects,
+            client,
+            store_ref,
+        )
+        .await
+    } else {
+        HashSet::new()
+    };
 
     // Step 2: Run typechecks (unsaved edits)
     if !typechecks.is_empty() {
         file_typecheck::run(typechecks, projects, generations, client, store_ref).await;
     }
 
-    // Step 3: Post-build recheck for files with buffer_content
+    // Step 3: Post-build recheck for files with buffer_content.
+    // Skip files whose build produced errors — don't overwrite compile
+    // error diagnostics with a clean buffer typecheck.
     let rechecks: HashMap<Url, PendingFileTypecheck> = compile_files
         .into_iter()
         .filter_map(|(uri, build)| {
+            if errored_files.contains(&uri) {
+                return None;
+            }
             build.buffer_content.map(|content| {
                 (
                     uri,

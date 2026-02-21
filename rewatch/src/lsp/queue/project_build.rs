@@ -10,7 +10,8 @@ use super::super::{ProjectMap, group_by_file, publish_and_store};
 use super::PendingState;
 use crate::build;
 use crate::build::build_types::{
-    BuildCommandState, BuildConfig, CompileMode, Module, OutputMode, OutputTarget,
+    BuildCommandState, BuildConfig, CompilationStage, CompileMode, FileBuiltState, Module, OutputMode,
+    OutputTarget,
 };
 use crate::build::diagnostics::BscDiagnostic;
 use crate::build::packages;
@@ -97,6 +98,11 @@ struct FullBuildResult {
     diagnostics: Vec<BscDiagnostic>,
     old_uris: HashSet<Url>,
     new_uris: HashSet<Url>,
+    /// Modules that need FullCompile intent — their Built status was lost
+    /// during the rebuild and couldn't be restored via hash promotion.
+    full_compile_intent: HashSet<String>,
+    /// The project root, used to key `full_compile_intent` in PendingState.
+    project_root: PathBuf,
 }
 
 /// Full project rebuild triggered by file creation or deletion. Groups
@@ -206,7 +212,9 @@ pub(super) async fn run(
             // full build already handled them and we can skip.
             // While we hold the lock, also determine which associated files
             // to clean up for deleted .res files (needs old build state).
-            let (old_uris, old_warn_error, files_to_cleanup) = {
+            // Snapshot: Built modules (for hash-based promotion) and
+            // CompileError(FullCompile) modules (for intent set).
+            let (old_uris, old_warn_error, files_to_cleanup, built_snapshot, error_fullcompile) = {
                 let guard = match projects_clone.lock() {
                     Ok(g) => g,
                     Err(e) => {
@@ -241,10 +249,32 @@ pub(super) async fn run(
                             .flat_map(|p| get_files_to_cleanup_on_delete(old_state, p))
                             .collect();
 
+                        // Snapshot Built modules for hash-based promotion.
+                        let mut built_snap: HashMap<String, FileBuiltState> = HashMap::new();
+                        let mut error_fc: HashSet<String> = HashSet::new();
+                        for (name, module) in &old_state.build_state.modules {
+                            if let Module::SourceFile(sf) = module {
+                                match sf.compilation_stage() {
+                                    CompilationStage::Built(b) => {
+                                        built_snap.insert(name.clone(), b.clone());
+                                    }
+                                    CompilationStage::CompileError {
+                                        compile_mode: CompileMode::FullCompile,
+                                        ..
+                                    } => {
+                                        error_fc.insert(name.clone());
+                                    }
+                                    _ => {}
+                                }
+                            }
+                        }
+
                         (
                             collect_source_uris(old_state),
                             old_state.get_warn_error_override().clone(),
                             cleanup,
+                            built_snap,
+                            error_fc,
                         )
                     }
                     None => {
@@ -264,8 +294,64 @@ pub(super) async fn run(
             }
 
             match reinitialize_project(&project_root, old_warn_error) {
-                Ok((new_state, diagnostics)) => {
+                Ok((mut new_state, diagnostics)) => {
                     let new_uris = collect_source_uris(&new_state);
+
+                    // Tier 1: Hash-based promotion — restore Built status for
+                    // modules whose hashes match the snapshot. No bsc needed.
+                    // Tier 2: Collect intent for modules that can't be promoted.
+                    let mut intent: HashSet<String> = HashSet::new();
+                    let mut promoted = 0usize;
+
+                    for (name, old_built) in &built_snapshot {
+                        if let Some(Module::SourceFile(sf)) = new_state.build_state.modules.get(name)
+                            && let CompilationStage::TypeChecked {
+                                implementation_source_hash,
+                                implementation_ast_hash,
+                                interface_source_hash,
+                                interface_ast_hash,
+                                cmi_hash,
+                                cmt_hash,
+                                ..
+                            } = sf.compilation_stage()
+                        {
+                            if *implementation_source_hash == old_built.implementation_source_hash
+                                && *implementation_ast_hash == old_built.implementation_ast_hash
+                                && *interface_source_hash == old_built.interface_source_hash
+                                && *interface_ast_hash == old_built.interface_ast_hash
+                                && *cmi_hash == old_built.cmi_hash
+                                && *cmt_hash == old_built.cmt_hash
+                            {
+                                // Hashes match — promote directly to Built.
+                                if let Some(Module::SourceFile(sf_mut)) =
+                                    new_state.build_state.modules.get_mut(name)
+                                {
+                                    sf_mut.set_compilation_stage(CompilationStage::Built(old_built.clone()));
+                                    promoted += 1;
+                                }
+                            } else {
+                                // Hashes differ — needs FullCompile later.
+                                intent.insert(name.clone());
+                            }
+                        }
+                        // If not TypeChecked (e.g. CompileError) or module gone — skip.
+                    }
+
+                    // CompileError(FullCompile) modules always need intent.
+                    for name in &error_fullcompile {
+                        if new_state.build_state.modules.contains_key(name) {
+                            intent.insert(name.clone());
+                        }
+                    }
+
+                    if promoted > 0 || !intent.is_empty() {
+                        tracing::debug!(
+                            project = %project_root.display(),
+                            promoted,
+                            intent_count = intent.len(),
+                            "project_build: hash promotion results"
+                        );
+                    }
 
                     // Replace state under lock
                     if let Ok(mut guard) = projects_clone.lock() {
@@ -278,6 +364,8 @@ pub(super) async fn run(
                         diagnostics,
                         old_uris,
                         new_uris,
+                        full_compile_intent: intent,
+                        project_root: project_root.clone(),
                     });
                 }
                 Err(e) => {
@@ -328,6 +416,15 @@ pub(super) async fn run(
             if !result.new_uris.contains(uri) {
                 publish_and_store(client, diagnostic_store, uri.clone(), vec![]).await;
             }
+        }
+
+        // Merge full_compile_intent into PendingState.
+        if !result.full_compile_intent.is_empty() {
+            state
+                .full_compile_intent
+                .entry(result.project_root.clone())
+                .or_default()
+                .extend(result.full_compile_intent.iter().cloned());
         }
     }
 }

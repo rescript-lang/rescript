@@ -22,6 +22,9 @@ struct BatchBuildResult {
     /// Absolute paths of all source files that were compiled or typechecked,
     /// including files from the dependency and dependent closures.
     touched_files: HashSet<PathBuf>,
+    /// Intent modules that could not be compiled yet (e.g. still at
+    /// `CompileError`) and should be kept for future flushes.
+    remaining_intent: HashSet<String>,
 }
 
 /// Run incremental builds for saved files. Groups files by project,
@@ -34,20 +37,29 @@ struct BatchBuildResult {
 /// keeps the lock held only for HashMap bookkeeping rather than for the
 /// entire duration of bsc subprocess invocations, so LSP handlers (hover,
 /// completions, etc.) are not blocked during compilation.
+/// Returns a set of file URIs that had compile errors, so callers
+/// can avoid overwriting those diagnostics (e.g. in post-build rechecks).
 pub(super) async fn run(
     compile_files: &HashMap<Url, PendingFileBuild>,
+    full_compile_intent: &mut HashMap<PathBuf, HashSet<String>>,
     projects: &Arc<Mutex<ProjectMap>>,
     client: &Client,
     diagnostic_store: Option<&DiagnosticStore>,
-) {
+) -> HashSet<Url> {
     let file_paths: Vec<PathBuf> = compile_files.values().map(|b| b.file_path.clone()).collect();
     let projects = Arc::clone(projects);
 
+    // Take the intent map so we can move it into the blocking task.
+    let mut intent_by_project: HashMap<PathBuf, HashSet<String>> = std::mem::take(full_compile_intent);
+
     let parent_span = tracing::Span::current();
-    let results = tokio::task::spawn_blocking(move || {
+    let (results, remaining_intent) = tokio::task::spawn_blocking(move || {
         let _entered = parent_span.enter();
 
+        let mut remaining_intent: HashMap<PathBuf, HashSet<String>> = HashMap::new();
+
         // Phase 1: group files by project and take states out (brief lock).
+        // Also take states for projects with pending intents but no file saves.
         // While the states are removed, LSP handlers for these projects
         // will get empty responses instead of blocking on the mutex.
         let mut project_work: Vec<(PathBuf, BuildCommandState, Vec<PathBuf>)> = Vec::new();
@@ -56,7 +68,7 @@ pub(super) async fn run(
                 Ok(g) => g,
                 Err(e) => {
                     tracing::error!("projects mutex poisoned in build flush: {e}");
-                    return Vec::new();
+                    return (Vec::new(), intent_by_project);
                 }
             };
             let mut by_project: HashMap<PathBuf, Vec<PathBuf>> = HashMap::new();
@@ -64,6 +76,10 @@ pub(super) async fn run(
                 if let Some(root) = guard.project_root_for_path(path) {
                     by_project.entry(root).or_default().push(path.clone());
                 }
+            }
+            // Also include projects that only have intents (no file saves).
+            for root in intent_by_project.keys() {
+                by_project.entry(root.clone()).or_default();
             }
             for (root, paths) in by_project {
                 if let Some(state) = guard.states.remove(&root) {
@@ -75,23 +91,45 @@ pub(super) async fn run(
         // Phase 2: build without holding the lock.
         let mut results = Vec::new();
         for (root, build_state, paths) in &mut project_work {
-            let module_names: Vec<String> = paths
-                .iter()
-                .filter_map(|p| build_state.mark_file_parse_dirty(p))
-                .collect();
-            if module_names.is_empty() {
-                tracing::warn!(
-                    project = %root.display(),
-                    "file_build: no modules resolved from {} dirty file(s)",
-                    paths.len()
-                );
+            let intent = intent_by_project.remove(root);
+
+            let module_names: Vec<String> = if paths.is_empty() {
+                Vec::new()
             } else {
+                let names: Vec<String> = paths
+                    .iter()
+                    .filter_map(|p| build_state.mark_file_parse_dirty(p))
+                    .collect();
+                if names.is_empty() {
+                    tracing::warn!(
+                        project = %root.display(),
+                        "file_build: no modules resolved from {} dirty file(s)",
+                        paths.len()
+                    );
+                }
+                names
+            };
+
+            // Skip entirely if there are no saved modules and no intent.
+            if module_names.is_empty() && intent.is_none() {
+                continue;
+            }
+
+            if !module_names.is_empty() {
                 tracing::debug!(
                     project = %root.display(),
                     modules = ?module_names,
                     "file_build: building modules"
                 );
-                results.push(build_batch(build_state, module_names));
+            }
+
+            let mut result = build_batch(build_state, module_names, intent);
+            let leftover = std::mem::take(&mut result.remaining_intent);
+            if !leftover.is_empty() {
+                remaining_intent.entry(root.clone()).or_default().extend(leftover);
+            }
+            if !result.diagnostics.is_empty() || !result.touched_files.is_empty() {
+                results.push(result);
             }
         }
 
@@ -103,15 +141,19 @@ pub(super) async fn run(
             }
         }
 
-        results
+        (results, remaining_intent)
     })
     .await
     .unwrap_or_else(|e| {
         tracing::error!("build flush task panicked: {e}");
-        Vec::new()
+        (Vec::new(), HashMap::new())
     });
 
-    // Publish diagnostics for all touched files
+    // Restore remaining intents (modules that couldn't be compiled yet).
+    *full_compile_intent = remaining_intent;
+
+    // Publish diagnostics for all touched files, tracking which have errors.
+    let mut errored_files = HashSet::new();
     for result in &results {
         if !result.diagnostics.is_empty() {
             for diag in &result.diagnostics {
@@ -127,6 +169,11 @@ pub(super) async fn run(
                         ),
                     )
                     .await;
+                if diag.severity == Severity::Error
+                    && let Ok(uri) = Url::from_file_path(&diag.file)
+                {
+                    errored_files.insert(uri);
+                }
             }
         }
         let by_file = group_by_file(&result.diagnostics);
@@ -137,6 +184,7 @@ pub(super) async fn run(
             }
         }
     }
+    errored_files
 }
 
 /// Build one or more saved files and propagate diagnostics.
@@ -182,58 +230,72 @@ pub(super) async fn run(
 /// previously had JS or that the user had saved need full recompilation
 /// to restore or produce their JavaScript output.
 #[instrument(name = "lsp.flush.file_build.batch", skip_all, fields(modules = ?module_names, error_count = tracing::field::Empty))]
-fn build_batch(build_state: &mut BuildCommandState, module_names: Vec<String>) -> BatchBuildResult {
-    let (mut diagnostics, mut touched_files) = compile_dependencies(build_state, &module_names);
+fn build_batch(
+    build_state: &mut BuildCommandState,
+    module_names: Vec<String>,
+    intent: Option<HashSet<String>>,
+) -> BatchBuildResult {
+    let mut diagnostics = Vec::new();
+    let mut touched_files = HashSet::new();
 
-    // Snapshot modules at CompileError(FullCompile) before typechecking
-    // dependents. These are modules the user saved but that failed to
-    // compile. If step 2 resolves the error, step 3 needs to emit JS.
-    // Modules whose CompileError came from TypecheckOnly were never
-    // saved — reaching TypeChecked in step 2 is their intended state.
-    let needs_rebuild_after_typecheck: AHashSet<String> = build_state
-        .build_state
-        .modules
-        .iter()
-        .filter_map(|(name, module)| match module {
-            Module::SourceFile(sf)
-                if matches!(
-                    sf.compilation_stage(),
-                    CompilationStage::CompileError {
-                        compile_mode: CompileMode::FullCompile,
-                        ..
-                    }
-                ) =>
-            {
-                Some(name.clone())
-            }
-            _ => None,
-        })
-        .collect();
+    if !module_names.is_empty() {
+        // Steps 1–3: compile saved files, typecheck dependents, resolve errors.
+        let (dep_diags, dep_touched) = compile_dependencies(build_state, &module_names);
+        diagnostics.extend(dep_diags);
+        touched_files.extend(dep_touched);
 
-    let (dep_diagnostics, dep_touched) = typecheck_dependents(build_state, &module_names);
+        // Snapshot modules at CompileError(FullCompile) before typechecking
+        // dependents. These are modules the user saved but that failed to
+        // compile. If step 2 resolves the error, step 3 needs to emit JS.
+        let needs_rebuild_after_typecheck: AHashSet<String> = build_state
+            .build_state
+            .modules
+            .iter()
+            .filter_map(|(name, module)| match module {
+                Module::SourceFile(sf)
+                    if matches!(
+                        sf.compilation_stage(),
+                        CompilationStage::CompileError {
+                            compile_mode: CompileMode::FullCompile,
+                            ..
+                        }
+                    ) =>
+                {
+                    Some(name.clone())
+                }
+                _ => None,
+            })
+            .collect();
 
-    diagnostics.extend(dep_diagnostics);
-    touched_files.extend(dep_touched);
+        let (dep_diagnostics, dep_touched) = typecheck_dependents(build_state, &module_names);
+        diagnostics.extend(dep_diagnostics);
+        touched_files.extend(dep_touched);
 
-    // Step 3: re-compile modules that were at CompileError(FullCompile) and are
-    // now at TypeChecked after step 2 (meaning a dependency fix resolved the
-    // error). These need full compilation to produce the JS the user requested.
-    let (rebuild_diagnostics, rebuild_touched) =
-        compile_resolved_errors(build_state, &needs_rebuild_after_typecheck);
-    diagnostics.extend(rebuild_diagnostics);
-    touched_files.extend(rebuild_touched);
-
-    let error_count = diagnostics
-        .iter()
-        .filter(|d| d.severity == Severity::Error)
-        .count();
-    if error_count > 0 {
-        tracing::Span::current().record("error_count", error_count);
+        // Step 3: re-compile modules that were at CompileError(FullCompile) and are
+        // now at TypeChecked after step 2 (meaning a dependency fix resolved the
+        // error). These need full compilation to produce the JS the user requested.
+        let (rebuild_diagnostics, rebuild_touched) =
+            compile_resolved_errors(build_state, &needs_rebuild_after_typecheck);
+        diagnostics.extend(rebuild_diagnostics);
+        touched_files.extend(rebuild_touched);
     }
+
+    // Step 4: drain full_compile_intent — compile intent modules that weren't
+    // already handled by steps 1–3. Modules already at Built (compiled as part
+    // of the dependency closure or via hash promotion) are skipped. Modules not
+    // yet at TypeChecked (e.g. still at CompileError) are kept for future flushes.
+    let remaining_intent = if let Some(names) = intent {
+        drain_full_compile_intent(build_state, names, &mut diagnostics, &mut touched_files)
+    } else {
+        HashSet::new()
+    };
+
+    record_error_count(&diagnostics);
 
     BatchBuildResult {
         diagnostics,
         touched_files,
+        remaining_intent,
     }
 }
 
@@ -296,14 +358,7 @@ fn compile_dependencies(
 
     let mut all_diagnostics = parse_diagnostics;
     all_diagnostics.extend(diagnostics);
-
-    let error_count = all_diagnostics
-        .iter()
-        .filter(|d| d.severity == Severity::Error)
-        .count();
-    if error_count > 0 {
-        tracing::Span::current().record("error_count", error_count);
-    }
+    record_error_count(&all_diagnostics);
 
     (all_diagnostics, touched_files)
 }
@@ -345,13 +400,7 @@ fn typecheck_dependents(
             }
         };
 
-    let error_count = diagnostics
-        .iter()
-        .filter(|d| d.severity == Severity::Error)
-        .count();
-    if error_count > 0 {
-        tracing::Span::current().record("error_count", error_count);
-    }
+    record_error_count(&diagnostics);
 
     (diagnostics, touched_files)
 }
@@ -408,6 +457,100 @@ fn compile_resolved_errors(
             }
         };
 
+    record_error_count(&diagnostics);
+
+    (diagnostics, touched_files)
+}
+
+/// Step 4 of `build_batch`: drain full_compile_intent modules.
+///
+/// Filters out modules already at `Built` (compiled in steps 1–3 or via hash
+/// promotion). Compiles remaining `TypeChecked` modules with `FullCompile`.
+/// Returns module names that couldn't be compiled yet (e.g. still at
+/// `CompileError`) for future flushes.
+#[instrument(name = "lsp.flush.file_build.drain_intent", skip_all, fields(intent_count = names.len()))]
+fn drain_full_compile_intent(
+    build_state: &mut BuildCommandState,
+    names: HashSet<String>,
+    diagnostics: &mut Vec<BscDiagnostic>,
+    touched_files: &mut HashSet<PathBuf>,
+) -> HashSet<String> {
+    // Partition intent modules into three buckets:
+    // - already Built (skip — steps 1–3 or hash promotion handled them)
+    // - TypeChecked (compile now)
+    // - other (keep for future flushes)
+    let mut pending = AHashSet::new();
+    let mut not_ready = HashSet::new();
+
+    for name in names {
+        match build_state.build_state.modules.get(&name) {
+            Some(Module::SourceFile(sf)) => match sf.compilation_stage() {
+                CompilationStage::Built(..) => {
+                    // Already compiled — nothing to do.
+                }
+                CompilationStage::TypeChecked { .. } => {
+                    pending.insert(name);
+                }
+                _ => {
+                    // Not ready yet (e.g. CompileError, SourceDirty).
+                    not_ready.insert(name);
+                }
+            },
+            _ => {
+                // Module no longer exists — discard.
+            }
+        }
+    }
+
+    if pending.is_empty() {
+        if !not_ready.is_empty() {
+            tracing::debug!(
+                "drain_intent: no TypeChecked modules to compile ({} still pending)",
+                not_ready.len()
+            );
+        }
+        return not_ready;
+    }
+
+    tracing::debug!(
+        modules = ?pending.iter().collect::<Vec<_>>(),
+        "drain_intent: compiling {} modules",
+        pending.len()
+    );
+
+    match build::compile_dependencies::compile_dependencies(build_state, &pending) {
+        Ok(result) => {
+            tracing::debug!(
+                compiled_modules = ?result.modules.iter().collect::<Vec<_>>(),
+                "drain_intent: compiled"
+            );
+            diagnostics.extend(result.diagnostics);
+            touched_files.extend(module_names_to_paths(build_state, &result.modules));
+        }
+        Err(e) => {
+            tracing::warn!("drain_intent completed with errors: {e}");
+            // Keep failed modules in intent for next attempt.
+            for name in &pending {
+                if build_state.build_state.modules.get(name).is_some_and(|m| {
+                    !matches!(
+                        m,
+                        Module::SourceFile(sf)
+                            if matches!(sf.compilation_stage(), CompilationStage::Built(..))
+                    )
+                }) {
+                    not_ready.insert(name.clone());
+                }
+            }
+            diagnostics.extend(e.diagnostics);
+            touched_files.extend(module_names_to_paths(build_state, &e.modules));
+        }
+    }
+
+    not_ready
+}
+
+/// Record the error count on the current tracing span if there are any errors.
+fn record_error_count(diagnostics: &[BscDiagnostic]) {
     let error_count = diagnostics
         .iter()
         .filter(|d| d.severity == Severity::Error)
@@ -415,8 +558,6 @@ fn compile_resolved_errors(
     if error_count > 0 {
         tracing::Span::current().record("error_count", error_count);
     }
-
-    (diagnostics, touched_files)
 }
 
 fn module_names_to_paths(build_state: &BuildCommandState, names: &AHashSet<String>) -> HashSet<PathBuf> {

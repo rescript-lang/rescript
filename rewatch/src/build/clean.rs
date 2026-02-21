@@ -323,7 +323,7 @@ pub fn cleanup_previous_build(
                                 compile_warnings: None,
                             });
                             if cmj_exists && let Some(cmj) = cmj_hash {
-                                sf_module.set_compilation_stage(CompilationStage::Built {
+                                sf_module.set_compilation_stage(CompilationStage::Built(FileBuiltState {
                                     implementation_source_hash: ish,
                                     implementation_ast_hash: iah,
                                     interface_source_hash,
@@ -335,7 +335,7 @@ pub fn cleanup_previous_build(
                                     implementation_parse_warnings: None,
                                     interface_parse_warnings: None,
                                     compile_warnings: None,
-                                });
+                                }));
                             }
                         }
                     }

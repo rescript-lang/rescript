@@ -82,19 +82,25 @@ pub enum CompilationStage {
     },
     /// Fully compiled (.cmi/.cmt/.cmj + JS produced).
     /// Accumulates all prior hashes + build artifact hashes.
-    Built {
-        implementation_source_hash: Hash,
-        implementation_ast_hash: Hash,
-        interface_source_hash: Option<Hash>,
-        interface_ast_hash: Option<Hash>,
-        cmi_hash: Hash,
-        cmt_hash: Hash,
-        cmj_hash: Hash,
-        compiled_at: SystemTime,
-        implementation_parse_warnings: Option<String>,
-        interface_parse_warnings: Option<String>,
-        compile_warnings: Option<String>,
-    },
+    Built(FileBuiltState),
+}
+
+/// All hashes and metadata for a fully compiled module.
+/// Used both in `CompilationStage::Built` and for snapshots when
+/// preserving Built status across project rebuilds.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FileBuiltState {
+    pub implementation_source_hash: Hash,
+    pub implementation_ast_hash: Hash,
+    pub interface_source_hash: Option<Hash>,
+    pub interface_ast_hash: Option<Hash>,
+    pub cmi_hash: Hash,
+    pub cmt_hash: Hash,
+    pub cmj_hash: Hash,
+    pub compiled_at: SystemTime,
+    pub implementation_parse_warnings: Option<String>,
+    pub interface_parse_warnings: Option<String>,
+    pub compile_warnings: Option<String>,
 }
 
 impl CompilationStage {
@@ -131,11 +137,8 @@ impl CompilationStage {
             | CompilationStage::TypeChecked {
                 implementation_parse_warnings,
                 ..
-            }
-            | CompilationStage::Built {
-                implementation_parse_warnings,
-                ..
             } => implementation_parse_warnings.as_deref(),
+            CompilationStage::Built(b) => b.implementation_parse_warnings.as_deref(),
             _ => None,
         }
     }
@@ -158,11 +161,8 @@ impl CompilationStage {
             | CompilationStage::TypeChecked {
                 interface_parse_warnings,
                 ..
-            }
-            | CompilationStage::Built {
-                interface_parse_warnings,
-                ..
             } => interface_parse_warnings.as_deref(),
+            CompilationStage::Built(b) => b.interface_parse_warnings.as_deref(),
             _ => None,
         }
     }
@@ -170,8 +170,8 @@ impl CompilationStage {
     /// Whether compilation produced warnings.
     pub fn has_compile_warnings(&self) -> bool {
         match self {
-            CompilationStage::TypeChecked { compile_warnings, .. }
-            | CompilationStage::Built { compile_warnings, .. } => compile_warnings.is_some(),
+            CompilationStage::TypeChecked { compile_warnings, .. } => compile_warnings.is_some(),
+            CompilationStage::Built(b) => b.compile_warnings.is_some(),
             _ => false,
         }
     }
@@ -179,8 +179,8 @@ impl CompilationStage {
     /// The compile warning text, if any.
     pub fn compile_warnings(&self) -> Option<&str> {
         match self {
-            CompilationStage::TypeChecked { compile_warnings, .. }
-            | CompilationStage::Built { compile_warnings, .. } => compile_warnings.as_deref(),
+            CompilationStage::TypeChecked { compile_warnings, .. } => compile_warnings.as_deref(),
+            CompilationStage::Built(b) => b.compile_warnings.as_deref(),
             _ => None,
         }
     }
@@ -235,15 +235,15 @@ impl CompilationStage {
             | (TypeChecked { .. }, TypeChecked { .. })
             // TypeChecked → Built: compile.rs — FullCompile after TypecheckOnly
             //                      clean.rs — restoring from artifacts
-            | (TypeChecked { .. }, Built { .. })
+            | (TypeChecked { .. }, Built(..))
             // TypeChecked → DependencyDirty: compile.rs — dependency interface changed
             | (TypeChecked { .. }, DependencyDirty { .. })
             // Built → CompileError: compile.rs — LSP save recompile, dependency broke it
-            | (Built { .. }, CompileError { .. })
+            | (Built(..), CompileError { .. })
             // Built → TypeChecked: compile.rs — LSP save recompile in TypecheckOnly mode
-            | (Built { .. }, TypeChecked { .. })
+            | (Built(..), TypeChecked { .. })
             // Built → DependencyDirty: compile.rs — dependency interface changed
-            | (Built { .. }, DependencyDirty { .. })
+            | (Built(..), DependencyDirty { .. })
         )
     }
 
@@ -253,7 +253,7 @@ impl CompilationStage {
     /// (it needs parsing first), but is kept for safety.
     pub fn needs_compile_for_mode(&self, mode: CompileMode) -> bool {
         match (self, mode) {
-            (CompilationStage::Built { .. }, _) => false,
+            (CompilationStage::Built(..), _) => false,
             (CompilationStage::ParseError, _) => false,
             (CompilationStage::TypeChecked { .. }, CompileMode::FullCompile) => true,
             (CompilationStage::TypeChecked { .. }, CompileMode::TypecheckOnly) => false,
@@ -272,8 +272,8 @@ impl CompilationStage {
     /// more recently than a dependent, the dependent must be recompiled.
     pub fn compiled_at(&self) -> Option<SystemTime> {
         match self {
-            CompilationStage::TypeChecked { compiled_at, .. }
-            | CompilationStage::Built { compiled_at, .. } => Some(*compiled_at),
+            CompilationStage::TypeChecked { compiled_at, .. } => Some(*compiled_at),
+            CompilationStage::Built(b) => Some(b.compiled_at),
             _ => None,
         }
     }

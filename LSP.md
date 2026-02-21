@@ -81,9 +81,9 @@ rewatch/src/
     ├── notifications.rs         # Custom rescript/buildFinished notification
     ├── queue.rs                 # Unified debounced queue: types, public API, consumer, merge, flush orchestration
     ├── queue/
-    │   ├── file_build.rs        # Per-file incremental build (dependency + dependent closure)
+    │   ├── file_build.rs        # Per-file incremental build (dependency + dependent closure + intent drain)
     │   ├── file_typecheck.rs    # Per-file typecheck (parallel, wave-based, staleness-aware)
-    │   └── project_build.rs     # Per-project full rebuild + artifact cleanup on file creation/deletion
+    │   └── project_build.rs     # Per-project full rebuild + artifact cleanup + hash-based Built promotion
     ├── references.rs            # Find references via analysis binary subprocess
     ├── rename.rs                # Rename via analysis binary subprocess
     ├── semantic_tokens.rs       # Semantic tokens via analysis binary subprocess
@@ -252,7 +252,7 @@ All file events flow into a single unified queue (`lsp/queue.rs`). The queue acc
 - **FileCreated / FileDeleted** (from `didChangeWatchedFiles` Created/Deleted) — structural change requiring full project rebuild
 - **ConfigChanged** (from `didSave` / `didChangeWatchedFiles` for `rescript.json`) — config change requiring full project rebuild
 
-A single background consumer task collects events into a `PendingState` with three action-oriented fields:
+A single background consumer task collects events into a `PendingState` with these fields:
 
 - `typechecks` — files needing typecheck (unsaved buffer content)
 - `compile_files` — files needing incremental build (saved to disk)
@@ -260,13 +260,15 @@ A single background consumer task collects events into a `PendingState` with thr
   - `created_files` — file paths whose creation requires a full project rebuild
   - `deleted_files` — file paths whose deletion requires a full project rebuild
   - `config_changed` — `rescript.json` paths requiring full project re-initialization
+- `full_compile_intent` — module names (keyed by project root) that need `FullCompile` (JS emission) but couldn't be compiled yet. Populated by project rebuilds when hash-based promotion fails; drained by incremental builds when modules reach `TypeChecked`
+- `recently_deleted` — file paths deleted in the previous flush, used for cross-flush delete+create detection
 
 The merge function applies promotion rules to consolidate per-file state. When a `FileCreated` or `FileDeleted` event arrives, any pending per-file typecheck or build for that same file is removed since the full rebuild will cover it. A `ConfigChanged` event clears pending typechecks for the same project (since the rebuild will produce fresh type information) but keeps pending compile_files. After 100ms of silence the batch is flushed sequentially:
 
-1. **Full builds first** — re-initialize affected projects from scratch (same flow as the initial build), replacing the old `BuildCommandState`. Clears stale diagnostics for files that no longer exist.
-2. **Incremental builds second** — saved files get a full incremental build (compile dependencies + typecheck dependents). Uses a take-build-replace pattern: each project's `BuildCommandState` is removed from the `ProjectMap` under a brief lock, built without holding the mutex, then inserted back. This keeps LSP handlers (hover, completions, etc.) unblocked during compilation.
+1. **Full builds first** — re-initialize affected projects from scratch (same flow as the initial build), replacing the old `BuildCommandState`. Before replacing the state, snapshots `Built` modules (as `FileBuiltState`) and `CompileError(FullCompile)` module names. After the new state is created, applies hash-based promotion: modules whose implementation/interface/cmi/cmt hashes match the snapshot are promoted directly back to `Built` (no bsc invocation needed). Modules that can't be promoted are added to `full_compile_intent` for deferred JS emission. Clears stale diagnostics for files that no longer exist.
+2. **Incremental builds second** — saved files get a full incremental build (compile dependencies + typecheck dependents + compile resolved errors + drain intent). Uses a take-build-replace pattern: each project's `BuildCommandState` is removed from the `ProjectMap` under a brief lock, built without holding the mutex, then inserted back. This keeps LSP handlers (hover, completions, etc.) unblocked during compilation. Also drains `full_compile_intent` as step 4: modules already compiled in steps 1–3 are skipped (already at `Built`), remaining `TypeChecked` modules get `FullCompile`, and modules not yet ready (e.g. still at `CompileError`) are kept for future flushes.
 3. **Typechecks third** — unsaved edits get a lightweight typecheck via `bsc -bs-read-stdin`, with brief lock for arg extraction only.
-4. **Post-build recheck** — if a saved file also had unsaved buffer content (didChange + didSave in the same debounce window), a typecheck pass runs from the buffer so diagnostics match the editor.
+4. **Post-build recheck** — if a saved file also had unsaved buffer content (didChange + didSave in the same debounce window), a typecheck pass runs from the buffer so diagnostics match the editor. Files whose build produced errors are skipped to avoid overwriting compile error diagnostics with clean buffer typecheck results.
 5. **`buildFinished` notification** — sent when full builds or incremental builds ran.
 
 Sequential execution within one consumer eliminates all races on `lib/lsp/` artifacts.
@@ -365,15 +367,19 @@ didSave / didChangeWatchedFiles notification
           Step 1: Full builds (per project root)
           ├── Group build_projects paths by project root (resolved at flush time)
           ├── Clean up associated files for deleted .res files (.resi + compiled JS)
-          ├── Re-initialize project (re-read packages, re-scan sources)
-          ├── Replace old BuildCommandState
-          ├── Invalidate uri_cache entries
+          ├── Snapshot Built modules (as FileBuiltState) and CompileError(FullCompile) names
+          ├── Re-initialize project (re-read packages, re-scan sources, TypecheckOnly)
+          ├── Hash-based promotion: compare old Built hashes against new TypeChecked hashes
+          │   ├── Match → promote directly to Built (no bsc needed)
+          │   └── Mismatch → add to full_compile_intent for deferred JS emission
+          ├── CompileError(FullCompile) modules → add to full_compile_intent unconditionally
+          ├── Replace old BuildCommandState, invalidate uri_cache entries
           ├── Publish diagnostics from new build
           └── Clear diagnostics for files that no longer exist (old/new URI diff)
                     │
                     ▼
           Step 2: Incremental builds (per project)
-          ├── group files by project root
+          ├── group files by project root (also include projects with pending intents)
           ├── mark_file_parse_dirty per file
           ├── Step 2a: compile_dependencies
           │   ├── parse_and_resolve (parse dirty files, resolve deps)
@@ -386,10 +392,15 @@ didSave / didChangeWatchedFiles notification
           │   ├── Snapshot modules at CompileError(FullCompile) before step 2b
           │   ├── After step 2b, find modules now at TypeChecked (error resolved)
           │   └── FullCompile build for those modules (produces missing JS)
+          ├── Step 2d: drain_full_compile_intent
+          │   ├── Skip modules already at Built (handled by steps 2a–2c or hash promotion)
+          │   ├── FullCompile modules at TypeChecked (produces JS)
+          │   └── Keep modules not yet ready (e.g. CompileError) for future flushes
           └── Publish combined diagnostics from all phases
                     │
                     ▼
           Post-build recheck (if any Build file had stashed buffer content)
+          ├── Skip files whose build produced errors (preserve compile error diagnostics)
                     │
                     ▼
           Send rescript/buildFinished notification
@@ -645,10 +656,16 @@ Parsed       { source_hash, ast_hash, interface_source_hash?, interface_ast_hash
 CompileError { ...same hashes as Parsed..., compile_mode }
 DependencyDirty { ...same hashes as Parsed... }   — dep changed, skip reparse
 TypeChecked  { ...Parsed hashes + cmi_hash, cmt_hash, compiled_at }
-Built        { ...TypeChecked hashes + cmj_hash }
+Built(FileBuiltState)  { ...TypeChecked hashes + cmj_hash }
 ```
 
-Each stage from `Parsed` onward also carries optional parse/compile warnings and optional interface hashes. This data model enables several optimizations that are not yet implemented:
+Each stage from `Parsed` onward also carries optional parse/compile warnings and optional interface hashes. `Built` wraps a `FileBuiltState` struct that is also used for snapshots during hash-based promotion across project rebuilds.
+
+**Already implemented:**
+
+- **Hash-based promotion across project rebuilds**: When `project_build` reinitializes a project (e.g. due to atomic file writes from LLMs or git), it snapshots `FileBuiltState` for all `Built` modules before replacing the state. After the new `TypecheckOnly` build, modules whose implementation/interface/cmi/cmt hashes match the snapshot are promoted directly back to `Built` — no bsc invocation needed. Modules that can't be promoted (hash mismatch or were at `CompileError(FullCompile)`) are added to `full_compile_intent` for deferred JS emission on subsequent flushes.
+
+**Not yet implemented:**
 
 - **No-op save detection**: Compare the on-disk `source_hash` against the hash stored in the module's stage. If they match, the file hasn't actually changed (e.g., user hit save without editing). Parsing and compilation can be skipped entirely.
 - **CMI-based skip in `TypecheckDependents`**: After compiling a saved file, compare its new `cmi_hash` against the pre-save value from the stage. If the interface is unchanged, no dependents need re-typechecking — saving an entire typecheck pass over the dependent closure.

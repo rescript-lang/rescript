@@ -549,14 +549,19 @@ pub fn process_in_waves(
                     interface_source_hash,
                     interface_ast_hash,
                     ..
-                }
-                | CompilationStage::Built {
+                } => (
+                    *implementation_source_hash,
+                    *implementation_ast_hash,
+                    *interface_source_hash,
+                    *interface_ast_hash,
+                ),
+                CompilationStage::Built(FileBuiltState {
                     implementation_source_hash,
                     implementation_ast_hash,
                     interface_source_hash,
                     interface_ast_hash,
                     ..
-                } => (
+                }) => (
                     *implementation_source_hash,
                     *implementation_ast_hash,
                     *interface_source_hash,
@@ -590,12 +595,12 @@ pub fn process_in_waves(
         // Extract Built hashes before taking the mutable borrow below.
         // Used to preserve Built state when TypecheckOnly produces identical artifacts.
         let prev_built_hashes = match prev_stage {
-            CompilationStage::Built {
+            CompilationStage::Built(FileBuiltState {
                 cmi_hash,
                 cmt_hash,
                 cmj_hash,
                 ..
-            } => Some((*cmi_hash, *cmt_hash, *cmj_hash)),
+            }) => Some((*cmi_hash, *cmt_hash, *cmj_hash)),
             _ => None,
         };
 
@@ -622,7 +627,7 @@ pub fn process_in_waves(
                             interface_parse_warnings: None,
                             compile_warnings: None,
                         });
-                        sf.set_compilation_stage(CompilationStage::Built {
+                        sf.set_compilation_stage(CompilationStage::Built(FileBuiltState {
                             implementation_source_hash,
                             implementation_ast_hash,
                             interface_source_hash,
@@ -634,7 +639,7 @@ pub fn process_in_waves(
                             implementation_parse_warnings,
                             interface_parse_warnings,
                             compile_warnings,
-                        });
+                        }));
                     } else {
                         sf.set_compilation_stage(CompilationStage::TypeChecked {
                             implementation_source_hash,
@@ -724,14 +729,19 @@ pub fn process_in_waves(
                     interface_source_hash,
                     interface_ast_hash,
                     ..
-                }
-                | CompilationStage::Built {
+                } => Some((
+                    *implementation_source_hash,
+                    *implementation_ast_hash,
+                    *interface_source_hash,
+                    *interface_ast_hash,
+                )),
+                CompilationStage::Built(FileBuiltState {
                     implementation_source_hash,
                     implementation_ast_hash,
                     interface_source_hash,
                     interface_ast_hash,
                     ..
-                } => Some((
+                }) => Some((
                     *implementation_source_hash,
                     *implementation_ast_hash,
                     *interface_source_hash,
@@ -1327,15 +1337,6 @@ pub fn mark_modules_with_expired_deps_for_recompile(build_state: &mut BuildComma
                     interface_parse_warnings,
                     ..
                 }
-                | CompilationStage::Built {
-                    implementation_source_hash,
-                    implementation_ast_hash,
-                    interface_source_hash,
-                    interface_ast_hash,
-                    implementation_parse_warnings,
-                    interface_parse_warnings,
-                    ..
-                }
                 | CompilationStage::DependencyDirty {
                     implementation_source_hash,
                     implementation_ast_hash,
@@ -1344,6 +1345,22 @@ pub fn mark_modules_with_expired_deps_for_recompile(build_state: &mut BuildComma
                     implementation_parse_warnings,
                     interface_parse_warnings,
                 } => Some((
+                    *implementation_source_hash,
+                    *implementation_ast_hash,
+                    *interface_source_hash,
+                    *interface_ast_hash,
+                    implementation_parse_warnings.clone(),
+                    interface_parse_warnings.clone(),
+                )),
+                CompilationStage::Built(FileBuiltState {
+                    implementation_source_hash,
+                    implementation_ast_hash,
+                    interface_source_hash,
+                    interface_ast_hash,
+                    implementation_parse_warnings,
+                    interface_parse_warnings,
+                    ..
+                }) => Some((
                     *implementation_source_hash,
                     *implementation_ast_hash,
                     *interface_source_hash,

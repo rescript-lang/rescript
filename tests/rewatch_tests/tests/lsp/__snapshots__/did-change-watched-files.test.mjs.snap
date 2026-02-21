@@ -981,6 +981,11 @@ exports[`lsp didChangeWatchedFiles > deleting a .resi file does not remove the .
   "        build.typecheck",
   "          build.typecheck_wave[file_count=1]",
   "            build.typecheck_file[module=Bar, package=rewatch-test-fixture]",
+  "    lsp.flush.file_build.batch[modules=[]]",
+  "      compile_dependencies[module_count=5, output=lsp]",
+  "        build.compile",
+  "          build.compile_wave[file_count=1]",
+  "            build.compile_file[module=Bar, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
 ]
 `;
 
