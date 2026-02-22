@@ -71,7 +71,11 @@ let inlay ~path ~pos ~maxLength ~currentFile ~debug =
     Ast_iterator.default_iterator.value_binding iterator vb
   in
   let iterator = {Ast_iterator.default_iterator with value_binding} in
-  let sourceFile = match currentFile with Some f -> f | None -> path in
+  let sourceFile =
+    match currentFile with
+    | Some f -> f
+    | None -> path
+  in
   (if Files.classifySourceFile path = Res then
      let parser =
        Res_driver.parsing_engine.parse_implementation ~for_printer:false
