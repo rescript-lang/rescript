@@ -266,7 +266,8 @@ pub fn parse_and_resolve(
                 kind: IncrementalBuildErrorKind::SourceFileParseError,
                 output_mode: build_config.output_mode.clone(),
                 diagnostics: parse_diagnostics,
-                modules: AHashSet::new(),
+                modules: Box::default(),
+                skipped_modules: Box::default(),
             });
         }
     };

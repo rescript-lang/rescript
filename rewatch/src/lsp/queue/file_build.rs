@@ -237,12 +237,14 @@ fn build_batch(
 ) -> BatchBuildResult {
     let mut diagnostics = Vec::new();
     let mut touched_files = HashSet::new();
+    let mut skipped_modules = HashSet::new();
 
     if !module_names.is_empty() {
         // Steps 1–3: compile saved files, typecheck dependents, resolve errors.
-        let (dep_diags, dep_touched) = compile_dependencies(build_state, &module_names);
-        diagnostics.extend(dep_diags);
-        touched_files.extend(dep_touched);
+        let dep_result = compile_dependencies(build_state, &module_names);
+        diagnostics.extend(dep_result.diagnostics);
+        touched_files.extend(dep_result.touched_files);
+        skipped_modules = dep_result.skipped_modules;
 
         // Snapshot modules at CompileError(FullCompile) before typechecking
         // dependents. These are modules the user saved but that failed to
@@ -281,13 +283,22 @@ fn build_batch(
     }
 
     // Step 4: drain full_compile_intent — compile intent modules that weren't
-    // already handled by steps 1–3. Modules already at Built (compiled as part
-    // of the dependency closure or via hash promotion) are skipped. Modules not
-    // yet at TypeChecked (e.g. still at CompileError) are kept for future flushes.
-    let remaining_intent = if let Some(names) = intent {
-        drain_full_compile_intent(build_state, names, &mut diagnostics, &mut touched_files)
-    } else {
+    // already handled by steps 1–3, plus any modules skipped because step 1
+    // broke early due to a dependency error. Modules already at Built are
+    // skipped. Modules not yet at TypeChecked (e.g. still at CompileError)
+    // are kept for future flushes.
+    let mut intent_names = intent.unwrap_or_default();
+    if !skipped_modules.is_empty() {
+        tracing::debug!(
+            skipped_count = skipped_modules.len(),
+            "build_batch: registering skipped modules as FullCompile intent"
+        );
+        intent_names.extend(skipped_modules);
+    }
+    let remaining_intent = if intent_names.is_empty() {
         HashSet::new()
+    } else {
+        drain_full_compile_intent(build_state, intent_names, &mut diagnostics, &mut touched_files)
     };
 
     record_error_count(&diagnostics);
@@ -305,11 +316,20 @@ fn build_batch(
 /// them, restricting to only the dependency closure.
 /// This produces type information and JavaScript output for just the
 /// saved file and its imports, without touching the rest of the codebase.
+/// Result of the compile_dependencies step.
+struct CompileDependenciesResult {
+    diagnostics: Vec<BscDiagnostic>,
+    touched_files: HashSet<PathBuf>,
+    /// Modules that were in the dependency closure but never attempted by bsc
+    /// because the compile loop broke early (a dependency had errors).
+    skipped_modules: HashSet<String>,
+}
+
 #[instrument(name = "lsp.flush.file_build.compile_dependencies", skip_all, fields(error_count = tracing::field::Empty))]
 fn compile_dependencies(
     build_state: &mut BuildCommandState,
     module_names: &[String],
-) -> (Vec<BscDiagnostic>, HashSet<PathBuf>) {
+) -> CompileDependenciesResult {
     use crate::build::build_types::BuildConfig;
 
     let build_config = BuildConfig {
@@ -333,12 +353,16 @@ fn compile_dependencies(
         Err(e) => {
             // Parse failure — return diagnostics for the affected files, skip compilation
             let touched: HashSet<PathBuf> = e.diagnostics.iter().map(|d| d.file.clone()).collect();
-            return (e.diagnostics, touched);
+            return CompileDependenciesResult {
+                diagnostics: e.diagnostics,
+                touched_files: touched,
+                skipped_modules: HashSet::new(),
+            };
         }
     };
 
     let module_set: AHashSet<String> = module_names.iter().cloned().collect();
-    let (diagnostics, touched_files) =
+    let (diagnostics, touched_files, skipped_modules) =
         match build::compile_dependencies::compile_dependencies(build_state, &module_set) {
             Ok(result) => {
                 tracing::debug!(
@@ -348,11 +372,17 @@ fn compile_dependencies(
                 (
                     result.diagnostics,
                     module_names_to_paths(build_state, &result.modules),
+                    HashSet::new(),
                 )
             }
             Err(e) => {
                 tracing::warn!("Incremental build completed with errors: {e}");
-                (e.diagnostics, module_names_to_paths(build_state, &e.modules))
+                let skipped: HashSet<String> = e.skipped_modules.into_iter().collect();
+                (
+                    e.diagnostics,
+                    module_names_to_paths(build_state, &e.modules),
+                    skipped,
+                )
             }
         };
 
@@ -360,7 +390,11 @@ fn compile_dependencies(
     all_diagnostics.extend(diagnostics);
     record_error_count(&all_diagnostics);
 
-    (all_diagnostics, touched_files)
+    CompileDependenciesResult {
+        diagnostics: all_diagnostics,
+        touched_files,
+        skipped_modules,
+    }
 }
 
 /// Re-typecheck all modules that import the saved modules (recursively).

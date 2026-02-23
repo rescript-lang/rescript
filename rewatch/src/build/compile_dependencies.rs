@@ -39,11 +39,14 @@ pub fn compile_dependencies(
     let result = match compile::process_in_waves(build_state, &params, || {}, |_| {}) {
         Ok(result) => result,
         Err(e) => {
+            // process_in_waves itself failed — the entire closure is skipped.
+            let skipped_modules = Box::new(params.modules.clone());
             return Err(IncrementalBuildError {
                 kind: IncrementalBuildErrorKind::CompileError(Some(e.to_string())),
                 output_mode: OutputMode::Silent,
                 diagnostics: vec![],
-                modules: params.modules,
+                modules: Box::new(params.modules),
+                skipped_modules,
             });
         }
     };
@@ -54,7 +57,8 @@ pub fn compile_dependencies(
             kind: IncrementalBuildErrorKind::CompileError(None),
             output_mode: OutputMode::Silent,
             diagnostics: result.to_diagnostics(),
-            modules: params.modules,
+            modules: Box::new(params.modules),
+            skipped_modules: Box::new(result.skipped_modules),
         })
     } else {
         Ok(IncrementalBuildResult {

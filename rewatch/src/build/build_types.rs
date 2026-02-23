@@ -425,6 +425,10 @@ pub struct ProcessResult {
     pub compile_errors: String,
     pub compile_warnings: String,
     pub num_compiled_modules: usize,
+    /// Modules that were in the compile universe but never attempted because
+    /// the compile loop broke early (e.g. a dependency error aborted the loop
+    /// before these modules' dependencies were satisfied).
+    pub skipped_modules: AHashSet<String>,
 }
 
 impl ProcessResult {
@@ -869,7 +873,12 @@ pub struct IncrementalBuildError {
     pub kind: IncrementalBuildErrorKind,
     pub diagnostics: Vec<super::diagnostics::BscDiagnostic>,
     /// The set of module names that participated in this compile cycle.
-    pub modules: AHashSet<String>,
+    /// Boxed (along with `skipped_modules`) to keep `IncrementalBuildError`
+    /// under clippy's `result_large_err` size threshold.
+    pub modules: Box<AHashSet<String>>,
+    /// Modules that were in the closure but never attempted by bsc because
+    /// the compile loop broke early due to a dependency error.
+    pub skipped_modules: Box<AHashSet<String>>,
 }
 
 #[derive(Debug, Clone)]

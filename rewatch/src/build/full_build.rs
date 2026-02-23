@@ -84,7 +84,8 @@ pub fn full_build(
                     kind: IncrementalBuildErrorKind::CompileError(Some(e.to_string())),
                     output_mode: output_mode.clone(),
                     diagnostics: vec![],
-                    modules: params.modules,
+                    modules: Box::new(params.modules),
+                    skipped_modules: Box::default(),
                 });
             }
         };
@@ -128,7 +129,8 @@ pub fn full_build(
             kind: IncrementalBuildErrorKind::CompileError(None),
             output_mode: output_mode.clone(),
             diagnostics: result.to_diagnostics(),
-            modules: params.modules,
+            modules: Box::new(params.modules),
+            skipped_modules: Box::default(),
         })
     } else {
         if show_progress {

@@ -124,4 +124,83 @@ describe("lsp stale JS output", { timeout: 60_000 }, () => {
       },
       { cwd: "packages/dep-chain" },
     ));
+
+  // Regression test for skipped modules in the dependency closure.
+  //
+  // Dependency graph: Main → App → {Leaf, Button}
+  //
+  // Scenario:
+  // 1. Break Leaf.res with a type error (introduce an unknown module ref).
+  //    Save Leaf.res so the error is in the build state.
+  //
+  // 2. Save App.res (unchanged content) — App depends on Leaf.
+  //    compile_dependencies builds the closure {Leaf, Button, App}.
+  //    Leaf has a compile error → the compile loop breaks early.
+  //    App is never attempted by bsc — it's "skipped".
+  //
+  // 3. Fix Leaf.res and save it.
+  //
+  // Expected: App.mjs is produced — the skipped module was registered as
+  // FullCompile intent and gets compiled when the dependency is fixed.
+  // Before the fix, App was stuck at TypeChecked with no JS output.
+  it("produces JS for skipped modules when a dependency error is resolved", () =>
+    runLspTest(
+      async ({ lsp, lspCwd, writeFile }) => {
+        const rootUri = pathToFileURL(lspCwd).href;
+        await lsp.initialize(rootUri);
+        await lsp.waitForNotification("rescript/buildFinished", 30000);
+
+        const appMjs = path.join(lspCwd, "src", "App.mjs");
+        const leafMjs = path.join(lspCwd, "src", "Leaf.mjs");
+
+        // Step 1: Break Leaf.res — reference an unknown module.
+        await writeFile("src/Leaf.res", "let value = Unknown.stuff\n");
+        await lsp.waitForNotification("rescript/buildFinished", 30000);
+
+        // Leaf.res should have diagnostics
+        let diagnostics = lsp.getDiagnostics();
+        const leafDiag = diagnostics.find(d => d.file === "src/Leaf.res");
+        expect(leafDiag, "Expected diagnostics for Leaf.res").toBeDefined();
+        expect(leafDiag.diagnostics.length).toBeGreaterThan(0);
+
+        // Step 2: Save App.res (valid content, but depends on broken Leaf).
+        // App's dependency closure includes Leaf, so compile_dependencies
+        // will fail and App will be skipped — never attempted by bsc.
+        await writeFile(
+          "src/App.res",
+          "let run = () => (Leaf.value, Button.label)\n",
+        );
+        await lsp.waitForNotification("rescript/buildFinished", 30000);
+
+        // App.mjs should NOT exist — Leaf's error prevented compilation.
+        expect(
+          existsSync(appMjs),
+          "App.mjs should not exist while dependency has errors",
+        ).toBe(false);
+
+        // Step 3: Fix Leaf.res.
+        await writeFile("src/Leaf.res", 'let value = "fixed"\n');
+        await lsp.waitForNotification("rescript/buildFinished", 30000);
+
+        // All diagnostics should be cleared
+        diagnostics = lsp.getDiagnostics();
+        for (const entry of diagnostics) {
+          expect(
+            entry.diagnostics,
+            `Expected no diagnostics for ${entry.file}, got: ${JSON.stringify(entry.diagnostics)}`,
+          ).toEqual([]);
+        }
+
+        // Both Leaf.mjs and App.mjs should exist — the skipped module
+        // was registered as intent and compiled when Leaf was fixed.
+        expect(existsSync(leafMjs), "Leaf.mjs should exist after fix").toBe(
+          true,
+        );
+        expect(
+          existsSync(appMjs),
+          "App.mjs should exist after dependency fix (skipped module intent)",
+        ).toBe(true);
+      },
+      { cwd: "packages/dep-chain" },
+    ));
 });

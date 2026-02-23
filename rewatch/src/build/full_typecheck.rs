@@ -31,7 +31,8 @@ pub fn full_typecheck(
                 kind: IncrementalBuildErrorKind::CompileError(Some(e.to_string())),
                 output_mode: OutputMode::Silent,
                 diagnostics: vec![],
-                modules: params.modules,
+                modules: Box::new(params.modules),
+                skipped_modules: Box::default(),
             });
         }
     };
@@ -42,7 +43,8 @@ pub fn full_typecheck(
             kind: IncrementalBuildErrorKind::CompileError(None),
             output_mode: OutputMode::Silent,
             diagnostics: result.to_diagnostics(),
-            modules: params.modules,
+            modules: Box::new(params.modules),
+            skipped_modules: Box::default(),
         })
     } else {
         write_compiler_info(build_state, OutputTarget::Lsp);

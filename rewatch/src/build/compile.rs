@@ -800,10 +800,17 @@ pub fn process_in_waves(
         }
     }
 
+    let skipped_modules = compile_params
+        .modules
+        .difference(&compiled_modules)
+        .cloned()
+        .collect();
+
     Ok(ProcessResult {
         compile_errors,
         compile_warnings,
         num_compiled_modules,
+        skipped_modules,
     })
 }
 
