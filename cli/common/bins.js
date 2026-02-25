@@ -20,17 +20,23 @@ const supportedPlatforms = [
 let mod;
 
 if (supportedPlatforms.includes(target)) {
-  const binPackageName = `@rescript/${target}`;
+  // Try custom scope first, then fall back to official @rescript scope
+  const customBinPackageName = `@roshan84ya/rescript-${target}`;
+  const officialBinPackageName = `@rescript/${target}`;
 
   try {
-    mod = await import(binPackageName);
+    mod = await import(customBinPackageName);
   } catch {
-    // First check if we are on an unsupported node version, as that may be the cause for the error.
-    checkNodeVersionSupported();
+    try {
+      mod = await import(officialBinPackageName);
+    } catch {
+      // First check if we are on an unsupported node version, as that may be the cause for the error.
+      checkNodeVersionSupported();
 
-    throw new Error(
-      `Package ${binPackageName} not found. Make sure the rescript package is installed correctly.`,
-    );
+      throw new Error(
+        `Package ${customBinPackageName} or ${officialBinPackageName} not found. Make sure the rescript package is installed correctly.`,
+      );
+    }
   }
 } else {
   throw new Error(`Platform ${target} is not supported!`);
