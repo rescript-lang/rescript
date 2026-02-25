@@ -814,6 +814,10 @@ let compile output_prefix =
       | _ -> false
     in
     let clause_is_not_typeof (tag, _) = tag_is_not_typeof tag in
+    let clause_is_object_typeof = function
+      | Ast_untagged_variants.Untagged ObjectType, _ -> true
+      | _ -> false
+    in
     let switch ?default ?declaration e clauses =
       let not_typeof_clauses, typeof_clauses =
         List.partition clause_is_not_typeof clauses
@@ -827,7 +831,17 @@ let compile output_prefix =
             (E.emit_check (IsInstanceOf (instance_type, Expr e)))
             switch_body
             ~else_:[build_if_chain rest]
-        | _ -> S.string_switch ?default ?declaration (E.typeof e) typeof_clauses
+        | _ ->
+          let typeof_switch () =
+            S.string_switch ?default ?declaration (E.typeof e) typeof_clauses
+          in
+          if has_null_case && List.exists clause_is_object_typeof typeof_clauses
+          then
+            match default with
+            | Some default_body ->
+              S.if_ (E.is_null e) default_body ~else_:[typeof_switch ()]
+            | None -> typeof_switch ()
+          else typeof_switch ()
       in
       build_if_chain not_typeof_clauses
     in
