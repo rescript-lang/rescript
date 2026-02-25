@@ -35,8 +35,7 @@
     "Woonki Moon (https://github.com/mununki)"
   ],
   "publishConfig": {
-    "access": "public",
-    "provenance": true
+    "access": "public"
   },
   "engines": {
     "node": ">=20.11.0"
