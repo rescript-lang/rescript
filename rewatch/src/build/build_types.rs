@@ -525,6 +525,12 @@ impl SourceFileModule {
     ///
     /// Panics in debug builds if the transition is invalid (see
     /// [`CompilationStage::can_transition_to`]).
+    ///
+    /// **WARNING**: In the LSP, `file_build` uses a take-remove-reinsert
+    /// pattern for `BuildCommandState`. If this assertion fires inside
+    /// `spawn_blocking`, the panic prevents the state from being
+    /// re-inserted into `ProjectMap.states`, permanently losing the
+    /// project and breaking all subsequent builds for that project.
     pub fn set_compilation_stage(&mut self, new_stage: CompilationStage) {
         debug_assert!(
             self.compilation_stage.can_transition_to(&new_stage),

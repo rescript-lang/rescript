@@ -139,6 +139,8 @@ pub(super) async fn run(
                 guard.uri_cache.retain(|_, r| *r != root);
                 guard.states.insert(root, state);
             }
+        } else {
+            tracing::error!("projects mutex poisoned in build flush phase 3");
         }
 
         (results, remaining_intent)

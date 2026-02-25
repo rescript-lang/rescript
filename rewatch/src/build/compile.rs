@@ -30,11 +30,13 @@ enum CompileFileOutcome {
     Warning(String),
     /// Compilation failed.
     Error(String),
+    /// Module was not sent to the compiler (already at target stage with clean deps).
+    Skipped,
 }
 
 impl CompileFileOutcome {
-    fn is_error(&self) -> bool {
-        matches!(self, CompileFileOutcome::Error(_))
+    fn is_success(&self) -> bool {
+        matches!(self, CompileFileOutcome::Success | CompileFileOutcome::Warning(_))
     }
 }
 
@@ -237,8 +239,8 @@ pub fn process_in_waves(
                         // dependencies had unchanged output (.cmi). Skip it.
                         return Some(CompileModuleResult {
                             module_name: module_name.to_string(),
-                            implementation: CompileFileOutcome::Success,
-                            interface: Some(CompileFileOutcome::Success),
+                            implementation: CompileFileOutcome::Skipped,
+                            interface: Some(CompileFileOutcome::Skipped),
                             is_clean_cmi: true,
                             was_compiled: false,
                         });
@@ -401,19 +403,20 @@ pub fn process_in_waves(
                     }
                     Module::SourceFile(_) => match &entry.implementation {
                         CompileFileOutcome::Warning(warning) => (Some(warning.clone()), None),
-                        CompileFileOutcome::Success => (None, None),
+                        CompileFileOutcome::Success | CompileFileOutcome::Skipped => (None, None),
                         CompileFileOutcome::Error(error) => (None, Some(error.clone())),
                     },
                 };
 
                 let (interface_warning, interface_error) = match &entry.interface {
                     Some(CompileFileOutcome::Warning(warning)) => (Some(warning.clone()), None),
-                    Some(CompileFileOutcome::Success) => (None, None),
+                    Some(CompileFileOutcome::Success) | Some(CompileFileOutcome::Skipped) => (None, None),
                     Some(CompileFileOutcome::Error(error)) => (None, Some(error.clone())),
                     None => (None, None),
                 };
 
-                if !entry.implementation.is_error() && entry.interface.as_ref().is_none_or(|r| !r.is_error())
+                if entry.implementation.is_success()
+                    && entry.interface.as_ref().is_none_or(|r| r.is_success())
                 {
                     successfully_compiled.insert(entry.module_name.clone());
                 } else if entry.was_compiled {
@@ -1321,13 +1324,16 @@ pub fn mark_modules_with_expired_deps_for_recompile(build_state: &mut BuildComma
     build_state.modules.iter_mut().for_each(|(module_name, module)| {
         if let Module::SourceFile(sf) = module
             && modules_with_expired_deps.contains(module_name)
-            // Preserve CompileError and Parsed — both already signal "needs
-            // compilation". CompileError carries semantic meaning for the LSP
-            // flow (step 3 in file_build::build_batch uses it to detect
-            // modules that need full compilation after a dependency fix).
-            // Parsed modules were just parsed in this cycle and resetting them
-            // loses their source/AST hashes.
+            // Preserve CompileError, ParseError, and Parsed — all already
+            // signal "needs work". CompileError carries semantic meaning for
+            // the LSP flow (step 3 in file_build::build_batch uses it to
+            // detect modules that need full compilation after a dependency
+            // fix). Parsed modules were just parsed in this cycle and
+            // resetting them loses their source/AST hashes. ParseError
+            // modules need reparsing, not recompilation — downgrading them
+            // to SourceDirty would let them be compiled with a stale AST.
             && !sf.compilation_stage().is_compile_error()
+            && !sf.compilation_stage().is_parse_error()
             && !matches!(sf.compilation_stage(), CompilationStage::Parsed { .. })
         {
             // Extract parse hashes from the current stage when available.
