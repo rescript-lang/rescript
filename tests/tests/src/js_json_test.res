@@ -315,7 +315,7 @@ describe(__MODULE__, () => {
     eq(__LOC__, J.decodeArray(J.number(1.23)), None)
   })
 
-  test("JSON Array/Object switch falls through to wildcard on null", () => {
+  test("JSON Array/Object switch falls through to wildcard on null and array", () => {
     let classifyArrayOrObject = (json: J.t) =>
       switch json {
       | J.Array(items) => Some(items->Js.Array2.length)
@@ -328,6 +328,19 @@ describe(__MODULE__, () => {
     eq(__LOC__, classifyArrayOrObject(J.null), None)
     eq(__LOC__, classifyArrayOrObject(J.array([J.number(1.)])), Some(1))
     eq(__LOC__, classifyArrayOrObject(J.object_(Js.Dict.empty())), Some(0))
+
+    // When there's no Array case, arrays should fall to wildcard
+    let classifyObjectOnly = (json: J.t) =>
+      switch json {
+      | J.Object(_) => "Object"
+      | J.String(_) => "String"
+      | _ => "default"
+      }
+
+    eq(__LOC__, classifyObjectOnly(J.null), "default")
+    eq(__LOC__, classifyObjectOnly(J.array([])), "default")
+    eq(__LOC__, classifyObjectOnly(J.object_(Js.Dict.empty())), "Object")
+    eq(__LOC__, classifyObjectOnly(J.string("hi")), "String")
   })
 
   test("JSON decodeBoolean", () => {
