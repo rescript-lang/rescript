@@ -1,6 +1,6 @@
 {
   "name": "@roshan84ya/rescript",
-  "version": "12.1.1-custom",
+  "version": "12.1.2-custom",
   "description": "ReScript toolchain",
   "type": "module",
   "keywords": [
@@ -69,7 +69,7 @@
     "@rescript/runtime": "12.1.0"
   },
   "optionalDependencies": {
-    "@roshan84ya/rescript-darwin-arm64": "12.1.1-custom",
+    "@roshan84ya/rescript-darwin-arm64": "12.1.2-custom",
     "@rescript/darwin-x64": "12.1.0",
     "@rescript/linux-arm64": "12.1.0",
     "@rescript/linux-x64": "12.1.0",
