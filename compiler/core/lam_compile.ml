@@ -814,9 +814,23 @@ let compile output_prefix =
       | _ -> false
     in
     let clause_is_not_typeof (tag, _) = tag_is_not_typeof tag in
-    let clause_is_object_typeof = function
-      | Ast_untagged_variants.Untagged ObjectType, _ -> true
-      | _ -> false
+    let has_null_clause clauses =
+      Ext_list.exists clauses (fun (tag, _) ->
+          match (tag : Ast_untagged_variants.tag_type) with
+          | Null -> true
+          | _ -> false)
+    in
+    let has_object_clause clauses =
+      Ext_list.exists clauses (fun (tag, _) ->
+          match (tag : Ast_untagged_variants.tag_type) with
+          | Untagged ObjectType -> true
+          | _ -> false)
+    in
+    let has_array_clause clauses =
+      Ext_list.exists clauses (fun (tag, _) ->
+          match (tag : Ast_untagged_variants.tag_type) with
+          | Untagged (InstanceType Array) -> true
+          | _ -> false)
     in
     let switch ?default ?declaration e clauses =
       let not_typeof_clauses, typeof_clauses =
@@ -831,17 +845,42 @@ let compile output_prefix =
             (E.emit_check (IsInstanceOf (instance_type, Expr e)))
             switch_body
             ~else_:[build_if_chain rest]
-        | _ ->
-          let typeof_switch () =
+        | _ -> (
+          let switch_stmt =
             S.string_switch ?default ?declaration (E.typeof e) typeof_clauses
           in
-          if has_null_case && List.exists clause_is_object_typeof typeof_clauses
-          then
-            match default with
-            | Some default_body ->
-              S.if_ (E.is_null e) default_body ~else_:[typeof_switch ()]
-            | None -> typeof_switch ()
-          else typeof_switch ()
+          (* If there's an Object clause but no Null clause and null is a possible value,
+             we need to exclude null from matching the Object case.
+             In JavaScript, typeof null === "object", so null would incorrectly match Object. *)
+          let needs_null_check =
+            has_null_case
+            && (not (has_null_clause typeof_clauses))
+            && has_object_clause typeof_clauses
+          in
+          (* If Array is a possible block type but there's no Array clause and there is an Object clause,
+             we need to exclude arrays from matching the Object case.
+             In JavaScript, typeof [] === "object", so arrays would incorrectly match Object. *)
+          let needs_array_check =
+            List.mem Ast_untagged_variants.(InstanceType Array) block_cases
+            && (not (has_array_clause typeof_clauses))
+            && has_object_clause typeof_clauses
+          in
+          let cond =
+            match (needs_null_check, needs_array_check) with
+            | true, true ->
+              Some (E.and_ (E.not (E.is_null e)) (E.not (E.is_array e)))
+            | true, false -> Some (E.not (E.is_null e))
+            | false, true -> Some (E.not (E.is_array e))
+            | false, false -> None
+          in
+          match cond with
+          | Some c ->
+            S.if_ c [switch_stmt]
+              ~else_:
+                (match default with
+                | Some block -> block
+                | None -> [])
+          | None -> switch_stmt)
       in
       build_if_chain not_typeof_clauses
     in
