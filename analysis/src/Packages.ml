@@ -37,12 +37,9 @@ let newBsPackage ~rootPath =
 
   let parseRaw raw =
     let libBs =
-      match !Cfg.libDir with
-      | Some dir -> Files.ifExists (Filename.concat rootPath dir)
-      | None -> (
-        match !Cfg.isDocGenFromCompiler with
-        | true -> BuildSystem.getStdlib rootPath
-        | false -> BuildSystem.getLibBs rootPath)
+      match !Cfg.isDocGenFromCompiler with
+      | true -> BuildSystem.getStdlib rootPath
+      | false -> BuildSystem.getLibBs rootPath
     in
     match Json.parse raw with
     | Some config -> (

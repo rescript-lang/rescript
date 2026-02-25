@@ -40,7 +40,16 @@ let getRuntimeDir rootPath =
         None))
   | true -> Some rootPath
 
-let getLibBs path = Files.ifExists (path /+ "lib" /+ "bs")
+let getLibBs path =
+  let bs = path /+ "lib" /+ "bs" in
+  let lsp = path /+ "lib" /+ "lsp" in
+  match (Sys.file_exists bs, Sys.file_exists lsp) with
+  | true, true ->
+    let mtime path = (Unix.stat path).st_mtime in
+    if mtime lsp > mtime bs then Some lsp else Some bs
+  | true, false -> Some bs
+  | false, true -> Some lsp
+  | false, false -> None
 
 let getStdlib base =
   match getRuntimeDir base with
