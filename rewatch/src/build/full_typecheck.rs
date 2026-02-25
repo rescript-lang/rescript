@@ -1,6 +1,7 @@
 use super::build_types::*;
 use super::compile;
 use crate::build::compiler_info::write_compiler_info;
+use crate::sourcedirs;
 use tracing::{info_span, instrument};
 
 /// Full typecheck: all dirty modules + dependents, typecheck only (no JS).
@@ -54,6 +55,7 @@ pub fn full_typecheck(
         })
     } else {
         write_compiler_info(build_state, OutputTarget::Lsp);
+        sourcedirs::print(build_state, OutputTarget::Lsp);
         Ok(IncrementalBuildResult {
             diagnostics: result.to_diagnostics(),
             modules: params.modules,

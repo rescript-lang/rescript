@@ -374,7 +374,9 @@ fn typecheck_from_ast(ctx: &FileContext, parent: &tracing::Span) -> TypecheckRes
     )
     .entered();
 
-    let mut args = vec!["-I".to_string(), "src".to_string()];
+    // -absname makes bsc embed absolute paths in .cmt files, which
+    // reanalyze needs to resolve source locations correctly.
+    let mut args = vec!["-absname".to_string(), "-I".to_string(), "src".to_string()];
     args.extend_from_slice(&ctx.file_args.ast_compiler_args);
 
     let output = Command::new(&ctx.file_args.bsc_path)

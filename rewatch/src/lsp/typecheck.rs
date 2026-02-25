@@ -41,9 +41,18 @@ pub fn typecheck_with_args(args: &TypecheckArgs, content: &str) -> Vec<BscDiagno
     // reporting and output prefix derivation.
     let mut full_args = args.compiler_args.clone();
     let source_arg = full_args.pop();
+    // -absname makes bsc embed absolute paths in .cmt files, which
+    // reanalyze needs to resolve source locations correctly.
+    full_args.push("-absname".into());
     full_args.push("-bs-read-stdin".into());
-    if let Some(arg) = source_arg {
-        full_args.push(arg);
+    if let Some(source) = source_arg {
+        // bsc runs from lib/lsp/ — use -o to keep .cmt output in the build
+        // dir, while the ../../-prefixed source path lets -absname resolve
+        // the correct absolute path for embedding inside the .cmt.
+        full_args.push("-o".into());
+        full_args.push(source.clone());
+        let prefixed = Path::new("../..").join(&source).to_string_lossy().into_owned();
+        full_args.push(prefixed);
     }
 
     let mut child = match Command::new(&args.bsc_path)

@@ -226,15 +226,13 @@ let newerFile a b =
   | false, false -> a
 
 let readCmtScan () =
-  let bsFile =
-    ["lib"; "bs"; ".sourcedirs.json"]
-    |> List.fold_left Filename.concat runConfig.bsbProjectRoot
+  let sourceDirsFile =
+    newerFile
+      (["lib"; "bs"; ".sourcedirs.json"]
+      |> List.fold_left Filename.concat runConfig.bsbProjectRoot)
+      (["lib"; "lsp"; ".sourcedirs.json"]
+      |> List.fold_left Filename.concat runConfig.bsbProjectRoot)
   in
-  let lspFile =
-    ["lib"; "lsp"; ".sourcedirs.json"]
-    |> List.fold_left Filename.concat runConfig.bsbProjectRoot
-  in
-  let sourceDirsFile = newerFile bsFile lspFile in
   let entries = ref [] in
   let read_entry (json : Ext_json_types.t) =
     match json with
