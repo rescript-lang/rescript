@@ -10,6 +10,11 @@
 > - :nail_care: [Polish]
 > - :house: [Internal]
 
+# v12.1.1-custom
+### :bug: Bug fix
+- Fix `null` falling into the object branch instead of the wildcard when pattern matching on untagged variants with both `Object` and `null` cases. https://github.com/rescript-lang/rescript/pull/8253
+
+
 # 12.1.0
 
 #### :rocket: New Feature

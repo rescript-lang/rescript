@@ -1,6 +1,6 @@
 {
-  "name": "rescript",
-  "version": "12.1.0",
+  "name": "@roshan84ya/rescript",
+  "version": "12.1.1-custom",
   "description": "ReScript toolchain",
   "type": "module",
   "keywords": [
