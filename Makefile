@@ -174,7 +174,7 @@ test-gentype: lib
 	make -C tests/gentype_tests/stdlib-no-shims clean test
 
 test-rewatch: lib
-	./rewatch/tests/suite.sh $(RESCRIPT_EXE)
+	node scripts/test.js -rewatch
 
 test-all: test test-gentype test-analysis test-tools test-rewatch
 

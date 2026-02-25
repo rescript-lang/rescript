@@ -27,6 +27,7 @@ use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
+use tracing::{info_span, instrument};
 
 fn is_dirty(module: &Module) -> bool {
     match module.source_type {
@@ -126,6 +127,7 @@ pub fn get_compiler_info(project_context: &ProjectContext) -> Result<CompilerInf
     })
 }
 
+#[instrument(name = "initialize_build", skip_all)]
 pub fn initialize_build(
     default_timing: Option<Duration>,
     filter: &Option<regex::Regex>,
@@ -229,6 +231,7 @@ impl fmt::Display for IncrementalBuildError {
     }
 }
 
+#[instrument(name = "incremental_build", skip_all, fields(module_count = build_state.modules.len()))]
 pub fn incremental_build(
     build_state: &mut BuildCommandState,
     default_timing: Option<Duration>,
@@ -267,6 +270,7 @@ pub fn incremental_build(
             warnings
         }
         Err(err) => {
+            let _error_span = info_span!("build.parse_error").entered();
             logs::finalize(&build_state.packages);
 
             if !plain_output && show_progress {
@@ -356,6 +360,7 @@ pub fn incremental_build(
     }
     pb.finish();
     if !compile_errors.is_empty() {
+        let _error_span = info_span!("build.compile_error").entered();
         if show_progress {
             if plain_output {
                 eprintln!("Compiled {num_compiled_modules} modules")
@@ -371,6 +376,7 @@ pub fn incremental_build(
             }
         }
         if helpers::contains_ascii_characters(&compile_warnings) {
+            let _warning_span = info_span!("build.compile_warning").entered();
             eprintln!("{}", &compile_warnings);
         }
         if initial_build {

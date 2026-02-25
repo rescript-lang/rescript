@@ -20,12 +20,20 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::sync::OnceLock;
 use std::time::SystemTime;
+use tracing::{info_span, instrument};
 
 /// Execute js-post-build command for a compiled JavaScript file.
 /// The command runs in the directory containing the rescript.json that defines it.
 /// The absolute path to the JS file is passed as an argument.
 fn execute_post_build_command(cmd: &str, js_file_path: &Path, working_dir: &Path) -> Result<()> {
     let full_command = format!("{} {}", cmd, js_file_path.display());
+
+    let _span = info_span!(
+        "build.js_post_build",
+        command = %cmd,
+        js_file = %js_file_path.display(),
+    )
+    .entered();
 
     debug!(
         "Executing js-post-build: {} (in {})",
@@ -72,6 +80,7 @@ fn execute_post_build_command(cmd: &str, js_file_path: &Path, working_dir: &Path
     }
 }
 
+#[instrument(name = "build.compile", skip_all)]
 pub fn compile(
     build_state: &mut BuildCommandState,
     show_progress: bool,
@@ -162,6 +171,13 @@ pub fn compile(
             loop_count,
         );
 
+        let wave_span = info_span!(
+            "build.compile_wave",
+            wave = loop_count,
+            file_count = in_progress_modules.len(),
+        );
+        let _wave_entered = wave_span.enter();
+
         let current_in_progres_modules = in_progress_modules.clone();
 
         let results = current_in_progres_modules
@@ -196,6 +212,14 @@ pub fn compile(
                             ))
                         }
                         SourceType::SourceFile(source_file) => {
+                            let root_config = build_state.get_root_config();
+                            let first_spec = root_config.get_package_specs().into_iter().next();
+                            let suffix = first_spec.as_ref().map(|s| root_config.get_suffix(s)).unwrap_or_default();
+                            let module_system = first_spec.as_ref().map(|s| s.module.as_str()).unwrap_or("esmodule");
+                            let namespace = package.namespace.to_suffix().unwrap_or_default();
+                            let _file_span =
+                                info_span!(parent: &wave_span, "build.compile_file", module = %module_name, package = %package.name, suffix, module_system, namespace).entered();
+
                             let cmi_path = helpers::get_compiler_asset(
                                 package,
                                 &package.namespace,

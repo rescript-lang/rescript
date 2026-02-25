@@ -1,0 +1,14 @@
+{
+  "name": "rewatch-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:update": "vitest run --update"
+  },
+  "devDependencies": {
+    "protobufjs": "^7.4.0",
+    "vitest": "^3.0.0"
+  }
+}

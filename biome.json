@@ -76,7 +76,8 @@
       "!**/package.json",
       "!**/packages/artifacts.json",
       "!**/.mypy_cache",
-      "!**/.history"
+      "!**/.history",
+      "!**/noop-ppx"
     ]
   }
 }

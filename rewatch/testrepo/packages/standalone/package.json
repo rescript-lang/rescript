@@ -1,7 +1,0 @@
-{
-    "name": "@testrepo/standalone",
-    "version": "1.0.0",
-    "dependencies": {
-        "@testrepo/dep01": "*"
-    }
-}

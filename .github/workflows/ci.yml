@@ -324,18 +324,6 @@ jobs:
         if: runner.os != 'Windows'
         run: make -C tests/gentype_tests/typescript-react-example clean test
 
-      # On Windows, after running setup-ocaml (if it wasn't cached yet or the cache couldn't be restored),
-      # Cygwin bash is used instead of Git Bash for Windows, breaking the rewatch tests.
-      # So we need to adjust the path to bring back Git Bash for Windows.
-      - name: Rewatch tests need Git Bash for Windows
-        if: ${{ runner.os == 'Windows' }}
-        run: echo "C:\Program Files\Git\bin" >> $GITHUB_PATH
-        shell: bash
-
-      - name: Run rewatch tests
-        run: ./rewatch/tests/suite.sh rewatch/target/release/rescript
-        shell: bash
-
       - name: Run syntax benchmarks
         if: matrix.benchmarks
         run: |
@@ -645,15 +633,18 @@ jobs:
           # Run integration tests with the oldest supported node version.
           node-version: 20
 
-      - name: Install ReScript package in rewatch/testrepo
+      - name: Install npm packages
+        run: yarn install
+
+      - name: Install ReScript package in test fixture
         run: |
           COMMIT_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
           yarn add "rescript@https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA::7}"
         shell: bash
-        working-directory: rewatch/testrepo
+        working-directory: tests/rewatch_tests/fixture
 
       - name: Run rewatch integration tests
-        run: ./rewatch/tests/suite.sh rewatch/testrepo/node_modules/.bin/rescript
+        run: node scripts/test.js -rewatch
         shell: bash
 
   publish:
