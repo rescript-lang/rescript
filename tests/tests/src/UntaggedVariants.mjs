@@ -157,13 +157,15 @@ function classify$5(x) {
   if (Array.isArray(x)) {
     return "array";
   }
-  switch (typeof x) {
-    case "string" :
-      return "string";
-    case "number" :
-      return "int";
-    case "object" :
-      return "Object" + x.name;
+  if (!Array.isArray(x)) {
+    switch (typeof x) {
+      case "string" :
+        return "string";
+      case "number" :
+        return "int";
+      case "object" :
+        return "Object" + x.name;
+    }
   }
 }
 
@@ -188,22 +190,24 @@ function classify$6(x) {
         _0: x
       };
     }
-    switch (typeof x) {
-      case "string" :
-        return {
-          TAG: "JSONString",
-          _0: x
-        };
-      case "number" :
-        return {
-          TAG: "JSONNumber",
-          _0: x
-        };
-      case "object" :
-        return {
-          TAG: "JSONObject",
-          _0: x
-        };
+    if (!Array.isArray(x)) {
+      switch (typeof x) {
+        case "string" :
+          return {
+            TAG: "JSONString",
+            _0: x
+          };
+        case "number" :
+          return {
+            TAG: "JSONNumber",
+            _0: x
+          };
+        case "object" :
+          return {
+            TAG: "JSONObject",
+            _0: x
+          };
+      }
     }
   }
 }
@@ -357,11 +361,13 @@ function classify$9(v) {
   if (Array.isArray(v)) {
     return v[0];
   }
-  switch (typeof v) {
-    case "object" :
-      return v.x;
-    case "function" :
-      return v(3);
+  if (!Array.isArray(v)) {
+    switch (typeof v) {
+      case "object" :
+        return v.x;
+      case "function" :
+        return v(3);
+    }
   }
 }
 
@@ -481,13 +487,15 @@ async function classify$10(a) {
       console.log(await a);
       return;
     }
-    switch (typeof a) {
-      case "string" :
-        console.log(a);
-        return;
-      case "object" :
-        console.log(a.userName);
-        return;
+    if (!Array.isArray(a)) {
+      switch (typeof a) {
+        case "string" :
+          console.log(a);
+          return;
+        case "object" :
+          console.log(a.userName);
+          return;
+      }
     }
   }
 }
@@ -589,13 +597,15 @@ async function classifyAll(t) {
     console.log("WeakMap");
     return;
   }
-  switch (typeof t) {
-    case "string" :
-      console.log(t);
-      return;
-    case "object" :
-      console.log(t.userName);
-      return;
+  if (!Array.isArray(t)) {
+    switch (typeof t) {
+      case "string" :
+        console.log(t);
+        return;
+      case "object" :
+        console.log(t.userName);
+        return;
+    }
   }
 }
 
@@ -629,11 +639,13 @@ function should_not_merge(x) {
   if (x instanceof Date) {
     return "do not merge";
   }
-  switch (typeof x) {
-    case "boolean" :
-      return "boolean";
-    case "object" :
-      return "do not merge";
+  if (!Array.isArray(x)) {
+    switch (typeof x) {
+      case "boolean" :
+        return "boolean";
+      case "object" :
+        return "do not merge";
+    }
   }
 }
 
@@ -644,10 +656,12 @@ function can_merge(x) {
   if (x instanceof Date) {
     return "do not merge";
   }
-  switch (typeof x) {
-    case "boolean" :
-    case "object" :
-      return "merge";
+  if (!Array.isArray(x)) {
+    switch (typeof x) {
+      case "boolean" :
+      case "object" :
+        return "merge";
+    }
   }
 }
 
