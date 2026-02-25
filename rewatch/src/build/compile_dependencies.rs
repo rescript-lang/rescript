@@ -27,6 +27,13 @@ pub fn compile_dependencies(
         .cloned()
         .collect();
 
+    tracing::debug!(
+        starts = ?module_names.iter().collect::<Vec<_>>(),
+        closure_size = closure.len(),
+        needs_compile_count = needs_compile.len(),
+        "compile_dependencies: closure computed"
+    );
+
     let params = CompileParams {
         modules: closure,
         filter: CompileFilter::DirtyOnly(needs_compile),
@@ -53,6 +60,12 @@ pub fn compile_dependencies(
 
     if !result.compile_errors.is_empty() {
         let _error_span = info_span!("build.compile_error", error = %result.compile_errors).entered();
+        if !result.skipped_modules.is_empty() {
+            tracing::debug!(
+                skipped = ?result.skipped_modules.iter().collect::<Vec<_>>(),
+                "compile_dependencies: modules skipped due to errors"
+            );
+        }
         Err(IncrementalBuildError {
             kind: IncrementalBuildErrorKind::CompileError(None),
             output_mode: OutputMode::Silent,

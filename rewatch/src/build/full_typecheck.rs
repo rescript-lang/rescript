@@ -39,12 +39,18 @@ pub fn full_typecheck(
 
     if !result.compile_errors.is_empty() {
         let _error_span = info_span!("build.compile_error", error = %result.compile_errors).entered();
+        if !result.skipped_modules.is_empty() {
+            tracing::debug!(
+                skipped = ?result.skipped_modules.iter().collect::<Vec<_>>(),
+                "full_typecheck: modules skipped due to errors"
+            );
+        }
         Err(IncrementalBuildError {
             kind: IncrementalBuildErrorKind::CompileError(None),
             output_mode: OutputMode::Silent,
             diagnostics: result.to_diagnostics(),
             modules: Box::new(params.modules),
-            skipped_modules: Box::default(),
+            skipped_modules: Box::new(result.skipped_modules),
         })
     } else {
         write_compiler_info(build_state, OutputTarget::Lsp);

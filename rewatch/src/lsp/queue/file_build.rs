@@ -290,7 +290,7 @@ fn build_batch(
     let mut intent_names = intent.unwrap_or_default();
     if !skipped_modules.is_empty() {
         tracing::debug!(
-            skipped_count = skipped_modules.len(),
+            skipped = ?skipped_modules.iter().collect::<Vec<_>>(),
             "build_batch: registering skipped modules as FullCompile intent"
         );
         intent_names.extend(skipped_modules);
@@ -516,33 +516,45 @@ fn drain_full_compile_intent(
     let mut pending = AHashSet::new();
     let mut not_ready = HashSet::new();
 
+    let mut already_built = Vec::new();
+    let mut discarded = Vec::new();
+
     for name in names {
         match build_state.build_state.modules.get(&name) {
             Some(Module::SourceFile(sf)) => match sf.compilation_stage() {
                 CompilationStage::Built(..) => {
-                    // Already compiled — nothing to do.
+                    already_built.push(name);
                 }
                 CompilationStage::TypeChecked { .. } => {
                     pending.insert(name);
                 }
-                _ => {
-                    // Not ready yet (e.g. CompileError, SourceDirty).
+                other => {
+                    tracing::debug!(
+                        module = %name,
+                        stage = ?std::mem::discriminant(other),
+                        "drain_intent: module not ready"
+                    );
                     not_ready.insert(name);
                 }
             },
             _ => {
-                // Module no longer exists — discard.
+                discarded.push(name);
             }
         }
     }
 
+    tracing::debug!(
+        built_count = already_built.len(),
+        pending_count = pending.len(),
+        not_ready_count = not_ready.len(),
+        discarded_count = discarded.len(),
+        built = ?already_built,
+        pending_modules = ?pending.iter().collect::<Vec<_>>(),
+        not_ready_modules = ?not_ready.iter().collect::<Vec<_>>(),
+        "drain_intent: partition"
+    );
+
     if pending.is_empty() {
-        if !not_ready.is_empty() {
-            tracing::debug!(
-                "drain_intent: no TypeChecked modules to compile ({} still pending)",
-                not_ready.len()
-            );
-        }
         return not_ready;
     }
 
@@ -563,7 +575,14 @@ fn drain_full_compile_intent(
         }
         Err(e) => {
             tracing::warn!("drain_intent completed with errors: {e}");
+            if !e.skipped_modules.is_empty() {
+                tracing::debug!(
+                    skipped = ?e.skipped_modules.iter().collect::<Vec<_>>(),
+                    "drain_intent: skipped modules from compile_dependencies"
+                );
+            }
             // Keep failed modules in intent for next attempt.
+            let mut became_built = Vec::new();
             for name in &pending {
                 if build_state.build_state.modules.get(name).is_some_and(|m| {
                     !matches!(
@@ -573,7 +592,15 @@ fn drain_full_compile_intent(
                     )
                 }) {
                     not_ready.insert(name.clone());
+                } else {
+                    became_built.push(name.clone());
                 }
+            }
+            if !became_built.is_empty() {
+                tracing::debug!(
+                    modules = ?became_built,
+                    "drain_intent: modules reached Built despite errors (dropped from intent)"
+                );
             }
             diagnostics.extend(e.diagnostics);
             touched_files.extend(module_names_to_paths(build_state, &e.modules));

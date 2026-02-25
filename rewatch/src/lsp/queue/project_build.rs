@@ -269,6 +269,12 @@ pub(super) async fn run(
                             }
                         }
 
+                        tracing::debug!(
+                            built_snapshot_modules = ?built_snap.keys().collect::<Vec<_>>(),
+                            error_fullcompile_modules = ?error_fc.iter().collect::<Vec<_>>(),
+                            "project_build: snapshot from old state"
+                        );
+
                         (
                             collect_source_uris(old_state),
                             old_state.get_warn_error_override().clone(),
@@ -344,14 +350,14 @@ pub(super) async fn run(
                         }
                     }
 
-                    if promoted > 0 || !intent.is_empty() {
-                        tracing::debug!(
-                            project = %project_root.display(),
-                            promoted,
-                            intent_count = intent.len(),
-                            "project_build: hash promotion results"
-                        );
-                    }
+                    tracing::debug!(
+                        project = %project_root.display(),
+                        snapshot_size = built_snapshot.len(),
+                        promoted,
+                        intent_count = intent.len(),
+                        intent_modules = ?intent.iter().collect::<Vec<_>>(),
+                        "project_build: hash promotion results"
+                    );
 
                     // Replace state under lock
                     if let Ok(mut guard) = projects_clone.lock() {

@@ -617,14 +617,33 @@ async fn flush_inner(
     // full_compile_intent. Intent drain piggybacks on the same
     // take-build-replace cycle — no extra locking needed.
     let errored_files = if has_incremental_builds || (has_full_builds && has_pending_intents) {
-        file_build::run(
+        if has_pending_intents {
+            for (root, names) in state.full_compile_intent.iter() {
+                tracing::debug!(
+                    project = %root.display(),
+                    modules = ?names.iter().collect::<Vec<_>>(),
+                    "flush: full_compile_intent before file_build"
+                );
+            }
+        }
+        let errored = file_build::run(
             &compile_files,
             &mut state.full_compile_intent,
             projects,
             client,
             store_ref,
         )
-        .await
+        .await;
+        if !state.full_compile_intent.is_empty() {
+            for (root, names) in state.full_compile_intent.iter() {
+                tracing::debug!(
+                    project = %root.display(),
+                    modules = ?names.iter().collect::<Vec<_>>(),
+                    "flush: full_compile_intent remaining after file_build"
+                );
+            }
+        }
+        errored
     } else {
         HashSet::new()
     };
