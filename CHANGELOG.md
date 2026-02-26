@@ -51,7 +51,7 @@
 #### :rocket: New Feature
 
 - Reanalyze: add scoped `@@live`/`@@dead` annotations for marking module/file sections as live or dead. https://github.com/rescript-lang/rescript/pull/8197
-- Stdlib: Added Array.zip, Array.unzip, Array.zipBy, and Array.partition
+- Stdlib: Added Array.zip, Array.unzip, Array.zipBy, and Array.partition. https://github.com/rescript-lang/rescript/pull/8244
 
 #### :bug: Bug fix
 
