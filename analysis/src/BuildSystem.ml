@@ -50,7 +50,7 @@ let getLibBs path =
     if mtime (sourcedirs lsp) > mtime (sourcedirs bs) then Some lsp else Some bs
   | true, false -> Some bs
   | false, true -> Some lsp
-  | false, false -> None
+  | false, false -> Files.ifExists bs
 
 let getStdlib base =
   match getRuntimeDir base with
