@@ -12,10 +12,10 @@
   ],
   "license": "SEE LICENSE IN LICENSE",
   "homepage": "https://rescript-lang.org",
-  "bugs": "https://github.com/rescript-lang/rescript/issues",
+  "bugs": "https://github.com/jagguji/rescript-v12.1.1-fix-switch-null-array-object-cases/issues",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/rescript-lang/rescript.git"
+    "url": "git+https://github.com/jagguji/rescript-v12.1.1-fix-switch-null-array-object-cases.git"
   },
   "author": {
     "name": "Hongbo Zhang",
