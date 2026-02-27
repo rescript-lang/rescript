@@ -10,20 +10,12 @@
 > - :nail_care: [Polish]
 > - :house: [Internal]
 
-# 13.0.0-alpha.2 (Unreleased)
-
-#### :boom: Breaking Change
-
-#### :eyeglasses: Spec Compliance
-
-#### :rocket: New Feature
+# 13.0.0-alpha.2
 
 #### :bug: Bug fix
 
 - Fix compiler crash (`Fatal error: Parmatch.all_record_args`) when matching empty dict/record patterns. https://github.com/rescript-lang/rescript/pull/8246
 - Fix `null` falling into the object branch instead of the wildcard when pattern matching on untagged variants with both `Object` and `null` cases. https://github.com/rescript-lang/rescript/pull/8253
-
-#### :memo: Documentation
 
 #### :nail_care: Polish
 
@@ -31,7 +23,7 @@
 
 #### :house: Internal
 
-- speed up dev container test by installing ocaml in docker image instead of in `postCreate.sh`. https://github.com/rescript-lang/rescript/pull/8230
+- Speed up dev container test by installing OCaml in docker image instead of in `postCreate.sh`. https://github.com/rescript-lang/rescript/pull/8230
 
 # 13.0.0-alpha.1
 
