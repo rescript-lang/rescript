@@ -10,6 +10,9 @@ use hyper::service::service_fn;
 use hyper::{Request, Response, StatusCode};
 use tokio::net::TcpListener;
 
+use opentelemetry::trace::TraceContextExt;
+use tracing_opentelemetry::OpenTelemetrySpanExt;
+
 use super::diagnostic_store::DiagnosticStore;
 
 const IDLE_TIMEOUT: Duration = Duration::from_secs(30);
@@ -71,12 +74,19 @@ async fn handle_report(
     };
 
     let message = String::from_utf8_lossy(&body_bytes).into_owned();
-    let _span = tracing::info_span!(parent: &root_span, "lsp.llm_report", message = %message).entered();
+    let span = tracing::info_span!(parent: &root_span, "lsp.llm_report", message = %message);
+    let _entered = span.enter();
 
+    // Extract the OTEL span ID so the caller can look it up in the trace viewer
+    let otel_context = span.context();
+    let span_ref = otel_context.span();
+    let span_id = span_ref.span_context().span_id().to_string();
+
+    let body = format!(r#"{{"status": "recorded", "span_id": "{span_id}"}}"#);
     Response::builder()
         .status(StatusCode::OK)
         .header("Content-Type", "application/json")
-        .body(Full::new(Bytes::from(r#"{"status": "recorded"}"#)))
+        .body(Full::new(Bytes::from(body)))
         .unwrap()
 }
 
