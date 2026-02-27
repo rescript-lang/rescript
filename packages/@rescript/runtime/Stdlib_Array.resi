@@ -1556,6 +1556,61 @@ Array.findMap([], n => mod(n, 2) == 0 ? Some(n * n) : None) == None
 let findMap: (array<'a>, 'a => option<'b>) => option<'b>
 
 /**
+`zip(a, b)` create an array of pairs from corresponding elements of a and b.
+Stop with the shorter array.
+
+## Examples
+
+```rescript
+Array.zip([1, 2], [3, 4, 5]) == [(1, 3), (2, 4)]
+```
+*/
+let zip: (t<'a>, array<'b>) => array<('a, 'b)>
+
+/**
+`zipBy(xs, ys, f)` create an array by applying `f` to corresponding elements of
+`xs` and `ys`. Stops with shorter array.
+
+Equivalent to `map(zip(xs, ys), ((a, b)) => f(a, b))`
+
+## Examples
+
+```rescript
+Array.zipBy([1, 2, 3], [4, 5], (a, b) => 2 * a + b) == [6, 9]
+```
+*/
+let zipBy: (t<'a>, array<'b>, ('a, 'b) => 'c) => array<'c>
+
+/**
+`partition(f, a)` split array into tuple of two arrays based on predicate `f`;
+first of tuple where predicate cause true, second where predicate cause false
+
+## Examples
+
+```rescript
+Array.partition([1, 2, 3, 4, 5], x => mod(x, 2) == 0) == ([2, 4], [1, 3, 5])
+
+Array.partition([1, 2, 3, 4, 5], x => mod(x, 2) != 0) == ([1, 3, 5], [2, 4])
+```
+*/
+let partition: (t<'a>, 'a => bool) => (t<'a>, t<'a>)
+
+/**
+`unzip(a)` takes an array of pairs and creates a pair of arrays. The first array
+contains all the first items of the pairs; the second array contains all the
+second items.
+
+## Examples
+
+```rescript
+Array.unzip([(1, 2), (3, 4)]) == ([1, 3], [2, 4])
+
+Array.unzip([(1, 2), (3, 4), (5, 6), (7, 8)]) == ([1, 3, 5, 7], [2, 4, 6, 8])
+```
+*/
+let unzip: array<('a, 'b)> => (t<'a>, array<'b>)
+
+/**
 `at(array, index)`
 
 Get an element by its index. Negative indices count backwards from the last item.

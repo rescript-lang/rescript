@@ -14,6 +14,8 @@
 
 #### :boom: Breaking Change
 
+- Stdlib: Added Array.zip, Array.unzip, Array.zipBy, and Array.partition. https://github.com/rescript-lang/rescript/pull/8244
+
 #### :eyeglasses: Spec Compliance
 
 #### :rocket: New Feature
