@@ -545,6 +545,14 @@ Implementation: `lsp/initialize.rs`
 
 Config changes (e.g. suffix, package-spec) trigger a full project re-initialization: the affected project is re-read from disk, packages are re-discovered, and a fresh `TypecheckOnly` build runs. Any pending typechecks scoped to that project are cleared to avoid stale results. The `rescript.json` watcher pattern is already registered alongside source file patterns.
 
+### Known limitation: external file modifications
+
+The LSP relies entirely on editor notifications (`didChange`, `didSave`, `didChangeWatchedFiles`) to learn about file changes. When a tool writes to a `.res` file directly on disk — bypassing the editor — the LSP may never be notified, so the corresponding `.mjs` output will not be regenerated.
+
+This affects AI coding agents (e.g. Claude Code's `Edit` tool in Zed) that perform atomic file writes without going through the editor buffer. The file watcher registration asks the **editor** to watch for changes; if the editor itself doesn't detect the external write, no `didChangeWatchedFiles` event is sent.
+
+Tracked upstream for the Zed + Claude Agent case: [zed-industries/claude-agent-acp#333](https://github.com/zed-industries/claude-agent-acp/issues/333), [zed-industries/claude-agent-acp#316](https://github.com/zed-industries/claude-agent-acp/pull/316).
+
 ## What Is NOT Implemented Yet
 
 | Feature                                 | Status                                                                                  |
