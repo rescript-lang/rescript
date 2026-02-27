@@ -21,6 +21,14 @@ let runConfig =
     unsuppress = [];
   }
 
+let reset () =
+  runConfig.dce <- false;
+  runConfig.exception_ <- false;
+  runConfig.suppress <- [];
+  runConfig.termination <- false;
+  runConfig.transitive <- false;
+  runConfig.unsuppress <- []
+
 let all () =
   runConfig.dce <- true;
   runConfig.exception_ <- true;
@@ -31,3 +39,24 @@ let exception_ () = runConfig.exception_ <- true
 let termination () = runConfig.termination <- true
 
 let transitive b = runConfig.transitive <- b
+
+type snapshot = {
+  dce: bool;
+  exception_: bool;
+  suppress: string list;
+  termination: bool;
+  transitive: bool;
+  unsuppress: string list;
+}
+
+let snapshot () =
+  {
+    dce = runConfig.dce;
+    exception_ = runConfig.exception_;
+    suppress = runConfig.suppress;
+    termination = runConfig.termination;
+    transitive = runConfig.transitive;
+    unsuppress = runConfig.unsuppress;
+  }
+
+let equal_snapshot (a : snapshot) (b : snapshot) = a = b
