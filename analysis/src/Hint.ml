@@ -31,6 +31,12 @@ let locItemToTypeHint ~full:{file; package} locItem =
         | `Field -> fromType t))
   | _ -> None
 
+(* [currentFile] is the file to parse for the AST. The LSP writes the
+   editor's current (possibly unsaved) buffer to a temporary file and passes
+   that path here, so hint positions stay in sync with what the user sees even
+   before the file is saved. When [None], [path] itself is parsed instead.
+   [path] is always the original on-disk path and is used for loading the
+   compiled `.cmt` artefact. *)
 let inlay ~path ~pos ~maxLength ~currentFile ~debug =
   let maxlen = try Some (int_of_string maxLength) with Failure _ -> None in
   let hints = ref [] in
