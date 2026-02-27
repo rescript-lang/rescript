@@ -16,20 +16,10 @@
 
 - Stdlib: Added Array.zip, Array.unzip, Array.zipBy, and Array.partition. https://github.com/rescript-lang/rescript/pull/8244
 
-#### :eyeglasses: Spec Compliance
-
-#### :rocket: New Feature
-
 #### :bug: Bug fix
 
 - Fix compiler crash (`Fatal error: Parmatch.all_record_args`) when matching empty dict/record patterns. https://github.com/rescript-lang/rescript/pull/8246
 - Fix `null` falling into the object branch instead of the wildcard when pattern matching on untagged variants with both `Object` and `null` cases. https://github.com/rescript-lang/rescript/pull/8253
-
-#### :memo: Documentation
-
-#### :nail_care: Polish
-
-#### :house: Internal
 
 # 12.2.0-rc.1
 
