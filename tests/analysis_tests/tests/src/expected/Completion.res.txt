@@ -179,6 +179,12 @@ Path Array.
     "detail": "(array<'a>, ~start: int=?, ~end: int=?) => array<'a>",
     "documentation": {"kind": "markdown", "value": "\n`slice(array, ~start, ~end)` creates a new array of items copied from `array` from `start` until (but not including) `end`.\n\nSee [`Array.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice) on MDN.\n\n## Examples\n\n```rescript\n[1, 2, 3, 4]->Array.slice(~start=1, ~end=3) == [2, 3]\n[1, 2, 3, 4]->Array.slice(~start=1) == [2, 3, 4]\n[1, 2, 3, 4]->Array.slice == [1, 2, 3, 4]\n```\n"}
   }, {
+    "label": "zip",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t<'a>, array<'b>) => array<('a, 'b)>",
+    "documentation": {"kind": "markdown", "value": "\n`zip(a, b)` create an array of pairs from corresponding elements of a and b.\nStop with the shorter array.\n\n## Examples\n\n```rescript\nArray.zip([1, 2], [3, 4, 5]) == [(1, 3), (2, 4)]\n```\n"}
+  }, {
     "label": "fillToEnd",
     "kind": 12,
     "tags": [1],
@@ -268,6 +274,12 @@ Path Array.
     "tags": [],
     "detail": "(array<'a>, 'a => 'b) => array<'b>",
     "documentation": {"kind": "markdown", "value": "\n`map(array, fn)` returns a new array with all elements from `array`, each element transformed using the provided `fn`.\n\nSee [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet mappedArray = array->Array.map(greeting => greeting ++ \" to you\")\n\nmappedArray == [\"Hello to you\", \"Hi to you\", \"Good bye to you\"]\n```\n"}
+  }, {
+    "label": "zipBy",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t<'a>, array<'b>, ('a, 'b) => 'c) => array<'c>",
+    "documentation": {"kind": "markdown", "value": "\n`zipBy(xs, ys, f)` create an array by applying `f` to corresponding elements of\n`xs` and `ys`. Stops with shorter array.\n\nEquivalent to `map(zip(xs, ys), ((a, b)) => f(a, b))`\n\n## Examples\n\n```rescript\nArray.zipBy([1, 2, 3], [4, 5], (a, b) => 2 * a + b) == [6, 9]\n```\n"}
   }, {
     "label": "with",
     "kind": 12,
@@ -539,6 +551,12 @@ Path Array.
     "detail": "(array<'a>, int) => 'a",
     "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n`unsafe_get(array, index)` returns the element at `index` of `array`.\n\nThis is _unsafe_, meaning it will return `undefined` value if `index` does not exist in `array`.\n\nUse `Array.unsafe_get` only when you are sure the `index` exists (i.e. when using for-loop).\n\n## Examples\n\n```rescript\nlet array = [1, 2, 3]\nfor index in 0 to array->Array.length - 1 {\n  let value = array->Array.unsafe_get(index)\n  Console.log(value)\n}\n```\n"}
   }, {
+    "label": "partition",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t<'a>, 'a => bool) => (t<'a>, t<'a>)",
+    "documentation": {"kind": "markdown", "value": "\n`partition(f, a)` split array into tuple of two arrays based on predicate `f`;\nfirst of tuple where predicate cause true, second where predicate cause false\n\n## Examples\n\n```rescript\nArray.partition([1, 2, 3, 4, 5], x => mod(x, 2) == 0) == ([2, 4], [1, 3, 5])\n\nArray.partition([1, 2, 3, 4, 5], x => mod(x, 2) != 0) == ([1, 3, 5], [2, 4])\n```\n"}
+  }, {
     "label": "copyAllWithin",
     "kind": 12,
     "tags": [1],
@@ -586,6 +604,12 @@ Path Array.
     "tags": [],
     "detail": "(array<'a>, array<'a>) => unit",
     "documentation": {"kind": "markdown", "value": "\n`pushMany(array, itemsArray)` appends many new items to the end of the array.\n\nBeware this will *mutate* the array.\n\nSee [`Array.push`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/push) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\n\nsomeArray->Array.pushMany([\"yay\", \"wehoo\"])\nsomeArray == [\"hi\", \"hello\", \"yay\", \"wehoo\"]\n```\n"}
+  }, {
+    "label": "unzip",
+    "kind": 12,
+    "tags": [],
+    "detail": "array<('a, 'b)> => (t<'a>, array<'b>)",
+    "documentation": {"kind": "markdown", "value": "\n`unzip(a)` takes an array of pairs and creates a pair of arrays. The first array\ncontains all the first items of the pairs; the second array contains all the\nsecond items.\n\n## Examples\n\n```rescript\nArray.unzip([(1, 2), (3, 4)]) == ([1, 3], [2, 4])\n\nArray.unzip([(1, 2), (3, 4), (5, 6), (7, 8)]) == ([1, 3, 5, 7], [2, 4, 6, 8])\n```\n"}
   }, {
     "label": "fromIterator",
     "kind": 12,
