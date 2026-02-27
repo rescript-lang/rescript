@@ -346,6 +346,59 @@ let findMap = (arr, f) => {
   loop(0)
 }
 
+let zip = (xs, ys) => {
+  let (lenx, leny) = (length(xs), length(ys))
+  let len = min(lenx, leny)
+  let s = makeUninitializedUnsafe(len)
+  for i in 0 to len - 1 {
+    setUnsafe(s, i, (getUnsafe(xs, i), getUnsafe(ys, i)))
+  }
+  s
+}
+
+let zipBy = (xs, ys, f) => {
+  let (lenx, leny) = (length(xs), length(ys))
+  let len = min(lenx, leny)
+  let s = makeUninitializedUnsafe(len)
+  for i in 0 to len - 1 {
+    setUnsafe(s, i, f(getUnsafe(xs, i), getUnsafe(ys, i)))
+  }
+  s
+}
+
+let partition = (a, f) => {
+  let l = length(a)
+  let i = ref(0)
+  let j = ref(0)
+  let a1 = makeUninitializedUnsafe(l)
+  let a2 = makeUninitializedUnsafe(l)
+  for ii in 0 to l - 1 {
+    let v = getUnsafe(a, ii)
+    if f(v) {
+      setUnsafe(a1, i.contents, v)
+      i.contents = i.contents + 1
+    } else {
+      setUnsafe(a2, j.contents, v)
+      j.contents = j.contents + 1
+    }
+  }
+  truncateToLengthUnsafe(a1, i.contents)
+  truncateToLengthUnsafe(a2, j.contents)
+  (a1, a2)
+}
+
+let unzip = a => {
+  let l = length(a)
+  let a1 = makeUninitializedUnsafe(l)
+  let a2 = makeUninitializedUnsafe(l)
+  for i in 0 to l - 1 {
+    let (v1, v2) = getUnsafe(a, i)
+    setUnsafe(a1, i, v1)
+    setUnsafe(a2, i, v2)
+  }
+  (a1, a2)
+}
+
 @send external at: (array<'a>, int) => option<'a> = "at"
 
 let last = a => a->get(a->length - 1)
