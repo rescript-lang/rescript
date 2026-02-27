@@ -20,6 +20,8 @@
 
 #### :bug: Bug fix
 
+- Reanalyze server: invalidate cache and recompute results when config changes in `rescript.json`. https://github.com/rescript-lang/rescript/pull/8262
+
 #### :memo: Documentation
 
 #### :nail_care: Polish

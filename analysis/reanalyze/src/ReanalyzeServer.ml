@@ -96,6 +96,14 @@ module Server = struct
     let s = Gc.quick_stat () in
     mb_of_words s.live_words
 
+  type reactive_pipeline = {
+    dce_config: DceConfig.t;
+    reactive_collection: ReactiveAnalysis.t;
+    reactive_merge: ReactiveMerge.t;
+    reactive_liveness: ReactiveLiveness.t;
+    reactive_solver: ReactiveSolver.t;
+  }
+
   type server_state = {
     parse_argv: string array -> string option;
     run_analysis:
@@ -111,12 +119,9 @@ module Server = struct
       unit;
     config: server_config;
     cmtRoot: string option;
-    dce_config: DceConfig.t;
-    reactive_collection: ReactiveAnalysis.t;
-    reactive_merge: ReactiveMerge.t;
-    reactive_liveness: ReactiveLiveness.t;
-    reactive_solver: ReactiveSolver.t;
+    mutable pipeline: reactive_pipeline;
     stats: server_stats;
+    mutable config_snapshot: RunConfig.snapshot;
   }
 
   type request_info = {
@@ -261,6 +266,32 @@ Examples:
         unlink_if_exists stderr_path)
       run
 
+  let create_reactive_pipeline () : reactive_pipeline =
+    let dce_config = DceConfig.current () in
+    let reactive_collection = ReactiveAnalysis.create ~config:dce_config in
+    let file_data_collection =
+      ReactiveAnalysis.to_file_data_collection reactive_collection
+    in
+    let reactive_merge = ReactiveMerge.create file_data_collection in
+    let reactive_liveness = ReactiveLiveness.create ~merged:reactive_merge in
+    let value_refs_from =
+      if dce_config.DceConfig.run.transitive then None
+      else Some reactive_merge.ReactiveMerge.value_refs_from
+    in
+    let reactive_solver =
+      ReactiveSolver.create ~decls:reactive_merge.ReactiveMerge.decls
+        ~live:reactive_liveness.ReactiveLiveness.live
+        ~annotations:reactive_merge.ReactiveMerge.annotations ~value_refs_from
+        ~config:dce_config
+    in
+    {
+      dce_config;
+      reactive_collection;
+      reactive_merge;
+      reactive_liveness;
+      reactive_solver;
+    }
+
   let init_state ~(parse_argv : string array -> string option)
       ~(run_analysis :
          dce_config:DceConfig.t ->
@@ -291,39 +322,16 @@ Examples:
              server with editor-like args only."
             !Cli.churn
         else
-          let dce_config = DceConfig.current () in
-          let reactive_collection =
-            ReactiveAnalysis.create ~config:dce_config
-          in
-          let file_data_collection =
-            ReactiveAnalysis.to_file_data_collection reactive_collection
-          in
-          let reactive_merge = ReactiveMerge.create file_data_collection in
-          let reactive_liveness =
-            ReactiveLiveness.create ~merged:reactive_merge
-          in
-          let value_refs_from =
-            if dce_config.DceConfig.run.transitive then None
-            else Some reactive_merge.ReactiveMerge.value_refs_from
-          in
-          let reactive_solver =
-            ReactiveSolver.create ~decls:reactive_merge.ReactiveMerge.decls
-              ~live:reactive_liveness.ReactiveLiveness.live
-              ~annotations:reactive_merge.ReactiveMerge.annotations
-              ~value_refs_from ~config:dce_config
-          in
+          let pipeline = create_reactive_pipeline () in
           Ok
             {
               parse_argv;
               run_analysis;
               config;
               cmtRoot;
-              dce_config;
-              reactive_collection;
-              reactive_merge;
-              reactive_liveness;
-              reactive_solver;
+              pipeline;
               stats = {request_count = 0};
+              config_snapshot = RunConfig.snapshot ();
             })
 
   let run_one_request (state : server_state) (_req : request) :
@@ -347,6 +355,17 @@ Examples:
         (* Always run from the server's project root; client cwd is not stable in VS Code. *)
         state.config.cwd (fun () ->
           capture_stdout_stderr (fun () ->
+              (* Re-read config from rescript.json to detect changes.
+                 If changed, recreate the entire reactive pipeline from scratch. *)
+              RunConfig.reset ();
+              Paths.Config.processConfig ();
+              let new_snapshot = RunConfig.snapshot () in
+              if
+                not
+                  (RunConfig.equal_snapshot state.config_snapshot new_snapshot)
+              then (
+                state.pipeline <- create_reactive_pipeline ();
+                state.config_snapshot <- new_snapshot);
               Log_.Color.setup ();
               Timing.enabled := !Cli.timing;
               Reactive.set_debug !Cli.timing;
@@ -357,18 +376,18 @@ Examples:
               (* Match direct CLI output (a leading newline before the JSON array). *)
               Printf.printf "\n";
               EmitJson.start ();
-              state.run_analysis ~dce_config:state.dce_config
-                ~cmtRoot:state.cmtRoot
-                ~reactive_collection:(Some state.reactive_collection)
-                ~reactive_merge:(Some state.reactive_merge)
-                ~reactive_liveness:(Some state.reactive_liveness)
-                ~reactive_solver:(Some state.reactive_solver) ~skip_file:None
+              let p = state.pipeline in
+              state.run_analysis ~dce_config:p.dce_config ~cmtRoot:state.cmtRoot
+                ~reactive_collection:(Some p.reactive_collection)
+                ~reactive_merge:(Some p.reactive_merge)
+                ~reactive_liveness:(Some p.reactive_liveness)
+                ~reactive_solver:(Some p.reactive_solver) ~skip_file:None
                 ~file_stats ();
               issue_count := Log_.Stats.get_issue_count ();
-              let d, l = ReactiveSolver.stats ~t:state.reactive_solver in
+              let d, l = ReactiveSolver.stats ~t:p.reactive_solver in
               dead_count := d;
               live_count := l;
-              Log_.Stats.report ~config:state.dce_config;
+              Log_.Stats.report ~config:p.dce_config;
               Log_.Stats.clear ();
               EmitJson.finish ())
           |> response_of_result)
