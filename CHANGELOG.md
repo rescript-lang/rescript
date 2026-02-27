@@ -18,6 +18,8 @@
 
 #### :rocket: New Feature
 
+- Reanalyze: add glob pattern support for suppress/unsuppress configurations (e.g., `"src/generated/**"`). https://github.com/rescript-lang/rescript/pull/8277
+
 #### :bug: Bug fix
 
 - Reanalyze server: invalidate cache and recompute results when config changes in `rescript.json`. https://github.com/rescript-lang/rescript/pull/8262
