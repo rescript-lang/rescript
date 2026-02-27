@@ -471,6 +471,8 @@ jobs:
   pkg-pr-new:
     needs:
       - build-compiler
+    outputs:
+      commit_sha: ${{ steps.publish.outputs.sha }}
     runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout
@@ -497,6 +499,7 @@ jobs:
           git diff --exit-code packages/artifacts.json
 
       - name: Publish packages to pkg.pr.new
+        id: publish
         run: |
           yarn dlx pkg-pr-new publish "." "./packages/@rescript/*"
 
@@ -587,9 +590,9 @@ jobs:
 
       - name: Install ReScript package
         run: |
-          COMMIT_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+          COMMIT_SHA="${{ needs.pkg-pr-new.outputs.commit_sha }}"
           npm i --no-audit \
-            "https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA::7}"
+            "https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA}"
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 
@@ -641,8 +644,8 @@ jobs:
 
       - name: Install ReScript package
         run: |
-          COMMIT_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
-          pnpm i "https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA::7}"
+          COMMIT_SHA="${{ needs.pkg-pr-new.outputs.commit_sha }}"
+          pnpm i "https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA}"
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 
@@ -676,8 +679,8 @@ jobs:
 
       - name: Install ReScript package in rewatch/testrepo
         run: |
-          COMMIT_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
-          yarn add "rescript@https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA::7}"
+          COMMIT_SHA="${{ needs.pkg-pr-new.outputs.commit_sha }}"
+          yarn add "rescript@https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA}"
         shell: bash
         working-directory: rewatch/testrepo
 
