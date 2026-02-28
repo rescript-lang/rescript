@@ -401,14 +401,14 @@ jobs:
 
       - name: "Upload artifacts: binaries"
         if: matrix.upload_binaries
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: binaries-${{ matrix.node-target }}
           path: packages/@rescript/${{ matrix.node-target }}/bin
 
       - name: "Upload artifacts: lib/ocaml"
         if: matrix.upload_libs
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: lib-ocaml
           path: |
@@ -423,7 +423,7 @@ jobs:
       - name: "Upload artifacts: scripts/res/apiDocs"
         id: upload-api-docs
         if: ${{ matrix.generate_api_docs }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: api
           path: scripts/res/apiDocs/
