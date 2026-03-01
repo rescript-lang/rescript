@@ -1089,7 +1089,8 @@ let fixpoint ~name ~(init : ('k, unit) t) ~(edges : ('k, 'k list) t) () :
     if output_entries <> [] then (
       let num_adds, num_removes = count_changes output_entries in
       my_stats.deltas_emitted <- my_stats.deltas_emitted + 1;
-      my_stats.entries_emitted <- my_stats.entries_emitted + List.length output_entries;
+      my_stats.entries_emitted <-
+        my_stats.entries_emitted + List.length output_entries;
       my_stats.adds_emitted <- my_stats.adds_emitted + num_adds;
       my_stats.removes_emitted <- my_stats.removes_emitted + num_removes;
       let delta = Batch output_entries in

@@ -672,6 +672,192 @@ let test_fixpoint_remove_base_needs_rederivation () =
   assert (get fp "y" = Some ());
   Printf.printf "PASSED\n\n"
 
+let test_fixpoint_batch_overlapping_deletions () =
+  reset ();
+  Printf.printf "=== Test: fixpoint batch overlapping deletions ===\n";
+
+  let init, emit_init = source ~name:"init" () in
+  let edges, emit_edges = source ~name:"edges" () in
+
+  (* r -> a,b ; a -> x ; b -> x ; x -> y *)
+  emit_edges (Set ("r", ["a"; "b"]));
+  emit_edges (Set ("a", ["x"]));
+  emit_edges (Set ("b", ["x"]));
+  emit_edges (Set ("x", ["y"]));
+
+  let fp = fixpoint ~name:"fp" ~init ~edges () in
+  emit_init (Set ("r", ()));
+
+  assert (get fp "x" = Some ());
+  assert (get fp "y" = Some ());
+
+  let removed = ref [] in
+  subscribe
+    (function
+      | Remove k -> removed := k :: !removed
+      | Batch entries ->
+        List.iter
+          (fun (k, v_opt) -> if v_opt = None then removed := k :: !removed)
+          entries
+      | _ -> ())
+    fp;
+
+  (* Remove both supports for x in one batch. *)
+  emit_edges (Batch [("a", Some []); ("b", Some [])]);
+
+  Printf.printf "Removed: [%s]\n" (String.concat ", " !removed);
+  assert (List.mem "x" !removed);
+  assert (List.mem "y" !removed);
+  assert (List.length !removed = 2);
+  assert (get fp "x" = None);
+  assert (get fp "y" = None);
+  assert (length fp = 3);
+
+  (* r, a, b *)
+  Printf.printf "PASSED\n\n"
+
+let test_fixpoint_batch_delete_add_same_wave () =
+  reset ();
+  Printf.printf "=== Test: fixpoint batch delete+add same wave ===\n";
+
+  let init, emit_init = source ~name:"init" () in
+  let edges, emit_edges = source ~name:"edges" () in
+
+  (* r -> a,c ; a -> x ; c -> [] *)
+  emit_edges (Set ("r", ["a"; "c"]));
+  emit_edges (Set ("a", ["x"]));
+  emit_edges (Set ("c", []));
+
+  let fp = fixpoint ~name:"fp" ~init ~edges () in
+  emit_init (Set ("r", ()));
+
+  assert (get fp "x" = Some ());
+  assert (length fp = 4);
+
+  let added = ref [] in
+  let removed = ref [] in
+  subscribe
+    (function
+      | Set (k, ()) -> added := k :: !added
+      | Remove k -> removed := k :: !removed
+      | Batch entries ->
+        List.iter
+          (fun (k, v_opt) ->
+            match v_opt with
+            | Some () -> added := k :: !added
+            | None -> removed := k :: !removed)
+          entries)
+    fp;
+
+  (* In one batch: remove a->x and add c->x. x should stay live. *)
+  emit_edges (Batch [("a", Some []); ("c", Some ["x"])]);
+
+  Printf.printf "Removed: [%s], Added: [%s]\n"
+    (String.concat ", " !removed)
+    (String.concat ", " !added);
+
+  assert (get fp "x" = Some ());
+  assert (length fp = 4);
+  assert (!removed = []);
+  assert (!added = []);
+
+  Printf.printf "PASSED\n\n"
+
+let test_fixpoint_fanin_single_predecessor_removed () =
+  reset ();
+  Printf.printf "=== Test: fixpoint fan-in single predecessor removed ===\n";
+
+  let init, emit_init = source ~name:"init" () in
+  let edges, emit_edges = source ~name:"edges" () in
+
+  (* r -> a,b,c ; a,b,c -> z *)
+  emit_edges (Set ("r", ["a"; "b"; "c"]));
+  emit_edges (Set ("a", ["z"]));
+  emit_edges (Set ("b", ["z"]));
+  emit_edges (Set ("c", ["z"]));
+
+  let fp = fixpoint ~name:"fp" ~init ~edges () in
+  emit_init (Set ("r", ()));
+
+  assert (get fp "z" = Some ());
+  assert (length fp = 5);
+
+  let removed = ref [] in
+  subscribe
+    (function
+      | Remove k -> removed := k :: !removed
+      | Batch entries ->
+        List.iter
+          (fun (k, v_opt) -> if v_opt = None then removed := k :: !removed)
+          entries
+      | _ -> ())
+    fp;
+
+  (* Remove only one predecessor contribution; z should remain live. *)
+  emit_edges (Set ("a", []));
+
+  Printf.printf "Removed: [%s]\n" (String.concat ", " !removed);
+  assert (get fp "z" = Some ());
+  assert (length fp = 5);
+  assert (!removed = []);
+
+  Printf.printf "PASSED\n\n"
+
+let test_fixpoint_cycle_alternative_external_support () =
+  reset ();
+  Printf.printf
+    "=== Test: fixpoint cycle with alternative external support ===\n";
+
+  let init, emit_init = source ~name:"init" () in
+  let edges, emit_edges = source ~name:"edges" () in
+
+  (* r1 -> b ; r2 -> c ; b <-> c *)
+  emit_edges (Set ("r1", ["b"]));
+  emit_edges (Set ("r2", ["c"]));
+  emit_edges (Set ("b", ["c"]));
+  emit_edges (Set ("c", ["b"]));
+
+  let fp = fixpoint ~name:"fp" ~init ~edges () in
+  emit_init (Set ("r1", ()));
+  emit_init (Set ("r2", ()));
+
+  assert (get fp "b" = Some ());
+  assert (get fp "c" = Some ());
+
+  let removed = ref [] in
+  subscribe
+    (function
+      | Remove k -> removed := k :: !removed
+      | Batch entries ->
+        List.iter
+          (fun (k, v_opt) -> if v_opt = None then removed := k :: !removed)
+          entries
+      | _ -> ())
+    fp;
+
+  (* Remove one external support edge; cycle should remain via r2 -> c. *)
+  emit_edges (Set ("r1", []));
+
+  Printf.printf "After removing r1->b, removed: [%s]\n"
+    (String.concat ", " !removed);
+  assert (get fp "b" = Some ());
+  assert (get fp "c" = Some ());
+  assert (!removed = []);
+
+  removed := [];
+
+  (* Remove the other external support edge; cycle should now disappear. *)
+  emit_edges (Set ("r2", []));
+
+  Printf.printf "After removing r2->c, removed: [%s]\n"
+    (String.concat ", " !removed);
+  assert (List.mem "b" !removed);
+  assert (List.mem "c" !removed);
+  assert (get fp "b" = None);
+  assert (get fp "c" = None);
+
+  Printf.printf "PASSED\n\n"
+
 let run_all () =
   Printf.printf "\n====== Fixpoint Incremental Tests ======\n\n";
   test_fixpoint_add_base ();
@@ -687,4 +873,8 @@ let run_all () =
   test_fixpoint_remove_edge_entry_rederivation ();
   test_fixpoint_remove_edge_entry_higher_rank_support ();
   test_fixpoint_remove_edge_entry_needs_rederivation ();
-  test_fixpoint_remove_base_needs_rederivation ()
+  test_fixpoint_remove_base_needs_rederivation ();
+  test_fixpoint_batch_overlapping_deletions ();
+  test_fixpoint_batch_delete_add_same_wave ();
+  test_fixpoint_fanin_single_predecessor_removed ();
+  test_fixpoint_cycle_alternative_external_support ()
