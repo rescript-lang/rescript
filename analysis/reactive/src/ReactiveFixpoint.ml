@@ -560,14 +560,6 @@ let apply t ~init_entries ~edge_entries =
   Invariants.assert_no_supported_deleted_left ~deleted_nodes ~current:t.current
     ~supported;
 
-  Hashtbl.iter
-    (fun k () ->
-      if not (Hashtbl.mem t.current k) then
-        output_entries := (k, None) :: !output_entries)
-    deleted_nodes;
-  Invariants.assert_removal_output_matches ~output_entries:!output_entries
-    ~deleted_nodes ~current:t.current;
-
   let expansion_queue = Queue.create () in
   let expansion_seen : ('k, unit) Hashtbl.t = Hashtbl.create 128 in
   let expansion_queue_pops = ref 0 in
@@ -606,6 +598,13 @@ let apply t ~init_entries ~edge_entries =
         !expansion_edges_scanned + List.length successors;
       List.iter add_live successors
   done;
+  Hashtbl.iter
+    (fun k () ->
+      if not (Hashtbl.mem t.current k) then
+        output_entries := (k, None) :: !output_entries)
+    deleted_nodes;
+  Invariants.assert_removal_output_matches ~output_entries:!output_entries
+    ~deleted_nodes ~current:t.current;
   (match pre_current with
   | Some pre ->
     Invariants.assert_final_fixpoint_and_delta

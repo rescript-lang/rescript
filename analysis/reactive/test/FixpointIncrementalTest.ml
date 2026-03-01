@@ -858,6 +858,58 @@ let test_fixpoint_cycle_alternative_external_support () =
 
   Printf.printf "PASSED\n\n"
 
+let test_fixpoint_remove_then_readd_via_expansion_same_wave () =
+  reset ();
+  Printf.printf
+    "=== Test: fixpoint remove then re-add via expansion (same wave) ===\n";
+
+  let init, emit_init = source ~name:"init" () in
+  let edges, emit_edges = source ~name:"edges" () in
+
+  (* r -> s ; s -> x ; y -> x ; then update s -> y.
+     x is first tentatively deleted (s no longer points to x),
+     then becomes reachable again via new path r -> s -> y -> x. *)
+  emit_edges (Set ("r", ["s"]));
+  emit_edges (Set ("s", ["x"]));
+  emit_edges (Set ("y", ["x"]));
+
+  let fp = fixpoint ~name:"fp" ~init ~edges () in
+  emit_init (Set ("r", ()));
+
+  assert (get fp "x" = Some ());
+  assert (get fp "y" = None);
+  assert (length fp = 3);
+
+  let added = ref [] in
+  let removed = ref [] in
+  subscribe
+    (function
+      | Set (k, ()) -> added := k :: !added
+      | Remove k -> removed := k :: !removed
+      | Batch entries ->
+        List.iter
+          (fun (k, v_opt) ->
+            match v_opt with
+            | Some () -> added := k :: !added
+            | None -> removed := k :: !removed)
+          entries)
+    fp;
+
+  emit_edges (Set ("s", ["y"]));
+
+  Printf.printf "Removed: [%s], Added: [%s]\n"
+    (String.concat ", " !removed)
+    (String.concat ", " !added);
+
+  (* x should remain reachable; it must not be emitted as removed. *)
+  assert (get fp "x" = Some ());
+  assert (get fp "y" = Some ());
+  assert (length fp = 4);
+  assert (not (List.mem "x" !removed));
+  assert (List.mem "y" !added);
+
+  Printf.printf "PASSED\n\n"
+
 let run_all () =
   Printf.printf "\n====== Fixpoint Incremental Tests ======\n\n";
   test_fixpoint_add_base ();
@@ -877,4 +929,5 @@ let run_all () =
   test_fixpoint_batch_overlapping_deletions ();
   test_fixpoint_batch_delete_add_same_wave ();
   test_fixpoint_fanin_single_predecessor_removed ();
-  test_fixpoint_cycle_alternative_external_support ()
+  test_fixpoint_cycle_alternative_external_support ();
+  test_fixpoint_remove_then_readd_via_expansion_same_wave ()
