@@ -31,6 +31,149 @@ let analyze_edge_change ~old_succs ~new_succs =
     in
     (removed_targets, has_new_edge)
 
+let compute_reachable_from_roots_with_work t =
+  let new_current = Hashtbl.create (Hashtbl.length t.current) in
+  let frontier = Queue.create () in
+  let nodes_visited = ref 0 in
+  let edges_scanned = ref 0 in
+
+  Hashtbl.iter
+    (fun k () ->
+      Hashtbl.replace new_current k ();
+      incr nodes_visited;
+      Queue.add k frontier)
+    t.roots;
+
+  while not (Queue.is_empty frontier) do
+    let k = Queue.pop frontier in
+    match Hashtbl.find_opt t.edge_map k with
+    | None -> ()
+    | Some successors ->
+      edges_scanned := !edges_scanned + List.length successors;
+      List.iter
+        (fun succ ->
+          if not (Hashtbl.mem new_current succ) then (
+            Hashtbl.replace new_current succ ();
+            incr nodes_visited;
+            Queue.add succ frontier))
+        successors
+  done;
+  (new_current, !nodes_visited, !edges_scanned)
+
+module Metrics = struct
+  let enabled =
+    match Sys.getenv_opt "RESCRIPT_REACTIVE_FIXPOINT_METRICS" with
+    | Some ("1" | "true" | "TRUE" | "yes" | "YES") -> true
+    | _ -> false
+
+  type t = {
+    mutable apply_calls: int;
+    mutable init_entries_total: int;
+    mutable edge_entries_total: int;
+    mutable output_entries_total: int;
+    mutable deleted_nodes_total: int;
+    mutable rederived_nodes_total: int;
+    mutable delete_then_rederive_calls: int;
+    mutable incr_node_work_total: int;
+    mutable incr_edge_work_total: int;
+    mutable full_node_work_total: int;
+    mutable full_edge_work_total: int;
+    mutable max_init_entries: int;
+    mutable max_edge_entries: int;
+    mutable max_deleted_nodes: int;
+    mutable max_rederived_nodes: int;
+  }
+
+  let totals =
+    {
+      apply_calls = 0;
+      init_entries_total = 0;
+      edge_entries_total = 0;
+      output_entries_total = 0;
+      deleted_nodes_total = 0;
+      rederived_nodes_total = 0;
+      delete_then_rederive_calls = 0;
+      incr_node_work_total = 0;
+      incr_edge_work_total = 0;
+      full_node_work_total = 0;
+      full_edge_work_total = 0;
+      max_init_entries = 0;
+      max_edge_entries = 0;
+      max_deleted_nodes = 0;
+      max_rederived_nodes = 0;
+    }
+
+  let update ~init_entries ~edge_entries ~output_entries ~deleted_nodes
+      ~rederived_nodes ~incr_node_work ~incr_edge_work ~full_node_work
+      ~full_edge_work =
+    if enabled then (
+      totals.apply_calls <- totals.apply_calls + 1;
+      totals.init_entries_total <- totals.init_entries_total + init_entries;
+      totals.edge_entries_total <- totals.edge_entries_total + edge_entries;
+      totals.output_entries_total <-
+        totals.output_entries_total + output_entries;
+      totals.deleted_nodes_total <- totals.deleted_nodes_total + deleted_nodes;
+      totals.rederived_nodes_total <-
+        totals.rederived_nodes_total + rederived_nodes;
+      if deleted_nodes > 0 && rederived_nodes > 0 then
+        totals.delete_then_rederive_calls <-
+          totals.delete_then_rederive_calls + 1;
+      totals.incr_node_work_total <-
+        totals.incr_node_work_total + incr_node_work;
+      totals.incr_edge_work_total <-
+        totals.incr_edge_work_total + incr_edge_work;
+      totals.full_node_work_total <-
+        totals.full_node_work_total + full_node_work;
+      totals.full_edge_work_total <-
+        totals.full_edge_work_total + full_edge_work;
+      totals.max_init_entries <- max totals.max_init_entries init_entries;
+      totals.max_edge_entries <- max totals.max_edge_entries edge_entries;
+      totals.max_deleted_nodes <- max totals.max_deleted_nodes deleted_nodes;
+      totals.max_rederived_nodes <-
+        max totals.max_rederived_nodes rederived_nodes)
+
+  let emit_summary () =
+    if enabled then
+      let pct_incr_nodes =
+        if totals.full_node_work_total = 0 then 0.
+        else
+          100.
+          *. float_of_int totals.incr_node_work_total
+          /. float_of_int totals.full_node_work_total
+      in
+      let pct_incr_edges =
+        if totals.full_edge_work_total = 0 then 0.
+        else
+          100.
+          *. float_of_int totals.incr_edge_work_total
+          /. float_of_int totals.full_edge_work_total
+      in
+      prerr_endline
+        (Printf.sprintf
+           "[ReactiveFixpointMetrics] apply_calls=%d init_entries_total=%d \
+            edge_entries_total=%d output_entries_total=%d \
+            deleted_nodes_total=%d rederived_nodes_total=%d \
+            delete_then_rederive_calls=%d incr_node_work_total=%d \
+            full_node_work_total=%d incr_edge_work_total=%d \
+            full_edge_work_total=%d incr_vs_full_nodes_pct=%.2f \
+            incr_vs_full_edges_pct=%.2f max_init_entries=%d \
+            max_edge_entries=%d max_deleted_nodes=%d max_rederived_nodes=%d"
+           totals.apply_calls totals.init_entries_total
+           totals.edge_entries_total totals.output_entries_total
+           totals.deleted_nodes_total totals.rederived_nodes_total
+           totals.delete_then_rederive_calls totals.incr_node_work_total
+           totals.full_node_work_total totals.incr_edge_work_total
+           totals.full_edge_work_total pct_incr_nodes pct_incr_edges
+           totals.max_init_entries totals.max_edge_entries
+           totals.max_deleted_nodes totals.max_rederived_nodes)
+
+  let emit_summary_on_signal _ = emit_summary ()
+  let () =
+    if enabled then
+      Sys.set_signal Sys.sigusr1 (Sys.Signal_handle emit_summary_on_signal)
+  let () = at_exit emit_summary
+end
+
 module Invariants = struct
   let enabled =
     match Sys.getenv_opt "RESCRIPT_REACTIVE_FIXPOINT_ASSERT" with
@@ -40,7 +183,8 @@ module Invariants = struct
   let () =
     if enabled then
       prerr_endline
-        "[ReactiveFixpoint] debug invariants enabled (RESCRIPT_REACTIVE_FIXPOINT_ASSERT)"
+        "[ReactiveFixpoint] debug invariants enabled \
+         (RESCRIPT_REACTIVE_FIXPOINT_ASSERT)"
 
   let assert_ condition message =
     if enabled && not condition then failwith message
@@ -164,10 +308,21 @@ module Invariants = struct
           | None -> Hashtbl.replace actual_removes k ())
         output_entries;
 
-      assert_
-        (set_equal expected_adds actual_adds
-        && set_equal expected_removes actual_removes)
-        "ReactiveFixpoint.apply invariant failed: output delta mismatch")
+      let adds_ok = set_equal expected_adds actual_adds in
+      let removes_ok = set_equal expected_removes actual_removes in
+      if not (adds_ok && removes_ok) then
+        failwith
+          (Printf.sprintf
+             "ReactiveFixpoint.apply invariant failed: output delta mismatch \
+              (pre=%d final=%d output=%d expected_adds=%d actual_adds=%d \
+              expected_removes=%d actual_removes=%d)"
+             (Hashtbl.length pre_current)
+             (Hashtbl.length t.current)
+             (List.length output_entries)
+             (Hashtbl.length expected_adds)
+             (Hashtbl.length actual_adds)
+             (Hashtbl.length expected_removes)
+             (Hashtbl.length actual_removes)))
 end
 
 let create () =
@@ -182,30 +337,9 @@ let iter_current t f = Hashtbl.iter f t.current
 let get_current t k = Hashtbl.find_opt t.current k
 let current_length t = Hashtbl.length t.current
 
-(* BFS helper to find all reachable from roots. *)
 let compute_reachable_from_roots t =
-  let new_current = Hashtbl.create (Hashtbl.length t.current) in
-  let frontier = Queue.create () in
-
-  Hashtbl.iter
-    (fun k () ->
-      Hashtbl.replace new_current k ();
-      Queue.add k frontier)
-    t.roots;
-
-  while not (Queue.is_empty frontier) do
-    let k = Queue.pop frontier in
-    match Hashtbl.find_opt t.edge_map k with
-    | None -> ()
-    | Some successors ->
-      List.iter
-        (fun succ ->
-          if not (Hashtbl.mem new_current succ) then (
-            Hashtbl.replace new_current succ ();
-            Queue.add succ frontier))
-        successors
-  done;
-  new_current
+  let reachable, _nodes, _edges = compute_reachable_from_roots_with_work t in
+  reachable
 
 let replace_current_with t new_current =
   Hashtbl.reset t.current;
@@ -330,6 +464,8 @@ let apply t ~init_entries ~edge_entries =
 
   let deleted_nodes : ('k, unit) Hashtbl.t = Hashtbl.create 128 in
   let delete_queue = Queue.create () in
+  let delete_queue_pops = ref 0 in
+  let delete_edges_scanned = ref 0 in
 
   let mark_deleted k =
     if Hashtbl.mem t.current k && not (Hashtbl.mem deleted_nodes k) then (
@@ -356,7 +492,10 @@ let apply t ~init_entries ~edge_entries =
 
   while not (Queue.is_empty delete_queue) do
     let k = Queue.pop delete_queue in
-    List.iter mark_deleted (old_successors k)
+    incr delete_queue_pops;
+    let succs = old_successors k in
+    delete_edges_scanned := !delete_edges_scanned + List.length succs;
+    List.iter mark_deleted succs
   done;
   Invariants.assert_deleted_nodes_closed ~current:t.current ~deleted_nodes
     ~old_successors;
@@ -384,6 +523,9 @@ let apply t ~init_entries ~edge_entries =
 
   let rederive_queue = Queue.create () in
   let rederive_pending : ('k, unit) Hashtbl.t = Hashtbl.create 128 in
+  let rederive_queue_pops = ref 0 in
+  let rederived_nodes = ref 0 in
+  let rederive_edges_scanned = ref 0 in
 
   let enqueue_rederive_if_needed k =
     if
@@ -400,6 +542,7 @@ let apply t ~init_entries ~edge_entries =
 
   while not (Queue.is_empty rederive_queue) do
     let k = Queue.pop rederive_queue in
+    incr rederive_queue_pops;
     Hashtbl.remove rederive_pending k;
     if
       Hashtbl.mem deleted_nodes k
@@ -407,9 +550,12 @@ let apply t ~init_entries ~edge_entries =
       && supported k
     then (
       Hashtbl.replace t.current k ();
+      incr rederived_nodes;
       match Hashtbl.find_opt t.edge_map k with
       | None -> ()
-      | Some succs -> List.iter enqueue_rederive_if_needed succs)
+      | Some succs ->
+        rederive_edges_scanned := !rederive_edges_scanned + List.length succs;
+        List.iter enqueue_rederive_if_needed succs)
   done;
   Invariants.assert_no_supported_deleted_left ~deleted_nodes ~current:t.current
     ~supported;
@@ -424,6 +570,8 @@ let apply t ~init_entries ~edge_entries =
 
   let expansion_queue = Queue.create () in
   let expansion_seen : ('k, unit) Hashtbl.t = Hashtbl.create 128 in
+  let expansion_queue_pops = ref 0 in
+  let expansion_edges_scanned = ref 0 in
 
   let enqueue_expand k =
     if Hashtbl.mem t.current k && not (Hashtbl.mem expansion_seen k) then (
@@ -450,9 +598,13 @@ let apply t ~init_entries ~edge_entries =
 
   while not (Queue.is_empty expansion_queue) do
     let k = Queue.pop expansion_queue in
+    incr expansion_queue_pops;
     match Hashtbl.find_opt t.edge_map k with
     | None -> ()
-    | Some successors -> List.iter add_live successors
+    | Some successors ->
+      expansion_edges_scanned :=
+        !expansion_edges_scanned + List.length successors;
+      List.iter add_live successors
   done;
   (match pre_current with
   | Some pre ->
@@ -460,5 +612,26 @@ let apply t ~init_entries ~edge_entries =
       ~compute_reachable:compute_reachable_from_roots ~t ~pre_current:pre
       ~output_entries:!output_entries
   | None -> ());
+
+  (if Metrics.enabled then
+     (* Metrics mode intentionally computes a full closure baseline to compare
+       incremental work against full recomputation. Keep this opt-in only. *)
+     let _full_reachable, full_node_work, full_edge_work =
+       compute_reachable_from_roots_with_work t
+     in
+     let incr_node_work =
+       List.length init_entries + List.length edge_entries + !delete_queue_pops
+       + !rederive_queue_pops + !expansion_queue_pops
+     in
+     let incr_edge_work =
+       !delete_edges_scanned + !rederive_edges_scanned
+       + !expansion_edges_scanned
+     in
+     Metrics.update ~init_entries:(List.length init_entries)
+       ~edge_entries:(List.length edge_entries)
+       ~output_entries:(List.length !output_entries)
+       ~deleted_nodes:(Hashtbl.length deleted_nodes)
+       ~rederived_nodes:!rederived_nodes ~incr_node_work ~incr_edge_work
+       ~full_node_work ~full_edge_work);
 
   !output_entries
