@@ -1,5 +1,6 @@
 
 
+import * as Primitive_int from "./Primitive_int.mjs";
 import * as Primitive_option from "./Primitive_option.mjs";
 
 function make(length, x) {
@@ -189,6 +190,70 @@ function findMap(arr, f) {
   };
 }
 
+function zip(xs, ys) {
+  let lenx = xs.length;
+  let leny = ys.length;
+  let len = Primitive_int.min(lenx, leny);
+  let s = new Array(len);
+  for (let i = 0; i < len; ++i) {
+    s[i] = [
+      xs[i],
+      ys[i]
+    ];
+  }
+  return s;
+}
+
+function zipBy(xs, ys, f) {
+  let lenx = xs.length;
+  let leny = ys.length;
+  let len = Primitive_int.min(lenx, leny);
+  let s = new Array(len);
+  for (let i = 0; i < len; ++i) {
+    s[i] = f(xs[i], ys[i]);
+  }
+  return s;
+}
+
+function partition(a, f) {
+  let l = a.length;
+  let i = 0;
+  let j = 0;
+  let a1 = new Array(l);
+  let a2 = new Array(l);
+  for (let ii = 0; ii < l; ++ii) {
+    let v = a[ii];
+    if (f(v)) {
+      a1[i] = v;
+      i = i + 1 | 0;
+    } else {
+      a2[j] = v;
+      j = j + 1 | 0;
+    }
+  }
+  a1.length = i;
+  a2.length = j;
+  return [
+    a1,
+    a2
+  ];
+}
+
+function unzip(a) {
+  let l = a.length;
+  let a1 = new Array(l);
+  let a2 = new Array(l);
+  for (let i = 0; i < l; ++i) {
+    let match = a[i];
+    a1[i] = match[0];
+    a2[i] = match[1];
+  }
+  return [
+    a1,
+    a2
+  ];
+}
+
 function last(a) {
   return a[a.length - 1 | 0];
 }
@@ -213,6 +278,10 @@ export {
   toShuffled,
   shuffle,
   findMap,
+  zip,
+  zipBy,
+  partition,
+  unzip,
   last,
 }
 /* No side effect */

@@ -1532,7 +1532,7 @@ dependencies = [
 
 [[package]]
 name = "rescript"
-version = "13.0.0-alpha.2"
+version = "13.0.0-alpha.3"
 dependencies = [
  "ahash",
  "anyhow",

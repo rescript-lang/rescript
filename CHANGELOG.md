@@ -10,7 +10,7 @@
 > - :nail_care: [Polish]
 > - :house: [Internal]
 
-# 13.0.0-alpha.2 (Unreleased)
+# 13.0.0-alpha.3 (Unreleased)
 
 #### :boom: Breaking Change
 
@@ -20,17 +20,28 @@
 
 #### :bug: Bug fix
 
+- Reanalyze server: invalidate cache and recompute results when config changes in `rescript.json`. https://github.com/rescript-lang/rescript/pull/8262
+
 #### :memo: Documentation
 
 #### :nail_care: Polish
 
+#### :house: Internal
+
+# 13.0.0-alpha.2
+
+#### :bug: Bug fix
+
+- Fix compiler crash (`Fatal error: Parmatch.all_record_args`) when matching empty dict/record patterns. https://github.com/rescript-lang/rescript/pull/8246
+- Fix `null` falling into the object branch instead of the wildcard when pattern matching on untagged variants with both `Object` and `null` cases. https://github.com/rescript-lang/rescript/pull/8253
+
+#### :nail_care: Polish
+
 - Build system: Watch only source folders from build state instead of the entire project directory, and report missing configured source folders. https://github.com/rescript-lang/rescript/pull/8219
-- Build system: Add OpenTelemetry tracing support for cli commands. https://github.com/rescript-lang/rescript/pull/8241
 
 #### :house: Internal
 
-- speed up dev container test by installing ocaml in docker image instead of in `postCreate.sh`. https://github.com/rescript-lang/rescript/pull/8230
-- Migrate rewatch integration tests from bash scripts to Vitest and remove old test infrastructure. https://github.com/rescript-lang/rescript/pull/8241
+- Speed up dev container test by installing OCaml in docker image instead of in `postCreate.sh`. https://github.com/rescript-lang/rescript/pull/8230
 
 # 13.0.0-alpha.1
 
@@ -53,6 +64,7 @@
 #### :rocket: New Feature
 
 - Reanalyze: add scoped `@@live`/`@@dead` annotations for marking module/file sections as live or dead. https://github.com/rescript-lang/rescript/pull/8197
+- Stdlib: Added Array.zip, Array.unzip, Array.zipBy, and Array.partition. https://github.com/rescript-lang/rescript/pull/8244
 
 #### :bug: Bug fix
 

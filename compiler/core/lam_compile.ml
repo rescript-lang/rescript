@@ -818,6 +818,25 @@ let compile output_prefix =
       let not_typeof_clauses, typeof_clauses =
         List.partition clause_is_not_typeof clauses
       in
+      let has_object_typeof =
+        List.exists
+          (function
+            | Ast_untagged_variants.Untagged ObjectType, _ -> true
+            | _ -> false)
+          typeof_clauses
+      in
+      let has_array_case =
+        List.exists
+          (function
+            | Ast_untagged_variants.Untagged (InstanceType Array), _ -> true
+            | _ -> false)
+          not_typeof_clauses
+      in
+      (* When there's an ObjectType typeof case, null and arrays can
+         incorrectly match it (typeof null === typeof [] === "object").
+         Guard against them when they should fall through to default. *)
+      let needs_null_guard = has_object_typeof && has_null_case in
+      let needs_array_guard = has_object_typeof && not has_array_case in
       let rec build_if_chain remaining_clauses =
         match remaining_clauses with
         | ( Ast_untagged_variants.Untagged (InstanceType instance_type),
@@ -827,7 +846,21 @@ let compile output_prefix =
             (E.emit_check (IsInstanceOf (instance_type, Expr e)))
             switch_body
             ~else_:[build_if_chain rest]
-        | _ -> S.string_switch ?default ?declaration (E.typeof e) typeof_clauses
+        | _ -> (
+          let typeof_switch () =
+            S.string_switch ?default ?declaration (E.typeof e) typeof_clauses
+          in
+          let guard =
+            match (needs_null_guard, needs_array_guard) with
+            | true, true -> Some (E.or_ (E.is_null e) (E.is_array e))
+            | true, false -> Some (E.is_null e)
+            | false, true -> Some (E.is_array e)
+            | false, false -> None
+          in
+          match (guard, default) with
+          | Some guard, Some default_body ->
+            S.if_ guard default_body ~else_:[typeof_switch ()]
+          | _ -> typeof_switch ())
       in
       build_if_chain not_typeof_clauses
     in

@@ -17,5 +17,5 @@ jobs:
           # ignore-branches: ""
           ignored-prefixes: "maintenance/"
           last-commit-age-days: 90
-          dry-run: true
+          dry-run: false
           rate-limit: true

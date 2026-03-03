@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://www.npmjs.org/package/rescript"><img src="https://img.shields.io/npm/v/rescript?color=brightgreen&label=npm%20package" alt="Current npm package version." /></a>
   <a href="https://github.com/rescript-lang/rescript/actions"><img src="https://github.com//rescript-lang/rescript/workflows/CI/badge.svg" alt="Current Github Actions workflow status." /></a>
-  <a href="https://github.com/rescript-lang/rescript/blob/HEAD/LICENSE"><img src="https://img.shields.io/badge/License-LGPL%20v3-blue.svg" alt="ReScript is released under the LGPL license." /></a>
+  <a href="https://github.com/rescript-lang/rescript/blob/HEAD/LICENSE"><img src="https://img.shields.io/badge/License-LGPL%20%2B%20MIT-blue.svg" alt="ReScript uses both LGPL and MIT licenses." /></a>
   <a href="https://x.com/intent/follow?screen_name=rescriptlang"><img src="https://img.shields.io/badge/X-000000?style=flat&logo=x&logoColor=white" alt="Follow @rescriptlang on X" /></a>
   <a href="https://bsky.app/profile/rescript-lang.org"><img src="https://img.shields.io/badge/Bluesky-0285FF?logo=bluesky&logoColor=fff&style=flat" alt="Follow @rescriptlang on Bluesky" /></a>
 </p>
@@ -92,9 +92,14 @@ For discussions on ongoing development, see the [Development](https://forum.resc
 
 ## 📄 License
 
-ReScript is licensed under LGPL version 3, with relaxed rules about creating and distributing combined work. See the [LICENSE](LICENSE) file for details.
+ReScript uses multiple licenses in this monorepo:
 
-The ReScript parser (subdirectory `compiler/syntax`) is licensed under the [MIT License](compiler/syntax/LICENSE).
+- `compiler/`: LGPL-3.0-or-later
+- `compiler/syntax/`: MIT
+- `packages/@rescript/runtime/`: MIT
+- `rewatch/`: MIT
+
+See the repository license index in [`LICENSE`](LICENSE) and full license texts in [`COPYING.LESSER`](COPYING.LESSER) and [`LICENSE.MIT`](LICENSE.MIT).
 
 ## 🏅 Acknowledgments
 

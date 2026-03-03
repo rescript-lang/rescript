@@ -58,7 +58,9 @@ time_end() {
 }
 
 BACKUP_FILE="/tmp/reactive-test-backup.$$"
+CONFIG_BACKUP_FILE="/tmp/reactive-test-config-backup.$$"
 DEFAULT_SOCKET_FILE=""
+CONFIG_FILE=""
 
 # Cleanup function
 cleanup() {
@@ -66,6 +68,11 @@ cleanup() {
   if [[ -f "$BACKUP_FILE" ]]; then
     cp "$BACKUP_FILE" "$TEST_FILE"
     rm -f "$BACKUP_FILE"
+  fi
+  # Restore config file if backup exists
+  if [[ -n "$CONFIG_FILE" && -f "$CONFIG_BACKUP_FILE" ]]; then
+    cp "$CONFIG_BACKUP_FILE" "$CONFIG_FILE"
+    rm -f "$CONFIG_BACKUP_FILE"
   fi
   # Stop server if running
   if [[ -n "$SERVER_PID" ]] && kill -0 "$SERVER_PID" 2>/dev/null; then
@@ -190,6 +197,12 @@ configure_project() {
     log_error "Could not find test file for project: $project_name"
     exit 1
   fi
+
+  CONFIG_FILE="$PROJECT_DIR/rescript.json"
+  if [[ ! -f "$CONFIG_FILE" ]]; then
+    log_error "Could not find config file: $CONFIG_FILE"
+    exit 1
+  fi
 }
 
 configure_project
@@ -214,6 +227,7 @@ time_end "initial_build"
 
 # Backup the test file
 cp "$TEST_FILE" "$BACKUP_FILE"
+cp "$CONFIG_FILE" "$CONFIG_BACKUP_FILE"
 
 # Start the server
 start_server() {
@@ -330,6 +344,24 @@ for r in sorted(removed):
         print(f"  - {r[0]} @ {short_file(r[1])}:{format_range(r[2])}: {r[3][:50]}...")
 PY
   time_end "json_compare"
+}
+
+set_config_suppress_all() {
+  python3 - <<PY
+import json
+
+path = "$CONFIG_FILE"
+with open(path) as f:
+    cfg = json.load(f)
+
+reanalyze = cfg.setdefault("reanalyze", {})
+reanalyze["suppress"] = ["src"]
+reanalyze["unsuppress"] = []
+
+with open(path, "w") as f:
+    json.dump(cfg, f, indent=2)
+    f.write("\\n")
+PY
 }
 
 # Add an unused value to the test file (creates +1 dead code warning)
@@ -487,6 +519,42 @@ run_scenario_make_live() {
   return 0
 }
 
+run_scenario_config_change() {
+  local baseline_count="$1"
+  local server_after="/tmp/reanalyze-after-config-server-$$.json"
+  local server_restored="/tmp/reanalyze-restored-config-server-$$.json"
+
+  log_edit "Updating rescript.json (reanalyze.suppress=[\"src\"])..."
+  set_config_suppress_all
+
+  log_reactive "Analyzing after config change..."
+  send_request "$server_after" "incremental"
+  local suppressed_count
+  suppressed_count=$(count_issues "$server_after")
+  if [[ "$suppressed_count" -ne 0 ]]; then
+    log_error "Expected 0 issues after suppressing src via config, got $suppressed_count"
+    rm -f "$server_after" "$server_restored"
+    return 1
+  fi
+
+  cp "$CONFIG_BACKUP_FILE" "$CONFIG_FILE"
+
+  log_reactive "Analyzing after config restore..."
+  send_request "$server_restored" "incremental"
+
+  local restored_count
+  restored_count=$(count_issues "$server_restored")
+  if [[ "$restored_count" -ne "$baseline_count" ]]; then
+    log_error "Expected $baseline_count issues after restoring config, got $restored_count"
+    rm -f "$server_after" "$server_restored"
+    return 1
+  fi
+
+  log "✓ Config change invalidates/recomputes server cache correctly"
+  rm -f "$server_after" "$server_restored"
+  return 0
+}
+
 # Run one benchmark iteration
 run_iteration() {
   local iter="$1"
@@ -538,6 +606,14 @@ main() {
   local baseline_count
   baseline_count=$(count_issues "$baseline_file")
   log "Baseline: $baseline_count issues"
+  log ""
+
+  if ! run_scenario_config_change "$baseline_count"; then
+    log_error "Config-change scenario failed"
+    stop_server
+    rm -f "$baseline_file"
+    exit 1
+  fi
   log ""
   
   #-----------------------------------------
@@ -627,4 +703,3 @@ main() {
 }
 
 main
-

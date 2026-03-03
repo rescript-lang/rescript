@@ -1,19 +1,9 @@
-/* ************************************************************************ */
-/*  */
-/* OCaml */
-/*  */
-/* Francois Pottier, projet Cristal, INRIA Rocquencourt */
-/* Jeremie Dimino, Jane Street Europe */
-/*  */
-/* Copyright 2002 Institut National de Recherche en Informatique et */
-/* en Automatique. */
-/*  */
-/* All rights reserved.  This file is distributed under the terms of */
-/* the GNU Lesser General Public License version 2.1, with the */
-/* special exception on linking described in the file LICENSE. */
-/*  */
-/* ************************************************************************ */
-/* Adapted significantly by ReScript Authors */
+/* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * Copyright (C) 2017- Hongbo Zhang, Authors of ReScript
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
 module A = Belt_Array
 
 type rec node<'a> = {

@@ -1,8 +1,9 @@
 {
   "name": "@rescript/linux-x64",
-  "version": "13.0.0-alpha.2",
+  "version": "13.0.0-alpha.3",
   "description": "ReScript binaries for Linux x86_64",
   "type": "module",
+  "license": "(LGPL-3.0-or-later AND MIT)",
   "homepage": "https://rescript-lang.org",
   "bugs": "https://github.com/rescript-lang/rescript/issues",
   "repository": {
