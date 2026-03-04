@@ -450,7 +450,8 @@ fn namespace_from_package_name(package_name: &str) -> String {
 impl Config {
     /// Try to convert a config from a certain path to a config struct
     pub fn new(path: &Path) -> Result<Self> {
-        let read = fs::read_to_string(path)?;
+        let read =
+            fs::read_to_string(path).map_err(|e| anyhow!("Could not read '{}': {}", path.display(), e))?;
         let mut config = Config::new_from_json_string(&read)?;
         config.set_path(path.to_path_buf())?;
         Ok(config)
@@ -1489,5 +1490,15 @@ pub mod tests {
         // Non-local dependency should never receive warning args, even if override is provided
         let args = config.get_warning_args(false, Some("+3+8+11".to_string()));
         assert_eq!(args, Vec::<String>::new());
+    }
+
+    #[test]
+    fn test_new_missing_rescript_json() {
+        let path = PathBuf::from("/nonexistent/path/rescript.json");
+        let error = Config::new(&path).unwrap_err().to_string();
+        assert!(
+            error.contains(path.to_string_lossy().as_ref()),
+            "Error should include the missing config path, got: {error}"
+        );
     }
 }
