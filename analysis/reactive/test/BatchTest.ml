@@ -9,7 +9,9 @@ let test_batch_flatmap () =
 
   let source, emit = source ~name:"source" () in
   let derived =
-    flatMap ~name:"derived" source ~f:(fun k v -> [(k ^ "_derived", v * 2)]) ()
+    flatMap ~name:"derived" source
+      ~f:(fun k v emit -> emit (k ^ "_derived") (v * 2))
+      ()
   in
 
   (* Subscribe to track what comes out *)
@@ -17,23 +19,21 @@ let test_batch_flatmap () =
   let received_entries = ref [] in
   subscribe
     (function
-      | Batch entries ->
+      | entries ->
         incr received_batches;
-        received_entries := entries @ !received_entries
-      | Set (k, v) -> received_entries := [(k, Some v)] @ !received_entries
-      | Remove k -> received_entries := [(k, None)] @ !received_entries)
+        received_entries := entries @ !received_entries)
     derived;
 
   (* Send a batch *)
-  emit_batch [set "a" 1; set "b" 2; set "c" 3] emit;
+  emit_sets emit [("a", 1); ("b", 2); ("c", 3)];
 
   Printf.printf "Received batches: %d, entries: %d\n" !received_batches
     (List.length !received_entries);
   assert (!received_batches = 1);
   assert (List.length !received_entries = 3);
-  assert (get derived "a_derived" = Some 2);
-  assert (get derived "b_derived" = Some 4);
-  assert (get derived "c_derived" = Some 6);
+  assert (get_opt derived "a_derived" = Some 2);
+  assert (get_opt derived "b_derived" = Some 4);
+  assert (get_opt derived "c_derived" = Some 6);
 
   Printf.printf "PASSED\n\n"
 
@@ -51,33 +51,29 @@ let test_batch_fixpoint () =
   let total_added = ref 0 in
   subscribe
     (function
-      | Batch entries ->
+      | entries ->
         incr batch_count;
         entries
-        |> List.iter (fun (_, v_opt) ->
-               match v_opt with
-               | Some () -> incr total_added
-               | None -> ())
-      | Set (_, ()) -> incr total_added
-      | Remove _ -> ())
+        |> List.iter (fun (_, mv) ->
+               if ReactiveMaybe.is_some mv then incr total_added))
     fp;
 
   (* Set up edges first *)
-  emit_edges (Set ("a", ["b"; "c"]));
-  emit_edges (Set ("b", ["d"]));
+  emit_set emit_edges "a" ["b"; "c"];
+  emit_set emit_edges "b" ["d"];
 
   (* Send batch of roots *)
-  emit_batch [set "a" (); set "x" ()] emit_init;
+  emit_sets emit_init [("a", ()); ("x", ())];
 
   Printf.printf "Batch count: %d, total added: %d\n" !batch_count !total_added;
   Printf.printf "fp length: %d\n" (length fp);
   (* Should have a, b, c, d (reachable from a) and x (standalone root) *)
   assert (length fp = 5);
-  assert (get fp "a" = Some ());
-  assert (get fp "b" = Some ());
-  assert (get fp "c" = Some ());
-  assert (get fp "d" = Some ());
-  assert (get fp "x" = Some ());
+  assert (get_opt fp "a" = Some ());
+  assert (get_opt fp "b" = Some ());
+  assert (get_opt fp "c" = Some ());
+  assert (get_opt fp "d" = Some ());
+  assert (get_opt fp "x" = Some ());
 
   Printf.printf "PASSED\n\n"
 

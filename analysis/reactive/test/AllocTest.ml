@@ -1,0 +1,642 @@
+(** Allocation measurement for reactive combinators.
+
+    Calls combinator internals directly (bypassing the source/emit
+    layer) to measure only the combinator's own allocations. *)
+
+open TestHelpers
+
+let words_since = AllocMeasure.words_since
+
+(* ---- Fixpoint allocation ---- *)
+
+let test_fixpoint_alloc_n n =
+  let state =
+    ReactiveFixpoint.create ~max_nodes:(n * 10) ~max_edges:(n * 100)
+  in
+
+  (* Chain graph: 0 -> 1 -> 2 -> ... -> n-1 *)
+  let root_snap = ReactiveWave.create ~max_entries:1 in
+  let edge_snap = ReactiveWave.create ~max_entries:n in
+  ReactiveWave.push root_snap 0 ();
+  for i = 0 to n - 2 do
+    ReactiveWave.push edge_snap i [i + 1]
+  done;
+  ReactiveFixpoint.initialize state ~roots:root_snap ~edges:edge_snap;
+  assert (ReactiveFixpoint.current_length state = n);
+
+  (* Pre-build waves once *)
+  let remove_root = ReactiveWave.create ~max_entries:1 in
+  ReactiveWave.push remove_root 0 ReactiveMaybe.none;
+  let add_root = ReactiveWave.create ~max_entries:1 in
+  ReactiveWave.push add_root 0 (ReactiveMaybe.some ());
+  let no_edges = ReactiveWave.create ~max_entries:1 in
+
+  (* Warmup *)
+  for _ = 1 to 5 do
+    ignore
+      (ReactiveFixpoint.apply_wave state ~roots:remove_root ~edges:no_edges);
+    ignore (ReactiveFixpoint.apply_wave state ~roots:add_root ~edges:no_edges)
+  done;
+  assert (ReactiveFixpoint.current_length state = n);
+
+  (* Measure *)
+  let iters = 100 in
+  ignore (words_since ());
+  for _ = 1 to iters do
+    ignore
+      (ReactiveFixpoint.apply_wave state ~roots:remove_root ~edges:no_edges);
+    ignore (ReactiveFixpoint.apply_wave state ~roots:add_root ~edges:no_edges)
+  done;
+  assert (ReactiveFixpoint.current_length state = n);
+  words_since () / iters
+
+let test_fixpoint_alloc () =
+  Printf.printf "=== Test: fixpoint allocation ===\n";
+  List.iter
+    (fun n ->
+      let words = test_fixpoint_alloc_n n in
+      Printf.printf "  n=%d: %d words/iter\n" n words)
+    [10; 100; 1000];
+  Printf.printf "PASSED\n\n"
+
+(* ---- FlatMap allocation ---- *)
+
+let test_flatmap_alloc_n n =
+  let output_wave = ReactiveWave.create ~max_entries:(n * 2) in
+  let state =
+    ReactiveFlatMap.create
+      ~f:(fun k v emit -> emit k v)
+      ~merge:(fun _l r -> r)
+      ~output_wave
+  in
+
+  (* Populate: n entries *)
+  for i = 0 to n - 1 do
+    ReactiveFlatMap.push state i (ReactiveMaybe.some i)
+  done;
+  ignore (ReactiveFlatMap.process state);
+  assert (ReactiveFlatMap.target_length state = n);
+
+  (* Warmup: toggle all entries (remove all, re-add all) *)
+  for _ = 1 to 5 do
+    for i = 0 to n - 1 do
+      ReactiveFlatMap.push state i ReactiveMaybe.none
+    done;
+    ignore (ReactiveFlatMap.process state);
+    assert (ReactiveFlatMap.target_length state = 0);
+    for i = 0 to n - 1 do
+      ReactiveFlatMap.push state i (ReactiveMaybe.some i)
+    done;
+    ignore (ReactiveFlatMap.process state);
+    assert (ReactiveFlatMap.target_length state = n)
+  done;
+
+  (* Measure *)
+  let iters = 100 in
+  ignore (words_since ());
+  for _ = 1 to iters do
+    for i = 0 to n - 1 do
+      ReactiveFlatMap.push state i ReactiveMaybe.none
+    done;
+    ignore (ReactiveFlatMap.process state);
+    for i = 0 to n - 1 do
+      ReactiveFlatMap.push state i (ReactiveMaybe.some i)
+    done;
+    ignore (ReactiveFlatMap.process state)
+  done;
+  assert (ReactiveFlatMap.target_length state = n);
+  words_since () / iters
+
+let test_flatmap_alloc () =
+  Printf.printf "=== Test: flatMap allocation ===\n";
+  List.iter
+    (fun n ->
+      let words = test_flatmap_alloc_n n in
+      Printf.printf "  n=%d: %d words/iter\n" n words)
+    [10; 100; 1000];
+  Printf.printf "PASSED\n\n"
+
+(* ---- Union allocation ---- *)
+
+let test_union_alloc_n n =
+  let output_wave = ReactiveWave.create ~max_entries:(n * 2) in
+  let state = ReactiveUnion.create ~merge:(fun _l r -> r) ~output_wave in
+
+  (* Populate: n entries on the left side *)
+  for i = 0 to n - 1 do
+    ReactiveUnion.push_left state i (ReactiveMaybe.some i)
+  done;
+  ignore (ReactiveUnion.process state);
+  assert (ReactiveUnion.target_length state = n);
+
+  (* Warmup: toggle all entries (remove all, re-add all) *)
+  for _ = 1 to 5 do
+    for i = 0 to n - 1 do
+      ReactiveUnion.push_left state i ReactiveMaybe.none
+    done;
+    ignore (ReactiveUnion.process state);
+    assert (ReactiveUnion.target_length state = 0);
+    for i = 0 to n - 1 do
+      ReactiveUnion.push_left state i (ReactiveMaybe.some i)
+    done;
+    ignore (ReactiveUnion.process state);
+    assert (ReactiveUnion.target_length state = n)
+  done;
+
+  (* Measure *)
+  let iters = 100 in
+  ignore (words_since ());
+  for _ = 1 to iters do
+    for i = 0 to n - 1 do
+      ReactiveUnion.push_left state i ReactiveMaybe.none
+    done;
+    ignore (ReactiveUnion.process state);
+    for i = 0 to n - 1 do
+      ReactiveUnion.push_left state i (ReactiveMaybe.some i)
+    done;
+    ignore (ReactiveUnion.process state)
+  done;
+  assert (ReactiveUnion.target_length state = n);
+  words_since () / iters
+
+let test_union_alloc () =
+  Printf.printf "=== Test: union allocation ===\n";
+  List.iter
+    (fun n ->
+      let words = test_union_alloc_n n in
+      Printf.printf "  n=%d: %d words/iter\n" n words)
+    [10; 100; 1000];
+  Printf.printf "PASSED\n\n"
+
+(* ---- Join allocation ---- *)
+
+let test_join_alloc_n n =
+  let output_wave = ReactiveWave.create ~max_entries:(n * 2) in
+  let right_tbl = ReactiveHash.Map.create () in
+  let state =
+    ReactiveJoin.create
+      ~key_of:(fun k _v -> k)
+      ~f:(fun k v right_mb emit ->
+        if ReactiveMaybe.is_some right_mb then
+          emit k (v + ReactiveMaybe.unsafe_get right_mb))
+      ~merge:(fun _l r -> r)
+      ~right_get:(ReactiveHash.Map.find_maybe right_tbl)
+      ~output_wave
+  in
+
+  (* Populate: n entries on the right, n on the left *)
+  for i = 0 to n - 1 do
+    ReactiveHash.Map.replace right_tbl i (i * 10)
+  done;
+  for i = 0 to n - 1 do
+    ReactiveJoin.push_left state i (ReactiveMaybe.some i)
+  done;
+  ignore (ReactiveJoin.process state);
+  assert (ReactiveJoin.target_length state = n);
+
+  (* Warmup: toggle all left entries *)
+  for _ = 1 to 5 do
+    for i = 0 to n - 1 do
+      ReactiveJoin.push_left state i ReactiveMaybe.none
+    done;
+    ignore (ReactiveJoin.process state);
+    assert (ReactiveJoin.target_length state = 0);
+    for i = 0 to n - 1 do
+      ReactiveJoin.push_left state i (ReactiveMaybe.some i)
+    done;
+    ignore (ReactiveJoin.process state);
+    assert (ReactiveJoin.target_length state = n)
+  done;
+
+  (* Measure *)
+  let iters = 100 in
+  ignore (words_since ());
+  for _ = 1 to iters do
+    for i = 0 to n - 1 do
+      ReactiveJoin.push_left state i ReactiveMaybe.none
+    done;
+    ignore (ReactiveJoin.process state);
+    for i = 0 to n - 1 do
+      ReactiveJoin.push_left state i (ReactiveMaybe.some i)
+    done;
+    ignore (ReactiveJoin.process state)
+  done;
+  assert (ReactiveJoin.target_length state = n);
+  words_since () / iters
+
+let test_join_alloc () =
+  Printf.printf "=== Test: join allocation ===\n";
+  List.iter
+    (fun n ->
+      let words = test_join_alloc_n n in
+      Printf.printf "  n=%d: %d words/iter\n" n words)
+    [10; 100; 1000];
+  Printf.printf "PASSED\n\n"
+
+(* ---- Reactive.join end-to-end allocation ---- *)
+
+let test_reactive_join_alloc_n n =
+  Reactive.reset ();
+  let left, emit_left = Reactive.source ~name:"left" () in
+  let right, emit_right = Reactive.source ~name:"right" () in
+
+  (* Join: for each (k, v) in left, look up k in right, produce (k, v + right_v) *)
+  let joined =
+    Reactive.join ~name:"joined" left right
+      ~key_of:(fun k _v -> k)
+      ~f:(fun k v right_mb emit ->
+        if ReactiveMaybe.is_some right_mb then
+          emit k (v + ReactiveMaybe.unsafe_get right_mb))
+      ()
+  in
+
+  (* Populate: n entries on right, then n entries on left *)
+  for i = 0 to n - 1 do
+    emit_set emit_right i (i * 10)
+  done;
+  for i = 0 to n - 1 do
+    emit_set emit_left i i
+  done;
+  assert (Reactive.length joined = n);
+
+  (* Pre-build waves for the hot loop: toggle all left entries *)
+  let remove_wave = ReactiveWave.create ~max_entries:n in
+  for i = 0 to n - 1 do
+    ReactiveWave.push remove_wave i ReactiveMaybe.none
+  done;
+  let add_wave = ReactiveWave.create ~max_entries:n in
+  for i = 0 to n - 1 do
+    ReactiveWave.push add_wave i (ReactiveMaybe.some i)
+  done;
+
+  (* Warmup *)
+  for _ = 1 to 5 do
+    emit_left remove_wave;
+    assert (Reactive.length joined = 0);
+    emit_left add_wave;
+    assert (Reactive.length joined = n)
+  done;
+  ignore emit_right;
+
+  (* Measure *)
+  let iters = 100 in
+  ignore (words_since ());
+  for _ = 1 to iters do
+    emit_left remove_wave;
+    emit_left add_wave
+  done;
+  assert (Reactive.length joined = n);
+  words_since () / iters
+
+let test_reactive_join_alloc () =
+  Printf.printf "=== Test: Reactive.join allocation ===\n";
+  List.iter
+    (fun n ->
+      let words = test_reactive_join_alloc_n n in
+      Printf.printf "  n=%d: %d words/iter\n" n words)
+    [10; 100; 1000];
+  Printf.printf "PASSED\n\n"
+
+(* ---- Reactive.fixpoint end-to-end allocation ---- *)
+
+let test_reactive_fixpoint_alloc_n n =
+  Reactive.reset ();
+  let init, emit_root = Reactive.source ~name:"init" () in
+  let edges, emit_edges = Reactive.source ~name:"edges" () in
+
+  (* Chain graph: 0 -> 1 -> 2 -> ... -> n-1 *)
+  for i = 0 to n - 2 do
+    emit_set emit_edges i [i + 1]
+  done;
+  let reachable = Reactive.fixpoint ~name:"reachable" ~init ~edges () in
+
+  (* Add root to populate *)
+  emit_set emit_root 0 ();
+  assert (Reactive.length reachable = n);
+
+  (* Pre-build waves for the hot loop *)
+  let remove_wave = ReactiveWave.create ~max_entries:1 in
+  ReactiveWave.push remove_wave 0 ReactiveMaybe.none;
+  let add_wave = ReactiveWave.create ~max_entries:1 in
+  ReactiveWave.push add_wave 0 (ReactiveMaybe.some ());
+
+  (* Warmup *)
+  for _ = 1 to 5 do
+    emit_root remove_wave;
+    assert (Reactive.length reachable = 0);
+    emit_root add_wave;
+    assert (Reactive.length reachable = n)
+  done;
+
+  (* Measure *)
+  let iters = 100 in
+  ignore (words_since ());
+  for _ = 1 to iters do
+    emit_root remove_wave;
+    emit_root add_wave
+  done;
+  assert (Reactive.length reachable = n);
+  words_since () / iters
+
+let test_reactive_fixpoint_alloc () =
+  Printf.printf "=== Test: Reactive.fixpoint allocation ===\n";
+  List.iter
+    (fun n ->
+      let words = test_reactive_fixpoint_alloc_n n in
+      Printf.printf "  n=%d: %d words/iter\n" n words)
+    [10; 100; 1000];
+  Printf.printf "PASSED\n\n"
+
+(* ---- Reactive.union end-to-end allocation ---- *)
+
+let test_reactive_union_alloc_n n =
+  Reactive.reset ();
+  let left, emit_left = Reactive.source ~name:"left" () in
+  let right, emit_right = Reactive.source ~name:"right" () in
+
+  let merged = Reactive.union ~name:"merged" left right () in
+
+  (* Populate: n entries on the left side *)
+  for i = 0 to n - 1 do
+    emit_set emit_left i i
+  done;
+  assert (Reactive.length merged = n);
+
+  (* Pre-build waves: single wave with all n entries *)
+  let remove_wave = ReactiveWave.create ~max_entries:n in
+  for i = 0 to n - 1 do
+    ReactiveWave.push remove_wave i ReactiveMaybe.none
+  done;
+  let add_wave = ReactiveWave.create ~max_entries:n in
+  for i = 0 to n - 1 do
+    ReactiveWave.push add_wave i (ReactiveMaybe.some i)
+  done;
+
+  (* Warmup *)
+  for _ = 1 to 5 do
+    emit_left remove_wave;
+    assert (Reactive.length merged = 0);
+    emit_left add_wave;
+    assert (Reactive.length merged = n)
+  done;
+  ignore emit_right;
+
+  (* Measure *)
+  let iters = 100 in
+  ignore (words_since ());
+  for _ = 1 to iters do
+    emit_left remove_wave;
+    emit_left add_wave
+  done;
+  assert (Reactive.length merged = n);
+  words_since () / iters
+
+let test_reactive_union_alloc () =
+  Printf.printf "=== Test: Reactive.union allocation ===\n";
+  List.iter
+    (fun n ->
+      let words = test_reactive_union_alloc_n n in
+      Printf.printf "  n=%d: %d words/iter\n" n words)
+    [10; 100; 1000];
+  Printf.printf "PASSED\n\n"
+
+(* ---- Reactive.flatMap end-to-end allocation ---- *)
+
+let test_reactive_flatmap_alloc_n n =
+  Reactive.reset ();
+  let src, emit_src = Reactive.source ~name:"src" () in
+
+  let derived =
+    Reactive.flatMap ~name:"derived" src ~f:(fun k v emit -> emit k v) ()
+  in
+
+  (* Populate: n entries *)
+  for i = 0 to n - 1 do
+    emit_set emit_src i i
+  done;
+  assert (Reactive.length derived = n);
+
+  (* Pre-build waves *)
+  let remove_wave = ReactiveWave.create ~max_entries:n in
+  for i = 0 to n - 1 do
+    ReactiveWave.push remove_wave i ReactiveMaybe.none
+  done;
+  let add_wave = ReactiveWave.create ~max_entries:n in
+  for i = 0 to n - 1 do
+    ReactiveWave.push add_wave i (ReactiveMaybe.some i)
+  done;
+
+  (* Warmup *)
+  for _ = 1 to 5 do
+    emit_src remove_wave;
+    assert (Reactive.length derived = 0);
+    emit_src add_wave;
+    assert (Reactive.length derived = n)
+  done;
+
+  (* Measure *)
+  let iters = 100 in
+  ignore (words_since ());
+  for _ = 1 to iters do
+    emit_src remove_wave;
+    emit_src add_wave
+  done;
+  assert (Reactive.length derived = n);
+  words_since () / iters
+
+let test_reactive_flatmap_alloc () =
+  Printf.printf "=== Test: Reactive.flatMap allocation ===\n";
+  List.iter
+    (fun n ->
+      let words = test_reactive_flatmap_alloc_n n in
+      Printf.printf "  n=%d: %d words/iter\n" n words)
+    [10; 100; 1000];
+  Printf.printf "PASSED\n\n"
+
+(* ---- PoolMapSet allocation ---- *)
+
+type empty_set_stats = {mutable total: int; mutable empty: int}
+
+let count_pool_empty_sets pms =
+  let s = {total = 0; empty = 0} in
+  ReactivePoolMapSet.iter_with pms s (fun st _k set ->
+      st.total <- st.total + 1;
+      if ReactiveHash.Set.cardinal set = 0 then st.empty <- st.empty + 1);
+  s
+
+let test_pool_map_set_pattern_drain_key_churn () =
+  Printf.printf "=== Test: PoolMapSet pattern (drain_key churn) ===\n";
+  let n = 100 in
+  let iters = 100 in
+  let pms = ReactivePoolMapSet.create ~capacity:(n * 2) in
+
+  for i = 0 to n - 1 do
+    ReactivePoolMapSet.add pms i i
+  done;
+
+  let miss_before = ReactivePoolMapSet.debug_miss_count pms in
+  ignore (words_since ());
+  for iter = 1 to iters do
+    let base = iter * n in
+    for i = 0 to n - 1 do
+      ReactivePoolMapSet.drain_key pms (base - n + i) () (fun () _ -> ())
+    done;
+    for i = 0 to n - 1 do
+      ReactivePoolMapSet.add pms (base + i) i
+    done
+  done;
+  let words = words_since () / iters in
+  let miss_after = ReactivePoolMapSet.debug_miss_count pms in
+  let miss_delta = miss_after - miss_before in
+  let st = count_pool_empty_sets pms in
+  Printf.printf
+    "  words/iter=%d, pool_miss_delta=%d, outer=%d, empty_sets=%d/%d\n" words
+    miss_delta
+    (ReactivePoolMapSet.cardinal pms)
+    st.empty st.total;
+  assert (ReactivePoolMapSet.cardinal pms = n);
+  assert (st.empty = 0);
+  assert (miss_delta = 0);
+  Printf.printf "PASSED\n\n"
+
+let test_pool_map_set_pattern_remove_recycle_churn () =
+  Printf.printf
+    "=== Test: PoolMapSet pattern (remove_from_set_and_recycle_if_empty churn) \
+     ===\n";
+  let n = 100 in
+  let iters = 100 in
+  let pms = ReactivePoolMapSet.create ~capacity:(n * 2) in
+
+  for i = 0 to n - 1 do
+    ReactivePoolMapSet.add pms i i
+  done;
+
+  let miss_before = ReactivePoolMapSet.debug_miss_count pms in
+  ignore (words_since ());
+  for iter = 1 to iters do
+    let base = iter * n in
+    for i = 0 to n - 1 do
+      ReactivePoolMapSet.remove_from_set_and_recycle_if_empty pms
+        (base - n + i)
+        i
+    done;
+    for i = 0 to n - 1 do
+      ReactivePoolMapSet.add pms (base + i) i
+    done
+  done;
+  let words = words_since () / iters in
+  let miss_after = ReactivePoolMapSet.debug_miss_count pms in
+  let miss_delta = miss_after - miss_before in
+  let st = count_pool_empty_sets pms in
+  Printf.printf
+    "  words/iter=%d, pool_miss_delta=%d, outer=%d, empty_sets=%d/%d\n" words
+    miss_delta
+    (ReactivePoolMapSet.cardinal pms)
+    st.empty st.total;
+  assert (ReactivePoolMapSet.cardinal pms = n);
+  assert (st.empty = 0);
+  assert (miss_delta = 0);
+  Printf.printf "PASSED\n\n"
+
+(* ---- PoolMapMap allocation ---- *)
+
+type inner_map_stats = {mutable empty: int}
+
+let count_empty_inner_maps pmm ~start ~count =
+  let s = {empty = 0} in
+  for i = 0 to count - 1 do
+    if ReactivePoolMapMap.inner_cardinal pmm (start + i) = 0 then
+      s.empty <- s.empty + 1
+  done;
+  s
+
+let test_pool_map_map_pattern_drain_outer_churn () =
+  Printf.printf "=== Test: PoolMapMap pattern (drain_outer churn) ===\n";
+  let n = 100 in
+  let iters = 100 in
+  let pmm = ReactivePoolMapMap.create ~capacity:(n * 2) in
+
+  for i = 0 to n - 1 do
+    ReactivePoolMapMap.replace pmm i i i
+  done;
+
+  let miss_before = ReactivePoolMapMap.debug_miss_count pmm in
+  ignore (words_since ());
+  for iter = 1 to iters do
+    let base = iter * n in
+    for i = 0 to n - 1 do
+      ReactivePoolMapMap.drain_outer pmm (base - n + i) () (fun () _ _ -> ())
+    done;
+    for i = 0 to n - 1 do
+      ReactivePoolMapMap.replace pmm (base + i) i i
+    done
+  done;
+  let words = words_since () / iters in
+  let miss_after = ReactivePoolMapMap.debug_miss_count pmm in
+  let miss_delta = miss_after - miss_before in
+  let final_start = iters * n in
+  let st = count_empty_inner_maps pmm ~start:final_start ~count:n in
+  Printf.printf
+    "  words/iter=%d, pool_miss_delta=%d, outer=%d, empty_inners=%d/%d\n" words
+    miss_delta
+    (ReactivePoolMapMap.outer_cardinal pmm)
+    st.empty n;
+  assert (ReactivePoolMapMap.outer_cardinal pmm = n);
+  assert (st.empty = 0);
+  assert (miss_delta = 0);
+  Printf.printf "PASSED\n\n"
+
+let test_pool_map_map_pattern_remove_recycle_churn () =
+  Printf.printf
+    "=== Test: PoolMapMap pattern (remove_from_inner_and_recycle_if_empty \
+     churn) ===\n";
+  let n = 100 in
+  let iters = 100 in
+  let pmm = ReactivePoolMapMap.create ~capacity:(n * 2) in
+
+  for i = 0 to n - 1 do
+    ReactivePoolMapMap.replace pmm i i i
+  done;
+
+  let miss_before = ReactivePoolMapMap.debug_miss_count pmm in
+  ignore (words_since ());
+  for iter = 1 to iters do
+    let base = iter * n in
+    for i = 0 to n - 1 do
+      ReactivePoolMapMap.remove_from_inner_and_recycle_if_empty pmm
+        (base - n + i)
+        i
+    done;
+    for i = 0 to n - 1 do
+      ReactivePoolMapMap.replace pmm (base + i) i i
+    done
+  done;
+  let words = words_since () / iters in
+  let miss_after = ReactivePoolMapMap.debug_miss_count pmm in
+  let miss_delta = miss_after - miss_before in
+  let final_start = iters * n in
+  let st = count_empty_inner_maps pmm ~start:final_start ~count:n in
+  Printf.printf
+    "  words/iter=%d, pool_miss_delta=%d, outer=%d, empty_inners=%d/%d\n" words
+    miss_delta
+    (ReactivePoolMapMap.outer_cardinal pmm)
+    st.empty n;
+  assert (ReactivePoolMapMap.outer_cardinal pmm = n);
+  assert (st.empty = 0);
+  assert (miss_delta = 0);
+  Printf.printf "PASSED\n\n"
+
+let run_all () =
+  Printf.printf "\n====== Allocation Tests ======\n\n";
+  test_fixpoint_alloc ();
+  test_union_alloc ();
+  test_flatmap_alloc ();
+  test_join_alloc ();
+  test_reactive_fixpoint_alloc ();
+  test_reactive_union_alloc ();
+  test_reactive_flatmap_alloc ();
+  test_reactive_join_alloc ();
+  test_pool_map_set_pattern_drain_key_churn ();
+  test_pool_map_set_pattern_remove_recycle_churn ();
+  test_pool_map_map_pattern_drain_outer_churn ();
+  test_pool_map_map_pattern_remove_recycle_churn ()

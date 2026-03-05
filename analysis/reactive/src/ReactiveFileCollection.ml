@@ -23,7 +23,8 @@ type ('raw, 'v) internal = {
 type ('raw, 'v) t = {
   internal: ('raw, 'v) internal;
   collection: (string, 'v) Reactive.t;
-  emit: (string, 'v) Reactive.delta -> unit;
+  emit: (string, 'v ReactiveMaybe.t) ReactiveWave.t -> unit;
+  scratch_wave: (string, 'v ReactiveMaybe.t) ReactiveWave.t;
 }
 (** A file collection is just a Reactive.t with some extra operations *)
 
@@ -31,13 +32,17 @@ type ('raw, 'v) t = {
 let create ~read_file ~process : ('raw, 'v) t =
   let internal = {cache = Hashtbl.create 256; read_file; process} in
   let collection, emit = Reactive.source ~name:"file_collection" () in
-  {internal; collection; emit}
+  let scratch_wave = ReactiveWave.create ~max_entries:65_536 in
+  {internal; collection; emit; scratch_wave}
 
 (** Get the collection interface for composition *)
 let to_collection t : (string, 'v) Reactive.t = t.collection
 
-(** Emit a delta *)
-let emit t delta = t.emit delta
+(** Emit a single set entry *)
+let emit_set t path value =
+  ReactiveWave.clear t.scratch_wave;
+  ReactiveWave.push t.scratch_wave path (ReactiveMaybe.some value);
+  t.emit t.scratch_wave
 
 (** Process a file if changed. Emits delta to subscribers. *)
 let process_if_changed t path =
@@ -49,51 +54,53 @@ let process_if_changed t path =
     let raw = t.internal.read_file path in
     let value = t.internal.process path raw in
     Hashtbl.replace t.internal.cache path (new_id, value);
-    emit t (Reactive.Set (path, value));
+    emit_set t path value;
     true (* changed *)
 
 (** Process multiple files (emits individual deltas) *)
 let process_files t paths =
   List.iter (fun path -> ignore (process_if_changed t path)) paths
 
-(** Process a file without emitting. Returns batch entry if changed. *)
-let process_file_silent t path =
-  let new_id = get_file_id path in
-  match Hashtbl.find_opt t.internal.cache path with
-  | Some (old_id, _) when not (file_changed ~old_id ~new_id) ->
-    None (* unchanged *)
-  | _ ->
-    let raw = t.internal.read_file path in
-    let value = t.internal.process path raw in
-    Hashtbl.replace t.internal.cache path (new_id, value);
-    Some (Reactive.set path value)
-
 (** Process multiple files and emit as a single batch.
     More efficient than process_files when processing many files at once. *)
 let process_files_batch t paths =
-  let entries =
-    paths |> List.filter_map (fun path -> process_file_silent t path)
-  in
-  if entries <> [] then emit t (Reactive.Batch entries);
-  List.length entries
+  ReactiveWave.clear t.scratch_wave;
+  let count = ref 0 in
+  List.iter
+    (fun path ->
+      let new_id = get_file_id path in
+      match Hashtbl.find_opt t.internal.cache path with
+      | Some (old_id, _) when not (file_changed ~old_id ~new_id) -> ()
+      | _ ->
+        let raw = t.internal.read_file path in
+        let value = t.internal.process path raw in
+        Hashtbl.replace t.internal.cache path (new_id, value);
+        ReactiveWave.push t.scratch_wave path (ReactiveMaybe.some value);
+        incr count)
+    paths;
+  if !count > 0 then t.emit t.scratch_wave;
+  !count
 
 (** Remove a file *)
 let remove t path =
   Hashtbl.remove t.internal.cache path;
-  emit t (Reactive.Remove path)
+  ReactiveWave.clear t.scratch_wave;
+  ReactiveWave.push t.scratch_wave path ReactiveMaybe.none;
+  t.emit t.scratch_wave
 
 (** Remove multiple files as a batch *)
 let remove_batch t paths =
-  let entries =
-    paths
-    |> List.filter_map (fun path ->
-           if Hashtbl.mem t.internal.cache path then (
-             Hashtbl.remove t.internal.cache path;
-             Some (path, None))
-           else None)
-  in
-  if entries <> [] then emit t (Reactive.Batch entries);
-  List.length entries
+  ReactiveWave.clear t.scratch_wave;
+  let count = ref 0 in
+  List.iter
+    (fun path ->
+      if Hashtbl.mem t.internal.cache path then (
+        Hashtbl.remove t.internal.cache path;
+        ReactiveWave.push t.scratch_wave path ReactiveMaybe.none;
+        incr count))
+    paths;
+  if !count > 0 then t.emit t.scratch_wave;
+  !count
 
 (** Clear all cached data *)
 let clear t = Hashtbl.clear t.internal.cache

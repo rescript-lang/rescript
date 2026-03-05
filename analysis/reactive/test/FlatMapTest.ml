@@ -13,38 +13,40 @@ let test_flatmap_basic () =
   (* Create derived collection via flatMap *)
   let derived =
     flatMap ~name:"derived" source
-      ~f:(fun key value ->
-        [(key * 10, value); ((key * 10) + 1, value); ((key * 10) + 2, value)])
+      ~f:(fun key value emit ->
+        emit (key * 10) value;
+        emit ((key * 10) + 1) value;
+        emit ((key * 10) + 2) value)
       ()
   in
 
   (* Add entry -> derived should have 3 entries *)
-  emit (Set (1, "a"));
-  Printf.printf "After Set(1, 'a'): derived has %d entries\n" (length derived);
+  emit_set emit 1 "a";
+  Printf.printf "After set (1, 'a'): derived has %d entries\n" (length derived);
   assert (length derived = 3);
-  assert (get source 1 = Some "a");
+  assert (get_opt source 1 = Some "a");
   (* Check source was updated *)
-  assert (get derived 10 = Some "a");
-  assert (get derived 11 = Some "a");
-  assert (get derived 12 = Some "a");
+  assert (get_opt derived 10 = Some "a");
+  assert (get_opt derived 11 = Some "a");
+  assert (get_opt derived 12 = Some "a");
 
   (* Add another entry *)
-  emit (Set (2, "b"));
-  Printf.printf "After Set(2, 'b'): derived has %d entries\n" (length derived);
+  emit_set emit 2 "b";
+  Printf.printf "After set (2, 'b'): derived has %d entries\n" (length derived);
   assert (length derived = 6);
 
   (* Update entry *)
-  emit (Set (1, "A"));
-  Printf.printf "After Set(1, 'A'): derived has %d entries\n" (length derived);
-  assert (get derived 10 = Some "A");
+  emit_set emit 1 "A";
+  Printf.printf "After set (1, 'A'): derived has %d entries\n" (length derived);
+  assert (get_opt derived 10 = Some "A");
   assert (length derived = 6);
 
-  (* Remove entry *)
-  emit (Remove 1);
+  (* remove entry *)
+  emit_remove emit 1;
   Printf.printf "After Remove(1): derived has %d entries\n" (length derived);
   assert (length derived = 3);
-  assert (get derived 10 = None);
-  assert (get derived 20 = Some "b");
+  assert (get_opt derived 10 = None);
+  assert (get_opt derived 20 = Some "b");
 
   Printf.printf "PASSED\n\n"
 
@@ -57,27 +59,27 @@ let test_flatmap_with_merge () =
   (* Create derived with merge *)
   let derived =
     flatMap ~name:"derived" source
-      ~f:(fun _key values -> [(0, values)]) (* all contribute to key 0 *)
+      ~f:(fun _key values emit -> emit 0 values) (* all contribute to key 0 *)
       ~merge:IntSet.union ()
   in
 
   (* Source 1 contributes {1, 2} *)
-  emit (Set (1, IntSet.of_list [1; 2]));
-  let v = get derived 0 |> Option.get in
+  emit_set emit 1 (IntSet.of_list [1; 2]);
+  let v = get_opt derived 0 |> Option.get in
   Printf.printf "After source 1: {%s}\n"
     (IntSet.elements v |> List.map string_of_int |> String.concat ", ");
   assert (IntSet.equal v (IntSet.of_list [1; 2]));
 
   (* Source 2 contributes {3, 4} -> should merge *)
-  emit (Set (2, IntSet.of_list [3; 4]));
-  let v = get derived 0 |> Option.get in
+  emit_set emit 2 (IntSet.of_list [3; 4]);
+  let v = get_opt derived 0 |> Option.get in
   Printf.printf "After source 2: {%s}\n"
     (IntSet.elements v |> List.map string_of_int |> String.concat ", ");
   assert (IntSet.equal v (IntSet.of_list [1; 2; 3; 4]));
 
-  (* Remove source 1 *)
-  emit (Remove 1);
-  let v = get derived 0 |> Option.get in
+  (* remove source 1 *)
+  emit_remove emit 1;
+  let v = get_opt derived 0 |> Option.get in
   Printf.printf "After remove 1: {%s}\n"
     (IntSet.elements v |> List.map string_of_int |> String.concat ", ");
   assert (IntSet.equal v (IntSet.of_list [3; 4]));
@@ -94,37 +96,37 @@ let test_composition () =
   (* First flatMap: file -> items *)
   let items =
     flatMap ~name:"items" source
-      ~f:(fun path items ->
-        List.mapi (fun i item -> (Printf.sprintf "%s:%d" path i, item)) items)
+      ~f:(fun path items emit ->
+        List.iteri
+          (fun i item -> emit (Printf.sprintf "%s:%d" path i) item)
+          items)
       ()
   in
 
   (* Second flatMap: item -> chars *)
   let chars =
     flatMap ~name:"chars" items
-      ~f:(fun key value ->
-        String.to_seq value
-        |> Seq.mapi (fun i c -> (Printf.sprintf "%s:%d" key i, c))
-        |> List.of_seq)
+      ~f:(fun key value emit ->
+        String.iteri (fun i c -> emit (Printf.sprintf "%s:%d" key i) c) value)
       ()
   in
 
   (* Add file with 2 items *)
-  emit (Set ("file1", ["ab"; "cd"]));
+  emit_set emit "file1" ["ab"; "cd"];
   Printf.printf "After file1: items=%d, chars=%d\n" (length items)
     (length chars);
   assert (length items = 2);
   assert (length chars = 4);
 
   (* Add another file *)
-  emit (Set ("file2", ["xyz"]));
+  emit_set emit "file2" ["xyz"];
   Printf.printf "After file2: items=%d, chars=%d\n" (length items)
     (length chars);
   assert (length items = 3);
   assert (length chars = 7);
 
   (* Update file1 *)
-  emit (Set ("file1", ["a"]));
+  emit_set emit "file1" ["a"];
   Printf.printf "After update file1: items=%d, chars=%d\n" (length items)
     (length chars);
   assert (length items = 2);
@@ -140,21 +142,21 @@ let test_flatmap_on_existing_data () =
 
   (* Create source and add data before creating flatMap *)
   let source, emit = source ~name:"source" () in
-  emit (Set (1, "a"));
-  emit (Set (2, "b"));
+  emit_set emit 1 "a";
+  emit_set emit 2 "b";
 
   Printf.printf "Source has %d entries before flatMap\n" (length source);
 
   (* Create flatMap AFTER source has data *)
   let derived =
-    flatMap ~name:"derived" source ~f:(fun k v -> [(k * 10, v)]) ()
+    flatMap ~name:"derived" source ~f:(fun k v emit -> emit (k * 10) v) ()
   in
 
   (* Check derived has existing data *)
   Printf.printf "Derived has %d entries (expected 2)\n" (length derived);
   assert (length derived = 2);
-  assert (get derived 10 = Some "a");
-  assert (get derived 20 = Some "b");
+  assert (get_opt derived 10 = Some "a");
+  assert (get_opt derived 20 = Some "b");
 
   Printf.printf "PASSED\n\n"
 

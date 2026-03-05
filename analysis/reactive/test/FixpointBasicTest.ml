@@ -1,6 +1,7 @@
 (** Basic fixpoint graph traversal tests *)
 
 open Reactive
+open TestHelpers
 
 let test_fixpoint () =
   reset ();
@@ -10,9 +11,9 @@ let test_fixpoint () =
   let edges, emit_edges = source ~name:"edges" () in
 
   (* Set up graph: 1 -> [2, 3], 2 -> [4], 3 -> [4] *)
-  emit_edges (Set (1, [2; 3]));
-  emit_edges (Set (2, [4]));
-  emit_edges (Set (3, [4]));
+  emit_set emit_edges 1 [2; 3];
+  emit_set emit_edges 2 [4];
+  emit_set emit_edges 3 [4];
 
   (* Compute fixpoint *)
   let reachable = fixpoint ~name:"reachable" ~init ~edges () in
@@ -22,32 +23,32 @@ let test_fixpoint () =
   assert (length reachable = 0);
 
   (* Add root 1 *)
-  emit_init (Set (1, ()));
+  emit_set emit_init 1 ();
   Printf.printf "After adding root 1: length=%d\n" (length reachable);
   assert (length reachable = 4);
   (* 1, 2, 3, 4 *)
-  assert (get reachable 1 = Some ());
-  assert (get reachable 2 = Some ());
-  assert (get reachable 3 = Some ());
-  assert (get reachable 4 = Some ());
-  assert (get reachable 5 = None);
+  assert (get_opt reachable 1 = Some ());
+  assert (get_opt reachable 2 = Some ());
+  assert (get_opt reachable 3 = Some ());
+  assert (get_opt reachable 4 = Some ());
+  assert (get_opt reachable 5 = None);
 
   (* Add another root 5 with edge 5 -> [6] *)
-  emit_edges (Set (5, [6]));
-  emit_init (Set (5, ()));
+  emit_set emit_edges 5 [6];
+  emit_set emit_init 5 ();
   Printf.printf "After adding root 5: length=%d\n" (length reachable);
   assert (length reachable = 6);
 
   (* 1, 2, 3, 4, 5, 6 *)
 
-  (* Remove root 1 *)
-  emit_init (Remove 1);
+  (* remove root 1 *)
+  emit_remove emit_init 1;
   Printf.printf "After removing root 1: length=%d\n" (length reachable);
   assert (length reachable = 2);
   (* 5, 6 *)
-  assert (get reachable 1 = None);
-  assert (get reachable 5 = Some ());
-  assert (get reachable 6 = Some ());
+  assert (get_opt reachable 1 = None);
+  assert (get_opt reachable 5 = Some ());
+  assert (get_opt reachable 6 = Some ());
 
   Printf.printf "PASSED\n\n"
 
@@ -59,18 +60,18 @@ let test_fixpoint_basic_expansion () =
   let edges, emit_edges = source ~name:"edges" () in
 
   (* Graph: a -> b -> c *)
-  emit_edges (Set ("a", ["b"]));
-  emit_edges (Set ("b", ["c"]));
+  emit_set emit_edges "a" ["b"];
+  emit_set emit_edges "b" ["c"];
 
   let fp = fixpoint ~name:"fp" ~init ~edges () in
 
-  emit_init (Set ("a", ()));
+  emit_set emit_init "a" ();
 
   assert (length fp = 3);
-  assert (get fp "a" = Some ());
-  assert (get fp "b" = Some ());
-  assert (get fp "c" = Some ());
-  assert (get fp "d" = None);
+  assert (get_opt fp "a" = Some ());
+  assert (get_opt fp "b" = Some ());
+  assert (get_opt fp "c" = Some ());
+  assert (get_opt fp "d" = None);
 
   Printf.printf "PASSED\n\n"
 
@@ -82,19 +83,19 @@ let test_fixpoint_multiple_roots () =
   let edges, emit_edges = source ~name:"edges" () in
 
   (* Graph: a -> b, c -> d (disconnected components) *)
-  emit_edges (Set ("a", ["b"]));
-  emit_edges (Set ("c", ["d"]));
+  emit_set emit_edges "a" ["b"];
+  emit_set emit_edges "c" ["d"];
 
   let fp = fixpoint ~name:"fp" ~init ~edges () in
 
-  emit_init (Set ("a", ()));
-  emit_init (Set ("c", ()));
+  emit_set emit_init "a" ();
+  emit_set emit_init "c" ();
 
   assert (length fp = 4);
-  assert (get fp "a" = Some ());
-  assert (get fp "b" = Some ());
-  assert (get fp "c" = Some ());
-  assert (get fp "d" = Some ());
+  assert (get_opt fp "a" = Some ());
+  assert (get_opt fp "b" = Some ());
+  assert (get_opt fp "c" = Some ());
+  assert (get_opt fp "d" = Some ());
 
   Printf.printf "PASSED\n\n"
 
@@ -106,13 +107,13 @@ let test_fixpoint_diamond () =
   let edges, emit_edges = source ~name:"edges" () in
 
   (* Graph: a -> b, a -> c, b -> d, c -> d *)
-  emit_edges (Set ("a", ["b"; "c"]));
-  emit_edges (Set ("b", ["d"]));
-  emit_edges (Set ("c", ["d"]));
+  emit_set emit_edges "a" ["b"; "c"];
+  emit_set emit_edges "b" ["d"];
+  emit_set emit_edges "c" ["d"];
 
   let fp = fixpoint ~name:"fp" ~init ~edges () in
 
-  emit_init (Set ("a", ()));
+  emit_set emit_init "a" ();
 
   assert (length fp = 4);
 
@@ -126,18 +127,18 @@ let test_fixpoint_cycle () =
   let edges, emit_edges = source ~name:"edges" () in
 
   (* Graph: a -> b -> c -> b (cycle from root) *)
-  emit_edges (Set ("a", ["b"]));
-  emit_edges (Set ("b", ["c"]));
-  emit_edges (Set ("c", ["b"]));
+  emit_set emit_edges "a" ["b"];
+  emit_set emit_edges "b" ["c"];
+  emit_set emit_edges "c" ["b"];
 
   let fp = fixpoint ~name:"fp" ~init ~edges () in
 
-  emit_init (Set ("a", ()));
+  emit_set emit_init "a" ();
 
   assert (length fp = 3);
-  assert (get fp "a" = Some ());
-  assert (get fp "b" = Some ());
-  assert (get fp "c" = Some ());
+  assert (get_opt fp "a" = Some ());
+  assert (get_opt fp "b" = Some ());
+  assert (get_opt fp "c" = Some ());
 
   Printf.printf "PASSED\n\n"
 
@@ -148,7 +149,7 @@ let test_fixpoint_empty_base () =
   let init, _emit_init = source ~name:"init" () in
   let edges, emit_edges = source ~name:"edges" () in
 
-  emit_edges (Set ("a", ["b"]));
+  emit_set emit_edges "a" ["b"];
 
   let fp = fixpoint ~name:"fp" ~init ~edges () in
 
@@ -164,14 +165,14 @@ let test_fixpoint_self_loop () =
   let edges, emit_edges = source ~name:"edges" () in
 
   (* Graph: a -> a (self loop) *)
-  emit_edges (Set ("a", ["a"]));
+  emit_set emit_edges "a" ["a"];
 
   let fp = fixpoint ~name:"fp" ~init ~edges () in
 
-  emit_init (Set ("a", ()));
+  emit_set emit_init "a" ();
 
   assert (length fp = 1);
-  assert (get fp "a" = Some ());
+  assert (get_opt fp "a" = Some ());
 
   Printf.printf "PASSED\n\n"
 
@@ -181,11 +182,11 @@ let test_fixpoint_existing_data () =
 
   (* Create source and pre-populate *)
   let init, emit_init = source ~name:"init" () in
-  emit_init (Set ("root", ()));
+  emit_set emit_init "root" ();
 
   let edges, emit_edges = source ~name:"edges" () in
-  emit_edges (Set ("root", ["a"; "b"]));
-  emit_edges (Set ("a", ["c"]));
+  emit_set emit_edges "root" ["a"; "b"];
+  emit_set emit_edges "a" ["c"];
 
   (* Create fixpoint - should immediately have all reachable *)
   let fp = fixpoint ~name:"fp" ~init ~edges () in
@@ -193,10 +194,10 @@ let test_fixpoint_existing_data () =
   Printf.printf "Fixpoint length: %d (expected 4)\n" (length fp);
   assert (length fp = 4);
   (* root, a, b, c *)
-  assert (get fp "root" = Some ());
-  assert (get fp "a" = Some ());
-  assert (get fp "b" = Some ());
-  assert (get fp "c" = Some ());
+  assert (get_opt fp "root" = Some ());
+  assert (get_opt fp "a" = Some ());
+  assert (get_opt fp "b" = Some ());
+  assert (get_opt fp "c" = Some ());
 
   Printf.printf "PASSED\n\n"
 

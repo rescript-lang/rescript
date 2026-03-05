@@ -26,61 +26,65 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
   (* Declarations: (pos, Decl.t) with last-write-wins *)
   let decls =
     Reactive.flatMap ~name:"decls" source
-      ~f:(fun _path file_data_opt ->
+      ~f:(fun _path file_data_opt emit ->
         match file_data_opt with
-        | None -> []
+        | None -> ()
         | Some file_data ->
-          Declarations.builder_to_list file_data.DceFileProcessing.decls)
+          Declarations.builder_to_list file_data.DceFileProcessing.decls
+          |> List.iter (fun (k, v) -> emit k v))
       ()
   in
 
   (* Annotations: (pos, annotated_as) with last-write-wins *)
   let annotations =
     Reactive.flatMap ~name:"annotations" source
-      ~f:(fun _path file_data_opt ->
+      ~f:(fun _path file_data_opt emit ->
         match file_data_opt with
-        | None -> []
+        | None -> ()
         | Some file_data ->
           FileAnnotations.builder_to_list
-            file_data.DceFileProcessing.annotations)
+            file_data.DceFileProcessing.annotations
+          |> List.iter (fun (k, v) -> emit k v))
       ()
   in
 
   (* Value refs_from: (posFrom, PosSet of targets) with PosSet.union merge *)
   let value_refs_from =
     Reactive.flatMap ~name:"value_refs_from" source
-      ~f:(fun _path file_data_opt ->
+      ~f:(fun _path file_data_opt emit ->
         match file_data_opt with
-        | None -> []
+        | None -> ()
         | Some file_data ->
           References.builder_value_refs_from_list
-            file_data.DceFileProcessing.refs)
+            file_data.DceFileProcessing.refs
+          |> List.iter (fun (k, v) -> emit k v))
       ~merge:PosSet.union ()
   in
 
   (* Type refs_from: (posFrom, PosSet of targets) with PosSet.union merge *)
   let type_refs_from =
     Reactive.flatMap ~name:"type_refs_from" source
-      ~f:(fun _path file_data_opt ->
+      ~f:(fun _path file_data_opt emit ->
         match file_data_opt with
-        | None -> []
+        | None -> ()
         | Some file_data ->
           References.builder_type_refs_from_list
-            file_data.DceFileProcessing.refs)
+            file_data.DceFileProcessing.refs
+          |> List.iter (fun (k, v) -> emit k v))
       ~merge:PosSet.union ()
   in
 
   (* Cross-file items: (path, CrossFileItems.t) with merge by concatenation *)
   let cross_file_items =
     Reactive.flatMap ~name:"cross_file_items" source
-      ~f:(fun path file_data_opt ->
+      ~f:(fun path file_data_opt emit ->
         match file_data_opt with
-        | None -> []
+        | None -> ()
         | Some file_data ->
           let items =
             CrossFileItems.builder_to_t file_data.DceFileProcessing.cross_file
           in
-          [(path, items)])
+          emit path items)
       ~merge:(fun a b ->
         CrossFileItems.
           {
@@ -94,36 +98,37 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
   (* File deps map: (from_file, FileSet of to_files) with FileSet.union merge *)
   let file_deps_map =
     Reactive.flatMap ~name:"file_deps_map" source
-      ~f:(fun _path file_data_opt ->
+      ~f:(fun _path file_data_opt emit ->
         match file_data_opt with
-        | None -> []
+        | None -> ()
         | Some file_data ->
-          FileDeps.builder_deps_to_list file_data.DceFileProcessing.file_deps)
+          FileDeps.builder_deps_to_list file_data.DceFileProcessing.file_deps
+          |> List.iter (fun (k, v) -> emit k v))
       ~merge:FileSet.union ()
   in
 
   (* Files set: (source_path, ()) - just track which source files exist *)
   let files =
     Reactive.flatMap ~name:"files" source
-      ~f:(fun _cmt_path file_data_opt ->
+      ~f:(fun _cmt_path file_data_opt emit ->
         match file_data_opt with
-        | None -> []
+        | None -> ()
         | Some file_data ->
           (* Include all source files from file_deps (NOT the CMT path) *)
           let file_set =
             FileDeps.builder_files file_data.DceFileProcessing.file_deps
           in
-          FileSet.fold (fun f acc -> (f, ()) :: acc) file_set [])
+          FileSet.iter (fun f -> emit f ()) file_set)
       ()
   in
 
   (* Extract exception_refs from cross_file_items for ReactiveExceptionRefs *)
   let exception_refs_collection =
     Reactive.flatMap ~name:"exception_refs_collection" cross_file_items
-      ~f:(fun _path items ->
+      ~f:(fun _path items emit ->
         items.CrossFileItems.exception_refs
-        |> List.map (fun (r : CrossFileItems.exception_ref) ->
-               (r.exception_path, r.loc_from)))
+        |> List.iter (fun (r : CrossFileItems.exception_ref) ->
+               emit r.exception_path r.loc_from))
       ()
   in
 

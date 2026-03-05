@@ -15,20 +15,27 @@ let of_reactive reactive = Reactive reactive
 let is_annotated_dead t pos =
   match t with
   | Frozen ann -> FileAnnotations.is_annotated_dead ann pos
-  | Reactive reactive -> Reactive.get reactive pos = Some FileAnnotations.Dead
+  | Reactive reactive ->
+    let mb = Reactive.get reactive pos in
+    ReactiveMaybe.is_some mb
+    && ReactiveMaybe.unsafe_get mb = FileAnnotations.Dead
 
 let is_annotated_gentype_or_live t pos =
   match t with
   | Frozen ann -> FileAnnotations.is_annotated_gentype_or_live ann pos
-  | Reactive reactive -> (
-    match Reactive.get reactive pos with
-    | Some (FileAnnotations.Live | FileAnnotations.GenType) -> true
-    | Some FileAnnotations.Dead | None -> false)
+  | Reactive reactive ->
+    let mb = Reactive.get reactive pos in
+    ReactiveMaybe.is_some mb
+    &&
+    let v = ReactiveMaybe.unsafe_get mb in
+    v = FileAnnotations.Live || v = FileAnnotations.GenType
 
 let is_annotated_gentype_or_dead t pos =
   match t with
   | Frozen ann -> FileAnnotations.is_annotated_gentype_or_dead ann pos
-  | Reactive reactive -> (
-    match Reactive.get reactive pos with
-    | Some (FileAnnotations.Dead | FileAnnotations.GenType) -> true
-    | Some FileAnnotations.Live | None -> false)
+  | Reactive reactive ->
+    let mb = Reactive.get reactive pos in
+    ReactiveMaybe.is_some mb
+    &&
+    let v = ReactiveMaybe.unsafe_get mb in
+    v = FileAnnotations.Dead || v = FileAnnotations.GenType

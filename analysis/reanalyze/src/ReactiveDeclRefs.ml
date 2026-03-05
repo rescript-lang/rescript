@@ -15,7 +15,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   (* Group declarations by file *)
   let decls_by_file : (string, (Lexing.position * Decl.t) list) Reactive.t =
     Reactive.flatMap ~name:"decl_refs.decls_by_file" decls
-      ~f:(fun pos decl -> [(pos.Lexing.pos_fname, [(pos, decl)])])
+      ~f:(fun pos decl emit -> emit pos.Lexing.pos_fname [(pos, decl)])
       ~merge:( @ ) ()
   in
 
@@ -31,28 +31,26 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
     Reactive.join ~name:"decl_refs.value_decl_refs" value_refs_from
       decls_by_file
       ~key_of:(fun posFrom _targets -> posFrom.Lexing.pos_fname)
-      ~f:(fun posFrom targets decls_opt ->
-        match decls_opt with
-        | None -> []
-        | Some decls_in_file ->
-          decls_in_file
-          |> List.filter_map (fun (decl_pos, decl) ->
-                 if pos_in_decl posFrom decl then Some (decl_pos, targets)
-                 else None))
+      ~f:(fun posFrom targets decls_mb emit ->
+        if ReactiveMaybe.is_some decls_mb then
+          let decls_in_file = ReactiveMaybe.unsafe_get decls_mb in
+          List.iter
+            (fun (decl_pos, decl) ->
+              if pos_in_decl posFrom decl then emit decl_pos targets)
+            decls_in_file)
       ~merge:PosSet.union ()
   in
 
   let type_decl_refs : (Lexing.position, PosSet.t) Reactive.t =
     Reactive.join ~name:"decl_refs.type_decl_refs" type_refs_from decls_by_file
       ~key_of:(fun posFrom _targets -> posFrom.Lexing.pos_fname)
-      ~f:(fun posFrom targets decls_opt ->
-        match decls_opt with
-        | None -> []
-        | Some decls_in_file ->
-          decls_in_file
-          |> List.filter_map (fun (decl_pos, decl) ->
-                 if pos_in_decl posFrom decl then Some (decl_pos, targets)
-                 else None))
+      ~f:(fun posFrom targets decls_mb emit ->
+        if ReactiveMaybe.is_some decls_mb then
+          let decls_in_file = ReactiveMaybe.unsafe_get decls_mb in
+          List.iter
+            (fun (decl_pos, decl) ->
+              if pos_in_decl posFrom decl then emit decl_pos targets)
+            decls_in_file)
       ~merge:PosSet.union ()
   in
 
@@ -61,23 +59,35 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   let with_value_refs : (Lexing.position, PosSet.t) Reactive.t =
     Reactive.join ~name:"decl_refs.with_value_refs" decls value_decl_refs
       ~key_of:(fun pos _decl -> pos)
-      ~f:(fun pos _decl refs_opt ->
-        [(pos, Option.value refs_opt ~default:PosSet.empty)])
+      ~f:(fun pos _decl refs_mb emit ->
+        let refs =
+          if ReactiveMaybe.is_some refs_mb then ReactiveMaybe.unsafe_get refs_mb
+          else PosSet.empty
+        in
+        emit pos refs)
       ()
   in
 
   let with_type_refs : (Lexing.position, PosSet.t) Reactive.t =
     Reactive.join ~name:"decl_refs.with_type_refs" decls type_decl_refs
       ~key_of:(fun pos _decl -> pos)
-      ~f:(fun pos _decl refs_opt ->
-        [(pos, Option.value refs_opt ~default:PosSet.empty)])
+      ~f:(fun pos _decl refs_mb emit ->
+        let refs =
+          if ReactiveMaybe.is_some refs_mb then ReactiveMaybe.unsafe_get refs_mb
+          else PosSet.empty
+        in
+        emit pos refs)
       ()
   in
 
   (* Combine into final (value_targets, type_targets) pairs *)
   Reactive.join ~name:"decl_refs.combined" with_value_refs with_type_refs
     ~key_of:(fun pos _value_targets -> pos)
-    ~f:(fun pos value_targets type_targets_opt ->
-      let type_targets = Option.value type_targets_opt ~default:PosSet.empty in
-      [(pos, (value_targets, type_targets))])
+    ~f:(fun pos value_targets type_targets_mb emit ->
+      let type_targets =
+        if ReactiveMaybe.is_some type_targets_mb then
+          ReactiveMaybe.unsafe_get type_targets_mb
+        else PosSet.empty
+      in
+      emit pos (value_targets, type_targets))
     ()

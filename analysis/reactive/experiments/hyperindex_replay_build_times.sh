@@ -6,14 +6,110 @@ START_REF="benchmark/rescript-baseline"
 END_REF="benchmark/rescript-followup"
 HYPERINDEX_REPO="/Users/cristianocalcagno/GitHub/hyperindex"
 OUT_DIR="${OUT_DIR:-/tmp/hyperindex-replay-times-refs}"
+MAX_STEPS="${MAX_STEPS:-0}"
+REACTIVE_ONLY=0
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_NAME="$0"
 RESCRIPT_REPO="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 TOOLS_BIN="$RESCRIPT_REPO/_build/default/tools/bin/main.exe"
 SOCKET_FILE="$HYPERINDEX_REPO/.rescript-reanalyze.sock"
-SERVER_LOG="$OUT_DIR/reactive-server.log"
 SERVER_PID=""
 FIXPOINT_ASSERT="${FIXPOINT_ASSERT:-1}"
 FIXPOINT_METRICS="${FIXPOINT_METRICS:-1}"
+ALLOC_TRACE_FILE="${ALLOC_TRACE_FILE:-/tmp/rescript-reactive-alloc-events.log}"
+
+alloc_trace_enabled() {
+  case "${RESCRIPT_REACTIVE_ALLOC_TRACE:-}" in
+    1|2|true|TRUE|yes|YES) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+append_alloc_marker() {
+  if alloc_trace_enabled; then
+    local msg="$1"
+    printf '%s\n' "$msg" >> "$ALLOC_TRACE_FILE"
+  fi
+}
+
+line_count() {
+  wc -l < "$1" | tr -d ' '
+}
+
+append_alloc_segment_summary() {
+  if ! alloc_trace_enabled; then
+    return
+  fi
+  local mode="$1"
+  local idx="$2"
+  local commit="$3"
+  local begin_line="$4"
+  local end_line="$5"
+  local counts
+  counts="$(
+    awk -v b="$begin_line" -v e="$end_line" '
+      NR > b && NR <= e && $1 == "[ALLOC_EVT]" {
+        total++
+        by[$2]++
+      }
+      END {
+        miss = by["pool_set_miss_create"] + 0
+        resize = by["pool_set_resize"] + 0
+        map_miss = by["pool_map_miss_create"] + 0
+        map_resize = by["pool_map_resize"] + 0
+        printf "total=%d set_miss_create=%d set_pool_resize=%d map_miss_create=%d map_pool_resize=%d kinds=%d", total + 0, miss, resize, map_miss, map_resize, length(by)
+      }' "$ALLOC_TRACE_FILE"
+  )"
+  append_alloc_marker "[ALLOC_REQ_SUMMARY] mode=${mode} idx=${idx} commit=${commit} ${counts}"
+}
+
+usage() {
+  cat <<EOF
+Usage: $SCRIPT_NAME [--out-dir DIR] [--max-steps N] [--reactive-only] [--help]
+
+Options:
+  --out-dir DIR      Output directory (default: \$OUT_DIR or /tmp/hyperindex-replay-times-refs)
+  --max-steps N      Replay only first N commits (default: 0 = all)
+  --reactive-only    Run only reactive analysis (skip cold analysis + comparison)
+  --help             Show this help
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --out-dir)
+      if [[ $# -lt 2 ]]; then
+        echo "missing value for --out-dir" >&2
+        exit 1
+      fi
+      OUT_DIR="$2"
+      shift 2
+      ;;
+    --max-steps)
+      if [[ $# -lt 2 ]]; then
+        echo "missing value for --max-steps" >&2
+        exit 1
+      fi
+      MAX_STEPS="$2"
+      shift 2
+      ;;
+    --reactive-only)
+      REACTIVE_ONLY=1
+      shift
+      ;;
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "unknown argument: $1" >&2
+      usage >&2
+      exit 1
+      ;;
+  esac
+done
+
+SERVER_LOG="$OUT_DIR/reactive-server.log"
 
 mkdir -p "$OUT_DIR"
 
@@ -66,12 +162,19 @@ COMMITS=(${(@f)$(git rev-list --first-parent --reverse "$START_REF..$END_REF")})
 TOTAL=${#COMMITS[@]}
 
 SUMMARY="$OUT_DIR/summary.tsv"
-echo -e "idx\tcommit\tbuild_status\tbuild_real_seconds\treactive_status\treactive_real_seconds\treactive_issue_count\tcold_status\tcold_real_seconds\treactive_vs_cold_pct\tchanged_files\tinsertions\tdeletions" > "$SUMMARY"
+COMMITS_FILE="$OUT_DIR/commits.txt"
+RUN_META_FILE="$OUT_DIR/run_meta.txt"
+echo -e "idx\tcommit\tbuild_status\tbuild_real_seconds\treactive_status\treactive_real_seconds\treactive_issue_count\tcold_status\tcold_real_seconds\treactive_vs_cold_pct\tcompare_status\tcompare_diff_count\tchanged_files\tinsertions\tdeletions" > "$SUMMARY"
 
 echo "Starting reactive server with debug assertions..."
 rm -f "$SOCKET_FILE" "$SERVER_LOG"
+if alloc_trace_enabled; then
+  rm -f "$ALLOC_TRACE_FILE"
+  append_alloc_marker "[ALLOC_PHASE_BEGIN] phase=startup"
+fi
 RESCRIPT_REACTIVE_FIXPOINT_ASSERT="$FIXPOINT_ASSERT" \
 RESCRIPT_REACTIVE_FIXPOINT_METRICS="$FIXPOINT_METRICS" \
+RESCRIPT_REACTIVE_ALLOC_TRACE_FILE="$ALLOC_TRACE_FILE" \
 "$TOOLS_BIN" reanalyze-server >"$SERVER_LOG" 2>&1 &
 SERVER_PID=$!
 
@@ -87,8 +190,40 @@ if [[ ! -S "$SOCKET_FILE" ]]; then
   cat "$SERVER_LOG" >&2
   exit 1
 fi
+if alloc_trace_enabled; then
+  append_alloc_marker "[ALLOC_PHASE_END] phase=startup"
+fi
 
 echo "Replay start: $START_REF..$END_REF ($TOTAL commits)"
+if alloc_trace_enabled; then
+  echo "Alloc trace file: $ALLOC_TRACE_FILE"
+fi
+if [[ "$REACTIVE_ONLY" -eq 1 ]]; then
+  echo "Mode: reactive-only (cold analysis + comparison disabled)"
+fi
+
+if [[ "$MAX_STEPS" -gt 0 && "$MAX_STEPS" -lt "$TOTAL" ]]; then
+  COMMITS=("${COMMITS[@]:0:$MAX_STEPS}")
+  TOTAL=${#COMMITS[@]}
+  echo "Limiting replay to first $TOTAL commits (MAX_STEPS=$MAX_STEPS)"
+fi
+
+{
+  echo "start_ref=$START_REF"
+  echo "end_ref=$END_REF"
+  echo "total=$TOTAL"
+  echo "reactive_only=$REACTIVE_ONLY"
+  echo "out_dir=$OUT_DIR"
+  echo "alloc_trace_file=$ALLOC_TRACE_FILE"
+  echo "generated_at_utc=$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+} > "$RUN_META_FILE"
+
+: > "$COMMITS_FILE"
+idx_tmp=0
+for c in $COMMITS; do
+  idx_tmp=$((idx_tmp+1))
+  echo -e "${idx_tmp}\t${c}" >> "$COMMITS_FILE"
+done
 
 idx=0
 for c in $COMMITS; do
@@ -142,14 +277,27 @@ for c in $COMMITS; do
   fi
 
   if [[ "$build_status" != "ok" ]]; then
-    echo -e "${idx}\t${c}\t${build_status}\t${build_real}\tskipped\tNA\tNA\tskipped\tNA\tNA\t${changed_files}\t${insertions}\t${deletions}" >> "$SUMMARY"
+    echo -e "${idx}\t${c}\t${build_status}\t${build_real}\tskipped\tNA\tNA\tskipped\tNA\tNA\tskipped\tNA\t${changed_files}\t${insertions}\t${deletions}" >> "$SUMMARY"
     echo "stop: commit $c build_status=$build_status" >&2
     exit 2
   fi
 
   set +e
+  append_alloc_marker "[ALLOC_REQ_BEGIN] mode=reactive idx=${idx} commit=${c}"
+  if alloc_trace_enabled; then
+    reactive_begin_line="$(line_count "$ALLOC_TRACE_FILE")"
+  else
+    reactive_begin_line=0
+  fi
   /usr/bin/time -p "$TOOLS_BIN" reanalyze -json >"$REACTIVE_JSON" 2>"$REACTIVE_TIME_LOG"
   reactive_rc=$?
+  if alloc_trace_enabled; then
+    reactive_end_line="$(line_count "$ALLOC_TRACE_FILE")"
+  else
+    reactive_end_line=0
+  fi
+  append_alloc_segment_summary "reactive" "$idx" "$c" "$reactive_begin_line" "$reactive_end_line"
+  append_alloc_marker "[ALLOC_REQ_END] mode=reactive idx=${idx} commit=${c} rc=${reactive_rc}"
   set -e
 
   reactive_real="$(awk '/^real / {print $2}' "$REACTIVE_TIME_LOG" | tail -n 1)"
@@ -165,24 +313,42 @@ for c in $COMMITS; do
   fi
 
   if [[ "$reactive_status" != "ok" ]]; then
-    echo -e "${idx}\t${c}\t${build_status}\t${build_real}\t${reactive_status}\t${reactive_real}\t${reactive_issues}\tskipped\tNA\tNA\t${changed_files}\t${insertions}\t${deletions}" >> "$SUMMARY"
+    echo -e "${idx}\t${c}\t${build_status}\t${build_real}\t${reactive_status}\t${reactive_real}\t${reactive_issues}\tskipped\tNA\tNA\tskipped\tNA\t${changed_files}\t${insertions}\t${deletions}" >> "$SUMMARY"
     echo "stop: commit $c reactive_status=$reactive_status" >&2
     echo "server log: $SERVER_LOG" >&2
     exit 3
   fi
 
-  set +e
-  /usr/bin/time -p env RESCRIPT_REANALYZE_NO_SERVER=1 "$TOOLS_BIN" reanalyze -json >"$COLD_JSON" 2>"$COLD_TIME_LOG"
-  cold_rc=$?
-  set -e
-
-  cold_real="$(awk '/^real / {print $2}' "$COLD_TIME_LOG" | tail -n 1)"
-  [[ -z "${cold_real:-}" ]] && cold_real="NA"
-
-  if [[ $cold_rc -eq 0 ]]; then
-    cold_status="ok"
+  if [[ "$REACTIVE_ONLY" -eq 1 ]]; then
+    cold_status="skipped"
+    cold_real="NA"
   else
-    cold_status="fail($cold_rc)"
+    set +e
+    append_alloc_marker "[ALLOC_REQ_BEGIN] mode=cold idx=${idx} commit=${c}"
+    if alloc_trace_enabled; then
+      cold_begin_line="$(line_count "$ALLOC_TRACE_FILE")"
+    else
+      cold_begin_line=0
+    fi
+    /usr/bin/time -p env RESCRIPT_REANALYZE_NO_SERVER=1 RESCRIPT_REACTIVE_ALLOC_TRACE_FILE="$ALLOC_TRACE_FILE" "$TOOLS_BIN" reanalyze -json >"$COLD_JSON" 2>"$COLD_TIME_LOG"
+    cold_rc=$?
+    if alloc_trace_enabled; then
+      cold_end_line="$(line_count "$ALLOC_TRACE_FILE")"
+    else
+      cold_end_line=0
+    fi
+    append_alloc_segment_summary "cold" "$idx" "$c" "$cold_begin_line" "$cold_end_line"
+    append_alloc_marker "[ALLOC_REQ_END] mode=cold idx=${idx} commit=${c} rc=${cold_rc}"
+    set -e
+
+    cold_real="$(awk '/^real / {print $2}' "$COLD_TIME_LOG" | tail -n 1)"
+    [[ -z "${cold_real:-}" ]] && cold_real="NA"
+
+    if [[ $cold_rc -eq 0 ]]; then
+      cold_status="ok"
+    else
+      cold_status="fail($cold_rc)"
+    fi
   fi
 
   if [[ "$cold_status" == "ok" && "$reactive_real" != "NA" && "$cold_real" != "NA" ]]; then
@@ -191,11 +357,58 @@ for c in $COMMITS; do
     reactive_vs_cold_pct="NA"
   fi
 
-  echo -e "${idx}\t${c}\t${build_status}\t${build_real}\t${reactive_status}\t${reactive_real}\t${reactive_issues}\t${cold_status}\t${cold_real}\t${reactive_vs_cold_pct}\t${changed_files}\t${insertions}\t${deletions}" >> "$SUMMARY"
+  if [[ "$reactive_status" == "ok" && "$cold_status" == "ok" ]]; then
+    set +e
+    compare_out="$(python3 - "$REACTIVE_JSON" "$COLD_JSON" <<'PY'
+import json, sys
+from collections import Counter
 
-  if [[ "$cold_status" != "ok" ]]; then
+reactive_path, cold_path = sys.argv[1], sys.argv[2]
+reactive = json.load(open(reactive_path))
+cold = json.load(open(cold_path))
+
+def canonical_multiset(x):
+    if isinstance(x, list):
+        return Counter(json.dumps(e, sort_keys=True, separators=(",", ":")) for e in x)
+    return Counter([json.dumps(x, sort_keys=True, separators=(",", ":"))])
+
+r = canonical_multiset(reactive)
+c = canonical_multiset(cold)
+if r == c:
+    print("equal 0")
+else:
+    diff = 0
+    keys = set(r) | set(c)
+    for k in keys:
+        diff += abs(r.get(k, 0) - c.get(k, 0))
+    print(f"mismatch {diff}")
+PY
+)"
+    compare_rc=$?
+    set -e
+    if [[ $compare_rc -eq 0 ]]; then
+      compare_status="$(echo "$compare_out" | awk '{print $1}')"
+      compare_diff_count="$(echo "$compare_out" | awk '{print $2}')"
+      [[ -z "${compare_status:-}" ]] && compare_status="error"
+      [[ -z "${compare_diff_count:-}" ]] && compare_diff_count="NA"
+    else
+      compare_status="error"
+      compare_diff_count="NA"
+    fi
+  else
+    compare_status="skipped"
+    compare_diff_count="NA"
+  fi
+
+  echo -e "${idx}\t${c}\t${build_status}\t${build_real}\t${reactive_status}\t${reactive_real}\t${reactive_issues}\t${cold_status}\t${cold_real}\t${reactive_vs_cold_pct}\t${compare_status}\t${compare_diff_count}\t${changed_files}\t${insertions}\t${deletions}" >> "$SUMMARY"
+
+  if [[ "$cold_status" != "ok" && "$cold_status" != "skipped" ]]; then
     echo "stop: commit $c cold_status=$cold_status" >&2
     exit 4
+  fi
+  if [[ "$REACTIVE_ONLY" -eq 0 && "$compare_status" != "equal" ]]; then
+    echo "stop: commit $c compare_status=$compare_status diff=$compare_diff_count" >&2
+    exit 5
   fi
 done
 

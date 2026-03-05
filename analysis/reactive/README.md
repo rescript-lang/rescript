@@ -8,7 +8,7 @@ This library provides composable reactive collections that automatically propaga
 
 ### Key Features
 
-- **Delta-based updates**: Changes propagate as `Set`, `Remove`, or `Batch` deltas
+- **Delta-based updates**: Changes propagate as `Batch` deltas
 - **Glitch-free semantics**: Topological scheduling ensures consistent updates
 - **Composable combinators**: `flatMap`, `join`, `union`, `fixpoint`
 - **Incremental fixpoint**: Efficient transitive closure with support for additions and removals
@@ -44,7 +44,7 @@ let reachable = fixpoint ~name:"reachable"
   ()
 
 (* Emit changes *)
-emit (Set ("file.res", file_data))
+emit (set_delta ("file.res", file_data))
 emit (Batch [set "a.res" data_a; set "b.res" data_b])
 ```
 
@@ -106,4 +106,3 @@ This library powers the reactive dead code analysis in reanalyze:
 - `ReactiveMerge`: Merges per-file data into global collections
 - `ReactiveLiveness`: Computes live declarations via fixpoint
 - `ReactiveSolver`: Generates dead code issues reactively
-

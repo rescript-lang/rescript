@@ -1,47 +1,31 @@
 (** Reactive V2: Accumulate-then-propagate scheduler for glitch-free semantics.
-    
+
     Key design:
     1. Nodes accumulate batch deltas (don't process immediately)
     2. Scheduler visits nodes in dependency order
     3. Each node processes accumulated deltas exactly once per wave
-    
+
     This eliminates glitches from multi-level dependencies. *)
 
-(** {1 Deltas} *)
+(** {1 Waves} *)
 
-type ('k, 'v) delta =
-  | Set of 'k * 'v
-  | Remove of 'k
-  | Batch of ('k * 'v option) list
+type ('k, 'v) wave = ('k, 'v ReactiveMaybe.t) ReactiveWave.t
 
-let set k v = (k, Some v)
-let remove k = (k, None)
+let wave_max_entries_default =
+  match Sys.getenv_opt "RESCRIPT_REACTIVE_WAVE_MAX_ENTRIES" with
+  | Some s -> (
+    match int_of_string_opt s with
+    | Some n when n > 0 -> n
+    | _ -> 65_536)
+  | None -> 65_536
 
-let delta_to_entries = function
-  | Set (k, v) -> [(k, Some v)]
-  | Remove k -> [(k, None)]
-  | Batch entries -> entries
-
-let merge_entries entries =
-  (* Deduplicate: later entries win *)
-  let tbl = Hashtbl.create (List.length entries) in
-  List.iter (fun (k, v) -> Hashtbl.replace tbl k v) entries;
-  Hashtbl.fold (fun k v acc -> (k, v) :: acc) tbl []
-
-let count_adds_removes entries =
-  List.fold_left
-    (fun (adds, removes) (_, v) ->
-      match v with
-      | Some _ -> (adds + 1, removes)
-      | None -> (adds, removes + 1))
-    (0, 0) entries
+let create_wave () = ReactiveWave.create ~max_entries:wave_max_entries_default
 
 (** {1 Statistics} *)
 
 type stats = {
   (* Input tracking *)
-  mutable deltas_received: int;
-      (** Number of delta messages (Set/Remove/Batch) *)
+  mutable deltas_received: int;  (** Number of delta messages (Batch) *)
   mutable entries_received: int;  (** Total entries after expanding batches *)
   mutable adds_received: int;  (** Set operations received from upstream *)
   mutable removes_received: int;
@@ -70,18 +54,6 @@ let create_stats () =
     removes_emitted = 0;
   }
 
-(** Count adds and removes in a list of entries *)
-let count_changes entries =
-  let adds = ref 0 in
-  let removes = ref 0 in
-  List.iter
-    (fun (_, v_opt) ->
-      match v_opt with
-      | Some _ -> incr adds
-      | None -> incr removes)
-    entries;
-  (!adds, !removes)
-
 (** {1 Debug} *)
 
 let debug_enabled = ref false
@@ -96,6 +68,7 @@ module Registry = struct
     mutable upstream: string list;
     mutable downstream: string list;
     mutable dirty: bool;
+    mutable outbound_inflight: int;
     process: unit -> unit; (* Process accumulated deltas *)
     stats: stats;
   }
@@ -106,7 +79,14 @@ module Registry = struct
   (* Combinator nodes: (combinator_id, (shape, inputs, output)) *)
   let combinators : (string, string * string list * string) Hashtbl.t =
     Hashtbl.create 32
-  let dirty_nodes : string list ref = ref []
+
+  (* Dirty-node tracking: count + per-node flag (no list, no Hashtbl) *)
+  let dirty_count = ref 0
+
+  (* Pre-sorted node array for zero-alloc propagation.
+     Built lazily on first propagate; invalidated by register. *)
+  let sorted_nodes : node_info array ref = ref [||]
+  let sorted_valid = ref true
 
   let register ~name ~level ~process ~stats =
     let info =
@@ -116,11 +96,13 @@ module Registry = struct
         upstream = [];
         downstream = [];
         dirty = false;
+        outbound_inflight = 0;
         process;
         stats;
       }
     in
     Hashtbl.replace nodes name info;
+    sorted_valid := false;
     info
 
   let add_edge ~from_name ~to_name ~label =
@@ -136,18 +118,41 @@ module Registry = struct
   let add_combinator ~name ~shape ~inputs ~output =
     Hashtbl.replace combinators name (shape, inputs, output)
 
-  let mark_dirty name =
-    match Hashtbl.find_opt nodes name with
-    | Some info when not info.dirty ->
+  (** Zero-alloc mark_dirty: sets flag + increments counter.
+      Takes node_info directly — no Hashtbl lookup, no cons cell. *)
+  let mark_dirty_node (info : node_info) =
+    if not info.dirty then (
       info.dirty <- true;
-      dirty_nodes := name :: !dirty_nodes
-    | _ -> ()
+      incr dirty_count)
+
+  (** Zero-alloc inflight tracking on node_info directly. *)
+  let inc_inflight_node (info : node_info) =
+    info.outbound_inflight <- info.outbound_inflight + 1
+
+  let dec_inflight_node (info : node_info) count =
+    if count > 0 then (
+      let n = info.outbound_inflight in
+      if count > n then
+        failwith
+          (Printf.sprintf
+             "Reactive inflight underflow on node %s (count=%d, inflight=%d)"
+             info.name count n);
+      info.outbound_inflight <- n - count)
+
+  let ensure_sorted () =
+    if not !sorted_valid then (
+      let all = Hashtbl.fold (fun _ info acc -> info :: acc) nodes [] in
+      let sorted = List.sort (fun a b -> compare a.level b.level) all in
+      sorted_nodes := Array.of_list sorted;
+      sorted_valid := true)
 
   let clear () =
     Hashtbl.clear nodes;
     Hashtbl.clear edges;
     Hashtbl.clear combinators;
-    dirty_nodes := []
+    dirty_count := 0;
+    sorted_nodes := [||];
+    sorted_valid := true
 
   let reset_stats () =
     Hashtbl.iter
@@ -339,61 +344,34 @@ module Scheduler = struct
       d_int after_.process_count before.process_count,
       d_time after_.process_time_ns before.process_time_ns )
 
-  (** Process all dirty nodes in level order *)
+  (** Process all dirty nodes in level order.
+      Uses pre-sorted node array — zero allocation at steady state. *)
   let propagate () =
     if !propagating then
       failwith "Scheduler.propagate: already propagating (nested call)"
     else (
       propagating := true;
       incr wave_counter;
-      let wave_id = !wave_counter in
-      let wave_start = Unix.gettimeofday () in
-      let processed_nodes = ref 0 in
-      if !debug_enabled then
+      Registry.ensure_sorted ();
+      let nodes = !Registry.sorted_nodes in
+      let len = Array.length nodes in
+
+      if !debug_enabled then (
+        let wave_id = !wave_counter in
+        let wave_start = Unix.gettimeofday () in
+        let processed_nodes = ref 0 in
         Printf.eprintf "\n=== Reactive wave %d ===\n%!" wave_id;
 
-      while !Registry.dirty_nodes <> [] do
-        (* Get all dirty nodes, sort by level *)
-        let dirty = !Registry.dirty_nodes in
-        Registry.dirty_nodes := [];
-
-        let nodes_with_levels =
-          dirty
-          |> List.filter_map (fun name ->
-                 match Hashtbl.find_opt Registry.nodes name with
-                 | Some info -> Some (info.Registry.level, name, info)
-                 | None -> None)
-        in
-
-        let sorted =
-          List.sort
-            (fun (l1, _, _) (l2, _, _) -> compare l1 l2)
-            nodes_with_levels
-        in
-
-        (* Find minimum level *)
-        match sorted with
-        | [] -> ()
-        | (min_level, _, _) :: _ ->
-          (* Process all nodes at minimum level *)
-          let at_level, rest =
-            List.partition (fun (l, _, _) -> l = min_level) sorted
-          in
-
-          (* Put remaining back in dirty list *)
-          List.iter
-            (fun (_, name, _) ->
-              Registry.dirty_nodes := name :: !Registry.dirty_nodes)
-            rest;
-
-          (* Process nodes at this level *)
-          List.iter
-            (fun (_, _, info) ->
+        while !Registry.dirty_count > 0 do
+          let made_progress = ref false in
+          for i = 0 to len - 1 do
+            let info = nodes.(i) in
+            if info.Registry.dirty && info.Registry.outbound_inflight = 0 then (
               info.Registry.dirty <- false;
-              let before =
-                if !debug_enabled then Some (snapshot_stats info.stats)
-                else None
-              in
+              decr Registry.dirty_count;
+              made_progress := true;
+              incr processed_nodes;
+              let before = snapshot_stats info.Registry.stats in
               let start = Sys.time () in
               info.Registry.process ();
               let elapsed = Sys.time () -. start in
@@ -402,55 +380,88 @@ module Scheduler = struct
                   (Int64.of_float (elapsed *. 1e9));
               info.Registry.stats.process_count <-
                 info.Registry.stats.process_count + 1;
-              if !debug_enabled then (
-                incr processed_nodes;
-                match before with
-                | None -> ()
-                | Some b ->
-                  let ( d_recv,
-                        e_recv,
-                        add_in,
-                        rem_in,
-                        d_emit,
-                        e_emit,
-                        add_out,
-                        rem_out,
-                        runs,
-                        dt_ns ) =
-                    diff_stats b info.Registry.stats
-                  in
-                  (* runs should always be 1 here, but keep the check defensive *)
-                  if runs <> 0 then
-                    Printf.eprintf
-                      "  %-30s (L%d): recv d/e/+/-=%d/%d/%d/%d emit \
-                       d/e/+/-=%d/%d/%d/%d time=%.2fms\n\
-                       %!"
-                      info.Registry.name info.Registry.level d_recv e_recv
-                      add_in rem_in d_emit e_emit add_out rem_out
-                      (Int64.to_float dt_ns /. 1e6)))
-            at_level
-      done;
+              let ( d_recv,
+                    e_recv,
+                    add_in,
+                    rem_in,
+                    d_emit,
+                    e_emit,
+                    add_out,
+                    rem_out,
+                    runs,
+                    dt_ns ) =
+                diff_stats before info.Registry.stats
+              in
+              if runs <> 0 then
+                Printf.eprintf
+                  "  %-30s (L%d): recv d/e/+/-=%d/%d/%d/%d emit \
+                   d/e/+/-=%d/%d/%d/%d time=%.2fms\n\
+                   %!"
+                  info.Registry.name info.Registry.level d_recv e_recv add_in
+                  rem_in d_emit e_emit add_out rem_out
+                  (Int64.to_float dt_ns /. 1e6))
+          done;
+          if (not !made_progress) && !Registry.dirty_count > 0 then
+            failwith
+              "Scheduler invariant violation: no runnable dirty node under \
+               inflight gate"
+        done;
 
-      (if !debug_enabled then
-         let wave_elapsed_ms = (Unix.gettimeofday () -. wave_start) *. 1000.0 in
-         Printf.eprintf "Wave %d: processed_nodes=%d wall=%.2fms\n%!" wave_id
-           !processed_nodes wave_elapsed_ms);
+        let wave_elapsed_ms = (Unix.gettimeofday () -. wave_start) *. 1000.0 in
+        Printf.eprintf "Wave %d: processed_nodes=%d wall=%.2fms\n%!" wave_id
+          !processed_nodes wave_elapsed_ms)
+      else
+        (* Hot path: no debug output, no gettimeofday, no timing *)
+        while !Registry.dirty_count > 0 do
+          let made_progress = ref false in
+          for i = 0 to len - 1 do
+            let info = nodes.(i) in
+            if info.Registry.dirty && info.Registry.outbound_inflight = 0 then (
+              info.Registry.dirty <- false;
+              decr Registry.dirty_count;
+              made_progress := true;
+              info.Registry.process ();
+              info.Registry.stats.process_count <-
+                info.Registry.stats.process_count + 1)
+          done;
+          if (not !made_progress) && !Registry.dirty_count > 0 then
+            failwith
+              "Scheduler invariant violation: no runnable dirty node under \
+               inflight gate"
+        done;
+
       propagating := false)
 
   let wave_count () = !wave_counter
   let reset_wave_count () = wave_counter := 0
 end
 
+(** {1 Subscriber notification — zero-alloc} *)
+
+(** Notify subscribers without allocating a closure.
+    [List.iter (fun h -> h wave) subs] allocates 4 words for the
+    closure capturing [wave]. This hand-unrolled version avoids that. *)
+let rec notify_subscribers wave = function
+  | [] -> ()
+  | [h] -> h wave
+  | [h1; h2] ->
+    h1 wave;
+    h2 wave
+  | h :: rest ->
+    h wave;
+    notify_subscribers wave rest
+
 (** {1 Collection Interface} *)
 
 type ('k, 'v) t = {
   name: string;
-  subscribe: (('k, 'v) delta -> unit) -> unit;
+  subscribe: (('k, 'v) wave -> unit) -> unit;
   iter: ('k -> 'v -> unit) -> unit;
-  get: 'k -> 'v option;
+  get: 'k -> 'v ReactiveMaybe.t;
   length: unit -> int;
   stats: stats;
   level: int;
+  node: Registry.node_info;
 }
 
 let iter f t = t.iter f
@@ -462,69 +473,71 @@ let name t = t.name
 
 (** {1 Source Collection} *)
 
+(* Module-level helper for source emit — avoids closure allocation.
+   Groups tbl + pending so iter_with can pass a single argument. *)
+type ('k, 'v) source_tables = {
+  tbl: ('k, 'v) ReactiveHash.Map.t;
+  pending: ('k, 'v ReactiveMaybe.t) ReactiveHash.Map.t;
+}
+
+let apply_source_emit (tables : ('k, 'v) source_tables) k
+    (mv : 'v ReactiveMaybe.t) =
+  if ReactiveMaybe.is_some mv then (
+    let v = ReactiveMaybe.unsafe_get mv in
+    ReactiveHash.Map.replace tables.tbl k v;
+    ReactiveHash.Map.replace tables.pending k (ReactiveMaybe.some v))
+  else (
+    ReactiveHash.Map.remove tables.tbl k;
+    ReactiveHash.Map.replace tables.pending k ReactiveMaybe.none)
+
 let source ~name () =
-  let tbl = Hashtbl.create 64 in
+  let tbl : ('k, 'v) ReactiveHash.Map.t = ReactiveHash.Map.create () in
   let subscribers = ref [] in
   let my_stats = create_stats () in
-
-  (* Pending deltas to propagate *)
-  let pending = ref [] in
+  let output_wave = create_wave () in
+  (* Pending deltas: accumulated by emit, flushed by process.
+     Uses ReactiveHash.Map for zero-alloc deduplication (last-write-wins). *)
+  let pending : ('k, 'v ReactiveMaybe.t) ReactiveHash.Map.t =
+    ReactiveHash.Map.create ()
+  in
+  let tables = {tbl; pending} in
+  let pending_count = ref 0 in
 
   let process () =
-    if !pending <> [] then (
-      let entries =
-        !pending |> List.concat_map delta_to_entries |> merge_entries
-      in
-      pending := [];
-      if entries <> [] then (
-        let num_adds, num_removes = count_changes entries in
-        my_stats.deltas_emitted <- my_stats.deltas_emitted + 1;
-        my_stats.entries_emitted <-
-          my_stats.entries_emitted + List.length entries;
-        my_stats.adds_emitted <- my_stats.adds_emitted + num_adds;
-        my_stats.removes_emitted <- my_stats.removes_emitted + num_removes;
-        let delta = Batch entries in
-        List.iter (fun h -> h delta) !subscribers))
+    let count = ReactiveHash.Map.cardinal pending in
+    if count > 0 then (
+      my_stats.deltas_emitted <- my_stats.deltas_emitted + 1;
+      my_stats.entries_emitted <- my_stats.entries_emitted + count;
+      ReactiveWave.clear output_wave;
+      ReactiveHash.Map.iter_with ReactiveWave.push output_wave pending;
+      ReactiveHash.Map.clear pending;
+      notify_subscribers output_wave !subscribers)
+    else ReactiveHash.Map.clear pending
   in
 
-  let _info = Registry.register ~name ~level:0 ~process ~stats:my_stats in
+  let my_info = Registry.register ~name ~level:0 ~process ~stats:my_stats in
 
   let collection =
     {
       name;
       subscribe = (fun h -> subscribers := h :: !subscribers);
-      iter = (fun f -> Hashtbl.iter f tbl);
-      get = (fun k -> Hashtbl.find_opt tbl k);
-      length = (fun () -> Hashtbl.length tbl);
+      iter = (fun f -> ReactiveHash.Map.iter f tbl);
+      get = (fun k -> ReactiveHash.Map.find_maybe tbl k);
+      length = (fun () -> ReactiveHash.Map.cardinal tbl);
       stats = my_stats;
       level = 0;
+      node = my_info;
     }
   in
 
-  let emit delta =
-    (* Track input *)
+  let emit (input_wave : ('k, 'v ReactiveMaybe.t) ReactiveWave.t) =
+    let count = ReactiveWave.count input_wave in
     my_stats.deltas_received <- my_stats.deltas_received + 1;
-    let entries = delta_to_entries delta in
-    my_stats.entries_received <- my_stats.entries_received + List.length entries;
-    let num_adds, num_removes = count_adds_removes entries in
-    my_stats.adds_received <- my_stats.adds_received + num_adds;
-    my_stats.removes_received <- my_stats.removes_received + num_removes;
-
-    (* Apply to internal state immediately *)
-    (match delta with
-    | Set (k, v) -> Hashtbl.replace tbl k v
-    | Remove k -> Hashtbl.remove tbl k
-    | Batch entries ->
-      List.iter
-        (fun (k, v_opt) ->
-          match v_opt with
-          | Some v -> Hashtbl.replace tbl k v
-          | None -> Hashtbl.remove tbl k)
-        entries);
-    (* Accumulate for propagation *)
-    pending := delta :: !pending;
-    Registry.mark_dirty name;
-    (* If not in propagation, start one *)
+    my_stats.entries_received <- my_stats.entries_received + count;
+    (* Apply to internal state and accumulate into pending map *)
+    ReactiveWave.iter_with input_wave apply_source_emit tables;
+    pending_count := !pending_count + 1;
+    Registry.mark_dirty_node my_info;
     if not (Scheduler.is_propagating ()) then Scheduler.propagate ()
   in
 
@@ -540,155 +553,57 @@ let flatMap ~name (src : ('k1, 'v1) t) ~f ?merge () : ('k2, 'v2) t =
     | None -> fun _ v -> v
   in
 
-  (* Internal state *)
-  let provenance : ('k1, 'k2 list) Hashtbl.t = Hashtbl.create 64 in
-  let contributions : ('k2, ('k1, 'v2) Hashtbl.t) Hashtbl.t =
-    Hashtbl.create 256
-  in
-  let target : ('k2, 'v2) Hashtbl.t = Hashtbl.create 256 in
   let subscribers = ref [] in
+  let output_wave = create_wave () in
   let my_stats = create_stats () in
-
-  (* Pending input deltas *)
-  let pending = ref [] in
-
-  let recompute_target k2 =
-    match Hashtbl.find_opt contributions k2 with
-    | None ->
-      Hashtbl.remove target k2;
-      Some (k2, None)
-    | Some contribs when Hashtbl.length contribs = 0 ->
-      Hashtbl.remove contributions k2;
-      Hashtbl.remove target k2;
-      Some (k2, None)
-    | Some contribs ->
-      let values = Hashtbl.fold (fun _ v acc -> v :: acc) contribs [] in
-      let merged =
-        match values with
-        | [] -> assert false
-        | [v] -> v
-        | v :: rest -> List.fold_left merge_fn v rest
-      in
-      Hashtbl.replace target k2 merged;
-      Some (k2, Some merged)
-  in
-
-  let remove_source k1 =
-    match Hashtbl.find_opt provenance k1 with
-    | None -> []
-    | Some target_keys ->
-      Hashtbl.remove provenance k1;
-      List.iter
-        (fun k2 ->
-          match Hashtbl.find_opt contributions k2 with
-          | None -> ()
-          | Some contribs -> Hashtbl.remove contribs k1)
-        target_keys;
-      target_keys
-  in
-
-  let add_source k1 entries =
-    let target_keys = List.map fst entries in
-    Hashtbl.replace provenance k1 target_keys;
-    List.iter
-      (fun (k2, v2) ->
-        let contribs =
-          match Hashtbl.find_opt contributions k2 with
-          | Some c -> c
-          | None ->
-            let c = Hashtbl.create 4 in
-            Hashtbl.replace contributions k2 c;
-            c
-        in
-        Hashtbl.replace contribs k1 v2)
-      entries;
-    target_keys
-  in
-
-  let process_entry (k1, v1_opt) =
-    let old_affected = remove_source k1 in
-    let new_affected =
-      match v1_opt with
-      | None -> []
-      | Some v1 ->
-        let entries = f k1 v1 in
-        add_source k1 entries
-    in
-    let all_affected = old_affected @ new_affected in
-    (* Deduplicate *)
-    let seen = Hashtbl.create (List.length all_affected) in
-    List.filter_map
-      (fun k2 ->
-        if Hashtbl.mem seen k2 then None
-        else (
-          Hashtbl.replace seen k2 ();
-          recompute_target k2))
-      all_affected
-  in
+  let state = ReactiveFlatMap.create ~f ~merge:merge_fn ~output_wave in
+  let pending_count = ref 0 in
 
   let process () =
-    if !pending <> [] then (
-      (* Track input deltas *)
-      my_stats.deltas_received <-
-        my_stats.deltas_received + List.length !pending;
-      let entries =
-        !pending |> List.concat_map delta_to_entries |> merge_entries
-      in
-      pending := [];
-      my_stats.entries_received <-
-        my_stats.entries_received + List.length entries;
-      let in_adds, in_removes = count_adds_removes entries in
-      my_stats.adds_received <- my_stats.adds_received + in_adds;
-      my_stats.removes_received <- my_stats.removes_received + in_removes;
+    let consumed = !pending_count in
+    pending_count := 0;
 
-      let output_entries = entries |> List.concat_map process_entry in
-      if output_entries <> [] then (
-        let num_adds, num_removes = count_changes output_entries in
-        my_stats.deltas_emitted <- my_stats.deltas_emitted + 1;
-        my_stats.entries_emitted <-
-          my_stats.entries_emitted + List.length output_entries;
-        my_stats.adds_emitted <- my_stats.adds_emitted + num_adds;
-        my_stats.removes_emitted <- my_stats.removes_emitted + num_removes;
-        let delta = Batch output_entries in
-        List.iter (fun h -> h delta) !subscribers))
+    my_stats.deltas_received <- my_stats.deltas_received + consumed;
+
+    Registry.dec_inflight_node src.node consumed;
+
+    let r = ReactiveFlatMap.process state in
+    my_stats.entries_received <- my_stats.entries_received + r.entries_received;
+    my_stats.adds_received <- my_stats.adds_received + r.adds_received;
+    my_stats.removes_received <- my_stats.removes_received + r.removes_received;
+
+    if r.entries_emitted > 0 then (
+      my_stats.deltas_emitted <- my_stats.deltas_emitted + 1;
+      my_stats.entries_emitted <- my_stats.entries_emitted + r.entries_emitted;
+      my_stats.adds_emitted <- my_stats.adds_emitted + r.adds_emitted;
+      my_stats.removes_emitted <- my_stats.removes_emitted + r.removes_emitted;
+      notify_subscribers output_wave !subscribers)
   in
 
-  let _info =
+  let my_info =
     Registry.register ~name ~level:my_level ~process ~stats:my_stats
   in
   Registry.add_edge ~from_name:src.name ~to_name:name ~label:"flatMap";
 
-  (* Subscribe to source: just accumulate *)
-  src.subscribe (fun delta ->
-      pending := delta :: !pending;
-      Registry.mark_dirty name);
+  (* Subscribe to source: push directly into pending map *)
+  src.subscribe (fun wave ->
+      Registry.inc_inflight_node src.node;
+      incr pending_count;
+      ReactiveWave.iter_with wave ReactiveFlatMap.push state;
+      Registry.mark_dirty_node my_info);
 
   (* Initialize from existing data *)
-  src.iter (fun k v ->
-      let entries = f k v in
-      let _ = add_source k entries in
-      List.iter
-        (fun (k2, v2) ->
-          let contribs =
-            match Hashtbl.find_opt contributions k2 with
-            | Some c -> c
-            | None ->
-              let c = Hashtbl.create 4 in
-              Hashtbl.replace contributions k2 c;
-              c
-          in
-          Hashtbl.replace contribs k v2;
-          Hashtbl.replace target k2 v2)
-        entries);
+  src.iter (fun k v -> ReactiveFlatMap.init_entry state k v);
 
   {
     name;
     subscribe = (fun h -> subscribers := h :: !subscribers);
-    iter = (fun f -> Hashtbl.iter f target);
-    get = (fun k -> Hashtbl.find_opt target k);
-    length = (fun () -> Hashtbl.length target);
+    iter = (fun f -> ReactiveFlatMap.iter_target f state);
+    get = (fun k -> ReactiveFlatMap.find_target state k);
+    length = (fun () -> ReactiveFlatMap.target_length state);
     stats = my_stats;
     level = my_level;
+    node = my_info;
   }
 
 (** {1 Join} *)
@@ -702,197 +617,42 @@ let join ~name (left : ('k1, 'v1) t) (right : ('k2, 'v2) t) ~key_of ~f ?merge ()
     | None -> fun _ v -> v
   in
 
-  (* Internal state *)
-  let left_entries : ('k1, 'v1) Hashtbl.t = Hashtbl.create 64 in
-  let provenance : ('k1, 'k3 list) Hashtbl.t = Hashtbl.create 64 in
-  let contributions : ('k3, ('k1, 'v3) Hashtbl.t) Hashtbl.t =
-    Hashtbl.create 256
-  in
-  let target : ('k3, 'v3) Hashtbl.t = Hashtbl.create 256 in
-  let left_to_right_key : ('k1, 'k2) Hashtbl.t = Hashtbl.create 64 in
-  let right_key_to_left_keys : ('k2, 'k1 list) Hashtbl.t = Hashtbl.create 64 in
   let subscribers = ref [] in
+  let output_wave = create_wave () in
   let my_stats = create_stats () in
-
-  (* Separate pending buffers for left and right *)
-  let left_pending = ref [] in
-  let right_pending = ref [] in
-
-  let recompute_target k3 =
-    match Hashtbl.find_opt contributions k3 with
-    | None ->
-      Hashtbl.remove target k3;
-      Some (k3, None)
-    | Some contribs when Hashtbl.length contribs = 0 ->
-      Hashtbl.remove contributions k3;
-      Hashtbl.remove target k3;
-      Some (k3, None)
-    | Some contribs ->
-      let values = Hashtbl.fold (fun _ v acc -> v :: acc) contribs [] in
-      let merged =
-        match values with
-        | [] -> assert false
-        | [v] -> v
-        | v :: rest -> List.fold_left merge_fn v rest
-      in
-      Hashtbl.replace target k3 merged;
-      Some (k3, Some merged)
+  let state =
+    ReactiveJoin.create ~key_of ~f ~merge:merge_fn ~right_get:right.get
+      ~output_wave
   in
-
-  let remove_left_contributions k1 =
-    match Hashtbl.find_opt provenance k1 with
-    | None -> []
-    | Some target_keys ->
-      Hashtbl.remove provenance k1;
-      List.iter
-        (fun k3 ->
-          match Hashtbl.find_opt contributions k3 with
-          | None -> ()
-          | Some contribs -> Hashtbl.remove contribs k1)
-        target_keys;
-      target_keys
-  in
-
-  let add_left_contributions k1 entries =
-    let target_keys = List.map fst entries in
-    Hashtbl.replace provenance k1 target_keys;
-    List.iter
-      (fun (k3, v3) ->
-        let contribs =
-          match Hashtbl.find_opt contributions k3 with
-          | Some c -> c
-          | None ->
-            let c = Hashtbl.create 4 in
-            Hashtbl.replace contributions k3 c;
-            c
-        in
-        Hashtbl.replace contribs k1 v3)
-      entries;
-    target_keys
-  in
-
-  let process_left_entry k1 v1 =
-    let old_affected = remove_left_contributions k1 in
-    (* Update right key tracking *)
-    (match Hashtbl.find_opt left_to_right_key k1 with
-    | Some old_k2 -> (
-      Hashtbl.remove left_to_right_key k1;
-      match Hashtbl.find_opt right_key_to_left_keys old_k2 with
-      | Some keys ->
-        Hashtbl.replace right_key_to_left_keys old_k2
-          (List.filter (fun k -> k <> k1) keys)
-      | None -> ())
-    | None -> ());
-    let k2 = key_of k1 v1 in
-    Hashtbl.replace left_to_right_key k1 k2;
-    let keys =
-      match Hashtbl.find_opt right_key_to_left_keys k2 with
-      | Some ks -> ks
-      | None -> []
-    in
-    Hashtbl.replace right_key_to_left_keys k2 (k1 :: keys);
-    (* Compute output *)
-    let right_val = right.get k2 in
-    let new_entries = f k1 v1 right_val in
-    let new_affected = add_left_contributions k1 new_entries in
-    old_affected @ new_affected
-  in
-
-  let remove_left_entry k1 =
-    Hashtbl.remove left_entries k1;
-    let affected = remove_left_contributions k1 in
-    (match Hashtbl.find_opt left_to_right_key k1 with
-    | Some k2 -> (
-      Hashtbl.remove left_to_right_key k1;
-      match Hashtbl.find_opt right_key_to_left_keys k2 with
-      | Some keys ->
-        Hashtbl.replace right_key_to_left_keys k2
-          (List.filter (fun k -> k <> k1) keys)
-      | None -> ())
-    | None -> ());
-    affected
-  in
+  let left_pending_count = ref 0 in
+  let right_pending_count = ref 0 in
 
   let process () =
-    (* Track input deltas *)
+    let consumed_left = !left_pending_count in
+    let consumed_right = !right_pending_count in
+    left_pending_count := 0;
+    right_pending_count := 0;
+
     my_stats.deltas_received <-
-      my_stats.deltas_received + List.length !left_pending
-      + List.length !right_pending;
+      my_stats.deltas_received + consumed_left + consumed_right;
 
-    (* Process both left and right pending *)
-    let left_entries_list =
-      !left_pending |> List.concat_map delta_to_entries |> merge_entries
-    in
-    let right_entries_list =
-      !right_pending |> List.concat_map delta_to_entries |> merge_entries
-    in
-    left_pending := [];
-    right_pending := [];
+    Registry.dec_inflight_node left.node consumed_left;
+    Registry.dec_inflight_node right.node consumed_right;
 
-    my_stats.entries_received <-
-      my_stats.entries_received
-      + List.length left_entries_list
-      + List.length right_entries_list;
-    let left_adds, left_removes = count_adds_removes left_entries_list in
-    let right_adds, right_removes = count_adds_removes right_entries_list in
-    my_stats.adds_received <- my_stats.adds_received + left_adds + right_adds;
-    my_stats.removes_received <-
-      my_stats.removes_received + left_removes + right_removes;
+    let r = ReactiveJoin.process state in
+    my_stats.entries_received <- my_stats.entries_received + r.entries_received;
+    my_stats.adds_received <- my_stats.adds_received + r.adds_received;
+    my_stats.removes_received <- my_stats.removes_received + r.removes_received;
 
-    let all_affected = ref [] in
-
-    (* Process left entries *)
-    List.iter
-      (fun (k1, v1_opt) ->
-        match v1_opt with
-        | Some v1 ->
-          Hashtbl.replace left_entries k1 v1;
-          let affected = process_left_entry k1 v1 in
-          all_affected := affected @ !all_affected
-        | None ->
-          let affected = remove_left_entry k1 in
-          all_affected := affected @ !all_affected)
-      left_entries_list;
-
-    (* Process right entries: reprocess affected left entries *)
-    List.iter
-      (fun (k2, _) ->
-        match Hashtbl.find_opt right_key_to_left_keys k2 with
-        | None -> ()
-        | Some left_keys ->
-          List.iter
-            (fun k1 ->
-              match Hashtbl.find_opt left_entries k1 with
-              | Some v1 ->
-                let affected = process_left_entry k1 v1 in
-                all_affected := affected @ !all_affected
-              | None -> ())
-            left_keys)
-      right_entries_list;
-
-    (* Deduplicate and compute outputs *)
-    let seen = Hashtbl.create (List.length !all_affected) in
-    let output_entries =
-      !all_affected
-      |> List.filter_map (fun k3 ->
-             if Hashtbl.mem seen k3 then None
-             else (
-               Hashtbl.replace seen k3 ();
-               recompute_target k3))
-    in
-
-    if output_entries <> [] then (
-      let num_adds, num_removes = count_changes output_entries in
+    if r.entries_emitted > 0 then (
       my_stats.deltas_emitted <- my_stats.deltas_emitted + 1;
-      my_stats.entries_emitted <-
-        my_stats.entries_emitted + List.length output_entries;
-      my_stats.adds_emitted <- my_stats.adds_emitted + num_adds;
-      my_stats.removes_emitted <- my_stats.removes_emitted + num_removes;
-      let delta = Batch output_entries in
-      List.iter (fun h -> h delta) !subscribers)
+      my_stats.entries_emitted <- my_stats.entries_emitted + r.entries_emitted;
+      my_stats.adds_emitted <- my_stats.adds_emitted + r.adds_emitted;
+      my_stats.removes_emitted <- my_stats.removes_emitted + r.removes_emitted;
+      notify_subscribers output_wave !subscribers)
   in
 
-  let _info =
+  let my_info =
     Registry.register ~name ~level:my_level ~process ~stats:my_stats
   in
   Registry.add_edge ~from_name:left.name ~to_name:name ~label:"join";
@@ -900,29 +660,31 @@ let join ~name (left : ('k1, 'v1) t) (right : ('k2, 'v2) t) ~key_of ~f ?merge ()
   Registry.add_combinator ~name:(name ^ "_join") ~shape:"join"
     ~inputs:[left.name; right.name] ~output:name;
 
-  (* Subscribe to sources: just accumulate *)
-  left.subscribe (fun delta ->
-      left_pending := delta :: !left_pending;
-      Registry.mark_dirty name);
+  (* Subscribe to sources: push directly into pending maps *)
+  left.subscribe (fun wave ->
+      Registry.inc_inflight_node left.node;
+      incr left_pending_count;
+      ReactiveWave.iter_with wave ReactiveJoin.push_left state;
+      Registry.mark_dirty_node my_info);
 
-  right.subscribe (fun delta ->
-      right_pending := delta :: !right_pending;
-      Registry.mark_dirty name);
+  right.subscribe (fun wave ->
+      Registry.inc_inflight_node right.node;
+      incr right_pending_count;
+      ReactiveWave.iter_with wave ReactiveJoin.push_right state;
+      Registry.mark_dirty_node my_info);
 
   (* Initialize from existing data *)
-  left.iter (fun k1 v1 ->
-      Hashtbl.replace left_entries k1 v1;
-      let _ = process_left_entry k1 v1 in
-      ());
+  left.iter (fun k1 v1 -> ReactiveJoin.init_entry state k1 v1);
 
   {
     name;
     subscribe = (fun h -> subscribers := h :: !subscribers);
-    iter = (fun f -> Hashtbl.iter f target);
-    get = (fun k -> Hashtbl.find_opt target k);
-    length = (fun () -> Hashtbl.length target);
+    iter = (fun f -> ReactiveJoin.iter_target f state);
+    get = (fun k -> ReactiveJoin.find_target state k);
+    length = (fun () -> ReactiveJoin.target_length state);
     stats = my_stats;
     level = my_level;
+    node = my_info;
   }
 
 (** {1 Union} *)
@@ -936,98 +698,39 @@ let union ~name (left : ('k, 'v) t) (right : ('k, 'v) t) ?merge () : ('k, 'v) t
     | None -> fun _ v -> v
   in
 
-  (* Internal state *)
-  let left_values : ('k, 'v) Hashtbl.t = Hashtbl.create 64 in
-  let right_values : ('k, 'v) Hashtbl.t = Hashtbl.create 64 in
-  let target : ('k, 'v) Hashtbl.t = Hashtbl.create 128 in
   let subscribers = ref [] in
+  let output_wave = create_wave () in
   let my_stats = create_stats () in
-
-  (* Separate pending buffers *)
-  let left_pending = ref [] in
-  let right_pending = ref [] in
-
-  let recompute_target k =
-    match (Hashtbl.find_opt left_values k, Hashtbl.find_opt right_values k) with
-    | None, None ->
-      Hashtbl.remove target k;
-      Some (k, None)
-    | Some v, None | None, Some v ->
-      Hashtbl.replace target k v;
-      Some (k, Some v)
-    | Some lv, Some rv ->
-      let merged = merge_fn lv rv in
-      Hashtbl.replace target k merged;
-      Some (k, Some merged)
-  in
+  let state = ReactiveUnion.create ~merge:merge_fn ~output_wave in
+  let left_pending_count = ref 0 in
+  let right_pending_count = ref 0 in
 
   let process () =
-    (* Track input deltas *)
+    let consumed_left = !left_pending_count in
+    let consumed_right = !right_pending_count in
+    left_pending_count := 0;
+    right_pending_count := 0;
+
     my_stats.deltas_received <-
-      my_stats.deltas_received + List.length !left_pending
-      + List.length !right_pending;
+      my_stats.deltas_received + consumed_left + consumed_right;
 
-    let left_entries =
-      !left_pending |> List.concat_map delta_to_entries |> merge_entries
-    in
-    let right_entries =
-      !right_pending |> List.concat_map delta_to_entries |> merge_entries
-    in
-    left_pending := [];
-    right_pending := [];
+    Registry.dec_inflight_node left.node consumed_left;
+    Registry.dec_inflight_node right.node consumed_right;
 
-    my_stats.entries_received <-
-      my_stats.entries_received + List.length left_entries
-      + List.length right_entries;
-    let left_adds, left_removes = count_adds_removes left_entries in
-    let right_adds, right_removes = count_adds_removes right_entries in
-    my_stats.adds_received <- my_stats.adds_received + left_adds + right_adds;
-    my_stats.removes_received <-
-      my_stats.removes_received + left_removes + right_removes;
+    let r = ReactiveUnion.process state in
+    my_stats.entries_received <- my_stats.entries_received + r.entries_received;
+    my_stats.adds_received <- my_stats.adds_received + r.adds_received;
+    my_stats.removes_received <- my_stats.removes_received + r.removes_received;
 
-    let all_affected = ref [] in
-
-    (* Apply left entries *)
-    List.iter
-      (fun (k, v_opt) ->
-        (match v_opt with
-        | Some v -> Hashtbl.replace left_values k v
-        | None -> Hashtbl.remove left_values k);
-        all_affected := k :: !all_affected)
-      left_entries;
-
-    (* Apply right entries *)
-    List.iter
-      (fun (k, v_opt) ->
-        (match v_opt with
-        | Some v -> Hashtbl.replace right_values k v
-        | None -> Hashtbl.remove right_values k);
-        all_affected := k :: !all_affected)
-      right_entries;
-
-    (* Deduplicate and compute outputs *)
-    let seen = Hashtbl.create (List.length !all_affected) in
-    let output_entries =
-      !all_affected
-      |> List.filter_map (fun k ->
-             if Hashtbl.mem seen k then None
-             else (
-               Hashtbl.replace seen k ();
-               recompute_target k))
-    in
-
-    if output_entries <> [] then (
-      let num_adds, num_removes = count_changes output_entries in
+    if r.entries_emitted > 0 then (
       my_stats.deltas_emitted <- my_stats.deltas_emitted + 1;
-      my_stats.entries_emitted <-
-        my_stats.entries_emitted + List.length output_entries;
-      my_stats.adds_emitted <- my_stats.adds_emitted + num_adds;
-      my_stats.removes_emitted <- my_stats.removes_emitted + num_removes;
-      let delta = Batch output_entries in
-      List.iter (fun h -> h delta) !subscribers)
+      my_stats.entries_emitted <- my_stats.entries_emitted + r.entries_emitted;
+      my_stats.adds_emitted <- my_stats.adds_emitted + r.adds_emitted;
+      my_stats.removes_emitted <- my_stats.removes_emitted + r.removes_emitted;
+      notify_subscribers output_wave !subscribers)
   in
 
-  let _info =
+  let my_info =
     Registry.register ~name ~level:my_level ~process ~stats:my_stats
   in
   Registry.add_edge ~from_name:left.name ~to_name:name ~label:"union";
@@ -1035,39 +738,32 @@ let union ~name (left : ('k, 'v) t) (right : ('k, 'v) t) ?merge () : ('k, 'v) t
   Registry.add_combinator ~name:(name ^ "_union") ~shape:"union"
     ~inputs:[left.name; right.name] ~output:name;
 
-  (* Subscribe to sources: just accumulate *)
-  left.subscribe (fun delta ->
-      left_pending := delta :: !left_pending;
-      Registry.mark_dirty name);
+  (* Subscribe to sources: push directly into pending maps *)
+  left.subscribe (fun wave ->
+      Registry.inc_inflight_node left.node;
+      incr left_pending_count;
+      ReactiveWave.iter_with wave ReactiveUnion.push_left state;
+      Registry.mark_dirty_node my_info);
 
-  right.subscribe (fun delta ->
-      right_pending := delta :: !right_pending;
-      Registry.mark_dirty name);
+  right.subscribe (fun wave ->
+      Registry.inc_inflight_node right.node;
+      incr right_pending_count;
+      ReactiveWave.iter_with wave ReactiveUnion.push_right state;
+      Registry.mark_dirty_node my_info);
 
   (* Initialize from existing data - process left then right *)
-  left.iter (fun k v ->
-      Hashtbl.replace left_values k v;
-      let merged = merge_fn v v in
-      (* self-merge for single value *)
-      Hashtbl.replace target k merged);
-  right.iter (fun k v ->
-      Hashtbl.replace right_values k v;
-      (* Right takes precedence, but merge if left exists *)
-      let merged =
-        match Hashtbl.find_opt left_values k with
-        | Some lv -> merge_fn lv v
-        | None -> v
-      in
-      Hashtbl.replace target k merged);
+  left.iter (fun k v -> ReactiveUnion.init_left state k v);
+  right.iter (fun k v -> ReactiveUnion.init_right state k v);
 
   {
     name;
     subscribe = (fun h -> subscribers := h :: !subscribers);
-    iter = (fun f -> Hashtbl.iter f target);
-    get = (fun k -> Hashtbl.find_opt target k);
-    length = (fun () -> Hashtbl.length target);
+    iter = (fun f -> ReactiveUnion.iter_target f state);
+    get = (fun k -> ReactiveUnion.find_target state k);
+    length = (fun () -> ReactiveUnion.target_length state);
     stats = my_stats;
     level = my_level;
+    node = my_info;
   }
 
 (** {1 Fixpoint} *)
@@ -1075,59 +771,75 @@ let union ~name (left : ('k, 'v) t) (right : ('k, 'v) t) ?merge () : ('k, 'v) t
 let fixpoint ~name ~(init : ('k, unit) t) ~(edges : ('k, 'k list) t) () :
     ('k, unit) t =
   let my_level = max init.level edges.level + 1 in
+  let int_env_or name default =
+    match Sys.getenv_opt name with
+    | None -> default
+    | Some s -> (
+      match int_of_string_opt s with
+      | Some n when n > 0 -> n
+      | _ -> default)
+  in
 
   (* Internal state *)
-  let state = ReactiveFixpoint.create () in
+  let max_nodes = int_env_or "RESCRIPT_REACTIVE_FIXPOINT_MAX_NODES" 100_000 in
+  let max_edges = int_env_or "RESCRIPT_REACTIVE_FIXPOINT_MAX_EDGES" 1_000_000 in
+  let max_root_wave_entries =
+    int_env_or "RESCRIPT_REACTIVE_FIXPOINT_MAX_ROOT_WAVE_ENTRIES" 4_096
+  in
+  let max_edge_wave_entries =
+    int_env_or "RESCRIPT_REACTIVE_FIXPOINT_MAX_EDGE_WAVE_ENTRIES" 16_384
+  in
+  let state = ReactiveFixpoint.create ~max_nodes ~max_edges in
+  let root_wave = ReactiveWave.create ~max_entries:max_root_wave_entries in
+  let edge_wave = ReactiveWave.create ~max_entries:max_edge_wave_entries in
   let subscribers = ref [] in
   let my_stats = create_stats () in
-
-  (* Separate pending buffers *)
-  let init_pending = ref [] in
-  let edges_pending = ref [] in
-
-  let emit_output output_entries =
-    if output_entries <> [] then (
-      let num_adds, num_removes = count_changes output_entries in
-      my_stats.deltas_emitted <- my_stats.deltas_emitted + 1;
-      my_stats.entries_emitted <-
-        my_stats.entries_emitted + List.length output_entries;
-      my_stats.adds_emitted <- my_stats.adds_emitted + num_adds;
-      my_stats.removes_emitted <- my_stats.removes_emitted + num_removes;
-      let delta = Batch output_entries in
-      List.iter (fun h -> h delta) !subscribers)
+  let root_pending : ('k, unit ReactiveMaybe.t) ReactiveHash.Map.t =
+    ReactiveHash.Map.create ()
   in
+  let edge_pending : ('k, 'k list ReactiveMaybe.t) ReactiveHash.Map.t =
+    ReactiveHash.Map.create ()
+  in
+  let init_pending_count = ref 0 in
+  let edges_pending_count = ref 0 in
 
   let process () =
-    (* Track input deltas *)
-    my_stats.deltas_received <-
-      my_stats.deltas_received + List.length !init_pending
-      + List.length !edges_pending;
+    let consumed_init = !init_pending_count in
+    let consumed_edges = !edges_pending_count in
+    init_pending_count := 0;
+    edges_pending_count := 0;
 
-    let init_entries =
-      !init_pending |> List.concat_map delta_to_entries |> merge_entries
-    in
-    let edges_entries =
-      !edges_pending |> List.concat_map delta_to_entries |> merge_entries
-    in
-    init_pending := [];
-    edges_pending := [];
+    my_stats.deltas_received <-
+      my_stats.deltas_received + consumed_init + consumed_edges;
+    Registry.dec_inflight_node init.node consumed_init;
+    Registry.dec_inflight_node edges.node consumed_edges;
+
+    (* Dump pending maps into waves *)
+    ReactiveWave.clear root_wave;
+    ReactiveWave.clear edge_wave;
+    let root_entries = ReactiveHash.Map.cardinal root_pending in
+    let edge_entries = ReactiveHash.Map.cardinal edge_pending in
+    ReactiveHash.Map.iter_with ReactiveWave.push root_wave root_pending;
+    ReactiveHash.Map.iter_with ReactiveWave.push edge_wave edge_pending;
+    ReactiveHash.Map.clear root_pending;
+    ReactiveHash.Map.clear edge_pending;
 
     my_stats.entries_received <-
-      my_stats.entries_received + List.length init_entries
-      + List.length edges_entries;
-    let init_adds, init_removes = count_adds_removes init_entries in
-    let edges_adds, edges_removes = count_adds_removes edges_entries in
-    my_stats.adds_received <- my_stats.adds_received + init_adds + edges_adds;
-    my_stats.removes_received <-
-      my_stats.removes_received + init_removes + edges_removes;
+      my_stats.entries_received + root_entries + edge_entries;
+    my_stats.adds_received <-
+      my_stats.adds_received + root_entries + edge_entries;
 
-    let output_entries =
-      ReactiveFixpoint.apply state ~init_entries ~edge_entries:edges_entries
+    let out_wave =
+      ReactiveFixpoint.apply_wave state ~roots:root_wave ~edges:edge_wave
     in
-    emit_output output_entries
+    let out_count = ReactiveWave.count out_wave in
+    if out_count > 0 then (
+      notify_subscribers out_wave !subscribers;
+      my_stats.deltas_emitted <- my_stats.deltas_emitted + 1;
+      my_stats.entries_emitted <- my_stats.entries_emitted + out_count)
   in
 
-  let _info =
+  let my_info =
     Registry.register ~name ~level:my_level ~process ~stats:my_stats
   in
   Registry.add_edge ~from_name:init.name ~to_name:name ~label:"roots";
@@ -1135,17 +847,32 @@ let fixpoint ~name ~(init : ('k, unit) t) ~(edges : ('k, 'k list) t) () :
   Registry.add_combinator ~name:(name ^ "_fp") ~shape:"fixpoint"
     ~inputs:[init.name; edges.name] ~output:name;
 
-  (* Subscribe to sources: just accumulate *)
-  init.subscribe (fun delta ->
-      init_pending := delta :: !init_pending;
-      Registry.mark_dirty name);
+  (* Subscribe to sources: push directly into pending maps *)
+  init.subscribe (fun wave ->
+      Registry.inc_inflight_node init.node;
+      init_pending_count := !init_pending_count + 1;
+      ReactiveWave.iter_with wave ReactiveHash.Map.replace root_pending;
+      Registry.mark_dirty_node my_info);
 
-  edges.subscribe (fun delta ->
-      edges_pending := delta :: !edges_pending;
-      Registry.mark_dirty name);
+  edges.subscribe (fun wave ->
+      Registry.inc_inflight_node edges.node;
+      edges_pending_count := !edges_pending_count + 1;
+      ReactiveWave.iter_with wave ReactiveHash.Map.replace edge_pending;
+      Registry.mark_dirty_node my_info);
 
   (* Initialize from existing data *)
-  ReactiveFixpoint.initialize state ~roots_iter:init.iter ~edges_iter:edges.iter;
+  let init_roots_wave =
+    ReactiveWave.create ~max_entries:(max 1 (init.length ()))
+  in
+  let init_edges_wave =
+    ReactiveWave.create ~max_entries:(max 1 (edges.length ()))
+  in
+  ReactiveWave.clear init_roots_wave;
+  ReactiveWave.clear init_edges_wave;
+  init.iter (fun k () -> ReactiveWave.push init_roots_wave k ());
+  edges.iter (fun k succs -> ReactiveWave.push init_edges_wave k succs);
+  ReactiveFixpoint.initialize state ~roots:init_roots_wave
+    ~edges:init_edges_wave;
 
   {
     name;
@@ -1155,6 +882,7 @@ let fixpoint ~name ~(init : ('k, unit) t) ~(edges : ('k, 'k list) t) () :
     length = (fun () -> ReactiveFixpoint.current_length state);
     stats = my_stats;
     level = my_level;
+    node = my_info;
   }
 
 (** {1 Utilities} *)

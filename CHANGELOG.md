@@ -20,15 +20,11 @@
 
 #### :bug: Bug fix
 
-- Reanalyze server: invalidate cache and recompute results when config changes in `rescript.json`. https://github.com/rescript-lang/rescript/pull/8262
-
 #### :memo: Documentation
 
 #### :nail_care: Polish
 
 #### :house: Internal
-
-- Reanalyze server: redesign incremental fixpoint with delete-then-rederive strategy and predecessor tracking, improving speed on deletions. https://github.com/rescript-lang/rescript/pull/8276
 
 # 13.0.0-alpha.2
 
