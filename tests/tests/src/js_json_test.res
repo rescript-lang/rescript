@@ -343,6 +343,30 @@ describe(__MODULE__, () => {
     eq(__LOC__, classifyObjectOnly(J.string("hi")), "String")
   })
 
+  test("JSON Object switch as statement guards null and array", () => {
+    let result = ref("none")
+    let classifyStatement = (json: J.t) => {
+      switch json {
+      | J.Object(_) => result := "object"
+      | J.Array(_) => ()
+      | J.String(_) => ()
+      | _ => ()
+      }
+    }
+
+    result := "none"
+    classifyStatement(J.null)
+    eq(__LOC__, result.contents, "none")
+
+    result := "none"
+    classifyStatement(J.array([]))
+    eq(__LOC__, result.contents, "none")
+
+    result := "none"
+    classifyStatement(J.object_(Js.Dict.empty()))
+    eq(__LOC__, result.contents, "object")
+  })
+
   test("JSON decodeBoolean", () => {
     eq(__LOC__, J.decodeBoolean(J.string("test")), None)
     eq(__LOC__, J.decodeBoolean(J.boolean(true)), Some(true))
