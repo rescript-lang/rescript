@@ -1,0 +1,13 @@
+{
+  "name": "rewatch-test-fixture",
+  "sources": {
+    "dir": "src",
+    "subdirs": true
+  },
+  "package-specs": {
+    "module": "esmodule",
+    "in-source": true
+  },
+  "suffix": ".mjs",
+  "dependencies": ["@rewatch-test/app", "@rewatch-test/library"]
+}

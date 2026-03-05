@@ -353,7 +353,7 @@ let completePipeChain ~(inJsxContext : bool) (exp : Parsetree.expression) =
   | _ -> None
 
 let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
-    ?findThisExprLoc text =
+    ?findThisExprLoc ?source text =
   let offsetNoWhite = Utils.skipWhite text (offset - 1) in
   let posNoWhite =
     let line, col = posCursor in
@@ -1784,10 +1784,21 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
   in
 
   if Filename.check_suffix path ".res" then (
-    let parser =
-      Res_driver.parsing_engine.parse_implementation ~for_printer:false
+    let str =
+      match source with
+      | Some src ->
+        let {Res_driver.parsetree = str} =
+          Res_driver.parse_implementation_from_source ~for_printer:false
+            ~display_filename:currentFile ~source:src
+        in
+        str
+      | None ->
+        let parser =
+          Res_driver.parsing_engine.parse_implementation ~for_printer:false
+        in
+        let {Res_driver.parsetree = str} = parser ~filename:currentFile in
+        str
     in
-    let {Res_driver.parsetree = str} = parser ~filename:currentFile in
     iterator.structure iterator str |> ignore;
     if blankAfterCursor = Some ' ' || blankAfterCursor = Some '\n' then (
       scope := !lastScopeBeforeCursor;
@@ -1797,8 +1808,21 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
     if !found = false then if debug then Printf.printf "XXX Not found!\n";
     !result)
   else if Filename.check_suffix path ".resi" then (
-    let parser = Res_driver.parsing_engine.parse_interface ~for_printer:false in
-    let {Res_driver.parsetree = signature} = parser ~filename:currentFile in
+    let signature =
+      match source with
+      | Some src ->
+        let {Res_driver.parsetree = signature} =
+          Res_driver.parse_interface_from_source ~for_printer:false
+            ~display_filename:currentFile ~source:src
+        in
+        signature
+      | None ->
+        let parser =
+          Res_driver.parsing_engine.parse_interface ~for_printer:false
+        in
+        let {Res_driver.parsetree = signature} = parser ~filename:currentFile in
+        signature
+    in
     iterator.signature iterator signature |> ignore;
     if blankAfterCursor = Some ' ' || blankAfterCursor = Some '\n' then (
       scope := !lastScopeBeforeCursor;
@@ -1815,6 +1839,13 @@ let completionWithParser ~debug ~path ~posCursor ~currentFile ~text =
     completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor text
   | None -> None
 
+let completionWithParserFromSource ~debug ~path ~posCursor ~source =
+  match Pos.positionToOffset source posCursor with
+  | Some offset ->
+    completionWithParser1 ~currentFile:path ~debug ~offset ~path ~posCursor
+      ~source source
+  | None -> None
+
 let findTypeOfExpressionAtLoc ~debug ~path ~posCursor ~currentFile loc =
   let textOpt = Files.readFile currentFile in
   match textOpt with
@@ -1825,3 +1856,10 @@ let findTypeOfExpressionAtLoc ~debug ~path ~posCursor ~currentFile loc =
       completionWithParser1 ~findThisExprLoc:loc ~currentFile ~debug ~offset
         ~path ~posCursor text
     | None -> None)
+
+let findTypeOfExpressionAtLocFromSource ~debug ~path ~posCursor ~source loc =
+  match Pos.positionToOffset source posCursor with
+  | Some offset ->
+    completionWithParser1 ~findThisExprLoc:loc ~currentFile:path ~debug ~offset
+      ~path ~posCursor ~source source
+  | None -> None

@@ -2,12 +2,8 @@
 
 let isBracedExpr = Res_parsetree_viewer.is_braced_expr
 
-let extractTypeFromExpr expr ~debug ~path ~currentFile ~full ~pos =
-  match
-    expr.Parsetree.pexp_loc
-    |> CompletionFrontEnd.findTypeOfExpressionAtLoc ~debug ~path ~currentFile
-         ~posCursor:(Pos.ofLexing expr.Parsetree.pexp_loc.loc_start)
-  with
+let extractTypeFromExprImpl ~debug ~full ~pos completableResult =
+  match completableResult with
   | Some (completable, scope) -> (
     let env = SharedTypes.QueryEnv.fromFile full.SharedTypes.file in
     let completions =
@@ -37,6 +33,18 @@ let extractTypeFromExpr expr ~debug ~path ~currentFile ~full ~pos =
       | None -> None)
     | _ -> None)
   | _ -> None
+
+let extractTypeFromExpr expr ~debug ~path ~currentFile ~full ~pos =
+  expr.Parsetree.pexp_loc
+  |> CompletionFrontEnd.findTypeOfExpressionAtLoc ~debug ~path ~currentFile
+       ~posCursor:(Pos.ofLexing expr.Parsetree.pexp_loc.loc_start)
+  |> extractTypeFromExprImpl ~debug ~full ~pos
+
+let extractTypeFromExprFromSource expr ~debug ~path ~source ~full ~pos =
+  expr.Parsetree.pexp_loc
+  |> CompletionFrontEnd.findTypeOfExpressionAtLocFromSource ~debug ~path ~source
+       ~posCursor:(Pos.ofLexing expr.Parsetree.pexp_loc.loc_start)
+  |> extractTypeFromExprImpl ~debug ~full ~pos
 
 module IfThenElse = struct
   (* Convert if-then-else to switch *)
@@ -377,7 +385,15 @@ module ExpandCatchAllForVariants = struct
     in
     {Ast_iterator.default_iterator with expr}
 
-  let xform ~path ~pos ~full ~structure ~currentFile ~codeActions ~debug =
+  let xformImpl
+      ~(extractType :
+         Parsetree.expression ->
+         debug:bool ->
+         path:string ->
+         full:SharedTypes.full ->
+         pos:int * int ->
+         SharedTypes.completionType option) ~path ~pos ~full ~structure
+      ~codeActions ~debug =
     let result = ref None in
     let iterator = mkIterator ~pos ~result in
     iterator.structure iterator structure;
@@ -411,7 +427,7 @@ module ExpandCatchAllForVariants = struct
       let currentConstructorNames = getCurrentConstructorNames cases in
       match
         switchExpr
-        |> extractTypeFromExpr ~debug ~path ~currentFile ~full
+        |> extractType ~debug ~path ~full
              ~pos:(Pos.ofLexing switchExpr.pexp_loc.loc_end)
       with
       | Some (Tvariant {constructors}) ->
@@ -533,6 +549,16 @@ module ExpandCatchAllForVariants = struct
           else ()
         | _ -> ())
       | _ -> ())
+
+  let xform ~path ~pos ~full ~structure ~currentFile ~codeActions ~debug =
+    xformImpl ~path ~pos ~full ~structure ~codeActions ~debug
+      ~extractType:(fun expr ~debug ~path ~full ~pos ->
+        extractTypeFromExpr expr ~debug ~path ~currentFile ~full ~pos)
+
+  let xformFromSource ~path ~pos ~full ~structure ~source ~codeActions ~debug =
+    xformImpl ~path ~pos ~full ~structure ~codeActions ~debug
+      ~extractType:(fun expr ~debug ~path ~full ~pos ->
+        extractTypeFromExprFromSource expr ~debug ~path ~source ~full ~pos)
 end
 
 module ExhaustiveSwitch = struct
@@ -580,8 +606,15 @@ module ExhaustiveSwitch = struct
     in
     {Ast_iterator.default_iterator with expr}
 
-  let xform ~printExpr ~path ~currentFile ~pos ~full ~structure ~codeActions
-      ~debug =
+  let xformImpl
+      ~(extractType :
+         Parsetree.expression ->
+         debug:bool ->
+         path:string ->
+         full:SharedTypes.full ->
+         pos:int * int ->
+         SharedTypes.completionType option) ~printExpr ~path ~pos ~full
+      ~structure ~codeActions ~debug =
     (* TODO: Adapt to '(' as leading/trailing character (skip one col, it's not included in the AST) *)
     let result = ref None in
     let foundSelection = ref (None, None) in
@@ -605,7 +638,7 @@ module ExhaustiveSwitch = struct
     | Some (Selection {expr}) -> (
       match
         expr
-        |> extractTypeFromExpr ~debug ~path ~currentFile ~full
+        |> extractType ~debug ~path ~full
              ~pos:(Pos.ofLexing expr.pexp_loc.loc_start)
       with
       | None -> ()
@@ -629,10 +662,7 @@ module ExhaustiveSwitch = struct
           in
           codeActions := codeAction :: !codeActions))
     | Some (Switch {switchExpr; completionExpr; pos}) -> (
-      match
-        completionExpr
-        |> extractTypeFromExpr ~debug ~path ~currentFile ~full ~pos
-      with
+      match completionExpr |> extractType ~debug ~path ~full ~pos with
       | None -> ()
       | Some extractedType -> (
         let open TypeUtils.Codegen in
@@ -654,6 +684,18 @@ module ExhaustiveSwitch = struct
               ~uri:path ~newText ~range
           in
           codeActions := codeAction :: !codeActions))
+
+  let xform ~printExpr ~path ~currentFile ~pos ~full ~structure ~codeActions
+      ~debug =
+    xformImpl ~printExpr ~path ~pos ~full ~structure ~codeActions ~debug
+      ~extractType:(fun expr ~debug ~path ~full ~pos ->
+        extractTypeFromExpr expr ~debug ~path ~currentFile ~full ~pos)
+
+  let xformFromSource ~printExpr ~path ~source ~pos ~full ~structure
+      ~codeActions ~debug =
+    xformImpl ~printExpr ~path ~pos ~full ~structure ~codeActions ~debug
+      ~extractType:(fun expr ~debug ~path ~full ~pos ->
+        extractTypeFromExprFromSource expr ~debug ~path ~source ~full ~pos)
 end
 
 module AddDocTemplate = struct
@@ -840,12 +882,8 @@ module AddDocTemplate = struct
   end
 end
 
-let parseImplementation ~filename =
-  let {Res_driver.parsetree = structure; comments} =
-    Res_driver.parsing_engine.parse_implementation ~for_printer:false ~filename
-  in
+let mkImplementationPrinters comments =
   let filterComments ~loc comments =
-    (* Relevant comments in the range of the expression *)
     let filter comment =
       Loc.hasPos ~pos:(Loc.start (Res_comment.loc comment)) loc
     in
@@ -871,14 +909,29 @@ let parseImplementation ~filename =
     |> Res_printer.print_implementation
          ~comments:(comments |> filterComments ~loc)
   in
+  (printExpr, printStructureItem, printStandaloneStructure)
+
+let parseImplementation ~filename =
+  let {Res_driver.parsetree = structure; comments} =
+    Res_driver.parsing_engine.parse_implementation ~for_printer:false ~filename
+  in
+  let printExpr, printStructureItem, printStandaloneStructure =
+    mkImplementationPrinters comments
+  in
   (structure, printExpr, printStructureItem, printStandaloneStructure)
 
-let parseInterface ~filename =
+let parseImplementationFromSource ~display_filename ~source =
   let {Res_driver.parsetree = structure; comments} =
-    Res_driver.parsing_engine.parse_interface ~for_printer:false ~filename
+    Res_driver.parse_implementation_from_source ~for_printer:false
+      ~display_filename ~source
   in
+  let printExpr, printStructureItem, printStandaloneStructure =
+    mkImplementationPrinters comments
+  in
+  (structure, printExpr, printStructureItem, printStandaloneStructure)
+
+let mkInterfacePrinters comments =
   let filterComments ~loc comments =
-    (* Relevant comments in the range of the expression *)
     let filter comment =
       Loc.hasPos ~pos:(Loc.start (Res_comment.loc comment)) loc
     in
@@ -892,6 +945,21 @@ let parseInterface ~filename =
          ~comments:(comments |> filterComments ~loc:item.psig_loc)
     |> Utils.indent range.start.character
   in
+  printSignatureItem
+
+let parseInterface ~filename =
+  let {Res_driver.parsetree = structure; comments} =
+    Res_driver.parsing_engine.parse_interface ~for_printer:false ~filename
+  in
+  let printSignatureItem = mkInterfacePrinters comments in
+  (structure, printSignatureItem)
+
+let parseInterfaceFromSource ~display_filename ~source =
+  let {Res_driver.parsetree = structure; comments} =
+    Res_driver.parse_interface_from_source ~for_printer:false ~display_filename
+      ~source
+  in
+  let printSignatureItem = mkInterfacePrinters comments in
   (structure, printSignatureItem)
 
 let extractCodeActions ~path ~startPos ~endPos ~currentFile ~debug =
@@ -931,3 +999,42 @@ let extractCodeActions ~path ~startPos ~endPos ~currentFile ~debug =
       ~printSignatureItem;
     !codeActions
   | Other -> []
+
+let extractCodeActionsFromSource ~path ~startPos ~endPos ~source ~package ~debug
+    =
+  let pos = startPos in
+  let codeActions = ref [] in
+  if Filename.check_suffix path ".res" then (
+    let structure, printExpr, printStructureItem, printStandaloneStructure =
+      parseImplementationFromSource ~display_filename:path ~source
+    in
+    IfThenElse.xform ~pos ~codeActions ~printExpr ~path structure;
+    ModuleToFile.xform ~pos ~codeActions ~path ~printStandaloneStructure
+      structure;
+    AddBracesToFn.xform ~pos ~codeActions ~path ~printStructureItem structure;
+    AddDocTemplate.Implementation.xform ~pos ~codeActions ~path
+      ~printStructureItem ~structure;
+
+    let () =
+      match Cmt.loadFullCmtWithPackage ~path ~package with
+      | Some full ->
+        AddTypeAnnotation.xform ~path ~pos ~full ~structure ~codeActions ~debug;
+        ExpandCatchAllForVariants.xformFromSource ~path ~pos ~full ~structure
+          ~codeActions ~source ~debug;
+        ExhaustiveSwitch.xformFromSource ~printExpr ~path
+          ~pos:
+            (if startPos = endPos then Single startPos
+             else Range (startPos, endPos))
+          ~full ~structure ~codeActions ~debug ~source
+      | None -> ()
+    in
+
+    !codeActions)
+  else if Filename.check_suffix path ".resi" then (
+    let signature, printSignatureItem =
+      parseInterfaceFromSource ~display_filename:path ~source
+    in
+    AddDocTemplate.Interface.xform ~pos ~codeActions ~path ~signature
+      ~printSignatureItem;
+    !codeActions)
+  else []

@@ -10,6 +10,7 @@ val preprocessor : string option ref
 val all_ppx : string list ref
 val annotations : bool ref
 val binary_annotations : bool ref
+val skip_source_digest : bool ref
 val noassert : bool ref
 val verbose : bool ref
 val real_paths : bool ref

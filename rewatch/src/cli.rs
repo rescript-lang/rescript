@@ -416,12 +416,8 @@ pub enum Command {
         #[arg(group = "format_input_mode")]
         files: Vec<String>,
     },
-    /// Print the compiler arguments for a ReScript source file.
-    CompilerArgs {
-        /// Path to a ReScript source file (.res or .resi)
-        #[command()]
-        path: String,
-    },
+    /// Start the language server (communicates over stdio)
+    Lsp,
 }
 
 impl Deref for FolderArg {

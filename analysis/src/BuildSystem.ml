@@ -40,7 +40,17 @@ let getRuntimeDir rootPath =
         None))
   | true -> Some rootPath
 
-let getLibBs path = Files.ifExists (path /+ "lib" /+ "bs")
+let getLibBs path =
+  let bs = path /+ "lib" /+ "bs" in
+  let lsp = path /+ "lib" /+ "lsp" in
+  let sourcedirs dir = dir /+ ".sourcedirs.json" in
+  match (Sys.file_exists (sourcedirs bs), Sys.file_exists (sourcedirs lsp)) with
+  | true, true ->
+    let mtime f = (Unix.stat f).st_mtime in
+    if mtime (sourcedirs lsp) > mtime (sourcedirs bs) then Some lsp else Some bs
+  | true, false -> Some bs
+  | false, true -> Some lsp
+  | false, false -> Files.ifExists bs
 
 let getStdlib base =
   match getRuntimeDir base with

@@ -7,22 +7,23 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-pub fn read(build_state: &mut BuildCommandState) -> anyhow::Result<CompileAssetsState> {
+#[tracing::instrument(name = "read_compile_state", skip_all)]
+pub fn read(build_state: &mut BuildCommandState, output: OutputTarget) -> anyhow::Result<CompileAssetsState> {
     let mut ast_modules: AHashMap<PathBuf, AstModule> = AHashMap::new();
-    let mut cmi_modules: AHashMap<String, SystemTime> = AHashMap::new();
+    let mut cmj_modules: AHashMap<String, SystemTime> = AHashMap::new();
     let mut cmt_modules: AHashMap<String, SystemTime> = AHashMap::new();
     let mut ast_rescript_file_locations = AHashSet::new();
 
     let mut rescript_file_locations = build_state
         .modules
         .values()
-        .filter_map(|module| match &module.source_type {
-            SourceType::SourceFile(source_file) => {
-                let package = build_state.packages.get(&module.package_name).unwrap();
+        .filter_map(|module| match module {
+            Module::SourceFile(sf_module) => {
+                let package = build_state.packages.get(&sf_module.package_name).unwrap();
 
-                Some(PathBuf::from(&package.path).join(&source_file.implementation.path))
+                Some(PathBuf::from(&package.path).join(&sf_module.source_file.implementation.path))
             }
-            _ => None,
+            Module::MlMap(_) => None,
         })
         .collect::<AHashSet<PathBuf>>();
 
@@ -31,10 +32,9 @@ pub fn read(build_state: &mut BuildCommandState) -> anyhow::Result<CompileAssets
             .modules
             .values()
             .filter_map(|module| {
-                let package = build_state.packages.get(&module.package_name).unwrap();
+                let package = build_state.packages.get(module.package_name()).unwrap();
                 module
                     .get_interface()
-                    .as_ref()
                     .map(|interface| package.path.join(&interface.path))
             })
             .collect::<AHashSet<PathBuf>>(),
@@ -45,7 +45,7 @@ pub fn read(build_state: &mut BuildCommandState) -> anyhow::Result<CompileAssets
         .packages
         .par_iter()
         .map(|(_, package)| {
-            let read_dir = fs::read_dir(package.get_ocaml_build_path()).unwrap();
+            let read_dir = fs::read_dir(package.get_ocaml_build_path_for_output(output)).unwrap();
             read_dir
                 .filter_map(|entry| match entry {
                     Ok(entry) => {
@@ -53,7 +53,7 @@ pub fn read(build_state: &mut BuildCommandState) -> anyhow::Result<CompileAssets
                         let extension = path.extension().and_then(|e| e.to_str());
                         match extension {
                             Some(ext) => match ext {
-                                "iast" | "ast" | "cmi" | "cmt" => Some((
+                                "iast" | "ast" | "cmj" | "cmt" => Some((
                                     path.to_owned(),
                                     entry.metadata().unwrap().modified().unwrap(),
                                     ext.to_owned(),
@@ -98,14 +98,10 @@ pub fn read(build_state: &mut BuildCommandState) -> anyhow::Result<CompileAssets
                         let _ = ast_rescript_file_locations.insert(res_file_path_buf);
                     }
                 }
-                "cmi" => {
-                    let module_name = helpers::file_path_to_module_name(
-                        path,
-                        // we don't want to include a namespace here because the CMI file
-                        // already includes a namespace
-                        &packages::Namespace::NoNamespace,
-                    );
-                    cmi_modules.insert(module_name, last_modified.to_owned());
+                "cmj" => {
+                    let module_name =
+                        helpers::file_path_to_module_name(path, &packages::Namespace::NoNamespace);
+                    cmj_modules.insert(module_name, last_modified.to_owned());
                 }
                 "cmt" => {
                     let module_name = helpers::file_path_to_module_name(
@@ -125,7 +121,7 @@ pub fn read(build_state: &mut BuildCommandState) -> anyhow::Result<CompileAssets
 
     Ok(CompileAssetsState {
         ast_modules,
-        cmi_modules,
+        cmj_modules,
         cmt_modules,
         ast_rescript_file_locations,
         rescript_file_locations,

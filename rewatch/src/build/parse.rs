@@ -12,24 +12,40 @@ use log::debug;
 use rayon::prelude::*;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use tracing::info_span;
 
 pub fn generate_asts(
     build_state: &mut BuildCommandState,
+    output: OutputTarget,
+    mode: CompileMode,
     inc: impl Fn() + std::marker::Sync,
 ) -> anyhow::Result<String> {
     let mut has_failure = false;
     let mut stderr = "".to_string();
+
+    // Count dirty modules for the span
+    let dirty_modules = build_state
+        .modules
+        .values()
+        .filter(|m| match m {
+            Module::SourceFile(sf) => sf.compilation_stage().is_source_dirty(),
+            Module::MlMap(mlmap) => mlmap.parse_dirty,
+        })
+        .count();
+
+    let parse_span = info_span!("build.parse", dirty_modules = dirty_modules);
+    let _span = parse_span.enter();
 
     build_state
         .modules
         .par_iter()
         .map(|(module_name, module)| {
             let package = build_state
-                .get_package(&module.package_name)
+                .get_package(module.package_name())
                 .expect("Package not found");
-            match &module.source_type {
-                SourceType::MlMap(_mlmap) => {
-                    let path = package.get_mlmap_path();
+            match module {
+                Module::MlMap(_) => {
+                    let path = package.get_mlmap_path_for_output(output);
                     (
                         module_name.to_owned(),
                         Ok((Path::new(&path).to_path_buf(), None)),
@@ -38,58 +54,59 @@ pub fn generate_asts(
                     )
                 }
 
-                SourceType::SourceFile(source_file) => {
-                    let (ast_result, iast_result, dirty) = if source_file.implementation.parse_dirty
-                        || source_file
-                            .interface
-                            .as_ref()
-                            .map(|i| i.parse_dirty)
-                            .unwrap_or(false)
-                    {
-                        debug!("Generating AST for module: {module_name}");
-                        inc();
-                        let ast_result = generate_ast(
-                            package.to_owned(),
-                            &source_file.implementation.path.to_owned(),
-                            build_state,
-                            build_state.get_warn_error_override(),
-                        )
-                        .map_err(|e| e.to_string());
+                Module::SourceFile(sf_module) => {
+                    let source_file = &sf_module.source_file;
+                    let (ast_result, iast_result, is_source_dirty) =
+                        if sf_module.compilation_stage().is_source_dirty() {
+                            debug!("Generating AST for module: {module_name}");
+                            inc();
+                            let ast_result = generate_ast(
+                                package.to_owned(),
+                                &source_file.implementation.path.to_owned(),
+                                build_state,
+                                build_state.get_warn_error_override(),
+                                &parse_span,
+                                output,
+                            )
+                            .map_err(|e| e.to_string());
 
-                        let iast_result = match source_file.interface.as_ref().map(|i| i.path.to_owned()) {
-                            Some(interface_file_path) => {
-                                match generate_ast(
-                                    package.to_owned(),
-                                    &interface_file_path.to_owned(),
-                                    build_state,
-                                    build_state.get_warn_error_override(),
-                                ) {
-                                    Ok(v) => Ok(Some(v)),
-                                    Err(e) => Err(e.to_string()),
+                            let iast_result = match source_file.interface.as_ref().map(|i| i.path.to_owned())
+                            {
+                                Some(interface_file_path) => {
+                                    match generate_ast(
+                                        package.to_owned(),
+                                        &interface_file_path.to_owned(),
+                                        build_state,
+                                        build_state.get_warn_error_override(),
+                                        &parse_span,
+                                        output,
+                                    ) {
+                                        Ok(v) => Ok(Some(v)),
+                                        Err(e) => Err(e.to_string()),
+                                    }
                                 }
-                            }
-                            _ => Ok(None),
+                                _ => Ok(None),
+                            };
+
+                            (ast_result, iast_result, true)
+                        } else {
+                            (
+                                Ok((
+                                    PathBuf::from(helpers::get_basename(&source_file.implementation.path))
+                                        .with_extension("ast"),
+                                    None,
+                                )),
+                                Ok(source_file.interface.as_ref().map(|i| {
+                                    (
+                                        PathBuf::from(helpers::get_basename(&i.path)).with_extension("iast"),
+                                        None,
+                                    )
+                                })),
+                                false,
+                            )
                         };
 
-                        (ast_result, iast_result, true)
-                    } else {
-                        (
-                            Ok((
-                                PathBuf::from(helpers::get_basename(&source_file.implementation.path))
-                                    .with_extension("ast"),
-                                None,
-                            )),
-                            Ok(source_file.interface.as_ref().map(|i| {
-                                (
-                                    PathBuf::from(helpers::get_basename(&i.path)).with_extension("iast"),
-                                    None,
-                                )
-                            })),
-                            false,
-                        )
-                    };
-
-                    (module_name.to_owned(), ast_result, iast_result, dirty)
+                    (module_name.to_owned(), ast_result, iast_result, is_source_dirty)
                 }
             }
         })
@@ -100,13 +117,13 @@ pub fn generate_asts(
             bool,
         )>>()
         .into_iter()
-        .for_each(|(module_name, ast_result, iast_result, is_dirty)| {
+        .for_each(|(module_name, ast_result, iast_result, is_source_dirty)| {
             // Get package name first to avoid borrow checker issues
             let package_name = build_state
                 .build_state
                 .modules
                 .get(&module_name)
-                .map(|module| module.package_name.clone())
+                .map(|module| module.package_name().to_owned())
                 .unwrap_or_else(|| {
                     eprintln!("Module not found: {module_name}");
                     String::new()
@@ -118,35 +135,38 @@ pub fn generate_asts(
                 .get(&package_name)
                 .expect("Package not found");
 
-            if let Some(module) = build_state.build_state.modules.get_mut(&module_name) {
-                // if the module is dirty, mark it also compile_dirty
-                // do NOT set to false if the module is not parse_dirty, it needs to keep
-                // the compile_dirty flag if it was set before
-                if is_dirty {
-                    module.compile_dirty = true;
-                    module.deps_dirty = true;
+            if let Some(Module::SourceFile(sf_module)) = build_state.build_state.modules.get_mut(&module_name)
+            {
+                // if the module is dirty, mark it for recompilation
+                // do NOT change if the module is not dirty, it needs to keep
+                // its compilation_stage if it was set before
+                if is_source_dirty {
+                    sf_module.set_compilation_stage(CompilationStage::SourceDirty);
+                    sf_module.needs_dependencies_rescan = true;
                 }
-                if let SourceType::SourceFile(ref mut source_file) = module.source_type {
+                let mut impl_parse_ok = false;
+                let mut iface_parse_ok = true; // true when no interface
+                let mut impl_parse_warnings: Option<String> = None;
+                let mut iface_parse_warnings: Option<String> = None;
+                {
+                    let source_file = &mut sf_module.source_file;
                     // We get Err(x) when there is a parse error. When it's Ok(_, Some(
                     // stderr_warnings )), the outputs are warnings
                     match ast_result {
                         // In case of an internal dependency, we want to keep on
-                        // propagating the warning with every compile. So we mark it as dirty for
-                        // the next round
+                        // propagating the warning with every compile. The warning
+                        // text is stored in the CompilationStage and replayed in
+                        // subsequent build cycles.
                         Ok((_path, Some(stderr_warnings))) if package.is_local_dep => {
-                            source_file.implementation.parse_state = ParseState::Warning;
-                            source_file.implementation.parse_dirty = true;
                             logs::append(package, &stderr_warnings);
                             stderr.push_str(&stderr_warnings);
+                            impl_parse_warnings = Some(stderr_warnings);
+                            impl_parse_ok = true;
                         }
                         Ok((_path, Some(_))) | Ok((_path, None)) => {
-                            source_file.implementation.parse_state = ParseState::Success;
-                            source_file.implementation.parse_dirty = false;
+                            impl_parse_ok = true;
                         }
                         Err(err) => {
-                            // Some compilation error
-                            source_file.implementation.parse_state = ParseState::ParseError;
-                            source_file.implementation.parse_dirty = true;
                             logs::append(package, &err);
                             has_failure = true;
                             stderr.push_str(&err);
@@ -157,111 +177,150 @@ pub fn generate_asts(
                     // stderr_warnings ))), the outputs are warnings
                     match iast_result {
                         // In case of an internal dependency, we want to keep on
-                        // propagating the warning with every compile. So we mark it as dirty for
-                        // the next round
+                        // propagating the warning with every compile. The warning
+                        // text is stored in the CompilationStage and replayed in
+                        // subsequent build cycles.
                         Ok(Some((_path, Some(stderr_warnings)))) if package.is_local_dep => {
-                            if let Some(interface) = source_file.interface.as_mut() {
-                                interface.parse_state = ParseState::Warning;
-                                interface.parse_dirty = true;
-                            }
                             logs::append(package, &stderr_warnings);
                             stderr.push_str(&stderr_warnings);
+                            iface_parse_warnings = Some(stderr_warnings);
                         }
-                        Ok(Some((_, None))) | Ok(Some((_, Some(_)))) => {
-                            if let Some(interface) = source_file.interface.as_mut() {
-                                interface.parse_state = ParseState::Success;
-                                interface.parse_dirty = false;
-                            }
-                        }
+                        Ok(Some((_, None))) | Ok(Some((_, Some(_)))) => {}
                         Err(err) => {
-                            // Some compilation error
-                            if let Some(interface) = source_file.interface.as_mut() {
-                                interface.parse_state = ParseState::ParseError;
-                                interface.parse_dirty = true;
-                            }
                             logs::append(package, &err);
                             has_failure = true;
                             stderr.push_str(&err);
+                            iface_parse_ok = false;
                         }
                         Ok(None) => {
                             // The file had no interface file associated
                         }
                     }
-                };
+
+                    // If parsing succeeded, upgrade from SourceDirty to Parsed with hashes
+                    if is_source_dirty && impl_parse_ok && iface_parse_ok {
+                        let build_path = package.get_build_path_for_output(output);
+
+                        let impl_source_path = package.path.join(&source_file.implementation.path);
+                        let impl_ast_path =
+                            build_path.join(helpers::get_ast_path(&source_file.implementation.path));
+                        let implementation_source_hash = helpers::compute_file_hash(&impl_source_path);
+                        let implementation_ast_hash = helpers::compute_file_hash(&impl_ast_path);
+
+                        let (interface_source_hash, interface_ast_hash) =
+                            if let Some(interface) = &source_file.interface {
+                                let iface_source_path = package.path.join(&interface.path);
+                                let iface_ast_path = build_path.join(helpers::get_ast_path(&interface.path));
+                                (
+                                    helpers::compute_file_hash(&iface_source_path),
+                                    helpers::compute_file_hash(&iface_ast_path),
+                                )
+                            } else {
+                                (None, None)
+                            };
+
+                        if let (Some(ish), Some(iah)) = (implementation_source_hash, implementation_ast_hash)
+                        {
+                            sf_module.set_compilation_stage(CompilationStage::Parsed {
+                                implementation_source_hash: ish,
+                                implementation_ast_hash: iah,
+                                interface_source_hash,
+                                interface_ast_hash,
+                                implementation_parse_warnings: impl_parse_warnings,
+                                interface_parse_warnings: iface_parse_warnings,
+                            });
+                        }
+                    } else if is_source_dirty && (!impl_parse_ok || !iface_parse_ok) {
+                        sf_module.set_compilation_stage(CompilationStage::ParseError);
+                    }
+                }
             }
         });
 
-    // compile the mlmaps of dirty modules
-    // first collect dirty packages
+    // compile the mlmaps of dirty packages
     let dirty_packages = build_state
         .modules
         .iter()
-        .filter(|(_, module)| module.compile_dirty)
-        .map(|(_, module)| module.package_name.clone())
+        .filter(|(_, module)| module.needs_compile_for_mode(mode))
+        .map(|(_, module)| module.package_name().to_owned())
         .collect::<AHashSet<String>>();
 
-    // Collect package names first to avoid borrow checker issues
-    let module_package_pairs = build_state.module_name_package_pairs();
+    // Collect mlmap module names and their package names
+    let mlmap_pairs: Vec<(String, String)> = build_state
+        .modules
+        .iter()
+        .filter_map(|(name, module)| match module {
+            Module::MlMap(m) => Some((name.clone(), m.package_name.clone())),
+            _ => None,
+        })
+        .collect();
 
-    for (module_name, package_name) in module_package_pairs {
-        if let Some(module) = build_state.build_state.modules.get_mut(&module_name) {
-            let is_dirty = match &module.source_type {
-                SourceType::MlMap(_) => {
-                    if dirty_packages.contains(&package_name) {
-                        let package = build_state
-                            .build_state
-                            .packages
-                            .get(&package_name)
-                            .expect("Package not found");
-                        // probably better to do this in a different function
-                        // specific to compiling mlmaps
-                        let compile_path = package.get_mlmap_compile_path();
-                        let mlmap_hash = helpers::compute_file_hash(Path::new(&compile_path));
-                        if let Err(err) = namespaces::compile_mlmap(
-                            &build_state.build_state.project_context,
-                            package,
-                            &module_name,
-                            &build_state.build_state.compiler_info.bsc_path,
-                        ) {
-                            has_failure = true;
-                            stderr.push_str(&format!("{err}\n"));
-                        }
-                        let mlmap_hash_after = helpers::compute_file_hash(Path::new(&compile_path));
+    for (module_name, package_name) in mlmap_pairs {
+        if !dirty_packages.contains(&package_name) {
+            continue;
+        }
+        let package = build_state
+            .build_state
+            .packages
+            .get(&package_name)
+            .expect("Package not found");
 
-                        let suffix = package
-                            .namespace
-                            .to_suffix()
-                            .expect("namespace should be set for mlmap module");
-                        let base_build_path = package.get_build_path().join(&suffix);
-                        let base_ocaml_build_path = package.get_ocaml_build_path().join(&suffix);
-                        let _ = std::fs::copy(
-                            base_build_path.with_extension("cmi"),
-                            base_ocaml_build_path.with_extension("cmi"),
-                        );
-                        let _ = std::fs::copy(
-                            base_build_path.with_extension("cmt"),
-                            base_ocaml_build_path.with_extension("cmt"),
-                        );
-                        let _ = std::fs::copy(
-                            base_build_path.with_extension("cmj"),
-                            base_ocaml_build_path.with_extension("cmj"),
-                        );
-                        let _ = std::fs::copy(
-                            base_build_path.with_extension("mlmap"),
-                            base_ocaml_build_path.with_extension("mlmap"),
-                        );
-                        match (mlmap_hash, mlmap_hash_after) {
-                            (Some(digest), Some(digest_after)) => !digest.eq(&digest_after),
-                            _ => true,
-                        }
-                    } else {
-                        false
-                    }
+        let compile_path = package.get_mlmap_compile_path_for_output(output);
+        let mlmap_hash = helpers::compute_file_hash(Path::new(&compile_path));
+        if let Err(err) = namespaces::compile_mlmap(
+            &build_state.build_state.project_context,
+            package,
+            &module_name,
+            &build_state.build_state.compiler_info.bsc_path,
+            output,
+            mode,
+        ) {
+            has_failure = true;
+            stderr.push_str(&format!("{err}\n"));
+        }
+        let mlmap_hash_after = helpers::compute_file_hash(Path::new(&compile_path));
+
+        let suffix = package
+            .namespace
+            .to_suffix()
+            .expect("namespace should be set for mlmap module");
+        let base_build_path = package.get_build_path_for_output(output).join(&suffix);
+        let base_ocaml_build_path = package.get_ocaml_build_path_for_output(output).join(&suffix);
+        let _ = std::fs::copy(
+            base_build_path.with_extension("cmi"),
+            base_ocaml_build_path.with_extension("cmi"),
+        );
+        let _ = std::fs::copy(
+            base_build_path.with_extension("cmt"),
+            base_ocaml_build_path.with_extension("cmt"),
+        );
+        if mode.emits_js() {
+            let _ = std::fs::copy(
+                base_build_path.with_extension("cmj"),
+                base_ocaml_build_path.with_extension("cmj"),
+            );
+        }
+        let _ = std::fs::copy(
+            base_build_path.with_extension("mlmap"),
+            base_ocaml_build_path.with_extension("mlmap"),
+        );
+
+        // If the mlmap output changed, mark all its dependents (source file modules) as dirty
+        let mlmap_changed = match (mlmap_hash, mlmap_hash_after) {
+            (Some(digest), Some(digest_after)) => !digest.eq(&digest_after),
+            _ => true,
+        };
+        if mlmap_changed {
+            let dependents: Vec<String> = build_state
+                .build_state
+                .modules
+                .get(&module_name)
+                .map(|m| m.dependents().iter().cloned().collect())
+                .unwrap_or_default();
+            for dep_name in dependents {
+                if let Some(Module::SourceFile(sf)) = build_state.build_state.modules.get_mut(&dep_name) {
+                    sf.set_compilation_stage(CompilationStage::SourceDirty);
                 }
-                _ => false,
-            };
-            if is_dirty {
-                module.compile_dirty = is_dirty;
             }
         }
     }
@@ -322,16 +381,54 @@ pub fn parser_args(
     ))
 }
 
+fn make_parse_file_span(
+    filename: &Path,
+    package: &Package,
+    parser_args: &[String],
+    build_state: &BuildState,
+    parent: &tracing::Span,
+) -> tracing::Span {
+    let module_name = helpers::file_path_to_module_name(filename, &package.namespace);
+    let mut ppx_names: Vec<String> = Vec::new();
+    let mut experimental: Vec<String> = Vec::new();
+    for pair in parser_args.windows(2) {
+        if pair[0] == "-ppx" {
+            let parts: Vec<&str> = pair[1].split(['/', '\\']).collect();
+            let start = if parts.len() >= 2 { parts.len() - 2 } else { 0 };
+            ppx_names.push(parts[start..].join("/"));
+        } else if pair[0] == "-enable-experimental" {
+            experimental.push(pair[1].clone());
+        }
+    }
+    let ppx = ppx_names.join(",");
+    let experimental = experimental.join(",");
+    let root_config = build_state.get_root_config();
+    let jsx = root_config.get_jsx_args().get(1).cloned().unwrap_or_default();
+    let bsc_flags = config::flatten_flags(&package.config.compiler_flags).join(" ");
+    info_span!(
+        parent: parent,
+        "build.parse_file",
+        module = %module_name,
+        package = %package.name,
+        ppx = %ppx,
+        experimental = %experimental,
+        jsx = %jsx,
+        bsc_flags = %bsc_flags,
+    )
+}
+
 fn generate_ast(
     package: Package,
     filename: &Path,
     build_state: &BuildState,
     warn_error_override: Option<String>,
+    parent_span: &tracing::Span,
+    output: OutputTarget,
 ) -> anyhow::Result<(PathBuf, Option<helpers::StdErr>)> {
     let file_path = PathBuf::from(&package.path).join(filename);
     let contents = helpers::read_file(&file_path).expect("Error reading file");
 
-    let build_path_abs = package.get_build_path();
+    let build_path_abs = package.get_build_path_for_output(output);
     let (ast_path, parser_args) = parser_args(
         &build_state.project_context,
         &package.config,
@@ -341,8 +438,14 @@ fn generate_ast(
         warn_error_override,
     )?;
 
+    let _parse_span = if tracing::enabled!(tracing::Level::INFO) {
+        make_parse_file_span(filename, &package, &parser_args, build_state, parent_span).entered()
+    } else {
+        tracing::Span::none().entered()
+    };
+
     // generate the dir of the ast_path (it mirrors the source file dir)
-    let ast_parent_path = package.get_build_path().join(ast_path.parent().unwrap());
+    let ast_parent_path = build_path_abs.join(ast_path.parent().unwrap());
     helpers::create_path(&ast_parent_path);
 
     /* Create .ast */
@@ -385,7 +488,9 @@ fn generate_ast(
     if let Ok((ast_path, _)) = &result {
         let _ = std::fs::copy(
             Path::new(&build_path_abs).join(ast_path),
-            package.get_ocaml_build_path().join(ast_path.file_name().unwrap()),
+            package
+                .get_ocaml_build_path_for_output(output)
+                .join(ast_path.file_name().unwrap()),
         );
     }
     result

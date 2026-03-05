@@ -132,6 +132,23 @@ let main () =
         Cache.deleteCache (Cache.targetFileFromLibBs libBs);
         print_endline "\"OK\"")
     | _ -> print_endline "\"ERR: Did not find root \"")
+  | _ :: "rewatch" :: rewatchArgs -> (
+    match rewatchArgs with
+    | ["completion"] -> CommandsRewatch.completion ()
+    | ["completionResolve"] -> CommandsRewatch.completionResolve ()
+    | ["hover"] -> CommandsRewatch.hover ()
+    | ["definition"] -> CommandsRewatch.definition ()
+    | ["typeDefinition"] -> CommandsRewatch.typeDefinition ()
+    | ["references"] -> CommandsRewatch.references ()
+    | ["documentSymbol"] -> CommandsRewatch.documentSymbol ()
+    | ["prepareRename"] -> CommandsRewatch.prepareRename ()
+    | ["rename"] -> CommandsRewatch.rename ()
+    | ["signatureHelp"] -> CommandsRewatch.signatureHelp ()
+    | ["codeLens"] -> CommandsRewatch.codeLens ()
+    | ["inlayHint"] -> CommandsRewatch.inlayHint ()
+    | ["semanticTokens"] -> CommandsRewatch.semanticTokens ()
+    | ["codeAction"] -> CommandsRewatch.codeAction ()
+    | _ -> prerr_endline "Unknown rewatch subcommand")
   | [_; "completion"; path; line; col; currentFile] ->
     printHeaderInfo path line col;
     Commands.completion ~debug ~path
@@ -147,7 +164,13 @@ let main () =
     Commands.typeDefinition ~path
       ~pos:(int_of_string line, int_of_string col)
       ~debug
-  | [_; "documentSymbol"; path] -> DocumentSymbol.command ~path
+  | [_; "documentSymbol"; path] ->
+    let source =
+      match Files.readFile path with
+      | Some s -> s
+      | None -> ""
+    in
+    print_endline (DocumentSymbol.command ~path ~source)
   | [_; "hover"; path; line; col; currentFile; supportsMarkdownLinks] ->
     Commands.hover ~path
       ~pos:(int_of_string line, int_of_string col)

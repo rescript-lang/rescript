@@ -15,6 +15,7 @@ and all_ppx = ref ([] : string list)
 (* -ppx *)
 let annotations = ref false (* -annot *)
 let binary_annotations = ref false (* -annot *)
+let skip_source_digest = ref false
 
 and noassert = ref false (* -noassert *)
 

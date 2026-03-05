@@ -70,18 +70,40 @@ let process_file sourcefile ?kind ppf =
     match kind with
     | Res ->
       let sourcefile = set_abs_input_name sourcefile in
-      Js_implementation.implementation
-        ~parser:
-          (Res_driver.parse_implementation
-             ~ignore_parse_errors:!Clflags.ignore_parse_errors)
-        ppf sourcefile
+      if !Js_config.read_stdin then (
+        Clflags.skip_source_digest := true;
+        let source = Res_io.read_stdin () in
+        Location.stdin_source := Some source;
+        Js_implementation.implementation
+          ~parser:(fun _fname ->
+            Res_driver.parse_implementation_from_stdin
+              ~ignore_parse_errors:!Clflags.ignore_parse_errors
+              ~filename:sourcefile source)
+          ppf sourcefile)
+      else
+        Js_implementation.implementation
+          ~parser:
+            (Res_driver.parse_implementation
+               ~ignore_parse_errors:!Clflags.ignore_parse_errors)
+          ppf sourcefile
     | Resi ->
       let sourcefile = set_abs_input_name sourcefile in
-      Js_implementation.interface
-        ~parser:
-          (Res_driver.parse_interface
-             ~ignore_parse_errors:!Clflags.ignore_parse_errors)
-        ppf sourcefile
+      if !Js_config.read_stdin then (
+        Clflags.skip_source_digest := true;
+        let source = Res_io.read_stdin () in
+        Location.stdin_source := Some source;
+        Js_implementation.interface
+          ~parser:(fun _fname ->
+            Res_driver.parse_interface_from_stdin
+              ~ignore_parse_errors:!Clflags.ignore_parse_errors
+              ~filename:sourcefile source)
+          ppf sourcefile)
+      else
+        Js_implementation.interface
+          ~parser:
+            (Res_driver.parse_interface
+               ~ignore_parse_errors:!Clflags.ignore_parse_errors)
+          ppf sourcefile
     | Intf_ast -> Js_implementation.interface_mliast ppf sourcefile
     (* The printer setup is done in the runtime depends on
        the content of ast
@@ -169,17 +191,29 @@ let format_file input =
   let ext =
     Ext_file_extensions.classify_input (Ext_filename.get_extension_maybe input)
   in
-  (match ext with
-  | Res | Resi -> ()
-  | _ -> Bsc_args.bad_arg ("don't know what to do with " ^ input));
-  let formatted =
-    Res_multi_printer.print
-      ~ignore_parse_errors:!Clflags.ignore_parse_errors
-      input
+  let is_interface =
+    match ext with
+    | Resi -> true
+    | Res -> false
+    | _ -> Bsc_args.bad_arg ("don't know what to do with " ^ input)
   in
-  match !Clflags.output_name with
-  | None -> output_string stdout formatted
-  | Some fname -> Ext_io.write_file fname formatted
+  if !Js_config.read_stdin then
+    let source = Res_io.read_stdin () in
+    let formatted =
+      Res_multi_printer.print_source
+        ~ignore_parse_errors:!Clflags.ignore_parse_errors
+        ~is_interface ~filename:input source
+    in
+    output_string stdout formatted
+  else
+    let formatted =
+      Res_multi_printer.print
+        ~ignore_parse_errors:!Clflags.ignore_parse_errors
+        input
+    in
+    match !Clflags.output_name with
+    | None -> output_string stdout formatted
+    | Some fname -> Ext_io.write_file fname formatted
 
 let set_color_option option =
   match Clflags.parse_color_setting option with
@@ -308,6 +342,9 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
     ( "-e",
       string_call (fun s -> eval s ~suffix:Literals.suffix_res),
       "(experimental) set the string to be evaluated in ReScript syntax" );
+    ( "-bs-read-stdin",
+      set Js_config.read_stdin,
+      "*internal* Read source from stdin instead of from the file argument" );
     ( "-bs-cmi-only",
       set Js_config.cmi_only,
       "*internal* Stop after generating cmi file" );

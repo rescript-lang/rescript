@@ -29,6 +29,8 @@ let none = in_file "_none_"
 
 let input_name = ref "_none_"
 let set_input_name name = if name <> "" then input_name := name
+
+let stdin_source : string option ref = ref None
 (* Terminal info *)
 
 (* Print the location in some way or another *)
@@ -134,7 +136,10 @@ let print ?(src = None) ~message_kind intro ppf (loc : t) =
       let src =
         match src with
         | Some src -> src
-        | None -> Ext_io.load_file file
+        | None -> (
+          match !stdin_source with
+          | Some src -> src
+          | None -> Ext_io.load_file file)
       in
       (* we're putting the line break `@,` here rather than above, because this
          branch might not be reached (aka no inline file content display) so

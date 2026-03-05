@@ -3,15 +3,57 @@ use anyhow::{Result, bail};
 use num_cpus;
 use rayon::prelude::*;
 use std::fs;
-use std::io::{self, Write};
+use std::io::{self, Read, Write};
 use std::path::Path;
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
+use tracing::{info_span, instrument};
 
 use crate::build::packages;
 use crate::cli::FileExtension;
 use clap::ValueEnum;
 
+/// On Windows, bsc writes CRLF to stdout (text mode).
+/// Match the line ending style of the original source to avoid unwanted conversions.
+fn normalize_line_endings(source: &str, formatted: &[u8]) -> String {
+    let raw = String::from_utf8_lossy(formatted);
+    if !source.contains("\r\n") && raw.contains("\r\n") {
+        raw.replace("\r\n", "\n")
+    } else {
+        raw.into_owned()
+    }
+}
+
+/// Format source code by piping it to `bsc -bs-read-stdin -format`.
+///
+/// `filename` is used by bsc for extension detection (`.res` vs `.resi`)
+/// and error locations — the file doesn't need to exist on disk.
+///
+/// On Windows, bsc writes CRLF to stdout. This function matches the line
+/// ending style of `source` to avoid unwanted conversions.
+pub fn format_source(bsc_exe: &Path, source: &str, filename: &str) -> Result<String> {
+    let mut child = Command::new(bsc_exe)
+        .args(["-bs-read-stdin", "-format", filename])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()?;
+
+    if let Some(mut stdin) = child.stdin.take() {
+        stdin.write_all(source.as_bytes())?;
+    }
+
+    let output = child.wait_with_output()?;
+
+    if !output.status.success() {
+        let stderr_str = String::from_utf8_lossy(&output.stderr);
+        bail!("Error formatting {filename}: {stderr_str}");
+    }
+
+    Ok(normalize_line_endings(source, &output.stdout))
+}
+
+#[instrument(name = "format.format", skip_all)]
 pub fn format(stdin_extension: Option<FileExtension>, check: bool, files: Vec<String>) -> Result<()> {
     let bsc_path = helpers::get_bsc();
 
@@ -61,23 +103,13 @@ fn format_stdin(bsc_exe: &Path, extension: FileExtension) -> Result<()> {
         .to_possible_value()
         .ok_or(anyhow::anyhow!("Could not get extension arg value"))?;
 
-    let mut temp_file = tempfile::Builder::new()
-        .suffix(extension_value.get_name())
-        .tempfile()?;
-    io::copy(&mut io::stdin(), &mut temp_file)?;
-    let temp_path = temp_file.path();
+    let dummy_filename = format!("stdin{}", extension_value.get_name());
 
-    let mut cmd = Command::new(bsc_exe);
-    cmd.arg("-format").arg(temp_path);
+    let mut source = String::new();
+    io::stdin().read_to_string(&mut source)?;
 
-    let output = cmd.output()?;
-
-    if output.status.success() {
-        io::stdout().write_all(&output.stdout)?;
-    } else {
-        let stderr_str = String::from_utf8_lossy(&output.stderr);
-        bail!("Error formatting stdin: {}", stderr_str);
-    }
+    let formatted = format_source(bsc_exe, &source, &dummy_filename)?;
+    io::stdout().write_all(formatted.as_bytes())?;
 
     Ok(())
 }
@@ -87,28 +119,26 @@ fn format_files(bsc_exe: &Path, files: Vec<String>, check: bool) -> Result<()> {
     let incorrectly_formatted_files = AtomicUsize::new(0);
 
     files.par_chunks(batch_size).try_for_each(|batch| {
-        batch.iter().try_for_each(|file| {
-            let mut cmd = Command::new(bsc_exe);
-            // Always get formatted output to stdout for comparison
-            cmd.arg("-format").arg(file);
+        batch.iter().try_for_each(|file| -> Result<()> {
+            let original_content = fs::read_to_string(file)?;
 
-            let output = cmd.output()?;
+            let output = Command::new(bsc_exe).args(["-format", file]).output()?;
 
-            if output.status.success() {
-                let original_content = fs::read_to_string(file)?;
-                let formatted_content = String::from_utf8_lossy(&output.stdout);
-                if original_content != formatted_content {
-                    if check {
-                        eprintln!("[format check] {file}");
-                        incorrectly_formatted_files.fetch_add(1, Ordering::SeqCst);
-                    } else {
-                        // Only write if content actually changed
-                        fs::write(file, &*formatted_content)?;
-                    }
-                }
-            } else {
+            if !output.status.success() {
                 let stderr_str = String::from_utf8_lossy(&output.stderr);
-                bail!("Error formatting {}: {}", file, stderr_str);
+                bail!("Error formatting {file}: {stderr_str}");
+            }
+
+            let formatted_content = normalize_line_endings(&original_content, &output.stdout);
+
+            if original_content != formatted_content {
+                if check {
+                    eprintln!("[format check] {file}");
+                    incorrectly_formatted_files.fetch_add(1, Ordering::SeqCst);
+                } else {
+                    let _file_span = info_span!("format.write_file", file = %file).entered();
+                    fs::write(file, &formatted_content)?;
+                }
             }
             Ok(())
         })
