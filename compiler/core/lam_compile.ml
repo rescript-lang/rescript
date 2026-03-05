@@ -825,18 +825,27 @@ let compile output_prefix =
             | _ -> false)
           typeof_clauses
       in
-      let has_array_case =
+      let clauses_have_array_case =
         List.exists
           (function
             | Ast_untagged_variants.Untagged (InstanceType Array), _ -> true
             | _ -> false)
           not_typeof_clauses
       in
+      let type_has_array_case =
+        List.exists
+          (function
+            | Ast_untagged_variants.InstanceType Array -> true
+            | _ -> false)
+          block_cases
+      in
       (* When there's an ObjectType typeof case, null and arrays can
          incorrectly match it (typeof null === typeof [] === "object").
          Guard against them when they should fall through to default. *)
       let needs_null_guard = has_object_typeof && has_null_case in
-      let needs_array_guard = has_object_typeof && not has_array_case in
+      let needs_array_guard =
+        has_object_typeof && type_has_array_case && not clauses_have_array_case
+      in
       let rec build_if_chain remaining_clauses =
         match remaining_clauses with
         | ( Ast_untagged_variants.Untagged (InstanceType instance_type),
@@ -860,7 +869,8 @@ let compile output_prefix =
           match (guard, default) with
           | Some guard, Some default_body ->
             S.if_ guard default_body ~else_:[typeof_switch ()]
-          | _ -> typeof_switch ())
+          | Some guard, None -> S.if_ (E.not guard) [typeof_switch ()]
+          | None, _ -> typeof_switch ())
       in
       build_if_chain not_typeof_clauses
     in
