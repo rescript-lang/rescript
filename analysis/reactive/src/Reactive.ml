@@ -1077,8 +1077,7 @@ let fixpoint ~name ~(init : ('k, unit) t) ~(edges : ('k, 'k list) t) () :
   let my_level = max init.level edges.level + 1 in
 
   (* Internal state *)
-  let current : ('k, unit) Hashtbl.t = Hashtbl.create 256 in
-  let edge_map : ('k, 'k list) Hashtbl.t = Hashtbl.create 256 in
+  let state = ReactiveFixpoint.create () in
   let subscribers = ref [] in
   let my_stats = create_stats () in
 
@@ -1086,35 +1085,16 @@ let fixpoint ~name ~(init : ('k, unit) t) ~(edges : ('k, 'k list) t) () :
   let init_pending = ref [] in
   let edges_pending = ref [] in
 
-  (* Track which nodes are roots *)
-  let roots : ('k, unit) Hashtbl.t = Hashtbl.create 64 in
-
-  (* BFS helper to find all reachable from roots *)
-  let recompute_all () =
-    let new_current = Hashtbl.create (Hashtbl.length current) in
-    let frontier = Queue.create () in
-
-    (* Start from all roots *)
-    Hashtbl.iter
-      (fun k () ->
-        Hashtbl.replace new_current k ();
-        Queue.add k frontier)
-      roots;
-
-    (* BFS *)
-    while not (Queue.is_empty frontier) do
-      let k = Queue.pop frontier in
-      match Hashtbl.find_opt edge_map k with
-      | None -> ()
-      | Some successors ->
-        List.iter
-          (fun succ ->
-            if not (Hashtbl.mem new_current succ) then (
-              Hashtbl.replace new_current succ ();
-              Queue.add succ frontier))
-          successors
-    done;
-    new_current
+  let emit_output output_entries =
+    if output_entries <> [] then (
+      let num_adds, num_removes = count_changes output_entries in
+      my_stats.deltas_emitted <- my_stats.deltas_emitted + 1;
+      my_stats.entries_emitted <-
+        my_stats.entries_emitted + List.length output_entries;
+      my_stats.adds_emitted <- my_stats.adds_emitted + num_adds;
+      my_stats.removes_emitted <- my_stats.removes_emitted + num_removes;
+      let delta = Batch output_entries in
+      List.iter (fun h -> h delta) !subscribers)
   in
 
   let process () =
@@ -1141,94 +1121,10 @@ let fixpoint ~name ~(init : ('k, unit) t) ~(edges : ('k, 'k list) t) () :
     my_stats.removes_received <-
       my_stats.removes_received + init_removes + edges_removes;
 
-    let output_entries = ref [] in
-    let needs_full_recompute = ref false in
-
-    (* Apply edge updates *)
-    List.iter
-      (fun (k, v_opt) ->
-        match v_opt with
-        | Some successors ->
-          let old = Hashtbl.find_opt edge_map k in
-          Hashtbl.replace edge_map k successors;
-          (* If edges changed for a current node, may need recompute *)
-          if Hashtbl.mem current k && old <> Some successors then
-            needs_full_recompute := true
-        | None ->
-          if Hashtbl.mem edge_map k then (
-            Hashtbl.remove edge_map k;
-            if Hashtbl.mem current k then needs_full_recompute := true))
-      edges_entries;
-
-    (* Apply init updates *)
-    List.iter
-      (fun (k, v_opt) ->
-        match v_opt with
-        | Some () -> Hashtbl.replace roots k ()
-        | None ->
-          if Hashtbl.mem roots k then (
-            Hashtbl.remove roots k;
-            needs_full_recompute := true))
-      init_entries;
-
-    (* Either do incremental expansion or full recompute *)
-    (if !needs_full_recompute then (
-       (* Full recompute: find what changed *)
-       let new_current = recompute_all () in
-
-       (* Find removed entries *)
-       Hashtbl.iter
-         (fun k () ->
-           if not (Hashtbl.mem new_current k) then
-             output_entries := (k, None) :: !output_entries)
-         current;
-
-       (* Find added entries *)
-       Hashtbl.iter
-         (fun k () ->
-           if not (Hashtbl.mem current k) then
-             output_entries := (k, Some ()) :: !output_entries)
-         new_current;
-
-       (* Update current *)
-       Hashtbl.reset current;
-       Hashtbl.iter (fun k v -> Hashtbl.replace current k v) new_current)
-     else
-       (* Incremental: BFS from new roots *)
-       let frontier = Queue.create () in
-
-       init_entries
-       |> List.iter (fun (k, v_opt) ->
-              match v_opt with
-              | Some () when not (Hashtbl.mem current k) ->
-                Hashtbl.replace current k ();
-                output_entries := (k, Some ()) :: !output_entries;
-                Queue.add k frontier
-              | _ -> ());
-
-       while not (Queue.is_empty frontier) do
-         let k = Queue.pop frontier in
-         match Hashtbl.find_opt edge_map k with
-         | None -> ()
-         | Some successors ->
-           List.iter
-             (fun succ ->
-               if not (Hashtbl.mem current succ) then (
-                 Hashtbl.replace current succ ();
-                 output_entries := (succ, Some ()) :: !output_entries;
-                 Queue.add succ frontier))
-             successors
-       done);
-
-    if !output_entries <> [] then (
-      let num_adds, num_removes = count_changes !output_entries in
-      my_stats.deltas_emitted <- my_stats.deltas_emitted + 1;
-      my_stats.entries_emitted <-
-        my_stats.entries_emitted + List.length !output_entries;
-      my_stats.adds_emitted <- my_stats.adds_emitted + num_adds;
-      my_stats.removes_emitted <- my_stats.removes_emitted + num_removes;
-      let delta = Batch !output_entries in
-      List.iter (fun h -> h delta) !subscribers)
+    let output_entries =
+      ReactiveFixpoint.apply state ~init_entries ~edge_entries:edges_entries
+    in
+    emit_output output_entries
   in
 
   let _info =
@@ -1249,35 +1145,14 @@ let fixpoint ~name ~(init : ('k, unit) t) ~(edges : ('k, 'k list) t) () :
       Registry.mark_dirty name);
 
   (* Initialize from existing data *)
-  (* First, copy edges *)
-  edges.iter (fun k v -> Hashtbl.replace edge_map k v);
-  (* Then, BFS from existing init values *)
-  let frontier = Queue.create () in
-  init.iter (fun k () ->
-      Hashtbl.replace roots k ();
-      (* Track roots *)
-      if not (Hashtbl.mem current k) then (
-        Hashtbl.replace current k ();
-        Queue.add k frontier));
-  while not (Queue.is_empty frontier) do
-    let k = Queue.pop frontier in
-    match Hashtbl.find_opt edge_map k with
-    | None -> ()
-    | Some successors ->
-      List.iter
-        (fun succ ->
-          if not (Hashtbl.mem current succ) then (
-            Hashtbl.replace current succ ();
-            Queue.add succ frontier))
-        successors
-  done;
+  ReactiveFixpoint.initialize state ~roots_iter:init.iter ~edges_iter:edges.iter;
 
   {
     name;
     subscribe = (fun h -> subscribers := h :: !subscribers);
-    iter = (fun f -> Hashtbl.iter f current);
-    get = (fun k -> Hashtbl.find_opt current k);
-    length = (fun () -> Hashtbl.length current);
+    iter = (fun f -> ReactiveFixpoint.iter_current state f);
+    get = (fun k -> ReactiveFixpoint.get_current state k);
+    length = (fun () -> ReactiveFixpoint.current_length state);
     stats = my_stats;
     level = my_level;
   }
