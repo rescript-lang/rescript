@@ -14,6 +14,10 @@ val create : max_nodes:int -> max_edges:int -> 'k t
 
     Raises [Invalid_argument] if capacities are not positive. *)
 
+val destroy : 'k t -> unit
+(** Release fixpoint-owned off-heap storage. The state must not be used
+    afterwards. *)
+
 val iter_current : 'k t -> ('k -> unit -> unit) -> unit
 val get_current : 'k t -> 'k -> unit ReactiveMaybe.t
 val current_length : 'k t -> int

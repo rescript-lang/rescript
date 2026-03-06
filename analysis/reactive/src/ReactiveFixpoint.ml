@@ -432,6 +432,8 @@ let create ~max_nodes ~max_edges =
       };
   }
 
+let destroy t = ReactiveWave.destroy t.output_wave
+
 type 'k root_wave = ('k, unit ReactiveMaybe.t) ReactiveWave.t
 type 'k edge_wave = ('k, 'k list ReactiveMaybe.t) ReactiveWave.t
 type 'k output_wave = ('k, unit ReactiveMaybe.t) ReactiveWave.t

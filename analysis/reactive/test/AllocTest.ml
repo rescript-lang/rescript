@@ -38,11 +38,14 @@ let print_offheap_snapshot label =
 let test_fixpoint_alloc_n n =
   let edge_values = Array.init (max 0 (n - 1)) (fun i -> [i + 1]) in
   Gc.full_major ();
+  let root_snap = ReactiveWave.create ~max_entries:1 in
+  let edge_snap = ReactiveWave.create ~max_entries:n in
+  let remove_root = ReactiveWave.create ~max_entries:1 in
+  let add_root = ReactiveWave.create ~max_entries:1 in
+  let no_edges = ReactiveWave.create ~max_entries:1 in
   let state = ReactiveFixpoint.create ~max_nodes:n ~max_edges:n in
 
   (* Chain graph: 0 -> 1 -> 2 -> ... -> n-1 *)
-  let root_snap = ReactiveWave.create ~max_entries:1 in
-  let edge_snap = ReactiveWave.create ~max_entries:n in
   ReactiveWave.push root_snap (off_int 0) (off_unit ());
   for i = 0 to n - 2 do
     ReactiveWave.push edge_snap (off_int i)
@@ -52,12 +55,9 @@ let test_fixpoint_alloc_n n =
   assert (ReactiveFixpoint.current_length state = n);
 
   (* Pre-build waves once *)
-  let remove_root = ReactiveWave.create ~max_entries:1 in
   ReactiveWave.push remove_root (off_int 0) ReactiveMaybe.none_offheap;
-  let add_root = ReactiveWave.create ~max_entries:1 in
   ReactiveWave.push add_root (off_int 0)
     (off_maybe_unit (ReactiveMaybe.some ()));
-  let no_edges = ReactiveWave.create ~max_entries:1 in
 
   (* Warmup *)
   for _ = 1 to 5 do
@@ -76,6 +76,12 @@ let test_fixpoint_alloc_n n =
     ignore (ReactiveFixpoint.apply_wave state ~roots:add_root ~edges:no_edges)
   done;
   assert (ReactiveFixpoint.current_length state = n);
+  ReactiveWave.destroy root_snap;
+  ReactiveWave.destroy edge_snap;
+  ReactiveWave.destroy remove_root;
+  ReactiveWave.destroy add_root;
+  ReactiveWave.destroy no_edges;
+  ReactiveFixpoint.destroy state;
   words_since () / iters
 
 let test_fixpoint_alloc () =
@@ -410,14 +416,10 @@ let test_reactive_fixpoint_alloc () =
 
 let test_reactive_union_alloc_n n =
   Reactive.reset ();
-  print_offheap_snapshot "before sources";
   let left, emit_left = Reactive.Source.create ~name:"left" () in
-  print_offheap_snapshot "after left source";
   let right, emit_right = Reactive.Source.create ~name:"right" () in
-  print_offheap_snapshot "after right source";
 
   let merged = Reactive.Union.create ~name:"merged" left right () in
-  print_offheap_snapshot "after union";
 
   (* Populate: n entries on the left side *)
   for i = 0 to n - 1 do
