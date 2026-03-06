@@ -195,6 +195,7 @@ let test_union_alloc_n n =
     ignore (ReactiveUnion.process state)
   done;
   assert (ReactiveUnion.target_length state = n);
+  ReactiveWave.destroy output_wave;
   words_since () / iters
 
 let test_union_alloc () =
@@ -265,6 +266,7 @@ let test_join_alloc_n n =
     ignore (ReactiveJoin.process state)
   done;
   assert (ReactiveJoin.target_length state = n);
+  ReactiveWave.destroy output_wave;
   words_since () / iters
 
 let test_join_alloc () =
@@ -449,12 +451,11 @@ let test_reactive_union_alloc_n n =
     emit_left add_wave
   done;
   assert (Reactive.length merged = n);
-  let words = words_since () / iters in
   ReactiveWave.destroy remove_wave;
   ReactiveWave.destroy add_wave;
   Reactive.destroy left;
   Reactive.destroy right;
-  words
+  words_since () / iters
 
 let test_reactive_union_alloc () =
   reset_offheap_state ();
