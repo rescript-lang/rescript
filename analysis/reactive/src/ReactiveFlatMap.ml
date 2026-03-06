@@ -76,7 +76,10 @@ let create ~f ~merge ~output_wave =
   in
   t
 
-let push t k v_opt = ReactiveHash.Map.replace t.scratch k v_opt
+let push t k v_opt =
+  ReactiveHash.Map.replace t.scratch
+    (ReactiveAllocator.unsafe_from_offheap k)
+    (ReactiveAllocator.unsafe_from_offheap v_opt)
 
 (* Remove one contribution key during remove_source iteration *)
 let remove_one_contribution (t : (_, _, _, _) t) k2 =
@@ -101,10 +104,14 @@ let recompute_target (t : (_, _, _, _) t) k2 =
     ReactivePoolMapMap.iter_inner_with t.contributions k2 t
       merge_one_contribution;
     ReactiveHash.Map.replace t.target k2 t.merge_acc;
-    ReactiveWave.push t.output_wave k2 (ReactiveMaybe.some t.merge_acc))
+    ReactiveWave.push t.output_wave
+      (ReactiveAllocator.unsafe_to_offheap k2)
+      (ReactiveAllocator.unsafe_to_offheap (ReactiveMaybe.some t.merge_acc)))
   else (
     ReactiveHash.Map.remove t.target k2;
-    ReactiveWave.push t.output_wave k2 ReactiveMaybe.none)
+    ReactiveWave.push t.output_wave
+      (ReactiveAllocator.unsafe_to_offheap k2)
+      ReactiveMaybe.none_offheap)
 
 (* Single-pass process + count for scratch *)
 let process_scratch_entry (t : (_, _, _, _) t) k1 mv =
@@ -118,6 +125,7 @@ let process_scratch_entry (t : (_, _, _, _) t) k1 mv =
   else t.result.removes_received <- t.result.removes_received + 1
 
 let count_output_entry (r : process_result) _k mv =
+  let mv = ReactiveAllocator.unsafe_from_offheap mv in
   if ReactiveMaybe.is_some mv then r.adds_emitted <- r.adds_emitted + 1
   else r.removes_emitted <- r.removes_emitted + 1
 

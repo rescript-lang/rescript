@@ -495,9 +495,14 @@ let initialize t ~roots ~edges =
   ReactiveHash.Map.clear t.roots;
   ReactiveHash.Map.clear t.edge_map;
   ReactivePoolMapSet.clear t.pred_map;
-  ReactiveWave.iter roots (fun k () -> ReactiveHash.Map.replace t.roots k ());
+  ReactiveWave.iter roots (fun k _ ->
+      ReactiveHash.Map.replace t.roots
+        (ReactiveAllocator.unsafe_from_offheap k)
+        ());
   ReactiveWave.iter edges (fun k successors ->
-      apply_edge_update t ~src:k ~new_successors:successors);
+      apply_edge_update t
+        ~src:(ReactiveAllocator.unsafe_from_offheap k)
+        ~new_successors:(ReactiveAllocator.unsafe_from_offheap successors));
   recompute_current t
 
 let is_supported t k =
@@ -530,7 +535,9 @@ let add_live t k =
   if not (ReactiveHash.Map.mem t.current k) then (
     ReactiveHash.Map.replace t.current k ();
     if not (ReactiveHash.Map.mem t.deleted_nodes k) then
-      ReactiveWave.push t.output_wave k (ReactiveMaybe.some ());
+      ReactiveWave.push t.output_wave
+        (ReactiveAllocator.unsafe_to_offheap k)
+        (ReactiveMaybe.maybe_unit_to_offheap (ReactiveMaybe.some ()));
     enqueue_expand t k)
 
 let enqueue_rederive_if_needed t k =
@@ -593,7 +600,9 @@ let apply_root_mutation t k mv =
 
 let emit_removal t k () =
   if not (ReactiveHash.Map.mem t.current k) then
-    ReactiveWave.push t.output_wave k ReactiveMaybe.none
+    ReactiveWave.push t.output_wave
+      (ReactiveAllocator.unsafe_to_offheap k)
+      ReactiveMaybe.none_offheap
 
 let rebuild_edge_change_queue t src _succs =
   ReactiveQueue.push t.edge_change_queue src
@@ -621,11 +630,21 @@ let apply_list t ~roots ~edges =
 
   (* Phase 1a: scan init entries — seed delete queue for removed roots,
      buffer added roots for later expansion *)
-  ReactiveWave.iter_with roots scan_root_entry t;
+  ReactiveWave.iter_with roots
+    (fun t k mv ->
+      scan_root_entry t
+        (ReactiveAllocator.unsafe_from_offheap k)
+        (ReactiveAllocator.unsafe_from_offheap mv))
+    t;
 
   (* Phase 1b: scan edge entries — seed delete queue for removed targets,
      store new_succs and has_new_edge for later phases *)
-  ReactiveWave.iter_with edges scan_edge_entry t;
+  ReactiveWave.iter_with edges
+    (fun t src mv ->
+      scan_edge_entry t
+        (ReactiveAllocator.unsafe_from_offheap src)
+        (ReactiveAllocator.unsafe_from_offheap mv))
+    t;
 
   Invariants.assert_edge_has_new_consistent
     ~edge_change_queue:t.edge_change_queue
@@ -647,7 +666,12 @@ let apply_list t ~roots ~edges =
       ~deleted_nodes:t.deleted_nodes ~old_successors:(old_successors t);
 
   (* Phase 3: apply root and edge mutations *)
-  ReactiveWave.iter_with roots apply_root_mutation t;
+  ReactiveWave.iter_with roots
+    (fun t k mv ->
+      apply_root_mutation t
+        (ReactiveAllocator.unsafe_from_offheap k)
+        (ReactiveAllocator.unsafe_from_offheap mv))
+    t;
 
   (* Apply edge updates by draining edge_change_queue. *)
   while not (ReactiveQueue.is_empty t.edge_change_queue) do
@@ -733,7 +757,10 @@ let apply_list t ~roots ~edges =
     if Invariants.enabled then (
       let entries = ref [] in
       ReactiveWave.iter t.output_wave (fun k v_opt ->
-          entries := (k, v_opt) :: !entries);
+          entries :=
+            ( ReactiveAllocator.unsafe_from_offheap k,
+              ReactiveAllocator.unsafe_from_offheap v_opt )
+            :: !entries);
       !entries)
     else []
   in

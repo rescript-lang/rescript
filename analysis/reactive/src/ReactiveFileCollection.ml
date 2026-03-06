@@ -32,7 +32,7 @@ type ('raw, 'v) t = {
 let create ~read_file ~process : ('raw, 'v) t =
   let internal = {cache = Hashtbl.create 256; read_file; process} in
   let collection, emit = Reactive.source ~name:"file_collection" () in
-  let scratch_wave = ReactiveWave.create ~max_entries:65_536 in
+  let scratch_wave = ReactiveWave.create ~max_entries:16 in
   {internal; collection; emit; scratch_wave}
 
 (** Get the collection interface for composition *)
@@ -41,7 +41,9 @@ let to_collection t : (string, 'v) Reactive.t = t.collection
 (** Emit a single set entry *)
 let emit_set t path value =
   ReactiveWave.clear t.scratch_wave;
-  ReactiveWave.push t.scratch_wave path (ReactiveMaybe.some value);
+  ReactiveWave.push t.scratch_wave
+    (ReactiveAllocator.unsafe_to_offheap path)
+    (ReactiveAllocator.unsafe_to_offheap (ReactiveMaybe.some value));
   t.emit t.scratch_wave
 
 (** Process a file if changed. Emits delta to subscribers. *)
@@ -75,7 +77,9 @@ let process_files_batch t paths =
         let raw = t.internal.read_file path in
         let value = t.internal.process path raw in
         Hashtbl.replace t.internal.cache path (new_id, value);
-        ReactiveWave.push t.scratch_wave path (ReactiveMaybe.some value);
+        ReactiveWave.push t.scratch_wave
+          (ReactiveAllocator.unsafe_to_offheap path)
+          (ReactiveAllocator.unsafe_to_offheap (ReactiveMaybe.some value));
         incr count)
     paths;
   if !count > 0 then t.emit t.scratch_wave;
@@ -85,7 +89,9 @@ let process_files_batch t paths =
 let remove t path =
   Hashtbl.remove t.internal.cache path;
   ReactiveWave.clear t.scratch_wave;
-  ReactiveWave.push t.scratch_wave path ReactiveMaybe.none;
+  ReactiveWave.push t.scratch_wave
+    (ReactiveAllocator.unsafe_to_offheap path)
+    ReactiveMaybe.none_offheap;
   t.emit t.scratch_wave
 
 (** Remove multiple files as a batch *)
@@ -96,7 +102,9 @@ let remove_batch t paths =
     (fun path ->
       if Hashtbl.mem t.internal.cache path then (
         Hashtbl.remove t.internal.cache path;
-        ReactiveWave.push t.scratch_wave path ReactiveMaybe.none;
+        ReactiveWave.push t.scratch_wave
+          (ReactiveAllocator.unsafe_to_offheap path)
+          ReactiveMaybe.none_offheap;
         incr count))
     paths;
   if !count > 0 then t.emit t.scratch_wave;

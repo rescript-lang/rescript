@@ -29,6 +29,12 @@ val to_offheap : 'a -> 'a offheap
     Raises [Invalid_argument] if the value is currently in the minor heap.
     Immediates are accepted. *)
 
+val int_to_offheap : int -> int offheap
+(** Safely mark an [int] as suitable for off-heap storage. *)
+
+val unit_to_offheap : unit -> unit offheap
+(** Safely mark [()] as suitable for off-heap storage. *)
+
 val unsafe_from_offheap : 'a offheap -> 'a
 (** Unsafely recover a regular OCaml value from an off-heap-marked value. *)
 

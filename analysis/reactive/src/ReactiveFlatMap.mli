@@ -19,7 +19,11 @@ val create :
   output_wave:('k2, 'v2 ReactiveMaybe.t) ReactiveWave.t ->
   ('k1, 'v1, 'k2, 'v2) t
 
-val push : ('k1, 'v1, 'k2, 'v2) t -> 'k1 -> 'v1 ReactiveMaybe.t -> unit
+val push :
+  ('k1, 'v1, 'k2, 'v2) t ->
+  'k1 ReactiveAllocator.offheap ->
+  'v1 ReactiveMaybe.t ReactiveAllocator.offheap ->
+  unit
 (** Push an entry into the scratch table. *)
 
 val process : ('k1, 'v1, 'k2, 'v2) t -> process_result

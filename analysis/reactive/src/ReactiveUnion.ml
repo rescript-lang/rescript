@@ -46,8 +46,15 @@ let create ~merge ~output_wave =
       };
   }
 
-let push_left t k mv = ReactiveHash.Map.replace t.left_scratch k mv
-let push_right t k mv = ReactiveHash.Map.replace t.right_scratch k mv
+let push_left t k mv =
+  ReactiveHash.Map.replace t.left_scratch
+    (ReactiveAllocator.unsafe_from_offheap k)
+    (ReactiveAllocator.unsafe_from_offheap mv)
+
+let push_right t k mv =
+  ReactiveHash.Map.replace t.right_scratch
+    (ReactiveAllocator.unsafe_from_offheap k)
+    (ReactiveAllocator.unsafe_from_offheap mv)
 
 (* Module-level helpers for iter_with — avoid closure allocation *)
 
@@ -85,18 +92,26 @@ let recompute_affected_entry t k =
         t.merge (ReactiveMaybe.unsafe_get lv) (ReactiveMaybe.unsafe_get rv)
       in
       ReactiveHash.Map.replace t.target k merged;
-      ReactiveWave.push t.output_wave k (ReactiveMaybe.some merged))
+      ReactiveWave.push t.output_wave
+        (ReactiveAllocator.unsafe_to_offheap k)
+        (ReactiveAllocator.unsafe_to_offheap (ReactiveMaybe.some merged)))
     else
       let v = ReactiveMaybe.unsafe_get lv in
       ReactiveHash.Map.replace t.target k v;
-      ReactiveWave.push t.output_wave k (ReactiveMaybe.some v))
+      ReactiveWave.push t.output_wave
+        (ReactiveAllocator.unsafe_to_offheap k)
+        (ReactiveAllocator.unsafe_to_offheap (ReactiveMaybe.some v)))
   else if has_right then (
     let v = ReactiveMaybe.unsafe_get rv in
     ReactiveHash.Map.replace t.target k v;
-    ReactiveWave.push t.output_wave k (ReactiveMaybe.some v))
+    ReactiveWave.push t.output_wave
+      (ReactiveAllocator.unsafe_to_offheap k)
+      (ReactiveAllocator.unsafe_to_offheap (ReactiveMaybe.some v)))
   else (
     ReactiveHash.Map.remove t.target k;
-    ReactiveWave.push t.output_wave k ReactiveMaybe.none);
+    ReactiveWave.push t.output_wave
+      (ReactiveAllocator.unsafe_to_offheap k)
+      ReactiveMaybe.none_offheap);
   r.entries_emitted <- r.entries_emitted + 1;
   if has_left || has_right then r.adds_emitted <- r.adds_emitted + 1
   else r.removes_emitted <- r.removes_emitted + 1

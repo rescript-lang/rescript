@@ -16,8 +16,8 @@ let wave_max_entries_default =
   | Some s -> (
     match int_of_string_opt s with
     | Some n when n > 0 -> n
-    | _ -> 65_536)
-  | None -> 65_536
+    | _ -> 16)
+  | None -> 16
 
 let create_wave () = ReactiveWave.create ~max_entries:wave_max_entries_default
 
@@ -471,6 +471,15 @@ let stats t = t.stats
 let level t = t.level
 let name t = t.name
 
+let unsafe_wave_push wave k v =
+  ReactiveWave.push wave (ReactiveAllocator.unsafe_to_offheap k)
+    (ReactiveAllocator.unsafe_to_offheap v)
+
+let unsafe_wave_map_replace pending k v =
+  ReactiveHash.Map.replace pending
+    (ReactiveAllocator.unsafe_from_offheap k)
+    (ReactiveAllocator.unsafe_from_offheap v)
+
 (** {1 Source Collection} *)
 
 (* Module-level helper for source emit — avoids closure allocation.
@@ -480,8 +489,9 @@ type ('k, 'v) source_tables = {
   pending: ('k, 'v ReactiveMaybe.t) ReactiveHash.Map.t;
 }
 
-let apply_source_emit (tables : ('k, 'v) source_tables) k
-    (mv : 'v ReactiveMaybe.t) =
+let apply_source_emit (tables : ('k, 'v) source_tables) k mv =
+  let k = ReactiveAllocator.unsafe_from_offheap k in
+  let mv = ReactiveAllocator.unsafe_from_offheap mv in
   if ReactiveMaybe.is_some mv then (
     let v = ReactiveMaybe.unsafe_get mv in
     ReactiveHash.Map.replace tables.tbl k v;
@@ -509,7 +519,7 @@ let source ~name () =
       my_stats.deltas_emitted <- my_stats.deltas_emitted + 1;
       my_stats.entries_emitted <- my_stats.entries_emitted + count;
       ReactiveWave.clear output_wave;
-      ReactiveHash.Map.iter_with ReactiveWave.push output_wave pending;
+      ReactiveHash.Map.iter_with unsafe_wave_push output_wave pending;
       ReactiveHash.Map.clear pending;
       notify_subscribers output_wave !subscribers)
     else ReactiveHash.Map.clear pending
@@ -819,8 +829,8 @@ let fixpoint ~name ~(init : ('k, unit) t) ~(edges : ('k, 'k list) t) () :
     ReactiveWave.clear edge_wave;
     let root_entries = ReactiveHash.Map.cardinal root_pending in
     let edge_entries = ReactiveHash.Map.cardinal edge_pending in
-    ReactiveHash.Map.iter_with ReactiveWave.push root_wave root_pending;
-    ReactiveHash.Map.iter_with ReactiveWave.push edge_wave edge_pending;
+    ReactiveHash.Map.iter_with unsafe_wave_push root_wave root_pending;
+    ReactiveHash.Map.iter_with unsafe_wave_push edge_wave edge_pending;
     ReactiveHash.Map.clear root_pending;
     ReactiveHash.Map.clear edge_pending;
 
@@ -851,13 +861,13 @@ let fixpoint ~name ~(init : ('k, unit) t) ~(edges : ('k, 'k list) t) () :
   init.subscribe (fun wave ->
       Registry.inc_inflight_node init.node;
       init_pending_count := !init_pending_count + 1;
-      ReactiveWave.iter_with wave ReactiveHash.Map.replace root_pending;
+      ReactiveWave.iter_with wave unsafe_wave_map_replace root_pending;
       Registry.mark_dirty_node my_info);
 
   edges.subscribe (fun wave ->
       Registry.inc_inflight_node edges.node;
       edges_pending_count := !edges_pending_count + 1;
-      ReactiveWave.iter_with wave ReactiveHash.Map.replace edge_pending;
+      ReactiveWave.iter_with wave unsafe_wave_map_replace edge_pending;
       Registry.mark_dirty_node my_info);
 
   (* Initialize from existing data *)
@@ -867,10 +877,34 @@ let fixpoint ~name ~(init : ('k, unit) t) ~(edges : ('k, 'k list) t) () :
   let init_edges_wave =
     ReactiveWave.create ~max_entries:(max 1 (edges.length ()))
   in
+  Printf.printf
+    "[Reactive.fixpoint] init existing data name=%s roots=%d edges=%d\n" name
+    (init.length ()) (edges.length ());
+  flush_all ();
   ReactiveWave.clear init_roots_wave;
   ReactiveWave.clear init_edges_wave;
-  init.iter (fun k () -> ReactiveWave.push init_roots_wave k ());
-  edges.iter (fun k succs -> ReactiveWave.push init_edges_wave k succs);
+  let init_root_count = ref 0 in
+  init.iter (fun k () ->
+      incr init_root_count;
+      if !init_root_count <= 5 || !init_root_count mod 100 = 0 then (
+        Printf.printf
+          "[Reactive.fixpoint] init root push name=%s count=%d\n" name
+          !init_root_count;
+        flush_all ());
+      unsafe_wave_push init_roots_wave k ());
+  let init_edge_count = ref 0 in
+  edges.iter (fun k succs ->
+      incr init_edge_count;
+      if !init_edge_count <= 5 || !init_edge_count mod 100 = 0 then (
+        Printf.printf
+          "[Reactive.fixpoint] init edge push name=%s count=%d\n" name
+          !init_edge_count;
+        flush_all ());
+      unsafe_wave_push init_edges_wave k succs);
+  Printf.printf
+    "[Reactive.fixpoint] init existing data loaded name=%s roots=%d edges=%d\n"
+    name !init_root_count !init_edge_count;
+  flush_all ();
   ReactiveFixpoint.initialize state ~roots:init_roots_wave
     ~edges:init_edges_wave;
 

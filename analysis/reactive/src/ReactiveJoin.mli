@@ -22,11 +22,17 @@ val create :
   ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t
 
 val push_left :
-  ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t -> 'k1 -> 'v1 ReactiveMaybe.t -> unit
+  ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t ->
+  'k1 ReactiveAllocator.offheap ->
+  'v1 ReactiveMaybe.t ReactiveAllocator.offheap ->
+  unit
 (** Push an entry into the left scratch table. *)
 
 val push_right :
-  ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t -> 'k2 -> 'v2 ReactiveMaybe.t -> unit
+  ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t ->
+  'k2 ReactiveAllocator.offheap ->
+  'v2 ReactiveMaybe.t ReactiveAllocator.offheap ->
+  unit
 (** Push an entry into the right scratch table. *)
 
 val process : ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t -> process_result

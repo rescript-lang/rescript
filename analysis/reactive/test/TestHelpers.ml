@@ -9,7 +9,7 @@ open Reactive
     The wave stores [Obj.t] internally, so a single concrete instance
     can be safely reused at any type via [Obj.magic]. *)
 let scratch_wave : (int, int) ReactiveWave.t =
-  ReactiveWave.create ~max_entries:65_536
+  ReactiveWave.create ~max_entries:16
 
 let wave () : ('k, 'v) ReactiveWave.t = Obj.magic scratch_wave
 
@@ -17,21 +17,27 @@ let wave () : ('k, 'v) ReactiveWave.t = Obj.magic scratch_wave
 let emit_set emit k v =
   let w = wave () in
   ReactiveWave.clear w;
-  ReactiveWave.push w k (ReactiveMaybe.some v);
+  ReactiveWave.push w (ReactiveAllocator.unsafe_to_offheap k)
+    (ReactiveAllocator.unsafe_to_offheap (ReactiveMaybe.some v));
   emit w
 
 (** Emit a single remove entry *)
 let emit_remove emit k =
   let w = wave () in
   ReactiveWave.clear w;
-  ReactiveWave.push w k ReactiveMaybe.none;
+  ReactiveWave.push w (ReactiveAllocator.unsafe_to_offheap k)
+    ReactiveMaybe.none_offheap;
   emit w
 
 (** Emit a batch of (key, value) set entries *)
 let emit_sets emit entries =
   let w = wave () in
   ReactiveWave.clear w;
-  List.iter (fun (k, v) -> ReactiveWave.push w k (ReactiveMaybe.some v)) entries;
+  List.iter
+    (fun (k, v) ->
+      ReactiveWave.push w (ReactiveAllocator.unsafe_to_offheap k)
+        (ReactiveAllocator.unsafe_to_offheap (ReactiveMaybe.some v)))
+    entries;
   emit w
 
 (** Emit a batch of (key, value option) entries — for mixed set/remove batches *)
@@ -41,8 +47,12 @@ let emit_batch emit entries =
   List.iter
     (fun (k, v_opt) ->
       match v_opt with
-      | Some v -> ReactiveWave.push w k (ReactiveMaybe.some v)
-      | None -> ReactiveWave.push w k ReactiveMaybe.none)
+      | Some v ->
+        ReactiveWave.push w (ReactiveAllocator.unsafe_to_offheap k)
+          (ReactiveAllocator.unsafe_to_offheap (ReactiveMaybe.some v))
+      | None ->
+        ReactiveWave.push w (ReactiveAllocator.unsafe_to_offheap k)
+          ReactiveMaybe.none_offheap)
     entries;
   emit w
 
@@ -53,6 +63,8 @@ let subscribe handler t =
   t.subscribe (fun wave ->
       let rev_entries = ref [] in
       ReactiveWave.iter wave (fun k mv ->
+          let k = ReactiveAllocator.unsafe_from_offheap k in
+          let mv = ReactiveAllocator.unsafe_from_offheap mv in
           rev_entries := (k, mv) :: !rev_entries);
       handler (List.rev !rev_entries))
 

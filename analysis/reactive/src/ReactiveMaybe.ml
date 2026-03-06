@@ -6,12 +6,21 @@
 
 type 'a t = Obj.t
 
-let sentinel : Obj.t = Obj.repr (ref ())
+let sentinel_words = 257
+let sentinel : Obj.t = Obj.repr (Array.make sentinel_words 0)
 
 let none = sentinel
+let none_offheap = ReactiveAllocator.to_offheap none
 let[@inline] some (x : 'a) : 'a t = Obj.repr x
 let[@inline] is_none (x : 'a t) = x == sentinel
 let[@inline] is_some (x : 'a t) = x != sentinel
 let[@inline] unsafe_get (x : 'a t) : 'a = Obj.obj x
+let[@inline] maybe_int_to_offheap (x : int t) : int t ReactiveAllocator.offheap =
+  ReactiveAllocator.unsafe_to_offheap x
+
+let[@inline] maybe_unit_to_offheap (x : unit t) :
+    unit t ReactiveAllocator.offheap =
+  ReactiveAllocator.unsafe_to_offheap x
+
 let[@inline] to_option (x : 'a t) : 'a option =
   if x != sentinel then Some (Obj.obj x) else None

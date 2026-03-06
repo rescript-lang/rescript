@@ -18,6 +18,8 @@ let check_non_negative name n =
 let slot_size_bytes = slot_size_bytes_unsafe ()
 let unsafe_to_offheap x = x
 let unsafe_from_offheap x = x
+let int_to_offheap x = unsafe_to_offheap x
+let unit_to_offheap x = unsafe_to_offheap x
 
 let to_offheap x =
   if is_in_minor_heap x then invalid_arg "ReactiveAllocator.to_offheap";

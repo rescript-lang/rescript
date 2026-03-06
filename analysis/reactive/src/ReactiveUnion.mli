@@ -19,10 +19,18 @@ val create :
   ('k, 'v) t
 (** Create union state with the given merge function and output wave buffer. *)
 
-val push_left : ('k, 'v) t -> 'k -> 'v ReactiveMaybe.t -> unit
+val push_left :
+  ('k, 'v) t ->
+  'k ReactiveAllocator.offheap ->
+  'v ReactiveMaybe.t ReactiveAllocator.offheap ->
+  unit
 (** Push an entry into the left scratch table. *)
 
-val push_right : ('k, 'v) t -> 'k -> 'v ReactiveMaybe.t -> unit
+val push_right :
+  ('k, 'v) t ->
+  'k ReactiveAllocator.offheap ->
+  'v ReactiveMaybe.t ReactiveAllocator.offheap ->
+  unit
 (** Push an entry into the right scratch table. *)
 
 val process : ('k, 'v) t -> process_result

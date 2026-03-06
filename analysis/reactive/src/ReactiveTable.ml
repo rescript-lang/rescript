@@ -14,13 +14,13 @@ let create ~initial_capacity =
   let t =
     ReactiveAllocator.Block.create ~capacity:(initial_capacity + data_offset)
   in
-  ReactiveAllocator.Block.set t length_slot (ReactiveAllocator.unsafe_to_offheap 0);
+  ReactiveAllocator.Block.set t length_slot (ReactiveAllocator.int_to_offheap 0);
   t
 
 let destroy = ReactiveAllocator.Block.destroy
 
 let clear t =
-  ReactiveAllocator.Block.set t length_slot (ReactiveAllocator.unsafe_to_offheap 0)
+  ReactiveAllocator.Block.set t length_slot (ReactiveAllocator.int_to_offheap 0)
 
 let ensure_capacity t needed =
   let old_capacity = capacity t in
@@ -47,14 +47,14 @@ let push t value =
   ensure_capacity t next_len;
   ReactiveAllocator.Block.set t (len + data_offset) value;
   ReactiveAllocator.Block.set t length_slot
-    (ReactiveAllocator.unsafe_to_offheap next_len)
+    (ReactiveAllocator.int_to_offheap next_len)
 
 let pop t =
   let len = length t in
   if len = 0 then invalid_arg "ReactiveTable.pop";
   let last = ReactiveAllocator.Block.get t (len - 1 + data_offset) in
   ReactiveAllocator.Block.set t length_slot
-    (ReactiveAllocator.unsafe_to_offheap (len - 1));
+    (ReactiveAllocator.int_to_offheap (len - 1));
   last
 
 let shrink_to_fit t =

@@ -19,6 +19,8 @@ let track_deltas c =
   c.subscribe (fun wave ->
       let rev_entries = ref [] in
       ReactiveWave.iter wave (fun k mv ->
+          let k = ReactiveAllocator.unsafe_from_offheap k in
+          let mv = ReactiveAllocator.unsafe_from_offheap mv in
           rev_entries := (k, mv) :: !rev_entries);
       received := List.rev !rev_entries :: !received);
   received
