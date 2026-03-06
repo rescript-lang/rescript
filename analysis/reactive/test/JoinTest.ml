@@ -8,14 +8,14 @@ let test_join () =
   Printf.printf "=== Test: join (reactive lookup/join) ===\n";
 
   (* Left collection: exception refs (path -> loc_from) *)
-  let left, emit_left = source ~name:"left" () in
+  let left, emit_left = Source.create ~name:"left" () in
 
   (* Right collection: decl index (path -> decl_pos) *)
-  let right, emit_right = source ~name:"right" () in
+  let right, emit_right = Source.create ~name:"right" () in
 
   (* Join: for each (path, loc_from) in left, look up path in right *)
   let joined =
-    join ~name:"joined" left right
+    Join.create ~name:"joined" left right
       ~key_of:(fun path _loc_from -> path)
       ~f:(fun _path loc_from decl_pos_mb emit ->
         if ReactiveMaybe.is_some decl_pos_mb then
@@ -76,12 +76,12 @@ let test_join_with_merge () =
   Printf.printf "=== Test: join with merge ===\n";
 
   (* Multiple left entries can map to same right key *)
-  let left, emit_left = source ~name:"left" () in
-  let right, emit_right = source ~name:"right" () in
+  let left, emit_left = Source.create ~name:"left" () in
+  let right, emit_right = Source.create ~name:"right" () in
 
   (* Join with merge: all entries produce to key 0 *)
   let joined =
-    join ~name:"joined" left right
+    Join.create ~name:"joined" left right
       ~key_of:(fun _id path -> path) (* Look up by path *)
       ~f:(fun _id _path value_mb emit ->
         if ReactiveMaybe.is_some value_mb then

@@ -8,13 +8,13 @@ let test_union_basic () =
   Printf.printf "=== Test: union basic ===\n";
 
   (* Left collection *)
-  let left, emit_left = source ~name:"left" () in
+  let left, emit_left = Source.create ~name:"left" () in
 
   (* Right collection *)
-  let right, emit_right = source ~name:"right" () in
+  let right, emit_right = Source.create ~name:"right" () in
 
   (* Create union without merge (right takes precedence) *)
-  let combined = union ~name:"combined" left right () in
+  let combined = Union.create ~name:"combined" left right () in
 
   (* Initially empty *)
   assert (length combined = 0);
@@ -63,13 +63,15 @@ let test_union_with_merge () =
   Printf.printf "=== Test: union with merge ===\n";
 
   (* Left collection *)
-  let left, emit_left = source ~name:"left" () in
+  let left, emit_left = Source.create ~name:"left" () in
 
   (* Right collection *)
-  let right, emit_right = source ~name:"right" () in
+  let right, emit_right = Source.create ~name:"right" () in
 
   (* Create union with set union as merge *)
-  let combined = union ~name:"combined" left right ~merge:IntSet.union () in
+  let combined =
+    Union.create ~name:"combined" left right ~merge:IntSet.union ()
+  in
 
   (* Add to left: key "x" -> {1, 2} *)
   emit_set emit_left "x" (IntSet.of_list [1; 2]);
@@ -106,17 +108,17 @@ let test_union_existing_data () =
   Printf.printf "=== Test: union on collections with existing data ===\n";
 
   (* Create collections with existing data *)
-  let left, emit_left = source ~name:"left" () in
+  let left, emit_left = Source.create ~name:"left" () in
   emit_set emit_left 1 "a";
   emit_set emit_left 2 "b";
 
-  let right, emit_right = source ~name:"right" () in
+  let right, emit_right = Source.create ~name:"right" () in
   emit_set emit_right 2 "B";
   (* Overlaps with left *)
   emit_set emit_right 3 "c";
 
   (* Create union after both have data *)
-  let combined = union ~name:"combined" left right () in
+  let combined = Union.create ~name:"combined" left right () in
 
   Printf.printf "Union has %d entries (expected 3)\n" (length combined);
   assert (length combined = 3);
@@ -134,14 +136,14 @@ let test_union_existing_data_with_non_idempotent_merge () =
   Printf.printf "=== Test: union existing data with non-idempotent merge ===\n";
 
   (* Create collections with existing data *)
-  let left, emit_left = source ~name:"left" () in
+  let left, emit_left = Source.create ~name:"left" () in
   emit_set emit_left "only_left" 3;
 
-  let right, _emit_right = source ~name:"right" () in
+  let right, _emit_right = Source.create ~name:"right" () in
 
   (* Create union after left already has data.
      With merge = (+), a left-only key must stay 3, not 6. *)
-  let combined = union ~name:"combined" left right ~merge:( + ) () in
+  let combined = Union.create ~name:"combined" left right ~merge:( + ) () in
 
   assert (length combined = 1);
   assert (get_opt combined "only_left" = Some 3);

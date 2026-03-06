@@ -8,11 +8,11 @@ let test_flatmap_basic () =
   Printf.printf "=== Test: flatMap basic ===\n";
 
   (* Create a simple source collection *)
-  let source, emit = source ~name:"source" () in
+  let source, emit = Source.create ~name:"source" () in
 
   (* Create derived collection via flatMap *)
   let derived =
-    flatMap ~name:"derived" source
+    FlatMap.create ~name:"derived" source
       ~f:(fun key value emit ->
         emit (key * 10) value;
         emit ((key * 10) + 1) value;
@@ -54,11 +54,11 @@ let test_flatmap_with_merge () =
   reset ();
   Printf.printf "=== Test: flatMap with merge ===\n";
 
-  let source, emit = source ~name:"source" () in
+  let source, emit = Source.create ~name:"source" () in
 
   (* Create derived with merge *)
   let derived =
-    flatMap ~name:"derived" source
+    FlatMap.create ~name:"derived" source
       ~f:(fun _key values emit -> emit 0 values) (* all contribute to key 0 *)
       ~merge:IntSet.union ()
   in
@@ -91,11 +91,11 @@ let test_composition () =
   Printf.printf "=== Test: composition (flatMap chain) ===\n";
 
   (* Source: file -> list of items *)
-  let source, emit = source ~name:"source" () in
+  let source, emit = Source.create ~name:"source" () in
 
   (* First flatMap: file -> items *)
   let items =
-    flatMap ~name:"items" source
+    FlatMap.create ~name:"items" source
       ~f:(fun path items emit ->
         List.iteri
           (fun i item -> emit (Printf.sprintf "%s:%d" path i) item)
@@ -105,7 +105,7 @@ let test_composition () =
 
   (* Second flatMap: item -> chars *)
   let chars =
-    flatMap ~name:"chars" items
+    FlatMap.create ~name:"chars" items
       ~f:(fun key value emit ->
         String.iteri (fun i c -> emit (Printf.sprintf "%s:%d" key i) c) value)
       ()
@@ -141,7 +141,7 @@ let test_flatmap_on_existing_data () =
   Printf.printf "=== Test: flatMap on collection with existing data ===\n";
 
   (* Create source and add data before creating flatMap *)
-  let source, emit = source ~name:"source" () in
+  let source, emit = Source.create ~name:"source" () in
   emit_set emit 1 "a";
   emit_set emit 2 "b";
 
@@ -149,7 +149,9 @@ let test_flatmap_on_existing_data () =
 
   (* Create flatMap AFTER source has data *)
   let derived =
-    flatMap ~name:"derived" source ~f:(fun k v emit -> emit (k * 10) v) ()
+    FlatMap.create ~name:"derived" source
+      ~f:(fun k v emit -> emit (k * 10) v)
+      ()
   in
 
   (* Check derived has existing data *)

@@ -7,14 +7,14 @@ let test_fixpoint_add_base () =
   reset ();
   Printf.printf "=== Test: fixpoint add base ===\n";
 
-  let init, emit_init = source ~name:"init" () in
-  let edges, emit_edges = source ~name:"edges" () in
+  let init, emit_init = Source.create ~name:"init" () in
+  let edges, emit_edges = Source.create ~name:"edges" () in
 
   (* Graph: a -> b, c -> d *)
   emit_set emit_edges "a" ["b"];
   emit_set emit_edges "c" ["d"];
 
-  let fp = fixpoint ~name:"fp" ~init ~edges () in
+  let fp = Fixpoint.create ~name:"fp" ~init ~edges () in
 
   emit_set emit_init "a" ();
   assert (length fp = 2);
@@ -49,14 +49,14 @@ let test_fixpoint_remove_base () =
   reset ();
   Printf.printf "=== Test: fixpoint remove base ===\n";
 
-  let init, emit_init = source ~name:"init" () in
-  let edges, emit_edges = source ~name:"edges" () in
+  let init, emit_init = Source.create ~name:"init" () in
+  let edges, emit_edges = Source.create ~name:"edges" () in
 
   (* Graph: a -> b -> c *)
   emit_set emit_edges "a" ["b"];
   emit_set emit_edges "b" ["c"];
 
-  let fp = fixpoint ~name:"fp" ~init ~edges () in
+  let fp = Fixpoint.create ~name:"fp" ~init ~edges () in
 
   emit_set emit_init "a" ();
   assert (length fp = 3);
@@ -83,10 +83,10 @@ let test_fixpoint_add_edge () =
   reset ();
   Printf.printf "=== Test: fixpoint add edge ===\n";
 
-  let init, emit_init = source ~name:"init" () in
-  let edges, emit_edges = source ~name:"edges" () in
+  let init, emit_init = Source.create ~name:"init" () in
+  let edges, emit_edges = Source.create ~name:"edges" () in
 
-  let fp = fixpoint ~name:"fp" ~init ~edges () in
+  let fp = Fixpoint.create ~name:"fp" ~init ~edges () in
 
   emit_set emit_init "a" ();
   assert (length fp = 1);
@@ -114,14 +114,14 @@ let test_fixpoint_remove_edge () =
   reset ();
   Printf.printf "=== Test: fixpoint remove edge ===\n";
 
-  let init, emit_init = source ~name:"init" () in
-  let edges, emit_edges = source ~name:"edges" () in
+  let init, emit_init = Source.create ~name:"init" () in
+  let edges, emit_edges = Source.create ~name:"edges" () in
 
   (* Graph: a -> b -> c *)
   emit_set emit_edges "a" ["b"];
   emit_set emit_edges "b" ["c"];
 
-  let fp = fixpoint ~name:"fp" ~init ~edges () in
+  let fp = Fixpoint.create ~name:"fp" ~init ~edges () in
 
   emit_set emit_init "a" ();
   assert (length fp = 3);
@@ -151,15 +151,15 @@ let test_fixpoint_cycle_removal () =
   reset ();
   Printf.printf "=== Test: fixpoint cycle removal (well-founded) ===\n";
 
-  let init, emit_init = source ~name:"init" () in
-  let edges, emit_edges = source ~name:"edges" () in
+  let init, emit_init = Source.create ~name:"init" () in
+  let edges, emit_edges = Source.create ~name:"edges" () in
 
   (* Graph: a -> b -> c -> b (b-c cycle reachable from a) *)
   emit_set emit_edges "a" ["b"];
   emit_set emit_edges "b" ["c"];
   emit_set emit_edges "c" ["b"];
 
-  let fp = fixpoint ~name:"fp" ~init ~edges () in
+  let fp = Fixpoint.create ~name:"fp" ~init ~edges () in
 
   emit_set emit_init "a" ();
   assert (length fp = 3);
@@ -191,15 +191,15 @@ let test_fixpoint_alternative_support () =
   reset ();
   Printf.printf "=== Test: fixpoint alternative support ===\n";
 
-  let init, emit_init = source ~name:"init" () in
-  let edges, emit_edges = source ~name:"edges" () in
+  let init, emit_init = Source.create ~name:"init" () in
+  let edges, emit_edges = Source.create ~name:"edges" () in
 
   (* Graph: a -> b, a -> c -> b
      If we remove a -> b, b should survive via a -> c -> b *)
   emit_set emit_edges "a" ["b"; "c"];
   emit_set emit_edges "c" ["b"];
 
-  let fp = fixpoint ~name:"fp" ~init ~edges () in
+  let fp = Fixpoint.create ~name:"fp" ~init ~edges () in
 
   emit_set emit_init "a" ();
   assert (length fp = 3);
@@ -228,13 +228,13 @@ let test_fixpoint_deltas () =
   reset ();
   Printf.printf "=== Test: fixpoint delta emissions ===\n";
 
-  let init, emit_init = source ~name:"init" () in
-  let edges, emit_edges = source ~name:"edges" () in
+  let init, emit_init = Source.create ~name:"init" () in
+  let edges, emit_edges = Source.create ~name:"edges" () in
 
   emit_set emit_edges 1 [2; 3];
   emit_set emit_edges 2 [4];
 
-  let fp = fixpoint ~name:"fp" ~init ~edges () in
+  let fp = Fixpoint.create ~name:"fp" ~init ~edges () in
 
   (* Count entries, not deltas - V2 emits batches *)
   let all_entries = ref [] in
@@ -273,10 +273,10 @@ let test_fixpoint_remove_spurious_root () =
   Printf.printf
     "=== Test: fixpoint remove spurious root (still reachable) ===\n";
 
-  let init, emit_init = source ~name:"init" () in
-  let edges, emit_edges = source ~name:"edges" () in
+  let init, emit_init = Source.create ~name:"init" () in
+  let edges, emit_edges = Source.create ~name:"edges" () in
 
-  let fp = fixpoint ~name:"fp" ~init ~edges () in
+  let fp = Fixpoint.create ~name:"fp" ~init ~edges () in
 
   (* Track all deltas *)
   let added = ref [] in
@@ -346,14 +346,14 @@ let test_fixpoint_remove_edge_entry_alternative_source () =
   Printf.printf
     "=== Test: fixpoint remove edge entry (alternative source) ===\n";
 
-  let init, emit_init = source ~name:"init" () in
-  let edges, emit_edges = source ~name:"edges" () in
+  let init, emit_init = Source.create ~name:"init" () in
+  let edges, emit_edges = Source.create ~name:"edges" () in
 
   (* Set up initial edges: a -> b, c -> b *)
   emit_set emit_edges "a" ["b"];
   emit_set emit_edges "c" ["b"];
 
-  let fp = fixpoint ~name:"fp" ~init ~edges () in
+  let fp = Fixpoint.create ~name:"fp" ~init ~edges () in
 
   (* Track changes *)
   let removed = ref [] in
@@ -399,10 +399,10 @@ let test_fixpoint_remove_edge_rederivation () =
   reset ();
   Printf.printf "=== Test: fixpoint remove edge (re-derivation needed) ===\n";
 
-  let init, emit_init = source ~name:"init" () in
-  let edges, emit_edges = source ~name:"edges" () in
+  let init, emit_init = Source.create ~name:"init" () in
+  let edges, emit_edges = Source.create ~name:"edges" () in
 
-  let fp = fixpoint ~name:"fp" ~init ~edges () in
+  let fp = Fixpoint.create ~name:"fp" ~init ~edges () in
 
   (* Track changes *)
   let removed = ref [] in
@@ -455,14 +455,14 @@ let test_fixpoint_remove_edge_entry_rederivation () =
   reset ();
   Printf.printf "=== Test: fixpoint remove edge entry (re-derivation) ===\n";
 
-  let init, emit_init = source ~name:"init" () in
-  let edges, emit_edges = source ~name:"edges" () in
+  let init, emit_init = Source.create ~name:"init" () in
+  let edges, emit_edges = Source.create ~name:"edges" () in
 
   (* Set up edges before creating fixpoint *)
   emit_set emit_edges "a" ["c"];
   emit_set emit_edges "b" ["c"];
 
-  let fp = fixpoint ~name:"fp" ~init ~edges () in
+  let fp = Fixpoint.create ~name:"fp" ~init ~edges () in
 
   (* Track changes *)
   let removed = ref [] in
@@ -508,10 +508,10 @@ let test_fixpoint_remove_edge_entry_higher_rank_support () =
   reset ();
   Printf.printf "=== Test: fixpoint edge removal (higher rank support) ===\n";
 
-  let init, emit_init = source ~name:"init" () in
-  let edges, emit_edges = source ~name:"edges" () in
+  let init, emit_init = Source.create ~name:"init" () in
+  let edges, emit_edges = Source.create ~name:"edges" () in
 
-  let fp = fixpoint ~name:"fp" ~init ~edges () in
+  let fp = Fixpoint.create ~name:"fp" ~init ~edges () in
 
   (* Track changes *)
   let removed = ref [] in
@@ -566,8 +566,8 @@ let test_fixpoint_remove_edge_entry_needs_rederivation () =
   Printf.printf
     "=== Test: fixpoint remove edge entry (needs re-derivation) ===\n";
 
-  let init, emit_init = source ~name:"init" () in
-  let edges, emit_edges = source ~name:"edges" () in
+  let init, emit_init = Source.create ~name:"init" () in
+  let edges, emit_edges = Source.create ~name:"edges" () in
 
   (* Pre-populate edges so fixpoint initializes with them *)
   emit_set emit_edges "r" ["a"; "b"];
@@ -576,7 +576,7 @@ let test_fixpoint_remove_edge_entry_needs_rederivation () =
   emit_set emit_edges "c" ["x"];
   emit_set emit_edges "x" ["y"];
 
-  let fp = fixpoint ~name:"fp" ~init ~edges () in
+  let fp = Fixpoint.create ~name:"fp" ~init ~edges () in
 
   (* Make r live *)
   emit_set emit_init "r" ();
@@ -610,8 +610,8 @@ let test_fixpoint_remove_base_needs_rederivation () =
   Printf.printf
     "=== Test: fixpoint remove base element (needs re-derivation) ===\n";
 
-  let init, emit_init = source ~name:"init" () in
-  let edges, emit_edges = source ~name:"edges" () in
+  let init, emit_init = Source.create ~name:"init" () in
+  let edges, emit_edges = Source.create ~name:"edges" () in
 
   (* Pre-populate edges so fixpoint initializes with them *)
   emit_set emit_edges "r1" ["a"];
@@ -621,7 +621,7 @@ let test_fixpoint_remove_base_needs_rederivation () =
   emit_set emit_edges "c" ["x"];
   emit_set emit_edges "x" ["y"];
 
-  let fp = fixpoint ~name:"fp" ~init ~edges () in
+  let fp = Fixpoint.create ~name:"fp" ~init ~edges () in
 
   emit_set emit_init "r1" ();
   emit_set emit_init "r2" ();
@@ -652,8 +652,8 @@ let test_fixpoint_batch_overlapping_deletions () =
   reset ();
   Printf.printf "=== Test: fixpoint batch overlapping deletions ===\n";
 
-  let init, emit_init = source ~name:"init" () in
-  let edges, emit_edges = source ~name:"edges" () in
+  let init, emit_init = Source.create ~name:"init" () in
+  let edges, emit_edges = Source.create ~name:"edges" () in
 
   (* r -> a,b ; a -> x ; b -> x ; x -> y *)
   emit_set emit_edges "r" ["a"; "b"];
@@ -661,7 +661,7 @@ let test_fixpoint_batch_overlapping_deletions () =
   emit_set emit_edges "b" ["x"];
   emit_set emit_edges "x" ["y"];
 
-  let fp = fixpoint ~name:"fp" ~init ~edges () in
+  let fp = Fixpoint.create ~name:"fp" ~init ~edges () in
   emit_set emit_init "r" ();
 
   assert (get_opt fp "x" = Some ());
@@ -695,15 +695,15 @@ let test_fixpoint_batch_delete_add_same_wave () =
   reset ();
   Printf.printf "=== Test: fixpoint batch delete+add same wave ===\n";
 
-  let init, emit_init = source ~name:"init" () in
-  let edges, emit_edges = source ~name:"edges" () in
+  let init, emit_init = Source.create ~name:"init" () in
+  let edges, emit_edges = Source.create ~name:"edges" () in
 
   (* r -> a,c ; a -> x ; c -> [] *)
   emit_set emit_edges "r" ["a"; "c"];
   emit_set emit_edges "a" ["x"];
   emit_set emit_edges "c" [];
 
-  let fp = fixpoint ~name:"fp" ~init ~edges () in
+  let fp = Fixpoint.create ~name:"fp" ~init ~edges () in
   emit_set emit_init "r" ();
 
   assert (get_opt fp "x" = Some ());
@@ -739,8 +739,8 @@ let test_fixpoint_fanin_single_predecessor_removed () =
   reset ();
   Printf.printf "=== Test: fixpoint fan-in single predecessor removed ===\n";
 
-  let init, emit_init = source ~name:"init" () in
-  let edges, emit_edges = source ~name:"edges" () in
+  let init, emit_init = Source.create ~name:"init" () in
+  let edges, emit_edges = Source.create ~name:"edges" () in
 
   (* r -> a,b,c ; a,b,c -> z *)
   emit_set emit_edges "r" ["a"; "b"; "c"];
@@ -748,7 +748,7 @@ let test_fixpoint_fanin_single_predecessor_removed () =
   emit_set emit_edges "b" ["z"];
   emit_set emit_edges "c" ["z"];
 
-  let fp = fixpoint ~name:"fp" ~init ~edges () in
+  let fp = Fixpoint.create ~name:"fp" ~init ~edges () in
   emit_set emit_init "r" ();
 
   assert (get_opt fp "z" = Some ());
@@ -779,8 +779,8 @@ let test_fixpoint_cycle_alternative_external_support () =
   Printf.printf
     "=== Test: fixpoint cycle with alternative external support ===\n";
 
-  let init, emit_init = source ~name:"init" () in
-  let edges, emit_edges = source ~name:"edges" () in
+  let init, emit_init = Source.create ~name:"init" () in
+  let edges, emit_edges = Source.create ~name:"edges" () in
 
   (* r1 -> b ; r2 -> c ; b <-> c *)
   emit_set emit_edges "r1" ["b"];
@@ -788,7 +788,7 @@ let test_fixpoint_cycle_alternative_external_support () =
   emit_set emit_edges "b" ["c"];
   emit_set emit_edges "c" ["b"];
 
-  let fp = fixpoint ~name:"fp" ~init ~edges () in
+  let fp = Fixpoint.create ~name:"fp" ~init ~edges () in
   emit_set emit_init "r1" ();
   emit_set emit_init "r2" ();
 
@@ -833,8 +833,8 @@ let test_fixpoint_remove_then_readd_via_expansion_same_wave () =
   Printf.printf
     "=== Test: fixpoint remove then re-add via expansion (same wave) ===\n";
 
-  let init, emit_init = source ~name:"init" () in
-  let edges, emit_edges = source ~name:"edges" () in
+  let init, emit_init = Source.create ~name:"init" () in
+  let edges, emit_edges = Source.create ~name:"edges" () in
 
   (* r -> s ; s -> x ; y -> x ; then update s -> y.
      x is first tentatively deleted (s no longer points to x),
@@ -843,7 +843,7 @@ let test_fixpoint_remove_then_readd_via_expansion_same_wave () =
   emit_set emit_edges "s" ["x"];
   emit_set emit_edges "y" ["x"];
 
-  let fp = fixpoint ~name:"fp" ~init ~edges () in
+  let fp = Fixpoint.create ~name:"fp" ~init ~edges () in
   emit_set emit_init "r" ();
 
   assert (get_opt fp "x" = Some ());

@@ -6,7 +6,9 @@ let test_table_promoted_wave_lifecycle () =
   let count = 128 in
   let width = 48 in
   let initial_live_blocks = ReactiveAllocator.live_block_count () in
-  let initial_live_block_slots = ReactiveAllocator.live_block_capacity_slots () in
+  let initial_live_block_slots =
+    ReactiveAllocator.live_block_capacity_slots ()
+  in
   Gc.full_major ();
   ignore (AllocMeasure.words_since ());
   let t = ReactiveTable.create ~initial_capacity:1 in
@@ -42,8 +44,7 @@ let test_table_promoted_wave_lifecycle () =
     done;
     assert (ReactiveTable.length t = count);
     assert (ReactiveTable.capacity t >= ReactiveTable.length t);
-    ReactiveTable.set t 0
-      (ReactiveAllocator.to_offheap fresh.(count - 1));
+    ReactiveTable.set t 0 (ReactiveAllocator.to_offheap fresh.(count - 1));
     assert (
       ReactiveAllocator.unsafe_from_offheap (ReactiveTable.get t 0)
       == fresh.(count - 1));
@@ -109,7 +110,8 @@ let test_table_unsafe_minor_heap_demo () =
       Gc.compact ()
     done;
     Printf.printf
-      "About to validate %d minor-heap values stored off-heap. This is unsafe and may return garbage or crash.\n"
+      "About to validate %d minor-heap values stored off-heap. This is unsafe \
+       and may return garbage or crash.\n"
       count;
     let mismatches = ref 0 in
     let samples = ref [] in
@@ -126,23 +128,19 @@ let test_table_unsafe_minor_heap_demo () =
       if not ok then (
         incr mismatches;
         if List.length !samples < 8 then
-          let observed_len =
-            try Bytes.length recovered with _ -> -1
-          in
-          let observed_first =
-            try Bytes.get recovered 0 with _ -> '?'
-          in
+          let observed_len = try Bytes.length recovered with _ -> -1 in
+          let observed_first = try Bytes.get recovered 0 with _ -> '?' in
           samples :=
-            Printf.sprintf
-              "slot=%d expected=%c len=%d first=%c"
-              i expected observed_len observed_first
+            Printf.sprintf "slot=%d expected=%c len=%d first=%c" i expected
+              observed_len observed_first
             :: !samples)
     done;
     Printf.printf "Observed mismatches: %d/%d\n" !mismatches count;
     List.iter (fun s -> Printf.printf "%s\n" s) (List.rev !samples);
     ReactiveTable.destroy t;
     Printf.printf
-      "UNSAFE DEMO COMPLETED (result is not trustworthy; crash/corruption would also be expected)\n\n"
+      "UNSAFE DEMO COMPLETED (result is not trustworthy; crash/corruption \
+       would also be expected)\n\n"
 
 let run_all () =
   test_table_promoted_wave_lifecycle ();

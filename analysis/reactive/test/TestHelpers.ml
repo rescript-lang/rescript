@@ -17,7 +17,8 @@ let wave () : ('k, 'v) ReactiveWave.t = Obj.magic scratch_wave
 let emit_set emit k v =
   let w = wave () in
   ReactiveWave.clear w;
-  ReactiveWave.push w (ReactiveAllocator.unsafe_to_offheap k)
+  ReactiveWave.push w
+    (ReactiveAllocator.unsafe_to_offheap k)
     (ReactiveAllocator.unsafe_to_offheap (ReactiveMaybe.some v));
   emit w
 
@@ -25,7 +26,8 @@ let emit_set emit k v =
 let emit_remove emit k =
   let w = wave () in
   ReactiveWave.clear w;
-  ReactiveWave.push w (ReactiveAllocator.unsafe_to_offheap k)
+  ReactiveWave.push w
+    (ReactiveAllocator.unsafe_to_offheap k)
     ReactiveMaybe.none_offheap;
   emit w
 
@@ -35,7 +37,8 @@ let emit_sets emit entries =
   ReactiveWave.clear w;
   List.iter
     (fun (k, v) ->
-      ReactiveWave.push w (ReactiveAllocator.unsafe_to_offheap k)
+      ReactiveWave.push w
+        (ReactiveAllocator.unsafe_to_offheap k)
         (ReactiveAllocator.unsafe_to_offheap (ReactiveMaybe.some v)))
     entries;
   emit w
@@ -48,10 +51,12 @@ let emit_batch emit entries =
     (fun (k, v_opt) ->
       match v_opt with
       | Some v ->
-        ReactiveWave.push w (ReactiveAllocator.unsafe_to_offheap k)
+        ReactiveWave.push w
+          (ReactiveAllocator.unsafe_to_offheap k)
           (ReactiveAllocator.unsafe_to_offheap (ReactiveMaybe.some v))
       | None ->
-        ReactiveWave.push w (ReactiveAllocator.unsafe_to_offheap k)
+        ReactiveWave.push w
+          (ReactiveAllocator.unsafe_to_offheap k)
           ReactiveMaybe.none_offheap)
     entries;
   emit w

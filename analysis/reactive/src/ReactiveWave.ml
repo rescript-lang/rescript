@@ -24,8 +24,12 @@ let create ~max_entries =
 
 let clear t = set_length t 0
 
+let destroy t = ReactiveAllocator.Block.destroy t
+
 let ensure_capacity t needed =
-  let current = (ReactiveAllocator.Block.capacity t - data_offset) / entry_width in
+  let current =
+    (ReactiveAllocator.Block.capacity t - data_offset) / entry_width
+  in
   if needed > current then (
     let next = ref (max 1 current) in
     while !next < needed do
@@ -48,7 +52,8 @@ let iter (type k v) (t : (k, v) t)
   let len = length t in
   for i = 0 to len - 1 do
     let key_slot = data_offset + (i * entry_width) in
-    f (ReactiveAllocator.Block.get t key_slot)
+    f
+      (ReactiveAllocator.Block.get t key_slot)
       (ReactiveAllocator.Block.get t (key_slot + 1))
   done
 
@@ -59,7 +64,8 @@ let iter_with (type a k v) (t : (k, v) t)
   let len = length t in
   for i = 0 to len - 1 do
     let key_slot = data_offset + (i * entry_width) in
-    f arg (ReactiveAllocator.Block.get t key_slot)
+    f arg
+      (ReactiveAllocator.Block.get t key_slot)
       (ReactiveAllocator.Block.get t (key_slot + 1))
   done
 

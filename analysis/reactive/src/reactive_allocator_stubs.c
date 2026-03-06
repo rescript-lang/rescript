@@ -135,6 +135,25 @@ value caml_reactive_allocator_live_block_capacity_slots(value unit) {
   return Val_int(reactive_live_block_capacity_slots);
 }
 
+value caml_reactive_allocator_reset(value unit) {
+  intnat index;
+  (void)unit;
+
+  for (index = 0; index < reactive_blocks_capacity; index++) {
+    reactive_block *block = &reactive_blocks[index];
+    if (block->in_use) {
+      free(block->data);
+      block->data = NULL;
+      block->capacity = 0;
+      block->in_use = 0;
+    }
+  }
+
+  reactive_live_block_count = 0;
+  reactive_live_block_capacity_slots = 0;
+  return Val_unit;
+}
+
 value caml_reactive_allocator_resize(value handle, value capacity) {
   reactive_block *block = reactive_block_of_handle(handle);
 

@@ -8,14 +8,14 @@ let test_file_collection () =
   Printf.printf "=== Test: File collection simulation ===\n";
 
   (* Simulate file processing with regular sources *)
-  let files, emit_file = source ~name:"files" () in
+  let files, emit_file = Source.create ~name:"files" () in
 
   (* file_a: hello(2), world(1) *)
   (* file_b: hello(1), foo(1) *)
 
   (* First flatMap: aggregate word counts across files with merge *)
   let word_counts =
-    flatMap ~name:"word_counts" files
+    FlatMap.create ~name:"word_counts" files
       ~f:(fun _path counts emit -> StringMap.iter (fun k v -> emit k v) counts)
         (* Each file contributes its word counts *)
       ~merge:( + ) (* Sum counts from multiple files *)
@@ -24,7 +24,7 @@ let test_file_collection () =
 
   (* Second flatMap: filter to words with count >= 2 *)
   let frequent_words =
-    flatMap ~name:"frequent_words" word_counts
+    FlatMap.create ~name:"frequent_words" word_counts
       ~f:(fun word count emit -> if count >= 2 then emit word count)
       ()
   in

@@ -45,24 +45,24 @@ let test_same_source_anti_join () =
   reset ();
   Printf.printf "=== Test: same source anti-join ===\n";
 
-  let src, emit = source ~name:"source" () in
+  let src, emit = Source.create ~name:"source" () in
 
   let refs =
-    flatMap ~name:"refs" src
+    FlatMap.create ~name:"refs" src
       ~f:(fun _file (data : file_data) emit ->
         List.iter (fun (k, v) -> emit k v) data.refs)
       ()
   in
 
   let decls =
-    flatMap ~name:"decls" src
+    FlatMap.create ~name:"decls" src
       ~f:(fun _file (data : file_data) emit ->
         List.iter (fun pos -> emit pos ()) data.decl_positions)
       ()
   in
 
   let external_refs =
-    join ~name:"external_refs" refs decls
+    Join.create ~name:"external_refs" refs decls
       ~key_of:(fun posFrom _posTo -> posFrom)
       ~f:(fun _posFrom posTo decl_mb emit ->
         if not (ReactiveMaybe.is_some decl_mb) then emit posTo ())
@@ -91,11 +91,11 @@ let test_multi_level_union () =
   reset ();
   Printf.printf "=== Test: multi-level union ===\n";
 
-  let src, emit = source ~name:"source" () in
+  let src, emit = Source.create ~name:"source" () in
 
   (* refs1: level 1 *)
   let refs1 =
-    flatMap ~name:"refs1" src
+    FlatMap.create ~name:"refs1" src
       ~f:(fun _file (data : file_data) emit ->
         List.iter
           (fun (k, v) -> if String.length k > 0 && k.[0] = 'D' then emit k v)
@@ -105,7 +105,7 @@ let test_multi_level_union () =
 
   (* intermediate: level 1 *)
   let intermediate =
-    flatMap ~name:"intermediate" src
+    FlatMap.create ~name:"intermediate" src
       ~f:(fun _file (data : file_data) emit ->
         List.iter
           (fun (k, v) -> if String.length k > 0 && k.[0] = 'I' then emit k v)
@@ -115,23 +115,23 @@ let test_multi_level_union () =
 
   (* refs2: level 2 *)
   let refs2 =
-    flatMap ~name:"refs2" intermediate ~f:(fun k v emit -> emit k v) ()
+    FlatMap.create ~name:"refs2" intermediate ~f:(fun k v emit -> emit k v) ()
   in
 
   (* decls: level 1 *)
   let decls =
-    flatMap ~name:"decls" src
+    FlatMap.create ~name:"decls" src
       ~f:(fun _file (data : file_data) emit ->
         List.iter (fun pos -> emit pos ()) data.decl_positions)
       ()
   in
 
   (* all_refs: union at level 3 *)
-  let all_refs = union ~name:"all_refs" refs1 refs2 () in
+  let all_refs = Union.create ~name:"all_refs" refs1 refs2 () in
 
   (* external_refs: join at level 4 *)
   let external_refs =
-    join ~name:"external_refs" all_refs decls
+    Join.create ~name:"external_refs" all_refs decls
       ~key_of:(fun posFrom _posTo -> posFrom)
       ~f:(fun _posFrom posTo decl_mb emit ->
         if not (ReactiveMaybe.is_some decl_mb) then emit posTo ())
@@ -157,11 +157,11 @@ let test_real_pipeline_simulation () =
   reset ();
   Printf.printf "=== Test: real pipeline simulation ===\n";
 
-  let src, emit = source ~name:"source" () in
+  let src, emit = Source.create ~name:"source" () in
 
   (* decls: level 1 *)
   let decls =
-    flatMap ~name:"decls" src
+    FlatMap.create ~name:"decls" src
       ~f:(fun _file (data : full_file_data) emit ->
         List.iter (fun pos -> emit pos ()) data.full_decls)
       ()
@@ -169,7 +169,7 @@ let test_real_pipeline_simulation () =
 
   (* merged_value_refs: level 1 *)
   let merged_value_refs =
-    flatMap ~name:"merged_value_refs" src
+    FlatMap.create ~name:"merged_value_refs" src
       ~f:(fun _file (data : full_file_data) emit ->
         List.iter (fun (k, v) -> emit k v) data.value_refs)
       ()
@@ -177,7 +177,7 @@ let test_real_pipeline_simulation () =
 
   (* exception_refs_raw: level 1 *)
   let exception_refs_raw =
-    flatMap ~name:"exception_refs_raw" src
+    FlatMap.create ~name:"exception_refs_raw" src
       ~f:(fun _file (data : full_file_data) emit ->
         List.iter (fun (k, v) -> emit k v) data.exception_refs)
       ()
@@ -185,7 +185,7 @@ let test_real_pipeline_simulation () =
 
   (* exception_decls: level 2 *)
   let exception_decls =
-    flatMap ~name:"exception_decls" decls
+    FlatMap.create ~name:"exception_decls" decls
       ~f:(fun pos () emit ->
         if String.length pos > 0 && pos.[0] = 'E' then emit pos ())
       ()
@@ -193,7 +193,8 @@ let test_real_pipeline_simulation () =
 
   (* resolved_exception_refs: join at level 3 *)
   let resolved_exception_refs =
-    join ~name:"resolved_exception_refs" exception_refs_raw exception_decls
+    Join.create ~name:"resolved_exception_refs" exception_refs_raw
+      exception_decls
       ~key_of:(fun path _loc -> path)
       ~f:(fun path loc decl_mb emit ->
         if ReactiveMaybe.is_some decl_mb then emit path loc)
@@ -202,19 +203,19 @@ let test_real_pipeline_simulation () =
 
   (* resolved_refs_from: level 4 *)
   let resolved_refs_from =
-    flatMap ~name:"resolved_refs_from" resolved_exception_refs
+    FlatMap.create ~name:"resolved_refs_from" resolved_exception_refs
       ~f:(fun posTo posFrom emit -> emit posFrom posTo)
       ()
   in
 
   (* value_refs_from: union at level 5 *)
   let value_refs_from =
-    union ~name:"value_refs_from" merged_value_refs resolved_refs_from ()
+    Union.create ~name:"value_refs_from" merged_value_refs resolved_refs_from ()
   in
 
   (* external_value_refs: join at level 6 *)
   let external_value_refs =
-    join ~name:"external_value_refs" value_refs_from decls
+    Join.create ~name:"external_value_refs" value_refs_from decls
       ~key_of:(fun posFrom _posTo -> posFrom)
       ~f:(fun _posFrom posTo decl_mb emit ->
         if not (ReactiveMaybe.is_some decl_mb) then emit posTo ())
@@ -242,11 +243,11 @@ let test_separate_sources () =
   reset ();
   Printf.printf "=== Test: separate sources (removals expected) ===\n";
 
-  let refs_src, emit_refs = source ~name:"refs_source" () in
-  let decls_src, emit_decls = source ~name:"decls_source" () in
+  let refs_src, emit_refs = Source.create ~name:"refs_source" () in
+  let decls_src, emit_decls = Source.create ~name:"decls_source" () in
 
   let external_refs =
-    join ~name:"external_refs" refs_src decls_src
+    Join.create ~name:"external_refs" refs_src decls_src
       ~key_of:(fun posFrom _posTo -> posFrom)
       ~f:(fun _posFrom posTo decl_mb emit ->
         if not (ReactiveMaybe.is_some decl_mb) then emit posTo ())

@@ -75,6 +75,7 @@ type ('k, 'v) t = {
   iter: ('k -> 'v -> unit) -> unit;
   get: 'k -> 'v ReactiveMaybe.t;
   length: unit -> int;
+  destroy: unit -> unit;
   stats: stats;
   level: int;
   node: Registry.node_info;
@@ -84,68 +85,79 @@ type ('k, 'v) t = {
 val iter : ('k -> 'v -> unit) -> ('k, 'v) t -> unit
 val get : ('k, 'v) t -> 'k -> 'v ReactiveMaybe.t
 val length : ('k, 'v) t -> int
+val destroy : ('k, 'v) t -> unit
 val stats : ('k, 'v) t -> stats
 val level : ('k, 'v) t -> int
 val name : ('k, 'v) t -> string
 
 (** {1 Source Collection} *)
 
-val source :
-  name:string ->
-  unit ->
-  ('k, 'v) t * (('k, 'v ReactiveMaybe.t) ReactiveWave.t -> unit)
-(** Create a named source collection.
-    Returns the collection and an emit function that takes a wave.
-    Each wave entry is a key with [ReactiveMaybe.some v] for set
-    or [ReactiveMaybe.none] for remove.
-    Emitting triggers propagation through the pipeline. *)
+module Source : sig
+  val create :
+    name:string ->
+    unit ->
+    ('k, 'v) t * (('k, 'v ReactiveMaybe.t) ReactiveWave.t -> unit)
+  (** Create a named source collection.
+      Returns the collection and an emit function that takes a wave.
+      Each wave entry is a key with [ReactiveMaybe.some v] for set
+      or [ReactiveMaybe.none] for remove.
+      Emitting triggers propagation through the pipeline. *)
+end
 
 (** {1 Combinators} *)
 
-val flatMap :
-  name:string ->
-  ('k1, 'v1) t ->
-  f:('k1 -> 'v1 -> ('k2 -> 'v2 -> unit) -> unit) ->
-  ?merge:('v2 -> 'v2 -> 'v2) ->
-  unit ->
-  ('k2, 'v2) t
-(** Transform each entry into zero or more output entries.
-    Optional merge function combines values for the same output key. *)
+module FlatMap : sig
+  val create :
+    name:string ->
+    ('k1, 'v1) t ->
+    f:('k1 -> 'v1 -> ('k2 -> 'v2 -> unit) -> unit) ->
+    ?merge:('v2 -> 'v2 -> 'v2) ->
+    unit ->
+    ('k2, 'v2) t
+  (** Transform each entry into zero or more output entries.
+      Optional merge function combines values for the same output key. *)
+end
 
-val join :
-  name:string ->
-  ('k1, 'v1) t ->
-  ('k2, 'v2) t ->
-  key_of:('k1 -> 'v1 -> 'k2) ->
-  f:('k1 -> 'v1 -> 'v2 ReactiveMaybe.t -> ('k3 -> 'v3 -> unit) -> unit) ->
-  ?merge:('v3 -> 'v3 -> 'v3) ->
-  unit ->
-  ('k3, 'v3) t
-(** Join left collection with right collection.
-    For each left entry, looks up the key in right.
-    Separate left/right pending buffers ensure glitch-freedom. *)
+module Join : sig
+  val create :
+    name:string ->
+    ('k1, 'v1) t ->
+    ('k2, 'v2) t ->
+    key_of:('k1 -> 'v1 -> 'k2) ->
+    f:('k1 -> 'v1 -> 'v2 ReactiveMaybe.t -> ('k3 -> 'v3 -> unit) -> unit) ->
+    ?merge:('v3 -> 'v3 -> 'v3) ->
+    unit ->
+    ('k3, 'v3) t
+  (** Join left collection with right collection.
+      For each left entry, looks up the key in right.
+      Separate left/right pending buffers ensure glitch-freedom. *)
+end
 
-val union :
-  name:string ->
-  ('k, 'v) t ->
-  ('k, 'v) t ->
-  ?merge:('v -> 'v -> 'v) ->
-  unit ->
-  ('k, 'v) t
-(** Combine two collections.
-    Optional merge function combines values for the same key.
-    Separate left/right pending buffers ensure glitch-freedom. *)
+module Union : sig
+  val create :
+    name:string ->
+    ('k, 'v) t ->
+    ('k, 'v) t ->
+    ?merge:('v -> 'v -> 'v) ->
+    unit ->
+    ('k, 'v) t
+  (** Combine two collections.
+      Optional merge function combines values for the same key.
+      Separate left/right pending buffers ensure glitch-freedom. *)
+end
 
-val fixpoint :
-  name:string ->
-  init:('k, unit) t ->
-  edges:('k, 'k list) t ->
-  unit ->
-  ('k, unit) t
-(** Compute transitive closure.
-    init: initial roots
-    edges: k -> successors
-    Returns: all reachable keys from roots *)
+module Fixpoint : sig
+  val create :
+    name:string ->
+    init:('k, unit) t ->
+    edges:('k, 'k list) t ->
+    unit ->
+    ('k, unit) t
+  (** Compute transitive closure.
+      init: initial roots
+      edges: k -> successors
+      Returns: all reachable keys from roots *)
+end
 
 (** {1 Utilities} *)
 

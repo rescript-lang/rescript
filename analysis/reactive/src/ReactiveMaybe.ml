@@ -15,7 +15,8 @@ let[@inline] some (x : 'a) : 'a t = Obj.repr x
 let[@inline] is_none (x : 'a t) = x == sentinel
 let[@inline] is_some (x : 'a t) = x != sentinel
 let[@inline] unsafe_get (x : 'a t) : 'a = Obj.obj x
-let[@inline] maybe_int_to_offheap (x : int t) : int t ReactiveAllocator.offheap =
+let[@inline] maybe_int_to_offheap (x : int t) : int t ReactiveAllocator.offheap
+    =
   ReactiveAllocator.unsafe_to_offheap x
 
 let[@inline] maybe_unit_to_offheap (x : unit t) :

@@ -1,6 +1,6 @@
 (** Zero-allocation (steady-state) join state and processing logic.
 
-    This module is used by {!Reactive.join}. *)
+    This module is used by {!Reactive.Join.create}. *)
 
 type ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t
 

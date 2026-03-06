@@ -1,6 +1,6 @@
 (** Zero-allocation union state and processing logic.
 
-    This is a private module used by {!Reactive.union}. *)
+    This is a private module used by {!Reactive.Union.create}. *)
 
 type ('k, 'v) t
 

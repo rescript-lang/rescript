@@ -1,19 +1,20 @@
 type 'a offheap = 'a
 
-external slot_size_bytes_unsafe : unit -> int =
-  "caml_reactive_allocator_slot_size_bytes"
+external slot_size_bytes_unsafe : unit -> int
+  = "caml_reactive_allocator_slot_size_bytes"
 [@@noalloc]
-external live_block_count : unit -> int = "caml_reactive_allocator_live_block_count"
+external live_block_count : unit -> int
+  = "caml_reactive_allocator_live_block_count"
 [@@noalloc]
 
-external live_block_capacity_slots : unit -> int =
-  "caml_reactive_allocator_live_block_capacity_slots"
+external live_block_capacity_slots : unit -> int
+  = "caml_reactive_allocator_live_block_capacity_slots"
 [@@noalloc]
+external reset : unit -> unit = "caml_reactive_allocator_reset" [@@noalloc]
 external is_in_minor_heap : 'a -> bool = "caml_reactive_value_is_young"
 [@@noalloc]
 
-let check_non_negative name n =
-  if n < 0 then invalid_arg name
+let check_non_negative name n = if n < 0 then invalid_arg name
 
 let slot_size_bytes = slot_size_bytes_unsafe ()
 let unsafe_to_offheap x = x
@@ -39,12 +40,12 @@ module Block = struct
   external unsafe_get : t -> int -> 'a offheap = "caml_reactive_allocator_get"
   [@@noalloc]
 
-  external unsafe_set : t -> int -> 'a offheap -> unit =
-    "caml_reactive_allocator_set"
+  external unsafe_set : t -> int -> 'a offheap -> unit
+    = "caml_reactive_allocator_set"
   [@@noalloc]
 
-  external blit_unsafe :
-    t -> int -> t -> int -> int -> unit = "caml_reactive_allocator_blit"
+  external blit_unsafe : t -> int -> t -> int -> int -> unit
+    = "caml_reactive_allocator_blit"
   [@@noalloc]
 
   let create ~capacity =

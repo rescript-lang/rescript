@@ -459,6 +459,7 @@ type ('k, 'v) t = {
   iter: ('k -> 'v -> unit) -> unit;
   get: 'k -> 'v ReactiveMaybe.t;
   length: unit -> int;
+  destroy: unit -> unit;
   stats: stats;
   level: int;
   node: Registry.node_info;
@@ -467,12 +468,18 @@ type ('k, 'v) t = {
 let iter f t = t.iter f
 let get t k = t.get k
 let length t = t.length ()
+let destroy t = t.destroy ()
 let stats t = t.stats
 let level t = t.level
 let name t = t.name
 
+let todo_destroy name =
+  Printf.eprintf "TODO: Reactive.destroy for node %s\n%!" name;
+  assert false
+
 let unsafe_wave_push wave k v =
-  ReactiveWave.push wave (ReactiveAllocator.unsafe_to_offheap k)
+  ReactiveWave.push wave
+    (ReactiveAllocator.unsafe_to_offheap k)
     (ReactiveAllocator.unsafe_to_offheap v)
 
 let unsafe_wave_map_replace pending k v =
@@ -500,7 +507,7 @@ let apply_source_emit (tables : ('k, 'v) source_tables) k mv =
     ReactiveHash.Map.remove tables.tbl k;
     ReactiveHash.Map.replace tables.pending k ReactiveMaybe.none)
 
-let source ~name () =
+let source_create ~name () =
   let tbl : ('k, 'v) ReactiveHash.Map.t = ReactiveHash.Map.create () in
   let subscribers = ref [] in
   let my_stats = create_stats () in
@@ -534,6 +541,7 @@ let source ~name () =
       iter = (fun f -> ReactiveHash.Map.iter f tbl);
       get = (fun k -> ReactiveHash.Map.find_maybe tbl k);
       length = (fun () -> ReactiveHash.Map.cardinal tbl);
+      destroy = (fun () -> ReactiveWave.destroy output_wave);
       stats = my_stats;
       level = 0;
       node = my_info;
@@ -555,7 +563,7 @@ let source ~name () =
 
 (** {1 FlatMap} *)
 
-let flatMap ~name (src : ('k1, 'v1) t) ~f ?merge () : ('k2, 'v2) t =
+let flatmap_create ~name (src : ('k1, 'v1) t) ~f ?merge () : ('k2, 'v2) t =
   let my_level = src.level + 1 in
   let merge_fn =
     match merge with
@@ -611,6 +619,7 @@ let flatMap ~name (src : ('k1, 'v1) t) ~f ?merge () : ('k2, 'v2) t =
     iter = (fun f -> ReactiveFlatMap.iter_target f state);
     get = (fun k -> ReactiveFlatMap.find_target state k);
     length = (fun () -> ReactiveFlatMap.target_length state);
+    destroy = (fun () -> todo_destroy name);
     stats = my_stats;
     level = my_level;
     node = my_info;
@@ -618,8 +627,8 @@ let flatMap ~name (src : ('k1, 'v1) t) ~f ?merge () : ('k2, 'v2) t =
 
 (** {1 Join} *)
 
-let join ~name (left : ('k1, 'v1) t) (right : ('k2, 'v2) t) ~key_of ~f ?merge ()
-    : ('k3, 'v3) t =
+let join_create ~name (left : ('k1, 'v1) t) (right : ('k2, 'v2) t) ~key_of ~f
+    ?merge () : ('k3, 'v3) t =
   let my_level = max left.level right.level + 1 in
   let merge_fn =
     match merge with
@@ -692,6 +701,7 @@ let join ~name (left : ('k1, 'v1) t) (right : ('k2, 'v2) t) ~key_of ~f ?merge ()
     iter = (fun f -> ReactiveJoin.iter_target f state);
     get = (fun k -> ReactiveJoin.find_target state k);
     length = (fun () -> ReactiveJoin.target_length state);
+    destroy = (fun () -> todo_destroy name);
     stats = my_stats;
     level = my_level;
     node = my_info;
@@ -699,8 +709,8 @@ let join ~name (left : ('k1, 'v1) t) (right : ('k2, 'v2) t) ~key_of ~f ?merge ()
 
 (** {1 Union} *)
 
-let union ~name (left : ('k, 'v) t) (right : ('k, 'v) t) ?merge () : ('k, 'v) t
-    =
+let union_create ~name (left : ('k, 'v) t) (right : ('k, 'v) t) ?merge () :
+    ('k, 'v) t =
   let my_level = max left.level right.level + 1 in
   let merge_fn =
     match merge with
@@ -771,6 +781,7 @@ let union ~name (left : ('k, 'v) t) (right : ('k, 'v) t) ?merge () : ('k, 'v) t
     iter = (fun f -> ReactiveUnion.iter_target f state);
     get = (fun k -> ReactiveUnion.find_target state k);
     length = (fun () -> ReactiveUnion.target_length state);
+    destroy = (fun () -> todo_destroy name);
     stats = my_stats;
     level = my_level;
     node = my_info;
@@ -778,7 +789,7 @@ let union ~name (left : ('k, 'v) t) (right : ('k, 'v) t) ?merge () : ('k, 'v) t
 
 (** {1 Fixpoint} *)
 
-let fixpoint ~name ~(init : ('k, unit) t) ~(edges : ('k, 'k list) t) () :
+let fixpoint_create ~name ~(init : ('k, unit) t) ~(edges : ('k, 'k list) t) () :
     ('k, unit) t =
   let my_level = max init.level edges.level + 1 in
   let int_env_or name default =
@@ -890,12 +901,33 @@ let fixpoint ~name ~(init : ('k, unit) t) ~(edges : ('k, 'k list) t) () :
     iter = (fun f -> ReactiveFixpoint.iter_current state f);
     get = (fun k -> ReactiveFixpoint.get_current state k);
     length = (fun () -> ReactiveFixpoint.current_length state);
+    destroy = (fun () -> todo_destroy name);
     stats = my_stats;
     level = my_level;
     node = my_info;
   }
 
 (** {1 Utilities} *)
+
+module Source = struct
+  let create = source_create
+end
+
+module FlatMap = struct
+  let create = flatmap_create
+end
+
+module Join = struct
+  let create = join_create
+end
+
+module Union = struct
+  let create = union_create
+end
+
+module Fixpoint = struct
+  let create = fixpoint_create
+end
 
 let to_mermaid () = Registry.to_mermaid ()
 let print_stats () = Registry.print_stats ()

@@ -31,7 +31,7 @@ type ('raw, 'v) t = {
 (** Create a new reactive file collection *)
 let create ~read_file ~process : ('raw, 'v) t =
   let internal = {cache = Hashtbl.create 256; read_file; process} in
-  let collection, emit = Reactive.source ~name:"file_collection" () in
+  let collection, emit = Reactive.Source.create ~name:"file_collection" () in
   let scratch_wave = ReactiveWave.create ~max_entries:16 in
   {internal; collection; emit; scratch_wave}
 

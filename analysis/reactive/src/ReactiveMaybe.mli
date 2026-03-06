@@ -20,6 +20,7 @@ val some : 'a -> 'a t
 val is_none : 'a t -> bool
 val is_some : 'a t -> bool
 val unsafe_get : 'a t -> 'a
+
 val maybe_int_to_offheap : int t -> int t ReactiveAllocator.offheap
 (** Safely mark an [int] maybe value as suitable for off-heap storage. *)
 

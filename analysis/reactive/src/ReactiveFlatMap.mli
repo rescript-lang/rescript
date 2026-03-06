@@ -1,6 +1,6 @@
 (** Zero-allocation (steady-state) flatMap state and processing logic.
 
-    This module is used by {!Reactive.flatMap}. *)
+    This module is used by {!Reactive.FlatMap.create}. *)
 
 type ('k1, 'v1, 'k2, 'v2) t
 

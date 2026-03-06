@@ -7,9 +7,9 @@ let test_batch_flatmap () =
   reset ();
   Printf.printf "=== Test: batch flatmap ===\n";
 
-  let source, emit = source ~name:"source" () in
+  let source, emit = Source.create ~name:"source" () in
   let derived =
-    flatMap ~name:"derived" source
+    FlatMap.create ~name:"derived" source
       ~f:(fun k v emit -> emit (k ^ "_derived") (v * 2))
       ()
   in
@@ -41,10 +41,10 @@ let test_batch_fixpoint () =
   reset ();
   Printf.printf "=== Test: batch fixpoint ===\n";
 
-  let init, emit_init = source ~name:"init" () in
-  let edges, emit_edges = source ~name:"edges" () in
+  let init, emit_init = Source.create ~name:"init" () in
+  let edges, emit_edges = Source.create ~name:"edges" () in
 
-  let fp = fixpoint ~name:"fp" ~init ~edges () in
+  let fp = Fixpoint.create ~name:"fp" ~init ~edges () in
 
   (* Track batches received *)
   let batch_count = ref 0 in

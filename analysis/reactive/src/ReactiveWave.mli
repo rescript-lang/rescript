@@ -13,6 +13,9 @@ val create : max_entries:int -> ('k, 'v) t
 val clear : ('k, 'v) t -> unit
 (** Remove all entries from the wave without releasing its storage. *)
 
+val destroy : ('k, 'v) t -> unit
+(** Release the wave's off-heap storage. The wave must not be used after this. *)
+
 val push :
   ('k, 'v) t ->
   'k ReactiveAllocator.offheap ->
@@ -23,17 +26,12 @@ val push :
 
 val iter :
   ('k, 'v) t ->
-  ( 'k ReactiveAllocator.offheap ->
-    'v ReactiveAllocator.offheap ->
-    unit ) ->
+  ('k ReactiveAllocator.offheap -> 'v ReactiveAllocator.offheap -> unit) ->
   unit
 
 val iter_with :
   ('k, 'v) t ->
-  ( 'a ->
-    'k ReactiveAllocator.offheap ->
-    'v ReactiveAllocator.offheap ->
-    unit ) ->
+  ('a -> 'k ReactiveAllocator.offheap -> 'v ReactiveAllocator.offheap -> unit) ->
   'a ->
   unit
 (** [iter_with t f arg] calls [f arg k v] for each entry.

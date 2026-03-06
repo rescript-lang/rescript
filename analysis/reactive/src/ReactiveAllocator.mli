@@ -60,8 +60,7 @@ module Block : sig
   val set : t -> int -> 'a offheap -> unit
   (** Write a slot. *)
 
-  val blit :
-    src:t -> src_pos:int -> dst:t -> dst_pos:int -> len:int -> unit
+  val blit : src:t -> src_pos:int -> dst:t -> dst_pos:int -> len:int -> unit
   (** Copy a range of raw value slots between blocks. *)
 end
 
@@ -73,6 +72,12 @@ val live_block_count : unit -> int
 
 val live_block_capacity_slots : unit -> int
 (** Total payload capacity, in slots, across all live blocks. *)
+
+val reset : unit -> unit
+(** Release all allocator blocks.
+
+    Intended for tests. Any existing block or wave handles become invalid after
+    this call. *)
 
 val is_in_minor_heap : 'a -> bool
 (** Runtime check for whether a value currently resides in the OCaml minor
