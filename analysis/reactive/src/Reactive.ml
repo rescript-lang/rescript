@@ -149,9 +149,7 @@ module Registry = struct
     sorted_valid := true
 
   let destroy_graph () =
-    let all = Hashtbl.fold (fun _ info acc -> info :: acc) nodes [] in
-    let sorted = List.sort (fun a b -> compare b.level a.level) all in
-    List.iter (fun info -> info.destroy ()) sorted;
+    Hashtbl.iter (fun _ info -> info.destroy ()) nodes;
     clear ()
 
   let reset_stats () =
