@@ -2,4 +2,7 @@
  (name reactive)
  (wrapped false)
  (private_modules ReactiveQueue)
+ (foreign_stubs
+  (language c)
+  (names reactive_allocator_stubs))
  (libraries unix))

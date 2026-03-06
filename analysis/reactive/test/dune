@@ -10,7 +10,8 @@
   FixpointIncrementalTest
   BatchTest
   IntegrationTest
-  GlitchFreeTest
+ GlitchFreeTest
   AllocMeasure
-  AllocTest)
+  AllocTest
+  TableTest)
  (libraries reactive))
