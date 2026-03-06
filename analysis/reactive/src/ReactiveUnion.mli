@@ -13,11 +13,15 @@ type process_result = {
   mutable removes_emitted: int;
 }
 
-val create :
-  merge:('v -> 'v -> 'v) ->
-  output_wave:('k, 'v ReactiveMaybe.t) ReactiveWave.t ->
-  ('k, 'v) t
-(** Create union state with the given merge function and output wave buffer. *)
+val create : merge:('v -> 'v -> 'v) -> ('k, 'v) t
+(** Create union state with the given merge function and an owned output wave. *)
+
+val destroy : ('k, 'v) t -> unit
+(** Release union-owned off-heap storage. The state must not be used
+    afterwards. *)
+
+val output_wave : ('k, 'v) t -> ('k, 'v ReactiveMaybe.t) ReactiveWave.t
+(** The owned output wave populated by [process]. *)
 
 val push_left :
   ('k, 'v) t ->

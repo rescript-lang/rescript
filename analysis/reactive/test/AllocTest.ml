@@ -161,8 +161,7 @@ let test_flatmap_alloc () =
 (* ---- Union allocation ---- *)
 
 let test_union_alloc_n n =
-  let output_wave = ReactiveWave.create ~max_entries:(n * 2) in
-  let state = ReactiveUnion.create ~merge:(fun _l r -> r) ~output_wave in
+  let state = ReactiveUnion.create ~merge:(fun _l r -> r) in
 
   (* Populate: n entries on the left side *)
   for i = 0 to n - 1 do
@@ -202,7 +201,7 @@ let test_union_alloc_n n =
     ignore (ReactiveUnion.process state)
   done;
   assert (ReactiveUnion.target_length state = n);
-  ReactiveWave.destroy output_wave;
+  ReactiveUnion.destroy state;
   words_since () / iters
 
 let test_union_alloc () =
@@ -456,8 +455,7 @@ let test_reactive_union_alloc_n n =
   assert (Reactive.length merged = n);
   ReactiveWave.destroy remove_wave;
   ReactiveWave.destroy add_wave;
-  Reactive.destroy left;
-  Reactive.destroy right;
+  Reactive.destroy_graph ();
   words_since () / iters
 
 let test_reactive_union_alloc () =

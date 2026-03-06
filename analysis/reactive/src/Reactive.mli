@@ -43,6 +43,9 @@ module Registry : sig
   val clear : unit -> unit
   (** Clear all registered nodes *)
 
+  val destroy_graph : unit -> unit
+  (** Destroy all registered nodes, then clear the registry. *)
+
   val to_mermaid : unit -> string
   (** Generate a Mermaid diagram of the pipeline *)
 
@@ -172,6 +175,9 @@ val set_debug : bool -> unit
 
 val reset : unit -> unit
 (** Clear all registered nodes (for tests) *)
+
+val destroy_graph : unit -> unit
+(** Destroy all registered nodes, then clear the registry. *)
 
 val reset_stats : unit -> unit
 (** Reset all node statistics to zero (keeps nodes intact) *)

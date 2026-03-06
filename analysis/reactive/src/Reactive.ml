@@ -70,6 +70,7 @@ module Registry = struct
     mutable dirty: bool;
     mutable outbound_inflight: int;
     process: unit -> unit; (* Process accumulated deltas *)
+    destroy: unit -> unit;
     stats: stats;
   }
 
@@ -84,11 +85,11 @@ module Registry = struct
   let dirty_count = ref 0
 
   (* Pre-sorted node array for zero-alloc propagation.
-     Built lazily on first propagate; invalidated by register. *)
+     Built lazily on first propagate; invalidated by register_node. *)
   let sorted_nodes : node_info array ref = ref [||]
   let sorted_valid = ref true
 
-  let register ~name ~level ~process ~stats =
+  let register_node ~name ~level ~process ~destroy ~stats =
     let info =
       {
         name;
@@ -98,6 +99,7 @@ module Registry = struct
         dirty = false;
         outbound_inflight = 0;
         process;
+        destroy;
         stats;
       }
     in
@@ -153,6 +155,12 @@ module Registry = struct
     dirty_count := 0;
     sorted_nodes := [||];
     sorted_valid := true
+
+  let destroy_graph () =
+    let all = Hashtbl.fold (fun _ info acc -> info :: acc) nodes [] in
+    let sorted = List.sort (fun a b -> compare b.level a.level) all in
+    List.iter (fun info -> info.destroy ()) sorted;
+    clear ()
 
   let reset_stats () =
     Hashtbl.iter
@@ -473,10 +481,6 @@ let stats t = t.stats
 let level t = t.level
 let name t = t.name
 
-let todo_destroy name =
-  Printf.eprintf "TODO: Reactive.destroy for node %s\n%!" name;
-  assert false
-
 let unsafe_wave_push wave k v =
   ReactiveWave.push wave
     (ReactiveAllocator.unsafe_to_offheap k)
@@ -526,7 +530,10 @@ module Source = struct
       else ReactiveHash.Map.clear pending
     in
 
-    let my_info = Registry.register ~name ~level:0 ~process ~stats:my_stats in
+    let destroy () = ReactiveWave.destroy output_wave in
+    let my_info =
+      Registry.register_node ~name ~level:0 ~process ~destroy ~stats:my_stats
+    in
 
     let collection =
       {
@@ -535,7 +542,7 @@ module Source = struct
         iter = (fun f -> ReactiveHash.Map.iter f tbl);
         get = (fun k -> ReactiveHash.Map.find_maybe tbl k);
         length = (fun () -> ReactiveHash.Map.cardinal tbl);
-        destroy = (fun () -> ReactiveWave.destroy output_wave);
+        destroy;
         stats = my_stats;
         level = 0;
         node = my_info;
@@ -596,8 +603,10 @@ module FlatMap = struct
         notify_subscribers output_wave !subscribers)
     in
 
+    let destroy () = ReactiveWave.destroy output_wave in
     let my_info =
-      Registry.register ~name ~level:my_level ~process ~stats:my_stats
+      Registry.register_node ~name ~level:my_level ~process ~destroy
+        ~stats:my_stats
     in
     Registry.add_edge ~from_name:src.name ~to_name:name ~label:"flatMap";
 
@@ -617,7 +626,7 @@ module FlatMap = struct
       iter = (fun f -> ReactiveFlatMap.iter_target f state);
       get = (fun k -> ReactiveFlatMap.find_target state k);
       length = (fun () -> ReactiveFlatMap.target_length state);
-      destroy = (fun () -> todo_destroy name);
+      destroy;
       stats = my_stats;
       level = my_level;
       node = my_info;
@@ -673,8 +682,10 @@ module Join = struct
         notify_subscribers output_wave !subscribers)
     in
 
+    let destroy () = ReactiveWave.destroy output_wave in
     let my_info =
-      Registry.register ~name ~level:my_level ~process ~stats:my_stats
+      Registry.register_node ~name ~level:my_level ~process ~destroy
+        ~stats:my_stats
     in
     Registry.add_edge ~from_name:left.name ~to_name:name ~label:"join";
     Registry.add_edge ~from_name:right.name ~to_name:name ~label:"join";
@@ -703,7 +714,7 @@ module Join = struct
       iter = (fun f -> ReactiveJoin.iter_target f state);
       get = (fun k -> ReactiveJoin.find_target state k);
       length = (fun () -> ReactiveJoin.target_length state);
-      destroy = (fun () -> todo_destroy name);
+      destroy;
       stats = my_stats;
       level = my_level;
       node = my_info;
@@ -723,9 +734,8 @@ module Union = struct
     in
 
     let subscribers = ref [] in
-    let output_wave = create_wave () in
     let my_stats = create_stats () in
-    let state = ReactiveUnion.create ~merge:merge_fn ~output_wave in
+    let state = ReactiveUnion.create ~merge:merge_fn in
     let left_pending_count = ref 0 in
     let right_pending_count = ref 0 in
 
@@ -749,6 +759,7 @@ module Union = struct
         my_stats.removes_received + r.removes_received;
 
       if r.entries_emitted > 0 then (
+        let output_wave = ReactiveUnion.output_wave state in
         my_stats.deltas_emitted <- my_stats.deltas_emitted + 1;
         my_stats.entries_emitted <- my_stats.entries_emitted + r.entries_emitted;
         my_stats.adds_emitted <- my_stats.adds_emitted + r.adds_emitted;
@@ -756,8 +767,10 @@ module Union = struct
         notify_subscribers output_wave !subscribers)
     in
 
+    let destroy () = ReactiveUnion.destroy state in
     let my_info =
-      Registry.register ~name ~level:my_level ~process ~stats:my_stats
+      Registry.register_node ~name ~level:my_level ~process ~destroy
+        ~stats:my_stats
     in
     Registry.add_edge ~from_name:left.name ~to_name:name ~label:"union";
     Registry.add_edge ~from_name:right.name ~to_name:name ~label:"union";
@@ -787,7 +800,7 @@ module Union = struct
       iter = (fun f -> ReactiveUnion.iter_target f state);
       get = (fun k -> ReactiveUnion.find_target state k);
       length = (fun () -> ReactiveUnion.target_length state);
-      destroy = (fun () -> todo_destroy name);
+      destroy;
       stats = my_stats;
       level = my_level;
       node = my_info;
@@ -875,8 +888,14 @@ module Fixpoint = struct
         my_stats.entries_emitted <- my_stats.entries_emitted + out_count)
     in
 
+    let destroy () =
+      ReactiveWave.destroy root_wave;
+      ReactiveWave.destroy edge_wave;
+      ReactiveFixpoint.destroy state
+    in
     let my_info =
-      Registry.register ~name ~level:my_level ~process ~stats:my_stats
+      Registry.register_node ~name ~level:my_level ~process ~destroy
+        ~stats:my_stats
     in
     Registry.add_edge ~from_name:init.name ~to_name:name ~label:"roots";
     Registry.add_edge ~from_name:edges.name ~to_name:name ~label:"edges";
@@ -909,6 +928,8 @@ module Fixpoint = struct
     edges.iter (fun k succs -> unsafe_wave_push init_edges_wave k succs);
     ReactiveFixpoint.initialize state ~roots:init_roots_wave
       ~edges:init_edges_wave;
+    ReactiveWave.destroy init_roots_wave;
+    ReactiveWave.destroy init_edges_wave;
 
     {
       name;
@@ -916,7 +937,7 @@ module Fixpoint = struct
       iter = (fun f -> ReactiveFixpoint.iter_current state f);
       get = (fun k -> ReactiveFixpoint.get_current state k);
       length = (fun () -> ReactiveFixpoint.current_length state);
-      destroy = (fun () -> todo_destroy name);
+      destroy;
       stats = my_stats;
       level = my_level;
       node = my_info;
@@ -928,5 +949,6 @@ end
 let to_mermaid () = Registry.to_mermaid ()
 let print_stats () = Registry.print_stats ()
 let set_debug = set_debug
+let destroy_graph () = Registry.destroy_graph ()
 let reset () = Registry.clear ()
 let reset_stats () = Registry.reset_stats ()

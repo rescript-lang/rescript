@@ -25,7 +25,7 @@ and process_result = {
   mutable removes_emitted: int;
 }
 
-let create ~merge ~output_wave =
+let create ~merge =
   {
     merge;
     left_values = ReactiveHash.Map.create ();
@@ -34,7 +34,7 @@ let create ~merge ~output_wave =
     left_scratch = ReactiveHash.Map.create ();
     right_scratch = ReactiveHash.Map.create ();
     affected = ReactiveHash.Set.create ();
-    output_wave;
+    output_wave = ReactiveWave.create ~max_entries:16;
     result =
       {
         entries_received = 0;
@@ -45,6 +45,10 @@ let create ~merge ~output_wave =
         removes_emitted = 0;
       };
   }
+
+let destroy t = ReactiveWave.destroy t.output_wave
+
+let output_wave t = t.output_wave
 
 let push_left t k mv =
   ReactiveHash.Map.replace t.left_scratch
