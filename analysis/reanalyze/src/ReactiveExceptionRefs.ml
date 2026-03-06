@@ -26,7 +26,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
     ~(exception_refs : (DcePath.t, Location.t) Reactive.t) : t =
   (* Step 1: Index exception declarations by path *)
   let exception_decls =
-    Reactive.flatMap ~name:"exc_refs.exception_decls" decls
+    Reactive.FlatMap.create ~name:"exc_refs.exception_decls" decls
       ~f:(fun _pos (decl : Decl.t) emit ->
         match decl.Decl.declKind with
         | Exception ->
@@ -44,7 +44,8 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
 
   (* Step 2: Join exception_refs with exception_decls *)
   let resolved_refs =
-    Reactive.join ~name:"exc_refs.resolved_refs" exception_refs exception_decls
+    Reactive.Join.create ~name:"exc_refs.resolved_refs" exception_refs
+      exception_decls
       ~key_of:(fun path _loc_from -> path)
       ~f:(fun _path loc_from loc_to_mb emit ->
         if ReactiveMaybe.is_some loc_to_mb then
@@ -57,7 +58,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
 
   (* Step 3: Create refs_from direction by inverting *)
   let resolved_refs_from =
-    Reactive.flatMap ~name:"exc_refs.resolved_refs_from" resolved_refs
+    Reactive.FlatMap.create ~name:"exc_refs.resolved_refs_from" resolved_refs
       ~f:(fun posTo posFromSet emit ->
         PosSet.iter
           (fun posFrom -> emit posFrom (PosSet.singleton posTo))

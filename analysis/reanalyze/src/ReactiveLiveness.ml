@@ -19,13 +19,14 @@ let create ~(merged : ReactiveMerge.t) : t =
 
   (* Combine value refs using union: per-file refs + exception refs *)
   let value_refs_from : (Lexing.position, PosSet.t) Reactive.t =
-    Reactive.union ~name:"liveness.value_refs_from" merged.value_refs_from
-      merged.exception_refs.resolved_refs_from ~merge:PosSet.union ()
+    Reactive.Union.create ~name:"liveness.value_refs_from"
+      merged.value_refs_from merged.exception_refs.resolved_refs_from
+      ~merge:PosSet.union ()
   in
 
   (* Combine type refs using union: per-file refs + type deps from ReactiveTypeDeps *)
   let type_refs_from : (Lexing.position, PosSet.t) Reactive.t =
-    Reactive.union ~name:"liveness.type_refs_from" merged.type_refs_from
+    Reactive.Union.create ~name:"liveness.type_refs_from" merged.type_refs_from
       merged.type_deps.all_type_refs_from ~merge:PosSet.union ()
   in
 
@@ -36,7 +37,7 @@ let create ~(merged : ReactiveMerge.t) : t =
 
   (* Step 2: Convert to edges format for fixpoint: decl -> successor list *)
   let edges : (Lexing.position, Lexing.position list) Reactive.t =
-    Reactive.flatMap ~name:"liveness.edges" decl_refs_index
+    Reactive.FlatMap.create ~name:"liveness.edges" decl_refs_index
       ~f:(fun pos (value_targets, type_targets) emit ->
         let all_targets = PosSet.union value_targets type_targets in
         emit pos (PosSet.elements all_targets))
@@ -55,7 +56,8 @@ let create ~(merged : ReactiveMerge.t) : t =
      We use join to explicitly track the dependency on decls. When a decl at
      position P arrives, any ref with posFrom=P will be reprocessed. *)
   let external_value_refs : (Lexing.position, unit) Reactive.t =
-    Reactive.join ~name:"liveness.external_value_refs" value_refs_from decls
+    Reactive.Join.create ~name:"liveness.external_value_refs" value_refs_from
+      decls
       ~key_of:(fun posFrom _targets -> posFrom)
       ~f:(fun _posFrom targets decl_mb emit ->
         if not (ReactiveMaybe.is_some decl_mb) then
@@ -66,7 +68,8 @@ let create ~(merged : ReactiveMerge.t) : t =
   in
 
   let external_type_refs : (Lexing.position, unit) Reactive.t =
-    Reactive.join ~name:"liveness.external_type_refs" type_refs_from decls
+    Reactive.Join.create ~name:"liveness.external_type_refs" type_refs_from
+      decls
       ~key_of:(fun posFrom _targets -> posFrom)
       ~f:(fun _posFrom targets decl_mb emit ->
         if not (ReactiveMaybe.is_some decl_mb) then
@@ -77,15 +80,15 @@ let create ~(merged : ReactiveMerge.t) : t =
   in
 
   let externally_referenced : (Lexing.position, unit) Reactive.t =
-    Reactive.union ~name:"liveness.externally_referenced" external_value_refs
-      external_type_refs
+    Reactive.Union.create ~name:"liveness.externally_referenced"
+      external_value_refs external_type_refs
       ~merge:(fun () () -> ())
       ()
   in
 
   (* Compute annotated roots: decls with @live or @genType *)
   let annotated_roots : (Lexing.position, unit) Reactive.t =
-    Reactive.join ~name:"liveness.annotated_roots" decls annotations
+    Reactive.Join.create ~name:"liveness.annotated_roots" decls annotations
       ~key_of:(fun pos _decl -> pos)
       ~f:(fun pos _decl ann_mb emit ->
         if ReactiveMaybe.is_some ann_mb then
@@ -98,7 +101,7 @@ let create ~(merged : ReactiveMerge.t) : t =
 
   (* Combine all roots *)
   let all_roots : (Lexing.position, unit) Reactive.t =
-    Reactive.union ~name:"liveness.all_roots" annotated_roots
+    Reactive.Union.create ~name:"liveness.all_roots" annotated_roots
       externally_referenced
       ~merge:(fun () () -> ())
       ()
@@ -106,7 +109,7 @@ let create ~(merged : ReactiveMerge.t) : t =
 
   (* Step 4: Compute fixpoint - all reachable positions from roots *)
   let live =
-    Reactive.fixpoint ~name:"liveness.live" ~init:all_roots ~edges ()
+    Reactive.Fixpoint.create ~name:"liveness.live" ~init:all_roots ~edges ()
   in
   {live; edges; roots = all_roots}
 

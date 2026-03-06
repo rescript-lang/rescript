@@ -49,7 +49,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
     ~(report_types_dead_only_in_interface : bool) : t =
   (* Step 1: Index decls by path *)
   let decl_by_path =
-    Reactive.flatMap ~name:"type_deps.decl_by_path" decls
+    Reactive.FlatMap.create ~name:"type_deps.decl_by_path" decls
       ~f:(fun _pos decl emit ->
         match decl_to_info decl with
         | Some info -> emit info.path [info]
@@ -59,7 +59,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
 
   (* Step 2: Same-path refs - connect all decls at the same path *)
   let same_path_refs =
-    Reactive.flatMap ~name:"type_deps.same_path_refs" decl_by_path
+    Reactive.FlatMap.create ~name:"type_deps.same_path_refs" decl_by_path
       ~f:(fun _path decls emit ->
         match decls with
         | [] | [_] -> ()
@@ -80,7 +80,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   (* Step 3: Cross-file refs - connect impl decls to intf decls *)
   (* First, extract impl decls that need to look up intf *)
   let impl_decls =
-    Reactive.flatMap ~name:"type_deps.impl_decls" decls
+    Reactive.FlatMap.create ~name:"type_deps.impl_decls" decls
       ~f:(fun _pos decl emit ->
         match decl_to_info decl with
         | Some info when not info.is_interface -> (
@@ -101,7 +101,8 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
      Original: extendTypeDependencies loc loc1 where loc=impl, loc1=intf
                adds posTo=impl, posFrom=intf *)
   let impl_to_intf_refs =
-    Reactive.join ~name:"type_deps.impl_to_intf_refs" impl_decls decl_by_path
+    Reactive.Join.create ~name:"type_deps.impl_to_intf_refs" impl_decls
+      decl_by_path
       ~key_of:(fun _pos (_, intf_path1, _) -> intf_path1)
       ~f:(fun _pos (info, _intf_path1, _intf_path2) intf_decls_mb emit ->
         if ReactiveMaybe.is_some intf_decls_mb then
@@ -118,7 +119,8 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
 
   (* Second join for path2 fallback *)
   let impl_needing_path2 =
-    Reactive.join ~name:"type_deps.impl_needing_path2" impl_decls decl_by_path
+    Reactive.Join.create ~name:"type_deps.impl_needing_path2" impl_decls
+      decl_by_path
       ~key_of:(fun _pos (_, intf_path1, _) -> intf_path1)
       ~f:(fun pos (info, _intf_path1, intf_path2) intf_decls_mb emit ->
         let found =
@@ -133,8 +135,8 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   in
 
   let impl_to_intf_refs_path2 =
-    Reactive.join ~name:"type_deps.impl_to_intf_refs_path2" impl_needing_path2
-      decl_by_path
+    Reactive.Join.create ~name:"type_deps.impl_to_intf_refs_path2"
+      impl_needing_path2 decl_by_path
       ~key_of:(fun _pos (_, intf_path2) -> intf_path2)
       ~f:(fun _pos (info, _) intf_decls_mb emit ->
         if ReactiveMaybe.is_some intf_decls_mb then
@@ -154,7 +156,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
      The intf->impl code in original only runs when isInterface=true,
      and the lookup is for finding the impl. *)
   let intf_decls =
-    Reactive.flatMap ~name:"type_deps.intf_decls" decls
+    Reactive.FlatMap.create ~name:"type_deps.intf_decls" decls
       ~f:(fun _pos decl emit ->
         match decl_to_info decl with
         | Some info when info.is_interface -> (
@@ -170,7 +172,8 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   in
 
   let intf_to_impl_refs =
-    Reactive.join ~name:"type_deps.intf_to_impl_refs" intf_decls decl_by_path
+    Reactive.Join.create ~name:"type_deps.intf_to_impl_refs" intf_decls
+      decl_by_path
       ~key_of:(fun _pos (_, impl_path) -> impl_path)
       ~f:(fun _pos (intf_info, _) impl_decls_mb emit ->
         if ReactiveMaybe.is_some impl_decls_mb then
@@ -213,18 +216,19 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
     (* Combine all refs_to sources using union *)
     let combined_refs_to =
       let u1 =
-        Reactive.union ~name:"type_deps.u1" same_path_refs cross_file_refs
-          ~merge:PosSet.union ()
+        Reactive.Union.create ~name:"type_deps.u1" same_path_refs
+          cross_file_refs ~merge:PosSet.union ()
       in
       let u2 =
-        Reactive.union ~name:"type_deps.u2" u1 impl_to_intf_refs_path2
+        Reactive.Union.create ~name:"type_deps.u2" u1 impl_to_intf_refs_path2
           ~merge:PosSet.union ()
       in
-      Reactive.union ~name:"type_deps.combined_refs_to" u2 intf_to_impl_refs
-        ~merge:PosSet.union ()
+      Reactive.Union.create ~name:"type_deps.combined_refs_to" u2
+        intf_to_impl_refs ~merge:PosSet.union ()
     in
     (* Invert the combined refs_to to refs_from *)
-    Reactive.flatMap ~name:"type_deps.all_type_refs_from" combined_refs_to
+    Reactive.FlatMap.create ~name:"type_deps.all_type_refs_from"
+      combined_refs_to
       ~f:(fun posTo posFromSet emit ->
         PosSet.iter
           (fun posFrom -> emit posFrom (PosSet.singleton posTo))

@@ -331,6 +331,9 @@ let test_reactive_join_alloc_n n =
     emit_left add_wave
   done;
   assert (Reactive.length joined = n);
+  ReactiveWave.destroy remove_wave;
+  ReactiveWave.destroy add_wave;
+  Reactive.destroy_graph ();
   words_since () / iters
 
 let test_reactive_join_alloc () =
@@ -390,6 +393,10 @@ let test_reactive_fixpoint_alloc_n n =
     emit_root add_wave
   done;
   assert (Reactive.length reachable = n);
+  ReactiveWave.destroy edge_wave;
+  ReactiveWave.destroy remove_wave;
+  ReactiveWave.destroy add_wave;
+  Reactive.destroy_graph ();
   words_since () / iters
 
 let test_reactive_fixpoint_alloc () =
@@ -503,6 +510,9 @@ let test_reactive_flatmap_alloc_n n =
     emit_src add_wave
   done;
   assert (Reactive.length derived = n);
+  ReactiveWave.destroy remove_wave;
+  ReactiveWave.destroy add_wave;
+  Reactive.destroy_graph ();
   words_since () / iters
 
 let test_reactive_flatmap_alloc () =

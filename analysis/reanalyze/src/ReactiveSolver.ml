@@ -55,7 +55,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
     ~(config : DceConfig.t) : t =
   (* dead_decls = decls where NOT in live (reactive join) *)
   let dead_decls =
-    Reactive.join ~name:"solver.dead_decls" decls live
+    Reactive.Join.create ~name:"solver.dead_decls" decls live
       ~key_of:(fun pos _decl -> pos)
       ~f:(fun pos decl live_mb emit ->
         if not (ReactiveMaybe.is_some live_mb) then emit pos decl)
@@ -64,7 +64,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
 
   (* live_decls = decls where in live (reactive join) *)
   let live_decls =
-    Reactive.join ~name:"solver.live_decls" decls live
+    Reactive.Join.create ~name:"solver.live_decls" decls live
       ~key_of:(fun pos _decl -> pos)
       ~f:(fun pos decl live_mb emit ->
         if ReactiveMaybe.is_some live_mb then emit pos decl)
@@ -75,13 +75,13 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   let dead_modules =
     if not config.DceConfig.run.transitive then
       (* Dead modules only reported in transitive mode *)
-      Reactive.flatMap ~name:"solver.dead_modules_empty" dead_decls
+      Reactive.FlatMap.create ~name:"solver.dead_modules_empty" dead_decls
         ~f:(fun _k _v _emit -> ())
         ()
     else
       (* modules_with_dead: (moduleName, (loc, fileName)) for each module with dead decls *)
       let modules_with_dead =
-        Reactive.flatMap ~name:"solver.modules_with_dead" dead_decls
+        Reactive.FlatMap.create ~name:"solver.modules_with_dead" dead_decls
           ~f:(fun _pos decl emit ->
             emit (decl_module_name decl)
               (decl.moduleLoc, decl.pos.Lexing.pos_fname))
@@ -90,12 +90,12 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
       in
       (* modules_with_live: (moduleName, ()) for each module with live decls *)
       let modules_with_live =
-        Reactive.flatMap ~name:"solver.modules_with_live" live_decls
+        Reactive.FlatMap.create ~name:"solver.modules_with_live" live_decls
           ~f:(fun _pos decl emit -> emit (decl_module_name decl) ())
           ()
       in
       (* Anti-join: modules in dead but not in live *)
-      Reactive.join ~name:"solver.dead_modules" modules_with_dead
+      Reactive.Join.create ~name:"solver.dead_modules" modules_with_dead
         modules_with_live
         ~key_of:(fun modName (_loc, _fileName) -> modName)
         ~f:(fun modName (loc, fileName) live_mb emit ->
@@ -106,7 +106,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
 
   (* Reactive per-file grouping of dead declarations *)
   let dead_decls_by_file =
-    Reactive.flatMap ~name:"solver.dead_decls_by_file" dead_decls
+    Reactive.FlatMap.create ~name:"solver.dead_decls_by_file" dead_decls
       ~f:(fun _pos decl emit -> emit decl.pos.Lexing.pos_fname [decl])
       ~merge:(fun decls1 decls2 -> decls1 @ decls2)
       ()
@@ -164,19 +164,20 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   let issues_by_file =
     match (transitive, value_refs_from) with
     | true, _ | false, None ->
-      Reactive.flatMap ~name:"solver.issues_by_file" dead_decls_by_file
+      Reactive.FlatMap.create ~name:"solver.issues_by_file" dead_decls_by_file
         ~f:(fun file decls emit -> emit file (issues_for_file file decls))
         ()
     | false, Some refs_from ->
       (* Create a singleton "refs token" that changes whenever refs_from changes,
          and join every file against it so per-file issues recompute. *)
       let refs_token =
-        Reactive.flatMap ~name:"solver.refs_token" refs_from
+        Reactive.FlatMap.create ~name:"solver.refs_token" refs_from
           ~f:(fun _posFrom _targets emit -> emit () ())
           ~merge:(fun _ _ -> ())
           ()
       in
-      Reactive.join ~name:"solver.issues_by_file" dead_decls_by_file refs_token
+      Reactive.Join.create ~name:"solver.issues_by_file" dead_decls_by_file
+        refs_token
         ~key_of:(fun _file _decls -> ())
         ~f:(fun file decls _token_mb emit ->
           emit file (issues_for_file file decls))
@@ -185,7 +186,8 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
 
   (* Reactive incorrect @dead: live decls with @dead annotation *)
   let incorrect_dead_decls =
-    Reactive.join ~name:"solver.incorrect_dead_decls" live_decls annotations
+    Reactive.Join.create ~name:"solver.incorrect_dead_decls" live_decls
+      annotations
       ~key_of:(fun pos _decl -> pos)
       ~f:(fun pos decl ann_mb emit ->
         if ReactiveMaybe.is_some ann_mb then
@@ -197,7 +199,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
 
   (* Reactive modules_with_reported: modules that have at least one reported dead value *)
   let modules_with_reported =
-    Reactive.flatMap ~name:"solver.modules_with_reported" issues_by_file
+    Reactive.FlatMap.create ~name:"solver.modules_with_reported" issues_by_file
       ~f:(fun _file (_issues, modules_list) emit ->
         List.iter (fun m -> emit m ()) modules_list)
       ()
@@ -205,7 +207,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
 
   (* Reactive dead module issues: dead_modules joined with modules_with_reported *)
   let dead_module_issues =
-    Reactive.join ~name:"solver.dead_module_issues" dead_modules
+    Reactive.Join.create ~name:"solver.dead_module_issues" dead_modules
       modules_with_reported
       ~key_of:(fun moduleName (_loc, _fileName) -> moduleName)
       ~f:(fun moduleName (loc, fileName) has_reported_mb emit ->
