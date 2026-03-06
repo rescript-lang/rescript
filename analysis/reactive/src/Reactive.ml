@@ -482,32 +482,25 @@ let unsafe_wave_push wave k v =
     (ReactiveAllocator.unsafe_to_offheap k)
     (ReactiveAllocator.unsafe_to_offheap v)
 
-let unsafe_wave_map_replace pending k v =
-  ReactiveHash.Map.replace pending
-    (ReactiveAllocator.unsafe_from_offheap k)
-    (ReactiveAllocator.unsafe_from_offheap v)
-
 (** {1 Source Collection} *)
 
-(* Module-level helper for source emit — avoids closure allocation.
-   Groups tbl + pending so iter_with can pass a single argument. *)
-type ('k, 'v) source_tables = {
-  tbl: ('k, 'v) ReactiveHash.Map.t;
-  pending: ('k, 'v ReactiveMaybe.t) ReactiveHash.Map.t;
-}
-
-let apply_source_emit (tables : ('k, 'v) source_tables) k mv =
-  let k = ReactiveAllocator.unsafe_from_offheap k in
-  let mv = ReactiveAllocator.unsafe_from_offheap mv in
-  if ReactiveMaybe.is_some mv then (
-    let v = ReactiveMaybe.unsafe_get mv in
-    ReactiveHash.Map.replace tables.tbl k v;
-    ReactiveHash.Map.replace tables.pending k (ReactiveMaybe.some v))
-  else (
-    ReactiveHash.Map.remove tables.tbl k;
-    ReactiveHash.Map.replace tables.pending k ReactiveMaybe.none)
-
 module Source = struct
+  type ('k, 'v) tables = {
+    tbl: ('k, 'v) ReactiveHash.Map.t;
+    pending: ('k, 'v ReactiveMaybe.t) ReactiveHash.Map.t;
+  }
+
+  let apply_emit (tables : ('k, 'v) tables) k mv =
+    let k = ReactiveAllocator.unsafe_from_offheap k in
+    let mv = ReactiveAllocator.unsafe_from_offheap mv in
+    if ReactiveMaybe.is_some mv then (
+      let v = ReactiveMaybe.unsafe_get mv in
+      ReactiveHash.Map.replace tables.tbl k v;
+      ReactiveHash.Map.replace tables.pending k (ReactiveMaybe.some v))
+    else (
+      ReactiveHash.Map.remove tables.tbl k;
+      ReactiveHash.Map.replace tables.pending k ReactiveMaybe.none)
+
   let create ~name () =
     let tbl : ('k, 'v) ReactiveHash.Map.t = ReactiveHash.Map.create () in
     let subscribers = ref [] in
@@ -554,7 +547,7 @@ module Source = struct
       my_stats.deltas_received <- my_stats.deltas_received + 1;
       my_stats.entries_received <- my_stats.entries_received + count;
       (* Apply to internal state and accumulate into pending map *)
-      ReactiveWave.iter_with input_wave apply_source_emit tables;
+      ReactiveWave.iter_with input_wave apply_emit tables;
       pending_count := !pending_count + 1;
       Registry.mark_dirty_node my_info;
       if not (Scheduler.is_propagating ()) then Scheduler.propagate ()
@@ -804,6 +797,11 @@ end
 (** {1 Fixpoint} *)
 
 module Fixpoint = struct
+  let unsafe_wave_map_replace pending k v =
+    ReactiveHash.Map.replace pending
+      (ReactiveAllocator.unsafe_from_offheap k)
+      (ReactiveAllocator.unsafe_from_offheap v)
+
   let create ~name ~(init : ('k, unit) t) ~(edges : ('k, 'k list) t) () :
       ('k, unit) t =
     let my_level = max init.level edges.level + 1 in
