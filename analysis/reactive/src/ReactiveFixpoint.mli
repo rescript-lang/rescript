@@ -18,6 +18,9 @@ val destroy : 'k t -> unit
 (** Release fixpoint-owned off-heap storage. The state must not be used
     afterwards. *)
 
+val output_wave : 'k t -> 'k output_wave
+(** The owned output wave populated by [apply_wave]. *)
+
 val iter_current : 'k t -> ('k -> unit -> unit) -> unit
 val get_current : 'k t -> 'k -> unit ReactiveMaybe.t
 val current_length : 'k t -> int
@@ -27,10 +30,8 @@ val initialize :
 (** Replace roots and edges from snapshots (full overwrite), then recompute
     closure. *)
 
-val apply_wave :
-  'k t -> roots:'k root_wave -> edges:'k edge_wave -> 'k output_wave
-(** Apply one incremental update wave and return closure delta entries as an
-    output wave.
+val apply_wave : 'k t -> roots:'k root_wave -> edges:'k edge_wave -> unit
+(** Apply one incremental update wave and populate the owned output wave.
 
     Duplicate updates for the same key in one call are coalesced
     (last-write-wins). *)

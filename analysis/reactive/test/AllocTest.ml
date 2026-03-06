@@ -61,9 +61,8 @@ let test_fixpoint_alloc_n n =
 
   (* Warmup *)
   for _ = 1 to 5 do
-    ignore
-      (ReactiveFixpoint.apply_wave state ~roots:remove_root ~edges:no_edges);
-    ignore (ReactiveFixpoint.apply_wave state ~roots:add_root ~edges:no_edges)
+    ReactiveFixpoint.apply_wave state ~roots:remove_root ~edges:no_edges;
+    ReactiveFixpoint.apply_wave state ~roots:add_root ~edges:no_edges
   done;
   assert (ReactiveFixpoint.current_length state = n);
 
@@ -71,9 +70,8 @@ let test_fixpoint_alloc_n n =
   let iters = 100 in
   ignore (words_since ());
   for _ = 1 to iters do
-    ignore
-      (ReactiveFixpoint.apply_wave state ~roots:remove_root ~edges:no_edges);
-    ignore (ReactiveFixpoint.apply_wave state ~roots:add_root ~edges:no_edges)
+    ReactiveFixpoint.apply_wave state ~roots:remove_root ~edges:no_edges;
+    ReactiveFixpoint.apply_wave state ~roots:add_root ~edges:no_edges
   done;
   assert (ReactiveFixpoint.current_length state = n);
   ReactiveWave.destroy root_snap;

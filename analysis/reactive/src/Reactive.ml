@@ -869,9 +869,8 @@ module Fixpoint = struct
       my_stats.adds_received <-
         my_stats.adds_received + root_entries + edge_entries;
 
-      let out_wave =
-        ReactiveFixpoint.apply_wave state ~roots:root_wave ~edges:edge_wave
-      in
+      ReactiveFixpoint.apply_wave state ~roots:root_wave ~edges:edge_wave;
+      let out_wave = ReactiveFixpoint.output_wave state in
       let out_count = ReactiveWave.count out_wave in
       if out_count > 0 then (
         notify_subscribers out_wave !subscribers;

@@ -433,6 +433,7 @@ let create ~max_nodes ~max_edges =
   }
 
 let destroy t = ReactiveWave.destroy t.output_wave
+let output_wave t = t.output_wave
 
 type 'k root_wave = ('k, unit ReactiveMaybe.t) ReactiveWave.t
 type 'k edge_wave = ('k, 'k list ReactiveMaybe.t) ReactiveWave.t
@@ -798,4 +799,4 @@ let apply_list t ~roots ~edges =
 let apply_wave t ~roots ~edges =
   ReactiveWave.clear t.output_wave;
   apply_list t ~roots ~edges;
-  t.output_wave
+  ()
