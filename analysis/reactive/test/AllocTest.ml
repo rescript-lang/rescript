@@ -138,6 +138,7 @@ let test_flatmap_alloc_n n =
     ignore (ReactiveFlatMap.process state)
   done;
   assert (ReactiveFlatMap.target_length state = n);
+  ReactiveWave.destroy output_wave;
   words_since () / iters
 
 let test_flatmap_alloc () =
@@ -706,14 +707,14 @@ let test_pool_map_map_pattern_remove_recycle_churn () =
 
 let run_all () =
   Printf.printf "\n====== Allocation Tests ======\n\n";
-  test_fixpoint_alloc ();
   test_union_alloc ();
   test_flatmap_alloc ();
   test_join_alloc ();
-  test_reactive_fixpoint_alloc ();
+  test_fixpoint_alloc ();
   test_reactive_union_alloc ();
   test_reactive_flatmap_alloc ();
   test_reactive_join_alloc ();
+  test_reactive_fixpoint_alloc ();
   test_pool_map_set_pattern_drain_key_churn ();
   test_pool_map_set_pattern_remove_recycle_churn ();
   test_pool_map_map_pattern_drain_outer_churn ();
