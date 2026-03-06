@@ -76,3 +76,29 @@ module Block = struct
       invalid_arg "ReactiveAllocator.Block.blit";
     blit_unsafe src src_pos dst dst_pos len
 end
+
+module Block2 = struct
+  type ('a, 'x, 'y) t = Block.t
+
+  let header_slots = 2
+
+  let create ~capacity ~x0 ~y0 =
+    let t = Block.create ~capacity:(capacity + header_slots) in
+    Block.set t 0 (unsafe_to_offheap x0);
+    Block.set t 1 (unsafe_to_offheap y0);
+    t
+
+  let destroy = Block.destroy
+  let capacity t = Block.capacity t - header_slots
+  let resize t ~capacity = Block.resize t ~capacity:(capacity + header_slots)
+  let get0 t = unsafe_from_offheap (Block.get t 0)
+  let set0 t x = Block.set t 0 (unsafe_to_offheap x)
+  let get1 t = unsafe_from_offheap (Block.get t 1)
+  let set1 t y = Block.set t 1 (unsafe_to_offheap y)
+  let get t index = Block.get t (index + header_slots)
+  let set t index value = Block.set t (index + header_slots) value
+
+  let blit ~src ~src_pos ~dst ~dst_pos ~len =
+    Block.blit ~src ~src_pos:(src_pos + header_slots) ~dst
+      ~dst_pos:(dst_pos + header_slots) ~len
+end

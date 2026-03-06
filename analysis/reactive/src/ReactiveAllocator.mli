@@ -64,6 +64,44 @@ module Block : sig
   (** Copy a range of raw value slots between blocks. *)
 end
 
+module Block2 : sig
+  type ('a, 'x, 'y) t
+
+  val create : capacity:int -> x0:'x -> y0:'y -> ('a, 'x, 'y) t
+  (** Allocate an off-heap block with two typed header slots followed by
+      [capacity] data slots. *)
+
+  val destroy : ('a, 'x, 'y) t -> unit
+  (** Release the block storage. The handle must not be used afterwards. *)
+
+  val capacity : ('a, 'x, 'y) t -> int
+  (** Current data capacity, in slots, excluding the two header slots. *)
+
+  val resize : ('a, 'x, 'y) t -> capacity:int -> unit
+  (** Resize the data region, preserving the two header slots and the data
+      prefix up to the new capacity. *)
+
+  val get0 : ('a, 'x, 'y) t -> 'x
+  val set0 : ('a, 'x, 'y) t -> 'x -> unit
+  val get1 : ('a, 'x, 'y) t -> 'y
+  val set1 : ('a, 'x, 'y) t -> 'y -> unit
+
+  val get : ('a, 'x, 'y) t -> int -> 'a offheap
+  (** Read a data slot. *)
+
+  val set : ('a, 'x, 'y) t -> int -> 'a offheap -> unit
+  (** Write a data slot. *)
+
+  val blit :
+    src:('a, 'x, 'y) t ->
+    src_pos:int ->
+    dst:('a, 'u, 'v) t ->
+    dst_pos:int ->
+    len:int ->
+    unit
+  (** Copy data slots between blocks, excluding header slots. *)
+end
+
 val slot_size_bytes : int
 (** Size in bytes of one stored raw OCaml value slot. *)
 

@@ -1,17 +1,13 @@
-(** Zero-allocation union state and processing logic.
-
-    Uses ReactiveHash (Hachis-backed) tables for all internal state.
-    After steady-state capacity is reached, [process] performs zero
-    heap allocation. *)
+(** Zero-allocation union state and processing logic. *)
 
 type ('k, 'v) t = {
   merge: 'v -> 'v -> 'v;
-  left_values: ('k, 'v) ReactiveHash.Map.t;
-  right_values: ('k, 'v) ReactiveHash.Map.t;
-  target: ('k, 'v) ReactiveHash.Map.t;
-  left_scratch: ('k, 'v ReactiveMaybe.t) ReactiveHash.Map.t;
-  right_scratch: ('k, 'v ReactiveMaybe.t) ReactiveHash.Map.t;
-  affected: 'k ReactiveHash.Set.t;
+  left_values: ('k, 'v) ReactiveMap.t;
+  right_values: ('k, 'v) ReactiveMap.t;
+  target: ('k, 'v) ReactiveMap.t;
+  left_scratch: ('k, 'v ReactiveMaybe.t) ReactiveMap.t;
+  right_scratch: ('k, 'v ReactiveMaybe.t) ReactiveMap.t;
+  affected: 'k ReactiveSet.t;
   output_wave: ('k, 'v ReactiveMaybe.t) ReactiveWave.t;
   result: process_result;
 }
@@ -28,12 +24,12 @@ and process_result = {
 let create ~merge =
   {
     merge;
-    left_values = ReactiveHash.Map.create ();
-    right_values = ReactiveHash.Map.create ();
-    target = ReactiveHash.Map.create ();
-    left_scratch = ReactiveHash.Map.create ();
-    right_scratch = ReactiveHash.Map.create ();
-    affected = ReactiveHash.Set.create ();
+    left_values = ReactiveMap.create ();
+    right_values = ReactiveMap.create ();
+    target = ReactiveMap.create ();
+    left_scratch = ReactiveMap.create ();
+    right_scratch = ReactiveMap.create ();
+    affected = ReactiveSet.create ();
     output_wave = ReactiveWave.create ();
     result =
       {
@@ -46,73 +42,100 @@ let create ~merge =
       };
   }
 
-let destroy t = ReactiveWave.destroy t.output_wave
+let destroy t =
+  ReactiveMap.destroy t.left_values;
+  ReactiveMap.destroy t.right_values;
+  ReactiveMap.destroy t.target;
+  ReactiveMap.destroy t.left_scratch;
+  ReactiveMap.destroy t.right_scratch;
+  ReactiveSet.destroy t.affected;
+  ReactiveWave.destroy t.output_wave
 
 let output_wave t = t.output_wave
 
-let push_left t k mv =
-  ReactiveHash.Map.replace t.left_scratch
-    (ReactiveAllocator.unsafe_from_offheap k)
-    (ReactiveAllocator.unsafe_from_offheap mv)
+let push_left t k mv = ReactiveMap.replace t.left_scratch k mv
 
-let push_right t k mv =
-  ReactiveHash.Map.replace t.right_scratch
-    (ReactiveAllocator.unsafe_from_offheap k)
-    (ReactiveAllocator.unsafe_from_offheap mv)
+let push_right t k mv = ReactiveMap.replace t.right_scratch k mv
 
 (* Module-level helpers for iter_with — avoid closure allocation *)
 
-let apply_left_entry t k (mv : 'v ReactiveMaybe.t) =
+let apply_left_entry t k mv =
+  let k = ReactiveAllocator.unsafe_from_offheap k in
+  let mv = ReactiveAllocator.unsafe_from_offheap mv in
   let r = t.result in
   r.entries_received <- r.entries_received + 1;
   if ReactiveMaybe.is_some mv then (
-    ReactiveHash.Map.replace t.left_values k (ReactiveMaybe.unsafe_get mv);
+    ReactiveMap.replace t.left_values
+      (ReactiveAllocator.unsafe_to_offheap k)
+      (ReactiveAllocator.unsafe_to_offheap (ReactiveMaybe.unsafe_get mv));
     r.adds_received <- r.adds_received + 1)
   else (
-    ReactiveHash.Map.remove t.left_values k;
+    ReactiveMap.remove t.left_values (ReactiveAllocator.unsafe_to_offheap k);
     r.removes_received <- r.removes_received + 1);
-  ReactiveHash.Set.add t.affected k
+  ReactiveSet.add t.affected (ReactiveAllocator.unsafe_to_offheap k)
 
-let apply_right_entry t k (mv : 'v ReactiveMaybe.t) =
+let apply_right_entry t k mv =
+  let k = ReactiveAllocator.unsafe_from_offheap k in
+  let mv = ReactiveAllocator.unsafe_from_offheap mv in
   let r = t.result in
   r.entries_received <- r.entries_received + 1;
   if ReactiveMaybe.is_some mv then (
-    ReactiveHash.Map.replace t.right_values k (ReactiveMaybe.unsafe_get mv);
+    ReactiveMap.replace t.right_values
+      (ReactiveAllocator.unsafe_to_offheap k)
+      (ReactiveAllocator.unsafe_to_offheap (ReactiveMaybe.unsafe_get mv));
     r.adds_received <- r.adds_received + 1)
   else (
-    ReactiveHash.Map.remove t.right_values k;
+    ReactiveMap.remove t.right_values (ReactiveAllocator.unsafe_to_offheap k);
     r.removes_received <- r.removes_received + 1);
-  ReactiveHash.Set.add t.affected k
+  ReactiveSet.add t.affected (ReactiveAllocator.unsafe_to_offheap k)
 
 let recompute_affected_entry t k =
+  let k = ReactiveAllocator.unsafe_from_offheap k in
   let r = t.result in
-  let lv = ReactiveHash.Map.find_maybe t.left_values k in
-  let rv = ReactiveHash.Map.find_maybe t.right_values k in
+  let lv =
+    ReactiveMap.find_maybe t.left_values (ReactiveAllocator.unsafe_to_offheap k)
+  in
+  let rv =
+    ReactiveMap.find_maybe t.right_values
+      (ReactiveAllocator.unsafe_to_offheap k)
+  in
   let has_left = ReactiveMaybe.is_some lv in
   let has_right = ReactiveMaybe.is_some rv in
   if has_left then (
     if has_right then (
       let merged =
-        t.merge (ReactiveMaybe.unsafe_get lv) (ReactiveMaybe.unsafe_get rv)
+        t.merge
+          (ReactiveAllocator.unsafe_from_offheap (ReactiveMaybe.unsafe_get lv))
+          (ReactiveAllocator.unsafe_from_offheap (ReactiveMaybe.unsafe_get rv))
       in
-      ReactiveHash.Map.replace t.target k merged;
+      ReactiveMap.replace t.target
+        (ReactiveAllocator.unsafe_to_offheap k)
+        (ReactiveAllocator.unsafe_to_offheap merged);
       ReactiveWave.push t.output_wave
         (ReactiveAllocator.unsafe_to_offheap k)
         (ReactiveAllocator.unsafe_to_offheap (ReactiveMaybe.some merged)))
     else
-      let v = ReactiveMaybe.unsafe_get lv in
-      ReactiveHash.Map.replace t.target k v;
+      let v =
+        ReactiveAllocator.unsafe_from_offheap (ReactiveMaybe.unsafe_get lv)
+      in
+      ReactiveMap.replace t.target
+        (ReactiveAllocator.unsafe_to_offheap k)
+        (ReactiveAllocator.unsafe_to_offheap v);
       ReactiveWave.push t.output_wave
         (ReactiveAllocator.unsafe_to_offheap k)
         (ReactiveAllocator.unsafe_to_offheap (ReactiveMaybe.some v)))
   else if has_right then (
-    let v = ReactiveMaybe.unsafe_get rv in
-    ReactiveHash.Map.replace t.target k v;
+    let v =
+      ReactiveAllocator.unsafe_from_offheap (ReactiveMaybe.unsafe_get rv)
+    in
+    ReactiveMap.replace t.target
+      (ReactiveAllocator.unsafe_to_offheap k)
+      (ReactiveAllocator.unsafe_to_offheap v);
     ReactiveWave.push t.output_wave
       (ReactiveAllocator.unsafe_to_offheap k)
       (ReactiveAllocator.unsafe_to_offheap (ReactiveMaybe.some v)))
   else (
-    ReactiveHash.Map.remove t.target k;
+    ReactiveMap.remove t.target (ReactiveAllocator.unsafe_to_offheap k);
     ReactiveWave.push t.output_wave
       (ReactiveAllocator.unsafe_to_offheap k)
       ReactiveMaybe.none_offheap);
@@ -121,7 +144,7 @@ let recompute_affected_entry t k =
   else r.removes_emitted <- r.removes_emitted + 1
 
 let process t =
-  ReactiveHash.Set.clear t.affected;
+  ReactiveSet.clear t.affected;
   let r = t.result in
   r.entries_received <- 0;
   r.adds_received <- 0;
@@ -130,31 +153,57 @@ let process t =
   r.adds_emitted <- 0;
   r.removes_emitted <- 0;
 
-  ReactiveHash.Map.iter_with apply_left_entry t t.left_scratch;
-  ReactiveHash.Map.iter_with apply_right_entry t t.right_scratch;
+  ReactiveMap.iter_with apply_left_entry t t.left_scratch;
+  ReactiveMap.iter_with apply_right_entry t t.right_scratch;
 
-  ReactiveHash.Map.clear t.left_scratch;
-  ReactiveHash.Map.clear t.right_scratch;
+  ReactiveMap.clear t.left_scratch;
+  ReactiveMap.clear t.right_scratch;
 
-  if ReactiveHash.Set.cardinal t.affected > 0 then (
+  if ReactiveSet.cardinal t.affected > 0 then (
     ReactiveWave.clear t.output_wave;
-    ReactiveHash.Set.iter_with recompute_affected_entry t t.affected);
+    ReactiveSet.iter_with recompute_affected_entry t t.affected);
 
   r
 
 let init_left t k v =
-  ReactiveHash.Map.replace t.left_values k v;
-  ReactiveHash.Map.replace t.target k v
+  ReactiveMap.replace t.left_values
+    (ReactiveAllocator.unsafe_to_offheap k)
+    (ReactiveAllocator.unsafe_to_offheap v);
+  ReactiveMap.replace t.target
+    (ReactiveAllocator.unsafe_to_offheap k)
+    (ReactiveAllocator.unsafe_to_offheap v)
 
 let init_right t k v =
-  ReactiveHash.Map.replace t.right_values k v;
-  let lv = ReactiveHash.Map.find_maybe t.left_values k in
+  ReactiveMap.replace t.right_values
+    (ReactiveAllocator.unsafe_to_offheap k)
+    (ReactiveAllocator.unsafe_to_offheap v);
+  let lv =
+    ReactiveMap.find_maybe t.left_values (ReactiveAllocator.unsafe_to_offheap k)
+  in
   let merged =
-    if ReactiveMaybe.is_some lv then t.merge (ReactiveMaybe.unsafe_get lv) v
+    if ReactiveMaybe.is_some lv then
+      t.merge
+        (ReactiveAllocator.unsafe_from_offheap (ReactiveMaybe.unsafe_get lv))
+        v
     else v
   in
-  ReactiveHash.Map.replace t.target k merged
+  ReactiveMap.replace t.target
+    (ReactiveAllocator.unsafe_to_offheap k)
+    (ReactiveAllocator.unsafe_to_offheap merged)
 
-let iter_target f t = ReactiveHash.Map.iter f t.target
-let find_target t k = ReactiveHash.Map.find_maybe t.target k
-let target_length t = ReactiveHash.Map.cardinal t.target
+let iter_target f t =
+  ReactiveMap.iter
+    (fun k v ->
+      f
+        (ReactiveAllocator.unsafe_from_offheap k)
+        (ReactiveAllocator.unsafe_from_offheap v))
+    t.target
+
+let find_target t k =
+  ReactiveMap.find_maybe t.target (ReactiveAllocator.unsafe_to_offheap k)
+  |> ReactiveMaybe.to_option
+  |> function
+  | Some v -> ReactiveMaybe.some (ReactiveAllocator.unsafe_from_offheap v)
+  | None -> ReactiveMaybe.none
+
+let target_length t = ReactiveMap.cardinal t.target
