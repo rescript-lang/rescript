@@ -507,427 +507,425 @@ let apply_source_emit (tables : ('k, 'v) source_tables) k mv =
     ReactiveHash.Map.remove tables.tbl k;
     ReactiveHash.Map.replace tables.pending k ReactiveMaybe.none)
 
-let source_create ~name () =
-  let tbl : ('k, 'v) ReactiveHash.Map.t = ReactiveHash.Map.create () in
-  let subscribers = ref [] in
-  let my_stats = create_stats () in
-  let output_wave = create_wave () in
-  (* Pending deltas: accumulated by emit, flushed by process.
+module Source = struct
+  let create ~name () =
+    let tbl : ('k, 'v) ReactiveHash.Map.t = ReactiveHash.Map.create () in
+    let subscribers = ref [] in
+    let my_stats = create_stats () in
+    let output_wave = create_wave () in
+    (* Pending deltas: accumulated by emit, flushed by process.
      Uses ReactiveHash.Map for zero-alloc deduplication (last-write-wins). *)
-  let pending : ('k, 'v ReactiveMaybe.t) ReactiveHash.Map.t =
-    ReactiveHash.Map.create ()
-  in
-  let tables = {tbl; pending} in
-  let pending_count = ref 0 in
+    let pending : ('k, 'v ReactiveMaybe.t) ReactiveHash.Map.t =
+      ReactiveHash.Map.create ()
+    in
+    let tables = {tbl; pending} in
+    let pending_count = ref 0 in
 
-  let process () =
-    let count = ReactiveHash.Map.cardinal pending in
-    if count > 0 then (
-      my_stats.deltas_emitted <- my_stats.deltas_emitted + 1;
-      my_stats.entries_emitted <- my_stats.entries_emitted + count;
-      ReactiveWave.clear output_wave;
-      ReactiveHash.Map.iter_with unsafe_wave_push output_wave pending;
-      ReactiveHash.Map.clear pending;
-      notify_subscribers output_wave !subscribers)
-    else ReactiveHash.Map.clear pending
-  in
+    let process () =
+      let count = ReactiveHash.Map.cardinal pending in
+      if count > 0 then (
+        my_stats.deltas_emitted <- my_stats.deltas_emitted + 1;
+        my_stats.entries_emitted <- my_stats.entries_emitted + count;
+        ReactiveWave.clear output_wave;
+        ReactiveHash.Map.iter_with unsafe_wave_push output_wave pending;
+        ReactiveHash.Map.clear pending;
+        notify_subscribers output_wave !subscribers)
+      else ReactiveHash.Map.clear pending
+    in
 
-  let my_info = Registry.register ~name ~level:0 ~process ~stats:my_stats in
+    let my_info = Registry.register ~name ~level:0 ~process ~stats:my_stats in
 
-  let collection =
-    {
-      name;
-      subscribe = (fun h -> subscribers := h :: !subscribers);
-      iter = (fun f -> ReactiveHash.Map.iter f tbl);
-      get = (fun k -> ReactiveHash.Map.find_maybe tbl k);
-      length = (fun () -> ReactiveHash.Map.cardinal tbl);
-      destroy = (fun () -> ReactiveWave.destroy output_wave);
-      stats = my_stats;
-      level = 0;
-      node = my_info;
-    }
-  in
+    let collection =
+      {
+        name;
+        subscribe = (fun h -> subscribers := h :: !subscribers);
+        iter = (fun f -> ReactiveHash.Map.iter f tbl);
+        get = (fun k -> ReactiveHash.Map.find_maybe tbl k);
+        length = (fun () -> ReactiveHash.Map.cardinal tbl);
+        destroy = (fun () -> ReactiveWave.destroy output_wave);
+        stats = my_stats;
+        level = 0;
+        node = my_info;
+      }
+    in
 
-  let emit (input_wave : ('k, 'v ReactiveMaybe.t) ReactiveWave.t) =
-    let count = ReactiveWave.count input_wave in
-    my_stats.deltas_received <- my_stats.deltas_received + 1;
-    my_stats.entries_received <- my_stats.entries_received + count;
-    (* Apply to internal state and accumulate into pending map *)
-    ReactiveWave.iter_with input_wave apply_source_emit tables;
-    pending_count := !pending_count + 1;
-    Registry.mark_dirty_node my_info;
-    if not (Scheduler.is_propagating ()) then Scheduler.propagate ()
-  in
+    let emit (input_wave : ('k, 'v ReactiveMaybe.t) ReactiveWave.t) =
+      let count = ReactiveWave.count input_wave in
+      my_stats.deltas_received <- my_stats.deltas_received + 1;
+      my_stats.entries_received <- my_stats.entries_received + count;
+      (* Apply to internal state and accumulate into pending map *)
+      ReactiveWave.iter_with input_wave apply_source_emit tables;
+      pending_count := !pending_count + 1;
+      Registry.mark_dirty_node my_info;
+      if not (Scheduler.is_propagating ()) then Scheduler.propagate ()
+    in
 
-  (collection, emit)
+    (collection, emit)
+end
 
 (** {1 FlatMap} *)
 
-let flatmap_create ~name (src : ('k1, 'v1) t) ~f ?merge () : ('k2, 'v2) t =
-  let my_level = src.level + 1 in
-  let merge_fn =
-    match merge with
-    | Some m -> m
-    | None -> fun _ v -> v
-  in
+module FlatMap = struct
+  let create ~name (src : ('k1, 'v1) t) ~f ?merge () : ('k2, 'v2) t =
+    let my_level = src.level + 1 in
+    let merge_fn =
+      match merge with
+      | Some m -> m
+      | None -> fun _ v -> v
+    in
 
-  let subscribers = ref [] in
-  let output_wave = create_wave () in
-  let my_stats = create_stats () in
-  let state = ReactiveFlatMap.create ~f ~merge:merge_fn ~output_wave in
-  let pending_count = ref 0 in
+    let subscribers = ref [] in
+    let output_wave = create_wave () in
+    let my_stats = create_stats () in
+    let state = ReactiveFlatMap.create ~f ~merge:merge_fn ~output_wave in
+    let pending_count = ref 0 in
 
-  let process () =
-    let consumed = !pending_count in
-    pending_count := 0;
+    let process () =
+      let consumed = !pending_count in
+      pending_count := 0;
 
-    my_stats.deltas_received <- my_stats.deltas_received + consumed;
+      my_stats.deltas_received <- my_stats.deltas_received + consumed;
 
-    Registry.dec_inflight_node src.node consumed;
+      Registry.dec_inflight_node src.node consumed;
 
-    let r = ReactiveFlatMap.process state in
-    my_stats.entries_received <- my_stats.entries_received + r.entries_received;
-    my_stats.adds_received <- my_stats.adds_received + r.adds_received;
-    my_stats.removes_received <- my_stats.removes_received + r.removes_received;
+      let r = ReactiveFlatMap.process state in
+      my_stats.entries_received <-
+        my_stats.entries_received + r.entries_received;
+      my_stats.adds_received <- my_stats.adds_received + r.adds_received;
+      my_stats.removes_received <-
+        my_stats.removes_received + r.removes_received;
 
-    if r.entries_emitted > 0 then (
-      my_stats.deltas_emitted <- my_stats.deltas_emitted + 1;
-      my_stats.entries_emitted <- my_stats.entries_emitted + r.entries_emitted;
-      my_stats.adds_emitted <- my_stats.adds_emitted + r.adds_emitted;
-      my_stats.removes_emitted <- my_stats.removes_emitted + r.removes_emitted;
-      notify_subscribers output_wave !subscribers)
-  in
+      if r.entries_emitted > 0 then (
+        my_stats.deltas_emitted <- my_stats.deltas_emitted + 1;
+        my_stats.entries_emitted <- my_stats.entries_emitted + r.entries_emitted;
+        my_stats.adds_emitted <- my_stats.adds_emitted + r.adds_emitted;
+        my_stats.removes_emitted <- my_stats.removes_emitted + r.removes_emitted;
+        notify_subscribers output_wave !subscribers)
+    in
 
-  let my_info =
-    Registry.register ~name ~level:my_level ~process ~stats:my_stats
-  in
-  Registry.add_edge ~from_name:src.name ~to_name:name ~label:"flatMap";
+    let my_info =
+      Registry.register ~name ~level:my_level ~process ~stats:my_stats
+    in
+    Registry.add_edge ~from_name:src.name ~to_name:name ~label:"flatMap";
 
-  (* Subscribe to source: push directly into pending map *)
-  src.subscribe (fun wave ->
-      Registry.inc_inflight_node src.node;
-      incr pending_count;
-      ReactiveWave.iter_with wave ReactiveFlatMap.push state;
-      Registry.mark_dirty_node my_info);
+    (* Subscribe to source: push directly into pending map *)
+    src.subscribe (fun wave ->
+        Registry.inc_inflight_node src.node;
+        incr pending_count;
+        ReactiveWave.iter_with wave ReactiveFlatMap.push state;
+        Registry.mark_dirty_node my_info);
 
-  (* Initialize from existing data *)
-  src.iter (fun k v -> ReactiveFlatMap.init_entry state k v);
+    (* Initialize from existing data *)
+    src.iter (fun k v -> ReactiveFlatMap.init_entry state k v);
 
-  {
-    name;
-    subscribe = (fun h -> subscribers := h :: !subscribers);
-    iter = (fun f -> ReactiveFlatMap.iter_target f state);
-    get = (fun k -> ReactiveFlatMap.find_target state k);
-    length = (fun () -> ReactiveFlatMap.target_length state);
-    destroy = (fun () -> todo_destroy name);
-    stats = my_stats;
-    level = my_level;
-    node = my_info;
-  }
+    {
+      name;
+      subscribe = (fun h -> subscribers := h :: !subscribers);
+      iter = (fun f -> ReactiveFlatMap.iter_target f state);
+      get = (fun k -> ReactiveFlatMap.find_target state k);
+      length = (fun () -> ReactiveFlatMap.target_length state);
+      destroy = (fun () -> todo_destroy name);
+      stats = my_stats;
+      level = my_level;
+      node = my_info;
+    }
+end
 
 (** {1 Join} *)
 
-let join_create ~name (left : ('k1, 'v1) t) (right : ('k2, 'v2) t) ~key_of ~f
-    ?merge () : ('k3, 'v3) t =
-  let my_level = max left.level right.level + 1 in
-  let merge_fn =
-    match merge with
-    | Some m -> m
-    | None -> fun _ v -> v
-  in
+module Join = struct
+  let create ~name (left : ('k1, 'v1) t) (right : ('k2, 'v2) t) ~key_of ~f
+      ?merge () : ('k3, 'v3) t =
+    let my_level = max left.level right.level + 1 in
+    let merge_fn =
+      match merge with
+      | Some m -> m
+      | None -> fun _ v -> v
+    in
 
-  let subscribers = ref [] in
-  let output_wave = create_wave () in
-  let my_stats = create_stats () in
-  let state =
-    ReactiveJoin.create ~key_of ~f ~merge:merge_fn ~right_get:right.get
-      ~output_wave
-  in
-  let left_pending_count = ref 0 in
-  let right_pending_count = ref 0 in
+    let subscribers = ref [] in
+    let output_wave = create_wave () in
+    let my_stats = create_stats () in
+    let state =
+      ReactiveJoin.create ~key_of ~f ~merge:merge_fn ~right_get:right.get
+        ~output_wave
+    in
+    let left_pending_count = ref 0 in
+    let right_pending_count = ref 0 in
 
-  let process () =
-    let consumed_left = !left_pending_count in
-    let consumed_right = !right_pending_count in
-    left_pending_count := 0;
-    right_pending_count := 0;
+    let process () =
+      let consumed_left = !left_pending_count in
+      let consumed_right = !right_pending_count in
+      left_pending_count := 0;
+      right_pending_count := 0;
 
-    my_stats.deltas_received <-
-      my_stats.deltas_received + consumed_left + consumed_right;
+      my_stats.deltas_received <-
+        my_stats.deltas_received + consumed_left + consumed_right;
 
-    Registry.dec_inflight_node left.node consumed_left;
-    Registry.dec_inflight_node right.node consumed_right;
+      Registry.dec_inflight_node left.node consumed_left;
+      Registry.dec_inflight_node right.node consumed_right;
 
-    let r = ReactiveJoin.process state in
-    my_stats.entries_received <- my_stats.entries_received + r.entries_received;
-    my_stats.adds_received <- my_stats.adds_received + r.adds_received;
-    my_stats.removes_received <- my_stats.removes_received + r.removes_received;
+      let r = ReactiveJoin.process state in
+      my_stats.entries_received <-
+        my_stats.entries_received + r.entries_received;
+      my_stats.adds_received <- my_stats.adds_received + r.adds_received;
+      my_stats.removes_received <-
+        my_stats.removes_received + r.removes_received;
 
-    if r.entries_emitted > 0 then (
-      my_stats.deltas_emitted <- my_stats.deltas_emitted + 1;
-      my_stats.entries_emitted <- my_stats.entries_emitted + r.entries_emitted;
-      my_stats.adds_emitted <- my_stats.adds_emitted + r.adds_emitted;
-      my_stats.removes_emitted <- my_stats.removes_emitted + r.removes_emitted;
-      notify_subscribers output_wave !subscribers)
-  in
+      if r.entries_emitted > 0 then (
+        my_stats.deltas_emitted <- my_stats.deltas_emitted + 1;
+        my_stats.entries_emitted <- my_stats.entries_emitted + r.entries_emitted;
+        my_stats.adds_emitted <- my_stats.adds_emitted + r.adds_emitted;
+        my_stats.removes_emitted <- my_stats.removes_emitted + r.removes_emitted;
+        notify_subscribers output_wave !subscribers)
+    in
 
-  let my_info =
-    Registry.register ~name ~level:my_level ~process ~stats:my_stats
-  in
-  Registry.add_edge ~from_name:left.name ~to_name:name ~label:"join";
-  Registry.add_edge ~from_name:right.name ~to_name:name ~label:"join";
-  Registry.add_combinator ~name:(name ^ "_join") ~shape:"join"
-    ~inputs:[left.name; right.name] ~output:name;
+    let my_info =
+      Registry.register ~name ~level:my_level ~process ~stats:my_stats
+    in
+    Registry.add_edge ~from_name:left.name ~to_name:name ~label:"join";
+    Registry.add_edge ~from_name:right.name ~to_name:name ~label:"join";
+    Registry.add_combinator ~name:(name ^ "_join") ~shape:"join"
+      ~inputs:[left.name; right.name] ~output:name;
 
-  (* Subscribe to sources: push directly into pending maps *)
-  left.subscribe (fun wave ->
-      Registry.inc_inflight_node left.node;
-      incr left_pending_count;
-      ReactiveWave.iter_with wave ReactiveJoin.push_left state;
-      Registry.mark_dirty_node my_info);
+    (* Subscribe to sources: push directly into pending maps *)
+    left.subscribe (fun wave ->
+        Registry.inc_inflight_node left.node;
+        incr left_pending_count;
+        ReactiveWave.iter_with wave ReactiveJoin.push_left state;
+        Registry.mark_dirty_node my_info);
 
-  right.subscribe (fun wave ->
-      Registry.inc_inflight_node right.node;
-      incr right_pending_count;
-      ReactiveWave.iter_with wave ReactiveJoin.push_right state;
-      Registry.mark_dirty_node my_info);
+    right.subscribe (fun wave ->
+        Registry.inc_inflight_node right.node;
+        incr right_pending_count;
+        ReactiveWave.iter_with wave ReactiveJoin.push_right state;
+        Registry.mark_dirty_node my_info);
 
-  (* Initialize from existing data *)
-  left.iter (fun k1 v1 -> ReactiveJoin.init_entry state k1 v1);
+    (* Initialize from existing data *)
+    left.iter (fun k1 v1 -> ReactiveJoin.init_entry state k1 v1);
 
-  {
-    name;
-    subscribe = (fun h -> subscribers := h :: !subscribers);
-    iter = (fun f -> ReactiveJoin.iter_target f state);
-    get = (fun k -> ReactiveJoin.find_target state k);
-    length = (fun () -> ReactiveJoin.target_length state);
-    destroy = (fun () -> todo_destroy name);
-    stats = my_stats;
-    level = my_level;
-    node = my_info;
-  }
+    {
+      name;
+      subscribe = (fun h -> subscribers := h :: !subscribers);
+      iter = (fun f -> ReactiveJoin.iter_target f state);
+      get = (fun k -> ReactiveJoin.find_target state k);
+      length = (fun () -> ReactiveJoin.target_length state);
+      destroy = (fun () -> todo_destroy name);
+      stats = my_stats;
+      level = my_level;
+      node = my_info;
+    }
+end
 
 (** {1 Union} *)
 
-let union_create ~name (left : ('k, 'v) t) (right : ('k, 'v) t) ?merge () :
-    ('k, 'v) t =
-  let my_level = max left.level right.level + 1 in
-  let merge_fn =
-    match merge with
-    | Some m -> m
-    | None -> fun _ v -> v
-  in
+module Union = struct
+  let create ~name (left : ('k, 'v) t) (right : ('k, 'v) t) ?merge () :
+      ('k, 'v) t =
+    let my_level = max left.level right.level + 1 in
+    let merge_fn =
+      match merge with
+      | Some m -> m
+      | None -> fun _ v -> v
+    in
 
-  let subscribers = ref [] in
-  let output_wave = create_wave () in
-  let my_stats = create_stats () in
-  let state = ReactiveUnion.create ~merge:merge_fn ~output_wave in
-  let left_pending_count = ref 0 in
-  let right_pending_count = ref 0 in
+    let subscribers = ref [] in
+    let output_wave = create_wave () in
+    let my_stats = create_stats () in
+    let state = ReactiveUnion.create ~merge:merge_fn ~output_wave in
+    let left_pending_count = ref 0 in
+    let right_pending_count = ref 0 in
 
-  let process () =
-    let consumed_left = !left_pending_count in
-    let consumed_right = !right_pending_count in
-    left_pending_count := 0;
-    right_pending_count := 0;
+    let process () =
+      let consumed_left = !left_pending_count in
+      let consumed_right = !right_pending_count in
+      left_pending_count := 0;
+      right_pending_count := 0;
 
-    my_stats.deltas_received <-
-      my_stats.deltas_received + consumed_left + consumed_right;
+      my_stats.deltas_received <-
+        my_stats.deltas_received + consumed_left + consumed_right;
 
-    Registry.dec_inflight_node left.node consumed_left;
-    Registry.dec_inflight_node right.node consumed_right;
+      Registry.dec_inflight_node left.node consumed_left;
+      Registry.dec_inflight_node right.node consumed_right;
 
-    let r = ReactiveUnion.process state in
-    my_stats.entries_received <- my_stats.entries_received + r.entries_received;
-    my_stats.adds_received <- my_stats.adds_received + r.adds_received;
-    my_stats.removes_received <- my_stats.removes_received + r.removes_received;
+      let r = ReactiveUnion.process state in
+      my_stats.entries_received <-
+        my_stats.entries_received + r.entries_received;
+      my_stats.adds_received <- my_stats.adds_received + r.adds_received;
+      my_stats.removes_received <-
+        my_stats.removes_received + r.removes_received;
 
-    if r.entries_emitted > 0 then (
-      my_stats.deltas_emitted <- my_stats.deltas_emitted + 1;
-      my_stats.entries_emitted <- my_stats.entries_emitted + r.entries_emitted;
-      my_stats.adds_emitted <- my_stats.adds_emitted + r.adds_emitted;
-      my_stats.removes_emitted <- my_stats.removes_emitted + r.removes_emitted;
-      notify_subscribers output_wave !subscribers)
-  in
+      if r.entries_emitted > 0 then (
+        my_stats.deltas_emitted <- my_stats.deltas_emitted + 1;
+        my_stats.entries_emitted <- my_stats.entries_emitted + r.entries_emitted;
+        my_stats.adds_emitted <- my_stats.adds_emitted + r.adds_emitted;
+        my_stats.removes_emitted <- my_stats.removes_emitted + r.removes_emitted;
+        notify_subscribers output_wave !subscribers)
+    in
 
-  let my_info =
-    Registry.register ~name ~level:my_level ~process ~stats:my_stats
-  in
-  Registry.add_edge ~from_name:left.name ~to_name:name ~label:"union";
-  Registry.add_edge ~from_name:right.name ~to_name:name ~label:"union";
-  Registry.add_combinator ~name:(name ^ "_union") ~shape:"union"
-    ~inputs:[left.name; right.name] ~output:name;
+    let my_info =
+      Registry.register ~name ~level:my_level ~process ~stats:my_stats
+    in
+    Registry.add_edge ~from_name:left.name ~to_name:name ~label:"union";
+    Registry.add_edge ~from_name:right.name ~to_name:name ~label:"union";
+    Registry.add_combinator ~name:(name ^ "_union") ~shape:"union"
+      ~inputs:[left.name; right.name] ~output:name;
 
-  (* Subscribe to sources: push directly into pending maps *)
-  left.subscribe (fun wave ->
-      Registry.inc_inflight_node left.node;
-      incr left_pending_count;
-      ReactiveWave.iter_with wave ReactiveUnion.push_left state;
-      Registry.mark_dirty_node my_info);
+    (* Subscribe to sources: push directly into pending maps *)
+    left.subscribe (fun wave ->
+        Registry.inc_inflight_node left.node;
+        incr left_pending_count;
+        ReactiveWave.iter_with wave ReactiveUnion.push_left state;
+        Registry.mark_dirty_node my_info);
 
-  right.subscribe (fun wave ->
-      Registry.inc_inflight_node right.node;
-      incr right_pending_count;
-      ReactiveWave.iter_with wave ReactiveUnion.push_right state;
-      Registry.mark_dirty_node my_info);
+    right.subscribe (fun wave ->
+        Registry.inc_inflight_node right.node;
+        incr right_pending_count;
+        ReactiveWave.iter_with wave ReactiveUnion.push_right state;
+        Registry.mark_dirty_node my_info);
 
-  (* Initialize from existing data - process left then right *)
-  left.iter (fun k v -> ReactiveUnion.init_left state k v);
-  right.iter (fun k v -> ReactiveUnion.init_right state k v);
+    (* Initialize from existing data - process left then right *)
+    left.iter (fun k v -> ReactiveUnion.init_left state k v);
+    right.iter (fun k v -> ReactiveUnion.init_right state k v);
 
-  {
-    name;
-    subscribe = (fun h -> subscribers := h :: !subscribers);
-    iter = (fun f -> ReactiveUnion.iter_target f state);
-    get = (fun k -> ReactiveUnion.find_target state k);
-    length = (fun () -> ReactiveUnion.target_length state);
-    destroy = (fun () -> todo_destroy name);
-    stats = my_stats;
-    level = my_level;
-    node = my_info;
-  }
+    {
+      name;
+      subscribe = (fun h -> subscribers := h :: !subscribers);
+      iter = (fun f -> ReactiveUnion.iter_target f state);
+      get = (fun k -> ReactiveUnion.find_target state k);
+      length = (fun () -> ReactiveUnion.target_length state);
+      destroy = (fun () -> todo_destroy name);
+      stats = my_stats;
+      level = my_level;
+      node = my_info;
+    }
+end
 
 (** {1 Fixpoint} *)
 
-let fixpoint_create ~name ~(init : ('k, unit) t) ~(edges : ('k, 'k list) t) () :
-    ('k, unit) t =
-  let my_level = max init.level edges.level + 1 in
-  let int_env_or name default =
-    match Sys.getenv_opt name with
-    | None -> default
-    | Some s -> (
-      match int_of_string_opt s with
-      | Some n when n > 0 -> n
-      | _ -> default)
-  in
-
-  (* Internal state *)
-  let max_nodes = int_env_or "RESCRIPT_REACTIVE_FIXPOINT_MAX_NODES" 100_000 in
-  let max_edges = int_env_or "RESCRIPT_REACTIVE_FIXPOINT_MAX_EDGES" 1_000_000 in
-  let max_root_wave_entries =
-    int_env_or "RESCRIPT_REACTIVE_FIXPOINT_MAX_ROOT_WAVE_ENTRIES" 4_096
-  in
-  let max_edge_wave_entries =
-    int_env_or "RESCRIPT_REACTIVE_FIXPOINT_MAX_EDGE_WAVE_ENTRIES" 16_384
-  in
-  let state = ReactiveFixpoint.create ~max_nodes ~max_edges in
-  let root_wave = ReactiveWave.create ~max_entries:max_root_wave_entries in
-  let edge_wave = ReactiveWave.create ~max_entries:max_edge_wave_entries in
-  let subscribers = ref [] in
-  let my_stats = create_stats () in
-  let root_pending : ('k, unit ReactiveMaybe.t) ReactiveHash.Map.t =
-    ReactiveHash.Map.create ()
-  in
-  let edge_pending : ('k, 'k list ReactiveMaybe.t) ReactiveHash.Map.t =
-    ReactiveHash.Map.create ()
-  in
-  let init_pending_count = ref 0 in
-  let edges_pending_count = ref 0 in
-
-  let process () =
-    let consumed_init = !init_pending_count in
-    let consumed_edges = !edges_pending_count in
-    init_pending_count := 0;
-    edges_pending_count := 0;
-
-    my_stats.deltas_received <-
-      my_stats.deltas_received + consumed_init + consumed_edges;
-    Registry.dec_inflight_node init.node consumed_init;
-    Registry.dec_inflight_node edges.node consumed_edges;
-
-    (* Dump pending maps into waves *)
-    ReactiveWave.clear root_wave;
-    ReactiveWave.clear edge_wave;
-    let root_entries = ReactiveHash.Map.cardinal root_pending in
-    let edge_entries = ReactiveHash.Map.cardinal edge_pending in
-    ReactiveHash.Map.iter_with unsafe_wave_push root_wave root_pending;
-    ReactiveHash.Map.iter_with unsafe_wave_push edge_wave edge_pending;
-    ReactiveHash.Map.clear root_pending;
-    ReactiveHash.Map.clear edge_pending;
-
-    my_stats.entries_received <-
-      my_stats.entries_received + root_entries + edge_entries;
-    my_stats.adds_received <-
-      my_stats.adds_received + root_entries + edge_entries;
-
-    let out_wave =
-      ReactiveFixpoint.apply_wave state ~roots:root_wave ~edges:edge_wave
+module Fixpoint = struct
+  let create ~name ~(init : ('k, unit) t) ~(edges : ('k, 'k list) t) () :
+      ('k, unit) t =
+    let my_level = max init.level edges.level + 1 in
+    let int_env_or name default =
+      match Sys.getenv_opt name with
+      | None -> default
+      | Some s -> (
+        match int_of_string_opt s with
+        | Some n when n > 0 -> n
+        | _ -> default)
     in
-    let out_count = ReactiveWave.count out_wave in
-    if out_count > 0 then (
-      notify_subscribers out_wave !subscribers;
-      my_stats.deltas_emitted <- my_stats.deltas_emitted + 1;
-      my_stats.entries_emitted <- my_stats.entries_emitted + out_count)
-  in
 
-  let my_info =
-    Registry.register ~name ~level:my_level ~process ~stats:my_stats
-  in
-  Registry.add_edge ~from_name:init.name ~to_name:name ~label:"roots";
-  Registry.add_edge ~from_name:edges.name ~to_name:name ~label:"edges";
-  Registry.add_combinator ~name:(name ^ "_fp") ~shape:"fixpoint"
-    ~inputs:[init.name; edges.name] ~output:name;
+    (* Internal state *)
+    let max_nodes = int_env_or "RESCRIPT_REACTIVE_FIXPOINT_MAX_NODES" 100_000 in
+    let max_edges =
+      int_env_or "RESCRIPT_REACTIVE_FIXPOINT_MAX_EDGES" 1_000_000
+    in
+    let max_root_wave_entries =
+      int_env_or "RESCRIPT_REACTIVE_FIXPOINT_MAX_ROOT_WAVE_ENTRIES" 4_096
+    in
+    let max_edge_wave_entries =
+      int_env_or "RESCRIPT_REACTIVE_FIXPOINT_MAX_EDGE_WAVE_ENTRIES" 16_384
+    in
+    let state = ReactiveFixpoint.create ~max_nodes ~max_edges in
+    let root_wave = ReactiveWave.create ~max_entries:max_root_wave_entries in
+    let edge_wave = ReactiveWave.create ~max_entries:max_edge_wave_entries in
+    let subscribers = ref [] in
+    let my_stats = create_stats () in
+    let root_pending : ('k, unit ReactiveMaybe.t) ReactiveHash.Map.t =
+      ReactiveHash.Map.create ()
+    in
+    let edge_pending : ('k, 'k list ReactiveMaybe.t) ReactiveHash.Map.t =
+      ReactiveHash.Map.create ()
+    in
+    let init_pending_count = ref 0 in
+    let edges_pending_count = ref 0 in
 
-  (* Subscribe to sources: push directly into pending maps *)
-  init.subscribe (fun wave ->
-      Registry.inc_inflight_node init.node;
-      init_pending_count := !init_pending_count + 1;
-      ReactiveWave.iter_with wave unsafe_wave_map_replace root_pending;
-      Registry.mark_dirty_node my_info);
+    let process () =
+      let consumed_init = !init_pending_count in
+      let consumed_edges = !edges_pending_count in
+      init_pending_count := 0;
+      edges_pending_count := 0;
 
-  edges.subscribe (fun wave ->
-      Registry.inc_inflight_node edges.node;
-      edges_pending_count := !edges_pending_count + 1;
-      ReactiveWave.iter_with wave unsafe_wave_map_replace edge_pending;
-      Registry.mark_dirty_node my_info);
+      my_stats.deltas_received <-
+        my_stats.deltas_received + consumed_init + consumed_edges;
+      Registry.dec_inflight_node init.node consumed_init;
+      Registry.dec_inflight_node edges.node consumed_edges;
 
-  (* Initialize from existing data *)
-  let init_roots_wave =
-    ReactiveWave.create ~max_entries:(max 1 (init.length ()))
-  in
-  let init_edges_wave =
-    ReactiveWave.create ~max_entries:(max 1 (edges.length ()))
-  in
-  ReactiveWave.clear init_roots_wave;
-  ReactiveWave.clear init_edges_wave;
-  init.iter (fun k () -> unsafe_wave_push init_roots_wave k ());
-  edges.iter (fun k succs -> unsafe_wave_push init_edges_wave k succs);
-  ReactiveFixpoint.initialize state ~roots:init_roots_wave
-    ~edges:init_edges_wave;
+      (* Dump pending maps into waves *)
+      ReactiveWave.clear root_wave;
+      ReactiveWave.clear edge_wave;
+      let root_entries = ReactiveHash.Map.cardinal root_pending in
+      let edge_entries = ReactiveHash.Map.cardinal edge_pending in
+      ReactiveHash.Map.iter_with unsafe_wave_push root_wave root_pending;
+      ReactiveHash.Map.iter_with unsafe_wave_push edge_wave edge_pending;
+      ReactiveHash.Map.clear root_pending;
+      ReactiveHash.Map.clear edge_pending;
 
-  {
-    name;
-    subscribe = (fun h -> subscribers := h :: !subscribers);
-    iter = (fun f -> ReactiveFixpoint.iter_current state f);
-    get = (fun k -> ReactiveFixpoint.get_current state k);
-    length = (fun () -> ReactiveFixpoint.current_length state);
-    destroy = (fun () -> todo_destroy name);
-    stats = my_stats;
-    level = my_level;
-    node = my_info;
-  }
+      my_stats.entries_received <-
+        my_stats.entries_received + root_entries + edge_entries;
+      my_stats.adds_received <-
+        my_stats.adds_received + root_entries + edge_entries;
+
+      let out_wave =
+        ReactiveFixpoint.apply_wave state ~roots:root_wave ~edges:edge_wave
+      in
+      let out_count = ReactiveWave.count out_wave in
+      if out_count > 0 then (
+        notify_subscribers out_wave !subscribers;
+        my_stats.deltas_emitted <- my_stats.deltas_emitted + 1;
+        my_stats.entries_emitted <- my_stats.entries_emitted + out_count)
+    in
+
+    let my_info =
+      Registry.register ~name ~level:my_level ~process ~stats:my_stats
+    in
+    Registry.add_edge ~from_name:init.name ~to_name:name ~label:"roots";
+    Registry.add_edge ~from_name:edges.name ~to_name:name ~label:"edges";
+    Registry.add_combinator ~name:(name ^ "_fp") ~shape:"fixpoint"
+      ~inputs:[init.name; edges.name] ~output:name;
+
+    (* Subscribe to sources: push directly into pending maps *)
+    init.subscribe (fun wave ->
+        Registry.inc_inflight_node init.node;
+        init_pending_count := !init_pending_count + 1;
+        ReactiveWave.iter_with wave unsafe_wave_map_replace root_pending;
+        Registry.mark_dirty_node my_info);
+
+    edges.subscribe (fun wave ->
+        Registry.inc_inflight_node edges.node;
+        edges_pending_count := !edges_pending_count + 1;
+        ReactiveWave.iter_with wave unsafe_wave_map_replace edge_pending;
+        Registry.mark_dirty_node my_info);
+
+    (* Initialize from existing data *)
+    let init_roots_wave =
+      ReactiveWave.create ~max_entries:(max 1 (init.length ()))
+    in
+    let init_edges_wave =
+      ReactiveWave.create ~max_entries:(max 1 (edges.length ()))
+    in
+    ReactiveWave.clear init_roots_wave;
+    ReactiveWave.clear init_edges_wave;
+    init.iter (fun k () -> unsafe_wave_push init_roots_wave k ());
+    edges.iter (fun k succs -> unsafe_wave_push init_edges_wave k succs);
+    ReactiveFixpoint.initialize state ~roots:init_roots_wave
+      ~edges:init_edges_wave;
+
+    {
+      name;
+      subscribe = (fun h -> subscribers := h :: !subscribers);
+      iter = (fun f -> ReactiveFixpoint.iter_current state f);
+      get = (fun k -> ReactiveFixpoint.get_current state k);
+      length = (fun () -> ReactiveFixpoint.current_length state);
+      destroy = (fun () -> todo_destroy name);
+      stats = my_stats;
+      level = my_level;
+      node = my_info;
+    }
+end
 
 (** {1 Utilities} *)
-
-module Source = struct
-  let create = source_create
-end
-
-module FlatMap = struct
-  let create = flatmap_create
-end
-
-module Join = struct
-  let create = join_create
-end
-
-module Union = struct
-  let create = union_create
-end
-
-module Fixpoint = struct
-  let create = fixpoint_create
-end
 
 let to_mermaid () = Registry.to_mermaid ()
 let print_stats () = Registry.print_stats ()
