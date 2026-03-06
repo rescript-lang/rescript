@@ -19,23 +19,24 @@ let unsafe_wave_push wave k v =
 (* ---- Fixpoint allocation ---- *)
 
 let test_fixpoint_alloc_n n =
-  let state =
-    ReactiveFixpoint.create ~max_nodes:(n * 10) ~max_edges:(n * 100)
-  in
+  let edge_values = Array.init (max 0 (n - 1)) (fun i -> [i + 1]) in
+  Gc.full_major ();
+  let state = ReactiveFixpoint.create ~max_nodes:n ~max_edges:n in
 
   (* Chain graph: 0 -> 1 -> 2 -> ... -> n-1 *)
   let root_snap = ReactiveWave.create ~max_entries:1 in
   let edge_snap = ReactiveWave.create ~max_entries:n in
   ReactiveWave.push root_snap (off_int 0) (off_unit ());
   for i = 0 to n - 2 do
-    unsafe_wave_push edge_snap i [i + 1]
+    ReactiveWave.push edge_snap (off_int i)
+      (ReactiveAllocator.to_offheap (edge_values.(i)))
   done;
   ReactiveFixpoint.initialize state ~roots:root_snap ~edges:edge_snap;
   assert (ReactiveFixpoint.current_length state = n);
 
   (* Pre-build waves once *)
   let remove_root = ReactiveWave.create ~max_entries:1 in
-  ReactiveWave.push remove_root (off 0) ReactiveMaybe.none_offheap;
+  ReactiveWave.push remove_root (off_int 0) ReactiveMaybe.none_offheap;
   let add_root = ReactiveWave.create ~max_entries:1 in
   ReactiveWave.push add_root (off_int 0) (off_maybe_unit (ReactiveMaybe.some ()));
   let no_edges = ReactiveWave.create ~max_entries:1 in
@@ -316,28 +317,30 @@ let test_reactive_join_alloc () =
 
 let test_reactive_fixpoint_alloc_n n =
   Reactive.reset ();
+  let edge_values = Array.init (max 0 (n - 1)) (fun i -> [i + 1]) in
+  Gc.full_major ();
   let init, emit_root = Reactive.source ~name:"init" () in
   let edges, emit_edges = Reactive.source ~name:"edges" () in
 
   (* Chain graph: 0 -> 1 -> 2 -> ... -> n-1 *)
+  let edge_wave = ReactiveWave.create ~max_entries:(max 1 (n - 1)) in
+  ReactiveWave.clear edge_wave;
   for i = 0 to n - 2 do
-    emit_set emit_edges i [i + 1]
+    ReactiveWave.push edge_wave (off_int i)
+      (ReactiveAllocator.to_offheap (ReactiveMaybe.some edge_values.(i)))
   done;
+  emit_edges edge_wave;
   let reachable = Reactive.fixpoint ~name:"reachable" ~init ~edges () in
-  Printf.printf "  [reactive_fixpoint_alloc_n] fixpoint built n=%d\n" n;
-  flush_all ();
 
   (* Add root to populate *)
   emit_set emit_root 0 ();
-  Printf.printf "  [reactive_fixpoint_alloc_n] root emitted n=%d\n" n;
-  flush_all ();
   assert (Reactive.length reachable = n);
 
   (* Pre-build waves for the hot loop *)
   let remove_wave = ReactiveWave.create ~max_entries:1 in
-  ReactiveWave.push remove_wave (off 0) ReactiveMaybe.none_offheap;
+  ReactiveWave.push remove_wave (off_int 0) ReactiveMaybe.none_offheap;
   let add_wave = ReactiveWave.create ~max_entries:1 in
-  unsafe_wave_push add_wave 0 (ReactiveMaybe.some ());
+  ReactiveWave.push add_wave (off_int 0) (off_maybe_unit (ReactiveMaybe.some ()));
 
   (* Warmup *)
   for _ = 1 to 5 do
