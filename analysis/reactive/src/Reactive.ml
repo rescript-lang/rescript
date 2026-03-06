@@ -11,15 +11,7 @@
 
 type ('k, 'v) wave = ('k, 'v ReactiveMaybe.t) ReactiveWave.t
 
-let wave_max_entries_default =
-  match Sys.getenv_opt "RESCRIPT_REACTIVE_WAVE_MAX_ENTRIES" with
-  | Some s -> (
-    match int_of_string_opt s with
-    | Some n when n > 0 -> n
-    | _ -> 16)
-  | None -> 16
-
-let create_wave () = ReactiveWave.create ~max_entries:wave_max_entries_default
+let create_wave () = ReactiveWave.create ()
 
 (** {1 Statistics} *)
 
@@ -575,9 +567,8 @@ module FlatMap = struct
     in
 
     let subscribers = ref [] in
-    let output_wave = create_wave () in
     let my_stats = create_stats () in
-    let state = ReactiveFlatMap.create ~f ~merge:merge_fn ~output_wave in
+    let state = ReactiveFlatMap.create ~f ~merge:merge_fn in
     let pending_count = ref 0 in
 
     let process () =
@@ -596,6 +587,7 @@ module FlatMap = struct
         my_stats.removes_received + r.removes_received;
 
       if r.entries_emitted > 0 then (
+        let output_wave = ReactiveFlatMap.output_wave state in
         my_stats.deltas_emitted <- my_stats.deltas_emitted + 1;
         my_stats.entries_emitted <- my_stats.entries_emitted + r.entries_emitted;
         my_stats.adds_emitted <- my_stats.adds_emitted + r.adds_emitted;
@@ -603,7 +595,7 @@ module FlatMap = struct
         notify_subscribers output_wave !subscribers)
     in
 
-    let destroy () = ReactiveWave.destroy output_wave in
+    let destroy () = ReactiveFlatMap.destroy state in
     let my_info =
       Registry.register_node ~name ~level:my_level ~process ~destroy
         ~stats:my_stats
@@ -839,8 +831,8 @@ module Fixpoint = struct
       int_env_or "RESCRIPT_REACTIVE_FIXPOINT_MAX_EDGE_WAVE_ENTRIES" 16_384
     in
     let state = ReactiveFixpoint.create ~max_nodes ~max_edges in
-    let root_wave = ReactiveWave.create ~max_entries:max_root_wave_entries in
-    let edge_wave = ReactiveWave.create ~max_entries:max_edge_wave_entries in
+    let root_wave = ReactiveWave.create ~max_entries:max_root_wave_entries () in
+    let edge_wave = ReactiveWave.create ~max_entries:max_edge_wave_entries () in
     let subscribers = ref [] in
     let my_stats = create_stats () in
     let root_pending : ('k, unit ReactiveMaybe.t) ReactiveHash.Map.t =
@@ -917,10 +909,10 @@ module Fixpoint = struct
 
     (* Initialize from existing data *)
     let init_roots_wave =
-      ReactiveWave.create ~max_entries:(max 1 (init.length ()))
+      ReactiveWave.create ~max_entries:(max 1 (init.length ())) ()
     in
     let init_edges_wave =
-      ReactiveWave.create ~max_entries:(max 1 (edges.length ()))
+      ReactiveWave.create ~max_entries:(max 1 (edges.length ())) ()
     in
     ReactiveWave.clear init_roots_wave;
     ReactiveWave.clear init_edges_wave;

@@ -48,7 +48,7 @@ let add_single_contribution_init (t : (_, _, _, _) t) k2 v2 =
   ReactivePoolMapMap.replace t.contributions k2 t.current_k1 v2;
   ReactiveHash.Map.replace t.target k2 v2
 
-let create ~f ~merge ~output_wave =
+let create ~f ~merge =
   let rec t =
     {
       f;
@@ -58,7 +58,7 @@ let create ~f ~merge ~output_wave =
       target = ReactiveHash.Map.create ();
       scratch = ReactiveHash.Map.create ();
       affected = ReactiveHash.Set.create ();
-      output_wave;
+      output_wave = ReactiveWave.create ();
       current_k1 = Obj.magic ();
       emit_fn = (fun k2 v2 -> add_single_contribution t k2 v2);
       result =
@@ -75,6 +75,10 @@ let create ~f ~merge ~output_wave =
     }
   in
   t
+
+let destroy t = ReactiveWave.destroy t.output_wave
+
+let output_wave t = t.output_wave
 
 let push t k v_opt =
   ReactiveHash.Map.replace t.scratch

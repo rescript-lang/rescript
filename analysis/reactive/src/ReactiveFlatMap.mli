@@ -16,8 +16,15 @@ type process_result = {
 val create :
   f:('k1 -> 'v1 -> ('k2 -> 'v2 -> unit) -> unit) ->
   merge:('v2 -> 'v2 -> 'v2) ->
-  output_wave:('k2, 'v2 ReactiveMaybe.t) ReactiveWave.t ->
   ('k1, 'v1, 'k2, 'v2) t
+
+val destroy : ('k1, 'v1, 'k2, 'v2) t -> unit
+(** Release flatMap-owned off-heap storage. The state must not be used
+    afterwards. *)
+
+val output_wave :
+  ('k1, 'v1, 'k2, 'v2) t -> ('k2, 'v2 ReactiveMaybe.t) ReactiveWave.t
+(** The owned output wave populated by [process]. *)
 
 val push :
   ('k1, 'v1, 'k2, 'v2) t ->

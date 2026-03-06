@@ -34,7 +34,7 @@ let create ~merge =
     left_scratch = ReactiveHash.Map.create ();
     right_scratch = ReactiveHash.Map.create ();
     affected = ReactiveHash.Set.create ();
-    output_wave = ReactiveWave.create ~max_entries:16;
+    output_wave = ReactiveWave.create ();
     result =
       {
         entries_received = 0;

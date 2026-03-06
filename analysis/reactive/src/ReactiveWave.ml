@@ -12,7 +12,7 @@ let set_length t len =
   ReactiveAllocator.Block.set t length_slot
     (ReactiveAllocator.int_to_offheap len)
 
-let create ~max_entries =
+let create ?(max_entries = 16) () =
   if max_entries < 0 then
     invalid_arg "ReactiveWave.create: max_entries must be >= 0";
   let t =

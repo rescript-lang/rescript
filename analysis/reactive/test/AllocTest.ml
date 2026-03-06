@@ -38,11 +38,11 @@ let print_offheap_snapshot label =
 let test_fixpoint_alloc_n n =
   let edge_values = Array.init (max 0 (n - 1)) (fun i -> [i + 1]) in
   Gc.full_major ();
-  let root_snap = ReactiveWave.create ~max_entries:1 in
-  let edge_snap = ReactiveWave.create ~max_entries:n in
-  let remove_root = ReactiveWave.create ~max_entries:1 in
-  let add_root = ReactiveWave.create ~max_entries:1 in
-  let no_edges = ReactiveWave.create ~max_entries:1 in
+  let root_snap = ReactiveWave.create ~max_entries:1 () in
+  let edge_snap = ReactiveWave.create ~max_entries:n () in
+  let remove_root = ReactiveWave.create ~max_entries:1 () in
+  let add_root = ReactiveWave.create ~max_entries:1 () in
+  let no_edges = ReactiveWave.create ~max_entries:1 () in
   let state = ReactiveFixpoint.create ~max_nodes:n ~max_edges:n in
 
   (* Chain graph: 0 -> 1 -> 2 -> ... -> n-1 *)
@@ -98,12 +98,8 @@ let test_fixpoint_alloc () =
 (* ---- FlatMap allocation ---- *)
 
 let test_flatmap_alloc_n n =
-  let output_wave = ReactiveWave.create ~max_entries:(n * 2) in
   let state =
-    ReactiveFlatMap.create
-      ~f:(fun k v emit -> emit k v)
-      ~merge:(fun _l r -> r)
-      ~output_wave
+    ReactiveFlatMap.create ~f:(fun k v emit -> emit k v) ~merge:(fun _l r -> r)
   in
 
   (* Populate: n entries *)
@@ -144,7 +140,7 @@ let test_flatmap_alloc_n n =
     ignore (ReactiveFlatMap.process state)
   done;
   assert (ReactiveFlatMap.target_length state = n);
-  ReactiveWave.destroy output_wave;
+  ReactiveFlatMap.destroy state;
   words_since () / iters
 
 let test_flatmap_alloc () =
@@ -218,7 +214,7 @@ let test_union_alloc () =
 (* ---- Join allocation ---- *)
 
 let test_join_alloc_n n =
-  let output_wave = ReactiveWave.create ~max_entries:(n * 2) in
+  let output_wave = ReactiveWave.create ~max_entries:(n * 2) () in
   let right_tbl = ReactiveHash.Map.create () in
   let state =
     ReactiveJoin.create
@@ -313,11 +309,11 @@ let test_reactive_join_alloc_n n =
   assert (Reactive.length joined = n);
 
   (* Pre-build waves for the hot loop: toggle all left entries *)
-  let remove_wave = ReactiveWave.create ~max_entries:n in
+  let remove_wave = ReactiveWave.create ~max_entries:n () in
   for i = 0 to n - 1 do
     ReactiveWave.push remove_wave (off i) ReactiveMaybe.none_offheap
   done;
-  let add_wave = ReactiveWave.create ~max_entries:n in
+  let add_wave = ReactiveWave.create ~max_entries:n () in
   for i = 0 to n - 1 do
     unsafe_wave_push add_wave i (ReactiveMaybe.some i)
   done;
@@ -362,7 +358,7 @@ let test_reactive_fixpoint_alloc_n n =
   let edges, emit_edges = Reactive.Source.create ~name:"edges" () in
 
   (* Chain graph: 0 -> 1 -> 2 -> ... -> n-1 *)
-  let edge_wave = ReactiveWave.create ~max_entries:(max 1 (n - 1)) in
+  let edge_wave = ReactiveWave.create ~max_entries:(max 1 (n - 1)) () in
   ReactiveWave.clear edge_wave;
   for i = 0 to n - 2 do
     ReactiveWave.push edge_wave (off_int i)
@@ -376,9 +372,9 @@ let test_reactive_fixpoint_alloc_n n =
   assert (Reactive.length reachable = n);
 
   (* Pre-build waves for the hot loop *)
-  let remove_wave = ReactiveWave.create ~max_entries:1 in
+  let remove_wave = ReactiveWave.create ~max_entries:1 () in
   ReactiveWave.push remove_wave (off_int 0) ReactiveMaybe.none_offheap;
-  let add_wave = ReactiveWave.create ~max_entries:1 in
+  let add_wave = ReactiveWave.create ~max_entries:1 () in
   ReactiveWave.push add_wave (off_int 0)
     (off_maybe_unit (ReactiveMaybe.some ()));
 
@@ -427,11 +423,11 @@ let test_reactive_union_alloc_n n =
   assert (Reactive.length merged = n);
 
   (* Pre-build waves: single wave with all n entries *)
-  let remove_wave = ReactiveWave.create ~max_entries:n in
+  let remove_wave = ReactiveWave.create ~max_entries:n () in
   for i = 0 to n - 1 do
     ReactiveWave.push remove_wave (off i) ReactiveMaybe.none_offheap
   done;
-  let add_wave = ReactiveWave.create ~max_entries:n in
+  let add_wave = ReactiveWave.create ~max_entries:n () in
   for i = 0 to n - 1 do
     unsafe_wave_push add_wave i (ReactiveMaybe.some i)
   done;
@@ -486,11 +482,11 @@ let test_reactive_flatmap_alloc_n n =
   assert (Reactive.length derived = n);
 
   (* Pre-build waves *)
-  let remove_wave = ReactiveWave.create ~max_entries:n in
+  let remove_wave = ReactiveWave.create ~max_entries:n () in
   for i = 0 to n - 1 do
     ReactiveWave.push remove_wave (off i) ReactiveMaybe.none_offheap
   done;
-  let add_wave = ReactiveWave.create ~max_entries:n in
+  let add_wave = ReactiveWave.create ~max_entries:n () in
   for i = 0 to n - 1 do
     unsafe_wave_push add_wave i (ReactiveMaybe.some i)
   done;

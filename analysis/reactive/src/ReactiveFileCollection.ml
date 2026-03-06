@@ -32,7 +32,7 @@ type ('raw, 'v) t = {
 let create ~read_file ~process : ('raw, 'v) t =
   let internal = {cache = Hashtbl.create 256; read_file; process} in
   let collection, emit = Reactive.Source.create ~name:"file_collection" () in
-  let scratch_wave = ReactiveWave.create ~max_entries:16 in
+  let scratch_wave = ReactiveWave.create () in
   {internal; collection; emit; scratch_wave}
 
 (** Get the collection interface for composition *)

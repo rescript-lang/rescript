@@ -6,9 +6,9 @@
 
 type ('k, 'v) t
 
-val create : max_entries:int -> ('k, 'v) t
-(** Create an empty wave with an initial capacity hint. The wave grows
-    automatically if that capacity is exceeded. *)
+val create : ?max_entries:int -> unit -> ('k, 'v) t
+(** Create an empty wave with an optional initial capacity hint. The wave
+    grows automatically if that capacity is exceeded. *)
 
 val clear : ('k, 'v) t -> unit
 (** Remove all entries from the wave without releasing its storage. *)
