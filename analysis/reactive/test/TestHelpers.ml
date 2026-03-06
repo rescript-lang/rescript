@@ -8,8 +8,7 @@ open Reactive
     Tests are single-threaded so one global wave is safe.
     The wave stores [Obj.t] internally, so a single concrete instance
     can be safely reused at any type via [Obj.magic]. *)
-let scratch_wave : (int, int) ReactiveWave.t =
-  ReactiveWave.create ()
+let scratch_wave : (int, int) ReactiveWave.t = ReactiveWave.create ()
 
 let wave () : ('k, 'v) ReactiveWave.t = Obj.magic scratch_wave
 

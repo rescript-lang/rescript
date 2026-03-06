@@ -18,8 +18,15 @@ val create :
   f:('k1 -> 'v1 -> 'v2 ReactiveMaybe.t -> ('k3 -> 'v3 -> unit) -> unit) ->
   merge:('v3 -> 'v3 -> 'v3) ->
   right_get:('k2 -> 'v2 ReactiveMaybe.t) ->
-  output_wave:('k3, 'v3 ReactiveMaybe.t) ReactiveWave.t ->
   ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t
+
+val destroy : ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t -> unit
+(** Release join-owned off-heap storage. The state must not be used
+    afterwards. *)
+
+val output_wave :
+  ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t -> ('k3, 'v3 ReactiveMaybe.t) ReactiveWave.t
+(** The owned output wave populated by [process]. *)
 
 val push_left :
   ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t ->

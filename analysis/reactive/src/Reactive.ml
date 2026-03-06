@@ -638,11 +638,9 @@ module Join = struct
     in
 
     let subscribers = ref [] in
-    let output_wave = create_wave () in
     let my_stats = create_stats () in
     let state =
       ReactiveJoin.create ~key_of ~f ~merge:merge_fn ~right_get:right.get
-        ~output_wave
     in
     let left_pending_count = ref 0 in
     let right_pending_count = ref 0 in
@@ -667,6 +665,7 @@ module Join = struct
         my_stats.removes_received + r.removes_received;
 
       if r.entries_emitted > 0 then (
+        let output_wave = ReactiveJoin.output_wave state in
         my_stats.deltas_emitted <- my_stats.deltas_emitted + 1;
         my_stats.entries_emitted <- my_stats.entries_emitted + r.entries_emitted;
         my_stats.adds_emitted <- my_stats.adds_emitted + r.adds_emitted;
@@ -674,7 +673,7 @@ module Join = struct
         notify_subscribers output_wave !subscribers)
     in
 
-    let destroy () = ReactiveWave.destroy output_wave in
+    let destroy () = ReactiveJoin.destroy state in
     let my_info =
       Registry.register_node ~name ~level:my_level ~process ~destroy
         ~stats:my_stats

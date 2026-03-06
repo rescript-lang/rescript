@@ -214,7 +214,6 @@ let test_union_alloc () =
 (* ---- Join allocation ---- *)
 
 let test_join_alloc_n n =
-  let output_wave = ReactiveWave.create ~max_entries:(n * 2) () in
   let right_tbl = ReactiveHash.Map.create () in
   let state =
     ReactiveJoin.create
@@ -224,7 +223,6 @@ let test_join_alloc_n n =
           emit k (v + ReactiveMaybe.unsafe_get right_mb))
       ~merge:(fun _l r -> r)
       ~right_get:(ReactiveHash.Map.find_maybe right_tbl)
-      ~output_wave
   in
 
   (* Populate: n entries on the right, n on the left *)
@@ -268,7 +266,7 @@ let test_join_alloc_n n =
     ignore (ReactiveJoin.process state)
   done;
   assert (ReactiveJoin.target_length state = n);
-  ReactiveWave.destroy output_wave;
+  ReactiveJoin.destroy state;
   words_since () / iters
 
 let test_join_alloc () =
