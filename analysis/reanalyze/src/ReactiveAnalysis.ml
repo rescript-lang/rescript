@@ -138,10 +138,10 @@ let to_file_data_collection (collection : t) :
     (string, DceFileProcessing.file_data option) Reactive.t =
   Reactive.flatMap ~name:"file_data_collection"
     (ReactiveFileCollection.to_collection collection)
-    ~f:(fun path result_opt ->
+    ~f:(fun path result_opt emit ->
       match result_opt with
-      | Some {dce_data = Some data; _} -> [(path, Some data)]
-      | _ -> [(path, None)])
+      | Some {dce_data = Some data; _} -> emit path (Some data)
+      | _ -> emit path None)
     ()
 
 (** Iterate over all file_data in the collection *)

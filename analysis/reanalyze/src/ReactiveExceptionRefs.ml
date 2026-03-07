@@ -27,7 +27,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   (* Step 1: Index exception declarations by path *)
   let exception_decls =
     Reactive.flatMap ~name:"exc_refs.exception_decls" decls
-      ~f:(fun _pos (decl : Decl.t) ->
+      ~f:(fun _pos (decl : Decl.t) emit ->
         match decl.Decl.declKind with
         | Exception ->
           let loc : Location.t =
@@ -37,8 +37,8 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
               loc_ghost = false;
             }
           in
-          [(decl.path, loc)]
-        | _ -> [])
+          emit decl.path loc
+        | _ -> ())
       () (* Last-write-wins is fine since paths should be unique *)
   in
 
@@ -46,24 +46,22 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   let resolved_refs =
     Reactive.join ~name:"exc_refs.resolved_refs" exception_refs exception_decls
       ~key_of:(fun path _loc_from -> path)
-      ~f:(fun _path loc_from loc_to_opt ->
-        match loc_to_opt with
-        | Some loc_to ->
+      ~f:(fun _path loc_from loc_to_mb emit ->
+        if ReactiveMaybe.is_some loc_to_mb then
+          let loc_to = ReactiveMaybe.unsafe_get loc_to_mb in
           (* Add value reference: pos_to -> pos_from (refs_to direction) *)
-          [
-            ( loc_to.Location.loc_start,
-              PosSet.singleton loc_from.Location.loc_start );
-          ]
-        | None -> [])
+          emit loc_to.Location.loc_start
+            (PosSet.singleton loc_from.Location.loc_start))
       ~merge:PosSet.union ()
   in
 
   (* Step 3: Create refs_from direction by inverting *)
   let resolved_refs_from =
     Reactive.flatMap ~name:"exc_refs.resolved_refs_from" resolved_refs
-      ~f:(fun posTo posFromSet ->
-        PosSet.elements posFromSet
-        |> List.map (fun posFrom -> (posFrom, PosSet.singleton posTo)))
+      ~f:(fun posTo posFromSet emit ->
+        PosSet.iter
+          (fun posFrom -> emit posFrom (PosSet.singleton posTo))
+          posFromSet)
       ~merge:PosSet.union ()
   in
 

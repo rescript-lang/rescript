@@ -37,9 +37,9 @@ let create ~(merged : ReactiveMerge.t) : t =
   (* Step 2: Convert to edges format for fixpoint: decl -> successor list *)
   let edges : (Lexing.position, Lexing.position list) Reactive.t =
     Reactive.flatMap ~name:"liveness.edges" decl_refs_index
-      ~f:(fun pos (value_targets, type_targets) ->
+      ~f:(fun pos (value_targets, type_targets) emit ->
         let all_targets = PosSet.union value_targets type_targets in
-        [(pos, PosSet.elements all_targets)])
+        emit pos (PosSet.elements all_targets))
       ()
   in
 
@@ -57,14 +57,10 @@ let create ~(merged : ReactiveMerge.t) : t =
   let external_value_refs : (Lexing.position, unit) Reactive.t =
     Reactive.join ~name:"liveness.external_value_refs" value_refs_from decls
       ~key_of:(fun posFrom _targets -> posFrom)
-      ~f:(fun _posFrom targets decl_opt ->
-        match decl_opt with
-        | Some _ ->
-          (* posFrom IS a decl position, refs are internal *)
-          []
-        | None ->
+      ~f:(fun _posFrom targets decl_mb emit ->
+        if not (ReactiveMaybe.is_some decl_mb) then
           (* posFrom is NOT a decl position, targets are externally referenced *)
-          PosSet.elements targets |> List.map (fun posTo -> (posTo, ())))
+          PosSet.elements targets |> List.iter (fun posTo -> emit posTo ()))
       ~merge:(fun () () -> ())
       ()
   in
@@ -72,14 +68,10 @@ let create ~(merged : ReactiveMerge.t) : t =
   let external_type_refs : (Lexing.position, unit) Reactive.t =
     Reactive.join ~name:"liveness.external_type_refs" type_refs_from decls
       ~key_of:(fun posFrom _targets -> posFrom)
-      ~f:(fun _posFrom targets decl_opt ->
-        match decl_opt with
-        | Some _ ->
-          (* posFrom IS a decl position, refs are internal *)
-          []
-        | None ->
+      ~f:(fun _posFrom targets decl_mb emit ->
+        if not (ReactiveMaybe.is_some decl_mb) then
           (* posFrom is NOT a decl position, targets are externally referenced *)
-          PosSet.elements targets |> List.map (fun posTo -> (posTo, ())))
+          PosSet.elements targets |> List.iter (fun posTo -> emit posTo ()))
       ~merge:(fun () () -> ())
       ()
   in
@@ -95,11 +87,11 @@ let create ~(merged : ReactiveMerge.t) : t =
   let annotated_roots : (Lexing.position, unit) Reactive.t =
     Reactive.join ~name:"liveness.annotated_roots" decls annotations
       ~key_of:(fun pos _decl -> pos)
-      ~f:(fun pos _decl ann_opt ->
-        match ann_opt with
-        | Some FileAnnotations.Live | Some FileAnnotations.GenType ->
-          [(pos, ())]
-        | _ -> [])
+      ~f:(fun pos _decl ann_mb emit ->
+        if ReactiveMaybe.is_some ann_mb then
+          match ReactiveMaybe.unsafe_get ann_mb with
+          | FileAnnotations.Live | FileAnnotations.GenType -> emit pos ()
+          | _ -> ())
       ~merge:(fun () () -> ())
       ()
   in

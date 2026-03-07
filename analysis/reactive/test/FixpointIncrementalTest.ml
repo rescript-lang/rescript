@@ -11,12 +11,12 @@ let test_fixpoint_add_base () =
   let edges, emit_edges = source ~name:"edges" () in
 
   (* Graph: a -> b, c -> d *)
-  emit_edges (Set ("a", ["b"]));
-  emit_edges (Set ("c", ["d"]));
+  emit_set emit_edges "a" ["b"];
+  emit_set emit_edges "c" ["d"];
 
   let fp = fixpoint ~name:"fp" ~init ~edges () in
 
-  emit_init (Set ("a", ()));
+  emit_set emit_init "a" ();
   assert (length fp = 2);
 
   (* a, b *)
@@ -26,17 +26,14 @@ let test_fixpoint_add_base () =
   let removed = ref [] in
   subscribe
     (function
-      | Set (k, ()) -> added := k :: !added
-      | Remove k -> removed := k :: !removed
-      | Batch entries ->
+      | entries ->
         entries
-        |> List.iter (fun (k, v_opt) ->
-               match v_opt with
-               | Some () -> added := k :: !added
-               | None -> removed := k :: !removed))
+        |> List.iter (fun (k, mv) ->
+               if ReactiveMaybe.is_some mv then added := k :: !added
+               else removed := k :: !removed))
     fp;
 
-  emit_init (Set ("c", ()));
+  emit_set emit_init "c" ();
 
   Printf.printf "Added: [%s]\n" (String.concat ", " !added);
   assert (List.length !added = 2);
@@ -56,26 +53,25 @@ let test_fixpoint_remove_base () =
   let edges, emit_edges = source ~name:"edges" () in
 
   (* Graph: a -> b -> c *)
-  emit_edges (Set ("a", ["b"]));
-  emit_edges (Set ("b", ["c"]));
+  emit_set emit_edges "a" ["b"];
+  emit_set emit_edges "b" ["c"];
 
   let fp = fixpoint ~name:"fp" ~init ~edges () in
 
-  emit_init (Set ("a", ()));
+  emit_set emit_init "a" ();
   assert (length fp = 3);
 
   let removed = ref [] in
   subscribe
     (function
-      | Remove k -> removed := k :: !removed
-      | Batch entries ->
+      | entries ->
         List.iter
-          (fun (k, v_opt) -> if v_opt = None then removed := k :: !removed)
-          entries
-      | _ -> ())
+          (fun (k, mv) ->
+            if not (ReactiveMaybe.is_some mv) then removed := k :: !removed)
+          entries)
     fp;
 
-  emit_init (Remove "a");
+  emit_remove emit_init "a";
 
   Printf.printf "Removed: [%s]\n" (String.concat ", " !removed);
   assert (List.length !removed = 3);
@@ -92,23 +88,21 @@ let test_fixpoint_add_edge () =
 
   let fp = fixpoint ~name:"fp" ~init ~edges () in
 
-  emit_init (Set ("a", ()));
+  emit_set emit_init "a" ();
   assert (length fp = 1);
 
   (* just a *)
   let added = ref [] in
   subscribe
     (function
-      | Set (k, ()) -> added := k :: !added
-      | Batch entries ->
+      | entries ->
         List.iter
-          (fun (k, v_opt) -> if v_opt = Some () then added := k :: !added)
-          entries
-      | _ -> ())
+          (fun (k, mv) -> if ReactiveMaybe.is_some mv then added := k :: !added)
+          entries)
     fp;
 
   (* Add edge a -> b *)
-  emit_edges (Set ("a", ["b"]));
+  emit_set emit_edges "a" ["b"];
 
   Printf.printf "Added: [%s]\n" (String.concat ", " !added);
   assert (List.mem "b" !added);
@@ -124,27 +118,26 @@ let test_fixpoint_remove_edge () =
   let edges, emit_edges = source ~name:"edges" () in
 
   (* Graph: a -> b -> c *)
-  emit_edges (Set ("a", ["b"]));
-  emit_edges (Set ("b", ["c"]));
+  emit_set emit_edges "a" ["b"];
+  emit_set emit_edges "b" ["c"];
 
   let fp = fixpoint ~name:"fp" ~init ~edges () in
 
-  emit_init (Set ("a", ()));
+  emit_set emit_init "a" ();
   assert (length fp = 3);
 
   let removed = ref [] in
   subscribe
     (function
-      | Remove k -> removed := k :: !removed
-      | Batch entries ->
+      | entries ->
         List.iter
-          (fun (k, v_opt) -> if v_opt = None then removed := k :: !removed)
-          entries
-      | _ -> ())
+          (fun (k, mv) ->
+            if not (ReactiveMaybe.is_some mv) then removed := k :: !removed)
+          entries)
     fp;
 
-  (* Remove edge a -> b *)
-  emit_edges (Set ("a", []));
+  (* remove edge a -> b *)
+  emit_set emit_edges "a" [];
 
   Printf.printf "Removed: [%s]\n" (String.concat ", " !removed);
   assert (List.length !removed = 2);
@@ -162,28 +155,27 @@ let test_fixpoint_cycle_removal () =
   let edges, emit_edges = source ~name:"edges" () in
 
   (* Graph: a -> b -> c -> b (b-c cycle reachable from a) *)
-  emit_edges (Set ("a", ["b"]));
-  emit_edges (Set ("b", ["c"]));
-  emit_edges (Set ("c", ["b"]));
+  emit_set emit_edges "a" ["b"];
+  emit_set emit_edges "b" ["c"];
+  emit_set emit_edges "c" ["b"];
 
   let fp = fixpoint ~name:"fp" ~init ~edges () in
 
-  emit_init (Set ("a", ()));
+  emit_set emit_init "a" ();
   assert (length fp = 3);
 
   let removed = ref [] in
   subscribe
     (function
-      | Remove k -> removed := k :: !removed
-      | Batch entries ->
+      | entries ->
         List.iter
-          (fun (k, v_opt) -> if v_opt = None then removed := k :: !removed)
-          entries
-      | _ -> ())
+          (fun (k, mv) ->
+            if not (ReactiveMaybe.is_some mv) then removed := k :: !removed)
+          entries)
     fp;
 
-  (* Remove edge a -> b *)
-  emit_edges (Set ("a", []));
+  (* remove edge a -> b *)
+  emit_set emit_edges "a" [];
 
   Printf.printf "Removed: [%s]\n" (String.concat ", " !removed);
   (* Both b and c should be removed - cycle has no well-founded support *)
@@ -204,27 +196,26 @@ let test_fixpoint_alternative_support () =
 
   (* Graph: a -> b, a -> c -> b
      If we remove a -> b, b should survive via a -> c -> b *)
-  emit_edges (Set ("a", ["b"; "c"]));
-  emit_edges (Set ("c", ["b"]));
+  emit_set emit_edges "a" ["b"; "c"];
+  emit_set emit_edges "c" ["b"];
 
   let fp = fixpoint ~name:"fp" ~init ~edges () in
 
-  emit_init (Set ("a", ()));
+  emit_set emit_init "a" ();
   assert (length fp = 3);
 
   let removed = ref [] in
   subscribe
     (function
-      | Remove k -> removed := k :: !removed
-      | Batch entries ->
+      | entries ->
         List.iter
-          (fun (k, v_opt) -> if v_opt = None then removed := k :: !removed)
-          entries
-      | _ -> ())
+          (fun (k, mv) ->
+            if not (ReactiveMaybe.is_some mv) then removed := k :: !removed)
+          entries)
     fp;
 
-  (* Remove direct edge a -> b (but keep a -> c) *)
-  emit_edges (Set ("a", ["c"]));
+  (* remove direct edge a -> b (but keep a -> c) *)
+  emit_set emit_edges "a" ["c"];
 
   Printf.printf "Removed: [%s]\n" (String.concat ", " !removed);
   (* b should NOT be removed - still reachable via c *)
@@ -240,8 +231,8 @@ let test_fixpoint_deltas () =
   let init, emit_init = source ~name:"init" () in
   let edges, emit_edges = source ~name:"edges" () in
 
-  emit_edges (Set (1, [2; 3]));
-  emit_edges (Set (2, [4]));
+  emit_set emit_edges 1 [2; 3];
+  emit_set emit_edges 2 [4];
 
   let fp = fixpoint ~name:"fp" ~init ~edges () in
 
@@ -249,13 +240,11 @@ let test_fixpoint_deltas () =
   let all_entries = ref [] in
   subscribe
     (function
-      | Set (k, v) -> all_entries := (k, Some v) :: !all_entries
-      | Remove k -> all_entries := (k, None) :: !all_entries
-      | Batch entries -> all_entries := entries @ !all_entries)
+      | entries -> all_entries := entries @ !all_entries)
     fp;
 
   (* Add root *)
-  emit_init (Set (1, ()));
+  emit_set emit_init 1 ();
   Printf.printf "After add root: %d entries\n" (List.length !all_entries);
   assert (List.length !all_entries = 4);
 
@@ -263,22 +252,22 @@ let test_fixpoint_deltas () =
   all_entries := [];
 
   (* Add edge 3 -> 5 *)
-  emit_edges (Set (3, [5]));
+  emit_set emit_edges 3 [5];
   Printf.printf "After add edge 3->5: %d entries\n" (List.length !all_entries);
   assert (List.length !all_entries = 1);
 
   (* 5 added *)
   all_entries := [];
 
-  (* Remove root (should remove all) *)
-  emit_init (Remove 1);
+  (* remove root (should remove all) *)
+  emit_remove emit_init 1;
   Printf.printf "After remove root: %d entries\n" (List.length !all_entries);
   assert (List.length !all_entries = 5);
 
   (* 1, 2, 3, 4, 5 removed *)
   Printf.printf "PASSED\n\n"
 
-(* Test: Remove from init but still reachable via edges *)
+(* Test: remove from init but still reachable via edges *)
 let test_fixpoint_remove_spurious_root () =
   reset ();
   Printf.printf
@@ -294,41 +283,38 @@ let test_fixpoint_remove_spurious_root () =
   let removed = ref [] in
   subscribe
     (function
-      | Set (k, ()) -> added := k :: !added
-      | Remove k -> removed := k :: !removed
-      | Batch entries ->
+      | entries ->
         entries
-        |> List.iter (fun (k, v_opt) ->
-               match v_opt with
-               | Some () -> added := k :: !added
-               | None -> removed := k :: !removed))
+        |> List.iter (fun (k, mv) ->
+               if ReactiveMaybe.is_some mv then added := k :: !added
+               else removed := k :: !removed))
     fp;
 
   (* Step 1: "b" is spuriously marked as a root *)
-  emit_init (Set ("b", ()));
+  emit_set emit_init "b" ();
   Printf.printf "After spurious root b: fp=[%s]\n"
     (let items = ref [] in
      iter (fun k _ -> items := k :: !items) fp;
      String.concat ", " (List.sort String.compare !items));
-  assert (get fp "b" = Some ());
+  assert (get_opt fp "b" = Some ());
 
   (* Step 2: The real root "root" is added *)
-  emit_init (Set ("root", ()));
+  emit_set emit_init "root" ();
   Printf.printf "After true root: fp=[%s]\n"
     (let items = ref [] in
      iter (fun k _ -> items := k :: !items) fp;
      String.concat ", " (List.sort String.compare !items));
 
   (* Step 3: Edge root -> a is added *)
-  emit_edges (Set ("root", ["a"]));
+  emit_set emit_edges "root" ["a"];
   Printf.printf "After edge root->a: fp=[%s]\n"
     (let items = ref [] in
      iter (fun k _ -> items := k :: !items) fp;
      String.concat ", " (List.sort String.compare !items));
-  assert (get fp "a" = Some ());
+  assert (get_opt fp "a" = Some ());
 
   (* Step 4: Edge a -> b is added *)
-  emit_edges (Set ("a", ["b"]));
+  emit_set emit_edges "a" ["b"];
   Printf.printf "After edge a->b: fp=[%s]\n"
     (let items = ref [] in
      iter (fun k _ -> items := k :: !items) fp;
@@ -340,7 +326,7 @@ let test_fixpoint_remove_spurious_root () =
   removed := [];
 
   (* Step 5: The spurious root "b" is REMOVED from init *)
-  emit_init (Remove "b");
+  emit_remove emit_init "b";
 
   Printf.printf "After removing b from init: fp=[%s]\n"
     (let items = ref [] in
@@ -350,7 +336,7 @@ let test_fixpoint_remove_spurious_root () =
 
   (* b should NOT be removed - still reachable via a *)
   assert (not (List.mem "b" !removed));
-  assert (get fp "b" = Some ());
+  assert (get_opt fp "b" = Some ());
   assert (length fp = 3);
 
   Printf.printf "PASSED\n\n"
@@ -364,8 +350,8 @@ let test_fixpoint_remove_edge_entry_alternative_source () =
   let edges, emit_edges = source ~name:"edges" () in
 
   (* Set up initial edges: a -> b, c -> b *)
-  emit_edges (Set ("a", ["b"]));
-  emit_edges (Set ("c", ["b"]));
+  emit_set emit_edges "a" ["b"];
+  emit_set emit_edges "c" ["b"];
 
   let fp = fixpoint ~name:"fp" ~init ~edges () in
 
@@ -373,17 +359,16 @@ let test_fixpoint_remove_edge_entry_alternative_source () =
   let removed = ref [] in
   subscribe
     (function
-      | Remove k -> removed := k :: !removed
-      | Batch entries ->
+      | entries ->
         List.iter
-          (fun (k, v_opt) -> if v_opt = None then removed := k :: !removed)
-          entries
-      | _ -> ())
+          (fun (k, mv) ->
+            if not (ReactiveMaybe.is_some mv) then removed := k :: !removed)
+          entries)
     fp;
 
   (* Add roots a and c *)
-  emit_init (Set ("a", ()));
-  emit_init (Set ("c", ()));
+  emit_set emit_init "a" ();
+  emit_set emit_init "c" ();
 
   Printf.printf "Initial: fp=[%s]\n"
     (let items = ref [] in
@@ -394,10 +379,10 @@ let test_fixpoint_remove_edge_entry_alternative_source () =
 
   removed := [];
 
-  (* Remove entire edge entry for "a" *)
-  emit_edges (Remove "a");
+  (* remove entire edge entry for "a" *)
+  emit_remove emit_edges "a";
 
-  Printf.printf "After Remove edge entry 'a': fp=[%s]\n"
+  Printf.printf "After remove edge entry 'a': fp=[%s]\n"
     (let items = ref [] in
      iter (fun k _ -> items := k :: !items) fp;
      String.concat ", " (List.sort String.compare !items));
@@ -405,7 +390,7 @@ let test_fixpoint_remove_edge_entry_alternative_source () =
 
   (* b should NOT be removed - still reachable via c -> b *)
   assert (not (List.mem "b" !removed));
-  assert (get fp "b" = Some ());
+  assert (get_opt fp "b" = Some ());
   assert (length fp = 3);
 
   Printf.printf "PASSED\n\n"
@@ -424,23 +409,20 @@ let test_fixpoint_remove_edge_rederivation () =
   let added = ref [] in
   subscribe
     (function
-      | Remove k -> removed := k :: !removed
-      | Set (k, ()) -> added := k :: !added
-      | Batch entries ->
+      | entries ->
         entries
-        |> List.iter (fun (k, v_opt) ->
-               match v_opt with
-               | Some () -> added := k :: !added
-               | None -> removed := k :: !removed))
+        |> List.iter (fun (k, mv) ->
+               if ReactiveMaybe.is_some mv then added := k :: !added
+               else removed := k :: !removed))
     fp;
 
   (* Add root *)
-  emit_init (Set ("root", ()));
+  emit_set emit_init "root" ();
 
   (* Build graph: root -> a -> b -> c, a -> c *)
-  emit_edges (Set ("root", ["a"]));
-  emit_edges (Set ("a", ["b"; "c"]));
-  emit_edges (Set ("b", ["c"]));
+  emit_set emit_edges "root" ["a"];
+  emit_set emit_edges "a" ["b"; "c"];
+  emit_set emit_edges "b" ["c"];
 
   Printf.printf "Initial: fp=[%s]\n"
     (let items = ref [] in
@@ -452,8 +434,8 @@ let test_fixpoint_remove_edge_rederivation () =
   removed := [];
   added := [];
 
-  (* Remove the direct edge a -> c *)
-  emit_edges (Set ("a", ["b"]));
+  (* remove the direct edge a -> c *)
+  emit_set emit_edges "a" ["b"];
 
   Printf.printf "After removing a->c: fp=[%s]\n"
     (let items = ref [] in
@@ -464,21 +446,21 @@ let test_fixpoint_remove_edge_rederivation () =
     (String.concat ", " !added);
 
   (* c should still be in fixpoint - reachable via root -> a -> b -> c *)
-  assert (get fp "c" = Some ());
+  assert (get_opt fp "c" = Some ());
   assert (length fp = 4);
 
   Printf.printf "PASSED\n\n"
 
 let test_fixpoint_remove_edge_entry_rederivation () =
   reset ();
-  Printf.printf "=== Test: fixpoint Remove edge entry (re-derivation) ===\n";
+  Printf.printf "=== Test: fixpoint remove edge entry (re-derivation) ===\n";
 
   let init, emit_init = source ~name:"init" () in
   let edges, emit_edges = source ~name:"edges" () in
 
   (* Set up edges before creating fixpoint *)
-  emit_edges (Set ("a", ["c"]));
-  emit_edges (Set ("b", ["c"]));
+  emit_set emit_edges "a" ["c"];
+  emit_set emit_edges "b" ["c"];
 
   let fp = fixpoint ~name:"fp" ~init ~edges () in
 
@@ -486,17 +468,16 @@ let test_fixpoint_remove_edge_entry_rederivation () =
   let removed = ref [] in
   subscribe
     (function
-      | Remove k -> removed := k :: !removed
-      | Batch entries ->
+      | entries ->
         List.iter
-          (fun (k, v_opt) -> if v_opt = None then removed := k :: !removed)
-          entries
-      | _ -> ())
+          (fun (k, mv) ->
+            if not (ReactiveMaybe.is_some mv) then removed := k :: !removed)
+          entries)
     fp;
 
   (* Add roots a and b *)
-  emit_init (Set ("a", ()));
-  emit_init (Set ("b", ()));
+  emit_set emit_init "a" ();
+  emit_set emit_init "b" ();
 
   Printf.printf "Initial: fp=[%s]\n"
     (let items = ref [] in
@@ -507,10 +488,10 @@ let test_fixpoint_remove_edge_entry_rederivation () =
 
   removed := [];
 
-  (* Remove entire edge entry for "a" using Remove delta *)
-  emit_edges (Remove "a");
+  (* remove entire edge entry for "a" using remove delta *)
+  emit_remove emit_edges "a";
 
-  Printf.printf "After Remove 'a' entry: fp=[%s]\n"
+  Printf.printf "After remove 'a' entry: fp=[%s]\n"
     (let items = ref [] in
      iter (fun k _ -> items := k :: !items) fp;
      String.concat ", " (List.sort String.compare !items));
@@ -518,7 +499,7 @@ let test_fixpoint_remove_edge_entry_rederivation () =
 
   (* c should survive - b -> c still exists *)
   assert (not (List.mem "c" !removed));
-  assert (get fp "c" = Some ());
+  assert (get_opt fp "c" = Some ());
   assert (length fp = 3);
 
   Printf.printf "PASSED\n\n"
@@ -537,23 +518,20 @@ let test_fixpoint_remove_edge_entry_higher_rank_support () =
   let added = ref [] in
   subscribe
     (function
-      | Remove k -> removed := k :: !removed
-      | Set (k, ()) -> added := k :: !added
-      | Batch entries ->
+      | entries ->
         entries
-        |> List.iter (fun (k, v_opt) ->
-               match v_opt with
-               | Some () -> added := k :: !added
-               | None -> removed := k :: !removed))
+        |> List.iter (fun (k, mv) ->
+               if ReactiveMaybe.is_some mv then added := k :: !added
+               else removed := k :: !removed))
     fp;
 
   (* Add root *)
-  emit_init (Set ("root", ()));
+  emit_set emit_init "root" ();
 
   (* Build graph: root -> a -> b -> c, a -> c *)
-  emit_edges (Set ("root", ["a"]));
-  emit_edges (Set ("a", ["b"; "c"]));
-  emit_edges (Set ("b", ["c"]));
+  emit_set emit_edges "root" ["a"];
+  emit_set emit_edges "a" ["b"; "c"];
+  emit_set emit_edges "b" ["c"];
 
   Printf.printf "Initial: fp=[%s]\n"
     (let items = ref [] in
@@ -561,13 +539,13 @@ let test_fixpoint_remove_edge_entry_higher_rank_support () =
      String.concat ", " (List.sort String.compare !items));
 
   assert (length fp = 4);
-  assert (get fp "c" = Some ());
+  assert (get_opt fp "c" = Some ());
 
   removed := [];
   added := [];
 
-  (* Remove direct edge a -> c, keeping a -> b *)
-  emit_edges (Set ("a", ["b"]));
+  (* remove direct edge a -> c, keeping a -> b *)
+  emit_set emit_edges "a" ["b"];
 
   Printf.printf "After removing a->c: fp=[%s]\n"
     (let items = ref [] in
@@ -578,7 +556,7 @@ let test_fixpoint_remove_edge_entry_higher_rank_support () =
     (String.concat ", " !added);
 
   (* c should still be in fixpoint via root -> a -> b -> c *)
-  assert (get fp "c" = Some ());
+  assert (get_opt fp "c" = Some ());
   assert (length fp = 4);
 
   Printf.printf "PASSED\n\n"
@@ -586,90 +564,88 @@ let test_fixpoint_remove_edge_entry_higher_rank_support () =
 let test_fixpoint_remove_edge_entry_needs_rederivation () =
   reset ();
   Printf.printf
-    "=== Test: fixpoint Remove edge entry (needs re-derivation) ===\n";
+    "=== Test: fixpoint remove edge entry (needs re-derivation) ===\n";
 
   let init, emit_init = source ~name:"init" () in
   let edges, emit_edges = source ~name:"edges" () in
 
   (* Pre-populate edges so fixpoint initializes with them *)
-  emit_edges (Set ("r", ["a"; "b"]));
-  emit_edges (Set ("a", ["y"]));
-  emit_edges (Set ("b", ["c"]));
-  emit_edges (Set ("c", ["x"]));
-  emit_edges (Set ("x", ["y"]));
+  emit_set emit_edges "r" ["a"; "b"];
+  emit_set emit_edges "a" ["y"];
+  emit_set emit_edges "b" ["c"];
+  emit_set emit_edges "c" ["x"];
+  emit_set emit_edges "x" ["y"];
 
   let fp = fixpoint ~name:"fp" ~init ~edges () in
 
   (* Make r live *)
-  emit_init (Set ("r", ()));
+  emit_set emit_init "r" ();
 
   (* Sanity: y initially reachable via short path *)
-  assert (get fp "y" = Some ());
-  assert (get fp "x" = Some ());
+  assert (get_opt fp "y" = Some ());
+  assert (get_opt fp "x" = Some ());
 
   let removed = ref [] in
   subscribe
     (function
-      | Remove k -> removed := k :: !removed
-      | Batch entries ->
+      | entries ->
         List.iter
-          (fun (k, v_opt) -> if v_opt = None then removed := k :: !removed)
-          entries
-      | _ -> ())
+          (fun (k, mv) ->
+            if not (ReactiveMaybe.is_some mv) then removed := k :: !removed)
+          entries)
     fp;
 
-  (* Remove the entire edge entry for a (removes a->y) *)
-  emit_edges (Remove "a");
+  (* remove the entire edge entry for a (removes a->y) *)
+  emit_remove emit_edges "a";
 
   Printf.printf "Removed: [%s]\n" (String.concat ", " !removed);
 
   (* Correct: y is still reachable via r->b->c->x->y *)
-  assert (get fp "y" = Some ());
+  assert (get_opt fp "y" = Some ());
 
   Printf.printf "PASSED\n\n"
 
 let test_fixpoint_remove_base_needs_rederivation () =
   reset ();
   Printf.printf
-    "=== Test: fixpoint Remove base element (needs re-derivation) ===\n";
+    "=== Test: fixpoint remove base element (needs re-derivation) ===\n";
 
   let init, emit_init = source ~name:"init" () in
   let edges, emit_edges = source ~name:"edges" () in
 
   (* Pre-populate edges so fixpoint initializes with them *)
-  emit_edges (Set ("r1", ["a"]));
-  emit_edges (Set ("a", ["y"]));
-  emit_edges (Set ("r2", ["b"]));
-  emit_edges (Set ("b", ["c"]));
-  emit_edges (Set ("c", ["x"]));
-  emit_edges (Set ("x", ["y"]));
+  emit_set emit_edges "r1" ["a"];
+  emit_set emit_edges "a" ["y"];
+  emit_set emit_edges "r2" ["b"];
+  emit_set emit_edges "b" ["c"];
+  emit_set emit_edges "c" ["x"];
+  emit_set emit_edges "x" ["y"];
 
   let fp = fixpoint ~name:"fp" ~init ~edges () in
 
-  emit_init (Set ("r1", ()));
-  emit_init (Set ("r2", ()));
+  emit_set emit_init "r1" ();
+  emit_set emit_init "r2" ();
 
   (* Sanity: y initially reachable *)
-  assert (get fp "y" = Some ());
-  assert (get fp "x" = Some ());
+  assert (get_opt fp "y" = Some ());
+  assert (get_opt fp "x" = Some ());
 
   let removed = ref [] in
   subscribe
     (function
-      | Remove k -> removed := k :: !removed
-      | Batch entries ->
+      | entries ->
         List.iter
-          (fun (k, v_opt) -> if v_opt = None then removed := k :: !removed)
-          entries
-      | _ -> ())
+          (fun (k, mv) ->
+            if not (ReactiveMaybe.is_some mv) then removed := k :: !removed)
+          entries)
     fp;
 
-  (* Remove r1 from base: y should remain via r2 path *)
-  emit_init (Remove "r1");
+  (* remove r1 from base: y should remain via r2 path *)
+  emit_remove emit_init "r1";
 
   Printf.printf "Removed: [%s]\n" (String.concat ", " !removed);
 
-  assert (get fp "y" = Some ());
+  assert (get_opt fp "y" = Some ());
   Printf.printf "PASSED\n\n"
 
 let test_fixpoint_batch_overlapping_deletions () =
@@ -680,37 +656,36 @@ let test_fixpoint_batch_overlapping_deletions () =
   let edges, emit_edges = source ~name:"edges" () in
 
   (* r -> a,b ; a -> x ; b -> x ; x -> y *)
-  emit_edges (Set ("r", ["a"; "b"]));
-  emit_edges (Set ("a", ["x"]));
-  emit_edges (Set ("b", ["x"]));
-  emit_edges (Set ("x", ["y"]));
+  emit_set emit_edges "r" ["a"; "b"];
+  emit_set emit_edges "a" ["x"];
+  emit_set emit_edges "b" ["x"];
+  emit_set emit_edges "x" ["y"];
 
   let fp = fixpoint ~name:"fp" ~init ~edges () in
-  emit_init (Set ("r", ()));
+  emit_set emit_init "r" ();
 
-  assert (get fp "x" = Some ());
-  assert (get fp "y" = Some ());
+  assert (get_opt fp "x" = Some ());
+  assert (get_opt fp "y" = Some ());
 
   let removed = ref [] in
   subscribe
     (function
-      | Remove k -> removed := k :: !removed
-      | Batch entries ->
+      | entries ->
         List.iter
-          (fun (k, v_opt) -> if v_opt = None then removed := k :: !removed)
-          entries
-      | _ -> ())
+          (fun (k, mv) ->
+            if not (ReactiveMaybe.is_some mv) then removed := k :: !removed)
+          entries)
     fp;
 
-  (* Remove both supports for x in one batch. *)
-  emit_edges (Batch [("a", Some []); ("b", Some [])]);
+  (* remove both supports for x in one batch. *)
+  emit_batch emit_edges [("a", Some []); ("b", Some [])];
 
   Printf.printf "Removed: [%s]\n" (String.concat ", " !removed);
   assert (List.mem "x" !removed);
   assert (List.mem "y" !removed);
   assert (List.length !removed = 2);
-  assert (get fp "x" = None);
-  assert (get fp "y" = None);
+  assert (get_opt fp "x" = None);
+  assert (get_opt fp "y" = None);
   assert (length fp = 3);
 
   (* r, a, b *)
@@ -724,39 +699,36 @@ let test_fixpoint_batch_delete_add_same_wave () =
   let edges, emit_edges = source ~name:"edges" () in
 
   (* r -> a,c ; a -> x ; c -> [] *)
-  emit_edges (Set ("r", ["a"; "c"]));
-  emit_edges (Set ("a", ["x"]));
-  emit_edges (Set ("c", []));
+  emit_set emit_edges "r" ["a"; "c"];
+  emit_set emit_edges "a" ["x"];
+  emit_set emit_edges "c" [];
 
   let fp = fixpoint ~name:"fp" ~init ~edges () in
-  emit_init (Set ("r", ()));
+  emit_set emit_init "r" ();
 
-  assert (get fp "x" = Some ());
+  assert (get_opt fp "x" = Some ());
   assert (length fp = 4);
 
   let added = ref [] in
   let removed = ref [] in
   subscribe
     (function
-      | Set (k, ()) -> added := k :: !added
-      | Remove k -> removed := k :: !removed
-      | Batch entries ->
+      | entries ->
         List.iter
-          (fun (k, v_opt) ->
-            match v_opt with
-            | Some () -> added := k :: !added
-            | None -> removed := k :: !removed)
+          (fun (k, mv) ->
+            if ReactiveMaybe.is_some mv then added := k :: !added
+            else removed := k :: !removed)
           entries)
     fp;
 
   (* In one batch: remove a->x and add c->x. x should stay live. *)
-  emit_edges (Batch [("a", Some []); ("c", Some ["x"])]);
+  emit_batch emit_edges [("a", Some []); ("c", Some ["x"])];
 
   Printf.printf "Removed: [%s], Added: [%s]\n"
     (String.concat ", " !removed)
     (String.concat ", " !added);
 
-  assert (get fp "x" = Some ());
+  assert (get_opt fp "x" = Some ());
   assert (length fp = 4);
   assert (!removed = []);
   assert (!added = []);
@@ -771,33 +743,32 @@ let test_fixpoint_fanin_single_predecessor_removed () =
   let edges, emit_edges = source ~name:"edges" () in
 
   (* r -> a,b,c ; a,b,c -> z *)
-  emit_edges (Set ("r", ["a"; "b"; "c"]));
-  emit_edges (Set ("a", ["z"]));
-  emit_edges (Set ("b", ["z"]));
-  emit_edges (Set ("c", ["z"]));
+  emit_set emit_edges "r" ["a"; "b"; "c"];
+  emit_set emit_edges "a" ["z"];
+  emit_set emit_edges "b" ["z"];
+  emit_set emit_edges "c" ["z"];
 
   let fp = fixpoint ~name:"fp" ~init ~edges () in
-  emit_init (Set ("r", ()));
+  emit_set emit_init "r" ();
 
-  assert (get fp "z" = Some ());
+  assert (get_opt fp "z" = Some ());
   assert (length fp = 5);
 
   let removed = ref [] in
   subscribe
     (function
-      | Remove k -> removed := k :: !removed
-      | Batch entries ->
+      | entries ->
         List.iter
-          (fun (k, v_opt) -> if v_opt = None then removed := k :: !removed)
-          entries
-      | _ -> ())
+          (fun (k, mv) ->
+            if not (ReactiveMaybe.is_some mv) then removed := k :: !removed)
+          entries)
     fp;
 
-  (* Remove only one predecessor contribution; z should remain live. *)
-  emit_edges (Set ("a", []));
+  (* remove only one predecessor contribution; z should remain live. *)
+  emit_set emit_edges "a" [];
 
   Printf.printf "Removed: [%s]\n" (String.concat ", " !removed);
-  assert (get fp "z" = Some ());
+  assert (get_opt fp "z" = Some ());
   assert (length fp = 5);
   assert (!removed = []);
 
@@ -812,49 +783,48 @@ let test_fixpoint_cycle_alternative_external_support () =
   let edges, emit_edges = source ~name:"edges" () in
 
   (* r1 -> b ; r2 -> c ; b <-> c *)
-  emit_edges (Set ("r1", ["b"]));
-  emit_edges (Set ("r2", ["c"]));
-  emit_edges (Set ("b", ["c"]));
-  emit_edges (Set ("c", ["b"]));
+  emit_set emit_edges "r1" ["b"];
+  emit_set emit_edges "r2" ["c"];
+  emit_set emit_edges "b" ["c"];
+  emit_set emit_edges "c" ["b"];
 
   let fp = fixpoint ~name:"fp" ~init ~edges () in
-  emit_init (Set ("r1", ()));
-  emit_init (Set ("r2", ()));
+  emit_set emit_init "r1" ();
+  emit_set emit_init "r2" ();
 
-  assert (get fp "b" = Some ());
-  assert (get fp "c" = Some ());
+  assert (get_opt fp "b" = Some ());
+  assert (get_opt fp "c" = Some ());
 
   let removed = ref [] in
   subscribe
     (function
-      | Remove k -> removed := k :: !removed
-      | Batch entries ->
+      | entries ->
         List.iter
-          (fun (k, v_opt) -> if v_opt = None then removed := k :: !removed)
-          entries
-      | _ -> ())
+          (fun (k, mv) ->
+            if not (ReactiveMaybe.is_some mv) then removed := k :: !removed)
+          entries)
     fp;
 
-  (* Remove one external support edge; cycle should remain via r2 -> c. *)
-  emit_edges (Set ("r1", []));
+  (* remove one external support edge; cycle should remain via r2 -> c. *)
+  emit_set emit_edges "r1" [];
 
   Printf.printf "After removing r1->b, removed: [%s]\n"
     (String.concat ", " !removed);
-  assert (get fp "b" = Some ());
-  assert (get fp "c" = Some ());
+  assert (get_opt fp "b" = Some ());
+  assert (get_opt fp "c" = Some ());
   assert (!removed = []);
 
   removed := [];
 
-  (* Remove the other external support edge; cycle should now disappear. *)
-  emit_edges (Set ("r2", []));
+  (* remove the other external support edge; cycle should now disappear. *)
+  emit_set emit_edges "r2" [];
 
   Printf.printf "After removing r2->c, removed: [%s]\n"
     (String.concat ", " !removed);
   assert (List.mem "b" !removed);
   assert (List.mem "c" !removed);
-  assert (get fp "b" = None);
-  assert (get fp "c" = None);
+  assert (get_opt fp "b" = None);
+  assert (get_opt fp "c" = None);
 
   Printf.printf "PASSED\n\n"
 
@@ -869,41 +839,38 @@ let test_fixpoint_remove_then_readd_via_expansion_same_wave () =
   (* r -> s ; s -> x ; y -> x ; then update s -> y.
      x is first tentatively deleted (s no longer points to x),
      then becomes reachable again via new path r -> s -> y -> x. *)
-  emit_edges (Set ("r", ["s"]));
-  emit_edges (Set ("s", ["x"]));
-  emit_edges (Set ("y", ["x"]));
+  emit_set emit_edges "r" ["s"];
+  emit_set emit_edges "s" ["x"];
+  emit_set emit_edges "y" ["x"];
 
   let fp = fixpoint ~name:"fp" ~init ~edges () in
-  emit_init (Set ("r", ()));
+  emit_set emit_init "r" ();
 
-  assert (get fp "x" = Some ());
-  assert (get fp "y" = None);
+  assert (get_opt fp "x" = Some ());
+  assert (get_opt fp "y" = None);
   assert (length fp = 3);
 
   let added = ref [] in
   let removed = ref [] in
   subscribe
     (function
-      | Set (k, ()) -> added := k :: !added
-      | Remove k -> removed := k :: !removed
-      | Batch entries ->
+      | entries ->
         List.iter
-          (fun (k, v_opt) ->
-            match v_opt with
-            | Some () -> added := k :: !added
-            | None -> removed := k :: !removed)
+          (fun (k, mv) ->
+            if ReactiveMaybe.is_some mv then added := k :: !added
+            else removed := k :: !removed)
           entries)
     fp;
 
-  emit_edges (Set ("s", ["y"]));
+  emit_set emit_edges "s" ["y"];
 
   Printf.printf "Removed: [%s], Added: [%s]\n"
     (String.concat ", " !removed)
     (String.concat ", " !added);
 
   (* x should remain reachable; it must not be emitted as removed. *)
-  assert (get fp "x" = Some ());
-  assert (get fp "y" = Some ());
+  assert (get_opt fp "x" = Some ());
+  assert (get_opt fp "y" = Some ());
   assert (length fp = 4);
   assert (not (List.mem "x" !removed));
   assert (List.mem "y" !added);

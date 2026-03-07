@@ -1,6 +1,7 @@
 (** Tests for glitch-free semantics with the accumulate-then-propagate scheduler *)
 
 open Reactive
+open TestHelpers
 
 type file_data = {refs: (string * string) list; decl_positions: string list}
 (** Type for file data *)
@@ -15,19 +16,19 @@ type full_file_data = {
 (** Track all deltas received *)
 let track_deltas c =
   let received = ref [] in
-  c.subscribe (fun d -> received := d :: !received);
+  c.subscribe (fun wave ->
+      let rev_entries = ref [] in
+      ReactiveWave.iter wave (fun k mv ->
+          rev_entries := (k, mv) :: !rev_entries);
+      received := List.rev !rev_entries :: !received);
   received
 
 (** Count adds and removes *)
 let count_delta = function
-  | Set _ -> (1, 0)
-  | Remove _ -> (0, 1)
-  | Batch entries ->
+  | entries ->
     List.fold_left
-      (fun (a, r) (_, v_opt) ->
-        match v_opt with
-        | Some _ -> (a + 1, r)
-        | None -> (a, r + 1))
+      (fun (a, r) (_, mv) ->
+        if ReactiveMaybe.is_some mv then (a + 1, r) else (a, r + 1))
       (0, 0) entries
 
 let sum_deltas deltas =
@@ -45,36 +46,35 @@ let test_same_source_anti_join () =
   let src, emit = source ~name:"source" () in
 
   let refs =
-    flatMap ~name:"refs" src ~f:(fun _file (data : file_data) -> data.refs) ()
+    flatMap ~name:"refs" src
+      ~f:(fun _file (data : file_data) emit ->
+        List.iter (fun (k, v) -> emit k v) data.refs)
+      ()
   in
 
   let decls =
     flatMap ~name:"decls" src
-      ~f:(fun _file (data : file_data) ->
-        List.map (fun pos -> (pos, ())) data.decl_positions)
+      ~f:(fun _file (data : file_data) emit ->
+        List.iter (fun pos -> emit pos ()) data.decl_positions)
       ()
   in
 
   let external_refs =
     join ~name:"external_refs" refs decls
       ~key_of:(fun posFrom _posTo -> posFrom)
-      ~f:(fun _posFrom posTo decl_opt ->
-        match decl_opt with
-        | Some () -> []
-        | None -> [(posTo, ())])
+      ~f:(fun _posFrom posTo decl_mb emit ->
+        if not (ReactiveMaybe.is_some decl_mb) then emit posTo ())
       ~merge:(fun () () -> ())
       ()
   in
 
   let deltas = track_deltas external_refs in
 
-  emit
-    (Batch
-       [
-         set "file1"
-           {refs = [("A", "X"); ("B", "Y")]; decl_positions = ["A"; "B"]};
-         set "file2" {refs = [("C", "Z")]; decl_positions = []};
-       ]);
+  emit_sets emit
+    [
+      ("file1", {refs = [("A", "X"); ("B", "Y")]; decl_positions = ["A"; "B"]});
+      ("file2", {refs = [("C", "Z")]; decl_positions = []});
+    ];
 
   let adds, removes = sum_deltas !deltas in
   Printf.printf "adds=%d, removes=%d, len=%d\n" adds removes
@@ -94,27 +94,33 @@ let test_multi_level_union () =
   (* refs1: level 1 *)
   let refs1 =
     flatMap ~name:"refs1" src
-      ~f:(fun _file (data : file_data) ->
-        List.filter (fun (k, _) -> String.length k > 0 && k.[0] = 'D') data.refs)
+      ~f:(fun _file (data : file_data) emit ->
+        List.iter
+          (fun (k, v) -> if String.length k > 0 && k.[0] = 'D' then emit k v)
+          data.refs)
       ()
   in
 
   (* intermediate: level 1 *)
   let intermediate =
     flatMap ~name:"intermediate" src
-      ~f:(fun _file (data : file_data) ->
-        List.filter (fun (k, _) -> String.length k > 0 && k.[0] = 'I') data.refs)
+      ~f:(fun _file (data : file_data) emit ->
+        List.iter
+          (fun (k, v) -> if String.length k > 0 && k.[0] = 'I' then emit k v)
+          data.refs)
       ()
   in
 
   (* refs2: level 2 *)
-  let refs2 = flatMap ~name:"refs2" intermediate ~f:(fun k v -> [(k, v)]) () in
+  let refs2 =
+    flatMap ~name:"refs2" intermediate ~f:(fun k v emit -> emit k v) ()
+  in
 
   (* decls: level 1 *)
   let decls =
     flatMap ~name:"decls" src
-      ~f:(fun _file (data : file_data) ->
-        List.map (fun pos -> (pos, ())) data.decl_positions)
+      ~f:(fun _file (data : file_data) emit ->
+        List.iter (fun pos -> emit pos ()) data.decl_positions)
       ()
   in
 
@@ -125,21 +131,16 @@ let test_multi_level_union () =
   let external_refs =
     join ~name:"external_refs" all_refs decls
       ~key_of:(fun posFrom _posTo -> posFrom)
-      ~f:(fun _posFrom posTo decl_opt ->
-        match decl_opt with
-        | Some () -> []
-        | None -> [(posTo, ())])
+      ~f:(fun _posFrom posTo decl_mb emit ->
+        if not (ReactiveMaybe.is_some decl_mb) then emit posTo ())
       ~merge:(fun () () -> ())
       ()
   in
 
   let deltas = track_deltas external_refs in
 
-  emit
-    (Batch
-       [
-         set "file1" {refs = [("D1", "X"); ("I1", "Y")]; decl_positions = ["D1"]};
-       ]);
+  emit_set emit "file1"
+    {refs = [("D1", "X"); ("I1", "Y")]; decl_positions = ["D1"]};
 
   let adds, removes = sum_deltas !deltas in
   Printf.printf "adds=%d, removes=%d, len=%d\n" adds removes
@@ -159,30 +160,32 @@ let test_real_pipeline_simulation () =
   (* decls: level 1 *)
   let decls =
     flatMap ~name:"decls" src
-      ~f:(fun _file (data : full_file_data) ->
-        List.map (fun pos -> (pos, ())) data.full_decls)
+      ~f:(fun _file (data : full_file_data) emit ->
+        List.iter (fun pos -> emit pos ()) data.full_decls)
       ()
   in
 
   (* merged_value_refs: level 1 *)
   let merged_value_refs =
     flatMap ~name:"merged_value_refs" src
-      ~f:(fun _file (data : full_file_data) -> data.value_refs)
+      ~f:(fun _file (data : full_file_data) emit ->
+        List.iter (fun (k, v) -> emit k v) data.value_refs)
       ()
   in
 
   (* exception_refs_raw: level 1 *)
   let exception_refs_raw =
     flatMap ~name:"exception_refs_raw" src
-      ~f:(fun _file (data : full_file_data) -> data.exception_refs)
+      ~f:(fun _file (data : full_file_data) emit ->
+        List.iter (fun (k, v) -> emit k v) data.exception_refs)
       ()
   in
 
   (* exception_decls: level 2 *)
   let exception_decls =
     flatMap ~name:"exception_decls" decls
-      ~f:(fun pos () ->
-        if String.length pos > 0 && pos.[0] = 'E' then [(pos, ())] else [])
+      ~f:(fun pos () emit ->
+        if String.length pos > 0 && pos.[0] = 'E' then emit pos ())
       ()
   in
 
@@ -190,17 +193,15 @@ let test_real_pipeline_simulation () =
   let resolved_exception_refs =
     join ~name:"resolved_exception_refs" exception_refs_raw exception_decls
       ~key_of:(fun path _loc -> path)
-      ~f:(fun path loc decl_opt ->
-        match decl_opt with
-        | Some () -> [(path, loc)]
-        | None -> [])
+      ~f:(fun path loc decl_mb emit ->
+        if ReactiveMaybe.is_some decl_mb then emit path loc)
       ()
   in
 
   (* resolved_refs_from: level 4 *)
   let resolved_refs_from =
     flatMap ~name:"resolved_refs_from" resolved_exception_refs
-      ~f:(fun posTo posFrom -> [(posFrom, posTo)])
+      ~f:(fun posTo posFrom emit -> emit posFrom posTo)
       ()
   in
 
@@ -213,26 +214,20 @@ let test_real_pipeline_simulation () =
   let external_value_refs =
     join ~name:"external_value_refs" value_refs_from decls
       ~key_of:(fun posFrom _posTo -> posFrom)
-      ~f:(fun _posFrom posTo decl_opt ->
-        match decl_opt with
-        | Some () -> []
-        | None -> [(posTo, ())])
+      ~f:(fun _posFrom posTo decl_mb emit ->
+        if not (ReactiveMaybe.is_some decl_mb) then emit posTo ())
       ~merge:(fun () () -> ())
       ()
   in
 
   let deltas = track_deltas external_value_refs in
 
-  emit
-    (Batch
-       [
-         set "file1"
-           {
-             value_refs = [("A", "X")];
-             exception_refs = [("E1", "Y")];
-             full_decls = ["A"; "E1"];
-           };
-       ]);
+  emit_set emit "file1"
+    {
+      value_refs = [("A", "X")];
+      exception_refs = [("E1", "Y")];
+      full_decls = ["A"; "E1"];
+    };
 
   let _adds, removes = sum_deltas !deltas in
   Printf.printf "removes=%d, len=%d\n" removes (length external_value_refs);
@@ -251,10 +246,8 @@ let test_separate_sources () =
   let external_refs =
     join ~name:"external_refs" refs_src decls_src
       ~key_of:(fun posFrom _posTo -> posFrom)
-      ~f:(fun _posFrom posTo decl_opt ->
-        match decl_opt with
-        | Some () -> []
-        | None -> [(posTo, ())])
+      ~f:(fun _posFrom posTo decl_mb emit ->
+        if not (ReactiveMaybe.is_some decl_mb) then emit posTo ())
       ~merge:(fun () () -> ())
       ()
   in
@@ -262,13 +255,13 @@ let test_separate_sources () =
   let deltas = track_deltas external_refs in
 
   (* Refs arrive first *)
-  emit_refs (Batch [set "A" "X"; set "B" "Y"; set "C" "Z"]);
+  emit_sets emit_refs [("A", "X"); ("B", "Y"); ("C", "Z")];
 
   let adds1, _ = sum_deltas !deltas in
   Printf.printf "After refs: adds=%d, len=%d\n" adds1 (length external_refs);
 
   (* Decls arrive second - causes removals *)
-  emit_decls (Batch [set "A" (); set "B" ()]);
+  emit_sets emit_decls [("A", ()); ("B", ())];
 
   let adds2, removes2 = sum_deltas !deltas in
   Printf.printf "After decls: adds=%d, removes=%d, len=%d\n" adds2 removes2

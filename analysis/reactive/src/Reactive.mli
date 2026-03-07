@@ -7,29 +7,16 @@
     
     This eliminates glitches from multi-level dependencies by construction. *)
 
-(** {1 Deltas} *)
+(** {1 Waves} *)
 
-type ('k, 'v) delta =
-  | Set of 'k * 'v
-  | Remove of 'k
-  | Batch of ('k * 'v option) list
-      (** Batch of updates: (key, Some value) = set, (key, None) = remove *)
-
-val set : 'k -> 'v -> 'k * 'v option
-(** Create a batch entry that sets a key *)
-
-val remove : 'k -> 'k * 'v option
-(** Create a batch entry that removes a key *)
-
-val delta_to_entries : ('k, 'v) delta -> ('k * 'v option) list
-(** Convert delta to batch entries *)
+type ('k, 'v) wave = ('k, 'v ReactiveMaybe.t) ReactiveWave.t
+(** Mutable wave buffer carrying batch entries *)
 
 (** {1 Statistics} *)
 
 type stats = {
   (* Input tracking *)
-  mutable deltas_received: int;
-      (** Number of delta messages (Set/Remove/Batch) *)
+  mutable deltas_received: int;  (** Number of delta messages (Batch) *)
   mutable entries_received: int;  (** Total entries after expanding batches *)
   mutable adds_received: int;  (** Set operations received from upstream *)
   mutable removes_received: int;
@@ -84,17 +71,18 @@ end
 
 type ('k, 'v) t = {
   name: string;
-  subscribe: (('k, 'v) delta -> unit) -> unit;
+  subscribe: (('k, 'v) wave -> unit) -> unit;
   iter: ('k -> 'v -> unit) -> unit;
-  get: 'k -> 'v option;
+  get: 'k -> 'v ReactiveMaybe.t;
   length: unit -> int;
   stats: stats;
   level: int;
+  node: Registry.node_info;
 }
 (** A named reactive collection at a specific topological level *)
 
 val iter : ('k -> 'v -> unit) -> ('k, 'v) t -> unit
-val get : ('k, 'v) t -> 'k -> 'v option
+val get : ('k, 'v) t -> 'k -> 'v ReactiveMaybe.t
 val length : ('k, 'v) t -> int
 val stats : ('k, 'v) t -> stats
 val level : ('k, 'v) t -> int
@@ -102,9 +90,14 @@ val name : ('k, 'v) t -> string
 
 (** {1 Source Collection} *)
 
-val source : name:string -> unit -> ('k, 'v) t * (('k, 'v) delta -> unit)
+val source :
+  name:string ->
+  unit ->
+  ('k, 'v) t * (('k, 'v ReactiveMaybe.t) ReactiveWave.t -> unit)
 (** Create a named source collection.
-    Returns the collection and an emit function.
+    Returns the collection and an emit function that takes a wave.
+    Each wave entry is a key with [ReactiveMaybe.some v] for set
+    or [ReactiveMaybe.none] for remove.
     Emitting triggers propagation through the pipeline. *)
 
 (** {1 Combinators} *)
@@ -112,7 +105,7 @@ val source : name:string -> unit -> ('k, 'v) t * (('k, 'v) delta -> unit)
 val flatMap :
   name:string ->
   ('k1, 'v1) t ->
-  f:('k1 -> 'v1 -> ('k2 * 'v2) list) ->
+  f:('k1 -> 'v1 -> ('k2 -> 'v2 -> unit) -> unit) ->
   ?merge:('v2 -> 'v2 -> 'v2) ->
   unit ->
   ('k2, 'v2) t
@@ -124,7 +117,7 @@ val join :
   ('k1, 'v1) t ->
   ('k2, 'v2) t ->
   key_of:('k1 -> 'v1 -> 'k2) ->
-  f:('k1 -> 'v1 -> 'v2 option -> ('k3 * 'v3) list) ->
+  f:('k1 -> 'v1 -> 'v2 ReactiveMaybe.t -> ('k3 -> 'v3 -> unit) -> unit) ->
   ?merge:('v3 -> 'v3 -> 'v3) ->
   unit ->
   ('k3, 'v3) t
