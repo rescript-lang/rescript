@@ -835,8 +835,7 @@ module Fixpoint = struct
     let root_pending : ('k, unit ReactiveMaybe.t) ReactiveHash.Map.t =
       ReactiveHash.Map.create ()
     in
-    let edge_pending :
-        ('k, 'k list ReactiveMaybe.t) ReactiveHash.Map.t =
+    let edge_pending : ('k, 'k list ReactiveMaybe.t) ReactiveHash.Map.t =
       ReactiveHash.Map.create ()
     in
     let init_pending_count = ref 0 in

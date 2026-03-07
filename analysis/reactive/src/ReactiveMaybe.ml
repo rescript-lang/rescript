@@ -23,8 +23,8 @@ let[@inline] maybe_unit_to_offheap (x : unit t) :
     unit t ReactiveAllocator.offheap =
   ReactiveAllocator.unsafe_to_offheap x
 
-let[@inline] maybe_offheap_list_to_offheap
-    (x : 'a ReactiveOffheapList.t t) : 'a list t ReactiveAllocator.offheap =
+let[@inline] maybe_offheap_list_to_offheap (x : 'a ReactiveOffheapList.t t) :
+    'a list t ReactiveAllocator.offheap =
   ReactiveAllocator.unsafe_to_offheap x
 
 let[@inline] to_option (x : 'a t) : 'a option =
