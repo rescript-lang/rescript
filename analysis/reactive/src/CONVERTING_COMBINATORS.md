@@ -156,9 +156,9 @@ allocation. Switching `unit option` to `ReactiveMaybe.t` does not
 save allocations (confirmed by measurement). Focus optimization
 effort on closures and non-unit option types instead.
 
-### Use `ReactiveQueue` for BFS/worklist patterns
+### Use `ReactiveFifo` for BFS/worklist patterns
 
-Pre-allocated array-based FIFOs (`ReactiveQueue`) eliminate cons-cell
+Off-heap FIFOs (`ReactiveFifo`) eliminate cons-cell
 allocation from worklist patterns. Clear + push cycles reuse the
 backing array at steady state.
 
@@ -337,7 +337,7 @@ Converted to `ReactiveHash`:
 - Per-call scratch: `deleted_nodes`, `rederive_pending`, `expansion_seen`, `old_successors_for_changed`, `new_successors_for_changed`, `edge_has_new`
 - Temp sets in `process_edge_change` and `apply_edge_update`
 
-Converted to `ReactiveQueue` (pre-allocated array-based FIFO):
+Converted to `ReactiveFifo` (off-heap FIFO):
 - 3 BFS queues: `delete_queue`, `rederive_queue`, `expansion_queue`
 - 2 phase queues: `added_roots_queue`, `edge_change_queue`
 - All persistent fields cleared per call, zero allocation at steady state
