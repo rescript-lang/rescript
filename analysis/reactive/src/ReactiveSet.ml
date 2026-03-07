@@ -8,8 +8,10 @@
    The backing block lives off-heap. Elements are ordinary OCaml values whose
    storage invariant has already been established before insertion.
 
-   Empty data slots contain a distinguished sentinel value. All other data
-   slots contain real set elements. *)
+   Data slots contain either:
+   - the distinguished empty sentinel, meaning the slot has never been used
+   - the distinguished tomb sentinel, meaning the slot was removed
+   - a real set element. *)
 
 type 'a t = ('a, int, int) ReactiveAllocator.Block2.t
 
@@ -17,8 +19,11 @@ let initial_capacity = 8
 let max_load_percent = 82
 
 let sentinel : Obj.t = Obj.repr (Array.make 257 0)
+let tomb : Obj.t = Obj.repr (Array.make 257 0)
 let[@inline] empty_sentinel =
  fun () -> (Obj.magic sentinel : 'a ReactiveAllocator.offheap)
+let[@inline] tomb_sentinel =
+ fun () -> (Obj.magic tomb : 'a ReactiveAllocator.offheap)
 
 let slot_capacity = ReactiveAllocator.Block2.capacity
 let population = ReactiveAllocator.Block2.get0
@@ -53,7 +58,10 @@ let clear t =
 
 let add_absent_key (type a) (t : a t) (x : a ReactiveAllocator.offheap) =
   let j = ref (start t x) in
-  while ReactiveAllocator.Block2.get t !j != empty_sentinel () do
+  while
+    let current = ReactiveAllocator.Block2.get t !j in
+    current != empty_sentinel () && current != tomb_sentinel ()
+  do
     j := next t !j
   done;
   ReactiveAllocator.Block2.set t !j x
@@ -70,7 +78,7 @@ let resize (type a) (t : a t) new_cap =
   set_mask t (new_cap - 1);
   for i = 0 to old_cap - 1 do
     let x = ReactiveAllocator.Block2.get old_keys i in
-    if x != empty_sentinel () then add_absent_key t x
+    if x != empty_sentinel () && x != tomb_sentinel () then add_absent_key t x
   done;
   ReactiveAllocator.Block2.destroy old_keys
 
@@ -82,23 +90,57 @@ let maybe_grow_before_add (type a) (t : a t) =
 let add (type a) (t : a t) (x : a ReactiveAllocator.offheap) =
   maybe_grow_before_add t;
   let j = ref (start t x) in
+  let first_tomb = ref (-1) in
   let found = ref false in
   while not !found do
     let current = ReactiveAllocator.Block2.get t !j in
     if current == empty_sentinel () then (
-      ReactiveAllocator.Block2.set t !j x;
+      let dst = if !first_tomb >= 0 then !first_tomb else !j in
+      ReactiveAllocator.Block2.set t dst x;
       set_population t (population t + 1);
       found := true)
+    else if current == tomb_sentinel () then (
+      if !first_tomb < 0 then first_tomb := !j;
+      j := next t !j)
     else if current = x then found := true
     else j := next t !j
   done
+
+let remove (type a) (t : a t) (x : a ReactiveAllocator.offheap) =
+  let j = ref (start t x) in
+  let done_ = ref false in
+  while not !done_ do
+    let current = ReactiveAllocator.Block2.get t !j in
+    if current == empty_sentinel () then done_ := true
+    else if current == tomb_sentinel () then j := next t !j
+    else if current = x then (
+      ReactiveAllocator.Block2.set t !j (tomb_sentinel ());
+      set_population t (population t - 1);
+      done_ := true)
+    else j := next t !j
+  done
+
+let mem (type a) (t : a t) (x : a ReactiveAllocator.offheap) =
+  let j = ref (start t x) in
+  let found = ref false in
+  let done_ = ref false in
+  while not !done_ do
+    let current = ReactiveAllocator.Block2.get t !j in
+    if current == empty_sentinel () then done_ := true
+    else if current == tomb_sentinel () then j := next t !j
+    else if current = x then (
+      found := true;
+      done_ := true)
+    else j := next t !j
+  done;
+  !found
 
 let iter_with (type a k) (f : a -> k ReactiveAllocator.offheap -> unit)
     (arg : a) (t : k t) =
   if population t > 0 then
     for i = 0 to slot_capacity t - 1 do
       let x = ReactiveAllocator.Block2.get t i in
-      if x != empty_sentinel () then f arg x
+      if x != empty_sentinel () && x != tomb_sentinel () then f arg x
     done
 
 let cardinal = population

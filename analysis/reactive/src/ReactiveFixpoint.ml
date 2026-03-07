@@ -8,10 +8,8 @@ let rec list_iter_with f arg = function
     list_iter_with f arg rest
 
 (* Note on set representations:
-   [current] and [roots] stay as map-of-unit because they are updated as
-   first-class maps in multiple places. [pred_map] is represented by
-   [ReactivePoolMapSet] because its semantics are exactly map-of-set with
-   churn-safe remove+recycle behavior. *)
+   [pred_map] is represented by [ReactivePoolMapSet] because its semantics are
+   exactly map-of-set with churn-safe remove+recycle behavior. *)
 
 type 'k metrics_state = {
   mutable delete_queue_pops: int;
@@ -21,27 +19,27 @@ type 'k metrics_state = {
   mutable rederive_edges_scanned: int;
   mutable expansion_queue_pops: int;
   mutable expansion_edges_scanned: int;
-  scratch_reachable: ('k, unit) ReactiveHash.Map.t;
+  scratch_reachable: 'k ReactiveSet.t;
 }
 (** Per-call metrics scratch state. Allocated once per fixpoint instance,
     mutable fields are reset and incremented in-place — zero allocation. *)
 
 type 'k t = {
-  current: ('k, unit) ReactiveHash.Map.t;
+  current: 'k ReactiveSet.t;
   edge_map: ('k, 'k list) ReactiveHash.Map.t;
   pred_map: ('k, 'k) ReactivePoolMapSet.t;
-  roots: ('k, unit) ReactiveHash.Map.t;
+  roots: 'k ReactiveSet.t;
   output_wave: ('k, unit ReactiveMaybe.t) ReactiveWave.t;
   (* Scratch tables — allocated once, cleared per apply_list call *)
-  deleted_nodes: ('k, unit) ReactiveHash.Map.t;
-  rederive_pending: ('k, unit) ReactiveHash.Map.t;
-  expansion_seen: ('k, unit) ReactiveHash.Map.t;
+  deleted_nodes: 'k ReactiveSet.t;
+  rederive_pending: 'k ReactiveSet.t;
+  expansion_seen: 'k ReactiveSet.t;
   old_successors_for_changed: ('k, 'k list) ReactiveHash.Map.t;
   new_successors_for_changed: ('k, 'k list) ReactiveHash.Map.t;
   (* Scratch sets for analyze_edge_change / apply_edge_update *)
-  scratch_set_a: 'k ReactiveHash.Set.t;
-  scratch_set_b: 'k ReactiveHash.Set.t;
-  edge_has_new: 'k ReactiveHash.Set.t;
+  scratch_set_a: 'k ReactiveSet.t;
+  scratch_set_b: 'k ReactiveSet.t;
+  edge_has_new: 'k ReactiveSet.t;
   (* Scratch queues *)
   delete_queue: 'k ReactiveQueue.t;
   rederive_queue: 'k ReactiveQueue.t;
@@ -63,25 +61,32 @@ let analyze_edge_change_has_new ~old_succs ~new_succs =
     List.iter (fun k -> Hashtbl.replace old_set k ()) old_succs;
     List.exists (fun tgt -> not (Hashtbl.mem old_set tgt)) new_succs
 
+let[@inline] off_key k = ReactiveAllocator.unsafe_to_offheap k
+
 (* Full-reachability BFS into [visited]. Returns (node_work, edge_work).
    [visited] is cleared before use; zero allocation when [visited] is
    pre-allocated (e.g. Metrics scratch map). *)
 let bfs_seed_root visited frontier _t k () =
-  ReactiveHash.Map.replace visited k ();
+  ReactiveSet.add visited (off_key k);
   ReactiveQueue.push frontier k
 
 let bfs_visit_succ visited frontier succ =
-  if not (ReactiveHash.Map.mem visited succ) then (
-    ReactiveHash.Map.replace visited succ ();
+  if not (ReactiveSet.mem visited (off_key succ)) then (
+    ReactiveSet.add visited (off_key succ);
     ReactiveQueue.push frontier succ)
 
 let compute_reachable ~visited t =
-  ReactiveHash.Map.clear visited;
+  ReactiveSet.clear visited;
   let frontier = t.delete_queue in
   ReactiveQueue.clear frontier;
   let node_work = ref 0 in
   let edge_work = ref 0 in
-  ReactiveHash.Map.iter_with (bfs_seed_root visited frontier) t t.roots;
+  ReactiveSet.iter_with
+    (fun (visited, frontier) k ->
+      bfs_seed_root visited frontier t
+        (ReactiveAllocator.unsafe_from_offheap k)
+        ())
+    (visited, frontier) t.roots;
   while not (ReactiveQueue.is_empty frontier) do
     let k = ReactiveQueue.pop frontier in
     incr node_work;
@@ -232,11 +237,14 @@ module Invariants = struct
   let assert_ condition message =
     if enabled && not condition then failwith message
 
-  (* Debug-only: copies a ReactiveHash.Map set into a Hashtbl for diffing.
+  (* Debug-only: copies a set into a Hashtbl for diffing.
      These allocations are acceptable since Invariants is opt-in debug code. *)
-  let copy_rh_set_to_hashtbl (rh : ('k, unit) ReactiveHash.Map.t) =
-    let out = Hashtbl.create (ReactiveHash.Map.cardinal rh) in
-    ReactiveHash.Map.iter (fun k () -> Hashtbl.replace out k ()) rh;
+  let copy_set_to_hashtbl (s : 'k ReactiveSet.t) =
+    let out = Hashtbl.create (ReactiveSet.cardinal s) in
+    ReactiveSet.iter_with
+      (fun out k ->
+        Hashtbl.replace out (ReactiveAllocator.unsafe_from_offheap k) ())
+      out s;
     out
 
   let set_equal a b =
@@ -281,7 +289,7 @@ module Invariants = struct
           let expected_has_new =
             analyze_edge_change_has_new ~old_succs ~new_succs
           in
-          let actual_has_new = ReactiveHash.Set.mem edge_has_new src in
+          let actual_has_new = ReactiveSet.mem edge_has_new (off_key src) in
           assert_
             (expected_has_new = actual_has_new)
             "ReactiveFixpoint.apply invariant failed: inconsistent edge_has_new")
@@ -289,40 +297,43 @@ module Invariants = struct
 
   let assert_deleted_nodes_closed ~current ~deleted_nodes ~old_successors =
     if enabled then
-      ReactiveHash.Map.iter
-        (fun k () ->
+      ReactiveSet.iter_with
+        (fun () k ->
+          let k = ReactiveAllocator.unsafe_from_offheap k in
           assert_
-            (ReactiveHash.Map.mem current k)
+            (ReactiveSet.mem current (off_key k))
             "ReactiveFixpoint.apply invariant failed: deleted node not in \
              current";
           List.iter
             (fun succ ->
-              if ReactiveHash.Map.mem current succ then
+              if ReactiveSet.mem current (off_key succ) then
                 assert_
-                  (ReactiveHash.Map.mem deleted_nodes succ)
+                  (ReactiveSet.mem deleted_nodes (off_key succ))
                   "ReactiveFixpoint.apply invariant failed: deleted closure \
                    broken")
             (old_successors k))
-        deleted_nodes
+        () deleted_nodes
 
   let assert_no_supported_deleted_left ~deleted_nodes ~current ~supported =
     if enabled then
-      ReactiveHash.Map.iter
-        (fun k () ->
-          if not (ReactiveHash.Map.mem current k) then
+      ReactiveSet.iter_with
+        (fun () k ->
+          let k = ReactiveAllocator.unsafe_from_offheap k in
+          if not (ReactiveSet.mem current (off_key k)) then
             assert_
               (not (supported k))
               "ReactiveFixpoint.apply invariant failed: supported deleted node \
                left behind")
-        deleted_nodes
+        () deleted_nodes
 
   let assert_current_minus_deleted ~pre_current ~current ~deleted_nodes =
     if enabled then (
       let expected = Hashtbl.copy pre_current in
-      ReactiveHash.Map.iter
-        (fun k () -> Hashtbl.remove expected k)
-        deleted_nodes;
-      let current_ht = copy_rh_set_to_hashtbl current in
+      ReactiveSet.iter_with
+        (fun expected k ->
+          Hashtbl.remove expected (ReactiveAllocator.unsafe_from_offheap k))
+        expected deleted_nodes;
+      let current_ht = copy_set_to_hashtbl current in
       assert_
         (set_equal expected current_ht)
         "ReactiveFixpoint.apply invariant failed: current != pre_current minus \
@@ -330,12 +341,13 @@ module Invariants = struct
 
   let assert_removal_output_matches ~output_entries ~deleted_nodes ~current =
     if enabled then (
-      let expected = Hashtbl.create (ReactiveHash.Map.cardinal deleted_nodes) in
-      ReactiveHash.Map.iter
-        (fun k () ->
-          if not (ReactiveHash.Map.mem current k) then
+      let expected = Hashtbl.create (ReactiveSet.cardinal deleted_nodes) in
+      ReactiveSet.iter_with
+        (fun expected k ->
+          let k = ReactiveAllocator.unsafe_from_offheap k in
+          if not (ReactiveSet.mem current (off_key k)) then
             Hashtbl.replace expected k ())
-        deleted_nodes;
+        expected deleted_nodes;
       let actual = Hashtbl.create (List.length output_entries) in
       List.iter
         (fun (k, mv) ->
@@ -348,25 +360,24 @@ module Invariants = struct
   let assert_final_fixpoint_and_delta ~visited ~t ~pre_current ~output_entries =
     if enabled then (
       ignore (compute_reachable ~visited t);
-      let reachable = copy_rh_set_to_hashtbl visited in
-      let current_ht = copy_rh_set_to_hashtbl t.current in
+      let reachable = copy_set_to_hashtbl visited in
+      let current_ht = copy_set_to_hashtbl t.current in
       assert_
         (set_equal reachable current_ht)
         "ReactiveFixpoint.apply invariant failed: current is not a fixed-point \
          closure";
 
-      let expected_adds =
-        Hashtbl.create (ReactiveHash.Map.cardinal t.current)
-      in
+      let expected_adds = Hashtbl.create (ReactiveSet.cardinal t.current) in
       let expected_removes = Hashtbl.create (Hashtbl.length pre_current) in
-      ReactiveHash.Map.iter
-        (fun k () ->
+      ReactiveSet.iter_with
+        (fun expected_adds k ->
+          let k = ReactiveAllocator.unsafe_from_offheap k in
           if not (Hashtbl.mem pre_current k) then
             Hashtbl.replace expected_adds k ())
-        t.current;
+        expected_adds t.current;
       Hashtbl.iter
         (fun k () ->
-          if not (ReactiveHash.Map.mem t.current k) then
+          if not (ReactiveSet.mem t.current (off_key k)) then
             Hashtbl.replace expected_removes k ())
         pre_current;
 
@@ -387,7 +398,7 @@ module Invariants = struct
               (pre=%d final=%d output=%d expected_adds=%d actual_adds=%d \
               expected_removes=%d actual_removes=%d)"
              (Hashtbl.length pre_current)
-             (ReactiveHash.Map.cardinal t.current)
+             (ReactiveSet.cardinal t.current)
              (List.length output_entries)
              (Hashtbl.length expected_adds)
              (Hashtbl.length actual_adds)
@@ -401,18 +412,18 @@ let create ~max_nodes ~max_edges =
   if max_edges <= 0 then
     invalid_arg "ReactiveFixpoint.create: max_edges must be > 0";
   {
-    current = ReactiveHash.Map.create ();
+    current = ReactiveSet.create ();
     edge_map = ReactiveHash.Map.create ();
     pred_map = ReactivePoolMapSet.create ~capacity:128;
-    roots = ReactiveHash.Map.create ();
+    roots = ReactiveSet.create ();
     output_wave = ReactiveWave.create ~max_entries:max_nodes ();
-    deleted_nodes = ReactiveHash.Map.create ();
-    rederive_pending = ReactiveHash.Map.create ();
-    expansion_seen = ReactiveHash.Map.create ();
+    deleted_nodes = ReactiveSet.create ();
+    rederive_pending = ReactiveSet.create ();
+    expansion_seen = ReactiveSet.create ();
     old_successors_for_changed = ReactiveHash.Map.create ();
-    scratch_set_a = ReactiveHash.Set.create ();
-    scratch_set_b = ReactiveHash.Set.create ();
-    edge_has_new = ReactiveHash.Set.create ();
+    scratch_set_a = ReactiveSet.create ();
+    scratch_set_b = ReactiveSet.create ();
+    edge_has_new = ReactiveSet.create ();
     delete_queue = ReactiveQueue.create ();
     rederive_queue = ReactiveQueue.create ();
     expansion_queue = ReactiveQueue.create ();
@@ -428,11 +439,21 @@ let create ~max_nodes ~max_edges =
         rederive_edges_scanned = 0;
         expansion_queue_pops = 0;
         expansion_edges_scanned = 0;
-        scratch_reachable = ReactiveHash.Map.create ();
+        scratch_reachable = ReactiveSet.create ();
       };
   }
 
-let destroy t = ReactiveWave.destroy t.output_wave
+let destroy t =
+  ReactiveSet.destroy t.current;
+  ReactiveSet.destroy t.roots;
+  ReactiveSet.destroy t.deleted_nodes;
+  ReactiveSet.destroy t.rederive_pending;
+  ReactiveSet.destroy t.expansion_seen;
+  ReactiveSet.destroy t.scratch_set_a;
+  ReactiveSet.destroy t.scratch_set_b;
+  ReactiveSet.destroy t.edge_has_new;
+  ReactiveSet.destroy t.metrics.scratch_reachable;
+  ReactiveWave.destroy t.output_wave
 let output_wave t = t.output_wave
 
 type 'k root_wave = ('k, unit ReactiveMaybe.t) ReactiveWave.t
@@ -441,9 +462,16 @@ type 'k output_wave = ('k, unit ReactiveMaybe.t) ReactiveWave.t
 type 'k root_snapshot = ('k, unit) ReactiveWave.t
 type 'k edge_snapshot = ('k, 'k list) ReactiveWave.t
 
-let iter_current t f = ReactiveHash.Map.iter f t.current
-let get_current t k = ReactiveHash.Map.find_maybe t.current k
-let current_length t = ReactiveHash.Map.cardinal t.current
+let iter_current t f =
+  ReactiveSet.iter_with
+    (fun f k -> f (ReactiveAllocator.unsafe_from_offheap k) ())
+    f t.current
+
+let get_current t k =
+  if ReactiveSet.mem t.current (off_key k) then ReactiveMaybe.some ()
+  else ReactiveMaybe.none
+
+let current_length t = ReactiveSet.cardinal t.current
 
 let recompute_current t = ignore (compute_reachable ~visited:t.current t)
 
@@ -452,7 +480,7 @@ let add_pred t ~target ~pred = ReactivePoolMapSet.add t.pred_map target pred
 let remove_pred t ~target ~pred =
   ReactivePoolMapSet.remove_from_set_and_recycle_if_empty t.pred_map target pred
 
-let has_live_pred_key t pred = ReactiveHash.Map.mem t.current pred
+let has_live_pred_key t pred = ReactiveSet.mem t.current (off_key pred)
 
 let has_live_predecessor t k =
   let r = ReactivePoolMapSet.find_maybe t.pred_map k in
@@ -475,33 +503,34 @@ let apply_edge_update t ~src ~new_successors =
     List.iter (fun target -> remove_pred t ~target ~pred:src) old_successors;
     ReactiveHash.Map.remove t.edge_map src
   | _, _ ->
-    ReactiveHash.Set.clear t.scratch_set_a;
-    ReactiveHash.Set.clear t.scratch_set_b;
-    List.iter (fun k -> ReactiveHash.Set.add t.scratch_set_a k) new_successors;
-    List.iter (fun k -> ReactiveHash.Set.add t.scratch_set_b k) old_successors;
+    ReactiveSet.clear t.scratch_set_a;
+    ReactiveSet.clear t.scratch_set_b;
+    List.iter
+      (fun k -> ReactiveSet.add t.scratch_set_a (off_key k))
+      new_successors;
+    List.iter
+      (fun k -> ReactiveSet.add t.scratch_set_b (off_key k))
+      old_successors;
 
     List.iter
       (fun target ->
-        if not (ReactiveHash.Set.mem t.scratch_set_a target) then
+        if not (ReactiveSet.mem t.scratch_set_a (off_key target)) then
           remove_pred t ~target ~pred:src)
       old_successors;
 
     List.iter
       (fun target ->
-        if not (ReactiveHash.Set.mem t.scratch_set_b target) then
+        if not (ReactiveSet.mem t.scratch_set_b (off_key target)) then
           add_pred t ~target ~pred:src)
       new_successors;
 
     ReactiveHash.Map.replace t.edge_map src new_successors
 
 let initialize t ~roots ~edges =
-  ReactiveHash.Map.clear t.roots;
+  ReactiveSet.clear t.roots;
   ReactiveHash.Map.clear t.edge_map;
   ReactivePoolMapSet.clear t.pred_map;
-  ReactiveWave.iter roots (fun k _ ->
-      ReactiveHash.Map.replace t.roots
-        (ReactiveAllocator.unsafe_from_offheap k)
-        ());
+  ReactiveWave.iter roots (fun k _ -> ReactiveSet.add t.roots k);
   ReactiveWave.iter edges (fun k successors ->
       apply_edge_update t
         ~src:(ReactiveAllocator.unsafe_from_offheap k)
@@ -509,7 +538,7 @@ let initialize t ~roots ~edges =
   recompute_current t
 
 let is_supported t k =
-  ReactiveHash.Map.mem t.roots k || has_live_predecessor t k
+  ReactiveSet.mem t.roots (off_key k) || has_live_predecessor t k
 
 let old_successors t k =
   let r = ReactiveHash.Map.find_maybe t.old_successors_for_changed k in
@@ -520,24 +549,24 @@ let old_successors t k =
 
 let mark_deleted t k =
   if
-    ReactiveHash.Map.mem t.current k
-    && not (ReactiveHash.Map.mem t.deleted_nodes k)
+    ReactiveSet.mem t.current (off_key k)
+    && not (ReactiveSet.mem t.deleted_nodes (off_key k))
   then (
-    ReactiveHash.Map.replace t.deleted_nodes k ();
+    ReactiveSet.add t.deleted_nodes (off_key k);
     ReactiveQueue.push t.delete_queue k)
 
 let enqueue_expand t k =
   if
-    ReactiveHash.Map.mem t.current k
-    && not (ReactiveHash.Map.mem t.expansion_seen k)
+    ReactiveSet.mem t.current (off_key k)
+    && not (ReactiveSet.mem t.expansion_seen (off_key k))
   then (
-    ReactiveHash.Map.replace t.expansion_seen k ();
+    ReactiveSet.add t.expansion_seen (off_key k);
     ReactiveQueue.push t.expansion_queue k)
 
 let add_live t k =
-  if not (ReactiveHash.Map.mem t.current k) then (
-    ReactiveHash.Map.replace t.current k ();
-    if not (ReactiveHash.Map.mem t.deleted_nodes k) then
+  if not (ReactiveSet.mem t.current (off_key k)) then (
+    ReactiveSet.add t.current (off_key k);
+    if not (ReactiveSet.mem t.deleted_nodes (off_key k)) then
       ReactiveWave.push t.output_wave
         (ReactiveAllocator.unsafe_to_offheap k)
         (ReactiveMaybe.maybe_unit_to_offheap (ReactiveMaybe.some ()));
@@ -545,32 +574,32 @@ let add_live t k =
 
 let enqueue_rederive_if_needed t k =
   if
-    ReactiveHash.Map.mem t.deleted_nodes k
-    && (not (ReactiveHash.Map.mem t.current k))
-    && (not (ReactiveHash.Map.mem t.rederive_pending k))
+    ReactiveSet.mem t.deleted_nodes (off_key k)
+    && (not (ReactiveSet.mem t.current (off_key k)))
+    && (not (ReactiveSet.mem t.rederive_pending (off_key k)))
     && is_supported t k
   then (
-    ReactiveHash.Map.replace t.rederive_pending k ();
+    ReactiveSet.add t.rederive_pending (off_key k);
     ReactiveQueue.push t.rederive_queue k)
 
 let scan_root_entry t k mv =
-  let had_root = ReactiveHash.Map.mem t.roots k in
+  let had_root = ReactiveSet.mem t.roots (off_key k) in
   if ReactiveMaybe.is_some mv then (
     if not had_root then ReactiveQueue.push t.added_roots_queue k)
   else if had_root then mark_deleted t k
 
-let set_add_k set k = ReactiveHash.Set.add set k
+let set_add_k set k = ReactiveSet.add set (off_key k)
 
 let rec mark_deleted_unless_in_set t set = function
   | [] -> ()
   | k :: rest ->
-    if not (ReactiveHash.Set.mem set k) then mark_deleted t k;
+    if not (ReactiveSet.mem set (off_key k)) then mark_deleted t k;
     mark_deleted_unless_in_set t set rest
 
 let rec list_exists_not_in_set set = function
   | [] -> false
   | k :: rest ->
-    (not (ReactiveHash.Set.mem set k)) || list_exists_not_in_set set rest
+    (not (ReactiveSet.mem set (off_key k))) || list_exists_not_in_set set rest
 
 let scan_edge_entry t src mv =
   let r = ReactiveHash.Map.find_maybe t.edge_map src in
@@ -583,26 +612,26 @@ let scan_edge_entry t src mv =
   ReactiveHash.Map.replace t.old_successors_for_changed src old_succs;
   ReactiveHash.Map.replace t.new_successors_for_changed src new_succs;
   ReactiveQueue.push t.edge_change_queue src;
-  let src_is_live = ReactiveHash.Map.mem t.current src in
+  let src_is_live = ReactiveSet.mem t.current (off_key src) in
   match (old_succs, new_succs) with
   | [], [] -> ()
-  | [], _ -> ReactiveHash.Set.add t.edge_has_new src
+  | [], _ -> ReactiveSet.add t.edge_has_new (off_key src)
   | _, [] -> if src_is_live then list_iter_with mark_deleted t old_succs
   | _, _ ->
-    ReactiveHash.Set.clear t.scratch_set_a;
-    ReactiveHash.Set.clear t.scratch_set_b;
+    ReactiveSet.clear t.scratch_set_a;
+    ReactiveSet.clear t.scratch_set_b;
     list_iter_with set_add_k t.scratch_set_a new_succs;
     list_iter_with set_add_k t.scratch_set_b old_succs;
     if src_is_live then mark_deleted_unless_in_set t t.scratch_set_a old_succs;
     if list_exists_not_in_set t.scratch_set_b new_succs then
-      ReactiveHash.Set.add t.edge_has_new src
+      ReactiveSet.add t.edge_has_new (off_key src)
 
 let apply_root_mutation t k mv =
-  if ReactiveMaybe.is_some mv then ReactiveHash.Map.replace t.roots k ()
-  else ReactiveHash.Map.remove t.roots k
+  if ReactiveMaybe.is_some mv then ReactiveSet.add t.roots (off_key k)
+  else ReactiveSet.remove t.roots (off_key k)
 
 let emit_removal t k () =
-  if not (ReactiveHash.Map.mem t.current k) then
+  if not (ReactiveSet.mem t.current (off_key k)) then
     ReactiveWave.push t.output_wave
       (ReactiveAllocator.unsafe_to_offheap k)
       ReactiveMaybe.none_offheap
@@ -610,24 +639,23 @@ let emit_removal t k () =
 let rebuild_edge_change_queue t src _succs =
   ReactiveQueue.push t.edge_change_queue src
 
-let remove_from_current t k () = ReactiveHash.Map.remove t.current k
+let remove_from_current t k = ReactiveSet.remove t.current k
 
-let enqueue_rederive_if_needed_kv t k () = enqueue_rederive_if_needed t k
+let enqueue_rederive_if_needed_kv t k = enqueue_rederive_if_needed t k
 
 let apply_list t ~roots ~edges =
   let pre_current =
-    if Invariants.enabled then
-      Some (Invariants.copy_rh_set_to_hashtbl t.current)
+    if Invariants.enabled then Some (Invariants.copy_set_to_hashtbl t.current)
     else None
   in
   (* Clear all scratch state up front *)
-  ReactiveHash.Map.clear t.deleted_nodes;
+  ReactiveSet.clear t.deleted_nodes;
   ReactiveQueue.clear t.delete_queue;
   ReactiveQueue.clear t.added_roots_queue;
   ReactiveQueue.clear t.edge_change_queue;
   ReactiveHash.Map.clear t.old_successors_for_changed;
   ReactiveHash.Map.clear t.new_successors_for_changed;
-  ReactiveHash.Set.clear t.edge_has_new;
+  ReactiveSet.clear t.edge_has_new;
   let m = t.metrics in
   Metrics.reset_per_call m;
 
@@ -690,7 +718,7 @@ let apply_list t ~roots ~edges =
   ReactiveHash.Map.iter_with rebuild_edge_change_queue t
     t.new_successors_for_changed;
 
-  ReactiveHash.Map.iter_with remove_from_current t t.deleted_nodes;
+  ReactiveSet.iter_with remove_from_current t t.deleted_nodes;
   (match pre_current with
   | Some pre ->
     Invariants.assert_current_minus_deleted ~pre_current:pre ~current:t.current
@@ -699,20 +727,23 @@ let apply_list t ~roots ~edges =
 
   (* Phase 4: rederive *)
   ReactiveQueue.clear t.rederive_queue;
-  ReactiveHash.Map.clear t.rederive_pending;
+  ReactiveSet.clear t.rederive_pending;
 
-  ReactiveHash.Map.iter_with enqueue_rederive_if_needed_kv t t.deleted_nodes;
+  ReactiveSet.iter_with
+    (fun t k ->
+      enqueue_rederive_if_needed_kv t (ReactiveAllocator.unsafe_from_offheap k))
+    t t.deleted_nodes;
 
   while not (ReactiveQueue.is_empty t.rederive_queue) do
     let k = ReactiveQueue.pop t.rederive_queue in
     if Metrics.enabled then m.rederive_queue_pops <- m.rederive_queue_pops + 1;
-    ReactiveHash.Map.remove t.rederive_pending k;
+    ReactiveSet.remove t.rederive_pending (off_key k);
     if
-      ReactiveHash.Map.mem t.deleted_nodes k
-      && (not (ReactiveHash.Map.mem t.current k))
+      ReactiveSet.mem t.deleted_nodes (off_key k)
+      && (not (ReactiveSet.mem t.current (off_key k)))
       && is_supported t k
     then (
-      ReactiveHash.Map.replace t.current k ();
+      ReactiveSet.add t.current (off_key k);
       if Metrics.enabled then m.rederived_nodes <- m.rederived_nodes + 1;
       let r = ReactiveHash.Map.find_maybe t.edge_map k in
       if ReactiveMaybe.is_some r then (
@@ -728,7 +759,7 @@ let apply_list t ~roots ~edges =
 
   (* Phase 5: expansion *)
   ReactiveQueue.clear t.expansion_queue;
-  ReactiveHash.Map.clear t.expansion_seen;
+  ReactiveSet.clear t.expansion_seen;
 
   (* Seed expansion from added roots *)
   while not (ReactiveQueue.is_empty t.added_roots_queue) do
@@ -739,8 +770,8 @@ let apply_list t ~roots ~edges =
   while not (ReactiveQueue.is_empty t.edge_change_queue) do
     let src = ReactiveQueue.pop t.edge_change_queue in
     if
-      ReactiveHash.Map.mem t.current src
-      && ReactiveHash.Set.mem t.edge_has_new src
+      ReactiveSet.mem t.current (off_key src)
+      && ReactiveSet.mem t.edge_has_new (off_key src)
     then enqueue_expand t src
   done;
 
@@ -755,7 +786,9 @@ let apply_list t ~roots ~edges =
           m.expansion_edges_scanned + List.length succs;
       list_iter_with add_live t succs)
   done;
-  ReactiveHash.Map.iter_with emit_removal t t.deleted_nodes;
+  ReactiveSet.iter_with
+    (fun t k -> emit_removal t (ReactiveAllocator.unsafe_from_offheap k) ())
+    t t.deleted_nodes;
   let output_entries_list =
     if Invariants.enabled then (
       let entries = ref [] in
@@ -792,7 +825,7 @@ let apply_list t ~roots ~edges =
     in
     Metrics.update ~init_entries:init_count ~edge_entries:edge_count
       ~output_entries:(ReactiveWave.count t.output_wave)
-      ~deleted_nodes:(ReactiveHash.Map.cardinal t.deleted_nodes)
+      ~deleted_nodes:(ReactiveSet.cardinal t.deleted_nodes)
       ~rederived_nodes:m.rederived_nodes ~incr_node_work ~incr_edge_work
       ~full_node_work ~full_edge_work
 

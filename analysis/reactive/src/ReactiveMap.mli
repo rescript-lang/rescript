@@ -14,6 +14,8 @@ val replace :
 
 val remove : ('k, 'v) t -> 'k ReactiveAllocator.offheap -> unit
 
+val mem : ('k, 'v) t -> 'k ReactiveAllocator.offheap -> bool
+
 val find_maybe :
   ('k, 'v) t ->
   'k ReactiveAllocator.offheap ->

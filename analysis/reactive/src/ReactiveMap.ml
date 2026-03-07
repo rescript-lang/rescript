@@ -130,6 +130,23 @@ let remove t k =
     else j := next t !j
   done
 
+let mem t k =
+  let empty : 'k ReactiveAllocator.offheap = empty_slot () in
+  let tomb : 'k ReactiveAllocator.offheap = tomb_slot () in
+  let j = ref (start t k) in
+  let found = ref false in
+  let done_ = ref false in
+  while not !done_ do
+    let current = ReactiveAllocator.Block2.get t.keys !j in
+    if current == empty then done_ := true
+    else if current == tomb then j := next t !j
+    else if current = k then (
+      found := true;
+      done_ := true)
+    else j := next t !j
+  done;
+  !found
+
 let find_maybe t k =
   let empty : 'k ReactiveAllocator.offheap = empty_slot () in
   let tomb : 'k ReactiveAllocator.offheap = tomb_slot () in

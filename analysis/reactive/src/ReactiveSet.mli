@@ -18,6 +18,12 @@ val clear : 'a t -> unit
 val add : 'a t -> 'a ReactiveAllocator.offheap -> unit
 (** Add an element to the set. Re-adding an existing element is a no-op. *)
 
+val remove : 'a t -> 'a ReactiveAllocator.offheap -> unit
+(** Remove an element from the set. Removing a missing element is a no-op. *)
+
+val mem : 'a t -> 'a ReactiveAllocator.offheap -> bool
+(** Test whether the set contains an element. *)
+
 val iter_with :
   ('b -> 'a ReactiveAllocator.offheap -> unit) -> 'b -> 'a t -> unit
 (** [iter_with f arg t] calls [f arg x] for each element. *)
