@@ -1,6 +1,6 @@
 (** A wave is a growable batch of key/value entries stored in off-heap
     allocator-backed storage. Its API is marked with
-    [ReactiveAllocator.offheap] so call sites make the boundary explicit.
+    [Allocator.offheap] so call sites make the boundary explicit.
     Current callers mostly use the unsafe conversions; those call sites are the
     audit surface for later enforcing the invariant. *)
 
@@ -16,22 +16,16 @@ val clear : ('k, 'v) t -> unit
 val destroy : ('k, 'v) t -> unit
 (** Release the wave's off-heap storage. The wave must not be used after this. *)
 
-val push :
-  ('k, 'v) t ->
-  'k ReactiveAllocator.offheap ->
-  'v ReactiveAllocator.offheap ->
-  unit
+val push : ('k, 'v) t -> 'k Allocator.offheap -> 'v Allocator.offheap -> unit
 (** Append one off-heap-marked entry to the wave. Callers are currently
     responsible for establishing the off-heap invariant before calling. *)
 
 val iter :
-  ('k, 'v) t ->
-  ('k ReactiveAllocator.offheap -> 'v ReactiveAllocator.offheap -> unit) ->
-  unit
+  ('k, 'v) t -> ('k Allocator.offheap -> 'v Allocator.offheap -> unit) -> unit
 
 val iter_with :
   ('k, 'v) t ->
-  ('a -> 'k ReactiveAllocator.offheap -> 'v ReactiveAllocator.offheap -> unit) ->
+  ('a -> 'k Allocator.offheap -> 'v Allocator.offheap -> unit) ->
   'a ->
   unit
 (** [iter_with t f arg] calls [f arg k v] for each entry.

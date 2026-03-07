@@ -1,11 +1,11 @@
 type 'a inner = 'a list
-type 'a t = 'a inner ReactiveAllocator.offheap
+type 'a t = 'a inner Allocator.offheap
 
-let unsafe_of_list = ReactiveAllocator.unsafe_to_offheap
-let of_list = ReactiveAllocator.to_offheap
-let list_of = ReactiveAllocator.unsafe_from_offheap
+let unsafe_of_list = Allocator.unsafe_to_offheap
+let of_list = Allocator.to_offheap
+let list_of = Allocator.unsafe_from_offheap
 let unsafe_of_offheap_list xs =
-  unsafe_of_list (ReactiveAllocator.unsafe_from_offheap xs)
+  unsafe_of_list (Allocator.unsafe_from_offheap xs)
 
 let empty () : 'a t = unsafe_of_list []
 

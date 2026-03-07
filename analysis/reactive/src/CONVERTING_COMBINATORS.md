@@ -96,17 +96,17 @@ static top-level function (no closure record needed). Available on
 `ReactiveHash.Map`, `ReactiveHash.Set`, `ReactiveWave`, and as
 `list_iter_with` for `'a list`.
 
-### Use `ReactiveMaybe` instead of `option` for lookups
+### Use `Maybe` instead of `option` for lookups
 
-`ReactiveHash.Map.find_maybe` returns a `ReactiveMaybe.t` — an
+`ReactiveHash.Map.find_maybe` returns a `Maybe.t` — an
 unboxed optional that avoids allocating `Some`. Use this instead of
 `find_opt` in hot paths:
 
 ```ocaml
 (* Zero allocation: *)
 let r = ReactiveHash.Map.find_maybe t.pred_map k in
-if ReactiveMaybe.is_some r then
-  use (ReactiveMaybe.unsafe_get r)
+if Maybe.is_some r then
+  use (Maybe.unsafe_get r)
 
 (* Allocates Some on hit: *)
 match ReactiveHash.Map.find_opt t.pred_map k with
@@ -152,7 +152,7 @@ instance.
 ### `unit option` is already unboxed
 
 OCaml represents `Some ()` identically to `()` at runtime — no
-allocation. Switching `unit option` to `ReactiveMaybe.t` does not
+allocation. Switching `unit option` to `Maybe.t` does not
 save allocations (confirmed by measurement). Focus optimization
 effort on closures and non-unit option types instead.
 

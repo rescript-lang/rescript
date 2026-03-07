@@ -32,8 +32,8 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
       decls_by_file
       ~key_of:(fun posFrom _targets -> posFrom.Lexing.pos_fname)
       ~f:(fun posFrom targets decls_mb emit ->
-        if ReactiveMaybe.is_some decls_mb then
-          let decls_in_file = ReactiveMaybe.unsafe_get decls_mb in
+        if Maybe.is_some decls_mb then
+          let decls_in_file = Maybe.unsafe_get decls_mb in
           List.iter
             (fun (decl_pos, decl) ->
               if pos_in_decl posFrom decl then emit decl_pos targets)
@@ -46,8 +46,8 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
       decls_by_file
       ~key_of:(fun posFrom _targets -> posFrom.Lexing.pos_fname)
       ~f:(fun posFrom targets decls_mb emit ->
-        if ReactiveMaybe.is_some decls_mb then
-          let decls_in_file = ReactiveMaybe.unsafe_get decls_mb in
+        if Maybe.is_some decls_mb then
+          let decls_in_file = Maybe.unsafe_get decls_mb in
           List.iter
             (fun (decl_pos, decl) ->
               if pos_in_decl posFrom decl then emit decl_pos targets)
@@ -62,7 +62,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
       ~key_of:(fun pos _decl -> pos)
       ~f:(fun pos _decl refs_mb emit ->
         let refs =
-          if ReactiveMaybe.is_some refs_mb then ReactiveMaybe.unsafe_get refs_mb
+          if Maybe.is_some refs_mb then Maybe.unsafe_get refs_mb
           else PosSet.empty
         in
         emit pos refs)
@@ -74,7 +74,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
       ~key_of:(fun pos _decl -> pos)
       ~f:(fun pos _decl refs_mb emit ->
         let refs =
-          if ReactiveMaybe.is_some refs_mb then ReactiveMaybe.unsafe_get refs_mb
+          if Maybe.is_some refs_mb then Maybe.unsafe_get refs_mb
           else PosSet.empty
         in
         emit pos refs)
@@ -86,8 +86,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
     ~key_of:(fun pos _value_targets -> pos)
     ~f:(fun pos value_targets type_targets_mb emit ->
       let type_targets =
-        if ReactiveMaybe.is_some type_targets_mb then
-          ReactiveMaybe.unsafe_get type_targets_mb
+        if Maybe.is_some type_targets_mb then Maybe.unsafe_get type_targets_mb
         else PosSet.empty
       in
       emit pos (value_targets, type_targets))

@@ -47,7 +47,7 @@ let pool_pop t =
 
 let ensure_inner t ko =
   let m = ReactiveHash.Map.find_maybe t.outer ko in
-  if ReactiveMaybe.is_some m then ReactiveMaybe.unsafe_get m
+  if Maybe.is_some m then Maybe.unsafe_get m
   else
     let inner = pool_pop t in
     ReactiveHash.Map.replace t.outer ko inner;
@@ -59,8 +59,8 @@ let replace t ko ki v =
 
 let remove_from_inner_and_recycle_if_empty t ko ki =
   let mb = ReactiveHash.Map.find_maybe t.outer ko in
-  if ReactiveMaybe.is_some mb then (
-    let inner = ReactiveMaybe.unsafe_get mb in
+  if Maybe.is_some mb then (
+    let inner = Maybe.unsafe_get mb in
     ReactiveHash.Map.remove inner ki;
     let after = ReactiveHash.Map.cardinal inner in
     if after = 0 then (
@@ -73,8 +73,8 @@ let remove_from_inner_and_recycle_if_empty t ko ki =
 
 let drain_outer t ko ctx f =
   let mb = ReactiveHash.Map.find_maybe t.outer ko in
-  if ReactiveMaybe.is_some mb then (
-    let inner = ReactiveMaybe.unsafe_get mb in
+  if Maybe.is_some mb then (
+    let inner = Maybe.unsafe_get mb in
     ReactiveHash.Map.iter_with f ctx inner;
     ReactiveHash.Map.remove t.outer ko;
     ReactiveHash.Map.clear inner;
@@ -86,13 +86,12 @@ let find_inner_maybe t ko = ReactiveHash.Map.find_maybe t.outer ko
 
 let iter_inner_with t ko ctx f =
   let mb = ReactiveHash.Map.find_maybe t.outer ko in
-  if ReactiveMaybe.is_some mb then
-    ReactiveHash.Map.iter_with f ctx (ReactiveMaybe.unsafe_get mb)
+  if Maybe.is_some mb then
+    ReactiveHash.Map.iter_with f ctx (Maybe.unsafe_get mb)
 
 let inner_cardinal t ko =
   let mb = ReactiveHash.Map.find_maybe t.outer ko in
-  if ReactiveMaybe.is_some mb then
-    ReactiveHash.Map.cardinal (ReactiveMaybe.unsafe_get mb)
+  if Maybe.is_some mb then ReactiveHash.Map.cardinal (Maybe.unsafe_get mb)
   else 0
 
 let outer_cardinal t = ReactiveHash.Map.cardinal t.outer

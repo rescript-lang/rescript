@@ -22,14 +22,13 @@ val destroy : ('k1, 'v1, 'k2, 'v2) t -> unit
 (** Release flatMap-owned off-heap storage. The state must not be used
     afterwards. *)
 
-val output_wave :
-  ('k1, 'v1, 'k2, 'v2) t -> ('k2, 'v2 ReactiveMaybe.t) ReactiveWave.t
+val output_wave : ('k1, 'v1, 'k2, 'v2) t -> ('k2, 'v2 Maybe.t) ReactiveWave.t
 (** The owned output wave populated by [process]. *)
 
 val push :
   ('k1, 'v1, 'k2, 'v2) t ->
-  'k1 ReactiveAllocator.offheap ->
-  'v1 ReactiveMaybe.t ReactiveAllocator.offheap ->
+  'k1 Allocator.offheap ->
+  'v1 Maybe.t Allocator.offheap ->
   unit
 (** Push an entry into the scratch table. *)
 
@@ -42,5 +41,5 @@ val init_entry : ('k1, 'v1, 'k2, 'v2) t -> 'k1 -> 'v1 -> unit
 (** Initialize from an existing source entry (during setup). *)
 
 val iter_target : ('k2 -> 'v2 -> unit) -> ('k1, 'v1, 'k2, 'v2) t -> unit
-val find_target : ('k1, 'v1, 'k2, 'v2) t -> 'k2 -> 'v2 ReactiveMaybe.t
+val find_target : ('k1, 'v1, 'k2, 'v2) t -> 'k2 -> 'v2 Maybe.t
 val target_length : ('k1, 'v1, 'k2, 'v2) t -> int

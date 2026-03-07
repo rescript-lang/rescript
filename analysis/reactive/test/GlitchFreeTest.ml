@@ -19,8 +19,8 @@ let track_deltas c =
   c.subscribe (fun wave ->
       let rev_entries = ref [] in
       ReactiveWave.iter wave (fun k mv ->
-          let k = ReactiveAllocator.unsafe_from_offheap k in
-          let mv = ReactiveAllocator.unsafe_from_offheap mv in
+          let k = Allocator.unsafe_from_offheap k in
+          let mv = Allocator.unsafe_from_offheap mv in
           rev_entries := (k, mv) :: !rev_entries);
       received := List.rev !rev_entries :: !received);
   received
@@ -30,7 +30,7 @@ let count_delta = function
   | entries ->
     List.fold_left
       (fun (a, r) (_, mv) ->
-        if ReactiveMaybe.is_some mv then (a + 1, r) else (a, r + 1))
+        if Maybe.is_some mv then (a + 1, r) else (a, r + 1))
       (0, 0) entries
 
 let sum_deltas deltas =
@@ -65,7 +65,7 @@ let test_same_source_anti_join () =
     Join.create ~name:"external_refs" refs decls
       ~key_of:(fun posFrom _posTo -> posFrom)
       ~f:(fun _posFrom posTo decl_mb emit ->
-        if not (ReactiveMaybe.is_some decl_mb) then emit posTo ())
+        if not (Maybe.is_some decl_mb) then emit posTo ())
       ~merge:(fun () () -> ())
       ()
   in
@@ -134,7 +134,7 @@ let test_multi_level_union () =
     Join.create ~name:"external_refs" all_refs decls
       ~key_of:(fun posFrom _posTo -> posFrom)
       ~f:(fun _posFrom posTo decl_mb emit ->
-        if not (ReactiveMaybe.is_some decl_mb) then emit posTo ())
+        if not (Maybe.is_some decl_mb) then emit posTo ())
       ~merge:(fun () () -> ())
       ()
   in
@@ -197,7 +197,7 @@ let test_real_pipeline_simulation () =
       exception_decls
       ~key_of:(fun path _loc -> path)
       ~f:(fun path loc decl_mb emit ->
-        if ReactiveMaybe.is_some decl_mb then emit path loc)
+        if Maybe.is_some decl_mb then emit path loc)
       ()
   in
 
@@ -218,7 +218,7 @@ let test_real_pipeline_simulation () =
     Join.create ~name:"external_value_refs" value_refs_from decls
       ~key_of:(fun posFrom _posTo -> posFrom)
       ~f:(fun _posFrom posTo decl_mb emit ->
-        if not (ReactiveMaybe.is_some decl_mb) then emit posTo ())
+        if not (Maybe.is_some decl_mb) then emit posTo ())
       ~merge:(fun () () -> ())
       ()
   in
@@ -250,7 +250,7 @@ let test_separate_sources () =
     Join.create ~name:"external_refs" refs_src decls_src
       ~key_of:(fun posFrom _posTo -> posFrom)
       ~f:(fun _posFrom posTo decl_mb emit ->
-        if not (ReactiveMaybe.is_some decl_mb) then emit posTo ())
+        if not (Maybe.is_some decl_mb) then emit posTo ())
       ~merge:(fun () () -> ())
       ()
   in

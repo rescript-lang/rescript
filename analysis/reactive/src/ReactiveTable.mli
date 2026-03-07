@@ -32,13 +32,13 @@ val capacity : 'a t -> int
 val clear : 'a t -> unit
 (** Remove all elements from the table without releasing its storage. *)
 
-val get : 'a t -> int -> 'a ReactiveAllocator.offheap
-val set : 'a t -> int -> 'a ReactiveAllocator.offheap -> unit
+val get : 'a t -> int -> 'a Allocator.offheap
+val set : 'a t -> int -> 'a Allocator.offheap -> unit
 
-val push : 'a t -> 'a ReactiveAllocator.offheap -> unit
+val push : 'a t -> 'a Allocator.offheap -> unit
 (** Append an element, growing via the allocator when needed. *)
 
-val pop : 'a t -> 'a ReactiveAllocator.offheap
+val pop : 'a t -> 'a Allocator.offheap
 (** Remove and return the last element. *)
 
 val shrink_to_fit : 'a t -> unit

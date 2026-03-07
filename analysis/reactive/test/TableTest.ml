@@ -5,10 +5,8 @@ let test_table_promoted_wave_lifecycle () =
   let iterations = 8 in
   let count = 128 in
   let width = 48 in
-  let initial_live_blocks = ReactiveAllocator.live_block_count () in
-  let initial_live_block_slots =
-    ReactiveAllocator.live_block_capacity_slots ()
-  in
+  let initial_live_blocks = Allocator.live_block_count () in
+  let initial_live_block_slots = Allocator.live_block_capacity_slots () in
   Gc.full_major ();
   ignore (AllocMeasure.words_since ());
   let t = ReactiveTable.create ~initial_capacity:1 in
@@ -28,38 +26,34 @@ let test_table_promoted_wave_lifecycle () =
     assert (produced_words > 0);
 
     for i = 0 to count - 1 do
-      assert (ReactiveAllocator.is_in_minor_heap fresh.(i))
+      assert (Allocator.is_in_minor_heap fresh.(i))
     done;
 
     Gc.full_major ();
 
     for i = 0 to count - 1 do
-      assert (not (ReactiveAllocator.is_in_minor_heap fresh.(i)))
+      assert (not (Allocator.is_in_minor_heap fresh.(i)))
     done;
 
     ignore (AllocMeasure.words_since ());
     ReactiveTable.clear t;
     for i = 0 to count - 1 do
-      ReactiveTable.push t (ReactiveAllocator.to_offheap fresh.(i))
+      ReactiveTable.push t (Allocator.to_offheap fresh.(i))
     done;
     assert (ReactiveTable.length t = count);
     assert (ReactiveTable.capacity t >= ReactiveTable.length t);
-    ReactiveTable.set t 0 (ReactiveAllocator.to_offheap fresh.(count - 1));
+    ReactiveTable.set t 0 (Allocator.to_offheap fresh.(count - 1));
     assert (
-      ReactiveAllocator.unsafe_from_offheap (ReactiveTable.get t 0)
-      == fresh.(count - 1));
+      Allocator.unsafe_from_offheap (ReactiveTable.get t 0) == fresh.(count - 1));
     for i = 0 to count - 1 do
       let expected = if i = 0 then fresh.(count - 1) else fresh.(i) in
-      let recovered =
-        ReactiveAllocator.unsafe_from_offheap (ReactiveTable.get t i)
-      in
+      let recovered = Allocator.unsafe_from_offheap (ReactiveTable.get t i) in
       assert (recovered == expected);
       assert (Bytes.get recovered 0 = Bytes.get expected 0);
       assert (Bytes.get recovered (width - 1) = Bytes.get expected (width - 1))
     done;
     assert (
-      ReactiveAllocator.unsafe_from_offheap (ReactiveTable.pop t)
-      == fresh.(count - 1));
+      Allocator.unsafe_from_offheap (ReactiveTable.pop t) == fresh.(count - 1));
     assert (ReactiveTable.length t = count - 1);
     ReactiveTable.shrink_to_fit t;
     assert (ReactiveTable.capacity t = ReactiveTable.length t);
@@ -76,9 +70,8 @@ let test_table_promoted_wave_lifecycle () =
   ReactiveTable.destroy t;
   let teardown_words = AllocMeasure.words_since () in
   assert (teardown_words = 0);
-  assert (ReactiveAllocator.live_block_count () = initial_live_blocks);
-  assert (
-    ReactiveAllocator.live_block_capacity_slots () = initial_live_block_slots);
+  assert (Allocator.live_block_count () = initial_live_blocks);
+  assert (Allocator.live_block_capacity_slots () = initial_live_block_slots);
   Printf.printf "  create=%d teardown=%d\n" create_words teardown_words;
   Printf.printf "PASSED\n\n"
 
@@ -99,7 +92,7 @@ let test_table_unsafe_minor_heap_demo () =
       let fresh = Bytes.make width c in
       Bytes.set fresh 0 c;
       Bytes.set fresh (width - 1) c;
-      ReactiveTable.push t (ReactiveAllocator.unsafe_to_offheap fresh)
+      ReactiveTable.push t (Allocator.unsafe_to_offheap fresh)
     done;
     Gc.compact ();
     for round = 1 to 200 do
@@ -118,7 +111,7 @@ let test_table_unsafe_minor_heap_demo () =
     for i = 0 to count - 1 do
       let expected = Char.chr ((i mod 26) + Char.code 'A') in
       let recovered : bytes =
-        ReactiveAllocator.unsafe_from_offheap (ReactiveTable.get t i)
+        Allocator.unsafe_from_offheap (ReactiveTable.get t i)
       in
       let ok =
         Bytes.length recovered = width

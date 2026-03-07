@@ -340,8 +340,7 @@ let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge
                    instead of mutable resolvedDead field. *)
                 let is_live pos = ReactiveSolver.is_pos_live ~t:solver pos in
                 let find_decl pos =
-                  ReactiveMaybe.to_option
-                    (Reactive.get merged.ReactiveMerge.decls pos)
+                  Maybe.to_option (Reactive.get merged.ReactiveMerge.decls pos)
                 in
                 let optional_args_state =
                   CrossFileItemsStore.compute_optional_args_state

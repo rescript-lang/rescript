@@ -9,7 +9,7 @@
 
 (** {1 Waves} *)
 
-type ('k, 'v) wave = ('k, 'v ReactiveMaybe.t) ReactiveWave.t
+type ('k, 'v) wave = ('k, 'v Maybe.t) ReactiveWave.t
 
 let create_wave () = ReactiveWave.create ()
 
@@ -455,7 +455,7 @@ type ('k, 'v) t = {
   name: string;
   subscribe: (('k, 'v) wave -> unit) -> unit;
   iter: ('k -> 'v -> unit) -> unit;
-  get: 'k -> 'v ReactiveMaybe.t;
+  get: 'k -> 'v Maybe.t;
   length: unit -> int;
   destroy: unit -> unit;
   stats: stats;
@@ -473,27 +473,27 @@ let name t = t.name
 
 let unsafe_wave_push wave k v =
   ReactiveWave.push wave
-    (ReactiveAllocator.unsafe_to_offheap k)
-    (ReactiveAllocator.unsafe_to_offheap v)
+    (Allocator.unsafe_to_offheap k)
+    (Allocator.unsafe_to_offheap v)
 
 (** {1 Source Collection} *)
 
 module Source = struct
   type ('k, 'v) tables = {
     tbl: ('k, 'v) ReactiveHash.Map.t;
-    pending: ('k, 'v ReactiveMaybe.t) ReactiveHash.Map.t;
+    pending: ('k, 'v Maybe.t) ReactiveHash.Map.t;
   }
 
   let apply_emit (tables : ('k, 'v) tables) k mv =
-    let k = ReactiveAllocator.unsafe_from_offheap k in
-    let mv = ReactiveAllocator.unsafe_from_offheap mv in
-    if ReactiveMaybe.is_some mv then (
-      let v = ReactiveMaybe.unsafe_get mv in
+    let k = Allocator.unsafe_from_offheap k in
+    let mv = Allocator.unsafe_from_offheap mv in
+    if Maybe.is_some mv then (
+      let v = Maybe.unsafe_get mv in
       ReactiveHash.Map.replace tables.tbl k v;
-      ReactiveHash.Map.replace tables.pending k (ReactiveMaybe.some v))
+      ReactiveHash.Map.replace tables.pending k (Maybe.some v))
     else (
       ReactiveHash.Map.remove tables.tbl k;
-      ReactiveHash.Map.replace tables.pending k ReactiveMaybe.none)
+      ReactiveHash.Map.replace tables.pending k Maybe.none)
 
   let create ~name () =
     let tbl : ('k, 'v) ReactiveHash.Map.t = ReactiveHash.Map.create () in
@@ -502,7 +502,7 @@ module Source = struct
     let output_wave = create_wave () in
     (* Pending deltas: accumulated by emit, flushed by process.
      Uses ReactiveHash.Map for zero-alloc deduplication (last-write-wins). *)
-    let pending : ('k, 'v ReactiveMaybe.t) ReactiveHash.Map.t =
+    let pending : ('k, 'v Maybe.t) ReactiveHash.Map.t =
       ReactiveHash.Map.create ()
     in
     let tables = {tbl; pending} in
@@ -539,7 +539,7 @@ module Source = struct
       }
     in
 
-    let emit (input_wave : ('k, 'v ReactiveMaybe.t) ReactiveWave.t) =
+    let emit (input_wave : ('k, 'v Maybe.t) ReactiveWave.t) =
       let count = ReactiveWave.count input_wave in
       my_stats.deltas_received <- my_stats.deltas_received + 1;
       my_stats.entries_received <- my_stats.entries_received + count;
@@ -801,8 +801,8 @@ end
 module Fixpoint = struct
   let unsafe_wave_map_replace pending k v =
     ReactiveHash.Map.replace pending
-      (ReactiveAllocator.unsafe_from_offheap k)
-      (ReactiveAllocator.unsafe_from_offheap v)
+      (Allocator.unsafe_from_offheap k)
+      (Allocator.unsafe_from_offheap v)
 
   let create ~name ~(init : ('k, unit) t) ~(edges : ('k, 'k list) t) () :
       ('k, unit) t =
@@ -832,10 +832,10 @@ module Fixpoint = struct
     let edge_wave = ReactiveWave.create ~max_entries:max_edge_wave_entries () in
     let subscribers = ref [] in
     let my_stats = create_stats () in
-    let root_pending : ('k, unit ReactiveMaybe.t) ReactiveHash.Map.t =
+    let root_pending : ('k, unit Maybe.t) ReactiveHash.Map.t =
       ReactiveHash.Map.create ()
     in
-    let edge_pending : ('k, 'k list ReactiveMaybe.t) ReactiveHash.Map.t =
+    let edge_pending : ('k, 'k list Maybe.t) ReactiveHash.Map.t =
       ReactiveHash.Map.create ()
     in
     let init_pending_count = ref 0 in
@@ -861,8 +861,8 @@ module Fixpoint = struct
       ReactiveHash.Map.iter_with
         (fun wave k mv ->
           ReactiveWave.push wave
-            (ReactiveAllocator.unsafe_to_offheap k)
-            (ReactiveAllocator.unsafe_to_offheap mv))
+            (Allocator.unsafe_to_offheap k)
+            (Allocator.unsafe_to_offheap mv))
         edge_wave edge_pending;
       ReactiveHash.Map.clear root_pending;
       ReactiveHash.Map.clear edge_pending;
@@ -920,8 +920,8 @@ module Fixpoint = struct
     init.iter (fun k () -> unsafe_wave_push init_roots_wave k ());
     edges.iter (fun k succs ->
         ReactiveWave.push init_edges_wave
-          (ReactiveAllocator.unsafe_to_offheap k)
-          (ReactiveAllocator.unsafe_to_offheap succs));
+          (Allocator.unsafe_to_offheap k)
+          (Allocator.unsafe_to_offheap succs));
     ReactiveFixpoint.initialize state ~roots:init_roots_wave
       ~edges:init_edges_wave;
     ReactiveWave.destroy init_roots_wave;

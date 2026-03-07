@@ -23,7 +23,7 @@ let int_to_offheap x = unsafe_to_offheap x
 let unit_to_offheap x = unsafe_to_offheap x
 
 let to_offheap x =
-  if is_in_minor_heap x then invalid_arg "ReactiveAllocator.to_offheap";
+  if is_in_minor_heap x then invalid_arg "Allocator.to_offheap";
   unsafe_to_offheap x
 
 module Block = struct
@@ -49,31 +49,31 @@ module Block = struct
   [@@noalloc]
 
   let create ~capacity =
-    check_non_negative "ReactiveAllocator.Block.create" capacity;
+    check_non_negative "Allocator.Block.create" capacity;
     create_unsafe capacity
 
   let resize block ~capacity =
-    check_non_negative "ReactiveAllocator.Block.resize" capacity;
+    check_non_negative "Allocator.Block.resize" capacity;
     resize_unsafe block capacity
 
   let get block index =
     let cap = capacity block in
-    if index < 0 || index >= cap then invalid_arg "ReactiveAllocator.Block.get";
+    if index < 0 || index >= cap then invalid_arg "Allocator.Block.get";
     unsafe_get block index
 
   let set block index value =
     let cap = capacity block in
-    if index < 0 || index >= cap then invalid_arg "ReactiveAllocator.Block.set";
+    if index < 0 || index >= cap then invalid_arg "Allocator.Block.set";
     unsafe_set block index value
 
   let blit ~src ~src_pos ~dst ~dst_pos ~len =
-    check_non_negative "ReactiveAllocator.Block.blit" src_pos;
-    check_non_negative "ReactiveAllocator.Block.blit" dst_pos;
-    check_non_negative "ReactiveAllocator.Block.blit" len;
+    check_non_negative "Allocator.Block.blit" src_pos;
+    check_non_negative "Allocator.Block.blit" dst_pos;
+    check_non_negative "Allocator.Block.blit" len;
     let src_cap = capacity src in
     let dst_cap = capacity dst in
     if src_pos + len > src_cap || dst_pos + len > dst_cap then
-      invalid_arg "ReactiveAllocator.Block.blit";
+      invalid_arg "Allocator.Block.blit";
     blit_unsafe src src_pos dst dst_pos len
 end
 

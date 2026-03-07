@@ -20,7 +20,7 @@ val remove_from_set_and_recycle_if_empty : ('k, 'v) t -> 'k -> 'v -> unit
 (** [remove_from_set_and_recycle_if_empty t k v] removes [v] from [k]'s set.
     If the set becomes empty, [k] is recycled. No-op if [k] is absent. *)
 
-val find_maybe : ('k, 'v) t -> 'k -> 'v ReactiveHash.Set.t ReactiveMaybe.t
+val find_maybe : ('k, 'v) t -> 'k -> 'v ReactiveHash.Set.t Maybe.t
 (** Zero-allocation lookup. *)
 
 val iter_with :

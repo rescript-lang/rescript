@@ -7,30 +7,30 @@ open TestHelpers
 
 let words_since = AllocMeasure.words_since
 
-let off = ReactiveAllocator.unsafe_to_offheap
-let off_int = ReactiveAllocator.int_to_offheap
-let off_unit = ReactiveAllocator.unit_to_offheap
-let off_maybe_int = ReactiveMaybe.maybe_int_to_offheap
-let off_maybe_unit = ReactiveMaybe.maybe_unit_to_offheap
+let off = Allocator.unsafe_to_offheap
+let off_int = Allocator.int_to_offheap
+let off_unit = Allocator.unit_to_offheap
+let off_maybe_int = Maybe.maybe_int_to_offheap
+let off_maybe_unit = Maybe.maybe_unit_to_offheap
 
 let unsafe_wave_push wave k v = ReactiveWave.push wave (off k) (off v)
 
 let print_offheap_usage () =
-  let blocks = ReactiveAllocator.live_block_count () in
-  let slots = ReactiveAllocator.live_block_capacity_slots () in
-  let bytes = slots * ReactiveAllocator.slot_size_bytes in
+  let blocks = Allocator.live_block_count () in
+  let slots = Allocator.live_block_capacity_slots () in
+  let bytes = slots * Allocator.slot_size_bytes in
   Printf.printf "  offheap: blocks=%d slots=%d bytes=%d\n" blocks slots bytes
 
 let reset_offheap_state () =
   Reactive.reset ();
-  ReactiveAllocator.reset ();
-  assert (ReactiveAllocator.live_block_count () = 0);
-  assert (ReactiveAllocator.live_block_capacity_slots () = 0)
+  Allocator.reset ();
+  assert (Allocator.live_block_count () = 0);
+  assert (Allocator.live_block_capacity_slots () = 0)
 
 let print_offheap_snapshot label =
-  let blocks = ReactiveAllocator.live_block_count () in
-  let slots = ReactiveAllocator.live_block_capacity_slots () in
-  let bytes = slots * ReactiveAllocator.slot_size_bytes in
+  let blocks = Allocator.live_block_count () in
+  let slots = Allocator.live_block_capacity_slots () in
+  let bytes = slots * Allocator.slot_size_bytes in
   Printf.printf "    %s: blocks=%d slots=%d bytes=%d\n" label blocks slots bytes
 
 (* ---- Fixpoint allocation ---- *)
@@ -49,15 +49,14 @@ let test_fixpoint_alloc_n n =
   ReactiveWave.push root_snap (off_int 0) (off_unit ());
   for i = 0 to n - 2 do
     ReactiveWave.push edge_snap (off_int i)
-      (ReactiveAllocator.to_offheap edge_values.(i))
+      (Allocator.to_offheap edge_values.(i))
   done;
   ReactiveFixpoint.initialize state ~roots:root_snap ~edges:edge_snap;
   assert (ReactiveFixpoint.current_length state = n);
 
   (* Pre-build waves once *)
-  ReactiveWave.push remove_root (off_int 0) ReactiveMaybe.none_offheap;
-  ReactiveWave.push add_root (off_int 0)
-    (off_maybe_unit (ReactiveMaybe.some ()));
+  ReactiveWave.push remove_root (off_int 0) Maybe.none_offheap;
+  ReactiveWave.push add_root (off_int 0) (off_maybe_unit (Maybe.some ()));
 
   (* Warmup *)
   for _ = 1 to 5 do
@@ -102,8 +101,7 @@ let test_flatmap_alloc_n n =
 
   (* Populate: n entries *)
   for i = 0 to n - 1 do
-    ReactiveFlatMap.push state (off_int i)
-      (off_maybe_int (ReactiveMaybe.some i))
+    ReactiveFlatMap.push state (off_int i) (off_maybe_int (Maybe.some i))
   done;
   ignore (ReactiveFlatMap.process state);
   assert (ReactiveFlatMap.target_length state = n);
@@ -111,13 +109,12 @@ let test_flatmap_alloc_n n =
   (* Warmup: toggle all entries (remove all, re-add all) *)
   for _ = 1 to 5 do
     for i = 0 to n - 1 do
-      ReactiveFlatMap.push state (off i) ReactiveMaybe.none_offheap
+      ReactiveFlatMap.push state (off i) Maybe.none_offheap
     done;
     ignore (ReactiveFlatMap.process state);
     assert (ReactiveFlatMap.target_length state = 0);
     for i = 0 to n - 1 do
-      ReactiveFlatMap.push state (off_int i)
-        (off_maybe_int (ReactiveMaybe.some i))
+      ReactiveFlatMap.push state (off_int i) (off_maybe_int (Maybe.some i))
     done;
     ignore (ReactiveFlatMap.process state);
     assert (ReactiveFlatMap.target_length state = n)
@@ -128,12 +125,11 @@ let test_flatmap_alloc_n n =
   ignore (words_since ());
   for _ = 1 to iters do
     for i = 0 to n - 1 do
-      ReactiveFlatMap.push state (off i) ReactiveMaybe.none_offheap
+      ReactiveFlatMap.push state (off i) Maybe.none_offheap
     done;
     ignore (ReactiveFlatMap.process state);
     for i = 0 to n - 1 do
-      ReactiveFlatMap.push state (off_int i)
-        (off_maybe_int (ReactiveMaybe.some i))
+      ReactiveFlatMap.push state (off_int i) (off_maybe_int (Maybe.some i))
     done;
     ignore (ReactiveFlatMap.process state)
   done;
@@ -159,8 +155,7 @@ let test_union_alloc_n n =
 
   (* Populate: n entries on the left side *)
   for i = 0 to n - 1 do
-    ReactiveUnion.push_left state (off_int i)
-      (off_maybe_int (ReactiveMaybe.some i))
+    ReactiveUnion.push_left state (off_int i) (off_maybe_int (Maybe.some i))
   done;
   ignore (ReactiveUnion.process state);
   assert (ReactiveUnion.target_length state = n);
@@ -168,13 +163,12 @@ let test_union_alloc_n n =
   (* Warmup: toggle all entries (remove all, re-add all) *)
   for _ = 1 to 5 do
     for i = 0 to n - 1 do
-      ReactiveUnion.push_left state (off i) ReactiveMaybe.none_offheap
+      ReactiveUnion.push_left state (off i) Maybe.none_offheap
     done;
     ignore (ReactiveUnion.process state);
     assert (ReactiveUnion.target_length state = 0);
     for i = 0 to n - 1 do
-      ReactiveUnion.push_left state (off_int i)
-        (off_maybe_int (ReactiveMaybe.some i))
+      ReactiveUnion.push_left state (off_int i) (off_maybe_int (Maybe.some i))
     done;
     ignore (ReactiveUnion.process state);
     assert (ReactiveUnion.target_length state = n)
@@ -185,12 +179,11 @@ let test_union_alloc_n n =
   ignore (words_since ());
   for _ = 1 to iters do
     for i = 0 to n - 1 do
-      ReactiveUnion.push_left state (off i) ReactiveMaybe.none_offheap
+      ReactiveUnion.push_left state (off i) Maybe.none_offheap
     done;
     ignore (ReactiveUnion.process state);
     for i = 0 to n - 1 do
-      ReactiveUnion.push_left state (off_int i)
-        (off_maybe_int (ReactiveMaybe.some i))
+      ReactiveUnion.push_left state (off_int i) (off_maybe_int (Maybe.some i))
     done;
     ignore (ReactiveUnion.process state)
   done;
@@ -217,8 +210,7 @@ let test_join_alloc_n n =
     ReactiveJoin.create
       ~key_of:(fun k _v -> k)
       ~f:(fun k v right_mb emit ->
-        if ReactiveMaybe.is_some right_mb then
-          emit k (v + ReactiveMaybe.unsafe_get right_mb))
+        if Maybe.is_some right_mb then emit k (v + Maybe.unsafe_get right_mb))
       ~merge:(fun _l r -> r)
       ~right_get:(ReactiveHash.Map.find_maybe right_tbl)
   in
@@ -228,8 +220,7 @@ let test_join_alloc_n n =
     ReactiveHash.Map.replace right_tbl i (i * 10)
   done;
   for i = 0 to n - 1 do
-    ReactiveJoin.push_left state (off_int i)
-      (off_maybe_int (ReactiveMaybe.some i))
+    ReactiveJoin.push_left state (off_int i) (off_maybe_int (Maybe.some i))
   done;
   ignore (ReactiveJoin.process state);
   assert (ReactiveJoin.target_length state = n);
@@ -237,13 +228,12 @@ let test_join_alloc_n n =
   (* Warmup: toggle all left entries *)
   for _ = 1 to 5 do
     for i = 0 to n - 1 do
-      ReactiveJoin.push_left state (off i) ReactiveMaybe.none_offheap
+      ReactiveJoin.push_left state (off i) Maybe.none_offheap
     done;
     ignore (ReactiveJoin.process state);
     assert (ReactiveJoin.target_length state = 0);
     for i = 0 to n - 1 do
-      ReactiveJoin.push_left state (off_int i)
-        (off_maybe_int (ReactiveMaybe.some i))
+      ReactiveJoin.push_left state (off_int i) (off_maybe_int (Maybe.some i))
     done;
     ignore (ReactiveJoin.process state);
     assert (ReactiveJoin.target_length state = n)
@@ -254,12 +244,11 @@ let test_join_alloc_n n =
   ignore (words_since ());
   for _ = 1 to iters do
     for i = 0 to n - 1 do
-      ReactiveJoin.push_left state (off i) ReactiveMaybe.none_offheap
+      ReactiveJoin.push_left state (off i) Maybe.none_offheap
     done;
     ignore (ReactiveJoin.process state);
     for i = 0 to n - 1 do
-      ReactiveJoin.push_left state (off_int i)
-        (off_maybe_int (ReactiveMaybe.some i))
+      ReactiveJoin.push_left state (off_int i) (off_maybe_int (Maybe.some i))
     done;
     ignore (ReactiveJoin.process state)
   done;
@@ -290,8 +279,7 @@ let test_reactive_join_alloc_n n =
     Reactive.Join.create ~name:"joined" left right
       ~key_of:(fun k _v -> k)
       ~f:(fun k v right_mb emit ->
-        if ReactiveMaybe.is_some right_mb then
-          emit k (v + ReactiveMaybe.unsafe_get right_mb))
+        if Maybe.is_some right_mb then emit k (v + Maybe.unsafe_get right_mb))
       ()
   in
 
@@ -307,11 +295,11 @@ let test_reactive_join_alloc_n n =
   (* Pre-build waves for the hot loop: toggle all left entries *)
   let remove_wave = ReactiveWave.create ~max_entries:n () in
   for i = 0 to n - 1 do
-    ReactiveWave.push remove_wave (off i) ReactiveMaybe.none_offheap
+    ReactiveWave.push remove_wave (off i) Maybe.none_offheap
   done;
   let add_wave = ReactiveWave.create ~max_entries:n () in
   for i = 0 to n - 1 do
-    unsafe_wave_push add_wave i (ReactiveMaybe.some i)
+    unsafe_wave_push add_wave i (Maybe.some i)
   done;
 
   (* Warmup *)
@@ -362,8 +350,7 @@ let test_reactive_fixpoint_alloc_n n =
   ReactiveWave.clear edge_wave;
   for i = 0 to n - 2 do
     ReactiveWave.push edge_wave (off_int i)
-      (ReactiveMaybe.maybe_offheap_list_to_offheap
-         (ReactiveMaybe.some edge_values_offheap.(i)))
+      (Maybe.maybe_offheap_list_to_offheap (Maybe.some edge_values_offheap.(i)))
   done;
   emit_edges edge_wave;
   let reachable = Reactive.Fixpoint.create ~name:"reachable" ~init ~edges () in
@@ -374,10 +361,9 @@ let test_reactive_fixpoint_alloc_n n =
 
   (* Pre-build waves for the hot loop *)
   let remove_wave = ReactiveWave.create ~max_entries:1 () in
-  ReactiveWave.push remove_wave (off_int 0) ReactiveMaybe.none_offheap;
+  ReactiveWave.push remove_wave (off_int 0) Maybe.none_offheap;
   let add_wave = ReactiveWave.create ~max_entries:1 () in
-  ReactiveWave.push add_wave (off_int 0)
-    (off_maybe_unit (ReactiveMaybe.some ()));
+  ReactiveWave.push add_wave (off_int 0) (off_maybe_unit (Maybe.some ()));
 
   (* Warmup *)
   for _ = 1 to 5 do
@@ -430,11 +416,11 @@ let test_reactive_union_alloc_n n =
   (* Pre-build waves: single wave with all n entries *)
   let remove_wave = ReactiveWave.create ~max_entries:n () in
   for i = 0 to n - 1 do
-    ReactiveWave.push remove_wave (off i) ReactiveMaybe.none_offheap
+    ReactiveWave.push remove_wave (off i) Maybe.none_offheap
   done;
   let add_wave = ReactiveWave.create ~max_entries:n () in
   for i = 0 to n - 1 do
-    unsafe_wave_push add_wave i (ReactiveMaybe.some i)
+    unsafe_wave_push add_wave i (Maybe.some i)
   done;
 
   (* Warmup *)
@@ -489,11 +475,11 @@ let test_reactive_flatmap_alloc_n n =
   (* Pre-build waves *)
   let remove_wave = ReactiveWave.create ~max_entries:n () in
   for i = 0 to n - 1 do
-    ReactiveWave.push remove_wave (off i) ReactiveMaybe.none_offheap
+    ReactiveWave.push remove_wave (off i) Maybe.none_offheap
   done;
   let add_wave = ReactiveWave.create ~max_entries:n () in
   for i = 0 to n - 1 do
-    unsafe_wave_push add_wave i (ReactiveMaybe.some i)
+    unsafe_wave_push add_wave i (Maybe.some i)
   done;
 
   (* Warmup *)

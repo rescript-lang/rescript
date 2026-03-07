@@ -4,7 +4,7 @@
     boundary explicit when such a list is stored in an off-heap container. *)
 
 type 'a inner
-type 'a t = 'a inner ReactiveAllocator.offheap
+type 'a t = 'a inner Allocator.offheap
 
 val unsafe_of_list : 'a list -> 'a t
 (** Reinterpret a list as offheap-marked without checking. *)
@@ -13,7 +13,7 @@ val of_list : 'a list -> 'a t
 (** Checked version of [unsafe_of_list]. Raises if the list is still in the
     minor heap. *)
 
-val unsafe_of_offheap_list : 'a list ReactiveAllocator.offheap -> 'a t
+val unsafe_of_offheap_list : 'a list Allocator.offheap -> 'a t
 (** Reinterpret an already offheap-marked list as an offheap-list value. *)
 
 val empty : unit -> 'a t

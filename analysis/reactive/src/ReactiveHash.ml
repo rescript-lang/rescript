@@ -125,7 +125,7 @@ let[@inline] table_find t x = find_probe t x (start t x)
 
 (* ---- find_maybe (zero-allocation) ---- *)
 
-let maybe_none_obj : Obj.t = Obj.repr ReactiveMaybe.none
+let maybe_none_obj : Obj.t = Obj.repr Maybe.none
 
 let rec find_maybe_probe t x j =
   let c = Array.unsafe_get t.keys j in
@@ -379,7 +379,7 @@ module Map = struct
   let find (type k v) (t : (k, v) t) (k : k) : v =
     (Obj.obj (table_find t (Obj.repr k)) : v)
 
-  let find_maybe (type k v) (t : (k, v) t) (k : k) : v ReactiveMaybe.t =
+  let find_maybe (type k v) (t : (k, v) t) (k : k) : v Maybe.t =
     Obj.obj (table_find_maybe t (Obj.repr k))
 
   let mem (type k v) (t : (k, v) t) (k : k) = table_mem t (Obj.repr k)

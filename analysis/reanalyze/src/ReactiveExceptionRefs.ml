@@ -48,8 +48,8 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
       exception_decls
       ~key_of:(fun path _loc_from -> path)
       ~f:(fun _path loc_from loc_to_mb emit ->
-        if ReactiveMaybe.is_some loc_to_mb then
-          let loc_to = ReactiveMaybe.unsafe_get loc_to_mb in
+        if Maybe.is_some loc_to_mb then
+          let loc_to = Maybe.unsafe_get loc_to_mb in
           (* Add value reference: pos_to -> pos_from (refs_to direction) *)
           emit loc_to.Location.loc_start
             (PosSet.singleton loc_from.Location.loc_start))

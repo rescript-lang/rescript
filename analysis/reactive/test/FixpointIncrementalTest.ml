@@ -29,7 +29,7 @@ let test_fixpoint_add_base () =
       | entries ->
         entries
         |> List.iter (fun (k, mv) ->
-               if ReactiveMaybe.is_some mv then added := k :: !added
+               if Maybe.is_some mv then added := k :: !added
                else removed := k :: !removed))
     fp;
 
@@ -67,7 +67,7 @@ let test_fixpoint_remove_base () =
       | entries ->
         List.iter
           (fun (k, mv) ->
-            if not (ReactiveMaybe.is_some mv) then removed := k :: !removed)
+            if not (Maybe.is_some mv) then removed := k :: !removed)
           entries)
     fp;
 
@@ -97,7 +97,7 @@ let test_fixpoint_add_edge () =
     (function
       | entries ->
         List.iter
-          (fun (k, mv) -> if ReactiveMaybe.is_some mv then added := k :: !added)
+          (fun (k, mv) -> if Maybe.is_some mv then added := k :: !added)
           entries)
     fp;
 
@@ -132,7 +132,7 @@ let test_fixpoint_remove_edge () =
       | entries ->
         List.iter
           (fun (k, mv) ->
-            if not (ReactiveMaybe.is_some mv) then removed := k :: !removed)
+            if not (Maybe.is_some mv) then removed := k :: !removed)
           entries)
     fp;
 
@@ -170,7 +170,7 @@ let test_fixpoint_cycle_removal () =
       | entries ->
         List.iter
           (fun (k, mv) ->
-            if not (ReactiveMaybe.is_some mv) then removed := k :: !removed)
+            if not (Maybe.is_some mv) then removed := k :: !removed)
           entries)
     fp;
 
@@ -210,7 +210,7 @@ let test_fixpoint_alternative_support () =
       | entries ->
         List.iter
           (fun (k, mv) ->
-            if not (ReactiveMaybe.is_some mv) then removed := k :: !removed)
+            if not (Maybe.is_some mv) then removed := k :: !removed)
           entries)
     fp;
 
@@ -286,7 +286,7 @@ let test_fixpoint_remove_spurious_root () =
       | entries ->
         entries
         |> List.iter (fun (k, mv) ->
-               if ReactiveMaybe.is_some mv then added := k :: !added
+               if Maybe.is_some mv then added := k :: !added
                else removed := k :: !removed))
     fp;
 
@@ -362,7 +362,7 @@ let test_fixpoint_remove_edge_entry_alternative_source () =
       | entries ->
         List.iter
           (fun (k, mv) ->
-            if not (ReactiveMaybe.is_some mv) then removed := k :: !removed)
+            if not (Maybe.is_some mv) then removed := k :: !removed)
           entries)
     fp;
 
@@ -412,7 +412,7 @@ let test_fixpoint_remove_edge_rederivation () =
       | entries ->
         entries
         |> List.iter (fun (k, mv) ->
-               if ReactiveMaybe.is_some mv then added := k :: !added
+               if Maybe.is_some mv then added := k :: !added
                else removed := k :: !removed))
     fp;
 
@@ -471,7 +471,7 @@ let test_fixpoint_remove_edge_entry_rederivation () =
       | entries ->
         List.iter
           (fun (k, mv) ->
-            if not (ReactiveMaybe.is_some mv) then removed := k :: !removed)
+            if not (Maybe.is_some mv) then removed := k :: !removed)
           entries)
     fp;
 
@@ -521,7 +521,7 @@ let test_fixpoint_remove_edge_entry_higher_rank_support () =
       | entries ->
         entries
         |> List.iter (fun (k, mv) ->
-               if ReactiveMaybe.is_some mv then added := k :: !added
+               if Maybe.is_some mv then added := k :: !added
                else removed := k :: !removed))
     fp;
 
@@ -591,7 +591,7 @@ let test_fixpoint_remove_edge_entry_needs_rederivation () =
       | entries ->
         List.iter
           (fun (k, mv) ->
-            if not (ReactiveMaybe.is_some mv) then removed := k :: !removed)
+            if not (Maybe.is_some mv) then removed := k :: !removed)
           entries)
     fp;
 
@@ -636,7 +636,7 @@ let test_fixpoint_remove_base_needs_rederivation () =
       | entries ->
         List.iter
           (fun (k, mv) ->
-            if not (ReactiveMaybe.is_some mv) then removed := k :: !removed)
+            if not (Maybe.is_some mv) then removed := k :: !removed)
           entries)
     fp;
 
@@ -673,7 +673,7 @@ let test_fixpoint_batch_overlapping_deletions () =
       | entries ->
         List.iter
           (fun (k, mv) ->
-            if not (ReactiveMaybe.is_some mv) then removed := k :: !removed)
+            if not (Maybe.is_some mv) then removed := k :: !removed)
           entries)
     fp;
 
@@ -716,7 +716,7 @@ let test_fixpoint_batch_delete_add_same_wave () =
       | entries ->
         List.iter
           (fun (k, mv) ->
-            if ReactiveMaybe.is_some mv then added := k :: !added
+            if Maybe.is_some mv then added := k :: !added
             else removed := k :: !removed)
           entries)
     fp;
@@ -760,7 +760,7 @@ let test_fixpoint_fanin_single_predecessor_removed () =
       | entries ->
         List.iter
           (fun (k, mv) ->
-            if not (ReactiveMaybe.is_some mv) then removed := k :: !removed)
+            if not (Maybe.is_some mv) then removed := k :: !removed)
           entries)
     fp;
 
@@ -801,7 +801,7 @@ let test_fixpoint_cycle_alternative_external_support () =
       | entries ->
         List.iter
           (fun (k, mv) ->
-            if not (ReactiveMaybe.is_some mv) then removed := k :: !removed)
+            if not (Maybe.is_some mv) then removed := k :: !removed)
           entries)
     fp;
 
@@ -857,7 +857,7 @@ let test_fixpoint_remove_then_readd_via_expansion_same_wave () =
       | entries ->
         List.iter
           (fun (k, mv) ->
-            if ReactiveMaybe.is_some mv then added := k :: !added
+            if Maybe.is_some mv then added := k :: !added
             else removed := k :: !removed)
           entries)
     fp;

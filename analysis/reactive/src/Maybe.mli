@@ -12,7 +12,7 @@ type 'a t
 val none : 'a t
 (** Unique sentinel representing the absent case. *)
 
-val none_offheap : 'a t ReactiveAllocator.offheap
+val none_offheap : 'a t Allocator.offheap
 (** Off-heap-marked form of [none]. Safe because the sentinel is allocated
     outside the minor heap and kept reachable for the lifetime of the process. *)
 
@@ -21,14 +21,14 @@ val is_none : 'a t -> bool
 val is_some : 'a t -> bool
 val unsafe_get : 'a t -> 'a
 
-val maybe_int_to_offheap : int t -> int t ReactiveAllocator.offheap
+val maybe_int_to_offheap : int t -> int t Allocator.offheap
 (** Safely mark an [int] maybe value as suitable for off-heap storage. *)
 
-val maybe_unit_to_offheap : unit t -> unit t ReactiveAllocator.offheap
+val maybe_unit_to_offheap : unit t -> unit t Allocator.offheap
 (** Safely mark a [unit] maybe value as suitable for off-heap storage. *)
 
 val maybe_offheap_list_to_offheap :
-  'a ReactiveOffheapList.t t -> 'a list t ReactiveAllocator.offheap
+  'a ReactiveOffheapList.t t -> 'a list t Allocator.offheap
 (** Mark a maybe value carrying an already offheap-marked list as suitable for
     storage in an off-heap container with semantic payload type ['a list]. *)
 

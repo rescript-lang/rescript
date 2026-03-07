@@ -18,8 +18,8 @@ let test_join () =
     Join.create ~name:"joined" left right
       ~key_of:(fun path _loc_from -> path)
       ~f:(fun _path loc_from decl_pos_mb emit ->
-        if ReactiveMaybe.is_some decl_pos_mb then
-          emit (ReactiveMaybe.unsafe_get decl_pos_mb) loc_from)
+        if Maybe.is_some decl_pos_mb then
+          emit (Maybe.unsafe_get decl_pos_mb) loc_from)
       ()
   in
 
@@ -84,8 +84,7 @@ let test_join_with_merge () =
     Join.create ~name:"joined" left right
       ~key_of:(fun _id path -> path) (* Look up by path *)
       ~f:(fun _id _path value_mb emit ->
-        if ReactiveMaybe.is_some value_mb then
-          emit 0 (ReactiveMaybe.unsafe_get value_mb))
+        if Maybe.is_some value_mb then emit 0 (Maybe.unsafe_get value_mb))
       ~merge:( + ) (* Sum values *)
       ()
   in

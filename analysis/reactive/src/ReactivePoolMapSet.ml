@@ -52,7 +52,7 @@ let pool_pop t =
 
 let ensure t k =
   let m = ReactiveHash.Map.find_maybe t.outer k in
-  if ReactiveMaybe.is_some m then ReactiveMaybe.unsafe_get m
+  if Maybe.is_some m then Maybe.unsafe_get m
   else
     let set = pool_pop t in
     ReactiveHash.Map.replace t.outer k set;
@@ -64,8 +64,8 @@ let add t k v =
 
 let drain_key t k ctx f =
   let mb = ReactiveHash.Map.find_maybe t.outer k in
-  if ReactiveMaybe.is_some mb then (
-    let set = ReactiveMaybe.unsafe_get mb in
+  if Maybe.is_some mb then (
+    let set = Maybe.unsafe_get mb in
     ReactiveHash.Set.iter_with f ctx set;
     ReactiveHash.Map.remove t.outer k;
     ReactiveHash.Set.clear set;
@@ -75,8 +75,8 @@ let drain_key t k ctx f =
 
 let remove_from_set_and_recycle_if_empty t k v =
   let mb = ReactiveHash.Map.find_maybe t.outer k in
-  if ReactiveMaybe.is_some mb then (
-    let set = ReactiveMaybe.unsafe_get mb in
+  if Maybe.is_some mb then (
+    let set = Maybe.unsafe_get mb in
     ReactiveHash.Set.remove set v;
     let after = ReactiveHash.Set.cardinal set in
     if after = 0 then (

@@ -24,7 +24,7 @@ val drain_outer :
     No-op if [ko] is absent. *)
 
 val find_inner_maybe :
-  ('ko, 'ki, 'v) t -> 'ko -> ('ki, 'v) ReactiveHash.Map.t ReactiveMaybe.t
+  ('ko, 'ki, 'v) t -> 'ko -> ('ki, 'v) ReactiveHash.Map.t Maybe.t
 (** Zero-allocation lookup of inner map by outer key. *)
 
 val iter_inner_with :

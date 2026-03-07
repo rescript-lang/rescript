@@ -17,8 +17,8 @@ let emit_set emit k v =
   let w = wave () in
   ReactiveWave.clear w;
   ReactiveWave.push w
-    (ReactiveAllocator.unsafe_to_offheap k)
-    (ReactiveAllocator.unsafe_to_offheap (ReactiveMaybe.some v));
+    (Allocator.unsafe_to_offheap k)
+    (Allocator.unsafe_to_offheap (Maybe.some v));
   emit w
 
 (** Emit a single edge-set entry, converting the successor list to the
@@ -27,18 +27,16 @@ let emit_edge_set emit k vs =
   let w = wave () in
   ReactiveWave.clear w;
   ReactiveWave.push w
-    (ReactiveAllocator.unsafe_to_offheap k)
-    (ReactiveMaybe.maybe_offheap_list_to_offheap
-       (ReactiveMaybe.some (ReactiveOffheapList.unsafe_of_list vs)));
+    (Allocator.unsafe_to_offheap k)
+    (Maybe.maybe_offheap_list_to_offheap
+       (Maybe.some (ReactiveOffheapList.unsafe_of_list vs)));
   emit w
 
 (** Emit a single remove entry *)
 let emit_remove emit k =
   let w = wave () in
   ReactiveWave.clear w;
-  ReactiveWave.push w
-    (ReactiveAllocator.unsafe_to_offheap k)
-    ReactiveMaybe.none_offheap;
+  ReactiveWave.push w (Allocator.unsafe_to_offheap k) Maybe.none_offheap;
   emit w
 
 (** Emit a batch of (key, value) set entries *)
@@ -48,8 +46,8 @@ let emit_sets emit entries =
   List.iter
     (fun (k, v) ->
       ReactiveWave.push w
-        (ReactiveAllocator.unsafe_to_offheap k)
-        (ReactiveAllocator.unsafe_to_offheap (ReactiveMaybe.some v)))
+        (Allocator.unsafe_to_offheap k)
+        (Allocator.unsafe_to_offheap (Maybe.some v)))
     entries;
   emit w
 
@@ -62,12 +60,10 @@ let emit_batch emit entries =
       match v_opt with
       | Some v ->
         ReactiveWave.push w
-          (ReactiveAllocator.unsafe_to_offheap k)
-          (ReactiveAllocator.unsafe_to_offheap (ReactiveMaybe.some v))
+          (Allocator.unsafe_to_offheap k)
+          (Allocator.unsafe_to_offheap (Maybe.some v))
       | None ->
-        ReactiveWave.push w
-          (ReactiveAllocator.unsafe_to_offheap k)
-          ReactiveMaybe.none_offheap)
+        ReactiveWave.push w (Allocator.unsafe_to_offheap k) Maybe.none_offheap)
     entries;
   emit w
 
@@ -80,13 +76,11 @@ let emit_edge_batch emit entries =
       match vs_opt with
       | Some vs ->
         ReactiveWave.push w
-          (ReactiveAllocator.unsafe_to_offheap k)
-          (ReactiveMaybe.maybe_offheap_list_to_offheap
-             (ReactiveMaybe.some (ReactiveOffheapList.unsafe_of_list vs)))
+          (Allocator.unsafe_to_offheap k)
+          (Maybe.maybe_offheap_list_to_offheap
+             (Maybe.some (ReactiveOffheapList.unsafe_of_list vs)))
       | None ->
-        ReactiveWave.push w
-          (ReactiveAllocator.unsafe_to_offheap k)
-          ReactiveMaybe.none_offheap)
+        ReactiveWave.push w (Allocator.unsafe_to_offheap k) Maybe.none_offheap)
     entries;
   emit w
 
@@ -97,8 +91,8 @@ let subscribe handler t =
   t.subscribe (fun wave ->
       let rev_entries = ref [] in
       ReactiveWave.iter wave (fun k mv ->
-          let k = ReactiveAllocator.unsafe_from_offheap k in
-          let mv = ReactiveAllocator.unsafe_from_offheap mv in
+          let k = Allocator.unsafe_from_offheap k in
+          let mv = Allocator.unsafe_from_offheap mv in
           rev_entries := (k, mv) :: !rev_entries);
       handler (List.rev !rev_entries))
 
@@ -110,7 +104,7 @@ let[@warning "-32"] track_changes () =
     | entries ->
       List.iter
         (fun (k, mv) ->
-          if ReactiveMaybe.is_some mv then added := k :: !added
+          if Maybe.is_some mv then added := k :: !added
           else removed := k :: !removed)
         entries
   in
@@ -137,7 +131,7 @@ let[@warning "-32"] write_lines path lines =
 (** {1 Maybe/option helpers} *)
 
 (** Convert [get] result to option for test assertions *)
-let get_opt t k = ReactiveMaybe.to_option (get t k)
+let get_opt t k = Maybe.to_option (get t k)
 
 (** {1 Common set modules} *)
 

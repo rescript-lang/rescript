@@ -58,7 +58,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
     Reactive.Join.create ~name:"solver.dead_decls" decls live
       ~key_of:(fun pos _decl -> pos)
       ~f:(fun pos decl live_mb emit ->
-        if not (ReactiveMaybe.is_some live_mb) then emit pos decl)
+        if not (Maybe.is_some live_mb) then emit pos decl)
       ()
   in
 
@@ -67,7 +67,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
     Reactive.Join.create ~name:"solver.live_decls" decls live
       ~key_of:(fun pos _decl -> pos)
       ~f:(fun pos decl live_mb emit ->
-        if ReactiveMaybe.is_some live_mb then emit pos decl)
+        if Maybe.is_some live_mb then emit pos decl)
       ()
   in
 
@@ -99,8 +99,8 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
         modules_with_live
         ~key_of:(fun modName (_loc, _fileName) -> modName)
         ~f:(fun modName (loc, fileName) live_mb emit ->
-          if not (ReactiveMaybe.is_some live_mb) then
-            emit modName (loc, fileName) (* dead: no live decls *))
+          if not (Maybe.is_some live_mb) then emit modName (loc, fileName)
+            (* dead: no live decls *))
         ()
   in
 
@@ -124,8 +124,8 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
     (* shouldReport checks annotations reactively *)
     let shouldReport (decl : Decl.t) =
       let ann = Reactive.get annotations decl.pos in
-      if ReactiveMaybe.is_some ann then
-        match ReactiveMaybe.unsafe_get ann with
+      if Maybe.is_some ann then
+        match Maybe.unsafe_get ann with
         | FileAnnotations.Live -> false
         | FileAnnotations.GenType -> false
         | FileAnnotations.Dead -> false
@@ -190,8 +190,8 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
       annotations
       ~key_of:(fun pos _decl -> pos)
       ~f:(fun pos decl ann_mb emit ->
-        if ReactiveMaybe.is_some ann_mb then
-          match ReactiveMaybe.unsafe_get ann_mb with
+        if Maybe.is_some ann_mb then
+          match Maybe.unsafe_get ann_mb with
           | FileAnnotations.Dead -> emit pos decl
           | _ -> ())
       ()
@@ -211,7 +211,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
       modules_with_reported
       ~key_of:(fun moduleName (_loc, _fileName) -> moduleName)
       ~f:(fun moduleName (loc, fileName) has_reported_mb emit ->
-        if ReactiveMaybe.is_some has_reported_mb then
+        if Maybe.is_some has_reported_mb then
           let loc =
             if loc.Location.loc_ghost then
               let pos =
@@ -253,8 +253,8 @@ let check_module_dead ~(dead_modules : (Name.t, Location.t * string) Reactive.t)
   if Hashtbl.mem reported_modules moduleName then None
   else
     let dm = Reactive.get dead_modules moduleName in
-    if ReactiveMaybe.is_some dm then (
-      let loc, fileName = ReactiveMaybe.unsafe_get dm in
+    if Maybe.is_some dm then (
+      let loc, fileName = Maybe.unsafe_get dm in
       Hashtbl.replace reported_modules moduleName ();
       let loc =
         if loc.Location.loc_ghost then
@@ -334,9 +334,8 @@ let iter_live_decls ~(t : t) (f : Decl.t -> unit) : unit =
     Returns true if pos is not a declaration (matches non-reactive behavior). *)
 let is_pos_live ~(t : t) (pos : Lexing.position) : bool =
   let d = Reactive.get t.decls pos in
-  if not (ReactiveMaybe.is_some d) then true
-    (* not a declaration, assume live *)
-  else ReactiveMaybe.is_some (Reactive.get t.live pos)
+  if not (Maybe.is_some d) then true (* not a declaration, assume live *)
+  else Maybe.is_some (Reactive.get t.live pos)
 
 (** Stats *)
 let stats ~(t : t) : int * int =

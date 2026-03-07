@@ -61,7 +61,7 @@ let create ~(merged : ReactiveMerge.t) : t =
       decls
       ~key_of:(fun posFrom _targets -> posFrom)
       ~f:(fun _posFrom targets decl_mb emit ->
-        if not (ReactiveMaybe.is_some decl_mb) then
+        if not (Maybe.is_some decl_mb) then
           (* posFrom is NOT a decl position, targets are externally referenced *)
           PosSet.elements targets |> List.iter (fun posTo -> emit posTo ()))
       ~merge:(fun () () -> ())
@@ -73,7 +73,7 @@ let create ~(merged : ReactiveMerge.t) : t =
       decls
       ~key_of:(fun posFrom _targets -> posFrom)
       ~f:(fun _posFrom targets decl_mb emit ->
-        if not (ReactiveMaybe.is_some decl_mb) then
+        if not (Maybe.is_some decl_mb) then
           (* posFrom is NOT a decl position, targets are externally referenced *)
           PosSet.elements targets |> List.iter (fun posTo -> emit posTo ()))
       ~merge:(fun () () -> ())
@@ -92,8 +92,8 @@ let create ~(merged : ReactiveMerge.t) : t =
     Reactive.Join.create ~name:"liveness.annotated_roots" decls annotations
       ~key_of:(fun pos _decl -> pos)
       ~f:(fun pos _decl ann_mb emit ->
-        if ReactiveMaybe.is_some ann_mb then
-          match ReactiveMaybe.unsafe_get ann_mb with
+        if Maybe.is_some ann_mb then
+          match Maybe.unsafe_get ann_mb with
           | FileAnnotations.Live | FileAnnotations.GenType -> emit pos ()
           | _ -> ())
       ~merge:(fun () () -> ())

@@ -15,9 +15,9 @@ type process_result = {
 
 val create :
   key_of:('k1 -> 'v1 -> 'k2) ->
-  f:('k1 -> 'v1 -> 'v2 ReactiveMaybe.t -> ('k3 -> 'v3 -> unit) -> unit) ->
+  f:('k1 -> 'v1 -> 'v2 Maybe.t -> ('k3 -> 'v3 -> unit) -> unit) ->
   merge:('v3 -> 'v3 -> 'v3) ->
-  right_get:('k2 -> 'v2 ReactiveMaybe.t) ->
+  right_get:('k2 -> 'v2 Maybe.t) ->
   ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t
 
 val destroy : ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t -> unit
@@ -25,20 +25,20 @@ val destroy : ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t -> unit
     afterwards. *)
 
 val output_wave :
-  ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t -> ('k3, 'v3 ReactiveMaybe.t) ReactiveWave.t
+  ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t -> ('k3, 'v3 Maybe.t) ReactiveWave.t
 (** The owned output wave populated by [process]. *)
 
 val push_left :
   ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t ->
-  'k1 ReactiveAllocator.offheap ->
-  'v1 ReactiveMaybe.t ReactiveAllocator.offheap ->
+  'k1 Allocator.offheap ->
+  'v1 Maybe.t Allocator.offheap ->
   unit
 (** Push an entry into the left scratch table. *)
 
 val push_right :
   ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t ->
-  'k2 ReactiveAllocator.offheap ->
-  'v2 ReactiveMaybe.t ReactiveAllocator.offheap ->
+  'k2 Allocator.offheap ->
+  'v2 Maybe.t Allocator.offheap ->
   unit
 (** Push an entry into the right scratch table. *)
 
@@ -52,5 +52,5 @@ val init_entry : ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t -> 'k1 -> 'v1 -> unit
 
 val iter_target :
   ('k3 -> 'v3 -> unit) -> ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t -> unit
-val find_target : ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t -> 'k3 -> 'v3 ReactiveMaybe.t
+val find_target : ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t -> 'k3 -> 'v3 Maybe.t
 val target_length : ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t -> int

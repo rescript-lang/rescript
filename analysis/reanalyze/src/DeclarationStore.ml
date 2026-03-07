@@ -17,7 +17,7 @@ let of_reactive reactive = Reactive reactive
 let find_opt t pos =
   match t with
   | Frozen decls -> Declarations.find_opt decls pos
-  | Reactive reactive -> ReactiveMaybe.to_option (Reactive.get reactive pos)
+  | Reactive reactive -> Maybe.to_option (Reactive.get reactive pos)
 
 let fold f t init =
   match t with

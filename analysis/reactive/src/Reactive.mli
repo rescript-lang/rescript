@@ -9,7 +9,7 @@
 
 (** {1 Waves} *)
 
-type ('k, 'v) wave = ('k, 'v ReactiveMaybe.t) ReactiveWave.t
+type ('k, 'v) wave = ('k, 'v Maybe.t) ReactiveWave.t
 (** Mutable wave buffer carrying batch entries *)
 
 (** {1 Statistics} *)
@@ -76,7 +76,7 @@ type ('k, 'v) t = {
   name: string;
   subscribe: (('k, 'v) wave -> unit) -> unit;
   iter: ('k -> 'v -> unit) -> unit;
-  get: 'k -> 'v ReactiveMaybe.t;
+  get: 'k -> 'v Maybe.t;
   length: unit -> int;
   destroy: unit -> unit;
   stats: stats;
@@ -86,7 +86,7 @@ type ('k, 'v) t = {
 (** A named reactive collection at a specific topological level *)
 
 val iter : ('k -> 'v -> unit) -> ('k, 'v) t -> unit
-val get : ('k, 'v) t -> 'k -> 'v ReactiveMaybe.t
+val get : ('k, 'v) t -> 'k -> 'v Maybe.t
 val length : ('k, 'v) t -> int
 val destroy : ('k, 'v) t -> unit
 val stats : ('k, 'v) t -> stats
@@ -99,11 +99,11 @@ module Source : sig
   val create :
     name:string ->
     unit ->
-    ('k, 'v) t * (('k, 'v ReactiveMaybe.t) ReactiveWave.t -> unit)
+    ('k, 'v) t * (('k, 'v Maybe.t) ReactiveWave.t -> unit)
   (** Create a named source collection.
       Returns the collection and an emit function that takes a wave.
-      Each wave entry is a key with [ReactiveMaybe.some v] for set
-      or [ReactiveMaybe.none] for remove.
+      Each wave entry is a key with [Maybe.some v] for set
+      or [Maybe.none] for remove.
       Emitting triggers propagation through the pipeline. *)
 end
 
@@ -127,7 +127,7 @@ module Join : sig
     ('k1, 'v1) t ->
     ('k2, 'v2) t ->
     key_of:('k1 -> 'v1 -> 'k2) ->
-    f:('k1 -> 'v1 -> 'v2 ReactiveMaybe.t -> ('k3 -> 'v3 -> unit) -> unit) ->
+    f:('k1 -> 'v1 -> 'v2 Maybe.t -> ('k3 -> 'v3 -> unit) -> unit) ->
     ?merge:('v3 -> 'v3 -> 'v3) ->
     unit ->
     ('k3, 'v3) t

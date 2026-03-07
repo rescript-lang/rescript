@@ -12,7 +12,7 @@ module Map : sig
   val replace : ('k, 'v) t -> 'k -> 'v -> unit
   val find_opt : ('k, 'v) t -> 'k -> 'v option
   val find : ('k, 'v) t -> 'k -> 'v
-  val find_maybe : ('k, 'v) t -> 'k -> 'v ReactiveMaybe.t
+  val find_maybe : ('k, 'v) t -> 'k -> 'v Maybe.t
   val mem : ('k, 'v) t -> 'k -> bool
   val remove : ('k, 'v) t -> 'k -> unit
 

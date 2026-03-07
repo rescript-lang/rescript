@@ -1,7 +1,7 @@
 (** Off-heap mutable sets for reactive internals.
 
     Elements are ordinary OCaml values. The set's backing storage lives in the
-    custom allocator via {!ReactiveAllocator.Block2}. *)
+    custom allocator via {!Allocator.Block2}. *)
 
 type 'a t
 
@@ -15,17 +15,16 @@ val destroy : 'a t -> unit
 val clear : 'a t -> unit
 (** Remove all elements while keeping the current storage. *)
 
-val add : 'a t -> 'a ReactiveAllocator.offheap -> unit
+val add : 'a t -> 'a Allocator.offheap -> unit
 (** Add an element to the set. Re-adding an existing element is a no-op. *)
 
-val remove : 'a t -> 'a ReactiveAllocator.offheap -> unit
+val remove : 'a t -> 'a Allocator.offheap -> unit
 (** Remove an element from the set. Removing a missing element is a no-op. *)
 
-val mem : 'a t -> 'a ReactiveAllocator.offheap -> bool
+val mem : 'a t -> 'a Allocator.offheap -> bool
 (** Test whether the set contains an element. *)
 
-val iter_with :
-  ('b -> 'a ReactiveAllocator.offheap -> unit) -> 'b -> 'a t -> unit
+val iter_with : ('b -> 'a Allocator.offheap -> unit) -> 'b -> 'a t -> unit
 (** [iter_with f arg t] calls [f arg x] for each element. *)
 
 val cardinal : 'a t -> int

@@ -54,8 +54,7 @@ let test_batch_fixpoint () =
       | entries ->
         incr batch_count;
         entries
-        |> List.iter (fun (_, mv) ->
-               if ReactiveMaybe.is_some mv then incr total_added))
+        |> List.iter (fun (_, mv) -> if Maybe.is_some mv then incr total_added))
     fp;
 
   (* Set up edges first *)

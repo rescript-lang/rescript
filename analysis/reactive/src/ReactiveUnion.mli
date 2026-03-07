@@ -20,21 +20,15 @@ val destroy : ('k, 'v) t -> unit
 (** Release union-owned off-heap storage. The state must not be used
     afterwards. *)
 
-val output_wave : ('k, 'v) t -> ('k, 'v ReactiveMaybe.t) ReactiveWave.t
+val output_wave : ('k, 'v) t -> ('k, 'v Maybe.t) ReactiveWave.t
 (** The owned output wave populated by [process]. *)
 
 val push_left :
-  ('k, 'v) t ->
-  'k ReactiveAllocator.offheap ->
-  'v ReactiveMaybe.t ReactiveAllocator.offheap ->
-  unit
+  ('k, 'v) t -> 'k Allocator.offheap -> 'v Maybe.t Allocator.offheap -> unit
 (** Push an entry into the left scratch table. *)
 
 val push_right :
-  ('k, 'v) t ->
-  'k ReactiveAllocator.offheap ->
-  'v ReactiveMaybe.t ReactiveAllocator.offheap ->
-  unit
+  ('k, 'v) t -> 'k Allocator.offheap -> 'v Maybe.t Allocator.offheap -> unit
 (** Push an entry into the right scratch table. *)
 
 val process : ('k, 'v) t -> process_result
@@ -49,5 +43,5 @@ val init_right : ('k, 'v) t -> 'k -> 'v -> unit
 (** Initialize a right entry (during setup, after left). *)
 
 val iter_target : ('k -> 'v -> unit) -> ('k, 'v) t -> unit
-val find_target : ('k, 'v) t -> 'k -> 'v ReactiveMaybe.t
+val find_target : ('k, 'v) t -> 'k -> 'v Maybe.t
 val target_length : ('k, 'v) t -> int

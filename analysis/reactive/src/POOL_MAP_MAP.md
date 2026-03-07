@@ -92,7 +92,7 @@ val inner_cardinal : ('ko, 'ki, 'v) t -> 'ko -> int
 val outer_cardinal : ('ko, 'ki, 'v) t -> int
 
 val find_inner_maybe :
-  ('ko, 'ki, 'v) t -> 'ko -> ('ki, 'v) ReactiveHash.Map.t ReactiveMaybe.t
+  ('ko, 'ki, 'v) t -> 'ko -> ('ki, 'v) ReactiveHash.Map.t Maybe.t
 (** Optional: keep internal/private if we want stricter discipline. *)
 
 val tighten : ('ko, 'ki, 'v) t -> unit

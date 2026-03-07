@@ -105,8 +105,8 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
       decl_by_path
       ~key_of:(fun _pos (_, intf_path1, _) -> intf_path1)
       ~f:(fun _pos (info, _intf_path1, _intf_path2) intf_decls_mb emit ->
-        if ReactiveMaybe.is_some intf_decls_mb then
-          match ReactiveMaybe.unsafe_get intf_decls_mb with
+        if Maybe.is_some intf_decls_mb then
+          match Maybe.unsafe_get intf_decls_mb with
           | intf_info :: _ ->
             (* Found at path1: posTo=impl, posFrom=intf *)
             emit info.pos (PosSet.singleton intf_info.pos);
@@ -124,9 +124,9 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
       ~key_of:(fun _pos (_, intf_path1, _) -> intf_path1)
       ~f:(fun pos (info, _intf_path1, intf_path2) intf_decls_mb emit ->
         let found =
-          ReactiveMaybe.is_some intf_decls_mb
+          Maybe.is_some intf_decls_mb
           &&
-          match ReactiveMaybe.unsafe_get intf_decls_mb with
+          match Maybe.unsafe_get intf_decls_mb with
           | _ :: _ -> true
           | [] -> false
         in
@@ -139,8 +139,8 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
       impl_needing_path2 decl_by_path
       ~key_of:(fun _pos (_, intf_path2) -> intf_path2)
       ~f:(fun _pos (info, _) intf_decls_mb emit ->
-        if ReactiveMaybe.is_some intf_decls_mb then
-          match ReactiveMaybe.unsafe_get intf_decls_mb with
+        if Maybe.is_some intf_decls_mb then
+          match Maybe.unsafe_get intf_decls_mb with
           | intf_info :: _ ->
             (* posTo=impl, posFrom=intf *)
             emit info.pos (PosSet.singleton intf_info.pos);
@@ -176,8 +176,8 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
       decl_by_path
       ~key_of:(fun _pos (_, impl_path) -> impl_path)
       ~f:(fun _pos (intf_info, _) impl_decls_mb emit ->
-        if ReactiveMaybe.is_some impl_decls_mb then
-          match ReactiveMaybe.unsafe_get impl_decls_mb with
+        if Maybe.is_some impl_decls_mb then
+          match Maybe.unsafe_get impl_decls_mb with
           | impl_info :: _ ->
             (* Original: extendTypeDependencies loc1 loc where loc1=intf, loc=impl
                But wait, looking at the original code more carefully:
