@@ -353,6 +353,7 @@ let test_reactive_fixpoint_alloc_n n =
   Reactive.reset ();
   let edge_values = Array.init (max 0 (n - 1)) (fun i -> [i + 1]) in
   Gc.full_major ();
+  let edge_values_offheap = Array.map ReactiveOffheapList.of_list edge_values in
   let init, emit_root = Reactive.Source.create ~name:"init" () in
   let edges, emit_edges = Reactive.Source.create ~name:"edges" () in
 
@@ -361,7 +362,8 @@ let test_reactive_fixpoint_alloc_n n =
   ReactiveWave.clear edge_wave;
   for i = 0 to n - 2 do
     ReactiveWave.push edge_wave (off_int i)
-      (ReactiveAllocator.to_offheap (ReactiveMaybe.some edge_values.(i)))
+      (ReactiveMaybe.maybe_offheap_list_to_offheap
+         (ReactiveMaybe.some edge_values_offheap.(i)))
   done;
   emit_edges edge_wave;
   let reachable = Reactive.Fixpoint.create ~name:"reachable" ~init ~edges () in

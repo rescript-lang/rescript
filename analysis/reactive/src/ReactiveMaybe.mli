@@ -27,4 +27,9 @@ val maybe_int_to_offheap : int t -> int t ReactiveAllocator.offheap
 val maybe_unit_to_offheap : unit t -> unit t ReactiveAllocator.offheap
 (** Safely mark a [unit] maybe value as suitable for off-heap storage. *)
 
+val maybe_offheap_list_to_offheap :
+  'a ReactiveOffheapList.t t -> 'a list t ReactiveAllocator.offheap
+(** Mark a maybe value carrying an already offheap-marked list as suitable for
+    storage in an off-heap container with semantic payload type ['a list]. *)
+
 val to_option : 'a t -> 'a option

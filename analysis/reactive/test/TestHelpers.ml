@@ -21,6 +21,17 @@ let emit_set emit k v =
     (ReactiveAllocator.unsafe_to_offheap (ReactiveMaybe.some v));
   emit w
 
+(** Emit a single edge-set entry, converting the successor list to the
+    explicit offheap-list type. *)
+let emit_edge_set emit k vs =
+  let w = wave () in
+  ReactiveWave.clear w;
+  ReactiveWave.push w
+    (ReactiveAllocator.unsafe_to_offheap k)
+    (ReactiveMaybe.maybe_offheap_list_to_offheap
+       (ReactiveMaybe.some (ReactiveOffheapList.unsafe_of_list vs)));
+  emit w
+
 (** Emit a single remove entry *)
 let emit_remove emit k =
   let w = wave () in
@@ -53,6 +64,25 @@ let emit_batch emit entries =
         ReactiveWave.push w
           (ReactiveAllocator.unsafe_to_offheap k)
           (ReactiveAllocator.unsafe_to_offheap (ReactiveMaybe.some v))
+      | None ->
+        ReactiveWave.push w
+          (ReactiveAllocator.unsafe_to_offheap k)
+          ReactiveMaybe.none_offheap)
+    entries;
+  emit w
+
+(** Emit a batch of edge entries using the explicit offheap-list type. *)
+let emit_edge_batch emit entries =
+  let w = wave () in
+  ReactiveWave.clear w;
+  List.iter
+    (fun (k, vs_opt) ->
+      match vs_opt with
+      | Some vs ->
+        ReactiveWave.push w
+          (ReactiveAllocator.unsafe_to_offheap k)
+          (ReactiveMaybe.maybe_offheap_list_to_offheap
+             (ReactiveMaybe.some (ReactiveOffheapList.unsafe_of_list vs)))
       | None ->
         ReactiveWave.push w
           (ReactiveAllocator.unsafe_to_offheap k)

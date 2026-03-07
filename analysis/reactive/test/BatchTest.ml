@@ -59,8 +59,8 @@ let test_batch_fixpoint () =
     fp;
 
   (* Set up edges first *)
-  emit_set emit_edges "a" ["b"; "c"];
-  emit_set emit_edges "b" ["d"];
+  emit_edge_set emit_edges "a" ["b"; "c"];
+  emit_edge_set emit_edges "b" ["d"];
 
   (* Send batch of roots *)
   emit_sets emit_init [("a", ()); ("x", ())];

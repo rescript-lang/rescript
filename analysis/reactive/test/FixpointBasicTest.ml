@@ -11,9 +11,9 @@ let test_fixpoint () =
   let edges, emit_edges = Source.create ~name:"edges" () in
 
   (* Set up graph: 1 -> [2, 3], 2 -> [4], 3 -> [4] *)
-  emit_set emit_edges 1 [2; 3];
-  emit_set emit_edges 2 [4];
-  emit_set emit_edges 3 [4];
+  emit_edge_set emit_edges 1 [2; 3];
+  emit_edge_set emit_edges 2 [4];
+  emit_edge_set emit_edges 3 [4];
 
   (* Compute fixpoint *)
   let reachable = Fixpoint.create ~name:"reachable" ~init ~edges () in
@@ -34,7 +34,7 @@ let test_fixpoint () =
   assert (get_opt reachable 5 = None);
 
   (* Add another root 5 with edge 5 -> [6] *)
-  emit_set emit_edges 5 [6];
+  emit_edge_set emit_edges 5 [6];
   emit_set emit_init 5 ();
   Printf.printf "After adding root 5: length=%d\n" (length reachable);
   assert (length reachable = 6);
@@ -60,8 +60,8 @@ let test_fixpoint_basic_expansion () =
   let edges, emit_edges = Source.create ~name:"edges" () in
 
   (* Graph: a -> b -> c *)
-  emit_set emit_edges "a" ["b"];
-  emit_set emit_edges "b" ["c"];
+  emit_edge_set emit_edges "a" ["b"];
+  emit_edge_set emit_edges "b" ["c"];
 
   let fp = Fixpoint.create ~name:"fp" ~init ~edges () in
 
@@ -83,8 +83,8 @@ let test_fixpoint_multiple_roots () =
   let edges, emit_edges = Source.create ~name:"edges" () in
 
   (* Graph: a -> b, c -> d (disconnected components) *)
-  emit_set emit_edges "a" ["b"];
-  emit_set emit_edges "c" ["d"];
+  emit_edge_set emit_edges "a" ["b"];
+  emit_edge_set emit_edges "c" ["d"];
 
   let fp = Fixpoint.create ~name:"fp" ~init ~edges () in
 
@@ -107,9 +107,9 @@ let test_fixpoint_diamond () =
   let edges, emit_edges = Source.create ~name:"edges" () in
 
   (* Graph: a -> b, a -> c, b -> d, c -> d *)
-  emit_set emit_edges "a" ["b"; "c"];
-  emit_set emit_edges "b" ["d"];
-  emit_set emit_edges "c" ["d"];
+  emit_edge_set emit_edges "a" ["b"; "c"];
+  emit_edge_set emit_edges "b" ["d"];
+  emit_edge_set emit_edges "c" ["d"];
 
   let fp = Fixpoint.create ~name:"fp" ~init ~edges () in
 
@@ -127,9 +127,9 @@ let test_fixpoint_cycle () =
   let edges, emit_edges = Source.create ~name:"edges" () in
 
   (* Graph: a -> b -> c -> b (cycle from root) *)
-  emit_set emit_edges "a" ["b"];
-  emit_set emit_edges "b" ["c"];
-  emit_set emit_edges "c" ["b"];
+  emit_edge_set emit_edges "a" ["b"];
+  emit_edge_set emit_edges "b" ["c"];
+  emit_edge_set emit_edges "c" ["b"];
 
   let fp = Fixpoint.create ~name:"fp" ~init ~edges () in
 
@@ -149,7 +149,7 @@ let test_fixpoint_empty_base () =
   let init, _emit_init = Source.create ~name:"init" () in
   let edges, emit_edges = Source.create ~name:"edges" () in
 
-  emit_set emit_edges "a" ["b"];
+  emit_edge_set emit_edges "a" ["b"];
 
   let fp = Fixpoint.create ~name:"fp" ~init ~edges () in
 
@@ -165,7 +165,7 @@ let test_fixpoint_self_loop () =
   let edges, emit_edges = Source.create ~name:"edges" () in
 
   (* Graph: a -> a (self loop) *)
-  emit_set emit_edges "a" ["a"];
+  emit_edge_set emit_edges "a" ["a"];
 
   let fp = Fixpoint.create ~name:"fp" ~init ~edges () in
 
@@ -185,8 +185,8 @@ let test_fixpoint_existing_data () =
   emit_set emit_init "root" ();
 
   let edges, emit_edges = Source.create ~name:"edges" () in
-  emit_set emit_edges "root" ["a"; "b"];
-  emit_set emit_edges "a" ["c"];
+  emit_edge_set emit_edges "root" ["a"; "b"];
+  emit_edge_set emit_edges "a" ["c"];
 
   (* Create fixpoint - should immediately have all reachable *)
   let fp = Fixpoint.create ~name:"fp" ~init ~edges () in

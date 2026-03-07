@@ -835,7 +835,8 @@ module Fixpoint = struct
     let root_pending : ('k, unit ReactiveMaybe.t) ReactiveHash.Map.t =
       ReactiveHash.Map.create ()
     in
-    let edge_pending : ('k, 'k list ReactiveMaybe.t) ReactiveHash.Map.t =
+    let edge_pending :
+        ('k, 'k list ReactiveMaybe.t) ReactiveHash.Map.t =
       ReactiveHash.Map.create ()
     in
     let init_pending_count = ref 0 in
@@ -858,7 +859,12 @@ module Fixpoint = struct
       let root_entries = ReactiveHash.Map.cardinal root_pending in
       let edge_entries = ReactiveHash.Map.cardinal edge_pending in
       ReactiveHash.Map.iter_with unsafe_wave_push root_wave root_pending;
-      ReactiveHash.Map.iter_with unsafe_wave_push edge_wave edge_pending;
+      ReactiveHash.Map.iter_with
+        (fun wave k mv ->
+          ReactiveWave.push wave
+            (ReactiveAllocator.unsafe_to_offheap k)
+            (ReactiveAllocator.unsafe_to_offheap mv))
+        edge_wave edge_pending;
       ReactiveHash.Map.clear root_pending;
       ReactiveHash.Map.clear edge_pending;
 
@@ -907,13 +913,16 @@ module Fixpoint = struct
     let init_roots_wave =
       ReactiveWave.create ~max_entries:(max 1 (init.length ())) ()
     in
-    let init_edges_wave =
+    let init_edges_wave : ('k, 'k list) ReactiveWave.t =
       ReactiveWave.create ~max_entries:(max 1 (edges.length ())) ()
     in
     ReactiveWave.clear init_roots_wave;
     ReactiveWave.clear init_edges_wave;
     init.iter (fun k () -> unsafe_wave_push init_roots_wave k ());
-    edges.iter (fun k succs -> unsafe_wave_push init_edges_wave k succs);
+    edges.iter (fun k succs ->
+        ReactiveWave.push init_edges_wave
+          (ReactiveAllocator.unsafe_to_offheap k)
+          (ReactiveAllocator.unsafe_to_offheap succs));
     ReactiveFixpoint.initialize state ~roots:init_roots_wave
       ~edges:init_edges_wave;
     ReactiveWave.destroy init_roots_wave;
