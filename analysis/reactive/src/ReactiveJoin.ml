@@ -197,9 +197,8 @@ let process_right_scratch_entry (t : (_, _, _, _, _, _) t) k2 _mv =
   t.result.entries_received <- t.result.entries_received + 1;
   if Maybe.is_some _mv then t.result.adds_received <- t.result.adds_received + 1
   else t.result.removes_received <- t.result.removes_received + 1;
-  let mb = ReactivePoolMapSet.find_inner_maybe t.right_key_to_left_keys k2 in
-  if Maybe.is_some mb then
-    StableSet.iter_with (Obj.magic reprocess_left_entry) t (Maybe.unsafe_get mb)
+  ReactivePoolMapSet.iter_inner_with t.right_key_to_left_keys k2 t
+    reprocess_left_entry
 
 let count_output_entry (r : process_result) _k mv =
   let mv = Stable.unsafe_to_value mv in

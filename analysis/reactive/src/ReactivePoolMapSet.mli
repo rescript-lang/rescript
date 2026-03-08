@@ -22,11 +22,22 @@ val remove_from_set_and_recycle_if_empty : ('k, 'v) t -> 'k -> 'v -> unit
     No-op if [k] is absent. *)
 
 val find_inner_maybe : ('k, 'v) t -> 'k -> 'v StableSet.t Maybe.t
-(** Zero-allocation lookup.
+(** Zero-allocation lookup of the inner set by outer key.
 
     The returned inner set is owned by the pool-map. It becomes invalid if the
     outer binding is later removed, [clear] is called, or the whole structure is
-    [destroy]ed. *)
+    [destroy]ed. Prefer {!iter_inner_with} and {!exists_inner_with} when direct
+    access is not needed. *)
+
+val iter_inner_with :
+  ('k, 'v) t -> 'k -> 'a -> ('a -> 'v -> unit) -> unit
+(** [iter_inner_with t k ctx f] calls [f ctx v] for each element in [k]'s inner
+    set. No-op if [k] is absent. *)
+
+val exists_inner_with :
+  ('k, 'v) t -> 'k -> 'a -> ('a -> 'v -> bool) -> bool
+(** [exists_inner_with t k ctx f] returns [true] if [f ctx v] holds for some
+    element in [k]'s inner set. Returns [false] if [k] is absent. *)
 
 val iter_with :
   ('k, 'v) t -> 'a -> ('a -> 'k -> 'v StableSet.t -> unit) -> unit

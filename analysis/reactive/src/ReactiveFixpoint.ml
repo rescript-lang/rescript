@@ -475,10 +475,7 @@ let remove_pred t ~target ~pred =
 let has_live_pred_key t pred = StableSet.mem t.current (stable_key pred)
 
 let has_live_predecessor t k =
-  let r = ReactivePoolMapSet.find_inner_maybe t.pred_map k in
-  if Maybe.is_some r then
-    StableSet.exists_with (Obj.magic has_live_pred_key) t (Maybe.unsafe_get r)
-  else false
+  ReactivePoolMapSet.exists_inner_with t.pred_map k t has_live_pred_key
 
 let add_pred_for_src (t, src) target = add_pred t ~target ~pred:src
 let remove_pred_for_src (t, src) target = remove_pred t ~target ~pred:src
