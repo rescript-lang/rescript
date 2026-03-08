@@ -480,15 +480,14 @@ module Source = struct
   }
 
   let apply_emit (tables : ('k, 'v) tables) k mv =
-    let mv = Stable.unsafe_to_value mv in
+    let mv = Stable.to_linear_value mv in
     if Maybe.is_some mv then (
       let v = Maybe.unsafe_get mv in
       StableMap.replace tables.tbl k (Stable.unsafe_of_value v);
       StableMap.replace tables.pending k (Stable.unsafe_of_value (Maybe.some v)))
     else (
       StableMap.remove tables.tbl k;
-      StableMap.replace tables.pending k
-        (Stable.unsafe_of_value Maybe.none))
+      StableMap.replace tables.pending k (Stable.unsafe_of_value Maybe.none))
 
   let create ~name () =
     let tbl : ('k, 'v) StableMap.t = StableMap.create () in
@@ -509,7 +508,8 @@ module Source = struct
         StableWave.clear output_wave;
         StableMap.iter_with
           (fun wave k v ->
-            StableWave.push wave k (Stable.unsafe_of_value (Stable.unsafe_to_value v)))
+            StableWave.push wave k
+              (Stable.unsafe_of_value (Stable.to_linear_value v)))
           output_wave pending;
         StableMap.clear pending;
         notify_subscribers output_wave !subscribers)
@@ -533,13 +533,15 @@ module Source = struct
           (fun f ->
             StableMap.iter_with
               (fun f k v ->
-                f k (Stable.unsafe_of_value (Stable.unsafe_to_value v)))
+                f k (Stable.unsafe_of_value (Stable.to_linear_value v)))
               f tbl);
         get =
           (fun k ->
             let mb = StableMap.find_maybe tbl k in
             if Maybe.is_some mb then
-              Maybe.some (Stable.unsafe_of_value (Stable.unsafe_to_value (Maybe.unsafe_get mb)))
+              Maybe.some
+                (Stable.unsafe_of_value
+                   (Stable.to_linear_value (Maybe.unsafe_get mb)))
             else Maybe.none);
         length = (fun () -> StableMap.cardinal tbl);
         destroy;

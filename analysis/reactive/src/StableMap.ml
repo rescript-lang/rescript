@@ -31,7 +31,7 @@ let[@inline] get_val t j : 'v Stable.t =
 let[@inline] set_val t j (v : 'v Stable.t) =
   Allocator.Block2.set t (val_slot j) (Obj.magic v)
 
-let[@inline] start t x = Hashtbl.hash (Stable.unsafe_to_value x) land mask t
+let[@inline] start t x = Hashtbl.hash (Stable.to_linear_value x) land mask t
 let[@inline] next t j = (j + 1) land mask t
 let[@inline] crowded_or_full occ cap = 100 * occ > max_load_percent * cap
 

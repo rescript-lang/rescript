@@ -60,8 +60,8 @@ let push_right t k mv = StableMap.replace t.right_scratch k mv
 (* Module-level helpers for iter_with — avoid closure allocation *)
 
 let apply_left_entry t k mv =
-  let k = Stable.unsafe_to_value k in
-  let mv = Stable.unsafe_to_value mv in
+  let k = Stable.to_linear_value k in
+  let mv = Stable.to_linear_value mv in
   let r = t.result in
   r.entries_received <- r.entries_received + 1;
   if Maybe.is_some mv then (
@@ -74,8 +74,8 @@ let apply_left_entry t k mv =
   StableSet.add t.affected (Stable.unsafe_of_value k)
 
 let apply_right_entry t k mv =
-  let k = Stable.unsafe_to_value k in
-  let mv = Stable.unsafe_to_value mv in
+  let k = Stable.to_linear_value k in
+  let mv = Stable.to_linear_value mv in
   let r = t.result in
   r.entries_received <- r.entries_received + 1;
   if Maybe.is_some mv then (
@@ -88,7 +88,7 @@ let apply_right_entry t k mv =
   StableSet.add t.affected (Stable.unsafe_of_value k)
 
 let recompute_affected_entry t k =
-  let k = Stable.unsafe_to_value k in
+  let k = Stable.to_linear_value k in
   let r = t.result in
   let lv = StableMap.find_maybe t.left_values (Stable.unsafe_of_value k) in
   let rv = StableMap.find_maybe t.right_values (Stable.unsafe_of_value k) in
@@ -98,21 +98,21 @@ let recompute_affected_entry t k =
     if has_right then (
       let merged =
         t.merge
-          (Stable.unsafe_to_value (Maybe.unsafe_get lv))
-          (Stable.unsafe_to_value (Maybe.unsafe_get rv))
+          (Stable.to_linear_value (Maybe.unsafe_get lv))
+          (Stable.to_linear_value (Maybe.unsafe_get rv))
       in
       StableMap.replace t.target (Stable.unsafe_of_value k)
         (Stable.unsafe_of_value merged);
       StableWave.push t.output_wave (Stable.unsafe_of_value k)
         (Stable.unsafe_of_value (Maybe.some merged)))
     else
-      let v = Stable.unsafe_to_value (Maybe.unsafe_get lv) in
+      let v = Stable.to_linear_value (Maybe.unsafe_get lv) in
       StableMap.replace t.target (Stable.unsafe_of_value k)
         (Stable.unsafe_of_value v);
       StableWave.push t.output_wave (Stable.unsafe_of_value k)
         (Stable.unsafe_of_value (Maybe.some v)))
   else if has_right then (
-    let v = Stable.unsafe_to_value (Maybe.unsafe_get rv) in
+    let v = Stable.to_linear_value (Maybe.unsafe_get rv) in
     StableMap.replace t.target (Stable.unsafe_of_value k)
       (Stable.unsafe_of_value v);
     StableWave.push t.output_wave (Stable.unsafe_of_value k)
@@ -157,8 +157,8 @@ let init_right t k v =
     if Maybe.is_some lv then
       Stable.unsafe_of_value
         (t.merge
-           (Stable.unsafe_to_value (Maybe.unsafe_get lv))
-           (Stable.unsafe_to_value v))
+           (Stable.to_linear_value (Maybe.unsafe_get lv))
+           (Stable.to_linear_value v))
     else v
   in
   StableMap.replace t.target k merged

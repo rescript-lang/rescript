@@ -43,16 +43,16 @@ let test_file_collection () =
   iter
     (fun word count ->
       Printf.printf "  %s: %d\n"
-        (Stable.unsafe_to_value word)
-        (Stable.unsafe_to_value count))
+        (Stable.to_linear_value word)
+        (Stable.to_linear_value count))
     word_counts;
 
   Printf.printf "Frequent words (count >= 2):\n";
   iter
     (fun word count ->
       Printf.printf "  %s: %d\n"
-        (Stable.unsafe_to_value word)
-        (Stable.unsafe_to_value count))
+        (Stable.to_linear_value word)
+        (Stable.to_linear_value count))
     frequent_words;
 
   (* Verify: hello=3 (2 from a + 1 from b), world=1, foo=1 *)
@@ -76,16 +76,16 @@ let test_file_collection () =
   iter
     (fun word count ->
       Printf.printf "  %s: %d\n"
-        (Stable.unsafe_to_value word)
-        (Stable.unsafe_to_value count))
+        (Stable.to_linear_value word)
+        (Stable.to_linear_value count))
     word_counts;
 
   Printf.printf "Frequent words after modification:\n";
   iter
     (fun word count ->
       Printf.printf "  %s: %d\n"
-        (Stable.unsafe_to_value word)
-        (Stable.unsafe_to_value count))
+        (Stable.to_linear_value word)
+        (Stable.to_linear_value count))
     frequent_words;
 
   (* Verify: hello=2 (1 from a + 1 from b), world=2, foo=1 *)

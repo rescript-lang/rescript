@@ -1,13 +1,28 @@
-(** Values marked for storage in stable containers.
+(** Values marked for storage in stable (C-allocated) containers.
 
-    This type does not prove safety. It marks values that are crossing the
-    stable boundary so call sites can be audited explicitly. *)
+    Stable containers live outside the OCaml GC heap. This means the GC will
+    not trace or move their contents. Two consequences:
+
+    {b Storing values.} Only values that are {e not} in the minor heap may be
+    stored. Use [of_value] (checked) or [unsafe_of_value] (unchecked) to mark
+    a value before storing it. [unsafe_of_value] is the only truly unsafe
+    operation: if a minor-heap value is stored, the GC may relocate the
+    original and the stable container will hold a dangling pointer.
+
+    {b Reading values.} Use [to_linear_value] to read a value back. The
+    result is an ordinary OCaml value that is {e not} protected by the GC
+    (the stable container owns the only reference). The caller must consume
+    it immediately and not stash it in a long-lived OCaml data structure,
+    because the stable container may destroy or overwrite its slot at any
+    time. Short-lived uses (comparison, passing to a function, computing a
+    result) are fine. *)
 
 type 'a t
 
 val unsafe_of_value : 'a -> 'a t
 (** Unsafely mark a value as suitable for stable storage. The caller must
-    ensure the stable invariants hold. *)
+    ensure the value is not in the minor heap.
+    This is the only truly unsafe operation in the module. *)
 
 val of_value : 'a -> 'a t
 (** Safely mark a value as suitable for stable storage.
@@ -21,5 +36,7 @@ val int : int -> int t
 val unit : unit t
 (** [()] as a stable value. *)
 
-val unsafe_to_value : 'a t -> 'a
-(** Unsafely recover a regular OCaml value from a stable-marked value. *)
+val to_linear_value : 'a t -> 'a
+(** Read a value from a stable container. The result must be consumed
+    immediately (linear use) and not stored in long-lived OCaml structures,
+    as the stable container may destroy or overwrite the slot at any time. *)

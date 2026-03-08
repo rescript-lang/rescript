@@ -219,7 +219,7 @@ let test_join_alloc_n n =
         if Maybe.is_some mb then
           Maybe.some
             (Stable.unsafe_of_value
-               (Stable.unsafe_to_value (Maybe.unsafe_get mb)))
+               (Stable.to_linear_value (Maybe.unsafe_get mb)))
         else Maybe.none)
   in
 

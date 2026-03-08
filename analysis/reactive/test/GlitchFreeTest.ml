@@ -19,8 +19,8 @@ let track_deltas c =
   c.subscribe (fun wave ->
       let rev_entries = ref [] in
       StableWave.iter wave (fun k mv ->
-          let k = Stable.unsafe_to_value k in
-          let mv = Stable.unsafe_to_value mv in
+          let k = Stable.to_linear_value k in
+          let mv = Stable.to_linear_value mv in
           rev_entries := (k, mv) :: !rev_entries);
       received := List.rev !rev_entries :: !received);
   received

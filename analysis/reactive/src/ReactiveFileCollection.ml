@@ -89,9 +89,7 @@ let process_files_batch t paths =
 let remove t path =
   Hashtbl.remove t.internal.cache path;
   StableWave.clear t.scratch_wave;
-  StableWave.push t.scratch_wave
-    (Stable.unsafe_of_value path)
-    Maybe.none_stable;
+  StableWave.push t.scratch_wave (Stable.unsafe_of_value path) Maybe.none_stable;
   t.emit t.scratch_wave
 
 (** Remove multiple files as a batch *)
@@ -125,4 +123,4 @@ let mem t path = Hashtbl.mem t.internal.cache path
 let length t = Reactive.length t.collection
 let iter f t =
   t.collection.iter (fun k v ->
-      f (Stable.unsafe_to_value k) (Stable.unsafe_to_value v))
+      f (Stable.to_linear_value k) (Stable.to_linear_value v))

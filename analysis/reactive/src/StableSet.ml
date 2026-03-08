@@ -29,7 +29,7 @@ let set_population = Allocator.Block2.set0
 let mask = Allocator.Block2.get1
 let set_mask = Allocator.Block2.set1
 
-let[@inline] start t x = Hashtbl.hash (Stable.unsafe_to_value x) land mask t
+let[@inline] start t x = Hashtbl.hash (Stable.to_linear_value x) land mask t
 let[@inline] next t j = (j + 1) land mask t
 
 let[@inline] crowded_or_full pop cap = 100 * pop > max_load_percent * cap

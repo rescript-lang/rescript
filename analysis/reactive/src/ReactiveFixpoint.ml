@@ -73,7 +73,7 @@ let compute_reachable ~visited t =
   let edge_work = ref 0 in
   StableSet.iter_with
     (fun (visited, frontier) k ->
-      bfs_seed_root visited frontier t (Stable.unsafe_to_value k) ())
+      bfs_seed_root visited frontier t (Stable.to_linear_value k) ())
     (visited, frontier) t.roots;
   while not (StableQueue.is_empty frontier) do
     let k = StableQueue.pop frontier in
@@ -230,7 +230,7 @@ module Invariants = struct
   let copy_set_to_hashtbl (s : 'k StableSet.t) =
     let out = Hashtbl.create (StableSet.cardinal s) in
     StableSet.iter_with
-      (fun out k -> Hashtbl.replace out (Stable.unsafe_to_value k) ())
+      (fun out k -> Hashtbl.replace out (Stable.to_linear_value k) ())
       out s;
     out
 
@@ -248,7 +248,7 @@ module Invariants = struct
       (* Drain and re-push to iterate without consuming *)
       let items = ref [] in
       while not (StableQueue.is_empty edge_change_queue) do
-        let src = Stable.unsafe_to_value (StableQueue.pop edge_change_queue) in
+        let src = Stable.to_linear_value (StableQueue.pop edge_change_queue) in
         items := src :: !items;
         enqueue q_copy src
       done;
@@ -286,7 +286,7 @@ module Invariants = struct
     if enabled then
       StableSet.iter_with
         (fun () k ->
-          let k = Stable.unsafe_to_value k in
+          let k = Stable.to_linear_value k in
           assert_
             (StableSet.mem current (stable_key k))
             "ReactiveFixpoint.apply invariant failed: deleted node not in \
@@ -305,7 +305,7 @@ module Invariants = struct
     if enabled then
       StableSet.iter_with
         (fun () k ->
-          let k = Stable.unsafe_to_value k in
+          let k = Stable.to_linear_value k in
           if not (StableSet.mem current (stable_key k)) then
             assert_
               (not (supported k))
@@ -317,7 +317,7 @@ module Invariants = struct
     if enabled then (
       let expected = Hashtbl.copy pre_current in
       StableSet.iter_with
-        (fun expected k -> Hashtbl.remove expected (Stable.unsafe_to_value k))
+        (fun expected k -> Hashtbl.remove expected (Stable.to_linear_value k))
         expected deleted_nodes;
       let current_ht = copy_set_to_hashtbl current in
       assert_
@@ -330,7 +330,7 @@ module Invariants = struct
       let expected = Hashtbl.create (StableSet.cardinal deleted_nodes) in
       StableSet.iter_with
         (fun expected k ->
-          let k = Stable.unsafe_to_value k in
+          let k = Stable.to_linear_value k in
           if not (StableSet.mem current (stable_key k)) then
             Hashtbl.replace expected k ())
         expected deleted_nodes;
@@ -357,7 +357,7 @@ module Invariants = struct
       let expected_removes = Hashtbl.create (Hashtbl.length pre_current) in
       StableSet.iter_with
         (fun expected_adds k ->
-          let k = Stable.unsafe_to_value k in
+          let k = Stable.to_linear_value k in
           if not (Hashtbl.mem pre_current k) then
             Hashtbl.replace expected_adds k ())
         expected_adds t.current;
@@ -477,8 +477,7 @@ let remove_pred t ~target ~pred =
 let has_live_pred_key t pred = StableSet.mem t.current pred
 
 let has_live_predecessor t k =
-  StableMapSet.exists_inner_with t.pred_map (stable_key k) t
-    has_live_pred_key
+  StableMapSet.exists_inner_with t.pred_map (stable_key k) t has_live_pred_key
 
 let add_pred_for_src (t, src) target = add_pred t ~target ~pred:src
 let remove_pred_for_src (t, src) target = remove_pred t ~target ~pred:src
@@ -526,7 +525,7 @@ let initialize t ~roots ~edges =
   StableMapSet.clear t.pred_map;
   StableWave.iter roots (fun k _ -> StableSet.add t.roots k);
   StableWave.iter edges (fun k successors ->
-      apply_edge_update t ~src:(Stable.unsafe_to_value k)
+      apply_edge_update t ~src:(Stable.to_linear_value k)
         ~new_successors:successors);
   recompute_current t
 
@@ -653,20 +652,20 @@ let apply_list t ~roots ~edges =
      buffer added roots for later expansion *)
   StableWave.iter_with roots
     (fun t k mv ->
-      scan_root_entry t (Stable.unsafe_to_value k) (Stable.unsafe_to_value mv))
+      scan_root_entry t (Stable.to_linear_value k) (Stable.to_linear_value mv))
     t;
 
   (* Phase 1b: scan edge entries — seed delete queue for removed targets,
      store new_succs and has_new_edge for later phases *)
   StableWave.iter_with edges
     (fun t src mv ->
-      let mv = Stable.unsafe_to_value mv in
+      let mv = Stable.to_linear_value mv in
       let mv =
         if Maybe.is_some mv then
           Maybe.some (Stable.unsafe_of_value (Maybe.unsafe_get mv))
         else Maybe.none
       in
-      scan_edge_entry t (Stable.unsafe_to_value src) mv)
+      scan_edge_entry t (Stable.to_linear_value src) mv)
     t;
 
   Invariants.assert_edge_has_new_consistent
@@ -677,7 +676,7 @@ let apply_list t ~roots ~edges =
 
   (* Phase 2: delete BFS *)
   while not (StableQueue.is_empty t.delete_queue) do
-    let k = Stable.unsafe_to_value (StableQueue.pop t.delete_queue) in
+    let k = Stable.to_linear_value (StableQueue.pop t.delete_queue) in
     let succs = old_successors t k in
     if Metrics.enabled then (
       m.delete_queue_pops <- m.delete_queue_pops + 1;
@@ -691,8 +690,8 @@ let apply_list t ~roots ~edges =
   (* Phase 3: apply root and edge mutations *)
   StableWave.iter_with roots
     (fun t k mv ->
-      apply_root_mutation t (Stable.unsafe_to_value k)
-        (Stable.unsafe_to_value mv))
+      apply_root_mutation t (Stable.to_linear_value k)
+        (Stable.to_linear_value mv))
     t;
 
   (* Apply edge updates by draining edge_change_queue. *)
@@ -703,7 +702,7 @@ let apply_list t ~roots ~edges =
       if Maybe.is_some r then Maybe.unsafe_get r else StableList.empty ()
     in
     apply_edge_update t
-      ~src:(Stable.unsafe_to_value src)
+      ~src:(Stable.to_linear_value src)
       ~new_successors:new_succs
   done;
   (* Rebuild edge_change_queue from new_successors_for_changed keys for
@@ -722,7 +721,7 @@ let apply_list t ~roots ~edges =
   StableSet.clear t.rederive_pending;
 
   StableSet.iter_with
-    (fun t k -> enqueue_rederive_if_needed_kv t (Stable.unsafe_to_value k))
+    (fun t k -> enqueue_rederive_if_needed_kv t (Stable.to_linear_value k))
     t t.deleted_nodes;
 
   while not (StableQueue.is_empty t.rederive_queue) do
@@ -732,7 +731,7 @@ let apply_list t ~roots ~edges =
     if
       StableSet.mem t.deleted_nodes k
       && (not (StableSet.mem t.current k))
-      && is_supported t (Stable.unsafe_to_value k)
+      && is_supported t (Stable.to_linear_value k)
     then (
       StableSet.add t.current k;
       if Metrics.enabled then m.rederived_nodes <- m.rederived_nodes + 1;
@@ -754,14 +753,14 @@ let apply_list t ~roots ~edges =
 
   (* Seed expansion from added roots *)
   while not (StableQueue.is_empty t.added_roots_queue) do
-    add_live t (Stable.unsafe_to_value (StableQueue.pop t.added_roots_queue))
+    add_live t (Stable.to_linear_value (StableQueue.pop t.added_roots_queue))
   done;
 
   (* Seed expansion from edge changes with new edges *)
   while not (StableQueue.is_empty t.edge_change_queue) do
     let src = StableQueue.pop t.edge_change_queue in
     if StableSet.mem t.current src && StableSet.mem t.edge_has_new src then
-      enqueue_expand t (Stable.unsafe_to_value src)
+      enqueue_expand t (Stable.to_linear_value src)
   done;
 
   while not (StableQueue.is_empty t.expansion_queue) do
@@ -776,14 +775,14 @@ let apply_list t ~roots ~edges =
       StableList.iter_with add_live t succs)
   done;
   StableSet.iter_with
-    (fun t k -> emit_removal t (Stable.unsafe_to_value k) ())
+    (fun t k -> emit_removal t (Stable.to_linear_value k) ())
     t t.deleted_nodes;
   let output_entries_list =
     if Invariants.enabled then (
       let entries = ref [] in
       StableWave.iter t.output_wave (fun k v_opt ->
           entries :=
-            (Stable.unsafe_to_value k, Stable.unsafe_to_value v_opt) :: !entries);
+            (Stable.to_linear_value k, Stable.to_linear_value v_opt) :: !entries);
       !entries)
     else []
   in

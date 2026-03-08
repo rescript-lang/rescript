@@ -109,18 +109,15 @@ let remove_source (t : (_, _, _, _) t) k1 =
 
 (* Merge callback for recompute_target iter_with *)
 let merge_one_contribution (t : (_, _, _, _) t) _k1 v =
-  let v = Stable.unsafe_to_value v in
+  let v = Stable.to_linear_value v in
   if t.merge_first then (
     t.merge_acc <- v;
     t.merge_first <- false)
   else t.merge_acc <- t.merge t.merge_acc v
 
 let recompute_target (t : (_, _, _, _) t) k2 =
-  let k2 = Stable.unsafe_to_value k2 in
-  if
-    StableMapMap.inner_cardinal t.contributions
-      (Stable.unsafe_of_value k2)
-    > 0
+  let k2 = Stable.to_linear_value k2 in
+  if StableMapMap.inner_cardinal t.contributions (Stable.unsafe_of_value k2) > 0
   then (
     t.merge_first <- true;
     StableMapMap.iter_inner_with t.contributions
@@ -134,14 +131,12 @@ let recompute_target (t : (_, _, _, _) t) k2 =
       (Stable.unsafe_of_value (Maybe.some t.merge_acc)))
   else (
     StableMap.remove t.target (Stable.unsafe_of_value k2);
-    StableWave.push t.output_wave
-      (Stable.unsafe_of_value k2)
-      Maybe.none_stable)
+    StableWave.push t.output_wave (Stable.unsafe_of_value k2) Maybe.none_stable)
 
 (* Single-pass process + count for scratch *)
 let process_scratch_entry (t : (_, _, _, _) t) k1 mv =
-  let k1 = Stable.unsafe_to_value k1 in
-  let mv = Stable.unsafe_to_value mv in
+  let k1 = Stable.to_linear_value k1 in
+  let mv = Stable.to_linear_value mv in
   t.result.entries_received <- t.result.entries_received + 1;
   remove_source t k1;
   if Maybe.is_some mv then (
@@ -152,7 +147,7 @@ let process_scratch_entry (t : (_, _, _, _) t) k1 mv =
   else t.result.removes_received <- t.result.removes_received + 1
 
 let count_output_entry (r : process_result) _k mv =
-  let mv = Stable.unsafe_to_value mv in
+  let mv = Stable.to_linear_value mv in
   if Maybe.is_some mv then r.adds_emitted <- r.adds_emitted + 1
   else r.removes_emitted <- r.removes_emitted + 1
 
@@ -179,8 +174,8 @@ let process (t : (_, _, _, _) t) =
   r
 
 let init_entry (t : (_, _, _, _) t) k1 v1 =
-  let k1 = Stable.unsafe_to_value k1 in
-  let v1 = Stable.unsafe_to_value v1 in
+  let k1 = Stable.to_linear_value k1 in
+  let v1 = Stable.to_linear_value v1 in
   t.current_k1 <- k1;
   t.f k1 v1 (fun k2 v2 -> add_single_contribution_init t k2 v2)
 

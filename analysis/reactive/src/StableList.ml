@@ -4,7 +4,7 @@ type 'a t = 'a inner Stable.t
 let unsafe_of_list = Stable.unsafe_of_value
 let unsafe_inner_of_list (l : 'a list) : 'a inner = l
 let of_list = Stable.of_value
-let list_of = Stable.unsafe_to_value
+let list_of = Stable.to_linear_value
 let of_stable_list xs = xs
 
 let empty () : 'a t = Stable.of_value []

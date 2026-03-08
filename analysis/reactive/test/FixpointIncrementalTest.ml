@@ -294,7 +294,7 @@ let test_fixpoint_remove_spurious_root () =
   emit_set emit_init "b" ();
   Printf.printf "After spurious root b: fp=[%s]\n"
     (let items = ref [] in
-     iter (fun k _ -> items := Stable.unsafe_to_value k :: !items) fp;
+     iter (fun k _ -> items := Stable.to_linear_value k :: !items) fp;
      String.concat ", " (List.sort String.compare !items));
   assert (get_opt fp "b" = Some ());
 
@@ -302,14 +302,14 @@ let test_fixpoint_remove_spurious_root () =
   emit_set emit_init "root" ();
   Printf.printf "After true root: fp=[%s]\n"
     (let items = ref [] in
-     iter (fun k _ -> items := Stable.unsafe_to_value k :: !items) fp;
+     iter (fun k _ -> items := Stable.to_linear_value k :: !items) fp;
      String.concat ", " (List.sort String.compare !items));
 
   (* Step 3: Edge root -> a is added *)
   emit_edge_set emit_edges "root" ["a"];
   Printf.printf "After edge root->a: fp=[%s]\n"
     (let items = ref [] in
-     iter (fun k _ -> items := Stable.unsafe_to_value k :: !items) fp;
+     iter (fun k _ -> items := Stable.to_linear_value k :: !items) fp;
      String.concat ", " (List.sort String.compare !items));
   assert (get_opt fp "a" = Some ());
 
@@ -317,7 +317,7 @@ let test_fixpoint_remove_spurious_root () =
   emit_edge_set emit_edges "a" ["b"];
   Printf.printf "After edge a->b: fp=[%s]\n"
     (let items = ref [] in
-     iter (fun k _ -> items := Stable.unsafe_to_value k :: !items) fp;
+     iter (fun k _ -> items := Stable.to_linear_value k :: !items) fp;
      String.concat ", " (List.sort String.compare !items));
 
   assert (length fp = 3);
@@ -330,7 +330,7 @@ let test_fixpoint_remove_spurious_root () =
 
   Printf.printf "After removing b from init: fp=[%s]\n"
     (let items = ref [] in
-     iter (fun k _ -> items := Stable.unsafe_to_value k :: !items) fp;
+     iter (fun k _ -> items := Stable.to_linear_value k :: !items) fp;
      String.concat ", " (List.sort String.compare !items));
   Printf.printf "Removed: [%s]\n" (String.concat ", " !removed);
 
@@ -372,7 +372,7 @@ let test_fixpoint_remove_edge_entry_alternative_source () =
 
   Printf.printf "Initial: fp=[%s]\n"
     (let items = ref [] in
-     iter (fun k _ -> items := Stable.unsafe_to_value k :: !items) fp;
+     iter (fun k _ -> items := Stable.to_linear_value k :: !items) fp;
      String.concat ", " (List.sort String.compare !items));
 
   assert (length fp = 3);
@@ -384,7 +384,7 @@ let test_fixpoint_remove_edge_entry_alternative_source () =
 
   Printf.printf "After remove edge entry 'a': fp=[%s]\n"
     (let items = ref [] in
-     iter (fun k _ -> items := Stable.unsafe_to_value k :: !items) fp;
+     iter (fun k _ -> items := Stable.to_linear_value k :: !items) fp;
      String.concat ", " (List.sort String.compare !items));
   Printf.printf "Removed: [%s]\n" (String.concat ", " !removed);
 
@@ -426,7 +426,7 @@ let test_fixpoint_remove_edge_rederivation () =
 
   Printf.printf "Initial: fp=[%s]\n"
     (let items = ref [] in
-     iter (fun k _ -> items := Stable.unsafe_to_value k :: !items) fp;
+     iter (fun k _ -> items := Stable.to_linear_value k :: !items) fp;
      String.concat ", " (List.sort String.compare !items));
 
   assert (length fp = 4);
@@ -439,7 +439,7 @@ let test_fixpoint_remove_edge_rederivation () =
 
   Printf.printf "After removing a->c: fp=[%s]\n"
     (let items = ref [] in
-     iter (fun k _ -> items := Stable.unsafe_to_value k :: !items) fp;
+     iter (fun k _ -> items := Stable.to_linear_value k :: !items) fp;
      String.concat ", " (List.sort String.compare !items));
   Printf.printf "Removed: [%s], Added: [%s]\n"
     (String.concat ", " !removed)
@@ -481,7 +481,7 @@ let test_fixpoint_remove_edge_entry_rederivation () =
 
   Printf.printf "Initial: fp=[%s]\n"
     (let items = ref [] in
-     iter (fun k _ -> items := Stable.unsafe_to_value k :: !items) fp;
+     iter (fun k _ -> items := Stable.to_linear_value k :: !items) fp;
      String.concat ", " (List.sort String.compare !items));
 
   assert (length fp = 3);
@@ -493,7 +493,7 @@ let test_fixpoint_remove_edge_entry_rederivation () =
 
   Printf.printf "After remove 'a' entry: fp=[%s]\n"
     (let items = ref [] in
-     iter (fun k _ -> items := Stable.unsafe_to_value k :: !items) fp;
+     iter (fun k _ -> items := Stable.to_linear_value k :: !items) fp;
      String.concat ", " (List.sort String.compare !items));
   Printf.printf "Removed: [%s]\n" (String.concat ", " !removed);
 
@@ -535,7 +535,7 @@ let test_fixpoint_remove_edge_entry_higher_rank_support () =
 
   Printf.printf "Initial: fp=[%s]\n"
     (let items = ref [] in
-     iter (fun k _ -> items := Stable.unsafe_to_value k :: !items) fp;
+     iter (fun k _ -> items := Stable.to_linear_value k :: !items) fp;
      String.concat ", " (List.sort String.compare !items));
 
   assert (length fp = 4);
@@ -549,7 +549,7 @@ let test_fixpoint_remove_edge_entry_higher_rank_support () =
 
   Printf.printf "After removing a->c: fp=[%s]\n"
     (let items = ref [] in
-     iter (fun k _ -> items := Stable.unsafe_to_value k :: !items) fp;
+     iter (fun k _ -> items := Stable.to_linear_value k :: !items) fp;
      String.concat ", " (List.sort String.compare !items));
   Printf.printf "Removed: [%s], Added: [%s]\n"
     (String.concat ", " !removed)

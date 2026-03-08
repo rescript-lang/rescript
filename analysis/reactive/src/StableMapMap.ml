@@ -9,13 +9,13 @@ let create () = StableMap.create ()
 
 let destroy t =
   StableMap.iter_with
-    (fun () _ko inner -> StableMap.destroy (Stable.unsafe_to_value inner))
+    (fun () _ko inner -> StableMap.destroy (Stable.to_linear_value inner))
     () t;
   StableMap.destroy t
 
 let ensure_inner t ko =
   let m = StableMap.find_maybe t ko in
-  if Maybe.is_some m then Stable.unsafe_to_value (Maybe.unsafe_get m)
+  if Maybe.is_some m then Stable.to_linear_value (Maybe.unsafe_get m)
   else
     let inner = StableMap.create () in
     StableMap.replace t ko (Stable.unsafe_of_value inner);
@@ -28,7 +28,7 @@ let replace t ko ki v =
 let remove_from_inner_and_recycle_if_empty t ko ki =
   let mb = StableMap.find_maybe t ko in
   if Maybe.is_some mb then (
-    let inner = Stable.unsafe_to_value (Maybe.unsafe_get mb) in
+    let inner = Stable.to_linear_value (Maybe.unsafe_get mb) in
     StableMap.remove inner ki;
     if StableMap.cardinal inner = 0 then (
       StableMap.remove t ko;
@@ -37,7 +37,7 @@ let remove_from_inner_and_recycle_if_empty t ko ki =
 let drain_outer t ko ctx f =
   let mb = StableMap.find_maybe t ko in
   if Maybe.is_some mb then (
-    let inner = Stable.unsafe_to_value (Maybe.unsafe_get mb) in
+    let inner = Stable.to_linear_value (Maybe.unsafe_get mb) in
     StableMap.iter_with f ctx inner;
     StableMap.remove t ko;
     StableMap.destroy inner)
@@ -45,19 +45,19 @@ let drain_outer t ko ctx f =
 let find_inner_maybe t ko =
   let mb = StableMap.find_maybe t ko in
   if Maybe.is_some mb then
-    Maybe.some (Stable.unsafe_to_value (Maybe.unsafe_get mb))
+    Maybe.some (Stable.to_linear_value (Maybe.unsafe_get mb))
   else Maybe.none
 
 let iter_inner_with t ko ctx f =
   let mb = StableMap.find_maybe t ko in
   if Maybe.is_some mb then
-    let inner = Stable.unsafe_to_value (Maybe.unsafe_get mb) in
+    let inner = Stable.to_linear_value (Maybe.unsafe_get mb) in
     StableMap.iter_with f ctx inner
 
 let inner_cardinal t ko =
   let mb = StableMap.find_maybe t ko in
   if Maybe.is_some mb then
-    StableMap.cardinal (Stable.unsafe_to_value (Maybe.unsafe_get mb))
+    StableMap.cardinal (Stable.to_linear_value (Maybe.unsafe_get mb))
   else 0
 
 let outer_cardinal t = StableMap.cardinal t

@@ -97,9 +97,7 @@ val name : ('k, 'v) t -> string
 
 module Source : sig
   val create :
-    name:string ->
-    unit ->
-    ('k, 'v) t * (('k, 'v Maybe.t) StableWave.t -> unit)
+    name:string -> unit -> ('k, 'v) t * (('k, 'v Maybe.t) StableWave.t -> unit)
   (** Create a named source collection.
       Returns the collection and an emit function that takes a wave.
       Each wave entry is a key with [Maybe.some v] for set

@@ -9,15 +9,15 @@ let create () = StableMap.create ()
 
 let destroy t =
   StableMap.iter_with
-    (fun () _k set -> StableSet.destroy (Stable.unsafe_to_value set))
+    (fun () _k set -> StableSet.destroy (Stable.to_linear_value set))
     () t;
   StableMap.destroy t
 
-let destroy_inner_set () _k set = StableSet.destroy (Stable.unsafe_to_value set)
+let destroy_inner_set () _k set = StableSet.destroy (Stable.to_linear_value set)
 
 let ensure t k =
   let m = StableMap.find_maybe t k in
-  if Maybe.is_some m then Stable.unsafe_to_value (Maybe.unsafe_get m)
+  if Maybe.is_some m then Stable.to_linear_value (Maybe.unsafe_get m)
   else
     let set = StableSet.create () in
     StableMap.replace t k (Stable.unsafe_of_value set);
@@ -30,7 +30,7 @@ let add t k v =
 let drain_key t k ctx f =
   let mb = StableMap.find_maybe t k in
   if Maybe.is_some mb then (
-    let set = Stable.unsafe_to_value (Maybe.unsafe_get mb) in
+    let set = Stable.to_linear_value (Maybe.unsafe_get mb) in
     StableSet.iter_with f ctx set;
     StableMap.remove t k;
     StableSet.destroy set)
@@ -38,7 +38,7 @@ let drain_key t k ctx f =
 let remove_from_set_and_recycle_if_empty t k v =
   let mb = StableMap.find_maybe t k in
   if Maybe.is_some mb then (
-    let set = Stable.unsafe_to_value (Maybe.unsafe_get mb) in
+    let set = Stable.to_linear_value (Maybe.unsafe_get mb) in
     StableSet.remove set v;
     if StableSet.cardinal set = 0 then (
       StableMap.remove t k;
@@ -47,26 +47,26 @@ let remove_from_set_and_recycle_if_empty t k v =
 let find_inner_maybe t k =
   let mb = StableMap.find_maybe t k in
   if Maybe.is_some mb then
-    Maybe.some (Stable.unsafe_to_value (Maybe.unsafe_get mb))
+    Maybe.some (Stable.to_linear_value (Maybe.unsafe_get mb))
   else Maybe.none
 
 let iter_inner_with t k ctx f =
   let mb = StableMap.find_maybe t k in
   if Maybe.is_some mb then
-    let set = Stable.unsafe_to_value (Maybe.unsafe_get mb) in
+    let set = Stable.to_linear_value (Maybe.unsafe_get mb) in
     StableSet.iter_with f ctx set
 
 let exists_inner_with t k ctx f =
   let mb = StableMap.find_maybe t k in
   if Maybe.is_some mb then
-    let set = Stable.unsafe_to_value (Maybe.unsafe_get mb) in
+    let set = Stable.to_linear_value (Maybe.unsafe_get mb) in
     StableSet.exists_with f ctx set
   else false
 
 let iter_with t ctx f =
   StableMap.iter_with
     (fun ctx stable_k stable_set ->
-      f ctx stable_k (Stable.unsafe_to_value stable_set))
+      f ctx stable_k (Stable.to_linear_value stable_set))
     ctx t
 
 let clear t =

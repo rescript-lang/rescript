@@ -130,10 +130,9 @@ let unlink_right_key (t : (_, _, _, _, _, _) t) k1 =
     StableMap.find_maybe t.left_to_right_key (Stable.unsafe_of_value k1)
   in
   if Maybe.is_some mb then (
-    let old_k2 = Stable.unsafe_to_value (Maybe.unsafe_get mb) in
+    let old_k2 = Stable.to_linear_value (Maybe.unsafe_get mb) in
     StableMap.remove t.left_to_right_key (Stable.unsafe_of_value k1);
-    StableMapSet.remove_from_set_and_recycle_if_empty
-      t.right_key_to_left_keys
+    StableMapSet.remove_from_set_and_recycle_if_empty t.right_key_to_left_keys
       (Stable.unsafe_of_value old_k2)
       (Stable.unsafe_of_value k1))
 
@@ -148,7 +147,7 @@ let process_left_entry (t : (_, _, _, _, _, _) t) k1 v1 =
     (Stable.unsafe_of_value k2)
     (Stable.unsafe_of_value k1);
   let right_val =
-    Stable.unsafe_to_value
+    Stable.to_linear_value
       (Maybe.to_stable (t.right_get (Stable.unsafe_of_value k2)))
   in
   t.current_k1 <- k1;
@@ -161,18 +160,15 @@ let remove_left_entry (t : (_, _, _, _, _, _) t) k1 =
 
 (* Merge callback for recompute_target iter_with *)
 let merge_one_contribution (t : (_, _, _, _, _, _) t) _k1 v =
-  let v = Stable.unsafe_to_value v in
+  let v = Stable.to_linear_value v in
   if t.merge_first then (
     t.merge_acc <- v;
     t.merge_first <- false)
   else t.merge_acc <- t.merge t.merge_acc v
 
 let recompute_target (t : (_, _, _, _, _, _) t) k3 =
-  let k3 = Stable.unsafe_to_value k3 in
-  if
-    StableMapMap.inner_cardinal t.contributions
-      (Stable.unsafe_of_value k3)
-    > 0
+  let k3 = Stable.to_linear_value k3 in
+  if StableMapMap.inner_cardinal t.contributions (Stable.unsafe_of_value k3) > 0
   then (
     t.merge_first <- true;
     StableMapMap.iter_inner_with t.contributions
@@ -186,14 +182,12 @@ let recompute_target (t : (_, _, _, _, _, _) t) k3 =
       (Stable.unsafe_of_value (Maybe.some t.merge_acc)))
   else (
     StableMap.remove t.target (Stable.unsafe_of_value k3);
-    StableWave.push t.output_wave
-      (Stable.unsafe_of_value k3)
-      Maybe.none_stable)
+    StableWave.push t.output_wave (Stable.unsafe_of_value k3) Maybe.none_stable)
 
 (* Single-pass process + count for left scratch *)
 let process_left_scratch_entry (t : (_, _, _, _, _, _) t) k1 mv =
-  let k1 = Stable.unsafe_to_value k1 in
-  let mv = Stable.unsafe_to_value mv in
+  let k1 = Stable.to_linear_value k1 in
+  let mv = Stable.to_linear_value mv in
   t.result.entries_received <- t.result.entries_received + 1;
   if Maybe.is_some mv then (
     t.result.adds_received <- t.result.adds_received + 1;
@@ -208,15 +202,15 @@ let process_left_scratch_entry (t : (_, _, _, _, _, _) t) k1 mv =
 
 (* Reprocess a left entry when its right key changed *)
 let reprocess_left_entry (t : (_, _, _, _, _, _) t) k1 =
-  let k1 = Stable.unsafe_to_value k1 in
+  let k1 = Stable.to_linear_value k1 in
   let mb = StableMap.find_maybe t.left_entries (Stable.unsafe_of_value k1) in
   if Maybe.is_some mb then
-    process_left_entry t k1 (Stable.unsafe_to_value (Maybe.unsafe_get mb))
+    process_left_entry t k1 (Stable.to_linear_value (Maybe.unsafe_get mb))
 
 (* Single-pass process + count for right scratch *)
 let process_right_scratch_entry (t : (_, _, _, _, _, _) t) k2 _mv =
-  let k2 = Stable.unsafe_to_value k2 in
-  let _mv = Stable.unsafe_to_value _mv in
+  let k2 = Stable.to_linear_value k2 in
+  let _mv = Stable.to_linear_value _mv in
   t.result.entries_received <- t.result.entries_received + 1;
   if Maybe.is_some _mv then t.result.adds_received <- t.result.adds_received + 1
   else t.result.removes_received <- t.result.removes_received + 1;
@@ -225,7 +219,7 @@ let process_right_scratch_entry (t : (_, _, _, _, _, _) t) k2 _mv =
     t reprocess_left_entry
 
 let count_output_entry (r : process_result) _k mv =
-  let mv = Stable.unsafe_to_value mv in
+  let mv = Stable.to_linear_value mv in
   if Maybe.is_some mv then r.adds_emitted <- r.adds_emitted + 1
   else r.removes_emitted <- r.removes_emitted + 1
 
@@ -255,8 +249,8 @@ let process (t : (_, _, _, _, _, _) t) =
   r
 
 let init_entry (t : (_, _, _, _, _, _) t) k1 v1 =
-  let k1 = Stable.unsafe_to_value k1 in
-  let v1 = Stable.unsafe_to_value v1 in
+  let k1 = Stable.to_linear_value k1 in
+  let v1 = Stable.to_linear_value v1 in
   StableMap.replace t.left_entries
     (Stable.unsafe_of_value k1)
     (Stable.unsafe_of_value v1);
@@ -268,7 +262,7 @@ let init_entry (t : (_, _, _, _, _, _) t) k1 v1 =
     (Stable.unsafe_of_value k2)
     (Stable.unsafe_of_value k1);
   let right_val =
-    Stable.unsafe_to_value
+    Stable.to_linear_value
       (Maybe.to_stable (t.right_get (Stable.unsafe_of_value k2)))
   in
   t.current_k1 <- k1;
