@@ -86,13 +86,11 @@ let find_inner_maybe t ko = StableHash.Map.find_maybe t.outer ko
 
 let iter_inner_with t ko ctx f =
   let mb = StableHash.Map.find_maybe t.outer ko in
-  if Maybe.is_some mb then
-    StableHash.Map.iter_with f ctx (Maybe.unsafe_get mb)
+  if Maybe.is_some mb then StableHash.Map.iter_with f ctx (Maybe.unsafe_get mb)
 
 let inner_cardinal t ko =
   let mb = StableHash.Map.find_maybe t.outer ko in
-  if Maybe.is_some mb then StableHash.Map.cardinal (Maybe.unsafe_get mb)
-  else 0
+  if Maybe.is_some mb then StableHash.Map.cardinal (Maybe.unsafe_get mb) else 0
 
 let outer_cardinal t = StableHash.Map.cardinal t.outer
 

@@ -797,18 +797,18 @@ end
 (** {1 Fixpoint} *)
 
 module Fixpoint = struct
-  let unsafe_wave_map_replace pending k v =
-    StableHash.Map.replace pending (Stable.unsafe_to_value k)
-      (Stable.unsafe_to_value v)
+  let stable_wave_map_replace pending k v = StableMap.replace pending k v
 
-  let unsafe_edge_wave_map_replace pending k v =
+  let stable_edge_wave_map_replace pending k v =
     let v : _ Maybe.t = Stable.unsafe_to_value v in
     let v =
       if Maybe.is_some v then
         Maybe.some (StableList.unsafe_inner_of_list (Maybe.unsafe_get v))
       else Maybe.none
     in
-    StableHash.Map.replace pending (Stable.unsafe_to_value k) v
+    StableMap.replace pending k (Stable.unsafe_of_value v)
+
+  let stable_wave_push wave k v = ReactiveWave.push wave k v
 
   let create ~name ~(init : ('k, unit) t) ~(edges : ('k, 'k list) t) () :
       ('k, unit) t =
@@ -838,11 +838,9 @@ module Fixpoint = struct
     let edge_wave = ReactiveWave.create ~max_entries:max_edge_wave_entries () in
     let subscribers = ref [] in
     let my_stats = create_stats () in
-    let root_pending : ('k, unit Maybe.t) StableHash.Map.t =
-      StableHash.Map.create ()
-    in
-    let edge_pending : ('k, 'k StableList.inner Maybe.t) StableHash.Map.t =
-      StableHash.Map.create ()
+    let root_pending : ('k, unit Maybe.t) StableMap.t = StableMap.create () in
+    let edge_pending : ('k, 'k StableList.inner Maybe.t) StableMap.t =
+      StableMap.create ()
     in
     let init_pending_count = ref 0 in
     let edges_pending_count = ref 0 in
@@ -861,16 +859,12 @@ module Fixpoint = struct
       (* Dump pending maps into waves *)
       ReactiveWave.clear root_wave;
       ReactiveWave.clear edge_wave;
-      let root_entries = StableHash.Map.cardinal root_pending in
-      let edge_entries = StableHash.Map.cardinal edge_pending in
-      StableHash.Map.iter_with unsafe_wave_push root_wave root_pending;
-      StableHash.Map.iter_with
-        (fun wave k mv ->
-          ReactiveWave.push wave (Stable.unsafe_of_value k)
-            (Stable.unsafe_of_value mv))
-        edge_wave edge_pending;
-      StableHash.Map.clear root_pending;
-      StableHash.Map.clear edge_pending;
+      let root_entries = StableMap.cardinal root_pending in
+      let edge_entries = StableMap.cardinal edge_pending in
+      StableMap.iter_with stable_wave_push root_wave root_pending;
+      StableMap.iter_with stable_wave_push edge_wave edge_pending;
+      StableMap.clear root_pending;
+      StableMap.clear edge_pending;
 
       my_stats.entries_received <-
         my_stats.entries_received + root_entries + edge_entries;
@@ -887,6 +881,8 @@ module Fixpoint = struct
     in
 
     let destroy () =
+      StableMap.destroy root_pending;
+      StableMap.destroy edge_pending;
       ReactiveWave.destroy root_wave;
       ReactiveWave.destroy edge_wave;
       ReactiveFixpoint.destroy state
@@ -904,13 +900,13 @@ module Fixpoint = struct
     init.subscribe (fun wave ->
         Registry.inc_inflight_node init.node;
         init_pending_count := !init_pending_count + 1;
-        ReactiveWave.iter_with wave unsafe_wave_map_replace root_pending;
+        ReactiveWave.iter_with wave stable_wave_map_replace root_pending;
         Registry.mark_dirty_node my_info);
 
     edges.subscribe (fun wave ->
         Registry.inc_inflight_node edges.node;
         edges_pending_count := !edges_pending_count + 1;
-        ReactiveWave.iter_with wave unsafe_edge_wave_map_replace edge_pending;
+        ReactiveWave.iter_with wave stable_edge_wave_map_replace edge_pending;
         Registry.mark_dirty_node my_info);
 
     (* Initialize from existing data *)

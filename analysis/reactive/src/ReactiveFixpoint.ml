@@ -10,27 +10,27 @@ type 'k metrics_state = {
   mutable rederive_edges_scanned: int;
   mutable expansion_queue_pops: int;
   mutable expansion_edges_scanned: int;
-  scratch_reachable: 'k ReactiveSet.t;
+  scratch_reachable: 'k StableSet.t;
 }
 (** Per-call metrics scratch state. Allocated once per fixpoint instance,
     mutable fields are reset and incremented in-place — zero allocation. *)
 
 type 'k t = {
-  current: 'k ReactiveSet.t;
-  edge_map: ('k, 'k StableList.inner) ReactiveMap.t;
+  current: 'k StableSet.t;
+  edge_map: ('k, 'k StableList.inner) StableMap.t;
   pred_map: ('k, 'k) ReactivePoolMapSet.t;
-  roots: 'k ReactiveSet.t;
+  roots: 'k StableSet.t;
   output_wave: ('k, unit Maybe.t) ReactiveWave.t;
   (* Scratch tables — allocated once, cleared per apply_list call *)
-  deleted_nodes: 'k ReactiveSet.t;
-  rederive_pending: 'k ReactiveSet.t;
-  expansion_seen: 'k ReactiveSet.t;
-  old_successors_for_changed: ('k, 'k StableList.inner) ReactiveMap.t;
-  new_successors_for_changed: ('k, 'k StableList.inner) ReactiveMap.t;
+  deleted_nodes: 'k StableSet.t;
+  rederive_pending: 'k StableSet.t;
+  expansion_seen: 'k StableSet.t;
+  old_successors_for_changed: ('k, 'k StableList.inner) StableMap.t;
+  new_successors_for_changed: ('k, 'k StableList.inner) StableMap.t;
   (* Scratch sets for analyze_edge_change / apply_edge_update *)
-  scratch_set_a: 'k ReactiveSet.t;
-  scratch_set_b: 'k ReactiveSet.t;
-  edge_has_new: 'k ReactiveSet.t;
+  scratch_set_a: 'k StableSet.t;
+  scratch_set_b: 'k StableSet.t;
+  edge_has_new: 'k StableSet.t;
   (* Scratch queues *)
   delete_queue: 'k StableQueue.t;
   rederive_queue: 'k StableQueue.t;
@@ -57,28 +57,28 @@ let[@inline] enqueue q k = StableQueue.push q (stable_key k)
    [visited] is cleared before use; zero allocation when [visited] is
    pre-allocated (e.g. Metrics scratch map). *)
 let bfs_seed_root visited frontier _t k () =
-  ReactiveSet.add visited (stable_key k);
+  StableSet.add visited (stable_key k);
   enqueue frontier k
 
 let bfs_visit_succ visited frontier succ =
-  if not (ReactiveSet.mem visited (stable_key succ)) then (
-    ReactiveSet.add visited (stable_key succ);
+  if not (StableSet.mem visited (stable_key succ)) then (
+    StableSet.add visited (stable_key succ);
     enqueue frontier succ)
 
 let compute_reachable ~visited t =
-  ReactiveSet.clear visited;
+  StableSet.clear visited;
   let frontier = t.delete_queue in
   StableQueue.clear frontier;
   let node_work = ref 0 in
   let edge_work = ref 0 in
-  ReactiveSet.iter_with
+  StableSet.iter_with
     (fun (visited, frontier) k ->
       bfs_seed_root visited frontier t (Stable.unsafe_to_value k) ())
     (visited, frontier) t.roots;
   while not (StableQueue.is_empty frontier) do
     let k = StableQueue.pop frontier in
     incr node_work;
-    let r = ReactiveMap.find_maybe t.edge_map k in
+    let r = StableMap.find_maybe t.edge_map k in
     if Maybe.is_some r then (
       let succs = Maybe.unsafe_get r in
       edge_work := !edge_work + StableList.length succs;
@@ -227,9 +227,9 @@ module Invariants = struct
 
   (* Debug-only: copies a set into a Hashtbl for diffing.
      These allocations are acceptable since Invariants is opt-in debug code. *)
-  let copy_set_to_hashtbl (s : 'k ReactiveSet.t) =
-    let out = Hashtbl.create (ReactiveSet.cardinal s) in
-    ReactiveSet.iter_with
+  let copy_set_to_hashtbl (s : 'k StableSet.t) =
+    let out = Hashtbl.create (StableSet.cardinal s) in
+    StableSet.iter_with
       (fun out k -> Hashtbl.replace out (Stable.unsafe_to_value k) ())
       out s;
     out
@@ -259,14 +259,14 @@ module Invariants = struct
       List.iter
         (fun src ->
           let r_old =
-            ReactiveMap.find_maybe old_successors_for_changed (stable_key src)
+            StableMap.find_maybe old_successors_for_changed (stable_key src)
           in
           let old_succs =
             if Maybe.is_some r_old then Maybe.unsafe_get r_old
             else StableList.empty ()
           in
           let r_new =
-            ReactiveMap.find_maybe new_successors_for_changed (stable_key src)
+            StableMap.find_maybe new_successors_for_changed (stable_key src)
           in
           let new_succs =
             if Maybe.is_some r_new then Maybe.unsafe_get r_new
@@ -275,7 +275,7 @@ module Invariants = struct
           let expected_has_new =
             analyze_edge_change_has_new ~old_succs ~new_succs
           in
-          let actual_has_new = ReactiveSet.mem edge_has_new (stable_key src) in
+          let actual_has_new = StableSet.mem edge_has_new (stable_key src) in
           assert_
             (expected_has_new = actual_has_new)
             "ReactiveFixpoint.apply invariant failed: inconsistent edge_has_new")
@@ -284,18 +284,18 @@ module Invariants = struct
   let assert_deleted_nodes_closed ~current ~deleted_nodes
       ~(old_successors : 'k -> 'k StableList.t) =
     if enabled then
-      ReactiveSet.iter_with
+      StableSet.iter_with
         (fun () k ->
           let k = Stable.unsafe_to_value k in
           assert_
-            (ReactiveSet.mem current (stable_key k))
+            (StableSet.mem current (stable_key k))
             "ReactiveFixpoint.apply invariant failed: deleted node not in \
              current";
           StableList.iter
             (fun succ ->
-              if ReactiveSet.mem current (stable_key succ) then
+              if StableSet.mem current (stable_key succ) then
                 assert_
-                  (ReactiveSet.mem deleted_nodes (stable_key succ))
+                  (StableSet.mem deleted_nodes (stable_key succ))
                   "ReactiveFixpoint.apply invariant failed: deleted closure \
                    broken")
             (old_successors k))
@@ -303,10 +303,10 @@ module Invariants = struct
 
   let assert_no_supported_deleted_left ~deleted_nodes ~current ~supported =
     if enabled then
-      ReactiveSet.iter_with
+      StableSet.iter_with
         (fun () k ->
           let k = Stable.unsafe_to_value k in
-          if not (ReactiveSet.mem current (stable_key k)) then
+          if not (StableSet.mem current (stable_key k)) then
             assert_
               (not (supported k))
               "ReactiveFixpoint.apply invariant failed: supported deleted node \
@@ -316,7 +316,7 @@ module Invariants = struct
   let assert_current_minus_deleted ~pre_current ~current ~deleted_nodes =
     if enabled then (
       let expected = Hashtbl.copy pre_current in
-      ReactiveSet.iter_with
+      StableSet.iter_with
         (fun expected k -> Hashtbl.remove expected (Stable.unsafe_to_value k))
         expected deleted_nodes;
       let current_ht = copy_set_to_hashtbl current in
@@ -327,11 +327,11 @@ module Invariants = struct
 
   let assert_removal_output_matches ~output_entries ~deleted_nodes ~current =
     if enabled then (
-      let expected = Hashtbl.create (ReactiveSet.cardinal deleted_nodes) in
-      ReactiveSet.iter_with
+      let expected = Hashtbl.create (StableSet.cardinal deleted_nodes) in
+      StableSet.iter_with
         (fun expected k ->
           let k = Stable.unsafe_to_value k in
-          if not (ReactiveSet.mem current (stable_key k)) then
+          if not (StableSet.mem current (stable_key k)) then
             Hashtbl.replace expected k ())
         expected deleted_nodes;
       let actual = Hashtbl.create (List.length output_entries) in
@@ -353,9 +353,9 @@ module Invariants = struct
         "ReactiveFixpoint.apply invariant failed: current is not a fixed-point \
          closure";
 
-      let expected_adds = Hashtbl.create (ReactiveSet.cardinal t.current) in
+      let expected_adds = Hashtbl.create (StableSet.cardinal t.current) in
       let expected_removes = Hashtbl.create (Hashtbl.length pre_current) in
-      ReactiveSet.iter_with
+      StableSet.iter_with
         (fun expected_adds k ->
           let k = Stable.unsafe_to_value k in
           if not (Hashtbl.mem pre_current k) then
@@ -363,7 +363,7 @@ module Invariants = struct
         expected_adds t.current;
       Hashtbl.iter
         (fun k () ->
-          if not (ReactiveSet.mem t.current (stable_key k)) then
+          if not (StableSet.mem t.current (stable_key k)) then
             Hashtbl.replace expected_removes k ())
         pre_current;
 
@@ -384,7 +384,7 @@ module Invariants = struct
               (pre=%d final=%d output=%d expected_adds=%d actual_adds=%d \
               expected_removes=%d actual_removes=%d)"
              (Hashtbl.length pre_current)
-             (ReactiveSet.cardinal t.current)
+             (StableSet.cardinal t.current)
              (List.length output_entries)
              (Hashtbl.length expected_adds)
              (Hashtbl.length actual_adds)
@@ -398,24 +398,24 @@ let create ~max_nodes ~max_edges =
   if max_edges <= 0 then
     invalid_arg "ReactiveFixpoint.create: max_edges must be > 0";
   {
-    current = ReactiveSet.create ();
-    edge_map = ReactiveMap.create ();
+    current = StableSet.create ();
+    edge_map = StableMap.create ();
     pred_map = ReactivePoolMapSet.create ~capacity:128;
-    roots = ReactiveSet.create ();
+    roots = StableSet.create ();
     output_wave = ReactiveWave.create ~max_entries:max_nodes ();
-    deleted_nodes = ReactiveSet.create ();
-    rederive_pending = ReactiveSet.create ();
-    expansion_seen = ReactiveSet.create ();
-    old_successors_for_changed = ReactiveMap.create ();
-    scratch_set_a = ReactiveSet.create ();
-    scratch_set_b = ReactiveSet.create ();
-    edge_has_new = ReactiveSet.create ();
+    deleted_nodes = StableSet.create ();
+    rederive_pending = StableSet.create ();
+    expansion_seen = StableSet.create ();
+    old_successors_for_changed = StableMap.create ();
+    scratch_set_a = StableSet.create ();
+    scratch_set_b = StableSet.create ();
+    edge_has_new = StableSet.create ();
     delete_queue = StableQueue.create ();
     rederive_queue = StableQueue.create ();
     expansion_queue = StableQueue.create ();
     added_roots_queue = StableQueue.create ();
     edge_change_queue = StableQueue.create ();
-    new_successors_for_changed = ReactiveMap.create ();
+    new_successors_for_changed = StableMap.create ();
     metrics =
       {
         delete_queue_pops = 0;
@@ -425,28 +425,28 @@ let create ~max_nodes ~max_edges =
         rederive_edges_scanned = 0;
         expansion_queue_pops = 0;
         expansion_edges_scanned = 0;
-        scratch_reachable = ReactiveSet.create ();
+        scratch_reachable = StableSet.create ();
       };
   }
 
 let destroy t =
-  ReactiveSet.destroy t.current;
-  ReactiveMap.destroy t.edge_map;
-  ReactiveSet.destroy t.roots;
-  ReactiveSet.destroy t.deleted_nodes;
-  ReactiveSet.destroy t.rederive_pending;
-  ReactiveSet.destroy t.expansion_seen;
-  ReactiveMap.destroy t.old_successors_for_changed;
-  ReactiveMap.destroy t.new_successors_for_changed;
-  ReactiveSet.destroy t.scratch_set_a;
-  ReactiveSet.destroy t.scratch_set_b;
-  ReactiveSet.destroy t.edge_has_new;
+  StableSet.destroy t.current;
+  StableMap.destroy t.edge_map;
+  StableSet.destroy t.roots;
+  StableSet.destroy t.deleted_nodes;
+  StableSet.destroy t.rederive_pending;
+  StableSet.destroy t.expansion_seen;
+  StableMap.destroy t.old_successors_for_changed;
+  StableMap.destroy t.new_successors_for_changed;
+  StableSet.destroy t.scratch_set_a;
+  StableSet.destroy t.scratch_set_b;
+  StableSet.destroy t.edge_has_new;
   StableQueue.destroy t.delete_queue;
   StableQueue.destroy t.rederive_queue;
   StableQueue.destroy t.expansion_queue;
   StableQueue.destroy t.added_roots_queue;
   StableQueue.destroy t.edge_change_queue;
-  ReactiveSet.destroy t.metrics.scratch_reachable;
+  StableSet.destroy t.metrics.scratch_reachable;
   ReactiveWave.destroy t.output_wave
 let output_wave t = t.output_wave
 
@@ -457,12 +457,12 @@ type 'k root_snapshot = ('k, unit) ReactiveWave.t
 type 'k edge_snapshot = ('k, 'k list) ReactiveWave.t
 
 let iter_current t f =
-  ReactiveSet.iter_with (fun f k -> f (Stable.unsafe_to_value k) ()) f t.current
+  StableSet.iter_with (fun f k -> f (Stable.unsafe_to_value k) ()) f t.current
 
 let get_current t k =
-  if ReactiveSet.mem t.current (stable_key k) then Maybe.some () else Maybe.none
+  if StableSet.mem t.current (stable_key k) then Maybe.some () else Maybe.none
 
-let current_length t = ReactiveSet.cardinal t.current
+let current_length t = StableSet.cardinal t.current
 
 let recompute_current t = ignore (compute_reachable ~visited:t.current t)
 
@@ -471,7 +471,7 @@ let add_pred t ~target ~pred = ReactivePoolMapSet.add t.pred_map target pred
 let remove_pred t ~target ~pred =
   ReactivePoolMapSet.remove_from_set_and_recycle_if_empty t.pred_map target pred
 
-let has_live_pred_key t pred = ReactiveSet.mem t.current (stable_key pred)
+let has_live_pred_key t pred = StableSet.mem t.current (stable_key pred)
 
 let has_live_predecessor t k =
   let r = ReactivePoolMapSet.find_maybe t.pred_map k in
@@ -483,107 +483,107 @@ let add_pred_for_src (t, src) target = add_pred t ~target ~pred:src
 let remove_pred_for_src (t, src) target = remove_pred t ~target ~pred:src
 
 let apply_edge_update t ~src ~new_successors =
-  let r = ReactiveMap.find_maybe t.edge_map (stable_key src) in
+  let r = StableMap.find_maybe t.edge_map (stable_key src) in
   let old_successors =
     if Maybe.is_some r then Maybe.unsafe_get r else StableList.empty ()
   in
   if StableList.is_empty old_successors && StableList.is_empty new_successors
-  then ReactiveMap.remove t.edge_map (stable_key src)
+  then StableMap.remove t.edge_map (stable_key src)
   else if StableList.is_empty old_successors then (
     StableList.iter_with add_pred_for_src (t, src) new_successors;
-    ReactiveMap.replace t.edge_map (stable_key src) new_successors)
+    StableMap.replace t.edge_map (stable_key src) new_successors)
   else if StableList.is_empty new_successors then (
     StableList.iter_with remove_pred_for_src (t, src) old_successors;
-    ReactiveMap.remove t.edge_map (stable_key src))
+    StableMap.remove t.edge_map (stable_key src))
   else (
-    ReactiveSet.clear t.scratch_set_a;
-    ReactiveSet.clear t.scratch_set_b;
+    StableSet.clear t.scratch_set_a;
+    StableSet.clear t.scratch_set_b;
     StableList.iter
-      (fun k -> ReactiveSet.add t.scratch_set_a (stable_key k))
+      (fun k -> StableSet.add t.scratch_set_a (stable_key k))
       new_successors;
     StableList.iter
-      (fun k -> ReactiveSet.add t.scratch_set_b (stable_key k))
+      (fun k -> StableSet.add t.scratch_set_b (stable_key k))
       old_successors;
 
     StableList.iter_with
       (fun () target ->
-        if not (ReactiveSet.mem t.scratch_set_a (stable_key target)) then
+        if not (StableSet.mem t.scratch_set_a (stable_key target)) then
           remove_pred t ~target ~pred:src)
       () old_successors;
 
     StableList.iter_with
       (fun () target ->
-        if not (ReactiveSet.mem t.scratch_set_b (stable_key target)) then
+        if not (StableSet.mem t.scratch_set_b (stable_key target)) then
           add_pred t ~target ~pred:src)
       () new_successors;
 
-    ReactiveMap.replace t.edge_map (stable_key src) new_successors)
+    StableMap.replace t.edge_map (stable_key src) new_successors)
 
 let initialize t ~roots ~edges =
-  ReactiveSet.clear t.roots;
-  ReactiveMap.clear t.edge_map;
+  StableSet.clear t.roots;
+  StableMap.clear t.edge_map;
   ReactivePoolMapSet.clear t.pred_map;
-  ReactiveWave.iter roots (fun k _ -> ReactiveSet.add t.roots k);
+  ReactiveWave.iter roots (fun k _ -> StableSet.add t.roots k);
   ReactiveWave.iter edges (fun k successors ->
       apply_edge_update t ~src:(Stable.unsafe_to_value k)
         ~new_successors:(StableList.of_stable_list successors));
   recompute_current t
 
 let is_supported t k =
-  ReactiveSet.mem t.roots (stable_key k) || has_live_predecessor t k
+  StableSet.mem t.roots (stable_key k) || has_live_predecessor t k
 
 let old_successors t k =
-  let r = ReactiveMap.find_maybe t.old_successors_for_changed (stable_key k) in
+  let r = StableMap.find_maybe t.old_successors_for_changed (stable_key k) in
   if Maybe.is_some r then Maybe.unsafe_get r
   else
-    let r2 = ReactiveMap.find_maybe t.edge_map (stable_key k) in
+    let r2 = StableMap.find_maybe t.edge_map (stable_key k) in
     if Maybe.is_some r2 then Maybe.unsafe_get r2 else StableList.empty ()
 
 let mark_deleted t k =
   if
-    ReactiveSet.mem t.current (stable_key k)
-    && not (ReactiveSet.mem t.deleted_nodes (stable_key k))
+    StableSet.mem t.current (stable_key k)
+    && not (StableSet.mem t.deleted_nodes (stable_key k))
   then (
-    ReactiveSet.add t.deleted_nodes (stable_key k);
+    StableSet.add t.deleted_nodes (stable_key k);
     enqueue t.delete_queue k)
 
 let enqueue_expand t k =
   if
-    ReactiveSet.mem t.current (stable_key k)
-    && not (ReactiveSet.mem t.expansion_seen (stable_key k))
+    StableSet.mem t.current (stable_key k)
+    && not (StableSet.mem t.expansion_seen (stable_key k))
   then (
-    ReactiveSet.add t.expansion_seen (stable_key k);
+    StableSet.add t.expansion_seen (stable_key k);
     enqueue t.expansion_queue k)
 
 let add_live t k =
-  if not (ReactiveSet.mem t.current (stable_key k)) then (
-    ReactiveSet.add t.current (stable_key k);
-    if not (ReactiveSet.mem t.deleted_nodes (stable_key k)) then
+  if not (StableSet.mem t.current (stable_key k)) then (
+    StableSet.add t.current (stable_key k);
+    if not (StableSet.mem t.deleted_nodes (stable_key k)) then
       ReactiveWave.push t.output_wave (Stable.unsafe_of_value k)
         (Maybe.maybe_unit_to_stable (Maybe.some ()));
     enqueue_expand t k)
 
 let enqueue_rederive_if_needed t k =
   if
-    ReactiveSet.mem t.deleted_nodes (stable_key k)
-    && (not (ReactiveSet.mem t.current (stable_key k)))
-    && (not (ReactiveSet.mem t.rederive_pending (stable_key k)))
+    StableSet.mem t.deleted_nodes (stable_key k)
+    && (not (StableSet.mem t.current (stable_key k)))
+    && (not (StableSet.mem t.rederive_pending (stable_key k)))
     && is_supported t k
   then (
-    ReactiveSet.add t.rederive_pending (stable_key k);
+    StableSet.add t.rederive_pending (stable_key k);
     enqueue t.rederive_queue k)
 
 let scan_root_entry t k mv =
-  let had_root = ReactiveSet.mem t.roots (stable_key k) in
+  let had_root = StableSet.mem t.roots (stable_key k) in
   if Maybe.is_some mv then (if not had_root then enqueue t.added_roots_queue k)
   else if had_root then mark_deleted t k
 
-let set_add_k set k = ReactiveSet.add set (stable_key k)
+let set_add_k set k = StableSet.add set (stable_key k)
 
 let mark_deleted_if_absent (t, set) k =
-  if not (ReactiveSet.mem set (stable_key k)) then mark_deleted t k
+  if not (StableSet.mem set (stable_key k)) then mark_deleted t k
 
-let not_in_set set k = not (ReactiveSet.mem set (stable_key k))
+let not_in_set set k = not (StableSet.mem set (stable_key k))
 
 let mark_deleted_unless_in_set t set xs =
   StableList.iter_with mark_deleted_if_absent (t, set) xs
@@ -591,44 +591,44 @@ let mark_deleted_unless_in_set t set xs =
 let exists_not_in_set set xs = StableList.exists_with not_in_set set xs
 
 let scan_edge_entry t src mv =
-  let r = ReactiveMap.find_maybe t.edge_map (stable_key src) in
+  let r = StableMap.find_maybe t.edge_map (stable_key src) in
   let old_succs =
     if Maybe.is_some r then Maybe.unsafe_get r else StableList.empty ()
   in
   let new_succs =
     if Maybe.is_some mv then Maybe.unsafe_get mv else StableList.empty ()
   in
-  ReactiveMap.replace t.old_successors_for_changed (stable_key src) old_succs;
-  ReactiveMap.replace t.new_successors_for_changed (stable_key src) new_succs;
+  StableMap.replace t.old_successors_for_changed (stable_key src) old_succs;
+  StableMap.replace t.new_successors_for_changed (stable_key src) new_succs;
   enqueue t.edge_change_queue src;
-  let src_is_live = ReactiveSet.mem t.current (stable_key src) in
+  let src_is_live = StableSet.mem t.current (stable_key src) in
   match (old_succs, new_succs) with
   | _ when StableList.is_empty old_succs && StableList.is_empty new_succs -> ()
   | _ when StableList.is_empty old_succs ->
-    ReactiveSet.add t.edge_has_new (stable_key src)
+    StableSet.add t.edge_has_new (stable_key src)
   | _ when StableList.is_empty new_succs ->
     if src_is_live then StableList.iter_with mark_deleted t old_succs
   | _ ->
-    ReactiveSet.clear t.scratch_set_a;
-    ReactiveSet.clear t.scratch_set_b;
+    StableSet.clear t.scratch_set_a;
+    StableSet.clear t.scratch_set_b;
     StableList.iter_with set_add_k t.scratch_set_a new_succs;
     StableList.iter_with set_add_k t.scratch_set_b old_succs;
     if src_is_live then mark_deleted_unless_in_set t t.scratch_set_a old_succs;
     if exists_not_in_set t.scratch_set_b new_succs then
-      ReactiveSet.add t.edge_has_new (stable_key src)
+      StableSet.add t.edge_has_new (stable_key src)
 
 let apply_root_mutation t k mv =
-  if Maybe.is_some mv then ReactiveSet.add t.roots (stable_key k)
-  else ReactiveSet.remove t.roots (stable_key k)
+  if Maybe.is_some mv then StableSet.add t.roots (stable_key k)
+  else StableSet.remove t.roots (stable_key k)
 
 let emit_removal t k () =
-  if not (ReactiveSet.mem t.current (stable_key k)) then
+  if not (StableSet.mem t.current (stable_key k)) then
     ReactiveWave.push t.output_wave (Stable.unsafe_of_value k) Maybe.none_stable
 
 let rebuild_edge_change_queue t src _succs =
   StableQueue.push t.edge_change_queue src
 
-let remove_from_current t k = ReactiveSet.remove t.current k
+let remove_from_current t k = StableSet.remove t.current k
 
 let enqueue_rederive_if_needed_kv t k = enqueue_rederive_if_needed t k
 
@@ -638,13 +638,13 @@ let apply_list t ~roots ~edges =
     else None
   in
   (* Clear all scratch state up front *)
-  ReactiveSet.clear t.deleted_nodes;
+  StableSet.clear t.deleted_nodes;
   StableQueue.clear t.delete_queue;
   StableQueue.clear t.added_roots_queue;
   StableQueue.clear t.edge_change_queue;
-  ReactiveMap.clear t.old_successors_for_changed;
-  ReactiveMap.clear t.new_successors_for_changed;
-  ReactiveSet.clear t.edge_has_new;
+  StableMap.clear t.old_successors_for_changed;
+  StableMap.clear t.new_successors_for_changed;
+  StableSet.clear t.edge_has_new;
   let m = t.metrics in
   Metrics.reset_per_call m;
 
@@ -697,7 +697,7 @@ let apply_list t ~roots ~edges =
   (* Apply edge updates by draining edge_change_queue. *)
   while not (StableQueue.is_empty t.edge_change_queue) do
     let src = StableQueue.pop t.edge_change_queue in
-    let r = ReactiveMap.find_maybe t.new_successors_for_changed src in
+    let r = StableMap.find_maybe t.new_successors_for_changed src in
     let new_succs =
       if Maybe.is_some r then Maybe.unsafe_get r else StableList.empty ()
     in
@@ -707,9 +707,9 @@ let apply_list t ~roots ~edges =
   done;
   (* Rebuild edge_change_queue from new_successors_for_changed keys for
      use in expansion seeding below *)
-  ReactiveMap.iter_with rebuild_edge_change_queue t t.new_successors_for_changed;
+  StableMap.iter_with rebuild_edge_change_queue t t.new_successors_for_changed;
 
-  ReactiveSet.iter_with remove_from_current t t.deleted_nodes;
+  StableSet.iter_with remove_from_current t t.deleted_nodes;
   (match pre_current with
   | Some pre ->
     Invariants.assert_current_minus_deleted ~pre_current:pre ~current:t.current
@@ -718,24 +718,24 @@ let apply_list t ~roots ~edges =
 
   (* Phase 4: rederive *)
   StableQueue.clear t.rederive_queue;
-  ReactiveSet.clear t.rederive_pending;
+  StableSet.clear t.rederive_pending;
 
-  ReactiveSet.iter_with
+  StableSet.iter_with
     (fun t k -> enqueue_rederive_if_needed_kv t (Stable.unsafe_to_value k))
     t t.deleted_nodes;
 
   while not (StableQueue.is_empty t.rederive_queue) do
     let k = StableQueue.pop t.rederive_queue in
     if Metrics.enabled then m.rederive_queue_pops <- m.rederive_queue_pops + 1;
-    ReactiveSet.remove t.rederive_pending k;
+    StableSet.remove t.rederive_pending k;
     if
-      ReactiveSet.mem t.deleted_nodes k
-      && (not (ReactiveSet.mem t.current k))
+      StableSet.mem t.deleted_nodes k
+      && (not (StableSet.mem t.current k))
       && is_supported t (Stable.unsafe_to_value k)
     then (
-      ReactiveSet.add t.current k;
+      StableSet.add t.current k;
       if Metrics.enabled then m.rederived_nodes <- m.rederived_nodes + 1;
-      let r = ReactiveMap.find_maybe t.edge_map k in
+      let r = StableMap.find_maybe t.edge_map k in
       if Maybe.is_some r then (
         let succs = Maybe.unsafe_get r in
         if Metrics.enabled then
@@ -749,7 +749,7 @@ let apply_list t ~roots ~edges =
 
   (* Phase 5: expansion *)
   StableQueue.clear t.expansion_queue;
-  ReactiveSet.clear t.expansion_seen;
+  StableSet.clear t.expansion_seen;
 
   (* Seed expansion from added roots *)
   while not (StableQueue.is_empty t.added_roots_queue) do
@@ -759,14 +759,14 @@ let apply_list t ~roots ~edges =
   (* Seed expansion from edge changes with new edges *)
   while not (StableQueue.is_empty t.edge_change_queue) do
     let src = StableQueue.pop t.edge_change_queue in
-    if ReactiveSet.mem t.current src && ReactiveSet.mem t.edge_has_new src then
+    if StableSet.mem t.current src && StableSet.mem t.edge_has_new src then
       enqueue_expand t (Stable.unsafe_to_value src)
   done;
 
   while not (StableQueue.is_empty t.expansion_queue) do
     let k = StableQueue.pop t.expansion_queue in
     if Metrics.enabled then m.expansion_queue_pops <- m.expansion_queue_pops + 1;
-    let r = ReactiveMap.find_maybe t.edge_map k in
+    let r = StableMap.find_maybe t.edge_map k in
     if Maybe.is_some r then (
       let succs = Maybe.unsafe_get r in
       if Metrics.enabled then
@@ -774,7 +774,7 @@ let apply_list t ~roots ~edges =
           m.expansion_edges_scanned + StableList.length succs;
       StableList.iter_with add_live t succs)
   done;
-  ReactiveSet.iter_with
+  StableSet.iter_with
     (fun t k -> emit_removal t (Stable.unsafe_to_value k) ())
     t t.deleted_nodes;
   let output_entries_list =
@@ -811,7 +811,7 @@ let apply_list t ~roots ~edges =
     in
     Metrics.update ~init_entries:init_count ~edge_entries:edge_count
       ~output_entries:(ReactiveWave.count t.output_wave)
-      ~deleted_nodes:(ReactiveSet.cardinal t.deleted_nodes)
+      ~deleted_nodes:(StableSet.cardinal t.deleted_nodes)
       ~rederived_nodes:m.rederived_nodes ~incr_node_work ~incr_edge_work
       ~full_node_work ~full_edge_work
 
