@@ -207,7 +207,7 @@ let test_union_alloc () =
 (* ---- Join allocation ---- *)
 
 let test_join_alloc_n n =
-  let right_tbl = ReactiveHash.Map.create () in
+  let right_tbl = StableMap.create () in
   let state =
     ReactiveJoin.create
       ~key_of:(fun k _v -> k)
@@ -215,14 +215,18 @@ let test_join_alloc_n n =
         if Maybe.is_some right_mb then emit k (v + Maybe.unsafe_get right_mb))
       ~merge:(fun _l r -> r)
       ~right_get:(fun k ->
-        Maybe.of_stable
-          (Stable.unsafe_of_value
-             (ReactiveHash.Map.find_maybe right_tbl (Stable.unsafe_to_value k))))
+        let mb = StableMap.find_maybe right_tbl k in
+        if Maybe.is_some mb then
+          Maybe.some
+            (Stable.unsafe_of_value
+               (Stable.unsafe_to_value (Maybe.unsafe_get mb)))
+        else Maybe.none)
   in
 
   (* Populate: n entries on the right, n on the left *)
   for i = 0 to n - 1 do
-    ReactiveHash.Map.replace right_tbl i (i * 10)
+    StableMap.replace right_tbl (Stable.unsafe_of_value i)
+      (Stable.unsafe_of_value (i * 10))
   done;
   for i = 0 to n - 1 do
     ReactiveJoin.push_left state (stable_int i)

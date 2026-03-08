@@ -471,72 +471,77 @@ let stats t = t.stats
 let level t = t.level
 let name t = t.name
 
-let unsafe_wave_push wave k v =
-  ReactiveWave.push wave (Stable.unsafe_of_value k) (Stable.unsafe_of_value v)
-
 (** {1 Source Collection} *)
 
 module Source = struct
   type ('k, 'v) tables = {
-    tbl: ('k, 'v) ReactiveHash.Map.t;
-    pending: ('k, 'v Maybe.t) ReactiveHash.Map.t;
+    tbl: ('k, 'v) StableMap.t;
+    pending: ('k, 'v Maybe.t) StableMap.t;
   }
 
   let apply_emit (tables : ('k, 'v) tables) k mv =
-    let k = Stable.unsafe_to_value k in
     let mv = Stable.unsafe_to_value mv in
     if Maybe.is_some mv then (
       let v = Maybe.unsafe_get mv in
-      ReactiveHash.Map.replace tables.tbl k v;
-      ReactiveHash.Map.replace tables.pending k (Maybe.some v))
+      StableMap.replace tables.tbl k (Stable.unsafe_of_value v);
+      StableMap.replace tables.pending k (Stable.unsafe_of_value (Maybe.some v)))
     else (
-      ReactiveHash.Map.remove tables.tbl k;
-      ReactiveHash.Map.replace tables.pending k Maybe.none)
+      StableMap.remove tables.tbl k;
+      StableMap.replace tables.pending k
+        (Stable.unsafe_of_value Maybe.none))
 
   let create ~name () =
-    let tbl : ('k, 'v) ReactiveHash.Map.t = ReactiveHash.Map.create () in
+    let tbl : ('k, 'v) StableMap.t = StableMap.create () in
     let subscribers = ref [] in
     let my_stats = create_stats () in
     let output_wave = create_wave () in
     (* Pending deltas: accumulated by emit, flushed by process.
-     Uses ReactiveHash.Map for zero-alloc deduplication (last-write-wins). *)
-    let pending : ('k, 'v Maybe.t) ReactiveHash.Map.t =
-      ReactiveHash.Map.create ()
-    in
+     Uses StableMap for zero-alloc deduplication (last-write-wins). *)
+    let pending : ('k, 'v Maybe.t) StableMap.t = StableMap.create () in
     let tables = {tbl; pending} in
     let pending_count = ref 0 in
 
     let process () =
-      let count = ReactiveHash.Map.cardinal pending in
+      let count = StableMap.cardinal pending in
       if count > 0 then (
         my_stats.deltas_emitted <- my_stats.deltas_emitted + 1;
         my_stats.entries_emitted <- my_stats.entries_emitted + count;
         ReactiveWave.clear output_wave;
-        ReactiveHash.Map.iter_with unsafe_wave_push output_wave pending;
-        ReactiveHash.Map.clear pending;
+        StableMap.iter_with
+          (fun wave k v ->
+            ReactiveWave.push wave k (Stable.unsafe_of_value (Stable.unsafe_to_value v)))
+          output_wave pending;
+        StableMap.clear pending;
         notify_subscribers output_wave !subscribers)
-      else ReactiveHash.Map.clear pending
+      else StableMap.clear pending
     in
 
-    let destroy () = ReactiveWave.destroy output_wave in
+    let destroy () =
+      StableMap.destroy tbl;
+      StableMap.destroy pending;
+      ReactiveWave.destroy output_wave
+    in
     let my_info =
       Registry.register_node ~name ~level:0 ~process ~destroy ~stats:my_stats
     in
 
-    let iter_stable f k v =
-      f (Stable.unsafe_of_value k) (Stable.unsafe_of_value v)
-    in
     let collection =
       {
         name;
         subscribe = (fun h -> subscribers := h :: !subscribers);
-        iter = (fun f -> ReactiveHash.Map.iter_with iter_stable f tbl);
+        iter =
+          (fun f ->
+            StableMap.iter_with
+              (fun f k v ->
+                f k (Stable.unsafe_of_value (Stable.unsafe_to_value v)))
+              f tbl);
         get =
           (fun k ->
-            Maybe.of_stable
-              (Stable.unsafe_of_value
-                 (ReactiveHash.Map.find_maybe tbl (Stable.unsafe_to_value k))));
-        length = (fun () -> ReactiveHash.Map.cardinal tbl);
+            let mb = StableMap.find_maybe tbl k in
+            if Maybe.is_some mb then
+              Maybe.some (Stable.unsafe_of_value (Stable.unsafe_to_value (Maybe.unsafe_get mb)))
+            else Maybe.none);
+        length = (fun () -> StableMap.cardinal tbl);
         destroy;
         stats = my_stats;
         level = 0;
