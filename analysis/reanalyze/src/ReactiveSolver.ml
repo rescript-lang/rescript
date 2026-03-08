@@ -57,8 +57,8 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   let dead_decls =
     Reactive.Join.create ~name:"solver.dead_decls" decls live
       ~key_of:(fun pos _decl -> pos)
-      ~f:(fun pos decl live_mb emit ->
-        if not (Maybe.is_some live_mb) then emit pos decl)
+      ~f:(fun pos decl live_mb wave ->
+        if not (Maybe.is_some live_mb) then StableWave.push wave pos decl)
       ()
   in
 
@@ -66,8 +66,8 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   let live_decls =
     Reactive.Join.create ~name:"solver.live_decls" decls live
       ~key_of:(fun pos _decl -> pos)
-      ~f:(fun pos decl live_mb emit ->
-        if Maybe.is_some live_mb then emit pos decl)
+      ~f:(fun pos decl live_mb wave ->
+        if Maybe.is_some live_mb then StableWave.push wave pos decl)
       ()
   in
 
@@ -76,15 +76,15 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
     if not config.DceConfig.run.transitive then
       (* Dead modules only reported in transitive mode *)
       Reactive.FlatMap.create ~name:"solver.dead_modules_empty" dead_decls
-        ~f:(fun _k _v _emit -> ())
+        ~f:(fun _k _v _wave -> ())
         ()
     else
       (* modules_with_dead: (moduleName, (loc, fileName)) for each module with dead decls *)
       let modules_with_dead =
         Reactive.FlatMap.create ~name:"solver.modules_with_dead" dead_decls
-          ~f:(fun _pos decl emit ->
+          ~f:(fun _pos decl wave ->
             let decl = Stable.to_linear_value decl in
-            emit
+            StableWave.push wave
               (Stable.unsafe_of_value (decl_module_name decl))
               (Stable.unsafe_of_value
                  (decl.moduleLoc, decl.pos.Lexing.pos_fname)))
@@ -94,9 +94,9 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
       (* modules_with_live: (moduleName, ()) for each module with live decls *)
       let modules_with_live =
         Reactive.FlatMap.create ~name:"solver.modules_with_live" live_decls
-          ~f:(fun _pos decl emit ->
+          ~f:(fun _pos decl wave ->
             let decl = Stable.to_linear_value decl in
-            emit
+            StableWave.push wave
               (Stable.unsafe_of_value (decl_module_name decl))
               (Stable.unsafe_of_value ()))
           ()
@@ -104,9 +104,9 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
       (* Anti-join: modules in dead but not in live *)
       Reactive.Join.create ~name:"solver.dead_modules" modules_with_dead
         modules_with_live
-        ~key_of:(fun modName (_loc, _fileName) -> modName)
-        ~f:(fun modName (loc, fileName) live_mb emit ->
-          if not (Maybe.is_some live_mb) then emit modName (loc, fileName)
+        ~key_of:(fun modName _v -> modName)
+        ~f:(fun modName v live_mb wave ->
+          if not (Maybe.is_some live_mb) then StableWave.push wave modName v
             (* dead: no live decls *))
         ()
   in
@@ -114,9 +114,9 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   (* Reactive per-file grouping of dead declarations *)
   let dead_decls_by_file =
     Reactive.FlatMap.create ~name:"solver.dead_decls_by_file" dead_decls
-      ~f:(fun _pos decl emit ->
+      ~f:(fun _pos decl wave ->
         let decl = Stable.to_linear_value decl in
-        emit
+        StableWave.push wave
           (Stable.unsafe_of_value decl.pos.Lexing.pos_fname)
           (Stable.unsafe_of_value [decl]))
       ~merge:(fun decls1 decls2 ->
@@ -182,10 +182,10 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
     match (transitive, value_refs_from) with
     | true, _ | false, None ->
       Reactive.FlatMap.create ~name:"solver.issues_by_file" dead_decls_by_file
-        ~f:(fun file decls emit ->
+        ~f:(fun file decls wave ->
           let file = Stable.to_linear_value file in
           let decls = Stable.to_linear_value decls in
-          emit
+          StableWave.push wave
             (Stable.unsafe_of_value file)
             (Stable.unsafe_of_value (issues_for_file file decls)))
         ()
@@ -194,16 +194,22 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
          and join every file against it so per-file issues recompute. *)
       let refs_token =
         Reactive.FlatMap.create ~name:"solver.refs_token" refs_from
-          ~f:(fun _posFrom _targets emit ->
-            emit (Stable.unsafe_of_value ()) (Stable.unsafe_of_value ()))
+          ~f:(fun _posFrom _targets wave ->
+            StableWave.push wave
+              (Stable.unsafe_of_value ())
+              (Stable.unsafe_of_value ()))
           ~merge:(fun _ _ -> Stable.unsafe_of_value ())
           ()
       in
       Reactive.Join.create ~name:"solver.issues_by_file" dead_decls_by_file
         refs_token
-        ~key_of:(fun _file _decls -> ())
-        ~f:(fun file decls _token_mb emit ->
-          emit file (issues_for_file file decls))
+        ~key_of:(fun _file _decls -> Stable.unsafe_of_value ())
+        ~f:(fun file decls _token_mb wave ->
+          let file = Stable.to_linear_value file in
+          let decls = Stable.to_linear_value decls in
+          StableWave.push wave
+            (Stable.unsafe_of_value file)
+            (Stable.unsafe_of_value (issues_for_file file decls)))
         ()
   in
 
@@ -212,10 +218,10 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
     Reactive.Join.create ~name:"solver.incorrect_dead_decls" live_decls
       annotations
       ~key_of:(fun pos _decl -> pos)
-      ~f:(fun pos decl ann_mb emit ->
+      ~f:(fun pos decl ann_mb wave ->
         if Maybe.is_some ann_mb then
-          match Maybe.unsafe_get ann_mb with
-          | FileAnnotations.Dead -> emit pos decl
+          match Stable.to_linear_value (Maybe.unsafe_get ann_mb) with
+          | FileAnnotations.Dead -> StableWave.push wave pos decl
           | _ -> ())
       ()
   in
@@ -223,10 +229,12 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   (* Reactive modules_with_reported: modules that have at least one reported dead value *)
   let modules_with_reported =
     Reactive.FlatMap.create ~name:"solver.modules_with_reported" issues_by_file
-      ~f:(fun _file v emit ->
+      ~f:(fun _file v wave ->
         let _issues, modules_list = Stable.to_linear_value v in
         List.iter
-          (fun m -> emit (Stable.unsafe_of_value m) (Stable.unsafe_of_value ()))
+          (fun m ->
+            StableWave.push wave (Stable.unsafe_of_value m)
+              (Stable.unsafe_of_value ()))
           modules_list)
       ()
   in
@@ -235,8 +243,10 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   let dead_module_issues =
     Reactive.Join.create ~name:"solver.dead_module_issues" dead_modules
       modules_with_reported
-      ~key_of:(fun moduleName (_loc, _fileName) -> moduleName)
-      ~f:(fun moduleName (loc, fileName) has_reported_mb emit ->
+      ~key_of:(fun moduleName _v -> moduleName)
+      ~f:(fun moduleName v has_reported_mb wave ->
+        let moduleName = Stable.to_linear_value moduleName in
+        let loc, fileName = Stable.to_linear_value v in
         if Maybe.is_some has_reported_mb then
           let loc =
             if loc.Location.loc_ghost then
@@ -251,8 +261,10 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
               {Location.loc_start = pos; loc_end = pos; loc_ghost = false}
             else loc
           in
-          emit moduleName
-            (AnalysisResult.make_dead_module_issue ~loc ~moduleName))
+          StableWave.push wave
+            (Stable.unsafe_of_value moduleName)
+            (Stable.unsafe_of_value
+               (AnalysisResult.make_dead_module_issue ~loc ~moduleName)))
       ()
   in
 

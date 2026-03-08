@@ -26,21 +26,22 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
   (* Declarations: (pos, Decl.t) with last-write-wins *)
   let decls =
     Reactive.FlatMap.create ~name:"decls" source
-      ~f:(fun _path file_data_opt emit ->
+      ~f:(fun _path file_data_opt wave ->
         let file_data_opt = Stable.to_linear_value file_data_opt in
         match file_data_opt with
         | None -> ()
         | Some file_data ->
           Declarations.builder_to_list file_data.DceFileProcessing.decls
           |> List.iter (fun (k, v) ->
-                 emit (Stable.unsafe_of_value k) (Stable.unsafe_of_value v)))
+                 StableWave.push wave (Stable.unsafe_of_value k)
+                   (Stable.unsafe_of_value v)))
       ()
   in
 
   (* Annotations: (pos, annotated_as) with last-write-wins *)
   let annotations =
     Reactive.FlatMap.create ~name:"annotations" source
-      ~f:(fun _path file_data_opt emit ->
+      ~f:(fun _path file_data_opt wave ->
         let file_data_opt = Stable.to_linear_value file_data_opt in
         match file_data_opt with
         | None -> ()
@@ -48,14 +49,15 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
           FileAnnotations.builder_to_list
             file_data.DceFileProcessing.annotations
           |> List.iter (fun (k, v) ->
-                 emit (Stable.unsafe_of_value k) (Stable.unsafe_of_value v)))
+                 StableWave.push wave (Stable.unsafe_of_value k)
+                   (Stable.unsafe_of_value v)))
       ()
   in
 
   (* Value refs_from: (posFrom, PosSet of targets) with PosSet.union merge *)
   let value_refs_from =
     Reactive.FlatMap.create ~name:"value_refs_from" source
-      ~f:(fun _path file_data_opt emit ->
+      ~f:(fun _path file_data_opt wave ->
         let file_data_opt = Stable.to_linear_value file_data_opt in
         match file_data_opt with
         | None -> ()
@@ -63,7 +65,8 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
           References.builder_value_refs_from_list
             file_data.DceFileProcessing.refs
           |> List.iter (fun (k, v) ->
-                 emit (Stable.unsafe_of_value k) (Stable.unsafe_of_value v)))
+                 StableWave.push wave (Stable.unsafe_of_value k)
+                   (Stable.unsafe_of_value v)))
       ~merge:(fun a b ->
         Stable.unsafe_of_value
           (PosSet.union (Stable.to_linear_value a) (Stable.to_linear_value b)))
@@ -73,7 +76,7 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
   (* Type refs_from: (posFrom, PosSet of targets) with PosSet.union merge *)
   let type_refs_from =
     Reactive.FlatMap.create ~name:"type_refs_from" source
-      ~f:(fun _path file_data_opt emit ->
+      ~f:(fun _path file_data_opt wave ->
         let file_data_opt = Stable.to_linear_value file_data_opt in
         match file_data_opt with
         | None -> ()
@@ -81,7 +84,8 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
           References.builder_type_refs_from_list
             file_data.DceFileProcessing.refs
           |> List.iter (fun (k, v) ->
-                 emit (Stable.unsafe_of_value k) (Stable.unsafe_of_value v)))
+                 StableWave.push wave (Stable.unsafe_of_value k)
+                   (Stable.unsafe_of_value v)))
       ~merge:(fun a b ->
         Stable.unsafe_of_value
           (PosSet.union (Stable.to_linear_value a) (Stable.to_linear_value b)))
@@ -91,7 +95,7 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
   (* Cross-file items: (path, CrossFileItems.t) with merge by concatenation *)
   let cross_file_items =
     Reactive.FlatMap.create ~name:"cross_file_items" source
-      ~f:(fun path file_data_opt emit ->
+      ~f:(fun path file_data_opt wave ->
         let file_data_opt = Stable.to_linear_value file_data_opt in
         match file_data_opt with
         | None -> ()
@@ -99,7 +103,7 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
           let items =
             CrossFileItems.builder_to_t file_data.DceFileProcessing.cross_file
           in
-          emit path (Stable.unsafe_of_value items))
+          StableWave.push wave path (Stable.unsafe_of_value items))
       ~merge:(fun a b ->
         let a = Stable.to_linear_value a in
         let b = Stable.to_linear_value b in
@@ -116,14 +120,15 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
   (* File deps map: (from_file, FileSet of to_files) with FileSet.union merge *)
   let file_deps_map =
     Reactive.FlatMap.create ~name:"file_deps_map" source
-      ~f:(fun _path file_data_opt emit ->
+      ~f:(fun _path file_data_opt wave ->
         let file_data_opt = Stable.to_linear_value file_data_opt in
         match file_data_opt with
         | None -> ()
         | Some file_data ->
           FileDeps.builder_deps_to_list file_data.DceFileProcessing.file_deps
           |> List.iter (fun (k, v) ->
-                 emit (Stable.unsafe_of_value k) (Stable.unsafe_of_value v)))
+                 StableWave.push wave (Stable.unsafe_of_value k)
+                   (Stable.unsafe_of_value v)))
       ~merge:(fun a b ->
         Stable.unsafe_of_value
           (FileSet.union (Stable.to_linear_value a) (Stable.to_linear_value b)))
@@ -133,7 +138,7 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
   (* Files set: (source_path, ()) - just track which source files exist *)
   let files =
     Reactive.FlatMap.create ~name:"files" source
-      ~f:(fun _cmt_path file_data_opt emit ->
+      ~f:(fun _cmt_path file_data_opt wave ->
         let file_data_opt = Stable.to_linear_value file_data_opt in
         match file_data_opt with
         | None -> ()
@@ -143,7 +148,8 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
           in
           FileSet.iter
             (fun f ->
-              emit (Stable.unsafe_of_value f) (Stable.unsafe_of_value ()))
+              StableWave.push wave (Stable.unsafe_of_value f)
+                (Stable.unsafe_of_value ()))
             file_set)
       ()
   in
@@ -151,11 +157,11 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
   (* Extract exception_refs from cross_file_items for ReactiveExceptionRefs *)
   let exception_refs_collection =
     Reactive.FlatMap.create ~name:"exception_refs_collection" cross_file_items
-      ~f:(fun _path items emit ->
+      ~f:(fun _path items wave ->
         let items = Stable.to_linear_value items in
         items.CrossFileItems.exception_refs
         |> List.iter (fun (r : CrossFileItems.exception_ref) ->
-               emit
+               StableWave.push wave
                  (Stable.unsafe_of_value r.exception_path)
                  (Stable.unsafe_of_value r.loc_from)))
       ()

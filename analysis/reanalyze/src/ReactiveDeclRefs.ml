@@ -15,10 +15,10 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   (* Group declarations by file *)
   let decls_by_file : (string, (Lexing.position * Decl.t) list) Reactive.t =
     Reactive.FlatMap.create ~name:"decl_refs.decls_by_file" decls
-      ~f:(fun pos decl emit ->
+      ~f:(fun pos decl wave ->
         let pos = Stable.to_linear_value pos in
         let decl = Stable.to_linear_value decl in
-        emit
+        StableWave.push wave
           (Stable.unsafe_of_value pos.Lexing.pos_fname)
           (Stable.unsafe_of_value [(pos, decl)]))
       ~merge:(fun a b ->
@@ -38,29 +38,51 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   let value_decl_refs : (Lexing.position, PosSet.t) Reactive.t =
     Reactive.Join.create ~name:"decl_refs.value_decl_refs" value_refs_from
       decls_by_file
-      ~key_of:(fun posFrom _targets -> posFrom.Lexing.pos_fname)
-      ~f:(fun posFrom targets decls_mb emit ->
+      ~key_of:(fun posFrom _targets ->
+        Stable.unsafe_of_value (Stable.to_linear_value posFrom).Lexing.pos_fname)
+      ~f:(fun posFrom targets decls_mb wave ->
+        let posFrom = Stable.to_linear_value posFrom in
+        let targets = Stable.to_linear_value targets in
         if Maybe.is_some decls_mb then
-          let decls_in_file = Maybe.unsafe_get decls_mb in
+          let decls_in_file =
+            Stable.to_linear_value (Maybe.unsafe_get decls_mb)
+          in
           List.iter
             (fun (decl_pos, decl) ->
-              if pos_in_decl posFrom decl then emit decl_pos targets)
+              if pos_in_decl posFrom decl then
+                StableWave.push wave
+                  (Stable.unsafe_of_value decl_pos)
+                  (Stable.unsafe_of_value targets))
             decls_in_file)
-      ~merge:PosSet.union ()
+      ~merge:(fun a b ->
+        Stable.unsafe_of_value
+          (PosSet.union (Stable.to_linear_value a) (Stable.to_linear_value b)))
+      ()
   in
 
   let type_decl_refs : (Lexing.position, PosSet.t) Reactive.t =
     Reactive.Join.create ~name:"decl_refs.type_decl_refs" type_refs_from
       decls_by_file
-      ~key_of:(fun posFrom _targets -> posFrom.Lexing.pos_fname)
-      ~f:(fun posFrom targets decls_mb emit ->
+      ~key_of:(fun posFrom _targets ->
+        Stable.unsafe_of_value (Stable.to_linear_value posFrom).Lexing.pos_fname)
+      ~f:(fun posFrom targets decls_mb wave ->
+        let posFrom = Stable.to_linear_value posFrom in
+        let targets = Stable.to_linear_value targets in
         if Maybe.is_some decls_mb then
-          let decls_in_file = Maybe.unsafe_get decls_mb in
+          let decls_in_file =
+            Stable.to_linear_value (Maybe.unsafe_get decls_mb)
+          in
           List.iter
             (fun (decl_pos, decl) ->
-              if pos_in_decl posFrom decl then emit decl_pos targets)
+              if pos_in_decl posFrom decl then
+                StableWave.push wave
+                  (Stable.unsafe_of_value decl_pos)
+                  (Stable.unsafe_of_value targets))
             decls_in_file)
-      ~merge:PosSet.union ()
+      ~merge:(fun a b ->
+        Stable.unsafe_of_value
+          (PosSet.union (Stable.to_linear_value a) (Stable.to_linear_value b)))
+      ()
   in
 
   (* Combine value and type refs into (value_targets, type_targets) pairs.
@@ -68,34 +90,47 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   let with_value_refs : (Lexing.position, PosSet.t) Reactive.t =
     Reactive.Join.create ~name:"decl_refs.with_value_refs" decls value_decl_refs
       ~key_of:(fun pos _decl -> pos)
-      ~f:(fun pos _decl refs_mb emit ->
+      ~f:(fun pos _decl refs_mb wave ->
+        let pos = Stable.to_linear_value pos in
         let refs =
-          if Maybe.is_some refs_mb then Maybe.unsafe_get refs_mb
+          if Maybe.is_some refs_mb then
+            Stable.to_linear_value (Maybe.unsafe_get refs_mb)
           else PosSet.empty
         in
-        emit pos refs)
+        StableWave.push wave
+          (Stable.unsafe_of_value pos)
+          (Stable.unsafe_of_value refs))
       ()
   in
 
   let with_type_refs : (Lexing.position, PosSet.t) Reactive.t =
     Reactive.Join.create ~name:"decl_refs.with_type_refs" decls type_decl_refs
       ~key_of:(fun pos _decl -> pos)
-      ~f:(fun pos _decl refs_mb emit ->
+      ~f:(fun pos _decl refs_mb wave ->
+        let pos = Stable.to_linear_value pos in
         let refs =
-          if Maybe.is_some refs_mb then Maybe.unsafe_get refs_mb
+          if Maybe.is_some refs_mb then
+            Stable.to_linear_value (Maybe.unsafe_get refs_mb)
           else PosSet.empty
         in
-        emit pos refs)
+        StableWave.push wave
+          (Stable.unsafe_of_value pos)
+          (Stable.unsafe_of_value refs))
       ()
   in
 
   (* Combine into final (value_targets, type_targets) pairs *)
   Reactive.Join.create ~name:"decl_refs.combined" with_value_refs with_type_refs
     ~key_of:(fun pos _value_targets -> pos)
-    ~f:(fun pos value_targets type_targets_mb emit ->
+    ~f:(fun pos value_targets type_targets_mb wave ->
+      let pos = Stable.to_linear_value pos in
+      let value_targets = Stable.to_linear_value value_targets in
       let type_targets =
-        if Maybe.is_some type_targets_mb then Maybe.unsafe_get type_targets_mb
+        if Maybe.is_some type_targets_mb then
+          Stable.to_linear_value (Maybe.unsafe_get type_targets_mb)
         else PosSet.empty
       in
-      emit pos (value_targets, type_targets))
+      StableWave.push wave
+        (Stable.unsafe_of_value pos)
+        (Stable.unsafe_of_value (value_targets, type_targets)))
     ()

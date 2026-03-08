@@ -10,8 +10,8 @@ let test_batch_flatmap () =
   let source, emit = Source.create ~name:"source" () in
   let derived =
     FlatMap.create ~name:"derived" source
-      ~f:(fun k v emit ->
-        emit
+      ~f:(fun k v wave ->
+        StableWave.push wave
           (Stable.unsafe_of_value (Stable.to_linear_value k ^ "_derived"))
           (Stable.int (Stable.to_linear_value v * 2)))
       ()

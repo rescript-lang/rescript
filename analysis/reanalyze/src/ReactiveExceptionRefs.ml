@@ -27,7 +27,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   (* Step 1: Index exception declarations by path *)
   let exception_decls =
     Reactive.FlatMap.create ~name:"exc_refs.exception_decls" decls
-      ~f:(fun _pos decl emit ->
+      ~f:(fun _pos decl wave ->
         let decl : Decl.t = Stable.to_linear_value decl in
         match decl.Decl.declKind with
         | Exception ->
@@ -38,7 +38,9 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
               loc_ghost = false;
             }
           in
-          emit (Stable.unsafe_of_value decl.path) (Stable.unsafe_of_value loc)
+          StableWave.push wave
+            (Stable.unsafe_of_value decl.path)
+            (Stable.unsafe_of_value loc)
         | _ -> ())
       () (* Last-write-wins is fine since paths should be unique *)
   in
@@ -48,24 +50,30 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
     Reactive.Join.create ~name:"exc_refs.resolved_refs" exception_refs
       exception_decls
       ~key_of:(fun path _loc_from -> path)
-      ~f:(fun _path loc_from loc_to_mb emit ->
+      ~f:(fun _path loc_from loc_to_mb wave ->
+        let loc_from = Stable.to_linear_value loc_from in
         if Maybe.is_some loc_to_mb then
-          let loc_to = Maybe.unsafe_get loc_to_mb in
+          let loc_to = Stable.to_linear_value (Maybe.unsafe_get loc_to_mb) in
           (* Add value reference: pos_to -> pos_from (refs_to direction) *)
-          emit loc_to.Location.loc_start
-            (PosSet.singleton loc_from.Location.loc_start))
-      ~merge:PosSet.union ()
+          StableWave.push wave
+            (Stable.unsafe_of_value loc_to.Location.loc_start)
+            (Stable.unsafe_of_value
+               (PosSet.singleton loc_from.Location.loc_start)))
+      ~merge:(fun a b ->
+        Stable.unsafe_of_value
+          (PosSet.union (Stable.to_linear_value a) (Stable.to_linear_value b)))
+      ()
   in
 
   (* Step 3: Create refs_from direction by inverting *)
   let resolved_refs_from =
     Reactive.FlatMap.create ~name:"exc_refs.resolved_refs_from" resolved_refs
-      ~f:(fun posTo posFromSet emit ->
+      ~f:(fun posTo posFromSet wave ->
         let posTo = Stable.to_linear_value posTo in
         let posFromSet = Stable.to_linear_value posFromSet in
         PosSet.iter
           (fun posFrom ->
-            emit
+            StableWave.push wave
               (Stable.unsafe_of_value posFrom)
               (Stable.unsafe_of_value (PosSet.singleton posTo)))
           posFromSet)

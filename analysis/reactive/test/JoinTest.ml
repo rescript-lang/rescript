@@ -17,9 +17,12 @@ let test_join () =
   let joined =
     Join.create ~name:"joined" left right
       ~key_of:(fun path _loc_from -> path)
-      ~f:(fun _path loc_from decl_pos_mb emit ->
+      ~f:(fun _path loc_from decl_pos_mb wave ->
         if Maybe.is_some decl_pos_mb then
-          emit (Maybe.unsafe_get decl_pos_mb) loc_from)
+          let decl_pos =
+            Stable.to_linear_value (Maybe.unsafe_get decl_pos_mb)
+          in
+          StableWave.push wave (Stable.int decl_pos) loc_from)
       ()
   in
 
@@ -83,9 +86,12 @@ let test_join_with_merge () =
   let joined =
     Join.create ~name:"joined" left right
       ~key_of:(fun _id path -> path) (* Look up by path *)
-      ~f:(fun _id _path value_mb emit ->
-        if Maybe.is_some value_mb then emit 0 (Maybe.unsafe_get value_mb))
-      ~merge:( + ) (* Sum values *)
+      ~f:(fun _id _path value_mb wave ->
+        if Maybe.is_some value_mb then
+          StableWave.push wave (Stable.int 0) (Maybe.unsafe_get value_mb))
+      ~merge:(fun l r ->
+        Stable.int (Stable.to_linear_value l + Stable.to_linear_value r))
+        (* Sum values *)
       ()
   in
 

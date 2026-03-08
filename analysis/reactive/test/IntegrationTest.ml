@@ -16,9 +16,10 @@ let test_file_collection () =
   (* First flatMap: aggregate word counts across files with merge *)
   let word_counts =
     FlatMap.create ~name:"word_counts" files
-      ~f:(fun _path counts emit ->
+      ~f:(fun _path counts wave ->
         StringMap.iter
-          (fun k v -> emit (Stable.unsafe_of_value k) (Stable.int v))
+          (fun k v ->
+            StableWave.push wave (Stable.unsafe_of_value k) (Stable.int v))
           (Stable.to_linear_value counts))
         (* Each file contributes its word counts *)
       ~merge:(fun a b ->
@@ -30,8 +31,9 @@ let test_file_collection () =
   (* Second flatMap: filter to words with count >= 2 *)
   let frequent_words =
     FlatMap.create ~name:"frequent_words" word_counts
-      ~f:(fun word count emit ->
-        if Stable.to_linear_value count >= 2 then emit word count)
+      ~f:(fun word count wave ->
+        if Stable.to_linear_value count >= 2 then
+          StableWave.push wave word count)
       ()
   in
 

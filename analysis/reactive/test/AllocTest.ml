@@ -92,7 +92,9 @@ let test_fixpoint_alloc () =
 
 let test_flatmap_alloc_n n =
   let state =
-    ReactiveFlatMap.create ~f:(fun k v emit -> emit k v) ~merge:(fun _l r -> r)
+    ReactiveFlatMap.create
+      ~f:(fun k v wave -> StableWave.push wave k v)
+      ~merge:(fun _l r -> r)
   in
 
   (* Populate: n entries *)
@@ -211,8 +213,11 @@ let test_join_alloc_n n =
   let state =
     ReactiveJoin.create
       ~key_of:(fun k _v -> k)
-      ~f:(fun k v right_mb emit ->
-        if Maybe.is_some right_mb then emit k (v + Maybe.unsafe_get right_mb))
+      ~f:(fun k v right_mb wave ->
+        if Maybe.is_some right_mb then
+          let v_val = Stable.to_linear_value v in
+          let r_val = Stable.to_linear_value (Maybe.unsafe_get right_mb) in
+          StableWave.push wave k (Stable.int (v_val + r_val)))
       ~merge:(fun _l r -> r)
       ~right_get:(fun k ->
         let mb = StableMap.find_maybe right_tbl k in
@@ -266,6 +271,7 @@ let test_join_alloc_n n =
   done;
   assert (ReactiveJoin.target_length state = n);
   ReactiveJoin.destroy state;
+  StableMap.destroy right_tbl;
   words_since () / iters
 
 let test_join_alloc () =
@@ -290,8 +296,11 @@ let test_reactive_join_alloc_n n =
   let joined =
     Reactive.Join.create ~name:"joined" left right
       ~key_of:(fun k _v -> k)
-      ~f:(fun k v right_mb emit ->
-        if Maybe.is_some right_mb then emit k (v + Maybe.unsafe_get right_mb))
+      ~f:(fun k v right_mb wave ->
+        if Maybe.is_some right_mb then
+          let v_val = Stable.to_linear_value v in
+          let r_val = Stable.to_linear_value (Maybe.unsafe_get right_mb) in
+          StableWave.push wave k (Stable.int (v_val + r_val)))
       ()
   in
 
@@ -478,7 +487,9 @@ let test_reactive_flatmap_alloc_n n =
   let src, emit_src = Reactive.Source.create ~name:"src" () in
 
   let derived =
-    Reactive.FlatMap.create ~name:"derived" src ~f:(fun k v emit -> emit k v) ()
+    Reactive.FlatMap.create ~name:"derived" src
+      ~f:(fun k v wave -> StableWave.push wave k v)
+      ()
   in
 
   (* Populate: n entries *)

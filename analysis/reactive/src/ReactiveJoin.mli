@@ -14,9 +14,14 @@ type process_result = {
 }
 
 val create :
-  key_of:('k1 -> 'v1 -> 'k2) ->
-  f:('k1 -> 'v1 -> 'v2 Maybe.t -> ('k3 -> 'v3 -> unit) -> unit) ->
-  merge:('v3 -> 'v3 -> 'v3) ->
+  key_of:('k1 Stable.t -> 'v1 Stable.t -> 'k2 Stable.t) ->
+  f:
+    ('k1 Stable.t ->
+    'v1 Stable.t ->
+    'v2 Stable.t Maybe.t ->
+    ('k3, 'v3) StableWave.t ->
+    unit) ->
+  merge:('v3 Stable.t -> 'v3 Stable.t -> 'v3 Stable.t) ->
   right_get:('k2 Stable.t -> 'v2 Stable.t Maybe.t) ->
   ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t
 

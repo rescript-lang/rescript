@@ -138,12 +138,12 @@ let to_file_data_collection (collection : t) :
     (string, DceFileProcessing.file_data option) Reactive.t =
   Reactive.FlatMap.create ~name:"file_data_collection"
     (ReactiveFileCollection.to_collection collection)
-    ~f:(fun path result_opt emit ->
+    ~f:(fun path result_opt wave ->
       let result_opt = Stable.to_linear_value result_opt in
       match result_opt with
       | Some {dce_data = Some data; _} ->
-        emit path (Stable.unsafe_of_value (Some data))
-      | _ -> emit path (Stable.unsafe_of_value None))
+        StableWave.push wave path (Stable.unsafe_of_value (Some data))
+      | _ -> StableWave.push wave path (Stable.unsafe_of_value None))
     ()
 
 (** Iterate over all file_data in the collection *)

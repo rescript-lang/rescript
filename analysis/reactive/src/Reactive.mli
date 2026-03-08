@@ -111,11 +111,7 @@ module FlatMap : sig
   val create :
     name:string ->
     ('k1, 'v1) t ->
-    f:
-      ('k1 Stable.t ->
-      'v1 Stable.t ->
-      ('k2 Stable.t -> 'v2 Stable.t -> unit) ->
-      unit) ->
+    f:('k1 Stable.t -> 'v1 Stable.t -> ('k2, 'v2) StableWave.t -> unit) ->
     ?merge:('v2 Stable.t -> 'v2 Stable.t -> 'v2 Stable.t) ->
     unit ->
     ('k2, 'v2) t
@@ -128,9 +124,14 @@ module Join : sig
     name:string ->
     ('k1, 'v1) t ->
     ('k2, 'v2) t ->
-    key_of:('k1 -> 'v1 -> 'k2) ->
-    f:('k1 -> 'v1 -> 'v2 Maybe.t -> ('k3 -> 'v3 -> unit) -> unit) ->
-    ?merge:('v3 -> 'v3 -> 'v3) ->
+    key_of:('k1 Stable.t -> 'v1 Stable.t -> 'k2 Stable.t) ->
+    f:
+      ('k1 Stable.t ->
+      'v1 Stable.t ->
+      'v2 Stable.t Maybe.t ->
+      ('k3, 'v3) StableWave.t ->
+      unit) ->
+    ?merge:('v3 Stable.t -> 'v3 Stable.t -> 'v3 Stable.t) ->
     unit ->
     ('k3, 'v3) t
   (** Join left collection with right collection.

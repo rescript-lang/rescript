@@ -49,21 +49,23 @@ let test_same_source_anti_join () =
 
   let refs =
     FlatMap.create ~name:"refs" src
-      ~f:(fun _file data emit ->
+      ~f:(fun _file data wave ->
         let data : file_data = Stable.to_linear_value data in
         List.iter
           (fun (k, v) ->
-            emit (Stable.unsafe_of_value k) (Stable.unsafe_of_value v))
+            StableWave.push wave (Stable.unsafe_of_value k)
+              (Stable.unsafe_of_value v))
           data.refs)
       ()
   in
 
   let decls =
     FlatMap.create ~name:"decls" src
-      ~f:(fun _file data emit ->
+      ~f:(fun _file data wave ->
         let data : file_data = Stable.to_linear_value data in
         List.iter
-          (fun pos -> emit (Stable.unsafe_of_value pos) Stable.unit)
+          (fun pos ->
+            StableWave.push wave (Stable.unsafe_of_value pos) Stable.unit)
           data.decl_positions)
       ()
   in
@@ -71,9 +73,12 @@ let test_same_source_anti_join () =
   let external_refs =
     Join.create ~name:"external_refs" refs decls
       ~key_of:(fun posFrom _posTo -> posFrom)
-      ~f:(fun _posFrom posTo decl_mb emit ->
-        if not (Maybe.is_some decl_mb) then emit posTo ())
-      ~merge:(fun () () -> ())
+      ~f:(fun _posFrom posTo decl_mb wave ->
+        if not (Maybe.is_some decl_mb) then
+          StableWave.push wave
+            (Stable.unsafe_of_value (Stable.to_linear_value posTo))
+            Stable.unit)
+      ~merge:(fun _l _r -> Stable.unit)
       ()
   in
 
@@ -103,12 +108,13 @@ let test_multi_level_union () =
   (* refs1: level 1 *)
   let refs1 =
     FlatMap.create ~name:"refs1" src
-      ~f:(fun _file data emit ->
+      ~f:(fun _file data wave ->
         let data : file_data = Stable.to_linear_value data in
         List.iter
           (fun (k, v) ->
             if String.length k > 0 && k.[0] = 'D' then
-              emit (Stable.unsafe_of_value k) (Stable.unsafe_of_value v))
+              StableWave.push wave (Stable.unsafe_of_value k)
+                (Stable.unsafe_of_value v))
           data.refs)
       ()
   in
@@ -116,28 +122,32 @@ let test_multi_level_union () =
   (* intermediate: level 1 *)
   let intermediate =
     FlatMap.create ~name:"intermediate" src
-      ~f:(fun _file data emit ->
+      ~f:(fun _file data wave ->
         let data : file_data = Stable.to_linear_value data in
         List.iter
           (fun (k, v) ->
             if String.length k > 0 && k.[0] = 'I' then
-              emit (Stable.unsafe_of_value k) (Stable.unsafe_of_value v))
+              StableWave.push wave (Stable.unsafe_of_value k)
+                (Stable.unsafe_of_value v))
           data.refs)
       ()
   in
 
   (* refs2: level 2 *)
   let refs2 =
-    FlatMap.create ~name:"refs2" intermediate ~f:(fun k v emit -> emit k v) ()
+    FlatMap.create ~name:"refs2" intermediate
+      ~f:(fun k v wave -> StableWave.push wave k v)
+      ()
   in
 
   (* decls: level 1 *)
   let decls =
     FlatMap.create ~name:"decls" src
-      ~f:(fun _file data emit ->
+      ~f:(fun _file data wave ->
         let data : file_data = Stable.to_linear_value data in
         List.iter
-          (fun pos -> emit (Stable.unsafe_of_value pos) Stable.unit)
+          (fun pos ->
+            StableWave.push wave (Stable.unsafe_of_value pos) Stable.unit)
           data.decl_positions)
       ()
   in
@@ -149,9 +159,12 @@ let test_multi_level_union () =
   let external_refs =
     Join.create ~name:"external_refs" all_refs decls
       ~key_of:(fun posFrom _posTo -> posFrom)
-      ~f:(fun _posFrom posTo decl_mb emit ->
-        if not (Maybe.is_some decl_mb) then emit posTo ())
-      ~merge:(fun () () -> ())
+      ~f:(fun _posFrom posTo decl_mb wave ->
+        if not (Maybe.is_some decl_mb) then
+          StableWave.push wave
+            (Stable.unsafe_of_value (Stable.to_linear_value posTo))
+            Stable.unit)
+      ~merge:(fun _l _r -> Stable.unit)
       ()
   in
 
@@ -178,10 +191,11 @@ let test_real_pipeline_simulation () =
   (* decls: level 1 *)
   let decls =
     FlatMap.create ~name:"decls" src
-      ~f:(fun _file data emit ->
+      ~f:(fun _file data wave ->
         let data : full_file_data = Stable.to_linear_value data in
         List.iter
-          (fun pos -> emit (Stable.unsafe_of_value pos) Stable.unit)
+          (fun pos ->
+            StableWave.push wave (Stable.unsafe_of_value pos) Stable.unit)
           data.full_decls)
       ()
   in
@@ -189,11 +203,12 @@ let test_real_pipeline_simulation () =
   (* merged_value_refs: level 1 *)
   let merged_value_refs =
     FlatMap.create ~name:"merged_value_refs" src
-      ~f:(fun _file data emit ->
+      ~f:(fun _file data wave ->
         let data : full_file_data = Stable.to_linear_value data in
         List.iter
           (fun (k, v) ->
-            emit (Stable.unsafe_of_value k) (Stable.unsafe_of_value v))
+            StableWave.push wave (Stable.unsafe_of_value k)
+              (Stable.unsafe_of_value v))
           data.value_refs)
       ()
   in
@@ -201,11 +216,12 @@ let test_real_pipeline_simulation () =
   (* exception_refs_raw: level 1 *)
   let exception_refs_raw =
     FlatMap.create ~name:"exception_refs_raw" src
-      ~f:(fun _file data emit ->
+      ~f:(fun _file data wave ->
         let data : full_file_data = Stable.to_linear_value data in
         List.iter
           (fun (k, v) ->
-            emit (Stable.unsafe_of_value k) (Stable.unsafe_of_value v))
+            StableWave.push wave (Stable.unsafe_of_value k)
+              (Stable.unsafe_of_value v))
           data.exception_refs)
       ()
   in
@@ -213,9 +229,10 @@ let test_real_pipeline_simulation () =
   (* exception_decls: level 2 *)
   let exception_decls =
     FlatMap.create ~name:"exception_decls" decls
-      ~f:(fun pos _unit emit ->
+      ~f:(fun pos _unit wave ->
         let pos_v = Stable.to_linear_value pos in
-        if String.length pos_v > 0 && pos_v.[0] = 'E' then emit pos Stable.unit)
+        if String.length pos_v > 0 && pos_v.[0] = 'E' then
+          StableWave.push wave pos Stable.unit)
       ()
   in
 
@@ -224,15 +241,15 @@ let test_real_pipeline_simulation () =
     Join.create ~name:"resolved_exception_refs" exception_refs_raw
       exception_decls
       ~key_of:(fun path _loc -> path)
-      ~f:(fun path loc decl_mb emit ->
-        if Maybe.is_some decl_mb then emit path loc)
+      ~f:(fun path loc decl_mb wave ->
+        if Maybe.is_some decl_mb then StableWave.push wave path loc)
       ()
   in
 
   (* resolved_refs_from: level 4 *)
   let resolved_refs_from =
     FlatMap.create ~name:"resolved_refs_from" resolved_exception_refs
-      ~f:(fun posTo posFrom emit -> emit posFrom posTo)
+      ~f:(fun posTo posFrom wave -> StableWave.push wave posFrom posTo)
       ()
   in
 
@@ -245,9 +262,12 @@ let test_real_pipeline_simulation () =
   let external_value_refs =
     Join.create ~name:"external_value_refs" value_refs_from decls
       ~key_of:(fun posFrom _posTo -> posFrom)
-      ~f:(fun _posFrom posTo decl_mb emit ->
-        if not (Maybe.is_some decl_mb) then emit posTo ())
-      ~merge:(fun () () -> ())
+      ~f:(fun _posFrom posTo decl_mb wave ->
+        if not (Maybe.is_some decl_mb) then
+          StableWave.push wave
+            (Stable.unsafe_of_value (Stable.to_linear_value posTo))
+            Stable.unit)
+      ~merge:(fun _l _r -> Stable.unit)
       ()
   in
 
@@ -277,9 +297,12 @@ let test_separate_sources () =
   let external_refs =
     Join.create ~name:"external_refs" refs_src decls_src
       ~key_of:(fun posFrom _posTo -> posFrom)
-      ~f:(fun _posFrom posTo decl_mb emit ->
-        if not (Maybe.is_some decl_mb) then emit posTo ())
-      ~merge:(fun () () -> ())
+      ~f:(fun _posFrom posTo decl_mb wave ->
+        if not (Maybe.is_some decl_mb) then
+          StableWave.push wave
+            (Stable.unsafe_of_value (Stable.to_linear_value posTo))
+            Stable.unit)
+      ~merge:(fun _l _r -> Stable.unit)
       ()
   in
 

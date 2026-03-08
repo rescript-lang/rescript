@@ -14,11 +14,7 @@ type process_result = {
 }
 
 val create :
-  f:
-    ('k1 Stable.t ->
-    'v1 Stable.t ->
-    ('k2 Stable.t -> 'v2 Stable.t -> unit) ->
-    unit) ->
+  f:('k1 Stable.t -> 'v1 Stable.t -> ('k2, 'v2) StableWave.t -> unit) ->
   merge:('v2 Stable.t -> 'v2 Stable.t -> 'v2 Stable.t) ->
   ('k1, 'v1, 'k2, 'v2) t
 

@@ -50,11 +50,11 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   (* Step 1: Index decls by path *)
   let decl_by_path =
     Reactive.FlatMap.create ~name:"type_deps.decl_by_path" decls
-      ~f:(fun _pos decl emit ->
+      ~f:(fun _pos decl wave ->
         let decl = Stable.to_linear_value decl in
         match decl_to_info decl with
         | Some info ->
-          emit
+          StableWave.push wave
             (Stable.unsafe_of_value info.path)
             (Stable.unsafe_of_value [info])
         | None -> ())
@@ -67,18 +67,18 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   (* Step 2: Same-path refs - connect all decls at the same path *)
   let same_path_refs =
     Reactive.FlatMap.create ~name:"type_deps.same_path_refs" decl_by_path
-      ~f:(fun _path decls emit ->
+      ~f:(fun _path decls wave ->
         let decls = Stable.to_linear_value decls in
         match decls with
         | [] | [_] -> ()
         | first :: rest ->
           rest
           |> List.iter (fun other ->
-                 emit
+                 StableWave.push wave
                    (Stable.unsafe_of_value other.pos)
                    (Stable.unsafe_of_value (PosSet.singleton first.pos));
                  if not report_types_dead_only_in_interface then
-                   emit
+                   StableWave.push wave
                      (Stable.unsafe_of_value first.pos)
                      (Stable.unsafe_of_value (PosSet.singleton other.pos))))
       ~merge:(fun a b ->
@@ -91,7 +91,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   (* First, extract impl decls that need to look up intf *)
   let impl_decls =
     Reactive.FlatMap.create ~name:"type_deps.impl_decls" decls
-      ~f:(fun _pos decl emit ->
+      ~f:(fun _pos decl wave ->
         let decl = Stable.to_linear_value decl in
         match decl_to_info decl with
         | Some info when not info.is_interface -> (
@@ -102,7 +102,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
             let path_2 = path_1 |> DcePath.typeToInterface in
             let intf_path1 = typeLabelName :: path_1 in
             let intf_path2 = typeLabelName :: path_2 in
-            emit
+            StableWave.push wave
               (Stable.unsafe_of_value info.pos)
               (Stable.unsafe_of_value (info, intf_path1, intf_path2)))
         | _ -> ())
@@ -115,51 +115,78 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   let impl_to_intf_refs =
     Reactive.Join.create ~name:"type_deps.impl_to_intf_refs" impl_decls
       decl_by_path
-      ~key_of:(fun _pos (_, intf_path1, _) -> intf_path1)
-      ~f:(fun _pos (info, _intf_path1, _intf_path2) intf_decls_mb emit ->
+      ~key_of:(fun _pos v ->
+        let _, intf_path1, _ = Stable.to_linear_value v in
+        Stable.unsafe_of_value intf_path1)
+      ~f:(fun _pos v intf_decls_mb wave ->
+        let info, _intf_path1, _intf_path2 = Stable.to_linear_value v in
         if Maybe.is_some intf_decls_mb then
-          match Maybe.unsafe_get intf_decls_mb with
+          match Stable.to_linear_value (Maybe.unsafe_get intf_decls_mb) with
           | intf_info :: _ ->
             (* Found at path1: posTo=impl, posFrom=intf *)
-            emit info.pos (PosSet.singleton intf_info.pos);
+            StableWave.push wave
+              (Stable.unsafe_of_value info.pos)
+              (Stable.unsafe_of_value (PosSet.singleton intf_info.pos));
             if not report_types_dead_only_in_interface then
               (* Also: posTo=intf, posFrom=impl *)
-              emit intf_info.pos (PosSet.singleton info.pos)
+              StableWave.push wave
+                (Stable.unsafe_of_value intf_info.pos)
+                (Stable.unsafe_of_value (PosSet.singleton info.pos))
           | [] -> ())
-      ~merge:PosSet.union ()
+      ~merge:(fun a b ->
+        Stable.unsafe_of_value
+          (PosSet.union (Stable.to_linear_value a) (Stable.to_linear_value b)))
+      ()
   in
 
   (* Second join for path2 fallback *)
   let impl_needing_path2 =
     Reactive.Join.create ~name:"type_deps.impl_needing_path2" impl_decls
       decl_by_path
-      ~key_of:(fun _pos (_, intf_path1, _) -> intf_path1)
-      ~f:(fun pos (info, _intf_path1, intf_path2) intf_decls_mb emit ->
+      ~key_of:(fun _pos v ->
+        let _, intf_path1, _ = Stable.to_linear_value v in
+        Stable.unsafe_of_value intf_path1)
+      ~f:(fun pos v intf_decls_mb wave ->
+        let pos = Stable.to_linear_value pos in
+        let info, _intf_path1, intf_path2 = Stable.to_linear_value v in
         let found =
           Maybe.is_some intf_decls_mb
           &&
-          match Maybe.unsafe_get intf_decls_mb with
+          match Stable.to_linear_value (Maybe.unsafe_get intf_decls_mb) with
           | _ :: _ -> true
           | [] -> false
         in
-        if not found then emit pos (info, intf_path2))
+        if not found then
+          StableWave.push wave
+            (Stable.unsafe_of_value pos)
+            (Stable.unsafe_of_value (info, intf_path2)))
       ()
   in
 
   let impl_to_intf_refs_path2 =
     Reactive.Join.create ~name:"type_deps.impl_to_intf_refs_path2"
       impl_needing_path2 decl_by_path
-      ~key_of:(fun _pos (_, intf_path2) -> intf_path2)
-      ~f:(fun _pos (info, _) intf_decls_mb emit ->
+      ~key_of:(fun _pos v ->
+        let _, intf_path2 = Stable.to_linear_value v in
+        Stable.unsafe_of_value intf_path2)
+      ~f:(fun _pos v intf_decls_mb wave ->
+        let info, _ = Stable.to_linear_value v in
         if Maybe.is_some intf_decls_mb then
-          match Maybe.unsafe_get intf_decls_mb with
+          match Stable.to_linear_value (Maybe.unsafe_get intf_decls_mb) with
           | intf_info :: _ ->
             (* posTo=impl, posFrom=intf *)
-            emit info.pos (PosSet.singleton intf_info.pos);
+            StableWave.push wave
+              (Stable.unsafe_of_value info.pos)
+              (Stable.unsafe_of_value (PosSet.singleton intf_info.pos));
             if not report_types_dead_only_in_interface then
-              emit intf_info.pos (PosSet.singleton info.pos)
+              StableWave.push wave
+                (Stable.unsafe_of_value intf_info.pos)
+                (Stable.unsafe_of_value (PosSet.singleton info.pos))
           | [] -> ())
-      ~merge:PosSet.union ()
+      ~merge:(fun a b ->
+        Stable.unsafe_of_value
+          (PosSet.union (Stable.to_linear_value a) (Stable.to_linear_value b)))
+      ()
   in
 
   (* Also handle intf -> impl direction.
@@ -169,7 +196,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
      and the lookup is for finding the impl. *)
   let intf_decls =
     Reactive.FlatMap.create ~name:"type_deps.intf_decls" decls
-      ~f:(fun _pos decl emit ->
+      ~f:(fun _pos decl wave ->
         let decl = Stable.to_linear_value decl in
         match decl_to_info decl with
         | Some info when info.is_interface -> (
@@ -179,7 +206,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
             let impl_path =
               typeLabelName :: DcePath.moduleToImplementation pathToType
             in
-            emit
+            StableWave.push wave
               (Stable.unsafe_of_value info.pos)
               (Stable.unsafe_of_value (info, impl_path)))
         | _ -> ())
@@ -189,10 +216,13 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   let intf_to_impl_refs =
     Reactive.Join.create ~name:"type_deps.intf_to_impl_refs" intf_decls
       decl_by_path
-      ~key_of:(fun _pos (_, impl_path) -> impl_path)
-      ~f:(fun _pos (intf_info, _) impl_decls_mb emit ->
+      ~key_of:(fun _pos v ->
+        let _, impl_path = Stable.to_linear_value v in
+        Stable.unsafe_of_value impl_path)
+      ~f:(fun _pos v impl_decls_mb wave ->
+        let intf_info, _ = Stable.to_linear_value v in
         if Maybe.is_some impl_decls_mb then
-          match Maybe.unsafe_get impl_decls_mb with
+          match Stable.to_linear_value (Maybe.unsafe_get impl_decls_mb) with
           | impl_info :: _ ->
             (* Original: extendTypeDependencies loc1 loc where loc1=intf, loc=impl
                But wait, looking at the original code more carefully:
@@ -208,11 +238,18 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
                Here loc is the current intf decl, loc1 is the found impl.
                So extendTypeDependencies loc1 loc means posTo=loc1=impl, posFrom=loc=intf
             *)
-            emit impl_info.pos (PosSet.singleton intf_info.pos);
+            StableWave.push wave
+              (Stable.unsafe_of_value impl_info.pos)
+              (Stable.unsafe_of_value (PosSet.singleton intf_info.pos));
             if not report_types_dead_only_in_interface then
-              emit intf_info.pos (PosSet.singleton impl_info.pos)
+              StableWave.push wave
+                (Stable.unsafe_of_value intf_info.pos)
+                (Stable.unsafe_of_value (PosSet.singleton impl_info.pos))
           | [] -> ())
-      ~merge:PosSet.union ()
+      ~merge:(fun a b ->
+        Stable.unsafe_of_value
+          (PosSet.union (Stable.to_linear_value a) (Stable.to_linear_value b)))
+      ()
   in
 
   (* Cross-file refs are the combination of:
@@ -257,12 +294,12 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
     (* Invert the combined refs_to to refs_from *)
     Reactive.FlatMap.create ~name:"type_deps.all_type_refs_from"
       combined_refs_to
-      ~f:(fun posTo posFromSet emit ->
+      ~f:(fun posTo posFromSet wave ->
         let posTo = Stable.to_linear_value posTo in
         let posFromSet = Stable.to_linear_value posFromSet in
         PosSet.iter
           (fun posFrom ->
-            emit
+            StableWave.push wave
               (Stable.unsafe_of_value posFrom)
               (Stable.unsafe_of_value (PosSet.singleton posTo)))
           posFromSet)

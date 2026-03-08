@@ -45,11 +45,11 @@ let create ~(merged : ReactiveMerge.t) : t =
   (* Step 2: Convert to edges format for fixpoint: decl -> successor list *)
   let edges : (Lexing.position, Lexing.position StableList.inner) Reactive.t =
     Reactive.FlatMap.create ~name:"liveness.edges" decl_refs_index
-      ~f:(fun pos v emit ->
+      ~f:(fun pos v wave ->
         let pos = Stable.to_linear_value pos in
         let value_targets, type_targets = Stable.to_linear_value v in
         let all_targets = PosSet.union value_targets type_targets in
-        emit
+        StableWave.push wave
           (Stable.unsafe_of_value pos)
           (Stable.unsafe_of_value
              (StableList.unsafe_inner_of_list (PosSet.elements all_targets))))
@@ -71,11 +71,14 @@ let create ~(merged : ReactiveMerge.t) : t =
     Reactive.Join.create ~name:"liveness.external_value_refs" value_refs_from
       decls
       ~key_of:(fun posFrom _targets -> posFrom)
-      ~f:(fun _posFrom targets decl_mb emit ->
+      ~f:(fun _posFrom targets decl_mb wave ->
+        let targets = Stable.to_linear_value targets in
         if not (Maybe.is_some decl_mb) then
           (* posFrom is NOT a decl position, targets are externally referenced *)
-          PosSet.elements targets |> List.iter (fun posTo -> emit posTo ()))
-      ~merge:(fun () () -> ())
+          PosSet.elements targets
+          |> List.iter (fun posTo ->
+                 StableWave.push wave (Stable.unsafe_of_value posTo) Stable.unit))
+      ~merge:(fun _ _ -> Stable.unit)
       ()
   in
 
@@ -83,11 +86,14 @@ let create ~(merged : ReactiveMerge.t) : t =
     Reactive.Join.create ~name:"liveness.external_type_refs" type_refs_from
       decls
       ~key_of:(fun posFrom _targets -> posFrom)
-      ~f:(fun _posFrom targets decl_mb emit ->
+      ~f:(fun _posFrom targets decl_mb wave ->
+        let targets = Stable.to_linear_value targets in
         if not (Maybe.is_some decl_mb) then
           (* posFrom is NOT a decl position, targets are externally referenced *)
-          PosSet.elements targets |> List.iter (fun posTo -> emit posTo ()))
-      ~merge:(fun () () -> ())
+          PosSet.elements targets
+          |> List.iter (fun posTo ->
+                 StableWave.push wave (Stable.unsafe_of_value posTo) Stable.unit))
+      ~merge:(fun _ _ -> Stable.unit)
       ()
   in
 
@@ -102,12 +108,14 @@ let create ~(merged : ReactiveMerge.t) : t =
   let annotated_roots : (Lexing.position, unit) Reactive.t =
     Reactive.Join.create ~name:"liveness.annotated_roots" decls annotations
       ~key_of:(fun pos _decl -> pos)
-      ~f:(fun pos _decl ann_mb emit ->
+      ~f:(fun pos _decl ann_mb wave ->
+        let pos = Stable.to_linear_value pos in
         if Maybe.is_some ann_mb then
-          match Maybe.unsafe_get ann_mb with
-          | FileAnnotations.Live | FileAnnotations.GenType -> emit pos ()
+          match Stable.to_linear_value (Maybe.unsafe_get ann_mb) with
+          | FileAnnotations.Live | FileAnnotations.GenType ->
+            StableWave.push wave (Stable.unsafe_of_value pos) Stable.unit
           | _ -> ())
-      ~merge:(fun () () -> ())
+      ~merge:(fun _ _ -> Stable.unit)
       ()
   in
 

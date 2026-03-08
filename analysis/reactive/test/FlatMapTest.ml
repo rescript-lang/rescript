@@ -13,11 +13,11 @@ let test_flatmap_basic () =
   (* Create derived collection via flatMap *)
   let derived =
     FlatMap.create ~name:"derived" source
-      ~f:(fun key value emit ->
+      ~f:(fun key value wave ->
         let key = Stable.to_linear_value key in
-        emit (Stable.int (key * 10)) value;
-        emit (Stable.int ((key * 10) + 1)) value;
-        emit (Stable.int ((key * 10) + 2)) value)
+        StableWave.push wave (Stable.int (key * 10)) value;
+        StableWave.push wave (Stable.int ((key * 10) + 1)) value;
+        StableWave.push wave (Stable.int ((key * 10) + 2)) value)
       ()
   in
 
@@ -60,7 +60,7 @@ let test_flatmap_with_merge () =
   (* Create derived with merge *)
   let derived =
     FlatMap.create ~name:"derived" source
-      ~f:(fun _key values emit -> emit (Stable.int 0) values)
+      ~f:(fun _key values wave -> StableWave.push wave (Stable.int 0) values)
         (* all contribute to key 0 *)
       ~merge:(fun a b ->
         Stable.unsafe_of_value
@@ -101,11 +101,11 @@ let test_composition () =
   (* First flatMap: file -> items *)
   let items =
     FlatMap.create ~name:"items" source
-      ~f:(fun path items emit ->
+      ~f:(fun path items wave ->
         let path = Stable.to_linear_value path in
         List.iteri
           (fun i item ->
-            emit
+            StableWave.push wave
               (Stable.unsafe_of_value (Printf.sprintf "%s:%d" path i))
               (Stable.unsafe_of_value item))
           (Stable.to_linear_value items))
@@ -115,11 +115,11 @@ let test_composition () =
   (* Second flatMap: item -> chars *)
   let chars =
     FlatMap.create ~name:"chars" items
-      ~f:(fun key value emit ->
+      ~f:(fun key value wave ->
         let key = Stable.to_linear_value key in
         String.iteri
           (fun i c ->
-            emit
+            StableWave.push wave
               (Stable.unsafe_of_value (Printf.sprintf "%s:%d" key i))
               (Stable.unsafe_of_value c))
           (Stable.to_linear_value value))
@@ -165,7 +165,8 @@ let test_flatmap_on_existing_data () =
   (* Create flatMap AFTER source has data *)
   let derived =
     FlatMap.create ~name:"derived" source
-      ~f:(fun k v emit -> emit (Stable.int (Stable.to_linear_value k * 10)) v)
+      ~f:(fun k v wave ->
+        StableWave.push wave (Stable.int (Stable.to_linear_value k * 10)) v)
       ()
   in
 
