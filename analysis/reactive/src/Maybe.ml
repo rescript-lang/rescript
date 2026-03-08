@@ -15,16 +15,6 @@ let[@inline] some (x : 'a) : 'a t = Obj.repr x
 let[@inline] is_none (x : 'a t) = x == sentinel
 let[@inline] is_some (x : 'a t) = x != sentinel
 let[@inline] unsafe_get (x : 'a t) : 'a = Obj.obj x
-let[@inline] maybe_int_to_stable (x : int t) : int t Stable.t =
-  Stable.unsafe_of_value x
-
-let[@inline] maybe_unit_to_stable (x : unit t) : unit t Stable.t =
-  Stable.unsafe_of_value x
-
-let[@inline] maybe_stable_list_to_stable (x : 'a StableList.t t) :
-    'a list t Stable.t =
-  Stable.unsafe_of_value x
-
 let[@inline] to_option (x : 'a t) : 'a option =
   if x != sentinel then Some (Obj.obj x) else None
 

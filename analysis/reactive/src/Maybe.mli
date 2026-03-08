@@ -21,16 +21,6 @@ val is_none : 'a t -> bool
 val is_some : 'a t -> bool
 val unsafe_get : 'a t -> 'a
 
-val maybe_int_to_stable : int t -> int t Stable.t
-(** Safely mark an [int] maybe value as suitable for stable storage. *)
-
-val maybe_unit_to_stable : unit t -> unit t Stable.t
-(** Safely mark a [unit] maybe value as suitable for stable storage. *)
-
-val maybe_stable_list_to_stable : 'a StableList.t t -> 'a list t Stable.t
-(** Mark a maybe value carrying an already stable-marked list as suitable for
-    storage in a stable container with semantic payload type ['a list]. *)
-
 val to_option : 'a t -> 'a option
 
 val to_stable : 'a Stable.t t -> 'a t Stable.t

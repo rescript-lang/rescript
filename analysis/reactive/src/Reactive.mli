@@ -153,7 +153,7 @@ module Fixpoint : sig
   val create :
     name:string ->
     init:('k, unit) t ->
-    edges:('k, 'k list) t ->
+    edges:('k, 'k StableList.inner) t ->
     unit ->
     ('k, unit) t
   (** Compute transitive closure.

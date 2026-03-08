@@ -7,7 +7,7 @@ type 'k root_wave = ('k, unit Maybe.t) ReactiveWave.t
 type 'k edge_wave = ('k, 'k StableList.inner Maybe.t) ReactiveWave.t
 type 'k output_wave = ('k, unit Maybe.t) ReactiveWave.t
 type 'k root_snapshot = ('k, unit) ReactiveWave.t
-type 'k edge_snapshot = ('k, 'k list) ReactiveWave.t
+type 'k edge_snapshot = ('k, 'k StableList.inner) ReactiveWave.t
 
 val create : max_nodes:int -> max_edges:int -> 'k t
 (** Create an empty state with fixed capacities.

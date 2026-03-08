@@ -454,7 +454,7 @@ type 'k root_wave = ('k, unit Maybe.t) ReactiveWave.t
 type 'k edge_wave = ('k, 'k StableList.inner Maybe.t) ReactiveWave.t
 type 'k output_wave = ('k, unit Maybe.t) ReactiveWave.t
 type 'k root_snapshot = ('k, unit) ReactiveWave.t
-type 'k edge_snapshot = ('k, 'k list) ReactiveWave.t
+type 'k edge_snapshot = ('k, 'k StableList.inner) ReactiveWave.t
 
 let iter_current t f =
   StableSet.iter_with (fun f k -> f k Stable.unit) f t.current
@@ -526,7 +526,7 @@ let initialize t ~roots ~edges =
   ReactiveWave.iter roots (fun k _ -> StableSet.add t.roots k);
   ReactiveWave.iter edges (fun k successors ->
       apply_edge_update t ~src:(Stable.unsafe_to_value k)
-        ~new_successors:(StableList.of_stable_list successors));
+        ~new_successors:successors);
   recompute_current t
 
 let is_supported t k =
@@ -560,7 +560,7 @@ let add_live t k =
     StableSet.add t.current (stable_key k);
     if not (StableSet.mem t.deleted_nodes (stable_key k)) then
       ReactiveWave.push t.output_wave (Stable.unsafe_of_value k)
-        (Maybe.maybe_unit_to_stable (Maybe.some ()));
+        (Maybe.to_stable (Maybe.some Stable.unit));
     enqueue_expand t k)
 
 let enqueue_rederive_if_needed t k =

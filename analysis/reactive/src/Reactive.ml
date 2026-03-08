@@ -806,19 +806,10 @@ end
 module Fixpoint = struct
   let stable_wave_map_replace pending k v = StableMap.replace pending k v
 
-  let stable_edge_wave_map_replace pending k v =
-    let v : _ Maybe.t = Stable.unsafe_to_value v in
-    let v =
-      if Maybe.is_some v then
-        Maybe.some (StableList.unsafe_inner_of_list (Maybe.unsafe_get v))
-      else Maybe.none
-    in
-    StableMap.replace pending k (Stable.unsafe_of_value v)
-
   let stable_wave_push wave k v = ReactiveWave.push wave k v
 
-  let create ~name ~(init : ('k, unit) t) ~(edges : ('k, 'k list) t) () :
-      ('k, unit) t =
+  let create ~name ~(init : ('k, unit) t) ~(edges : ('k, 'k StableList.inner) t)
+      () : ('k, unit) t =
     let my_level = max init.level edges.level + 1 in
     let int_env_or name default =
       match Sys.getenv_opt name with
@@ -913,14 +904,14 @@ module Fixpoint = struct
     edges.subscribe (fun wave ->
         Registry.inc_inflight_node edges.node;
         edges_pending_count := !edges_pending_count + 1;
-        ReactiveWave.iter_with wave stable_edge_wave_map_replace edge_pending;
+        ReactiveWave.iter_with wave stable_wave_map_replace edge_pending;
         Registry.mark_dirty_node my_info);
 
     (* Initialize from existing data *)
     let init_roots_wave =
       ReactiveWave.create ~max_entries:(max 1 (init.length ())) ()
     in
-    let init_edges_wave : ('k, 'k list) ReactiveWave.t =
+    let init_edges_wave : ('k, 'k StableList.inner) ReactiveWave.t =
       ReactiveWave.create ~max_entries:(max 1 (edges.length ())) ()
     in
     ReactiveWave.clear init_roots_wave;
