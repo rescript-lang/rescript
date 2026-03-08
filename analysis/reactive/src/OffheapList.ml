@@ -1,11 +1,10 @@
 type 'a inner = 'a list
-type 'a t = 'a inner Allocator.offheap
+type 'a t = 'a inner Offheap.t
 
-let unsafe_of_list = Allocator.unsafe_to_offheap
-let of_list = Allocator.to_offheap
-let list_of = Allocator.unsafe_from_offheap
-let unsafe_of_offheap_list xs =
-  unsafe_of_list (Allocator.unsafe_from_offheap xs)
+let unsafe_of_list = Offheap.unsafe_of_value
+let of_list = Offheap.of_value
+let list_of = Offheap.unsafe_to_value
+let unsafe_of_offheap_list xs = unsafe_of_list (Offheap.unsafe_to_value xs)
 
 let empty () : 'a t = unsafe_of_list []
 

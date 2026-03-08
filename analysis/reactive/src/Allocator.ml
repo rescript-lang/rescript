@@ -1,5 +1,3 @@
-type 'a offheap = 'a
-
 external slot_size_bytes_unsafe : unit -> int
   = "caml_reactive_allocator_slot_size_bytes"
 [@@noalloc]
@@ -17,14 +15,6 @@ external is_in_minor_heap : 'a -> bool = "caml_reactive_value_is_young"
 let check_non_negative name n = if n < 0 then invalid_arg name
 
 let slot_size_bytes = slot_size_bytes_unsafe ()
-let unsafe_to_offheap x = x
-let unsafe_from_offheap x = x
-let int_to_offheap x = unsafe_to_offheap x
-let unit_to_offheap x = unsafe_to_offheap x
-
-let to_offheap x =
-  if is_in_minor_heap x then invalid_arg "Allocator.to_offheap";
-  unsafe_to_offheap x
 
 module Block = struct
   type 'a t = int
@@ -42,11 +32,11 @@ module Block = struct
     = "caml_reactive_allocator_resize"
   [@@noalloc]
 
-  external unsafe_get : 'a t -> int -> 'a offheap
+  external unsafe_get : 'a t -> int -> 'a Offheap.t
     = "caml_reactive_allocator_get"
   [@@noalloc]
 
-  external unsafe_set : 'a t -> int -> 'a offheap -> unit
+  external unsafe_set : 'a t -> int -> 'a Offheap.t -> unit
     = "caml_reactive_allocator_set"
   [@@noalloc]
 
@@ -90,17 +80,17 @@ module Block2 = struct
 
   let create ~capacity ~x0 ~y0 =
     let t = Block.create ~capacity:(capacity + header_slots) in
-    Block.set t 0 (unsafe_to_offheap x0);
-    Block.set t 1 (unsafe_to_offheap y0);
+    Block.set t 0 (Offheap.unsafe_of_value x0);
+    Block.set t 1 (Offheap.unsafe_of_value y0);
     t
 
   let destroy = Block.destroy
   let capacity t = Block.capacity t - header_slots
   let resize t ~capacity = Block.resize t ~capacity:(capacity + header_slots)
-  let get0 t = unsafe_from_offheap (Block.get t 0)
-  let set0 t x = Block.set t 0 (unsafe_to_offheap x)
-  let get1 t = unsafe_from_offheap (Block.get t 1)
-  let set1 t y = Block.set t 1 (unsafe_to_offheap y)
+  let get0 t = Offheap.unsafe_to_value (Block.get t 0)
+  let set0 t x = Block.set t 0 (Offheap.unsafe_of_value x)
+  let get1 t = Offheap.unsafe_to_value (Block.get t 1)
+  let set1 t y = Block.set t 1 (Offheap.unsafe_of_value y)
   let get t index = Block.get t (index + header_slots)
   let set t index value = Block.set t (index + header_slots) value
 

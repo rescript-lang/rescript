@@ -60,79 +60,75 @@ let push_right t k mv = ReactiveMap.replace t.right_scratch k mv
 (* Module-level helpers for iter_with — avoid closure allocation *)
 
 let apply_left_entry t k mv =
-  let k = Allocator.unsafe_from_offheap k in
-  let mv = Allocator.unsafe_from_offheap mv in
+  let k = Offheap.unsafe_to_value k in
+  let mv = Offheap.unsafe_to_value mv in
   let r = t.result in
   r.entries_received <- r.entries_received + 1;
   if Maybe.is_some mv then (
     ReactiveMap.replace t.left_values
-      (Allocator.unsafe_to_offheap k)
-      (Allocator.unsafe_to_offheap (Maybe.unsafe_get mv));
+      (Offheap.unsafe_of_value k)
+      (Offheap.unsafe_of_value (Maybe.unsafe_get mv));
     r.adds_received <- r.adds_received + 1)
   else (
-    ReactiveMap.remove t.left_values (Allocator.unsafe_to_offheap k);
+    ReactiveMap.remove t.left_values (Offheap.unsafe_of_value k);
     r.removes_received <- r.removes_received + 1);
-  ReactiveSet.add t.affected (Allocator.unsafe_to_offheap k)
+  ReactiveSet.add t.affected (Offheap.unsafe_of_value k)
 
 let apply_right_entry t k mv =
-  let k = Allocator.unsafe_from_offheap k in
-  let mv = Allocator.unsafe_from_offheap mv in
+  let k = Offheap.unsafe_to_value k in
+  let mv = Offheap.unsafe_to_value mv in
   let r = t.result in
   r.entries_received <- r.entries_received + 1;
   if Maybe.is_some mv then (
     ReactiveMap.replace t.right_values
-      (Allocator.unsafe_to_offheap k)
-      (Allocator.unsafe_to_offheap (Maybe.unsafe_get mv));
+      (Offheap.unsafe_of_value k)
+      (Offheap.unsafe_of_value (Maybe.unsafe_get mv));
     r.adds_received <- r.adds_received + 1)
   else (
-    ReactiveMap.remove t.right_values (Allocator.unsafe_to_offheap k);
+    ReactiveMap.remove t.right_values (Offheap.unsafe_of_value k);
     r.removes_received <- r.removes_received + 1);
-  ReactiveSet.add t.affected (Allocator.unsafe_to_offheap k)
+  ReactiveSet.add t.affected (Offheap.unsafe_of_value k)
 
 let recompute_affected_entry t k =
-  let k = Allocator.unsafe_from_offheap k in
+  let k = Offheap.unsafe_to_value k in
   let r = t.result in
-  let lv =
-    ReactiveMap.find_maybe t.left_values (Allocator.unsafe_to_offheap k)
-  in
-  let rv =
-    ReactiveMap.find_maybe t.right_values (Allocator.unsafe_to_offheap k)
-  in
+  let lv = ReactiveMap.find_maybe t.left_values (Offheap.unsafe_of_value k) in
+  let rv = ReactiveMap.find_maybe t.right_values (Offheap.unsafe_of_value k) in
   let has_left = Maybe.is_some lv in
   let has_right = Maybe.is_some rv in
   if has_left then (
     if has_right then (
       let merged =
         t.merge
-          (Allocator.unsafe_from_offheap (Maybe.unsafe_get lv))
-          (Allocator.unsafe_from_offheap (Maybe.unsafe_get rv))
+          (Offheap.unsafe_to_value (Maybe.unsafe_get lv))
+          (Offheap.unsafe_to_value (Maybe.unsafe_get rv))
       in
       ReactiveMap.replace t.target
-        (Allocator.unsafe_to_offheap k)
-        (Allocator.unsafe_to_offheap merged);
+        (Offheap.unsafe_of_value k)
+        (Offheap.unsafe_of_value merged);
       ReactiveWave.push t.output_wave
-        (Allocator.unsafe_to_offheap k)
-        (Allocator.unsafe_to_offheap (Maybe.some merged)))
+        (Offheap.unsafe_of_value k)
+        (Offheap.unsafe_of_value (Maybe.some merged)))
     else
-      let v = Allocator.unsafe_from_offheap (Maybe.unsafe_get lv) in
+      let v = Offheap.unsafe_to_value (Maybe.unsafe_get lv) in
       ReactiveMap.replace t.target
-        (Allocator.unsafe_to_offheap k)
-        (Allocator.unsafe_to_offheap v);
+        (Offheap.unsafe_of_value k)
+        (Offheap.unsafe_of_value v);
       ReactiveWave.push t.output_wave
-        (Allocator.unsafe_to_offheap k)
-        (Allocator.unsafe_to_offheap (Maybe.some v)))
+        (Offheap.unsafe_of_value k)
+        (Offheap.unsafe_of_value (Maybe.some v)))
   else if has_right then (
-    let v = Allocator.unsafe_from_offheap (Maybe.unsafe_get rv) in
+    let v = Offheap.unsafe_to_value (Maybe.unsafe_get rv) in
     ReactiveMap.replace t.target
-      (Allocator.unsafe_to_offheap k)
-      (Allocator.unsafe_to_offheap v);
+      (Offheap.unsafe_of_value k)
+      (Offheap.unsafe_of_value v);
     ReactiveWave.push t.output_wave
-      (Allocator.unsafe_to_offheap k)
-      (Allocator.unsafe_to_offheap (Maybe.some v)))
+      (Offheap.unsafe_of_value k)
+      (Offheap.unsafe_of_value (Maybe.some v)))
   else (
-    ReactiveMap.remove t.target (Allocator.unsafe_to_offheap k);
+    ReactiveMap.remove t.target (Offheap.unsafe_of_value k);
     ReactiveWave.push t.output_wave
-      (Allocator.unsafe_to_offheap k)
+      (Offheap.unsafe_of_value k)
       Maybe.none_offheap);
   r.entries_emitted <- r.entries_emitted + 1;
   if has_left || has_right then r.adds_emitted <- r.adds_emitted + 1
@@ -162,39 +158,35 @@ let process t =
 
 let init_left t k v =
   ReactiveMap.replace t.left_values
-    (Allocator.unsafe_to_offheap k)
-    (Allocator.unsafe_to_offheap v);
+    (Offheap.unsafe_of_value k)
+    (Offheap.unsafe_of_value v);
   ReactiveMap.replace t.target
-    (Allocator.unsafe_to_offheap k)
-    (Allocator.unsafe_to_offheap v)
+    (Offheap.unsafe_of_value k)
+    (Offheap.unsafe_of_value v)
 
 let init_right t k v =
   ReactiveMap.replace t.right_values
-    (Allocator.unsafe_to_offheap k)
-    (Allocator.unsafe_to_offheap v);
-  let lv =
-    ReactiveMap.find_maybe t.left_values (Allocator.unsafe_to_offheap k)
-  in
+    (Offheap.unsafe_of_value k)
+    (Offheap.unsafe_of_value v);
+  let lv = ReactiveMap.find_maybe t.left_values (Offheap.unsafe_of_value k) in
   let merged =
     if Maybe.is_some lv then
-      t.merge (Allocator.unsafe_from_offheap (Maybe.unsafe_get lv)) v
+      t.merge (Offheap.unsafe_to_value (Maybe.unsafe_get lv)) v
     else v
   in
   ReactiveMap.replace t.target
-    (Allocator.unsafe_to_offheap k)
-    (Allocator.unsafe_to_offheap merged)
+    (Offheap.unsafe_of_value k)
+    (Offheap.unsafe_of_value merged)
 
 let iter_target f t =
   ReactiveMap.iter
-    (fun k v ->
-      f (Allocator.unsafe_from_offheap k) (Allocator.unsafe_from_offheap v))
+    (fun k v -> f (Offheap.unsafe_to_value k) (Offheap.unsafe_to_value v))
     t.target
 
 let find_target t k =
-  ReactiveMap.find_maybe t.target (Allocator.unsafe_to_offheap k)
-  |> Maybe.to_option
+  ReactiveMap.find_maybe t.target (Offheap.unsafe_of_value k) |> Maybe.to_option
   |> function
-  | Some v -> Maybe.some (Allocator.unsafe_from_offheap v)
+  | Some v -> Maybe.some (Offheap.unsafe_to_value v)
   | None -> Maybe.none
 
 let target_length t = ReactiveMap.cardinal t.target

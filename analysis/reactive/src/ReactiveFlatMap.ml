@@ -35,15 +35,15 @@ and process_result = {
 let add_single_contribution (t : (_, _, _, _) t) k2 v2 =
   ReactivePoolMapSet.add t.provenance t.current_k1 k2;
   ReactivePoolMapMap.replace t.contributions k2 t.current_k1 v2;
-  ReactiveSet.add t.affected (Allocator.unsafe_to_offheap k2)
+  ReactiveSet.add t.affected (Offheap.unsafe_of_value k2)
 
 (* Emit callback for init — writes directly to target *)
 let add_single_contribution_init (t : (_, _, _, _) t) k2 v2 =
   ReactivePoolMapSet.add t.provenance t.current_k1 k2;
   ReactivePoolMapMap.replace t.contributions k2 t.current_k1 v2;
   ReactiveMap.replace t.target
-    (Allocator.unsafe_to_offheap k2)
-    (Allocator.unsafe_to_offheap v2)
+    (Offheap.unsafe_of_value k2)
+    (Offheap.unsafe_of_value v2)
 
 let create ~f ~merge =
   let rec t =
@@ -87,7 +87,7 @@ let push t k v_opt = ReactiveMap.replace t.scratch k v_opt
 let remove_one_contribution (t : (_, _, _, _) t) k2 =
   ReactivePoolMapMap.remove_from_inner_and_recycle_if_empty t.contributions k2
     t.current_k1;
-  ReactiveSet.add t.affected (Allocator.unsafe_to_offheap k2)
+  ReactiveSet.add t.affected (Offheap.unsafe_of_value k2)
 
 let remove_source (t : (_, _, _, _) t) k1 =
   t.current_k1 <- k1;
@@ -101,27 +101,27 @@ let merge_one_contribution (t : (_, _, _, _) t) _k1 v =
   else t.merge_acc <- t.merge t.merge_acc v
 
 let recompute_target (t : (_, _, _, _) t) k2 =
-  let k2 = Allocator.unsafe_from_offheap k2 in
+  let k2 = Offheap.unsafe_to_value k2 in
   if ReactivePoolMapMap.inner_cardinal t.contributions k2 > 0 then (
     t.merge_first <- true;
     ReactivePoolMapMap.iter_inner_with t.contributions k2 t
       merge_one_contribution;
     ReactiveMap.replace t.target
-      (Allocator.unsafe_to_offheap k2)
-      (Allocator.unsafe_to_offheap t.merge_acc);
+      (Offheap.unsafe_of_value k2)
+      (Offheap.unsafe_of_value t.merge_acc);
     ReactiveWave.push t.output_wave
-      (Allocator.unsafe_to_offheap k2)
-      (Allocator.unsafe_to_offheap (Maybe.some t.merge_acc)))
+      (Offheap.unsafe_of_value k2)
+      (Offheap.unsafe_of_value (Maybe.some t.merge_acc)))
   else (
-    ReactiveMap.remove t.target (Allocator.unsafe_to_offheap k2);
+    ReactiveMap.remove t.target (Offheap.unsafe_of_value k2);
     ReactiveWave.push t.output_wave
-      (Allocator.unsafe_to_offheap k2)
+      (Offheap.unsafe_of_value k2)
       Maybe.none_offheap)
 
 (* Single-pass process + count for scratch *)
 let process_scratch_entry (t : (_, _, _, _) t) k1 mv =
-  let k1 = Allocator.unsafe_from_offheap k1 in
-  let mv = Allocator.unsafe_from_offheap mv in
+  let k1 = Offheap.unsafe_to_value k1 in
+  let mv = Offheap.unsafe_to_value mv in
   t.result.entries_received <- t.result.entries_received + 1;
   remove_source t k1;
   if Maybe.is_some mv then (
@@ -132,7 +132,7 @@ let process_scratch_entry (t : (_, _, _, _) t) k1 mv =
   else t.result.removes_received <- t.result.removes_received + 1
 
 let count_output_entry (r : process_result) _k mv =
-  let mv = Allocator.unsafe_from_offheap mv in
+  let mv = Offheap.unsafe_to_value mv in
   if Maybe.is_some mv then r.adds_emitted <- r.adds_emitted + 1
   else r.removes_emitted <- r.removes_emitted + 1
 
@@ -164,15 +164,13 @@ let init_entry (t : (_, _, _, _) t) k1 v1 =
 
 let iter_target f t =
   ReactiveMap.iter
-    (fun k v ->
-      f (Allocator.unsafe_from_offheap k) (Allocator.unsafe_from_offheap v))
+    (fun k v -> f (Offheap.unsafe_to_value k) (Offheap.unsafe_to_value v))
     t.target
 
 let find_target t k =
-  ReactiveMap.find_maybe t.target (Allocator.unsafe_to_offheap k)
-  |> Maybe.to_option
+  ReactiveMap.find_maybe t.target (Offheap.unsafe_of_value k) |> Maybe.to_option
   |> function
-  | Some v -> Maybe.some (Allocator.unsafe_from_offheap v)
+  | Some v -> Maybe.some (Offheap.unsafe_to_value v)
   | None -> Maybe.none
 
 let target_length t = ReactiveMap.cardinal t.target

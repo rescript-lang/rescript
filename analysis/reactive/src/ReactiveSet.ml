@@ -3,7 +3,7 @@
    - ['a t] is [('a, int, int) Allocator.Block2.t].
    - Header slot [0]: population, exposed as [int].
    - Header slot [1]: index mask, exposed as [int].
-   - Data slots: keys, stored as ['a Allocator.offheap].
+   - Data slots: keys, stored as ['a Offheap.t].
 
    The backing block lives off-heap. Elements are ordinary OCaml values whose
    storage invariant has already been established before insertion.
@@ -20,9 +20,8 @@ let max_load_percent = 82
 
 let sentinel : Obj.t = Obj.repr (Array.make 257 0)
 let tomb : Obj.t = Obj.repr (Array.make 257 0)
-let[@inline] empty_sentinel =
- fun () -> (Obj.magic sentinel : 'a Allocator.offheap)
-let[@inline] tomb_sentinel = fun () -> (Obj.magic tomb : 'a Allocator.offheap)
+let[@inline] empty_sentinel = fun () -> (Obj.magic sentinel : 'a Offheap.t)
+let[@inline] tomb_sentinel = fun () -> (Obj.magic tomb : 'a Offheap.t)
 
 let slot_capacity = Allocator.Block2.capacity
 let population = Allocator.Block2.get0
@@ -30,8 +29,7 @@ let set_population = Allocator.Block2.set0
 let mask = Allocator.Block2.get1
 let set_mask = Allocator.Block2.set1
 
-let[@inline] start t x =
-  Hashtbl.hash (Allocator.unsafe_from_offheap x) land mask t
+let[@inline] start t x = Hashtbl.hash (Offheap.unsafe_to_value x) land mask t
 let[@inline] next t j = (j + 1) land mask t
 
 let[@inline] crowded_or_full pop cap = 100 * pop > max_load_percent * cap
@@ -55,7 +53,7 @@ let clear t =
   set_population t 0;
   clear_slots t
 
-let add_absent_key (type a) (t : a t) (x : a Allocator.offheap) =
+let add_absent_key (type a) (t : a t) (x : a Offheap.t) =
   let j = ref (start t x) in
   while
     let current = Allocator.Block2.get t !j in
@@ -85,7 +83,7 @@ let maybe_grow_before_add (type a) (t : a t) =
   let next_population = population t + 1 in
   if crowded_or_full next_population cap then resize t (2 * cap)
 
-let add (type a) (t : a t) (x : a Allocator.offheap) =
+let add (type a) (t : a t) (x : a Offheap.t) =
   maybe_grow_before_add t;
   let j = ref (start t x) in
   let first_tomb = ref (-1) in
@@ -104,7 +102,7 @@ let add (type a) (t : a t) (x : a Allocator.offheap) =
     else j := next t !j
   done
 
-let remove (type a) (t : a t) (x : a Allocator.offheap) =
+let remove (type a) (t : a t) (x : a Offheap.t) =
   let j = ref (start t x) in
   let done_ = ref false in
   while not !done_ do
@@ -118,7 +116,7 @@ let remove (type a) (t : a t) (x : a Allocator.offheap) =
     else j := next t !j
   done
 
-let mem (type a) (t : a t) (x : a Allocator.offheap) =
+let mem (type a) (t : a t) (x : a Offheap.t) =
   let j = ref (start t x) in
   let found = ref false in
   let done_ = ref false in
@@ -133,8 +131,7 @@ let mem (type a) (t : a t) (x : a Allocator.offheap) =
   done;
   !found
 
-let iter_with (type a k) (f : a -> k Allocator.offheap -> unit) (arg : a)
-    (t : k t) =
+let iter_with (type a k) (f : a -> k Offheap.t -> unit) (arg : a) (t : k t) =
   if population t > 0 then
     for i = 0 to slot_capacity t - 1 do
       let x = Allocator.Block2.get t i in

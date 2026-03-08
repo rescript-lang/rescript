@@ -7,9 +7,9 @@ open TestHelpers
 
 let words_since = AllocMeasure.words_since
 
-let off = Allocator.unsafe_to_offheap
-let off_int = Allocator.int_to_offheap
-let off_unit = Allocator.unit_to_offheap
+let off = Offheap.unsafe_of_value
+let off_int = Offheap.int
+let off_unit = Offheap.unit
 let off_maybe_int = Maybe.maybe_int_to_offheap
 let off_maybe_unit = Maybe.maybe_unit_to_offheap
 
@@ -48,8 +48,7 @@ let test_fixpoint_alloc_n n =
   (* Chain graph: 0 -> 1 -> 2 -> ... -> n-1 *)
   ReactiveWave.push root_snap (off_int 0) (off_unit ());
   for i = 0 to n - 2 do
-    ReactiveWave.push edge_snap (off_int i)
-      (Allocator.to_offheap edge_values.(i))
+    ReactiveWave.push edge_snap (off_int i) (Offheap.of_value edge_values.(i))
   done;
   ReactiveFixpoint.initialize state ~roots:root_snap ~edges:edge_snap;
   assert (ReactiveFixpoint.current_length state = n);

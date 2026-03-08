@@ -9,8 +9,8 @@ let max_load_percent = 82
 let empty_sentinel : Obj.t = Obj.repr (Array.make 257 0)
 let tomb_sentinel : Obj.t = Obj.repr (Array.make 257 0)
 
-let[@inline] empty_slot () : 'a Allocator.offheap = Obj.magic empty_sentinel
-let[@inline] tomb_slot () : 'a Allocator.offheap = Obj.magic tomb_sentinel
+let[@inline] empty_slot () : 'a Offheap.t = Obj.magic empty_sentinel
+let[@inline] tomb_slot () : 'a Offheap.t = Obj.magic tomb_sentinel
 
 let key_capacity t = Allocator.Block2.capacity t.keys
 let population t = Allocator.Block2.get0 t.keys
@@ -19,8 +19,7 @@ let occupation t = Allocator.Block2.get1 t.keys
 let set_occupation t n = Allocator.Block2.set1 t.keys n
 let[@inline] mask t = key_capacity t - 1
 
-let[@inline] start t x =
-  Hashtbl.hash (Allocator.unsafe_from_offheap x) land mask t
+let[@inline] start t x = Hashtbl.hash (Offheap.unsafe_to_value x) land mask t
 
 let[@inline] next t j = (j + 1) land mask t
 let[@inline] crowded_or_full occ cap = 100 * occ > max_load_percent * cap
@@ -47,7 +46,7 @@ let clear t =
   clear_keys t
 
 let insert_absent t k v =
-  let empty : 'k Allocator.offheap = empty_slot () in
+  let empty : 'k Offheap.t = empty_slot () in
   let j = ref (start t k) in
   while Allocator.Block2.get t.keys !j != empty do
     j := next t !j
@@ -85,8 +84,8 @@ let maybe_grow_before_insert t =
 
 let replace t k v =
   maybe_grow_before_insert t;
-  let empty : 'k Allocator.offheap = empty_slot () in
-  let tomb : 'k Allocator.offheap = tomb_slot () in
+  let empty : 'k Offheap.t = empty_slot () in
+  let tomb : 'k Offheap.t = tomb_slot () in
   let j = ref (start t k) in
   let first_tomb = ref (-1) in
   let done_ = ref false in
@@ -109,8 +108,8 @@ let replace t k v =
   done
 
 let remove t k =
-  let empty : 'k Allocator.offheap = empty_slot () in
-  let tomb : 'k Allocator.offheap = tomb_slot () in
+  let empty : 'k Offheap.t = empty_slot () in
+  let tomb : 'k Offheap.t = tomb_slot () in
   let j = ref (start t k) in
   let done_ = ref false in
   while not !done_ do
@@ -125,8 +124,8 @@ let remove t k =
   done
 
 let mem t k =
-  let empty : 'k Allocator.offheap = empty_slot () in
-  let tomb : 'k Allocator.offheap = tomb_slot () in
+  let empty : 'k Offheap.t = empty_slot () in
+  let tomb : 'k Offheap.t = tomb_slot () in
   let j = ref (start t k) in
   let found = ref false in
   let done_ = ref false in
@@ -142,8 +141,8 @@ let mem t k =
   !found
 
 let find_maybe t k =
-  let empty : 'k Allocator.offheap = empty_slot () in
-  let tomb : 'k Allocator.offheap = tomb_slot () in
+  let empty : 'k Offheap.t = empty_slot () in
+  let tomb : 'k Offheap.t = tomb_slot () in
   let j = ref (start t k) in
   let found = ref Maybe.none in
   let done_ = ref false in
@@ -159,8 +158,8 @@ let find_maybe t k =
   !found
 
 let iter_with f arg t =
-  let empty : 'k Allocator.offheap = empty_slot () in
-  let tomb : 'k Allocator.offheap = tomb_slot () in
+  let empty : 'k Offheap.t = empty_slot () in
+  let tomb : 'k Offheap.t = tomb_slot () in
   if population t > 0 then
     for i = 0 to key_capacity t - 1 do
       let k = Allocator.Block2.get t.keys i in

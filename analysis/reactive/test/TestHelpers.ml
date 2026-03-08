@@ -17,8 +17,8 @@ let emit_set emit k v =
   let w = wave () in
   ReactiveWave.clear w;
   ReactiveWave.push w
-    (Allocator.unsafe_to_offheap k)
-    (Allocator.unsafe_to_offheap (Maybe.some v));
+    (Offheap.unsafe_of_value k)
+    (Offheap.unsafe_of_value (Maybe.some v));
   emit w
 
 (** Emit a single edge-set entry, converting the successor list to the
@@ -27,7 +27,7 @@ let emit_edge_set emit k vs =
   let w = wave () in
   ReactiveWave.clear w;
   ReactiveWave.push w
-    (Allocator.unsafe_to_offheap k)
+    (Offheap.unsafe_of_value k)
     (Maybe.maybe_offheap_list_to_offheap
        (Maybe.some (OffheapList.unsafe_of_list vs)));
   emit w
@@ -36,7 +36,7 @@ let emit_edge_set emit k vs =
 let emit_remove emit k =
   let w = wave () in
   ReactiveWave.clear w;
-  ReactiveWave.push w (Allocator.unsafe_to_offheap k) Maybe.none_offheap;
+  ReactiveWave.push w (Offheap.unsafe_of_value k) Maybe.none_offheap;
   emit w
 
 (** Emit a batch of (key, value) set entries *)
@@ -46,8 +46,8 @@ let emit_sets emit entries =
   List.iter
     (fun (k, v) ->
       ReactiveWave.push w
-        (Allocator.unsafe_to_offheap k)
-        (Allocator.unsafe_to_offheap (Maybe.some v)))
+        (Offheap.unsafe_of_value k)
+        (Offheap.unsafe_of_value (Maybe.some v)))
     entries;
   emit w
 
@@ -60,10 +60,10 @@ let emit_batch emit entries =
       match v_opt with
       | Some v ->
         ReactiveWave.push w
-          (Allocator.unsafe_to_offheap k)
-          (Allocator.unsafe_to_offheap (Maybe.some v))
+          (Offheap.unsafe_of_value k)
+          (Offheap.unsafe_of_value (Maybe.some v))
       | None ->
-        ReactiveWave.push w (Allocator.unsafe_to_offheap k) Maybe.none_offheap)
+        ReactiveWave.push w (Offheap.unsafe_of_value k) Maybe.none_offheap)
     entries;
   emit w
 
@@ -76,11 +76,11 @@ let emit_edge_batch emit entries =
       match vs_opt with
       | Some vs ->
         ReactiveWave.push w
-          (Allocator.unsafe_to_offheap k)
+          (Offheap.unsafe_of_value k)
           (Maybe.maybe_offheap_list_to_offheap
              (Maybe.some (OffheapList.unsafe_of_list vs)))
       | None ->
-        ReactiveWave.push w (Allocator.unsafe_to_offheap k) Maybe.none_offheap)
+        ReactiveWave.push w (Offheap.unsafe_of_value k) Maybe.none_offheap)
     entries;
   emit w
 
@@ -91,8 +91,8 @@ let subscribe handler t =
   t.subscribe (fun wave ->
       let rev_entries = ref [] in
       ReactiveWave.iter wave (fun k mv ->
-          let k = Allocator.unsafe_from_offheap k in
-          let mv = Allocator.unsafe_from_offheap mv in
+          let k = Offheap.unsafe_to_value k in
+          let mv = Offheap.unsafe_to_value mv in
           rev_entries := (k, mv) :: !rev_entries);
       handler (List.rev !rev_entries))
 

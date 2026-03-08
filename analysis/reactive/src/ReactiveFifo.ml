@@ -3,7 +3,7 @@
    - ['a t] is [('a, int, int) Allocator.Block2.t].
    - Header slot [0]: head index.
    - Header slot [1]: tail index.
-   - Data slots: queue elements, stored as ['a Allocator.offheap].
+   - Data slots: queue elements, stored as ['a Offheap.t].
 
    Head and tail are monotone counters. Physical slot positions are computed
    from the current capacity via bit masking, so the backing capacity always

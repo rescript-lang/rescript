@@ -11,32 +11,8 @@
    - is not in the minor heap, and
    - remains reachable through ordinary OCaml roots elsewhere.
 
-   Immediates such as [int] are always safe to store. *)
-
-type 'a offheap
-(** A value intended to be stored in off-heap structures.
-
-    This type does not prove safety. It marks values that are crossing the
-    off-heap boundary so call sites can be audited explicitly. *)
-
-val unsafe_to_offheap : 'a -> 'a offheap
-(** Unsafely mark a value as suitable for off-heap storage. The caller must
-    ensure the allocator invariants hold. *)
-
-val to_offheap : 'a -> 'a offheap
-(** Safely mark a value as suitable for off-heap storage.
-
-    Raises [Invalid_argument] if the value is currently in the minor heap.
-    Immediates are accepted. *)
-
-val int_to_offheap : int -> int offheap
-(** Safely mark an [int] as suitable for off-heap storage. *)
-
-val unit_to_offheap : unit -> unit offheap
-(** Safely mark [()] as suitable for off-heap storage. *)
-
-val unsafe_from_offheap : 'a offheap -> 'a
-(** Unsafely recover a regular OCaml value from an off-heap-marked value. *)
+   Immediates such as [int] are always safe to store. Use {!Offheap} to mark
+   values that cross into off-heap containers. *)
 
 module Block : sig
   type 'a t
@@ -53,11 +29,11 @@ module Block : sig
   val resize : 'a t -> capacity:int -> unit
   (** Resize the block, preserving the prefix up to the new capacity. *)
 
-  val get : 'a t -> int -> 'a offheap
+  val get : 'a t -> int -> 'a Offheap.t
   (** Read a slot. The caller is responsible for keeping pointed-to values
       alive and out of the minor heap while stored off-heap. *)
 
-  val set : 'a t -> int -> 'a offheap -> unit
+  val set : 'a t -> int -> 'a Offheap.t -> unit
   (** Write a slot. *)
 
   val blit :
@@ -87,10 +63,10 @@ module Block2 : sig
   val get1 : ('a, 'x, 'y) t -> 'y
   val set1 : ('a, 'x, 'y) t -> 'y -> unit
 
-  val get : ('a, 'x, 'y) t -> int -> 'a offheap
+  val get : ('a, 'x, 'y) t -> int -> 'a Offheap.t
   (** Read a data slot. *)
 
-  val set : ('a, 'x, 'y) t -> int -> 'a offheap -> unit
+  val set : ('a, 'x, 'y) t -> int -> 'a Offheap.t -> unit
   (** Write a data slot. *)
 
   val blit :
@@ -121,4 +97,4 @@ val reset : unit -> unit
 val is_in_minor_heap : 'a -> bool
 (** Runtime check for whether a value currently resides in the OCaml minor
     heap. Immediates return [false]. Useful for enforcing the off-heap storage
-    invariant in tests and debug code, and by [to_offheap]. *)
+    invariant in tests and debug code. *)

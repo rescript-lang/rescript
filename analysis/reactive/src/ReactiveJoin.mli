@@ -30,15 +30,15 @@ val output_wave :
 
 val push_left :
   ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t ->
-  'k1 Allocator.offheap ->
-  'v1 Maybe.t Allocator.offheap ->
+  'k1 Offheap.t ->
+  'v1 Maybe.t Offheap.t ->
   unit
 (** Push an entry into the left scratch table. *)
 
 val push_right :
   ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t ->
-  'k2 Allocator.offheap ->
-  'v2 Maybe.t Allocator.offheap ->
+  'k2 Offheap.t ->
+  'v2 Maybe.t Offheap.t ->
   unit
 (** Push an entry into the right scratch table. *)
 

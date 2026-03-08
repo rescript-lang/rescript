@@ -23,12 +23,10 @@ val destroy : ('k, 'v) t -> unit
 val output_wave : ('k, 'v) t -> ('k, 'v Maybe.t) ReactiveWave.t
 (** The owned output wave populated by [process]. *)
 
-val push_left :
-  ('k, 'v) t -> 'k Allocator.offheap -> 'v Maybe.t Allocator.offheap -> unit
+val push_left : ('k, 'v) t -> 'k Offheap.t -> 'v Maybe.t Offheap.t -> unit
 (** Push an entry into the left scratch table. *)
 
-val push_right :
-  ('k, 'v) t -> 'k Allocator.offheap -> 'v Maybe.t Allocator.offheap -> unit
+val push_right : ('k, 'v) t -> 'k Offheap.t -> 'v Maybe.t Offheap.t -> unit
 (** Push an entry into the right scratch table. *)
 
 val process : ('k, 'v) t -> process_result
