@@ -1,7 +1,7 @@
 # Converting Reactive Combinators to Zero-Allocation Modules
 
 This document describes how to extract a reactive combinator from
-`Reactive.ml` into its own private module backed by `ReactiveHash`
+`Reactive.ml` into its own private module backed by `StableHash`
 (Hachis open-addressing tables), following the pattern established
 by `ReactiveUnion` and `ReactiveFlatMap`.
 
@@ -83,33 +83,33 @@ capturing `t`. Use the `_with` variants to pass `t` as data:
 
 ```ocaml
 (* Allocates a closure capturing t: *)
-ReactiveHash.Map.iter (fun k () -> enqueue t k) m
+StableHash.Map.iter (fun k () -> enqueue t k) m
 List.iter (fun k -> mark_deleted t k) succs
 
 (* Zero allocation — t passed as data: *)
-ReactiveHash.Map.iter_with enqueue_kv t m
+StableHash.Map.iter_with enqueue_kv t m
 list_iter_with mark_deleted t succs
 ```
 
 `iter_with f arg t` calls `f arg k v` directly, where `f` is a
 static top-level function (no closure record needed). Available on
-`ReactiveHash.Map`, `ReactiveHash.Set`, `ReactiveWave`, and as
+`StableHash.Map`, `StableHash.Set`, `ReactiveWave`, and as
 `list_iter_with` for `'a list`.
 
 ### Use `Maybe` instead of `option` for lookups
 
-`ReactiveHash.Map.find_maybe` returns a `Maybe.t` — an
+`StableHash.Map.find_maybe` returns a `Maybe.t` — an
 unboxed optional that avoids allocating `Some`. Use this instead of
 `find_opt` in hot paths:
 
 ```ocaml
 (* Zero allocation: *)
-let r = ReactiveHash.Map.find_maybe t.pred_map k in
+let r = StableHash.Map.find_maybe t.pred_map k in
 if Maybe.is_some r then
   use (Maybe.unsafe_get r)
 
 (* Allocates Some on hit: *)
-match ReactiveHash.Map.find_opt t.pred_map k with
+match StableHash.Map.find_opt t.pred_map k with
 | Some v -> use v
 | None -> ...
 ```
@@ -122,19 +122,19 @@ When checking whether any key in map A exists in map B (e.g.
 
 ```ocaml
 (* Zero allocation, early-exit: *)
-ReactiveHash.Map.has_common_key pred_set current
+StableHash.Map.has_common_key pred_set current
 
 (* Allocates 5 words/call due to capturing closure: *)
 try
-  ReactiveHash.Map.iter (fun k () ->
-    if ReactiveHash.Map.mem current k then raise Found) pred_set;
+  StableHash.Map.iter (fun k () ->
+    if StableHash.Map.mem current k then raise Found) pred_set;
   false
 with Found -> true
 ```
 
 ### `Obj.magic` for type-erased iteration
 
-`ReactiveHash` stores `Obj.t` internally. The `iter` implementation
+`StableHash` stores `Obj.t` internally. The `iter` implementation
 uses `Obj.magic f` to cast the user's typed callback directly,
 avoiding a wrapper closure that would allocate 10 words per call:
 
@@ -192,7 +192,7 @@ for the pattern.
 For combinators whose `process()` runs on every scheduler wave, this
 means O(n) allocations per wave just for internal bookkeeping.
 
-`ReactiveHash` wraps Hachis, which uses open addressing with flat
+`StableHash` wraps Hachis, which uses open addressing with flat
 arrays. After the table reaches steady-state capacity, `clear` +
 `replace` reuses existing array slots — zero heap allocation.
 
@@ -210,17 +210,17 @@ Add the module to `private_modules` in
 ### 2. Define a state type and `process_result`
 
 The state record holds all persistent tables and scratch buffers.
-Use `ReactiveHash.Map` for key-value maps and `ReactiveHash.Set`
+Use `StableHash.Map` for key-value maps and `StableHash.Set`
 for dedup sets.
 
 ```ocaml
 type ('k, 'v) t = {
   (* persistent state *)
-  target: ('k, 'v) ReactiveHash.Map.t;
+  target: ('k, 'v) StableHash.Map.t;
   ...
   (* scratch — allocated once, cleared per process() *)
-  scratch: ('k, 'v option) ReactiveHash.Map.t;
-  affected: 'k ReactiveHash.Set.t;
+  scratch: ('k, 'v option) StableHash.Map.t;
+  affected: 'k StableHash.Set.t;
   (* pre-allocated output buffer *)
   output_wave: ('k, 'v option) ReactiveWave.t;
 }
@@ -289,13 +289,13 @@ let my_combinator ~name ... =
 ### 5. Key patterns to follow
 
 **Replace per-process-call allocations:**
-| Old (Hashtbl)                              | New (ReactiveHash)                       |
+| Old (Hashtbl)                              | New (StableHash)                       |
 |--------------------------------------------|------------------------------------------|
 | `pending := wave :: !pending`              | `ReactiveWave.iter wave push_to_scratch` |
 | `merge_wave_entries !pending`              | scratch map already merged               |
 | `merge_entries entries`                    | scratch map already deduped              |
-| `Hashtbl.create n` for `seen`             | persistent `ReactiveHash.Set`, `clear`   |
-| `List.filter_map ... recompute_target`    | `ReactiveHash.Set.iter` + write to wave  |
+| `Hashtbl.create n` for `seen`             | persistent `StableHash.Set`, `clear`   |
+| `List.filter_map ... recompute_target`    | `StableHash.Set.iter` + write to wave  |
 | `count_adds_removes entries` (list walk)  | count inline with `ref` during iteration |
 
 **Eliminate intermediate lists:**
@@ -332,7 +332,7 @@ make -C analysis/reactive test
 
 ### Remaining allocations in `ReactiveFixpoint`
 
-Converted to `ReactiveHash`:
+Converted to `StableHash`:
 - Persistent state: `current`, `edge_map`, `pred_map` (including inner pred sets), `roots`
 - Per-call scratch: `deleted_nodes`, `rederive_pending`, `expansion_seen`, `old_successors_for_changed`, `new_successors_for_changed`, `edge_has_new`
 - Temp sets in `process_edge_change` and `apply_edge_update`
@@ -351,6 +351,6 @@ Eliminated intermediate lists, records, and closures:
 
 Still allocating (inherent to the algorithm or debug-only):
 - **`edge_map` values** are `'k list` — list allocation is inherent when edges change.
-- **`pred_map` inner maps**: new `ReactiveHash.Map` created when a node first gains predecessors (same pattern as `contributions` in flatMap/join — allocates once per new target, then reuses).
+- **`pred_map` inner maps**: new `StableHash.Map` created when a node first gains predecessors (same pattern as `contributions` in flatMap/join — allocates once per new target, then reuses).
 - **`compute_reachable_from_roots_with_work`**: creates a fresh `Hashtbl` for full BFS. Only called during `initialize` and in `Metrics` mode.
 - **`Invariants` module**: uses `Hashtbl` for debug-only set operations (copies, diffs). Opt-in via env var — not on the hot path.

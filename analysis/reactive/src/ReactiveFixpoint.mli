@@ -4,7 +4,7 @@ type 'k t
     This implementation uses fixed-capacity arrays allocated in [create]. *)
 
 type 'k root_wave = ('k, unit Maybe.t) ReactiveWave.t
-type 'k edge_wave = ('k, 'k list Maybe.t) ReactiveWave.t
+type 'k edge_wave = ('k, 'k StableList.inner Maybe.t) ReactiveWave.t
 type 'k output_wave = ('k, unit Maybe.t) ReactiveWave.t
 type 'k root_snapshot = ('k, unit) ReactiveWave.t
 type 'k edge_snapshot = ('k, 'k list) ReactiveWave.t

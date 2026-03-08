@@ -9,6 +9,9 @@ type 'a t = 'a inner Stable.t
 val unsafe_of_list : 'a list -> 'a t
 (** Reinterpret a list as stable-marked without checking. *)
 
+val unsafe_inner_of_list : 'a list -> 'a inner
+(** Reinterpret a list as a [StableList.inner] without checking. *)
+
 val of_list : 'a list -> 'a t
 (** Checked version of [unsafe_of_list]. Raises if the list is still in the
     minor heap. *)

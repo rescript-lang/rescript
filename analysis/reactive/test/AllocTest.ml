@@ -209,19 +209,19 @@ let test_union_alloc () =
 (* ---- Join allocation ---- *)
 
 let test_join_alloc_n n =
-  let right_tbl = ReactiveHash.Map.create () in
+  let right_tbl = StableHash.Map.create () in
   let state =
     ReactiveJoin.create
       ~key_of:(fun k _v -> k)
       ~f:(fun k v right_mb emit ->
         if Maybe.is_some right_mb then emit k (v + Maybe.unsafe_get right_mb))
       ~merge:(fun _l r -> r)
-      ~right_get:(ReactiveHash.Map.find_maybe right_tbl)
+      ~right_get:(StableHash.Map.find_maybe right_tbl)
   in
 
   (* Populate: n entries on the right, n on the left *)
   for i = 0 to n - 1 do
-    ReactiveHash.Map.replace right_tbl i (i * 10)
+    StableHash.Map.replace right_tbl i (i * 10)
   done;
   for i = 0 to n - 1 do
     ReactiveJoin.push_left state (stable_int i)
@@ -529,7 +529,7 @@ let count_pool_empty_sets pms =
   let s = {total = 0; empty = 0} in
   ReactivePoolMapSet.iter_with pms s (fun st _k set ->
       st.total <- st.total + 1;
-      if ReactiveHash.Set.cardinal set = 0 then st.empty <- st.empty + 1);
+      if StableHash.Set.cardinal set = 0 then st.empty <- st.empty + 1);
   s
 
 let test_pool_map_set_pattern_drain_key_churn () =

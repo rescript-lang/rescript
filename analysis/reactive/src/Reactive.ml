@@ -478,8 +478,8 @@ let unsafe_wave_push wave k v =
 
 module Source = struct
   type ('k, 'v) tables = {
-    tbl: ('k, 'v) ReactiveHash.Map.t;
-    pending: ('k, 'v Maybe.t) ReactiveHash.Map.t;
+    tbl: ('k, 'v) StableHash.Map.t;
+    pending: ('k, 'v Maybe.t) StableHash.Map.t;
   }
 
   let apply_emit (tables : ('k, 'v) tables) k mv =
@@ -487,35 +487,35 @@ module Source = struct
     let mv = Stable.unsafe_to_value mv in
     if Maybe.is_some mv then (
       let v = Maybe.unsafe_get mv in
-      ReactiveHash.Map.replace tables.tbl k v;
-      ReactiveHash.Map.replace tables.pending k (Maybe.some v))
+      StableHash.Map.replace tables.tbl k v;
+      StableHash.Map.replace tables.pending k (Maybe.some v))
     else (
-      ReactiveHash.Map.remove tables.tbl k;
-      ReactiveHash.Map.replace tables.pending k Maybe.none)
+      StableHash.Map.remove tables.tbl k;
+      StableHash.Map.replace tables.pending k Maybe.none)
 
   let create ~name () =
-    let tbl : ('k, 'v) ReactiveHash.Map.t = ReactiveHash.Map.create () in
+    let tbl : ('k, 'v) StableHash.Map.t = StableHash.Map.create () in
     let subscribers = ref [] in
     let my_stats = create_stats () in
     let output_wave = create_wave () in
     (* Pending deltas: accumulated by emit, flushed by process.
-     Uses ReactiveHash.Map for zero-alloc deduplication (last-write-wins). *)
-    let pending : ('k, 'v Maybe.t) ReactiveHash.Map.t =
-      ReactiveHash.Map.create ()
+     Uses StableHash.Map for zero-alloc deduplication (last-write-wins). *)
+    let pending : ('k, 'v Maybe.t) StableHash.Map.t =
+      StableHash.Map.create ()
     in
     let tables = {tbl; pending} in
     let pending_count = ref 0 in
 
     let process () =
-      let count = ReactiveHash.Map.cardinal pending in
+      let count = StableHash.Map.cardinal pending in
       if count > 0 then (
         my_stats.deltas_emitted <- my_stats.deltas_emitted + 1;
         my_stats.entries_emitted <- my_stats.entries_emitted + count;
         ReactiveWave.clear output_wave;
-        ReactiveHash.Map.iter_with unsafe_wave_push output_wave pending;
-        ReactiveHash.Map.clear pending;
+        StableHash.Map.iter_with unsafe_wave_push output_wave pending;
+        StableHash.Map.clear pending;
         notify_subscribers output_wave !subscribers)
-      else ReactiveHash.Map.clear pending
+      else StableHash.Map.clear pending
     in
 
     let destroy () = ReactiveWave.destroy output_wave in
@@ -527,9 +527,9 @@ module Source = struct
       {
         name;
         subscribe = (fun h -> subscribers := h :: !subscribers);
-        iter = (fun f -> ReactiveHash.Map.iter f tbl);
-        get = (fun k -> ReactiveHash.Map.find_maybe tbl k);
-        length = (fun () -> ReactiveHash.Map.cardinal tbl);
+        iter = (fun f -> StableHash.Map.iter f tbl);
+        get = (fun k -> StableHash.Map.find_maybe tbl k);
+        length = (fun () -> StableHash.Map.cardinal tbl);
         destroy;
         stats = my_stats;
         level = 0;
@@ -798,8 +798,17 @@ end
 
 module Fixpoint = struct
   let unsafe_wave_map_replace pending k v =
-    ReactiveHash.Map.replace pending (Stable.unsafe_to_value k)
+    StableHash.Map.replace pending (Stable.unsafe_to_value k)
       (Stable.unsafe_to_value v)
+
+  let unsafe_edge_wave_map_replace pending k v =
+    let v : _ Maybe.t = Stable.unsafe_to_value v in
+    let v =
+      if Maybe.is_some v then
+        Maybe.some (StableList.unsafe_inner_of_list (Maybe.unsafe_get v))
+      else Maybe.none
+    in
+    StableHash.Map.replace pending (Stable.unsafe_to_value k) v
 
   let create ~name ~(init : ('k, unit) t) ~(edges : ('k, 'k list) t) () :
       ('k, unit) t =
@@ -829,11 +838,11 @@ module Fixpoint = struct
     let edge_wave = ReactiveWave.create ~max_entries:max_edge_wave_entries () in
     let subscribers = ref [] in
     let my_stats = create_stats () in
-    let root_pending : ('k, unit Maybe.t) ReactiveHash.Map.t =
-      ReactiveHash.Map.create ()
+    let root_pending : ('k, unit Maybe.t) StableHash.Map.t =
+      StableHash.Map.create ()
     in
-    let edge_pending : ('k, 'k list Maybe.t) ReactiveHash.Map.t =
-      ReactiveHash.Map.create ()
+    let edge_pending : ('k, 'k StableList.inner Maybe.t) StableHash.Map.t =
+      StableHash.Map.create ()
     in
     let init_pending_count = ref 0 in
     let edges_pending_count = ref 0 in
@@ -852,16 +861,16 @@ module Fixpoint = struct
       (* Dump pending maps into waves *)
       ReactiveWave.clear root_wave;
       ReactiveWave.clear edge_wave;
-      let root_entries = ReactiveHash.Map.cardinal root_pending in
-      let edge_entries = ReactiveHash.Map.cardinal edge_pending in
-      ReactiveHash.Map.iter_with unsafe_wave_push root_wave root_pending;
-      ReactiveHash.Map.iter_with
+      let root_entries = StableHash.Map.cardinal root_pending in
+      let edge_entries = StableHash.Map.cardinal edge_pending in
+      StableHash.Map.iter_with unsafe_wave_push root_wave root_pending;
+      StableHash.Map.iter_with
         (fun wave k mv ->
           ReactiveWave.push wave (Stable.unsafe_of_value k)
             (Stable.unsafe_of_value mv))
         edge_wave edge_pending;
-      ReactiveHash.Map.clear root_pending;
-      ReactiveHash.Map.clear edge_pending;
+      StableHash.Map.clear root_pending;
+      StableHash.Map.clear edge_pending;
 
       my_stats.entries_received <-
         my_stats.entries_received + root_entries + edge_entries;
@@ -901,7 +910,7 @@ module Fixpoint = struct
     edges.subscribe (fun wave ->
         Registry.inc_inflight_node edges.node;
         edges_pending_count := !edges_pending_count + 1;
-        ReactiveWave.iter_with wave unsafe_wave_map_replace edge_pending;
+        ReactiveWave.iter_with wave unsafe_edge_wave_map_replace edge_pending;
         Registry.mark_dirty_node my_info);
 
     (* Initialize from existing data *)

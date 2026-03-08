@@ -451,7 +451,7 @@ let destroy t =
 let output_wave t = t.output_wave
 
 type 'k root_wave = ('k, unit Maybe.t) ReactiveWave.t
-type 'k edge_wave = ('k, 'k list Maybe.t) ReactiveWave.t
+type 'k edge_wave = ('k, 'k StableList.inner Maybe.t) ReactiveWave.t
 type 'k output_wave = ('k, unit Maybe.t) ReactiveWave.t
 type 'k root_snapshot = ('k, unit) ReactiveWave.t
 type 'k edge_snapshot = ('k, 'k list) ReactiveWave.t
@@ -476,7 +476,7 @@ let has_live_pred_key t pred = ReactiveSet.mem t.current (stable_key pred)
 let has_live_predecessor t k =
   let r = ReactivePoolMapSet.find_maybe t.pred_map k in
   if Maybe.is_some r then
-    ReactiveHash.Set.exists_with has_live_pred_key t (Maybe.unsafe_get r)
+    StableHash.Set.exists_with has_live_pred_key t (Maybe.unsafe_get r)
   else false
 
 let add_pred_for_src (t, src) target = add_pred t ~target ~pred:src
@@ -662,7 +662,7 @@ let apply_list t ~roots ~edges =
       let mv = Stable.unsafe_to_value mv in
       let mv =
         if Maybe.is_some mv then
-          Maybe.some (StableList.unsafe_of_list (Maybe.unsafe_get mv))
+          Maybe.some (Stable.unsafe_of_value (Maybe.unsafe_get mv))
         else Maybe.none
       in
       scan_edge_entry t (Stable.unsafe_to_value src) mv)
