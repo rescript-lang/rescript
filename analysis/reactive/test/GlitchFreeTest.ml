@@ -49,15 +49,22 @@ let test_same_source_anti_join () =
 
   let refs =
     FlatMap.create ~name:"refs" src
-      ~f:(fun _file (data : file_data) emit ->
-        List.iter (fun (k, v) -> emit k v) data.refs)
+      ~f:(fun _file data emit ->
+        let data : file_data = Stable.to_linear_value data in
+        List.iter
+          (fun (k, v) ->
+            emit (Stable.unsafe_of_value k) (Stable.unsafe_of_value v))
+          data.refs)
       ()
   in
 
   let decls =
     FlatMap.create ~name:"decls" src
-      ~f:(fun _file (data : file_data) emit ->
-        List.iter (fun pos -> emit pos ()) data.decl_positions)
+      ~f:(fun _file data emit ->
+        let data : file_data = Stable.to_linear_value data in
+        List.iter
+          (fun pos -> emit (Stable.unsafe_of_value pos) Stable.unit)
+          data.decl_positions)
       ()
   in
 
@@ -96,9 +103,12 @@ let test_multi_level_union () =
   (* refs1: level 1 *)
   let refs1 =
     FlatMap.create ~name:"refs1" src
-      ~f:(fun _file (data : file_data) emit ->
+      ~f:(fun _file data emit ->
+        let data : file_data = Stable.to_linear_value data in
         List.iter
-          (fun (k, v) -> if String.length k > 0 && k.[0] = 'D' then emit k v)
+          (fun (k, v) ->
+            if String.length k > 0 && k.[0] = 'D' then
+              emit (Stable.unsafe_of_value k) (Stable.unsafe_of_value v))
           data.refs)
       ()
   in
@@ -106,9 +116,12 @@ let test_multi_level_union () =
   (* intermediate: level 1 *)
   let intermediate =
     FlatMap.create ~name:"intermediate" src
-      ~f:(fun _file (data : file_data) emit ->
+      ~f:(fun _file data emit ->
+        let data : file_data = Stable.to_linear_value data in
         List.iter
-          (fun (k, v) -> if String.length k > 0 && k.[0] = 'I' then emit k v)
+          (fun (k, v) ->
+            if String.length k > 0 && k.[0] = 'I' then
+              emit (Stable.unsafe_of_value k) (Stable.unsafe_of_value v))
           data.refs)
       ()
   in
@@ -121,8 +134,11 @@ let test_multi_level_union () =
   (* decls: level 1 *)
   let decls =
     FlatMap.create ~name:"decls" src
-      ~f:(fun _file (data : file_data) emit ->
-        List.iter (fun pos -> emit pos ()) data.decl_positions)
+      ~f:(fun _file data emit ->
+        let data : file_data = Stable.to_linear_value data in
+        List.iter
+          (fun pos -> emit (Stable.unsafe_of_value pos) Stable.unit)
+          data.decl_positions)
       ()
   in
 
@@ -162,32 +178,44 @@ let test_real_pipeline_simulation () =
   (* decls: level 1 *)
   let decls =
     FlatMap.create ~name:"decls" src
-      ~f:(fun _file (data : full_file_data) emit ->
-        List.iter (fun pos -> emit pos ()) data.full_decls)
+      ~f:(fun _file data emit ->
+        let data : full_file_data = Stable.to_linear_value data in
+        List.iter
+          (fun pos -> emit (Stable.unsafe_of_value pos) Stable.unit)
+          data.full_decls)
       ()
   in
 
   (* merged_value_refs: level 1 *)
   let merged_value_refs =
     FlatMap.create ~name:"merged_value_refs" src
-      ~f:(fun _file (data : full_file_data) emit ->
-        List.iter (fun (k, v) -> emit k v) data.value_refs)
+      ~f:(fun _file data emit ->
+        let data : full_file_data = Stable.to_linear_value data in
+        List.iter
+          (fun (k, v) ->
+            emit (Stable.unsafe_of_value k) (Stable.unsafe_of_value v))
+          data.value_refs)
       ()
   in
 
   (* exception_refs_raw: level 1 *)
   let exception_refs_raw =
     FlatMap.create ~name:"exception_refs_raw" src
-      ~f:(fun _file (data : full_file_data) emit ->
-        List.iter (fun (k, v) -> emit k v) data.exception_refs)
+      ~f:(fun _file data emit ->
+        let data : full_file_data = Stable.to_linear_value data in
+        List.iter
+          (fun (k, v) ->
+            emit (Stable.unsafe_of_value k) (Stable.unsafe_of_value v))
+          data.exception_refs)
       ()
   in
 
   (* exception_decls: level 2 *)
   let exception_decls =
     FlatMap.create ~name:"exception_decls" decls
-      ~f:(fun pos () emit ->
-        if String.length pos > 0 && pos.[0] = 'E' then emit pos ())
+      ~f:(fun pos _unit emit ->
+        let pos_v = Stable.to_linear_value pos in
+        if String.length pos_v > 0 && pos_v.[0] = 'E' then emit pos Stable.unit)
       ()
   in
 

@@ -111,8 +111,12 @@ module FlatMap : sig
   val create :
     name:string ->
     ('k1, 'v1) t ->
-    f:('k1 -> 'v1 -> ('k2 -> 'v2 -> unit) -> unit) ->
-    ?merge:('v2 -> 'v2 -> 'v2) ->
+    f:
+      ('k1 Stable.t ->
+      'v1 Stable.t ->
+      ('k2 Stable.t -> 'v2 Stable.t -> unit) ->
+      unit) ->
+    ?merge:('v2 Stable.t -> 'v2 Stable.t -> 'v2 Stable.t) ->
     unit ->
     ('k2, 'v2) t
   (** Transform each entry into zero or more output entries.

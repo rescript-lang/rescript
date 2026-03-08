@@ -51,30 +51,40 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   let decl_by_path =
     Reactive.FlatMap.create ~name:"type_deps.decl_by_path" decls
       ~f:(fun _pos decl emit ->
+        let decl = Stable.to_linear_value decl in
         match decl_to_info decl with
-        | Some info -> emit info.path [info]
+        | Some info ->
+          emit
+            (Stable.unsafe_of_value info.path)
+            (Stable.unsafe_of_value [info])
         | None -> ())
-      ~merge:List.append ()
+      ~merge:(fun a b ->
+        Stable.unsafe_of_value
+          (List.append (Stable.to_linear_value a) (Stable.to_linear_value b)))
+      ()
   in
 
   (* Step 2: Same-path refs - connect all decls at the same path *)
   let same_path_refs =
     Reactive.FlatMap.create ~name:"type_deps.same_path_refs" decl_by_path
       ~f:(fun _path decls emit ->
+        let decls = Stable.to_linear_value decls in
         match decls with
         | [] | [_] -> ()
         | first :: rest ->
-          (* Connect each decl to the first one (and vice-versa if needed).
-             Original: extendTypeDependencies loc loc0 adds posTo=loc, posFrom=loc0
-             So: posTo=other, posFrom=first *)
           rest
           |> List.iter (fun other ->
-                 (* Always add: other -> first (posTo=other, posFrom=first) *)
-                 emit other.pos (PosSet.singleton first.pos);
+                 emit
+                   (Stable.unsafe_of_value other.pos)
+                   (Stable.unsafe_of_value (PosSet.singleton first.pos));
                  if not report_types_dead_only_in_interface then
-                   (* Also add: first -> other (posTo=first, posFrom=other) *)
-                   emit first.pos (PosSet.singleton other.pos)))
-      ~merge:PosSet.union ()
+                   emit
+                     (Stable.unsafe_of_value first.pos)
+                     (Stable.unsafe_of_value (PosSet.singleton other.pos))))
+      ~merge:(fun a b ->
+        Stable.unsafe_of_value
+          (PosSet.union (Stable.to_linear_value a) (Stable.to_linear_value b)))
+      ()
   in
 
   (* Step 3: Cross-file refs - connect impl decls to intf decls *)
@@ -82,17 +92,19 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   let impl_decls =
     Reactive.FlatMap.create ~name:"type_deps.impl_decls" decls
       ~f:(fun _pos decl emit ->
+        let decl = Stable.to_linear_value decl in
         match decl_to_info decl with
         | Some info when not info.is_interface -> (
           match info.path with
           | [] -> ()
           | typeLabelName :: pathToType ->
-            (* Try two intf paths *)
             let path_1 = pathToType |> DcePath.moduleToInterface in
             let path_2 = path_1 |> DcePath.typeToInterface in
             let intf_path1 = typeLabelName :: path_1 in
             let intf_path2 = typeLabelName :: path_2 in
-            emit info.pos (info, intf_path1, intf_path2))
+            emit
+              (Stable.unsafe_of_value info.pos)
+              (Stable.unsafe_of_value (info, intf_path1, intf_path2)))
         | _ -> ())
       ()
   in
@@ -158,6 +170,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   let intf_decls =
     Reactive.FlatMap.create ~name:"type_deps.intf_decls" decls
       ~f:(fun _pos decl emit ->
+        let decl = Stable.to_linear_value decl in
         match decl_to_info decl with
         | Some info when info.is_interface -> (
           match info.path with
@@ -166,7 +179,9 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
             let impl_path =
               typeLabelName :: DcePath.moduleToImplementation pathToType
             in
-            emit info.pos (info, impl_path))
+            emit
+              (Stable.unsafe_of_value info.pos)
+              (Stable.unsafe_of_value (info, impl_path)))
         | _ -> ())
       ()
   in
@@ -243,10 +258,18 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
     Reactive.FlatMap.create ~name:"type_deps.all_type_refs_from"
       combined_refs_to
       ~f:(fun posTo posFromSet emit ->
+        let posTo = Stable.to_linear_value posTo in
+        let posFromSet = Stable.to_linear_value posFromSet in
         PosSet.iter
-          (fun posFrom -> emit posFrom (PosSet.singleton posTo))
+          (fun posFrom ->
+            emit
+              (Stable.unsafe_of_value posFrom)
+              (Stable.unsafe_of_value (PosSet.singleton posTo)))
           posFromSet)
-      ~merge:PosSet.union ()
+      ~merge:(fun a b ->
+        Stable.unsafe_of_value
+          (PosSet.union (Stable.to_linear_value a) (Stable.to_linear_value b)))
+      ()
   in
 
   {

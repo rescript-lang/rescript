@@ -15,8 +15,16 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   (* Group declarations by file *)
   let decls_by_file : (string, (Lexing.position * Decl.t) list) Reactive.t =
     Reactive.FlatMap.create ~name:"decl_refs.decls_by_file" decls
-      ~f:(fun pos decl emit -> emit pos.Lexing.pos_fname [(pos, decl)])
-      ~merge:( @ ) ()
+      ~f:(fun pos decl emit ->
+        let pos = Stable.to_linear_value pos in
+        let decl = Stable.to_linear_value decl in
+        emit
+          (Stable.unsafe_of_value pos.Lexing.pos_fname)
+          (Stable.unsafe_of_value [(pos, decl)]))
+      ~merge:(fun a b ->
+        Stable.unsafe_of_value
+          (Stable.to_linear_value a @ Stable.to_linear_value b))
+      ()
   in
 
   (* Check if posFrom is contained in decl's range *)

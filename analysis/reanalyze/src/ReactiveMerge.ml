@@ -27,11 +27,13 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
   let decls =
     Reactive.FlatMap.create ~name:"decls" source
       ~f:(fun _path file_data_opt emit ->
+        let file_data_opt = Stable.to_linear_value file_data_opt in
         match file_data_opt with
         | None -> ()
         | Some file_data ->
           Declarations.builder_to_list file_data.DceFileProcessing.decls
-          |> List.iter (fun (k, v) -> emit k v))
+          |> List.iter (fun (k, v) ->
+                 emit (Stable.unsafe_of_value k) (Stable.unsafe_of_value v)))
       ()
   in
 
@@ -39,12 +41,14 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
   let annotations =
     Reactive.FlatMap.create ~name:"annotations" source
       ~f:(fun _path file_data_opt emit ->
+        let file_data_opt = Stable.to_linear_value file_data_opt in
         match file_data_opt with
         | None -> ()
         | Some file_data ->
           FileAnnotations.builder_to_list
             file_data.DceFileProcessing.annotations
-          |> List.iter (fun (k, v) -> emit k v))
+          |> List.iter (fun (k, v) ->
+                 emit (Stable.unsafe_of_value k) (Stable.unsafe_of_value v)))
       ()
   in
 
@@ -52,46 +56,60 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
   let value_refs_from =
     Reactive.FlatMap.create ~name:"value_refs_from" source
       ~f:(fun _path file_data_opt emit ->
+        let file_data_opt = Stable.to_linear_value file_data_opt in
         match file_data_opt with
         | None -> ()
         | Some file_data ->
           References.builder_value_refs_from_list
             file_data.DceFileProcessing.refs
-          |> List.iter (fun (k, v) -> emit k v))
-      ~merge:PosSet.union ()
+          |> List.iter (fun (k, v) ->
+                 emit (Stable.unsafe_of_value k) (Stable.unsafe_of_value v)))
+      ~merge:(fun a b ->
+        Stable.unsafe_of_value
+          (PosSet.union (Stable.to_linear_value a) (Stable.to_linear_value b)))
+      ()
   in
 
   (* Type refs_from: (posFrom, PosSet of targets) with PosSet.union merge *)
   let type_refs_from =
     Reactive.FlatMap.create ~name:"type_refs_from" source
       ~f:(fun _path file_data_opt emit ->
+        let file_data_opt = Stable.to_linear_value file_data_opt in
         match file_data_opt with
         | None -> ()
         | Some file_data ->
           References.builder_type_refs_from_list
             file_data.DceFileProcessing.refs
-          |> List.iter (fun (k, v) -> emit k v))
-      ~merge:PosSet.union ()
+          |> List.iter (fun (k, v) ->
+                 emit (Stable.unsafe_of_value k) (Stable.unsafe_of_value v)))
+      ~merge:(fun a b ->
+        Stable.unsafe_of_value
+          (PosSet.union (Stable.to_linear_value a) (Stable.to_linear_value b)))
+      ()
   in
 
   (* Cross-file items: (path, CrossFileItems.t) with merge by concatenation *)
   let cross_file_items =
     Reactive.FlatMap.create ~name:"cross_file_items" source
       ~f:(fun path file_data_opt emit ->
+        let file_data_opt = Stable.to_linear_value file_data_opt in
         match file_data_opt with
         | None -> ()
         | Some file_data ->
           let items =
             CrossFileItems.builder_to_t file_data.DceFileProcessing.cross_file
           in
-          emit path items)
+          emit path (Stable.unsafe_of_value items))
       ~merge:(fun a b ->
-        CrossFileItems.
-          {
-            exception_refs = a.exception_refs @ b.exception_refs;
-            optional_arg_calls = a.optional_arg_calls @ b.optional_arg_calls;
-            function_refs = a.function_refs @ b.function_refs;
-          })
+        let a = Stable.to_linear_value a in
+        let b = Stable.to_linear_value b in
+        Stable.unsafe_of_value
+          CrossFileItems.
+            {
+              exception_refs = a.exception_refs @ b.exception_refs;
+              optional_arg_calls = a.optional_arg_calls @ b.optional_arg_calls;
+              function_refs = a.function_refs @ b.function_refs;
+            })
       ()
   in
 
@@ -99,26 +117,34 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
   let file_deps_map =
     Reactive.FlatMap.create ~name:"file_deps_map" source
       ~f:(fun _path file_data_opt emit ->
+        let file_data_opt = Stable.to_linear_value file_data_opt in
         match file_data_opt with
         | None -> ()
         | Some file_data ->
           FileDeps.builder_deps_to_list file_data.DceFileProcessing.file_deps
-          |> List.iter (fun (k, v) -> emit k v))
-      ~merge:FileSet.union ()
+          |> List.iter (fun (k, v) ->
+                 emit (Stable.unsafe_of_value k) (Stable.unsafe_of_value v)))
+      ~merge:(fun a b ->
+        Stable.unsafe_of_value
+          (FileSet.union (Stable.to_linear_value a) (Stable.to_linear_value b)))
+      ()
   in
 
   (* Files set: (source_path, ()) - just track which source files exist *)
   let files =
     Reactive.FlatMap.create ~name:"files" source
       ~f:(fun _cmt_path file_data_opt emit ->
+        let file_data_opt = Stable.to_linear_value file_data_opt in
         match file_data_opt with
         | None -> ()
         | Some file_data ->
-          (* Include all source files from file_deps (NOT the CMT path) *)
           let file_set =
             FileDeps.builder_files file_data.DceFileProcessing.file_deps
           in
-          FileSet.iter (fun f -> emit f ()) file_set)
+          FileSet.iter
+            (fun f ->
+              emit (Stable.unsafe_of_value f) (Stable.unsafe_of_value ()))
+            file_set)
       ()
   in
 
@@ -126,9 +152,12 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
   let exception_refs_collection =
     Reactive.FlatMap.create ~name:"exception_refs_collection" cross_file_items
       ~f:(fun _path items emit ->
+        let items = Stable.to_linear_value items in
         items.CrossFileItems.exception_refs
         |> List.iter (fun (r : CrossFileItems.exception_ref) ->
-               emit r.exception_path r.loc_from))
+               emit
+                 (Stable.unsafe_of_value r.exception_path)
+                 (Stable.unsafe_of_value r.loc_from)))
       ()
   in
 

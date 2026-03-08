@@ -14,8 +14,12 @@ type process_result = {
 }
 
 val create :
-  f:('k1 -> 'v1 -> ('k2 -> 'v2 -> unit) -> unit) ->
-  merge:('v2 -> 'v2 -> 'v2) ->
+  f:
+    ('k1 Stable.t ->
+    'v1 Stable.t ->
+    ('k2 Stable.t -> 'v2 Stable.t -> unit) ->
+    unit) ->
+  merge:('v2 Stable.t -> 'v2 Stable.t -> 'v2 Stable.t) ->
   ('k1, 'v1, 'k2, 'v2) t
 
 val destroy : ('k1, 'v1, 'k2, 'v2) t -> unit

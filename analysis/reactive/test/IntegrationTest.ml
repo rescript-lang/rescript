@@ -16,16 +16,22 @@ let test_file_collection () =
   (* First flatMap: aggregate word counts across files with merge *)
   let word_counts =
     FlatMap.create ~name:"word_counts" files
-      ~f:(fun _path counts emit -> StringMap.iter (fun k v -> emit k v) counts)
+      ~f:(fun _path counts emit ->
+        StringMap.iter
+          (fun k v -> emit (Stable.unsafe_of_value k) (Stable.int v))
+          (Stable.to_linear_value counts))
         (* Each file contributes its word counts *)
-      ~merge:( + ) (* Sum counts from multiple files *)
+      ~merge:(fun a b ->
+        Stable.int (Stable.to_linear_value a + Stable.to_linear_value b))
+        (* Sum counts from multiple files *)
       ()
   in
 
   (* Second flatMap: filter to words with count >= 2 *)
   let frequent_words =
     FlatMap.create ~name:"frequent_words" word_counts
-      ~f:(fun word count emit -> if count >= 2 then emit word count)
+      ~f:(fun word count emit ->
+        if Stable.to_linear_value count >= 2 then emit word count)
       ()
   in
 

@@ -45,9 +45,14 @@ let create ~(merged : ReactiveMerge.t) : t =
   (* Step 2: Convert to edges format for fixpoint: decl -> successor list *)
   let edges : (Lexing.position, Lexing.position StableList.inner) Reactive.t =
     Reactive.FlatMap.create ~name:"liveness.edges" decl_refs_index
-      ~f:(fun pos (value_targets, type_targets) emit ->
+      ~f:(fun pos v emit ->
+        let pos = Stable.to_linear_value pos in
+        let value_targets, type_targets = Stable.to_linear_value v in
         let all_targets = PosSet.union value_targets type_targets in
-        emit pos (StableList.unsafe_inner_of_list (PosSet.elements all_targets)))
+        emit
+          (Stable.unsafe_of_value pos)
+          (Stable.unsafe_of_value
+             (StableList.unsafe_inner_of_list (PosSet.elements all_targets))))
       ()
   in
 

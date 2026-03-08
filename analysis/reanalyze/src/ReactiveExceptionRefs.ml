@@ -27,7 +27,8 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   (* Step 1: Index exception declarations by path *)
   let exception_decls =
     Reactive.FlatMap.create ~name:"exc_refs.exception_decls" decls
-      ~f:(fun _pos (decl : Decl.t) emit ->
+      ~f:(fun _pos decl emit ->
+        let decl : Decl.t = Stable.to_linear_value decl in
         match decl.Decl.declKind with
         | Exception ->
           let loc : Location.t =
@@ -37,7 +38,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
               loc_ghost = false;
             }
           in
-          emit decl.path loc
+          emit (Stable.unsafe_of_value decl.path) (Stable.unsafe_of_value loc)
         | _ -> ())
       () (* Last-write-wins is fine since paths should be unique *)
   in
@@ -60,10 +61,18 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   let resolved_refs_from =
     Reactive.FlatMap.create ~name:"exc_refs.resolved_refs_from" resolved_refs
       ~f:(fun posTo posFromSet emit ->
+        let posTo = Stable.to_linear_value posTo in
+        let posFromSet = Stable.to_linear_value posFromSet in
         PosSet.iter
-          (fun posFrom -> emit posFrom (PosSet.singleton posTo))
+          (fun posFrom ->
+            emit
+              (Stable.unsafe_of_value posFrom)
+              (Stable.unsafe_of_value (PosSet.singleton posTo)))
           posFromSet)
-      ~merge:PosSet.union ()
+      ~merge:(fun a b ->
+        Stable.unsafe_of_value
+          (PosSet.union (Stable.to_linear_value a) (Stable.to_linear_value b)))
+      ()
   in
 
   {exception_decls; resolved_refs; resolved_refs_from}
