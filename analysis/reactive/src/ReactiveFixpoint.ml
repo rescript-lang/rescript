@@ -400,7 +400,7 @@ let create ~max_nodes ~max_edges =
   {
     current = StableSet.create ();
     edge_map = StableMap.create ();
-    pred_map = ReactivePoolMapSet.create ~capacity:128;
+    pred_map = ReactivePoolMapSet.create ();
     roots = StableSet.create ();
     output_wave = ReactiveWave.create ~max_entries:max_nodes ();
     deleted_nodes = StableSet.create ();
@@ -432,6 +432,7 @@ let create ~max_nodes ~max_edges =
 let destroy t =
   StableSet.destroy t.current;
   StableMap.destroy t.edge_map;
+  ReactivePoolMapSet.destroy t.pred_map;
   StableSet.destroy t.roots;
   StableSet.destroy t.deleted_nodes;
   StableSet.destroy t.rederive_pending;
@@ -474,9 +475,9 @@ let remove_pred t ~target ~pred =
 let has_live_pred_key t pred = StableSet.mem t.current (stable_key pred)
 
 let has_live_predecessor t k =
-  let r = ReactivePoolMapSet.find_maybe t.pred_map k in
+  let r = ReactivePoolMapSet.find_inner_maybe t.pred_map k in
   if Maybe.is_some r then
-    ReactiveHash.Set.exists_with has_live_pred_key t (Maybe.unsafe_get r)
+    StableSet.exists_with (Obj.magic has_live_pred_key) t (Maybe.unsafe_get r)
   else false
 
 let add_pred_for_src (t, src) target = add_pred t ~target ~pred:src

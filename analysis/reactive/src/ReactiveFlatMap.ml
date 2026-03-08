@@ -50,8 +50,8 @@ let create ~f ~merge =
     {
       f;
       merge;
-      provenance = ReactivePoolMapSet.create ~capacity:128;
-      contributions = ReactivePoolMapMap.create ~capacity:128;
+      provenance = ReactivePoolMapSet.create ();
+      contributions = ReactivePoolMapMap.create ();
       target = StableMap.create ();
       scratch = StableMap.create ();
       affected = StableSet.create ();
@@ -74,6 +74,8 @@ let create ~f ~merge =
   t
 
 let destroy t =
+  ReactivePoolMapSet.destroy t.provenance;
+  ReactivePoolMapMap.destroy t.contributions;
   StableMap.destroy t.target;
   StableMap.destroy t.scratch;
   StableSet.destroy t.affected;

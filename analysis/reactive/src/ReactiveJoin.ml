@@ -59,11 +59,11 @@ let create ~key_of ~f ~merge ~right_get =
       merge;
       right_get;
       left_entries = StableMap.create ();
-      provenance = ReactivePoolMapSet.create ~capacity:128;
-      contributions = ReactivePoolMapMap.create ~capacity:128;
+      provenance = ReactivePoolMapSet.create ();
+      contributions = ReactivePoolMapMap.create ();
       target = StableMap.create ();
       left_to_right_key = StableMap.create ();
-      right_key_to_left_keys = ReactivePoolMapSet.create ~capacity:128;
+      right_key_to_left_keys = ReactivePoolMapSet.create ();
       left_scratch = StableMap.create ();
       right_scratch = StableMap.create ();
       affected = StableSet.create ();
@@ -87,8 +87,11 @@ let create ~key_of ~f ~merge ~right_get =
 
 let destroy t =
   StableMap.destroy t.left_entries;
+  ReactivePoolMapSet.destroy t.provenance;
+  ReactivePoolMapMap.destroy t.contributions;
   StableMap.destroy t.target;
   StableMap.destroy t.left_to_right_key;
+  ReactivePoolMapSet.destroy t.right_key_to_left_keys;
   StableMap.destroy t.left_scratch;
   StableMap.destroy t.right_scratch;
   StableSet.destroy t.affected;
@@ -194,9 +197,9 @@ let process_right_scratch_entry (t : (_, _, _, _, _, _) t) k2 _mv =
   t.result.entries_received <- t.result.entries_received + 1;
   if Maybe.is_some _mv then t.result.adds_received <- t.result.adds_received + 1
   else t.result.removes_received <- t.result.removes_received + 1;
-  let mb = ReactivePoolMapSet.find_maybe t.right_key_to_left_keys k2 in
+  let mb = ReactivePoolMapSet.find_inner_maybe t.right_key_to_left_keys k2 in
   if Maybe.is_some mb then
-    ReactiveHash.Set.iter_with reprocess_left_entry t (Maybe.unsafe_get mb)
+    StableSet.iter_with (Obj.magic reprocess_left_entry) t (Maybe.unsafe_get mb)
 
 let count_output_entry (r : process_result) _k mv =
   let mv = Stable.unsafe_to_value mv in

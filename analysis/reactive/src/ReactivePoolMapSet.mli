@@ -1,42 +1,43 @@
-(** A map from keys to sets, with an internal pool for recycling inner sets.
-
-    Eliminates allocation under key churn by recycling cleared inner sets. *)
+(** A map from keys to sets, backed by stable storage. *)
 
 type ('k, 'v) t
 
-val create : capacity:int -> ('k, 'v) t
-(** [create ~capacity] creates an empty pool map set.
-    [capacity] is the initial pool capacity; the pool grows on demand. *)
+val create : unit -> ('k, 'v) t
+(** [create ()] creates an empty map-of-set. *)
+
+val destroy : ('k, 'v) t -> unit
+(** Destroy the outer map and all owned inner sets. *)
 
 val add : ('k, 'v) t -> 'k -> 'v -> unit
 (** [add t k v] ensures a set exists for [k] and adds [v] to it. *)
 
 val drain_key : ('k, 'v) t -> 'k -> 'a -> ('a -> 'v -> unit) -> unit
 (** [drain_key t k ctx f] iterates [f ctx v] over the set for [k], then
-    removes [k] from the outer map and recycles its inner set.
+    removes [k] from the outer map and destroys its inner set.
     No-op if [k] is absent. *)
 
 val remove_from_set_and_recycle_if_empty : ('k, 'v) t -> 'k -> 'v -> unit
 (** [remove_from_set_and_recycle_if_empty t k v] removes [v] from [k]'s set.
-    If the set becomes empty, [k] is recycled. No-op if [k] is absent. *)
+    If the set becomes empty, [k] is removed and its inner set destroyed.
+    No-op if [k] is absent. *)
 
-val find_maybe : ('k, 'v) t -> 'k -> 'v ReactiveHash.Set.t Maybe.t
-(** Zero-allocation lookup. *)
+val find_inner_maybe : ('k, 'v) t -> 'k -> 'v StableSet.t Maybe.t
+(** Zero-allocation lookup.
+
+    The returned inner set is owned by the pool-map. It becomes invalid if the
+    outer binding is later removed, [clear] is called, or the whole structure is
+    [destroy]ed. *)
 
 val iter_with :
-  ('k, 'v) t -> 'a -> ('a -> 'k -> 'v ReactiveHash.Set.t -> unit) -> unit
+  ('k, 'v) t -> 'a -> ('a -> 'k -> 'v StableSet.t -> unit) -> unit
 (** [iter_with t ctx f] calls [f ctx k set] for each binding. *)
 
 val clear : ('k, 'v) t -> unit
-(** Removes all outer bindings; inner sets are cleared and recycled. *)
-
-val tighten : ('k, 'v) t -> unit
-(** [tighten t] shrinks the outer map's capacity after key churn.
-    Call explicitly after a batch of key removals. *)
+(** Removes all outer bindings and destroys their inner sets. *)
 
 val cardinal : ('k, 'v) t -> int
 (** Number of live entries in the outer map. *)
 
 val debug_miss_count : ('k, 'v) t -> int
-(** Number of pool misses (fresh set allocations) since creation.
-    Intended for diagnostics and allocation tests. *)
+(** Always [0] in the stable-backed implementation. Kept for diagnostics and
+    allocation-test compatibility. *)
