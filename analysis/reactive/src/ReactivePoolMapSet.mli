@@ -8,20 +8,22 @@ val create : unit -> ('k, 'v) t
 val destroy : ('k, 'v) t -> unit
 (** Destroy the outer map and all owned inner sets. *)
 
-val add : ('k, 'v) t -> 'k -> 'v -> unit
+val add : ('k, 'v) t -> 'k Stable.t -> 'v Stable.t -> unit
 (** [add t k v] ensures a set exists for [k] and adds [v] to it. *)
 
-val drain_key : ('k, 'v) t -> 'k -> 'a -> ('a -> 'v -> unit) -> unit
+val drain_key :
+  ('k, 'v) t -> 'k Stable.t -> 'a -> ('a -> 'v Stable.t -> unit) -> unit
 (** [drain_key t k ctx f] iterates [f ctx v] over the set for [k], then
     removes [k] from the outer map and destroys its inner set.
     No-op if [k] is absent. *)
 
-val remove_from_set_and_recycle_if_empty : ('k, 'v) t -> 'k -> 'v -> unit
+val remove_from_set_and_recycle_if_empty :
+  ('k, 'v) t -> 'k Stable.t -> 'v Stable.t -> unit
 (** [remove_from_set_and_recycle_if_empty t k v] removes [v] from [k]'s set.
     If the set becomes empty, [k] is removed and its inner set destroyed.
     No-op if [k] is absent. *)
 
-val find_inner_maybe : ('k, 'v) t -> 'k -> 'v StableSet.t Maybe.t
+val find_inner_maybe : ('k, 'v) t -> 'k Stable.t -> 'v StableSet.t Maybe.t
 (** Zero-allocation lookup of the inner set by outer key.
 
     The returned inner set is owned by the pool-map. It becomes invalid if the
@@ -30,17 +32,17 @@ val find_inner_maybe : ('k, 'v) t -> 'k -> 'v StableSet.t Maybe.t
     access is not needed. *)
 
 val iter_inner_with :
-  ('k, 'v) t -> 'k -> 'a -> ('a -> 'v -> unit) -> unit
+  ('k, 'v) t -> 'k Stable.t -> 'a -> ('a -> 'v Stable.t -> unit) -> unit
 (** [iter_inner_with t k ctx f] calls [f ctx v] for each element in [k]'s inner
     set. No-op if [k] is absent. *)
 
 val exists_inner_with :
-  ('k, 'v) t -> 'k -> 'a -> ('a -> 'v -> bool) -> bool
+  ('k, 'v) t -> 'k Stable.t -> 'a -> ('a -> 'v Stable.t -> bool) -> bool
 (** [exists_inner_with t k ctx f] returns [true] if [f ctx v] holds for some
     element in [k]'s inner set. Returns [false] if [k] is absent. *)
 
 val iter_with :
-  ('k, 'v) t -> 'a -> ('a -> 'k -> 'v StableSet.t -> unit) -> unit
+  ('k, 'v) t -> 'a -> ('a -> 'k Stable.t -> 'v StableSet.t -> unit) -> unit
 (** [iter_with t ctx f] calls [f ctx k set] for each binding. *)
 
 val clear : ('k, 'v) t -> unit

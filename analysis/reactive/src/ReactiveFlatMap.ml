@@ -33,14 +33,24 @@ and process_result = {
 
 (* Emit callback for steady-state — marks affected *)
 let add_single_contribution (t : (_, _, _, _) t) k2 v2 =
-  ReactivePoolMapSet.add t.provenance t.current_k1 k2;
-  ReactivePoolMapMap.replace t.contributions k2 t.current_k1 v2;
+  ReactivePoolMapSet.add t.provenance
+    (Stable.unsafe_of_value t.current_k1)
+    (Stable.unsafe_of_value k2);
+  ReactivePoolMapMap.replace t.contributions
+    (Stable.unsafe_of_value k2)
+    (Stable.unsafe_of_value t.current_k1)
+    (Stable.unsafe_of_value v2);
   StableSet.add t.affected (Stable.unsafe_of_value k2)
 
 (* Emit callback for init — writes directly to target *)
 let add_single_contribution_init (t : (_, _, _, _) t) k2 v2 =
-  ReactivePoolMapSet.add t.provenance t.current_k1 k2;
-  ReactivePoolMapMap.replace t.contributions k2 t.current_k1 v2;
+  ReactivePoolMapSet.add t.provenance
+    (Stable.unsafe_of_value t.current_k1)
+    (Stable.unsafe_of_value k2);
+  ReactivePoolMapMap.replace t.contributions
+    (Stable.unsafe_of_value k2)
+    (Stable.unsafe_of_value t.current_k1)
+    (Stable.unsafe_of_value v2);
   StableMap.replace t.target
     (Stable.unsafe_of_value k2)
     (Stable.unsafe_of_value v2)
@@ -88,15 +98,18 @@ let push t k v_opt = StableMap.replace t.scratch k v_opt
 (* Remove one contribution key during remove_source iteration *)
 let remove_one_contribution (t : (_, _, _, _) t) k2 =
   ReactivePoolMapMap.remove_from_inner_and_recycle_if_empty t.contributions k2
-    t.current_k1;
-  StableSet.add t.affected (Stable.unsafe_of_value k2)
+    (Stable.unsafe_of_value t.current_k1);
+  StableSet.add t.affected k2
 
 let remove_source (t : (_, _, _, _) t) k1 =
   t.current_k1 <- k1;
-  ReactivePoolMapSet.drain_key t.provenance k1 t remove_one_contribution
+  ReactivePoolMapSet.drain_key t.provenance
+    (Stable.unsafe_of_value k1)
+    t remove_one_contribution
 
 (* Merge callback for recompute_target iter_with *)
 let merge_one_contribution (t : (_, _, _, _) t) _k1 v =
+  let v = Stable.unsafe_to_value v in
   if t.merge_first then (
     t.merge_acc <- v;
     t.merge_first <- false)
@@ -104,10 +117,15 @@ let merge_one_contribution (t : (_, _, _, _) t) _k1 v =
 
 let recompute_target (t : (_, _, _, _) t) k2 =
   let k2 = Stable.unsafe_to_value k2 in
-  if ReactivePoolMapMap.inner_cardinal t.contributions k2 > 0 then (
+  if
+    ReactivePoolMapMap.inner_cardinal t.contributions
+      (Stable.unsafe_of_value k2)
+    > 0
+  then (
     t.merge_first <- true;
-    ReactivePoolMapMap.iter_inner_with t.contributions k2 t
-      merge_one_contribution;
+    ReactivePoolMapMap.iter_inner_with t.contributions
+      (Stable.unsafe_of_value k2)
+      t merge_one_contribution;
     StableMap.replace t.target
       (Stable.unsafe_of_value k2)
       (Stable.unsafe_of_value t.merge_acc);

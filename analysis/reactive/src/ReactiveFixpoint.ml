@@ -467,15 +467,18 @@ let current_length t = StableSet.cardinal t.current
 
 let recompute_current t = ignore (compute_reachable ~visited:t.current t)
 
-let add_pred t ~target ~pred = ReactivePoolMapSet.add t.pred_map target pred
+let add_pred t ~target ~pred =
+  ReactivePoolMapSet.add t.pred_map (stable_key target) (stable_key pred)
 
 let remove_pred t ~target ~pred =
-  ReactivePoolMapSet.remove_from_set_and_recycle_if_empty t.pred_map target pred
+  ReactivePoolMapSet.remove_from_set_and_recycle_if_empty t.pred_map
+    (stable_key target) (stable_key pred)
 
-let has_live_pred_key t pred = StableSet.mem t.current (stable_key pred)
+let has_live_pred_key t pred = StableSet.mem t.current pred
 
 let has_live_predecessor t k =
-  ReactivePoolMapSet.exists_inner_with t.pred_map k t has_live_pred_key
+  ReactivePoolMapSet.exists_inner_with t.pred_map (stable_key k) t
+    has_live_pred_key
 
 let add_pred_for_src (t, src) target = add_pred t ~target ~pred:src
 let remove_pred_for_src (t, src) target = remove_pred t ~target ~pred:src
