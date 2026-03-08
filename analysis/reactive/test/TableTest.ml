@@ -1,4 +1,4 @@
-(** Tests for off-heap ReactiveTable storage. *)
+(** Tests for stable ReactiveTable storage. *)
 
 let test_table_promoted_wave_lifecycle () =
   Printf.printf "=== Test: table promoted-wave lifecycle ===\n";
@@ -38,20 +38,20 @@ let test_table_promoted_wave_lifecycle () =
     ignore (AllocMeasure.words_since ());
     ReactiveTable.clear t;
     for i = 0 to count - 1 do
-      ReactiveTable.push t (Offheap.of_value fresh.(i))
+      ReactiveTable.push t (Stable.of_value fresh.(i))
     done;
     assert (ReactiveTable.length t = count);
     assert (ReactiveTable.capacity t >= ReactiveTable.length t);
-    ReactiveTable.set t 0 (Offheap.of_value fresh.(count - 1));
-    assert (Offheap.unsafe_to_value (ReactiveTable.get t 0) == fresh.(count - 1));
+    ReactiveTable.set t 0 (Stable.of_value fresh.(count - 1));
+    assert (Stable.unsafe_to_value (ReactiveTable.get t 0) == fresh.(count - 1));
     for i = 0 to count - 1 do
       let expected = if i = 0 then fresh.(count - 1) else fresh.(i) in
-      let recovered = Offheap.unsafe_to_value (ReactiveTable.get t i) in
+      let recovered = Stable.unsafe_to_value (ReactiveTable.get t i) in
       assert (recovered == expected);
       assert (Bytes.get recovered 0 = Bytes.get expected 0);
       assert (Bytes.get recovered (width - 1) = Bytes.get expected (width - 1))
     done;
-    assert (Offheap.unsafe_to_value (ReactiveTable.pop t) == fresh.(count - 1));
+    assert (Stable.unsafe_to_value (ReactiveTable.pop t) == fresh.(count - 1));
     assert (ReactiveTable.length t = count - 1);
     ReactiveTable.shrink_to_fit t;
     assert (ReactiveTable.capacity t = ReactiveTable.length t);
@@ -84,13 +84,13 @@ let test_table_unsafe_minor_heap_demo () =
     let width = 64 in
     let t = ReactiveTable.create ~initial_capacity:count in
     (* Each [Bytes.make] result starts in the minor heap. We store only the raw
-       addresses off-heap and intentionally drop all OCaml roots. *)
+       addresses in stable storage and intentionally drop all OCaml roots. *)
     for i = 0 to count - 1 do
       let c = Char.chr ((i mod 26) + Char.code 'A') in
       let fresh = Bytes.make width c in
       Bytes.set fresh 0 c;
       Bytes.set fresh (width - 1) c;
-      ReactiveTable.push t (Offheap.unsafe_of_value fresh)
+      ReactiveTable.push t (Stable.unsafe_of_value fresh)
     done;
     Gc.compact ();
     for round = 1 to 200 do
@@ -101,14 +101,14 @@ let test_table_unsafe_minor_heap_demo () =
       Gc.compact ()
     done;
     Printf.printf
-      "About to validate %d minor-heap values stored off-heap. This is unsafe \
-       and may return garbage or crash.\n"
+      "About to validate %d minor-heap values stored in stable storage. This \
+       is unsafe and may return garbage or crash.\n"
       count;
     let mismatches = ref 0 in
     let samples = ref [] in
     for i = 0 to count - 1 do
       let expected = Char.chr ((i mod 26) + Char.code 'A') in
-      let recovered : bytes = Offheap.unsafe_to_value (ReactiveTable.get t i) in
+      let recovered : bytes = Stable.unsafe_to_value (ReactiveTable.get t i) in
       let ok =
         Bytes.length recovered = width
         && Bytes.get recovered 0 = expected
