@@ -12,6 +12,5 @@
   IntegrationTest
   GlitchFreeTest
   AllocMeasure
-  AllocTest
-  TableTest)
+  AllocTest)
  (libraries reactive))

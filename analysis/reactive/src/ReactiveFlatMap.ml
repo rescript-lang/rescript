@@ -11,7 +11,7 @@ type ('k1, 'v1, 'k2, 'v2) t = {
   scratch: ('k1, 'v1 Maybe.t) StableMap.t;
   affected: 'k2 StableSet.t;
   (* Pre-allocated output buffer *)
-  output_wave: ('k2, 'v2 Maybe.t) ReactiveWave.t;
+  output_wave: ('k2, 'v2 Maybe.t) StableWave.t;
   (* Emit callback state — allocated once, reused per entry *)
   mutable current_k1: 'k1;
   emit_fn: 'k2 -> 'v2 -> unit;
@@ -65,7 +65,7 @@ let create ~f ~merge =
       target = StableMap.create ();
       scratch = StableMap.create ();
       affected = StableSet.create ();
-      output_wave = ReactiveWave.create ();
+      output_wave = StableWave.create ();
       current_k1 = Obj.magic ();
       emit_fn = (fun k2 v2 -> add_single_contribution t k2 v2);
       result =
@@ -89,7 +89,7 @@ let destroy t =
   StableMap.destroy t.target;
   StableMap.destroy t.scratch;
   StableSet.destroy t.affected;
-  ReactiveWave.destroy t.output_wave
+  StableWave.destroy t.output_wave
 
 let output_wave t = t.output_wave
 
@@ -129,12 +129,12 @@ let recompute_target (t : (_, _, _, _) t) k2 =
     StableMap.replace t.target
       (Stable.unsafe_of_value k2)
       (Stable.unsafe_of_value t.merge_acc);
-    ReactiveWave.push t.output_wave
+    StableWave.push t.output_wave
       (Stable.unsafe_of_value k2)
       (Stable.unsafe_of_value (Maybe.some t.merge_acc)))
   else (
     StableMap.remove t.target (Stable.unsafe_of_value k2);
-    ReactiveWave.push t.output_wave
+    StableWave.push t.output_wave
       (Stable.unsafe_of_value k2)
       Maybe.none_stable)
 
@@ -165,17 +165,17 @@ let process (t : (_, _, _, _) t) =
   r.removes_emitted <- 0;
 
   StableSet.clear t.affected;
-  ReactiveWave.clear t.output_wave;
+  StableWave.clear t.output_wave;
 
   StableMap.iter_with process_scratch_entry t t.scratch;
   StableMap.clear t.scratch;
 
   StableSet.iter_with recompute_target t t.affected;
 
-  let num_entries = ReactiveWave.count t.output_wave in
+  let num_entries = StableWave.count t.output_wave in
   r.entries_emitted <- num_entries;
   if num_entries > 0 then
-    ReactiveWave.iter_with t.output_wave count_output_entry r;
+    StableWave.iter_with t.output_wave count_output_entry r;
   r
 
 let init_entry (t : (_, _, _, _) t) k1 v1 =

@@ -23,8 +23,8 @@ type ('raw, 'v) internal = {
 type ('raw, 'v) t = {
   internal: ('raw, 'v) internal;
   collection: (string, 'v) Reactive.t;
-  emit: (string, 'v Maybe.t) ReactiveWave.t -> unit;
-  scratch_wave: (string, 'v Maybe.t) ReactiveWave.t;
+  emit: (string, 'v Maybe.t) StableWave.t -> unit;
+  scratch_wave: (string, 'v Maybe.t) StableWave.t;
 }
 (** A file collection is just a Reactive.t with some extra operations *)
 
@@ -32,7 +32,7 @@ type ('raw, 'v) t = {
 let create ~read_file ~process : ('raw, 'v) t =
   let internal = {cache = Hashtbl.create 256; read_file; process} in
   let collection, emit = Reactive.Source.create ~name:"file_collection" () in
-  let scratch_wave = ReactiveWave.create () in
+  let scratch_wave = StableWave.create () in
   {internal; collection; emit; scratch_wave}
 
 (** Get the collection interface for composition *)
@@ -40,8 +40,8 @@ let to_collection t : (string, 'v) Reactive.t = t.collection
 
 (** Emit a single set entry *)
 let emit_set t path value =
-  ReactiveWave.clear t.scratch_wave;
-  ReactiveWave.push t.scratch_wave
+  StableWave.clear t.scratch_wave;
+  StableWave.push t.scratch_wave
     (Stable.unsafe_of_value path)
     (Stable.unsafe_of_value (Maybe.some value));
   t.emit t.scratch_wave
@@ -66,7 +66,7 @@ let process_files t paths =
 (** Process multiple files and emit as a single batch.
     More efficient than process_files when processing many files at once. *)
 let process_files_batch t paths =
-  ReactiveWave.clear t.scratch_wave;
+  StableWave.clear t.scratch_wave;
   let count = ref 0 in
   List.iter
     (fun path ->
@@ -77,7 +77,7 @@ let process_files_batch t paths =
         let raw = t.internal.read_file path in
         let value = t.internal.process path raw in
         Hashtbl.replace t.internal.cache path (new_id, value);
-        ReactiveWave.push t.scratch_wave
+        StableWave.push t.scratch_wave
           (Stable.unsafe_of_value path)
           (Stable.unsafe_of_value (Maybe.some value));
         incr count)
@@ -88,21 +88,21 @@ let process_files_batch t paths =
 (** Remove a file *)
 let remove t path =
   Hashtbl.remove t.internal.cache path;
-  ReactiveWave.clear t.scratch_wave;
-  ReactiveWave.push t.scratch_wave
+  StableWave.clear t.scratch_wave;
+  StableWave.push t.scratch_wave
     (Stable.unsafe_of_value path)
     Maybe.none_stable;
   t.emit t.scratch_wave
 
 (** Remove multiple files as a batch *)
 let remove_batch t paths =
-  ReactiveWave.clear t.scratch_wave;
+  StableWave.clear t.scratch_wave;
   let count = ref 0 in
   List.iter
     (fun path ->
       if Hashtbl.mem t.internal.cache path then (
         Hashtbl.remove t.internal.cache path;
-        ReactiveWave.push t.scratch_wave
+        StableWave.push t.scratch_wave
           (Stable.unsafe_of_value path)
           Maybe.none_stable;
         incr count))

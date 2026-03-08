@@ -9,9 +9,9 @@
 
 (** {1 Waves} *)
 
-type ('k, 'v) wave = ('k, 'v Maybe.t) ReactiveWave.t
+type ('k, 'v) wave = ('k, 'v Maybe.t) StableWave.t
 
-let create_wave () = ReactiveWave.create ()
+let create_wave () = StableWave.create ()
 
 (** {1 Statistics} *)
 
@@ -506,10 +506,10 @@ module Source = struct
       if count > 0 then (
         my_stats.deltas_emitted <- my_stats.deltas_emitted + 1;
         my_stats.entries_emitted <- my_stats.entries_emitted + count;
-        ReactiveWave.clear output_wave;
+        StableWave.clear output_wave;
         StableMap.iter_with
           (fun wave k v ->
-            ReactiveWave.push wave k (Stable.unsafe_of_value (Stable.unsafe_to_value v)))
+            StableWave.push wave k (Stable.unsafe_of_value (Stable.unsafe_to_value v)))
           output_wave pending;
         StableMap.clear pending;
         notify_subscribers output_wave !subscribers)
@@ -519,7 +519,7 @@ module Source = struct
     let destroy () =
       StableMap.destroy tbl;
       StableMap.destroy pending;
-      ReactiveWave.destroy output_wave
+      StableWave.destroy output_wave
     in
     let my_info =
       Registry.register_node ~name ~level:0 ~process ~destroy ~stats:my_stats
@@ -549,12 +549,12 @@ module Source = struct
       }
     in
 
-    let emit (input_wave : ('k, 'v Maybe.t) ReactiveWave.t) =
-      let count = ReactiveWave.count input_wave in
+    let emit (input_wave : ('k, 'v Maybe.t) StableWave.t) =
+      let count = StableWave.count input_wave in
       my_stats.deltas_received <- my_stats.deltas_received + 1;
       my_stats.entries_received <- my_stats.entries_received + count;
       (* Apply to internal state and accumulate into pending map *)
-      ReactiveWave.iter_with input_wave apply_emit tables;
+      StableWave.iter_with input_wave apply_emit tables;
       pending_count := !pending_count + 1;
       Registry.mark_dirty_node my_info;
       if not (Scheduler.is_propagating ()) then Scheduler.propagate ()
@@ -614,7 +614,7 @@ module FlatMap = struct
     src.subscribe (fun wave ->
         Registry.inc_inflight_node src.node;
         incr pending_count;
-        ReactiveWave.iter_with wave ReactiveFlatMap.push state;
+        StableWave.iter_with wave ReactiveFlatMap.push state;
         Registry.mark_dirty_node my_info);
 
     (* Initialize from existing data *)
@@ -695,13 +695,13 @@ module Join = struct
     left.subscribe (fun wave ->
         Registry.inc_inflight_node left.node;
         incr left_pending_count;
-        ReactiveWave.iter_with wave ReactiveJoin.push_left state;
+        StableWave.iter_with wave ReactiveJoin.push_left state;
         Registry.mark_dirty_node my_info);
 
     right.subscribe (fun wave ->
         Registry.inc_inflight_node right.node;
         incr right_pending_count;
-        ReactiveWave.iter_with wave ReactiveJoin.push_right state;
+        StableWave.iter_with wave ReactiveJoin.push_right state;
         Registry.mark_dirty_node my_info);
 
     (* Initialize from existing data *)
@@ -780,13 +780,13 @@ module Union = struct
     left.subscribe (fun wave ->
         Registry.inc_inflight_node left.node;
         incr left_pending_count;
-        ReactiveWave.iter_with wave ReactiveUnion.push_left state;
+        StableWave.iter_with wave ReactiveUnion.push_left state;
         Registry.mark_dirty_node my_info);
 
     right.subscribe (fun wave ->
         Registry.inc_inflight_node right.node;
         incr right_pending_count;
-        ReactiveWave.iter_with wave ReactiveUnion.push_right state;
+        StableWave.iter_with wave ReactiveUnion.push_right state;
         Registry.mark_dirty_node my_info);
 
     (* Initialize from existing data - process left then right *)
@@ -811,7 +811,7 @@ end
 module Fixpoint = struct
   let stable_wave_map_replace pending k v = StableMap.replace pending k v
 
-  let stable_wave_push wave k v = ReactiveWave.push wave k v
+  let stable_wave_push wave k v = StableWave.push wave k v
 
   let create ~name ~(init : ('k, unit) t) ~(edges : ('k, 'k StableList.inner) t)
       () : ('k, unit) t =
@@ -837,8 +837,8 @@ module Fixpoint = struct
       int_env_or "RESCRIPT_REACTIVE_FIXPOINT_MAX_EDGE_WAVE_ENTRIES" 16_384
     in
     let state = ReactiveFixpoint.create ~max_nodes ~max_edges in
-    let root_wave = ReactiveWave.create ~max_entries:max_root_wave_entries () in
-    let edge_wave = ReactiveWave.create ~max_entries:max_edge_wave_entries () in
+    let root_wave = StableWave.create ~max_entries:max_root_wave_entries () in
+    let edge_wave = StableWave.create ~max_entries:max_edge_wave_entries () in
     let subscribers = ref [] in
     let my_stats = create_stats () in
     let root_pending : ('k, unit Maybe.t) StableMap.t = StableMap.create () in
@@ -860,8 +860,8 @@ module Fixpoint = struct
       Registry.dec_inflight_node edges.node consumed_edges;
 
       (* Dump pending maps into waves *)
-      ReactiveWave.clear root_wave;
-      ReactiveWave.clear edge_wave;
+      StableWave.clear root_wave;
+      StableWave.clear edge_wave;
       let root_entries = StableMap.cardinal root_pending in
       let edge_entries = StableMap.cardinal edge_pending in
       StableMap.iter_with stable_wave_push root_wave root_pending;
@@ -876,7 +876,7 @@ module Fixpoint = struct
 
       ReactiveFixpoint.apply_wave state ~roots:root_wave ~edges:edge_wave;
       let out_wave = ReactiveFixpoint.output_wave state in
-      let out_count = ReactiveWave.count out_wave in
+      let out_count = StableWave.count out_wave in
       if out_count > 0 then (
         notify_subscribers out_wave !subscribers;
         my_stats.deltas_emitted <- my_stats.deltas_emitted + 1;
@@ -886,8 +886,8 @@ module Fixpoint = struct
     let destroy () =
       StableMap.destroy root_pending;
       StableMap.destroy edge_pending;
-      ReactiveWave.destroy root_wave;
-      ReactiveWave.destroy edge_wave;
+      StableWave.destroy root_wave;
+      StableWave.destroy edge_wave;
       ReactiveFixpoint.destroy state
     in
     let my_info =
@@ -903,30 +903,30 @@ module Fixpoint = struct
     init.subscribe (fun wave ->
         Registry.inc_inflight_node init.node;
         init_pending_count := !init_pending_count + 1;
-        ReactiveWave.iter_with wave stable_wave_map_replace root_pending;
+        StableWave.iter_with wave stable_wave_map_replace root_pending;
         Registry.mark_dirty_node my_info);
 
     edges.subscribe (fun wave ->
         Registry.inc_inflight_node edges.node;
         edges_pending_count := !edges_pending_count + 1;
-        ReactiveWave.iter_with wave stable_wave_map_replace edge_pending;
+        StableWave.iter_with wave stable_wave_map_replace edge_pending;
         Registry.mark_dirty_node my_info);
 
     (* Initialize from existing data *)
     let init_roots_wave =
-      ReactiveWave.create ~max_entries:(max 1 (init.length ())) ()
+      StableWave.create ~max_entries:(max 1 (init.length ())) ()
     in
-    let init_edges_wave : ('k, 'k StableList.inner) ReactiveWave.t =
-      ReactiveWave.create ~max_entries:(max 1 (edges.length ())) ()
+    let init_edges_wave : ('k, 'k StableList.inner) StableWave.t =
+      StableWave.create ~max_entries:(max 1 (edges.length ())) ()
     in
-    ReactiveWave.clear init_roots_wave;
-    ReactiveWave.clear init_edges_wave;
-    init.iter (fun k _unit -> ReactiveWave.push init_roots_wave k Stable.unit);
-    edges.iter (fun k succs -> ReactiveWave.push init_edges_wave k succs);
+    StableWave.clear init_roots_wave;
+    StableWave.clear init_edges_wave;
+    init.iter (fun k _unit -> StableWave.push init_roots_wave k Stable.unit);
+    edges.iter (fun k succs -> StableWave.push init_edges_wave k succs);
     ReactiveFixpoint.initialize state ~roots:init_roots_wave
       ~edges:init_edges_wave;
-    ReactiveWave.destroy init_roots_wave;
-    ReactiveWave.destroy init_edges_wave;
+    StableWave.destroy init_roots_wave;
+    StableWave.destroy init_edges_wave;
 
     {
       name;

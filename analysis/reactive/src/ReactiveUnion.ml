@@ -8,7 +8,7 @@ type ('k, 'v) t = {
   left_scratch: ('k, 'v Maybe.t) StableMap.t;
   right_scratch: ('k, 'v Maybe.t) StableMap.t;
   affected: 'k StableSet.t;
-  output_wave: ('k, 'v Maybe.t) ReactiveWave.t;
+  output_wave: ('k, 'v Maybe.t) StableWave.t;
   result: process_result;
 }
 
@@ -30,7 +30,7 @@ let create ~merge =
     left_scratch = StableMap.create ();
     right_scratch = StableMap.create ();
     affected = StableSet.create ();
-    output_wave = ReactiveWave.create ();
+    output_wave = StableWave.create ();
     result =
       {
         entries_received = 0;
@@ -49,7 +49,7 @@ let destroy t =
   StableMap.destroy t.left_scratch;
   StableMap.destroy t.right_scratch;
   StableSet.destroy t.affected;
-  ReactiveWave.destroy t.output_wave
+  StableWave.destroy t.output_wave
 
 let output_wave t = t.output_wave
 
@@ -103,23 +103,23 @@ let recompute_affected_entry t k =
       in
       StableMap.replace t.target (Stable.unsafe_of_value k)
         (Stable.unsafe_of_value merged);
-      ReactiveWave.push t.output_wave (Stable.unsafe_of_value k)
+      StableWave.push t.output_wave (Stable.unsafe_of_value k)
         (Stable.unsafe_of_value (Maybe.some merged)))
     else
       let v = Stable.unsafe_to_value (Maybe.unsafe_get lv) in
       StableMap.replace t.target (Stable.unsafe_of_value k)
         (Stable.unsafe_of_value v);
-      ReactiveWave.push t.output_wave (Stable.unsafe_of_value k)
+      StableWave.push t.output_wave (Stable.unsafe_of_value k)
         (Stable.unsafe_of_value (Maybe.some v)))
   else if has_right then (
     let v = Stable.unsafe_to_value (Maybe.unsafe_get rv) in
     StableMap.replace t.target (Stable.unsafe_of_value k)
       (Stable.unsafe_of_value v);
-    ReactiveWave.push t.output_wave (Stable.unsafe_of_value k)
+    StableWave.push t.output_wave (Stable.unsafe_of_value k)
       (Stable.unsafe_of_value (Maybe.some v)))
   else (
     StableMap.remove t.target (Stable.unsafe_of_value k);
-    ReactiveWave.push t.output_wave (Stable.unsafe_of_value k) Maybe.none_stable);
+    StableWave.push t.output_wave (Stable.unsafe_of_value k) Maybe.none_stable);
   r.entries_emitted <- r.entries_emitted + 1;
   if has_left || has_right then r.adds_emitted <- r.adds_emitted + 1
   else r.removes_emitted <- r.removes_emitted + 1
@@ -141,7 +141,7 @@ let process t =
   StableMap.clear t.right_scratch;
 
   if StableSet.cardinal t.affected > 0 then (
-    ReactiveWave.clear t.output_wave;
+    StableWave.clear t.output_wave;
     StableSet.iter_with recompute_affected_entry t t.affected);
 
   r

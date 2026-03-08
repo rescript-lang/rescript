@@ -9,7 +9,7 @@
 
 (** {1 Waves} *)
 
-type ('k, 'v) wave = ('k, 'v Maybe.t) ReactiveWave.t
+type ('k, 'v) wave = ('k, 'v Maybe.t) StableWave.t
 (** Mutable wave buffer carrying batch entries *)
 
 (** {1 Statistics} *)
@@ -99,7 +99,7 @@ module Source : sig
   val create :
     name:string ->
     unit ->
-    ('k, 'v) t * (('k, 'v Maybe.t) ReactiveWave.t -> unit)
+    ('k, 'v) t * (('k, 'v Maybe.t) StableWave.t -> unit)
   (** Create a named source collection.
       Returns the collection and an emit function that takes a wave.
       Each wave entry is a key with [Maybe.some v] for set

@@ -33,25 +33,25 @@ let print_stable_snapshot label =
 let test_fixpoint_alloc_n n =
   let edge_values = Array.init (max 0 (n - 1)) (fun i -> [i + 1]) in
   Gc.full_major ();
-  let root_snap = ReactiveWave.create ~max_entries:1 () in
-  let edge_snap = ReactiveWave.create ~max_entries:n () in
-  let remove_root = ReactiveWave.create ~max_entries:1 () in
-  let add_root = ReactiveWave.create ~max_entries:1 () in
-  let no_edges = ReactiveWave.create ~max_entries:1 () in
+  let root_snap = StableWave.create ~max_entries:1 () in
+  let edge_snap = StableWave.create ~max_entries:n () in
+  let remove_root = StableWave.create ~max_entries:1 () in
+  let add_root = StableWave.create ~max_entries:1 () in
+  let no_edges = StableWave.create ~max_entries:1 () in
   let state = ReactiveFixpoint.create ~max_nodes:n ~max_edges:n in
 
   (* Chain graph: 0 -> 1 -> 2 -> ... -> n-1 *)
-  ReactiveWave.push root_snap (stable_int 0) stable_unit;
+  StableWave.push root_snap (stable_int 0) stable_unit;
   for i = 0 to n - 2 do
-    ReactiveWave.push edge_snap (stable_int i)
+    StableWave.push edge_snap (stable_int i)
       (Stable.of_value (StableList.unsafe_inner_of_list edge_values.(i)))
   done;
   ReactiveFixpoint.initialize state ~roots:root_snap ~edges:edge_snap;
   assert (ReactiveFixpoint.current_length state = n);
 
   (* Pre-build waves once *)
-  ReactiveWave.push remove_root (stable_int 0) Maybe.none_stable;
-  ReactiveWave.push add_root (stable_int 0)
+  StableWave.push remove_root (stable_int 0) Maybe.none_stable;
+  StableWave.push add_root (stable_int 0)
     (Maybe.to_stable (Maybe.some Stable.unit));
 
   (* Warmup *)
@@ -69,11 +69,11 @@ let test_fixpoint_alloc_n n =
     ReactiveFixpoint.apply_wave state ~roots:add_root ~edges:no_edges
   done;
   assert (ReactiveFixpoint.current_length state = n);
-  ReactiveWave.destroy root_snap;
-  ReactiveWave.destroy edge_snap;
-  ReactiveWave.destroy remove_root;
-  ReactiveWave.destroy add_root;
-  ReactiveWave.destroy no_edges;
+  StableWave.destroy root_snap;
+  StableWave.destroy edge_snap;
+  StableWave.destroy remove_root;
+  StableWave.destroy add_root;
+  StableWave.destroy no_edges;
   ReactiveFixpoint.destroy state;
   words_since () / iters
 
@@ -305,13 +305,13 @@ let test_reactive_join_alloc_n n =
   assert (Reactive.length joined = n);
 
   (* Pre-build waves for the hot loop: toggle all left entries *)
-  let remove_wave = ReactiveWave.create ~max_entries:n () in
+  let remove_wave = StableWave.create ~max_entries:n () in
   for i = 0 to n - 1 do
-    ReactiveWave.push remove_wave (stable_int i) Maybe.none_stable
+    StableWave.push remove_wave (stable_int i) Maybe.none_stable
   done;
-  let add_wave = ReactiveWave.create ~max_entries:n () in
+  let add_wave = StableWave.create ~max_entries:n () in
   for i = 0 to n - 1 do
-    ReactiveWave.push add_wave (stable_int i)
+    StableWave.push add_wave (stable_int i)
       (Maybe.to_stable (Maybe.some (Stable.int i)))
   done;
 
@@ -332,8 +332,8 @@ let test_reactive_join_alloc_n n =
     emit_left add_wave
   done;
   assert (Reactive.length joined = n);
-  ReactiveWave.destroy remove_wave;
-  ReactiveWave.destroy add_wave;
+  StableWave.destroy remove_wave;
+  StableWave.destroy add_wave;
   Reactive.destroy_graph ();
   words_since () / iters
 
@@ -359,10 +359,10 @@ let test_reactive_fixpoint_alloc_n n =
   let edges, emit_edges = Reactive.Source.create ~name:"edges" () in
 
   (* Chain graph: 0 -> 1 -> 2 -> ... -> n-1 *)
-  let edge_wave = ReactiveWave.create ~max_entries:(max 1 (n - 1)) () in
-  ReactiveWave.clear edge_wave;
+  let edge_wave = StableWave.create ~max_entries:(max 1 (n - 1)) () in
+  StableWave.clear edge_wave;
   for i = 0 to n - 2 do
-    ReactiveWave.push edge_wave (stable_int i)
+    StableWave.push edge_wave (stable_int i)
       (Maybe.to_stable (Maybe.some edge_values_stable.(i)))
   done;
   emit_edges edge_wave;
@@ -373,10 +373,10 @@ let test_reactive_fixpoint_alloc_n n =
   assert (Reactive.length reachable = n);
 
   (* Pre-build waves for the hot loop *)
-  let remove_wave = ReactiveWave.create ~max_entries:1 () in
-  ReactiveWave.push remove_wave (stable_int 0) Maybe.none_stable;
-  let add_wave = ReactiveWave.create ~max_entries:1 () in
-  ReactiveWave.push add_wave (stable_int 0)
+  let remove_wave = StableWave.create ~max_entries:1 () in
+  StableWave.push remove_wave (stable_int 0) Maybe.none_stable;
+  let add_wave = StableWave.create ~max_entries:1 () in
+  StableWave.push add_wave (stable_int 0)
     (Maybe.to_stable (Maybe.some Stable.unit));
 
   (* Warmup *)
@@ -395,9 +395,9 @@ let test_reactive_fixpoint_alloc_n n =
     emit_root add_wave
   done;
   assert (Reactive.length reachable = n);
-  ReactiveWave.destroy edge_wave;
-  ReactiveWave.destroy remove_wave;
-  ReactiveWave.destroy add_wave;
+  StableWave.destroy edge_wave;
+  StableWave.destroy remove_wave;
+  StableWave.destroy add_wave;
   Reactive.destroy_graph ();
   words_since () / iters
 
@@ -428,13 +428,13 @@ let test_reactive_union_alloc_n n =
   assert (Reactive.length merged = n);
 
   (* Pre-build waves: single wave with all n entries *)
-  let remove_wave = ReactiveWave.create ~max_entries:n () in
+  let remove_wave = StableWave.create ~max_entries:n () in
   for i = 0 to n - 1 do
-    ReactiveWave.push remove_wave (stable_int i) Maybe.none_stable
+    StableWave.push remove_wave (stable_int i) Maybe.none_stable
   done;
-  let add_wave = ReactiveWave.create ~max_entries:n () in
+  let add_wave = StableWave.create ~max_entries:n () in
   for i = 0 to n - 1 do
-    ReactiveWave.push add_wave (stable_int i)
+    StableWave.push add_wave (stable_int i)
       (Maybe.to_stable (Maybe.some (Stable.int i)))
   done;
 
@@ -455,8 +455,8 @@ let test_reactive_union_alloc_n n =
     emit_left add_wave
   done;
   assert (Reactive.length merged = n);
-  ReactiveWave.destroy remove_wave;
-  ReactiveWave.destroy add_wave;
+  StableWave.destroy remove_wave;
+  StableWave.destroy add_wave;
   Reactive.destroy_graph ();
   words_since () / iters
 
@@ -488,13 +488,13 @@ let test_reactive_flatmap_alloc_n n =
   assert (Reactive.length derived = n);
 
   (* Pre-build waves *)
-  let remove_wave = ReactiveWave.create ~max_entries:n () in
+  let remove_wave = StableWave.create ~max_entries:n () in
   for i = 0 to n - 1 do
-    ReactiveWave.push remove_wave (stable_int i) Maybe.none_stable
+    StableWave.push remove_wave (stable_int i) Maybe.none_stable
   done;
-  let add_wave = ReactiveWave.create ~max_entries:n () in
+  let add_wave = StableWave.create ~max_entries:n () in
   for i = 0 to n - 1 do
-    ReactiveWave.push add_wave (stable_int i)
+    StableWave.push add_wave (stable_int i)
       (Maybe.to_stable (Maybe.some (Stable.int i)))
   done;
 
@@ -514,8 +514,8 @@ let test_reactive_flatmap_alloc_n n =
     emit_src add_wave
   done;
   assert (Reactive.length derived = n);
-  ReactiveWave.destroy remove_wave;
-  ReactiveWave.destroy add_wave;
+  StableWave.destroy remove_wave;
+  StableWave.destroy add_wave;
   Reactive.destroy_graph ();
   words_since () / iters
 

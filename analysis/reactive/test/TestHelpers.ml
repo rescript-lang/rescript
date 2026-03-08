@@ -8,15 +8,15 @@ open Reactive
     Tests are single-threaded so one global wave is safe.
     The wave stores [Obj.t] internally, so a single concrete instance
     can be safely reused at any type via [Obj.magic]. *)
-let scratch_wave : (int, int) ReactiveWave.t = ReactiveWave.create ()
+let scratch_wave : (int, int) StableWave.t = StableWave.create ()
 
-let wave () : ('k, 'v) ReactiveWave.t = Obj.magic scratch_wave
+let wave () : ('k, 'v) StableWave.t = Obj.magic scratch_wave
 
 (** Emit a single set entry *)
 let emit_set emit k v =
   let w = wave () in
-  ReactiveWave.clear w;
-  ReactiveWave.push w (Stable.unsafe_of_value k)
+  StableWave.clear w;
+  StableWave.push w (Stable.unsafe_of_value k)
     (Stable.unsafe_of_value (Maybe.some v));
   emit w
 
@@ -24,25 +24,25 @@ let emit_set emit k v =
     explicit stable-list type. *)
 let emit_edge_set emit k vs =
   let w = wave () in
-  ReactiveWave.clear w;
-  ReactiveWave.push w (Stable.unsafe_of_value k)
+  StableWave.clear w;
+  StableWave.push w (Stable.unsafe_of_value k)
     (Maybe.to_stable (Maybe.some (StableList.unsafe_of_list vs)));
   emit w
 
 (** Emit a single remove entry *)
 let emit_remove emit k =
   let w = wave () in
-  ReactiveWave.clear w;
-  ReactiveWave.push w (Stable.unsafe_of_value k) Maybe.none_stable;
+  StableWave.clear w;
+  StableWave.push w (Stable.unsafe_of_value k) Maybe.none_stable;
   emit w
 
 (** Emit a batch of (key, value) set entries *)
 let emit_sets emit entries =
   let w = wave () in
-  ReactiveWave.clear w;
+  StableWave.clear w;
   List.iter
     (fun (k, v) ->
-      ReactiveWave.push w (Stable.unsafe_of_value k)
+      StableWave.push w (Stable.unsafe_of_value k)
         (Stable.unsafe_of_value (Maybe.some v)))
     entries;
   emit w
@@ -50,28 +50,28 @@ let emit_sets emit entries =
 (** Emit a batch of (key, value option) entries — for mixed set/remove batches *)
 let emit_batch emit entries =
   let w = wave () in
-  ReactiveWave.clear w;
+  StableWave.clear w;
   List.iter
     (fun (k, v_opt) ->
       match v_opt with
       | Some v ->
-        ReactiveWave.push w (Stable.unsafe_of_value k)
+        StableWave.push w (Stable.unsafe_of_value k)
           (Stable.unsafe_of_value (Maybe.some v))
-      | None -> ReactiveWave.push w (Stable.unsafe_of_value k) Maybe.none_stable)
+      | None -> StableWave.push w (Stable.unsafe_of_value k) Maybe.none_stable)
     entries;
   emit w
 
 (** Emit a batch of edge entries using the explicit stable-list type. *)
 let emit_edge_batch emit entries =
   let w = wave () in
-  ReactiveWave.clear w;
+  StableWave.clear w;
   List.iter
     (fun (k, vs_opt) ->
       match vs_opt with
       | Some vs ->
-        ReactiveWave.push w (Stable.unsafe_of_value k)
+        StableWave.push w (Stable.unsafe_of_value k)
           (Maybe.to_stable (Maybe.some (StableList.unsafe_of_list vs)))
-      | None -> ReactiveWave.push w (Stable.unsafe_of_value k) Maybe.none_stable)
+      | None -> StableWave.push w (Stable.unsafe_of_value k) Maybe.none_stable)
     entries;
   emit w
 
@@ -81,7 +81,7 @@ let emit_edge_batch emit entries =
 let subscribe handler t =
   t.subscribe (fun wave ->
       let rev_entries = ref [] in
-      ReactiveWave.iter wave (fun k mv ->
+      StableWave.iter wave (fun k mv ->
           let k = Stable.unsafe_to_value k in
           let mv = Stable.unsafe_to_value mv in
           rev_entries := (k, mv) :: !rev_entries);

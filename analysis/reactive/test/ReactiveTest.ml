@@ -11,5 +11,4 @@ let () =
   IntegrationTest.run_all ();
   GlitchFreeTest.run_all ();
   AllocTest.run_all ();
-  TableTest.run_all ();
   Printf.printf "\nAll tests passed!\n"

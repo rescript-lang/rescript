@@ -25,7 +25,7 @@ val destroy : ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t -> unit
     afterwards. *)
 
 val output_wave :
-  ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t -> ('k3, 'v3 Maybe.t) ReactiveWave.t
+  ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t -> ('k3, 'v3 Maybe.t) StableWave.t
 (** The owned output wave populated by [process]. *)
 
 val push_left :

@@ -22,7 +22,7 @@ val destroy : ('k1, 'v1, 'k2, 'v2) t -> unit
 (** Release flatMap-owned stable storage. The state must not be used
     afterwards. *)
 
-val output_wave : ('k1, 'v1, 'k2, 'v2) t -> ('k2, 'v2 Maybe.t) ReactiveWave.t
+val output_wave : ('k1, 'v1, 'k2, 'v2) t -> ('k2, 'v2 Maybe.t) StableWave.t
 (** The owned output wave populated by [process]. *)
 
 val push :

@@ -20,7 +20,7 @@ val destroy : ('k, 'v) t -> unit
 (** Release union-owned stable storage. The state must not be used
     afterwards. *)
 
-val output_wave : ('k, 'v) t -> ('k, 'v Maybe.t) ReactiveWave.t
+val output_wave : ('k, 'v) t -> ('k, 'v Maybe.t) StableWave.t
 (** The owned output wave populated by [process]. *)
 
 val push_left : ('k, 'v) t -> 'k Stable.t -> 'v Maybe.t Stable.t -> unit

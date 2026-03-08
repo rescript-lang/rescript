@@ -20,7 +20,7 @@ type 'k t = {
   edge_map: ('k, 'k StableList.inner) StableMap.t;
   pred_map: ('k, 'k) StableMapSet.t;
   roots: 'k StableSet.t;
-  output_wave: ('k, unit Maybe.t) ReactiveWave.t;
+  output_wave: ('k, unit Maybe.t) StableWave.t;
   (* Scratch tables — allocated once, cleared per apply_list call *)
   deleted_nodes: 'k StableSet.t;
   rederive_pending: 'k StableSet.t;
@@ -402,7 +402,7 @@ let create ~max_nodes ~max_edges =
     edge_map = StableMap.create ();
     pred_map = StableMapSet.create ();
     roots = StableSet.create ();
-    output_wave = ReactiveWave.create ~max_entries:max_nodes ();
+    output_wave = StableWave.create ~max_entries:max_nodes ();
     deleted_nodes = StableSet.create ();
     rederive_pending = StableSet.create ();
     expansion_seen = StableSet.create ();
@@ -448,14 +448,14 @@ let destroy t =
   StableQueue.destroy t.added_roots_queue;
   StableQueue.destroy t.edge_change_queue;
   StableSet.destroy t.metrics.scratch_reachable;
-  ReactiveWave.destroy t.output_wave
+  StableWave.destroy t.output_wave
 let output_wave t = t.output_wave
 
-type 'k root_wave = ('k, unit Maybe.t) ReactiveWave.t
-type 'k edge_wave = ('k, 'k StableList.inner Maybe.t) ReactiveWave.t
-type 'k output_wave = ('k, unit Maybe.t) ReactiveWave.t
-type 'k root_snapshot = ('k, unit) ReactiveWave.t
-type 'k edge_snapshot = ('k, 'k StableList.inner) ReactiveWave.t
+type 'k root_wave = ('k, unit Maybe.t) StableWave.t
+type 'k edge_wave = ('k, 'k StableList.inner Maybe.t) StableWave.t
+type 'k output_wave = ('k, unit Maybe.t) StableWave.t
+type 'k root_snapshot = ('k, unit) StableWave.t
+type 'k edge_snapshot = ('k, 'k StableList.inner) StableWave.t
 
 let iter_current t f =
   StableSet.iter_with (fun f k -> f k Stable.unit) f t.current
@@ -524,8 +524,8 @@ let initialize t ~roots ~edges =
   StableSet.clear t.roots;
   StableMap.clear t.edge_map;
   StableMapSet.clear t.pred_map;
-  ReactiveWave.iter roots (fun k _ -> StableSet.add t.roots k);
-  ReactiveWave.iter edges (fun k successors ->
+  StableWave.iter roots (fun k _ -> StableSet.add t.roots k);
+  StableWave.iter edges (fun k successors ->
       apply_edge_update t ~src:(Stable.unsafe_to_value k)
         ~new_successors:successors);
   recompute_current t
@@ -560,7 +560,7 @@ let add_live t k =
   if not (StableSet.mem t.current (stable_key k)) then (
     StableSet.add t.current (stable_key k);
     if not (StableSet.mem t.deleted_nodes (stable_key k)) then
-      ReactiveWave.push t.output_wave (Stable.unsafe_of_value k)
+      StableWave.push t.output_wave (Stable.unsafe_of_value k)
         (Maybe.to_stable (Maybe.some Stable.unit));
     enqueue_expand t k)
 
@@ -624,7 +624,7 @@ let apply_root_mutation t k mv =
 
 let emit_removal t k () =
   if not (StableSet.mem t.current (stable_key k)) then
-    ReactiveWave.push t.output_wave (Stable.unsafe_of_value k) Maybe.none_stable
+    StableWave.push t.output_wave (Stable.unsafe_of_value k) Maybe.none_stable
 
 let rebuild_edge_change_queue t src _succs =
   StableQueue.push t.edge_change_queue src
@@ -651,14 +651,14 @@ let apply_list t ~roots ~edges =
 
   (* Phase 1a: scan init entries — seed delete queue for removed roots,
      buffer added roots for later expansion *)
-  ReactiveWave.iter_with roots
+  StableWave.iter_with roots
     (fun t k mv ->
       scan_root_entry t (Stable.unsafe_to_value k) (Stable.unsafe_to_value mv))
     t;
 
   (* Phase 1b: scan edge entries — seed delete queue for removed targets,
      store new_succs and has_new_edge for later phases *)
-  ReactiveWave.iter_with edges
+  StableWave.iter_with edges
     (fun t src mv ->
       let mv = Stable.unsafe_to_value mv in
       let mv =
@@ -689,7 +689,7 @@ let apply_list t ~roots ~edges =
       ~deleted_nodes:t.deleted_nodes ~old_successors:(old_successors t);
 
   (* Phase 3: apply root and edge mutations *)
-  ReactiveWave.iter_with roots
+  StableWave.iter_with roots
     (fun t k mv ->
       apply_root_mutation t (Stable.unsafe_to_value k)
         (Stable.unsafe_to_value mv))
@@ -781,7 +781,7 @@ let apply_list t ~roots ~edges =
   let output_entries_list =
     if Invariants.enabled then (
       let entries = ref [] in
-      ReactiveWave.iter t.output_wave (fun k v_opt ->
+      StableWave.iter t.output_wave (fun k v_opt ->
           entries :=
             (Stable.unsafe_to_value k, Stable.unsafe_to_value v_opt) :: !entries);
       !entries)
@@ -800,8 +800,8 @@ let apply_list t ~roots ~edges =
     let full_node_work, full_edge_work =
       compute_reachable ~visited:t.metrics.scratch_reachable t
     in
-    let init_count = ReactiveWave.count roots in
-    let edge_count = ReactiveWave.count edges in
+    let init_count = StableWave.count roots in
+    let edge_count = StableWave.count edges in
     let incr_node_work =
       init_count + edge_count + m.delete_queue_pops + m.rederive_queue_pops
       + m.expansion_queue_pops
@@ -811,12 +811,12 @@ let apply_list t ~roots ~edges =
       + m.expansion_edges_scanned
     in
     Metrics.update ~init_entries:init_count ~edge_entries:edge_count
-      ~output_entries:(ReactiveWave.count t.output_wave)
+      ~output_entries:(StableWave.count t.output_wave)
       ~deleted_nodes:(StableSet.cardinal t.deleted_nodes)
       ~rederived_nodes:m.rederived_nodes ~incr_node_work ~incr_edge_work
       ~full_node_work ~full_edge_work
 
 let apply_wave t ~roots ~edges =
-  ReactiveWave.clear t.output_wave;
+  StableWave.clear t.output_wave;
   apply_list t ~roots ~edges;
   ()
