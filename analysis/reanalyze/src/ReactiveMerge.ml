@@ -162,13 +162,23 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
 (** Convert reactive decls to Declarations.t for solver *)
 let freeze_decls (t : t) : Declarations.t =
   let result = PosHash.create 256 in
-  Reactive.iter (fun pos decl -> PosHash.replace result pos decl) t.decls;
+  Reactive.iter
+    (fun pos decl ->
+      PosHash.replace result
+        (Stable.unsafe_to_nonlinear_value pos)
+        (Stable.unsafe_to_nonlinear_value decl))
+    t.decls;
   Declarations.create_from_hashtbl result
 
 (** Convert reactive annotations to FileAnnotations.t for solver *)
 let freeze_annotations (t : t) : FileAnnotations.t =
   let result = PosHash.create 256 in
-  Reactive.iter (fun pos ann -> PosHash.replace result pos ann) t.annotations;
+  Reactive.iter
+    (fun pos ann ->
+      PosHash.replace result
+        (Stable.unsafe_to_nonlinear_value pos)
+        (Stable.unsafe_to_nonlinear_value ann))
+    t.annotations;
   FileAnnotations.create_from_hashtbl result
 
 (** Convert reactive refs to References.t for solver.
@@ -190,26 +200,29 @@ let freeze_refs (t : t) : References.t =
   (* Merge per-file value refs_from *)
   Reactive.iter
     (fun posFrom posToSet ->
+      let posFrom = Stable.to_linear_value posFrom in
       PosSet.iter
         (fun posTo -> add_to_from value_refs_from posFrom posTo)
-        posToSet)
+        (Stable.to_linear_value posToSet))
     t.value_refs_from;
 
   (* Merge per-file type refs_from *)
   Reactive.iter
     (fun posFrom posToSet ->
+      let posFrom = Stable.to_linear_value posFrom in
       PosSet.iter
         (fun posTo -> add_to_from type_refs_from posFrom posTo)
-        posToSet)
+        (Stable.to_linear_value posToSet))
     t.type_refs_from;
 
   (* Add type-label dependency refs from all sources *)
   let add_type_refs_from reactive =
     Reactive.iter
       (fun posFrom posToSet ->
+        let posFrom = Stable.to_linear_value posFrom in
         PosSet.iter
           (fun posTo -> add_to_from type_refs_from posFrom posTo)
-          posToSet)
+          (Stable.to_linear_value posToSet))
       reactive
   in
   add_type_refs_from t.type_deps.all_type_refs_from;
@@ -217,9 +230,10 @@ let freeze_refs (t : t) : References.t =
   (* Add exception refs (to value refs_from) *)
   Reactive.iter
     (fun posFrom posToSet ->
+      let posFrom = Stable.to_linear_value posFrom in
       PosSet.iter
         (fun posTo -> add_to_from value_refs_from posFrom posTo)
-        posToSet)
+        (Stable.to_linear_value posToSet))
     t.exception_refs.resolved_refs_from;
 
   References.create ~value_refs_from ~type_refs_from
@@ -231,6 +245,7 @@ let collect_cross_file_items (t : t) : CrossFileItems.t =
   let function_refs = ref [] in
   Reactive.iter
     (fun _path items ->
+      let items = Stable.unsafe_to_nonlinear_value items in
       exception_refs := items.CrossFileItems.exception_refs @ !exception_refs;
       optional_arg_calls :=
         items.CrossFileItems.optional_arg_calls @ !optional_arg_calls;
@@ -247,17 +262,23 @@ let collect_cross_file_items (t : t) : CrossFileItems.t =
 let freeze_file_deps (t : t) : FileDeps.t =
   let files =
     let result = ref FileSet.empty in
-    Reactive.iter (fun path () -> result := FileSet.add path !result) t.files;
+    Reactive.iter
+      (fun path _unit ->
+        result := FileSet.add (Stable.unsafe_to_nonlinear_value path) !result)
+      t.files;
     !result
   in
   let deps = FileDeps.FileHash.create 256 in
   Reactive.iter
     (fun from_file to_files ->
-      FileDeps.FileHash.replace deps from_file to_files)
+      FileDeps.FileHash.replace deps
+        (Stable.unsafe_to_nonlinear_value from_file)
+        (Stable.unsafe_to_nonlinear_value to_files))
     t.file_deps_map;
   (* Add file deps from exception refs - iterate value_refs_from *)
   Reactive.iter
     (fun posFrom posToSet ->
+      let posFrom = Stable.to_linear_value posFrom in
       PosSet.iter
         (fun posTo ->
           let from_file = posFrom.Lexing.pos_fname in
@@ -270,6 +291,6 @@ let freeze_file_deps (t : t) : FileDeps.t =
             in
             FileDeps.FileHash.replace deps from_file
               (FileSet.add to_file existing))
-        posToSet)
+        (Stable.to_linear_value posToSet))
     t.exception_refs.resolved_refs_from;
   FileDeps.create ~files ~deps

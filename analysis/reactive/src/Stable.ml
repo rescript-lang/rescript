@@ -5,6 +5,7 @@ external is_in_minor_heap : 'a -> bool = "caml_reactive_value_is_young"
 
 let unsafe_of_value x = x
 let to_linear_value x = x
+let unsafe_to_nonlinear_value x = x
 let int x = unsafe_of_value x
 let unit = unsafe_of_value ()
 

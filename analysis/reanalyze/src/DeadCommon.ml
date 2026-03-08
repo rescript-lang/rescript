@@ -481,7 +481,9 @@ let solveDeadReactive ~ann_store ~config ~decl_store ~value_refs_from
   let t0 = Unix.gettimeofday () in
   let debug = config.DceConfig.cli.debug in
   let transitive = config.DceConfig.run.transitive in
-  let is_live pos = Maybe.is_some (Reactive.get live pos) in
+  let is_live pos =
+    Maybe.is_some (Reactive.get live (Stable.unsafe_of_value pos))
+  in
 
   (* hasRefBelow uses on-demand search through value_refs_from *)
   let hasRefBelow =
@@ -489,7 +491,9 @@ let solveDeadReactive ~ann_store ~config ~decl_store ~value_refs_from
     | None -> fun _ -> false
     | Some refs_from ->
       make_hasRefBelow ~transitive ~iter_value_refs_from:(fun f ->
-          Reactive.iter f refs_from)
+          Reactive.iter
+            (fun k v -> f (Stable.to_linear_value k) (Stable.to_linear_value v))
+            refs_from)
   in
 
   (* Process each declaration based on computed liveness *)
@@ -522,7 +526,9 @@ let solveDeadReactive ~ann_store ~config ~decl_store ~value_refs_from
          (if debug then
             let live_reason : Liveness.live_reason option =
               if not is_live then None
-              else if Maybe.is_some (Reactive.get roots pos) then
+              else if
+                Maybe.is_some (Reactive.get roots (Stable.unsafe_of_value pos))
+              then
                 if AnnotationStore.is_annotated_gentype_or_live ann_store pos
                 then Some Liveness.Annotated
                 else Some Liveness.ExternalRef

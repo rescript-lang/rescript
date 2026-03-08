@@ -15,7 +15,12 @@
     it immediately and not stash it in a long-lived OCaml data structure,
     because the stable container may destroy or overwrite its slot at any
     time. Short-lived uses (comparison, passing to a function, computing a
-    result) are fine. *)
+    result) are fine.
+
+    {b Stable-safety.} A module is {e stable-safe} when it contains zero calls
+    to [unsafe_of_value] — all stored values are known stable by construction.
+    See [STABLE_SAFETY.md] in the reactive directory for a guide on how to
+    establish stable-safety and repair violations. *)
 
 type 'a t
 
@@ -40,3 +45,10 @@ val to_linear_value : 'a t -> 'a
 (** Read a value from a stable container. The result must be consumed
     immediately (linear use) and not stored in long-lived OCaml structures,
     as the stable container may destroy or overwrite the slot at any time. *)
+
+val unsafe_to_nonlinear_value : 'a t -> 'a
+(** Like [to_linear_value] but explicitly marks a non-linear use: the
+    returned value will be stored in a long-lived OCaml structure (e.g.,
+    a hashtable or accumulator list). This is safe only when the stable
+    container will not destroy or overwrite the slot while the OCaml
+    reference is alive. Each call site should be audited individually. *)

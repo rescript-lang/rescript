@@ -480,14 +480,13 @@ module Source = struct
   }
 
   let apply_emit (tables : ('k, 'v) tables) k mv =
-    let mv = Stable.to_linear_value mv in
+    let mv = Maybe.of_stable mv in
     if Maybe.is_some mv then (
-      let v = Maybe.unsafe_get mv in
-      StableMap.replace tables.tbl k (Stable.unsafe_of_value v);
-      StableMap.replace tables.pending k (Stable.unsafe_of_value (Maybe.some v)))
+      StableMap.replace tables.tbl k (Maybe.unsafe_get mv);
+      StableMap.replace tables.pending k (Maybe.to_stable mv))
     else (
       StableMap.remove tables.tbl k;
-      StableMap.replace tables.pending k (Stable.unsafe_of_value Maybe.none))
+      StableMap.replace tables.pending k (Maybe.to_stable mv))
 
   let create ~name () =
     let tbl : ('k, 'v) StableMap.t = StableMap.create () in
@@ -507,9 +506,7 @@ module Source = struct
         my_stats.entries_emitted <- my_stats.entries_emitted + count;
         StableWave.clear output_wave;
         StableMap.iter_with
-          (fun wave k v ->
-            StableWave.push wave k
-              (Stable.unsafe_of_value (Stable.to_linear_value v)))
+          (fun wave k v -> StableWave.push wave k v)
           output_wave pending;
         StableMap.clear pending;
         notify_subscribers output_wave !subscribers)
@@ -529,20 +526,8 @@ module Source = struct
       {
         name;
         subscribe = (fun h -> subscribers := h :: !subscribers);
-        iter =
-          (fun f ->
-            StableMap.iter_with
-              (fun f k v ->
-                f k (Stable.unsafe_of_value (Stable.to_linear_value v)))
-              f tbl);
-        get =
-          (fun k ->
-            let mb = StableMap.find_maybe tbl k in
-            if Maybe.is_some mb then
-              Maybe.some
-                (Stable.unsafe_of_value
-                   (Stable.to_linear_value (Maybe.unsafe_get mb)))
-            else Maybe.none);
+        iter = (fun f -> StableMap.iter f tbl);
+        get = (fun k -> StableMap.find_maybe tbl k);
         length = (fun () -> StableMap.cardinal tbl);
         destroy;
         stats = my_stats;

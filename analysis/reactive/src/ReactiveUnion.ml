@@ -1,7 +1,7 @@
 (** Zero-allocation union state and processing logic. *)
 
 type ('k, 'v) t = {
-  merge: 'v -> 'v -> 'v;
+  merge: 'v Stable.t -> 'v Stable.t -> 'v Stable.t;
   left_values: ('k, 'v) StableMap.t;
   right_values: ('k, 'v) StableMap.t;
   target: ('k, 'v) StableMap.t;
@@ -60,66 +60,51 @@ let push_right t k mv = StableMap.replace t.right_scratch k mv
 (* Module-level helpers for iter_with — avoid closure allocation *)
 
 let apply_left_entry t k mv =
-  let k = Stable.to_linear_value k in
-  let mv = Stable.to_linear_value mv in
+  let mv = Maybe.of_stable mv in
   let r = t.result in
   r.entries_received <- r.entries_received + 1;
   if Maybe.is_some mv then (
-    StableMap.replace t.left_values (Stable.unsafe_of_value k)
-      (Stable.unsafe_of_value (Maybe.unsafe_get mv));
+    StableMap.replace t.left_values k (Maybe.unsafe_get mv);
     r.adds_received <- r.adds_received + 1)
   else (
-    StableMap.remove t.left_values (Stable.unsafe_of_value k);
+    StableMap.remove t.left_values k;
     r.removes_received <- r.removes_received + 1);
-  StableSet.add t.affected (Stable.unsafe_of_value k)
+  StableSet.add t.affected k
 
 let apply_right_entry t k mv =
-  let k = Stable.to_linear_value k in
-  let mv = Stable.to_linear_value mv in
+  let mv = Maybe.of_stable mv in
   let r = t.result in
   r.entries_received <- r.entries_received + 1;
   if Maybe.is_some mv then (
-    StableMap.replace t.right_values (Stable.unsafe_of_value k)
-      (Stable.unsafe_of_value (Maybe.unsafe_get mv));
+    StableMap.replace t.right_values k (Maybe.unsafe_get mv);
     r.adds_received <- r.adds_received + 1)
   else (
-    StableMap.remove t.right_values (Stable.unsafe_of_value k);
+    StableMap.remove t.right_values k;
     r.removes_received <- r.removes_received + 1);
-  StableSet.add t.affected (Stable.unsafe_of_value k)
+  StableSet.add t.affected k
 
 let recompute_affected_entry t k =
-  let k = Stable.to_linear_value k in
   let r = t.result in
-  let lv = StableMap.find_maybe t.left_values (Stable.unsafe_of_value k) in
-  let rv = StableMap.find_maybe t.right_values (Stable.unsafe_of_value k) in
+  let lv = StableMap.find_maybe t.left_values k in
+  let rv = StableMap.find_maybe t.right_values k in
   let has_left = Maybe.is_some lv in
   let has_right = Maybe.is_some rv in
   if has_left then (
     if has_right then (
-      let merged =
-        t.merge
-          (Stable.to_linear_value (Maybe.unsafe_get lv))
-          (Stable.to_linear_value (Maybe.unsafe_get rv))
-      in
-      StableMap.replace t.target (Stable.unsafe_of_value k)
-        (Stable.unsafe_of_value merged);
-      StableWave.push t.output_wave (Stable.unsafe_of_value k)
-        (Stable.unsafe_of_value (Maybe.some merged)))
+      let merged = t.merge (Maybe.unsafe_get lv) (Maybe.unsafe_get rv) in
+      StableMap.replace t.target k merged;
+      StableWave.push t.output_wave k (Maybe.to_stable (Maybe.some merged)))
     else
-      let v = Stable.to_linear_value (Maybe.unsafe_get lv) in
-      StableMap.replace t.target (Stable.unsafe_of_value k)
-        (Stable.unsafe_of_value v);
-      StableWave.push t.output_wave (Stable.unsafe_of_value k)
-        (Stable.unsafe_of_value (Maybe.some v)))
+      let v = Maybe.unsafe_get lv in
+      StableMap.replace t.target k v;
+      StableWave.push t.output_wave k (Maybe.to_stable (Maybe.some v)))
   else if has_right then (
-    let v = Stable.to_linear_value (Maybe.unsafe_get rv) in
-    StableMap.replace t.target (Stable.unsafe_of_value k)
-      (Stable.unsafe_of_value v);
-    StableWave.push t.output_wave (Stable.unsafe_of_value k)
-      (Stable.unsafe_of_value (Maybe.some v)))
+    let v = Maybe.unsafe_get rv in
+    StableMap.replace t.target k v;
+    StableWave.push t.output_wave k (Maybe.to_stable (Maybe.some v)))
   else (
-    StableMap.remove t.target (Stable.unsafe_of_value k);
-    StableWave.push t.output_wave (Stable.unsafe_of_value k) Maybe.none_stable);
+    StableMap.remove t.target k;
+    StableWave.push t.output_wave k Maybe.none_stable);
   r.entries_emitted <- r.entries_emitted + 1;
   if has_left || has_right then r.adds_emitted <- r.adds_emitted + 1
   else r.removes_emitted <- r.removes_emitted + 1
@@ -154,12 +139,7 @@ let init_right t k v =
   StableMap.replace t.right_values k v;
   let lv = StableMap.find_maybe t.left_values k in
   let merged =
-    if Maybe.is_some lv then
-      Stable.unsafe_of_value
-        (t.merge
-           (Stable.to_linear_value (Maybe.unsafe_get lv))
-           (Stable.to_linear_value v))
-    else v
+    if Maybe.is_some lv then t.merge (Maybe.unsafe_get lv) v else v
   in
   StableMap.replace t.target k merged
 

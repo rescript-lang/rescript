@@ -13,7 +13,7 @@ type process_result = {
   mutable removes_emitted: int;
 }
 
-val create : merge:('v -> 'v -> 'v) -> ('k, 'v) t
+val create : merge:('v Stable.t -> 'v Stable.t -> 'v Stable.t) -> ('k, 'v) t
 (** Create union state with the given merge function and an owned output wave. *)
 
 val destroy : ('k, 'v) t -> unit

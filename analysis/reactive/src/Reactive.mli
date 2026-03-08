@@ -139,11 +139,11 @@ module Union : sig
     name:string ->
     ('k, 'v) t ->
     ('k, 'v) t ->
-    ?merge:('v -> 'v -> 'v) ->
+    ?merge:('v Stable.t -> 'v Stable.t -> 'v Stable.t) ->
     unit ->
     ('k, 'v) t
   (** Combine two collections.
-      Optional merge function combines values for the same key.
+      Optional merge function combines stable-marked values for the same key.
       Separate left/right pending buffers ensure glitch-freedom. *)
 end
 

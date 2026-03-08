@@ -123,9 +123,9 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
     let modules_with_values : (Name.t, unit) Hashtbl.t = Hashtbl.create 8 in
     (* shouldReport checks annotations reactively *)
     let shouldReport (decl : Decl.t) =
-      let ann = Reactive.get annotations decl.pos in
+      let ann = Reactive.get annotations (Stable.unsafe_of_value decl.pos) in
       if Maybe.is_some ann then
-        match Maybe.unsafe_get ann with
+        match Stable.to_linear_value (Maybe.unsafe_get ann) with
         | FileAnnotations.Live -> false
         | FileAnnotations.GenType -> false
         | FileAnnotations.Dead -> false
@@ -145,7 +145,11 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
         | Some refs_from ->
           (* Must iterate ALL refs since cross-file refs also count as "below" *)
           DeadCommon.make_hasRefBelow ~transitive
-            ~iter_value_refs_from:(fun f -> Reactive.iter f refs_from)
+            ~iter_value_refs_from:(fun f ->
+              Reactive.iter
+                (fun k v ->
+                  f (Stable.to_linear_value k) (Stable.to_linear_value v))
+                refs_from)
     in
     (* Sort within file and generate issues *)
     let sorted = decls |> List.fast_sort Decl.compareForReporting in
@@ -252,9 +256,9 @@ let check_module_dead ~(dead_modules : (Name.t, Location.t * string) Reactive.t)
     moduleName : Issue.t option =
   if Hashtbl.mem reported_modules moduleName then None
   else
-    let dm = Reactive.get dead_modules moduleName in
+    let dm = Reactive.get dead_modules (Stable.unsafe_of_value moduleName) in
     if Maybe.is_some dm then (
-      let loc, fileName = Maybe.unsafe_get dm in
+      let loc, fileName = Stable.to_linear_value (Maybe.unsafe_get dm) in
       Hashtbl.replace reported_modules moduleName ();
       let loc =
         if loc.Location.loc_ghost then
@@ -283,7 +287,8 @@ let collect_issues ~(t : t) ~(config : DceConfig.t)
   (* Collect incorrect @dead issues from reactive collection *)
   let incorrect_dead_issues = ref [] in
   Reactive.iter
-    (fun _pos (decl : Decl.t) ->
+    (fun _pos decl ->
+      let decl : Decl.t = Stable.to_linear_value decl in
       let issue =
         DeadCommon.makeDeadIssue ~decl
           ~message:" is annotated @dead but is live"
@@ -302,7 +307,8 @@ let collect_issues ~(t : t) ~(config : DceConfig.t)
   let num_files = ref 0 in
   let dead_issues = ref [] in
   Reactive.iter
-    (fun _file (file_issues, _modules_list) ->
+    (fun _file v ->
+      let file_issues, _modules_list = Stable.unsafe_to_nonlinear_value v in
       incr num_files;
       dead_issues := file_issues @ !dead_issues)
     t.issues_by_file;
@@ -311,7 +317,8 @@ let collect_issues ~(t : t) ~(config : DceConfig.t)
   (* Collect module issues from reactive dead_module_issues *)
   let module_issues = ref [] in
   Reactive.iter
-    (fun _moduleName issue -> module_issues := issue :: !module_issues)
+    (fun _moduleName issue ->
+      module_issues := Stable.unsafe_to_nonlinear_value issue :: !module_issues)
     t.dead_module_issues;
   let t3 = Unix.gettimeofday () in
 
@@ -328,14 +335,15 @@ let collect_issues ~(t : t) ~(config : DceConfig.t)
 
 (** Iterate over live declarations *)
 let iter_live_decls ~(t : t) (f : Decl.t -> unit) : unit =
-  Reactive.iter (fun _pos decl -> f decl) t.live_decls
+  Reactive.iter (fun _pos decl -> f (Stable.to_linear_value decl)) t.live_decls
 
 (** Check if a position is live using the reactive collection.
     Returns true if pos is not a declaration (matches non-reactive behavior). *)
 let is_pos_live ~(t : t) (pos : Lexing.position) : bool =
-  let d = Reactive.get t.decls pos in
+  let pos_s = Stable.unsafe_of_value pos in
+  let d = Reactive.get t.decls pos_s in
   if not (Maybe.is_some d) then true (* not a declaration, assume live *)
-  else Maybe.is_some (Reactive.get t.live pos)
+  else Maybe.is_some (Reactive.get t.live pos_s)
 
 (** Stats *)
 let stats ~(t : t) : int * int =

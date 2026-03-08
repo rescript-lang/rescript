@@ -8,7 +8,7 @@
 
 type t = {
   live: (Lexing.position, unit) Reactive.t;
-  edges: (Lexing.position, Lexing.position list) Reactive.t;
+  edges: (Lexing.position, Lexing.position StableList.inner) Reactive.t;
   roots: (Lexing.position, unit) Reactive.t;
 }
 
@@ -21,13 +21,20 @@ let create ~(merged : ReactiveMerge.t) : t =
   let value_refs_from : (Lexing.position, PosSet.t) Reactive.t =
     Reactive.Union.create ~name:"liveness.value_refs_from"
       merged.value_refs_from merged.exception_refs.resolved_refs_from
-      ~merge:PosSet.union ()
+      ~merge:(fun a b ->
+        Stable.unsafe_of_value
+          (PosSet.union (Stable.to_linear_value a) (Stable.to_linear_value b)))
+      ()
   in
 
   (* Combine type refs using union: per-file refs + type deps from ReactiveTypeDeps *)
   let type_refs_from : (Lexing.position, PosSet.t) Reactive.t =
     Reactive.Union.create ~name:"liveness.type_refs_from" merged.type_refs_from
-      merged.type_deps.all_type_refs_from ~merge:PosSet.union ()
+      merged.type_deps.all_type_refs_from
+      ~merge:(fun a b ->
+        Stable.unsafe_of_value
+          (PosSet.union (Stable.to_linear_value a) (Stable.to_linear_value b)))
+      ()
   in
 
   (* Step 1: Build decl_refs_index - maps decl -> (value_targets, type_targets) *)
@@ -36,11 +43,11 @@ let create ~(merged : ReactiveMerge.t) : t =
   in
 
   (* Step 2: Convert to edges format for fixpoint: decl -> successor list *)
-  let edges : (Lexing.position, Lexing.position list) Reactive.t =
+  let edges : (Lexing.position, Lexing.position StableList.inner) Reactive.t =
     Reactive.FlatMap.create ~name:"liveness.edges" decl_refs_index
       ~f:(fun pos (value_targets, type_targets) emit ->
         let all_targets = PosSet.union value_targets type_targets in
-        emit pos (PosSet.elements all_targets))
+        emit pos (StableList.unsafe_inner_of_list (PosSet.elements all_targets)))
       ()
   in
 
@@ -82,7 +89,7 @@ let create ~(merged : ReactiveMerge.t) : t =
   let externally_referenced : (Lexing.position, unit) Reactive.t =
     Reactive.Union.create ~name:"liveness.externally_referenced"
       external_value_refs external_type_refs
-      ~merge:(fun () () -> ())
+      ~merge:(fun _ _ -> Stable.unit)
       ()
   in
 
@@ -103,7 +110,7 @@ let create ~(merged : ReactiveMerge.t) : t =
   let all_roots : (Lexing.position, unit) Reactive.t =
     Reactive.Union.create ~name:"liveness.all_roots" annotated_roots
       externally_referenced
-      ~merge:(fun () () -> ())
+      ~merge:(fun _ _ -> Stable.unit)
       ()
   in
 

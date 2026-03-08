@@ -217,14 +217,27 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
     let combined_refs_to =
       let u1 =
         Reactive.Union.create ~name:"type_deps.u1" same_path_refs
-          cross_file_refs ~merge:PosSet.union ()
+          cross_file_refs
+          ~merge:(fun a b ->
+            Stable.unsafe_of_value
+              (PosSet.union (Stable.to_linear_value a)
+                 (Stable.to_linear_value b)))
+          ()
       in
       let u2 =
         Reactive.Union.create ~name:"type_deps.u2" u1 impl_to_intf_refs_path2
-          ~merge:PosSet.union ()
+          ~merge:(fun a b ->
+            Stable.unsafe_of_value
+              (PosSet.union (Stable.to_linear_value a)
+                 (Stable.to_linear_value b)))
+          ()
       in
       Reactive.Union.create ~name:"type_deps.combined_refs_to" u2
-        intf_to_impl_refs ~merge:PosSet.union ()
+        intf_to_impl_refs
+        ~merge:(fun a b ->
+          Stable.unsafe_of_value
+            (PosSet.union (Stable.to_linear_value a) (Stable.to_linear_value b)))
+        ()
     in
     (* Invert the combined refs_to to refs_from *)
     Reactive.FlatMap.create ~name:"type_deps.all_type_refs_from"
@@ -252,7 +265,8 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
 let add_to_refs_builder (t : t) ~(refs : References.builder) : unit =
   Reactive.iter
     (fun posTo posFromSet ->
+      let posTo = Stable.to_linear_value posTo in
       PosSet.iter
         (fun posFrom -> References.add_type_ref refs ~posTo ~posFrom)
-        posFromSet)
+        (Stable.to_linear_value posFromSet))
     t.all_type_refs

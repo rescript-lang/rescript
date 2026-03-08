@@ -74,20 +74,22 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
 let add_to_refs_builder (t : t) ~(refs : References.builder) : unit =
   Reactive.iter
     (fun posTo posFromSet ->
+      let posTo = Stable.to_linear_value posTo in
       PosSet.iter
         (fun posFrom -> References.add_value_ref refs ~posTo ~posFrom)
-        posFromSet)
+        (Stable.to_linear_value posFromSet))
     t.resolved_refs
 
 (** Add file dependencies for resolved refs *)
 let add_to_file_deps_builder (t : t) ~(file_deps : FileDeps.builder) : unit =
   Reactive.iter
     (fun posTo posFromSet ->
+      let posTo = Stable.to_linear_value posTo in
       PosSet.iter
         (fun posFrom ->
           let from_file = posFrom.Lexing.pos_fname in
           let to_file = posTo.Lexing.pos_fname in
           if from_file <> to_file then
             FileDeps.add_dep file_deps ~from_file ~to_file)
-        posFromSet)
+        (Stable.to_linear_value posFromSet))
     t.resolved_refs

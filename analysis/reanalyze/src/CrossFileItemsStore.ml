@@ -17,7 +17,9 @@ let iter_optional_arg_calls t f =
   | Frozen cfi -> List.iter f cfi.CrossFileItems.optional_arg_calls
   | Reactive r ->
     Reactive.iter
-      (fun _path items -> List.iter f items.CrossFileItems.optional_arg_calls)
+      (fun _path items ->
+        let items = Stable.to_linear_value items in
+        List.iter f items.CrossFileItems.optional_arg_calls)
       r
 
 let iter_function_refs t f =
@@ -25,7 +27,9 @@ let iter_function_refs t f =
   | Frozen cfi -> List.iter f cfi.CrossFileItems.function_refs
   | Reactive r ->
     Reactive.iter
-      (fun _path items -> List.iter f items.CrossFileItems.function_refs)
+      (fun _path items ->
+        let items = Stable.to_linear_value items in
+        List.iter f items.CrossFileItems.function_refs)
       r
 
 (** Compute optional args state from calls and function references.

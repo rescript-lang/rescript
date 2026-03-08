@@ -70,7 +70,11 @@ let test_union_with_merge () =
 
   (* Create union with set union as merge *)
   let combined =
-    Union.create ~name:"combined" left right ~merge:IntSet.union ()
+    Union.create ~name:"combined" left right
+      ~merge:(fun a b ->
+        Stable.unsafe_of_value
+          (IntSet.union (Stable.to_linear_value a) (Stable.to_linear_value b)))
+      ()
   in
 
   (* Add to left: key "x" -> {1, 2} *)
@@ -143,7 +147,12 @@ let test_union_existing_data_with_non_idempotent_merge () =
 
   (* Create union after left already has data.
      With merge = (+), a left-only key must stay 3, not 6. *)
-  let combined = Union.create ~name:"combined" left right ~merge:( + ) () in
+  let combined =
+    Union.create ~name:"combined" left right
+      ~merge:(fun a b ->
+        Stable.int (Stable.to_linear_value a + Stable.to_linear_value b))
+      ()
+  in
 
   assert (length combined = 1);
   assert (get_opt combined "only_left" = Some 3);
