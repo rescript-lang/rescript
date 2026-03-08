@@ -1,12 +1,12 @@
 type 'a inner = 'a list
-type 'a t = 'a inner Offheap.t
+type 'a t = 'a inner Stable.t
 
-let unsafe_of_list = Offheap.unsafe_of_value
-let of_list = Offheap.of_value
-let list_of = Offheap.unsafe_to_value
-let unsafe_of_offheap_list xs = unsafe_of_list (Offheap.unsafe_to_value xs)
+let unsafe_of_list = Stable.unsafe_of_value
+let of_list = Stable.of_value
+let list_of = Stable.unsafe_to_value
+let of_stable_list xs = xs
 
-let empty () : 'a t = unsafe_of_list []
+let empty () : 'a t = Stable.of_value []
 
 let is_empty xs =
   match list_of xs with

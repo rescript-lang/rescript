@@ -10,13 +10,13 @@ let capacity (t : 'a t) = Allocator.Block.capacity t - data_offset
 let create ~initial_capacity : 'a t =
   if initial_capacity < 0 then invalid_arg "ReactiveTable.create";
   let t = Allocator.Block.create ~capacity:(initial_capacity + data_offset) in
-  Allocator.Block.set t length_slot (Obj.magic (Offheap.int 0));
+  Allocator.Block.set t length_slot (Obj.magic (Stable.int 0));
   t
 
 let destroy = Allocator.Block.destroy
 
 let clear (t : 'a t) =
-  Allocator.Block.set t length_slot (Obj.magic (Offheap.int 0))
+  Allocator.Block.set t length_slot (Obj.magic (Stable.int 0))
 
 let ensure_capacity (t : 'a t) needed =
   let old_capacity = capacity t in
@@ -42,13 +42,13 @@ let push (t : 'a t) value =
   let next_len = len + 1 in
   ensure_capacity t next_len;
   Allocator.Block.set t (len + data_offset) (Obj.magic value);
-  Allocator.Block.set t length_slot (Obj.magic (Offheap.int next_len))
+  Allocator.Block.set t length_slot (Obj.magic (Stable.int next_len))
 
 let pop (t : 'a t) =
   let len = length t in
   if len = 0 then invalid_arg "ReactiveTable.pop";
   let last = Obj.magic (Allocator.Block.get t (len - 1 + data_offset)) in
-  Allocator.Block.set t length_slot (Obj.magic (Offheap.int (len - 1)));
+  Allocator.Block.set t length_slot (Obj.magic (Stable.int (len - 1)));
   last
 
 let shrink_to_fit (t : 'a t) =

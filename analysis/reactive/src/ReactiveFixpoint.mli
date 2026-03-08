@@ -15,7 +15,7 @@ val create : max_nodes:int -> max_edges:int -> 'k t
     Raises [Invalid_argument] if capacities are not positive. *)
 
 val destroy : 'k t -> unit
-(** Release fixpoint-owned off-heap storage. The state must not be used
+(** Release fixpoint-owned stable storage. The state must not be used
     afterwards. *)
 
 val output_wave : 'k t -> 'k output_wave

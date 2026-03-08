@@ -19,14 +19,14 @@ val create :
   ('k1, 'v1, 'k2, 'v2) t
 
 val destroy : ('k1, 'v1, 'k2, 'v2) t -> unit
-(** Release flatMap-owned off-heap storage. The state must not be used
+(** Release flatMap-owned stable storage. The state must not be used
     afterwards. *)
 
 val output_wave : ('k1, 'v1, 'k2, 'v2) t -> ('k2, 'v2 Maybe.t) ReactiveWave.t
 (** The owned output wave populated by [process]. *)
 
 val push :
-  ('k1, 'v1, 'k2, 'v2) t -> 'k1 Offheap.t -> 'v1 Maybe.t Offheap.t -> unit
+  ('k1, 'v1, 'k2, 'v2) t -> 'k1 Stable.t -> 'v1 Maybe.t Stable.t -> unit
 (** Push an entry into the scratch table. *)
 
 val process : ('k1, 'v1, 'k2, 'v2) t -> process_result

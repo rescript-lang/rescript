@@ -472,7 +472,7 @@ let level t = t.level
 let name t = t.name
 
 let unsafe_wave_push wave k v =
-  ReactiveWave.push wave (Offheap.unsafe_of_value k) (Offheap.unsafe_of_value v)
+  ReactiveWave.push wave (Stable.unsafe_of_value k) (Stable.unsafe_of_value v)
 
 (** {1 Source Collection} *)
 
@@ -483,8 +483,8 @@ module Source = struct
   }
 
   let apply_emit (tables : ('k, 'v) tables) k mv =
-    let k = Offheap.unsafe_to_value k in
-    let mv = Offheap.unsafe_to_value mv in
+    let k = Stable.unsafe_to_value k in
+    let mv = Stable.unsafe_to_value mv in
     if Maybe.is_some mv then (
       let v = Maybe.unsafe_get mv in
       ReactiveHash.Map.replace tables.tbl k v;
@@ -798,9 +798,8 @@ end
 
 module Fixpoint = struct
   let unsafe_wave_map_replace pending k v =
-    ReactiveHash.Map.replace pending
-      (Offheap.unsafe_to_value k)
-      (Offheap.unsafe_to_value v)
+    ReactiveHash.Map.replace pending (Stable.unsafe_to_value k)
+      (Stable.unsafe_to_value v)
 
   let create ~name ~(init : ('k, unit) t) ~(edges : ('k, 'k list) t) () :
       ('k, unit) t =
@@ -858,9 +857,8 @@ module Fixpoint = struct
       ReactiveHash.Map.iter_with unsafe_wave_push root_wave root_pending;
       ReactiveHash.Map.iter_with
         (fun wave k mv ->
-          ReactiveWave.push wave
-            (Offheap.unsafe_of_value k)
-            (Offheap.unsafe_of_value mv))
+          ReactiveWave.push wave (Stable.unsafe_of_value k)
+            (Stable.unsafe_of_value mv))
         edge_wave edge_pending;
       ReactiveHash.Map.clear root_pending;
       ReactiveHash.Map.clear edge_pending;
@@ -917,9 +915,8 @@ module Fixpoint = struct
     ReactiveWave.clear init_edges_wave;
     init.iter (fun k () -> unsafe_wave_push init_roots_wave k ());
     edges.iter (fun k succs ->
-        ReactiveWave.push init_edges_wave
-          (Offheap.unsafe_of_value k)
-          (Offheap.unsafe_of_value succs));
+        ReactiveWave.push init_edges_wave (Stable.unsafe_of_value k)
+          (Stable.unsafe_of_value succs));
     ReactiveFixpoint.initialize state ~roots:init_roots_wave
       ~edges:init_edges_wave;
     ReactiveWave.destroy init_roots_wave;

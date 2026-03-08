@@ -21,7 +21,7 @@ val create :
   ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t
 
 val destroy : ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t -> unit
-(** Release join-owned off-heap storage. The state must not be used
+(** Release join-owned stable storage. The state must not be used
     afterwards. *)
 
 val output_wave :
@@ -30,15 +30,15 @@ val output_wave :
 
 val push_left :
   ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t ->
-  'k1 Offheap.t ->
-  'v1 Maybe.t Offheap.t ->
+  'k1 Stable.t ->
+  'v1 Maybe.t Stable.t ->
   unit
 (** Push an entry into the left scratch table. *)
 
 val push_right :
   ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t ->
-  'k2 Offheap.t ->
-  'v2 Maybe.t Offheap.t ->
+  'k2 Stable.t ->
+  'v2 Maybe.t Stable.t ->
   unit
 (** Push an entry into the right scratch table. *)
 

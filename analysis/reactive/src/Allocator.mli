@@ -1,7 +1,7 @@
-(** Off-heap storage for raw OCaml values.
+(** Stable storage for raw OCaml values.
 
    Main concepts:
-   - A [block] is an off-heap buffer managed by the allocator.
+   - A [block] is a stable buffer managed by the allocator.
    - A block contains a number of [slots].
    - Each slot stores one raw OCaml [value] word.
    - Block [capacity] is measured in slots; byte counts are derived from that.
@@ -11,14 +11,14 @@
    - is not in the minor heap, and
    - remains reachable through ordinary OCaml roots elsewhere.
 
-   Immediates such as [int] are always safe to store. Use {!Offheap} to mark
-   values that cross into off-heap containers. *)
+   Immediates such as [int] are always safe to store. Use {!Stable} to mark
+   values that cross into stable containers. *)
 
 module Block : sig
   type 'a t
 
   val create : capacity:int -> 'a t
-  (** Allocate an off-heap block of raw OCaml value slots. *)
+  (** Allocate a stable block of raw OCaml value slots. *)
 
   val destroy : 'a t -> unit
   (** Release the block storage. The handle must not be used afterwards. *)
@@ -29,11 +29,11 @@ module Block : sig
   val resize : 'a t -> capacity:int -> unit
   (** Resize the block, preserving the prefix up to the new capacity. *)
 
-  val get : 'a t -> int -> 'a Offheap.t
+  val get : 'a t -> int -> 'a Stable.t
   (** Read a slot. The caller is responsible for keeping pointed-to values
-      alive and out of the minor heap while stored off-heap. *)
+      alive and out of the minor heap while stored stable. *)
 
-  val set : 'a t -> int -> 'a Offheap.t -> unit
+  val set : 'a t -> int -> 'a Stable.t -> unit
   (** Write a slot. *)
 
   val blit :
@@ -45,7 +45,7 @@ module Block2 : sig
   type ('a, 'x, 'y) t
 
   val create : capacity:int -> x0:'x -> y0:'y -> ('a, 'x, 'y) t
-  (** Allocate an off-heap block with two typed header slots followed by
+  (** Allocate a stable block with two typed header slots followed by
       [capacity] data slots. *)
 
   val destroy : ('a, 'x, 'y) t -> unit
@@ -63,10 +63,10 @@ module Block2 : sig
   val get1 : ('a, 'x, 'y) t -> 'y
   val set1 : ('a, 'x, 'y) t -> 'y -> unit
 
-  val get : ('a, 'x, 'y) t -> int -> 'a Offheap.t
+  val get : ('a, 'x, 'y) t -> int -> 'a Stable.t
   (** Read a data slot. *)
 
-  val set : ('a, 'x, 'y) t -> int -> 'a Offheap.t -> unit
+  val set : ('a, 'x, 'y) t -> int -> 'a Stable.t -> unit
   (** Write a data slot. *)
 
   val blit :
@@ -96,5 +96,5 @@ val reset : unit -> unit
 
 val is_in_minor_heap : 'a -> bool
 (** Runtime check for whether a value currently resides in the OCaml minor
-    heap. Immediates return [false]. Useful for enforcing the off-heap storage
+    heap. Immediates return [false]. Useful for enforcing the stable storage
     invariant in tests and debug code. *)

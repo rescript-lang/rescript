@@ -3,7 +3,7 @@
    - ['a t] is [('a, int, int) Allocator.Block2.t].
    - Header slot [0]: head index.
    - Header slot [1]: tail index.
-   - Data slots: queue elements, stored as ['a Offheap.t].
+   - Data slots: queue elements, stored as ['a Stable.t].
 
    Head and tail are monotone counters. Physical slot positions are computed
    from the current capacity via bit masking, so the backing capacity always
@@ -52,7 +52,7 @@ let push t x =
   set_tail t (tail_i + 1)
 
 let pop t =
-  if is_empty t then invalid_arg "ReactiveFifo.pop: empty";
+  if is_empty t then invalid_arg "StableQueue.pop: empty";
   let head_i = head t in
   let x = Allocator.Block2.get t (slot_index t head_i) in
   set_head t (head_i + 1);

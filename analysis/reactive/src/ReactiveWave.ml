@@ -28,7 +28,7 @@ let ensure_capacity (t : ('k, 'v) t) needed =
     done;
     Allocator.Block2.resize t ~capacity:(!next * entry_width))
 
-let push (type k v) (t : (k, v) t) (k : k Offheap.t) (v : v Offheap.t) =
+let push (type k v) (t : (k, v) t) (k : k Stable.t) (v : v Stable.t) =
   let len = length t in
   ensure_capacity t (len + 1);
   let key_slot = len * entry_width in
@@ -36,7 +36,7 @@ let push (type k v) (t : (k, v) t) (k : k Offheap.t) (v : v Offheap.t) =
   Allocator.Block2.set t (key_slot + 1) (Obj.magic v);
   set_length t (len + 1)
 
-let iter (type k v) (t : (k, v) t) (f : k Offheap.t -> v Offheap.t -> unit) =
+let iter (type k v) (t : (k, v) t) (f : k Stable.t -> v Stable.t -> unit) =
   let len = length t in
   for i = 0 to len - 1 do
     let key_slot = i * entry_width in
@@ -46,7 +46,7 @@ let iter (type k v) (t : (k, v) t) (f : k Offheap.t -> v Offheap.t -> unit) =
   done
 
 let iter_with (type a k v) (t : (k, v) t)
-    (f : a -> k Offheap.t -> v Offheap.t -> unit) (arg : a) =
+    (f : a -> k Stable.t -> v Stable.t -> unit) (arg : a) =
   let len = length t in
   for i = 0 to len - 1 do
     let key_slot = i * entry_width in

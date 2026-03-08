@@ -1,20 +1,20 @@
-(** Off-heap-marked OCaml lists.
+(** Stable-marked OCaml lists.
 
     The list cells are ordinary OCaml heap values. This type makes the
-    boundary explicit when such a list is stored in an off-heap container. *)
+    boundary explicit when such a list is stored in a stable container. *)
 
 type 'a inner
-type 'a t = 'a inner Offheap.t
+type 'a t = 'a inner Stable.t
 
 val unsafe_of_list : 'a list -> 'a t
-(** Reinterpret a list as offheap-marked without checking. *)
+(** Reinterpret a list as stable-marked without checking. *)
 
 val of_list : 'a list -> 'a t
 (** Checked version of [unsafe_of_list]. Raises if the list is still in the
     minor heap. *)
 
-val unsafe_of_offheap_list : 'a list Offheap.t -> 'a t
-(** Reinterpret an already offheap-marked list as an offheap-list value. *)
+val of_stable_list : 'a list Stable.t -> 'a t
+(** Reinterpret an already stable-marked list as a stable-list value. *)
 
 val empty : unit -> 'a t
 val is_empty : 'a t -> bool

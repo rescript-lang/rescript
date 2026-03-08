@@ -42,8 +42,8 @@ let to_collection t : (string, 'v) Reactive.t = t.collection
 let emit_set t path value =
   ReactiveWave.clear t.scratch_wave;
   ReactiveWave.push t.scratch_wave
-    (Offheap.unsafe_of_value path)
-    (Offheap.unsafe_of_value (Maybe.some value));
+    (Stable.unsafe_of_value path)
+    (Stable.unsafe_of_value (Maybe.some value));
   t.emit t.scratch_wave
 
 (** Process a file if changed. Emits delta to subscribers. *)
@@ -78,8 +78,8 @@ let process_files_batch t paths =
         let value = t.internal.process path raw in
         Hashtbl.replace t.internal.cache path (new_id, value);
         ReactiveWave.push t.scratch_wave
-          (Offheap.unsafe_of_value path)
-          (Offheap.unsafe_of_value (Maybe.some value));
+          (Stable.unsafe_of_value path)
+          (Stable.unsafe_of_value (Maybe.some value));
         incr count)
     paths;
   if !count > 0 then t.emit t.scratch_wave;
@@ -90,8 +90,8 @@ let remove t path =
   Hashtbl.remove t.internal.cache path;
   ReactiveWave.clear t.scratch_wave;
   ReactiveWave.push t.scratch_wave
-    (Offheap.unsafe_of_value path)
-    Maybe.none_offheap;
+    (Stable.unsafe_of_value path)
+    Maybe.none_stable;
   t.emit t.scratch_wave
 
 (** Remove multiple files as a batch *)
@@ -103,8 +103,8 @@ let remove_batch t paths =
       if Hashtbl.mem t.internal.cache path then (
         Hashtbl.remove t.internal.cache path;
         ReactiveWave.push t.scratch_wave
-          (Offheap.unsafe_of_value path)
-          Maybe.none_offheap;
+          (Stable.unsafe_of_value path)
+          Maybe.none_stable;
         incr count))
     paths;
   if !count > 0 then t.emit t.scratch_wave;

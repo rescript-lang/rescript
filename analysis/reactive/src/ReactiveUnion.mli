@@ -17,16 +17,16 @@ val create : merge:('v -> 'v -> 'v) -> ('k, 'v) t
 (** Create union state with the given merge function and an owned output wave. *)
 
 val destroy : ('k, 'v) t -> unit
-(** Release union-owned off-heap storage. The state must not be used
+(** Release union-owned stable storage. The state must not be used
     afterwards. *)
 
 val output_wave : ('k, 'v) t -> ('k, 'v Maybe.t) ReactiveWave.t
 (** The owned output wave populated by [process]. *)
 
-val push_left : ('k, 'v) t -> 'k Offheap.t -> 'v Maybe.t Offheap.t -> unit
+val push_left : ('k, 'v) t -> 'k Stable.t -> 'v Maybe.t Stable.t -> unit
 (** Push an entry into the left scratch table. *)
 
-val push_right : ('k, 'v) t -> 'k Offheap.t -> 'v Maybe.t Offheap.t -> unit
+val push_right : ('k, 'v) t -> 'k Stable.t -> 'v Maybe.t Stable.t -> unit
 (** Push an entry into the right scratch table. *)
 
 val process : ('k, 'v) t -> process_result

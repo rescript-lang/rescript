@@ -32,11 +32,11 @@ module Block = struct
     = "caml_reactive_allocator_resize"
   [@@noalloc]
 
-  external unsafe_get : 'a t -> int -> 'a Offheap.t
+  external unsafe_get : 'a t -> int -> 'a Stable.t
     = "caml_reactive_allocator_get"
   [@@noalloc]
 
-  external unsafe_set : 'a t -> int -> 'a Offheap.t -> unit
+  external unsafe_set : 'a t -> int -> 'a Stable.t -> unit
     = "caml_reactive_allocator_set"
   [@@noalloc]
 
@@ -80,17 +80,17 @@ module Block2 = struct
 
   let create ~capacity ~x0 ~y0 =
     let t = Block.create ~capacity:(capacity + header_slots) in
-    Block.set t 0 (Offheap.unsafe_of_value x0);
-    Block.set t 1 (Offheap.unsafe_of_value y0);
+    Block.set t 0 (Stable.unsafe_of_value x0);
+    Block.set t 1 (Stable.unsafe_of_value y0);
     t
 
   let destroy = Block.destroy
   let capacity t = Block.capacity t - header_slots
   let resize t ~capacity = Block.resize t ~capacity:(capacity + header_slots)
-  let get0 t = Offheap.unsafe_to_value (Block.get t 0)
-  let set0 t x = Block.set t 0 (Offheap.unsafe_of_value x)
-  let get1 t = Offheap.unsafe_to_value (Block.get t 1)
-  let set1 t y = Block.set t 1 (Offheap.unsafe_of_value y)
+  let get0 t = Stable.unsafe_to_value (Block.get t 0)
+  let set0 t x = Block.set t 0 (Stable.unsafe_of_value x)
+  let get1 t = Stable.unsafe_to_value (Block.get t 1)
+  let set1 t y = Block.set t 1 (Stable.unsafe_of_value y)
   let get t index = Block.get t (index + header_slots)
   let set t index value = Block.set t (index + header_slots) value
 

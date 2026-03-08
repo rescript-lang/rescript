@@ -9,5 +9,5 @@ let int x = unsafe_of_value x
 let unit x = unsafe_of_value x
 
 let of_value x =
-  if is_in_minor_heap x then invalid_arg "Offheap.of_value";
+  if is_in_minor_heap x then invalid_arg "Stable.of_value";
   unsafe_of_value x

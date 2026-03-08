@@ -1,7 +1,7 @@
 (library
  (name reactive)
  (wrapped false)
- (private_modules ReactiveFifo)
+ (private_modules StableQueue)
  (foreign_stubs
   (language c)
   (names reactive_allocator_stubs))
