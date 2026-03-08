@@ -27,24 +27,30 @@ let to_offheap x =
   unsafe_to_offheap x
 
 module Block = struct
-  type t = int
+  type 'a t = int
 
-  external create_unsafe : int -> t = "caml_reactive_allocator_create"
+  external create_unsafe : int -> 'a t = "caml_reactive_allocator_create"
   [@@noalloc]
 
-  external destroy : t -> unit = "caml_reactive_allocator_destroy" [@@noalloc]
-  external capacity : t -> int = "caml_reactive_allocator_capacity" [@@noalloc]
-  external resize_unsafe : t -> int -> unit = "caml_reactive_allocator_resize"
+  external destroy : 'a t -> unit = "caml_reactive_allocator_destroy"
   [@@noalloc]
 
-  external unsafe_get : t -> int -> 'a offheap = "caml_reactive_allocator_get"
+  external capacity : 'a t -> int = "caml_reactive_allocator_capacity"
   [@@noalloc]
 
-  external unsafe_set : t -> int -> 'a offheap -> unit
+  external resize_unsafe : 'a t -> int -> unit
+    = "caml_reactive_allocator_resize"
+  [@@noalloc]
+
+  external unsafe_get : 'a t -> int -> 'a offheap
+    = "caml_reactive_allocator_get"
+  [@@noalloc]
+
+  external unsafe_set : 'a t -> int -> 'a offheap -> unit
     = "caml_reactive_allocator_set"
   [@@noalloc]
 
-  external blit_unsafe : t -> int -> t -> int -> int -> unit
+  external blit_unsafe : 'a t -> int -> 'a t -> int -> int -> unit
     = "caml_reactive_allocator_blit"
   [@@noalloc]
 
@@ -78,7 +84,7 @@ module Block = struct
 end
 
 module Block2 = struct
-  type ('a, 'x, 'y) t = Block.t
+  type ('a, 'x, 'y) t = 'a Block.t
 
   let header_slots = 2
 

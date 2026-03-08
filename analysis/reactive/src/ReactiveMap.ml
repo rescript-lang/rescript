@@ -1,6 +1,6 @@
 type ('k, 'v) t = {
   keys: ('k, int, int) Allocator.Block2.t;
-  vals: Allocator.Block.t;
+  vals: 'v Allocator.Block.t;
 }
 
 let initial_capacity = 8

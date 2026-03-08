@@ -40,8 +40,7 @@ let create ~(merged : ReactiveMerge.t) : t =
     Reactive.FlatMap.create ~name:"liveness.edges" decl_refs_index
       ~f:(fun pos (value_targets, type_targets) emit ->
         let all_targets = PosSet.union value_targets type_targets in
-        emit pos
-          (ReactiveOffheapList.unsafe_of_list (PosSet.elements all_targets)))
+        emit pos (PosSet.elements all_targets))
       ()
   in
 

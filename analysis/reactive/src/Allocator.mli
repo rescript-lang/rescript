@@ -39,28 +39,29 @@ val unsafe_from_offheap : 'a offheap -> 'a
 (** Unsafely recover a regular OCaml value from an off-heap-marked value. *)
 
 module Block : sig
-  type t
+  type 'a t
 
-  val create : capacity:int -> t
+  val create : capacity:int -> 'a t
   (** Allocate an off-heap block of raw OCaml value slots. *)
 
-  val destroy : t -> unit
+  val destroy : 'a t -> unit
   (** Release the block storage. The handle must not be used afterwards. *)
 
-  val capacity : t -> int
+  val capacity : 'a t -> int
   (** Current block size, in slots. *)
 
-  val resize : t -> capacity:int -> unit
+  val resize : 'a t -> capacity:int -> unit
   (** Resize the block, preserving the prefix up to the new capacity. *)
 
-  val get : t -> int -> 'a offheap
+  val get : 'a t -> int -> 'a offheap
   (** Read a slot. The caller is responsible for keeping pointed-to values
       alive and out of the minor heap while stored off-heap. *)
 
-  val set : t -> int -> 'a offheap -> unit
+  val set : 'a t -> int -> 'a offheap -> unit
   (** Write a slot. *)
 
-  val blit : src:t -> src_pos:int -> dst:t -> dst_pos:int -> len:int -> unit
+  val blit :
+    src:'a t -> src_pos:int -> dst:'a t -> dst_pos:int -> len:int -> unit
   (** Copy a range of raw value slots between blocks. *)
 end
 
