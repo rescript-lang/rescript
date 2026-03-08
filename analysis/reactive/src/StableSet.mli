@@ -27,5 +27,8 @@ val mem : 'a t -> 'a Stable.t -> bool
 val iter_with : ('b -> 'a Stable.t -> unit) -> 'b -> 'a t -> unit
 (** [iter_with f arg t] calls [f arg x] for each element. *)
 
+val exists_with : ('b -> 'a Stable.t -> bool) -> 'b -> 'a t -> bool
+(** [exists_with f arg t] returns [true] if [f arg x] holds for some element. *)
+
 val cardinal : 'a t -> int
 (** Number of elements currently stored. *)
