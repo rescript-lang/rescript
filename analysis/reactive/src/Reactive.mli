@@ -75,8 +75,8 @@ end
 type ('k, 'v) t = {
   name: string;
   subscribe: (('k, 'v) wave -> unit) -> unit;
-  iter: ('k -> 'v -> unit) -> unit;
-  get: 'k -> 'v Maybe.t;
+  iter: ('k Stable.t -> 'v Stable.t -> unit) -> unit;
+  get: 'k Stable.t -> 'v Stable.t Maybe.t;
   length: unit -> int;
   destroy: unit -> unit;
   stats: stats;
@@ -85,8 +85,8 @@ type ('k, 'v) t = {
 }
 (** A named reactive collection at a specific topological level *)
 
-val iter : ('k -> 'v -> unit) -> ('k, 'v) t -> unit
-val get : ('k, 'v) t -> 'k -> 'v Maybe.t
+val iter : ('k Stable.t -> 'v Stable.t -> unit) -> ('k, 'v) t -> unit
+val get : ('k, 'v) t -> 'k Stable.t -> 'v Stable.t Maybe.t
 val length : ('k, 'v) t -> int
 val destroy : ('k, 'v) t -> unit
 val stats : ('k, 'v) t -> stats

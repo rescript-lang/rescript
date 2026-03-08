@@ -27,3 +27,6 @@ let[@inline] maybe_stable_list_to_stable (x : 'a StableList.t t) :
 
 let[@inline] to_option (x : 'a t) : 'a option =
   if x != sentinel then Some (Obj.obj x) else None
+
+let[@inline] to_stable (m : 'a Stable.t t) : 'a t Stable.t = Obj.magic m
+let[@inline] of_stable (m : 'a t Stable.t) : 'a Stable.t t = Obj.magic m

@@ -32,3 +32,9 @@ val maybe_stable_list_to_stable : 'a StableList.t t -> 'a list t Stable.t
     storage in a stable container with semantic payload type ['a list]. *)
 
 val to_option : 'a t -> 'a option
+
+val to_stable : 'a Stable.t t -> 'a t Stable.t
+(** Reorder [Stable.t] outside [Maybe.t]. Zero allocation. *)
+
+val of_stable : 'a t Stable.t -> 'a Stable.t t
+(** Reorder [Stable.t] inside [Maybe.t]. Zero allocation. *)

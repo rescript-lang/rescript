@@ -457,10 +457,10 @@ type 'k root_snapshot = ('k, unit) ReactiveWave.t
 type 'k edge_snapshot = ('k, 'k list) ReactiveWave.t
 
 let iter_current t f =
-  StableSet.iter_with (fun f k -> f (Stable.unsafe_to_value k) ()) f t.current
+  StableSet.iter_with (fun f k -> f k Stable.unit) f t.current
 
 let get_current t k =
-  if StableSet.mem t.current (stable_key k) then Maybe.some () else Maybe.none
+  if StableSet.mem t.current k then Maybe.some Stable.unit else Maybe.none
 
 let current_length t = StableSet.cardinal t.current
 

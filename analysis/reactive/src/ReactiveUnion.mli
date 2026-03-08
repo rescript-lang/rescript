@@ -34,12 +34,12 @@ val process : ('k, 'v) t -> process_result
     Returns stats for the caller to apply. The output wave is populated
     (and can be sent to subscribers) only when [entries_emitted > 0]. *)
 
-val init_left : ('k, 'v) t -> 'k -> 'v -> unit
+val init_left : ('k, 'v) t -> 'k Stable.t -> 'v Stable.t -> unit
 (** Initialize a left entry (during setup, before subscriptions). *)
 
-val init_right : ('k, 'v) t -> 'k -> 'v -> unit
+val init_right : ('k, 'v) t -> 'k Stable.t -> 'v Stable.t -> unit
 (** Initialize a right entry (during setup, after left). *)
 
-val iter_target : ('k -> 'v -> unit) -> ('k, 'v) t -> unit
-val find_target : ('k, 'v) t -> 'k -> 'v Maybe.t
+val iter_target : ('k Stable.t -> 'v Stable.t -> unit) -> ('k, 'v) t -> unit
+val find_target : ('k, 'v) t -> 'k Stable.t -> 'v Stable.t Maybe.t
 val target_length : ('k, 'v) t -> int

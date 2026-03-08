@@ -159,18 +159,13 @@ let process (t : (_, _, _, _) t) =
   r
 
 let init_entry (t : (_, _, _, _) t) k1 v1 =
+  let k1 = Stable.unsafe_to_value k1 in
+  let v1 = Stable.unsafe_to_value v1 in
   t.current_k1 <- k1;
   t.f k1 v1 (fun k2 v2 -> add_single_contribution_init t k2 v2)
 
-let iter_target f t =
-  StableMap.iter
-    (fun k v -> f (Stable.unsafe_to_value k) (Stable.unsafe_to_value v))
-    t.target
+let iter_target f t = StableMap.iter f t.target
 
-let find_target t k =
-  StableMap.find_maybe t.target (Stable.unsafe_of_value k) |> Maybe.to_option
-  |> function
-  | Some v -> Maybe.some (Stable.unsafe_to_value v)
-  | None -> Maybe.none
+let find_target t k = StableMap.find_maybe t.target k
 
 let target_length t = StableMap.cardinal t.target

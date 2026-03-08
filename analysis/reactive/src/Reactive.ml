@@ -454,8 +454,8 @@ let rec notify_subscribers wave = function
 type ('k, 'v) t = {
   name: string;
   subscribe: (('k, 'v) wave -> unit) -> unit;
-  iter: ('k -> 'v -> unit) -> unit;
-  get: 'k -> 'v Maybe.t;
+  iter: ('k Stable.t -> 'v Stable.t -> unit) -> unit;
+  get: 'k Stable.t -> 'v Stable.t Maybe.t;
   length: unit -> int;
   destroy: unit -> unit;
   stats: stats;
@@ -523,12 +523,19 @@ module Source = struct
       Registry.register_node ~name ~level:0 ~process ~destroy ~stats:my_stats
     in
 
+    let iter_stable f k v =
+      f (Stable.unsafe_of_value k) (Stable.unsafe_of_value v)
+    in
     let collection =
       {
         name;
         subscribe = (fun h -> subscribers := h :: !subscribers);
-        iter = (fun f -> StableHash.Map.iter f tbl);
-        get = (fun k -> StableHash.Map.find_maybe tbl k);
+        iter = (fun f -> StableHash.Map.iter_with iter_stable f tbl);
+        get =
+          (fun k ->
+            Maybe.of_stable
+              (Stable.unsafe_of_value
+                 (StableHash.Map.find_maybe tbl (Stable.unsafe_to_value k))));
         length = (fun () -> StableHash.Map.cardinal tbl);
         destroy;
         stats = my_stats;
@@ -918,10 +925,8 @@ module Fixpoint = struct
     in
     ReactiveWave.clear init_roots_wave;
     ReactiveWave.clear init_edges_wave;
-    init.iter (fun k () -> unsafe_wave_push init_roots_wave k ());
-    edges.iter (fun k succs ->
-        ReactiveWave.push init_edges_wave (Stable.unsafe_of_value k)
-          (Stable.unsafe_of_value succs));
+    init.iter (fun k _unit -> ReactiveWave.push init_roots_wave k Stable.unit);
+    edges.iter (fun k succs -> ReactiveWave.push init_edges_wave k succs);
     ReactiveFixpoint.initialize state ~roots:init_roots_wave
       ~edges:init_edges_wave;
     ReactiveWave.destroy init_roots_wave;

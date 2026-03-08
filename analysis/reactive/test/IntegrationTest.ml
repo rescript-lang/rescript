@@ -40,10 +40,20 @@ let test_file_collection () =
   emit_set emit_file "file_b" counts_b;
 
   Printf.printf "Word counts:\n";
-  iter (fun word count -> Printf.printf "  %s: %d\n" word count) word_counts;
+  iter
+    (fun word count ->
+      Printf.printf "  %s: %d\n"
+        (Stable.unsafe_to_value word)
+        (Stable.unsafe_to_value count))
+    word_counts;
 
   Printf.printf "Frequent words (count >= 2):\n";
-  iter (fun word count -> Printf.printf "  %s: %d\n" word count) frequent_words;
+  iter
+    (fun word count ->
+      Printf.printf "  %s: %d\n"
+        (Stable.unsafe_to_value word)
+        (Stable.unsafe_to_value count))
+    frequent_words;
 
   (* Verify: hello=3 (2 from a + 1 from b), world=1, foo=1 *)
   assert (get_opt word_counts "hello" = Some 3);
@@ -63,10 +73,20 @@ let test_file_collection () =
   emit_set emit_file "file_a" counts_a';
 
   Printf.printf "Word counts after modification:\n";
-  iter (fun word count -> Printf.printf "  %s: %d\n" word count) word_counts;
+  iter
+    (fun word count ->
+      Printf.printf "  %s: %d\n"
+        (Stable.unsafe_to_value word)
+        (Stable.unsafe_to_value count))
+    word_counts;
 
   Printf.printf "Frequent words after modification:\n";
-  iter (fun word count -> Printf.printf "  %s: %d\n" word count) frequent_words;
+  iter
+    (fun word count ->
+      Printf.printf "  %s: %d\n"
+        (Stable.unsafe_to_value word)
+        (Stable.unsafe_to_value count))
+    frequent_words;
 
   (* Verify: hello=2 (1 from a + 1 from b), world=2, foo=1 *)
   assert (get_opt word_counts "hello" = Some 2);

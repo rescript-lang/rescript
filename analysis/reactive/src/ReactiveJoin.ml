@@ -4,7 +4,7 @@ type ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t = {
   key_of: 'k1 -> 'v1 -> 'k2;
   f: 'k1 -> 'v1 -> 'v2 Maybe.t -> ('k3 -> 'v3 -> unit) -> unit;
   merge: 'v3 -> 'v3 -> 'v3;
-  right_get: 'k2 -> 'v2 Maybe.t;
+  right_get: 'k2 Stable.t -> 'v2 Stable.t Maybe.t;
   (* Persistent state *)
   left_entries: ('k1, 'v1) StableMap.t;
   provenance: ('k1, 'k3) ReactivePoolMapSet.t;
@@ -128,7 +128,10 @@ let process_left_entry (t : (_, _, _, _, _, _) t) k1 v1 =
     (Stable.unsafe_of_value k1)
     (Stable.unsafe_of_value k2);
   ReactivePoolMapSet.add t.right_key_to_left_keys k2 k1;
-  let right_val = t.right_get k2 in
+  let right_val =
+    Stable.unsafe_to_value
+      (Maybe.to_stable (t.right_get (Stable.unsafe_of_value k2)))
+  in
   t.current_k1 <- k1;
   t.f k1 v1 right_val t.emit_fn
 
@@ -226,6 +229,8 @@ let process (t : (_, _, _, _, _, _) t) =
   r
 
 let init_entry (t : (_, _, _, _, _, _) t) k1 v1 =
+  let k1 = Stable.unsafe_to_value k1 in
+  let v1 = Stable.unsafe_to_value v1 in
   StableMap.replace t.left_entries
     (Stable.unsafe_of_value k1)
     (Stable.unsafe_of_value v1);
@@ -234,19 +239,15 @@ let init_entry (t : (_, _, _, _, _, _) t) k1 v1 =
     (Stable.unsafe_of_value k1)
     (Stable.unsafe_of_value k2);
   ReactivePoolMapSet.add t.right_key_to_left_keys k2 k1;
-  let right_val = t.right_get k2 in
+  let right_val =
+    Stable.unsafe_to_value
+      (Maybe.to_stable (t.right_get (Stable.unsafe_of_value k2)))
+  in
   t.current_k1 <- k1;
   t.f k1 v1 right_val (fun k3 v3 -> add_single_contribution_init t k3 v3)
 
-let iter_target f t =
-  StableMap.iter
-    (fun k v -> f (Stable.unsafe_to_value k) (Stable.unsafe_to_value v))
-    t.target
+let iter_target f t = StableMap.iter f t.target
 
-let find_target t k =
-  StableMap.find_maybe t.target (Stable.unsafe_of_value k) |> Maybe.to_option
-  |> function
-  | Some v -> Maybe.some (Stable.unsafe_to_value v)
-  | None -> Maybe.none
+let find_target t k = StableMap.find_maybe t.target k
 
 let target_length t = StableMap.cardinal t.target

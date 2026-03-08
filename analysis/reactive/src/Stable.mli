@@ -18,8 +18,8 @@ val of_value : 'a -> 'a t
 val int : int -> int t
 (** Safely mark an [int] as suitable for stable storage. *)
 
-val unit : unit -> unit t
-(** Safely mark [()] as suitable for stable storage. *)
+val unit : unit t
+(** [()] as a stable value. *)
 
 val unsafe_to_value : 'a t -> 'a
 (** Unsafely recover a regular OCaml value from a stable-marked value. *)

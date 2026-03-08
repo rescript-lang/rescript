@@ -34,9 +34,10 @@ val process : ('k1, 'v1, 'k2, 'v2) t -> process_result
     Returns stats for the caller to apply. The output wave is populated
     (and can be sent to subscribers) only when [entries_emitted > 0]. *)
 
-val init_entry : ('k1, 'v1, 'k2, 'v2) t -> 'k1 -> 'v1 -> unit
+val init_entry : ('k1, 'v1, 'k2, 'v2) t -> 'k1 Stable.t -> 'v1 Stable.t -> unit
 (** Initialize from an existing source entry (during setup). *)
 
-val iter_target : ('k2 -> 'v2 -> unit) -> ('k1, 'v1, 'k2, 'v2) t -> unit
-val find_target : ('k1, 'v1, 'k2, 'v2) t -> 'k2 -> 'v2 Maybe.t
+val iter_target :
+  ('k2 Stable.t -> 'v2 Stable.t -> unit) -> ('k1, 'v1, 'k2, 'v2) t -> unit
+val find_target : ('k1, 'v1, 'k2, 'v2) t -> 'k2 Stable.t -> 'v2 Stable.t Maybe.t
 val target_length : ('k1, 'v1, 'k2, 'v2) t -> int

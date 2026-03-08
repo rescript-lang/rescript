@@ -147,32 +147,24 @@ let process t =
   r
 
 let init_left t k v =
-  StableMap.replace t.left_values (Stable.unsafe_of_value k)
-    (Stable.unsafe_of_value v);
-  StableMap.replace t.target (Stable.unsafe_of_value k)
-    (Stable.unsafe_of_value v)
+  StableMap.replace t.left_values k v;
+  StableMap.replace t.target k v
 
 let init_right t k v =
-  StableMap.replace t.right_values (Stable.unsafe_of_value k)
-    (Stable.unsafe_of_value v);
-  let lv = StableMap.find_maybe t.left_values (Stable.unsafe_of_value k) in
+  StableMap.replace t.right_values k v;
+  let lv = StableMap.find_maybe t.left_values k in
   let merged =
     if Maybe.is_some lv then
-      t.merge (Stable.unsafe_to_value (Maybe.unsafe_get lv)) v
+      Stable.unsafe_of_value
+        (t.merge
+           (Stable.unsafe_to_value (Maybe.unsafe_get lv))
+           (Stable.unsafe_to_value v))
     else v
   in
-  StableMap.replace t.target (Stable.unsafe_of_value k)
-    (Stable.unsafe_of_value merged)
+  StableMap.replace t.target k merged
 
-let iter_target f t =
-  StableMap.iter
-    (fun k v -> f (Stable.unsafe_to_value k) (Stable.unsafe_to_value v))
-    t.target
+let iter_target f t = StableMap.iter f t.target
 
-let find_target t k =
-  StableMap.find_maybe t.target (Stable.unsafe_of_value k) |> Maybe.to_option
-  |> function
-  | Some v -> Maybe.some (Stable.unsafe_to_value v)
-  | None -> Maybe.none
+let find_target t k = StableMap.find_maybe t.target k
 
 let target_length t = StableMap.cardinal t.target

@@ -123,4 +123,6 @@ let get t path =
 
 let mem t path = Hashtbl.mem t.internal.cache path
 let length t = Reactive.length t.collection
-let iter f t = Reactive.iter f t.collection
+let iter f t =
+  t.collection.iter (fun k v ->
+      f (Stable.unsafe_to_value k) (Stable.unsafe_to_value v))

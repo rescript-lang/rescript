@@ -123,8 +123,13 @@ let[@warning "-32"] write_lines path lines =
 
 (** {1 Maybe/option helpers} *)
 
-(** Convert [get] result to option for test assertions *)
-let get_opt t k = Maybe.to_option (get t k)
+(** Convert [get] result to option for test assertions.
+    Wraps the key as [Stable.t] and unwraps the result for convenience. *)
+let get_opt t k =
+  let r = get t (Stable.unsafe_of_value k) in
+  match Maybe.to_option r with
+  | Some v -> Some (Stable.unsafe_to_value v)
+  | None -> None
 
 (** {1 Common set modules} *)
 

@@ -21,8 +21,8 @@ val destroy : 'k t -> unit
 val output_wave : 'k t -> 'k output_wave
 (** The owned output wave populated by [apply_wave]. *)
 
-val iter_current : 'k t -> ('k -> unit -> unit) -> unit
-val get_current : 'k t -> 'k -> unit Maybe.t
+val iter_current : 'k t -> ('k Stable.t -> unit Stable.t -> unit) -> unit
+val get_current : 'k t -> 'k Stable.t -> unit Stable.t Maybe.t
 val current_length : 'k t -> int
 
 val initialize :

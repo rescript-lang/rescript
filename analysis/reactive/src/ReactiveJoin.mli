@@ -17,7 +17,7 @@ val create :
   key_of:('k1 -> 'v1 -> 'k2) ->
   f:('k1 -> 'v1 -> 'v2 Maybe.t -> ('k3 -> 'v3 -> unit) -> unit) ->
   merge:('v3 -> 'v3 -> 'v3) ->
-  right_get:('k2 -> 'v2 Maybe.t) ->
+  right_get:('k2 Stable.t -> 'v2 Stable.t Maybe.t) ->
   ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t
 
 val destroy : ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t -> unit
@@ -47,10 +47,15 @@ val process : ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t -> process_result
     Returns stats for the caller to apply. The output wave is populated
     (and can be sent to subscribers) only when [entries_emitted > 0]. *)
 
-val init_entry : ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t -> 'k1 -> 'v1 -> unit
+val init_entry :
+  ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t -> 'k1 Stable.t -> 'v1 Stable.t -> unit
 (** Initialize from an existing left source entry (during setup). *)
 
 val iter_target :
-  ('k3 -> 'v3 -> unit) -> ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t -> unit
-val find_target : ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t -> 'k3 -> 'v3 Maybe.t
+  ('k3 Stable.t -> 'v3 Stable.t -> unit) ->
+  ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t ->
+  unit
+
+val find_target :
+  ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t -> 'k3 Stable.t -> 'v3 Stable.t Maybe.t
 val target_length : ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t -> int

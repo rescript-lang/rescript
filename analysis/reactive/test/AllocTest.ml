@@ -46,7 +46,7 @@ let test_fixpoint_alloc_n n =
   let state = ReactiveFixpoint.create ~max_nodes:n ~max_edges:n in
 
   (* Chain graph: 0 -> 1 -> 2 -> ... -> n-1 *)
-  ReactiveWave.push root_snap (stable_int 0) (stable_unit ());
+  ReactiveWave.push root_snap (stable_int 0) stable_unit;
   for i = 0 to n - 2 do
     ReactiveWave.push edge_snap (stable_int i) (Stable.of_value edge_values.(i))
   done;
@@ -216,7 +216,10 @@ let test_join_alloc_n n =
       ~f:(fun k v right_mb emit ->
         if Maybe.is_some right_mb then emit k (v + Maybe.unsafe_get right_mb))
       ~merge:(fun _l r -> r)
-      ~right_get:(StableHash.Map.find_maybe right_tbl)
+      ~right_get:(fun k ->
+        Maybe.of_stable
+          (Stable.unsafe_of_value
+             (StableHash.Map.find_maybe right_tbl (Stable.unsafe_to_value k))))
   in
 
   (* Populate: n entries on the right, n on the left *)
