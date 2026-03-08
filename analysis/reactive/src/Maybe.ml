@@ -21,7 +21,7 @@ let[@inline] maybe_int_to_offheap (x : int t) : int t Allocator.offheap =
 let[@inline] maybe_unit_to_offheap (x : unit t) : unit t Allocator.offheap =
   Allocator.unsafe_to_offheap x
 
-let[@inline] maybe_offheap_list_to_offheap (x : 'a ReactiveOffheapList.t t) :
+let[@inline] maybe_offheap_list_to_offheap (x : 'a OffheapList.t t) :
     'a list t Allocator.offheap =
   Allocator.unsafe_to_offheap x
 

@@ -17,7 +17,7 @@ type 'k metrics_state = {
 
 type 'k t = {
   current: 'k ReactiveSet.t;
-  edge_map: ('k, 'k ReactiveOffheapList.inner) ReactiveMap.t;
+  edge_map: ('k, 'k OffheapList.inner) ReactiveMap.t;
   pred_map: ('k, 'k) ReactivePoolMapSet.t;
   roots: 'k ReactiveSet.t;
   output_wave: ('k, unit Maybe.t) ReactiveWave.t;
@@ -25,8 +25,8 @@ type 'k t = {
   deleted_nodes: 'k ReactiveSet.t;
   rederive_pending: 'k ReactiveSet.t;
   expansion_seen: 'k ReactiveSet.t;
-  old_successors_for_changed: ('k, 'k ReactiveOffheapList.inner) ReactiveMap.t;
-  new_successors_for_changed: ('k, 'k ReactiveOffheapList.inner) ReactiveMap.t;
+  old_successors_for_changed: ('k, 'k OffheapList.inner) ReactiveMap.t;
+  new_successors_for_changed: ('k, 'k OffheapList.inner) ReactiveMap.t;
   (* Scratch sets for analyze_edge_change / apply_edge_update *)
   scratch_set_a: 'k ReactiveSet.t;
   scratch_set_b: 'k ReactiveSet.t;
@@ -43,15 +43,12 @@ type 'k t = {
 (* Standalone version for Invariants (no scratch sets available).
    Debug-only — allocates temporary Hashtbl. *)
 let analyze_edge_change_has_new ~old_succs ~new_succs =
-  if ReactiveOffheapList.is_empty old_succs then
-    not (ReactiveOffheapList.is_empty new_succs)
-  else if ReactiveOffheapList.is_empty new_succs then false
+  if OffheapList.is_empty old_succs then not (OffheapList.is_empty new_succs)
+  else if OffheapList.is_empty new_succs then false
   else
-    let old_set = Hashtbl.create (ReactiveOffheapList.length old_succs) in
-    ReactiveOffheapList.iter (fun k -> Hashtbl.replace old_set k ()) old_succs;
-    ReactiveOffheapList.exists
-      (fun tgt -> not (Hashtbl.mem old_set tgt))
-      new_succs
+    let old_set = Hashtbl.create (OffheapList.length old_succs) in
+    OffheapList.iter (fun k -> Hashtbl.replace old_set k ()) old_succs;
+    OffheapList.exists (fun tgt -> not (Hashtbl.mem old_set tgt)) new_succs
 
 let[@inline] off_key k = Allocator.unsafe_to_offheap k
 let[@inline] enqueue q k = ReactiveFifo.push q (off_key k)
@@ -84,8 +81,8 @@ let compute_reachable ~visited t =
     let r = ReactiveMap.find_maybe t.edge_map k in
     if Maybe.is_some r then (
       let succs = Maybe.unsafe_get r in
-      edge_work := !edge_work + ReactiveOffheapList.length succs;
-      ReactiveOffheapList.iter_with (bfs_visit_succ visited) frontier succs)
+      edge_work := !edge_work + OffheapList.length succs;
+      OffheapList.iter_with (bfs_visit_succ visited) frontier succs)
   done;
   (!node_work, !edge_work)
 
@@ -268,14 +265,14 @@ module Invariants = struct
           in
           let old_succs =
             if Maybe.is_some r_old then Maybe.unsafe_get r_old
-            else ReactiveOffheapList.empty ()
+            else OffheapList.empty ()
           in
           let r_new =
             ReactiveMap.find_maybe new_successors_for_changed (off_key src)
           in
           let new_succs =
             if Maybe.is_some r_new then Maybe.unsafe_get r_new
-            else ReactiveOffheapList.empty ()
+            else OffheapList.empty ()
           in
           let expected_has_new =
             analyze_edge_change_has_new ~old_succs ~new_succs
@@ -287,7 +284,7 @@ module Invariants = struct
         !items)
 
   let assert_deleted_nodes_closed ~current ~deleted_nodes
-      ~(old_successors : 'k -> 'k ReactiveOffheapList.t) =
+      ~(old_successors : 'k -> 'k OffheapList.t) =
     if enabled then
       ReactiveSet.iter_with
         (fun () k ->
@@ -296,7 +293,7 @@ module Invariants = struct
             (ReactiveSet.mem current (off_key k))
             "ReactiveFixpoint.apply invariant failed: deleted node not in \
              current";
-          ReactiveOffheapList.iter
+          OffheapList.iter
             (fun succ ->
               if ReactiveSet.mem current (off_key succ) then
                 assert_
@@ -493,35 +490,33 @@ let remove_pred_for_src (t, src) target = remove_pred t ~target ~pred:src
 let apply_edge_update t ~src ~new_successors =
   let r = ReactiveMap.find_maybe t.edge_map (off_key src) in
   let old_successors =
-    if Maybe.is_some r then Maybe.unsafe_get r else ReactiveOffheapList.empty ()
+    if Maybe.is_some r then Maybe.unsafe_get r else OffheapList.empty ()
   in
-  if
-    ReactiveOffheapList.is_empty old_successors
-    && ReactiveOffheapList.is_empty new_successors
+  if OffheapList.is_empty old_successors && OffheapList.is_empty new_successors
   then ReactiveMap.remove t.edge_map (off_key src)
-  else if ReactiveOffheapList.is_empty old_successors then (
-    ReactiveOffheapList.iter_with add_pred_for_src (t, src) new_successors;
+  else if OffheapList.is_empty old_successors then (
+    OffheapList.iter_with add_pred_for_src (t, src) new_successors;
     ReactiveMap.replace t.edge_map (off_key src) new_successors)
-  else if ReactiveOffheapList.is_empty new_successors then (
-    ReactiveOffheapList.iter_with remove_pred_for_src (t, src) old_successors;
+  else if OffheapList.is_empty new_successors then (
+    OffheapList.iter_with remove_pred_for_src (t, src) old_successors;
     ReactiveMap.remove t.edge_map (off_key src))
   else (
     ReactiveSet.clear t.scratch_set_a;
     ReactiveSet.clear t.scratch_set_b;
-    ReactiveOffheapList.iter
+    OffheapList.iter
       (fun k -> ReactiveSet.add t.scratch_set_a (off_key k))
       new_successors;
-    ReactiveOffheapList.iter
+    OffheapList.iter
       (fun k -> ReactiveSet.add t.scratch_set_b (off_key k))
       old_successors;
 
-    ReactiveOffheapList.iter_with
+    OffheapList.iter_with
       (fun () target ->
         if not (ReactiveSet.mem t.scratch_set_a (off_key target)) then
           remove_pred t ~target ~pred:src)
       () old_successors;
 
-    ReactiveOffheapList.iter_with
+    OffheapList.iter_with
       (fun () target ->
         if not (ReactiveSet.mem t.scratch_set_b (off_key target)) then
           add_pred t ~target ~pred:src)
@@ -537,7 +532,7 @@ let initialize t ~roots ~edges =
   ReactiveWave.iter edges (fun k successors ->
       apply_edge_update t
         ~src:(Allocator.unsafe_from_offheap k)
-        ~new_successors:(ReactiveOffheapList.unsafe_of_offheap_list successors));
+        ~new_successors:(OffheapList.unsafe_of_offheap_list successors));
   recompute_current t
 
 let is_supported t k =
@@ -548,8 +543,7 @@ let old_successors t k =
   if Maybe.is_some r then Maybe.unsafe_get r
   else
     let r2 = ReactiveMap.find_maybe t.edge_map (off_key k) in
-    if Maybe.is_some r2 then Maybe.unsafe_get r2
-    else ReactiveOffheapList.empty ()
+    if Maybe.is_some r2 then Maybe.unsafe_get r2 else OffheapList.empty ()
 
 let mark_deleted t k =
   if
@@ -599,38 +593,35 @@ let mark_deleted_if_absent (t, set) k =
 let not_in_set set k = not (ReactiveSet.mem set (off_key k))
 
 let mark_deleted_unless_in_set t set xs =
-  ReactiveOffheapList.iter_with mark_deleted_if_absent (t, set) xs
+  OffheapList.iter_with mark_deleted_if_absent (t, set) xs
 
-let exists_not_in_set set xs = ReactiveOffheapList.exists_with not_in_set set xs
+let exists_not_in_set set xs = OffheapList.exists_with not_in_set set xs
 
 let scan_edge_entry t src mv =
   let r = ReactiveMap.find_maybe t.edge_map (off_key src) in
   let old_succs =
-    if Maybe.is_some r then Maybe.unsafe_get r else ReactiveOffheapList.empty ()
+    if Maybe.is_some r then Maybe.unsafe_get r else OffheapList.empty ()
   in
   let new_succs =
-    if Maybe.is_some mv then
-      ReactiveOffheapList.unsafe_of_list (Maybe.unsafe_get mv)
-    else ReactiveOffheapList.empty ()
+    if Maybe.is_some mv then OffheapList.unsafe_of_list (Maybe.unsafe_get mv)
+    else OffheapList.empty ()
   in
   ReactiveMap.replace t.old_successors_for_changed (off_key src) old_succs;
   ReactiveMap.replace t.new_successors_for_changed (off_key src) new_succs;
   enqueue t.edge_change_queue src;
   let src_is_live = ReactiveSet.mem t.current (off_key src) in
   match (old_succs, new_succs) with
-  | _
-    when ReactiveOffheapList.is_empty old_succs
-         && ReactiveOffheapList.is_empty new_succs ->
+  | _ when OffheapList.is_empty old_succs && OffheapList.is_empty new_succs ->
     ()
-  | _ when ReactiveOffheapList.is_empty old_succs ->
+  | _ when OffheapList.is_empty old_succs ->
     ReactiveSet.add t.edge_has_new (off_key src)
-  | _ when ReactiveOffheapList.is_empty new_succs ->
-    if src_is_live then ReactiveOffheapList.iter_with mark_deleted t old_succs
+  | _ when OffheapList.is_empty new_succs ->
+    if src_is_live then OffheapList.iter_with mark_deleted t old_succs
   | _ ->
     ReactiveSet.clear t.scratch_set_a;
     ReactiveSet.clear t.scratch_set_b;
-    ReactiveOffheapList.iter_with set_add_k t.scratch_set_a new_succs;
-    ReactiveOffheapList.iter_with set_add_k t.scratch_set_b old_succs;
+    OffheapList.iter_with set_add_k t.scratch_set_a new_succs;
+    OffheapList.iter_with set_add_k t.scratch_set_b old_succs;
     if src_is_live then mark_deleted_unless_in_set t t.scratch_set_a old_succs;
     if exists_not_in_set t.scratch_set_b new_succs then
       ReactiveSet.add t.edge_has_new (off_key src)
@@ -699,8 +690,8 @@ let apply_list t ~roots ~edges =
     if Metrics.enabled then (
       m.delete_queue_pops <- m.delete_queue_pops + 1;
       m.delete_edges_scanned <-
-        m.delete_edges_scanned + ReactiveOffheapList.length succs);
-    ReactiveOffheapList.iter_with mark_deleted t succs
+        m.delete_edges_scanned + OffheapList.length succs);
+    OffheapList.iter_with mark_deleted t succs
   done;
   if Invariants.enabled then
     Invariants.assert_deleted_nodes_closed ~current:t.current
@@ -719,8 +710,7 @@ let apply_list t ~roots ~edges =
     let src = ReactiveFifo.pop t.edge_change_queue in
     let r = ReactiveMap.find_maybe t.new_successors_for_changed src in
     let new_succs =
-      if Maybe.is_some r then Maybe.unsafe_get r
-      else ReactiveOffheapList.empty ()
+      if Maybe.is_some r then Maybe.unsafe_get r else OffheapList.empty ()
     in
     apply_edge_update t
       ~src:(Allocator.unsafe_from_offheap src)
@@ -762,8 +752,8 @@ let apply_list t ~roots ~edges =
         let succs = Maybe.unsafe_get r in
         if Metrics.enabled then
           m.rederive_edges_scanned <-
-            m.rederive_edges_scanned + ReactiveOffheapList.length succs;
-        ReactiveOffheapList.iter_with enqueue_rederive_if_needed t succs))
+            m.rederive_edges_scanned + OffheapList.length succs;
+        OffheapList.iter_with enqueue_rederive_if_needed t succs))
   done;
   if Invariants.enabled then
     Invariants.assert_no_supported_deleted_left ~deleted_nodes:t.deleted_nodes
@@ -794,8 +784,8 @@ let apply_list t ~roots ~edges =
       let succs = Maybe.unsafe_get r in
       if Metrics.enabled then
         m.expansion_edges_scanned <-
-          m.expansion_edges_scanned + ReactiveOffheapList.length succs;
-      ReactiveOffheapList.iter_with add_live t succs)
+          m.expansion_edges_scanned + OffheapList.length succs;
+      OffheapList.iter_with add_live t succs)
   done;
   ReactiveSet.iter_with
     (fun t k -> emit_removal t (Allocator.unsafe_from_offheap k) ())

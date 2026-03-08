@@ -29,7 +29,7 @@ let emit_edge_set emit k vs =
   ReactiveWave.push w
     (Allocator.unsafe_to_offheap k)
     (Maybe.maybe_offheap_list_to_offheap
-       (Maybe.some (ReactiveOffheapList.unsafe_of_list vs)));
+       (Maybe.some (OffheapList.unsafe_of_list vs)));
   emit w
 
 (** Emit a single remove entry *)
@@ -78,7 +78,7 @@ let emit_edge_batch emit entries =
         ReactiveWave.push w
           (Allocator.unsafe_to_offheap k)
           (Maybe.maybe_offheap_list_to_offheap
-             (Maybe.some (ReactiveOffheapList.unsafe_of_list vs)))
+             (Maybe.some (OffheapList.unsafe_of_list vs)))
       | None ->
         ReactiveWave.push w (Allocator.unsafe_to_offheap k) Maybe.none_offheap)
     entries;
