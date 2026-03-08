@@ -142,7 +142,7 @@ let exists_with (type a k) (f : a -> k Stable.t -> bool) (arg : a) (t : k t) =
   let found = ref false in
   let done_ = ref false in
   let i = ref 0 in
-  while not !done_ && !i < slot_capacity t do
+  while (not !done_) && !i < slot_capacity t do
     let x = Allocator.Block2.get t !i in
     if x != empty_sentinel () && x != tomb_sentinel () && f arg x then (
       found := true;

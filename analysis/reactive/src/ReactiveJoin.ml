@@ -7,11 +7,11 @@ type ('k1, 'v1, 'k2, 'v2, 'k3, 'v3) t = {
   right_get: 'k2 Stable.t -> 'v2 Stable.t Maybe.t;
   (* Persistent state *)
   left_entries: ('k1, 'v1) StableMap.t;
-  provenance: ('k1, 'k3) ReactivePoolMapSet.t;
-  contributions: ('k3, 'k1, 'v3) ReactivePoolMapMap.t;
+  provenance: ('k1, 'k3) StableMapSet.t;
+  contributions: ('k3, 'k1, 'v3) StableMapMap.t;
   target: ('k3, 'v3) StableMap.t;
   left_to_right_key: ('k1, 'k2) StableMap.t;
-  right_key_to_left_keys: ('k2, 'k1) ReactivePoolMapSet.t;
+  right_key_to_left_keys: ('k2, 'k1) StableMapSet.t;
   (* Scratch — allocated once, cleared per process() *)
   left_scratch: ('k1, 'v1 Maybe.t) StableMap.t;
   right_scratch: ('k2, 'v2 Maybe.t) StableMap.t;
@@ -39,10 +39,10 @@ and process_result = {
 
 (* Emit callback for steady-state — marks affected *)
 let add_single_contribution (t : (_, _, _, _, _, _) t) k3 v3 =
-  ReactivePoolMapSet.add t.provenance
+  StableMapSet.add t.provenance
     (Stable.unsafe_of_value t.current_k1)
     (Stable.unsafe_of_value k3);
-  ReactivePoolMapMap.replace t.contributions
+  StableMapMap.replace t.contributions
     (Stable.unsafe_of_value k3)
     (Stable.unsafe_of_value t.current_k1)
     (Stable.unsafe_of_value v3);
@@ -50,10 +50,10 @@ let add_single_contribution (t : (_, _, _, _, _, _) t) k3 v3 =
 
 (* Emit callback for init — writes directly to target *)
 let add_single_contribution_init (t : (_, _, _, _, _, _) t) k3 v3 =
-  ReactivePoolMapSet.add t.provenance
+  StableMapSet.add t.provenance
     (Stable.unsafe_of_value t.current_k1)
     (Stable.unsafe_of_value k3);
-  ReactivePoolMapMap.replace t.contributions
+  StableMapMap.replace t.contributions
     (Stable.unsafe_of_value k3)
     (Stable.unsafe_of_value t.current_k1)
     (Stable.unsafe_of_value v3);
@@ -69,11 +69,11 @@ let create ~key_of ~f ~merge ~right_get =
       merge;
       right_get;
       left_entries = StableMap.create ();
-      provenance = ReactivePoolMapSet.create ();
-      contributions = ReactivePoolMapMap.create ();
+      provenance = StableMapSet.create ();
+      contributions = StableMapMap.create ();
       target = StableMap.create ();
       left_to_right_key = StableMap.create ();
-      right_key_to_left_keys = ReactivePoolMapSet.create ();
+      right_key_to_left_keys = StableMapSet.create ();
       left_scratch = StableMap.create ();
       right_scratch = StableMap.create ();
       affected = StableSet.create ();
@@ -97,11 +97,11 @@ let create ~key_of ~f ~merge ~right_get =
 
 let destroy t =
   StableMap.destroy t.left_entries;
-  ReactivePoolMapSet.destroy t.provenance;
-  ReactivePoolMapMap.destroy t.contributions;
+  StableMapSet.destroy t.provenance;
+  StableMapMap.destroy t.contributions;
   StableMap.destroy t.target;
   StableMap.destroy t.left_to_right_key;
-  ReactivePoolMapSet.destroy t.right_key_to_left_keys;
+  StableMapSet.destroy t.right_key_to_left_keys;
   StableMap.destroy t.left_scratch;
   StableMap.destroy t.right_scratch;
   StableSet.destroy t.affected;
@@ -115,13 +115,13 @@ let push_right t k v_opt = StableMap.replace t.right_scratch k v_opt
 
 (* Remove one contribution key during remove_left_contributions iteration *)
 let remove_one_contribution_key (t : (_, _, _, _, _, _) t) k3 =
-  ReactivePoolMapMap.remove_from_inner_and_recycle_if_empty t.contributions k3
+  StableMapMap.remove_from_inner_and_recycle_if_empty t.contributions k3
     (Stable.unsafe_of_value t.current_k1);
   StableSet.add t.affected k3
 
 let remove_left_contributions (t : (_, _, _, _, _, _) t) k1 =
   t.current_k1 <- k1;
-  ReactivePoolMapSet.drain_key t.provenance
+  StableMapSet.drain_key t.provenance
     (Stable.unsafe_of_value k1)
     t remove_one_contribution_key
 
@@ -132,7 +132,7 @@ let unlink_right_key (t : (_, _, _, _, _, _) t) k1 =
   if Maybe.is_some mb then (
     let old_k2 = Stable.unsafe_to_value (Maybe.unsafe_get mb) in
     StableMap.remove t.left_to_right_key (Stable.unsafe_of_value k1);
-    ReactivePoolMapSet.remove_from_set_and_recycle_if_empty
+    StableMapSet.remove_from_set_and_recycle_if_empty
       t.right_key_to_left_keys
       (Stable.unsafe_of_value old_k2)
       (Stable.unsafe_of_value k1))
@@ -144,7 +144,7 @@ let process_left_entry (t : (_, _, _, _, _, _) t) k1 v1 =
   StableMap.replace t.left_to_right_key
     (Stable.unsafe_of_value k1)
     (Stable.unsafe_of_value k2);
-  ReactivePoolMapSet.add t.right_key_to_left_keys
+  StableMapSet.add t.right_key_to_left_keys
     (Stable.unsafe_of_value k2)
     (Stable.unsafe_of_value k1);
   let right_val =
@@ -170,12 +170,12 @@ let merge_one_contribution (t : (_, _, _, _, _, _) t) _k1 v =
 let recompute_target (t : (_, _, _, _, _, _) t) k3 =
   let k3 = Stable.unsafe_to_value k3 in
   if
-    ReactivePoolMapMap.inner_cardinal t.contributions
+    StableMapMap.inner_cardinal t.contributions
       (Stable.unsafe_of_value k3)
     > 0
   then (
     t.merge_first <- true;
-    ReactivePoolMapMap.iter_inner_with t.contributions
+    StableMapMap.iter_inner_with t.contributions
       (Stable.unsafe_of_value k3)
       t merge_one_contribution;
     StableMap.replace t.target
@@ -220,7 +220,7 @@ let process_right_scratch_entry (t : (_, _, _, _, _, _) t) k2 _mv =
   t.result.entries_received <- t.result.entries_received + 1;
   if Maybe.is_some _mv then t.result.adds_received <- t.result.adds_received + 1
   else t.result.removes_received <- t.result.removes_received + 1;
-  ReactivePoolMapSet.iter_inner_with t.right_key_to_left_keys
+  StableMapSet.iter_inner_with t.right_key_to_left_keys
     (Stable.unsafe_of_value k2)
     t reprocess_left_entry
 
@@ -264,7 +264,7 @@ let init_entry (t : (_, _, _, _, _, _) t) k1 v1 =
   StableMap.replace t.left_to_right_key
     (Stable.unsafe_of_value k1)
     (Stable.unsafe_of_value k2);
-  ReactivePoolMapSet.add t.right_key_to_left_keys
+  StableMapSet.add t.right_key_to_left_keys
     (Stable.unsafe_of_value k2)
     (Stable.unsafe_of_value k1);
   let right_val =

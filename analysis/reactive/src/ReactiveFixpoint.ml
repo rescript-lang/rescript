@@ -1,5 +1,5 @@
 (* Note on set representations:
-   [pred_map] is represented by [ReactivePoolMapSet] because its semantics are
+   [pred_map] is represented by [StableMapSet] because its semantics are
    exactly map-of-set with churn-safe remove+recycle behavior. *)
 
 type 'k metrics_state = {
@@ -18,7 +18,7 @@ type 'k metrics_state = {
 type 'k t = {
   current: 'k StableSet.t;
   edge_map: ('k, 'k StableList.inner) StableMap.t;
-  pred_map: ('k, 'k) ReactivePoolMapSet.t;
+  pred_map: ('k, 'k) StableMapSet.t;
   roots: 'k StableSet.t;
   output_wave: ('k, unit Maybe.t) ReactiveWave.t;
   (* Scratch tables — allocated once, cleared per apply_list call *)
@@ -400,7 +400,7 @@ let create ~max_nodes ~max_edges =
   {
     current = StableSet.create ();
     edge_map = StableMap.create ();
-    pred_map = ReactivePoolMapSet.create ();
+    pred_map = StableMapSet.create ();
     roots = StableSet.create ();
     output_wave = ReactiveWave.create ~max_entries:max_nodes ();
     deleted_nodes = StableSet.create ();
@@ -432,7 +432,7 @@ let create ~max_nodes ~max_edges =
 let destroy t =
   StableSet.destroy t.current;
   StableMap.destroy t.edge_map;
-  ReactivePoolMapSet.destroy t.pred_map;
+  StableMapSet.destroy t.pred_map;
   StableSet.destroy t.roots;
   StableSet.destroy t.deleted_nodes;
   StableSet.destroy t.rederive_pending;
@@ -468,16 +468,16 @@ let current_length t = StableSet.cardinal t.current
 let recompute_current t = ignore (compute_reachable ~visited:t.current t)
 
 let add_pred t ~target ~pred =
-  ReactivePoolMapSet.add t.pred_map (stable_key target) (stable_key pred)
+  StableMapSet.add t.pred_map (stable_key target) (stable_key pred)
 
 let remove_pred t ~target ~pred =
-  ReactivePoolMapSet.remove_from_set_and_recycle_if_empty t.pred_map
+  StableMapSet.remove_from_set_and_recycle_if_empty t.pred_map
     (stable_key target) (stable_key pred)
 
 let has_live_pred_key t pred = StableSet.mem t.current pred
 
 let has_live_predecessor t k =
-  ReactivePoolMapSet.exists_inner_with t.pred_map (stable_key k) t
+  StableMapSet.exists_inner_with t.pred_map (stable_key k) t
     has_live_pred_key
 
 let add_pred_for_src (t, src) target = add_pred t ~target ~pred:src
@@ -523,7 +523,7 @@ let apply_edge_update t ~src ~new_successors =
 let initialize t ~roots ~edges =
   StableSet.clear t.roots;
   StableMap.clear t.edge_map;
-  ReactivePoolMapSet.clear t.pred_map;
+  StableMapSet.clear t.pred_map;
   ReactiveWave.iter roots (fun k _ -> StableSet.add t.roots k);
   ReactiveWave.iter edges (fun k successors ->
       apply_edge_update t ~src:(Stable.unsafe_to_value k)

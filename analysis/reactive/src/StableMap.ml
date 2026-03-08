@@ -65,9 +65,7 @@ let insert_absent t k v =
 
 let resize t new_cap =
   let old_cap = pair_capacity t in
-  let old =
-    Allocator.Block2.create ~capacity:(2 * old_cap) ~x0:0 ~y0:0
-  in
+  let old = Allocator.Block2.create ~capacity:(2 * old_cap) ~x0:0 ~y0:0 in
   Allocator.Block2.blit ~src:t ~src_pos:0 ~dst:old ~dst_pos:0 ~len:(2 * old_cap);
   Allocator.Block2.resize t ~capacity:(2 * new_cap);
   set_population t 0;
