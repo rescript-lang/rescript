@@ -9,8 +9,8 @@
     on every source edit). *)
 
 type ('k, 'v) t = {
-  outer: ('k, 'v StableHash.Set.t) StableHash.Map.t;
-  mutable pool: 'v StableHash.Set.t array;
+  outer: ('k, 'v ReactiveHash.Set.t) ReactiveHash.Map.t;
+  mutable pool: 'v ReactiveHash.Set.t array;
   mutable pool_len: int;
   mutable recycle_count: int;
   mutable miss_count: int;
@@ -18,7 +18,7 @@ type ('k, 'v) t = {
 
 let create ~capacity:pool_capacity =
   {
-    outer = StableHash.Map.create ();
+    outer = ReactiveHash.Map.create ();
     pool = Array.make pool_capacity (Obj.magic 0);
     pool_len = 0;
     recycle_count = 0;
@@ -48,60 +48,60 @@ let pool_pop t =
   else (
     t.miss_count <- t.miss_count + 1;
     ReactiveAllocTrace.emit_alloc_kind ReactiveAllocTrace.Pool_set_miss_create;
-    StableHash.Set.create ())
+    ReactiveHash.Set.create ())
 
 let ensure t k =
-  let m = StableHash.Map.find_maybe t.outer k in
+  let m = ReactiveHash.Map.find_maybe t.outer k in
   if Maybe.is_some m then Maybe.unsafe_get m
   else
     let set = pool_pop t in
-    StableHash.Map.replace t.outer k set;
+    ReactiveHash.Map.replace t.outer k set;
     set
 
 let add t k v =
   let set = ensure t k in
-  StableHash.Set.add set v
+  ReactiveHash.Set.add set v
 
 let drain_key t k ctx f =
-  let mb = StableHash.Map.find_maybe t.outer k in
+  let mb = ReactiveHash.Map.find_maybe t.outer k in
   if Maybe.is_some mb then (
     let set = Maybe.unsafe_get mb in
-    StableHash.Set.iter_with f ctx set;
-    StableHash.Map.remove t.outer k;
-    StableHash.Set.clear set;
+    ReactiveHash.Set.iter_with f ctx set;
+    ReactiveHash.Map.remove t.outer k;
+    ReactiveHash.Set.clear set;
     pool_push t set;
     t.recycle_count <- t.recycle_count + 1;
     ReactiveAllocTrace.emit_op_kind ReactiveAllocTrace.Pool_set_drain_key)
 
 let remove_from_set_and_recycle_if_empty t k v =
-  let mb = StableHash.Map.find_maybe t.outer k in
+  let mb = ReactiveHash.Map.find_maybe t.outer k in
   if Maybe.is_some mb then (
     let set = Maybe.unsafe_get mb in
-    StableHash.Set.remove set v;
-    let after = StableHash.Set.cardinal set in
+    ReactiveHash.Set.remove set v;
+    let after = ReactiveHash.Set.cardinal set in
     if after = 0 then (
-      StableHash.Map.remove t.outer k;
-      StableHash.Set.clear set;
+      ReactiveHash.Map.remove t.outer k;
+      ReactiveHash.Set.clear set;
       pool_push t set;
       t.recycle_count <- t.recycle_count + 1);
     ReactiveAllocTrace.emit_op_kind
       ReactiveAllocTrace.Pool_set_remove_recycle_if_empty)
 
-let find_maybe t k = StableHash.Map.find_maybe t.outer k
+let find_maybe t k = ReactiveHash.Map.find_maybe t.outer k
 
-let iter_with t ctx f = StableHash.Map.iter_with f ctx t.outer
+let iter_with t ctx f = ReactiveHash.Map.iter_with f ctx t.outer
 
 let recycle_inner_set t _k set =
-  StableHash.Set.clear set;
+  ReactiveHash.Set.clear set;
   pool_push t set;
   t.recycle_count <- t.recycle_count + 1
 
 let clear t =
-  StableHash.Map.iter_with recycle_inner_set t t.outer;
-  StableHash.Map.clear t.outer
+  ReactiveHash.Map.iter_with recycle_inner_set t t.outer;
+  ReactiveHash.Map.clear t.outer
 
-let tighten t = StableHash.Map.tighten t.outer
+let tighten t = ReactiveHash.Map.tighten t.outer
 
-let cardinal t = StableHash.Map.cardinal t.outer
+let cardinal t = ReactiveHash.Map.cardinal t.outer
 
 let debug_miss_count t = t.miss_count

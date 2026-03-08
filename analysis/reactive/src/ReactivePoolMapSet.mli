@@ -20,11 +20,11 @@ val remove_from_set_and_recycle_if_empty : ('k, 'v) t -> 'k -> 'v -> unit
 (** [remove_from_set_and_recycle_if_empty t k v] removes [v] from [k]'s set.
     If the set becomes empty, [k] is recycled. No-op if [k] is absent. *)
 
-val find_maybe : ('k, 'v) t -> 'k -> 'v StableHash.Set.t Maybe.t
+val find_maybe : ('k, 'v) t -> 'k -> 'v ReactiveHash.Set.t Maybe.t
 (** Zero-allocation lookup. *)
 
 val iter_with :
-  ('k, 'v) t -> 'a -> ('a -> 'k -> 'v StableHash.Set.t -> unit) -> unit
+  ('k, 'v) t -> 'a -> ('a -> 'k -> 'v ReactiveHash.Set.t -> unit) -> unit
 (** [iter_with t ctx f] calls [f ctx k set] for each binding. *)
 
 val clear : ('k, 'v) t -> unit

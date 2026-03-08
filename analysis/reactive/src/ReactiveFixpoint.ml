@@ -476,7 +476,7 @@ let has_live_pred_key t pred = StableSet.mem t.current (stable_key pred)
 let has_live_predecessor t k =
   let r = ReactivePoolMapSet.find_maybe t.pred_map k in
   if Maybe.is_some r then
-    StableHash.Set.exists_with has_live_pred_key t (Maybe.unsafe_get r)
+    ReactiveHash.Set.exists_with has_live_pred_key t (Maybe.unsafe_get r)
   else false
 
 let add_pred_for_src (t, src) target = add_pred t ~target ~pred:src

@@ -196,7 +196,7 @@ let process_right_scratch_entry (t : (_, _, _, _, _, _) t) k2 _mv =
   else t.result.removes_received <- t.result.removes_received + 1;
   let mb = ReactivePoolMapSet.find_maybe t.right_key_to_left_keys k2 in
   if Maybe.is_some mb then
-    StableHash.Set.iter_with reprocess_left_entry t (Maybe.unsafe_get mb)
+    ReactiveHash.Set.iter_with reprocess_left_entry t (Maybe.unsafe_get mb)
 
 let count_output_entry (r : process_result) _k mv =
   let mv = Stable.unsafe_to_value mv in
