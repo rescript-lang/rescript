@@ -83,9 +83,11 @@ let test_fixpoint_alloc () =
   List.iter
     (fun n ->
       let words = test_fixpoint_alloc_n n in
-      Printf.printf "  n=%d: %d words/iter\n" n words)
+      Printf.printf "  n=%d: %d words/iter\n" n words;
+      assert (words = 0))
     [10; 100; 1000];
   print_stable_usage ();
+  assert (Allocator.live_block_count () = 0);
   Printf.printf "PASSED\n\n"
 
 (* ---- FlatMap allocation ---- *)
@@ -144,9 +146,11 @@ let test_flatmap_alloc () =
   List.iter
     (fun n ->
       let words = test_flatmap_alloc_n n in
-      Printf.printf "  n=%d: %d words/iter\n" n words)
+      Printf.printf "  n=%d: %d words/iter\n" n words;
+      assert (words = 0))
     [10; 100; 1000];
   print_stable_usage ();
+  assert (Allocator.live_block_count () = 0);
   Printf.printf "PASSED\n\n"
 
 (* ---- Union allocation ---- *)
@@ -201,9 +205,11 @@ let test_union_alloc () =
   List.iter
     (fun n ->
       let words = test_union_alloc_n n in
-      Printf.printf "  n=%d: %d words/iter\n" n words)
+      Printf.printf "  n=%d: %d words/iter\n" n words;
+      assert (words = 0))
     [10; 100; 1000];
   print_stable_usage ();
+  assert (Allocator.live_block_count () = 0);
   Printf.printf "PASSED\n\n"
 
 (* ---- Join allocation ---- *)
@@ -280,9 +286,11 @@ let test_join_alloc () =
   List.iter
     (fun n ->
       let words = test_join_alloc_n n in
-      Printf.printf "  n=%d: %d words/iter\n" n words)
+      Printf.printf "  n=%d: %d words/iter\n" n words;
+      assert (words = 0))
     [10; 100; 1000];
   print_stable_usage ();
+  assert (Allocator.live_block_count () = 0);
   Printf.printf "PASSED\n\n"
 
 (* ---- Reactive.join end-to-end allocation ---- *)
@@ -352,9 +360,11 @@ let test_reactive_join_alloc () =
   List.iter
     (fun n ->
       let words = test_reactive_join_alloc_n n in
-      Printf.printf "  n=%d: %d words/iter\n" n words)
+      Printf.printf "  n=%d: %d words/iter\n" n words;
+      assert (words = 0))
     [10; 100; 1000];
   print_stable_usage ();
+  assert (Allocator.live_block_count () = 0);
   Printf.printf "PASSED\n\n"
 
 (* ---- Reactive.fixpoint end-to-end allocation ---- *)
@@ -416,9 +426,11 @@ let test_reactive_fixpoint_alloc () =
   List.iter
     (fun n ->
       let words = test_reactive_fixpoint_alloc_n n in
-      Printf.printf "  n=%d: %d words/iter\n" n words)
+      Printf.printf "  n=%d: %d words/iter\n" n words;
+      assert (words = 0))
     [10; 100; 1000];
   print_stable_usage ();
+  assert (Allocator.live_block_count () = 0);
   Printf.printf "PASSED\n\n"
 
 (* ---- Reactive.union end-to-end allocation ---- *)
@@ -475,9 +487,11 @@ let test_reactive_union_alloc () =
   List.iter
     (fun n ->
       let words = test_reactive_union_alloc_n n in
-      Printf.printf "  n=%d: %d words/iter\n" n words)
+      Printf.printf "  n=%d: %d words/iter\n" n words;
+      assert (words = 0))
     [10; 100; 1000];
   print_stable_usage ();
+  assert (Allocator.live_block_count () = 0);
   Printf.printf "PASSED\n\n"
 
 (* ---- Reactive.flatMap end-to-end allocation ---- *)
@@ -536,9 +550,11 @@ let test_reactive_flatmap_alloc () =
   List.iter
     (fun n ->
       let words = test_reactive_flatmap_alloc_n n in
-      Printf.printf "  n=%d: %d words/iter\n" n words)
+      Printf.printf "  n=%d: %d words/iter\n" n words;
+      assert (words = 0))
     [10; 100; 1000];
   print_stable_usage ();
+  assert (Allocator.live_block_count () = 0);
   Printf.printf "PASSED\n\n"
 
 let run_all () =
