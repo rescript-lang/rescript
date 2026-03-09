@@ -5,6 +5,11 @@
 
 open TestHelpers
 
+let check_alloc =
+  match Sys.getenv_opt "RESCRIPT_REACTIVE_FIXPOINT_ASSERT" with
+  | Some ("1" | "true" | "TRUE" | "yes" | "YES") -> false
+  | _ -> true
+
 let words_since = AllocMeasure.words_since
 
 let stable_int = Stable.int
@@ -84,7 +89,7 @@ let test_fixpoint_alloc () =
     (fun n ->
       let words = test_fixpoint_alloc_n n in
       Printf.printf "  n=%d: %d words/iter\n" n words;
-      assert (words = 0))
+      if check_alloc then assert (words = 0))
     [10; 100; 1000];
   print_stable_usage ();
   assert (Allocator.live_block_count () = 0);
@@ -147,7 +152,7 @@ let test_flatmap_alloc () =
     (fun n ->
       let words = test_flatmap_alloc_n n in
       Printf.printf "  n=%d: %d words/iter\n" n words;
-      assert (words = 0))
+      if check_alloc then assert (words = 0))
     [10; 100; 1000];
   print_stable_usage ();
   assert (Allocator.live_block_count () = 0);
@@ -206,7 +211,7 @@ let test_union_alloc () =
     (fun n ->
       let words = test_union_alloc_n n in
       Printf.printf "  n=%d: %d words/iter\n" n words;
-      assert (words = 0))
+      if check_alloc then assert (words = 0))
     [10; 100; 1000];
   print_stable_usage ();
   assert (Allocator.live_block_count () = 0);
@@ -287,7 +292,7 @@ let test_join_alloc () =
     (fun n ->
       let words = test_join_alloc_n n in
       Printf.printf "  n=%d: %d words/iter\n" n words;
-      assert (words = 0))
+      if check_alloc then assert (words = 0))
     [10; 100; 1000];
   print_stable_usage ();
   assert (Allocator.live_block_count () = 0);
@@ -361,7 +366,7 @@ let test_reactive_join_alloc () =
     (fun n ->
       let words = test_reactive_join_alloc_n n in
       Printf.printf "  n=%d: %d words/iter\n" n words;
-      assert (words = 0))
+      if check_alloc then assert (words = 0))
     [10; 100; 1000];
   print_stable_usage ();
   assert (Allocator.live_block_count () = 0);
@@ -427,7 +432,7 @@ let test_reactive_fixpoint_alloc () =
     (fun n ->
       let words = test_reactive_fixpoint_alloc_n n in
       Printf.printf "  n=%d: %d words/iter\n" n words;
-      assert (words = 0))
+      if check_alloc then assert (words = 0))
     [10; 100; 1000];
   print_stable_usage ();
   assert (Allocator.live_block_count () = 0);
@@ -488,7 +493,7 @@ let test_reactive_union_alloc () =
     (fun n ->
       let words = test_reactive_union_alloc_n n in
       Printf.printf "  n=%d: %d words/iter\n" n words;
-      assert (words = 0))
+      if check_alloc then assert (words = 0))
     [10; 100; 1000];
   print_stable_usage ();
   assert (Allocator.live_block_count () = 0);
@@ -551,7 +556,7 @@ let test_reactive_flatmap_alloc () =
     (fun n ->
       let words = test_reactive_flatmap_alloc_n n in
       Printf.printf "  n=%d: %d words/iter\n" n words;
-      assert (words = 0))
+      if check_alloc then assert (words = 0))
     [10; 100; 1000];
   print_stable_usage ();
   assert (Allocator.live_block_count () = 0);
