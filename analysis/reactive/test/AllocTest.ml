@@ -6,7 +6,7 @@
 open TestHelpers
 
 let check_alloc =
-  match Sys.getenv_opt "RESCRIPT_REACTIVE_FIXPOINT_ASSERT" with
+  match Sys.getenv_opt "RESCRIPT_REACTIVE_SKIP_ALLOC_ASSERT" with
   | Some ("1" | "true" | "TRUE" | "yes" | "YES") -> false
   | _ -> true
 

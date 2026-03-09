@@ -44,14 +44,16 @@ type 'k t = {
   metrics: 'k metrics_state;
 }
 
+let set_add_k set k = StableSet.add set k
+let not_in_set set k = not (StableSet.mem set k)
+
 let analyze_edge_change_has_new scratch ~old_succs ~new_succs =
   if StableList.is_empty old_succs then not (StableList.is_empty new_succs)
   else if StableList.is_empty new_succs then false
-  else begin
+  else (
     StableSet.clear scratch;
-    StableList.iter (fun k -> StableSet.add scratch k) old_succs;
-    StableList.exists (fun tgt -> not (StableSet.mem scratch tgt)) new_succs
-  end
+    StableList.iter_with set_add_k scratch old_succs;
+    StableList.exists_with not_in_set scratch new_succs)
 
 let[@inline] enqueue q k = StableQueue.push q k
 
@@ -73,11 +75,11 @@ let[@inline] succs_of_maybe mv =
 (* Full-reachability BFS into [visited]. Returns (node_work, edge_work).
    [visited] is cleared before use; zero allocation when [visited] is
    pre-allocated (e.g. Metrics scratch map). *)
-let bfs_seed_root visited frontier _t k () =
+let bfs_seed (visited, frontier) k =
   StableSet.add visited k;
   StableQueue.push frontier k
 
-let bfs_visit_succ visited frontier succ =
+let bfs_visit_succ (visited, frontier) succ =
   if not (StableSet.mem visited succ) then (
     StableSet.add visited succ;
     StableQueue.push frontier succ)
@@ -88,9 +90,8 @@ let compute_reachable ~visited t =
   StableQueue.clear frontier;
   let node_work = ref 0 in
   let edge_work = ref 0 in
-  StableSet.iter_with
-    (fun (visited, frontier) k -> bfs_seed_root visited frontier t k ())
-    (visited, frontier) t.roots;
+  let vf = (visited, frontier) in
+  StableSet.iter_with (fun vf k -> bfs_seed vf k) vf t.roots;
   while not (StableQueue.is_empty frontier) do
     let k = StableQueue.pop frontier in
     incr node_work;
@@ -98,9 +99,44 @@ let compute_reachable ~visited t =
     if Maybe.is_some r then (
       let succs = succs_of_stable (Maybe.unsafe_get r) in
       edge_work := !edge_work + StableList.length succs;
-      StableList.iter_with (bfs_visit_succ visited) frontier succs)
+      StableList.iter_with bfs_visit_succ vf succs)
   done;
   (!node_work, !edge_work)
+
+(* Functions needed by Invariants — defined early to avoid closures *)
+let has_live_pred_key t pred = StableSet.mem t.current pred
+
+let has_live_predecessor t k =
+  StableMapSet.exists_inner_with t.pred_map k t has_live_pred_key
+
+let is_supported t k = StableSet.mem t.roots k || has_live_predecessor t k
+
+let old_successors t k =
+  let r = StableMap.find_maybe t.old_successors_for_changed k in
+  if Maybe.is_some r then succs_of_stable (Maybe.unsafe_get r)
+  else find_succs t.edge_map k
+
+(* BFS variant for invariants — takes t directly, zero alloc *)
+let bfs_seed_scratch t k =
+  StableSet.add t.metrics.scratch_reachable k;
+  StableQueue.push t.delete_queue k
+
+let bfs_visit_scratch t succ =
+  if not (StableSet.mem t.metrics.scratch_reachable succ) then (
+    StableSet.add t.metrics.scratch_reachable succ;
+    StableQueue.push t.delete_queue succ)
+
+let fill_reachable_scratch t =
+  StableSet.clear t.metrics.scratch_reachable;
+  StableQueue.clear t.delete_queue;
+  StableSet.iter_with bfs_seed_scratch t t.roots;
+  while not (StableQueue.is_empty t.delete_queue) do
+    let k = StableQueue.pop t.delete_queue in
+    let r = StableMap.find_maybe t.edge_map k in
+    if Maybe.is_some r then
+      StableList.iter_with bfs_visit_scratch t
+        (succs_of_stable (Maybe.unsafe_get r))
+  done
 
 module Metrics = struct
   let enabled =
@@ -226,6 +262,8 @@ module Metrics = struct
   let () = at_exit emit_summary
 end
 
+exception Sets_not_equal
+
 module Invariants = struct
   let enabled =
     match Sys.getenv_opt "RESCRIPT_REACTIVE_FIXPOINT_ASSERT" with
@@ -241,135 +279,127 @@ module Invariants = struct
   let assert_ condition message =
     if enabled && not condition then failwith message
 
+  let check_mem_b b k = if not (StableSet.mem b k) then raise Sets_not_equal
+
   let stable_set_equal a b =
     StableSet.cardinal a = StableSet.cardinal b
     &&
-    let ok = ref true in
-    StableSet.iter_with
-      (fun (ok, b) k -> if !ok && not (StableSet.mem b k) then ok := false)
-      (ok, b) a;
-    !ok
+    match StableSet.iter_with check_mem_b b a with
+    | () -> true
+    | exception Sets_not_equal -> false
 
   let copy_stable_set ~dst src =
     StableSet.clear dst;
-    StableSet.iter_with (fun dst k -> StableSet.add dst k) dst src
+    StableSet.iter_with set_add_k dst src
 
-  let assert_edge_has_new_consistent ~inv_scratch_a ~old_successors_for_changed
-      ~new_successors_for_changed ~edge_has_new =
+  (* Callbacks for assert_edge_has_new_consistent — take t directly *)
+  let check_edge_has_new_entry t src old_succs_s =
+    let old_succs = succs_of_stable old_succs_s in
+    let new_succs = find_succs t.new_successors_for_changed src in
+    let expected_has_new =
+      analyze_edge_change_has_new t.inv_scratch_a ~old_succs ~new_succs
+    in
+    let actual_has_new = StableSet.mem t.edge_has_new src in
+    assert_
+      (expected_has_new = actual_has_new)
+      "ReactiveFixpoint.apply invariant failed: inconsistent edge_has_new"
+
+  let assert_edge_has_new_consistent t =
     if enabled then
-      StableMap.iter_with
-        (fun (scratch, new_map, edge_has_new) src old_succs_s ->
-          let old_succs = succs_of_stable old_succs_s in
-          let new_succs = find_succs new_map src in
-          let expected_has_new =
-            analyze_edge_change_has_new scratch ~old_succs ~new_succs
-          in
-          let actual_has_new = StableSet.mem edge_has_new src in
-          assert_
-            (expected_has_new = actual_has_new)
-            "ReactiveFixpoint.apply invariant failed: inconsistent edge_has_new")
-        (inv_scratch_a, new_successors_for_changed, edge_has_new)
-        old_successors_for_changed
+      StableMap.iter_with check_edge_has_new_entry t
+        t.old_successors_for_changed
 
-  let assert_deleted_nodes_closed ~current ~deleted_nodes
-      ~(old_successors : 'k Stable.t -> 'k StableList.t) =
+  (* Callbacks for assert_deleted_nodes_closed — take t directly *)
+  let check_succ_in_deleted t succ =
+    if StableSet.mem t.current succ then
+      assert_
+        (StableSet.mem t.deleted_nodes succ)
+        "ReactiveFixpoint.apply invariant failed: deleted closure broken"
+
+  let check_deleted_node_closed t k =
+    assert_
+      (StableSet.mem t.current k)
+      "ReactiveFixpoint.apply invariant failed: deleted node not in current";
+    StableList.iter_with check_succ_in_deleted t (old_successors t k)
+
+  let assert_deleted_nodes_closed t =
     if enabled then
-      StableSet.iter_with
-        (fun () k ->
-          assert_ (StableSet.mem current k)
-            "ReactiveFixpoint.apply invariant failed: deleted node not in \
-             current";
-          StableList.iter
-            (fun succ ->
-              if StableSet.mem current succ then
-                assert_
-                  (StableSet.mem deleted_nodes succ)
-                  "ReactiveFixpoint.apply invariant failed: deleted closure \
-                   broken")
-            (old_successors k))
-        () deleted_nodes
+      StableSet.iter_with check_deleted_node_closed t t.deleted_nodes
 
-  let assert_no_supported_deleted_left ~deleted_nodes ~current ~supported =
+  (* Callback for assert_no_supported_deleted_left *)
+  let check_no_supported_deleted t k =
+    if not (StableSet.mem t.current k) then
+      assert_
+        (not (is_supported t k))
+        "ReactiveFixpoint.apply invariant failed: supported deleted node left \
+         behind"
+
+  let assert_no_supported_deleted_left t =
     if enabled then
-      StableSet.iter_with
-        (fun () k ->
-          if not (StableSet.mem current k) then
-            assert_
-              (not (supported k))
-              "ReactiveFixpoint.apply invariant failed: supported deleted node \
-               left behind")
-        () deleted_nodes
+      StableSet.iter_with check_no_supported_deleted t t.deleted_nodes
 
-  let assert_current_minus_deleted ~inv_scratch_a ~pre_current ~current
-      ~deleted_nodes =
+  let assert_current_minus_deleted t =
     if enabled then (
-      copy_stable_set ~dst:inv_scratch_a pre_current;
+      copy_stable_set ~dst:t.inv_scratch_a t.inv_pre_current;
       StableSet.iter_with
         (fun dst k -> StableSet.remove dst k)
-        inv_scratch_a deleted_nodes;
+        t.inv_scratch_a t.deleted_nodes;
       assert_
-        (stable_set_equal inv_scratch_a current)
+        (stable_set_equal t.inv_scratch_a t.current)
         "ReactiveFixpoint.apply invariant failed: current != pre_current minus \
          deleted")
 
-  let assert_removal_output_matches ~inv_scratch_a ~inv_scratch_b ~output_wave
-      ~deleted_nodes ~current =
+  (* Callbacks for assert_removal_output_matches / assert_final_fixpoint *)
+  let add_to_a_if_not_in_current t k =
+    if not (StableSet.mem t.current k) then StableSet.add t.inv_scratch_a k
+
+  let add_to_b_if_none dst k mv =
+    if not (Maybe.is_some (Stable.to_linear_value mv)) then StableSet.add dst k
+
+  let add_to_a_if_not_in_pre t k =
+    if not (StableSet.mem t.inv_pre_current k) then
+      StableSet.add t.inv_scratch_a k
+
+  let add_to_b_if_some dst k mv =
+    if Maybe.is_some (Stable.to_linear_value mv) then StableSet.add dst k
+
+  let assert_removal_output_matches t =
     if enabled then (
-      StableSet.clear inv_scratch_a;
-      StableSet.iter_with
-        (fun (dst, current) k ->
-          if not (StableSet.mem current k) then StableSet.add dst k)
-        (inv_scratch_a, current) deleted_nodes;
-      StableSet.clear inv_scratch_b;
-      StableWave.iter_with output_wave
-        (fun dst k mv ->
-          if not (Maybe.is_some (Stable.to_linear_value mv)) then
-            StableSet.add dst k)
-        inv_scratch_b;
+      StableSet.clear t.inv_scratch_a;
+      StableSet.iter_with add_to_a_if_not_in_current t t.deleted_nodes;
+      StableSet.clear t.inv_scratch_b;
+      StableWave.iter_with t.output_wave add_to_b_if_none t.inv_scratch_b;
       assert_
-        (stable_set_equal inv_scratch_a inv_scratch_b)
+        (stable_set_equal t.inv_scratch_a t.inv_scratch_b)
         "ReactiveFixpoint.apply invariant failed: removal output mismatch")
 
-  let assert_final_fixpoint_and_delta ~inv_scratch_a ~inv_scratch_b ~visited ~t
-      ~pre_current ~output_wave =
+  let assert_final_fixpoint_and_delta t =
     if enabled then (
-      ignore (compute_reachable ~visited t);
+      fill_reachable_scratch t;
       assert_
-        (stable_set_equal visited t.current)
+        (stable_set_equal t.metrics.scratch_reachable t.current)
         "ReactiveFixpoint.apply invariant failed: current is not a fixed-point \
          closure";
-      (* Check adds *)
-      StableSet.clear inv_scratch_a;
-      StableSet.iter_with
-        (fun (dst, pre) k -> if not (StableSet.mem pre k) then StableSet.add dst k)
-        (inv_scratch_a, pre_current) t.current;
-      StableSet.clear inv_scratch_b;
-      StableWave.iter_with output_wave
-        (fun dst k mv ->
-          if Maybe.is_some (Stable.to_linear_value mv) then StableSet.add dst k)
-        inv_scratch_b;
-      let adds_ok = stable_set_equal inv_scratch_a inv_scratch_b in
-      (* Check removes *)
-      StableSet.clear inv_scratch_a;
-      StableSet.iter_with
-        (fun (dst, current) k ->
-          if not (StableSet.mem current k) then StableSet.add dst k)
-        (inv_scratch_a, t.current) pre_current;
-      StableSet.clear inv_scratch_b;
-      StableWave.iter_with output_wave
-        (fun dst k mv ->
-          if not (Maybe.is_some (Stable.to_linear_value mv)) then
-            StableSet.add dst k)
-        inv_scratch_b;
-      let removes_ok = stable_set_equal inv_scratch_a inv_scratch_b in
+      (* Check adds: nodes in current but not in pre_current *)
+      StableSet.clear t.inv_scratch_a;
+      StableSet.iter_with add_to_a_if_not_in_pre t t.current;
+      StableSet.clear t.inv_scratch_b;
+      StableWave.iter_with t.output_wave add_to_b_if_some t.inv_scratch_b;
+      let adds_ok = stable_set_equal t.inv_scratch_a t.inv_scratch_b in
+      (* Check removes: nodes in pre_current but not in current *)
+      StableSet.clear t.inv_scratch_a;
+      StableSet.iter_with add_to_a_if_not_in_current t t.inv_pre_current;
+      StableSet.clear t.inv_scratch_b;
+      StableWave.iter_with t.output_wave add_to_b_if_none t.inv_scratch_b;
+      let removes_ok = stable_set_equal t.inv_scratch_a t.inv_scratch_b in
       if not (adds_ok && removes_ok) then
         failwith
           (Printf.sprintf
              "ReactiveFixpoint.apply invariant failed: output delta mismatch \
               (pre=%d final=%d output=%d)"
-             (StableSet.cardinal pre_current)
+             (StableSet.cardinal t.inv_pre_current)
              (StableSet.cardinal t.current)
-             (StableWave.count output_wave)))
+             (StableWave.count t.output_wave)))
 end
 
 let create ~max_nodes ~max_edges =
@@ -458,11 +488,6 @@ let add_pred t ~target ~pred = StableMapSet.add t.pred_map target pred
 let remove_pred t ~target ~pred =
   StableMapSet.remove_from_set_and_recycle_if_empty t.pred_map target pred
 
-let has_live_pred_key t pred = StableSet.mem t.current pred
-
-let has_live_predecessor t k =
-  StableMapSet.exists_inner_with t.pred_map k t has_live_pred_key
-
 let add_pred_for_src (t, src) target = add_pred t ~target ~pred:src
 let remove_pred_for_src (t, src) target = remove_pred t ~target ~pred:src
 
@@ -505,13 +530,6 @@ let initialize t ~roots ~edges =
       apply_edge_update t ~src:k ~new_successors:(succs_of_stable successors));
   recompute_current t
 
-let is_supported t k = StableSet.mem t.roots k || has_live_predecessor t k
-
-let old_successors t k =
-  let r = StableMap.find_maybe t.old_successors_for_changed k in
-  if Maybe.is_some r then succs_of_stable (Maybe.unsafe_get r)
-  else find_succs t.edge_map k
-
 let mark_deleted t k =
   if StableSet.mem t.current k && not (StableSet.mem t.deleted_nodes k) then (
     StableSet.add t.deleted_nodes k;
@@ -544,12 +562,8 @@ let scan_root_entry t k mv =
   if Maybe.is_some mv then (if not had_root then enqueue t.added_roots_queue k)
   else if had_root then mark_deleted t k
 
-let set_add_k set k = StableSet.add set k
-
 let mark_deleted_if_absent (t, set) k =
   if not (StableSet.mem set k) then mark_deleted t k
-
-let not_in_set set k = not (StableSet.mem set k)
 
 let mark_deleted_unless_in_set t set xs =
   StableList.iter_with mark_deleted_if_absent (t, set) xs
@@ -620,10 +634,7 @@ let apply_list t ~roots ~edges =
     (fun t src mv -> scan_edge_entry t src (Maybe.of_stable mv))
     t;
 
-  Invariants.assert_edge_has_new_consistent ~inv_scratch_a:t.inv_scratch_a
-    ~old_successors_for_changed:t.old_successors_for_changed
-    ~new_successors_for_changed:t.new_successors_for_changed
-    ~edge_has_new:t.edge_has_new;
+  Invariants.assert_edge_has_new_consistent t;
 
   (* Phase 2: delete BFS *)
   while not (StableQueue.is_empty t.delete_queue) do
@@ -634,9 +645,7 @@ let apply_list t ~roots ~edges =
       m.delete_edges_scanned <- m.delete_edges_scanned + StableList.length succs);
     StableList.iter_with mark_deleted t succs
   done;
-  if Invariants.enabled then
-    Invariants.assert_deleted_nodes_closed ~current:t.current
-      ~deleted_nodes:t.deleted_nodes ~old_successors:(old_successors t);
+  Invariants.assert_deleted_nodes_closed t;
 
   (* Phase 3: apply root and edge mutations *)
   StableWave.iter_with roots
@@ -654,10 +663,7 @@ let apply_list t ~roots ~edges =
   StableMap.iter_with rebuild_edge_change_queue t t.new_successors_for_changed;
 
   StableSet.iter_with remove_from_current t t.deleted_nodes;
-  if Invariants.enabled then
-    Invariants.assert_current_minus_deleted ~inv_scratch_a:t.inv_scratch_a
-      ~pre_current:t.inv_pre_current ~current:t.current
-      ~deleted_nodes:t.deleted_nodes;
+  Invariants.assert_current_minus_deleted t;
 
   (* Phase 4: rederive *)
   StableQueue.clear t.rederive_queue;
@@ -686,9 +692,7 @@ let apply_list t ~roots ~edges =
             m.rederive_edges_scanned + StableList.length succs;
         StableList.iter_with enqueue_rederive_if_needed t succs))
   done;
-  if Invariants.enabled then
-    Invariants.assert_no_supported_deleted_left ~deleted_nodes:t.deleted_nodes
-      ~current:t.current ~supported:(is_supported t);
+  Invariants.assert_no_supported_deleted_left t;
 
   (* Phase 5: expansion *)
   StableQueue.clear t.expansion_queue;
@@ -718,13 +722,8 @@ let apply_list t ~roots ~edges =
       StableList.iter_with add_live t succs)
   done;
   StableSet.iter_with (fun t k -> emit_removal t k ()) t t.deleted_nodes;
-  Invariants.assert_removal_output_matches ~inv_scratch_a:t.inv_scratch_a
-    ~inv_scratch_b:t.inv_scratch_b ~output_wave:t.output_wave
-    ~deleted_nodes:t.deleted_nodes ~current:t.current;
-  if Invariants.enabled then
-    Invariants.assert_final_fixpoint_and_delta ~inv_scratch_a:t.inv_scratch_a
-      ~inv_scratch_b:t.inv_scratch_b ~visited:t.metrics.scratch_reachable ~t
-      ~pre_current:t.inv_pre_current ~output_wave:t.output_wave;
+  Invariants.assert_removal_output_matches t;
+  Invariants.assert_final_fixpoint_and_delta t;
 
   if Metrics.enabled then
     let full_node_work, full_edge_work =
