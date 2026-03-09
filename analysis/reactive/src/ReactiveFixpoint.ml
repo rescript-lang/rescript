@@ -17,7 +17,7 @@ type 'k metrics_state = {
 
 type 'k t = {
   current: 'k StableSet.t;
-  edge_map: ('k, 'k StableList.inner) StableMap.t;
+  edge_map: ('k, 'k StableList.t) StableMap.t;
   pred_map: ('k, 'k) StableMapSet.t;
   roots: 'k StableSet.t;
   output_wave: ('k, unit Maybe.t) StableWave.t;
@@ -25,8 +25,8 @@ type 'k t = {
   deleted_nodes: 'k StableSet.t;
   rederive_pending: 'k StableSet.t;
   expansion_seen: 'k StableSet.t;
-  old_successors_for_changed: ('k, 'k StableList.inner) StableMap.t;
-  new_successors_for_changed: ('k, 'k StableList.inner) StableMap.t;
+  old_successors_for_changed: ('k, 'k StableList.t) StableMap.t;
+  new_successors_for_changed: ('k, 'k StableList.t) StableMap.t;
   (* Scratch sets for analyze_edge_change / apply_edge_update *)
   scratch_set_a: 'k StableSet.t;
   scratch_set_b: 'k StableSet.t;
@@ -57,6 +57,21 @@ let analyze_edge_change_has_new ~old_succs ~new_succs =
 let[@inline] stable_key k = Stable.unsafe_of_value k
 let[@inline] enqueue q k = StableQueue.push q k
 
+(* Helpers for StableList values stored in StableMap/StableWave.
+   The map stores 'v Stable.t, so find returns StableList.t Stable.t
+   and replace expects StableList.t Stable.t. *)
+let[@inline] succs_of_stable (s : 'a StableList.t Stable.t) : 'a StableList.t =
+  Stable.to_linear_value s
+
+let[@inline] find_succs map k =
+  let r = StableMap.find_maybe map k in
+  if Maybe.is_some r then succs_of_stable (Maybe.unsafe_get r)
+  else StableList.empty ()
+
+let[@inline] succs_of_maybe mv =
+  if Maybe.is_some mv then succs_of_stable (Maybe.unsafe_get mv)
+  else StableList.empty ()
+
 (* Full-reachability BFS into [visited]. Returns (node_work, edge_work).
    [visited] is cleared before use; zero allocation when [visited] is
    pre-allocated (e.g. Metrics scratch map). *)
@@ -83,7 +98,7 @@ let compute_reachable ~visited t =
     incr node_work;
     let r = StableMap.find_maybe t.edge_map k in
     if Maybe.is_some r then (
-      let succs = Maybe.unsafe_get r in
+      let succs = succs_of_stable (Maybe.unsafe_get r) in
       edge_work := !edge_work + StableList.length succs;
       StableList.iter_with (bfs_visit_succ visited) frontier succs)
   done;
@@ -263,16 +278,8 @@ module Invariants = struct
       (* Check each *)
       List.iter
         (fun src ->
-          let r_old = StableMap.find_maybe old_successors_for_changed src in
-          let old_succs =
-            if Maybe.is_some r_old then Maybe.unsafe_get r_old
-            else StableList.empty ()
-          in
-          let r_new = StableMap.find_maybe new_successors_for_changed src in
-          let new_succs =
-            if Maybe.is_some r_new then Maybe.unsafe_get r_new
-            else StableList.empty ()
-          in
+          let old_succs = find_succs old_successors_for_changed src in
+          let new_succs = find_succs new_successors_for_changed src in
           let expected_has_new =
             analyze_edge_change_has_new ~old_succs ~new_succs
           in
@@ -449,10 +456,10 @@ let destroy t =
 let output_wave t = t.output_wave
 
 type 'k root_wave = ('k, unit Maybe.t) StableWave.t
-type 'k edge_wave = ('k, 'k StableList.inner Maybe.t) StableWave.t
+type 'k edge_wave = ('k, 'k StableList.t Maybe.t) StableWave.t
 type 'k output_wave = ('k, unit Maybe.t) StableWave.t
 type 'k root_snapshot = ('k, unit) StableWave.t
-type 'k edge_snapshot = ('k, 'k StableList.inner) StableWave.t
+type 'k edge_snapshot = ('k, 'k StableList.t) StableWave.t
 
 let iter_current t f =
   StableSet.iter_with (fun f k -> f k Stable.unit) f t.current
@@ -478,15 +485,12 @@ let add_pred_for_src (t, src) target = add_pred t ~target ~pred:src
 let remove_pred_for_src (t, src) target = remove_pred t ~target ~pred:src
 
 let apply_edge_update t ~src ~new_successors =
-  let r = StableMap.find_maybe t.edge_map src in
-  let old_successors =
-    if Maybe.is_some r then Maybe.unsafe_get r else StableList.empty ()
-  in
+  let old_successors = find_succs t.edge_map src in
   if StableList.is_empty old_successors && StableList.is_empty new_successors
   then StableMap.remove t.edge_map src
   else if StableList.is_empty old_successors then (
     StableList.iter_with add_pred_for_src (t, src) new_successors;
-    StableMap.replace t.edge_map src new_successors)
+    StableMap.replace t.edge_map src (StableList.to_stable new_successors))
   else if StableList.is_empty new_successors then (
     StableList.iter_with remove_pred_for_src (t, src) old_successors;
     StableMap.remove t.edge_map src)
@@ -508,7 +512,7 @@ let apply_edge_update t ~src ~new_successors =
           add_pred t ~target ~pred:src)
       () new_successors;
 
-    StableMap.replace t.edge_map src new_successors)
+    StableMap.replace t.edge_map src (StableList.to_stable new_successors))
 
 let initialize t ~roots ~edges =
   StableSet.clear t.roots;
@@ -516,17 +520,15 @@ let initialize t ~roots ~edges =
   StableMapSet.clear t.pred_map;
   StableWave.iter roots (fun k _ -> StableSet.add t.roots k);
   StableWave.iter edges (fun k successors ->
-      apply_edge_update t ~src:k ~new_successors:successors);
+      apply_edge_update t ~src:k ~new_successors:(succs_of_stable successors));
   recompute_current t
 
 let is_supported t k = StableSet.mem t.roots k || has_live_predecessor t k
 
 let old_successors t k =
   let r = StableMap.find_maybe t.old_successors_for_changed k in
-  if Maybe.is_some r then Maybe.unsafe_get r
-  else
-    let r2 = StableMap.find_maybe t.edge_map k in
-    if Maybe.is_some r2 then Maybe.unsafe_get r2 else StableList.empty ()
+  if Maybe.is_some r then succs_of_stable (Maybe.unsafe_get r)
+  else find_succs t.edge_map k
 
 let mark_deleted t k =
   if StableSet.mem t.current k && not (StableSet.mem t.deleted_nodes k) then (
@@ -573,15 +575,12 @@ let mark_deleted_unless_in_set t set xs =
 let exists_not_in_set set xs = StableList.exists_with not_in_set set xs
 
 let scan_edge_entry t src mv =
-  let r = StableMap.find_maybe t.edge_map src in
-  let old_succs =
-    if Maybe.is_some r then Maybe.unsafe_get r else StableList.empty ()
-  in
-  let new_succs =
-    if Maybe.is_some mv then Maybe.unsafe_get mv else StableList.empty ()
-  in
-  StableMap.replace t.old_successors_for_changed src old_succs;
-  StableMap.replace t.new_successors_for_changed src new_succs;
+  let old_succs = find_succs t.edge_map src in
+  let new_succs = succs_of_maybe mv in
+  StableMap.replace t.old_successors_for_changed src
+    (StableList.to_stable old_succs);
+  StableMap.replace t.new_successors_for_changed src
+    (StableList.to_stable new_succs);
   enqueue t.edge_change_queue src;
   let src_is_live = StableSet.mem t.current src in
   match (old_succs, new_succs) with
@@ -668,10 +667,7 @@ let apply_list t ~roots ~edges =
   (* Apply edge updates by draining edge_change_queue. *)
   while not (StableQueue.is_empty t.edge_change_queue) do
     let src = StableQueue.pop t.edge_change_queue in
-    let r = StableMap.find_maybe t.new_successors_for_changed src in
-    let new_succs =
-      if Maybe.is_some r then Maybe.unsafe_get r else StableList.empty ()
-    in
+    let new_succs = find_succs t.new_successors_for_changed src in
     apply_edge_update t ~src ~new_successors:new_succs
   done;
   (* Rebuild edge_change_queue from new_successors_for_changed keys for
@@ -706,7 +702,7 @@ let apply_list t ~roots ~edges =
       if Metrics.enabled then m.rederived_nodes <- m.rederived_nodes + 1;
       let r = StableMap.find_maybe t.edge_map k in
       if Maybe.is_some r then (
-        let succs = Maybe.unsafe_get r in
+        let succs = succs_of_stable (Maybe.unsafe_get r) in
         if Metrics.enabled then
           m.rederive_edges_scanned <-
             m.rederive_edges_scanned + StableList.length succs;
@@ -737,7 +733,7 @@ let apply_list t ~roots ~edges =
     if Metrics.enabled then m.expansion_queue_pops <- m.expansion_queue_pops + 1;
     let r = StableMap.find_maybe t.edge_map k in
     if Maybe.is_some r then (
-      let succs = Maybe.unsafe_get r in
+      let succs = succs_of_stable (Maybe.unsafe_get r) in
       if Metrics.enabled then
         m.expansion_edges_scanned <-
           m.expansion_edges_scanned + StableList.length succs;

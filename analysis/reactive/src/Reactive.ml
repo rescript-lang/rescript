@@ -800,8 +800,8 @@ module Fixpoint = struct
 
   let stable_wave_push wave k v = StableWave.push wave k v
 
-  let create ~name ~(init : ('k, unit) t) ~(edges : ('k, 'k StableList.inner) t)
-      () : ('k, unit) t =
+  let create ~name ~(init : ('k, unit) t) ~(edges : ('k, 'k StableList.t) t) ()
+      : ('k, unit) t =
     let my_level = max init.level edges.level + 1 in
     let int_env_or name default =
       match Sys.getenv_opt name with
@@ -829,7 +829,7 @@ module Fixpoint = struct
     let subscribers = ref [] in
     let my_stats = create_stats () in
     let root_pending : ('k, unit Maybe.t) StableMap.t = StableMap.create () in
-    let edge_pending : ('k, 'k StableList.inner Maybe.t) StableMap.t =
+    let edge_pending : ('k, 'k StableList.t Maybe.t) StableMap.t =
       StableMap.create ()
     in
     let init_pending_count = ref 0 in
@@ -903,7 +903,7 @@ module Fixpoint = struct
     let init_roots_wave =
       StableWave.create ~max_entries:(max 1 (init.length ())) ()
     in
-    let init_edges_wave : ('k, 'k StableList.inner) StableWave.t =
+    let init_edges_wave : ('k, 'k StableList.t) StableWave.t =
       StableWave.create ~max_entries:(max 1 (edges.length ())) ()
     in
     StableWave.clear init_roots_wave;

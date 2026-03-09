@@ -1,23 +1,23 @@
-(** Stable-marked OCaml lists.
+(** Lists intended for storage in stable (C-allocated) containers.
 
-    The list cells are ordinary OCaml heap values. This type makes the
-    boundary explicit when such a list is stored in a stable container. *)
+    The list cells are ordinary OCaml heap values. The container that
+    stores a [StableList.t] is responsible for the [Stable.t] wrapping. *)
 
-type 'a inner
-type 'a t = 'a inner Stable.t
+type 'a t
 
 val unsafe_of_list : 'a list -> 'a t
-(** Reinterpret a list as stable-marked without checking. *)
-
-val unsafe_inner_of_list : 'a list -> 'a inner
-(** Reinterpret a list as a [StableList.inner] without checking. *)
+(** Reinterpret a list as a [StableList.t] without checking. *)
 
 val of_list : 'a list -> 'a t
 (** Checked version of [unsafe_of_list]. Raises if the list is still in the
     minor heap. *)
 
-val of_stable_list : 'a list Stable.t -> 'a t
-(** Reinterpret an already stable-marked list as a stable-list value. *)
+val to_stable : 'a t -> 'a t Stable.t
+(** Safe conversion: a [StableList.t] is always in the major heap by
+    construction, so wrapping it in [Stable.t] is safe. *)
+
+val maybe_to_stable : 'a t Maybe.t -> 'a t Maybe.t Stable.t
+(** Safe conversion for a [Maybe.t] containing a [StableList.t]. *)
 
 val empty : unit -> 'a t
 val is_empty : 'a t -> bool

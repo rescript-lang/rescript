@@ -8,7 +8,7 @@
 
 type t = {
   live: (Lexing.position, unit) Reactive.t;
-  edges: (Lexing.position, Lexing.position StableList.inner) Reactive.t;
+  edges: (Lexing.position, Lexing.position StableList.t) Reactive.t;
   roots: (Lexing.position, unit) Reactive.t;
 }
 
@@ -43,7 +43,7 @@ let create ~(merged : ReactiveMerge.t) : t =
   in
 
   (* Step 2: Convert to edges format for fixpoint: decl -> successor list *)
-  let edges : (Lexing.position, Lexing.position StableList.inner) Reactive.t =
+  let edges : (Lexing.position, Lexing.position StableList.t) Reactive.t =
     Reactive.FlatMap.create ~name:"liveness.edges" decl_refs_index
       ~f:(fun pos v wave ->
         let pos = Stable.to_linear_value pos in
@@ -52,7 +52,7 @@ let create ~(merged : ReactiveMerge.t) : t =
         StableWave.push wave
           (Stable.unsafe_of_value pos)
           (Stable.unsafe_of_value
-             (StableList.unsafe_inner_of_list (PosSet.elements all_targets))))
+             (StableList.unsafe_of_list (PosSet.elements all_targets))))
       ()
   in
 

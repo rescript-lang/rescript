@@ -4,10 +4,10 @@ type 'k t
     This implementation uses fixed-capacity arrays allocated in [create]. *)
 
 type 'k root_wave = ('k, unit Maybe.t) StableWave.t
-type 'k edge_wave = ('k, 'k StableList.inner Maybe.t) StableWave.t
+type 'k edge_wave = ('k, 'k StableList.t Maybe.t) StableWave.t
 type 'k output_wave = ('k, unit Maybe.t) StableWave.t
 type 'k root_snapshot = ('k, unit) StableWave.t
-type 'k edge_snapshot = ('k, 'k StableList.inner) StableWave.t
+type 'k edge_snapshot = ('k, 'k StableList.t) StableWave.t
 
 val create : max_nodes:int -> max_edges:int -> 'k t
 (** Create an empty state with fixed capacities.

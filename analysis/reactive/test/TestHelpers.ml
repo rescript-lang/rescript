@@ -26,7 +26,7 @@ let emit_edge_set emit k vs =
   let w = wave () in
   StableWave.clear w;
   StableWave.push w (Stable.unsafe_of_value k)
-    (Maybe.to_stable (Maybe.some (StableList.unsafe_of_list vs)));
+    (StableList.maybe_to_stable (Maybe.some (StableList.unsafe_of_list vs)));
   emit w
 
 (** Emit a single remove entry *)
@@ -70,7 +70,8 @@ let emit_edge_batch emit entries =
       match vs_opt with
       | Some vs ->
         StableWave.push w (Stable.unsafe_of_value k)
-          (Maybe.to_stable (Maybe.some (StableList.unsafe_of_list vs)))
+          (StableList.maybe_to_stable
+             (Maybe.some (StableList.unsafe_of_list vs)))
       | None -> StableWave.push w (Stable.unsafe_of_value k) Maybe.none_stable)
     entries;
   emit w

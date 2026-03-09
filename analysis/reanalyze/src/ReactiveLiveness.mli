@@ -4,7 +4,7 @@
 
 type t = {
   live: (Lexing.position, unit) Reactive.t;
-  edges: (Lexing.position, Lexing.position StableList.inner) Reactive.t;
+  edges: (Lexing.position, Lexing.position StableList.t) Reactive.t;
   roots: (Lexing.position, unit) Reactive.t;
 }
 

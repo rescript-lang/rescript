@@ -44,7 +44,7 @@ let test_fixpoint_alloc_n n =
   StableWave.push root_snap (stable_int 0) stable_unit;
   for i = 0 to n - 2 do
     StableWave.push edge_snap (stable_int i)
-      (Stable.of_value (StableList.unsafe_inner_of_list edge_values.(i)))
+      (Stable.of_value (StableList.unsafe_of_list edge_values.(i)))
   done;
   ReactiveFixpoint.initialize state ~roots:root_snap ~edges:edge_snap;
   assert (ReactiveFixpoint.current_length state = n);
@@ -382,7 +382,7 @@ let test_reactive_fixpoint_alloc_n n =
   StableWave.clear edge_wave;
   for i = 0 to n - 2 do
     StableWave.push edge_wave (stable_int i)
-      (Maybe.to_stable (Maybe.some edge_values_stable.(i)))
+      (StableList.maybe_to_stable (Maybe.some edge_values_stable.(i)))
   done;
   emit_edges edge_wave;
   let reachable = Reactive.Fixpoint.create ~name:"reachable" ~init ~edges () in
