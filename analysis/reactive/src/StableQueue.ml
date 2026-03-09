@@ -39,7 +39,10 @@ let resize (type a) (t : a t) new_cap =
     let src = slot_index t (head t + i) in
     Allocator.Block2.set fresh i (Allocator.Block2.get t src)
   done;
+  Allocator.Block2.resize t ~capacity:new_cap;
   Allocator.Block2.blit ~src:fresh ~src_pos:0 ~dst:t ~dst_pos:0 ~len:new_cap;
+  set_head t 0;
+  set_tail t old_len;
   Allocator.Block2.destroy fresh
 
 let maybe_grow_before_push t =

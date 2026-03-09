@@ -68,6 +68,10 @@ let process_files t paths =
 let process_files_batch t paths =
   StableWave.clear t.scratch_wave;
   let count = ref 0 in
+  (* Accumulate changes in an OCaml list to keep values reachable from GC roots.
+     We must not store minor-heap values directly into C-allocated scratch_wave
+     because the GC cannot update pointers in C memory when it moves objects. *)
+  let changes = ref [] in
   List.iter
     (fun path ->
       let new_id = get_file_id path in
@@ -77,12 +81,19 @@ let process_files_batch t paths =
         let raw = t.internal.read_file path in
         let value = t.internal.process path raw in
         Hashtbl.replace t.internal.cache path (new_id, value);
-        StableWave.push t.scratch_wave
-          (Stable.unsafe_of_value path)
-          (Stable.unsafe_of_value (Maybe.some value));
+        changes := (path, value) :: !changes;
         incr count)
     paths;
-  if !count > 0 then t.emit t.scratch_wave;
+  if !count > 0 then (
+    (* Promote all values to the major heap. After this, addresses are stable
+       (minor GC never moves major-heap objects, and we don't compact). *)
+    Gc.full_major ();
+    List.iter
+      (fun (path, value) ->
+        StableWave.push t.scratch_wave (Stable.of_value path)
+          (Stable.of_value (Maybe.some value)))
+      !changes;
+    t.emit t.scratch_wave);
   !count
 
 (** Remove a file *)
