@@ -27,6 +27,9 @@ val mem : 'a t -> 'a Stable.t -> bool
 val iter_with : ('b -> 'a Stable.t -> unit) -> 'b -> 'a t -> unit
 (** [iter_with f arg t] calls [f arg x] for each element. *)
 
+val iter_with2 : ('b -> 'c -> 'a Stable.t -> unit) -> 'b -> 'c -> 'a t -> unit
+(** [iter_with2 f arg1 arg2 t] calls [f arg1 arg2 x] for each element. *)
+
 val exists_with : ('b -> 'a Stable.t -> bool) -> 'b -> 'a t -> bool
 (** [exists_with f arg t] returns [true] if [f arg x] holds for some element. *)
 

@@ -37,10 +37,6 @@ type 'k t = {
   expansion_queue: 'k StableQueue.t;
   added_roots_queue: 'k StableQueue.t;
   edge_change_queue: 'k StableQueue.t;
-  (* Scratch sets for Invariants — allocated once, zero-alloc when used *)
-  inv_pre_current: 'k StableSet.t;
-  inv_scratch_a: 'k StableSet.t;
-  inv_scratch_b: 'k StableSet.t;
   metrics: 'k metrics_state;
 }
 
@@ -277,24 +273,24 @@ module Invariants = struct
   let assert_ condition message =
     if enabled && not condition then failwith message
 
-  (* Callbacks for assert_edge_has_new_consistent — take t directly *)
-  let check_edge_has_new_entry t src old_succs_s =
+  (* Callbacks for assert_edge_has_new_consistent *)
+  let check_edge_has_new_entry old_succs_set t src old_succs_s =
     let old_succs = succs_of_stable old_succs_s in
     let new_succs = find_succs t.new_successors_for_changed src in
-    let expected_has_new =
-      analyze_edge_change_has_new t.inv_scratch_a ~old_succs ~new_succs
+    let recomputed =
+      analyze_edge_change_has_new old_succs_set ~old_succs ~new_succs
     in
-    let actual_has_new = StableSet.mem t.edge_has_new src in
     assert_
-      (expected_has_new = actual_has_new)
+      (recomputed = StableSet.mem t.edge_has_new src)
       "ReactiveFixpoint.apply invariant failed: inconsistent edge_has_new"
 
-  let assert_edge_has_new_consistent t =
-    if enabled then
-      StableMap.iter_with check_edge_has_new_entry t
-        t.old_successors_for_changed
+  let assert_edge_has_new_consistent old_succs_set t =
+    if enabled && Maybe.is_some old_succs_set then
+      StableMap.iter_with2 check_edge_has_new_entry
+        (Maybe.unsafe_get old_succs_set)
+        t t.old_successors_for_changed
 
-  (* Callbacks for assert_deleted_nodes_closed — take t directly *)
+  (* Callbacks for assert_deleted_nodes_closed *)
   let check_succ_in_deleted t succ =
     if StableSet.mem t.current succ then
       assert_
@@ -323,66 +319,72 @@ module Invariants = struct
     if enabled then
       StableSet.iter_with check_no_supported_deleted t t.deleted_nodes
 
-  let assert_current_minus_deleted t =
-    if enabled then (
-      StableSet.copy ~dst:t.inv_scratch_a t.inv_pre_current;
-      StableSet.iter_with
-        (fun dst k -> StableSet.remove dst k)
-        t.inv_scratch_a t.deleted_nodes;
+  let remove_from_set dst k = StableSet.remove dst k
+
+  let assert_current_minus_deleted ~pre_current ~expected t =
+    if enabled && Maybe.is_some pre_current && Maybe.is_some expected then (
+      let pre_current = Maybe.unsafe_get pre_current in
+      let expected = Maybe.unsafe_get expected in
+      StableSet.copy ~dst:expected pre_current;
+      StableSet.iter_with remove_from_set expected t.deleted_nodes;
       assert_
-        (StableSet.equal t.inv_scratch_a t.current)
+        (StableSet.equal expected t.current)
         "ReactiveFixpoint.apply invariant failed: current != pre_current minus \
          deleted")
 
   (* Callbacks for assert_removal_output_matches / assert_final_fixpoint *)
-  let add_to_a_if_not_in_current t k =
-    if not (StableSet.mem t.current k) then StableSet.add t.inv_scratch_a k
+  let add_if_not_in_set ref_set dst k =
+    if not (StableSet.mem ref_set k) then StableSet.add dst k
 
-  let add_to_b_if_none dst k mv =
+  let add_to_set_if_none dst k mv =
     if not (Maybe.is_some (Stable.to_linear_value mv)) then StableSet.add dst k
 
-  let add_to_a_if_not_in_pre t k =
-    if not (StableSet.mem t.inv_pre_current k) then
-      StableSet.add t.inv_scratch_a k
-
-  let add_to_b_if_some dst k mv =
+  let add_to_set_if_some dst k mv =
     if Maybe.is_some (Stable.to_linear_value mv) then StableSet.add dst k
 
-  let assert_removal_output_matches t =
-    if enabled then (
-      StableSet.clear t.inv_scratch_a;
-      StableSet.iter_with add_to_a_if_not_in_current t t.deleted_nodes;
-      StableSet.clear t.inv_scratch_b;
-      StableWave.iter_with t.output_wave add_to_b_if_none t.inv_scratch_b;
+  let assert_removal_output_matches ~expected ~actual t =
+    if enabled && Maybe.is_some expected && Maybe.is_some actual then (
+      let expected = Maybe.unsafe_get expected in
+      let actual = Maybe.unsafe_get actual in
+      StableSet.clear expected;
+      StableSet.iter_with2 add_if_not_in_set t.current expected t.deleted_nodes;
+      StableSet.clear actual;
+      StableWave.iter_with t.output_wave add_to_set_if_none actual;
       assert_
-        (StableSet.equal t.inv_scratch_a t.inv_scratch_b)
+        (StableSet.equal expected actual)
         "ReactiveFixpoint.apply invariant failed: removal output mismatch")
 
-  let assert_final_fixpoint_and_delta t =
-    if enabled then (
+  let assert_final_fixpoint_and_delta ~pre_current ~expected ~actual t =
+    if
+      enabled && Maybe.is_some pre_current && Maybe.is_some expected
+      && Maybe.is_some actual
+    then (
+      let pre_current = Maybe.unsafe_get pre_current in
+      let expected = Maybe.unsafe_get expected in
+      let actual = Maybe.unsafe_get actual in
       fill_reachable_scratch t;
       assert_
         (StableSet.equal t.metrics.scratch_reachable t.current)
         "ReactiveFixpoint.apply invariant failed: current is not a fixed-point \
          closure";
       (* Check adds: nodes in current but not in pre_current *)
-      StableSet.clear t.inv_scratch_a;
-      StableSet.iter_with add_to_a_if_not_in_pre t t.current;
-      StableSet.clear t.inv_scratch_b;
-      StableWave.iter_with t.output_wave add_to_b_if_some t.inv_scratch_b;
-      let adds_ok = StableSet.equal t.inv_scratch_a t.inv_scratch_b in
+      StableSet.clear expected;
+      StableSet.iter_with2 add_if_not_in_set pre_current expected t.current;
+      StableSet.clear actual;
+      StableWave.iter_with t.output_wave add_to_set_if_some actual;
+      let adds_ok = StableSet.equal expected actual in
       (* Check removes: nodes in pre_current but not in current *)
-      StableSet.clear t.inv_scratch_a;
-      StableSet.iter_with add_to_a_if_not_in_current t t.inv_pre_current;
-      StableSet.clear t.inv_scratch_b;
-      StableWave.iter_with t.output_wave add_to_b_if_none t.inv_scratch_b;
-      let removes_ok = StableSet.equal t.inv_scratch_a t.inv_scratch_b in
+      StableSet.clear expected;
+      StableSet.iter_with2 add_if_not_in_set t.current expected pre_current;
+      StableSet.clear actual;
+      StableWave.iter_with t.output_wave add_to_set_if_none actual;
+      let removes_ok = StableSet.equal expected actual in
       if not (adds_ok && removes_ok) then
         failwith
           (Printf.sprintf
              "ReactiveFixpoint.apply invariant failed: output delta mismatch \
               (pre=%d final=%d output=%d)"
-             (StableSet.cardinal t.inv_pre_current)
+             (StableSet.cardinal pre_current)
              (StableSet.cardinal t.current)
              (StableWave.count t.output_wave)))
 end
@@ -410,9 +412,6 @@ let create ~max_nodes ~max_edges =
     expansion_queue = StableQueue.create ();
     added_roots_queue = StableQueue.create ();
     edge_change_queue = StableQueue.create ();
-    inv_pre_current = StableSet.create ();
-    inv_scratch_a = StableSet.create ();
-    inv_scratch_b = StableSet.create ();
     new_successors_for_changed = StableMap.create ();
     metrics =
       {
@@ -445,9 +444,6 @@ let destroy t =
   StableQueue.destroy t.expansion_queue;
   StableQueue.destroy t.added_roots_queue;
   StableQueue.destroy t.edge_change_queue;
-  StableSet.destroy t.inv_pre_current;
-  StableSet.destroy t.inv_scratch_a;
-  StableSet.destroy t.inv_scratch_b;
   StableSet.destroy t.metrics.scratch_reachable;
   StableWave.destroy t.output_wave
 let output_wave t = t.output_wave
@@ -594,7 +590,18 @@ let remove_from_current t k = StableSet.remove t.current k
 let enqueue_rederive_if_needed_kv t k = enqueue_rederive_if_needed t k
 
 let apply_list t ~roots ~edges =
-  if Invariants.enabled then StableSet.copy ~dst:t.inv_pre_current t.current;
+  (* Create scratch sets for invariant checks — only real when enabled *)
+  let pre_current =
+    if Invariants.enabled then Maybe.some (StableSet.create ()) else Maybe.none
+  in
+  let expected =
+    if Invariants.enabled then Maybe.some (StableSet.create ()) else Maybe.none
+  in
+  let actual =
+    if Invariants.enabled then Maybe.some (StableSet.create ()) else Maybe.none
+  in
+  if Invariants.enabled then
+    StableSet.copy ~dst:(Maybe.unsafe_get pre_current) t.current;
   (* Clear all scratch state up front *)
   StableSet.clear t.deleted_nodes;
   StableQueue.clear t.delete_queue;
@@ -618,7 +625,7 @@ let apply_list t ~roots ~edges =
     (fun t src mv -> scan_edge_entry t src (Maybe.of_stable mv))
     t;
 
-  Invariants.assert_edge_has_new_consistent t;
+  Invariants.assert_edge_has_new_consistent expected t;
 
   (* Phase 2: delete BFS *)
   while not (StableQueue.is_empty t.delete_queue) do
@@ -647,7 +654,7 @@ let apply_list t ~roots ~edges =
   StableMap.iter_with rebuild_edge_change_queue t t.new_successors_for_changed;
 
   StableSet.iter_with remove_from_current t t.deleted_nodes;
-  Invariants.assert_current_minus_deleted t;
+  Invariants.assert_current_minus_deleted ~pre_current ~expected t;
 
   (* Phase 4: rederive *)
   StableQueue.clear t.rederive_queue;
@@ -706,8 +713,12 @@ let apply_list t ~roots ~edges =
       StableList.iter_with add_live t succs)
   done;
   StableSet.iter_with (fun t k -> emit_removal t k ()) t t.deleted_nodes;
-  Invariants.assert_removal_output_matches t;
-  Invariants.assert_final_fixpoint_and_delta t;
+  Invariants.assert_removal_output_matches ~expected ~actual t;
+  Invariants.assert_final_fixpoint_and_delta ~pre_current ~expected ~actual t;
+  if Invariants.enabled then (
+    StableSet.destroy (Maybe.unsafe_get pre_current);
+    StableSet.destroy (Maybe.unsafe_get expected);
+    StableSet.destroy (Maybe.unsafe_get actual));
 
   if Metrics.enabled then
     let full_node_work, full_edge_work =

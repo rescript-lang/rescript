@@ -169,5 +169,14 @@ let iter_with f arg t =
       if k != empty && k != tomb then f arg k (get_val t i)
     done
 
+let iter_with2 f arg1 arg2 t =
+  let empty : 'k Stable.t = empty_slot () in
+  let tomb : 'k Stable.t = tomb_slot () in
+  if population t > 0 then
+    for i = 0 to pair_capacity t - 1 do
+      let k = get_key t i in
+      if k != empty && k != tomb then f arg1 arg2 k (get_val t i)
+    done
+
 let iter f t = iter_with (fun f k v -> f k v) f t
 let cardinal = population

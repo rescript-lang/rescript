@@ -138,6 +138,14 @@ let iter_with (type a k) (f : a -> k Stable.t -> unit) (arg : a) (t : k t) =
       if x != empty_sentinel () && x != tomb_sentinel () then f arg x
     done
 
+let iter_with2 (type a b k) (f : a -> b -> k Stable.t -> unit) (arg1 : a)
+    (arg2 : b) (t : k t) =
+  if population t > 0 then
+    for i = 0 to slot_capacity t - 1 do
+      let x = Allocator.Block2.get t i in
+      if x != empty_sentinel () && x != tomb_sentinel () then f arg1 arg2 x
+    done
+
 let exists_with (type a k) (f : a -> k Stable.t -> bool) (arg : a) (t : k t) =
   let found = ref false in
   let done_ = ref false in
