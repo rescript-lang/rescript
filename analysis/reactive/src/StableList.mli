@@ -22,7 +22,7 @@ val of_stable_list : 'a list Stable.t -> 'a t
 val empty : unit -> 'a t
 val is_empty : 'a t -> bool
 val length : 'a t -> int
-val iter : ('a -> unit) -> 'a t -> unit
-val iter_with : ('b -> 'a -> unit) -> 'b -> 'a t -> unit
-val exists : ('a -> bool) -> 'a t -> bool
-val exists_with : ('b -> 'a -> bool) -> 'b -> 'a t -> bool
+val iter : ('a Stable.t -> unit) -> 'a t -> unit
+val iter_with : ('b -> 'a Stable.t -> unit) -> 'b -> 'a t -> unit
+val exists : ('a Stable.t -> bool) -> 'a t -> bool
+val exists_with : ('b -> 'a Stable.t -> bool) -> 'b -> 'a t -> bool
