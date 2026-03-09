@@ -263,6 +263,13 @@ send_request() {
   # shellcheck disable=SC2086
   "$TOOLS_BIN" reanalyze $REANALYZE_ARGS > "$output_file" 2>/dev/null
   time_end "$label"
+  # Check that the server is still alive
+  if ! kill -0 "$SERVER_PID" 2>/dev/null; then
+    log_error "Server crashed during $label request!"
+    log_error "Server log:"
+    cat /tmp/reanalyze-server-$$.log
+    return 1
+  fi
 }
 
 # Run standalone (non-reactive) analysis for comparison
