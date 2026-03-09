@@ -42,7 +42,7 @@ type t = {
 
 (** {1 Creation} *)
 
-val create : (string, DceFileProcessing.file_data option) Reactive.t -> t
+val create : (string, DceFileProcessing.file_data Maybe.t) Reactive.t -> t
 (** Create reactive merge from a file data collection.
     All derived collections update automatically when source changes. *)
 

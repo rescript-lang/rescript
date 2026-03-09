@@ -133,17 +133,19 @@ let process_files ~(collection : t) ~config:_ cmtFilePaths :
 let length (collection : t) = ReactiveFileCollection.length collection
 
 (** Get the underlying reactive collection for composition.
-    Returns (path, file_data option) suitable for ReactiveMerge. *)
+    Returns (path, file_data Maybe.t) suitable for ReactiveMerge.
+    Uses Maybe instead of option for zero allocation. *)
 let to_file_data_collection (collection : t) :
-    (string, DceFileProcessing.file_data option) Reactive.t =
+    (string, DceFileProcessing.file_data Maybe.t) Reactive.t =
   Reactive.FlatMap.create ~name:"file_data_collection"
     (ReactiveFileCollection.to_collection collection)
     ~f:(fun path result_opt wave ->
       let result_opt = Stable.to_linear_value result_opt in
       match result_opt with
       | Some {dce_data = Some data; _} ->
-        StableWave.push wave path (Stable.unsafe_of_value (Some data))
-      | _ -> StableWave.push wave path (Stable.unsafe_of_value None))
+        StableWave.push wave path
+          (Maybe.to_stable (Maybe.some (Stable.unsafe_of_value data)))
+      | _ -> StableWave.push wave path Maybe.none_stable)
     ()
 
 (** Iterate over all file_data in the collection *)

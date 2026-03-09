@@ -21,16 +21,18 @@ type t = {
 
 (** {1 Creation} *)
 
-let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
+let create (source : (string, DceFileProcessing.file_data Maybe.t) Reactive.t) :
     t =
   (* Declarations: (pos, Decl.t) with last-write-wins *)
   let decls =
     Reactive.FlatMap.create ~name:"decls" source
-      ~f:(fun _path file_data_opt wave ->
-        let file_data_opt = Stable.to_linear_value file_data_opt in
-        match file_data_opt with
-        | None -> ()
-        | Some file_data ->
+      ~f:(fun _path file_data_maybe wave ->
+        let file_data_maybe = Maybe.of_stable file_data_maybe in
+        if Maybe.is_none file_data_maybe then ()
+        else
+          let file_data =
+            Stable.to_linear_value (Maybe.unsafe_get file_data_maybe)
+          in
           Declarations.builder_to_list file_data.DceFileProcessing.decls
           |> List.iter (fun (k, v) ->
                  StableWave.push wave (Stable.unsafe_of_value k)
@@ -41,11 +43,13 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
   (* Annotations: (pos, annotated_as) with last-write-wins *)
   let annotations =
     Reactive.FlatMap.create ~name:"annotations" source
-      ~f:(fun _path file_data_opt wave ->
-        let file_data_opt = Stable.to_linear_value file_data_opt in
-        match file_data_opt with
-        | None -> ()
-        | Some file_data ->
+      ~f:(fun _path file_data_maybe wave ->
+        let file_data_maybe = Maybe.of_stable file_data_maybe in
+        if Maybe.is_none file_data_maybe then ()
+        else
+          let file_data =
+            Stable.to_linear_value (Maybe.unsafe_get file_data_maybe)
+          in
           FileAnnotations.builder_to_list
             file_data.DceFileProcessing.annotations
           |> List.iter (fun (k, v) ->
@@ -57,11 +61,13 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
   (* Value refs_from: (posFrom, PosSet of targets) with PosSet.union merge *)
   let value_refs_from =
     Reactive.FlatMap.create ~name:"value_refs_from" source
-      ~f:(fun _path file_data_opt wave ->
-        let file_data_opt = Stable.to_linear_value file_data_opt in
-        match file_data_opt with
-        | None -> ()
-        | Some file_data ->
+      ~f:(fun _path file_data_maybe wave ->
+        let file_data_maybe = Maybe.of_stable file_data_maybe in
+        if Maybe.is_none file_data_maybe then ()
+        else
+          let file_data =
+            Stable.to_linear_value (Maybe.unsafe_get file_data_maybe)
+          in
           References.builder_value_refs_from_list
             file_data.DceFileProcessing.refs
           |> List.iter (fun (k, v) ->
@@ -76,11 +82,13 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
   (* Type refs_from: (posFrom, PosSet of targets) with PosSet.union merge *)
   let type_refs_from =
     Reactive.FlatMap.create ~name:"type_refs_from" source
-      ~f:(fun _path file_data_opt wave ->
-        let file_data_opt = Stable.to_linear_value file_data_opt in
-        match file_data_opt with
-        | None -> ()
-        | Some file_data ->
+      ~f:(fun _path file_data_maybe wave ->
+        let file_data_maybe = Maybe.of_stable file_data_maybe in
+        if Maybe.is_none file_data_maybe then ()
+        else
+          let file_data =
+            Stable.to_linear_value (Maybe.unsafe_get file_data_maybe)
+          in
           References.builder_type_refs_from_list
             file_data.DceFileProcessing.refs
           |> List.iter (fun (k, v) ->
@@ -95,11 +103,13 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
   (* Cross-file items: (path, CrossFileItems.t) with merge by concatenation *)
   let cross_file_items =
     Reactive.FlatMap.create ~name:"cross_file_items" source
-      ~f:(fun path file_data_opt wave ->
-        let file_data_opt = Stable.to_linear_value file_data_opt in
-        match file_data_opt with
-        | None -> ()
-        | Some file_data ->
+      ~f:(fun path file_data_maybe wave ->
+        let file_data_maybe = Maybe.of_stable file_data_maybe in
+        if Maybe.is_none file_data_maybe then ()
+        else
+          let file_data =
+            Stable.to_linear_value (Maybe.unsafe_get file_data_maybe)
+          in
           let items =
             CrossFileItems.builder_to_t file_data.DceFileProcessing.cross_file
           in
@@ -120,11 +130,13 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
   (* File deps map: (from_file, FileSet of to_files) with FileSet.union merge *)
   let file_deps_map =
     Reactive.FlatMap.create ~name:"file_deps_map" source
-      ~f:(fun _path file_data_opt wave ->
-        let file_data_opt = Stable.to_linear_value file_data_opt in
-        match file_data_opt with
-        | None -> ()
-        | Some file_data ->
+      ~f:(fun _path file_data_maybe wave ->
+        let file_data_maybe = Maybe.of_stable file_data_maybe in
+        if Maybe.is_none file_data_maybe then ()
+        else
+          let file_data =
+            Stable.to_linear_value (Maybe.unsafe_get file_data_maybe)
+          in
           FileDeps.builder_deps_to_list file_data.DceFileProcessing.file_deps
           |> List.iter (fun (k, v) ->
                  StableWave.push wave (Stable.unsafe_of_value k)
@@ -138,11 +150,13 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
   (* Files set: (source_path, ()) - just track which source files exist *)
   let files =
     Reactive.FlatMap.create ~name:"files" source
-      ~f:(fun _cmt_path file_data_opt wave ->
-        let file_data_opt = Stable.to_linear_value file_data_opt in
-        match file_data_opt with
-        | None -> ()
-        | Some file_data ->
+      ~f:(fun _cmt_path file_data_maybe wave ->
+        let file_data_maybe = Maybe.of_stable file_data_maybe in
+        if Maybe.is_none file_data_maybe then ()
+        else
+          let file_data =
+            Stable.to_linear_value (Maybe.unsafe_get file_data_maybe)
+          in
           let file_set =
             FileDeps.builder_files file_data.DceFileProcessing.file_deps
           in
