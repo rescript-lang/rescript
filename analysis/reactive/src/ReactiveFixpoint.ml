@@ -262,8 +262,6 @@ module Metrics = struct
   let () = at_exit emit_summary
 end
 
-exception Sets_not_equal
-
 module Invariants = struct
   let enabled =
     match Sys.getenv_opt "RESCRIPT_REACTIVE_FIXPOINT_ASSERT" with
@@ -278,19 +276,6 @@ module Invariants = struct
 
   let assert_ condition message =
     if enabled && not condition then failwith message
-
-  let check_mem_b b k = if not (StableSet.mem b k) then raise Sets_not_equal
-
-  let stable_set_equal a b =
-    StableSet.cardinal a = StableSet.cardinal b
-    &&
-    match StableSet.iter_with check_mem_b b a with
-    | () -> true
-    | exception Sets_not_equal -> false
-
-  let copy_stable_set ~dst src =
-    StableSet.clear dst;
-    StableSet.iter_with set_add_k dst src
 
   (* Callbacks for assert_edge_has_new_consistent — take t directly *)
   let check_edge_has_new_entry t src old_succs_s =
@@ -340,12 +325,12 @@ module Invariants = struct
 
   let assert_current_minus_deleted t =
     if enabled then (
-      copy_stable_set ~dst:t.inv_scratch_a t.inv_pre_current;
+      StableSet.copy ~dst:t.inv_scratch_a t.inv_pre_current;
       StableSet.iter_with
         (fun dst k -> StableSet.remove dst k)
         t.inv_scratch_a t.deleted_nodes;
       assert_
-        (stable_set_equal t.inv_scratch_a t.current)
+        (StableSet.equal t.inv_scratch_a t.current)
         "ReactiveFixpoint.apply invariant failed: current != pre_current minus \
          deleted")
 
@@ -370,14 +355,14 @@ module Invariants = struct
       StableSet.clear t.inv_scratch_b;
       StableWave.iter_with t.output_wave add_to_b_if_none t.inv_scratch_b;
       assert_
-        (stable_set_equal t.inv_scratch_a t.inv_scratch_b)
+        (StableSet.equal t.inv_scratch_a t.inv_scratch_b)
         "ReactiveFixpoint.apply invariant failed: removal output mismatch")
 
   let assert_final_fixpoint_and_delta t =
     if enabled then (
       fill_reachable_scratch t;
       assert_
-        (stable_set_equal t.metrics.scratch_reachable t.current)
+        (StableSet.equal t.metrics.scratch_reachable t.current)
         "ReactiveFixpoint.apply invariant failed: current is not a fixed-point \
          closure";
       (* Check adds: nodes in current but not in pre_current *)
@@ -385,13 +370,13 @@ module Invariants = struct
       StableSet.iter_with add_to_a_if_not_in_pre t t.current;
       StableSet.clear t.inv_scratch_b;
       StableWave.iter_with t.output_wave add_to_b_if_some t.inv_scratch_b;
-      let adds_ok = stable_set_equal t.inv_scratch_a t.inv_scratch_b in
+      let adds_ok = StableSet.equal t.inv_scratch_a t.inv_scratch_b in
       (* Check removes: nodes in pre_current but not in current *)
       StableSet.clear t.inv_scratch_a;
       StableSet.iter_with add_to_a_if_not_in_current t t.inv_pre_current;
       StableSet.clear t.inv_scratch_b;
       StableWave.iter_with t.output_wave add_to_b_if_none t.inv_scratch_b;
-      let removes_ok = stable_set_equal t.inv_scratch_a t.inv_scratch_b in
+      let removes_ok = StableSet.equal t.inv_scratch_a t.inv_scratch_b in
       if not (adds_ok && removes_ok) then
         failwith
           (Printf.sprintf
@@ -609,8 +594,7 @@ let remove_from_current t k = StableSet.remove t.current k
 let enqueue_rederive_if_needed_kv t k = enqueue_rederive_if_needed t k
 
 let apply_list t ~roots ~edges =
-  if Invariants.enabled then
-    Invariants.copy_stable_set ~dst:t.inv_pre_current t.current;
+  if Invariants.enabled then StableSet.copy ~dst:t.inv_pre_current t.current;
   (* Clear all scratch state up front *)
   StableSet.clear t.deleted_nodes;
   StableQueue.clear t.delete_queue;

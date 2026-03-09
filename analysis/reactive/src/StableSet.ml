@@ -151,4 +151,26 @@ let exists_with (type a k) (f : a -> k Stable.t -> bool) (arg : a) (t : k t) =
   done;
   !found
 
+let equal (type a) (a : a t) (b : a t) =
+  population a = population b
+  &&
+  let ok = ref true in
+  let i = ref 0 in
+  let cap = slot_capacity a in
+  while !ok && !i < cap do
+    let x = Allocator.Block2.get a !i in
+    if x != empty_sentinel () && x != tomb_sentinel () && not (mem b x) then
+      ok := false;
+    incr i
+  done;
+  !ok
+
+let copy ~dst src =
+  clear dst;
+  if population src > 0 then
+    for i = 0 to slot_capacity src - 1 do
+      let x = Allocator.Block2.get src i in
+      if x != empty_sentinel () && x != tomb_sentinel () then add dst x
+    done
+
 let cardinal = population

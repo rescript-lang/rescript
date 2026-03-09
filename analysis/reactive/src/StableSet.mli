@@ -30,5 +30,11 @@ val iter_with : ('b -> 'a Stable.t -> unit) -> 'b -> 'a t -> unit
 val exists_with : ('b -> 'a Stable.t -> bool) -> 'b -> 'a t -> bool
 (** [exists_with f arg t] returns [true] if [f arg x] holds for some element. *)
 
+val equal : 'a t -> 'a t -> bool
+(** [equal a b] returns [true] if both sets contain the same elements. *)
+
+val copy : dst:'a t -> 'a t -> unit
+(** [copy ~dst src] clears [dst] then adds all elements of [src] to it. *)
+
 val cardinal : 'a t -> int
 (** Number of elements currently stored. *)
