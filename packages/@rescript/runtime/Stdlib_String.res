@@ -182,7 +182,13 @@ external substringToEnd: (string, ~start: int) => string = "substring"
 @send external padStart: (string, int, string) => string = "padStart"
 @send external padEnd: (string, int, string) => string = "padEnd"
 
-@send external localeCompare: (string, string) => float = "localeCompare"
+@send
+external localeCompare: (
+  string,
+  string,
+  ~locales: array<string>=?,
+  ~options: Stdlib_Intl_Collator.options=?,
+) => float = "localeCompare"
 
 let isEmpty = s => length(s) == 0
 
