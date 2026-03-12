@@ -64,7 +64,7 @@ type let_kind = Lambda.let_kind = Strict | Alias | StrictOpt | Variable
 
 type field_dbg_info = Lambda.field_dbg_info =
   | Fld_record of {name: string; mutable_flag: Asttypes.mutable_flag}
-  | Fld_module of {name: string}
+  | Fld_module of {name: string; jsx_component: bool}
   | Fld_record_inline of {name: string}
   | Fld_record_extension of {name: string}
   | Fld_tuple

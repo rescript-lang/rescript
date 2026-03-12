@@ -232,6 +232,64 @@ type initialization = J.block
 *)
 
 let compile output_prefix =
+  let root_module_name (id : Ident.t) =
+    match String.index_opt id.name '$' with
+    | Some index -> String.sub id.name 0 index
+    | None -> id.name
+  in
+  let rec extract_nested_external_component_segments segments
+      ((lam : Lam.t), (make_dynamic_import : bool option ref)) :
+      (Ident.t * bool * string list) option =
+    match lam with
+    | Lprim
+        {
+          primitive = Pfield (_, Fld_module {name; jsx_component = _});
+          args = [arg];
+          _;
+        } ->
+      extract_nested_external_component_segments (name :: segments)
+        (arg, make_dynamic_import)
+    | Lvar id ->
+      make_dynamic_import := Some false;
+      Some (id, false, List.rev segments)
+    | Lglobal_module (id, dynamic_import) ->
+      make_dynamic_import := Some dynamic_import;
+      Some (id, dynamic_import, List.rev segments)
+    | _ -> None
+  in
+  let extract_nested_external_component_field (lam : Lam.t) :
+      (Ident.t * bool * string) option =
+    match lam with
+    | Lprim
+        {
+          primitive = Pfield (_, Fld_module {name = "make"; jsx_component = _});
+          args = [arg];
+          _;
+        } -> (
+      let dynamic_import = ref None in
+      match
+        extract_nested_external_component_segments [] (arg, dynamic_import)
+      with
+      | Some (id, dynamic_import, segments) -> (
+        let segments =
+          match segments with
+          | head :: rest
+            when head = id.name
+                 || head = root_module_name id
+                 || Ext_string.starts_with head (root_module_name id ^ "$") ->
+            rest
+          | _ -> segments
+        in
+        match segments with
+        | [] -> None
+        | _ ->
+          Some
+            ( id,
+              dynamic_import,
+              String.concat "$" (root_module_name id :: segments) ))
+      | None -> None)
+    | _ -> None
+  in
   let rec compile_external_field (* Like [List.empty]*)
       ?(dynamic_import = false) (lamba_cxt : Lam_compile_context.t)
       (id : Ident.t) name : Js_output.t =
@@ -299,6 +357,17 @@ let compile output_prefix =
               | {block; value = Some b} ->
                 (Ext_list.append block args_code, b :: args)
               | _ -> assert false)
+      in
+      let args =
+        if appinfo.ap_transformed_jsx then
+          match (appinfo.ap_args, args) with
+          | jsx_tag :: _, _ :: rest_args -> (
+            match extract_nested_external_component_field jsx_tag with
+            | Some (id, dynamic_import, hidden_name) ->
+              E.ml_var_dot ~dynamic_import id hidden_name :: rest_args
+            | None -> args)
+          | _ -> args
+        else args
       in
 
       let fn = E.ml_var_dot ~dynamic_import module_id ident_info.name in
@@ -1524,6 +1593,17 @@ let compile output_prefix =
               (Ext_list.append block args_code, b :: fn_code)
             | {value = None} -> assert false)
       in
+      let args =
+        if appinfo.ap_transformed_jsx then
+          match (appinfo.ap_args, args) with
+          | jsx_tag :: _, _ :: rest_args -> (
+            match extract_nested_external_component_field jsx_tag with
+            | Some (id, dynamic_import, hidden_name) ->
+              E.ml_var_dot ~dynamic_import id hidden_name :: rest_args
+            | None -> args)
+          | _ -> args
+        else args
+      in
       match (ap_func, lambda_cxt.continuation) with
       | ( Lvar fn_id,
           ( EffectCall (Maybe_tail_is_return (Tail_with_name {label = Some ret}))
@@ -1583,6 +1663,48 @@ let compile output_prefix =
   and compile_prim (prim_info : Lam.prim_info)
       (lambda_cxt : Lam_compile_context.t) =
     match prim_info with
+    | {
+     primitive =
+       Pjs_call
+         {
+           prim_name = "jsx" | "jsxs" | "jsxKeyed" | "jsxsKeyed";
+           transformed_jsx = true;
+           _;
+         };
+     args = jsx_tag :: rest_args;
+     loc;
+    } ->
+      let new_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
+      let tag_block, tag_expr =
+        match extract_nested_external_component_field jsx_tag with
+        | Some (id, dynamic_import, hidden_name) -> (
+          match
+            Lam_compile_env.query_external_id_info ~dynamic_import id
+              (hidden_name ^ "$jsx")
+          with
+          | exception Not_found -> (
+            match compile_lambda new_cxt jsx_tag with
+            | {block; value = Some b} -> (block, b)
+            | {value = None} -> assert false)
+          | _ -> ([], E.ml_var_dot ~dynamic_import id hidden_name))
+        | None -> (
+          match compile_lambda new_cxt jsx_tag with
+          | {block; value = Some b} -> (block, b)
+          | {value = None} -> assert false)
+      in
+      let rest_blocks, rest_exprs =
+        Ext_list.split_map rest_args (fun x ->
+            match compile_lambda new_cxt x with
+            | {block; value = Some b} -> (block, b)
+            | {value = None} -> assert false)
+      in
+      let args_code : J.block = List.concat (tag_block :: rest_blocks) in
+      let exp =
+        Lam_compile_primitive.translate output_prefix loc lambda_cxt
+          prim_info.primitive (tag_expr :: rest_exprs)
+      in
+      Js_output.output_of_block_and_expression lambda_cxt.continuation args_code
+        exp
     | {
      primitive = Pfield (_, fld_info);
      args = [Lglobal_module (id, dynamic_import)];

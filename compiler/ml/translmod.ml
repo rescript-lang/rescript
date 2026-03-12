@@ -64,14 +64,20 @@ let rec apply_coercion loc strict (restr : Typedtree.module_coercion) arg =
   | Tcoerce_structure (pos_cc_list, id_pos_list, runtime_fields) ->
     Lambda.name_lambda strict arg (fun id ->
         let get_field_name name pos =
-          Lambda.Lprim (Pfield (pos, Fld_module {name}), [Lvar id], loc)
+          Lambda.Lprim
+            ( Pfield (pos, Fld_module {name; jsx_component = false}),
+              [Lvar id],
+              loc )
         in
         let lam =
           Lambda.Lprim
             ( Pmakeblock (Blk_module runtime_fields),
               Ext_list.map2 pos_cc_list runtime_fields (fun (pos, cc) name ->
                   apply_coercion loc Alias cc
-                    (Lprim (Pfield (pos, Fld_module {name}), [Lvar id], loc))),
+                    (Lprim
+                       ( Pfield (pos, Fld_module {name; jsx_component = false}),
+                         [Lvar id],
+                         loc ))),
               loc )
         in
         wrap_id_pos_list loc id_pos_list get_field_name lam)
@@ -432,7 +438,10 @@ and transl_structure loc fields cc rootpath final_env = function
                 Pgenval,
                 id,
                 Lprim
-                  ( Pfield (pos, Fld_module {name = Ident.name id}),
+                  ( Pfield
+                      ( pos,
+                        Fld_module {name = Ident.name id; jsx_component = false}
+                      ),
                     [Lvar mid],
                     incl.incl_loc ),
                 body ),

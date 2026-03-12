@@ -80,6 +80,34 @@ let make_new_binding binding expression new_name =
     Jsx_common.raise_error ~loc:pvb_loc
       "JSX component calls cannot be destructured."
 
+let longident_of_segments = function
+  | [] -> assert false
+  | head :: rest ->
+    List.fold_left (fun acc name -> Ldot (acc, name)) (Lident head) rest
+
+let make_hoisted_component_binding ~empty_loc ~full_module_name nested_modules =
+  let path =
+    nested_modules |> List.rev |> longident_of_segments |> fun txt ->
+    {loc = empty_loc; txt = Ldot (txt, "make")}
+  in
+  let marker_name = full_module_name ^ "$jsx" in
+  {
+    pstr_loc = empty_loc;
+    pstr_desc =
+      Pstr_value
+        ( Nonrecursive,
+          [
+            Vb.mk ~loc:empty_loc
+              (Pat.var ~loc:empty_loc {loc = empty_loc; txt = full_module_name})
+              (Exp.ident ~loc:empty_loc path);
+            Vb.mk ~loc:empty_loc
+              (Pat.var ~loc:empty_loc {loc = empty_loc; txt = marker_name})
+              (Exp.construct ~loc:empty_loc
+                 {loc = empty_loc; txt = Lident "true"}
+                 None);
+          ] );
+  }
+
 (* Lookup the filename from the location information on the AST node and turn it into a valid module identifier *)
 let filename_from_loc (pstr_loc : Location.t) =
   let file_name =
@@ -216,6 +244,8 @@ let make_type_decls_with_core_type props_name loc core_type typ_vars =
 let live_attr = ({txt = "live"; loc = Location.none}, PStr [])
 let jsx_component_props_attr =
   ({txt = "res.jsxComponentProps"; loc = Location.none}, PStr [])
+let jsx_component_path_attr =
+  ({txt = "res.jsxComponentPath"; loc = Location.none}, PStr [])
 
 (* type props<'x, 'y, ...> = { x: 'x, y?: 'y, ... } *)
 let make_props_record_type ~core_type_of_attr ~external_ ~typ_vars_of_core_type
@@ -805,6 +835,15 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
           },
           Some (binding_wrapper full_expression) )
     in
+    let () =
+      match (fn_name, config.nested_modules) with
+      | "make", _ :: _ ->
+        config.hoisted_structure_items <-
+          make_hoisted_component_binding ~empty_loc ~full_module_name
+            config.nested_modules
+          :: config.hoisted_structure_items
+      | _ -> ()
+    in
     (Some props_record_type, binding, new_binding))
   else if Jsx_common.has_attr_on_binding Jsx_common.has_attr_with_props binding
   then
@@ -1288,7 +1327,7 @@ let mk_uppercase_tag_name_expr tag_name =
     | JsxUpperTag path -> Longident.Ldot (path, "make")
   in
   let loc = tag_name.loc in
-  Exp.ident ~loc {txt = tag_identifier; loc}
+  Exp.ident ~loc ~attrs:[jsx_component_path_attr] {txt = tag_identifier; loc}
 
 let expr ~(config : Jsx_common.jsx_config) mapper expression =
   match expression with

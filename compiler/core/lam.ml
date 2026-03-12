@@ -555,7 +555,8 @@ let prim ~primitive:(prim : Lam_primitive.t) ~args loc : t =
         | ( f :: fields,
             Lprim
               {
-                primitive = Pfield (pos, Fld_module {name = f1});
+                primitive =
+                  Pfield (pos, Fld_module {name = f1; jsx_component = false});
                 args = [(Lglobal_module (v1, _) | Lvar v1)];
               }
             :: args ) ->
@@ -566,7 +567,8 @@ let prim ~primitive:(prim : Lam_primitive.t) ~args loc : t =
       | ( field1 :: rest,
           Lprim
             {
-              primitive = Pfield (pos, Fld_module {name = f1});
+              primitive =
+                Pfield (pos, Fld_module {name = f1; jsx_component = false});
               args = [((Lglobal_module (v1, _) | Lvar v1) as lam)];
             }
           :: args1 ) ->

@@ -123,7 +123,12 @@ let rec no_side_effects (lam : Lam.t) : bool =
   (* | Lsend _ -> false  *)
   | Lapply
       {
-        ap_func = Lprim {primitive = Pfield (_, Fld_module {name = "from_fun"})};
+        ap_func =
+          Lprim
+            {
+              primitive =
+                Pfield (_, Fld_module {name = "from_fun"; jsx_component = _});
+            };
         ap_args = [arg];
       } ->
     no_side_effects arg
