@@ -14,6 +14,8 @@
 
 #### :boom: Breaking Change
 
+- Change `Intl.Collator.compare` return type from `int` to `Ordering.t` (`float`). https://github.com/rescript-lang/rescript/pull/8289
+
 #### :eyeglasses: Spec Compliance
 
 #### :rocket: New Feature
