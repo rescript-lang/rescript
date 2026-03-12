@@ -477,35 +477,40 @@ fn flatten_dependencies(dependencies: Vec<Dependency>) -> Vec<Dependency> {
 }
 
 pub fn read_package_name(package_dir: &Path) -> Result<String> {
-    let mut file_name = "package.json";
-    let package_json_path = package_dir.join(file_name);
-
-    let package_json_contents = if Path::exists(&package_json_path) {
-        fs::read_to_string(&package_json_path).map_err(|e| anyhow!("Could not read package.json: {}", e))?
-    } else {
-        let rescript_json_path = package_dir.join("rescript.json");
-        if Path::exists(&rescript_json_path) {
-            file_name = "rescript.json";
-            fs::read_to_string(&rescript_json_path)
-                .map_err(|e| anyhow!("Could not read rescript.json: {}", e))?
-        } else {
-            return Err(anyhow!(
-                "There is no package.json or rescript.json file in {}",
-                package_dir.to_string_lossy()
-            ));
+    let read_name = |file_name: &str| -> Result<Option<String>> {
+        let path = package_dir.join(file_name);
+        if !Path::exists(&path) {
+            return Ok(None);
         }
+
+        let contents =
+            fs::read_to_string(&path).map_err(|e| anyhow!("Could not read {}: {}", file_name, e))?;
+        let json: serde_json::Value =
+            serde_json::from_str(&contents).map_err(|e| anyhow!("Could not parse {}: {}", file_name, e))?;
+
+        Ok(json["name"].as_str().map(|name| name.to_string()))
     };
 
-    let package_json: serde_json::Value = serde_json::from_str(&package_json_contents)
-        .map_err(|e| anyhow!("Could not parse {}: {}", file_name, e))?;
+    if let Some(name) = read_name("package.json")? {
+        return Ok(name);
+    }
 
-    package_json["name"]
-        .as_str()
-        .map(|s| s.to_string())
-        .ok_or_else(|| anyhow!("No name field found in package.json"))
+    if let Some(name) = read_name("rescript.json")? {
+        return Ok(name);
+    }
+
+    Err(anyhow!(
+        "No name field found in package.json or rescript.json in {}",
+        package_dir.to_string_lossy()
+    ))
 }
 
-fn make_package(config: config::Config, package_path: &Path, is_root: bool, is_local_dep: bool) -> Package {
+fn make_package(
+    config: config::Config,
+    package_path: &Path,
+    is_root: bool,
+    is_local_dep: bool,
+) -> Result<Package> {
     let source_folders = match config.sources.to_owned() {
         Some(config::OneOrMore::Single(source)) => get_source_dirs(source, None),
         Some(config::OneOrMore::Multiple(sources)) => {
@@ -532,7 +537,7 @@ fn make_package(config: config::Config, package_path: &Path, is_root: bool, is_l
         }
     };
 
-    let package_name = read_package_name(package_path).expect("Could not read package name");
+    let package_name = read_package_name(package_path)?;
     if package_name != config.name {
         log::warn!(
             "\nPackage name mismatch for {}:\n\
@@ -544,7 +549,7 @@ This inconsistency will cause issues with package resolution.\n",
         );
     }
 
-    Package {
+    Ok(Package {
         name: package_name,
         config: config.to_owned(),
         source_folders,
@@ -559,7 +564,7 @@ This inconsistency will cause issues with package resolution.\n",
         dirs: None,
         is_local_dep,
         is_root,
-    }
+    })
 }
 
 pub fn read_packages(
@@ -575,7 +580,7 @@ pub fn read_packages(
             .path
             .parent()
             .ok_or_else(|| anyhow!("Could not the read parent folder or a rescript.json file"))?;
-        make_package(config.to_owned(), folder, true, true)
+        make_package(config.to_owned(), folder, true, true)?
     };
 
     map.insert(current_package.name.to_string(), current_package);
@@ -589,12 +594,12 @@ pub fn read_packages(
         /* is local dep */ true,
     ));
 
-    dependencies.iter().for_each(|d| {
+    for d in dependencies.iter() {
         if !map.contains_key(&d.name) {
-            let package = make_package(d.config.to_owned(), &d.path, false, d.is_local_dep);
+            let package = make_package(d.config.to_owned(), &d.path, false, d.is_local_dep)?;
             map.insert(d.name.to_string(), package);
         }
-    });
+    }
 
     Ok(map)
 }
@@ -1066,9 +1071,11 @@ pub fn validate_packages_dependencies(packages: &AHashMap<String, Package>) -> b
 mod test {
     use crate::config;
 
-    use super::{Namespace, Package};
+    use super::{Namespace, Package, read_package_name};
     use ahash::{AHashMap, AHashSet};
+    use std::fs;
     use std::path::PathBuf;
+    use tempfile::TempDir;
 
     pub struct CreatePackageArgs {
         name: String,
@@ -1173,5 +1180,29 @@ mod test {
 
         let is_valid = super::validate_packages_dependencies(&packages);
         assert!(is_valid)
+    }
+
+    #[test]
+    fn should_report_missing_name_when_package_and_rescript_json_lack_it() {
+        let temp_dir = TempDir::new().expect("temp dir should be created");
+        let package_dir = temp_dir.path();
+
+        fs::write(package_dir.join("package.json"), "{\n  \"private\": true\n}\n")
+            .expect("package.json should be written");
+        fs::write(
+            package_dir.join("rescript.json"),
+            "{\n  \"suffix\": \".mjs\"\n}\n",
+        )
+        .expect("rescript.json should be written");
+
+        let error = read_package_name(package_dir).expect_err("missing names should fail");
+
+        assert_eq!(
+            error.to_string(),
+            format!(
+                "No name field found in package.json or rescript.json in {}",
+                package_dir.to_string_lossy()
+            )
+        );
     }
 }
