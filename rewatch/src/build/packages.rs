@@ -352,7 +352,7 @@ fn read_dependencies(
 
                         let parent_path_str = project_context.get_root_path().to_string_lossy();
                         log::error!(
-                            "We could not build package tree reading dependency '{package_name}', at path '{parent_path_str}'. Error: {error}",
+                            "Could not build package tree reading dependency '{package_name}' at path '{parent_path_str}'. Error: {error}",
                         );
 
                         std::process::exit(2)
@@ -363,7 +363,7 @@ fn read_dependencies(
                             Err(error) => {
                                 let parent_path_str = project_context.get_root_path().to_string_lossy();
                                 log::error!(
-                                    "We could not build package tree  '{package_name}', at path '{parent_path_str}'. Error: {error}",
+                                    "Could not build package tree for '{package_name}' at path '{parent_path_str}'. Error: {error}",
                                 );
                                 std::process::exit(2)
                             }
