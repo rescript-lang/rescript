@@ -32,4 +32,10 @@ module Other: {
   @react.component
   let make: (~name: string) => React.element
 }
+let JsxV4$M4: M4.props<string, string, string> => React.element
+let JsxV4$M4$jsx: bool
+let JsxV4$MM: MM.props => React.element
+let JsxV4$MM$jsx: bool
+let JsxV4$Other: Other.props<string> => React.element
+let JsxV4$Other$jsx: bool
 
