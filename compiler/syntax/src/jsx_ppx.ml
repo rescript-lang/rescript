@@ -117,7 +117,9 @@ let get_mapper ~config =
   in
   let structure mapper items =
     let old_config = save_config () in
+    let is_top_level = config.nested_modules = [] in
     config.has_component <- false;
+    if is_top_level then config.hoisted_structure_items <- [];
     let result =
       List.map
         (fun item ->
@@ -128,6 +130,11 @@ let get_mapper ~config =
           if config.version = 4 then transform_structure_item4 item else [item])
         items
       |> List.flatten
+    in
+    let result =
+      if config.version = 4 && is_top_level then
+        result @ List.rev config.hoisted_structure_items
+      else result
     in
     restore_config old_config;
     result
@@ -143,6 +150,7 @@ let rewrite_implementation ~jsx_version ~jsx_module (code : Parsetree.structure)
       module_ = jsx_module;
       nested_modules = [];
       has_component = false;
+      hoisted_structure_items = [];
     }
   in
   let mapper = get_mapper ~config in
@@ -156,6 +164,7 @@ let rewrite_signature ~jsx_version ~jsx_module (code : Parsetree.signature) :
       module_ = jsx_module;
       nested_modules = [];
       has_component = false;
+      hoisted_structure_items = [];
     }
   in
   let mapper = get_mapper ~config in

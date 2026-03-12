@@ -84,7 +84,7 @@ val ref_tag_info : tag_info
 
 type field_dbg_info =
   | Fld_record of {name: string; mutable_flag: Asttypes.mutable_flag}
-  | Fld_module of {name: string}
+  | Fld_module of {name: string; jsx_component: bool}
   | Fld_record_inline of {name: string}
   | Fld_record_extension of {name: string}
   | Fld_tuple
@@ -99,6 +99,8 @@ val fld_record : Types.label_description -> field_dbg_info
 val fld_record_inline : Types.label_description -> field_dbg_info
 
 val fld_record_extension : Types.label_description -> field_dbg_info
+
+val fld_module : name:string -> jsx_component:bool -> field_dbg_info
 
 val ref_field_info : field_dbg_info
 
@@ -393,6 +395,7 @@ val transl_normal_path : Path.t -> lambda (* Path.t is already normal *)
 
 val transl_module_path : ?loc:Location.t -> Env.t -> Path.t -> lambda
 val transl_value_path : ?loc:Location.t -> Env.t -> Path.t -> lambda
+val transl_jsx_value_path : ?loc:Location.t -> Env.t -> Path.t -> lambda
 val transl_extension_path : ?loc:Location.t -> Env.t -> Path.t -> lambda
 
 val subst_lambda : lambda Ident.tbl -> lambda -> lambda

@@ -72,7 +72,7 @@ let string_of_loc_kind = function
 
 let str_of_field_info (fld_info : Lambda.field_dbg_info) =
   match fld_info with
-  | Fld_module {name}
+  | Fld_module {name; jsx_component = _}
   | Fld_record {name}
   | Fld_record_inline {name}
   | Fld_record_extension {name} ->
