@@ -31,6 +31,7 @@
 #### :nail_care: Polish
 
 - Reanalyze server: redesign incremental fixpoint with delete-then-rederive strategy and predecessor tracking, improving speed on deletions. https://github.com/rescript-lang/rescript/pull/8276
+- Improve error message for dependency without `rescript.json`. https://github.com/rescript-lang/rescript/issues/8265
 
 #### :house: Internal
 
