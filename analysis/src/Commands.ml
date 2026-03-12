@@ -41,9 +41,9 @@ let completionResolve ~path ~modulePath =
   in
   print_endline docstring
 
-let inlayhint ~path ~pos ~maxLength ~debug =
+let inlayhint ~path ~pos ~maxLength ~currentFile ~debug =
   let result =
-    match Hint.inlay ~path ~pos ~maxLength ~debug with
+    match Hint.inlay ~path ~pos ~maxLength ~currentFile ~debug with
     | Some hints -> hints |> Protocol.array
     | None -> Protocol.null
   in
@@ -516,7 +516,7 @@ let test ~path =
               ("Inlay Hint " ^ path ^ " " ^ string_of_int line_start ^ ":"
              ^ string_of_int line_end);
             inlayhint ~path ~pos:(line_start, line_end) ~maxLength:"25"
-              ~debug:false
+              ~currentFile:None ~debug:false
           | "cle" ->
             print_endline ("Code Lens " ^ path);
             codeLens ~path ~debug:false
