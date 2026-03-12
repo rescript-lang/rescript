@@ -176,6 +176,13 @@ let expr sub {exp_extra; exp_desc; exp_env; _} =
   | Texp_setfield (exp1, _, _, exp2) ->
     sub.expr sub exp1;
     sub.expr sub exp2
+  | Texp_index (exp1, exp2) ->
+    sub.expr sub exp1;
+    sub.expr sub exp2
+  | Texp_setindex (exp1, exp2, exp3) ->
+    sub.expr sub exp1;
+    sub.expr sub exp2;
+    sub.expr sub exp3
   | Texp_array list -> List.iter (sub.expr sub) list
   | Texp_ifthenelse (exp1, exp2, expo) ->
     sub.expr sub exp1;

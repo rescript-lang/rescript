@@ -1,0 +1,124 @@
+Complete src/CompletionBracketAccess.res 5:14
+posCursor:[5:14] posNoWhite:[5:13] Found expr:[5:3->0:-1]
+Completable: Cpath Value[people][]->
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[people][]->
+ContextPath Value[people][]
+ContextPath Value[people]
+Path people
+Path Stdlib.Option.
+Path 
+[{
+    "label": "Option.getUnsafe",
+    "kind": 12,
+    "tags": [],
+    "detail": "option<'a> => 'a",
+    "documentation": {"kind": "markdown", "value": "\n`getUnsafe(opt)` returns `value` if `opt` is `Some(value)`, otherwise `undefined`.\n\n## Examples\n\n```rescript\nOption.getUnsafe(Some(3)) == 3\nOption.getUnsafe((None: option<int>)) // Returns `undefined`, which is not a valid `int`\n```\n\n## Notes\n\n- This is an unsafe operation. It assumes `value` is not `None`, and may cause undefined behaviour if it is.\n"}
+  }, {
+    "label": "Option.equal",
+    "kind": 12,
+    "tags": [],
+    "detail": "(option<'a>, option<'b>, ('a, 'b) => bool) => bool",
+    "documentation": {"kind": "markdown", "value": "\n`equal(opt1, opt2, f)` evaluates two optional values for equality with respect to a predicate function `f`. If both `opt1` and `opt2` are `None`, returns `true`.\nIf one of the arguments is `Some(value)` and the other is `None`, returns\n`false`.\nIf arguments are `Some(value1)` and `Some(value2)`, returns the result of\n`f(value1, value2)`, the predicate function `f` must return a bool.\n\n## Examples\n\n```rescript\nlet clockEqual = (a, b) => mod(a, 12) == mod(b, 12)\n\nopen Option\n\nequal(Some(3), Some(15), clockEqual) // true\nequal(Some(3), None, clockEqual) // false\nequal(None, Some(3), clockEqual) // false\nequal(None, None, clockEqual) // true\n```\n"}
+  }, {
+    "label": "Option.orElse",
+    "kind": 12,
+    "tags": [],
+    "detail": "(option<'a>, option<'a>) => option<'a>",
+    "documentation": {"kind": "markdown", "value": "\n`orElse(opt1, opt2)` returns `opt2` if `opt1` is `None`, otherwise `opt1`.\n\n## Examples\n\n```rescript\nOption.orElse(Some(1812), Some(1066)) == Some(1812)\nOption.orElse(None, Some(1066)) == Some(1066)\nOption.orElse(None, None) == None\n```\n"}
+  }, {
+    "label": "Option.filter",
+    "kind": 12,
+    "tags": [],
+    "detail": "(option<'a>, 'a => bool) => option<'a>",
+    "documentation": {"kind": "markdown", "value": "\n`filter(opt, f)` applies `f` to `opt`, if `f` returns `true`, then it returns `Some(value)`, otherwise returns `None`.\n\n## Examples\n\n```rescript\nOption.filter(Some(10), x => x > 5) // Some(10)\nOption.filter(Some(4), x => x > 5) // None\nOption.filter(None, x => x > 5) // None\n```\n"}
+  }, {
+    "label": "Option.map",
+    "kind": 12,
+    "tags": [],
+    "detail": "(option<'a>, 'a => 'b) => option<'b>",
+    "documentation": {"kind": "markdown", "value": "\n`map(opt, f)` returns `Some(f(value))` if `opt` is `Some(value)`, otherwise `None`.\n\n## Examples\n\n```rescript\nOption.map(Some(3), x => x * x) // Some(9)\nOption.map(None, x => x * x) // None\n```\n"}
+  }, {
+    "label": "Option.getExn",
+    "kind": 12,
+    "tags": [1],
+    "detail": "(option<'a>, ~message: string=?) => 'a",
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n`getExn(opt, ~message=?)` returns `value` if `opt` is `Some(value)`, otherwise throws an exception with the message provided, or a generic message if no message was provided.\n\n```rescript\nOption.getExn(Some(3)) == 3\n\nswitch Option.getExn(None) {\n| exception _ => assert(true)\n| _ => assert(false)\n}\n\nswitch Option.getExn(None, ~message=\"was None!\") {\n| exception _ => assert(true) // Throws a JsError with the message \"was None!\"\n| _ => assert(false)\n}\n```\n\n## Exceptions\n\n- Throws an error if `opt` is `None`\n"}
+  }, {
+    "label": "Option.compare",
+    "kind": 12,
+    "tags": [],
+    "detail": "(\n  option<'a>,\n  option<'b>,\n  ('a, 'b) => Ordering.t,\n) => Ordering.t",
+    "documentation": {"kind": "markdown", "value": "\n`compare(opt1, opt2, f)` compares two optional values with respect to given `f`.\n\nIf both `opt1` and `opt2` are `None`, it returns `0.`. If the first argument is `Some(value1)` and the second is `None`, returns `1.` (something is greater than nothing).\n\nIf the first argument is `None` and the second is `Some(value2)`, returns `-1.`\n(nothing is less than something).\n\nIf the arguments are `Some(value1)` and `Some(value2)`, returns the result of\n`f(value1, value2)`, `f` takes two arguments and returns `-1.` if the first\nargument is less than the second, `0.` if the arguments are equal, and `1.` if\nthe first argument is greater than the second.\n\n## Examples\n\n```rescript\nlet clockCompare = (a, b) => Int.compare(mod(a, 12), mod(b, 12))\n\nOption.compare(Some(3), Some(15), clockCompare) // 0.\nOption.compare(Some(3), Some(14), clockCompare) // 1.\nOption.compare(Some(2), Some(15), clockCompare) // (-1.)\nOption.compare(None, Some(15), clockCompare) // (-1.)\nOption.compare(Some(14), None, clockCompare) // 1.\nOption.compare(None, None, clockCompare) // 0.\n```\n"}
+  }, {
+    "label": "Option.ignore",
+    "kind": 12,
+    "tags": [],
+    "detail": "option<'a> => unit",
+    "documentation": {"kind": "markdown", "value": "\n  `ignore(option)` ignores the provided option and returns unit.\n\n  This helper is useful when you want to discard a value (for example, the result of an operation with side effects)\n  without having to store or process it further.\n"}
+  }, {
+    "label": "Option.getOrThrow",
+    "kind": 12,
+    "tags": [],
+    "detail": "(option<'a>, ~message: string=?) => 'a",
+    "documentation": {"kind": "markdown", "value": "\n`getOrThrow(opt, ~message=?)` returns `value` if `opt` is `Some(value)`, otherwise throws an exception with the message provided, or a generic message if no message was provided.\n\n```rescript\nOption.getOrThrow(Some(3)) == 3\n\nswitch Option.getOrThrow(None) {\n| exception _ => assert(true)\n| _ => assert(false)\n}\n\nswitch Option.getOrThrow(None, ~message=\"was None!\") {\n| exception _ => assert(true) // Throws a JsError with the message \"was None!\"\n| _ => assert(false)\n}\n```\n\n## Exceptions\n\n- Throws an error if `opt` is `None`\n"}
+  }, {
+    "label": "Option.getOr",
+    "kind": 12,
+    "tags": [],
+    "detail": "(option<'a>, 'a) => 'a",
+    "documentation": {"kind": "markdown", "value": "\n`getOr(opt, default)` returns `value` if `opt` is `Some(value)`, otherwise `default`.\n\n## Examples\n\n```rescript\nOption.getOr(None, \"Banana\") // Banana\nOption.getOr(Some(\"Apple\"), \"Banana\") // Apple\n\nlet greet = (firstName: option<string>) => \"Greetings \" ++ firstName->Option.getOr(\"Anonymous\")\n\nSome(\"Jane\")->greet // \"Greetings Jane\"\nNone->greet // \"Greetings Anonymous\"\n```\n"}
+  }, {
+    "label": "Option.mapOr",
+    "kind": 12,
+    "tags": [],
+    "detail": "(option<'a>, 'b, 'a => 'b) => 'b",
+    "documentation": {"kind": "markdown", "value": "\n`mapOr(opt, default, f)` returns `f(value)` if `opt` is `Some(value)`, otherwise `default`.\n\n## Examples\n\n```rescript\nlet someValue = Some(3)\nsomeValue->Option.mapOr(0, x => x + 5) // 8\n\nlet noneValue = None\nnoneValue->Option.mapOr(0, x => x + 5) // 0\n```\n"}
+  }, {
+    "label": "Option.mapWithDefault",
+    "kind": 12,
+    "tags": [1],
+    "detail": "(option<'a>, 'b, 'a => 'b) => 'b",
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"}
+  }, {
+    "label": "Option.isSome",
+    "kind": 12,
+    "tags": [],
+    "detail": "option<'a> => bool",
+    "documentation": {"kind": "markdown", "value": "\n`isSome(opt)` returns `true` if `opt` is `Some(value)`, otherwise returns `false`.\n\n## Examples\n\n```rescript\nOption.isSome(None) // false\nOption.isSome(Some(1)) // true\n```\n"}
+  }, {
+    "label": "Option.getWithDefault",
+    "kind": 12,
+    "tags": [1],
+    "detail": "(option<'a>, 'a) => 'a",
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"}
+  }, {
+    "label": "Option.forEach",
+    "kind": 12,
+    "tags": [],
+    "detail": "(option<'a>, 'a => unit) => unit",
+    "documentation": {"kind": "markdown", "value": "\n`forEach(opt, f)` call `f` on `opt`. if `opt` is `Some(value)`, then if calls\n`f`, otherwise returns `unit`.\n\n## Examples\n\n```rescript\nOption.forEach(Some(\"thing\"), x => Console.log(x)) // logs \"thing\"\nOption.forEach(None, x => Console.log(x)) // returns ()\n```\n"}
+  }, {
+    "label": "Option.flatMap",
+    "kind": 12,
+    "tags": [],
+    "detail": "(option<'a>, 'a => option<'b>) => option<'b>",
+    "documentation": {"kind": "markdown", "value": "\n`flatMap(opt, f)` returns `f(value)` if `opt` is `Some(value)`, otherwise `None`.\n\n## Examples\n\n```rescript\nlet addIfAboveOne = value =>\n  if value > 1 {\n    Some(value + 1)\n  } else {\n    None\n  }\n\nOption.flatMap(Some(2), addIfAboveOne) // Some(3)\nOption.flatMap(Some(-4), addIfAboveOne) // None\nOption.flatMap(None, addIfAboveOne) // None\n```\n"}
+  }, {
+    "label": "Option.isNone",
+    "kind": 12,
+    "tags": [],
+    "detail": "option<'a> => bool",
+    "documentation": {"kind": "markdown", "value": "\n`isNone(opt)` returns `true` if `opt` is `None`, false otherwise.\n\n## Examples\n\n```rescript\nOption.isNone(None) // true\nOption.isNone(Some(1)) // false\n```\n"}
+  }]
+
+Inlay Hint src/CompletionBracketAccess.res 1:34
+[{
+    "position": {"line": 9, "character": 15},
+    "label": ": option<person>",
+    "kind": 1,
+    "paddingLeft": true,
+    "paddingRight": false
+}]
+

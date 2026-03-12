@@ -18,7 +18,9 @@ function size(a) {
   return a.length;
 }
 
-let get = Belt_Array.get;
+function get(a, x) {
+  return a[x];
+}
 
 let getExn = Belt_Array.getExn;
 
