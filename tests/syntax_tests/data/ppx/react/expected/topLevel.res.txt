@@ -17,3 +17,4 @@ module V4A = {
     \"TopLevel$V4A"
   }
 }
+let \"TopLevel$V4A" = V4A.make and \"TopLevel$V4A$jsx" = true

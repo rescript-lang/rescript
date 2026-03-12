@@ -47,3 +47,6 @@ module Async = {
     \"ReturnConstraint$Async"
   }
 }
+let \"ReturnConstraint$Standard" = Standard.make and \"ReturnConstraint$Standard$jsx" = true
+let \"ReturnConstraint$ForwardRef" = ForwardRef.make and \"ReturnConstraint$ForwardRef$jsx" = true
+let \"ReturnConstraint$Async" = Async.make and \"ReturnConstraint$Async$jsx" = true

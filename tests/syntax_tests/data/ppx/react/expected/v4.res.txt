@@ -116,3 +116,6 @@ module Rec2 = {
   }
   and mm = x => make(x)
 }
+let \"V4$Rec" = Rec.make and \"V4$Rec$jsx" = true
+let \"V4$Rec1" = Rec1.make and \"V4$Rec1$jsx" = true
+let \"V4$Rec2" = Rec2.make and \"V4$Rec2$jsx" = true

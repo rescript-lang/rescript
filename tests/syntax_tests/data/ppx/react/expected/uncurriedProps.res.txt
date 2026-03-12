@@ -57,10 +57,13 @@ module Bar = {
   @res.jsxComponentProps
   type props = {}
 
-  let make = (_: props): React.element => React.jsx(Foo.make, {callback: {(_, _, _) => ()}})
+  let make = (_: props): React.element =>
+    React.jsx(@res.jsxComponentPath Foo.make, {callback: {(_, _, _) => ()}})
   let make = {
     let \"UncurriedProps$Bar" = props => make(props)
 
     \"UncurriedProps$Bar"
   }
 }
+let \"UncurriedProps$Foo" = Foo.make and \"UncurriedProps$Foo$jsx" = true
+let \"UncurriedProps$Bar" = Bar.make and \"UncurriedProps$Bar$jsx" = true

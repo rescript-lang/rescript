@@ -1329,6 +1329,17 @@ let mk_uppercase_tag_name_expr tag_name =
 
 let expr ~(config : Jsx_common.jsx_config) mapper expression =
   match expression with
+  | {pexp_desc = Pexp_letmodule (name, module_expr, body); pexp_loc = loc; pexp_attributes = attrs}
+    ->
+    config.nested_modules <- name.txt :: config.nested_modules;
+    let mapped_module_expr = default_mapper.module_expr mapper module_expr in
+    let mapped_body = mapper.expr mapper body in
+    let () =
+      match config.nested_modules with
+      | _ :: rest -> config.nested_modules <- rest
+      | [] -> ()
+    in
+    Exp.letmodule ~loc ~attrs name mapped_module_expr mapped_body
   | {
    pexp_desc = Pexp_jsx_element jsx_element;
    pexp_loc = loc;
