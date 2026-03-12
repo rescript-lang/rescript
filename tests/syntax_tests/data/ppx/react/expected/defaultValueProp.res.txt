@@ -86,3 +86,7 @@ module C3 = {
     \"DefaultValueProp$C3"
   }
 }
+let \"DefaultValueProp$C0" = C0.make and \"DefaultValueProp$C0$jsx" = true
+let \"DefaultValueProp$C1" = C1.make and \"DefaultValueProp$C1$jsx" = true
+let \"DefaultValueProp$C2" = C2.make and \"DefaultValueProp$C2$jsx" = true
+let \"DefaultValueProp$C3" = C3.make and \"DefaultValueProp$C3$jsx" = true

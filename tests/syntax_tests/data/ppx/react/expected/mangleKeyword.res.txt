@@ -25,5 +25,6 @@ module C4A1 = {
   external make: React.component<props<string, string>> = "default"
 }
 
-let c4a0 = React.jsx(C4A0.make, {_open: "x", _type: "t"})
-let c4a1 = React.jsx(C4A1.make, {_open: "x", _type: "t"})
+let c4a0 = React.jsx(@res.jsxComponentPath C4A0.make, {_open: "x", _type: "t"})
+let c4a1 = React.jsx(@res.jsxComponentPath C4A1.make, {_open: "x", _type: "t"})
+let \"MangleKeyword$C4A0" = C4A0.make and \"MangleKeyword$C4A0$jsx" = true

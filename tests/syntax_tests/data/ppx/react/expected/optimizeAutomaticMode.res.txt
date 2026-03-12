@@ -18,3 +18,4 @@ module User = {
     \"OptimizeAutomaticMode$User"
   }
 }
+let \"OptimizeAutomaticMode$User" = User.make and \"OptimizeAutomaticMode$User$jsx" = true

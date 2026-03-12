@@ -6,10 +6,10 @@
 // let c0 = <A x="x" {...p0} {...p1} />
 
 // only spread props
-let c1 = React.jsx(A.make, p)
+let c1 = React.jsx(@res.jsxComponentPath A.make, p)
 
 // reversed order
-let c2 = React.jsx(A.make, {...p, x: "x"})
+let c2 = React.jsx(@res.jsxComponentPath A.make, {...p, x: "x"})
 
 let c3 = ReactDOM.jsx("div", p)
 
@@ -23,5 +23,5 @@ let c5 = ReactDOM.jsxsKeyed(
 )
 
 // both need to be parsed
-let c6 = React.jsx(A.make, params->Obj.magic)
-let c7 = React.jsx(A.make, params->Obj.magic)
+let c6 = React.jsx(@res.jsxComponentPath A.make, params->Obj.magic)
+let c7 = React.jsx(@res.jsxComponentPath A.make, params->Obj.magic)
