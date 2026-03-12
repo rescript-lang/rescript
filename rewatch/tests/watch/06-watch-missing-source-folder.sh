@@ -54,7 +54,11 @@ fi
 # where the config change triggers a full rebuild that runs concurrently
 # with the subsequent `rewatch build`.
 exit_watcher
-sleep 1
+if ! wait_for_file_gone "lib/rescript.lock" 20; then
+  error "Watcher did not stop in time"
+  git checkout "$DEP01_CONFIG"
+  exit 1
+fi
 
 # Restore dep01's rescript.json
 git checkout "$DEP01_CONFIG"
