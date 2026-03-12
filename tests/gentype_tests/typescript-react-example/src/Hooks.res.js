@@ -204,6 +204,10 @@ let make$1 = Hooks;
 
 let $$default = Hooks;
 
+let Hooks$RenderPropRequiresConversion$jsx = true;
+
+let Hooks$DD$jsx = true;
+
 export {
   make$1 as make,
   $$default as default,
@@ -219,5 +223,9 @@ export {
   RenderPropRequiresConversion,
   WithChildren,
   DD,
+  Hooks$RenderPropRequiresConversion,
+  Hooks$RenderPropRequiresConversion$jsx,
+  Hooks$DD,
+  Hooks$DD$jsx,
 }
 /* make Not a pure module */
