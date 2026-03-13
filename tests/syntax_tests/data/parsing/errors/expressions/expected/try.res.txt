@@ -1,5 +1,16 @@
 
   Syntax error!
+  syntax_tests/data/parsing/errors/expressions/try.res:2:38
+
+  1 ┆ let parsedPayload =
+  2 ┆   try (Js.Json.parseExn(response)) {
+  3 ┆   | _ => Js.Json.null
+  4 ┆   }
+
+  Expected 'catch' or 'finally' after 'try'
+
+
+  Syntax error!
   syntax_tests/data/parsing/errors/expressions/try.res:2:37-38
 
   1 ┆ let parsedPayload =
@@ -7,6 +18,7 @@
   3 ┆   | _ => Js.Json.null
   4 ┆   }
 
-  Did you forget a `catch` here?
+  consecutive statements on a line must be separated by ';' or a newline
 
-let parsedPayload = try Js.Json.parseExn response with | _ -> Js.Json.null
+let parsedPayload = try Js.Json.parseExn response
+;;(([%rescript.exprhole ]; (fun [arity:1]_ -> Js.Json.null))[@res.braces ])

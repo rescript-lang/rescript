@@ -79,9 +79,10 @@ let count_helper (lam : Lam.t) : collection =
       count l;
       Ext_list.iter_snd sw.sw_consts count;
       Ext_list.iter_snd sw.sw_blocks count
-    | Ltrywith (l1, _v, l2) ->
+    | Ltrywith (l1, _v, l2, finally_expr) ->
       count l1;
-      count l2
+      Ext_option.iter l2 count;
+      Ext_option.iter finally_expr count
     | Lifthenelse (l1, l2, l3) ->
       count l1;
       count l2;
