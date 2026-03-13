@@ -5,9 +5,11 @@ import { existsSync } from "node:fs";
 import * as path from "node:path";
 import { setup } from "#dev/process";
 
-const { execBuild, execClean } = setup(path.join(import.meta.dirname, "a"));
+const { execBuildOrThrow, execClean } = setup(
+  path.join(import.meta.dirname, "a"),
+);
 await execClean();
-await execBuild();
+await execBuildOrThrow();
 
 assert.ok(
   !existsSync(

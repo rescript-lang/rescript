@@ -5,9 +5,9 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { setup } from "#dev/process";
 
-const { execBuild, execClean } = setup(import.meta.dirname);
+const { execBuildOrThrow, execClean } = setup(import.meta.dirname);
 
-await execBuild();
+await execBuildOrThrow();
 
 const content = await fs.readFile(
   path.join(import.meta.dirname, "src", "demo.js"),

@@ -1,10 +1,10 @@
 import * as assert from "node:assert";
 import { setup } from "#dev/process";
 
-const { execClean, execBuild } = setup(import.meta.dirname);
+const { execClean, execBuildOrThrow } = setup(import.meta.dirname);
 
 await execClean();
-await execBuild();
+await execBuildOrThrow();
 
 const x = await import("./src/demo.res.js");
 assert.equal(x.v, 42);

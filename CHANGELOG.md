@@ -38,6 +38,7 @@
 #### :house: Internal
 
 - Reanalyze server: redesign incremental fixpoint with delete-then-rederive strategy and predecessor tracking, improving speed on deletions. https://github.com/rescript-lang/rescript/pull/8276
+- Fix build tests failing silently. https://github.com/rescript-lang/rescript/pull/8295
 
 # 13.0.0-alpha.2
 
