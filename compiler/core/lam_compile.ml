@@ -233,9 +233,12 @@ type initialization = J.block
 
 let compile output_prefix =
   let root_module_name (id : Ident.t) =
-    match String.index_opt id.name '$' with
-    | Some index -> String.sub id.name 0 index
-    | None -> id.name
+    match Ext_namespace.try_split_module_name id.name with
+    | Some (_namespace, module_name) -> module_name
+    | None -> (
+      match String.index_opt id.name '$' with
+      | Some index -> String.sub id.name 0 index
+      | None -> id.name)
   in
   let rec extract_nested_external_component_segments segments
       ((lam : Lam.t), (make_dynamic_import : bool option ref)) :
@@ -271,6 +274,16 @@ let compile output_prefix =
         extract_nested_external_component_segments [] (arg, dynamic_import)
       with
       | Some (id, dynamic_import, segments) -> (
+        let denamespace_segment segment =
+          let root_name = root_module_name id in
+          let namespaced_prefix = root_name ^ "$" in
+          if Ext_string.starts_with segment namespaced_prefix then
+            match String.split_on_char '$' segment with
+            | root :: _namespace :: rest when rest <> [] ->
+              String.concat "$" (root :: rest)
+            | _ -> segment
+          else segment
+        in
         let segments =
           match segments with
           | head :: rest
@@ -279,6 +292,11 @@ let compile output_prefix =
                  || Ext_string.starts_with head (root_module_name id ^ "$") ->
             rest
           | _ -> segments
+        in
+        let segments =
+          match segments with
+          | head :: rest -> denamespace_segment head :: rest
+          | [] -> []
         in
         match segments with
         | [] -> None
@@ -289,6 +307,72 @@ let compile output_prefix =
               String.concat "$" (root_module_name id :: segments) ))
       | None -> None)
     | _ -> None
+  in
+  let normalize_hidden_component_name (id : Ident.t) (hidden_name : string) =
+    let root_name = root_module_name id in
+    let id_parts = String.split_on_char '$' id.name in
+    let namespace_parts =
+      match id_parts with
+      | _root :: rest -> rest
+      | [] -> []
+    in
+    let hidden_parts = String.split_on_char '$' hidden_name in
+    let hidden_parts_without_root =
+      match hidden_parts with
+      | first :: rest when String.equal first root_name -> rest
+      | _ -> hidden_parts
+    in
+    let rec drop_prefix prefix parts =
+      match (prefix, parts) with
+      | [], _ -> parts
+      | x :: xs, y :: ys when String.equal x y -> drop_prefix xs ys
+      | _ -> parts
+    in
+    let tail = drop_prefix namespace_parts hidden_parts_without_root in
+    match tail with
+    | [] -> hidden_name
+    | _ -> String.concat "$" (root_name :: tail)
+  in
+  let hidden_component_name_candidates (id : Ident.t) (hidden_name : string) =
+    let candidates = ref [] in
+    let push candidate =
+      if not (List.mem candidate !candidates) then
+        candidates := candidate :: !candidates
+    in
+    (match String.split_on_char '$' hidden_name with
+    | root :: _namespace :: rest when rest <> [] ->
+      push (String.concat "$" (root :: rest))
+    | _ -> ());
+    push (normalize_hidden_component_name id hidden_name);
+    push hidden_name;
+    List.rev !candidates
+  in
+  let rewrite_nested_jsx_component_expr (jsx_tag : Lam.t)
+      (compiled_expr : J.expression) : J.expression =
+    let rec extract_module_id (expr : J.expression) =
+      match expr.expression_desc with
+      | Var (Qualified (module_id, _)) -> Some module_id
+      | Static_index (inner, _, _) -> extract_module_id inner
+      | _ -> None
+    in
+    match extract_nested_external_component_field jsx_tag with
+    | Some (id, dynamic_import, hidden_name) -> (
+      let hidden_name_candidates =
+        hidden_component_name_candidates id hidden_name
+      in
+      let resolved_hidden_name =
+        match hidden_name_candidates with
+        | candidate :: _ -> Some candidate
+        | [] -> None
+      in
+      match (resolved_hidden_name, extract_module_id compiled_expr) with
+      | Some hidden_name, Some module_id ->
+        {
+          compiled_expr with
+          expression_desc = Var (Qualified (module_id, Some hidden_name));
+        }
+      | _ -> compiled_expr)
+    | None -> compiled_expr
   in
   let rec compile_external_field (* Like [List.empty]*)
       ?(dynamic_import = false) (lamba_cxt : Lam_compile_context.t)
@@ -361,15 +445,11 @@ let compile output_prefix =
       let args =
         if appinfo.ap_transformed_jsx then
           match (appinfo.ap_args, args) with
-          | jsx_tag :: _, _ :: rest_args -> (
-            match extract_nested_external_component_field jsx_tag with
-            | Some (id, dynamic_import, hidden_name) ->
-              E.ml_var_dot ~dynamic_import id hidden_name :: rest_args
-            | None -> args)
+          | jsx_tag :: _, jsx_expr :: rest_args ->
+            rewrite_nested_jsx_component_expr jsx_tag jsx_expr :: rest_args
           | _ -> args
         else args
       in
-
       let fn = E.ml_var_dot ~dynamic_import module_id ident_info.name in
       let expression =
         match appinfo.ap_info.ap_status with
@@ -1596,11 +1676,8 @@ let compile output_prefix =
       let args =
         if appinfo.ap_transformed_jsx then
           match (appinfo.ap_args, args) with
-          | jsx_tag :: _, _ :: rest_args -> (
-            match extract_nested_external_component_field jsx_tag with
-            | Some (id, dynamic_import, hidden_name) ->
-              E.ml_var_dot ~dynamic_import id hidden_name :: rest_args
-            | None -> args)
+          | jsx_tag :: _, jsx_expr :: rest_args ->
+            rewrite_nested_jsx_component_expr jsx_tag jsx_expr :: rest_args
           | _ -> args
         else args
       in
@@ -1676,21 +1753,10 @@ let compile output_prefix =
     } ->
       let new_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
       let tag_block, tag_expr =
-        match extract_nested_external_component_field jsx_tag with
-        | Some (id, dynamic_import, hidden_name) -> (
-          match
-            Lam_compile_env.query_external_id_info ~dynamic_import id
-              (hidden_name ^ "$jsx")
-          with
-          | exception Not_found -> (
-            match compile_lambda new_cxt jsx_tag with
-            | {block; value = Some b} -> (block, b)
-            | {value = None} -> assert false)
-          | _ -> ([], E.ml_var_dot ~dynamic_import id hidden_name))
-        | None -> (
-          match compile_lambda new_cxt jsx_tag with
-          | {block; value = Some b} -> (block, b)
-          | {value = None} -> assert false)
+        match compile_lambda new_cxt jsx_tag with
+        | {block; value = Some b} ->
+          (block, rewrite_nested_jsx_component_expr jsx_tag b)
+        | {value = None} -> assert false
       in
       let rest_blocks, rest_exprs =
         Ext_list.split_map rest_args (fun x ->
