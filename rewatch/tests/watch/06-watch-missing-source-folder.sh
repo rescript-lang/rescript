@@ -65,7 +65,23 @@ git checkout "$DEP01_CONFIG"
 
 # Rebuild to regenerate any artifacts that were removed by `rewatch clean`
 # but not rebuilt due to the modified config (e.g. Dep01.mjs).
-rewatch build > /dev/null 2>&1
+if ! rewatch build > /dev/null 2>&1; then
+  error "Rebuild after restoring config failed"
+  rm -f rewatch.log
+  exit 1
+fi
+
+# Slow CI runners can still be catching up on file restoration when the build
+# command returns. Wait until git no longer sees tracked deletions before doing
+# the final cleanliness check.
+timeout=20
+while [ "$timeout" -gt 0 ]; do
+  if [ -z "$(git diff --name-only --diff-filter=D .)" ]; then
+    break
+  fi
+  sleep 1
+  timeout=$((timeout - 1))
+done
 rm -f rewatch.log
 
 if git diff --exit-code . > /dev/null 2>&1 && [ -z "$(git ls-files --others --exclude-standard .)" ];
