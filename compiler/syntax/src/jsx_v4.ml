@@ -498,15 +498,23 @@ let modified_binding ~binding_loc ~binding_pat_loc ~fn_name binding =
   in
   (wrap_expression_with_binding wrap_expression, has_forward_ref, expression)
 
-let vb_match ~expr (name, default, _, alias, loc, _) =
+let rec strip_constraint_unpack pattern =
+  match pattern with
+  | {ppat_desc = Ppat_constraint (_, {ptyp_desc = Ptyp_package _})} -> pattern
+  | {ppat_desc = Ppat_constraint (pattern, _)} ->
+    strip_constraint_unpack pattern
+  | _ -> pattern
+
+let vb_match ~expr (name, default, pattern, _alias, loc, _) =
   let label = get_label name in
   match default with
   | Some default ->
+    let resolved_name = "__" ^ label ^ "_value" in
     let value_binding =
       Vb.mk
-        (Pat.var (Location.mkloc alias loc))
+        (Pat.var (Location.mkloc resolved_name loc))
         (Exp.match_
-           (Exp.ident {txt = Lident ("__" ^ alias); loc = Location.none})
+           (Exp.ident {txt = Lident ("__" ^ label); loc = Location.none})
            [
              Exp.case
                (Pat.construct
@@ -518,7 +526,10 @@ let vb_match ~expr (name, default, _, alias, loc, _) =
                default;
            ])
     in
-    Exp.let_ Nonrecursive [value_binding] expr
+    Exp.let_ Nonrecursive [value_binding]
+      (Exp.let_ Nonrecursive
+         [Vb.mk pattern (Exp.ident (Location.mknoloc @@ Lident resolved_name))]
+         expr)
   | None -> expr
 
 let vb_match_expr named_arg_list expr =
@@ -652,22 +663,6 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
           ]
           (Exp.ident ~loc:pstr_loc {loc = empty_loc; txt = Lident txt})
     in
-    let rec strip_constraint_unpack ~label pattern =
-      match pattern with
-      | {ppat_desc = Ppat_constraint (_, {ptyp_desc = Ptyp_package _})} ->
-        pattern
-      | {ppat_desc = Ppat_constraint (pattern, _)} ->
-        strip_constraint_unpack ~label pattern
-      | _ -> pattern
-    in
-    let safe_pattern_label pattern =
-      match pattern with
-      | {ppat_desc = Ppat_var {txt; loc}} ->
-        {pattern with ppat_desc = Ppat_var {txt = "__" ^ txt; loc}}
-      | {ppat_desc = Ppat_alias (p, {txt; loc})} ->
-        {pattern with ppat_desc = Ppat_alias (p, {txt = "__" ^ txt; loc})}
-      | _ -> pattern
-    in
     let rec returned_expression patterns_with_label patterns_with_nolabel
         ({pexp_desc} as expr) =
       match pexp_desc with
@@ -688,17 +683,20 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
             lhs = {ppat_loc; ppat_desc} as pattern;
             rhs = expr;
           } -> (
-        let pattern_without_constraint =
-          strip_constraint_unpack ~label:(get_label arg_label) pattern
-        in
+        let pattern_without_constraint = strip_constraint_unpack pattern in
         (*
            If prop has the default value as Ident, it will get a build error
            when the referenced Ident value and the prop have the same name.
-           So we add a "__" to label to resolve the build error.
+           So we bind a temp "__<label>" in the props pattern and destructure
+           the original pattern later after resolving the default.
         *)
         let pattern_with_safe_label =
           match default with
-          | Some _ -> safe_pattern_label pattern_without_constraint
+          | Some _ ->
+            Pat.var
+              (Location.mkloc
+                 ("__" ^ get_label arg_label)
+                 pattern_without_constraint.ppat_loc)
           | _ -> pattern_without_constraint
         in
         if is_labelled arg_label || is_optional arg_label then

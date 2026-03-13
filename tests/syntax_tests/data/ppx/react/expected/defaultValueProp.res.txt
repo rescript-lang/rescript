@@ -5,14 +5,16 @@ module C0 = {
     b?: 'b,
   }
   let make = ({a: ?__a, b: ?__b, _}: props<_, _>) => {
-    let a = switch __a {
+    let __a_value = switch __a {
     | Some(a) => a
     | None => 2
     }
-    let b = switch __b {
+    let a = __a_value
+    let __b_value = switch __b {
     | Some(b) => b
     | None => a * 2
     }
+    let b = __b_value
     (React.int(a + b): React.element)
   }
   let make = {
@@ -29,10 +31,11 @@ module C1 = {
   }
 
   let make = ({a: ?__a, b, _}: props<_, _>) => {
-    let a = switch __a {
+    let __a_value = switch __a {
     | Some(a) => a
     | None => 2
     }
+    let a = __a_value
     (React.int(a + b): React.element)
   }
   let make = {
@@ -50,10 +53,11 @@ module C2 = {
   }
 
   let make = ({a: ?__a, _}: props<_>) => {
-    let a = switch __a {
+    let __a_value = switch __a {
     | Some(a) => a
     | None => a
     }
+    let a = __a_value
     (React.string(a): React.element)
   }
   let make = {
@@ -69,11 +73,12 @@ module C3 = {
     disabled?: 'disabled,
   }
 
-  let make = ({disabled: ?__everythingDisabled, _}: props<bool>) => {
-    let everythingDisabled = switch __everythingDisabled {
+  let make = ({disabled: ?__disabled, _}: props<bool>) => {
+    let __disabled_value = switch __disabled {
     | Some(disabled) => disabled
     | None => false
     }
+    let everythingDisabled: bool = __disabled_value
     (
       {
         React.string(everythingDisabled ? "true" : "false")

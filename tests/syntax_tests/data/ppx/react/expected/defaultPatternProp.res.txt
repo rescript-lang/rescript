@@ -1,0 +1,35 @@
+@@jsxConfig({version: 4})
+
+module C0 = {
+  module M = {
+    @res.jsxComponentProps
+    type props = {}
+
+    let make = (_: props): React.element => React.null
+    let make = {
+      let \"DefaultPatternProp$C0$M" = props => make(props)
+
+      \"DefaultPatternProp$C0$M"
+    }
+  }
+
+  module type S = module type of M
+  @res.jsxComponentProps
+  type props<'component> = {
+    component?: 'component,
+  }
+
+  let make = ({component: ?__component, _}: props<_>) => {
+    let __component_value = switch __component {
+    | Some(component) => component
+    | None => module(M: S)
+    }
+    let module(C: S) = __component_value
+    (React.jsx(C.make, {}): React.element)
+  }
+  let make = {
+    let \"DefaultPatternProp$C0" = (props: props<_>) => make(props)
+
+    \"DefaultPatternProp$C0"
+  }
+}
