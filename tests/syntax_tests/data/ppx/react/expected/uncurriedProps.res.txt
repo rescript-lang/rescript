@@ -5,10 +5,11 @@ type props<'a> = {
 }
 
 let make = ({a: ?__a, _}: props<unit => unit>) => {
-  let a = switch __a {
+  let __a_value = switch __a {
   | Some(a) => a
   | None => () => ()
   }
+  let a: unit => unit = __a_value
   (React.null: React.element)
 }
 let make = {
@@ -34,10 +35,11 @@ module Foo = {
   }
 
   let make = ({callback: ?__callback, _}: props<(string, bool, bool) => unit>) => {
-    let callback = switch __callback {
+    let __callback_value = switch __callback {
     | Some(callback) => callback
     | None => (_, _, _) => ()
     }
+    let callback: (string, bool, bool) => unit = __callback_value
     (
       {
         React.null
