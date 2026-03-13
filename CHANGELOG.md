@@ -25,6 +25,7 @@
 
 - Fix `null` and array values incorrectly matching the `Object` branch when pattern matching on `JSON.t` (or other untagged variants with an `Object` case) in statement position. https://github.com/rescript-lang/rescript/pull/8279
 - Fix rewatch panic when `package.json` has no `name` field. https://github.com/rescript-lang/rescript/pull/8291
+- Fix unpacking first-class module in default argument of react component. https://github.com/rescript-lang/rescript/pull/8296
 
 #### :memo: Documentation
 
