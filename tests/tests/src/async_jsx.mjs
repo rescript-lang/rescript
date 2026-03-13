@@ -33,9 +33,17 @@ let Bar = {
   make: Async_jsx$Bar
 };
 
+let Async_jsx$Foo$jsx = true;
+
+let Async_jsx$Bar$jsx = true;
+
 export {
   getNow,
   Foo,
   Bar,
+  Async_jsx$Foo,
+  Async_jsx$Foo$jsx,
+  Async_jsx$Bar,
+  Async_jsx$Bar$jsx,
 }
 /* react/jsx-runtime Not a pure module */

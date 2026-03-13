@@ -33,10 +33,26 @@ let V4A3 = {
   make: Jsxv4_newtype$V4A3
 };
 
+let Jsxv4_newtype$V4A$jsx = true;
+
+let Jsxv4_newtype$V4A1$jsx = true;
+
+let Jsxv4_newtype$V4A2$jsx = true;
+
+let Jsxv4_newtype$V4A3$jsx = true;
+
 export {
   V4A,
   V4A1,
   V4A2,
   V4A3,
+  Jsxv4_newtype$V4A,
+  Jsxv4_newtype$V4A$jsx,
+  Jsxv4_newtype$V4A1,
+  Jsxv4_newtype$V4A1$jsx,
+  Jsxv4_newtype$V4A2,
+  Jsxv4_newtype$V4A2$jsx,
+  Jsxv4_newtype$V4A3,
+  Jsxv4_newtype$V4A3$jsx,
 }
 /* No side effect */

@@ -1,0 +1,33 @@
+// @ts-check
+
+import * as assert from "node:assert";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+import { setup } from "#dev/process";
+
+const { execBuild, execClean } = setup(import.meta.dirname);
+
+await execClean();
+await execBuild();
+
+const outputPath = path.join(import.meta.dirname, "src", "MainLayout.res.js");
+const output = await fs.readFile(outputPath, "utf8");
+const sidebarOutputPath = path.join(
+  import.meta.dirname,
+  "src",
+  "Sidebar.res.js",
+);
+const sidebarOutput = await fs.readFile(sidebarOutputPath, "utf8");
+
+assert.match(
+  output,
+  /JsxRuntime\.jsx\(Sidebar\$RscNestedJsxDeep\.Sidebar\$Group,/,
+);
+assert.doesNotMatch(output, /\.Group\.make,/);
+assert.match(sidebarOutput, /Sidebar\$Group\$jsx/);
+assert.match(
+  sidebarOutput,
+  /export \{[\s\S]*Group,[\s\S]*Sidebar\$Group,[\s\S]*Sidebar\$Group\$jsx[\s\S]*\}/s,
+);
+
+await execClean();

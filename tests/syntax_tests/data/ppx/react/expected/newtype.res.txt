@@ -99,3 +99,4 @@ module Uncurried = {
     \"Newtype$Uncurried"
   }
 }
+let \"Newtype$Uncurried" = Uncurried.make and \"Newtype$Uncurried$jsx" = true

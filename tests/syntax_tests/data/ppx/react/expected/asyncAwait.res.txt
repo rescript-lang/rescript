@@ -35,3 +35,5 @@ module C1 = {
     \"AsyncAwait$C1"
   }
 }
+let \"AsyncAwait$C0" = C0.make and \"AsyncAwait$C0$jsx" = true
+let \"AsyncAwait$C1" = C1.make and \"AsyncAwait$C1$jsx" = true

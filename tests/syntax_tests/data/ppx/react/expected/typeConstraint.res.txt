@@ -14,3 +14,4 @@ module V4A = {
     \"TypeConstraint$V4A"
   }
 }
+let \"TypeConstraint$V4A" = V4A.make and \"TypeConstraint$V4A$jsx" = true

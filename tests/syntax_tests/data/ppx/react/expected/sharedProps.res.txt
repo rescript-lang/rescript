@@ -67,3 +67,11 @@ module V4A8 = {
 
   external make: React.component<props> = "default"
 }
+let \"SharedProps$V4A1" = V4A1.make and \"SharedProps$V4A1$jsx" = true
+let \"SharedProps$V4A2" = V4A2.make and \"SharedProps$V4A2$jsx" = true
+let \"SharedProps$V4A3" = V4A3.make and \"SharedProps$V4A3$jsx" = true
+let \"SharedProps$V4A4" = V4A4.make and \"SharedProps$V4A4$jsx" = true
+let \"SharedProps$V4A5" = V4A5.make and \"SharedProps$V4A5$jsx" = true
+let \"SharedProps$V4A6" = V4A6.make and \"SharedProps$V4A6$jsx" = true
+let \"SharedProps$V4A7" = V4A7.make and \"SharedProps$V4A7$jsx" = true
+let \"SharedProps$V4A8" = V4A8.make and \"SharedProps$V4A8$jsx" = true

@@ -80,6 +80,34 @@ let make_new_binding binding expression new_name =
     Jsx_common.raise_error ~loc:pvb_loc
       "JSX component calls cannot be destructured."
 
+let longident_of_segments = function
+  | [] -> assert false
+  | head :: rest ->
+    List.fold_left (fun acc name -> Ldot (acc, name)) (Lident head) rest
+
+let make_hoisted_component_binding ~empty_loc ~full_module_name nested_modules =
+  let path =
+    nested_modules |> List.rev |> longident_of_segments |> fun txt ->
+    {loc = empty_loc; txt = Ldot (txt, "make")}
+  in
+  let marker_name = full_module_name ^ "$jsx" in
+  {
+    pstr_loc = empty_loc;
+    pstr_desc =
+      Pstr_value
+        ( Nonrecursive,
+          [
+            Vb.mk ~loc:empty_loc
+              (Pat.var ~loc:empty_loc {loc = empty_loc; txt = full_module_name})
+              (Exp.ident ~loc:empty_loc path);
+            Vb.mk ~loc:empty_loc
+              (Pat.var ~loc:empty_loc {loc = empty_loc; txt = marker_name})
+              (Exp.construct ~loc:empty_loc
+                 {loc = empty_loc; txt = Lident "true"}
+                 None);
+          ] );
+  }
+
 (* Lookup the filename from the location information on the AST node and turn it into a valid module identifier *)
 let filename_from_loc (pstr_loc : Location.t) =
   let file_name =
@@ -94,8 +122,27 @@ let filename_from_loc (pstr_loc : Location.t) =
   let file_name = String.capitalize_ascii file_name in
   file_name
 
+let unnamespace_module_name file_name =
+  match String.index_opt file_name '$' with
+  | Some index -> String.sub file_name 0 index
+  | None -> (
+    match Ext_namespace.try_split_module_name file_name with
+    | Some (_namespace, module_name) -> module_name
+    | None -> file_name)
+
+let maybe_hoist_nested_make_component ~(config : Jsx_common.jsx_config)
+    ~empty_loc ~full_module_name fn_name =
+  match (fn_name, config.nested_modules) with
+  | "make", _ :: _ ->
+    config.hoisted_structure_items <-
+      make_hoisted_component_binding ~empty_loc ~full_module_name
+        config.nested_modules
+      :: config.hoisted_structure_items
+  | _ -> ()
+
 (* Build a string representation of a module name with segments separated by $ *)
 let make_module_name file_name nested_modules fn_name =
+  let file_name = unnamespace_module_name file_name in
   let full_module_name =
     match (file_name, nested_modules, fn_name) with
     (* TODO: is this even reachable? It seems like the fileName always exists *)
@@ -216,6 +263,8 @@ let make_type_decls_with_core_type props_name loc core_type typ_vars =
 let live_attr = ({txt = "live"; loc = Location.none}, PStr [])
 let jsx_component_props_attr =
   ({txt = "res.jsxComponentProps"; loc = Location.none}, PStr [])
+let jsx_component_path_attr =
+  ({txt = "res.jsxComponentPath"; loc = Location.none}, PStr [])
 
 (* type props<'x, 'y, ...> = { x: 'x, y?: 'y, ... } *)
 let make_props_record_type ~core_type_of_attr ~external_ ~typ_vars_of_core_type
@@ -803,6 +852,10 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
           },
           Some (binding_wrapper full_expression) )
     in
+    let () =
+      maybe_hoist_nested_make_component ~config ~empty_loc ~full_module_name
+        fn_name
+    in
     (Some props_record_type, binding, new_binding))
   else if Jsx_common.has_attr_on_binding Jsx_common.has_attr_with_props binding
   then
@@ -900,6 +953,10 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
         Some
           (make_new_binding ~loc:empty_loc ~full_module_name modified_binding)
     in
+    let () =
+      maybe_hoist_nested_make_component ~config ~empty_loc ~full_module_name
+        fn_name
+    in
     let binding_expr =
       {
         binding.pvb_expr with
@@ -933,7 +990,8 @@ let transform_structure_item ~config item =
   | {
       pstr_loc;
       pstr_desc =
-        Pstr_primitive ({pval_attributes; pval_type} as value_description);
+        Pstr_primitive
+          ({pval_attributes; pval_type; pval_name} as value_description);
     } as pstr -> (
     match
       ( List.filter Jsx_common.has_attr pval_attributes,
@@ -993,6 +1051,15 @@ let transform_structure_item ~config item =
                 pval_attributes = List.filter other_attrs_pure pval_attributes;
               };
         }
+      in
+      let file_name = filename_from_loc pstr_loc in
+      let empty_loc = Location.in_file file_name in
+      let full_module_name =
+        make_module_name file_name config.nested_modules pval_name.txt
+      in
+      let () =
+        maybe_hoist_nested_make_component ~config ~empty_loc ~full_module_name
+          pval_name.txt
       in
       [props_record_type; new_structure]
     | _ ->
@@ -1286,10 +1353,24 @@ let mk_uppercase_tag_name_expr tag_name =
     | JsxUpperTag path -> Longident.Ldot (path, "make")
   in
   let loc = tag_name.loc in
-  Exp.ident ~loc {txt = tag_identifier; loc}
+  Exp.ident ~loc ~attrs:[jsx_component_path_attr] {txt = tag_identifier; loc}
 
 let expr ~(config : Jsx_common.jsx_config) mapper expression =
   match expression with
+  | {
+   pexp_desc = Pexp_letmodule (name, module_expr, body);
+   pexp_loc = loc;
+   pexp_attributes = attrs;
+  } ->
+    config.nested_modules <- name.txt :: config.nested_modules;
+    let mapped_module_expr = default_mapper.module_expr mapper module_expr in
+    let mapped_body = mapper.expr mapper body in
+    let () =
+      match config.nested_modules with
+      | _ :: rest -> config.nested_modules <- rest
+      | [] -> ()
+    in
+    Exp.letmodule ~loc ~attrs name mapped_module_expr mapped_body
   | {
    pexp_desc = Pexp_jsx_element jsx_element;
    pexp_loc = loc;

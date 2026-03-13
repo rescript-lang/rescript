@@ -37,10 +37,16 @@ let ReactTest = {
   FormattedMessage: FormattedMessage
 };
 
+let ExternalArity$ReactTest$FormattedMessage = ReactIntl.FormattedMessage;
+
+let ExternalArity$ReactTest$FormattedMessage$jsx = true;
+
 export {
   f1,
   f2,
   FromTypeConstructor,
   ReactTest,
+  ExternalArity$ReactTest$FormattedMessage,
+  ExternalArity$ReactTest$FormattedMessage$jsx,
 }
 /* test1 Not a pure module */

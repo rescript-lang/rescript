@@ -21,3 +21,5 @@ module NoProps = {
     \"Interface$NoProps"
   }
 }
+let \"Interface$A" = A.make and \"Interface$A$jsx" = true
+let \"Interface$NoProps" = NoProps.make and \"Interface$NoProps$jsx" = true

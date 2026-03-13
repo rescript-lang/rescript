@@ -323,7 +323,7 @@ let lambda ppf v =
       fprintf ppf ")@ %a)@]" lam body
     | Lprim
         {
-          primitive = Pfield (n, Fld_module {name = s});
+          primitive = Pfield (n, Fld_module {name = s; jsx_component = _});
           args = [Lglobal_module (id, dynamic_import)];
           _;
         } ->

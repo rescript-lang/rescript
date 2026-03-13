@@ -652,6 +652,11 @@ let extract_directive_for_fn exp =
          if txt = "directive" then Ast_payload.is_single_string payload
          else None)
 
+let has_jsx_component_path_attr (exp : Typedtree.expression) =
+  List.exists
+    (fun ({txt; _}, _) -> String.equal txt "res.jsxComponentPath")
+    exp.exp_attributes
+
 let rec transl_exp e =
   List.iter (Translattribute.check_attribute e) e.exp_attributes;
   transl_exp0 e
@@ -661,7 +666,9 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
   | Texp_ident (_, _, {val_kind = Val_prim p}) ->
     transl_primitive e.exp_loc p e.exp_env e.exp_type
   | Texp_ident (path, _, {val_kind = Val_reg}) ->
-    transl_value_path ~loc:e.exp_loc e.exp_env path
+    if has_jsx_component_path_attr e then
+      transl_jsx_value_path ~loc:e.exp_loc e.exp_env path
+    else transl_value_path ~loc:e.exp_loc e.exp_env path
   | Texp_constant cst -> Lconst (Const_base cst)
   | Texp_let (rec_flag, pat_expr_list, body) ->
     transl_let rec_flag pat_expr_list (transl_exp body)
