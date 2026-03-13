@@ -25,7 +25,11 @@ assert.match(
 );
 assert.match(
   output,
-  /JsxRuntime\.jsx\(Sidebar\$RscNestedJsxMembers\.Sidebar(?:\$RscNestedJsxMembers)?\$Provider,/,
+  /JsxRuntime\.jsx\(Sidebar\$RscNestedJsxMembers\.Sidebar\$Provider,/,
+);
+assert.doesNotMatch(
+  output,
+  /JsxRuntime\.jsx\(Sidebar\$RscNestedJsxMembers\.Sidebar\$RscNestedJsxMembers\$Provider,/,
 );
 assert.doesNotMatch(output, /\.Provider\.make,/);
 assert.match(

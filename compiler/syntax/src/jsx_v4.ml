@@ -122,8 +122,17 @@ let filename_from_loc (pstr_loc : Location.t) =
   let file_name = String.capitalize_ascii file_name in
   file_name
 
+let unnamespace_module_name file_name =
+  match String.index_opt file_name '$' with
+  | Some index -> String.sub file_name 0 index
+  | None -> (
+    match Ext_namespace.try_split_module_name file_name with
+    | Some (module_name, _namespace) -> module_name
+    | None -> file_name)
+
 (* Build a string representation of a module name with segments separated by $ *)
 let make_module_name file_name nested_modules fn_name =
+  let file_name = unnamespace_module_name file_name in
   let full_module_name =
     match (file_name, nested_modules, fn_name) with
     (* TODO: is this even reachable? It seems like the fileName always exists *)
