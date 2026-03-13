@@ -41,4 +41,5 @@ module V4C = {
   }
 }
 let \"NoPropsWithKey$V4CA" = V4CA.make and \"NoPropsWithKey$V4CA$jsx" = true
+let \"NoPropsWithKey$V4CB" = V4CB.make and \"NoPropsWithKey$V4CB$jsx" = true
 let \"NoPropsWithKey$V4C" = V4C.make and \"NoPropsWithKey$V4C$jsx" = true
