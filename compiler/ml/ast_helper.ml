@@ -154,7 +154,12 @@ end
 
 module Exp = struct
   let mk ?(loc = !default_loc) ?(attrs = []) d =
-    {pexp_desc = d; pexp_loc = loc; pexp_attributes = attrs}
+    {
+      pexp_desc = d;
+      pexp_loc = loc;
+      pexp_attributes = attrs;
+      pexp_is_return = false;
+    }
   let attr d a = {d with pexp_attributes = d.pexp_attributes @ [a]}
 
   let ident ?loc ?attrs a = mk ?loc ?attrs (Pexp_ident a)
