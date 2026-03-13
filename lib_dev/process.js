@@ -32,6 +32,7 @@ export const {
   execBin,
   rescript,
   execBuild,
+  execBuildOrThrow,
   execClean,
 } = setup();
 
@@ -194,6 +195,25 @@ export function setup(cwd = process.cwd()) {
      */
     execBuild(args = [], options = {}) {
       return exec(rescript_exe, ["build", ...args], options);
+    },
+
+    /**
+     * Execute ReScript `build` command directly and throw on non-zero exit
+     * while preserving captured stdout/stderr for quiet successful tests.
+     *
+     * @param {string[]} [args]
+     * @param {ExecOptions} [options]
+     * @return {Promise<ExecResult>}
+     */
+    async execBuildOrThrow(args = [], options = {}) {
+      const out = await exec(rescript_exe, ["build", ...args], options);
+      if (out.status !== 0) {
+        const err = new Error("ReScript build failed");
+        err.stack = out.stdout + out.stderr;
+        Object.assign(err, { execResult: out });
+        throw err;
+      }
+      return out;
     },
 
     /**
