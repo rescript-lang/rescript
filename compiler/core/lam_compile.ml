@@ -347,46 +347,51 @@ let compile output_prefix =
     push hidden_name;
     List.rev !candidates
   in
-  let exported_hidden_component_name (module_id : J.module_id)
+  let exported_hidden_component_name ~(id : Ident.t) ~(dynamic_import : bool)
       (hidden_name_candidates : string list) =
     let rec loop = function
       | [] -> None
       | candidate :: rest -> (
         match
-          Lam_compile_env.query_external_id_info
-            ~dynamic_import:module_id.dynamic_import module_id.id
+          Lam_compile_env.query_external_id_info ~dynamic_import id
             (candidate ^ "$jsx")
         with
         | _ -> Some candidate
         | exception Not_found -> loop rest)
     in
-    match module_id.kind with
-    | Ml -> loop hidden_name_candidates
-    | _ -> None
+    loop hidden_name_candidates
   in
   let rewrite_nested_jsx_component_expr (jsx_tag : Lam.t)
       (compiled_expr : J.expression) : J.expression =
-    let rec extract_module_id (expr : J.expression) =
+    let rec extract_root_expr (expr : J.expression) =
       match expr.expression_desc with
-      | Var (Qualified (module_id, _)) -> Some module_id
-      | Static_index (inner, _, _) -> extract_module_id inner
+      | Var (Qualified (module_id, Some _)) ->
+        Some {expr with expression_desc = Var (Qualified (module_id, None))}
+      | Static_index (inner, _, _) -> extract_root_expr inner
+      | Var _ -> Some expr
       | _ -> None
     in
+    let hidden_component_access (root_expr : J.expression) hidden_name =
+      match root_expr.expression_desc with
+      | Var (Qualified (module_id, None)) ->
+        {
+          root_expr with
+          expression_desc = Var (Qualified (module_id, Some hidden_name));
+        }
+      | _ -> E.dot root_expr hidden_name
+    in
     match extract_nested_external_component_field jsx_tag with
-    | Some (id, _dynamic_import, hidden_name) -> (
+    | Some (id, dynamic_import, hidden_name) -> (
       let hidden_name_candidates =
         hidden_component_name_candidates id hidden_name
       in
-      match extract_module_id compiled_expr with
-      | Some module_id -> (
+      match extract_root_expr compiled_expr with
+      | Some root_expr -> (
         match
-          exported_hidden_component_name module_id hidden_name_candidates
+          exported_hidden_component_name ~id ~dynamic_import
+            hidden_name_candidates
         with
-        | Some hidden_name ->
-          {
-            compiled_expr with
-            expression_desc = Var (Qualified (module_id, Some hidden_name));
-          }
+        | Some hidden_name -> hidden_component_access root_expr hidden_name
         | None -> compiled_expr)
       | None -> compiled_expr)
     | None -> compiled_expr
@@ -1671,7 +1676,7 @@ let compile output_prefix =
          };
     } -> (
       match fld_info with
-      | Fld_module {name} ->
+      | Fld_module {name; jsx_component = _} ->
         compile_external_field_apply ~dynamic_import appinfo id name lambda_cxt
       | _ -> assert false)
     | _ -> (
@@ -1795,7 +1800,7 @@ let compile output_prefix =
     } -> (
       (* should be before Lglobal_global *)
       match fld_info with
-      | Fld_module {name = field} ->
+      | Fld_module {name = field; jsx_component = _} ->
         compile_external_field ~dynamic_import lambda_cxt id field
       | _ -> assert false)
     | {primitive = Praise; args = [e]; _} -> (

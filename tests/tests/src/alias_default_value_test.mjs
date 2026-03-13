@@ -105,6 +105,8 @@ let Alias_default_value_test$C6$jsx = true;
 
 let Alias_default_value_test$C7$jsx = true;
 
+let Alias_default_value_test$C8$jsx = true;
+
 export {
   C0,
   C1,
@@ -128,5 +130,7 @@ export {
   Alias_default_value_test$C6$jsx,
   Alias_default_value_test$C7,
   Alias_default_value_test$C7$jsx,
+  Alias_default_value_test$C8,
+  Alias_default_value_test$C8$jsx,
 }
 /* No side effect */
