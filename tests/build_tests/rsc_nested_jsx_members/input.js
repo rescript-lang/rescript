@@ -33,6 +33,12 @@ const externalSidebarOutput = await fs.readFile(
   externalSidebarOutputPath,
   "utf8",
 );
+const plainAccessOutputPath = path.join(
+  import.meta.dirname,
+  "src",
+  "PlainAccess.res.js",
+);
+const plainAccessOutput = await fs.readFile(plainAccessOutputPath, "utf8");
 
 assert.match(
   output,
@@ -65,5 +71,14 @@ assert.match(
   externalSidebarOutput,
   /export \{[\s\S]*Provider,[\s\S]*SidebarExternal\$Provider,[\s\S]*SidebarExternal\$Provider\$jsx[\s\S]*\}/s,
 );
+assert.match(
+  plainAccessOutput,
+  /let provider = Sidebar\$RscNestedJsxMembers\.Provider\.make;/,
+);
+assert.match(
+  plainAccessOutput,
+  /let callProvider = Sidebar\$RscNestedJsxMembers\.Provider\.make\(\{/,
+);
+assert.doesNotMatch(plainAccessOutput, /Sidebar\$Provider/);
 
 await execClean();

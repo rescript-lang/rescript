@@ -955,6 +955,10 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
         Some
           (make_new_binding ~loc:empty_loc ~full_module_name modified_binding)
     in
+    let () =
+      maybe_hoist_nested_make_component ~config ~empty_loc ~full_module_name
+        fn_name
+    in
     let binding_expr =
       {
         binding.pvb_expr with
