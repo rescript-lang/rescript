@@ -119,6 +119,9 @@ let collect_occurs lam : occ_tbl =
       count bv l1;
       count bv l2;
       count Map_ident.empty l3
+    | Lfor_of (_, l1, l2) ->
+      count bv l1;
+      count Map_ident.empty l2
     | Lwhile (l1, l2) ->
       count Map_ident.empty l1;
       count Map_ident.empty l2

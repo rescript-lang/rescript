@@ -100,6 +100,7 @@ let identifyPexp pexp =
   | Pexp_sequence _ -> "Pexp_sequence"
   | Pexp_while _ -> "Pexp_while"
   | Pexp_for _ -> "Pexp_for"
+  | Pexp_for_of _ -> "Pexp_for_of"
   | Pexp_constraint _ -> "Pexp_constraint"
   | Pexp_coerce _ -> "Pexp_coerce"
   | Pexp_send _ -> "Pexp_send"

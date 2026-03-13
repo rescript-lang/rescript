@@ -350,6 +350,10 @@ and expression i ppf x =
     expression i ppf e1;
     expression i ppf e2;
     expression i ppf e3
+  | Texp_for_of (s, _, e1, e2) ->
+    line i ppf "Texp_for_of \"%a\"\n" fmt_ident s;
+    expression i ppf e1;
+    expression i ppf e2
   | Texp_send (e, Tmeth_name s, eo) ->
     line i ppf "Texp_send \"%s\"\n" s;
     expression i ppf e;

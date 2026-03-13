@@ -278,6 +278,9 @@ end = struct
       iter_expression exp1;
       iter_expression exp2;
       iter_expression exp3
+    | Texp_for_of (_id, _, exp1, exp2) ->
+      iter_expression exp1;
+      iter_expression exp2
     | Texp_send (exp, _meth, expo) -> (
       iter_expression exp;
       match expo with

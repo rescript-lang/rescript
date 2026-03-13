@@ -243,6 +243,8 @@ let expr sub x =
     | Texp_for (id, p, exp1, exp2, dir, exp3) ->
       Texp_for
         (id, p, sub.expr sub exp1, sub.expr sub exp2, dir, sub.expr sub exp3)
+    | Texp_for_of (id, p, exp1, exp2) ->
+      Texp_for_of (id, p, sub.expr sub exp1, sub.expr sub exp2)
     | Texp_send (exp, meth, expo) ->
       Texp_send (sub.expr sub exp, meth, opt (sub.expr sub) expo)
     | Texp_letmodule (id, s, mexpr, exp) ->
