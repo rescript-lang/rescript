@@ -18,6 +18,21 @@ const sidebarOutputPath = path.join(
   "Sidebar.res.js",
 );
 const sidebarOutput = await fs.readFile(sidebarOutputPath, "utf8");
+const externalOutputPath = path.join(
+  import.meta.dirname,
+  "src",
+  "MainLayoutExternal.res.js",
+);
+const externalOutput = await fs.readFile(externalOutputPath, "utf8");
+const externalSidebarOutputPath = path.join(
+  import.meta.dirname,
+  "src",
+  "SidebarExternal.res.js",
+);
+const externalSidebarOutput = await fs.readFile(
+  externalSidebarOutputPath,
+  "utf8",
+);
 
 assert.match(
   output,
@@ -27,9 +42,17 @@ assert.match(
   output,
   /JsxRuntime\.jsx\(Sidebar\$RscNestedJsxMembers\.Sidebar\$Provider,/,
 );
+assert.match(
+  externalOutput,
+  /JsxRuntime\.jsx\(SidebarExternal\$RscNestedJsxMembers\.SidebarExternal\$Provider,/,
+);
 assert.doesNotMatch(
   output,
   /JsxRuntime\.jsx\(Sidebar\$RscNestedJsxMembers\.Sidebar\$RscNestedJsxMembers\$Provider,/,
+);
+assert.doesNotMatch(
+  externalOutput,
+  /JsxRuntime\.jsx\(SidebarExternal\$RscNestedJsxMembers\.Provider\.make,/,
 );
 assert.doesNotMatch(output, /\.Provider\.make,/);
 assert.match(
@@ -38,5 +61,9 @@ assert.match(
 );
 assert.match(sidebarOutput, /Sidebar\$Provider\$jsx/);
 assert.match(sidebarOutput, /Sidebar\$Inset\$jsx/);
+assert.match(
+  externalSidebarOutput,
+  /export \{[\s\S]*Provider,[\s\S]*SidebarExternal\$Provider,[\s\S]*SidebarExternal\$Provider\$jsx[\s\S]*\}/s,
+);
 
 await execClean();

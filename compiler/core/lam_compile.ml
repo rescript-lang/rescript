@@ -347,6 +347,23 @@ let compile output_prefix =
     push hidden_name;
     List.rev !candidates
   in
+  let exported_hidden_component_name (module_id : J.module_id)
+      (hidden_name_candidates : string list) =
+    let rec loop = function
+      | [] -> None
+      | candidate :: rest -> (
+        match
+          Lam_compile_env.query_external_id_info
+            ~dynamic_import:module_id.dynamic_import module_id.id
+            (candidate ^ "$jsx")
+        with
+        | _ -> Some candidate
+        | exception Not_found -> loop rest)
+    in
+    match module_id.kind with
+    | Ml -> loop hidden_name_candidates
+    | _ -> None
+  in
   let rewrite_nested_jsx_component_expr (jsx_tag : Lam.t)
       (compiled_expr : J.expression) : J.expression =
     let rec extract_module_id (expr : J.expression) =
@@ -356,22 +373,22 @@ let compile output_prefix =
       | _ -> None
     in
     match extract_nested_external_component_field jsx_tag with
-    | Some (id, dynamic_import, hidden_name) -> (
+    | Some (id, _dynamic_import, hidden_name) -> (
       let hidden_name_candidates =
         hidden_component_name_candidates id hidden_name
       in
-      let resolved_hidden_name =
-        match hidden_name_candidates with
-        | candidate :: _ -> Some candidate
-        | [] -> None
-      in
-      match (resolved_hidden_name, extract_module_id compiled_expr) with
-      | Some hidden_name, Some module_id ->
-        {
-          compiled_expr with
-          expression_desc = Var (Qualified (module_id, Some hidden_name));
-        }
-      | _ -> compiled_expr)
+      match extract_module_id compiled_expr with
+      | Some module_id -> (
+        match
+          exported_hidden_component_name module_id hidden_name_candidates
+        with
+        | Some hidden_name ->
+          {
+            compiled_expr with
+            expression_desc = Var (Qualified (module_id, Some hidden_name));
+          }
+        | None -> compiled_expr)
+      | None -> compiled_expr)
     | None -> compiled_expr
   in
   let rec compile_external_field (* Like [List.empty]*)

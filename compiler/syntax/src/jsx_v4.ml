@@ -127,8 +127,18 @@ let unnamespace_module_name file_name =
   | Some index -> String.sub file_name 0 index
   | None -> (
     match Ext_namespace.try_split_module_name file_name with
-    | Some (module_name, _namespace) -> module_name
+    | Some (_namespace, module_name) -> module_name
     | None -> file_name)
+
+let maybe_hoist_nested_make_component ~(config : Jsx_common.jsx_config)
+    ~empty_loc ~full_module_name fn_name =
+  match (fn_name, config.nested_modules) with
+  | "make", _ :: _ ->
+    config.hoisted_structure_items <-
+      make_hoisted_component_binding ~empty_loc ~full_module_name
+        config.nested_modules
+      :: config.hoisted_structure_items
+  | _ -> ()
 
 (* Build a string representation of a module name with segments separated by $ *)
 let make_module_name file_name nested_modules fn_name =
@@ -845,13 +855,8 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
           Some (binding_wrapper full_expression) )
     in
     let () =
-      match (fn_name, config.nested_modules) with
-      | "make", _ :: _ ->
-        config.hoisted_structure_items <-
-          make_hoisted_component_binding ~empty_loc ~full_module_name
-            config.nested_modules
-          :: config.hoisted_structure_items
-      | _ -> ()
+      maybe_hoist_nested_make_component ~config ~empty_loc ~full_module_name
+        fn_name
     in
     (Some props_record_type, binding, new_binding))
   else if Jsx_common.has_attr_on_binding Jsx_common.has_attr_with_props binding
@@ -983,7 +988,8 @@ let transform_structure_item ~config item =
   | {
       pstr_loc;
       pstr_desc =
-        Pstr_primitive ({pval_attributes; pval_type} as value_description);
+        Pstr_primitive
+          ({pval_attributes; pval_type; pval_name} as value_description);
     } as pstr -> (
     match
       ( List.filter Jsx_common.has_attr pval_attributes,
@@ -1043,6 +1049,15 @@ let transform_structure_item ~config item =
                 pval_attributes = List.filter other_attrs_pure pval_attributes;
               };
         }
+      in
+      let file_name = filename_from_loc pstr_loc in
+      let empty_loc = Location.in_file file_name in
+      let full_module_name =
+        make_module_name file_name config.nested_modules pval_name.txt
+      in
+      let () =
+        maybe_hoist_nested_make_component ~config ~empty_loc ~full_module_name
+          pval_name.txt
       in
       [props_record_type; new_structure]
     | _ ->
