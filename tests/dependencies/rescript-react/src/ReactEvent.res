@@ -59,21 +59,27 @@ external toSyntheticEvent: synthetic<'a> => Synthetic.t = "%identity"
 module Clipboard = {
   type tag = JsxEvent.Clipboard.tag
   type t = synthetic<tag>
-  include MakeEventWithType({type t = t})
+  include MakeEventWithType({
+    type t = t
+  })
   @get external clipboardData: t => {..} = "clipboardData" /* Should return Dom.dataTransfer */
 }
 
 module Composition = {
   type tag = JsxEvent.Composition.tag
   type t = synthetic<tag>
-  include MakeEventWithType({type t = t})
+  include MakeEventWithType({
+    type t = t
+  })
   @get external data: t => string = "data"
 }
 
 module Keyboard = {
   type tag = JsxEvent.Keyboard.tag
   type t = synthetic<tag>
-  include MakeEventWithType({type t = t})
+  include MakeEventWithType({
+    type t = t
+  })
   @get external altKey: t => bool = "altKey"
   @get external charCode: t => int = "charCode"
   @get external code: t => string = "code"
@@ -93,7 +99,9 @@ module Keyboard = {
 module Focus = {
   type tag = JsxEvent.Focus.tag
   type t = synthetic<tag>
-  include MakeEventWithType({type t = t})
+  include MakeEventWithType({
+    type t = t
+  })
   @get @return(nullable)
   external relatedTarget: t => option<{..}> = "relatedTarget" /* Should return Dom.eventTarget */
 }
@@ -101,13 +109,17 @@ module Focus = {
 module Form = {
   type tag = JsxEvent.Form.tag
   type t = synthetic<tag>
-  include MakeEventWithType({type t = t})
+  include MakeEventWithType({
+    type t = t
+  })
 }
 
 module Mouse = {
   type tag = JsxEvent.Mouse.tag
   type t = synthetic<tag>
-  include MakeEventWithType({type t = t})
+  include MakeEventWithType({
+    type t = t
+  })
   @get external altKey: t => bool = "altKey"
   @get external button: t => int = "button"
   @get external buttons: t => int = "buttons"
@@ -131,7 +143,9 @@ module Mouse = {
 module Pointer = {
   type tag = JsxEvent.Pointer.tag
   type t = synthetic<tag>
-  include MakeEventWithType({type t = t})
+  include MakeEventWithType({
+    type t = t
+  })
 
   // UIEvent
   @get external detail: t => int = "detail"
@@ -176,13 +190,17 @@ module Pointer = {
 module Selection = {
   type tag = JsxEvent.Selection.tag
   type t = synthetic<tag>
-  include MakeEventWithType({type t = t})
+  include MakeEventWithType({
+    type t = t
+  })
 }
 
 module Touch = {
   type tag = JsxEvent.Touch.tag
   type t = synthetic<tag>
-  include MakeEventWithType({type t = t})
+  include MakeEventWithType({
+    type t = t
+  })
   @get external altKey: t => bool = "altKey"
   @get external changedTouches: t => {..} = "changedTouches" /* Should return Dom.touchList */
   @get external ctrlKey: t => bool = "ctrlKey"
@@ -197,7 +215,9 @@ module Touch = {
 module UI = {
   type tag = JsxEvent.UI.tag
   type t = synthetic<tag>
-  include MakeEventWithType({type t = t})
+  include MakeEventWithType({
+    type t = t
+  })
   @get external detail: t => int = "detail"
   @get external view: t => Dom.window = "view" /* Should return DOMAbstractView/WindowProxy */
 }
@@ -205,7 +225,9 @@ module UI = {
 module Wheel = {
   type tag = JsxEvent.Wheel.tag
   type t = synthetic<tag>
-  include MakeEventWithType({type t = t})
+  include MakeEventWithType({
+    type t = t
+  })
   @get external deltaMode: t => int = "deltaMode"
   @get external deltaX: t => float = "deltaX"
   @get external deltaY: t => float = "deltaY"
@@ -215,19 +237,25 @@ module Wheel = {
 module Media = {
   type tag = JsxEvent.Media.tag
   type t = synthetic<tag>
-  include MakeEventWithType({type t = t})
+  include MakeEventWithType({
+    type t = t
+  })
 }
 
 module Image = {
   type tag = JsxEvent.Image.tag
   type t = synthetic<tag>
-  include MakeEventWithType({type t = t})
+  include MakeEventWithType({
+    type t = t
+  })
 }
 
 module Animation = {
   type tag = JsxEvent.Animation.tag
   type t = synthetic<tag>
-  include MakeEventWithType({type t = t})
+  include MakeEventWithType({
+    type t = t
+  })
   @get external animationName: t => string = "animationName"
   @get external pseudoElement: t => string = "pseudoElement"
   @get external elapsedTime: t => float = "elapsedTime"
@@ -236,7 +264,9 @@ module Animation = {
 module Transition = {
   type tag = JsxEvent.Transition.tag
   type t = synthetic<tag>
-  include MakeEventWithType({type t = t})
+  include MakeEventWithType({
+    type t = t
+  })
   @get external propertyName: t => string = "propertyName"
   @get external pseudoElement: t => string = "pseudoElement"
   @get external elapsedTime: t => float = "elapsedTime"
