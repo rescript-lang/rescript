@@ -1508,12 +1508,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"h3@npm:2.0.1-rc.14":
-  version: 2.0.1-rc.14
-  resolution: "h3@npm:2.0.1-rc.14"
+"h3@npm:2.0.1-rc.16":
+  version: 2.0.1-rc.16
+  resolution: "h3@npm:2.0.1-rc.16"
   dependencies:
-    rou3: "npm:^0.7.12"
-    srvx: "npm:^0.11.2"
+    rou3: "npm:^0.8.0"
+    srvx: "npm:^0.11.9"
   peerDependencies:
     crossws: ^0.4.1
   peerDependenciesMeta:
@@ -1521,7 +1521,7 @@ __metadata:
       optional: true
   bin:
     h3: bin/h3.mjs
-  checksum: 10c0/963c5ec8d206d73c6481269ceb88aaae7cda342576dcd9c56dfcd356007e29538952e25152a9ea411b355cccf98b12ee42a975aa327af7e945e41d4f328eed1b
+  checksum: 10c0/5da1c575307ef3cb953c4e79a1538878b93bca5218935ce77d36e8b4a9ac581ff789252cbbab6288855bcd796eeb2e91d16d00b52d9722d72bbfa515bba576ce
   languageName: node
   linkType: hard
 
@@ -2344,7 +2344,7 @@ __metadata:
   dependencies:
     "@rescript/react": "npm:^0.14.0"
     "@rollup/plugin-node-resolve": "npm:^16.0.0"
-    h3: "npm:2.0.1-rc.14"
+    h3: "npm:2.0.1-rc.16"
     rescript: "workspace:^"
     rollup: "npm:^4.32.0"
   languageName: unknown
@@ -2631,10 +2631,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"rou3@npm:^0.7.12":
-  version: 0.7.12
-  resolution: "rou3@npm:0.7.12"
-  checksum: 10c0/2ea87ddd91a5d0f9d9671fa2bb714f57566eae33ecb24e8a61bb298aca8c226483e59cafe1c60297ac9aa58b2b6ad506447374cdbff4e99cf0f9f72a9dae09dc
+"rou3@npm:^0.8.0":
+  version: 0.8.1
+  resolution: "rou3@npm:0.8.1"
+  checksum: 10c0/c8728cf3c41833db0e20cbadba07b3c678b8b9fb12db1d8803f275a7a6cce02d0be9bee79367575883f65659c9c0ed1001e6527146ed27772e439e5d6c68d264
   languageName: node
   linkType: hard
 
@@ -2789,12 +2789,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"srvx@npm:^0.11.2":
-  version: 0.11.8
-  resolution: "srvx@npm:0.11.8"
+"srvx@npm:^0.11.9":
+  version: 0.11.9
+  resolution: "srvx@npm:0.11.9"
   bin:
     srvx: bin/srvx.mjs
-  checksum: 10c0/da7d9ee8417f3e457411ab594745aae180987f6d3b90d759d4948b9b9299c647d8e3ada54816e815cf8adf7b264d2b5dd3cf39f722a79f9efa73412b406e7a21
+  checksum: 10c0/e0e09be97cfae5f3e42bd6e1578e0aece8a65580d5dd136adcc54e50e414e391f6a8a40130aaee989d20b7bef65310b49a77bd23717d5d6ca75d18d6bc69c4d7
   languageName: node
   linkType: hard
 
