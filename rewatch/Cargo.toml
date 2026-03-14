@@ -27,6 +27,7 @@ serde_json = { version = "1.0.93" }
 serde_ignored = "0.1.11"
 serde_path_to_error = "0.1.16"
 sysinfo = "0.29.10"
+rusqlite = { version = "0.31", features = ["bundled"] }
 tempfile = "3.10.1"
 
 # OpenTelemetry for tracing

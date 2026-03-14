@@ -190,7 +190,6 @@ rescript build
 cat <<'EOF' | rescript-editor-analysis.exe rewatch llmIndex
 {
   "rootPath": "/path/to/your/rescript-project",
-  "namespace": null,
   "suffix": ".mjs",
   "rescriptVersion": [13, 0],
   "genericJsxModule": null,
@@ -216,7 +215,6 @@ EOF
 cat <<'EOF' | /Users/nojaf/Projects/rescript/packages/@rescript/darwin-arm64/bin/rescript-editor-analysis.exe rewatch llmIndex
 {
   "rootPath": "/Users/nojaf/Projects/relocation",
-  "namespace": null,
   "suffix": ".res.mjs",
   "rescriptVersion": [13, 0],
   "genericJsxModule": null,

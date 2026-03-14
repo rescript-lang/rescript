@@ -4,6 +4,7 @@ pub mod cmd;
 pub mod config;
 pub mod format;
 pub mod helpers;
+pub mod llm_index;
 pub mod lock;
 pub mod lsp;
 pub mod project_context;

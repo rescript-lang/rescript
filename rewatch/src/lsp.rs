@@ -1,4 +1,4 @@
-mod analysis;
+pub(crate) mod analysis;
 mod code_action;
 mod code_lens;
 mod completion;

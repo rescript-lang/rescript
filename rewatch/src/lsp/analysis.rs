@@ -268,7 +268,7 @@ fn build_context_json(
     };
 
     let opens = build_opens(namespace, package_config);
-    let paths_for_module = build_paths_for_module(build_state, runtime);
+    let paths_for_module = build_paths_for_module(build_state, runtime, OutputTarget::Lsp);
     let (project_files, dependencies_files) = build_file_sets(build_state, runtime);
 
     json!({
@@ -319,7 +319,7 @@ fn ensure_cmt(
 /// 1. `["Stdlib", "place holder"]` and `["Pervasives", "JsxModules", "place holder"]` (unless `-nopervasives`)
 /// 2. `[namespace_name, "place holder"]` if there's a namespace
 /// 3. From `-open Foo.Bar` in compiler_flags: `["Foo", "Bar", "place holder"]`
-fn build_opens(namespace: &Namespace, config: &config::Config) -> Value {
+pub(crate) fn build_opens(namespace: &Namespace, config: &config::Config) -> Value {
     let flags = config::flatten_flags(&config.compiler_flags);
 
     let no_pervasives = flags.iter().any(|f| f == "-nopervasives");
@@ -371,7 +371,11 @@ fn build_opens(namespace: &Namespace, config: &config::Config) -> Value {
 ///
 /// Includes both project/dependency modules from the build state and runtime
 /// modules from the cached `RuntimeModuleData`.
-fn build_paths_for_module(build_state: &BuildCommandState, runtime: &RuntimeModuleData) -> Value {
+pub(crate) fn build_paths_for_module(
+    build_state: &BuildCommandState,
+    runtime: &RuntimeModuleData,
+    output: OutputTarget,
+) -> Value {
     let mut result = serde_json::Map::new();
 
     // Add cached runtime modules from lib/ocaml/
@@ -387,7 +391,7 @@ fn build_paths_for_module(build_state: &BuildCommandState, runtime: &RuntimeModu
         match module {
             Module::SourceFile(sf_module) => {
                 let source_file = &sf_module.source_file;
-                let build_path = package.get_build_path_for_output(OutputTarget::Lsp);
+                let build_path = package.get_build_path_for_output(output);
 
                 let impl_path = &source_file.implementation.path;
                 let basename = helpers::file_path_to_compiler_asset_basename(impl_path, &package.namespace);
@@ -431,7 +435,7 @@ fn build_paths_for_module(build_state: &BuildCommandState, runtime: &RuntimeModu
                 }
             }
             Module::MlMap(_) => {
-                let build_path = package.get_build_path_for_output(OutputTarget::Lsp);
+                let build_path = package.get_build_path_for_output(output);
                 let cmt = build_path.join(format!("{}.cmt", module_name));
                 result.insert(
                     module_name.clone(),
@@ -451,7 +455,10 @@ fn build_paths_for_module(build_state: &BuildCommandState, runtime: &RuntimeModu
 /// Partition module names into project files and dependency files.
 ///
 /// Runtime modules from the cached `RuntimeModuleData` are included in dependency files.
-fn build_file_sets(build_state: &BuildCommandState, runtime: &RuntimeModuleData) -> (Value, Value) {
+pub(crate) fn build_file_sets(
+    build_state: &BuildCommandState,
+    runtime: &RuntimeModuleData,
+) -> (Value, Value) {
     let root_package_name = &build_state.build_state.get_root_config().name;
 
     let mut project_files = Vec::new();

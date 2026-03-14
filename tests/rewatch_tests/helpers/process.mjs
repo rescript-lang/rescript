@@ -61,6 +61,15 @@ export function createRescriptCli(cwd, otelEndpoint) {
     },
 
     /**
+     * Run `rescript sync` and wait for completion.
+     * @param {string[]} args
+     * @returns {Promise<{status: number, stdout: string, stderr: string}>}
+     */
+    sync(args = []) {
+      return run(rescript_exe, ["sync", ...args], { cwd, env });
+    },
+
+    /**
      * Spawn `rescript watch` and return a handle with control methods.
      * @param {string[]} args
      * @returns {{stop: () => Promise<void>, stdout: import("stream").Readable, stderr: import("stream").Readable, process: child_process.ChildProcess, waitForOutput: (pattern: RegExp, timeoutMs?: number) => Promise<string>}}

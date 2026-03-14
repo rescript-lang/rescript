@@ -4,7 +4,7 @@ use std::process::ExitCode;
 use std::{io::Write, path::Path};
 use tracing::instrument;
 
-use rescript::{build, cli, cmd, format, lock, lsp, telemetry, watcher};
+use rescript::{build, cli, cmd, format, llm_index, lock, lsp, telemetry, watcher};
 
 fn main() -> ExitCode {
     // Initialize telemetry (only active if OTEL_EXPORTER_OTLP_ENDPOINT is set)
@@ -79,6 +79,7 @@ fn run_main(telemetry_guard: &telemetry::TelemetryGuard) -> i32 {
         }
         cli::Command::Lsp => run_lsp(),
         cli::Command::Format { stdin, check, files } => run_format(stdin, check, files),
+        cli::Command::Sync { folder } => llm_index::run_sync(&folder, show_progress, plain_output),
     }
 }
 

@@ -418,6 +418,11 @@ pub enum Command {
     },
     /// Start the language server (communicates over stdio)
     Lsp,
+    /// Build the project (typecheck) and write rescript.db
+    Sync {
+        #[command(flatten)]
+        folder: FolderArg,
+    },
 }
 
 impl Deref for FolderArg {

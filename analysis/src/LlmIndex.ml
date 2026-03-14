@@ -243,6 +243,83 @@ let parseOpens json =
            | _ -> None)
   | _ -> []
 
+(** Process a single package entry from the stdin JSON. *)
+let processPackageEntry json =
+  let rootPath = getString "rootPath" json in
+  let suffix =
+    match Json.get "suffix" json with
+    | Some (Json.String s) -> s
+    | _ -> ".js"
+  in
+  let rescriptVersion =
+    match Json.get "rescriptVersion" json with
+    | Some (Json.Array [Json.Number major; Json.Number minor]) ->
+      (int_of_float major, int_of_float minor)
+    | _ -> (13, 0)
+  in
+  let genericJsxModule =
+    match Json.get "genericJsxModule" json with
+    | Some (Json.String s) -> Some s
+    | _ -> None
+  in
+  let opens = parseOpens (Json.get "opens" json) in
+  let pathsForModule =
+    match Json.get "pathsForModule" json with
+    | Some obj -> parsePathsForModule obj
+    | None -> Hashtbl.create 0
+  in
+  let projectFiles = parseFileSet (Json.get "projectFiles" json) in
+  let dependenciesFiles = parseFileSet (Json.get "dependenciesFiles" json) in
+  let package : SharedTypes.package =
+    {
+      genericJsxModule;
+      suffix;
+      rootPath;
+      projectFiles;
+      dependenciesFiles;
+      pathsForModule;
+      namespace = None;
+      opens;
+      rescriptVersion;
+      autocomplete = Misc.StringMap.empty;
+    }
+  in
+  let files =
+    match Json.get "files" json with
+    | Some (Json.Array items) ->
+      items
+      |> List.filter_map (fun item ->
+             let moduleName = getString "moduleName" item in
+             let cmt = getString "cmt" item in
+             let cmti = getString "cmti" item in
+             let path =
+               if cmti <> "" then cmti else if cmt <> "" then cmt else ""
+             in
+             if moduleName <> "" && path <> "" then Some (moduleName, path)
+             else None)
+    | _ -> []
+  in
+  files
+  |> List.filter_map (fun (moduleName, path) ->
+         match Cmt.loadFullCmtWithPackage ~path ~package with
+         | None ->
+           prerr_endline ("llmIndex: failed to load cmt for " ^ path);
+           None
+         | Some full ->
+           let sourceFilePath =
+             match Hashtbl.find_opt package.pathsForModule moduleName with
+             | Some paths ->
+               let srcPath = sourcePathFromPaths paths in
+               Files.relpath rootPath srcPath
+               |> Files.split Filename.dir_sep
+               |> String.concat "/"
+             | None -> path
+           in
+           let moduleJson =
+             extractModuleForIndex ~rootPath ~sourceFilePath full.file.structure
+           in
+           Some moduleJson)
+
 let command () =
   let input = In_channel.input_all In_channel.stdin in
   match Json.parse input with
@@ -250,90 +327,10 @@ let command () =
     prerr_endline "llmIndex: failed to parse JSON from stdin";
     print_endline "[]"
   | Some json ->
-    (* Build the package from the context (same fields as rewatch context) *)
-    let rootPath = getString "rootPath" json in
-    let namespace =
-      match Json.get "namespace" json with
-      | Some (Json.String s) -> Some s
-      | _ -> None
-    in
-    let suffix =
-      match Json.get "suffix" json with
-      | Some (Json.String s) -> s
-      | _ -> ".js"
-    in
-    let rescriptVersion =
-      match Json.get "rescriptVersion" json with
-      | Some (Json.Array [Json.Number major; Json.Number minor]) ->
-        (int_of_float major, int_of_float minor)
-      | _ -> (13, 0)
-    in
-    let genericJsxModule =
-      match Json.get "genericJsxModule" json with
-      | Some (Json.String s) -> Some s
-      | _ -> None
-    in
-    let opens = parseOpens (Json.get "opens" json) in
-    let pathsForModule =
-      match Json.get "pathsForModule" json with
-      | Some obj -> parsePathsForModule obj
-      | None -> Hashtbl.create 0
-    in
-    let projectFiles = parseFileSet (Json.get "projectFiles" json) in
-    let dependenciesFiles = parseFileSet (Json.get "dependenciesFiles" json) in
-    let package : SharedTypes.package =
-      {
-        genericJsxModule;
-        suffix;
-        rootPath;
-        projectFiles;
-        dependenciesFiles;
-        pathsForModule;
-        namespace;
-        opens;
-        rescriptVersion;
-        autocomplete = Misc.StringMap.empty;
-      }
-    in
-    (* Parse the files array *)
-    let files =
-      match Json.get "files" json with
-      | Some (Json.Array items) ->
-        items
-        |> List.filter_map (fun item ->
-               let moduleName = getString "moduleName" item in
-               let cmt = getString "cmt" item in
-               let cmti = getString "cmti" item in
-               let path =
-                 if cmti <> "" then cmti else if cmt <> "" then cmt else ""
-               in
-               if moduleName <> "" && path <> "" then Some (moduleName, path)
-               else None)
+    let packageEntries =
+      match Json.get "packages" json with
+      | Some (Json.Array items) -> items
       | _ -> []
     in
-    (* Process each file *)
-    let results =
-      files
-      |> List.filter_map (fun (moduleName, path) ->
-             match Cmt.loadFullCmtWithPackage ~path ~package with
-             | None ->
-               prerr_endline ("llmIndex: failed to load cmt for " ^ path);
-               None
-             | Some full ->
-               (* Resolve source file path from pathsForModule *)
-               let sourceFilePath =
-                 match Hashtbl.find_opt package.pathsForModule moduleName with
-                 | Some paths ->
-                   let srcPath = sourcePathFromPaths paths in
-                   Files.relpath rootPath srcPath
-                   |> Files.split Filename.dir_sep
-                   |> String.concat "/"
-                 | None -> path
-               in
-               let moduleJson =
-                 extractModuleForIndex ~rootPath ~sourceFilePath
-                   full.file.structure
-               in
-               Some moduleJson)
-    in
+    let results = packageEntries |> List.concat_map processPackageEntry in
     print_endline (Protocol.array results)
