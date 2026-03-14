@@ -1,0 +1,48 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`llmIndex > extracts module information from the library package 1`] = `
+[
+  {
+    "moduleAliases": [],
+    "moduleName": "Library",
+    "nestedModules": [],
+    "qualifiedName": "Library",
+    "records": [
+      {
+        "fields": [
+          {
+            "name": "name",
+            "optional": false,
+            "signature": "string",
+          },
+        ],
+        "name": "user",
+        "signature": "type user = {name: string}",
+      },
+    ],
+    "sourceFilePath": "lib/bs/src/Library.res",
+    "typeAliases": [],
+    "values": [
+      {
+        "name": "greeting",
+        "paramCount": 0,
+        "returnType": null,
+        "signature": "string",
+      },
+      {
+        "name": "admin",
+        "paramCount": 0,
+        "returnType": null,
+        "signature": "user",
+      },
+      {
+        "name": "greet",
+        "paramCount": 1,
+        "returnType": "string",
+        "signature": "string => string",
+      },
+    ],
+    "variants": [],
+  },
+]
+`;

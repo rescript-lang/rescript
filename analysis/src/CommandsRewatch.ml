@@ -433,6 +433,8 @@ let signatureHelp () =
           {signatures = []; activeSignature = None; activeParameter = None}
       | Some res -> Protocol.stringifySignatureHelp res)
 
+let llmIndex () = LlmIndex.command ()
+
 let typeDefinition () =
   withRewatchContext ~name:"typeDefinition" ~default:Protocol.null (fun ctx ->
       let locationOpt =
