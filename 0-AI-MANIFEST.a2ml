@@ -1,19 +1,29 @@
-;; SPDX-License-Identifier: PMPL-1.0-or-later
 ;; 0-AI-MANIFEST.a2ml — AI Agent Entry Point
-;; Repository: hyperpolymath/rescript
+;; Repository: rescript/rescript (upstream fork contribution)
 
 @abstract:
-AI manifest for rescript. Read this file first before any other work.
+AI manifest for the ReScript compiler. Read this file first.
+This is a MULTI-LICENSED repository — NOT hyperpolymath original code.
 @end
 
+;; === LICENSE MODEL (CRITICAL) ===
+;; This repository contains code under MULTIPLE licenses:
+;;   - compiler/:                    LGPL-3.0-or-later
+;;   - compiler/syntax/:             MIT
+;;   - packages/@rescript/runtime/:  MIT
+;;   - rewatch/:                     MIT
+;;
+;; DO NOT apply PMPL-1.0-or-later headers to this repository.
+;; Preserve the original SPDX headers on all existing files.
+;; New contributions should use the license of the directory they're in.
+
 ;; === CANONICAL LOCATIONS ===
-;; Machine-readable state: .machine_readable/
-;; Documentation: docs/
-;; Source code: src/
-;; Tests: verification/tests/ or tests/
+;; Full architecture guide: CLAUDE.md (comprehensive compiler docs)
+;; Source code: compiler/, analysis/, rewatch/, packages/
+;; Tests: tests/
 
 ;; === CRITICAL INVARIANTS ===
-;; - SPDX headers on ALL files (PMPL-1.0-or-later)
-;; - No believe_me, assert_total, sorry, Admitted, unsafeCoerce, Obj.magic
-;; - SCM files ONLY in .machine_readable/ (never root)
-;; - Author: Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+;; - Respect existing multi-license structure (LGPL-3.0 + MIT)
+;; - Never modify parsetree0.ml (PPX compatibility)
+;; - DCO sign-off required on commits
+;; - Build with: make && make lib && make test
