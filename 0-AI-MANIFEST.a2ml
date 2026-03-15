@@ -1,0 +1,19 @@
+;; SPDX-License-Identifier: PMPL-1.0-or-later
+;; 0-AI-MANIFEST.a2ml — AI Agent Entry Point
+;; Repository: hyperpolymath/rescript
+
+@abstract:
+AI manifest for rescript. Read this file first before any other work.
+@end
+
+;; === CANONICAL LOCATIONS ===
+;; Machine-readable state: .machine_readable/
+;; Documentation: docs/
+;; Source code: src/
+;; Tests: verification/tests/ or tests/
+
+;; === CRITICAL INVARIANTS ===
+;; - SPDX headers on ALL files (PMPL-1.0-or-later)
+;; - No believe_me, assert_total, sorry, Admitted, unsafeCoerce, Obj.magic
+;; - SCM files ONLY in .machine_readable/ (never root)
+;; - Author: Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
