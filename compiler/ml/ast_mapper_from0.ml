@@ -310,24 +310,44 @@ module E = struct
         | _ -> true)
       attrs
 
+  let try_map_jsx_text (sub : mapper) (e : expression) : Pt.expression option =
+    match e.pexp_desc with
+    | Pexp_apply
+        ( {
+            pexp_desc =
+              Pexp_ident {txt = Longident.Ldot (Lident "React", "string")};
+          },
+          [
+            ( Asttypes.Noloc.Nolabel,
+              {pexp_desc = Pexp_constant (Pconst_string (text, None))} );
+          ] ) ->
+      let loc = sub.location sub e.pexp_loc in
+      Some (Ast_helper.Exp.jsx_text ~loc text)
+    | _ -> None
+
   let map_jsx_children sub (e : expression) : Pt.jsx_children =
+    let map_jsx_child (e : expression) : Pt.expression =
+      match try_map_jsx_text sub e with
+      | Some jsx_text -> jsx_text
+      | None -> sub.expr sub e
+    in
     let rec visit (e : expression) : Pt.expression list =
       match e.pexp_desc with
       | Pexp_construct
           ({txt = Longident.Lident "::"}, Some {pexp_desc = Pexp_tuple [e1; e2]})
         ->
-        sub.expr sub e1 :: visit e2
+        map_jsx_child e1 :: visit e2
       | Pexp_construct ({txt = Longident.Lident "[]"}, ext_opt) -> (
         match ext_opt with
         | None -> []
         | Some e -> visit e)
-      | _ -> [sub.expr sub e]
+      | _ -> [map_jsx_child e]
     in
     match e.pexp_desc with
     | Pexp_construct ({txt = Longident.Lident "[]" | Longident.Lident "::"}, _)
       ->
       visit e
-    | _ -> [sub.expr sub e]
+    | _ -> [map_jsx_child e]
 
   let try_map_jsx_prop (sub : mapper) (lbl : Asttypes.Noloc.arg_label)
       (e : expression) : Parsetree.jsx_prop option =

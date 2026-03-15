@@ -195,7 +195,7 @@ let iter_expression f e =
       module_expr me
     | Pexp_pack me -> module_expr me
     | Pexp_await _ -> assert false (* should be handled earlier *)
-    | Pexp_jsx_element _ ->
+    | Pexp_jsx_element _ | Pexp_jsx_text _ ->
       raise (Error (e.pexp_loc, Env.empty, Jsx_not_enabled))
   and case {pc_lhs = _; pc_guard; pc_rhs} =
     may expr pc_guard;
@@ -3256,7 +3256,7 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
   | Pexp_extension ext ->
     raise (Error_forward (Builtin_attributes.error_of_extension ext))
   | Pexp_await _ -> (* should be handled earlier *) assert false
-  | Pexp_jsx_element _ ->
+  | Pexp_jsx_element _ | Pexp_jsx_text _ ->
     raise (Error (sexp.pexp_loc, Env.empty, Jsx_not_enabled))
 
 and type_function ?in_function ~arity ~async loc attrs env ty_expected_ l

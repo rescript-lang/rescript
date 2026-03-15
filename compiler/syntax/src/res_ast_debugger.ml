@@ -731,6 +731,15 @@ module SexpAst = struct
             Sexp.list (map_empty ~f:jsx_prop props);
             Sexp.list (map_empty ~f:expression xs);
           ]
+      | Pexp_jsx_text
+          {jsx_text_content; jsx_text_leading_space; jsx_text_trailing_space} ->
+        Sexp.list
+          [
+            Sexp.atom "Pexp_jsx_text";
+            Sexp.atom jsx_text_content;
+            Sexp.atom (Printf.sprintf "leading=%b" jsx_text_leading_space);
+            Sexp.atom (Printf.sprintf "trailing=%b" jsx_text_trailing_space);
+          ]
     in
     Sexp.list [Sexp.atom "expression"; desc]
 

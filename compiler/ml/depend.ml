@@ -311,6 +311,7 @@ let rec add_expr bv exp =
     | JsxQualifiedLowerTag {path; _} | JsxUpperTag path -> add_path bv path);
     and_jsx_props bv props;
     add_jsx_children bv children
+  | Pexp_jsx_text _ -> ()
 
 and add_jsx_children bv xs = List.iter (add_expr bv) xs
 

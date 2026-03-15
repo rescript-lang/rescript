@@ -4,7 +4,7 @@ let f = () => id
 if isArray(children) {
   // Scenario 1
   let code = children->asStringArray->Js.Array2.joinWith("")
-  <InlineCode> {code->s} </InlineCode>
+  <InlineCode>{code->s}</InlineCode>
 } else if isObject(children) {
   // Scenario 2
   children->asElement

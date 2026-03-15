@@ -370,6 +370,10 @@ module E = struct
         (map_jsx_props sub props) ote
         (map_jsx_children sub children)
         closing_tag
+    | Pexp_jsx_text
+        {jsx_text_content; jsx_text_leading_space; jsx_text_trailing_space} ->
+      jsx_text ~loc ~attrs ~leading_space:jsx_text_leading_space
+        ~trailing_space:jsx_text_trailing_space jsx_text_content
 end
 
 module P = struct

@@ -15,6 +15,6 @@
   }, {
     "id": "FormatDocstringsTest2.testJsx-1",
     "name": "testJsx",
-    "code": "let component = () => {\n  <div className=\"container\">\n    <h1> {\"Title\"->React.string} </h1>\n    <button onClick={_ => Console.log(\"clicked\")}> {\"Click me\"->React.string} </button>\n  </div>\n}"
+    "code": "let component = () => {\n  <div className=\"container\">\n    <h1>{\"Title\"->React.string}</h1>\n    <button onClick={_ => Console.log(\"clicked\")}>{\"Click me\"->React.string}</button>\n  </div>\n}"
   }]
   }

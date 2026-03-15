@@ -380,6 +380,10 @@ and expression i ppf x =
     | Some closing_tag ->
       line i ppf "closing_tag =%a\n" fmt_jsx_tag_name
         closing_tag.jsx_closing_container_tag_name)
+  | Pexp_jsx_text
+      {jsx_text_content; jsx_text_leading_space; jsx_text_trailing_space} ->
+    line i ppf "Pexp_jsx_text %S (leading=%b, trailing=%b)\n" jsx_text_content
+      jsx_text_leading_space jsx_text_trailing_space
 
 and jsx_children i ppf children =
   line i ppf "jsx_children =\n";
