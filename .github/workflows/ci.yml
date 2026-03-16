@@ -532,7 +532,7 @@ jobs:
         uses: actions/setup-node@v6
         with:
           # Run integration tests with the oldest supported node version.
-          node-version: 20
+          node-version: 22
 
       - name: Make test directory
         id: tmp-dir
@@ -583,7 +583,7 @@ jobs:
         uses: actions/setup-node@v6
         with:
           # Run integration tests with the oldest supported node version.
-          node-version: 20
+          node-version: 22
 
       - name: Checkout
         uses: actions/checkout@v6
@@ -634,7 +634,7 @@ jobs:
         uses: actions/setup-node@v6
         with:
           # Run integration tests with the oldest supported node version.
-          node-version: 20
+          node-version: 22
 
       - name: Install npm packages
         run: yarn install
