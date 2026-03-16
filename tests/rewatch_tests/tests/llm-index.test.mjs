@@ -1,6 +1,7 @@
 import child_process from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 import { bsc_exe, runtimePath } from "../helpers/bins.mjs";
 import { createRescriptCli } from "../helpers/process.mjs";
@@ -152,36 +153,43 @@ describe("llmIndex", () => {
       expect(fs.existsSync(dbPath)).toBe(true);
 
       // Query the database to verify contents
-      const query = sql => {
-        const result = child_process.execSync(`sqlite3 "${dbPath}" "${sql}"`, {
-          encoding: "utf8",
-        });
-        return result.trim();
-      };
+      const db = new DatabaseSync(dbPath, { readOnly: true });
 
       // Should have packages
-      const pkgCount = parseInt(query("SELECT COUNT(*) FROM packages"), 10);
+      const pkgCount = db
+        .prepare("SELECT COUNT(*) as cnt FROM packages")
+        .get().cnt;
       expect(pkgCount).toBeGreaterThan(0);
 
       // Should have modules
-      const modCount = parseInt(query("SELECT COUNT(*) FROM modules"), 10);
+      const modCount = db
+        .prepare("SELECT COUNT(*) as cnt FROM modules")
+        .get().cnt;
       expect(modCount).toBeGreaterThan(0);
 
       // Should have the Library module with its record type
-      const libraryType = query(
-        "SELECT name, kind FROM types WHERE name = 'user' AND kind = 'record' LIMIT 1",
-      );
-      expect(libraryType).toBe("user|record");
+      const libraryType = db
+        .prepare(
+          "SELECT name, kind FROM types WHERE name = 'user' AND kind = 'record' LIMIT 1",
+        )
+        .get();
+      expect(libraryType).toEqual({ name: "user", kind: "record" });
 
       // Should have fields for the user record
-      const userField = query(
-        "SELECT f.name, f.signature FROM fields f JOIN types t ON f.type_id = t.id WHERE t.name = 'user' LIMIT 1",
-      );
-      expect(userField).toBe("name|string");
+      const userField = db
+        .prepare(
+          "SELECT f.name, f.signature FROM fields f JOIN types t ON f.type_id = t.id WHERE t.name = 'user' LIMIT 1",
+        )
+        .get();
+      expect(userField).toEqual({ name: "name", signature: "string" });
 
       // Should have values
-      const valCount = parseInt(query("SELECT COUNT(*) FROM [values]"), 10);
+      const valCount = db
+        .prepare("SELECT COUNT(*) as cnt FROM [values]")
+        .get().cnt;
       expect(valCount).toBeGreaterThan(0);
+
+      db.close();
     } finally {
       if (sandbox) {
         await removeSandbox(sandbox);
