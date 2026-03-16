@@ -24,8 +24,15 @@ fn get_log_file_path(package: &packages::Package, subfolder: Location) -> PathBu
     build_folder.join(".compiler.log")
 }
 
-pub fn does_ocaml_build_compiler_log_exist(package: &packages::Package) -> bool {
-    get_log_file_path(package, Location::Ocaml).exists()
+pub fn does_flat_build_dir_have_artifacts(
+    package: &packages::Package,
+    output: super::build_types::OutputTarget,
+) -> bool {
+    let flat_dir = package.get_ocaml_build_path_for_output(output);
+    flat_dir.exists()
+        && std::fs::read_dir(&flat_dir)
+            .map(|mut entries| entries.next().is_some())
+            .unwrap_or(false)
 }
 
 fn escape_colours(str: &str) -> String {
@@ -62,16 +69,12 @@ pub fn initialize(packages: &AHashMap<String, Package>) {
 }
 
 pub fn append(package: &packages::Package, str: &str) {
-    File::options()
-        .append(true)
-        .open(get_log_file_path(package, Location::Bs))
-        .map(|file| write_to_log_file(file, &package.name, str))
-        .unwrap_or_else(|err| {
-            panic!(
-                "Cannot write compilerlog: {} ({err})",
-                get_log_file_path(package, Location::Bs).to_string_lossy()
-            );
-        });
+    let log_path = get_log_file_path(package, Location::Bs);
+    // If the log file doesn't exist (e.g. LSP profile skips logs::initialize),
+    // silently skip rather than panicking.
+    if let Ok(file) = File::options().append(true).open(&log_path) {
+        write_to_log_file(file, &package.name, str);
+    }
 }
 
 pub fn finalize(packages: &AHashMap<String, Package>) {

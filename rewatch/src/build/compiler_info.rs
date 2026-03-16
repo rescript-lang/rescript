@@ -1,6 +1,6 @@
 use crate::helpers;
 
-use super::build_types::{BuildCommandState, CompilerInfo};
+use super::build_types::{BuildCommandState, CompilerInfo, OutputTarget};
 use super::packages;
 use super::{clean, logs};
 use ahash::AHashMap;
@@ -34,15 +34,16 @@ fn get_rescript_config_hash(package: &packages::Package) -> Option<String> {
 pub fn verify_compiler_info(
     packages: &AHashMap<String, packages::Package>,
     compiler: &CompilerInfo,
+    output: OutputTarget,
 ) -> CompilerCheckResult {
     let mismatched_packages = packages
         .values()
         .filter(|package| {
-            let info_path = package.get_compiler_info_path();
+            let info_path = package.get_compiler_info_path_for_output(output);
             let Ok(contents) = std::fs::read_to_string(&info_path) else {
                 // Can't read the compiler-info.json file, maybe there is no current build.
-                // We check if the ocaml build folder exists, if not, we assume the compiler is not installed
-                return logs::does_ocaml_build_compiler_log_exist(package);
+                // We check if the flat build folder has artifacts — if not, there's nothing to clean.
+                return logs::does_flat_build_dir_have_artifacts(package, output);
             };
 
             let parsed: Result<CompilerInfoFile, _> = serde_json::from_str(&contents);
@@ -103,8 +104,7 @@ pub fn verify_compiler_info(
 
     let cleaned_count = mismatched_packages.len();
     mismatched_packages.par_iter().for_each(|package| {
-        // suppress progress printing during init to avoid breaking step output
-        clean::clean_package(false, true, package);
+        clean::clean_package_for_output(package, output);
     });
     if cleaned_count == 0 {
         CompilerCheckResult::SameCompilerAsLastRun
@@ -113,7 +113,7 @@ pub fn verify_compiler_info(
     }
 }
 
-pub fn write_compiler_info(build_state: &BuildCommandState) {
+pub fn write_compiler_info(build_state: &BuildCommandState, output: OutputTarget) {
     let bsc_path = build_state.compiler_info.bsc_path.to_string_lossy().to_string();
     let bsc_hash = build_state.compiler_info.bsc_hash.to_hex().to_string();
     let runtime_path = build_state
@@ -157,7 +157,7 @@ pub fn write_compiler_info(build_state: &BuildCommandState) {
                     return;
                 }
             };
-            let info_path = package.get_compiler_info_path();
+            let info_path = package.get_compiler_info_path_for_output(output);
             let should_write = match std::fs::read_to_string(&info_path) {
                 Ok(existing) => existing != contents,
                 Err(_) => true,

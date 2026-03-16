@@ -395,8 +395,8 @@ pub fn get_ast_path(source_file: &Path) -> PathBuf {
         .join(format!("{basename}{extension}"))
 }
 
-pub fn get_compiler_asset(
-    package: &packages::Package,
+pub fn get_compiler_asset_in(
+    ocaml_build_path: &Path,
     namespace: &packages::Namespace,
     source_file: &Path,
     extension: &str,
@@ -406,9 +406,7 @@ pub fn get_compiler_asset(
         _ => namespace,
     };
     let basename = file_path_to_compiler_asset_basename(source_file, namespace);
-    package
-        .get_ocaml_build_path()
-        .join(format!("{basename}.{extension}"))
+    ocaml_build_path.join(format!("{basename}.{extension}"))
 }
 
 pub fn canonicalize_string_path(path: &str) -> Option<PathBuf> {
