@@ -140,7 +140,7 @@ let rec extractModuleForIndex ~rootPath ~sourceFilePath ?(modulePath = [])
                ]
              :: !moduleAliases
          | Module {type_ = Structure m; _} ->
-           let childPath = m.name :: modulePath in
+           let childPath = structure.name :: modulePath in
            let nested =
              extractModuleForIndex ~rootPath ~sourceFilePath
                ~modulePath:childPath m
@@ -148,7 +148,7 @@ let rec extractModuleForIndex ~rootPath ~sourceFilePath ?(modulePath = [])
            nestedModules := nested :: !nestedModules
          | Module {type_ = Constraint (Structure _impl, Structure iface); _} ->
            (* module M : SIG = IMPL — prefer the interface *)
-           let childPath = iface.name :: modulePath in
+           let childPath = structure.name :: modulePath in
            let nested =
              extractModuleForIndex ~rootPath ~sourceFilePath
                ~modulePath:childPath iface
