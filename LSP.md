@@ -463,7 +463,7 @@ Typecheck diagnostics go through a staleness check: if a newer `didChange` arriv
 
 Implementation: `lsp.rs` — `group_by_file()` and `to_lsp_diagnostic()`
 
-## HTTP Diagnostics Endpoint (Experimental)
+## HTTP Endpoint (Experimental)
 
 > **Status:** Experimental. This feature may change or be removed. It exists to explore whether external tools (e.g. LLM agents like Claude Code) can leverage the running LSP to verify code changes without triggering a separate build.
 
@@ -473,11 +473,17 @@ When `diagnostics_http` is set to a port number in `initializationOptions`, the 
 rescript-lsp HTTP diagnostics server listening on http://127.0.0.1:54321/diagnostics
 ```
 
-### Endpoint
+### Endpoints
 
-`GET /diagnostics` — returns the current diagnostics as JSON. Files with no diagnostics are omitted. An empty `{}` response means the project is clean.
+#### `GET /diagnostics`
+
+Returns the current diagnostics as JSON. Files with no diagnostics are omitted. An empty `{}` response means the project is clean.
 
 The endpoint **blocks** until the LSP is idle (no pending events, no flush in progress) or until a 30-second timeout expires. This means you can save a file and immediately curl — the response will wait for the build to finish before returning. The `X-Build-Status` response header is `idle` on success or `timeout` if the deadline was reached.
+
+```bash
+curl -s http://127.0.0.1:54321/diagnostics | jq .
+```
 
 ```json
 {
@@ -494,29 +500,93 @@ The endpoint **blocks** until the LSP is idle (no pending events, no flush in pr
 }
 ```
 
-### Usage
+#### `GET /hover?file=<path>&line=<n>&col=<n>`
+
+Returns hover/type information for the symbol at the given position. The `file` parameter must be an absolute path. Lines and columns are 0-based.
 
 ```bash
-curl -s http://127.0.0.1:54321/diagnostics | jq .
+curl -s 'http://127.0.0.1:54321/hover?file=/path/to/src/App.res&line=0&col=4' | jq .
 ```
 
-### Idle tracking
+Returns 200 with the hover result, or 404 if no hover info is available.
 
-The store uses a pending-ID model: each queue event increments a monotonic ID. When a flush completes, it only signals "idle" if no newer events arrived during the flush. A `FlushGuard` ensures the signal fires even if the flush panics. This prevents the HTTP endpoint from returning stale results when rapid edits overlap with builds.
+#### `GET /definition?file=<path>&line=<n>&col=<n>`
 
-Implementation: `lsp/diagnostic_store.rs`, `lsp/http.rs`
+Returns the definition location for the symbol at the given position.
 
-### Problem Reporting
+```bash
+curl -s 'http://127.0.0.1:54321/definition?file=/path/to/src/App.res&line=0&col=4' | jq .
+```
 
-`POST /report` — allows an LLM agent to report a problem it observed. The request body is plain text describing the issue (e.g., "File Foo.res was not compiled to JS after save"). The LSP creates an `lsp.llm_report` OTEL span with the message, making it visible in trace viewers alongside the LSP's own build/typecheck spans.
+Returns 200 with a location object (`uri`, `range`), or 404 if no definition is found.
+
+#### `GET /references?file=<path>&line=<n>&col=<n>`
+
+Returns all reference locations for the symbol at the given position.
+
+```bash
+curl -s 'http://127.0.0.1:54321/references?file=/path/to/src/App.res&line=0&col=4' | jq .
+```
+
+Returns 200 with an array of location objects. Returns an empty array `[]` if no references are found.
+
+#### `GET /document-symbols?file=<path>`
+
+Returns the symbol outline for a file (functions, types, modules, etc.).
+
+```bash
+curl -s 'http://127.0.0.1:54321/document-symbols?file=/path/to/src/App.res' | jq .
+```
+
+Returns 200 with a nested array of document symbols. Returns an empty array `[]` if no symbols are found.
+
+#### `GET /workspace-symbols?query=<string>`
+
+Returns matching symbols across the entire project.
+
+```bash
+curl -s 'http://127.0.0.1:54321/workspace-symbols?query=useState' | jq .
+```
+
+Returns 200 with an array of symbol information objects. Returns an empty array `[]` if no matches are found.
+
+#### `POST /report`
+
+Allows an LLM agent to report a problem it observed. The request body is plain text describing the issue. The LSP creates an `lsp.llm_report` OTEL span with the message, making it visible in trace viewers alongside the LSP's own build/typecheck spans.
 
 ```bash
 curl -X POST http://127.0.0.1:54321/report -d "File Foo.res was not compiled to JS after save"
 ```
 
-Response: `{"status": "recorded"}`
+Response: `{"status": "recorded", "span_id": "<id>"}`
 
-This span can then be used with the OTEL viewer's `/api/spans/{span_id}/context` endpoint to see what the LSP was doing around the time of the report (which files were changed/saved, which flushes ran, whether any had errors). See `rewatch/otel-viewer/` for the viewer endpoints.
+This span can then be used with the OTEL viewer's `/api/spans/{span_id}/context` endpoint to see what the LSP was doing around the time of the report. See `rewatch/otel-viewer/` for the viewer endpoints.
+
+### Error responses
+
+All endpoints return structured JSON errors:
+
+- **400 Bad Request** — missing or invalid query parameters (e.g., no `file`, non-integer `line`/`col`)
+- **404 Not Found** — file not found on disk, or handler returned no result
+
+```json
+{ "error": "missing required query parameter: file" }
+```
+
+### Idle tracking
+
+The `/diagnostics` endpoint uses a pending-ID model: each queue event increments a monotonic ID. When a flush completes, it only signals "idle" if no newer events arrived during the flush. A `FlushGuard` ensures the signal fires even if the flush panics. This prevents the HTTP endpoint from returning stale results when rapid edits overlap with builds.
+
+The other endpoints (`/hover`, `/definition`, `/references`, `/document-symbols`, `/workspace-symbols`) return immediately with whatever state is currently available. They do not block or wait for builds to complete.
+
+### Notes for LLM agents
+
+- All file paths must be **absolute**.
+- Lines and columns are **0-based** (matching LSP convention).
+- The source is always read from disk — unsaved editor buffers are not visible to the HTTP endpoints.
+- If the project hasn't been built yet (no `.cmt` files), hover/definition/references will return 404. Wait for the initial build to complete first (poll `/diagnostics` until you get an `X-Build-Status: idle` response).
+
+Implementation: `lsp/diagnostic_store.rs`, `lsp/http.rs`
 
 Implementation: `lsp/http.rs`
 

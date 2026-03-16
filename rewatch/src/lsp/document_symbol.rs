@@ -18,13 +18,23 @@ pub fn handle(
     uri: &Url,
 ) -> Option<DocumentSymbolResponse> {
     let source = analysis::resolve_source(open_buffers, file_path, uri, "document_symbol")?;
+    handle_with_source(projects, file_path, uri, &source)
+}
 
+/// Core document symbol logic that takes source directly, bypassing open_buffers.
+/// Used by both the LSP handler and the HTTP endpoint.
+pub fn handle_with_source(
+    projects: &Mutex<ProjectMap>,
+    file_path: &Path,
+    uri: &Url,
+    source: &str,
+) -> Option<DocumentSymbolResponse> {
     let ctx = {
         let mut guard = projects.lock().ok()?;
         guard.build_analysis_context(
             uri,
             file_path,
-            &source,
+            source,
             Position {
                 line: 0,
                 character: 0,

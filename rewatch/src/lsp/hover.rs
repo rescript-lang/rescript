@@ -17,10 +17,21 @@ pub fn handle(
     position: Position,
 ) -> Option<Hover> {
     let source = analysis::resolve_source(open_buffers, file_path, uri, "hover")?;
+    handle_with_source(projects, file_path, uri, &source, position)
+}
 
+/// Core hover logic that takes source directly, bypassing open_buffers.
+/// Used by both the LSP handler and the HTTP endpoint.
+pub fn handle_with_source(
+    projects: &Mutex<ProjectMap>,
+    file_path: &Path,
+    uri: &Url,
+    source: &str,
+    position: Position,
+) -> Option<Hover> {
     let ctx = {
         let mut guard = projects.lock().ok()?;
-        guard.build_analysis_context(uri, file_path, &source, position, true, None)?
+        guard.build_analysis_context(uri, file_path, source, position, true, None)?
     };
 
     let _span = tracing::info_span!(
