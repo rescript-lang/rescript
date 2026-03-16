@@ -1,0 +1,30 @@
+{
+  "name": "hyperpolymath-tests",
+  "sources": [
+    {
+      "dir": "point_to_point",
+      "subdirs": true
+    },
+    {
+      "dir": "end_to_end",
+      "subdirs": true
+    },
+    {
+      "dir": "aspect_oriented",
+      "subdirs": true
+    },
+    {
+      "dir": "benchmarks",
+      "subdirs": true
+    }
+  ],
+  "package-specs": {
+    "module": "esmodule",
+    "in-source": true,
+    "suffix": ".mjs"
+  },
+  "compiler-flags": [
+    "-w -3-6-26-27-29-30-32..40-44-45-52-60-9-106+104",
+    "-warn-error A"
+  ]
+}

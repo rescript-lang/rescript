@@ -1,0 +1,160 @@
+= Hyperpolymath ReScript Test Suite
+:toc:
+:toc-placement!:
+
+Comprehensive test and benchmark suite for ReScript v13.0.0-alpha.2, covering
+all phases of the compiler lifecycle with three testing paradigms.
+
+toc::[]
+
+== Overview
+
+This suite contains **~1,600+ test assertions** and **40+ benchmarks** organized
+across three testing paradigms:
+
+[cols="1,3,1"]
+|===
+| Paradigm | Description | Files
+
+| **Point-to-Point**
+| Unit tests for individual compiler phases
+| 10 files
+
+| **End-to-End**
+| Full pipeline tests across all phases
+| 6 files
+
+| **Aspect-Oriented**
+| Cross-cutting concern tests
+| 6 files
+
+| **Benchmarks**
+| Performance benchmarks with timing
+| 4 files
+|===
+
+== Compiler Lifecycle Coverage
+
+[source]
+----
+ReScript Source (.res)
+  ↓ 01_lexer — Token recognition, literals, operators
+  ↓ 02_parser — Expression parsing, type declarations
+  ↓ 03_frontend — PPX, FFI, pipe desugaring, functors
+  ↓ 04_typechecker — Type inference, constraint propagation
+  ↓ 05_lambda — Constant folding, DCE, beta reduction, TCO
+  ↓ 06_js_codegen — Expression/data structure compilation
+  ↓ 07_js_output — Module format, exports, imports
+  ↓ 08_gentype — (covered via type system tests)
+  ↓ 09_runtime — Stdlib: Array, String, Int, Float, Option, Result, Dict, Math, JSON, RegExp
+  ↓ 10_analysis — LSP patterns, type annotations, completion
+  ↓ 11_rewatch — Build config patterns
+  ↓ 12_cli — Compiler flag behavior
+----
+
+== Running Tests
+
+[source,bash]
+----
+# Build and run all tests
+./tests/hyperpolymath/run_tests.sh
+
+# Run specific categories
+./tests/hyperpolymath/run_tests.sh --point-to-point
+./tests/hyperpolymath/run_tests.sh --end-to-end
+./tests/hyperpolymath/run_tests.sh --aspect-oriented
+./tests/hyperpolymath/run_tests.sh --benchmarks
+
+# Or compile and run individual test files
+cd tests/hyperpolymath
+node ../../cli/rescript.js build
+node point_to_point/01_lexer/lexer_token_test.mjs
+----
+
+== Test Paradigms
+
+=== Point-to-Point
+
+Unit tests targeting a single compiler phase. Each test file exercises one
+layer of the compilation pipeline and verifies runtime correctness.
+
+[cols="1,2"]
+|===
+| File | Coverage
+
+| `01_lexer/lexer_token_test.res` | Integer/float/string/char/bool/bigint literals, operators, identifiers
+| `02_parser/parser_expression_test.res` | Let bindings, functions, pattern matching, if/else, try/catch, modules
+| `02_parser/parser_type_test.res` | All type forms: records, variants, polyvars, recursive, unboxed, abstract
+| `03_frontend/frontend_transform_test.res` | @module, @val, @scope, @send, @get, @new, @variadic, %raw, pipe, deriving
+| `04_typechecker/typechecker_inference_test.res` | Basic/function/polymorphic/record/variant/recursive type inference
+| `05_lambda/lambda_optimization_test.res` | Constant folding, DCE, beta reduction, TCO, pattern match optimization
+| `06_js_codegen/js_codegen_expressions_test.res` | Arithmetic, strings, arrays, records, pattern matching, loops, dicts
+| `06_js_codegen/js_codegen_data_test.res` | Variant/record/tuple/option/result/polyvar/bigint/list encoding
+| `07_js_output/js_output_format_test.res` | Module exports, nested modules, include, aliases, import dedup
+| `09_runtime/runtime_stdlib_test.res` | Array, String, Int, Float, Option, Result, Dict, Math, JSON, RegExp, Error
+| `10_analysis/analysis_patterns_test.res` | Type annotations, module resolution, signatures, completion, diagnostics
+|===
+
+=== End-to-End
+
+Full pipeline tests that exercise multiple compiler phases together.
+
+[cols="1,2"]
+|===
+| File | Coverage
+
+| `compilation/full_pipeline_test.res` | BST, queue, state machine, expression evaluator, geometry, memoization
+| `error_reporting/error_handling_test.res` | Exception messages, JSON parsing, retry pattern, error accumulation
+| `module_system/module_resolution_test.res` | Nested modules, functors, first-class modules, signatures, include
+| `interop/js_interop_test.res` | @val, @scope, @send, @new, %raw, Set/Map interop, Promise, typeof
+| `optimization/optimization_pipeline_test.res` | Constant folding, DCE, inlining, TCO, pattern match, curry optimization
+| `incremental/incremental_test.res` | Cross-module constants, dependency tracking, interface boundaries, re-exports
+|===
+
+=== Aspect-Oriented
+
+Cross-cutting concern tests that verify behavior across all phases.
+
+[cols="1,2"]
+|===
+| File | Coverage
+
+| `error_recovery/error_recovery_test.res` | Try/catch, exception chaining, callbacks, re-raise, error boundaries
+| `source_positions/position_tracking_test.res` | __POS__, __LOC__, __MODULE__, __LINE__, closures, modules
+| `warnings/warning_behavior_test.res` | Partial matches, polymorphic comparison, shadows, unused args
+| `determinism/determinism_test.res` | Sort stability, eval order, side effects, module init, hash consistency
+| `compatibility/backward_compat_test.res` | Belt API, Js API, old patterns, currying, pipes, labeled args
+| `performance/perf_regression_test.res` | 50-variant enum, deep recursion, large arrays, memoization, closures
+| `memory/memory_patterns_test.res` | Closure capture, refs, mutable records, linked lists, trees, promises
+|===
+
+=== Benchmarks
+
+Performance benchmarks with `performance.now()` timing.
+
+[cols="1,2"]
+|===
+| File | Coverage
+
+| `parse/parse_benchmark_test.res` | Array creation, deep expressions, pattern matching, string ops, records
+| `compile/compile_benchmark_test.res` | 40-variant switch, composition chains, module hierarchy, closures
+| `codegen/codegen_benchmark_test.res` | Vec3 math, expression evaluation, closure calls, dict lookup
+| `stdlib/stdlib_benchmark_test.res` | Array map/filter/reduce/sort, string ops, dict ops, binary search
+|===
+
+== Writing New Tests
+
+Use the `Test.run()` pattern from the existing test framework:
+
+[source,rescript]
+----
+let eq = (a, b) => a == b
+Test.run(__POS_OF__("descriptive test name"), actualValue, eq, expectedValue)
+----
+
+All test files must:
+
+1. Include `// SPDX-License-Identifier: (LGPL-3.0-or-later AND MIT)`
+2. Use the `Test.run(__POS_OF__(...))` pattern
+3. End with `_test.res` suffix
+4. Be placed in the appropriate category directory
