@@ -20,6 +20,7 @@ mod semantic_tokens;
 mod signature_help;
 mod type_definition;
 mod typecheck;
+mod workspace_symbol;
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -93,6 +94,11 @@ impl ProjectMap {
     pub(crate) fn get_for_uri(&mut self, uri: &Url) -> Option<&BuildCommandState> {
         let root = self.project_root_for(uri)?;
         self.states.get(&root)
+    }
+
+    /// Iterate over all build states (one per project root).
+    pub(crate) fn all_build_states(&self) -> impl Iterator<Item = &BuildCommandState> {
+        self.states.values()
     }
 
     /// Build an `AnalysisContext` for a file URI, using cached runtime module data.
@@ -220,6 +226,7 @@ impl LanguageServer for Backend {
                     resolve_provider: Some(false),
                 }),
                 document_symbol_provider: Some(OneOf::Left(true)),
+                workspace_symbol_provider: Some(OneOf::Left(true)),
                 completion_provider: Some(CompletionOptions {
                     resolve_provider: Some(true),
                     trigger_characters: Some(
@@ -641,6 +648,10 @@ impl LanguageServer for Backend {
             &file_path,
             uri,
         ))
+    }
+
+    async fn symbol(&self, params: WorkspaceSymbolParams) -> Result<Option<Vec<SymbolInformation>>> {
+        Ok(workspace_symbol::handle(&self.projects, &params.query))
     }
 
     async fn code_lens(&self, params: CodeLensParams) -> Result<Option<Vec<CodeLens>>> {

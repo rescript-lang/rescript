@@ -30,6 +30,7 @@ import {
   ShutdownRequest,
   SignatureHelpRequest,
   TypeDefinitionRequest,
+  WorkspaceSymbolRequest,
 } from "vscode-languageserver-protocol/node.js";
 import { bsc_exe, rescript_exe, runtimePath } from "./bins.mjs";
 
@@ -379,6 +380,15 @@ export function createLspClient(cwd, otelEndpoint) {
       return sendRequest(DocumentSymbolRequest.type, {
         textDocument: { uri },
       });
+    },
+
+    /**
+     * Request workspace symbols matching a query string.
+     * @param {string} query - The search query
+     * @returns {Promise<import("vscode-languageserver-protocol").SymbolInformation[] | null>}
+     */
+    async workspaceSymbolsFor(query) {
+      return sendRequest(WorkspaceSymbolRequest.type, { query });
     },
 
     /**

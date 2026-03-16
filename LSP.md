@@ -186,6 +186,7 @@ referencesProvider:     true
 codeActionProvider:     true
 renameProvider:         { prepareProvider: true }
 documentSymbolProvider: true
+workspaceSymbolProvider: true
 inlayHintProvider:      true
 signatureHelpProvider:  { triggerCharacters: ["("], retriggerCharacters: ["=", ","] }
 semanticTokensProvider: full
@@ -553,6 +554,102 @@ This affects AI coding agents (e.g. Claude Code's `Edit` tool in Zed) that perfo
 
 Tracked upstream for the Zed + Claude Agent case: [zed-industries/claude-agent-acp#333](https://github.com/zed-industries/claude-agent-acp/issues/333), [zed-industries/claude-agent-acp#316](https://github.com/zed-industries/claude-agent-acp/pull/316).
 
+## Workspace Symbol
+
+`workspace/symbol` provides project-wide symbol search. Given a query string, it returns all matching symbol definitions (values, types, modules, constructors, record fields) across the workspace.
+
+The implementation reads serialized `.ast`/`.iast` files from `lib/lsp/` (produced during the initial build) and walks the parse tree to extract symbols — no `.cmt` or type information is needed. Only modules that have been successfully parsed (compilation stage past `Parsed`) are included; external dependencies without `lib/lsp/` artifacts are skipped.
+
+Symbols are matched case-insensitively by substring. An empty query returns all symbols in the workspace.
+
+The analysis binary subcommand `rewatch workspaceSymbol` receives a JSON payload via stdin:
+
+```json
+{
+  "query": "greeting",
+  "files": [
+    {
+      "moduleName": "Library",
+      "astPath": "/path/to/lib/lsp/src/Library.ast",
+      "sourcePath": "/path/to/packages/library/src/Library.res",
+      "isInterface": false
+    }
+  ]
+}
+```
+
+And returns an array of LSP `SymbolInformation` objects:
+
+```json
+[
+  {
+    "name": "greeting",
+    "kind": 13,
+    "location": {
+      "uri": "file:///path/to/packages/library/src/Library.res",
+      "range": { "start": { "line": 1, "character": 0 }, "end": { "line": 1, "character": 38 } }
+    },
+    "containerName": "Library"
+  }
+]
+```
+
+Implementation: `lsp/workspace_symbol.rs` (Rust handler), `analysis/src/WorkspaceSymbol.ml` (OCaml AST walker)
+
+## `rescript sync` and `rescript.db`
+
+The `rescript sync` command produces an SQLite database (`rescript.db`) containing a structured index of all symbols in the project. This is designed for LLM agents and external tools that need to query project structure without running the LSP.
+
+### Usage
+
+```bash
+rescript sync
+```
+
+This runs in the project root and:
+
+1. Performs a typecheck-only build (`lib/bs/`, produces `.cmt`/`.cmti` but no JS)
+2. Spawns the analysis binary with `rewatch llmIndex` to extract symbol information from `.cmt` files
+3. Writes `rescript.db` in the project root
+
+### Database schema
+
+The database contains tables for:
+
+- **packages** — package name, root path, namespace
+- **modules** — module name, source file path, package reference
+- **types** — type declarations with kind (record, variant, alias, abstract)
+- **values** — value/function bindings with type signatures
+- **fields** — record fields with parent type, type signature, optionality
+- **constructors** — variant constructors with parent type, payload types
+- **module_aliases** — module alias relationships
+
+### Querying
+
+```bash
+# Find all values matching a name
+sqlite3 rescript.db "SELECT v.name, v.type_signature, m.source_file_path FROM values v JOIN modules m ON v.module_id = m.id WHERE v.name LIKE '%greeting%'"
+
+# Find all types in a module
+sqlite3 rescript.db "SELECT t.name, t.kind FROM types t JOIN modules m ON t.module_id = m.id WHERE m.name = 'Library'"
+```
+
+### Relationship to `workspace/symbol`
+
+`rescript sync` and `workspace/symbol` serve similar discovery use cases but differ in approach:
+
+| | `workspace/symbol` | `rescript sync` |
+|---|---|---|
+| **Data source** | `.ast` files (parse tree) | `.cmt` files (typed tree) |
+| **Type info** | No (names, kinds, locations only) | Yes (full type signatures) |
+| **Requires LSP** | Yes (runs inside the LSP server) | No (standalone CLI command) |
+| **Output** | LSP JSON response | SQLite database on disk |
+| **Freshness** | Live (reflects current LSP build state) | Snapshot (must re-run to update) |
+
+For LLM agents, `rescript sync` is useful for initial exploration and can be queried via `sqlite3` in a Claude Code hook. `workspace/symbol` is useful for live queries during an editing session.
+
+Implementation: `rewatch/src/llm_index.rs`, `analysis/src/LlmIndex.ml`
+
 ## What Is NOT Implemented Yet
 
 | Feature                                 | Status                                                                                  |
@@ -582,7 +679,7 @@ Tracked upstream for the Zed + Claude Agent case: [zed-industries/claude-agent-a
 | File creation/deletion handling         | Implemented (FileCreated/FileDeleted queue events via didChangeWatchedFiles)            |
 | File operation notifications            | Partially implemented (capabilities advertised, handlers not yet wired up)              |
 | `rescript.json` change handling         | Implemented (full re-initialization on config change)                                   |
-| `workspace/symbol`                      | TODO — project-wide symbol search                                                       |
+| `workspace/symbol`                      | Implemented (analysis, reads `.ast` files)                                              |
 | `textDocument/documentHighlight`        | TODO — highlight all occurrences of a symbol in current file                            |
 | `textDocument/foldingRange`             | TODO — code folding regions                                                             |
 | `textDocument/selectionRange`           | TODO — smart expand/shrink selection                                                    |

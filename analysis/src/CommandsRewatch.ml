@@ -435,6 +435,8 @@ let signatureHelp () =
 
 let llmIndex () = LlmIndex.command ()
 
+let workspaceSymbol () = WorkspaceSymbol.command ()
+
 let typeDefinition () =
   withRewatchContext ~name:"typeDefinition" ~default:Protocol.null (fun ctx ->
       let locationOpt =

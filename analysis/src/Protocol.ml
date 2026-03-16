@@ -57,6 +57,14 @@ type completionItem = {
 }
 
 type location = {uri: string; range: range}
+
+type symbolInformation = {
+  name: string;
+  kind: int;
+  location: location;
+  containerName: string option;
+}
+
 type documentSymbolItem = {
   name: string;
   kind: int;
@@ -184,6 +192,17 @@ let stringifyHover value =
 let stringifyLocation (h : location) =
   Printf.sprintf {|{"uri": %s, "range": %s}|} (wrapInQuotes h.uri)
     (stringifyRange h.range)
+
+let stringifySymbolInformation (si : symbolInformation) =
+  let containerField =
+    match si.containerName with
+    | Some name -> Printf.sprintf {|, "containerName": %s|} (wrapInQuotes name)
+    | None -> ""
+  in
+  Printf.sprintf {|{"name": %s, "kind": %d, "location": %s%s}|}
+    (wrapInQuotes si.name) si.kind
+    (stringifyLocation si.location)
+    containerField
 
 let stringifyDocumentSymbolItems items =
   let buf = Buffer.create 10 in

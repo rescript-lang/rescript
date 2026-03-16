@@ -149,6 +149,7 @@ let main () =
     | ["semanticTokens"] -> CommandsRewatch.semanticTokens ()
     | ["codeAction"] -> CommandsRewatch.codeAction ()
     | ["llmIndex"] -> CommandsRewatch.llmIndex ()
+    | ["workspaceSymbol"] -> CommandsRewatch.workspaceSymbol ()
     | _ -> prerr_endline "Unknown rewatch subcommand")
   | [_; "completion"; path; line; col; currentFile] ->
     printHeaderInfo path line col;
