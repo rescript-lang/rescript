@@ -1,0 +1,43 @@
+# SPDX-License-Identifier: PMPL-1.0-or-later
+name: Security Policy
+on: [push, pull_request]
+
+permissions: read-all
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Security checks
+        run: |
+          FAILED=false
+          
+          # Block MD5/SHA1 for security (allow for checksums/caching)
+          WEAK_CRYPTO=$(grep -rE 'md5\(|sha1\(' --include="*.py" --include="*.rb" --include="*.js" --include="*.ts" --include="*.go" --include="*.rs" . 2>/dev/null | grep -v 'checksum\|cache\|test\|spec' | head -5 || true)
+          if [ -n "$WEAK_CRYPTO" ]; then
+            echo "⚠️ Weak crypto (MD5/SHA1) detected. Use SHA256+ for security:"
+            echo "$WEAK_CRYPTO"
+          fi
+          
+          # Block HTTP URLs (except localhost)
+          HTTP_URLS=$(grep -rE 'http://[^l][^o][^c]' --include="*.py" --include="*.js" --include="*.ts" --include="*.go" --include="*.rs" --include="*.yaml" --include="*.yml" . 2>/dev/null | grep -v 'localhost\|127.0.0.1\|example\|test\|spec' | head -5 || true)
+          if [ -n "$HTTP_URLS" ]; then
+            echo "⚠️ HTTP URLs found. Use HTTPS:"
+            echo "$HTTP_URLS"
+          fi
+          
+          # Block hardcoded secrets patterns
+          SECRETS=$(grep -rEi '(api_key|apikey|secret_key|password)\s*[=:]\s*["\x27][A-Za-z0-9+/=]{20,}' --include="*.py" --include="*.js" --include="*.ts" --include="*.go" --include="*.rs" --include="*.env" . 2>/dev/null | grep -v 'example\|sample\|test\|mock\|placeholder' | head -3 || true)
+          if [ -n "$SECRETS" ]; then
+            echo "❌ Potential hardcoded secrets detected!"
+            FAILED=true
+          fi
+          
+          if [ "$FAILED" = true ]; then
+            exit 1
+          fi
+          
+          echo "✅ Security policy check passed"

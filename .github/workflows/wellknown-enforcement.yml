@@ -1,0 +1,96 @@
+# SPDX-License-Identifier: PMPL-1.0-or-later
+name: Well-Known Standards (RFC 9116 + RSR)
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - '.well-known/**'
+      - 'security.txt'
+  pull_request:
+    paths:
+      - '.well-known/**'
+  schedule:
+    # Weekly expiry check
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+
+
+permissions: read-all
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      
+      - name: RFC 9116 security.txt validation
+        run: |
+          SECTXT=""
+          [ -f ".well-known/security.txt" ] && SECTXT=".well-known/security.txt"
+          [ -f "security.txt" ] && SECTXT="security.txt"
+          
+          if [ -z "$SECTXT" ]; then
+            echo "::warning::No security.txt found. See https://github.com/{{OWNER}}/well-known-ecosystem"
+            exit 0
+          fi
+          
+          # Required: Contact
+          grep -q "^Contact:" "$SECTXT" || { echo "::error::Missing Contact field"; exit 1; }
+          
+          # Required: Expires
+          if ! grep -q "^Expires:" "$SECTXT"; then
+            echo "::error::Missing Expires field"
+            exit 1
+          fi
+          
+          # Check expiry
+          EXPIRES=$(grep "^Expires:" "$SECTXT" | cut -d: -f2- | tr -d ' ' | head -1)
+          if date -d "$EXPIRES" > /dev/null 2>&1; then
+            DAYS=$(( ($(date -d "$EXPIRES" +%s) - $(date +%s)) / 86400 ))
+            if [ $DAYS -lt 0 ]; then
+              echo "::error::security.txt EXPIRED"
+              exit 1
+            elif [ $DAYS -lt 30 ]; then
+              echo "::warning::security.txt expires in $DAYS days"
+            else
+              echo "✅ security.txt valid ($DAYS days)"
+            fi
+          fi
+
+      - name: RSR well-known compliance
+        run: |
+          MISSING=""
+          [ ! -f ".well-known/security.txt" ] && [ ! -f "security.txt" ] && MISSING="$MISSING security.txt"
+          [ ! -f ".well-known/ai.txt" ] && MISSING="$MISSING ai.txt"
+          [ ! -f ".well-known/humans.txt" ] && MISSING="$MISSING humans.txt"
+          
+          if [ -n "$MISSING" ]; then
+            echo "::warning::Missing RSR recommended files:$MISSING"
+            echo "Reference: https://github.com/{{OWNER}}/well-known-ecosystem/.well-known/"
+          else
+            echo "✅ RSR well-known compliant"
+          fi
+
+      - name: Mixed content check
+        run: |
+          MIXED=$(grep -rE 'src="http://|href="http://' --include="*.html" --include="*.htm" . 2>/dev/null | grep -vE 'localhost|127\.0\.0\.1|example\.com' | head -5 || true)
+          if [ -n "$MIXED" ]; then
+            echo "::error::Mixed content (HTTP in HTML)"
+            echo "$MIXED"
+            exit 1
+          fi
+          echo "✅ No mixed content"
+
+      - name: DNS security records check
+        if: hashFiles('CNAME') != ''
+        run: |
+          DOMAIN=$(cat CNAME 2>/dev/null | tr -d '\n')
+          if [ -n "$DOMAIN" ]; then
+            echo "Checking DNS for $DOMAIN..."
+            # CAA record
+            dig +short CAA "$DOMAIN" | grep -q "issue" && echo "✅ CAA record" || echo "::warning::No CAA record"
+            # DNSSEC
+            dig +dnssec +short "$DOMAIN" | grep -q "RRSIG" && echo "✅ DNSSEC" || echo "::warning::No DNSSEC"
+          fi

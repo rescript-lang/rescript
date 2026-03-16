@@ -1,0 +1,72 @@
+# SPDX-License-Identifier: PMPL-1.0-or-later
+# Prevention workflow - runs OpenSSF Scorecard and fails on low scores
+name: OpenSSF Scorecard Enforcer
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 6 * * 1'  # Weekly on Monday
+  workflow_dispatch:
+
+permissions: read-all
+
+jobs:
+  scorecard:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      id-token: write  # For OIDC
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Run Scorecard
+        uses: ossf/scorecard-action@4eaacf0543bb3f2c246792bd56e8cdeffafb205a # v2.4.3
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          publish_results: true
+
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@9e907b5e64f6b83e7804b09294d44122997950d6 # v3
+        with:
+          sarif_file: results.sarif
+
+      - name: Check minimum score
+        run: |
+          # Parse score from results
+          SCORE=$(jq -r '.runs[0].tool.driver.properties.score // 0' results.sarif 2>/dev/null || echo "0")
+
+          echo "OpenSSF Scorecard Score: $SCORE"
+
+          # Minimum acceptable score (0-10 scale)
+          MIN_SCORE=5
+
+          if [ "$(echo "$SCORE < $MIN_SCORE" | bc -l)" = "1" ]; then
+            echo "::error::Scorecard score $SCORE is below minimum $MIN_SCORE"
+            exit 1
+          fi
+
+  # Check specific high-priority items
+  check-critical:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Check SECURITY.md exists
+        run: |
+          if [ ! -f "SECURITY.md" ]; then
+            echo "::error::SECURITY.md is required"
+            exit 1
+          fi
+
+      - name: Check for pinned dependencies
+        run: |
+          # Check workflows for unpinned actions
+          unpinned=$(grep -r "uses:.*@v[0-9]" .github/workflows/*.yml 2>/dev/null | grep -v "#" | head -5 || true)
+          if [ -n "$unpinned" ]; then
+            echo "::warning::Found unpinned actions:"
+            echo "$unpinned"
+          fi

@@ -1,0 +1,155 @@
+# SPDX-License-Identifier: PMPL-1.0-or-later
+# workflow-linter.yml - Validates GitHub workflows against RSR security standards
+# This workflow can be copied to other repos for consistent enforcement
+name: Workflow Security Linter
+
+on:
+  push:
+    paths:
+      - '.github/workflows/**'
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+  workflow_dispatch:
+
+permissions: read-all
+
+jobs:
+  lint-workflows:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Check SPDX Headers
+        run: |
+          echo "=== Checking SPDX License Headers ==="
+          failed=0
+          for file in .github/workflows/*.yml .github/workflows/*.yaml; do
+            [ -f "$file" ] || continue
+            if ! head -1 "$file" | grep -q "^# SPDX-License-Identifier:"; then
+              echo "ERROR: $file missing SPDX header"
+              failed=1
+            fi
+          done
+          if [ $failed -eq 1 ]; then
+            echo "Add '# SPDX-License-Identifier: PMPL-1.0' as first line"
+            exit 1
+          fi
+          echo "All workflows have SPDX headers"
+
+      - name: Check Permissions Declaration
+        run: |
+          echo "=== Checking Permissions ==="
+          failed=0
+          for file in .github/workflows/*.yml .github/workflows/*.yaml; do
+            [ -f "$file" ] || continue
+            if ! grep -q "^permissions:" "$file"; then
+              echo "ERROR: $file missing top-level 'permissions:' declaration"
+              failed=1
+            fi
+          done
+          if [ $failed -eq 1 ]; then
+            echo "Add 'permissions: read-all' at workflow level"
+            exit 1
+          fi
+          echo "All workflows have permissions declared"
+
+      - name: Check SHA-Pinned Actions
+        run: |
+          echo "=== Checking Action Pinning ==="
+          # Find any uses: lines that don't have @SHA format
+          # Pattern: uses: owner/repo@<40-char-hex>
+          unpinned=$(grep -rn "uses:" .github/workflows/ | \
+            grep -v "@[a-f0-9]\{40\}" | \
+            grep -v "uses: \./\|uses: docker://\|uses: actions/github-script" || true)
+
+          if [ -n "$unpinned" ]; then
+            echo "ERROR: Found unpinned actions:"
+            echo "$unpinned"
+            echo ""
+            echo "Replace version tags with SHA pins, e.g.:"
+            echo "  uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.1"
+            exit 1
+          fi
+          echo "All actions are SHA-pinned"
+
+      - name: Check for Duplicate Workflows
+        run: |
+          echo "=== Checking for Duplicates ==="
+          # Known duplicate patterns
+          if [ -f .github/workflows/codeql.yml ] && [ -f .github/workflows/codeql-analysis.yml ]; then
+            echo "ERROR: Duplicate CodeQL workflows found"
+            echo "Delete codeql-analysis.yml (keep codeql.yml)"
+            exit 1
+          fi
+          if [ -f .github/workflows/rust.yml ] && [ -f .github/workflows/rust-ci.yml ]; then
+            echo "WARNING: Potential duplicate Rust workflows"
+            echo "Consider consolidating rust.yml and rust-ci.yml"
+          fi
+          echo "No critical duplicates found"
+
+      - name: Check CodeQL Language Matrix
+        run: |
+          echo "=== Checking CodeQL Configuration ==="
+          if [ ! -f .github/workflows/codeql.yml ]; then
+            echo "No CodeQL workflow found (optional)"
+            exit 0
+          fi
+
+          # Detect repo languages
+          has_js=$(find . -name "*.js" -o -name "*.ts" -o -name "*.jsx" -o -name "*.tsx" -path "*/src/*" -o -path "*/lib/*" 2>/dev/null | head -1)
+          has_py=$(find . -name "*.py" -path "*/src/*" -o -path "*/lib/*" 2>/dev/null | head -1)
+          has_go=$(find . -name "*.go" -path "*/src/*" -o -path "*/cmd/*" -o -path "*/pkg/*" 2>/dev/null | head -1)
+          has_rs=$(find . -name "*.rs" -path "*/src/*" 2>/dev/null | head -1)
+          has_java=$(find . -name "*.java" -path "*/src/*" 2>/dev/null | head -1)
+          has_rb=$(find . -name "*.rb" -path "*/lib/*" -o -path "*/app/*" 2>/dev/null | head -1)
+
+          echo "Detected languages:"
+          [ -n "$has_js" ] && echo "  - javascript-typescript"
+          [ -n "$has_py" ] && echo "  - python"
+          [ -n "$has_go" ] && echo "  - go"
+          [ -n "$has_rs" ] && echo "  - rust (note: CodeQL rust is limited)"
+          [ -n "$has_java" ] && echo "  - java-kotlin"
+          [ -n "$has_rb" ] && echo "  - ruby"
+
+          # Check for over-reach
+          if grep -q "language:.*'go'" .github/workflows/codeql.yml && [ -z "$has_go" ]; then
+            echo "WARNING: CodeQL configured for Go but no Go files found"
+          fi
+          if grep -q "language:.*'python'" .github/workflows/codeql.yml && [ -z "$has_py" ]; then
+            echo "WARNING: CodeQL configured for Python but no Python files found"
+          fi
+          if grep -q "language:.*'java'" .github/workflows/codeql.yml && [ -z "$has_java" ]; then
+            echo "WARNING: CodeQL configured for Java but no Java files found"
+          fi
+          if grep -q "language:.*'ruby'" .github/workflows/codeql.yml && [ -z "$has_rb" ]; then
+            echo "WARNING: CodeQL configured for Ruby but no Ruby files found"
+          fi
+
+          echo "CodeQL check complete"
+
+      - name: Check Secrets Guards
+        run: |
+          echo "=== Checking Secrets Usage ==="
+          # Look for secrets without conditional guards in mirror workflows
+          if [ -f .github/workflows/mirror.yml ]; then
+            if grep -q "secrets\." .github/workflows/mirror.yml; then
+              if ! grep -q "if:.*vars\." .github/workflows/mirror.yml; then
+                echo "WARNING: mirror.yml uses secrets without vars guard"
+                echo "Add 'if: vars.FEATURE_ENABLED == true' to jobs"
+              fi
+            fi
+          fi
+          echo "Secrets check complete"
+
+      - name: Summary
+        run: |
+          echo ""
+          echo "=== Workflow Linter Summary ==="
+          echo "All critical checks passed."
+          echo ""
+          echo "For more info, see: robot-repo-bot/ERROR-CATALOG.scm"

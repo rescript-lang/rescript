@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: PMPL-1.0-or-later
+name: TypeScript/JavaScript Blocker
+on: [push, pull_request]
+
+permissions: read-all
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Block new TypeScript/JavaScript
+        run: |
+          NEW_TS=$(git diff --name-only --diff-filter=A HEAD~1 2>/dev/null | grep -E '\.(ts|tsx)$' | grep -v '\.gen\.' || true)
+          NEW_JS=$(git diff --name-only --diff-filter=A HEAD~1 2>/dev/null | grep -E '\.(js|jsx)$' | grep -v '\.res\.js$' | grep -v '\.gen\.' | grep -v 'node_modules' || true)
+          
+          if [ -n "$NEW_TS" ] || [ -n "$NEW_JS" ]; then
+            echo "❌ New TS/JS files detected. Use ReScript instead."
+            [ -n "$NEW_TS" ] && echo "$NEW_TS"
+            [ -n "$NEW_JS" ] && echo "$NEW_JS"
+            exit 1
+          fi
+          echo "✅ ReScript policy enforced"

@@ -1,0 +1,92 @@
+# SPDX-License-Identifier: PMPL-1.0-or-later
+# RSR Anti-Pattern CI Check
+# SPDX-License-Identifier: PMPL-1.0-or-later
+#
+# Enforces: No TypeScript, No Go, No Python (except SaltStack), No npm
+# Allows: ReScript, Deno, WASM, Rust, OCaml, Haskell, Guile/Scheme
+
+name: RSR Anti-Pattern Check
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+
+
+permissions: read-all
+
+jobs:
+  antipattern-check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Check for TypeScript
+        run: |
+          # Exclude bindings/deno/ - those are Deno FFI files using Deno.dlopen, not plain TypeScript
+          # Exclude .d.ts files - those are TypeScript type declarations for ReScript FFI
+          TS_FILES=$(find . \( -name "*.ts" -o -name "*.tsx" \) | grep -v node_modules | grep -v 'bindings/deno' | grep -v '\.d\.ts$' || true)
+          if [ -n "$TS_FILES" ]; then
+            echo "❌ TypeScript files detected - use ReScript instead"
+            echo "$TS_FILES"
+            exit 1
+          fi
+          echo "✅ No TypeScript files (Deno FFI bindings excluded)"
+
+      - name: Check for Go
+        run: |
+          if find . -name "*.go" | grep -q .; then
+            echo "❌ Go files detected - use Rust/WASM instead"
+            find . -name "*.go"
+            exit 1
+          fi
+          echo "✅ No Go files"
+
+      - name: Check for Python (non-SaltStack)
+        run: |
+          PY_FILES=$(find . -name "*.py" | grep -v salt | grep -v _states | grep -v _modules | grep -v pillar | grep -v venv | grep -v __pycache__ || true)
+          if [ -n "$PY_FILES" ]; then
+            echo "❌ Python files detected - only allowed for SaltStack"
+            echo "$PY_FILES"
+            exit 1
+          fi
+          echo "✅ No non-SaltStack Python files"
+
+      - name: Check for npm lockfiles
+        run: |
+          if [ -f "package-lock.json" ] || [ -f "yarn.lock" ]; then
+            echo "❌ npm/yarn lockfile detected - use Deno instead"
+            exit 1
+          fi
+          echo "✅ No npm lockfiles"
+
+      - name: Check for tsconfig
+        run: |
+          if [ -f "tsconfig.json" ]; then
+            echo "❌ tsconfig.json detected - use ReScript instead"
+            exit 1
+          fi
+          echo "✅ No tsconfig.json"
+
+      - name: Verify Deno presence (if package.json exists)
+        run: |
+          if [ -f "package.json" ]; then
+            if [ ! -f "deno.json" ] && [ ! -f "deno.jsonc" ]; then
+              echo "⚠️ Warning: package.json without deno.json - migration recommended"
+            fi
+          fi
+          echo "✅ Deno configuration check complete"
+
+      - name: Summary
+        run: |
+          echo "╔════════════════════════════════════════════════════════════╗"
+          echo "║           RSR Anti-Pattern Check Passed ✅                 ║"
+          echo "║                                                            ║"
+          echo "║  Allowed: ReScript, Deno, WASM, Rust, OCaml, Haskell,     ║"
+          echo "║           Guile/Scheme, SaltStack (Python)                 ║"
+          echo "║                                                            ║"
+          echo "║  Blocked: TypeScript, Go, npm, Python (non-Salt)          ║"
+          echo "╚════════════════════════════════════════════════════════════╝"

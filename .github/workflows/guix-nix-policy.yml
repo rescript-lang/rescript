@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: PMPL-1.0-or-later
+name: Guix/Nix Package Policy
+on: [push, pull_request]
+
+permissions: read-all
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Enforce Guix primary / Nix fallback
+        run: |
+          # Check for package manager files
+          HAS_GUIX=$(find . -name "*.scm" -o -name ".guix-channel" -o -name "guix.scm" 2>/dev/null | head -1)
+          HAS_NIX=$(find . -name "*.nix" 2>/dev/null | head -1)
+          
+          # Block new package-lock.json, yarn.lock, Gemfile.lock, etc.
+          NEW_LOCKS=$(git diff --name-only --diff-filter=A HEAD~1 2>/dev/null | grep -E 'package-lock\.json|yarn\.lock|Gemfile\.lock|Pipfile\.lock|poetry\.lock|cargo\.lock' || true)
+          if [ -n "$NEW_LOCKS" ]; then
+            echo "⚠️ Lock files detected. Prefer Guix manifests for reproducibility."
+          fi
+          
+          # Prefer Guix, fallback to Nix
+          if [ -n "$HAS_GUIX" ]; then
+            echo "✅ Guix package management detected (primary)"
+          elif [ -n "$HAS_NIX" ]; then
+            echo "✅ Nix package management detected (fallback)"
+          else
+            echo "ℹ️ Consider adding guix.scm or flake.nix for reproducible builds"
+          fi
+          
+          echo "✅ Package policy check passed"
