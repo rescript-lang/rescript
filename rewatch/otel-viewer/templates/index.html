@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>otel-viewer</title>
+        <link rel="icon" type="image/x-icon" href="/static/favicon.ico" />
+        <script src="https://cdn.tailwindcss.com"></script>
+        <style>
+            .toast {
+                animation: fadeInOut 2s ease-in-out forwards;
+            }
+            @keyframes fadeInOut {
+                0% {
+                    opacity: 0;
+                    transform: translateY(10px);
+                }
+                15% {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+                85% {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+                100% {
+                    opacity: 0;
+                    transform: translateY(-10px);
+                }
+            }
+        </style>
+    </head>
+    <body class="bg-white text-gray-800 min-h-screen font-mono">
+        <div class="max-w-6xl mx-auto p-6">
+            <!-- Header -->
+            <div class="flex items-center gap-4 mb-6">
+                <h1 class="text-xl font-bold text-gray-900">otel-viewer</h1>
+                <button
+                    id="back-btn"
+                    class="hidden text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
+                >
+                    &larr; Back to traces
+                </button>
+                <span
+                    id="last-polled"
+                    class="hidden ml-auto text-xs text-gray-400"
+                ></span>
+            </div>
+
+            <!-- Trace list view -->
+            <div id="trace-list-view">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-gray-500 border-b border-gray-300">
+                            <th class="text-left py-2 px-3">Time</th>
+                            <th class="text-left py-2 px-3">Root Span</th>
+                            <th class="text-right py-2 px-3">Duration</th>
+                            <th class="text-right py-2 px-3">Spans</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trace-table-body"></tbody>
+                </table>
+                <p id="trace-empty" class="hidden text-gray-400 text-sm mt-4">
+                    No traces captured yet. Send OTLP data to this server.
+                </p>
+            </div>
+
+            <!-- Trace detail view -->
+            <div id="trace-detail-view" class="hidden">
+                <div id="span-tree"></div>
+            </div>
+
+            <!-- Floating export button -->
+            <div
+                id="export-bar"
+                class="hidden fixed bottom-6 right-6 flex gap-2 bg-white border border-gray-300 rounded-lg shadow-lg px-4 py-3"
+            >
+                <span
+                    id="selected-count"
+                    class="text-sm text-gray-500 self-center mr-2"
+                ></span>
+                <button
+                    id="export-btn"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm cursor-pointer"
+                >
+                    Copy for LLM
+                </button>
+                <button
+                    id="clear-btn"
+                    class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded text-sm cursor-pointer border border-gray-300"
+                >
+                    Clear
+                </button>
+            </div>
+
+            <!-- Toast -->
+            <div
+                id="toast-container"
+                class="fixed bottom-24 right-6 flex flex-col-reverse gap-2"
+            ></div>
+        </div>
+
+        <script type="module" src="/static/app.js"></script>
+    </body>
+</html>
