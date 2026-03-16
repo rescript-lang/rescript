@@ -132,6 +132,31 @@ let print_engine =
         print_string (Res_printer.print_interface ~width signature ~comments));
   }
 
+let parse_implementation_from_stdin ?(ignore_parse_errors = false) ~filename
+    source =
+  Location.input_name := filename;
+  let parse_result =
+    parse_implementation_from_source ~for_printer:false
+      ~display_filename:filename ~source
+  in
+  if parse_result.invalid then (
+    Res_diagnostics.print_report parse_result.diagnostics parse_result.source;
+    if not ignore_parse_errors then exit 1);
+  parse_result.parsetree
+[@@raises exit]
+
+let parse_interface_from_stdin ?(ignore_parse_errors = false) ~filename source =
+  Location.input_name := filename;
+  let parse_result =
+    parse_interface_from_source ~for_printer:false ~display_filename:filename
+      ~source
+  in
+  if parse_result.invalid then (
+    Res_diagnostics.print_report parse_result.diagnostics parse_result.source;
+    if not ignore_parse_errors then exit 1);
+  parse_result.parsetree
+[@@raises exit]
+
 let parse_implementation ?(ignore_parse_errors = false) sourcefile =
   Location.input_name := sourcefile;
   let parse_result =
@@ -158,5 +183,7 @@ let parse_interface ?(ignore_parse_errors = false) sourcefile =
 let _ =
  fun s ->
   ( parse_implementation ~ignore_parse_errors:false s,
-    parse_interface ~ignore_parse_errors:false s )
+    parse_interface ~ignore_parse_errors:false s,
+    parse_implementation_from_stdin ~ignore_parse_errors:false ~filename:"" s,
+    parse_interface_from_stdin ~ignore_parse_errors:false ~filename:"" s )
 [@@raises exit]

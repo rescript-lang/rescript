@@ -39,6 +39,8 @@ val in_file : string -> t
 val input_name : string ref
 val set_input_name : string -> unit
 
+val stdin_source : string option ref
+
 val get_pos_info : Lexing.position -> string * int * int (* file, line, char *)
 val print_loc : formatter -> t -> unit
 
