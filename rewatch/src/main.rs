@@ -54,6 +54,7 @@ fn main() -> Result<()> {
                 true, // create_sourcedirs is now always enabled
                 plain_output,
                 (*build_args.warn_error).clone(),
+                build_args.prod,
             ) {
                 Err(e) => {
                     eprintln!("{:#}", e);
@@ -78,6 +79,7 @@ fn main() -> Result<()> {
                 true, // create_sourcedirs is now always enabled
                 plain_output,
                 (*watch_args.warn_error).clone(),
+                watch_args.prod,
             ) {
                 Err(e) => {
                     eprintln!("{:#}", e);
@@ -86,9 +88,9 @@ fn main() -> Result<()> {
                 Ok(_) => Ok(()),
             }
         }
-        cli::Command::Clean { folder } => {
+        cli::Command::Clean { folder, prod } => {
             let _lock = get_lock_or_exit(LockKind::Build, &folder);
-            let result = build::clean::clean(Path::new(&folder as &str), show_progress, plain_output);
+            let result = build::clean::clean(Path::new(&folder as &str), show_progress, plain_output, prod);
             let _lock = drop_lock(LockKind::Build, &folder);
 
             result

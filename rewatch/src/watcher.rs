@@ -151,6 +151,7 @@ struct AsyncWatchArgs<'a> {
     after_build: Option<String>,
     create_sourcedirs: bool,
     plain_output: bool,
+    prod: bool,
 }
 
 async fn async_watch(
@@ -165,6 +166,7 @@ async fn async_watch(
         after_build,
         create_sourcedirs,
         plain_output,
+        prod,
     }: AsyncWatchArgs<'_>,
 ) -> Result<()> {
     let mut build_state = initial_build_state;
@@ -381,6 +383,7 @@ async fn async_watch(
                     path,
                     plain_output,
                     build_state.get_warn_error_override(),
+                    prod,
                 )
                 .expect("Could not initialize build");
 
@@ -434,6 +437,7 @@ pub fn start(
     create_sourcedirs: bool,
     plain_output: bool,
     warn_error: Option<String>,
+    prod: bool,
 ) -> Result<()> {
     futures::executor::block_on(async {
         let queue = Arc::new(FifoQueue::<Result<Event, Error>>::new());
@@ -453,6 +457,7 @@ pub fn start(
             path,
             plain_output,
             warn_error.clone(),
+            prod,
         )
         .with_context(|| "Could not initialize build")?;
 
@@ -471,6 +476,7 @@ pub fn start(
             after_build,
             create_sourcedirs,
             plain_output,
+            prod,
         })
         .await
     })

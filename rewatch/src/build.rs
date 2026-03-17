@@ -134,12 +134,13 @@ pub fn initialize_build(
     path: &Path,
     plain_output: bool,
     warn_error: Option<String>,
+    prod: bool,
 ) -> Result<BuildCommandState> {
     let project_context = ProjectContext::new(path)?;
     let compiler = get_compiler_info(&project_context)?;
 
     let timing_clean_start = Instant::now();
-    let packages = packages::make(filter, &project_context, show_progress)?;
+    let packages = packages::make(filter, &project_context, show_progress, prod)?;
 
     let compiler_check = verify_compiler_info(&packages, &compiler);
 
@@ -489,6 +490,7 @@ pub fn build(
     create_sourcedirs: bool,
     plain_output: bool,
     warn_error: Option<String>,
+    prod: bool,
 ) -> Result<BuildCommandState> {
     let default_timing: Option<std::time::Duration> = if no_timing {
         Some(std::time::Duration::new(0.0 as u64, 0.0 as u32))
@@ -503,6 +505,7 @@ pub fn build(
         path,
         plain_output,
         warn_error,
+        prod,
     )
     .with_context(|| "Could not initialize build")?;
 

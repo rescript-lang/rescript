@@ -219,6 +219,10 @@ pub struct BuildArgs {
     /// Disable output timing
     #[arg(short, long, default_value_t = false, num_args = 0..=1)]
     pub no_timing: bool,
+
+    /// Skip dev-dependencies and dev sources (type: "dev")
+    #[arg(long, default_value_t = false)]
+    pub prod: bool,
 }
 
 #[cfg(test)]
@@ -372,6 +376,10 @@ pub struct WatchArgs {
 
     #[command(flatten)]
     pub warn_error: WarnErrorArg,
+
+    /// Skip dev-dependencies and dev sources (type: "dev")
+    #[arg(long, default_value_t = false)]
+    pub prod: bool,
 }
 
 impl From<BuildArgs> for WatchArgs {
@@ -381,6 +389,7 @@ impl From<BuildArgs> for WatchArgs {
             filter: build_args.filter,
             after_build: build_args.after_build,
             warn_error: build_args.warn_error,
+            prod: build_args.prod,
         }
     }
 }
@@ -395,6 +404,10 @@ pub enum Command {
     Clean {
         #[command(flatten)]
         folder: FolderArg,
+
+        /// Skip dev-dependencies and dev sources (type: "dev")
+        #[arg(long, default_value_t = false)]
+        prod: bool,
     },
     /// Format ReScript files.
     Format {
