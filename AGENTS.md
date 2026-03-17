@@ -83,7 +83,13 @@ compiler/
 ├── ext/             # Extended utilities and data structures
 └── gentype/         # TypeScript generation
 
-analysis/            # Language server and tooling
+analysis/            # OCaml analysis binary (hover, completion, references)
+
+rewatch/src/
+├── build/           # Build system logic
+├── lsp/             # LSP server implementation (Rust, tower-lsp)
+└── ...              # CLI, config, watcher, etc.
+
 packages/@rescript/
 ├── runtime/         # Runtime and standard library
 └── <platform>/      # Platform-specific binaries
@@ -92,7 +98,9 @@ tests/
 ├── syntax_tests/    # Parser/syntax layer tests
 ├── tests/           # Runtime library tests
 ├── build_tests/     # Integration tests
-└── ounit_tests/     # Compiler unit tests
+├── ounit_tests/     # Compiler unit tests
+└── rewatch_tests/
+    └── tests/lsp/   # LSP integration tests
 ```
 
 ## Working on the Compiler
@@ -307,6 +315,7 @@ rewatch/src/
 │   ├── deps.rs         # Dependency analysis and module graph
 │   ├── clean.rs        # Build artifact cleanup
 │   └── logs.rs         # Build logging and error reporting
+├── lsp/               # LSP server (tower-lsp, shells out to analysis binary)
 ├── cli.rs              # Command-line interface definitions
 ├── config.rs           # rescript.json configuration parsing
 ├── watcher.rs          # File watching and incremental builds
@@ -495,6 +504,16 @@ When clippy suggests refactoring that could impact performance, consider the tra
 2. Update `AsyncWatchArgs` for new parameters
 3. Handle different file types (`.res`, `.resi`, etc.)
 4. Consider performance impact of watching many files
+
+## Working on the LSP Server
+
+The LSP server runs via `rescript lsp` — a single Rust process (tower-lsp) that owns the build state and speaks LSP over stdio. It shells out to the OCaml `rescript-editor-analysis` binary for features like hover, completion, and references.
+
+**Start here:** read `LSP.md` in the project root for architecture and protocol details.
+
+- **Source:** `rewatch/src/lsp/` — see `rewatch/src/lsp/AGENTS.md` for development notes
+- **Analysis binary:** `analysis/` — the OCaml binary that the LSP shells out to
+- **Tests:** `tests/rewatch_tests/tests/lsp/` — see `tests/rewatch_tests/AGENTS.md` for test infrastructure
 
 ## CI Gotchas
 

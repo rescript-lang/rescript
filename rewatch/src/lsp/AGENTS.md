@@ -1,5 +1,13 @@
 # LSP Module - Development Notes
 
+## Analysis binary integration
+
+Most LSP features (hover, completion, references, etc.) shell out to the OCaml `rescript-editor-analysis.exe` binary. The Rust side builds a JSON context and spawns the process — see `analysis.rs` for details. The OCaml side is in `analysis/` at the repo root — see `analysis/AGENTS.md`.
+
+## Tests
+
+LSP integration tests are in `tests/rewatch_tests/tests/lsp/` — see `tests/rewatch_tests/AGENTS.md` for how the test harness works.
+
 ## Debugging with `client.log_message`
 
 When debugging LSP handlers, the most effective approach is to add
