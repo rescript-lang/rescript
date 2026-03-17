@@ -7,13 +7,17 @@ external unsafeSourceLocValuePath: string => sourceLocValuePath = "%identity"
 describe("SourceLoc", () => {
   test("Pos.decode parses sourceLocPos", () => {
     let decoded = SourceLoc.Pos.decode(unsafeSourceLocPos("demo.res;1;2;3;4"))
-    eq(__LOC__, decoded, Some({
-      file: "demo.res",
-      startLine: 1,
-      startCol: 2,
-      endLine: 3,
-      endCol: 4,
-    }))
+    eq(
+      __LOC__,
+      decoded,
+      Some({
+        file: "demo.res",
+        startLine: 1,
+        startCol: 2,
+        endLine: 3,
+        endCol: 4,
+      }),
+    )
   })
 
   test("Pos.decode rejects malformed sourceLocPos", () => {
