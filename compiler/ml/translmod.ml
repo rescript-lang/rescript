@@ -255,7 +255,8 @@ let rec compile_functor mexp coercion root_path loc =
 (* Compile a module expression *)
 and transl_module cc rootpath mexp =
   Ext_ref.protect Translcore.current_root_path rootpath (fun () ->
-      List.iter (Translattribute.check_attribute_on_module mexp)
+      List.iter
+        (Translattribute.check_attribute_on_module mexp)
         mexp.mod_attributes;
       let loc = mexp.mod_loc in
       match mexp.mod_type with

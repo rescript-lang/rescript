@@ -706,7 +706,8 @@ let raise_kind = function
   | Raise_regular -> "raise"
   | Raise_reraise -> "reraise"
 
-let lam_of_loc ?(root_path : Path.t option) ?(current_value_path = []) kind loc =
+let lam_of_loc ?(root_path : Path.t option) ?(current_value_path = []) kind loc
+    =
   let loc_start = loc.Location.loc_start in
   let loc_end = loc.loc_end in
   let file, lnum, cnum = Location.get_pos_info loc_start in
