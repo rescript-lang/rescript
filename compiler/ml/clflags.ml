@@ -46,6 +46,8 @@ and ignore_parse_errors = ref false (* -ignore-parse-errors *)
 
 let dont_write_files = ref false (* set to true under ocamldoc *)
 
+let implicit_source_loc = ref false
+
 let reset_dump_state () =
   dump_source := false;
   dump_parsetree := false;

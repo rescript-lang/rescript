@@ -2239,6 +2239,21 @@ let extract_function_name funct =
   | Texp_ident (path, _, _) -> Some (Longident.parse (Path.name path))
   | _ -> None
 
+type implicit_source_loc_kind = Source_loc_pos | Source_loc_value_path
+
+let optional_source_loc_kind env ty =
+  match (expand_head env ty).desc with
+  | Tconstr (option_path, [inner], _)
+    when Path.same option_path Predef.path_option -> (
+    match (expand_head env inner).desc with
+    | Tconstr (path, [], _) when Path.same path Predef.path_source_loc_pos ->
+      Some Source_loc_pos
+    | Tconstr (path, [], _)
+      when Path.same path Predef.path_source_loc_value_path ->
+      Some Source_loc_value_path
+    | _ -> None)
+  | _ -> None
+
 type lazy_args =
   (Asttypes.arg_label * (unit -> Typedtree.expression) option) list
 
@@ -2246,6 +2261,24 @@ type targs = (Asttypes.arg_label * Typedtree.expression option) list
 let rec type_exp ?deprecated_context ~context ?recarg env sexp =
   (* We now delegate everything to type_expect *)
   type_expect ?deprecated_context ~context ?recarg env sexp (newvar ())
+
+and implicit_source_loc_arg ~apply_loc env ty kind =
+  let loc = {apply_loc with Location.loc_ghost = true} in
+  let expr =
+    Ast_helper.Exp.ident ~loc
+      (Location.mknoloc
+         (Longident.Lident
+            (match kind with
+            | Source_loc_pos -> "__SOURCE_LOC_POS__"
+            | Source_loc_value_path -> "__SOURCE_LOC_VALUE_PATH__")))
+  in
+  option_some (type_expect ~context:None env expr (extract_option_type env ty))
+
+and missing_optional_arg ~apply_loc env ty =
+  match optional_source_loc_kind env ty with
+  | Some kind when !Clflags.implicit_source_loc ->
+    fun () -> implicit_source_loc_arg ~apply_loc env ty kind
+  | _ -> fun () -> option_none (instance env ty) Location.none
 
 (* Typing of an expression with an expected type.
    This provide better error messages, and allows controlled
@@ -2449,7 +2482,9 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
     let args, ty_res, fully_applied =
       match translate_unified_ops env funct sargs with
       | Some (targs, result_type) -> (targs, result_type, true)
-      | None -> type_application ~context total_app env funct sargs
+      | None ->
+        type_application ~context ~apply_loc:sexp.pexp_loc total_app env funct
+          sargs
     in
     end_def ();
     unify_var env (newvar ()) funct.exp_type;
@@ -3531,7 +3566,7 @@ and translate_unified_ops (env : Env.t) (funct : Typedtree.expression)
     | _ -> None)
   | _ -> None
 
-and type_application ~context total_app env funct (sargs : sargs) :
+and type_application ~context ~apply_loc total_app env funct (sargs : sargs) :
     targs * Types.type_expr * bool =
   let result_type omitted ty_fun =
     List.fold_left
@@ -3631,9 +3666,7 @@ and type_application ~context total_app env funct (sargs : sargs) :
         match (expand_head env ty_fun).desc with
         | Tarrow ({lbl; typ = t1}, t2, _, _) when is_optional lbl ->
           ignored := (lbl, t1, ty_fun.level) :: !ignored;
-          let arg =
-            (lbl, Some (fun () -> option_none (instance env t1) Location.none))
-          in
+          let arg = (lbl, Some (missing_optional_arg ~apply_loc env t1)) in
           type_unknown_args max_arity ~args:(arg :: args) ~top_arity:None
             omitted t2 []
         | _ -> collect_args ()
@@ -3708,9 +3741,8 @@ and type_application ~context total_app env funct (sargs : sargs) :
         | None ->
           if optional && (total_app || label_assoc Nolabel sargs) then (
             ignored := (l, ty, lv) :: !ignored;
-            ( sargs,
-              omitted,
-              Some (fun () -> option_none (instance env ty) Location.none) ))
+            let arg = Some (missing_optional_arg ~apply_loc env ty) in
+            (sargs, omitted, arg))
           else (sargs, (l, ty, lv) :: omitted, None)
         | Some (l', sarg0, sargs) ->
           if (not optional) && is_optional l' then

@@ -55,6 +55,8 @@ let string_of_loc_kind = function
   | Loc_FILE -> "loc_FILE"
   | Loc_LINE -> "loc_LINE"
   | Loc_MODULE -> "loc_MODULE"
+  | Loc_SOURCE_LOC_VALUE_PATH -> "loc_SOURCE_LOC_VALUE_PATH"
+  | Loc_SOURCE_LOC_POS -> "loc_SOURCE_LOC_POS"
   | Loc_POS -> "loc_POS"
   | Loc_LOC -> "loc_LOC"
 
