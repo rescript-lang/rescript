@@ -15,5 +15,5 @@ jobs:
       - name: Trigger BoJ Server (Casket/ssg-mcp)
         run: |
           # Send a secure trigger to boj-server to build this repository
-          curl -X POST "http://boj-server.local:7700/cartridges/ssg-mcp/build"             -H "Content-Type: application/json"             -d "{\"repo\": \"${{ github.repository }}\", \"branch\": \"${{ github.ref_name }}\", \"engine\": \"casket\"}"
+          curl -X POST "http://boj-server.local:7700/cartridges/ssg-mcp/invoke"             -H "Content-Type: application/json"             -d "{\"repo\": \"${{ github.repository }}\", \"branch\": \"${{ github.ref_name }}\", \"engine\": \"casket\\"}"}
         continue-on-error: true
