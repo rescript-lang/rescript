@@ -454,18 +454,25 @@ pub(crate) fn build_paths_for_module(
 
 /// Partition module names into project files and dependency files.
 ///
-/// Runtime modules from the cached `RuntimeModuleData` are included in dependency files.
+/// "Project files" are modules from the root package and any local workspace
+/// packages (`is_local_dep`). The analysis binary searches these for cross-file
+/// references. "Dependency files" are external npm packages and runtime modules
+/// — used for type resolution but not searched for references.
 pub(crate) fn build_file_sets(
     build_state: &BuildCommandState,
     runtime: &RuntimeModuleData,
 ) -> (Value, Value) {
-    let root_package_name = &build_state.build_state.get_root_config().name;
-
     let mut project_files = Vec::new();
     let mut dependencies_files = Vec::new();
 
     for (module_name, module) in &build_state.build_state.modules {
-        if module.package_name() == root_package_name {
+        let is_local = build_state
+            .build_state
+            .packages
+            .get(module.package_name())
+            .is_some_and(|pkg| pkg.is_root || pkg.is_local_dep);
+
+        if is_local {
             project_files.push(Value::String(module_name.clone()));
         } else {
             dependencies_files.push(Value::String(module_name.clone()));

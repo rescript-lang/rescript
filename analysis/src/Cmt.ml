@@ -42,11 +42,14 @@ let fullFromUri ~uri =
         None))
 
 let fullsFromModule ~package ~moduleName =
-  if Hashtbl.mem package.pathsForModule moduleName then
-    let paths = Hashtbl.find package.pathsForModule moduleName in
+  match Hashtbl.find_opt package.pathsForModule moduleName with
+  | Some paths ->
     let uris = getUris paths in
-    uris |> List.filter_map (fun uri -> fullFromUri ~uri)
-  else []
+    uris
+    |> List.filter_map (fun uri ->
+           let cmt = getCmtPath ~uri paths in
+           fullForCmt ~moduleName ~package ~uri cmt)
+  | None -> []
 
 let loadFullCmtFromPath ~path =
   let uri = Uri.fromPath path in
