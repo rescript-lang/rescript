@@ -248,14 +248,10 @@ fn modules_with_cmi_changed(
     pre_cmi_hashes: &HashMap<String, Option<blake3::Hash>>,
 ) -> Vec<String> {
     for (name, old_cmi) in pre_cmi_hashes {
-        let new_cmi = build_state
-            .build_state
-            .modules
-            .get(name)
-            .and_then(|m| match m {
-                Module::SourceFile(sf) => sf.compilation_stage().cmi_hash(),
-                _ => None,
-            });
+        let new_cmi = build_state.build_state.modules.get(name).and_then(|m| match m {
+            Module::SourceFile(sf) => sf.compilation_stage().cmi_hash(),
+            _ => None,
+        });
         if let (Some(old), Some(new)) = (old_cmi, new_cmi)
             && old == &new
         {
