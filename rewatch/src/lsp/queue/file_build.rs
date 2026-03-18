@@ -247,6 +247,31 @@ fn build_batch(
     let mut skipped_modules = HashSet::new();
 
     if !module_names.is_empty() {
+        // Snapshot which saved modules have a stable .cmi BEFORE compilation
+        // changes their stage. A module's .cmi cannot change if:
+        // - only the .res was saved (SourceImplementationDirty), AND
+        // - the module has a .resi file (interface determines .cmi)
+        let cmi_stable_modules: HashSet<String> = module_names
+            .iter()
+            .filter(|name| {
+                build_state
+                    .build_state
+                    .modules
+                    .get(*name)
+                    .is_some_and(|m| {
+                        if let Module::SourceFile(sf) = m {
+                            matches!(
+                                sf.compilation_stage(),
+                                CompilationStage::SourceImplementationDirty
+                            ) && sf.source_file.interface.is_some()
+                        } else {
+                            false
+                        }
+                    })
+            })
+            .cloned()
+            .collect();
+
         // Steps 1–3: compile saved files, typecheck dependents, resolve errors.
         let dep_result = compile_dependencies(build_state, &module_names);
         diagnostics.extend(dep_result.diagnostics);
@@ -276,7 +301,22 @@ fn build_batch(
             })
             .collect();
 
-        let (dep_diagnostics, dep_touched) = typecheck_dependents(build_state, &module_names);
+        // Skip typecheck_dependents for modules whose .cmi cannot have changed.
+        let modules_needing_dependent_typecheck: Vec<String> = module_names
+            .iter()
+            .filter(|name| !cmi_stable_modules.contains(*name))
+            .cloned()
+            .collect();
+
+        let (dep_diagnostics, dep_touched) = if modules_needing_dependent_typecheck.is_empty() {
+            tracing::debug!(
+                skipped_modules = ?cmi_stable_modules.iter().collect::<Vec<_>>(),
+                "skipping typecheck_dependents: all saved modules have stable .cmi (impl-only change with .resi)"
+            );
+            (Vec::new(), HashSet::new())
+        } else {
+            typecheck_dependents(build_state, &modules_needing_dependent_typecheck)
+        };
         diagnostics.extend(dep_diagnostics);
         touched_files.extend(dep_touched);
 

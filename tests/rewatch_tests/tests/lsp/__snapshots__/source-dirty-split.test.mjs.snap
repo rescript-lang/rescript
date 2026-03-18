@@ -325,13 +325,6 @@ exports[`lsp source-dirty split > handles implementation-only change on module w
   "          build.compile",
   "            build.compile_wave[file_count=1]",
   "              build.compile_file[module=Library, package=@rewatch-test/library, suffix=.mjs, module_system=esmodule]",
-  "      lsp.flush.file_build.typecheck_dependents[dependent_count=2]",
-  "        typecheck_dependents[module_count=4, output=lsp]",
-  "          build.typecheck",
-  "            build.typecheck_wave[file_count=1]",
-  "              build.typecheck_file[module=App, package=@rewatch-test/app]",
-  "            build.typecheck_wave[file_count=1]",
-  "              build.typecheck_file[module=Root, package=rewatch-test-fixture]",
   "      lsp.flush.file_build.compile_resolved",
 ]
 `;
