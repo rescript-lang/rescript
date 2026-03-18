@@ -220,6 +220,12 @@ format: | $(YARN_INSTALL_STAMP)
 checkformat: | $(YARN_INSTALL_STAMP)
 	./scripts/format_check.sh
 
+fmt: | $(YARN_INSTALL_STAMP)
+	./scripts/format.sh
+
+lint:
+	cargo clippy --manifest-path rewatch/Cargo.toml --all-targets --all-features
+
 # Clean
 
 clean-gentype:

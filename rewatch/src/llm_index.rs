@@ -488,9 +488,7 @@ pub fn insert_module_recursive(
 /// Call this once after all modules have been inserted, then pass to `insert_usages`.
 pub fn build_module_id_map(conn: &Connection) -> rusqlite::Result<std::collections::HashMap<String, i64>> {
     let mut stmt = conn.prepare("SELECT id, qualified_name FROM modules")?;
-    let rows = stmt.query_map([], |row| {
-        Ok((row.get::<_, String>(1)?, row.get::<_, i64>(0)?))
-    })?;
+    let rows = stmt.query_map([], |row| Ok((row.get::<_, String>(1)?, row.get::<_, i64>(0)?)))?;
     let mut map = std::collections::HashMap::new();
     for row in rows {
         let (name, id) = row?;
@@ -746,10 +744,14 @@ pub fn run_sync(folder: &str, show_progress: bool, plain_output: bool) -> i32 {
                             };
                             let build_path = pkg.get_build_path_for_output(OutputTarget::Standard);
                             let impl_path = &sf.source_file.implementation.path;
-                            let basename = helpers::file_path_to_compiler_asset_basename(impl_path, &pkg.namespace);
+                            let basename =
+                                helpers::file_path_to_compiler_asset_basename(impl_path, &pkg.namespace);
                             let dir = impl_path.parent().unwrap_or(Path::new(""));
                             let (cmt_path, compiled_path) = if let Some(iface) = &sf.source_file.interface {
-                                let iface_basename = helpers::file_path_to_compiler_asset_basename(&iface.path, &pkg.namespace);
+                                let iface_basename = helpers::file_path_to_compiler_asset_basename(
+                                    &iface.path,
+                                    &pkg.namespace,
+                                );
                                 let iface_dir = iface.path.parent().unwrap_or(Path::new(""));
                                 let cmti = build_path.join(iface_dir).join(format!("{iface_basename}.cmti"));
                                 let compiled = cmti.to_string_lossy().to_string();

@@ -44,8 +44,7 @@ let isNamespaceModule ~(package : SharedTypes.package) moduleName =
     Note: ReScript namespaces are flat (one level deep), so resolving just
     the first path segment is sufficient. Nested namespaces don't exist. *)
 let resolveNamespacedTarget ~(package : SharedTypes.package) targetModule path =
-  if not (isNamespaceModule ~package targetModule) then
-    (targetModule, path)
+  if not (isNamespaceModule ~package targetModule) then (targetModule, path)
   else
     match path with
     | firstSegment :: restPath ->
@@ -69,18 +68,17 @@ let extractUsages ~(package : SharedTypes.package) (extra : SharedTypes.extra) =
                 let pos = loc.loc_start in
                 Protocol.stringifyObject
                   [
-                    ( "targetModule",
-                      Some (Protocol.wrapInQuotes resolvedModule) );
+                    ("targetModule", Some (Protocol.wrapInQuotes resolvedModule));
                     ( "path",
                       Some
                         (Protocol.array
                            (List.map Protocol.wrapInQuotes resolvedPath)) );
-                    ("tip", Some (Protocol.wrapInQuotes (SharedTypes.Tip.toString tip)));
-                    ( "line",
-                      Some (string_of_int (pos.pos_lnum - 1)) );
-                    ( "col",
+                    ( "tip",
                       Some
-                        (string_of_int (pos.pos_cnum - pos.pos_bol)) );
+                        (Protocol.wrapInQuotes (SharedTypes.Tip.toString tip))
+                    );
+                    ("line", Some (string_of_int (pos.pos_lnum - 1)));
+                    ("col", Some (string_of_int (pos.pos_cnum - pos.pos_bol)));
                   ]))
   |> List.of_seq
 

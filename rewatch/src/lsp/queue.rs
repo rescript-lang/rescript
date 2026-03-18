@@ -661,7 +661,8 @@ async fn flush_inner(
     // Step 1: Run incremental builds (saved files) and drain pending
     // full_compile_intent. Intent drain piggybacks on the same
     // take-build-replace cycle — no extra locking needed.
-    let (errored_files, touched_files) = if has_incremental_builds || (has_full_builds && has_pending_intents) {
+    let (errored_files, touched_files) = if has_incremental_builds || (has_full_builds && has_pending_intents)
+    {
         if has_pending_intents {
             for (root, names) in state.full_compile_intent.iter() {
                 tracing::debug!(
@@ -730,12 +731,7 @@ async fn flush_inner(
             .await;
 
         // Step 5: Send sync events to the background DB sync queue.
-        send_db_sync_events(
-            projects,
-            has_full_builds,
-            &touched_files,
-            db_sync_queue,
-        );
+        send_db_sync_events(projects, has_full_builds, &touched_files, db_sync_queue);
     }
 }
 
@@ -805,8 +801,7 @@ fn build_sync_event(
     let opens = analysis::build_opens(&root_package.namespace, &root_package.config);
     // Use OutputTarget::Lsp — the LSP builds write .cmt/.cmti into lib/lsp/,
     // so the analysis binary must read from there to get up-to-date data.
-    let paths_for_module =
-        analysis::build_paths_for_module(build_state, runtime, OutputTarget::Lsp);
+    let paths_for_module = analysis::build_paths_for_module(build_state, runtime, OutputTarget::Lsp);
     let (project_files, dependencies_files) = analysis::build_file_sets(build_state, runtime);
     let root_config = build_state.build_state.get_root_config();
     let suffix = root_config.suffix.clone().unwrap_or_else(|| ".js".to_string());

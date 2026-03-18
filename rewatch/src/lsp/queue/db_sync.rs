@@ -173,9 +173,7 @@ fn process_batch(
     let stored_hashes: HashMap<String, String> = conn
         .prepare("SELECT name, cmt_hash FROM modules WHERE cmt_hash IS NOT NULL AND cmt_hash != ''")
         .and_then(|mut stmt| {
-            let rows = stmt.query_map([], |row| {
-                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
-            })?;
+            let rows = stmt.query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)))?;
             rows.collect::<Result<HashMap<_, _>, _>>()
         })
         .unwrap_or_default();
