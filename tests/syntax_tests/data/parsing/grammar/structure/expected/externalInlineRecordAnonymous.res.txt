@@ -1,0 +1,18 @@
+type f1.arg0 = {
+  x: int }[@@res.inlineRecordDefinition ]
+external f1 : f1.arg0 -> unit (a:1) = "f1"
+type f2.arg0 = {
+  x: int }[@@res.inlineRecordDefinition ]
+external f2 : f2.arg0 -> string -> unit (a:2) = "f2"
+type f3.return.type = {
+  done: bool }[@@res.inlineRecordDefinition ]
+and f3.arg1 = {
+  y: string }[@@res.inlineRecordDefinition ]
+and f3.arg0 = {
+  x: int }[@@res.inlineRecordDefinition ]
+external f3 : f3.arg0 option -> f3.arg1 -> f3.return.type option (a:2) = "f3"
+type f4.arg1 = {
+  y: string }[@@res.inlineRecordDefinition ]
+and f4.named = {
+  x: int }[@@res.inlineRecordDefinition ]
+external f4 : named:f4.named -> f4.arg1 -> unit (a:2) = "f4"
