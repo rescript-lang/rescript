@@ -194,6 +194,82 @@ pub(super) async fn run(
     (errored_files, all_touched_files)
 }
 
+/// Snapshot .cmi hashes for saved modules before compilation.
+///
+/// Returns two sets:
+/// - `cmi_stable`: modules whose .cmi is statically known to be stable
+///   (SourceImplementationDirty + has .resi → interface determines .cmi)
+/// - `pre_cmi_hashes`: .cmi hashes for remaining modules, to compare after compilation
+fn snapshot_cmi_state(
+    build_state: &BuildCommandState,
+    module_names: &[String],
+) -> (HashSet<String>, HashMap<String, Option<blake3::Hash>>) {
+    let cmi_stable: HashSet<String> = module_names
+        .iter()
+        .filter(|name| {
+            build_state.build_state.modules.get(*name).is_some_and(|m| {
+                if let Module::SourceFile(sf) = m {
+                    matches!(
+                        sf.compilation_stage(),
+                        CompilationStage::SourceImplementationDirty
+                    ) && sf.source_file.interface.is_some()
+                } else {
+                    false
+                }
+            })
+        })
+        .cloned()
+        .collect();
+
+    let pre_cmi_hashes: HashMap<String, _> = module_names
+        .iter()
+        .filter(|name| !cmi_stable.contains(*name))
+        .filter_map(|name| {
+            let module = build_state.build_state.modules.get(name)?;
+            if let Module::SourceFile(sf) = module {
+                Some((name.clone(), sf.compilation_stage().cmi_hash()))
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    (cmi_stable, pre_cmi_hashes)
+}
+
+/// Determine which saved modules need `typecheck_dependents`.
+///
+/// Starts from the statically-known stable set, then adds modules whose
+/// .cmi hash didn't change after compilation (runtime check).
+fn modules_with_cmi_changed(
+    build_state: &BuildCommandState,
+    module_names: &[String],
+    cmi_stable: &mut HashSet<String>,
+    pre_cmi_hashes: &HashMap<String, Option<blake3::Hash>>,
+) -> Vec<String> {
+    for (name, old_cmi) in pre_cmi_hashes {
+        let new_cmi = build_state
+            .build_state
+            .modules
+            .get(name)
+            .and_then(|m| match m {
+                Module::SourceFile(sf) => sf.compilation_stage().cmi_hash(),
+                _ => None,
+            });
+        if let (Some(old), Some(new)) = (old_cmi, new_cmi)
+            && old == &new
+        {
+            cmi_stable.insert(name.clone());
+        }
+    }
+
+    module_names
+        .iter()
+        .filter(|name| !cmi_stable.contains(*name))
+        .cloned()
+        .collect()
+}
+
 /// Build one or more saved files and propagate diagnostics.
 ///
 /// This is the core LSP save-build flow, executed in three steps:
@@ -211,6 +287,10 @@ pub(super) async fn run(
 /// imports *those*, recursively). Re-typechecks them to surface errors
 /// caused by API changes (e.g. a function signature changed). No
 /// JavaScript is emitted — that happens when those files are saved.
+///
+/// This step is skipped when the saved module's `.cmi` (compiled interface)
+/// didn't change — either statically (impl-only change with `.resi`) or
+/// detected via hash comparison before/after compilation.
 ///
 /// ## Step 3: `compile_resolved_errors` — produce JS for resolved errors
 ///
@@ -247,40 +327,17 @@ fn build_batch(
     let mut skipped_modules = HashSet::new();
 
     if !module_names.is_empty() {
-        // Snapshot which saved modules have a stable .cmi BEFORE compilation
-        // changes their stage. A module's .cmi cannot change if:
-        // - only the .res was saved (SourceImplementationDirty), AND
-        // - the module has a .resi file (interface determines .cmi)
-        let cmi_stable_modules: HashSet<String> = module_names
-            .iter()
-            .filter(|name| {
-                build_state
-                    .build_state
-                    .modules
-                    .get(*name)
-                    .is_some_and(|m| {
-                        if let Module::SourceFile(sf) = m {
-                            matches!(
-                                sf.compilation_stage(),
-                                CompilationStage::SourceImplementationDirty
-                            ) && sf.source_file.interface.is_some()
-                        } else {
-                            false
-                        }
-                    })
-            })
-            .cloned()
-            .collect();
+        // Snapshot .cmi state before compilation to detect unchanged interfaces.
+        let (mut cmi_stable, pre_cmi_hashes) = snapshot_cmi_state(build_state, &module_names);
 
-        // Steps 1–3: compile saved files, typecheck dependents, resolve errors.
+        // Step 1: compile saved files and their dependency closure.
         let dep_result = compile_dependencies(build_state, &module_names);
         diagnostics.extend(dep_result.diagnostics);
         touched_files.extend(dep_result.touched_files);
         skipped_modules = dep_result.skipped_modules;
 
         // Snapshot modules at CompileError(FullCompile) before typechecking
-        // dependents. These are modules the user saved but that failed to
-        // compile. If step 2 resolves the error, step 3 needs to emit JS.
+        // dependents. If step 2 resolves the error, step 3 needs to emit JS.
         let needs_rebuild_after_typecheck: AHashSet<String> = build_state
             .build_state
             .modules
@@ -301,28 +358,23 @@ fn build_batch(
             })
             .collect();
 
-        // Skip typecheck_dependents for modules whose .cmi cannot have changed.
-        let modules_needing_dependent_typecheck: Vec<String> = module_names
-            .iter()
-            .filter(|name| !cmi_stable_modules.contains(*name))
-            .cloned()
-            .collect();
+        // Step 2: typecheck dependents — but only for modules whose .cmi changed.
+        let cmi_changed =
+            modules_with_cmi_changed(build_state, &module_names, &mut cmi_stable, &pre_cmi_hashes);
 
-        let (dep_diagnostics, dep_touched) = if modules_needing_dependent_typecheck.is_empty() {
+        let (dep_diagnostics, dep_touched) = if cmi_changed.is_empty() {
             tracing::debug!(
-                skipped_modules = ?cmi_stable_modules.iter().collect::<Vec<_>>(),
-                "skipping typecheck_dependents: all saved modules have stable .cmi (impl-only change with .resi)"
+                skipped_modules = ?cmi_stable.iter().collect::<Vec<_>>(),
+                "skipping typecheck_dependents: all saved modules have stable .cmi"
             );
             (Vec::new(), HashSet::new())
         } else {
-            typecheck_dependents(build_state, &modules_needing_dependent_typecheck)
+            typecheck_dependents(build_state, &cmi_changed)
         };
         diagnostics.extend(dep_diagnostics);
         touched_files.extend(dep_touched);
 
-        // Step 3: re-compile modules that were at CompileError(FullCompile) and are
-        // now at TypeChecked after step 2 (meaning a dependency fix resolved the
-        // error). These need full compilation to produce the JS the user requested.
+        // Step 3: re-compile modules whose errors were resolved by step 2.
         let (rebuild_diagnostics, rebuild_touched) =
             compile_resolved_errors(build_state, &needs_rebuild_after_typecheck);
         diagnostics.extend(rebuild_diagnostics);

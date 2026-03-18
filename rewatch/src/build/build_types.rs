@@ -1074,10 +1074,10 @@ mod tests {
 
     #[test]
     fn transition_partial_dirty_to_both_dirty_is_valid() {
-        assert!(CompilationStage::SourceImplementationDirty
-            .can_transition_to(&CompilationStage::SourceBothDirty));
-        assert!(CompilationStage::SourceInterfaceDirty
-            .can_transition_to(&CompilationStage::SourceBothDirty));
+        assert!(
+            CompilationStage::SourceImplementationDirty.can_transition_to(&CompilationStage::SourceBothDirty)
+        );
+        assert!(CompilationStage::SourceInterfaceDirty.can_transition_to(&CompilationStage::SourceBothDirty));
     }
 
     #[test]
