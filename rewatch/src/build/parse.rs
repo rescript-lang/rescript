@@ -137,11 +137,10 @@ pub fn generate_asts(
 
             if let Some(Module::SourceFile(sf_module)) = build_state.build_state.modules.get_mut(&module_name)
             {
-                // if the module is dirty, mark it for recompilation
-                // do NOT change if the module is not dirty, it needs to keep
-                // its compilation_stage if it was set before
+                // if the module is dirty, mark it for dependency rescan.
+                // The compilation stage is already set correctly by mark_file_parse_dirty
+                // (SourceImplementationDirty, SourceInterfaceDirty, or SourceBothDirty).
                 if is_source_dirty {
-                    sf_module.set_compilation_stage(CompilationStage::SourceDirty);
                     sf_module.needs_dependencies_rescan = true;
                 }
                 let mut impl_parse_ok = false;
@@ -197,7 +196,7 @@ pub fn generate_asts(
                         }
                     }
 
-                    // If parsing succeeded, upgrade from SourceDirty to Parsed with hashes
+                    // If parsing succeeded, upgrade from Source*Dirty to Parsed with hashes
                     if is_source_dirty && impl_parse_ok && iface_parse_ok {
                         let build_path = package.get_build_path_for_output(output);
 
@@ -319,7 +318,7 @@ pub fn generate_asts(
                 .unwrap_or_default();
             for dep_name in dependents {
                 if let Some(Module::SourceFile(sf)) = build_state.build_state.modules.get_mut(&dep_name) {
-                    sf.set_compilation_stage(CompilationStage::SourceDirty);
+                    sf.set_compilation_stage(CompilationStage::SourceBothDirty);
                 }
             }
         }

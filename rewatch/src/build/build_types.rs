@@ -13,11 +13,11 @@ use std::{fmt, fmt::Display, ops::Deref, path::Path, path::PathBuf, time::System
 /// that stage, enabling the compile loop to make data-driven decisions
 /// about what work is needed and whether output will affect dependents.
 ///
-/// Lifecycle: `SourceDirty → Parsed → TypeChecked → Built`
+/// Lifecycle: `Source*Dirty → Parsed → TypeChecked → Built`
 ///            `Built/TypeChecked → DependencyDirty → TypeChecked → Built`
 ///
 /// Error paths:
-/// - `SourceDirty → ParseError` when parsing fails (syntax error, etc.).
+/// - `Source*Dirty → ParseError` when parsing fails (syntax error, etc.).
 ///   The module stays here until its source changes.
 /// - `Parsed → CompileError` when compilation fails (e.g. due
 ///   to a dependency's API not matching). The AST hashes are preserved so
@@ -25,10 +25,15 @@ use std::{fmt, fmt::Display, ops::Deref, path::Path, path::PathBuf, time::System
 ///   full recompilation is needed.
 #[derive(Debug, PartialEq, Eq)]
 pub enum CompilationStage {
-    /// Source changed or not yet compiled — needs full pipeline (reparse + recompile).
-    SourceDirty,
+    /// Only the implementation (.res) source changed — needs reparse + recompile.
+    SourceImplementationDirty,
+    /// Only the interface (.resi) source changed — needs reparse + recompile.
+    SourceInterfaceDirty,
+    /// Both sides changed, or structural change (new module, deleted dep, mlmap, unknown).
+    /// Needs full pipeline (reparse + recompile).
+    SourceBothDirty,
     /// Parsing failed (syntax error, etc.). The module is inert until
-    /// its source changes and resets it to `SourceDirty`.
+    /// its source changes.
     ParseError,
     /// AST generated. Carries hashes of implementation (and optional interface)
     /// source + AST artifacts.
@@ -106,7 +111,12 @@ pub struct FileBuiltState {
 impl CompilationStage {
     /// Whether this module's source has changed and needs reparsing + recompilation.
     pub fn is_source_dirty(&self) -> bool {
-        matches!(self, CompilationStage::SourceDirty)
+        matches!(
+            self,
+            CompilationStage::SourceImplementationDirty
+                | CompilationStage::SourceInterfaceDirty
+                | CompilationStage::SourceBothDirty
+        )
     }
 
     /// Whether this module failed compilation (type error, etc.).
@@ -189,29 +199,32 @@ impl CompilationStage {
     ///
     /// Valid transitions:
     /// ```text
-    /// SourceDirty     → SourceDirty, ParseError, Parsed
-    /// ParseError      → SourceDirty, ParseError
-    /// Parsed          → SourceDirty, Parsed, CompileError, TypeChecked
-    /// CompileError    → SourceDirty, CompileError, TypeChecked
-    /// DependencyDirty → SourceDirty, DependencyDirty, CompileError, TypeChecked
-    /// TypeChecked     → SourceDirty, CompileError, TypeChecked, Built, DependencyDirty
-    /// Built           → SourceDirty, CompileError, TypeChecked, DependencyDirty
+    /// Source*Dirty     → Source*Dirty, ParseError, Parsed
+    /// ParseError       → Source*Dirty, ParseError
+    /// Parsed           → Source*Dirty, Parsed, CompileError, TypeChecked
+    /// CompileError     → Source*Dirty, CompileError, TypeChecked
+    /// DependencyDirty  → Source*Dirty, DependencyDirty, CompileError, TypeChecked
+    /// TypeChecked      → Source*Dirty, CompileError, TypeChecked, Built, DependencyDirty
+    /// Built            → Source*Dirty, CompileError, TypeChecked, DependencyDirty
     /// ```
     pub fn can_transition_to(&self, new_stage: &CompilationStage) -> bool {
         use CompilationStage::*;
         matches!(
             (self, new_stage),
-            // Any stage can reset to SourceDirty:
+            // Any stage can reset to any source-dirty variant:
             //   parse.rs     — source changed on disk, or mlmap changed
             //   compile.rs   — deleted deps, or hash computation failed
-            (_, SourceDirty)
-            // SourceDirty → ParseError: parse.rs — AST generation failed (syntax error)
-            | (SourceDirty, ParseError)
+            //   build_types  — mark_file_parse_dirty sets the specific variant
+            (_, SourceBothDirty)
+            | (_, SourceImplementationDirty)
+            | (_, SourceInterfaceDirty)
+            // Source*Dirty → ParseError: parse.rs — AST generation failed (syntax error)
+            | (SourceBothDirty | SourceImplementationDirty | SourceInterfaceDirty, ParseError)
             // ParseError → ParseError: parse.rs — re-parsed but still fails
             | (ParseError, ParseError)
-            // SourceDirty → Parsed: parse.rs — AST successfully generated
-            //                       clean.rs — AST on disk is fresh, restoring from artifacts
-            | (SourceDirty, Parsed { .. })
+            // Source*Dirty → Parsed: parse.rs — AST successfully generated
+            //                        clean.rs — AST on disk is fresh, restoring from artifacts
+            | (SourceBothDirty | SourceImplementationDirty | SourceInterfaceDirty, Parsed { .. })
             // Parsed → Parsed: parse.rs — re-parsed (e.g. re-entered parse phase)
             | (Parsed { .. }, Parsed { .. })
             // Parsed → CompileError: compile.rs — compilation failed (type error)
@@ -249,7 +262,7 @@ impl CompilationStage {
 
     /// Whether this module needs work for the given compile mode.
     /// `ParseError` returns `false` — the module can't compile without a successful parse.
-    /// `SourceDirty` returns `true` — should not normally appear in a compile universe
+    /// `Source*Dirty` returns `true` — should not normally appear in a compile universe
     /// (it needs parsing first), but is kept for safety.
     pub fn needs_compile_for_mode(&self, mode: CompileMode) -> bool {
         match (self, mode) {
@@ -263,7 +276,12 @@ impl CompilationStage {
                 | CompilationStage::DependencyDirty { .. },
                 _,
             ) => true,
-            (CompilationStage::SourceDirty, _) => true,
+            (
+                CompilationStage::SourceImplementationDirty
+                | CompilationStage::SourceInterfaceDirty
+                | CompilationStage::SourceBothDirty,
+                _,
+            ) => true,
         }
     }
 
@@ -275,6 +293,44 @@ impl CompilationStage {
             CompilationStage::TypeChecked { compiled_at, .. } => Some(*compiled_at),
             CompilationStage::Built(b) => Some(b.compiled_at),
             _ => None,
+        }
+    }
+
+    /// The compiled module interface hash, if available.
+    /// Present only after successful typecheck or full build.
+    pub fn cmi_hash(&self) -> Option<Hash> {
+        match self {
+            CompilationStage::TypeChecked { cmi_hash, .. } => Some(*cmi_hash),
+            CompilationStage::Built(b) => Some(b.cmi_hash),
+            _ => None,
+        }
+    }
+
+    /// Whether this module has a separate interface (.resi) file,
+    /// based on the presence of `interface_source_hash` in the compilation stage.
+    pub fn has_interface(&self) -> bool {
+        match self {
+            CompilationStage::Parsed {
+                interface_source_hash,
+                ..
+            }
+            | CompilationStage::CompileError {
+                interface_source_hash,
+                ..
+            }
+            | CompilationStage::DependencyDirty {
+                interface_source_hash,
+                ..
+            }
+            | CompilationStage::TypeChecked {
+                interface_source_hash,
+                ..
+            } => interface_source_hash.is_some(),
+            CompilationStage::Built(b) => b.interface_source_hash.is_some(),
+            CompilationStage::SourceImplementationDirty
+            | CompilationStage::SourceInterfaceDirty
+            | CompilationStage::SourceBothDirty
+            | CompilationStage::ParseError => false,
         }
     }
 }
@@ -459,7 +515,7 @@ pub struct SourceFile {
 }
 
 /// A regular source file module (.res/.resi) that goes through the full
-/// compilation pipeline: SourceDirty → Parsed → TypeChecked → Built.
+/// compilation pipeline: Source*Dirty → Parsed → TypeChecked → Built.
 #[derive(Debug)]
 pub struct SourceFileModule {
     /// The module name (HashMap key), stored here so that methods like
@@ -488,7 +544,7 @@ pub struct SourceFileModule {
     /// and reset to `false` in `deps.rs` after dependencies are resolved.
     pub needs_dependencies_rescan: bool,
     /// How far this module has progressed through the build pipeline
-    /// (SourceDirty → Parsed → CompileError / TypeChecked → Built).
+    /// (Source*Dirty → Parsed → CompileError / TypeChecked → Built).
     ///
     /// Private — use [`compilation_stage()`] to read and
     /// [`set_compilation_stage()`] to write, which logs every transition
@@ -497,7 +553,7 @@ pub struct SourceFileModule {
 }
 
 impl SourceFileModule {
-    /// Create a new module in the `SourceDirty` stage.
+    /// Create a new module in the `SourceBothDirty` stage.
     pub fn new(
         module_name: String,
         package_name: String,
@@ -512,7 +568,7 @@ impl SourceFileModule {
             deps: AHashSet::new(),
             dependents: AHashSet::new(),
             needs_dependencies_rescan: true,
-            compilation_stage: CompilationStage::SourceDirty,
+            compilation_stage: CompilationStage::SourceBothDirty,
         }
     }
 
@@ -769,11 +825,12 @@ impl BuildCommandState {
     /// Updates `last_modified` from the file's metadata.
     /// Returns the module name if found and marked, `None` otherwise.
     pub fn mark_file_parse_dirty(&mut self, file_path: &Path) -> Option<String> {
-        let (module_name, _, _) = match self.find_module_for_file(file_path) {
+        let (module_name, _, is_interface) = match self.find_module_for_file(file_path) {
             Some(result) => {
                 tracing::debug!(
                     file = %file_path.display(),
                     module = %result.0,
+                    is_interface = result.2,
                     "mark_file_parse_dirty: resolved file to module"
                 );
                 result
@@ -813,7 +870,26 @@ impl BuildCommandState {
                 }
             }
             if matched {
-                m.set_compilation_stage(CompilationStage::SourceDirty);
+                let new_stage = match m.compilation_stage() {
+                    // Already partially dirty — if the other side now changed too, upgrade
+                    CompilationStage::SourceImplementationDirty if is_interface => {
+                        CompilationStage::SourceBothDirty
+                    }
+                    CompilationStage::SourceInterfaceDirty if !is_interface => {
+                        CompilationStage::SourceBothDirty
+                    }
+                    // Already at the right dirty state or SourceBothDirty — no change needed
+                    s if s.is_source_dirty() => return Some(module_name),
+                    // Not dirty yet — set the specific variant
+                    _ => {
+                        if is_interface {
+                            CompilationStage::SourceInterfaceDirty
+                        } else {
+                            CompilationStage::SourceImplementationDirty
+                        }
+                    }
+                };
+                m.set_compilation_stage(new_stage);
                 return Some(module_name);
             }
         }
@@ -919,6 +995,107 @@ impl fmt::Display for IncrementalBuildError {
                     write!(f, "{LINE_CLEAR}  {CROSS}Failed to Compile. See Errors Above",)
                 }
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn dummy_hash() -> Hash {
+        blake3::hash(b"test")
+    }
+
+    fn make_parsed() -> CompilationStage {
+        CompilationStage::Parsed {
+            implementation_source_hash: dummy_hash(),
+            implementation_ast_hash: dummy_hash(),
+            interface_source_hash: None,
+            interface_ast_hash: None,
+            implementation_parse_warnings: None,
+            interface_parse_warnings: None,
+        }
+    }
+
+    #[test]
+    fn is_source_dirty_matches_all_three_variants() {
+        assert!(CompilationStage::SourceImplementationDirty.is_source_dirty());
+        assert!(CompilationStage::SourceInterfaceDirty.is_source_dirty());
+        assert!(CompilationStage::SourceBothDirty.is_source_dirty());
+        assert!(!CompilationStage::ParseError.is_source_dirty());
+        assert!(!make_parsed().is_source_dirty());
+    }
+
+    #[test]
+    fn transition_any_stage_to_any_dirty_variant() {
+        let stages = vec![
+            CompilationStage::SourceImplementationDirty,
+            CompilationStage::SourceInterfaceDirty,
+            CompilationStage::SourceBothDirty,
+            CompilationStage::ParseError,
+            make_parsed(),
+        ];
+        let dirty_targets = vec![
+            CompilationStage::SourceImplementationDirty,
+            CompilationStage::SourceInterfaceDirty,
+            CompilationStage::SourceBothDirty,
+        ];
+        for from in &stages {
+            for to in &dirty_targets {
+                assert!(
+                    from.can_transition_to(to),
+                    "{from:?} should be able to transition to {to:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn transition_dirty_to_parsed_and_parse_error() {
+        let dirty_variants = vec![
+            CompilationStage::SourceImplementationDirty,
+            CompilationStage::SourceInterfaceDirty,
+            CompilationStage::SourceBothDirty,
+        ];
+        let parsed = make_parsed();
+        let parse_error = CompilationStage::ParseError;
+        for dirty in &dirty_variants {
+            assert!(
+                dirty.can_transition_to(&parsed),
+                "{dirty:?} → Parsed should be valid"
+            );
+            assert!(
+                dirty.can_transition_to(&parse_error),
+                "{dirty:?} → ParseError should be valid"
+            );
+        }
+    }
+
+    #[test]
+    fn transition_partial_dirty_to_both_dirty_is_valid() {
+        assert!(CompilationStage::SourceImplementationDirty
+            .can_transition_to(&CompilationStage::SourceBothDirty));
+        assert!(CompilationStage::SourceInterfaceDirty
+            .can_transition_to(&CompilationStage::SourceBothDirty));
+    }
+
+    #[test]
+    fn needs_compile_for_all_dirty_variants() {
+        let dirty_variants = vec![
+            CompilationStage::SourceImplementationDirty,
+            CompilationStage::SourceInterfaceDirty,
+            CompilationStage::SourceBothDirty,
+        ];
+        for dirty in &dirty_variants {
+            assert!(
+                dirty.needs_compile_for_mode(CompileMode::FullCompile),
+                "{dirty:?} should need compile for FullCompile"
+            );
+            assert!(
+                dirty.needs_compile_for_mode(CompileMode::TypecheckOnly),
+                "{dirty:?} should need compile for TypecheckOnly"
+            );
         }
     }
 }

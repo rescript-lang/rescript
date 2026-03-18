@@ -570,7 +570,10 @@ pub fn process_in_waves(
                     *interface_source_hash,
                     *interface_ast_hash,
                 ),
-                CompilationStage::SourceDirty | CompilationStage::ParseError => {
+                CompilationStage::SourceImplementationDirty
+                | CompilationStage::SourceInterfaceDirty
+                | CompilationStage::SourceBothDirty
+                | CompilationStage::ParseError => {
                     // Fallback: compute from disk
                     let build_path = pkg.get_build_path_for_output(compile_params.output);
                     let sh = helpers::compute_file_hash(&pkg.path.join(&impl_path));
@@ -681,7 +684,7 @@ pub fn process_in_waves(
                     }
                 }
                 _ => {
-                    sf.set_compilation_stage(CompilationStage::SourceDirty);
+                    sf.set_compilation_stage(CompilationStage::SourceBothDirty);
                 }
             }
         }
@@ -750,7 +753,10 @@ pub fn process_in_waves(
                     *interface_source_hash,
                     *interface_ast_hash,
                 )),
-                CompilationStage::SourceDirty | CompilationStage::ParseError => None,
+                CompilationStage::SourceImplementationDirty
+                | CompilationStage::SourceInterfaceDirty
+                | CompilationStage::SourceBothDirty
+                | CompilationStage::ParseError => None,
             };
             if let Some((
                 implementation_source_hash,
@@ -1248,7 +1254,7 @@ pub fn mark_modules_with_deleted_deps_source_dirty(build_state: &mut BuildState)
         if let Module::SourceFile(sf) = module
             && !sf.deps.is_disjoint(&build_state.deleted_modules)
         {
-            sf.set_compilation_stage(CompilationStage::SourceDirty);
+            sf.set_compilation_stage(CompilationStage::SourceBothDirty);
         }
     });
 }
@@ -1331,7 +1337,7 @@ pub fn mark_modules_with_expired_deps_for_recompile(build_state: &mut BuildComma
             // fix). Parsed modules were just parsed in this cycle and
             // resetting them loses their source/AST hashes. ParseError
             // modules need reparsing, not recompilation — downgrading them
-            // to SourceDirty would let them be compiled with a stale AST.
+            // to Source*Dirty would let them be compiled with a stale AST.
             && !sf.compilation_stage().is_compile_error()
             && !sf.compilation_stage().is_parse_error()
             && !matches!(sf.compilation_stage(), CompilationStage::Parsed { .. })
@@ -1339,7 +1345,7 @@ pub fn mark_modules_with_expired_deps_for_recompile(build_state: &mut BuildComma
             // Extract parse hashes from the current stage when available.
             // Modules at Built/TypeChecked/DependencyDirty have valid ASTs
             // and only need recompilation, not reparsing → DependencyDirty.
-            // Modules at SourceDirty/ParseError have no valid hashes → SourceDirty.
+            // Modules at Source*Dirty/ParseError have no valid hashes → SourceBothDirty.
             let hashes = match sf.compilation_stage() {
                 CompilationStage::TypeChecked {
                     implementation_source_hash,
@@ -1395,7 +1401,7 @@ pub fn mark_modules_with_expired_deps_for_recompile(build_state: &mut BuildComma
                     });
                 }
                 None => {
-                    sf.set_compilation_stage(CompilationStage::SourceDirty);
+                    sf.set_compilation_stage(CompilationStage::SourceBothDirty);
                 }
             }
         }

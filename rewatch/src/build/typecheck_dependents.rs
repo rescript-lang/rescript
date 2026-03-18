@@ -18,7 +18,7 @@ pub fn typecheck_dependents(
     let all_dependents =
         dependency_closure::get_dependent_closure(&build_state.modules, module_names.clone());
 
-    // Exclude modules at SourceDirty or ParseError — they need
+    // Exclude modules at Source*Dirty or ParseError — they need
     // parse_and_resolve before they can be compiled (their AST is
     // invalid or missing). DependencyDirty modules pass through
     // because their AST is still valid — they only need recompilation.
