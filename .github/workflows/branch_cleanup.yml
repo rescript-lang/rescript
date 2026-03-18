@@ -1,10 +1,8 @@
 name: Cleanup Stale Branches
-
 on:
   workflow_dispatch:
   schedule:
     - cron: '0 0 * * *' # This schedule runs the workflow at midnight every day
-
 jobs:
   cleanup-stale-branches:
     runs-on: ubuntu-latest
@@ -19,3 +17,4 @@ jobs:
           last-commit-age-days: 90
           dry-run: false
           rate-limit: true
+permissions: read-all

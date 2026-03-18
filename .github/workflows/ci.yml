@@ -1,5 +1,4 @@
 name: CI
-
 on:
   push:
     branches: [master, 11.0_release]
@@ -7,20 +6,16 @@ on:
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
       - "v[0-9]+.[0-9]+.[0-9]+-*"
-
   pull_request:
     branches: [master, 11.0_release]
-
 concurrency:
   group: ci-${{ github.ref }}-1
   # Cancel previous builds for pull requests only.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
 env:
   OCAMLRUNPARAM: b
   RUST_BACKTRACE: "1"
   RUSTFLAGS: "-Dwarnings"
-
 jobs:
   build-compiler:
     outputs:
@@ -60,19 +55,15 @@ jobs:
             node-target: win32-x64
             rust-target: x86_64-pc-windows-gnu
             exe-suffix: ".exe"
-
           # Verify that the compiler still builds with the oldest OCaml version we support.
           - os: ubuntu-24.04
             ocaml_compiler: ocaml-variants.5.0.0+options,ocaml-option-static
             node-target: linux-x64
             rust-target: x86_64-unknown-linux-musl
-
     runs-on: ${{matrix.os}}
-
     env:
       # When changing the setup-ocaml version, also adjust it in the setup step further below.
       SETUP_OCAML_VERSION: 3.4.6 # OPAM <2.6.0
-
     steps:
       - name: "Windows: Set git config"
         if: runner.os == 'Windows'
@@ -80,19 +71,15 @@ jobs:
           git config --system core.autocrlf false
           git config --system core.eol lf
           git config --system core.longpaths true
-
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-
       - name: Use Node.js
         uses: actions/setup-node@49933ea5288caeca8642195f2b846b8bbe245a93 # v4
         with:
           cache: yarn
           node-version-file: .nvmrc
-
       - name: Install npm packages
         run: yarn install
-
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
         uses: awalsh128/cache-apt-pkgs-action@v1.4.3
@@ -101,14 +88,12 @@ jobs:
           # plus OPAM wants cmake
           packages: bubblewrap darcs g++-multilib gcc-multilib mercurial musl-tools rsync cmake
           version: v4
-
       - name: Restore rewatch build cache
         id: rewatch-build-cache
         uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
           path: rewatch/target
           key: rewatch-build-v3-${{ matrix.rust-target }}-${{ hashFiles('rewatch/src/**', 'rewatch/Cargo.lock') }}
-
       - name: Determine Rust toolchain version
         id: rust-version
         shell: bash
@@ -119,7 +104,6 @@ jobs:
             exit 1
           fi
           echo "version=${version}" >> "$GITHUB_OUTPUT"
-
       - name: Install rust toolchain
         if: steps.rewatch-build-cache.outputs.cache-hit != 'true'
         uses: dtolnay/rust-toolchain@master
@@ -127,22 +111,18 @@ jobs:
           toolchain: ${{ steps.rust-version.outputs.version }}
           targets: ${{ matrix.rust-target }}
           components: clippy, rustfmt
-
       - name: Build rewatch
         if: steps.rewatch-build-cache.outputs.cache-hit != 'true'
         run: |
           cargo build --manifest-path rewatch/Cargo.toml --target ${{ matrix.rust-target }} --release
-
       - name: Lint rewatch
         if: steps.rewatch-build-cache.outputs.cache-hit != 'true'
         run: |
           cargo clippy --manifest-path rewatch/Cargo.toml --all-targets --all-features
-
       - name: Run rewatch unit tests
         if: steps.rewatch-build-cache.outputs.cache-hit != 'true'
         run: |
           cargo test --manifest-path rewatch/Cargo.toml --release
-
       - name: Copy rewatch binary
         run: |
           cp rewatch/target/${{ matrix.rust-target }}/release/rescript${{ matrix.exe-suffix }} rescript
@@ -150,12 +130,10 @@ jobs:
           cp rewatch/target/${{ matrix.rust-target }}/release/rescript${{ matrix.exe-suffix }} rewatch/target/release
           ./scripts/copyExes.js --rewatch
         shell: bash
-
       # matrix.ocaml_compiler may contain commas
       - name: Get OPAM cache key
         shell: bash
         run: echo "opam_cache_key=opam-env-v8-${{ matrix.os }}-${{ env.SETUP_OCAML_VERSION }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('*.opam') }}" | sed 's/,/-/g' >> $GITHUB_ENV
-
       - name: Restore OPAM environment
         id: cache-opam-env
         uses: actions/cache/restore@v5
@@ -168,14 +146,12 @@ jobs:
             C:\cygwin
             C:\.opam
           key: ${{ env.opam_cache_key }}
-
       - name: Use OCaml ${{matrix.ocaml_compiler}}
         uses: ocaml/setup-ocaml@v3.4.8
         if: steps.cache-opam-env.outputs.cache-hit != 'true'
         with:
           ocaml-compiler: ${{matrix.ocaml_compiler}}
           opam-pin: false
-
       - name: Get OPAM executable path
         if: steps.cache-opam-env.outputs.cache-hit != 'true'
         uses: actions/github-script@v8
@@ -187,11 +163,9 @@ jobs:
             const fs = require('fs/promises');
             await fs.writeFile('.opam-path', opamPath, 'utf-8');
             console.log('stored path to .opam-path');
-
       - name: Install OPAM dependencies
         if: steps.cache-opam-env.outputs.cache-hit != 'true'
         run: opam install . --deps-only --with-test
-
       - name: Cache OPAM environment
         if: steps.cache-opam-env.outputs.cache-hit != 'true'
         uses: actions/cache/save@v5
@@ -204,7 +178,6 @@ jobs:
             C:\cygwin
             C:\.opam
           key: ${{ env.opam_cache_key }}
-
       - name: Use cached OPAM environment
         if: steps.cache-opam-env.outputs.cache-hit == 'true'
         run: |
@@ -241,14 +214,12 @@ jobs:
             echo "BASH_ENV=C:\\cygwin\\bash_env" >> "$GITHUB_ENV"
           fi
         shell: bash
-
       - name: Compiler build state key
         id: compiler-build-state-key
         shell: bash
         run: |
           echo "value=compiler-build-state-v1-${{ matrix.os }}-${{ env.SETUP_OCAML_VERSION }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('*.opam') }}" \
             | sed 's/,/-/g' >> "$GITHUB_OUTPUT"
-
       - name: Restore compiler build state
         if: github.base_ref == 'master' || github.ref == 'refs/heads/master'
         id: compiler-build-state
@@ -259,15 +230,12 @@ jobs:
             ~/.cache/dune
             _build
           key: ${{ steps.compiler-build-state-key.outputs.value }}
-
       - name: Build compiler
         if: runner.os != 'Linux'
         run: opam exec -- dune build --display quiet --profile release
-
       - name: Build compiler (Linux static)
         if: runner.os == 'Linux'
         run: opam exec -- dune build --display quiet --profile static
-
       - name: Delete stable compiler build state
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         shell: bash
@@ -279,7 +247,6 @@ jobs:
             --confirm || echo "not exist"
         env:
           GH_TOKEN: ${{ github.token }}
-
       - name: Save compiler build state
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         uses: actions/cache/save@v5
@@ -289,41 +256,31 @@ jobs:
             ~/.cache/dune
             _build
           key: ${{ steps.compiler-build-state-key.outputs.value }}
-
       - name: Copy compiler exes to platform bin dir
         run: node scripts/copyExes.js --compiler
-
       - name: "Syntax: Run tests"
         env:
           ROUNDTRIP_TEST: ${{ runner.os == 'Windows' && '0' || '1' }}
         run: ./scripts/test_syntax.sh
         shell: bash
-
       - name: Build @rescript/runtime
         run: yarn workspace @rescript/runtime build
         shell: bash
-
       - name: Check for changes in @rescript/runtime/lib
         run: git diff --exit-code lib/js lib/es6
         working-directory: packages/@rescript/runtime
-
       - name: Version Check
         run: yarn constraints
-
       - name: Run tests
         run: node scripts/test.js -all
-
       - name: Check for diffs in tests folder
         run: git diff --ignore-cr-at-eol --exit-code tests
-
       - name: Run analysis / tools tests
         if: runner.os != 'Windows' && runner.os != 'Linux'
         run: opam exec -- make -C tests/analysis_tests test && make -C tests/tools_tests test
-
       - name: Run gentype tests
         if: runner.os != 'Windows'
         run: make -C tests/gentype_tests/typescript-react-example clean test
-
       # On Windows, after running setup-ocaml (if it wasn't cached yet or the cache couldn't be restored),
       # Cygwin bash is used instead of Git Bash for Windows, breaking the rewatch tests.
       # So we need to adjust the path to bring back Git Bash for Windows.
@@ -331,17 +288,14 @@ jobs:
         if: ${{ runner.os == 'Windows' }}
         run: echo "C:\Program Files\Git\bin" >> $GITHUB_PATH
         shell: bash
-
       - name: Run rewatch tests
         run: ./rewatch/tests/suite.sh rewatch/target/release/rescript
         shell: bash
-
       - name: Run syntax benchmarks
         if: matrix.benchmarks
         run: |
           set -o pipefail
           ./_build/install/default/bin/syntax_benchmarks | tee tests/benchmark-output.json
-
       # Benchmarking is disabled for now because of inconsistent run times on different runners
       #
       # - name: Restore previous benchmark data
@@ -371,19 +325,15 @@ jobs:
       #   with:
       #     path: ./tests/benchmark-cache
       #     key: syntax-benchmark-v1
-
       - name: Build playground compiler
         if: matrix.build_playground
         run: opam exec -- make playground
-
       - name: Test playground compiler
         if: matrix.build_playground
         run: yarn workspace playground test
-
       - name: Setup Rclone
         if: ${{ matrix.build_playground && startsWith(github.ref, 'refs/tags/v') }}
         uses: cometkim/rclone-actions/setup-rclone@main
-
       - name: Configure Rclone remote
         if: ${{ matrix.build_playground && startsWith(github.ref, 'refs/tags/v') }}
         uses: cometkim/rclone-actions/configure-remote/s3-provider@main
@@ -394,18 +344,15 @@ jobs:
           access-key-id: ${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}
           secret-access-key: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
           acl: private
-
       - name: Upload playground compiler to CDN
         if: ${{ matrix.build_playground && startsWith(github.ref, 'refs/tags/v') }}
         run: yarn workspace playground upload-bundle
-
       - name: "Upload artifacts: binaries"
         if: matrix.upload_binaries
         uses: actions/upload-artifact@v6
         with:
           name: binaries-${{ matrix.node-target }}
           path: packages/@rescript/${{ matrix.node-target }}/bin
-
       - name: "Upload artifacts: lib/ocaml"
         if: matrix.upload_libs
         uses: actions/upload-artifact@v6
@@ -415,11 +362,9 @@ jobs:
             packages/@rescript/runtime/lib/ocaml
             !packages/@rescript/runtime/lib/ocaml/*.ast
             !packages/@rescript/runtime/lib/ocaml/*.iast
-
       - name: Generate API Docs
         if: ${{ matrix.generate_api_docs }}
         run: yarn apidocs:generate
-
       - name: "Upload artifacts: scripts/res/apiDocs"
         id: upload-api-docs
         if: ${{ matrix.generate_api_docs }}
@@ -427,7 +372,6 @@ jobs:
         with:
           name: api
           path: scripts/res/apiDocs/
-
   pkg-pr-new:
     needs:
       - build-compiler
@@ -437,32 +381,26 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-
       - name: Use Node.js
         uses: actions/setup-node@49933ea5288caeca8642195f2b846b8bbe245a93 # v4
         with:
           cache: yarn
           node-version-file: .nvmrc
-
       - name: Download artifacts
         uses: actions/download-artifact@v7
         with:
           pattern: "@(binaries-*|lib-ocaml)"
-
       - name: Move artifacts into packages
         run: .github/workflows/moveArtifacts.sh
         shell: bash
-
       - name: Check artifact list
         run: |
           node ./scripts/updateArtifactList.js
           git diff --exit-code packages/artifacts.json
-
       - name: Publish packages to pkg.pr.new
         id: publish
         run: |
           yarn dlx pkg-pr-new publish "." "./packages/@rescript/*"
-
   api-docs:
     needs:
       - build-compiler
@@ -473,13 +411,11 @@ jobs:
         with:
           repository: rescript-lang/rescript-lang.org
           ssh-key: ${{ secrets.RESCRIPT_LANG_ORG_DEPLOY_KEY }}
-
       - name: Download artifacts
         uses: actions/download-artifact@v7
         with:
           artifact-ids: ${{ needs.build-compiler.outputs.api-docs-artifact-id }}
           path: data/api
-
       - name: Check if repo is clean
         id: diffcheck
         run: |
@@ -489,20 +425,17 @@ jobs:
           else
             echo "clean=false" >> $GITHUB_OUTPUT
           fi
-
       - name: Use Node.js
         if: steps.diffcheck.outputs.clean == 'false'
         uses: actions/setup-node@49933ea5288caeca8642195f2b846b8bbe245a93 # v4
         with:
           cache: yarn
           node-version-file: .node-version
-
       - name: Build website
         if: steps.diffcheck.outputs.clean == 'false'
         run: |
           yarn
           yarn build
-
       - name: Commit and push
         if: ${{ steps.diffcheck.outputs.clean == 'false' && startsWith(github.ref, 'refs/tags/v') }}
         run: |
@@ -511,7 +444,6 @@ jobs:
           git add data/api
           git commit -m "Update API docs for $GITHUB_REF_NAME"
           git push
-
   test-devcontainer:
     runs-on: ubuntu-24.04-arm
     steps:
@@ -519,10 +451,9 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - name: Run make in dev container
         uses: devcontainers/ci@v0.3
-        with:    
+        with:
           push: never
           runCmd: make
-
   test-installation-npm:
     needs:
       - pkg-pr-new
@@ -539,13 +470,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-
       - name: Use Node.js
         uses: actions/setup-node@49933ea5288caeca8642195f2b846b8bbe245a93 # v4
         with:
           # Run integration tests with the oldest supported node version.
           node-version: 20
-
       - name: Make test directory
         id: tmp-dir
         shell: bash
@@ -558,7 +487,6 @@ jobs:
           fi
           echo "path=$dir" >> "$GITHUB_OUTPUT"
           cp -r tests/package_tests/installation_test/* "$dir"
-
       - name: Install ReScript package
         run: |
           COMMIT_SHA="${{ needs.pkg-pr-new.outputs.commit_sha }}"
@@ -566,12 +494,10 @@ jobs:
             "https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA}"
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
-
       - name: Test installation
         run: npx rescript -h && npx rescript build && cat src/Test.res.js
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
-
   test-installation-pnpm:
     needs:
       - pkg-pr-new
@@ -590,16 +516,13 @@ jobs:
         uses: pnpm/action-setup@v4
         with:
           version: 10
-
       - name: Use Node.js
         uses: actions/setup-node@49933ea5288caeca8642195f2b846b8bbe245a93 # v4
         with:
           # Run integration tests with the oldest supported node version.
           node-version: 20
-
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-
       - name: Make test directory
         id: tmp-dir
         shell: bash
@@ -612,19 +535,16 @@ jobs:
           fi
           echo "path=$dir" >> "$GITHUB_OUTPUT"
           cp -r tests/package_tests/installation_test/* "$dir"
-
       - name: Install ReScript package
         run: |
           COMMIT_SHA="${{ needs.pkg-pr-new.outputs.commit_sha }}"
           pnpm i "https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA}"
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
-
       - name: Test installation
         run: pnpm rescript -h && pnpm rescript build && cat src/Test.res.js
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
-
   test-integration-rewatch:
     needs:
       - pkg-pr-new
@@ -641,24 +561,20 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-
       - name: Use Node.js
         uses: actions/setup-node@49933ea5288caeca8642195f2b846b8bbe245a93 # v4
         with:
           # Run integration tests with the oldest supported node version.
           node-version: 20
-
       - name: Install ReScript package in rewatch/testrepo
         run: |
           COMMIT_SHA="${{ needs.pkg-pr-new.outputs.commit_sha }}"
           yarn add "rescript@https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA}"
         shell: bash
         working-directory: rewatch/testrepo
-
       - name: Run rewatch integration tests
         run: ./rewatch/tests/suite.sh rewatch/testrepo/node_modules/.bin/rescript
         shell: bash
-
   publish:
     permissions:
       id-token: write
@@ -671,28 +587,24 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-
       - name: Use Node.js
         uses: actions/setup-node@49933ea5288caeca8642195f2b846b8bbe245a93 # v4
         with:
           cache: yarn
           node-version-file: .nvmrc
           registry-url: https://registry.npmjs.org # Needed to make auth work for publishing
-
       - name: Download artifacts
         uses: actions/download-artifact@v7
         with:
           pattern: "@(binaries-*|lib-ocaml)"
-
       - name: Move artifacts into packages
         run: .github/workflows/moveArtifacts.sh
         shell: bash
-
       - name: Publish packages on npm with tag "ci"
         run: |
           yarn workspaces foreach -W --no-private \
             npm publish --provenance --tolerate-republish --tag ci
-
       - name: Update Website Playground
         run: curl -X POST "${{ secrets.CLOUDFLARE_PAGES_DEPLOYMENT_HOOK }}"
         shell: bash
+permissions: read-all
