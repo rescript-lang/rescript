@@ -101,6 +101,23 @@ impl ProjectMap {
         self.states.values()
     }
 
+    /// Get the cached runtime module data, if already populated.
+    pub(crate) fn get_runtime_module_data(&self) -> Option<&analysis::RuntimeModuleData> {
+        self.runtime_module_data.as_ref()
+    }
+
+    /// Ensure the runtime module data cache is populated.
+    /// Scans the runtime path from the first available build state.
+    pub(crate) fn ensure_runtime_module_data(&mut self) {
+        if self.runtime_module_data.is_some() {
+            return;
+        }
+        if let Some(build_state) = self.states.values().next() {
+            let runtime_path = &build_state.build_state.compiler_info.runtime_path;
+            self.runtime_module_data = Some(analysis::scan_runtime_modules(runtime_path));
+        }
+    }
+
     /// Build an `AnalysisContext` for a file URI, using cached runtime module data.
     ///
     /// This is the single entry point for all analysis handlers. It resolves the
@@ -351,13 +368,15 @@ impl LanguageServer for Backend {
         let diagnostic_store = self.diagnostic_store.lock().ok().and_then(|s| s.clone());
         let debounce = Duration::from_millis(self.queue_debounce_ms.lock().map(|g| *g).unwrap_or(100));
         if let Ok(mut q) = self.queue.lock() {
-            *q = Some(queue::Queue::new(
+            let queue = queue::Queue::new(
                 Arc::clone(&self.projects),
                 self.client.clone(),
                 self.root_span.clone(),
                 debounce,
                 diagnostic_store,
-            ));
+            );
+            queue.trigger_initial_db_sync();
+            *q = Some(queue);
         }
 
         self.client

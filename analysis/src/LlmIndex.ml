@@ -10,7 +10,7 @@
 let rec countArrows (typ : Types.type_expr) =
   match typ.desc with
   | Tlink t | Tsubst t | Tpoly (t, []) -> countArrows t
-  | Tarrow (_, ret, _, _) -> 1 + countArrows ret
+  | Tarrow (_, rest, _, _) -> 1 + countArrows rest
   | _ -> 0
 
 (** Extract the final return type of a (possibly curried) function type. *)
@@ -27,10 +27,69 @@ let sourcePathFromPaths (paths : SharedTypes.paths) =
   | IntfAndImpl {resi; _} -> resi
   | Namespace {cmt} -> cmt
 
+(** Check whether a module name refers to a namespace (mlmap) rather than a
+    real source module. Namespace entries in pathsForModule use the [Namespace]
+    variant. *)
+let isNamespaceModule ~(package : SharedTypes.package) moduleName =
+  match Hashtbl.find_opt package.pathsForModule moduleName with
+  | Some (SharedTypes.Namespace _) -> true
+  | _ -> false
+
+(** Resolve a namespace reference to the actual sub-module.
+    When targetModule is a namespace (e.g. "WebAPI") and path starts with
+    a sub-module name, resolve to the namespaced module name.
+    E.g. "WebAPI" + ["DOMAPI", "element"] → ("DOMAPI-WebAPI", ["element"]).
+    Only resolves for namespace modules — real modules like "Stdlib" are left as-is.
+
+    Note: ReScript namespaces are flat (one level deep), so resolving just
+    the first path segment is sufficient. Nested namespaces don't exist. *)
+let resolveNamespacedTarget ~(package : SharedTypes.package) targetModule path =
+  if not (isNamespaceModule ~package targetModule) then
+    (targetModule, path)
+  else
+    match path with
+    | firstSegment :: restPath ->
+      let namespacedName = firstSegment ^ "-" ^ targetModule in
+      if Hashtbl.mem package.pathsForModule namespacedName then
+        (namespacedName, restPath)
+      else (targetModule, path)
+    | [] -> (targetModule, path)
+
+(** Extract cross-module usages from a module's external references.
+    Resolves namespace references to the actual sub-module.
+    Emits all external references — the Rust side filters via FK resolution. *)
+let extractUsages ~(package : SharedTypes.package) (extra : SharedTypes.extra) =
+  extra.externalReferences |> Hashtbl.to_seq
+  |> Seq.flat_map (fun (targetModule, refs) ->
+         List.to_seq refs
+         |> Seq.map (fun (path, tip, (loc : Location.t)) ->
+                let resolvedModule, resolvedPath =
+                  resolveNamespacedTarget ~package targetModule path
+                in
+                let pos = loc.loc_start in
+                Protocol.stringifyObject
+                  [
+                    ( "targetModule",
+                      Some (Protocol.wrapInQuotes resolvedModule) );
+                    ( "path",
+                      Some
+                        (Protocol.array
+                           (List.map Protocol.wrapInQuotes resolvedPath)) );
+                    ("tip", Some (Protocol.wrapInQuotes (SharedTypes.Tip.toString tip)));
+                    ( "line",
+                      Some (string_of_int (pos.pos_lnum - 1)) );
+                    ( "col",
+                      Some
+                        (string_of_int (pos.pos_cnum - pos.pos_bol)) );
+                  ]))
+  |> List.of_seq
+
 (** Walk a Module.structure and produce JSON for the LLM index.
-    Returns a JSON string representing a single module object. *)
+    Returns a JSON string representing a single module object.
+    [~usages] is an optional pre-rendered JSON array string for top-level modules;
+    nested modules don't carry their own usages (they share the parent's extra). *)
 let rec extractModuleForIndex ~rootPath ~sourceFilePath ?(modulePath = [])
-    (structure : SharedTypes.Module.structure) =
+    ?(usages = None) (structure : SharedTypes.Module.structure) =
   let open SharedTypes in
   let records = ref [] in
   let variants = ref [] in
@@ -161,6 +220,11 @@ let rec extractModuleForIndex ~rootPath ~sourceFilePath ?(modulePath = [])
     | [] -> structure.name
     | parts -> List.rev (structure.name :: parts) |> String.concat "."
   in
+  let usagesField =
+    match usages with
+    | Some u -> ("usages", Some (Protocol.array u))
+    | None -> ("usages", Some (Protocol.array []))
+  in
   Protocol.stringifyObject
     [
       ("moduleName", Some (Protocol.wrapInQuotes structure.name));
@@ -172,6 +236,7 @@ let rec extractModuleForIndex ~rootPath ~sourceFilePath ?(modulePath = [])
       ("values", Some (Protocol.array (List.rev !values)));
       ("moduleAliases", Some (Protocol.array (List.rev !moduleAliases)));
       ("nestedModules", Some (Protocol.array (List.rev !nestedModules)));
+      usagesField;
     ]
 
 let getString key obj =
@@ -292,18 +357,24 @@ let processPackageEntry json =
              let moduleName = getString "moduleName" item in
              let cmt = getString "cmt" item in
              let cmti = getString "cmti" item in
-             let path =
+             (* For structure: prefer cmti (public API), fall back to cmt.
+                For usages: prefer cmt (implementation references). *)
+             let structurePath =
                if cmti <> "" then cmti else if cmt <> "" then cmt else ""
              in
-             if moduleName <> "" && path <> "" then Some (moduleName, path)
+             let usagesPath =
+               if cmt <> "" then cmt else if cmti <> "" then cmti else ""
+             in
+             if moduleName <> "" && structurePath <> "" then
+               Some (moduleName, structurePath, usagesPath)
              else None)
     | _ -> []
   in
   files
-  |> List.filter_map (fun (moduleName, path) ->
-         match Cmt.loadFullCmtWithPackage ~path ~package with
+  |> List.filter_map (fun (moduleName, structurePath, usagesPath) ->
+         match Cmt.loadFullCmtWithPackage ~path:structurePath ~package with
          | None ->
-           prerr_endline ("llmIndex: failed to load cmt for " ^ path);
+           prerr_endline ("llmIndex: failed to load cmt for " ^ structurePath);
            None
          | Some full ->
            let sourceFilePath =
@@ -313,10 +384,21 @@ let processPackageEntry json =
                Files.relpath rootPath srcPath
                |> Files.split Filename.dir_sep
                |> String.concat "/"
-             | None -> path
+             | None -> structurePath
+           in
+           (* Extract usages from the implementation (.cmt) when available,
+              since that's where actual dependency references live.
+              The interface (.cmti) only has type-level references. *)
+           let usages =
+             if usagesPath <> structurePath && usagesPath <> "" then
+               match Cmt.loadFullCmtWithPackage ~path:usagesPath ~package with
+               | Some implFull -> extractUsages ~package implFull.extra
+               | None -> extractUsages ~package full.extra
+             else extractUsages ~package full.extra
            in
            let moduleJson =
-             extractModuleForIndex ~rootPath ~sourceFilePath full.file.structure
+             extractModuleForIndex ~rootPath ~sourceFilePath
+               ~usages:(Some usages) full.file.structure
            in
            Some moduleJson)
 

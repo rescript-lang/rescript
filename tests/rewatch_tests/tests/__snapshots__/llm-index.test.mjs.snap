@@ -22,6 +22,17 @@ exports[`llmIndex > extracts module information from the library package 1`] = `
     ],
     "sourceFilePath": "lib/bs/src/Library.res",
     "typeAliases": [],
+    "usages": [
+      {
+        "col": 39,
+        "line": 5,
+        "path": [
+          "++",
+        ],
+        "targetModule": "Pervasives",
+        "tip": "Value",
+      },
+    ],
     "values": [
       {
         "name": "greeting",

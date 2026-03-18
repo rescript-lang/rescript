@@ -19,6 +19,7 @@
 //! Sequential execution within one consumer eliminates all races on
 //! `lib/lsp/` artifacts.
 
+pub(crate) mod db_sync;
 mod file_build;
 mod file_typecheck;
 mod project_build;
@@ -39,6 +40,9 @@ use super::ProjectMap;
 use super::diagnostic_store::{DiagnosticStore, FlushGuard};
 use super::file_args::{is_rescript_config, is_rescript_source};
 use super::notifications;
+use crate::lsp::analysis;
+
+use db_sync::{DbSyncEvent, DbSyncQueue, ModuleFileEntry, SyncPackageContext};
 
 /// Monotonically increasing generation counter for staleness detection.
 static GENERATION: AtomicU64 = AtomicU64::new(0);
@@ -207,6 +211,10 @@ pub struct Queue {
     generations: Arc<Mutex<HashMap<Url, u64>>>,
     /// Optional diagnostic store for the HTTP diagnostics endpoint.
     diagnostic_store: Option<Arc<DiagnosticStore>>,
+    /// Handle to send db sync events directly (e.g. after initial build).
+    db_sync_queue: DbSyncQueue,
+    /// Projects map, needed for building sync events.
+    projects: Arc<Mutex<ProjectMap>>,
 }
 
 impl Queue {
@@ -220,14 +228,18 @@ impl Queue {
     ) -> Self {
         let (tx, rx) = mpsc::unbounded_channel();
         let generations = Arc::new(Mutex::new(HashMap::new()));
+        let db_sync_parent = tracing::debug_span!(parent: &root_span, "db_sync.consumer");
+        let db_sync_queue = DbSyncQueue::new(debounce, db_sync_parent);
+        let db_sync_queue_clone = db_sync_queue.clone();
         tokio::spawn(
             consumer(
                 rx,
-                projects,
+                Arc::clone(&projects),
                 Arc::clone(&generations),
                 client,
                 debounce,
                 diagnostic_store.clone(),
+                db_sync_queue,
             )
             .instrument(root_span),
         );
@@ -235,6 +247,8 @@ impl Queue {
             tx,
             generations,
             diagnostic_store,
+            db_sync_queue: db_sync_queue_clone,
+            projects,
         }
     }
 
@@ -301,6 +315,18 @@ impl Queue {
         let _ = self.tx.send(QueueEvent::FileDeleted { file_path });
     }
 
+    /// Send a full db sync event for all modules in all projects.
+    /// Called once after the initial build to populate the usages table.
+    pub fn trigger_initial_db_sync(&self) {
+        let touched = HashSet::new();
+        send_db_sync_events(
+            &self.projects,
+            true, // has_full_builds = true → filter = None → all modules
+            &touched,
+            &self.db_sync_queue,
+        );
+    }
+
     fn next_generation(&self, uri: &Url) -> u64 {
         let generation = GENERATION.fetch_add(1, Ordering::Relaxed) + 1;
         match self.generations.lock() {
@@ -324,6 +350,7 @@ async fn consumer(
     client: Client,
     debounce: Duration,
     diagnostic_store: Option<Arc<DiagnosticStore>>,
+    db_sync_queue: DbSyncQueue,
 ) {
     let mut state = PendingState::new();
 
@@ -346,7 +373,7 @@ async fn consumer(
                             deadline.as_mut().reset(Instant::now() + debounce);
                         }
                         None => {
-                            flush(&mut state, &projects, &generations, &client, &diagnostic_store).await;
+                            flush(&mut state, &projects, &generations, &client, &diagnostic_store, &db_sync_queue).await;
                             return;
                         }
                     }
@@ -356,7 +383,15 @@ async fn consumer(
         }
 
         // Phase 3: flush
-        flush(&mut state, &projects, &generations, &client, &diagnostic_store).await;
+        flush(
+            &mut state,
+            &projects,
+            &generations,
+            &client,
+            &diagnostic_store,
+            &db_sync_queue,
+        )
+        .await;
     }
 }
 
@@ -506,12 +541,21 @@ async fn flush(
     generations: &Arc<Mutex<HashMap<Url, u64>>>,
     client: &Client,
     diagnostic_store: &Option<Arc<DiagnosticStore>>,
+    db_sync_queue: &DbSyncQueue,
 ) {
     if state.typechecks.is_empty() && state.compile_files.is_empty() && state.build_projects.is_empty() {
         return;
     }
 
-    flush_inner(state, projects, generations, client, diagnostic_store).await;
+    flush_inner(
+        state,
+        projects,
+        generations,
+        client,
+        diagnostic_store,
+        db_sync_queue,
+    )
+    .await;
 }
 
 #[tracing::instrument(
@@ -525,6 +569,7 @@ async fn flush_inner(
     generations: &Arc<Mutex<HashMap<Url, u64>>>,
     client: &Client,
     diagnostic_store: &Option<Arc<DiagnosticStore>>,
+    db_sync_queue: &DbSyncQueue,
 ) {
     let summary = state.summary();
 
@@ -616,7 +661,7 @@ async fn flush_inner(
     // Step 1: Run incremental builds (saved files) and drain pending
     // full_compile_intent. Intent drain piggybacks on the same
     // take-build-replace cycle — no extra locking needed.
-    let errored_files = if has_incremental_builds || (has_full_builds && has_pending_intents) {
+    let (errored_files, touched_files) = if has_incremental_builds || (has_full_builds && has_pending_intents) {
         if has_pending_intents {
             for (root, names) in state.full_compile_intent.iter() {
                 tracing::debug!(
@@ -626,7 +671,7 @@ async fn flush_inner(
                 );
             }
         }
-        let errored = file_build::run(
+        let (errored, touched) = file_build::run(
             &compile_files,
             &mut state.full_compile_intent,
             projects,
@@ -643,9 +688,9 @@ async fn flush_inner(
                 );
             }
         }
-        errored
+        (errored, touched)
     } else {
-        HashSet::new()
+        (HashSet::new(), HashSet::new())
     };
 
     // Step 2: Run typechecks (unsaved edits)
@@ -683,7 +728,172 @@ async fn flush_inner(
         client
             .send_notification::<notifications::BuildFinished>(notifications::BuildFinishedParams {})
             .await;
+
+        // Step 5: Send sync events to the background DB sync queue.
+        send_db_sync_events(
+            projects,
+            has_full_builds,
+            &touched_files,
+            db_sync_queue,
+        );
     }
+}
+
+// ---------------------------------------------------------------------------
+// DB sync helpers
+// ---------------------------------------------------------------------------
+
+use crate::build::build_types::{BuildCommandState, CompilationStage, Module, OutputTarget};
+
+/// Extract and send db sync events to the background queue.
+fn send_db_sync_events(
+    projects: &Arc<Mutex<ProjectMap>>,
+    has_full_builds: bool,
+    touched_files: &HashSet<PathBuf>,
+    db_sync_queue: &DbSyncQueue,
+) {
+    let Ok(mut guard) = projects.lock() else {
+        return;
+    };
+    let filter = if has_full_builds {
+        None // full rebuild — send all modules
+    } else {
+        Some(touched_files)
+    };
+    // Ensure runtime module data is available. It's lazily populated
+    // on the first analysis request, but db_sync needs it from the
+    // first flush onward.
+    guard.ensure_runtime_module_data();
+    let runtime = guard.get_runtime_module_data();
+    for build_state in guard.states.values() {
+        if let Some(runtime) = runtime
+            && let Some(event) = build_sync_event(build_state, runtime, filter)
+        {
+            tracing::debug!(
+                project = %event.project_root.display(),
+                module_count = event.files.len(),
+                touched_files = filter.map_or(0, |f| f.len()),
+                filter = if filter.is_none() { "all" } else { "incremental" },
+                "db_sync: queueing event"
+            );
+            db_sync_queue.send(event);
+        }
+    }
+}
+
+/// Build a `DbSyncEvent` for the given project.
+/// When `touched_files` is `Some`, only modules whose source files are in the set
+/// are included (incremental build — includes reverse dependencies that were
+/// typechecked, so usages stay in sync when an interface changes).
+/// When `None`, all modules are included (full build).
+/// Called while holding the `ProjectMap` lock (briefly).
+fn build_sync_event(
+    build_state: &BuildCommandState,
+    runtime: &analysis::RuntimeModuleData,
+    touched_files: Option<&HashSet<PathBuf>>,
+) -> Option<DbSyncEvent> {
+    let root_package = build_state.build_state.packages.values().find(|p| p.is_root)?;
+    let project_root = root_package.path.clone();
+
+    let analysis_binary_path = build_state
+        .build_state
+        .compiler_info
+        .bsc_path
+        .parent()?
+        .join("rescript-editor-analysis.exe");
+
+    let opens = analysis::build_opens(&root_package.namespace, &root_package.config);
+    // Use OutputTarget::Lsp — the LSP builds write .cmt/.cmti into lib/lsp/,
+    // so the analysis binary must read from there to get up-to-date data.
+    let paths_for_module =
+        analysis::build_paths_for_module(build_state, runtime, OutputTarget::Lsp);
+    let (project_files, dependencies_files) = analysis::build_file_sets(build_state, runtime);
+    let root_config = build_state.build_state.get_root_config();
+    let suffix = root_config.suffix.clone().unwrap_or_else(|| ".js".to_string());
+
+    let package_context = SyncPackageContext {
+        root_path: project_root.clone(),
+        suffix,
+        rescript_version: crate::llm_index::cargo_pkg_version(),
+        opens,
+        paths_for_module,
+        project_files,
+        dependencies_files,
+    };
+
+    let mut files = Vec::new();
+
+    for (module_name, module) in &build_state.build_state.modules {
+        let Module::SourceFile(sf_module) = module else {
+            continue;
+        };
+        let Some(package) = build_state.build_state.packages.get(&sf_module.package_name) else {
+            continue;
+        };
+
+        // When filtering (incremental build), only include modules whose
+        // source file was compiled or typechecked (includes reverse deps).
+        // touched_files contains absolute paths (package.path + relative),
+        // while source_file paths are relative, so we must join.
+        if let Some(filter) = touched_files {
+            let impl_abs = package.path.join(&sf_module.source_file.implementation.path);
+            let iface_compiled = sf_module
+                .source_file
+                .interface
+                .as_ref()
+                .is_some_and(|i| filter.contains(&package.path.join(&i.path)));
+            if !filter.contains(&impl_abs) && !iface_compiled {
+                continue;
+            }
+        }
+
+        // Extract cmt_hash from the compilation stage. If the module
+        // hasn't been typechecked/built yet, there's no hash to compare.
+        let cmt_hash = match sf_module.compilation_stage() {
+            CompilationStage::TypeChecked { cmt_hash, .. } => cmt_hash.to_string(),
+            CompilationStage::Built(b) => b.cmt_hash.to_string(),
+            _ => String::new(),
+        };
+
+        let build_path = package.get_build_path_for_output(OutputTarget::Lsp);
+        let impl_path = &sf_module.source_file.implementation.path;
+        let basename = crate::helpers::file_path_to_compiler_asset_basename(impl_path, &package.namespace);
+        let dir = impl_path.parent().unwrap_or(std::path::Path::new(""));
+
+        let cmt = build_path.join(dir).join(format!("{basename}.cmt"));
+        if let Some(interface) = &sf_module.source_file.interface {
+            let iface_path = &interface.path;
+            let iface_basename =
+                crate::helpers::file_path_to_compiler_asset_basename(iface_path, &package.namespace);
+            let iface_dir = iface_path.parent().unwrap_or(std::path::Path::new(""));
+            let cmti = build_path.join(iface_dir).join(format!("{iface_basename}.cmti"));
+            // Send both: cmti for module structure, cmt for usages
+            files.push(ModuleFileEntry {
+                module_name: module_name.clone(),
+                cmt: cmt.to_string_lossy().to_string(),
+                cmti: cmti.to_string_lossy().to_string(),
+                cmt_hash,
+            });
+        } else {
+            files.push(ModuleFileEntry {
+                module_name: module_name.clone(),
+                cmt: cmt.to_string_lossy().to_string(),
+                cmti: String::new(),
+                cmt_hash,
+            });
+        }
+    }
+
+    if files.is_empty() {
+        return None;
+    }
+
+    Some(DbSyncEvent {
+        project_root,
+        analysis_binary_path,
+        package_context,
+        files,
+    })
 }
 
 // ---------------------------------------------------------------------------

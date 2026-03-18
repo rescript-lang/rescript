@@ -148,6 +148,20 @@ packages -> modules -> types   -> fields
 | alias_kind            | TEXT    | `type`, `value`, or `module` |
 | target_qualified_name | TEXT    | What it points to            |
 
+### usages
+
+Tracks which project modules reference which dependency symbols. Updated incrementally by the LSP after each build.
+
+| Column           | Type    | Description                                                   |
+| ---------------- | ------- | ------------------------------------------------------------- |
+| id               | INTEGER | Primary key                                                   |
+| source_module_id | INTEGER | FK to modules — the project module containing the usage       |
+| target_module_id | INTEGER | FK to modules — the dependency module being referenced         |
+| target_path      | TEXT    | Dot-joined path within the module (e.g., `Storage.getItem`)   |
+| tip              | TEXT    | Symbol kind: `Value`, `Type`, `Field(name)`, `Constructor(name)`, `Module` |
+| source_line      | INTEGER | 0-based line number of the usage in the source file           |
+| source_col       | INTEGER | 0-based column of the usage in the source file                |
+
 ## Common Query Patterns
 
 ### Find a function by name
@@ -215,6 +229,38 @@ SELECT v.name, v.signature, m.qualified_name as module
 FROM "values" v
 JOIN modules m ON v.module_id = m.id
 WHERE v.return_type LIKE '%promise%'
+LIMIT 20
+```
+
+### Which dependency modules does the project use?
+
+```sql
+SELECT tm.qualified_name as dependency, COUNT(*) as usage_count
+FROM usages u
+JOIN modules tm ON u.target_module_id = tm.id
+GROUP BY tm.qualified_name
+ORDER BY usage_count DESC
+```
+
+### Which project files reference a specific dependency?
+
+```sql
+SELECT DISTINCT sm.qualified_name, sm.source_file_path
+FROM usages u
+JOIN modules sm ON u.source_module_id = sm.id
+JOIN modules tm ON u.target_module_id = tm.id
+WHERE tm.qualified_name = 'DOMAPI-WebAPI'
+```
+
+### What specific symbols from a dependency are used?
+
+```sql
+SELECT tm.qualified_name, u.target_path, u.tip, COUNT(*) as times_used
+FROM usages u
+JOIN modules tm ON u.target_module_id = tm.id
+WHERE tm.qualified_name LIKE '%-WebAPI'
+GROUP BY tm.qualified_name, u.target_path, u.tip
+ORDER BY times_used DESC
 LIMIT 20
 ```
 

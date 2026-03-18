@@ -271,6 +271,7 @@ fn build_context_json(
     let paths_for_module = build_paths_for_module(build_state, runtime, OutputTarget::Lsp);
     let (project_files, dependencies_files) = build_file_sets(build_state, runtime);
 
+    let (major, minor) = crate::llm_index::cargo_pkg_version();
     json!({
         "source": source,
         "path": path,
@@ -278,7 +279,7 @@ fn build_context_json(
         "rootPath": root_path,
         "namespace": namespace_str,
         "suffix": suffix,
-        "rescriptVersion": [13, 0],
+        "rescriptVersion": [major, minor],
         "genericJsxModule": generic_jsx_module,
         "opens": opens,
         "pathsForModule": paths_for_module,

@@ -37,15 +37,18 @@ struct BatchBuildResult {
 /// keeps the lock held only for HashMap bookkeeping rather than for the
 /// entire duration of bsc subprocess invocations, so LSP handlers (hover,
 /// completions, etc.) are not blocked during compilation.
-/// Returns a set of file URIs that had compile errors, so callers
-/// can avoid overwriting those diagnostics (e.g. in post-build rechecks).
+/// Returns:
+/// - `errored_files`: URIs that had compile errors (callers skip post-build rechecks for these)
+/// - `touched_files`: absolute source paths of all modules that were compiled or typechecked,
+///   including reverse dependencies. Used by the db sync queue to know which modules' usages
+///   may have changed.
 pub(super) async fn run(
     compile_files: &HashMap<Url, PendingFileBuild>,
     full_compile_intent: &mut HashMap<PathBuf, HashSet<String>>,
     projects: &Arc<Mutex<ProjectMap>>,
     client: &Client,
     diagnostic_store: Option<&DiagnosticStore>,
-) -> HashSet<Url> {
+) -> (HashSet<Url>, HashSet<PathBuf>) {
     let file_paths: Vec<PathBuf> = compile_files.values().map(|b| b.file_path.clone()).collect();
     let projects = Arc::clone(projects);
 
@@ -156,6 +159,7 @@ pub(super) async fn run(
 
     // Publish diagnostics for all touched files, tracking which have errors.
     let mut errored_files = HashSet::new();
+    let mut all_touched_files = HashSet::new();
     for result in &results {
         if !result.diagnostics.is_empty() {
             for diag in &result.diagnostics {
@@ -185,8 +189,9 @@ pub(super) async fn run(
                 publish_and_store(client, diagnostic_store, uri, diags).await;
             }
         }
+        all_touched_files.extend(result.touched_files.iter().cloned());
     }
-    errored_files
+    (errored_files, all_touched_files)
 }
 
 /// Build one or more saved files and propagate diagnostics.
