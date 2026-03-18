@@ -34,7 +34,10 @@ module ValuePath = {
 
   external toString: t => string = "%identity"
 
-  let segments = (value: t) => value->toString->Stdlib_String.split(".")
+  let segments = (value: t) => {
+    let value = value->toString
+    value === "" ? [] : value->Stdlib_String.split(".")
+  }
 
   let name = (value: t) => {
     let segments = value->segments

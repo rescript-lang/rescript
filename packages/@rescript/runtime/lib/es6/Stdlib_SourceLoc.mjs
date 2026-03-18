@@ -32,16 +32,20 @@ let Pos = {
 };
 
 function segments(value) {
-  return value.split(".");
+  if (value === "") {
+    return [];
+  } else {
+    return value.split(".");
+  }
 }
 
 function name(value) {
-  let segments = value.split(".");
-  let length = segments.length;
+  let segments$1 = segments(value);
+  let length = segments$1.length;
   if (length === 0) {
     return "";
   } else {
-    return segments[length - 1 | 0];
+    return segments$1[length - 1 | 0];
   }
 }
 

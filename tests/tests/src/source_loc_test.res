@@ -6,9 +6,9 @@ open Test_utils
 external unsafeSourceLocPos: string => sourceLocPos = "%identity"
 external unsafeSourceLocValuePath: string => sourceLocValuePath = "%identity"
 
-type sourceLocCapture = (option<sourceLocPos>, option<sourceLocValuePath>)
+type sourceLocCapture = (sourceLocPos, sourceLocValuePath)
 
-let capture = (~pos: option<sourceLocPos>=?, ~valuePath: option<sourceLocValuePath>=?) => (
+let capture = (~pos: sourceLocPos=%autofill, ~valuePath: sourceLocValuePath=%autofill) => (
   pos,
   valuePath,
 )
@@ -18,8 +18,8 @@ let topLevelBinding = capture()
 let topLevelExpressionCapture = ref((None: option<sourceLocCapture>))
 
 let storeTopLevelExpression = (
-  ~pos: option<sourceLocPos>=?,
-  ~valuePath: option<sourceLocValuePath>=?,
+  ~pos: sourceLocPos=%autofill,
+  ~valuePath: sourceLocValuePath=%autofill,
 ) => {
   topLevelExpressionCapture.contents = Some((pos, valuePath))
 }
@@ -32,8 +32,8 @@ module Nested = {
   let topLevelExpressionCapture = ref((None: option<sourceLocCapture>))
 
   let storeTopLevelExpression = (
-    ~pos: option<sourceLocPos>=?,
-    ~valuePath: option<sourceLocValuePath>=?,
+    ~pos: sourceLocPos=%autofill,
+    ~valuePath: sourceLocValuePath=%autofill,
   ) => {
     topLevelExpressionCapture.contents = Some((pos, valuePath))
   }
@@ -42,19 +42,12 @@ module Nested = {
 }
 
 let expectCapture = (loc, (pos, valuePath): sourceLocCapture, expectedValuePath) => {
-  switch pos {
-  | Some(pos) =>
-    switch SourceLoc.Pos.decode(pos) {
-    | Some({file}) => eq(loc, file, "source_loc_test.res")
-    | None => ok(loc, false)
-    }
+  switch SourceLoc.Pos.decode(pos) {
+  | Some({file}) => eq(loc, file, "source_loc_test.res")
   | None => ok(loc, false)
   }
 
-  switch valuePath {
-  | Some(valuePath) => eq(loc, SourceLoc.ValuePath.toString(valuePath), expectedValuePath)
-  | None => ok(loc, false)
-  }
+  eq(loc, SourceLoc.ValuePath.toString(valuePath), expectedValuePath)
 }
 
 describe("SourceLoc", () => {
@@ -83,6 +76,12 @@ describe("SourceLoc", () => {
     eq(__LOC__, SourceLoc.ValuePath.name(valuePath), "run")
   })
 
+  test("ValuePath helpers treat empty strings as missing", () => {
+    let valuePath = unsafeSourceLocValuePath("")
+    eq(__LOC__, SourceLoc.ValuePath.segments(valuePath), [])
+    eq(__LOC__, SourceLoc.ValuePath.name(valuePath), "")
+  })
+
   test("implicit source loc autofill works for a top-level let binding", () => {
     expectCapture(__LOC__, topLevelBinding, "Source_loc_test.topLevelBinding")
   })
@@ -103,5 +102,14 @@ describe("SourceLoc", () => {
     | Some(capture) => expectCapture(__LOC__, capture, "Source_loc_test.Nested")
     | None => ok(__LOC__, false)
     }
+  })
+
+  test("explicit source loc args override autofill", () => {
+    let (pos, valuePath) = capture(
+      ~pos=unsafeSourceLocPos(""),
+      ~valuePath=unsafeSourceLocValuePath(""),
+    )
+    eq(__LOC__, SourceLoc.Pos.decode(pos), None)
+    eq(__LOC__, SourceLoc.ValuePath.segments(valuePath), [])
   })
 })

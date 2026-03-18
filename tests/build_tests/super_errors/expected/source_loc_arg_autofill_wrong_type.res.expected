@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/source_loc_arg_autofill_wrong_type.res[0m:[2m1:25-33[0m
+
+  [1;31m1[0m [2m│[0m let log = (~pos: string=[1;31m%autofill[0m, ()) => pos
+  2 [2m│[0m 
+
+  `%autofill` can only be used on args explicitly annotated as `sourceLocPos` or `sourceLocValuePath`. Example: `~pos: sourceLocPos=%autofill`.

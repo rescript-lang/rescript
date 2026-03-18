@@ -4,27 +4,24 @@ import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
 import * as Stdlib_SourceLoc from "@rescript/runtime/lib/es6/Stdlib_SourceLoc.mjs";
 
-function capture(pos, valuePath) {
+function capture(posOpt, valuePathOpt) {
+  let pos = posOpt !== undefined ? posOpt : "";
+  let valuePath = valuePathOpt !== undefined ? valuePathOpt : "";
   return [
     pos,
     valuePath
   ];
 }
 
-let topLevelBinding_0 = "source_loc_test.res;16;22;16;31";
-
-let topLevelBinding_1 = "Source_loc_test.topLevelBinding";
-
-let topLevelBinding = [
-  topLevelBinding_0,
-  topLevelBinding_1
-];
+let topLevelBinding = capture("source_loc_test.res;16;22;16;31", "Source_loc_test.topLevelBinding");
 
 let topLevelExpressionCapture = {
   contents: undefined
 };
 
-function storeTopLevelExpression(pos, valuePath) {
+function storeTopLevelExpression(posOpt, valuePathOpt) {
+  let pos = posOpt !== undefined ? posOpt : "";
+  let valuePath = valuePathOpt !== undefined ? valuePathOpt : "";
   topLevelExpressionCapture.contents = [
     pos,
     valuePath
@@ -33,20 +30,15 @@ function storeTopLevelExpression(pos, valuePath) {
 
 storeTopLevelExpression("source_loc_test.res;27;0;27;25", "Source_loc_test");
 
-let nestedBinding_0 = "source_loc_test.res;30;22;30;31";
-
-let nestedBinding_1 = "Source_loc_test.Nested.nestedBinding";
-
-let nestedBinding = [
-  nestedBinding_0,
-  nestedBinding_1
-];
+let nestedBinding = capture("source_loc_test.res;30;22;30;31", "Source_loc_test.Nested.nestedBinding");
 
 let topLevelExpressionCapture$1 = {
   contents: undefined
 };
 
-function storeTopLevelExpression$1(pos, valuePath) {
+function storeTopLevelExpression$1(posOpt, valuePathOpt) {
+  let pos = posOpt !== undefined ? posOpt : "";
+  let valuePath = valuePathOpt !== undefined ? valuePathOpt : "";
   topLevelExpressionCapture$1.contents = [
     pos,
     valuePath
@@ -62,29 +54,19 @@ let Nested = {
 };
 
 function expectCapture(loc, param, expectedValuePath) {
-  let valuePath = param[1];
-  let pos = param[0];
-  if (pos !== undefined) {
-    let match = Stdlib_SourceLoc.Pos.decode(pos);
-    if (match !== undefined) {
-      Test_utils.eq(loc, match.file, "source_loc_test.res");
-    } else {
-      Test_utils.ok(loc, false);
-    }
+  let match = Stdlib_SourceLoc.Pos.decode(param[0]);
+  if (match !== undefined) {
+    Test_utils.eq(loc, match.file, "source_loc_test.res");
   } else {
     Test_utils.ok(loc, false);
   }
-  if (valuePath !== undefined) {
-    return Test_utils.eq(loc, valuePath, expectedValuePath);
-  } else {
-    return Test_utils.ok(loc, false);
-  }
+  Test_utils.eq(loc, param[1], expectedValuePath);
 }
 
 Mocha.describe("SourceLoc", () => {
   Mocha.test("Pos.decode parses sourceLocPos", () => {
     let decoded = Stdlib_SourceLoc.Pos.decode("demo.res;1;2;3;4");
-    Test_utils.eq("File \"source_loc_test.res\", line 64, characters 6-13", decoded, {
+    Test_utils.eq("File \"source_loc_test.res\", line 57, characters 6-13", decoded, {
       file: "demo.res",
       startLine: 1,
       startCol: 2,
@@ -92,33 +74,43 @@ Mocha.describe("SourceLoc", () => {
       endCol: 4
     });
   });
-  Mocha.test("Pos.decode rejects malformed sourceLocPos", () => Test_utils.eq("File \"source_loc_test.res\", line 77, characters 7-14", Stdlib_SourceLoc.Pos.decode("bad"), undefined));
+  Mocha.test("Pos.decode rejects malformed sourceLocPos", () => Test_utils.eq("File \"source_loc_test.res\", line 70, characters 7-14", Stdlib_SourceLoc.Pos.decode("bad"), undefined));
   Mocha.test("ValuePath helpers expose segments and name", () => {
     let valuePath = "Demo.Nested.run";
-    Test_utils.eq("File \"source_loc_test.res\", line 82, characters 7-14", Stdlib_SourceLoc.ValuePath.segments(valuePath), [
+    Test_utils.eq("File \"source_loc_test.res\", line 75, characters 7-14", Stdlib_SourceLoc.ValuePath.segments(valuePath), [
       "Demo",
       "Nested",
       "run"
     ]);
-    Test_utils.eq("File \"source_loc_test.res\", line 83, characters 7-14", Stdlib_SourceLoc.ValuePath.name(valuePath), "run");
+    Test_utils.eq("File \"source_loc_test.res\", line 76, characters 7-14", Stdlib_SourceLoc.ValuePath.name(valuePath), "run");
   });
-  Mocha.test("implicit source loc autofill works for a top-level let binding", () => expectCapture("File \"source_loc_test.res\", line 87, characters 18-25", topLevelBinding, "Source_loc_test.topLevelBinding"));
+  Mocha.test("ValuePath helpers treat empty strings as missing", () => {
+    let valuePath = "";
+    Test_utils.eq("File \"source_loc_test.res\", line 81, characters 7-14", Stdlib_SourceLoc.ValuePath.segments(valuePath), []);
+    Test_utils.eq("File \"source_loc_test.res\", line 82, characters 7-14", Stdlib_SourceLoc.ValuePath.name(valuePath), "");
+  });
+  Mocha.test("implicit source loc autofill works for a top-level let binding", () => expectCapture("File \"source_loc_test.res\", line 86, characters 18-25", topLevelBinding, "Source_loc_test.topLevelBinding"));
   Mocha.test("implicit source loc autofill works for a top-level expression", () => {
     let capture = topLevelExpressionCapture.contents;
     if (capture !== undefined) {
-      return expectCapture("File \"source_loc_test.res\", line 92, characters 37-44", capture, "Source_loc_test");
+      return expectCapture("File \"source_loc_test.res\", line 91, characters 37-44", capture, "Source_loc_test");
     } else {
-      return Test_utils.ok("File \"source_loc_test.res\", line 93, characters 17-24", false);
+      return Test_utils.ok("File \"source_loc_test.res\", line 92, characters 17-24", false);
     }
   });
-  Mocha.test("implicit source loc autofill works for a nested module let binding", () => expectCapture("File \"source_loc_test.res\", line 98, characters 18-25", nestedBinding, "Source_loc_test.Nested.nestedBinding"));
+  Mocha.test("implicit source loc autofill works for a nested module let binding", () => expectCapture("File \"source_loc_test.res\", line 97, characters 18-25", nestedBinding, "Source_loc_test.Nested.nestedBinding"));
   Mocha.test("implicit source loc autofill works for a nested module expression", () => {
     let capture = topLevelExpressionCapture$1.contents;
     if (capture !== undefined) {
-      return expectCapture("File \"source_loc_test.res\", line 103, characters 37-44", capture, "Source_loc_test.Nested");
+      return expectCapture("File \"source_loc_test.res\", line 102, characters 37-44", capture, "Source_loc_test.Nested");
     } else {
-      return Test_utils.ok("File \"source_loc_test.res\", line 104, characters 17-24", false);
+      return Test_utils.ok("File \"source_loc_test.res\", line 103, characters 17-24", false);
     }
+  });
+  Mocha.test("explicit source loc args override autofill", () => {
+    let match = capture("", "");
+    Test_utils.eq("File \"source_loc_test.res\", line 112, characters 7-14", Stdlib_SourceLoc.Pos.decode(match[0]), undefined);
+    Test_utils.eq("File \"source_loc_test.res\", line 113, characters 7-14", Stdlib_SourceLoc.ValuePath.segments(match[1]), []);
   });
 });
 
@@ -130,4 +122,4 @@ export {
   Nested,
   expectCapture,
 }
-/*  Not a pure module */
+/* topLevelBinding Not a pure module */

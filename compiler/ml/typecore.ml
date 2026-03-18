@@ -2241,23 +2241,70 @@ let extract_function_name funct =
 
 type implicit_source_loc_kind = Source_loc_pos | Source_loc_value_path
 
+let source_loc_kind env ty =
+  match (expand_head env ty).desc with
+  | Tconstr (path, [], _) when Path.same path Predef.path_source_loc_pos ->
+    Some Source_loc_pos
+  | Tconstr (path, [], _) when Path.same path Predef.path_source_loc_value_path
+    ->
+    Some Source_loc_value_path
+  | _ -> None
+
 let optional_source_loc_kind env ty =
   match (expand_head env ty).desc with
   | Tconstr (option_path, [inner], _)
-    when Path.same option_path Predef.path_option -> (
-    match (expand_head env inner).desc with
-    | Tconstr (path, [], _) when Path.same path Predef.path_source_loc_pos ->
-      Some Source_loc_pos
-    | Tconstr (path, [], _)
-      when Path.same path Predef.path_source_loc_value_path ->
-      Some Source_loc_value_path
-    | _ -> None)
+    when Path.same option_path Predef.path_option ->
+    source_loc_kind env inner
   | _ -> None
 
 type lazy_args =
   (Asttypes.arg_label * (unit -> Typedtree.expression) option) list
 
 type targs = (Asttypes.arg_label * Typedtree.expression option) list
+
+let source_loc_default_arg ~loc _kind =
+  Ast_helper.Exp.apply ~loc
+    (Ast_helper.Exp.ident ~loc
+       (Location.mknoloc (Longident.Ldot (Longident.Lident "Obj", "magic"))))
+    [(Nolabel, Ast_helper.Exp.constant ~loc (Pconst_string ("", None)))]
+
+let source_loc_kind_of_pattern_annotation env spat =
+  match spat.ppat_desc with
+  | Ppat_constraint (_, sty) ->
+    let cty = Typetexp.transl_simple_type env false sty in
+    source_loc_kind env cty.ctyp_type
+  | _ -> None
+
+let autofill_default_loc expr =
+  match expr.pexp_desc with
+  | Pexp_extension ({txt = "autofill"; loc}, PStr []) -> Some loc
+  | Pexp_extension ({txt = "autofill"; loc}, _) ->
+    raise
+      (Error_forward
+         (Location.errorf ~loc
+            "`%%autofill` does not take a payload. Use `%%autofill`."))
+  | _ -> None
+
+let invalid_source_loc_optional_arg ~loc =
+  raise
+    (Error_forward
+       (Location.errorf ~loc
+          "Optional `sourceLocPos` and `sourceLocValuePath` args must use \
+           `=%%autofill`. Remove the optional/default syntax to make this a \
+           regular required arg."))
+
+let invalid_autofill_arg ~loc =
+  raise
+    (Error_forward
+       (Location.errorf ~loc
+          "`%%autofill` can only be used on args explicitly annotated as \
+           `sourceLocPos` or `sourceLocValuePath`. Example: `~pos: \
+           sourceLocPos=%%autofill`."))
+
+(* We don't preserve `%autofill` in the function type.
+   Instead we reserve optional source-loc args for autofill and enforce that
+   `%autofill` is the only supported way to author them. A deeper integration
+   would represent autofill explicitly in the AST/type layer. *)
 let rec type_exp ?deprecated_context ~context ?recarg env sexp =
   (* We now delegate everything to type_expect *)
   type_expect ?deprecated_context ~context ?recarg env sexp (newvar ())
@@ -2422,6 +2469,16 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
         async;
       } ->
     assert (is_optional l);
+    let default =
+      match
+        ( source_loc_kind_of_pattern_annotation env spat,
+          autofill_default_loc default )
+      with
+      | Some kind, Some _ -> source_loc_default_arg ~loc:default.pexp_loc kind
+      | Some _, None -> invalid_source_loc_optional_arg ~loc:default.pexp_loc
+      | None, Some loc -> invalid_autofill_arg ~loc
+      | None, None -> default
+    in
     (* default allowed only with optional argument *)
     let open Ast_helper in
     let default_loc = default.pexp_loc in
@@ -2463,6 +2520,11 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
       [Exp.case pat body]
   | Pexp_fun
       {arg_label = l; default = None; lhs = spat; rhs = sbody; arity; async} ->
+    let () =
+      match (is_optional l, source_loc_kind_of_pattern_annotation env spat) with
+      | true, Some _ -> invalid_source_loc_optional_arg ~loc:spat.ppat_loc
+      | _ -> ()
+    in
     type_function ?in_function ~arity ~async loc sexp.pexp_attributes env
       ty_expected l
       [Ast_helper.Exp.case spat sbody]
