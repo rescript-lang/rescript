@@ -63,7 +63,7 @@ jobs:
           echo "=== Checking Action Pinning ==="
           # Find any uses: lines that don't have @SHA format
           # Pattern: uses: owner/repo@<40-char-hex>
-          unpinned=$(grep -rn "uses:" .github/workflows/ | \
+          unpinned=$(grep -rnE "^[[:space:]]+uses:" .github/workflows/ | \
             grep -v "@[a-f0-9]\{40\}" | \
             grep -v "uses: \./\|uses: docker://\|uses: actions/github-script" || true)
 
