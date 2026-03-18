@@ -4716,7 +4716,11 @@ and parse_type_parameter ?current_type_name_path ?inline_types_context
             ~attrs constr args
         in
 
-        let typ = parse_arrow_type_rest ~es6_arrow:true ~start_pos typ p in
+        let typ =
+          parse_arrow_type_rest
+            ?current_type_name_path:positional_type_name_path
+            ?inline_types_context ~es6_arrow:true ~start_pos typ p
+        in
         let typ = parse_type_alias p typ in
         Some {attrs = []; label = Nolabel; typ; start_pos})
     | _ ->
@@ -4945,7 +4949,9 @@ and parse_external_type_expr ~current_type_name_path ~inline_types_context p =
         ~es6_arrow:true ~start_pos typ p
     in
     parse_type_alias p typ
-  else parse_typ_expr ?current_type_name_path ~inline_types_context p
+  else if is_es6_arrow_type p then
+    parse_typ_expr ?current_type_name_path ~inline_types_context p
+  else parse_typ_expr p
 
 and parse_tuple_type ~attrs ~first ~start_pos p =
   let typexprs =
