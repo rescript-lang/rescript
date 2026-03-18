@@ -15,7 +15,8 @@ on:
   workflow_dispatch:
 
 
-permissions: read-all
+permissions:
+  contents: read
 
 jobs:
   validate:

@@ -14,7 +14,8 @@ on:
     branches: [main, master, develop]
 
 
-permissions: read-all
+permissions:
+  contents: read
 
 jobs:
   antipattern-check:

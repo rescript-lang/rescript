@@ -2,7 +2,8 @@
 name: Guix/Nix Package Policy
 on: [push, pull_request]
 
-permissions: read-all
+permissions:
+  contents: read
 
 jobs:
   check:

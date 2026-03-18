@@ -2,7 +2,8 @@
 name: TypeScript/JavaScript Blocker
 on: [push, pull_request]
 
-permissions: read-all
+permissions:
+  contents: read
 
 jobs:
   check:

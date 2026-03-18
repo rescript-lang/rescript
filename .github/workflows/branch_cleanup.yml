@@ -18,4 +18,5 @@ jobs:
           last-commit-age-days: 90
           dry-run: false
           rate-limit: true
-permissions: read-all
+permissions:
+  contents: read

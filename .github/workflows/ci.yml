@@ -608,4 +608,5 @@ jobs:
       - name: Update Website Playground
         run: curl -X POST "${{ secrets.CLOUDFLARE_PAGES_DEPLOYMENT_HOOK }}"
         shell: bash
-permissions: read-all
+permissions:
+  contents: read
