@@ -2262,6 +2262,8 @@ type lazy_args =
 
 type targs = (Asttypes.arg_label * Typedtree.expression option) list
 
+(* This Obj.magic models `%autofill` as an empty string (which represents "missing").
+   The real source-loc payload is synthesized later at each call site. *)
 let source_loc_default_arg ~loc _kind =
   Ast_helper.Exp.apply ~loc
     (Ast_helper.Exp.ident ~loc
@@ -2309,6 +2311,8 @@ let rec type_exp ?deprecated_context ~context ?recarg env sexp =
   (* We now delegate everything to type_expect *)
   type_expect ?deprecated_context ~context ?recarg env sexp (newvar ())
 
+(* For the `%autofill` case (or rather, the `~whatever: sourceLocPos=%autofill` case), 
+   inject the special loc primitive at the application site. *)
 and autofill_source_loc_arg ~apply_loc env ty kind =
   let loc = {apply_loc with Location.loc_ghost = true} in
   let expr =
@@ -2469,6 +2473,7 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
         async;
       } ->
     assert (is_optional l);
+    (* Handle `%autofill` injection if needed. *)
     let default =
       match
         ( source_loc_kind_of_pattern_annotation env spat,
