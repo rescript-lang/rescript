@@ -91,14 +91,14 @@ function discoverSourceFiles(sandboxPath, packageDir) {
   return resFiles.sort();
 }
 
-describe("lsp", { timeout: 60_000 }, () => {
+describe("lsp", { timeout: 120_000 }, () => {
   it("builds project with lsp profile artifacts on initial build", () =>
     runLspTest(async ({ lsp, sandbox }) => {
       const rootUri = pathToFileURL(sandbox).href;
       await lsp.initialize(rootUri);
 
       // Wait for the server to finish the initial build
-      await lsp.waitForNotification("rescript/buildFinished", 15000);
+      await lsp.waitForNotification("rescript/buildFinished", 30000);
 
       // Discover all packages from rescript.json files in the sandbox,
       // then filter to only those in the build's dependency tree (i.e. those

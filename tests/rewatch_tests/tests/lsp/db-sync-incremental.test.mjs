@@ -67,16 +67,21 @@ async function waitForDb(sandbox, predicate, timeoutMs = 10000) {
   throw new Error(`waitForDb: timed out after ${timeoutMs}ms`);
 }
 
-describe("lsp incremental db sync", { timeout: 60_000 }, () => {
+describe("lsp incremental db sync", { timeout: 120_000 }, () => {
   it("updates module values in rescript.db after a file is saved", () =>
-    runLspTest(async ({ lsp, sandbox, cli, writeFile }) => {
+    runLspTest(async ({ lsp, sandbox, writeFile }) => {
       const rootUri = pathToFileURL(sandbox).href;
       await lsp.initialize(rootUri);
       await lsp.waitForNotification("rescript/buildFinished", 30000);
 
-      // Populate the initial DB via `rescript sync`
-      const syncResult = await cli.sync();
-      expect(syncResult.status).toBe(0);
+      // Wait for the LSP's background db_sync to populate the initial DB.
+      // Use a longer timeout because db_sync shells out to the analysis binary
+      // for all modules, which can be slow on CI (especially Windows).
+      await waitForDb(
+        sandbox,
+        db => getValueNames(db, "Library").includes("greet"),
+        30000,
+      );
 
       // Verify initial state: Library has greeting, admin, greet
       let db = openDb(sandbox);
@@ -117,14 +122,17 @@ let farewell = (name: string) => "bye " ++ name
     }));
 
   it("updates module types in rescript.db after a file is saved", () =>
-    runLspTest(async ({ lsp, sandbox, cli, writeFile }) => {
+    runLspTest(async ({ lsp, sandbox, writeFile }) => {
       const rootUri = pathToFileURL(sandbox).href;
       await lsp.initialize(rootUri);
       await lsp.waitForNotification("rescript/buildFinished", 30000);
 
-      // Populate the initial DB
-      const syncResult = await cli.sync();
-      expect(syncResult.status).toBe(0);
+      // Wait for the LSP's background db_sync to populate the initial DB.
+      await waitForDb(
+        sandbox,
+        db => getTypeNames(db, "Library").includes("user"),
+        30000,
+      );
 
       // Verify initial state: Library has the `user` record type
       let db = openDb(sandbox);
