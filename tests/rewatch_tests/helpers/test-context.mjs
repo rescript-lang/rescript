@@ -311,6 +311,7 @@ const SUMMARY_ATTRS = {
   "build.parse_file": [
     "module",
     "package",
+    "kind",
     "ppx",
     "experimental",
     "jsx",

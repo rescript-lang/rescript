@@ -404,11 +404,16 @@ fn make_parse_file_span(
     let root_config = build_state.get_root_config();
     let jsx = root_config.get_jsx_args().get(1).cloned().unwrap_or_default();
     let bsc_flags = config::flatten_flags(&package.config.compiler_flags).join(" ");
+    let kind = match filename.extension().and_then(|e| e.to_str()) {
+        Some("resi") => "interface",
+        _ => "implementation",
+    };
     info_span!(
         parent: parent,
         "build.parse_file",
         module = %module_name,
         package = %package.name,
+        kind = %kind,
         ppx = %ppx,
         experimental = %experimental,
         jsx = %jsx,

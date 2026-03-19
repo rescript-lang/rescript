@@ -347,8 +347,9 @@ fn process_batch(
             // Resolve compiled path, hash, and package name.
             // Project modules come from file_entry_map; runtime modules are
             // identified by name and get their paths from the analysis output.
-            let (compiled_file_path, source_file_path, cmt_hash, pkg_name);
+            let (compiled_file_path, source_file_path, cmt_hash, pkg_name, has_interface);
             if let Some(file_entry) = file_entry_map.get(analysis_module.module_name.as_str()) {
+                has_interface = !file_entry.cmti.is_empty();
                 compiled_file_path = if file_entry.cmti.is_empty() {
                     file_entry.cmt.clone()
                 } else {
@@ -359,6 +360,7 @@ fn process_batch(
                 pkg_name = file_entry.package_name.clone();
             } else if runtime_names.contains(analysis_module.module_name.as_str()) {
                 // Runtime module — use the source path from the analysis output
+                has_interface = analysis_module.source_file_path.ends_with(".resi");
                 compiled_file_path = analysis_module.source_file_path.clone();
                 source_file_path = analysis_module.source_file_path.clone();
                 cmt_hash = String::new();
@@ -377,6 +379,7 @@ fn process_batch(
                     &compiled_file_path,
                     &cmt_hash,
                     &source_file_path,
+                    has_interface,
                 )?;
                 tx.execute(
                     "DELETE FROM usages WHERE source_module_id = ?1",
@@ -400,6 +403,7 @@ fn process_batch(
                     &compiled_file_path,
                     &cmt_hash,
                     &source_file_path,
+                    has_interface,
                 ) {
                     Ok(_) => {}
                     Err(e) => {

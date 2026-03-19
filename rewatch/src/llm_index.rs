@@ -132,6 +132,7 @@ CREATE TABLE IF NOT EXISTS modules (
     source_file_path TEXT NOT NULL,
     compiled_file_path TEXT NOT NULL,
     cmt_hash TEXT,
+    has_interface INTEGER DEFAULT 0,
     is_auto_opened INTEGER DEFAULT 0,
     FOREIGN KEY (package_id) REFERENCES packages(id) ON DELETE CASCADE,
     FOREIGN KEY (parent_module_id) REFERENCES modules(id) ON DELETE CASCADE
@@ -416,6 +417,7 @@ pub fn spawn_analysis(
 
 /// Insert a module and its children into the database recursively.
 /// Returns the number of modules inserted (including nested).
+#[allow(clippy::too_many_arguments)]
 pub fn insert_module_recursive(
     conn: &Connection,
     module: &AnalysisModule,
@@ -424,11 +426,12 @@ pub fn insert_module_recursive(
     compiled_file_path: &str,
     cmt_hash: &str,
     source_file_path: &str,
+    has_interface: bool,
 ) -> rusqlite::Result<usize> {
     let module_id: i64 = conn.query_row(
         "INSERT INTO modules (package_id, parent_module_id, name, qualified_name, \
-         source_file_path, compiled_file_path, cmt_hash, is_auto_opened) \
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 0) \
+         source_file_path, compiled_file_path, cmt_hash, has_interface, is_auto_opened) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 0) \
          RETURNING id",
         rusqlite::params![
             package_id,
@@ -438,6 +441,7 @@ pub fn insert_module_recursive(
             source_file_path,
             compiled_file_path,
             cmt_hash,
+            has_interface as i32,
         ],
         |row| row.get(0),
     )?;
@@ -450,6 +454,7 @@ pub fn insert_module_recursive(
         compiled_file_path,
         cmt_hash,
         source_file_path,
+        has_interface,
     )?;
 
     Ok(1 + nested_count)
@@ -457,6 +462,7 @@ pub fn insert_module_recursive(
 
 /// Insert all child data (types, values, aliases, nested modules) for a module
 /// that already has a row in the DB. Returns the count of nested modules inserted.
+#[allow(clippy::too_many_arguments)]
 pub fn insert_module_children(
     conn: &Connection,
     module: &AnalysisModule,
@@ -465,6 +471,7 @@ pub fn insert_module_children(
     compiled_file_path: &str,
     cmt_hash: &str,
     source_file_path: &str,
+    has_interface: bool,
 ) -> rusqlite::Result<usize> {
     // Insert records → types table with kind='record' + fields table
     for record in &module.records {
@@ -543,6 +550,7 @@ pub fn insert_module_children(
             compiled_file_path,
             cmt_hash,
             source_file_path,
+            has_interface,
         )?;
     }
 
@@ -580,6 +588,7 @@ pub fn delete_module_children(conn: &Connection, module_id: i64) -> rusqlite::Re
 /// Refresh all data for an existing module: delete old children, update the
 /// module row metadata, and re-insert fresh children from analysis output.
 /// Returns the count of nested modules inserted.
+#[allow(clippy::too_many_arguments)]
 pub fn refresh_module_data(
     conn: &Connection,
     module: &AnalysisModule,
@@ -588,13 +597,20 @@ pub fn refresh_module_data(
     compiled_file_path: &str,
     cmt_hash: &str,
     source_file_path: &str,
+    has_interface: bool,
 ) -> rusqlite::Result<usize> {
     delete_module_children(conn, module_id)?;
 
     conn.execute(
-        "UPDATE modules SET cmt_hash = ?1, source_file_path = ?2, compiled_file_path = ?3 \
-         WHERE id = ?4",
-        rusqlite::params![cmt_hash, source_file_path, compiled_file_path, module_id],
+        "UPDATE modules SET cmt_hash = ?1, source_file_path = ?2, compiled_file_path = ?3, \
+         has_interface = ?4 WHERE id = ?5",
+        rusqlite::params![
+            cmt_hash,
+            source_file_path,
+            compiled_file_path,
+            has_interface as i32,
+            module_id
+        ],
     )?;
 
     insert_module_children(
@@ -605,6 +621,7 @@ pub fn refresh_module_data(
         compiled_file_path,
         cmt_hash,
         source_file_path,
+        has_interface,
     )
 }
 
@@ -845,11 +862,12 @@ pub fn run_sync(folder: &str, show_progress: bool, plain_output: bool) -> i32 {
                 // Look up which package this module belongs to and resolve paths.
                 // Hash the .cmt/.cmti (not .cmi) so the incremental sync can
                 // skip modules whose typed tree didn't change.
-                let (package_id, source_file_path, cmt_hash, compiled) =
+                let (package_id, source_file_path, cmt_hash, compiled, has_iface) =
                     match build_state.build_state.modules.get(module_name.as_str()) {
                         Some(Module::SourceFile(sf)) => {
                             let pkg_id = package_ids.get(&sf.package_name).copied().unwrap_or(0);
-                            let src = sf.source_file.implementation.path.to_string_lossy().to_string();
+                            let has_iface = sf.source_file.interface.is_some();
+                            let src = analysis_module.source_file_path.clone();
                             let Some(pkg) = build_state.build_state.packages.get(&sf.package_name) else {
                                 continue;
                             };
@@ -875,14 +893,15 @@ pub fn run_sync(folder: &str, show_progress: bool, plain_output: bool) -> i32 {
                             let hash = helpers::compute_file_hash(&cmt_path)
                                 .map(|h| h.to_string())
                                 .unwrap_or_default();
-                            (pkg_id, src, hash, compiled_path)
+                            (pkg_id, src, hash, compiled_path, has_iface)
                         }
                         _ => {
                             // Not in build state — likely a runtime module
                             if runtime_package_id > 0 && runtime_names.contains(module_name.as_str()) {
                                 let src = analysis_module.source_file_path.clone();
                                 let cmti = runtime_ocaml_dir.join(format!("{module_name}.cmti"));
-                                let cmt_path = if cmti.exists() {
+                                let has_cmti = cmti.exists();
+                                let cmt_path = if has_cmti {
                                     cmti
                                 } else {
                                     runtime_ocaml_dir.join(format!("{module_name}.cmt"))
@@ -891,7 +910,7 @@ pub fn run_sync(folder: &str, show_progress: bool, plain_output: bool) -> i32 {
                                     .map(|h| h.to_string())
                                     .unwrap_or_default();
                                 let compiled_path = cmt_path.to_string_lossy().to_string();
-                                (runtime_package_id, src, hash, compiled_path)
+                                (runtime_package_id, src, hash, compiled_path, has_cmti)
                             } else {
                                 continue;
                             }
@@ -910,6 +929,7 @@ pub fn run_sync(folder: &str, show_progress: bool, plain_output: bool) -> i32 {
                     &compiled,
                     &cmt_hash,
                     &source_file_path,
+                    has_iface,
                 ) {
                     Ok(count) => total_modules += count,
                     Err(e) => eprintln!("Failed to insert module {module_name}: {e}"),

@@ -78,6 +78,24 @@ describe("lsp initial db sync", { timeout: 60_000 }, () => {
       expect(moduleNames).toContain("Stdlib");
       expect(moduleNames).toContain("Pervasives");
 
+      // Modules with a .resi file should have has_interface = 1
+      const appModule = db
+        .prepare(
+          "SELECT m.name, m.has_interface FROM modules m WHERE m.name = 'App' AND m.parent_module_id IS NULL",
+        )
+        .get();
+      expect(appModule).toBeDefined();
+      expect(appModule.has_interface).toBe(1);
+
+      // Modules without a .resi file should have has_interface = 0
+      const rootModule = db
+        .prepare(
+          "SELECT m.name, m.has_interface FROM modules m WHERE m.name = 'Root' AND m.parent_module_id IS NULL",
+        )
+        .get();
+      expect(rootModule).toBeDefined();
+      expect(rootModule.has_interface).toBe(0);
+
       // The usages table should exist and have entries
       const usageCount = db.prepare("SELECT COUNT(*) as cnt FROM usages").get();
       expect(usageCount.cnt).toBeGreaterThan(0);
