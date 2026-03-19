@@ -10,8 +10,8 @@
 //! Top-level module rows are preserved (their `module_id` is referenced by
 //! other modules' usages); child data is deleted and re-inserted from fresh
 //! analysis output. New modules not yet in the database are fully inserted.
-//! If the database does not exist (user hasn't run `rescript sync`), sync
-//! events are silently skipped.
+//! If the database does not exist, it is created automatically on the first
+//! sync event (schema + packages), so `rescript sync` is not required.
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -51,6 +51,24 @@ pub struct SyncPackageContext {
     pub paths_for_module: Value,
     pub project_files: Value,
     pub dependencies_files: Value,
+    /// Pre-built runtime package entry for the analysis binary's stdin JSON.
+    /// Includes the runtime's `pathsForModule`, `projectFiles`, and `files` so
+    /// that runtime modules (Stdlib_Array, Pervasives, etc.) are extracted by the
+    /// analysis binary alongside project modules.
+    pub runtime_analysis_entry: Option<Value>,
+    /// Module names from the runtime, used to identify runtime modules in the
+    /// analysis output (they aren't in `build_state.modules`).
+    pub runtime_module_names: Vec<String>,
+}
+
+/// Metadata for a package, used to populate the `packages` table when
+/// creating the database for the first time from the LSP.
+#[derive(Debug, Clone)]
+pub struct PackageMetadata {
+    pub name: String,
+    pub path: String,
+    pub rescript_json: String,
+    pub is_local: bool,
 }
 
 /// Self-contained payload with structured Rust data.
@@ -64,6 +82,9 @@ pub struct DbSyncEvent {
     pub package_context: SyncPackageContext,
     /// Per-module cmt/cmti file paths for the touched modules.
     pub files: Vec<ModuleFileEntry>,
+    /// Package metadata for all packages in the project.
+    /// Used to create the `packages` table when the DB doesn't exist yet.
+    pub packages: Vec<PackageMetadata>,
 }
 
 /// Background queue that keeps `rescript.db` in sync.
@@ -89,6 +110,8 @@ impl DbSyncQueue {
 }
 
 /// Build the stdin JSON for the analysis binary from a `SyncPackageContext`.
+/// Includes the runtime package entry (if present) so that runtime modules
+/// like Stdlib_Array, Pervasives, etc. are extracted alongside project modules.
 fn build_stdin_json(ctx: &SyncPackageContext, files: &[&ModuleFileEntry]) -> Value {
     let file_entries: Vec<Value> = files
         .iter()
@@ -101,25 +124,29 @@ fn build_stdin_json(ctx: &SyncPackageContext, files: &[&ModuleFileEntry]) -> Val
         })
         .collect();
 
-    json!({
-        "packages": [{
-            "rootPath": ctx.root_path.to_string_lossy(),
-            "suffix": ctx.suffix,
-            "rescriptVersion": [ctx.rescript_version.0, ctx.rescript_version.1],
-            "genericJsxModule": Value::Null,
-            "opens": ctx.opens,
-            "pathsForModule": ctx.paths_for_module,
-            "projectFiles": ctx.project_files,
-            "dependenciesFiles": ctx.dependencies_files,
-            "files": file_entries,
-        }]
-    })
+    let project_entry = json!({
+        "rootPath": ctx.root_path.to_string_lossy(),
+        "suffix": ctx.suffix,
+        "rescriptVersion": [ctx.rescript_version.0, ctx.rescript_version.1],
+        "genericJsxModule": Value::Null,
+        "opens": ctx.opens,
+        "pathsForModule": ctx.paths_for_module,
+        "projectFiles": ctx.project_files,
+        "dependenciesFiles": ctx.dependencies_files,
+        "files": file_entries,
+    });
+
+    let mut packages = vec![project_entry];
+    if let Some(runtime_entry) = &ctx.runtime_analysis_entry {
+        packages.push(runtime_entry.clone());
+    }
+
+    json!({ "packages": packages })
 }
 
 /// Open the existing database if it has the expected schema.
-/// Returns `None` if the database does not exist or has a stale schema —
-/// the caller should skip the sync (a full `rescript sync` is needed first).
-fn open_db(db_path: &std::path::Path) -> Option<Connection> {
+/// Returns `None` if the database does not exist or has a stale schema.
+fn open_existing_db(db_path: &std::path::Path) -> Option<Connection> {
     if !db_path.exists() {
         return None;
     }
@@ -149,6 +176,37 @@ fn open_db(db_path: &std::path::Path) -> Option<Connection> {
     if has_usages { Some(conn) } else { None }
 }
 
+/// Create a new database with schema and package rows, using the shared
+/// `llm_index::create_db` that is also used by the `rescript sync` CLI command.
+fn create_db(db_path: &std::path::Path, packages: &[PackageMetadata]) -> Option<Connection> {
+    let pkg_refs: Vec<(&str, &str, &str, bool)> = packages
+        .iter()
+        .map(|p| {
+            (
+                p.name.as_str(),
+                p.path.as_str(),
+                p.rescript_json.as_str(),
+                p.is_local,
+            )
+        })
+        .collect();
+
+    match llm_index::create_db(db_path, &pkg_refs) {
+        Ok(conn) => {
+            tracing::info!(
+                "db_sync: created {} with {} packages",
+                db_path.display(),
+                packages.len()
+            );
+            Some(conn)
+        }
+        Err(e) => {
+            tracing::warn!("db_sync: failed to create DB: {e}");
+            None
+        }
+    }
+}
+
 /// Process a coalesced batch: shell out to analysis binary and update all module data in the DB.
 fn process_batch(
     parent_span: &tracing::Span,
@@ -156,6 +214,7 @@ fn process_batch(
     analysis_binary_path: &std::path::Path,
     ctx: &SyncPackageContext,
     files: &[ModuleFileEntry],
+    packages: &[PackageMetadata],
 ) {
     let span = tracing::debug_span!(
         parent: parent_span,
@@ -167,10 +226,18 @@ fn process_batch(
     );
     let _guard = span.enter();
     let db_path = project_root.join("rescript.db");
-    let Some(conn) = open_db(&db_path) else {
-        // No DB or stale schema — user needs to run `rescript sync` first.
-        tracing::debug!("db_sync: no valid rescript.db at {}, skipping", db_path.display());
-        return;
+    let conn = match open_existing_db(&db_path) {
+        Some(conn) => conn,
+        None => match create_db(&db_path, packages) {
+            Some(conn) => conn,
+            None => {
+                tracing::warn!(
+                    "db_sync: could not open or create {}, skipping",
+                    db_path.display()
+                );
+                return;
+            }
+        },
     };
 
     // Filter out modules whose cmt_hash matches what's already in the DB.
@@ -270,18 +337,35 @@ fn process_batch(
             .map(|f| (f.module_name.as_str(), *f))
             .collect();
 
+        // Build a set of runtime module names so we can identify them in the
+        // analysis output (they aren't in build_state.modules / file_entry_map).
+        let runtime_names: std::collections::HashSet<&str> =
+            ctx.runtime_module_names.iter().map(|s| s.as_str()).collect();
+
         // Phase 1: For each analysis module, delete old data and insert fresh data.
         for analysis_module in &analysis_output {
-            let Some(file_entry) = file_entry_map.get(analysis_module.module_name.as_str()) else {
+            // Resolve compiled path, hash, and package name.
+            // Project modules come from file_entry_map; runtime modules are
+            // identified by name and get their paths from the analysis output.
+            let (compiled_file_path, source_file_path, cmt_hash, pkg_name);
+            if let Some(file_entry) = file_entry_map.get(analysis_module.module_name.as_str()) {
+                compiled_file_path = if file_entry.cmti.is_empty() {
+                    file_entry.cmt.clone()
+                } else {
+                    file_entry.cmti.clone()
+                };
+                source_file_path = analysis_module.source_file_path.clone();
+                cmt_hash = file_entry.cmt_hash.clone();
+                pkg_name = file_entry.package_name.clone();
+            } else if runtime_names.contains(analysis_module.module_name.as_str()) {
+                // Runtime module — use the source path from the analysis output
+                compiled_file_path = analysis_module.source_file_path.clone();
+                source_file_path = analysis_module.source_file_path.clone();
+                cmt_hash = String::new();
+                pkg_name = "@rescript/runtime".to_string();
+            } else {
                 continue;
             };
-            let compiled_file_path = if file_entry.cmti.is_empty() {
-                &file_entry.cmt
-            } else {
-                &file_entry.cmti
-            };
-            let source_file_path = &analysis_module.source_file_path;
-            let cmt_hash = &file_entry.cmt_hash;
 
             if let Some(&(module_id, package_id)) = module_info.get(&analysis_module.qualified_name) {
                 // Existing module: refresh child data + delete old usages
@@ -290,9 +374,9 @@ fn process_batch(
                     analysis_module,
                     module_id,
                     package_id,
-                    compiled_file_path,
-                    cmt_hash,
-                    source_file_path,
+                    &compiled_file_path,
+                    &cmt_hash,
+                    &source_file_path,
                 )?;
                 tx.execute(
                     "DELETE FROM usages WHERE source_module_id = ?1",
@@ -300,10 +384,10 @@ fn process_batch(
                 )?;
             } else {
                 // New module: look up package_id and do full insert
-                let Some(&pkg_id) = package_id_map.get(&file_entry.package_name) else {
+                let Some(&pkg_id) = package_id_map.get(&pkg_name) else {
                     tracing::warn!(
                         module = %analysis_module.qualified_name,
-                        package = %file_entry.package_name,
+                        package = %pkg_name,
                         "db_sync: package not in DB, skipping new module"
                     );
                     continue;
@@ -313,9 +397,9 @@ fn process_batch(
                     analysis_module,
                     pkg_id,
                     None,
-                    compiled_file_path,
-                    cmt_hash,
-                    source_file_path,
+                    &compiled_file_path,
+                    &cmt_hash,
+                    &source_file_path,
                 ) {
                     Ok(_) => {}
                     Err(e) => {
@@ -349,6 +433,7 @@ struct CoalescedProject {
     analysis_binary_path: PathBuf,
     package_context: SyncPackageContext,
     files_map: HashMap<String, ModuleFileEntry>,
+    packages: Vec<PackageMetadata>,
 }
 
 impl CoalescedProject {
@@ -364,6 +449,7 @@ impl CoalescedProject {
                 analysis_binary_path: event.analysis_binary_path,
                 package_context: event.package_context,
                 files_map,
+                packages: event.packages,
             },
         )
     }
@@ -374,6 +460,8 @@ impl CoalescedProject {
         for f in event.files {
             self.files_map.insert(f.module_name.clone(), f);
         }
+        // Take the latest packages list (may have changed if project was reconfigured)
+        self.packages = event.packages;
     }
 }
 
@@ -430,6 +518,7 @@ async fn consumer(mut rx: mpsc::UnboundedReceiver<DbSyncEvent>, debounce: Durati
                 let files: Vec<ModuleFileEntry> = coalesced.files_map.into_values().collect();
                 let analysis_binary_path = coalesced.analysis_binary_path;
                 let package_context = coalesced.package_context;
+                let packages = coalesced.packages;
                 let span = parent_span.clone();
 
                 tokio::task::spawn_blocking(move || {
@@ -439,6 +528,7 @@ async fn consumer(mut rx: mpsc::UnboundedReceiver<DbSyncEvent>, debounce: Durati
                         &analysis_binary_path,
                         &package_context,
                         &files,
+                        &packages,
                     );
                 })
             })

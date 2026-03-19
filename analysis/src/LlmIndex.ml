@@ -35,24 +35,45 @@ let isNamespaceModule ~(package : SharedTypes.package) moduleName =
   | Some (SharedTypes.Namespace _) -> true
   | _ -> false
 
-(** Resolve a namespace reference to the actual sub-module.
-    When targetModule is a namespace (e.g. "WebAPI") and path starts with
-    a sub-module name, resolve to the namespaced module name.
-    E.g. "WebAPI" + ["DOMAPI", "element"] → ("DOMAPI-WebAPI", ["element"]).
-    Only resolves for namespace modules — real modules like "Stdlib" are left as-is.
+(** Resolve a target module reference to the actual leaf module for the LLM index.
 
-    Note: ReScript namespaces are flat (one level deep), so resolving just
-    the first path segment is sufficient. Nested namespaces don't exist. *)
-let resolveNamespacedTarget ~(package : SharedTypes.package) targetModule path =
-  if not (isNamespaceModule ~package targetModule) then (targetModule, path)
-  else
-    match path with
-    | firstSegment :: restPath ->
+    This is an improved version of the resolution logic used elsewhere in the
+    analysis (e.g. ProcessExtra, References). The general analysis stores
+    external references keyed by the top-level module (e.g. "Stdlib") with the
+    submodule encoded in the path (e.g. ["Array"; "find"]). That format is
+    deeply wired into hover, go-to-definition, and find-references, so we
+    cannot change it without a larger refactor.
+
+    For the LLM index we want a uniform representation: target_module should
+    always point to the leaf module, with target_path containing only the
+    value/type name. This function handles two cases:
+
+    1. Namespace packages (e.g. @rescript/webapi):
+       "WebAPI" + ["Document"; "querySelector"] → ("Document-WebAPI", ["querySelector"])
+
+    2. Re-exporting top-level modules (e.g. @rescript/runtime):
+       "Stdlib" + ["Array"; "find"] → ("Stdlib_Array", ["find"])
+       This works because the runtime ships flat files like Stdlib_Array.resi
+       that are re-exported by Stdlib.res.
+
+    TODO: Ideally the core analysis (ProcessExtra/ResolvePath) should resolve
+    to leaf modules too, which would make this function unnecessary. That
+    requires updating all consumers (hover, references, completion) in one go. *)
+let resolveTargetForIndex ~(package : SharedTypes.package) targetModule path =
+  match path with
+  | firstSegment :: restPath ->
+    if isNamespaceModule ~package targetModule then
+      (* Case 1: namespace package — "WebAPI" + ["Document", ...] → "Document-WebAPI" *)
       let namespacedName = firstSegment ^ "-" ^ targetModule in
       if Hashtbl.mem package.pathsForModule namespacedName then
         (namespacedName, restPath)
       else (targetModule, path)
-    | [] -> (targetModule, path)
+    else
+      (* Case 2: re-exporting module — "Stdlib" + ["Array", ...] → "Stdlib_Array" *)
+      let flatName = targetModule ^ "_" ^ firstSegment in
+      if Hashtbl.mem package.pathsForModule flatName then (flatName, restPath)
+      else (targetModule, path)
+  | [] -> (targetModule, path)
 
 (** Extract cross-module usages from a module's external references.
     Resolves namespace references to the actual sub-module.
@@ -63,7 +84,7 @@ let extractUsages ~(package : SharedTypes.package) (extra : SharedTypes.extra) =
          List.to_seq refs
          |> Seq.map (fun (path, tip, (loc : Location.t)) ->
                 let resolvedModule, resolvedPath =
-                  resolveNamespacedTarget ~package targetModule path
+                  resolveTargetForIndex ~package targetModule path
                 in
                 let pos = loc.loc_start in
                 Protocol.stringifyObject

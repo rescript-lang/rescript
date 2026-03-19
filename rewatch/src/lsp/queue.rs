@@ -42,7 +42,7 @@ use super::file_args::{is_rescript_config, is_rescript_source};
 use super::notifications;
 use crate::lsp::analysis;
 
-use db_sync::{DbSyncEvent, DbSyncQueue, ModuleFileEntry, SyncPackageContext};
+use db_sync::{DbSyncEvent, DbSyncQueue, ModuleFileEntry, PackageMetadata, SyncPackageContext};
 
 /// Monotonically increasing generation counter for staleness detection.
 static GENERATION: AtomicU64 = AtomicU64::new(0);
@@ -806,15 +806,92 @@ fn build_sync_event(
     let root_config = build_state.build_state.get_root_config();
     let suffix = root_config.suffix.clone().unwrap_or_else(|| ".js".to_string());
 
+    // Build the runtime analysis entry so the analysis binary also processes
+    // runtime modules (Stdlib_Array, Pervasives, etc.) alongside project files.
+    let runtime_path = &build_state.build_state.compiler_info.runtime_path;
+    let ocaml_dir = runtime_path.join("lib").join("ocaml");
+    let (major, minor) = crate::llm_index::cargo_pkg_version();
+
+    let runtime_files: Vec<serde_json::Value> = runtime
+        .module_names
+        .iter()
+        .filter(|name| runtime.paths.contains_key(name.as_str()))
+        .map(|name| {
+            let cmti_path = ocaml_dir.join(format!("{name}.cmti"));
+            if cmti_path.exists() {
+                serde_json::json!({
+                    "moduleName": name,
+                    "cmt": "",
+                    "cmti": cmti_path.to_string_lossy(),
+                })
+            } else {
+                serde_json::json!({
+                    "moduleName": name,
+                    "cmt": ocaml_dir.join(format!("{name}.cmt")).to_string_lossy(),
+                    "cmti": "",
+                })
+            }
+        })
+        .collect();
+    let runtime_project_files: Vec<serde_json::Value> = runtime
+        .module_names
+        .iter()
+        .filter(|name| runtime.paths.contains_key(name.as_str()))
+        .map(|n| serde_json::Value::String(n.clone()))
+        .collect();
+    let runtime_analysis_entry = if runtime_files.is_empty() {
+        None
+    } else {
+        Some(serde_json::json!({
+            "rootPath": runtime_path.to_string_lossy(),
+            "suffix": ".js",
+            "rescriptVersion": [major, minor],
+            "genericJsxModule": serde_json::Value::Null,
+            "opens": [],
+            "pathsForModule": serde_json::Value::Object(runtime.paths.clone()),
+            "projectFiles": runtime_project_files,
+            "dependenciesFiles": [],
+            "files": runtime_files,
+        }))
+    };
+
     let package_context = SyncPackageContext {
         root_path: project_root.clone(),
         suffix,
-        rescript_version: crate::llm_index::cargo_pkg_version(),
+        rescript_version: (major, minor),
         opens,
         paths_for_module,
         project_files,
         dependencies_files,
+        runtime_analysis_entry,
+        runtime_module_names: runtime.module_names.clone(),
     };
+
+    // Collect package metadata for DB creation (used when rescript.db doesn't exist yet).
+    let mut packages: Vec<PackageMetadata> = build_state
+        .build_state
+        .packages
+        .iter()
+        .map(|(pkg_name, package)| {
+            let rescript_json_path = package.path.join("rescript.json");
+            let rescript_json = std::fs::read_to_string(&rescript_json_path).unwrap_or_default();
+            PackageMetadata {
+                name: pkg_name.clone(),
+                path: package.path.to_string_lossy().to_string(),
+                rescript_json,
+                is_local: package.is_root || package.is_local_dep,
+            }
+        })
+        .collect();
+
+    // Include @rescript/runtime as a package
+    let runtime_json = std::fs::read_to_string(runtime_path.join("package.json")).unwrap_or_default();
+    packages.push(PackageMetadata {
+        name: "@rescript/runtime".to_string(),
+        path: runtime_path.to_string_lossy().to_string(),
+        rescript_json: runtime_json,
+        is_local: false,
+    });
 
     let mut files = Vec::new();
 
@@ -890,6 +967,7 @@ fn build_sync_event(
         analysis_binary_path,
         package_context,
         files,
+        packages,
     })
 }
 

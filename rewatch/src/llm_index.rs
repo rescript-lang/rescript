@@ -212,6 +212,47 @@ CREATE INDEX IF NOT EXISTS idx_usages_source_target ON usages(source_module_id, 
 CREATE INDEX IF NOT EXISTS idx_usages_target_path ON usages(target_module_id, target_path);
 ";
 
+/// Create a fresh `rescript.db` at `db_path`: remove any existing file, open a
+/// new SQLite database, apply pragmas and schema, and insert the given packages.
+///
+/// Used by both `rescript sync` (CLI) and the LSP's background `db_sync` queue
+/// to avoid duplicating the DB bootstrap logic.
+///
+/// Each entry in `packages` is `(name, path, rescript_json, is_local)`.
+pub fn create_db(db_path: &Path, packages: &[(&str, &str, &str, bool)]) -> Result<Connection, String> {
+    // Remove the main DB file and any WAL/SHM sidecar files. If we only
+    // remove the main file, SQLite may find stale WAL files from a previous
+    // connection (e.g. the LSP's db_sync) and fail with a disk I/O error.
+    let db_str = db_path.to_string_lossy();
+    for path in [
+        db_path.to_path_buf(),
+        std::path::PathBuf::from(format!("{db_str}-wal")),
+        std::path::PathBuf::from(format!("{db_str}-shm")),
+    ] {
+        if path.exists() {
+            std::fs::remove_file(&path).map_err(|e| format!("Could not remove {}: {e}", path.display()))?;
+        }
+    }
+    let conn = Connection::open(db_path)
+        .map_err(|e| format!("Could not open database {}: {e}", db_path.display()))?;
+    conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; PRAGMA foreign_keys=ON;")
+        .map_err(|e| format!("Could not set database pragmas: {e}"))?;
+    conn.execute_batch(SCHEMA_DDL)
+        .map_err(|e| format!("Could not apply database schema: {e}"))?;
+
+    for &(name, path, rescript_json, is_local) in packages {
+        let local_flag = is_local as i32;
+        conn.execute(
+            "INSERT INTO packages (name, path, rescript_json, config_hash, is_local) \
+             VALUES (?1, ?2, ?3, '', ?4)",
+            rusqlite::params![name, path, rescript_json, local_flag],
+        )
+        .map_err(|e| format!("Could not insert package {name}: {e}"))?;
+    }
+
+    Ok(conn)
+}
+
 /// Collect the list of files to index (for the `files` array in the stdin JSON).
 /// Each entry has `moduleName` and either `cmt` or `cmti`.
 pub fn collect_files_for_indexing(build_state: &BuildCommandState) -> Vec<Value> {
@@ -721,66 +762,53 @@ pub fn run_sync(folder: &str, show_progress: bool, plain_output: bool) -> i32 {
     let runtime = scan_runtime_modules(&build_state.build_state.compiler_info.runtime_path);
 
     let db_path = path.join("rescript.db");
-    if db_path.exists()
-        && let Err(e) = std::fs::remove_file(&db_path)
-    {
-        eprintln!("Could not remove existing {}: {e}", db_path.display());
-        return 1;
-    }
-    let conn = match Connection::open(&db_path) {
+    let runtime_path = &build_state.build_state.compiler_info.runtime_path;
+    let runtime_json = std::fs::read_to_string(runtime_path.join("package.json")).unwrap_or_default();
+
+    // Collect package metadata for DB creation
+    let pkg_data: Vec<(String, String, String, bool)> = build_state
+        .build_state
+        .packages
+        .iter()
+        .map(|(pkg_name, package)| {
+            let rescript_json_path = package.path.join("rescript.json");
+            let rescript_json = std::fs::read_to_string(&rescript_json_path).unwrap_or_default();
+            (
+                pkg_name.clone(),
+                package.path.to_string_lossy().to_string(),
+                rescript_json,
+                package.is_root || package.is_local_dep,
+            )
+        })
+        .chain(std::iter::once((
+            "@rescript/runtime".to_string(),
+            runtime_path.to_string_lossy().to_string(),
+            runtime_json,
+            false,
+        )))
+        .collect();
+
+    let pkg_refs: Vec<(&str, &str, &str, bool)> = pkg_data
+        .iter()
+        .map(|(n, p, j, l)| (n.as_str(), p.as_str(), j.as_str(), *l))
+        .collect();
+
+    let conn = match create_db(&db_path, &pkg_refs) {
         Ok(conn) => conn,
         Err(e) => {
-            eprintln!("Could not open database: {e}");
+            eprintln!("{e}");
             return 1;
         }
     };
 
-    if let Err(e) = conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;") {
-        eprintln!("Could not set database pragmas: {e}");
-        return 1;
-    }
-    if let Err(e) = conn.execute_batch(SCHEMA_DDL) {
-        eprintln!("Could not apply database schema: {e}");
-        return 1;
-    }
-
-    // Insert all packages into the database and build a name→id map
-    let mut package_ids: std::collections::HashMap<String, i64> = std::collections::HashMap::new();
-    for (pkg_name, package) in &build_state.build_state.packages {
-        let rescript_json_path = package.path.join("rescript.json");
-        let rescript_json = std::fs::read_to_string(&rescript_json_path).unwrap_or_default();
-        let is_local = (package.is_root || package.is_local_dep) as i32;
-        match conn.query_row(
-            "INSERT INTO packages (name, path, rescript_json, config_hash, is_local) \
-             VALUES (?1, ?2, ?3, '', ?4) RETURNING id",
-            rusqlite::params![pkg_name, package.path.to_string_lossy(), rescript_json, is_local],
-            |row| row.get::<_, i64>(0),
-        ) {
-            Ok(id) => {
-                package_ids.insert(pkg_name.clone(), id);
-            }
-            Err(e) => {
-                eprintln!("Could not insert package {pkg_name}: {e}");
-            }
-        }
-    }
-
-    // Insert @rescript/runtime as a package
-    let runtime_path = &build_state.build_state.compiler_info.runtime_path;
-    let runtime_json = std::fs::read_to_string(runtime_path.join("package.json")).unwrap_or_default();
-    match conn.query_row(
-        "INSERT INTO packages (name, path, rescript_json, config_hash) \
-         VALUES (?1, ?2, ?3, '') RETURNING id",
-        rusqlite::params!["@rescript/runtime", runtime_path.to_string_lossy(), runtime_json],
-        |row| row.get::<_, i64>(0),
-    ) {
-        Ok(id) => {
-            package_ids.insert("@rescript/runtime".to_string(), id);
-        }
-        Err(e) => {
-            eprintln!("Could not insert @rescript/runtime package: {e}");
-        }
-    }
+    // Build name→id map from the packages we just inserted
+    let package_ids: std::collections::HashMap<String, i64> = conn
+        .prepare("SELECT id, name FROM packages")
+        .and_then(|mut stmt| {
+            let rows = stmt.query_map([], |row| Ok((row.get::<_, String>(1)?, row.get::<_, i64>(0)?)))?;
+            rows.collect::<Result<_, _>>()
+        })
+        .unwrap_or_default();
 
     // Call analysis binary once with all packages (project + runtime)
     let Some(root_package) = build_state.build_state.packages.values().find(|p| p.is_root) else {
