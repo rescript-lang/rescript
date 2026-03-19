@@ -94,7 +94,8 @@ packages -> modules -> types   -> fields
 | qualified_name     | TEXT    | Full path (e.g., `React`, `React.Children`, `DOMAPI-WebAPI`) |
 | source_file_path   | TEXT    | Path to .res/.resi file                                      |
 | compiled_file_path | TEXT    | Path to .cmi file                                            |
-| file_hash          | TEXT    | Hash of the .cmi file (for invalidation)                     |
+| cmt_hash           | TEXT    | Hash of the .cmt file (for invalidation)                     |
+| has_interface      | INTEGER | 1 if the module has a .resi interface file                   |
 | is_auto_opened     | INTEGER | 1 if globally available (Stdlib, Pervasives)                 |
 
 **Note on qualified names**: Namespaced modules use hyphen format internally: `DOMAPI-WebAPI`, `FetchAPI-WebAPI`. In ReScript code you write `WebAPI.DOMAPI`. Nested modules use dots: `React.Children`.

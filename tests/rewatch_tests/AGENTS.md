@@ -226,7 +226,7 @@ To add new spans or attributes in rewatch:
 
 - The tests use their own in-process OTEL receiver (`helpers/otel-receiver.mjs`) that collects spans in memory for snapshot assertions.
 - Set `DEBUG_OTEL=1` to print span summaries to the console during test execution
-- Set `OTEL_VIEWER_ENDPOINT=http://localhost:4707` to forward test traces to the otel-viewer UI. Start otel-viewer first (`cd rewatch/otel-viewer && uv run python server.py`), then run tests:
+- Set `OTEL_VIEWER_ENDPOINT=http://localhost:4707` to forward test traces to the otel-viewer UI (see `rewatch/otel-viewer/AGENTS.md`). Check if it's already running first: `curl -sf http://localhost:4707/health`. If not, start it with `cd rewatch/otel-viewer && uv run python server.py`. Then run tests:
   ```bash
   OTEL_VIEWER_ENDPOINT=http://localhost:4707 yarn test tests/build.test.mjs
   ```

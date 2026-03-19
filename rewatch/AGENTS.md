@@ -11,6 +11,10 @@ Rust-based ReScript build system and CLI. Also hosts the LSP server.
 
 Integration tests (build, watch, clean, format, LSP): `tests/rewatch_tests/` — see `tests/rewatch_tests/AGENTS.md`
 
+## Telemetry
+
+Rewatch emits OpenTelemetry traces for build, watch, and LSP commands. Use `otel-viewer/` (see `otel-viewer/AGENTS.md`) to collect and browse traces locally. Use `tracing::debug!` (not `log::debug!`) for events you want visible in OTEL.
+
 ## Building and testing
 
 ```bash

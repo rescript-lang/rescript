@@ -155,6 +155,11 @@ async def trace_detail(request: Request, trace_id: str):
 # --- API ---
 
 
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
 @app.get("/api/traces")
 async def api_traces():
     return db.get_traces()

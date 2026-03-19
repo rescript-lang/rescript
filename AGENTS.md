@@ -407,7 +407,7 @@ make test-rewatch     # Run integration tests
 
 #### OpenTelemetry Tracing
 
-Rewatch supports OpenTelemetry (OTEL) tracing for build, watch, and LSP commands. Any OTLP-compatible viewer (Jaeger, Grafana, etc.) will work. For a lightweight option tailored to rewatch development, see `rewatch/otel-viewer/` — it requires only `uv` (no Docker) and includes features like LLM export.
+Rewatch supports OpenTelemetry (OTEL) tracing for build, watch, and LSP commands. Any OTLP-compatible viewer (Jaeger, Grafana, etc.) will work. For a lightweight option tailored to rewatch development, see `rewatch/otel-viewer/` (development notes in `rewatch/otel-viewer/AGENTS.md`) — it requires only `uv` (no Docker) and includes features like LLM export.
 
 ```bash
 # Start the viewer (see rewatch/otel-viewer/README.md for setup)
