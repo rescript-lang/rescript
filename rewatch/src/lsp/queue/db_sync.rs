@@ -1,14 +1,17 @@
-//! Background sync queue for keeping `rescript.db` usages up to date.
+//! Background sync queue for keeping `rescript.db` fully up to date.
 //!
 //! Receives self-contained payloads from the main build queue after each flush
 //! (including the initial build). Debounces and coalesces events, then shells
-//! out to the analysis binary to extract cross-module usage data and writes it
-//! to the SQLite database.
+//! out to the analysis binary to extract module data and cross-module usage
+//! data, writing it to the SQLite database.
 //!
-//! **Scope**: This queue only updates the `usages` table. Full module data
-//! (types, values, fields, etc.) is populated by `rescript sync` and is not
-//! modified here. If the database does not exist (user hasn't run `rescript sync`),
-//! sync events are silently skipped.
+//! **Scope**: This queue updates all module data tables: `types`, `values`,
+//! `fields`, `constructors`, `aliases`, nested `modules` rows, and `usages`.
+//! Top-level module rows are preserved (their `module_id` is referenced by
+//! other modules' usages); child data is deleted and re-inserted from fresh
+//! analysis output. New modules not yet in the database are fully inserted.
+//! If the database does not exist (user hasn't run `rescript sync`), sync
+//! events are silently skipped.
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -32,6 +35,9 @@ pub struct ModuleFileEntry {
     /// blake3 hash of the .cmt/.cmti file from the build state.
     /// Used to skip re-extraction when the typed tree didn't change.
     pub cmt_hash: String,
+    /// Package name from the build state, used to look up `package_id`
+    /// when inserting new modules that don't yet exist in the DB.
+    pub package_name: String,
 }
 
 /// Everything the sync queue needs to know about a package.
@@ -60,7 +66,7 @@ pub struct DbSyncEvent {
     pub files: Vec<ModuleFileEntry>,
 }
 
-/// Background queue that keeps `rescript.db` usages in sync.
+/// Background queue that keeps `rescript.db` in sync.
 #[derive(Clone)]
 pub struct DbSyncQueue {
     tx: mpsc::UnboundedSender<DbSyncEvent>,
@@ -127,7 +133,7 @@ fn open_db(db_path: &std::path::Path) -> Option<Connection> {
 
     // Match the pragmas used by the full `rescript sync` path so that
     // concurrent readers (e.g. Claude querying the DB) don't hit SQLITE_BUSY.
-    conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;")
+    conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; PRAGMA foreign_keys=ON;")
         .ok()?;
 
     // Check that the usages table exists (implies up-to-date schema)
@@ -143,7 +149,7 @@ fn open_db(db_path: &std::path::Path) -> Option<Connection> {
     if has_usages { Some(conn) } else { None }
 }
 
-/// Process a coalesced batch: shell out to analysis binary and update usages in the DB.
+/// Process a coalesced batch: shell out to analysis binary and update all module data in the DB.
 fn process_batch(
     parent_span: &tracing::Span,
     project_root: &std::path::Path,
@@ -233,51 +239,100 @@ fn process_batch(
         }
     };
 
-    // Build a qualified_name → module_id map for O(1) lookups
-    let module_id_map: HashMap<String, i64> = match llm_index::build_module_id_map(&conn) {
-        Ok(map) => map,
-        Err(e) => {
-            tracing::warn!("db_sync: failed to build module ID map: {e}");
-            return;
-        }
-    };
-
-    // Run the delete + insert inside a transaction. If anything fails,
+    // Run the full module data refresh inside a transaction. If anything fails,
     // the RAII Transaction guard automatically rolls back on drop.
     let result = (|| -> Result<(), rusqlite::Error> {
         let tx = conn.unchecked_transaction()?;
 
-        // Delete old usages for touched modules using qualified_name from
-        // the analysis output. This is correct for namespaced modules where
-        // the build-state key (short name) differs from the DB key
-        // (qualified_name, e.g. "DOMAPI-WebAPI").
-        //
-        // Invariant: only project source modules appear in `analysis_output`
-        // here (build_sync_event only collects project SourceFile modules).
-        // Dependency modules are targets of usages, never sources.
+        // Build lookup maps for existing top-level modules and packages.
+        let module_info: HashMap<String, (i64, i64)> = {
+            let mut stmt = tx.prepare(
+                "SELECT id, qualified_name, package_id FROM modules WHERE parent_module_id IS NULL",
+            )?;
+            let rows = stmt.query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(1)?,
+                    (row.get::<_, i64>(0)?, row.get::<_, i64>(2)?),
+                ))
+            })?;
+            rows.collect::<Result<HashMap<_, _>, _>>()?
+        };
+
+        let package_id_map: HashMap<String, i64> = {
+            let mut stmt = tx.prepare("SELECT id, name FROM packages")?;
+            let rows = stmt.query_map([], |row| Ok((row.get::<_, String>(1)?, row.get::<_, i64>(0)?)))?;
+            rows.collect::<Result<HashMap<_, _>, _>>()?
+        };
+
+        // Map module_name → file entry for compiled path / hash / package_name lookup.
+        let file_entry_map: HashMap<&str, &ModuleFileEntry> = changed_files
+            .iter()
+            .map(|f| (f.module_name.as_str(), *f))
+            .collect();
+
+        // Phase 1: For each analysis module, delete old data and insert fresh data.
         for analysis_module in &analysis_output {
-            let Some(&module_id) = module_id_map.get(&analysis_module.qualified_name) else {
+            let Some(file_entry) = file_entry_map.get(analysis_module.module_name.as_str()) else {
                 continue;
             };
-            tx.execute(
-                "DELETE FROM usages WHERE source_module_id = ?1",
-                rusqlite::params![module_id],
-            )?;
+            let compiled_file_path = if file_entry.cmti.is_empty() {
+                &file_entry.cmt
+            } else {
+                &file_entry.cmti
+            };
+            let source_file_path = &analysis_module.source_file_path;
+            let cmt_hash = &file_entry.cmt_hash;
+
+            if let Some(&(module_id, package_id)) = module_info.get(&analysis_module.qualified_name) {
+                // Existing module: refresh child data + delete old usages
+                llm_index::refresh_module_data(
+                    &tx,
+                    analysis_module,
+                    module_id,
+                    package_id,
+                    compiled_file_path,
+                    cmt_hash,
+                    source_file_path,
+                )?;
+                tx.execute(
+                    "DELETE FROM usages WHERE source_module_id = ?1",
+                    rusqlite::params![module_id],
+                )?;
+            } else {
+                // New module: look up package_id and do full insert
+                let Some(&pkg_id) = package_id_map.get(&file_entry.package_name) else {
+                    tracing::warn!(
+                        module = %analysis_module.qualified_name,
+                        package = %file_entry.package_name,
+                        "db_sync: package not in DB, skipping new module"
+                    );
+                    continue;
+                };
+                match llm_index::insert_module_recursive(
+                    &tx,
+                    analysis_module,
+                    pkg_id,
+                    None,
+                    compiled_file_path,
+                    cmt_hash,
+                    source_file_path,
+                ) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        tracing::warn!(
+                            module = %analysis_module.qualified_name,
+                            "db_sync: failed to insert new module: {e}"
+                        );
+                    }
+                }
+            }
         }
 
-        // Insert new usages from analysis output (skip modules not in DB)
+        // Phase 2: Rebuild module_id_map (now includes new + nested modules)
+        // and insert fresh usages for all changed modules.
+        let module_id_map = llm_index::build_module_id_map(&tx)?;
         for analysis_module in &analysis_output {
             llm_index::insert_usages(&tx, analysis_module, &module_id_map)?;
-        }
-
-        // Update stored cmt_hash so the next sync skips unchanged modules.
-        for f in &changed_files {
-            if !f.cmt_hash.is_empty() {
-                tx.execute(
-                    "UPDATE modules SET cmt_hash = ?1 WHERE name = ?2",
-                    rusqlite::params![&f.cmt_hash, &f.module_name],
-                )?;
-            }
         }
 
         tx.commit()?;

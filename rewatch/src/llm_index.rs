@@ -401,6 +401,30 @@ pub fn insert_module_recursive(
         |row| row.get(0),
     )?;
 
+    let nested_count = insert_module_children(
+        conn,
+        module,
+        module_id,
+        package_id,
+        compiled_file_path,
+        cmt_hash,
+        source_file_path,
+    )?;
+
+    Ok(1 + nested_count)
+}
+
+/// Insert all child data (types, values, aliases, nested modules) for a module
+/// that already has a row in the DB. Returns the count of nested modules inserted.
+pub fn insert_module_children(
+    conn: &Connection,
+    module: &AnalysisModule,
+    module_id: i64,
+    package_id: i64,
+    compiled_file_path: &str,
+    cmt_hash: &str,
+    source_file_path: &str,
+) -> rusqlite::Result<usize> {
     // Insert records → types table with kind='record' + fields table
     for record in &module.records {
         let type_id: i64 = conn.query_row(
@@ -468,7 +492,7 @@ pub fn insert_module_recursive(
     // have been inserted (see `insert_usages`).
 
     // Recurse into nested modules
-    let mut count = 1usize;
+    let mut count = 0usize;
     for child in &module.nested_modules {
         count += insert_module_recursive(
             conn,
@@ -482,6 +506,65 @@ pub fn insert_module_recursive(
     }
 
     Ok(count)
+}
+
+/// Delete all child data (types, values, aliases, nested modules) for a module.
+/// Does NOT delete the module row itself, nor its usages.
+/// Requires `PRAGMA foreign_keys = ON` for cascading nested module deletes.
+pub fn delete_module_children(conn: &Connection, module_id: i64) -> rusqlite::Result<()> {
+    // Delete types (with FK cascade, this also deletes fields + constructors)
+    conn.execute(
+        "DELETE FROM types WHERE module_id = ?1",
+        rusqlite::params![module_id],
+    )?;
+    // Delete values
+    conn.execute(
+        "DELETE FROM \"values\" WHERE module_id = ?1",
+        rusqlite::params![module_id],
+    )?;
+    // Delete aliases
+    conn.execute(
+        "DELETE FROM aliases WHERE source_module_id = ?1",
+        rusqlite::params![module_id],
+    )?;
+    // Delete nested modules (with FK cascade, this recursively deletes their
+    // types/values/aliases/further-nested modules)
+    conn.execute(
+        "DELETE FROM modules WHERE parent_module_id = ?1",
+        rusqlite::params![module_id],
+    )?;
+    Ok(())
+}
+
+/// Refresh all data for an existing module: delete old children, update the
+/// module row metadata, and re-insert fresh children from analysis output.
+/// Returns the count of nested modules inserted.
+pub fn refresh_module_data(
+    conn: &Connection,
+    module: &AnalysisModule,
+    module_id: i64,
+    package_id: i64,
+    compiled_file_path: &str,
+    cmt_hash: &str,
+    source_file_path: &str,
+) -> rusqlite::Result<usize> {
+    delete_module_children(conn, module_id)?;
+
+    conn.execute(
+        "UPDATE modules SET cmt_hash = ?1, source_file_path = ?2, compiled_file_path = ?3 \
+         WHERE id = ?4",
+        rusqlite::params![cmt_hash, source_file_path, compiled_file_path, module_id],
+    )?;
+
+    insert_module_children(
+        conn,
+        module,
+        module_id,
+        package_id,
+        compiled_file_path,
+        cmt_hash,
+        source_file_path,
+    )
 }
 
 /// Build a qualified_name → module_id lookup map from the database.

@@ -868,6 +868,7 @@ fn build_sync_event(
                 cmt: cmt.to_string_lossy().to_string(),
                 cmti: cmti.to_string_lossy().to_string(),
                 cmt_hash,
+                package_name: sf_module.package_name.clone(),
             });
         } else {
             files.push(ModuleFileEntry {
@@ -875,6 +876,7 @@ fn build_sync_event(
                 cmt: cmt.to_string_lossy().to_string(),
                 cmti: String::new(),
                 cmt_hash,
+                package_name: sf_module.package_name.clone(),
             });
         }
     }
