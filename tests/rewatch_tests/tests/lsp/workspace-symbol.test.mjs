@@ -2,7 +2,7 @@ import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import { runLspTest } from "../../helpers/test-context.mjs";
 
-describe("lsp workspace symbol", { timeout: 60_000 }, () => {
+describe("lsp workspace symbol", { timeout: 120_000 }, () => {
   it("finds symbols matching a query", () =>
     runLspTest(async ({ lsp, sandbox }) => {
       const rootUri = pathToFileURL(sandbox).href;

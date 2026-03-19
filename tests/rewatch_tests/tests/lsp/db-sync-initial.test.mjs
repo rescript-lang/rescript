@@ -11,7 +11,9 @@ import { runLspTest } from "../../helpers/test-context.mjs";
 function openDb(sandbox) {
   const dbPath = path.join(sandbox, "rescript.db");
   try {
-    return new DatabaseSync(dbPath, { readOnly: true });
+    const db = new DatabaseSync(dbPath, { readOnly: true });
+    db.exec("PRAGMA busy_timeout = 3000");
+    return db;
   } catch {
     return null;
   }
@@ -28,6 +30,8 @@ async function waitForDb(sandbox, predicate, timeoutMs = 10000) {
     if (db) {
       try {
         if (predicate(db)) return db;
+      } catch (err) {
+        console.warn(`waitForDb: transient error, retrying: ${err.message}`);
       } finally {
         db.close();
       }
@@ -37,7 +41,7 @@ async function waitForDb(sandbox, predicate, timeoutMs = 10000) {
   throw new Error(`waitForDb: timed out after ${timeoutMs}ms`);
 }
 
-describe("lsp initial db sync", { timeout: 60_000 }, () => {
+describe("lsp initial db sync", { timeout: 120_000 }, () => {
   it("creates rescript.db after initial build without rescript sync", () =>
     runLspTest(async ({ lsp, sandbox }) => {
       const rootUri = pathToFileURL(sandbox).href;

@@ -11,7 +11,9 @@ import { runLspTest } from "../../helpers/test-context.mjs";
 function openDb(sandbox) {
   const dbPath = path.join(sandbox, "rescript.db");
   try {
-    return new DatabaseSync(dbPath, { readOnly: true });
+    const db = new DatabaseSync(dbPath, { readOnly: true });
+    db.exec("PRAGMA busy_timeout = 3000");
+    return db;
   } catch {
     return null;
   }
@@ -58,6 +60,8 @@ async function waitForDb(sandbox, predicate, timeoutMs = 10000) {
     if (db) {
       try {
         if (predicate(db)) return db;
+      } catch (err) {
+        console.warn(`waitForDb: transient error, retrying: ${err.message}`);
       } finally {
         db.close();
       }
