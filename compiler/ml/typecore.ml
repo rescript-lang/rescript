@@ -2239,7 +2239,7 @@ let extract_function_name funct =
   | Texp_ident (path, _, _) -> Some (Longident.parse (Path.name path))
   | _ -> None
 
-type implicit_source_loc_kind = Source_loc_pos | Source_loc_value_path
+type autofill_source_loc_kind = Source_loc_pos | Source_loc_value_path
 
 let source_loc_kind env ty =
   match (expand_head env ty).desc with
@@ -2309,7 +2309,7 @@ let rec type_exp ?deprecated_context ~context ?recarg env sexp =
   (* We now delegate everything to type_expect *)
   type_expect ?deprecated_context ~context ?recarg env sexp (newvar ())
 
-and implicit_source_loc_arg ~apply_loc env ty kind =
+and autofill_source_loc_arg ~apply_loc env ty kind =
   let loc = {apply_loc with Location.loc_ghost = true} in
   let expr =
     Ast_helper.Exp.ident ~loc
@@ -2323,8 +2323,8 @@ and implicit_source_loc_arg ~apply_loc env ty kind =
 
 and missing_optional_arg ~apply_loc env ty =
   match optional_source_loc_kind env ty with
-  | Some kind when !Clflags.implicit_source_loc ->
-    fun () -> implicit_source_loc_arg ~apply_loc env ty kind
+  | Some kind when !Clflags.allow_autofill_source_loc ->
+    fun () -> autofill_source_loc_arg ~apply_loc env ty kind
   | _ -> fun () -> option_none (instance env ty) Location.none
 
 (* Typing of an expression with an expected type.

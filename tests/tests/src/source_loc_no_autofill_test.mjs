@@ -13,7 +13,7 @@ function capture(posOpt, valuePathOpt) {
   ];
 }
 
-Mocha.describe("SourceLoc without -implicit-source-loc", () => {
+Mocha.describe("SourceLoc without -allow-autofill-source-loc", () => {
   Mocha.test("missing args fall back to empty source loc values", () => {
     let match = capture(undefined, undefined);
     let valuePath = match[1];

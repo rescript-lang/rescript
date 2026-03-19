@@ -1,1 +1,1 @@
-let log = (~pos: sourceLocPos=__SOURCE_LOC_POS__, ()) => pos
+let log = (~pos: sourceLocPos=__SOURCE_LOC_POS__) => pos

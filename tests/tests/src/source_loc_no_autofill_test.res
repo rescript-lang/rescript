@@ -6,7 +6,7 @@ let capture = (~pos: sourceLocPos=%autofill, ~valuePath: sourceLocValuePath=%aut
   valuePath,
 )
 
-describe("SourceLoc without -implicit-source-loc", () => {
+describe("SourceLoc without -allow-autofill-source-loc", () => {
   test("missing args fall back to empty source loc values", () => {
     let (pos, valuePath) = capture()
     eq(__LOC__, SourceLoc.Pos.decode(pos), None)

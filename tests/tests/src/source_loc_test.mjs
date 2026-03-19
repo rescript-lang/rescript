@@ -89,8 +89,8 @@ Mocha.describe("SourceLoc", () => {
     Test_utils.eq("File \"source_loc_test.res\", line 81, characters 7-14", Stdlib_SourceLoc.ValuePath.segments(valuePath), []);
     Test_utils.eq("File \"source_loc_test.res\", line 82, characters 7-14", Stdlib_SourceLoc.ValuePath.name(valuePath), "");
   });
-  Mocha.test("implicit source loc autofill works for a top-level let binding", () => expectCapture("File \"source_loc_test.res\", line 86, characters 18-25", topLevelBinding, "Source_loc_test.topLevelBinding"));
-  Mocha.test("implicit source loc autofill works for a top-level expression", () => {
+  Mocha.test("source loc autofill works for a top-level let binding", () => expectCapture("File \"source_loc_test.res\", line 86, characters 18-25", topLevelBinding, "Source_loc_test.topLevelBinding"));
+  Mocha.test("source loc autofill works for a top-level expression", () => {
     let capture = topLevelExpressionCapture.contents;
     if (capture !== undefined) {
       return expectCapture("File \"source_loc_test.res\", line 91, characters 37-44", capture, "Source_loc_test");
@@ -98,8 +98,8 @@ Mocha.describe("SourceLoc", () => {
       return Test_utils.ok("File \"source_loc_test.res\", line 92, characters 17-24", false);
     }
   });
-  Mocha.test("implicit source loc autofill works for a nested module let binding", () => expectCapture("File \"source_loc_test.res\", line 97, characters 18-25", nestedBinding, "Source_loc_test.Nested.nestedBinding"));
-  Mocha.test("implicit source loc autofill works for a nested module expression", () => {
+  Mocha.test("source loc autofill works for a nested module let binding", () => expectCapture("File \"source_loc_test.res\", line 97, characters 18-25", nestedBinding, "Source_loc_test.Nested.nestedBinding"));
+  Mocha.test("source loc autofill works for a nested module expression", () => {
     let capture = topLevelExpressionCapture$1.contents;
     if (capture !== undefined) {
       return expectCapture("File \"source_loc_test.res\", line 102, characters 37-44", capture, "Source_loc_test.Nested");

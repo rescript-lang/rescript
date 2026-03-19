@@ -1,1 +1,1 @@
-let log = (~pos=%autofill, ()) => pos
+let log = (~pos=%autofill) => pos

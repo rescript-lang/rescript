@@ -1,1 +1,1 @@
-let log = (~pos: sourceLocPos=?, ()) => pos
+let log = (~pos: sourceLocPos=?) => pos

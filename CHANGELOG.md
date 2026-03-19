@@ -22,7 +22,7 @@
 
 - Reanalyze: add glob pattern support for suppress/unsuppress configurations (e.g., `"src/generated/**"`). https://github.com/rescript-lang/rescript/pull/8277
 - Add optional `~locales` and `~options` parameters to `String.localeCompare`. https://github.com/rescript-lang/rescript/pull/8287
-- Add new `sourceLocPos` and `sourceLocValuePath` magic constants, and allow them to be autoinjected from the call site into function arguments via `-implicit-source-loc`. https://github.com/rescript-lang/rescript/pull/8303
+- Add new `sourceLocPos` and `sourceLocValuePath` magic constants, and allow them to be autoinjected from the call site into function arguments via `-allow-autofill-source-loc`. https://github.com/rescript-lang/rescript/pull/8303
 
 #### :bug: Bug fix
 

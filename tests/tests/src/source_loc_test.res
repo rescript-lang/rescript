@@ -1,4 +1,4 @@
-@@config({flags: ["-implicit-source-loc"]})
+@@config({flags: ["-allow-autofill-source-loc"]})
 
 open Mocha
 open Test_utils
@@ -82,22 +82,22 @@ describe("SourceLoc", () => {
     eq(__LOC__, SourceLoc.ValuePath.name(valuePath), "")
   })
 
-  test("implicit source loc autofill works for a top-level let binding", () => {
+  test("source loc autofill works for a top-level let binding", () => {
     expectCapture(__LOC__, topLevelBinding, "Source_loc_test.topLevelBinding")
   })
 
-  test("implicit source loc autofill works for a top-level expression", () => {
+  test("source loc autofill works for a top-level expression", () => {
     switch topLevelExpressionCapture.contents {
     | Some(capture) => expectCapture(__LOC__, capture, "Source_loc_test")
     | None => ok(__LOC__, false)
     }
   })
 
-  test("implicit source loc autofill works for a nested module let binding", () => {
+  test("source loc autofill works for a nested module let binding", () => {
     expectCapture(__LOC__, Nested.nestedBinding, "Source_loc_test.Nested.nestedBinding")
   })
 
-  test("implicit source loc autofill works for a nested module expression", () => {
+  test("source loc autofill works for a nested module expression", () => {
     switch Nested.topLevelExpressionCapture.contents {
     | Some(capture) => expectCapture(__LOC__, capture, "Source_loc_test.Nested")
     | None => ok(__LOC__, false)
