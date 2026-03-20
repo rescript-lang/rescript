@@ -57,6 +57,7 @@ type error =
       string * Longident.t * (Path.t * Path.t) * (Path.t * Path.t) list
   | Undefined_method of type_expr * string * string list option
   | Private_type of type_expr
+  | Pattern_only_constructor of Longident.t
   | Private_label of Longident.t * type_expr
   | Not_subtype of
       Ctype.type_pairs * Ctype.type_pairs * Ctype.subtype_context option
@@ -3795,6 +3796,8 @@ and type_construct ~context env loc lid sarg ty_expected attrs =
   Env.mark_constructor Env.Positive env (Longident.last lid.txt) constr;
   Builtin_attributes.check_deprecated loc constr.cstr_attributes
     constr.cstr_name;
+  if Ast_untagged_variants.has_primitive_catchall constr.cstr_attributes then
+    raise (Error (loc, env, Pattern_only_constructor lid.txt));
   let sargs =
     match sarg with
     | None -> []
@@ -4563,6 +4566,10 @@ let report_error env loc ppf error =
       "In this type, the locally bound module name %s escapes its scope" id
   | Private_type ty ->
     fprintf ppf "Cannot create values of the private type %a" type_expr ty
+  | Pattern_only_constructor lid ->
+    fprintf ppf
+      "Constructor %a is pattern-only and cannot be used as an expression"
+      longident lid
   | Private_label (lid, ty) ->
     fprintf ppf "Cannot assign field %a of the private type %a" longident lid
       type_expr ty

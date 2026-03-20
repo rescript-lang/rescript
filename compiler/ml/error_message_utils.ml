@@ -682,10 +682,16 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
           (fun (cd : Types.constructor_declaration) ->
             let constructor_name = Ident.name cd.cd_id in
             let runtime_repr =
-              match Ast_untagged_variants.process_tag_type cd.cd_attributes with
-              | Some (String s) -> Some s (* @as("string_value") *)
-              | Some _ -> None (* @as with non-string values *)
-              | None -> Some constructor_name (* No @as, use constructor name *)
+              match
+                Ast_untagged_variants.constructor_runtime_representation
+                  cd.cd_attributes
+              with
+              | Ast_untagged_variants.Constructor_tag (Some (String s)) ->
+                Some s
+              | Ast_untagged_variants.Constructor_tag (Some _) -> None
+              | Ast_untagged_variants.Constructor_tag None ->
+                Some constructor_name
+              | Ast_untagged_variants.Constructor_primitive_catchall _ -> None
             in
             match runtime_repr with
             | Some repr -> Some (repr, constructor_name)

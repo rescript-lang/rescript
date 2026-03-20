@@ -912,17 +912,30 @@ and tree_of_constructor ?printing_context cd =
   let name = Ident.name cd.cd_id in
   let nullary = Ast_untagged_variants.is_nullary_variant cd.cd_args in
   let repr =
-    if not nullary then None
-    else
-      match Ast_untagged_variants.process_tag_type cd.cd_attributes with
-      | Some Null -> Some "@as(null)"
-      | Some Undefined -> Some "@as(undefined)"
-      | Some (String s) -> Some (Printf.sprintf "@as(%S)" s)
-      | Some (Int i) -> Some (Printf.sprintf "@as(%d)" i)
-      | Some (Float f) -> Some (Printf.sprintf "@as(%s)" f)
-      | Some (Bool b) -> Some (Printf.sprintf "@as(%b)" b)
-      | Some (BigInt s) -> Some (Printf.sprintf "@as(%sn)" s)
-      | Some (Untagged _) (* should never happen *) | None -> None
+    match
+      Ast_untagged_variants.constructor_runtime_representation cd.cd_attributes
+    with
+    | Ast_untagged_variants.Constructor_primitive_catchall
+        Ast_untagged_variants.PrimitiveInt ->
+      Some "@catch(int)"
+    | Ast_untagged_variants.Constructor_primitive_catchall
+        Ast_untagged_variants.PrimitiveFloat ->
+      Some "@catch(float)"
+    | Ast_untagged_variants.Constructor_primitive_catchall
+        Ast_untagged_variants.PrimitiveString ->
+      Some "@catch(string)"
+    | Ast_untagged_variants.Constructor_tag tag_type -> (
+      if not nullary then None
+      else
+        match tag_type with
+        | Some Null -> Some "@as(null)"
+        | Some Undefined -> Some "@as(undefined)"
+        | Some (String s) -> Some (Printf.sprintf "@as(%S)" s)
+        | Some (Int i) -> Some (Printf.sprintf "@as(%d)" i)
+        | Some (Float f) -> Some (Printf.sprintf "@as(%s)" f)
+        | Some (Bool b) -> Some (Printf.sprintf "@as(%b)" b)
+        | Some (BigInt s) -> Some (Printf.sprintf "@as(%sn)" s)
+        | Some (Untagged _) (* should never happen *) | None -> None)
   in
   let arg () = tree_of_constructor_arguments ?printing_context cd.cd_args in
   match cd.cd_res with

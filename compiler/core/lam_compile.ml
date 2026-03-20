@@ -168,9 +168,10 @@ let get_block_cases (sw_names : Ast_untagged_variants.switch_names option) =
   (match sw_names with
   | None -> res := []
   | Some {blocks} ->
-    Ext_array.iter blocks (function
-      | {block_type = Some block_type} -> res := block_type :: !res
-      | {block_type = None} -> ()));
+    Ext_array.iter blocks (function {kind} ->
+        (match Ast_untagged_variants.block_kind_to_block_type kind with
+        | Some block_type -> res := block_type :: !res
+        | None -> ())));
   !res
 
 let get_literal_cases (sw_names : Ast_untagged_variants.switch_names option) =
@@ -182,6 +183,78 @@ let get_literal_cases (sw_names : Ast_untagged_variants.switch_names option) =
       | {tag_type = Some t} -> res := t :: !res
       | {name; tag_type = None} -> res := String name :: !res));
   !res
+
+let has_tagged_primitive_catchall
+    (sw_names : Ast_untagged_variants.switch_names option) : bool =
+  match sw_names with
+  | None -> false
+  | Some {blocks} ->
+    Array.exists
+      (fun {Ast_untagged_variants.kind} ->
+        match kind with
+        | Tagged_primitive_catchall _ -> true
+        | Tagged_block | Untagged_block _ -> false)
+      blocks
+
+let has_tagged_block (sw_names : Ast_untagged_variants.switch_names option) :
+    bool =
+  match sw_names with
+  | None -> false
+  | Some {blocks} ->
+    Array.exists
+      (fun {Ast_untagged_variants.kind} ->
+        match kind with
+        | Tagged_block -> true
+        | Tagged_primitive_catchall _ | Untagged_block _ -> false)
+      blocks
+
+let block_discriminant_expr ~sw_names ~tag_name (e : E.t) : E.t =
+  if has_tagged_primitive_catchall sw_names || has_tagged_block sw_names then
+    E.tag ~name:tag_name e
+  else e
+
+let get_block_literal_cases
+    (sw_names : Ast_untagged_variants.switch_names option) :
+    Ast_untagged_variants.tag_type list =
+  match sw_names with
+  | None -> []
+  | Some {blocks; _} ->
+    let acc = ref [] in
+    Ext_array.iter blocks (function
+      | {kind = Tagged_block; tag} -> (
+        match tag.tag_type with
+        | Some t -> acc := t :: !acc
+        | None -> acc := String tag.name :: !acc)
+      | _ -> ());
+    !acc
+
+let split_sw_blocks_by_catchall sw_blocks get_block =
+  List.fold_right
+    (fun ((i, _) as case) (literals, catchalls) ->
+      match get_block i with
+      | Some {Ast_untagged_variants.kind = Tagged_block} ->
+        (case :: literals, catchalls)
+      | Some {kind = Tagged_primitive_catchall _ | Untagged_block _} ->
+        (literals, case :: catchalls)
+      | None -> (literals, catchalls))
+    sw_blocks ([], [])
+
+let all_literal_cases_with_block_tags
+    (sw_names : Ast_untagged_variants.switch_names option) :
+    Ast_untagged_variants.tag_type list =
+  match sw_names with
+  | None -> []
+  | Some {blocks; _} as names ->
+    if has_tagged_primitive_catchall names then (
+      let acc = ref (get_literal_cases names) in
+      Ext_array.iter blocks (function
+        | {Ast_untagged_variants.kind = Tagged_block; tag} -> (
+          match tag.tag_type with
+          | Some t -> acc := t :: !acc
+          | None -> acc := String tag.name :: !acc)
+        | _ -> ());
+      !acc)
+    else get_literal_cases names
 
 let has_null_undefined_other
     (sw_names : Ast_untagged_variants.switch_names option) =
@@ -641,12 +714,12 @@ let compile output_prefix =
       table (Some [])
   and compile_cases ?(untagged = false) ?(has_null_case = false) ~cxt
       ~(switch_exp : E.t) ?(default = NonComplete) ?(get_tag = fun _ -> None)
-      ?(block_cases = []) cases : initialization =
+      ?(block_cases = []) ?(literal_cases = []) cases : initialization =
     match use_compile_literal_cases cases ~get_tag with
     | Some string_cases ->
       if untagged then
-        compile_untagged_cases ~cxt ~switch_exp ~block_cases ~default
-          ~has_null_case string_cases
+        compile_untagged_cases ~cxt ~switch_exp ~block_cases ~literal_cases
+          ~default ~has_null_case string_cases
       else compile_string_cases ~cxt ~switch_exp ~default string_cases
     | None ->
       cases
@@ -690,40 +763,98 @@ let compile output_prefix =
     let get_const_tag i = get_const_tag i sw_names in
     let get_block i = get_block i sw_names in
     let block_cases = get_block_cases sw_names in
+    let literal_cases = all_literal_cases_with_block_tags sw_names in
+    let block_literal_cases = get_block_literal_cases sw_names in
     let get_block_tag i : Ast_untagged_variants.tag option =
       match get_block i with
       | None -> None
-      | Some {tag = {name}; block_type = Some block_type} ->
-        Some {name; tag_type = Some (Untagged block_type)} (* untagged block *)
-      | Some {block_type = None; tag} ->
-        (* tagged block *)
-        Some tag
+      | Some {tag = {name}; kind = Tagged_primitive_catchall primitive_catchall}
+        ->
+        Some
+          {
+            name;
+            tag_type =
+              Some
+                (Untagged
+                   (Ast_untagged_variants.primitive_catchall_to_block_type
+                      primitive_catchall));
+          }
+      | Some {tag = {name}; kind = Untagged_block block_type} ->
+        Some {name; tag_type = Some (Untagged block_type)}
+      | Some {kind = Tagged_block; tag} -> Some tag
     in
     let tag_name = get_tag_name sw_names in
-    let untagged = block_cases <> [] in
+    let has_block_cases = block_cases <> [] in
     let compile_whole (cxt : Lam_compile_context.t) =
       match
         compile_lambda {cxt with continuation = NeedValue Not_tail} switch_arg
       with
       | {value = None; _} -> assert false
       | {block; value = Some e} -> (
+        let compile_tagged_primitive_block_cases discr =
+          let sw_blocks_literal_only, sw_blocks_untagged_only =
+            split_sw_blocks_by_catchall sw_blocks get_block
+          in
+          match (sw_blocks_literal_only, sw_blocks_untagged_only) with
+          | [], _ ->
+            compile_cases ~untagged:true ~cxt ~switch_exp:discr ~block_cases
+              ~literal_cases:block_literal_cases ~default:sw_blocks_default
+              ~get_tag:get_block_tag sw_blocks_untagged_only
+          | _, [] ->
+            compile_cases ~cxt ~switch_exp:discr ~block_cases
+              ~literal_cases:block_literal_cases ~default:sw_blocks_default
+              ~get_tag:get_block_tag sw_blocks_literal_only
+          | _ ->
+            [
+              S.if_
+                (E.is_a_literal_case ~literal_cases:block_literal_cases
+                   ~block_cases discr)
+                (compile_cases ~cxt ~switch_exp:discr ~block_cases
+                   ~literal_cases:block_literal_cases ~default:sw_blocks_default
+                   ~get_tag:get_block_tag sw_blocks_literal_only)
+                ~else_:
+                  (compile_cases ~untagged:true ~cxt ~switch_exp:discr
+                     ~block_cases ~literal_cases:block_literal_cases
+                     ~default:sw_blocks_default ~get_tag:get_block_tag
+                     sw_blocks_untagged_only);
+            ]
+        in
+        let is_object_payload_case (e : E.t) =
+          E.and_
+            (E.string_equal (E.typeof e) (E.str "object"))
+            (E.not (E.is_null e))
+        in
         block
         @
-        if sw_consts_full && sw_consts = [] then
-          compile_cases ~block_cases ~untagged ~cxt
-            ~switch_exp:(if untagged then e else E.tag ~name:tag_name e)
+        if has_tagged_primitive_catchall sw_names then
+          let discr = E.tag ~name:tag_name e in
+          if sw_consts = [] then compile_tagged_primitive_block_cases discr
+          else
+            [
+              S.if_ (is_object_payload_case e)
+                (compile_tagged_primitive_block_cases discr)
+                ~else_:
+                  (compile_cases ~cxt ~switch_exp:e ~default:sw_num_default
+                     ~get_tag:get_const_tag sw_consts);
+            ]
+        else if sw_consts_full && sw_consts = [] then
+          compile_cases ~block_cases ~literal_cases ~untagged:has_block_cases
+            ~cxt
+            ~switch_exp:(block_discriminant_expr ~sw_names ~tag_name e)
             ~default:sw_blocks_default ~get_tag:get_block_tag sw_blocks
         else if sw_blocks_full && sw_blocks = [] then
-          compile_cases ~cxt ~switch_exp:e ~block_cases ~default:sw_num_default
-            ~get_tag:get_const_tag sw_consts
+          compile_cases ~cxt ~switch_exp:e ~block_cases ~literal_cases
+            ~default:sw_num_default ~get_tag:get_const_tag sw_consts
         else
           (* [e] will be used twice  *)
           let dispatch e =
+            let block_switch_exp =
+              block_discriminant_expr ~sw_names ~tag_name e
+            in
             let is_a_literal_case () =
-              if untagged then
-                E.is_a_literal_case
-                  ~literal_cases:(get_literal_cases sw_names)
-                  ~block_cases e
+              if has_block_cases then
+                let lit_cases = all_literal_cases_with_block_tags sw_names in
+                E.is_a_literal_case ~literal_cases:lit_cases ~block_cases e
               else
                 E.is_int_tag
                   ~has_null_undefined_other:(has_null_undefined_other sw_names)
@@ -737,29 +868,27 @@ let compile output_prefix =
               | _ -> false
             in
             if
-              untagged
+              has_block_cases
               && List.length sw_consts = 0
               && eq_default sw_num_default sw_blocks_default
+              && not (has_tagged_primitive_catchall sw_names)
             then
-              let literal_cases = get_literal_cases sw_names in
               let has_null_case =
                 List.mem Ast_untagged_variants.Null literal_cases
               in
-              compile_cases ~untagged ~cxt
-                ~switch_exp:(if untagged then e else E.tag ~name:tag_name e)
-                ~block_cases ~has_null_case ~default:sw_blocks_default
-                ~get_tag:get_block_tag sw_blocks
+              compile_cases ~untagged:has_block_cases ~cxt ~literal_cases
+                ~switch_exp:block_switch_exp ~block_cases ~has_null_case
+                ~default:sw_blocks_default ~get_tag:get_block_tag sw_blocks
             else
               [
                 S.if_ (is_a_literal_case ())
-                  (compile_cases ~cxt ~switch_exp:e ~block_cases
+                  (compile_cases ~cxt ~literal_cases ~switch_exp:e ~block_cases
                      ~default:sw_num_default ~get_tag:get_const_tag sw_consts)
                   ~else_:
-                    (compile_cases ~untagged ~cxt
-                       ~switch_exp:
-                         (if untagged then e else E.tag ~name:tag_name e)
-                       ~block_cases ~default:sw_blocks_default
-                       ~get_tag:get_block_tag sw_blocks);
+                    (compile_cases ~untagged:has_block_cases ~cxt ~literal_cases
+                       ~switch_exp:block_switch_exp ~block_cases
+                       ~default:sw_blocks_default ~get_tag:get_block_tag
+                       sw_blocks);
               ]
           in
           match e.expression_desc with
@@ -795,16 +924,16 @@ let compile output_prefix =
            S.string_switch ?default ?declaration e clauses)
          ~switch_exp ~default
   and compile_untagged_cases ~cxt ~switch_exp ~default ~block_cases
-      ~has_null_case cases =
+      ~literal_cases ~has_null_case cases =
     let mk_eq (i : Ast_untagged_variants.tag_type option) x j y =
       let check =
         match (i, j) with
         | Some tag_type, _ ->
           Ast_untagged_variants.DynamicChecks.add_runtime_type_check ~tag_type
-            ~has_null_case ~block_cases (Expr x) (Expr y)
+            ~has_null_case ~block_cases ~literal_cases (Expr x) (Expr y)
         | _, Some tag_type ->
           Ast_untagged_variants.DynamicChecks.add_runtime_type_check ~tag_type
-            ~has_null_case ~block_cases (Expr y) (Expr x)
+            ~has_null_case ~block_cases ~literal_cases (Expr y) (Expr x)
         | _ -> Ast_untagged_variants.DynamicChecks.( == ) (Expr x) (Expr y)
       in
       E.emit_check check

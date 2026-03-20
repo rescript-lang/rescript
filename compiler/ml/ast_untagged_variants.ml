@@ -62,10 +62,21 @@ type untagged_error =
   | ConstructorMoreThanOneArg of string
 type error =
   | InvalidVariantAsAnnotation
+  | InvalidVariantCatchAnnotation
   | Duplicated_bs_as
+  | DuplicatedVariantConstructorAnnotation
   | InvalidVariantTagAnnotation
   | InvalidUntaggedVariantDefinition of untagged_error
   | TagFieldNameConflict of string * string * string
+  | TaggedPrimitiveCatchAll_TaggedVariantRequired
+  | TaggedPrimitiveCatchAll_UnboxedVariantUnsupported
+  | TaggedPrimitiveCatchAll_AtMostOneNumber
+  | TaggedPrimitiveCatchAll_AtMostOneString
+  | TaggedPrimitiveCatchAll_OnNullaryConstructor of string
+  | TaggedPrimitiveCatchAll_InlineRecordRequired of string
+  | TaggedPrimitiveCatchAll_TooManyTagFields of string * string
+  | TaggedPrimitiveCatchAll_TagFieldOptional of string * string
+  | TaggedPrimitiveCatchAll_TagFieldWrongType of string * string * string
 exception Error of Location.t * error
 
 let report_error ppf =
@@ -75,7 +86,13 @@ let report_error ppf =
     fprintf ppf
       "A variant case annotation @as(...) must be a string or integer, \
        boolean, null, undefined"
+  | InvalidVariantCatchAnnotation ->
+    fprintf ppf
+      "A variant case annotation @catch(...) must be int, float, or string"
   | Duplicated_bs_as -> fprintf ppf "duplicate @as "
+  | DuplicatedVariantConstructorAnnotation ->
+    fprintf ppf
+      "duplicate constructor annotation, use only one of @as or @catch"
   | InvalidVariantTagAnnotation ->
     fprintf ppf "A variant tag annotation @tag(...) must be a string"
   | InvalidUntaggedVariantDefinition untagged_variant ->
@@ -105,6 +122,44 @@ let report_error ppf =
        value of inline record field \"%s\". Use a different @tag name or \
        rename the field."
       constructor_name runtime_value field_name
+  | TaggedPrimitiveCatchAll_TaggedVariantRequired ->
+    fprintf ppf
+      "Primitive catch-all @catch(int|float|string) requires an explicit \
+       @tag(\"...\") annotation on the variant type"
+  | TaggedPrimitiveCatchAll_UnboxedVariantUnsupported ->
+    fprintf ppf
+      "Primitive catch-all @catch(int|float|string) is not allowed on @unboxed \
+       variants"
+  | TaggedPrimitiveCatchAll_AtMostOneNumber ->
+    fprintf ppf
+      "At most one number catch-all (@catch(int|float)) is allowed per variant"
+  | TaggedPrimitiveCatchAll_AtMostOneString ->
+    fprintf ppf
+      "At most one string catch-all (@catch(string)) is allowed per variant"
+  | TaggedPrimitiveCatchAll_OnNullaryConstructor name ->
+    fprintf ppf
+      "Constructor \"%s\": primitive catch-all @catch(int|float|string) is not \
+       allowed on nullary constructors"
+      name
+  | TaggedPrimitiveCatchAll_InlineRecordRequired name ->
+    fprintf ppf
+      "Constructor \"%s\": primitive catch-all requires an inline record \
+       payload"
+      name
+  | TaggedPrimitiveCatchAll_TooManyTagFields (name, tag_name) ->
+    fprintf ppf
+      "Constructor \"%s\": inline record may expose the discriminant through \
+       at most one field named \"%s\" (or @as(\"%s\"))"
+      name tag_name tag_name
+  | TaggedPrimitiveCatchAll_TagFieldOptional (name, field_name) ->
+    fprintf ppf
+      "Constructor \"%s\": field \"%s\" must not be optional for primitive \
+       catch-all"
+      name field_name
+  | TaggedPrimitiveCatchAll_TagFieldWrongType (name, field_name, expected) ->
+    fprintf ppf
+      "Constructor \"%s\": field \"%s\" must have type %s (direct builtin)" name
+      field_name expected
 
 (* Type of the runtime representation of an untagged block (case with payoad) *)
 type block_type =
@@ -118,6 +173,8 @@ type block_type =
   | ObjectType
   | UnknownType
 
+type primitive_catchall = PrimitiveInt | PrimitiveFloat | PrimitiveString
+
 let block_type_to_user_visible_string = function
   | IntType -> "int"
   | StringType -> "string"
@@ -128,6 +185,15 @@ let block_type_to_user_visible_string = function
   | FunctionType -> "function"
   | ObjectType -> "object"
   | UnknownType -> "unknown"
+
+let primitive_catchall_to_block_type = function
+  | PrimitiveInt -> IntType
+  | PrimitiveFloat -> FloatType
+  | PrimitiveString -> StringType
+
+let primitive_catchall_to_bucket = function
+  | PrimitiveInt | PrimitiveFloat -> `Number
+  | PrimitiveString -> `String
 
 (*
   Type of the runtime representation of a tag.
@@ -144,8 +210,17 @@ type tag_type =
   | Undefined (* literal or tagged block *)
   | Untagged of block_type (* untagged block *)
 type tag = {name: string; tag_type: tag_type option}
-type block = {tag: tag; tag_name: string option; block_type: block_type option}
+type block_kind =
+  | Tagged_block
+  | Tagged_primitive_catchall of primitive_catchall
+  | Untagged_block of block_type
+
+type block = {tag: tag; tag_name: string option; kind: block_kind}
 type switch_names = {consts: tag array; blocks: block array}
+
+type constructor_runtime_representation =
+  | Constructor_primitive_catchall of primitive_catchall
+  | Constructor_tag of tag_type option
 
 let tag_type_to_user_visible_string = function
   | String _ -> "string"
@@ -156,6 +231,12 @@ let tag_type_to_user_visible_string = function
   | Null -> "null"
   | Undefined -> "undefined"
   | Untagged block_type -> block_type_to_user_visible_string block_type
+
+let block_kind_to_block_type = function
+  | Tagged_block -> None
+  | Tagged_primitive_catchall primitive_catchall ->
+    Some (primitive_catchall_to_block_type primitive_catchall)
+  | Untagged_block block_type -> Some block_type
 
 let untagged = "unboxed"
 
@@ -190,6 +271,53 @@ let extract_concrete_typedecl :
 let expand_head : (Env.t -> Types.type_expr -> Types.type_expr) ref =
   ref (Obj.magic ())
 
+type constructor_annotation =
+  | Tag of tag_type
+  | PrimitiveCatchAll of primitive_catchall
+
+let process_constructor_annotation (attrs : Parsetree.attributes) =
+  let st : constructor_annotation option ref = ref None in
+  Ext_list.iter attrs (fun (({txt; loc}, payload) as attr) ->
+      match txt with
+      | "as" ->
+        if !st = None then (
+          (match Ast_payload.is_single_string payload with
+          | None -> ()
+          | Some (s, _dec) -> st := Some (Tag (String s)));
+          (match Ast_payload.is_single_int payload with
+          | None -> ()
+          | Some i -> st := Some (Tag (Int i)));
+          (match Ast_payload.is_single_float payload with
+          | None -> ()
+          | Some f -> st := Some (Tag (Float f)));
+          (match Ast_payload.is_single_bigint payload with
+          | None -> ()
+          | Some i -> st := Some (Tag (BigInt i)));
+          (match Ast_payload.is_single_bool payload with
+          | None -> ()
+          | Some b -> st := Some (Tag (Bool b)));
+          (match Ast_payload.is_single_ident payload with
+          | None -> ()
+          | Some (Lident "null") -> st := Some (Tag Null)
+          | Some (Lident "undefined") -> st := Some (Tag Undefined)
+          | Some _ -> raise (Error (loc, InvalidVariantAsAnnotation)));
+          if !st = None then raise (Error (loc, InvalidVariantAsAnnotation))
+          else Used_attributes.mark_used_attribute attr)
+        else raise (Error (loc, DuplicatedVariantConstructorAnnotation))
+      | "catch" ->
+        if !st = None then (
+          (match Ast_payload.is_single_ident payload with
+          | Some (Lident "int") -> st := Some (PrimitiveCatchAll PrimitiveInt)
+          | Some (Lident "float") ->
+            st := Some (PrimitiveCatchAll PrimitiveFloat)
+          | Some (Lident "string") ->
+            st := Some (PrimitiveCatchAll PrimitiveString)
+          | Some _ | None -> raise (Error (loc, InvalidVariantCatchAnnotation)));
+          Used_attributes.mark_used_attribute attr)
+        else raise (Error (loc, DuplicatedVariantConstructorAnnotation))
+      | _ -> ());
+  !st
+
 let process_tag_type (attrs : Parsetree.attributes) =
   let st : tag_type option ref = ref None in
   Ext_list.iter attrs (fun (({txt; loc}, payload) as attr) ->
@@ -221,6 +349,24 @@ let process_tag_type (attrs : Parsetree.attributes) =
         else raise (Error (loc, Duplicated_bs_as))
       | _ -> ());
   !st
+
+let process_constructor_tag_type (attrs : Parsetree.attributes) =
+  match process_constructor_annotation attrs with
+  | Some (Tag tag_type) -> Some tag_type
+  | Some (PrimitiveCatchAll _) | None -> None
+
+let process_primitive_catchall (attrs : Parsetree.attributes) =
+  match process_constructor_annotation attrs with
+  | Some (PrimitiveCatchAll primitive_catchall) -> Some primitive_catchall
+  | Some (Tag _) | None -> None
+
+let has_primitive_catchall (attrs : Parsetree.attributes) =
+  process_primitive_catchall attrs <> None
+
+let constructor_runtime_representation (attrs : Parsetree.attributes) =
+  match process_primitive_catchall attrs with
+  | Some primitive_catchall -> Constructor_primitive_catchall primitive_catchall
+  | None -> Constructor_tag (process_constructor_tag_type attrs)
 
 let () =
   Location.register_error_of_exn (function
@@ -300,27 +446,40 @@ let get_block_type_from_typ ~env (t : Types.type_expr) : block_type option =
     | {desc = Ttuple _} -> Some (InstanceType Array)
     | _ -> None)
 
-let get_block_type ~env (cstr : Types.constructor_declaration) :
-    block_type option =
+let get_block_kind ~env (cstr : Types.constructor_declaration) :
+    block_kind option =
   match (process_untagged cstr.cd_attributes, cstr.cd_args) with
-  | false, _ -> None
+  | false, _ -> (
+    match process_primitive_catchall cstr.cd_attributes with
+    | None -> None
+    | Some primitive_catchall ->
+      Some (Tagged_primitive_catchall primitive_catchall))
   | true, Cstr_tuple [t] when get_block_type_from_typ ~env t |> Option.is_some
     ->
-    get_block_type_from_typ ~env t
-  | true, Cstr_tuple [ty] -> (
+    Option.map
+      (fun block_type -> Untagged_block block_type)
+      (get_block_type_from_typ ~env t)
+  | true, Cstr_tuple [ty] ->
     let default = Some UnknownType in
-    match !extract_concrete_typedecl env ty with
-    | _, _, {type_kind = Type_record (_, Record_unboxed _)} -> default
-    | _, _, {type_kind = Type_record (_, _)} -> Some ObjectType
-    | _ -> default
-    | exception _ -> default)
+    let block_type =
+      match !extract_concrete_typedecl env ty with
+      | _, _, {type_kind = Type_record (_, Record_unboxed _)} -> default
+      | _, _, {type_kind = Type_record (_, _)} -> Some ObjectType
+      | _ -> default
+      | exception _ -> default
+    in
+    Option.map (fun block_type -> Untagged_block block_type) block_type
   | true, Cstr_tuple (_ :: _ :: _) ->
     (* C(_, _) with at least 2 args is an object *)
-    Some ObjectType
+    Some (Untagged_block ObjectType)
   | true, Cstr_record _ ->
     (* inline record is an object *)
-    Some ObjectType
+    Some (Untagged_block ObjectType)
   | true, _ -> None (* TODO: add restrictions here *)
+
+let get_block_type ~env (cstr : Types.constructor_declaration) :
+    block_type option =
+  Option.bind (get_block_kind ~env cstr) block_kind_to_block_type
 
 let process_tag_name (attrs : Parsetree.attributes) =
   let st = ref None in
@@ -422,7 +581,7 @@ let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
       check_literal ~is_const:true ~loc literal);
   if is_untagged_def then
     Ext_list.rev_iter blocks (fun (loc, block) ->
-        match block.block_type with
+        match block_kind_to_block_type block.kind with
         | Some block_type ->
           (match block_type with
           | UnknownType -> incr unknown_types
@@ -441,13 +600,15 @@ let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
         | None -> ())
   else
     Ext_list.rev_iter blocks (fun (loc, block) ->
-        check_literal ~is_const:false ~loc block.tag)
+        match block.kind with
+        | Tagged_block -> check_literal ~is_const:false ~loc block.tag
+        | Tagged_primitive_catchall _ | Untagged_block _ -> ())
 
 let get_cstr_loc_tag (cstr : Types.constructor_declaration) =
   ( cstr.cd_loc,
     {
       name = Ident.name cstr.cd_id;
-      tag_type = process_tag_type cstr.cd_attributes;
+      tag_type = process_constructor_tag_type cstr.cd_attributes;
     } )
 
 let constructor_declaration_from_constructor_description ~env
@@ -466,7 +627,12 @@ let names_from_type_variant ?(is_untagged_def = false) ~env
     (cstrs : Types.constructor_declaration list) =
   let get_block (cstr : Types.constructor_declaration) : block =
     let tag = snd (get_cstr_loc_tag cstr) in
-    {tag; tag_name = get_tag_name cstr; block_type = get_block_type ~env cstr}
+    let kind =
+      match get_block_kind ~env cstr with
+      | Some kind -> kind
+      | None -> Tagged_block
+    in
+    {tag; tag_name = get_tag_name cstr; kind}
   in
   let consts, blocks =
     Ext_list.fold_left cstrs ([], []) (fun (consts, blocks) cstr ->
@@ -485,31 +651,95 @@ let check_tag_field_conflicts (cstrs : Types.constructor_declaration list) =
   List.iter
     (fun (cstr : Types.constructor_declaration) ->
       let constructor_name = Ident.name cstr.cd_id in
+      let primitive_catchall = process_primitive_catchall cstr.cd_attributes in
       let effective_tag_name =
-        match process_tag_name cstr.cd_attributes with
-        | Some explicit_tag -> explicit_tag
-        | None -> constructor_name
+        match primitive_catchall with
+        | Some _ -> (
+          match process_tag_name cstr.cd_attributes with
+          | Some explicit_tag -> explicit_tag
+          | None -> assert false)
+        | None -> (
+          match process_tag_name cstr.cd_attributes with
+          | Some explicit_tag -> explicit_tag
+          | None -> constructor_name)
       in
-      match cstr.cd_args with
-      | Cstr_record fields ->
+      let effective_field_name (field : Types.label_declaration) =
+        let field_name = Ident.name field.ld_id in
+        match process_tag_type field.ld_attributes with
+        | Some (String as_name) -> as_name
+        | Some _ | None -> field_name
+      in
+      match (primitive_catchall, cstr.cd_args) with
+      | None, Cstr_record fields ->
         List.iter
           (fun (field : Types.label_declaration) ->
             let field_name = Ident.name field.ld_id in
-            let effective_field_name =
-              match process_tag_type field.ld_attributes with
-              | Some (String as_name) -> as_name
-              (* @as payload types other than string have no effect on record fields *)
-              | Some _ | None -> field_name
-            in
-            (* Check if effective field name conflicts with tag *)
-            if effective_field_name = effective_tag_name then
+            let runtime_field_name = effective_field_name field in
+            if runtime_field_name = effective_tag_name then
               raise
                 (Error
                    ( cstr.cd_loc,
                      TagFieldNameConflict
-                       (constructor_name, field_name, effective_field_name) )))
+                       (constructor_name, field_name, runtime_field_name) )))
           fields
-      | _ -> ())
+      | Some _, Cstr_tuple [] ->
+        raise
+          (Error
+             ( cstr.cd_loc,
+               TaggedPrimitiveCatchAll_OnNullaryConstructor constructor_name ))
+      | Some _, Cstr_record fields -> (
+        let matching_fields =
+          List.filter
+            (fun field -> effective_field_name field = effective_tag_name)
+            fields
+        in
+        match matching_fields with
+        | [] -> ()
+        | _ :: _ :: _ ->
+          raise
+            (Error
+               ( cstr.cd_loc,
+                 TaggedPrimitiveCatchAll_TooManyTagFields
+                   (constructor_name, effective_tag_name) ))
+        | [field] ->
+          let field_name = Ident.name field.ld_id in
+          if field.ld_optional then
+            raise
+              (Error
+                 ( cstr.cd_loc,
+                   TaggedPrimitiveCatchAll_TagFieldOptional
+                     (constructor_name, field_name) ));
+          let expected, ok =
+            match primitive_catchall with
+            | Some PrimitiveInt -> (
+              match field.ld_type.desc with
+              | Tconstr (path, _, _) when Path.same path Predef.path_int ->
+                ("int", true)
+              | _ -> ("int", false))
+            | Some PrimitiveFloat -> (
+              match field.ld_type.desc with
+              | Tconstr (path, _, _) when Path.same path Predef.path_float ->
+                ("float", true)
+              | _ -> ("float", false))
+            | Some PrimitiveString -> (
+              match field.ld_type.desc with
+              | Tconstr (path, _, _) when Path.same path Predef.path_string ->
+                ("string", true)
+              | _ -> ("string", false))
+            | None -> assert false
+          in
+          if not ok then
+            raise
+              (Error
+                 ( cstr.cd_loc,
+                   TaggedPrimitiveCatchAll_TagFieldWrongType
+                     (constructor_name, field_name, expected) )))
+      | Some _, _ ->
+        raise
+          (Error
+             ( cstr.cd_loc,
+               TaggedPrimitiveCatchAll_InlineRecordRequired constructor_name ))
+      | None, _ -> ())
     cstrs
 
 type well_formedness_check = {
@@ -518,10 +748,45 @@ type well_formedness_check = {
 }
 
 let check_well_formed ~env {is_untagged_def; cstrs} =
+  let primitive_catchalls =
+    List.filter_map
+      (fun (cstr : Types.constructor_declaration) ->
+        match process_primitive_catchall cstr.cd_attributes with
+        | None -> None
+        | Some primitive_catchall ->
+          Some
+            ( cstr.cd_loc,
+              Ident.name cstr.cd_id,
+              primitive_catchall,
+              process_tag_name cstr.cd_attributes ))
+      cstrs
+  in
+  (match primitive_catchalls with
+  | [] -> ()
+  | (loc, _, _, tag_name) :: _ ->
+    if is_untagged_def then
+      raise (Error (loc, TaggedPrimitiveCatchAll_UnboxedVariantUnsupported));
+    if tag_name = None then
+      raise (Error (loc, TaggedPrimitiveCatchAll_TaggedVariantRequired)));
   check_tag_field_conflicts cstrs;
+  let has_number_catchall = ref false in
+  let has_string_catchall = ref false in
+  List.iter
+    (fun (loc, _, primitive_catchall, _) ->
+      match primitive_catchall_to_bucket primitive_catchall with
+      | `Number ->
+        if !has_number_catchall then
+          raise (Error (loc, TaggedPrimitiveCatchAll_AtMostOneNumber));
+        has_number_catchall := true
+      | `String ->
+        if !has_string_catchall then
+          raise (Error (loc, TaggedPrimitiveCatchAll_AtMostOneString));
+        has_string_catchall := true)
+    primitive_catchalls;
   ignore (names_from_type_variant ~env ~is_untagged_def cstrs)
 
-let has_undefined_literal attrs = process_tag_type attrs = Some Undefined
+let has_undefined_literal attrs =
+  process_constructor_tag_type attrs = Some Undefined
 
 let block_is_object ~env attrs = get_block_type ~env attrs = Some ObjectType
 
@@ -675,8 +940,29 @@ module DynamicChecks = struct
     else (* (undefiled + other) || other *)
       typeof e != object_
 
+  let literal_cases_for_block_type (block_type : block_type)
+      (literal_cases : tag_type list) =
+    Ext_list.filter literal_cases (function
+      | String _ -> block_type = StringType
+      | Int _ | Float _ -> block_type = IntType || block_type = FloatType
+      | BigInt _ -> block_type = BigintType
+      | Bool _ -> block_type = BooleanType
+      | _ -> false)
+
+  let literal_case_expr y (literal_case : tag_type) = y == tag_type literal_case
+
+  let not_one_of_the_literals y = function
+    | [] -> None
+    | literal_1 :: rest ->
+      let is_literal_1 = literal_case_expr y literal_1 in
+      let is_any_literal =
+        Ext_list.fold_right rest is_literal_1 (fun literal_n acc ->
+            literal_case_expr y literal_n ||| acc)
+      in
+      Some (not is_any_literal)
+
   let add_runtime_type_check ~tag_type ~has_null_case
-      ~(block_cases : block_type list) x y =
+      ~(block_cases : block_type list) ~(literal_cases : tag_type list) x y =
     let instances =
       Ext_list.filter_map block_cases (function
         | InstanceType i -> Some i
@@ -684,9 +970,17 @@ module DynamicChecks = struct
     in
     match tag_type with
     | Untagged
-        ( IntType | StringType | FloatType | BigintType | BooleanType
-        | FunctionType ) ->
-      typeof y == x
+        ((IntType | StringType | FloatType | BigintType | BooleanType) as
+         block_type) -> (
+      let runtime_type_matches = typeof y == x in
+      match
+        literal_cases
+        |> literal_cases_for_block_type block_type
+        |> not_one_of_the_literals y
+      with
+      | Some not_a_literal -> runtime_type_matches &&& not_a_literal
+      | None -> runtime_type_matches)
+    | Untagged FunctionType -> typeof y == x
     | Untagged ObjectType ->
       let object_case =
         if has_null_case then typeof y == x &&& (y != nil) else typeof y == x

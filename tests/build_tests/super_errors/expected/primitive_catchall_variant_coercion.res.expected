@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/primitive_catchall_variant_coercion.res[0m:[2m11:27-34[0m
+
+   9 [2m│[0m }
+  10 [2m│[0m 
+  [1;31m11[0m [2m│[0m let f = (x: A.t): B.t => ([1;31mx :> B.t[0m)
+  12 [2m│[0m 
+
+  Type A.t is not a subtype of B.t

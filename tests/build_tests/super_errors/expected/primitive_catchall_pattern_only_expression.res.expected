@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/primitive_catchall_pattern_only_expression.res[0m:[2m6:9-39[0m
+
+  4 [2m│[0m   | @catch(string) Other({kind: string, thing: int})
+  5 [2m│[0m 
+  [1;31m6[0m [2m│[0m let x = [1;31mOther({kind: "one", thing: 12})[0m
+  7 [2m│[0m 
+
+  Constructor Other is pattern-only and cannot be used as an expression
