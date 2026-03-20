@@ -64,6 +64,8 @@ pub struct AnalysisField {
     pub signature: String,
     #[serde(default)]
     pub optional: bool,
+    #[serde(default, rename = "mutable")]
+    pub mutable_: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -153,6 +155,7 @@ CREATE TABLE IF NOT EXISTS fields (
     name TEXT NOT NULL,
     signature TEXT NOT NULL,
     optional INTEGER DEFAULT 0,
+    mutable INTEGER DEFAULT 0,
     FOREIGN KEY (type_id) REFERENCES types(id) ON DELETE CASCADE
 );
 
@@ -482,8 +485,8 @@ pub fn insert_module_children(
         )?;
         for field in &record.fields {
             conn.execute(
-                "INSERT INTO fields (type_id, name, signature, optional) VALUES (?1, ?2, ?3, ?4)",
-                rusqlite::params![type_id, &field.name, &field.signature, field.optional as i32],
+                "INSERT INTO fields (type_id, name, signature, optional, mutable) VALUES (?1, ?2, ?3, ?4, ?5)",
+                rusqlite::params![type_id, &field.name, &field.signature, field.optional as i32, field.mutable_ as i32],
             )?;
         }
     }

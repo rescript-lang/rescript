@@ -20,7 +20,8 @@ let attrsToDocstring attrs =
   | None -> []
   | Some docstring -> [docstring]
 
-let mapRecordField {Types.ld_id; ld_type; ld_attributes; ld_optional} =
+let mapRecordField
+    {Types.ld_id; ld_type; ld_attributes; ld_optional; ld_mutable} =
   let astamp = Ident.binding_time ld_id in
   let name = Ident.name ld_id in
   {
@@ -28,6 +29,7 @@ let mapRecordField {Types.ld_id; ld_type; ld_attributes; ld_optional} =
     fname = Location.mknoloc name;
     typ = ld_type;
     optional = ld_optional;
+    mutable_ = ld_mutable = Mutable;
     docstring =
       (match ProcessAttributes.findDocAttribute ld_attributes with
       | None -> []
@@ -260,6 +262,7 @@ let forTypeDeclaration ~env ~(exported : Exported.t)
                                           fname = Location.mknoloc name;
                                           typ = f.ld_type.ctyp_type;
                                           optional = f.ld_optional;
+                                          mutable_ = f.ld_mutable = Mutable;
                                           docstring =
                                             (match
                                                ProcessAttributes
@@ -298,6 +301,7 @@ let forTypeDeclaration ~env ~(exported : Exported.t)
                          ld_type = {ctyp_type};
                          ld_attributes;
                          ld_optional;
+                         ld_mutable;
                        }
                      ->
                        let fstamp = Ident.binding_time ld_id in
@@ -306,6 +310,7 @@ let forTypeDeclaration ~env ~(exported : Exported.t)
                          fname;
                          typ = ctyp_type;
                          optional = ld_optional;
+                         mutable_ = ld_mutable = Mutable;
                          docstring = attrsToDocstring ld_attributes;
                          deprecated =
                            ProcessAttributes.findDeprecatedAttribute

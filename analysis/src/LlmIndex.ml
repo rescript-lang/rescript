@@ -159,6 +159,8 @@ let rec extractModuleForIndex ~rootPath ~sourceFilePath ?(modulePath = [])
                                      else field.typ))) );
                           ( "optional",
                             Some (if field.optional then "true" else "false") );
+                          ( "mutable",
+                            Some (if field.mutable_ then "true" else "false") );
                         ])
              in
              records :=

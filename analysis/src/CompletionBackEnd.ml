@@ -2044,6 +2044,7 @@ let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
         stamp = -1;
         fname = {loc = Location.none; txt = name};
         optional = true;
+        mutable_ = false;
         typ = Ctype.newconstr primitive [];
         docstring = [];
         deprecated = None;
@@ -2074,6 +2075,7 @@ let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
         stamp = -1;
         fname = {loc = Location.none; txt = name};
         optional = true;
+        mutable_ = false;
         typ = Ctype.newconstr primitive [];
         docstring = [];
         deprecated = None;

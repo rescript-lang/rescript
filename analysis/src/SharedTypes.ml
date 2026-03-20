@@ -41,6 +41,7 @@ type field = {
   fname: string Location.loc;
   typ: Types.type_expr;
   optional: bool;
+  mutable_: bool;
   docstring: string list;
   deprecated: string option;
 }
