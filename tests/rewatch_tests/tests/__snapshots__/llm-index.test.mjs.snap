@@ -11,6 +11,7 @@ exports[`llmIndex > extracts module information from the library package 1`] = `
       {
         "fields": [
           {
+            "mutable": false,
             "name": "name",
             "optional": false,
             "signature": "string",
