@@ -91,7 +91,7 @@ function discoverSourceFiles(sandboxPath, packageDir) {
   return resFiles.sort();
 }
 
-describe("lsp", { timeout: 120_000 }, () => {
+describe("lsp", { timeout: 60_000 }, () => {
   it("builds project with lsp profile artifacts on initial build", () =>
     runLspTest(async ({ lsp, sandbox }) => {
       const rootUri = pathToFileURL(sandbox).href;

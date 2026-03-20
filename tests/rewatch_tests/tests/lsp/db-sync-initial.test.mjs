@@ -45,7 +45,7 @@ describe("lsp initial db sync", { timeout: 120_000 }, () => {
   it("creates rescript.db after initial build without rescript sync", () =>
     runLspTest(async ({ lsp, sandbox }) => {
       const rootUri = pathToFileURL(sandbox).href;
-      await lsp.initialize(rootUri);
+      await lsp.initialize(rootUri, { db_sync: true });
       await lsp.waitForNotification("rescript/buildFinished", 30000);
 
       // The db_sync queue should create rescript.db after the initial build.

@@ -6,7 +6,7 @@ import { runLspTest } from "../../helpers/test-context.mjs";
 
 describe(
   "rescript clean does not break running LSP",
-  { timeout: 120_000 },
+  { timeout: 60_000 },
   () => {
     it("LSP continues to work after rescript clean", () =>
       runLspTest(async ({ lsp, sandbox, cli }) => {

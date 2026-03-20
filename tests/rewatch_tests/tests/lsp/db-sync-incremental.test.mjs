@@ -75,7 +75,7 @@ describe("lsp incremental db sync", { timeout: 120_000 }, () => {
   it("updates module values in rescript.db after a file is saved", () =>
     runLspTest(async ({ lsp, sandbox, writeFile }) => {
       const rootUri = pathToFileURL(sandbox).href;
-      await lsp.initialize(rootUri);
+      await lsp.initialize(rootUri, { db_sync: true });
       await lsp.waitForNotification("rescript/buildFinished", 30000);
 
       // Wait for the LSP's background db_sync to populate the initial DB.
@@ -128,7 +128,7 @@ let farewell = (name: string) => "bye " ++ name
   it("updates module types in rescript.db after a file is saved", () =>
     runLspTest(async ({ lsp, sandbox, writeFile }) => {
       const rootUri = pathToFileURL(sandbox).href;
-      await lsp.initialize(rootUri);
+      await lsp.initialize(rootUri, { db_sync: true });
       await lsp.waitForNotification("rescript/buildFinished", 30000);
 
       // Wait for the LSP's background db_sync to populate the initial DB.

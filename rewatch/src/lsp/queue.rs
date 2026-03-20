@@ -212,7 +212,8 @@ pub struct Queue {
     /// Optional diagnostic store for the HTTP diagnostics endpoint.
     diagnostic_store: Option<Arc<DiagnosticStore>>,
     /// Handle to send db sync events directly (e.g. after initial build).
-    db_sync_queue: DbSyncQueue,
+    /// `None` when the client did not enable `db_sync` in initialization options.
+    db_sync_queue: Option<DbSyncQueue>,
     /// Projects map, needed for building sync events.
     projects: Arc<Mutex<ProjectMap>>,
 }
@@ -225,11 +226,16 @@ impl Queue {
         root_span: tracing::Span,
         debounce: Duration,
         diagnostic_store: Option<Arc<DiagnosticStore>>,
+        enable_db_sync: bool,
     ) -> Self {
         let (tx, rx) = mpsc::unbounded_channel();
         let generations = Arc::new(Mutex::new(HashMap::new()));
-        let db_sync_parent = tracing::debug_span!(parent: &root_span, "db_sync.consumer");
-        let db_sync_queue = DbSyncQueue::new(debounce, db_sync_parent);
+        let db_sync_queue = if enable_db_sync {
+            let db_sync_parent = tracing::debug_span!(parent: &root_span, "db_sync.consumer");
+            Some(DbSyncQueue::new(debounce, db_sync_parent))
+        } else {
+            None
+        };
         let db_sync_queue_clone = db_sync_queue.clone();
         tokio::spawn(
             consumer(
@@ -317,14 +323,17 @@ impl Queue {
 
     /// Send a full db sync event for all modules in all projects.
     /// Called once after the initial build to populate the usages table.
+    /// No-op when db_sync is not enabled.
     pub fn trigger_initial_db_sync(&self) {
-        let touched = HashSet::new();
-        send_db_sync_events(
-            &self.projects,
-            true, // has_full_builds = true → filter = None → all modules
-            &touched,
-            &self.db_sync_queue,
-        );
+        if let Some(ref db_sync_queue) = self.db_sync_queue {
+            let touched = HashSet::new();
+            send_db_sync_events(
+                &self.projects,
+                true, // has_full_builds = true → filter = None → all modules
+                &touched,
+                db_sync_queue,
+            );
+        }
     }
 
     fn next_generation(&self, uri: &Url) -> u64 {
@@ -350,7 +359,7 @@ async fn consumer(
     client: Client,
     debounce: Duration,
     diagnostic_store: Option<Arc<DiagnosticStore>>,
-    db_sync_queue: DbSyncQueue,
+    db_sync_queue: Option<DbSyncQueue>,
 ) {
     let mut state = PendingState::new();
 
@@ -541,7 +550,7 @@ async fn flush(
     generations: &Arc<Mutex<HashMap<Url, u64>>>,
     client: &Client,
     diagnostic_store: &Option<Arc<DiagnosticStore>>,
-    db_sync_queue: &DbSyncQueue,
+    db_sync_queue: &Option<DbSyncQueue>,
 ) {
     if state.typechecks.is_empty() && state.compile_files.is_empty() && state.build_projects.is_empty() {
         return;
@@ -569,7 +578,7 @@ async fn flush_inner(
     generations: &Arc<Mutex<HashMap<Url, u64>>>,
     client: &Client,
     diagnostic_store: &Option<Arc<DiagnosticStore>>,
-    db_sync_queue: &DbSyncQueue,
+    db_sync_queue: &Option<DbSyncQueue>,
 ) {
     let summary = state.summary();
 
@@ -731,7 +740,9 @@ async fn flush_inner(
             .await;
 
         // Step 5: Send sync events to the background DB sync queue.
-        send_db_sync_events(projects, has_full_builds, &touched_files, db_sync_queue);
+        if let Some(db_sync) = db_sync_queue {
+            send_db_sync_events(projects, has_full_builds, &touched_files, db_sync);
+        }
     }
 }
 

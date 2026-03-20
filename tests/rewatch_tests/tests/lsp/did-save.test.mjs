@@ -4,7 +4,7 @@ import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import { runLspTest } from "../../helpers/test-context.mjs";
 
-describe("lsp didSave", { timeout: 120_000 }, () => {
+describe("lsp didSave", { timeout: 60_000 }, () => {
   it("produces JS output when a file is saved", () =>
     runLspTest(async ({ lsp, sandbox }) => {
       const rootUri = pathToFileURL(sandbox).href;

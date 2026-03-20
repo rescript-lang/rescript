@@ -195,14 +195,16 @@ export function createLspClient(cwd, otelEndpoint) {
     /**
      * Send initialize request and initialized notification.
      * @param {string} rootUri - The root URI of the workspace
+     * @param {object} [initializationOptions] - Optional initialization options (e.g. { db_sync: true })
      * @returns {Promise<import("vscode-languageserver-protocol").InitializeResult>}
      */
-    async initialize(rootUri) {
+    async initialize(rootUri, initializationOptions) {
       const result = await sendRequest(InitializeRequest.type, {
         processId: process.pid,
         rootUri,
         capabilities: {},
         workspaceFolders: [{ uri: rootUri, name: "root" }],
+        ...(initializationOptions && { initializationOptions }),
       });
       // Start waiting for the registration before sending initialized,
       // so we don't miss it if the server responds immediately.

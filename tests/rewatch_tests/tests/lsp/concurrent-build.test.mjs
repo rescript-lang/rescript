@@ -22,7 +22,7 @@ function getExtensions(dir) {
   return new Set(listFiles(dir).map(f => path.extname(f)));
 }
 
-describe("concurrent LSP and CLI build", { timeout: 120_000 }, () => {
+describe("concurrent LSP and CLI build", { timeout: 60_000 }, () => {
   it("LSP and standard build use separate flat artifact directories", () =>
     runLspTest(async ({ lsp, sandbox, cli }) => {
       // 1. Run a standard CLI build first — populates lib/bs/ and lib/ocaml/

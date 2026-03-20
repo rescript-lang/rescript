@@ -48,6 +48,7 @@ rescript build          # One-shot build (unchanged, for CI)
 │    root_span: tracing::Span,                           │
 │    queue_debounce_ms: Mutex<u64>,                      │
 │    diagnostic_store: Mutex<Option<Arc<DiagnosticStore>>│
+│    db_sync_enabled: Mutex<bool>,                       │
 │  }                                                    │
 │                                                       │
 │  No server-side file watcher needed.                  │
@@ -110,6 +111,7 @@ The server accepts optional configuration via `initializationOptions` in the `in
 | ------------------- | -------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `queue_debounce_ms` | `number` | `100`   | Debounce timeout in milliseconds for the unified queue. Lower values give faster feedback; higher values batch more events.                                                                                                                                          |
 | `diagnostics_http`  | `number` | —       | **(Experimental)** Port for the HTTP diagnostics server. When set, starts an HTTP server on this port that exposes current diagnostics. Use a fixed port per project for predictable URLs. See [HTTP Diagnostics Endpoint](#http-diagnostics-endpoint-experimental). |
+| `db_sync`           | `bool`   | `false` | **(Experimental)** Enable background synchronization of module data to `rescript.db`. Required for `workspace/symbol` and LLM index features. When disabled, the analysis binary is never spawned in the background after builds.                                   |
 
 Example (Zed `settings.json`):
 

@@ -172,6 +172,9 @@ struct Backend {
     /// Shared diagnostic store for the HTTP diagnostics endpoint.
     /// Created in `initialize` when a `diagnostics_http` port is configured.
     diagnostic_store: Mutex<Option<Arc<DiagnosticStore>>>,
+    /// Whether to run background db_sync after each build.
+    /// Enabled via `initializationOptions.db_sync` (default: false).
+    db_sync_enabled: Mutex<bool>,
 }
 
 #[tower_lsp::async_trait]
@@ -210,6 +213,16 @@ impl LanguageServer for Backend {
             && let Some(port) = opts.get("diagnostics_http").and_then(|v| v.as_u64())
         {
             self.start_diagnostics_http(port as u16).await;
+        }
+
+        // Enable background db_sync if requested.
+        if let Some(opts) = &params.initialization_options
+            && let Some(true) = opts.get("db_sync").and_then(|v| v.as_bool())
+        {
+            tracing::info!("db_sync enabled via initializationOptions");
+            if let Ok(mut d) = self.db_sync_enabled.lock() {
+                *d = true;
+            }
         }
 
         if let Ok(mut wf) = self.workspace_folders.write() {
@@ -367,6 +380,7 @@ impl LanguageServer for Backend {
         // Start the unified queue now that initial build state is available.
         let diagnostic_store = self.diagnostic_store.lock().ok().and_then(|s| s.clone());
         let debounce = Duration::from_millis(self.queue_debounce_ms.lock().map(|g| *g).unwrap_or(100));
+        let enable_db_sync = self.db_sync_enabled.lock().map(|g| *g).unwrap_or(false);
         if let Ok(mut q) = self.queue.lock() {
             let queue = queue::Queue::new(
                 Arc::clone(&self.projects),
@@ -374,6 +388,7 @@ impl LanguageServer for Backend {
                 self.root_span.clone(),
                 debounce,
                 diagnostic_store,
+                enable_db_sync,
             );
             queue.trigger_initial_db_sync();
             *q = Some(queue);
@@ -947,6 +962,7 @@ pub async fn run_stdio() {
         root_span: tracing::Span::current(),
         queue_debounce_ms: Mutex::new(100),
         diagnostic_store: Mutex::new(None),
+        db_sync_enabled: Mutex::new(false),
     });
 
     let server = Server::new(stdin, stdout, socket).serve(service);

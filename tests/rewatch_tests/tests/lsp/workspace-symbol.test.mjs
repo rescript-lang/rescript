@@ -6,7 +6,7 @@ describe("lsp workspace symbol", { timeout: 120_000 }, () => {
   it("finds symbols matching a query", () =>
     runLspTest(async ({ lsp, sandbox }) => {
       const rootUri = pathToFileURL(sandbox).href;
-      await lsp.initialize(rootUri);
+      await lsp.initialize(rootUri, { db_sync: true });
       await lsp.waitForNotification("rescript/buildFinished", 30000);
 
       const result = await lsp.workspaceSymbolsFor("greeting");
@@ -20,7 +20,7 @@ describe("lsp workspace symbol", { timeout: 120_000 }, () => {
   it("returns null for a query with no matches", () =>
     runLspTest(async ({ lsp, sandbox }) => {
       const rootUri = pathToFileURL(sandbox).href;
-      await lsp.initialize(rootUri);
+      await lsp.initialize(rootUri, { db_sync: true });
       await lsp.waitForNotification("rescript/buildFinished", 30000);
 
       const result = await lsp.workspaceSymbolsFor("zzz_nonexistent_zzz");
@@ -30,7 +30,7 @@ describe("lsp workspace symbol", { timeout: 120_000 }, () => {
   it("returns symbols across multiple files", () =>
     runLspTest(async ({ lsp, sandbox }) => {
       const rootUri = pathToFileURL(sandbox).href;
-      await lsp.initialize(rootUri);
+      await lsp.initialize(rootUri, { db_sync: true });
       await lsp.waitForNotification("rescript/buildFinished", 30000);
 
       // "run" is in App.res, "greeting" is in Library.res
@@ -47,7 +47,7 @@ describe("lsp workspace symbol", { timeout: 120_000 }, () => {
   it("finds type symbols and record fields", () =>
     runLspTest(async ({ lsp, sandbox }) => {
       const rootUri = pathToFileURL(sandbox).href;
-      await lsp.initialize(rootUri);
+      await lsp.initialize(rootUri, { db_sync: true });
       await lsp.waitForNotification("rescript/buildFinished", 30000);
 
       const result = await lsp.workspaceSymbolsFor("user");
