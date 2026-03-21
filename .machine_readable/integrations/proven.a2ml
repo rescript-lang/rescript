@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: PMPL-1.0-or-later
+# Proven Integration — Formally Verified Safety Library
+
+[integration]
+name = "proven"
+type = "safety-library"
+repository = "https://github.com/hyperpolymath/proven"
+version = "1.2.0"
+
+[binding-policy]
+approach = "thin-ffi-wrapper"
+unsafe-patterns = "replace-with-proven-equivalent"
+modules-available = ["SafeMath", "SafeString", "SafeJSON", "SafeURL", "SafeRegex", "SafeSQL", "SafeFile", "SafeTemplate", "SafeCrypto"]
+
+[adoption-guidance]
+priority = "high"
+scope = "all-string-json-url-crypto-operations"
+migration = "incremental — replace unsafe patterns as encountered"
