@@ -83,7 +83,7 @@ jobs:
         run: yarn install
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
-        uses: awalsh128/cache-apt-pkgs-action@v1.4.3
+        uses: awalsh128/cache-apt-pkgs-action@5902b33ae29014e6ca012c5d8025d4346556bd40 # v1.4.3
         with:
           # https://github.com/ocaml/setup-ocaml/blob/2f57267f071bc8547dfcb9433ff21d44fffef190/packages/setup-ocaml/src/unix.ts#L48
           # plus OPAM wants cmake
@@ -107,7 +107,7 @@ jobs:
           echo "version=${version}" >> "$GITHUB_OUTPUT"
       - name: Install rust toolchain
         if: steps.rewatch-build-cache.outputs.cache-hit != 'true'
-        uses: dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@4be9e76fd7c4901c61fb841f559994984270fce7 # stable
         with:
           toolchain: ${{ steps.rust-version.outputs.version }}
           targets: ${{ matrix.rust-target }}
@@ -137,7 +137,7 @@ jobs:
         run: echo "opam_cache_key=opam-env-v8-${{ matrix.os }}-${{ env.SETUP_OCAML_VERSION }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('*.opam') }}" | sed 's/,/-/g' >> $GITHUB_ENV
       - name: Restore OPAM environment
         id: cache-opam-env
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
         with:
           path: |
             ${{ runner.tool_cache }}/opam
@@ -148,14 +148,14 @@ jobs:
             C:\.opam
           key: ${{ env.opam_cache_key }}
       - name: Use OCaml ${{matrix.ocaml_compiler}}
-        uses: ocaml/setup-ocaml@v3.4.8
+        uses: ocaml/setup-ocaml@dec6499fef64fc5d7ed43d43a87251b7b1c306f5 # v3
         if: steps.cache-opam-env.outputs.cache-hit != 'true'
         with:
           ocaml-compiler: ${{matrix.ocaml_compiler}}
           opam-pin: false
       - name: Get OPAM executable path
         if: steps.cache-opam-env.outputs.cache-hit != 'true'
-        uses: actions/github-script@v8
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         with:
           script: |
             const opamPath = await io.which('opam', true);
@@ -169,7 +169,7 @@ jobs:
         run: opam install . --deps-only --with-test
       - name: Cache OPAM environment
         if: steps.cache-opam-env.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
         with:
           path: |
             ${{ runner.tool_cache }}/opam
@@ -224,7 +224,7 @@ jobs:
       - name: Restore compiler build state
         if: github.base_ref == 'master' || github.ref == 'refs/heads/master'
         id: compiler-build-state
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
         with:
           path: |
             C:\.cache\dune
@@ -250,7 +250,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
       - name: Save compiler build state
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
         with:
           path: |
             C:\.cache\dune
@@ -301,7 +301,7 @@ jobs:
       #
       # - name: Restore previous benchmark data
       #   if: matrix.benchmarks
-      #   uses: actions/cache/restore@v5
+      #   uses: actions/cache/restore@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
       #   with:
       #     path: ./tests/benchmark-cache
       #     key: syntax-benchmark-v1
@@ -322,7 +322,7 @@ jobs:
 
       # - name: Save benchmark data as new baseline
       #   if: matrix.benchmarks && github.ref == 'refs/heads/master'
-      #   uses: actions/cache/save@v5
+      #   uses: actions/cache/save@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
       #   with:
       #     path: ./tests/benchmark-cache
       #     key: syntax-benchmark-v1
@@ -334,10 +334,10 @@ jobs:
         run: yarn workspace playground test
       - name: Setup Rclone
         if: ${{ matrix.build_playground && startsWith(github.ref, 'refs/tags/v') }}
-        uses: cometkim/rclone-actions/setup-rclone@main
+        uses: cometkim/rclone-actions/setup-rclone@8d9c6b95341f7698609deee65c3d62af42893288 # main
       - name: Configure Rclone remote
         if: ${{ matrix.build_playground && startsWith(github.ref, 'refs/tags/v') }}
-        uses: cometkim/rclone-actions/configure-remote/s3-provider@main
+        uses: cometkim/rclone-actions/configure-remote/s3-provider@8d9c6b95341f7698609deee65c3d62af42893288 # main
         with:
           name: rescript
           provider: Cloudflare
@@ -350,13 +350,13 @@ jobs:
         run: yarn workspace playground upload-bundle
       - name: "Upload artifacts: binaries"
         if: matrix.upload_binaries
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: binaries-${{ matrix.node-target }}
           path: packages/@rescript/${{ matrix.node-target }}/bin
       - name: "Upload artifacts: lib/ocaml"
         if: matrix.upload_libs
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: lib-ocaml
           path: |
@@ -369,7 +369,7 @@ jobs:
       - name: "Upload artifacts: scripts/res/apiDocs"
         id: upload-api-docs
         if: ${{ matrix.generate_api_docs }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: api
           path: scripts/res/apiDocs/
@@ -388,7 +388,7 @@ jobs:
           cache: yarn
           node-version-file: .nvmrc
       - name: Download artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           pattern: "@(binaries-*|lib-ocaml)"
       - name: Move artifacts into packages
@@ -413,7 +413,7 @@ jobs:
           repository: rescript-lang/rescript-lang.org
           ssh-key: ${{ secrets.RESCRIPT_LANG_ORG_DEPLOY_KEY }}
       - name: Download artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           artifact-ids: ${{ needs.build-compiler.outputs.api-docs-artifact-id }}
           path: data/api
@@ -451,7 +451,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - name: Run make in dev container
-        uses: devcontainers/ci@v0.3
+        uses: devcontainers/ci@8bf61b26e9c3a98f69cb6ce2f88d24ff59b785c6 # v0.3
         with:
           push: never
           runCmd: make
@@ -514,7 +514,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4
         with:
           version: 10
       - name: Use Node.js
@@ -595,7 +595,7 @@ jobs:
           node-version-file: .nvmrc
           registry-url: https://registry.npmjs.org # Needed to make auth work for publishing
       - name: Download artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           pattern: "@(binaries-*|lib-ocaml)"
       - name: Move artifacts into packages
