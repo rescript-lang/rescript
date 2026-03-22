@@ -1,3 +1,4 @@
+#![forbid(unsafe_code)]
 pub mod build;
 pub mod cli;
 pub mod cmd;

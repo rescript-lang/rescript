@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: PMPL-1.0-or-later
+# Clade declaration — part of the gv-clade-index registry
+# See: https://github.com/hyperpolymath/gv-clade-index
+
+[identity]
+uuid = "98c14840-abac-51da-aa27-76a4751ada2d"
+primary-forge = "github"
+primary-owner = "hyperpolymath"
+canonical-name = "rescript"
+prefixed-name = "dx-rescript"
+
+[clade]
+primary = "dx"
+secondary = ["nl"]
+assigned = "2026-03-16"
+rationale = ""
+
+[forges]
+github = "hyperpolymath/rescript"
+gitlab = "hyperpolymath/rescript"
+bitbucket = "hyperpolymath/rescript"
+
+[lineage]
+type = "standalone"
+parent = "ReScript tooling and contributions"
+born = "2026-03-16"

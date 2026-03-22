@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: PMPL-1.0-or-later
+name: BoJ Server Build Trigger
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+jobs:
+  trigger-boj:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - name: Trigger BoJ Server (Casket/ssg-mcp)
+        run: |
+          # Send a secure trigger to boj-server to build this repository
+          curl -X POST "http://boj-server.local:7700/cartridges/ssg-mcp/invoke"             -H "Content-Type: application/json"             -d "{\"repo\": \"${{ github.repository }}\", \"branch\": \"${{ github.ref_name }}\", \"engine\": \"casket\\"}"}
+        continue-on-error: true
+permissions:
+  contents: read

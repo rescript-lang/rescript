@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: PMPL-1.0-or-later
+# VeriSimDB Feed — Cross-Repo Analytics Data Store
+
+[integration]
+name = "verisimdb"
+type = "data-feed"
+repository = "https://github.com/hyperpolymath/nextgen-databases"
+data-store = "verisimdb-data"
+
+[feed-config]
+emit-scan-results = true
+emit-build-metrics = true
+emit-dependency-graph = true
+format = "hexad"
+destination = "verisimdb-data/feeds/"

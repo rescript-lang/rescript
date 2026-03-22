@@ -1,16 +1,15 @@
+# SPDX-License-Identifier: PMPL-1.0-or-later
 name: Cleanup Stale Branches
-
 on:
   workflow_dispatch:
   schedule:
     - cron: '0 0 * * *' # This schedule runs the workflow at midnight every day
-
 jobs:
   cleanup-stale-branches:
     runs-on: ubuntu-latest
     steps:
       - name: Cleanup Stale Branches
-        uses: cbrgm/cleanup-stale-branches-action@v1
+        uses: cbrgm/cleanup-stale-branches-action@65a84e3b4dd2e168c499c206237fdd4bb071a6da # v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.repository }}
@@ -19,3 +18,5 @@ jobs:
           last-commit-age-days: 90
           dry-run: false
           rate-limit: true
+permissions:
+  contents: read

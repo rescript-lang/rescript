@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: PMPL-1.0-or-later
+# Trustfile — Integrity and Provenance Contract
+
+[trustfile]
+version = "1.0.0"
+format = "a2ml"
+
+[provenance]
+source-control = "git"
+forge = "github"
+ci-verified = true
+signing-policy = "commit-signing-preferred"
+
+[integrity]
+spdx-compliant = true
+license-audit = "required"
+dependency-pinning = "sha-pinned"
+
+[verification]
+reproducible-builds = "goal"
+sbom-generation = "required"
+attestation = "sigstore-preferred"

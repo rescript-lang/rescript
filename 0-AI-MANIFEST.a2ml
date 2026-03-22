@@ -1,0 +1,29 @@
+;; 0-AI-MANIFEST.a2ml — AI Agent Entry Point
+;; Repository: rescript/rescript (upstream fork contribution)
+
+@abstract:
+AI manifest for the ReScript compiler. Read this file first.
+This is a MULTI-LICENSED repository — NOT hyperpolymath original code.
+@end
+
+;; === LICENSE MODEL (CRITICAL) ===
+;; This repository contains code under MULTIPLE licenses:
+;;   - compiler/:                    LGPL-3.0-or-later
+;;   - compiler/syntax/:             MIT
+;;   - packages/@rescript/runtime/:  MIT
+;;   - rewatch/:                     MIT
+;;
+;; DO NOT apply PMPL-1.0-or-later headers to this repository.
+;; Preserve the original SPDX headers on all existing files.
+;; New contributions should use the license of the directory they're in.
+
+;; === CANONICAL LOCATIONS ===
+;; Full architecture guide: CLAUDE.md (comprehensive compiler docs)
+;; Source code: compiler/, analysis/, rewatch/, packages/
+;; Tests: tests/
+
+;; === CRITICAL INVARIANTS ===
+;; - Respect existing multi-license structure (LGPL-3.0 + MIT)
+;; - Never modify parsetree0.ml (PPX compatibility)
+;; - DCO sign-off required on commits
+;; - Build with: make && make lib && make test
