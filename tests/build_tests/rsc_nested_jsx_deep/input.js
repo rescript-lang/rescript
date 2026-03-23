@@ -30,4 +30,7 @@ assert.match(
   /export \{[\s\S]*Group,[\s\S]*Sidebar\$Group,[\s\S]*Sidebar\$Group\$jsx[\s\S]*\}/s,
 );
 
+const brandIcons = await import("./src/BrandIcons.res.js");
+assert.match(Object.keys(brandIcons).join(", "), /ReScript, BrandIcons\$ReScript, BrandIcons\$ReScript\$jsx, getIconForLanguageExtension/);
+
 await execClean();
