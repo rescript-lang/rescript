@@ -18,8 +18,12 @@ function Issue_7917_test(props) {
 
 let make = Issue_7917_test;
 
+let Issue_7917_test$M$jsx = true;
+
 export {
   M,
   make,
+  Issue_7917_test$M,
+  Issue_7917_test$M$jsx,
 }
 /* react/jsx-runtime Not a pure module */

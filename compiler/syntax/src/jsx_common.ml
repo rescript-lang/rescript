@@ -7,6 +7,12 @@ type jsx_config = {
   mutable nested_modules: string list;
   mutable has_component: bool;
   mutable hoisted_structure_items: structure_item list;
+  (* Nesting depth of [structure] calls while rewriting one implementation.
+     Used so we only clear/append hoisted items at the true file root — not for
+     nested [Pmod_structure] reached from expression traversal (e.g. via
+     [module_expr]), which would otherwise see [nested_modules = []] and wipe
+     hoisted bindings added for earlier structure items. *)
+  mutable structure_depth: int;
 }
 
 (* Helper method to look up the [@react.component] attribute *)

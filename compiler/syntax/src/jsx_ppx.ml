@@ -117,7 +117,8 @@ let get_mapper ~config =
   in
   let structure mapper items =
     let old_config = save_config () in
-    let is_top_level = config.nested_modules = [] in
+    let is_top_level = config.structure_depth = 0 in
+    config.structure_depth <- config.structure_depth + 1;
     config.has_component <- false;
     if is_top_level then config.hoisted_structure_items <- [];
     let result =
@@ -136,6 +137,7 @@ let get_mapper ~config =
         result @ List.rev config.hoisted_structure_items
       else result
     in
+    config.structure_depth <- config.structure_depth - 1;
     restore_config old_config;
     result
   in
@@ -151,6 +153,7 @@ let rewrite_implementation ~jsx_version ~jsx_module (code : Parsetree.structure)
       nested_modules = [];
       has_component = false;
       hoisted_structure_items = [];
+      structure_depth = 0;
     }
   in
   let mapper = get_mapper ~config in
@@ -165,6 +168,7 @@ let rewrite_signature ~jsx_version ~jsx_module (code : Parsetree.signature) :
       nested_modules = [];
       has_component = false;
       hoisted_structure_items = [];
+      structure_depth = 0;
     }
   in
   let mapper = get_mapper ~config in

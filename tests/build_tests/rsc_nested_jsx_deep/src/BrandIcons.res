@@ -3,10 +3,9 @@ module ReScript = {
   let make = () => React.null
 }
 
-
 let getIconForLanguageExtension = (language: string) => {
   switch language {
-  | "res" | "rescript" => <ReScript  />
+  | "res" | "rescript" => <ReScript />
   | _ => React.null
   }
 }

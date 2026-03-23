@@ -116,6 +116,7 @@ module Rec2 = {
   }
   and mm = x => make(x)
 }
+let \"V4$Uncurried" = Uncurried.make and \"V4$Uncurried$jsx" = true
 let \"V4$E" = E.make and \"V4$E$jsx" = true
 let \"V4$EUncurried" = EUncurried.make and \"V4$EUncurried$jsx" = true
 let \"V4$Rec" = Rec.make and \"V4$Rec$jsx" = true

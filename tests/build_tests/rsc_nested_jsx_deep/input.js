@@ -31,6 +31,27 @@ assert.match(
 );
 
 const brandIcons = await import("./src/BrandIcons.res.js");
-assert.match(Object.keys(brandIcons).join(", "), /ReScript, BrandIcons\$ReScript, BrandIcons\$ReScript\$jsx, getIconForLanguageExtension/);
+assert.deepStrictEqual(
+  new Set(Object.keys(brandIcons)),
+  new Set([
+    "ReScript",
+    "BrandIcons$ReScript",
+    "BrandIcons$ReScript$jsx",
+    "getIconForLanguageExtension",
+  ]),
+);
+
+const multipleNested = await import("./src/MultipleNested.res.js");
+assert.deepStrictEqual(
+  new Set(Object.keys(multipleNested)),
+  new Set([
+    "Group",
+    "MultipleNested$Group",
+    "MultipleNested$Group$jsx",
+    "Other",
+    "MultipleNested$Other",
+    "MultipleNested$Other$jsx",
+  ]),
+);
 
 await execClean();
