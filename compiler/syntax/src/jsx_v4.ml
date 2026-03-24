@@ -96,6 +96,15 @@ let props_longident_for_nested_module nested_modules =
     in
     Ldot (mod_path, "props")
 
+(* Hoisted File$Nested / File$Nested$jsx exist for JS/RSC exports; they are not
+   always referenced from ReScript when a nested module is absent from the
+   [.resi], so suppress unused-value (32) on these bindings only. *)
+let jsx_hoisted_binding_warning_attrs =
+  [
+    ( Location.mknoloc "warning",
+      PStr [Str.eval (Exp.constant (Pconst_string ("-32", None)))] );
+  ]
+
 let make_hoisted_component_binding ~empty_loc ~full_module_name nested_modules =
   let path =
     nested_modules |> List.rev |> longident_of_segments |> fun txt ->
@@ -108,10 +117,10 @@ let make_hoisted_component_binding ~empty_loc ~full_module_name nested_modules =
       Pstr_value
         ( Nonrecursive,
           [
-            Vb.mk ~loc:empty_loc
+            Vb.mk ~loc:empty_loc ~attrs:jsx_hoisted_binding_warning_attrs
               (Pat.var ~loc:empty_loc {loc = empty_loc; txt = full_module_name})
               (Exp.ident ~loc:empty_loc path);
-            Vb.mk ~loc:empty_loc
+            Vb.mk ~loc:empty_loc ~attrs:jsx_hoisted_binding_warning_attrs
               (Pat.var ~loc:empty_loc {loc = empty_loc; txt = marker_name})
               (Exp.construct ~loc:empty_loc
                  {loc = empty_loc; txt = Lident "true"}

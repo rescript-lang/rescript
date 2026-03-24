@@ -14,4 +14,5 @@ module V4A = {
     \"TypeConstraint$V4A"
   }
 }
-let \"TypeConstraint$V4A" = V4A.make and \"TypeConstraint$V4A$jsx" = true
+@warning("-32") let \"TypeConstraint$V4A" = V4A.make
+@warning("-32") and \"TypeConstraint$V4A$jsx" = true

@@ -65,5 +65,7 @@ module Bar = {
     \"UncurriedProps$Bar"
   }
 }
-let \"UncurriedProps$Foo" = Foo.make and \"UncurriedProps$Foo$jsx" = true
-let \"UncurriedProps$Bar" = Bar.make and \"UncurriedProps$Bar$jsx" = true
+@warning("-32") let \"UncurriedProps$Foo" = Foo.make
+@warning("-32") and \"UncurriedProps$Foo$jsx" = true
+@warning("-32") let \"UncurriedProps$Bar" = Bar.make
+@warning("-32") and \"UncurriedProps$Bar$jsx" = true

@@ -121,8 +121,10 @@ module V4AUncurried = {
     \"ForwardRef$V4AUncurried"
   }
 }
-let \"ForwardRef$V4A$FancyInput" = V4A.FancyInput.make and \"ForwardRef$V4A$FancyInput$jsx" = true
-let \"ForwardRef$V4A" = V4A.make and \"ForwardRef$V4A$jsx" = true
-let \"ForwardRef$V4AUncurried$FancyInput" = V4AUncurried.FancyInput.make
-and \"ForwardRef$V4AUncurried$FancyInput$jsx" = true
-let \"ForwardRef$V4AUncurried" = V4AUncurried.make and \"ForwardRef$V4AUncurried$jsx" = true
+@warning("-32") let \"ForwardRef$V4A$FancyInput" = V4A.FancyInput.make
+@warning("-32") and \"ForwardRef$V4A$FancyInput$jsx" = true
+@warning("-32") let \"ForwardRef$V4A" = V4A.make @warning("-32") and \"ForwardRef$V4A$jsx" = true
+@warning("-32") let \"ForwardRef$V4AUncurried$FancyInput" = V4AUncurried.FancyInput.make
+@warning("-32") and \"ForwardRef$V4AUncurried$FancyInput$jsx" = true
+@warning("-32") let \"ForwardRef$V4AUncurried" = V4AUncurried.make
+@warning("-32") and \"ForwardRef$V4AUncurried$jsx" = true

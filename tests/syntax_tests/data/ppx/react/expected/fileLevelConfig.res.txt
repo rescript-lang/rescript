@@ -15,4 +15,5 @@ module V4A = {
     \"FileLevelConfig$V4A"
   }
 }
-let \"FileLevelConfig$V4A" = V4A.make and \"FileLevelConfig$V4A$jsx" = true
+@warning("-32") let \"FileLevelConfig$V4A" = V4A.make
+@warning("-32") and \"FileLevelConfig$V4A$jsx" = true

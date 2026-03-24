@@ -21,5 +21,6 @@ module NoProps = {
     \"Interface$NoProps"
   }
 }
-let \"Interface$A" = A.make and \"Interface$A$jsx" = true
-let \"Interface$NoProps" = NoProps.make and \"Interface$NoProps$jsx" = true
+@warning("-32") let \"Interface$A" = A.make @warning("-32") and \"Interface$A$jsx" = true
+@warning("-32") let \"Interface$NoProps" = NoProps.make
+@warning("-32") and \"Interface$NoProps$jsx" = true

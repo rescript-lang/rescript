@@ -99,8 +99,9 @@ module Uncurried = {
     \"Newtype$Uncurried"
   }
 }
-let \"Newtype$V4A" = V4A.make and \"Newtype$V4A$jsx" = true
-let \"Newtype$V4A1" = V4A1.make and \"Newtype$V4A1$jsx" = true
-let \"Newtype$V4A2" = V4A2.make and \"Newtype$V4A2$jsx" = true
-let \"Newtype$V4A3" = V4A3.make and \"Newtype$V4A3$jsx" = true
-let \"Newtype$Uncurried" = Uncurried.make and \"Newtype$Uncurried$jsx" = true
+@warning("-32") let \"Newtype$V4A" = V4A.make @warning("-32") and \"Newtype$V4A$jsx" = true
+@warning("-32") let \"Newtype$V4A1" = V4A1.make @warning("-32") and \"Newtype$V4A1$jsx" = true
+@warning("-32") let \"Newtype$V4A2" = V4A2.make @warning("-32") and \"Newtype$V4A2$jsx" = true
+@warning("-32") let \"Newtype$V4A3" = V4A3.make @warning("-32") and \"Newtype$V4A3$jsx" = true
+@warning("-32") let \"Newtype$Uncurried" = Uncurried.make
+@warning("-32") and \"Newtype$Uncurried$jsx" = true

@@ -162,10 +162,10 @@ module C6 = {
     \"AliasProps$C6"
   }
 }
-let \"AliasProps$C0" = C0.make and \"AliasProps$C0$jsx" = true
-let \"AliasProps$C1" = C1.make and \"AliasProps$C1$jsx" = true
-let \"AliasProps$C2" = C2.make and \"AliasProps$C2$jsx" = true
-let \"AliasProps$C3" = C3.make and \"AliasProps$C3$jsx" = true
-let \"AliasProps$C4" = C4.make and \"AliasProps$C4$jsx" = true
-let \"AliasProps$C5" = C5.make and \"AliasProps$C5$jsx" = true
-let \"AliasProps$C6" = C6.make and \"AliasProps$C6$jsx" = true
+@warning("-32") let \"AliasProps$C0" = C0.make @warning("-32") and \"AliasProps$C0$jsx" = true
+@warning("-32") let \"AliasProps$C1" = C1.make @warning("-32") and \"AliasProps$C1$jsx" = true
+@warning("-32") let \"AliasProps$C2" = C2.make @warning("-32") and \"AliasProps$C2$jsx" = true
+@warning("-32") let \"AliasProps$C3" = C3.make @warning("-32") and \"AliasProps$C3$jsx" = true
+@warning("-32") let \"AliasProps$C4" = C4.make @warning("-32") and \"AliasProps$C4$jsx" = true
+@warning("-32") let \"AliasProps$C5" = C5.make @warning("-32") and \"AliasProps$C5$jsx" = true
+@warning("-32") let \"AliasProps$C6" = C6.make @warning("-32") and \"AliasProps$C6$jsx" = true
