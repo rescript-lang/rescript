@@ -22,3 +22,12 @@ module Select: {
     >,
   >
 }
+let \"FirstClassModules$Select": React.component<
+  Select.props<
+    module(T with type t = 'a and type key = 'key),
+    option<'key>,
+    option<'key> => unit,
+    array<'a>,
+  >,
+>
+let \"FirstClassModules$Select$jsx": bool

@@ -12,3 +12,7 @@ module NoProps: {
 
   let make: React.component<props>
 }
+let \"Interface$A": React.component<A.props<string>>
+let \"Interface$A$jsx": bool
+let \"Interface$NoProps": React.component<NoProps.props>
+let \"Interface$NoProps$jsx": bool
