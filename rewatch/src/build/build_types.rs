@@ -485,14 +485,55 @@ pub struct ProcessResult {
     /// the compile loop broke early (e.g. a dependency error aborted the loop
     /// before these modules' dependencies were satisfied).
     pub skipped_modules: AHashSet<String>,
+    /// Diagnostics created directly by the build system (not parsed from bsc
+    /// output). Used for errors that rewatch detects itself before bsc runs.
+    pub raw_diagnostics: Vec<super::diagnostics::BscDiagnostic>,
+    /// Source files to attach fallback diagnostics to when compile_errors is
+    /// non-empty but produces no parsed or raw diagnostics.
+    pub compile_error_files: Vec<std::path::PathBuf>,
 }
 
 impl ProcessResult {
     pub fn to_diagnostics(&self) -> Vec<super::diagnostics::BscDiagnostic> {
+        use super::diagnostics::*;
+
+        let mut diagnostics = self.raw_diagnostics.clone();
+
         let mut output = String::new();
         output.push_str(&self.compile_warnings);
         output.push_str(&self.compile_errors);
-        super::diagnostics::parse_compiler_output(&output)
+        let parsed = parse_compiler_output(&output);
+
+        // If compile_errors is non-empty but neither raw nor parsed diagnostics
+        // were produced, the error format was not recognised. Emit a fallback
+        // diagnostic so it does not fail silently in the LSP.
+        if !self.compile_errors.is_empty() && diagnostics.is_empty() && parsed.is_empty() {
+            let cleaned = strip_ansi(&self.compile_errors);
+            let message = cleaned.trim().to_owned();
+            if !message.is_empty() {
+                log::warn!("Compile error produced no diagnostics — emitting fallback: {message}");
+                for file in &self.compile_error_files {
+                    diagnostics.push(BscDiagnostic {
+                        file: file.clone(),
+                        range: SourceRange {
+                            start: SourcePosition {
+                                line: 1,
+                                character: 1,
+                            },
+                            end: SourcePosition {
+                                line: 1,
+                                character: 1,
+                            },
+                        },
+                        severity: Severity::Error,
+                        message: message.clone(),
+                    });
+                }
+            }
+        }
+
+        diagnostics.extend(parsed);
+        diagnostics
     }
 }
 

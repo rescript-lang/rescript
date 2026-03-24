@@ -34,7 +34,7 @@ pub enum Severity {
 }
 
 /// Strip ANSI escape sequences from a string.
-fn strip_ansi(s: &str) -> String {
+pub fn strip_ansi(s: &str) -> String {
     let re = Regex::new(r"\x1b\[[0-9;]*m").expect("valid regex");
     re.replace_all(s, "").to_string()
 }

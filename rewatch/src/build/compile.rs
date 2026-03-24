@@ -166,6 +166,7 @@ pub fn process_in_waves(
     let mut files_current_loop_count;
     let mut compile_errors = "".to_string();
     let mut compile_warnings = "".to_string();
+    let mut raw_diagnostics = Vec::<super::diagnostics::BscDiagnostic>::new();
     let mut num_compiled_modules = 0;
     let mut sorted_modules = build_state.module_names.iter().collect::<Vec<&String>>();
     sorted_modules.sort();
@@ -490,6 +491,38 @@ pub fn process_in_waves(
                 }
             }
 
+            // Create a diagnostic for each source file in the cycle so the
+            // LSP can surface the error. The standard bsc output parser
+            // doesn't recognise this message format, so we build the
+            // diagnostics directly.
+            let diag_message = format!(
+                "Found a circular dependency in your code:\n{}\n{}",
+                dependency_cycle::format(&cycle, build_state),
+                guidance
+            );
+            for module_name in cycle.iter() {
+                if let Some(Module::SourceFile(sf)) = build_state.get_module(module_name)
+                    && let Some(package) = build_state.get_package(&sf.package_name)
+                {
+                    let file = package.path.join(&sf.source_file.implementation.path);
+                    raw_diagnostics.push(super::diagnostics::BscDiagnostic {
+                        file,
+                        range: super::diagnostics::SourceRange {
+                            start: super::diagnostics::SourcePosition {
+                                line: 1,
+                                character: 1,
+                            },
+                            end: super::diagnostics::SourcePosition {
+                                line: 1,
+                                character: 1,
+                            },
+                        },
+                        severity: super::diagnostics::Severity::Error,
+                        message: diag_message.clone(),
+                    });
+                }
+            }
+
             compile_errors.push_str(&message)
         }
         if !compile_errors.is_empty() {
@@ -809,17 +842,39 @@ pub fn process_in_waves(
         }
     }
 
-    let skipped_modules = compile_params
+    let skipped_modules: AHashSet<String> = compile_params
         .modules
         .difference(&compiled_modules)
         .cloned()
         .collect();
+
+    // Collect source file paths for skipped modules so the fallback
+    // diagnostic path in to_diagnostics() can attach errors to them.
+    let compile_error_files: Vec<PathBuf> = if !compile_errors.is_empty() {
+        skipped_modules
+            .iter()
+            .chain(errored_modules.iter())
+            .filter_map(|name| {
+                if let Some(Module::SourceFile(sf)) = build_state.get_module(name)
+                    && let Some(package) = build_state.get_package(&sf.package_name)
+                {
+                    Some(package.path.join(&sf.source_file.implementation.path))
+                } else {
+                    None
+                }
+            })
+            .collect()
+    } else {
+        vec![]
+    };
 
     Ok(ProcessResult {
         compile_errors,
         compile_warnings,
         num_compiled_modules,
         skipped_modules,
+        raw_diagnostics,
+        compile_error_files,
     })
 }
 
