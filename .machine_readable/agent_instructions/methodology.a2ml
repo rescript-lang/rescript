@@ -1,0 +1,107 @@
+# SPDX-License-Identifier: PMPL-1.0-or-later
+# Copyright (c) 2026 Jonathan D.A. Jewell (hyperpolymath) <j.d.a.jewell@open.ac.uk>
+#
+# methodology.a2ml — AI agent methodology configuration
+# Declares how agents should approach work in this repository.
+# Read at session start by any AI agent (Claude, Gemini, Copilot, etc.)
+#
+# Reference: ADR-002 in standards/agentic-a2ml/docs/
+
+[metadata]
+version = "1.0.0"
+last-updated = "2026-03-24"
+spec = "https://github.com/hyperpolymath/standards/blob/main/agentic-a2ml/docs/ADR-002-methodology-layer.adoc"
+
+# ============================================================================
+# MODE SELECTION
+# ============================================================================
+# convergent: find gaps, fill them, build infrastructure (default for ops/infra)
+# divergent: find what's strongest, push it further (for research/creative)
+# hybrid: audit 20% of budget, then focus 80% on top MUSTs (default for most)
+
+[methodology]
+default-mode = "hybrid"
+ring-ceiling = 2              # Hard ceiling for ring expansion (0-3)
+wave-cap = 2                  # Max waves before requiring user "keep going"
+spike-required = true         # Every session must ship code, not just designs
+
+# ============================================================================
+# PRIORITY WEIGHTS
+# ============================================================================
+# MUST (3x): Blocking the current work → fix immediately
+# SHOULD (2x): Degrading quality of current work → fix if in zone
+# COULD (1x): Improving quality of adjacent work → add to debt list
+
+[methodology.priority-weights]
+must = 3
+should = 2
+could = 1
+
+# ============================================================================
+# CONVERGENT BUDGET (when mode = convergent or hybrid)
+# ============================================================================
+# How to allocate effort across work types.
+# Prevents over-polishing docs while structural work waits.
+
+[methodology.convergent-budget]
+structural = 70   # % for new modules, compilation fixes, wiring, integration
+corrective = 20   # % for bugs found, broken imports, stale references
+perfective = 10   # % for SPDX headers, doc updates, formatting, style
+
+# ============================================================================
+# UNIQUE STRENGTH (when mode = divergent)
+# ============================================================================
+# What makes this project special. Agents should DEEPEN this, not broaden it.
+# Customise this per project — the template default is generic.
+
+[methodology.unique-strength]
+description = "{{PROJECT_UNIQUE_STRENGTH}}"
+deepen-not-broaden = true
+
+# ============================================================================
+# DIVERGENT INVARIANTS
+# ============================================================================
+# Constraints that divergent mode must NOT violate.
+# These are the riverbanks — diverge within them, not across.
+# "Amplify uniqueness" means deepen, not broaden.
+#
+# Test before any divergent action:
+#   "Does this deepen the existing strength, or add a parallel strength?"
+#   If parallel → stop. Note as cross-project insight.
+
+[methodology.divergent-invariants]
+rules = [
+  # Customise per project. Examples:
+  # "Idris2 only for formal verification — no Lean4, Coq, Agda",
+  # "believe_me count must remain zero",
+  # "FFI architecture: Idris2 → RefC → Zig → C ABI (no shortcuts)",
+]
+
+# Optional: language invariant for the core strength
+# If set, divergent mode will not introduce other languages for this purpose
+# language-invariant = "idris2"
+
+# ============================================================================
+# CONSTRAINT HINTS
+# ============================================================================
+# Help Phase 0 find the critical chain faster.
+# Updated at session end with newly discovered constraints.
+
+[methodology.known-constraints]
+constraints = [
+  # Customise per project. Examples:
+  # "End-to-end build has never been verified",
+  # "libproject.so does not exist yet — all bindings call stubs",
+]
+
+# ============================================================================
+# STATE FILE VALIDATION
+# ============================================================================
+# Phase 0 reads STATE.a2ml first but it may be broken.
+# These rules detect corrupt/template/stale state files.
+
+[methodology.state-validation]
+reject-if-contains = ["{{PLACEHOLDER}}", "{{PROJECT}}", "rsr-template-repo"]
+reject-if-project-name-mismatch = true
+staleness-threshold-days = 90
+fallback-files = ["TODO.md", "TODO.adoc", "ROADMAP.adoc", "README.adoc"]

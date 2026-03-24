@@ -1,0 +1,41 @@
+// SPDX-License-Identifier: PMPL-1.0-or-later
+// Copyright (c) 2026 Jonathan D.A. Jewell (hyperpolymath) <j.d.a.jewell@open.ac.uk>
+= Agent Instructions
+:toc: preamble
+
+Methodology-aware configuration for AI agents. Read by any AI agent
+(Claude, Gemini, Copilot, etc.) at session start.
+
+== Files
+
+[cols="1,3"]
+|===
+| File | Purpose
+
+| `methodology.a2ml`
+| Default mode, invariants, ring ceiling, priority weights, convergent budget
+
+| `coverage.a2ml`
+| Session coverage tracking — what was visited, what was skipped, what has MUSTs
+
+| `debt.a2ml`
+| Meander debt — things found but not fixed, carried between sessions
+|===
+
+== How Agents Use These
+
+1. Read `methodology.a2ml` at session start — know mode, invariants, ceiling
+2. Read `coverage.a2ml` — know what was visited last time, what was skipped
+3. Read `debt.a2ml` — know what's outstanding from previous sessions
+4. At session end, update `coverage.a2ml` and `debt.a2ml`
+
+== Relationship to Other Files
+
+* `AGENTIC.a2ml` says WHAT agents can do (permissions, gating)
+* `agent_instructions/` says HOW agents should work (methodology)
+* `bot_directives/` says what the gitbot-fleet does (fleet-specific)
+* `CLAUDE.md` says how Claude specifically should work (Claude-specific)
+
+== Reference
+
+ADR-002 in `standards/agentic-a2ml/docs/ADR-002-methodology-layer.adoc`

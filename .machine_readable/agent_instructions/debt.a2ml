@@ -1,0 +1,49 @@
+# SPDX-License-Identifier: PMPL-1.0-or-later
+# Copyright (c) 2026 Jonathan D.A. Jewell (hyperpolymath) <j.d.a.jewell@open.ac.uk>
+#
+# debt.a2ml — Meander debt list
+# Things found but not fixed. Carried between sessions.
+# Becomes the next session's Phase 0 input.
+#
+# Reference: ADR-002 in standards/agentic-a2ml/docs/
+
+[metadata]
+version = "1.0.0"
+last-updated = "2026-03-24"
+
+# ============================================================================
+# DEBT ITEMS
+# ============================================================================
+# Each item has: component, issue, effort (easy|medium|hard), impact (high|medium|low),
+# priority (should|could), and discovered date.
+#
+# Items are consumed (removed) when fixed. New items are added at session end.
+# The debt list prevents the "one more wave" loop — found things are persisted,
+# not forgotten, and not used as justification for infinite meandering.
+
+# ============================================================================
+# SHOULD — would fix next wave
+# ============================================================================
+# These are inputs for the next session if the user says "keep going".
+#
+# Example:
+# [[debt.should]]
+# component = "system-tools/monitoring/observatory"
+# issue = "Stale duplicate of root observatory/"
+# effort = "easy"
+# impact = "medium"
+# discovered = "2026-03-23"
+
+# ============================================================================
+# COULD — would fix eventually
+# ============================================================================
+# These are low-priority items that don't justify a session on their own.
+# They get picked up when an agent is in the area for other reasons.
+#
+# Example:
+# [[debt.could]]
+# component = "cicada"
+# issue = "RSR_OUTLINE.adoc references banned AGPL-3.0"
+# effort = "easy"
+# impact = "low"
+# discovered = "2026-03-23"

@@ -1,0 +1,61 @@
+# SPDX-License-Identifier: PMPL-1.0-or-later
+# Copyright (c) 2026 Jonathan D.A. Jewell (hyperpolymath) <j.d.a.jewell@open.ac.uk>
+#
+# coverage.a2ml — Session coverage tracking
+# Updated at the end of each AI agent session.
+# Persists what was visited, what was skipped, and what has MUSTs.
+#
+# Reference: ADR-002 in standards/agentic-a2ml/docs/
+
+[metadata]
+version = "1.0.0"
+last-updated = "2026-03-24"
+
+# ============================================================================
+# COVERAGE STATE
+# ============================================================================
+# Updated by agents at session end. Tracks which components have been
+# visited and which have known MUSTs that were skipped.
+
+[coverage]
+total-components = 0
+visited-components = 0
+coverage-percent = 0
+
+# ============================================================================
+# VISITED COMPONENTS
+# ============================================================================
+# Component → session date + ring reached
+# Agents add entries as they work through components.
+#
+# Example:
+# [coverage.visited.emergency-room]
+# date = "2026-03-23"
+# ring = 2
+# fixes = 3
+# notes = "boot-guardian built, shutdown-marshal built"
+
+# ============================================================================
+# SKIPPED COMPONENTS WITH MUSTS
+# ============================================================================
+# Components with known MUSTs that were not visited in the most recent session.
+# These become P1 inputs for the next session's Phase 0.
+#
+# Example:
+# [coverage.skipped-musts.session-sentinel]
+# priority = "P0"
+# issue = "56 SIGABRTs in 4 days, D-Bus race condition"
+# discovered = "2026-03-23"
+
+# ============================================================================
+# CHERRY-PICKING AUDIT
+# ============================================================================
+# At session end, agents report whether they chose easy work over hard work.
+# This is the accountability mechanism for the weighted priority system.
+#
+# [coverage.cherry-picking]
+# easy-high-completed = 3
+# hard-high-completed = 1
+# easy-low-completed = 2
+# hard-low-deferred = 4
+# assessment = "Correctly prioritised — all MUST items addressed before COULDs"
