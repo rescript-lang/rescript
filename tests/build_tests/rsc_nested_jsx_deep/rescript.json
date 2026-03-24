@@ -12,5 +12,8 @@
     "in-source": true,
     "suffix": ".res.js"
   },
-  "namespace": true
+  "namespace": true,
+  "warnings": {
+    "error": "+A"
+  }
 }
