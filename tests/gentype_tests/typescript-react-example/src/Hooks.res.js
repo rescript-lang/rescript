@@ -204,6 +204,16 @@ let make$1 = Hooks;
 
 let $$default = Hooks;
 
+let Hooks$Inner$jsx = true;
+
+let Hooks$Inner$Inner2$jsx = true;
+
+let Hooks$NoProps$jsx = true;
+
+let Hooks$WithRef = make;
+
+let Hooks$WithRef$jsx = true;
+
 let Hooks$RenderPropRequiresConversion$jsx = true;
 
 let Hooks$DD$jsx = true;
@@ -223,6 +233,14 @@ export {
   RenderPropRequiresConversion,
   WithChildren,
   DD,
+  Hooks$Inner,
+  Hooks$Inner$jsx,
+  Hooks$Inner$Inner2,
+  Hooks$Inner$Inner2$jsx,
+  Hooks$NoProps,
+  Hooks$NoProps$jsx,
+  Hooks$WithRef,
+  Hooks$WithRef$jsx,
   Hooks$RenderPropRequiresConversion,
   Hooks$RenderPropRequiresConversion$jsx,
   Hooks$DD,
