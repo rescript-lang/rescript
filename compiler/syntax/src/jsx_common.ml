@@ -13,6 +13,9 @@ type jsx_config = {
      [module_expr]), which would otherwise see [nested_modules = []] and wipe
      hoisted bindings added for earlier structure items. *)
   mutable structure_depth: int;
+  (* Inside [Pmod_functor] bodies, hoisting [File$M = M.make] at the file top
+     would reference [M] as a functor (illegal). Skip hoists when > 0. *)
+  mutable functor_depth: int;
 }
 
 (* Helper method to look up the [@react.component] attribute *)

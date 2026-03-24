@@ -85,6 +85,19 @@ let get_mapper ~config =
     | 4 -> module_binding4 mapper mb
     | _ -> default_mapper.module_binding mapper mb
   in
+  let module_expr mapper me =
+    match (config.version, me.pmod_desc) with
+    | 4, Pmod_functor _ -> (
+      config.functor_depth <- config.functor_depth + 1;
+      try
+        let m = default_mapper.module_expr mapper me in
+        config.functor_depth <- config.functor_depth - 1;
+        m
+      with e ->
+        config.functor_depth <- config.functor_depth - 1;
+        raise e)
+    | _ -> default_mapper.module_expr mapper me
+  in
   let save_config () =
     {
       config with
@@ -142,7 +155,7 @@ let get_mapper ~config =
     result
   in
 
-  {default_mapper with expr; module_binding; signature; structure}
+  {default_mapper with expr; module_binding; module_expr; signature; structure}
 
 let rewrite_implementation ~jsx_version ~jsx_module (code : Parsetree.structure)
     : Parsetree.structure =
@@ -154,6 +167,7 @@ let rewrite_implementation ~jsx_version ~jsx_module (code : Parsetree.structure)
       has_component = false;
       hoisted_structure_items = [];
       structure_depth = 0;
+      functor_depth = 0;
     }
   in
   let mapper = get_mapper ~config in
@@ -169,6 +183,7 @@ let rewrite_signature ~jsx_version ~jsx_module (code : Parsetree.signature) :
       has_component = false;
       hoisted_structure_items = [];
       structure_depth = 0;
+      functor_depth = 0;
     }
   in
   let mapper = get_mapper ~config in

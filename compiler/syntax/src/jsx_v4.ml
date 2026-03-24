@@ -132,8 +132,8 @@ let unnamespace_module_name file_name =
 
 let maybe_hoist_nested_make_component ~(config : Jsx_common.jsx_config)
     ~empty_loc ~full_module_name fn_name =
-  match (fn_name, config.nested_modules) with
-  | "make", _ :: _ ->
+  match (fn_name, config.nested_modules, config.functor_depth) with
+  | "make", _ :: _, 0 ->
     config.hoisted_structure_items <-
       make_hoisted_component_binding ~empty_loc ~full_module_name
         config.nested_modules
