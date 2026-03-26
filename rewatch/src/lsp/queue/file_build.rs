@@ -96,7 +96,7 @@ pub(super) async fn run(
         for (root, build_state, paths) in &mut project_work {
             let intent = intent_by_project.remove(root);
 
-            let module_names: Vec<String> = if paths.is_empty() {
+            let mut module_names: Vec<String> = if paths.is_empty() {
                 Vec::new()
             } else {
                 let names: Vec<String> = paths
@@ -112,6 +112,7 @@ pub(super) async fn run(
                 }
                 names
             };
+            module_names.sort();
 
             // Skip entirely if there are no saved modules and no intent.
             if module_names.is_empty() && intent.is_none() {
@@ -546,7 +547,7 @@ fn compile_resolved_errors(
     build_state: &mut BuildCommandState,
     errored_before_typecheck: &AHashSet<String>,
 ) -> (Vec<BscDiagnostic>, HashSet<PathBuf>) {
-    let resolved: Vec<String> = errored_before_typecheck
+    let mut resolved: Vec<String> = errored_before_typecheck
         .iter()
         .filter(|name| {
             build_state
@@ -557,6 +558,7 @@ fn compile_resolved_errors(
         })
         .cloned()
         .collect();
+    resolved.sort();
 
     if !resolved.is_empty() {
         tracing::Span::current().record("modules", tracing::field::debug(&resolved));
