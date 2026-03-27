@@ -13,7 +13,7 @@ let translate_signature_value ~config ~output_file_relative ~resolver ~type_env
     (val_id, val_attributes |> Annotation.from_attributes ~config ~loc:val_loc)
   with
   | id, GenType ->
-    id |> Ident.name
+    id |> Ident.name |> Ext_ident.unwrap_uppercase_exotic
     |> Translation.translate_value ~attributes:val_attributes ~config
          ~doc_string:(Annotation.doc_string_from_attrs val_attributes)
          ~output_file_relative ~resolver ~type_env ~type_expr
