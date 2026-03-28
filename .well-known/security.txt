@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: PMPL-1.0-or-later
+# RFC 9116 - security.txt
+# https://securitytxt.org/
+
+Contact: mailto:j.d.a.jewell@open.ac.uk
+Expires: 2027-12-31T23:59:59.000Z
+Preferred-Languages: en
+Canonical: https://github.com/hyperpolymath/rescript/.well-known/security.txt
+Policy: https://github.com/hyperpolymath/rescript/blob/main/SECURITY.md
