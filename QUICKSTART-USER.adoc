@@ -1,0 +1,124 @@
+// SPDX-License-Identifier: PMPL-1.0-or-later
+// Template: QUICKSTART-USER.adoc — 5-minute path to working software
+// Replace rescript, Rescript — See README.adoc for details., just run, Rescript started successfully. with actuals
+= rescript — Quick Start for Users
+:toc:
+:toclevels: 2
+
+== What is rescript?
+
+Rescript — See README.adoc for details.
+
+== Prerequisites
+
+Before you begin, ensure you have:
+
+* **just** — task runner (https://github.com/casey/just[install guide])
+* Platform-specific requirements listed below
+
+[cols="1,3"]
+|===
+| Platform | Additional Requirements
+
+| Linux
+| See README.adoc
+
+| macOS
+| See README.adoc
+
+| Windows
+| See README.adoc
+|===
+
+== Install
+
+=== Option 1: Standard Install (recommended)
+
+[source,bash]
+----
+# Clone and set up
+git clone https://github.com/hyperpolymath/rescript.git
+cd rescript
+just setup
+----
+
+The setup script will:
+
+* Detect your platform and shell
+* Install missing dependencies (with your permission)
+* Configure the application
+* Offer install location choices
+* Run a self-diagnostic to verify everything works
+
+=== Option 2: Container (via Stapeln)
+
+[source,bash]
+----
+just stapeln-run
+----
+
+=== Option 3: Portable (no system changes)
+
+[source,bash]
+----
+just install --portable --prefix=./rescript-portable
+----
+
+== First Run
+
+[source,bash]
+----
+just run
+----
+
+Expected output:
+
+[source]
+----
+Rescript started successfully.
+----
+
+== Self-Diagnostic
+
+If something isn't working:
+
+[source,bash]
+----
+just doctor
+----
+
+This checks all dependencies, permissions, paths, and connectivity.
+If it finds issues, it will suggest fixes.
+
+To attempt automatic repair:
+
+[source,bash]
+----
+just heal
+----
+
+== Get Help
+
+* **In-app**: `just run --help`
+* **Guided tour**: `just tour`
+* **Report a problem**: `just help-me` (pre-fills diagnostic context)
+* **Wiki**: https://github.com/hyperpolymath/rescript/wiki
+
+== Uninstall
+
+[source,bash]
+----
+just uninstall
+----
+
+You will be asked:
+
+1. Which uninstall tier (Bennett reversible, parameter-based, standard, or secure)
+2. Whether to include or exclude your data
+3. Whether to clear caches and LLM models
+
+== Next Steps
+
+* Read the link:README.adoc[README] for full feature overview
+* Read the link:EXPLAINME.adoc[EXPLAINME] for architecture and design decisions
+* Try `just tour` for a guided walkthrough

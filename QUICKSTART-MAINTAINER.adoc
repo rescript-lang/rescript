@@ -1,0 +1,129 @@
+// SPDX-License-Identifier: PMPL-1.0-or-later
+// Template: QUICKSTART-MAINTAINER.adoc — packaging, deploying, and maintaining
+// Replace rescript, {{PACKAGE_NAME}}, {{DEPS}} with actuals
+= rescript — Quick Start for Platform Maintainers
+:toc:
+:toclevels: 2
+
+== Overview
+
+This guide covers packaging, deploying, and maintaining rescript for
+distribution on your platform.
+
+== Runtime Dependencies
+
+{{DEPS}}
+
+== Build from Source
+
+[source,bash]
+----
+git clone https://github.com/hyperpolymath/rescript.git
+cd rescript
+just build-release
+----
+
+Output: `{{BUILD_OUTPUT_PATH}}`
+
+== Packaging
+
+=== Guix
+
+[source,bash]
+----
+guix build -f guix.scm
+----
+
+=== Nix
+
+[source,bash]
+----
+nix build
+----
+
+=== Container (Stapeln)
+
+[source,bash]
+----
+just stapeln-export    # Generates Containerfile
+podman build -t rescript .
+----
+
+=== Manual Package
+
+[source,bash]
+----
+just install --prefix=/usr/local
+----
+
+Files installed:
+
+[cols="1,2"]
+|===
+| Path | Contents
+
+| `$PREFIX/bin/`
+| Executables
+
+| `$PREFIX/share/{{PACKAGE_NAME}}/`
+| Data files, assets
+
+| `$PREFIX/share/doc/{{PACKAGE_NAME}}/`
+| Documentation
+
+| `$PREFIX/share/applications/`
+| .desktop file (Linux, if GUI)
+
+| `$PREFIX/share/man/man1/`
+| Man pages
+|===
+
+== Configuration
+
+Default config location: `$XDG_CONFIG_HOME/{{PACKAGE_NAME}}/config.toml`
+
+Fallback: `$HOME/.config/{{PACKAGE_NAME}}/config.toml`
+
+== Health Checks
+
+[source,bash]
+----
+just doctor            # Full diagnostic
+just run --version   # Version check
+just run --selftest  # Built-in self-test
+----
+
+== Updating
+
+[source,bash]
+----
+git pull
+just build-release
+just install --prefix=/usr/local
+----
+
+Or via OPSM: `opsm update {{PACKAGE_NAME}}`
+
+== Security Notes
+
+* License: PMPL-1.0-or-later (Palimpsest License)
+* All dependencies SHA-pinned
+* `panic-attacker` scan results: link:INSTALL-SECURITY-REPORT.adoc[]
+* OpenSSF Scorecard: see badge in README
+
+== Multi-Instance Deployment
+
+For deploying multiple instances (e.g., different users or tenants):
+
+[source,bash]
+----
+just install --prefix=/opt/{{PACKAGE_NAME}}-instance1 --config=/etc/{{PACKAGE_NAME}}/instance1.toml
+just install --prefix=/opt/{{PACKAGE_NAME}}-instance2 --config=/etc/{{PACKAGE_NAME}}/instance2.toml
+----
+
+Each instance has isolated config, data, and logs.
+
+== Reporting Issues
+
+* Upstream: https://github.com/hyperpolymath/rescript/issues
+* With diagnostic: `just help-me` (pre-fills context)

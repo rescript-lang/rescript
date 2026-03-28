@@ -1,0 +1,91 @@
+; SPDX-License-Identifier: PMPL-1.0-or-later
+; MUST.contractile — Baseline invariants for rescript
+; These constraints MUST NOT be violated. K9 validators enforce them.
+;
+; Part of the contractile family: MUST, TRUST, DUST, INTENT, ADJUST
+
+; ── Definitions ──────────────────────────────────────────────────
+;
+; MUST (noun/verb)
+;   The hard-constraint contractile. Defines invariants that are structurally
+;   required for the repository to function correctly and safely. Violating
+;   a MUST is always a bug — there are no "soft" MUSTs.
+;
+; Scope:
+;   MUST governs code, configuration, CI, and structure. It does NOT govern
+;   style, preference, or approach — those belong in CLAUDE.md or coding
+;   standards. MUST is for things that break the project if violated.
+;
+; Relationship to other contractiles:
+;   - TRUST: MUST is enforced regardless of trust level. Even maximal-trust
+;     agents cannot violate MUST constraints.
+;   - ADJUST: All ADJUST invariants are implicitly MUST invariants too.
+;     ADJUST exists separately for visibility.
+;   - INTENT: MUST protects the architectural decisions described in INTENT.
+;   - DUST: When a feature enters DUST (deprecation), its MUST constraints
+;     remain active until the feature is fully removed.
+;
+; Enforcement:
+;   K9 validators in contractiles/k9/ machine-check MUST constraints.
+;   CI runs these on every PR. Violations block merge.
+;
+; ── End Definitions ──────────────────────────────────────────────
+
+(must-contractile
+  (version "1.0.0")
+  (repo "rescript")
+
+  ; === Universal Invariants (apply to ALL repos) ===
+
+  (invariants
+    ; Paths
+    (must "no hardcoded absolute paths (/home/*, /mnt/*, /var/mnt/*)")
+    (must "all paths use env vars, XDG dirs, or relative references")
+
+    ; Language policy
+    (must "no new TypeScript files")
+    (must "no new Python files")
+    (must "no new Go files")
+    (must "no npm/bun/yarn/pnpm dependencies — Deno only")
+
+    ; Dangerous patterns
+    (must "no believe_me (Idris2)")
+    (must "no assert_total (Idris2)")
+    (must "no Admitted (Coq)")
+    (must "no sorry (Lean)")
+    (must "no unsafeCoerce (Haskell)")
+    (must "no Obj.magic (OCaml)")
+    (must "no unsafe {} blocks without safety comment (Rust)")
+
+    ; License
+    (must "SPDX-License-Identifier header on every source file")
+    (must "no removal or modification of LICENSE file")
+
+    ; Structure
+    (must ".machine_readable/ directory preserved")
+    (must "0-AI-MANIFEST.a2ml preserved")
+    (must "no SCM files in repo root — only in .machine_readable/")
+
+    ; CI
+    (must "no removal of CI workflows without explicit approval")
+    (must "all GitHub Actions SHA-pinned")
+
+    ; Code quality
+    (must "tests must not be deleted or weakened")
+    (must "generated code in generated/ directory only")
+    (must "no introduction of OWASP top 10 vulnerabilities")
+
+    ; ABI/FFI (if applicable)
+    (must "no modification of ABI contracts without proof update")
+    (must "no removal of formal verification proofs")
+  )
+
+  ; === Project-Specific Invariants ===
+  ; *REMINDER: Add invariants specific to this repo*
+  ; (must "# Add project-specific invariants here")
+
+  (enforcement
+    (k9-validator "contractiles/k9/must-check.k9.ncl")
+    (ci "quality.yml runs must-check on every PR")
+  )
+)

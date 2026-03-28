@@ -1,0 +1,72 @@
+; SPDX-License-Identifier: PMPL-1.0-or-later
+; INTENT.contractile — Purpose and scope for rescript
+; Helps LLM/SLM agents understand what this repo IS and IS NOT.
+;
+; Part of the contractile family: MUST, TRUST, DUST, INTENT, ADJUST
+
+; ── Definitions ──────────────────────────────────────────────────
+;
+; INTENT (noun)
+;   The purpose contractile. Defines what this repository IS, what it is
+;   NOT (anti-purpose), and which architectural decisions are load-bearing.
+;   Without INTENT, LLMs drift into scope creep, reverse key decisions,
+;   or add features that belong in a different repo.
+;
+; Scope:
+;   INTENT governs the conceptual boundaries of the project — its reason
+;   for existing, its domain, and its relationship to the ecosystem.
+;   It does NOT specify implementation details (that's MUST and code).
+;
+; Relationship to other contractiles:
+;   - MUST: INTENT explains WHY certain MUSTs exist. If you don't
+;     understand a MUST, read INTENT first.
+;   - TRUST: The "ask-before-touching" section in INTENT maps directly
+;     to TRUST.trust-deny for the most sensitive areas.
+;   - ADJUST: INTENT's anti-purpose should include "this software is
+;     NOT only for users with perfect vision/hearing/mobility."
+;   - DUST: When INTENT changes (repo pivots), related DUST entries
+;     should be created for the abandoned direction.
+;
+; ── End Definitions ──────────────────────────────────────────────
+
+(intent-contractile
+  (version "1.0.0")
+  (repo "rescript")
+
+  ; === Purpose (what this repo IS) ===
+  (purpose
+    "{{ONE_PARAGRAPH_PURPOSE}}"
+  )
+
+  ; === Anti-Purpose (what this repo is NOT — prevents scope creep) ===
+  (anti-purpose
+    "{{ONE_PARAGRAPH_ANTI_PURPOSE}}"
+    ; Examples:
+    ; "This is NOT a general-purpose database — it solves one specific problem."
+    ; "This is NOT a framework — it is a library with a focused API."
+    ; "This does NOT handle authentication — that is delegated to [other repo]."
+  )
+
+  ; === Key Architectural Decisions That Must Not Be Reversed ===
+  (architectural-invariants
+    ; *REMINDER: List the foundational decisions*
+    ; ("Idris2 for ABI definitions — dependent types prove interface correctness")
+    ; ("Zig for FFI — zero-cost C ABI compatibility")
+    ; ("Elixir for supervision — OTP fault tolerance")
+  )
+
+  ; === Sensitive Areas (if in doubt, ask) ===
+  (ask-before-touching
+    ; *REMINDER: List areas where LLMs should check before modifying*
+    ; "src/abi/ — formal proofs, changes require re-verification"
+    ; "ffi/zig/ — C ABI boundary, changes affect all language bindings"
+    ; ".machine_readable/ — checkpoint files, format is specified"
+  )
+
+  ; === Ecosystem Position ===
+  (ecosystem
+    (belongs-to "{{MONOREPO_OR_STANDALONE}}")
+    (depends-on ("{{DEP1}}" "{{DEP2}}"))
+    (depended-on-by ("{{CONSUMER1}}" "{{CONSUMER2}}"))
+  )
+)

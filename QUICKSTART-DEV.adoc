@@ -1,0 +1,111 @@
+// SPDX-License-Identifier: PMPL-1.0-or-later
+// Template: QUICKSTART-DEV.adoc — clone → build → test → PR
+// Replace rescript, {{BUILD_CMD}}, {{TEST_CMD}}, {{LANG_STACK}} with actuals
+= rescript — Quick Start for Developers
+:toc:
+:toclevels: 2
+
+== Tech Stack
+
+{{LANG_STACK}}
+
+== Set Up Development Environment
+
+=== Option A: Guix (preferred)
+
+[source,bash]
+----
+guix shell
+----
+
+=== Option B: Nix (fallback)
+
+[source,bash]
+----
+nix develop
+----
+
+=== Option C: Manual
+
+[source,bash]
+----
+git clone https://github.com/hyperpolymath/rescript.git
+cd rescript
+just setup-dev
+----
+
+== Build
+
+[source,bash]
+----
+{{BUILD_CMD}}
+----
+
+== Test
+
+[source,bash]
+----
+{{TEST_CMD}}
+----
+
+== Project Structure
+
+[source]
+----
+rescript/
+├── src/                  # Source code
+├── src/abi/              # Idris2 ABI definitions (if applicable)
+├── ffi/zig/              # Zig FFI bridge (if applicable)
+├── tests/                # Test suite
+├── docs/                 # Documentation
+├── .machine_readable/    # Checkpoint files (STATE, META, ECOSYSTEM)
+├── Justfile              # Task runner recipes
+├── guix.scm              # Guix environment
+├── flake.nix             # Nix environment (fallback)
+└── 0-AI-MANIFEST.a2ml    # AI agent entry point
+----
+
+== Key Recipes
+
+[source,bash]
+----
+just build          # Build the project
+just test           # Run tests
+just doctor         # Self-diagnostic
+just lint           # Lint and format
+just panic-scan     # Security scan via panic-attacker
+just tour           # Guided tour of the codebase
+----
+
+== Before Submitting a PR
+
+[source,bash]
+----
+just lint           # Format and lint
+just test           # All tests pass
+just panic-scan     # No new security issues
+----
+
+== Contractile Invariants
+
+Read `.machine_readable/MUST.contractile` before making changes.
+Key invariants that must never be violated:
+
+{{MUST_INVARIANTS}}
+
+== LLM/AI Agent Development
+
+If using an AI assistant, load the warmup context first:
+
+[source,bash]
+----
+just llm-context    # Outputs role-appropriate context
+----
+
+Or read `0-AI-MANIFEST.a2ml` and `.claude/CLAUDE.md` directly.
+
+== Get Help
+
+* **Architecture**: link:EXPLAINME.adoc[EXPLAINME.adoc]
+* **Wiki**: https://github.com/hyperpolymath/rescript/wiki
+* **Report issue**: `just help-me`

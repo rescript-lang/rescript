@@ -1,0 +1,126 @@
+; SPDX-License-Identifier: PMPL-1.0-or-later
+; ADJUST.contractile — Accessibility invariants for rescript
+; "ADJUST" = Accessibility & Digital Justice for Universal Software & Technology
+;
+; Part of the contractile family: MUST, TRUST, DUST, INTENT, ADJUST
+; This file is machine-readable. LLM/SLM agents MUST NOT violate these invariants.
+
+; ── Definitions ──────────────────────────────────────────────────
+;
+; ADJUST (noun/verb)
+;   The accessibility contractile. Defines how software must adapt to serve
+;   all users regardless of ability, device, or context. Named for the verb
+;   "adjust" — to make suitable, to adapt, to accommodate — which is the
+;   core action of accessible design.
+;
+; Scope:
+;   ADJUST governs all user-facing interfaces: GUI, TUI, CLI, web, mobile,
+;   documentation, error messages, and installation flows. It applies to
+;   both human users and assistive technologies (screen readers, switch
+;   devices, braille displays, voice control).
+;
+; Relationship to other contractiles:
+;   - MUST: ADJUST invariants are a subset of MUST — violating ADJUST
+;     is a MUST violation. ADJUST exists separately because accessibility
+;     rules are numerous enough to warrant their own file, and because
+;     LLMs frequently forget accessibility unless explicitly reminded.
+;   - TRUST: ADJUST does not affect trust levels. All trust tiers must
+;     respect ADJUST invariants equally.
+;   - DUST: Deprecating a feature does not exempt it from ADJUST until
+;     it is fully removed. Deprecated UI must remain accessible.
+;   - INTENT: ADJUST supports the anti-purpose "this software is NOT
+;     only for able-bodied users with modern hardware."
+;
+; Standard: WCAG 2.2 Level AA (minimum)
+;   https://www.w3.org/WAI/WCAG22/quickref/?levels=aaa
+;
+; Why a separate file:
+;   Experience shows LLMs and developers alike treat accessibility as an
+;   afterthought. By placing invariants in a contractile that is loaded
+;   at session start, we make it structurally impossible to forget.
+;
+; ── End Definitions ──────────────────────────────────────────────
+
+(adjust-contractile
+  (version "1.0.0")
+  (full-name "Accessibility & Digital Justice for Universal Software & Technology")
+  (standard "WCAG-2.2-AA")
+  (repo "rescript")
+
+  (invariants
+    ; ── Visual ──
+    (adjust "colour-contrast-ratio >= 4.5:1 for normal text")
+    (adjust "colour-contrast-ratio >= 3:1 for large text (18pt+ or 14pt+ bold)")
+    (adjust "no information conveyed by colour alone")
+    (adjust "no flashing or strobing content (3 flashes/second max)")
+    (adjust "text resizable to 200% without loss of content or function")
+    (adjust "focus indicators visible on all interactive elements")
+
+    ; ── Keyboard ──
+    (adjust "all interactive elements reachable via keyboard (Tab/Shift+Tab)")
+    (adjust "no keyboard traps — user can always Tab away")
+    (adjust "skip navigation link present on pages with repeated blocks")
+    (adjust "logical focus order follows visual reading order")
+
+    ; ── Screen reader ──
+    (adjust "all images have meaningful alt text (or alt='' if decorative)")
+    (adjust "all form inputs have associated labels")
+    (adjust "ARIA landmarks used for page regions (main, nav, banner, etc.)")
+    (adjust "dynamic content updates announced via aria-live regions")
+    (adjust "semantic HTML used (headings, lists, tables) — not div soup")
+
+    ; ── Interactive ──
+    (adjust "touch targets minimum 44x44px on mobile/touch interfaces")
+    (adjust "error messages identify the field and describe the error")
+    (adjust "error messages not conveyed by colour or position alone")
+    (adjust "form validation provides suggestions for correction")
+
+    ; ── Media ──
+    (adjust "video has captions (closed or open)")
+    (adjust "audio-only content has text transcript")
+    (adjust "no autoplay of media with sound")
+
+    ; ── Motion ──
+    (adjust "animations respect prefers-reduced-motion media query")
+    (adjust "no content depends on motion to convey meaning")
+
+    ; ── CLI/TUI ──
+    (adjust "CLI output must not rely solely on colour (use symbols: [OK] [FAIL])")
+    (adjust "TUI must support high-contrast mode")
+    (adjust "all CLI commands support --help with plain-text output")
+    (adjust "error messages written in plain language, not jargon or codes alone")
+
+    ; ── Documentation ──
+    (adjust "docs use clear language, short sentences, logical structure")
+    (adjust "code examples include comments explaining non-obvious steps")
+    (adjust "diagrams have text descriptions or alt text")
+
+    ; ── Internationalisation (i18n) ──
+    (adjust "all user-facing strings externalisable for translation")
+    (adjust "no hardcoded English in error messages — use message keys")
+    (adjust "date/time/number formats locale-aware")
+    (adjust "RTL (right-to-left) layout support where applicable")
+    (adjust "Unicode handled correctly throughout (UTF-8 everywhere)")
+  )
+
+  (related-resources
+    ; LOL — super-parallel corpus crawler for 1500+ languages
+    ; Use for linguistic data, translation coverage, and i18n validation
+    (lol "standards/lol — multilingual NLP corpus, see README.adoc")
+    (polyglot-i18n "polyglot-i18n — i18n framework and WASM translation engine")
+  )
+
+  (enforcement
+    (ci "accessibility linting in quality.yml workflow")
+    (pr-block "PR blocked if accessibility regression detected")
+    (tool "axe-core or pa11y for automated checks on web UI")
+    (tool "CLI output inspected for colour-only signalling")
+    (manual "manual screen reader test before major releases")
+  )
+
+  (notes
+    "These are MINIMUM requirements. Exceeding them (AAA) is encouraged."
+    "When in doubt about an accessibility decision, ask — don't guess."
+    "Accessibility is not optional polish — it is a structural requirement."
+  )
+)

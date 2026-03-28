@@ -1,0 +1,80 @@
+; SPDX-License-Identifier: PMPL-1.0-or-later
+; TRUST.contractile — Trust boundaries for rescript
+; Defines what LLM/SLM agents are trusted to do without asking.
+;
+; Part of the contractile family: MUST, TRUST, DUST, INTENT, ADJUST
+
+; ── Definitions ──────────────────────────────────────────────────
+;
+; TRUST (noun/verb)
+;   The permission contractile. Defines the boundary between what an AI
+;   agent may do autonomously and what requires human approval. Trust is
+;   graduated — not binary — with four levels from minimal to maximal.
+;
+; Trust levels:
+;   - maximal:    Agent may read, build, test, lint, format, heal freely.
+;                 Only destructive/external actions require approval.
+;   - standard:   Agent may read and build. Test/lint need approval.
+;   - restricted: Agent may read only. All modifications need approval.
+;   - minimal:    Agent may read specific files only. Everything else blocked.
+;
+; Scope:
+;   TRUST governs AI agent behaviour only. It does not affect human
+;   contributors — humans follow CONTRIBUTING.md and GOVERNANCE.adoc.
+;
+; Relationship to other contractiles:
+;   - MUST: Trust never overrides MUST. Even at maximal trust, MUST
+;     violations are blocked.
+;   - ADJUST: Trust does not exempt from ADJUST. All trust tiers must
+;     produce accessible output.
+;   - INTENT: TRUST.trust-deny protects the sensitive areas listed in
+;     INTENT.ask-before-touching.
+;   - DUST: Deprecated features have the same trust rules as active ones.
+;
+; ── End Definitions ──────────────────────────────────────────────
+
+(trust-contractile
+  (version "1.0.0")
+  (repo "rescript")
+
+  (trust-level "maximal")  ; maximal | standard | restricted | minimal
+
+  ; === Maximal Trust (default) ===
+  ; LLM may freely do these without asking:
+  (trust-actions
+    "read"          ; Read any file in the repo
+    "build"         ; Run build commands
+    "test"          ; Run test suites
+    "lint"          ; Run linters and formatters
+    "format"        ; Auto-format code
+    "doctor"        ; Run self-diagnostics
+    "heal"          ; Attempt automatic repair
+    "git-status"    ; Check git status
+    "git-diff"      ; View diffs
+    "git-log"       ; View history
+  )
+
+  ; === Denied Actions (always require human approval) ===
+  (trust-deny
+    "delete-branch"           ; Could lose work
+    "force-push"              ; Overwrites history
+    "modify-ci-secrets"       ; Security sensitive
+    "publish"                 ; External visibility
+    "push-to-main"            ; Protected branch
+    "delete-files-bulk"       ; More than 5 files at once
+    "modify-license"          ; Legal implications
+    "modify-security-policy"  ; Security implications
+    "remove-proofs"           ; Formal verification regression
+    "disable-ci-checks"       ; Safety regression
+  )
+
+  ; === Trust Boundary ===
+  (trust-boundary "repo")  ; LLM confined to this repo unless explicitly told otherwise
+
+  ; === Override ===
+  ; Repos requiring tighter trust override these settings with justification:
+  ; (override
+  ;   (trust-level "restricted")
+  ;   (reason "Contains production secrets / handles PII / etc.")
+  ; )
+)
