@@ -213,12 +213,12 @@ let ctx_matcher p =
       | Tpat_tuple args when List.length args = len -> (p, args @ rem)
       | Tpat_any -> (p, omegas @ rem)
       | _ -> raise NoMatch)
-  | Tpat_record (((_, lbl, _, _) :: _ as l), _) -> (
+  | Tpat_record (((_, lbl, _, _) :: _ as l), _, _rest) -> (
     (* Records are normalized *)
     let len = Array.length lbl.lbl_all in
     fun q rem ->
       match q.pat_desc with
-      | Tpat_record (((_, lbl', _, _) :: _ as l'), _)
+      | Tpat_record (((_, lbl', _, _) :: _ as l'), _, _rest')
         when Array.length lbl'.lbl_all = len ->
         let l' = all_record_args l' in
         (p, List.fold_right (fun (_, _, p, _) r -> p :: r) l' rem)
@@ -536,9 +536,9 @@ let simplify_or p =
         let q2 = simpl_rec p2 in
         {p with pat_desc = Tpat_or (q1, q2, o)}
       with Var q2 -> raise (Var {p with pat_desc = Tpat_or (q1, q2, o)}))
-    | {pat_desc = Tpat_record (lbls, closed)} ->
+    | {pat_desc = Tpat_record (lbls, closed, rest)} ->
       let all_lbls = all_record_args lbls in
-      {p with pat_desc = Tpat_record (all_lbls, closed)}
+      {p with pat_desc = Tpat_record (all_lbls, closed, rest)}
     | _ -> p
   in
   try simpl_rec p with Var p -> p
@@ -556,10 +556,12 @@ let simplify_cases args cls =
         | Tpat_any -> cl :: simplify rem
         | Tpat_alias (p, id, _) ->
           simplify ((p :: patl, bind Alias id arg action) :: rem)
-        | Tpat_record ([], _) -> (omega :: patl, action) :: simplify rem
-        | Tpat_record (lbls, closed) ->
+        | Tpat_record ([], _, _rest) -> (omega :: patl, action) :: simplify rem
+        | Tpat_record (lbls, closed, rest) ->
           let all_lbls = all_record_args lbls in
-          let full_pat = {pat with pat_desc = Tpat_record (all_lbls, closed)} in
+          let full_pat =
+            {pat with pat_desc = Tpat_record (all_lbls, closed, rest)}
+          in
           (full_pat :: patl, action) :: simplify rem
         | Tpat_or _ -> (
           let pat_simple = simplify_or pat in
@@ -615,7 +617,7 @@ let rec extract_vars r p =
   | Tpat_var (id, _) -> IdentSet.add id r
   | Tpat_alias (p, id, _) -> extract_vars (IdentSet.add id r) p
   | Tpat_tuple pats -> List.fold_left extract_vars r pats
-  | Tpat_record (lpats, _) ->
+  | Tpat_record (lpats, _, _rest) ->
     List.fold_left (fun r (_, _, p, _) -> extract_vars r p) r lpats
   | Tpat_construct (_, _, pats) -> List.fold_left extract_vars r pats
   | Tpat_array pats -> List.fold_left extract_vars r pats
@@ -1422,7 +1424,7 @@ let record_matching_line num_fields lbl_pat_list =
 let get_args_record num_fields p rem =
   match p with
   | {pat_desc = Tpat_any} -> record_matching_line num_fields [] @ rem
-  | {pat_desc = Tpat_record (lbl_pat_list, _)} ->
+  | {pat_desc = Tpat_record (lbl_pat_list, _, _rest)} ->
     record_matching_line num_fields lbl_pat_list @ rem
   | _ -> assert false
 
@@ -1430,8 +1432,8 @@ let matcher_record num_fields p rem =
   match p.pat_desc with
   | Tpat_or (_, _, _) -> raise OrPat
   | Tpat_any | Tpat_var _ -> record_matching_line num_fields [] @ rem
-  | Tpat_record ([], _) when num_fields = 0 -> rem
-  | Tpat_record (((_, lbl, _, _) :: _ as lbl_pat_list), _)
+  | Tpat_record ([], _, _rest) when num_fields = 0 -> rem
+  | Tpat_record (((_, lbl, _, _) :: _ as lbl_pat_list), _, _rest)
     when Array.length lbl.lbl_all = num_fields ->
     record_matching_line num_fields lbl_pat_list @ rem
   | _ -> raise NoMatch
@@ -2561,7 +2563,7 @@ and do_compile_matching repr partial ctx arg pmh =
       compile_no_test
         (divide_tuple (List.length patl) (normalize_pat pat))
         ctx_combine repr partial ctx pm
-    | Tpat_record ((_, lbl, _, _) :: _, _) ->
+    | Tpat_record ((_, lbl, _, _) :: _, _, _rest) ->
       compile_no_test
         (divide_record lbl.lbl_all (normalize_pat pat))
         ctx_combine repr partial ctx pm
@@ -2636,7 +2638,7 @@ let find_in_pat pred =
     | Tpat_alias (p, _, _) | Tpat_variant (_, Some p, _) -> find_rec p
     | Tpat_tuple ps | Tpat_construct (_, _, ps) | Tpat_array ps ->
       List.exists find_rec ps
-    | Tpat_record (lpats, _) ->
+    | Tpat_record (lpats, _, _rest) ->
       List.exists (fun (_, _, p, _) -> find_rec p) lpats
     | Tpat_or (p, q, _) -> find_rec p || find_rec q
     | Tpat_constant _ | Tpat_var _ | Tpat_any | Tpat_variant (_, None, _) ->
@@ -2646,7 +2648,7 @@ let find_in_pat pred =
 
 let have_mutable_field p =
   match p with
-  | Tpat_record (lps, _) ->
+  | Tpat_record (lps, _, _rest) ->
     List.exists
       (fun (_, lbl, _, _) ->
         match lbl.Types.lbl_mut with
@@ -2740,7 +2742,32 @@ let partial_function loc () =
       ],
       loc )
 
+(* For record patterns with rest, inject the rest binding into the action body *)
+let inject_record_rest_binding param (pat, action) =
+  match pat.pat_desc with
+  | Tpat_record (_, _, Some rest) ->
+    let action_with_rest =
+      Llet
+        ( Strict,
+          Pgenval,
+          rest.rest_ident,
+          Lprim (Precord_spread_new rest.excluded_labels, [param], pat.pat_loc),
+          action )
+    in
+    let pat_without_rest =
+      {
+        pat with
+        pat_desc =
+          (match pat.pat_desc with
+          | Tpat_record (fields, closed, _) -> Tpat_record (fields, closed, None)
+          | _ -> pat.pat_desc);
+      }
+    in
+    (pat_without_rest, action_with_rest)
+  | _ -> (pat, action)
+
 let for_function loc repr param pat_act_list partial =
+  let pat_act_list = List.map (inject_record_rest_binding param) pat_act_list in
   compile_matching repr (partial_function loc) param pat_act_list partial
 
 (* In the following two cases, exhaustiveness info is not available! *)
@@ -2809,6 +2836,28 @@ let for_let loc param pat body =
   | Tpat_var (id, _) ->
     (* fast path, and keep track of simple bindings to unboxable numbers *)
     Llet (Strict, Pgenval, id, param, body)
+  | Tpat_record (_, _, Some rest) ->
+    (* Record pattern with rest: compile the explicit field bindings normally,
+       then add a binding for the rest ident using Precord_spread_new *)
+    let body_with_rest =
+      Llet
+        ( Strict,
+          Pgenval,
+          rest.rest_ident,
+          Lprim (Precord_spread_new rest.excluded_labels, [param], loc),
+          body )
+    in
+    (* Compile the explicit fields pattern (without rest) into the body *)
+    let pat_without_rest =
+      {
+        pat with
+        pat_desc =
+          (match pat.pat_desc with
+          | Tpat_record (fields, closed, _) -> Tpat_record (fields, closed, None)
+          | _ -> pat.pat_desc);
+      }
+    in
+    simple_for_let loc param pat_without_rest body_with_rest
   | _ -> simple_for_let loc param pat body
 
 (* Handling of tupled functions and matchings *)

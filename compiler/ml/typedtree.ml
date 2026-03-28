@@ -35,6 +35,14 @@ type pattern = {
   pat_attributes: attribute list;
 }
 
+and record_pat_rest = {
+  rest_ident: Ident.t;
+  rest_type: type_expr;
+  rest_path: Path.t;
+  rest_labels: Types.label_declaration list;
+  excluded_labels: string list;
+}
+
 and pat_extra =
   | Tpat_constraint of core_type
   | Tpat_type of Path.t * Longident.t loc
@@ -52,6 +60,7 @@ and pattern_desc =
   | Tpat_record of
       (Longident.t loc * label_description * pattern * bool (* optional *)) list
       * closed_flag
+      * record_pat_rest option
   | Tpat_array of pattern list
   | Tpat_or of pattern * pattern * row_desc option
 
@@ -413,7 +422,7 @@ let iter_pattern_desc f = function
   | Tpat_tuple patl -> List.iter f patl
   | Tpat_construct (_, _, patl) -> List.iter f patl
   | Tpat_variant (_, pat, _) -> may f pat
-  | Tpat_record (lbl_pat_list, _) ->
+  | Tpat_record (lbl_pat_list, _, _rest) ->
     List.iter (fun (_, _, pat, _) -> f pat) lbl_pat_list
   | Tpat_array patl -> List.iter f patl
   | Tpat_or (p1, p2, _) ->
@@ -425,8 +434,9 @@ let map_pattern_desc f d =
   match d with
   | Tpat_alias (p1, id, s) -> Tpat_alias (f p1, id, s)
   | Tpat_tuple pats -> Tpat_tuple (List.map f pats)
-  | Tpat_record (lpats, closed) ->
-    Tpat_record (List.map (fun (lid, l, p, o) -> (lid, l, f p, o)) lpats, closed)
+  | Tpat_record (lpats, closed, rest) ->
+    Tpat_record
+      (List.map (fun (lid, l, p, o) -> (lid, l, f p, o)) lpats, closed, rest)
   | Tpat_construct (lid, c, pats) -> Tpat_construct (lid, c, List.map f pats)
   | Tpat_array pats -> Tpat_array (List.map f pats)
   | Tpat_variant (x1, Some p1, x2) -> Tpat_variant (x1, Some (f p1), x2)
@@ -446,6 +456,13 @@ let rec bound_idents pat =
   | Tpat_or (p1, _, _) ->
     (* Invariant : both arguments binds the same variables *)
     bound_idents p1
+  | Tpat_record (_, _, Some rest) ->
+    (* Rest ident is added via enter_variable during type checking,
+       but we also need it in bound_idents for Lambda compilation *)
+    idents :=
+      (rest.rest_ident, Location.mknoloc (Ident.name rest.rest_ident))
+      :: !idents;
+    iter_pattern_desc bound_idents pat.pat_desc
   | d -> iter_pattern_desc bound_idents d
 
 let pat_bound_idents pat =

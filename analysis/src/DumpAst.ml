@@ -99,7 +99,7 @@ let rec printPattern pattern ~pos ~indentation =
       | None -> ""
       | Some pat -> "," ^ printPattern pat ~pos ~indentation)
     ^ ")"
-  | Ppat_record (fields, _) ->
+  | Ppat_record (fields, _, _rest) ->
     "Ppat_record(\n"
     ^ addIndentation (indentation + 1)
     ^ "fields:\n"

@@ -95,6 +95,12 @@ type error =
   | Type_params_not_supported of Longident.t
   | Field_access_on_dict_type
   | Jsx_not_enabled
+  | Record_rest_invalid_type
+  | Record_rest_requires_type_annotation of string
+  | Record_rest_not_record of Longident.t
+  | Record_rest_field_not_optional of string * Longident.t
+  | Record_rest_field_missing of string * Longident.t
+  | Record_rest_extra_field of string * Longident.t
 
 exception Error of Location.t * Env.t * error
 exception Error_forward of Location.error
@@ -496,7 +502,7 @@ let rec build_as_type env p =
            row_fixed = false;
            row_closed = false;
          })
-  | Tpat_record (lpl, _) ->
+  | Tpat_record (lpl, _, _rest) ->
     let lbl = snd4 (List.hd lpl) in
     if lbl.lbl_private = Private then p.pat_type
     else
@@ -1478,7 +1484,7 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
     match (sarg, arg_type) with
     | Some p, [ty] -> type_pat p ty (fun p -> k (Some p))
     | _ -> k None)
-  | Ppat_record (lid_sp_list, closed) ->
+  | Ppat_record (lid_sp_list, closed, rest) ->
     let has_dict_pattern_attr =
       Dict_type_helpers.has_dict_pattern_attribute sp.ppat_attributes
     in
@@ -1537,12 +1543,146 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
           k (label_lid, label, arg, opt))
     in
     let k' k lbl_pat_list =
+      (* When there's a rest pattern, use Open to suppress missing-field warnings *)
+      let effective_closed =
+        match rest with
+        | Some _ -> Asttypes.Open
+        | None -> closed
+      in
       check_recordpat_labels ~get_jsx_component_error_info loc lbl_pat_list
-        closed;
+        effective_closed;
       unify_pat_types loc !env record_ty expected_ty;
+      (* Resolve the rest pattern info *)
+      let typed_rest =
+        match rest with
+        | None -> None
+        | Some rest_pat ->
+          (* Extract type annotation and binding name from rest pattern *)
+          let rest_type_lid, rest_name =
+            match rest_pat.ppat_desc with
+            | Ppat_constraint ({ppat_desc = Ppat_var name}, cty) -> (
+              match cty.ptyp_desc with
+              | Ptyp_constr (lid, []) -> (lid, name)
+              | _ ->
+                raise
+                  (Error (rest_pat.ppat_loc, !env, Record_rest_invalid_type)))
+            | Ppat_var name ->
+              (* No type annotation — try to infer from context *)
+              (* For now, require type annotation *)
+              raise
+                (Error
+                   ( rest_pat.ppat_loc,
+                     !env,
+                     Record_rest_requires_type_annotation name.txt ))
+            | _ ->
+              raise (Error (rest_pat.ppat_loc, !env, Record_rest_invalid_type))
+          in
+          (* Look up the rest record type *)
+          let rest_path, rest_decl =
+            Typetexp.find_type !env rest_type_lid.loc rest_type_lid.txt
+          in
+          let rest_labels =
+            match rest_decl with
+            | {type_kind = Type_record (labels, _)} -> labels
+            | _ ->
+              raise
+                (Error
+                   ( rest_type_lid.loc,
+                     !env,
+                     Record_rest_not_record rest_type_lid.txt ))
+          in
+          (* Get explicit field names *)
+          let explicit_fields =
+            List.map (fun (_, label, _, _) -> label.lbl_name) lbl_pat_list
+          in
+          (* Get explicit optional fields *)
+          let explicit_optional_fields =
+            List.filter_map
+              (fun (_, label, _, opt) ->
+                if opt then Some label.lbl_name else None)
+              lbl_pat_list
+          in
+          (* Get rest field names *)
+          let rest_field_names =
+            List.map
+              (fun (l : Types.label_declaration) -> Ident.name l.ld_id)
+              rest_labels
+          in
+          (* Validate: fields in both explicit and rest must be optional in the explicit pattern *)
+          List.iter
+            (fun rest_field ->
+              if
+                List.mem rest_field explicit_fields
+                && not (List.mem rest_field explicit_optional_fields)
+              then
+                raise
+                  (Error
+                     ( rest_pat.ppat_loc,
+                       !env,
+                       Record_rest_field_not_optional
+                         (rest_field, rest_type_lid.txt) )))
+            rest_field_names;
+          (* Validate: all source fields must be in explicit or rest *)
+          (match lbl_pat_list with
+          | (_, label1, _, _) :: _ ->
+            let all_source = label1.lbl_all in
+            Array.iter
+              (fun source_label ->
+                let name = source_label.lbl_name in
+                if
+                  (not (List.mem name explicit_fields))
+                  && not (List.mem name rest_field_names)
+                then
+                  raise
+                    (Error
+                       ( rest_pat.ppat_loc,
+                         !env,
+                         Record_rest_field_missing (name, rest_type_lid.txt) )))
+              all_source
+          | [] -> ());
+          (* Validate: rest type fields must all exist in source *)
+          (match lbl_pat_list with
+          | (_, label1, _, _) :: _ ->
+            let all_source = label1.lbl_all in
+            let source_field_names =
+              Array.to_list (Array.map (fun l -> l.lbl_name) all_source)
+            in
+            List.iter
+              (fun (rest_label : Types.label_declaration) ->
+                if
+                  not
+                    (List.mem (Ident.name rest_label.ld_id) source_field_names)
+                then
+                  raise
+                    (Error
+                       ( rest_type_lid.loc,
+                         !env,
+                         Record_rest_extra_field
+                           (Ident.name rest_label.ld_id, rest_type_lid.txt) )))
+              rest_labels
+          | [] -> ());
+          let rest_type_expr =
+            newgenty
+              (Tconstr
+                 ( rest_path,
+                   List.map (fun _ -> newvar ()) rest_decl.type_params,
+                   ref Mnil ))
+          in
+          let rest_ident =
+            enter_variable rest_pat.ppat_loc rest_name rest_type_expr
+          in
+          Some
+            {
+              Typedtree.rest_ident;
+              rest_type = rest_type_expr;
+              rest_path;
+              rest_labels;
+              excluded_labels = explicit_fields;
+            }
+      in
       rp k
         {
-          pat_desc = Tpat_record (lbl_pat_list, closed);
+          pat_desc = Tpat_record (lbl_pat_list, closed, typed_rest);
           pat_loc = loc;
           pat_extra = [];
           pat_type = expected_ty;
@@ -2066,7 +2206,7 @@ let iter_ppat f p =
   | Ppat_open (_, p)
   | Ppat_constraint (p, _) ->
     f p
-  | Ppat_record (args, _flag) -> List.iter (fun {x = p} -> f p) args
+  | Ppat_record (args, _flag, _rest) -> List.iter (fun {x = p} -> f p) args
 
 let contains_polymorphic_variant p =
   let rec loop p =
@@ -4788,6 +4928,32 @@ let report_error env loc ppf error =
     fprintf ppf
       "Cannot compile JSX expression because JSX support is not enabled. Add \
        \"jsx\" settings to rescript.json to enable JSX support."
+  | Record_rest_invalid_type ->
+    fprintf ppf "Record rest pattern must have the form: ...Type.t as name"
+  | Record_rest_requires_type_annotation name ->
+    fprintf ppf
+      "Record rest pattern `...%s` requires a type annotation. Use `...Type.t \
+       as %s`."
+      name name
+  | Record_rest_not_record lid ->
+    fprintf ppf
+      "Type %a is not a record type and cannot be used as a record rest \
+       pattern."
+      longident lid
+  | Record_rest_field_not_optional (field, lid) ->
+    fprintf ppf
+      "Field `%s` appears in both the explicit pattern and the rest type `%a`. \
+       It must be marked as optional (`?%s`) in the explicit pattern."
+      field longident lid field
+  | Record_rest_field_missing (field, lid) ->
+    fprintf ppf
+      "Field `%s` is not covered by the explicit pattern or the rest type `%a`."
+      field longident lid
+  | Record_rest_extra_field (field, lid) ->
+    fprintf ppf
+      "Field `%s` in the rest type `%a` does not exist in the source record \
+       type."
+      field longident lid
 
 let report_error env loc ppf err =
   Printtyp.wrap_printing_env env (fun () -> report_error env loc ppf err)

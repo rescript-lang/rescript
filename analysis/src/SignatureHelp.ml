@@ -664,7 +664,8 @@ let signatureHelp ~path ~pos ~currentFile ~debug ~allowForConstructorPayloads =
                 match tupleItemWithCursor with
                 | None -> -1
                 | Some i -> i)
-              | `ConstructorPat (_, {ppat_desc = Ppat_record (fields, _)}) -> (
+              | `ConstructorPat (_, {ppat_desc = Ppat_record (fields, _, _rest)})
+                -> (
                 let fieldNameWithCursor =
                   fields
                   |> List.find_map

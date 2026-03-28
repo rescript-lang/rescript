@@ -2730,7 +2730,7 @@ and print_pattern ~state (p : Parsetree.pattern) cmt_tbl =
       Doc.concat [Doc.text "..."; print_ident_path ident cmt_tbl]
     | Ppat_type ident ->
       Doc.concat [Doc.text "#..."; print_ident_path ident cmt_tbl]
-    | Ppat_record (rows, _)
+    | Ppat_record (rows, _, _rest)
       when ParsetreeViewer.has_dict_pattern_attribute p.ppat_attributes ->
       Doc.concat
         [
@@ -2748,9 +2748,23 @@ and print_pattern ~state (p : Parsetree.pattern) cmt_tbl =
           Doc.soft_line;
           Doc.rbrace;
         ]
-    | Ppat_record ([], Open) ->
+    | Ppat_record ([], Open, None) ->
       Doc.concat [Doc.lbrace; Doc.text "_"; Doc.rbrace]
-    | Ppat_record (rows, open_flag) ->
+    | Ppat_record (rows, open_flag, rest) ->
+      let print_rest_pattern rest_pat =
+        match rest_pat.Parsetree.ppat_desc with
+        | Ppat_constraint ({ppat_desc = Ppat_var name}, typ) ->
+          Doc.concat
+            [
+              Doc.text "...";
+              print_typ_expr ~state typ cmt_tbl;
+              Doc.text " as ";
+              Doc.text name.txt;
+            ]
+        | Ppat_var name -> Doc.concat [Doc.text "..."; Doc.text name.txt]
+        | _ ->
+          Doc.concat [Doc.text "..."; print_pattern ~state rest_pat cmt_tbl]
+      in
       Doc.group
         (Doc.concat
            [
@@ -2765,9 +2779,19 @@ and print_pattern ~state (p : Parsetree.pattern) cmt_tbl =
                          (fun row ->
                            print_pattern_record_row ~state row cmt_tbl)
                          rows);
-                    (match open_flag with
-                    | Open -> Doc.concat [Doc.text ","; Doc.line; Doc.text "_"]
-                    | Closed -> Doc.nil);
+                    (match rest with
+                    | Some rest_pat ->
+                      Doc.concat
+                        [
+                          (if rows <> [] then Doc.concat [Doc.text ","; Doc.line]
+                           else Doc.nil);
+                          print_rest_pattern rest_pat;
+                        ]
+                    | None -> (
+                      match open_flag with
+                      | Open ->
+                        Doc.concat [Doc.text ","; Doc.line; Doc.text "_"]
+                      | Closed -> Doc.nil));
                   ]);
              Doc.if_breaks (Doc.text ",") Doc.nil;
              Doc.soft_line;

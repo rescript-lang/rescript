@@ -43,6 +43,14 @@ type pattern = {
   pat_attributes: attributes;
 }
 
+and record_pat_rest = {
+  rest_ident: Ident.t;
+  rest_type: type_expr;
+  rest_path: Path.t;
+  rest_labels: Types.label_declaration list;
+  excluded_labels: string list;
+}
+
 and pat_extra =
   | Tpat_constraint of core_type
       (** P : T          { pat_desc = P
@@ -85,6 +93,7 @@ and pattern_desc =
   | Tpat_record of
       (Longident.t loc * label_description * pattern * bool (* optional *)) list
       * closed_flag
+      * record_pat_rest option
       (** { l1=P1; ...; ln=Pn }     (flag = Closed)
             { l1=P1; ...; ln=Pn; _}   (flag = Open)
 

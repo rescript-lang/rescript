@@ -183,7 +183,7 @@ let rec add_pattern bv pat =
   | Ppat_construct (c, op) ->
     add bv c;
     add_opt add_pattern bv op
-  | Ppat_record (pl, _) ->
+  | Ppat_record (pl, _, _rest) ->
     List.iter
       (fun {lid = lbl; x = p} ->
         add bv lbl;

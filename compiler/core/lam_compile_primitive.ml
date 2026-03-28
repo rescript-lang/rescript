@@ -603,6 +603,18 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
     match args with
     | [e1] -> E.obj ~dup:e1 []
     | _ -> assert false)
+  | Precord_spread_new excluded -> (
+    match args with
+    | [e1] ->
+      (* Generate: (({field1, field2, ...rest}) => rest)(source)
+         This uses JS destructuring to cleanly extract the rest *)
+      let excluded_str = String.concat ", " excluded in
+      let code = Printf.sprintf "(({%s, ...__rest}) => __rest)" excluded_str in
+      E.call
+        ~info:{arity = Full; call_info = Call_na; call_transformed_jsx = false}
+        (E.raw_js_code (Exp (Js_function {arity = 1; arrow = true})) code)
+        [e1]
+    | _ -> assert false)
   | Phash -> (
     match args with
     | [e1; e2; e3; e4] -> E.runtime_call Primitive_modules.hash "hash" args

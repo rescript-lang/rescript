@@ -389,8 +389,12 @@ module P = struct
     | Ppat_construct (l, p) ->
       construct ~loc ~attrs (map_loc sub l) (map_opt (sub.pat sub) p)
     | Ppat_variant (l, p) -> variant ~loc ~attrs l (map_opt (sub.pat sub) p)
-    | Ppat_record (lpl, cf) ->
+    | Ppat_record (lpl, cf, rest) ->
       record ~loc ~attrs
+        ?rest:
+          (match rest with
+          | None -> None
+          | Some p -> Some (sub.pat sub p))
         (List.map
            (fun {lid; x = pat; opt} ->
              {lid = map_loc sub lid; x = sub.pat sub pat; opt})

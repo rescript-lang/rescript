@@ -43,7 +43,7 @@ let inlay ~path ~pos ~maxLength ~debug =
   let rec processPattern (pat : Parsetree.pattern) =
     match pat.ppat_desc with
     | Ppat_tuple pl -> pl |> List.iter processPattern
-    | Ppat_record (fields, _) ->
+    | Ppat_record (fields, _, _rest) ->
       Ext_list.iter fields (fun {x = p} -> processPattern p)
     | Ppat_array fields -> fields |> List.iter processPattern
     | Ppat_var {loc} -> push loc Type

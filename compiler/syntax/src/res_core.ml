@@ -324,6 +324,7 @@ type fundef_parameter =
 type record_pattern_item =
   | PatUnderscore
   | PatField of Parsetree.pattern Parsetree.record_element
+  | PatRest of Parsetree.pattern
 
 type context = OrdinaryExpr | TernaryTrueBranchExpr | WhenExpr
 
@@ -1505,9 +1506,71 @@ and parse_record_pattern_row_field ~attrs p =
 and parse_record_pattern_row p =
   let attrs = parse_attributes p in
   match p.Parser.token with
-  | DotDotDot ->
+  | DotDotDot -> (
     Parser.next p;
-    Some (true, PatField (parse_record_pattern_row_field ~attrs p))
+    let start_pos = p.Parser.start_pos in
+    match p.Parser.token with
+    | Uident _ ->
+      (* ...ModulePath.t as name *)
+      let type_path = parse_value_path p in
+      let type_loc = type_path.loc in
+      let core_type = Ast_helper.Typ.constr ~loc:type_loc type_path [] in
+      Parser.expect As p;
+      let name_start = p.start_pos in
+      let name =
+        match p.token with
+        | Lident ident ->
+          Parser.next p;
+          Location.mkloc ident (mk_loc name_start p.prev_end_pos)
+        | _ ->
+          Parser.err p (Diagnostics.unexpected p.token p.breadcrumbs);
+          Location.mkloc "_" (mk_loc name_start p.prev_end_pos)
+      in
+      let rest_loc = mk_loc start_pos p.prev_end_pos in
+      let rest_pat =
+        Ast_helper.Pat.constraint_ ~loc:rest_loc ~attrs
+          (Ast_helper.Pat.var ~loc:name.loc name)
+          core_type
+      in
+      Some (false, PatRest rest_pat)
+    | Lident ident ->
+      Parser.next p;
+      if p.Parser.token = As then (
+        (* ...typeName as name *)
+        let type_path =
+          Location.mkloc (Longident.Lident ident)
+            (mk_loc start_pos p.prev_end_pos)
+        in
+        let type_loc = type_path.loc in
+        let core_type = Ast_helper.Typ.constr ~loc:type_loc type_path [] in
+        Parser.expect As p;
+        let name_start = p.start_pos in
+        let name =
+          match p.token with
+          | Lident id ->
+            Parser.next p;
+            Location.mkloc id (mk_loc name_start p.prev_end_pos)
+          | _ ->
+            Parser.err p (Diagnostics.unexpected p.token p.breadcrumbs);
+            Location.mkloc "_" (mk_loc name_start p.prev_end_pos)
+        in
+        let rest_loc = mk_loc start_pos p.prev_end_pos in
+        let rest_pat =
+          Ast_helper.Pat.constraint_ ~loc:rest_loc ~attrs
+            (Ast_helper.Pat.var ~loc:name.loc name)
+            core_type
+        in
+        Some (false, PatRest rest_pat))
+      else
+        (* ...name (no type annotation) *)
+        let loc = mk_loc start_pos p.prev_end_pos in
+        let rest_pat =
+          Ast_helper.Pat.var ~loc ~attrs (Location.mkloc ident loc)
+        in
+        Some (false, PatRest rest_pat)
+    | _ ->
+      (* Fallback: treat as old-style spread (error) *)
+      Some (true, PatField (parse_record_pattern_row_field ~attrs p)))
   | Uident _ | Lident _ ->
     Some (false, PatField (parse_record_pattern_row_field ~attrs p))
   | Question -> (
@@ -1548,14 +1611,14 @@ and parse_record_pattern ~attrs p =
       ~f:parse_record_pattern_row
   in
   Parser.expect Rbrace p;
-  let fields, closed_flag =
+  let fields, closed_flag, rest =
     let raw_fields, flag =
       match raw_fields with
       | (_hasSpread, PatUnderscore) :: rest -> (rest, Asttypes.Open)
       | raw_fields -> (raw_fields, Asttypes.Closed)
     in
     List.fold_left
-      (fun (fields, flag) curr ->
+      (fun (fields, flag, rest) curr ->
         let has_spread, field = curr in
         match field with
         | PatField field ->
@@ -1563,12 +1626,13 @@ and parse_record_pattern ~attrs p =
              let pattern = field.x in
              Parser.err ~start_pos:pattern.Parsetree.ppat_loc.loc_start p
                (Diagnostics.message ErrorMessages.record_pattern_spread));
-          (field :: fields, flag)
-        | PatUnderscore -> (fields, flag))
-      ([], flag) raw_fields
+          (field :: fields, flag, rest)
+        | PatRest rest_pat -> (fields, flag, Some rest_pat)
+        | PatUnderscore -> (fields, flag, rest))
+      ([], flag, None) raw_fields
   in
   let loc = mk_loc start_pos p.prev_end_pos in
-  Ast_helper.Pat.record ~loc ~attrs fields closed_flag
+  Ast_helper.Pat.record ~loc ~attrs ?rest fields closed_flag
 
 and parse_tuple_pattern ~attrs ~first ~start_pos p =
   let patterns =

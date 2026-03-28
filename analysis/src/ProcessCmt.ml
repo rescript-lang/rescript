@@ -512,7 +512,7 @@ let rec forStructureItem ~(env : SharedTypes.Env.t) ~(exported : Exported.t)
       | Tpat_tuple pats | Tpat_array pats | Tpat_construct (_, _, pats) ->
         pats |> List.iter (fun p -> handlePattern [] p)
       | Tpat_or (p, _, _) -> handlePattern [] p
-      | Tpat_record (items, _) ->
+      | Tpat_record (items, _, _rest) ->
         items |> List.iter (fun (_, _, p, _) -> handlePattern [] p)
       | Tpat_variant (_, Some p, _) -> handlePattern [] p
       | Tpat_variant (_, None, _) | Tpat_any | Tpat_constant _ -> ()

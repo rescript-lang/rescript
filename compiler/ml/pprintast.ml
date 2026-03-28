@@ -461,7 +461,7 @@ and simple_pattern ctxt (f : Format.formatter) (x : pattern) : unit =
     | Ppat_array l -> pp f "@[<2>[|%a|]@]" (list (pattern1 ctxt) ~sep:";") l
     | Ppat_unpack s -> pp f "(module@ %s)@ " s.txt
     | Ppat_type li -> pp f "#%a" longident_loc li
-    | Ppat_record (l, closed) -> (
+    | Ppat_record (l, closed, _rest) -> (
       let longident_x_pattern f {lid = li; x = p; opt} =
         let opt_str = if opt then "?" else "" in
         match (li, p) with
