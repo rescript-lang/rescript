@@ -1,0 +1,42 @@
+# SPDX-License-Identifier: PMPL-1.0-or-later
+# Mustfile (A2ML Canonical)
+# Copyright (c) 2026 Jonathan D.A. Jewell (hyperpolymath)
+
+@abstract:
+Physical State contract for Rescript. Baseline UX Manifesto invariants
+that MUST hold at all times.
+@end
+
+@requires:
+- section: Core-Files
+- section: Banned
+@end
+
+## Core-Files
+
+### license-present
+- description: LICENSE file must exist
+- run: test -f LICENSE
+- severity: critical
+
+### readme-present
+- description: README must exist
+- run: test -f README.adoc || test -f README.md
+- severity: critical
+
+## Banned
+
+### no-hardcoded-paths
+- description: No hardcoded developer paths
+- run: "! grep -rn '/home/hyper\|/mnt/eclipse' --include='*.rs' --include='*.res' --include='*.ex' --include='*.gleam' --include='*.zig' --include='*.sh' . 2>/dev/null | grep -v '.git/' | grep -v 'ux-rollout.jl' | head -1"
+- severity: critical
+
+### no-dockerfiles
+- description: No Dockerfiles (use Containerfile)
+- run: test ! -f Dockerfile
+- severity: warning
+
+### no-makefiles
+- description: No Makefiles (use Justfile)
+- run: test ! -f Makefile
+- severity: warning

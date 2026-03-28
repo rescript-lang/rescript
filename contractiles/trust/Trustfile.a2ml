@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: PMPL-1.0-or-later
+# Trustfile (A2ML Canonical)
+# Copyright (c) 2026 Jonathan D.A. Jewell (hyperpolymath)
+
+@abstract:
+Trust and provenance verification for Rescript.
+Maximal trust by default — LLM may read, build, test, lint, format.
+@end
+
+@trust-level: maximal
+@trust-boundary: repo
+@trust-actions: [read, build, test, lint, format]
+@trust-deny: [delete-branch, force-push, modify-ci-secrets, publish]
+
+## Integrity
+
+### license-content
+- description: LICENSE contains expected SPDX identifier
+- run: grep -q 'SPDX\|License\|MIT\|Apache\|PMPL\|MPL' LICENSE
+- severity: critical
+
+### no-secrets-committed
+- description: No .env or credential files in repo
+- run: test ! -f .env && test ! -f credentials.json && test ! -f .env.local
+- severity: critical
