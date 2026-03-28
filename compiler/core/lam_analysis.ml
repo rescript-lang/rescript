@@ -53,7 +53,7 @@ let rec no_side_effects (lam : Lam.t) : bool =
     (* whether it's mutable or not *)
     | Pfield _ | Pval_from_option | Pval_from_option_not_nest
     (* NOP The compiler already [t option] is the same as t *)
-    | Pduprecord
+    | Pduprecord | Precord_spread_new _
     (* generic primitives *)
     | Pobjcomp _ | Pobjorder | Pobjmin | Pobjmax | Pobjtag | Pobjsize
     (* bool primitives *)

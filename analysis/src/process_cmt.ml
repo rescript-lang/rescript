@@ -517,7 +517,7 @@ let rec for_structure_item ~(env : Shared_types.Env.t) ~(exported : Exported.t)
       | Tpat_tuple pats | Tpat_array pats | Tpat_construct (_, _, pats) ->
         pats |> List.iter (fun p -> handle_pattern [] p)
       | Tpat_or (p, _, _) -> handle_pattern [] p
-      | Tpat_record (items, _) ->
+      | Tpat_record (items, _, _rest) ->
         items |> List.iter (fun (_, _, p, _) -> handle_pattern [] p)
       | Tpat_variant (_, Some p, _) -> handle_pattern [] p
       | Tpat_variant (_, None, _) | Tpat_any | Tpat_constant _ -> ()

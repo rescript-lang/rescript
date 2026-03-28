@@ -102,6 +102,7 @@ module Pat : sig
   val record :
     ?loc:loc ->
     ?attrs:attrs ->
+    ?rest:pattern ->
     pattern record_element list ->
     closed_flag ->
     pattern

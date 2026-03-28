@@ -235,7 +235,7 @@ let collect_pattern ~config ~refs :
  fun super self pat ->
   let pos_from = pat.Typedtree.pat_loc.loc_start in
   (match pat.pat_desc with
-  | Typedtree.Tpat_record (cases, _clodsedFlag) ->
+  | Typedtree.Tpat_record (cases, _clodsedFlag, _rest) ->
     cases
     |> List.iter (fun (_loc, {Types.lbl_loc = {loc_start = pos_to}}, _pat, _) ->
            if !Config.analyze_types then

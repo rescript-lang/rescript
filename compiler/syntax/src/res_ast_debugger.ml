@@ -804,7 +804,7 @@ module Sexp_ast = struct
             | None -> Sexp.atom "None"
             | Some p -> Sexp.list [Sexp.atom "Some"; pattern p]);
           ]
-      | Ppat_record (rows, flag) ->
+      | Ppat_record (rows, flag, _rest) ->
         Sexp.list
           [
             Sexp.atom "Ppat_record";

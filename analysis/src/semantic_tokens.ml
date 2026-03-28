@@ -233,7 +233,7 @@ let command ~debug ~emitter ~source ~kind_file =
     | Ppat_construct ({txt = Lident ("true" | "false")}, _) ->
       (* Don't emit true or false *)
       Ast_iterator.default_iterator.pat iterator p
-    | Ppat_record (cases, _) ->
+    | Ppat_record (cases, _, _rest) ->
       Ext_list.iter cases (fun {lid = label} ->
           emitter |> emit_record_label ~label ~debug);
       Ast_iterator.default_iterator.pat iterator p

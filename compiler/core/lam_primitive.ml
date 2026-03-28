@@ -42,6 +42,7 @@ type t =
   | Pduprecord
   (* Tagged template literal: [tag; strings_array; values_array] *)
   | Ptagged_template
+  | Precord_spread_new of string list
   (* External call *)
   | Pjs_call of {
       prim_name: string;
@@ -228,9 +229,9 @@ let eq_primitive_approx (lhs : t) (rhs : t) =
   | Pnull_to_opt | Pnull_undefined_to_opt | Pis_null | Pis_not_none | Psome
   | Psome_not_nest | Pis_undefined | Pis_null_undefined | Pimport | Ptypeof
   | Pfn_arity | Pis_poly_var_block | Pdebugger | Pinit_mod | Pupdate_mod
-  | Pduprecord | Pmakearray | Parraylength | Parrayrefu | Parraysetu
-  | Parrayrefs | Parraysets | Pjs_fn_make_unit | Pjs_fn_method | Phash
-  | Phash_mixstring | Phash_mixint | Phash_finalmix ->
+  | Pduprecord | Precord_spread_new _ | Pmakearray | Parraylength | Parrayrefu
+  | Parraysetu | Parrayrefs | Parraysets | Pjs_fn_make_unit | Pjs_fn_method
+  | Phash | Phash_mixstring | Phash_mixint | Phash_finalmix ->
     rhs = lhs
   (* Reachable only via the optimizer's term-equality comparison, which the
      test suite doesn't exercise for tagged templates. *)

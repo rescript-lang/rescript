@@ -517,7 +517,7 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
           (NPolyvariantPayload {item_num = 0; constructor_name = txt}
           :: pattern_path)
         ?context_path p
-    | Ppat_record (fields, _) ->
+    | Ppat_record (fields, _, _rest) ->
       Ext_list.iter fields (fun {lid = fname; x = p} ->
           match fname with
           | {Location.txt = Longident.Lident fname} ->

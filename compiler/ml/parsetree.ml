@@ -184,9 +184,10 @@ and pattern_desc =
     (* `A             (None)
        `A P           (Some P)
     *)
-  | Ppat_record of pattern record_element list * closed_flag
-    (* { l1=P1; ...; ln=Pn }     (flag = Closed)
-       { l1=P1; ...; ln=Pn; _}   (flag = Open)
+  | Ppat_record of pattern record_element list * closed_flag * pattern option
+    (* { l1=P1; ...; ln=Pn }     (flag = Closed, rest = None)
+       { l1=P1; ...; ln=Pn; _}   (flag = Open, rest = None)
+       { l1=P1; ...; ...T as r }  (rest = Some pattern)
 
        Invariant: n > 0
     *)

@@ -29,20 +29,6 @@ Explanation: since records have a known, fixed shape, a spread like `{a, ...b}` 
 
 
   Syntax error!
-  syntax_tests/data/parsing/errors/other/spread.res:4:15-18
-
-  2 │ 
-  3 │ let record = {...x, ...y}
-  4 │ let {...x, ...y} = myRecord
-  5 │ 
-  6 │ let list{...x, ...y} = myList
-
-  Record spread (`...`) is not supported in pattern matches.
-Explanation: you can't collect a subset of a record's field into its own record, since a record needs an explicit declaration and that subset wouldn't have one.
-Solution: you need to pull out each field you want explicitly.
-
-
-  Syntax error!
   syntax_tests/data/parsing/errors/other/spread.res:6:13-22
 
   4 │ let {...x, ...y} = myRecord
@@ -56,7 +42,7 @@ Explanation: a list spread at the tail is efficient, but a spread in the middle 
 
 let [|arr;_|] = [|1;2;3|]
 let record = { x with y }
-let { x; y } = myRecord
+let {  } = myRecord
 let x::y = myList
 type nonrec t = {
   ...: a }
