@@ -1,5 +1,0 @@
-= rescript
-:toc: preamble
-:icons: font
-
-
