@@ -1,0 +1,65 @@
+# RSR-template-repo - Editor Configuration
+# https://editorconfig.org
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_size = 2
+indent_style = space
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.adoc]
+trim_trailing_whitespace = false
+
+[*.rs]
+indent_size = 4
+
+[*.ex]
+indent_size = 2
+
+[*.exs]
+indent_size = 2
+
+[*.zig]
+indent_size = 4
+
+[*.ada]
+indent_size = 3
+
+[*.adb]
+indent_size = 3
+
+[*.ads]
+indent_size = 3
+
+[*.hs]
+indent_size = 2
+
+[*.res]
+indent_size = 2
+
+[*.resi]
+indent_size = 2
+
+[*.ncl]
+indent_size = 2
+
+[*.rkt]
+indent_size = 2
+
+[*.scm]
+indent_size = 2
+
+[*.nix]
+indent_size = 2
+
+[Justfile]
+indent_style = space
+indent_size = 4
+
