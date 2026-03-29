@@ -323,7 +323,8 @@ let rewrite_optional_inline_record_fields = function
                {
                  typ with
                  ptyp_desc =
-                   Ptyp_constr ({txt = Lident "option"; loc = typ.ptyp_loc}, [typ]);
+                   Ptyp_constr
+                     ({txt = Lident "option"; loc = typ.ptyp_loc}, [typ]);
                }
              in
              {ld with pld_type = typ}
@@ -457,7 +458,10 @@ let transl_declaration ~type_record_as_object ~untagged_wfc env sdecl id =
            Location.prerr_warning loc Warnings.Constraint_on_gadt);
       let scstrs =
         Ext_list.map scstrs (fun ({pcd_args} as cstr) ->
-            {cstr with pcd_args = rewrite_optional_inline_record_fields pcd_args})
+            {
+              cstr with
+              pcd_args = rewrite_optional_inline_record_fields pcd_args;
+            })
       in
       let all_constrs = ref StringSet.empty in
       List.iter
