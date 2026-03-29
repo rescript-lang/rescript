@@ -56,12 +56,15 @@ let f2_with = x =>
 exception A({name: int, x: int})
 exception B(int, int)
 exception C({name: int})
+exception D({code: int, message?: string})
 
 let u = f =>
   try f() catch {
   | A({name, x}) => name + x
   | B(a, b) => a + b
   | C(x) => x.name
+  | D({code, message}) => code + String.length(message)
+  | D({code}) => code
   | _ => -1
   }
 
@@ -70,5 +73,7 @@ describe(__LOC__, () => {
     eq(__LOC__, u(() => throw(A({name: 1, x: 1}))), 2)
     eq(__LOC__, u(() => throw(B(1, 2))), 3)
     eq(__LOC__, u(() => throw(C({name: 4}))), 4)
+    eq(__LOC__, u(() => throw(D({code: 1, message: "A"}))), 2)
+    eq(__LOC__, u(() => throw(D({code: 3}))), 3)
   })
 })
