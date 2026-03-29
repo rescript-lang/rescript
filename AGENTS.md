@@ -83,7 +83,13 @@ compiler/
 ├── ext/             # Extended utilities and data structures
 └── gentype/         # TypeScript generation
 
-analysis/            # Language server and tooling
+analysis/            # OCaml analysis binary (hover, completion, references)
+
+rewatch/src/
+├── build/           # Build system logic
+├── lsp/             # LSP server implementation (Rust, tower-lsp)
+└── ...              # CLI, config, watcher, etc.
+
 packages/@rescript/
 ├── runtime/         # Runtime and standard library
 └── <platform>/      # Platform-specific binaries
@@ -92,7 +98,9 @@ tests/
 ├── syntax_tests/    # Parser/syntax layer tests
 ├── tests/           # Runtime library tests
 ├── build_tests/     # Integration tests
-└── ounit_tests/     # Compiler unit tests
+├── ounit_tests/     # Compiler unit tests
+└── rewatch_tests/
+    └── tests/lsp/   # LSP integration tests
 ```
 
 ## Working on the Compiler
@@ -307,6 +315,7 @@ rewatch/src/
 │   ├── deps.rs         # Dependency analysis and module graph
 │   ├── clean.rs        # Build artifact cleanup
 │   └── logs.rs         # Build logging and error reporting
+├── lsp/               # LSP server (tower-lsp, shells out to analysis binary)
 ├── cli.rs              # Command-line interface definitions
 ├── config.rs           # rescript.json configuration parsing
 ├── watcher.rs          # File watching and incremental builds
@@ -387,21 +396,7 @@ make test-rewatch     # Run integration tests
 
 **Note**: The rewatch project is located in the `rewatch/` directory with its own `Cargo.toml` file. All cargo commands should be run from the project root using the `--manifest-path rewatch/Cargo.toml` flag, as shown in the CI workflow.
 
-**Integration Tests**: The `make test-rewatch` command runs bash-based integration tests located in `rewatch/tests/suite.sh`. These tests use the `rewatch/testrepo/` directory as a test workspace with various package configurations to verify rewatch's behavior across different scenarios.
-
-**Running Individual Integration Tests**: You can run individual test scripts directly by setting up the environment manually:
-
-```bash
-cd rewatch/tests
-export REWATCH_EXECUTABLE="$(realpath ../target/debug/rescript)"
-eval $(node ./get_bin_paths.js)
-export RESCRIPT_BSC_EXE
-export RESCRIPT_RUNTIME
-source ./utils.sh
-bash ./watch/06-watch-missing-source-folder.sh
-```
-
-This is useful for iterating on a specific test without running the full suite.
+**Integration Tests**: The `make test-rewatch` command runs Vitest-based integration tests located in `tests/rewatch_tests/`. These tests use a sandbox copy of `tests/rewatch_tests/fixture/` to verify rewatch's behavior across different scenarios (build, watch, clean, format, etc.).
 
 #### Debugging
 
@@ -409,6 +404,26 @@ This is useful for iterating on a specific test without running the full suite.
 - **Compiler Args**: Check generated `bsc` arguments in `compile.rs`
 - **Dependencies**: Inspect module dependency graph in `deps.rs`
 - **File Watching**: Monitor file change events in `watcher.rs`
+
+#### OpenTelemetry Tracing
+
+Rewatch supports OpenTelemetry (OTEL) tracing for build, watch, and LSP commands. Any OTLP-compatible viewer (Jaeger, Grafana, etc.) will work. For a lightweight option tailored to rewatch development, see `rewatch/otel-viewer/` (development notes in `rewatch/otel-viewer/AGENTS.md`) — it requires only `uv` (no Docker) and includes features like LLM export.
+
+```bash
+# Start the viewer (see rewatch/otel-viewer/README.md for setup)
+cd rewatch/otel-viewer
+uv run python server.py
+```
+
+Then run rewatch with the OTLP endpoint set:
+
+```bash
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4707 cargo run --manifest-path rewatch/Cargo.toml -- build
+```
+
+Open http://localhost:4707 to browse traces.
+
+Note: Use `tracing::debug!` (not `log::debug!`) for events you want to appear in OTEL traces — they use separate logging systems.
 
 #### Running Rewatch Directly
 
@@ -490,8 +505,16 @@ When clippy suggests refactoring that could impact performance, consider the tra
 3. Handle different file types (`.res`, `.resi`, etc.)
 4. Consider performance impact of watching many files
 
+## Working on the LSP Server
+
+The LSP server runs via `rescript lsp` — a single Rust process (tower-lsp) that owns the build state and speaks LSP over stdio. It shells out to the OCaml `rescript-editor-analysis` binary for features like hover, completion, and references.
+
+**Start here:** read `LSP.md` in the project root for architecture and protocol details.
+
+- **Source:** `rewatch/src/lsp/` — see `rewatch/src/lsp/AGENTS.md` for development notes
+- **Analysis binary:** `analysis/` — the OCaml binary that the LSP shells out to
+- **Tests:** `tests/rewatch_tests/tests/lsp/` — see `tests/rewatch_tests/AGENTS.md` for test infrastructure
+
 ## CI Gotchas
 
 - **`sleep` is fragile** — Prefer polling (e.g., `wait_for_file`) over fixed sleeps. CI runners are slower than local machines.
-- **`exit_watcher` is async** — It only signals the watcher to stop (removes the lock file), it doesn't wait for the process to exit. Avoid triggering config-change events before exiting, as the watcher may start a concurrent rebuild.
-- **`sed -i` differs across platforms** — macOS requires `sed -i '' ...`, Linux does not. Use the `replace` / `normalize_paths` helpers from `rewatch/tests/utils.sh` instead of raw `sed`.

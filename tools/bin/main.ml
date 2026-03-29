@@ -60,7 +60,7 @@ let main () =
   | "doc" :: rest -> (
     match rest with
     | ["-h"] | ["--help"] -> logAndExit (Ok docHelp)
-    | [path] ->
+    | path :: _ ->
       (* NOTE: Internal use to generate docs from compiler *)
       let () =
         match Sys.getenv_opt "FROM_COMPILER" with

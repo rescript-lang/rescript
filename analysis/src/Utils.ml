@@ -19,7 +19,7 @@ let isFirstCharUppercase s =
   String.length s > 0 && Char.equal s.[0] (Char.uppercase_ascii s.[0])
 
 let cmtPosToPosition {Lexing.pos_lnum; pos_cnum; pos_bol} =
-  Protocol.{line = pos_lnum - 1; character = pos_cnum - pos_bol}
+  Protocol.{line = max 0 (pos_lnum - 1); character = max 0 (pos_cnum - pos_bol)}
 
 let cmtLocToRange {Location.loc_start; loc_end} =
   Protocol.{start = cmtPosToPosition loc_start; end_ = cmtPosToPosition loc_end}

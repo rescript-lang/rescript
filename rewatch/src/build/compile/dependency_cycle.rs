@@ -28,14 +28,14 @@ fn find_shortest_cycle(modules: &Vec<(&String, &Module)>) -> Vec<String> {
     // Second pass: build the graph and count in-degrees
     for (name, module) in modules {
         // Update in-degrees
-        for dep in module.deps.iter() {
+        for dep in module.deps().iter() {
             if let Some(count) = in_degrees.get_mut(dep) {
                 *count += 1;
             }
         }
 
         // Update the graph
-        *graph.get_mut(*name).unwrap() = &module.deps;
+        *graph.get_mut(*name).unwrap() = module.deps();
     }
     // Remove all nodes in the graph that have no incoming edges
     graph.retain(|_, deps| !deps.is_empty());
@@ -159,24 +159,17 @@ pub fn format(cycle: &[String], build_state: &BuildCommandState) -> String {
             let display_name = helpers::format_namespaced_module_name(name);
 
             match build_state.get_module(name) {
-                Some(Module {
-                    source_type: SourceType::SourceFile(source_file),
-                    package_name,
-                    ..
-                }) => {
-                    if let Some(package) = build_state.get_package(package_name) {
-                        let abs_path = Path::new(&package.path).join(&source_file.implementation.path);
+                Some(Module::SourceFile(sf_module)) => {
+                    if let Some(package) = build_state.get_package(&sf_module.package_name) {
+                        let abs_path =
+                            Path::new(&package.path).join(&sf_module.source_file.implementation.path);
                         let rel_path = abs_path.strip_prefix(root).unwrap_or(&abs_path).to_string_lossy();
                         format!("{display_name} ({rel_path})")
                     } else {
                         display_name
                     }
                 }
-                Some(Module {
-                    source_type: SourceType::MlMap(_),
-                    ..
-                })
-                | None => display_name,
+                Some(Module::MlMap(_)) | None => display_name,
             }
         })
         .collect::<Vec<String>>()

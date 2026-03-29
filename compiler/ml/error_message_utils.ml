@@ -44,8 +44,11 @@ end = struct
     if loc.Location.loc_start.pos_fname = "_none_" then ""
     else
       try
-        (* TODO: Maybe cache later on *)
-        let src = Ext_io.load_file loc.Location.loc_start.pos_fname in
+        let src =
+          match !Location.stdin_source with
+          | Some src -> src
+          | None -> Ext_io.load_file loc.Location.loc_start.pos_fname
+        in
         extract_location_string ~src loc
       with _ -> ""
 

@@ -33,9 +33,14 @@ let docsForLabel typeExpr ~file ~package ~supportsMarkdownLinks =
   in
   typeDefinitions |> String.concat "\n"
 
-let findFunctionType ~currentFile ~debug ~path ~pos =
+let findFunctionType ~debug ?package ~path ~pos ~text =
   (* Start by looking at the typed info at the loc of the fn *)
-  match Cmt.loadFullCmtFromPath ~path with
+  let fullOpt =
+    match package with
+    | Some package -> Cmt.loadFullCmtWithPackage ~path ~package
+    | None -> Cmt.loadFullCmtFromPath ~path
+  in
+  match fullOpt with
   | None -> None
   | Some full -> (
     let {file; package} = full in
@@ -72,26 +77,22 @@ let findFunctionType ~currentFile ~debug ~path ~pos =
     | None -> (
       (* If nothing was found there, try using the unsaved completion engine *)
       let completables =
-        let textOpt = Files.readFile currentFile in
-        match textOpt with
-        | None | Some "" -> None
-        | Some text -> (
-          (* Leverage the completion functionality to pull out the type of the identifier doing the function application.
-             This lets us leverage all of the smart work done in completions to find the correct type in many cases even
-             for files not saved yet. *)
-          match
-            CompletionFrontEnd.completionWithParser ~debug ~path ~posCursor:pos
-              ~currentFile ~text
-          with
-          | None -> None
-          | Some (completable, scope) ->
-            Some
-              ( completable
-                |> CompletionBackEnd.processCompletable ~debug ~full ~pos ~scope
-                     ~env ~forHover:true,
-                env,
-                package,
-                file ))
+        (* Leverage the completion functionality to pull out the type of the identifier doing the function application.
+           This lets us leverage all of the smart work done in completions to find the correct type in many cases even
+           for files not saved yet. *)
+        match
+          CompletionFrontEnd.completionWithParserFromSource ~debug ~path
+            ~posCursor:pos ~source:text
+        with
+        | None -> None
+        | Some (completable, scope) ->
+          Some
+            ( completable
+              |> CompletionBackEnd.processCompletable ~debug ~full ~pos ~scope
+                   ~env ~forHover:true,
+              env,
+              package,
+              file )
       in
       match completables with
       | Some ({kind = Value type_expr; docstring} :: _, env, package, file) ->
@@ -238,11 +239,11 @@ let findConstructorArgs ~full ~env ~constructorName loc =
     | _ -> None)
   | _ -> None
 
-let signatureHelp ~path ~pos ~currentFile ~debug ~allowForConstructorPayloads =
-  let textOpt = Files.readFile currentFile in
-  match textOpt with
-  | None | Some "" -> None
-  | Some text -> (
+let signatureHelp ~path ~pos ~currentFile ~text ~debug
+    ~allowForConstructorPayloads ?package () =
+  match text with
+  | "" -> None
+  | text -> (
     match Pos.positionToOffset text pos with
     | None -> None
     | Some offset -> (
@@ -415,17 +416,17 @@ let signatureHelp ~path ~pos ~currentFile ~debug ~allowForConstructorPayloads =
         Ast_iterator.default_iterator.pat iterator pat
       in
       let iterator = {Ast_iterator.default_iterator with expr; pat} in
-      let parser =
-        Res_driver.parsing_engine.parse_implementation ~for_printer:false
+      let {Res_driver.parsetree = structure} =
+        Res_driver.parse_implementation_from_source ~for_printer:false
+          ~display_filename:currentFile ~source:text
       in
-      let {Res_driver.parsetree = structure} = parser ~filename:currentFile in
       iterator.structure iterator structure |> ignore;
       (* Handle function application, if found *)
       match !result with
       | Some (_, `FunctionCall (argAtCursor, exp, _extractedArgs)) -> (
         (* Not looking for the cursor position after this, but rather the target function expression's loc. *)
         let pos = exp.pexp_loc |> Loc.end_ in
-        match findFunctionType ~currentFile ~debug ~path ~pos with
+        match findFunctionType ~debug ?package ~path ~pos ~text with
         | Some (args, docstring, type_expr, package, _env, file) ->
           if debug then
             Printf.printf "argAtCursor: %s\n"
@@ -525,7 +526,11 @@ let signatureHelp ~path ~pos ~currentFile ~debug ~allowForConstructorPayloads =
         -> (
         if Debug.verbose () then
           Printf.printf "[signature_help] Found constructor!\n";
-        match Cmt.loadFullCmtFromPath ~path with
+        match
+          match package with
+          | Some package -> Cmt.loadFullCmtWithPackage ~path ~package
+          | None -> Cmt.loadFullCmtFromPath ~path
+        with
         | None ->
           if Debug.verbose () then
             Printf.printf "[signature_help] Could not load cmt\n";

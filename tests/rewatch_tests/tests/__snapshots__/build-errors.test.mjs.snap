@@ -1,0 +1,113 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`build errors > detects circular dependencies 1`] = `
+[
+  "rewatch.build[working_dir=.]",
+  "  initialize_build",
+  "    packages.make",
+  "      build.load_package_sources[package=@rewatch-test/app]",
+  "      build.load_package_sources[package=@rewatch-test/library]",
+  "      build.load_package_sources[package=rewatch-test-fixture]",
+  "    packages.parse_packages",
+  "    clean.cleanup_previous_build",
+  "  build.parse[dirty_modules=5]",
+  "    build.parse_file[module=App, package=@rewatch-test/app, kind=implementation]",
+  "    build.parse_file[module=App, package=@rewatch-test/app, kind=interface]",
+  "    build.parse_file[module=LibHelper, package=@rewatch-test/library, kind=implementation]",
+  "    build.parse_file[module=Library, package=@rewatch-test/library, kind=implementation]",
+  "    build.parse_file[module=Root, package=rewatch-test-fixture, kind=implementation]",
+  "    build.parse_file[module=Unrelated, package=@rewatch-test/library, kind=implementation]",
+  "  full_build[module_count=5, output=standard]",
+  "    build.compile",
+  "      build.compile_wave[file_count=1]",
+  "        build.compile_file[module=Unrelated, package=@rewatch-test/library, suffix=.mjs, module_system=esmodule]",
+  "    build.compile_error",
+]
+`;
+
+exports[`build errors > reports errors when a dependency is deleted 1`] = `
+[
+  "rewatch.build[working_dir=.]",
+  "  initialize_build",
+  "    packages.make",
+  "      build.load_package_sources[package=@rewatch-test/app]",
+  "      build.load_package_sources[package=@rewatch-test/library]",
+  "      build.load_package_sources[package=rewatch-test-fixture]",
+  "    packages.parse_packages",
+  "    clean.cleanup_previous_build",
+  "  build.parse[dirty_modules=4]",
+  "    build.parse_file[module=App, package=@rewatch-test/app, kind=implementation]",
+  "    build.parse_file[module=App, package=@rewatch-test/app, kind=interface]",
+  "    build.parse_file[module=Library, package=@rewatch-test/library, kind=implementation]",
+  "    build.parse_file[module=Root, package=rewatch-test-fixture, kind=implementation]",
+  "    build.parse_file[module=Unrelated, package=@rewatch-test/library, kind=implementation]",
+  "  full_build[module_count=4, output=standard]",
+  "    build.compile",
+  "      build.compile_wave[file_count=2]",
+  "        build.compile_file[module=Library, package=@rewatch-test/library, suffix=.mjs, module_system=esmodule]",
+  "        build.compile_file[module=Unrelated, package=@rewatch-test/library, suffix=.mjs, module_system=esmodule]",
+  "      build.compile_wave[file_count=1]",
+  "        build.compile_file[module=App, package=@rewatch-test/app, suffix=.mjs, module_system=esmodule]",
+  "      build.compile_wave[file_count=1]",
+  "        build.compile_file[module=Root, package=rewatch-test-fixture, suffix=.mjs, module_system=esmodule]",
+  "rewatch.build[working_dir=.]",
+  "  initialize_build",
+  "    packages.make",
+  "      build.load_package_sources[package=@rewatch-test/app]",
+  "      build.load_package_sources[package=@rewatch-test/library]",
+  "      build.load_package_sources[package=rewatch-test-fixture]",
+  "    packages.parse_packages",
+  "    clean.cleanup_previous_build",
+  "  build.parse[dirty_modules=0]",
+  "  full_build[module_count=3, output=standard]",
+  "    build.compile",
+  "      build.compile_wave[file_count=1]",
+  "        build.compile_file[module=App, package=@rewatch-test/app, suffix=.mjs, module_system=esmodule]",
+  "    build.compile_error",
+]
+`;
+
+exports[`build errors > reports parse errors 1`] = `
+[
+  "rewatch.build[working_dir=.]",
+  "  initialize_build",
+  "    packages.make",
+  "      build.load_package_sources[package=@rewatch-test/app]",
+  "      build.load_package_sources[package=@rewatch-test/library]",
+  "      build.load_package_sources[package=rewatch-test-fixture]",
+  "    packages.parse_packages",
+  "    clean.cleanup_previous_build",
+  "  build.parse[dirty_modules=4]",
+  "    build.parse_file[module=App, package=@rewatch-test/app, kind=implementation]",
+  "    build.parse_file[module=App, package=@rewatch-test/app, kind=interface]",
+  "    build.parse_file[module=Library, package=@rewatch-test/library, kind=implementation]",
+  "    build.parse_file[module=Root, package=rewatch-test-fixture, kind=implementation]",
+  "    build.parse_file[module=Unrelated, package=@rewatch-test/library, kind=implementation]",
+  "  build.parse_error",
+]
+`;
+
+exports[`build errors > reports type errors 1`] = `
+[
+  "rewatch.build[working_dir=.]",
+  "  initialize_build",
+  "    packages.make",
+  "      build.load_package_sources[package=@rewatch-test/app]",
+  "      build.load_package_sources[package=@rewatch-test/library]",
+  "      build.load_package_sources[package=rewatch-test-fixture]",
+  "    packages.parse_packages",
+  "    clean.cleanup_previous_build",
+  "  build.parse[dirty_modules=4]",
+  "    build.parse_file[module=App, package=@rewatch-test/app, kind=implementation]",
+  "    build.parse_file[module=App, package=@rewatch-test/app, kind=interface]",
+  "    build.parse_file[module=Library, package=@rewatch-test/library, kind=implementation]",
+  "    build.parse_file[module=Root, package=rewatch-test-fixture, kind=implementation]",
+  "    build.parse_file[module=Unrelated, package=@rewatch-test/library, kind=implementation]",
+  "  full_build[module_count=4, output=standard]",
+  "    build.compile",
+  "      build.compile_wave[file_count=2]",
+  "        build.compile_file[module=Library, package=@rewatch-test/library, suffix=.mjs, module_system=esmodule]",
+  "        build.compile_file[module=Unrelated, package=@rewatch-test/library, suffix=.mjs, module_system=esmodule]",
+  "    build.compile_error",
+]
+`;

@@ -13,19 +13,20 @@ use rayon::prelude::*;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
+use tracing::instrument;
 
-fn remove_ast(package: &packages::Package, source_file: &Path) {
-    let _ = std::fs::remove_file(helpers::get_compiler_asset(
-        package,
+fn remove_ast(ocaml_build_path: &Path, source_file: &Path) {
+    let _ = std::fs::remove_file(helpers::get_compiler_asset_in(
+        ocaml_build_path,
         &packages::Namespace::NoNamespace,
         source_file,
         "ast",
     ));
 }
 
-fn remove_iast(package: &packages::Package, source_file: &Path) {
-    let _ = std::fs::remove_file(helpers::get_compiler_asset(
-        package,
+fn remove_iast(ocaml_build_path: &Path, source_file: &Path) {
+    let _ = std::fs::remove_file(helpers::get_compiler_asset_in(
+        ocaml_build_path,
         &packages::Namespace::NoNamespace,
         source_file,
         "iast",
@@ -39,9 +40,33 @@ fn remove_mjs_file(source_file: &Path, suffix: &str) {
     ));
 }
 
-fn remove_compile_asset(package: &packages::Package, source_file: &Path, extension: &str) {
-    let _ = std::fs::remove_file(helpers::get_compiler_asset(
-        package,
+/// Remove stale source file copies (.res/.resi) from the flat build dir (e.g. lib/lsp-ocaml/)
+/// and the nested build dir (e.g. lib/lsp/src/). These copies are created during
+/// compilation but are not tracked by the compile assets scan.
+fn remove_source_copies(
+    package: &packages::Package,
+    ocaml_build_path: &Path,
+    source_file: &Path,
+    output: OutputTarget,
+) {
+    if let Some(filename) = source_file.file_name() {
+        // Flat dir: lib/lsp-ocaml/App.res
+        let _ = std::fs::remove_file(ocaml_build_path.join(filename));
+    }
+    // Nested dir: lib/lsp/src/App.res (relative to package root)
+    if let Ok(relative) = source_file.strip_prefix(&package.path) {
+        let _ = std::fs::remove_file(package.get_build_path_for_output(output).join(relative));
+    }
+}
+
+fn remove_compile_asset(
+    package: &packages::Package,
+    ocaml_build_path: &Path,
+    source_file: &Path,
+    extension: &str,
+) {
+    let _ = std::fs::remove_file(helpers::get_compiler_asset_in(
+        ocaml_build_path,
         &package.namespace,
         source_file,
         extension,
@@ -54,11 +79,11 @@ fn remove_compile_asset(package: &packages::Package, source_file: &Path, extensi
     ));
 }
 
-pub fn remove_compile_assets(package: &packages::Package, source_file: &Path) {
+pub fn remove_compile_assets(package: &packages::Package, ocaml_build_path: &Path, source_file: &Path) {
     // optimization
     // only issue cmti if there is an interfacce file
     for extension in &["cmj", "cmi", "cmt", "cmti"] {
-        remove_compile_asset(package, source_file, extension);
+        remove_compile_asset(package, ocaml_build_path, source_file, extension);
     }
 }
 
@@ -67,9 +92,10 @@ fn clean_source_files(build_state: &BuildState, root_config: &Config) {
     let rescript_file_locations = build_state
         .modules
         .values()
-        .filter_map(|module| match &module.source_type {
-            SourceType::SourceFile(source_file) => {
-                build_state.packages.get(&module.package_name).map(|package| {
+        .filter_map(|module| match module {
+            Module::SourceFile(sf_module) => {
+                build_state.packages.get(&sf_module.package_name).map(|package| {
+                    let source_file = &sf_module.source_file;
                     root_config
                         .get_package_specs()
                         .into_iter()
@@ -102,9 +128,11 @@ fn clean_source_files(build_state: &BuildState, root_config: &Config) {
 // TODO: change to scan_previous_build => CompileAssetsState
 // and then do cleanup on that state (for instance remove all .mjs files that are not in the state)
 
+#[instrument(name = "clean.cleanup_previous_build", skip_all)]
 pub fn cleanup_previous_build(
     build_state: &mut BuildCommandState,
     compile_assets_state: CompileAssetsState,
+    output: OutputTarget,
 ) -> (usize, usize) {
     // delete the .mjs file which appear in our previous compile assets
     // but does not exists anymore
@@ -137,10 +165,12 @@ pub fn cleanup_previous_build(
                 .packages
                 .get(package_name)
                 .expect("Could not find package");
-            remove_compile_assets(package, res_file_location);
+            let ocaml_build_path = package.get_ocaml_build_path_for_output(output);
+            remove_compile_assets(package, &ocaml_build_path, res_file_location);
             remove_mjs_file(res_file_location, suffix);
-            remove_iast(package, res_file_location);
-            remove_ast(package, res_file_location);
+            remove_iast(&ocaml_build_path, res_file_location);
+            remove_ast(&ocaml_build_path, res_file_location);
+            remove_source_copies(package, &ocaml_build_path, res_file_location, output);
             match helpers::get_extension(ast_file_path).as_str() {
                 "iast" => Some(module_name.to_owned()),
                 "ast" => None,
@@ -155,74 +185,161 @@ pub fn cleanup_previous_build(
     compile_assets_state
         .ast_rescript_file_locations
         .intersection(&compile_assets_state.rescript_file_locations)
-        .for_each(|res_file_location| {
-            let AstModule {
-                module_name,
-                last_modified: ast_last_modified,
-                ast_file_path,
-                ..
-            } = compile_assets_state
+        // Skip .resi entries — they are handled when we process the .res entry for
+        // the same module. This gives us per-module iteration instead of per-file.
+        .filter(|res_file_location| {
+            let ast_module = compile_assets_state
                 .ast_modules
-                .get(res_file_location)
+                .get(*res_file_location)
                 .expect("Could not find module name for ast file");
+            !helpers::is_interface_ast_file(&ast_module.ast_file_path)
+        })
+        .cloned()
+        .collect::<Vec<_>>()
+        .into_iter()
+        .for_each(|res_file_location| {
+            let ast_module = compile_assets_state
+                .ast_modules
+                .get(&res_file_location)
+                .expect("Could not find module name for ast file");
+            let module_name = ast_module.module_name.clone();
+            let ast_last_modified = ast_module.last_modified;
+            let ast_file_path = ast_module.ast_file_path.clone();
+
+            // Look up matching .iast entry for this module (if it has an interface).
+            let iast_entry = compile_assets_state.ast_modules.iter().find(|(_, m)| {
+                m.module_name == module_name && helpers::is_interface_ast_file(&m.ast_file_path)
+            });
+
             let module = build_state
+                .build_state
                 .modules
-                .get_mut(module_name)
+                .get_mut(&module_name)
                 .expect("Could not find module for ast file");
 
-            let cmt_last_modified = compile_assets_state.cmt_modules.get(module_name);
-            // if there is a new AST but it has not been compiled yet, we mark the module as compile dirty
-            // we do this by checking if the cmt file is newer than the AST file. We always compile the
-            // interface AND implementation. For some reason the CMI file is not always rewritten if it
-            // doesn't have any changes, that's why we just look at the CMT file.
-            if let Some(cmt_last_modified) = cmt_last_modified
-                && cmt_last_modified > ast_last_modified
-                && !deleted_interfaces.contains(module_name)
+            let sf_module = match module {
+                Module::SourceFile(sf) => sf,
+                Module::MlMap(_) => unreachable!("MlMap is not matched with a ReScript file"),
+            };
+
+            // Check freshness: .ast must be newer than source, and .iast (if present)
+            // must be newer than the interface source.
+            let impl_ast_is_fresh = ast_last_modified > sf_module.source_file.implementation.last_modified
+                && !deleted_interfaces.contains(&module_name);
+            let iface_ast_is_fresh = match (&sf_module.source_file.interface, &iast_entry) {
+                (Some(iface), Some((_, iast_module))) => iast_module.last_modified > iface.last_modified,
+                (None, _) => true,        // no interface → trivially fresh
+                (Some(_), None) => false, // interface exists but no .iast → stale
+            };
+
+            if impl_ast_is_fresh
+                && iface_ast_is_fresh
+                && sf_module.compilation_stage().is_source_dirty()
+                && !deleted_interfaces.contains(&module_name)
+                // When --warn-error is passed, keep modules Source*Dirty so the
+                // parse phase re-runs them with the overridden warning flags.
+                // Warning 110 (%todo) and others are emitted during parsing,
+                // not compilation, so the parse phase must run for
+                // --warn-error to take effect.
+                && build_state.warn_error_override.is_none()
             {
-                module.compile_dirty = false;
-            }
+                // Both AST files are fresh. Compute hashes directly from absolute paths.
+                // res_file_location is the absolute .res path (extracted from the .ast file).
+                let implementation_source_hash = helpers::compute_file_hash(&res_file_location);
+                let implementation_ast_hash = helpers::compute_file_hash(&ast_file_path);
 
-            match &mut module.source_type {
-                SourceType::MlMap(_) => unreachable!("MlMap is not matched with a ReScript file"),
-                SourceType::SourceFile(source_file) => {
-                    if helpers::is_interface_ast_file(ast_file_path) {
-                        let interface = source_file
-                            .interface
-                            .as_mut()
-                            .expect("Could not find interface for module");
-
-                        let source_last_modified = interface.last_modified;
-                        if ast_last_modified > &source_last_modified {
-                            interface.parse_dirty = false;
-                        }
+                // For the interface, the .iast entry's key is the absolute .resi path.
+                let (interface_source_hash, interface_ast_hash) =
+                    if let Some((resi_path, iast_module)) = &iast_entry {
+                        (
+                            helpers::compute_file_hash(resi_path.as_path()),
+                            helpers::compute_file_hash(&iast_module.ast_file_path),
+                        )
                     } else {
-                        let implementation = &mut source_file.implementation;
-                        let source_last_modified = implementation.last_modified;
-                        if ast_last_modified > &source_last_modified
-                            && !deleted_interfaces.contains(module_name)
+                        (None, None)
+                    };
+
+                if let (Some(ish), Some(iah)) = (implementation_source_hash, implementation_ast_hash) {
+                    sf_module.set_compilation_stage(CompilationStage::Parsed {
+                        implementation_source_hash: ish,
+                        implementation_ast_hash: iah,
+                        interface_source_hash,
+                        interface_ast_hash,
+                        implementation_parse_warnings: None,
+                        interface_parse_warnings: None,
+                    });
+
+                    // If compilation artifacts are also fresh (.cmt newer
+                    // than .ast), restore through TypeChecked and Built.
+                    let cmt_last_modified = compile_assets_state.cmt_modules.get(&module_name);
+                    let cmj_exists = compile_assets_state.cmj_modules.contains_key(&module_name);
+                    if let Some(cmt_last_modified) = cmt_last_modified
+                        && cmt_last_modified > &ast_last_modified
+                    {
+                        let (cmi_hash, cmt_hash, cmj_hash) = if let Some(pkg) =
+                            build_state.build_state.packages.get(&sf_module.package_name)
                         {
-                            implementation.parse_dirty = false;
+                            let ocaml_path = pkg.get_ocaml_build_path_for_output(output);
+                            let impl_path = &sf_module.source_file.implementation.path;
+                            (
+                                helpers::compute_file_hash(&helpers::get_compiler_asset_in(
+                                    &ocaml_path,
+                                    &pkg.namespace,
+                                    impl_path,
+                                    "cmi",
+                                )),
+                                helpers::compute_file_hash(&helpers::get_compiler_asset_in(
+                                    &ocaml_path,
+                                    &pkg.namespace,
+                                    impl_path,
+                                    "cmt",
+                                )),
+                                if cmj_exists {
+                                    helpers::compute_file_hash(&helpers::get_compiler_asset_in(
+                                        &ocaml_path,
+                                        &pkg.namespace,
+                                        impl_path,
+                                        "cmj",
+                                    ))
+                                } else {
+                                    None
+                                },
+                            )
+                        } else {
+                            (None, None, None)
+                        };
+
+                        if let (Some(cmi), Some(cmt)) = (cmi_hash, cmt_hash) {
+                            sf_module.set_compilation_stage(CompilationStage::TypeChecked {
+                                implementation_source_hash: ish,
+                                implementation_ast_hash: iah,
+                                interface_source_hash,
+                                interface_ast_hash,
+                                cmi_hash: cmi,
+                                cmt_hash: cmt,
+                                compiled_at: *cmt_last_modified,
+                                implementation_parse_warnings: None,
+                                interface_parse_warnings: None,
+                                compile_warnings: None,
+                            });
+                            if cmj_exists && let Some(cmj) = cmj_hash {
+                                sf_module.set_compilation_stage(CompilationStage::Built(FileBuiltState {
+                                    implementation_source_hash: ish,
+                                    implementation_ast_hash: iah,
+                                    interface_source_hash,
+                                    interface_ast_hash,
+                                    cmi_hash: cmi,
+                                    cmt_hash: cmt,
+                                    cmj_hash: cmj,
+                                    compiled_at: *cmt_last_modified,
+                                    implementation_parse_warnings: None,
+                                    interface_parse_warnings: None,
+                                    compile_warnings: None,
+                                }));
+                            }
                         }
                     }
                 }
-            }
-        });
-
-    compile_assets_state
-        .cmi_modules
-        .iter()
-        .for_each(|(module_name, last_modified)| {
-            if let Some(module) = build_state.modules.get_mut(module_name) {
-                module.last_compiled_cmi = Some(*last_modified);
-            }
-        });
-
-    compile_assets_state
-        .cmt_modules
-        .iter()
-        .for_each(|(module_name, last_modified)| {
-            if let Some(module) = build_state.modules.get_mut(module_name) {
-                module.last_compiled_cmt = Some(*last_modified);
             }
         });
 
@@ -262,76 +379,39 @@ pub fn cleanup_previous_build(
     (diff_len, compile_assets_state.ast_rescript_file_locations.len())
 }
 
-fn has_parse_warnings(module: &Module) -> bool {
-    matches!(
-        &module.source_type,
-        SourceType::SourceFile(SourceFile {
-            implementation: Implementation {
-                parse_state: ParseState::Warning,
-                ..
-            },
-            ..
-        }) | SourceType::SourceFile(SourceFile {
-            interface: Some(Interface {
-                parse_state: ParseState::Warning,
-                ..
-            }),
-            ..
-        })
-    )
+fn has_compile_warnings(sf_module: &SourceFileModule) -> bool {
+    sf_module.compilation_stage().has_compile_warnings()
 }
 
-fn has_compile_warnings(module: &Module) -> bool {
-    matches!(
-        &module.source_type,
-        SourceType::SourceFile(SourceFile {
-            implementation: Implementation {
-                compile_state: CompileState::Warning,
-                ..
-            },
-            ..
-        }) | SourceType::SourceFile(SourceFile {
-            interface: Some(Interface {
-                compile_state: CompileState::Warning,
-                ..
-            }),
-            ..
-        })
-    )
-}
-
-pub fn cleanup_after_build(build_state: &BuildCommandState) {
+pub fn cleanup_after_build(build_state: &BuildCommandState, output: OutputTarget) {
     build_state.modules.par_iter().for_each(|(_module_name, module)| {
-        let package = build_state.get_package(&module.package_name).unwrap();
-        if has_parse_warnings(module)
-            && let SourceType::SourceFile(source_file) = &module.source_type
-        {
-            remove_iast(package, &source_file.implementation.path);
-            remove_ast(package, &source_file.implementation.path);
-        }
-        if has_compile_warnings(module) {
-            // only retain AST file if the compilation doesn't have warnings, we remove the AST in favor
-            // of the CMI/CMT/CMJ files because if we delete these, the editor tooling doesn't
-            // work anymore. If we remove the intermediate AST file, the editor tooling will
-            // work, and we have an indication that we need to recompile the file.
+        let Module::SourceFile(sf_module) = module else {
+            return;
+        };
+        let package = build_state.get_package(&sf_module.package_name).unwrap();
+        let ocaml_build_path = package.get_ocaml_build_path_for_output(output);
+        if has_compile_warnings(sf_module) {
+            // Only retain AST file if the compilation doesn't have warnings.
+            // We remove the AST in favor of the CMI/CMT/CMJ files because if
+            // we delete these, the editor tooling doesn't work anymore. If we
+            // remove the intermediate AST file, the editor tooling will work,
+            // and we have an indication that we need to recompile the file.
             //
-            // Recompiling this takes a bit more time, because we have to parse again, but
-            // if we have warnings it's usually not a lot of files so the additional
-            // latency shouldn't be too bad
-            match &module.source_type {
-                SourceType::SourceFile(source_file) => {
-                    // we only clean the ast here, this will cause the file to be recompiled
-                    // (and thus keep showing the warning), but it will keep the cmi file, so that we don't
-                    // unecessary mark all the dependents as dirty, when there is no change in the interface
-                    remove_ast(package, &source_file.implementation.path);
-                    remove_iast(package, &source_file.implementation.path);
-                }
-                SourceType::MlMap(_) => (),
-            }
+            // Recompiling this takes a bit more time, because we have to parse
+            // again, but if we have warnings it's usually not a lot of files
+            // so the additional latency shouldn't be too bad.
+            //
+            // We only clean the ast here — this will cause the file to be
+            // recompiled (and thus keep showing the warning), but it will keep
+            // the cmi file so that we don't unnecessarily mark all the
+            // dependents as dirty when there is no change in the interface.
+            remove_ast(&ocaml_build_path, &sf_module.source_file.implementation.path);
+            remove_iast(&ocaml_build_path, &sf_module.source_file.implementation.path);
         }
     });
 }
 
+#[instrument(name = "clean.clean", skip_all)]
 pub fn clean(path: &Path, show_progress: bool, plain_output: bool) -> Result<()> {
     let project_context = ProjectContext::new(path)?;
     let compiler_info = build::get_compiler_info(&project_context)?;
@@ -366,7 +446,7 @@ pub fn clean(path: &Path, show_progress: bool, plain_output: bool) -> Result<()>
 
     let timing_clean_mjs = Instant::now();
     let mut build_state = BuildState::new(project_context, packages, compiler_info);
-    packages::parse_packages(&mut build_state)?;
+    packages::parse_packages(&mut build_state, OutputTarget::Standard, CompileMode::FullCompile)?;
     let root_config = build_state.get_root_config();
     let suffix_for_print = match root_config.package_specs {
         None => match &root_config.suffix {
@@ -431,14 +511,19 @@ pub fn clean_package(show_progress: bool, plain_output: bool, package: &Package)
         let _ = std::io::stdout().flush();
     }
 
-    let path_str = package.get_build_path();
-    let path = std::path::Path::new(&path_str);
-    let _ = std::fs::remove_dir_all(path);
-
-    let path_str = package.get_ocaml_build_path();
-    let path = std::path::Path::new(&path_str);
-    let _ = std::fs::remove_dir_all(path);
+    // Clean standard build artifacts (not LSP — a running LSP server
+    // manages its own lib/lsp/ and lib/lsp-ocaml/ directories).
+    let _ = std::fs::remove_dir_all(package.get_build_path());
+    let _ = std::fs::remove_dir_all(package.get_ocaml_build_path());
 
     // remove the per-package compiler metadata file so that a subsequent build writes fresh metadata
     let _ = std::fs::remove_file(package.get_compiler_info_path());
+}
+
+/// Clean only the build artifacts for a specific output target.
+/// Used by verify_compiler_info to avoid destroying the other target's artifacts.
+pub fn clean_package_for_output(package: &Package, output: OutputTarget) {
+    let _ = std::fs::remove_dir_all(package.get_build_path_for_output(output));
+    let _ = std::fs::remove_dir_all(package.get_ocaml_build_path_for_output(output));
+    let _ = std::fs::remove_file(package.get_compiler_info_path_for_output(output));
 }

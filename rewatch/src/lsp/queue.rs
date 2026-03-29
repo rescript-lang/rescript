@@ -1,0 +1,1553 @@
+//! Unified debounced queue for all LSP file events.
+//!
+//! All file events (didChange, didOpen, didSave, didChangeWatchedFiles) go
+//! into a single unbounded channel. A background consumer task collects
+//! events into a `HashMap<Url, PendingFile>`, applying promotion rules to
+//! consolidate per-file state. After a configurable debounce period
+//! (default 100ms, set via `initializationOptions.queue_debounce_ms`) the batch
+//! is flushed:
+//!
+//! 1. **Builds first** — saved files get a full incremental build (compile
+//!    dependencies + typecheck dependents), holding the projects lock.
+//! 2. **Typechecks second** — unsaved edits get a lightweight typecheck via
+//!    `bsc -bs-read-stdin`, with brief lock for arg extraction only.
+//! 3. **Post-build recheck** — if a saved file also had unsaved buffer
+//!    content (didChange + didSave in the same window), a typecheck pass
+//!    runs from the buffer so diagnostics match the editor.
+//! 4. **`buildFinished` notification** — sent only when builds ran.
+//!
+//! Sequential execution within one consumer eliminates all races on
+//! `lib/lsp/` artifacts.
+
+pub(crate) mod db_sync;
+mod file_build;
+mod file_typecheck;
+mod project_build;
+
+use std::collections::{HashMap, HashSet};
+use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
+
+use tokio::sync::mpsc;
+use tokio::time::Instant;
+use tower_lsp::Client;
+use tower_lsp::lsp_types::Url;
+use tracing::Instrument;
+
+use super::ProjectMap;
+use super::diagnostic_store::{DiagnosticStore, FlushGuard};
+use super::file_args::{is_rescript_config, is_rescript_source};
+use super::notifications;
+use crate::lsp::analysis;
+
+use db_sync::{DbSyncEvent, DbSyncQueue, ModuleFileEntry, PackageMetadata, SyncPackageContext};
+
+/// Monotonically increasing generation counter for staleness detection.
+static GENERATION: AtomicU64 = AtomicU64::new(0);
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+/// A fact about what happened in the editor / filesystem.
+/// The merge logic derives the correct build actions from these facts.
+enum QueueEvent {
+    /// A buffer was opened in the editor (didOpen).
+    BufferOpened {
+        uri: Url,
+        file_path: PathBuf,
+        content: String,
+        generation: u64,
+    },
+    /// A buffer's content changed in the editor (didChange).
+    BufferChanged {
+        uri: Url,
+        file_path: PathBuf,
+        content: String,
+        generation: u64,
+    },
+    /// A file changed on disk (didSave or didChangeWatchedFiles CHANGED).
+    FileChangedOnDisk { uri: Url, file_path: PathBuf },
+    /// A file was created on disk (didChangeWatchedFiles CREATED).
+    FileCreated { file_path: PathBuf },
+    /// A file was deleted from disk (didChangeWatchedFiles DELETED).
+    FileDeleted { file_path: PathBuf },
+    /// A `rescript.json` config file was saved — triggers a full project rebuild.
+    ConfigChanged { file_path: PathBuf },
+}
+
+/// A file that needs typechecking (unsaved buffer content).
+struct PendingFileTypecheck {
+    file_path: PathBuf,
+    content: String,
+    generation: u64,
+}
+
+/// A file that needs an incremental build (saved to disk).
+/// `buffer_content` holds the latest unsaved content if a `didChange`
+/// arrived for this file in the same batch — used for post-build recheck.
+struct PendingFileBuild {
+    file_path: PathBuf,
+    buffer_content: Option<String>,
+    generation: u64,
+}
+
+/// Tracks file changes that require full project rebuilds.
+/// Created and deleted files are tracked separately so that recreated files
+/// (deleted then created in the same batch, e.g. git checkout) can be
+/// identified and promoted to incremental builds for JS emission.
+struct PendingProjectBuilds {
+    created_files: HashSet<PathBuf>,
+    deleted_files: HashSet<PathBuf>,
+    /// `rescript.json` files that were saved, triggering a full rebuild.
+    config_changed: HashSet<PathBuf>,
+}
+
+impl Default for PendingProjectBuilds {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl PendingProjectBuilds {
+    fn new() -> Self {
+        PendingProjectBuilds {
+            created_files: HashSet::new(),
+            deleted_files: HashSet::new(),
+            config_changed: HashSet::new(),
+        }
+    }
+
+    fn is_empty(&self) -> bool {
+        self.created_files.is_empty() && self.deleted_files.is_empty() && self.config_changed.is_empty()
+    }
+}
+
+/// All pending state accumulated between flushes.
+struct PendingState {
+    /// Files that need typechecking (unsaved buffer content).
+    typechecks: HashMap<Url, PendingFileTypecheck>,
+    /// Files that need an incremental build (saved to disk).
+    compile_files: HashMap<Url, PendingFileBuild>,
+    /// File changes that require full project rebuilds.
+    /// Flush resolves project roots and groups these into per-project sets.
+    build_projects: PendingProjectBuilds,
+    /// Files deleted in a recent flush that haven't been matched by a create.
+    /// Used to detect cross-flush delete+create (file overwrite) patterns
+    /// from LLMs and git operations.
+    recently_deleted: HashSet<PathBuf>,
+    /// Module names that need FullCompile (JS emission), keyed by project root.
+    /// Populated when project_build replaces a BuildCommandState and hash-based
+    /// promotion couldn't restore Built status. Drained by file_build on flushes
+    /// that include file saves or project builds.
+    pub(super) full_compile_intent: HashMap<PathBuf, HashSet<String>>,
+}
+
+/// Debug summary of what a flush is about to process.
+struct FlushSummary {
+    project_builds: String,
+    incremental_builds: String,
+    typechecks: String,
+}
+
+impl PendingState {
+    fn summary(&self) -> FlushSummary {
+        let mut project_parts: Vec<String> = Vec::new();
+        if !self.build_projects.created_files.is_empty() {
+            let mut files: Vec<String> = self
+                .build_projects
+                .created_files
+                .iter()
+                .map(|p| p.display().to_string())
+                .collect();
+            files.sort();
+            project_parts.push(format!("created: {}", files.join(", ")));
+        }
+        if !self.build_projects.deleted_files.is_empty() {
+            let mut files: Vec<String> = self
+                .build_projects
+                .deleted_files
+                .iter()
+                .map(|p| p.display().to_string())
+                .collect();
+            files.sort();
+            project_parts.push(format!("deleted: {}", files.join(", ")));
+        }
+        if !self.build_projects.config_changed.is_empty() {
+            let mut files: Vec<String> = self
+                .build_projects
+                .config_changed
+                .iter()
+                .map(|p| p.display().to_string())
+                .collect();
+            files.sort();
+            project_parts.push(format!("config: {}", files.join(", ")));
+        }
+        let mut incremental_builds: Vec<&str> = self.compile_files.keys().map(|u| u.as_str()).collect();
+        incremental_builds.sort();
+
+        let mut typechecks: Vec<&str> = self.typechecks.keys().map(|u| u.as_str()).collect();
+        typechecks.sort();
+
+        FlushSummary {
+            project_builds: project_parts.join("; "),
+            incremental_builds: incremental_builds.join(", "),
+            typechecks: typechecks.join(", "),
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
+/// Unified LSP queue. Accepts all file events and processes them
+/// sequentially with debouncing.
+pub struct Queue {
+    tx: mpsc::UnboundedSender<QueueEvent>,
+    /// Latest generation sent per URI, for staleness detection on typecheck results.
+    generations: Arc<Mutex<HashMap<Url, u64>>>,
+    /// Optional diagnostic store for the HTTP diagnostics endpoint.
+    diagnostic_store: Option<Arc<DiagnosticStore>>,
+    /// Handle to send db sync events directly (e.g. after initial build).
+    /// `None` when the client did not enable `db_sync` in initialization options.
+    db_sync_queue: Option<DbSyncQueue>,
+    /// Projects map, needed for building sync events.
+    projects: Arc<Mutex<ProjectMap>>,
+}
+
+impl Queue {
+    /// Create the queue and spawn the single background consumer task.
+    pub fn new(
+        projects: Arc<Mutex<ProjectMap>>,
+        client: Client,
+        root_span: tracing::Span,
+        debounce: Duration,
+        diagnostic_store: Option<Arc<DiagnosticStore>>,
+        enable_db_sync: bool,
+    ) -> Self {
+        let (tx, rx) = mpsc::unbounded_channel();
+        let generations = Arc::new(Mutex::new(HashMap::new()));
+        let db_sync_queue = if enable_db_sync {
+            let db_sync_parent = tracing::debug_span!(parent: &root_span, "db_sync.consumer");
+            Some(DbSyncQueue::new(debounce, db_sync_parent))
+        } else {
+            None
+        };
+        let db_sync_queue_clone = db_sync_queue.clone();
+        tokio::spawn(
+            consumer(
+                rx,
+                Arc::clone(&projects),
+                Arc::clone(&generations),
+                client,
+                debounce,
+                diagnostic_store.clone(),
+                db_sync_queue,
+            )
+            .instrument(root_span),
+        );
+        Queue {
+            tx,
+            generations,
+            diagnostic_store,
+            db_sync_queue: db_sync_queue_clone,
+            projects,
+        }
+    }
+
+    /// A buffer was opened in the editor (didOpen).
+    pub fn notify_buffer_opened(&self, uri: Url, file_path: PathBuf, content: String) {
+        if let Some(ref store) = self.diagnostic_store {
+            store.mark_pending();
+        }
+        let generation = self.next_generation(&uri);
+        let _ = self.tx.send(QueueEvent::BufferOpened {
+            uri,
+            file_path,
+            content,
+            generation,
+        });
+    }
+
+    /// A buffer's content changed in the editor (didChange).
+    pub fn notify_buffer_changed(&self, uri: Url, file_path: PathBuf, content: String) {
+        if let Some(ref store) = self.diagnostic_store {
+            store.mark_pending();
+        }
+        let generation = self.next_generation(&uri);
+        let _ = self.tx.send(QueueEvent::BufferChanged {
+            uri,
+            file_path,
+            content,
+            generation,
+        });
+    }
+
+    /// A file changed on disk (didSave or didChangeWatchedFiles CHANGED).
+    /// Config files (`rescript.json`) are routed to a full project rebuild.
+    pub fn notify_file_changed_on_disk(&self, uri: Url, file_path: PathBuf) {
+        if let Some(ref store) = self.diagnostic_store {
+            store.mark_pending();
+        }
+        if is_rescript_config(&file_path) {
+            let _ = self.tx.send(QueueEvent::ConfigChanged { file_path });
+        } else {
+            let _ = self.tx.send(QueueEvent::FileChangedOnDisk { uri, file_path });
+        }
+    }
+
+    /// A file was created on disk (didChangeWatchedFiles CREATED).
+    pub fn notify_file_created(&self, file_path: PathBuf) {
+        if !is_rescript_source(&file_path) {
+            return;
+        }
+        if let Some(ref store) = self.diagnostic_store {
+            store.mark_pending();
+        }
+        let _ = self.tx.send(QueueEvent::FileCreated { file_path });
+    }
+
+    /// A file was deleted from disk (didChangeWatchedFiles DELETED).
+    pub fn notify_file_deleted(&self, file_path: PathBuf) {
+        if !is_rescript_source(&file_path) {
+            return;
+        }
+        if let Some(ref store) = self.diagnostic_store {
+            store.mark_pending();
+        }
+        let _ = self.tx.send(QueueEvent::FileDeleted { file_path });
+    }
+
+    /// Send a full db sync event for all modules in all projects.
+    /// Called once after the initial build to populate the usages table.
+    /// No-op when db_sync is not enabled.
+    pub fn trigger_initial_db_sync(&self) {
+        if let Some(ref db_sync_queue) = self.db_sync_queue {
+            let touched = HashSet::new();
+            send_db_sync_events(
+                &self.projects,
+                true, // has_full_builds = true → filter = None → all modules
+                &touched,
+                db_sync_queue,
+            );
+        }
+    }
+
+    fn next_generation(&self, uri: &Url) -> u64 {
+        let generation = GENERATION.fetch_add(1, Ordering::Relaxed) + 1;
+        match self.generations.lock() {
+            Ok(mut gens) => {
+                gens.insert(uri.clone(), generation);
+            }
+            Err(e) => tracing::error!("generations mutex poisoned: {e}"),
+        }
+        generation
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Consumer loop
+// ---------------------------------------------------------------------------
+
+async fn consumer(
+    mut rx: mpsc::UnboundedReceiver<QueueEvent>,
+    projects: Arc<Mutex<ProjectMap>>,
+    generations: Arc<Mutex<HashMap<Url, u64>>>,
+    client: Client,
+    debounce: Duration,
+    diagnostic_store: Option<Arc<DiagnosticStore>>,
+    db_sync_queue: Option<DbSyncQueue>,
+) {
+    let mut state = PendingState::new();
+
+    loop {
+        // Phase 1: wait for at least one event
+        match rx.recv().await {
+            Some(event) => state.merge(event),
+            None => break,
+        }
+
+        // Phase 2: debounce — collect more events until silence
+        let deadline = tokio::time::sleep(debounce);
+        tokio::pin!(deadline);
+        loop {
+            tokio::select! {
+                event = rx.recv() => {
+                    match event {
+                        Some(event) => {
+                            state.merge(event);
+                            deadline.as_mut().reset(Instant::now() + debounce);
+                        }
+                        None => {
+                            flush(&mut state, &projects, &generations, &client, &diagnostic_store, &db_sync_queue).await;
+                            return;
+                        }
+                    }
+                }
+                _ = &mut deadline => break,
+            }
+        }
+
+        // Phase 3: flush
+        flush(
+            &mut state,
+            &projects,
+            &generations,
+            &client,
+            &diagnostic_store,
+            &db_sync_queue,
+        )
+        .await;
+    }
+}
+
+impl PendingState {
+    fn new() -> Self {
+        PendingState {
+            typechecks: HashMap::new(),
+            compile_files: HashMap::new(),
+            build_projects: PendingProjectBuilds::new(),
+            recently_deleted: HashSet::new(),
+            full_compile_intent: HashMap::new(),
+        }
+    }
+
+    /// Merge a new event into the pending state, applying promotion rules.
+    fn merge(&mut self, event: QueueEvent) {
+        match event {
+            // Buffer events: unsaved content to typecheck.
+            QueueEvent::BufferOpened {
+                uri,
+                file_path,
+                content,
+                generation,
+            }
+            | QueueEvent::BufferChanged {
+                uri,
+                file_path,
+                content,
+                generation,
+            } => {
+                if let Some(build) = self.compile_files.get_mut(&uri) {
+                    // Already promoted to Build → stash content for post-build recheck
+                    build.buffer_content = Some(content);
+                    build.generation = generation;
+                } else {
+                    // Insert or update typecheck
+                    match self.typechecks.get_mut(&uri) {
+                        Some(existing) => {
+                            existing.content = content;
+                            existing.generation = generation;
+                        }
+                        None => {
+                            self.typechecks.insert(
+                                uri,
+                                PendingFileTypecheck {
+                                    file_path,
+                                    content,
+                                    generation,
+                                },
+                            );
+                        }
+                    }
+                }
+            }
+            // Disk-save events: file on disk changed, do incremental build.
+            QueueEvent::FileChangedOnDisk { uri, file_path } => {
+                if self.compile_files.contains_key(&uri) {
+                    // Already a Build → nothing to do
+                    return;
+                }
+                // Promote from typecheck if present, stashing content
+                let (buffer_content, generation) = match self.typechecks.remove(&uri) {
+                    Some(tc) => (Some(tc.content), tc.generation),
+                    None => (None, 0),
+                };
+                self.compile_files.insert(
+                    uri,
+                    PendingFileBuild {
+                        file_path,
+                        buffer_content,
+                        generation,
+                    },
+                );
+            }
+            QueueEvent::FileCreated { file_path } => {
+                if let Ok(uri) = Url::from_file_path(&file_path) {
+                    self.typechecks.remove(&uri);
+                    self.compile_files.remove(&uri);
+                }
+                // Check both same-flush (build_projects.deleted_files) and
+                // cross-flush (recently_deleted) for the delete+create pattern.
+                let same_flush_delete = self.build_projects.deleted_files.remove(&file_path);
+                let cross_flush_delete = self.recently_deleted.remove(&file_path);
+                if same_flush_delete || cross_flush_delete {
+                    // Delete + create = content overwrite (LLM, git checkout).
+                    // Still need project_build to re-add the module to state,
+                    // plus file_build to emit JS with FullCompile.
+                    self.build_projects.created_files.insert(file_path.clone());
+                    if let Ok(uri) = Url::from_file_path(&file_path) {
+                        self.compile_files.insert(
+                            uri,
+                            PendingFileBuild {
+                                file_path,
+                                buffer_content: None,
+                                generation: 0,
+                            },
+                        );
+                    }
+                } else {
+                    // Genuinely new file — needs full project rebuild
+                    // plus file_build to emit JS (no didSave will follow
+                    // for files created by LLMs or external tools).
+                    self.build_projects.created_files.insert(file_path.clone());
+                    if let Ok(uri) = Url::from_file_path(&file_path) {
+                        self.compile_files.insert(
+                            uri,
+                            PendingFileBuild {
+                                file_path,
+                                buffer_content: None,
+                                generation: 0,
+                            },
+                        );
+                    }
+                }
+            }
+            QueueEvent::FileDeleted { file_path } => {
+                if let Ok(uri) = Url::from_file_path(&file_path) {
+                    self.typechecks.remove(&uri);
+                    self.compile_files.remove(&uri);
+                }
+                self.recently_deleted.insert(file_path.clone());
+                self.build_projects.deleted_files.insert(file_path);
+            }
+            QueueEvent::ConfigChanged { file_path } => {
+                // The full project rebuild does a TypecheckOnly build of all
+                // modules, so pending per-file typechecks are redundant.
+                // Keep compile_files — the full build doesn't emit JS.
+                // Only clear typechecks for files under this project root
+                // to avoid discarding work for unrelated projects in a monorepo.
+                if let Some(project_root) = file_path.parent() {
+                    self.typechecks
+                        .retain(|_, tc| !tc.file_path.starts_with(project_root));
+                }
+                self.build_projects.config_changed.insert(file_path);
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Flush orchestration
+// ---------------------------------------------------------------------------
+
+async fn flush(
+    state: &mut PendingState,
+    projects: &Arc<Mutex<ProjectMap>>,
+    generations: &Arc<Mutex<HashMap<Url, u64>>>,
+    client: &Client,
+    diagnostic_store: &Option<Arc<DiagnosticStore>>,
+    db_sync_queue: &Option<DbSyncQueue>,
+) {
+    if state.typechecks.is_empty() && state.compile_files.is_empty() && state.build_projects.is_empty() {
+        return;
+    }
+
+    flush_inner(
+        state,
+        projects,
+        generations,
+        client,
+        diagnostic_store,
+        db_sync_queue,
+    )
+    .await;
+}
+
+#[tracing::instrument(
+    name = "lsp.flush",
+    skip_all,
+    fields(project_builds, incremental_builds, typechecks,)
+)]
+async fn flush_inner(
+    state: &mut PendingState,
+    projects: &Arc<Mutex<ProjectMap>>,
+    generations: &Arc<Mutex<HashMap<Url, u64>>>,
+    client: &Client,
+    diagnostic_store: &Option<Arc<DiagnosticStore>>,
+    db_sync_queue: &Option<DbSyncQueue>,
+) {
+    let summary = state.summary();
+
+    let span = tracing::Span::current();
+    span.record("project_builds", summary.project_builds.as_str());
+    span.record("incremental_builds", summary.incremental_builds.as_str());
+    span.record("typechecks", summary.typechecks.as_str());
+
+    client
+        .log_message(
+            tower_lsp::lsp_types::MessageType::INFO,
+            format!(
+                "flush: project_builds=[{}], incremental_builds=[{}], typechecks=[{}]",
+                summary.project_builds, summary.incremental_builds, summary.typechecks,
+            ),
+        )
+        .await;
+
+    // Log details of each pending category
+    for (uri, build) in &state.compile_files {
+        client
+            .log_message(
+                tower_lsp::lsp_types::MessageType::INFO,
+                format!(
+                    "flush: incremental build: {} (has buffer: {})",
+                    uri,
+                    build.buffer_content.is_some()
+                ),
+            )
+            .await;
+    }
+    for uri in state.typechecks.keys() {
+        client
+            .log_message(
+                tower_lsp::lsp_types::MessageType::INFO,
+                format!("flush: typecheck: {}", uri),
+            )
+            .await;
+    }
+    for path in &state.build_projects.created_files {
+        client
+            .log_message(
+                tower_lsp::lsp_types::MessageType::INFO,
+                format!("flush: created file: {}", path.display()),
+            )
+            .await;
+    }
+    for path in &state.build_projects.deleted_files {
+        client
+            .log_message(
+                tower_lsp::lsp_types::MessageType::INFO,
+                format!("flush: deleted file: {}", path.display()),
+            )
+            .await;
+    }
+    for path in &state.build_projects.config_changed {
+        client
+            .log_message(
+                tower_lsp::lsp_types::MessageType::INFO,
+                format!("flush: config changed: {}", path.display()),
+            )
+            .await;
+    }
+
+    // Create a FlushGuard that calls end_flush on drop (even on panic).
+    let _flush_guard = diagnostic_store.as_ref().map(|s| FlushGuard::new(s));
+    let store_ref = diagnostic_store.as_deref();
+
+    // Rotate recently_deleted: clear old entries from previous flushes,
+    // carry forward this flush's deletes for cross-flush detection.
+    // Must happen before project_build::run takes build_projects.
+    state.recently_deleted.clear();
+    state
+        .recently_deleted
+        .extend(state.build_projects.deleted_files.iter().cloned());
+
+    // Step 0: Run full builds (file creation / deletion).
+    let has_full_builds = !state.build_projects.is_empty();
+    if has_full_builds {
+        project_build::run(state, projects, client, store_ref).await;
+    }
+
+    let compile_files: HashMap<Url, PendingFileBuild> = std::mem::take(&mut state.compile_files);
+    let typechecks: HashMap<Url, PendingFileTypecheck> = std::mem::take(&mut state.typechecks);
+
+    let has_incremental_builds = !compile_files.is_empty();
+    let has_pending_intents = !state.full_compile_intent.is_empty();
+
+    // Step 1: Run incremental builds (saved files) and drain pending
+    // full_compile_intent. Intent drain piggybacks on the same
+    // take-build-replace cycle — no extra locking needed.
+    let (errored_files, touched_files) = if has_incremental_builds || (has_full_builds && has_pending_intents)
+    {
+        if has_pending_intents {
+            for (root, names) in state.full_compile_intent.iter() {
+                tracing::debug!(
+                    project = %root.display(),
+                    modules = ?names.iter().collect::<Vec<_>>(),
+                    "flush: full_compile_intent before file_build"
+                );
+            }
+        }
+        let (errored, touched) = file_build::run(
+            &compile_files,
+            &mut state.full_compile_intent,
+            projects,
+            client,
+            store_ref,
+        )
+        .await;
+        if !state.full_compile_intent.is_empty() {
+            for (root, names) in state.full_compile_intent.iter() {
+                tracing::debug!(
+                    project = %root.display(),
+                    modules = ?names.iter().collect::<Vec<_>>(),
+                    "flush: full_compile_intent remaining after file_build"
+                );
+            }
+        }
+        (errored, touched)
+    } else {
+        (HashSet::new(), HashSet::new())
+    };
+
+    // Step 2: Run typechecks (unsaved edits)
+    if !typechecks.is_empty() {
+        file_typecheck::run(typechecks, projects, generations, client, store_ref).await;
+    }
+
+    // Step 3: Post-build recheck for files with buffer_content.
+    // Skip files whose build produced errors — don't overwrite compile
+    // error diagnostics with a clean buffer typecheck.
+    let rechecks: HashMap<Url, PendingFileTypecheck> = compile_files
+        .into_iter()
+        .filter_map(|(uri, build)| {
+            if errored_files.contains(&uri) {
+                return None;
+            }
+            build.buffer_content.map(|content| {
+                (
+                    uri,
+                    PendingFileTypecheck {
+                        file_path: build.file_path,
+                        content,
+                        generation: build.generation,
+                    },
+                )
+            })
+        })
+        .collect();
+    if !rechecks.is_empty() {
+        file_typecheck::run(rechecks, projects, generations, client, store_ref).await;
+    }
+
+    // Step 4: Notify buildFinished (only if any builds ran)
+    if has_full_builds || has_incremental_builds {
+        client
+            .send_notification::<notifications::BuildFinished>(notifications::BuildFinishedParams {})
+            .await;
+
+        // Step 5: Send sync events to the background DB sync queue.
+        if let Some(db_sync) = db_sync_queue {
+            send_db_sync_events(projects, has_full_builds, &touched_files, db_sync);
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// DB sync helpers
+// ---------------------------------------------------------------------------
+
+use crate::build::build_types::{BuildCommandState, CompilationStage, Module, OutputTarget};
+
+/// Extract and send db sync events to the background queue.
+fn send_db_sync_events(
+    projects: &Arc<Mutex<ProjectMap>>,
+    has_full_builds: bool,
+    touched_files: &HashSet<PathBuf>,
+    db_sync_queue: &DbSyncQueue,
+) {
+    let Ok(mut guard) = projects.lock() else {
+        return;
+    };
+    let filter = if has_full_builds {
+        None // full rebuild — send all modules
+    } else {
+        Some(touched_files)
+    };
+    // Ensure runtime module data is available. It's lazily populated
+    // on the first analysis request, but db_sync needs it from the
+    // first flush onward.
+    guard.ensure_runtime_module_data();
+    let runtime = guard.get_runtime_module_data();
+    for build_state in guard.states.values() {
+        if let Some(runtime) = runtime
+            && let Some(event) = build_sync_event(build_state, runtime, filter)
+        {
+            tracing::debug!(
+                project = %event.project_root.display(),
+                module_count = event.files.len(),
+                touched_files = filter.map_or(0, |f| f.len()),
+                filter = if filter.is_none() { "all" } else { "incremental" },
+                "db_sync: queueing event"
+            );
+            db_sync_queue.send(event);
+        }
+    }
+}
+
+/// Build a `DbSyncEvent` for the given project.
+/// When `touched_files` is `Some`, only modules whose source files are in the set
+/// are included (incremental build — includes reverse dependencies that were
+/// typechecked, so usages stay in sync when an interface changes).
+/// When `None`, all modules are included (full build).
+/// Called while holding the `ProjectMap` lock (briefly).
+fn build_sync_event(
+    build_state: &BuildCommandState,
+    runtime: &analysis::RuntimeModuleData,
+    touched_files: Option<&HashSet<PathBuf>>,
+) -> Option<DbSyncEvent> {
+    let root_package = build_state.build_state.packages.values().find(|p| p.is_root)?;
+    let project_root = root_package.path.clone();
+
+    let analysis_binary_path = build_state
+        .build_state
+        .compiler_info
+        .bsc_path
+        .parent()?
+        .join("rescript-editor-analysis.exe");
+
+    let opens = analysis::build_opens(&root_package.namespace, &root_package.config);
+    // Use OutputTarget::Lsp — the LSP builds write .cmt/.cmti into lib/lsp/,
+    // so the analysis binary must read from there to get up-to-date data.
+    let paths_for_module = analysis::build_paths_for_module(build_state, runtime, OutputTarget::Lsp);
+    let (project_files, dependencies_files) = analysis::build_file_sets(build_state, runtime);
+    let root_config = build_state.build_state.get_root_config();
+    let suffix = root_config.suffix.clone().unwrap_or_else(|| ".js".to_string());
+
+    // Build the runtime analysis entry so the analysis binary also processes
+    // runtime modules (Stdlib_Array, Pervasives, etc.) alongside project files.
+    let runtime_path = &build_state.build_state.compiler_info.runtime_path;
+    let ocaml_dir = runtime_path.join("lib").join("ocaml");
+    let (major, minor) = crate::llm_index::cargo_pkg_version();
+
+    let runtime_files: Vec<serde_json::Value> = runtime
+        .module_names
+        .iter()
+        .filter(|name| runtime.paths.contains_key(name.as_str()))
+        .map(|name| {
+            let cmti_path = ocaml_dir.join(format!("{name}.cmti"));
+            if cmti_path.exists() {
+                serde_json::json!({
+                    "moduleName": name,
+                    "cmt": "",
+                    "cmti": cmti_path.to_string_lossy(),
+                })
+            } else {
+                serde_json::json!({
+                    "moduleName": name,
+                    "cmt": ocaml_dir.join(format!("{name}.cmt")).to_string_lossy(),
+                    "cmti": "",
+                })
+            }
+        })
+        .collect();
+    let runtime_project_files: Vec<serde_json::Value> = runtime
+        .module_names
+        .iter()
+        .filter(|name| runtime.paths.contains_key(name.as_str()))
+        .map(|n| serde_json::Value::String(n.clone()))
+        .collect();
+    let runtime_analysis_entry = if runtime_files.is_empty() {
+        None
+    } else {
+        Some(serde_json::json!({
+            "rootPath": runtime_path.to_string_lossy(),
+            "suffix": ".js",
+            "rescriptVersion": [major, minor],
+            "genericJsxModule": serde_json::Value::Null,
+            "opens": [],
+            "pathsForModule": serde_json::Value::Object(runtime.paths.clone()),
+            "projectFiles": runtime_project_files,
+            "dependenciesFiles": [],
+            "files": runtime_files,
+        }))
+    };
+
+    let package_context = SyncPackageContext {
+        root_path: project_root.clone(),
+        suffix,
+        rescript_version: (major, minor),
+        opens,
+        paths_for_module,
+        project_files,
+        dependencies_files,
+        runtime_analysis_entry,
+        runtime_module_names: runtime.module_names.clone(),
+    };
+
+    // Collect package metadata for DB creation (used when rescript.db doesn't exist yet).
+    let mut packages: Vec<PackageMetadata> = build_state
+        .build_state
+        .packages
+        .iter()
+        .map(|(pkg_name, package)| {
+            let rescript_json_path = package.path.join("rescript.json");
+            let rescript_json = std::fs::read_to_string(&rescript_json_path).unwrap_or_default();
+            PackageMetadata {
+                name: pkg_name.clone(),
+                path: package.path.to_string_lossy().to_string(),
+                rescript_json,
+                is_local: package.is_root || package.is_local_dep,
+            }
+        })
+        .collect();
+
+    // Include @rescript/runtime as a package
+    let runtime_json = std::fs::read_to_string(runtime_path.join("package.json")).unwrap_or_default();
+    packages.push(PackageMetadata {
+        name: "@rescript/runtime".to_string(),
+        path: runtime_path.to_string_lossy().to_string(),
+        rescript_json: runtime_json,
+        is_local: false,
+    });
+
+    let mut files = Vec::new();
+
+    for (module_name, module) in &build_state.build_state.modules {
+        let Module::SourceFile(sf_module) = module else {
+            continue;
+        };
+        let Some(package) = build_state.build_state.packages.get(&sf_module.package_name) else {
+            continue;
+        };
+
+        // When filtering (incremental build), only include modules whose
+        // source file was compiled or typechecked (includes reverse deps).
+        // touched_files contains absolute paths (package.path + relative),
+        // while source_file paths are relative, so we must join.
+        if let Some(filter) = touched_files {
+            let impl_abs = package.path.join(&sf_module.source_file.implementation.path);
+            let iface_compiled = sf_module
+                .source_file
+                .interface
+                .as_ref()
+                .is_some_and(|i| filter.contains(&package.path.join(&i.path)));
+            if !filter.contains(&impl_abs) && !iface_compiled {
+                continue;
+            }
+        }
+
+        // Extract cmt_hash from the compilation stage. If the module
+        // hasn't been typechecked/built yet, there's no hash to compare.
+        let cmt_hash = match sf_module.compilation_stage() {
+            CompilationStage::TypeChecked { cmt_hash, .. } => cmt_hash.to_string(),
+            CompilationStage::Built(b) => b.cmt_hash.to_string(),
+            _ => String::new(),
+        };
+
+        let build_path = package.get_build_path_for_output(OutputTarget::Lsp);
+        let impl_path = &sf_module.source_file.implementation.path;
+        let basename = crate::helpers::file_path_to_compiler_asset_basename(impl_path, &package.namespace);
+        let dir = impl_path.parent().unwrap_or(std::path::Path::new(""));
+
+        let cmt = build_path.join(dir).join(format!("{basename}.cmt"));
+        if let Some(interface) = &sf_module.source_file.interface {
+            let iface_path = &interface.path;
+            let iface_basename =
+                crate::helpers::file_path_to_compiler_asset_basename(iface_path, &package.namespace);
+            let iface_dir = iface_path.parent().unwrap_or(std::path::Path::new(""));
+            let cmti = build_path.join(iface_dir).join(format!("{iface_basename}.cmti"));
+            // Send both: cmti for module structure, cmt for usages
+            files.push(ModuleFileEntry {
+                module_name: module_name.clone(),
+                cmt: cmt.to_string_lossy().to_string(),
+                cmti: cmti.to_string_lossy().to_string(),
+                cmt_hash,
+                package_name: sf_module.package_name.clone(),
+            });
+        } else {
+            files.push(ModuleFileEntry {
+                module_name: module_name.clone(),
+                cmt: cmt.to_string_lossy().to_string(),
+                cmti: String::new(),
+                cmt_hash,
+                package_name: sf_module.package_name.clone(),
+            });
+        }
+    }
+
+    if files.is_empty() {
+        return None;
+    }
+
+    Some(DbSyncEvent {
+        project_root,
+        analysis_binary_path,
+        package_context,
+        files,
+        packages,
+    })
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_path(name: &str) -> PathBuf {
+        if cfg!(windows) {
+            PathBuf::from(format!("C:\\tmp\\{name}"))
+        } else {
+            PathBuf::from(format!("/tmp/{name}"))
+        }
+    }
+
+    fn test_uri(name: &str) -> Url {
+        Url::from_file_path(test_path(name)).unwrap()
+    }
+
+    // -- Buffer events on empty state --
+
+    #[test]
+    fn buffer_changed_on_empty_creates_typecheck() {
+        let mut state = PendingState::new();
+        state.merge(QueueEvent::BufferChanged {
+            uri: test_uri("A.res"),
+            file_path: test_path("A.res"),
+            content: "let x = 1".into(),
+            generation: 1,
+        });
+
+        assert_eq!(state.typechecks.len(), 1);
+        let tc = state.typechecks.get(&test_uri("A.res")).unwrap();
+        assert_eq!(tc.content, "let x = 1");
+        assert_eq!(tc.generation, 1);
+    }
+
+    #[test]
+    fn buffer_opened_on_empty_creates_typecheck() {
+        let mut state = PendingState::new();
+        state.merge(QueueEvent::BufferOpened {
+            uri: test_uri("A.res"),
+            file_path: test_path("A.res"),
+            content: "let x = 1".into(),
+            generation: 1,
+        });
+
+        assert_eq!(state.typechecks.len(), 1);
+        let tc = state.typechecks.get(&test_uri("A.res")).unwrap();
+        assert_eq!(tc.content, "let x = 1");
+    }
+
+    // -- Buffer + Buffer → latest content wins --
+
+    #[test]
+    fn buffer_then_buffer_keeps_latest_content() {
+        let mut state = PendingState::new();
+        state.merge(QueueEvent::BufferChanged {
+            uri: test_uri("A.res"),
+            file_path: test_path("A.res"),
+            content: "v1".into(),
+            generation: 1,
+        });
+        state.merge(QueueEvent::BufferChanged {
+            uri: test_uri("A.res"),
+            file_path: test_path("A.res"),
+            content: "v2".into(),
+            generation: 2,
+        });
+
+        assert_eq!(state.typechecks.len(), 1);
+        let tc = state.typechecks.get(&test_uri("A.res")).unwrap();
+        assert_eq!(tc.content, "v2");
+        assert_eq!(tc.generation, 2);
+    }
+
+    // -- Buffer + Save → promote to Build with buffer_content --
+
+    #[test]
+    fn buffer_then_save_promotes_to_build_with_content() {
+        let mut state = PendingState::new();
+        state.merge(QueueEvent::BufferChanged {
+            uri: test_uri("A.res"),
+            file_path: test_path("A.res"),
+            content: "unsaved".into(),
+            generation: 1,
+        });
+        state.merge(QueueEvent::FileChangedOnDisk {
+            uri: test_uri("A.res"),
+            file_path: test_path("A.res"),
+        });
+
+        // Typecheck was removed, promoted to build
+        assert!(state.typechecks.is_empty());
+        let build = state.compile_files.get(&test_uri("A.res")).unwrap();
+        assert_eq!(build.buffer_content.as_deref(), Some("unsaved"));
+    }
+
+    // -- Save on empty state → Build with no buffer_content --
+
+    #[test]
+    fn save_on_empty_creates_build() {
+        let mut state = PendingState::new();
+        state.merge(QueueEvent::FileChangedOnDisk {
+            uri: test_uri("A.res"),
+            file_path: test_path("A.res"),
+        });
+
+        let build = state.compile_files.get(&test_uri("A.res")).unwrap();
+        assert!(build.buffer_content.is_none());
+    }
+
+    // -- Save + Buffer → stay Build, update buffer_content --
+
+    #[test]
+    fn save_then_buffer_updates_buffer_content() {
+        let mut state = PendingState::new();
+        state.merge(QueueEvent::FileChangedOnDisk {
+            uri: test_uri("A.res"),
+            file_path: test_path("A.res"),
+        });
+        state.merge(QueueEvent::BufferChanged {
+            uri: test_uri("A.res"),
+            file_path: test_path("A.res"),
+            content: "edited".into(),
+            generation: 1,
+        });
+
+        let build = state.compile_files.get(&test_uri("A.res")).unwrap();
+        assert_eq!(build.buffer_content.as_deref(), Some("edited"));
+        // No typecheck entry — it went straight into the existing build
+        assert!(state.typechecks.is_empty());
+    }
+
+    // -- Save + Save → stays Build --
+
+    #[test]
+    fn save_then_save_stays_build() {
+        let mut state = PendingState::new();
+        state.merge(QueueEvent::FileChangedOnDisk {
+            uri: test_uri("A.res"),
+            file_path: test_path("A.res"),
+        });
+        state.merge(QueueEvent::FileChangedOnDisk {
+            uri: test_uri("A.res"),
+            file_path: test_path("A.res"),
+        });
+
+        assert_eq!(state.compile_files.len(), 1);
+        let build = state.compile_files.get(&test_uri("A.res")).unwrap();
+        assert!(build.buffer_content.is_none());
+    }
+
+    // -- FileCreated / FileDeleted → build_projects --
+
+    #[test]
+    fn file_created_adds_to_build_projects() {
+        let mut state = PendingState::new();
+        state.merge(QueueEvent::FileCreated {
+            file_path: test_path("New.res"),
+        });
+
+        assert!(state.build_projects.created_files.contains(&test_path("New.res")));
+    }
+
+    #[test]
+    fn file_deleted_adds_to_build_projects() {
+        let mut state = PendingState::new();
+        state.merge(QueueEvent::FileDeleted {
+            file_path: test_path("Old.res"),
+        });
+
+        assert!(state.build_projects.deleted_files.contains(&test_path("Old.res")));
+    }
+
+    #[test]
+    fn file_deleted_removes_pending_typecheck() {
+        let mut state = PendingState::new();
+        state.merge(QueueEvent::BufferChanged {
+            uri: test_uri("A.res"),
+            file_path: test_path("A.res"),
+            content: "let x = 1".into(),
+            generation: 1,
+        });
+        state.merge(QueueEvent::FileDeleted {
+            file_path: test_path("A.res"),
+        });
+
+        assert!(state.typechecks.is_empty());
+        assert!(state.build_projects.deleted_files.contains(&test_path("A.res")));
+    }
+
+    #[test]
+    fn file_created_supersedes_pending_save() {
+        let mut state = PendingState::new();
+        state.merge(QueueEvent::FileChangedOnDisk {
+            uri: test_uri("A.res"),
+            file_path: test_path("A.res"),
+        });
+        state.merge(QueueEvent::FileCreated {
+            file_path: test_path("A.res"),
+        });
+
+        // FileCreated clears the old save entry and re-adds a fresh one
+        // (no buffer_content), plus triggers project_build.
+        assert!(state.compile_files.contains_key(&test_uri("A.res")));
+        assert!(
+            state
+                .compile_files
+                .get(&test_uri("A.res"))
+                .unwrap()
+                .buffer_content
+                .is_none()
+        );
+        assert!(state.build_projects.created_files.contains(&test_path("A.res")));
+    }
+
+    // -- Multiple files stay independent --
+
+    #[test]
+    fn different_files_stay_independent() {
+        let mut state = PendingState::new();
+        state.merge(QueueEvent::BufferChanged {
+            uri: test_uri("A.res"),
+            file_path: test_path("A.res"),
+            content: "a".into(),
+            generation: 1,
+        });
+        state.merge(QueueEvent::FileChangedOnDisk {
+            uri: test_uri("B.res"),
+            file_path: test_path("B.res"),
+        });
+
+        assert_eq!(state.typechecks.len(), 1);
+        assert!(state.typechecks.contains_key(&test_uri("A.res")));
+        assert_eq!(state.compile_files.len(), 1);
+        assert!(state.compile_files.contains_key(&test_uri("B.res")));
+    }
+
+    // -- Cross-cutting: full build + per-file events --
+
+    #[test]
+    fn file_created_and_buffer_changed_are_independent() {
+        let mut state = PendingState::new();
+        state.merge(QueueEvent::FileCreated {
+            file_path: test_path("New.res"),
+        });
+        state.merge(QueueEvent::BufferChanged {
+            uri: test_uri("Existing.res"),
+            file_path: test_path("Existing.res"),
+            content: "let x = 1".into(),
+            generation: 1,
+        });
+
+        assert!(state.build_projects.created_files.contains(&test_path("New.res")));
+        assert_eq!(state.typechecks.len(), 1);
+        assert!(state.typechecks.contains_key(&test_uri("Existing.res")));
+    }
+
+    #[test]
+    fn file_deleted_and_save_are_independent() {
+        let mut state = PendingState::new();
+        state.merge(QueueEvent::FileDeleted {
+            file_path: test_path("Removed.res"),
+        });
+        state.merge(QueueEvent::FileChangedOnDisk {
+            uri: test_uri("Other.res"),
+            file_path: test_path("Other.res"),
+        });
+
+        assert!(
+            state
+                .build_projects
+                .deleted_files
+                .contains(&test_path("Removed.res"))
+        );
+        assert_eq!(state.compile_files.len(), 1);
+        let build = state.compile_files.get(&test_uri("Other.res")).unwrap();
+        assert!(build.buffer_content.is_none());
+    }
+
+    #[test]
+    fn multiple_structural_changes_accumulate() {
+        let mut state = PendingState::new();
+        state.merge(QueueEvent::FileCreated {
+            file_path: test_path("A.res"),
+        });
+        state.merge(QueueEvent::FileDeleted {
+            file_path: test_path("B.res"),
+        });
+        state.merge(QueueEvent::FileCreated {
+            file_path: test_path("C.res"),
+        });
+
+        assert_eq!(state.build_projects.created_files.len(), 2);
+        assert!(state.build_projects.created_files.contains(&test_path("A.res")));
+        assert!(state.build_projects.created_files.contains(&test_path("C.res")));
+        assert_eq!(state.build_projects.deleted_files.len(), 1);
+        assert!(state.build_projects.deleted_files.contains(&test_path("B.res")));
+    }
+
+    #[test]
+    fn full_sequence_buffer_save_then_create() {
+        let mut state = PendingState::new();
+
+        // User edits a file
+        state.merge(QueueEvent::BufferChanged {
+            uri: test_uri("App.res"),
+            file_path: test_path("App.res"),
+            content: "let x = 1".into(),
+            generation: 1,
+        });
+
+        // User saves it
+        state.merge(QueueEvent::FileChangedOnDisk {
+            uri: test_uri("App.res"),
+            file_path: test_path("App.res"),
+        });
+
+        // Meanwhile a new file appears on disk
+        state.merge(QueueEvent::FileCreated {
+            file_path: test_path("New.res"),
+        });
+
+        // App.res should be promoted to Build with buffer_content
+        let build = state.compile_files.get(&test_uri("App.res")).unwrap();
+        assert_eq!(build.buffer_content.as_deref(), Some("let x = 1"));
+        assert!(state.typechecks.is_empty());
+
+        // New.res triggers a full build
+        assert!(state.build_projects.created_files.contains(&test_path("New.res")));
+    }
+
+    // -- Recreated files (delete + create) → treated as save --
+
+    #[test]
+    fn delete_then_create_treated_as_overwrite() {
+        let mut state = PendingState::new();
+
+        // File deleted (e.g. git checkout starts)
+        state.merge(QueueEvent::FileDeleted {
+            file_path: test_path("Pkmn.res"),
+        });
+
+        // Same file recreated (git checkout completes)
+        state.merge(QueueEvent::FileCreated {
+            file_path: test_path("Pkmn.res"),
+        });
+
+        // Delete+create = overwrite. Removed from deleted_files,
+        // but still in created_files (project_build re-adds the module).
+        assert!(
+            !state
+                .build_projects
+                .deleted_files
+                .contains(&test_path("Pkmn.res"))
+        );
+        assert!(
+            state
+                .build_projects
+                .created_files
+                .contains(&test_path("Pkmn.res"))
+        );
+        // AND promoted to compile_files for JS emission
+        assert!(state.compile_files.contains_key(&test_uri("Pkmn.res")));
+        let build = state.compile_files.get(&test_uri("Pkmn.res")).unwrap();
+        assert!(build.buffer_content.is_none());
+    }
+
+    #[test]
+    fn create_without_prior_delete_also_in_compile_files() {
+        let mut state = PendingState::new();
+
+        // Brand new file, no prior delete
+        state.merge(QueueEvent::FileCreated {
+            file_path: test_path("New.res"),
+        });
+
+        assert!(state.build_projects.created_files.contains(&test_path("New.res")));
+        // Also in compile_files — LLMs and external tools won't send
+        // didSave, so file_build must emit JS after project_build.
+        assert!(state.compile_files.contains_key(&test_uri("New.res")));
+    }
+
+    #[test]
+    fn delete_without_create_not_in_compile_files() {
+        let mut state = PendingState::new();
+
+        state.merge(QueueEvent::FileDeleted {
+            file_path: test_path("Old.res"),
+        });
+
+        assert!(state.build_projects.deleted_files.contains(&test_path("Old.res")));
+        assert!(state.compile_files.is_empty());
+    }
+
+    // -- ConfigChanged clears typechecks but keeps compile_files --
+
+    #[test]
+    fn config_changed_clears_pending_typechecks() {
+        let mut state = PendingState::new();
+
+        // Unsaved edits in two files
+        state.merge(QueueEvent::BufferChanged {
+            uri: test_uri("A.res"),
+            file_path: test_path("A.res"),
+            content: "let a = 1".into(),
+            generation: 1,
+        });
+        state.merge(QueueEvent::BufferChanged {
+            uri: test_uri("B.res"),
+            file_path: test_path("B.res"),
+            content: "let b = 2".into(),
+            generation: 2,
+        });
+        assert_eq!(state.typechecks.len(), 2);
+
+        // Config change — full rebuild will typecheck everything
+        state.merge(QueueEvent::ConfigChanged {
+            file_path: test_path("rescript.json"),
+        });
+
+        // Typechecks cleared — full build covers them
+        assert!(state.typechecks.is_empty());
+        assert!(
+            state
+                .build_projects
+                .config_changed
+                .contains(&test_path("rescript.json"))
+        );
+    }
+
+    #[test]
+    fn config_changed_keeps_pending_compile_files() {
+        let mut state = PendingState::new();
+
+        // A file was saved
+        state.merge(QueueEvent::FileChangedOnDisk {
+            uri: test_uri("A.res"),
+            file_path: test_path("A.res"),
+        });
+        assert_eq!(state.compile_files.len(), 1);
+
+        // Config change — full rebuild is TypecheckOnly, doesn't emit JS
+        state.merge(QueueEvent::ConfigChanged {
+            file_path: test_path("rescript.json"),
+        });
+
+        // compile_files kept — still need incremental build for JS output
+        assert_eq!(state.compile_files.len(), 1);
+        assert!(state.compile_files.contains_key(&test_uri("A.res")));
+        assert!(
+            state
+                .build_projects
+                .config_changed
+                .contains(&test_path("rescript.json"))
+        );
+    }
+
+    #[test]
+    fn config_changed_only_clears_typechecks_for_same_project() {
+        let mut state = PendingState::new();
+
+        let project_a = if cfg!(windows) {
+            PathBuf::from("C:\\repo\\packages\\a")
+        } else {
+            PathBuf::from("/repo/packages/a")
+        };
+        let project_b = if cfg!(windows) {
+            PathBuf::from("C:\\repo\\packages\\b")
+        } else {
+            PathBuf::from("/repo/packages/b")
+        };
+
+        let file_a = project_a.join("src").join("A.res");
+        let file_b = project_b.join("src").join("B.res");
+        let uri_a = Url::from_file_path(&file_a).unwrap();
+        let uri_b = Url::from_file_path(&file_b).unwrap();
+
+        // Unsaved edits in both projects
+        state.merge(QueueEvent::BufferChanged {
+            uri: uri_a.clone(),
+            file_path: file_a,
+            content: "let a = 1".into(),
+            generation: 1,
+        });
+        state.merge(QueueEvent::BufferChanged {
+            uri: uri_b.clone(),
+            file_path: file_b,
+            content: "let b = 2".into(),
+            generation: 2,
+        });
+        assert_eq!(state.typechecks.len(), 2);
+
+        // Config change in project A only
+        state.merge(QueueEvent::ConfigChanged {
+            file_path: project_a.join("rescript.json"),
+        });
+
+        // Only project A's typecheck is cleared
+        assert_eq!(state.typechecks.len(), 1);
+        assert!(state.typechecks.contains_key(&uri_b));
+        assert!(!state.typechecks.contains_key(&uri_a));
+    }
+
+    // -- Cross-flush delete+create detection --
+
+    /// Simulate the recently_deleted rotation that flush_inner performs.
+    fn simulate_flush_rotation(state: &mut PendingState) {
+        state.recently_deleted.clear();
+        state
+            .recently_deleted
+            .extend(state.build_projects.deleted_files.iter().cloned());
+        // Simulate project_build taking build_projects
+        state.build_projects = PendingProjectBuilds::new();
+        // Simulate file_build/file_typecheck taking their maps
+        state.compile_files.clear();
+        state.typechecks.clear();
+    }
+
+    #[test]
+    fn cross_flush_delete_then_create_treated_as_overwrite() {
+        let mut state = PendingState::new();
+
+        // Flush N: file is deleted
+        state.merge(QueueEvent::FileDeleted {
+            file_path: test_path("Pkmn.res"),
+        });
+
+        // Simulate flush N completing
+        simulate_flush_rotation(&mut state);
+
+        // Flush N+1: same file is created (cross-flush overwrite)
+        state.merge(QueueEvent::FileCreated {
+            file_path: test_path("Pkmn.res"),
+        });
+
+        // Should be in created_files (project_build re-adds module to state)
+        // AND in compile_files (file_build emits JS)
+        assert!(
+            state
+                .build_projects
+                .created_files
+                .contains(&test_path("Pkmn.res"))
+        );
+        assert!(state.compile_files.contains_key(&test_uri("Pkmn.res")));
+    }
+
+    #[test]
+    fn recently_deleted_cleared_after_rotation_without_create() {
+        let mut state = PendingState::new();
+
+        // Flush N: file is deleted
+        state.merge(QueueEvent::FileDeleted {
+            file_path: test_path("Gone.res"),
+        });
+
+        // Simulate flush N completing — recently_deleted carries {Gone.res}
+        simulate_flush_rotation(&mut state);
+        assert!(state.recently_deleted.contains(&test_path("Gone.res")));
+
+        // Flush N+1: no create arrives, flush completes
+        simulate_flush_rotation(&mut state);
+
+        // recently_deleted should now be empty (no new deletes to carry forward)
+        assert!(state.recently_deleted.is_empty());
+    }
+}

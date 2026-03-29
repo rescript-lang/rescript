@@ -71,4 +71,5 @@ let jsx_module_of_string = function
   | module_name -> Generic {module_name}
 
 let as_pp = ref false
+let read_stdin = ref false
 let self_stack : string Stack.t = Stack.create ()

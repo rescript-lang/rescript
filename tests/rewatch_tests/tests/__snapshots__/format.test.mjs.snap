@@ -1,0 +1,79 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`format > check mode fails for unformatted files 1`] = `
+[
+  "rewatch.format",
+  "  format.format",
+  "    packages.make",
+  "      build.load_package_sources[package=@rewatch-test/app]",
+  "      build.load_package_sources[package=@rewatch-test/library]",
+  "      build.load_package_sources[package=rewatch-test-fixture]",
+]
+`;
+
+exports[`format > check mode succeeds for correctly formatted files 1`] = `
+[
+  "rewatch.format",
+  "  format.format",
+  "    packages.make",
+  "      build.load_package_sources[package=@rewatch-test/app]",
+  "      build.load_package_sources[package=@rewatch-test/library]",
+  "      build.load_package_sources[package=rewatch-test-fixture]",
+]
+`;
+
+exports[`format > does not rewrite already formatted files 1`] = `
+[
+  "rewatch.format",
+  "  format.format",
+  "    packages.make",
+  "      build.load_package_sources[package=@rewatch-test/app]",
+  "      build.load_package_sources[package=@rewatch-test/library]",
+  "      build.load_package_sources[package=rewatch-test-fixture]",
+]
+`;
+
+exports[`format > formats .res code from stdin 1`] = `
+[
+  "rewatch.format",
+  "  format.format",
+]
+`;
+
+exports[`format > formats .resi code from stdin 1`] = `
+[
+  "rewatch.format",
+  "  format.format",
+]
+`;
+
+exports[`format > formats a single file 1`] = `
+[
+  "rewatch.format",
+  "  format.format",
+  "    format.write_file[file=packages/library/src/Library.res]",
+]
+`;
+
+exports[`format > formats all project files 1`] = `
+[
+  "rewatch.format",
+  "  format.format",
+  "    packages.make",
+  "      build.load_package_sources[package=@rewatch-test/app]",
+  "      build.load_package_sources[package=@rewatch-test/library]",
+  "      build.load_package_sources[package=rewatch-test-fixture]",
+  "    format.write_file[file=packages/app/src/App.res]",
+  "    format.write_file[file=packages/library/src/Library.res]",
+]
+`;
+
+exports[`format > formats only current package when run from subdirectory 1`] = `
+[
+  "rewatch.format",
+  "  format.format",
+  "    packages.make",
+  "      build.load_package_sources[package=@rewatch-test/library]",
+  "    format.write_file[file=packages/library/src/Library.res]",
+]
+`;

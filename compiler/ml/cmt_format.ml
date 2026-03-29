@@ -197,7 +197,10 @@ let save_cmt filename modname binary_annots sourcefile initial_env cmi =
            | None -> None
            | Some cmi -> Some (output_cmi temp_file_name oc cmi)
          in
-         let source_digest = Misc.may_map Digest.file sourcefile in
+         let source_digest =
+           if !Clflags.skip_source_digest then None
+           else Misc.may_map Digest.file sourcefile
+         in
          let cmt = {
            cmt_modname = modname;
            cmt_annots = clear_env binary_annots;

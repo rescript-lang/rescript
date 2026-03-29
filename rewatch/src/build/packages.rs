@@ -18,6 +18,7 @@ use std::fs::{self};
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
+use tracing::{info_span, instrument};
 
 #[derive(Debug, Clone)]
 pub struct SourceFileMeta {
@@ -79,8 +80,16 @@ pub fn get_esmodule_path(canonical_path: &Path) -> PathBuf {
     canonical_path.join("lib").join("es6")
 }
 
+pub fn get_lsp_build_path(canonical_path: &Path) -> PathBuf {
+    canonical_path.join("lib").join("lsp")
+}
+
 pub fn get_ocaml_build_path(canonical_path: &Path) -> PathBuf {
     canonical_path.join("lib").join("ocaml")
+}
+
+pub fn get_lsp_ocaml_build_path(canonical_path: &Path) -> PathBuf {
+    canonical_path.join("lib").join("lsp-ocaml")
 }
 
 impl Package {
@@ -88,12 +97,43 @@ impl Package {
         get_ocaml_build_path(&self.path)
     }
 
+    pub fn get_lsp_ocaml_build_path(&self) -> PathBuf {
+        get_lsp_ocaml_build_path(&self.path)
+    }
+
+    /// Returns the flat artifact directory for the given output target.
+    /// Standard builds use `lib/ocaml/`, LSP builds use `lib/lsp-ocaml/`.
+    pub fn get_ocaml_build_path_for_output(&self, output: OutputTarget) -> PathBuf {
+        if output.is_lsp() {
+            self.get_lsp_ocaml_build_path()
+        } else {
+            self.get_ocaml_build_path()
+        }
+    }
+
     pub fn get_build_path(&self) -> PathBuf {
         get_build_path(&self.path)
     }
 
+    pub fn get_lsp_build_path(&self) -> PathBuf {
+        get_lsp_build_path(&self.path)
+    }
+
+    /// Returns the build artifact path for the given output target.
+    pub fn get_build_path_for_output(&self, output: OutputTarget) -> PathBuf {
+        if output.is_lsp() {
+            self.get_lsp_build_path()
+        } else {
+            self.get_build_path()
+        }
+    }
+
     pub fn get_compiler_info_path(&self) -> PathBuf {
         self.get_build_path().join("compiler-info.json")
+    }
+
+    pub fn get_compiler_info_path_for_output(&self, output: OutputTarget) -> PathBuf {
+        self.get_build_path_for_output(output).join("compiler-info.json")
     }
 
     pub fn get_js_path(&self) -> PathBuf {
@@ -112,12 +152,30 @@ impl Package {
         self.get_build_path().join(format!("{suffix}.mlmap"))
     }
 
+    pub fn get_mlmap_path_for_output(&self, output: OutputTarget) -> PathBuf {
+        let suffix = self
+            .namespace
+            .to_suffix()
+            .expect("namespace should be set for mlmap module");
+        self.get_build_path_for_output(output)
+            .join(format!("{suffix}.mlmap"))
+    }
+
     pub fn get_mlmap_compile_path(&self) -> PathBuf {
         let suffix = self
             .namespace
             .to_suffix()
             .expect("namespace should be set for mlmap module");
         self.get_build_path().join(format!("{suffix}.cmi"))
+    }
+
+    pub fn get_mlmap_compile_path_for_output(&self, output: OutputTarget) -> PathBuf {
+        let suffix = self
+            .namespace
+            .to_suffix()
+            .expect("namespace should be set for mlmap module");
+        self.get_build_path_for_output(output)
+            .join(format!("{suffix}.cmi"))
     }
 
     pub fn is_source_file_type_dev(&self, path: &Path) -> bool {
@@ -209,7 +267,7 @@ pub fn read_folders(
 /// sources in a flat list. In the process, it removes the children, as they are being resolved
 /// because of the recursiveness. So you get a flat list of files back, retaining the type_ and
 /// whether it needs to recurse into all structures
-fn get_source_dirs(source: config::Source, sub_path: Option<PathBuf>) -> AHashSet<config::PackageSource> {
+pub fn get_source_dirs(source: config::Source, sub_path: Option<PathBuf>) -> AHashSet<config::PackageSource> {
     let mut source_folders: AHashSet<config::PackageSource> = AHashSet::new();
 
     let source_folder = source.to_qualified_without_children(sub_path.to_owned());
@@ -352,7 +410,7 @@ fn read_dependencies(
 
                         let parent_path_str = project_context.get_root_path().to_string_lossy();
                         log::error!(
-                            "Could not build package tree reading dependency '{package_name}' at path '{parent_path_str}'. Error: {error}",
+                            "We could not build package tree reading dependency '{package_name}', at path '{parent_path_str}'. Error: {error}",
                         );
 
                         std::process::exit(2)
@@ -363,7 +421,7 @@ fn read_dependencies(
                             Err(error) => {
                                 let parent_path_str = project_context.get_root_path().to_string_lossy();
                                 log::error!(
-                                    "Could not build package tree for '{package_name}' at path '{parent_path_str}'. Error: {error}",
+                                    "We could not build package tree  '{package_name}', at path '{parent_path_str}'. Error: {error}",
                                 );
                                 std::process::exit(2)
                             }
@@ -509,7 +567,10 @@ This inconsistency will cause issues with package resolution.\n",
     })
 }
 
-fn read_packages(project_context: &ProjectContext, show_progress: bool) -> Result<AHashMap<String, Package>> {
+pub fn read_packages(
+    project_context: &ProjectContext,
+    show_progress: bool,
+) -> Result<AHashMap<String, Package>> {
     // Store all packages and completely deduplicate them
     let mut map: AHashMap<String, Package> = AHashMap::new();
 
@@ -591,11 +652,12 @@ pub fn get_source_files(
 
 /// This takes the tree of packages, and finds all the source files for each, adding them to the
 /// respective packages.
-fn extend_with_children(
+pub fn extend_with_children(
     filter: &Option<regex::Regex>,
     mut build: AHashMap<String, Package>,
 ) -> AHashMap<String, Package> {
     for (_key, package) in build.iter_mut() {
+        let _span = info_span!("build.load_package_sources", package = %package.name).entered();
         let mut map: AHashMap<PathBuf, SourceFileMeta> = AHashMap::new();
         package
             .source_folders
@@ -645,6 +707,7 @@ fn extend_with_children(
 ///    interface files.
 ///
 /// The two step process is there to reduce IO overhead.
+#[instrument(name = "packages.make", skip_all)]
 pub fn make(
     filter: &Option<regex::Regex>,
     project_context: &ProjectContext,
@@ -659,49 +722,58 @@ pub fn make(
     Ok(result)
 }
 
-pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
-    let packages = build_state.packages.clone();
+#[instrument(name = "packages.parse_packages", skip_all)]
+pub fn parse_packages(build_state: &mut BuildState, output: OutputTarget, mode: CompileMode) -> Result<()> {
+    // Destructure to allow simultaneous immutable borrows of `packages` /
+    // `project_context` and mutable borrows of `modules` / `module_names`.
+    let BuildState {
+        packages,
+        modules,
+        module_names,
+        project_context,
+        ..
+    } = build_state;
     for (package_name, package) in packages.iter() {
         debug!("Parsing package: {package_name}");
         if let Some(package_modules) = package.modules.to_owned() {
-            build_state.module_names.extend(package_modules)
+            module_names.extend(package_modules)
         }
-        let build_path_abs = package.get_build_path();
-        let bs_build_path = package.get_ocaml_build_path();
+        let build_path_abs = package.get_build_path_for_output(output);
+        let ocaml_build_path = package.get_ocaml_build_path_for_output(output);
         helpers::create_path(&build_path_abs);
-        helpers::create_path(&bs_build_path);
-        let root_config = build_state.get_root_config();
+        helpers::create_path(&ocaml_build_path);
 
-        root_config.get_package_specs().iter().for_each(|spec| {
-            if !spec.in_source {
-                // we don't want to calculate this if we don't have out of source specs
-                // we do this twice, but we almost never have multiple package specs
-                // so this optimization is less important
-                let relative_dirs: AHashSet<PathBuf> = match &package.source_files {
-                    Some(source_files) => source_files
-                        .keys()
-                        .map(|source_file| {
-                            Path::new(source_file)
-                                .parent()
-                                .expect("parent dir not found")
-                                .to_owned()
+        // TypecheckOnly mode only needs lib/lsp + lib/ocaml — no JS output directories
+        if mode.emits_js() {
+            let root_config = project_context.get_root_config();
+            root_config.get_package_specs().iter().for_each(|spec| {
+                if !spec.in_source {
+                    let relative_dirs: AHashSet<PathBuf> = match &package.source_files {
+                        Some(source_files) => source_files
+                            .keys()
+                            .map(|source_file| {
+                                Path::new(source_file)
+                                    .parent()
+                                    .expect("parent dir not found")
+                                    .to_owned()
+                            })
+                            .collect(),
+                        _ => AHashSet::new(),
+                    };
+                    if spec.is_common_js() {
+                        helpers::create_path(&package.get_js_path());
+                        relative_dirs.iter().for_each(|path_buf| {
+                            helpers::create_path_for_path(&Path::join(&package.get_js_path(), path_buf))
                         })
-                        .collect(),
-                    _ => AHashSet::new(),
-                };
-                if spec.is_common_js() {
-                    helpers::create_path(&package.get_js_path());
-                    relative_dirs.iter().for_each(|path_buf| {
-                        helpers::create_path_for_path(&Path::join(&package.get_js_path(), path_buf))
-                    })
-                } else {
-                    helpers::create_path(&package.get_esmodule_path());
-                    relative_dirs.iter().for_each(|path_buf| {
-                        helpers::create_path_for_path(&Path::join(&package.get_esmodule_path(), path_buf))
-                    })
+                    } else {
+                        helpers::create_path(&package.get_esmodule_path());
+                        relative_dirs.iter().for_each(|path_buf| {
+                            helpers::create_path_for_path(&Path::join(&package.get_esmodule_path(), path_buf))
+                        })
+                    }
                 }
-            }
-        });
+            });
+        }
 
         package.namespace.to_suffix().iter().for_each(|namespace| {
             // generate the mlmap "AST" file for modules that have a namespace configured
@@ -730,7 +802,7 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
                 .filter(|module_name| helpers::is_non_exotic_module_name(module_name))
                 .collect::<AHashSet<String>>();
 
-            let mlmap = namespaces::gen_mlmap(package, namespace, &depending_modules);
+            let mlmap = namespaces::gen_mlmap(package, namespace, &depending_modules, output);
 
             // mlmap will be compiled in the AST generation step
             // compile_mlmap(&package, namespace, &project_root);
@@ -752,21 +824,18 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
                 })
                 .collect::<AHashSet<String>>();
 
-            build_state.insert_module(
-                &helpers::file_path_to_module_name(&mlmap.to_owned(), &packages::Namespace::NoNamespace),
-                Module {
-                    deps_dirty: false,
-                    source_type: SourceType::MlMap(MlMap { parse_dirty: false }),
+            let mlmap_module_name =
+                helpers::file_path_to_module_name(&mlmap.to_owned(), &packages::Namespace::NoNamespace);
+            modules.insert(
+                mlmap_module_name.clone(),
+                Module::MlMap(MlMapModule {
+                    package_name: package.name.to_owned(),
+                    parse_dirty: false,
                     deps,
                     dependents: AHashSet::new(),
-                    package_name: package.name.to_owned(),
-                    compile_dirty: false,
-                    last_compiled_cmt: None,
-                    last_compiled_cmi: None,
-                    // Not sure if this is correct
-                    is_type_dev: false,
-                },
+                }),
             );
+            module_names.insert(mlmap_module_name);
         });
 
         debug!("Building source file-tree for package: {}", package.name);
@@ -780,47 +849,37 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
                 if helpers::is_implementation_file(extension) {
                     // Store duplicate paths in an Option so we can build the error after the entry borrow ends.
                     let mut duplicate_paths: Option<(PathBuf, PathBuf)> = None;
-                    match build_state.modules.entry(module_name.to_string()) {
+                    match modules.entry(module_name.to_string()) {
                         Entry::Occupied(mut entry) => {
                             let module = entry.get_mut();
-                            if let SourceType::SourceFile(ref mut source_file) = module.source_type {
-                                if &source_file.implementation.path != file {
+                            if let Module::SourceFile(m) = module {
+                                if &m.source_file.implementation.path != file {
                                     duplicate_paths = Some((
-                                        Path::new(&package.path).join(&source_file.implementation.path),
+                                        Path::new(&package.path).join(&m.source_file.implementation.path),
                                         Path::new(&package.path).join(file),
                                     ));
                                 }
-                                source_file.implementation.path = file.to_owned();
-                                source_file.implementation.last_modified = metadata.modified;
-                                source_file.implementation.parse_dirty = true;
+                                m.source_file.implementation.path = file.to_owned();
+                                m.source_file.implementation.last_modified = metadata.modified;
                             }
                         }
                         Entry::Vacant(entry) => {
-                            entry.insert(Module {
-                                deps_dirty: true,
-                                source_type: SourceType::SourceFile(SourceFile {
+                            entry.insert(Module::SourceFile(SourceFileModule::new(
+                                module_name.clone(),
+                                package.name.to_owned(),
+                                SourceFile {
                                     implementation: Implementation {
                                         path: file.to_owned(),
-                                        parse_state: ParseState::Pending,
-                                        compile_state: CompileState::Pending,
                                         last_modified: metadata.modified,
-                                        parse_dirty: true,
-                                        compile_warnings: None,
                                     },
                                     interface: None,
-                                }),
-                                deps: AHashSet::new(),
-                                dependents: AHashSet::new(),
-                                package_name: package.name.to_owned(),
-                                compile_dirty: true,
-                                last_compiled_cmt: None,
-                                last_compiled_cmi: None,
-                                is_type_dev: metadata.is_type_dev,
-                            });
+                                },
+                                metadata.is_type_dev,
+                            )));
                         }
                     }
                     if let Some((existing_path, duplicate_path)) = duplicate_paths {
-                        let root_path = build_state.get_root_config().path.clone();
+                        let root_path = project_context.get_root_config().path.clone();
                         let root = root_path.parent().map(PathBuf::from).unwrap_or(root_path);
                         let existing_display = existing_path.strip_prefix(&root).unwrap_or(&existing_path);
                         let duplicate_display = duplicate_path.strip_prefix(&root).unwrap_or(&duplicate_path);
@@ -866,50 +925,32 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
                             )
                         }
                         Some(_) => {
-                            build_state
-                                .modules
+                            modules
                                 .entry(module_name.to_string())
                                 .and_modify(|module| {
-                                    if let SourceType::SourceFile(ref mut source_file) = module.source_type {
-                                        source_file.interface = Some(Interface {
+                                    if let Module::SourceFile(m) = module {
+                                        m.source_file.interface = Some(Interface {
                                             path: file.to_owned(),
-                                            parse_state: ParseState::Pending,
-                                            compile_state: CompileState::Pending,
                                             last_modified: metadata.modified,
-                                            parse_dirty: true,
-                                            compile_warnings: None,
                                         });
                                     }
                                 })
-                                .or_insert(Module {
-                                    deps_dirty: true,
-                                    source_type: SourceType::SourceFile(SourceFile {
+                                .or_insert(Module::SourceFile(SourceFileModule::new(
+                                    module_name.clone(),
+                                    package.name.to_owned(),
+                                    SourceFile {
                                         // this will be overwritten later
                                         implementation: Implementation {
                                             path: implementation_filename,
-                                            parse_state: ParseState::Pending,
-                                            compile_state: CompileState::Pending,
                                             last_modified: metadata.modified,
-                                            parse_dirty: true,
-                                            compile_warnings: None,
                                         },
                                         interface: Some(Interface {
                                             path: file.to_owned(),
-                                            parse_state: ParseState::Pending,
-                                            compile_state: CompileState::Pending,
                                             last_modified: metadata.modified,
-                                            parse_dirty: true,
-                                            compile_warnings: None,
                                         }),
-                                    }),
-                                    deps: AHashSet::new(),
-                                    dependents: AHashSet::new(),
-                                    package_name: package.name.to_owned(),
-                                    compile_dirty: true,
-                                    last_compiled_cmt: None,
-                                    last_compiled_cmi: None,
-                                    is_type_dev: metadata.is_type_dev,
-                                });
+                                    },
+                                    metadata.is_type_dev,
+                                )));
                         }
                     }
                 }

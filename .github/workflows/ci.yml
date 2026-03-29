@@ -324,18 +324,6 @@ jobs:
         if: runner.os != 'Windows'
         run: make -C tests/gentype_tests/typescript-react-example clean test
 
-      # On Windows, after running setup-ocaml (if it wasn't cached yet or the cache couldn't be restored),
-      # Cygwin bash is used instead of Git Bash for Windows, breaking the rewatch tests.
-      # So we need to adjust the path to bring back Git Bash for Windows.
-      - name: Rewatch tests need Git Bash for Windows
-        if: ${{ runner.os == 'Windows' }}
-        run: echo "C:\Program Files\Git\bin" >> $GITHUB_PATH
-        shell: bash
-
-      - name: Run rewatch tests
-        run: ./rewatch/tests/suite.sh rewatch/target/release/rescript
-        shell: bash
-
       - name: Run syntax benchmarks
         if: matrix.benchmarks
         run: |
@@ -401,14 +389,14 @@ jobs:
 
       - name: "Upload artifacts: binaries"
         if: matrix.upload_binaries
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v6
         with:
           name: binaries-${{ matrix.node-target }}
           path: packages/@rescript/${{ matrix.node-target }}/bin
 
       - name: "Upload artifacts: lib/ocaml"
         if: matrix.upload_libs
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v6
         with:
           name: lib-ocaml
           path: |
@@ -423,7 +411,7 @@ jobs:
       - name: "Upload artifacts: scripts/res/apiDocs"
         id: upload-api-docs
         if: ${{ matrix.generate_api_docs }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v6
         with:
           name: api
           path: scripts/res/apiDocs/
@@ -445,7 +433,7 @@ jobs:
           node-version-file: .nvmrc
 
       - name: Download artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v7
         with:
           pattern: "@(binaries-*|lib-ocaml)"
 
@@ -475,7 +463,7 @@ jobs:
           ssh-key: ${{ secrets.RESCRIPT_LANG_ORG_DEPLOY_KEY }}
 
       - name: Download artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v7
         with:
           artifact-ids: ${{ needs.build-compiler.outputs.api-docs-artifact-id }}
           path: data/api
@@ -544,7 +532,7 @@ jobs:
         uses: actions/setup-node@v6
         with:
           # Run integration tests with the oldest supported node version.
-          node-version: 20
+          node-version: 22
 
       - name: Make test directory
         id: tmp-dir
@@ -595,7 +583,7 @@ jobs:
         uses: actions/setup-node@v6
         with:
           # Run integration tests with the oldest supported node version.
-          node-version: 20
+          node-version: 22
 
       - name: Checkout
         uses: actions/checkout@v6
@@ -646,17 +634,20 @@ jobs:
         uses: actions/setup-node@v6
         with:
           # Run integration tests with the oldest supported node version.
-          node-version: 20
+          node-version: 22
 
-      - name: Install ReScript package in rewatch/testrepo
+      - name: Install npm packages
+        run: yarn install
+
+      - name: Install ReScript package in test fixture
         run: |
           COMMIT_SHA="${{ needs.pkg-pr-new.outputs.commit_sha }}"
           yarn add "rescript@https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA}"
         shell: bash
-        working-directory: rewatch/testrepo
+        working-directory: tests/rewatch_tests/fixture
 
       - name: Run rewatch integration tests
-        run: ./rewatch/tests/suite.sh rewatch/testrepo/node_modules/.bin/rescript
+        run: node scripts/test.js -rewatch
         shell: bash
 
   publish:
@@ -680,7 +671,7 @@ jobs:
           registry-url: https://registry.npmjs.org # Needed to make auth work for publishing
 
       - name: Download artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v7
         with:
           pattern: "@(binaries-*|lib-ocaml)"
 

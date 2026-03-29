@@ -1,0 +1,839 @@
+/**
+ * Test context for rewatch tests.
+ *
+ * Provides a unified test harness that:
+ * 1. Creates an isolated sandbox copy of the fixture
+ * 2. Starts an OTEL receiver to collect traces
+ * 3. Runs the test scenario with CLI helpers
+ * 4. Builds a span summary for snapshot testing
+ * 5. Cleans up resources
+ */
+
+import { existsSync } from "node:fs";
+import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+import { expect } from "vitest";
+import { createLspClient } from "./lsp-client.mjs";
+import { createOtelReceiver } from "./otel-receiver.mjs";
+import { createRescriptCli } from "./process.mjs";
+import { createSandbox, removeSandbox } from "./sandbox.mjs";
+
+/**
+ * @typedef {object} SpanNode
+ * @property {string} name - Span name
+ * @property {object} [attrs] - Selected attributes (if any)
+ * @property {SpanNode[]} [children] - Child spans (if any)
+ */
+
+/**
+ * @typedef {object} TestContext
+ * @property {string} sandbox - Path to the test sandbox
+ * @property {ReturnType<typeof createRescriptCli>} cli - CLI helper scoped to sandbox root
+ * @property {(relativePath: string) => ReturnType<typeof createRescriptCli>} createCli - Create a CLI helper scoped to a subdirectory of the sandbox
+ * @property {(relativePath: string, content: string) => Promise<void>} writeFileInSandbox - Write a file in the sandbox (relative path resolved against sandbox root, uses atomic writes)
+ * @property {(relativePath: string) => Promise<string>} readFileInSandbox - Read a file from the sandbox (relative path resolved against sandbox root)
+ * @property {(filePath: string) => Promise<void>} deleteFile - Delete a file
+ * @property {(filePath: string) => boolean} fileExists - Check if file exists
+ */
+
+/**
+ * Convert flat spans to a tree structure based on parent-child relationships.
+ * @param {Array<object>} spans - Flat array of spans
+ * @returns {SpanNode[]} - Tree of span nodes
+ */
+/**
+ * Convert a timestamp value to BigInt. Handles both plain numbers/strings
+ * and protobufjs Long objects (which have low/high/unsigned properties).
+ */
+function toBigInt(value) {
+  if (!value) return 0n;
+  if (typeof value === "bigint") return value;
+  if (typeof value.toBigInt === "function") return value.toBigInt();
+  return BigInt(value);
+}
+
+function buildSpanTree(spans) {
+  // Create a map of spanId -> span
+  const spanMap = new Map();
+  for (const span of spans) {
+    spanMap.set(span.spanId, span);
+  }
+
+  // Group spans by parentSpanId
+  const childrenMap = new Map();
+  const roots = [];
+
+  for (const span of spans) {
+    if (!span.parentSpanId || !spanMap.has(span.parentSpanId)) {
+      roots.push(span);
+    } else {
+      const parentId = span.parentSpanId;
+      if (!childrenMap.has(parentId)) {
+        childrenMap.set(parentId, []);
+      }
+      childrenMap.get(parentId).push(span);
+    }
+  }
+
+  // Sort children by start time
+  for (const children of childrenMap.values()) {
+    children.sort((a, b) => {
+      const aStart = toBigInt(a.startTimeUnixNano);
+      const bStart = toBigInt(b.startTimeUnixNano);
+      if (aStart < bStart) return -1;
+      if (aStart > bStart) return 1;
+      return 0;
+    });
+  }
+
+  // Sort roots by start time
+  roots.sort((a, b) => {
+    const aStart = toBigInt(a.startTimeUnixNano);
+    const bStart = toBigInt(b.startTimeUnixNano);
+    if (aStart < bStart) return -1;
+    if (aStart > bStart) return 1;
+    return 0;
+  });
+
+  // Recursively build tree
+  function buildNode(span) {
+    const children = childrenMap.get(span.spanId) || [];
+    const node = { name: span.name };
+
+    // Include selected attributes
+    if (span.attributes && Object.keys(span.attributes).length > 0) {
+      node.attrs = span.attributes;
+    }
+
+    if (children.length > 0) {
+      node.children = children.map(buildNode);
+    }
+
+    return node;
+  }
+
+  return roots.map(buildNode);
+}
+
+/**
+ * Span names to include in the summary.
+ * Other spans are filtered out to reduce noise.
+ */
+const SUMMARY_SPAN_NAMES = new Set([
+  // Top-level command spans
+  "rewatch.build",
+  "rewatch.clean",
+  "rewatch.watch",
+  "rewatch.format",
+  "rewatch.lsp",
+  "lsp.initialized",
+  "lsp.initial_build",
+  "lsp.discover_package",
+  "lsp.source_dir",
+  "lsp.register_watchers",
+  "lsp.did_open",
+  "lsp.did_change",
+  "lsp.did_save",
+  "lsp.did_change_watched_files",
+  "lsp.enqueue_build",
+  "lsp.enqueue_full_build",
+  "lsp.flush",
+  "lsp.flush.file_build.batch",
+  "lsp.flush.file_build.compile_dependencies",
+  "lsp.flush.file_build.typecheck_dependents",
+  "lsp.flush.file_build.compile_resolved",
+  "lsp.flush.project_build",
+  "lsp.flush.file_typecheck",
+  "lsp.flush.file_typecheck.parse",
+  "lsp.flush.file_typecheck.parse_file",
+  "lsp.flush.file_typecheck.wave",
+  "lsp.flush.file_typecheck.file",
+  "lsp.full_build",
+  "lsp.build",
+  "lsp.build.compile_dependencies",
+  "lsp.build.typecheck_dependents",
+  "lsp.typecheck",
+  "lsp.typecheck.parse",
+  "lsp.typecheck.parse_file",
+  "lsp.typecheck.wave",
+  "lsp.typecheck.file",
+  "lsp.completion",
+  "lsp.completion.ensure_cmt",
+  "lsp.completion.build_context",
+  "lsp.completion.analysis_binary",
+  "lsp.completion_resolve",
+  "lsp.completion_resolve.build_context",
+  "lsp.completion_resolve.analysis_binary",
+  "lsp.hover",
+  "lsp.hover.ensure_cmt",
+  "lsp.hover.build_context",
+  "lsp.hover.analysis_binary",
+  "lsp.definition",
+  "lsp.definition.ensure_cmt",
+  "lsp.definition.build_context",
+  "lsp.definition.analysis_binary",
+  "lsp.type_definition",
+  "lsp.type_definition.ensure_cmt",
+  "lsp.type_definition.build_context",
+  "lsp.type_definition.analysis_binary",
+  "lsp.references",
+  "lsp.references.ensure_cmt",
+  "lsp.references.build_context",
+  "lsp.references.analysis_binary",
+  "lsp.code_lens",
+  "lsp.code_lens.ensure_cmt",
+  "lsp.code_lens.build_context",
+  "lsp.code_lens.analysis_binary",
+  "lsp.inlay_hint",
+  "lsp.inlay_hint.ensure_cmt",
+  "lsp.inlay_hint.build_context",
+  "lsp.inlay_hint.analysis_binary",
+  "lsp.semantic_tokens",
+  "lsp.semantic_tokens.build_context",
+  "lsp.semantic_tokens.analysis_binary",
+  "lsp.code_action",
+  "lsp.code_action.ensure_cmt",
+  "lsp.code_action.build_context",
+  "lsp.code_action.analysis_binary",
+  "lsp.document_symbol",
+  "lsp.document_symbol.build_context",
+  "lsp.document_symbol.analysis_binary",
+  "lsp.workspace_symbol",
+  "lsp.prepare_rename",
+  "lsp.prepare_rename.ensure_cmt",
+  "lsp.prepare_rename.build_context",
+  "lsp.prepare_rename.analysis_binary",
+  "lsp.rename",
+  "lsp.rename.ensure_cmt",
+  "lsp.rename.build_context",
+  "lsp.rename.analysis_binary",
+  "lsp.signature_help",
+  "lsp.signature_help.ensure_cmt",
+  "lsp.signature_help.build_context",
+  "lsp.signature_help.analysis_binary",
+  "lsp.did_open",
+  "lsp.did_close",
+  "lsp.did_change",
+  "lsp.formatting",
+  // Build pipeline spans
+  "initialize_build",
+  "full_build",
+  "full_typecheck",
+  "compile_dependencies",
+  "typecheck_dependents",
+  "packages.make",
+  "packages.parse_packages",
+  "build.load_package_sources",
+  "build.parse",
+  "build.parse_file",
+  "build.parse_error",
+  "build.compile",
+  "build.compile_wave",
+  "build.compile_file",
+  "build.typecheck",
+  "build.typecheck_wave",
+  "build.typecheck_file",
+  "build.compile_error",
+  "build.compile_warning",
+  "build.js_post_build",
+  // Clean spans
+  "clean.clean",
+  "clean.cleanup_previous_build",
+  // Format spans
+  "format.format",
+  "format.write_file",
+]);
+
+/**
+ * Attributes to include in the summary for specific span types.
+ */
+const SUMMARY_ATTRS = {
+  "rewatch.build": ["working_dir"],
+  "rewatch.clean": ["working_dir"],
+  "rewatch.watch": ["working_dir"],
+  "rewatch.format": ["check", "is_stdin"],
+  "lsp.discover_package": ["name"],
+  "lsp.source_dir": ["dir", "recursive"],
+  "lsp.initial_build": ["project"],
+  "lsp.register_watchers": ["watcher_count"],
+  "lsp.did_save": ["file"],
+  "lsp.did_change_watched_files": ["file_count"],
+  "lsp.enqueue_build": ["file"],
+  "lsp.enqueue_full_build": ["file", "kind"],
+  "lsp.flush": ["project_builds", "incremental_builds", "typechecks"],
+  "lsp.flush.file_build.batch": ["modules", "error_count"],
+  "lsp.flush.file_build.compile_dependencies": ["error_count"],
+  "lsp.flush.file_build.typecheck_dependents": [
+    "dependent_count",
+    "error_count",
+  ],
+  "lsp.flush.file_build.compile_resolved": ["modules", "error_count"],
+  "lsp.flush.project_build": ["project"],
+  "lsp.flush.file_typecheck": ["file_count"],
+  "lsp.flush.file_typecheck.parse": ["file_count"],
+  "lsp.flush.file_typecheck.parse_file": ["module"],
+  "lsp.flush.file_typecheck.wave": ["file_count"],
+  "lsp.flush.file_typecheck.file": ["module"],
+  "lsp.full_build": ["project"],
+  "lsp.build": ["file_count"],
+  "lsp.typecheck": ["file_count"],
+  "lsp.typecheck.parse": ["file_count"],
+  "lsp.typecheck.parse_file": ["module"],
+  "lsp.typecheck.wave": ["file_count"],
+  "lsp.typecheck.file": ["module"],
+  "lsp.build.typecheck_dependents": ["dependent_count"],
+  "lsp.completion": ["file", "module", "package", "items_count"],
+  "lsp.completion_resolve": ["file", "module", "package"],
+  "lsp.hover": ["file", "module", "package"],
+  "lsp.definition": ["file", "module", "package"],
+  "lsp.type_definition": ["file", "module", "package"],
+  "lsp.references": ["file", "module", "package"],
+  "lsp.code_lens": ["file", "module", "package"],
+  "lsp.inlay_hint": ["file", "module", "package"],
+  "lsp.semantic_tokens": ["file", "module", "package"],
+  "lsp.code_action": ["file", "module", "package"],
+  "lsp.document_symbol": ["file", "module", "package"],
+  "lsp.workspace_symbol": ["query", "file_count"],
+  "lsp.prepare_rename": ["file", "module", "package"],
+  "lsp.rename": ["file", "module", "package"],
+  "lsp.signature_help": ["file", "module", "package"],
+  "lsp.did_open": ["file"],
+  "lsp.did_close": ["file"],
+  "lsp.did_change": ["file"],
+  "lsp.formatting": ["file"],
+  full_build: ["module_count", "output"],
+  full_typecheck: ["module_count", "output"],
+  compile_dependencies: ["module_count", "output"],
+  typecheck_dependents: ["module_count", "output"],
+  "build.load_package_sources": ["package"],
+  "build.parse": ["dirty_modules"],
+  "build.parse_file": [
+    "module",
+    "package",
+    "kind",
+    "ppx",
+    "experimental",
+    "jsx",
+    "bsc_flags",
+  ],
+  "build.compile_wave": ["file_count"],
+  "build.typecheck_wave": ["file_count"],
+  "build.compile_file": [
+    "module",
+    "package",
+    "suffix",
+    "module_system",
+    "namespace",
+  ],
+  "build.typecheck_file": ["module", "package", "namespace"],
+  "build.js_post_build": ["command", "js_file"],
+  "format.write_file": ["file"],
+};
+
+/**
+ * Convert a span tree to a simplified summary for snapshots.
+ * @param {SpanNode[]} tree - The span tree
+ * @returns {Array} - Simplified summary
+ */
+function treeToSummary(tree) {
+  const result = [];
+
+  function processNode(node, depth = 0) {
+    // Only include spans we care about
+    if (!SUMMARY_SPAN_NAMES.has(node.name)) {
+      // Still process children even if we skip this node
+      if (node.children) {
+        for (const child of node.children) {
+          processNode(child, depth);
+        }
+      }
+      return;
+    }
+
+    // Build summary entry
+    let entry = node.name;
+
+    // Add selected attributes (skip empty values)
+    const attrsToInclude = SUMMARY_ATTRS[node.name];
+    if (attrsToInclude && node.attrs) {
+      const parts = [];
+      for (const attr of attrsToInclude) {
+        const value = node.attrs[attr];
+        if (value !== undefined && value !== "") {
+          parts.push(`${attr}=${value}`);
+        }
+      }
+      if (parts.length > 0) {
+        entry += `[${parts.join(", ")}]`;
+      }
+    }
+
+    // Add indentation for nesting
+    const indent = "  ".repeat(depth);
+    result.push(indent + entry);
+
+    // Process children
+    if (node.children) {
+      for (const child of node.children) {
+        processNode(child, depth + 1);
+      }
+    }
+  }
+
+  for (const root of tree) {
+    processNode(root);
+  }
+
+  // Sort consecutive parallel spans alphabetically for deterministic snapshots
+  return sortParallelSpans(result);
+}
+
+/**
+ * Span patterns that run in parallel and need sorting for deterministic output.
+ */
+const PARALLEL_SPAN_PATTERNS = [
+  "build.load_package_sources",
+  "build.parse_file",
+  "build.compile_file",
+  "build.typecheck_file",
+  "format.write_file",
+  "lsp.build",
+  "lsp.flush.file_build.batch",
+  "lsp.flush.file_typecheck",
+  "lsp.flush.file_typecheck.parse_file",
+  "lsp.flush.file_typecheck.file",
+  "lsp.typecheck",
+  "lsp.typecheck.parse_file",
+  "lsp.typecheck.file",
+  "lsp.discover_package",
+  "lsp.initial_build",
+  "lsp.source_dir",
+];
+
+/**
+ * Sort consecutive blocks matching parallel span patterns alphabetically.
+ * A "block" is a matching line plus any deeper-indented children below it.
+ * This ensures spans with children (e.g., compile_file with js_post_build)
+ * are sorted as a unit rather than being split by their children.
+ *
+ * @param {string[]} lines - Summary lines
+ * @returns {string[]} - Lines with parallel span blocks sorted
+ */
+function sortParallelSpans(lines) {
+  const result = [];
+  let currentPattern = null;
+  // Each block is { key: string, lines: string[] }
+  let collectedBlocks = [];
+  let currentBlockIndent = 0;
+
+  function flushBlocks() {
+    if (collectedBlocks.length > 0) {
+      collectedBlocks.sort((a, b) => a.key.localeCompare(b.key));
+      for (const block of collectedBlocks) {
+        // Recursively sort parallel spans within each block's children
+        if (block.lines.length > 1) {
+          const [header, ...children] = block.lines;
+          result.push(header);
+          result.push(...sortParallelSpans(children));
+        } else {
+          result.push(...block.lines);
+        }
+      }
+      collectedBlocks = [];
+    }
+  }
+
+  for (const line of lines) {
+    const matchedPattern = PARALLEL_SPAN_PATTERNS.find(p => line.includes(p));
+    const indent = line.search(/\S/);
+
+    // If we're collecting blocks and this line is a deeper-indented child,
+    // append it to the current block (even if the child itself matches a
+    // parallel pattern — e.g. build.load_package_sources inside
+    // lsp.initial_build).
+    if (collectedBlocks.length > 0 && indent > currentBlockIndent) {
+      collectedBlocks[collectedBlocks.length - 1].lines.push(line);
+      continue;
+    }
+
+    if (matchedPattern && matchedPattern === currentPattern) {
+      // Another block of the same pattern
+      collectedBlocks.push({ key: line.trim(), lines: [line] });
+      currentBlockIndent = indent;
+    } else {
+      // Different pattern or not a pattern — flush and reset
+      flushBlocks();
+
+      if (matchedPattern) {
+        currentPattern = matchedPattern;
+        currentBlockIndent = indent;
+        collectedBlocks.push({ key: line.trim(), lines: [line] });
+      } else {
+        currentPattern = null;
+        result.push(line);
+      }
+    }
+  }
+
+  flushBlocks();
+
+  return result;
+}
+
+/**
+ * Normalize absolute paths in span attributes to sandbox-relative paths.
+ *
+ * @param {string[]} summary - Summary lines
+ * @param {string} sandboxPath - The sandbox root path
+ * @returns {string[]} - Summary with normalized paths
+ */
+export function normalizePaths(summary, sandboxPath) {
+  const sandboxUri = pathToFileURL(sandboxPath).href;
+  // Ensure the URI prefix ends with / for clean stripping
+  const sandboxUriPrefix = sandboxUri.endsWith("/")
+    ? sandboxUri
+    : sandboxUri + "/";
+
+  // On Windows, paths may use backslashes. Build a forward-slash variant
+  // of the sandbox path so we can strip both styles.
+  const sandboxForward = sandboxPath.replaceAll("\\", "/");
+
+  return summary.map(line => {
+    // Normalize all backslashes to forward slashes for consistent snapshots
+    line = line.replaceAll("\\", "/");
+
+    // Replace file:// URIs pointing into the sandbox
+    line = line.replaceAll(sandboxUriPrefix, "");
+    // Also handle the root URI without trailing slash (exact match)
+    line = line.replaceAll(sandboxUri, ".");
+
+    // Replace absolute filesystem paths (with trailing slash)
+    line = line.replaceAll(sandboxForward + "/", "");
+    // Exact match for sandbox root without trailing slash
+    line = line.replaceAll(sandboxForward, ".");
+
+    // Strip leading ./ from relative paths (e.g. ./packages/... -> packages/...)
+    line = line.replace(/=\.\//g, "=");
+
+    return line;
+  });
+}
+
+/**
+ * Run a rewatch test with snapshot-based span assertions.
+ *
+ * The test flow is:
+ * 1. Setup: Create sandbox, start OTEL receiver
+ * 2. Scenario: Execute your test operations (build, clean, watch, etc.)
+ * 3. Assert: Snapshot the span tree summary
+ * 4. Cleanup: Remove sandbox, stop OTEL receiver
+ *
+ * @param {(ctx: TestContext) => Promise<void>} scenario - The test scenario to execute
+ * @param {object} [options] - Options for the test
+ * @param {(summary: string[], sandboxPath: string) => string[]} [options.processSpans] - Transform the span summary before snapshot
+ * @returns {Promise<void>}
+ */
+export async function runRewatchTest(scenario, options = {}) {
+  let otelReceiver = null;
+  let sandbox = null;
+  const watchHandles = [];
+
+  try {
+    // Setup
+    otelReceiver = await createOtelReceiver({
+      forwardEndpoint: process.env.OTEL_VIEWER_ENDPOINT,
+    });
+    sandbox = await createSandbox();
+
+    // Create a CLI helper that tracks watch handles for automatic cleanup
+    function createTrackedCli(cwd) {
+      const inner = createRescriptCli(cwd, otelReceiver.endpoint);
+      return {
+        ...inner,
+        spawnWatch(args) {
+          const handle = inner.spawnWatch(args);
+          watchHandles.push(handle);
+          return handle;
+        },
+      };
+    }
+
+    const cli = createTrackedCli(sandbox);
+
+    // Create test context
+    const ctx = {
+      sandbox,
+      cli,
+      createCli(relativePath) {
+        return createTrackedCli(path.join(sandbox, relativePath));
+      },
+
+      async writeFileInSandbox(relativePath, content) {
+        const fullPath = path.join(sandbox, relativePath);
+        // Ensure parent directory exists
+        await mkdir(path.dirname(fullPath), { recursive: true });
+        // Use atomic write (temp file + rename) to prevent the watcher from
+        // seeing a truncated file. On Linux, fs.writeFile generates two
+        // inotify IN_MODIFY events (truncate + write) which can cause the
+        // watcher to read the file while it's empty.
+        const tmpPath = fullPath + ".__atomic_tmp";
+        await writeFile(tmpPath, content);
+        await rename(tmpPath, fullPath);
+      },
+
+      async readFileInSandbox(relativePath) {
+        const fullPath = path.join(sandbox, relativePath);
+        return readFile(fullPath, "utf8");
+      },
+
+      async deleteFile(filePath) {
+        const fullPath = path.isAbsolute(filePath)
+          ? filePath
+          : path.join(sandbox, filePath);
+        await unlink(fullPath);
+      },
+
+      fileExists(filePath) {
+        const fullPath = path.isAbsolute(filePath)
+          ? filePath
+          : path.join(sandbox, filePath);
+        return existsSync(fullPath);
+      },
+    };
+
+    // Execute scenario
+    await scenario(ctx);
+  } finally {
+    // Stop any watch processes to flush telemetry
+    for (const handle of watchHandles) {
+      try {
+        await handle.stop();
+      } catch (err) {
+        console.error("[runRewatchTest] Error stopping watch process:", err);
+      }
+    }
+  }
+
+  try {
+    // Wait for a root rewatch span to arrive at the receiver.
+    // These top-level spans (rewatch.build, rewatch.clean, rewatch.format, etc.)
+    // close last, right before TelemetryGuard::drop calls force_flush().
+    // If one has arrived, all child spans have been exported too.
+    await otelReceiver.waitForSpan(s => s.name.startsWith("rewatch."));
+
+    // Get spans and build tree
+    const spans = otelReceiver.getSpans();
+    const tree = buildSpanTree(spans);
+    let summary = treeToSummary(tree);
+
+    // Always normalize absolute paths to sandbox-relative paths
+    summary = normalizePaths(summary, sandbox);
+
+    // Apply any additional processing callback
+    if (options.processSpans) {
+      summary = options.processSpans(summary, sandbox);
+    }
+
+    if (process.env.DEBUG_OTEL) {
+      console.log(`[runRewatchTest] Span summary:`);
+      for (const line of summary) {
+        console.log(`  ${line}`);
+      }
+    }
+
+    // Snapshot assertion - wrap in try/catch to log debug info on failure
+    try {
+      expect(summary).toMatchSnapshot();
+    } catch (err) {
+      // Log raw telemetry data to help debug CI failures
+      console.error("\n=== SNAPSHOT ASSERTION FAILED ===");
+      console.error("Platform:", process.platform);
+      console.error("Sandbox path:", sandbox);
+      // Dump rewatch -vv stderr from watch processes
+      for (let i = 0; i < watchHandles.length; i++) {
+        const stderr = watchHandles[i].getStderr?.();
+        if (stderr) {
+          console.error(`\n--- Watch process ${i} stderr (-vv) ---`);
+          console.error(stderr);
+        }
+      }
+      console.error("\n--- Raw spans (%d total) ---", spans.length);
+      for (const span of spans) {
+        console.error(JSON.stringify(span, null, 2));
+      }
+      console.error("\n--- Span tree ---");
+      console.error(JSON.stringify(tree, null, 2));
+      console.error("\n--- Summary (actual) ---");
+      for (const line of summary) {
+        console.error(`  ${JSON.stringify(line)}`);
+      }
+      console.error("=== END DEBUG INFO ===\n");
+      throw err;
+    }
+  } finally {
+    if (sandbox) {
+      await removeSandbox(sandbox);
+    }
+    if (otelReceiver) {
+      await otelReceiver.stop();
+    }
+  }
+}
+
+/**
+ * @typedef {object} LspTestContext
+ * @property {string} sandbox - Path to the test sandbox (fixture root)
+ * @property {string} lspCwd - Working directory for the LSP server (same as sandbox unless options.cwd is set)
+ * @property {ReturnType<typeof createLspClient>} lsp - LSP client connected to the server
+ * @property {(relativePath: string, content: string) => Promise<void>} writeFile - Write a file relative to lspCwd
+ * @property {(relativePath: string) => Promise<string>} readFile - Read a file relative to lspCwd
+ * @property {(relativePath: string) => Promise<void>} deleteFile - Delete a file relative to lspCwd
+ */
+
+/**
+ * Run an LSP test with snapshot-based span assertions.
+ *
+ * Mirrors `runRewatchTest` but boots an LSP client instead of a CLI.
+ * The test flow is:
+ * 1. Setup: Create sandbox, start OTEL receiver, spawn LSP server
+ * 2. Scenario: Execute your test operations (initialize, open, save, hover, etc.)
+ * 3. Assert: Snapshot the OTEL span tree summary
+ * 4. Cleanup: Shutdown LSP, remove sandbox, stop OTEL receiver
+ *
+ * @param {(ctx: LspTestContext) => Promise<void>} scenario - The test scenario to execute
+ * @param {object} [options] - Options for the test
+ * @param {string} [options.cwd] - Subdirectory within the sandbox to use as LSP working directory (relative to sandbox root)
+ * @param {(summary: string[], sandboxPath: string) => string[]} [options.processSpans] - Transform the span summary before snapshot
+ * @returns {Promise<void>}
+ */
+export async function runLspTest(scenario, options = {}) {
+  let otelReceiver = null;
+  let sandbox = null;
+  let lsp = null;
+
+  try {
+    // Setup
+    otelReceiver = await createOtelReceiver({
+      forwardEndpoint: process.env.OTEL_VIEWER_ENDPOINT,
+    });
+    sandbox = await createSandbox();
+    const lspCwd = options.cwd ? path.join(sandbox, options.cwd) : sandbox;
+    lsp = createLspClient(lspCwd, otelReceiver.endpoint);
+
+    // CLI helper without OTEL — CLI spans should not pollute LSP snapshots
+    const cli = createRescriptCli(lspCwd);
+
+    // Create test context
+    const ctx = {
+      sandbox,
+      lspCwd,
+      lsp,
+      cli,
+
+      async writeFile(relativePath, content) {
+        const fullPath = path.join(lspCwd, relativePath);
+        await mkdir(path.dirname(fullPath), { recursive: true });
+        const tmpPath = fullPath + ".__atomic_tmp";
+        await writeFile(tmpPath, content);
+        await rename(tmpPath, fullPath);
+        lsp.saveFile(relativePath);
+      },
+
+      async writeFileExternal(relativePath, content) {
+        const fullPath = path.join(lspCwd, relativePath);
+        await mkdir(path.dirname(fullPath), { recursive: true });
+        const tmpPath = fullPath + ".__atomic_tmp";
+        await writeFile(tmpPath, content);
+        await rename(tmpPath, fullPath);
+        lsp.notifyWatchedFilesChanged([{ relativePath }]);
+      },
+
+      async readFile(relativePath) {
+        const fullPath = path.join(lspCwd, relativePath);
+        return readFile(fullPath, "utf8");
+      },
+
+      async deleteFile(relativePath) {
+        const fullPath = path.join(lspCwd, relativePath);
+        await unlink(fullPath);
+      },
+    };
+
+    // Execute scenario
+    await scenario(ctx);
+  } finally {
+    // Shutdown LSP to flush telemetry
+    if (lsp) {
+      try {
+        await lsp.shutdown();
+      } catch {
+        // Shutdown may fail if the server crashed — force kill
+        try {
+          lsp.process.kill("SIGKILL");
+        } catch {}
+      }
+    }
+  }
+
+  try {
+    // Wait for the root `rewatch.lsp` span to arrive at the receiver.
+    // This is the outermost instrumented span — it closes last, right before
+    // TelemetryGuard::drop calls force_flush(). If this span has arrived,
+    // all other spans have been exported too.
+    await otelReceiver.waitForSpan(s => s.name === "rewatch.lsp");
+
+    // Get spans and build tree
+    const spans = otelReceiver.getSpans();
+    const tree = buildSpanTree(spans);
+    let summary = treeToSummary(tree);
+
+    // Always normalize absolute paths to sandbox-relative paths
+    summary = normalizePaths(summary, sandbox);
+
+    // Apply any additional processing callback
+    if (options.processSpans) {
+      summary = options.processSpans(summary, sandbox);
+    }
+
+    if (process.env.DEBUG_OTEL) {
+      console.log(`[runLspTest] Span summary:`);
+      for (const line of summary) {
+        console.log(`  ${line}`);
+      }
+    }
+
+    // Snapshot assertion
+    try {
+      expect(summary).toMatchSnapshot();
+    } catch (err) {
+      console.error("\n=== LSP SNAPSHOT ASSERTION FAILED ===");
+      console.error("Platform:", process.platform);
+      console.error("Sandbox path:", sandbox);
+      const stderr = lsp?.getStderr?.();
+      if (stderr) {
+        console.error("\n--- LSP server stderr ---");
+        console.error(stderr);
+      }
+      console.error("\n--- Raw spans (%d total) ---", spans.length);
+      for (const span of spans) {
+        console.error(JSON.stringify(span, null, 2));
+      }
+      console.error("\n--- Span tree ---");
+      console.error(JSON.stringify(tree, null, 2));
+      console.error("\n--- Summary (actual) ---");
+      for (const line of summary) {
+        console.error(`  ${JSON.stringify(line)}`);
+      }
+      console.error("=== END DEBUG INFO ===\n");
+      throw err;
+    }
+  } finally {
+    if (sandbox) {
+      await removeSandbox(sandbox);
+    }
+    if (otelReceiver) {
+      await otelReceiver.stop();
+    }
+  }
+}

@@ -1,4 +1,4 @@
-use crate::build::build_types::BuildState;
+use crate::build::build_types::{BuildState, OutputTarget};
 use crate::build::packages::Package;
 use ahash::{AHashMap, AHashSet};
 use rayon::prelude::*;
@@ -80,7 +80,7 @@ fn sort_paths(mut v: Vec<PathBuf>) -> Vec<PathBuf> {
     v
 }
 
-pub fn print(buildstate: &BuildState) {
+pub fn print(buildstate: &BuildState, output: OutputTarget) {
     // Find Root Package
     let (_name, root_package) = buildstate
         .packages
@@ -95,7 +95,7 @@ pub fn print(buildstate: &BuildState) {
         .iter()
         .filter(|(_name, package)| !package.is_root)
         .for_each(|(_name, package)| {
-            let path = package.get_build_path().join(".sourcedirs.json");
+            let path = package.get_build_path_for_output(output).join(".sourcedirs.json");
             let _ = std::fs::remove_file(&path);
         });
 
@@ -122,7 +122,12 @@ pub fn print(buildstate: &BuildState) {
                 .strip_prefix(&root_package.path)
                 .unwrap_or(Path::new(""))
                 .to_path_buf();
-            let build_root = pkg_rel.join("lib").join("bs");
+            let build_root = pkg_rel.join(
+                package
+                    .get_build_path_for_output(output)
+                    .strip_prefix(&package.path)
+                    .unwrap_or(Path::new("lib/bs")),
+            );
             let scan_dirs = sort_paths(
                 package
                     .dirs
@@ -186,6 +191,6 @@ pub fn print(buildstate: &BuildState) {
             v
         }),
     };
-    write_sourcedirs_files(&root_package.get_build_path(), &root_sourcedirs)
+    write_sourcedirs_files(&root_package.get_build_path_for_output(output), &root_sourcedirs)
         .expect("Could not write sourcedirs.json");
 }

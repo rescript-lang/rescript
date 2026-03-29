@@ -24,7 +24,7 @@ let kindNumber = function
   | EnumMember -> 22
   | TypeParameter -> 26
 
-let command ~path =
+let command ~path ~source =
   let symbols = ref [] in
   let addSymbol name loc kind =
     if
@@ -134,16 +134,16 @@ let command ~path =
   in
 
   (if Filename.check_suffix path ".res" then
-     let parser =
-       Res_driver.parsing_engine.parse_implementation ~for_printer:false
+     let {Res_driver.parsetree = structure} =
+       Res_driver.parse_implementation_from_source ~for_printer:false
+         ~display_filename:path ~source
      in
-     let {Res_driver.parsetree = structure} = parser ~filename:path in
      iterator.structure iterator structure |> ignore
    else
-     let parser =
-       Res_driver.parsing_engine.parse_interface ~for_printer:false
+     let {Res_driver.parsetree = signature} =
+       Res_driver.parse_interface_from_source ~for_printer:false
+         ~display_filename:path ~source
      in
-     let {Res_driver.parsetree = signature} = parser ~filename:path in
      iterator.signature iterator signature |> ignore);
   let isInside
       ({
@@ -198,4 +198,4 @@ let command ~path =
   in
   let sortedSymbols = !symbols |> List.sort compareSymbol in
   let symbolsWithChildren = [] |> addSortedSymbolsToChildren ~sortedSymbols in
-  print_endline (Protocol.stringifyDocumentSymbolItems symbolsWithChildren)
+  Protocol.stringifyDocumentSymbolItems symbolsWithChildren

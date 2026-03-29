@@ -1,0 +1,7 @@
+{
+  "name": "@rewatch-test/with-deps",
+  "private": true,
+  "dependencies": {
+    "rescript-bun": "2.1.0"
+  }
+}

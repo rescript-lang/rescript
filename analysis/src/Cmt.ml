@@ -42,15 +42,32 @@ let fullFromUri ~uri =
         None))
 
 let fullsFromModule ~package ~moduleName =
-  if Hashtbl.mem package.pathsForModule moduleName then
-    let paths = Hashtbl.find package.pathsForModule moduleName in
+  match Hashtbl.find_opt package.pathsForModule moduleName with
+  | Some paths ->
     let uris = getUris paths in
-    uris |> List.filter_map (fun uri -> fullFromUri ~uri)
-  else []
+    uris
+    |> List.filter_map (fun uri ->
+           let cmt = getCmtPath ~uri paths in
+           fullForCmt ~moduleName ~package ~uri cmt)
+  | None -> []
 
 let loadFullCmtFromPath ~path =
   let uri = Uri.fromPath path in
   fullFromUri ~uri
+
+let loadFullCmtWithPackage ~path ~package =
+  let uri = Uri.fromPath path in
+  let pathStr = Uri.toPath uri in
+  let moduleName =
+    BuildSystem.namespacedName package.namespace (FindFiles.getName pathStr)
+  in
+  match Hashtbl.find_opt package.pathsForModule moduleName with
+  | Some paths ->
+    let cmt = getCmtPath ~uri paths in
+    fullForCmt ~moduleName ~package ~uri cmt
+  | None ->
+    prerr_endline ("can't find module " ^ moduleName);
+    None
 
 let loadCmtInfosFromPath ~path =
   let uri = Uri.fromPath path in
