@@ -1,0 +1,90 @@
+# SPDX-License-Identifier: PMPL-1.0-or-later
+# stapeln.toml — Layer-based container build for rescript
+#
+# stapeln builds containers as composable layers (German: "to stack").
+# Each layer is independently cacheable, verifiable, and signable.
+
+[metadata]
+name = "rescript"
+version = "0.1.0"
+description = "rescript"
+author = "Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>"
+license = "PMPL-1.0-or-later"
+registry = "ghcr.io/hyperpolymath"
+
+[build]
+containerfile = "Containerfile"
+context = "."
+runtime = "podman"
+
+# ── Layer Definitions ──────────────────────────────────────────
+
+[layers.base]
+description = "Chainguard Wolfi minimal base"
+from = "cgr.dev/chainguard/wolfi-base:latest"
+cache = true
+verify = true
+
+[layers.toolchain]
+description = "Build tools and dependencies"
+extends = "base"
+packages = ["deno", "build-base"]
+cache = true
+
+[layers.build]
+description = "rescript build"
+extends = "toolchain"
+commands = ["deno install", "deno task res:build"]
+
+[layers.runtime]
+description = "Minimal runtime"
+from = "cgr.dev/chainguard/wolfi-base:latest"
+packages = ["ca-certificates", "curl"]
+copy-from = [
+    { layer = "build", src = "/app/", dst = "/app/" },
+]
+entrypoint = ["/app/src/Main.bs.js"]
+user = "nonroot"
+
+# ── Security ───────────────────────────────────────────────────
+
+[security]
+non-root = true
+read-only-root = false
+no-new-privileges = true
+cap-drop = ["ALL"]
+seccomp-profile = "default"
+
+[security.signing]
+algorithm = "ML-DSA-87"
+provider = "cerro-torre"
+
+[security.sbom]
+format = "spdx-json"
+output = "sbom.spdx.json"
+include-deps = true
+
+# ── Verification ──────────────────────────────────────────────
+
+[verify]
+vordr = true
+svalinn = true
+scan-on-build = true
+fail-on = ["critical", "high"]
+
+# ── Targets ───────────────────────────────────────────────────
+
+[targets.development]
+description = "Full development environment"
+layers = ["base", "toolchain", "build"]
+env = { LOG_LEVEL = "debug" }
+
+[targets.production]
+description = "Production deployment"
+layers = ["runtime"]
+env = { LOG_LEVEL = "info" }
+
+[targets.test]
+description = "Test environment"
+layers = ["base", "toolchain", "build"]
+env = { LOG_LEVEL = "debug" }
