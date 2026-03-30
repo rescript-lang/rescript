@@ -31,6 +31,7 @@
 - Fix unpacking first-class module in default argument of react component. https://github.com/rescript-lang/rescript/pull/8296
 - Fix exception record field regression. https://github.com/rescript-lang/rescript/pull/8319
 - Rewatch: ignore stale lock for unrelated process name. https://github.com/rescript-lang/rescript/pull/8316
+- Fix handling of exotic identifiers for let bindings in GenType. https://github.com/rescript-lang/rescript/pull/8315
 
 #### :memo: Documentation
 
