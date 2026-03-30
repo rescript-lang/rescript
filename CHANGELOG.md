@@ -29,12 +29,14 @@
 - Fix `null` and array values incorrectly matching the `Object` branch when pattern matching on `JSON.t` (or other untagged variants with an `Object` case) in statement position. https://github.com/rescript-lang/rescript/pull/8279
 - Fix rewatch panic when `package.json` has no `name` field. https://github.com/rescript-lang/rescript/pull/8291
 - Fix unpacking first-class module in default argument of react component. https://github.com/rescript-lang/rescript/pull/8296
+- Fix exception record field regression. https://github.com/rescript-lang/rescript/pull/8319
+- Rewatch: ignore stale lock for unrelated process name. https://github.com/rescript-lang/rescript/pull/8316
 
 #### :memo: Documentation
 
 #### :nail_care: Polish
 
-- Improve error message for dependency without `rescript.json`. https://github.com/rescript-lang/rescript/issues/8265
+- Improve error message for dependency without `rescript.json`. https://github.com/rescript-lang/rescript/pull/8292
 
 #### :house: Internal
 

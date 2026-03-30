@@ -3,7 +3,7 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 use std::process;
-use sysinfo::{PidExt, System, SystemExt};
+use sysinfo::{PidExt, ProcessExt, System, SystemExt};
 
 /* This locking mechanism is meant to never be deleted. Instead, it stores the PID of the process
  * that's running, when trying to aquire a lock, it checks wether that process is still running. If
@@ -46,11 +46,30 @@ pub enum Lock {
     Error(Error),
 }
 
-fn pid_exists(to_check_pid: u32) -> bool {
-    System::new_all()
-        .processes()
-        .iter()
-        .any(|(pid, _process)| pid.as_u32() == to_check_pid)
+fn matching_process_name() -> Option<String> {
+    std::env::current_exe()
+        .ok()
+        .and_then(|path| path.file_name().map(|name| name.to_string_lossy().into_owned()))
+}
+
+fn pid_matches_current_process(to_check_pid: u32) -> bool {
+    let system = System::new_all();
+    let current_process_name = matching_process_name();
+
+    system.processes().iter().any(|(pid, process)| {
+        if pid.as_u32() != to_check_pid {
+            return false;
+        }
+
+        match &current_process_name {
+            Some(current_process_name) => process
+                .exe()
+                .file_name()
+                .map(|name| name.to_string_lossy() == current_process_name.as_str())
+                .unwrap_or_else(|| process.name() == current_process_name.as_str()),
+            None => true,
+        }
+    })
 }
 
 pub fn get(folder: &str) -> Lock {
@@ -67,7 +86,9 @@ pub fn get(folder: &str) -> Lock {
     // proceed, otherwise we will overwrite the stale lock with our own PID.
     match fs::read_to_string(&location) {
         Ok(contents) => match contents.parse::<u32>() {
-            Ok(parsed_pid) if pid_exists(parsed_pid) => return Lock::Error(Error::Locked(parsed_pid)),
+            Ok(parsed_pid) if pid_matches_current_process(parsed_pid) => {
+                return Lock::Error(Error::Locked(parsed_pid));
+            }
             Ok(_) => (),
             Err(e) => return Lock::Error(Error::ParsingLockfile(e)),
         },
@@ -132,5 +153,19 @@ mod tests {
             project_folder.join("lib").join(LOCKFILE).exists(),
             "lockfile should be created"
         );
+    }
+
+    #[test]
+    fn ignores_stale_lock_for_unrelated_process_name() {
+        let temp_dir = TempDir::new().expect("temp dir should be created");
+        let project_folder = temp_dir.path().join("project");
+        let lib_dir = project_folder.join("lib");
+        fs::create_dir_all(&lib_dir).expect("lib directory should be created");
+        fs::write(lib_dir.join(LOCKFILE), "1").expect("lockfile should be written");
+
+        match get(project_folder.to_str().expect("path should be valid")) {
+            Lock::Aquired(_) => {}
+            _ => panic!("expected stale lock from unrelated process to be ignored"),
+        }
     }
 }
