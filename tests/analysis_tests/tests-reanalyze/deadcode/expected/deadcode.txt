@@ -31,6 +31,44 @@
   addTypeReference _none_:1:-1 --> ComponentAsProp.res:6:12
   addTypeReference _none_:1:-1 --> ComponentAsProp.res:6:20
   addTypeReference _none_:1:-1 --> ComponentAsProp.res:6:34
+  Scanning ContextOptionalArgs.cmt Source:ContextOptionalArgs.res
+  addValueDeclaration +dispatchNotificationContext ContextOptionalArgs.res:2:6 path:+ContextOptionalArgs.NotificationProvider
+  addValueDeclaration +make ContextOptionalArgs.res:8:8 path:+ContextOptionalArgs.NotificationProvider.Provider
+  addValueDeclaration +make ContextOptionalArgs.res:12:6 path:+ContextOptionalArgs.NotificationProvider
+  addValueDeclaration +useNotification ContextOptionalArgs.res:22:6 path:+ContextOptionalArgs.NotificationProvider
+  addValueDeclaration +make ContextOptionalArgs.res:27:6 path:+ContextOptionalArgs.ComponentUsingAction
+  addValueDeclaration +make ContextOptionalArgs.res:41:6 path:+ContextOptionalArgs.ComponentNotUsingAction
+  addValueDeclaration +make ContextOptionalArgs.res:55:4 path:+ContextOptionalArgs
+  addRecordLabelDeclaration children ContextOptionalArgs.res:12:14 path:+ContextOptionalArgs.NotificationProvider.props
+  addValueReference ContextOptionalArgs.res:2:6 --> React.res:80:0
+  addValueReference ContextOptionalArgs.res:8:8 --> ContextOptionalArgs.res:2:6
+  addValueReference ContextOptionalArgs.res:8:8 --> React.res:76:2
+  addRecordLabelDeclaration children ContextOptionalArgs.res:12:14 path:+ContextOptionalArgs.NotificationProvider.props
+  addValueDeclaration +dispatchNotification ContextOptionalArgs.res:13:8 path:+ContextOptionalArgs.NotificationProvider
+  addValueReference ContextOptionalArgs.res:13:8 --> ContextOptionalArgs.res:13:43
+  addValueReference ContextOptionalArgs.res:13:8 --> ContextOptionalArgs.res:15:13
+  addValueReference ContextOptionalArgs.res:13:8 --> ContextOptionalArgs.res:13:43
+  addValueReference ContextOptionalArgs.res:13:8 --> ContextOptionalArgs.res:13:32
+  addValueReference ContextOptionalArgs.res:19:5 --> ContextOptionalArgs.res:8:8
+  addValueReference ContextOptionalArgs.res:19:20 --> ContextOptionalArgs.res:13:8
+  addValueReference ContextOptionalArgs.res:19:43 --> ContextOptionalArgs.res:12:14
+  addTypeReference _none_:1:-1 --> ContextOptionalArgs.res:12:14
+  DeadOptionalArgs.addReferences React.useContext called with optional argNames: argNamesMaybe: ContextOptionalArgs.res:22:30
+  addValueReference ContextOptionalArgs.res:22:6 --> ContextOptionalArgs.res:2:6
+  addValueReference ContextOptionalArgs.res:22:6 --> React.res:250:0
+  addValueDeclaration +dispatchNotification ContextOptionalArgs.res:28:8 path:+ContextOptionalArgs.ComponentUsingAction
+  addValueReference ContextOptionalArgs.res:28:8 --> ContextOptionalArgs.res:22:6
+  addValueReference ContextOptionalArgs.res:35:4 --> React.res:3:0
+  addValueReference ContextOptionalArgs.res:31:6 --> ContextOptionalArgs.res:28:8
+  addValueReference ContextOptionalArgs.res:30:4 --> React.res:150:0
+  addValueDeclaration +dispatchNotification ContextOptionalArgs.res:42:8 path:+ContextOptionalArgs.ComponentNotUsingAction
+  addValueReference ContextOptionalArgs.res:42:8 --> ContextOptionalArgs.res:22:6
+  addValueReference ContextOptionalArgs.res:49:4 --> React.res:3:0
+  addValueReference ContextOptionalArgs.res:45:6 --> ContextOptionalArgs.res:42:8
+  addValueReference ContextOptionalArgs.res:44:4 --> React.res:150:0
+  addValueReference ContextOptionalArgs.res:56:3 --> ContextOptionalArgs.res:12:6
+  addValueReference ContextOptionalArgs.res:57:5 --> ContextOptionalArgs.res:27:6
+  addValueReference ContextOptionalArgs.res:58:5 --> ContextOptionalArgs.res:41:6
   Scanning CreateErrorHandler1.cmt Source:CreateErrorHandler1.res
   addValueDeclaration +notification CreateErrorHandler1.res:3:6 path:+CreateErrorHandler1.Error1
   addValueReference CreateErrorHandler1.res:3:6 --> CreateErrorHandler1.res:3:21
@@ -1931,9 +1969,9 @@
   
 Forward Liveness Analysis
 
-    decls: 695
-    roots(external targets): 134
-    decl-deps: decls_with_out=407 edges_to_decls=288
+    decls: 706
+    roots(external targets): 143
+    decl-deps: decls_with_out=417 edges_to_decls=302
 
     Root (annotated): Value +Hooks.+default
     Root (external ref): Value +FirstClassModules.M.InnerModule2.+k
@@ -1974,8 +2012,10 @@ Forward Liveness Analysis
     Root (external ref): RecordLabel +Records.record.v
     Root (external ref): VariantCase +DeadTest.VariantUsedOnlyInImplementation.t.A
     Root (annotated): Value +DeadTest.GloobLive.+globallyLive3
+    Root (external ref): Value +ContextOptionalArgs.ComponentUsingAction.+make
     Root (external ref): Value +Hooks.RenderPropRequiresConversion.+car
     Root (external ref): RecordLabel +Records.person.address
+    Root (external ref): RecordLabel +ContextOptionalArgs.NotificationProvider.props.children
     Root (annotated): Value +Variants.+testConvert2
     Root (annotated): Value +Tuples.+coord2d
     Root (external ref): Value +CreateErrorHandler1.Error1.+notification
@@ -2008,6 +2048,7 @@ Forward Liveness Analysis
     Root (external ref): Value OptArg.+bar
     Root (annotated): Value +Records.+payloadValue
     Root (external ref): RecordLabel +DeadTest.props.s
+    Root (external ref): Value +ContextOptionalArgs.NotificationProvider.+make
     Root (annotated): Value +TestEmitInnerModules.Inner.+y
     Root (external ref): VariantCase InnerModuleTypes.I.t.Foo
     Root (annotated): Value +Types.+selfRecursiveConverter
@@ -2025,6 +2066,7 @@ Forward Liveness Analysis
     Root (external ref): RecordLabel +Tuples.person.name
     Root (external ref): Value +FirstClassModules.M.InnerModule3.+k3
     Root (external ref): VariantCase +Unison.break.Always
+    Root (external ref): Value +ContextOptionalArgs.ComponentNotUsingAction.+dispatchNotification
     Root (external ref): RecordLabel +Records.coord.x
     Root (annotated): RecordLabel +DeadTypeTest.record.y
     Root (annotated): Value +TestImport.+defaultValue
@@ -2085,6 +2127,7 @@ Forward Liveness Analysis
     Root (annotated): Value +OcamlWarningSuppressToplevel.+suppressed1
     Root (external ref): RecordLabel +Records.business2.address2
     Root (annotated): Value +Tuples.+testTuple
+    Root (external ref): Value +ContextOptionalArgs.NotificationProvider.+dispatchNotification
     Root (annotated): Value +Records.+testMyObj2
     Root (annotated): Value +Uncurried.+callback2
     Root (external ref): Value +DeadTest.VariantUsedOnlyInImplementation.+a
@@ -2095,6 +2138,7 @@ Forward Liveness Analysis
     Root (annotated): Value +TestEmitInnerModules.Inner.+x
     Root (external ref): Value +OptArg.+wrapOneArg
     Root (external ref): RecordLabel +ComponentAsProp.props.title
+    Root (external ref): Value +ContextOptionalArgs.ComponentUsingAction.+dispatchNotification
     Root (annotated): Value +Records.+findAddress
     Root (annotated): Value +Uncurried.+callback
     Root (annotated): Value +VariantsWithPayload.+printVariantWithPayload
@@ -2105,6 +2149,7 @@ Forward Liveness Analysis
     Root (annotated): Value +LetPrivate.local_1.+x
     Root (annotated): Value +TestImport.+make
     Root (external ref): RecordLabel +Unison.t.break
+    Root (external ref): Value +ContextOptionalArgs.NotificationProvider.Provider.+make
     Root (annotated): Value +Docstrings.+grouped
     Root (annotated): Value +OcamlWarningSuppressToplevel.M.+suppressed4
     Root (annotated): Value +Types.+optFunction
@@ -2141,8 +2186,10 @@ Forward Liveness Analysis
     Root (annotated): RecordLabel +DeadTypeTest.record.x
     Root (external ref): RecordLabel +Records.myRec.type_
     Root (annotated): Value +TestOptArg.+liveSuppressesOptArgs
+    Root (external ref): Value +ContextOptionalArgs.ComponentNotUsingAction.+make
     Root (annotated): Value NestedModulesInSignature.Universe.+theAnswer
     Root (annotated): Value +Docstrings.+unitArgWithoutConversion
+    Root (annotated): Value +ContextOptionalArgs.+make
     Root (annotated): Value +References.+create
     Root (annotated): Value +Types.+currentTime
     Root (annotated): Value +Records.+someBusiness2
@@ -2256,7 +2303,7 @@ Forward Liveness Analysis
     Root (annotated): Value +UseImportJsValue.+useGetProp
     Root (external ref): RecordLabel +Hooks.RenderPropRequiresConversion.props.renderVehicle
   
-  320 roots found
+  329 roots found
 
     Propagate: +Hooks.+default -> +Hooks.+make
     Propagate: DeadRT.moduleAccessPath.Root -> +DeadRT.moduleAccessPath.Root
@@ -2267,6 +2314,7 @@ Forward Liveness Analysis
     Propagate: +Newton.+f -> +Newton.++
     Propagate: +Newton.+f -> +Newton.+*
     Propagate: +DeadTest.VariantUsedOnlyInImplementation.t.A -> +DeadTest.VariantUsedOnlyInImplementation.t.A
+    Propagate: +ContextOptionalArgs.ComponentUsingAction.+make -> +ContextOptionalArgs.NotificationProvider.+useNotification
     Propagate: +DeadTest.+thisIsMarkedLive -> +DeadTest.+thisIsKeptAlive
     Propagate: +TypeReexport.UseOriginal.reexportedType.directlyUsed -> +TypeReexport.UseOriginal.originalType.directlyUsed
     Propagate: InnerModuleTypes.I.t.Foo -> +InnerModuleTypes.I.t.Foo
@@ -2285,6 +2333,7 @@ Forward Liveness Analysis
     Propagate: +DeadTest.VariantUsedOnlyInImplementation.+a -> +DeadTest.VariantUsedOnlyInImplementation.+a
     Propagate: +OptArg.+wrapOneArg -> +OptArg.+oneArg
     Propagate: +TestImmutableArray.+testImmutableArrayGet -> ImmutableArray.Array.+get
+    Propagate: +ContextOptionalArgs.NotificationProvider.Provider.+make -> +ContextOptionalArgs.NotificationProvider.+dispatchNotificationContext
     Propagate: +TypeReexport.VariantUseReexported.reexportedType.A -> +TypeReexport.VariantUseReexported.originalType.A
     Propagate: +References.+set -> +References.R.+set
     Propagate: +DeadTest.MM.+x -> +DeadTest.MM.+x
@@ -2312,7 +2361,7 @@ Forward Liveness Analysis
     Propagate: +DeadTest.MM.+x -> +DeadTest.MM.+y
     Propagate: +ImportJsValue.AbsoluteValue.+getAbs -> +ImportJsValue.AbsoluteValue.+getAbs
   
-  53 declarations marked live via propagation
+  55 declarations marked live via propagation
 
   Dead VariantCase +AutoAnnotate.variant.R
   Dead RecordLabel +AutoAnnotate.record.variant
@@ -2341,6 +2390,56 @@ Forward Liveness Analysis
   Live (external ref) RecordLabel +ComponentAsProp.props.button
       deps: in=1 (live=1 dead=0) out=0
         <- +ComponentAsProp.+make (live)
+  Live (propagated) Value +ContextOptionalArgs.NotificationProvider.+dispatchNotificationContext
+      deps: in=2 (live=2 dead=0) out=0
+        <- +ContextOptionalArgs.NotificationProvider.Provider.+make (live)
+        <- +ContextOptionalArgs.NotificationProvider.+useNotification (live)
+  Live (external ref) Value +ContextOptionalArgs.NotificationProvider.Provider.+make
+      deps: in=1 (live=1 dead=0) out=1
+        <- +ContextOptionalArgs.NotificationProvider.+make (live)
+        -> +ContextOptionalArgs.NotificationProvider.+dispatchNotificationContext
+  Live (external ref) Value +ContextOptionalArgs.NotificationProvider.+make
+      deps: in=1 (live=1 dead=0) out=3
+        <- +ContextOptionalArgs.+make (live)
+        -> +ContextOptionalArgs.NotificationProvider.Provider.+make
+        -> +ContextOptionalArgs.NotificationProvider.props.children
+        -> +ContextOptionalArgs.NotificationProvider.+dispatchNotification
+  Live (external ref) RecordLabel +ContextOptionalArgs.NotificationProvider.props.children
+      deps: in=1 (live=1 dead=0) out=0
+        <- +ContextOptionalArgs.NotificationProvider.+make (live)
+  Live (external ref) Value +ContextOptionalArgs.NotificationProvider.+dispatchNotification
+      deps: in=1 (live=1 dead=0) out=0
+        <- +ContextOptionalArgs.NotificationProvider.+make (live)
+  Live (propagated) Value +ContextOptionalArgs.NotificationProvider.+useNotification
+      deps: in=4 (live=4 dead=0) out=1
+        <- +ContextOptionalArgs.ComponentUsingAction.+make (live)
+        <- +ContextOptionalArgs.ComponentUsingAction.+dispatchNotification (live)
+        <- +ContextOptionalArgs.ComponentNotUsingAction.+make (live)
+        <- ... (1 more)
+        -> +ContextOptionalArgs.NotificationProvider.+dispatchNotificationContext
+  Live (external ref) Value +ContextOptionalArgs.ComponentUsingAction.+make
+      deps: in=1 (live=1 dead=0) out=2
+        <- +ContextOptionalArgs.+make (live)
+        -> +ContextOptionalArgs.NotificationProvider.+useNotification
+        -> +ContextOptionalArgs.ComponentUsingAction.+dispatchNotification
+  Live (external ref) Value +ContextOptionalArgs.ComponentUsingAction.+dispatchNotification
+      deps: in=1 (live=1 dead=0) out=1
+        <- +ContextOptionalArgs.ComponentUsingAction.+make (live)
+        -> +ContextOptionalArgs.NotificationProvider.+useNotification
+  Live (external ref) Value +ContextOptionalArgs.ComponentNotUsingAction.+make
+      deps: in=1 (live=1 dead=0) out=2
+        <- +ContextOptionalArgs.+make (live)
+        -> +ContextOptionalArgs.NotificationProvider.+useNotification
+        -> +ContextOptionalArgs.ComponentNotUsingAction.+dispatchNotification
+  Live (external ref) Value +ContextOptionalArgs.ComponentNotUsingAction.+dispatchNotification
+      deps: in=1 (live=1 dead=0) out=1
+        <- +ContextOptionalArgs.ComponentNotUsingAction.+make (live)
+        -> +ContextOptionalArgs.NotificationProvider.+useNotification
+  Live (annotated) Value +ContextOptionalArgs.+make
+      deps: in=0 (live=0 dead=0) out=3
+        -> +ContextOptionalArgs.NotificationProvider.+make
+        -> +ContextOptionalArgs.ComponentUsingAction.+make
+        -> +ContextOptionalArgs.ComponentNotUsingAction.+make
   Live (external ref) Value +CreateErrorHandler1.Error1.+notification
   Live (external ref) Value +CreateErrorHandler2.Error2.+notification
   Live (external ref) Value +DeadCodeImplementation.M.+x

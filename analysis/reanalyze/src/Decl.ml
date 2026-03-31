@@ -7,6 +7,7 @@ module Kind = struct
     | VariantCase
     | Value of {
         isToplevel: bool;
+        mutable ownsOptionalArgs: bool;
         mutable optionalArgs: OptionalArgs.t;
         sideEffects: bool;
       }

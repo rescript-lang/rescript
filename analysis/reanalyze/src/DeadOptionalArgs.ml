@@ -7,12 +7,34 @@ let addFunctionReference ~config ~decls ~cross_file ~(locFrom : Location.t)
   if active () then
     let posTo = locTo.loc_start in
     let posFrom = locFrom.loc_start in
-    (* Check if target has optional args - for filtering and debug logging *)
+    (* Only declarations that own optional args should participate in
+       optional-arg state merging. A function-valued alias like
+       [let f = useNotification()] can have an optional-arg type, but it is not
+       the declaration site that should receive warnings. *)
     let shouldAdd =
-      match Declarations.find_opt_builder decls posTo with
-      | Some {declKind = Value {optionalArgs}} ->
-        not (OptionalArgs.isEmpty optionalArgs)
-      | _ -> false
+      if posTo.pos_fname <> posFrom.pos_fname then
+        match Declarations.find_opt_builder decls posTo with
+        | Some {declKind = Value {ownsOptionalArgs; optionalArgs}} ->
+          ownsOptionalArgs && not (OptionalArgs.isEmpty optionalArgs)
+        | _ -> false
+      else
+        match
+          ( Declarations.find_opt_builder decls posFrom,
+            Declarations.find_opt_builder decls posTo )
+        with
+        | ( Some
+              {
+                declKind =
+                  Value {ownsOptionalArgs = true; optionalArgs = sourceArgs};
+              },
+            Some
+              {
+                declKind =
+                  Value {ownsOptionalArgs = true; optionalArgs = targetArgs};
+              } ) ->
+          (not (OptionalArgs.isEmpty sourceArgs))
+          && not (OptionalArgs.isEmpty targetArgs)
+        | _ -> false
     in
     if shouldAdd then (
       if config.DceConfig.cli.debug then
@@ -39,23 +61,44 @@ let rec fromTypeExpr (texpr : Types.type_expr) =
   | Tsubst t -> fromTypeExpr t
   | _ -> []
 
-let addReferences ~config ~cross_file ~(locFrom : Location.t)
+let rec fromTypeExprWithArity (texpr : Types.type_expr) arity =
+  if arity <= 0 then []
+  else
+    match texpr.desc with
+    | _ when not (active ()) -> []
+    | Tarrow ({lbl = Optional {txt = s}}, tTo, _, _) ->
+      s :: fromTypeExprWithArity tTo (arity - 1)
+    | Tarrow (_, tTo, _, _) -> fromTypeExprWithArity tTo (arity - 1)
+    | Tlink t -> fromTypeExprWithArity t arity
+    | Tsubst t -> fromTypeExprWithArity t arity
+    | _ -> []
+
+let addReferences ~config ~decls ~cross_file ~(locFrom : Location.t)
     ~(locTo : Location.t) ~(binding : Location.t) ~path (argNames, argNamesMaybe)
     =
-  if active () then (
+  if active () then
     let posTo = locTo.loc_start in
     let posFrom = binding.loc_start in
-    CrossFileItems.add_optional_arg_call cross_file ~pos_from:posFrom
-      ~pos_to:posTo ~arg_names:argNames ~arg_names_maybe:argNamesMaybe;
-    if config.DceConfig.cli.debug then
-      let callPos = locFrom.loc_start in
-      Log_.item
-        "DeadOptionalArgs.addReferences %s called with optional argNames:%s \
-         argNamesMaybe:%s %s@."
-        (path |> DcePath.fromPathT |> DcePath.toString)
-        (argNames |> String.concat ", ")
-        (argNamesMaybe |> String.concat ", ")
-        (callPos |> Pos.toString))
+    let callPos = locFrom.loc_start in
+    let shouldAdd =
+      if posTo.pos_fname <> callPos.pos_fname then true
+      else
+        match Declarations.find_opt_builder decls posTo with
+        | Some {declKind = Value {ownsOptionalArgs; optionalArgs}} ->
+          ownsOptionalArgs && not (OptionalArgs.isEmpty optionalArgs)
+        | _ -> false
+    in
+    if shouldAdd then (
+      CrossFileItems.add_optional_arg_call cross_file ~pos_from:posFrom
+        ~pos_to:posTo ~arg_names:argNames ~arg_names_maybe:argNamesMaybe;
+      if config.DceConfig.cli.debug then
+        Log_.item
+          "DeadOptionalArgs.addReferences %s called with optional argNames:%s \
+           argNamesMaybe:%s %s@."
+          (path |> DcePath.fromPathT |> DcePath.toString)
+          (argNames |> String.concat ", ")
+          (argNamesMaybe |> String.concat ", ")
+          (callPos |> Pos.toString))
 
 (** Check for optional args issues. Returns issues instead of logging.
     Uses optional_args_state map for final computed state. *)
