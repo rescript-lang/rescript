@@ -7,12 +7,14 @@ let add_function_reference ~config ~decls ~cross_file ~(loc_from : Location.t)
   if active () then
     let pos_to = loc_to.loc_start in
     let pos_from = loc_from.loc_start in
-    (* Check if target has optional args - for filtering and debug logging *)
-    let should_add =
-      match Declarations.find_opt_builder decls pos_to with
+    let has_optional_arg_state pos =
+      match Declarations.find_opt_builder decls pos with
       | Some {decl_kind = Value {optional_args}} ->
         not (Optional_args.is_empty optional_args)
       | _ -> false
+    in
+    let should_add =
+      has_optional_arg_state pos_from && has_optional_arg_state pos_to
     in
     if should_add then (
       if config.Dce_config.cli.debug then
@@ -39,6 +41,18 @@ let rec from_type_expr (texpr : Types.type_expr) =
   | Tsubst t -> from_type_expr t
   | _ -> []
 
+let rec from_type_expr_with_arity (texpr : Types.type_expr) arity =
+  if arity <= 0 then []
+  else
+    match texpr.desc with
+    | _ when not (active ()) -> []
+    | Tarrow ({lbl = Optional {txt = s}}, t_to, _, _) ->
+      s :: from_type_expr_with_arity t_to (arity - 1)
+    | Tarrow (_, t_to, _, _) -> from_type_expr_with_arity t_to (arity - 1)
+    | Tlink t -> from_type_expr_with_arity t arity
+    | Tsubst t -> from_type_expr_with_arity t arity
+    | _ -> []
+
 let add_references ~config ~cross_file ~(loc_from : Location.t)
     ~(loc_to : Location.t) ~(binding : Location.t) ~path
     (arg_names, arg_names_maybe) =
@@ -61,7 +75,7 @@ let add_references ~config ~cross_file ~(loc_from : Location.t)
     Uses optional_args_state map for final computed state. *)
 let check ~optional_args_state ~ann_store ~config:_ decl : Issue.t list =
   match decl with
-  | {Decl.decl_kind = Value {optional_args}}
+  | {Decl.decl_kind = Value {reports_optional_args = true; optional_args}}
     when active ()
          && not
               (Annotation_store.is_annotated_gentype_or_live ann_store decl.pos)
