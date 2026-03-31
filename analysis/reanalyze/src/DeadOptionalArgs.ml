@@ -7,6 +7,15 @@ let addFunctionReference ~config ~decls ~cross_file ~(locFrom : Location.t)
   if active () then
     let posTo = locTo.loc_start in
     let posFrom = locFrom.loc_start in
+    let ownsNonEmptyOptionalArgs pos =
+      match Declarations.find_opt_builder decls pos with
+      | Some {declKind = Value {ownsOptionalArgs; optionalArgs}} ->
+        ownsOptionalArgs && not (OptionalArgs.isEmpty optionalArgs)
+      | _ -> false
+    in
+    let bothOwnNonEmptyOptionalArgs () =
+      ownsNonEmptyOptionalArgs posFrom && ownsNonEmptyOptionalArgs posTo
+    in
     (* Only declarations that own optional args should participate in
        optional-arg state merging. A function-valued alias like
        [let f = useNotification()] can have an optional-arg type, but it is not
@@ -16,47 +25,9 @@ let addFunctionReference ~config ~decls ~cross_file ~(locFrom : Location.t)
         if
           fileIsImplementationOf posTo.pos_fname posFrom.pos_fname
           || fileIsImplementationOf posFrom.pos_fname posTo.pos_fname
-        then
-          match Declarations.find_opt_builder decls posTo with
-          | Some {declKind = Value {ownsOptionalArgs; optionalArgs}} ->
-            ownsOptionalArgs && not (OptionalArgs.isEmpty optionalArgs)
-          | _ -> false
-        else
-          match
-            ( Declarations.find_opt_builder decls posFrom,
-              Declarations.find_opt_builder decls posTo )
-          with
-          | ( Some
-                {
-                  declKind =
-                    Value {ownsOptionalArgs = true; optionalArgs = sourceArgs};
-                },
-              Some
-                {
-                  declKind =
-                    Value {ownsOptionalArgs = true; optionalArgs = targetArgs};
-                } ) ->
-            (not (OptionalArgs.isEmpty sourceArgs))
-            && not (OptionalArgs.isEmpty targetArgs)
-          | _ -> false
-      else
-        match
-          ( Declarations.find_opt_builder decls posFrom,
-            Declarations.find_opt_builder decls posTo )
-        with
-        | ( Some
-              {
-                declKind =
-                  Value {ownsOptionalArgs = true; optionalArgs = sourceArgs};
-              },
-            Some
-              {
-                declKind =
-                  Value {ownsOptionalArgs = true; optionalArgs = targetArgs};
-              } ) ->
-          (not (OptionalArgs.isEmpty sourceArgs))
-          && not (OptionalArgs.isEmpty targetArgs)
-        | _ -> false
+        then ownsNonEmptyOptionalArgs posTo
+        else bothOwnNonEmptyOptionalArgs ()
+      else bothOwnNonEmptyOptionalArgs ()
     in
     if shouldAdd then (
       if config.DceConfig.cli.debug then
