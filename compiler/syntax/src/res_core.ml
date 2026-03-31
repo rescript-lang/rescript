@@ -126,11 +126,9 @@ module ErrorMessages = struct
      matching currently guarantees to never create new intermediate data."
 
   let record_pattern_spread =
-    "Record spread (`...`) is not supported in pattern matches.\n\
-     Explanation: you can't collect a subset of a record's field into its own \
-     record, since a record needs an explicit declaration and that subset \
-     wouldn't have one.\n\
-     Solution: you need to pull out each field you want explicitly."
+    "Record rest patterns require a type annotation and a binding name.\n\
+     Correct syntax: `...typeName as bindingName`\n\
+     Example: `let {name, ...Config.t as rest} = myRecord`"
   (* let recordPatternUnderscore = "Record patterns only support one `_`, at the end." *)
   [@@live]
 
