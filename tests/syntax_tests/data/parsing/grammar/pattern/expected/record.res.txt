@@ -89,3 +89,7 @@ let { a; b } = x
 let f [arity:1]{ a } = ()
 let f [arity:1]{ a } = ()
 let f [arity:1]{ a } = ()
+let { a } = x
+let { a } = x
+let { a } = x
+let { a } = x

@@ -65,7 +65,14 @@ let get_age3 = () =>
   switch x {
   | {age, _} => age
   }
-let get_age3 = () => 
+let get_age3 = () =>
   switch x {
   | {_} => ""
   }
+
+// Record rest with polymorphic type args
+let {a, ...rest} = x
+let {a, ...t<'v> as rest} = x
+let {a, ...M.t<'v> as rest} = x
+let {a, ...M.t<int> as rest} = x
+let {a, ...M.t<'a, 'b> as rest} = x

@@ -104,3 +104,9 @@ switch x {
 let f = ({a, ...rest}) => ()
 let f = ({a, ...b as rest}) => ()
 let f = ({a, ...M.t as rest}) => ()
+
+// Polymorphic rest type args
+let {a, ...t<'v> as rest} = x
+let {a, ...M.t<'v> as rest} = x
+let {a, ...M.t<int> as rest} = x
+let {a, ...M.t<'a, 'b> as rest} = x
