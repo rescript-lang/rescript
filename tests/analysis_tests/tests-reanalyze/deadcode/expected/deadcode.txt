@@ -59,11 +59,13 @@
   addValueDeclaration +dispatchNotification ContextOptionalArgs.res:28:8 path:+ContextOptionalArgs.ComponentUsingAction
   addValueReference ContextOptionalArgs.res:28:8 --> ContextOptionalArgs.res:22:6
   addValueReference ContextOptionalArgs.res:35:4 --> React.res:3:0
+  DeadOptionalArgs.addReferences dispatchNotification called with optional argNames:action argNamesMaybe: ContextOptionalArgs.res:31:6
   addValueReference ContextOptionalArgs.res:31:6 --> ContextOptionalArgs.res:28:8
   addValueReference ContextOptionalArgs.res:30:4 --> React.res:150:0
   addValueDeclaration +dispatchNotification ContextOptionalArgs.res:42:8 path:+ContextOptionalArgs.ComponentNotUsingAction
   addValueReference ContextOptionalArgs.res:42:8 --> ContextOptionalArgs.res:22:6
   addValueReference ContextOptionalArgs.res:49:4 --> React.res:3:0
+  DeadOptionalArgs.addReferences dispatchNotification called with optional argNames: argNamesMaybe: ContextOptionalArgs.res:45:6
   addValueReference ContextOptionalArgs.res:45:6 --> ContextOptionalArgs.res:42:8
   addValueReference ContextOptionalArgs.res:44:4 --> React.res:150:0
   addValueReference ContextOptionalArgs.res:56:3 --> ContextOptionalArgs.res:12:6

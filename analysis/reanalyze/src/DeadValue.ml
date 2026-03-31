@@ -32,14 +32,14 @@ let collectValueBinding ~config ~decls ~file ~(current_binding : Location.t)
           vb.vb_expr.exp_type
           |> (fun texpr -> DeadOptionalArgs.fromTypeExprWithArity texpr arity)
           |> OptionalArgs.fromList
-        | Texp_function _ ->
+        | _ ->
           vb.vb_expr.exp_type |> DeadOptionalArgs.fromTypeExpr
           |> OptionalArgs.fromList
-        | _ -> OptionalArgs.empty
       in
       (* Only actual function declarations own optional-arg diagnostics.
          Aliases to function values can expose the same optional-arg type, but
-         warnings should stay attached to the declaration site. *)
+         warnings should stay attached to the declaration site while usage state
+         still propagates through the alias. *)
       let ownsOptionalArgs =
         match vb.vb_expr.exp_desc with
         | Texp_function _ -> true
@@ -128,15 +128,13 @@ let rec collectExpr ~config ~decls ~refs ~file_deps ~cross_file ~callee_locs
     ~(last_binding : Location.t) super self (e : Typedtree.expression) =
   let locFrom = e.exp_loc in
   let binding = last_binding in
-  let suppressOptionalArgs pos =
+  let suppressOptionalArgOwnership pos =
     match Declarations.find_opt_builder decls pos with
-    | Some ({declKind = Value ({optionalArgs; _} as value_kind)} as decl)
-      when not (OptionalArgs.isEmpty optionalArgs) ->
+    | Some
+        ({declKind = Value ({ownsOptionalArgs = true} as value_kind)} as decl)
+      ->
       Declarations.replace_builder decls pos
-        {
-          decl with
-          declKind = Value {value_kind with optionalArgs = OptionalArgs.empty};
-        }
+        {decl with declKind = Value {value_kind with ownsOptionalArgs = false}}
     | _ -> ()
   in
   let rec remove_first target = function
@@ -166,8 +164,8 @@ let rec collectExpr ~config ~decls ~refs ~file_deps ~cross_file ~callee_locs
     else (
       addValueReference ~config ~refs ~file_deps ~binding ~addFileReference:true
         ~locFrom ~locTo;
-      if not (List.mem locFrom !callee_locs) then
-        suppressOptionalArgs locTo.loc_start)
+      if binding = Location.none && not (List.mem locFrom !callee_locs) then
+        suppressOptionalArgOwnership locTo.loc_start)
   | Texp_apply
       {
         funct =

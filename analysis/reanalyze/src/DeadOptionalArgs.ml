@@ -7,27 +7,28 @@ let addFunctionReference ~config ~decls ~cross_file ~(locFrom : Location.t)
   if active () then
     let posTo = locTo.loc_start in
     let posFrom = locFrom.loc_start in
-    let ownsNonEmptyOptionalArgs pos =
+    let hasNonEmptyOptionalArgs pos =
       match Declarations.find_opt_builder decls pos with
-      | Some {declKind = Value {ownsOptionalArgs; optionalArgs}} ->
-        ownsOptionalArgs && not (OptionalArgs.isEmpty optionalArgs)
+      | Some {declKind = Value {optionalArgs}} ->
+        not (OptionalArgs.isEmpty optionalArgs)
       | _ -> false
     in
-    let bothOwnNonEmptyOptionalArgs () =
-      ownsNonEmptyOptionalArgs posFrom && ownsNonEmptyOptionalArgs posTo
+    let bothHaveNonEmptyOptionalArgs () =
+      hasNonEmptyOptionalArgs posFrom && hasNonEmptyOptionalArgs posTo
     in
     (* Only declarations that own optional args should participate in
        optional-arg state merging. A function-valued alias like
        [let f = useNotification()] can have an optional-arg type, but it is not
-       the declaration site that should receive warnings. *)
+       the declaration site that should receive warnings. The alias still needs
+       optional-arg state so calls through it can propagate back to the owner. *)
     let shouldAdd =
       if posTo.pos_fname <> posFrom.pos_fname then
         if
           fileIsImplementationOf posTo.pos_fname posFrom.pos_fname
           || fileIsImplementationOf posFrom.pos_fname posTo.pos_fname
-        then ownsNonEmptyOptionalArgs posTo
-        else bothOwnNonEmptyOptionalArgs ()
-      else bothOwnNonEmptyOptionalArgs ()
+        then hasNonEmptyOptionalArgs posTo
+        else bothHaveNonEmptyOptionalArgs ()
+      else bothHaveNonEmptyOptionalArgs ()
     in
     if shouldAdd then (
       if config.DceConfig.cli.debug then
@@ -77,8 +78,8 @@ let addReferences ~config ~decls ~cross_file ~(locFrom : Location.t)
       if posTo.pos_fname <> callPos.pos_fname then true
       else
         match Declarations.find_opt_builder decls posTo with
-        | Some {declKind = Value {ownsOptionalArgs; optionalArgs}} ->
-          ownsOptionalArgs && not (OptionalArgs.isEmpty optionalArgs)
+        | Some {declKind = Value {optionalArgs}} ->
+          not (OptionalArgs.isEmpty optionalArgs)
         | _ -> false
     in
     if shouldAdd then (
@@ -97,7 +98,7 @@ let addReferences ~config ~decls ~cross_file ~(locFrom : Location.t)
     Uses optional_args_state map for final computed state. *)
 let check ~optional_args_state ~ann_store ~config:_ decl : Issue.t list =
   match decl with
-  | {Decl.declKind = Value {optionalArgs}}
+  | {Decl.declKind = Value {ownsOptionalArgs = true; optionalArgs}}
     when active ()
          && not
               (AnnotationStore.is_annotated_gentype_or_live ann_store decl.pos)
