@@ -13,10 +13,32 @@ let addFunctionReference ~config ~decls ~cross_file ~(locFrom : Location.t)
        the declaration site that should receive warnings. *)
     let shouldAdd =
       if posTo.pos_fname <> posFrom.pos_fname then
-        match Declarations.find_opt_builder decls posTo with
-        | Some {declKind = Value {ownsOptionalArgs; optionalArgs}} ->
-          ownsOptionalArgs && not (OptionalArgs.isEmpty optionalArgs)
-        | _ -> false
+        if
+          fileIsImplementationOf posTo.pos_fname posFrom.pos_fname
+          || fileIsImplementationOf posFrom.pos_fname posTo.pos_fname
+        then
+          match Declarations.find_opt_builder decls posTo with
+          | Some {declKind = Value {ownsOptionalArgs; optionalArgs}} ->
+            ownsOptionalArgs && not (OptionalArgs.isEmpty optionalArgs)
+          | _ -> false
+        else
+          match
+            ( Declarations.find_opt_builder decls posFrom,
+              Declarations.find_opt_builder decls posTo )
+          with
+          | ( Some
+                {
+                  declKind =
+                    Value {ownsOptionalArgs = true; optionalArgs = sourceArgs};
+                },
+              Some
+                {
+                  declKind =
+                    Value {ownsOptionalArgs = true; optionalArgs = targetArgs};
+                } ) ->
+            (not (OptionalArgs.isEmpty sourceArgs))
+            && not (OptionalArgs.isEmpty targetArgs)
+          | _ -> false
       else
         match
           ( Declarations.find_opt_builder decls posFrom,
