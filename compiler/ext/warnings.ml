@@ -88,6 +88,7 @@ type t =
   | Bs_toplevel_expression_unit of
       (string * top_level_unit_help) option (* 109 *)
   | Bs_todo of string option (* 110 *)
+  | Bs_record_rest_empty (* 111 *)
 
 (* If you remove a warning, leave a hole in the numbering.  NEVER change
    the numbers of existing warnings.
@@ -154,8 +155,9 @@ let number = function
   | Bs_uninterpreted_delimiters _ -> 108
   | Bs_toplevel_expression_unit _ -> 109
   | Bs_todo _ -> 110
+  | Bs_record_rest_empty -> 111
 
-let last_warning_number = 110
+let last_warning_number = 111
 
 let letter_all =
   let rec loop i = if i = 0 then [] else i :: loop (i - 1) in
@@ -532,6 +534,9 @@ let message = function
            `%s->ignore`"
           help_text help_text
       | _ -> "")
+  | Bs_record_rest_empty ->
+    "All fields of the rest type are already present in the explicit pattern. \
+     The rest record will always be empty."
   | Bs_todo maybe_text ->
     (match maybe_text with
     | None -> "Todo found."

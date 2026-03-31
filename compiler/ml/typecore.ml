@@ -1608,6 +1608,15 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
               (fun (l : Types.label_declaration) -> Ident.name l.ld_id)
               rest_labels
           in
+          (* Warn if all rest fields are already explicit — the rest record will be empty *)
+          if
+            rest_field_names <> []
+            && List.for_all
+                 (fun f -> List.mem f explicit_fields)
+                 rest_field_names
+          then
+            Location.prerr_warning rest_pat.ppat_loc
+              Warnings.Bs_record_rest_empty;
           (* Validate: fields in both explicit and rest must be optional in the explicit pattern *)
           let not_optional =
             List.filter
