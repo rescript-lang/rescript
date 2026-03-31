@@ -1511,10 +1511,11 @@ and parse_record_pattern_row p =
     let start_pos = p.Parser.start_pos in
     match p.Parser.token with
     | Uident _ ->
-      (* ...ModulePath.t as name *)
+      (* ...ModulePath.t<'a> as name *)
       let type_path = parse_value_path p in
       let type_loc = type_path.loc in
-      let core_type = Ast_helper.Typ.constr ~loc:type_loc type_path [] in
+      let type_args = parse_type_constructor_args ~constr_name:type_path p in
+      let core_type = Ast_helper.Typ.constr ~loc:type_loc type_path type_args in
       Parser.expect As p;
       let name_start = p.start_pos in
       let name =
@@ -1535,14 +1536,17 @@ and parse_record_pattern_row p =
       Some (false, PatRest rest_pat)
     | Lident ident ->
       Parser.next p;
-      if p.Parser.token = As then (
-        (* ...typeName as name *)
+      if p.Parser.token = As || p.Parser.token = Token.LessThan then (
+        (* ...typeName<'a> as name *)
         let type_path =
           Location.mkloc (Longident.Lident ident)
             (mk_loc start_pos p.prev_end_pos)
         in
         let type_loc = type_path.loc in
-        let core_type = Ast_helper.Typ.constr ~loc:type_loc type_path [] in
+        let type_args = parse_type_constructor_args ~constr_name:type_path p in
+        let core_type =
+          Ast_helper.Typ.constr ~loc:type_loc type_path type_args
+        in
         Parser.expect As p;
         let name_start = p.start_pos in
         let name =

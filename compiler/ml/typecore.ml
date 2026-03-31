@@ -1558,11 +1558,11 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
         | None -> None
         | Some rest_pat ->
           (* Extract type annotation and binding name from rest pattern *)
-          let rest_type_lid, rest_name =
+          let rest_type_lid, rest_name, rest_type_args_syntax =
             match rest_pat.ppat_desc with
             | Ppat_constraint ({ppat_desc = Ppat_var name}, cty) -> (
               match cty.ptyp_desc with
-              | Ptyp_constr (lid, []) -> (lid, name)
+              | Ptyp_constr (lid, type_args) -> (lid, name, type_args)
               | _ ->
                 raise
                   (Error (rest_pat.ppat_loc, !env, Record_rest_invalid_type)))
@@ -1661,12 +1661,30 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
                            (Ident.name rest_label.ld_id, rest_type_lid.txt) )))
               rest_labels
           | [] -> ());
+          let rest_type_args =
+            match rest_type_args_syntax with
+            | [] -> List.map (fun _ -> newvar ()) rest_decl.type_params
+            | args ->
+              let n_args = List.length args in
+              let n_params = List.length rest_decl.type_params in
+              if n_args <> n_params then
+                raise
+                  (Typetexp.Error
+                     ( rest_type_lid.loc,
+                       !env,
+                       Typetexp.Type_arity_mismatch
+                         (rest_type_lid.txt, n_params, n_args) ));
+              List.map
+                (fun sty ->
+                  let cty, force =
+                    Typetexp.transl_simple_type_delayed !env sty
+                  in
+                  pattern_force := force :: !pattern_force;
+                  cty.ctyp_type)
+                args
+          in
           let rest_type_expr =
-            newgenty
-              (Tconstr
-                 ( rest_path,
-                   List.map (fun _ -> newvar ()) rest_decl.type_params,
-                   ref Mnil ))
+            newgenty (Tconstr (rest_path, rest_type_args, ref Mnil))
           in
           let rest_ident =
             enter_variable rest_pat.ppat_loc rest_name rest_type_expr

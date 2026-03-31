@@ -39,3 +39,19 @@ let extractClassName = ({?className, ...baseProps as rest}: fullProps) => {
   let _ = className
   rest
 }
+
+// Polymorphic rest type
+type container<'a> = {
+  id: string,
+  value: 'a,
+}
+
+type valueContainer<'a> = {
+  value: 'a,
+}
+
+let {id, ...valueContainer<int> as intRest} = ({id: "1", value: 42}: container<int>)
+let _ = (id, intRest)
+
+// Polymorphic rest in function parameter
+let getValue = ({id: _, ...valueContainer<'a> as rest}: container<'a>) => rest

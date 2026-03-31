@@ -23,7 +23,18 @@ function extractClassName(param) {
   return ((({className, ...__rest}) => __rest))(param);
 }
 
+let intRest = ((({id, ...__rest}) => __rest))({
+  id: "1",
+  value: 42
+});
+
+function getValue(param) {
+  return ((({id, ...__rest}) => __rest))(param);
+}
+
 let name = "test";
+
+let id = "1";
 
 export {
   rest,
@@ -31,5 +42,8 @@ export {
   describe,
   getName,
   extractClassName,
+  intRest,
+  id,
+  getValue,
 }
 /* No side effect */
