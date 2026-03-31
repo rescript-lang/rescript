@@ -23,6 +23,7 @@
 - Reanalyze: add glob pattern support for suppress/unsuppress configurations (e.g., `"src/generated/**"`). https://github.com/rescript-lang/rescript/pull/8277
 - Add optional `~locales` and `~options` parameters to `String.localeCompare`. https://github.com/rescript-lang/rescript/pull/8287
 - Support inline records in external definitions. https://github.com/rescript-lang/rescript/pull/8304
+- Add support for pattern matching/destructuring of record rest. https://github.com/rescript-lang/rescript/pull/8317
 
 #### :bug: Bug fix
 
