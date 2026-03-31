@@ -75,6 +75,7 @@ type t =
       (string * top_level_unit_help) option (* 109 *)
   | Bs_todo of string option (* 110 *)
   | Bs_private_record_mutation of string (* 111 *)
+  | Bs_record_rest_empty (* 112 *)
 
 (* If you remove a warning, leave a hole in the numbering.  NEVER change
    the numbers of existing warnings.
@@ -128,8 +129,9 @@ let number = function
   | Bs_toplevel_expression_unit _ -> 109
   | Bs_todo _ -> 110
   | Bs_private_record_mutation _ -> 111
+  | Bs_record_rest_empty -> 112
 
-let last_warning_number = 111
+let last_warning_number = 112
 
 let letter_all =
   let rec loop i = if i = 0 then [] else i :: loop (i - 1) in
@@ -448,6 +450,9 @@ let message = function
            `%s->ignore`"
           help_text help_text
       | _ -> "")
+  | Bs_record_rest_empty ->
+    "All fields of the rest type are already present in the explicit pattern. \
+     The rest record will always be empty."
   | Bs_todo maybe_text ->
     (match maybe_text with
     | None -> "Todo found."
@@ -569,6 +574,7 @@ let descriptions =
     (109, "Toplevel expression has unit type");
     (110, "Todo found");
     (111, "Mutation of private record field");
+    (112, "Record rest pattern will always be empty");
   ]
 
 let help_warnings () =
