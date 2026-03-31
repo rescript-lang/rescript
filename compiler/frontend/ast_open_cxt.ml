@@ -56,6 +56,7 @@ let restore_exp (xs : Parsetree.expression) (qualifiers : t) :
         ({
            pexp_desc = Pexp_open (flag, lid, x);
            pexp_attributes = attrs;
+           pexp_is_return = false;
            pexp_loc = loc;
          }
           : Parsetree.expression))
