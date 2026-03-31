@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/record_rest_not_record.res[0m:[2m3:12-20[0m
+
+  1 [2m│[0m type source = {a: int, b: string}
+  2 [2m│[0m type notRecord = One | Two
+  [1;31m3[0m [2m│[0m let {a, ...[1;31mnotRecord[0m as rest} = ({a: 1, b: "x"}: source)
+  4 [2m│[0m 
+
+  Type notRecord is not a record type and cannot be used as a record rest pattern.

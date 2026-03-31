@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/record_rest_requires_type_annotation.res[0m:[2m2:12-18[0m
+
+  1 [2m│[0m type source = {a: int, b: string}
+  [1;31m2[0m [2m│[0m let {a, ...[1;31mtheRest[0m} = ({a: 1, b: "x"}: source)
+  3 [2m│[0m 
+
+  Record rest pattern `...theRest` requires a type annotation. Use `...Type.t as theRest`.
