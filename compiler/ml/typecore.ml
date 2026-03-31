@@ -98,7 +98,7 @@ type error =
   | Record_rest_invalid_type
   | Record_rest_requires_type_annotation of string
   | Record_rest_not_record of Longident.t
-  | Record_rest_field_not_optional of string * Longident.t
+  | Record_rest_field_not_optional of string list * Longident.t
   | Record_rest_field_missing of string list * Longident.t
   | Record_rest_extra_field of string * Longident.t
 
@@ -1609,19 +1609,20 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
               rest_labels
           in
           (* Validate: fields in both explicit and rest must be optional in the explicit pattern *)
-          List.iter
-            (fun rest_field ->
-              if
+          let not_optional =
+            List.filter
+              (fun rest_field ->
                 List.mem rest_field explicit_fields
-                && not (List.mem rest_field explicit_optional_fields)
-              then
-                raise
-                  (Error
-                     ( rest_pat.ppat_loc,
-                       !env,
-                       Record_rest_field_not_optional
-                         (rest_field, rest_type_lid.txt) )))
-            rest_field_names;
+                && not (List.mem rest_field explicit_optional_fields))
+              rest_field_names
+          in
+          if not_optional <> [] then
+            raise
+              (Error
+                 ( rest_pat.ppat_loc,
+                   !env,
+                   Record_rest_field_not_optional
+                     (not_optional, rest_type_lid.txt) ));
           (* Validate: all source fields must be in explicit or rest *)
           (match lbl_pat_list with
           | (_, label1, _, _) :: _ ->
@@ -4961,11 +4962,23 @@ let report_error env loc ppf error =
       "Type %a is not a record type and cannot be used as a record rest \
        pattern."
       longident lid
-  | Record_rest_field_not_optional (field, lid) ->
-    fprintf ppf
-      "Field `%s` appears in both the explicit pattern and the rest type `%a`. \
-       It must be marked as optional (`?%s`) in the explicit pattern."
-      field longident lid field
+  | Record_rest_field_not_optional (fields, lid) -> (
+    let field_list =
+      fields |> List.map (fun f -> "\n- " ^ f) |> String.concat ""
+    in
+    match fields with
+    | [field] ->
+      fprintf ppf
+        "The following field appears in both the explicit pattern and the rest \
+         type `%a`:%s\n\n\
+         Mark it as optional (`?%s`) in the explicit pattern."
+        longident lid field_list field
+    | _ ->
+      fprintf ppf
+        "The following fields appear in both the explicit pattern and the rest \
+         type `%a`:%s\n\n\
+         Mark them as optional (e.g. `?fieldName`) in the explicit pattern."
+        longident lid field_list)
   | Record_rest_field_missing (fields, lid) -> (
     let field_list =
       fields |> List.map (fun f -> "\n- " ^ f) |> String.concat ""
