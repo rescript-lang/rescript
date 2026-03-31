@@ -22,20 +22,34 @@ Possible solutions:
   2 │ 
   3 │ let record = {...x, ...y}
   4 │ let {...x, ...y} = myRecord
-  5 │ 
+  5 │ let {...M.t} = myRecord
 
   Records can only have one `...` spread, at the beginning.
 Explanation: since records have a known, fixed shape, a spread like `{a, ...b}` wouldn't make sense, as `b` would override every field of `a` anyway.
 
 
   Syntax error!
-  syntax_tests/data/parsing/errors/other/spread.res:6:13-22
+  syntax_tests/data/parsing/errors/other/spread.res:5:9-14
 
+  3 │ let record = {...x, ...y}
   4 │ let {...x, ...y} = myRecord
-  5 │ 
-  6 │ let list{...x, ...y} = myList
-  7 │ 
-  8 │ type t = {...a}
+  5 │ let {...M.t} = myRecord
+  6 │ 
+  7 │ let list{...x, ...y} = myList
+
+  Record rest patterns require a type annotation and a binding name.
+Correct syntax: `...typeName as bindingName`
+Example: `let {name, ...Config.t as rest} = myRecord`
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/other/spread.res:7:13-22
+
+  5 │ let {...M.t} = myRecord
+  6 │ 
+  7 │ let list{...x, ...y} = myList
+  8 │ 
+  9 │ type t = {...a}
 
   List pattern matches only supports one `...` spread, at the end.
 Explanation: a list spread at the tail is efficient, but a spread in the middle would create new lists; out of performance concern, our pattern matching currently guarantees to never create new intermediate data.
@@ -43,6 +57,7 @@ Explanation: a list spread at the tail is efficient, but a spread in the middle 
 let [|arr;_|] = [|1;2;3|]
 let record = { x with y }
 let {  } = myRecord
+let { M.t = t } = myRecord
 let x::y = myList
 type nonrec t = {
   ...: a }
