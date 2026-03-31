@@ -132,7 +132,7 @@ type error =
   | Record_rest_requires_type_annotation of string
   | Record_rest_not_record of Longident.t
   | Record_rest_field_not_optional of string * Longident.t
-  | Record_rest_field_missing of string * Longident.t
+  | Record_rest_field_missing of string list * Longident.t
   | Record_rest_extra_field of string * Longident.t
 
 exception Error of Location.t * Env.t * error
