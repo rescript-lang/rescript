@@ -27,13 +27,27 @@ let collect_value_binding ~config ~decls ~file ~(current_binding : Location.t)
         ({pat_desc = Tpat_any}, id, {loc = {loc_start; loc_ghost} as loc})
       when (not loc_ghost) && not vb.vb_loc.loc_ghost ->
       let name = Ident.name id |> Name.create ~is_interface:false in
-      let optional_args =
-        vb.vb_expr.exp_type |> Dead_optional_args.from_type_expr
-        |> Optional_args.from_list
+      let optional_args, reports_optional_args =
+        match vb.vb_expr.exp_desc with
+        | Texp_function {arity = Some arity; _} ->
+          ( vb.vb_expr.exp_type
+            |> (fun texpr ->
+                 Dead_optional_args.from_type_expr_with_arity texpr arity)
+            |> Optional_args.from_list,
+            true )
+        | Texp_function _ ->
+          ( vb.vb_expr.exp_type |> Dead_optional_args.from_type_expr
+            |> Optional_args.from_list,
+            true )
+        | _ ->
+          ( vb.vb_expr.exp_type |> Dead_optional_args.from_type_expr
+            |> Optional_args.from_list,
+            false )
       in
       let exists =
         match Declarations.find_opt_builder decls loc_start with
         | Some {decl_kind = Value r} ->
+          r.reports_optional_args <- reports_optional_args;
           r.optional_args <- optional_args;
           true
         | _ -> false
@@ -50,7 +64,8 @@ let collect_value_binding ~config ~decls ~file ~(current_binding : Location.t)
          let side_effects = Side_effects.check_expr vb.vb_expr in
          name
          |> add_value_declaration ~config ~decls ~file ~is_toplevel ~loc
-              ~module_loc:module_path.loc ~optional_args ~path ~side_effects);
+              ~module_loc:module_path.loc ~reports_optional_args
+              ~optional_args ~path ~side_effects);
       (match Declarations.find_opt_builder decls loc_start with
       | None -> ()
       | Some decl ->
@@ -351,13 +366,16 @@ let rec process_signature_item ~config ~decls ~file ~do_types ~do_values
           val_type |> Dead_optional_args.from_type_expr
           |> Optional_args.from_list
         in
+        let reports_optional_args =
+          not (Optional_args.is_empty optional_args)
+        in
 
         (* if Ident.name id = "someValue" then
            Printf.printf "XXX %s\n" (Ident.name id); *)
         Ident.name id
         |> Name.create ~is_interface:false
         |> add_value_declaration ~config ~decls ~file ~loc ~module_loc
-             ~optional_args ~path ~side_effects:false
+             ~reports_optional_args ~optional_args ~path ~side_effects:false
   | Sig_module (id, {Types.md_type = module_type; md_loc = module_loc}, _)
   | Sig_modtype (id, {Types.mtd_type = Some module_type; mtd_loc = module_loc})
     ->
