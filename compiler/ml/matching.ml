@@ -564,7 +564,13 @@ let simplify_cases args cls =
         | Tpat_any -> cl :: simplify rem
         | Tpat_alias (p, id, _) ->
           simplify ((p :: patl, bind Alias id arg action) :: rem)
-        | Tpat_record ([], _, _rest) -> (omega :: patl, action) :: simplify rem
+        | Tpat_record ([], _, rest) ->
+          let action =
+            match rest with
+            | None -> action
+            | Some rest -> bind_record_rest pat.pat_loc arg rest action
+          in
+          (omega :: patl, action) :: simplify rem
         | Tpat_record (lbls, closed, rest) ->
           let all_lbls = all_record_args lbls in
           let full_pat =

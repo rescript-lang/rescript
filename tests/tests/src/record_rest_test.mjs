@@ -4,7 +4,7 @@ import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
 
 function describeConfig(c) {
-  let rest = ((({name, ...__rest}) => __rest))(c);
+  let rest = ((({name: __unused0, ...__rest}) => __rest))(c);
   return [
     c.name,
     rest
@@ -15,44 +15,52 @@ function getName(param) {
   return param.name;
 }
 
+function getWholeConfig(param) {
+  return ((({...__rest}) => __rest))(param);
+}
+
 function extractClassName(param) {
-  return ((({className, ...__rest}) => __rest))(param);
+  return ((({className: __unused0, ...__rest}) => __rest))(param);
 }
 
 function getValue(param) {
-  return ((({id, ...__rest}) => __rest))(param);
+  return ((({id: __unused0, ...__rest}) => __rest))(param);
 }
 
 function getTupleRest(param) {
-  return ((({name, ...__rest}) => __rest))(param[0]);
+  return ((({name: __unused0, ...__rest}) => __rest))(param[0]);
 }
 
 function getWrappedRest(wrapped) {
-  return ((({name, ...__rest}) => __rest))(wrapped._0);
+  return ((({name: __unused0, ...__rest}) => __rest))(wrapped._0);
 }
 
 function getInlineWrappedRest(wrapped) {
-  return ((({TAG, name, ...__rest}) => __rest))(wrapped);
+  return ((({TAG: __unused0, name: __unused1, ...__rest}) => __rest))(wrapped);
 }
 
 function getCustomTaggedInlineWrappedRest(wrapped) {
-  return ((({kind, name, ...__rest}) => __rest))(wrapped);
+  return ((({kind: __unused0, name: __unused1, ...__rest}) => __rest))(wrapped);
+}
+
+function getDashedTaggedInlineWrappedRest(wrapped) {
+  return ((({"custom-tag": __unused0, name: __unused1, ...__rest}) => __rest))(wrapped);
 }
 
 Mocha.describe("Record_rest_test", () => {
   Mocha.test("let binding captures record rest value", () => {
-    let rest = ((({name, ...__rest}) => __rest))({
+    let rest = ((({name: __unused0, ...__rest}) => __rest))({
       name: "test",
       version: "1.0",
       debug: true
     });
-    Test_utils.eq("File \"record_rest_test.res\", line 83, characters 7-14", "test", "test");
-    Test_utils.eq("File \"record_rest_test.res\", line 84, characters 7-14", rest, {
+    Test_utils.eq("File \"record_rest_test.res\", line 95, characters 7-14", "test", "test");
+    Test_utils.eq("File \"record_rest_test.res\", line 96, characters 7-14", rest, {
       version: "1.0",
       debug: true
     });
   });
-  Mocha.test("match arm returns the named field and the rest record", () => Test_utils.eq("File \"record_rest_test.res\", line 89, characters 6-13", describeConfig({
+  Mocha.test("match arm returns the named field and the rest record", () => Test_utils.eq("File \"record_rest_test.res\", line 101, characters 6-13", describeConfig({
     name: "match",
     version: "2.0",
     debug: false
@@ -63,11 +71,20 @@ Mocha.describe("Record_rest_test", () => {
       debug: false
     }
   ]));
-  Mocha.test("function parameter destructuring keeps the named field", () => Test_utils.eq("File \"record_rest_test.res\", line 96, characters 7-14", getName({
+  Mocha.test("function parameter destructuring keeps the named field", () => Test_utils.eq("File \"record_rest_test.res\", line 108, characters 7-14", getName({
     name: "param",
     version: "3.0",
     debug: true
   }), "param"));
+  Mocha.test("empty-field rest pattern still binds the whole record", () => Test_utils.eq("File \"record_rest_test.res\", line 113, characters 6-13", ((({...__rest}) => __rest))({
+    name: "whole",
+    version: "3.5",
+    debug: false
+  }), {
+    name: "whole",
+    version: "3.5",
+    debug: false
+  }));
   Mocha.test("optional overlap keeps the remaining fields in the rest object", () => {
     let onClick = () => {};
     let rest = extractClassName({
@@ -75,28 +92,28 @@ Mocha.describe("Record_rest_test", () => {
       style: "bold",
       onClick: onClick
     });
-    Test_utils.eq("File \"record_rest_test.res\", line 102, characters 7-14", rest, {
+    Test_utils.eq("File \"record_rest_test.res\", line 122, characters 7-14", rest, {
       style: "bold",
       onClick: onClick
     });
   });
   Mocha.test("polymorphic rest captures the value field", () => {
-    let intRest = ((({id, ...__rest}) => __rest))({
+    let intRest = ((({id: __unused0, ...__rest}) => __rest))({
       id: "1",
       value: 42
     });
-    Test_utils.eq("File \"record_rest_test.res\", line 107, characters 7-14", "1", "1");
-    Test_utils.eq("File \"record_rest_test.res\", line 108, characters 7-14", intRest, {
+    Test_utils.eq("File \"record_rest_test.res\", line 127, characters 7-14", "1", "1");
+    Test_utils.eq("File \"record_rest_test.res\", line 128, characters 7-14", intRest, {
       value: 42
     });
-    Test_utils.eq("File \"record_rest_test.res\", line 109, characters 7-14", ((({id, ...__rest}) => __rest))({
+    Test_utils.eq("File \"record_rest_test.res\", line 129, characters 7-14", ((({id: __unused0, ...__rest}) => __rest))({
       id: "2",
       value: "hello"
     }), {
       value: "hello"
     });
   });
-  Mocha.test("tuple nested record rest is initialized", () => Test_utils.eq("File \"record_rest_test.res\", line 114, characters 6-13", getTupleRest([
+  Mocha.test("tuple nested record rest is initialized", () => Test_utils.eq("File \"record_rest_test.res\", line 134, characters 6-13", getTupleRest([
     {
       name: "tuple",
       version: "4.0",
@@ -108,7 +125,7 @@ Mocha.describe("Record_rest_test", () => {
     debug: false
   }));
   Mocha.test("variant payload rest works through the or-pattern path", () => {
-    Test_utils.eq("File \"record_rest_test.res\", line 122, characters 6-13", getWrappedRest({
+    Test_utils.eq("File \"record_rest_test.res\", line 142, characters 6-13", getWrappedRest({
       TAG: "Wrap",
       _0: {
         name: "wrapped",
@@ -119,7 +136,7 @@ Mocha.describe("Record_rest_test", () => {
       version: "5.0",
       debug: true
     });
-    Test_utils.eq("File \"record_rest_test.res\", line 127, characters 6-13", getWrappedRest({
+    Test_utils.eq("File \"record_rest_test.res\", line 147, characters 6-13", getWrappedRest({
       TAG: "Mirror",
       _0: {
         name: "mirror",
@@ -132,7 +149,7 @@ Mocha.describe("Record_rest_test", () => {
     });
   });
   Mocha.test("inline record variant rest removes the runtime tag field", () => {
-    Test_utils.eq("File \"record_rest_test.res\", line 135, characters 6-13", getInlineWrappedRest({
+    Test_utils.eq("File \"record_rest_test.res\", line 155, characters 6-13", getInlineWrappedRest({
       TAG: "InlineWrap",
       name: "inline",
       version: "7.0",
@@ -141,7 +158,7 @@ Mocha.describe("Record_rest_test", () => {
       version: "7.0",
       debug: true
     });
-    Test_utils.eq("File \"record_rest_test.res\", line 140, characters 6-13", getInlineWrappedRest({
+    Test_utils.eq("File \"record_rest_test.res\", line 160, characters 6-13", getInlineWrappedRest({
       TAG: "InlineMirror",
       name: "inlineMirror",
       version: "8.0",
@@ -152,7 +169,7 @@ Mocha.describe("Record_rest_test", () => {
     });
   });
   Mocha.test("inline record variant rest removes a custom runtime tag field", () => {
-    Test_utils.eq("File \"record_rest_test.res\", line 148, characters 6-13", getCustomTaggedInlineWrappedRest({
+    Test_utils.eq("File \"record_rest_test.res\", line 168, characters 6-13", getCustomTaggedInlineWrappedRest({
       kind: "CustomInlineWrap",
       name: "customInline",
       version: "9.0",
@@ -161,7 +178,7 @@ Mocha.describe("Record_rest_test", () => {
       version: "9.0",
       debug: true
     });
-    Test_utils.eq("File \"record_rest_test.res\", line 155, characters 6-13", getCustomTaggedInlineWrappedRest({
+    Test_utils.eq("File \"record_rest_test.res\", line 175, characters 6-13", getCustomTaggedInlineWrappedRest({
       kind: "CustomInlineMirror",
       name: "customInlineMirror",
       version: "10.0",
@@ -171,16 +188,38 @@ Mocha.describe("Record_rest_test", () => {
       debug: false
     });
   });
+  Mocha.test("inline record rest works with a non-identifier custom tag name", () => {
+    Test_utils.eq("File \"record_rest_test.res\", line 185, characters 6-13", getDashedTaggedInlineWrappedRest({
+      "custom-tag": "DashedInlineWrap",
+      name: "dashedInline",
+      version: "11.0",
+      debug: true
+    }), {
+      version: "11.0",
+      debug: true
+    });
+    Test_utils.eq("File \"record_rest_test.res\", line 192, characters 6-13", getDashedTaggedInlineWrappedRest({
+      "custom-tag": "DashedInlineMirror",
+      name: "dashedInlineMirror",
+      version: "12.0",
+      debug: false
+    }), {
+      version: "12.0",
+      debug: false
+    });
+  });
 });
 
 export {
   describeConfig,
   getName,
+  getWholeConfig,
   extractClassName,
   getValue,
   getTupleRest,
   getWrappedRest,
   getInlineWrappedRest,
   getCustomTaggedInlineWrappedRest,
+  getDashedTaggedInlineWrappedRest,
 }
 /*  Not a pure module */

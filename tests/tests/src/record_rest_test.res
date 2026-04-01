@@ -18,6 +18,7 @@ let describeConfig = (c: config) =>
   }
 
 let getName = ({name, ...subConfig as _rest}: config) => name
+let getWholeConfig = ({...config as rest}: config) => rest
 
 type fullProps = {
   className?: string,
@@ -77,6 +78,17 @@ let getCustomTaggedInlineWrappedRest = wrapped =>
   | CustomInlineMirror({name: _, ...subConfig as rest}) => rest
   }
 
+@tag("custom-tag")
+type dashedTaggedInlineWrapped =
+  | DashedInlineWrap({name: string, version: string, debug: bool})
+  | DashedInlineMirror({name: string, version: string, debug: bool})
+
+let getDashedTaggedInlineWrappedRest = wrapped =>
+  switch wrapped {
+  | DashedInlineWrap({name: _, ...subConfig as rest})
+  | DashedInlineMirror({name: _, ...subConfig as rest}) => rest
+  }
+
 describe(__MODULE__, () => {
   test("let binding captures record rest value", () => {
     let {name, ...subConfig as rest} = ({name: "test", version: "1.0", debug: true}: config)
@@ -94,6 +106,14 @@ describe(__MODULE__, () => {
 
   test("function parameter destructuring keeps the named field", () => {
     eq(__LOC__, getName({name: "param", version: "3.0", debug: true}), "param")
+  })
+
+  test("empty-field rest pattern still binds the whole record", () => {
+    eq(
+      __LOC__,
+      getWholeConfig({name: "whole", version: "3.5", debug: false}),
+      {name: "whole", version: "3.5", debug: false},
+    )
   })
 
   test("optional overlap keeps the remaining fields in the rest object", () => {
@@ -157,6 +177,23 @@ describe(__MODULE__, () => {
         CustomInlineMirror({name: "customInlineMirror", version: "10.0", debug: false}),
       ),
       {version: "10.0", debug: false},
+    )
+  })
+
+  test("inline record rest works with a non-identifier custom tag name", () => {
+    eq(
+      __LOC__,
+      getDashedTaggedInlineWrappedRest(
+        DashedInlineWrap({name: "dashedInline", version: "11.0", debug: true}),
+      ),
+      {version: "11.0", debug: true},
+    )
+    eq(
+      __LOC__,
+      getDashedTaggedInlineWrappedRest(
+        DashedInlineMirror({name: "dashedInlineMirror", version: "12.0", debug: false}),
+      ),
+      {version: "12.0", debug: false},
     )
   })
 })
