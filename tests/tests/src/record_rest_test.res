@@ -1,3 +1,6 @@
+open Mocha
+open Test_utils
+
 type config = {
   name: string,
   version: string,
@@ -9,20 +12,13 @@ type subConfig = {
   debug: bool,
 }
 
-// Basic rest pattern in let binding
-let {name, ...subConfig as rest} = ({name: "test", version: "1.0", debug: true}: config)
-let _ = (name, rest)
-
-// Rest pattern in match arm
-let describe = (c: config) =>
+let describeConfig = (c: config) =>
   switch c {
   | {name, ...subConfig as rest} => (name, rest)
   }
 
-// Rest pattern in function parameter
 let getName = ({name, ...subConfig as _rest}: config) => name
 
-// Optional field overlap: className is in both explicit (as optional) and rest type
 type fullProps = {
   className?: string,
   style?: string,
@@ -35,12 +31,8 @@ type baseProps = {
   onClick: unit => unit,
 }
 
-let extractClassName = ({?className, ...baseProps as rest}: fullProps) => {
-  let _ = className
-  rest
-}
+let extractClassName = ({className: ?_, ...baseProps as rest}: fullProps) => rest
 
-// Polymorphic rest type
 type container<'a> = {
   id: string,
   value: 'a,
@@ -50,26 +42,121 @@ type valueContainer<'a> = {
   value: 'a,
 }
 
-let {id, ...valueContainer<int> as intRest} = ({id: "1", value: 42}: container<int>)
-let _ = (id, intRest)
-
-// Polymorphic rest in function parameter
 let getValue = ({id: _, ...valueContainer<'a> as rest}: container<'a>) => rest
 
 type wrapped =
   | Wrap(config)
   | Mirror(config)
 
-// Nested record rest in a tuple pattern
 let getTupleRest = (({name: _, ...subConfig as rest}, _): (config, int)) => rest
 
-let tupleRest = getTupleRest((({name: "tuple", version: "2.0", debug: false}: config), 1))
-
-// Nested record rest in constructor and or-pattern matches
 let getWrappedRest = wrapped =>
   switch wrapped {
   | Wrap({name: _, ...subConfig as rest})
   | Mirror({name: _, ...subConfig as rest}) => rest
   }
 
-let wrappedRest = getWrappedRest(Wrap({name: "wrapped", version: "3.0", debug: true}))
+type inlineWrapped =
+  | InlineWrap({name: string, version: string, debug: bool})
+  | InlineMirror({name: string, version: string, debug: bool})
+
+let getInlineWrappedRest = wrapped =>
+  switch wrapped {
+  | InlineWrap({name: _, ...subConfig as rest})
+  | InlineMirror({name: _, ...subConfig as rest}) => rest
+  }
+
+@tag("kind")
+type customTaggedInlineWrapped =
+  | CustomInlineWrap({name: string, version: string, debug: bool})
+  | CustomInlineMirror({name: string, version: string, debug: bool})
+
+let getCustomTaggedInlineWrappedRest = wrapped =>
+  switch wrapped {
+  | CustomInlineWrap({name: _, ...subConfig as rest})
+  | CustomInlineMirror({name: _, ...subConfig as rest}) => rest
+  }
+
+describe(__MODULE__, () => {
+  test("let binding captures record rest value", () => {
+    let {name, ...subConfig as rest} = ({name: "test", version: "1.0", debug: true}: config)
+    eq(__LOC__, name, "test")
+    eq(__LOC__, rest, {version: "1.0", debug: true})
+  })
+
+  test("match arm returns the named field and the rest record", () => {
+    eq(
+      __LOC__,
+      describeConfig({name: "match", version: "2.0", debug: false}),
+      ("match", {version: "2.0", debug: false}),
+    )
+  })
+
+  test("function parameter destructuring keeps the named field", () => {
+    eq(__LOC__, getName({name: "param", version: "3.0", debug: true}), "param")
+  })
+
+  test("optional overlap keeps the remaining fields in the rest object", () => {
+    let onClick = () => ()
+    let rest = extractClassName({className: "btn", style: "bold", onClick})
+    eq(__LOC__, rest, {style: "bold", onClick})
+  })
+
+  test("polymorphic rest captures the value field", () => {
+    let {id, ...valueContainer<int> as intRest} = ({id: "1", value: 42}: container<int>)
+    eq(__LOC__, id, "1")
+    eq(__LOC__, intRest, {value: 42})
+    eq(__LOC__, getValue({id: "2", value: "hello"}), {value: "hello"})
+  })
+
+  test("tuple nested record rest is initialized", () => {
+    eq(
+      __LOC__,
+      getTupleRest((({name: "tuple", version: "4.0", debug: false}: config), 1)),
+      {version: "4.0", debug: false},
+    )
+  })
+
+  test("variant payload rest works through the or-pattern path", () => {
+    eq(
+      __LOC__,
+      getWrappedRest(Wrap({name: "wrapped", version: "5.0", debug: true})),
+      {version: "5.0", debug: true},
+    )
+    eq(
+      __LOC__,
+      getWrappedRest(Mirror({name: "mirror", version: "6.0", debug: false})),
+      {version: "6.0", debug: false},
+    )
+  })
+
+  test("inline record variant rest removes the runtime tag field", () => {
+    eq(
+      __LOC__,
+      getInlineWrappedRest(InlineWrap({name: "inline", version: "7.0", debug: true})),
+      {version: "7.0", debug: true},
+    )
+    eq(
+      __LOC__,
+      getInlineWrappedRest(InlineMirror({name: "inlineMirror", version: "8.0", debug: false})),
+      {version: "8.0", debug: false},
+    )
+  })
+
+  test("inline record variant rest removes a custom runtime tag field", () => {
+    eq(
+      __LOC__,
+      getCustomTaggedInlineWrappedRest(
+        CustomInlineWrap({name: "customInline", version: "9.0", debug: true}),
+      ),
+      {version: "9.0", debug: true},
+    )
+    eq(
+      __LOC__,
+      getCustomTaggedInlineWrappedRest(
+        CustomInlineMirror({name: "customInlineMirror", version: "10.0", debug: false}),
+      ),
+      {version: "10.0", debug: false},
+    )
+  })
+})

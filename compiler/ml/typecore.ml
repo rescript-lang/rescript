@@ -1615,6 +1615,22 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
                 if opt then Some label.lbl_name else None)
               lbl_pat_list
           in
+          let runtime_excluded_fields =
+            match lbl_pat_list with
+            | (_, label1, _, _) :: _ -> (
+              match label1.lbl_repres with
+              | Record_inlined {attrs; _}
+                when not (Ast_untagged_variants.process_untagged attrs) ->
+                let tag_name =
+                  match Ast_untagged_variants.process_tag_name attrs with
+                  | Some s -> s
+                  | None -> "TAG"
+                in
+                if List.mem tag_name explicit_fields then explicit_fields
+                else tag_name :: explicit_fields
+              | _ -> explicit_fields)
+            | [] -> explicit_fields
+          in
           (* Get rest field names *)
           let rest_field_names =
             List.map
@@ -1721,7 +1737,7 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
               rest_type = rest_type_expr;
               rest_path;
               rest_labels;
-              excluded_labels = explicit_fields;
+              excluded_labels = runtime_excluded_fields;
             }
       in
       rp k
