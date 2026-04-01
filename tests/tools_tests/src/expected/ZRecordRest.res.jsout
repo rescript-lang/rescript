@@ -3,7 +3,7 @@
 
 
 function extract(param) {
-  let rest = ((({name, ...__rest}) => __rest))(param);
+  let rest = ((({name: __unused0, ...__rest}) => __rest))(param);
   return [
     param.name,
     rest

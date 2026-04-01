@@ -1581,9 +1581,9 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
           let rest_path, rest_decl =
             Typetexp.find_type !env rest_type_lid.loc rest_type_lid.txt
           in
-          let rest_labels =
-            match rest_decl with
-            | {type_kind = Type_record (labels, _)} -> labels
+          let rest_decl =
+            match rest_decl.type_kind with
+            | Type_record _ -> instance_declaration rest_decl
             | _ ->
               raise
                 (Error
@@ -1595,101 +1595,6 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
           let explicit_fields =
             List.map (fun (_, label, _, _) -> label.lbl_name) lbl_pat_list
           in
-          (* Get explicit optional fields *)
-          let explicit_optional_fields =
-            List.filter_map
-              (fun (_, label, _, opt) ->
-                if opt then Some label.lbl_name else None)
-              lbl_pat_list
-          in
-          let runtime_excluded_fields =
-            match lbl_pat_list with
-            | (_, label1, _, _) :: _ -> (
-              match label1.lbl_repres with
-              | Record_inlined {attrs; _}
-                when not (Ast_untagged_variants.process_untagged attrs) ->
-                let tag_name =
-                  match Ast_untagged_variants.process_tag_name attrs with
-                  | Some s -> s
-                  | None -> "TAG"
-                in
-                if List.mem tag_name explicit_fields then explicit_fields
-                else tag_name :: explicit_fields
-              | _ -> explicit_fields)
-            | [] -> explicit_fields
-          in
-          (* Get rest field names *)
-          let rest_field_names =
-            List.map
-              (fun (l : Types.label_declaration) -> Ident.name l.ld_id)
-              rest_labels
-          in
-          (* Validate: fields in both explicit and rest must be optional in the explicit pattern *)
-          let not_optional =
-            List.filter
-              (fun rest_field ->
-                List.mem rest_field explicit_fields
-                && not (List.mem rest_field explicit_optional_fields))
-              rest_field_names
-          in
-          if not_optional <> [] then
-            raise
-              (Error
-                 ( rest_pat.ppat_loc,
-                   !env,
-                   Record_rest_field_not_optional
-                     (not_optional, rest_type_lid.txt) ));
-          (* Validate: all source fields must be in explicit or rest *)
-          (match lbl_pat_list with
-          | (_, label1, _, _) :: _ ->
-            let all_source = label1.lbl_all in
-            let missing =
-              Array.to_list all_source
-              |> List.filter_map (fun source_label ->
-                     let name = source_label.lbl_name in
-                     if
-                       (not (List.mem name explicit_fields))
-                       && not (List.mem name rest_field_names)
-                     then Some name
-                     else None)
-            in
-            if missing <> [] then
-              raise
-                (Error
-                   ( rest_pat.ppat_loc,
-                     !env,
-                     Record_rest_field_missing (missing, rest_type_lid.txt) ))
-          | [] -> ());
-          (* Validate: rest type fields must all exist in source *)
-          (match lbl_pat_list with
-          | (_, label1, _, _) :: _ ->
-            let all_source = label1.lbl_all in
-            let source_field_names =
-              Array.to_list (Array.map (fun l -> l.lbl_name) all_source)
-            in
-            List.iter
-              (fun (rest_label : Types.label_declaration) ->
-                if
-                  not
-                    (List.mem (Ident.name rest_label.ld_id) source_field_names)
-                then
-                  raise
-                    (Error
-                       ( rest_type_lid.loc,
-                         !env,
-                         Record_rest_extra_field
-                           (Ident.name rest_label.ld_id, rest_type_lid.txt) )))
-              rest_labels
-          | [] -> ());
-          (* Warn if all rest fields are already explicit — the rest record will be empty *)
-          if
-            rest_field_names <> []
-            && List.for_all
-                 (fun f -> List.mem f explicit_fields)
-                 rest_field_names
-          then
-            Location.prerr_warning rest_pat.ppat_loc
-              Warnings.Bs_record_rest_empty;
           let rest_type_args =
             match rest_type_args_syntax with
             | [] -> List.map (fun _ -> newvar ()) rest_decl.type_params
@@ -1715,6 +1620,133 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
           let rest_type_expr =
             newgenty (Tconstr (rest_path, rest_type_args, ref Mnil))
           in
+          List.iter2
+            (fun param arg -> unify_pat_types rest_type_lid.loc !env param arg)
+            rest_decl.type_params rest_type_args;
+          let source_fields, source_repr =
+            match
+              try
+                let _, _, source_decl =
+                  extract_concrete_typedecl !env record_ty
+                in
+                let source_decl = instance_declaration source_decl in
+                let source_type_args =
+                  match expand_head !env record_ty with
+                  | {desc = Tconstr (_, args, _)} -> args
+                  | _ -> assert false
+                in
+                Some (source_decl, source_type_args)
+              with Not_found -> None
+            with
+            | Some (source_decl, source_type_args) -> (
+              List.iter2
+                (fun param arg -> unify_pat_types loc !env param arg)
+                source_decl.type_params source_type_args;
+              match source_decl.type_kind with
+              | Type_record (fields, repr) ->
+                ( List.map
+                    (fun (l : Types.label_declaration) ->
+                      (Ident.name l.ld_id, l.ld_type))
+                    fields,
+                  repr )
+              | _ -> assert false)
+            | None -> (
+              unify_pat_types rest_type_lid.loc !env record_ty rest_type_expr;
+              match rest_decl.type_kind with
+              | Type_record (fields, repr) ->
+                ( List.map
+                    (fun (l : Types.label_declaration) ->
+                      (Ident.name l.ld_id, l.ld_type))
+                    fields,
+                  repr )
+              | _ -> assert false)
+          in
+          let rest_labels =
+            match rest_decl.type_kind with
+            | Type_record (labels, _) -> labels
+            | _ -> assert false
+          in
+          (* Get explicit optional fields *)
+          let explicit_optional_fields =
+            List.filter_map
+              (fun (_, label, _, opt) ->
+                if opt then Some label.lbl_name else None)
+              lbl_pat_list
+          in
+          let runtime_excluded_fields =
+            match source_repr with
+            | Record_inlined {attrs; _}
+              when not (Ast_untagged_variants.process_untagged attrs) ->
+              let tag_name =
+                match Ast_untagged_variants.process_tag_name attrs with
+                | Some s -> s
+                | None -> "TAG"
+              in
+              if List.mem tag_name explicit_fields then explicit_fields
+              else tag_name :: explicit_fields
+            | _ -> explicit_fields
+          in
+          (* Get rest field names *)
+          let rest_field_names =
+            List.map
+              (fun (l : Types.label_declaration) -> Ident.name l.ld_id)
+              rest_labels
+          in
+          (* Validate: fields in both explicit and rest must be optional in the explicit pattern *)
+          let not_optional =
+            List.filter
+              (fun rest_field ->
+                List.mem rest_field explicit_fields
+                && not (List.mem rest_field explicit_optional_fields))
+              rest_field_names
+          in
+          if not_optional <> [] then
+            raise
+              (Error
+                 ( rest_pat.ppat_loc,
+                   !env,
+                   Record_rest_field_not_optional
+                     (not_optional, rest_type_lid.txt) ));
+          (* Validate: all source fields must be in explicit or rest *)
+          let source_field_names = List.map fst source_fields in
+          let missing =
+            List.filter
+              (fun source_field ->
+                (not (List.mem source_field explicit_fields))
+                && not (List.mem source_field rest_field_names))
+              source_field_names
+          in
+          if missing <> [] then
+            raise
+              (Error
+                 ( rest_pat.ppat_loc,
+                   !env,
+                   Record_rest_field_missing (missing, rest_type_lid.txt) ));
+          (* Validate: rest type fields must all exist in source and use compatible types *)
+          List.iter
+            (fun (rest_label : Types.label_declaration) ->
+              let rest_field = Ident.name rest_label.ld_id in
+              match List.assoc_opt rest_field source_fields with
+              | None ->
+                raise
+                  (Error
+                     ( rest_type_lid.loc,
+                       !env,
+                       Record_rest_extra_field (rest_field, rest_type_lid.txt)
+                     ))
+              | Some source_type ->
+                unify_pat_types rest_type_lid.loc !env rest_label.ld_type
+                  source_type)
+            rest_labels;
+          (* Warn if all rest fields are already explicit — the rest record will be empty *)
+          if
+            rest_field_names <> []
+            && List.for_all
+                 (fun f -> List.mem f explicit_fields)
+                 rest_field_names
+          then
+            Location.prerr_warning rest_pat.ppat_loc
+              Warnings.Bs_record_rest_empty;
           let rest_ident =
             enter_variable rest_pat.ppat_loc rest_name rest_type_expr
           in

@@ -606,10 +606,22 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
   | Precord_spread_new excluded -> (
     match args with
     | [e1] ->
-      (* Generate: (({field1, field2, ...rest}) => rest)(source)
-         This uses JS destructuring to cleanly extract the rest *)
-      let excluded_str = String.concat ", " excluded in
-      let code = Printf.sprintf "(({%s, ...__rest}) => __rest)" excluded_str in
+      (* Generate: (({field1: __unused0, ...__rest}) => __rest)(source)
+         This uses JS destructuring to cleanly extract the rest while
+         safely handling quoted property names and the empty-exclusion case. *)
+      let excluded_bindings =
+        List.mapi
+          (fun i field ->
+            let field = Js_dump_property.property_key (Js_op.Lit field) in
+            Printf.sprintf "%s: __unused%d" field i)
+          excluded
+      in
+      let destructured =
+        match excluded_bindings with
+        | [] -> "...__rest"
+        | _ -> String.concat ", " excluded_bindings ^ ", ...__rest"
+      in
+      let code = Printf.sprintf "(({%s}) => __rest)" destructured in
       E.call
         ~info:{arity = Full; call_info = Call_na; call_transformed_jsx = false}
         (E.raw_js_code (Exp (Js_function {arity = 1; arrow = true})) code)
