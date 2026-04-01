@@ -517,8 +517,27 @@ let rec for_structure_item ~(env : Shared_types.Env.t) ~(exported : Exported.t)
       | Tpat_tuple pats | Tpat_array pats | Tpat_construct (_, _, pats) ->
         pats |> List.iter (fun p -> handle_pattern [] p)
       | Tpat_or (p, _, _) -> handle_pattern [] p
-      | Tpat_record (items, _, _rest) ->
-        items |> List.iter (fun (_, _, p, _) -> handle_pattern [] p)
+      | Tpat_record (record_items, _, rest) -> (
+        record_items |> List.iter (fun (_, _, p, _) -> handle_pattern [] p);
+        match rest with
+        | None -> ()
+        | Some rest ->
+          let declared =
+            add_declared ~name:rest.rest_name
+              ~stamp:(Ident.binding_time rest.rest_ident)
+              ~env ~extent:rest.rest_name.loc ~item:rest.rest_type []
+              (Exported.add exported Exported.Value)
+              Stamps.add_value
+          in
+          items :=
+            {
+              Module.kind = Module.Value declared.item;
+              name = declared.name.txt;
+              docstring = declared.docstring;
+              deprecated = declared.deprecated;
+              loc = declared.extent_loc;
+            }
+            :: !items)
       | Tpat_variant (_, Some p, _) -> handle_pattern [] p
       | Tpat_variant (_, None, _) | Tpat_any | Tpat_constant _ -> ()
     in

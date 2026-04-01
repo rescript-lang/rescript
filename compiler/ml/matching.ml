@@ -640,7 +640,7 @@ let rec extract_vars r p =
     let r = List.fold_left (fun r (_, _, p, _) -> extract_vars r p) r lpats in
     match rest with
     | None -> r
-    | Some rest -> IdentSet.add rest.rest_ident r)
+    | Some rest -> Ident_set.add rest.rest_ident r)
   | Tpat_construct (_, _, pats) -> List.fold_left extract_vars r pats
   | Tpat_array pats -> List.fold_left extract_vars r pats
   | Tpat_variant (_, Some p, _) -> extract_vars r p

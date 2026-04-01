@@ -1624,7 +1624,7 @@ and parse_record_pattern ~attrs p =
           | None -> (fields, flag, Some rest_pat)
           | Some _ ->
             Parser.err ~start_pos:rest_pat.Parsetree.ppat_loc.loc_start p
-              (Diagnostics.message ErrorMessages.record_pattern_multiple_rest);
+              (Diagnostics.message Error_messages.record_pattern_multiple_rest);
             (fields, flag, rest))
         | PatUnderscore -> (fields, flag, rest))
       ([], flag, None) raw_fields

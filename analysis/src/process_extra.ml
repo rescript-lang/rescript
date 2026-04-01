@@ -378,22 +378,32 @@ let pat ~(file : File.t) ~env ~extra (iter : Tast_iterator.iterator)
       | Tpackage (path, _, _) -> Some path
       | _ -> None
   in
-  let add_for_pattern stamp name =
+  let add_for_declared_pattern ~stamp ~name ~extent ~item ~attributes =
     if Stamps.find_value file.stamps stamp = None then (
       let declared =
         Process_attributes.new_declared ~name ~stamp ~module_path:NotVisible
-          ~extent:pattern.pat_loc ~item:pattern.pat_type false
-          pattern.pat_attributes
+          ~extent ~item false attributes
       in
       Stamps.add_value file.stamps stamp declared;
       add_reference ~extra stamp name.loc;
       add_loc_item extra name.loc
-        (Typed (name.txt, pattern.pat_type, Definition (stamp, Value))))
+        (Typed (name.txt, item, Definition (stamp, Value))))
+  in
+  let add_for_pattern stamp name =
+    add_for_declared_pattern ~stamp ~name ~extent:pattern.pat_loc
+      ~item:pattern.pat_type ~attributes:pattern.pat_attributes
   in
   (* Log.log("Entering pattern " ++ Utils.showLocation(pat_loc)); *)
   (match pattern.pat_desc with
-  | Tpat_record (items, _, _rest) ->
-    add_for_record ~env ~extra ~record_type:pattern.pat_type items
+  | Tpat_record (items, _, rest) -> (
+    add_for_record ~env ~extra ~record_type:pattern.pat_type items;
+    match rest with
+    | None -> ()
+    | Some rest ->
+      add_for_declared_pattern
+        ~stamp:(Ident.binding_time rest.rest_ident)
+        ~name:rest.rest_name ~extent:rest.rest_name.loc ~item:rest.rest_type
+        ~attributes:pattern.pat_attributes)
   | Tpat_construct (lident, constructor, _) ->
     add_for_constructor ~env ~extra pattern.pat_type lident constructor
   | Tpat_alias (_inner, ident, name) -> (
