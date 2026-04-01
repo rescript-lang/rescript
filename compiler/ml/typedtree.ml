@@ -37,6 +37,7 @@ type pattern = {
 
 and record_pat_rest = {
   rest_ident: Ident.t;
+  rest_name: string loc;
   rest_type: type_expr;
   rest_path: Path.t;
   rest_labels: Types.label_declaration list;
@@ -459,9 +460,7 @@ let rec bound_idents pat =
   | Tpat_record (_, _, Some rest) ->
     (* Rest ident is added via enter_variable during type checking,
        but we also need it in bound_idents for Lambda compilation *)
-    idents :=
-      (rest.rest_ident, Location.mknoloc (Ident.name rest.rest_ident))
-      :: !idents;
+    idents := (rest.rest_ident, rest.rest_name) :: !idents;
     iter_pattern_desc bound_idents pat.pat_desc
   | d -> iter_pattern_desc bound_idents d
 

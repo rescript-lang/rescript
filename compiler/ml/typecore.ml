@@ -1620,6 +1620,8 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
           let rest_type_expr =
             newgenty (Tconstr (rest_path, rest_type_args, ref Mnil))
           in
+          if rest_decl.type_private = Private then
+            raise (Error (rest_type_lid.loc, !env, Private_type rest_type_expr));
           List.iter2
             (fun param arg -> unify_pat_types rest_type_lid.loc !env param arg)
             rest_decl.type_params rest_type_args;
@@ -1753,6 +1755,7 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
           Some
             {
               Typedtree.rest_ident;
+              rest_name;
               rest_type = rest_type_expr;
               rest_path;
               rest_labels;
