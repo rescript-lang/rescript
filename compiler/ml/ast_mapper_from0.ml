@@ -576,7 +576,8 @@ module P = struct
       construct ~loc ~attrs (map_loc sub l) (map_opt (sub.pat sub) p)
     | Ppat_variant (l, p) -> variant ~loc ~attrs l (map_opt (sub.pat sub) p)
     | Ppat_record (lpl, cf) ->
-      record ~loc ~attrs
+      let rest, attrs = Parsetree0.get_record_rest_attr attrs in
+      record ~loc ~attrs ?rest
         (Ext_list.map lpl (fun (lid, p) ->
              let lid1 = map_loc sub lid in
              let p1 = sub.pat sub p in

@@ -398,12 +398,13 @@ module P = struct
       iter_loc sub l;
       iter_opt (sub.pat sub) p
     | Ppat_variant (_l, p) -> iter_opt (sub.pat sub) p
-    | Ppat_record (lpl, _cf, _rest) ->
+    | Ppat_record (lpl, _cf, rest) ->
       List.iter
         (fun {lid; x = pat} ->
           iter_loc sub lid;
           sub.pat sub pat)
-        lpl
+        lpl;
+      iter_opt (sub.pat sub) rest
     | Ppat_array pl -> List.iter (sub.pat sub) pl
     | Ppat_or (p1, p2) ->
       sub.pat sub p1;

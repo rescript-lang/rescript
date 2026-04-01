@@ -597,6 +597,7 @@ and module_binding = {
 
 let optional_attr = (Location.mknoloc "res.optional", Parsetree.PStr [])
 let optional_attr0 = (Location.mknoloc "res.optional", PStr [])
+let record_rest_attr_name = "res.record_rest"
 
 let add_optional_attr ~optional attrs =
   if optional then optional_attr0 :: attrs else attrs
@@ -608,3 +609,16 @@ let get_optional_attr attrs_ =
   let attrs = remove_optional_attr attrs_ in
   let optional = List.length attrs <> List.length attrs_ in
   (optional, attrs)
+
+let add_record_rest_attr ~rest attrs =
+  (Location.mknoloc record_rest_attr_name, PPat (rest, None)) :: attrs
+
+let get_record_rest_attr attrs_ =
+  let rec remove_record_rest_attr acc = function
+    | ({Location.txt = attr_name; _}, Parsetree.PPat (rest, None)) :: attrs
+      when attr_name = record_rest_attr_name ->
+      (Some rest, List.rev_append acc attrs)
+    | attr :: attrs -> remove_record_rest_attr (attr :: acc) attrs
+    | [] -> (None, List.rev acc)
+  in
+  remove_record_rest_attr [] attrs_

@@ -129,6 +129,11 @@ module ErrorMessages = struct
     "Record rest patterns require a type annotation and a binding name.\n\
      Correct syntax: `...typeName as bindingName`\n\
      Example: `let {name, ...Config.t as rest} = myRecord`"
+
+  let record_pattern_multiple_rest =
+    "Record patterns can only have one `...` rest clause.\n\
+     Use a single `...typeName as bindingName` clause to capture the remaining \
+     fields."
   (* let recordPatternUnderscore = "Record patterns only support one `_`, at the end." *)
   [@@live]
 
@@ -1602,7 +1607,13 @@ and parse_record_pattern ~attrs p =
              Parser.err ~start_pos:pattern.Parsetree.ppat_loc.loc_start p
                (Diagnostics.message ErrorMessages.record_pattern_spread));
           (field :: fields, flag, rest)
-        | PatRest rest_pat -> (fields, flag, Some rest_pat)
+        | PatRest rest_pat -> (
+          match rest with
+          | None -> (fields, flag, Some rest_pat)
+          | Some _ ->
+            Parser.err ~start_pos:rest_pat.Parsetree.ppat_loc.loc_start p
+              (Diagnostics.message ErrorMessages.record_pattern_multiple_rest);
+            (fields, flag, rest))
         | PatUnderscore -> (fields, flag, rest))
       ([], flag, None) raw_fields
   in

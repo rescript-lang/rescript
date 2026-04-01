@@ -29,6 +29,19 @@ Explanation: since records have a known, fixed shape, a spread like `{a, ...b}` 
 
 
   Syntax error!
+  syntax_tests/data/parsing/errors/other/spread.res:4:9-18
+
+  2 │ 
+  3 │ let record = {...x, ...y}
+  4 │ let {...x, ...y} = myRecord
+  5 │ let {...M.t} = myRecord
+  6 │ 
+
+  Record patterns can only have one `...` rest clause.
+Use a single `...typeName as bindingName` clause to capture the remaining fields.
+
+
+  Syntax error!
   syntax_tests/data/parsing/errors/other/spread.res:5:9-14
 
   3 │ let record = {...x, ...y}

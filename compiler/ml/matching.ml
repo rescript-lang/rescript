@@ -543,6 +543,14 @@ let simplify_or p =
   in
   try simpl_rec p with Var p -> p
 
+let bind_record_rest loc arg rest action =
+  Llet
+    ( Strict,
+      Pgenval,
+      rest.rest_ident,
+      Lprim (Precord_spread_new rest.excluded_labels, [arg], loc),
+      action )
+
 let simplify_cases args cls =
   match args with
   | [] -> assert false
@@ -560,7 +568,12 @@ let simplify_cases args cls =
         | Tpat_record (lbls, closed, rest) ->
           let all_lbls = all_record_args lbls in
           let full_pat =
-            {pat with pat_desc = Tpat_record (all_lbls, closed, rest)}
+            {pat with pat_desc = Tpat_record (all_lbls, closed, None)}
+          in
+          let action =
+            match rest with
+            | None -> action
+            | Some rest -> bind_record_rest pat.pat_loc arg rest action
           in
           (full_pat :: patl, action) :: simplify rem
         | Tpat_or _ -> (
@@ -617,8 +630,11 @@ let rec extract_vars r p =
   | Tpat_var (id, _) -> IdentSet.add id r
   | Tpat_alias (p, id, _) -> extract_vars (IdentSet.add id r) p
   | Tpat_tuple pats -> List.fold_left extract_vars r pats
-  | Tpat_record (lpats, _, _rest) ->
-    List.fold_left (fun r (_, _, p, _) -> extract_vars r p) r lpats
+  | Tpat_record (lpats, _, rest) -> (
+    let r = List.fold_left (fun r (_, _, p, _) -> extract_vars r p) r lpats in
+    match rest with
+    | None -> r
+    | Some rest -> IdentSet.add rest.rest_ident r)
   | Tpat_construct (_, _, pats) -> List.fold_left extract_vars r pats
   | Tpat_array pats -> List.fold_left extract_vars r pats
   | Tpat_variant (_, Some p, _) -> extract_vars r p
@@ -2742,32 +2758,7 @@ let partial_function loc () =
       ],
       loc )
 
-(* For record patterns with rest, inject the rest binding into the action body *)
-let inject_record_rest_binding param (pat, action) =
-  match pat.pat_desc with
-  | Tpat_record (_, _, Some rest) ->
-    let action_with_rest =
-      Llet
-        ( Strict,
-          Pgenval,
-          rest.rest_ident,
-          Lprim (Precord_spread_new rest.excluded_labels, [param], pat.pat_loc),
-          action )
-    in
-    let pat_without_rest =
-      {
-        pat with
-        pat_desc =
-          (match pat.pat_desc with
-          | Tpat_record (fields, closed, _) -> Tpat_record (fields, closed, None)
-          | _ -> pat.pat_desc);
-      }
-    in
-    (pat_without_rest, action_with_rest)
-  | _ -> (pat, action)
-
 let for_function loc repr param pat_act_list partial =
-  let pat_act_list = List.map (inject_record_rest_binding param) pat_act_list in
   compile_matching repr (partial_function loc) param pat_act_list partial
 
 (* In the following two cases, exhaustiveness info is not available! *)
@@ -2836,28 +2827,6 @@ let for_let loc param pat body =
   | Tpat_var (id, _) ->
     (* fast path, and keep track of simple bindings to unboxable numbers *)
     Llet (Strict, Pgenval, id, param, body)
-  | Tpat_record (_, _, Some rest) ->
-    (* Record pattern with rest: compile the explicit field bindings normally,
-       then add a binding for the rest ident using Precord_spread_new *)
-    let body_with_rest =
-      Llet
-        ( Strict,
-          Pgenval,
-          rest.rest_ident,
-          Lprim (Precord_spread_new rest.excluded_labels, [param], loc),
-          body )
-    in
-    (* Compile the explicit fields pattern (without rest) into the body *)
-    let pat_without_rest =
-      {
-        pat with
-        pat_desc =
-          (match pat.pat_desc with
-          | Tpat_record (fields, closed, _) -> Tpat_record (fields, closed, None)
-          | _ -> pat.pat_desc);
-      }
-    in
-    simple_for_let loc param pat_without_rest body_with_rest
   | _ -> simple_for_let loc param pat body
 
 (* Handling of tupled functions and matchings *)

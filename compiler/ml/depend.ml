@@ -188,7 +188,8 @@ let rec add_pattern bv pat =
       (fun {lid = lbl; x = p} ->
         add bv lbl;
         add_pattern bv p)
-      pl
+      pl;
+    add_opt add_pattern bv _rest
   | Ppat_array pl -> List.iter (add_pattern bv) pl
   | Ppat_or (p1, p2) ->
     add_pattern bv p1;

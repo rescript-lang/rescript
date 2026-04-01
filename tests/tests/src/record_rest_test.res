@@ -55,3 +55,21 @@ let _ = (id, intRest)
 
 // Polymorphic rest in function parameter
 let getValue = ({id: _, ...valueContainer<'a> as rest}: container<'a>) => rest
+
+type wrapped =
+  | Wrap(config)
+  | Mirror(config)
+
+// Nested record rest in a tuple pattern
+let getTupleRest = (({name: _, ...subConfig as rest}, _): (config, int)) => rest
+
+let tupleRest = getTupleRest((({name: "tuple", version: "2.0", debug: false}: config), 1))
+
+// Nested record rest in constructor and or-pattern matches
+let getWrappedRest = wrapped =>
+  switch wrapped {
+  | Wrap({name: _, ...subConfig as rest})
+  | Mirror({name: _, ...subConfig as rest}) => rest
+  }
+
+let wrappedRest = getWrappedRest(Wrap({name: "wrapped", version: "3.0", debug: true}))

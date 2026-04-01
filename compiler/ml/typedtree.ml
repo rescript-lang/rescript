@@ -500,6 +500,16 @@ let rec alpha_pat env p =
     let new_p = alpha_pat env p1 in
     try {p with pat_desc = Tpat_alias (new_p, alpha_var env id, s)}
     with Not_found -> new_p)
+  | Tpat_record (lpats, closed, Some rest) ->
+    let rest_ident =
+      try alpha_var env rest.rest_ident with Not_found -> rest.rest_ident
+    in
+    let lpats =
+      List.map
+        (fun (lid, lbl, pat, opt) -> (lid, lbl, alpha_pat env pat, opt))
+        lpats
+    in
+    {p with pat_desc = Tpat_record (lpats, closed, Some {rest with rest_ident})}
   | d -> {p with pat_desc = map_pattern_desc (alpha_pat env) d}
 
 let mkloc = Location.mkloc

@@ -2237,7 +2237,9 @@ let iter_ppat f p =
   | Ppat_open (_, p)
   | Ppat_constraint (p, _) ->
     f p
-  | Ppat_record (args, _flag, _rest) -> List.iter (fun {x = p} -> f p) args
+  | Ppat_record (args, _flag, rest) ->
+    List.iter (fun {x = p} -> f p) args;
+    may f rest
 
 let contains_polymorphic_variant p =
   let rec loop p =
