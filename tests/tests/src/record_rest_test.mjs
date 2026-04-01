@@ -32,6 +32,32 @@ function getValue(param) {
   return ((({id, ...__rest}) => __rest))(param);
 }
 
+function getTupleRest(param) {
+  return ((({name, ...__rest}) => __rest))(param[0]);
+}
+
+let tupleRest = getTupleRest([
+  {
+    name: "tuple",
+    version: "2.0",
+    debug: false
+  },
+  1
+]);
+
+function getWrappedRest(wrapped) {
+  return ((({name, ...__rest}) => __rest))(wrapped._0);
+}
+
+let wrappedRest = getWrappedRest({
+  TAG: "Wrap",
+  _0: {
+    name: "wrapped",
+    version: "3.0",
+    debug: true
+  }
+});
+
 let name = "test";
 
 let id = "1";
@@ -45,5 +71,9 @@ export {
   intRest,
   id,
   getValue,
+  getTupleRest,
+  tupleRest,
+  getWrappedRest,
+  wrappedRest,
 }
-/* No side effect */
+/* tupleRest Not a pure module */
