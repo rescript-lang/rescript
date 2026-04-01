@@ -101,6 +101,12 @@ type error =
   | Record_rest_field_not_optional of string list * Longident.t
   | Record_rest_field_missing of string list * Longident.t
   | Record_rest_extra_field of string * Longident.t
+  | Record_rest_field_runtime_name_mismatch of {
+      field: string;
+      rest_type: Longident.t;
+      source_runtime_name: string;
+      rest_runtime_name: string;
+    }
 
 exception Error of Location.t * Env.t * error
 exception Error_forward of Location.error
@@ -310,6 +316,15 @@ let extract_concrete_variant env ty =
   | p0, p, {type_kind = Type_variant cstrs} -> (p0, p, cstrs)
   | p0, p, {type_kind = Type_open} -> (p0, p, [])
   | _ -> raise Not_found
+
+let runtime_label_name name attrs =
+  Ext_list.find_def attrs Lambda.find_name name
+
+let runtime_label_description_name (lbl : Types.label_description) =
+  runtime_label_name lbl.lbl_name lbl.lbl_attributes
+
+let runtime_label_declaration_name (lbl : Types.label_declaration) =
+  runtime_label_name (Ident.name lbl.ld_id) lbl.ld_attributes
 
 let label_is_optional ld = ld.lbl_optional
 
@@ -1595,6 +1610,11 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
           let explicit_fields =
             List.map (fun (_, label, _, _) -> label.lbl_name) lbl_pat_list
           in
+          let explicit_runtime_fields =
+            List.map
+              (fun (_, label, _, _) -> runtime_label_description_name label)
+              lbl_pat_list
+          in
           let rest_type_args =
             match rest_type_args_syntax with
             | [] -> List.map (fun _ -> newvar ()) rest_decl.type_params
@@ -1648,7 +1668,9 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
               | Type_record (fields, repr) ->
                 ( List.map
                     (fun (l : Types.label_declaration) ->
-                      (Ident.name l.ld_id, l.ld_type))
+                      ( Ident.name l.ld_id,
+                        runtime_label_declaration_name l,
+                        l.ld_type ))
                     fields,
                   repr )
               | _ -> assert false)
@@ -1658,7 +1680,9 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
               | Type_record (fields, repr) ->
                 ( List.map
                     (fun (l : Types.label_declaration) ->
-                      (Ident.name l.ld_id, l.ld_type))
+                      ( Ident.name l.ld_id,
+                        runtime_label_declaration_name l,
+                        l.ld_type ))
                     fields,
                   repr )
               | _ -> assert false)
@@ -1684,9 +1708,10 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
                 | Some s -> s
                 | None -> "TAG"
               in
-              if List.mem tag_name explicit_fields then explicit_fields
-              else tag_name :: explicit_fields
-            | _ -> explicit_fields
+              if List.mem tag_name explicit_runtime_fields then
+                explicit_runtime_fields
+              else tag_name :: explicit_runtime_fields
+            | _ -> explicit_runtime_fields
           in
           (* Get rest field names *)
           let rest_field_names =
@@ -1710,7 +1735,9 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
                    Record_rest_field_not_optional
                      (not_optional, rest_type_lid.txt) ));
           (* Validate: all source fields must be in explicit or rest *)
-          let source_field_names = List.map fst source_fields in
+          let source_field_names =
+            List.map (fun (name, _, _) -> name) source_fields
+          in
           let missing =
             List.filter
               (fun source_field ->
@@ -1728,7 +1755,13 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
           List.iter
             (fun (rest_label : Types.label_declaration) ->
               let rest_field = Ident.name rest_label.ld_id in
-              match List.assoc_opt rest_field source_fields with
+              let rest_runtime_field =
+                runtime_label_declaration_name rest_label
+              in
+              match
+                Ext_list.find_first source_fields (fun (field, _, _) ->
+                    field = rest_field)
+              with
               | None ->
                 raise
                   (Error
@@ -1736,7 +1769,19 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
                        !env,
                        Record_rest_extra_field (rest_field, rest_type_lid.txt)
                      ))
-              | Some source_type ->
+              | Some (_, source_runtime_field, source_type) ->
+                if source_runtime_field <> rest_runtime_field then
+                  raise
+                    (Error
+                       ( rest_type_lid.loc,
+                         !env,
+                         Record_rest_field_runtime_name_mismatch
+                           {
+                             field = rest_field;
+                             rest_type = rest_type_lid.txt;
+                             source_runtime_name = source_runtime_field;
+                             rest_runtime_name = rest_runtime_field;
+                           } ));
                 unify_pat_types rest_type_lid.loc !env rest_label.ld_type
                   source_type)
             rest_labels;
@@ -5063,6 +5108,13 @@ let report_error env loc ppf error =
       "Field `%s` in the rest type `%a` does not exist in the source record \
        type."
       field longident lid
+  | Record_rest_field_runtime_name_mismatch
+      {field; rest_type; source_runtime_name; rest_runtime_name} ->
+    fprintf ppf
+      "Field `%s` in the rest type `%a` has runtime representation `%s`, but \
+       in the source record type it is `%s`. Runtime representations must \
+       match."
+      field longident rest_type rest_runtime_name source_runtime_name
 
 let report_error env loc ppf err =
   Printtyp.wrap_printing_env env (fun () -> report_error env loc ppf err)

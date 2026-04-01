@@ -134,6 +134,12 @@ type error =
   | Record_rest_field_not_optional of string list * Longident.t
   | Record_rest_field_missing of string list * Longident.t
   | Record_rest_extra_field of string * Longident.t
+  | Record_rest_field_runtime_name_mismatch of {
+      field: string;
+      rest_type: Longident.t;
+      source_runtime_name: string;
+      rest_runtime_name: string;
+    }
 
 exception Error of Location.t * Env.t * error
 exception Error_forward of Location.error

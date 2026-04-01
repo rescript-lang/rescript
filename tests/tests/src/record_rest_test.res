@@ -12,10 +12,19 @@ type subConfig = {
   debug: bool,
 }
 
+type renamedConfig = {
+  @as("user-name")
+  name: string,
+  version: string,
+  debug: bool,
+}
+
 let describeConfig = (c: config) =>
   switch c {
   | {name, ...subConfig as rest} => (name, rest)
   }
+
+let getRenamedRest = ({name: _, ...subConfig as rest}: renamedConfig) => rest
 
 let getName = ({name, ...subConfig as _rest}: config) => name
 let getWholeConfig = ({...config as rest}: config) => rest
@@ -67,6 +76,26 @@ let getInlineWrappedRest = wrapped =>
   | InlineMirror({name: _, ...subConfig as rest}) => rest
   }
 
+type renamedInlineWrapped =
+  | RenamedInlineWrap({
+      @as("user-name")
+      name: string,
+      version: string,
+      debug: bool,
+    })
+  | RenamedInlineMirror({
+      @as("user-name")
+      name: string,
+      version: string,
+      debug: bool,
+    })
+
+let getRenamedInlineWrappedRest = wrapped =>
+  switch wrapped {
+  | RenamedInlineWrap({name: _, ...subConfig as rest})
+  | RenamedInlineMirror({name: _, ...subConfig as rest}) => rest
+  }
+
 @tag("kind")
 type customTaggedInlineWrapped =
   | CustomInlineWrap({name: string, version: string, debug: bool})
@@ -106,6 +135,14 @@ describe(__MODULE__, () => {
 
   test("function parameter destructuring keeps the named field", () => {
     eq(__LOC__, getName({name: "param", version: "3.0", debug: true}), "param")
+  })
+
+  test("record rest excludes fields renamed with @as", () => {
+    eq(
+      __LOC__,
+      getRenamedRest({name: "renamed", version: "3.2", debug: true}),
+      {version: "3.2", debug: true},
+    )
   })
 
   test("empty-field rest pattern still binds the whole record", () => {
@@ -160,6 +197,23 @@ describe(__MODULE__, () => {
       __LOC__,
       getInlineWrappedRest(InlineMirror({name: "inlineMirror", version: "8.0", debug: false})),
       {version: "8.0", debug: false},
+    )
+  })
+
+  test("inline record variant rest excludes fields renamed with @as", () => {
+    eq(
+      __LOC__,
+      getRenamedInlineWrappedRest(
+        RenamedInlineWrap({name: "inlineRenamed", version: "8.5", debug: true}),
+      ),
+      {version: "8.5", debug: true},
+    )
+    eq(
+      __LOC__,
+      getRenamedInlineWrappedRest(
+        RenamedInlineMirror({name: "inlineRenamed2", version: "8.6", debug: false}),
+      ),
+      {version: "8.6", debug: false},
     )
   })
 
