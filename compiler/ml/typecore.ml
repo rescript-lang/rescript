@@ -343,6 +343,19 @@ let unify_pat_types loc env ty ty' =
   | Tags (l1, l2) ->
     raise (Typetexp.Error (loc, env, Typetexp.Variant_tags (l1, l2)))
 
+let extract_instantiated_concrete_typedecl env loc ty =
+  let _, _, decl = extract_concrete_typedecl env ty in
+  let decl = instance_declaration decl in
+  let args =
+    match expand_head env ty with
+    | {desc = Tconstr (_, args, _)} -> args
+    | _ -> assert false
+  in
+  List.iter2
+    (fun param arg -> unify_pat_types loc env param arg)
+    decl.type_params args;
+  decl
+
 (* unification inside type_exp and type_expect *)
 let unify_exp_types ~context loc env ty expected_ty =
   try unify env ty expected_ty with
@@ -1593,18 +1606,11 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
               raise (Error (rest_pat.ppat_loc, !env, Record_rest_invalid_type))
           in
           (* Look up the rest record type *)
-          let rest_path, rest_decl =
+          let rest_path, rest_annotation_decl =
             Typetexp.find_type !env rest_type_lid.loc rest_type_lid.txt
           in
-          let rest_decl =
-            match rest_decl.type_kind with
-            | Type_record _ -> instance_declaration rest_decl
-            | _ ->
-              raise
-                (Error
-                   ( rest_type_lid.loc,
-                     !env,
-                     Record_rest_not_record rest_type_lid.txt ))
+          let rest_annotation_decl =
+            instance_declaration rest_annotation_decl
           in
           (* Get explicit field names *)
           let explicit_fields =
@@ -1617,10 +1623,11 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
           in
           let rest_type_args =
             match rest_type_args_syntax with
-            | [] -> List.map (fun _ -> newvar ()) rest_decl.type_params
+            | [] ->
+              List.map (fun _ -> newvar ()) rest_annotation_decl.type_params
             | args ->
               let n_args = List.length args in
-              let n_params = List.length rest_decl.type_params in
+              let n_params = List.length rest_annotation_decl.type_params in
               if n_args <> n_params then
                 raise
                   (Typetexp.Error
@@ -1640,30 +1647,45 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
           let rest_type_expr =
             newgenty (Tconstr (rest_path, rest_type_args, ref Mnil))
           in
-          if rest_decl.type_private = Private then
+          if rest_annotation_decl.type_private = Private then
             raise (Error (rest_type_lid.loc, !env, Private_type rest_type_expr));
           List.iter2
             (fun param arg -> unify_pat_types rest_type_lid.loc !env param arg)
-            rest_decl.type_params rest_type_args;
+            rest_annotation_decl.type_params rest_type_args;
+          let rest_decl =
+            match
+              try
+                Some
+                  (extract_instantiated_concrete_typedecl !env rest_type_lid.loc
+                     rest_type_expr)
+              with Not_found -> None
+            with
+            | Some rest_decl -> (
+              if rest_decl.type_private = Private then
+                raise
+                  (Error (rest_type_lid.loc, !env, Private_type rest_type_expr));
+              match rest_decl.type_kind with
+              | Type_record _ -> rest_decl
+              | _ ->
+                raise
+                  (Error
+                     ( rest_type_lid.loc,
+                       !env,
+                       Record_rest_not_record rest_type_lid.txt )))
+            | None ->
+              raise
+                (Error
+                   ( rest_type_lid.loc,
+                     !env,
+                     Record_rest_not_record rest_type_lid.txt ))
+          in
           let source_fields, source_repr =
             match
               try
-                let _, _, source_decl =
-                  extract_concrete_typedecl !env record_ty
-                in
-                let source_decl = instance_declaration source_decl in
-                let source_type_args =
-                  match expand_head !env record_ty with
-                  | {desc = Tconstr (_, args, _)} -> args
-                  | _ -> assert false
-                in
-                Some (source_decl, source_type_args)
+                Some (extract_instantiated_concrete_typedecl !env loc record_ty)
               with Not_found -> None
             with
-            | Some (source_decl, source_type_args) -> (
-              List.iter2
-                (fun param arg -> unify_pat_types loc !env param arg)
-                source_decl.type_params source_type_args;
+            | Some source_decl -> (
               match source_decl.type_kind with
               | Type_record (fields, repr) ->
                 ( List.map
