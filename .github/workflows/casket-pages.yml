@@ -1,0 +1,116 @@
+# SPDX-License-Identifier: PMPL-1.0-or-later
+name: GitHub Pages
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+
+      - name: Checkout casket-ssg
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+        with:
+          repository: hyperpolymath/casket-ssg
+          path: .casket-ssg
+
+      - name: Setup GHCup
+        uses: haskell-actions/setup@ec49483bfc012387b227434aba94f59a6ecd0900 # v2
+        with:
+          ghc-version: '9.8.2'
+          cabal-version: '3.10'
+
+      - name: Cache Cabal
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cabal/packages
+            ~/.cabal/store
+            .casket-ssg/dist-newstyle
+          key: ${{ runner.os }}-casket-${{ hashFiles('.casket-ssg/casket-ssg.cabal') }}
+
+      - name: Build casket-ssg
+        working-directory: .casket-ssg
+        run: cabal build
+
+      - name: Prepare site source
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .site-src _site
+
+          if [ -d site ]; then
+            cp -R site .site-src
+          else
+            mkdir -p .site-src
+            TODAY="$(date +%Y-%m-%d)"
+            REPO_NAME="${{ github.event.repository.name }}"
+            REPO_URL="https://github.com/${{ github.repository }}"
+            README_URL=""
+
+            if [ -f README.md ]; then
+              README_URL="${REPO_URL}/blob/${{ github.ref_name }}/README.md"
+            elif [ -f README.adoc ]; then
+              README_URL="${REPO_URL}/blob/${{ github.ref_name }}/README.adoc"
+            fi
+
+            {
+              echo "---"
+              echo "title: ${REPO_NAME}"
+              echo "date: ${TODAY}"
+              echo "---"
+              echo
+              echo "# ${REPO_NAME}"
+              echo
+              echo "Static documentation site for ${REPO_NAME}."
+              echo
+              echo "- Source repository: [${{ github.repository }}](${REPO_URL})"
+              if [ -n "${README_URL}" ]; then
+                echo "- README: [project README](${README_URL})"
+              fi
+              if [ -d docs ]; then
+                echo "- Docs directory: [docs/](${REPO_URL}/tree/${{ github.ref_name }}/docs)"
+              fi
+              echo
+              echo "Project-specific site content can be added later under site/."
+            } > .site-src/index.md
+          fi
+
+      - name: Build site
+        run: |
+          mkdir -p _site
+          cd .casket-ssg && cabal run casket-ssg -- build ../.site-src ../_site
+          touch ../_site/.nojekyll
+
+      - name: Setup Pages
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
+        with:
+          path: '_site'
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
