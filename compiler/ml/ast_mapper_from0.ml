@@ -93,6 +93,18 @@ let for_await_of_attr_name = "_res.for_await_of"
 
 let map_loc sub {loc; txt} = {loc = sub.location sub loc; txt}
 
+let record_rest_attr_name = "res.record_rest"
+
+let get_record_rest_attr attrs_ =
+  let rec remove_record_rest_attr acc = function
+    | ({Location.txt = attr_name; _}, Pt.PPat (rest, None)) :: attrs
+      when attr_name = record_rest_attr_name ->
+      (Some rest, List.rev_append acc attrs)
+    | attr :: attrs -> remove_record_rest_attr (attr :: acc) attrs
+    | [] -> (None, List.rev acc)
+  in
+  remove_record_rest_attr [] attrs_
+
 module T = struct
   (* Type expressions for the core language *)
 
@@ -656,7 +668,7 @@ module P = struct
       construct ~loc ~attrs (map_loc sub l) (map_opt (sub.pat sub) p)
     | Ppat_variant (l, p) -> variant ~loc ~attrs l (map_opt (sub.pat sub) p)
     | Ppat_record (lpl, cf) ->
-      let rest, attrs = Parsetree0.get_record_rest_attr attrs in
+      let rest, attrs = get_record_rest_attr attrs in
       record ~loc ~attrs ?rest
         (Ext_list.map lpl (fun (lid, p) ->
              let lid1 = map_loc sub lid in

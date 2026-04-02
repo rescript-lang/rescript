@@ -87,6 +87,11 @@ let for_await_of_attr_name = "_res.for_await_of"
 
 let map_loc sub {loc; txt} = {loc = sub.location sub loc; txt}
 
+let record_rest_attr_name = "res.record_rest"
+
+let add_record_rest_attr ~rest attrs =
+  (Location.mknoloc record_rest_attr_name, Pt.PPat (rest, None)) :: attrs
+
 module T = struct
   (* Type expressions for the core language *)
 
@@ -606,7 +611,7 @@ module P = struct
         match rest with
         | None -> attrs
         | Some rest_pat ->
-          Parsetree0.add_record_rest_attr ~rest:(sub.pat sub rest_pat) attrs
+          add_record_rest_attr ~rest:(sub.pat sub rest_pat) attrs
       in
       record ~loc ~attrs
         (Ext_list.map lpl (fun {lid; x = p; opt = optional} ->

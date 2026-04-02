@@ -12,6 +12,8 @@ type subConfig = {
   debug: bool,
 }
 
+type aliasedSubConfig = subConfig
+
 type renamedConfig = {
   @as("user-name")
   name: string,
@@ -23,6 +25,8 @@ let describeConfig = (c: config) =>
   switch c {
   | {name, ...subConfig as rest} => (name, rest)
   }
+
+let getAliasedRest = ({name: _, ...aliasedSubConfig as rest}: config) => rest
 
 let getRenamedRest = ({name: _, ...subConfig as rest}: renamedConfig) => rest
 
@@ -135,6 +139,14 @@ describe(__MODULE__, () => {
 
   test("function parameter destructuring keeps the named field", () => {
     eq(__LOC__, getName({name: "param", version: "3.0", debug: true}), "param")
+  })
+
+  test("record rest accepts type aliases to record shapes", () => {
+    eq(
+      __LOC__,
+      getAliasedRest({name: "aliased", version: "3.1", debug: false}),
+      {version: "3.1", debug: false},
+    )
   })
 
   test("record rest excludes fields renamed with @as", () => {
