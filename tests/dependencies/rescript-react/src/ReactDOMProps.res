@@ -6,25 +6,145 @@
 
 type style = JsxDOMStyle.t
 type domRef
+
 /**
   [Read more on MDN](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/popover)
 */
 type popover = | @as("auto") Auto | @as("manual") Manual | @as("hint") Hint
+
 /**
   [Read more on MDN](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/button#popovertargetaction)
 */
 type popoverTargetAction = | @as("toggle") Toggle | @as("show") Show | @as("hide") Hide
 
-/*
-  This list isn't exhaustive. We'll add more as we go.
-*/
-type domProps = {
-  key?: string,
-  children?: Jsx.element,
-  ref?: domRef,
+type base = {
   // https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/iframe#allow
   allow?: string,
-  /* accessibility */
+  accessKey?: string,
+  capture?: [#user | #environment],
+  className?: string /* substitute for "class" */,
+  contentEditable?: bool,
+  contextMenu?: string,
+  @as("data-testid") dataTestId?: string,
+  dir?: string /* "ltr", "rtl" or "auto" */,
+  draggable?: bool,
+  hidden?: bool,
+  id?: string,
+  inert?: bool,
+  lang?: string,
+  popover?: popover,
+  popoverTarget?: string,
+  popoverTargetAction?: popoverTargetAction,
+  role?: string /* ARIA role */,
+  spellCheck?: bool,
+  tabIndex?: int,
+  title?: string,
+  /* tag-specific html attributes */
+  accept?: string,
+  acceptCharset?: string,
+  action?: string /* uri */,
+  allowFullScreen?: bool,
+  alt?: string,
+  @as("as")
+  as_?: string,
+  async?: bool,
+  autoComplete?: string /* has a fixed, but large-ish, set of possible values */,
+  autoCapitalize?: string /* Mobile Safari specific */,
+  autoFocus?: bool,
+  autoPlay?: bool,
+  challenge?: string,
+  charSet?: string,
+  checked?: bool,
+  cite?: string /* uri */,
+  crossOrigin?: string /* anonymous, use-credentials */,
+  cols?: int,
+  colSpan?: int,
+  content?: string,
+  controls?: bool,
+  coords?: string /* set of values specifying the coordinates of a region */,
+  data?: string /* uri */,
+  dateTime?: string /* "valid date string with optional time" */,
+  default?: bool,
+  defer?: bool,
+  disabled?: bool,
+  download?: string /* should really be either a boolean, signifying presence, or a string */,
+  encType?: string /* "application/x-www-form-urlencoded", "multipart/form-data" or "text/plain" */,
+  form?: string,
+  formAction?: string /* uri */,
+  formTarget?: string /* "_blank", "_self", etc. */,
+  formMethod?: string /* "post", "get", "put" */,
+  // https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/iframe#frameborder
+  frameBorder?: int /* "0", "1" */,
+  headers?: string,
+  height?: string /* in html5 this can only be a number, but in html4 it can ba a percentage as well */,
+  high?: int,
+  href?: string /* uri */,
+  hrefLang?: string,
+  htmlFor?: string /* substitute for "for" */,
+  httpEquiv?: string /* has a fixed set of possible values */,
+  icon?: string /* uri? */,
+  inputMode?: string /* "verbatim", "latin", "numeric", etc. */,
+  integrity?: string,
+  keyType?: string,
+  kind?: string /* has a fixed set of possible values */,
+  label?: string,
+  list?: string,
+  loading?: [#\"lazy" | #eager],
+  loop?: bool,
+  low?: int,
+  manifest?: string /* uri */,
+  max?: string /* should be int or Date.t */,
+  maxLength?: int,
+  media?: string /* a valid media query */,
+  mediaGroup?: string,
+  method?: string /* "post" or "get" */,
+  min?: string,
+  minLength?: int,
+  multiple?: bool,
+  muted?: bool,
+  name?: string,
+  nonce?: string,
+  noValidate?: bool,
+  @as("open")
+  open_?: bool /* use this one. Previous one is deprecated */,
+  optimum?: int,
+  pattern?: string /* valid Js RegExp */,
+  placeholder?: string,
+  playsInline?: bool,
+  poster?: string /* uri */,
+  preload?: string /* "none", "metadata" or "auto" (and "" as a synonym for "auto") */,
+  radioGroup?: string,
+  readOnly?: bool,
+  rel?: string /* a space- or comma-separated (depending on the element) list of a fixed set of "link types" */,
+  required?: bool,
+  reversed?: bool,
+  rows?: int,
+  rowSpan?: int,
+  sandbox?: string /* has a fixed set of possible values */,
+  scope?: string /* has a fixed set of possible values */,
+  scoped?: bool,
+  scrolling?: string /* html4 only, "auto", "yes" or "no" */,
+  shape?: string,
+  size?: int,
+  sizes?: string,
+  span?: int,
+  src?: string /* uri */,
+  srcDoc?: string,
+  srcLang?: string,
+  srcSet?: string,
+  start?: int,
+  step?: float,
+  summary?: string /* deprecated */,
+  target?: string,
+  @as("type")
+  type_?: string /* has a fixed but large-ish set of possible values */ /* use this one. Previous one is deprecated */,
+  useMap?: string,
+  value?: string,
+  width?: string /* in html5 this can only be a number, but in html4 it can ba a percentage as well */,
+  wrap?: string /* "hard" or "soft" */,
+}
+
+type accessibility = {
   /* https://www.w3.org/TR/wai-aria-1.1/ */
   /* https://accessibilityresources.org/<aria-tag> is a great resource for these */
   @as("aria-current")
@@ -123,141 +243,17 @@ type domProps = {
   ariaRowspan?: int,
   @as("aria-setsize")
   ariaSetsize?: int,
-  /* react textarea/input */
-  defaultChecked?: bool,
-  defaultValue?: string,
-  /* global html attributes */
-  accessKey?: string,
-  capture?: [#user | #environment],
-  className?: string /* substitute for "class" */,
-  contentEditable?: bool,
-  contextMenu?: string,
-  @as("data-testid") dataTestId?: string,
-  dir?: string /* "ltr", "rtl" or "auto" */,
-  draggable?: bool,
-  hidden?: bool,
-  id?: string,
-  inert?: bool,
-  lang?: string,
-  popover?: popover,
-  popoverTarget?: string,
-  popoverTargetAction?: popoverTargetAction,
-  role?: string /* ARIA role */,
-  style?: style,
-  spellCheck?: bool,
-  tabIndex?: int,
-  title?: string,
-  /* html5 microdata */
+}
+
+type microdata = {
   itemID?: string,
   itemProp?: string,
   itemRef?: string,
   itemScope?: bool,
   itemType?: string /* uri */,
-  /* tag-specific html attributes */
-  accept?: string,
-  acceptCharset?: string,
-  action?: string /* uri */,
-  allowFullScreen?: bool,
-  alt?: string,
-  @as("as")
-  as_?: string,
-  async?: bool,
-  autoComplete?: string /* has a fixed, but large-ish, set of possible values */,
-  autoCapitalize?: string /* Mobile Safari specific */,
-  autoFocus?: bool,
-  autoPlay?: bool,
-  challenge?: string,
-  charSet?: string,
-  checked?: bool,
-  cite?: string /* uri */,
-  crossOrigin?: string /* anonymous, use-credentials */,
-  cols?: int,
-  colSpan?: int,
-  content?: string,
-  controls?: bool,
-  coords?: string /* set of values specifying the coordinates of a region */,
-  data?: string /* uri */,
-  dateTime?: string /* "valid date string with optional time" */,
-  default?: bool,
-  defer?: bool,
-  disabled?: bool,
-  download?: string /* should really be either a boolean, signifying presence, or a string */,
-  encType?: string /* "application/x-www-form-urlencoded", "multipart/form-data" or "text/plain" */,
-  form?: string,
-  formAction?: string /* uri */,
-  formTarget?: string /* "_blank", "_self", etc. */,
-  formMethod?: string /* "post", "get", "put" */,
-  // https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/iframe#frameborder
-  frameBorder?: int /* "0", "1" */,
-  headers?: string,
-  height?: string /* in html5 this can only be a number, but in html4 it can ba a percentage as well */,
-  high?: int,
-  href?: string /* uri */,
-  hrefLang?: string,
-  htmlFor?: string /* substitute for "for" */,
-  httpEquiv?: string /* has a fixed set of possible values */,
-  icon?: string /* uri? */,
-  inputMode?: string /* "verbatim", "latin", "numeric", etc. */,
-  integrity?: string,
-  keyType?: string,
-  kind?: string /* has a fixed set of possible values */,
-  label?: string,
-  list?: string,
-  loading?: [#lazy | #eager],
-  loop?: bool,
-  low?: int,
-  manifest?: string /* uri */,
-  max?: string /* should be int or Date.t */,
-  maxLength?: int,
-  media?: string /* a valid media query */,
-  mediaGroup?: string,
-  method?: string /* "post" or "get" */,
-  min?: string,
-  minLength?: int,
-  multiple?: bool,
-  muted?: bool,
-  name?: string,
-  nonce?: string,
-  noValidate?: bool,
-  @as("open")
-  open_?: bool /* use this one. Previous one is deprecated */,
-  optimum?: int,
-  pattern?: string /* valid Js RegExp */,
-  placeholder?: string,
-  playsInline?: bool,
-  poster?: string /* uri */,
-  preload?: string /* "none", "metadata" or "auto" (and "" as a synonym for "auto") */,
-  radioGroup?: string,
-  readOnly?: bool,
-  rel?: string /* a space- or comma-separated (depending on the element) list of a fixed set of "link types" */,
-  required?: bool,
-  reversed?: bool,
-  rows?: int,
-  rowSpan?: int,
-  sandbox?: string /* has a fixed set of possible values */,
-  scope?: string /* has a fixed set of possible values */,
-  scoped?: bool,
-  scrolling?: string /* html4 only, "auto", "yes" or "no" */,
-  /* seamless - supported by React, but removed from the html5 spec */
-  selected?: bool,
-  shape?: string,
-  size?: int,
-  sizes?: string,
-  span?: int,
-  src?: string /* uri */,
-  srcDoc?: string,
-  srcLang?: string,
-  srcSet?: string,
-  start?: int,
-  step?: float,
-  summary?: string /* deprecated */,
-  target?: string,
-  @as("type")
-  type_?: string /* has a fixed but large-ish set of possible values */ /* use this one. Previous one is deprecated */,
-  useMap?: string,
-  value?: string,
-  width?: string /* in html5 this can only be a number, but in html4 it can ba a percentage as well */,
-  wrap?: string /* "hard" or "soft" */,
+}
+
+type events = {
   /* Clipboard events */
   onCopy?: JsxEvent.Clipboard.t => unit,
   onCut?: JsxEvent.Clipboard.t => unit,
@@ -353,7 +349,9 @@ type domProps = {
   onAnimationIteration?: JsxEvent.Animation.t => unit,
   /* Transition events */
   onTransitionEnd?: JsxEvent.Transition.t => unit,
-  /* svg */
+}
+
+type svg = {
   accentHeight?: string,
   accumulate?: string,
   additive?: string,
@@ -607,7 +605,9 @@ type domProps = {
   yChannelSelector?: string,
   z?: string,
   zoomAndPan?: string,
-  /* RDFa */
+}
+
+type rdfa = {
   about?: string,
   datatype?: string,
   inlist?: string,
@@ -616,7 +616,29 @@ type domProps = {
   resource?: string,
   typeof?: string,
   vocab?: string,
-  /* react-specific */
+}
+
+type react = {
+  children?: Jsx.element,
   dangerouslySetInnerHTML?: {"__html": string},
+  defaultChecked?: bool,
+  defaultValue?: string,
+  key?: string,
+  ref?: domRef,
+  selected?: bool,
   suppressContentEditableWarning?: bool,
+}
+
+/*
+  This list isn't exhaustive. We'll add more as we go.
+*/
+type t = {
+  ...base,
+  ...accessibility,
+  ...microdata,
+  ...events,
+  ...svg,
+  ...rdfa,
+  ...react,
+  style?: style,
 }
