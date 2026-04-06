@@ -71,7 +71,7 @@ jobs:
 
     env:
       # When changing the setup-ocaml version, also adjust it in the setup step further below.
-      SETUP_OCAML_VERSION: 3.4.6 # OPAM <2.6.0
+      SETUP_OCAML_VERSION: 3.6.0 # OPAM <2.6.0
 
     steps:
       - name: "Windows: Set git config"
@@ -170,7 +170,7 @@ jobs:
           key: ${{ env.opam_cache_key }}
 
       - name: Use OCaml ${{matrix.ocaml_compiler}}
-        uses: ocaml/setup-ocaml@v3.4.8
+        uses: ocaml/setup-ocaml@v3.6.0
         if: steps.cache-opam-env.outputs.cache-hit != 'true'
         with:
           ocaml-compiler: ${{matrix.ocaml_compiler}}
@@ -208,7 +208,7 @@ jobs:
       - name: Use cached OPAM environment
         if: steps.cache-opam-env.outputs.cache-hit == 'true'
         run: |
-          # https://github.com/ocaml/setup-ocaml/blob/v3.4.6/packages/setup-ocaml/src/installer.ts
+          # https://github.com/ocaml/setup-ocaml/blob/v3.6.0/packages/setup-ocaml/src/installer.ts
           echo "OPAMCOLOR=always"                    >> "$GITHUB_ENV"
           echo "OPAMCONFIRMLEVEL=unsafe-yes"         >> "$GITHUB_ENV"
           echo "OPAMDOWNLOADJOBS=4"                  >> "$GITHUB_ENV"
