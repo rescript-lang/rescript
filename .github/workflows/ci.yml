@@ -35,6 +35,7 @@ jobs:
             upload_libs: true
             node-target: linux-x64
             rust-target: x86_64-unknown-linux-musl
+            dune-profile: static
           - os: ubuntu-24.04-arm # ARM
             ocaml_compiler: ocaml-variants.5.3.0+options,ocaml-option-static
             upload_binaries: true
@@ -44,34 +45,40 @@ jobs:
             benchmarks: true
             node-target: linux-arm64
             rust-target: aarch64-unknown-linux-musl
+            dune-profile: static
           - os: macos-15-intel # x64
             ocaml_compiler: 5.3.0
             upload_binaries: true
             node-target: darwin-x64
             rust-target: x86_64-apple-darwin
+            dune-profile: release
           - os: macos-15 # ARM
             ocaml_compiler: 5.3.0
             upload_binaries: true
             node-target: darwin-arm64
             rust-target: aarch64-apple-darwin
+            dune-profile: release
           - os: windows-2025
             ocaml_compiler: 5.3.0
             upload_binaries: true
             node-target: win32-x64
             rust-target: x86_64-pc-windows-gnu
             exe-suffix: ".exe"
+            dune-profile: release
 
           # Verify that the compiler still builds with the oldest OCaml version we support.
           - os: ubuntu-24.04
             ocaml_compiler: ocaml-variants.5.0.0+options,ocaml-option-static
             node-target: linux-x64
             rust-target: x86_64-unknown-linux-musl
+            dune-profile: static
 
     runs-on: ${{matrix.os}}
 
     env:
       # When changing the setup-ocaml version, also adjust it in the setup step further below.
       SETUP_OCAML_VERSION: 3.6.0 # OPAM <2.6.0
+      DUNE_PROFILE: ${{ matrix.dune-profile }}
 
     steps:
       - name: "Windows: Set git config"
@@ -261,12 +268,7 @@ jobs:
           key: ${{ steps.compiler-build-state-key.outputs.value }}
 
       - name: Build compiler
-        if: runner.os != 'Linux'
-        run: opam exec -- dune build --display quiet --profile release
-
-      - name: Build compiler (Linux static)
-        if: runner.os == 'Linux'
-        run: opam exec -- dune build --display quiet --profile static
+        run: opam exec -- dune build --display quiet
 
       - name: Delete stable compiler build state
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
