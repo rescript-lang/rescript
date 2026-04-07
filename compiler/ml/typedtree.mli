@@ -98,7 +98,7 @@ and pattern_desc =
       (** { l1=P1; ...; ln=Pn }     (flag = Closed)
             { l1=P1; ...; ln=Pn; _}   (flag = Open)
 
-            Invariant: n > 0
+            Invariant: n > 0 unless this is a rest-only record pattern
          *)
   | Tpat_array of pattern list  (** [| P1; ...; Pn |] *)
   | Tpat_or of pattern * pattern * row_desc option

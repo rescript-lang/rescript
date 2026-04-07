@@ -165,6 +165,12 @@ describe(__MODULE__, () => {
     )
   })
 
+  test("rest-only record patterns can also bind the whole alias", () => {
+    let {...config as rest} as whole = ({name: "wholeAlias", version: "3.6", debug: true}: config)
+    eq(__LOC__, whole, {name: "wholeAlias", version: "3.6", debug: true})
+    eq(__LOC__, rest, {name: "wholeAlias", version: "3.6", debug: true})
+  })
+
   test("optional overlap keeps the remaining fields in the rest object", () => {
     let onClick = () => ()
     let rest = extractClassName({className: "btn", style: "bold", onClick})

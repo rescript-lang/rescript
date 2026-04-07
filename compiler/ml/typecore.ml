@@ -530,8 +530,10 @@ let rec build_as_type env p =
            row_fixed = false;
            row_closed = false;
          })
-  | Tpat_record (lpl, _, _rest) ->
-    let lbl = snd4 (List.hd lpl) in
+  | Tpat_record ([], _, _rest) ->
+    (* Rest-only record patterns already carry the source record type. *)
+    p.pat_type
+  | Tpat_record (((_, lbl, _, _) :: _ as lpl), _, _rest) ->
     if lbl.lbl_private = Private then p.pat_type
     else
       let ty = newvar () in
