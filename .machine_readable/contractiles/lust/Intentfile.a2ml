@@ -1,0 +1,127 @@
+# SPDX-License-Identifier: PMPL-1.0-or-later
+# Intentfile — Design intent and aspirations for Burble
+# Author: Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+#
+# What Burble INTENDS to become. Target state, not current state.
+# Run with: intend list
+# Track with: intend progress
+
+@abstract:
+Design intent for the Burble voice-first communications platform.
+Voice first. Friction last. Complexity optional.
+@end
+
+## Core Product Intent
+
+### voice-quality-over-features
+- description: Voice quality always beats feature count
+- status: declared
+- probe: test -f server/lib/burble/media/engine.ex
+- notes: Every feature decision must ask "does this improve voice quality?"
+
+### zero-drama-join
+- description: Browser join in under 10 seconds with zero installs
+- status: in-progress
+- probe: test -f server/priv/static/index.html
+- notes: Guest join working. Magic link auth planned.
+
+### self-hosting-real
+- description: One-command deployment that actually works
+- status: in-progress
+- probe: test -f server/mix.exs
+- target: podman-compose up and it just works
+- notes: Single-node works. Multi-node + container deployment planned.
+
+### privacy-by-default
+- description: TURN-only, no IP leakage, E2EE available
+- status: in-progress
+- probe: test -f server/lib/burble/media/privacy.ex
+- notes: Privacy module implemented with 5-layer architecture.
+
+## Architecture Intent
+
+### beam-native-media
+- description: Media plane runs on BEAM via Membrane Framework
+- status: declared
+- target: Membrane RTC Engine for production SFU
+- notes: MVP uses peer-to-peer mesh. SFU upgrade planned.
+
+### formal-verification
+- description: Consent and permission proofs in Idris2
+- status: in-progress
+- probe: test -f server/lib/burble/verification/avow.ex
+- target: Idris2 ABI for Avow consent types, Zig FFI bridge
+- notes: Elixir implementation exists. Formal proofs via Avow protocol.
+
+### three-verification-layers
+- description: NNTPS (storage) + Vext (integrity) + Avow (attestation)
+- status: in-progress
+- probe: test -f server/lib/burble/verification/vext.ex && test -f server/lib/burble/verification/avow.ex && test -f server/lib/burble/text/nntps_backend.ex
+- notes: All three layers implemented. Integration testing needed.
+
+### coprocessor-backends
+- description: Audio, Crypto, Neural, I/O, Math coprocessor kernels
+- status: declared
+- target: Zig NIFs for hot-path audio processing
+- notes: Architecture designed. Implementation when performance demands.
+
+## Integration Intent
+
+### idaptik-embeddable
+- description: Burble client library embeddable in IDApTIK
+- status: declared
+- target: client/lib/ with clean embedding API
+- notes: Jessica↔Q voice via Burble. Spatial audio for guard positioning.
+
+### panll-foundational
+- description: Burble as PanLL's voice layer
+- status: declared
+- target: Workspace-aware audio routing
+- notes: Panel-based voice channels, per-workspace rooms.
+
+### cadre-router-integration
+- description: Type-safe routing via cadre-router in web client
+- status: in-progress
+- probe: test -f client/web/src/app/Routes.res
+- notes: 15 typed route variants defined. Auth guards working.
+
+## Quality Intent
+
+### comprehensive-testing
+- description: 80%+ code coverage with meaningful tests
+- status: aspiration
+- target: Unit + integration + E2E + property-based
+
+### documentation-complete
+- description: Every module documented, every directory has README
+- status: in-progress
+- target: Full API reference + architecture guide
+
+### zero-dangerous-patterns
+- description: No believe_me, sorry, Admitted, unsafeCoerce
+- status: in-progress
+- probe: test -z "$(find . -name '*.idr' -exec grep -l 'believe_me' {} \; 2>/dev/null)"
+
+## Dogfooding Intent
+
+### dogfood-verisimdb
+- description: Use VeriSimDB for audit log and session telemetry
+- status: declared
+- supersedes: PostgreSQL-only audit storage
+- notes: When VeriSimDB matures. Time-series verified data is natural fit.
+
+### dogfood-stapeln
+- description: Use Stapeln ecosystem for container orchestration
+- status: declared
+- notes: cerro-torre, svalinn, vordr, k9-svc
+
+### dogfood-hypatia
+- description: Use Hypatia for security scanning
+- status: in-progress
+- probe: test -f .github/workflows/hypatia-scan.yml
+
+### dogfood-contractiles
+- description: Use contractile CLI for pre-commit and CI verification
+- status: in-progress
+- probe: test -L contractiles
+- notes: Mustfile 23/23 passing. Trustfile comprehensive. Publish to crates.io planned.

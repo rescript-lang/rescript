@@ -1,22 +1,78 @@
 # SPDX-License-Identifier: PMPL-1.0-or-later
-# Dustfile — Cleanup and Hygiene Contract
+# Dustfile — Cleanup and hygiene contract for Burble
+# Author: Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+#
+# What should be cleaned up. Housekeeping, not blockers.
+# Run with: dust status
+# Roll back with: dust rollback <name>
 
-[dustfile]
-version = "1.0.0"
-format = "a2ml"
+@abstract:
+Cleanup and hygiene items for the Burble voice platform.
+These are maintenance tasks — not blocking, but should be addressed.
+@end
 
-[cleanup]
-stale-branch-policy = "delete-after-merge"
-artifact-retention = "90-days"
-cache-policy = "clear-on-release"
+## Stale Files
 
-[hygiene]
-linting = "required"
-formatting = "required"
-dead-code-removal = "encouraged"
-todo-tracking = "tracked-in-issues"
+### no-stale-snapshots
+- description: No dated status/completion files in root
+- run: test -z "$(ls *-STATUS-*.md *-COMPLETION-*.md 2>/dev/null)"
+- severity: info
 
-[reversibility]
-backup-before-destructive = true
-rollback-mechanism = "git-revert"
-data-retention-policy = "preserve-30-days"
+### no-ai-djot
+- description: AI.djot is superseded by 0-AI-MANIFEST.a2ml
+- run: test ! -f AI.djot
+- severity: warning
+
+### no-next-steps
+- description: NEXT_STEPS.md superseded by ROADMAP
+- run: test ! -f NEXT_STEPS.md
+- severity: info
+
+## Build Artifacts
+
+### no-tracked-elixir-build
+- description: No Elixir build artifacts tracked in git
+- run: test -z "$(git ls-files server/_build/ server/deps/ 2>/dev/null)"
+- severity: warning
+
+### no-tracked-rescript-build
+- description: No ReScript build artifacts tracked in git
+- run: test -z "$(git ls-files 'client/web/src/**/*.res.mjs' client/web/lib/ 2>/dev/null)"
+- severity: warning
+
+## Burble-Specific Cleanup
+
+### stale-room-processes
+- description: Room processes should auto-terminate after idle timeout
+- verification: Burble.Rooms.Room uses @idle_timeout_ms (5 minutes)
+- severity: info
+- notes: Not a file check — design verification that idle rooms are cleaned up
+
+### expired-invite-tokens
+- description: Expired invite tokens should be purged periodically
+- verification: Scheduled task purges tokens past expires_at
+- severity: info
+- notes: Planned — not yet implemented
+
+### orphaned-turn-credentials
+- description: TURN credentials expire after 1 hour
+- verification: Burble.Media.Privacy.generate_turn_credential sets TTL
+- severity: info
+
+### template-example-trustfile
+- description: Remove the example Trustfile (keep only the real one)
+- run: test ! -f .machine_readable/contractiles/trust/Trustfile_just_an_example.a2ml
+- severity: info
+- rollback: git checkout HEAD -- .machine_readable/contractiles/trust/Trustfile_just_an_example.a2ml
+
+## Format Duplicates
+
+### no-duplicate-contributing
+- description: Only one CONTRIBUTING format
+- run: test -z "$(test -f CONTRIBUTING.md && test -f CONTRIBUTING.adoc && echo dup)"
+- severity: warning
+
+### no-duplicate-readme
+- description: Only one README format
+- run: test ! -f README.md || test ! -f README.adoc
+- severity: warning

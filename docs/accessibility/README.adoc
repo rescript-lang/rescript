@@ -1,0 +1,257 @@
+// SPDX-License-Identifier: PMPL-1.0-or-later
+= Burble Accessibility
+:toc: auto
+:icons: font
+
+== Overview
+
+Burble is committed to providing an accessible voice-first communication platform that works for everyone, regardless of ability. This document outlines our accessibility features, compliance targets, and roadmap.
+
+== Current Accessibility Features
+
+=== Keyboard Accessibility
+
+[cols="1,3,1", options="header"]
+|=== 
+|Feature |Description |Status
+
+|Custom Keybindings 
+|Remappable keyboard shortcuts for all major actions 
+|✅ Implemented
+
+|Push-To-Talk 
+|Space key (configurable) for voice activation 
+|✅ Implemented
+
+|Mute/Deafen 
+|M/D keys for quick audio control 
+|✅ Implemented
+
+|Volume Control 
+|Arrow keys for volume adjustment 
+|✅ Implemented
+
+|Room Navigation 
+|Tab/Shift+Tab for room switching 
+|✅ Implemented
+|===
+
+=== Screen Reader Support
+
+[cols="1,3,1", options="header"]
+|=== 
+|Feature |Description |Status
+
+|Presence Announcements 
+|"User joined/left room" audio cues 
+|✅ Implemented
+
+|Room Change Announcements 
+|"Switched to room X" notifications 
+|✅ Implemented
+
+|Moderation Announcements 
+|"User was action by moderator" alerts 
+|✅ Implemented
+
+|ARIA Attributes 
+|Semantic HTML for screen readers 
+|⚠️ Partial
+
+|Live Regions 
+|Dynamic content updates for screen readers 
+|⚠️ Planned
+|===
+
+== Planned Accessibility Features
+
+=== Visual Accessibility (Q2 2026)
+
+[cols="1,3,1", options="header"]
+|=== 
+|Feature |Description |Target
+
+|High Contrast Mode 
+|WCAG 4.5:1 contrast ratios 
+|Q2 2026
+
+|Colorblind Support 
+|Deuteranopia, Protanopia, Tritanopia palettes 
+|Q2 2026
+
+|Font Size Adjustment 
+|4 levels (14-20px) with persistence 
+|Q2 2026
+
+|Theme Switching 
+|Dark/Light/System with OS preference detection 
+|Q2 2026
+
+|Reduced Motion 
+|Respects `prefers-reduced-motion` 
+|Q2 2026
+|===
+
+=== Auditory Accessibility (Q3 2026)
+
+[cols="1,3,1", options="header"]
+|=== 
+|Feature |Description |Target
+
+|Closed Captions 
+|Real-time voice-to-text (Web Speech API) 
+|Q3 2026
+
+|Visual Notifications 
+|On-screen indicators for audio events 
+|Q3 2026
+
+|Volume Normalization 
+|EBU R128 (-23 LUFS) compliance 
+|Q3 2026
+
+|Voice Commands 
+|Voice-controlled interface 
+|Q3 2026
+|===
+
+=== Cognitive Accessibility (Q4 2026)
+
+[cols="1,3,1", options="header"]
+|=== 
+|Feature |Description |Target
+
+|Clear Language Mode 
+|Simplified terminology with tooltips 
+|Q4 2026
+
+|Predictable Navigation 
+|Consistent layout across all pages 
+|Q4 2026
+
+|Error Prevention 
+|Confirmations for all destructive actions 
+|Q4 2026
+
+|Contextual Help 
+|Persistent help system with guidance 
+|Q4 2026
+|===
+
+== Compliance Targets
+
+=== WCAG 2.1 Compliance
+
+[cols="1,2,1", options="header"]
+|=== 
+|Level |Requirements |Target
+
+|WCAG 2.1 A 
+|Minimum accessibility 
+|Q2 2026
+
+|WCAG 2.1 AA 
+|Recommended accessibility 
+|Q4 2026
+
+|WCAG 2.1 AAA 
+|Enhanced accessibility 
+|2027
+|===
+
+=== Legal Compliance
+
+[cols="1,3,1", options="header"]
+|=== 
+|Standard |Description |Target
+
+|Section 508 
+|U.S. federal accessibility requirements 
+|Q4 2026
+
+|EN 301 549 
+|EU public sector procurement 
+|Q4 2026
+
+|VPAT 2.4 
+|Voluntary Product Accessibility Template 
+|Q4 2026
+|===
+
+== Implementation Roadmap
+
+=== Q2 2026: Foundation
+
+* Port PanLL's accessibility engine
+* Implement theme switching
+* Add font size adjustment
+* Integrate K9 accessibility validator
+* Create basic compliance report
+
+=== Q3 2026: Enhancement
+
+* Add closed captions
+* Implement visual notifications
+* Add colorblind support
+* Complete screen reader support
+* Add accessibility testing to CI
+
+=== Q4 2026: Compliance
+
+* Achieve WCAG 2.1 AA compliance
+* Complete legal compliance documentation
+* Publish VPAT
+* Final accessibility audit
+
+== Testing & Validation
+
+=== Automated Testing
+
+* **pa11y**: Automated WCAG testing
+* **axe-core**: Accessibility engine
+* **K9-SVC**: Contractile validation
+* **CI Integration**: GitHub Actions workflow
+
+=== Manual Testing
+
+* Keyboard-only navigation
+* Screen reader testing (NVDA, VoiceOver)
+* High contrast mode verification
+* Colorblind simulation testing
+
+== Reporting Accessibility Issues
+
+Found an accessibility issue? Please report it:
+
+* **GitHub Issues**: https://github.com/hyperpolymath/burble/issues
+* **Email**: accessibility@hyperpolymath.dev
+* **Matrix**: #hyperpolymath-accessibility:matrix.org
+
+Include:
+- Description of the issue
+- Steps to reproduce
+- Browser/OS/Assistive technology used
+- Suggested fix (if any)
+
+== Accessibility Statement
+
+Burble is committed to:
+
+* Following WCAG 2.1 guidelines
+* Providing equivalent alternatives for audio content
+* Ensuring keyboard accessibility
+* Supporting screen readers and other assistive technologies
+* Continuous improvement based on user feedback
+
+We welcome contributions to improve accessibility. See our link:../CONTRIBUTING.adoc[Contributing Guide] for details.
+
+== Related Documents
+
+* link:../ROADMAP.adoc[Project Roadmap] — Accessibility milestones
+* link:../../.machine_readable/contractiles/adjust/Adjustfile.a2ml[Adjustfile] — Accessibility contract
+* link:https://www.w3.org/WAI/standards-guidelines/wcag/[WCAG Guidelines] — Official standards
+* link:https://www.section508.gov/[Section 508] — U.S. federal requirements
+
+== License
+
+This document is licensed under PMPL-1.0-or-later. See link:../../LICENSE[LICENSE] for details.

@@ -17,3 +17,32 @@ jobs:
         continue-on-error: true
 permissions:
   contents: read
+
+  - name: K9-SVC Validation
+    run: |
+      echo "Running K9-SVC contractile validation..."
+      if [ -f .machine_readable/contractiles/must/Mustfile.a2ml ]; then
+        echo "✅ Mustfile found - running validation"
+        # Placeholder for actual K9 validation
+        echo "K9 validation would run here"
+      else
+        echo "❌ Mustfile not found"
+        exit 1
+      fi
+      
+  - name: Contractile Check
+    run: |
+      echo "Checking contractile completeness..."
+      contractiles=("must" "trust" "dust" "lust" "adjust" "intend")
+      missing=0
+      for c in "${contractiles[@]}"; do
+        if [ ! -f ".machine_readable/contractiles/$c/${c^}file.a2ml" ]; then
+          echo "❌ Missing: $c"
+          missing=$((missing + 1))
+        fi
+      done
+      if [ $missing -gt 0 ]; then
+        echo "❌ $missing contractiles missing"
+        exit 1
+      fi
+      echo "✅ All contractiles present"

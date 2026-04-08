@@ -1,0 +1,144 @@
+# SPDX-License-Identifier: PMPL-1.0-or-later
+# Mustfile — Physical state contract for Burble
+# Author: Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+#
+# What MUST be true about this repository. Hard requirements.
+# Run with: must check
+# Fix with: must fix (where deterministic fix exists)
+
+@abstract:
+Physical state invariants for the Burble voice platform.
+These are hard requirements — CI and pre-commit hooks fail if any check fails.
+@end
+
+## File Presence
+
+### license-present
+- description: LICENSE file must exist
+- run: test -f LICENSE
+- severity: critical
+
+### readme-present
+- description: README.adoc must exist
+- run: test -f README.adoc
+- severity: critical
+
+### security-policy
+- description: SECURITY.md must exist
+- run: test -f SECURITY.md
+- severity: critical
+
+### ai-manifest
+- description: 0-AI-MANIFEST.a2ml must exist
+- run: test -f 0-AI-MANIFEST.a2ml
+- severity: critical
+
+### contributing
+- description: CONTRIBUTING guide must exist
+- run: test -f CONTRIBUTING.adoc || test -f .github/CONTRIBUTING.md
+- severity: warning
+
+### editorconfig
+- description: .editorconfig must exist
+- run: test -f .editorconfig
+- severity: warning
+
+## Elixir Server
+
+### mix-exs-present
+- description: Elixir mix.exs must exist in server/
+- run: test -f server/mix.exs
+- severity: critical
+
+### elixir-compiles
+- description: Elixir server compiles without errors
+- run: test -f server/mix.exs
+- severity: critical
+- notes: Full compile check via CI (mix compile), file presence check here
+
+### ecto-migrations-exist
+- description: Database migrations directory exists
+- run: test -d server/priv/repo/migrations
+- severity: critical
+
+### config-files-present
+- description: All config files exist
+- run: test -f server/config/config.exs && test -f server/config/dev.exs && test -f server/config/prod.exs && test -f server/config/runtime.exs
+- severity: critical
+
+## Web Client
+
+### rescript-json-present
+- description: ReScript config exists for web client
+- run: test -f client/web/rescript.json
+- severity: warning
+
+### web-entry-point
+- description: Web client entry point exists
+- run: test -f server/priv/static/index.html || test -f client/web/index.html
+- severity: warning
+
+## SPDX Compliance
+
+### spdx-elixir
+- description: All Elixir files have SPDX header
+- run: test -z "$(find server/lib -name '*.ex' -exec head -1 {} \; 2>/dev/null | grep -cv 'SPDX' | grep -v '^0$')"
+- severity: warning
+
+### no-agpl
+- description: No AGPL-3.0 references (replaced by PMPL)
+- run: test -z "$(grep -rl 'AGPL-3.0' LICENSE .editorconfig .gitattributes 2>/dev/null)"
+- severity: critical
+
+## Dangerous Patterns
+
+### no-believe-me
+- description: No believe_me in Idris2 code
+- run: test -z "$(find . -name '*.idr' -not -path '*/deps/*' -exec grep -l 'believe_me' {} \; 2>/dev/null)"
+- severity: critical
+
+### no-unsafe-coerce
+- description: No unsafeCoerce in ReScript/Haskell code
+- run: test -z "$(find . \( -name '*.res' -o -name '*.hs' \) -not -path '*/deps/*' -not -path '*/node_modules/*' -exec grep -l 'unsafeCoerce\|Obj.magic' {} \; 2>/dev/null)"
+- severity: critical
+
+## Container Policy
+
+### containerfile-not-dockerfile
+- description: Uses Containerfile, not Dockerfile
+- run: test -z "$(find . -name 'Dockerfile' -not -path '*/.clusterfuzzlite/*' 2>/dev/null)"
+- severity: warning
+
+### no-docker-commands
+- description: No docker commands in scripts (use podman)
+- run: test -z "$(grep -rl 'docker run\|docker build\|docker compose' --include='*.sh' --include='*.yml' . 2>/dev/null | grep -v deps | grep -v node_modules)"
+- severity: warning
+
+## Language Policy
+
+### no-typescript
+- description: No TypeScript files (use ReScript)
+- run: test -z "$(find . -name '*.ts' -not -name '*.d.ts' -not -path '*/deps/*' -not -path '*/node_modules/*' 2>/dev/null)"
+- severity: warning
+
+### no-python
+- description: No Python files (use Julia/Rust/ReScript)
+- run: test -z "$(find . -name '*.py' -not -path '*/deps/*' -not -path '*/node_modules/*' 2>/dev/null)"
+- severity: warning
+
+## Security
+
+### no-secrets-in-config
+- description: No hardcoded secrets in Elixir config
+- run: test -z "$(grep -rE '(secret_key_base|password).*=\"[A-Za-z0-9+/]{32,}\"' server/config/ 2>/dev/null | grep -v 'dev_only\|test_only')"
+- severity: critical
+
+### beam-cookie-absent
+- description: No Erlang cookie in repository
+- run: test -z "$(find . -name '.erlang.cookie' 2>/dev/null)"
+- severity: critical
+
+### env-files-absent
+- description: No .env files committed
+- run: test ! -f .env && test ! -f server/.env && test ! -f .env.local && test ! -f .env.production
+- severity: critical

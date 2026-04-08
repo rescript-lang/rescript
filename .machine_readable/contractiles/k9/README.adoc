@@ -1,0 +1,178 @@
+// SPDX-License-Identifier: PMPL-1.0-or-later
+= K9 Contractiles
+:toc: left
+:icons: font
+
+== What Are K9 Contractiles?
+
+K9 contractiles are self-validating components that combine configuration, validation, and deployment logic in a single file format. They implement the RSR principle of "self-describing artifacts" by embedding contracts and orchestration directly in the component.
+
+== The Three Security Levels
+
+K9 components declare their trust requirements using "The Leash" security model:
+
+[horizontal]
+`'Kennel`:: Pure data, no execution (safest)
+`'Yard`:: Nickel evaluation with contracts (medium trust)
+`'Hunt`:: Full execution with Just recipes (requires signature)
+
+== Example Components
+
+This directory contains example K9 contractiles for common repository tasks:
+
+=== Kennel Level (Pure Data)
+
+**File:** `examples/project-metadata.k9.ncl`
+
+Pure configuration data with no execution. Safe to include in any repository.
+
+**Use cases:**
+- Project metadata (name, version, description)
+- Build configuration
+- Tool settings
+- Data schemas
+
+**Security:** No signature required, data-only.
+
+=== Yard Level (Validated Config)
+
+**File:** `examples/ci-config.k9.ncl`
+
+Configuration with Nickel contracts for runtime validation. Evaluated safely without I/O.
+
+**Use cases:**
+- CI/CD configuration with validation
+- Deployment parameters
+- Database schemas with constraints
+- API specifications
+
+**Security:** Signature recommended, Nickel evaluation only.
+
+=== Hunt Level (Full Execution)
+
+**File:** `examples/setup-repo.k9.ncl`
+
+Full execution with Just recipes. Can run shell commands and modify filesystem.
+
+**Use cases:**
+- Repository setup scripts
+- Deployment automation
+- System configuration
+- Package installation
+
+**Security:** **Signature required**, full system access.
+
+== Usage in Your Repository
+
+=== 1. Create K9 Components
+
+Choose the appropriate security level for your use case:
+
+[source,bash]
+----
+# Kennel: Pure configuration
+cp .machine_readable/contractiles/k9/examples/project-metadata.k9.ncl config/metadata.k9.ncl
+
+# Yard: Validated configuration
+cp .machine_readable/contractiles/k9/examples/ci-config.k9.ncl .github/ci.k9.ncl
+
+# Hunt: Full automation
+cp .machine_readable/contractiles/k9/examples/setup-repo.k9.ncl scripts/setup.k9.ncl
+----
+
+=== 2. Validate Components
+
+[source,bash]
+----
+# Validate Nickel syntax and contracts
+nickel typecheck config/metadata.k9.ncl
+
+# Verify Hunt-level signature (if signed)
+./must verify scripts/setup.k9.ncl
+----
+
+=== 3. Execute Components
+
+[source,bash]
+----
+# Kennel: Export as JSON
+nickel export config/metadata.k9.ncl > metadata.json
+
+# Yard: Evaluate with validation
+nickel eval .github/ci.k9.ncl
+
+# Hunt: Run with Just (dry-run first!)
+./must --dry-run run scripts/setup.k9.ncl
+./must run scripts/setup.k9.ncl
+----
+
+== Integration with RSR
+
+K9 contractiles integrate with other RSR standards:
+
+**STATE.a2ml**:: K9 components can generate or validate STATE.a2ml
+**ECOSYSTEM.a2ml**:: K9 can automate cross-repo operations
+**META.a2ml**:: K9 can enforce architectural decisions
+
+== Security Best Practices
+
+=== For Kennel/Yard Components
+
+✅ **Safe to use without signatures** +
+✅ **Review Nickel code before use** +
+✅ **Validate contracts match expectations**
+
+=== For Hunt Components
+
+⚠️ **ALWAYS verify signatures** +
+⚠️ **Review Just recipes carefully** +
+⚠️ **Run dry-run mode first** +
+⚠️ **Never run as root unless required** +
+⚠️ **Sandbox external components**
+
+**See:** https://github.com/hyperpolymath/standards/blob/main/k9-svc/docs/SECURITY-BEST-PRACTICES.adoc
+
+== Template Files
+
+Use these as starting points for your own K9 components:
+
+- `template-kennel.k9.ncl` - Pure data template
+- `template-yard.k9.ncl` - Validated config template
+- `template-hunt.k9.ncl` - Full execution template
+
+== Dependencies
+
+To use K9 contractiles in your repository:
+
+[source,bash]
+----
+# Install Nickel (configuration language)
+curl -L https://github.com/tweag/nickel/releases/latest/download/nickel-linux-x86_64 -o nickel
+chmod +x nickel && sudo mv nickel /usr/local/bin/
+
+# Install Just (task runner, for Hunt level)
+cargo install just
+
+# Clone K9-SVC (for must shim and tooling)
+git clone https://github.com/hyperpolymath/standards.git
+# Note: K9-SVC is located in standards/k9-svc
+----
+
+== Learn More
+
+- **K9-SVC Specification:** https://github.com/hyperpolymath/standards/blob/main/k9-svc/SPEC.adoc
+- **K9 User Guide:** https://github.com/hyperpolymath/standards/blob/main/k9-svc/GUIDE.adoc
+- **Security Documentation:** https://github.com/hyperpolymath/standards/blob/main/k9-svc/docs/SECURITY-FAQ.adoc
+- **IANA Media Type:** `application/vnd.k9+nickel`
+
+== Contributing
+
+When adding K9 contractiles to your repository:
+
+1. Use appropriate security level (Kennel > Yard > Hunt)
+2. Document what each component does
+3. Include validation contracts in Yard/Hunt components
+4. Sign Hunt-level components before committing
+5. Add K9 validation to CI/CD pipeline
+
+**Questions?** Open an issue on https://github.com/hyperpolymath/standards/tree/main/k9-svc

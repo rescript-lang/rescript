@@ -1,0 +1,211 @@
+# SPDX-License-Identifier: PMPL-1.0-or-later
+# Adjustfile — Accessibility Contract for Burble
+# Author: Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+#
+# Accessibility requirements and compliance for Burble.
+# Voice-first design must be inclusive for all users.
+#
+# Run with: adjust check
+# Fix with: adjust fix (where deterministic fix exists)
+
+@abstract:
+Accessibility requirements and compliance for the Burble voice-first communications platform.
+These requirements ensure Burble is usable by everyone, regardless of ability.
+@end
+
+## Keyboard Accessibility
+
+### keyboard-navigation
+- description: All features accessible via keyboard
+- status: partial
+- probe: test -f server/lib/burble/accessibility/keyboard.ex
+- compliance: WCAG 2.1 AA
+- notes: Basic navigation implemented. Full keyboard-only flow needed.
+- fix: Port PanLL's comprehensive keyboard navigation system
+
+### custom-keybindings
+- description: User-configurable keybindings
+- status: implemented
+- probe: test -f server/lib/burble/accessibility/keyboard.ex
+- compliance: WCAG 2.1 AAA
+- notes: Users can remap PTT, mute, deafen, volume, and room navigation keys
+
+### keyboard-shortcuts-discoverable
+- description: Keyboard shortcuts are documented and discoverable
+- status: missing
+- compliance: WCAG 2.1 A
+- fix: Add keyboard shortcuts help modal in web client
+
+## Visual Accessibility
+
+### high-contrast-mode
+- description: High contrast UI theme
+- status: missing
+- compliance: WCAG 2.1 AA
+- fix: Port PanLL's high-contrast theme system
+- target: CSS variables for contrast ratios >= 4.5:1
+
+### colorblind-support
+- description: Colorblind-friendly color schemes
+- status: missing
+- compliance: WCAG 2.1 AA
+- fix: Implement deuteranopia, protanopia, and tritanopia palettes
+- reference: PanLL's palette system
+
+### font-size-adjustment
+- description: Resizable UI fonts (4 levels: 14-20px)
+- status: missing
+- compliance: WCAG 2.1 AA
+- fix: Port PanLL's font size adjustment system
+- target: User preference persists across sessions
+
+### theme-switching
+- description: Dark/Light/System theme support
+- status: missing
+- compliance: WCAG 2.1 AA
+- fix: Port PanLL's theme system
+- target: Respects OS preference, user override
+
+## Auditory Accessibility
+
+### screen-reader-support
+- description: Full screen reader compatibility
+- status: partial
+- probe: test -f server/lib/burble/accessibility/screen_reader.ex
+- compliance: WCAG 2.1 AA
+- notes: Basic announcements implemented. Needs ARIA attributes and live regions.
+- fix: Complete ARIA implementation in web client
+
+### closed-captions
+- description: Real-time captioning for voice chat
+- status: missing
+- compliance: WCAG 2.1 AA
+- notes: Requires Web Speech API or external STT integration
+- target: 90%+ accuracy for English, configurable display
+
+### visual-notifications
+- description: Visual indicators for audio events
+- status: missing
+- compliance: WCAG 2.1 A
+- notes: Speaking indicators, mute status, connection status
+- fix: Add visual cues that duplicate audio information
+
+### volume-normalization
+- description: Consistent volume levels across users
+- status: missing
+- compliance: WCAG 2.1 AA
+- notes: Prevents sudden loud sounds for sensitive users
+- target: -23 LUFS normalization per EBU R128
+
+## Motor Accessibility
+
+### voice-commands
+- description: Voice-controlled interface
+- status: missing
+- compliance: WCAG 2.1 AAA
+- notes: "Mute", "Deafen", "Join room X", "Volume up/down"
+- target: Web Speech API with fallback to keyboard
+
+### reduced-motion
+- description: Reduced animation options
+- status: missing
+- compliance: WCAG 2.1 AA
+- fix: Port PanLL's animation control (on/reduced/off)
+- target: Respects prefers-reduced-motion media query
+
+### hover-alternatives
+- description: All hover interactions have click alternatives
+- status: partial
+- compliance: WCAG 2.1 AA
+- notes: Some hover tooltips need click-to-show option
+- fix: Audit and add click alternatives
+
+## Cognitive Accessibility
+
+### clear-language
+- description: Simple, consistent terminology
+- status: partial
+- compliance: WCAG 2.1 AAA
+- notes: Technical terms need plain language explanations
+- fix: Add tooltips/glossary for jargon
+
+### predictable-navigation
+- description: Consistent navigation patterns
+- status: partial
+- compliance: WCAG 2.1 AA
+- notes: Navigation structure varies between pages
+- fix: Standardize navigation layout
+
+### error-prevention
+- description: Confirmation for destructive actions
+- status: partial
+- compliance: WCAG 2.1 AA
+- notes: Room deletion has confirmation, others may not
+- fix: Audit all destructive actions
+
+### help-availability
+- description: Context-sensitive help always available
+- status: missing
+- compliance: WCAG 2.1 AAA
+- notes: No persistent help system
+- fix: Add help button with contextual guidance
+
+## Compliance Targets
+
+### wcag-2.1-aa
+- description: WCAG 2.1 AA compliance
+- status: partial
+- target: Full compliance by Q4 2026
+- tracking: https://github.com/hyperpolymath/burble/issues/XXX
+
+### section-508
+- description: U.S. Section 508 compliance
+- status: partial
+- target: Full compliance by Q4 2026
+- notes: Aligns with WCAG 2.1 AA for most requirements
+
+### en-301-549
+- description: EU EN 301 549 compliance
+- status: partial
+- target: Full compliance by Q4 2026
+- notes: EU public sector procurement requirement
+
+## Integration Requirements
+
+### panll-accessibility-port
+- description: Port PanLL's accessibility engine to Burble
+- status: planned
+- reference: /var/mnt/eclipse/repos/panll/tests/accessibility_engine_test.js
+- target: Q2 2026
+
+### k9-accessibility-validator
+- description: Integrate K9 accessibility validator
+- status: planned
+- reference: /var/mnt/eclipse/repos/panll/contractiles/k9/validators/accessibility-baseline.k9.ncl
+- target: Q2 2026
+
+### accessibility-testing
+- description: Add accessibility tests to CI/CD
+- status: planned
+- target: pa11y or axe-core integration
+- compliance: Automated WCAG testing
+
+## Documentation Requirements
+
+### accessibility-guide
+- description: User-facing accessibility guide
+- status: missing
+- target: docs/accessibility/USER-GUIDE.adoc
+- notes: Keyboard shortcuts, screen reader setup, theme switching
+
+### developer-accessibility
+- description: Developer accessibility guidelines
+- status: missing
+- target: docs/accessibility/DEVELOPER.adoc
+- notes: Coding standards, testing requirements, compliance checklist
+
+### compliance-report
+- description: Accessibility compliance report
+- status: missing
+- target: docs/compliance/ACCESSIBILITY.adoc
+- notes: VPAT (Voluntary Product Accessibility Template)

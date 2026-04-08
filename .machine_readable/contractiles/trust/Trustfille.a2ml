@@ -1,0 +1,897 @@
+# SPDX-License-Identifier: PMPL-1.0-or-later
+# =============================================================================
+# A2ML Trustfile Example (Fully Populated Reference)
+# This is the complete example. The blank template is Trustfile.a2ml.
+# =============================================================================
+
+---
+### [META]
+id: "did:web:example.com"
+version: "2026.2.5-final"
+context:
+  - "https://a2ml.org/ns/v2"
+  - "https://leanprover-community.github.io/lean4"
+  - "https://hypatia.scans/ns/v1"
+  - "https://w3id.org/security/v4"
+  - "https://w3id.org/transparency/v1"
+meta:
+  generated: "2026-02-16T00:00:00Z"
+  expires: "2027-02-16T00:00:00Z"
+  signature:
+    algorithm: "Ed448+Dilithium5"
+    value: |
+      -----BEGIN HYBRID SIGNATURE-----
+      BASE64_Ed448+Dilithium5_SIGNATURE_OF_THIS_FILE
+      -----END HYBRID SIGNATURE-----
+    signedBy: "did:web:example.com#primary-sig"
+    proof: "https://example.com/proofs/meta.lean"
+  fallbackSignature:
+    algorithm: "SPHINCS+"
+    value: |
+      -----BEGIN SPHINCS+ SIGNATURE-----
+      BASE64_SPHINCS+_SIGNATURE_OF_THIS_FILE
+      -----END SPHINCS+ SIGNATURE-----
+  integrity:
+    sha3-512: "HEX_SHA3_512_OF_THIS_FILE"
+    shake256: "BASE32_SHAKE256_OF_THIS_FILE"
+    zonemd: "2026021601;SHA512;BASE64_SHA512_OF_ZONE;SHAKE256;BASE32_SHAKE256_OF_ZONE"
+  ci_cd:
+    github_actions: "https://github.com/hyperpolymath/example.com/blob/main/.github/workflows/trustfile.yml"
+    gitbot_fleet: "https://gitbot-fleet.example.com/hooks/trustfile"
+    hypatia_scan: "https://hypatia.scans/repos/example.com"
+  automation:
+    hashing: ["SHA3-512", "SHAKE256", "BLAKE3"]
+    diffing: "alert-on-unexpected-changes"
+    integrity: ["zonemd-consistency", "transparency-log-continuity", "lean-proof-validity"]
+
+---
+### [THREAT_MODEL]
+adversaries:
+  - type: "APT"
+    mitigations:
+      - "Capability-based auth → No lateral movement."
+      - "LEAN4 proofs → No exploit primitives."
+      - "Transparency logs → Immediate detection."
+  - type: "Ransomware"
+    mitigations:
+      - "Consent-Aware HTTP → No bulk exfiltration."
+      - "SDP (CAdRE Router) → Resource isolation."
+      - "Immutable logs → Instant rollback."
+  - type: "Quantum Adversary"
+    mitigations:
+      - "Kyber1024 + Dilithium5 → PQ-resistant crypto."
+      - "SPHINCS+ fallback → Crypto agility."
+      - "GitBot-Fleet → Automated key rotation."
+  - type: "DDoS"
+    mitigations:
+      - "Cloudflare edge network → Absorbs volumetric attacks."
+      - "HTTP DDoS Managed Ruleset → Auto-mitigation at max sensitivity."
+      - "Challenge Passage TTL → Rate-limits challenge solvers."
+      - "Security Level → Adjustable based on threat intelligence."
+  - type: "AI Scraper"
+    mitigations:
+      - "Bot Fight Mode → Challenges known bot patterns."
+      - "Block AI Bots → Blocks verified AI crawlers + similar unverified."
+      - "AI Labyrinth → Traps scrapers in infinite maze of AI-generated decoy content."
+      - "AI Crawl Control → Per-crawler blocking and monitoring."
+      - "Managed robots.txt → Programmatic crawl directives."
+  - type: "Credential Stuffer"
+    mitigations:
+      - "Browser Integrity Check → Rejects headless/automated browsers."
+      - "Challenge Passage TTL → Forces re-challenge after 30 min."
+      - "HSTS preload → Prevents SSL-stripping MITM for credential capture."
+      - "Leaked credentials detection → (Enterprise; noted for upgrade path)."
+  - type: "Email Spoofing"
+    mitigations:
+      - "SPF hard fail (-all) → Rejects unauthorized senders."
+      - "DMARC p=reject → Instructs receivers to drop spoofed mail."
+      - "DKIM signing → Cryptographic message authentication."
+      - "CAA records → Restricts certificate issuance to authorized CAs."
+
+---
+### [DNS]
+dnssec:
+  enabled: true
+  algorithm: "ECDSAP256SHA256"
+  ds_record: "{{DS_RECORD}}"
+  key_tag: "{{KEY_TAG}}"
+  digest_type: "SHA-256"
+  policy: "DNSSEC MUST be enabled on all zones. DS records propagated to registrar."
+  security:
+    proof: "DNS.DNSSEC.lean"
+    ci_cd: "verify-dnssec-propagation"
+soa:
+  mname: "ns1.cloudflare.com."
+  rname: "admin.example.com."
+  serial: 2026021601
+  refresh: 10800
+  retry: 3600
+  expire: 604800
+  minimumTTL: 3600
+  zonemd: "2026021601;SHA512;BASE64_SHA512_OF_ZONE;SHAKE256;BASE32_SHAKE256_OF_ZONE"
+records:
+  - type: "A"
+    name: "@"
+    value: "192.0.2.1"
+    ttl: 3600
+    proxied: true
+    security:
+      zonemd: "2026021601;SHA512;BASE64_SHA512;SHAKE256;BASE32_SHAKE256"
+      proof: "DNS.Core.A_Record.lean"
+      hypatia: "scan-dns-record"
+      ci_cd: "auto-hash-on-push"
+  - type: "AAAA"
+    name: "@"
+    value: "2001:db8::1"
+    ttl: 3600
+    proxied: true
+    security:
+      proof: "DNS.Core.AAAA_Record.lean"
+  - type: "HTTPS"
+    name: "@"
+    value: '1 . alpn="h3,h2" ipv4hint=192.0.2.1 ipv6hint=2001:db8::1'
+    ttl: 3600
+    security:
+      proof: "DNS.HTTPS.lean"
+  - type: "SVCB"
+    name: "@"
+    value: '1 . alpn="h3,h2" port=443 ipv4hint=192.0.2.1 ipv6hint=2001:db8::1'
+    ttl: 3600
+    security:
+      proof: "DNS.SVCB.lean"
+  - type: "TXT"
+    name: "@"
+    value: '"v=DMARC1; p=reject; rua=mailto:dmarc@example.com; ruf=mailto:dmarc@example.com"'
+    ttl: 3600
+    security:
+      proof: "Email.DMARC.lean"
+  - type: "CAA"
+    name: "@"
+    value: '0 issue "letsencrypt.org"'
+    ttl: 3600
+  - type: "CAA"
+    name: "@"
+    value: '0 issue "digicert.com"'
+    ttl: 3600
+  - type: "CAA"
+    name: "@"
+    value: '0 iodef "mailto:security@example.com"'
+    ttl: 3600
+  - type: "TLSA"
+    name: "_443._tcp"
+    value: "3 1 1 D2ABDE240D7CD3EE6B4B28C54DF034B97983A1D16E8A410E4561CB106618E971"
+    ttl: 3600
+  - type: "TLSA"
+    name: "_443._tcp"
+    value: "3 3 1 BASE32_SHAKE256_CERT_HASH"
+    ttl: 3600
+  - type: "TXT"
+    name: "_cyberwar-trap"
+    value: '"🎣 This system is formally verified. Good luck, script kiddie."'
+    ttl: 3600
+    security:
+      hypatia: "scan-for-apt-activity"
+      proof: "Psychological.Warfare.lean"
+  - type: "TXT"
+    name: "_capabilities"
+    value: '"v=OCAP1; endpoint=https://example.com/cap"'
+    ttl: 3600
+    security:
+      proof: "HTTP.Capabilities.lean"
+  - type: "TXT"
+    name: "_consent"
+    value: '"v=CAdRE1; endpoint=https://example.com/.well-known/consent"'
+    ttl: 3600
+    security:
+      proof: "HTTP.Consent.lean"
+      gitbot: "validate-consent-endpoint"
+  # Email Security Records
+  - type: "TXT"
+    name: "@"
+    value: '"v=spf1 -all"'
+    ttl: 3600
+    notes: "Hard fail. No servers authorized to send. Override per-domain if email is used."
+    security:
+      proof: "Email.SPF.lean"
+  - type: "TXT"
+    name: "_dmarc"
+    value: '"v=DMARC1; p=reject; sp=reject; adkim=s; aspf=s; rua=mailto:dmarc@example.com; ruf=mailto:dmarc@example.com; fo=1"'
+    ttl: 3600
+    notes: "Strict alignment. Reject all unauthenticated. Forensic reports on any failure."
+    security:
+      proof: "Email.DMARC.lean"
+      ci_cd: "validate-dmarc-alignment"
+  - type: "TXT"
+    name: "*._domainkey"
+    value: '"v=DKIM1; p="'
+    ttl: 3600
+    notes: "Empty public key = revoked. Prevents DKIM pass on spoofed mail for non-sending domains."
+    security:
+      proof: "Email.DKIM.lean"
+  - type: "TXT"
+    name: "_mta-sts"
+    value: '"v=STSv1; id={{MTA_STS_ID}}"'
+    ttl: 3600
+    notes: "MTA-STS policy ID. Rotate on policy change."
+  - type: "TXT"
+    name: "_smtp._tls"
+    value: '"v=TLSRPTv1; rua=mailto:tls-reports@example.com"'
+    ttl: 3600
+    notes: "SMTP TLS Reporting (RFC 8460). Receive reports on TLS failures."
+
+---
+### [EMAIL_SECURITY]
+overview: |
+  Email security posture for domains that do NOT send email.
+  All records configured to reject/block spoofed mail.
+  For domains that DO send email, override SPF with authorized senders,
+  configure DKIM signing keys, and set DMARC to quarantine during rollout.
+policy:
+  non_sending_domains:
+    spf: "v=spf1 -all"
+    dmarc: "p=reject; sp=reject; adkim=s; aspf=s; fo=1"
+    dkim: "revoked (empty public key)"
+    mta_sts: "mode: enforce; max_age: 604800"
+  sending_domains:
+    spf: "v=spf1 include:_spf.google.com include:_spf.cloudflare.com -all"
+    dmarc: "p=reject; sp=reject; adkim=s; aspf=s; pct=100; fo=1"
+    dkim: "2048-bit RSA minimum; rotate annually"
+    mta_sts: "mode: enforce; max_age: 604800"
+email_routing:
+  provider: "Cloudflare Email Routing"
+  features:
+    - "Custom address forwarding"
+    - "DMARC enforcement (rejects unauthenticated inbound)"
+    - "IPv6 support"
+    - "Automatic MX/SPF/DKIM record creation"
+  security:
+    proof: "Email.Routing.lean"
+security:
+  proof: "Email.Policy.lean"
+  ci_cd: "validate-email-records-on-push"
+
+---
+### [TRUSTFILE]
+issuer: "did:web:example.com"
+keys:
+  - id: "#primary-sig"
+    type: "HybridKey2024"
+    classical:
+      algorithm: "Ed448"
+      publicKeyJwk:
+        kty: "OKP"
+        crv: "Ed448"
+        x: "BASE64URL_Ed448_PUBLIC_KEY"
+    postQuantum:
+      algorithm: "Dilithium5"
+      publicKeyJwk:
+        kty: "OKP"
+        crv: "Dilithium5"
+        x: "BASE64URL_Dilithium5_PUBLIC_KEY"
+    fallback:
+      algorithm: "SPHINCS+"
+      publicKeyJwk:
+        kty: "OKP"
+        crv: "SPHINCS+"
+        x: "BASE64URL_SPHINCS+_PUBLIC_KEY"
+    usage: ["authentication", "assertion"]
+    security:
+      proof: "Crypto.HybridKey.lean"
+      hypatia: "scan-keys"
+      ci_cd: "rotate-keys-on-compromise"
+algorithms:
+  hashing: ["SHA3-512", "SHAKE256", "BLAKE3"]
+  kdf: "HKDF-SHAKE512"
+  rng: "ChaCha20-DRBG"
+  passwordHashing: "Argon2id (512 MiB, 8 iter, 4 lanes)"
+  security:
+    proof: "Crypto.Algorithms.lean"
+policies:
+  dns:
+    rego: |
+      package trustfile.dns
+      default allow = false
+      allow {
+        input.record.security.proof != ""
+        input.record.security.zonemd != ""
+      }
+    lean: "Policies.DNS.lean"
+    ci_cd: "validate-dns-policies-on-push"
+  http:
+    rego: |
+      package trustfile.http
+      default allow = false
+      allow {
+        input.consent.granted
+        valid_capability(input.capability)
+      }
+    lean: "Policies.HTTP.lean"
+  php:
+    rego: |
+      package trustfile.php
+      default allow = false
+      allow {
+        input.php.aegis_enabled
+        input.php.sanctify_enabled
+      }
+    lean: "Policies.PHP.lean"
+fallbacks:
+  signatures: ["Ed448+Dilithium5", "SPHINCS+"]
+  keyExchange: ["Kyber1024-X25519", "X25519"]
+
+---
+### [CI_CD]
+github_actions:
+  name: "Trustfile Validation"
+  on: ["push", "pull_request"]
+  jobs:
+    validate:
+      runs-on: "ubuntu-latest"
+      steps:
+        - uses: "actions/checkout@v4"
+        - name: "Validate A2ML"
+          run: "a2ml validate example.com.trustfile.a2ml"
+        - name: "Run LEAN4 Proofs"
+          run: "lake build && lake exectest"
+        - name: "Hypatia Scan"
+          run: "hypatia scan --config hypatia.yml"
+        - name: "GitBot-Fleet Passover"
+          run: "gitbot-fleet passover --file example.com.trustfile.a2ml"
+    update_integrity:
+      runs-on: "ubuntu-latest"
+      steps:
+        - name: "Update Hashes"
+          run: |
+            NEW_SHA3=$(sha3sum -a 512 example.com.trustfile.a2ml | awk '{print $1}')
+            NEW_SHAKE=$(shake256sum example.com.trustfile.a2ml | awk '{print $1}' | base32)
+            sed -i "s|sha3-512:.*|sha3-512: \"$NEW_SHA3\"|" example.com.trustfile.a2ml
+            sed -i "s|shake256:.*|shake256: \"$NEW_SHAKE\"|" example.com.trustfile.a2ml
+        - name: "Commit and Push"
+          run: |
+            git config --global user.name "GitBot-Fleet"
+            git config --global user.email "gitbot@example.com"
+            git add example.com.trustfile.a2ml
+            git commit -m "Auto-update integrity hashes [skip ci]"
+            git push
+gitbot_fleet:
+  hooks:
+    - type: "pre-commit"
+      script: "a2ml validate example.com.trustfile.a2ml"
+    - type: "post-merge"
+      script: "gitbot-fleet diff --file example.com.trustfile.a2ml"
+hypatia:
+  config: "hypatia.yml"
+  scans:
+    - type: "dns"
+      frequency: "daily"
+    - type: "crypto"
+      frequency: "weekly"
+    - type: "php"
+      frequency: "on-push"
+
+---
+### [LEAN4_PROOFS]
+theorems:
+  - name: "dns_correctness"
+    file: "DNS.Core.lean"
+    description: "All DNS records are conflict-free and correctly signed."
+    status: "proven"
+    ci_cd: "reprove-on-dns-change"
+  - name: "tls_handshake_safety"
+    file: "TLS.Handshake.lean"
+    description: "TLS 1.3 + Kyber1024 handshake resists downgrade attacks."
+    status: "proven"
+  - name: "consent_aware_http_soundness"
+    file: "HTTP.Consent.lean"
+    description: "Consent-Aware HTTP (CAdRE) enforces user intent."
+    status: "proven"
+  - name: "capability_gateway_correctness"
+    file: "HTTP.Capabilities.lean"
+    description: "OCAP-style capability gateway is safe."
+    status: "proven"
+  - name: "php_hardening_no_bypasses"
+    file: "PHP.Hardening.lean"
+    description: "PHP-Aegis + Sanctify-PHP blocks all unsafe functions."
+    status: "proven"
+  - name: "edge_ssl_no_downgrade"
+    file: "Cloudflare.SSL.lean"
+    description: "TLS 1.3 + HSTS preload prevents protocol downgrade at edge."
+    status: "proven"
+    ci_cd: "reprove-on-ssl-change"
+  - name: "bot_defense_coverage"
+    file: "Cloudflare.Bots.lean"
+    description: "Bot Fight Mode + AI Labyrinth + Block AI Bots covers all free-plan bot vectors."
+    status: "proven"
+  - name: "email_anti_spoofing"
+    file: "Email.Policy.lean"
+    description: "SPF -all + DMARC reject + revoked DKIM prevents email spoofing on non-sending domains."
+    status: "proven"
+    ci_cd: "reprove-on-email-record-change"
+  - name: "response_headers_complete"
+    file: "Cloudflare.ResponseHeaders.lean"
+    description: "All OWASP-recommended response headers enforced at edge."
+    status: "proven"
+  - name: "dnssec_chain_valid"
+    file: "DNS.DNSSEC.lean"
+    description: "DNSSEC chain of trust from root to zone is valid and signed."
+    status: "proven"
+    ci_cd: "verify-dnssec-weekly"
+  - name: "network_transport_safety"
+    file: "Cloudflare.Network.lean"
+    description: "HTTP/3 + 0-RTT replay protection + Onion routing correctly configured."
+    status: "proven"
+
+---
+### [AUTOMATION]
+hashing:
+  tool: "GitBot-Fleet"
+  triggers: ["pre-commit", "post-merge"]
+  algorithms: ["SHA3-512", "SHAKE256", "BLAKE3"]
+diffing:
+  tool: "GitBot-Fleet"
+  rules:
+    - "alert-on-unexpected-changes"
+    - "require-proof-updates-for-crypto-changes"
+integrity:
+  tool: "Hypatia + LEAN4"
+  checks:
+    - "zonemd-consistency"
+    - "transparency-log-continuity"
+    - "lean-proof-validity"
+
+---
+### [CAPABILITY_GATEWAY]
+rules:
+  - resource: "/api/data"
+    policy: "require Ed448+Dilithium5-signed capability token"
+    proof: "HTTP.Capabilities.Data.lean"
+  - resource: "/admin"
+    policy: "require TPM 2.0 + YubiKey device attestation"
+    proof: "HTTP.Capabilities.Admin.lean"
+
+---
+### [SDP_RULES]
+services:
+  - name: "dashboard.internal"
+    access:
+      - group: "admins"
+        policy: "require Ed448+Dilithium5 + device-attestation + cadre-consent"
+      - group: "bots"
+        policy: "require JWT (Kyber1024) + IP in CI_NETWORK"
+    proof: "SDP.Dashboard.lean"
+  - name: "db.internal"
+    access:
+      - group: "apps"
+        policy: "require mutual TLS (Kyber1024-X25519) + client cert"
+    proof: "SDP.Database.lean"
+
+---
+### [TRANSPARENCY_LOG]
+rfc9162:
+  uri: "https://example.com/log/transparency.json"
+  entries:
+    - timestamp: "2026-02-16T00:00:00Z"
+      data: "BASE64_ENCODED_THIS_FILE"
+      signature: "BASE64_Ed448+Dilithium5_SIGNATURE"
+      lean_proof: "Transparency.Log.lean"
+      ci_cd: "append-on-push"
+
+---
+### [SSL/TLS]
+ciphers:
+  - "TLS_AES_256_GCM_SHA384"
+  - "TLS_CHACHA20_POLY1305_SHA256"
+groups:
+  - "X25519Kyber768Draft00"
+  - "secp256r1"
+protocols:
+  - "TLSv1.3"
+minimum_version: "1.2"
+notes: |
+  TLS 1.3 preferred with post-quantum key exchange (X25519Kyber768).
+  Minimum version 1.2 enforced at Cloudflare edge for clients that
+  don't support 1.3 yet. TLS 1.0 and 1.1 are BANNED. Cipher preference
+  is server-side (Cloudflare-controlled on free plan).
+features:
+  ocspStapling: true
+  signedCertTimestamps: true
+  certificateTransparency:
+    logs:
+      - "ct.googleapis.com/aviator"
+      - "ct.googleapis.com/rocketeer"
+    monitoring: true
+    notes: "Cloudflare automatically includes SCT in TLS handshake for all proxied zones."
+  mustStaple: true
+  opportunistic_encryption: true
+  automatic_https_rewrites: true
+  always_use_https: true
+edge_certificates:
+  provider: "Cloudflare Universal SSL"
+  type: "DV (Domain Validated)"
+  issuers: ["DigiCert", "Let's Encrypt", "Google Trust Services"]
+  auto_renewal: true
+  caa_restriction: true
+  notes: |
+    Cloudflare issues Universal SSL certificates automatically for all
+    proxied zones. CAA records restrict issuance to authorized CAs only.
+    Origin certificates should use Cloudflare Origin CA (15-year validity)
+    or publicly trusted certs for Full (Strict) mode.
+security:
+  proof: "TLS.Configuration.lean"
+  ci_cd: "verify-tls-settings-drift"
+
+---
+### [CLOUDFLARE]
+waf:
+  ruleset: "OWASP_ModSecurity_CRS"
+  sensitivity: "high"
+  paranoiaLevel: 4
+  managed_rulesets:
+    - name: "Cloudflare Managed Ruleset"
+      id: "efb7b8c949ac4650a09736fc376e9aee"
+      action: "execute"
+      phase: "http_request_firewall_managed"
+    - name: "Cloudflare OWASP Core Ruleset"
+      id: "4814384a9e5d4991b9815dcfc25d2f1f"
+      action: "execute"
+      phase: "http_request_firewall_managed"
+  ddos:
+    http:
+      sensitivity: "high"
+      action: "managed_challenge"
+      ruleset: "Cloudflare HTTP DDoS Attack Protection"
+    notes: "Always-on, unmetered DDoS protection on all plans."
+  security:
+    proof: "Cloudflare.WAF.lean"
+    ci_cd: "validate-waf-rulesets"
+workers:
+  - name: "consent-aware-http"
+    script: "https://example.com/workers/consent.js"
+    routes:
+      - "example.com/.well-known/consent*"
+  - name: "capability-gateway"
+    script: "https://example.com/workers/cap.js"
+    routes:
+      - "example.com/cap*"
+
+---
+### [CLOUDFLARE_EDGE_SECURITY]
+overview: |
+  Cloudflare edge security settings applied uniformly across all zones.
+  These are the maximum free-plan configurations. Settings are enforced
+  via API and validated by Hypatia CI scans. Any drift triggers an alert.
+
+ssl_tls:
+  mode: "strict"
+  min_tls_version: "1.2"
+  tls_1_3: "zrt"
+  always_use_https: true
+  automatic_https_rewrites: true
+  opportunistic_encryption: true
+  hsts:
+    enabled: true
+    max_age: 31536000
+    include_subdomains: true
+    preload: true
+    nosniff: true
+  universal_ssl: true
+  certificate_transparency: true
+  ocsp_stapling: true
+  notes: |
+    TLS 1.3 with 0-RTT (zrt). HSTS preloaded at 1 year with subdomains.
+    SSL mode 'strict' requires valid origin certificate (Cloudflare Origin CA
+    or publicly trusted). Downgrade to 'full' only if origin has self-signed.
+  security:
+    proof: "Cloudflare.SSL.lean"
+    ci_cd: "verify-ssl-settings-drift"
+
+bot_defense:
+  bot_fight_mode: true
+  block_ai_bots: true
+  ai_labyrinth: true
+  ai_crawl_control:
+    default_action: "block"
+    notes: |
+      Block all known AI crawlers by default. AI Labyrinth traps persistent
+      scrapers in an infinite maze of AI-generated decoy content, wasting
+      their compute while protecting real content. Individual crawlers can
+      be allowed via per-crawler overrides if licensing agreements exist.
+  managed_robots_txt: true
+  javascript_detections: false
+  notes: |
+    JS detections require Super Bot Fight Mode (Pro+). On free plan,
+    Bot Fight Mode uses pattern matching only. AI Labyrinth is the
+    primary free-plan defense against sophisticated AI scraping.
+  security:
+    proof: "Cloudflare.Bots.lean"
+    ci_cd: "verify-bot-settings"
+
+scrape_shield:
+  email_obfuscation: true
+  hotlink_protection: true
+  server_side_excludes: true
+  notes: |
+    Email obfuscation rewrites email addresses in HTML to prevent
+    harvesting by scrapers. Hotlink protection prevents other sites
+    from embedding your images. Server-side excludes hide content
+    from suspicious visitors.
+  security:
+    proof: "Cloudflare.ScrapeShield.lean"
+
+browser_integrity:
+  browser_check: true
+  security_level: "medium"
+  challenge_ttl: 1800
+  notes: |
+    Browser Integrity Check evaluates HTTP headers for common
+    characteristics of abusive traffic. Security level 'medium'
+    challenges visitors from IPs with moderate threat scores.
+    Challenge TTL of 30 minutes before re-challenge.
+  security:
+    proof: "Cloudflare.BrowserIntegrity.lean"
+
+page_shield:
+  enabled: true
+  script_monitoring: true
+  notes: |
+    Page Shield monitors client-side JavaScript resources loaded by
+    your pages. Free tier provides script detection and alerts for
+    new/changed scripts. Paid tiers add malicious script detection.
+  security:
+    proof: "Cloudflare.PageShield.lean"
+    ci_cd: "review-new-scripts"
+
+security_txt:
+  enabled: true
+  contact: "mailto:j.d.a.jewell@open.ac.uk"
+  preferred_languages: "en"
+  expires: "{{SECURITY_TXT_EXPIRES}}"
+  policy: "https://{{DOMAIN}}/.well-known/security-policy"
+  acknowledgments: "https://{{DOMAIN}}/.well-known/security-acknowledgments"
+  encryption: "https://{{DOMAIN}}/.well-known/pgp-key.txt"
+  canonical: "https://{{DOMAIN}}/.well-known/security.txt"
+  notes: |
+    RFC 9116 compliant. Served by Cloudflare at /.well-known/security.txt.
+    Contact is the author's university email. Expiry set to 1 year from
+    deployment, auto-renewed by CI. Canonical URL prevents spoofing.
+  security:
+    proof: "Cloudflare.SecurityTxt.lean"
+    ci_cd: "renew-security-txt-before-expiry"
+
+---
+### [RESPONSE_HEADERS]
+overview: |
+  Security response headers applied at the Cloudflare edge via Managed
+  Transforms and custom response header modification rules. These headers
+  instruct browsers to enforce security policies regardless of origin config.
+
+managed_transforms:
+  add:
+    - "X-Content-Type-Options: nosniff"
+    - "X-Frame-Options: SAMEORIGIN"
+    - "Referrer-Policy: strict-origin-when-cross-origin"
+  remove:
+    - "Server"
+    - "X-Powered-By"
+  notes: "Managed Transforms are Cloudflare's built-in header rules. Zero config."
+
+custom_headers:
+  - name: "Permissions-Policy"
+    value: "camera=(), microphone=(), geolocation=(), payment=()"
+    notes: "Deny all sensitive browser APIs unless explicitly needed."
+  - name: "Content-Security-Policy"
+    value: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'"
+    notes: "Strict CSP baseline. Override per-project if needed (e.g., for CDN scripts)."
+  - name: "Cross-Origin-Opener-Policy"
+    value: "same-origin"
+  - name: "Cross-Origin-Embedder-Policy"
+    value: "require-corp"
+  - name: "Cross-Origin-Resource-Policy"
+    value: "same-origin"
+
+policy: |
+  All security headers are enforced at the edge. Origin servers SHOULD
+  also set these headers as defense-in-depth. Headers set at edge take
+  precedence when Managed Transforms are enabled. CSP violations are
+  reported to /csp-report endpoint if a report-uri directive is added.
+
+security:
+  proof: "Cloudflare.ResponseHeaders.lean"
+  ci_cd: "validate-response-headers"
+
+---
+### [NETWORK]
+overview: |
+  Network-level settings applied at the Cloudflare edge.
+  These affect how traffic is transported between clients and edge.
+
+http2: true
+http3: true
+quic: true
+zero_rtt: true
+websockets: true
+onion_routing: true
+ipv6_compatibility: true
+brotli: true
+
+zero_rtt_policy: |
+  0-RTT Connection Resumption is enabled for performance. Note: 0-RTT
+  data is vulnerable to replay attacks. Cloudflare mitigates this by
+  only allowing 0-RTT on idempotent requests (GET/HEAD). Non-idempotent
+  requests (POST/PUT/DELETE) always use full handshake. Applications
+  MUST NOT rely on 0-RTT for state-changing operations.
+
+onion_routing_policy: |
+  Tor/Onion routing enabled via Cloudflare's Opportunistic Onion
+  (Alt-Svc header advertising .onion endpoint). This allows Tor users
+  to access sites without exit node MITM risk. Does NOT create a
+  dedicated .onion address — uses Cloudflare's shared onion service.
+
+security:
+  proof: "Cloudflare.Network.lean"
+  ci_cd: "verify-network-settings"
+
+---
+### [PERFORMANCE]
+overview: |
+  Performance settings that have security implications.
+  Applied at the Cloudflare edge for all zones.
+
+early_hints: true
+speed_brain: true
+auto_minify:
+  javascript: true
+  css: true
+  html: true
+rocket_loader: false
+notes: |
+  Rocket Loader disabled by default — it rewrites JavaScript loading
+  order which can break SPAs and CSP policies. Enable per-project only
+  after testing. Speed Brain uses Speculation Rules API to prefetch
+  likely navigation targets (conservative eagerness only).
+
+caching:
+  browser_ttl: "respect-origin"
+  edge_ttl: "default"
+  always_online: true
+  notes: |
+    Always Online serves stale cached copies when origin is unreachable.
+    Browser TTL respects origin Cache-Control headers. Do not cache
+    authenticated content — use Cache-Control: private on origin.
+
+security:
+  proof: "Cloudflare.Performance.lean"
+
+---
+### [PHP_HARDENING]
+aegis:
+  enabled: true
+  rules:
+    - "disable_functions=exec,popen,shell_exec,system"
+    - "expose_php=0"
+    - "session.cookie_httponly=1"
+    - "session.cookie_secure=1"
+sanctify:
+  enabled: true
+  directives:
+    - "sanctify.globals=1"
+    - "sanctify.request=1"
+    - "sanctify.error_reporting=E_ALL"
+
+---
+### [CONTAINER_SUPPLY_CHAIN]
+overview: |
+  Container supply-chain verification via the stapeln ecosystem.
+  All container images are built with Podman on Chainguard Wolfi base
+  images, signed as .ctp bundles via cerro-torre, and governed by
+  svalinn edge gateway policies. Runtime monitoring provided by vordr.
+
+runtime:
+  engine: "Podman"
+  policy: "Rootless containers only. Never Docker."
+  socket: "${XDG_RUNTIME_DIR}/podman/podman.sock"
+  security:
+    proof: "Container.Runtime.lean"
+
+base_images:
+  provider: "Chainguard"
+  registry: "cgr.dev/chainguard/"
+  allowed:
+    - "cgr.dev/chainguard/wolfi-base:latest"
+    - "cgr.dev/chainguard/static:latest"
+  policy: "Only Chainguard images permitted as base. Rebuilt daily, CVE-free."
+  security:
+    proof: "Container.BaseImages.lean"
+    ci_cd: "scan-base-images-daily"
+
+verified_bundles:
+  format: ".ctp"
+  tool: "cerro-torre"
+  operations:
+    pack: "ct pack <image> -o <bundle.ctp>"
+    sign: "cerro-sign sign <bundle.ctp> --key-id <key>"
+    verify: "ct verify <bundle.ctp>"
+    push: "ct push <bundle.ctp> <registry/image:tag>"
+    explain: "ct explain <bundle.ctp>"
+  attestations:
+    required: ["source-signature", "sbom-complete"]
+    recommended: ["security-audit", "reproducible-build"]
+  security:
+    proof: "Container.Bundles.lean"
+    hypatia: "scan-ctp-bundles"
+
+gateway:
+  tool: "svalinn"
+  policy_file: "container/.gatekeeper.yaml"
+  capabilities:
+    - "JWT/OAuth2 authentication"
+    - "Rate limiting (per-client, per-endpoint)"
+    - "Container trust enforcement (.ctp signature verification)"
+    - "Request validation (body size, NaN/Inf rejection)"
+    - "CORS policy enforcement"
+    - "Audit logging for write operations"
+    - "TLS auto-provisioning"
+  security:
+    proof: "Container.Gateway.lean"
+    ci_cd: "validate-gatekeeper-policy-on-push"
+
+monitoring:
+  tool: "vordr"
+  config_file: "container/vordr.toml"
+  capabilities:
+    - "Health endpoint monitoring"
+    - "Container crash detection"
+    - "Resource usage thresholds (CPU, memory, disk)"
+    - "Structured JSON log output"
+    - "Automatic restart on failure (configurable)"
+  security:
+    proof: "Container.Monitoring.lean"
+
+signing:
+  algorithm: "Ed25519"
+  tool: "cerro-torre sign / cerro-sign"
+  key_management: |
+    Signing keys are project-specific. Each service has a dedicated
+    Ed25519 key pair (e.g. <service>-release). Public keys are
+    distributed in .gatekeeper.yaml trusted_signers section.
+  security:
+    proof: "Container.Signing.lean"
+    ci_cd: "rotate-signing-keys-on-compromise"
+
+deployment:
+  tool: "k9-svc"
+  spec_file: "container/deploy.k9.ncl"
+  trust_level: "Hunt"
+  description: |
+    k9-svc deployment components at Hunt trust level. Full pedigree
+    (L1-L5: identity, target, security, validation, recipes).
+    Requires cryptographic handshake before execution. Supports
+    dev/staging/production environments with rolling deployment.
+  security:
+    proof: "Container.Deployment.lean"
+    ci_cd: "validate-k9-pedigree-on-push"
+
+---
+### [SIGNATURE_BLOCK]
+primary:
+  algorithm: "Ed448+Dilithium5"
+  signature: |
+    -----BEGIN HYBRID SIGNATURE-----
+    BASE64_Ed448+Dilithium5_SIGNATURE_OF_THIS_FILE
+    -----END HYBRID SIGNATURE-----
+  signedBy: "did:web:example.com#primary-sig"
+  lean_proof: "Signature.Primary.lean"
+fallback:
+  algorithm: "SPHINCS+"
+  signature: |
+    -----BEGIN SPHINCS+ SIGNATURE-----
+    BASE64_SPHINCS+_SIGNATURE_OF_THIS_FILE
+    -----END SPHINCS+ SIGNATURE-----
+  lean_proof: "Signature.Fallback.lean"
+
+---
+### [DEPLOYMENT]
+1. Replace all `BASE64_*`, `HEX_*`, and `DID_WEB_ID` placeholders.
+2. Generate LEAN4 proofs:
+   ```bash
+   lake build && lake exectest
