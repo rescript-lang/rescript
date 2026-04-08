@@ -34,6 +34,8 @@ val transl_primitive :
 val transl_extension_constructor :
   Env.t -> Path.t option -> Typedtree.extension_constructor -> Lambda.lambda
 
+val current_root_path : Path.t option ref
+
 (* Forward declaration -- to be filled in by Translmod.transl_module *)
 val transl_module :
   (Typedtree.module_coercion ->

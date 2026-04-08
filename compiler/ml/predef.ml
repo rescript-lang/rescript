@@ -51,6 +51,10 @@ and ident_result = ident_create "result"
 
 and ident_dict = ident_create "dict"
 
+and ident_source_loc_pos = ident_create "sourceLocPos"
+
+and ident_source_loc_value_path = ident_create "sourceLocValuePath"
+
 and ident_bigint = ident_create "bigint"
 
 and ident_string = ident_create "string"
@@ -67,6 +71,9 @@ let type_is_builtin_path_but_option (p : Path.t) : test =
   match p with
   | Pident {stamp} when stamp = ident_option.stamp -> For_sure_no
   | Pident {stamp} when stamp = ident_unit.stamp -> For_sure_no
+  | Pident {stamp} when stamp = ident_source_loc_pos.stamp -> For_sure_yes
+  | Pident {stamp} when stamp = ident_source_loc_value_path.stamp ->
+    For_sure_yes
   | Pident {stamp} when stamp >= ident_int.stamp && stamp <= ident_promise.stamp
     ->
     For_sure_yes
@@ -93,6 +100,10 @@ and path_option = Pident ident_option
 and path_result = Pident ident_result
 
 and path_dict = Pident ident_dict
+
+and path_source_loc_pos = Pident ident_source_loc_pos
+
+and path_source_loc_value_path = Pident ident_source_loc_value_path
 
 and path_bigint = Pident ident_bigint
 
@@ -371,6 +382,8 @@ let common_initial_env add_type add_extension empty_env =
   |> add_type ident_array decl_array
   |> add_type ident_list decl_list
   |> add_type ident_dict decl_dict
+  |> add_type ident_source_loc_pos decl_abstr
+  |> add_type ident_source_loc_value_path decl_abstr
   |> add_type ident_unknown decl_unknown
   |> add_exception ident_undefined_recursive_module
        [newgenty (Ttuple [type_string; type_int; type_int])]

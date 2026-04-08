@@ -34,6 +34,21 @@ let transl_module =
     (fun _cc _rootpath _modl -> assert false
       : module_coercion -> Path.t option -> module_expr -> lambda)
 
+let current_root_path = ref None
+let current_value_path = ref []
+
+let with_current_value_path pat f =
+  let path_segment =
+    match pat.pat_desc with
+    | Tpat_var (id, _) -> Some (Ident.name id)
+    | Tpat_alias (_, id, _) -> Some (Ident.name id)
+    | _ -> None
+  in
+  match path_segment with
+  | None -> f ()
+  | Some name ->
+    Ext_ref.protect current_value_path (!current_value_path @ [name]) f
+
 (* Compile an exception/extension definition *)
 
 let transl_extension_constructor env path ext =
@@ -244,6 +259,8 @@ let primitives_table =
       ("%loc_LINE", Ploc Loc_LINE);
       ("%loc_POS", Ploc Loc_POS);
       ("%loc_MODULE", Ploc Loc_MODULE);
+      ("%loc_SOURCE_LOC_VALUE_PATH", Ploc Loc_SOURCE_LOC_VALUE_PATH);
+      ("%loc_SOURCE_LOC_POS", Ploc Loc_SOURCE_LOC_POS);
       (* BEGIN Triples for  ref data type *)
       ("%makeref", Pmakeblock Lambda.ref_tag_info);
       ("%refset", Psetfield (0, Lambda.ref_field_set_info));
@@ -449,7 +466,10 @@ let transl_primitive loc p env ty =
   in
   match prim with
   | Ploc kind -> (
-    let lam = lam_of_loc kind loc in
+    let lam =
+      lam_of_loc ?root_path:!current_root_path
+        ~current_value_path:!current_value_path kind loc
+    in
     match p.prim_arity with
     | 0 -> lam
     | 1 ->
@@ -743,9 +763,14 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
         | _ -> k
       in
       wrap (Lprim (Praise k, [targ], e.exp_loc))
-    | Ploc kind, [] -> lam_of_loc kind e.exp_loc
+    | Ploc kind, [] ->
+      lam_of_loc ?root_path:!current_root_path
+        ~current_value_path:!current_value_path kind e.exp_loc
     | Ploc kind, [arg1] ->
-      let lam = lam_of_loc kind arg1.exp_loc in
+      let lam =
+        lam_of_loc ?root_path:!current_root_path
+          ~current_value_path:!current_value_path kind arg1.exp_loc
+      in
       Lprim (Pmakeblock Blk_tuple, lam :: argl, e.exp_loc)
     | Ploc _, _ -> assert false
     | _, _ -> (
@@ -1076,7 +1101,7 @@ and transl_let rec_flag pat_expr_list body =
     let rec transl = function
       | [] -> body
       | {vb_pat = pat; vb_expr = expr; vb_attributes = attr; vb_loc} :: rem ->
-        let lam = transl_exp expr in
+        let lam = with_current_value_path pat (fun () -> transl_exp expr) in
         let lam = Translattribute.add_inline_attribute lam vb_loc attr in
         Matching.for_let pat.pat_loc lam pat (transl rem)
     in
@@ -1092,7 +1117,7 @@ and transl_let rec_flag pat_expr_list body =
            Only variables are allowed as left-hand side of `let rec'
         *)
       in
-      let lam = transl_exp expr in
+      let lam = with_current_value_path pat (fun () -> transl_exp expr) in
       let lam = Translattribute.add_inline_attribute lam vb_loc vb_attributes in
       (id, lam)
     in

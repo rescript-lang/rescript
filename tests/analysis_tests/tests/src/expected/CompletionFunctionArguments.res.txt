@@ -232,8 +232,15 @@ Path someFnTakingVariant
     "tags": [],
     "detail": "someVariant",
     "documentation": {"kind": "markdown", "value": "```rescript\ntype someVariant = One | Two | Three(int, string)\n```"},
+    "sortText": "A Some(_)",
     "insertText": "Some($0)",
     "insertTextFormat": 2
+  }, {
+    "label": "SourceLoc",
+    "kind": 9,
+    "tags": [],
+    "detail": "module SourceLoc",
+    "documentation": null
   }]
 
 Complete src/CompletionFunctionArguments.res 60:44

@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/source_loc_arg_non_autofill_default.res[0m:[2m1:31-48[0m
+
+  [1;31m1[0m [2m│[0m let log = (~pos: sourceLocPos=[1;31m__SOURCE_LOC_POS__[0m) => pos
+  2 [2m│[0m 
+
+  Optional `sourceLocPos` and `sourceLocValuePath` args must use `=%autofill`. Remove the optional/default syntax to make this a regular required arg.

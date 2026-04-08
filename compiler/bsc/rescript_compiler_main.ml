@@ -336,6 +336,9 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
     ( "-bs-noassertfalse",
       set Clflags.no_assert_false,
       "*internal*  no code for assert false" );
+    ( "-allow-autofill-source-loc",
+      set Clflags.allow_autofill_source_loc,
+      "*internal* Allow source-loc autofill for optional source-loc args" );
     ( "-noassert",
       set Clflags.noassert,
       "*internal* Do not compile assertion checks" );

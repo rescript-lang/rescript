@@ -254,35 +254,38 @@ let rec compile_functor mexp coercion root_path loc =
 
 (* Compile a module expression *)
 and transl_module cc rootpath mexp =
-  List.iter (Translattribute.check_attribute_on_module mexp) mexp.mod_attributes;
-  let loc = mexp.mod_loc in
-  match mexp.mod_type with
-  | Mty_alias (Mta_absent, _) ->
-    apply_coercion loc Alias cc Lambda.lambda_module_alias
-  | _ -> (
-    match mexp.mod_desc with
-    | Tmod_ident (path, _) ->
-      apply_coercion loc Strict cc
-        (Lambda.transl_module_path ~loc mexp.mod_env path)
-    | Tmod_structure str -> fst (transl_struct loc [] cc rootpath str)
-    | Tmod_functor _ -> compile_functor mexp cc rootpath loc
-    | Tmod_apply (funct, arg, ccarg) ->
-      let inlined_attribute, funct =
-        Translattribute.get_and_remove_inlined_attribute_on_module funct
-      in
-      apply_coercion loc Strict cc
-        (Lapply
-           {
-             ap_loc = loc;
-             ap_func = transl_module Tcoerce_none None funct;
-             ap_args = [transl_module ccarg None arg];
-             ap_inlined = inlined_attribute;
-             ap_transformed_jsx = false;
-           })
-    | Tmod_constraint (arg, _, _, ccarg) ->
-      transl_module (compose_coercions cc ccarg) rootpath arg
-    | Tmod_unpack (arg, _) ->
-      apply_coercion loc Strict cc (Translcore.transl_exp arg))
+  Ext_ref.protect Translcore.current_root_path rootpath (fun () ->
+      List.iter
+        (Translattribute.check_attribute_on_module mexp)
+        mexp.mod_attributes;
+      let loc = mexp.mod_loc in
+      match mexp.mod_type with
+      | Mty_alias (Mta_absent, _) ->
+        apply_coercion loc Alias cc Lambda.lambda_module_alias
+      | _ -> (
+        match mexp.mod_desc with
+        | Tmod_ident (path, _) ->
+          apply_coercion loc Strict cc
+            (Lambda.transl_module_path ~loc mexp.mod_env path)
+        | Tmod_structure str -> fst (transl_struct loc [] cc rootpath str)
+        | Tmod_functor _ -> compile_functor mexp cc rootpath loc
+        | Tmod_apply (funct, arg, ccarg) ->
+          let inlined_attribute, funct =
+            Translattribute.get_and_remove_inlined_attribute_on_module funct
+          in
+          apply_coercion loc Strict cc
+            (Lapply
+               {
+                 ap_loc = loc;
+                 ap_func = transl_module Tcoerce_none None funct;
+                 ap_args = [transl_module ccarg None arg];
+                 ap_inlined = inlined_attribute;
+                 ap_transformed_jsx = false;
+               })
+        | Tmod_constraint (arg, _, _, ccarg) ->
+          transl_module (compose_coercions cc ccarg) rootpath arg
+        | Tmod_unpack (arg, _) ->
+          apply_coercion loc Strict cc (Translcore.transl_exp arg)))
 
 and transl_struct loc fields cc rootpath str =
   transl_structure loc fields cc rootpath str.str_final_env str.str_items
