@@ -28,9 +28,33 @@ module StringSet = Set.Make (String)
 
 type candidate = {
   module_ident: Ident.t;
-  component_ident: Ident.t;
   hidden_export_name: string;
 }
+
+let dynamic_import_module_root (expr : J.expression) =
+  match expr.expression_desc with
+  | Await
+      {
+        expression_desc =
+          Call
+            ({expression_desc = Var (Id import_ident); _}, [arg], _);
+        _;
+      }
+    when String.equal import_ident.name "import" -> (
+      match arg.expression_desc with
+      | Str {txt; _} ->
+        let basename = Filename.basename txt in
+        let suffixes = [".res.mjs"; ".res.js"; ".mjs"; ".js"] in
+        let rec strip_suffix = function
+          | [] -> basename
+          | suffix :: rest ->
+            if Filename.check_suffix basename suffix then
+              Filename.chop_suffix basename suffix
+            else strip_suffix rest
+        in
+        Some (strip_suffix suffixes)
+      | _ -> None)
+  | _ -> None
 
 let marker_name hidden_export_name = hidden_export_name ^ "$jsx"
 
@@ -86,7 +110,6 @@ let candidate_of_statement block exports (st : J.statement) =
         Some
           {
             module_ident;
-            component_ident = value_ident;
             hidden_export_name = hidden_ident.name;
           }
       | Some _ | None -> None)
@@ -97,7 +120,7 @@ let collect_candidates block exports =
 
 let hidden_export_names_to_remove candidates =
   Ext_list.fold_left candidates StringSet.empty (fun acc candidate ->
-      acc |> StringSet.add candidate.hidden_export_name
+      acc |> StringSet.add (Ident.name candidate.module_ident)
       |> StringSet.add (marker_name candidate.hidden_export_name))
 
 let marker_names_to_remove_from_block candidates =
@@ -115,32 +138,75 @@ let rewrite_block block candidates removed_marker_names =
       match st.statement_desc with
       | Variable {ident; value; property; ident_info} -> (
         match candidate_by_module_ident candidates ident with
-        | Some candidate ->
-          let module_value = E.var candidate.component_ident in
-          [
-            {
-              st with
-              statement_desc =
-                Variable {ident; value = Some module_value; property; ident_info};
-            };
-          ]
+        | Some _ -> [st]
         | None ->
           if StringSet.mem (Ident.name ident) removed_marker_names then []
           else [st])
       | _ -> [st])
     block
 
+let dynamic_import_aliases block =
+  List.fold_left
+    (fun aliases (st : J.statement) ->
+      match st.statement_desc with
+      | Variable {ident; value = Some expr; _} -> (
+        match dynamic_import_module_root expr with
+        | Some module_root -> Map_ident.add aliases ident module_root
+        | None -> aliases)
+      | _ -> aliases)
+    Map_ident.empty block
+
+let rewrite_dynamic_import_component_access aliases (expr : J.expression) =
+  let rec collect_segments segments (expr : J.expression) =
+    match expr.expression_desc with
+    | Static_index (inner, field, _) -> collect_segments (field :: segments) inner
+    | Var (Id id) -> (
+      match Map_ident.find_opt aliases id with
+      | Some module_root when segments <> [] -> Some (id, module_root, segments)
+      | Some _ | None -> None)
+    | _ -> None
+  in
+  match expr.expression_desc with
+  | Static_index (inner, "make", _) -> (
+    match collect_segments [] inner with
+    | Some (id, module_root, segments) ->
+      let segments = List.rev segments in
+      let hidden_name =
+        match segments with
+        | first :: _ when Ext_string.starts_with first (module_root ^ "$") ->
+          String.concat "$" segments
+        | _ -> String.concat "$" (module_root :: segments)
+      in
+      {expr with expression_desc = Static_index (E.var id, hidden_name, None)}
+    | None -> expr)
+  | _ -> expr
+
+let rewrite_dynamic_import_block block =
+  let aliases = dynamic_import_aliases block in
+  if Map_ident.is_empty aliases then block
+  else
+    let mapper =
+      {
+        Js_record_map.super with
+        expression =
+          (fun self expr ->
+            let expr = Js_record_map.super.expression self expr in
+            rewrite_dynamic_import_component_access aliases expr);
+      }
+    in
+    mapper.block mapper block
+
 let program (js : J.program) : J.program =
   let candidates = collect_candidates js.block js.exports in
-  match candidates with
-  | [] -> js
-  | _ ->
-    let removed_export_names = hidden_export_names_to_remove candidates in
-    let removed_marker_names = marker_names_to_remove_from_block candidates in
-    let exports =
-      Ext_list.filter js.exports (fun (ident : Ident.t) ->
-          not (StringSet.mem (Ident.name ident) removed_export_names))
-    in
-    let export_set = Set_ident.of_list exports in
-    let block = rewrite_block js.block candidates removed_marker_names in
-    {J.block; exports; export_set}
+  let removed_export_names = hidden_export_names_to_remove candidates in
+  let removed_marker_names = marker_names_to_remove_from_block candidates in
+  let exports =
+    Ext_list.filter js.exports (fun (ident : Ident.t) ->
+        not (StringSet.mem (Ident.name ident) removed_export_names))
+  in
+  let export_set = Set_ident.of_list exports in
+  let block =
+    rewrite_dynamic_import_block
+      (rewrite_block js.block candidates removed_marker_names)
+  in
+  {J.block; exports; export_set}

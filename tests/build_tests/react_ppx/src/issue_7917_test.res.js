@@ -6,7 +6,9 @@ function Issue_7917_test$M(props) {
   return null;
 }
 
-let M = Issue_7917_test$M;
+let M = {
+  make: Issue_7917_test$M
+};
 
 function Issue_7917_test(props) {
   let __component = props.component;
@@ -17,7 +19,7 @@ function Issue_7917_test(props) {
 let make = Issue_7917_test;
 
 export {
-  M,
   make,
+  Issue_7917_test$M,
 }
 /* react/jsx-runtime Not a pure module */

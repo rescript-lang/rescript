@@ -379,22 +379,107 @@ let compile output_prefix =
             String.concat "$" (root_module_name id :: segments) ))
     | None -> None
   in
-  let rewrite_component_make_access (compiled_expr : J.expression) :
-      J.expression =
-    match compiled_expr.expression_desc with
-    | Static_index (inner, "make", _) -> inner
-    | _ -> compiled_expr
+  let normalize_hidden_component_name (id : Ident.t) (hidden_name : string) =
+    let root_name = root_module_name id in
+    let id_parts = String.split_on_char '$' id.name in
+    let namespace_parts =
+      match id_parts with
+      | _root :: rest -> rest
+      | [] -> []
+    in
+    let hidden_parts = String.split_on_char '$' hidden_name in
+    let hidden_parts_without_root =
+      match hidden_parts with
+      | first :: rest when String.equal first root_name -> rest
+      | _ -> hidden_parts
+    in
+    let rec drop_prefix prefix parts =
+      match (prefix, parts) with
+      | [], _ -> parts
+      | x :: xs, y :: ys when String.equal x y -> drop_prefix xs ys
+      | _ -> parts
+    in
+    let tail = drop_prefix namespace_parts hidden_parts_without_root in
+    match tail with
+    | [] -> hidden_name
+    | _ -> String.concat "$" (root_name :: tail)
+  in
+  let hidden_component_name_candidates (id : Ident.t) (hidden_name : string) =
+    let candidates = ref [] in
+    let push candidate =
+      if not (List.mem candidate !candidates) then
+        candidates := candidate :: !candidates
+    in
+    (match String.split_on_char '$' hidden_name with
+    | root :: _namespace :: rest when rest <> [] ->
+      push (String.concat "$" (root :: rest))
+    | _ -> ());
+    push (normalize_hidden_component_name id hidden_name);
+    push hidden_name;
+    List.rev !candidates
+  in
+  let exported_hidden_component_name ~(id : Ident.t) ~(dynamic_import : bool)
+      (hidden_name_candidates : string list) =
+    let rec loop = function
+      | [] -> None
+      | candidate :: rest -> (
+        match Lam_compile_env.query_external_id_info ~dynamic_import id candidate with
+        | _ -> Some candidate
+        | exception Not_found -> loop rest)
+    in
+    loop hidden_name_candidates
+  in
+  let rec extract_root_expr (expr : J.expression) =
+    match expr.expression_desc with
+    | Var (Qualified (module_id, Some _)) ->
+      Some {expr with expression_desc = Var (Qualified (module_id, None))}
+    | Static_index (inner, _, _) -> extract_root_expr inner
+    | Var _ -> Some expr
+    | _ -> None
+  in
+  let hidden_component_access (root_expr : J.expression) hidden_name =
+    match root_expr.expression_desc with
+    | Var (Qualified (module_id, None)) ->
+      {
+        root_expr with
+        expression_desc = Var (Qualified (module_id, Some hidden_name));
+      }
+    | _ -> E.dot root_expr hidden_name
   in
   let rewrite_nested_jsx_component_expr (jsx_tag : Lam.t)
       (compiled_expr : J.expression) : J.expression =
     match extract_nested_external_component_field jsx_tag with
-    | Some _ -> rewrite_component_make_access compiled_expr
+    | Some (id, dynamic_import, hidden_name) -> (
+      let hidden_name_candidates =
+        hidden_component_name_candidates id hidden_name
+      in
+      match extract_root_expr compiled_expr with
+      | Some root_expr -> (
+        match
+          exported_hidden_component_name ~id ~dynamic_import
+            hidden_name_candidates
+        with
+        | Some hidden_name -> hidden_component_access root_expr hidden_name
+        | None -> compiled_expr)
+      | None -> compiled_expr)
     | None -> compiled_expr
   in
   let rewrite_nested_component_make_expr (lam : Lam.t)
       (compiled_expr : J.expression) : J.expression =
     match extract_static_nested_external_component_path lam with
-    | Some _ -> rewrite_component_make_access compiled_expr
+    | Some (id, dynamic_import, hidden_name) -> (
+      let hidden_name_candidates =
+        hidden_component_name_candidates id hidden_name
+      in
+      match extract_root_expr compiled_expr with
+      | Some root_expr -> (
+        match
+          exported_hidden_component_name ~id ~dynamic_import
+            hidden_name_candidates
+        with
+        | Some hidden_name -> hidden_component_access root_expr hidden_name
+        | None -> compiled_expr)
+      | None -> compiled_expr)
     | None -> compiled_expr
   in
   let rec compile_external_field (* Like [List.empty]*)

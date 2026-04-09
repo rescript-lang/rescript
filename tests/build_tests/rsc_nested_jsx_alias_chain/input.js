@@ -21,18 +21,18 @@ const plainAccessOutput = await fs.readFile(
 
 assert.match(
   layoutOutput,
-  /JsxRuntime\.jsx\(Sidebar\$RscNestedJsxAliasChain\.Provider,/,
+  /JsxRuntime\.jsx\(Sidebar\$RscNestedJsxAliasChain\.Sidebar\$Provider,/,
 );
 assert.doesNotMatch(layoutOutput, /\.Provider\.make,/);
 assert.match(
   plainAccessOutput,
-  /let provider = Sidebar\$RscNestedJsxAliasChain\.Provider;/,
+  /let provider = Sidebar\$RscNestedJsxAliasChain\.Sidebar\$Provider;/,
 );
 assert.match(
   plainAccessOutput,
-  /let callProvider = Sidebar\$RscNestedJsxAliasChain\.Provider\(\{/,
+  /let callProvider = Sidebar\$RscNestedJsxAliasChain\.Sidebar\$Provider\(\{/,
 );
 assert.doesNotMatch(plainAccessOutput, /\.Provider\.make/);
-assert.doesNotMatch(plainAccessOutput, /Sidebar\$Provider/);
+assert.doesNotMatch(plainAccessOutput, /Sidebar\$RscNestedJsxAliasChain\.Provider/);
 
 await execClean();
