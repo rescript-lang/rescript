@@ -61,8 +61,14 @@ assert.doesNotMatch(
   /JsxRuntime\.jsx\(SidebarExternal\$RscNestedJsxMembers\.Provider\.make,/,
 );
 assert.doesNotMatch(output, /\.Provider\.make,/);
-assert.match(sidebarOutput, /let Provider = \{[\s\S]*make: Sidebar\$Provider[\s\S]*\};/s);
-assert.match(sidebarOutput, /let Inset = \{[\s\S]*make: Sidebar\$Inset[\s\S]*\};/s);
+assert.match(
+  sidebarOutput,
+  /let Provider = \{[\s\S]*make: Sidebar\$Provider[\s\S]*\};/s,
+);
+assert.match(
+  sidebarOutput,
+  /let Inset = \{[\s\S]*make: Sidebar\$Inset[\s\S]*\};/s,
+);
 assert.doesNotMatch(sidebarOutput, /Provider\.make = Provider;/);
 assert.doesNotMatch(sidebarOutput, /Inset\.make = Inset;/);
 assert.doesNotMatch(sidebarOutput, /Sidebar\$Provider\$jsx/);
@@ -90,6 +96,9 @@ assert.match(
   /let callProvider = Sidebar\$RscNestedJsxMembers\.Sidebar\$Provider\(\{/,
 );
 assert.doesNotMatch(plainAccessOutput, /\.Provider\.make/);
-assert.doesNotMatch(plainAccessOutput, /Sidebar\$RscNestedJsxMembers\.Provider/);
+assert.doesNotMatch(
+  plainAccessOutput,
+  /Sidebar\$RscNestedJsxMembers\.Provider/,
+);
 
 await execClean();

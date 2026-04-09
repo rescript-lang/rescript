@@ -295,7 +295,9 @@ let compile output_prefix =
   let extract_nested_external_component_path (lam : Lam.t) :
       (Ident.t * bool * string) option =
     let dynamic_import = ref None in
-    match extract_nested_external_component_segments [] (lam, dynamic_import) with
+    match
+      extract_nested_external_component_segments [] (lam, dynamic_import)
+    with
     | Some (id, dynamic_import, segments) -> (
       let denamespace_segment segment =
         let root_name = root_module_name id in
@@ -338,8 +340,8 @@ let compile output_prefix =
           primitive = Pfield (_, Fld_module {name = "make"; jsx_component = _});
           args = [arg];
           _;
-        } -> (
-      extract_nested_external_component_path arg)
+        } ->
+      extract_nested_external_component_path arg
     | _ -> None
   in
   let extract_static_nested_external_component_path (lam : Lam.t) :
@@ -423,7 +425,9 @@ let compile output_prefix =
     let rec loop = function
       | [] -> None
       | candidate :: rest -> (
-        match Lam_compile_env.query_external_id_info ~dynamic_import id candidate with
+        match
+          Lam_compile_env.query_external_id_info ~dynamic_import id candidate
+        with
         | _ -> Some candidate
         | exception Not_found -> loop rest)
     in
@@ -1879,14 +1883,19 @@ let compile output_prefix =
       in
       Js_output.output_of_block_and_expression lambda_cxt.continuation args_code
         exp
-    | {primitive = Pfield (_, (Fld_module {name = "make"; jsx_component = _} as fld_info));
-       args = [arg];
-       _} ->
+    | {
+     primitive =
+       Pfield (_, (Fld_module {name = "make"; jsx_component = _} as fld_info));
+     args = [arg];
+     _;
+    } -> (
       let new_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
-      (match compile_lambda new_cxt arg with
+      match compile_lambda new_cxt arg with
       | {block; value = Some compiled_arg} ->
         let compiled_expr = Js_of_lam_block.field fld_info compiled_arg 0l in
-        let compiled_expr = rewrite_nested_component_make_expr arg compiled_expr in
+        let compiled_expr =
+          rewrite_nested_component_make_expr arg compiled_expr
+        in
         Js_output.output_of_block_and_expression lambda_cxt.continuation block
           compiled_expr
       | {value = None} -> assert false)

@@ -26,34 +26,30 @@ module E = Js_exp_make
 
 module StringSet = Set.Make (String)
 
-type candidate = {
-  module_ident: Ident.t;
-  hidden_export_name: string;
-}
+type candidate = {module_ident: Ident.t; hidden_export_name: string}
 
 let dynamic_import_module_root (expr : J.expression) =
   match expr.expression_desc with
   | Await
       {
         expression_desc =
-          Call
-            ({expression_desc = Var (Id import_ident); _}, [arg], _);
+          Call ({expression_desc = Var (Id import_ident); _}, [arg], _);
         _;
       }
     when String.equal import_ident.name "import" -> (
-      match arg.expression_desc with
-      | Str {txt; _} ->
-        let basename = Filename.basename txt in
-        let suffixes = [".res.mjs"; ".res.js"; ".mjs"; ".js"] in
-        let rec strip_suffix = function
-          | [] -> basename
-          | suffix :: rest ->
-            if Filename.check_suffix basename suffix then
-              Filename.chop_suffix basename suffix
-            else strip_suffix rest
-        in
-        Some (strip_suffix suffixes)
-      | _ -> None)
+    match arg.expression_desc with
+    | Str {txt; _} ->
+      let basename = Filename.basename txt in
+      let suffixes = [".res.mjs"; ".res.js"; ".mjs"; ".js"] in
+      let rec strip_suffix = function
+        | [] -> basename
+        | suffix :: rest ->
+          if Filename.check_suffix basename suffix then
+            Filename.chop_suffix basename suffix
+          else strip_suffix rest
+      in
+      Some (strip_suffix suffixes)
+    | _ -> None)
   | _ -> None
 
 let marker_name hidden_export_name = hidden_export_name ^ "$jsx"
@@ -65,7 +61,8 @@ let is_hidden_component_name_for module_ident ident =
   Ext_string.ends_with (Ident.name ident) (hidden_component_suffix module_ident)
 
 let find_hidden_alias_by_value block module_ident value_ident =
-  List.find_map (fun (st : J.statement) ->
+  List.find_map
+    (fun (st : J.statement) ->
       match st.statement_desc with
       | Variable
           {
@@ -81,7 +78,9 @@ let find_hidden_alias_by_value block module_ident value_ident =
     block
 
 let has_export_name exports name =
-  List.exists (fun (ident : Ident.t) -> String.equal (Ident.name ident) name) exports
+  List.exists
+    (fun (ident : Ident.t) -> String.equal (Ident.name ident) name)
+    exports
 
 let candidate_of_statement block exports (st : J.statement) =
   match st.statement_desc with
@@ -93,26 +92,24 @@ let candidate_of_statement block exports (st : J.statement) =
             {
               expression_desc =
                 Caml_block
-                  ([{expression_desc = Var (Id value_ident); _}], Immutable, _, Blk_module ["make"]);
+                  ( [{expression_desc = Var (Id value_ident); _}],
+                    Immutable,
+                    _,
+                    Blk_module ["make"] );
               _;
             };
         property = _;
         ident_info = _;
       } -> (
-      let hidden_ident =
-        if is_hidden_component_name_for module_ident value_ident then
-          Some value_ident
-        else find_hidden_alias_by_value block module_ident value_ident
-      in
-      match hidden_ident with
-      | Some hidden_ident
-        when has_export_name exports hidden_ident.name ->
-        Some
-          {
-            module_ident;
-            hidden_export_name = hidden_ident.name;
-          }
-      | Some _ | None -> None)
+    let hidden_ident =
+      if is_hidden_component_name_for module_ident value_ident then
+        Some value_ident
+      else find_hidden_alias_by_value block module_ident value_ident
+    in
+    match hidden_ident with
+    | Some hidden_ident when has_export_name exports hidden_ident.name ->
+      Some {module_ident; hidden_export_name = hidden_ident.name}
+    | Some _ | None -> None)
   | _ -> None
 
 let collect_candidates block exports =
@@ -120,7 +117,8 @@ let collect_candidates block exports =
 
 let hidden_export_names_to_remove candidates =
   Ext_list.fold_left candidates StringSet.empty (fun acc candidate ->
-      acc |> StringSet.add (Ident.name candidate.module_ident)
+      acc
+      |> StringSet.add (Ident.name candidate.module_ident)
       |> StringSet.add (marker_name candidate.hidden_export_name))
 
 let marker_names_to_remove_from_block candidates =
@@ -128,13 +126,15 @@ let marker_names_to_remove_from_block candidates =
       StringSet.add (marker_name candidate.hidden_export_name) acc)
 
 let candidate_by_module_ident candidates module_ident =
-  List.find_map (fun candidate ->
+  List.find_map
+    (fun candidate ->
       if Ident.same candidate.module_ident module_ident then Some candidate
       else None)
     candidates
 
 let rewrite_block block candidates removed_marker_names =
-  List.concat_map (fun (st : J.statement) ->
+  List.concat_map
+    (fun (st : J.statement) ->
       match st.statement_desc with
       | Variable {ident; value; property; ident_info} -> (
         match candidate_by_module_ident candidates ident with
@@ -159,7 +159,8 @@ let dynamic_import_aliases block =
 let rewrite_dynamic_import_component_access aliases (expr : J.expression) =
   let rec collect_segments segments (expr : J.expression) =
     match expr.expression_desc with
-    | Static_index (inner, field, _) -> collect_segments (field :: segments) inner
+    | Static_index (inner, field, _) ->
+      collect_segments (field :: segments) inner
     | Var (Id id) -> (
       match Map_ident.find_opt aliases id with
       | Some module_root when segments <> [] -> Some (id, module_root, segments)

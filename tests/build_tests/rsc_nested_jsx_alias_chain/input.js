@@ -33,6 +33,9 @@ assert.match(
   /let callProvider = Sidebar\$RscNestedJsxAliasChain\.Sidebar\$Provider\(\{/,
 );
 assert.doesNotMatch(plainAccessOutput, /\.Provider\.make/);
-assert.doesNotMatch(plainAccessOutput, /Sidebar\$RscNestedJsxAliasChain\.Provider/);
+assert.doesNotMatch(
+  plainAccessOutput,
+  /Sidebar\$RscNestedJsxAliasChain\.Provider/,
+);
 
 await execClean();

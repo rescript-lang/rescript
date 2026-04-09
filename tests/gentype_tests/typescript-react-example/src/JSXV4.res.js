@@ -12,12 +12,8 @@ let CompV4 = {
 
 let make = JSXV4Gen.make;
 
-let JSXV4$CompV4$jsx = true;
-
 export {
-  CompV4,
   make,
   JSXV4$CompV4,
-  JSXV4$CompV4$jsx,
 }
 /* make Not a pure module */

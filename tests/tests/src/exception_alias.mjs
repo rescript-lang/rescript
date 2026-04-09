@@ -14,6 +14,8 @@ let b = Belt_List.length({
   }
 });
 
+let List_make = Belt_List.make;
+
 let List = {
   size: Belt_List.size,
   head: Belt_List.head,
@@ -26,7 +28,7 @@ let List = {
   get: Belt_List.get,
   getExn: Belt_List.getExn,
   getOrThrow: Belt_List.getOrThrow,
-  make: Belt_List.make,
+  make: List_make,
   makeByU: Belt_List.makeByU,
   makeBy: Belt_List.makeBy,
   shuffle: Belt_List.shuffle,

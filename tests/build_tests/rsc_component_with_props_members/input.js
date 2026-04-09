@@ -33,8 +33,14 @@ assert.match(
 );
 assert.doesNotMatch(output, /\.Provider\.make,/);
 assert.doesNotMatch(output, /\.Inset\.make,/);
-assert.match(sidebarOutput, /let Provider = \{[\s\S]*make: Sidebar\$Provider[\s\S]*\};/s);
-assert.match(sidebarOutput, /let Inset = \{[\s\S]*make: Sidebar\$Inset[\s\S]*\};/s);
+assert.match(
+  sidebarOutput,
+  /let Provider = \{[\s\S]*make: Sidebar\$Provider[\s\S]*\};/s,
+);
+assert.match(
+  sidebarOutput,
+  /let Inset = \{[\s\S]*make: Sidebar\$Inset[\s\S]*\};/s,
+);
 assert.match(
   sidebarOutput,
   /export \{[\s\S]*Sidebar\$Provider,[\s\S]*Sidebar\$Inset[\s\S]*\}/s,
@@ -53,7 +59,13 @@ assert.match(
 );
 assert.doesNotMatch(plainAccessOutput, /\.Provider\.make/);
 assert.doesNotMatch(plainAccessOutput, /\.Inset\.make/);
-assert.doesNotMatch(plainAccessOutput, /Sidebar\$RscComponentWithPropsMembers\.Provider/);
-assert.doesNotMatch(plainAccessOutput, /Sidebar\$RscComponentWithPropsMembers\.Inset/);
+assert.doesNotMatch(
+  plainAccessOutput,
+  /Sidebar\$RscComponentWithPropsMembers\.Provider/,
+);
+assert.doesNotMatch(
+  plainAccessOutput,
+  /Sidebar\$RscComponentWithPropsMembers\.Inset/,
+);
 
 await execClean();

@@ -229,7 +229,7 @@ let Y = {
   make: make$1
 };
 
-<Y.make />;
+<42 />;
 
 let context = React.createContext(0);
 
@@ -251,22 +251,13 @@ let Jsx_preserve_test$A = QueryClientProvider;
 
 let make$3 = Jsx_preserve_test;
 
-let Jsx_preserve_test$Icon$jsx = true;
-
 let Jsx_preserve_test$A$jsx = true;
-
-let Jsx_preserve_test$B$jsx = true;
-
-let Jsx_preserve_test$MyWeirdComponent$jsx = true;
-
-let Jsx_preserve_test$ComponentWithOptionalProps$jsx = true;
 
 let Jsx_preserve_test$Y$1 = make$1;
 
 let Jsx_preserve_test$Y$jsx = true;
 
 export {
-  Icon,
   _single_element_child,
   _multiple_element_children,
   _single_element_fragment,
@@ -281,12 +272,9 @@ export {
   _container_with_spread_props_keyed,
   _unary_element_with_only_spread_props,
   A,
-  B,
   _external_component_with_children,
-  MyWeirdComponent,
   _escaped_jsx_prop,
   _large_component,
-  ComponentWithOptionalProps,
   _optional_props,
   _props_with_hyphen,
   _empty_fragment,
@@ -298,15 +286,11 @@ export {
   ContextProvider,
   make$3 as make,
   Jsx_preserve_test$Icon,
-  Jsx_preserve_test$Icon$jsx,
   Jsx_preserve_test$A,
   Jsx_preserve_test$A$jsx,
   Jsx_preserve_test$B,
-  Jsx_preserve_test$B$jsx,
   Jsx_preserve_test$MyWeirdComponent,
-  Jsx_preserve_test$MyWeirdComponent$jsx,
   Jsx_preserve_test$ComponentWithOptionalProps,
-  Jsx_preserve_test$ComponentWithOptionalProps$jsx,
   Jsx_preserve_test$Y$1 as Jsx_preserve_test$Y,
   Jsx_preserve_test$Y$jsx,
 }

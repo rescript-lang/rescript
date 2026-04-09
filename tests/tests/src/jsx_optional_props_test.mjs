@@ -16,12 +16,8 @@ let _element = JsxRuntime.jsx(Jsx_optional_props_test$ComponentWithOptionalProps
   element: JsxRuntime.jsx("div", {})
 });
 
-let Jsx_optional_props_test$ComponentWithOptionalProps$jsx = true;
-
 export {
-  ComponentWithOptionalProps,
   _element,
   Jsx_optional_props_test$ComponentWithOptionalProps,
-  Jsx_optional_props_test$ComponentWithOptionalProps$jsx,
 }
 /* _element Not a pure module */

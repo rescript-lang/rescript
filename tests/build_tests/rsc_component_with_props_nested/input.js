@@ -24,11 +24,11 @@ assert.match(
   /JsxRuntime\.jsx\(Sidebar\$RscComponentWithPropsNested\.Sidebar\$Provider,/,
 );
 assert.doesNotMatch(output, /\.Provider\.make,/);
-assert.match(sidebarOutput, /let Provider = \{[\s\S]*make: Sidebar\$Provider[\s\S]*\};/s);
 assert.match(
   sidebarOutput,
-  /export \{[\s\S]*Sidebar\$Provider[\s\S]*\}/s,
+  /let Provider = \{[\s\S]*make: Sidebar\$Provider[\s\S]*\};/s,
 );
+assert.match(sidebarOutput, /export \{[\s\S]*Sidebar\$Provider[\s\S]*\}/s);
 assert.doesNotMatch(sidebarOutput, /Provider\.make = Provider;/);
 assert.doesNotMatch(sidebarOutput, /Sidebar\$Provider\$jsx/);
 

@@ -91,46 +91,14 @@ let C8 = {
   make: Alias_default_value_test$C8
 };
 
-let Alias_default_value_test$C0$jsx = true;
-
-let Alias_default_value_test$C1$jsx = true;
-
-let Alias_default_value_test$C2$jsx = true;
-
-let Alias_default_value_test$C3$jsx = true;
-
-let Alias_default_value_test$C4$jsx = true;
-
-let Alias_default_value_test$C6$jsx = true;
-
-let Alias_default_value_test$C7$jsx = true;
-
-let Alias_default_value_test$C8$jsx = true;
-
 export {
-  C0,
-  C1,
-  C2,
-  C3,
-  C4,
-  C6,
-  C7,
-  C8,
   Alias_default_value_test$C0,
-  Alias_default_value_test$C0$jsx,
   Alias_default_value_test$C1,
-  Alias_default_value_test$C1$jsx,
   Alias_default_value_test$C2,
-  Alias_default_value_test$C2$jsx,
   Alias_default_value_test$C3,
-  Alias_default_value_test$C3$jsx,
   Alias_default_value_test$C4,
-  Alias_default_value_test$C4$jsx,
   Alias_default_value_test$C6,
-  Alias_default_value_test$C6$jsx,
   Alias_default_value_test$C7,
-  Alias_default_value_test$C7$jsx,
   Alias_default_value_test$C8,
-  Alias_default_value_test$C8$jsx,
 }
 /* No side effect */
