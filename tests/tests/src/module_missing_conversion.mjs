@@ -7,8 +7,6 @@ function f(x) {
   return x;
 }
 
-let XX_make = Belt_Array.make;
-
 let XX = {
   get: Belt_Array.get,
   getExn: Belt_Array.getExn,
@@ -20,7 +18,7 @@ let XX = {
   shuffle: Belt_Array.shuffle,
   reverseInPlace: Belt_Array.reverseInPlace,
   reverse: Belt_Array.reverse,
-  make: XX_make,
+  make: Belt_Array.make,
   range: Belt_Array.range,
   rangeBy: Belt_Array.rangeBy,
   makeByU: Belt_Array.makeByU,

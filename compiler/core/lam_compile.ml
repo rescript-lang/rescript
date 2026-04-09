@@ -1892,7 +1892,7 @@ let compile output_prefix =
       match arg with
       | Lglobal_module (id, dynamic_import) ->
         compile_external_field ~dynamic_import lambda_cxt id "make"
-      | _ ->
+      | _ -> (
         let new_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
         match compile_lambda new_cxt arg with
         | {block; value = Some compiled_arg} ->
@@ -1902,7 +1902,7 @@ let compile output_prefix =
           in
           Js_output.output_of_block_and_expression lambda_cxt.continuation block
             compiled_expr
-        | {value = None} -> assert false)
+        | {value = None} -> assert false))
     | {
      primitive = Pfield (_, fld_info);
      args = [Lglobal_module (id, dynamic_import)];

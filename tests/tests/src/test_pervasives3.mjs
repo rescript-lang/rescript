@@ -3,8 +3,6 @@
 import * as Belt_List from "@rescript/runtime/lib/es6/Belt_List.mjs";
 import * as Pervasives from "@rescript/runtime/lib/es6/Pervasives.mjs";
 
-let Pervasives_make = Belt_List.make;
-
 let Pervasives$1 = {
   failwith: Pervasives.failwith,
   invalid_arg: Pervasives.invalid_arg,
@@ -36,7 +34,7 @@ let Pervasives$1 = {
   get: Belt_List.get,
   getExn: Belt_List.getExn,
   getOrThrow: Belt_List.getOrThrow,
-  make: Pervasives_make,
+  make: Belt_List.make,
   makeByU: Belt_List.makeByU,
   makeBy: Belt_List.makeBy,
   shuffle: Belt_List.shuffle,
