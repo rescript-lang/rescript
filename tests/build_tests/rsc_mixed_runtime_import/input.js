@@ -23,7 +23,7 @@ assert.match(
 );
 assert.match(
   output,
-  /JsxRuntime\.jsx\(Sidebar\$RscMixedRuntimeImport\.Sidebar\$Provider,/,
+  /JsxRuntime\.jsx\(Sidebar\$RscMixedRuntimeImport\.Provider,/,
 );
 assert.doesNotMatch(output, /@rescript\/runtime\/lib\/es6\/Stdlib_Option\.mjs/);
 assert.equal(

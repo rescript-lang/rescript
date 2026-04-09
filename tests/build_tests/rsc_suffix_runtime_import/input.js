@@ -23,7 +23,7 @@ assert.match(
 );
 assert.match(
   output,
-  /JsxRuntime\.jsx\(Sidebar\$RscSuffixRuntimeImport\.Sidebar\$Provider,/,
+  /JsxRuntime\.jsx\(Sidebar\$RscSuffixRuntimeImport\.Provider,/,
 );
 assert.equal(output.match(/Stdlib_Option\.(js|mjs)/g)?.length ?? 0, 1);
 assert.doesNotMatch(

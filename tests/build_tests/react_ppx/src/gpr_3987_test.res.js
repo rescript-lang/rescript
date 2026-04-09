@@ -33,9 +33,7 @@ function Gpr_3987_test$Gpr3987ReproOk2(props) {
   return null;
 }
 
-let Gpr3987ReproOk2 = {
-  make: Gpr_3987_test$Gpr3987ReproOk2
-};
+let Gpr3987ReproOk2 = Gpr_3987_test$Gpr3987ReproOk2;
 
 JsxRuntime.jsx(Gpr_3987_test$Gpr3987ReproOk2, {
   value: "test",
@@ -46,27 +44,17 @@ function Gpr_3987_test$Gpr3987ReproError(props) {
   return null;
 }
 
-let Gpr3987ReproError = {
-  make: Gpr_3987_test$Gpr3987ReproError
-};
+let Gpr3987ReproError = Gpr_3987_test$Gpr3987ReproError;
 
 JsxRuntime.jsx(Gpr_3987_test$Gpr3987ReproError, {
   value: "test",
   onChange: (param, param$1) => {}
 });
 
-let Gpr_3987_test$Gpr3987ReproOk2$jsx = true;
-
-let Gpr_3987_test$Gpr3987ReproError$jsx = true;
-
 export {
   makeContainer,
   Gpr3987ReproOk,
   Gpr3987ReproOk2,
   Gpr3987ReproError,
-  Gpr_3987_test$Gpr3987ReproOk2,
-  Gpr_3987_test$Gpr3987ReproOk2$jsx,
-  Gpr_3987_test$Gpr3987ReproError,
-  Gpr_3987_test$Gpr3987ReproError$jsx,
 }
 /*  Not a pure module */
