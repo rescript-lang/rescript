@@ -4,6 +4,7 @@ type module_access_path =
   | Dot of module_access_path * module_item
 
 let new_module_item ~name = name
+let module_item_to_string module_item = module_item
 
 let rec emit_module_access_path ~config module_access_path =
   match module_access_path with

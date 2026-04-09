@@ -38,6 +38,6 @@ export type props<actions,person,children,renderMe> = {
   readonly renderMe: renderMe
 };
 
-export const CompV4_make: React.ComponentType<{ readonly x: string; readonly y: string }> = JSXV4JS.CompV4.make as any;
+export const CompV4_make: React.ComponentType<{ readonly x: string; readonly y: string }> = JSXV4JS.JSXV4$CompV4 as any;
 
-export const CompV4: { make: React.ComponentType<{ readonly x: string; readonly y: string }> } = JSXV4JS.CompV4 as any;
+export const CompV4: React.ComponentType<{ readonly x: string; readonly y: string }> = JSXV4JS.JSXV4$CompV4 as any;

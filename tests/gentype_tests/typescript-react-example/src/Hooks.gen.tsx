@@ -61,15 +61,15 @@ export default $$default;
 
 export const Another_anotherComponent: React.ComponentType<{ readonly vehicle: vehicle; readonly callback: () => void }> = HooksJS.Another.anotherComponent as any;
 
-export const Inner_make: React.ComponentType<{ readonly vehicle: vehicle }> = HooksJS.Inner.make as any;
+export const Inner_make: React.ComponentType<{ readonly vehicle: vehicle }> = HooksJS.Hooks$Inner as any;
 
 export const Inner_Another_anotherComponent: React.ComponentType<{ readonly vehicle: vehicle }> = HooksJS.Inner.Another.anotherComponent as any;
 
-export const Inner_Inner2_make: React.ComponentType<{ readonly vehicle: vehicle }> = HooksJS.Inner.Inner2.make as any;
+export const Inner_Inner2_make: React.ComponentType<{ readonly vehicle: vehicle }> = HooksJS.Hooks$Inner$Inner2 as any;
 
 export const Inner_Inner2_Another_anotherComponent: React.ComponentType<{ readonly vehicle: vehicle }> = HooksJS.Inner.Inner2.Another.anotherComponent as any;
 
-export const NoProps_make: React.ComponentType<{}> = HooksJS.NoProps.make as any;
+export const NoProps_make: React.ComponentType<{}> = HooksJS.Hooks$NoProps as any;
 
 export const functionWithRenamedArgs: (_to:vehicle, _Type:vehicle, cb:cb) => string = HooksJS.functionWithRenamedArgs as any;
 
@@ -79,7 +79,7 @@ export const WithRename_componentWithRenamedArgs: React.ComponentType<{
   readonly cb: cb
 }> = HooksJS.WithRename.componentWithRenamedArgs as any;
 
-export const WithRef_make: React.ComponentType<{ readonly vehicle: vehicle; readonly ref?: any }> = HooksJS.WithRef.make as any;
+export const WithRef_make: React.ComponentType<{ readonly vehicle: vehicle; readonly ref?: any }> = HooksJS.Hooks$WithRef as any;
 
 export const ForwardRef_input: (_1:r) => JSX.Element = HooksJS.ForwardRef.input as any;
 
@@ -87,13 +87,13 @@ export const Poly_polymorphicComponent: React.ComponentType<{ readonly p: [vehic
 
 export const Fun_functionReturningReactElement: React.ComponentType<{ readonly name: string }> = HooksJS.Fun.functionReturningReactElement as any;
 
-export const RenderPropRequiresConversion_make: React.ComponentType<{ readonly renderVehicle: React.ComponentType<{ readonly number: number; readonly vehicle: vehicle }> }> = HooksJS.RenderPropRequiresConversion.make as any;
+export const RenderPropRequiresConversion_make: React.ComponentType<{ readonly renderVehicle: React.ComponentType<{ readonly number: number; readonly vehicle: vehicle }> }> = HooksJS.Hooks$RenderPropRequiresConversion as any;
 
 export const WithChildren_aComponentWithChildren: React.ComponentType<{ readonly vehicle: vehicle; readonly children: React.ReactNode }> = HooksJS.WithChildren.aComponentWithChildren as any;
 
-export const DD_make: React.ComponentType<{ readonly array: Js_TypedArray2_Uint8Array_t; readonly name: string }> = HooksJS.DD.make as any;
+export const DD_make: React.ComponentType<{ readonly array: Js_TypedArray2_Uint8Array_t; readonly name: string }> = HooksJS.Hooks$DD as any;
 
-export const NoProps: { make: React.ComponentType<{}> } = HooksJS.NoProps as any;
+export const NoProps: React.ComponentType<{}> = HooksJS.Hooks$NoProps as any;
 
 export const Inner: {
   Inner2: {
@@ -116,7 +116,7 @@ export const Inner: {
   }>
 } = HooksJS.Inner as any;
 
-export const RenderPropRequiresConversion: { make: React.ComponentType<{ readonly renderVehicle: React.ComponentType<{ readonly number: number; readonly vehicle: vehicle }> }> } = HooksJS.RenderPropRequiresConversion as any;
+export const RenderPropRequiresConversion: React.ComponentType<{ readonly renderVehicle: React.ComponentType<{ readonly number: number; readonly vehicle: vehicle }> }> = HooksJS.Hooks$RenderPropRequiresConversion as any;
 
 export const WithRename: { componentWithRenamedArgs: React.ComponentType<{
   readonly _to: vehicle; 
@@ -128,11 +128,11 @@ export const ForwardRef: { input: (_1:r) => JSX.Element } = HooksJS.ForwardRef a
 
 export const Fun: { functionReturningReactElement: React.ComponentType<{ readonly name: string }> } = HooksJS.Fun as any;
 
-export const WithRef: { make: React.ComponentType<{ readonly vehicle: vehicle; readonly ref?: any }> } = HooksJS.WithRef as any;
+export const WithRef: React.ComponentType<{ readonly vehicle: vehicle; readonly ref?: any }> = HooksJS.Hooks$WithRef as any;
 
 export const WithChildren: { aComponentWithChildren: React.ComponentType<{ readonly vehicle: vehicle; readonly children: React.ReactNode }> } = HooksJS.WithChildren as any;
 
-export const DD: { make: React.ComponentType<{ readonly array: Js_TypedArray2_Uint8Array_t; readonly name: string }> } = HooksJS.DD as any;
+export const DD: React.ComponentType<{ readonly array: Js_TypedArray2_Uint8Array_t; readonly name: string }> = HooksJS.Hooks$DD as any;
 
 export const Another: { anotherComponent: React.ComponentType<{ readonly vehicle: vehicle; readonly callback: () => void }> } = HooksJS.Another as any;
 

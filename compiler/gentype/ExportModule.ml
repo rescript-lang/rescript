@@ -3,7 +3,12 @@ open GenTypeCommon
 type export_module_item = (string, export_module_value) Hashtbl.t
 
 and export_module_value =
-  | S of {name: string; type_: type_; doc_string: DocString.t}
+  | S of {
+      name: string;
+      path: string list;
+      type_: type_;
+      doc_string: DocString.t;
+    }
   | M of {export_module_item: export_module_item}
 
 type export_module_items = (string, export_module_item) Hashtbl.t
@@ -18,7 +23,7 @@ type field_info = {field_for_value: field; field_for_type: field}
 
 let rec export_module_value_to_type ~config export_module_value =
   match export_module_value with
-  | S {name; type_; doc_string} ->
+  | S {name; type_; doc_string; _} ->
     {type_for_value = ident name; type_for_type = type_; doc_string}
   | M {export_module_item} ->
     let fields_info =
@@ -57,13 +62,13 @@ and export_module_item_to_fields =
        export_module_item []
     : config:Config.t -> export_module_item -> field_info list)
 
-let rec extend_export_module_item ~doc_string x
+let rec extend_export_module_item ~doc_string ~resolved_name x
     ~(export_module_item : export_module_item) ~type_ ~value_name =
   match x with
   | [] -> ()
   | [field_name] ->
     Hashtbl.replace export_module_item field_name
-      (S {name = value_name; type_; doc_string})
+      (S {name = value_name; path = resolved_name; type_; doc_string})
   | field_name :: rest ->
     let inner_export_module_item =
       match Hashtbl.find export_module_item field_name with
@@ -77,7 +82,7 @@ let rec extend_export_module_item ~doc_string x
         inner_export_module_item
     in
     rest
-    |> extend_export_module_item ~doc_string
+    |> extend_export_module_item ~doc_string ~resolved_name
          ~export_module_item:inner_export_module_item ~value_name ~type_
 
 let extend_export_module_items x ~doc_string
@@ -95,8 +100,8 @@ let extend_export_module_items x ~doc_string
         export_module_item
     in
     rest
-    |> extend_export_module_item ~doc_string ~export_module_item ~type_
-         ~value_name
+    |> extend_export_module_item ~doc_string ~resolved_name:x ~export_module_item
+         ~type_ ~value_name
 
 let create_module_items_emitter =
   (fun () -> Hashtbl.create 1 : unit -> export_module_items)
@@ -107,16 +112,53 @@ let rev_fold f tbl base =
 
 let emit_all_module_items ~config ~emitters ~file_name
     (export_module_items : export_module_items) =
+  let is_react_component_type type_ =
+    match type_ with
+    | Function ({arg_types = [{a_type = Object (_, fields)}]; ret_type; _}) ->
+      ret_type |> EmitType.is_type_function_component ~fields
+    | _ -> false
+  in
+  let hidden_export_access resolved_name =
+    match List.rev resolved_name with
+    | "make" :: module_path_rev -> (
+      match List.rev module_path_rev with
+      | [] -> None
+      | module_path ->
+        Some
+          ((file_name |> ModuleName.for_js_file |> ModuleName.to_string)
+          ^ "."
+          ^ (file_name |> ModuleName.to_string)
+          ^ "$" ^ String.concat "$" module_path))
+    | _ -> None
+  in
+  let single_make_component_export export_module_item =
+    match Hashtbl.length export_module_item with
+    | 1 -> (
+      match Hashtbl.find_opt export_module_item "make" with
+      | Some (S {path; type_; doc_string; _}) when is_react_component_type type_ -> (
+        match hidden_export_access path with
+        | Some access -> Some (access, type_, doc_string)
+        | None -> None)
+      | Some (S _) | Some (M _) | None -> None)
+    | _ -> None
+  in
   emitters
   |> rev_fold
        (fun module_name export_module_item emitters ->
-         let {type_for_type; doc_string} =
-           M {export_module_item} |> export_module_value_to_type ~config
-         in
          if !Debug.code_items then Log_.item "EmitModule %s @." module_name;
-         let emitted_module_item =
-           ModuleName.for_inner_module ~file_name ~inner_module_name:module_name
-           |> ModuleName.to_string
+         let emitted_module_item, type_for_type, doc_string =
+           match single_make_component_export export_module_item with
+           | Some (component_access, type_, doc_string) ->
+             (component_access, type_, doc_string)
+           | None ->
+             let {type_for_type; doc_string} =
+               M {export_module_item} |> export_module_value_to_type ~config
+             in
+             ( ModuleName.for_inner_module ~file_name
+                 ~inner_module_name:module_name
+               |> ModuleName.to_string,
+               type_for_type,
+               doc_string )
          in
          emitted_module_item
          |> EmitType.emit_export_const ~doc_string ~early:false ~config

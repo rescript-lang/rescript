@@ -8,8 +8,8 @@ type module_access_path =
 val check_mutable_object_field : previous_name:string -> name:string -> bool
 val default : string
 val emit_module_access_path : config:Config.t -> module_access_path -> string
-
 val is_mutable_object_field : string -> bool
+val module_item_to_string : module_item -> string
 val new_module_item : name:string -> module_item
 val js_variant_tag : polymorphic:bool -> tag:string option -> string
 val js_variant_payload_tag : n:int -> string
