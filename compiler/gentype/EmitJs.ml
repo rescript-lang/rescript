@@ -157,7 +157,8 @@ let emit_code_item ~config ~emitters ~module_items_emitter ~env ~file_name
             ((file_name |> ModuleName.for_js_file |> ModuleName.to_string)
             ^ "."
             ^ (file_name |> ModuleName.to_string)
-            ^ "$" ^ String.concat "$" module_path))
+            ^ "$"
+            ^ String.concat "$" module_path))
       | _ -> None)
   in
   if !Debug.code_items then
@@ -373,7 +374,7 @@ let emit_code_item ~config ~emitters ~module_items_emitter ~env ~file_name
     in
     let is_react_component_export =
       match type_ with
-      | Function ({arg_types = [{a_type = Object (_, fields)}]; ret_type; _}) ->
+      | Function {arg_types = [{a_type = Object (_, fields)}]; ret_type; _} ->
         ret_type |> EmitType.is_type_function_component ~fields
       | _ -> false
     in

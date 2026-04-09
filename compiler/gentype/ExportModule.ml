@@ -100,8 +100,8 @@ let extend_export_module_items x ~doc_string
         export_module_item
     in
     rest
-    |> extend_export_module_item ~doc_string ~resolved_name:x ~export_module_item
-         ~type_ ~value_name
+    |> extend_export_module_item ~doc_string ~resolved_name:x
+         ~export_module_item ~type_ ~value_name
 
 let create_module_items_emitter =
   (fun () -> Hashtbl.create 1 : unit -> export_module_items)
@@ -114,7 +114,7 @@ let emit_all_module_items ~config ~emitters ~file_name
     (export_module_items : export_module_items) =
   let is_react_component_type type_ =
     match type_ with
-    | Function ({arg_types = [{a_type = Object (_, fields)}]; ret_type; _}) ->
+    | Function {arg_types = [{a_type = Object (_, fields)}]; ret_type; _} ->
       ret_type |> EmitType.is_type_function_component ~fields
     | _ -> false
   in
@@ -128,14 +128,16 @@ let emit_all_module_items ~config ~emitters ~file_name
           ((file_name |> ModuleName.for_js_file |> ModuleName.to_string)
           ^ "."
           ^ (file_name |> ModuleName.to_string)
-          ^ "$" ^ String.concat "$" module_path))
+          ^ "$"
+          ^ String.concat "$" module_path))
     | _ -> None
   in
   let single_make_component_export export_module_item =
     match Hashtbl.length export_module_item with
     | 1 -> (
       match Hashtbl.find_opt export_module_item "make" with
-      | Some (S {path; type_; doc_string; _}) when is_react_component_type type_ -> (
+      | Some (S {path; type_; doc_string; _}) when is_react_component_type type_
+        -> (
         match hidden_export_access path with
         | Some access -> Some (access, type_, doc_string)
         | None -> None)

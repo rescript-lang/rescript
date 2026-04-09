@@ -1889,16 +1889,20 @@ let compile output_prefix =
      args = [arg];
      _;
     } -> (
-      let new_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
-      match compile_lambda new_cxt arg with
-      | {block; value = Some compiled_arg} ->
-        let compiled_expr = Js_of_lam_block.field fld_info compiled_arg 0l in
-        let compiled_expr =
-          rewrite_nested_component_make_expr arg compiled_expr
-        in
-        Js_output.output_of_block_and_expression lambda_cxt.continuation block
-          compiled_expr
-      | {value = None} -> assert false)
+      match arg with
+      | Lglobal_module (id, dynamic_import) ->
+        compile_external_field ~dynamic_import lambda_cxt id "make"
+      | _ ->
+        let new_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
+        match compile_lambda new_cxt arg with
+        | {block; value = Some compiled_arg} ->
+          let compiled_expr = Js_of_lam_block.field fld_info compiled_arg 0l in
+          let compiled_expr =
+            rewrite_nested_component_make_expr arg compiled_expr
+          in
+          Js_output.output_of_block_and_expression lambda_cxt.continuation block
+            compiled_expr
+        | {value = None} -> assert false)
     | {
      primitive = Pfield (_, fld_info);
      args = [Lglobal_module (id, dynamic_import)];
