@@ -72,7 +72,7 @@ and translate_signature_item_from_types ~config ~output_file_relative ~resolver
     |> translate_module_declaration_from_types ~config ~output_file_relative
          ~resolver ~type_env ~id
   | Types.Sig_value (id, {val_attributes; val_loc; val_type}) ->
-    let name = id |> Ident.name in
+    let name = id |> Ident.name |> Ext_ident.unwrap_uppercase_exotic in
     if !Debug.translation then Log_.item "Translate Sig Value %s\n" name;
     let module_item = Runtime.new_module_item ~name in
     type_env |> TypeEnv.update_module_item ~module_item;

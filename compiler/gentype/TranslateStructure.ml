@@ -104,7 +104,7 @@ let translate_value_binding ~config ~output_file_relative ~resolver ~type_env
     {Typedtree.vb_attributes; vb_expr; vb_pat} : Translation.t =
   match vb_pat.pat_desc with
   | Tpat_var (id, _) | Tpat_alias ({pat_desc = Tpat_any}, id, _) ->
-    let name = id |> Ident.name in
+    let name = id |> Ident.name |> Ext_ident.unwrap_uppercase_exotic in
     if !Debug.translation then Log_.item "Translate Value Binding %s\n" name;
     let module_item = Runtime.new_module_item ~name in
     type_env |> TypeEnv.update_module_item ~module_item;
@@ -113,7 +113,7 @@ let translate_value_binding ~config ~output_file_relative ~resolver ~type_env
       |> Annotation.from_attributes ~config ~loc:vb_pat.pat_loc
       = GenType
     then
-      id |> Ident.name
+      name
       |> Translation.translate_value ~attributes:vb_attributes ~config
            ~doc_string:(Annotation.doc_string_from_attrs vb_attributes)
            ~output_file_relative ~resolver ~type_env ~type_expr:vb_pat.pat_type
