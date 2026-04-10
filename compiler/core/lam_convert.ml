@@ -205,8 +205,7 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Pfield (id, info) -> prim ~primitive:(Pfield (id, info)) ~args loc
   | Psetfield (id, info) -> prim ~primitive:(Psetfield (id, info)) ~args loc
   | Pduprecord -> prim ~primitive:Pduprecord ~args loc
-  | Precord_spread_new excluded ->
-    prim ~primitive:(Precord_spread_new excluded) ~args loc
+  | Precord_rest excluded -> prim ~primitive:(Precord_rest excluded) ~args loc
   | Praise _ -> prim ~primitive:Praise ~args loc
   | Pobjcomp x -> prim ~primitive:(Pobjcomp x) ~args loc
   | Pobjorder -> prim ~primitive:Pobjorder ~args loc

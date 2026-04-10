@@ -79,11 +79,19 @@ let map_loc sub {loc; txt} = {loc = sub.location sub loc; txt}
 
 let record_rest_attr_name = "res.record_rest"
 
+let record_rest_of_pattern (rest : Pt.pattern) =
+  match rest.Pt.ppat_desc with
+  | Pt.Ppat_constraint ({ppat_desc = Pt.Ppat_var rest_name; _}, rest_type) ->
+    Some {Pt.rest_loc = rest.ppat_loc; rest_name; rest_type = Some rest_type}
+  | Pt.Ppat_var rest_name ->
+    Some {Pt.rest_loc = rest.ppat_loc; rest_name; rest_type = None}
+  | _ -> None
+
 let get_record_rest_attr attrs_ =
   let rec remove_record_rest_attr acc = function
     | ({Location.txt = attr_name; _}, Pt.PPat (rest, None)) :: attrs
       when attr_name = record_rest_attr_name ->
-      (Some rest, List.rev_append acc attrs)
+      (record_rest_of_pattern rest, List.rev_append acc attrs)
     | attr :: attrs -> remove_record_rest_attr (attr :: acc) attrs
     | [] -> (None, List.rev acc)
   in

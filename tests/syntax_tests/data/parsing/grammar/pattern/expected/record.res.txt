@@ -81,15 +81,18 @@ let f [arity:1](({ a } : myRecord) as p) = ()
 ;;for { a;_} = 0 to 10 do () done
 ;;for { a;_} = 0 to 10 do () done
 ;;for ({ a } : myRecord) = 0 to 10 do () done
-let { a } = x
-let { a } = x
-let { a } = x
-let { a; b } = x
-;;match x with | { a } -> () | { a } -> () | { a } -> ()
-let f [arity:1]{ a } = ()
-let f [arity:1]{ a } = ()
-let f [arity:1]{ a } = ()
-let { a } = x
-let { a } = x
-let { a } = x
-let { a } = x
+let { a; ...rest } = x
+let { a; ...b as rest } = x
+let { a; ...M.t as rest } = x
+let { a; b; ...M.Sub.t as rest } = x
+;;match x with
+  | { a; ...rest } -> ()
+  | { a; ...b as rest } -> ()
+  | { a; ...M.t as rest } -> ()
+let f [arity:1]{ a; ...rest } = ()
+let f [arity:1]{ a; ...b as rest } = ()
+let f [arity:1]{ a; ...M.t as rest } = ()
+let { a; ...'v t as rest } = x
+let { a; ...'v M.t as rest } = x
+let { a; ...int M.t as rest } = x
+let { a; ...('a, 'b) M.t as rest } = x

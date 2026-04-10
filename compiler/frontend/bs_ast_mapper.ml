@@ -430,7 +430,13 @@ module P = struct
         ?rest:
           (match rest with
           | None -> None
-          | Some p -> Some (sub.pat sub p))
+          | Some {rest_loc; rest_name; rest_type} ->
+            Some
+              {
+                rest_loc = sub.location sub rest_loc;
+                rest_name = map_loc sub rest_name;
+                rest_type = map_opt (sub.typ sub) rest_type;
+              })
         (List.map
            (fun {lid; x = p; opt} ->
              {lid = map_loc sub lid; x = sub.pat sub p; opt})

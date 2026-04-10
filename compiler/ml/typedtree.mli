@@ -47,9 +47,7 @@ and record_pat_rest = {
   rest_ident: Ident.t;
   rest_name: string loc;
   rest_type: type_expr;
-  rest_path: Path.t;
-  rest_labels: Types.label_declaration list;
-  excluded_labels: string list;
+  excluded_runtime_labels: string list;
 }
 
 and pat_extra =

@@ -8,4 +8,4 @@
   Record patterns can only have one `...` rest clause.
 Use a single `...typeName as bindingName` clause to capture the remaining fields.
 
-let {  } = myRecord
+let { ...Config.t as second } = myRecord

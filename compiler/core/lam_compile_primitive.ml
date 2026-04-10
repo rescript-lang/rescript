@@ -603,7 +603,7 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
     match args with
     | [e1] -> E.obj ~dup:e1 []
     | _ -> assert false)
-  | Precord_spread_new excluded -> (
+  | Precord_rest excluded -> (
     match args with
     | [e1] ->
       (* Generate: (({field1: __unused0, ...__rest}) => __rest)(source)

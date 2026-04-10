@@ -548,7 +548,7 @@ let bind_record_rest loc arg rest action =
     ( Strict,
       Pgenval,
       rest.rest_ident,
-      Lprim (Precord_spread_new rest.excluded_labels, [arg], loc),
+      Lprim (Precord_rest rest.excluded_runtime_labels, [arg], loc),
       action )
 
 let simplify_cases args cls =

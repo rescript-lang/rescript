@@ -404,7 +404,11 @@ module P = struct
           iter_loc sub lid;
           sub.pat sub pat)
         lpl;
-      iter_opt (sub.pat sub) rest
+      iter_opt
+        (fun {rest_name; rest_type; _} ->
+          iter_loc sub rest_name;
+          iter_opt (sub.typ sub) rest_type)
+        rest
     | Ppat_array pl -> List.iter (sub.pat sub) pl
     | Ppat_or (p1, p2) ->
       sub.pat sub p1;

@@ -82,6 +82,14 @@ let record_rest_attr_name = "res.record_rest"
 let add_record_rest_attr ~rest attrs =
   (Location.mknoloc record_rest_attr_name, Pt.PPat (rest, None)) :: attrs
 
+let record_rest_to_pattern sub (rest : record_pat_rest) =
+  let loc = sub.location sub rest.rest_loc in
+  let name = map_loc sub rest.rest_name in
+  let pat = Ast_helper0.Pat.var ~loc name in
+  match rest.rest_type with
+  | None -> pat
+  | Some typ -> Ast_helper0.Pat.constraint_ ~loc pat (sub.typ sub typ)
+
 module T = struct
   (* Type expressions for the core language *)
 
@@ -569,7 +577,7 @@ module P = struct
         match rest with
         | None -> attrs
         | Some rest_pat ->
-          add_record_rest_attr ~rest:(sub.pat sub rest_pat) attrs
+          add_record_rest_attr ~rest:(record_rest_to_pattern sub rest_pat) attrs
       in
       record ~loc ~attrs
         (Ext_list.map lpl (fun {lid; x = p; opt = optional} ->

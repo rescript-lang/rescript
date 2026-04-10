@@ -327,7 +327,7 @@ type fundef_parameter =
 type record_pattern_item =
   | PatUnderscore
   | PatField of Parsetree.pattern Parsetree.record_element
-  | PatRest of Parsetree.pattern
+  | PatRest of Parsetree.record_pat_rest
 
 type context = OrdinaryExpr | TernaryTrueBranchExpr | WhenExpr
 
@@ -1532,22 +1532,25 @@ and parse_record_pattern_row p =
           Location.mkloc "_" (mk_loc name_start p.prev_end_pos)
       in
       let rest_loc = mk_loc start_pos p.prev_end_pos in
-      let rest_pat =
-        Ast_helper.Pat.constraint_ ~loc:rest_loc ~attrs
-          (Ast_helper.Pat.var ~loc:name.loc name)
-          core_type
-      in
-      Some (false, PatRest rest_pat))
+      Some
+        ( false,
+          PatRest
+            {Parsetree.rest_loc; rest_name = name; rest_type = Some core_type}
+        ))
     else
       match p.Parser.token with
       | Lident ident ->
         (* ...name (no type annotation) *)
         Parser.next p;
         let loc = mk_loc start_pos p.prev_end_pos in
-        let rest_pat =
-          Ast_helper.Pat.var ~loc ~attrs (Location.mkloc ident loc)
-        in
-        Some (false, PatRest rest_pat)
+        Some
+          ( false,
+            PatRest
+              {
+                Parsetree.rest_loc = loc;
+                rest_name = Location.mkloc ident loc;
+                rest_type = None;
+              } )
       | _ ->
         (* Fallback: treat as old-style spread (error) *)
         Some (true, PatField (parse_record_pattern_row_field ~attrs p)))
@@ -1611,7 +1614,7 @@ and parse_record_pattern ~attrs p =
           match rest with
           | None -> (fields, flag, Some rest_pat)
           | Some _ ->
-            Parser.err ~start_pos:rest_pat.Parsetree.ppat_loc.loc_start p
+            Parser.err ~start_pos:rest_pat.Parsetree.rest_loc.loc_start p
               (Diagnostics.message ErrorMessages.record_pattern_multiple_rest);
             (fields, flag, rest))
         | PatUnderscore -> (fields, flag, rest))

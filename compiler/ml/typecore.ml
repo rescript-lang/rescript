@@ -95,18 +95,7 @@ type error =
   | Type_params_not_supported of Longident.t
   | Field_access_on_dict_type
   | Jsx_not_enabled
-  | Record_rest_invalid_type
-  | Record_rest_requires_type_annotation of string
-  | Record_rest_not_record of Longident.t
-  | Record_rest_field_not_optional of string list * Longident.t
-  | Record_rest_field_missing of string list * Longident.t
-  | Record_rest_extra_field of string * Longident.t
-  | Record_rest_field_runtime_name_mismatch of {
-      field: string;
-      rest_type: Longident.t;
-      source_runtime_name: string;
-      rest_runtime_name: string;
-    }
+  | Record_rest of Typecore_record_rest.error
 
 exception Error of Location.t * Env.t * error
 exception Error_forward of Location.error
@@ -317,15 +306,6 @@ let extract_concrete_variant env ty =
   | p0, p, {type_kind = Type_open} -> (p0, p, [])
   | _ -> raise Not_found
 
-let runtime_label_name name attrs =
-  Ext_list.find_def attrs Lambda.find_name name
-
-let runtime_label_description_name (lbl : Types.label_description) =
-  runtime_label_name lbl.lbl_name lbl.lbl_attributes
-
-let runtime_label_declaration_name (lbl : Types.label_declaration) =
-  runtime_label_name (Ident.name lbl.ld_id) lbl.ld_attributes
-
 let label_is_optional ld = ld.lbl_optional
 
 let check_optional_attr env ld optional loc =
@@ -342,19 +322,6 @@ let unify_pat_types loc env ty ty' =
   | Unify trace -> raise (Error (loc, env, Pattern_type_clash trace))
   | Tags (l1, l2) ->
     raise (Typetexp.Error (loc, env, Typetexp.Variant_tags (l1, l2)))
-
-let extract_instantiated_concrete_typedecl env loc ty =
-  let _, _, decl = extract_concrete_typedecl env ty in
-  let decl = instance_declaration decl in
-  let args =
-    match expand_head env ty with
-    | {desc = Tconstr (_, args, _)} -> args
-    | _ -> assert false
-  in
-  List.iter2
-    (fun param arg -> unify_pat_types loc env param arg)
-    decl.type_params args;
-  decl
 
 (* unification inside type_exp and type_expect *)
 let unify_exp_types ~context loc env ty expected_ty =
@@ -1582,254 +1549,22 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
       check_recordpat_labels ~get_jsx_component_error_info loc lbl_pat_list
         effective_closed;
       unify_pat_types loc !env record_ty expected_ty;
-      (* Resolve the rest pattern info *)
       let typed_rest =
         match rest with
         | None -> None
-        | Some rest_pat ->
-          (* Extract type annotation and binding name from rest pattern *)
-          let rest_type_lid, rest_name, rest_type_args_syntax =
-            match rest_pat.ppat_desc with
-            | Ppat_constraint ({ppat_desc = Ppat_var name}, cty) -> (
-              match cty.ptyp_desc with
-              | Ptyp_constr (lid, type_args) -> (lid, name, type_args)
-              | _ ->
-                raise
-                  (Error (rest_pat.ppat_loc, !env, Record_rest_invalid_type)))
-            | Ppat_var name ->
-              (* No type annotation — try to infer from context *)
-              (* For now, require type annotation *)
-              raise
-                (Error
-                   ( rest_pat.ppat_loc,
-                     !env,
-                     Record_rest_requires_type_annotation name.txt ))
-            | _ ->
-              raise (Error (rest_pat.ppat_loc, !env, Record_rest_invalid_type))
+        | Some rest -> (
+          let check_not_private loc ty decl =
+            if decl.type_private = Private then
+              raise (Error (loc, !env, Private_type ty))
           in
-          (* Look up the rest record type *)
-          let rest_path, rest_annotation_decl =
-            Typetexp.find_type !env rest_type_lid.loc rest_type_lid.txt
-          in
-          let rest_annotation_decl =
-            instance_declaration rest_annotation_decl
-          in
-          (* Get explicit field names *)
-          let explicit_fields =
-            List.map (fun (_, label, _, _) -> label.lbl_name) lbl_pat_list
-          in
-          let explicit_runtime_fields =
-            List.map
-              (fun (_, label, _, _) -> runtime_label_description_name label)
-              lbl_pat_list
-          in
-          let rest_type_args =
-            match rest_type_args_syntax with
-            | [] ->
-              List.map (fun _ -> newvar ()) rest_annotation_decl.type_params
-            | args ->
-              let n_args = List.length args in
-              let n_params = List.length rest_annotation_decl.type_params in
-              if n_args <> n_params then
-                raise
-                  (Typetexp.Error
-                     ( rest_type_lid.loc,
-                       !env,
-                       Typetexp.Type_arity_mismatch
-                         (rest_type_lid.txt, n_params, n_args) ));
-              List.map
-                (fun sty ->
-                  let cty, force =
-                    Typetexp.transl_simple_type_delayed !env sty
-                  in
-                  pattern_force := force :: !pattern_force;
-                  cty.ctyp_type)
-                args
-          in
-          let rest_type_expr =
-            newgenty (Tconstr (rest_path, rest_type_args, ref Mnil))
-          in
-          if rest_annotation_decl.type_private = Private then
-            raise (Error (rest_type_lid.loc, !env, Private_type rest_type_expr));
-          List.iter2
-            (fun param arg -> unify_pat_types rest_type_lid.loc !env param arg)
-            rest_annotation_decl.type_params rest_type_args;
-          let rest_decl =
-            match
-              try
-                Some
-                  (extract_instantiated_concrete_typedecl !env rest_type_lid.loc
-                     rest_type_expr)
-              with Not_found -> None
-            with
-            | Some rest_decl -> (
-              if rest_decl.type_private = Private then
-                raise
-                  (Error (rest_type_lid.loc, !env, Private_type rest_type_expr));
-              match rest_decl.type_kind with
-              | Type_record _ -> rest_decl
-              | _ ->
-                raise
-                  (Error
-                     ( rest_type_lid.loc,
-                       !env,
-                       Record_rest_not_record rest_type_lid.txt )))
-            | None ->
-              raise
-                (Error
-                   ( rest_type_lid.loc,
-                     !env,
-                     Record_rest_not_record rest_type_lid.txt ))
-          in
-          let source_fields, source_repr =
-            match
-              try
-                Some (extract_instantiated_concrete_typedecl !env loc record_ty)
-              with Not_found -> None
-            with
-            | Some source_decl -> (
-              match source_decl.type_kind with
-              | Type_record (fields, repr) ->
-                ( List.map
-                    (fun (l : Types.label_declaration) ->
-                      ( Ident.name l.ld_id,
-                        runtime_label_declaration_name l,
-                        l.ld_type ))
-                    fields,
-                  repr )
-              | _ -> assert false)
-            | None -> (
-              unify_pat_types rest_type_lid.loc !env record_ty rest_type_expr;
-              match rest_decl.type_kind with
-              | Type_record (fields, repr) ->
-                ( List.map
-                    (fun (l : Types.label_declaration) ->
-                      ( Ident.name l.ld_id,
-                        runtime_label_declaration_name l,
-                        l.ld_type ))
-                    fields,
-                  repr )
-              | _ -> assert false)
-          in
-          let rest_labels =
-            match rest_decl.type_kind with
-            | Type_record (labels, _) -> labels
-            | _ -> assert false
-          in
-          (* Get explicit optional fields *)
-          let explicit_optional_fields =
-            List.filter_map
-              (fun (_, label, _, opt) ->
-                if opt then Some label.lbl_name else None)
-              lbl_pat_list
-          in
-          let runtime_excluded_fields =
-            match source_repr with
-            | Record_inlined {attrs; _}
-              when not (Ast_untagged_variants.process_untagged attrs) ->
-              let tag_name =
-                match Ast_untagged_variants.process_tag_name attrs with
-                | Some s -> s
-                | None -> "TAG"
-              in
-              if List.mem tag_name explicit_runtime_fields then
-                explicit_runtime_fields
-              else tag_name :: explicit_runtime_fields
-            | _ -> explicit_runtime_fields
-          in
-          (* Get rest field names *)
-          let rest_field_names =
-            List.map
-              (fun (l : Types.label_declaration) -> Ident.name l.ld_id)
-              rest_labels
-          in
-          (* Validate: fields in both explicit and rest must be optional in the explicit pattern *)
-          let not_optional =
-            List.filter
-              (fun rest_field ->
-                List.mem rest_field explicit_fields
-                && not (List.mem rest_field explicit_optional_fields))
-              rest_field_names
-          in
-          if not_optional <> [] then
-            raise
-              (Error
-                 ( rest_pat.ppat_loc,
-                   !env,
-                   Record_rest_field_not_optional
-                     (not_optional, rest_type_lid.txt) ));
-          (* Validate: all source fields must be in explicit or rest *)
-          let source_field_names =
-            List.map (fun (name, _, _) -> name) source_fields
-          in
-          let missing =
-            List.filter
-              (fun source_field ->
-                (not (List.mem source_field explicit_fields))
-                && not (List.mem source_field rest_field_names))
-              source_field_names
-          in
-          if missing <> [] then
-            raise
-              (Error
-                 ( rest_pat.ppat_loc,
-                   !env,
-                   Record_rest_field_missing (missing, rest_type_lid.txt) ));
-          (* Validate: rest type fields must all exist in source and use compatible types *)
-          List.iter
-            (fun (rest_label : Types.label_declaration) ->
-              let rest_field = Ident.name rest_label.ld_id in
-              let rest_runtime_field =
-                runtime_label_declaration_name rest_label
-              in
-              match
-                Ext_list.find_first source_fields (fun (field, _, _) ->
-                    field = rest_field)
-              with
-              | None ->
-                raise
-                  (Error
-                     ( rest_type_lid.loc,
-                       !env,
-                       Record_rest_extra_field (rest_field, rest_type_lid.txt)
-                     ))
-              | Some (_, source_runtime_field, source_type) ->
-                if source_runtime_field <> rest_runtime_field then
-                  raise
-                    (Error
-                       ( rest_type_lid.loc,
-                         !env,
-                         Record_rest_field_runtime_name_mismatch
-                           {
-                             field = rest_field;
-                             rest_type = rest_type_lid.txt;
-                             source_runtime_name = source_runtime_field;
-                             rest_runtime_name = rest_runtime_field;
-                           } ));
-                unify_pat_types rest_type_lid.loc !env rest_label.ld_type
-                  source_type)
-            rest_labels;
-          (* Warn if all rest fields are already explicit — the rest record will be empty *)
-          if
-            rest_field_names <> []
-            && List.for_all
-                 (fun f -> List.mem f explicit_fields)
-                 rest_field_names
-          then
-            Location.prerr_warning rest_pat.ppat_loc
-              Warnings.Bs_record_rest_empty;
-          let rest_ident =
-            enter_variable rest_pat.ppat_loc rest_name rest_type_expr
-          in
-          Some
-            {
-              Typedtree.rest_ident;
-              rest_name;
-              rest_type = rest_type_expr;
-              rest_path;
-              rest_labels;
-              excluded_labels = runtime_excluded_fields;
-            }
+          try
+            Some
+              (Typecore_record_rest.type_record_pat_rest ~env:!env
+                 ~pattern_force ~loc ~record_ty ~lbl_pat_list ~rest
+                 ~enter_variable:(fun loc name ty -> enter_variable loc name ty)
+                 ~unify_pat_types ~check_not_private)
+          with Typecore_record_rest.Error (loc, env, err) ->
+            raise (Error (loc, env, Record_rest err)))
       in
       rp k
         {
@@ -2357,9 +2092,7 @@ let iter_ppat f p =
   | Ppat_open (_, p)
   | Ppat_constraint (p, _) ->
     f p
-  | Ppat_record (args, _flag, rest) ->
-    List.iter (fun {x = p} -> f p) args;
-    may f rest
+  | Ppat_record (args, _flag, _rest) -> List.iter (fun {x = p} -> f p) args
 
 let contains_polymorphic_variant p =
   let rec loop p =
@@ -5081,64 +4814,7 @@ let report_error env loc ppf error =
     fprintf ppf
       "Cannot compile JSX expression because JSX support is not enabled. Add \
        \"jsx\" settings to rescript.json to enable JSX support."
-  | Record_rest_invalid_type ->
-    fprintf ppf "Record rest pattern must have the form: ...Type.t as name"
-  | Record_rest_requires_type_annotation name ->
-    fprintf ppf
-      "Record rest pattern `...%s` requires a type annotation. Use `...Type.t \
-       as %s`."
-      name name
-  | Record_rest_not_record lid ->
-    fprintf ppf
-      "Type %a is not a record type and cannot be used as a record rest \
-       pattern."
-      longident lid
-  | Record_rest_field_not_optional (fields, lid) -> (
-    let field_list =
-      fields |> List.map (fun f -> "\n- " ^ f) |> String.concat ""
-    in
-    match fields with
-    | [field] ->
-      fprintf ppf
-        "The following field appears in both the explicit pattern and the rest \
-         type `%a`:%s\n\n\
-         Mark it as optional (`?%s`) in the explicit pattern."
-        longident lid field_list field
-    | _ ->
-      fprintf ppf
-        "The following fields appear in both the explicit pattern and the rest \
-         type `%a`:%s\n\n\
-         Mark them as optional (e.g. `?fieldName`) in the explicit pattern."
-        longident lid field_list)
-  | Record_rest_field_missing (fields, lid) -> (
-    let field_list =
-      fields |> List.map (fun f -> "\n- " ^ f) |> String.concat ""
-    in
-    match fields with
-    | [_] ->
-      fprintf ppf
-        "The following field is not part of the rest type `%a`:%s\n\n\
-         List this field in the record pattern before the spread so it's not \
-         present in the rest record."
-        longident lid field_list
-    | _ ->
-      fprintf ppf
-        "The following fields are not part of the rest type `%a`:%s\n\n\
-         List these fields in the record pattern before the spread so they're \
-         not present in the rest record."
-        longident lid field_list)
-  | Record_rest_extra_field (field, lid) ->
-    fprintf ppf
-      "Field `%s` in the rest type `%a` does not exist in the source record \
-       type."
-      field longident lid
-  | Record_rest_field_runtime_name_mismatch
-      {field; rest_type; source_runtime_name; rest_runtime_name} ->
-    fprintf ppf
-      "Field `%s` in the rest type `%a` has runtime representation `%s`, but \
-       in the source record type it is `%s`. Runtime representations must \
-       match."
-      field longident rest_type rest_runtime_name source_runtime_name
+  | Record_rest err -> Typecore_record_rest.report_error ppf err
 
 let report_error env loc ppf err =
   Printtyp.wrap_printing_env env (fun () -> report_error env loc ppf err)

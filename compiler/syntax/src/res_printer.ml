@@ -2752,18 +2752,16 @@ and print_pattern ~state (p : Parsetree.pattern) cmt_tbl =
       Doc.concat [Doc.lbrace; Doc.text "_"; Doc.rbrace]
     | Ppat_record (rows, open_flag, rest) ->
       let print_rest_pattern rest_pat =
-        match rest_pat.Parsetree.ppat_desc with
-        | Ppat_constraint ({ppat_desc = Ppat_var name}, typ) ->
+        match rest_pat.Parsetree.rest_type with
+        | Some typ ->
           Doc.concat
             [
               Doc.text "...";
               print_typ_expr ~state typ cmt_tbl;
               Doc.text " as ";
-              Doc.text name.txt;
+              Doc.text rest_pat.rest_name.txt;
             ]
-        | Ppat_var name -> Doc.concat [Doc.text "..."; Doc.text name.txt]
-        | _ ->
-          Doc.concat [Doc.text "..."; print_pattern ~state rest_pat cmt_tbl]
+        | None -> Doc.concat [Doc.text "..."; Doc.text rest_pat.rest_name.txt]
       in
       Doc.group
         (Doc.concat

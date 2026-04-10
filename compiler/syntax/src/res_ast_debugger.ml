@@ -787,7 +787,7 @@ module SexpAst = struct
             | None -> Sexp.atom "None"
             | Some p -> Sexp.list [Sexp.atom "Some"; pattern p]);
           ]
-      | Ppat_record (rows, flag, _rest) ->
+      | Ppat_record (rows, flag, rest) ->
         Sexp.list
           [
             Sexp.atom "Ppat_record";
@@ -797,6 +797,21 @@ module SexpAst = struct
                  ~f:(fun {lid = longident_loc; x = p} ->
                    Sexp.list [longident longident_loc.Location.txt; pattern p])
                  rows);
+            (match rest with
+            | None -> Sexp.atom "None"
+            | Some {rest_name; rest_type; _} ->
+              Sexp.list
+                [
+                  Sexp.atom "Some";
+                  Sexp.list
+                    [
+                      Sexp.atom rest_name.txt;
+                      (match rest_type with
+                      | None -> Sexp.atom "None"
+                      | Some type_expr ->
+                        Sexp.list [Sexp.atom "Some"; core_type type_expr]);
+                    ];
+                ]);
           ]
       | Ppat_array patterns ->
         Sexp.list

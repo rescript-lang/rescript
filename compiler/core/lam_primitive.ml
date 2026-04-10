@@ -40,7 +40,7 @@ type t =
   | Psetfield of int * Lam_compat.set_field_dbg_info
   (* could have field info at least for record *)
   | Pduprecord
-  | Precord_spread_new of string list
+  | Precord_rest of string list
   (* External call *)
   | Pjs_call of {
       prim_name: string;
@@ -227,7 +227,7 @@ let eq_primitive_approx (lhs : t) (rhs : t) =
   | Pnull_to_opt | Pnull_undefined_to_opt | Pis_null | Pis_not_none | Psome
   | Psome_not_nest | Pis_undefined | Pis_null_undefined | Pimport | Ptypeof
   | Pfn_arity | Pis_poly_var_block | Pdebugger | Pinit_mod | Pupdate_mod
-  | Pduprecord | Precord_spread_new _ | Pmakearray | Parraylength | Parrayrefu
+  | Pduprecord | Precord_rest _ | Pmakearray | Parraylength | Parrayrefu
   | Parraysetu | Parrayrefs | Parraysets | Pjs_fn_make_unit | Pjs_fn_method
   | Phash | Phash_mixstring | Phash_mixint | Phash_finalmix ->
     rhs = lhs
