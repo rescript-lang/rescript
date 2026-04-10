@@ -69,7 +69,7 @@ Explanation: a list spread at the tail is efficient, but a spread in the middle 
 
 let [|arr;_|] = [|1;2;3|]
 let record = { x with y }
-let {  } = myRecord
+let { ...y } = myRecord
 let { M.t = t } = myRecord
 let x::y = myList
 type nonrec t = {

@@ -9,4 +9,7 @@
 
   Did you forget a `}` here?
 
-;;match x with | { a; b = { x; y } } -> () | { y } -> () | { a; b } -> ()
+;;match x with
+  | { a; b = { x; y } } -> ()
+  | { y; ...x } -> ()
+  | { a; b } -> ()

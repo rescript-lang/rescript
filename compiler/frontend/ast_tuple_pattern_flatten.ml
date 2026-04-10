@@ -65,7 +65,7 @@ let flattern_tuple_pattern_vb (self : Bs_ast_mapper.mapper)
           :: acc)
     | _ -> {pvb_pat; pvb_expr; pvb_loc = vb.pvb_loc; pvb_attributes} :: acc)
   | Ppat_record (_, _, Some rest), Pexp_pack {pmod_desc = Pmod_ident _} ->
-    Location.raise_errorf ~loc:rest.ppat_loc
+    Location.raise_errorf ~loc:rest.rest_loc
       "Record rest patterns are not supported when destructuring modules. Bind \
        the module fields explicitly."
   | Ppat_record (lid_pats, _, None), Pexp_pack {pmod_desc = Pmod_ident id} ->
