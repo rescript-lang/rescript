@@ -12,6 +12,13 @@ type subConfig = {
   debug: bool,
 }
 
+module SubConfig = {
+  type t = {
+    version: string,
+    debug: bool,
+  }
+}
+
 type aliasedSubConfig = subConfig
 
 type renamedConfig = {
@@ -27,6 +34,7 @@ let describeConfig = (c: config) =>
   }
 
 let getAliasedRest = ({name: _, ...aliasedSubConfig as rest}: config) => rest
+let getNamespacedRest = ({name: _, ...SubConfig.t as rest}: config) => rest
 
 let getRenamedRest = ({name: _, ...subConfig as rest}: renamedConfig) => rest
 
@@ -147,6 +155,23 @@ describe(__MODULE__, () => {
       getAliasedRest({name: "aliased", version: "3.1", debug: false}),
       {version: "3.1", debug: false},
     )
+  })
+
+  test("record rest accepts namespaced record types", () => {
+    eq(
+      __LOC__,
+      getNamespacedRest({name: "namespaced", version: "3.15", debug: true}),
+      {version: "3.15", debug: true},
+    )
+
+    let {name: _, ...SubConfig.t as rest} = (
+      {
+        name: "namespaced-let",
+        version: "3.16",
+        debug: false,
+      }: config
+    )
+    eq(__LOC__, rest, {version: "3.16", debug: false})
   })
 
   test("record rest excludes fields renamed with @as", () => {

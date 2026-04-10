@@ -1,9 +1,11 @@
 type config = {name: string, version: string}
-type subConfig = {version: string}
+module SubConfig = {
+  type t = {version: string}
+}
 
 let getVersion = (config: config) =>
   switch config {
-  | {name: _, ...subConfig as rest} =>
+  | {name: _, ...SubConfig.t as rest} =>
     rest.version
 //  ^def
   }
