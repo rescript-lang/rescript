@@ -10,13 +10,11 @@
 > - :nail_care: [Polish]
 > - :house: [Internal]
 
-# 13.0.0-alpha.3 (Unreleased)
+# 13.0.0-alpha.3
 
 #### :boom: Breaking Change
 
 - Change `Intl.Collator.compare` return type from `int` to `Ordering.t` (`float`). https://github.com/rescript-lang/rescript/pull/8289
-
-#### :eyeglasses: Spec Compliance
 
 #### :rocket: New Feature
 
@@ -29,12 +27,10 @@
 - Reanalyze server: invalidate cache and recompute results when config changes in `rescript.json`. https://github.com/rescript-lang/rescript/pull/8262
 - Fix `null` and array values incorrectly matching the `Object` branch when pattern matching on `JSON.t` (or other untagged variants with an `Object` case) in statement position. https://github.com/rescript-lang/rescript/pull/8279
 - Fix rewatch panic when `package.json` has no `name` field. https://github.com/rescript-lang/rescript/pull/8291
-- Fix unpacking first-class module in default argument of react component. https://github.com/rescript-lang/rescript/pull/8296
+- Fix unpacking first-class module in default argument of React component. https://github.com/rescript-lang/rescript/pull/8296
 - Fix exception record field regression. https://github.com/rescript-lang/rescript/pull/8319
 - Rewatch: ignore stale lock for unrelated process name. https://github.com/rescript-lang/rescript/pull/8316
 - Fix handling of exotic identifiers for let bindings in GenType. https://github.com/rescript-lang/rescript/pull/8315
-
-#### :memo: Documentation
 
 #### :nail_care: Polish
 
