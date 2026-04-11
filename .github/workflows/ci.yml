@@ -589,7 +589,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Install pnpm
-        uses: pnpm/action-setup@v5
+        uses: pnpm/action-setup@v6
         with:
           version: 10
 
