@@ -9,3 +9,11 @@ let f = u => {
 type fn2 = (int, int) => int
 let add: fn2 = (a, b) => a + b
 let add5: int => int = add(5, ...)
+
+type hook
+external hook: hook = "hook"
+external addHook: (hook, 'a => unit) => unit = "addHook"
+
+let addHookPartial = addHook(hook, ...)
+let _ = addHookPartial((_x: int) => ())
+let _ = addHookPartial((_x: string) => ())
