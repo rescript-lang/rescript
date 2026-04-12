@@ -589,7 +589,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Install pnpm
-        uses: pnpm/action-setup@v5
+        uses: pnpm/action-setup@v6
         with:
           version: 10
 
@@ -597,7 +597,7 @@ jobs:
         uses: actions/setup-node@v6
         with:
           # Run integration tests with the oldest supported node version.
-          node-version: 20
+          node-version: 22
 
       - name: Checkout
         uses: actions/checkout@v6
@@ -618,7 +618,9 @@ jobs:
       - name: Install ReScript package
         run: |
           COMMIT_SHA="${{ needs.pkg-pr-new.outputs.commit_sha }}"
-          pnpm i "https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA}"
+          # pnpm 10 blocks pkg.pr.new's URL-based platform subdependencies unless block-exotic-subdeps is disabled.
+          pnpm --config.block-exotic-subdeps=false i \
+            "https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA}"
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 
