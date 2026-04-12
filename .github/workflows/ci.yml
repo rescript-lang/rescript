@@ -185,7 +185,7 @@ jobs:
 
       - name: Get OPAM executable path
         if: steps.cache-opam-env.outputs.cache-hit != 'true'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const opamPath = await io.which('opam', true);
