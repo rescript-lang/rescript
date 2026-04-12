@@ -28,6 +28,7 @@
 - Fix unpacking first-class module in default argument of react component. https://github.com/rescript-lang/rescript/pull/8296
 - Fix exception record field regression. https://github.com/rescript-lang/rescript/pull/8319
 - Rewatch: ignore stale lock for unrelated process name. https://github.com/rescript-lang/rescript/pull/8316
+- Fix partial application generalization for `...`. https://github.com/rescript-lang/rescript/pull/8343
 
 #### :memo: Documentation
 
