@@ -20,6 +20,8 @@
 
 #### :bug: Bug fix
 
+- Fix partial application generalization for `...`. https://github.com/rescript-lang/rescript/pull/8343
+
 #### :memo: Documentation
 
 #### :nail_care: Polish
