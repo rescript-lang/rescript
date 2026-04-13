@@ -496,7 +496,8 @@ npm i "https://pkg.pr.new/rescript-lang/rescript@${PR_NUMBER}"
 yarn add "rescript@https://pkg.pr.new/rescript-lang/rescript@${PR_NUMBER}"
 
 # Use pnpm
-pnpm add "https://pkg.pr.new/rescript-lang/rescript@${PR_NUMBER}"
+# pnpm 10 blocks pkg.pr.new's URL-based platform subdependencies unless block-exotic-subdeps is disabled.
+pnpm --config.block-exotic-subdeps=false add "https://pkg.pr.new/rescript-lang/rescript@${PR_NUMBER}"
 ```
 
 Then attempt to rebuild your project as you would normally.
