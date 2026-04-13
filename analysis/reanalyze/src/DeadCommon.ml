@@ -123,11 +123,12 @@ let addDeclaration_ ~config ~decls ~(file : FileContext.t) ?posEnd ?posStart
     Declarations.add decls pos decl)
 
 let addValueDeclaration ~config ~decls ~file ?(isToplevel = true)
-    ~(loc : Location.t) ~moduleLoc ?(optionalArgs = OptionalArgs.empty) ~path
-    ~sideEffects name =
+    ?(ownsOptionalArgs = false) ~(loc : Location.t) ~moduleLoc
+    ?(optionalArgs = OptionalArgs.empty) ~path ~sideEffects name =
   name
   |> addDeclaration_ ~config ~decls ~file
-       ~declKind:(Value {isToplevel; optionalArgs; sideEffects})
+       ~declKind:
+         (Value {isToplevel; ownsOptionalArgs; optionalArgs; sideEffects})
        ~loc ~moduleLoc ~path
 
 (** Create a dead code issue. Pure - no side effects. *)

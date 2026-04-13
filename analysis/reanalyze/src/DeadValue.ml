@@ -27,12 +27,28 @@ let collectValueBinding ~config ~decls ~file ~(current_binding : Location.t)
       when (not loc_ghost) && not vb.vb_loc.loc_ghost ->
       let name = Ident.name id |> Name.create ~isInterface:false in
       let optionalArgs =
-        vb.vb_expr.exp_type |> DeadOptionalArgs.fromTypeExpr
-        |> OptionalArgs.fromList
+        match vb.vb_expr.exp_desc with
+        | Texp_function {arity = Some arity; _} ->
+          vb.vb_expr.exp_type
+          |> (fun texpr -> DeadOptionalArgs.fromTypeExprWithArity texpr arity)
+          |> OptionalArgs.fromList
+        | _ ->
+          vb.vb_expr.exp_type |> DeadOptionalArgs.fromTypeExpr
+          |> OptionalArgs.fromList
+      in
+      (* Only actual function declarations own optional-arg diagnostics.
+         Aliases to function values can expose the same optional-arg type, but
+         warnings should stay attached to the declaration site while usage state
+         still propagates through the alias. *)
+      let ownsOptionalArgs =
+        match vb.vb_expr.exp_desc with
+        | Texp_function _ -> true
+        | _ -> false
       in
       let exists =
         match Declarations.find_opt_builder decls loc_start with
         | Some {declKind = Value r} ->
+          r.ownsOptionalArgs <- ownsOptionalArgs;
           r.optionalArgs <- optionalArgs;
           true
         | _ -> false
@@ -48,8 +64,9 @@ let collectValueBinding ~config ~decls ~file ~(current_binding : Location.t)
          let isToplevel = oldLastBinding = Location.none in
          let sideEffects = SideEffects.checkExpr vb.vb_expr in
          name
-         |> addValueDeclaration ~config ~decls ~file ~isToplevel ~loc
-              ~moduleLoc:modulePath.loc ~optionalArgs ~path ~sideEffects);
+         |> addValueDeclaration ~config ~decls ~file ~isToplevel
+              ~ownsOptionalArgs ~loc ~moduleLoc:modulePath.loc ~optionalArgs
+              ~path ~sideEffects);
       (match Declarations.find_opt_builder decls loc_start with
       | None -> ()
       | Some decl ->
@@ -74,8 +91,8 @@ let collectValueBinding ~config ~decls ~file ~(current_binding : Location.t)
   in
   loc
 
-let processOptionalArgs ~config ~cross_file ~expType ~(locFrom : Location.t)
-    ~(binding : Location.t) ~locTo ~path args =
+let processOptionalArgs ~config ~decls ~cross_file ~expType
+    ~(locFrom : Location.t) ~(binding : Location.t) ~locTo ~path args =
   if expType |> DeadOptionalArgs.hasOptionalArgs then (
     let supplied = ref [] in
     let suppliedMaybe = ref [] in
@@ -104,13 +121,34 @@ let processOptionalArgs ~config ~cross_file ~expType ~(locFrom : Location.t)
              if argIsSupplied = None then suppliedMaybe := s :: !suppliedMaybe
            | _ -> ());
     (!supplied, !suppliedMaybe)
-    |> DeadOptionalArgs.addReferences ~config ~cross_file ~locFrom ~locTo
+    |> DeadOptionalArgs.addReferences ~config ~decls ~cross_file ~locFrom ~locTo
          ~binding ~path)
 
-let rec collectExpr ~config ~refs ~file_deps ~cross_file
+let rec collectExpr ~config ~decls ~refs ~file_deps ~cross_file ~callee_locs
     ~(last_binding : Location.t) super self (e : Typedtree.expression) =
   let locFrom = e.exp_loc in
   let binding = last_binding in
+  let suppressOptionalArgOwnership pos =
+    match Declarations.find_opt_builder decls pos with
+    | Some
+        ({declKind = Value ({ownsOptionalArgs = true} as value_kind)} as decl)
+      ->
+      Declarations.replace_builder decls pos
+        {decl with declKind = Value {value_kind with ownsOptionalArgs = false}}
+    | _ -> ()
+  in
+  let rec remove_first target = function
+    | [] -> []
+    | x :: xs when x = target -> xs
+    | x :: xs -> x :: remove_first target xs
+  in
+  let callee_loc_opt =
+    match e.exp_desc with
+    | Texp_apply {funct = {exp_desc = Texp_ident (_, _, _); exp_loc}; _} ->
+      Some exp_loc
+    | _ -> None
+  in
+  Option.iter (fun loc -> callee_locs := loc :: !callee_locs) callee_loc_opt;
   (match e.exp_desc with
   | Texp_ident (_path, _, {Types.val_loc = {loc_ghost = false; _} as locTo}) ->
     (* if Path.name _path = "rc" then assert false; *)
@@ -123,9 +161,11 @@ let rec collectExpr ~config ~refs ~file_deps ~cross_file
           (locTo.loc_start |> Pos.toString);
       References.add_value_ref refs ~posTo:locTo.loc_start
         ~posFrom:Location.none.loc_start)
-    else
+    else (
       addValueReference ~config ~refs ~file_deps ~binding ~addFileReference:true
-        ~locFrom ~locTo
+        ~locFrom ~locTo;
+      if binding = Location.none && not (List.mem locFrom !callee_locs) then
+        suppressOptionalArgOwnership locTo.loc_start)
   | Texp_apply
       {
         funct =
@@ -138,7 +178,7 @@ let rec collectExpr ~config ~refs ~file_deps ~cross_file
         args;
       } ->
     args
-    |> processOptionalArgs ~config ~cross_file ~expType:exp_type
+    |> processOptionalArgs ~config ~decls ~cross_file ~expType:exp_type
          ~locFrom:(locFrom : Location.t)
          ~binding:last_binding ~locTo ~path
   | Texp_let
@@ -179,7 +219,7 @@ let rec collectExpr ~config ~refs ~file_deps ~cross_file
          && Ident.name etaArg = "eta"
          && Path.name idArg2 = "arg" ->
     args
-    |> processOptionalArgs ~config ~cross_file ~expType:exp_type
+    |> processOptionalArgs ~config ~decls ~cross_file ~expType:exp_type
          ~locFrom:(locFrom : Location.t)
          ~binding:last_binding ~locTo ~path
   | Texp_field
@@ -206,12 +246,16 @@ let rec collectExpr ~config ~refs ~file_deps ~cross_file
              ->
              (* Punned field in OCaml projects has ghost location in expression *)
              let e = {e with exp_loc = {exp_loc with loc_ghost = false}} in
-             collectExpr ~config ~refs ~file_deps ~cross_file ~last_binding
-               super self e
+             collectExpr ~config ~decls ~refs ~file_deps ~cross_file
+               ~callee_locs ~last_binding super self e
              |> ignore
            | _ -> ())
   | _ -> ());
-  super.Tast_mapper.expr self e
+  let result = super.Tast_mapper.expr self e in
+  Option.iter
+    (fun loc -> callee_locs := remove_first loc !callee_locs)
+    callee_loc_opt;
+  result
 
 (*
   type k. is a locally abstract type
@@ -279,13 +323,17 @@ let rec processSignatureItem ~config ~decls ~file ~doTypes ~doValues ~moduleLoc
         let optionalArgs =
           val_type |> DeadOptionalArgs.fromTypeExpr |> OptionalArgs.fromList
         in
+        (* Signature items only expose the function type, so we conservatively
+           seed ownership from the presence of optional args. The implementation
+           pass above refines this for aliases that should not own warnings. *)
+        let ownsOptionalArgs = not (OptionalArgs.isEmpty optionalArgs) in
 
         (* if Ident.name id = "someValue" then
            Printf.printf "XXX %s\n" (Ident.name id); *)
         Ident.name id
         |> Name.create ~isInterface:false
         |> addValueDeclaration ~config ~decls ~file ~loc ~moduleLoc
-             ~optionalArgs ~path ~sideEffects:false
+             ~ownsOptionalArgs ~optionalArgs ~path ~sideEffects:false
   | Sig_module (id, {Types.md_type = moduleType; md_loc = moduleLoc}, _)
   | Sig_modtype (id, {Types.mtd_type = Some moduleType; mtd_loc = moduleLoc}) ->
     let modulePath' =
@@ -309,6 +357,7 @@ let rec processSignatureItem ~config ~decls ~file ~doTypes ~doValues ~moduleLoc
 (* Traverse the AST *)
 let traverseStructure ~config ~decls ~refs ~file_deps ~cross_file ~file ~doTypes
     ~doExternals (structure : Typedtree.structure) : unit =
+  let callee_locs = ref [] in
   let rec create_mapper (last_binding : Location.t) (modulePath : ModulePath.t)
       =
     let super = Tast_mapper.default in
@@ -317,9 +366,8 @@ let traverseStructure ~config ~decls ~refs ~file_deps ~cross_file ~file ~doTypes
         super with
         expr =
           (fun _self e ->
-            e
-            |> collectExpr ~config ~refs ~file_deps ~cross_file ~last_binding
-                 super mapper);
+            collectExpr ~config ~decls ~refs ~file_deps ~cross_file ~callee_locs
+              ~last_binding super mapper e);
         pat = (fun _self p -> p |> collectPattern ~config ~refs super mapper);
         structure_item =
           (fun _self (structureItem : Typedtree.structure_item) ->
