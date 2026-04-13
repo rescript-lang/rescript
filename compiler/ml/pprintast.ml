@@ -691,6 +691,11 @@ and expression ctxt f x =
     | Pexp_setfield (e1, li, e2) ->
       pp f "@[<2>%a.%a@ <-@ %a@]" (simple_expr ctxt) e1 longident_loc li
         (simple_expr ctxt) e2
+    | Pexp_index (e1, e2) ->
+      pp f "%a.(%a)" (simple_expr ctxt) e1 (expression ctxt) e2
+    | Pexp_setindex (e1, e2, e3) ->
+      pp f "%a.(%a)@ <-@ %a" (simple_expr ctxt) e1 (expression ctxt) e2
+        (simple_expr ctxt) e3
     | Pexp_ifthenelse (e1, e2, eo) ->
       (* @;@[<2>else@ %a@]@] *)
       let fmt : (_, _, _) format =

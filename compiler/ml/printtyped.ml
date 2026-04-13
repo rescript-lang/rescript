@@ -329,6 +329,18 @@ and expression i ppf x =
     expression i ppf e1;
     longident i ppf li;
     expression i ppf e2
+  | Texp_index (e1, e2) ->
+    line i ppf "Texp_index\n";
+    expression i ppf e1;
+    line i ppf "index:\n";
+    expression i ppf e2
+  | Texp_setindex (e1, e2, e3) ->
+    line i ppf "Texp_setindex\n";
+    expression i ppf e1;
+    line i ppf "index:\n";
+    expression i ppf e2;
+    line i ppf "value:\n";
+    expression i ppf e3
   | Texp_array l ->
     line i ppf "Texp_array\n";
     list i expression ppf l

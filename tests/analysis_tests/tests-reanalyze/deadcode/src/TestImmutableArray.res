@@ -1,7 +1,6 @@
 @genType
 let testImmutableArrayGet = arr => {
-  open ImmutableArray
-  arr[3]
+  ImmutableArray.Array.get(arr, 3)
 }
 
 /*
@@ -10,12 +9,10 @@ let testImmutableArrayGet = arr => {
  */
 
 let testBeltArrayGet = arr => {
-  open Belt
-  arr[3]
+  Belt.Array.get(arr, 3)
 }
 
 let testBeltArraySet = arr => {
-  open Belt
-  arr[3] = 4
+  Belt.Array.set(arr, 3, 4)
 }
 

@@ -257,6 +257,10 @@ let rec exprToContextPathInner ~(inJsxContext : bool) (e : Parsetree.expression)
     match exprToContextPath ~inJsxContext e1 with
     | None -> None
     | Some contexPath -> Some (CPObj (contexPath, txt)))
+  | Pexp_index (e1, _) -> (
+    match exprToContextPath ~inJsxContext e1 with
+    | None -> None
+    | Some contextPath -> Some (CPIndex contextPath))
   | Pexp_apply
       {
         funct =

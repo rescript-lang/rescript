@@ -1358,12 +1358,12 @@
   addValueReference TestFirstClassModules.res:27:4 --> TestFirstClassModules.res:29:2
   Scanning TestImmutableArray.cmt Source:TestImmutableArray.res
   addValueDeclaration +testImmutableArrayGet TestImmutableArray.res:2:4 path:+TestImmutableArray
-  addValueDeclaration +testBeltArrayGet TestImmutableArray.res:12:4 path:+TestImmutableArray
-  addValueDeclaration +testBeltArraySet TestImmutableArray.res:17:4 path:+TestImmutableArray
+  addValueDeclaration +testBeltArrayGet TestImmutableArray.res:11:4 path:+TestImmutableArray
+  addValueDeclaration +testBeltArraySet TestImmutableArray.res:15:4 path:+TestImmutableArray
   addValueReference TestImmutableArray.res:2:4 --> TestImmutableArray.res:2:28
   addValueReference TestImmutableArray.res:2:4 --> ImmutableArray.resi:6:2
-  addValueReference TestImmutableArray.res:12:4 --> TestImmutableArray.res:12:23
-  addValueReference TestImmutableArray.res:17:4 --> TestImmutableArray.res:17:23
+  addValueReference TestImmutableArray.res:11:4 --> TestImmutableArray.res:11:23
+  addValueReference TestImmutableArray.res:15:4 --> TestImmutableArray.res:15:23
   Scanning TestImport.cmt Source:TestImport.res
   addValueDeclaration +innerStuffContents TestImport.res:1:0 path:+TestImport
   addValueDeclaration +innerStuffContentsAsEmptyObject TestImport.res:7:0 path:+TestImport
@@ -4952,11 +4952,11 @@ Forward Liveness Analysis
   M.test is never used
 
   Warning Dead Value
-  TestImmutableArray.res:12:1-54
+  TestImmutableArray.res:11:1-58
   testBeltArrayGet is never used
 
   Warning Dead Value
-  TestImmutableArray.res:17:1-58
+  TestImmutableArray.res:15:1-61
   testBeltArraySet is never used
 
   Warning Dead Value

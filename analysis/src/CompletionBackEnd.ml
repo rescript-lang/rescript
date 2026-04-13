@@ -999,6 +999,28 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
           ~kind:
             (Completion.ExtractedType (Toption (env, ExtractedType typ), `Type));
       ])
+  | CPIndex cp -> (
+    if Debug.verbose () then print_endline "[ctx_path]--> CPIndex";
+    match
+      cp
+      |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
+           ~exact:true ~scope
+      |> completionsGetCompletionType ~full
+    with
+    | Some (Tarray (env, TypeExpr elementType), _) ->
+      (* Return Value so completionsGetTypeEnv2 (used by CPPipe) can resolve it,
+         enabling pipe completion on arr[n]-> *)
+      [
+        Completion.create "dummy" ~env
+          ~kind:(Completion.Value (Predef.type_option elementType));
+      ]
+    | Some (Tarray (env, elementType), _) ->
+      (* Fallback when element type is itself an extracted type *)
+      [
+        Completion.create "dummy" ~env
+          ~kind:(Completion.ExtractedType (Toption (env, elementType), `Type));
+      ]
+    | _ -> [])
   | CPAwait cp -> (
     if Debug.verbose () then print_endline "[ctx_path]--> CPAwait";
     match
