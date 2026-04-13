@@ -11,12 +11,12 @@ module Icon = {
 
 let _single_element_child =
   <div>
-    <h1> {React.string("Hello, world!")} </h1>
+    <h1>{React.string("Hello, world!")}</h1>
   </div>
 
 let _multiple_element_children =
   <div>
-    <h1> {React.string("Hello, world!")} </h1>
+    <h1>{React.string("Hello, world!")}</h1>
     <Icon />
   </div>
 
@@ -34,7 +34,7 @@ let _multiple_element_fragment =
 let _unary_element_with_props = <input type_="text" className="foo" />
 
 let _container_element_with_props_and_children =
-  <div title="foo" className="foo"> {React.string("Hello, world!")} </div>
+  <div title="foo" className="foo">{React.string("Hello, world!")}</div>
 
 let baseProps: JsxDOM.domProps = {
   title: "foo",
@@ -50,8 +50,8 @@ let _container_with_spread_props =
   </div>
 
 let baseChildren = React.array([
-  <span> {React.string("Hello, world!")} </span>,
-  <span> {React.string("Hello, world!")} </span>,
+  <span>{React.string("Hello, world!")}</span>,
+  <span>{React.string("Hello, world!")}</span>,
 ])
 
 let _unary_element_with_spread_props_keyed = <input {...baseProps} type_="text" key="barry-key" />
@@ -77,7 +77,7 @@ module A = {
 module B = {
   @react.component
   let make = () => {
-    <p> {React.string("Hello, world!")} </p>
+    <p>{React.string("Hello, world!")}</p>
   }
 }
 
@@ -91,11 +91,7 @@ module MyWeirdComponent = {
   type props = {\"MyWeirdProp": string}
 
   @react.componentWithProps
-  let make = props =>
-    <p>
-      {React.string("foo")}
-      {React.string(props.\"MyWeirdProp")}
-    </p>
+  let make = props => <p>{React.string("foo")} {React.string(props.\"MyWeirdProp")}</p>
 }
 
 let _escaped_jsx_prop = <MyWeirdComponent \"MyWeirdProp"="bar" />
@@ -108,7 +104,7 @@ let _large_component =
     <strong title="foo" className="bar" tabIndex={1} onClick={_ => ()} onMouseDown={_ => ()}>
       {React.string("Hello, world!")}
     </strong>
-    <p> {React.int(5)} </p>
+    <p>{React.int(5)}</p>
   </div>
 
 module ComponentWithOptionalProps = {
@@ -166,5 +162,5 @@ module ContextProvider = {
 
 @react.component
 let make = (~children) => {
-  <ContextProvider value=42> {children} </ContextProvider>
+  <ContextProvider value=42>{children}</ContextProvider>
 }

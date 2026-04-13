@@ -31,12 +31,8 @@ let x =
     <B />
     {children}
   </A>
-let x = <A> {a} </A>
-let x =
-  <A>
-    {a}
-    {b}
-  </A>
+let x = <A>{a}</A>
+let x = <A>{a} {b}</A>
 let x =
   <custom-tag className="container">
     {a}
@@ -286,7 +282,7 @@ let x =
     {@attr ident}
   </div>
 
-let x = <MyComponent sidebar={<div> test </div>} nav={<Navbar />} />
+let x = <MyComponent sidebar={<div>test</div>} nav={<Navbar />} />
 
 <div>
   {possibleGradeValues
@@ -301,13 +297,13 @@ let x = <MyComponent sidebar={<div> test </div>} nav={<Navbar />} />
 </div>
 
 // https://github.com/rescript-lang/syntax/issues/113
-<div> {Js.log(a <= 10)} </div>
+<div>{Js.log(a <= 10)}</div>
 <div>
-  <div> {Js.log(a <= 10)} </div>
+  <div>{Js.log(a <= 10)}</div>
 </div>
 <div>
   <div onClick={_ => Js.log(a <= 10)}>
-    <div> {Js.log(a <= 10)} </div>
+    <div>{Js.log(a <= 10)}</div>
   </div>
 </div>
 
@@ -378,7 +374,7 @@ let x = {
 }
 
 let x = {
-  let _ = <div> {children} </div>
+  let _ = <div>{children}</div>
   msg->React.string
 }
 
@@ -393,7 +389,7 @@ let x = {
 }
 
 let x = {
-  let _ = <C> {children} </C>
+  let _ = <C>{children}</C>
   msg->React.string
 }
 
@@ -464,44 +460,35 @@ let x =
 
 let moo =
   <div>
-    <p> {React.string("moo")} </p>
+    <p>{React.string("moo")}</p>
     // c1
-    <p> {React.string("moo")} </p>
+    <p>{React.string("moo")}</p>
     // c2
     // c3
-    <p> {React.string("moo")} </p>
+    <p>{React.string("moo")}</p>
 
     // c4
 
-    <p> {React.string("moo")} </p>
+    <p>{React.string("moo")}</p>
   </div>
 
 let fragmented_moo =
   <>
-    <p> {React.string("moo")} </p>
+    <p>{React.string("moo")}</p>
     // c1
-    <p> {React.string("moo")} </p>
+    <p>{React.string("moo")}</p>
     // c2
     // c3
-    <p> {React.string("moo")} </p>
+    <p>{React.string("moo")}</p>
 
     // c4
 
-    <p> {React.string("moo")} </p>
+    <p>{React.string("moo")}</p>
   </>
 
-let arrow_with_fragment = el => <>
-  {t(nbsp ++ "(")}
-  el
-  {t(")")}
-</>
+let arrow_with_fragment = el => <> {t(nbsp ++ "(")} el {t(")")} </>
 
-let arrow_with_container_tag = el =>
-  <div>
-    {t(nbsp ++ "(")}
-    el
-    {t(")")}
-  </div>
+let arrow_with_container_tag = el => <div>{t(nbsp ++ "(")} el {t(")")}</div>
 
 <Component
   prop1

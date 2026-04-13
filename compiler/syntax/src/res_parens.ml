@@ -375,7 +375,8 @@ let jsx_child_expr expr =
          ( Pexp_ident _ | Pexp_constant _ | Pexp_field _ | Pexp_construct _
          | Pexp_variant _ | Pexp_array _ | Pexp_pack _ | Pexp_record _
          | Pexp_extension _ | Pexp_letmodule _ | Pexp_letexception _
-         | Pexp_open _ | Pexp_sequence _ | Pexp_let _ | Pexp_jsx_element _ );
+         | Pexp_open _ | Pexp_sequence _ | Pexp_let _ | Pexp_jsx_element _
+         | Pexp_jsx_text _ );
        pexp_attributes = [];
       } ->
         Nothing
@@ -386,7 +387,7 @@ let jsx_child_expr expr =
        pexp_attributes = [];
       } ->
         Nothing
-      | {pexp_desc = Pexp_jsx_element _} -> Nothing
+      | {pexp_desc = Pexp_jsx_element _ | Pexp_jsx_text _} -> Nothing
       | _ -> Parenthesized))
 
 let binary_expr expr =

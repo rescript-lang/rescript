@@ -27,7 +27,7 @@ assert(await f())
 
 user.data = await fetch()
 
-<Navbar promise={await gc()}> {await weirdReactSuspenseApi} </Navbar>
+<Navbar promise={await gc()}>{await weirdReactSuspenseApi}</Navbar>
 
 let inBinaryExpression = (await x->Js.Promise.resolve) + 1
 let inBinaryExpression = (await x->Js.Promise.resolve) + (await y->Js.Promise.resolve)

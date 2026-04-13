@@ -217,6 +217,16 @@ module Exp = struct
               jsx_container_element_closing_tag = e;
             }))
 
+  let jsx_text ?loc ?attrs ?(leading_space = false) ?(trailing_space = false)
+      text =
+    mk ?loc ?attrs
+      (Pexp_jsx_text
+         {
+           jsx_text_content = text;
+           jsx_text_leading_space = leading_space;
+           jsx_text_trailing_space = trailing_space;
+         })
+
   let case ?bar lhs ?guard rhs =
     {pc_bar = bar; pc_lhs = lhs; pc_guard = guard; pc_rhs = rhs}
 
