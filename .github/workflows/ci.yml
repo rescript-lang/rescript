@@ -31,6 +31,7 @@ jobs:
             upload_libs: true
             node-target: linux-x64
             rust-target: x86_64-unknown-linux-musl
+            dune-profile: static
           - os: ubuntu-24.04-arm # ARM
             ocaml_compiler: ocaml-variants.5.3.0+options,ocaml-option-static
             upload_binaries: true
@@ -40,16 +41,19 @@ jobs:
             benchmarks: true
             node-target: linux-arm64
             rust-target: aarch64-unknown-linux-musl
+            dune-profile: static
           - os: macos-15-intel # x64
             ocaml_compiler: 5.3.0
             upload_binaries: true
             node-target: darwin-x64
             rust-target: x86_64-apple-darwin
+            dune-profile: release
           - os: macos-15 # ARM
             ocaml_compiler: 5.3.0
             upload_binaries: true
             node-target: darwin-arm64
             rust-target: aarch64-apple-darwin
+            dune-profile: release
           - os: windows-2025
             ocaml_compiler: 5.3.0
             upload_binaries: true
@@ -182,7 +186,7 @@ jobs:
       - name: Use cached OPAM environment
         if: steps.cache-opam-env.outputs.cache-hit == 'true'
         run: |
-          # https://github.com/ocaml/setup-ocaml/blob/v3.4.6/packages/setup-ocaml/src/installer.ts
+          # https://github.com/ocaml/setup-ocaml/blob/v3.6.0/packages/setup-ocaml/src/installer.ts
           echo "OPAMCOLOR=always"                    >> "$GITHUB_ENV"
           echo "OPAMCONFIRMLEVEL=unsafe-yes"         >> "$GITHUB_ENV"
           echo "OPAMDOWNLOADJOBS=4"                  >> "$GITHUB_ENV"
@@ -539,7 +543,9 @@ jobs:
       - name: Install ReScript package
         run: |
           COMMIT_SHA="${{ needs.pkg-pr-new.outputs.commit_sha }}"
-          pnpm i "https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA}"
+          # pnpm 10 blocks pkg.pr.new's URL-based platform subdependencies unless block-exotic-subdeps is disabled.
+          pnpm --config.block-exotic-subdeps=false i \
+            "https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA}"
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
       - name: Test installation

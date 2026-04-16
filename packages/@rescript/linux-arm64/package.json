@@ -1,6 +1,6 @@
 {
   "name": "@rescript/linux-arm64",
-  "version": "13.0.0-alpha.3",
+  "version": "13.0.0-alpha.4",
   "description": "ReScript binaries for Linux ARM64",
   "type": "module",
   "license": "(LGPL-3.0-or-later AND MIT)",
