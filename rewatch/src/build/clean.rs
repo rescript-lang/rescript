@@ -302,7 +302,7 @@ fn has_compile_warnings(module: &Module) -> bool {
 
 pub fn cleanup_after_build(build_state: &BuildCommandState) {
     build_state.modules.par_iter().for_each(|(_module_name, module)| {
-        let package = build_state.get_package(&module.package_name).unwrap();
+        let package = build_state.get_package(&module.package_name).expect("TODO: handle error");
         if has_parse_warnings(module)
             && let SourceType::SourceFile(source_file) = &module.source_type
         {

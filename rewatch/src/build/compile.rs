@@ -124,7 +124,7 @@ pub fn compile(
     loop {
         let mut dependents: AHashSet<String> = AHashSet::new();
         for dirty_module in current_step_modules.iter() {
-            dependents.extend(build_state.get_module(dirty_module).unwrap().dependents.clone());
+            dependents.extend(build_state.get_module(dirty_module).expect("TODO: handle error").dependents.clone());
         }
 
         current_step_modules = dependents
@@ -145,7 +145,7 @@ pub fn compile(
     let mut in_progress_modules = compile_universe
         .iter()
         .filter(|module_name| {
-            let module = build_state.get_module(module_name).unwrap();
+            let module = build_state.get_module(module_name).expect("TODO: handle error");
             module.deps.intersection(&compile_universe).count() == 0
         })
         .map(|module_name| module_name.to_string())
@@ -167,7 +167,7 @@ pub fn compile(
         let results = current_in_progres_modules
             .par_iter()
             .filter_map(|module_name| {
-                let module = build_state.get_module(module_name).unwrap();
+                let module = build_state.get_module(module_name).expect("TODO: handle error");
                 let package = build_state
                     .get_package(&module.package_name)
                     .expect("Package not found");
@@ -188,7 +188,7 @@ pub fn compile(
                             // this is why mlmap is compiled in the AST generation stage
                             // compile_mlmap(&module.package, module_name, &project_root);
                             Some((
-                                package.namespace.to_suffix().unwrap(),
+                                package.namespace.to_suffix().expect("TODO: handle error"),
                                 Ok(None),
                                 Some(Ok(None)),
                                 false,
@@ -281,13 +281,13 @@ pub fn compile(
                 clean_modules.insert(module_name.to_string());
             }
 
-            let module_dependents = build_state.get_module(module_name).unwrap().dependents.clone();
+            let module_dependents = build_state.get_module(module_name).expect("TODO: handle error").dependents.clone();
 
             // if not clean -- compile modules that depend on this module
             for dep in module_dependents.iter() {
                 //  mark the reverse dep as dirty when the source is not clean
                 if !*is_clean {
-                    let dep_module = build_state.modules.get_mut(dep).unwrap();
+                    let dep_module = build_state.modules.get_mut(dep).expect("TODO: handle error");
                     //  mark the reverse dep as dirty when the source is not clean
                     dep_module.compile_dirty = true;
                 }
@@ -350,8 +350,8 @@ pub fn compile(
                         match interface_result {
                             Some(Ok(Some(err))) => {
                                 let warning_text = err.to_string();
-                                source_file.interface.as_mut().unwrap().compile_state = CompileState::Warning;
-                                source_file.interface.as_mut().unwrap().compile_warnings =
+                                source_file.interface.as_mut().expect("TODO: handle error").compile_state = CompileState::Warning;
+                                source_file.interface.as_mut().expect("TODO: handle error").compile_warnings =
                                     Some(warning_text.clone());
                                 (Some(warning_text), None)
                             }
@@ -363,8 +363,8 @@ pub fn compile(
                                 (None, None)
                             }
                             Some(Err(err)) => {
-                                source_file.interface.as_mut().unwrap().compile_state = CompileState::Error;
-                                source_file.interface.as_mut().unwrap().compile_warnings = None;
+                                source_file.interface.as_mut().expect("TODO: handle error").compile_state = CompileState::Error;
+                                source_file.interface.as_mut().expect("TODO: handle error").compile_warnings = None;
                                 (None, Some(err.to_string()))
                             }
                             _ => (None, None),
@@ -412,7 +412,7 @@ pub fn compile(
             let cycle = dependency_cycle::find(
                 &compile_universe
                     .iter()
-                    .map(|s| (s, build_state.get_module(s).unwrap()))
+                    .map(|s| (s, build_state.get_module(s).expect("TODO: handle error")))
                     .collect::<Vec<(&String, &Module)>>(),
             );
 
@@ -530,7 +530,7 @@ pub fn compiler_args(
             // if the module is the entry we just want to open the namespace
             vec![
                 "-open".to_string(),
-                config.get_namespace().to_suffix().unwrap().to_string(),
+                config.get_namespace().to_suffix().expect("TODO: handle error").to_string(),
             ]
         }
         packages::Namespace::Namespace(_)
@@ -540,7 +540,7 @@ pub fn compiler_args(
         } => {
             vec![
                 "-bs-ns".to_string(),
-                config.get_namespace().to_suffix().unwrap().to_string(),
+                config.get_namespace().to_suffix().expect("TODO: handle error").to_string(),
             ]
         }
         packages::Namespace::NoNamespace => vec![],
@@ -584,15 +584,15 @@ pub fn compiler_args(
                         "{}:{}:{}",
                         spec.module.as_str(),
                         if spec.in_source {
-                            file_path.parent().unwrap().to_str().unwrap().to_string()
+                            file_path.parent().expect("TODO: handle error").to_str().expect("TODO: handle error").to_string()
                         } else {
                             Path::new("lib")
                                 .join(Path::join(
                                     Path::new(&spec.get_out_of_source_dir()),
-                                    file_path.parent().unwrap(),
+                                    file_path.parent().expect("TODO: handle error"),
                                 ))
                                 .to_str()
-                                .unwrap()
+                                .expect("TODO: handle error")
                                 .to_string()
                         },
                         root_config.get_suffix(spec),
@@ -772,7 +772,7 @@ fn compile_file(
                 .canonicalize()
                 .map(StrippedVerbatimPath::to_stripped_verbatim_path)
                 .ok()
-                .unwrap(),
+                .expect("TODO: handle error"),
         )
         .args(to_mjs_args)
         .output();
@@ -791,7 +791,7 @@ fn compile_file(
                 .expect("stdout should be non-null")
                 .to_string();
 
-            let dir = Path::new(implementation_file_path).parent().unwrap();
+            let dir = Path::new(implementation_file_path).parent().expect("TODO: handle error");
 
             // perhaps we can do this copying somewhere else
             if !is_interface {
@@ -851,7 +851,7 @@ fn compile_file(
                     Path::new(&package.path).join(path),
                     package
                         .get_ocaml_build_path()
-                        .join(std::path::Path::new(path).file_name().unwrap()),
+                        .join(std::path::Path::new(path).file_name().expect("TODO: handle error")),
                 )
                 .expect("copying source file failed");
             }
@@ -873,7 +873,7 @@ fn compile_file(
                     Path::new(&package.path).join(path),
                     package
                         .get_ocaml_build_path()
-                        .join(std::path::Path::new(path).file_name().unwrap()),
+                        .join(std::path::Path::new(path).file_name().expect("TODO: handle error")),
                 )
                 .expect("copying source file failed");
             }
@@ -982,7 +982,7 @@ pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildCommandState)
         .filter(|m| !m.1.is_mlmap())
         .for_each(|(module_name, module)| {
             for dependent in module.dependents.iter() {
-                let dependent_module = build_state.modules.get(dependent).unwrap();
+                let dependent_module = build_state.modules.get(dependent).expect("TODO: handle error");
                 match dependent_module.source_type {
                     SourceType::SourceFile(_) => {
                         match (module.last_compiled_cmt, module.last_compiled_cmt) {
@@ -1029,7 +1029,7 @@ pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildCommandState)
                     // way around)
                     SourceType::MlMap(_) => {
                         for dependent_of_namespace in dependent_module.dependents.iter() {
-                            let dependent_module = build_state.modules.get(dependent_of_namespace).unwrap();
+                            let dependent_module = build_state.modules.get(dependent_of_namespace).expect("TODO: handle error");
 
                             if let (Some(last_compiled_dependent), Some(last_compiled)) =
                                 (dependent_module.last_compiled_cmt, module.last_compiled_cmt)

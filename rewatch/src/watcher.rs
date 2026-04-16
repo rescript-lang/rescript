@@ -175,7 +175,7 @@ async fn async_watch(
 
     ctrlc::set_handler(move || {
         let pressed = Arc::clone(&ctrlc_pressed);
-        let mut pressed = pressed.lock().unwrap();
+        let mut pressed = pressed.lock().expect("TODO: handle error");
         *pressed = true;
     })
     .expect("Error setting Ctrl-C handler");
@@ -183,7 +183,7 @@ async fn async_watch(
     let mut initial_build = true;
 
     loop {
-        if *ctrlc_pressed_clone.lock().unwrap() {
+        if *ctrlc_pressed_clone.lock().expect("TODO: handle error") {
             if show_progress {
                 println!("\nExiting...");
             }

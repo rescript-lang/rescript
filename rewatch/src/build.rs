@@ -70,7 +70,7 @@ pub fn get_compiler_args(rescript_file_path: &Path) -> Result<String> {
     };
 
     // make PathBuf from package root and get the relative path for filename
-    let relative_filename = filename.strip_prefix(PathBuf::from(&current_package)).unwrap();
+    let relative_filename = filename.strip_prefix(PathBuf::from(&current_package)).expect("TODO: handle error");
 
     let file_path = PathBuf::from(&current_package).join(filename);
     let contents = helpers::read_file(&file_path).expect("Error reading file");
@@ -253,7 +253,7 @@ pub fn incremental_build(
             format_step(current_step, total_steps),
             CODE
         ))
-        .unwrap(),
+        .expect("TODO: handle error"),
     );
 
     let timing_parse_start = Instant::now();
@@ -324,7 +324,7 @@ pub fn incremental_build(
 
     let start_compiling = Instant::now();
     let pb = if !plain_output && show_progress {
-        ProgressBar::new(build_state.modules.len().try_into().unwrap())
+        ProgressBar::new(build_state.modules.len().try_into().expect("TODO: handle error"))
     } else {
         ProgressBar::hidden()
     };
@@ -334,7 +334,7 @@ pub fn incremental_build(
             format_step(current_step, total_steps),
             SWORDS
         ))
-        .unwrap(),
+        .expect("TODO: handle error"),
     );
 
     let (compile_errors, compile_warnings, num_compiled_modules) = compile::compile(

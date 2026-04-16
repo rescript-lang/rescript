@@ -18,7 +18,7 @@ pub fn read(build_state: &mut BuildCommandState) -> anyhow::Result<CompileAssets
         .values()
         .filter_map(|module| match &module.source_type {
             SourceType::SourceFile(source_file) => {
-                let package = build_state.packages.get(&module.package_name).unwrap();
+                let package = build_state.packages.get(&module.package_name).expect("TODO: handle error");
 
                 Some(PathBuf::from(&package.path).join(&source_file.implementation.path))
             }
@@ -31,7 +31,7 @@ pub fn read(build_state: &mut BuildCommandState) -> anyhow::Result<CompileAssets
             .modules
             .values()
             .filter_map(|module| {
-                let package = build_state.packages.get(&module.package_name).unwrap();
+                let package = build_state.packages.get(&module.package_name).expect("TODO: handle error");
                 module
                     .get_interface()
                     .as_ref()
@@ -45,7 +45,7 @@ pub fn read(build_state: &mut BuildCommandState) -> anyhow::Result<CompileAssets
         .packages
         .par_iter()
         .map(|(_, package)| {
-            let read_dir = fs::read_dir(package.get_ocaml_build_path()).unwrap();
+            let read_dir = fs::read_dir(package.get_ocaml_build_path()).expect("TODO: handle error");
             read_dir
                 .filter_map(|entry| match entry {
                     Ok(entry) => {
@@ -55,7 +55,7 @@ pub fn read(build_state: &mut BuildCommandState) -> anyhow::Result<CompileAssets
                             Some(ext) => match ext {
                                 "iast" | "ast" | "cmi" | "cmt" => Some((
                                     path.to_owned(),
-                                    entry.metadata().unwrap().modified().unwrap(),
+                                    entry.metadata().expect("TODO: handle error").modified().expect("TODO: handle error"),
                                     ext.to_owned(),
                                     package.name.to_owned(),
                                     package.namespace.to_owned(),
@@ -92,7 +92,7 @@ pub fn read(build_state: &mut BuildCommandState) -> anyhow::Result<CompileAssets
                                 ast_file_path: path.to_path_buf(),
                                 is_root: *package_is_root,
                                 suffix: root_config
-                                    .get_suffix(root_config.get_package_specs().first().unwrap()),
+                                    .get_suffix(root_config.get_package_specs().first().expect("TODO: handle error")),
                             },
                         );
                         let _ = ast_rescript_file_locations.insert(res_file_path_buf);

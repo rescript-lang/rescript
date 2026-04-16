@@ -161,7 +161,7 @@ pub fn read_folders(
         (
             path.to_owned(),
             SourceFileMeta {
-                modified: meta.modified().unwrap(),
+                modified: meta.modified().expect("TODO: handle error"),
                 is_type_dev,
             },
         )
@@ -170,7 +170,7 @@ pub fn read_folders(
     for entry in fs::read_dir(package_dir.join(&path_buf))? {
         let entry_path_buf = entry.map(|entry| entry.path())?;
         let metadata = fs::metadata(&entry_path_buf)?;
-        let name = entry_path_buf.file_name().unwrap().to_str().unwrap().to_string();
+        let name = entry_path_buf.file_name().expect("TODO: handle error").to_str().expect("TODO: handle error").to_string();
 
         let path_ext = entry_path_buf.extension().and_then(|x| x.to_str());
         let new_path = path_buf.join(&name);
@@ -189,7 +189,7 @@ pub fn read_folders(
                     map.insert(
                         path,
                         SourceFileMeta {
-                            modified: metadata.modified().unwrap(),
+                            modified: metadata.modified().expect("TODO: handle error"),
                             is_type_dev,
                         },
                     );
@@ -629,7 +629,7 @@ fn extend_with_children(
         package.modules = Some(modules);
         let mut dirs = AHashSet::new();
         map.keys().for_each(|path| {
-            let dir = std::path::Path::new(&path).parent().unwrap();
+            let dir = std::path::Path::new(&path).parent().expect("TODO: handle error");
             dirs.insert(dir.to_owned());
         });
         package.dirs = Some(dirs);
@@ -774,7 +774,7 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
             for (file, metadata) in source_files.iter() {
                 let namespace = package.namespace.to_owned();
 
-                let extension = file.extension().unwrap().to_str().unwrap();
+                let extension = file.extension().expect("TODO: handle error").to_str().expect("TODO: handle error");
                 let module_name = helpers::file_path_to_module_name(file, &namespace);
 
                 if helpers::is_implementation_file(extension) {
@@ -838,7 +838,7 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
                 } else {
                     // remove last character of string: resi -> res
                     let mut implementation_filename = file.to_owned();
-                    let extension = implementation_filename.extension().unwrap().to_str().unwrap();
+                    let extension = implementation_filename.extension().expect("TODO: handle error").to_str().expect("TODO: handle error");
                     implementation_filename = match extension {
                         "resi" => implementation_filename.with_extension("res"),
                         _ => implementation_filename,

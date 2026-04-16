@@ -42,7 +42,7 @@ impl<T> Queue<T> for FifoQueue<T> {
 
     /// Adds an element to the back of the queue
     fn push(&self, value: T) {
-        let mut data = self.data.lock().unwrap();
+        let mut data = self.data.lock().expect("TODO: handle error");
         data.push_back(value);
         self.cv.notify_one();
     }
@@ -50,24 +50,24 @@ impl<T> Queue<T> for FifoQueue<T> {
     /// Removes an element from the front of the queue
     /// Returns None if the queue is empty
     fn pop(&self) -> T {
-        let mut data = self.data.lock().unwrap();
+        let mut data = self.data.lock().expect("TODO: handle error");
 
         while data.is_empty() {
-            data = self.cv.wait(data).unwrap();
+            data = self.cv.wait(data).expect("TODO: handle error");
         }
 
-        data.pop_front().unwrap()
+        data.pop_front().expect("TODO: handle error")
     }
 
     /// Returns the size of the queue
     fn len(&self) -> usize {
-        let data = self.data.lock().unwrap();
+        let data = self.data.lock().expect("TODO: handle error");
         data.len()
     }
 
     /// Checks if the queue is empty
     fn is_empty(&self) -> bool {
-        let data = self.data.lock().unwrap();
+        let data = self.data.lock().expect("TODO: handle error");
         data.is_empty()
     }
 }
@@ -119,8 +119,8 @@ mod test {
             q2.push(4)
         });
 
-        t1.join().unwrap();
-        t2.join().unwrap();
+        t1.join().expect("TODO: handle error");
+        t2.join().expect("TODO: handle error");
 
         assert_eq!(queue.len(), 4);
     }
@@ -143,8 +143,8 @@ mod test {
             }
         });
 
-        handle1.join().unwrap();
-        handle2.join().unwrap();
+        handle1.join().expect("TODO: handle error");
+        handle2.join().expect("TODO: handle error");
 
         assert!(queue.is_empty());
     }
@@ -169,8 +169,8 @@ mod test {
             }
         });
 
-        handle1.join().unwrap();
-        handle2.join().unwrap();
+        handle1.join().expect("TODO: handle error");
+        handle2.join().expect("TODO: handle error");
 
         assert!(queue.is_empty());
     }

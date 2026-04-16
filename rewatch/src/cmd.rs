@@ -25,8 +25,8 @@ pub fn run(command_string: String) {
         .expect("failed to execute process");
 
     {
-        let stdout = cmd.stdout.as_mut().unwrap();
-        let stderr = cmd.stderr.as_mut().unwrap();
+        let stdout = cmd.stdout.as_mut().expect("TODO: handle error");
+        let stderr = cmd.stderr.as_mut().expect("TODO: handle error");
 
         let stdout_reader = BufReader::new(stdout);
         let stderr_reader = BufReader::new(stderr);
@@ -35,11 +35,11 @@ pub fn run(command_string: String) {
         let std_err = stderr_reader.lines();
 
         for line in stdout_lines {
-            println!("{}", line.unwrap());
+            println!("{}", line.expect("TODO: handle error"));
         }
 
         for line in std_err {
-            eprintln!("{}", line.unwrap());
+            eprintln!("{}", line.expect("TODO: handle error"));
         }
 
         let subcommand_duration = start_subcommand.elapsed();
@@ -52,5 +52,5 @@ pub fn run(command_string: String) {
         );
     }
 
-    cmd.wait().unwrap();
+    cmd.wait().expect("TODO: handle error");
 }

@@ -47,7 +47,7 @@ fn get_dep_modules(
 
     deps.iter()
         .map(|dep| {
-            let dep_first = dep.split('.').next().unwrap();
+            let dep_first = dep.split('.').next().expect("TODO: handle error");
             let dep_second = dep.split('.').nth(1);
             match &namespace {
                 Some(namespace) => {
@@ -112,7 +112,7 @@ pub fn get_deps(build_state: &mut BuildState, deleted_modules: &AHashSet<String>
                     let mut deps = get_dep_modules(
                         &ast_path.to_string_lossy(),
                         package.namespace.to_suffix(),
-                        package.modules.as_ref().unwrap(),
+                        package.modules.as_ref().expect("TODO: handle error"),
                         all_mod,
                         package,
                         build_state,
@@ -124,7 +124,7 @@ pub fn get_deps(build_state: &mut BuildState, deleted_modules: &AHashSet<String>
                         deps.extend(get_dep_modules(
                             &iast_path.to_string_lossy(),
                             package.namespace.to_suffix(),
-                            package.modules.as_ref().unwrap(),
+                            package.modules.as_ref().expect("TODO: handle error"),
                             all_mod,
                             package,
                             build_state,
@@ -134,7 +134,7 @@ pub fn get_deps(build_state: &mut BuildState, deleted_modules: &AHashSet<String>
                         packages::Namespace::NamespaceWithEntry { namespace: _, entry }
                             if entry == module_name =>
                         {
-                            deps.insert(package.namespace.to_suffix().unwrap());
+                            deps.insert(package.namespace.to_suffix().expect("TODO: handle error"));
                         }
                         _ => (),
                     }

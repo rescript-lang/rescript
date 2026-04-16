@@ -221,7 +221,7 @@ impl ProjectContext {
     }
 
     pub fn get_root_path(&self) -> &Path {
-        self.get_root_config().path.parent().unwrap()
+        self.get_root_config().path.parent().expect("TODO: handle error")
     }
 
     /// Returns the local packages relevant for the current context.

@@ -35,7 +35,7 @@ fn find_shortest_cycle(modules: &Vec<(&String, &Module)>) -> Vec<String> {
         }
 
         // Update the graph
-        *graph.get_mut(*name).unwrap() = &module.deps;
+        *graph.get_mut(*name).expect("TODO: handle error") = &module.deps;
     }
     // Remove all nodes in the graph that have no incoming edges
     graph.retain(|_, deps| !deps.is_empty());
@@ -103,7 +103,7 @@ fn find_cycle_bfs(
     queue.push_back(start.clone());
 
     while let Some(current) = queue.pop_front() {
-        let (dist, _) = *visited.get(&current).unwrap();
+        let (dist, _) = *visited.get(&current).expect("TODO: handle error");
 
         // OPTIMIZATION: Early termination if we've gone too far
         // If we're already at max_length, we won't find a shorter cycle from here
@@ -124,7 +124,7 @@ fn find_cycle_bfs(
                     let mut curr = current.clone();
                     while curr != *start {
                         path.push(curr.clone());
-                        curr = visited.get(&curr).unwrap().1.clone().unwrap();
+                        curr = visited.get(&curr).expect("TODO: handle error").1.clone().expect("TODO: handle error");
                     }
 
                     return Some(path);

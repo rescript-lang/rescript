@@ -81,7 +81,7 @@ impl StrippedVerbatimPath for PathBuf {
                                 .as_os_str()
                                 .to_string_lossy()
                                 .strip_prefix("\\\\?\\")
-                                .unwrap(),
+                                .expect("TODO: handle error"),
                         );
                     } else {
                         stripped.push(prefix_component.as_os_str());
@@ -316,7 +316,7 @@ fn add_suffix(base: &str, namespace: &packages::Namespace) -> String {
         | packages::Namespace::NamespaceWithEntry {
             namespace: _,
             entry: _,
-        } => base.to_string() + "-" + &namespace.to_suffix().unwrap(),
+        } => base.to_string() + "-" + &namespace.to_suffix().expect("TODO: handle error"),
         packages::Namespace::NoNamespace => base.to_string(),
     }
 }
@@ -346,11 +346,11 @@ pub fn contains_ascii_characters(str: &str) -> bool {
 }
 
 pub fn create_path(path: &Path) {
-    fs::DirBuilder::new().recursive(true).create(path).unwrap();
+    fs::DirBuilder::new().recursive(true).create(path).expect("TODO: handle error");
 }
 
 pub fn create_path_for_path(path: &Path) {
-    fs::DirBuilder::new().recursive(true).create(path).unwrap();
+    fs::DirBuilder::new().recursive(true).create(path).expect("TODO: handle error");
 }
 
 pub fn get_bin_dir() -> PathBuf {
@@ -380,7 +380,7 @@ pub fn string_ends_with_any(s: &Path, suffixes: &[&str]) -> bool {
 }
 
 fn path_to_ast_extension(path: &Path) -> &str {
-    let extension = path.extension().unwrap().to_str().unwrap();
+    let extension = path.extension().expect("TODO: handle error").to_str().expect("TODO: handle error");
     if extension.ends_with("i") { ".iast" } else { ".ast" }
 }
 
@@ -391,7 +391,7 @@ pub fn get_ast_path(source_file: &Path) -> PathBuf {
 
     source_path
         .parent()
-        .unwrap()
+        .expect("TODO: handle error")
         .join(format!("{basename}{extension}"))
 }
 
@@ -429,7 +429,7 @@ pub fn get_bs_compiler_asset(
         _ => namespace,
     };
 
-    let dir = source_file.parent().unwrap();
+    let dir = source_file.parent().expect("TODO: handle error");
     let basename = file_path_to_compiler_asset_basename(source_file, namespace);
 
     package
@@ -437,7 +437,7 @@ pub fn get_bs_compiler_asset(
         .join(dir)
         .join(format!("{basename}{extension}"))
         .to_str()
-        .unwrap()
+        .expect("TODO: handle error")
         .to_owned()
 }
 
@@ -478,7 +478,7 @@ pub fn is_source_file(extension: &str) -> bool {
 
 pub fn is_non_exotic_module_name(module_name: &str) -> bool {
     let mut chars = module_name.chars();
-    if chars.next().unwrap().is_ascii_uppercase() && chars.all(|c| c.is_ascii_alphanumeric() || c == '_') {
+    if chars.next().expect("TODO: handle error").is_ascii_uppercase() && chars.all(|c| c.is_ascii_alphanumeric() || c == '_') {
         return true;
     }
     false
@@ -496,7 +496,7 @@ pub fn format_namespaced_module_name(module_name: &str) -> String {
     // from ModuleName-Namespace to Namespace.ModuleName
     // also format ModuleName-@Namespace to Namespace.ModuleName
     let mut split = module_name.split('-');
-    let module_name = split.next().unwrap();
+    let module_name = split.next().expect("TODO: handle error");
     let namespace = split.next();
     let namespace = namespace.map(|ns| ns.trim_start_matches('@'));
     match namespace {

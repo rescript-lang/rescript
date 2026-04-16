@@ -46,8 +46,8 @@ pub fn gen_mlmap(
         // (only contains A-Z a-z 0-9 and _ and only starts with a capital letter)
         // if not, it does not make sense to export as part of the name space
         // this helps compile times of exotic modules such as MyModule.test
-        file.write_all(module.as_bytes()).unwrap();
-        file.write_all(b"\n").unwrap();
+        file.write_all(module.as_bytes()).expect("TODO: handle error");
+        file.write_all(b"\n").expect("TODO: handle error");
     }
 
     path
@@ -80,7 +80,7 @@ pub fn compile_mlmap(
                 .canonicalize()
                 .map(StrippedVerbatimPath::to_stripped_verbatim_path)
                 .ok()
-                .unwrap(),
+                .expect("TODO: handle error"),
         )
         .args(&args)
         .output()?;
