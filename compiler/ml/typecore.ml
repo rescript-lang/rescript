@@ -2918,6 +2918,13 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
         })
   | Pexp_sequence (sexp1, sexp2) ->
     let exp1 = type_statement ~context:None env sexp1 in
+    (match exp1.exp_desc with
+    | Texp_break | Texp_continue ->
+      (* Loop control should only reuse the nonreturning-statement warning when
+         there is a following statement in the same block/sequence. *)
+      Location.prerr_warning (final_subexpression sexp1).pexp_loc
+        Warnings.Nonreturning_statement
+    | _ -> ());
     let exp2 = type_expect ~context:None env sexp2 ty_expected in
     re
       {
@@ -3943,12 +3950,6 @@ and type_statement ~context env sexp =
   begin_def ();
   let exp = type_exp ~context env sexp in
   end_def ();
-  (match exp.exp_desc with
-  | Texp_break | Texp_continue ->
-    (* Reuse the existing nonreturning-statement warning that throw(...) gets
-       for unconditional loop control in statement position. *)
-    Location.prerr_warning loc Warnings.Nonreturning_statement
-  | _ -> ());
   let ty = expand_head env exp.exp_type and tv = newvar () in
   if is_Tvar ty && ty.level > tv.level then
     Location.prerr_warning loc Warnings.Nonreturning_statement;
