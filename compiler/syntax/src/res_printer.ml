@@ -3582,6 +3582,8 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
     | Pexp_ifthenelse (_ifExpr, _thenExpr, _elseExpr) ->
       let ifs, else_expr = ParsetreeViewer.collect_if_expressions e in
       print_if_chain ~state e.pexp_attributes ifs else_expr cmt_tbl
+    | Pexp_break -> Doc.text "break"
+    | Pexp_continue -> Doc.text "continue"
     | Pexp_while (expr1, expr2) ->
       let condition =
         let doc = print_expression_with_comments ~state expr1 cmt_tbl in

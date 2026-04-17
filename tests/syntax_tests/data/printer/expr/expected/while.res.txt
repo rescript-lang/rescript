@@ -18,5 +18,5 @@ while continuePrefix.contents && aPrefixLen.contents <= aLen && bPrefixLen.conte
 let x =
   @attr
   while true {
-    break()
+    break_()
   }

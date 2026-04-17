@@ -137,6 +137,7 @@ let collect_info (meta : Lam_stats.t) (lam : Lam.t) =
     | Lsequence (l1, l2) ->
       collect l1;
       collect l2
+    | Lbreak | Lcontinue -> ()
     | Lwhile (l1, l2) ->
       collect l1;
       collect l2

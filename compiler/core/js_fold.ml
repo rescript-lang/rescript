@@ -228,11 +228,11 @@ class fold =
         let _self = _self#block _x1 in
         let _self = _self#block _x2 in
         _self
-      | While (_x0, _x1) ->
+      | While (_label, _x0, _x1) ->
         let _self = _self#expression _x0 in
         let _self = _self#block _x1 in
         _self
-      | ForRange (_x0, _x1, _x2, _x3, _x4) ->
+      | ForRange (_label, _x0, _x1, _x2, _x3, _x4) ->
         let _self =
           option (fun _self -> _self#for_ident_expression) _self _x0
         in
@@ -241,8 +241,8 @@ class fold =
         let _self = _self#for_direction _x3 in
         let _self = _self#block _x4 in
         _self
-      | Continue -> _self
-      | Break -> _self
+      | Continue _ -> _self
+      | Break _ -> _self
       | Return _x0 ->
         let _self = _self#expression _x0 in
         _self

@@ -522,6 +522,9 @@ module E = struct
         (map_opt (sub.expr sub) e3)
     | Pexp_sequence (e1, e2) ->
       sequence ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)
+    | Pexp_extension ({txt = "res.break"; _}, PStr []) -> break ~loc ~attrs ()
+    | Pexp_extension ({txt = "res.continue"; _}, PStr []) ->
+      continue ~loc ~attrs ()
     | Pexp_while (e1, e2) ->
       while_ ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)
     | Pexp_for (p, e1, e2, d, e3) ->

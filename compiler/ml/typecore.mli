@@ -113,6 +113,8 @@ type error =
   | Inlined_record_expected
   | Invalid_extension_constructor_payload
   | Not_an_extension_constructor
+  | Break_outside_loop
+  | Continue_outside_loop
   | Literal_overflow of string
   | Unknown_literal of string * char
   | Illegal_letrec_pat

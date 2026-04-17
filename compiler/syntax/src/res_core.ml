@@ -3089,6 +3089,18 @@ and parse_braced_or_record_expr p =
   let start_pos = p.Parser.start_pos in
   Parser.expect Lbrace p;
   match p.Parser.token with
+  | Break ->
+    let expr = parse_expr_block p in
+    Parser.expect Rbrace p;
+    let loc = mk_loc start_pos p.prev_end_pos in
+    let braces = make_braces_attr loc in
+    {expr with pexp_attributes = braces :: expr.pexp_attributes}
+  | Continue ->
+    let expr = parse_expr_block p in
+    Parser.expect Rbrace p;
+    let loc = mk_loc start_pos p.prev_end_pos in
+    let braces = make_braces_attr loc in
+    {expr with pexp_attributes = braces :: expr.pexp_attributes}
   | token when Token.is_keyword token -> (
     match
       recover_keyword_field_name_if_probably_field p
@@ -3564,6 +3576,14 @@ and parse_expr_block_item p =
   let start_pos = p.Parser.start_pos in
   let attrs = parse_attributes p in
   match p.Parser.token with
+  | Break ->
+    Parser.next p;
+    let loc = mk_loc start_pos p.prev_end_pos in
+    Ast_helper.Exp.break ~loc ~attrs ()
+  | Continue ->
+    Parser.next p;
+    let loc = mk_loc start_pos p.prev_end_pos in
+    Ast_helper.Exp.continue ~loc ~attrs ()
   | Module -> (
     Parser.next p;
     match p.token with

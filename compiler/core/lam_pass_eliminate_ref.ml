@@ -95,6 +95,8 @@ let rec eliminate_ref id (lam : Lam.t) =
   | Lifthenelse (e1, e2, e3) ->
     Lam.if_ (eliminate_ref id e1) (eliminate_ref id e2) (eliminate_ref id e3)
   | Lsequence (e1, e2) -> Lam.seq (eliminate_ref id e1) (eliminate_ref id e2)
+  | Lbreak -> Lam.break
+  | Lcontinue -> Lam.continue
   | Lwhile (e1, e2) -> Lam.while_ (eliminate_ref id e1) (eliminate_ref id e2)
   | Lfor (v, e1, e2, dir, e3) ->
     Lam.for_ v (eliminate_ref id e1) (eliminate_ref id e2) dir

@@ -1638,17 +1638,17 @@
   addValueDeclaration +group Unison.res:17:4 path:+Unison
   addValueDeclaration +fits Unison.res:19:8 path:+Unison
   addValueDeclaration +toString Unison.res:26:8 path:+Unison
-  addVariantCaseDeclaration IfNeed Unison.res:4:2 path:+Unison.break
-  addVariantCaseDeclaration Never Unison.res:5:2 path:+Unison.break
-  addVariantCaseDeclaration Always Unison.res:6:2 path:+Unison.break
-  addRecordLabelDeclaration break Unison.res:9:2 path:+Unison.t
+  addVariantCaseDeclaration IfNeed Unison.res:4:2 path:+Unison.break_
+  addVariantCaseDeclaration Never Unison.res:5:2 path:+Unison.break_
+  addVariantCaseDeclaration Always Unison.res:6:2 path:+Unison.break_
+  addRecordLabelDeclaration break_ Unison.res:9:2 path:+Unison.t
   addRecordLabelDeclaration doc Unison.res:10:2 path:+Unison.t
   addVariantCaseDeclaration Empty Unison.res:14:2 path:+Unison.stack
   addVariantCaseDeclaration Cons Unison.res:15:2 path:+Unison.stack
-  addValueReference Unison.res:17:4 --> Unison.res:17:20
-  addTypeReference Unison.res:17:20 --> Unison.res:4:2
+  addValueReference Unison.res:17:4 --> Unison.res:17:21
+  addTypeReference Unison.res:17:21 --> Unison.res:4:2
   addValueReference Unison.res:17:4 --> Unison.res:17:13
-  addValueReference Unison.res:17:4 --> Unison.res:17:28
+  addValueReference Unison.res:17:4 --> Unison.res:17:29
   addValueReference Unison.res:19:8 --> Unison.res:19:16
   addValueReference Unison.res:19:8 --> Unison.res:19:16
   addValueReference Unison.res:19:8 --> Unison.res:23:10
@@ -1657,18 +1657,18 @@
   addTypeReference Unison.res:23:9 --> Unison.res:10:2
   addValueReference Unison.res:19:8 --> Unison.res:19:19
   addValueReference Unison.res:26:8 --> Unison.res:26:20
-  addValueReference Unison.res:26:8 --> Unison.res:28:23
+  addValueReference Unison.res:26:8 --> Unison.res:28:24
   addValueReference Unison.res:26:8 --> Unison.res:19:8
   addValueReference Unison.res:26:8 --> Unison.res:26:20
-  addValueReference Unison.res:26:8 --> Unison.res:28:23
+  addValueReference Unison.res:26:8 --> Unison.res:28:24
   addValueReference Unison.res:26:8 --> Unison.res:26:8
-  addValueReference Unison.res:26:8 --> Unison.res:28:17
+  addValueReference Unison.res:26:8 --> Unison.res:28:18
   addValueReference Unison.res:26:8 --> Unison.res:26:20
-  addValueReference Unison.res:26:8 --> Unison.res:28:23
+  addValueReference Unison.res:26:8 --> Unison.res:28:24
   addValueReference Unison.res:26:8 --> Unison.res:26:8
-  addValueReference Unison.res:26:8 --> Unison.res:28:17
+  addValueReference Unison.res:26:8 --> Unison.res:28:18
   addValueReference Unison.res:26:8 --> Unison.res:26:20
-  addValueReference Unison.res:26:8 --> Unison.res:28:23
+  addValueReference Unison.res:26:8 --> Unison.res:28:24
   addValueReference Unison.res:26:8 --> Unison.res:26:8
   addValueReference Unison.res:26:8 --> Unison.res:28:10
   addTypeReference Unison.res:28:9 --> Unison.res:9:2
@@ -1677,16 +1677,16 @@
   addTypeReference Unison.res:37:20 --> Unison.res:14:2
   addValueReference Unison.res:37:0 --> Unison.res:26:8
   addTypeReference Unison.res:38:20 --> Unison.res:15:2
-  DeadOptionalArgs.addReferences group called with optional argNames:break argNamesMaybe: Unison.res:38:25
-  addTypeReference Unison.res:38:38 --> Unison.res:5:2
+  DeadOptionalArgs.addReferences group called with optional argNames:break_ argNamesMaybe: Unison.res:38:25
+  addTypeReference Unison.res:38:39 --> Unison.res:5:2
   addValueReference Unison.res:38:25 --> Unison.res:17:4
-  addTypeReference Unison.res:38:53 --> Unison.res:14:2
+  addTypeReference Unison.res:38:54 --> Unison.res:14:2
   addValueReference Unison.res:38:0 --> Unison.res:26:8
   addTypeReference Unison.res:39:20 --> Unison.res:15:2
-  DeadOptionalArgs.addReferences group called with optional argNames:break argNamesMaybe: Unison.res:39:25
-  addTypeReference Unison.res:39:38 --> Unison.res:6:2
+  DeadOptionalArgs.addReferences group called with optional argNames:break_ argNamesMaybe: Unison.res:39:25
+  addTypeReference Unison.res:39:39 --> Unison.res:6:2
   addValueReference Unison.res:39:25 --> Unison.res:17:4
-  addTypeReference Unison.res:39:52 --> Unison.res:14:2
+  addTypeReference Unison.res:39:53 --> Unison.res:14:2
   addValueReference Unison.res:39:0 --> Unison.res:26:8
   Scanning UseImportJsValue.cmt Source:UseImportJsValue.res
   addValueDeclaration +useGetProp UseImportJsValue.res:2:4 path:+UseImportJsValue
@@ -2008,6 +2008,7 @@ Forward Liveness Analysis
     Root (external ref): Value OptArg.+bar
     Root (annotated): Value +Records.+payloadValue
     Root (external ref): RecordLabel +DeadTest.props.s
+    Root (external ref): VariantCase +Unison.break_.Never
     Root (annotated): Value +TestEmitInnerModules.Inner.+y
     Root (external ref): VariantCase InnerModuleTypes.I.t.Foo
     Root (annotated): Value +Types.+selfRecursiveConverter
@@ -2019,12 +2020,10 @@ Forward Liveness Analysis
     Root (annotated): Value +TestFirstClassModules.+convertRecord
     Root (external ref): VariantCase DeadTypeTest.deadType.OnlyInInterface
     Root (external ref): RecordLabel +Records.myRecBsAs.type_
-    Root (external ref): VariantCase +Unison.break.Never
     Root (annotated): Value +ImportJsValue.+higherOrder
     Root (annotated): Value +Variants.+restResult3
     Root (external ref): RecordLabel +Tuples.person.name
     Root (external ref): Value +FirstClassModules.M.InnerModule3.+k3
-    Root (external ref): VariantCase +Unison.break.Always
     Root (external ref): RecordLabel +Records.coord.x
     Root (annotated): RecordLabel +DeadTypeTest.record.y
     Root (annotated): Value +TestImport.+defaultValue
@@ -2040,10 +2039,10 @@ Forward Liveness Analysis
     Root (external ref): Value +ModuleExceptionBug.+ddjdj
     Root (annotated): Value +TransitiveType1.+convert
     Root (annotated): Value +ImportHooks.+make
+    Root (external ref): VariantCase +Unison.break_.IfNeed
     Root (external ref): Value +DeadTest.+make
     Root (annotated): Value +Records.+testMyRecBsAs
     Root (external ref): Value +DeadTest.+ira
-    Root (external ref): Value +Unison.+toString
     Root (external ref): Value +DeadTest.+deadIncorrect
     Root (annotated): Value +Records.+origin
     Root (annotated): Value +Variants.+onlySunday
@@ -2058,7 +2057,6 @@ Forward Liveness Analysis
     Root (annotated): Value +ModuleAliases.+testNested
     Root (external ref): Value +FirstClassModules.SomeFunctor.+ww
     Root (external ref): VariantCase +DeadTest.WithInclude.t.A
-    Root (external ref): Value +Unison.+group
     Root (annotated): Value +ImportJsValue.+area
     Root (annotated): Value +Records.+testMyRec
     Root (external ref): RecordLabel +Uncurried.auth.login
@@ -2104,7 +2102,6 @@ Forward Liveness Analysis
     Root (annotated): Value +Hooks.RenderPropRequiresConversion.+make
     Root (annotated): Value +LetPrivate.local_1.+x
     Root (annotated): Value +TestImport.+make
-    Root (external ref): RecordLabel +Unison.t.break
     Root (annotated): Value +Docstrings.+grouped
     Root (annotated): Value +OcamlWarningSuppressToplevel.M.+suppressed4
     Root (annotated): Value +Types.+optFunction
@@ -2124,6 +2121,7 @@ Forward Liveness Analysis
     Root (annotated): Value +Types.+jsStringT
     Root (annotated): Value +Variants.+restResult1
     Root (external ref): VariantCase +TypeReexport.VariantUseReexported.reexportedType.A
+    Root (external ref): Value +Unison.+toString
     Root (annotated): Value +ImportJsValue.+polymorphic
     Root (annotated): Value +References.+set
     Root (external ref): Value +DeadTest.MM.+x
@@ -2132,6 +2130,7 @@ Forward Liveness Analysis
     Root (annotated): Value +Docstrings.+useParamU
     Root (annotated): Value +ImportJsValue.+useColor
     Root (annotated): Value +Tuples.+changeSecondAge
+    Root (external ref): Value +Unison.+group
     Root (annotated): RecordLabel +DeadTest.inlineRecord.IR.e
     Root (annotated): Value +Docstrings.+unnamed1U
     Root (annotated): Value +Records.+recordValue
@@ -2151,10 +2150,12 @@ Forward Liveness Analysis
     Root (external ref): RecordLabel +Records.coord.z
     Root (annotated): Value +Types.+someIntList
     Root (annotated): Value +Types.+jsString2T
+    Root (external ref): VariantCase +Unison.stack.Empty
     Root (annotated): Value +Records.+coord2d
     Root (external ref): RecordLabel +DynamicallyLoadedComponent.props.s
     Root (external ref): RecordLabel +Tuples.person.age
     Root (annotated): Value +NestedModules.Universe.+someString
+    Root (external ref): VariantCase +Unison.break_.Always
     Root (annotated): Value +TestFirstClassModules.+convertInterface
     Root (external ref): RecordLabel +TestPromise.fromPayload.s
     Root (annotated): Value +Types.+testMarshalFields
@@ -2174,6 +2175,7 @@ Forward Liveness Analysis
     Root (annotated): Value +Records.+computeArea3
     Root (annotated): Value +Variants.+fortytwoBAD
     Root (external ref): Value +DeadTest.+thisIsUsedOnce
+    Root (external ref): RecordLabel +Unison.t.break_
     Root (external ref): Value ImmutableArray.+fromArray
     Root (external ref): Value +RepeatedLabel.+userData
     Root (annotated): Value +Variants.+testConvert2to3
@@ -2189,7 +2191,6 @@ Forward Liveness Analysis
     Root (annotated): Value +Variants.+restResult2
     Root (annotated): Value +Docstrings.+useParam
     Root (annotated): Value +Records.+getPayload
-    Root (external ref): VariantCase +Unison.break.IfNeed
     Root (annotated): Value +ScopedAnnotationsOverride.M.NestedInLive.+nestedLive
     Root (external ref): Value +FirstClassModules.M.+y
     Root (external ref): RecordLabel +Uncurried.authU.loginU
@@ -2203,6 +2204,7 @@ Forward Liveness Analysis
     Root (annotated): Value +VariantsWithPayload.+printManyPayloads
     Root (annotated): Value +TestFirstClassModules.+convertFirstClassModuleWithTypeEquations
     Root (annotated): Value +TransitiveType1.+convertAlias
+    Root (external ref): VariantCase +Unison.stack.Cons
     Root (external ref): Exception +DeadExn.Inside.Einside
     Root (annotated): Value +TestImport.+defaultValue2
     Root (external ref): Exception +DeadExn.Etoplevel
@@ -2221,7 +2223,6 @@ Forward Liveness Analysis
     Root (annotated): Value +References.+destroysRefIdentity
     Root (external ref): Value +FirstClassModules.M.+x
     Root (external ref): Value +TypeReexportCrossFileB.+recordValue
-    Root (external ref): VariantCase +Unison.stack.Empty
     Root (annotated): Value +Records.+computeArea4
     Root (annotated): Value +TestModuleAliases.+testInner1Expanded
     Root (external ref): Value +TypeReexport.OnlyReexportedDead.+value
@@ -2241,7 +2242,6 @@ Forward Liveness Analysis
     Root (annotated): Value +Docstrings.+unitArgWithConversion
     Root (annotated): Value +DeadTest.GloobLive.+globallyLive1
     Root (external ref): RecordLabel +Records.business.owner
-    Root (external ref): VariantCase +Unison.stack.Cons
     Root (external ref): VariantCase +DeadTypeTest.deadType.InBoth
     Root (external ref): RecordLabel +Records.business.address
     Root (external ref): RecordLabel +VariantsWithPayload.payload.y
@@ -2272,7 +2272,6 @@ Forward Liveness Analysis
     Propagate: InnerModuleTypes.I.t.Foo -> +InnerModuleTypes.I.t.Foo
     Propagate: DeadTypeTest.deadType.OnlyInInterface -> +DeadTypeTest.deadType.OnlyInInterface
     Propagate: +TypeReexport.UseReexported.reexportedType.usedField -> +TypeReexport.UseReexported.originalType.usedField
-    Propagate: +Unison.+toString -> +Unison.+fits
     Propagate: +References.+get -> +References.R.+get
     Propagate: +DeadTest.WithInclude.t.A -> +DeadTest.WithInclude.t.A
     Propagate: ErrorHandler.Make.+notify -> +ErrorHandler.Make.+notify
@@ -2286,6 +2285,7 @@ Forward Liveness Analysis
     Propagate: +OptArg.+wrapOneArg -> +OptArg.+oneArg
     Propagate: +TestImmutableArray.+testImmutableArrayGet -> ImmutableArray.Array.+get
     Propagate: +TypeReexport.VariantUseReexported.reexportedType.A -> +TypeReexport.VariantUseReexported.originalType.A
+    Propagate: +Unison.+toString -> +Unison.+fits
     Propagate: +References.+set -> +References.R.+set
     Propagate: +DeadTest.MM.+x -> +DeadTest.MM.+x
     Propagate: NestedModulesInSignature.Universe.+theAnswer -> +NestedModulesInSignature.Universe.+theAnswer
@@ -3868,12 +3868,12 @@ Forward Liveness Analysis
   Live (annotated) Value +Uncurried.+sumU2
   Live (annotated) Value +Uncurried.+sumCurried
   Live (annotated) Value +Uncurried.+sumLblCurried
-  Live (external ref) VariantCase +Unison.break.IfNeed
+  Live (external ref) VariantCase +Unison.break_.IfNeed
       deps: in=1 (live=1 dead=0) out=0
         <- +Unison.+group (live)
-  Live (external ref) VariantCase +Unison.break.Never
-  Live (external ref) VariantCase +Unison.break.Always
-  Live (external ref) RecordLabel +Unison.t.break
+  Live (external ref) VariantCase +Unison.break_.Never
+  Live (external ref) VariantCase +Unison.break_.Always
+  Live (external ref) RecordLabel +Unison.t.break_
       deps: in=1 (live=1 dead=0) out=0
         <- +Unison.+toString (live)
   Live (external ref) RecordLabel +Unison.t.doc
@@ -3884,7 +3884,7 @@ Forward Liveness Analysis
   Live (external ref) VariantCase +Unison.stack.Cons
   Live (external ref) Value +Unison.+group
       deps: in=0 (live=0 dead=0) out=1
-        -> +Unison.break.IfNeed
+        -> +Unison.break_.IfNeed
   Live (propagated) Value +Unison.+fits
       deps: in=2 (live=2 dead=0) out=2
         <- +Unison.+fits (live)
@@ -3896,7 +3896,7 @@ Forward Liveness Analysis
         <- +Unison.+toString (live)
         -> +Unison.+fits
         -> +Unison.+toString
-        -> +Unison.t.break
+        -> +Unison.t.break_
         -> ... (1 more)
   Live (annotated) Value +UseImportJsValue.+useGetProp
   Live (annotated) Value +UseImportJsValue.+useTypeImportedInOtherModule
@@ -5199,10 +5199,6 @@ Forward Liveness Analysis
   OptionalArgsLiveDead.res:1:1-33
   optional argument fmt of function formatDate is never used
 
-  Warning Redundant Optional Argument
-  Unison.res:17:1-60
-  optional argument break of function group is always supplied (2 calls)
-
   Warning Unused Argument
   OptArg.res:14:1-42
   optional argument a of function twoArgs is never used
@@ -5218,6 +5214,10 @@ Forward Liveness Analysis
   Warning Redundant Optional Argument
   OptArg.res:20:1-51
   optional argument a of function wrapOneArg is always supplied (1 calls)
+
+  Warning Redundant Optional Argument
+  Unison.res:17:1-55
+  optional argument break_ of function group is always supplied (2 calls)
 
   Warning Redundant Optional Argument
   OptArg.res:26:1-70

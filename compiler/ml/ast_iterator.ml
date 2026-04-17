@@ -329,6 +329,7 @@ module E = struct
     | Pexp_sequence (e1, e2) ->
       sub.expr sub e1;
       sub.expr sub e2
+    | Pexp_break | Pexp_continue -> ()
     | Pexp_while (e1, e2) ->
       sub.expr sub e1;
       sub.expr sub e2

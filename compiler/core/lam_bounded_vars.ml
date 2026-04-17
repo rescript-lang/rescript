@@ -150,6 +150,8 @@ let rewrite (map : _ Hash_ident.t) (lam : Lam.t) : Lam.t =
       let l1 = aux l1 in
       let l2 = aux l2 in
       Lam.seq l1 l2
+    | Lbreak -> Lam.break
+    | Lcontinue -> Lam.continue
     | Lwhile (l1, l2) ->
       let l1 = aux l1 in
       let l2 = aux l2 in

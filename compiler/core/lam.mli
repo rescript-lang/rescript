@@ -77,6 +77,8 @@ and t = private
   | Ltrywith of t * ident * t
   | Lifthenelse of t * t * t
   | Lsequence of t * t
+  | Lbreak
+  | Lcontinue
   | Lwhile of t * t
   | Lfor of ident * t * t * Asttypes.direction_flag * t
   | Lassign of ident * t
@@ -147,6 +149,10 @@ val not_ : Location.t -> t -> t
 
 val seq : t -> t -> t
 (** drop unused block *)
+
+val break : t
+
+val continue : t
 
 val while_ : t -> t -> t
 

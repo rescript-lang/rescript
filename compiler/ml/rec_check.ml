@@ -197,7 +197,7 @@ let rec classify_expression : Typedtree.expression -> sd =
   | Texp_ident _ | Texp_for _ | Texp_constant _ | Texp_tuple _ | Texp_array _
   | Texp_construct _ | Texp_variant _ | Texp_record _ | Texp_setfield _
   | Texp_while _ | Texp_pack _ | Texp_function _ | Texp_extension_constructor _
-    ->
+  | Texp_break | Texp_continue ->
     Static
   | Texp_apply {funct = {exp_desc = Texp_ident (_, _, vd)}} when is_ref vd ->
     Static
@@ -232,6 +232,7 @@ let rec expression : Env.env -> Typedtree.expression -> Use.t =
            for inclusion in another value *)
         (discard (expression env e3)))
   | Texp_constant _ -> Use.empty
+  | Texp_break | Texp_continue -> Use.empty
   | Texp_apply
       {funct = {exp_desc = Texp_ident (_, _, vd)}; args = [(_, Some arg)]}
     when is_ref vd ->

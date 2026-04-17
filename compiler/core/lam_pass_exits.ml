@@ -48,6 +48,7 @@ and no_bounded_variables (l : Lam.t) =
     no_bounded_variables e1 && no_bounded_variables e2
     && no_bounded_variables e3
   | Lsequence (e1, e2) -> no_bounded_variables e1 && no_bounded_variables e2
+  | Lbreak | Lcontinue -> true
   | Lwhile (e1, e2) -> no_bounded_variables e1 && no_bounded_variables e2
   | Lstaticcatch (e1, (_, vars), e2) ->
     vars = [] && no_bounded_variables e1 && no_bounded_variables e2
@@ -231,6 +232,8 @@ let subst_helper (subst : subst_tbl) (query : int -> int) (lam : Lam.t) : Lam.t
     | Ltrywith (l1, v, l2) -> Lam.try_ (simplif l1) v (simplif l2)
     | Lifthenelse (l1, l2, l3) -> Lam.if_ (simplif l1) (simplif l2) (simplif l3)
     | Lsequence (l1, l2) -> Lam.seq (simplif l1) (simplif l2)
+    | Lbreak -> Lam.break
+    | Lcontinue -> Lam.continue
     | Lwhile (l1, l2) -> Lam.while_ (simplif l1) (simplif l2)
     | Lfor (v, l1, l2, dir, l3) ->
       Lam.for_ v (simplif l1) (simplif l2) dir (simplif l3)

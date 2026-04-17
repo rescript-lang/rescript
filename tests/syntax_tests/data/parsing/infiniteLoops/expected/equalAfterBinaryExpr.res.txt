@@ -57,13 +57,13 @@ let removeNode [arity:2]rbt node =
          (successor.color <- Black;
           if successor.parent === None then rbt -> (rootSet (Some successor)))
        else
-         (let break = ref false in
+         (let break_ = ref false in
           let successorRef = ref successor in
-          while not break.contents do
+          while not break_.contents do
             let successor = successorRef.contents in
             match successor.parent with
             | None ->
-                (rbt -> (rootSet (Some successor)); break.contents <- true)
+                (rbt -> (rootSet (Some successor)); break_.contents <- true)
             | Some successorParent ->
                 let sibling = siblingOf successor in
                 (if
@@ -106,7 +106,7 @@ let removeNode [arity:2]rbt node =
                     then
                       (if (!==) sibling None then siblingNN.color <- Red;
                        successorParent.color <- Black;
-                       break.contents <- true)
+                       break_.contents <- true)
                     else
                       if
                         ((!==) sibling None) &&
@@ -139,7 +139,7 @@ let removeNode [arity:2]rbt node =
                              (sibling.color <- Red;
                               (sibling.right -> castNotOption).color <- Black;
                               rotateLeft rbt sibling);
-                         break.contents <- true)
+                         break_.contents <- true)
                       else
                         (let sibling = siblingOf successor in
                          let sibling = sibling -> castNotOption in

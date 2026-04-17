@@ -279,6 +279,8 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
     | Lstaticcatch (l1, ids, l2) -> Lam.staticcatch (simpl l1) ids (simpl l2)
     | Ltrywith (l1, v, l2) -> Lam.try_ (simpl l1) v (simpl l2)
     | Lsequence (l1, l2) -> Lam.seq (simpl l1) (simpl l2)
+    | Lbreak -> Lam.break
+    | Lcontinue -> Lam.continue
     | Lwhile (l1, l2) -> Lam.while_ (simpl l1) (simpl l2)
     | Lfor (flag, l1, l2, dir, l3) ->
       Lam.for_ flag (simpl l1) (simpl l2) dir (simpl l3)

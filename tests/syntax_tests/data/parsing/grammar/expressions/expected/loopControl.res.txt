@@ -1,0 +1,10 @@
+;;while true do
+    if done then break;
+    if skip then continue;
+    (match state with
+     | Skip -> continue
+     | Stop -> break
+     | KeepGoing -> work ())
+    done
+;;for i = 0 to 10 do match i with | 3 -> continue | 8 -> break | _ -> work ()
+  done

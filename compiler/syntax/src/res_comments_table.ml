@@ -1220,6 +1220,7 @@ and walk_expression expr t comments =
     attach t.trailing typexpr.ptyp_loc trailing
   | Pexp_tuple []
   | Pexp_array []
+  | Pexp_break | Pexp_continue
   | Pexp_construct ({txt = Longident.Lident "[]"}, _) ->
     attach t.inside expr.pexp_loc comments
   | Pexp_construct ({txt = Longident.Lident "::"}, _) ->

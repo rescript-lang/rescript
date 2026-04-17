@@ -1,0 +1,23 @@
+
+  [1;33mWarning number 21[0m
+  [36m/.../fixtures/loop_control_nonreturning_statement.res[0m:[2m3:5-9[0m
+
+  1 [2m│[0m let breakInWhile = () => {
+  2 [2m│[0m   while true {
+  [1;33m3[0m [2m│[0m     [1;33mbreak[0m
+  4 [2m│[0m     Console.log("after break")
+  5 [2m│[0m   }
+
+  This statement does not continue execution; following code is unreachable.
+
+
+  [1;33mWarning number 21[0m
+  [36m/.../fixtures/loop_control_nonreturning_statement.res[0m:[2m10:5-12[0m
+
+   8 [2m│[0m let continueInFor = () => {
+   9 [2m│[0m   for i in 0 to 10 {
+  [1;33m10[0m [2m│[0m     [1;33mcontinue[0m
+  11 [2m│[0m     Console.log(i)
+  12 [2m│[0m   }
+
+  This statement does not continue execution; following code is unreachable.

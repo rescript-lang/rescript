@@ -197,6 +197,8 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lam.t =
       Lam.staticcatch (simplif l1) (i, args) (simplif l2)
     | Ltrywith (l1, v, l2) -> Lam.try_ (simplif l1) v (simplif l2)
     | Lifthenelse (l1, l2, l3) -> Lam.if_ (simplif l1) (simplif l2) (simplif l3)
+    | Lbreak -> Lam.break
+    | Lcontinue -> Lam.continue
     | Lwhile (l1, l2) -> Lam.while_ (simplif l1) (simplif l2)
     | Lfor (v, l1, l2, dir, l3) ->
       Lam.for_ v (simplif l1) (simplif l2) dir (simplif l3)

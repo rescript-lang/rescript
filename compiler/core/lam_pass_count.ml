@@ -186,6 +186,7 @@ let collect_occurs lam : occ_tbl =
     | Lsequence (l1, l2) ->
       count bv l1;
       count bv l2
+    | Lbreak | Lcontinue -> ()
   and count_default bv sw =
     match sw.sw_failaction with
     | None -> ()
