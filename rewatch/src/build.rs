@@ -14,6 +14,7 @@ use crate::build::compile::{mark_modules_with_deleted_deps_dirty, mark_modules_w
 use crate::build::compiler_info::{CompilerCheckResult, verify_compiler_info, write_compiler_info};
 use crate::helpers::emojis::*;
 use crate::helpers::{self};
+use crate::lock::{LockKind, drop_lock, get_lock_or_exit};
 use crate::project_context::ProjectContext;
 use crate::sourcedirs;
 use anyhow::{Context, Result, anyhow};
@@ -146,7 +147,13 @@ pub fn initialize_build(
         return Err(anyhow!("Failed to validate package dependencies"));
     }
 
-    let mut build_state = BuildCommandState::new(project_context, packages, compiler, warn_error);
+    let mut build_state = BuildCommandState::new(
+        path.to_path_buf(),
+        project_context,
+        packages,
+        compiler,
+        warn_error,
+    );
     packages::parse_packages(&mut build_state)?;
 
     let compile_assets_state = read_compile_state::read(&mut build_state)?;
@@ -238,6 +245,10 @@ pub fn incremental_build(
     create_sourcedirs: bool,
     plain_output: bool,
 ) -> Result<(), IncrementalBuildError> {
+    let build_folder = build_state.root_folder.to_string_lossy().to_string();
+
+    let _lock = get_lock_or_exit(LockKind::Build, &build_folder);
+
     logs::initialize(&build_state.packages);
     let num_dirty_modules = build_state.modules.values().filter(|m| is_dirty(m)).count() as u64;
     let pb = if !plain_output && show_progress {
@@ -281,6 +292,8 @@ pub fn incremental_build(
             }
 
             eprintln!("{}", &err);
+            let _lock = drop_lock(LockKind::Build, &build_folder);
+
             return Err(IncrementalBuildError {
                 kind: IncrementalBuildErrorKind::SourceFileParseError,
                 plain_output,
@@ -343,9 +356,13 @@ pub fn incremental_build(
         || pb.inc(1),
         |size| pb.set_length(size),
     )
-    .map_err(|e| IncrementalBuildError {
-        kind: IncrementalBuildErrorKind::CompileError(Some(e.to_string())),
-        plain_output,
+    .map_err(|e| {
+        let _lock = drop_lock(LockKind::Build, &build_folder);
+
+        IncrementalBuildError {
+            kind: IncrementalBuildErrorKind::CompileError(Some(e.to_string())),
+            plain_output,
+        }
     })?;
 
     let compile_duration = start_compiling.elapsed();
@@ -379,6 +396,9 @@ pub fn incremental_build(
         if helpers::contains_ascii_characters(&compile_errors) {
             eprintln!("{}", &compile_errors);
         }
+
+        let _lock = drop_lock(LockKind::Build, &build_folder);
+
         Err(IncrementalBuildError {
             kind: IncrementalBuildErrorKind::CompileError(None),
             plain_output,
@@ -409,6 +429,7 @@ pub fn incremental_build(
         // Write per-package compiler metadata to `lib/bs/compiler-info.json` (idempotent)
         write_compiler_info(build_state);
 
+        let _lock = drop_lock(LockKind::Build, &build_folder);
         Ok(())
     }
 }

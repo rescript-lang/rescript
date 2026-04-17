@@ -18,7 +18,7 @@ out=$(rewatch build 2>&1)
 status=$?
 
 mv rescript.json.bak rescript.json
-rm -f lib/rescript.lock
+clear_locks
 
 if [ $status -eq 0 ]; then
   error "Expected build to fail for experimental-features list input"
