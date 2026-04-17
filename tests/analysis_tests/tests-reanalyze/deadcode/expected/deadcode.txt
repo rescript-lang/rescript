@@ -94,12 +94,13 @@
   addValueDeclaration +make DeadTest.res:117:4 path:+DeadTest
   addValueDeclaration +theSideEffectIsLogging DeadTest.res:121:4 path:+DeadTest
   addValueDeclaration +stringLengthNoSideEffects DeadTest.res:123:4 path:+DeadTest
-  addValueDeclaration +globallyLive1 DeadTest.res:128:6 path:+DeadTest.GloobLive
-  addValueDeclaration +globallyLive2 DeadTest.res:129:6 path:+DeadTest.GloobLive
-  addValueDeclaration +globallyLive3 DeadTest.res:130:6 path:+DeadTest.GloobLive
-  addValueDeclaration +funWithInnerVars DeadTest.res:145:4 path:+DeadTest
-  addValueDeclaration +deadIncorrect DeadTest.res:154:4 path:+DeadTest
-  addValueDeclaration +ira DeadTest.res:160:4 path:+DeadTest
+  addValueDeclaration +breakChangesControlFlow DeadTest.res:125:4 path:+DeadTest
+  addValueDeclaration +globallyLive1 DeadTest.res:134:6 path:+DeadTest.GloobLive
+  addValueDeclaration +globallyLive2 DeadTest.res:135:6 path:+DeadTest.GloobLive
+  addValueDeclaration +globallyLive3 DeadTest.res:136:6 path:+DeadTest.GloobLive
+  addValueDeclaration +funWithInnerVars DeadTest.res:151:4 path:+DeadTest
+  addValueDeclaration +deadIncorrect DeadTest.res:160:4 path:+DeadTest
+  addValueDeclaration +ira DeadTest.res:166:4 path:+DeadTest
   addValueReference DeadTest.res:1:15 --> ImmutableArray.resi:9:0
   addValueReference DeadTest.res:8:7 --> DeadTest.res:7:4
   addValueReference DeadTest.res:11:7 --> DeadTest.res:10:4
@@ -156,37 +157,37 @@
   addValueReference DeadTest.res:117:19 --> React.res:7:0
   addTypeReference _none_:1:-1 --> DeadTest.res:117:12
   addValueReference DeadTest.res:119:16 --> DeadTest.res:117:4
-  addVariantCaseDeclaration A DeadTest.res:134:11 path:+DeadTest.WithInclude.t
-  addVariantCaseDeclaration A DeadTest.res:137:13 path:+DeadTest.WithInclude.T.t
-  addVariantCaseDeclaration A DeadTest.res:137:13 path:+DeadTest.WithInclude.t
-  addTypeReference DeadTest.res:142:7 --> DeadTest.res:134:11
-  addValueDeclaration +x DeadTest.res:146:6 path:+DeadTest
-  addValueDeclaration +y DeadTest.res:147:6 path:+DeadTest
-  addValueReference DeadTest.res:145:4 --> DeadTest.res:146:6
-  addValueReference DeadTest.res:145:4 --> DeadTest.res:147:6
-  addRecordLabelDeclaration a DeadTest.res:151:11 path:+DeadTest.rc
-  addValueDeclaration +_ DeadTest.res:156:0 path:+DeadTest
-  addValueReference DeadTest.res:156:8 --> DeadTest.res:154:4
-  addRecordLabelDeclaration IR.a DeadTest.res:158:24 path:+DeadTest.inlineRecord
-  addRecordLabelDeclaration IR.b DeadTest.res:158:32 path:+DeadTest.inlineRecord
-  addRecordLabelDeclaration IR.c DeadTest.res:158:40 path:+DeadTest.inlineRecord
-  addRecordLabelDeclaration IR.d DeadTest.res:158:51 path:+DeadTest.inlineRecord
-  addRecordLabelDeclaration IR.e DeadTest.res:158:65 path:+DeadTest.inlineRecord
-  addVariantCaseDeclaration IR DeadTest.res:158:20 path:+DeadTest.inlineRecord
-  addValueDeclaration +_ DeadTest.res:161:0 path:+DeadTest
-  addTypeReference DeadTest.res:163:20 --> DeadTest.res:158:20
-  addValueReference DeadTest.res:163:27 --> DeadTest.res:160:4
-  addTypeReference DeadTest.res:163:35 --> DeadTest.res:158:32
-  addValueReference DeadTest.res:163:35 --> DeadTest.res:163:7
-  addValueReference DeadTest.res:163:40 --> DeadTest.res:163:8
-  addTypeReference DeadTest.res:163:7 --> DeadTest.res:158:40
-  addValueReference DeadTest.res:162:9 --> DeadTest.res:161:8
-  addRecordLabelDeclaration IR2.a DeadTest.res:167:26 path:+DeadTest.inlineRecord2
-  addRecordLabelDeclaration IR2.b DeadTest.res:167:34 path:+DeadTest.inlineRecord2
-  addVariantCaseDeclaration IR2 DeadTest.res:167:21 path:+DeadTest.inlineRecord2
-  addRecordLabelDeclaration IR3.a DeadTest.res:169:34 path:+DeadTest.inlineRecord3
-  addRecordLabelDeclaration IR3.b DeadTest.res:169:42 path:+DeadTest.inlineRecord3
-  addVariantCaseDeclaration IR3 DeadTest.res:169:21 path:+DeadTest.inlineRecord3
+  addVariantCaseDeclaration A DeadTest.res:140:11 path:+DeadTest.WithInclude.t
+  addVariantCaseDeclaration A DeadTest.res:143:13 path:+DeadTest.WithInclude.T.t
+  addVariantCaseDeclaration A DeadTest.res:143:13 path:+DeadTest.WithInclude.t
+  addTypeReference DeadTest.res:148:7 --> DeadTest.res:140:11
+  addValueDeclaration +x DeadTest.res:152:6 path:+DeadTest
+  addValueDeclaration +y DeadTest.res:153:6 path:+DeadTest
+  addValueReference DeadTest.res:151:4 --> DeadTest.res:152:6
+  addValueReference DeadTest.res:151:4 --> DeadTest.res:153:6
+  addRecordLabelDeclaration a DeadTest.res:157:11 path:+DeadTest.rc
+  addValueDeclaration +_ DeadTest.res:162:0 path:+DeadTest
+  addValueReference DeadTest.res:162:8 --> DeadTest.res:160:4
+  addRecordLabelDeclaration IR.a DeadTest.res:164:24 path:+DeadTest.inlineRecord
+  addRecordLabelDeclaration IR.b DeadTest.res:164:32 path:+DeadTest.inlineRecord
+  addRecordLabelDeclaration IR.c DeadTest.res:164:40 path:+DeadTest.inlineRecord
+  addRecordLabelDeclaration IR.d DeadTest.res:164:51 path:+DeadTest.inlineRecord
+  addRecordLabelDeclaration IR.e DeadTest.res:164:65 path:+DeadTest.inlineRecord
+  addVariantCaseDeclaration IR DeadTest.res:164:20 path:+DeadTest.inlineRecord
+  addValueDeclaration +_ DeadTest.res:167:0 path:+DeadTest
+  addTypeReference DeadTest.res:169:20 --> DeadTest.res:164:20
+  addValueReference DeadTest.res:169:27 --> DeadTest.res:166:4
+  addTypeReference DeadTest.res:169:35 --> DeadTest.res:164:32
+  addValueReference DeadTest.res:169:35 --> DeadTest.res:169:7
+  addValueReference DeadTest.res:169:40 --> DeadTest.res:169:8
+  addTypeReference DeadTest.res:169:7 --> DeadTest.res:164:40
+  addValueReference DeadTest.res:168:9 --> DeadTest.res:167:8
+  addRecordLabelDeclaration IR2.a DeadTest.res:173:26 path:+DeadTest.inlineRecord2
+  addRecordLabelDeclaration IR2.b DeadTest.res:173:34 path:+DeadTest.inlineRecord2
+  addVariantCaseDeclaration IR2 DeadTest.res:173:21 path:+DeadTest.inlineRecord2
+  addRecordLabelDeclaration IR3.a DeadTest.res:175:34 path:+DeadTest.inlineRecord3
+  addRecordLabelDeclaration IR3.b DeadTest.res:175:42 path:+DeadTest.inlineRecord3
+  addVariantCaseDeclaration IR3 DeadTest.res:175:21 path:+DeadTest.inlineRecord3
   addValueReference DeadTest.res:28:2 --> DeadTest.res:31:6
   addValueReference DeadTest.res:36:2 --> DeadTest.res:39:6
   addValueReference DeadTest.res:60:2 --> DeadTest.res:64:6
@@ -1787,10 +1788,10 @@
   addTypeReference DeadTest.res:35:11 --> DeadTest.res:38:11
   extendTypeDependencies DeadTest.res:35:11 --> DeadTest.res:38:11
   addTypeReference DeadTest.res:38:11 --> DeadTest.res:35:11
-  extendTypeDependencies DeadTest.res:137:13 --> DeadTest.res:134:11
-  addTypeReference DeadTest.res:134:11 --> DeadTest.res:137:13
-  extendTypeDependencies DeadTest.res:134:11 --> DeadTest.res:137:13
-  addTypeReference DeadTest.res:137:13 --> DeadTest.res:134:11
+  extendTypeDependencies DeadTest.res:143:13 --> DeadTest.res:140:11
+  addTypeReference DeadTest.res:140:11 --> DeadTest.res:143:13
+  extendTypeDependencies DeadTest.res:140:11 --> DeadTest.res:143:13
+  addTypeReference DeadTest.res:143:13 --> DeadTest.res:140:11
   extendTypeDependencies DeadRT.res:2:2 --> DeadRT.resi:2:2
   addTypeReference DeadRT.resi:2:2 --> DeadRT.res:2:2
   extendTypeDependencies DeadRT.resi:2:2 --> DeadRT.res:2:2
@@ -1931,7 +1932,7 @@
   
 Forward Liveness Analysis
 
-    decls: 695
+    decls: 696
     roots(external targets): 134
     decl-deps: decls_with_out=407 edges_to_decls=288
 
@@ -1944,7 +1945,6 @@ Forward Liveness Analysis
     Root (external ref): Value +CreateErrorHandler2.Error2.+notification
     Root (annotated): Value +DeadTest.+fortyTwoButExported
     Root (annotated): Value +ScopedAnnotationsOverride.M.+live1
-    Root (external ref): RecordLabel +DeadTest.inlineRecord.IR.b
     Root (annotated): Value +Docstrings.+twoU
     Root (external ref): RecordLabel +TypeReexportCrossFileB.reexportedRecord.usedField
     Root (annotated): Value +NestedModules.Universe.Nested2.+nested2Function
@@ -1954,12 +1954,12 @@ Forward Liveness Analysis
     Root (external ref): VariantCase +DeadTypeTest.deadType.OnlyInImplementation
     Root (annotated): Value +TestImport.+valueStartingWithUpperCaseLetter
     Root (external ref): Value +TypeReexport.VariantUseReexported.+value
+    Root (annotated): RecordLabel +DeadTest.inlineRecord.IR.e
     Root (external ref): Value +OptionalArgsLiveDead.+liveCaller
     Root (annotated): RecordLabel +ImportHookDefault.props.renderMe
     Root (annotated): Value +TypeParams3.+test
     Root (annotated): Value +Variants.+sunday
     Root (annotated): Value +NestedModules.Universe.Nested2.Nested3.+nested3Value
-    Root (annotated): Value +DeadTest.GloobLive.+globallyLive2
     Root (annotated): Value +Hooks.+functionWithRenamedArgs
     Root (external ref): RecordLabel +Unison.t.doc
     Root (annotated): Value +Tuples.+computeAreaWithIdent
@@ -1973,7 +1973,6 @@ Forward Liveness Analysis
     Root (external ref): Value +Newton.+f
     Root (external ref): RecordLabel +Records.record.v
     Root (external ref): VariantCase +DeadTest.VariantUsedOnlyInImplementation.t.A
-    Root (annotated): Value +DeadTest.GloobLive.+globallyLive3
     Root (external ref): Value +Hooks.RenderPropRequiresConversion.+car
     Root (external ref): RecordLabel +Records.person.address
     Root (annotated): Value +Variants.+testConvert2
@@ -2029,10 +2028,10 @@ Forward Liveness Analysis
     Root (annotated): Value +TestImport.+defaultValue
     Root (external ref): Value +OptArg.+threeArgs
     Root (annotated): Value +Types.+setMatch
+    Root (external ref): Value +DeadTest.+deadIncorrect
     Root (external ref): RecordLabel +TypeReexport.UseReexported.reexportedType.usedField
     Root (annotated): Value +Docstrings.+signMessage
     Root (external ref): Value +DeadExn.+eInside
-    Root (external ref): VariantCase +DeadTest.inlineRecord.IR
     Root (external ref): RecordLabel +ComponentAsProp.props.button
     Root (annotated): Value +ImportJsValue.+returnedFromHigherOrder
     Root (annotated): Value +TestImport.+innerStuffContents
@@ -2042,8 +2041,7 @@ Forward Liveness Analysis
     Root (external ref): VariantCase +Unison.break_.IfNeed
     Root (external ref): Value +DeadTest.+make
     Root (annotated): Value +Records.+testMyRecBsAs
-    Root (external ref): Value +DeadTest.+ira
-    Root (external ref): Value +DeadTest.+deadIncorrect
+    Root (external ref): RecordLabel +DeadTest.inlineRecord.IR.c
     Root (annotated): Value +Records.+origin
     Root (annotated): Value +Variants.+onlySunday
     Root (annotated): Value +Docstrings.+treeU
@@ -2056,9 +2054,9 @@ Forward Liveness Analysis
     Root (annotated): Value +References.+get
     Root (annotated): Value +ModuleAliases.+testNested
     Root (external ref): Value +FirstClassModules.SomeFunctor.+ww
-    Root (external ref): VariantCase +DeadTest.WithInclude.t.A
     Root (annotated): Value +ImportJsValue.+area
     Root (annotated): Value +Records.+testMyRec
+    Root (annotated): Value +DeadTest.GloobLive.+globallyLive3
     Root (external ref): RecordLabel +Uncurried.auth.login
     Root (annotated): Value +ImportJsValue.+roundedNumber
     Root (external ref): RecordLabel +RepeatedLabel.tabState.a
@@ -2102,10 +2100,12 @@ Forward Liveness Analysis
     Root (annotated): Value +Hooks.RenderPropRequiresConversion.+make
     Root (annotated): Value +LetPrivate.local_1.+x
     Root (annotated): Value +TestImport.+make
+    Root (annotated): Value +DeadTest.GloobLive.+globallyLive1
     Root (annotated): Value +Docstrings.+grouped
     Root (annotated): Value +OcamlWarningSuppressToplevel.M.+suppressed4
     Root (annotated): Value +Types.+optFunction
     Root (annotated): Value +Records.+getPayloadRecordPlusOne
+    Root (external ref): VariantCase +DeadTest.inlineRecord.IR
     Root (annotated): Value +Types.+swap
     Root (annotated): Value +Types.+jsonStringify
     Root (annotated): RecordLabel +ImportHookDefault.props.person
@@ -2131,7 +2131,6 @@ Forward Liveness Analysis
     Root (annotated): Value +ImportJsValue.+useColor
     Root (annotated): Value +Tuples.+changeSecondAge
     Root (external ref): Value +Unison.+group
-    Root (annotated): RecordLabel +DeadTest.inlineRecord.IR.e
     Root (annotated): Value +Docstrings.+unnamed1U
     Root (annotated): Value +Records.+recordValue
     Root (annotated): Value +ImportHookDefault.+make
@@ -2145,8 +2144,8 @@ Forward Liveness Analysis
     Root (annotated): Value +References.+create
     Root (annotated): Value +Types.+currentTime
     Root (annotated): Value +Records.+someBusiness2
+    Root (external ref): Value +DeadTest.+ira
     Root (annotated): Value +FirstClassModules.+testConvert
-    Root (external ref): RecordLabel +DeadTest.inlineRecord.IR.c
     Root (external ref): RecordLabel +Records.coord.z
     Root (annotated): Value +Types.+someIntList
     Root (annotated): Value +Types.+jsString2T
@@ -2227,6 +2226,7 @@ Forward Liveness Analysis
     Root (annotated): Value +TestModuleAliases.+testInner1Expanded
     Root (external ref): Value +TypeReexport.OnlyReexportedDead.+value
     Root (annotated): Value +ImportIndex.+make
+    Root (external ref): RecordLabel +DeadTest.inlineRecord.IR.b
     Root (annotated): Value +Unboxed.+testV1
     Root (annotated): Value +NestedModules.Universe.+theAnswer
     Root (annotated): Value +References.+access
@@ -2238,10 +2238,11 @@ Forward Liveness Analysis
     Root (annotated): Value +References.+update
     Root (annotated): Value +Opaque.+noConversion
     Root (external ref): RecordLabel +RepeatedLabel.tabState.b
+    Root (annotated): Value +DeadTest.GloobLive.+globallyLive2
     Root (external ref): RecordLabel +TypeReexport.OnlyReexportedDead.reexportedType.usedField
     Root (annotated): Value +Docstrings.+unitArgWithConversion
-    Root (annotated): Value +DeadTest.GloobLive.+globallyLive1
     Root (external ref): RecordLabel +Records.business.owner
+    Root (external ref): VariantCase +DeadTest.WithInclude.t.A
     Root (external ref): VariantCase +DeadTypeTest.deadType.InBoth
     Root (external ref): RecordLabel +Records.business.address
     Root (external ref): RecordLabel +VariantsWithPayload.payload.y
@@ -2273,7 +2274,6 @@ Forward Liveness Analysis
     Propagate: DeadTypeTest.deadType.OnlyInInterface -> +DeadTypeTest.deadType.OnlyInInterface
     Propagate: +TypeReexport.UseReexported.reexportedType.usedField -> +TypeReexport.UseReexported.originalType.usedField
     Propagate: +References.+get -> +References.R.+get
-    Propagate: +DeadTest.WithInclude.t.A -> +DeadTest.WithInclude.t.A
     Propagate: ErrorHandler.Make.+notify -> +ErrorHandler.Make.+notify
     Propagate: +References.+make -> +References.R.+make
     Propagate: +ScopedAnnotationsLiveVsDead.LiveScope.+root -> +ScopedAnnotationsLiveVsDead.+middleLive
@@ -2297,6 +2297,7 @@ Forward Liveness Analysis
     Propagate: +ImportJsValue.+useGetAbs -> +ImportJsValue.AbsoluteValue.+getAbs
     Propagate: +TypeReexport.VariantUseOriginal.reexportedType.A -> +TypeReexport.VariantUseOriginal.originalType.A
     Propagate: +TypeReexport.OnlyReexportedDead.reexportedType.usedField -> +TypeReexport.OnlyReexportedDead.originalType.usedField
+    Propagate: +DeadTest.WithInclude.t.A -> +DeadTest.WithInclude.t.A
     Propagate: +References.R.+get -> +References.R.+get
     Propagate: +References.R.+make -> +References.R.+make
     Propagate: +ScopedAnnotationsLiveVsDead.+middleLive -> +ScopedAnnotationsLiveVsDead.+leafLive
@@ -2499,6 +2500,7 @@ Forward Liveness Analysis
         <- +DeadTest.+make (live)
   Dead Value +DeadTest.+theSideEffectIsLogging
   Dead Value +DeadTest.+stringLengthNoSideEffects
+  Dead Value +DeadTest.+breakChangesControlFlow
   Live (annotated) Value +DeadTest.GloobLive.+globallyLive1
   Live (annotated) Value +DeadTest.GloobLive.+globallyLive2
   Live (annotated) Value +DeadTest.GloobLive.+globallyLive3
@@ -3956,7 +3958,7 @@ Forward Liveness Analysis
   Live (annotated) Value +VariantsWithPayload.+testVariant1Object
 
   Incorrect Dead Annotation
-  DeadTest.res:153:1-28
+  DeadTest.res:159:1-28
   deadIncorrect  is annotated @dead but is live
 
   Warning Dead Module
@@ -4083,12 +4085,16 @@ Forward Liveness Analysis
   DeadTest.res:123:1-54
   stringLengthNoSideEffects is never used and could have side effects
 
+  Warning Dead Value With Side Effects
+  DeadTest.res:125:1-62
+  breakChangesControlFlow is never used and could have side effects
+
   Warning Dead Type
-  DeadTest.res:151:12-17
+  DeadTest.res:157:12-17
   rc.a is a record label never used to read a value
 
   Warning Dead Type
-  DeadTest.res:158:25-30
+  DeadTest.res:164:25-30
   inlineRecord.IR.a is a record label never used to read a value
 
   Warning Dead Module
@@ -5223,4 +5229,4 @@ Forward Liveness Analysis
   OptArg.res:26:1-70
   optional argument c of function wrapfourArgs is always supplied (2 calls)
   
-  Analysis reported 317 issues (Incorrect Dead Annotation:1, Warning Dead Exception:2, Warning Dead Module:22, Warning Dead Type:93, Warning Dead Value:179, Warning Dead Value With Side Effects:2, Warning Redundant Optional Argument:6, Warning Unused Argument:12)
+  Analysis reported 318 issues (Incorrect Dead Annotation:1, Warning Dead Exception:2, Warning Dead Module:22, Warning Dead Type:93, Warning Dead Value:179, Warning Dead Value With Side Effects:3, Warning Redundant Optional Argument:6, Warning Unused Argument:12)
