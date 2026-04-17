@@ -74,7 +74,7 @@ and t = private
   | Lstringswitch of t * (string * t) list * t option
   | Lstaticraise of int * t list
   | Lstaticcatch of t * (int * ident list) * t
-  | Ltrywith of t * ident * t
+  | Ltrywith of t * ident * t option * t option
   | Lifthenelse of t * t * t
   | Lsequence of t * t
   | Lwhile of t * t
@@ -151,7 +151,7 @@ val seq : t -> t -> t
 val while_ : t -> t -> t
 
 (* val event : t -> Lambda.lambda_event -> t   *)
-val try_ : t -> ident -> t -> t
+val try_ : t -> ident -> t option -> t option -> t
 
 val assign : ident -> t -> t
 

@@ -62,9 +62,10 @@ let inner_iter (l : t) (f : t -> unit) : unit =
   | Lstaticcatch (e1, _vars, e2) ->
     f e1;
     f e2
-  | Ltrywith (e1, _exn, e2) ->
+  | Ltrywith (e1, _exn, e2, finally_expr) ->
     f e1;
-    f e2
+    Ext_option.iter e2 f;
+    Ext_option.iter finally_expr f
   | Lifthenelse (e1, e2, e3) ->
     f e1;
     f e2;
@@ -107,7 +108,8 @@ let inner_exists (l : t) (f : t -> bool) : bool =
   | Lprim {args; primitive = _; loc = _} -> Ext_list.exists args f
   | Lstaticraise (_id, args) -> Ext_list.exists args f
   | Lstaticcatch (e1, _vars, e2) -> f e1 || f e2
-  | Ltrywith (e1, _exn, e2) -> f e1 || f e2
+  | Ltrywith (e1, _exn, e2, finally_expr) ->
+    f e1 || Ext_option.exists e2 f || Ext_option.exists finally_expr f
   | Lifthenelse (e1, e2, e3) -> f e1 || f e2 || f e3
   | Lsequence (e1, e2) -> f e1 || f e2
   | Lwhile (e1, e2) -> f e1 || f e2

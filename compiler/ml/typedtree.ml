@@ -89,7 +89,7 @@ and expression_desc =
       transformed_jsx: bool;
     }
   | Texp_match of expression * case list * case list * partial
-  | Texp_try of expression * case list
+  | Texp_try of expression * case list * expression option
   | Texp_tuple of expression list
   | Texp_construct of
       Longident.t loc * constructor_description * expression list

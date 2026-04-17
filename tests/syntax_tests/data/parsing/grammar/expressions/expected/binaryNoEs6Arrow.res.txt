@@ -9,12 +9,11 @@
           ((sibling === None) || (parent === None))
   with
   | _ -> ()
-;;try (color === Black) && ((sibling === None) || (parent === None))
+;;try (color === Black) && ((sibling === None) || (parent === None)) 
   with | _ -> ()
 ;;try
     ((color === Black) && (color === Red)) &&
-      ((sibling === None) || (parent === None))
-  with | _ -> ()
+      ((sibling === None) || (parent === None)) with | _ -> ()
 ;;while (color === Black) && ((sibling === None) || (parent === None)) do ()
     done
 ;;while

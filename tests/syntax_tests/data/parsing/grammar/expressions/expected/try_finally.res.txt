@@ -1,0 +1,147 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/grammar/expressions/try_finally.res:2:31-5:3
+
+  1 │ // Test try without catch or finally (should error)
+  2 │ let badTry = try doSomething()
+  3 │ 
+  4 │ // Test try with only finally (valid)
+  5 │ let goodTryFinally = try doSomething() finally cleanup()
+  6 │ 
+  7 │ // Test try-finally in various contexts
+
+  Did you forget a `catch` here?
+
+
+  Syntax error!
+  syntax_tests/data/parsing/grammar/expressions/try_finally.res:5:39-46
+
+  3 │ 
+  4 │ // Test try with only finally (valid)
+  5 │ let goodTryFinally = try doSomething() finally cleanup()
+  6 │ 
+  7 │ // Test try-finally in various contexts
+
+  Did you forget a `catch` here?
+
+
+  Syntax error!
+  syntax_tests/data/parsing/grammar/expressions/try_finally.res:13:4-11
+
+  11 ┆ try {
+  12 ┆   parse(data)
+  13 ┆ } finally {
+  14 ┆   log("Processing complete")
+  15 ┆ }
+
+  Did you forget a `catch` here?
+
+
+  Syntax error!
+  syntax_tests/data/parsing/grammar/expressions/try_finally.res:19:27-34
+
+  17 │ 
+  18 │ // In assignment
+  19 │ let value = try getValue() finally logAttempt()
+  20 │ 
+  21 │ // In conditional
+
+  Did you forget a `catch` here?
+
+
+  Syntax error!
+  syntax_tests/data/parsing/grammar/expressions/try_finally.res:23:25-32
+
+  21 │ // In conditional
+  22 │ let result = if condition {
+  23 │   try getPositiveValue() finally logAttempt()
+  24 │ } else {
+  25 │   defaultValue
+
+  Did you forget a `catch` here?
+
+
+  Syntax error!
+  syntax_tests/data/parsing/grammar/expressions/try_finally.res:30:28-35
+
+  28 │ // In record field
+  29 │ let record = {
+  30 │   value: try computeValue() finally logComputation(),
+  31 │   status: "computed"
+  32 │ }
+
+  Did you forget a `catch` here?
+
+
+  Syntax error!
+  syntax_tests/data/parsing/grammar/expressions/try_finally.res:36:17-24
+
+  34 │ // In array element
+  35 │ let items = [
+  36 │   try getItem(0) finally logAccess(0),
+  37 │   try getItem(1) finally logAccess(1)
+  38 │ ]
+
+  Did you forget a `catch` here?
+
+
+  Syntax error!
+  syntax_tests/data/parsing/grammar/expressions/try_finally.res:41:28-35
+
+  39 │ 
+  40 │ // In tuple
+  41 │ let tuple = (try getFirst() finally logFirst(), try getSecond() finally
+     │  logSecond())
+  42 │ 
+  43 │ // In function argument
+
+  Did you forget a `catch` here?
+
+
+  Syntax error!
+  syntax_tests/data/parsing/grammar/expressions/try_finally.res:44:40-47
+
+  42 │ 
+  43 │ // In function argument
+  44 │ let result = processData(try getInput() finally logInput())
+  45 │ 
+  46 │ // In return position (function body)
+
+  Did you forget a `catch` here?
+
+
+  Syntax error!
+  syntax_tests/data/parsing/grammar/expressions/try_finally.res:60:35-42
+
+  58 │ let complex = {
+  59 │   data: try {
+  60 │     let raw = try parseJson(input) finally logParseAttempt()
+  61 │     let validated = try validate(raw) finally logValidation()
+  62 │     try transform(validated) finally logTransform()
+
+  Did you forget a `catch` here?
+
+
+  Syntax error!
+  syntax_tests/data/parsing/grammar/expressions/try_finally.res:61:38-45
+
+  59 ┆ data: try {
+  60 ┆   let raw = try parseJson(input) finally logParseAttempt()
+  61 ┆   let validated = try validate(raw) finally logValidation()
+  62 ┆   try transform(validated) finally logTransform()
+  63 ┆ } catch {
+
+  Did you forget a `catch` here?
+
+
+  Syntax error!
+  syntax_tests/data/parsing/grammar/expressions/try_finally.res:62:29-36
+
+  60 ┆   let raw = try parseJson(input) finally logParseAttempt()
+  61 ┆   let validated = try validate(raw) finally logValidation()
+  62 ┆   try transform(validated) finally logTransform()
+  63 ┆ } catch {
+  64 ┆ | ParseError => {error: "parse", value: null}
+
+  Did you forget a `catch` here?
+
