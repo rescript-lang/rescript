@@ -4,6 +4,9 @@ This document captures a first working direction for AI-oriented tooling in ReSc
 
 The lint command is the first concrete piece, but the intended surface is broader: commands and output modes in `rescript-tools` that are shaped for LLMs and agent workflows.
 
+A starter agent skill template for this workflow lives at
+`docs/skills/rescript-ai-template/SKILL.md`.
+
 ## Goal
 
 Build AI-oriented tooling that:
