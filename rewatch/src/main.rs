@@ -5,7 +5,7 @@ use std::{io::Write, path::Path};
 
 use rescript::{
     build, cli, cmd, format,
-    lock::{LockKind, get_lock_or_exit},
+    lock::{LockKind, drop_lock, get_lock_or_exit},
     watcher,
 };
 
@@ -88,7 +88,10 @@ fn main() -> Result<()> {
         }
         cli::Command::Clean { folder } => {
             let _lock = get_lock_or_exit(LockKind::Build, &folder);
-            build::clean::clean(Path::new(&folder as &str), show_progress, plain_output)
+            let result = build::clean::clean(Path::new(&folder as &str), show_progress, plain_output);
+            let _lock = drop_lock(LockKind::Build, &folder);
+
+            result
         }
         cli::Command::Format { stdin, check, files } => format::format(stdin, check, files),
     }
