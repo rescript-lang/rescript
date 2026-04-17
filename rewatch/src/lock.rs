@@ -35,7 +35,7 @@ pub enum Error {
     Locked(u32),
     AwaitingLockFile(AwaitLockError),
     ParsingLockfile(std::num::ParseIntError),
-    ReadingLockfile(std::io::Error),
+    ReadingLockfile(LockKind, std::io::Error),
     WritingLockfile(std::io::Error),
     ProjectFolderMissing(std::path::PathBuf),
 }
@@ -49,8 +49,11 @@ impl std::fmt::Display for Error {
             Error::ParsingLockfile(e) => format!(
                 "Could not parse lockfile: \n {e} \n  (try removing it and running the command again)"
             ),
-            Error::ReadingLockfile(e) => {
-                format!("Could not read lockfile: \n {e} \n  (try removing it and running the command again)")
+            Error::ReadingLockfile(kind, e) => {
+                format!(
+                    "Could not read lockfile: {}, \n {e} \n  (try removing it and running the command again)",
+                    kind.file_name()
+                )
             }
             Error::WritingLockfile(e) => format!("Could not write lockfile: \n {e}"),
             Error::ProjectFolderMissing(path) => format!(
@@ -113,7 +116,7 @@ impl LockKind {
 
 pub const TIMEOUT_SECONDS: u64 = 60;
 
-pub fn await_lock_deletion(location: &Path) -> Result<(), Error> {
+pub fn await_lock_deletion(location: &Path, kind: LockKind) -> Result<(), Error> {
     let now = SystemTime::now();
     let queue = Arc::new(FifoQueue::<Result<Event, notify::Error>>::new());
     let producer = queue.clone();
@@ -127,12 +130,13 @@ pub fn await_lock_deletion(location: &Path) -> Result<(), Error> {
 
     loop {
         while !queue.is_empty() {
-            if let Ok(Event {
-                kind: EventKind::Remove(_),
-                ..
-            }) = queue.pop()
-            {
-                return Ok(());
+            match queue.pop() {
+                Ok(Event {
+                    kind: EventKind::Remove(_),
+                    paths,
+                    ..
+                }) if paths.iter().find(|p| p.ends_with(kind.file_name())).is_some() => return Ok(()),
+                Ok(_) | Err(_) => (),
             }
         }
 
@@ -167,7 +171,7 @@ pub fn get(kind: LockKind, folder: &str) -> Lock {
                 Ok(parsed_pid) if pid_matches_current_process(parsed_pid) => match kind {
                     LockKind::Build => {
                         println!("Awaiting lockfile");
-                        match await_lock_deletion(&location) {
+                        match await_lock_deletion(&lib_dir, kind) {
                             Ok(_) => {
                                 continue;
                             }
@@ -180,7 +184,7 @@ pub fn get(kind: LockKind, folder: &str) -> Lock {
                 Err(e) => return Lock::Error(Error::ParsingLockfile(e)),
             },
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => break,
-            Err(e) => return Lock::Error(Error::ReadingLockfile(e)),
+            Err(e) => return Lock::Error(Error::ReadingLockfile(kind, e)),
         }
     }
 
@@ -201,12 +205,26 @@ pub fn get(kind: LockKind, folder: &str) -> Lock {
 pub fn get_lock_or_exit(kind: LockKind, folder: &str) -> Lock {
     match get(kind, folder) {
         Lock::Error(error) => {
-            eprintln!("Could not start ReScript build: {error}");
+            eprintln!("Could not start Rescript build: {error}");
             std::process::exit(1);
         }
 
         acquired_lock => acquired_lock,
     }
+}
+
+pub fn drop_lock(kind: LockKind, folder: &str) -> Result<()> {
+    let project_folder = Path::new(folder);
+    if !project_folder.exists() {
+        return Ok(());
+    }
+
+    let lib_dir = project_folder.join("lib");
+    let location = lib_dir.join(kind.file_name());
+
+    fs::remove_file(&location)?;
+
+    Ok(())
 }
 
 #[cfg(test)]
