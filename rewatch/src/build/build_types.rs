@@ -122,6 +122,7 @@ pub struct BuildState {
 /// - This prevents the "code smell" of optional fields that are None for some commands
 #[derive(Debug)]
 pub struct BuildCommandState {
+    pub root_folder: PathBuf,
     pub build_state: BuildState,
     // Command-line --warn-error flag override (takes precedence over rescript.json config)
     pub warn_error_override: Option<String>,
@@ -171,12 +172,14 @@ impl BuildState {
 
 impl BuildCommandState {
     pub fn new(
+        root_folder: PathBuf,
         project_context: ProjectContext,
         packages: AHashMap<String, Package>,
         compiler: CompilerInfo,
         warn_error_override: Option<String>,
     ) -> Self {
         Self {
+            root_folder,
             build_state: BuildState::new(project_context, packages, compiler),
             warn_error_override,
         }
