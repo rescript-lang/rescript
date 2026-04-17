@@ -1,16 +1,39 @@
+use anyhow::Result;
+use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use std::fs;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 use std::process;
+use std::sync::Arc;
+use std::time::{Duration, SystemTime};
 use sysinfo::{PidExt, ProcessExt, System, SystemExt};
+
+use crate::queue::FifoQueue;
+use crate::queue::*;
 
 /* This locking mechanism is meant to never be deleted. Instead, it stores the PID of the process
  * that's running, when trying to aquire a lock, it checks wether that process is still running. If
  * not, it rewrites the lockfile to have its own PID instead. */
 
+pub enum AwaitLockError {
+    Watcher(notify::Error),
+    Timeout(String),
+}
+
+impl std::fmt::Display for AwaitLockError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let msg = match self {
+            AwaitLockError::Watcher(error) => format!("Error starting file watcher {}", error),
+            AwaitLockError::Timeout(path) => format!("Timeout awaiting lockfile {}", path),
+        };
+        write!(f, "{msg}")
+    }
+}
+
 pub enum Error {
     Locked(u32),
+    AwaitingLockFile(AwaitLockError),
     ParsingLockfile(std::num::ParseIntError),
     ReadingLockfile(std::io::Error),
     WritingLockfile(std::io::Error),
@@ -34,6 +57,9 @@ impl std::fmt::Display for Error {
                 "Could not write lockfile because the specified project folder does not exist: {}",
                 path.to_string_lossy()
             ),
+            Error::AwaitingLockFile(await_lock_error) => {
+                format!("Error awaiting lockfile: {await_lock_error}")
+            }
         };
         write!(f, "{msg}")
     }
@@ -70,6 +96,7 @@ fn pid_matches_current_process(to_check_pid: u32) -> bool {
     })
 }
 
+#[derive(Clone, Copy)]
 pub enum LockKind {
     Watch,
     Build,
@@ -81,6 +108,44 @@ impl LockKind {
             LockKind::Watch => "watch.lock",
             LockKind::Build => "build.lock",
         })
+    }
+}
+
+pub const TIMEOUT_SECONDS: u64 = 60;
+
+pub fn await_lock_deletion(location: &Path) -> Result<(), Error> {
+    let now = SystemTime::now();
+    let queue = Arc::new(FifoQueue::<Result<Event, notify::Error>>::new());
+    let producer = queue.clone();
+
+    let mut watcher = RecommendedWatcher::new(move |res| producer.push(res), Config::default())
+        .map_err(|e| Error::AwaitingLockFile(AwaitLockError::Watcher(e)))?;
+
+    watcher
+        .watch(location, RecursiveMode::NonRecursive)
+        .map_err(|e| Error::AwaitingLockFile(AwaitLockError::Watcher(e)))?;
+
+    loop {
+        while !queue.is_empty() {
+            if let Ok(Event {
+                kind: EventKind::Remove(_),
+                ..
+            }) = queue.pop()
+            {
+                return Ok(());
+            }
+        }
+
+        match now.elapsed() {
+            Ok(elapsed) if elapsed < Duration::from_secs(TIMEOUT_SECONDS) => {
+                std::thread::sleep(Duration::from_millis(50));
+            }
+            Ok(_) | Err(_) => {
+                return Err(Error::AwaitingLockFile(AwaitLockError::Timeout(
+                    location.to_string_lossy().to_string(),
+                )));
+            }
+        }
     }
 }
 
@@ -96,16 +161,27 @@ pub fn get(kind: LockKind, folder: &str) -> Lock {
 
     // When a lockfile already exists we parse its PID: if the process is still alive we refuse to
     // proceed, otherwise we will overwrite the stale lock with our own PID.
-    match fs::read_to_string(&location) {
-        Ok(contents) => match contents.parse::<u32>() {
-            Ok(parsed_pid) if pid_matches_current_process(parsed_pid) => {
-                return Lock::Error(Error::Locked(parsed_pid));
-            }
-            Ok(_) => (),
-            Err(e) => return Lock::Error(Error::ParsingLockfile(e)),
-        },
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => (),
-        Err(e) => return Lock::Error(Error::ReadingLockfile(e)),
+    loop {
+        match fs::read_to_string(&location) {
+            Ok(contents) => match contents.parse::<u32>() {
+                Ok(parsed_pid) if pid_matches_current_process(parsed_pid) => match kind {
+                    LockKind::Build => {
+                        println!("Awaiting lockfile");
+                        match await_lock_deletion(&location) {
+                            Ok(_) => {
+                                continue;
+                            }
+                            Err(_) => return Lock::Error(Error::Locked(parsed_pid)),
+                        };
+                    }
+                    LockKind::Watch => return Lock::Error(Error::Locked(parsed_pid)),
+                },
+                Ok(_) => break,
+                Err(e) => return Lock::Error(Error::ParsingLockfile(e)),
+            },
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => break,
+            Err(e) => return Lock::Error(Error::ReadingLockfile(e)),
+        }
     }
 
     if let Err(e) = fs::create_dir_all(&lib_dir) {
@@ -119,6 +195,17 @@ pub fn get(kind: LockKind, folder: &str) -> Lock {
             Err(e) => Lock::Error(Error::WritingLockfile(e)),
         },
         Err(e) => Lock::Error(Error::WritingLockfile(e)),
+    }
+}
+
+pub fn get_lock_or_exit(kind: LockKind, folder: &str) -> Lock {
+    match get(kind, folder) {
+        Lock::Error(error) => {
+            eprintln!("Could not start ReScript build: {error}");
+            std::process::exit(1);
+        }
+
+        acquired_lock => acquired_lock,
     }
 }
 
@@ -168,7 +255,10 @@ mod tests {
             "lib directory should be created"
         );
         assert!(
-            project_folder.join("lib").join(LockKind::Watch.file_name()).exists(),
+            project_folder
+                .join("lib")
+                .join(LockKind::Watch.file_name())
+                .exists(),
             "lockfile should be created"
         );
     }

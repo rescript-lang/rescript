@@ -14,6 +14,7 @@ use crate::build::compile::{mark_modules_with_deleted_deps_dirty, mark_modules_w
 use crate::build::compiler_info::{CompilerCheckResult, verify_compiler_info, write_compiler_info};
 use crate::helpers::emojis::*;
 use crate::helpers::{self};
+use crate::lock::{LockKind, get_lock_or_exit};
 use crate::project_context::ProjectContext;
 use crate::sourcedirs;
 use anyhow::{Context, Result, anyhow};
@@ -469,6 +470,8 @@ pub fn build(
     plain_output: bool,
     warn_error: Option<String>,
 ) -> Result<BuildCommandState> {
+    let _lock = get_lock_or_exit(LockKind::Build, &path.to_string_lossy());
+
     let default_timing: Option<std::time::Duration> = if no_timing {
         Some(std::time::Duration::new(0.0 as u64, 0.0 as u32))
     } else {
