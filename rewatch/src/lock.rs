@@ -182,9 +182,7 @@ pub fn get(kind: LockKind, folder: &str) -> Lock {
                     LockKind::Build => {
                         println!("Waiting for other build to finish...");
                         match await_lock_deletion(&lib_dir, kind) {
-                            Ok(_) => {
-                                continue;
-                            }
+                            Ok(_) => continue,
                             Err(_) => return Lock::Error(Error::Locked(parsed_pid)),
                         };
                     }
