@@ -118,6 +118,7 @@ pub const TIMEOUT_SECONDS: u64 = 60;
 
 pub fn await_lock_deletion(location: &Path, kind: LockKind) -> Result<(), Error> {
     let now = SystemTime::now();
+    let lock_path = location.join(kind.file_name());
     let queue = Arc::new(FifoQueue::<Result<Event, notify::Error>>::new());
     let producer = queue.clone();
 
@@ -129,13 +130,22 @@ pub fn await_lock_deletion(location: &Path, kind: LockKind) -> Result<(), Error>
         .map_err(|e| Error::AwaitingLockFile(AwaitLockError::Watcher(e)))?;
 
     loop {
+        if !lock_path.exists() {
+            return Ok(());
+        }
+
         while !queue.is_empty() {
             match queue.pop() {
                 Ok(Event {
                     kind: EventKind::Remove(_),
                     paths,
                     ..
-                }) if paths.iter().find(|p| p.ends_with(kind.file_name())).is_some() => return Ok(()),
+                }) if paths
+                    .iter()
+                    .any(|path| path == &lock_path || path.ends_with(kind.file_name())) =>
+                {
+                    return Ok(());
+                }
                 Ok(_) | Err(_) => (),
             }
         }
@@ -146,7 +156,7 @@ pub fn await_lock_deletion(location: &Path, kind: LockKind) -> Result<(), Error>
             }
             Ok(_) | Err(_) => {
                 return Err(Error::AwaitingLockFile(AwaitLockError::Timeout(
-                    location.to_string_lossy().to_string(),
+                    lock_path.to_string_lossy().to_string(),
                 )));
             }
         }
