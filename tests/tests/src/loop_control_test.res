@@ -82,6 +82,35 @@ describe(__MODULE__, () => {
     eq(__LOC__, [0, 2, 3], values.contents->Belt.List.reverse->Belt.List.toArray)
   })
 
+  test("braced break expression in value position compiles", () => {
+    let reached = ref(false)
+    let acceptUnit = (_: unit) => ()
+
+    while true {
+      let x = {break}
+      acceptUnit(x)
+      reached := true
+    }
+
+    eq(__LOC__, false, reached.contents)
+  })
+
+  test("braced continue expression in value position compiles", () => {
+    let values = ref(list{})
+    let acceptUnit = (_: unit) => ()
+
+    for i in 0 to 3 {
+      if i == 1 {
+        let x = {continue}
+        acceptUnit(x)
+      }
+
+      values := list{i, ...values.contents}
+    }
+
+    eq(__LOC__, [0, 2, 3], values.contents->Belt.List.reverse->Belt.List.toArray)
+  })
+
   test("switch inside for targets the loop", () => {
     let values = ref(list{})
 

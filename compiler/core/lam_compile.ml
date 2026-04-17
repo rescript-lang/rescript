@@ -1877,7 +1877,9 @@ let compile output_prefix =
             S.break_ ~label ()
           else S.break_ ()
         in
-        Js_output.make [stmt] ~output_finished:True)
+        (* [break] is accepted inside braced expressions like [{break}], so keep
+           the usual NeedValue invariant even though JS only has a statement form. *)
+        Js_output.make [stmt] ~value:E.undefined ~output_finished:True)
     | Lcontinue -> (
       match lambda_cxt.loop_stack with
       | [] -> assert false
@@ -1892,7 +1894,7 @@ let compile output_prefix =
             S.continue_ ~label ()
           else S.continue_ ()
         in
-        Js_output.make [stmt] ~output_finished:True)
+        Js_output.make [stmt] ~value:E.undefined ~output_finished:True)
     | Lwhile (p, body) -> compile_while p body lambda_cxt
     | Lfor (id, start, finish, direction, body) -> (
       match (direction, finish) with

@@ -102,6 +102,31 @@ Mocha.describe("Loop_control_test", () => {
       3
     ], Belt_List.toArray(Belt_List.reverse(values)));
   });
+  Mocha.test("braced break expression in value position compiles", () => {
+    let reached = false;
+    while (true) {
+      break;
+      
+    };
+    Test_utils.eq("File \"loop_control_test.res\", line 95, characters 7-14", false, reached);
+  });
+  Mocha.test("braced continue expression in value position compiles", () => {
+    let values = /* [] */0;
+    for (let i = 0; i <= 3; ++i) {
+      if (i === 1) {
+        continue;
+      }
+      values = {
+        hd: i,
+        tl: values
+      };
+    }
+    Test_utils.eq("File \"loop_control_test.res\", line 111, characters 7-14", [
+      0,
+      2,
+      3
+    ], Belt_List.toArray(Belt_List.reverse(values)));
+  });
   Mocha.test("switch inside for targets the loop", () => {
     let values = /* [] */0;
     for (let i = 0; i <= 5; ++i) {
@@ -119,7 +144,7 @@ Mocha.describe("Loop_control_test", () => {
         continue;
       }
     }
-    Test_utils.eq("File \"loop_control_test.res\", line 96, characters 7-14", [
+    Test_utils.eq("File \"loop_control_test.res\", line 125, characters 7-14", [
       0,
       2,
       3
@@ -143,7 +168,7 @@ Mocha.describe("Loop_control_test", () => {
           };
       }
     }
-    Test_utils.eq("File \"loop_control_test.res\", line 117, characters 7-14", [
+    Test_utils.eq("File \"loop_control_test.res\", line 146, characters 7-14", [
       0,
       2,
       3
