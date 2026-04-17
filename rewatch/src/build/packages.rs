@@ -290,7 +290,10 @@ fn read_dependencies(
     let mut dependencies = package_config.dependencies.to_owned().unwrap_or_default();
 
     // Concatenate dev dependencies if is_local_dep is true and not in prod mode
-    if is_local_dep && !prod && let Some(dev_deps) = package_config.dev_dependencies.to_owned() {
+    if is_local_dep
+        && !prod
+        && let Some(dev_deps) = package_config.dev_dependencies.to_owned()
+    {
         dependencies.extend(dev_deps);
     }
 
@@ -511,7 +514,11 @@ This inconsistency will cause issues with package resolution.\n",
     })
 }
 
-fn read_packages(project_context: &ProjectContext, show_progress: bool, prod: bool) -> Result<AHashMap<String, Package>> {
+fn read_packages(
+    project_context: &ProjectContext,
+    show_progress: bool,
+    prod: bool,
+) -> Result<AHashMap<String, Package>> {
     // Store all packages and completely deduplicate them
     let mut map: AHashMap<String, Package> = AHashMap::new();
 
