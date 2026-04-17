@@ -52,7 +52,11 @@ replace() {
 }
 
 exit_watcher() {
-  rm -f lib/rescript.lock
+  rm -f lib/watch.lock
+}
+
+clear_locks() {
+  rm -f lib/watch.lock lib/build.lock
 }
 
 wait_for_file() {
