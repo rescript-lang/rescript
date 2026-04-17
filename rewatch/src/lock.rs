@@ -170,7 +170,7 @@ pub fn get(kind: LockKind, folder: &str) -> Lock {
             Ok(contents) => match contents.parse::<u32>() {
                 Ok(parsed_pid) if pid_matches_current_process(parsed_pid) => match kind {
                     LockKind::Build => {
-                        println!("Awaiting lockfile");
+                        println!("Waiting for other build to finish...");
                         match await_lock_deletion(&lib_dir, kind) {
                             Ok(_) => {
                                 continue;
