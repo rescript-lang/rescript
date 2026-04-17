@@ -15,7 +15,6 @@ Mocha.describe("Loop_control_test", () => {
       }
       if (i === 5) {
         break;
-        
       }
       values = {
         hd: i,
@@ -42,7 +41,6 @@ Mocha.describe("Loop_control_test", () => {
           };
         } else {
           break;
-          
         }
       } else {
         continue;
@@ -68,7 +66,7 @@ Mocha.describe("Loop_control_test", () => {
           continue loop_0;
         case "stop" :
           break loop_0;
-          default:
+        default:
           values = {
             hd: i,
             tl: values
@@ -89,7 +87,6 @@ Mocha.describe("Loop_control_test", () => {
       }
       if (i === 4) {
         break;
-        
       }
       values = {
         hd: i,
@@ -106,7 +103,6 @@ Mocha.describe("Loop_control_test", () => {
     let reached = false;
     while (true) {
       break;
-      
     };
     Test_utils.eq("File \"loop_control_test.res\", line 95, characters 7-14", false, reached);
   });
@@ -138,7 +134,6 @@ Mocha.describe("Loop_control_test", () => {
           };
         } else {
           break;
-          
         }
       } else {
         continue;
@@ -161,7 +156,7 @@ Mocha.describe("Loop_control_test", () => {
           continue loop_1;
         case "stop" :
           break loop_1;
-          default:
+        default:
           values = {
             hd: i,
             tl: values

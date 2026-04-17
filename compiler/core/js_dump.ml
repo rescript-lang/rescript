@@ -1519,7 +1519,6 @@ and statement_desc top cxt f (s : J.statement_desc) : cxt =
       P.space f;
       P.string f label);
     semi f;
-    P.newline f;
     cxt
   | Return e -> (
     match e.expression_desc with
