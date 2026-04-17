@@ -25,6 +25,20 @@ Usage: rescript-tools extract-codeblocks <FILE> [--transform-assert-equal]
 
 Example: rescript-tools extract-codeblocks ./path/to/MyModule.res|}
 
+let lintHelp =
+  {|ReScript Tools
+
+Run AI-oriented lint checks on a file or directory
+
+Usage: rescript-tools lint <FILE-OR-DIR> [--config <FILE>] [--json]
+
+Notes:
+- Text is the default output format
+- Use --json for compact machine-readable JSON
+- Both source AST and typed information are used when available
+
+Example: rescript-tools lint ./src/MyModule.res|}
+
 let help =
   {|ReScript Tools
 
@@ -40,6 +54,9 @@ format-codeblocks <file>                Format ReScript code blocks
   [--transform-assert-equal]              Transform `assertEqual` to `==`
 extract-codeblocks <file>               Extract ReScript code blocks from file
   [--transform-assert-equal]              Transform `==` to `assertEqual`
+lint <file-or-dir>                      Run AI-oriented lint checks
+  [--config <file>]                       Use the given lint config file
+  [--json]                                Output compact JSON
 reanalyze                               Reanalyze
 reanalyze-server                        Start reanalyze server
 -v, --version                           Print version
@@ -171,6 +188,27 @@ let main () =
         print_endline (Analysis.Protocol.stringifyResult r);
         exit 1)
     | _ -> logAndExit (Error extractCodeblocksHelp))
+  | "lint" :: rest -> (
+    match rest with
+    | ["-h"] | ["--help"] -> logAndExit (Ok lintHelp)
+    | path :: args -> (
+      let rec parse_args config_path json = function
+        | [] -> Ok (config_path, json)
+        | "--json" :: rest -> parse_args config_path true rest
+        | "--config" :: config :: rest -> parse_args (Some config) json rest
+        | _ -> Error lintHelp
+      in
+      match parse_args None false args with
+      | Error help -> logAndExit (Error help)
+      | Ok (config_path, json) -> (
+        match Tools.Lint.run ?config_path ~json path with
+        | Error err ->
+          prerr_endline err;
+          exit 2
+        | Ok {Tools.Lint.output; has_findings} ->
+          if output <> "" then print_endline output;
+          exit (if has_findings then 1 else 0)))
+    | _ -> logAndExit (Error lintHelp))
   | "reanalyze" :: _ ->
     if Sys.getenv_opt "RESCRIPT_REANALYZE_NO_SERVER" = Some "1" then (
       let len = Array.length Sys.argv in

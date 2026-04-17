@@ -4,10 +4,11 @@ let digits_count n =
   in
   loop (abs n) 1 0
 
-let seek_2_lines_before src (pos : Lexing.position) =
+let seek_lines_before line_count src (pos : Lexing.position) =
   let original_line = pos.pos_lnum in
   let rec loop current_line current_char =
-    if current_line + 2 >= original_line then (current_char, current_line)
+    if current_line + line_count >= original_line then
+      (current_char, current_line)
     else
       loop
         (if src.[current_char] = '\n' then current_line + 1 else current_line)
@@ -15,13 +16,13 @@ let seek_2_lines_before src (pos : Lexing.position) =
   in
   loop 1 0
 
-let seek_2_lines_after src (pos : Lexing.position) =
+let seek_lines_after line_count src (pos : Lexing.position) =
   let original_line = pos.pos_lnum in
   let rec loop current_line current_char =
     if current_char = String.length src then (current_char, current_line)
     else
       match src.[current_char] with
-      | '\n' when current_line = original_line + 2 ->
+      | '\n' when current_line = original_line + line_count ->
         (current_char, current_line)
       | '\n' -> loop (current_line + 1) (current_char + 1)
       | _ -> loop current_line (current_char + 1)
@@ -59,6 +60,13 @@ let filter_mapi f l =
       loop f rest (i + 1) accum
   in
   loop f l 0 [] |> List.rev
+
+let maybe_drop_trailing_blank_line ~skip_blank_context lines =
+  if skip_blank_context then
+    match List.rev lines with
+    | "" :: rest -> List.rev rest
+    | _ -> lines
+  else lines
 
 (* Spiritual equivalent of
    https://github.com/ocaml/ocaml/blob/414bdec9ae387129b8102cc6bf3c0b6ae173eeb9/utils/misc.ml#L601
@@ -107,6 +115,7 @@ let setup = Color.setup
 type gutter = Number of int | Elided
 type highlighted_string = {s: string; start: int; end_: int}
 type line = {gutter: gutter; content: highlighted_string list}
+type highlight_style = Flat | Colored | Underlined
 
 (*
   Features:
@@ -116,16 +125,17 @@ type line = {gutter: gutter; content: highlighted_string list}
   - center snippet when it's heavily indented
   - ellide intermediate lines when the reported range is huge
 *)
-let print ~is_warning ~src ~(start_pos : Lexing.position)
+let print ~highlight_style ~context_lines_before ~context_lines_after
+    ~skip_blank_context ~is_warning ~src ~(start_pos : Lexing.position)
     ~(end_pos : Lexing.position) =
   let indent = 2 in
   let highlight_line_start_line = start_pos.pos_lnum in
   let highlight_line_end_line = end_pos.pos_lnum in
   let start_line_line_offset, first_shown_line =
-    seek_2_lines_before src start_pos
+    seek_lines_before context_lines_before src start_pos
   in
   let end_line_line_end_offset, last_shown_line =
-    seek_2_lines_after src end_pos
+    seek_lines_after context_lines_after src end_pos
   in
 
   let more_than_5_highlighted_lines =
@@ -136,25 +146,36 @@ let print ~is_warning ~src ~(start_pos : Lexing.position)
   (* 3 for separator + the 2 spaces around it *)
   let line_width = 78 - max_line_digits_count - indent - 3 in
   let lines =
-    if
-      start_line_line_offset >= 0
-      && end_line_line_end_offset >= start_line_line_offset
-    then
-      String.sub src start_line_line_offset
-        (end_line_line_end_offset - start_line_line_offset)
-      |> String.split_on_char '\n'
-      |> filter_mapi (fun i line ->
-             let line_number = i + first_shown_line in
-             if more_than_5_highlighted_lines then
-               if line_number = highlight_line_start_line + 2 then
-                 Some (Elided, line)
-               else if
-                 line_number > highlight_line_start_line + 2
-                 && line_number < highlight_line_end_line - 1
-               then None
-               else Some (Number line_number, line)
-             else Some (Number line_number, line))
-    else []
+    (if
+       start_line_line_offset >= 0
+       && end_line_line_end_offset >= start_line_line_offset
+     then
+       String.sub src start_line_line_offset
+         (end_line_line_end_offset - start_line_line_offset)
+       |> String.split_on_char '\n'
+       |> maybe_drop_trailing_blank_line ~skip_blank_context
+       |> filter_mapi (fun i line ->
+              let line_number = i + first_shown_line in
+              if more_than_5_highlighted_lines then
+                if line_number = highlight_line_start_line + 2 then
+                  Some (Elided, line)
+                else if
+                  line_number > highlight_line_start_line + 2
+                  && line_number < highlight_line_end_line - 1
+                then None
+                else Some (Number line_number, line)
+              else Some (Number line_number, line))
+     else [])
+    |>
+    if skip_blank_context then
+      List.filter (fun (gutter, line) ->
+          match gutter with
+          | Elided -> true
+          | Number line_number ->
+            line_number >= highlight_line_start_line
+            && line_number <= highlight_line_end_line
+            || String.trim line <> "")
+    else fun lines -> lines
   in
   let leading_space_to_cut =
     lines
@@ -214,71 +235,117 @@ let print ~is_warning ~src ~(start_pos : Lexing.position)
            in
            {gutter; content = new_content})
   in
-  let buf = Buffer.create 100 in
-  let open Color in
-  let add_ch =
-    let last_color = ref NoColor in
-    fun color ch ->
-      if (not !Color.color_enabled) || !last_color = color then
-        Buffer.add_char buf ch
-      else
-        let ansi =
-          match (!last_color, color) with
-          | NoColor, Dim -> dim
-          (* | NoColor, Filename -> filename *)
-          | NoColor, Err -> err
-          | NoColor, Warn -> warn
-          | _, NoColor -> reset
-          | _, Dim -> reset ^ dim
-          (* | _, Filename -> reset ^ filename *)
-          | _, Err -> reset ^ err
-          | _, Warn -> reset ^ warn
-        in
-        Buffer.add_string buf ansi;
-        Buffer.add_char buf ch;
-        last_color := color
-  in
-  let draw_gutter color s =
-    for _i = 1 to max_line_digits_count + indent - String.length s do
+  let is_highlighted_segment {start; end_; _} = end_ > start in
+  let render_inline ~use_color () =
+    let buf = Buffer.create 100 in
+    let open Color in
+    let add_ch =
+      let last_color = ref NoColor in
+      fun color ch ->
+        if (not use_color) || (not !Color.color_enabled) || !last_color = color
+        then Buffer.add_char buf ch
+        else
+          let ansi =
+            match (!last_color, color) with
+            | NoColor, Dim -> dim
+            (* | NoColor, Filename -> filename *)
+            | NoColor, Err -> err
+            | NoColor, Warn -> warn
+            | _, NoColor -> reset
+            | _, Dim -> reset ^ dim
+            (* | _, Filename -> reset ^ filename *)
+            | _, Err -> reset ^ err
+            | _, Warn -> reset ^ warn
+          in
+          Buffer.add_string buf ansi;
+          Buffer.add_char buf ch;
+          last_color := color
+    in
+    let draw_gutter color s =
+      for _i = 1 to max_line_digits_count + indent - String.length s do
+        add_ch NoColor ' '
+      done;
+      s |> String.iter (add_ch color);
+      add_ch NoColor ' ';
+      separator |> String.iter (add_ch Dim);
       add_ch NoColor ' '
-    done;
-    s |> String.iter (add_ch color);
-    add_ch NoColor ' ';
-    separator |> String.iter (add_ch Dim);
-    add_ch NoColor ' '
-  in
-  stripped_lines
-  |> List.iter (fun {gutter; content} ->
-         match gutter with
-         | Elided ->
-           draw_gutter Dim ".";
-           add_ch Dim '.';
-           add_ch Dim '.';
-           add_ch Dim '.';
-           add_ch NoColor '\n'
-         | Number line_number ->
-           content
-           |> List.iteri (fun i line ->
-                  let gutter_content =
-                    if i = 0 then string_of_int line_number else ""
-                  in
-                  let gutter_color =
-                    if
-                      i = 0
-                      && line_number >= highlight_line_start_line
-                      && line_number <= highlight_line_end_line
-                    then if is_warning then Warn else Err
-                    else NoColor
-                  in
-                  draw_gutter gutter_color gutter_content;
+    in
+    stripped_lines
+    |> List.iter (fun {gutter; content} ->
+           match gutter with
+           | Elided ->
+             draw_gutter Dim ".";
+             add_ch Dim '.';
+             add_ch Dim '.';
+             add_ch Dim '.';
+             add_ch NoColor '\n'
+           | Number line_number ->
+             content
+             |> List.iteri (fun i line ->
+                    let gutter_content =
+                      if i = 0 then string_of_int line_number else ""
+                    in
+                    let gutter_color =
+                      if
+                        i = 0
+                        && line_number >= highlight_line_start_line
+                        && line_number <= highlight_line_end_line
+                      then if is_warning then Warn else Err
+                      else NoColor
+                    in
+                    draw_gutter gutter_color gutter_content;
 
-                  line.s
-                  |> String.iteri (fun ii ch ->
-                         let c =
-                           if ii >= line.start && ii < line.end_ then
-                             if is_warning then Warn else Err
-                           else NoColor
-                         in
-                         add_ch c ch);
-                  add_ch NoColor '\n'));
-  Buffer.contents buf
+                    line.s
+                    |> String.iteri (fun ii ch ->
+                           let c =
+                             if ii >= line.start && ii < line.end_ then
+                               if is_warning then Warn else Err
+                             else NoColor
+                           in
+                           add_ch c ch);
+                    add_ch NoColor '\n'));
+    Buffer.contents buf
+  in
+  let render_underlined () =
+    let buf = Buffer.create 100 in
+    let draw_gutter marker gutter_content =
+      Buffer.add_string buf
+        (Printf.sprintf "%s %*s | " marker max_line_digits_count gutter_content)
+    in
+    let draw_caret_line caret_start caret_end =
+      let caret_start = max 0 caret_start in
+      let caret_end = max caret_start caret_end in
+      let caret_count = max 1 (caret_end - caret_start) in
+      draw_gutter " " "";
+      Buffer.add_string buf (String.make caret_start ' ');
+      Buffer.add_string buf (String.make caret_count '^');
+      Buffer.add_char buf '\n'
+    in
+    stripped_lines
+    |> List.iter (fun {gutter; content} ->
+           match gutter with
+           | Elided ->
+             draw_gutter " " ".";
+             Buffer.add_string buf "...";
+             Buffer.add_char buf '\n'
+           | Number line_number ->
+             content
+             |> List.iteri (fun i line ->
+                    let gutter_content =
+                      if i = 0 then string_of_int line_number else ""
+                    in
+                    let highlight_this_row = is_highlighted_segment line in
+                    let marker = if highlight_this_row then ">" else " " in
+                    draw_gutter marker gutter_content;
+                    Buffer.add_string buf line.s;
+                    Buffer.add_char buf '\n';
+                    if highlight_this_row then
+                      draw_caret_line
+                        (min (String.length line.s) line.start)
+                        (min (String.length line.s) line.end_)));
+    Buffer.contents buf
+  in
+  match highlight_style with
+  | Flat -> render_inline ~use_color:false ()
+  | Colored -> render_inline ~use_color:true ()
+  | Underlined -> render_underlined ()

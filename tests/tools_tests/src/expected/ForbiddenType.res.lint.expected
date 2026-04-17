@@ -1,0 +1,11 @@
+severity: error
+rule: forbidden-reference
+path: src/lint/ForbiddenType.res
+range: 1:21-1:22
+message: Forbidden reference
+symbol: Js_json.t
+snippet:
+```text
+> 1 | type json = Js.Json.t
+    |                     ^
+```

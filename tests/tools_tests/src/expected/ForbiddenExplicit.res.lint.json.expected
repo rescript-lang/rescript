@@ -1,0 +1,1 @@
+[{"rule":"forbidden-reference","path":"src/lint/ForbiddenExplicit.res","range":[0,27,0,34],"severity":"error","message":"Forbidden reference","symbol":"Belt_Array.forEach"}]

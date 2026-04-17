@@ -1,0 +1,11 @@
+{
+  "rules": {
+    "forbidden-reference": {
+      "severity": "error",
+      "items": ["Belt.Array.forEach", "Belt.Array.map", "Js.Json.t"]
+    },
+    "single-use-function": {
+      "severity": "warning"
+    }
+  }
+}

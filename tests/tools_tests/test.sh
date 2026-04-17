@@ -33,6 +33,44 @@ for file in src/docstrings-format/*.{res,resi,md}; do
   fi
 done
 
+# Test lint command
+for file in src/lint/*.res; do
+  output="src/expected/$(basename $file).lint.expected"
+  ../../_build/install/default/bin/rescript-tools lint "$file" > "$output" || true
+  if [ "$RUNNER_OS" == "Windows" ]; then
+    perl -pi -e 's/\r\n/\n/g' -- "$output"
+  fi
+
+  json_output="src/expected/$(basename $file).lint.json.expected"
+  ../../_build/install/default/bin/rescript-tools lint "$file" --json > "$json_output" || true
+  if [ "$RUNNER_OS" == "Windows" ]; then
+    perl -pi -e 's/\r\n/\n/g' -- "$json_output"
+  fi
+done
+
+unbuilt_file="unbuilt/ForbiddenExplicitNoCmt.res"
+unbuilt_output="src/expected/$(basename $unbuilt_file).lint.expected"
+../../_build/install/default/bin/rescript-tools lint "$unbuilt_file" > "$unbuilt_output" || true
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- "$unbuilt_output"
+fi
+
+unbuilt_json_output="src/expected/$(basename $unbuilt_file).lint.json.expected"
+../../_build/install/default/bin/rescript-tools lint "$unbuilt_file" --json > "$unbuilt_json_output" || true
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- "$unbuilt_json_output"
+fi
+
+../../_build/install/default/bin/rescript-tools lint src/lint > src/expected/lint-root.expected || true
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- src/expected/lint-root.expected
+fi
+
+../../_build/install/default/bin/rescript-tools lint src/lint --json > src/expected/lint-root.json.expected || true
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- src/expected/lint-root.json.expected
+fi
+
 # Test migrate command
 for file in src/migrate/*.{res,resi}; do
   output="src/expected/$(basename $file).expected"

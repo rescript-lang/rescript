@@ -1,0 +1,12 @@
+severity: error
+rule: forbidden-reference
+path: src/lint/ForbiddenOpen.res
+range: 3:17-3:20
+message: Forbidden reference
+symbol: Belt_Array.map
+snippet:
+```text
+  1 | open Belt.Array
+> 3 | let run = () => map([1, 2], x => x + 1)
+    |                 ^^^
+```

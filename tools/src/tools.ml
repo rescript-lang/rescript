@@ -1294,3 +1294,4 @@ module ExtractCodeblocks = struct
 end
 
 module Migrate = Migrate
+module Lint = Lint
