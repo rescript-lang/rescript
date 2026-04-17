@@ -241,6 +241,8 @@ pub fn drop_lock(kind: LockKind, folder: &str) -> Result<()> {
 mod tests {
     use super::*;
     use std::fs;
+    use std::thread;
+    use std::time::Duration;
     use tempfile::TempDir;
 
     #[test]
@@ -306,5 +308,80 @@ mod tests {
             Lock::Aquired(_) => {}
             _ => panic!("expected stale lock from unrelated process to be ignored"),
         }
+    }
+
+    #[test]
+    fn returns_locked_for_active_watch_lock() {
+        let temp_dir = TempDir::new().expect("temp dir should be created");
+        let project_folder = temp_dir.path().join("project");
+        let lib_dir = project_folder.join("lib");
+        let current_pid = process::id();
+
+        fs::create_dir_all(&lib_dir).expect("lib directory should be created");
+        fs::write(lib_dir.join(LockKind::Watch.file_name()), current_pid.to_string())
+            .expect("lockfile should be written");
+
+        match get(
+            LockKind::Watch,
+            project_folder.to_str().expect("path should be valid"),
+        ) {
+            Lock::Error(Error::Locked(locked_pid)) => assert_eq!(locked_pid, current_pid),
+            _ => panic!("expected watch lock to block a second active watcher"),
+        }
+    }
+
+    #[test]
+    fn waits_for_active_build_lock_to_be_removed() {
+        let temp_dir = TempDir::new().expect("temp dir should be created");
+        let project_folder = temp_dir.path().join("project");
+        let lib_dir = project_folder.join("lib");
+        let build_lock_path = lib_dir.join(LockKind::Build.file_name());
+        let current_pid = process::id();
+
+        fs::create_dir_all(&lib_dir).expect("lib directory should be created");
+        fs::write(&build_lock_path, current_pid.to_string()).expect("lockfile should be written");
+
+        let build_lock_path_for_thread = build_lock_path.clone();
+        let remover = thread::spawn(move || {
+            thread::sleep(Duration::from_millis(250));
+            fs::remove_file(build_lock_path_for_thread).expect("lockfile should be removed");
+        });
+
+        match get(
+            LockKind::Build,
+            project_folder.to_str().expect("path should be valid"),
+        ) {
+            Lock::Aquired(acquired_pid) => assert_eq!(acquired_pid, current_pid),
+            _ => panic!("expected build lock to wait for removal and then be acquired"),
+        }
+
+        remover.join().expect("lockfile remover thread should complete");
+
+        assert_eq!(
+            fs::read_to_string(build_lock_path).expect("build lock should be rewritten"),
+            current_pid.to_string()
+        );
+    }
+
+    #[test]
+    fn drop_lock_removes_existing_build_lock() {
+        let temp_dir = TempDir::new().expect("temp dir should be created");
+        let project_folder = temp_dir.path().join("project");
+        let lib_dir = project_folder.join("lib");
+        let build_lock_path = lib_dir.join(LockKind::Build.file_name());
+
+        fs::create_dir_all(&lib_dir).expect("lib directory should be created");
+        fs::write(&build_lock_path, process::id().to_string()).expect("lockfile should be written");
+
+        drop_lock(
+            LockKind::Build,
+            project_folder.to_str().expect("path should be valid"),
+        )
+        .expect("build lock should be removed");
+
+        assert!(
+            !build_lock_path.exists(),
+            "drop_lock should remove the build lock file"
+        );
     }
 }

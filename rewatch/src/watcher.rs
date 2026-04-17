@@ -109,7 +109,7 @@ fn compute_watch_paths(build_state: &BuildCommandState, root: &Path) -> Vec<(Pat
         }
     }
 
-    // Watch the lib/ directory for the lockfile (rescript.lock lives in lib/)
+    // Watch the lib/ directory for the watcher lockfile (watch.lock lives in lib/)
     let lib_dir = root.join("lib");
     if lib_dir.exists() {
         insert(lib_dir, RecursiveMode::NonRecursive);
@@ -202,8 +202,11 @@ async fn async_watch(
         }
 
         for event in events {
-            // if there is a file named rescript.lock in the events path, we can quit the watcher
-            if event.paths.iter().any(|path| path.ends_with(LockKind::Watch.file_name()))
+            // If watch.lock is removed, we can quit the watcher.
+            if event
+                .paths
+                .iter()
+                .any(|path| path.ends_with(LockKind::Watch.file_name()))
                 && let EventKind::Remove(_) = event.kind
             {
                 if show_progress {
