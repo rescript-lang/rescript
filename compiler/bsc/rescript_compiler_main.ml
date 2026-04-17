@@ -268,6 +268,10 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
           Js_config.binary_ast := true;
           Js_config.syntax_only := true),
       "*internal* Generate binary .mli_ast and ml_ast and stop" );
+    ( "-bs-test-ast-conversion",
+      set Js_config.test_ast_conversion,
+      "*internal* Roundtrip the parsed AST through Parsetree0 before \
+       continuing" );
     ( "-bs-syntax-only",
       set Js_config.syntax_only,
       "*internal* Only check syntax" );
