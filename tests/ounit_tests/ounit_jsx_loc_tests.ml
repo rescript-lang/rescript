@@ -8,7 +8,8 @@ let parse_structure source =
   |> fun result -> result.parsetree
 
 let roundtrip_structure source =
-  parse_structure source |> Ml_binary.to_ast0 Ml_binary.Ml
+  parse_structure source
+  |> Ml_binary.to_ast0 Ml_binary.Ml
   |> Ml_binary.ast0_to_structure
 
 let get_jsx_props structure =
@@ -56,7 +57,8 @@ let assert_same_loc expected actual =
       loc.loc_end.pos_bol,
       loc.loc_end.pos_cnum )
   in
-  assert_equal ~printer:(fun loc ->
+  assert_equal
+    ~printer:(fun loc ->
       let sl, sb, sc, el, eb, ec = to_tuple loc in
       Printf.sprintf "(%d,%d,%d)-(%d,%d,%d)" sl sb sc el eb ec)
     expected actual
@@ -78,8 +80,8 @@ let _ = <Comp {...props} foo=bar />
 |} in
   let original, roundtripped = get_roundtripped_props source in
   match (original, roundtripped) with
-  | Parsetree.JSXPropSpreading (original_loc, _) :: _,
-    JSXPropSpreading (loc, _) :: _ ->
+  | ( Parsetree.JSXPropSpreading (original_loc, _) :: _,
+      JSXPropSpreading (loc, _) :: _ ) ->
     assert_same_loc original_loc loc
   | _ -> assert_failure "Expected a leading JSX spread prop"
 

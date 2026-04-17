@@ -348,7 +348,11 @@ module E = struct
       let loc, attrs = extract_internal_loc_attr attr_name e.pexp_attributes in
       let e = {e with pexp_attributes = attrs} in
       let expr = sub.expr sub e in
-      make_prop (match loc with Some loc -> loc | None -> fallback expr) expr
+      make_prop
+        (match loc with
+        | Some loc -> loc
+        | None -> fallback expr)
+        expr
     in
     match (lbl, e) with
     | Asttypes.Noloc.Labelled "_spreadProps", _expr ->
