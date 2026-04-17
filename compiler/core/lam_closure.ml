@@ -126,6 +126,7 @@ let free_variables (export_idents : Set_ident.t) (params : stats Map_ident.t)
     | Lsequence (e1, e2) ->
       iter top e1;
       iter sink_pos e2
+    | Lbreak | Lcontinue -> ()
     | Lwhile (e1, e2) ->
       iter sink_pos e1;
       iter sink_pos e2 (* in the loop, no substitution any way *)

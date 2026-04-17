@@ -264,11 +264,11 @@ let is_attribute_start = function
 let is_jsx_child_start = is_atomic_expr_start
 
 let is_block_expr_start = function
-  | Token.Assert | At | Await | Backtick | Bang | Codepoint _ | Exception
-  | False | Float _ | For | Forwardslash | ForwardslashDot | Hash | If | Int _
-  | Lbrace | Lbracket | LessThan | Let _ | Lident _ | List | Lparen | Minus
-  | MinusDot | Module | Open | Percent | Plus | PlusDot | String _ | Switch
-  | True | Try | Uident _ | Underscore | While | Dict ->
+  | Token.Assert | At | Await | Backtick | Bang | Break | Codepoint _ | Continue
+  | Exception | False | Float _ | For | Forwardslash | ForwardslashDot | Hash
+  | If | Int _ | Lbrace | Lbracket | LessThan | Let _ | Lident _ | List | Lparen
+  | Minus | MinusDot | Module | Open | Percent | Plus | PlusDot | String _
+  | Switch | True | Try | Uident _ | Underscore | While | Dict ->
     true
   | _ -> false
 

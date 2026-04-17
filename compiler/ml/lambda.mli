@@ -335,6 +335,8 @@ type lambda =
   | Ltrywith of lambda * Ident.t * lambda
   | Lifthenelse of lambda * lambda * lambda
   | Lsequence of lambda * lambda
+  | Lbreak
+  | Lcontinue
   | Lwhile of lambda * lambda
   | Lfor of Ident.t * lambda * lambda * direction_flag * lambda
   | Lassign of Ident.t * lambda

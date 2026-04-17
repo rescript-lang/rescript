@@ -89,6 +89,7 @@ let count_helper (lam : Lam.t) : collection =
     | Lsequence (l1, l2) ->
       count l1;
       count l2
+    | Lbreak | Lcontinue -> ()
     | Lwhile (l1, l2) ->
       count l1;
       count l2

@@ -401,6 +401,8 @@ let lambda ppf v =
       fprintf ppf "@[<2>(if@ %a@ %a@ %a)@]" lam lcond lam lif lam lelse
     | Lsequence (l1, l2) ->
       fprintf ppf "@[<2>(seq@ %a@ %a)@]" lam l1 sequence l2
+    | Lbreak -> fprintf ppf "break"
+    | Lcontinue -> fprintf ppf "continue"
     | Lwhile (lcond, lbody) ->
       fprintf ppf "@[<2>(while@ %a@ %a)@]" lam lcond lam lbody
     | Lfor (param, lo, hi, dir, body) ->

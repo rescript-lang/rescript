@@ -132,14 +132,14 @@ let asyncIterator: AsyncIterator.t<(string, string)> = %raw(`
 
 let processMyAsyncIterator = async () => {
   // ReScript doesn't have `for ... of` loops, but it's easy to mimic using a while loop.
-  let break = ref(false)
+  let break_ = ref(false)
 
-  while !break.contents {
+  while !break_.contents {
     // Await the next iterator value
     let {value, done} = await asyncIterator->AsyncIterator.next
 
     // Exit the while loop if the iterator says it's done
-    break := done
+    break_ := done
 
     if done {
       value->Option.isNone == true

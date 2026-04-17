@@ -364,6 +364,8 @@ type lambda =
   | Ltrywith of lambda * Ident.t * lambda
   | Lifthenelse of lambda * lambda * lambda
   | Lsequence of lambda * lambda
+  | Lbreak
+  | Lcontinue
   | Lwhile of lambda * lambda
   | Lfor of Ident.t * lambda * lambda * Asttypes.direction_flag * lambda
   | Lassign of Ident.t * lambda
@@ -475,6 +477,8 @@ let make_key e =
     | Lifthenelse (cond, ifso, ifnot) ->
       Lifthenelse (tr_rec env cond, tr_rec env ifso, tr_rec env ifnot)
     | Lsequence (e1, e2) -> Lsequence (tr_rec env e1, tr_rec env e2)
+    | Lbreak -> Lbreak
+    | Lcontinue -> Lcontinue
     | Lassign (x, e) -> Lassign (x, tr_rec env e)
     | Lsend (m, e1, _loc) -> Lsend (m, tr_rec env e1, Location.none)
     | Lletrec _ | Lfunction _ | Lfor _ | Lwhile _ -> raise_notrace Not_simple
@@ -542,6 +546,7 @@ let iter f = function
   | Lsequence (e1, e2) ->
     f e1;
     f e2
+  | Lbreak | Lcontinue -> ()
   | Lwhile (e1, e2) ->
     f e1;
     f e2
@@ -571,7 +576,8 @@ let free_ids get l =
     | Lfor (v, _e1, _e2, _dir, _e3) -> fv := IdentSet.remove v !fv
     | Lassign (id, _e) -> fv := IdentSet.add id !fv
     | Lvar _ | Lconst _ | Lapply _ | Lprim _ | Lswitch _ | Lstringswitch _
-    | Lstaticraise _ | Lifthenelse _ | Lsequence _ | Lwhile _ | Lsend _ ->
+    | Lstaticraise _ | Lifthenelse _ | Lsequence _ | Lbreak | Lcontinue
+    | Lwhile _ | Lsend _ ->
       ()
   in
   free l;
@@ -675,6 +681,8 @@ let subst_lambda s lam =
     | Ltrywith (e1, exn, e2) -> Ltrywith (subst e1, exn, subst e2)
     | Lifthenelse (e1, e2, e3) -> Lifthenelse (subst e1, subst e2, subst e3)
     | Lsequence (e1, e2) -> Lsequence (subst e1, subst e2)
+    | Lbreak -> Lbreak
+    | Lcontinue -> Lcontinue
     | Lwhile (e1, e2) -> Lwhile (subst e1, subst e2)
     | Lfor (v, e1, e2, dir, e3) -> Lfor (v, subst e1, subst e2, dir, subst e3)
     | Lassign (id, e) -> Lassign (id, subst e)

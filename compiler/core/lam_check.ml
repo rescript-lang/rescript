@@ -62,6 +62,7 @@ let check file lam =
       check_staticfails e1 cxt;
       check_staticfails e2 cxt;
       check_staticfails e3 Set_int.empty
+    | Lbreak | Lcontinue -> ()
     | Llet (_str, _id, arg, body) -> check_list [arg; body] cxt
     | Lletrec (decl, body) ->
       check_list_snd decl cxt;
@@ -138,6 +139,7 @@ let check file lam =
     | Lsequence (e1, e2) ->
       iter e1;
       iter e2
+    | Lbreak | Lcontinue -> ()
     | Lwhile (e1, e2) ->
       iter e1;
       iter e2

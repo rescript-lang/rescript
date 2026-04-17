@@ -210,6 +210,8 @@ and expression_desc =
   | Texp_array of expression list
   | Texp_ifthenelse of expression * expression * expression option
   | Texp_sequence of expression * expression
+  | Texp_break
+  | Texp_continue
   | Texp_while of expression * expression
   | Texp_for of
       Ident.t

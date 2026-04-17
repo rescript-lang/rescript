@@ -256,6 +256,7 @@ let rec add_expr bv exp =
   | Pexp_sequence (e1, e2) ->
     add_expr bv e1;
     add_expr bv e2
+  | Pexp_break | Pexp_continue -> ()
   | Pexp_while (e1, e2) ->
     add_expr bv e1;
     add_expr bv e2

@@ -3,6 +3,8 @@ module Comment = Res_comment
 type t =
   | Await
   | Open
+  | Break
+  | Continue
   | True
   | False
   | Codepoint of {c: int; original: string}
@@ -125,6 +127,8 @@ let precedence = function
 let to_string = function
   | Await -> "await"
   | Open -> "open"
+  | Break -> "break"
+  | Continue -> "continue"
   | True -> "true"
   | False -> "false"
   | Codepoint {original} -> "codepoint '" ^ original ^ "'"
@@ -232,7 +236,9 @@ let keyword_table = function
   | "as" -> As
   | "assert" -> Assert
   | "await" -> Await
+  | "break" -> Break
   | "constraint" -> Constraint
+  | "continue" -> Continue
   | "else" -> Else
   | "exception" -> Exception
   | "external" -> External
@@ -261,9 +267,10 @@ let keyword_table = function
 [@@raises Not_found]
 
 let is_keyword = function
-  | Await | And | As | Assert | Constraint | Else | Exception | External | False
-  | For | If | In | Include | Land | Let _ | List | Lor | Module | Mutable | Of
-  | Open | Private | Rec | Switch | True | Try | Typ | When | While | Dict ->
+  | Await | Break | Continue | And | As | Assert | Constraint | Else | Exception
+  | External | False | For | If | In | Include | Land | Let _ | List | Lor
+  | Module | Mutable | Of | Open | Private | Rec | Switch | True | Try | Typ
+  | When | While | Dict ->
     true
   | _ -> false
 

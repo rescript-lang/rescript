@@ -787,6 +787,8 @@ and simple_expr ctxt f x =
       pp f "@[<0>@[<2>[|%a|]@]@]"
         (list (simple_expr (under_semi ctxt)) ~sep:";")
         l
+    | Pexp_break -> pp f "break"
+    | Pexp_continue -> pp f "continue"
     | Pexp_while (e1, e2) ->
       let fmt : (_, _, _) format = "@[<2>while@;%a@;do@;%a@;done@]" in
       pp f fmt (expression ctxt) e1 (expression ctxt) e2

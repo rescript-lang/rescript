@@ -83,6 +83,7 @@ let pass_free_variables (l : Lam.t) : Set_ident.t =
     | Lsequence (e1, e2) ->
       free e1;
       free e2
+    | Lbreak | Lcontinue -> ()
     | Lwhile (e1, e2) ->
       free e1;
       free e2

@@ -80,6 +80,8 @@ type error =
   | Inlined_record_expected
   | Invalid_extension_constructor_payload
   | Not_an_extension_constructor
+  | Break_outside_loop
+  | Continue_outside_loop
   | Literal_overflow of string
   | Unknown_literal of string * char
   | Illegal_letrec_pat
@@ -141,6 +143,18 @@ let rp node =
 
 type recarg = Allowed | Required | Rejected
 
+let loop_depth = ref 0
+
+let with_depth depth_ref f =
+  let saved = !depth_ref in
+  depth_ref := saved + 1;
+  Misc.try_finally f (fun () -> depth_ref := saved)
+
+let with_reset_control_flow f =
+  let saved_loop_depth = !loop_depth in
+  loop_depth := 0;
+  Misc.try_finally f (fun () -> loop_depth := saved_loop_depth)
+
 let case lhs rhs = {c_lhs = lhs; c_guard = None; c_rhs = rhs}
 
 (* Upper approximation of free identifiers on the parse tree *)
@@ -190,6 +204,7 @@ let iter_expression f e =
       expr e1;
       expr e2;
       expr e3
+    | Pexp_break | Pexp_continue -> ()
     | Pexp_letmodule (_, me, e) ->
       expr e;
       module_expr me
@@ -2903,6 +2918,13 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
         })
   | Pexp_sequence (sexp1, sexp2) ->
     let exp1 = type_statement ~context:None env sexp1 in
+    (match exp1.exp_desc with
+    | Texp_break | Texp_continue ->
+      (* Loop control should only reuse the nonreturning-statement warning when
+         there is a following statement in the same block/sequence. *)
+      Location.prerr_warning (final_subexpression sexp1).pexp_loc
+        Warnings.Nonreturning_statement
+    | _ -> ());
     let exp2 = type_expect ~context:None env sexp2 ty_expected in
     re
       {
@@ -2913,11 +2935,37 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
       }
+  | Pexp_break ->
+    if !loop_depth = 0 then raise (Error (loc, env, Break_outside_loop))
+    else
+      rue
+        {
+          exp_desc = Texp_break;
+          exp_loc = loc;
+          exp_extra = [];
+          exp_type = instance_def Predef.type_unit;
+          exp_attributes = sexp.pexp_attributes;
+          exp_env = env;
+        }
+  | Pexp_continue ->
+    if !loop_depth = 0 then raise (Error (loc, env, Continue_outside_loop))
+    else
+      rue
+        {
+          exp_desc = Texp_continue;
+          exp_loc = loc;
+          exp_extra = [];
+          exp_type = instance_def Predef.type_unit;
+          exp_attributes = sexp.pexp_attributes;
+          exp_env = env;
+        }
   | Pexp_while (scond, sbody) ->
     let cond =
       type_expect ~context:(Some WhileCondition) env scond Predef.type_bool
     in
-    let body = type_statement ~context:None env sbody in
+    let body =
+      with_depth loop_depth (fun () -> type_statement ~context:None env sbody)
+    in
     rue
       {
         exp_desc = Texp_while (cond, body);
@@ -2949,7 +2997,10 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
           ~check:(fun s -> Warnings.Unused_for_index s)
       | _ -> raise (Error (param.ppat_loc, env, Invalid_for_loop_index))
     in
-    let body = type_statement ~context:None new_env sbody in
+    let body =
+      with_depth loop_depth (fun () ->
+          type_statement ~context:None new_env sbody)
+    in
     rue
       {
         exp_desc = Texp_for (id, param, low, high, dir, body);
@@ -3311,8 +3362,9 @@ and type_function ?in_function ~arity ~async loc attrs env ty_expected_ l
     generalize_structure ty_arg;
     generalize_structure ty_res);
   let cases, partial =
-    type_cases ~call_context:`Function ~in_function:(loc_fun, ty_fun) env ty_arg
-      ty_res true loc caselist
+    with_reset_control_flow (fun () ->
+        type_cases ~call_context:`Function ~in_function:(loc_fun, ty_fun) env
+          ty_arg ty_res true loc caselist)
   in
   let case = List.hd cases in
   if is_optional l && not_function env ty_res then
@@ -4625,6 +4677,10 @@ let report_error env loc ppf error =
       "Invalid [%%extension_constructor] payload, a constructor is expected."
   | Not_an_extension_constructor ->
     fprintf ppf "This constructor is not an extension constructor."
+  | Break_outside_loop ->
+    fprintf ppf "`break` can only be used directly inside a loop body."
+  | Continue_outside_loop ->
+    fprintf ppf "`continue` can only be used inside a loop body."
   | Literal_overflow ty ->
     fprintf ppf
       "Integer literal exceeds the range of representable integers of type %s"

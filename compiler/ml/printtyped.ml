@@ -341,6 +341,8 @@ and expression i ppf x =
     line i ppf "Texp_sequence\n";
     expression i ppf e1;
     expression i ppf e2
+  | Texp_break -> line i ppf "Texp_break\n"
+  | Texp_continue -> line i ppf "Texp_continue\n"
   | Texp_while (e1, e2) ->
     line i ppf "Texp_while\n";
     expression i ppf e1;

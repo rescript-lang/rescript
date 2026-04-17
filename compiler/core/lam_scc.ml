@@ -60,6 +60,7 @@ let hit_mask (mask : Hash_set_ident_mask.t) (l : Lam.t) : bool =
     | Lstaticraise (_, args) -> hit_list args
     | Lifthenelse (e1, e2, e3) -> hit e1 || hit e2 || hit e3
     | Lsequence (e1, e2) -> hit e1 || hit e2
+    | Lbreak | Lcontinue -> false
     | Lwhile (e1, e2) -> hit e1 || hit e2
   in
   hit l

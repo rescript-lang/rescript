@@ -330,8 +330,8 @@ let debug = t => {
           text(")"),
         }),
       )
-    | LineBreak(break) =>
-      let breakTxt = switch break {
+    | LineBreak(break_) =>
+      let breakTxt = switch break_ {
       | Classic => "Classic"
       | Soft => "Soft"
       | Hard => "Hard"

@@ -104,6 +104,8 @@ module Types = struct
     | Ltrywith of t * ident * t
     | Lifthenelse of t * t * t
     | Lsequence of t * t
+    | Lbreak
+    | Lcontinue
     | Lwhile of t * t
     | Lfor of ident * t * t * Asttypes.direction_flag * t
     | Lassign of ident * t
@@ -156,6 +158,8 @@ module X = struct
     | Ltrywith of t * ident * t
     | Lifthenelse of t * t * t
     | Lsequence of t * t
+    | Lbreak
+    | Lcontinue
     | Lwhile of t * t
     | Lfor of ident * t * t * Asttypes.direction_flag * t
     | Lassign of ident * t
@@ -237,6 +241,8 @@ let inner_map (l : t) (f : t -> X.t) : X.t =
     let e1 = f e1 in
     let e2 = f e2 in
     Lsequence (e1, e2)
+  | Lbreak -> Lbreak
+  | Lcontinue -> Lcontinue
   | Lwhile (e1, e2) ->
     let e1 = f e1 in
     let e2 = f e2 in
@@ -373,6 +379,8 @@ let rec eq_approx (l1 : t) (l2 : t) =
     match l2 with
     | Lsequence (a0, b0) -> eq_approx a a0 && eq_approx b b0
     | _ -> false)
+  | Lbreak -> l2 = Lbreak
+  | Lcontinue -> l2 = Lcontinue
   | Lwhile (p, b) -> (
     match l2 with
     | Lwhile (p0, b0) -> eq_approx p p0 && eq_approx b b0
@@ -437,6 +445,8 @@ let stringswitch (lam : t) cases default : t =
 let true_ : t = Lconst Const_js_true
 let false_ : t = Lconst Const_js_false
 let unit : t = Lconst (Const_js_undefined {is_unit = true})
+let break : t = Lbreak
+let continue : t = Lcontinue
 
 let rec seq (a : t) b : t =
   match a with

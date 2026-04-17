@@ -21,6 +21,8 @@ let dump_tokens filename =
       | Res_token.Open -> "Open"
       | Res_token.True -> "True"
       | Res_token.False -> "False"
+      | Res_token.Break -> "Break"
+      | Res_token.Continue -> "Continue"
       | Res_token.Codepoint {original} -> "Codepoint(\"" ^ original ^ "\")"
       | Res_token.Int {i} -> "Int(\"" ^ i ^ "\")"
       | Res_token.Float {f} -> "Float(\"" ^ f ^ "\")"

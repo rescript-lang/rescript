@@ -44,13 +44,13 @@ let funDef = (~bodyArgs, ~functionName, ~funParams, ~indent, ~mkBody, ~typeVars)
   } ++
   (genericsString(~typeVars) ++
   ((funParams->parens) ++
-  (" {" ++ ((bodyArgs->mkBody) ++ (Indent.break(~indent) ++ "}"))))))
+  (" {" ++ ((bodyArgs->mkBody) ++ (Indent.break_(~indent) ++ "}"))))))
 
 let ifThenElse = (~indent, if_, then_, else_) => {
   let indent1 = indent->Indent.more
   if_(~indent=indent1) ++
-  (Indent.break(~indent) ++
-  ("? " ++ (then_(~indent=indent1) ++ (Indent.break(~indent) ++ (": " ++ else_(~indent=indent1))))))
+  (Indent.break_(~indent) ++
+  ("? " ++ (then_(~indent=indent1) ++ (Indent.break_(~indent) ++ (": " ++ else_(~indent=indent1))))))
 }
 
 let newNameGen = () => Hashtbl.create(1)
@@ -69,7 +69,7 @@ let \"switch" = (~indent, ~cases, expr) => {
     } else {
       expr ++
       ("===" ++
-      (label ++ (Indent.break(~indent) ++ ("? " ++ (code ++ (Indent.break(~indent) ++ ": "))))))
+      (label ++ (Indent.break_(~indent) ++ ("? " ++ (code ++ (Indent.break_(~indent) ++ ": "))))))
     }
   )
   ->String.concat("")

@@ -170,6 +170,8 @@ and printExprItem expr ~pos ~indentation =
       |> String.concat "\n")
   | Pexp_ident {txt} ->
     "Pexp_ident:" ^ (Utils.flattenLongIdent txt |> SharedTypes.ident)
+  | Pexp_break -> "Pexp_break"
+  | Pexp_continue -> "Pexp_continue"
   | Pexp_apply {funct = expr; args} ->
     let printLabel labelled ~pos =
       match labelled with
