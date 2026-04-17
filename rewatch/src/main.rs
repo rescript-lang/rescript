@@ -3,7 +3,11 @@ use console::Term;
 use log::LevelFilter;
 use std::{io::Write, path::Path};
 
-use rescript::{build, cli, cmd, format, lock, watcher};
+use rescript::{
+    build, cli, cmd, format,
+    lock::{self, LockKind},
+    watcher,
+};
 
 fn main() -> Result<()> {
     let cli = cli::parse_with_default().unwrap_or_else(|err| err.exit());
@@ -42,7 +46,7 @@ fn main() -> Result<()> {
             std::process::exit(0);
         }
         cli::Command::Build(build_args) => {
-            let _lock = get_lock(&build_args.folder);
+            // let _lock = get_lock(&build_args.folder); // -> Move to build::build
 
             match build::build(
                 &build_args.filter,
@@ -66,7 +70,7 @@ fn main() -> Result<()> {
             };
         }
         cli::Command::Watch(watch_args) => {
-            let _lock = get_lock(&watch_args.folder);
+            let _lock = get_lock(LockKind::Watch, &watch_args.folder);
 
             match watcher::start(
                 &watch_args.filter,
@@ -85,19 +89,20 @@ fn main() -> Result<()> {
             }
         }
         cli::Command::Clean { folder } => {
-            let _lock = get_lock(&folder);
+            let _lock = get_lock(LockKind::Build, &folder);
             build::clean::clean(Path::new(&folder as &str), show_progress, plain_output)
         }
         cli::Command::Format { stdin, check, files } => format::format(stdin, check, files),
     }
 }
 
-fn get_lock(folder: &str) -> lock::Lock {
-    match lock::get(folder) {
+fn get_lock(kind: LockKind, folder: &str) -> lock::Lock {
+    match lock::get(kind, folder) {
         lock::Lock::Error(error) => {
             eprintln!("Could not start ReScript build: {error}");
             std::process::exit(1);
         }
+
         acquired_lock => acquired_lock,
     }
 }

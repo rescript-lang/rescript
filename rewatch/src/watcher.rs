@@ -6,7 +6,7 @@ use crate::config;
 use crate::helpers;
 use crate::helpers::StrippedVerbatimPath;
 use crate::helpers::emojis::*;
-use crate::lock::LOCKFILE;
+use crate::lock::LockKind;
 use crate::queue::FifoQueue;
 use crate::queue::*;
 use anyhow::{Context, Result};
@@ -203,7 +203,7 @@ async fn async_watch(
 
         for event in events {
             // if there is a file named rescript.lock in the events path, we can quit the watcher
-            if event.paths.iter().any(|path| path.ends_with(LOCKFILE))
+            if event.paths.iter().any(|path| path.ends_with(LockKind::Watch.file_name()))
                 && let EventKind::Remove(_) = event.kind
             {
                 if show_progress {

@@ -9,8 +9,6 @@ use sysinfo::{PidExt, ProcessExt, System, SystemExt};
  * that's running, when trying to aquire a lock, it checks wether that process is still running. If
  * not, it rewrites the lockfile to have its own PID instead. */
 
-pub static LOCKFILE: &str = "rescript.lock";
-
 pub enum Error {
     Locked(u32),
     ParsingLockfile(std::num::ParseIntError),
@@ -72,14 +70,28 @@ fn pid_matches_current_process(to_check_pid: u32) -> bool {
     })
 }
 
-pub fn get(folder: &str) -> Lock {
+pub enum LockKind {
+    Watch,
+    Build,
+}
+
+impl LockKind {
+    pub fn file_name(&self) -> String {
+        String::from(match self {
+            LockKind::Watch => "watch.lock",
+            LockKind::Build => "build.lock",
+        })
+    }
+}
+
+pub fn get(kind: LockKind, folder: &str) -> Lock {
     let project_folder = Path::new(folder);
     if !project_folder.exists() {
         return Lock::Error(Error::ProjectFolderMissing(project_folder.to_path_buf()));
     }
 
     let lib_dir = project_folder.join("lib");
-    let location = lib_dir.join(LOCKFILE);
+    let location = lib_dir.join(kind.file_name());
     let pid = process::id();
 
     // When a lockfile already exists we parse its PID: if the process is still alive we refuse to
@@ -121,7 +133,10 @@ mod tests {
         let temp_dir = TempDir::new().expect("temp dir should be created");
         let missing_folder = temp_dir.path().join("missing_project");
 
-        match get(missing_folder.to_str().expect("path should be valid")) {
+        match get(
+            LockKind::Watch,
+            missing_folder.to_str().expect("path should be valid"),
+        ) {
             Lock::Error(Error::ProjectFolderMissing(path)) => {
                 assert_eq!(path, missing_folder);
             }
@@ -140,7 +155,10 @@ mod tests {
         let project_folder = temp_dir.path().join("project");
         fs::create_dir(&project_folder).expect("project folder should be created");
 
-        match get(project_folder.to_str().expect("path should be valid")) {
+        match get(
+            LockKind::Watch,
+            project_folder.to_str().expect("path should be valid"),
+        ) {
             Lock::Aquired(_) => {}
             _ => panic!("expected lock to be acquired"),
         }
@@ -150,7 +168,7 @@ mod tests {
             "lib directory should be created"
         );
         assert!(
-            project_folder.join("lib").join(LOCKFILE).exists(),
+            project_folder.join("lib").join(LockKind::Watch.file_name()).exists(),
             "lockfile should be created"
         );
     }
@@ -161,9 +179,12 @@ mod tests {
         let project_folder = temp_dir.path().join("project");
         let lib_dir = project_folder.join("lib");
         fs::create_dir_all(&lib_dir).expect("lib directory should be created");
-        fs::write(lib_dir.join(LOCKFILE), "1").expect("lockfile should be written");
+        fs::write(lib_dir.join(LockKind::Watch.file_name()), "1").expect("lockfile should be written");
 
-        match get(project_folder.to_str().expect("path should be valid")) {
+        match get(
+            LockKind::Watch,
+            project_folder.to_str().expect("path should be valid"),
+        ) {
             Lock::Aquired(_) => {}
             _ => panic!("expected stale lock from unrelated process to be ignored"),
         }
