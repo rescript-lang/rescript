@@ -1,4 +1,3 @@
-@notUndefined
-type t<'yield>
+type t<'yield> = asyncIterable<'yield>
 
 external ignore: t<'yield> => unit = "%ignore"

@@ -234,7 +234,8 @@ let translate_constr ~config ~params_translation ~(path : Path.t) ~type_env =
             ]
           "Generator";
     }
-  | ["Stdlib"; "AsyncIterable"; "t"], [param_translation] ->
+  | (["Stdlib"; "AsyncIterable"; "t"] | ["asyncIterable"]), [param_translation]
+    ->
     {
       dependencies = param_translation.dependencies;
       type_ = ident ~type_args:[param_translation.type_] "AsyncIterable";

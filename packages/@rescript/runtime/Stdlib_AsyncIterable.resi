@@ -10,8 +10,7 @@ See [`AsyncIterator`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Re
 /**
 Type representing an async iterable that yields values of type `'yield`.
 */
-@notUndefined
-type t<'yield>
+type t<'yield> = asyncIterable<'yield>
 
 /**
 `ignore(asyncIterable)` marks `asyncIterable` as intentionally unused.
