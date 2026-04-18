@@ -25,6 +25,19 @@ open Ast_helper
 open Location
 module Pt = Parsetree
 
+let jsx_prop_loc_attr = "res.jsxPropLoc"
+let jsx_spread_loc_attr = "res.jsxSpreadLoc"
+
+let extract_internal_loc_attr attr_name attrs =
+  let rec loop rev_acc = function
+    | [] -> (None, List.rev rev_acc)
+    | (({txt; loc}, payload) as attr) :: rest ->
+      if txt = attr_name && payload = PStr [] then
+        (Some loc, List.rev_append rev_acc rest)
+      else loop (attr :: rev_acc) rest
+  in
+  loop [] attrs
+
 type mapper = {
   attribute: mapper -> attribute -> Pt.attribute;
   attributes: mapper -> attribute list -> Pt.attribute list;
@@ -331,9 +344,22 @@ module E = struct
 
   let try_map_jsx_prop (sub : mapper) (lbl : Asttypes.Noloc.arg_label)
       (e : expression) : Parsetree.jsx_prop option =
+    let map_expr_with_loc_attr attr_name fallback make_prop =
+      let loc, attrs = extract_internal_loc_attr attr_name e.pexp_attributes in
+      let e = {e with pexp_attributes = attrs} in
+      let expr = sub.expr sub e in
+      make_prop
+        (match loc with
+        | Some loc -> loc
+        | None -> fallback expr)
+        expr
+    in
     match (lbl, e) with
-    | Asttypes.Noloc.Labelled "_spreadProps", expr ->
-      Some (Parsetree.JSXPropSpreading (Location.none, sub.expr sub expr))
+    | Asttypes.Noloc.Labelled "_spreadProps", _expr ->
+      Some
+        (map_expr_with_loc_attr jsx_spread_loc_attr
+           (fun expr -> expr.pexp_loc)
+           (fun loc expr -> Parsetree.JSXPropSpreading (loc, expr)))
     | ( Asttypes.Noloc.Labelled name,
         {pexp_desc = Pexp_ident {txt = Longident.Lident v}; pexp_loc = name_loc}
       )
@@ -344,14 +370,18 @@ module E = struct
       )
       when name = v ->
       Some (Parsetree.JSXPropPunning (true, {txt = name; loc = name_loc}))
-    | Asttypes.Noloc.Labelled name, exp ->
+    | Asttypes.Noloc.Labelled name, _exp ->
       Some
-        (Parsetree.JSXPropValue
-           ({txt = name; loc = Location.none}, false, sub.expr sub exp))
-    | Asttypes.Noloc.Optional name, exp ->
+        (map_expr_with_loc_attr jsx_prop_loc_attr
+           (fun expr -> expr.pexp_loc)
+           (fun loc expr ->
+             Parsetree.JSXPropValue ({txt = name; loc}, false, expr)))
+    | Asttypes.Noloc.Optional name, _exp ->
       Some
-        (Parsetree.JSXPropValue
-           ({txt = name; loc = Location.none}, true, sub.expr sub exp))
+        (map_expr_with_loc_attr jsx_prop_loc_attr
+           (fun expr -> expr.pexp_loc)
+           (fun loc expr ->
+             Parsetree.JSXPropValue ({txt = name; loc}, true, expr)))
     | _ -> None
 
   let extract_props_and_children (sub : mapper) items =
