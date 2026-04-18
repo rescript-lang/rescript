@@ -14,6 +14,8 @@
 
 #### :boom: Breaking Change
 
+- Support for `break` and `continue` in loops. `break` and `continue` are new keywords. https://github.com/rescript-lang/rescript/pull/8348
+
 #### :eyeglasses: Spec Compliance
 
 #### :rocket: New Feature
@@ -25,6 +27,8 @@
 #### :memo: Documentation
 
 #### :nail_care: Polish
+
+- Allow builds while watchers are running. https://github.com/rescript-lang/rescript/pull/8349
 
 #### :house: Internal
 
