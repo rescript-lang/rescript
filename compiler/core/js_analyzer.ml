@@ -135,8 +135,9 @@ let no_side_effect_obj =
         | Throw _ | Debugger | Break _ | Variable _ | Continue _ ->
           raise_notrace Not_found
         | Exp e -> self.expression self e
-        | Int_switch _ | String_switch _ | ForRange _ | ForOf _ | ForAwaitOf _
-        | If _ | While _ | Block _ | Return _ | Try _ ->
+        | ForOf _ | ForAwaitOf _ -> raise_notrace Not_found
+        | Int_switch _ | String_switch _ | ForRange _ | If _ | While _ | Block _
+        | Return _ | Try _ ->
           super.statement self s);
     expression =
       (fun _ s ->

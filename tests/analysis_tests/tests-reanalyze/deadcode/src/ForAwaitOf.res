@@ -5,12 +5,11 @@ let keep = async (xs: AsyncIterable.t<int>) => {
   }
 }
 
-let sideEffects = {
-  let asyncIterable: AsyncIterable.t<int> = %raw(`(async function* () {
-    yield 1
-  })()`)
+@val external asyncIterable: AsyncIterable.t<int> = "asyncIterable"
 
+let sideEffects = {
+  // Keep the body pure so the loop's effect comes only from iteration itself.
   for await value of asyncIterable {
-    Js.log(value)
+    ()
   }
 }

@@ -352,17 +352,16 @@
   addValueDeclaration +r FirstClassModulesInterface.resi:7:0 path:FirstClassModulesInterface
   Scanning ForAwaitOf.cmt Source:ForAwaitOf.res
   addValueDeclaration +keep ForAwaitOf.res:2:4 path:+ForAwaitOf
-  addValueDeclaration +sideEffects ForAwaitOf.res:8:4 path:+ForAwaitOf
+  addValueDeclaration +sideEffects ForAwaitOf.res:10:4 path:+ForAwaitOf
   addValueReference ForAwaitOf.res:2:4 --> ForAwaitOf.res:3:2
   addValueReference ForAwaitOf.res:2:4 --> ForAwaitOf.res:2:18
-  addValueDeclaration +asyncIterable ForAwaitOf.res:9:6 path:+ForAwaitOf
-  addValueReference ForAwaitOf.res:9:6 --> ForAwaitOf.res:9:44
-  addValueReference ForAwaitOf.res:8:4 --> ForAwaitOf.res:13:2
-  addValueReference ForAwaitOf.res:8:4 --> ForAwaitOf.res:9:6
+  addValueReference ForAwaitOf.res:10:4 --> ForAwaitOf.res:8:0
   Scanning ForOf.cmt Source:ForOf.res
   addValueDeclaration +keep ForOf.res:2:4 path:+ForOf
+  addValueDeclaration +sideEffects ForOf.res:10:4 path:+ForOf
   addValueReference ForOf.res:2:4 --> ForOf.res:3:2
   addValueReference ForOf.res:2:4 --> ForOf.res:2:11
+  addValueReference ForOf.res:10:4 --> ForOf.res:8:0
   Scanning Hooks.cmt Source:Hooks.res
   addValueDeclaration +make Hooks.res:4:4 path:+Hooks
   addValueDeclaration +default Hooks.res:25:4 path:+Hooks
@@ -1947,7 +1946,7 @@ Forward Liveness Analysis
 
     decls: 700
     roots(external targets): 134
-    decl-deps: decls_with_out=411 edges_to_decls=289
+    decl-deps: decls_with_out=411 edges_to_decls=288
 
     Root (annotated): Value +Hooks.+default
     Root (external ref): Value +FirstClassModules.M.InnerModule2.+k
@@ -2753,12 +2752,8 @@ Forward Liveness Analysis
         -> +FirstClassModulesInterface.+r
   Live (annotated) Value +ForAwaitOf.+keep
   Dead Value +ForAwaitOf.+sideEffects
-      deps: in=0 (live=0 dead=0) out=1
-        -> +ForAwaitOf.+asyncIterable
-  Dead Value +ForAwaitOf.+asyncIterable
-      deps: in=1 (live=0 dead=1) out=0
-        <- +ForAwaitOf.+sideEffects (dead)
   Live (annotated) Value +ForOf.+keep
+  Dead Value +ForOf.+sideEffects
   Live (external ref) RecordLabel +Hooks.vehicle.name
       deps: in=4 (live=4 dead=0) out=0
         <- +Hooks.+make (live)
@@ -4249,7 +4244,11 @@ Forward Liveness Analysis
   r is never used
 
   Warning Dead Value With Side Effects
-  ForAwaitOf.res:8:1-174
+  ForAwaitOf.res:10:1-148
+  sideEffects is never used and could have side effects
+
+  Warning Dead Value With Side Effects
+  ForOf.res:10:1-133
   sideEffects is never used and could have side effects
 
   Warning Dead Type
@@ -5256,4 +5255,4 @@ Forward Liveness Analysis
   OptArg.res:26:1-70
   optional argument c of function wrapfourArgs is always supplied (2 calls)
   
-  Analysis reported 319 issues (Incorrect Dead Annotation:1, Warning Dead Exception:2, Warning Dead Module:22, Warning Dead Type:93, Warning Dead Value:179, Warning Dead Value With Side Effects:4, Warning Redundant Optional Argument:6, Warning Unused Argument:12)
+  Analysis reported 320 issues (Incorrect Dead Annotation:1, Warning Dead Exception:2, Warning Dead Module:22, Warning Dead Type:93, Warning Dead Value:179, Warning Dead Value With Side Effects:5, Warning Redundant Optional Argument:6, Warning Unused Argument:12)

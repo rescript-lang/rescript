@@ -18,6 +18,7 @@ let suites =
       Ounit_utf8_test.suites;
       Ounit_unicode_tests.suites;
       Ounit_util_tests.suites;
+      Ounit_js_analyzer_tests.suites;
       Ounit_jsx_loc_tests.suites;
     ]
 
