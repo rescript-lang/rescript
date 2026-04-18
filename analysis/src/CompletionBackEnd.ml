@@ -2154,7 +2154,7 @@ let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
           Sys.readdir (Filename.dirname (env.file.uri |> Uri.toPath))
           |> Array.to_list
         in
-        (* Try to filter out compiled in source files *)
+        (* Filter out generated build artifacts from in-source builds. *)
         let resFiles =
           StringSet.of_list
             (files
@@ -2162,6 +2162,10 @@ let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
                    if Filename.extension f = ".res" then
                      Some (try Filename.chop_extension f with _ -> f)
                    else None))
+        in
+        let is_internal_artifact_extension = function
+          | ".ast" | ".cmi" | ".cmj" | ".cmt" | ".cmti" | ".iast" -> true
+          | _ -> false
         in
         files
         |> List.filter_map (fun fileName ->
@@ -2175,6 +2179,7 @@ let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
                else
                  match Filename.extension fileName with
                  | ".res" | ".resi" | "" -> None
+                 | ext when is_internal_artifact_extension ext -> None
                  | _ -> Some ("./" ^ fileName))
         |> List.sort String.compare
       with _ ->
