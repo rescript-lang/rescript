@@ -95,7 +95,10 @@ let rewrite kind ppxs ast =
 
 let apply_rewriters_str ?(restore = true) ~tool_name ast =
   match !Clflags.all_ppx with
-  | [] -> ast
+  | [] ->
+    if !Js_config.test_ast_conversion then
+      Ml_binary.ast0_roundtrip Ml_binary.Ml ast
+    else ast
   | ppxs ->
     ast
     |> Ast_mapper.add_ppx_context_str ~tool_name
@@ -104,7 +107,10 @@ let apply_rewriters_str ?(restore = true) ~tool_name ast =
 
 let apply_rewriters_sig ?(restore = true) ~tool_name ast =
   match !Clflags.all_ppx with
-  | [] -> ast
+  | [] ->
+    if !Js_config.test_ast_conversion then
+      Ml_binary.ast0_roundtrip Ml_binary.Mli ast
+    else ast
   | ppxs ->
     ast
     |> Ast_mapper.add_ppx_context_sig ~tool_name

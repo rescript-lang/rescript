@@ -29,6 +29,8 @@
 - Fix exception record field regression. https://github.com/rescript-lang/rescript/pull/8319
 - Rewatch: ignore stale lock for unrelated process name. https://github.com/rescript-lang/rescript/pull/8316
 - Fix partial application generalization for `...`. https://github.com/rescript-lang/rescript/pull/8343
+- Preserve JSX prop locations across the AST0 translation layer, fixing `0:0` editor diagnostics in PPX-related flows. https://github.com/rescript-lang/rescript/pull/8350
+- Allow builds while watchers are running. https://github.com/rescript-lang/rescript/pull/8349
 
 #### :memo: Documentation
 
