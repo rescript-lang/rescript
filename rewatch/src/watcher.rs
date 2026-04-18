@@ -140,6 +140,44 @@ fn unregister_watches(watcher: &mut RecommendedWatcher, watch_paths: &[(PathBuf,
     }
 }
 
+fn carry_forward_compile_warnings(previous: &BuildCommandState, next: &mut BuildCommandState) {
+    for (module_name, next_module) in next.build_state.modules.iter_mut() {
+        let Some(previous_module) = previous.build_state.modules.get(module_name) else {
+            continue;
+        };
+        if previous_module.package_name != next_module.package_name {
+            continue;
+        }
+
+        match (&previous_module.source_type, &mut next_module.source_type) {
+            (SourceType::SourceFile(previous_source), SourceType::SourceFile(next_source)) => {
+                if previous_source.implementation.path == next_source.implementation.path {
+                    next_source.implementation.compile_warnings =
+                        previous_source.implementation.compile_warnings.clone();
+
+                    if next_source.implementation.compile_warnings.is_some() {
+                        next_source.implementation.compile_state =
+                            previous_source.implementation.compile_state.clone();
+                    }
+                }
+
+                if let (Some(previous_interface), Some(next_interface)) =
+                    (&previous_source.interface, &mut next_source.interface)
+                    && previous_interface.path == next_interface.path
+                {
+                    next_interface.compile_warnings = previous_interface.compile_warnings.clone();
+
+                    if next_interface.compile_warnings.is_some() {
+                        next_interface.compile_state = previous_interface.compile_state.clone();
+                    }
+                }
+            }
+            (SourceType::MlMap(_), SourceType::MlMap(_)) => (),
+            _ => (),
+        }
+    }
+}
+
 struct AsyncWatchArgs<'a> {
     watcher: &'a mut RecommendedWatcher,
     current_watch_paths: Vec<(PathBuf, RecursiveMode)>,
@@ -374,7 +412,7 @@ async fn async_watch(
             }
             CompileType::Full => {
                 let timing_total = Instant::now();
-                build_state = build::initialize_build(
+                let mut next_build_state = build::initialize_build(
                     None,
                     filter,
                     show_progress,
@@ -383,6 +421,12 @@ async fn async_watch(
                     build_state.get_warn_error_override(),
                 )
                 .expect("Could not initialize build");
+
+                // Full rebuilds can be triggered by editor atomic saves that surface as rename events.
+                // Preserve warning state for unchanged modules so their warnings are re-emitted after the
+                // fresh build state replaces the previous one.
+                carry_forward_compile_warnings(&build_state, &mut next_build_state);
+                build_state = next_build_state;
 
                 // Re-register watches based on the new build state
                 unregister_watches(watcher, &current_watch_paths);
@@ -474,4 +518,198 @@ pub fn start(
         })
         .await
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::build::build_types::{
+        CompileState, CompilerInfo, Implementation, Interface, Module, ParseState, SourceFile, SourceType,
+    };
+    use crate::build::packages::{Namespace, Package};
+    use crate::config;
+    use crate::project_context::ProjectContext;
+    use ahash::{AHashMap, AHashSet};
+    use std::path::PathBuf;
+    use std::sync::RwLock;
+    use std::time::SystemTime;
+
+    fn test_project_context(root: &str) -> ProjectContext {
+        let root_path = PathBuf::from(root);
+        let config = config::tests::create_config(config::tests::CreateConfigArgs {
+            name: "test-root".to_string(),
+            bs_deps: vec![],
+            build_dev_deps: vec![],
+            allowed_dependents: None,
+            path: root_path.clone(),
+        });
+
+        ProjectContext {
+            current_config: config,
+            monorepo_context: None,
+            node_modules_exist_cache: RwLock::new(AHashMap::new()),
+            packages_cache: RwLock::new(AHashMap::new()),
+        }
+    }
+
+    fn test_package(name: &str, path: &str) -> Package {
+        let package_path = PathBuf::from(path);
+        Package {
+            name: name.to_string(),
+            config: config::tests::create_config(config::tests::CreateConfigArgs {
+                name: name.to_string(),
+                bs_deps: vec![],
+                build_dev_deps: vec![],
+                allowed_dependents: None,
+                path: package_path.clone(),
+            }),
+            source_folders: AHashSet::new(),
+            source_files: None,
+            namespace: Namespace::NoNamespace,
+            modules: None,
+            path: package_path,
+            dirs: None,
+            is_local_dep: true,
+            is_root: true,
+        }
+    }
+
+    fn test_build_state(module_name: &str, module: Module) -> BuildCommandState {
+        let root = "/tmp/rewatch-warning-carry-forward";
+        let package = test_package("test-package", root);
+        let mut packages = AHashMap::new();
+        packages.insert(package.name.clone(), package);
+
+        let compiler = CompilerInfo {
+            bsc_path: PathBuf::from("/tmp/bsc"),
+            bsc_hash: blake3::hash(b"test-bsc"),
+            runtime_path: PathBuf::from("/tmp/runtime"),
+        };
+
+        let mut build_state = BuildCommandState::new(
+            PathBuf::from(root),
+            test_project_context(root),
+            packages,
+            compiler,
+            None,
+        );
+        build_state.insert_module(module_name, module);
+        build_state
+    }
+
+    fn test_module(
+        implementation_path: &str,
+        implementation_warning: Option<&str>,
+        interface_path: Option<&str>,
+        interface_warning: Option<&str>,
+    ) -> Module {
+        let implementation_compile_state = if implementation_warning.is_some() {
+            CompileState::Warning
+        } else {
+            CompileState::Success
+        };
+        let interface_compile_state = if interface_warning.is_some() {
+            CompileState::Warning
+        } else {
+            CompileState::Success
+        };
+
+        Module {
+            source_type: SourceType::SourceFile(SourceFile {
+                implementation: Implementation {
+                    path: PathBuf::from(implementation_path),
+                    parse_state: ParseState::Success,
+                    compile_state: implementation_compile_state,
+                    last_modified: SystemTime::UNIX_EPOCH,
+                    parse_dirty: false,
+                    compile_warnings: implementation_warning.map(str::to_string),
+                },
+                interface: interface_path.map(|interface_path| Interface {
+                    path: PathBuf::from(interface_path),
+                    parse_state: ParseState::Success,
+                    compile_state: interface_compile_state,
+                    last_modified: SystemTime::UNIX_EPOCH,
+                    parse_dirty: false,
+                    compile_warnings: interface_warning.map(str::to_string),
+                }),
+            }),
+            deps: AHashSet::new(),
+            dependents: AHashSet::new(),
+            package_name: "test-package".to_string(),
+            compile_dirty: false,
+            last_compiled_cmi: None,
+            last_compiled_cmt: None,
+            deps_dirty: false,
+            is_type_dev: false,
+        }
+    }
+
+    #[test]
+    fn carries_forward_implementation_warnings_for_matching_module_paths() {
+        let previous = test_build_state(
+            "ModuleA",
+            test_module("src/ModuleA.res", Some("warning: impl"), None, None),
+        );
+        let mut next = test_build_state("ModuleA", test_module("src/ModuleA.res", None, None, None));
+
+        carry_forward_compile_warnings(&previous, &mut next);
+
+        let module = next.get_module("ModuleA").expect("module should exist");
+        let SourceType::SourceFile(source_file) = &module.source_type else {
+            panic!("expected source file module");
+        };
+
+        assert_eq!(
+            source_file.implementation.compile_warnings.as_deref(),
+            Some("warning: impl")
+        );
+        assert_eq!(source_file.implementation.compile_state, CompileState::Warning);
+    }
+
+    #[test]
+    fn does_not_carry_forward_warnings_when_module_paths_change() {
+        let previous = test_build_state(
+            "ModuleA",
+            test_module("src/ModuleA.res", Some("warning: impl"), None, None),
+        );
+        let mut next = test_build_state("ModuleA", test_module("src/ModuleARenamed.res", None, None, None));
+
+        carry_forward_compile_warnings(&previous, &mut next);
+
+        let module = next.get_module("ModuleA").expect("module should exist");
+        let SourceType::SourceFile(source_file) = &module.source_type else {
+            panic!("expected source file module");
+        };
+
+        assert_eq!(source_file.implementation.compile_warnings, None);
+        assert_eq!(source_file.implementation.compile_state, CompileState::Success);
+    }
+
+    #[test]
+    fn carries_forward_interface_warnings_for_matching_interface_paths() {
+        let previous = test_build_state(
+            "ModuleA",
+            test_module(
+                "src/ModuleA.res",
+                None,
+                Some("src/ModuleA.resi"),
+                Some("warning: interface"),
+            ),
+        );
+        let mut next = test_build_state(
+            "ModuleA",
+            test_module("src/ModuleA.res", None, Some("src/ModuleA.resi"), None),
+        );
+
+        carry_forward_compile_warnings(&previous, &mut next);
+
+        let module = next.get_module("ModuleA").expect("module should exist");
+        let SourceType::SourceFile(source_file) = &module.source_type else {
+            panic!("expected source file module");
+        };
+        let interface = source_file.interface.as_ref().expect("interface should exist");
+
+        assert_eq!(interface.compile_warnings.as_deref(), Some("warning: interface"));
+        assert_eq!(interface.compile_state, CompileState::Warning);
+    }
 }
