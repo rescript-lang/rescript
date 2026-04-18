@@ -29,7 +29,7 @@ external asIterable: t<'yield, 'return, 'next> => Stdlib_Iterable.t<'yield> = "%
 external asIteratorObject: t<'yield, 'return, 'next> => Stdlib_IteratorObject.t<
   'yield,
   'return,
-  unknown,
+  'next,
 > = "%identity"
 
 /**

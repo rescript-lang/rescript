@@ -255,6 +255,27 @@ Test.run(
   [2, 4],
 )
 
+Test.run(
+  __POS_OF__("Generator.asIteratorObject nextValue"),
+  {
+    let generatorWithNext: Generator.t<int, unit, int> = %raw(`(function* () {
+      let injected = yield 1
+      yield injected + 1
+    })()`)
+
+    switch generatorWithNext->Generator.next {
+    | Yield({value: 1}) =>
+      switch generatorWithNext->Generator.asIteratorObject->IteratorObject.nextValue(41) {
+      | Yield({value: 42}) => Some("nextValue")
+      | _ => None
+      }
+    | _ => None
+    }
+  },
+  eq,
+  Some("nextValue"),
+)
+
 let generatorReturnValueResult = ref(None)
 let generatorReturnValue: Generator.t<int, string, unit> = %raw(`(function* () {
   yield 1

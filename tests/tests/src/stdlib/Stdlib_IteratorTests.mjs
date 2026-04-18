@@ -362,6 +362,29 @@ Test.run([
   4
 ]);
 
+Test.run([
+  [
+    "Stdlib_IteratorTests.res",
+    258,
+    13,
+    51
+  ],
+  "Generator.asIteratorObject nextValue"
+], (generatorWithNext => {
+      let match = generatorWithNext.next();
+      if (match.done !== false) {
+        return;
+      }
+      let match$1 = generatorWithNext.next(41);
+      if (match$1.done !== false || match$1.value !== 42) {
+        return;
+      }
+      return "nextValue";
+    })((function* () {
+        let injected = yield 1;
+        yield injected + 1 | 0;
+      })()), eq, "nextValue");
+
 let generatorReturnValueResult = {
   contents: undefined
 };
