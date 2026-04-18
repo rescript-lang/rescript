@@ -43,6 +43,7 @@ let check_div_by_zero = ref true
 let get_check_div_by_zero () = !check_div_by_zero
 let syntax_only = ref false
 let binary_ast = ref false
+let test_ast_conversion = ref false
 let debug = ref false
 let cmi_only = ref false
 let cmj_only = ref false

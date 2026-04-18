@@ -25,6 +25,13 @@ open Ast_helper0
 open Location
 module Pt = Parsetree0
 
+let jsx_prop_loc_attr = "res.jsxPropLoc"
+let jsx_spread_loc_attr = "res.jsxSpreadLoc"
+
+let wrap_with_loc_attr attr_name loc (expr : Pt.expression) =
+  let attr : Pt.attribute = (Location.mkloc attr_name loc, Pt.PStr []) in
+  {expr with pexp_attributes = attr :: expr.pexp_attributes}
+
 type mapper = {
   attribute: mapper -> attribute -> Pt.attribute;
   attributes: mapper -> attribute list -> Pt.attribute list;
@@ -334,9 +341,12 @@ module E = struct
              if is_optional then Asttypes.Noloc.Optional name.txt
              else Asttypes.Noloc.Labelled name.txt
            in
-           (label, sub.expr sub value)
-         | JSXPropSpreading (_, value) ->
-           (Asttypes.Noloc.Labelled "_spreadProps", sub.expr sub value))
+           ( label,
+             sub.expr sub value |> wrap_with_loc_attr jsx_prop_loc_attr name.loc
+           )
+         | JSXPropSpreading (loc, value) ->
+           ( Asttypes.Noloc.Labelled "_spreadProps",
+             sub.expr sub value |> wrap_with_loc_attr jsx_spread_loc_attr loc ))
 
   let map_jsx_children sub loc children =
     match children with
