@@ -181,6 +181,10 @@ function idAsyncIterable(x) {
   return x;
 }
 
+function idBuiltinAsyncIterable(x) {
+  return x;
+}
+
 function idAsyncIterator(x) {
   return x;
 }
@@ -287,6 +291,7 @@ export {
   idIterableIterator,
   idGenerator,
   idAsyncIterable,
+  idBuiltinAsyncIterable,
   idAsyncIterator,
   idAsyncIterableIterator,
   idAsyncGenerator,

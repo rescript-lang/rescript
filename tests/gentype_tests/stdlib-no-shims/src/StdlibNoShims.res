@@ -98,6 +98,7 @@ let idTuple = (x: (int, string, float)) => x
 @genType let idIterableIterator = (x: IterableIterator.t<int, unit, unit>) => x
 @genType let idGenerator = (x: Generator.t<int, unit, unit>) => x
 @genType let idAsyncIterable = (x: AsyncIterable.t<int>) => x
+@genType let idBuiltinAsyncIterable = (x: asyncIterable<int>) => x
 @genType let idAsyncIterator = (x: AsyncIterator.t<int, unit, unit>) => x
 @genType let idAsyncIterableIterator = (x: AsyncIterableIterator.t<int, unit, unit>) => x
 @genType let idAsyncGenerator = (x: AsyncGenerator.t<int, unit, unit>) => x

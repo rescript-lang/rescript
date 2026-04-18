@@ -103,6 +103,11 @@ const asyncIterable: AsyncIterable<number> = S.idAsyncIterable(
     yield 1;
   })()
 );
+const builtinAsyncIterable: AsyncIterable<number> = S.idBuiltinAsyncIterable(
+  (async function* () {
+    yield 1;
+  })()
+);
 const ait: AsyncIterator<number, void, void> = S.idAsyncIterator({
   next(): Promise<IteratorResult<number>> {
     return Promise.resolve({ done: true, value: undefined });

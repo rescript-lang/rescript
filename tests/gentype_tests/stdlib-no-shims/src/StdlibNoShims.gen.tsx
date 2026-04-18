@@ -103,6 +103,8 @@ export const idGenerator: (x:Generator<number,void,void>) => Generator<number,vo
 
 export const idAsyncIterable: (x:AsyncIterable<number>) => AsyncIterable<number> = StdlibNoShimsJS.idAsyncIterable as any;
 
+export const idBuiltinAsyncIterable: (x:AsyncIterable<number>) => AsyncIterable<number> = StdlibNoShimsJS.idBuiltinAsyncIterable as any;
+
 export const idAsyncIterator: (x:AsyncIterator<number,void,void>) => AsyncIterator<number,void,void> = StdlibNoShimsJS.idAsyncIterator as any;
 
 export const idAsyncIterableIterator: (x:AsyncIterableIterator<number,void,void>) => AsyncIterableIterator<number,void,void> = StdlibNoShimsJS.idAsyncIterableIterator as any;
