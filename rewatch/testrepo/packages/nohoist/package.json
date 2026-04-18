@@ -2,6 +2,6 @@
   "name": "@testrepo/nohoist",
   "dependencies": {
     "rescript": "12.0.0-beta.3",
-    "rescript-bun": "2.1.0"
+    "rescript-bun": "patch:rescript-bun@npm%3A2.1.0#~/.yarn/patches/rescript-bun-npm-2.1.0-d9adc91a04.patch"
   }
 }

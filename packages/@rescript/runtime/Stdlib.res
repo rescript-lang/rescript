@@ -31,8 +31,15 @@ module String = Stdlib_String
 module Symbol = Stdlib_Symbol
 module Type = Stdlib_Type
 
+module Iterable = Stdlib_Iterable
 module Iterator = Stdlib_Iterator
+module IteratorObject = Stdlib_IteratorObject
+module IterableIterator = Stdlib_IterableIterator
+module Generator = Stdlib_Generator
+module AsyncIterable = Stdlib_AsyncIterable
 module AsyncIterator = Stdlib_AsyncIterator
+module AsyncIterableIterator = Stdlib_AsyncIterableIterator
+module AsyncGenerator = Stdlib_AsyncGenerator
 module Map = Stdlib_Map
 module WeakMap = Stdlib_WeakMap
 module Set = Stdlib_Set

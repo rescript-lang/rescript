@@ -73,6 +73,25 @@ Test.run([
     "Stdlib_DictTests.res",
     44,
     13,
+    27
+  ],
+  "fromIterable"
+], Object.fromEntries([
+  [
+    "foo",
+    "bar"
+  ],
+  [
+    "baz",
+    "qux"
+  ]
+]), eq, {foo: "bar", baz: "qux"});
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    51,
+    13,
     35
   ],
   "getUnsafe - existing"
@@ -84,7 +103,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    50,
+    57,
     13,
     34
   ],
@@ -99,7 +118,7 @@ let dict = {
 Test.run([
   [
     "Stdlib_DictTests.res",
-    62,
+    69,
     22,
     38
   ],
@@ -109,7 +128,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    63,
+    70,
     22,
     43
   ],
@@ -119,7 +138,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    64,
+    71,
     22,
     37
   ],
@@ -129,7 +148,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    65,
+    72,
     22,
     39
   ],
@@ -139,7 +158,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    67,
+    74,
     15,
     51
   ],

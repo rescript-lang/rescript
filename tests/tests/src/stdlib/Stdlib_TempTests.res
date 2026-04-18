@@ -160,7 +160,7 @@ Console.info("Symbol")
 Console.info("---")
 let x = Symbol.getFor("Foo")
 Console.log(x)
-let array: array<string> = String.getSymbolUnsafe("foo", Symbol.iterator)()->Iterator.toArray
+let array: array<string> = String.getSymbolUnsafe("foo", Symbol.iterator)()->IteratorObject.toArray
 Console.log(array)
 
 Console.info("")

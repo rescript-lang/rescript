@@ -1,0 +1,152 @@
+diff --git a/src/Bun.res b/src/Bun.res
+index c5dbb6b991d19dd138aec65e4208ff4aec194e3c..2c313b1ff7c08f71aa64159ed430bd1872786f14 100644
+--- a/src/Bun.res
++++ b/src/Bun.res
+@@ -3159,7 +3159,7 @@ module Glob = {
+    * ```
+    */
+   @send
+-  external scan: (t, ~options: globScanOptions=?) => AsyncIterator.t<string> = "scan"
++  external scan: (t, ~options: globScanOptions=?) => AsyncIterator.t<string, unit, unknown> = "scan"
+ 
+   /**
+    * Scan a root directory recursively for files that match this glob pattern. Returns an async iterator.
+@@ -3181,7 +3181,7 @@ module Glob = {
+    * ```
+    */
+   @send
+-  external scanFromCwd: (t, string) => AsyncIterator.t<string> = "scan"
++  external scanFromCwd: (t, string) => AsyncIterator.t<string, unit, unknown> = "scan"
+ 
+   /**
+    * Synchronously scan a root directory recursively for files that match this glob pattern. Returns an iterator.
+@@ -3203,7 +3203,8 @@ module Glob = {
+    * ```
+    */
+   @send
+-  external scanSync: (t, ~options: globScanOptions=?) => Iterator.t<string> = "scanSync"
++  external scanSync: (t, ~options: globScanOptions=?) => IteratorObject.t<string, unit, unknown> =
++    "scanSync"
+ 
+   /**
+    * Synchronously scan a root directory recursively for files that match this glob pattern. Returns an iterator.
+@@ -3225,7 +3226,7 @@ module Glob = {
+    * ```
+    */
+   @send
+-  external scanFromCwdSync: (t, string) => Iterator.t<string> = "scanSync"
++  external scanFromCwdSync: (t, string) => IteratorObject.t<string, unit, unknown> = "scanSync"
+ 
+   /**
+    * Match the glob against a string
+diff --git a/src/BunSqlite.res b/src/BunSqlite.res
+index a4c414214153e64bb5d98a55da0af0e781fe7ce8..8efca631ae17f48ec10a1ef6f1962ba2ededc93c 100644
+--- a/src/BunSqlite.res
++++ b/src/BunSqlite.res
+@@ -27,7 +27,7 @@ module Statement = {
+ 
+   /** Runs a query and returns an iterator over the results as raw JSON. */
+   @send
+-  external iterate: (t, {..}) => Iterator.t<JSON.t> = "iterate"
++  external iterate: (t, {..}) => IteratorObject.t<JSON.t, unit, unknown> = "iterate"
+ 
+   /** Destroys the statement, freeing up resources. */
+   @send
+diff --git a/src/CookieMap.res b/src/CookieMap.res
+index a71a6648ed36cb57849fc77a050117da8d6e438f..a253551552458d668d8ace7013f9ee1678e79c23 100644
+--- a/src/CookieMap.res
++++ b/src/CookieMap.res
+@@ -26,7 +26,7 @@ external fromString: string => t = "CookieMap"
+ @send external delete: (t, cookieStoreDeleteOptions) => unit = "delete"
+ @send external toJSON: t => dict<string> = "toJSON"
+ @get external size: t => int = "size"
+-@send external entries: t => Iterator.t<(string, string)> = "entries"
+-@send external keys: t => Iterator.t<string> = "entries"
+-@send external values: t => Iterator.t<string> = "entries"
++@send external entries: t => IteratorObject.t<(string, string), unit, unknown> = "entries"
++@send external keys: t => IteratorObject.t<string, unit, unknown> = "entries"
++@send external values: t => IteratorObject.t<string, unit, unknown> = "entries"
+ @send external forEach: (t, (string, string, t) => unit) => unit = "forEach"
+diff --git a/src/Globals.res b/src/Globals.res
+index 8a19eb175c173d06fc19686f3f7171210960a6b8..cb2b967407f318e0783101e7e57c79db7717d978 100644
+--- a/src/Globals.res
++++ b/src/Globals.res
+@@ -145,9 +145,9 @@ module Headers = {
+   @return(nullable) @send external get: (t, string) => option<string> = "get"
+   @send external has: (t, string) => bool = "has"
+   @send external set: (t, string, string) => unit = "set"
+-  @send external entries: t => Iterator.t<(string, string)> = "entries"
+-  @send external keys: t => Iterator.t<string> = "keys"
+-  @send external values: t => Iterator.t<string> = "values"
++  @send external entries: t => IteratorObject.t<(string, string), unit, unknown> = "entries"
++  @send external keys: t => IteratorObject.t<string, unit, unknown> = "keys"
++  @send external values: t => IteratorObject.t<string, unit, unknown> = "values"
+   @send external forEach: (t, (string, string, t) => unit) => unit = "forEach"
+ 
+   /**
+@@ -222,9 +222,10 @@ module FormData = {
+   @send external delete: (t, string) => unit = "delete"
+   @send external has: (t, string) => bool = "has"
+   @send external set: (t, string, stringOrBlob, ~fileName: string=?) => unit = "set"
+-  @send external keys: t => Iterator.t<string> = "keys"
+-  @send external values: t => Iterator.t<formDataEntryValue> = "values"
+-  @send external entries: t => Iterator.t<(string, formDataEntryValue)> = "entries"
++  @send external keys: t => IteratorObject.t<string, unit, unknown> = "keys"
++  @send external values: t => IteratorObject.t<formDataEntryValue, unit, unknown> = "values"
++  @send external entries: t => IteratorObject.t<(string, formDataEntryValue), unit, unknown> =
++    "entries"
+   @send external forEach: ((formDataEntryValue, string, t) => unit) => unit = "forEach"
+ }
+ 
+@@ -462,7 +463,9 @@ module ReadableStream = {
+   @send external tee: t<'t> => (t<'t>, t<'t>) = "tee"
+ 
+   type valuesOptions = {preventCancel: bool}
+-  @send external values: (t<'t>, ~options: valuesOptions=?) => AsyncIterator.t<'t> = "values"
++  @send
++  external values: (t<'t>, ~options: valuesOptions=?) => AsyncIterator.t<'t, unit, unknown> =
++    "values"
+ 
+   @new
+   external make: (
+@@ -689,15 +692,15 @@ module URLSearchParams = {
+ 
+   /** Returns an iterator allowing to go through all entries of the key/value pairs. */
+   @send
+-  external entries: t => Iterator.t<(string, string)> = "entries"
++  external entries: t => IteratorObject.t<(string, string), unit, unknown> = "entries"
+ 
+   /** Returns an iterator allowing to go through all keys of the key/value pairs of this search parameter. */
+   @send
+-  external keys: t => Iterator.t<string> = "keys"
++  external keys: t => IteratorObject.t<string, unit, unknown> = "keys"
+ 
+   /** Returns an iterator allowing to go through all values of the key/value pairs of this search parameter. */
+   @send
+-  external values: t => Iterator.t<string> = "values"
++  external values: t => IteratorObject.t<string, unit, unknown> = "values"
+ 
+   /** Executes a provided function once for each key/value pair. */
+   @send
+@@ -2130,7 +2133,7 @@ module ShellPromise = {
+      * Automatically calls {@link quiet} to disable echoing to stdout.
+      */
+   @send
+-  external lines: t => AsyncIterator.t<string> = "lines"
++  external lines: t => AsyncIterator.t<string, unit, unknown> = "lines"
+ 
+   /**
+      * Read from stdout as a string
+diff --git a/src/HTMLRewriter.res b/src/HTMLRewriter.res
+index 5260b585d144bd1a51074f5f3811501ba4efc47e..8e2cbdc5b5ab1e3516be81b56dd952bfc43c1a56 100644
+--- a/src/HTMLRewriter.res
++++ b/src/HTMLRewriter.res
+@@ -17,7 +17,7 @@ module Types = {
+ 
+   type rec element = {
+     mutable tagName: string,
+-    attributes: Iterator.t<array<string>>,
++    attributes: IteratorObject.t<array<string>, unit, unknown>,
+     removed: bool,
+     /** Whether the element is explicitly self-closing, e.g. `<foo />` */
+     selfClosing: bool,

@@ -1,40 +1,49 @@
 @notUndefined
-type t<'a>
+type t<'yield, 'return, 'next>
 
-type value<'a> = {
-  done: bool,
-  value: option<'a>,
-}
+type rawResult<'yield, 'return>
 
-let value = v => {
-  done: false,
-  value: Some(v),
-}
+type result<'yield, 'return> = Stdlib_Iterator.result<'yield, 'return>
 
-let done = (~finalValue=?) => {
-  done: true,
-  value: finalValue,
-}
+let value: 'yield => result<'yield, 'return> = %raw(`value => ({done: false, value})`)
+let done: unit => result<'yield, unit> = %raw(`() => ({done: true, value: undefined})`)
+let doneWithValue: 'return => result<'yield, 'return> = %raw(`value => ({done: true, value})`)
 
-@send external next: t<'a> => promise<value<'a>> = "next"
+let normalizeResult: rawResult<'yield, 'return> => result<
+  'yield,
+  'return,
+> = %raw(`result => result.done ? {done: true, value: result.value} : {done: false, value: result.value}`)
+
+@send
+external nextRaw: t<'yield, 'return, 'next> => promise<rawResult<'yield, 'return>> = "next"
+
+let next = async iterator => normalizeResult(await iterator->nextRaw)
+
+@send
+external nextValueRaw: (t<'yield, 'return, 'next>, 'next) => promise<rawResult<'yield, 'return>> =
+  "next"
+
+let nextValue = async (iterator, value) => normalizeResult(await iterator->nextValueRaw(value))
 
 let forEach = async (iterator, f) => {
   let iteratorDone = ref(false)
 
   while !iteratorDone.contents {
-    let {done, value} = await iterator->next
-    f(value)
-    iteratorDone := done
+    switch await iterator->next {
+    | Yield({value}) => f(value)
+    | Return(_) => iteratorDone := true
+    }
   }
 }
 
-let make: (unit => promise<value<'value>>) => t<'value> = %raw(`function makeAsyncIterator(next) {
+let make: (unit => promise<result<'yield, 'return>>) => t<
+  'yield,
+  'return,
+  unit,
+> = %raw(`function makeAsyncIterator(next) {
   return {
-    next,
-    [Symbol.asyncIterator]() {
-      return this;
-    }
+    next
   }
 }`)
 
-external ignore: t<'a> => unit = "%ignore"
+external ignore: t<'yield, 'return, 'next> => unit = "%ignore"

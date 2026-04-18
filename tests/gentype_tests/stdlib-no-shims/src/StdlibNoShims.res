@@ -91,8 +91,17 @@ let idTuple = (x: (int, string, float)) => x
 @genType let idSymbol = (x: Symbol.t) => x
 
 // More Stdlib exposed types (add more as generator support grows)
-@genType let idIterator = (x: Iterator.t<int>) => x
-@genType let idAsyncIterator = (x: AsyncIterator.t<int>) => x
+@genType let idIterable = (x: Iterable.t<int>) => x
+@genType let idBuiltinIterable = (x: iterable<int>) => x
+@genType let idIterator = (x: Iterator.t<int, unit, unit>) => x
+@genType let idIteratorObject = (x: IteratorObject.t<int, unit, unit>) => x
+@genType let idIterableIterator = (x: IterableIterator.t<int, unit, unit>) => x
+@genType let idGenerator = (x: Generator.t<int, unit, unit>) => x
+@genType let idAsyncIterable = (x: AsyncIterable.t<int>) => x
+@genType let idBuiltinAsyncIterable = (x: asyncIterable<int>) => x
+@genType let idAsyncIterator = (x: AsyncIterator.t<int, unit, unit>) => x
+@genType let idAsyncIterableIterator = (x: AsyncIterableIterator.t<int, unit, unit>) => x
+@genType let idAsyncGenerator = (x: AsyncGenerator.t<int, unit, unit>) => x
 @genType let idOrdering = (x: Ordering.t) => x
 
 // Intl* types
@@ -111,5 +120,3 @@ let idTuple = (x: (int, string, float)) => x
 
 // Dynamic object
 @genType let idObj = (x: {..}) => x
-
-// dummy change to trigger rebuild

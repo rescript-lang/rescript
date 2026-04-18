@@ -153,11 +153,47 @@ function idSymbol(x) {
   return x;
 }
 
+function idIterable(x) {
+  return x;
+}
+
+function idBuiltinIterable(x) {
+  return x;
+}
+
 function idIterator(x) {
   return x;
 }
 
+function idIteratorObject(x) {
+  return x;
+}
+
+function idIterableIterator(x) {
+  return x;
+}
+
+function idGenerator(x) {
+  return x;
+}
+
+function idAsyncIterable(x) {
+  return x;
+}
+
+function idBuiltinAsyncIterable(x) {
+  return x;
+}
+
 function idAsyncIterator(x) {
+  return x;
+}
+
+function idAsyncIterableIterator(x) {
+  return x;
+}
+
+function idAsyncGenerator(x) {
   return x;
 }
 
@@ -248,8 +284,17 @@ export {
   idBigInt64Array,
   idBigUint64Array,
   idSymbol,
+  idIterable,
+  idBuiltinIterable,
   idIterator,
+  idIteratorObject,
+  idIterableIterator,
+  idGenerator,
+  idAsyncIterable,
+  idBuiltinAsyncIterable,
   idAsyncIterator,
+  idAsyncIterableIterator,
+  idAsyncGenerator,
   idOrdering,
   idIntlCollator,
   idIntlDateTimeFormat,

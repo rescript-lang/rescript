@@ -11,6 +11,11 @@ Type representing an instance of `Map`.
 type t<'k, 'v>
 
 /**
+`asIterable(map)` views `map` as an `Iterable.t` of key/value pairs.
+*/
+external asIterable: t<'k, 'v> => Stdlib_Iterable.t<('k, 'v)> = "%identity"
+
+/**
 Creates a new, mutable JavaScript `Map`. A `Map` can have any values as both keys and values.
 
 See [`Map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map) on MDN.
@@ -54,31 +59,20 @@ switch map->Map.get(ReScript) {
 external fromArray: array<('k, 'v)> => t<'k, 'v> = "Map"
 
 /**
-Turns an iterator in the shape of `('key, 'value)` into a `Map`.
+Turns an iterable in the shape of `('key, 'value)` into a `Map`.
 
 ## Examples
 
 ```rescript
-// Let's pretend we have an interator in the correct shape
-let iterator: Iterator.t<(string, string)> = %raw(`
-  (() => {
-    var map1 = new Map();
+let iterable: Iterable.t<(string, string)> = [("first", "1"), ("second", "2")]->Array.asIterable
 
-    map1.set('first', '1');
-    map1.set('second', '2');
-
-    var iterator1 = map1[Symbol.iterator]();
-    return iterator1;
-  })()
-`)
-
-iterator
-->Map.fromIterator
+iterable
+->Map.fromIterable
 ->Map.size == 2
 ```
 */
 @new
-external fromIterator: Stdlib_Iterator.t<('k, 'v)> => t<'k, 'v> = "Map"
+external fromIterable: Stdlib_Iterable.t<('k, 'v)> => t<'k, 'v> = "Map"
 
 /**
 Returns the size, the number of key/value pairs, of the map.
@@ -242,15 +236,17 @@ map->Map.set("anotherKey", "anotherValue")
 let keys = map->Map.keys
 
 // Logs the first key
-Console.log(Iterator.next(keys).value)
+switch keys->IteratorObject.next {
+| Yield({value}) => Console.log(value)
+| Return(_) => ()
+}
 
-// You can also turn the iterator into an array.
-// Remember that an iterator consumes values. We'll need a fresh keys iterator to get an array of all keys, since we consumed a value via `next` above already.
-Console.log(map->Map.keys->Iterator.toArray)
+// You can also turn the iterator into an array. Remember that iterators are consumed, so use a fresh one.
+Console.log(map->Map.keys->IteratorObject.toArray)
 ```
 */
 @send
-external keys: t<'k, 'v> => Stdlib_Iterator.t<'k> = "keys"
+external keys: t<'k, 'v> => Stdlib_IteratorObject.t<'k, unit, unknown> = "keys"
 
 /**
 Returns an iterator that holds all values of the map.
@@ -264,15 +260,17 @@ map->Map.set("anotherKey", "anotherValue")
 let values = map->Map.values
 
 // Logs the first value
-Console.log(Iterator.next(values).value)
+switch values->IteratorObject.next {
+| Yield({value}) => Console.log(value)
+| Return(_) => ()
+}
 
-// You can also turn the iterator into an array.
-// Remember that an iterator consumes values. We'll need a fresh values iterator to get an array of all values, since we consumed a value via `next` above already.
-Console.log(map->Map.values->Iterator.toArray)
+// You can also turn the iterator into an array. Remember that iterators are consumed, so use a fresh one.
+Console.log(map->Map.values->IteratorObject.toArray)
 ```
 */
 @send
-external values: t<'k, 'v> => Stdlib_Iterator.t<'v> = "values"
+external values: t<'k, 'v> => Stdlib_IteratorObject.t<'v, unit, unknown> = "values"
 
 /**
 Returns an iterator that holds all entries of the map.
@@ -287,15 +285,17 @@ map->Map.set("anotherKey", "anotherValue")
 let entries = map->Map.entries
 
 // Logs the first value
-Console.log(Iterator.next(entries).value)
+switch entries->IteratorObject.next {
+| Yield({value}) => Console.log(value)
+| Return(_) => ()
+}
 
-// You can also turn the iterator into an array.
-// Remember that an iterator consumes entries. We'll need a fresh entries iterator to get an array of all entries, since we consumed a value via `next` above already.
-Console.log(map->Map.entries->Iterator.toArray)
+// You can also turn the iterator into an array. Remember that iterators are consumed, so use a fresh one.
+Console.log(map->Map.entries->IteratorObject.toArray)
 ```
 */
 @send
-external entries: t<'k, 'v> => Stdlib_Iterator.t<('k, 'v)> = "entries"
+external entries: t<'k, 'v> => Stdlib_IteratorObject.t<('k, 'v), unit, unknown> = "entries"
 
 /**
   `ignore(map)` ignores the provided map and returns unit.
