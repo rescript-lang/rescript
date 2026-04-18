@@ -362,28 +362,31 @@ Test.run([
   4
 ]);
 
+let generatorWithNext = ((function* () {
+      let injected = yield 1
+      yield injected + 1
+    })());
+
+let match$8 = generatorWithNext.next();
+
+let tmp;
+
+if (match$8.done === false && match$8.value === 1) {
+  let match$9 = generatorWithNext.next(41);
+  tmp = match$9.done === false && match$9.value === 42 ? "nextValue" : undefined;
+} else {
+  tmp = undefined;
+}
+
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    258,
+    259,
     13,
     51
   ],
   "Generator.asIteratorObject nextValue"
-], (generatorWithNext => {
-      let match = generatorWithNext.next();
-      if (match.done !== false) {
-        return;
-      }
-      let match$1 = generatorWithNext.next(41);
-      if (match$1.done !== false || match$1.value !== 42) {
-        return;
-      }
-      return "nextValue";
-    })((function* () {
-        let injected = yield 1;
-        yield injected + 1 | 0;
-      })()), eq, "nextValue");
+], tmp, eq, "nextValue");
 
 let generatorReturnValueResult = {
   contents: undefined
@@ -394,18 +397,18 @@ let generatorReturnValue = ((function* () {
   return "done"
 })());
 
-let match$8 = generatorReturnValue.next();
+let match$10 = generatorReturnValue.next();
 
-let match$9 = generatorReturnValue.return("stopped");
+let match$11 = generatorReturnValue.return("stopped");
 
-if (match$9.done !== false && match$9.value === "stopped") {
+if (match$11.done !== false && match$11.value === "stopped") {
   generatorReturnValueResult.contents = "returnValue";
 }
 
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    275,
+    296,
     13,
     36
   ],
@@ -425,18 +428,18 @@ let generatorThrowError = ((function* () {
   }
 })());
 
-let match$10 = generatorThrowError.next();
+let match$12 = generatorThrowError.next();
 
-let match$11 = generatorThrowError.throw(Primitive_exceptions.internalToException(new Error("boom")));
+let match$13 = generatorThrowError.throw(Primitive_exceptions.internalToException(new Error("boom")));
 
-if (match$11.done !== false) {
+if (match$13.done !== false) {
   generatorThrowErrorResult.contents = "throwError";
 }
 
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    302,
+    323,
     13,
     35
   ],
@@ -452,7 +455,7 @@ let asyncResult = {
   contents: undefined
 };
 
-let match$12 = await asyncIterableIterator.next();
+let match$14 = await asyncIterableIterator.next();
 
 await Stdlib_AsyncIterableIterator.forEach(asyncIterableIterator, param => {
   if (param[0] === "second") {
@@ -464,7 +467,7 @@ await Stdlib_AsyncIterableIterator.forEach(asyncIterableIterator, param => {
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    328,
+    349,
     20,
     35
   ],
@@ -507,7 +510,7 @@ await Stdlib_AsyncIterator.forEach(asyncIterator, value => {
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    354,
+    375,
     20,
     54
   ],
@@ -523,18 +526,18 @@ let asyncGeneratorNextValueResult = {
   contents: undefined
 };
 
-let match$13 = await asyncGeneratorNextValue.next(undefined);
+let match$15 = await asyncGeneratorNextValue.next(undefined);
 
-let match$14 = await asyncGeneratorNextValue.next(4);
+let match$16 = await asyncGeneratorNextValue.next(4);
 
-if (match$14.done !== false && match$14.value === "5") {
+if (match$16.done !== false && match$16.value === "5") {
   asyncGeneratorNextValueResult.contents = "nextValue";
 }
 
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    380,
+    401,
     13,
     39
   ],
@@ -560,7 +563,7 @@ await Stdlib_AsyncIterableIterator.forEach(asyncGeneratorIterable, value => {
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    399,
+    420,
     13,
     53
   ],
@@ -583,18 +586,18 @@ let asyncGeneratorReturnValue = ((async function* () {
   return "done"
 })());
 
-let match$15 = await asyncGeneratorReturnValue.next();
+let match$17 = await asyncGeneratorReturnValue.next();
 
-let match$16 = await asyncGeneratorReturnValue.return("stopped");
+let match$18 = await asyncGeneratorReturnValue.return("stopped");
 
-if (match$16.done !== false && match$16.value === "stopped") {
+if (match$18.done !== false && match$18.value === "stopped") {
   asyncGeneratorReturnValueResult.contents = "returnValue";
 }
 
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    428,
+    449,
     13,
     41
   ],
@@ -614,18 +617,18 @@ let asyncGeneratorThrowError = ((async function* () {
   }
 })());
 
-let match$17 = await asyncGeneratorThrowError.next();
+let match$19 = await asyncGeneratorThrowError.next();
 
-let match$18 = await asyncGeneratorThrowError.throw(Primitive_exceptions.internalToException(new Error("boom")));
+let match$20 = await asyncGeneratorThrowError.throw(Primitive_exceptions.internalToException(new Error("boom")));
 
-if (match$18.done !== false) {
+if (match$20.done !== false) {
   asyncGeneratorThrowErrorResult.contents = "throwError";
 }
 
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    457,
+    478,
     13,
     40
   ],
@@ -652,7 +655,7 @@ await Stdlib_AsyncIterableIterator.forEach(createdAsyncIterableIterator, value =
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    481,
+    502,
     13,
     56
   ],

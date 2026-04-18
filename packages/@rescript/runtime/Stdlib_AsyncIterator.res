@@ -8,7 +8,7 @@ let done: unit => result<'yield, unit> = %raw(`() => ({done: true, value: undefi
 let doneWithValue: 'return => result<'yield, 'return> = %raw(`value => ({done: true, value})`)
 
 @send
-external next: t<'yield, 'return, unit> => promise<result<'yield, 'return>> = "next"
+external next: t<'yield, 'return, 'next> => promise<result<'yield, 'return>> = "next"
 
 @send
 external nextValue: (t<'yield, 'return, 'next>, 'next) => promise<result<'yield, 'return>> = "next"

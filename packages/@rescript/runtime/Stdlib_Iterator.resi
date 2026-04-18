@@ -60,7 +60,7 @@ iterator->Iterator.next == Yield({value: 0})
 ```
 */
 @send
-external next: t<'yield, 'return, unit> => result<'yield, 'return> = "next"
+external next: t<'yield, 'return, 'next> => result<'yield, 'return> = "next"
 
 /**
 `nextValue(iterator, value)` advances `iterator`, sending `value` back into it.

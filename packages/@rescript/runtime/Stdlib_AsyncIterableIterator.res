@@ -21,7 +21,8 @@ external asAsyncIterator: t<'yield, 'return, 'next> => Stdlib_AsyncIterator.t<
 > = "%identity"
 
 @send
-external next: t<'yield, 'return, unit> => promise<Stdlib_Iterator.result<'yield, 'return>> = "next"
+external next: t<'yield, 'return, 'next> => promise<Stdlib_Iterator.result<'yield, 'return>> =
+  "next"
 
 @send
 external nextValue: (

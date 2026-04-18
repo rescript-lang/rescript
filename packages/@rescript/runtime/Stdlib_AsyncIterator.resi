@@ -81,7 +81,7 @@ process()->ignore
 ```
 */
 @send
-external next: t<'yield, 'return, unit> => promise<result<'yield, 'return>> = "next"
+external next: t<'yield, 'return, 'next> => promise<result<'yield, 'return>> = "next"
 
 /**
 `nextValue(asyncIterator, value)` advances `asyncIterator`, sending `value` back into it.
@@ -95,7 +95,7 @@ for each yielded value.
 
 The final return value is not passed to `f`.
 */
-let forEach: (t<'yield, 'return, unit>, 'yield => unit) => promise<unit>
+let forEach: (t<'yield, 'return, 'next>, 'yield => unit) => promise<unit>
 
 /**
 `make(nextFn)` creates an async iterator protocol object from a function returning

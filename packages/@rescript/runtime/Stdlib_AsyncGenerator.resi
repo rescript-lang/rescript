@@ -39,7 +39,8 @@ external asAsyncIterator: t<'yield, 'return, 'next> => Stdlib_AsyncIterator.t<
 `next(generator)` advances `generator` without sending a value back in.
 */
 @send
-external next: t<'yield, 'return, unit> => promise<Stdlib_Iterator.result<'yield, 'return>> = "next"
+external next: t<'yield, 'return, 'next> => promise<Stdlib_Iterator.result<'yield, 'return>> =
+  "next"
 
 /**
 `nextValue(generator, value)` advances `generator`, sending `value` back into it.

@@ -59,7 +59,8 @@ external asAsyncIterator: t<'yield, 'return, 'next> => Stdlib_AsyncIterator.t<
 `next(iterator)` advances `iterator` without sending a value back in.
 */
 @send
-external next: t<'yield, 'return, unit> => promise<Stdlib_Iterator.result<'yield, 'return>> = "next"
+external next: t<'yield, 'return, 'next> => promise<Stdlib_Iterator.result<'yield, 'return>> =
+  "next"
 
 /**
 `nextValue(iterator, value)` advances `iterator`, sending `value` back into it.
@@ -76,7 +77,7 @@ for each yielded value.
 
 The final return value is not passed to `f`.
 */
-let forEach: (t<'yield, 'return, unit>, 'yield => unit) => promise<unit>
+let forEach: (t<'yield, 'return, 'next>, 'yield => unit) => promise<unit>
 
 /**
 `ignore(iterator)` marks `iterator` as intentionally unused.

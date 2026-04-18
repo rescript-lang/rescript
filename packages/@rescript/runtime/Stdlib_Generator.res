@@ -10,7 +10,7 @@ external asIteratorObject: t<'yield, 'return, 'next> => Stdlib_IteratorObject.t<
 > = "%identity"
 
 @send
-external next: t<'yield, 'return, unit> => Stdlib_Iterator.result<'yield, 'return> = "next"
+external next: t<'yield, 'return, 'next> => Stdlib_Iterator.result<'yield, 'return> = "next"
 
 @send
 external nextValue: (t<'yield, 'return, 'next>, 'next) => Stdlib_Iterator.result<'yield, 'return> =
