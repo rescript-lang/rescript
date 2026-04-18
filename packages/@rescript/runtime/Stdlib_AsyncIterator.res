@@ -1,17 +1,29 @@
 @notUndefined
 type t<'yield, 'return, 'next>
 
+type rawResult<'yield, 'return>
+
 type result<'yield, 'return> = Stdlib_Iterator.result<'yield, 'return>
 
 let value: 'yield => result<'yield, 'return> = %raw(`value => ({done: false, value})`)
 let done: unit => result<'yield, unit> = %raw(`() => ({done: true, value: undefined})`)
 let doneWithValue: 'return => result<'yield, 'return> = %raw(`value => ({done: true, value})`)
 
-@send
-external next: t<'yield, 'return, 'next> => promise<result<'yield, 'return>> = "next"
+let normalizeResult: rawResult<'yield, 'return> => result<
+  'yield,
+  'return,
+> = %raw(`result => result.done ? {done: true, value: result.value} : {done: false, value: result.value}`)
 
 @send
-external nextValue: (t<'yield, 'return, 'next>, 'next) => promise<result<'yield, 'return>> = "next"
+external nextRaw: t<'yield, 'return, 'next> => promise<rawResult<'yield, 'return>> = "next"
+
+let next = async iterator => normalizeResult(await iterator->nextRaw)
+
+@send
+external nextValueRaw: (t<'yield, 'return, 'next>, 'next) => promise<rawResult<'yield, 'return>> =
+  "next"
+
+let nextValue = async (iterator, value) => normalizeResult(await iterator->nextValueRaw(value))
 
 let forEach = async (iterator, f) => {
   let iteratorDone = ref(false)

@@ -20,15 +20,10 @@ external asAsyncIterator: t<'yield, 'return, 'next> => Stdlib_AsyncIterator.t<
   'next,
 > = "%identity"
 
-@send
-external next: t<'yield, 'return, 'next> => promise<Stdlib_Iterator.result<'yield, 'return>> =
-  "next"
+let next = iterator => iterator->asAsyncIterator->Stdlib_AsyncIterator.next
 
-@send
-external nextValue: (
-  t<'yield, 'return, 'next>,
-  'next,
-) => promise<Stdlib_Iterator.result<'yield, 'return>> = "next"
+let nextValue = (iterator, value) =>
+  iterator->asAsyncIterator->Stdlib_AsyncIterator.nextValue(value)
 
 let forEach = async (iterator, f) => {
   let iteratorDone = ref(false)

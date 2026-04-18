@@ -4,8 +4,11 @@ import * as Test from "./Test.mjs";
 import * as Belt_Array from "@rescript/runtime/lib/es6/Belt_Array.mjs";
 import * as Stdlib_Iterator from "@rescript/runtime/lib/es6/Stdlib_Iterator.mjs";
 import * as Primitive_object from "@rescript/runtime/lib/es6/Primitive_object.mjs";
+import * as Stdlib_Generator from "@rescript/runtime/lib/es6/Stdlib_Generator.mjs";
 import * as Primitive_exceptions from "@rescript/runtime/lib/es6/Primitive_exceptions.mjs";
 import * as Stdlib_AsyncIterator from "@rescript/runtime/lib/es6/Stdlib_AsyncIterator.mjs";
+import * as Stdlib_AsyncGenerator from "@rescript/runtime/lib/es6/Stdlib_AsyncGenerator.mjs";
+import * as Stdlib_IteratorObject from "@rescript/runtime/lib/es6/Stdlib_IteratorObject.mjs";
 import * as Stdlib_IterableIterator from "@rescript/runtime/lib/es6/Stdlib_IterableIterator.mjs";
 import * as Stdlib_AsyncIterableIterator from "@rescript/runtime/lib/es6/Stdlib_AsyncIterableIterator.mjs";
 
@@ -181,9 +184,9 @@ let syncResult = {
   contents: undefined
 };
 
-let match = iterator.next();
+let match = Stdlib_IterableIterator.next(iterator);
 
-let match$1 = iterator.next();
+let match$1 = Stdlib_IterableIterator.next(iterator);
 
 if (match$1.done === false && match$1.value === "b") {
   syncResult.contents = "b";
@@ -209,7 +212,7 @@ let protocolResult = {
   contents: undefined
 };
 
-let match$2 = iteratorProtocol.next();
+let match$2 = Stdlib_Iterator.next(iteratorProtocol);
 
 if (match$2.done === false && match$2.value === "x") {
   protocolResult.contents = "x";
@@ -224,6 +227,41 @@ Test.run([
   ],
   "Iterator next"
 ], protocolResult.contents, eq, "x");
+
+let omittedDoneIterator = (({
+  step: 0,
+  next() {
+    if (this.step === 0) {
+      this.step = 1
+      return {value: 1}
+    }
+    return {done: true, value: "done"}
+  }
+}));
+
+let omittedDoneResult = {
+  contents: undefined
+};
+
+let match$3 = Stdlib_Iterator.next(omittedDoneIterator);
+
+if (match$3.done === false) {
+  if (match$3.value !== 1) {
+    
+  } else {
+    omittedDoneResult.contents = "yield";
+  }
+}
+
+Test.run([
+  [
+    "Stdlib_IteratorTests.res",
+    169,
+    13,
+    46
+  ],
+  "Iterator next with omitted done"
+], omittedDoneResult.contents, eq, "yield");
 
 let current = {
   contents: 0
@@ -243,10 +281,10 @@ let createdProtocolResult = {
   contents: undefined
 };
 
-let match$3 = createdIterator.next();
+let match$4 = Stdlib_Iterator.next(createdIterator);
 
-if (match$3.done === false) {
-  if (match$3.value !== 0) {
+if (match$4.done === false) {
+  if (match$4.value !== 0) {
     
   } else {
     createdProtocolResult.contents = "protocol";
@@ -256,7 +294,7 @@ if (match$3.done === false) {
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    172,
+    197,
     13,
     41
   ],
@@ -281,12 +319,12 @@ let createdIterableResult = {
   contents: undefined
 };
 
-let match$4 = createdIterableIterator.next();
+let match$5 = Stdlib_IterableIterator.next(createdIterableIterator);
 
-let match$5 = createdIterableIterator.next();
+let match$6 = Stdlib_IterableIterator.next(createdIterableIterator);
 
-if (match$5.done === false) {
-  if (match$5.value !== 1) {
+if (match$6.done === false) {
+  if (match$6.value !== 1) {
     
   } else {
     createdIterableResult.contents = "iterable";
@@ -296,7 +334,7 @@ if (match$5.done === false) {
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    205,
+    230,
     13,
     50
   ],
@@ -312,18 +350,18 @@ let iteratorNextValueResult = {
   contents: undefined
 };
 
-let match$6 = generatorViaIterator.next(undefined);
+let match$7 = Stdlib_Iterator.nextValue(generatorViaIterator, undefined);
 
-let match$7 = generatorViaIterator.next(4);
+let match$8 = Stdlib_Iterator.nextValue(generatorViaIterator, 4);
 
-if (match$7.done !== false && match$7.value === "5") {
+if (match$8.done !== false && match$8.value === "5") {
   iteratorNextValueResult.contents = "nextValue";
 }
 
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    228,
+    253,
     20,
     40
   ],
@@ -333,7 +371,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    231,
+    256,
     13,
     35
   ],
@@ -349,7 +387,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    245,
+    270,
     13,
     41
   ],
@@ -367,13 +405,13 @@ let generatorWithNext = ((function* () {
       yield injected + 1
     })());
 
-let match$8 = generatorWithNext.next();
+let match$9 = Stdlib_Generator.next(generatorWithNext);
 
 let tmp;
 
-if (match$8.done === false && match$8.value === 1) {
-  let match$9 = generatorWithNext.next(41);
-  tmp = match$9.done === false && match$9.value === 42 ? "nextValue" : undefined;
+if (match$9.done === false && match$9.value === 1) {
+  let match$10 = Stdlib_IteratorObject.nextValue(generatorWithNext, 41);
+  tmp = match$10.done === false && match$10.value === 42 ? "nextValue" : undefined;
 } else {
   tmp = undefined;
 }
@@ -381,7 +419,7 @@ if (match$8.done === false && match$8.value === 1) {
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    259,
+    284,
     13,
     51
   ],
@@ -397,18 +435,18 @@ let generatorReturnValue = ((function* () {
   return "done"
 })());
 
-let match$10 = generatorReturnValue.next();
+let match$11 = Stdlib_Generator.next(generatorReturnValue);
 
-let match$11 = generatorReturnValue.return("stopped");
+let match$12 = Stdlib_Generator.returnValue(generatorReturnValue, "stopped");
 
-if (match$11.done !== false && match$11.value === "stopped") {
+if (match$12.done !== false && match$12.value === "stopped") {
   generatorReturnValueResult.contents = "returnValue";
 }
 
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    296,
+    321,
     13,
     36
   ],
@@ -428,18 +466,18 @@ let generatorThrowError = ((function* () {
   }
 })());
 
-let match$12 = generatorThrowError.next();
+let match$13 = Stdlib_Generator.next(generatorThrowError);
 
-let match$13 = generatorThrowError.throw(Primitive_exceptions.internalToException(new Error("boom")));
+let match$14 = Stdlib_Generator.throwError(generatorThrowError, Primitive_exceptions.internalToException(new Error("boom")));
 
-if (match$13.done !== false) {
+if (match$14.done !== false) {
   generatorThrowErrorResult.contents = "throwError";
 }
 
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    323,
+    348,
     13,
     35
   ],
@@ -455,7 +493,7 @@ let asyncResult = {
   contents: undefined
 };
 
-let match$14 = await asyncIterableIterator.next();
+let match$15 = await Stdlib_AsyncIterableIterator.next(asyncIterableIterator);
 
 await Stdlib_AsyncIterableIterator.forEach(asyncIterableIterator, param => {
   if (param[0] === "second") {
@@ -467,7 +505,7 @@ await Stdlib_AsyncIterableIterator.forEach(asyncIterableIterator, param => {
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    349,
+    374,
     20,
     35
   ],
@@ -510,12 +548,44 @@ await Stdlib_AsyncIterator.forEach(asyncIterator, value => {
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    375,
+    400,
     20,
     54
   ],
   "Creating your own async iterator"
 ], asyncResult$1.contents, eq, "done");
+
+let asyncOmittedDoneValues = {
+  contents: []
+};
+
+let asyncOmittedDoneIterator = (({
+  step: 0,
+  next() {
+    if (this.step === 0) {
+      this.step = 1
+      return Promise.resolve({value: 1})
+    }
+    return Promise.resolve({done: true, value: "done"})
+  }
+}));
+
+await Stdlib_AsyncIterator.forEach(asyncOmittedDoneIterator, value => {
+  asyncOmittedDoneValues.contents = Belt_Array.concatMany([
+    asyncOmittedDoneValues.contents,
+    [value]
+  ]);
+});
+
+Test.run([
+  [
+    "Stdlib_IteratorTests.res",
+    419,
+    13,
+    54
+  ],
+  "AsyncIterator.forEach with omitted done"
+], asyncOmittedDoneValues.contents, eq, [1]);
 
 let asyncGeneratorNextValue = ((async function* () {
   let sent = yield 1
@@ -526,18 +596,18 @@ let asyncGeneratorNextValueResult = {
   contents: undefined
 };
 
-let match$15 = await asyncGeneratorNextValue.next(undefined);
+let match$16 = await Stdlib_AsyncIterator.nextValue(asyncGeneratorNextValue, undefined);
 
-let match$16 = await asyncGeneratorNextValue.next(4);
+let match$17 = await Stdlib_AsyncGenerator.nextValue(asyncGeneratorNextValue, 4);
 
-if (match$16.done !== false && match$16.value === "5") {
+if (match$17.done !== false && match$17.value === "5") {
   asyncGeneratorNextValueResult.contents = "nextValue";
 }
 
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    401,
+    449,
     13,
     39
   ],
@@ -563,7 +633,7 @@ await Stdlib_AsyncIterableIterator.forEach(asyncGeneratorIterable, value => {
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    420,
+    468,
     13,
     53
   ],
@@ -586,18 +656,18 @@ let asyncGeneratorReturnValue = ((async function* () {
   return "done"
 })());
 
-let match$17 = await asyncGeneratorReturnValue.next();
+let match$18 = await Stdlib_AsyncGenerator.next(asyncGeneratorReturnValue);
 
-let match$18 = await asyncGeneratorReturnValue.return("stopped");
+let match$19 = await Stdlib_AsyncGenerator.returnValue(asyncGeneratorReturnValue, "stopped");
 
-if (match$18.done !== false && match$18.value === "stopped") {
+if (match$19.done !== false && match$19.value === "stopped") {
   asyncGeneratorReturnValueResult.contents = "returnValue";
 }
 
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    449,
+    497,
     13,
     41
   ],
@@ -617,18 +687,18 @@ let asyncGeneratorThrowError = ((async function* () {
   }
 })());
 
-let match$19 = await asyncGeneratorThrowError.next();
+let match$20 = await Stdlib_AsyncGenerator.next(asyncGeneratorThrowError);
 
-let match$20 = await asyncGeneratorThrowError.throw(Primitive_exceptions.internalToException(new Error("boom")));
+let match$21 = await Stdlib_AsyncGenerator.throwError(asyncGeneratorThrowError, Primitive_exceptions.internalToException(new Error("boom")));
 
-if (match$20.done !== false) {
+if (match$21.done !== false) {
   asyncGeneratorThrowErrorResult.contents = "throwError";
 }
 
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    478,
+    526,
     13,
     40
   ],
@@ -655,7 +725,7 @@ await Stdlib_AsyncIterableIterator.forEach(createdAsyncIterableIterator, value =
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    502,
+    550,
     13,
     56
   ],
@@ -670,6 +740,8 @@ export {
   syncResult,
   iteratorProtocol,
   protocolResult,
+  omittedDoneIterator,
+  omittedDoneResult,
   createdIterator,
   createdProtocolResult,
   createdIterableIterator,
@@ -683,6 +755,8 @@ export {
   asyncIterableIterator,
   asyncResult,
   asyncIterator,
+  asyncOmittedDoneValues,
+  asyncOmittedDoneIterator,
   asyncGeneratorNextValue,
   asyncGeneratorNextValueResult,
   asyncGeneratorIterableValues,

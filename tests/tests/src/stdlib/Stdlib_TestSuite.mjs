@@ -97,6 +97,10 @@ let iteratorProtocol = Stdlib_IteratorTests.iteratorProtocol;
 
 let protocolResult = Stdlib_IteratorTests.protocolResult;
 
+let omittedDoneIterator = Stdlib_IteratorTests.omittedDoneIterator;
+
+let omittedDoneResult = Stdlib_IteratorTests.omittedDoneResult;
+
 let createdIterator = Stdlib_IteratorTests.createdIterator;
 
 let createdProtocolResult = Stdlib_IteratorTests.createdProtocolResult;
@@ -122,6 +126,10 @@ let asyncIterableIterator = Stdlib_IteratorTests.asyncIterableIterator;
 let asyncResult = Stdlib_IteratorTests.asyncResult;
 
 let asyncIterator = Stdlib_IteratorTests.asyncIterator;
+
+let asyncOmittedDoneValues = Stdlib_IteratorTests.asyncOmittedDoneValues;
+
+let asyncOmittedDoneIterator = Stdlib_IteratorTests.asyncOmittedDoneIterator;
 
 let asyncGeneratorNextValue = Stdlib_IteratorTests.asyncGeneratorNextValue;
 
@@ -187,6 +195,8 @@ export {
   syncResult,
   iteratorProtocol,
   protocolResult,
+  omittedDoneIterator,
+  omittedDoneResult,
   createdIterator,
   createdProtocolResult,
   createdIterableIterator,
@@ -200,6 +210,8 @@ export {
   asyncIterableIterator,
   asyncResult,
   asyncIterator,
+  asyncOmittedDoneValues,
+  asyncOmittedDoneIterator,
   asyncGeneratorNextValue,
   asyncGeneratorNextValueResult,
   asyncGeneratorIterableValues,

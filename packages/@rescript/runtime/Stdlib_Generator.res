@@ -9,19 +9,24 @@ external asIteratorObject: t<'yield, 'return, 'next> => Stdlib_IteratorObject.t<
   'next,
 > = "%identity"
 
-@send
-external next: t<'yield, 'return, 'next> => Stdlib_Iterator.result<'yield, 'return> = "next"
+let next = generator => generator->asIterator->Stdlib_Iterator.next
+
+let nextValue = (generator, value) => generator->asIterator->Stdlib_Iterator.nextValue(value)
 
 @send
-external nextValue: (t<'yield, 'return, 'next>, 'next) => Stdlib_Iterator.result<'yield, 'return> =
-  "next"
-
-@send
-external returnValue: (
+external returnValueRaw: (
   t<'yield, 'return, 'next>,
   'return,
-) => Stdlib_Iterator.result<'yield, 'return> = "return"
+) => Stdlib_Iterator.rawResult<'yield, 'return> = "return"
+
+let returnValue = (generator, value) =>
+  generator->returnValueRaw(value)->Stdlib_Iterator.normalizeResult
 
 @send
-external throwError: (t<'yield, 'return, 'next>, exn) => Stdlib_Iterator.result<'yield, 'return> =
-  "throw"
+external throwErrorRaw: (
+  t<'yield, 'return, 'next>,
+  exn,
+) => Stdlib_Iterator.rawResult<'yield, 'return> = "throw"
+
+let throwError = (generator, error) =>
+  generator->throwErrorRaw(error)->Stdlib_Iterator.normalizeResult

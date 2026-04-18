@@ -17,12 +17,9 @@ external asIterator: t<'yield, 'return, 'next> => Stdlib_Iterator.t<'yield, 'ret
   "%identity"
 external asIterable: t<'yield, 'return, 'next> => Stdlib_Iterable.t<'yield> = "%identity"
 
-@send
-external next: t<'yield, 'return, 'next> => Stdlib_Iterator.result<'yield, 'return> = "next"
+let next = iterator => iterator->asIterator->Stdlib_Iterator.next
 
-@send
-external nextValue: (t<'yield, 'return, 'next>, 'next) => Stdlib_Iterator.result<'yield, 'return> =
-  "next"
+let nextValue = (iterator, value) => iterator->asIterator->Stdlib_Iterator.nextValue(value)
 
 @val
 external toArrayWithMapper: (t<'yield, 'return, 'next>, 'yield => 'mapped) => array<'mapped> =

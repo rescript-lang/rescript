@@ -33,15 +33,12 @@ external asIterable: t<'yield, 'return, 'next> => Stdlib_Iterable.t<'yield> = "%
 /**
 `next(iteratorObject)` advances `iteratorObject` without sending a value back in.
 */
-@send
-external next: t<'yield, 'return, 'next> => Stdlib_Iterator.result<'yield, 'return> = "next"
+let next: t<'yield, 'return, 'next> => Stdlib_Iterator.result<'yield, 'return>
 
 /**
 `nextValue(iteratorObject, value)` advances `iteratorObject`, sending `value` back into it.
 */
-@send
-external nextValue: (t<'yield, 'return, 'next>, 'next) => Stdlib_Iterator.result<'yield, 'return> =
-  "next"
+let nextValue: (t<'yield, 'return, 'next>, 'next) => Stdlib_Iterator.result<'yield, 'return>
 
 /**
 `toArray(iteratorObject)` consumes `iteratorObject` and returns its yielded values as an array.

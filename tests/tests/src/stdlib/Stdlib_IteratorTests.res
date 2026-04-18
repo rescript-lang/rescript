@@ -147,6 +147,31 @@ switch iteratorProtocol->Iterator.next {
 
 Test.run(__POS_OF__("Iterator next"), protocolResult.contents, eq, Some("x"))
 
+let omittedDoneIterator: Iterator.t<int, string, unit> = %raw(`({
+  step: 0,
+  next() {
+    if (this.step === 0) {
+      this.step = 1
+      return {value: 1}
+    }
+    return {done: true, value: "done"}
+  }
+})`)
+
+let omittedDoneResult = ref(None)
+
+switch omittedDoneIterator->Iterator.next {
+| Yield({value: 1}) => omittedDoneResult.contents = Some("yield")
+| _ => ()
+}
+
+Test.run(
+  __POS_OF__("Iterator next with omitted done"),
+  omittedDoneResult.contents,
+  eq,
+  Some("yield"),
+)
+
 let createdIterator = {
   let current = ref(0)
   Iterator.make(() => {
@@ -373,6 +398,29 @@ await asyncIterator->AsyncIterator.forEach(value => {
 })
 
 Test.run(__POS_OF__("Creating your own async iterator"), asyncResult.contents, eq, Some("done"))
+
+let asyncOmittedDoneValues = ref([])
+let asyncOmittedDoneIterator: AsyncIterator.t<int, string, unit> = %raw(`({
+  step: 0,
+  next() {
+    if (this.step === 0) {
+      this.step = 1
+      return Promise.resolve({value: 1})
+    }
+    return Promise.resolve({done: true, value: "done"})
+  }
+})`)
+
+await asyncOmittedDoneIterator->AsyncIterator.forEach(value => {
+  asyncOmittedDoneValues := [...asyncOmittedDoneValues.contents, value]
+})
+
+Test.run(
+  __POS_OF__("AsyncIterator.forEach with omitted done"),
+  asyncOmittedDoneValues.contents,
+  eq,
+  [1],
+)
 
 let asyncGeneratorNextValue: AsyncGenerator.t<
   int,

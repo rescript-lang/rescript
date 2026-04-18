@@ -22,6 +22,17 @@ Result returned by `AsyncIterator.next`.
 */
 type result<'yield, 'return> = Stdlib_Iterator.result<'yield, 'return>
 
+type rawResult<'yield, 'return>
+
+/**
+Low-level raw JavaScript async iterator result shape.
+
+This is mainly intended for internal use and protocol-level interop. Prefer
+`AsyncIterator.result`, `AsyncIterator.next`, and `AsyncIterator.nextValue` in
+normal ReScript code.
+*/
+let normalizeResult: rawResult<'yield, 'return> => result<'yield, 'return>
+
 /**
 `value(value)` creates a yielded iterator result.
 
@@ -55,6 +66,14 @@ let done: unit => result<'yield, unit>
 let doneWithValue: 'return => result<'yield, 'return>
 
 /**
+`nextRaw(asyncIterator)` advances `asyncIterator` and returns a promise for the raw
+JavaScript iterator result object.
+
+This is mainly intended for internal use and protocol-level interop.
+*/
+let nextRaw: t<'yield, 'return, 'next> => promise<rawResult<'yield, 'return>>
+
+/**
 `next(asyncIterator)` advances `asyncIterator` without sending a value back in.
 
 ## Examples
@@ -80,14 +99,20 @@ let process = async () => {
 process()->ignore
 ```
 */
-@send
-external next: t<'yield, 'return, 'next> => promise<result<'yield, 'return>> = "next"
+let next: t<'yield, 'return, 'next> => promise<result<'yield, 'return>>
+
+/**
+`nextValueRaw(asyncIterator, value)` advances `asyncIterator`, sends `value` back
+into it, and returns a promise for the raw JavaScript iterator result object.
+
+This is mainly intended for internal use and protocol-level interop.
+*/
+let nextValueRaw: (t<'yield, 'return, 'next>, 'next) => promise<rawResult<'yield, 'return>>
 
 /**
 `nextValue(asyncIterator, value)` advances `asyncIterator`, sending `value` back into it.
 */
-@send
-external nextValue: (t<'yield, 'return, 'next>, 'next) => promise<result<'yield, 'return>> = "next"
+let nextValue: (t<'yield, 'return, 'next>, 'next) => promise<result<'yield, 'return>>
 
 /**
 `forEach(asyncIterator, f)` consumes all yielded values in `asyncIterator` and runs `f`

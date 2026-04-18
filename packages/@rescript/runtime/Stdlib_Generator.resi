@@ -35,28 +35,19 @@ external asIteratorObject: t<'yield, 'return, 'next> => Stdlib_IteratorObject.t<
 /**
 `next(generator)` advances `generator` without sending a value back in.
 */
-@send
-external next: t<'yield, 'return, 'next> => Stdlib_Iterator.result<'yield, 'return> = "next"
+let next: t<'yield, 'return, 'next> => Stdlib_Iterator.result<'yield, 'return>
 
 /**
 `nextValue(generator, value)` advances `generator`, sending `value` back into it.
 */
-@send
-external nextValue: (t<'yield, 'return, 'next>, 'next) => Stdlib_Iterator.result<'yield, 'return> =
-  "next"
+let nextValue: (t<'yield, 'return, 'next>, 'next) => Stdlib_Iterator.result<'yield, 'return>
 
 /**
 `returnValue(generator, value)` completes `generator` with the final return `value`.
 */
-@send
-external returnValue: (
-  t<'yield, 'return, 'next>,
-  'return,
-) => Stdlib_Iterator.result<'yield, 'return> = "return"
+let returnValue: (t<'yield, 'return, 'next>, 'return) => Stdlib_Iterator.result<'yield, 'return>
 
 /**
 `throwError(generator, error)` throws `error` into `generator`.
 */
-@send
-external throwError: (t<'yield, 'return, 'next>, exn) => Stdlib_Iterator.result<'yield, 'return> =
-  "throw"
+let throwError: (t<'yield, 'return, 'next>, exn) => Stdlib_Iterator.result<'yield, 'return>

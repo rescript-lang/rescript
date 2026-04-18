@@ -6,12 +6,10 @@ external asIterator: t<'yield, 'return, 'next> => Stdlib_Iterator.t<'yield, 'ret
   "%identity"
 external asIterable: t<'yield, 'return, 'next> => Stdlib_Iterable.t<'yield> = "%identity"
 
-@send
-external next: t<'yield, 'return, 'next> => Stdlib_Iterator.result<'yield, 'return> = "next"
+let next = iteratorObject => iteratorObject->asIterator->Stdlib_Iterator.next
 
-@send
-external nextValue: (t<'yield, 'return, 'next>, 'next) => Stdlib_Iterator.result<'yield, 'return> =
-  "next"
+let nextValue = (iteratorObject, value) =>
+  iteratorObject->asIterator->Stdlib_Iterator.nextValue(value)
 
 @send
 external toArray: t<'yield, 'return, 'next> => array<'yield> = "toArray"

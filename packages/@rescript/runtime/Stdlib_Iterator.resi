@@ -25,6 +25,16 @@ type result<'yield, 'return> =
   | @as(false) Yield({value: 'yield})
   | @as(true) Return({value: 'return})
 
+type rawResult<'yield, 'return>
+
+/**
+Low-level raw JavaScript iterator result shape.
+
+This is mainly intended for internal use and protocol-level interop. Prefer
+`Iterator.result`, `Iterator.next`, and `Iterator.nextValue` in normal ReScript code.
+*/
+let normalizeResult: rawResult<'yield, 'return> => result<'yield, 'return>
+
 /**
 `value(value)` creates a yielded iterator result.
 */
@@ -39,6 +49,13 @@ let done: unit => result<'yield, unit>
 `doneWithValue(value)` creates a completed iterator result with the provided final value.
 */
 let doneWithValue: 'return => result<'yield, 'return>
+
+/**
+`nextRaw(iterator)` advances `iterator` and returns the raw JavaScript iterator result object.
+
+This is mainly intended for internal use and protocol-level interop.
+*/
+let nextRaw: t<'yield, 'return, 'next> => rawResult<'yield, 'return>
 
 /**
 `next(iterator)` advances `iterator` without sending a value back in.
@@ -59,14 +76,20 @@ let iterator: Iterator.t<int, string, unit> = %raw(`({
 iterator->Iterator.next == Yield({value: 0})
 ```
 */
-@send
-external next: t<'yield, 'return, 'next> => result<'yield, 'return> = "next"
+let next: t<'yield, 'return, 'next> => result<'yield, 'return>
+
+/**
+`nextValueRaw(iterator, value)` advances `iterator`, sending `value` back into it,
+and returns the raw JavaScript iterator result object.
+
+This is mainly intended for internal use and protocol-level interop.
+*/
+let nextValueRaw: (t<'yield, 'return, 'next>, 'next) => rawResult<'yield, 'return>
 
 /**
 `nextValue(iterator, value)` advances `iterator`, sending `value` back into it.
 */
-@send
-external nextValue: (t<'yield, 'return, 'next>, 'next) => result<'yield, 'return> = "next"
+let nextValue: (t<'yield, 'return, 'next>, 'next) => result<'yield, 'return>
 
 /**
 `make(nextFn)` creates a bare iterator protocol object from a function returning

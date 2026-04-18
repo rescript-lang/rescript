@@ -1,5 +1,6 @@
 'use strict';
 
+let Stdlib_Iterator = require("./Stdlib_Iterator.cjs");
 
 let make = (function makeIterableIterator(next) {
   return {
@@ -10,5 +11,11 @@ let make = (function makeIterableIterator(next) {
   }
 });
 
+let next = Stdlib_Iterator.next;
+
+let nextValue = Stdlib_Iterator.nextValue;
+
 exports.make = make;
+exports.next = next;
+exports.nextValue = nextValue;
 /* No side effect */

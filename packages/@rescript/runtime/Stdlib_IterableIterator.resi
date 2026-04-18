@@ -56,15 +56,12 @@ external asIterable: t<'yield, 'return, 'next> => Stdlib_Iterable.t<'yield> = "%
 /**
 `next(iterator)` advances `iterator` without sending a value back in.
 */
-@send
-external next: t<'yield, 'return, 'next> => Stdlib_Iterator.result<'yield, 'return> = "next"
+let next: t<'yield, 'return, 'next> => Stdlib_Iterator.result<'yield, 'return>
 
 /**
 `nextValue(iterator, value)` advances `iterator`, sending `value` back into it.
 */
-@send
-external nextValue: (t<'yield, 'return, 'next>, 'next) => Stdlib_Iterator.result<'yield, 'return> =
-  "next"
+let nextValue: (t<'yield, 'return, 'next>, 'next) => Stdlib_Iterator.result<'yield, 'return>
 
 /**
 `toArrayWithMapper(iterator, mapper)` consumes `iterator`, applies `mapper` to each yielded

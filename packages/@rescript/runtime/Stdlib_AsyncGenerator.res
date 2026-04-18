@@ -12,24 +12,25 @@ external asAsyncIterator: t<'yield, 'return, 'next> => Stdlib_AsyncIterator.t<
   'next,
 > = "%identity"
 
-@send
-external next: t<'yield, 'return, 'next> => promise<Stdlib_Iterator.result<'yield, 'return>> =
-  "next"
+let next = generator => generator->asAsyncIterator->Stdlib_AsyncIterator.next
+
+let nextValue = (generator, value) =>
+  generator->asAsyncIterator->Stdlib_AsyncIterator.nextValue(value)
 
 @send
-external nextValue: (
-  t<'yield, 'return, 'next>,
-  'next,
-) => promise<Stdlib_Iterator.result<'yield, 'return>> = "next"
-
-@send
-external returnValue: (
+external returnValueRaw: (
   t<'yield, 'return, 'next>,
   'return,
-) => promise<Stdlib_Iterator.result<'yield, 'return>> = "return"
+) => promise<Stdlib_AsyncIterator.rawResult<'yield, 'return>> = "return"
+
+let returnValue = async (generator, value) =>
+  Stdlib_AsyncIterator.normalizeResult(await generator->returnValueRaw(value))
 
 @send
-external throwError: (
+external throwErrorRaw: (
   t<'yield, 'return, 'next>,
   exn,
-) => promise<Stdlib_Iterator.result<'yield, 'return>> = "throw"
+) => promise<Stdlib_AsyncIterator.rawResult<'yield, 'return>> = "throw"
+
+let throwError = async (generator, error) =>
+  Stdlib_AsyncIterator.normalizeResult(await generator->throwErrorRaw(error))
