@@ -21,6 +21,7 @@
 #### :bug: Bug fix
 
 - Fix partial application generalization for `...`. https://github.com/rescript-lang/rescript/pull/8343
+- Rewatch: preserve warnings after atomic-save full rebuilds. https://github.com/rescript-lang/rescript/pull/8358
 
 #### :memo: Documentation
 
