@@ -31,6 +31,7 @@
 - Fix partial application generalization for `...`. https://github.com/rescript-lang/rescript/pull/8343
 - Preserve JSX prop locations across the AST0 translation layer, fixing `0:0` editor diagnostics in PPX-related flows. https://github.com/rescript-lang/rescript/pull/8350
 - Allow builds while watchers are running. https://github.com/rescript-lang/rescript/pull/8349
+- Rewatch: preserve warnings after atomic-save full rebuilds. https://github.com/rescript-lang/rescript/pull/8358
 
 #### :memo: Documentation
 
