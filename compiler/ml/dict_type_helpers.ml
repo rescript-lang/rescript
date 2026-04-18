@@ -28,8 +28,16 @@
   A dict pattern is treated as a record pattern in the compiler and syntax, with an attriubute `@res.dictPattern`
   attached to it. This attribute is used to tell the compiler that the pattern is a dict pattern, and is what
   triggers the compiler to treat the dict record type differently to regular record types.
+  Dict expressions are lowered to `Primitive_dict.make`, with an internal attribute attached so typing can
+  recognize the construct without depending on the exact lowered callee path.
   *)
 let dict_magic_field_name = "dictValuesType"
+
+let has_dict_literal_attribute attrs =
+  attrs
+  |> List.find_opt (fun (({txt}, _) : Parsetree.attribute) ->
+         txt = "res.$dictLiteral")
+  |> Option.is_some
 
 let has_dict_pattern_attribute attrs =
   attrs
@@ -47,3 +55,6 @@ let dict_attr : Parsetree.attribute =
 
 let dict_magic_field_attr : Parsetree.attribute =
   (Location.mknoloc "res.$dictMagicField", Parsetree.PStr [])
+
+let dict_literal_attr : Parsetree.attribute =
+  (Location.mknoloc "res.$dictLiteral", Parsetree.PStr [])

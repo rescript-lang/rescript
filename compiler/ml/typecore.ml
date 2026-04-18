@@ -2259,15 +2259,6 @@ let extract_function_name funct =
   | Texp_ident (path, _, _) -> Some (Longident.parse (Path.name path))
   | _ -> None
 
-let is_primitive_dict_make = function
-  | {
-      pexp_desc =
-        Pexp_ident
-          {txt = Longident.Ldot (Longident.Lident "Primitive_dict", "make")};
-    } ->
-    true
-  | _ -> false
-
 type lazy_args =
   (Asttypes.arg_label * (unit -> Typedtree.expression) option) list
 
@@ -2469,8 +2460,8 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
     let funct =
       type_exp ~deprecated_context:FunctionCall ~context:None env sfunct
     in
-    (if is_primitive_dict_make sfunct then
-       (* Dict literals lower to Primitive_dict.make, so thread the expected
+    (if Dict_type_helpers.has_dict_literal_attribute sexp.pexp_attributes then
+       (* Dict literals lower to a regular application, so thread the expected
           dict value type into the application before typing the tuple values. *)
        let _, ty_res =
          filter_arrow ~env

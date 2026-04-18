@@ -4324,6 +4324,7 @@ and parse_dict_expr ~start_pos p =
   let key_value_pairs = List.filter_map to_key_value_pair rows in
   Parser.expect Rbrace p;
   Ast_helper.Exp.apply ~loc
+    ~attrs:[Dict_type_helpers.dict_literal_attr]
     (Ast_helper.Exp.ident ~loc
        (Location.mkloc
           (Longident.Ldot (Longident.Lident Primitive_modules.dict, "make"))
