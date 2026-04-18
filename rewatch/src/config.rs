@@ -5,19 +5,19 @@ use crate::project_context::ProjectContext;
 use anyhow::{Result, anyhow};
 use convert_case::{Case, Casing};
 use serde::de::{Error as DeError, Visitor};
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{MAIN_SEPARATOR, Path, PathBuf};
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(untagged)]
 pub enum OneOrMore<T> {
     Multiple(Vec<T>),
     Single(T),
 }
 
-#[derive(Deserialize, Debug, Clone, PartialEq, Hash)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Hash)]
 #[serde(untagged)]
 pub enum Subdirs {
     Qualified(Vec<Source>),
@@ -25,7 +25,7 @@ pub enum Subdirs {
 }
 impl Eq for Subdirs {}
 
-#[derive(Deserialize, Debug, Clone, PartialEq, Hash)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Hash)]
 pub struct PackageSource {
     pub dir: String,
     pub subdirs: Option<Subdirs>,
@@ -44,7 +44,7 @@ impl PackageSource {
 
 impl Eq for PackageSource {}
 
-#[derive(Deserialize, Debug, Clone, PartialEq, Hash)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Hash)]
 #[serde(untagged)]
 pub enum Source {
     Shorthand(String),
@@ -145,7 +145,7 @@ impl Source {
 
 impl Eq for Source {}
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct PackageSpec {
     pub module: PackageModule,
     #[serde(rename = "in-source", default = "default_true")]
@@ -153,7 +153,7 @@ pub struct PackageSpec {
     pub suffix: Option<String>,
 }
 
-#[derive(Deserialize, Debug, Clone, Eq, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq)]
 pub enum PackageModule {
     #[serde(rename = "commonjs")]
     CommonJs,
@@ -188,34 +188,34 @@ impl PackageSpec {
     }
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(untagged)]
 pub enum Error {
     Catchall(bool),
     Qualified(String),
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Warnings {
     pub number: Option<String>,
     pub error: Option<Error>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(untagged)]
 pub enum NamespaceConfig {
     Bool(bool),
     String(String),
 }
 
-#[derive(Deserialize, Debug, Clone, Eq, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub enum JsxMode {
     Classic,
     Automatic,
 }
 
-#[derive(Deserialize, Debug, Clone, Eq, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[serde(untagged)]
 pub enum JsxModule {
@@ -223,7 +223,7 @@ pub enum JsxModule {
     Other(String),
 }
 
-#[derive(Deserialize, Debug, Clone, Eq, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq)]
 pub struct JsxSpecs {
     pub version: Option<i32>,
     pub module: Option<JsxModule>,
@@ -238,7 +238,7 @@ pub type GenTypeConfig = serde_json::Value;
 
 /// Configuration for running a command after each JavaScript file is compiled.
 /// Note: Unlike bsb, rewatch passes absolute paths to the command for clarity.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct JsPostBuild {
     pub cmd: String,
 }
@@ -246,7 +246,7 @@ pub struct JsPostBuild {
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub enum DeprecationWarning {}
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Serialize, Debug, Clone, Eq, PartialEq, Hash)]
 pub enum ExperimentalFeature {
     LetUnwrap,
 }
@@ -283,7 +283,7 @@ impl<'de> serde::Deserialize<'de> for ExperimentalFeature {
 
 /// # rescript.json representation
 /// This is tricky, there is a lot of ambiguity. This is probably incomplete.
-#[derive(Deserialize, Debug, Clone, Default)]
+#[derive(Deserialize, Serialize, Debug, Clone, Default)]
 pub struct Config {
     pub name: String,
     // In the case of monorepos, the root source won't necessarily have to have sources. It can
@@ -334,6 +334,14 @@ pub struct Config {
     #[serde(default = "default_path")]
     pub path: PathBuf,
 }
+
+// impl Serialize for Config {
+//     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+//     where
+//         S: serde::Serializer {
+//         todo!()
+//     }
+// }
 
 fn default_path() -> PathBuf {
     PathBuf::from("./rescript.json")

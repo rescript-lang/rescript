@@ -12,11 +12,12 @@ pub mod read_compile_state;
 use self::parse::parser_args;
 use crate::build::compile::{mark_modules_with_deleted_deps_dirty, mark_modules_with_expired_deps_dirty};
 use crate::build::compiler_info::{CompilerCheckResult, verify_compiler_info, write_compiler_info};
+use crate::build_state;
 use crate::helpers::emojis::*;
 use crate::helpers::{self};
 use crate::lock::{LockKind, drop_lock, get_lock_or_exit};
 use crate::project_context::ProjectContext;
-use crate::sourcedirs;
+use crate::sourcedirs::{self};
 use anyhow::{Context, Result, anyhow};
 use build_types::*;
 use console::style;
@@ -372,6 +373,9 @@ pub fn incremental_build(
         sourcedirs::print(build_state);
     }
     pb.finish();
+
+    let _ = build_state::flush(build_state, &build_folder);
+
     if !compile_errors.is_empty() {
         if show_progress {
             if plain_output {

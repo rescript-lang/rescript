@@ -12,6 +12,7 @@ use anyhow::{Result, anyhow};
 use console::style;
 use log::debug;
 use rayon::prelude::*;
+use serde::Serialize;
 use std::collections::hash_map::Entry;
 use std::error;
 use std::fs::{self};
@@ -19,13 +20,13 @@ use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Debug, Clone)]
 pub struct SourceFileMeta {
     pub modified: SystemTime,
     pub is_type_dev: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Debug, Clone)]
 pub enum Namespace {
     Namespace(String),
     NamespaceWithEntry { namespace: String, entry: String },
@@ -42,7 +43,7 @@ impl Namespace {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Debug, Clone)]
 struct Dependency {
     name: String,
     config: config::Config,
@@ -51,12 +52,14 @@ struct Dependency {
     is_local_dep: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Debug, Clone)]
 pub struct Package {
     pub name: String,
     pub config: config::Config,
+    #[serde(skip_serializing)]
     pub source_folders: AHashSet<config::PackageSource>,
     // these are the relative file paths (relative to the package root)
+    #[serde(skip_serializing)]
     pub source_files: Option<AHashMap<PathBuf, SourceFileMeta>>,
     pub namespace: Namespace,
     pub modules: Option<AHashSet<String>>,

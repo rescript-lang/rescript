@@ -223,6 +223,7 @@ pub fn compile(
                                 }
                                 _ => None,
                             };
+
                             let result = compile_file(
                                 package,
                                 &helpers::get_ast_path(&source_file.implementation.path),
@@ -231,6 +232,7 @@ pub fn compile(
                                 build_state,
                                 build_state.get_warn_error_override(),
                             );
+
                             let cmi_digest_after = helpers::compute_file_hash(Path::new(&cmi_path));
 
                             // we want to compare both the hash of interface and the implementation

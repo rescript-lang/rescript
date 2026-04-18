@@ -5,10 +5,12 @@ use ahash::{AHashMap, AHashSet};
 use anyhow::anyhow;
 use anyhow::{Context, Result};
 use log::debug;
+use serde::Serialize;
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::sync::RwLock;
 
+#[derive(Serialize)]
 pub enum MonoRepoContext {
     /// Monorepo root - contains local dependencies (symlinked in node_modules)
     MonorepoRoot {
@@ -19,10 +21,13 @@ pub enum MonoRepoContext {
     MonorepoPackage { parent_config: Box<Config> },
 }
 
+#[derive(Serialize)]
 pub struct ProjectContext {
     pub current_config: Config,
     pub monorepo_context: Option<MonoRepoContext>,
+    #[serde(skip_serializing)]
     pub node_modules_exist_cache: RwLock<AHashMap<PathBuf, bool>>, // caches whether a directory contains a node_modules subfolder
+    #[serde(skip_serializing)]
     pub packages_cache: RwLock<AHashMap<(PathBuf, String), PathBuf>>, // caches full results of helpers::try_package_path per (package_dir, package_name)
 }
 

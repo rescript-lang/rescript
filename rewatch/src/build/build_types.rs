@@ -3,9 +3,10 @@ use crate::config::Config;
 use crate::project_context::ProjectContext;
 use ahash::{AHashMap, AHashSet};
 use blake3::Hash;
+use serde::Serialize;
 use std::{fmt::Display, ops::Deref, path::PathBuf, time::SystemTime};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Debug, Clone, PartialEq)]
 pub enum ParseState {
     Pending,
     ParseError,
@@ -13,14 +14,14 @@ pub enum ParseState {
     Success,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Debug, Clone, PartialEq)]
 pub enum CompileState {
     Pending,
     Error,
     Warning,
     Success,
 }
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Debug, Clone, PartialEq)]
 pub struct Interface {
     pub path: PathBuf,
     pub parse_state: ParseState,
@@ -33,7 +34,7 @@ pub struct Interface {
     pub compile_warnings: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Debug, Clone, PartialEq)]
 pub struct Implementation {
     pub path: PathBuf,
     pub parse_state: ParseState,
@@ -46,18 +47,18 @@ pub struct Implementation {
     pub compile_warnings: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Debug, Clone, PartialEq)]
 pub struct SourceFile {
     pub implementation: Implementation,
     pub interface: Option<Interface>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Debug, Clone, PartialEq)]
 pub struct MlMap {
     pub parse_dirty: bool,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Debug, Clone, PartialEq)]
 pub enum SourceType {
     SourceFile(SourceFile),
     MlMap(MlMap),
@@ -72,7 +73,7 @@ impl Display for SourceType {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Debug, Clone)]
 pub struct Module {
     pub source_type: SourceType,
     pub deps: AHashSet<String>,
@@ -101,7 +102,7 @@ impl Module {
 /// Core build state containing all the essential data needed for compilation.
 /// This is the minimal state required for basic build operations like cleaning.
 /// Used by commands that don't need command-line specific overrides (e.g., `clean`).
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct BuildState {
     pub project_context: ProjectContext,
     pub modules: AHashMap<String, Module>,
@@ -128,7 +129,7 @@ pub struct BuildCommandState {
     pub warn_error_override: Option<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Debug, Clone)]
 pub struct CompilerInfo {
     pub bsc_path: PathBuf,
     pub bsc_hash: Hash,
