@@ -70,6 +70,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@rescript/webapi@patch:@rescript/webapi@npm%3A0.1.0-experimental-73e6a0d#~/.yarn/patches/@rescript-webapi-npm-0.1.0-experimental-73e6a0d-288a2072f7.patch":
+  version: 0.1.0-experimental-73e6a0d
+  resolution: "@rescript/webapi@patch:@rescript/webapi@npm%3A0.1.0-experimental-73e6a0d#~/.yarn/patches/@rescript-webapi-npm-0.1.0-experimental-73e6a0d-288a2072f7.patch::version=0.1.0-experimental-73e6a0d&hash=eb9117"
+  dependencies:
+    rescript: "npm:^12.0.0-alpha.13"
+  checksum: 10c0/83df59606d6a76a1bcecf3e556ccddc734c41f74cf90f37268e5d9bbdaa5c5ec579deca223f5685426da5d928ec0ea5295ca9ae4daee38bc72c9cdf8a657d10e
+  languageName: node
+  linkType: hard
+
 "@rescript/win32-x64@npm:12.0.0-beta.1":
   version: 12.0.0-beta.1
   resolution: "@rescript/win32-x64@npm:12.0.0-beta.1"
@@ -141,7 +150,7 @@ __metadata:
   resolution: "@testrepo/nohoist@workspace:packages/nohoist"
   dependencies:
     rescript: "npm:12.0.0-beta.3"
-    rescript-bun: "npm:2.1.0"
+    rescript-bun: "patch:rescript-bun@npm%3A2.1.0#~/.yarn/patches/rescript-bun-npm-2.1.0-d9adc91a04.patch"
   languageName: unknown
   linkType: soft
 
@@ -169,7 +178,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@testrepo/with-dev-deps@workspace:packages/with-dev-deps"
   dependencies:
-    "@rescript/webapi": "npm:0.1.0-experimental-73e6a0d"
+    "@rescript/webapi": "patch:@rescript/webapi@npm%3A0.1.0-experimental-73e6a0d#~/.yarn/patches/@rescript-webapi-npm-0.1.0-experimental-73e6a0d-288a2072f7.patch"
     rescript-nodejs: "patch:rescript-nodejs@npm%3A16.1.0#~/.yarn/patches/rescript-nodejs-npm-16.1.0-1841fa6174.patch"
   languageName: unknown
   linkType: soft
@@ -190,6 +199,15 @@ __metadata:
   peerDependencies:
     rescript: ">= 12.0.0-alpha.4"
   checksum: 10c0/f76fd4dffdd90b13d1d61642fa5eabb26828c85b9eb71e945ffac9c84e81b9a6b68d20d9e68096156243bc543197a15906b606572db7d8c50a554d50652d3143
+  languageName: node
+  linkType: hard
+
+"rescript-bun@patch:rescript-bun@npm%3A2.1.0#~/.yarn/patches/rescript-bun-npm-2.1.0-d9adc91a04.patch":
+  version: 2.1.0
+  resolution: "rescript-bun@patch:rescript-bun@npm%3A2.1.0#~/.yarn/patches/rescript-bun-npm-2.1.0-d9adc91a04.patch::version=2.1.0&hash=685f4a"
+  peerDependencies:
+    rescript: ">= 12.0.0-alpha.4"
+  checksum: 10c0/d7d8ee95a3e8fa66ffa63f17bd90d88c4ea9029246dcd9c0519787de5bbc1ca73b061cc1052cd6239e53e2dff3d2ae298fcef244f5e167b6cda35692bdd64337
   languageName: node
   linkType: hard
 

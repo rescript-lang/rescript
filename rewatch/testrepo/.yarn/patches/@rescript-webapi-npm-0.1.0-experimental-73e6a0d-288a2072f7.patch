@@ -1,0 +1,28 @@
+diff --git a/src/URLAPI/URLSearchParams.res b/src/URLAPI/URLSearchParams.res
+index 9f0f7132a0630782aa2f98bc7c86454ae07831a4..0ac1b61b93923355682ec189d0857d140cb6b918 100644
+--- a/src/URLAPI/URLSearchParams.res
++++ b/src/URLAPI/URLSearchParams.res
+@@ -43,7 +43,7 @@ Returns key/value pairs in the same order as they appear in the query string.
+ [Read more on MDN](https://developer.mozilla.org/docs/Web/API/URLSearchParams/entries)
+ */
+ @send
+-external entries: urlSearchParams => Iterator.t<(string, string)> = "entries"
++external entries: urlSearchParams => IteratorObject.t<(string, string), unit, unknown> = "entries"
+ 
+ /**
+ Returns the first value associated to the given search parameter.
+@@ -71,7 +71,7 @@ Returns an iterator allowing iteration through all keys contained in this object
+ [Read more on MDN](https://developer.mozilla.org/docs/Web/API/URLSearchParams/keys)
+ */
+ @send
+-external keys: urlSearchParams => Iterator.t<string> = "keys"
++external keys: urlSearchParams => IteratorObject.t<string, unit, unknown> = "keys"
+ 
+ /**
+ Sets the value associated to a given search parameter to the given value. If there were several values, delete the others.
+@@ -98,4 +98,4 @@ Returns an iterator allowing iteration through all values contained in this obje
+ [Read more on MDN](https://developer.mozilla.org/docs/Web/API/URLSearchParams/values)
+ */
+ @send
+-external values: urlSearchParams => Iterator.t<string> = "values"
++external values: urlSearchParams => IteratorObject.t<string, unit, unknown> = "values"

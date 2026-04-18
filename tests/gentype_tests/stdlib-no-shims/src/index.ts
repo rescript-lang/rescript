@@ -85,12 +85,40 @@ const bu64: BigUint64Array = S.idBigUint64Array(new BigUint64Array(2));
 const sym: symbol = S.idSymbol(Symbol("x"));
 
 // Iterator / AsyncIterator / Ordering
-const it: Iterator<number> = S.idIterator([1, 2, 3].values());
-const ait: AsyncIterator<number> = S.idAsyncIterator({
+const iterable: Iterable<number> = S.idIterable([1, 2, 3]);
+const builtinIterable: Iterable<number> = S.idBuiltinIterable([1, 2, 3]);
+const it: Iterator<number, void, void> = S.idIterator([1, 2, 3].values());
+const ito: IteratorObject<number, void, void> = S.idIteratorObject(
+  [1, 2, 3].values()
+);
+const iterableIterator: IterableIterator<number, void, void> =
+  S.idIterableIterator([1, 2, 3].values());
+const gen: Generator<number, void, void> = S.idGenerator(
+  (function* () {
+    yield 1;
+  })()
+);
+const asyncIterable: AsyncIterable<number> = S.idAsyncIterable(
+  (async function* () {
+    yield 1;
+  })()
+);
+const ait: AsyncIterator<number, void, void> = S.idAsyncIterator({
   next(): Promise<IteratorResult<number>> {
     return Promise.resolve({ done: true, value: undefined });
   },
 });
+const asyncIterableIterator: AsyncIterableIterator<number, void, void> =
+  S.idAsyncIterableIterator(
+    (async function* () {
+      yield 1;
+    })()
+  );
+const asyncGenerator: AsyncGenerator<number, void, void> = S.idAsyncGenerator(
+  (async function* () {
+    yield 1;
+  })()
+);
 const ord: number = S.idOrdering(0);
 
 // Intl family

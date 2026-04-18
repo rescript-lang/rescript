@@ -149,15 +149,155 @@ let translate_constr ~config ~params_translation ~(path : Path.t) ~type_env =
     {dependencies = []; type_ = ident ("Intl." ^ intl_module)}
   | (["Stdlib"; "Error"; "t"] | ["Stdlib"; "JsError"; "t"]), [] ->
     {dependencies = []; type_ = ident "Error"}
-  | ["Stdlib"; "Iterator"; "t"], [param_translation] ->
+  | (["Stdlib"; "Iterable"; "t"] | ["iterable"]), [param_translation] ->
     {
       dependencies = param_translation.dependencies;
-      type_ = ident ~type_args:[param_translation.type_] "Iterator";
+      type_ = ident ~type_args:[param_translation.type_] "Iterable";
     }
-  | ["Stdlib"; "AsyncIterator"; "t"], [param_translation] ->
+  | ( ["Stdlib"; "Iterator"; "t"],
+      [yield_translation; return_translation; next_translation] ) ->
+    {
+      dependencies =
+        List.concat
+          [
+            yield_translation.dependencies;
+            return_translation.dependencies;
+            next_translation.dependencies;
+          ];
+      type_ =
+        ident
+          ~type_args:
+            [
+              yield_translation.type_;
+              return_translation.type_;
+              next_translation.type_;
+            ]
+          "Iterator";
+    }
+  | ( ["Stdlib"; "IteratorObject"; "t"],
+      [yield_translation; return_translation; next_translation] ) ->
+    {
+      dependencies =
+        List.concat
+          [
+            yield_translation.dependencies;
+            return_translation.dependencies;
+            next_translation.dependencies;
+          ];
+      type_ =
+        ident
+          ~type_args:
+            [
+              yield_translation.type_;
+              return_translation.type_;
+              next_translation.type_;
+            ]
+          "IteratorObject";
+    }
+  | ( ["Stdlib"; "IterableIterator"; "t"],
+      [yield_translation; return_translation; next_translation] ) ->
+    {
+      dependencies =
+        List.concat
+          [
+            yield_translation.dependencies;
+            return_translation.dependencies;
+            next_translation.dependencies;
+          ];
+      type_ =
+        ident
+          ~type_args:
+            [
+              yield_translation.type_;
+              return_translation.type_;
+              next_translation.type_;
+            ]
+          "IterableIterator";
+    }
+  | ( ["Stdlib"; "Generator"; "t"],
+      [yield_translation; return_translation; next_translation] ) ->
+    {
+      dependencies =
+        List.concat
+          [
+            yield_translation.dependencies;
+            return_translation.dependencies;
+            next_translation.dependencies;
+          ];
+      type_ =
+        ident
+          ~type_args:
+            [
+              yield_translation.type_;
+              return_translation.type_;
+              next_translation.type_;
+            ]
+          "Generator";
+    }
+  | ["Stdlib"; "AsyncIterable"; "t"], [param_translation] ->
     {
       dependencies = param_translation.dependencies;
-      type_ = ident ~type_args:[param_translation.type_] "AsyncIterator";
+      type_ = ident ~type_args:[param_translation.type_] "AsyncIterable";
+    }
+  | ( ["Stdlib"; "AsyncIterator"; "t"],
+      [yield_translation; return_translation; next_translation] ) ->
+    {
+      dependencies =
+        List.concat
+          [
+            yield_translation.dependencies;
+            return_translation.dependencies;
+            next_translation.dependencies;
+          ];
+      type_ =
+        ident
+          ~type_args:
+            [
+              yield_translation.type_;
+              return_translation.type_;
+              next_translation.type_;
+            ]
+          "AsyncIterator";
+    }
+  | ( ["Stdlib"; "AsyncIterableIterator"; "t"],
+      [yield_translation; return_translation; next_translation] ) ->
+    {
+      dependencies =
+        List.concat
+          [
+            yield_translation.dependencies;
+            return_translation.dependencies;
+            next_translation.dependencies;
+          ];
+      type_ =
+        ident
+          ~type_args:
+            [
+              yield_translation.type_;
+              return_translation.type_;
+              next_translation.type_;
+            ]
+          "AsyncIterableIterator";
+    }
+  | ( ["Stdlib"; "AsyncGenerator"; "t"],
+      [yield_translation; return_translation; next_translation] ) ->
+    {
+      dependencies =
+        List.concat
+          [
+            yield_translation.dependencies;
+            return_translation.dependencies;
+            next_translation.dependencies;
+          ];
+      type_ =
+        ident
+          ~type_args:
+            [
+              yield_translation.type_;
+              return_translation.type_;
+              next_translation.type_;
+            ]
+          "AsyncGenerator";
     }
   | ["Stdlib"; "Ordering"; "t"], [] -> {dependencies = []; type_ = number_t}
   | ["unit"], [] -> {dependencies = []; type_ = unit_t}

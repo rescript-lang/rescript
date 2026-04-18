@@ -41,6 +41,13 @@ Test.run(__POS_OF__("make"), Dict.make(), eq, %raw(`{}`))
 Test.run(__POS_OF__("fromArray"), Dict.fromArray([("foo", "bar")]), eq, %raw(`{foo: "bar"}`))
 
 Test.run(
+  __POS_OF__("fromIterable"),
+  Dict.fromIterable([("foo", "bar"), ("baz", "qux")]->Array.asIterable),
+  eq,
+  %raw(`{foo: "bar", baz: "qux"}`),
+)
+
+Test.run(
   __POS_OF__("getUnsafe - existing"),
   Dict.fromArray([("foo", "bar")])->Dict.getUnsafe("foo"),
   eq,

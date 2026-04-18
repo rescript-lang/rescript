@@ -15,6 +15,20 @@ Test.run([
   "String.equal optimization"
 ], false, eq, false);
 
+Test.run([
+  [
+    "Stdlib_StringTests.res",
+    5,
+    13,
+    32
+  ],
+  "String.asIterable"
+], Array.from("abc"), eq, [
+  "a",
+  "b",
+  "c"
+]);
+
 export {
   eq,
 }

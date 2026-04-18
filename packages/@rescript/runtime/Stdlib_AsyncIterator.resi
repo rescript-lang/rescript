@@ -1,197 +1,133 @@
 /***
-Bindings to async iterators, a way to do async iteration in JavaScript.
+A JavaScript async iterator protocol object.
 
-See [async iterator protocols](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols#the_async_iterator_and_async_iterable_protocols) on MDN.*/
+This models the async iterator protocol: an object with a `next()` method that
+returns a promise resolving to an iterator result.
+
+See [`AsyncIterator`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/AsyncIterator) on MDN.
+*/
 
 /**
-The type representing an async iterator.
+Type representing an async iterator protocol object.
+
+- `'yield` is the type produced while iterating
+- `'return` is the final completion value once iteration is done
+- `'next` is the type that can be sent back into `next(value)`
 */
 @notUndefined
-type t<'a>
-
-type value<'a> = {
-  /**
-  Whether there are more values to iterate on before the iterator is done.
-  */
-  done: bool,
-  /**
-  The value of this iteration, if any.
-  */
-  value: option<'a>,
-}
+type t<'yield, 'return, 'next>
 
 /**
-`make(nextFn)`
-
-Creates an async iterator from a function that returns the next value of the iterator.
-
-## Examples
-
-- A simple example, creating an async iterator that returns 1, 2, 3:
-
-```rescript
-let context = ref(0)
-
-let asyncIterator = AsyncIterator.make(async () => {
-  let currentValue = context.contents
-  // Increment current value
-  context := currentValue + 1
-
-  {
-    AsyncIterator.value: Some(currentValue),
-    done: currentValue >= 3,
-  }
-})
-
-// This will log 1, 2, 3
-let main = async () =>
-  await asyncIterator->AsyncIterator.forEach(value =>
-    switch value {
-    | Some(value) => Console.log(value)
-    | None => ()
-    }
-  )
-
-main()->ignore
-```
+Result returned by `AsyncIterator.next`.
 */
-let make: (unit => promise<value<'value>>) => t<'value>
+type result<'yield, 'return> = Stdlib_Iterator.result<'yield, 'return>
 
 /**
-`value(value)`
-
-Shorthand for creating a value object with the provided value, and the `done` property set to false.
+`value(value)` creates a yielded iterator result.
 
 ## Examples
 
 ```rescript
-let context = ref(0)
+let current = ref(0)
 
-let asyncIterator = AsyncIterator.make(async () => {
-  let currentValue = context.contents
-  // Increment current value
-  context := currentValue + 1
+let asyncIterableIterator = AsyncIterator.make(async () => {
+  let value = current.contents
+  current := value + 1
 
-  if currentValue >= 3 {
+  if value >= 3 {
     AsyncIterator.done()
   } else {
-    AsyncIterator.value(currentValue)
+    AsyncIterator.value(value)
   }
 })
 ```
 */
-let value: 'value => value<'value>
+let value: 'yield => result<'yield, 'return>
 
 /**
- `done(~finalValue=?)`
-
- Shorthand for creating a value object with the `done` property set to true, and the provided value as the final value, if any.
-
-  ## Examples
-  ```rescript
-  let context = ref(0)
-  
-  let asyncIterator = AsyncIterator.make(async () => {
-    let currentValue = context.contents
-    // Increment current value
-    context := currentValue + 1
-  
-    if currentValue >= 3 {
-      AsyncIterator.done()
-    } else {
-      AsyncIterator.value(currentValue)
-    }
-  })
-  ```
- */
-let done: (~finalValue: 'value=?) => value<'value>
+`done()` creates a completed iterator result with `unit` as the final value.
+*/
+let done: unit => result<'yield, unit>
 
 /**
-`next(asyncIterator)`
+`doneWithValue(value)` creates a completed iterator result with the provided final value.
+*/
+let doneWithValue: 'return => result<'yield, 'return>
 
-Returns the next value of the iterator, if any.
-
-See [async iterator protocols](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols#the_async_iterator_and_async_iterable_protocols) on MDN.
+/**
+`next(asyncIterator)` advances `asyncIterator` without sending a value back in.
 
 ## Examples
 
-- A simple example, getting the next value:
-
 ```rescript
-let asyncIterator: AsyncIterator.t<(string, string)> = %raw(`
-  (() => {
-    var map1 = new Map();
-
-    map1.set('first', '1');
-    map1.set('second', '2');
-
-    var iterator1 = map1[Symbol.iterator]();
-    return iterator1;
-  })()
-`)
-
-let processMyAsyncIterator = async () => {
-  // ReScript doesn't have `for ... of` loops, but it's easy to mimic using a while loop.
-  let break_ = ref(false)
-
-  while !break_.contents {
-    // Await the next iterator value
-    let {value, done} = await asyncIterator->AsyncIterator.next
-
-    // Exit the while loop if the iterator says it's done
-    break_ := done
-
-    if done {
-      value->Option.isNone == true
+let asyncIterator: AsyncIterator.t<int, unit, unit> = %raw(`({
+  current: 0,
+  next() {
+    if (this.current < 2) {
+      return Promise.resolve({done: false, value: this.current++})
     }
+    return Promise.resolve({done: true, value: undefined})
+  }
+})`)
+
+let process = async () => {
+  switch await asyncIterator->AsyncIterator.next {
+  | Yield({value: 0}) => ()
+  | _ => ()
   }
 }
 
-processMyAsyncIterator()->ignore
+process()->ignore
 ```
 */
 @send
-external next: t<'a> => promise<value<'a>> = "next"
+external next: t<'yield, 'return, unit> => promise<result<'yield, 'return>> = "next"
 
 /**
-`forEach(iterator, fn)` consumes all values in the async iterator and runs the callback `fn` for each value.
+`nextValue(asyncIterator, value)` advances `asyncIterator`, sending `value` back into it.
+*/
+@send
+external nextValue: (t<'yield, 'return, 'next>, 'next) => promise<result<'yield, 'return>> = "next"
 
-See [iterator protocols](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols) on MDN.
+/**
+`forEach(asyncIterator, f)` consumes all yielded values in `asyncIterator` and runs `f`
+for each yielded value.
+
+The final return value is not passed to `f`.
+*/
+let forEach: (t<'yield, 'return, unit>, 'yield => unit) => promise<unit>
+
+/**
+`make(nextFn)` creates an async iterator protocol object from a function returning
+the next result.
+
+The returned value is not automatically async iterable.
 
 ## Examples
 
 ```rescript
-// Let's pretend we get an async iterator returning ints from somewhere.
-let asyncIterator: AsyncIterator.t<(string, string)> = %raw(`
-  (() => {
-    var map1 = new Map();
+let current = ref(0)
 
-    map1.set('first', '1');
-    map1.set('second', '2');
+let asyncIterator = AsyncIterator.make(async () => {
+  let value = current.contents
+  current := value + 1
 
-    var iterator1 = map1[Symbol.iterator]();
-    return iterator1;
-  })()
-`)
+  if value >= 3 {
+    AsyncIterator.done()
+  } else {
+    AsyncIterator.value(value)
+  }
+})
 
 let main = async () =>
-  await asyncIterator->AsyncIterator.forEach(v => {
-    switch v {
-    | Some(("second", value)) => value == "2"
-    | _ => ()
-    }
-  })
+  await asyncIterator->AsyncIterator.forEach(value => Console.log(value))
 
 main()->ignore
 ```
 */
-let forEach: (t<'a>, option<'a> => unit) => promise<unit>
+let make: (unit => promise<result<'yield, 'return>>) => t<'yield, 'return, unit>
 
 /**
-  `ignore(iterator)` ignores the provided async iterator and returns unit.
-
-  This helper is useful when you want to discard a value (for example, the result of an operation with side effects)
-  without having to store or process it further.
-
+`ignore(asyncIterator)` marks `asyncIterator` as intentionally unused.
 */
-external ignore: t<'a> => unit = "%ignore"
+external ignore: t<'yield, 'return, 'next> => unit = "%ignore"

@@ -122,27 +122,19 @@ let dict = Dict.fromArray([("key1", "value1"), ("key2", "value2")])
 external fromArray: array<(string, 'a)> => dict<'a> = "Object.fromEntries"
 
 /**
-`fromIterator(entries)` creates a new dictionary from the provided iterator of key/value pairs.
+`fromIterable(entries)` creates a new dictionary from the provided iterable of key/value pairs.
 
 ## Examples
 
 ```rescript
-let iterator: Iterator.t<(string, int)> = %raw(`
-  (() => {
-    var map1 = new Map();
-    map1.set('first', 1);
-    map1.set('second', 2);
-    var iterator1 = map1[Symbol.iterator]();
-    return iterator1;
-  })()
-`)
-iterator
-->Dict.fromIterator
+let iterable: Iterable.t<(string, int)> = [("first", 1), ("second", 2)]->Array.asIterable
+iterable
+->Dict.fromIterable
 ->Dict.valuesToArray == [1, 2]
 ```
 */
 @val
-external fromIterator: Stdlib_Iterator.t<(string, 'a)> => dict<'a> = "Object.fromEntries"
+external fromIterable: Stdlib_Iterable.t<(string, 'a)> => dict<'a> = "Object.fromEntries"
 
 /**
 `toArray(dictionary)` returns an array of all the key/value pairs of the dictionary.

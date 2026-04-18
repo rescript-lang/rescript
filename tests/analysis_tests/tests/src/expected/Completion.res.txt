@@ -356,8 +356,8 @@ Path Array.
     "label": "entries",
     "kind": 12,
     "tags": [],
-    "detail": "array<'a> => Iterator.t<(int, 'a)>",
-    "documentation": {"kind": "markdown", "value": "\n`entries(array)` returns a new array iterator object that contains the key/value pairs for each index in the array.\n\nSee [Array.prototype.entries](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/entries) on MDN.\n\n## Examples\n\n```rescript\nlet array = [5, 6, 7]\nlet iterator: Iterator.t<(int, int)> = array->Array.entries\niterator->Iterator.next == {done: false, value: Some((0, 5))}\niterator->Iterator.next == {done: false, value: Some((1, 6))}\n```\n"}
+    "detail": "array<'a> => IteratorObject.t<(int, 'a), unit, unknown>",
+    "documentation": {"kind": "markdown", "value": "\n`entries(array)` returns a new array iterator object that contains the key/value pairs for each index in the array.\n\nSee [Array.prototype.entries](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/entries) on MDN.\n\n## Examples\n\n```rescript\nlet array = [5, 6, 7]\nlet iterator: IteratorObject.t<(int, int), unit, unknown> = array->Array.entries\niterator->IteratorObject.toArray == [(0, 5), (1, 6), (2, 7)]\n```\n"}
   }, {
     "label": "unshiftMany",
     "kind": 12,
@@ -370,6 +370,12 @@ Path Array.
     "tags": [],
     "detail": "(array<'a>, 'a, ~from: int=?) => int",
     "documentation": {"kind": "markdown", "value": "\n`lastIndexOf(array, item, ~from)` returns the last index of the provided `item` in `array`, searching backwards from `from`. Uses [strict check for equality](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Strict_equality) when comparing items.\n\nReturns `-1` if the item isn't found. Check out `Array.lastIndexOfOpt` for a version that returns `None` instead of `-1` if the item does not exist.\n\nSee [`Array.lastIndexOf`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/lastIndexOf) on MDN.\n\n## Examples\n\n```rescript\n[1, 2, 1, 2]->Array.lastIndexOf(2) == 3\n[1, 2]->Array.lastIndexOf(3) == -1\n[1, 2, 1, 2]->Array.lastIndexOf(2, ~from=2) == 1\n\n[{\"language\": \"ReScript\"}]->Array.lastIndexOf({\"language\": \"ReScript\"}) == -1 // -1, because of strict equality\n```\n"}
+  }, {
+    "label": "fromIterable",
+    "kind": 12,
+    "tags": [],
+    "detail": "Iterable.t<'a> => array<'a>",
+    "documentation": {"kind": "markdown", "value": "\n`fromIterable(iterable)` creates an array from the provided `iterable`\n\n## Examples\n\n```rescript\nMap.fromArray([(\"foo\", 1), (\"bar\", 2)])\n->Map.values\n->IteratorObject.asIterable\n->Array.fromIterable == [1, 2]\n```\n"}
   }, {
     "label": "filter",
     "kind": 12,
@@ -410,8 +416,8 @@ Path Array.
     "label": "values",
     "kind": 12,
     "tags": [],
-    "detail": "array<'a> => Iterator.t<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`values(array)` returns a new array iterator object that contains the values for each index in the array.\n\nSee [Array.prototype.values](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/values) on MDN.\n\n## Examples\n\n```rescript\nlet array = [5, 6, 7]\nlet iterator: Iterator.t<int> = array->Array.values\niterator->Iterator.next == {done: false, value: Some(5)}\niterator->Iterator.next == {done: false, value: Some(6)}\n```\n "}
+    "detail": "array<'a> => IteratorObject.t<'a, unit, unknown>",
+    "documentation": {"kind": "markdown", "value": "\n`values(array)` returns a new array iterator object that contains the values for each index in the array.\n\nSee [Array.prototype.values](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/values) on MDN.\n\n## Examples\n\n```rescript\nlet array = [5, 6, 7]\nlet iterator: IteratorObject.t<int, unit, unknown> = array->Array.values\niterator->IteratorObject.toArray == [5, 6, 7]\n```\n "}
   }, {
     "label": "indexOfOpt",
     "kind": 12,
@@ -587,6 +593,12 @@ Path Array.
     "detail": "(array<'a>, int) => option<'a>",
     "documentation": {"kind": "markdown", "value": "\n`get(array, index)` returns the element at `index` of `array`.\n\nReturns `None` if the index does not exist in the array. Equivalent to doing `array[index]` in JavaScript.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\n\narray->Array.get(0) == Some(\"Hello\")\n\narray->Array.get(3) == None\n```\n"}
   }, {
+    "label": "asIterable",
+    "kind": 12,
+    "tags": [],
+    "detail": "array<'a> => Iterable.t<'a>",
+    "documentation": {"kind": "markdown", "value": "\n`asIterable(array)` views `array` as an `Iterable.t`.\n\nThis is useful when passing an array to APIs that consume iterables, such as\n`Array.from` or `for...of` in JavaScript.\n"}
+  }, {
     "label": "removeInPlace",
     "kind": 12,
     "tags": [],
@@ -610,12 +622,6 @@ Path Array.
     "tags": [],
     "detail": "array<('a, 'b)> => (t<'a>, array<'b>)",
     "documentation": {"kind": "markdown", "value": "\n`unzip(a)` takes an array of pairs and creates a pair of arrays. The first array\ncontains all the first items of the pairs; the second array contains all the\nsecond items.\n\n## Examples\n\n```rescript\nArray.unzip([(1, 2), (3, 4)]) == ([1, 3], [2, 4])\n\nArray.unzip([(1, 2), (3, 4), (5, 6), (7, 8)]) == ([1, 3, 5, 7], [2, 4, 6, 8])\n```\n"}
-  }, {
-    "label": "fromIterator",
-    "kind": 12,
-    "tags": [],
-    "detail": "Iterator.t<'a> => array<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`fromIterator(iterator)` creates an array from the provided `iterator`\n\n## Examples\n\n```rescript\nMap.fromArray([(\"foo\", 1), (\"bar\", 2)])\n->Map.values\n->Array.fromIterator == [1, 2]\n```\n"}
   }, {
     "label": "forEach",
     "kind": 12,
@@ -1283,10 +1289,28 @@ Path As
     "detail": "Asterix",
     "documentation": {"kind": "markdown", "value": "```rescript\nAsterix\n```\n\n```rescript\ntype z = Allo | Asterix | Baba\n```"}
   }, {
+    "label": "AsyncIterable",
+    "kind": 9,
+    "tags": [],
+    "detail": "module AsyncIterable",
+    "documentation": null
+  }, {
     "label": "AsyncIterator",
     "kind": 9,
     "tags": [],
     "detail": "module AsyncIterator",
+    "documentation": null
+  }, {
+    "label": "AsyncGenerator",
+    "kind": 9,
+    "tags": [],
+    "detail": "module AsyncGenerator",
+    "documentation": null
+  }, {
+    "label": "AsyncIterableIterator",
+    "kind": 9,
+    "tags": [],
+    "detail": "module AsyncIterableIterator",
     "documentation": null
   }]
 

@@ -1,41 +1,33 @@
 'use strict';
 
-let Primitive_option = require("./Primitive_option.cjs");
 
-function value(v) {
-  return {
-    done: false,
-    value: Primitive_option.some(v)
-  };
-}
+let value = (value => ({done: false, value}));
 
-function done(finalValue) {
-  return {
-    done: true,
-    value: finalValue
-  };
-}
+let done = (() => ({done: true, value: undefined}));
+
+let doneWithValue = (value => ({done: true, value}));
 
 async function forEach(iterator, f) {
   let iteratorDone = false;
   while (!iteratorDone) {
     let match = await iterator.next();
-    f(match.value);
-    iteratorDone = match.done;
+    if (match.done === false) {
+      f(match.value);
+    } else {
+      iteratorDone = true;
+    }
   };
 }
 
 let make = (function makeAsyncIterator(next) {
   return {
-    next,
-    [Symbol.asyncIterator]() {
-      return this;
-    }
+    next
   }
 });
 
-exports.make = make;
 exports.value = value;
 exports.done = done;
+exports.doneWithValue = doneWithValue;
 exports.forEach = forEach;
+exports.make = make;
 /* No side effect */

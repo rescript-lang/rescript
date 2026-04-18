@@ -550,6 +550,12 @@ Path a
     "tags": [],
     "detail": "(array<'a>, int) => option<'a>",
     "documentation": {"kind": "markdown", "value": "\n`at(array, index)`\n\nGet an element by its index. Negative indices count backwards from the last item.\n\n## Examples\n\n```rescript\n[\"a\", \"b\", \"c\"]->Array.at(0) == Some(\"a\")\n[\"a\", \"b\", \"c\"]->Array.at(2) == Some(\"c\")\n[\"a\", \"b\", \"c\"]->Array.at(3) == None\n[\"a\", \"b\", \"c\"]->Array.at(-1) == Some(\"c\")\n[\"a\", \"b\", \"c\"]->Array.at(-3) == Some(\"a\")\n[\"a\", \"b\", \"c\"]->Array.at(-4) == None\n```\n"}
+  }, {
+    "label": "Array.asIterable",
+    "kind": 12,
+    "tags": [],
+    "detail": "array<'a> => Iterable.t<'a>",
+    "documentation": {"kind": "markdown", "value": "\n`asIterable(array)` views `array` as an `Iterable.t`.\n\nThis is useful when passing an array to APIs that consume iterables, such as\n`Array.from` or `for...of` in JavaScript.\n"}
   }]
 
 Complete src/CompletionJsx.res 30:12

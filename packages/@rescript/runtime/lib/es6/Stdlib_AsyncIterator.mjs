@@ -1,43 +1,35 @@
 
 
-import * as Primitive_option from "./Primitive_option.mjs";
 
-function value(v) {
-  return {
-    done: false,
-    value: Primitive_option.some(v)
-  };
-}
+let value = (value => ({done: false, value}));
 
-function done(finalValue) {
-  return {
-    done: true,
-    value: finalValue
-  };
-}
+let done = (() => ({done: true, value: undefined}));
+
+let doneWithValue = (value => ({done: true, value}));
 
 async function forEach(iterator, f) {
   let iteratorDone = false;
   while (!iteratorDone) {
     let match = await iterator.next();
-    f(match.value);
-    iteratorDone = match.done;
+    if (match.done === false) {
+      f(match.value);
+    } else {
+      iteratorDone = true;
+    }
   };
 }
 
 let make = (function makeAsyncIterator(next) {
   return {
-    next,
-    [Symbol.asyncIterator]() {
-      return this;
-    }
+    next
   }
 });
 
 export {
-  make,
   value,
   done,
+  doneWithValue,
   forEach,
+  make,
 }
 /* No side effect */

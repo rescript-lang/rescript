@@ -432,7 +432,99 @@ Test.run([
 Test.run([
   [
     "Stdlib_ArrayTests.res",
-    110,
+    111,
+    13,
+    27
+  ],
+  "fromIterable"
+], Array.from("abc"), eq, [
+  "a",
+  "b",
+  "c"
+]);
+
+Test.run([
+  [
+    "Stdlib_ArrayTests.res",
+    118,
+    13,
+    31
+  ],
+  "Map.fromIterable"
+], new Map([
+  [
+    "one",
+    1
+  ],
+  [
+    "two",
+    2
+  ]
+]).size, eq, 2);
+
+Test.run([
+  [
+    "Stdlib_ArrayTests.res",
+    125,
+    13,
+    31
+  ],
+  "Set.fromIterable"
+], new Set([
+  1,
+  2,
+  2
+]).size, eq, 2);
+
+Test.run([
+  [
+    "Stdlib_ArrayTests.res",
+    132,
+    13,
+    29
+  ],
+  "Map.asIterable"
+], Array.from(new Map([
+  [
+    "one",
+    1
+  ],
+  [
+    "two",
+    2
+  ]
+])), eq, [
+  [
+    "one",
+    1
+  ],
+  [
+    "two",
+    2
+  ]
+]);
+
+Test.run([
+  [
+    "Stdlib_ArrayTests.res",
+    139,
+    13,
+    29
+  ],
+  "Set.asIterable"
+], Array.from(new Set([
+  1,
+  2,
+  2
+])), eq, [
+  1,
+  2
+]);
+
+Test.run([
+  [
+    "Stdlib_ArrayTests.res",
+    145,
     20,
     39
   ],
@@ -446,7 +538,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_ArrayTests.res",
-    111,
+    146,
     20,
     34
   ],
@@ -460,7 +552,7 @@ array.splice(1, 0, "foo");
 Test.run([
   [
     "Stdlib_ArrayTests.res",
-    116,
+    151,
     22,
     49
   ],
@@ -475,7 +567,7 @@ let array$1 = [
 Test.run([
   [
     "Stdlib_ArrayTests.res",
-    122,
+    157,
     15,
     43
   ],

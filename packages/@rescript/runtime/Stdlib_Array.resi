@@ -11,18 +11,27 @@ type t<'a> = array<'a>
 type arrayLike<'a>
 
 /**
-`fromIterator(iterator)` creates an array from the provided `iterator`
+`asIterable(array)` views `array` as an `Iterable.t`.
+
+This is useful when passing an array to APIs that consume iterables, such as
+`Array.from` or `for...of` in JavaScript.
+*/
+external asIterable: array<'a> => Stdlib_Iterable.t<'a> = "%identity"
+
+/**
+`fromIterable(iterable)` creates an array from the provided `iterable`
 
 ## Examples
 
 ```rescript
 Map.fromArray([("foo", 1), ("bar", 2)])
 ->Map.values
-->Array.fromIterator == [1, 2]
+->IteratorObject.asIterable
+->Array.fromIterable == [1, 2]
 ```
 */
 @val
-external fromIterator: Stdlib_Iterator.t<'a> => array<'a> = "Array.from"
+external fromIterable: Stdlib_Iterable.t<'a> => array<'a> = "Array.from"
 
 /**
 `fromArrayLike(source)` converts an array-like value (anything with indexed items and a `length`) into a regular array.
@@ -1661,13 +1670,12 @@ See [Array.prototype.entries](https://developer.mozilla.org/en-US/docs/Web/JavaS
 
 ```rescript
 let array = [5, 6, 7]
-let iterator: Iterator.t<(int, int)> = array->Array.entries
-iterator->Iterator.next == {done: false, value: Some((0, 5))}
-iterator->Iterator.next == {done: false, value: Some((1, 6))}
+let iterator: IteratorObject.t<(int, int), unit, unknown> = array->Array.entries
+iterator->IteratorObject.toArray == [(0, 5), (1, 6), (2, 7)]
 ```
 */
 @send
-external entries: array<'a> => Stdlib_Iterator.t<(int, 'a)> = "entries"
+external entries: array<'a> => Stdlib_IteratorObject.t<(int, 'a), unit, unknown> = "entries"
 
 /**
 `values(array)` returns a new array iterator object that contains the values for each index in the array.
@@ -1678,10 +1686,9 @@ See [Array.prototype.values](https://developer.mozilla.org/en-US/docs/Web/JavaSc
 
 ```rescript
 let array = [5, 6, 7]
-let iterator: Iterator.t<int> = array->Array.values
-iterator->Iterator.next == {done: false, value: Some(5)}
-iterator->Iterator.next == {done: false, value: Some(6)}
+let iterator: IteratorObject.t<int, unit, unknown> = array->Array.values
+iterator->IteratorObject.toArray == [5, 6, 7]
 ```
  */
 @send
-external values: array<'a> => Stdlib_Iterator.t<'a> = "values"
+external values: array<'a> => Stdlib_IteratorObject.t<'a, unit, unknown> = "values"

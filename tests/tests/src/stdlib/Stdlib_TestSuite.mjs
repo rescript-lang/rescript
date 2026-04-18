@@ -85,13 +85,63 @@ let PatternMatching = Stdlib_DictTests.PatternMatching;
 
 let Has = Stdlib_DictTests.Has;
 
+let supportsIteratorHelpers = Stdlib_IteratorTests.supportsIteratorHelpers;
+
+let _checkIteratorHelperTypes = Stdlib_IteratorTests._checkIteratorHelperTypes;
+
 let iterator = Stdlib_IteratorTests.iterator;
 
 let syncResult = Stdlib_IteratorTests.syncResult;
 
+let iteratorProtocol = Stdlib_IteratorTests.iteratorProtocol;
+
+let protocolResult = Stdlib_IteratorTests.protocolResult;
+
+let createdIterator = Stdlib_IteratorTests.createdIterator;
+
+let createdProtocolResult = Stdlib_IteratorTests.createdProtocolResult;
+
+let createdIterableIterator = Stdlib_IteratorTests.createdIterableIterator;
+
+let createdIterableResult = Stdlib_IteratorTests.createdIterableResult;
+
+let generatorViaIterator = Stdlib_IteratorTests.generatorViaIterator;
+
+let iteratorNextValueResult = Stdlib_IteratorTests.iteratorNextValueResult;
+
+let generatorReturnValueResult = Stdlib_IteratorTests.generatorReturnValueResult;
+
+let generatorReturnValue = Stdlib_IteratorTests.generatorReturnValue;
+
+let generatorThrowErrorResult = Stdlib_IteratorTests.generatorThrowErrorResult;
+
+let generatorThrowError = Stdlib_IteratorTests.generatorThrowError;
+
+let asyncIterableIterator = Stdlib_IteratorTests.asyncIterableIterator;
+
 let asyncResult = Stdlib_IteratorTests.asyncResult;
 
 let asyncIterator = Stdlib_IteratorTests.asyncIterator;
+
+let asyncGeneratorNextValue = Stdlib_IteratorTests.asyncGeneratorNextValue;
+
+let asyncGeneratorNextValueResult = Stdlib_IteratorTests.asyncGeneratorNextValueResult;
+
+let asyncGeneratorIterableValues = Stdlib_IteratorTests.asyncGeneratorIterableValues;
+
+let asyncGeneratorIterable = Stdlib_IteratorTests.asyncGeneratorIterable;
+
+let _asyncIterableView = Stdlib_IteratorTests._asyncIterableView;
+
+let asyncGeneratorReturnValueResult = Stdlib_IteratorTests.asyncGeneratorReturnValueResult;
+
+let asyncGeneratorReturnValue = Stdlib_IteratorTests.asyncGeneratorReturnValue;
+
+let asyncGeneratorThrowErrorResult = Stdlib_IteratorTests.asyncGeneratorThrowErrorResult;
+
+let asyncGeneratorThrowError = Stdlib_IteratorTests.asyncGeneratorThrowError;
+
+let createdAsyncIterableIterator = Stdlib_IteratorTests.createdAsyncIterableIterator;
 
 let eq = Stdlib_RegExpTest.eq;
 
@@ -131,10 +181,35 @@ export {
   intDict,
   PatternMatching,
   Has,
+  supportsIteratorHelpers,
+  _checkIteratorHelperTypes,
   iterator,
   syncResult,
+  iteratorProtocol,
+  protocolResult,
+  createdIterator,
+  createdProtocolResult,
+  createdIterableIterator,
+  createdIterableResult,
+  generatorViaIterator,
+  iteratorNextValueResult,
+  generatorReturnValueResult,
+  generatorReturnValue,
+  generatorThrowErrorResult,
+  generatorThrowError,
+  asyncIterableIterator,
   asyncResult,
   asyncIterator,
+  asyncGeneratorNextValue,
+  asyncGeneratorNextValueResult,
+  asyncGeneratorIterableValues,
+  asyncGeneratorIterable,
+  _asyncIterableView,
+  asyncGeneratorReturnValueResult,
+  asyncGeneratorReturnValue,
+  asyncGeneratorThrowErrorResult,
+  asyncGeneratorThrowError,
+  createdAsyncIterableIterator,
   eq,
 }
 /* Stdlib_IntTests Not a pure module */

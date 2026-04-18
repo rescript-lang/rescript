@@ -1,40 +1,37 @@
 @notUndefined
-type t<'a>
+type t<'yield, 'return, 'next>
 
-type value<'a> = {
-  done: bool,
-  value: option<'a>,
-}
+type result<'yield, 'return> = Stdlib_Iterator.result<'yield, 'return>
 
-let value = v => {
-  done: false,
-  value: Some(v),
-}
+let value: 'yield => result<'yield, 'return> = %raw(`value => ({done: false, value})`)
+let done: unit => result<'yield, unit> = %raw(`() => ({done: true, value: undefined})`)
+let doneWithValue: 'return => result<'yield, 'return> = %raw(`value => ({done: true, value})`)
 
-let done = (~finalValue=?) => {
-  done: true,
-  value: finalValue,
-}
+@send
+external next: t<'yield, 'return, unit> => promise<result<'yield, 'return>> = "next"
 
-@send external next: t<'a> => promise<value<'a>> = "next"
+@send
+external nextValue: (t<'yield, 'return, 'next>, 'next) => promise<result<'yield, 'return>> = "next"
 
 let forEach = async (iterator, f) => {
   let iteratorDone = ref(false)
 
   while !iteratorDone.contents {
-    let {done, value} = await iterator->next
-    f(value)
-    iteratorDone := done
+    switch await iterator->next {
+    | Yield({value}) => f(value)
+    | Return(_) => iteratorDone := true
+    }
   }
 }
 
-let make: (unit => promise<value<'value>>) => t<'value> = %raw(`function makeAsyncIterator(next) {
+let make: (unit => promise<result<'yield, 'return>>) => t<
+  'yield,
+  'return,
+  unit,
+> = %raw(`function makeAsyncIterator(next) {
   return {
-    next,
-    [Symbol.asyncIterator]() {
-      return this;
-    }
+    next
   }
 }`)
 
-external ignore: t<'a> => unit = "%ignore"
+external ignore: t<'yield, 'return, 'next> => unit = "%ignore"

@@ -102,9 +102,44 @@ Test.run(
 
 Test.run(
   __POS_OF__("fromIterator"),
-  Array.fromIterator(Map.fromArray([(1, 3), (2, 4)])->Map.values),
+  Array.fromIterable(Map.fromArray([(1, 3), (2, 4)])->Map.values->IteratorObject.asIterable),
   eq,
   [3, 4],
+)
+
+Test.run(
+  __POS_OF__("fromIterable"),
+  Array.fromIterable("abc"->String.asIterable),
+  eq,
+  ["a", "b", "c"],
+)
+
+Test.run(
+  __POS_OF__("Map.fromIterable"),
+  Map.fromIterable([("one", 1), ("two", 2)]->Array.asIterable)->Map.size,
+  eq,
+  2,
+)
+
+Test.run(
+  __POS_OF__("Set.fromIterable"),
+  Set.fromIterable([1, 2, 2]->Array.asIterable)->Set.size,
+  eq,
+  2,
+)
+
+Test.run(
+  __POS_OF__("Map.asIterable"),
+  Map.fromArray([("one", 1), ("two", 2)])->Map.asIterable->Array.fromIterable,
+  eq,
+  [("one", 1), ("two", 2)],
+)
+
+Test.run(
+  __POS_OF__("Set.asIterable"),
+  Set.fromArray([1, 2, 2])->Set.asIterable->Array.fromIterable,
+  eq,
+  [1, 2],
 )
 
 Test.run(__POS_OF__("last - with items"), [1, 2, 3]->Array.last, eq, Some(3))

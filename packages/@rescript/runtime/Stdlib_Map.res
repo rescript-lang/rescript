@@ -1,9 +1,12 @@
 @notUndefined
 type t<'k, 'v>
 
+external asIterable: t<'k, 'v> => Stdlib_Iterable.t<('k, 'v)> = "%identity"
+
 @new external make: unit => t<'k, 'v> = "Map"
 @new external fromArray: array<('k, 'v)> => t<'k, 'v> = "Map"
-@new external fromIterator: Stdlib_Iterator.t<('k, 'v)> => t<'k, 'v> = "Map"
+@new
+external fromIterable: Stdlib_Iterable.t<('k, 'v)> => t<'k, 'v> = "Map"
 
 @get external size: t<'k, 'v> => int = "size"
 
@@ -19,8 +22,9 @@ let isEmpty = map => map->size === 0
 @send external set: (t<'k, 'v>, 'k, 'v) => unit = "set"
 @send external delete: (t<'k, 'v>, 'k) => bool = "delete"
 
-@send external keys: t<'k, 'v> => Stdlib_Iterator.t<'k> = "keys"
-@send external values: t<'k, 'v> => Stdlib_Iterator.t<'v> = "values"
-@send external entries: t<'k, 'v> => Stdlib_Iterator.t<('k, 'v)> = "entries"
+@send external keys: t<'k, 'v> => Stdlib_IteratorObject.t<'k, unit, unknown> = "keys"
+@send external values: t<'k, 'v> => Stdlib_IteratorObject.t<'v, unit, unknown> = "values"
+@send
+external entries: t<'k, 'v> => Stdlib_IteratorObject.t<('k, 'v), unit, unknown> = "entries"
 
 external ignore: t<'k, 'v> => unit = "%ignore"

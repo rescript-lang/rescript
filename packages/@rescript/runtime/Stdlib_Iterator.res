@@ -1,44 +1,29 @@
 @notUndefined
-type t<'a>
+type t<'yield, 'return, 'next>
 
-type value<'a> = {
-  done: bool,
-  value: option<'a>,
-}
+@tag("done")
+type result<'yield, 'return> =
+  | @as(false) Yield({value: 'yield})
+  | @as(true) Return({value: 'return})
 
-@send external next: t<'a> => value<'a> = "next"
-@send
-external toArray: t<'a> => array<'a> = "toArray"
-external toArrayWithMapper: (t<'a>, 'a => 'b) => array<'b> = "Array.from"
-
-@send
-external forEach: (t<'a>, 'a => unit) => unit = "forEach"
-
-external ignore: t<'a> => unit = "%ignore"
+let value: 'yield => result<'yield, 'return> = %raw(`value => ({done: false, value})`)
+let done: unit => result<'yield, unit> = %raw(`() => ({done: true, value: undefined})`)
+let doneWithValue: 'return => result<'yield, 'return> = %raw(`value => ({done: true, value})`)
 
 @send
-external drop: (t<'a>, int) => t<'a> = "drop"
+external next: t<'yield, 'return, unit> => result<'yield, 'return> = "next"
 
 @send
-external every: (t<'a>, 'a => bool) => bool = "every"
+external nextValue: (t<'yield, 'return, 'next>, 'next) => result<'yield, 'return> = "next"
 
-@send
-external filter: (t<'a>, 'a => bool) => t<'a> = "filter"
+let make: (unit => result<'yield, 'return>) => t<
+  'yield,
+  'return,
+  unit,
+> = %raw(`function makeIterator(next) {
+  return {
+    next
+  }
+}`)
 
-@send
-external find: (t<'a>, 'a => bool) => option<'a> = "find"
-
-@send
-external flatMap: (t<'a>, 'a => t<'b>) => t<'b> = "flatMap"
-
-@send
-external map: (t<'a>, 'a => 'b) => t<'b> = "map"
-
-@send
-external reduce: (t<'a>, ('acc, 'a) => 'acc, ~initialValue: 'acc=?) => 'acc = "reduce"
-
-@send
-external some: (t<'a>, 'a => bool) => bool = "some"
-
-@send
-external take: (t<'a>, int) => t<'a> = "take"
+external ignore: t<'yield, 'return, 'next> => unit = "%ignore"
