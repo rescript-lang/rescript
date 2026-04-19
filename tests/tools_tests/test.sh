@@ -71,6 +71,17 @@ if [ "$RUNNER_OS" == "Windows" ]; then
   perl -pi -e 's/\r\n/\n/g' -- src/expected/lint-root.json.expected
 fi
 
+# Test active-rules command
+../../_build/install/default/bin/rescript-tools active-rules src/lint > src/expected/active-rules.expected || exit 1
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- src/expected/active-rules.expected
+fi
+
+../../_build/install/default/bin/rescript-tools active-rules src/lint --json > src/expected/active-rules.json.expected || exit 1
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- src/expected/active-rules.json.expected
+fi
+
 # Test migrate command
 for file in src/migrate/*.{res,resi}; do
   output="src/expected/$(basename $file).expected"

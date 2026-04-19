@@ -1,0 +1,38 @@
+namespace: lint
+rule: forbidden-reference
+active: true
+summary: Report references to configured modules, values, and types.
+details: Uses typed references when available so opened modules and aliases resolve to the real symbol path before matching.
+settings:
+- enabled: true
+- severity: error
+- items: Belt.Array.forEach, Belt.Array.map, Js.Json.t
+
+namespace: lint
+rule: single-use-function
+active: true
+summary: Report local non-exported functions that are defined once and used once.
+details: Counts local function bindings and same-file typed references, then reports helpers that only have a single real use site.
+settings:
+- enabled: true
+- severity: warning
+
+namespace: rewrite
+rule: prefer-switch
+active: true
+summary: Rewrite `if` and ternary control flow into canonical `switch`.
+details: Simple boolean branches become `switch condition`, and `else if` chains collapse into guarded `switch ()` cases.
+settings:
+- enabled: true
+- if: true
+- ternary: true
+
+namespace: rewrite
+rule: no-optional-some
+active: true
+summary: Rewrite redundant optional-argument wrapping from `?Some(expr)` to the direct labeled form.
+details: Turns `~label=?Some(expr)` into `~label=expr` when the argument is already in an optional position.
+settings:
+- enabled: true
+
+summary: 4 active, 0 inactive, 4 total

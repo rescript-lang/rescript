@@ -1,5 +1,7 @@
 open Analysis
 
+module ActiveRules = Active_rules
+
 module StringSet = Set.Make (String)
 
 type fieldDoc = {

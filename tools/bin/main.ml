@@ -39,6 +39,20 @@ Notes:
 
 Example: rescript-tools lint ./src/MyModule.res|}
 
+let activeRulesHelp =
+  {|ReScript Tools
+
+List lint and rewrite rules, whether they are currently active, and what they do
+
+Usage: rescript-tools active-rules <FILE-OR-DIR> [--config <FILE>] [--json]
+
+Notes:
+- Uses the same config discovery path as lint and rewrite
+- Includes both lint and rewrite rules
+- Text is the default output format
+
+Example: rescript-tools active-rules ./src|}
+
 let help =
   {|ReScript Tools
 
@@ -55,6 +69,9 @@ format-codeblocks <file>                Format ReScript code blocks
 extract-codeblocks <file>               Extract ReScript code blocks from file
   [--transform-assert-equal]              Transform `==` to `assertEqual`
 lint <file-or-dir>                      Run AI-oriented lint checks
+  [--config <file>]                       Use the given lint config file
+  [--json]                                Output compact JSON
+active-rules <file-or-dir>              List lint/rewrite rules and whether they are active
   [--config <file>]                       Use the given lint config file
   [--json]                                Output compact JSON
 reanalyze                               Reanalyze
@@ -209,6 +226,27 @@ let main () =
           if output <> "" then print_endline output;
           exit (if has_findings then 1 else 0)))
     | _ -> logAndExit (Error lintHelp))
+  | "active-rules" :: rest -> (
+    match rest with
+    | ["-h"] | ["--help"] -> logAndExit (Ok activeRulesHelp)
+    | path :: args -> (
+      let rec parse_args config_path json = function
+        | [] -> Ok (config_path, json)
+        | "--json" :: rest -> parse_args config_path true rest
+        | "--config" :: config :: rest -> parse_args (Some config) json rest
+        | _ -> Error activeRulesHelp
+      in
+      match parse_args None false args with
+      | Error help -> logAndExit (Error help)
+      | Ok (config_path, json) -> (
+        match Tools.ActiveRules.run ?config_path ~json path with
+        | Error err ->
+          prerr_endline err;
+          exit 2
+        | Ok {Tools.ActiveRules.output} ->
+          if output <> "" then print_endline output;
+          exit 0))
+    | _ -> logAndExit (Error activeRulesHelp))
   | "reanalyze" :: _ ->
     if Sys.getenv_opt "RESCRIPT_REANALYZE_NO_SERVER" = Some "1" then (
       let len = Array.length Sys.argv in
