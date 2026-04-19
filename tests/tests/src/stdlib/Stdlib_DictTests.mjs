@@ -293,93 +293,10 @@ Test.run([
   "concatAll with empty array returns empty dictionary"
 ], Object.assign({}), eq, {});
 
-let foo = {
-  a: 1,
-  b: 2
-};
-
-let baz = {
-  b: 4,
-  c: 5
-};
-
-let result$4 = Object.assign({}, foo, {
-  b: 3
-}, baz, {
-  d: 6
-});
-
 Test.run([
   [
     "Stdlib_DictTests.res",
-    189,
-    15,
-    53
-  ],
-  "dict spread respects overwrite order"
-], result$4, eq, {
-  a: 1,
-  b: 4,
-  c: 5,
-  d: 6
-});
-
-Test.run([
-  [
-    "Stdlib_DictTests.res",
-    200,
-    15,
-    58
-  ],
-  "dict spread leaves first source unchanged"
-], foo, eq, {
-  a: 1,
-  b: 2
-});
-
-Test.run([
-  [
-    "Stdlib_DictTests.res",
-    209,
-    15,
-    58
-  ],
-  "dict spread leaves later source unchanged"
-], baz, eq, {
-  b: 4,
-  c: 5
-});
-
-let foo$1 = {
-  a: 1
-};
-
-let result$5 = Object.assign({}, foo$1);
-
-Test.run([
-  [
-    "Stdlib_DictTests.res",
-    223,
-    22,
-    55
-  ],
-  "dict spread clone copies values"
-], result$5, eq, foo$1);
-
-Test.run([
-  [
-    "Stdlib_DictTests.res",
-    224,
-    22,
-    68
-  ],
-  "dict spread clone returns a fresh dictionary"
-], result$5 === foo$1, eq, false);
-
-Test.run([
-  [
-    "Stdlib_DictTests.res",
-    228,
+    178,
     13,
     35
   ],
@@ -392,7 +309,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    234,
+    184,
     13,
     34
   ],
@@ -407,7 +324,7 @@ let dict = {
 Test.run([
   [
     "Stdlib_DictTests.res",
-    246,
+    196,
     22,
     38
   ],
@@ -417,7 +334,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    247,
+    197,
     22,
     43
   ],
@@ -427,7 +344,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    248,
+    198,
     22,
     37
   ],
@@ -437,7 +354,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    249,
+    199,
     22,
     39
   ],
@@ -447,7 +364,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    251,
+    201,
     15,
     51
   ],
