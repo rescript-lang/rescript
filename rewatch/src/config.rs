@@ -233,9 +233,11 @@ pub struct JsxSpecs {
     pub preserve: Option<bool>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
 pub enum GenTypeModule {
+    #[serde(rename = "commonjs")]
     CommonJs,
+    #[serde(rename = "esmodule")]
     EsModule,
 }
 
@@ -248,26 +250,13 @@ impl GenTypeModule {
     }
 }
 
-impl<'de> Deserialize<'de> for GenTypeModule {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let raw = String::deserialize(deserializer)?;
-        match raw.as_str() {
-            "commonjs" => Ok(GenTypeModule::CommonJs),
-            "esmodule" => Ok(GenTypeModule::EsModule),
-            other => Err(DeError::custom(format!(
-                "Unknown gentypeconfig.module value '{other}'. Expected: commonjs | esmodule",
-            ))),
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
 pub enum GenTypeModuleResolution {
+    #[serde(rename = "node")]
     Node,
+    #[serde(rename = "node16")]
     Node16,
+    #[serde(rename = "bundler")]
     Bundler,
 }
 
@@ -277,23 +266,6 @@ impl GenTypeModuleResolution {
             GenTypeModuleResolution::Node => "node",
             GenTypeModuleResolution::Node16 => "node16",
             GenTypeModuleResolution::Bundler => "bundler",
-        }
-    }
-}
-
-impl<'de> Deserialize<'de> for GenTypeModuleResolution {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let raw = String::deserialize(deserializer)?;
-        match raw.as_str() {
-            "node" => Ok(GenTypeModuleResolution::Node),
-            "node16" => Ok(GenTypeModuleResolution::Node16),
-            "bundler" => Ok(GenTypeModuleResolution::Bundler),
-            other => Err(DeError::custom(format!(
-                "Unknown gentypeconfig.moduleResolution value '{other}'. Expected: node | node16 | bundler",
-            ))),
         }
     }
 }
