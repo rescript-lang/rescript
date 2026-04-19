@@ -103,6 +103,7 @@ pub fn get_compiler_args(rescript_file_path: &Path) -> Result<String> {
         is_type_dev,
         true,
         None, // No warn_error_override for compiler-args command
+        &[],  // Source dirs not available outside full build; gentype falls back to defaults.
     )?;
 
     let result = serde_json::to_string_pretty(&CompilerArgs {

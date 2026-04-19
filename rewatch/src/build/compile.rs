@@ -472,6 +472,56 @@ pub fn compile(
     Ok((compile_errors, compile_warnings, num_compiled_modules))
 }
 
+/// Walks a package's declared source folders and returns every directory
+/// reachable under them (honoring `subdirs: true`), relative to the package
+/// root. Mirrors the filesystem walk gentype used to perform from
+/// `rescript.json` when resolving cross-file imports.
+fn collect_gentype_source_dirs(package: &packages::Package) -> Vec<PathBuf> {
+    let mut out: Vec<PathBuf> = Vec::new();
+    let root = &package.path;
+
+    fn walk_recursive(root: &Path, rel: &Path, out: &mut Vec<PathBuf>) {
+        let abs = if rel.as_os_str().is_empty() {
+            root.to_path_buf()
+        } else {
+            root.join(rel)
+        };
+        let Ok(meta) = std::fs::metadata(&abs) else {
+            return;
+        };
+        if !meta.is_dir() {
+            return;
+        }
+        out.push(rel.to_path_buf());
+        let Ok(entries) = std::fs::read_dir(&abs) else {
+            return;
+        };
+        for entry in entries.flatten() {
+            let Ok(child_meta) = entry.metadata() else {
+                continue;
+            };
+            if child_meta.is_dir() {
+                let name = entry.file_name();
+                walk_recursive(root, &rel.join(name), out);
+            }
+        }
+    }
+
+    for source in &package.source_folders {
+        let rel = PathBuf::from(&source.dir);
+        match &source.subdirs {
+            Some(config::Subdirs::Recurse(true)) => walk_recursive(root, &rel, &mut out),
+            _ => {
+                let abs = root.join(&rel);
+                if abs.is_dir() {
+                    out.push(rel);
+                }
+            }
+        }
+    }
+    out
+}
+
 static RUNTIME_PATH_MEMO: OnceLock<PathBuf> = OnceLock::new();
 
 pub fn get_runtime_path(package_config: &Config, project_context: &ProjectContext) -> Result<PathBuf> {
@@ -520,6 +570,9 @@ pub fn compiler_args(
     is_local_dep: bool,
     // Command-line --warn-error flag override (takes precedence over rescript.json config)
     warn_error_override: Option<String>,
+    // Pre-expanded source directories for the current package (used by gentype).
+    // Pass an empty slice when unavailable (e.g. the compiler-args CLI command).
+    current_package_dirs: &[PathBuf],
 ) -> Result<Vec<String>> {
     let bsc_flags = config::flatten_flags(&config.compiler_flags);
     let dependency_paths = get_dependency_paths(config, project_context, packages, is_type_dev);
@@ -551,7 +604,8 @@ pub fn compiler_args(
     let jsx_module_args = root_config.get_jsx_module_args();
     let jsx_mode_args = root_config.get_jsx_mode_args();
     let jsx_preserve_args = root_config.get_jsx_preserve_args();
-    let gentype_arg = config.get_gentype_arg();
+    let bsb_project_root = project_context.get_root_path();
+    let gentype_arg = config.get_gentype_args(current_package_dirs, Some(bsb_project_root));
     let experimental_args = root_config.get_experimental_features_args();
     let warning_args = config.get_warning_args(is_local_dep, warn_error_override);
 
@@ -755,6 +809,14 @@ fn compile_file(
         helpers::file_path_to_compiler_asset_basename(implementation_file_path, &package.namespace);
     let has_interface = module.get_interface().is_some();
     let is_type_dev = module.is_type_dev;
+    // Gentype resolves cross-file imports by walking every directory reachable
+    // from the sources tree (including dirs that hold only `.ts` shims),
+    // so we can't rely on `package.dirs` which only tracks `.res` dirs.
+    let current_package_dirs: Vec<PathBuf> = if package.config.gentype_config.is_some() {
+        collect_gentype_source_dirs(package)
+    } else {
+        Vec::new()
+    };
     let to_mjs_args = compiler_args(
         &package.config,
         ast_path,
@@ -766,6 +828,7 @@ fn compile_file(
         is_type_dev,
         package.is_local_dep,
         warn_error_override,
+        &current_package_dirs,
     )?;
 
     let to_mjs = Command::new(&compiler_info.bsc_path)

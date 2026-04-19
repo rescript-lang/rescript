@@ -233,8 +233,123 @@ pub struct JsxSpecs {
     pub preserve: Option<bool>,
 }
 
-/// We do not care about the internal structure because the gentype config is loaded by bsc.
-pub type GenTypeConfig = serde_json::Value;
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum GenTypeModule {
+    CommonJs,
+    EsModule,
+}
+
+impl GenTypeModule {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            GenTypeModule::CommonJs => "commonjs",
+            GenTypeModule::EsModule => "esmodule",
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for GenTypeModule {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let raw = String::deserialize(deserializer)?;
+        match raw.as_str() {
+            "commonjs" => Ok(GenTypeModule::CommonJs),
+            "esmodule" => Ok(GenTypeModule::EsModule),
+            other => Err(DeError::custom(format!(
+                "Unknown gentypeconfig.module value '{other}'. Expected: commonjs | esmodule",
+            ))),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum GenTypeModuleResolution {
+    Node,
+    Node16,
+    Bundler,
+}
+
+impl GenTypeModuleResolution {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            GenTypeModuleResolution::Node => "node",
+            GenTypeModuleResolution::Node16 => "node16",
+            GenTypeModuleResolution::Bundler => "bundler",
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for GenTypeModuleResolution {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let raw = String::deserialize(deserializer)?;
+        match raw.as_str() {
+            "node" => Ok(GenTypeModuleResolution::Node),
+            "node16" => Ok(GenTypeModuleResolution::Node16),
+            "bundler" => Ok(GenTypeModuleResolution::Bundler),
+            other => Err(DeError::custom(format!(
+                "Unknown gentypeconfig.moduleResolution value '{other}'. Expected: node | node16 | bundler",
+            ))),
+        }
+    }
+}
+
+/// Accepts either an object `{ "From": "To", ... }` or (deprecated) an array of
+/// `"From=To"` strings.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct GenTypeShims(pub HashMap<String, String>);
+
+impl<'de> Deserialize<'de> for GenTypeShims {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum Repr {
+            Map(HashMap<String, String>),
+            List(Vec<String>),
+        }
+        match Repr::deserialize(deserializer)? {
+            Repr::Map(m) => Ok(GenTypeShims(m)),
+            Repr::List(entries) => {
+                let mut map = HashMap::with_capacity(entries.len());
+                for entry in entries {
+                    match entry.split_once('=') {
+                        Some((from, to)) => {
+                            map.insert(from.trim().to_string(), to.trim().to_string());
+                        }
+                        None => {
+                            return Err(DeError::custom(format!(
+                                "Invalid gentypeconfig.shims entry '{entry}': expected 'From=To'",
+                            )));
+                        }
+                    }
+                }
+                Ok(GenTypeShims(map))
+            }
+        }
+    }
+}
+
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Default)]
+pub struct GenTypeConfig {
+    pub module: Option<GenTypeModule>,
+    #[serde(rename = "moduleResolution")]
+    pub module_resolution: Option<GenTypeModuleResolution>,
+    #[serde(rename = "exportInterfaces")]
+    pub export_interfaces: Option<bool>,
+    #[serde(rename = "generatedFileExtension")]
+    pub generated_file_extension: Option<String>,
+    #[serde(default)]
+    pub shims: GenTypeShims,
+    #[serde(default)]
+    pub debug: HashMap<String, bool>,
+}
 
 /// Configuration for running a command after each JavaScript file is compiled.
 /// Note: Unlike bsb, rewatch passes absolute paths to the command for clarity.
@@ -598,11 +713,64 @@ impl Config {
         }
     }
 
-    pub fn get_gentype_arg(&self) -> Vec<String> {
-        match &self.gentype_config {
-            Some(_) => vec!["-bs-gentype".to_string()],
-            None => vec![],
+    /// Build the full set of `-bs-gentype-*` CLI flags for a bsc invocation.
+    /// `source_dirs` are pre-expanded directories relative to the package root.
+    pub fn get_gentype_args(&self, source_dirs: &[PathBuf], bsb_project_root: Option<&Path>) -> Vec<String> {
+        let Some(gt) = &self.gentype_config else {
+            return vec![];
+        };
+        let mut args = vec!["-bs-gentype".to_string()];
+
+        if let Some(module) = &gt.module {
+            args.push("-bs-gentype-module".to_string());
+            args.push(module.as_str().to_string());
         }
+        if let Some(resolution) = &gt.module_resolution {
+            args.push("-bs-gentype-module-resolution".to_string());
+            args.push(resolution.as_str().to_string());
+        }
+        if gt.export_interfaces == Some(true) {
+            args.push("-bs-gentype-export-interfaces".to_string());
+        }
+        if let Some(ext) = &gt.generated_file_extension {
+            args.push("-bs-gentype-generated-extension".to_string());
+            args.push(ext.clone());
+        }
+        if let Some(suffix) = &self.suffix {
+            args.push("-bs-gentype-suffix".to_string());
+            args.push(suffix.clone());
+        }
+        let mut shims: Vec<(&String, &String)> = gt.shims.0.iter().collect();
+        shims.sort_by(|a, b| a.0.cmp(b.0));
+        for (from_, to) in shims {
+            args.push("-bs-gentype-shim".to_string());
+            args.push(format!("{from_}={to}"));
+        }
+        let mut debug_items: Vec<&String> = gt
+            .debug
+            .iter()
+            .filter_map(|(k, v)| if *v { Some(k) } else { None })
+            .collect();
+        debug_items.sort();
+        for item in debug_items {
+            args.push("-bs-gentype-debug".to_string());
+            args.push(item.clone());
+        }
+        if let Some(deps) = &self.dependencies {
+            for dep in deps {
+                args.push("-bs-gentype-dep".to_string());
+                args.push(dep.clone());
+            }
+        }
+        for dir in source_dirs {
+            args.push("-bs-gentype-source-dir".to_string());
+            args.push(dir.to_string_lossy().to_string());
+        }
+        if let Some(root) = bsb_project_root {
+            args.push("-bs-gentype-bsb-project-root".to_string());
+            args.push(root.to_string_lossy().to_string());
+        }
+        args
     }
 
     /// Directory containing the `rescript.json` this config was parsed from.
@@ -1033,8 +1201,42 @@ pub mod tests {
         "#;
 
         let config = serde_json::from_str::<Config>(json).unwrap();
-        assert!(config.gentype_config.is_some());
-        assert_eq!(config.get_gentype_arg(), vec!["-bs-gentype".to_string()]);
+        let gt = config.gentype_config.as_ref().unwrap();
+        assert_eq!(gt.module, Some(GenTypeModule::EsModule));
+        assert_eq!(gt.generated_file_extension.as_deref(), Some(".gen.tsx"));
+
+        let args = config.get_gentype_args(&[], None);
+        assert!(args.contains(&"-bs-gentype".to_string()));
+        assert!(args.contains(&"-bs-gentype-module".to_string()));
+        assert!(args.contains(&"esmodule".to_string()));
+        assert!(args.contains(&"-bs-gentype-generated-extension".to_string()));
+        assert!(args.contains(&".gen.tsx".to_string()));
+        assert!(args.contains(&"-bs-gentype-suffix".to_string()));
+        assert!(args.contains(&".mjs".to_string()));
+        assert!(args.contains(&"-bs-gentype-dep".to_string()));
+        assert!(args.contains(&"@teamwalnut/app".to_string()));
+    }
+
+    #[test]
+    fn test_gentype_shims_object_and_array_forms() {
+        let object_form = serde_json::from_str::<GenTypeShims>(r#"{"From": "To"}"#).unwrap();
+        assert_eq!(object_form.0.get("From"), Some(&"To".to_string()));
+
+        let array_form = serde_json::from_str::<GenTypeShims>(r#"["From=To", "A=B"]"#).unwrap();
+        assert_eq!(array_form.0.get("From"), Some(&"To".to_string()));
+        assert_eq!(array_form.0.get("A"), Some(&"B".to_string()));
+    }
+
+    #[test]
+    fn test_gentype_args_without_gentype_config() {
+        let json = r#"
+        {
+            "name": "pkg",
+            "sources": [ { "dir": "src/", "subdirs": true } ]
+        }
+        "#;
+        let config = serde_json::from_str::<Config>(json).unwrap();
+        assert!(config.get_gentype_args(&[], None).is_empty());
     }
 
     #[test]

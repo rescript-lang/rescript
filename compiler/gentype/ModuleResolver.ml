@@ -21,43 +21,20 @@ let read_bs_dependencies_dirs ~root =
 
 type pkgs = {dirs: string list; pkgs: (string, string) Hashtbl.t}
 
+(** Source directories are pre-expanded by the build system and supplied via
+    [-bs-gentype-source-dir] flags — we just filter to the ones that actually
+    exist on disk under the project root. *)
 let read_dirs_from_config ~(config : Config.t) =
-  let dirs = ref [] in
-  let root = config.project_root in
   let ( +++ ) = Filename.concat in
-  let rec process_dir ~subdirs dir =
-    let abs_dir =
-      match dir = "" with
-      | true -> root
-      | false -> root +++ dir
-    in
-    if Sys.file_exists abs_dir && Sys.is_directory abs_dir then (
-      dirs := dir :: !dirs;
-      if subdirs then
-        abs_dir |> Sys.readdir
-        |> Array.iter (fun d -> process_dir ~subdirs (dir +++ d)))
-  in
-  let rec process_source_item (source_item : Ext_json_types.t) =
-    match source_item with
-    | Str {str} -> str |> process_dir ~subdirs:false
-    | Obj {map} -> (
-      match Map_string.find_opt map "dir" with
-      | Some (Str {str}) ->
-        let subdirs =
-          match Map_string.find_opt map "subdirs" with
-          | Some (True _) -> true
-          | Some (False _) -> false
-          | _ -> false
-        in
-        str |> process_dir ~subdirs
-      | _ -> ())
-    | Arr {content} -> Array.iter process_source_item content
-    | _ -> ()
-  in
-  (match config.sources with
-  | Some source_item -> process_source_item source_item
-  | None -> ());
-  !dirs
+  let root = config.project_root in
+  config.sources
+  |> List.filter (fun dir ->
+         let abs_dir =
+           match dir = "" with
+           | true -> root
+           | false -> root +++ dir
+         in
+         Sys.file_exists abs_dir && Sys.is_directory abs_dir)
 
 let read_source_dirs ~(config : Config.t) =
   let source_dirs =
