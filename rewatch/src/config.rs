@@ -726,9 +726,20 @@ impl Config {
         };
         let mut args = vec!["-bs-gentype".to_string()];
 
-        if let Some(module) = &gt.module {
+        // Match the pre-refactor precedence: gentypeconfig.module wins, then
+        // object-form package-specs.module is used as a fallback, otherwise
+        // leave bsc to apply its own default (ESModule).
+        let module_override =
+            gt.module
+                .as_ref()
+                .map(|m| m.as_str().to_string())
+                .or_else(|| match &self.package_specs {
+                    Some(OneOrMore::Single(spec)) => Some(spec.module.as_str().to_string()),
+                    _ => None,
+                });
+        if let Some(module) = module_override {
             args.push("-bs-gentype-module".to_string());
-            args.push(module.as_str().to_string());
+            args.push(module);
         }
         if let Some(resolution) = &gt.module_resolution {
             args.push("-bs-gentype-module-resolution".to_string());
@@ -1236,6 +1247,46 @@ pub mod tests {
         let array_form = serde_json::from_str::<GenTypeShims>(r#"["From=To", "A=B"]"#).unwrap();
         assert_eq!(array_form.0.get("From"), Some(&"To".to_string()));
         assert_eq!(array_form.0.get("A"), Some(&"B".to_string()));
+    }
+
+    #[test]
+    fn test_gentype_module_falls_back_to_package_specs_module() {
+        // If gentypeconfig.module is omitted but package-specs is a single
+        // object with "module": "commonjs", the old JSON-reading code used
+        // that as the fallback. Preserve that behavior via the CLI flags.
+        let json = r#"
+        {
+            "name": "pkg",
+            "sources": [ { "dir": "src", "subdirs": true } ],
+            "package-specs": { "module": "commonjs", "in-source": true },
+            "suffix": ".bs.js",
+            "gentypeconfig": {
+                "generatedFileExtension": ".gen.tsx"
+            }
+        }
+        "#;
+        let config = serde_json::from_str::<Config>(json).unwrap();
+        let args = config.get_gentype_args(&[], None, &[]);
+        let module_idx = args.iter().position(|s| s == "-bs-gentype-module").unwrap();
+        assert_eq!(args[module_idx + 1], "commonjs");
+    }
+
+    #[test]
+    fn test_gentype_module_explicit_wins_over_package_specs() {
+        let json = r#"
+        {
+            "name": "pkg",
+            "sources": [ { "dir": "src", "subdirs": true } ],
+            "package-specs": { "module": "commonjs", "in-source": true },
+            "gentypeconfig": {
+                "module": "esmodule"
+            }
+        }
+        "#;
+        let config = serde_json::from_str::<Config>(json).unwrap();
+        let args = config.get_gentype_args(&[], None, &[]);
+        let module_idx = args.iter().position(|s| s == "-bs-gentype-module").unwrap();
+        assert_eq!(args[module_idx + 1], "esmodule");
     }
 
     #[test]
