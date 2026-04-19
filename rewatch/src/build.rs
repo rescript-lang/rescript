@@ -441,6 +441,9 @@ fn log_config_warnings(build_state: &BuildCommandState) {
         if package.is_local_dep {
             package.config.get_deprecations().iter().for_each(
                 |deprecation_warning| match deprecation_warning {
+                    crate::config::DeprecationWarning::BsconfigJson => {
+                        log_deprecated_config_filename(&package.name, "bsconfig.json", "rescript.json");
+                    }
                     crate::config::DeprecationWarning::BsDependencies => {
                         log_deprecated_config_field(&package.name, "bs-dependencies", "dependencies");
                     }
@@ -472,6 +475,14 @@ fn log_deprecated_config_field(package_name: &str, field_name: &str, new_field_n
     let warning = format!(
         "The field '{field_name}' found in the package config of '{package_name}' is deprecated and will be removed in a future version.\n\
         Use '{new_field_name}' instead."
+    );
+    eprintln!("\n{}", style(warning).yellow());
+}
+
+fn log_deprecated_config_filename(package_name: &str, filename: &str, new_filename: &str) {
+    let warning = format!(
+        "The config file '{filename}' used by package '{package_name}' is deprecated and support will be removed in a future version.\n\
+        Rename it to '{new_filename}'."
     );
     eprintln!("\n{}", style(warning).yellow());
 }

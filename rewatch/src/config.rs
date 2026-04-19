@@ -245,6 +245,7 @@ pub struct JsPostBuild {
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub enum DeprecationWarning {
+    BsconfigJson,
     BsDependencies,
     BsDevDependencies,
     BscFlags,
@@ -503,6 +504,9 @@ impl Config {
     }
 
     fn set_path(&mut self, path: PathBuf) -> Result<()> {
+        if path.file_name().and_then(|n| n.to_str()) == Some("bsconfig.json") {
+            self.deprecation_warnings.push(DeprecationWarning::BsconfigJson);
+        }
         self.path = path;
         Ok(())
     }
@@ -1592,6 +1596,24 @@ pub mod tests {
         assert!(
             error.contains(path.to_string_lossy().as_ref()),
             "Error should include the missing config path, got: {error}"
+        );
+    }
+
+    #[test]
+    fn test_bsconfig_json_filename_deprecation() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let path = tmp.path().join("bsconfig.json");
+        std::fs::write(
+            &path,
+            r#"{ "name": "legacy", "sources": { "dir": "src", "subdirs": true } }"#,
+        )
+        .expect("write");
+
+        let config = Config::new(&path).expect("a valid bsconfig.json");
+        assert!(
+            config
+                .get_deprecations()
+                .contains(&DeprecationWarning::BsconfigJson)
         );
     }
 }
