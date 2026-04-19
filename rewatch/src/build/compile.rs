@@ -567,6 +567,7 @@ pub fn compiler_args(
     };
 
     let package_name_arg = vec!["-bs-package-name".to_string(), config.name.to_owned()];
+    let project_root_args = config.get_project_root_args();
 
     let implementation_args = if is_interface {
         debug!("Compiling interface file: {}", &module_name);
@@ -627,6 +628,7 @@ pub fn compiler_args(
         // we should probably parse the right ones from the package config
         // vec!["-w".to_string(), "a".to_string()],
         package_name_arg,
+        project_root_args,
         implementation_args,
         // vec![
         //     "-I".to_string(),

@@ -263,6 +263,10 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
       string_call Js_packages_state.update_npm_package_path,
       "*internal* Set npm-output-path: [opt_module]:path, for example: \
        'lib/cjs', 'amdjs:lib/amdjs', 'es6:lib/es6' " );
+    ( "-bs-project-root",
+      string_call (fun s -> Ext_path.custom_package_dir := Some s),
+      "*internal* Set the project root directory, avoiding a filesystem walk \
+       for rescript.json" );
     ( "-bs-ast",
       unit_call (fun _ ->
           Js_config.binary_ast := true;

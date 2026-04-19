@@ -127,4 +127,13 @@ let rec find_root_filename ~cwd filenames =
 
 let find_config_dir cwd = find_root_filename ~cwd [Literals.rescript_json]
 
-let package_dir = lazy (find_config_dir (Lazy.force cwd))
+(* When set (e.g. by the build system via -bs-project-root), we skip the
+   directory walk entirely. *)
+let custom_package_dir : string option ref = ref None
+
+let fallback_package_dir = lazy (find_config_dir (Lazy.force cwd))
+
+let package_dir () =
+  match !custom_package_dir with
+  | Some dir -> dir
+  | None -> Lazy.force fallback_package_dir

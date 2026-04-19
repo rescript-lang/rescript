@@ -29,5 +29,10 @@ val node_rebase_file : from:string -> to_:string -> string -> string
 
 val absolute_cwd_path : string -> string
 
-(* It is lazy so that it will not hit errors when in script mode *)
-val package_dir : string Lazy.t
+val custom_package_dir : string option ref
+(** When set, [package_dir ()] returns this value instead of walking the
+    filesystem. Typically set by the build system via [-bs-project-root]. *)
+
+val package_dir : unit -> string
+(** Returns the package root directory. Evaluated on demand so that script
+    mode does not hit the filesystem walk when [custom_package_dir] is unset. *)
