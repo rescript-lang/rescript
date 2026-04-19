@@ -520,6 +520,9 @@ pub fn compiler_args(
     is_local_dep: bool,
     // Command-line --warn-error flag override (takes precedence over rescript.json config)
     warn_error_override: Option<String>,
+    // Pre-expanded source directories for the current package (used by gentype).
+    // Pass an empty slice when unavailable (e.g. the compiler-args CLI command).
+    current_package_dirs: &[PathBuf],
 ) -> Result<Vec<String>> {
     let bsc_flags = config::flatten_flags(&config.compiler_flags);
     let dependency_paths = get_dependency_paths(config, project_context, packages, is_type_dev);
@@ -551,7 +554,21 @@ pub fn compiler_args(
     let jsx_module_args = root_config.get_jsx_module_args();
     let jsx_mode_args = root_config.get_jsx_mode_args();
     let jsx_preserve_args = root_config.get_jsx_preserve_args();
-    let gentype_arg = config.get_gentype_arg();
+    let bsb_project_root = project_context.get_root_path();
+    let dep_paths: Vec<(String, PathBuf)> = if config.gentype_config.is_some() {
+        let resolved = packages.as_ref().map(|pkgs| {
+            config
+                .dependencies
+                .iter()
+                .flatten()
+                .filter_map(|name| pkgs.get(name).map(|pkg| (name.clone(), pkg.path.clone())))
+                .collect::<Vec<_>>()
+        });
+        resolved.unwrap_or_default()
+    } else {
+        Vec::new()
+    };
+    let gentype_arg = config.get_gentype_args(current_package_dirs, Some(bsb_project_root), &dep_paths);
     let experimental_args = root_config.get_experimental_features_args();
     let warning_args = config.get_warning_args(is_local_dep, warn_error_override);
 
@@ -567,6 +584,7 @@ pub fn compiler_args(
     };
 
     let package_name_arg = vec!["-bs-package-name".to_string(), config.name.to_owned()];
+    let project_root_args = config.get_project_root_args();
 
     let implementation_args = if is_interface {
         debug!("Compiling interface file: {}", &module_name);
@@ -627,6 +645,7 @@ pub fn compiler_args(
         // we should probably parse the right ones from the package config
         // vec!["-w".to_string(), "a".to_string()],
         package_name_arg,
+        project_root_args,
         implementation_args,
         // vec![
         //     "-I".to_string(),
@@ -753,6 +772,9 @@ fn compile_file(
         helpers::file_path_to_compiler_asset_basename(implementation_file_path, &package.namespace);
     let has_interface = module.get_interface().is_some();
     let is_type_dev = module.is_type_dev;
+    // `gentype_dirs` is populated once during package discovery, so we just
+    // borrow the cached slice here (empty when gentype is off).
+    let current_package_dirs: &[PathBuf] = package.gentype_dirs.as_deref().unwrap_or(&[]);
     let to_mjs_args = compiler_args(
         &package.config,
         ast_path,
@@ -764,6 +786,7 @@ fn compile_file(
         is_type_dev,
         package.is_local_dep,
         warn_error_override,
+        current_package_dirs,
     )?;
 
     let to_mjs = Command::new(&compiler_info.bsc_path)

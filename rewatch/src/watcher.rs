@@ -575,6 +575,7 @@ mod tests {
             modules: None,
             path: package_path,
             dirs: None,
+            gentype_dirs: None,
             is_local_dep: true,
             is_root: true,
         }

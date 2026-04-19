@@ -63,6 +63,11 @@ pub struct Package {
     // canonicalized dir of the package
     pub path: PathBuf,
     pub dirs: Option<AHashSet<PathBuf>>,
+    /// Every directory reachable from `source_folders` (honoring
+    /// `subdirs: true`), relative to the package root — including ones that
+    /// hold only `.ts` shim files and therefore are absent from `dirs`.
+    /// Populated during package discovery only when gentype is enabled.
+    pub gentype_dirs: Option<Vec<PathBuf>>,
     pub is_local_dep: bool,
     pub is_root: bool,
 }
@@ -509,6 +514,7 @@ This inconsistency will cause issues with package resolution.\n",
             .map(StrippedVerbatimPath::to_stripped_verbatim_path)
             .expect("Could not canonicalize"),
         dirs: None,
+        gentype_dirs: None,
         is_local_dep,
         is_root,
     })
@@ -644,9 +650,61 @@ fn extend_with_children(
             dirs.insert(dir.to_owned());
         });
         package.dirs = Some(dirs);
+        if package.config.gentype_config.is_some() {
+            package.gentype_dirs = Some(collect_gentype_source_dirs(package));
+        }
         package.source_files = Some(map);
     }
     build
+}
+
+/// Walks a package's declared source folders and returns every directory
+/// reachable under them (honoring `subdirs: true`), relative to the package
+/// root. Gentype needs every such directory — including ones containing only
+/// `.ts` shims — to resolve cross-file imports, so `package.dirs` (which
+/// tracks only dirs with `.res` source files) isn't enough.
+fn collect_gentype_source_dirs(package: &Package) -> Vec<PathBuf> {
+    let mut out: Vec<PathBuf> = Vec::new();
+    let root = &package.path;
+
+    fn walk_recursive(root: &Path, rel: &Path, out: &mut Vec<PathBuf>) {
+        let abs = if rel.as_os_str().is_empty() {
+            root.to_path_buf()
+        } else {
+            root.join(rel)
+        };
+        let Ok(meta) = std::fs::metadata(&abs) else {
+            return;
+        };
+        if !meta.is_dir() {
+            return;
+        }
+        out.push(rel.to_path_buf());
+        let Ok(entries) = std::fs::read_dir(&abs) else {
+            return;
+        };
+        for entry in entries.flatten() {
+            let Ok(child_meta) = entry.metadata() else {
+                continue;
+            };
+            if child_meta.is_dir() {
+                walk_recursive(root, &rel.join(entry.file_name()), out);
+            }
+        }
+    }
+
+    for source in &package.source_folders {
+        let rel = PathBuf::from(&source.dir);
+        match &source.subdirs {
+            Some(config::Subdirs::Recurse(true)) => walk_recursive(root, &rel, &mut out),
+            _ => {
+                if root.join(&rel).is_dir() {
+                    out.push(rel);
+                }
+            }
+        }
+    }
+    out
 }
 
 /// Make turns a folder, that should contain a config, into a tree of Packages.
@@ -1071,6 +1129,7 @@ mod test {
             modules: None,
             path: PathBuf::from("./something"),
             dirs: None,
+            gentype_dirs: None,
             is_root: false,
             is_local_dep: false,
         }

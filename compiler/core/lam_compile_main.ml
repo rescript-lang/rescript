@@ -314,12 +314,12 @@ let lambda_as_module
         let basename =  
           Ext_namespace.change_ext_ns_suffix (Filename.basename output_prefix) suffix
         in
-        let target_file = 
-          (Lazy.force Ext_path.package_dir //
+        let target_file =
+          (Ext_path.package_dir () //
            path //
            basename
            (* #913 only generate little-case js file *)
-          ) in     
+          ) in
         (if not !Clflags.dont_write_files then 
            Ext_pervasives.with_file_as_chan
              target_file output_chan );
