@@ -246,7 +246,13 @@ fn get_source_dirs(source: config::Source, sub_path: Option<PathBuf>) -> AHashSe
 
 pub fn read_config(package_dir: &Path) -> Result<Config> {
     let rescript_json_path = package_dir.join("rescript.json");
-    Config::new(&rescript_json_path)
+    let bsconfig_json_path = package_dir.join("bsconfig.json");
+
+    if rescript_json_path.exists() {
+        Config::new(&rescript_json_path)
+    } else {
+        Config::new(&bsconfig_json_path)
+    }
 }
 
 pub fn read_dependency(
