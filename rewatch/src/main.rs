@@ -6,32 +6,50 @@ use std::{io::Write, path::Path};
 use rescript::{
     build, cli, cmd, format,
     lock::{LockKind, drop_lock, get_lock_or_exit},
-    watcher,
+    telemetry, watcher,
 };
 
-fn main() -> Result<()> {
+fn main() {
+    // Initialize telemetry (only active if OTEL_EXPORTER_OTLP_ENDPOINT is set)
+    let telemetry_guard = telemetry::init_telemetry();
+    let otel_enabled = telemetry_guard.otel_enabled();
+
+    let exit_code = run_main(otel_enabled);
+
+    // std::process::exit terminates the process without running Drops for
+    // values still on the stack, so the TelemetryGuard's Drop (which flushes
+    // buffered OTLP spans) would be skipped. Drop explicitly first.
+    drop(telemetry_guard);
+
+    std::process::exit(exit_code);
+}
+
+fn run_main(otel_enabled: bool) -> i32 {
     let cli = cli::parse_with_default().unwrap_or_else(|err| err.exit());
 
     let log_level_filter = cli.verbose.log_level_filter();
 
-    let stdout_logger = env_logger::Builder::new()
-        .format(|buf, record| writeln!(buf, "{}:\n{}", record.level(), record.args()))
-        .filter_level(log_level_filter)
-        .target(env_logger::fmt::Target::Stdout)
-        .build();
+    // Only set up custom logger if OTEL is not enabled (OTEL sets up its own subscriber)
+    if !otel_enabled {
+        let stdout_logger = env_logger::Builder::new()
+            .format(|buf, record| writeln!(buf, "{}:\n{}", record.level(), record.args()))
+            .filter_level(log_level_filter)
+            .target(env_logger::fmt::Target::Stdout)
+            .build();
 
-    let stderr_logger = env_logger::Builder::new()
-        .format(|buf, record| writeln!(buf, "{}:\n{}", record.level(), record.args()))
-        .filter_level(log_level_filter)
-        .target(env_logger::fmt::Target::Stderr)
-        .build();
+        let stderr_logger = env_logger::Builder::new()
+            .format(|buf, record| writeln!(buf, "{}:\n{}", record.level(), record.args()))
+            .filter_level(log_level_filter)
+            .target(env_logger::fmt::Target::Stderr)
+            .build();
 
-    log::set_max_level(log_level_filter);
-    log::set_boxed_logger(Box::new(SplitLogger {
-        stdout: stdout_logger,
-        stderr: stderr_logger,
-    }))
-    .expect("Failed to initialize logger");
+        log::set_max_level(log_level_filter);
+        log::set_boxed_logger(Box::new(SplitLogger {
+            stdout: stdout_logger,
+            stderr: stderr_logger,
+        }))
+        .expect("Failed to initialize logger");
+    }
 
     let is_tty: bool = Term::stdout().is_term() && Term::stderr().is_term();
     let plain_output = !is_tty;
@@ -42,12 +60,11 @@ fn main() -> Result<()> {
 
     match cli.command {
         cli::Command::CompilerArgs { path } => {
-            println!("{}", build::get_compiler_args(Path::new(&path))?);
-            std::process::exit(0);
+            exit_code(build::get_compiler_args(Path::new(&path)).map(|args| println!("{}", args)))
         }
         cli::Command::Build(build_args) => {
             let features = build_args.features.parsed();
-            match build::build(
+            let result = build::build(
                 &build_args.filter,
                 Path::new(&build_args.folder as &str),
                 show_progress,
@@ -57,24 +74,19 @@ fn main() -> Result<()> {
                 (*build_args.warn_error).clone(),
                 build_args.prod,
                 features,
-            ) {
-                Err(e) => {
-                    eprintln!("{:#}", e);
-                    std::process::exit(1)
-                }
-                Ok(_) => {
-                    if let Some(args_after_build) = (*build_args.after_build).clone() {
-                        cmd::run(args_after_build)
-                    }
-                    std::process::exit(0)
-                }
-            };
+            );
+            if result.is_ok()
+                && let Some(args_after_build) = (*build_args.after_build).clone()
+            {
+                cmd::run(args_after_build);
+            }
+            exit_code(result.map(|_| ()))
         }
         cli::Command::Watch(watch_args) => {
             let _lock = get_lock_or_exit(LockKind::Watch, &watch_args.folder);
 
             let features = watch_args.features.parsed();
-            match watcher::start(
+            exit_code(watcher::start(
                 &watch_args.filter,
                 show_progress,
                 &watch_args.folder,
@@ -85,22 +97,32 @@ fn main() -> Result<()> {
                 watch_args.clear_screen,
                 watch_args.prod,
                 features,
-            ) {
-                Err(e) => {
-                    eprintln!("{:#}", e);
-                    std::process::exit(1)
-                }
-                Ok(_) => Ok(()),
-            }
+            ))
         }
         cli::Command::Clean { folder, prod } => {
             let _lock = get_lock_or_exit(LockKind::Build, &folder);
-            let result = build::clean::clean(Path::new(&folder as &str), show_progress, plain_output, prod);
-            let _lock = drop_lock(LockKind::Build, &folder);
+            let code = exit_code(build::clean::clean(
+                Path::new(&folder as &str),
+                show_progress,
+                plain_output,
+                prod,
+            ));
+            let _ = drop_lock(LockKind::Build, &folder);
 
-            result
+            code
         }
-        cli::Command::Format { stdin, check, files } => format::format(stdin, check, files),
+        cli::Command::Format { stdin, check, files } => exit_code(format::format(stdin, check, files)),
+    }
+}
+
+/// Map a command's Result<()> to a process exit code, printing the error on failure.
+fn exit_code(result: Result<()>) -> i32 {
+    match result {
+        Ok(()) => 0,
+        Err(e) => {
+            eprintln!("{:#}", e);
+            1
+        }
     }
 }
 
