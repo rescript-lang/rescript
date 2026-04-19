@@ -5,3 +5,15 @@ let baz = {js|foo|js}
 let x =
   Primitive_dict.make
     [|("foo", {js|bar|js});("bar", {js|baz|js});("baz", baz)|]
+let foo = Primitive_dict.make [|("a", 1)|]
+let qux = Primitive_dict.make [|("c", 3)|]
+let x =
+  ((Primitive_dict.spread)[@res.dictSpread ]) (Primitive_dict.make [||])
+    [|foo;(Primitive_dict.make [|("bar", 2)|]);qux|]
+let x =
+  ((Primitive_dict.spread)[@res.dictSpread ])
+    (Primitive_dict.make [|("before", 1)|])
+    [|foo;(Primitive_dict.make [|("after", 2)|])|]
+let x =
+  ((Primitive_dict.spread)[@res.dictSpread ]) (Primitive_dict.make [||])
+    [|foo|]

@@ -293,10 +293,105 @@ Test.run([
   "concatAll with empty array returns empty dictionary"
 ], Object.assign({}), eq, {});
 
+let foo = {
+  a: 1,
+  b: 2
+};
+
+let baz = {
+  b: 4,
+  c: 5
+};
+
+let result$4 = Object.assign({}, foo, {
+  b: 3
+}, baz, {
+  d: 6
+});
+
 Test.run([
   [
     "Stdlib_DictTests.res",
-    178,
+    189,
+    15,
+    63
+  ],
+  "dict spread applies sources from left to right"
+], result$4, eq, {
+  a: 1,
+  b: 4,
+  c: 5,
+  d: 6
+});
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    200,
+    15,
+    58
+  ],
+  "dict spread leaves first source unchanged"
+], foo, eq, {
+  a: 1,
+  b: 2
+});
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    209,
+    15,
+    58
+  ],
+  "dict spread leaves later source unchanged"
+], baz, eq, {
+  b: 4,
+  c: 5
+});
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    217,
+    22,
+    62
+  ],
+  "dict spread returns a fresh dictionary"
+], result$4 === foo, eq, false);
+
+let foo$1 = {
+  a: 1
+};
+
+let result$5 = Object.assign({}, foo$1);
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    225,
+    15,
+    51
+  ],
+  "dict spread copies a single source"
+], result$5, eq, {
+  a: 1
+});
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    231,
+    15,
+    75
+  ],
+  "dict spread copies a single source into a fresh dictionary"
+], result$5 === foo$1, eq, false);
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    239,
     13,
     35
   ],
@@ -309,7 +404,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    184,
+    245,
     13,
     34
   ],
@@ -324,7 +419,7 @@ let dict = {
 Test.run([
   [
     "Stdlib_DictTests.res",
-    196,
+    257,
     22,
     38
   ],
@@ -334,7 +429,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    197,
+    258,
     22,
     43
   ],
@@ -344,7 +439,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    198,
+    259,
     22,
     37
   ],
@@ -354,7 +449,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    199,
+    260,
     22,
     39
   ],
@@ -364,7 +459,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    201,
+    262,
     15,
     51
   ],

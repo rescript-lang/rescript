@@ -150,8 +150,6 @@ module ErrorMessages = struct
      ...b}` wouldn't make sense, as `b` would override every field of `a` \
      anyway."
 
-  let dict_expr_spread = "Dict literals do not support spread (`...`) yet."
-
   let record_field_missing_colon =
     "Records use `:` when assigning fields. Example: `{field: value}`"
 
@@ -285,6 +283,7 @@ let tagged_template_literal_attr =
   (Location.mknoloc "res.taggedTemplate", Parsetree.PStr [])
 
 let spread_attr = (Location.mknoloc "res.spread", Parsetree.PStr [])
+let dict_spread_attr = (Location.mknoloc "res.dictSpread", Parsetree.PStr [])
 
 type argument = {label: Asttypes.arg_label; expr: Parsetree.expression}
 
@@ -3505,14 +3504,12 @@ and parse_record_expr_row p :
         None)
     else None
 
-and parse_dict_expr_row p =
+and parse_dict_expr_part p =
   match p.Parser.token with
   | DotDotDot ->
-    Parser.err p (Diagnostics.message ErrorMessages.dict_expr_spread);
     Parser.next p;
-    (* Parse the expr so it's consumed *)
-    let _spread_expr = parse_constrained_or_coerced_expr p in
-    None
+    let spread_expr = parse_constrained_or_coerced_expr p in
+    Some (`Spread spread_expr)
   | String s -> (
     let loc = mk_loc p.start_pos p.end_pos in
     Parser.next p;
@@ -3520,15 +3517,15 @@ and parse_dict_expr_row p =
     match p.Parser.token with
     | Colon ->
       Parser.next p;
-      let fieldExpr = parse_expr p in
-      Some (field, fieldExpr)
+      let field_expr = parse_expr p in
+      Some (`Row (field, field_expr))
     | Equal ->
       Parser.err ~start_pos:p.start_pos ~end_pos:p.end_pos p
         (Diagnostics.message ErrorMessages.dict_field_missing_colon);
       Parser.next p;
-      let fieldExpr = parse_expr p in
-      Some (field, fieldExpr)
-    | _ -> Some (field, Ast_helper.Exp.ident ~loc:field.loc field))
+      let field_expr = parse_expr p in
+      Some (`Row (field, field_expr))
+    | _ -> Some (`Row (field, Ast_helper.Exp.ident ~loc:field.loc field)))
   | _ -> None
 
 and parse_record_expr_with_string_keys ~start_pos first_row p =
@@ -4374,9 +4371,9 @@ and parse_list_expr ~start_pos p =
       [(Asttypes.Nolabel, Ast_helper.Exp.array ~loc list_exprs)]
 
 and parse_dict_expr ~start_pos p =
-  let rows =
+  let parts =
     parse_comma_delimited_region ~grammar:Grammar.DictRows ~closing:Rbrace
-      ~f:parse_dict_expr_row p
+      ~f:parse_dict_expr_part p
   in
   let loc = mk_loc start_pos p.end_pos in
   let to_key_value_pair
@@ -4393,14 +4390,93 @@ and parse_dict_expr ~start_pos p =
            ])
     | _ -> None
   in
-  let key_value_pairs = List.filter_map to_key_value_pair rows in
+  let dict_rows_loc
+      (rows : (Longident.t Location.loc * Parsetree.expression) list) =
+    match (rows, List.rev rows) with
+    | (first_key, _) :: _, (_, last_expr) :: _ ->
+      mk_loc first_key.loc.loc_start last_expr.pexp_loc.loc_end
+    | _ -> loc
+  in
+  let make_dict_chunk ?loc_override rows =
+    let chunk_loc =
+      match loc_override with
+      | Some loc -> loc
+      | None -> dict_rows_loc rows
+    in
+    let key_value_pairs = List.filter_map to_key_value_pair rows in
+    Ast_helper.Exp.apply ~loc:chunk_loc
+      (Ast_helper.Exp.ident ~loc:chunk_loc
+         (Location.mkloc
+            (Longident.Ldot (Longident.Lident Primitive_modules.dict, "make"))
+            chunk_loc))
+      [(Asttypes.Nolabel, Ast_helper.Exp.array ~loc:chunk_loc key_value_pairs)]
+  in
+  let grouped_parts =
+    let rec loop current_rows acc = function
+      | [] ->
+        let acc =
+          match current_rows with
+          | [] -> acc
+          | rows -> `Rows (List.rev rows) :: acc
+        in
+        List.rev acc
+      | `Row row :: rest -> loop (row :: current_rows) acc rest
+      | `Spread spread_expr :: rest ->
+        let acc =
+          match current_rows with
+          | [] -> `Spread spread_expr :: acc
+          | rows -> `Spread spread_expr :: `Rows (List.rev rows) :: acc
+        in
+        loop [] acc rest
+    in
+    loop [] [] parts
+  in
   Parser.expect Rbrace p;
-  Ast_helper.Exp.apply ~loc
-    (Ast_helper.Exp.ident ~loc
-       (Location.mkloc
-          (Longident.Ldot (Longident.Lident Primitive_modules.dict, "make"))
-          loc))
-    [(Asttypes.Nolabel, Ast_helper.Exp.array ~loc key_value_pairs)]
+  match grouped_parts with
+  | [] -> make_dict_chunk ~loc_override:loc []
+  | [`Rows rows] -> make_dict_chunk ~loc_override:loc rows
+  | `Rows target_rows :: source_parts ->
+    let spread_ident =
+      Ast_helper.Exp.ident ~loc ~attrs:[dict_spread_attr]
+        (Location.mkloc
+           (Longident.Ldot (Longident.Lident Primitive_modules.dict, "spread"))
+           loc)
+    in
+    let spread =
+      Ast_helper.Exp.apply ~loc spread_ident
+        [
+          (Asttypes.Nolabel, make_dict_chunk target_rows);
+          ( Asttypes.Nolabel,
+            Ast_helper.Exp.array ~loc
+              (List.map
+                 (function
+                   | `Rows rows -> make_dict_chunk rows
+                   | `Spread spread_expr -> spread_expr)
+                 source_parts) );
+        ]
+    in
+    spread
+  | source_parts ->
+    let spread_ident =
+      Ast_helper.Exp.ident ~loc ~attrs:[dict_spread_attr]
+        (Location.mkloc
+           (Longident.Ldot (Longident.Lident Primitive_modules.dict, "spread"))
+           loc)
+    in
+    let spread =
+      Ast_helper.Exp.apply ~loc spread_ident
+        [
+          (Asttypes.Nolabel, make_dict_chunk []);
+          ( Asttypes.Nolabel,
+            Ast_helper.Exp.array ~loc
+              (List.map
+                 (function
+                   | `Rows rows -> make_dict_chunk rows
+                   | `Spread spread_expr -> spread_expr)
+                 source_parts) );
+        ]
+    in
+    spread
 
 and parse_array_exp p =
   let start_pos = p.Parser.start_pos in
