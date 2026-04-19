@@ -1,0 +1,22 @@
+let flag = true
+let other = false
+
+let direct = switch flag {
+| true => 1
+| false => 2
+}
+let ternary = switch flag {
+| true => "yes"
+| false => "no"
+}
+
+let chained = switch () {
+| _ if flag => 1
+| _ if other => 2
+| _ => 3
+}
+
+let onlyWhen = switch flag {
+| true => Console.log("hit")
+| false => ()
+}

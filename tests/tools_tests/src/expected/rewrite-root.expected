@@ -1,0 +1,15 @@
+path: .tmp-rewrite-tests/root/RewriteClean.res
+status: unchanged
+
+path: .tmp-rewrite-tests/root/RewriteIfs.res
+status: rewritten
+rules:
+- prefer-switch(4): rewrote `if` / ternary branches into `switch`
+
+path: .tmp-rewrite-tests/root/RewriteOptionalSome.res
+status: rewritten
+rules:
+- prefer-switch(1): rewrote `if` / ternary branches into `switch`
+- no-optional-some(3): rewrote `~label=?Some(expr)` into `~label=expr`
+
+summary: rewritten 2 files, unchanged 1, rules: prefer-switch(5), no-optional-some(3)

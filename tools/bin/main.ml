@@ -39,6 +39,21 @@ Notes:
 
 Example: rescript-tools lint ./src/MyModule.res|}
 
+let rewriteHelp =
+  {|ReScript Tools
+
+Rewrite a file or directory into a narrower agent-oriented source form
+
+Usage: rescript-tools rewrite <FILE-OR-DIR> [--config <FILE>] [--diff] [--json]
+
+Notes:
+- Files are rewritten in place
+- Use --diff to preview the rewritten diff without modifying files
+- Use --json for compact machine-readable output
+- Rewrite rules are loaded from the same config discovery path as lint
+
+Example: rescript-tools rewrite ./src/MyModule.res|}
+
 let activeRulesHelp =
   {|ReScript Tools
 
@@ -102,9 +117,23 @@ extract-codeblocks <file>               Extract ReScript code blocks from file
 lint <file-or-dir>                      Run AI-oriented lint checks
   [--config <file>]                       Use the given lint config file
   [--json]                                Output compact JSON
+rewrite <file-or-dir>                   Rewrite source into agent-oriented normal form
+  [--config <file>]                       Use the given lint config file
+  [--diff]                                Preview the rewritten diff without writing files
+  [--json]                                Output compact JSON
 active-rules <file-or-dir>              List lint/rewrite rules and whether they are active
   [--config <file>]                       Use the given lint config file
   [--json]                                Output compact JSON
+show <symbol-path>                      Show hover-style semantic information
+  [--kind <auto|module|value|type>]      Select what kind of symbol to resolve
+  [--context <file-or-dir>]               Resolve within the package for this path
+  [--comments <include|omit>]             Include or omit doc/comments in output
+find-references <symbol-path>           Find references by symbol path
+  [--kind <auto|module|value|type>]      Select what kind of symbol to resolve
+  [--context <file-or-dir>]               Resolve within the package for this path
+find-references --file <file>           Find references at a source location
+  [--line <line>]                         Use 1-based line number
+  [--col <col>]                           Use 1-based column number
 reanalyze                               Reanalyze
 reanalyze-server                        Start reanalyze server
 -v, --version                           Print version
@@ -257,6 +286,30 @@ let main () =
           if output <> "" then print_endline output;
           exit (if has_findings then 1 else 0)))
     | _ -> logAndExit (Error lintHelp))
+  | "rewrite" :: rest -> (
+    match rest with
+    | ["-h"] | ["--help"] -> logAndExit (Ok rewriteHelp)
+    | path :: args -> (
+      let rec parse_args config_path json diff = function
+        | [] -> Ok (config_path, json, diff)
+        | "--json" :: rest -> parse_args config_path true diff rest
+        | "--diff" :: rest -> parse_args config_path json true rest
+        | "--config" :: config :: rest ->
+          parse_args (Some config) json diff rest
+        | _ -> Error rewriteHelp
+      in
+      match parse_args None false false args with
+      | Error help -> logAndExit (Error help)
+      | Ok (config_path, json, diff) -> (
+        let mode = if diff then Tools.Rewrite.Diff else Tools.Rewrite.Write in
+        match Tools.Rewrite.run ?config_path ~json ~mode path with
+        | Error err ->
+          prerr_endline err;
+          exit 2
+        | Ok {Tools.Rewrite.output; _} ->
+          if output <> "" then print_endline output;
+          exit 0))
+    | _ -> logAndExit (Error rewriteHelp))
   | "active-rules" :: rest -> (
     match rest with
     | ["-h"] | ["--help"] -> logAndExit (Ok activeRulesHelp)

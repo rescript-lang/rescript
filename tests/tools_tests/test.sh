@@ -110,7 +110,6 @@ fi
 
 ../../_build/install/default/bin/rescript-tools show String --kind module > /dev/null || exit 1
 
-
 # Test find-references command
 ../../_build/install/default/bin/rescript-tools find-references FindReferencesFixture.makeGreeting --kind value > src/expected/find-references-FindReferencesFixture.makeGreeting.expected || exit 1
 if [ "$RUNNER_OS" == "Windows" ]; then
@@ -123,6 +122,75 @@ if [ "$RUNNER_OS" == "Windows" ]; then
 fi
 
 ../../_build/install/default/bin/rescript-tools find-references FindReferencesFixture --kind module > /dev/null || exit 1
+
+# Test rewrite command
+rm -rf .tmp-rewrite-tests
+mkdir -p .tmp-rewrite-tests
+
+for file in src/rewrite/*.res; do
+  tmp_file=".tmp-rewrite-tests/$(basename $file)"
+  cp "$file" "$tmp_file"
+
+  output="src/expected/$(basename $file).rewrite.expected"
+  ../../_build/install/default/bin/rescript-tools rewrite "$tmp_file" > "$output"
+  if [ "$RUNNER_OS" == "Windows" ]; then
+    perl -pi -e 's/\r\n/\n/g' -- "$output"
+  fi
+
+  rewritten_output="src/expected/$(basename $file).rewrite.source.expected"
+  cat "$tmp_file" > "$rewritten_output"
+  if [ "$RUNNER_OS" == "Windows" ]; then
+    perl -pi -e 's/\r\n/\n/g' -- "$rewritten_output"
+  fi
+
+  cp "$file" "$tmp_file"
+  json_output="src/expected/$(basename $file).rewrite.json.expected"
+  ../../_build/install/default/bin/rescript-tools rewrite "$tmp_file" --json > "$json_output"
+  if [ "$RUNNER_OS" == "Windows" ]; then
+    perl -pi -e 's/\r\n/\n/g' -- "$json_output"
+  fi
+
+  diff_output="src/expected/$(basename $file).rewrite.diff.expected"
+  ../../_build/install/default/bin/rescript-tools rewrite "$file" --diff > "$diff_output"
+  if [ "$RUNNER_OS" == "Windows" ]; then
+    perl -pi -e 's/\r\n/\n/g' -- "$diff_output"
+  fi
+
+  diff_json_output="src/expected/$(basename $file).rewrite.diff.json.expected"
+  ../../_build/install/default/bin/rescript-tools rewrite "$file" --diff --json > "$diff_json_output"
+  if [ "$RUNNER_OS" == "Windows" ]; then
+    perl -pi -e 's/\r\n/\n/g' -- "$diff_json_output"
+  fi
+done
+
+rm -rf .tmp-rewrite-tests/root
+mkdir -p .tmp-rewrite-tests/root
+cp src/rewrite/*.res .tmp-rewrite-tests/root/
+../../_build/install/default/bin/rescript-tools rewrite .tmp-rewrite-tests/root > src/expected/rewrite-root.expected
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- src/expected/rewrite-root.expected
+fi
+
+rm -rf .tmp-rewrite-tests/root
+mkdir -p .tmp-rewrite-tests/root
+cp src/rewrite/*.res .tmp-rewrite-tests/root/
+../../_build/install/default/bin/rescript-tools rewrite .tmp-rewrite-tests/root --json > src/expected/rewrite-root.json.expected
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- src/expected/rewrite-root.json.expected
+fi
+
+../../_build/install/default/bin/rescript-tools rewrite src/rewrite --diff > src/expected/rewrite-root.diff.expected
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- src/expected/rewrite-root.diff.expected
+fi
+
+../../_build/install/default/bin/rescript-tools rewrite src/rewrite --diff --json > src/expected/rewrite-root.diff.json.expected
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- src/expected/rewrite-root.diff.json.expected
+fi
+
+rm -rf .tmp-rewrite-tests
+
 # Test migrate command
 for file in src/migrate/*.{res,resi}; do
   output="src/expected/$(basename $file).expected"
