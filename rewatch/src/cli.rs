@@ -384,6 +384,16 @@ mod tests {
     }
 
     #[test]
+    fn watch_clear_screen_flag_is_parsed() {
+        let cli = parse(&["rescript", "watch", "--clear-screen"]).expect("expected watch command");
+
+        match cli.command {
+            Command::Watch(watch_args) => assert!(watch_args.clear_screen),
+            other => panic!("expected watch command, got {other:?}"),
+        }
+    }
+
+    #[test]
     fn clean_prod_flag_is_parsed() {
         let cli = parse(&["rescript", "clean", "--prod"]).expect("expected clean command");
 
@@ -428,6 +438,10 @@ pub struct WatchArgs {
     #[command(flatten)]
     pub warn_error: WarnErrorArg,
 
+    /// Clear terminal screen before each rebuild in interactive watch mode.
+    #[arg(long, default_value_t = false)]
+    pub clear_screen: bool,
+
     /// Skip dev-dependencies and dev sources (type: "dev")
     #[arg(long, default_value_t = false)]
     pub prod: bool,
@@ -440,6 +454,7 @@ impl From<BuildArgs> for WatchArgs {
             filter: build_args.filter,
             after_build: build_args.after_build,
             warn_error: build_args.warn_error,
+            clear_screen: false,
             prod: build_args.prod,
         }
     }

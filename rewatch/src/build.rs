@@ -56,6 +56,43 @@ pub struct CompilerArgs {
     pub parser_args: Vec<String>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CompilationOutcome {
+    Clean,
+    Warnings,
+}
+
+fn has_output(output: &str) -> bool {
+    helpers::contains_ascii_characters(output)
+}
+
+fn has_config_warnings(build_state: &BuildCommandState) -> bool {
+    build_state.packages.iter().any(|(_, package)| {
+        package.is_local_dep
+            && (!package.config.get_unsupported_fields().is_empty()
+                || !package.config.get_unknown_fields().is_empty())
+    })
+}
+
+pub fn format_finished_compilation_message(
+    compilation_kind: Option<&str>,
+    outcome: CompilationOutcome,
+    duration: Duration,
+) -> String {
+    let compilation_kind = compilation_kind
+        .map(|kind| format!("{kind} "))
+        .unwrap_or_default();
+    let (status, warning_suffix) = match outcome {
+        CompilationOutcome::Clean => (CHECKMARK, ""),
+        CompilationOutcome::Warnings => (WARNING, " with warnings"),
+    };
+
+    format!(
+        "{LINE_CLEAR}{status}Finished {compilation_kind}compilation{warning_suffix} in {:.2}s",
+        duration.as_secs_f64()
+    )
+}
+
 pub fn get_compiler_args(rescript_file_path: &Path) -> Result<String> {
     let filename = &helpers::get_abs_path(rescript_file_path);
     let current_package = helpers::get_abs_path(
@@ -246,7 +283,7 @@ pub fn incremental_build(
     only_incremental: bool,
     create_sourcedirs: bool,
     plain_output: bool,
-) -> Result<(), IncrementalBuildError> {
+) -> Result<CompilationOutcome, IncrementalBuildError> {
     let build_folder = build_state.root_folder.to_string_lossy().to_string();
 
     let _lock = get_lock_or_exit(LockKind::Build, &build_folder);
@@ -264,7 +301,7 @@ pub fn incremental_build(
         ProgressStyle::with_template(&format!(
             "{} {}Parsing... {{spinner}} {{pos}}/{{len}} {{msg}}",
             format_step(current_step, total_steps),
-            CODE
+            PARSE
         ))
         .unwrap(),
     );
@@ -314,13 +351,14 @@ pub fn incremental_build(
                 "{}{} {}Parsed {} source files in {:.2}s",
                 LINE_CLEAR,
                 format_step(current_step, total_steps),
-                CODE,
+                PARSE,
                 num_dirty_modules,
                 default_timing.unwrap_or(timing_parse_total).as_secs_f64()
             );
         }
     }
-    if helpers::contains_ascii_characters(&parse_warnings) {
+    let has_parse_warnings = has_output(&parse_warnings);
+    if has_parse_warnings {
         eprintln!("{}", &parse_warnings);
     }
 
@@ -389,13 +427,13 @@ pub fn incremental_build(
                 );
             }
         }
-        if helpers::contains_ascii_characters(&compile_warnings) {
+        if has_output(&compile_warnings) {
             eprintln!("{}", &compile_warnings);
         }
         if initial_build {
             log_config_warnings(build_state);
         }
-        if helpers::contains_ascii_characters(&compile_errors) {
+        if has_output(&compile_errors) {
             eprintln!("{}", &compile_errors);
         }
 
@@ -406,6 +444,14 @@ pub fn incremental_build(
             plain_output,
         })
     } else {
+        let has_compile_warnings = has_output(&compile_warnings);
+        let has_config_warning_output = initial_build && has_config_warnings(build_state);
+        let outcome = if has_parse_warnings || has_compile_warnings || has_config_warning_output {
+            CompilationOutcome::Warnings
+        } else {
+            CompilationOutcome::Clean
+        };
+
         if show_progress {
             if plain_output {
                 println!("Compiled {num_compiled_modules} modules")
@@ -421,7 +467,7 @@ pub fn incremental_build(
             }
         }
 
-        if helpers::contains_ascii_characters(&compile_warnings) {
+        if has_compile_warnings {
             eprintln!("{}", &compile_warnings);
         }
         if initial_build {
@@ -432,7 +478,7 @@ pub fn incremental_build(
         write_compiler_info(build_state);
 
         let _lock = drop_lock(LockKind::Build, &build_folder);
-        Ok(())
+        Ok(outcome)
     }
 }
 
@@ -519,14 +565,16 @@ pub fn build(
         create_sourcedirs,
         plain_output,
     ) {
-        Ok(_) => {
+        Ok(result) => {
             if !plain_output && show_progress {
                 let timing_total_elapsed = timing_total.elapsed();
                 println!(
-                    "\n{}{}Finished Compilation in {:.2}s",
-                    LINE_CLEAR,
-                    SPARKLES,
-                    default_timing.unwrap_or(timing_total_elapsed).as_secs_f64()
+                    "\n{}",
+                    format_finished_compilation_message(
+                        None,
+                        result,
+                        default_timing.unwrap_or(timing_total_elapsed),
+                    )
                 );
             }
             clean::cleanup_after_build(&build_state);
@@ -538,5 +586,33 @@ pub fn build(
             write_build_ninja(&build_state);
             Err(anyhow!("Incremental build failed. Error: {e}"))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn formats_successful_completion_message() {
+        assert_eq!(
+            format_finished_compilation_message(None, CompilationOutcome::Clean, Duration::from_millis(1500),),
+            format!("{LINE_CLEAR}{}Finished compilation in 1.50s", CHECKMARK)
+        );
+    }
+
+    #[test]
+    fn formats_warning_completion_message() {
+        assert_eq!(
+            format_finished_compilation_message(
+                Some("incremental"),
+                CompilationOutcome::Warnings,
+                Duration::from_millis(1500),
+            ),
+            format!(
+                "{LINE_CLEAR}{}Finished incremental compilation with warnings in 1.50s",
+                WARNING
+            )
+        );
     }
 }
