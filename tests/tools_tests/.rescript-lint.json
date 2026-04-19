@@ -1,4 +1,5 @@
 {
+  "$schema": "../../docs/docson/rescript-lint-schema.json",
   "lint": {
     "rules": {
       "forbidden-reference": [

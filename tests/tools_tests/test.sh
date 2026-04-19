@@ -33,6 +33,8 @@ for file in src/docstrings-format/*.{res,resi,md}; do
   fi
 done
 
+node -e "JSON.parse(require('node:fs').readFileSync('../../docs/docson/rescript-lint-schema.json', 'utf8'))" || exit 1
+
 # Test lint command
 for file in src/lint/*.{res,resi}; do
   output="src/expected/$(basename $file).lint.expected"

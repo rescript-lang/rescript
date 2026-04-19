@@ -27,7 +27,7 @@ Initial rules
 - Rewrite: `prefer-switch`, `no-optional-some`, `preferred-type-syntax`
 
 Support
-- Add `.rescript-lint.json` config support, AI tooling docs, and golden tests for the new command surface
+- Add `.rescript-lint.json` config support, a shipped JSON schema, AI tooling docs, and golden tests for the new command surface
 ```
 
 ## Goal
@@ -180,10 +180,17 @@ Possible file names:
 - `.rescript-lint.json`
 - `rescript-lint.json`
 
+Schema:
+
+- shipped at `docs/docson/rescript-lint-schema.json`
+- can be referenced from config files through a `$schema` field for editor completion and validation
+- the schema covers both the recommended namespaced shape and the deprecated top-level `rules` lint shortcut
+
 Example shape:
 
 ```json
 {
+  "$schema": "./node_modules/rescript/docs/docson/rescript-lint-schema.json",
   "lint": {
     "rules": {
       "forbidden-reference": [
@@ -222,6 +229,8 @@ Example shape:
 `forbidden-reference` accepts either one rule object or an array of rule objects.
 Each `items` entry must be an object with `kind` (`module`, `value`, or `type`)
 and `path`; `message` is optional at both the rule and item level.
+The older top-level `rules` field is still accepted for lint-only configs, but
+new configs should prefer `lint.rules`.
 
 ## Lint V1 Rules
 
@@ -295,6 +304,7 @@ Example:
 
 ```json
 {
+  "$schema": "./node_modules/rescript/docs/docson/rescript-lint-schema.json",
   "lint": {
     "rules": {
       "forbidden-source-root-reference": {

@@ -65,6 +65,7 @@
     "COPYING.LESSER",
     "CREDITS.md",
     "docs/docson/build-schema.json",
+    "docs/docson/rescript-lint-schema.json",
     "cli"
   ],
   "exports": {
