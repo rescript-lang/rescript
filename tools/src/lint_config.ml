@@ -10,6 +10,17 @@ let default_single_use_function_rule : single_use_function_rule =
 let default_alias_avoidance_rule : alias_avoidance_rule =
   {enabled = true; severity = SeverityWarning; message = None}
 
+let default_forbidden_source_root_reference_rule :
+    forbidden_source_root_reference_rule =
+  {
+    enabled = true;
+    severity = SeverityError;
+    message = None;
+    roots = [];
+    kinds =
+      [ForbiddenSourceRootReferenceValue; ForbiddenSourceRootReferenceType];
+  }
+
 let default_preferred_type_syntax_rule : preferred_type_syntax_rule =
   {enabled = true; severity = SeverityWarning; message = None; dict = false}
 
@@ -22,6 +33,8 @@ let default_config =
     forbidden_reference = [default_forbidden_reference_rule];
     single_use_function = default_single_use_function_rule;
     alias_avoidance = default_alias_avoidance_rule;
+    forbidden_source_root_reference =
+      default_forbidden_source_root_reference_rule;
     preferred_type_syntax = default_preferred_type_syntax_rule;
     rewrite =
       {
@@ -44,6 +57,11 @@ let parse_forbidden_reference_kind = function
   | "module" -> Some ForbiddenReferenceModule
   | "value" -> Some ForbiddenReferenceValue
   | "type" -> Some ForbiddenReferenceType
+  | _ -> None
+
+let parse_forbidden_source_root_reference_kind = function
+  | "value" -> Some ForbiddenSourceRootReferenceValue
+  | "type" -> Some ForbiddenSourceRootReferenceType
   | _ -> None
 
 let result_all results =
@@ -104,7 +122,7 @@ let parse_item_objects ~rule = function
       (Printf.sprintf
          "error: lint rule `%s` field `items` must be an array of objects" rule)
 
-let parse_config_json json =
+let parse_config_json ?config_dir json =
   let lint_json = json |> Json.get "lint" in
   let rules =
     match Option.bind lint_json (Json.get "rules") with
@@ -213,6 +231,78 @@ let parse_config_json json =
        }
         : alias_avoidance_rule)
   in
+  let parse_forbidden_source_root_reference_rule rule :
+      (forbidden_source_root_reference_rule, string) result =
+    let roots =
+      match Option.bind (rule |> Json.get "roots") Json.array with
+      | None -> Ok []
+      | Some roots_json ->
+        roots_json
+        |> List.mapi (fun index root_json ->
+               match Json.string root_json with
+               | None ->
+                 Error
+                   (Printf.sprintf
+                      "error: lint rule `forbidden-source-root-reference` root \
+                       %d must be a string"
+                      (index + 1))
+               | Some root ->
+                 let display_path = Lint_support.Path.normalize_rel_path root in
+                 let root =
+                   if Filename.is_relative root then
+                     match config_dir with
+                     | Some config_dir -> Filename.concat config_dir root
+                     | None -> root
+                   else root
+                 in
+                 let abs_path =
+                   if Files.exists root then Unix.realpath root else root
+                 in
+                 Ok {display_path; abs_path})
+        |> result_all
+    in
+    let kinds =
+      match Option.bind (rule |> Json.get "kinds") Json.array with
+      | None -> Ok default_forbidden_source_root_reference_rule.kinds
+      | Some kinds_json ->
+        kinds_json
+        |> List.mapi (fun index kind_json ->
+               match Json.string kind_json with
+               | None ->
+                 Error
+                   (Printf.sprintf
+                      "error: lint rule `forbidden-source-root-reference` kind \
+                       %d must be a string"
+                      (index + 1))
+               | Some kind -> (
+                 match parse_forbidden_source_root_reference_kind kind with
+                 | Some kind -> Ok kind
+                 | None ->
+                   Error
+                     (Printf.sprintf
+                        "error: lint rule `forbidden-source-root-reference` \
+                         kind `%s` must be one of `value` or `type`"
+                        kind)))
+        |> result_all
+    in
+    Result.bind roots (fun roots ->
+        Result.map
+          (fun kinds ->
+            ({
+               enabled =
+                 Lint_support.Json.bool_with_default ~default:true rule
+                   "enabled";
+               severity =
+                 parse_rule_severity
+                   ~default:
+                     default_forbidden_source_root_reference_rule.severity rule;
+               message = parse_rule_message rule;
+               roots;
+               kinds;
+             }
+              : forbidden_source_root_reference_rule))
+          kinds)
+  in
   let parse_preferred_type_syntax_rule rule :
       (preferred_type_syntax_rule, string) result =
     Ok
@@ -283,24 +373,32 @@ let parse_config_json json =
                (get_rule "alias-avoidance"))
             (fun alias_avoidance ->
               Result.bind
-                (parse_singleton_rule ~rule:"preferred-type-syntax"
-                   ~default:default_preferred_type_syntax_rule
-                   parse_preferred_type_syntax_rule
-                   (get_rule "preferred-type-syntax"))
-                (fun preferred_type_syntax ->
-                  Ok
-                    {
-                      forbidden_reference;
-                      single_use_function;
-                      alias_avoidance;
-                      preferred_type_syntax;
-                      rewrite =
+                (parse_singleton_rule ~rule:"forbidden-source-root-reference"
+                   ~default:default_forbidden_source_root_reference_rule
+                   parse_forbidden_source_root_reference_rule
+                   (get_rule "forbidden-source-root-reference"))
+                (fun forbidden_source_root_reference ->
+                  Result.bind
+                    (parse_singleton_rule ~rule:"preferred-type-syntax"
+                       ~default:default_preferred_type_syntax_rule
+                       parse_preferred_type_syntax_rule
+                       (get_rule "preferred-type-syntax"))
+                    (fun preferred_type_syntax ->
+                      Ok
                         {
-                          prefer_switch;
-                          no_optional_some;
-                          preferred_type_syntax = preferred_type_syntax_rewrite;
-                        };
-                    }))))
+                          forbidden_reference;
+                          single_use_function;
+                          alias_avoidance;
+                          forbidden_source_root_reference;
+                          preferred_type_syntax;
+                          rewrite =
+                            {
+                              prefer_switch;
+                              no_optional_some;
+                              preferred_type_syntax =
+                                preferred_type_syntax_rewrite;
+                            };
+                        })))))
 
 let discover_config_path start_path =
   let rec loop path =
@@ -333,4 +431,6 @@ let load ?config_path target_path =
   match config_path with
   | None -> Ok default_config
   | Some path ->
-    Result.bind (Lint_support.Json.read_file path) parse_config_json
+    Result.bind
+      (Lint_support.Json.read_file path)
+      (parse_config_json ~config_dir:(Filename.dirname path))

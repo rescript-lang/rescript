@@ -50,6 +50,20 @@ type alias_avoidance_rule = {
   message: string option;
 }
 
+type forbidden_source_root_reference_kind =
+  | ForbiddenSourceRootReferenceValue
+  | ForbiddenSourceRootReferenceType
+
+type forbidden_source_root = {display_path: string; abs_path: string}
+
+type forbidden_source_root_reference_rule = {
+  enabled: bool;
+  severity: severity;
+  message: string option;
+  roots: forbidden_source_root list;
+  kinds: forbidden_source_root_reference_kind list;
+}
+
 type preferred_type_syntax_rule = {
   enabled: bool;
   severity: severity;
@@ -77,6 +91,7 @@ type config = {
   forbidden_reference: forbidden_reference_rule list;
   single_use_function: single_use_function_rule;
   alias_avoidance: alias_avoidance_rule;
+  forbidden_source_root_reference: forbidden_source_root_reference_rule;
   preferred_type_syntax: preferred_type_syntax_rule;
   rewrite: rewrite_config;
 }
@@ -118,12 +133,20 @@ let forbidden_reference_kind_to_string = function
   | ForbiddenReferenceValue -> "value"
   | ForbiddenReferenceType -> "type"
 
+let forbidden_source_root_reference_kind_to_string = function
+  | ForbiddenSourceRootReferenceValue -> "value"
+  | ForbiddenSourceRootReferenceType -> "type"
+
 let forbidden_reference_default_message = "Forbidden reference"
 
 let single_use_function_default_message = "Local function is only used once"
 
 let alias_avoidance_default_message =
   "Use the fully qualified reference directly instead of creating a local alias"
+
+let forbidden_source_root_reference_default_message root =
+  Printf.sprintf "Do not reference declarations from `%s` directly"
+    root.display_path
 
 let preferred_type_syntax_default_message = "Prefer `dict<_>` over `Dict.t<_>`"
 
@@ -170,6 +193,18 @@ let alias_avoidance_rule_info =
       "Flags pass-through aliases such as `let alias = Module.value`, `type \
        alias = Module.t`, and `module Alias = Long.Module.Path` so the \
        qualified reference can be used directly instead.";
+    rewrite_note = None;
+  }
+
+let forbidden_source_root_reference_rule_info =
+  {
+    namespace = "lint";
+    rule = "forbidden-source-root-reference";
+    summary =
+      "Report references whose declarations come from configured source roots.";
+    details =
+      "Uses typed declaration origin paths so generated or otherwise \
+       restricted source trees can be blocked by folder root.";
     rewrite_note = None;
   }
 
@@ -223,6 +258,7 @@ let configurable_rule_infos =
     forbidden_reference_rule_info;
     single_use_function_rule_info;
     alias_avoidance_rule_info;
+    forbidden_source_root_reference_rule_info;
     preferred_type_syntax_rule_info;
     prefer_switch_rule_info;
     no_optional_some_rule_info;
@@ -271,6 +307,18 @@ let effective_single_use_function_message (rule : single_use_function_rule) =
 
 let effective_alias_avoidance_message (rule : alias_avoidance_rule) =
   Option.value rule.message ~default:alias_avoidance_default_message
+
+let effective_forbidden_source_root_reference_message
+    (rule : forbidden_source_root_reference_rule) root =
+  Option.value rule.message
+    ~default:(forbidden_source_root_reference_default_message root)
+
+let forbidden_source_root_reference_message_setting
+    (rule : forbidden_source_root_reference_rule) =
+  match (rule.message, rule.roots) with
+  | Some message, _ -> message
+  | None, [root] -> forbidden_source_root_reference_default_message root
+  | None, _ -> "Do not reference declarations from these source roots directly"
 
 let effective_preferred_type_syntax_message (rule : preferred_type_syntax_rule)
     =
@@ -361,6 +409,34 @@ let rule_listings_of_config (config : config) =
       };
     ]
   in
+  let forbidden_source_root_reference_listings =
+    let rule = config.forbidden_source_root_reference in
+    [
+      {
+        namespace = forbidden_source_root_reference_rule_info.namespace;
+        rule = forbidden_source_root_reference_rule_info.rule;
+        instance = None;
+        active = rule.enabled && rule.roots <> [] && rule.kinds <> [];
+        summary = forbidden_source_root_reference_rule_info.summary;
+        details = forbidden_source_root_reference_rule_info.details;
+        settings =
+          [
+            ("enabled", RuleSettingBool rule.enabled);
+            ("severity", RuleSettingString (severity_to_string rule.severity));
+            ( "message",
+              RuleSettingString
+                (forbidden_source_root_reference_message_setting rule) );
+            ( "roots",
+              RuleSettingStringList
+                (rule.roots |> List.map (fun root -> root.display_path)) );
+            ( "kinds",
+              RuleSettingStringList
+                (rule.kinds
+                |> List.map forbidden_source_root_reference_kind_to_string) );
+          ];
+      };
+    ]
+  in
   let preferred_type_syntax_listings =
     let rule = config.preferred_type_syntax in
     [
@@ -384,7 +460,8 @@ let rule_listings_of_config (config : config) =
     ]
   in
   forbidden_reference_listings @ single_use_function_listings
-  @ alias_avoidance_listings @ preferred_type_syntax_listings
+  @ alias_avoidance_listings @ forbidden_source_root_reference_listings
+  @ preferred_type_syntax_listings
   @ [
       {
         namespace = prefer_switch_rule_info.namespace;

@@ -51,6 +51,18 @@ settings:
 - message: Use the fully qualified reference directly instead of creating a local alias
 
 namespace: lint
+rule: forbidden-source-root-reference
+active: true
+summary: Report references whose declarations come from configured source roots.
+details: Uses typed declaration origin paths so generated or otherwise restricted source trees can be blocked by folder root.
+settings:
+- enabled: true
+- severity: error
+- message: Do not reference declarations from `src/generated` directly
+- roots: src/generated
+- kinds: value, type
+
+namespace: lint
 rule: preferred-type-syntax
 active: true
 summary: Prefer canonical builtin type syntax where available.
@@ -88,4 +100,4 @@ settings:
 - enabled: true
 - dict: true
 
-summary: 8 active, 0 inactive, 8 total
+summary: 9 active, 0 inactive, 9 total

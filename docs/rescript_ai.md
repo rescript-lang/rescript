@@ -23,7 +23,7 @@ Commands
 - `find-references`: Finds references from either a symbol path or a source location.
 
 Initial rules
-- Lint: `forbidden-reference`, `single-use-function`, `alias-avoidance`, `preferred-type-syntax`
+- Lint: `forbidden-reference`, `single-use-function`, `alias-avoidance`, `forbidden-source-root-reference`, `preferred-type-syntax`
 - Rewrite: `prefer-switch`, `no-optional-some`, `preferred-type-syntax`
 
 Support
@@ -206,6 +206,11 @@ Example shape:
           ]
         }
       ],
+      "forbidden-source-root-reference": {
+        "severity": "error",
+        "roots": ["src/generated"],
+        "kinds": ["value", "type"]
+      },
       "single-use-function": {
         "severity": "warning"
       }
@@ -267,6 +272,41 @@ Likely exclusions for V1:
 - generated/PPX-shaped artifacts if they create unstable counts
 
 Longer term, this can grow into a reanalyze-style map/merge analysis.
+
+### Forbidden source-root references
+
+Goal: block references whose declarations come from specific source roots.
+
+Useful for:
+
+- generated code under folders like `src/generated` or `src/__generated__`
+- code owned by another system that should not be referenced directly
+- enforcing a boundary between handwritten and generated modules
+
+V1 shape:
+
+- configured as folder roots relative to `.rescript-lint.json`
+- typed-only, since it matches the declaration origin path rather than the referenced path text
+- supports `value` and `type` kinds
+- does not report when the current file is also inside the matching forbidden root
+- first matching root wins for message selection
+
+Example:
+
+```json
+{
+  "lint": {
+    "rules": {
+      "forbidden-source-root-reference": {
+        "severity": "error",
+        "roots": ["src/generated"],
+        "kinds": ["value", "type"],
+        "message": "Do not reference generated definitions directly."
+      }
+    }
+  }
+}
+```
 
 ## Candidate Lint Rule Ideas
 

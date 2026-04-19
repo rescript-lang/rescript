@@ -48,6 +48,19 @@ for file in src/lint/*.{res,resi}; do
   fi
 done
 
+generated_file="src/generated/GeneratedConsumer.res"
+generated_output="src/expected/$(basename $generated_file).lint.expected"
+../../_build/install/default/bin/rescript-tools lint "$generated_file" > "$generated_output" || true
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- "$generated_output"
+fi
+
+generated_json_output="src/expected/$(basename $generated_file).lint.json.expected"
+../../_build/install/default/bin/rescript-tools lint "$generated_file" --json > "$generated_json_output" || true
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- "$generated_json_output"
+fi
+
 unbuilt_file="unbuilt/ForbiddenExplicitNoCmt.res"
 unbuilt_output="src/expected/$(basename $unbuilt_file).lint.expected"
 ../../_build/install/default/bin/rescript-tools lint "$unbuilt_file" > "$unbuilt_output" || true

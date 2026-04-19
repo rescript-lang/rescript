@@ -1,0 +1,26 @@
+severity: error
+rule: forbidden-source-root-reference
+path: src/lint/ForbiddenGeneratedReference.resi
+range: 2:24-2:37
+message: Do not reference declarations from `src/generated` directly
+symbol: GeneratedModel.generatedType
+snippet:
+```text
+  1 | type wrapper = {
+> 2 |   item: GeneratedModel.generatedType,
+    |                        ^^^^^^^^^^^^^
+  3 | }
+```
+
+severity: error
+rule: forbidden-source-root-reference
+path: src/lint/ForbiddenGeneratedReference.resi
+range: 5:37-5:50
+message: Do not reference declarations from `src/generated` directly
+symbol: GeneratedModel.generatedType
+snippet:
+```text
+  3 | }
+> 5 | let acceptGenerated: GeneratedModel.generatedType => int
+    |                                     ^^^^^^^^^^^^^
+```

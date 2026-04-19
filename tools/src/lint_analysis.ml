@@ -13,6 +13,13 @@ let starts_with_path ~prefix path =
 
 type forbidden_symbol = {kind: forbidden_reference_kind; path: string list}
 
+type resolved_symbol = {
+  kind: forbidden_reference_kind;
+  path: string list;
+  declaration_source_path: string option;
+  source_root_reference_kind: forbidden_source_root_reference_kind option;
+}
+
 type forbidden_item_match =
   | ForbiddenItemExact
   | ForbiddenItemModulePrefix of int
@@ -63,6 +70,28 @@ let package_for_path path =
 let declared_symbol_path ~module_name (declared : _ SharedTypes.Declared.t) =
   module_name
   :: SharedTypes.ModulePath.toPath declared.modulePath declared.name.txt
+
+let rec source_path_of_module_path = function
+  | SharedTypes.ModulePath.File (uri, _) -> Some (Uri.toPath uri)
+  | SharedTypes.ModulePath.IncludedModule (_, module_path) ->
+    source_path_of_module_path module_path
+  | SharedTypes.ModulePath.ExportedModule {modulePath; _} ->
+    source_path_of_module_path modulePath
+  | SharedTypes.ModulePath.NotVisible -> None
+
+let declared_source_path (declared : _ SharedTypes.Declared.t) =
+  source_path_of_module_path declared.modulePath
+
+let path_is_within_root ~path ~root =
+  let path = if Files.exists path then Unix.realpath path else path in
+  let root = if Files.exists root then Unix.realpath root else root in
+  if root = "" then false
+  else
+    let root_length = String.length root in
+    Files.pathStartsWith path root
+    && (String.length path = root_length
+       || root.[root_length - 1] = Filename.dir_sep.[0]
+       || path.[root_length] = Filename.dir_sep.[0])
 
 let rec take_path count path =
   if count <= 0 then []
@@ -424,10 +453,19 @@ module Ast = struct
 end
 
 module Typed = struct
-  let kind_of_tip = function
-    | Tip.Module -> ForbiddenReferenceModule
-    | Tip.Value -> ForbiddenReferenceValue
-    | Tip.Type | Tip.Field _ | Tip.Constructor _ -> ForbiddenReferenceType
+  let forbidden_source_root_reference_kind_matches left right = left = right
+
+  let resolved_symbol_of_declared ~module_name ~kind declared =
+    {
+      kind;
+      path = declared_symbol_path ~module_name declared;
+      declaration_source_path = declared_source_path declared;
+      source_root_reference_kind =
+        (match kind with
+        | ForbiddenReferenceValue -> Some ForbiddenSourceRootReferenceValue
+        | ForbiddenReferenceType -> Some ForbiddenSourceRootReferenceType
+        | ForbiddenReferenceModule -> None);
+    }
 
   let resolve_global_symbol ~package ~module_name ~path ~tip =
     match ProcessCmt.fileForModule module_name ~package with
@@ -439,76 +477,102 @@ module Typed = struct
           match tip with
           | Tip.Value ->
             Stamps.findValue env.file.stamps stamp
-            |> Option.map (fun declared ->
-                   declared_symbol_path ~module_name:env.file.moduleName
-                     declared)
+            |> Option.map
+                 (resolved_symbol_of_declared ~module_name:env.file.moduleName
+                    ~kind:ForbiddenReferenceValue)
           | Tip.Type ->
             Stamps.findType env.file.stamps stamp
-            |> Option.map (fun declared ->
-                   declared_symbol_path ~module_name:env.file.moduleName
-                     declared)
+            |> Option.map
+                 (resolved_symbol_of_declared ~module_name:env.file.moduleName
+                    ~kind:ForbiddenReferenceType)
           | Tip.Module ->
             Stamps.findModule env.file.stamps stamp
-            |> Option.map (fun declared ->
-                   declared_symbol_path ~module_name:env.file.moduleName
-                     declared)
+            |> Option.map
+                 (resolved_symbol_of_declared ~module_name:env.file.moduleName
+                    ~kind:ForbiddenReferenceModule)
           | Tip.Field field_name ->
             Stamps.findType env.file.stamps stamp
             |> Option.map (fun declared ->
-                   declared_symbol_path ~module_name:env.file.moduleName
-                     declared
-                   @ [field_name])
+                   {
+                     kind = ForbiddenReferenceType;
+                     path =
+                       declared_symbol_path ~module_name:env.file.moduleName
+                         declared
+                       @ [field_name];
+                     declaration_source_path = declared_source_path declared;
+                     source_root_reference_kind = None;
+                   })
           | Tip.Constructor constructor_name ->
             Stamps.findType env.file.stamps stamp
             |> Option.map (fun declared ->
-                   declared_symbol_path ~module_name:env.file.moduleName
-                     declared
-                   @ [constructor_name]))
+                   {
+                     kind = ForbiddenReferenceType;
+                     path =
+                       declared_symbol_path ~module_name:env.file.moduleName
+                         declared
+                       @ [constructor_name];
+                     declaration_source_path = declared_source_path declared;
+                     source_root_reference_kind = None;
+                   }))
 
   let resolve_local_symbol ~(file : File.t) ~tip stamp =
     match tip with
     | Tip.Value ->
       Stamps.findValue file.stamps stamp
-      |> Option.map (fun declared ->
-             declared_symbol_path ~module_name:file.moduleName declared)
+      |> Option.map
+           (resolved_symbol_of_declared ~module_name:file.moduleName
+              ~kind:ForbiddenReferenceValue)
     | Tip.Type ->
       Stamps.findType file.stamps stamp
-      |> Option.map (fun declared ->
-             declared_symbol_path ~module_name:file.moduleName declared)
+      |> Option.map
+           (resolved_symbol_of_declared ~module_name:file.moduleName
+              ~kind:ForbiddenReferenceType)
     | Tip.Module ->
       Stamps.findModule file.stamps stamp
-      |> Option.map (fun declared ->
-             declared_symbol_path ~module_name:file.moduleName declared)
+      |> Option.map
+           (resolved_symbol_of_declared ~module_name:file.moduleName
+              ~kind:ForbiddenReferenceModule)
     | Tip.Field field_name ->
       Stamps.findType file.stamps stamp
       |> Option.map (fun declared ->
-             declared_symbol_path ~module_name:file.moduleName declared
-             @ [field_name])
+             {
+               kind = ForbiddenReferenceType;
+               path =
+                 declared_symbol_path ~module_name:file.moduleName declared
+                 @ [field_name];
+               declaration_source_path = declared_source_path declared;
+               source_root_reference_kind = None;
+             })
     | Tip.Constructor constructor_name ->
       Stamps.findType file.stamps stamp
       |> Option.map (fun declared ->
-             declared_symbol_path ~module_name:file.moduleName declared
-             @ [constructor_name])
+             {
+               kind = ForbiddenReferenceType;
+               path =
+                 declared_symbol_path ~module_name:file.moduleName declared
+                 @ [constructor_name];
+               declaration_source_path = declared_source_path declared;
+               source_root_reference_kind = None;
+             })
 
   let symbol (full : SharedTypes.full) (loc_item : locItem) =
     match loc_item.locType with
     | Typed (_, _typ, LocalReference (stamp, tip)) ->
       resolve_local_symbol ~file:full.file ~tip stamp
-      |> Option.map (fun path -> {kind = kind_of_tip tip; path})
     | Typed (_, _typ, GlobalReference (module_name, path, tip)) ->
       resolve_global_symbol ~package:full.package ~module_name ~path ~tip
-      |> Option.map (fun path -> {kind = kind_of_tip tip; path})
     | Typed (_, _, (Definition _ | NotFound))
     | LModule _ | TopLevelModule _ | Constant _ | TypeDefinition _ ->
       None
 
   let forbidden_reference_findings ~config ~path (full : SharedTypes.full) =
     let matching_rule symbol =
+      let forbidden_symbol = {kind = symbol.kind; path = symbol.path} in
       config.forbidden_reference
       |> List.find_map (fun (rule : forbidden_reference_rule) ->
              if (not rule.enabled) || rule.items = [] then None
              else
-               best_matching_forbidden_item rule.items symbol
+               best_matching_forbidden_item rule.items forbidden_symbol
                |> Option.map (fun item -> (rule, item)))
     in
     full.extra.locItems
@@ -526,6 +590,44 @@ module Typed = struct
                     ~message:
                       (effective_forbidden_reference_item_message rule item)
                     ?symbol ())))
+
+  let forbidden_source_root_reference_findings ~config ~path
+      (full : SharedTypes.full) =
+    let rule = config.forbidden_source_root_reference in
+    if (not rule.enabled) || rule.roots = [] || rule.kinds = [] then []
+    else
+      let file_is_within_root root =
+        path_is_within_root ~path ~root:root.abs_path
+      in
+      full.extra.locItems
+      |> List.filter_map (fun loc_item ->
+             match symbol full loc_item with
+             | None -> None
+             | Some symbol -> (
+               match symbol.declaration_source_path with
+               | None -> None
+               | Some declaration_source_path ->
+                 rule.roots
+                 |> List.find_opt (fun root ->
+                        (not (file_is_within_root root))
+                        && (match symbol.source_root_reference_kind with
+                           | None -> false
+                           | Some symbol_kind ->
+                             rule.kinds
+                             |> List.exists (fun kind ->
+                                    forbidden_source_root_reference_kind_matches
+                                      kind symbol_kind))
+                        && path_is_within_root ~path:declaration_source_path
+                             ~root:root.abs_path)
+                 |> Option.map (fun root ->
+                        let symbol = Some (String.concat "." symbol.path) in
+                        raw_finding ~rule:"forbidden-source-root-reference"
+                          ~abs_path:path ~loc:loc_item.loc
+                          ~severity:rule.severity
+                          ~message:
+                            (effective_forbidden_source_root_reference_message
+                               rule root)
+                          ?symbol ())))
 
   let is_function_type typ =
     match (Shared.dig typ).desc with
@@ -623,7 +725,7 @@ let dedupe_findings findings =
   in
   loop [] findings
 
-let compare_raw_findings left right =
+let compare_raw_findings (left : raw_finding) (right : raw_finding) =
   let span ({Location.loc_start; loc_end} : Location.t) =
     ( loc_end.pos_lnum - loc_start.pos_lnum,
       loc_end.pos_cnum - loc_start.pos_cnum )
@@ -664,6 +766,7 @@ let analyze_file ~config path =
     | Some full ->
       findings :=
         Typed.forbidden_reference_findings ~config ~path full
+        @ Typed.forbidden_source_root_reference_findings ~config ~path full
         @ Typed.single_use_function_findings ~config ~path
             ~local_function_bindings:ast.local_function_bindings full
         @ !findings);

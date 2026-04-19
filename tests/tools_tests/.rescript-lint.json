@@ -40,6 +40,11 @@
       "alias-avoidance": {
         "severity": "warning"
       },
+      "forbidden-source-root-reference": {
+        "severity": "error",
+        "roots": ["src/generated"],
+        "kinds": ["value", "type"]
+      },
       "preferred-type-syntax": {
         "severity": "warning",
         "dict": true
