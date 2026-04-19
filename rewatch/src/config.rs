@@ -157,7 +157,7 @@ pub struct PackageSpec {
 pub enum PackageModule {
     #[serde(rename = "commonjs", alias = "cjs")]
     CommonJs,
-    #[serde(rename = "esmodule")]
+    #[serde(rename = "esmodule", alias = "es6")]
     EsModule,
 }
 
@@ -250,6 +250,7 @@ pub enum DeprecationWarning {
     BsDevDependencies,
     BscFlags,
     CjsModule,
+    Es6Module,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -498,8 +499,15 @@ impl Config {
             }
         }
 
-        if raw_value.as_ref().is_some_and(uses_cjs_module) {
-            config.deprecation_warnings.push(DeprecationWarning::CjsModule);
+        if let Some(value) = raw_value.as_ref() {
+            for (legacy_module, warning) in [
+                ("cjs", DeprecationWarning::CjsModule),
+                ("es6", DeprecationWarning::Es6Module),
+            ] {
+                if uses_module_alias(value, legacy_module) {
+                    config.deprecation_warnings.push(warning);
+                }
+            }
         }
 
         config.handle_deprecations()?;
@@ -832,19 +840,17 @@ fn resolve_spec_in_source(spec: &serde_json::Value) -> bool {
         .unwrap_or(true)
 }
 
-fn uses_cjs_module(value: &serde_json::Value) -> bool {
+fn uses_module_alias(value: &serde_json::Value, alias: &str) -> bool {
     let specs = match value.get("package-specs") {
         Some(specs) => specs,
         None => return false,
     };
+    let spec_has_alias =
+        |spec: &serde_json::Value| -> bool { spec.get("module").and_then(|m| m.as_str()) == Some(alias) };
     match specs {
-        serde_json::Value::Array(specs) => specs.iter().any(spec_has_cjs_module),
-        _ => spec_has_cjs_module(specs),
+        serde_json::Value::Array(specs) => specs.iter().any(spec_has_alias),
+        _ => spec_has_alias(specs),
     }
-}
-
-fn spec_has_cjs_module(spec: &serde_json::Value) -> bool {
-    spec.get("module").and_then(|m| m.as_str()) == Some("cjs")
 }
 
 fn validate_package_spec_value(value: &serde_json::Value) -> Result<()> {
@@ -859,7 +865,7 @@ fn validate_package_spec_value(value: &serde_json::Value) -> Result<()> {
     };
 
     match module {
-        "commonjs" | "cjs" | "esmodule" => Ok(()),
+        "commonjs" | "cjs" | "esmodule" | "es6" => Ok(()),
         other => Err(anyhow!(
             "Module system \"{other}\" is unsupported. Expected \"commonjs\" or \"esmodule\"."
         )),
@@ -1272,27 +1278,21 @@ pub mod tests {
     }
 
     #[test]
-    fn test_package_specs_es6_deprecation() {
+    fn test_es6_module_alias() {
         let json = r#"
         {
             "name": "testrepo",
-            "sources": {
-                "dir": "src",
-                "subdirs": true
-            },
-            "package-specs": [
-                {
-                "module": "es6",
-                "in-source": true
-                }
-            ],
+            "sources": { "dir": "src", "subdirs": true },
+            "package-specs": [ { "module": "es6", "in-source": true } ],
             "suffix": ".mjs"
         }
         "#;
 
-        let err = Config::new_from_json_string(json).unwrap_err();
-        let message = err.to_string();
-        assert!(message.contains("Module system \"es6\" is unsupported"));
+        let config = Config::new_from_json_string(json).expect("a valid json string");
+        let specs = config.get_package_specs();
+        assert_eq!(specs.len(), 1);
+        assert_eq!(specs[0].module, PackageModule::EsModule);
+        assert_eq!(config.get_deprecations(), [DeprecationWarning::Es6Module]);
     }
 
     #[test]

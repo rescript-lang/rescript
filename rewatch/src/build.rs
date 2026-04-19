@@ -492,6 +492,9 @@ fn log_deprecations(
             crate::config::DeprecationWarning::CjsModule => {
                 "  - module 'cjs' in package-specs — use 'commonjs' instead"
             }
+            crate::config::DeprecationWarning::Es6Module => {
+                "  - module 'es6' in package-specs — use 'esmodule' instead"
+            }
         };
         message.push('\n');
         message.push_str(line);
