@@ -1,3 +1,46 @@
 Definition src/RecordRest.res 8:4
 {"uri": "RecordRest.res", "range": {"start": {"line": 7, "character": 32}, "end": {"line": 7, "character": 36}}}
 
+Inlay Hint src/RecordRest.res 1:34
+[{
+    "position": {"line": 12, "character": 41},
+    "label": ": SubConfig.t",
+    "kind": 1,
+    "paddingLeft": true,
+    "paddingRight": false
+}, {
+    "position": {"line": 5, "character": 14},
+    "label": ": config => string",
+    "kind": 1,
+    "paddingLeft": true,
+    "paddingRight": false
+}]
+
+Highlight src/RecordRest.res
+structure items:4 diagnostics:0
+Lident: config 0:5 Type
+Lident: name 0:15 Property
+Lident: string 0:21 Type
+Lident: version 0:29 Property
+Lident: string 0:38 Type
+Lident: SubConfig 1:7 Namespace
+Lident: t 2:7 Type
+Lident: version 2:12 Property
+Lident: string 2:21 Type
+Variable: getVersion [5:4->5:14]
+Variable: config [5:18->5:24]
+Lident: config 5:26 Type
+Lident: config 6:9 Variable
+Lident: name 7:5 Property
+Variable: rest [7:32->7:36]
+Ldot: SubConfig 7:17 Namespace
+Lident: t 7:27 Type
+Lident: version 8:9 Property
+Lident: rest 8:4 Variable
+Lident: name 12:5 Property
+Variable: localRest [12:32->12:41]
+Ldot: SubConfig 12:17 Namespace
+Lident: t 12:27 Type
+Lident: name 12:46 Property
+Lident: version 12:57 Property
+
