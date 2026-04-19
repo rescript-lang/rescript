@@ -2259,6 +2259,19 @@ let extract_function_name funct =
   | Texp_ident (path, _, _) -> Some (Longident.parse (Path.name path))
   | _ -> None
 
+let should_unify_expected_result_before_typing_lowered_apply funct sargs =
+  match (extract_function_name funct, sargs) with
+  | ( Some (Longident.Ldot (Longident.Lident "Primitive_dict", "make")),
+      [(Asttypes.Nolabel, {Parsetree.pexp_desc = Parsetree.Pexp_array _})] ) ->
+    (* Dict literals *)
+    true
+  | ( Some
+        (Longident.Ldot (Longident.Lident "Primitive_promise", "unsafe_async")),
+      [(Asttypes.Nolabel, _)] ) ->
+    (* Async wrapper *)
+    true
+  | _ -> false
+
 type lazy_args =
   (Asttypes.arg_label * (unit -> Typedtree.expression) option) list
 
@@ -2460,6 +2473,17 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
     let funct =
       type_exp ~deprecated_context:FunctionCall ~context:None env sfunct
     in
+    (if should_unify_expected_result_before_typing_lowered_apply funct sargs
+     then
+       (* Lowered syntax like dict literals and async wrappers becomes a regular
+          application, so thread the expected result type into the application
+          before typing its arguments. *)
+       let _, ty_res =
+         filter_arrow ~env
+           ~arity:(Some (List.length sargs))
+           funct.exp_type Nolabel
+       in
+       unify_exp_types ~context:None loc env ty_res (instance env ty_expected));
     let ty = instance env funct.exp_type in
     end_def ();
     wrap_trace_gadt_instances env (lower_args env []) ty;
