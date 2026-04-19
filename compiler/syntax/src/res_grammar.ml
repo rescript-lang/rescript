@@ -224,7 +224,7 @@ let is_mod_expr_start = function
   | _ -> false
 
 let is_dict_row_start = function
-  | Token.String _ -> true
+  | Token.DotDotDot | String _ -> true
   | _ -> false
 
 let is_record_row_start = function

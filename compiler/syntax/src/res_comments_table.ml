@@ -1488,6 +1488,22 @@ and walk_expression expr t comments =
     attach t.trailing expr.pexp_loc after_expr;
     walk_list (cases |> List.map (fun case -> Case case)) t rest
     (* unary expression: todo use parsetreeviewer *)
+  | Pexp_apply _
+    when Option.is_some
+           (Res_parsetree_viewer.collect_spread_dict_expr_parts expr) -> (
+    match Res_parsetree_viewer.collect_spread_dict_expr_parts expr with
+    | Some parts ->
+      let part_exprs =
+        List.map
+          (function
+            | Res_parsetree_viewer.DictExprRows rows_expr ->
+              Expression rows_expr
+            | Res_parsetree_viewer.DictExprSpread spread_expr ->
+              Expression spread_expr)
+          parts
+      in
+      walk_list part_exprs t comments
+    | None -> assert false)
   | Pexp_apply
       {
         funct =

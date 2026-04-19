@@ -174,6 +174,62 @@ Test.run(
   dict{},
 )
 
+{
+  let foo = dict{
+    "a": 1,
+    "b": 2,
+  }
+  let baz = dict{
+    "b": 4,
+    "c": 5,
+  }
+  let result = dict{...foo, "b": 3, ...baz, "d": 6}
+
+  Test.run(
+    __POS_OF__("dict spread applies sources from left to right"),
+    result,
+    eq,
+    dict{
+      "a": 1,
+      "b": 4,
+      "c": 5,
+      "d": 6,
+    },
+  )
+  Test.run(
+    __POS_OF__("dict spread leaves first source unchanged"),
+    foo,
+    eq,
+    dict{
+      "a": 1,
+      "b": 2,
+    },
+  )
+  Test.run(
+    __POS_OF__("dict spread leaves later source unchanged"),
+    baz,
+    eq,
+    dict{
+      "b": 4,
+      "c": 5,
+    },
+  )
+  Test.run(__POS_OF__("dict spread returns a fresh dictionary"), result === foo, eq, false)
+}
+
+{
+  let foo = dict{"a": 1}
+  let result = dict{...foo}
+
+  Test.run(__POS_OF__("dict spread copies a single source"), result, eq, dict{"a": 1})
+  Test.run(
+    __POS_OF__("dict spread copies a single source into a fresh dictionary"),
+    result === foo,
+    eq,
+    false,
+  )
+}
+
 Test.run(
   __POS_OF__("getUnsafe - existing"),
   Dict.fromArray([("foo", "bar")])->Dict.getUnsafe("foo"),
