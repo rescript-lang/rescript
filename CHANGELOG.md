@@ -30,6 +30,8 @@
 #### :nail_care: Polish
 
 - Improve default argument type mismatch errors. https://github.com/rescript-lang/rescript/pull/8389
+- Allow builds while watchers are running. https://github.com/rescript-lang/rescript/pull/8349
+- Build system: Add OpenTelemetry tracing support for cli commands.
 
 #### :house: Internal
 
