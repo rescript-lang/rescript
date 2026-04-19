@@ -1,0 +1,1 @@
+[{"path":".tmp-rewrite-tests/RewritePreferredTypeSyntax.resi","mode":"write","changed":true,"applied":[{"rule":"preferred-type-syntax","count":4,"note":"rewrote `Dict.t<_>` into `dict<_>`"}]}]

@@ -12,4 +12,14 @@ rules:
 - prefer-switch(1): rewrote `if` / ternary branches into `switch`
 - no-optional-some(3): rewrote `~label=?Some(expr)` into `~label=expr`
 
-summary: rewritten 2 files, unchanged 1, rules: prefer-switch(5), no-optional-some(3)
+path: .tmp-rewrite-tests/root/RewritePreferredTypeSyntax.res
+status: rewritten
+rules:
+- preferred-type-syntax(4): rewrote `Dict.t<_>` into `dict<_>`
+
+path: .tmp-rewrite-tests/root/RewritePreferredTypeSyntax.resi
+status: rewritten
+rules:
+- preferred-type-syntax(4): rewrote `Dict.t<_>` into `dict<_>`
+
+summary: rewritten 4 files, unchanged 1, rules: prefer-switch(5), no-optional-some(3), preferred-type-syntax(8)

@@ -127,7 +127,7 @@ fi
 rm -rf .tmp-rewrite-tests
 mkdir -p .tmp-rewrite-tests
 
-for file in src/rewrite/*.res; do
+for file in src/rewrite/*.{res,resi}; do
   tmp_file=".tmp-rewrite-tests/$(basename $file)"
   cp "$file" "$tmp_file"
 
@@ -165,7 +165,7 @@ done
 
 rm -rf .tmp-rewrite-tests/root
 mkdir -p .tmp-rewrite-tests/root
-cp src/rewrite/*.res .tmp-rewrite-tests/root/
+cp src/rewrite/*.{res,resi} .tmp-rewrite-tests/root/
 ../../_build/install/default/bin/rescript-tools rewrite .tmp-rewrite-tests/root > src/expected/rewrite-root.expected
 if [ "$RUNNER_OS" == "Windows" ]; then
   perl -pi -e 's/\r\n/\n/g' -- src/expected/rewrite-root.expected
@@ -173,7 +173,7 @@ fi
 
 rm -rf .tmp-rewrite-tests/root
 mkdir -p .tmp-rewrite-tests/root
-cp src/rewrite/*.res .tmp-rewrite-tests/root/
+cp src/rewrite/*.{res,resi} .tmp-rewrite-tests/root/
 ../../_build/install/default/bin/rescript-tools rewrite .tmp-rewrite-tests/root --json > src/expected/rewrite-root.json.expected
 if [ "$RUNNER_OS" == "Windows" ]; then
   perl -pi -e 's/\r\n/\n/g' -- src/expected/rewrite-root.json.expected

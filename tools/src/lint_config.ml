@@ -10,16 +10,25 @@ let default_single_use_function_rule : single_use_function_rule =
 let default_alias_avoidance_rule : alias_avoidance_rule =
   {enabled = true; severity = SeverityWarning; message = None}
 
+let default_preferred_type_syntax_rule : preferred_type_syntax_rule =
+  {enabled = true; severity = SeverityWarning; message = None; dict = false}
+
+let default_preferred_type_syntax_rewrite_rule :
+    preferred_type_syntax_rewrite_rule =
+  {enabled = true; dict = false}
+
 let default_config =
   {
     forbidden_reference = [default_forbidden_reference_rule];
     single_use_function = default_single_use_function_rule;
     alias_avoidance = default_alias_avoidance_rule;
+    preferred_type_syntax = default_preferred_type_syntax_rule;
     rewrite =
       {
         prefer_switch =
           {enabled = true; rewrite_if = true; rewrite_ternary = true};
         no_optional_some = {enabled = true};
+        preferred_type_syntax = default_preferred_type_syntax_rewrite_rule;
       };
   }
 
@@ -41,7 +50,7 @@ let result_all results =
   let rec loop acc = function
     | [] -> Ok (List.rev acc)
     | Ok value :: rest -> loop (value :: acc) rest
-    | Error _ as error :: _ -> error
+    | (Error _ as error) :: _ -> error
   in
   loop [] results
 
@@ -65,22 +74,18 @@ let parse_rule_objects ~rule = function
          "error: lint rule `%s` must be an object or array of objects" rule)
 
 let parse_singleton_rule ~rule ~default parse json =
-  Result.bind
-    (parse_rule_objects ~rule json)
-    (function
-      | [] -> Ok default
-      | [rule_json] -> parse rule_json
-      | _ ->
-        Error
-          (Printf.sprintf
-             "error: lint rule `%s` does not support multiple instances" rule))
+  Result.bind (parse_rule_objects ~rule json) (function
+    | [] -> Ok default
+    | [rule_json] -> parse rule_json
+    | _ ->
+      Error
+        (Printf.sprintf
+           "error: lint rule `%s` does not support multiple instances" rule))
 
 let parse_rule_instances ~rule ~default parse json =
-  Result.bind
-    (parse_rule_objects ~rule json)
-    (function
-      | [] -> Ok [default]
-      | rule_jsons -> rule_jsons |> List.map parse |> result_all)
+  Result.bind (parse_rule_objects ~rule json) (function
+    | [] -> Ok [default]
+    | rule_jsons -> rule_jsons |> List.map parse |> result_all)
 
 let parse_item_objects ~rule = function
   | None -> Ok []
@@ -91,13 +96,13 @@ let parse_item_objects ~rule = function
            | Json.Object _ as item_json -> Ok item_json
            | _ ->
              Error
-               (Printf.sprintf
-                  "error: lint rule `%s` item %d must be an object" rule
-                  (index + 1)))
+               (Printf.sprintf "error: lint rule `%s` item %d must be an object"
+                  rule (index + 1)))
     |> result_all
   | Some _ ->
     Error
-      (Printf.sprintf "error: lint rule `%s` field `items` must be an array of objects" rule)
+      (Printf.sprintf
+         "error: lint rule `%s` field `items` must be an array of objects" rule)
 
 let parse_config_json json =
   let lint_json = json |> Json.get "lint" in
@@ -139,7 +144,8 @@ let parse_config_json json =
           | None ->
             Error
               (Printf.sprintf
-                 "error: lint rule `forbidden-reference` item kind `%s` must be one of `module`, `value`, or `type`"
+                 "error: lint rule `forbidden-reference` item kind `%s` must \
+                  be one of `module`, `value`, or `type`"
                  kind))
       in
       let path =
@@ -154,21 +160,18 @@ let parse_config_json json =
           in
           if path = [] then
             Error
-              "error: lint rule `forbidden-reference` item path must not be empty"
+              "error: lint rule `forbidden-reference` item path must not be \
+               empty"
           else Ok path
       in
       Result.bind kind (fun kind ->
           Result.map
-            (fun path ->
-              {
-                kind;
-                path;
-                message = parse_rule_message item_json;
-              })
+            (fun path -> {kind; path; message = parse_rule_message item_json})
             path)
     in
     Result.bind
-      (parse_item_objects ~rule:"forbidden-reference" (rule |> Json.get "items"))
+      (parse_item_objects ~rule:"forbidden-reference"
+         (rule |> Json.get "items"))
       (fun items_json ->
         Result.map
           (fun items ->
@@ -181,31 +184,50 @@ let parse_config_json json =
                    ~default:default_forbidden_reference_rule.severity rule;
                message = parse_rule_message rule;
                items;
-             } : forbidden_reference_rule))
+             }
+              : forbidden_reference_rule))
           (items_json |> List.map parse_item |> result_all))
   in
   let parse_single_use_function_rule rule :
       (single_use_function_rule, string) result =
     Ok
       ({
-        enabled =
-          Lint_support.Json.bool_with_default ~default:true rule "enabled";
-        severity =
-          parse_rule_severity ~default:default_single_use_function_rule.severity
-            rule;
-        message = parse_rule_message rule;
-      } : single_use_function_rule)
+         enabled =
+           Lint_support.Json.bool_with_default ~default:true rule "enabled";
+         severity =
+           parse_rule_severity
+             ~default:default_single_use_function_rule.severity rule;
+         message = parse_rule_message rule;
+       }
+        : single_use_function_rule)
   in
   let parse_alias_avoidance_rule rule : (alias_avoidance_rule, string) result =
     Ok
       ({
-        enabled =
-          Lint_support.Json.bool_with_default ~default:true rule "enabled";
-        severity =
-          parse_rule_severity ~default:default_alias_avoidance_rule.severity
-            rule;
-        message = parse_rule_message rule;
-      } : alias_avoidance_rule)
+         enabled =
+           Lint_support.Json.bool_with_default ~default:true rule "enabled";
+         severity =
+           parse_rule_severity ~default:default_alias_avoidance_rule.severity
+             rule;
+         message = parse_rule_message rule;
+       }
+        : alias_avoidance_rule)
+  in
+  let parse_preferred_type_syntax_rule rule :
+      (preferred_type_syntax_rule, string) result =
+    Ok
+      ({
+         enabled =
+           Lint_support.Json.bool_with_default ~default:true rule "enabled";
+         severity =
+           parse_rule_severity
+             ~default:default_preferred_type_syntax_rule.severity rule;
+         message = parse_rule_message rule;
+         dict =
+           Lint_support.Json.bool_with_default
+             ~default:default_preferred_type_syntax_rule.dict rule "dict";
+       }
+        : preferred_type_syntax_rule)
   in
   let prefer_switch =
     match get_rewrite_rule "prefer-switch" with
@@ -232,27 +254,53 @@ let parse_config_json json =
       }
     | None -> default_config.rewrite.no_optional_some
   in
+  let preferred_type_syntax_rewrite =
+    match get_rewrite_rule "preferred-type-syntax" with
+    | Some rule ->
+      {
+        enabled =
+          Lint_support.Json.bool_with_default ~default:true rule "enabled";
+        dict =
+          Lint_support.Json.bool_with_default
+            ~default:default_preferred_type_syntax_rewrite_rule.dict rule "dict";
+      }
+    | None -> default_config.rewrite.preferred_type_syntax
+  in
   Result.bind
     (parse_rule_instances ~rule:"forbidden-reference"
-       ~default:default_forbidden_reference_rule
-       parse_forbidden_reference_rule (get_rule "forbidden-reference"))
+       ~default:default_forbidden_reference_rule parse_forbidden_reference_rule
+       (get_rule "forbidden-reference"))
     (fun forbidden_reference ->
       Result.bind
         (parse_singleton_rule ~rule:"single-use-function"
            ~default:default_single_use_function_rule
-           parse_single_use_function_rule (get_rule "single-use-function"))
+           parse_single_use_function_rule
+           (get_rule "single-use-function"))
         (fun single_use_function ->
-          Result.map
-            (fun alias_avoidance ->
-              {
-                forbidden_reference;
-                single_use_function;
-                alias_avoidance;
-                rewrite = {prefer_switch; no_optional_some};
-              })
+          Result.bind
             (parse_singleton_rule ~rule:"alias-avoidance"
-               ~default:default_alias_avoidance_rule
-               parse_alias_avoidance_rule (get_rule "alias-avoidance"))))
+               ~default:default_alias_avoidance_rule parse_alias_avoidance_rule
+               (get_rule "alias-avoidance"))
+            (fun alias_avoidance ->
+              Result.bind
+                (parse_singleton_rule ~rule:"preferred-type-syntax"
+                   ~default:default_preferred_type_syntax_rule
+                   parse_preferred_type_syntax_rule
+                   (get_rule "preferred-type-syntax"))
+                (fun preferred_type_syntax ->
+                  Ok
+                    {
+                      forbidden_reference;
+                      single_use_function;
+                      alias_avoidance;
+                      preferred_type_syntax;
+                      rewrite =
+                        {
+                          prefer_switch;
+                          no_optional_some;
+                          preferred_type_syntax = preferred_type_syntax_rewrite;
+                        };
+                    }))))
 
 let discover_config_path start_path =
   let rec loop path =

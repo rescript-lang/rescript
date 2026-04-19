@@ -50,6 +50,17 @@ settings:
 - severity: warning
 - message: Use the fully qualified reference directly instead of creating a local alias
 
+namespace: lint
+rule: preferred-type-syntax
+active: true
+summary: Prefer canonical builtin type syntax where available.
+details: Currently reports `Dict.t<_>` and `Stdlib.Dict.t<_>` in favor of `dict<_>`.
+settings:
+- enabled: true
+- severity: warning
+- message: Prefer `dict<_>` over `Dict.t<_>`
+- dict: true
+
 namespace: rewrite
 rule: prefer-switch
 active: true
@@ -68,4 +79,13 @@ details: Turns `~label=?Some(expr)` into `~label=expr` when the argument is alre
 settings:
 - enabled: true
 
-summary: 6 active, 0 inactive, 6 total
+namespace: rewrite
+rule: preferred-type-syntax
+active: true
+summary: Rewrite supported types into canonical builtin syntax.
+details: Currently rewrites `Dict.t<_>` and `Stdlib.Dict.t<_>` into `dict<_>`.
+settings:
+- enabled: true
+- dict: true
+
+summary: 8 active, 0 inactive, 8 total

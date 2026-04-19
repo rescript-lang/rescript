@@ -39,6 +39,10 @@
       },
       "alias-avoidance": {
         "severity": "warning"
+      },
+      "preferred-type-syntax": {
+        "severity": "warning",
+        "dict": true
       }
     }
   },
@@ -51,6 +55,10 @@
       },
       "no-optional-some": {
         "enabled": true
+      },
+      "preferred-type-syntax": {
+        "enabled": true,
+        "dict": true
       }
     }
   }

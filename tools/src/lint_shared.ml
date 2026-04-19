@@ -50,6 +50,13 @@ type alias_avoidance_rule = {
   message: string option;
 }
 
+type preferred_type_syntax_rule = {
+  enabled: bool;
+  severity: severity;
+  message: string option;
+  dict: bool;
+}
+
 type prefer_switch_rule = {
   enabled: bool;
   rewrite_if: bool;
@@ -58,15 +65,19 @@ type prefer_switch_rule = {
 
 type no_optional_some_rule = {enabled: bool}
 
+type preferred_type_syntax_rewrite_rule = {enabled: bool; dict: bool}
+
 type rewrite_config = {
   prefer_switch: prefer_switch_rule;
   no_optional_some: no_optional_some_rule;
+  preferred_type_syntax: preferred_type_syntax_rewrite_rule;
 }
 
 type config = {
   forbidden_reference: forbidden_reference_rule list;
   single_use_function: single_use_function_rule;
   alias_avoidance: alias_avoidance_rule;
+  preferred_type_syntax: preferred_type_syntax_rule;
   rewrite: rewrite_config;
 }
 
@@ -114,6 +125,11 @@ let single_use_function_default_message = "Local function is only used once"
 let alias_avoidance_default_message =
   "Use the fully qualified reference directly instead of creating a local alias"
 
+let preferred_type_syntax_default_message = "Prefer `dict<_>` over `Dict.t<_>`"
+
+let preferred_type_syntax_dict_path path =
+  path = ["Dict"; "t"] || path = ["Stdlib"; "Dict"; "t"]
+
 let rule_setting_value_to_text = function
   | RuleSettingBool value -> string_of_bool value
   | RuleSettingString value -> value
@@ -157,6 +173,17 @@ let alias_avoidance_rule_info =
     rewrite_note = None;
   }
 
+let preferred_type_syntax_rule_info =
+  {
+    namespace = "lint";
+    rule = "preferred-type-syntax";
+    summary = "Prefer canonical builtin type syntax where available.";
+    details =
+      "Currently reports `Dict.t<_>` and `Stdlib.Dict.t<_>` in favor of \
+       `dict<_>`.";
+    rewrite_note = None;
+  }
+
 let prefer_switch_rule_info =
   {
     namespace = "rewrite";
@@ -181,13 +208,25 @@ let no_optional_some_rule_info =
     rewrite_note = Some "rewrote `~label=?Some(expr)` into `~label=expr`";
   }
 
+let preferred_type_syntax_rewrite_rule_info =
+  {
+    namespace = "rewrite";
+    rule = "preferred-type-syntax";
+    summary = "Rewrite supported types into canonical builtin syntax.";
+    details =
+      "Currently rewrites `Dict.t<_>` and `Stdlib.Dict.t<_>` into `dict<_>`.";
+    rewrite_note = Some "rewrote `Dict.t<_>` into `dict<_>`";
+  }
+
 let configurable_rule_infos =
   [
     forbidden_reference_rule_info;
     single_use_function_rule_info;
     alias_avoidance_rule_info;
+    preferred_type_syntax_rule_info;
     prefer_switch_rule_info;
     no_optional_some_rule_info;
+    preferred_type_syntax_rewrite_rule_info;
   ]
 
 let rewrite_rule_infos =
@@ -204,18 +243,21 @@ let rewrite_note_for_rule rule =
 let effective_forbidden_reference_message (rule : forbidden_reference_rule) =
   Option.value rule.message ~default:forbidden_reference_default_message
 
-let effective_forbidden_reference_item_message
-    (rule : forbidden_reference_rule) (item : forbidden_reference_item) =
-  Option.value item.message ~default:(effective_forbidden_reference_message rule)
+let effective_forbidden_reference_item_message (rule : forbidden_reference_rule)
+    (item : forbidden_reference_item) =
+  Option.value item.message
+    ~default:(effective_forbidden_reference_message rule)
 
 let forbidden_reference_message_settings (rule : forbidden_reference_rule) =
   let has_item_message =
-    rule.items |> List.exists (fun (item : forbidden_reference_item) ->
-      item.message <> None)
+    rule.items
+    |> List.exists (fun (item : forbidden_reference_item) ->
+           item.message <> None)
   in
   let has_item_without_message =
-    rule.items |> List.exists (fun (item : forbidden_reference_item) ->
-      item.message = None)
+    rule.items
+    |> List.exists (fun (item : forbidden_reference_item) ->
+           item.message = None)
   in
   match rule.message with
   | Some message -> [("message", RuleSettingString message)]
@@ -230,6 +272,10 @@ let effective_single_use_function_message (rule : single_use_function_rule) =
 let effective_alias_avoidance_message (rule : alias_avoidance_rule) =
   Option.value rule.message ~default:alias_avoidance_default_message
 
+let effective_preferred_type_syntax_message (rule : preferred_type_syntax_rule)
+    =
+  Option.value rule.message ~default:preferred_type_syntax_default_message
+
 let rule_listings_of_config (config : config) =
   let instance_if_many total index =
     if total > 1 then Some (index + 1) else None
@@ -240,15 +286,14 @@ let rule_listings_of_config (config : config) =
            let item_settings =
              rule.items
              |> List.mapi (fun item_index (item : forbidden_reference_item) ->
-                    let prefix =
-                      Printf.sprintf "item[%d]" (item_index + 1)
-                    in
+                    let prefix = Printf.sprintf "item[%d]" (item_index + 1) in
                     let base_settings =
                       [
                         ( prefix ^ ".kind",
                           RuleSettingString
                             (forbidden_reference_kind_to_string item.kind) );
-                        (prefix ^ ".path", RuleSettingString (String.concat "." item.path));
+                        ( prefix ^ ".path",
+                          RuleSettingString (String.concat "." item.path) );
                       ]
                     in
                     match item.message with
@@ -316,8 +361,30 @@ let rule_listings_of_config (config : config) =
       };
     ]
   in
+  let preferred_type_syntax_listings =
+    let rule = config.preferred_type_syntax in
+    [
+      {
+        namespace = preferred_type_syntax_rule_info.namespace;
+        rule = preferred_type_syntax_rule_info.rule;
+        instance = None;
+        active = rule.enabled && rule.dict;
+        summary = preferred_type_syntax_rule_info.summary;
+        details = preferred_type_syntax_rule_info.details;
+        settings =
+          [
+            ("enabled", RuleSettingBool rule.enabled);
+            ("severity", RuleSettingString (severity_to_string rule.severity));
+            ( "message",
+              RuleSettingString (effective_preferred_type_syntax_message rule)
+            );
+            ("dict", RuleSettingBool rule.dict);
+          ];
+      };
+    ]
+  in
   forbidden_reference_listings @ single_use_function_listings
-  @ alias_avoidance_listings
+  @ alias_avoidance_listings @ preferred_type_syntax_listings
   @ [
       {
         namespace = prefer_switch_rule_info.namespace;
@@ -346,6 +413,22 @@ let rule_listings_of_config (config : config) =
         details = no_optional_some_rule_info.details;
         settings =
           [("enabled", RuleSettingBool config.rewrite.no_optional_some.enabled)];
+      };
+      {
+        namespace = preferred_type_syntax_rewrite_rule_info.namespace;
+        rule = preferred_type_syntax_rewrite_rule_info.rule;
+        instance = None;
+        active =
+          config.rewrite.preferred_type_syntax.enabled
+          && config.rewrite.preferred_type_syntax.dict;
+        summary = preferred_type_syntax_rewrite_rule_info.summary;
+        details = preferred_type_syntax_rewrite_rule_info.details;
+        settings =
+          [
+            ( "enabled",
+              RuleSettingBool config.rewrite.preferred_type_syntax.enabled );
+            ("dict", RuleSettingBool config.rewrite.preferred_type_syntax.dict);
+          ];
       };
     ]
 

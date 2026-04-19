@@ -23,7 +23,11 @@ type rewritten_file = {
 
 type run_result = {output: string; changed_files: int}
 
-type rule_counts = {prefer_switch: int; no_optional_some: int}
+type rule_counts = {
+  prefer_switch: int;
+  no_optional_some: int;
+  preferred_type_syntax: int;
+}
 
 let package_for_path path =
   let uri = Uri.fromPath path in
@@ -125,36 +129,35 @@ let verify_rewritten_source ~path ~contents =
       Res_driver.parse_interface_from_source ~for_printer:true
         ~display_filename:path ~source:contents
     in
-    if invalid then
+    if invalid then (
       let buf = Buffer.create 256 in
       let formatter = Format.formatter_of_buffer buf in
       Res_diagnostics.print_report ~formatter diagnostics contents;
       Format.pp_print_flush formatter ();
       Error
-        (Printf.sprintf
-           "error: rewrite produced invalid syntax for %s\n%s" path
-           (Buffer.contents buf))
+        (Printf.sprintf "error: rewrite produced invalid syntax for %s\n%s" path
+           (Buffer.contents buf)))
     else Ok ()
   else
     let {Res_driver.invalid; diagnostics; _} =
       Res_driver.parse_implementation_from_source ~for_printer:true
         ~display_filename:path ~source:contents
     in
-    if invalid then
+    if invalid then (
       let buf = Buffer.create 256 in
       let formatter = Format.formatter_of_buffer buf in
       Res_diagnostics.print_report ~formatter diagnostics contents;
       Format.pp_print_flush formatter ();
       Error
-        (Printf.sprintf
-           "error: rewrite produced invalid syntax for %s\n%s" path
-           (Buffer.contents buf))
+        (Printf.sprintf "error: rewrite produced invalid syntax for %s\n%s" path
+           (Buffer.contents buf)))
     else Ok ()
 
 let applied_rules_of_counts (rule_counts : rule_counts) =
   [
     ("prefer-switch", rule_counts.prefer_switch);
     ("no-optional-some", rule_counts.no_optional_some);
+    ("preferred-type-syntax", rule_counts.preferred_type_syntax);
   ]
   |> List.filter_map (fun (rule, count) ->
          if count <= 0 then None
@@ -163,11 +166,7 @@ let applied_rules_of_counts (rule_counts : rule_counts) =
 module Diff = struct
   type op = Equal of string | Delete of string | Insert of string
 
-  type entry = {
-    op: op;
-    old_no: int option;
-    new_no: int option;
-  }
+  type entry = {op: op; old_no: int option; new_no: int option}
 
   let strip_trailing_cr line =
     let len = String.length line in
@@ -189,29 +188,30 @@ module Diff = struct
     for before_index = before_len - 1 downto 0 do
       for after_index = after_len - 1 downto 0 do
         table.(before_index).(after_index) <-
-          if before.(before_index) = after.(after_index) then
-            table.(before_index + 1).(after_index + 1) + 1
-          else
-            max table.(before_index + 1).(after_index)
-              table.(before_index).(after_index + 1)
+          (if before.(before_index) = after.(after_index) then
+             table.(before_index + 1).(after_index + 1) + 1
+           else
+             max
+               table.(before_index + 1).(after_index)
+               table.(before_index).(after_index + 1))
       done
     done;
     let rec loop before_index after_index acc =
-      if before_index < before_len && after_index < after_len
-         && before.(before_index) = after.(after_index)
+      if
+        before_index < before_len && after_index < after_len
+        && before.(before_index) = after.(after_index)
       then
         loop (before_index + 1) (after_index + 1)
           (Equal before.(before_index) :: acc)
-      else if before_index < before_len
-              && (after_index = after_len
-                 || table.(before_index + 1).(after_index)
-                    >= table.(before_index).(after_index + 1))
+      else if
+        before_index < before_len
+        && (after_index = after_len
+           || table.(before_index + 1).(after_index)
+              >= table.(before_index).(after_index + 1))
       then
-        loop (before_index + 1) after_index
-          (Delete before.(before_index) :: acc)
+        loop (before_index + 1) after_index (Delete before.(before_index) :: acc)
       else if after_index < after_len then
-        loop before_index (after_index + 1)
-          (Insert after.(after_index) :: acc)
+        loop before_index (after_index + 1) (Insert after.(after_index) :: acc)
       else List.rev acc
     in
     loop 0 0 []
@@ -279,8 +279,12 @@ module Diff = struct
       | None -> 1)
 
   let render_hunk entries start finish =
-    let old_start = line_start entries start finish (fun entry -> entry.old_no) in
-    let new_start = line_start entries start finish (fun entry -> entry.new_no) in
+    let old_start =
+      line_start entries start finish (fun entry -> entry.old_no)
+    in
+    let new_start =
+      line_start entries start finish (fun entry -> entry.new_no)
+    in
     let old_count =
       count_lines entries start finish (fun entry -> entry.old_no)
     in
@@ -292,8 +296,8 @@ module Diff = struct
         new_count
     in
     let lines =
-      entries
-      |> Array.to_list |> List.mapi (fun index entry -> (index, entry))
+      entries |> Array.to_list
+      |> List.mapi (fun index entry -> (index, entry))
       |> List.filter_map (fun (index, entry) ->
              if index < start || index > finish then None
              else
@@ -336,27 +340,34 @@ module Diff = struct
 
   let render ~path ~before ~after =
     let entries = build_ops ~before ~after |> annotate in
-    let has_changes =
-      entries |> Array.exists is_change
-    in
+    let has_changes = entries |> Array.exists is_change in
     if not has_changes then None
     else
       let hunks = collect_hunks entries 3 in
       let body =
-        hunks |> List.map (fun (start, finish) -> render_hunk entries start finish)
+        hunks
+        |> List.map (fun (start, finish) -> render_hunk entries start finish)
       in
       Some
         (String.concat "\n"
-           ([
-              Printf.sprintf "--- a/%s" path;
-              Printf.sprintf "+++ b/%s" path;
-            ]
+           ([Printf.sprintf "--- a/%s" path; Printf.sprintf "+++ b/%s" path]
            @ body))
 end
 
 let rewrite_file ~(config : config) path =
   let prefer_switch_count = ref 0 in
   let no_optional_some_count = ref 0 in
+  let preferred_type_syntax_count = ref 0 in
+  let rewrite_dict_type (core_type : Parsetree.core_type)
+      (lid : Longident.t Location.loc) args =
+    incr preferred_type_syntax_count;
+    let loc = lid.loc in
+    {
+      core_type with
+      ptyp_desc =
+        Ptyp_constr (Location.mkloc (Longident.Lident "dict") loc, args);
+    }
+  in
   let rec expr mapper (expression : Parsetree.expression) =
     match expression.pexp_desc with
     | Pexp_apply {funct; args; partial; transformed_jsx} ->
@@ -367,7 +378,8 @@ let rewrite_file ~(config : config) path =
         |> List.map
              (fun ((label, arg) : Asttypes.arg_label * Parsetree.expression) ->
                match (label, arg.pexp_desc) with
-               | Asttypes.Optional {txt; loc}, Pexp_construct ({txt = Lident "Some"; _}, Some inner)
+               | ( Asttypes.Optional {txt; loc},
+                   Pexp_construct ({txt = Lident "Some"; _}, Some inner) )
                  when config.rewrite.no_optional_some.enabled ->
                  incr no_optional_some_count;
                  (Asttypes.Labelled {txt; loc}, inner)
@@ -377,7 +389,7 @@ let rewrite_file ~(config : config) path =
         expression with
         pexp_desc = Pexp_apply {funct; args; partial; transformed_jsx};
       }
-    | Pexp_ifthenelse _ when should_rewrite_if ~config expression ->
+    | Pexp_ifthenelse _ when should_rewrite_if ~config expression -> (
       let rec collect branches (current_expr : Parsetree.expression) =
         match current_expr.pexp_desc with
         | Pexp_ifthenelse (condition, then_expr, Some else_expr)
@@ -409,25 +421,41 @@ let rewrite_file ~(config : config) path =
       in
       let attrs = filter_ternary_attributes expression.pexp_attributes in
       incr prefer_switch_count;
-      (match branches with
-      | [condition, then_expr] ->
+      match branches with
+      | [(condition, then_expr)] ->
         make_boolean_switch ~loc:expression.pexp_loc ~attrs condition then_expr
           fallback
-      | _ ->
-        make_guard_switch ~loc:expression.pexp_loc ~attrs branches fallback)
+      | _ -> make_guard_switch ~loc:expression.pexp_loc ~attrs branches fallback
+      )
     | _ -> Ast_mapper.default_mapper.expr mapper expression
+  and typ mapper (core_type : Parsetree.core_type) =
+    match core_type.ptyp_desc with
+    | Ptyp_constr (({txt = lid; _} as lid_loc), args)
+      when config.rewrite.preferred_type_syntax.enabled
+           && config.rewrite.preferred_type_syntax.dict
+           && preferred_type_syntax_dict_path (Utils.flattenLongIdent lid) ->
+      let args = List.map (typ mapper) args in
+      rewrite_dict_type core_type lid_loc args
+    | _ -> Ast_mapper.default_mapper.typ mapper core_type
   in
-  let mapper = {Ast_mapper.default_mapper with expr} in
+  let mapper = {Ast_mapper.default_mapper with expr; typ} in
   let finalize ~source ~contents =
     let applied_rules =
       applied_rules_of_counts
         {
           prefer_switch = !prefer_switch_count;
           no_optional_some = !no_optional_some_count;
+          preferred_type_syntax = !preferred_type_syntax_count;
         }
     in
     if applied_rules = [] then
-      Ok {changed = false; source_contents = source; contents = source; applied_rules}
+      Ok
+        {
+          changed = false;
+          source_contents = source;
+          contents = source;
+          applied_rules;
+        }
     else
       match verify_rewritten_source ~path ~contents with
       | Error _ as error -> error
@@ -494,7 +522,8 @@ let stringify_applied_rules_text applied_rules =
 let count_unchanged_files results =
   results
   |> List.fold_left
-       (fun count (result : file_result) -> if result.changed then count else count + 1)
+       (fun count (result : file_result) ->
+         if result.changed then count else count + 1)
        0
 
 let summarize_applied_rules results =
@@ -504,9 +533,11 @@ let summarize_applied_rules results =
          result.applied_rules
          |> List.iter (fun (applied_rule : applied_rule) ->
                 let total =
-                  Hashtbl.find_opt totals applied_rule.rule |> Option.value ~default:0
+                  Hashtbl.find_opt totals applied_rule.rule
+                  |> Option.value ~default:0
                 in
-                Hashtbl.replace totals applied_rule.rule (total + applied_rule.count)));
+                Hashtbl.replace totals applied_rule.rule
+                  (total + applied_rule.count)));
   rewrite_rule_infos
   |> List.filter_map (fun (rule_info : rule_info) ->
          match Hashtbl.find_opt totals rule_info.rule with
@@ -527,7 +558,8 @@ let stringify_summary_text ~mode results =
   let changed_files =
     results
     |> List.fold_left
-         (fun count (result : file_result) -> if result.changed then count + 1 else count)
+         (fun count (result : file_result) ->
+           if result.changed then count + 1 else count)
          0
   in
   let unchanged_files = count_unchanged_files results in
@@ -542,7 +574,8 @@ let stringify_summary_text ~mode results =
                  Printf.sprintf "%s(%d)" applied_rule.rule applied_rule.count))
   in
   Printf.sprintf "summary: %s %d files, unchanged %d%s"
-    (summary_label_for_mode mode) changed_files unchanged_files rule_summary
+    (summary_label_for_mode mode)
+    changed_files unchanged_files rule_summary
 
 let stringify_text_file_result ~mode ~display_base (result : file_result) =
   let path = Lint_support.Path.display ~base:display_base result.abs_path in
@@ -558,8 +591,7 @@ let stringify_text_file_result ~mode ~display_base (result : file_result) =
   in
   match result.diff with
   | None -> String.concat "\n" lines
-  | Some diff ->
-    String.concat "\n" (lines @ ["diff:"; "```diff"; diff; "```"])
+  | Some diff -> String.concat "\n" (lines @ ["diff:"; "```diff"; diff; "```"])
 
 let stringify_json_file_result ~mode ~display_base (result : file_result) =
   let path = Lint_support.Path.display ~base:display_base result.abs_path in
@@ -577,8 +609,7 @@ let render_results ~mode ~json ~display_base results =
   if json then
     "["
     ^ String.concat ","
-        (results
-        |> List.map (stringify_json_file_result ~mode ~display_base))
+        (results |> List.map (stringify_json_file_result ~mode ~display_base))
     ^ "]"
   else
     let sections =
@@ -603,13 +634,12 @@ let run ?config_path ?(json = false) ?(mode = Write) target =
     && not (FindFiles.isSourceFile target)
   then
     Error
-      "File extension not supported. This command accepts .res and .resi \
-       files"
+      "File extension not supported. This command accepts .res and .resi files"
   else
     let target = Unix.realpath target in
     match Lint_config.load ?config_path target with
     | Error _ as error -> error
-    | Ok config ->
+    | Ok config -> (
       let files = collect_files target in
       let display_base = display_base target files in
       let process_one path =
@@ -652,4 +682,4 @@ let run ?config_path ?(json = false) ?(mode = Write) target =
                    (fun count (result : file_result) ->
                      if result.changed then count + 1 else count)
                    0;
-          }
+          })

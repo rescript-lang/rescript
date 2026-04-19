@@ -7,6 +7,29 @@ The lint command is the first concrete piece, but the intended surface is broade
 A starter agent skill template for this workflow lives at
 `docs/skills/rescript-ai-template/SKILL.md`.
 
+## PR description
+
+Keep this section updated as the command surface and rule set change so the PR
+description stays current.
+
+```text
+Add AI-oriented `rescript-tools` commands
+
+Commands
+- `lint`: Runs configurable AI-oriented lint checks on a file or project root using source and typed information.
+- `rewrite`: Rewrites source into a narrower agent-oriented normal form, with optional diff output.
+- `active-rules`: Lists lint and rewrite rules, whether they are active, and how they are configured.
+- `show`: Returns hover-style semantic information for a symbol path.
+- `find-references`: Finds references from either a symbol path or a source location.
+
+Initial rules
+- Lint: `forbidden-reference`, `single-use-function`, `alias-avoidance`, `preferred-type-syntax`
+- Rewrite: `prefer-switch`, `no-optional-some`, `preferred-type-syntax`
+
+Support
+- Add `.rescript-lint.json` config support, AI tooling docs, and golden tests for the new command surface
+```
+
 ## Goal
 
 Build AI-oriented tooling that:
@@ -278,9 +301,9 @@ This section is intentionally a scratchpad for future rules.
 
 - enforce regular string literals instead of template strings when interpolation or other template-only behavior is not needed
 
-### Builtin type spellings
+### Preferred type syntax
 
-- enforce builtin type spellings where available
+- enforce canonical builtin type syntax where available
 - example: prefer `dict<>` over `Dict.t<>`
 
 ### Dict normalization
@@ -342,13 +365,18 @@ Lint and rewrite config should each live under their own namespace in `.rescript
       },
       "single-use-function": {
         "severity": "warning"
+      },
+      "preferred-type-syntax": {
+        "severity": "warning",
+        "dict": true
       }
     }
   },
   "rewrite": {
     "rules": {
       "prefer-switch": {"enabled": true, "if": true, "ternary": true},
-      "no-optional-some": {"enabled": true}
+      "no-optional-some": {"enabled": true},
+      "preferred-type-syntax": {"enabled": true, "dict": true}
     }
   }
 }

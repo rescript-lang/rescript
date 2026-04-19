@@ -11,10 +11,7 @@ let starts_with_path ~prefix path =
   in
   loop prefix path
 
-type forbidden_symbol = {
-  kind: forbidden_reference_kind;
-  path: string list;
-}
+type forbidden_symbol = {kind: forbidden_reference_kind; path: string list}
 
 type forbidden_item_match =
   | ForbiddenItemExact
@@ -37,12 +34,14 @@ let forbidden_item_match_is_better candidate best =
   | ForbiddenItemExact, ForbiddenItemModulePrefix _ -> true
   | ForbiddenItemModulePrefix _, ForbiddenItemExact -> false
   | ForbiddenItemExact, ForbiddenItemExact -> false
-  | ForbiddenItemModulePrefix candidate_length, ForbiddenItemModulePrefix best_length ->
+  | ( ForbiddenItemModulePrefix candidate_length,
+      ForbiddenItemModulePrefix best_length ) ->
     candidate_length > best_length
 
 let best_matching_forbidden_item items symbol =
   items
-  |> List.fold_left (fun best (item : forbidden_reference_item) ->
+  |> List.fold_left
+       (fun best (item : forbidden_reference_item) ->
          match forbidden_item_match item symbol with
          | None -> best
          | Some candidate_match -> (
@@ -110,7 +109,9 @@ let resolve_forbidden_reference_items ~target_path items =
       match Hashtbl.find_opt resolved_module_cache (path_key path) with
       | Some resolved -> resolved
       | None ->
-        let resolved = Lint_support.SymbolPath.resolve_module_env ~package path in
+        let resolved =
+          Lint_support.SymbolPath.resolve_module_env ~package path
+        in
         Hashtbl.add resolved_module_cache (path_key path) resolved;
         resolved
     in
@@ -121,11 +122,12 @@ let resolve_forbidden_reference_items ~target_path items =
           let module_prefix = take_path prefix_length item.path in
           match resolve_module_prefix module_prefix with
           | None -> loop (prefix_length - 1)
-          | Some env ->
+          | Some env -> (
             let remainder = drop_path prefix_length item.path in
             match remainder with
             | [] -> Some [env.QueryEnv.file.moduleName]
             | _ -> resolve_exported_path ~env ~package ~kind:item.kind remainder
+            )
       in
       loop (List.length item.path)
     in
@@ -164,7 +166,7 @@ module Ast = struct
 
   let rec qualified_ident_path (expression : Parsetree.expression) =
     match expression.pexp_desc with
-    | Pexp_ident {txt = (Longident.Ldot _ as lid); _} ->
+    | Pexp_ident {txt = Longident.Ldot _ as lid; _} ->
       Some (Utils.flattenLongIdent lid)
     | Pexp_constraint (expression, _)
     | Pexp_open (_, _, expression)
@@ -174,14 +176,14 @@ module Ast = struct
 
   let rec qualified_module_path (module_expr : Parsetree.module_expr) =
     match module_expr.pmod_desc with
-    | Pmod_ident {txt = (Longident.Ldot _ as lid); _} ->
+    | Pmod_ident {txt = Longident.Ldot _ as lid; _} ->
       Some (Utils.flattenLongIdent lid)
     | Pmod_constraint (module_expr, _) -> qualified_module_path module_expr
     | _ -> None
 
   let qualified_type_path (core_type : Parsetree.core_type) =
     match core_type.ptyp_desc with
-    | Ptyp_constr ({txt = (Longident.Ldot _ as lid); _}, _arguments) ->
+    | Ptyp_constr ({txt = Longident.Ldot _ as lid; _}, _arguments) ->
       Some (Utils.flattenLongIdent lid)
     | _ -> None
 
@@ -190,7 +192,8 @@ module Ast = struct
     let symbol = Some (String.concat "." symbol_path) in
     raw_finding ~rule:"alias-avoidance" ~abs_path:path ~loc
       ~severity:rule.severity
-      ~message:(effective_alias_avoidance_message rule) ?symbol ()
+      ~message:(effective_alias_avoidance_message rule)
+      ?symbol ()
 
   let value_alias_avoidance_findings ~path (rule : alias_avoidance_rule)
       bindings =
@@ -213,10 +216,10 @@ module Ast = struct
              symbol_path)
 
   let module_declaration_alias_avoidance_finding ~path
-      (rule : alias_avoidance_rule) (module_declaration : Parsetree.module_declaration)
-      =
+      (rule : alias_avoidance_rule)
+      (module_declaration : Parsetree.module_declaration) =
     match module_declaration.pmd_type.pmty_desc with
-    | Pmty_alias {txt = (Longident.Ldot _ as lid); _} ->
+    | Pmty_alias {txt = Longident.Ldot _ as lid; _} ->
       Some
         (alias_avoidance_finding ~path rule ~loc:module_declaration.pmd_name.loc
            (Utils.flattenLongIdent lid))
@@ -241,9 +244,18 @@ module Ast = struct
                  (alias_avoidance_finding ~path rule ~loc:decl.ptype_name.loc
                     symbol_path)))
 
-  let summary_of_file ?alias_avoidance_rule path =
+  let preferred_type_syntax_finding ~path (rule : preferred_type_syntax_rule)
+      ~(symbol_path : string list) ~loc =
+    let symbol = Some (String.concat "." symbol_path) in
+    raw_finding ~rule:"preferred-type-syntax" ~abs_path:path ~loc
+      ~severity:rule.severity
+      ~message:(effective_preferred_type_syntax_message rule)
+      ?symbol ()
+
+  let summary_of_file ?alias_avoidance_rule
+      ?(preferred_type_syntax_rule : preferred_type_syntax_rule option) path =
     let local_function_bindings = ref StringSet.empty in
-    let alias_findings = ref [] in
+    let ast_findings = ref [] in
     let inspect_bindings bindings =
       bindings
       |> List.iter (fun (binding : Parsetree.value_binding) ->
@@ -255,8 +267,8 @@ module Ast = struct
       match alias_avoidance_rule with
       | None -> ()
       | Some rule ->
-        alias_findings :=
-          value_alias_avoidance_findings ~path rule bindings @ !alias_findings
+        ast_findings :=
+          value_alias_avoidance_findings ~path rule bindings @ !ast_findings
     in
     let iterator =
       let open Ast_iterator in
@@ -270,24 +282,27 @@ module Ast = struct
               match alias_avoidance_rule with
               | None -> ()
               | Some rule ->
-                alias_findings :=
-                  type_alias_avoidance_findings ~path rule decls
-                  @ !alias_findings)
+                ast_findings :=
+                  type_alias_avoidance_findings ~path rule decls @ !ast_findings
+              )
             | Pstr_module module_binding -> (
               match alias_avoidance_rule with
               | None -> ()
               | Some rule -> (
-                match module_alias_avoidance_finding ~path rule module_binding with
+                match
+                  module_alias_avoidance_finding ~path rule module_binding
+                with
                 | None -> ()
-                | Some finding -> alias_findings := finding :: !alias_findings))
+                | Some finding -> ast_findings := finding :: !ast_findings))
             | Pstr_recmodule module_bindings -> (
               match alias_avoidance_rule with
               | None -> ()
               | Some rule ->
-                alias_findings :=
+                ast_findings :=
                   (module_bindings
-                  |> List.filter_map (module_alias_avoidance_finding ~path rule))
-                  @ !alias_findings)
+                  |> List.filter_map (module_alias_avoidance_finding ~path rule)
+                  )
+                  @ !ast_findings)
             | _ -> ());
             Ast_iterator.default_iterator.structure_item iter structure_item);
         signature_item =
@@ -297,9 +312,9 @@ module Ast = struct
               match alias_avoidance_rule with
               | None -> ()
               | Some rule ->
-                alias_findings :=
-                  type_alias_avoidance_findings ~path rule decls
-                  @ !alias_findings)
+                ast_findings :=
+                  type_alias_avoidance_findings ~path rule decls @ !ast_findings
+              )
             | Psig_module module_declaration -> (
               match alias_avoidance_rule with
               | None -> ()
@@ -309,18 +324,34 @@ module Ast = struct
                     module_declaration
                 with
                 | None -> ()
-                | Some finding -> alias_findings := finding :: !alias_findings))
+                | Some finding -> ast_findings := finding :: !ast_findings))
             | Psig_recmodule module_declarations -> (
               match alias_avoidance_rule with
               | None -> ()
               | Some rule ->
-                alias_findings :=
+                ast_findings :=
                   (module_declarations
                   |> List.filter_map
                        (module_declaration_alias_avoidance_finding ~path rule))
-                  @ !alias_findings)
+                  @ !ast_findings)
             | _ -> ());
             Ast_iterator.default_iterator.signature_item iter signature_item);
+        typ =
+          (fun iter (core_type : Parsetree.core_type) ->
+            (match preferred_type_syntax_rule with
+            | Some rule when rule.enabled && rule.dict -> (
+              match core_type.ptyp_desc with
+              | Ptyp_constr ({txt = Longident.Ldot _ as lid; loc}, _arguments)
+                when preferred_type_syntax_dict_path
+                       (Utils.flattenLongIdent lid) ->
+                ast_findings :=
+                  preferred_type_syntax_finding ~path rule
+                    ~symbol_path:(Utils.flattenLongIdent lid)
+                    ~loc
+                  :: !ast_findings
+              | _ -> ())
+            | Some _ | None -> ());
+            Ast_iterator.default_iterator.typ iter core_type);
         expr =
           (fun iter expression ->
             (match expression.pexp_desc with
@@ -330,10 +361,11 @@ module Ast = struct
               | None -> ()
               | Some rule -> (
                 match
-                  local_module_alias_avoidance_finding ~path rule name module_expr
+                  local_module_alias_avoidance_finding ~path rule name
+                    module_expr
                 with
                 | None -> ()
-                | Some finding -> alias_findings := finding :: !alias_findings))
+                | Some finding -> ast_findings := finding :: !ast_findings))
             | _ -> ());
             Ast_iterator.default_iterator.expr iter expression);
       }
@@ -388,7 +420,7 @@ module Ast = struct
                })
     in
     ( {parse_errors; local_function_bindings = !local_function_bindings},
-      List.rev !alias_findings )
+      List.rev !ast_findings )
 end
 
 module Typed = struct
@@ -483,7 +515,7 @@ module Typed = struct
     |> List.filter_map (fun loc_item ->
            match symbol full loc_item with
            | None -> None
-           | Some symbol ->
+           | Some symbol -> (
              match matching_rule symbol with
              | None -> None
              | Some (rule, item) ->
@@ -491,8 +523,9 @@ module Typed = struct
                Some
                  (raw_finding ~rule:"forbidden-reference" ~abs_path:path
                     ~loc:loc_item.loc ~severity:rule.severity
-                    ~message:(effective_forbidden_reference_item_message rule item)
-                    ?symbol ()))
+                    ~message:
+                      (effective_forbidden_reference_item_message rule item)
+                    ?symbol ())))
 
   let is_function_type typ =
     match (Shared.dig typ).desc with
@@ -522,8 +555,8 @@ module Typed = struct
               findings :=
                 raw_finding ~rule:"single-use-function" ~abs_path:path
                   ~loc:declared.name.loc ~severity:rule.severity
-                  ~message:(effective_single_use_function_message rule) ?symbol
-                  ()
+                  ~message:(effective_single_use_function_message rule)
+                  ?symbol ()
                 :: !findings)
         full.file.stamps;
       List.rev !findings
@@ -613,12 +646,17 @@ let analyze_file ~config path =
   let alias_avoidance_rule =
     if config.alias_avoidance.enabled then Some config.alias_avoidance else None
   in
-  let ast, alias_avoidance_findings =
-    Ast.summary_of_file ?alias_avoidance_rule path
+  let preferred_type_syntax_rule =
+    if config.preferred_type_syntax.enabled && config.preferred_type_syntax.dict
+    then Some config.preferred_type_syntax
+    else None
+  in
+  let ast, ast_findings =
+    Ast.summary_of_file ?alias_avoidance_rule ?preferred_type_syntax_rule path
   in
   let findings = ref ast.parse_errors in
-  if ast.parse_errors = [] then begin
-    findings := alias_avoidance_findings @ !findings;
+  if ast.parse_errors = [] then (
+    findings := ast_findings @ !findings;
     match
       if has_typed_artifact path then Cmt.loadFullCmtFromPath ~path else None
     with
@@ -628,8 +666,7 @@ let analyze_file ~config path =
         Typed.forbidden_reference_findings ~config ~path full
         @ Typed.single_use_function_findings ~config ~path
             ~local_function_bindings:ast.local_function_bindings full
-        @ !findings
-  end;
+        @ !findings);
   !findings
 
 type analyzed_target = {display_base: string; findings: raw_finding list}
