@@ -18,13 +18,13 @@ pub mod deserialize;
 
 pub mod emojis {
     use console::Emoji;
-    pub static COMMAND: Emoji<'_, '_> = Emoji("🏃 ", "");
-    pub static SWEEP: Emoji<'_, '_> = Emoji("🧹 ", "");
-    pub static CODE: Emoji<'_, '_> = Emoji("🧱 ", "");
-    pub static SWORDS: Emoji<'_, '_> = Emoji("🤺 ", "");
-    pub static CHECKMARK: Emoji<'_, '_> = Emoji("✅ ", "");
-    pub static CROSS: Emoji<'_, '_> = Emoji("❌ ", "");
-    pub static SPARKLES: Emoji<'_, '_> = Emoji("✨ ", "");
+    pub static COMMAND: Emoji<'_, '_> = Emoji("🏃 ", "[run] ");
+    pub static SWEEP: Emoji<'_, '_> = Emoji("🧹 ", "[clean] ");
+    pub static PARSE: Emoji<'_, '_> = Emoji("🧱 ", "[parse] ");
+    pub static SWORDS: Emoji<'_, '_> = Emoji("🤺 ", "[build] ");
+    pub static CHECKMARK: Emoji<'_, '_> = Emoji("✅ ", "[ok] ");
+    pub static WARNING: Emoji<'_, '_> = Emoji("⚠️ ", "[warn] ");
+    pub static CROSS: Emoji<'_, '_> = Emoji("❌ ", "[error] ");
     pub static LINE_CLEAR: &str = "\x1b[2K\r";
 }
 

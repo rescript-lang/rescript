@@ -5,7 +5,6 @@ use crate::cmd;
 use crate::config;
 use crate::helpers;
 use crate::helpers::StrippedVerbatimPath;
-use crate::helpers::emojis::*;
 use crate::lock::LockKind;
 use crate::queue::FifoQueue;
 use crate::queue::*;
@@ -379,7 +378,7 @@ async fn async_watch(
         match needs_compile_type {
             CompileType::Incremental => {
                 let timing_total = Instant::now();
-                if build::incremental_build(
+                if let Ok(result) = build::incremental_build(
                     &mut build_state,
                     None,
                     initial_build,
@@ -387,9 +386,7 @@ async fn async_watch(
                     !initial_build,
                     create_sourcedirs,
                     plain_output,
-                )
-                .is_ok()
-                {
+                ) {
                     if let Some(a) = after_build.clone() {
                         cmd::run(a)
                     }
@@ -400,11 +397,12 @@ async fn async_watch(
                             println!("Finished {compilation_type} compilation")
                         } else {
                             println!(
-                                "\n{}{}Finished {} compilation in {:.2}s\n",
-                                LINE_CLEAR,
-                                SPARKLES,
-                                compilation_type,
-                                timing_total_elapsed.as_secs_f64()
+                                "\n{}\n",
+                                build::format_finished_compilation_message(
+                                    Some(compilation_type),
+                                    result.has_warnings,
+                                    timing_total_elapsed,
+                                )
                             );
                         }
                     }
@@ -436,7 +434,7 @@ async fn async_watch(
                 current_watch_paths = compute_watch_paths(&build_state, path);
                 register_watches(watcher, &current_watch_paths);
 
-                let _ = build::incremental_build(
+                let result = build::incremental_build(
                     &mut build_state,
                     None,
                     initial_build,
@@ -445,25 +443,25 @@ async fn async_watch(
                     create_sourcedirs,
                     plain_output,
                 );
-                if let Some(a) = after_build.clone() {
-                    cmd::run(a)
-                }
+                if let Ok(result) = result {
+                    if let Some(a) = after_build.clone() {
+                        cmd::run(a)
+                    }
 
-                build::write_build_ninja(&build_state);
-
-                let timing_total_elapsed = timing_total.elapsed();
-                if show_progress {
-                    if plain_output {
-                        println!("Finished compilation")
-                    } else {
+                    let timing_total_elapsed = timing_total.elapsed();
+                    if !plain_output && show_progress {
                         println!(
-                            "\n{}{}Finished compilation in {:.2}s\n",
-                            LINE_CLEAR,
-                            SPARKLES,
-                            timing_total_elapsed.as_secs_f64()
+                            "\n{}\n",
+                            build::format_finished_compilation_message(
+                                None,
+                                result.has_warnings,
+                                timing_total_elapsed,
+                            )
                         );
                     }
                 }
+
+                build::write_build_ninja(&build_state);
                 needs_compile_type = CompileType::None;
                 initial_build = false;
             }
