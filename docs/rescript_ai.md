@@ -23,8 +23,16 @@ Commands
 - `find-references`: Finds references from either a symbol path or a source location.
 
 Initial rules
-- Lint: `forbidden-reference`, `single-use-function`, `alias-avoidance`, `forbidden-source-root-reference`, `preferred-type-syntax`
-- Rewrite: `prefer-switch`, `no-optional-some`, `preferred-type-syntax`
+- Lint:
+  - `forbidden-reference`: Bans using configured module, value, and type references.
+  - `single-use-function`: Reports local helper functions that are defined once and only used once.
+  - `alias-avoidance`: Reports local aliases like `let f = Module.f`, `type t = Module.t`, and `module M = Long.Path`. Prefer the fully qualified reference instead.
+  - `forbidden-source-root-reference`: Reports value and type references whose declarations come from configured source roots such as generated code folders.
+  - `preferred-type-syntax`: Reports non-canonical type spellings like `Dict.t<_>` in favor of builtin syntax like `dict<_>`.
+- Rewrite:
+  - `prefer-switch`: Rewrites eligible `if` / `else if` chains and ternaries into canonical `switch` forms.
+  - `no-optional-some`: Rewrites redundant `~label=?Some(expr)` optional-argument wrapping into the direct labeled form.
+  - `preferred-type-syntax`: Rewrites supported non-canonical type spellings like `Dict.t<_>` into builtin syntax like `dict<_>`.
 
 Support
 - Add `.rescript-lint.json` config support, a shipped JSON schema, AI tooling docs, and golden tests for the new command surface
@@ -132,7 +140,14 @@ Proposed fields:
 Example JSON finding:
 
 ```json
-{"rule":"forbidden-reference","path":"src/A.res","range":[12,2,12,20],"severity":"error","symbol":"Belt.Array.forEach","message":"Forbidden reference"}
+{
+  "rule": "forbidden-reference",
+  "path": "src/A.res",
+  "range": [12, 2, 12, 20],
+  "severity": "error",
+  "symbol": "Belt.Array.forEach",
+  "message": "Forbidden reference"
+}
 ```
 
 ## Lint Output Contract
@@ -198,8 +213,8 @@ Example shape:
           "severity": "error",
           "message": "Do not use Belt.Array helpers here.",
           "items": [
-            {"kind": "module", "path": "Belt.Array"},
-            {"kind": "value", "path": "Belt.Array.forEach"}
+            { "kind": "module", "path": "Belt.Array" },
+            { "kind": "value", "path": "Belt.Array.forEach" }
           ]
         },
         {
@@ -329,6 +344,10 @@ This section is intentionally a scratchpad for future rules.
 - disallow plain functions that return JSX; require them to be defined as React components instead
 - goal: keep file shape predictable and preserve HMR-friendly module boundaries
 
+### FFI shape
+
+- disallow `@obj external`
+
 ### Size limits
 
 - file length limits
@@ -408,9 +427,9 @@ Lint and rewrite config should each live under their own namespace in `.rescript
       "forbidden-reference": {
         "severity": "error",
         "items": [
-          {"kind": "value", "path": "Belt.Array.forEach"},
-          {"kind": "value", "path": "Belt.Array.map"},
-          {"kind": "type", "path": "Js.Json.t"}
+          { "kind": "value", "path": "Belt.Array.forEach" },
+          { "kind": "value", "path": "Belt.Array.map" },
+          { "kind": "type", "path": "Js.Json.t" }
         ]
       },
       "single-use-function": {
@@ -424,9 +443,9 @@ Lint and rewrite config should each live under their own namespace in `.rescript
   },
   "rewrite": {
     "rules": {
-      "prefer-switch": {"enabled": true, "if": true, "ternary": true},
-      "no-optional-some": {"enabled": true},
-      "preferred-type-syntax": {"enabled": true, "dict": true}
+      "prefer-switch": { "enabled": true, "if": true, "ternary": true },
+      "no-optional-some": { "enabled": true },
+      "preferred-type-syntax": { "enabled": true, "dict": true }
     }
   }
 }
