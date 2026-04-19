@@ -9,6 +9,12 @@ let dictValueInference = {
   }
 };
 
+async function asyncValueInference() {
+  return {
+    get: 200
+  };
+}
+
 let primitiveMakeValueInference = {
   health: {
     get: 200
@@ -18,6 +24,7 @@ let primitiveMakeValueInference = {
 export {
   Hidden,
   dictValueInference,
+  asyncValueInference,
   primitiveMakeValueInference,
 }
 /* No side effect */

@@ -250,7 +250,7 @@ let filter_parsing_attrs attrs =
             Location.txt =
               ( "res.braces" | "ns.braces" | "res.iflet" | "res.ternary"
               | "res.await" | "res.template" | "res.taggedTemplate"
-              | "res.patVariantSpread" | "res.dictPattern" | "res.$dictLiteral"
+              | "res.patVariantSpread" | "res.dictPattern"
               | "res.inlineRecordDefinition" );
           },
           _ ) ->
@@ -585,7 +585,7 @@ let is_printable_attribute attr =
         Location.txt =
           ( "res.iflet" | "res.braces" | "ns.braces" | "JSX" | "res.await"
           | "res.template" | "res.taggedTemplate" | "res.ternary"
-          | "res.$dictLiteral" | "res.inlineRecordDefinition" );
+          | "res.inlineRecordDefinition" );
       },
       _ ) ->
     false
