@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/allowMutation_private_record_immutable_field.res[0m:[2m11:1-21[0m
+
+   9 [2m│[0m 
+  10 [2m│[0m let item = PrivateRecord.make(1)
+  [1;31m11[0m [2m│[0m [1;31mitem.name = "changed"[0m
+  12 [2m│[0m 
+
+  The record field name is not mutable
