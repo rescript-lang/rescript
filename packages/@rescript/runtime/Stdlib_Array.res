@@ -145,6 +145,7 @@ external removeInPlace: (array<'a>, int, @as(1) _) => unit = "splice"
 
 @send external concat: (array<'a>, array<'a>) => array<'a> = "concat"
 @variadic @send external concatMany: (array<'a>, array<array<'a>>) => array<'a> = "concat"
+let concatAll = arrays => concatMany([], arrays)
 
 @send external flat: array<array<'a>> => array<'a> = "flat"
 

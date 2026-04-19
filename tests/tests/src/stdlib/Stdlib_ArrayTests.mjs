@@ -443,10 +443,70 @@ Test.run([
   "c"
 ]);
 
+let arrays = [
+  [
+    1,
+    2
+  ],
+  [3],
+  [
+    4,
+    5
+  ]
+];
+
+let result = Stdlib_Array.concatAll(arrays);
+
 Test.run([
   [
     "Stdlib_ArrayTests.res",
-    118,
+    121,
+    22,
+    53
+  ],
+  "concatAll concatenates arrays"
+], result, eq, [
+  1,
+  2,
+  3,
+  4,
+  5
+]);
+
+Test.run([
+  [
+    "Stdlib_ArrayTests.res",
+    123,
+    15,
+    57
+  ],
+  "concatAll leaves source arrays unchanged"
+], arrays, eq, [
+  [
+    1,
+    2
+  ],
+  [3],
+  [
+    4,
+    5
+  ]
+]);
+
+Test.run([
+  [
+    "Stdlib_ArrayTests.res",
+    130,
+    20,
+    39
+  ],
+  "concatAll - empty"
+], Stdlib_Array.concatAll([]), eq, []);
+
+Test.run([
+  [
+    "Stdlib_ArrayTests.res",
+    133,
     13,
     31
   ],
@@ -465,7 +525,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_ArrayTests.res",
-    125,
+    140,
     13,
     31
   ],
@@ -479,7 +539,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_ArrayTests.res",
-    132,
+    147,
     13,
     29
   ],
@@ -507,7 +567,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_ArrayTests.res",
-    139,
+    154,
     13,
     29
   ],
@@ -524,7 +584,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_ArrayTests.res",
-    145,
+    160,
     20,
     39
   ],
@@ -538,7 +598,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_ArrayTests.res",
-    146,
+    161,
     20,
     34
   ],
@@ -552,7 +612,7 @@ array.splice(1, 0, "foo");
 Test.run([
   [
     "Stdlib_ArrayTests.res",
-    151,
+    166,
     22,
     49
   ],
@@ -567,7 +627,7 @@ let array$1 = [
 Test.run([
   [
     "Stdlib_ArrayTests.res",
-    157,
+    172,
     15,
     43
   ],
