@@ -332,10 +332,10 @@ pub fn cleanup_after_build(build_state: &BuildCommandState) {
     });
 }
 
-pub fn clean(path: &Path, show_progress: bool, plain_output: bool) -> Result<()> {
+pub fn clean(path: &Path, show_progress: bool, plain_output: bool, prod: bool) -> Result<()> {
     let project_context = ProjectContext::new(path)?;
     let compiler_info = build::get_compiler_info(&project_context)?;
-    let packages = packages::make(&None, &project_context, show_progress)?;
+    let packages = packages::make(&None, &project_context, show_progress, prod)?;
 
     let timing_clean_compiler_assets = Instant::now();
     if !plain_output && show_progress {

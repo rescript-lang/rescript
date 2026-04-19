@@ -219,6 +219,10 @@ pub struct BuildArgs {
     /// Disable output timing
     #[arg(short, long, default_value_t = false, num_args = 0..=1)]
     pub no_timing: bool,
+
+    /// Skip dev-dependencies and dev sources (type: "dev")
+    #[arg(long, default_value_t = false)]
+    pub prod: bool,
 }
 
 #[cfg(test)]
@@ -348,6 +352,57 @@ mod tests {
         assert_eq!(err.kind(), ErrorKind::DisplayVersion);
     }
 
+    // --prod flag tests.
+    #[test]
+    fn build_prod_flag_is_parsed() {
+        let cli = parse(&["rescript", "build", "--prod"]).expect("expected build command");
+
+        match cli.command {
+            Command::Build(build_args) => assert!(build_args.prod),
+            other => panic!("expected build command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn build_prod_flag_defaults_to_false() {
+        let cli = parse(&["rescript", "build"]).expect("expected build command");
+
+        match cli.command {
+            Command::Build(build_args) => assert!(!build_args.prod),
+            other => panic!("expected build command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn watch_prod_flag_is_parsed() {
+        let cli = parse(&["rescript", "watch", "--prod"]).expect("expected watch command");
+
+        match cli.command {
+            Command::Watch(watch_args) => assert!(watch_args.prod),
+            other => panic!("expected watch command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn clean_prod_flag_is_parsed() {
+        let cli = parse(&["rescript", "clean", "--prod"]).expect("expected clean command");
+
+        match cli.command {
+            Command::Clean { prod, .. } => assert!(prod),
+            other => panic!("expected clean command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn prod_flag_defaults_to_build_command() {
+        let cli = parse(&["rescript", "--prod"]).expect("expected default build command");
+
+        match cli.command {
+            Command::Build(build_args) => assert!(build_args.prod),
+            other => panic!("expected build command, got {other:?}"),
+        }
+    }
+
     #[cfg(unix)]
     #[test]
     fn non_utf_argument_returns_error() {
@@ -372,6 +427,10 @@ pub struct WatchArgs {
 
     #[command(flatten)]
     pub warn_error: WarnErrorArg,
+
+    /// Skip dev-dependencies and dev sources (type: "dev")
+    #[arg(long, default_value_t = false)]
+    pub prod: bool,
 }
 
 impl From<BuildArgs> for WatchArgs {
@@ -381,6 +440,7 @@ impl From<BuildArgs> for WatchArgs {
             filter: build_args.filter,
             after_build: build_args.after_build,
             warn_error: build_args.warn_error,
+            prod: build_args.prod,
         }
     }
 }
@@ -395,6 +455,10 @@ pub enum Command {
     Clean {
         #[command(flatten)]
         folder: FolderArg,
+
+        /// Skip dev-dependencies and dev sources (type: "dev")
+        #[arg(long, default_value_t = false)]
+        prod: bool,
     },
     /// Format ReScript files.
     Format {

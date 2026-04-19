@@ -45,6 +45,7 @@ const buildHelp =
   "  -q, --quiet...                   Decrease logging verbosity\n" +
   '      --warn-error <WARN_ERROR>    Override warning configuration from rescript.json. Example: --warn-error "+3+8+11+12+26+27+31+32+33+34+35+39+44+45+110"\n' +
   "  -n, --no-timing [<NO_TIMING>]    Disable output timing [default: false] [possible values: true, false]\n" +
+  '      --prod                       Skip dev-dependencies and dev sources (type: "dev")\n' +
   "  -h, --help                       Print help\n";
 
 const cleanHelp =
@@ -56,6 +57,7 @@ const cleanHelp =
   "  [FOLDER]  Path to the project or subproject. This folder must contain a rescript.json file [default: .]\n" +
   "\n" +
   "Options:\n" +
+  '      --prod        Skip dev-dependencies and dev sources (type: "dev")\n' +
   "  -v, --verbose...  Increase logging verbosity\n" +
   "  -q, --quiet...    Decrease logging verbosity\n" +
   "  -h, --help        Print help\n";

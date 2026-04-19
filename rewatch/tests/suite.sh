@@ -79,6 +79,7 @@ fi
 ./compile/11-dev-dependency-non-dev-source.sh &&
 ./compile/12-compile-dev-dependencies.sh &&
 ./compile/13-no-infinite-loop-with-cycle.sh &&
+./compile/17-prod-flag.sh &&
 ./compile/14-no-testrepo-changes.sh &&
 ./compile/15-no-new-files.sh &&
 ./compile/16-snapshots-unchanged.sh &&

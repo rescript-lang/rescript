@@ -21,6 +21,8 @@
 
 #### :rocket: New Feature
 
+- Rewatch: add `--prod` flag to `build`, `watch`, and `clean` to skip dev-dependencies and dev sources (`"type": "dev"`), enabling builds in environments where dev packages aren't installed (e.g. after `pnpm install --prod`). https://github.com/rescript-lang/rescript/pull/8347
+
 #### :bug: Bug fix
 
 - Fix partial application generalization for `...`. https://github.com/rescript-lang/rescript/pull/8343
