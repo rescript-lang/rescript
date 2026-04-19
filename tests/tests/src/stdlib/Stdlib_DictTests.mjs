@@ -369,9 +369,9 @@ let result$5 = Object.assign({}, foo$1);
 Test.run([
   [
     "Stdlib_DictTests.res",
-    225,
-    15,
-    51
+    224,
+    22,
+    58
   ],
   "dict spread copies a single source"
 ], result$5, eq, {
@@ -381,7 +381,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    231,
+    226,
     15,
     75
   ],
@@ -391,7 +391,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    239,
+    234,
     13,
     35
   ],
@@ -404,7 +404,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    245,
+    240,
     13,
     34
   ],
@@ -419,7 +419,7 @@ let dict = {
 Test.run([
   [
     "Stdlib_DictTests.res",
-    257,
+    252,
     22,
     38
   ],
@@ -429,7 +429,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    258,
+    253,
     22,
     43
   ],
@@ -439,7 +439,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    259,
+    254,
     22,
     37
   ],
@@ -449,7 +449,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    260,
+    255,
     22,
     39
   ],
@@ -459,7 +459,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    262,
+    257,
     15,
     51
   ],
