@@ -79,6 +79,7 @@ fn main() -> Result<()> {
                 true, // create_sourcedirs is now always enabled
                 plain_output,
                 (*watch_args.warn_error).clone(),
+                watch_args.clear_screen,
                 watch_args.prod,
             ) {
                 Err(e) => {

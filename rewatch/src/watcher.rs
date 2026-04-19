@@ -9,6 +9,7 @@ use crate::lock::LockKind;
 use crate::queue::FifoQueue;
 use crate::queue::*;
 use anyhow::{Context, Result};
+use console::Term;
 use futures_timer::Delay;
 use notify::event::ModifyKind;
 use notify::{Config, Error, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
@@ -177,6 +178,31 @@ fn carry_forward_compile_warnings(previous: &BuildCommandState, next: &mut Build
     }
 }
 
+fn should_clear_screen(
+    clear_screen: bool,
+    show_progress: bool,
+    plain_output: bool,
+    initial_build: bool,
+) -> bool {
+    clear_screen && show_progress && !plain_output && !initial_build
+}
+
+fn clear_terminal_screen() {
+    let _ = Term::stdout().clear_screen();
+}
+
+fn print_rebuild_header(compile_type: CompileType) {
+    match compile_type {
+        CompileType::Incremental => println!("Change detected. Rebuilding..."),
+        CompileType::Full => println!("Change detected. Full rebuild..."),
+        CompileType::None => (),
+    }
+}
+
+fn print_build_failed_footer() {
+    println!("\nBuild failed. Watching for changes...");
+}
+
 struct AsyncWatchArgs<'a> {
     watcher: &'a mut RecommendedWatcher,
     current_watch_paths: Vec<(PathBuf, RecursiveMode)>,
@@ -188,6 +214,7 @@ struct AsyncWatchArgs<'a> {
     after_build: Option<String>,
     create_sourcedirs: bool,
     plain_output: bool,
+    clear_screen: bool,
     prod: bool,
 }
 
@@ -203,6 +230,7 @@ async fn async_watch(
         after_build,
         create_sourcedirs,
         plain_output,
+        clear_screen,
         prod,
     }: AsyncWatchArgs<'_>,
 ) -> Result<()> {
@@ -377,8 +405,13 @@ async fn async_watch(
 
         match needs_compile_type {
             CompileType::Incremental => {
+                if should_clear_screen(clear_screen, show_progress, plain_output, initial_build) {
+                    clear_terminal_screen();
+                    print_rebuild_header(CompileType::Incremental);
+                }
+
                 let timing_total = Instant::now();
-                if let Ok(result) = build::incremental_build(
+                let result = build::incremental_build(
                     &mut build_state,
                     None,
                     initial_build,
@@ -386,31 +419,46 @@ async fn async_watch(
                     !initial_build,
                     create_sourcedirs,
                     plain_output,
-                ) {
-                    if let Some(a) = after_build.clone() {
-                        cmd::run(a)
+                );
+
+                match result {
+                    Ok(result) => {
+                        if let Some(a) = after_build.clone() {
+                            cmd::run(a)
+                        }
+                        let timing_total_elapsed = timing_total.elapsed();
+                        if show_progress {
+                            let compilation_type = if initial_build { "initial" } else { "incremental" };
+                            if plain_output {
+                                println!("Finished {compilation_type} compilation")
+                            } else {
+                                println!(
+                                    "\n{}\n",
+                                    build::format_finished_compilation_message(
+                                        Some(compilation_type),
+                                        result,
+                                        timing_total_elapsed,
+                                    )
+                                );
+                            }
+                        }
                     }
-                    let timing_total_elapsed = timing_total.elapsed();
-                    if show_progress {
-                        let compilation_type = if initial_build { "initial" } else { "incremental" };
-                        if plain_output {
-                            println!("Finished {compilation_type} compilation")
-                        } else {
-                            println!(
-                                "\n{}\n",
-                                build::format_finished_compilation_message(
-                                    Some(compilation_type),
-                                    result,
-                                    timing_total_elapsed,
-                                )
-                            );
+                    Err(_) => {
+                        if should_clear_screen(clear_screen, show_progress, plain_output, initial_build) {
+                            print_build_failed_footer();
                         }
                     }
                 }
+
                 needs_compile_type = CompileType::None;
                 initial_build = false;
             }
             CompileType::Full => {
+                if should_clear_screen(clear_screen, show_progress, plain_output, initial_build) {
+                    clear_terminal_screen();
+                    print_rebuild_header(CompileType::Full);
+                }
+
                 let timing_total = Instant::now();
                 let mut next_build_state = build::initialize_build(
                     None,
@@ -443,17 +491,28 @@ async fn async_watch(
                     create_sourcedirs,
                     plain_output,
                 );
-                if let Ok(result) = result {
-                    if let Some(a) = after_build.clone() {
-                        cmd::run(a)
-                    }
+                match result {
+                    Ok(result) => {
+                        if let Some(a) = after_build.clone() {
+                            cmd::run(a)
+                        }
 
-                    let timing_total_elapsed = timing_total.elapsed();
-                    if !plain_output && show_progress {
-                        println!(
-                            "\n{}\n",
-                            build::format_finished_compilation_message(None, result, timing_total_elapsed,)
-                        );
+                        let timing_total_elapsed = timing_total.elapsed();
+                        if !plain_output && show_progress {
+                            println!(
+                                "\n{}\n",
+                                build::format_finished_compilation_message(
+                                    None,
+                                    result,
+                                    timing_total_elapsed,
+                                )
+                            );
+                        }
+                    }
+                    Err(_) => {
+                        if should_clear_screen(clear_screen, show_progress, plain_output, initial_build) {
+                            print_build_failed_footer();
+                        }
                     }
                 }
 
@@ -479,6 +538,7 @@ pub fn start(
     create_sourcedirs: bool,
     plain_output: bool,
     warn_error: Option<String>,
+    clear_screen: bool,
     prod: bool,
 ) -> Result<()> {
     futures::executor::block_on(async {
@@ -518,6 +578,7 @@ pub fn start(
             after_build,
             create_sourcedirs,
             plain_output,
+            clear_screen,
             prod,
         })
         .await
@@ -647,6 +708,15 @@ mod tests {
             deps_dirty: false,
             is_type_dev: false,
         }
+    }
+
+    #[test]
+    fn clears_screen_only_for_non_initial_interactive_rebuilds() {
+        assert!(should_clear_screen(true, true, false, false));
+        assert!(!should_clear_screen(true, true, false, true));
+        assert!(!should_clear_screen(true, true, true, false));
+        assert!(!should_clear_screen(true, false, false, false));
+        assert!(!should_clear_screen(false, true, false, false));
     }
 
     #[test]
