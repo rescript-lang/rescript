@@ -290,6 +290,10 @@ and expression_desc =
     (* for i = E1 to E2 do E3 done      (flag = Upto)
        for i = E1 downto E2 do E3 done  (flag = Downto)
     *)
+  | Pexp_for_of of pattern * expression * expression
+    (* for pattern of array_expr do body_expr *)
+  | Pexp_for_await_of of pattern * expression * expression
+    (* for await pattern of iterable_expr do body_expr *)
   | Pexp_constraint of expression * core_type (* (E : T) *)
   | Pexp_coerce of expression * unit * core_type
     (* (E :> T)        (None, T)

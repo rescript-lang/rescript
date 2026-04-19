@@ -643,6 +643,112 @@ Test.run([
   3
 ]);
 
+let asyncIterableForAwaitValues = {
+  contents: []
+};
+
+let asyncIterableForAwait = ((async function* () {
+  yield 1
+  yield 2
+  yield 3
+})());
+
+for await (let value of asyncIterableForAwait) {
+  asyncIterableForAwaitValues.contents = Belt_Array.concatMany([
+    asyncIterableForAwaitValues.contents,
+    [value]
+  ]);
+}
+
+Test.run([
+  [
+    "Stdlib_IteratorTests.res",
+    485,
+    20,
+    36
+  ],
+  "for await...of"
+], asyncIterableForAwaitValues.contents, eq, [
+  1,
+  2,
+  3
+]);
+
+let asyncIterableForAwaitLoopControlValues = {
+  contents: []
+};
+
+let asyncIterableForAwaitLoopControl = ((async function* () {
+  yield 1
+  yield 2
+  yield 3
+  yield 4
+})());
+
+loop_0: for await (let value$1 of asyncIterableForAwaitLoopControl) {
+  let exit = 0;
+  switch (value$1) {
+    case 1 :
+      continue loop_0;
+    case 3 :
+      break loop_0;
+    default:
+      exit = 1;
+  }
+  if (exit === 1) {
+    asyncIterableForAwaitLoopControlValues.contents = Belt_Array.concatMany([
+      asyncIterableForAwaitLoopControlValues.contents,
+      [value$1]
+    ]);
+  }
+}
+
+Test.run([
+  [
+    "Stdlib_IteratorTests.res",
+    506,
+    13,
+    44
+  ],
+  "for await...of break/continue"
+], asyncIterableForAwaitLoopControlValues.contents, eq, [2]);
+
+async function collectStartupMessages(logs) {
+  let messages = [];
+  for await (let line of logs) {
+    if (line === ":heartbeat") {
+      continue;
+    }
+    if (line === "server ready") {
+      break;
+    }
+    messages.push(line);
+  }
+  return messages;
+}
+
+let startupLogs = ((async function* () {
+  yield ":heartbeat"
+  yield "Booting app"
+  yield ":heartbeat"
+  yield "Connecting to database"
+  yield "server ready"
+  yield "This line should not be collected"
+})());
+
+Test.run([
+  [
+    "Stdlib_IteratorTests.res",
+    540,
+    13,
+    54
+  ],
+  "for await...of realistic break/continue"
+], await collectStartupMessages(startupLogs), eq, [
+  "Booting app",
+  "Connecting to database"
+]);
+
 let _asyncIterableView = ((async function* () {
       yield 1
     })());
@@ -667,7 +773,7 @@ if (match$19.done !== false && match$19.value === "stopped") {
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    497,
+    569,
     13,
     41
   ],
@@ -698,7 +804,7 @@ if (match$21.done !== false) {
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    526,
+    598,
     13,
     40
   ],
@@ -725,7 +831,7 @@ await Stdlib_AsyncIterableIterator.forEach(createdAsyncIterableIterator, value =
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    550,
+    622,
     13,
     56
   ],
@@ -761,6 +867,12 @@ export {
   asyncGeneratorNextValueResult,
   asyncGeneratorIterableValues,
   asyncGeneratorIterable,
+  asyncIterableForAwaitValues,
+  asyncIterableForAwait,
+  asyncIterableForAwaitLoopControlValues,
+  asyncIterableForAwaitLoopControl,
+  collectStartupMessages,
+  startupLogs,
   _asyncIterableView,
   asyncGeneratorReturnValueResult,
   asyncGeneratorReturnValue,

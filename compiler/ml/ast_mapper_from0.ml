@@ -88,6 +88,9 @@ let map_constant = function
   | Pconst_string (s, q) -> Pconst_string (s, q)
   | Pconst_float (s, suffix) -> Pconst_float (s, suffix)
 
+let for_of_attr_name = "_res.for_of"
+let for_await_of_attr_name = "_res.for_await_of"
+
 let map_loc sub {loc; txt} = {loc = sub.location sub loc; txt}
 
 module T = struct
@@ -320,6 +323,37 @@ module E = struct
     List.filter
       (function
         | {Location.txt = "res.await"}, _ -> false
+        | _ -> true)
+      attrs
+
+  let extract_for_of_attribute attrs =
+    List.find_map
+      (function
+        | {Location.txt}, Pt.PPat (_, Some expr) when txt = for_of_attr_name ->
+          Some expr
+        | _ -> None)
+      attrs
+
+  let extract_for_await_of_attribute attrs =
+    List.find_map
+      (function
+        | {Location.txt}, Pt.PPat (_, Some expr)
+          when txt = for_await_of_attr_name ->
+          Some expr
+        | _ -> None)
+      attrs
+
+  let remove_for_of_attribute attrs =
+    List.filter
+      (function
+        | {Location.txt}, _ when txt = for_of_attr_name -> false
+        | _ -> true)
+      attrs
+
+  let remove_for_await_of_attribute attrs =
+    List.filter
+      (function
+        | {Location.txt}, _ when txt = for_await_of_attr_name -> false
         | _ -> true)
       attrs
 
@@ -557,9 +591,22 @@ module E = struct
       continue ~loc ~attrs ()
     | Pexp_while (e1, e2) ->
       while_ ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)
-    | Pexp_for (p, e1, e2, d, e3) ->
-      for_ ~loc ~attrs (sub.pat sub p) (sub.expr sub e1) (sub.expr sub e2) d
-        (sub.expr sub e3)
+    | Pexp_for (p, e1, e2, d, e3) -> (
+      let async_iterable_expr = extract_for_await_of_attribute attrs in
+      let array_expr = extract_for_of_attribute attrs in
+      let attrs =
+        remove_for_await_of_attribute (remove_for_of_attribute attrs)
+      in
+      match (async_iterable_expr, array_expr) with
+      | Some iterable, _ ->
+        for_await_of ~loc ~attrs (sub.pat sub p) iterable (sub.expr sub e3)
+      | None, Some array ->
+        (* This is actually a for...of loop, decode it *)
+        for_of ~loc ~attrs (sub.pat sub p) array (sub.expr sub e3)
+      | None, None ->
+        (* Regular for loop *)
+        for_ ~loc ~attrs (sub.pat sub p) (sub.expr sub e1) (sub.expr sub e2) d
+          (sub.expr sub e3))
     | Pexp_coerce (e, (), t2) ->
       coerce ~loc ~attrs (sub.expr sub e) (sub.typ sub t2)
     | Pexp_constraint (e, t) ->

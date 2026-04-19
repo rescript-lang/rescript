@@ -21,3 +21,11 @@ for i in 0 to 10 {
   | _ => work()
   }
 }
+
+for i of [0, 1, 2, 3, 4, 5] {
+  switch i {
+  | 1 => continue
+  | 4 => break
+  | _ => work()
+  }
+}

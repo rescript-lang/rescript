@@ -411,6 +411,12 @@ let lambda ppf v =
         | Upto -> "to"
         | Downto -> "downto")
         lam hi lam body
+    | Lfor_of (param, iterable, body) ->
+      fprintf ppf "@[<2>(for %a@ of@ %a@ %a)@]" Ident.print param lam iterable
+        lam body
+    | Lfor_await_of (param, iterable, body) ->
+      fprintf ppf "@[<2>(for await %a@ of@ %a@ %a)@]" Ident.print param lam
+        iterable lam body
     | Lassign (id, expr) ->
       fprintf ppf "@[<2>(assign@ %a@ %a)@]" Ident.print id lam expr
   and sequence ppf = function

@@ -241,6 +241,16 @@ class fold =
         let _self = _self#for_direction _x3 in
         let _self = _self#block _x4 in
         _self
+      | ForOf (_label, _x0, _x1, _x2) ->
+        let _self = _self#for_ident _x0 in
+        let _self = _self#expression _x1 in
+        let _self = _self#block _x2 in
+        _self
+      | ForAwaitOf (_label, _x0, _x1, _x2) ->
+        let _self = _self#for_ident _x0 in
+        let _self = _self#expression _x1 in
+        let _self = _self#block _x2 in
+        _self
       | Continue _ -> _self
       | Break _ -> _self
       | Return _x0 ->

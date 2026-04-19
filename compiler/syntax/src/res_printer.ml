@@ -3624,6 +3624,40 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
              Doc.space;
              print_expression_block ~state ~braces:true body cmt_tbl;
            ])
+    | Pexp_for_of (pattern, array_expr, body) ->
+      Doc.breakable_group ~force_break:true
+        (Doc.concat
+           [
+             Doc.text "for ";
+             print_pattern ~state pattern cmt_tbl;
+             Doc.text " of ";
+             (let doc =
+                print_expression_with_comments ~state array_expr cmt_tbl
+              in
+              match Parens.expr array_expr with
+              | Parens.Parenthesized -> add_parens doc
+              | Braced braces -> print_braces doc array_expr braces
+              | Nothing -> doc);
+             Doc.space;
+             print_expression_block ~state ~braces:true body cmt_tbl;
+           ])
+    | Pexp_for_await_of (pattern, iterable_expr, body) ->
+      Doc.breakable_group ~force_break:true
+        (Doc.concat
+           [
+             Doc.text "for await ";
+             print_pattern ~state pattern cmt_tbl;
+             Doc.text " of ";
+             (let doc =
+                print_expression_with_comments ~state iterable_expr cmt_tbl
+              in
+              match Parens.expr iterable_expr with
+              | Parens.Parenthesized -> add_parens doc
+              | Braced braces -> print_braces doc iterable_expr braces
+              | Nothing -> doc);
+             Doc.space;
+             print_expression_block ~state ~braces:true body cmt_tbl;
+           ])
     | Pexp_constraint
         ( {pexp_desc = Pexp_pack mod_expr},
           {ptyp_desc = Ptyp_package package_type; ptyp_loc} ) ->

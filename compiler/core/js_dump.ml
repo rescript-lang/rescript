@@ -1498,6 +1498,60 @@ and statement_desc top cxt f (s : J.statement_desc) : cxt =
           brace_block cxt f s)
     in
     action cxt
+  | ForOf (label, id, iterable, s) ->
+    P.vgroup f 0 (fun _ ->
+        let cxt =
+          P.group f 0 (fun _ ->
+              let cxt =
+                match label with
+                | None -> cxt
+                | Some label ->
+                  P.string f label;
+                  P.string f L.colon;
+                  P.space f;
+                  cxt
+              in
+              P.string f L.for_;
+              P.space f;
+              P.paren_group f 1 (fun _ ->
+                  P.string f L.let_;
+                  P.space f;
+                  let cxt = Ext_pp_scope.ident cxt f id in
+                  P.space f;
+                  P.string f L.of_;
+                  P.space f;
+                  expression ~level:0 cxt f iterable))
+        in
+        P.space f;
+        brace_block cxt f s)
+  | ForAwaitOf (label, id, iterable, s) ->
+    P.vgroup f 0 (fun _ ->
+        let cxt =
+          P.group f 0 (fun _ ->
+              let cxt =
+                match label with
+                | None -> cxt
+                | Some label ->
+                  P.string f label;
+                  P.string f L.colon;
+                  P.space f;
+                  cxt
+              in
+              P.string f L.for_;
+              P.space f;
+              P.string f L.await;
+              P.space f;
+              P.paren_group f 1 (fun _ ->
+                  P.string f L.let_;
+                  P.space f;
+                  let cxt = Ext_pp_scope.ident cxt f id in
+                  P.space f;
+                  P.string f L.of_;
+                  P.space f;
+                  expression ~level:0 cxt f iterable))
+        in
+        P.space f;
+        brace_block cxt f s)
   | Continue label ->
     P.string f L.continue;
     (match label with

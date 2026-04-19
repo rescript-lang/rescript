@@ -3816,28 +3816,65 @@ and parse_if_or_if_let_expression p =
   Parser.eat_breadcrumb p;
   expr
 
-and parse_for_rest has_opening_paren pattern start_pos p =
-  Parser.expect In p;
-  let e1 = parse_expr p in
-  let direction =
-    match p.Parser.token with
-    | Lident "to" -> Asttypes.Upto
-    | Lident "downto" -> Asttypes.Downto
-    | token ->
-      Parser.err p (Diagnostics.unexpected token p.breadcrumbs);
-      Asttypes.Upto
+and normalize_for_of_pattern p pattern =
+  match pattern.Parsetree.ppat_desc with
+  | Ppat_any | Ppat_var _ -> pattern
+  | _ ->
+    Parser.err ~start_pos:pattern.ppat_loc.loc_start
+      ~end_pos:pattern.ppat_loc.loc_end p
+      (Diagnostics.message
+         "A `for...of` or `for await...of` loop only supports a variable or \
+          `_` on the left side. Destructuring patterns are not supported here.");
+    Ast_helper.Pat.any ~loc:pattern.ppat_loc ()
+
+and parse_for_rest has_opening_paren ~await pattern start_pos p =
+  let parse_loop_body () =
+    if has_opening_paren then Parser.expect Rparen p;
+    Parser.expect Lbrace p;
+    let body_expr = parse_expr_block p in
+    Parser.expect Rbrace p;
+    body_expr
   in
-  if p.Parser.token = Eof then
-    Parser.err ~start_pos:p.start_pos p
-      (Diagnostics.unexpected p.Parser.token p.breadcrumbs)
-  else Parser.next p;
-  let e2 = parse_expr ~context:WhenExpr p in
-  if has_opening_paren then Parser.expect Rparen p;
-  Parser.expect Lbrace p;
-  let body_expr = parse_expr_block p in
-  Parser.expect Rbrace p;
-  let loc = mk_loc start_pos p.prev_end_pos in
-  Ast_helper.Exp.for_ ~loc pattern e1 e2 direction body_expr
+  match p.Parser.token with
+  | Of ->
+    (* for...of loop *)
+    Parser.next p;
+    let pattern = normalize_for_of_pattern p pattern in
+    let array_expr = parse_expr ~context:WhenExpr p in
+    let body_expr = parse_loop_body () in
+    let loc = mk_loc start_pos p.prev_end_pos in
+    if await then Ast_helper.Exp.for_await_of ~loc pattern array_expr body_expr
+    else Ast_helper.Exp.for_of ~loc pattern array_expr body_expr
+  | In ->
+    if await then
+      Parser.err ~start_pos p
+        (Diagnostics.message
+           "A `for await` loop must use `of`, like `for await item of items`.");
+    (* regular for loop *)
+    Parser.next p;
+    let e1 = parse_expr p in
+    let direction =
+      match p.Parser.token with
+      | Lident "to" -> Asttypes.Upto
+      | Lident "downto" -> Asttypes.Downto
+      | token ->
+        Parser.err p (Diagnostics.unexpected token p.breadcrumbs);
+        Asttypes.Upto
+    in
+    if p.Parser.token = Eof then
+      Parser.err ~start_pos:p.start_pos p
+        (Diagnostics.unexpected p.Parser.token p.breadcrumbs)
+    else Parser.next p;
+    let e2 = parse_expr ~context:WhenExpr p in
+    let body_expr = parse_loop_body () in
+    let loc = mk_loc start_pos p.prev_end_pos in
+    Ast_helper.Exp.for_ ~loc pattern e1 e2 direction body_expr
+  | _ ->
+    Parser.err p
+      (Diagnostics.message
+         "A for-loop has the following form: `for i in 0 to 10` or `for item \
+          of items`. Did you forget an `in` or `of` here?");
+    Recover.default_expr ()
 
 and parse_for_expression p =
   let start_pos = p.Parser.start_pos in
@@ -3857,7 +3894,7 @@ and parse_for_expression p =
           let lid = Location.mkloc (Longident.Lident "()") loc in
           Ast_helper.Pat.construct lid None
         in
-        parse_for_rest false
+        parse_for_rest false ~await:false
           (parse_alias_pattern ~attrs:[] unit_pattern p)
           start_pos p
       | _ -> (
@@ -3871,13 +3908,48 @@ and parse_for_expression p =
             parse_tuple_pattern ~attrs:[] ~start_pos:lparen ~first:pat p
           in
           let pattern = parse_alias_pattern ~attrs:[] tuple_pattern p in
-          parse_for_rest false pattern start_pos p
-        | _ -> parse_for_rest true pat start_pos p))
+          parse_for_rest false ~await:false pattern start_pos p
+        | _ -> parse_for_rest true ~await:false pat start_pos p))
+    | Await -> (
+      Parser.next p;
+      match p.token with
+      | Lparen -> (
+        let lparen = p.start_pos in
+        Parser.next p;
+        match p.token with
+        | Rparen ->
+          Parser.next p;
+          let unit_pattern =
+            let loc = mk_loc lparen p.prev_end_pos in
+            let lid = Location.mkloc (Longident.Lident "()") loc in
+            Ast_helper.Pat.construct lid None
+          in
+          parse_for_rest false ~await:true
+            (parse_alias_pattern ~attrs:[] unit_pattern p)
+            start_pos p
+        | _ -> (
+          Parser.leave_breadcrumb p Grammar.Pattern;
+          let pat = parse_pattern p in
+          Parser.eat_breadcrumb p;
+          match p.token with
+          | Comma ->
+            Parser.next p;
+            let tuple_pattern =
+              parse_tuple_pattern ~attrs:[] ~start_pos:lparen ~first:pat p
+            in
+            let pattern = parse_alias_pattern ~attrs:[] tuple_pattern p in
+            parse_for_rest false ~await:true pattern start_pos p
+          | _ -> parse_for_rest true ~await:true pat start_pos p))
+      | _ ->
+        Parser.leave_breadcrumb p Grammar.Pattern;
+        let pat = parse_pattern p in
+        Parser.eat_breadcrumb p;
+        parse_for_rest false ~await:true pat start_pos p)
     | _ ->
       Parser.leave_breadcrumb p Grammar.Pattern;
       let pat = parse_pattern p in
       Parser.eat_breadcrumb p;
-      parse_for_rest false pat start_pos p
+      parse_for_rest false ~await:false pat start_pos p
   in
   Parser.eat_breadcrumb p;
   Parser.end_region p;

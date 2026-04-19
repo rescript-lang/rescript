@@ -671,6 +671,17 @@ module SexpAst = struct
             direction_flag flag;
             expression e3;
           ]
+      | Pexp_for_of (pat, e1, e2) ->
+        Sexp.list
+          [Sexp.atom "Pexp_for_of"; pattern pat; expression e1; expression e2]
+      | Pexp_for_await_of (pat, e1, e2) ->
+        Sexp.list
+          [
+            Sexp.atom "Pexp_for_await_of";
+            pattern pat;
+            expression e1;
+            expression e2;
+          ]
       | Pexp_constraint (expr, typexpr) ->
         Sexp.list
           [Sexp.atom "Pexp_constraint"; expression expr; core_type typexpr]

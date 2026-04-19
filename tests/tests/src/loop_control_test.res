@@ -145,4 +145,57 @@ describe(__MODULE__, () => {
 
     eq(__LOC__, [0, 2, 3], values.contents->Belt.List.reverse->Belt.List.toArray)
   })
+
+  test("for..of loop break and continue", () => {
+    let values = ref(list{})
+
+    for i of [0, 1, 2, 3, 4, 5]->Array.asIterable {
+      if i == 1 {
+        continue
+      }
+
+      if i == 4 {
+        break
+      }
+
+      values := list{i, ...values.contents}
+    }
+
+    eq(__LOC__, [0, 2, 3], values.contents->Belt.List.reverse->Belt.List.toArray)
+  })
+
+  test("switch inside for..of targets the loop", () => {
+    let values = ref(list{})
+
+    for i of [0, 1, 2, 3, 4, 5]->Array.asIterable {
+      switch i {
+      | 1 => continue
+      | 4 => break
+      | _ => values := list{i, ...values.contents}
+      }
+    }
+
+    eq(__LOC__, [0, 2, 3], values.contents->Belt.List.reverse->Belt.List.toArray)
+  })
+
+  // Keep a JS `switch` in the generated output so this exercises labeled loop control.
+  test("string switch inside for..of targets the loop via JS switch", () => {
+    let values = ref(list{})
+
+    for i of [0, 1, 2, 3, 4, 5]->Array.asIterable {
+      let state = switch i {
+      | 1 => "skip"
+      | 4 => "stop"
+      | _ => "keep"
+      }
+
+      switch state {
+      | "skip" => continue
+      | "stop" => break
+      | _ => values := list{i, ...values.contents}
+      }
+    }
+
+    eq(__LOC__, [0, 2, 3], values.contents->Belt.List.reverse->Belt.List.toArray)
+  })
 })

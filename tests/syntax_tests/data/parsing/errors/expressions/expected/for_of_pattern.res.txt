@@ -1,0 +1,14 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/expressions/for_of_pattern.res:3:5-17
+
+  1 │ let arr = [1, 2, 3]
+  2 │ 
+  3 │ for (item, index) of arr {
+  4 │   ignore((item, index))
+  5 │ }
+
+  A `for...of` or `for await...of` loop only supports a variable or `_` on the left side. Destructuring patterns are not supported here.
+
+let arr = [|1;2;3|]
+;;for _ of arr do ignore (item, index) done
