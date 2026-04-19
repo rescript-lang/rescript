@@ -21,7 +21,9 @@ Aggressive source normalization for agents should be a separate command rather t
 
 ## First Feature: Lint
 
-The rest of this document focuses on lint as the first implementation target.
+The rest of this document starts from lint as the first implementation target,
+but later sections also cover rewrite and semantic lookup commands that now
+belong in the same tool surface.
 
 ## Command Surface
 
@@ -29,7 +31,11 @@ Recommended first shape:
 
 ```sh
 rescript-tools lint <file-or-root> [--config <file>] [--json]
-rescript-tools rewrite <file-or-root> [--config <file>] [--json]
+rescript-tools rewrite <file-or-root> [--config <file>] [--diff] [--json]
+rescript-tools active-rules <file-or-root> [--config <file>] [--json]
+rescript-tools show <symbol-path> [--kind <auto|module|value|type>] [--context <file-or-root>] [--comments <include|omit>]
+rescript-tools find-references <symbol-path> [--kind <auto|module|value|type>] [--context <file-or-root>]
+rescript-tools find-references --file <file> --line <line> --col <col>
 ```
 
 Notes:
@@ -43,6 +49,12 @@ Notes:
 - `rewrite` is separate from `lint`
 - `rewrite` is allowed to be more aggressive because it is explicitly agent-oriented
 - lint reports style/semantic problems; rewrite canonicalizes source into a narrower normal form
+- `rewrite --diff` should preview the rewritten diff without modifying files
+- `rewrite` should emit a short summary of what changed after a write pass
+- `active-rules` should list lint and rewrite rules, whether they are active, and what they do
+- `show` should expose hover-style semantic lookup by symbol path instead of source position
+- `show --comments omit` should make it easy to get a tighter, agent-oriented output
+- `find-references` should support both symbol-path and source-location queries
 
 ## Recommended Placement
 
@@ -149,17 +161,19 @@ Example shape:
 
 ```json
 {
-  "rules": {
-    "forbidden-reference": {
-      "severity": "error",
-      "items": [
-        "RescriptCore",
-        "Belt",
-        "Belt.Array.forEach"
-      ]
-    },
-    "single-use-function": {
-      "severity": "warning"
+  "lint": {
+    "rules": {
+      "forbidden-reference": {
+        "severity": "error",
+        "items": [
+          "RescriptCore",
+          "Belt",
+          "Belt.Array.forEach"
+        ]
+      },
+      "single-use-function": {
+        "severity": "warning"
+      }
     }
   }
 }
@@ -215,6 +229,65 @@ Likely exclusions for V1:
 
 Longer term, this can grow into a reanalyze-style map/merge analysis.
 
+## Candidate Lint Rule Ideas
+
+This section is intentionally a scratchpad for future rules.
+
+### React component file shape
+
+- React component files must define an interface for the component props
+- React component files should only export the React component itself
+- disallow plain functions that return JSX; require them to be defined as React components instead
+- goal: keep file shape predictable and preserve HMR-friendly module boundaries
+
+### Size limits
+
+- file length limits
+- function length limits
+- max JSX size/length limits
+
+### Naming conventions
+
+- configurable naming rules
+- examples:
+  - `camelCase` vs `snake_case`
+  - likely separate handling for values, types, modules, files, and props
+
+### Regex-based validation
+
+- configurable regex validation for names or other text-shaped surfaces
+- useful when a team wants project-specific constraints without adding a bespoke rule
+
+### String literal normalization
+
+- enforce regular string literals instead of template strings when interpolation or other template-only behavior is not needed
+
+### Builtin type spellings
+
+- enforce builtin type spellings where available
+- example: prefer `dict<>` over `Dict.t<>`
+
+### Dict normalization
+
+- prefer dict spread over helper-based concat/merge patterns when the result is equivalent
+- prefer dict literal syntax when constructing dicts in cases where a literal is a clearer canonical form
+
+### Alias avoidance
+
+- disallow aliases in general when the alias only shortens an existing qualified path
+- prefer the fully qualified reference path instead
+
+### Custom error messages
+
+- allow custom error messages per rule or per violation pattern
+- useful when a team wants lint output to teach the preferred local convention, not just report failure
+
+### JSX element rules
+
+- require certain props for specific JSX elements
+- example: enforce required props per element type
+- disallow rendering `<a>` directly and require a designated `Link` component instead
+
 ## Separate Command: Agent Rewrite
 
 Aggressive source normalization for agents should be a separate command rather than part of lint.
@@ -222,7 +295,7 @@ Aggressive source normalization for agents should be a separate command rather t
 Recommended first shape:
 
 ```sh
-rescript-tools rewrite <file-or-root> [--config <file>] [--json]
+rescript-tools rewrite <file-or-root> [--config <file>] [--diff] [--json]
 ```
 
 Goal:
@@ -233,6 +306,33 @@ Goal:
 
 This is intentionally not just lint autofix.
 It is an agent-oriented normalization pass.
+
+Write mode should still emit a short summary after applying rewrites so an
+agent can quickly tell which rules fired and how much source changed.
+
+Lint and rewrite config should each live under their own namespace in `.rescript-lint.json`, for example:
+
+```json
+{
+  "lint": {
+    "rules": {
+      "forbidden-reference": {
+        "severity": "error",
+        "items": ["Belt.Array.forEach", "Belt.Array.map", "Js.Json.t"]
+      },
+      "single-use-function": {
+        "severity": "warning"
+      }
+    }
+  },
+  "rewrite": {
+    "rules": {
+      "prefer-switch": {"enabled": true, "if": true, "ternary": true},
+      "no-optional-some": {"enabled": true}
+    }
+  }
+}
+```
 
 ### Rewrite model
 
@@ -293,7 +393,7 @@ Why:
 Implementation notes:
 
 - this should be an AST-based rewrite rule
-- the rewrite is straightforward: `?Some(expr)` -> `?expr`
+- the rewrite is straightforward: `~label=?Some(expr)` -> `~label=expr`
 
 #### Other good candidates
 
@@ -378,6 +478,22 @@ This section is intentionally a scratchpad. Add ideas here freely before they ar
   - docs
   - module path
   - source location
+- type-at for a symbol or source location
+- implementation jump
+  - for example `.resi` to `.res`
+- signature help for agents
+  - labels
+  - arity
+  - current argument position
+- document symbols / file outline
+- workspace symbols / symbol search
+  - values
+  - types
+  - modules
+- deterministic completion surfaces
+  - module members
+  - record fields
+  - variant constructors
 - search symbols/modules by semantic identity rather than raw grep
 - find implementations / exported values / local bindings by kind
 - rename preview for agents
@@ -401,21 +517,20 @@ This section is intentionally a scratchpad. Add ideas here freely before they ar
   - "show all externals in this package"
   - "show all uses of Belt in changed files"
 
-## Suggested Implementation Order
+## Remaining Implementation Priorities
 
-1. Add `lint` command and help text in `tools/bin/main.ml`
-2. Create a new `Tools.Lint` module in `tools/src/`
-3. Define config parsing and finding/output types
-4. Implement AST lane plumbing
-5. Implement typed lane plumbing on top of `analysis/src/Cmt.ml`
-6. Implement `forbidden-reference`
-7. Implement local `single-use-function`
-8. Add `--git` line-range filtering
-9. Add tests for file mode and project mode
-10. Add `rewrite` command and a separate `Tools.Rewrite` module
-11. Implement rewrite verification and fixed-point pass ordering
-12. Add aggressive canonicalization rules like `if`/ternary -> `switch`
-13. Add optional-arg normalization like `?Some(expr)` -> `?expr`
+Much of the initial bootstrapping work described earlier in this document is
+now done. The current command surface already includes `lint`, `rewrite`,
+`active-rules`, `show`, and `find-references`, along with namespaced
+`lint`/`rewrite` config and the first rewrite rules.
+
+Near-term remaining work is mostly about hardening and narrowing the scope of
+future additions:
+
+1. Add `--git` line-range filtering
+2. Harden rewrite verification with fixed-point pass ordering
+3. Add type-aware rewrite validation after rewriting
+4. Keep expanding semantic lookup/editing commands only where they prove useful
 
 ## Testing Plan
 
