@@ -130,8 +130,7 @@ let after_parsing_impl ppf outputprefix (ast : Parsetree.structure) =
     if !Js_config.syntax_only then Warnings.check_fatal ()
     else
       let modulename =
-        Ext_filename.module_name
-          ~preserve_case:(!Js_config.multi_entry)
+        Ext_filename.module_name ~preserve_case:!Js_config.multi_entry
           outputprefix
       in
       Lam_compile_env.reset ();
@@ -197,7 +196,7 @@ let implementation_map ppf sourcefile =
   let list_of_modules = Ext_io.rev_lines_of_chann ichan in
   close_in ichan;
   let ns =
-    Ext_filename.module_name ~preserve_case:(!Js_config.multi_entry) sourcefile
+    Ext_filename.module_name ~preserve_case:!Js_config.multi_entry sourcefile
   in
   let ml_ast =
     Ext_list.fold_left list_of_modules [] (fun acc line ->
