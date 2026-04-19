@@ -588,8 +588,8 @@ let arrays = [["hi", "hello"], ["yay"], ["wehoo"]]
 
 let result = Array.concatAll(arrays)
 
-assertEqual(arrays, [["hi", "hello"], ["yay"], ["wehoo"]])
-assertEqual(result, ["hi", "hello", "yay", "wehoo"])
+arrays == [["hi", "hello"], ["yay"], ["wehoo"]]
+result == ["hi", "hello", "yay", "wehoo"]
 ```
 */
 let concatAll: array<array<'a>> => array<'a>

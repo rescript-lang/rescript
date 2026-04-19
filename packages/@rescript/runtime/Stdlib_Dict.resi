@@ -255,8 +255,8 @@ let result = target->Dict.assignMany([
   dict{"someKey": 3, "someKey2": 4},
 ])
 
-assertEqual(result, dict{"firstKey": 1, "someKey": 3, "someKey2": 4})
-assertEqual(result === target, true)
+result == dict{"firstKey": 1, "someKey": 3, "someKey2": 4}
+(result === target) == true
 ```
 */
 @variadic @val
@@ -274,9 +274,9 @@ let dict2 = dict{"firstKey": 2, "someKey": 3}
 
 let merged = dict1->Dict.concat(dict2)
 
-assertEqual(dict1, dict{"firstKey": 1})
-assertEqual(merged, dict{"firstKey": 2, "someKey": 3})
-assertEqual(merged === dict1, false)
+dict1 == dict{"firstKey": 1}
+merged == dict{"firstKey": 2, "someKey": 3}
+(merged === dict1) == false
 ```
 */
 @val
@@ -295,9 +295,9 @@ let merged = target->Dict.concatMany([
   dict{"someKey": 3, "someKey2": 4},
 ])
 
-assertEqual(target, dict{"firstKey": 1})
-assertEqual(merged, dict{"firstKey": 1, "someKey": 3, "someKey2": 4})
-assertEqual(merged === target, false)
+target == dict{"firstKey": 1}
+merged == dict{"firstKey": 1, "someKey": 3, "someKey2": 4}
+(merged === target) == false
 ```
 */
 @variadic @val
@@ -316,8 +316,9 @@ let dict3 = dict{"someKey": 3, "someKey2": 4}
 
 let merged = Dict.concatAll([dict1, dict2, dict3])
 
-assertEqual(dict1, dict{"firstKey": 1})
-assertEqual(merged, dict{"firstKey": 1, "someKey": 3, "someKey2": 4})
+dict1 == dict{"firstKey": 1}
+merged == dict{"firstKey": 1, "someKey": 3, "someKey2": 4}
+(merged === dict1) == false
 ```
 */
 @variadic @val
