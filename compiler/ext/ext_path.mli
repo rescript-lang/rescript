@@ -29,10 +29,9 @@ val node_rebase_file : from:string -> to_:string -> string -> string
 
 val absolute_cwd_path : string -> string
 
-val custom_package_dir : string option ref
-(** Set by [-bs-project-root]. Must be populated before [package_dir ()] is
-    called; the compiler does not locate [rescript.json] on its own. *)
+val project_root : string option ref
+(** Populated by [-bs-project-root]. Must be set before [package_dir ()]
+    is called; the compiler does not locate [rescript.json] on its own. *)
 
 val package_dir : unit -> string
-(** Returns the package root directory. Fails if [custom_package_dir] is
-    unset. *)
+(** Returns the package root directory. Fails if [project_root] is unset. *)

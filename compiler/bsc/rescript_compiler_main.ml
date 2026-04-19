@@ -265,10 +265,9 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
        'lib/cjs', 'amdjs:lib/amdjs', 'es6:lib/es6' " );
     ( "-bs-project-root",
       string_call (fun s ->
-          Ext_path.custom_package_dir := Some s;
+          Ext_path.project_root := Some s;
           GenTypeConfig.project_root := s),
-      "*internal* Set the project root directory, avoiding a filesystem walk \
-       for rescript.json" );
+      "*internal* Set the project root directory" );
     ( "-bs-ast",
       unit_call (fun _ ->
           Js_config.binary_ast := true;

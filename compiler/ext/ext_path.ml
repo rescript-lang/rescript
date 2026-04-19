@@ -110,13 +110,13 @@ let absolute_cwd_path s = absolute_path cwd s
    | File x -> File (absolute_path cwd x )
    | Dir x -> Dir (absolute_path cwd x) *)
 
-(** Set by [-bs-project-root] to tell the compiler where the package root is.
-    The build system (rewatch) or [cli/bsc.js] is responsible for supplying it;
-    the compiler no longer reads [rescript.json] itself. *)
-let custom_package_dir : string option ref = ref None
+(** Populated by [-bs-project-root]. The build system (rewatch) or
+    [cli/bsc.js] is responsible for supplying it; the compiler no longer
+    reads [rescript.json] itself. *)
+let project_root : string option ref = ref None
 
 let package_dir () =
-  match !custom_package_dir with
+  match !project_root with
   | Some dir -> dir
   | None ->
     Ext_fmt.failwithf ~loc:__LOC__
