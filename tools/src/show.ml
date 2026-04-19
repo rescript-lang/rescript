@@ -1,11 +1,7 @@
 open Analysis
 open SharedTypes
 
-type show_kind = Lint_support.SymbolKind.t =
-  | Auto
-  | Module
-  | Value
-  | Type
+type show_kind = Lint_support.SymbolKind.t = Auto | Module | Value | Type
 
 type comments_mode = Include | Omit
 
@@ -48,8 +44,8 @@ let normalize_output output =
     | lines -> lines
   in
   output |> String.split_on_char '\n'
-  |> List.map trim_trailing_horizontal_whitespace |> List.rev
-  |> drop_trailing_blank_lines_rev |> List.rev |> String.concat "\n"
+  |> List.map trim_trailing_horizontal_whitespace
+  |> List.rev |> drop_trailing_blank_lines_rev |> List.rev |> String.concat "\n"
 
 let docstring_for_mode ~comments_mode docstring =
   match comments_mode with
@@ -64,7 +60,9 @@ let resolve_module_hover ~package ~comments_mode path =
       ~docstring:(docstring_for_mode ~comments_mode file.structure.docstring)
       ~name ~file ~package None
   | None -> (
-    match Lint_support.SymbolPath.resolve_exported ~package ~tip:Tip.Module path with
+    match
+      Lint_support.SymbolPath.resolve_exported ~package ~tip:Tip.Module path
+    with
     | None -> None
     | Some (env, stamp) -> (
       match Stamps.findModule env.file.stamps stamp with
@@ -75,7 +73,9 @@ let resolve_module_hover ~package ~comments_mode path =
           ~name ~file:env.file ~package (Some declared)))
 
 let resolve_value_hover ~package ~comments_mode path =
-  match Lint_support.SymbolPath.resolve_exported ~package ~tip:Tip.Value path with
+  match
+    Lint_support.SymbolPath.resolve_exported ~package ~tip:Tip.Value path
+  with
   | None -> None
   | Some (env, stamp) -> (
     match Stamps.findValue env.file.stamps stamp with
@@ -84,19 +84,21 @@ let resolve_value_hover ~package ~comments_mode path =
       Some
         (Hover.hoverWithExpandedTypes ~file:env.file ~package
            ~supportsMarkdownLinks:false
-           ~docstring:
-             (docstring_for_mode ~comments_mode declared.docstring)
+           ~docstring:(docstring_for_mode ~comments_mode declared.docstring)
            declared.item))
 
 let resolve_type_hover ~package path =
-  match Lint_support.SymbolPath.resolve_exported ~package ~tip:Tip.Type path with
+  match
+    Lint_support.SymbolPath.resolve_exported ~package ~tip:Tip.Type path
+  with
   | None -> None
   | Some (env, stamp) -> (
     match Stamps.findType env.file.stamps stamp with
     | None -> None
-    | Some declared ->
+    | Some declared -> (
       let type_definition =
-        Markdown.codeBlock (Shared.declToString declared.name.txt declared.item.decl)
+        Markdown.codeBlock
+          (Shared.declToString declared.name.txt declared.item.decl)
       in
       match declared.item.decl.type_manifest with
       | None -> Some type_definition
@@ -106,8 +108,9 @@ let resolve_type_hover ~package path =
             typ
         in
         match expansion_type with
-        | `Default -> Some (String.concat "\n" (type_definition :: expanded_types))
-        | `InlineType -> Some (String.concat "\n" expanded_types)))
+        | `Default ->
+          Some (String.concat "\n" (type_definition :: expanded_types))
+        | `InlineType -> Some (String.concat "\n" expanded_types))))
 
 let try_resolvers resolvers =
   resolvers
@@ -156,5 +159,4 @@ let run ?context_path ?(kind = Auto) ?(comments_mode = Include) path =
         | None ->
           Error
             (Printf.sprintf "error: could not resolve %s as %s"
-               (String.concat "." path)
-               (show_kind_to_string kind))))
+               (String.concat "." path) (show_kind_to_string kind))))

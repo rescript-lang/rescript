@@ -343,7 +343,8 @@ let main () =
           | None -> Error showHelp)
         | "--comments" :: value :: rest -> (
           match Tools.Show.comments_mode_of_string value with
-          | Some comments_mode -> parse_args kind context_path comments_mode rest
+          | Some comments_mode ->
+            parse_args kind context_path comments_mode rest
           | None -> Error showHelp)
         | "--context" :: path :: rest ->
           parse_args kind (Some path) comments_mode rest
@@ -363,9 +364,9 @@ let main () =
   | "find-references" :: rest -> (
     match rest with
     | ["-h"] | ["--help"] -> logAndExit (Ok findReferencesHelp)
-    | args ->
+    | args -> (
       let rec parse_args symbol_path kind context_path file_path line col =
-          function
+        function
         | [] -> Ok (symbol_path, kind, context_path, file_path, line, col)
         | "--kind" :: value :: rest -> (
           match Tools.Find_references.symbol_kind_of_string value with
@@ -395,7 +396,9 @@ let main () =
           | Some _ -> Error findReferencesHelp)
         | _ -> Error findReferencesHelp
       in
-      match parse_args None Tools.Find_references.Auto None None None None args with
+      match
+        parse_args None Tools.Find_references.Auto None None None None args
+      with
       | Error help -> logAndExit (Error help)
       | Ok (symbol_path, kind, context_path, file_path, line, col) -> (
         let query =
@@ -416,7 +419,7 @@ let main () =
             exit 2
           | Ok {Tools.Find_references.output; _} ->
             if output <> "" then print_endline output;
-            exit 0)))
+            exit 0))))
   | "reanalyze" :: _ ->
     if Sys.getenv_opt "RESCRIPT_REANALYZE_NO_SERVER" = Some "1" then (
       let len = Array.length Sys.argv in

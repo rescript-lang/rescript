@@ -1,11 +1,7 @@
 open Analysis
 open SharedTypes
 
-type symbol_kind = Lint_support.SymbolKind.t =
-  | Auto
-  | Module
-  | Value
-  | Type
+type symbol_kind = Lint_support.SymbolKind.t = Auto | Module | Value | Type
 
 type query =
   | Symbol of {
@@ -39,8 +35,8 @@ let display_base_for_path path =
   | None ->
     if Lint_support.Path.is_directory path then path else Filename.dirname path
 
-let raw_reference_of_analysis_reference ({References.uri; locOpt} :
-                                         References.references) =
+let raw_reference_of_analysis_reference
+    ({References.uri; locOpt} : References.references) =
   {abs_path = Uri.toPath uri; loc = locOpt}
 
 let compare_loc_opt left right =
@@ -52,7 +48,8 @@ let compare_loc_opt left right =
     compare (Lint_support.Range.of_loc left) (Lint_support.Range.of_loc right)
 
 let compare_raw_reference left right =
-  compare (left.abs_path, left.loc |> Option.map Lint_support.Range.of_loc)
+  compare
+    (left.abs_path, left.loc |> Option.map Lint_support.Range.of_loc)
     (right.abs_path, right.loc |> Option.map Lint_support.Range.of_loc)
 
 let sort_and_dedupe references =
@@ -123,7 +120,9 @@ let resolve_value_references ~package path =
       |> Result.map (fun refs -> (Value, refs)))
 
 let resolve_type_references ~package path =
-  match Lint_support.SymbolPath.resolve_exported ~package ~tip:Tip.Type path with
+  match
+    Lint_support.SymbolPath.resolve_exported ~package ~tip:Tip.Type path
+  with
   | None -> None
   | Some (env, stamp) ->
     Some
@@ -147,21 +146,23 @@ let resolve_symbol_references ~package ~kind path =
         (fun () -> resolve_value_references ~package path);
         (fun () -> resolve_type_references ~package path);
       ]
-  | Module -> try_symbol_resolvers [fun () -> resolve_module_references ~package path]
-  | Value -> try_symbol_resolvers [fun () -> resolve_value_references ~package path]
-  | Type -> try_symbol_resolvers [fun () -> resolve_type_references ~package path]
+  | Module ->
+    try_symbol_resolvers [(fun () -> resolve_module_references ~package path)]
+  | Value ->
+    try_symbol_resolvers [(fun () -> resolve_value_references ~package path)]
+  | Type ->
+    try_symbol_resolvers [(fun () -> resolve_type_references ~package path)]
 
 let resolve_location_references ~file_path ~line ~col =
   match Cmt.loadFullCmtFromPath ~path:file_path with
   | None ->
-    Error
-      (Printf.sprintf "error: failed to load typed info for %s" file_path)
+    Error (Printf.sprintf "error: failed to load typed info for %s" file_path)
   | Some full -> (
     match References.getLocItem ~full ~pos:(line - 1, col - 1) ~debug:false with
     | None ->
       Error
-        (Printf.sprintf "error: could not resolve a symbol at %s:%d:%d" file_path
-           line col)
+        (Printf.sprintf "error: could not resolve a symbol at %s:%d:%d"
+           file_path line col)
     | Some loc_item -> Ok (references_from_loc_item full loc_item))
 
 let snippet_of_reference ~source_cache (reference : raw_reference) =

@@ -9,7 +9,8 @@ let stringify_setting_value_json = function
   | RuleSettingStringList values ->
     Protocol.array (values |> List.map Protocol.wrapInQuotes)
 
-let stringify_setting_json (key, value) = (key, Some (stringify_setting_value_json value))
+let stringify_setting_json (key, value) =
+  (key, Some (stringify_setting_value_json value))
 
 let stringify_settings_json settings =
   Lint_support.Json.stringify_compact_object
@@ -86,7 +87,8 @@ let render_summary_text listed_rules =
          0
   in
   let inactive = total - active in
-  Printf.sprintf "summary: %d active, %d inactive, %d total" active inactive total
+  Printf.sprintf "summary: %d active, %d inactive, %d total" active inactive
+    total
 
 let render ~json listed_rules =
   if json then
@@ -95,8 +97,7 @@ let render ~json listed_rules =
         ( "rules",
           Some
             ("["
-            ^ String.concat ","
-                (listed_rules |> List.map stringify_rule_json)
+            ^ String.concat "," (listed_rules |> List.map stringify_rule_json)
             ^ "]") );
         ("summary", Some (render_summary_json listed_rules));
       ]

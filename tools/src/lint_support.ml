@@ -93,8 +93,9 @@ module SymbolPath = struct
         match remainder with
         | [] -> Some (SharedTypes.QueryEnv.fromFile file)
         | _ ->
-          resolve_in_env ~env:(SharedTypes.QueryEnv.fromFile file) ~package
-            remainder))
+          resolve_in_env
+            ~env:(SharedTypes.QueryEnv.fromFile file)
+            ~package remainder))
 
   let direct_scope ~package path =
     match path with
@@ -114,8 +115,7 @@ module SymbolPath = struct
     package.SharedTypes.opens
     |> List.filter_map (fun open_path ->
            resolve_open_env ~package open_path
-           |> Option.map (fun env ->
-                  {env; path; top_level_module = None}))
+           |> Option.map (fun env -> {env; path; top_level_module = None}))
 
   let scopes ~package path =
     match direct_scope ~package path with
