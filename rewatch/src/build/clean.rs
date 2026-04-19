@@ -250,7 +250,9 @@ pub fn cleanup_previous_build(
         .difference(&all_module_names)
         .flat_map(|module_name| {
             // if the module is a namespace, we need to mark the whole namespace as dirty when a module has been deleted
-            if let Some(namespace) = helpers::get_namespace_from_module_name(module_name) {
+            if !module_name.contains(':')
+                && let Some(namespace) = helpers::get_namespace_from_module_name(module_name)
+            {
                 return vec![namespace, module_name.to_string()];
             }
             vec![module_name.to_string()]

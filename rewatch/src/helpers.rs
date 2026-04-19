@@ -325,8 +325,16 @@ pub fn module_name_with_namespace(module_name: &str, namespace: &packages::Names
     capitalize(&add_suffix(module_name, namespace))
 }
 
-// this doesn't capitalize the module name! if the rescript name of the file is "foo.res" the
-// compiler assets are foo-Namespace.cmt and foo-Namespace.cmj, but the module name is Foo
+pub fn is_constructible_file_module(path: &Path, multi_entry: bool) -> bool {
+    !multi_entry
+        || get_basename(path)
+            .chars()
+            .next()
+            .is_some_and(|chr| chr.is_ascii_uppercase())
+}
+
+// Compiler asset basenames preserve the source file stem. Constructible module names are a
+// separate concept because lowercase file modules intentionally stay private to the file level.
 pub fn file_path_to_compiler_asset_basename(path: &Path, namespace: &packages::Namespace) -> String {
     let base = get_basename(path);
     add_suffix(&base, namespace)
@@ -334,6 +342,33 @@ pub fn file_path_to_compiler_asset_basename(path: &Path, namespace: &packages::N
 
 pub fn file_path_to_module_name(path: &Path, namespace: &packages::Namespace) -> String {
     capitalize(&file_path_to_compiler_asset_basename(path, namespace))
+}
+
+pub fn file_path_to_constructible_module_name(
+    path: &Path,
+    namespace: &packages::Namespace,
+    multi_entry: bool,
+) -> Option<String> {
+    if is_constructible_file_module(path, multi_entry) {
+        Some(file_path_to_module_name(path, namespace))
+    } else {
+        None
+    }
+}
+
+pub fn file_path_to_module_key(
+    path: &Path,
+    namespace: &packages::Namespace,
+    package_name: &str,
+    multi_entry: bool,
+) -> String {
+    match file_path_to_constructible_module_name(path, namespace, multi_entry) {
+        Some(module_name) => module_name,
+        None => {
+            let source_path = path.with_extension("");
+            format!("{}:{}", package_name, source_path.to_string_lossy())
+        }
+    }
 }
 
 pub fn contains_ascii_characters(str: &str) -> bool {
@@ -549,4 +584,50 @@ pub fn is_local_package(workspace_path: &Path, canonical_package_path: &Path) ->
         && !canonical_package_path
             .components()
             .any(|c| c.as_os_str() == "node_modules")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::build::packages::Namespace;
+
+    #[test]
+    fn constructible_module_names_require_uppercase_file_stems_when_multi_entry_enabled() {
+        assert_eq!(
+            file_path_to_constructible_module_name(Path::new("src/Foo.res"), &Namespace::NoNamespace, true),
+            Some("Foo".to_string())
+        );
+        assert_eq!(
+            file_path_to_constructible_module_name(Path::new("src/foo.res"), &Namespace::NoNamespace, true),
+            None
+        );
+    }
+
+    #[test]
+    fn lowercase_file_module_keys_include_package_and_path_when_multi_entry_enabled() {
+        assert_eq!(
+            file_path_to_module_key(Path::new("src/a/foo.res"), &Namespace::NoNamespace, "pkg", true),
+            "pkg:src/a/foo"
+        );
+        assert_eq!(
+            file_path_to_module_key(Path::new("src/b/foo.res"), &Namespace::NoNamespace, "pkg", true),
+            "pkg:src/b/foo"
+        );
+    }
+
+    #[test]
+    fn lowercase_file_module_keys_use_old_capitalized_name_by_default() {
+        assert_eq!(
+            file_path_to_module_key(Path::new("src/foo.res"), &Namespace::NoNamespace, "pkg", false),
+            "Foo"
+        );
+    }
+
+    #[test]
+    fn uppercase_file_module_keys_stay_constructible_module_names() {
+        assert_eq!(
+            file_path_to_module_key(Path::new("src/Foo.res"), &Namespace::NoNamespace, "pkg", true),
+            "Foo"
+        );
+    }
 }

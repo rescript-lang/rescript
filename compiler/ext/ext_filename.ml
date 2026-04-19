@@ -76,10 +76,11 @@ let new_extension name (ext : string) =
     we can not tell the difference between "x.cpp.ml" 
     and "x.ml"
 *)
-let module_name name =
+let module_name ?(preserve_case = false) name =
   let rec search_dot i name =
-    if i < 0 then Ext_string.capitalize_ascii name
-    else if String.unsafe_get name i = '.' then Ext_string.capitalize_sub name i
+    if i < 0 then if preserve_case then name else Ext_string.capitalize_ascii name
+    else if String.unsafe_get name i = '.' then
+      if preserve_case then String.sub name 0 i else Ext_string.capitalize_sub name i
     else search_dot (i - 1) name
   in
   let name = Filename.basename name in

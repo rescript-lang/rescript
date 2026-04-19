@@ -20,7 +20,7 @@ let module_of_filename outputprefix =
       String.sub basename 0 pos
     with Not_found -> basename
   in
-  String.capitalize_ascii name
+  if !Js_config.multi_entry then name else String.capitalize_ascii name
 
 let fprintf = Format.fprintf
 
@@ -129,7 +129,11 @@ let after_parsing_impl ppf outputprefix (ast : Parsetree.structure) =
       output_value stdout ast);
     if !Js_config.syntax_only then Warnings.check_fatal ()
     else
-      let modulename = Ext_filename.module_name outputprefix in
+      let modulename =
+        Ext_filename.module_name
+          ~preserve_case:(!Js_config.multi_entry)
+          outputprefix
+      in
       Lam_compile_env.reset ();
       let env = Res_compmisc.initial_env ~modulename () in
       Env.set_unit_name modulename;
@@ -192,7 +196,9 @@ let implementation_map ppf sourcefile =
   seek_in ichan (Ext_digest.length + 1);
   let list_of_modules = Ext_io.rev_lines_of_chann ichan in
   close_in ichan;
-  let ns = Ext_filename.module_name sourcefile in
+  let ns =
+    Ext_filename.module_name ~preserve_case:(!Js_config.multi_entry) sourcefile
+  in
   let ml_ast =
     Ext_list.fold_left list_of_modules [] (fun acc line ->
         if Ext_string.is_empty line then acc

@@ -58,6 +58,8 @@ pub fn read(build_state: &mut BuildCommandState) -> anyhow::Result<CompileAssets
                                     entry.metadata().unwrap().modified().unwrap(),
                                     ext.to_owned(),
                                     package.name.to_owned(),
+                                    package.path.to_owned(),
+                                    package.config.is_multi_entry_enabled(),
                                     package.namespace.to_owned(),
                                     package.is_root,
                                 )),
@@ -68,20 +70,54 @@ pub fn read(build_state: &mut BuildCommandState) -> anyhow::Result<CompileAssets
                     }
                     Err(_) => None,
                 })
-                .collect::<Vec<(PathBuf, SystemTime, String, String, packages::Namespace, bool)>>()
+                .collect::<Vec<(
+                    PathBuf,
+                    SystemTime,
+                    String,
+                    String,
+                    PathBuf,
+                    bool,
+                    packages::Namespace,
+                    bool,
+                )>>()
         })
         .flatten()
-        .collect::<Vec<(PathBuf, SystemTime, String, String, packages::Namespace, bool)>>();
+        .collect::<Vec<(
+            PathBuf,
+            SystemTime,
+            String,
+            String,
+            PathBuf,
+            bool,
+            packages::Namespace,
+            bool,
+        )>>();
 
     let root_config = build_state.get_root_config();
 
     compile_assets.iter().for_each(
-        |(path, last_modified, extension, package_name, package_namespace, package_is_root)| {
+        |(
+            path,
+            last_modified,
+            extension,
+            package_name,
+            package_path,
+            package_multi_entry,
+            package_namespace,
+            package_is_root,
+        )| {
             match extension.as_str() {
                 "iast" | "ast" => {
-                    let module_name = helpers::file_path_to_module_name(path, package_namespace);
-
                     if let Some(res_file_path_buf) = get_res_path_from_ast(path) {
+                        let source_path = res_file_path_buf
+                            .strip_prefix(package_path)
+                            .unwrap_or(&res_file_path_buf);
+                        let module_name = helpers::file_path_to_module_key(
+                            source_path,
+                            package_namespace,
+                            package_name,
+                            *package_multi_entry,
+                        );
                         let _ = ast_modules.insert(
                             res_file_path_buf.clone(),
                             AstModule {

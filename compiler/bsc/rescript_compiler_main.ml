@@ -298,6 +298,7 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
       set Clflags.transparent_modules,
       "*internal*Do not record dependencies for module aliases" );
     ("-bs-gentype", set Clflags.bs_gentype, "*internal* Pass gentype command");
+<<<<<<< HEAD
     ( "-bs-gentype-module",
       string_call (fun s ->
           GenTypeConfig.module_flag := GenTypeConfig.module_of_string s),
@@ -341,7 +342,7 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
       string_call (fun s -> GenTypeConfig.bsb_project_root := s),
       "*internal* Set gentype bsb project root (workspace root containing \
        .sourcedirs.json)" );
-    (******************************************************************************)
+    ("-bs-multi-entry", set Js_config.multi_entry, "*internal* Preserve lowercase file module names");
     ( "-unboxed-types",
       set Clflags.unboxed_types,
       "*internal* Unannotated unboxable types will be unboxed" );
