@@ -304,6 +304,26 @@ assertEqual(merged === target, false)
 external concatMany: (@as(json`{}`) _, dict<'a>, array<dict<'a>>) => dict<'a> = "Object.assign"
 
 /**
+`concatAll(dictionaries)` [shallowly](https://developer.mozilla.org/en-US/docs/Glossary/Shallow_copy) merges all dictionaries in `dictionaries` into a fresh dictionary, and returns the new dictionary.
+
+None of the input dictionaries are mutated. Later dictionaries overwrite earlier ones when they contain the same key. If `dictionaries` is empty, an empty dictionary is returned.
+
+## Examples
+```rescript
+let dict1 = dict{"firstKey": 1}
+let dict2 = dict{"someKey": 2}
+let dict3 = dict{"someKey": 3, "someKey2": 4}
+
+let merged = Dict.concatAll([dict1, dict2, dict3])
+
+assertEqual(dict1, dict{"firstKey": 1})
+assertEqual(merged, dict{"firstKey": 1, "someKey": 3, "someKey2": 4})
+```
+*/
+@variadic @val
+external concatAll: (@as(json`{}`) _, array<dict<'a>>) => dict<'a> = "Object.assign"
+
+/**
 `copy(dictionary)` [shallowly copies](https://developer.mozilla.org/en-US/docs/Glossary/Shallow_copy) the provided dictionary to a new dictionary.
 
 ## Examples

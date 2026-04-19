@@ -125,6 +125,105 @@ Test.run(
   Test.run(__POS_OF__("concatMany returns a fresh dictionary"), result === target, eq, false)
 }
 
+{
+  let first = dict{
+    "a": 1,
+    "b": 2,
+  }
+  let last = dict{
+    "b": 4,
+    "c": 0,
+  }
+  let result = Dict.concatAll([first, dict{"b": 3}, last])
+
+  Test.run(
+    __POS_OF__("concatAll copies into a fresh dictionary"),
+    result,
+    eq,
+    dict{
+      "a": 1,
+      "b": 4,
+      "c": 0,
+    },
+  )
+  Test.run(
+    __POS_OF__("concatAll leaves first source unchanged"),
+    first,
+    eq,
+    dict{
+      "a": 1,
+      "b": 2,
+    },
+  )
+  Test.run(
+    __POS_OF__("concatAll leaves later source unchanged"),
+    last,
+    eq,
+    dict{
+      "b": 4,
+      "c": 0,
+    },
+  )
+  Test.run(__POS_OF__("concatAll returns a fresh dictionary"), result === first, eq, false)
+}
+
+Test.run(
+  __POS_OF__("concatAll with empty array returns empty dictionary"),
+  Dict.concatAll([]),
+  eq,
+  dict{},
+)
+
+{
+  let foo = dict{
+    "a": 1,
+    "b": 2,
+  }
+  let baz = dict{
+    "b": 4,
+    "c": 5,
+  }
+  let result = dict{...foo, "b": 3, ...baz, "d": 6}
+
+  Test.run(
+    __POS_OF__("dict spread respects overwrite order"),
+    result,
+    eq,
+    dict{
+      "a": 1,
+      "b": 4,
+      "c": 5,
+      "d": 6,
+    },
+  )
+  Test.run(
+    __POS_OF__("dict spread leaves first source unchanged"),
+    foo,
+    eq,
+    dict{
+      "a": 1,
+      "b": 2,
+    },
+  )
+  Test.run(
+    __POS_OF__("dict spread leaves later source unchanged"),
+    baz,
+    eq,
+    dict{
+      "b": 4,
+      "c": 5,
+    },
+  )
+}
+
+{
+  let foo = dict{"a": 1}
+  let result = dict{...foo}
+
+  Test.run(__POS_OF__("dict spread clone copies values"), result, eq, foo)
+  Test.run(__POS_OF__("dict spread clone returns a fresh dictionary"), result === foo, eq, false)
+}
+
 Test.run(
   __POS_OF__("getUnsafe - existing"),
   Dict.fromArray([("foo", "bar")])->Dict.getUnsafe("foo"),

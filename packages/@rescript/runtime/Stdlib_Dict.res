@@ -30,6 +30,8 @@ external fromIterable: Stdlib_Iterable.t<(string, 'a)> => dict<'a> = "Object.fro
 @variadic @val
 external concatMany: (@as(json`{}`) _, dict<'a>, array<dict<'a>>) => dict<'a> = "Object.assign"
 
+@variadic @val external concatAll: (@as(json`{}`) _, array<dict<'a>>) => dict<'a> = "Object.assign"
+
 @val external copy: (@as(json`{}`) _, dict<'a>) => dict<'a> = "Object.assign"
 
 // Use %raw to support for..in which is a ~10% faster than .forEach
