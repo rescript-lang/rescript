@@ -22,19 +22,24 @@ pub fn generate_asts(
     let mut has_failure = false;
     let mut stderr = "".to_string();
 
-    // Count dirty modules for the span
-    let dirty_modules = build_state
-        .modules
-        .values()
-        .filter(|m| match &m.source_type {
-            SourceType::SourceFile(sf) => {
-                sf.implementation.parse_dirty || sf.interface.as_ref().is_some_and(|i| i.parse_dirty)
-            }
-            SourceType::MlMap(mlmap) => mlmap.parse_dirty,
-        })
-        .count();
-
-    let parse_span = info_span!("build.parse", dirty_modules = dirty_modules);
+    // Count dirty modules for the span attribute only when a subscriber is
+    // listening. Otherwise iterating every module every parse phase is pure
+    // waste on the hot path.
+    let parse_span = if tracing::enabled!(tracing::Level::INFO) {
+        let dirty_modules = build_state
+            .modules
+            .values()
+            .filter(|m| match &m.source_type {
+                SourceType::SourceFile(sf) => {
+                    sf.implementation.parse_dirty || sf.interface.as_ref().is_some_and(|i| i.parse_dirty)
+                }
+                SourceType::MlMap(mlmap) => mlmap.parse_dirty,
+            })
+            .count();
+        info_span!("build.parse", dirty_modules = dirty_modules)
+    } else {
+        tracing::Span::none()
+    };
     let _span = parse_span.enter();
 
     build_state
