@@ -22,6 +22,7 @@
 #### :rocket: New Feature
 
 - Rewatch: add `--prod` flag to `build`, `watch`, and `clean` to skip dev-dependencies and dev sources (`"type": "dev"`), enabling builds in environments where dev packages aren't installed (e.g. after `pnpm install --prod`). https://github.com/rescript-lang/rescript/pull/8347
+- Add `Dict.assignMany`, `Dict.concat` and `Dict.concatMany` to the stdlib. https://github.com/rescript-lang/rescript/pull/8364
 
 #### :bug: Bug fix
 
