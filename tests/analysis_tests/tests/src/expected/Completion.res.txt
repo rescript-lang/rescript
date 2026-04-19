@@ -491,6 +491,12 @@ Path Array.
     "detail": "(array<'a>, array<'a>, ('a, 'a) => bool) => bool",
     "documentation": {"kind": "markdown", "value": "\n`equal(left, right, predicate)` checks if the two arrays contain the same elements according to the equality `predicate`.\n\n## Examples\n\n```rescript\nArray.equal([1, 2, 3], [1, 2, 3], Int.equal) == true\nArray.equal([1, 2, 3], [1, 3, 2], Int.equal) == false\n```\n"}
   }, {
+    "label": "concatAll",
+    "kind": 12,
+    "tags": [],
+    "detail": "array<array<'a>> => array<'a>",
+    "documentation": {"kind": "markdown", "value": "\n`concatAll(arrays)` concatenates all arrays in `arrays`, creating a new array.\n\nSee [`Array.concat`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/concat) on MDN.\n\n## Examples\n```rescript\nlet arrays = [[\"hi\", \"hello\"], [\"yay\"], [\"wehoo\"]]\n\nlet result = Array.concatAll(arrays)\n\nassertEqual(arrays, [[\"hi\", \"hello\"], [\"yay\"], [\"wehoo\"]])\nassertEqual(result, [\"hi\", \"hello\", \"yay\", \"wehoo\"])\n```\n"}
+  }, {
     "label": "joinUnsafe",
     "kind": 12,
     "tags": [],
