@@ -192,10 +192,7 @@ fn compile_one(
             // The mlmap is compiled during AST generation; the entry here just
             // marks it compiled so its namespace members can proceed.
             CompletionMsg {
-                module_name: package
-                    .namespace
-                    .to_suffix()
-                    .unwrap_or_else(|| module_name.to_string()),
+                module_name: package.namespace.to_suffix().unwrap(),
                 result: Ok(None),
                 interface_result: Some(Ok(None)),
                 is_clean: false,
@@ -383,10 +380,7 @@ pub fn compile(
             // Look up dependents from the node the scheduler scheduled under —
             // for mlmap, compile_one returns the namespace suffix, which is the
             // key modules use to refer to the namespace entry.
-            let dependents = build_state
-                .get_module(&finished_name)
-                .map(|m| m.dependents.clone())
-                .unwrap_or_default();
+            let dependents = build_state.get_module(&finished_name).unwrap().dependents.clone();
 
             for dep in &dependents {
                 if !compile_universe.contains(dep) {
@@ -395,17 +389,13 @@ pub fn compile(
                 if !is_clean {
                     dirty_set.insert(dep.clone());
                 }
-                if let Some(count) = pending_deps.get_mut(dep) {
-                    if *count == 0 {
-                        continue;
-                    }
-                    *count -= 1;
-                    if *count == 0 && !completed.contains(dep) {
-                        ready_heap.push(WorkUnit {
-                            priority: *priorities.get(dep).unwrap_or(&0),
-                            module_name: dep.clone(),
-                        });
-                    }
+                let count = pending_deps.get_mut(dep).unwrap();
+                *count -= 1;
+                if *count == 0 && !completed.contains(dep) {
+                    ready_heap.push(WorkUnit {
+                        priority: priorities[dep],
+                        module_name: dep.clone(),
+                    });
                 }
             }
         }
@@ -423,6 +413,11 @@ pub fn compile(
     let mut compile_errors = String::new();
     let mut compile_warnings = String::new();
     let mut num_compiled_modules = 0;
+
+    // Sort by module name so the accumulated error/warning strings and the
+    // per-package compile.log writes are deterministic across runs, even
+    // though modules complete in arbitrary order.
+    results_buffer.sort_by(|a, b| a.module_name.cmp(&b.module_name));
 
     for msg in results_buffer {
         let CompletionMsg {
