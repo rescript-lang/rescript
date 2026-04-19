@@ -452,6 +452,10 @@ pub fn read_package_name(package_dir: &Path) -> Result<String> {
         return Ok(name);
     }
 
+    if let Some(name) = read_name("bsconfig.json")? {
+        return Ok(name);
+    }
+
     Err(anyhow!(
         "No name field found in package.json or rescript.json in {}",
         package_dir.to_string_lossy()
