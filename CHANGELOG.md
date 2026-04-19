@@ -36,6 +36,8 @@
 
 #### :house: Internal
 
+- Move `rescript.json` reading out of the compiler (`bsc`) and into the build system. Rewatch now passes all gentype config and the package root as CLI flags; `bsc` no longer opens `rescript.json` or `.sourcedirs.json`. The custom OCaml JSON parser (`Ext_json*`) is removed. https://github.com/rescript-lang/rescript/pull/8365
+
 # 13.0.0-alpha.3
 
 #### :boom: Breaking Change
