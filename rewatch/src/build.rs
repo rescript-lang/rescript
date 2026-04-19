@@ -436,7 +436,9 @@ pub fn incremental_build(
 }
 
 fn log_config_warnings(build_state: &BuildCommandState) {
-    build_state.packages.iter().for_each(|(_, package)| {
+    let mut packages: Vec<_> = build_state.packages.values().collect();
+    packages.sort_by(|a, b| a.name.cmp(&b.name));
+    packages.iter().for_each(|package| {
         // Deprecations affect every package we load (local or external) —
         // external consumers can't fix them themselves, so we point them at
         // the package's issue tracker when we can find one.

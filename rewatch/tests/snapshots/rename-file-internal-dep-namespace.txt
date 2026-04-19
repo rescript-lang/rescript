@@ -13,15 +13,33 @@ Compiled 3 modules
 
 
 
+The field 'bs-dependencies' found in the package config of '@testrepo/deprecated-config' is deprecated and will be removed in a future version.
+Use 'dependencies' instead.
+
+The field 'bs-dev-dependencies' found in the package config of '@testrepo/deprecated-config' is deprecated and will be removed in a future version.
+Use 'dev-dependencies' instead.
+
+The field 'bsc-flags' found in the package config of '@testrepo/deprecated-config' is deprecated and will be removed in a future version.
+Use 'compiler-flags' instead.
+
 The field 'ignored-dirs' found in the package config of '@testrepo/deprecated-config' is not supported by ReScript 12's new build system.
 
 Unknown field 'some-new-field' found in the package config of '@testrepo/deprecated-config'. This option will be ignored.
 
-Unknown field 'bs-dependencies' found in the package config of '@testrepo/deprecated-config'. This option will be ignored.
+The field 'bs-dependencies' found in the package config of 'rescript-nodejs' is deprecated and will be removed in a future version.
+Use 'dependencies' instead.
+Please report this to the package maintainer: https://github.com/TheSpyder/rescript-nodejs/issues
 
-Unknown field 'bs-dev-dependencies' found in the package config of '@testrepo/deprecated-config'. This option will be ignored.
+The field 'bs-dev-dependencies' found in the package config of 'rescript-nodejs' is deprecated and will be removed in a future version.
+Use 'dev-dependencies' instead.
+Please report this to the package maintainer: https://github.com/TheSpyder/rescript-nodejs/issues
 
-Unknown field 'bsc-flags' found in the package config of '@testrepo/deprecated-config'. This option will be ignored.
+The config file 'bsconfig.json' used by package 'rescript-nodejs' is deprecated and support will be removed in a future version.
+Rename it to 'rescript.json'.
+
+The field 'bs-dev-dependencies' found in the package config of 'sury' is deprecated and will be removed in a future version.
+Use 'dev-dependencies' instead.
+Please report this to the package maintainer: https://github.com/DZakh/sury/issues
 
   [1;31mWe've found a bug for you![0m
   [36m/packages/new-namespace/src/NS_alias.res[0m:[2m2:1-16[0m
