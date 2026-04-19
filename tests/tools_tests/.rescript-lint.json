@@ -1,11 +1,43 @@
 {
   "lint": {
     "rules": {
-      "forbidden-reference": {
-        "severity": "error",
-        "items": ["Belt.Array.forEach", "Belt.Array.map", "Js.Json.t"]
-      },
+      "forbidden-reference": [
+        {
+          "severity": "error",
+          "items": [
+            {
+              "kind": "module",
+              "path": "Belt.Array",
+              "message": "Avoid Belt.Array module references here."
+            },
+            {
+              "kind": "value",
+              "path": "Belt.Array.forEach"
+            },
+            {
+              "kind": "value",
+              "path": "Belt.Array.map",
+              "message": "Prefer Array.map directly."
+            }
+          ],
+          "message": "Do not use Belt.Array helpers here. Prefer Stdlib/Array directly."
+        },
+        {
+          "severity": "warning",
+          "items": [
+            {
+              "kind": "type",
+              "path": "Js.Json.t",
+              "message": "Avoid Js.Json.t here."
+            }
+          ]
+        }
+      ],
       "single-use-function": {
+        "severity": "warning",
+        "message": "Inline this helper unless it is a meaningful reusable abstraction."
+      },
+      "alias-avoidance": {
         "severity": "warning"
       }
     }

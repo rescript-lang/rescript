@@ -23,6 +23,7 @@ let stringify_rule_json (listed_rule : rule_listing) =
     [
       ("namespace", Some (Protocol.wrapInQuotes listed_rule.namespace));
       ("rule", Some (Protocol.wrapInQuotes listed_rule.rule));
+      ("instance", listed_rule.instance |> Option.map string_of_int);
       ("active", Some (string_of_bool listed_rule.active));
       ("summary", Some (Protocol.wrapInQuotes listed_rule.summary));
       ("details", Some (Protocol.wrapInQuotes listed_rule.details));
@@ -37,10 +38,20 @@ let stringify_rule_text (listed_rule : rule_listing) =
     [
       Printf.sprintf "namespace: %s" listed_rule.namespace;
       Printf.sprintf "rule: %s" listed_rule.rule;
-      Printf.sprintf "active: %s" (string_of_bool listed_rule.active);
-      Printf.sprintf "summary: %s" listed_rule.summary;
-      Printf.sprintf "details: %s" listed_rule.details;
     ]
+  in
+  let lines =
+    match listed_rule.instance with
+    | None -> lines
+    | Some instance -> lines @ [Printf.sprintf "instance: %d" instance]
+  in
+  let lines =
+    lines
+    @ [
+        Printf.sprintf "active: %s" (string_of_bool listed_rule.active);
+        Printf.sprintf "summary: %s" listed_rule.summary;
+        Printf.sprintf "details: %s" listed_rule.details;
+      ]
   in
   let lines =
     if listed_rule.settings = [] then lines

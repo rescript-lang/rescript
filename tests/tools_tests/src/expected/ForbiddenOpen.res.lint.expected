@@ -2,7 +2,7 @@ severity: error
 rule: forbidden-reference
 path: src/lint/ForbiddenOpen.res
 range: 3:17-3:20
-message: Forbidden reference
+message: Prefer Array.map directly.
 symbol: Belt_Array.map
 snippet:
 ```text

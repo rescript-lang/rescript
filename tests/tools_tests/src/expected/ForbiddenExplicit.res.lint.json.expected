@@ -1,1 +1,1 @@
-[{"rule":"forbidden-reference","path":"src/lint/ForbiddenExplicit.res","range":[0,27,0,34],"severity":"error","message":"Forbidden reference","symbol":"Belt_Array.forEach"}]
+[{"rule":"forbidden-reference","path":"src/lint/ForbiddenExplicit.res","range":[0,27,0,34],"severity":"error","message":"Do not use Belt.Array helpers here. Prefer Stdlib/Array directly.","symbol":"Belt_Array.forEach"}]

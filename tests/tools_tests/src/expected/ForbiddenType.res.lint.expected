@@ -1,8 +1,20 @@
-severity: error
+severity: warning
+rule: alias-avoidance
+path: src/lint/ForbiddenType.res
+range: 1:6-1:10
+message: Use the fully qualified reference directly instead of creating a local alias
+symbol: Js.Json.t
+snippet:
+```text
+> 1 | type json = Js.Json.t
+    |      ^^^^
+```
+
+severity: warning
 rule: forbidden-reference
 path: src/lint/ForbiddenType.res
 range: 1:21-1:22
-message: Forbidden reference
+message: Avoid Js.Json.t here.
 symbol: Js_json.t
 snippet:
 ```text

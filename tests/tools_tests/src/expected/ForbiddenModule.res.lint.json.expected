@@ -1,0 +1,1 @@
+[{"rule":"forbidden-reference","path":"src/lint/ForbiddenModule.res","range":[0,22,0,28],"severity":"error","message":"Avoid Belt.Array module references here.","symbol":"Belt_Array.length"}]

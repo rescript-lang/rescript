@@ -11,10 +11,49 @@ let starts_with_path ~prefix path =
   in
   loop prefix path
 
-let match_forbidden_path items path =
+type forbidden_symbol = {
+  kind: forbidden_reference_kind;
+  path: string list;
+}
+
+type forbidden_item_match =
+  | ForbiddenItemExact
+  | ForbiddenItemModulePrefix of int
+
+let forbidden_item_match (item : forbidden_reference_item)
+    (symbol : forbidden_symbol) =
+  match item.kind with
+  | ForbiddenReferenceModule ->
+    if starts_with_path ~prefix:item.path symbol.path then
+      Some (ForbiddenItemModulePrefix (List.length item.path))
+    else None
+  | ForbiddenReferenceValue | ForbiddenReferenceType ->
+    if item.kind = symbol.kind && item.path = symbol.path then
+      Some ForbiddenItemExact
+    else None
+
+let forbidden_item_match_is_better candidate best =
+  match (candidate, best) with
+  | ForbiddenItemExact, ForbiddenItemModulePrefix _ -> true
+  | ForbiddenItemModulePrefix _, ForbiddenItemExact -> false
+  | ForbiddenItemExact, ForbiddenItemExact -> false
+  | ForbiddenItemModulePrefix candidate_length, ForbiddenItemModulePrefix best_length ->
+    candidate_length > best_length
+
+let best_matching_forbidden_item items symbol =
   items
-  |> List.find_map (fun item ->
-         if starts_with_path ~prefix:item path then Some (item, path) else None)
+  |> List.fold_left (fun best (item : forbidden_reference_item) ->
+         match forbidden_item_match item symbol with
+         | None -> best
+         | Some candidate_match -> (
+           match best with
+           | None -> Some (candidate_match, item)
+           | Some (best_match, _best_item) ->
+             if forbidden_item_match_is_better candidate_match best_match then
+               Some (candidate_match, item)
+             else best))
+       None
+  |> Option.map snd
 
 let path_key path = String.concat "." path
 
@@ -40,23 +79,26 @@ let rec drop_path count path =
     | [] -> []
     | _ :: tail -> drop_path (count - 1) tail
 
-let resolve_exported_path ~env ~package path =
-  let resolve tip find_declared =
-    match References.exportedForTip ~env ~path ~package ~tip with
-    | None -> None
-    | Some (env, _name, stamp) ->
-      find_declared env.file.stamps stamp
+let tip_of_forbidden_reference_kind = function
+  | ForbiddenReferenceModule -> Tip.Module
+  | ForbiddenReferenceValue -> Tip.Value
+  | ForbiddenReferenceType -> Tip.Type
+
+let resolve_exported_path ~env ~package ~kind path =
+  let tip = tip_of_forbidden_reference_kind kind in
+  match References.exportedForTip ~env ~path ~package ~tip with
+  | None -> None
+  | Some (env, _name, stamp) -> (
+    match kind with
+    | ForbiddenReferenceModule ->
+      Stamps.findModule env.file.stamps stamp
       |> Option.map (declared_symbol_path ~module_name:env.file.moduleName)
-  in
-  match path with
-  | [] -> Some [env.QueryEnv.file.moduleName]
-  | _ -> (
-    match resolve Tip.Module Stamps.findModule with
-    | Some _ as resolved -> resolved
-    | None -> (
-      match resolve Tip.Value Stamps.findValue with
-      | Some _ as resolved -> resolved
-      | None -> resolve Tip.Type Stamps.findType))
+    | ForbiddenReferenceValue ->
+      Stamps.findValue env.file.stamps stamp
+      |> Option.map (declared_symbol_path ~module_name:env.file.moduleName)
+    | ForbiddenReferenceType ->
+      Stamps.findType env.file.stamps stamp
+      |> Option.map (declared_symbol_path ~module_name:env.file.moduleName))
 
 let resolve_forbidden_reference_items ~target_path items =
   match package_for_path target_path with
@@ -72,31 +114,35 @@ let resolve_forbidden_reference_items ~target_path items =
         Hashtbl.add resolved_module_cache (path_key path) resolved;
         resolved
     in
-    let resolve_item_from_module_prefix item =
+    let resolve_item_from_module_prefix (item : forbidden_reference_item) =
       let rec loop prefix_length =
         if prefix_length <= 0 then None
         else
-          let module_prefix = take_path prefix_length item in
+          let module_prefix = take_path prefix_length item.path in
           match resolve_module_prefix module_prefix with
           | None -> loop (prefix_length - 1)
           | Some env ->
-            let remainder = drop_path prefix_length item in
+            let remainder = drop_path prefix_length item.path in
             match remainder with
             | [] -> Some [env.QueryEnv.file.moduleName]
-            | _ -> resolve_exported_path ~env ~package remainder
+            | _ -> resolve_exported_path ~env ~package ~kind:item.kind remainder
       in
-      loop (List.length item)
+      loop (List.length item.path)
     in
-    let resolve_item item =
-      match Hashtbl.find_opt resolved_cache (path_key item) with
+    let resolve_item (item : forbidden_reference_item) =
+      let key =
+        forbidden_reference_kind_to_string item.kind ^ ":" ^ path_key item.path
+      in
+      match Hashtbl.find_opt resolved_cache key with
       | Some resolved -> resolved
       | None ->
         let resolved =
           resolve_item_from_module_prefix item
-          |> Option.value ~default:item
+          |> Option.value ~default:item.path
         in
-        Hashtbl.add resolved_cache (path_key item) resolved;
-        resolved
+        let item = {item with path = resolved} in
+        Hashtbl.add resolved_cache key item;
+        item
     in
     items |> List.map resolve_item
 
@@ -116,24 +162,178 @@ module Ast = struct
     | Ppat_constraint (pattern, _) -> collect_binding_names pattern
     | _ -> []
 
-  let summary_of_file path =
+  let rec qualified_ident_path (expression : Parsetree.expression) =
+    match expression.pexp_desc with
+    | Pexp_ident {txt = (Longident.Ldot _ as lid); _} ->
+      Some (Utils.flattenLongIdent lid)
+    | Pexp_constraint (expression, _)
+    | Pexp_open (_, _, expression)
+    | Pexp_newtype (_, expression) ->
+      qualified_ident_path expression
+    | _ -> None
+
+  let rec qualified_module_path (module_expr : Parsetree.module_expr) =
+    match module_expr.pmod_desc with
+    | Pmod_ident {txt = (Longident.Ldot _ as lid); _} ->
+      Some (Utils.flattenLongIdent lid)
+    | Pmod_constraint (module_expr, _) -> qualified_module_path module_expr
+    | _ -> None
+
+  let qualified_type_path (core_type : Parsetree.core_type) =
+    match core_type.ptyp_desc with
+    | Ptyp_constr ({txt = (Longident.Ldot _ as lid); _}, _arguments) ->
+      Some (Utils.flattenLongIdent lid)
+    | _ -> None
+
+  let alias_avoidance_finding ~path (rule : alias_avoidance_rule) ~loc
+      symbol_path =
+    let symbol = Some (String.concat "." symbol_path) in
+    raw_finding ~rule:"alias-avoidance" ~abs_path:path ~loc
+      ~severity:rule.severity
+      ~message:(effective_alias_avoidance_message rule) ?symbol ()
+
+  let value_alias_avoidance_findings ~path (rule : alias_avoidance_rule)
+      bindings =
+    bindings
+    |> List.filter_map (fun (binding : Parsetree.value_binding) ->
+           match collect_binding_names binding.pvb_pat with
+           | [name_loc] -> (
+             match qualified_ident_path binding.pvb_expr with
+             | None -> None
+             | Some symbol_path ->
+               Some
+                 (alias_avoidance_finding ~path rule ~loc:name_loc symbol_path))
+           | _ -> None)
+
+  let module_alias_avoidance_finding ~path (rule : alias_avoidance_rule)
+      (module_binding : Parsetree.module_binding) =
+    qualified_module_path module_binding.pmb_expr
+    |> Option.map (fun symbol_path ->
+           alias_avoidance_finding ~path rule ~loc:module_binding.pmb_name.loc
+             symbol_path)
+
+  let module_declaration_alias_avoidance_finding ~path
+      (rule : alias_avoidance_rule) (module_declaration : Parsetree.module_declaration)
+      =
+    match module_declaration.pmd_type.pmty_desc with
+    | Pmty_alias {txt = (Longident.Ldot _ as lid); _} ->
+      Some
+        (alias_avoidance_finding ~path rule ~loc:module_declaration.pmd_name.loc
+           (Utils.flattenLongIdent lid))
+    | _ -> None
+
+  let local_module_alias_avoidance_finding ~path (rule : alias_avoidance_rule)
+      (name : string Location.loc) (module_expr : Parsetree.module_expr) =
+    qualified_module_path module_expr
+    |> Option.map (fun symbol_path ->
+           alias_avoidance_finding ~path rule ~loc:name.loc symbol_path)
+
+  let type_alias_avoidance_findings ~path (rule : alias_avoidance_rule) decls =
+    decls
+    |> List.filter_map (fun (decl : Parsetree.type_declaration) ->
+           match decl.ptype_manifest with
+           | None -> None
+           | Some manifest -> (
+             match qualified_type_path manifest with
+             | None -> None
+             | Some symbol_path ->
+               Some
+                 (alias_avoidance_finding ~path rule ~loc:decl.ptype_name.loc
+                    symbol_path)))
+
+  let summary_of_file ?alias_avoidance_rule path =
     let local_function_bindings = ref StringSet.empty in
+    let alias_findings = ref [] in
+    let inspect_bindings bindings =
+      bindings
+      |> List.iter (fun (binding : Parsetree.value_binding) ->
+             if is_function_expression binding.pvb_expr then
+               collect_binding_names binding.pvb_pat
+               |> List.iter (fun loc ->
+                      local_function_bindings :=
+                        StringSet.add (loc_key loc) !local_function_bindings));
+      match alias_avoidance_rule with
+      | None -> ()
+      | Some rule ->
+        alias_findings :=
+          value_alias_avoidance_findings ~path rule bindings @ !alias_findings
+    in
     let iterator =
       let open Ast_iterator in
       {
         Ast_iterator.default_iterator with
+        structure_item =
+          (fun iter structure_item ->
+            (match structure_item.pstr_desc with
+            | Pstr_value (_rec_flag, bindings) -> inspect_bindings bindings
+            | Pstr_type (_rec_flag, decls) -> (
+              match alias_avoidance_rule with
+              | None -> ()
+              | Some rule ->
+                alias_findings :=
+                  type_alias_avoidance_findings ~path rule decls
+                  @ !alias_findings)
+            | Pstr_module module_binding -> (
+              match alias_avoidance_rule with
+              | None -> ()
+              | Some rule -> (
+                match module_alias_avoidance_finding ~path rule module_binding with
+                | None -> ()
+                | Some finding -> alias_findings := finding :: !alias_findings))
+            | Pstr_recmodule module_bindings -> (
+              match alias_avoidance_rule with
+              | None -> ()
+              | Some rule ->
+                alias_findings :=
+                  (module_bindings
+                  |> List.filter_map (module_alias_avoidance_finding ~path rule))
+                  @ !alias_findings)
+            | _ -> ());
+            Ast_iterator.default_iterator.structure_item iter structure_item);
+        signature_item =
+          (fun iter signature_item ->
+            (match signature_item.psig_desc with
+            | Psig_type (_rec_flag, decls) -> (
+              match alias_avoidance_rule with
+              | None -> ()
+              | Some rule ->
+                alias_findings :=
+                  type_alias_avoidance_findings ~path rule decls
+                  @ !alias_findings)
+            | Psig_module module_declaration -> (
+              match alias_avoidance_rule with
+              | None -> ()
+              | Some rule -> (
+                match
+                  module_declaration_alias_avoidance_finding ~path rule
+                    module_declaration
+                with
+                | None -> ()
+                | Some finding -> alias_findings := finding :: !alias_findings))
+            | Psig_recmodule module_declarations -> (
+              match alias_avoidance_rule with
+              | None -> ()
+              | Some rule ->
+                alias_findings :=
+                  (module_declarations
+                  |> List.filter_map
+                       (module_declaration_alias_avoidance_finding ~path rule))
+                  @ !alias_findings)
+            | _ -> ());
+            Ast_iterator.default_iterator.signature_item iter signature_item);
         expr =
           (fun iter expression ->
             (match expression.pexp_desc with
-            | Pexp_let (_rec_flag, bindings, _) ->
-              bindings
-              |> List.iter (fun (binding : Parsetree.value_binding) ->
-                     if is_function_expression binding.pvb_expr then
-                       collect_binding_names binding.pvb_pat
-                       |> List.iter (fun loc ->
-                              local_function_bindings :=
-                                StringSet.add (loc_key loc)
-                                  !local_function_bindings))
+            | Pexp_let (_rec_flag, bindings, _) -> inspect_bindings bindings
+            | Pexp_letmodule (name, module_expr, _) -> (
+              match alias_avoidance_rule with
+              | None -> ()
+              | Some rule -> (
+                match
+                  local_module_alias_avoidance_finding ~path rule name module_expr
+                with
+                | None -> ()
+                | Some finding -> alias_findings := finding :: !alias_findings))
             | _ -> ());
             Ast_iterator.default_iterator.expr iter expression);
       }
@@ -187,10 +387,16 @@ module Ast = struct
                  symbol = None;
                })
     in
-    {parse_errors; local_function_bindings = !local_function_bindings}
+    ( {parse_errors; local_function_bindings = !local_function_bindings},
+      List.rev !alias_findings )
 end
 
 module Typed = struct
+  let kind_of_tip = function
+    | Tip.Module -> ForbiddenReferenceModule
+    | Tip.Value -> ForbiddenReferenceValue
+    | Tip.Type | Tip.Field _ | Tip.Constructor _ -> ForbiddenReferenceType
+
   let resolve_global_symbol ~package ~module_name ~path ~tip =
     match ProcessCmt.fileForModule module_name ~package with
     | None -> None
@@ -252,39 +458,41 @@ module Typed = struct
              declared_symbol_path ~module_name:file.moduleName declared
              @ [constructor_name])
 
-  let symbol_path (full : SharedTypes.full) (loc_item : locItem) =
+  let symbol (full : SharedTypes.full) (loc_item : locItem) =
     match loc_item.locType with
     | Typed (_, _typ, LocalReference (stamp, tip)) ->
       resolve_local_symbol ~file:full.file ~tip stamp
+      |> Option.map (fun path -> {kind = kind_of_tip tip; path})
     | Typed (_, _typ, GlobalReference (module_name, path, tip)) ->
       resolve_global_symbol ~package:full.package ~module_name ~path ~tip
+      |> Option.map (fun path -> {kind = kind_of_tip tip; path})
     | Typed (_, _, (Definition _ | NotFound))
     | LModule _ | TopLevelModule _ | Constant _ | TypeDefinition _ ->
       None
 
   let forbidden_reference_findings ~config ~path (full : SharedTypes.full) =
-    if
-      (not config.forbidden_reference.enabled)
-      || config.forbidden_reference.items = []
-    then []
-    else
-      full.extra.locItems
-      |> List.filter_map (fun loc_item ->
-             match symbol_path full loc_item with
+    let matching_rule symbol =
+      config.forbidden_reference
+      |> List.find_map (fun (rule : forbidden_reference_rule) ->
+             if (not rule.enabled) || rule.items = [] then None
+             else
+               best_matching_forbidden_item rule.items symbol
+               |> Option.map (fun item -> (rule, item)))
+    in
+    full.extra.locItems
+    |> List.filter_map (fun loc_item ->
+           match symbol full loc_item with
+           | None -> None
+           | Some symbol ->
+             match matching_rule symbol with
              | None -> None
-             | Some symbol_path -> (
-               match
-                 match_forbidden_path config.forbidden_reference.items
-                   symbol_path
-               with
-               | None -> None
-               | Some (_item, matched_path) ->
-                 let symbol = Some (String.concat "." matched_path) in
-                 Some
-                   (raw_finding ~rule:"forbidden-reference" ~abs_path:path
-                      ~loc:loc_item.loc
-                      ~severity:config.forbidden_reference.severity
-                      ~message:"Forbidden reference" ?symbol ())))
+             | Some (rule, item) ->
+               let symbol = Some (String.concat "." symbol.path) in
+               Some
+                 (raw_finding ~rule:"forbidden-reference" ~abs_path:path
+                    ~loc:loc_item.loc ~severity:rule.severity
+                    ~message:(effective_forbidden_reference_item_message rule item)
+                    ?symbol ()))
 
   let is_function_type typ =
     match (Shared.dig typ).desc with
@@ -295,6 +503,7 @@ module Typed = struct
       (full : SharedTypes.full) =
     if not config.single_use_function.enabled then []
     else
+      let rule = config.single_use_function in
       let findings = ref [] in
       Stamps.iterValues
         (fun stamp (declared : Types.type_expr Declared.t) ->
@@ -312,9 +521,9 @@ module Typed = struct
               let symbol = Some declared.name.txt in
               findings :=
                 raw_finding ~rule:"single-use-function" ~abs_path:path
-                  ~loc:declared.name.loc
-                  ~severity:config.single_use_function.severity
-                  ~message:"Local function is only used once" ?symbol ()
+                  ~loc:declared.name.loc ~severity:rule.severity
+                  ~message:(effective_single_use_function_message rule) ?symbol
+                  ()
                 :: !findings)
         full.file.stamps;
       List.rev !findings
@@ -401,19 +610,26 @@ let compare_raw_findings left right =
       Lint_support.Range.of_loc right.loc )
 
 let analyze_file ~config path =
-  let ast = Ast.summary_of_file path in
+  let alias_avoidance_rule =
+    if config.alias_avoidance.enabled then Some config.alias_avoidance else None
+  in
+  let ast, alias_avoidance_findings =
+    Ast.summary_of_file ?alias_avoidance_rule path
+  in
   let findings = ref ast.parse_errors in
-  (if ast.parse_errors = [] then
-     match
-       if has_typed_artifact path then Cmt.loadFullCmtFromPath ~path else None
-     with
-     | None -> ()
-     | Some full ->
-       findings :=
-         Typed.forbidden_reference_findings ~config ~path full
-         @ Typed.single_use_function_findings ~config ~path
-             ~local_function_bindings:ast.local_function_bindings full
-         @ !findings);
+  if ast.parse_errors = [] then begin
+    findings := alias_avoidance_findings @ !findings;
+    match
+      if has_typed_artifact path then Cmt.loadFullCmtFromPath ~path else None
+    with
+    | None -> ()
+    | Some full ->
+      findings :=
+        Typed.forbidden_reference_findings ~config ~path full
+        @ Typed.single_use_function_findings ~config ~path
+            ~local_function_bindings:ast.local_function_bindings full
+        @ !findings
+  end;
   !findings
 
 type analyzed_target = {display_base: string; findings: raw_finding list}
@@ -423,12 +639,13 @@ let analyze_target ~config target_path =
     {
       config with
       forbidden_reference =
-        {
-          config.forbidden_reference with
-          items =
-            resolve_forbidden_reference_items ~target_path
-              config.forbidden_reference.items;
-        };
+        config.forbidden_reference
+        |> List.map (fun (rule : forbidden_reference_rule) ->
+               {
+                 rule with
+                 items =
+                   resolve_forbidden_reference_items ~target_path rule.items;
+               });
     }
   in
   let files = collect_files target_path in

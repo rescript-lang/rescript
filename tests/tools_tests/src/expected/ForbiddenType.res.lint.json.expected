@@ -1,1 +1,1 @@
-[{"rule":"forbidden-reference","path":"src/lint/ForbiddenType.res","range":[0,20,0,21],"severity":"error","message":"Forbidden reference","symbol":"Js_json.t"}]
+[{"rule":"alias-avoidance","path":"src/lint/ForbiddenType.res","range":[0,5,0,9],"severity":"warning","message":"Use the fully qualified reference directly instead of creating a local alias","symbol":"Js.Json.t"},{"rule":"forbidden-reference","path":"src/lint/ForbiddenType.res","range":[0,20,0,21],"severity":"warning","message":"Avoid Js.Json.t here.","symbol":"Js_json.t"}]

@@ -34,7 +34,7 @@ for file in src/docstrings-format/*.{res,resi,md}; do
 done
 
 # Test lint command
-for file in src/lint/*.res; do
+for file in src/lint/*.{res,resi}; do
   output="src/expected/$(basename $file).lint.expected"
   ../../_build/install/default/bin/rescript-tools lint "$file" > "$output" || true
   if [ "$RUNNER_OS" == "Windows" ]; then

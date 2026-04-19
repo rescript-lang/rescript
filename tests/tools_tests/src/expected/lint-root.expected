@@ -1,8 +1,71 @@
+severity: warning
+rule: alias-avoidance
+path: src/lint/AliasAvoidance.res
+range: 1:8-1:21
+message: Use the fully qualified reference directly instead of creating a local alias
+symbol: ShowFixture.Nested
+snippet:
+```text
+> 1 | module AliasGreeting = ShowFixture.Nested
+    |        ^^^^^^^^^^^^^
+```
+
+severity: warning
+rule: alias-avoidance
+path: src/lint/AliasAvoidance.res
+range: 3:6-3:15
+message: Use the fully qualified reference directly instead of creating a local alias
+symbol: ShowFixture.item
+snippet:
+```text
+  1 | module AliasGreeting = ShowFixture.Nested
+> 3 | type itemAlias = ShowFixture.item
+    |      ^^^^^^^^^
+```
+
+severity: warning
+rule: alias-avoidance
+path: src/lint/AliasAvoidance.res
+range: 5:5-5:8
+message: Use the fully qualified reference directly instead of creating a local alias
+symbol: String.length
+snippet:
+```text
+  3 | type itemAlias = ShowFixture.item
+> 5 | let len = String.length
+    |     ^^^
+```
+
+severity: warning
+rule: alias-avoidance
+path: src/lint/AliasAvoidance.resi
+range: 1:8-1:21
+message: Use the fully qualified reference directly instead of creating a local alias
+symbol: ShowFixture.Nested
+snippet:
+```text
+> 1 | module AliasGreeting = ShowFixture.Nested
+    |        ^^^^^^^^^^^^^
+```
+
+severity: warning
+rule: alias-avoidance
+path: src/lint/AliasAvoidance.resi
+range: 3:6-3:15
+message: Use the fully qualified reference directly instead of creating a local alias
+symbol: ShowFixture.item
+snippet:
+```text
+  1 | module AliasGreeting = ShowFixture.Nested
+> 3 | type itemAlias = ShowFixture.item
+    |      ^^^^^^^^^
+```
+
 severity: error
 rule: forbidden-reference
 path: src/lint/ForbiddenExplicit.res
 range: 1:28-1:35
-message: Forbidden reference
+message: Do not use Belt.Array helpers here. Prefer Stdlib/Array directly.
 symbol: Belt_Array.forEach
 snippet:
 ```text
@@ -12,9 +75,21 @@ snippet:
 
 severity: error
 rule: forbidden-reference
+path: src/lint/ForbiddenModule.res
+range: 1:23-1:29
+message: Avoid Belt.Array module references here.
+symbol: Belt_Array.length
+snippet:
+```text
+> 1 | let size = Belt.Array.length([1, 2])
+    |                       ^^^^^^
+```
+
+severity: error
+rule: forbidden-reference
 path: src/lint/ForbiddenOpen.res
 range: 3:17-3:20
-message: Forbidden reference
+message: Prefer Array.map directly.
 symbol: Belt_Array.map
 snippet:
 ```text
@@ -23,11 +98,23 @@ snippet:
     |                 ^^^
 ```
 
-severity: error
+severity: warning
+rule: alias-avoidance
+path: src/lint/ForbiddenType.res
+range: 1:6-1:10
+message: Use the fully qualified reference directly instead of creating a local alias
+symbol: Js.Json.t
+snippet:
+```text
+> 1 | type json = Js.Json.t
+    |      ^^^^
+```
+
+severity: warning
 rule: forbidden-reference
 path: src/lint/ForbiddenType.res
 range: 1:21-1:22
-message: Forbidden reference
+message: Avoid Js.Json.t here.
 symbol: Js_json.t
 snippet:
 ```text
@@ -39,7 +126,7 @@ severity: warning
 rule: single-use-function
 path: src/lint/SingleUse.res
 range: 2:7-2:13
-message: Local function is only used once
+message: Inline this helper unless it is a meaningful reusable abstraction.
 symbol: helper
 snippet:
 ```text

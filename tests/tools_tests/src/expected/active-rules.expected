@@ -1,12 +1,34 @@
 namespace: lint
 rule: forbidden-reference
+instance: 1
 active: true
 summary: Report references to configured modules, values, and types.
 details: Uses typed references when available so opened modules and aliases resolve to the real symbol path before matching.
 settings:
 - enabled: true
 - severity: error
-- items: Belt.Array.forEach, Belt.Array.map, Js.Json.t
+- message: Do not use Belt.Array helpers here. Prefer Stdlib/Array directly.
+- item[1].kind: module
+- item[1].path: Belt.Array
+- item[1].message: Avoid Belt.Array module references here.
+- item[2].kind: value
+- item[2].path: Belt.Array.forEach
+- item[3].kind: value
+- item[3].path: Belt.Array.map
+- item[3].message: Prefer Array.map directly.
+
+namespace: lint
+rule: forbidden-reference
+instance: 2
+active: true
+summary: Report references to configured modules, values, and types.
+details: Uses typed references when available so opened modules and aliases resolve to the real symbol path before matching.
+settings:
+- enabled: true
+- severity: warning
+- item[1].kind: type
+- item[1].path: Js.Json.t
+- item[1].message: Avoid Js.Json.t here.
 
 namespace: lint
 rule: single-use-function
@@ -16,6 +38,17 @@ details: Counts local function bindings and same-file typed references, then rep
 settings:
 - enabled: true
 - severity: warning
+- message: Inline this helper unless it is a meaningful reusable abstraction.
+
+namespace: lint
+rule: alias-avoidance
+active: true
+summary: Report local aliases that only shorten an existing qualified value, type, or module reference.
+details: Flags pass-through aliases such as `let alias = Module.value`, `type alias = Module.t`, and `module Alias = Long.Module.Path` so the qualified reference can be used directly instead.
+settings:
+- enabled: true
+- severity: warning
+- message: Use the fully qualified reference directly instead of creating a local alias
 
 namespace: rewrite
 rule: prefer-switch
@@ -35,4 +68,4 @@ details: Turns `~label=?Some(expr)` into `~label=expr` when the argument is alre
 settings:
 - enabled: true
 
-summary: 4 active, 0 inactive, 4 total
+summary: 6 active, 0 inactive, 6 total

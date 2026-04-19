@@ -1,1 +1,1 @@
-[{"rule":"forbidden-reference","path":"src/lint/ForbiddenOpen.res","range":[2,16,2,19],"severity":"error","message":"Forbidden reference","symbol":"Belt_Array.map"}]
+[{"rule":"forbidden-reference","path":"src/lint/ForbiddenOpen.res","range":[2,16,2,19],"severity":"error","message":"Prefer Array.map directly.","symbol":"Belt_Array.map"}]

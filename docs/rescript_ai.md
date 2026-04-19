@@ -163,14 +163,26 @@ Example shape:
 {
   "lint": {
     "rules": {
-      "forbidden-reference": {
-        "severity": "error",
-        "items": [
-          "RescriptCore",
-          "Belt",
-          "Belt.Array.forEach"
-        ]
-      },
+      "forbidden-reference": [
+        {
+          "severity": "error",
+          "message": "Do not use Belt.Array helpers here.",
+          "items": [
+            {"kind": "module", "path": "Belt.Array"},
+            {"kind": "value", "path": "Belt.Array.forEach"}
+          ]
+        },
+        {
+          "severity": "warning",
+          "items": [
+            {
+              "kind": "type",
+              "path": "Js.Json.t",
+              "message": "Avoid Js.Json.t here."
+            }
+          ]
+        }
+      ],
       "single-use-function": {
         "severity": "warning"
       }
@@ -178,6 +190,10 @@ Example shape:
   }
 }
 ```
+
+`forbidden-reference` accepts either one rule object or an array of rule objects.
+Each `items` entry must be an object with `kind` (`module`, `value`, or `type`)
+and `path`; `message` is optional at both the rule and item level.
 
 ## Lint V1 Rules
 
@@ -318,7 +334,11 @@ Lint and rewrite config should each live under their own namespace in `.rescript
     "rules": {
       "forbidden-reference": {
         "severity": "error",
-        "items": ["Belt.Array.forEach", "Belt.Array.map", "Js.Json.t"]
+        "items": [
+          {"kind": "value", "path": "Belt.Array.forEach"},
+          {"kind": "value", "path": "Belt.Array.map"},
+          {"kind": "type", "path": "Js.Json.t"}
+        ]
       },
       "single-use-function": {
         "severity": "warning"

@@ -2,7 +2,7 @@ severity: error
 rule: forbidden-reference
 path: src/lint/ForbiddenExplicit.res
 range: 1:28-1:35
-message: Forbidden reference
+message: Do not use Belt.Array helpers here. Prefer Stdlib/Array directly.
 symbol: Belt_Array.forEach
 snippet:
 ```text
