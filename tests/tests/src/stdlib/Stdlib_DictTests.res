@@ -221,12 +221,7 @@ Test.run(
   let foo = dict{"a": 1}
   let result = dict{...foo}
 
-  Test.run(
-    __POS_OF__("dict spread copies a single source"),
-    result,
-    eq,
-    dict{"a": 1},
-  )
+  Test.run(__POS_OF__("dict spread copies a single source"), result, eq, dict{"a": 1})
   Test.run(
     __POS_OF__("dict spread copies a single source into a fresh dictionary"),
     result === foo,
