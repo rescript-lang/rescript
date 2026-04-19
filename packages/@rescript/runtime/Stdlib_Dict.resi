@@ -222,7 +222,7 @@ external valuesToArray: dict<'a> => array<'a> = "Object.values"
 /**
 `assign(dictionary1, dictionary2)` [shallowly](https://developer.mozilla.org/en-US/docs/Glossary/Shallow_copy) merges dictionary2 into dictionary1, and returns dictionary1.
 
-Beware this will *mutate* dictionary1. If you're looking for a way to copy a dictionary, check out `Dict.copy`.
+Beware this will *mutate* dictionary1. If you're looking for a fresh merged dictionary instead, check out `Dict.concat`.
 
 ## Examples
 ```rescript
@@ -241,6 +241,67 @@ Console.log(dict1->Dict.keysToArray) // Logs `["firstKey", "someKey", "someKey2"
 */
 @val
 external assign: (dict<'a>, dict<'a>) => dict<'a> = "Object.assign"
+
+/**
+`assignMany(target, sources)` [shallowly](https://developer.mozilla.org/en-US/docs/Glossary/Shallow_copy) merges each dictionary in `sources` into `target`, and returns `target`.
+
+Beware this will *mutate* `target`. Later dictionaries overwrite earlier ones. If you're looking for a fresh merged dictionary instead, check out `Dict.concatMany`.
+
+## Examples
+```rescript
+let target = dict{"firstKey": 1}
+let result = target->Dict.assignMany([
+  dict{"someKey": 2},
+  dict{"someKey": 3, "someKey2": 4},
+])
+
+assertEqual(result, dict{"firstKey": 1, "someKey": 3, "someKey2": 4})
+assertEqual(result === target, true)
+```
+*/
+@variadic @val
+external assignMany: (dict<'a>, array<dict<'a>>) => dict<'a> = "Object.assign"
+
+/**
+`concat(dictionary1, dictionary2)` [shallowly](https://developer.mozilla.org/en-US/docs/Glossary/Shallow_copy) merges `dictionary1` and `dictionary2` into a fresh dictionary, and returns the new dictionary.
+
+Neither input dictionary is mutated. If both dictionaries contain the same key, the value from `dictionary2` overwrites the one from `dictionary1`.
+
+## Examples
+```rescript
+let dict1 = dict{"firstKey": 1}
+let dict2 = dict{"firstKey": 2, "someKey": 3}
+
+let merged = dict1->Dict.concat(dict2)
+
+assertEqual(dict1, dict{"firstKey": 1})
+assertEqual(merged, dict{"firstKey": 2, "someKey": 3})
+assertEqual(merged === dict1, false)
+```
+*/
+@val
+external concat: (@as(json`{}`) _, dict<'a>, dict<'a>) => dict<'a> = "Object.assign"
+
+/**
+`concatMany(target, sources)` [shallowly](https://developer.mozilla.org/en-US/docs/Glossary/Shallow_copy) merges `target` and each dictionary in `sources` into a fresh dictionary, and returns the new dictionary.
+
+Neither `target` nor any dictionary in `sources` is mutated. Later dictionaries overwrite earlier ones when they contain the same key.
+
+## Examples
+```rescript
+let target = dict{"firstKey": 1}
+let merged = target->Dict.concatMany([
+  dict{"someKey": 2},
+  dict{"someKey": 3, "someKey2": 4},
+])
+
+assertEqual(target, dict{"firstKey": 1})
+assertEqual(merged, dict{"firstKey": 1, "someKey": 3, "someKey2": 4})
+assertEqual(merged === target, false)
+```
+*/
+@variadic @val
+external concatMany: (@as(json`{}`) _, dict<'a>, array<dict<'a>>) => dict<'a> = "Object.assign"
 
 /**
 `copy(dictionary)` [shallowly copies](https://developer.mozilla.org/en-US/docs/Glossary/Shallow_copy) the provided dictionary to a new dictionary.

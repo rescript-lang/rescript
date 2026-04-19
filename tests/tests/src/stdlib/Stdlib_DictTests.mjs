@@ -87,10 +87,142 @@ Test.run([
   ]
 ]), eq, {foo: "bar", baz: "qux"});
 
+let target = {
+  a: 1,
+  b: 2
+};
+
+let result = Object.assign(target, {
+  b: 3
+}, {
+  b: 4,
+  c: 0
+});
+
 Test.run([
   [
     "Stdlib_DictTests.res",
-    51,
+    58,
+    15,
+    57
+  ],
+  "assignMany copies from sources to target"
+], result, eq, {
+  a: 1,
+  b: 4,
+  c: 0
+});
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    67,
+    22,
+    49
+  ],
+  "assignMany mutates target"
+], result === target, eq, true);
+
+let target$1 = {
+  a: 1,
+  b: 2
+};
+
+let result$1 = Object.assign({}, target$1, {
+  b: 3,
+  c: 0
+});
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    78,
+    15,
+    54
+  ],
+  "concat copies into a fresh dictionary"
+], result$1, eq, {
+  a: 1,
+  b: 3,
+  c: 0
+});
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    88,
+    15,
+    47
+  ],
+  "concat leaves target unchanged"
+], target$1, eq, {
+  a: 1,
+  b: 2
+});
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    96,
+    22,
+    57
+  ],
+  "concat returns a fresh dictionary"
+], result$1 === target$1, eq, false);
+
+let target$2 = {
+  a: 1,
+  b: 2
+};
+
+let result$2 = Object.assign({}, target$2, {
+  b: 3
+}, {
+  b: 4,
+  c: 0
+});
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    107,
+    15,
+    58
+  ],
+  "concatMany copies into a fresh dictionary"
+], result$2, eq, {
+  a: 1,
+  b: 4,
+  c: 0
+});
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    117,
+    15,
+    51
+  ],
+  "concatMany leaves target unchanged"
+], target$2, eq, {
+  a: 1,
+  b: 2
+});
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    125,
+    22,
+    61
+  ],
+  "concatMany returns a fresh dictionary"
+], result$2 === target$2, eq, false);
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    129,
     13,
     35
   ],
@@ -103,7 +235,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    57,
+    135,
     13,
     34
   ],
@@ -118,7 +250,7 @@ let dict = {
 Test.run([
   [
     "Stdlib_DictTests.res",
-    69,
+    147,
     22,
     38
   ],
@@ -128,7 +260,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    70,
+    148,
     22,
     43
   ],
@@ -138,7 +270,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    71,
+    149,
     22,
     37
   ],
@@ -148,7 +280,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    72,
+    150,
     22,
     39
   ],
@@ -158,7 +290,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    74,
+    152,
     15,
     51
   ],
