@@ -430,6 +430,32 @@ pub fn get_ast_path(source_file: &Path) -> PathBuf {
         .join(format!("{basename}{extension}"))
 }
 
+pub fn get_ocaml_ast_cache_path(package: &packages::Package, source_file: &Path) -> PathBuf {
+    let source_file = source_file.strip_prefix(&package.path).unwrap_or(source_file);
+    let ast_path = get_ast_path(source_file);
+    get_ocaml_ast_cache_path_from_ast_path(package, &ast_path)
+}
+
+pub fn get_ocaml_ast_cache_path_for_extension(
+    package: &packages::Package,
+    source_file: &Path,
+    extension: &str,
+) -> PathBuf {
+    let source_file = source_file.strip_prefix(&package.path).unwrap_or(source_file);
+    let ast_path = get_ast_path(source_file).with_extension(extension);
+    get_ocaml_ast_cache_path_from_ast_path(package, &ast_path)
+}
+
+fn get_ocaml_ast_cache_path_from_ast_path(package: &packages::Package, ast_path: &Path) -> PathBuf {
+    if package.config.is_multi_entry_enabled() {
+        package.get_ocaml_build_path().join(ast_path)
+    } else {
+        package
+            .get_ocaml_build_path()
+            .join(ast_path.file_name().expect("AST path should have a file name"))
+    }
+}
+
 pub fn get_compiler_asset(
     package: &packages::Package,
     namespace: &packages::Namespace,

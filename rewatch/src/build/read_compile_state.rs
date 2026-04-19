@@ -7,6 +7,17 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
+type CompileAsset = (
+    PathBuf,
+    SystemTime,
+    String,
+    String,
+    PathBuf,
+    bool,
+    packages::Namespace,
+    bool,
+);
+
 pub fn read(build_state: &mut BuildCommandState) -> anyhow::Result<CompileAssetsState> {
     let mut ast_modules: AHashMap<PathBuf, AstModule> = AHashMap::new();
     let mut cmi_modules: AHashMap<String, SystemTime> = AHashMap::new();
@@ -45,53 +56,12 @@ pub fn read(build_state: &mut BuildCommandState) -> anyhow::Result<CompileAssets
         .packages
         .par_iter()
         .map(|(_, package)| {
-            let read_dir = fs::read_dir(package.get_ocaml_build_path()).unwrap();
-            read_dir
-                .filter_map(|entry| match entry {
-                    Ok(entry) => {
-                        let path = entry.path();
-                        let extension = path.extension().and_then(|e| e.to_str());
-                        match extension {
-                            Some(ext) => match ext {
-                                "iast" | "ast" | "cmi" | "cmt" => Some((
-                                    path.to_owned(),
-                                    entry.metadata().unwrap().modified().unwrap(),
-                                    ext.to_owned(),
-                                    package.name.to_owned(),
-                                    package.path.to_owned(),
-                                    package.config.is_multi_entry_enabled(),
-                                    package.namespace.to_owned(),
-                                    package.is_root,
-                                )),
-                                _ => None,
-                            },
-                            None => None,
-                        }
-                    }
-                    Err(_) => None,
-                })
-                .collect::<Vec<(
-                    PathBuf,
-                    SystemTime,
-                    String,
-                    String,
-                    PathBuf,
-                    bool,
-                    packages::Namespace,
-                    bool,
-                )>>()
+            let mut package_assets = Vec::new();
+            collect_compile_assets(package, &package.get_ocaml_build_path(), &mut package_assets);
+            package_assets
         })
         .flatten()
-        .collect::<Vec<(
-            PathBuf,
-            SystemTime,
-            String,
-            String,
-            PathBuf,
-            bool,
-            packages::Namespace,
-            bool,
-        )>>();
+        .collect::<Vec<CompileAsset>>();
 
     let root_config = build_state.get_root_config();
 
@@ -182,4 +152,41 @@ fn get_res_path_from_ast(ast_file: &Path) -> Option<PathBuf> {
         }
     }
     None
+}
+
+fn collect_compile_assets(package: &packages::Package, dir: &Path, assets: &mut Vec<CompileAsset>) {
+    let Ok(read_dir) = fs::read_dir(dir) else {
+        return;
+    };
+
+    for entry in read_dir.flatten() {
+        let path = entry.path();
+        let Ok(metadata) = entry.metadata() else {
+            continue;
+        };
+
+        if metadata.is_dir() {
+            collect_compile_assets(package, &path, assets);
+            continue;
+        }
+
+        let Some(extension) = path.extension().and_then(|extension| extension.to_str()) else {
+            continue;
+        };
+        let extension = extension.to_owned();
+
+        match extension.as_str() {
+            "iast" | "ast" | "cmi" | "cmt" => assets.push((
+                path,
+                metadata.modified().unwrap(),
+                extension,
+                package.name.to_owned(),
+                package.path.to_owned(),
+                package.config.is_multi_entry_enabled(),
+                package.namespace.to_owned(),
+                package.is_root,
+            )),
+            _ => {}
+        }
+    }
 }

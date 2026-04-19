@@ -26,7 +26,27 @@ else
   rm -rf packages/main/src/lower-a packages/main/src/lower-b
   exit 1
 fi
+
+lower_a_ast=packages/main/lib/ocaml/src/lower-a/lowercaseDuplicate.ast
+lower_b_ast=packages/main/lib/ocaml/src/lower-b/lowercaseDuplicate.ast
+if [ -f "$lower_a_ast" ] && [ -f "$lower_b_ast" ] && [ ! -f packages/main/lib/ocaml/lowercaseDuplicate.ast ];
+then
+  success "Duplicate lowercase AST cache paths are unique"
+else
+  error "Duplicate lowercase AST cache paths should preserve source directories"
+  rm -rf packages/main/src/lower-a packages/main/src/lower-b
+  exit 1
+fi
+
 rm -rf packages/main/src/lower-a packages/main/src/lower-b
+rewatch build &> /dev/null
+if [ -f "$lower_a_ast" ] || [ -f "$lower_b_ast" ];
+then
+  error "Removed lowercase file AST cache paths should be cleaned"
+  exit 1
+else
+  success "Removed lowercase file AST cache paths are cleaned"
+fi
 
 mkdir -p packages/main/src/lower-private
 echo 'let value = 1' > packages/main/src/lower-private/lowerPrivate.res

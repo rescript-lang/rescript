@@ -383,10 +383,9 @@ fn generate_ast(
         }
     };
     if let Ok((ast_path, _)) = &result {
-        let _ = std::fs::copy(
-            Path::new(&build_path_abs).join(ast_path),
-            package.get_ocaml_build_path().join(ast_path.file_name().unwrap()),
-        );
+        let cache_path = helpers::get_ocaml_ast_cache_path(&package, filename);
+        helpers::create_path_for_path(cache_path.parent().expect("AST cache path should have a parent"));
+        let _ = std::fs::copy(Path::new(&build_path_abs).join(ast_path), cache_path);
     }
     result
 }

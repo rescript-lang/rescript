@@ -14,22 +14,23 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
+fn remove_ast_cache(package: &packages::Package, source_file: &Path, extension: &str) {
+    let ast_cache_path = helpers::get_ocaml_ast_cache_path_for_extension(package, source_file, extension);
+    let _ = std::fs::remove_file(&ast_cache_path);
+
+    let legacy_ast_cache_path =
+        helpers::get_compiler_asset(package, &packages::Namespace::NoNamespace, source_file, extension);
+    if legacy_ast_cache_path != ast_cache_path {
+        let _ = std::fs::remove_file(legacy_ast_cache_path);
+    }
+}
+
 fn remove_ast(package: &packages::Package, source_file: &Path) {
-    let _ = std::fs::remove_file(helpers::get_compiler_asset(
-        package,
-        &packages::Namespace::NoNamespace,
-        source_file,
-        "ast",
-    ));
+    remove_ast_cache(package, source_file, "ast");
 }
 
 fn remove_iast(package: &packages::Package, source_file: &Path) {
-    let _ = std::fs::remove_file(helpers::get_compiler_asset(
-        package,
-        &packages::Namespace::NoNamespace,
-        source_file,
-        "iast",
-    ));
+    remove_ast_cache(package, source_file, "iast");
 }
 
 fn remove_mjs_file(source_file: &Path, suffix: &str) {
