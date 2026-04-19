@@ -498,15 +498,19 @@ async fn async_watch(
                         }
 
                         let timing_total_elapsed = timing_total.elapsed();
-                        if !plain_output && show_progress {
-                            println!(
-                                "\n{}\n",
-                                build::format_finished_compilation_message(
-                                    None,
-                                    result,
-                                    timing_total_elapsed,
-                                )
-                            );
+                        if show_progress {
+                            if plain_output {
+                                println!("Finished compilation")
+                            } else {
+                                println!(
+                                    "\n{}\n",
+                                    build::format_finished_compilation_message(
+                                        None,
+                                        result,
+                                        timing_total_elapsed,
+                                    )
+                                );
+                            }
                         }
                     }
                     Err(_) => {
