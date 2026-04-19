@@ -1,33 +1,11 @@
 open Analysis
 open Lint_shared
 
-let get_source source_cache path =
-  match Hashtbl.find_opt source_cache path with
-  | Some source -> source
-  | None ->
-    let source = Files.readFile path in
-    Hashtbl.add source_cache path source;
-    source
-
-let trim_trailing_newlines value =
-  let rec loop last =
-    if last < 0 then ""
-    else if value.[last] = '\n' || value.[last] = '\r' then loop (last - 1)
-    else String.sub value 0 (last + 1)
-  in
-  loop (String.length value - 1)
-
 let snippet_of_raw ~source_cache (raw_finding : raw_finding) =
-  match get_source source_cache raw_finding.abs_path with
-  | None -> None
-  | Some source ->
-    Code_frame.print ~highlight_style:Underlined ~context_lines_before:2
-      ~context_lines_after:1 ~skip_blank_context:true
-      ~is_warning:(raw_finding.severity = SeverityWarning)
-      ~src:source ~start_pos:raw_finding.loc.loc_start
-      ~end_pos:raw_finding.loc.loc_end
-    |> trim_trailing_newlines
-    |> fun snippet -> Some ("```text\n" ^ snippet ^ "\n```")
+  Lint_support.Snippet.of_loc ~source_cache ~path:raw_finding.abs_path
+    ~loc:raw_finding.loc
+    ~is_warning:(raw_finding.severity = SeverityWarning)
+    ()
 
 let compact_finding_fields (finding : finding) =
   [
@@ -62,7 +40,7 @@ let stringify_text_finding ~source_cache ~display_base
   | Some snippet -> String.concat "\n" (lines @ ["snippet:"; snippet])
 
 let stringify_text_findings ~display_base findings =
-  let source_cache = Hashtbl.create 16 in
+  let source_cache = Lint_support.Snippet.create_cache () in
   findings
   |> List.map (stringify_text_finding ~source_cache ~display_base)
   |> String.concat "\n\n"

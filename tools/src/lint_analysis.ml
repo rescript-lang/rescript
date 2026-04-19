@@ -18,8 +18,6 @@ let match_forbidden_path items path =
 
 let path_key path = String.concat "." path
 
-let placeholder_module_path = "place holder"
-
 let package_for_path path =
   let uri = Uri.fromPath path in
   Packages.getPackage ~uri
@@ -41,22 +39,6 @@ let rec drop_path count path =
     match path with
     | [] -> []
     | _ :: tail -> drop_path (count - 1) tail
-
-let resolve_module_env ~package path =
-  match path with
-  | [] -> None
-  | root_module :: nested_path -> (
-    match ProcessCmt.fileForModule root_module ~package with
-    | None -> None
-    | Some file ->
-      let env = QueryEnv.fromFile file in
-      match nested_path with
-      | [] -> Some env
-      | _ ->
-        ResolvePath.resolvePath ~env
-          ~path:(nested_path @ [placeholder_module_path])
-          ~package
-        |> Option.map fst)
 
 let resolve_exported_path ~env ~package path =
   let resolve tip find_declared =
@@ -86,7 +68,7 @@ let resolve_forbidden_reference_items ~target_path items =
       match Hashtbl.find_opt resolved_module_cache (path_key path) with
       | Some resolved -> resolved
       | None ->
-        let resolved = resolve_module_env ~package path in
+        let resolved = Lint_support.SymbolPath.resolve_module_env ~package path in
         Hashtbl.add resolved_module_cache (path_key path) resolved;
         resolved
     in
@@ -381,7 +363,7 @@ let display_base target_path files =
     else Filename.dirname target_path
 
 let dedupe_findings findings =
-  let same_signature left right =
+  let same_signature (left : raw_finding) (right : raw_finding) =
     left.rule = right.rule
     && left.abs_path = right.abs_path
     && left.symbol = right.symbol
