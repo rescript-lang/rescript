@@ -110,6 +110,19 @@ fi
 
 ../../_build/install/default/bin/rescript-tools show String --kind module > /dev/null || exit 1
 
+
+# Test find-references command
+../../_build/install/default/bin/rescript-tools find-references FindReferencesFixture.makeGreeting --kind value > src/expected/find-references-FindReferencesFixture.makeGreeting.expected || exit 1
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- src/expected/find-references-FindReferencesFixture.makeGreeting.expected
+fi
+
+../../_build/install/default/bin/rescript-tools find-references --file src/find_references/FindReferencesUse.res --line 4 --col 35 > src/expected/find-references-location.expected || exit 1
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- src/expected/find-references-location.expected
+fi
+
+../../_build/install/default/bin/rescript-tools find-references FindReferencesFixture --kind module > /dev/null || exit 1
 # Test migrate command
 for file in src/migrate/*.{res,resi}; do
   output="src/expected/$(basename $file).expected"

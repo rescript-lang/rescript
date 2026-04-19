@@ -1298,3 +1298,4 @@ end
 module Migrate = Migrate
 module Lint = Lint
 module Show = Show
+module Find_references = Find_references

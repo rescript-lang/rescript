@@ -68,6 +68,22 @@ Notes:
 
 Example: rescript-tools show String.localeCompare|}
 
+let findReferencesHelp =
+  {|ReScript Tools
+
+Find references for a symbol path or for the symbol at a source location
+
+Usage:
+  rescript-tools find-references <SYMBOL-PATH> [--kind <auto|module|value|type>] [--context <FILE-OR-DIR>]
+  rescript-tools find-references --file <FILE> --line <LINE> --col <COL>
+
+Notes:
+- Positional input means symbol-path mode
+- Location mode uses 1-based line and column numbers
+- Context defaults to the current working directory in symbol-path mode
+
+Example: rescript-tools find-references String.localeCompare|}
+
 let help =
   {|ReScript Tools
 
@@ -291,6 +307,63 @@ let main () =
           if output <> "" then print_endline output;
           exit 0))
     | _ -> logAndExit (Error showHelp))
+  | "find-references" :: rest -> (
+    match rest with
+    | ["-h"] | ["--help"] -> logAndExit (Ok findReferencesHelp)
+    | args ->
+      let rec parse_args symbol_path kind context_path file_path line col =
+          function
+        | [] -> Ok (symbol_path, kind, context_path, file_path, line, col)
+        | "--kind" :: value :: rest -> (
+          match Tools.Find_references.symbol_kind_of_string value with
+          | Some kind ->
+            parse_args symbol_path kind context_path file_path line col rest
+          | None -> Error findReferencesHelp)
+        | "--context" :: path :: rest ->
+          parse_args symbol_path kind (Some path) file_path line col rest
+        | "--file" :: path :: rest ->
+          parse_args symbol_path kind context_path (Some path) line col rest
+        | "--line" :: value :: rest -> (
+          match int_of_string_opt value with
+          | Some line ->
+            parse_args symbol_path kind context_path file_path (Some line) col
+              rest
+          | None -> Error findReferencesHelp)
+        | "--col" :: value :: rest -> (
+          match int_of_string_opt value with
+          | Some col ->
+            parse_args symbol_path kind context_path file_path line (Some col)
+              rest
+          | None -> Error findReferencesHelp)
+        | value :: rest when not (String.starts_with ~prefix:"--" value) -> (
+          match symbol_path with
+          | None ->
+            parse_args (Some value) kind context_path file_path line col rest
+          | Some _ -> Error findReferencesHelp)
+        | _ -> Error findReferencesHelp
+      in
+      match parse_args None Tools.Find_references.Auto None None None None args with
+      | Error help -> logAndExit (Error help)
+      | Ok (symbol_path, kind, context_path, file_path, line, col) -> (
+        let query =
+          match (symbol_path, file_path, line, col) with
+          | Some symbol_path, None, None, None ->
+            Some
+              (Tools.Find_references.Symbol {symbol_path; kind; context_path})
+          | None, Some file_path, Some line, Some col ->
+            Some (Tools.Find_references.Location {file_path; line; col})
+          | _ -> None
+        in
+        match query with
+        | None -> logAndExit (Error findReferencesHelp)
+        | Some query -> (
+          match Tools.Find_references.run query with
+          | Error err ->
+            prerr_endline err;
+            exit 2
+          | Ok {Tools.Find_references.output; _} ->
+            if output <> "" then print_endline output;
+            exit 0)))
   | "reanalyze" :: _ ->
     if Sys.getenv_opt "RESCRIPT_REANALYZE_NO_SERVER" = Some "1" then (
       let len = Array.length Sys.argv in
