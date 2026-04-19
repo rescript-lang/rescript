@@ -155,7 +155,7 @@ pub struct PackageSpec {
 
 #[derive(Deserialize, Debug, Clone, Eq, PartialEq)]
 pub enum PackageModule {
-    #[serde(rename = "commonjs")]
+    #[serde(rename = "commonjs", alias = "cjs")]
     CommonJs,
     #[serde(rename = "esmodule")]
     EsModule,
@@ -249,6 +249,7 @@ pub enum DeprecationWarning {
     BsDependencies,
     BsDevDependencies,
     BscFlags,
+    CjsModule,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -495,6 +496,10 @@ impl Config {
                     config.deprecation_warnings.push(warning);
                 }
             }
+        }
+
+        if raw_value.as_ref().is_some_and(uses_cjs_module) {
+            config.deprecation_warnings.push(DeprecationWarning::CjsModule);
         }
 
         config.handle_deprecations()?;
@@ -827,6 +832,21 @@ fn resolve_spec_in_source(spec: &serde_json::Value) -> bool {
         .unwrap_or(true)
 }
 
+fn uses_cjs_module(value: &serde_json::Value) -> bool {
+    let specs = match value.get("package-specs") {
+        Some(specs) => specs,
+        None => return false,
+    };
+    match specs {
+        serde_json::Value::Array(specs) => specs.iter().any(spec_has_cjs_module),
+        _ => spec_has_cjs_module(specs),
+    }
+}
+
+fn spec_has_cjs_module(spec: &serde_json::Value) -> bool {
+    spec.get("module").and_then(|m| m.as_str()) == Some("cjs")
+}
+
 fn validate_package_spec_value(value: &serde_json::Value) -> Result<()> {
     let module = match value.get("module") {
         Some(module) => module,
@@ -839,7 +859,7 @@ fn validate_package_spec_value(value: &serde_json::Value) -> Result<()> {
     };
 
     match module {
-        "commonjs" | "esmodule" => Ok(()),
+        "commonjs" | "cjs" | "esmodule" => Ok(()),
         other => Err(anyhow!(
             "Module system \"{other}\" is unsupported. Expected \"commonjs\" or \"esmodule\"."
         )),
@@ -1366,6 +1386,24 @@ pub mod tests {
             unreachable!("Expected compiler flags to be Some");
         }
         assert!(config.get_deprecations().is_empty());
+    }
+
+    #[test]
+    fn test_cjs_module_alias() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": { "dir": "src", "subdirs": true },
+            "package-specs": [ { "module": "cjs", "in-source": true } ],
+            "suffix": ".js"
+        }
+        "#;
+
+        let config = Config::new_from_json_string(json).expect("a valid json string");
+        let specs = config.get_package_specs();
+        assert_eq!(specs.len(), 1);
+        assert_eq!(specs[0].module, PackageModule::CommonJs);
+        assert_eq!(config.get_deprecations(), [DeprecationWarning::CjsModule]);
     }
 
     #[test]

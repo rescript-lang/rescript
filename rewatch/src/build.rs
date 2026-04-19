@@ -489,6 +489,9 @@ fn log_deprecations(
             crate::config::DeprecationWarning::BscFlags => {
                 "  - field 'bsc-flags' — use 'compiler-flags' instead"
             }
+            crate::config::DeprecationWarning::CjsModule => {
+                "  - module 'cjs' in package-specs — use 'commonjs' instead"
+            }
         };
         message.push('\n');
         message.push_str(line);
