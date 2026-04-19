@@ -15,6 +15,9 @@ type bs_version = int * int * int
 type t = {
   bsb_project_root: string;
   bs_dependencies: string list;
+  dep_paths: (string, string) Hashtbl.t;
+      (** Map from package name to its install path, used to locate
+          [.cmt]/[.cmti] files of cross-package references. *)
   mutable emit_import_curry: bool;
   mutable emit_import_react: bool;
   mutable emit_type_prop_done: bool;
@@ -35,6 +38,7 @@ let default =
   {
     bsb_project_root = "";
     bs_dependencies = [];
+    dep_paths = Hashtbl.create 0;
     emit_import_curry = false;
     emit_import_react = false;
     emit_type_prop_done = false;
@@ -75,6 +79,7 @@ let suffix_flag : string option ref = ref None
 let shims : (string * string) list ref = ref []
 let bs_dependencies_flag : string list ref = ref []
 let source_dirs_flag : string list ref = ref []
+let dep_paths_flag : (string * string) list ref = ref []
 
 let module_of_string = function
   | "commonjs" -> Some CommonJS
@@ -96,6 +101,11 @@ let add_bs_dependency name =
   bs_dependencies_flag := name :: !bs_dependencies_flag
 
 let add_source_dir dir = source_dirs_flag := dir :: !source_dirs_flag
+
+let add_dep_path raw =
+  match String.split_on_char '=' raw with
+  | [name; path] -> dep_paths_flag := (name, path) :: !dep_paths_flag
+  | _ -> ()
 
 (* ----- Build the Config.t from flags ---------------------------------- *)
 
@@ -141,9 +151,15 @@ let build_config ~namespace =
     if bsb_project_root <> project_root then
       Log_.item "bsb project root: %s\n" bsb_project_root;
     Log_.item "Config shims:%d entries \n" (shims_map |> ModuleNameMap.cardinal));
+  let dep_paths =
+    let tbl = Hashtbl.create (List.length !dep_paths_flag) in
+    List.iter (fun (name, path) -> Hashtbl.add tbl name path) !dep_paths_flag;
+    tbl
+  in
   {
     bsb_project_root;
     bs_dependencies = List.rev !bs_dependencies_flag;
+    dep_paths;
     emit_import_curry = false;
     emit_import_react = false;
     emit_type_prop_done = false;

@@ -715,7 +715,12 @@ impl Config {
 
     /// Build the full set of `-bs-gentype-*` CLI flags for a bsc invocation.
     /// `source_dirs` are pre-expanded directories relative to the package root.
-    pub fn get_gentype_args(&self, source_dirs: &[PathBuf], bsb_project_root: Option<&Path>) -> Vec<String> {
+    pub fn get_gentype_args(
+        &self,
+        source_dirs: &[PathBuf],
+        bsb_project_root: Option<&Path>,
+        dep_paths: &[(String, PathBuf)],
+    ) -> Vec<String> {
         let Some(gt) = &self.gentype_config else {
             return vec![];
         };
@@ -765,6 +770,12 @@ impl Config {
         for dir in source_dirs {
             args.push("-bs-gentype-source-dir".to_string());
             args.push(dir.to_string_lossy().to_string());
+        }
+        let mut dep_paths_sorted: Vec<&(String, PathBuf)> = dep_paths.iter().collect();
+        dep_paths_sorted.sort_by(|a, b| a.0.cmp(&b.0));
+        for (name, path) in dep_paths_sorted {
+            args.push("-bs-gentype-dep-path".to_string());
+            args.push(format!("{}={}", name, path.to_string_lossy()));
         }
         if let Some(root) = bsb_project_root {
             args.push("-bs-gentype-bsb-project-root".to_string());
@@ -1205,7 +1216,7 @@ pub mod tests {
         assert_eq!(gt.module, Some(GenTypeModule::EsModule));
         assert_eq!(gt.generated_file_extension.as_deref(), Some(".gen.tsx"));
 
-        let args = config.get_gentype_args(&[], None);
+        let args = config.get_gentype_args(&[], None, &[]);
         assert!(args.contains(&"-bs-gentype".to_string()));
         assert!(args.contains(&"-bs-gentype-module".to_string()));
         assert!(args.contains(&"esmodule".to_string()));
@@ -1236,7 +1247,7 @@ pub mod tests {
         }
         "#;
         let config = serde_json::from_str::<Config>(json).unwrap();
-        assert!(config.get_gentype_args(&[], None).is_empty());
+        assert!(config.get_gentype_args(&[], None, &[]).is_empty());
     }
 
     #[test]

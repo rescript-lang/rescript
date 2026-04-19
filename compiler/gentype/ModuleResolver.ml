@@ -19,78 +19,10 @@ let read_bs_dependencies_dirs ~root =
   find_sub_dirs "";
   !dirs
 
-type pkgs = {dirs: string list; pkgs: (string, string) Hashtbl.t}
-
-(** Source directories are pre-expanded by the build system and supplied via
-    [-bs-gentype-source-dir] flags — we just filter to the ones that actually
-    exist on disk under the project root. *)
-let read_dirs_from_config ~(config : Config.t) =
-  let ( +++ ) = Filename.concat in
-  let root = config.project_root in
-  config.sources
-  |> List.filter (fun dir ->
-         let abs_dir =
-           match dir = "" with
-           | true -> root
-           | false -> root +++ dir
-         in
-         Sys.file_exists abs_dir && Sys.is_directory abs_dir)
-
-let read_source_dirs ~(config : Config.t) =
-  let source_dirs =
-    ["lib"; "bs"; ".sourcedirs.json"]
-    |> List.fold_left ( +++ ) config.bsb_project_root
-  in
-  let dirs = ref [] in
-  let pkgs = Hashtbl.create 1 in
-  let read_dirs json =
-    match json with
-    | Ext_json_types.Obj {map} -> (
-      match Map_string.find_opt map "dirs" with
-      | Some (Arr {content}) ->
-        content
-        |> Array.iter (fun x ->
-               match x with
-               | Ext_json_types.Str {str} -> dirs := str :: !dirs
-               | _ -> ());
-        ()
-      | _ -> ())
-    | _ -> ()
-  in
-  let read_pkgs json =
-    match json with
-    | Ext_json_types.Obj {map} -> (
-      match Map_string.find_opt map "pkgs" with
-      | Some (Arr {content}) ->
-        content
-        |> Array.iter (fun x ->
-               match x with
-               | Ext_json_types.Arr
-                   {content = [|Str {str = name}; Str {str = path}|]} ->
-                 Hashtbl.add pkgs name path
-               | _ -> ());
-        ()
-      | _ -> ())
-    | _ -> ()
-  in
-  if source_dirs |> Sys.file_exists then
-    try
-      let json = source_dirs |> Ext_json_parse.parse_json_from_file in
-      if config.bsb_project_root <> config.project_root then
-        dirs := read_dirs_from_config ~config
-      else read_dirs json;
-      read_pkgs json
-    with _ -> ()
-  else (
-    Log_.item "Warning: can't find source dirs: %s\n" source_dirs;
-    Log_.item "Types for cross-references will not be found by genType.\n";
-    dirs := read_dirs_from_config ~config);
-  {dirs = !dirs; pkgs}
-
-(** Read the project's .sourcedirs.json file if it exists
-   and build a map of the files with the given extension
-   back to the directory where they belong. *)
-let sourcedirs_json_to_map ~config ~extensions ~exclude_file =
+(** Build a map of source filenames (with the given extensions) back to the
+    directory where they belong. Source directories and dependency install
+    paths are provided by the build system through CLI flags. *)
+let sourcedirs_to_map ~(config : Config.t) ~extensions ~exclude_file =
   let rec chop_extensions fname =
     match fname |> Filename.chop_extension with
     | fname_chopped -> fname_chopped |> chop_extensions
@@ -112,15 +44,15 @@ let sourcedirs_json_to_map ~config ~extensions ~exclude_file =
                     (fname |> chop_extensions |> ModuleName.from_string_unsafe)
                     dir_emitted)
   in
-  let {dirs; pkgs} = read_source_dirs ~config in
-  dirs
+  config.sources
   |> List.iter (fun dir ->
-         add_dir ~dir_emitted:dir
-           ~dir_on_disk:(config.project_root +++ dir)
-           ~filter:filter_given_extension ~map:file_map);
+         let dir_on_disk = config.project_root +++ dir in
+         if Sys.file_exists dir_on_disk && Sys.is_directory dir_on_disk then
+           add_dir ~dir_emitted:dir ~dir_on_disk ~filter:filter_given_extension
+             ~map:file_map);
   config.bs_dependencies
   |> List.iter (fun package_name ->
-         match Hashtbl.find pkgs package_name with
+         match Hashtbl.find config.dep_paths package_name with
          | path ->
            let root = ["lib"; "bs"] |> List.fold_left ( +++ ) path in
            let filter file_name =
@@ -149,7 +81,7 @@ let create_lazy_resolver ~config ~extensions ~exclude_file =
     lazy_find =
       lazy
         (let module_name_map, bs_dependencies_file_map =
-           sourcedirs_json_to_map ~config ~extensions ~exclude_file
+           sourcedirs_to_map ~config ~extensions ~exclude_file
          in
          let find ~bs_dependencies ~map module_name =
            match map |> ModuleNameMap.find module_name with

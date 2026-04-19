@@ -605,7 +605,20 @@ pub fn compiler_args(
     let jsx_mode_args = root_config.get_jsx_mode_args();
     let jsx_preserve_args = root_config.get_jsx_preserve_args();
     let bsb_project_root = project_context.get_root_path();
-    let gentype_arg = config.get_gentype_args(current_package_dirs, Some(bsb_project_root));
+    let dep_paths: Vec<(String, PathBuf)> = if config.gentype_config.is_some() {
+        let resolved = packages.as_ref().map(|pkgs| {
+            config
+                .dependencies
+                .iter()
+                .flatten()
+                .filter_map(|name| pkgs.get(name).map(|pkg| (name.clone(), pkg.path.clone())))
+                .collect::<Vec<_>>()
+        });
+        resolved.unwrap_or_default()
+    } else {
+        Vec::new()
+    };
+    let gentype_arg = config.get_gentype_args(current_package_dirs, Some(bsb_project_root), &dep_paths);
     let experimental_args = root_config.get_experimental_features_args();
     let warning_args = config.get_warning_args(is_local_dep, warn_error_override);
 

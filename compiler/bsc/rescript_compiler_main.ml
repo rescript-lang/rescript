@@ -334,6 +334,10 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
       string_call GenTypeConfig.add_source_dir,
       "*internal* Register a gentype source directory relative to the project \
        root (repeatable)" );
+    ( "-bs-gentype-dep-path",
+      string_call GenTypeConfig.add_dep_path,
+      "*internal* Register a gentype dependency install path: \
+       <name>=<absolute-path> (repeatable)" );
     ( "-bs-gentype-bsb-project-root",
       string_call (fun s -> GenTypeConfig.bsb_project_root := s),
       "*internal* Set gentype bsb project root (workspace root containing \
