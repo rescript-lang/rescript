@@ -53,6 +53,21 @@ Notes:
 
 Example: rescript-tools active-rules ./src|}
 
+let showHelp =
+  {|ReScript Tools
+
+Show hover-style semantic information for a module, value, or type path
+
+Usage: rescript-tools show <SYMBOL-PATH> [--kind <auto|module|value|type>] [--context <FILE-OR-DIR>] [--comments <include|omit>]
+
+Notes:
+- Symbol paths are user-facing paths like String or String.localeCompare
+- Context defaults to the current working directory
+- Kind defaults to auto
+- Comments default to include
+
+Example: rescript-tools show String.localeCompare|}
+
 let help =
   {|ReScript Tools
 
@@ -247,6 +262,35 @@ let main () =
           if output <> "" then print_endline output;
           exit 0))
     | _ -> logAndExit (Error activeRulesHelp))
+  | "show" :: rest -> (
+    match rest with
+    | ["-h"] | ["--help"] -> logAndExit (Ok showHelp)
+    | path :: args -> (
+      let rec parse_args kind context_path comments_mode = function
+        | [] -> Ok (kind, context_path, comments_mode)
+        | "--kind" :: value :: rest -> (
+          match Tools.Show.show_kind_of_string value with
+          | Some kind -> parse_args kind context_path comments_mode rest
+          | None -> Error showHelp)
+        | "--comments" :: value :: rest -> (
+          match Tools.Show.comments_mode_of_string value with
+          | Some comments_mode -> parse_args kind context_path comments_mode rest
+          | None -> Error showHelp)
+        | "--context" :: path :: rest ->
+          parse_args kind (Some path) comments_mode rest
+        | _ -> Error showHelp
+      in
+      match parse_args Tools.Show.Auto None Tools.Show.Include args with
+      | Error help -> logAndExit (Error help)
+      | Ok (kind, context_path, comments_mode) -> (
+        match Tools.Show.run ?context_path ~kind ~comments_mode path with
+        | Error err ->
+          prerr_endline err;
+          exit 2
+        | Ok {Tools.Show.output} ->
+          if output <> "" then print_endline output;
+          exit 0))
+    | _ -> logAndExit (Error showHelp))
   | "reanalyze" :: _ ->
     if Sys.getenv_opt "RESCRIPT_REANALYZE_NO_SERVER" = Some "1" then (
       let len = Array.length Sys.argv in

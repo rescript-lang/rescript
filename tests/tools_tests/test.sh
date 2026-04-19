@@ -82,6 +82,34 @@ if [ "$RUNNER_OS" == "Windows" ]; then
   perl -pi -e 's/\r\n/\n/g' -- src/expected/active-rules.json.expected
 fi
 
+# Test show command
+../../_build/install/default/bin/rescript-tools show ShowFixture --kind module > src/expected/show-ShowFixture.expected || exit 1
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- src/expected/show-ShowFixture.expected
+fi
+
+../../_build/install/default/bin/rescript-tools show ShowFixture.Nested.makeGreeting --kind value > src/expected/show-ShowFixture.Nested.makeGreeting.expected || exit 1
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- src/expected/show-ShowFixture.Nested.makeGreeting.expected
+fi
+
+../../_build/install/default/bin/rescript-tools show ShowFixture.Nested.makeGreeting --kind value --comments omit > src/expected/show-ShowFixture.Nested.makeGreeting.no-comments.expected || exit 1
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- src/expected/show-ShowFixture.Nested.makeGreeting.no-comments.expected
+fi
+
+../../_build/install/default/bin/rescript-tools show ShowFixture.item --kind type > src/expected/show-ShowFixture.item.expected || exit 1
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- src/expected/show-ShowFixture.item.expected
+fi
+
+../../_build/install/default/bin/rescript-tools show String.localeCompare > src/expected/show-String.localeCompare.expected || exit 1
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- src/expected/show-String.localeCompare.expected
+fi
+
+../../_build/install/default/bin/rescript-tools show String --kind module > /dev/null || exit 1
+
 # Test migrate command
 for file in src/migrate/*.{res,resi}; do
   output="src/expected/$(basename $file).expected"

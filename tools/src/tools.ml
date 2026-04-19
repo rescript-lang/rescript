@@ -1297,3 +1297,4 @@ end
 
 module Migrate = Migrate
 module Lint = Lint
+module Show = Show

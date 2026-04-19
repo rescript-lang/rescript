@@ -1,0 +1,7 @@
+```rescript
+module ShowFixture: {
+  type item = {label: string}
+  module Nested
+  let makeGreeting: string => string
+}
+```
