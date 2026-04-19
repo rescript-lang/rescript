@@ -578,6 +578,23 @@ Console.log(someArray) // ["hi", "hello", "yay", "wehoo"]
 external concatMany: (array<'a>, array<array<'a>>) => array<'a> = "concat"
 
 /**
+`concatAll(arrays)` concatenates all arrays in `arrays`, creating a new array.
+
+See [`Array.concat`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/concat) on MDN.
+
+## Examples
+```rescript
+let arrays = [["hi", "hello"], ["yay"], ["wehoo"]]
+
+let result = Array.concatAll(arrays)
+
+assertEqual(arrays, [["hi", "hello"], ["yay"], ["wehoo"]])
+assertEqual(result, ["hi", "hello", "yay", "wehoo"])
+```
+*/
+let concatAll: array<array<'a>> => array<'a>
+
+/**
 `flat(arrays)` concatenates an array of arrays into a single array.
 
 See [`Array.flat`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/flat) on MDN.
