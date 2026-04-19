@@ -256,17 +256,17 @@ async fn async_watch(
                 return Ok(());
             }
 
-            // Detect rescript.json changes and trigger a full rebuild
-            if event
-                .paths
-                .iter()
-                .any(|p| p.file_name().map(|name| name == "rescript.json").unwrap_or(false))
-                && matches!(
-                    event.kind,
-                    EventKind::Modify(_) | EventKind::Create(_) | EventKind::Remove(_)
-                )
-            {
-                log::debug!("rescript.json changed -> full compile");
+            // Detect config-file changes and trigger a full rebuild.
+            // Legacy bsconfig.json is accepted for backward compatibility.
+            if event.paths.iter().any(|p| {
+                p.file_name()
+                    .map(|name| name == "rescript.json" || name == "bsconfig.json")
+                    .unwrap_or(false)
+            }) && matches!(
+                event.kind,
+                EventKind::Modify(_) | EventKind::Create(_) | EventKind::Remove(_)
+            ) {
+                log::debug!("config file changed -> full compile");
                 needs_compile_type = CompileType::Full;
                 continue;
             }
