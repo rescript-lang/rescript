@@ -156,9 +156,13 @@ let build_config ~namespace =
     List.iter (fun (name, path) -> Hashtbl.add tbl name path) !dep_paths_flag;
     tbl
   in
+  (* Old code accumulated these lists via prepend and returned them
+     unreversed, so iteration proceeded in reverse input order. Keep that
+     behavior so that last-write-wins in ModuleNameMap produces the same
+     winner when two dirs / deps contribute the same module name. *)
   {
     bsb_project_root;
-    bs_dependencies = List.rev !bs_dependencies_flag;
+    bs_dependencies = !bs_dependencies_flag;
     dep_paths;
     emit_import_curry = false;
     emit_import_react = false;
@@ -172,6 +176,6 @@ let build_config ~namespace =
     platform_lib = "rescript";
     project_root;
     shims_map;
-    sources = List.rev !source_dirs_flag;
+    sources = !source_dirs_flag;
     suffix;
   }

@@ -782,9 +782,9 @@ impl Config {
             args.push("-bs-gentype-source-dir".to_string());
             args.push(dir.to_string_lossy().to_string());
         }
-        let mut dep_paths_sorted: Vec<&(String, PathBuf)> = dep_paths.iter().collect();
-        dep_paths_sorted.sort_by(|a, b| a.0.cmp(&b.0));
-        for (name, path) in dep_paths_sorted {
+        // Preserve caller's order so the resulting Hashtbl has last-added
+        // semantics equivalent to the old pkgs-array iteration.
+        for (name, path) in dep_paths {
             args.push("-bs-gentype-dep-path".to_string());
             args.push(format!("{}={}", name, path.to_string_lossy()));
         }
