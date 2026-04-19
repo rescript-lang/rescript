@@ -374,9 +374,13 @@ fn make_parse_file_span(
     let mut experimental: Vec<String> = Vec::new();
     for pair in parser_args.windows(2) {
         if pair[0] == "-ppx" {
-            let parts: Vec<&str> = pair[1].split(['/', '\\']).collect();
-            let start = if parts.len() >= 2 { parts.len() - 2 } else { 0 };
-            ppx_names.push(parts[start..].join("/"));
+            // Use the PPX executable's file name so paths like
+            // `node_modules/foo/ppx.exe` reduce to `ppx.exe` cross-platform.
+            let name = Path::new(&pair[1])
+                .file_name()
+                .map(|s| s.to_string_lossy().into_owned())
+                .unwrap_or_else(|| pair[1].clone());
+            ppx_names.push(name);
         } else if pair[0] == "-enable-experimental" {
             experimental.push(pair[1].clone());
         }
