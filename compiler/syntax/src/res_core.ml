@@ -4411,6 +4411,25 @@ and parse_dict_expr ~start_pos p =
             chunk_loc))
       [(Asttypes.Nolabel, Ast_helper.Exp.array ~loc:chunk_loc key_value_pairs)]
   in
+  let make_dict_spread target_expr source_parts =
+    let spread_ident =
+      Ast_helper.Exp.ident ~loc ~attrs:[dict_spread_attr]
+        (Location.mkloc
+           (Longident.Ldot (Longident.Lident Primitive_modules.dict, "spread"))
+           loc)
+    in
+    Ast_helper.Exp.apply ~loc spread_ident
+      [
+        (Asttypes.Nolabel, target_expr);
+        ( Asttypes.Nolabel,
+          Ast_helper.Exp.array ~loc
+            (List.map
+               (function
+                 | `Rows rows -> make_dict_chunk rows
+                 | `Spread spread_expr -> spread_expr)
+               source_parts) );
+      ]
+  in
   let grouped_parts =
     let rec loop current_rows acc = function
       | [] ->
@@ -4436,47 +4455,8 @@ and parse_dict_expr ~start_pos p =
   | [] -> make_dict_chunk ~loc_override:loc []
   | [`Rows rows] -> make_dict_chunk ~loc_override:loc rows
   | `Rows target_rows :: source_parts ->
-    let spread_ident =
-      Ast_helper.Exp.ident ~loc ~attrs:[dict_spread_attr]
-        (Location.mkloc
-           (Longident.Ldot (Longident.Lident Primitive_modules.dict, "spread"))
-           loc)
-    in
-    let spread =
-      Ast_helper.Exp.apply ~loc spread_ident
-        [
-          (Asttypes.Nolabel, make_dict_chunk target_rows);
-          ( Asttypes.Nolabel,
-            Ast_helper.Exp.array ~loc
-              (List.map
-                 (function
-                   | `Rows rows -> make_dict_chunk rows
-                   | `Spread spread_expr -> spread_expr)
-                 source_parts) );
-        ]
-    in
-    spread
-  | source_parts ->
-    let spread_ident =
-      Ast_helper.Exp.ident ~loc ~attrs:[dict_spread_attr]
-        (Location.mkloc
-           (Longident.Ldot (Longident.Lident Primitive_modules.dict, "spread"))
-           loc)
-    in
-    let spread =
-      Ast_helper.Exp.apply ~loc spread_ident
-        [
-          (Asttypes.Nolabel, make_dict_chunk []);
-          ( Asttypes.Nolabel,
-            Ast_helper.Exp.array ~loc
-              (List.map
-                 (function
-                   | `Rows rows -> make_dict_chunk rows
-                   | `Spread spread_expr -> spread_expr)
-                 source_parts) );
-        ]
-    in
-    spread
+    make_dict_spread (make_dict_chunk target_rows) source_parts
+  | source_parts -> make_dict_spread (make_dict_chunk []) source_parts
 
 and parse_array_exp p =
   let start_pos = p.Parser.start_pos in

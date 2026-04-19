@@ -748,17 +748,17 @@ let is_spread_belt_array_concat expr =
     has_spread_attr expr.pexp_attributes
   | _ -> false
 
-let collect_spread_dict_expr_parts expr =
-  let is_tuple_array_expr (expr : Parsetree.expression) =
-    let is_plain_tuple (expr : Parsetree.expression) =
-      match expr with
-      | {pexp_desc = Pexp_tuple _} -> true
-      | _ -> false
-    in
+let is_tuple_array (expr : Parsetree.expression) =
+  let is_plain_tuple (expr : Parsetree.expression) =
     match expr with
-    | {pexp_desc = Pexp_array items} -> List.for_all is_plain_tuple items
+    | {pexp_desc = Pexp_tuple _} -> true
     | _ -> false
   in
+  match expr with
+  | {pexp_desc = Pexp_array items} -> List.for_all is_plain_tuple items
+  | _ -> false
+
+let collect_spread_dict_expr_parts expr =
   let extract_literal_dict_rows (expr : Parsetree.expression) =
     match expr with
     | {
@@ -774,7 +774,7 @@ let collect_spread_dict_expr_parts expr =
            args = [(Nolabel, key_values)];
          };
     }
-      when is_tuple_array_expr key_values ->
+      when is_tuple_array key_values ->
       Some key_values
     | _ -> None
   in
@@ -867,16 +867,6 @@ let is_underscore_apply_sugar expr =
 let is_rewritten_underscore_apply_sugar expr =
   match expr.pexp_desc with
   | Pexp_ident {txt = Longident.Lident "_"} -> true
-  | _ -> false
-
-let is_tuple_array (expr : Parsetree.expression) =
-  let is_plain_tuple (expr : Parsetree.expression) =
-    match expr with
-    | {pexp_desc = Pexp_tuple _} -> true
-    | _ -> false
-  in
-  match expr with
-  | {pexp_desc = Pexp_array items} -> List.for_all is_plain_tuple items
   | _ -> false
 
 let get_jsx_prop_loc = function
