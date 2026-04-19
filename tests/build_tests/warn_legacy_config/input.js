@@ -7,6 +7,6 @@ const { execBuild, execClean } = setup(import.meta.dirname);
 
 const output = await execBuild();
 assert.equal(output.status, 0);
-assert.match(output.stderr, /bsconfig\.json.*deprecated/i);
-assert.match(output.stderr, /rename it to 'rescript\.json'/i);
+assert.match(output.stderr, /uses deprecated config/i);
+assert.match(output.stderr, /filename 'bsconfig\.json' .* rename to 'rescript\.json'/i);
 await execClean();

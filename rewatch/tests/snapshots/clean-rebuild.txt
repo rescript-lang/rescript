@@ -13,30 +13,21 @@ Compiled 430 modules
 
 
 
-The field 'bs-dependencies' found in the package config of '@testrepo/deprecated-config' is deprecated and will be removed in a future version.
-Use 'dependencies' instead.
-
-The field 'bs-dev-dependencies' found in the package config of '@testrepo/deprecated-config' is deprecated and will be removed in a future version.
-Use 'dev-dependencies' instead.
-
-The field 'bsc-flags' found in the package config of '@testrepo/deprecated-config' is deprecated and will be removed in a future version.
-Use 'compiler-flags' instead.
+Package '@testrepo/deprecated-config' uses deprecated config (support will be removed in a future version):
+  - field 'bs-dependencies' — use 'dependencies' instead
+  - field 'bs-dev-dependencies' — use 'dev-dependencies' instead
+  - field 'bsc-flags' — use 'compiler-flags' instead
 
 The field 'ignored-dirs' found in the package config of '@testrepo/deprecated-config' is not supported by ReScript 12's new build system.
 
 Unknown field 'some-new-field' found in the package config of '@testrepo/deprecated-config'. This option will be ignored.
 
-The field 'bs-dependencies' found in the package config of 'rescript-nodejs' is deprecated and will be removed in a future version.
-Use 'dependencies' instead.
+Package 'rescript-nodejs' uses deprecated config (support will be removed in a future version):
+  - field 'bs-dependencies' — use 'dependencies' instead
+  - field 'bs-dev-dependencies' — use 'dev-dependencies' instead
+  - filename 'bsconfig.json' — rename to 'rescript.json'
 Please report this to the package maintainer: https://github.com/TheSpyder/rescript-nodejs/issues
 
-The field 'bs-dev-dependencies' found in the package config of 'rescript-nodejs' is deprecated and will be removed in a future version.
-Use 'dev-dependencies' instead.
-Please report this to the package maintainer: https://github.com/TheSpyder/rescript-nodejs/issues
-
-The config file 'bsconfig.json' used by package 'rescript-nodejs' is deprecated and support will be removed in a future version.
-Rename it to 'rescript.json'.
-
-The field 'bs-dev-dependencies' found in the package config of 'sury' is deprecated and will be removed in a future version.
-Use 'dev-dependencies' instead.
+Package 'sury' uses deprecated config (support will be removed in a future version):
+  - field 'bs-dev-dependencies' — use 'dev-dependencies' instead
 Please report this to the package maintainer: https://github.com/DZakh/sury/issues

@@ -439,53 +439,17 @@ fn log_config_warnings(build_state: &BuildCommandState) {
     let mut packages: Vec<_> = build_state.packages.values().collect();
     packages.sort_by(|a, b| a.name.cmp(&b.name));
     packages.iter().for_each(|package| {
-        // Deprecations affect every package we load (local or external) —
-        // external consumers can't fix them themselves, so we point them at
-        // the package's issue tracker when we can find one.
-        let issue_tracker_url = if package.is_local_dep {
-            None
-        } else {
-            crate::build::packages::read_issue_tracker_url(&package.path)
-        };
-
-        package
-            .config
-            .get_deprecations()
-            .iter()
-            .for_each(|deprecation_warning| match deprecation_warning {
-                crate::config::DeprecationWarning::BsconfigJson => {
-                    log_deprecated_config_filename(
-                        &package.name,
-                        "bsconfig.json",
-                        "rescript.json",
-                        issue_tracker_url.as_deref(),
-                    );
-                }
-                crate::config::DeprecationWarning::BsDependencies => {
-                    log_deprecated_config_field(
-                        &package.name,
-                        "bs-dependencies",
-                        "dependencies",
-                        issue_tracker_url.as_deref(),
-                    );
-                }
-                crate::config::DeprecationWarning::BsDevDependencies => {
-                    log_deprecated_config_field(
-                        &package.name,
-                        "bs-dev-dependencies",
-                        "dev-dependencies",
-                        issue_tracker_url.as_deref(),
-                    );
-                }
-                crate::config::DeprecationWarning::BscFlags => {
-                    log_deprecated_config_field(
-                        &package.name,
-                        "bsc-flags",
-                        "compiler-flags",
-                        issue_tracker_url.as_deref(),
-                    );
-                }
-            });
+        let deprecations = package.config.get_deprecations();
+        if !deprecations.is_empty() {
+            // External consumers can't fix deprecations themselves, so we
+            // point them at the package's issue tracker when we can find one.
+            let issue_tracker_url = if package.is_local_dep {
+                None
+            } else {
+                crate::build::packages::read_issue_tracker_url(&package.path)
+            };
+            log_deprecations(&package.name, deprecations, issue_tracker_url.as_deref());
+        }
 
         if package.is_local_dep {
             package
@@ -503,36 +467,36 @@ fn log_config_warnings(build_state: &BuildCommandState) {
     });
 }
 
-fn log_deprecated_config_field(
+fn log_deprecations(
     package_name: &str,
-    field_name: &str,
-    new_field_name: &str,
+    deprecations: &[crate::config::DeprecationWarning],
     issue_tracker_url: Option<&str>,
 ) {
-    let mut warning = format!(
-        "The field '{field_name}' found in the package config of '{package_name}' is deprecated and will be removed in a future version.\n\
-        Use '{new_field_name}' instead."
+    let mut message = format!(
+        "Package '{package_name}' uses deprecated config (support will be removed in a future version):"
     );
-    if let Some(url) = issue_tracker_url {
-        warning.push_str(&format!("\nPlease report this to the package maintainer: {url}"));
+    for deprecation in deprecations {
+        let line = match deprecation {
+            crate::config::DeprecationWarning::BsconfigJson => {
+                "  - filename 'bsconfig.json' — rename to 'rescript.json'"
+            }
+            crate::config::DeprecationWarning::BsDependencies => {
+                "  - field 'bs-dependencies' — use 'dependencies' instead"
+            }
+            crate::config::DeprecationWarning::BsDevDependencies => {
+                "  - field 'bs-dev-dependencies' — use 'dev-dependencies' instead"
+            }
+            crate::config::DeprecationWarning::BscFlags => {
+                "  - field 'bsc-flags' — use 'compiler-flags' instead"
+            }
+        };
+        message.push('\n');
+        message.push_str(line);
     }
-    eprintln!("\n{}", style(warning).yellow());
-}
-
-fn log_deprecated_config_filename(
-    package_name: &str,
-    filename: &str,
-    new_filename: &str,
-    issue_tracker_url: Option<&str>,
-) {
-    let mut warning = format!(
-        "The config file '{filename}' used by package '{package_name}' is deprecated and support will be removed in a future version.\n\
-        Rename it to '{new_filename}'."
-    );
     if let Some(url) = issue_tracker_url {
-        warning.push_str(&format!("\nPlease report this to the package maintainer: {url}"));
+        message.push_str(&format!("\nPlease report this to the package maintainer: {url}"));
     }
-    eprintln!("\n{}", style(warning).yellow());
+    eprintln!("\n{}", style(message).yellow());
 }
 
 fn log_unsupported_config_field(package_name: &str, field_name: &str) {
