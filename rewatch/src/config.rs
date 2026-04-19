@@ -1220,10 +1220,7 @@ pub mod tests {
 
         let config = Config::new_from_json_string(json).expect("a valid json string");
         assert_eq!(config.dev_dependencies, Some(vec!["@testrepo/main".to_string()]));
-        assert_eq!(
-            config.get_deprecations(),
-            [DeprecationWarning::BsDevDependencies]
-        );
+        assert_eq!(config.get_deprecations(), [DeprecationWarning::BsDevDependencies]);
     }
 
     #[test]
