@@ -156,10 +156,6 @@ let build_config ~namespace =
     List.iter (fun (name, path) -> Hashtbl.add tbl name path) !dep_paths_flag;
     tbl
   in
-  (* Old code accumulated these lists via prepend and returned them
-     unreversed, so iteration proceeded in reverse input order. Keep that
-     behavior so that last-write-wins in ModuleNameMap produces the same
-     winner when two dirs / deps contribute the same module name. *)
   {
     bsb_project_root;
     bs_dependencies = !bs_dependencies_flag;
