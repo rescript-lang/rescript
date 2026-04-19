@@ -400,7 +400,7 @@ async fn async_watch(
                                 "\n{}\n",
                                 build::format_finished_compilation_message(
                                     Some(compilation_type),
-                                    result.has_warnings,
+                                    result,
                                     timing_total_elapsed,
                                 )
                             );
@@ -452,11 +452,7 @@ async fn async_watch(
                     if !plain_output && show_progress {
                         println!(
                             "\n{}\n",
-                            build::format_finished_compilation_message(
-                                None,
-                                result.has_warnings,
-                                timing_total_elapsed,
-                            )
+                            build::format_finished_compilation_message(None, result, timing_total_elapsed,)
                         );
                     }
                 }

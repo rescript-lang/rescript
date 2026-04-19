@@ -57,8 +57,9 @@ pub struct CompilerArgs {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct IncrementalBuildResult {
-    pub has_warnings: bool,
+pub enum CompilationOutcome {
+    Clean,
+    Warnings,
 }
 
 fn has_output(output: &str) -> bool {
@@ -75,14 +76,16 @@ fn has_config_warnings(build_state: &BuildCommandState) -> bool {
 
 pub fn format_finished_compilation_message(
     compilation_kind: Option<&str>,
-    has_warnings: bool,
+    outcome: CompilationOutcome,
     duration: Duration,
 ) -> String {
     let compilation_kind = compilation_kind
         .map(|kind| format!("{kind} "))
         .unwrap_or_default();
-    let status = if has_warnings { WARNING } else { CHECKMARK };
-    let warning_suffix = if has_warnings { " with warnings" } else { "" };
+    let (status, warning_suffix) = match outcome {
+        CompilationOutcome::Clean => (CHECKMARK, ""),
+        CompilationOutcome::Warnings => (WARNING, " with warnings"),
+    };
 
     format!(
         "{LINE_CLEAR}{status}Finished {compilation_kind}compilation{warning_suffix} in {:.2}s",
@@ -280,7 +283,7 @@ pub fn incremental_build(
     only_incremental: bool,
     create_sourcedirs: bool,
     plain_output: bool,
-) -> Result<IncrementalBuildResult, IncrementalBuildError> {
+) -> Result<CompilationOutcome, IncrementalBuildError> {
     let build_folder = build_state.root_folder.to_string_lossy().to_string();
 
     let _lock = get_lock_or_exit(LockKind::Build, &build_folder);
@@ -443,7 +446,11 @@ pub fn incremental_build(
     } else {
         let has_compile_warnings = has_output(&compile_warnings);
         let has_config_warning_output = initial_build && has_config_warnings(build_state);
-        let has_warnings = has_parse_warnings || has_compile_warnings || has_config_warning_output;
+        let outcome = if has_parse_warnings || has_compile_warnings || has_config_warning_output {
+            CompilationOutcome::Warnings
+        } else {
+            CompilationOutcome::Clean
+        };
 
         if show_progress {
             if plain_output {
@@ -471,7 +478,7 @@ pub fn incremental_build(
         write_compiler_info(build_state);
 
         let _lock = drop_lock(LockKind::Build, &build_folder);
-        Ok(IncrementalBuildResult { has_warnings })
+        Ok(outcome)
     }
 }
 
@@ -565,7 +572,7 @@ pub fn build(
                     "\n{}",
                     format_finished_compilation_message(
                         None,
-                        result.has_warnings,
+                        result,
                         default_timing.unwrap_or(timing_total_elapsed),
                     )
                 );
@@ -589,7 +596,7 @@ mod tests {
     #[test]
     fn formats_successful_completion_message() {
         assert_eq!(
-            format_finished_compilation_message(None, false, Duration::from_millis(1500)),
+            format_finished_compilation_message(None, CompilationOutcome::Clean, Duration::from_millis(1500),),
             format!("{LINE_CLEAR}{}Finished compilation in 1.50s", CHECKMARK)
         );
     }
@@ -597,7 +604,11 @@ mod tests {
     #[test]
     fn formats_warning_completion_message() {
         assert_eq!(
-            format_finished_compilation_message(Some("incremental"), true, Duration::from_millis(1500)),
+            format_finished_compilation_message(
+                Some("incremental"),
+                CompilationOutcome::Warnings,
+                Duration::from_millis(1500),
+            ),
             format!(
                 "{LINE_CLEAR}{}Finished incremental compilation with warnings in 1.50s",
                 WARNING
