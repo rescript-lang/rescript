@@ -66,7 +66,7 @@ fn run_main(otel_enabled: bool) -> i32 {
             let features = build_args.features.parsed();
             let result = build::build(
                 &build_args.filter,
-                Path::new(&build_args.folder as &str),
+                build_args.folder.as_ref(),
                 show_progress,
                 build_args.no_timing,
                 true, // create_sourcedirs is now always enabled
@@ -102,7 +102,7 @@ fn run_main(otel_enabled: bool) -> i32 {
         cli::Command::Clean { folder, prod } => {
             let _lock = get_lock_or_exit(LockKind::Build, &folder);
             let code = exit_code(build::clean::clean(
-                Path::new(&folder as &str),
+                folder.as_ref(),
                 show_progress,
                 plain_output,
                 prod,
