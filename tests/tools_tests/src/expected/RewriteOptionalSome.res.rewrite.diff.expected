@@ -7,21 +7,27 @@ diff:
 ```diff
 --- a/src/rewrite/RewriteOptionalSome.res
 +++ b/src/rewrite/RewriteOptionalSome.res
-@@ -1,6 +1,12 @@
+@@ -1,15 +1,12 @@
  let flag = true
  let useValue = (~value=?, ()) => value
 
 -let direct = useValue(~value=?Some(1), ())
--let nested = useValue(~value=?Some(if flag { 1 } else { 2 }), ())
--let fromComputation = useValue(~value=?Some(String.length("abc")), ())
 +let direct = useValue(~value=1, ())
-+let nested = useValue(
+ let nested = useValue(
+-  ~value=?Some(
+-    if flag {
+-      1
+-    } else {
+-      2
+-    },
+-  ),
 +  ~value=switch flag {
 +  | true => 1
 +  | false => 2
 +  },
-+  (),
-+)
+   (),
+ )
+-let fromComputation = useValue(~value=?Some(String.length("abc")), ())
 +let fromComputation = useValue(~value=String.length("abc"), ())
 ```
 

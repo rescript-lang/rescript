@@ -2,7 +2,7 @@
 
 This document captures a first working direction for AI-oriented tooling in ReScript.
 
-The lint command is the first concrete piece, but the intended surface is broader: commands and output modes in `rescript-tools` that are shaped for LLMs and agent workflows.
+The lint command is the first concrete piece, but the intended surface is broader: a standalone `rescript-assist` CLI with commands and output modes shaped for LLMs and agent workflows.
 
 A starter agent skill template for this workflow lives at
 `docs/skills/rescript-ai-template/SKILL.md`.
@@ -13,7 +13,7 @@ Keep this section updated as the command surface and rule set change so the PR
 description stays current.
 
 ```text
-Add AI-oriented `rescript-tools` commands
+Add the standalone `rescript-assist` CLI for AI-oriented workflows
 
 Commands
 - `lint`: Runs configurable AI-oriented lint checks on a file or project root using source and typed information.
@@ -35,7 +35,7 @@ Initial rules
   - `preferred-type-syntax`: Rewrites supported non-canonical type spellings like `Dict.t<_>` into builtin syntax like `dict<_>`.
 
 Support
-- Add `.rescript-lint.json` config support, a shipped JSON schema, AI tooling docs, and golden tests for the new command surface
+- Add `.rescript-lint.json` config support, a shipped JSON schema, AI tooling docs, golden tests, and the standalone `rescript-assist` binary
 ```
 
 ## Goal
@@ -61,12 +61,12 @@ belong in the same tool surface.
 Recommended first shape:
 
 ```sh
-rescript-tools lint <file-or-root> [--config <file>] [--json]
-rescript-tools rewrite <file-or-root> [--config <file>] [--diff] [--json]
-rescript-tools active-rules <file-or-root> [--config <file>] [--json]
-rescript-tools show <symbol-path> [--kind <auto|module|value|type>] [--context <file-or-root>] [--comments <include|omit>]
-rescript-tools find-references <symbol-path> [--kind <auto|module|value|type>] [--context <file-or-root>]
-rescript-tools find-references --file <file> --line <line> --col <col>
+rescript-assist lint <file-or-root> [--config <file>] [--json]
+rescript-assist rewrite <file-or-root> [--config <file>] [--diff] [--json]
+rescript-assist active-rules <file-or-root> [--config <file>] [--json]
+rescript-assist show <symbol-path> [--kind <auto|module|value|type>] [--context <file-or-root>] [--comments <include|omit>]
+rescript-assist find-references <symbol-path> [--kind <auto|module|value|type>] [--context <file-or-root>]
+rescript-assist find-references --file <file> --line <line> --col <col>
 ```
 
 Notes:
@@ -89,7 +89,7 @@ Notes:
 
 ## Recommended Placement
 
-- CLI entrypoint: `tools/bin/main.ml`
+- CLI entrypoints: `tools/bin/assist_main.ml` for `rescript-assist`, `tools/bin/main.ml` for `rescript-tools`
 - command implementation: new module in `tools/src/`
 - semantic loading and package resolution: reuse `analysis/src/Cmt.ml`
 - typedtree-derived structure/reference data: reuse `analysis/src/ProcessCmt.ml`
@@ -348,6 +348,24 @@ This section is intentionally a scratchpad for future rules.
 
 - disallow `@obj external`
 
+### Preset policy checks
+
+Some policy checks are better expressed as named presets than as a generic
+pattern language.
+
+Examples:
+
+- `no-obj-magic`
+- `no-raw`
+- `no-obj-external`
+
+These should expand to concrete lint implementations internally, but the config
+surface should stay narrow:
+
+- enable or disable the preset
+- optionally override the message
+- optionally scope it to certain folders or paths
+
 ### Size limits
 
 - file length limits
@@ -403,7 +421,7 @@ Aggressive source normalization for agents should be a separate command rather t
 Recommended first shape:
 
 ```sh
-rescript-tools rewrite <file-or-root> [--config <file>] [--diff] [--json]
+rescript-assist rewrite <file-or-root> [--config <file>] [--diff] [--json]
 ```
 
 Goal:

@@ -9,40 +9,42 @@ diff:
 ```diff
 --- a/src/rewrite/RewriteIfs.res
 +++ b/src/rewrite/RewriteIfs.res
-@@ -1,16 +1,22 @@
+@@ -1,21 +1,22 @@
  let flag = true
  let other = false
 
--let direct = if flag { 1 } else { 2 }
--let ternary = flag ? "yes" : "no"
+-let direct = if flag {
+-  1
+-} else {
+-  2
 +let direct = switch flag {
 +| true => 1
 +| false => 2
-+}
+ }
+-let ternary = flag ? "yes" : "no"
 +let ternary = switch flag {
 +| true => "yes"
 +| false => "no"
 +}
 
--let chained =
--  if flag {
--    1
--  } else if other {
--    2
--  } else {
--    3
--  }
+-let chained = if flag {
+-  1
+-} else if other {
+-  2
+-} else {
+-  3
 +let chained = switch () {
 +| _ if flag => 1
 +| _ if other => 2
 +| _ => 3
-+}
+ }
 
--let onlyWhen = if flag { Console.log("hit") }
+-let onlyWhen = if flag {
+-  Console.log("hit")
 +let onlyWhen = switch flag {
 +| true => Console.log("hit")
 +| false => ()
-+}
+ }
 ```
 
 path: src/rewrite/RewriteOptionalSome.res
@@ -54,21 +56,27 @@ diff:
 ```diff
 --- a/src/rewrite/RewriteOptionalSome.res
 +++ b/src/rewrite/RewriteOptionalSome.res
-@@ -1,6 +1,12 @@
+@@ -1,15 +1,12 @@
  let flag = true
  let useValue = (~value=?, ()) => value
 
 -let direct = useValue(~value=?Some(1), ())
--let nested = useValue(~value=?Some(if flag { 1 } else { 2 }), ())
--let fromComputation = useValue(~value=?Some(String.length("abc")), ())
 +let direct = useValue(~value=1, ())
-+let nested = useValue(
+ let nested = useValue(
+-  ~value=?Some(
+-    if flag {
+-      1
+-    } else {
+-      2
+-    },
+-  ),
 +  ~value=switch flag {
 +  | true => 1
 +  | false => 2
 +  },
-+  (),
-+)
+   (),
+ )
+-let fromComputation = useValue(~value=?Some(String.length("abc")), ())
 +let fromComputation = useValue(~value=String.length("abc"), ())
 ```
 
