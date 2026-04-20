@@ -414,6 +414,18 @@ pub fn compile(
     let mut compile_warnings = String::new();
     let mut num_compiled_modules = 0;
 
+    // Persist propagated dirtiness back onto build_state. Modules that were
+    // marked dirty (because a predecessor's cmi changed) but never scheduled
+    // — e.g. the first compile error aborted further dispatch — must keep
+    // compile_dirty = true so the next incremental build recompiles them.
+    // Successful recompiles in the result loop below override this back to
+    // false for the modules that actually ran.
+    for name in &dirty_set {
+        if let Some(module) = build_state.build_state.modules.get_mut(name) {
+            module.compile_dirty = true;
+        }
+    }
+
     // Sort by module name so the accumulated error/warning strings and the
     // per-package compile.log writes are deterministic across runs, even
     // though modules complete in arbitrary order.
