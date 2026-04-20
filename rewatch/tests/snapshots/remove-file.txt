@@ -13,15 +13,24 @@ Compiled 2 modules
 
 
 
+Package '@testrepo/deprecated-config' uses deprecated config (support will be removed in a future version):
+  - field 'bs-dependencies' — use 'dependencies' instead
+  - field 'bs-dev-dependencies' — use 'dev-dependencies' instead
+  - field 'bsc-flags' — use 'compiler-flags' instead
+
 The field 'ignored-dirs' found in the package config of '@testrepo/deprecated-config' is not supported by ReScript 12's new build system.
 
 Unknown field 'some-new-field' found in the package config of '@testrepo/deprecated-config'. This option will be ignored.
 
-Unknown field 'bs-dependencies' found in the package config of '@testrepo/deprecated-config'. This option will be ignored.
+Package 'rescript-nodejs' uses deprecated config (support will be removed in a future version):
+  - field 'bs-dependencies' — use 'dependencies' instead
+  - field 'bs-dev-dependencies' — use 'dev-dependencies' instead
+  - filename 'bsconfig.json' — rename to 'rescript.json'
+Please report this to the package maintainer: https://github.com/TheSpyder/rescript-nodejs/issues
 
-Unknown field 'bs-dev-dependencies' found in the package config of '@testrepo/deprecated-config'. This option will be ignored.
-
-Unknown field 'bsc-flags' found in the package config of '@testrepo/deprecated-config'. This option will be ignored.
+Package 'sury' uses deprecated config (support will be removed in a future version):
+  - field 'bs-dev-dependencies' — use 'dev-dependencies' instead
+Please report this to the package maintainer: https://github.com/DZakh/sury/issues
 
   [1;31mWe've found a bug for you![0m
   [36m/packages/dep01/src/Dep01.res[0m:[2m3:9-17[0m

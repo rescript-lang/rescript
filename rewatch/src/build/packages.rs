@@ -251,7 +251,13 @@ fn get_source_dirs(source: config::Source, sub_path: Option<PathBuf>) -> AHashSe
 
 pub fn read_config(package_dir: &Path) -> Result<Config> {
     let rescript_json_path = package_dir.join("rescript.json");
-    Config::new(&rescript_json_path)
+    let bsconfig_json_path = package_dir.join("bsconfig.json");
+
+    if rescript_json_path.exists() {
+        Config::new(&rescript_json_path)
+    } else {
+        Config::new(&bsconfig_json_path)
+    }
 }
 
 pub fn read_dependency(
@@ -451,10 +457,50 @@ pub fn read_package_name(package_dir: &Path) -> Result<String> {
         return Ok(name);
     }
 
+    if let Some(name) = read_name("bsconfig.json")? {
+        return Ok(name);
+    }
+
     Err(anyhow!(
         "No name field found in package.json or rescript.json in {}",
         package_dir.to_string_lossy()
     ))
+}
+
+/// Looks up the best-effort issue tracker URL for a package by reading its
+/// package.json, preferring `bugs.url`, then deriving from `repository`.
+/// Returns None if no tracker could be inferred.
+pub fn read_issue_tracker_url(package_dir: &Path) -> Option<String> {
+    let contents = fs::read_to_string(package_dir.join("package.json")).ok()?;
+    let json: serde_json::Value = serde_json::from_str(&contents).ok()?;
+
+    let extract_url = |v: &serde_json::Value| -> Option<String> {
+        match v {
+            serde_json::Value::String(s) => Some(s.to_owned()),
+            serde_json::Value::Object(o) => o.get("url").and_then(|u| u.as_str()).map(String::from),
+            _ => None,
+        }
+    };
+
+    if let Some(bugs_url) = json.get("bugs").and_then(extract_url) {
+        return Some(bugs_url);
+    }
+
+    json.get("repository")
+        .and_then(extract_url)
+        .map(|repo| issues_url_from_repository(&repo))
+}
+
+fn issues_url_from_repository(repo: &str) -> String {
+    let cleaned = repo.trim_start_matches("git+").trim_end_matches(".git");
+
+    // npm shorthand (no scheme, no user@): treat as github-style "owner/repo"
+    if !cleaned.contains("://") && !cleaned.contains('@') {
+        let path = cleaned.trim_start_matches("github:");
+        return format!("https://github.com/{path}/issues");
+    }
+
+    format!("{cleaned}/issues")
 }
 
 fn make_package(
@@ -1100,7 +1146,7 @@ pub fn validate_packages_dependencies(packages: &AHashMap<String, Package>) -> b
 mod test {
     use crate::config;
 
-    use super::{Namespace, Package, read_package_name};
+    use super::{Namespace, Package, read_issue_tracker_url, read_package_name};
     use ahash::{AHashMap, AHashSet};
     use std::fs;
     use std::path::PathBuf;
@@ -1234,5 +1280,78 @@ mod test {
                 package_dir.to_string_lossy()
             )
         );
+    }
+
+    fn write_pkg_json(dir: &std::path::Path, body: &str) {
+        fs::write(dir.join("package.json"), body).expect("package.json should be written");
+    }
+
+    #[test]
+    fn issue_tracker_url_prefers_bugs_url_string() {
+        let temp_dir = TempDir::new().unwrap();
+        write_pkg_json(
+            temp_dir.path(),
+            r#"{"name":"x","bugs":"https://example.com/issues"}"#,
+        );
+        assert_eq!(
+            read_issue_tracker_url(temp_dir.path()),
+            Some("https://example.com/issues".to_string())
+        );
+    }
+
+    #[test]
+    fn issue_tracker_url_prefers_bugs_object_url() {
+        let temp_dir = TempDir::new().unwrap();
+        write_pkg_json(
+            temp_dir.path(),
+            r#"{"name":"x","bugs":{"url":"https://example.com/report"}}"#,
+        );
+        assert_eq!(
+            read_issue_tracker_url(temp_dir.path()),
+            Some("https://example.com/report".to_string())
+        );
+    }
+
+    #[test]
+    fn issue_tracker_url_derives_from_repository_git_url() {
+        let temp_dir = TempDir::new().unwrap();
+        write_pkg_json(
+            temp_dir.path(),
+            r#"{"name":"x","repository":"git+https://github.com/owner/repo.git"}"#,
+        );
+        assert_eq!(
+            read_issue_tracker_url(temp_dir.path()),
+            Some("https://github.com/owner/repo/issues".to_string())
+        );
+    }
+
+    #[test]
+    fn issue_tracker_url_derives_from_repository_object() {
+        let temp_dir = TempDir::new().unwrap();
+        write_pkg_json(
+            temp_dir.path(),
+            r#"{"name":"x","repository":{"type":"git","url":"https://github.com/owner/repo.git"}}"#,
+        );
+        assert_eq!(
+            read_issue_tracker_url(temp_dir.path()),
+            Some("https://github.com/owner/repo/issues".to_string())
+        );
+    }
+
+    #[test]
+    fn issue_tracker_url_handles_shorthand() {
+        let temp_dir = TempDir::new().unwrap();
+        write_pkg_json(temp_dir.path(), r#"{"name":"x","repository":"owner/repo"}"#);
+        assert_eq!(
+            read_issue_tracker_url(temp_dir.path()),
+            Some("https://github.com/owner/repo/issues".to_string())
+        );
+    }
+
+    #[test]
+    fn issue_tracker_url_returns_none_without_hints() {
+        let temp_dir = TempDir::new().unwrap();
+        write_pkg_json(temp_dir.path(), r#"{"name":"x"}"#);
+        assert_eq!(read_issue_tracker_url(temp_dir.path()), None);
     }
 }

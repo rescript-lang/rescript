@@ -155,9 +155,9 @@ pub struct PackageSpec {
 
 #[derive(Deserialize, Debug, Clone, Eq, PartialEq)]
 pub enum PackageModule {
-    #[serde(rename = "commonjs")]
+    #[serde(rename = "commonjs", alias = "cjs")]
     CommonJs,
-    #[serde(rename = "esmodule")]
+    #[serde(rename = "esmodule", alias = "es6")]
     EsModule,
 }
 
@@ -331,7 +331,14 @@ pub struct JsPostBuild {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
-pub enum DeprecationWarning {}
+pub enum DeprecationWarning {
+    BsconfigJson,
+    BsDependencies,
+    BsDevDependencies,
+    BscFlags,
+    CjsModule,
+    Es6Module,
+}
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum ExperimentalFeature {
@@ -380,13 +387,14 @@ pub struct Config {
     pub package_specs: Option<OneOrMore<PackageSpec>>,
     pub warnings: Option<Warnings>,
     pub suffix: Option<String>,
+    #[serde(alias = "bs-dependencies")]
     pub dependencies: Option<Vec<String>>,
-    #[serde(rename = "dev-dependencies")]
+    #[serde(rename = "dev-dependencies", alias = "bs-dev-dependencies")]
     pub dev_dependencies: Option<Vec<String>>,
     #[serde(rename = "ppx-flags")]
     pub ppx_flags: Option<Vec<OneOrMore<String>>>,
 
-    #[serde(rename = "compiler-flags")]
+    #[serde(rename = "compiler-flags", alias = "bsc-flags")]
     pub compiler_flags: Option<Vec<OneOrMore<String>>>,
 
     pub namespace: Option<NamespaceConfig>,
@@ -546,8 +554,9 @@ impl Config {
 
     /// Try to convert a config from a string to a config struct
     pub fn new_from_json_string(config_str: &str) -> Result<Self> {
-        if let Ok(value) = serde_json::from_str::<serde_json::Value>(config_str) {
-            validate_package_specs_value(&value)?;
+        let raw_value = serde_json::from_str::<serde_json::Value>(config_str).ok();
+        if let Some(value) = raw_value.as_ref() {
+            validate_package_specs_value(value)?;
         }
 
         let mut deserializer = serde_json::Deserializer::from_str(config_str);
@@ -565,6 +574,29 @@ impl Config {
                     }
                 })?;
 
+        if let Some(value) = raw_value.as_ref().and_then(|v| v.as_object()) {
+            for (raw_key, warning) in [
+                ("bs-dependencies", DeprecationWarning::BsDependencies),
+                ("bs-dev-dependencies", DeprecationWarning::BsDevDependencies),
+                ("bsc-flags", DeprecationWarning::BscFlags),
+            ] {
+                if value.contains_key(raw_key) {
+                    config.deprecation_warnings.push(warning);
+                }
+            }
+        }
+
+        if let Some(value) = raw_value.as_ref() {
+            for (legacy_module, warning) in [
+                ("cjs", DeprecationWarning::CjsModule),
+                ("es6", DeprecationWarning::Es6Module),
+            ] {
+                if uses_module_alias(value, legacy_module) {
+                    config.deprecation_warnings.push(warning);
+                }
+            }
+        }
+
         config.handle_deprecations()?;
         config.unknown_fields = unknown_fields;
 
@@ -572,6 +604,9 @@ impl Config {
     }
 
     fn set_path(&mut self, path: PathBuf) -> Result<()> {
+        if path.file_name().and_then(|n| n.to_str()) == Some("bsconfig.json") {
+            self.deprecation_warnings.push(DeprecationWarning::BsconfigJson);
+        }
         self.path = path;
         Ok(())
     }
@@ -981,6 +1016,19 @@ fn resolve_spec_in_source(spec: &serde_json::Value) -> bool {
         .unwrap_or(true)
 }
 
+fn uses_module_alias(value: &serde_json::Value, alias: &str) -> bool {
+    let specs = match value.get("package-specs") {
+        Some(specs) => specs,
+        None => return false,
+    };
+    let spec_has_alias =
+        |spec: &serde_json::Value| -> bool { spec.get("module").and_then(|m| m.as_str()) == Some(alias) };
+    match specs {
+        serde_json::Value::Array(specs) => specs.iter().any(spec_has_alias),
+        _ => spec_has_alias(specs),
+    }
+}
+
 fn validate_package_spec_value(value: &serde_json::Value) -> Result<()> {
     let module = match value.get("module") {
         Some(module) => module,
@@ -993,7 +1041,7 @@ fn validate_package_spec_value(value: &serde_json::Value) -> Result<()> {
     };
 
     match module {
-        "commonjs" | "esmodule" => Ok(()),
+        "commonjs" | "cjs" | "esmodule" | "es6" => Ok(()),
         other => Err(anyhow!(
             "Module system \"{other}\" is unsupported. Expected \"commonjs\" or \"esmodule\"."
         )),
@@ -1381,6 +1429,31 @@ pub mod tests {
     }
 
     #[test]
+    fn test_bs_dependencies_alias() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": {
+                "dir": "src",
+                "subdirs": true
+            },
+            "package-specs": [
+                {
+                "module": "esmodule",
+                "in-source": true
+                }
+            ],
+            "suffix": ".mjs",
+            "bs-dependencies": [ "@testrepo/main" ]
+        }
+        "#;
+
+        let config = Config::new_from_json_string(json).expect("a valid json string");
+        assert_eq!(config.dependencies, Some(vec!["@testrepo/main".to_string()]));
+        assert_eq!(config.get_deprecations(), [DeprecationWarning::BsDependencies]);
+    }
+
+    #[test]
     fn test_dev_dependencies() {
         let json = r#"
         {
@@ -1403,6 +1476,31 @@ pub mod tests {
         let config = Config::new_from_json_string(json).expect("a valid json string");
         assert_eq!(config.dev_dependencies, Some(vec!["@testrepo/main".to_string()]));
         assert!(config.get_deprecations().is_empty());
+    }
+
+    #[test]
+    fn test_bs_dev_dependencies_alias() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": {
+                "dir": "src",
+                "subdirs": true
+            },
+            "package-specs": [
+                {
+                "module": "esmodule",
+                "in-source": true
+                }
+            ],
+            "suffix": ".mjs",
+            "bs-dev-dependencies": [ "@testrepo/main" ]
+        }
+        "#;
+
+        let config = Config::new_from_json_string(json).expect("a valid json string");
+        assert_eq!(config.dev_dependencies, Some(vec!["@testrepo/main".to_string()]));
+        assert_eq!(config.get_deprecations(), [DeprecationWarning::BsDevDependencies]);
     }
 
     #[test]
@@ -1430,27 +1528,21 @@ pub mod tests {
     }
 
     #[test]
-    fn test_package_specs_es6_deprecation() {
+    fn test_es6_module_alias() {
         let json = r#"
         {
             "name": "testrepo",
-            "sources": {
-                "dir": "src",
-                "subdirs": true
-            },
-            "package-specs": [
-                {
-                "module": "es6",
-                "in-source": true
-                }
-            ],
+            "sources": { "dir": "src", "subdirs": true },
+            "package-specs": [ { "module": "es6", "in-source": true } ],
             "suffix": ".mjs"
         }
         "#;
 
-        let err = Config::new_from_json_string(json).unwrap_err();
-        let message = err.to_string();
-        assert!(message.contains("Module system \"es6\" is unsupported"));
+        let config = Config::new_from_json_string(json).expect("a valid json string");
+        let specs = config.get_package_specs();
+        assert_eq!(specs.len(), 1);
+        assert_eq!(specs[0].module, PackageModule::EsModule);
+        assert_eq!(config.get_deprecations(), [DeprecationWarning::Es6Module]);
     }
 
     #[test]
@@ -1544,6 +1636,49 @@ pub mod tests {
             unreachable!("Expected compiler flags to be Some");
         }
         assert!(config.get_deprecations().is_empty());
+    }
+
+    #[test]
+    fn test_cjs_module_alias() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": { "dir": "src", "subdirs": true },
+            "package-specs": [ { "module": "cjs", "in-source": true } ],
+            "suffix": ".js"
+        }
+        "#;
+
+        let config = Config::new_from_json_string(json).expect("a valid json string");
+        let specs = config.get_package_specs();
+        assert_eq!(specs.len(), 1);
+        assert_eq!(specs[0].module, PackageModule::CommonJs);
+        assert_eq!(config.get_deprecations(), [DeprecationWarning::CjsModule]);
+    }
+
+    #[test]
+    fn test_bsc_flags_alias() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": {
+                "dir": "src",
+                "subdirs": true
+            },
+            "package-specs": [
+                {
+                "module": "esmodule",
+                "in-source": true
+                }
+            ],
+            "suffix": ".mjs",
+            "bsc-flags": [ "-w" ]
+        }
+        "#;
+
+        let config = Config::new_from_json_string(json).expect("a valid json string");
+        assert!(config.compiler_flags.is_some());
+        assert_eq!(config.get_deprecations(), [DeprecationWarning::BscFlags]);
     }
 
     fn test_find_is_type_dev(source: OneOrMore<Source>, path: &Path, expected: bool) {
@@ -1749,6 +1884,24 @@ pub mod tests {
         assert!(
             error.contains(path.to_string_lossy().as_ref()),
             "Error should include the missing config path, got: {error}"
+        );
+    }
+
+    #[test]
+    fn test_bsconfig_json_filename_deprecation() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let path = tmp.path().join("bsconfig.json");
+        std::fs::write(
+            &path,
+            r#"{ "name": "legacy", "sources": { "dir": "src", "subdirs": true } }"#,
+        )
+        .expect("write");
+
+        let config = Config::new(&path).expect("a valid bsconfig.json");
+        assert!(
+            config
+                .get_deprecations()
+                .contains(&DeprecationWarning::BsconfigJson)
         );
     }
 }
