@@ -45,8 +45,8 @@
   },
   "bin": {
     "bsc": "cli/bsc.js",
-    "rescript-assist": "cli/rescript-assist.js",
     "rescript": "cli/rescript.js",
+    "rescript-assist": "cli/rescript-assist.js",
     "rescript-tools": "cli/rescript-tools.js"
   },
   "scripts": {
