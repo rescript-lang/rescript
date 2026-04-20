@@ -16,6 +16,7 @@
 
 - Support for `break` and `continue` in loops. `break` and `continue` are new keywords. https://github.com/rescript-lang/rescript/pull/8348
 - Fix iterator / iterable typedefs, add generator typedefs. https://github.com/rescript-lang/rescript/pull/8355
+- Remove deprecated %external extension. https://github.com/rescript-lang/rescript/pull/8376
 
 #### :eyeglasses: Spec Compliance
 
