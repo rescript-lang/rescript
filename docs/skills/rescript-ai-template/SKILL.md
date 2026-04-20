@@ -1,6 +1,6 @@
 ---
 name: rescript-ai-template
-description: Template skill for agents working in a ReScript codebase with rescript-assist lint and related AI-oriented workflows. Use when creating a project-specific skill for file-by-file editing, lint-repair loops, and semantic checks.
+description: Template skill for agents working in a ReScript codebase with rescript-assist lint check and related AI-oriented workflows. Use when creating a project-specific skill for file-by-file editing, lint-repair loops, and semantic checks.
 ---
 
 # ReScript AI Template
@@ -12,7 +12,7 @@ Use this as a starting point for a project-specific skill. Replace placeholders 
 Use this skill when:
 
 - editing `.res` or `.resi` files
-- fixing lint findings from `rescript-assist lint`
+- fixing lint findings from `rescript-assist lint check`
 - doing small file-first repair loops
 - checking semantic issues that depend on `.cmt/.cmti`
 
@@ -20,7 +20,7 @@ Use this skill when:
 
 1. Prefer a file-first loop:
    - edit one file
-   - run `rescript-assist lint <file>`
+   - run `rescript-assist lint check <file>`
    - fix findings
    - rerun lint for that file
 
@@ -36,9 +36,9 @@ Use this skill when:
 ## Commands
 
 ```sh
-rescript-assist lint <file>
-rescript-assist lint <dir-or-root>
-rescript-assist lint <file-or-root> --json
+rescript-assist lint check <file>
+rescript-assist lint check <dir-or-root>
+rescript-assist lint check <file-or-root> --json
 ```
 
 Optional project verification commands:
@@ -86,7 +86,7 @@ Fill this section in for the actual repo:
 For one-file work:
 
 ```sh
-rescript-assist lint src/File.res
+rescript-assist lint check src/File.res
 ```
 
 Fix the reported findings, then rerun the same command until clean.
@@ -94,7 +94,7 @@ Fix the reported findings, then rerun the same command until clean.
 For broader fallout:
 
 ```sh
-rescript-assist lint src/
+rescript-assist lint check src/
 ```
 
 ## Notes

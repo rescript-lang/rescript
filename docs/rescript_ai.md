@@ -16,11 +16,11 @@ description stays current.
 Add the standalone `rescript-assist` CLI for AI-oriented workflows
 
 Commands
-- `lint`: Runs configurable AI-oriented lint checks on a file or project root using source and typed information.
-- `rewrite`: Rewrites source into a narrower agent-oriented normal form, with optional diff output.
-- `active-rules`: Lists lint and rewrite rules, whether they are active, and how they are configured.
-- `show`: Returns hover-style semantic information for a symbol path.
-- `find-references`: Finds references from either a symbol path or a source location.
+- `lint check`: Runs configurable AI-oriented lint checks on a file or project root using source and typed information.
+- `rewrite run`: Rewrites source into a narrower agent-oriented normal form, with optional diff output.
+- `support active-rules`: Lists lint and rewrite rules, whether they are active, and how they are configured.
+- `support show`: Returns hover-style semantic information for a symbol path.
+- `support find-references`: Finds references from either a symbol path or a source location.
 
 Initial rules
 - Lint:
@@ -61,18 +61,18 @@ belong in the same tool surface.
 Recommended first shape:
 
 ```sh
-rescript-assist lint <file-or-root> [--config <file>] [--json]
-rescript-assist rewrite <file-or-root> [--config <file>] [--diff] [--json]
-rescript-assist active-rules <file-or-root> [--config <file>] [--json]
-rescript-assist show <symbol-path> [--kind <auto|module|value|type>] [--context <file-or-root>] [--comments <include|omit>]
-rescript-assist find-references <symbol-path> [--kind <auto|module|value|type>] [--context <file-or-root>]
-rescript-assist find-references --file <file> --line <line> --col <col>
+rescript-assist lint check <file-or-root> [--config <file>] [--json]
+rescript-assist rewrite run <file-or-root> [--config <file>] [--diff] [--json]
+rescript-assist support active-rules <file-or-root> [--config <file>] [--json]
+rescript-assist support show <symbol-path> [--kind <auto|module|value|type>] [--context <file-or-root>] [--comments <include|omit>]
+rescript-assist support find-references <symbol-path> [--kind <auto|module|value|type>] [--context <file-or-root>]
+rescript-assist support find-references --file <file> --line <line> --col <col>
 ```
 
 Notes:
 
-- `lint <file>` is the primary AI workflow
-- `lint <root>` should walk project sources
+- `lint check <file>` is the primary AI workflow
+- `lint check <root>` should walk project sources
 - source AST analysis and typed analysis should run together as one lint pass
 - text should be the default output
 - `--json` should opt into compact JSON
@@ -80,17 +80,18 @@ Notes:
 - `rewrite` is separate from `lint`
 - `rewrite` is allowed to be more aggressive because it is explicitly agent-oriented
 - lint reports style/semantic problems; rewrite canonicalizes source into a narrower normal form
-- `rewrite --diff` should preview the rewritten diff without modifying files
+- `rewrite run --diff` should preview the rewritten diff without modifying files
 - `rewrite` should emit a short summary of what changed after a write pass
-- `active-rules` should list lint and rewrite rules, whether they are active, and what they do
-- `show` should expose hover-style semantic lookup by symbol path instead of source position
-- `show --comments omit` should make it easy to get a tighter, agent-oriented output
-- `find-references` should support both symbol-path and source-location queries
+- `support active-rules` should list lint and rewrite rules, whether they are active, and what they do
+- `support show` should expose hover-style semantic lookup by symbol path instead of source position
+- `support show --comments omit` should make it easy to get a tighter, agent-oriented output
+- `support find-references` should support both symbol-path and source-location queries
 
 ## Recommended Placement
 
 - CLI entrypoints: `tools/bin/assist_main.ml` for `rescript-assist`, `tools/bin/main.ml` for `rescript-tools`
-- command implementation: new module in `tools/src/`
+- command dispatch: `tools/bin/ai_cli.ml`
+- feature implementation: `tools/src/`
 - semantic loading and package resolution: reuse `analysis/src/Cmt.ml`
 - typedtree-derived structure/reference data: reuse `analysis/src/ProcessCmt.ml`
 - compact JSON helpers: likely reuse or extend `analysis/src/Protocol.ml`
@@ -421,7 +422,7 @@ Aggressive source normalization for agents should be a separate command rather t
 Recommended first shape:
 
 ```sh
-rescript-assist rewrite <file-or-root> [--config <file>] [--diff] [--json]
+rescript-assist rewrite run <file-or-root> [--config <file>] [--diff] [--json]
 ```
 
 Goal:
@@ -655,9 +656,10 @@ This section is intentionally a scratchpad. Add ideas here freely before they ar
 ## Remaining Implementation Priorities
 
 Much of the initial bootstrapping work described earlier in this document is
-now done. The current command surface already includes `lint`, `rewrite`,
-`active-rules`, `show`, and `find-references`, along with namespaced
-`lint`/`rewrite` config and the first rewrite rules.
+now done. The current command surface already includes `lint check`,
+`rewrite run`, and `support` subcommands for `active-rules`, `show`, and
+`find-references`, along with namespaced `lint`/`rewrite` config and the first
+rewrite rules.
 
 Near-term remaining work is mostly about hardening and narrowing the scope of
 future additions:

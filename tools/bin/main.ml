@@ -43,10 +43,7 @@ extract-codeblocks <file>               Extract ReScript code blocks from file
 reanalyze                               Reanalyze
 reanalyze-server                        Start reanalyze server
 -v, --version                           Print version
--h, --help                              Print help
-
-AI-oriented commands now live in the standalone `rescript-assist` binary:
-  lint, rewrite, active-rules, show, find-references|}
+-h, --help                              Print help|}
 
 let logAndExit = function
   | Ok log ->
