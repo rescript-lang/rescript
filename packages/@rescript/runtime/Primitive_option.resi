@@ -18,10 +18,6 @@ let some: Primitive_object_extern.t => Primitive_object_extern.t
 
 let isNested: Primitive_object_extern.t => bool
 
-let toUndefined: option<Primitive_object_extern.t> => Primitive_js_extern.undefined<
-  Primitive_object_extern.t,
->
-
 type poly
 
 /** When it is None, return None
