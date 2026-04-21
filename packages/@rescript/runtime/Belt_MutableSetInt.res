@@ -179,9 +179,7 @@ let make = () => {data: None}
 
 let isEmpty = d => N.isEmpty(d.data)
 let minimum = d => N.minimum(d.data)
-let minUndefined = d => N.minUndefined(d.data)
 let maximum = d => N.maximum(d.data)
-let maxUndefined = d => N.maxUndefined(d.data)
 let forEach = (d, f) => N.forEach(d.data, f)
 let reduce = (d, acc, cb) => N.reduce(d.data, acc, cb)
 let every = (d, p) => N.every(d.data, p)
@@ -199,7 +197,6 @@ let fromArray = xs => {data: I.fromArray(xs)}
 let cmp = (d0, d1) => I.cmp(d0.data, d1.data)
 let eq = (d0, d1) => I.eq(d0.data, d1.data)
 let get = (d, x) => I.get(d.data, x)
-let getUndefined = (d, x) => I.getUndefined(d.data, x)
 let getOrThrow = (d, x) => I.getOrThrow(d.data, x)
 let getExn = getOrThrow
 

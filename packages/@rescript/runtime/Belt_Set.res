@@ -104,13 +104,9 @@ let toList = m => Dict.toList(m.data)
 let toArray = m => Dict.toArray(m.data)
 
 let minimum = m => Dict.minimum(m.data)
-let minUndefined = m => Dict.minUndefined(m.data)
 let maximum = m => Dict.maximum(m.data)
-let maxUndefined = m => Dict.maxUndefined(m.data)
 
 let get = (m, e) => Dict.get(~cmp=m.cmp, m.data, e)
-
-let getUndefined = (m, e) => Dict.getUndefined(~cmp=m.cmp, m.data, e)
 
 let getOrThrow = (m, e) => Dict.getOrThrow(~cmp=m.cmp, m.data, e)
 

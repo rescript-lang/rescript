@@ -100,12 +100,9 @@ let toList: t => list<value>
 let toArray: t => array<value>
 
 let minimum: t => option<value>
-let minUndefined: t => Js.undefined<value>
 let maximum: t => option<value>
-let maxUndefined: t => Js.undefined<value>
 
 let get: (t, value) => option<value>
-let getUndefined: (t, value) => Js.undefined<value>
 let getExn: (t, value) => value
 let getOrThrow: (t, value) => value
 

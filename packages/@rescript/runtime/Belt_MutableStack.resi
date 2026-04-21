@@ -27,9 +27,8 @@ let clear: t<'a> => unit
 let copy: t<'a> => t<'a>
 
 let push: (t<'a>, 'a) => unit
-let popUndefined: t<'a> => Js.undefined<'a>
 let pop: t<'a> => option<'a>
-let topUndefined: t<'a> => Js.undefined<'a>
+let popOrThrow: t<'a> => 'a
 let top: t<'a> => option<'a>
 let isEmpty: t<'a> => bool
 let size: t<'a> => int

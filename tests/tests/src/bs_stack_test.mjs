@@ -17,7 +17,7 @@ function inOrder(v) {
     current = v$1.left;
   };
   while (!Belt_MutableStack.isEmpty(s)) {
-    current = Belt_MutableStack.popUndefined(s);
+    current = Belt_MutableStack.popOrThrow(s);
     let v$2 = current;
     Belt_MutableQueue.add(q, v$2.value);
     current = v$2.right;
@@ -64,7 +64,7 @@ function inOrder2(v) {
     } else if (Belt_MutableStack.isEmpty(s)) {
       todo = false;
     } else {
-      cursor = Belt_MutableStack.popUndefined(s);
+      cursor = Belt_MutableStack.popOrThrow(s);
       let current = cursor;
       Belt_MutableQueue.add(q, current.value);
       cursor = current.right;

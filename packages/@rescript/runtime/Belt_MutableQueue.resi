@@ -44,11 +44,6 @@ let add: (t<'a>, 'a) => unit
 let peek: t<'a> => option<'a>
 
 /**
-`peekUndefined(q)` returns `undefined` if not found.
-*/
-let peekUndefined: t<'a> => Js.undefined<'a>
-
-/**
 `peekExn(q)` throws an exception if `q` is empty.
 */
 let peekExn: t<'a> => 'a
@@ -62,12 +57,6 @@ let peekOrThrow: t<'a> => 'a
 `pop(q)` removes and returns the first element in queue `q`.
 */
 let pop: t<'a> => option<'a>
-
-/**
-`popUndefined(q)` removes and returns the first element in queue `q`. it will
-return `undefined` if it is already empty.
-*/
-let popUndefined: t<'a> => Js.undefined<'a>
 
 /**
 `popExn(q)` throw an exception if q is empty.

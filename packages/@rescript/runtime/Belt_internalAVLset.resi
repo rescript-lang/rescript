@@ -25,9 +25,7 @@ let bal: (t<'a>, 'a, t<'a>) => t<'a>
 let singleton: 'a => t<'a>
 
 let minimum: t<'a> => option<'a>
-let minUndefined: t<'a> => Js.undefined<'a>
 let maximum: t<'a> => option<'a>
-let maxUndefined: t<'a> => Js.undefined<'a>
 
 let removeMinAuxWithRef: (node<'a>, ref<'a>) => t<'a>
 /* `removeMinAuxWithRef n cell` return a new node with
@@ -76,7 +74,6 @@ let cmp: (t<'a>, t<'a>, ~cmp: cmp<'a, 'b>) => int
 let eq: (t<'a>, t<'a>, ~cmp: cmp<'a, 'b>) => bool
 let subset: (t<'a>, t<'a>, ~cmp: cmp<'a, 'b>) => bool
 let get: (t<'a>, 'a, ~cmp: cmp<'a, 'b>) => option<'a>
-let getUndefined: (t<'a>, 'a, ~cmp: cmp<'a, 'b>) => Js.undefined<'a>
 let getOrThrow: (t<'a>, 'a, ~cmp: cmp<'a, 'b>) => 'a
 
 let fromArray: (array<'a>, ~cmp: cmp<'a, 'b>) => t<'a>

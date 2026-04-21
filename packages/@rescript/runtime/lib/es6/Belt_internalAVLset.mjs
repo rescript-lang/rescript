@@ -100,12 +100,6 @@ function minimum(n) {
   }
 }
 
-function minUndefined(n) {
-  if (n !== undefined) {
-    return min0Aux(n);
-  }
-}
-
 function max0Aux(_n) {
   while (true) {
     let n = _n;
@@ -121,12 +115,6 @@ function max0Aux(_n) {
 function maximum(n) {
   if (n !== undefined) {
     return Primitive_option.some(max0Aux(n));
-  }
-}
-
-function maxUndefined(n) {
-  if (n !== undefined) {
-    return max0Aux(n);
   }
 }
 
@@ -350,7 +338,7 @@ function checkInvariantInternal(_v) {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "Belt_internalAVLset.res",
-          292,
+          280,
           4
         ],
         Error: new Error()
@@ -668,22 +656,6 @@ function get(_n, x, cmp) {
   };
 }
 
-function getUndefined(_n, x, cmp) {
-  while (true) {
-    let n = _n;
-    if (n === undefined) {
-      return;
-    }
-    let v = n.v;
-    let c = cmp(x, v);
-    if (c === 0) {
-      return v;
-    }
-    _n = c < 0 ? n.l : n.r;
-    continue;
-  };
-}
-
 function getOrThrow(_n, x, cmp) {
   while (true) {
     let n = _n;
@@ -842,9 +814,7 @@ export {
   bal,
   singleton,
   minimum,
-  minUndefined,
   maximum,
-  maxUndefined,
   removeMinAuxWithRef,
   isEmpty,
   stackAllLeft,
@@ -872,7 +842,6 @@ export {
   eq,
   subset,
   get,
-  getUndefined,
   getOrThrow,
   fromArray,
   addMutate,

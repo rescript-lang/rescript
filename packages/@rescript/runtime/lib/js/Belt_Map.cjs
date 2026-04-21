@@ -175,40 +175,20 @@ function minKey(m) {
   return Belt_MapDict.minKey(m.data);
 }
 
-function minKeyUndefined(m) {
-  return Belt_MapDict.minKeyUndefined(m.data);
-}
-
 function maxKey(m) {
   return Belt_MapDict.maxKey(m.data);
-}
-
-function maxKeyUndefined(m) {
-  return Belt_MapDict.maxKeyUndefined(m.data);
 }
 
 function minimum(m) {
   return Belt_MapDict.minimum(m.data);
 }
 
-function minUndefined(m) {
-  return Belt_MapDict.minUndefined(m.data);
-}
-
 function maximum(m) {
   return Belt_MapDict.maximum(m.data);
 }
 
-function maxUndefined(m) {
-  return Belt_MapDict.maxUndefined(m.data);
-}
-
 function get(map, x) {
   return Belt_MapDict.get(map.data, x, map.cmp);
-}
-
-function getUndefined(map, x) {
-  return Belt_MapDict.getUndefined(map.data, x, map.cmp);
 }
 
 function getWithDefault(map, x, def) {
@@ -314,15 +294,10 @@ exports.fromArray = fromArray;
 exports.keysToArray = keysToArray;
 exports.valuesToArray = valuesToArray;
 exports.minKey = minKey;
-exports.minKeyUndefined = minKeyUndefined;
 exports.maxKey = maxKey;
-exports.maxKeyUndefined = maxKeyUndefined;
 exports.minimum = minimum;
-exports.minUndefined = minUndefined;
 exports.maximum = maximum;
-exports.maxUndefined = maxUndefined;
 exports.get = get;
-exports.getUndefined = getUndefined;
 exports.getWithDefault = getWithDefault;
 exports.getExn = getExn;
 exports.getOrThrow = getOrThrow;

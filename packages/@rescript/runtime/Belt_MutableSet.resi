@@ -531,26 +531,6 @@ s1->Belt.MutableSet.minimum == Some(1)
 let minimum: t<'value, 'id> => option<'value>
 
 /**
-Returns minimum value of the collection. `undefined` if collection is empty.
-
-## Examples
-
-```rescript
-module IntCmp = Belt.Id.MakeComparable({
-  type t = int
-  let cmp = Pervasives.compare
-})
-
-let s0 = Belt.MutableSet.make(~id=module(IntCmp))
-let s1 = Belt.MutableSet.fromArray([3, 2, 1, 5], ~id=module(IntCmp))
-
-s0->Belt.MutableSet.minUndefined == Js.undefined
-s1->Belt.MutableSet.minUndefined == Js.Undefined.return(1)
-```
-*/
-let minUndefined: t<'value, 'id> => Js.undefined<'value>
-
-/**
 Returns maximum value of the collection. `None` if collection is empty.
 
 ## Examples
@@ -571,26 +551,6 @@ s1->Belt.MutableSet.maximum == Some(5)
 let maximum: t<'value, 'id> => option<'value>
 
 /**
-Returns maximum value of the collection. `undefined` if collection is empty.
-
-## Examples
-
-```rescript
-module IntCmp = Belt.Id.MakeComparable({
-  type t = int
-  let cmp = Pervasives.compare
-})
-
-let s0 = Belt.MutableSet.make(~id=module(IntCmp))
-let s1 = Belt.MutableSet.fromArray([3, 2, 1, 5], ~id=module(IntCmp))
-
-s0->Belt.MutableSet.maxUndefined == Js.undefined
-s1->Belt.MutableSet.maxUndefined == Js.Undefined.return(5)
-```
-*/
-let maxUndefined: t<'value, 'id> => Js.undefined<'value>
-
-/**
 Returns the reference of the value which is equivalent to value using the comparator specifiecd by this collection. Returns `None` if element does not exist.
 
 ## Examples
@@ -608,11 +568,6 @@ s0->Belt.MutableSet.get(20) == None
 ```
 */
 let get: (t<'value, 'id>, 'value) => option<'value>
-
-/**
-Same as `Belt.MutableSet.get` but returns `undefined` when element does not exist.
-*/
-let getUndefined: (t<'value, 'id>, 'value) => Js.undefined<'value>
 
 /**
 Same as `Belt.MutableSet.get` but throw when element does not exist.
