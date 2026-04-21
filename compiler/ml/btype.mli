@@ -80,6 +80,11 @@ val row_fixed : row_desc -> bool
 val static_row : row_desc -> bool
 (* Return whether the row is static or not *)
 
+val narrow_row_by_tags : string list -> row_desc -> row_desc
+(* Return a copy of the row with the given tags marked [Rabsent]. Used to
+   compute the residual row bound to a polymorphic-variant narrowing
+   catch-all. *)
+
 val hash_variant : label -> int
 (* Hash function for variant tags *)
 
