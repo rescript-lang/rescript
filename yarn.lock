@@ -422,25 +422,25 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rescript/darwin-arm64@workspace:packages/@rescript/darwin-arm64":
+"@rescript/darwin-arm64@workspace:*, @rescript/darwin-arm64@workspace:packages/@rescript/darwin-arm64":
   version: 0.0.0-use.local
   resolution: "@rescript/darwin-arm64@workspace:packages/@rescript/darwin-arm64"
   languageName: unknown
   linkType: soft
 
-"@rescript/darwin-x64@workspace:packages/@rescript/darwin-x64":
+"@rescript/darwin-x64@workspace:*, @rescript/darwin-x64@workspace:packages/@rescript/darwin-x64":
   version: 0.0.0-use.local
   resolution: "@rescript/darwin-x64@workspace:packages/@rescript/darwin-x64"
   languageName: unknown
   linkType: soft
 
-"@rescript/linux-arm64@workspace:packages/@rescript/linux-arm64":
+"@rescript/linux-arm64@workspace:*, @rescript/linux-arm64@workspace:packages/@rescript/linux-arm64":
   version: 0.0.0-use.local
   resolution: "@rescript/linux-arm64@workspace:packages/@rescript/linux-arm64"
   languageName: unknown
   linkType: soft
 
-"@rescript/linux-x64@workspace:packages/@rescript/linux-x64":
+"@rescript/linux-x64@workspace:*, @rescript/linux-x64@workspace:packages/@rescript/linux-x64":
   version: 0.0.0-use.local
   resolution: "@rescript/linux-x64@workspace:packages/@rescript/linux-x64"
   languageName: unknown
@@ -492,7 +492,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rescript/runtime@workspace:packages/@rescript/runtime":
+"@rescript/runtime@workspace:*, @rescript/runtime@workspace:packages/@rescript/runtime":
   version: 0.0.0-use.local
   resolution: "@rescript/runtime@workspace:packages/@rescript/runtime"
   dependencies:
@@ -500,7 +500,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rescript/win32-x64@workspace:packages/@rescript/win32-x64":
+"@rescript/win32-x64@workspace:*, @rescript/win32-x64@workspace:packages/@rescript/win32-x64":
   version: 0.0.0-use.local
   resolution: "@rescript/win32-x64@workspace:packages/@rescript/win32-x64"
   languageName: unknown
@@ -2431,12 +2431,12 @@ __metadata:
   resolution: "rescript@workspace:."
   dependencies:
     "@biomejs/biome": "npm:2.4.10"
-    "@rescript/darwin-arm64": "workspace:packages/@rescript/darwin-arm64"
-    "@rescript/darwin-x64": "workspace:packages/@rescript/darwin-x64"
-    "@rescript/linux-arm64": "workspace:packages/@rescript/linux-arm64"
-    "@rescript/linux-x64": "workspace:packages/@rescript/linux-x64"
-    "@rescript/runtime": "workspace:packages/@rescript/runtime"
-    "@rescript/win32-x64": "workspace:packages/@rescript/win32-x64"
+    "@rescript/darwin-arm64": "workspace:*"
+    "@rescript/darwin-x64": "workspace:*"
+    "@rescript/linux-arm64": "workspace:*"
+    "@rescript/linux-x64": "workspace:*"
+    "@rescript/runtime": "workspace:*"
+    "@rescript/win32-x64": "workspace:*"
     "@types/node": "npm:^25.0.3"
     "@types/semver": "npm:^7.7.0"
     "@yarnpkg/types": "npm:^4.0.1"
@@ -2452,6 +2452,8 @@ __metadata:
     "@rescript/linux-arm64":
       optional: true
     "@rescript/linux-x64":
+      optional: true
+    "@rescript/runtime":
       optional: true
     "@rescript/win32-x64":
       optional: true
