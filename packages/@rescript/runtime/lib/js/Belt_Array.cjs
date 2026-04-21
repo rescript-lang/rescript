@@ -15,7 +15,7 @@ function getOrThrow(arr, i) {
       RE_EXN_ID: "Assert_failure",
       _1: [
         "Belt_Array.res",
-        29,
+        27,
         2
       ],
       Error: new Error()
@@ -39,7 +39,7 @@ function setOrThrow(arr, i, v) {
       RE_EXN_ID: "Assert_failure",
       _1: [
         "Belt_Array.res",
-        44,
+        42,
         2
       ],
       Error: new Error()

@@ -116,12 +116,6 @@ let minimum = n =>
   | Some(n) => Some(min0Aux(n))
   }
 
-let minUndefined = n =>
-  switch n {
-  | None => Js.undefined
-  | Some(n) => Js.Undefined.return(min0Aux(n))
-  }
-
 let rec max0Aux = n =>
   switch n.right {
   | None => n.value
@@ -132,12 +126,6 @@ let maximum = n =>
   switch n {
   | None => None
   | Some(n) => Some(max0Aux(n))
-  }
-
-let maxUndefined = n =>
-  switch n {
-  | None => Js.undefined
-  | Some(n) => Js.Undefined.return(max0Aux(n))
   }
 
 let rec removeMinAuxWithRef = (n, v) =>
@@ -538,27 +526,6 @@ let rec get = (n: t<_>, x, ~cmp) =>
       Some(v)
     } else {
       get(
-        ~cmp,
-        if c < 0 {
-          t.left
-        } else {
-          t.right
-        },
-        x,
-      )
-    }
-  }
-
-let rec getUndefined = (n: t<_>, x, ~cmp) =>
-  switch n {
-  | None => Js.Undefined.empty
-  | Some(t) /* Node(l, v, r, _) */ =>
-    let v = t.value
-    let c = Belt_Id.getCmpInternal(cmp)(x, v)
-    if c == 0 {
-      Js.Undefined.return(v)
-    } else {
-      getUndefined(
         ~cmp,
         if c < 0 {
           t.left

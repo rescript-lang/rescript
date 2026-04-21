@@ -44,25 +44,6 @@ let rec get = (n, x: key) =>
     }
   }
 
-let rec getUndefined = (n, x: key) =>
-  switch n {
-  | None => Js.undefined
-  | Some(n) =>
-    let v = n.N.key
-    if x == v {
-      Js.Undefined.return(n.N.value)
-    } else {
-      getUndefined(
-        if x < v {
-          n.N.left
-        } else {
-          n.N.right
-        },
-        x,
-      )
-    }
-  }
-
 let rec getOrThrow = (n, x: key) =>
   switch n {
   | None => throw(Not_found)

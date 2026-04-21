@@ -15,8 +15,6 @@ external getUnsafe: (t<'a>, int) => 'a = "%array_unsafe_get"
 
 external setUnsafe: (t<'a>, int, 'a) => unit = "%array_unsafe_set"
 
-external getUndefined: (t<'a>, int) => Js.undefined<'a> = "%array_unsafe_get"
-
 /* external get: 'a t -> int -> 'a = "%array_safe_get" */
 let get = (arr, i) =>
   if i >= 0 && i < length(arr) {

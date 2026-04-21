@@ -19,16 +19,8 @@ function clear(m) {
   m.data = undefined;
 }
 
-function minKeyUndefined(m) {
-  return Belt_internalAVLtree.minKeyUndefined(m.data);
-}
-
 function minKey(m) {
   return Belt_internalAVLtree.minKey(m.data);
-}
-
-function maxKeyUndefined(m) {
-  return Belt_internalAVLtree.maxKeyUndefined(m.data);
 }
 
 function maxKey(m) {
@@ -39,16 +31,8 @@ function minimum(m) {
   return Belt_internalAVLtree.minimum(m.data);
 }
 
-function minUndefined(m) {
-  return Belt_internalAVLtree.minUndefined(m.data);
-}
-
 function maximum(m) {
   return Belt_internalAVLtree.maximum(m.data);
-}
-
-function maxUndefined(m) {
-  return Belt_internalAVLtree.maxUndefined(m.data);
 }
 
 function set(m, k, v) {
@@ -260,10 +244,6 @@ function get(d, x) {
   return Belt_internalMapString.get(d.data, x);
 }
 
-function getUndefined(d, x) {
-  return Belt_internalMapString.getUndefined(d.data, x);
-}
-
 function getWithDefault(d, x, def) {
   return Belt_internalMapString.getWithDefault(d.data, x, def);
 }
@@ -315,15 +295,10 @@ exports.fromArray = fromArray;
 exports.keysToArray = keysToArray;
 exports.valuesToArray = valuesToArray;
 exports.minKey = minKey;
-exports.minKeyUndefined = minKeyUndefined;
 exports.maxKey = maxKey;
-exports.maxKeyUndefined = maxKeyUndefined;
 exports.minimum = minimum;
-exports.minUndefined = minUndefined;
 exports.maximum = maximum;
-exports.maxUndefined = maxUndefined;
 exports.get = get;
-exports.getUndefined = getUndefined;
 exports.getWithDefault = getWithDefault;
 exports.getExn = getExn;
 exports.getOrThrow = getOrThrow;

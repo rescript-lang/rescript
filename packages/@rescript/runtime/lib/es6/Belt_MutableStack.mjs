@@ -25,13 +25,6 @@ function push(s, x) {
   };
 }
 
-function topUndefined(s) {
-  let x = s.root;
-  if (x !== undefined) {
-    return x.head;
-  }
-}
-
 function top(s) {
   let x = s.root;
   if (x !== undefined) {
@@ -43,20 +36,24 @@ function isEmpty(s) {
   return s.root === undefined;
 }
 
-function popUndefined(s) {
-  let x = s.root;
-  if (x !== undefined) {
-    s.root = x.tail;
-    return x.head;
-  }
-}
-
 function pop(s) {
   let x = s.root;
   if (x !== undefined) {
     s.root = x.tail;
     return Primitive_option.some(x.head);
   }
+}
+
+function popOrThrow(s) {
+  let x = s.root;
+  if (x !== undefined) {
+    s.root = x.tail;
+    return x.head;
+  }
+  throw {
+    RE_EXN_ID: "Not_found",
+    Error: new Error()
+  };
 }
 
 function size(s) {
@@ -114,9 +111,8 @@ export {
   clear,
   copy,
   push,
-  popUndefined,
   pop,
-  topUndefined,
+  popOrThrow,
   top,
   isEmpty,
   size,
