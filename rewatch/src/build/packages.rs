@@ -766,9 +766,15 @@ fn collect_gentype_source_dirs(package: &Package) -> Vec<PathBuf> {
 ///   or no consumer requests anything, the dep builds with all of its declared features.
 ///   Otherwise we take the union of specific feature requests and pass it through the dep's
 ///   own `features` map for transitive expansion.
+///
+/// `dev-dependencies` only contribute when that edge is actually traversed by
+/// `read_dependencies` — i.e. when the consumer is a local dep and we're not in `--prod`. This
+/// keeps dev-only feature requests (e.g. a shorthand `dev-dependencies` entry that would flip
+/// everything to "all features") from leaking into production builds.
 pub fn compute_active_features(
     packages: &AHashMap<String, Package>,
     cli_features: Option<&Vec<String>>,
+    prod: bool,
 ) -> Result<AHashMap<String, AHashSet<String>>> {
     let mut result: AHashMap<String, AHashSet<String>> = AHashMap::new();
 
@@ -783,20 +789,32 @@ pub fn compute_active_features(
             }
         } else {
             for consumer in packages.values() {
-                let deps_iter = consumer
-                    .config
-                    .dependencies
-                    .as_ref()
-                    .into_iter()
-                    .flatten()
-                    .chain(consumer.config.dev_dependencies.as_ref().into_iter().flatten());
-                for dep in deps_iter {
-                    if dep.name() != package_name {
-                        continue;
+                // `dependencies` always contribute.
+                if let Some(deps) = consumer.config.dependencies.as_ref() {
+                    for dep in deps {
+                        if dep.name() != package_name {
+                            continue;
+                        }
+                        match dep.features() {
+                            None => any_all_request = true,
+                            Some(list) => requested.extend(list.iter().cloned()),
+                        }
                     }
-                    match dep.features() {
-                        None => any_all_request = true,
-                        Some(list) => requested.extend(list.iter().cloned()),
+                }
+                // `dev-dependencies` only contribute when that edge is actually traversed:
+                // local consumer, not `--prod`. Matches `read_dependencies`.
+                if consumer.is_local_dep
+                    && !prod
+                    && let Some(dev_deps) = consumer.config.dev_dependencies.as_ref()
+                {
+                    for dep in dev_deps {
+                        if dep.name() != package_name {
+                            continue;
+                        }
+                        match dep.features() {
+                            None => any_all_request = true,
+                            Some(list) => requested.extend(list.iter().cloned()),
+                        }
                     }
                 }
             }
@@ -837,7 +855,7 @@ pub fn make(
 ) -> Result<AHashMap<String, Package>> {
     let mut map = read_packages(project_context, show_progress, prod)?;
 
-    let active_features = compute_active_features(&map, cli_features)?;
+    let active_features = compute_active_features(&map, cli_features, prod)?;
 
     // Drop source directories whose feature tag is not in the package's active set.
     // Untagged source dirs remain; they're included regardless of the feature selection.
@@ -1488,7 +1506,7 @@ mod test {
             ),
         );
 
-        let active = super::compute_active_features(&packages, None).unwrap();
+        let active = super::compute_active_features(&packages, None, false).unwrap();
         let root = active.get("root").unwrap();
         assert!(root.contains("native"));
         assert!(root.contains("full"));
@@ -1515,7 +1533,7 @@ mod test {
         );
 
         let cli = vec!["full".to_string()];
-        let active = super::compute_active_features(&packages, Some(&cli)).unwrap();
+        let active = super::compute_active_features(&packages, Some(&cli), false).unwrap();
         let root = active.get("root").unwrap();
         assert!(root.contains("full"));
         assert!(root.contains("native"));
@@ -1565,8 +1583,79 @@ mod test {
         // Flip the dep's is_root flag to false since root_package_with_features sets it to true.
         packages.get_mut("dep").unwrap().is_root = false;
 
-        let active = super::compute_active_features(&packages, None).unwrap();
+        let active = super::compute_active_features(&packages, None, false).unwrap();
         let dep_active = active.get("dep").unwrap();
         assert!(dep_active.contains("native"));
+    }
+
+    #[test]
+    fn compute_active_features_prod_ignores_dev_dependency_feature_requests() {
+        // Regression: a dep that appears in both `dependencies` (restricted to `native`) and
+        // `dev-dependencies` (shorthand = all features). In `--prod` the dev edge isn't
+        // traversed by `read_dependencies`, so its broader feature request must not flip the
+        // dep's active set to "all features". Only the non-dev restriction applies.
+        let mut packages: AHashMap<String, super::Package> = AHashMap::new();
+
+        let mut root_config = config::tests::create_config(config::tests::CreateConfigArgs {
+            name: "root".to_string(),
+            bs_deps: vec![],
+            build_dev_deps: vec![],
+            allowed_dependents: None,
+            path: PathBuf::from("./rescript.json"),
+        });
+        root_config.sources = Some(config::OneOrMore::Single(config::Source::Shorthand(
+            "src".to_string(),
+        )));
+        root_config.dependencies = Some(vec![config::Dependency::Qualified(config::QualifiedDependency {
+            name: "dep".to_string(),
+            features: Some(vec!["native".to_string()]),
+        })]);
+        root_config.dev_dependencies = Some(vec![config::Dependency::Shorthand("dep".to_string())]);
+        packages.insert(
+            "root".to_string(),
+            super::Package {
+                name: "root".to_string(),
+                config: root_config,
+                source_folders: AHashSet::new(),
+                source_files: None,
+                namespace: super::Namespace::NoNamespace,
+                modules: None,
+                path: PathBuf::from("."),
+                dirs: None,
+                is_local_dep: true,
+                is_root: true,
+            },
+        );
+
+        packages.insert(
+            "dep".to_string(),
+            root_package_with_features(
+                None,
+                vec![
+                    ("src", None),
+                    ("src-native", Some("native")),
+                    ("src-experimental", Some("experimental")),
+                ],
+            ),
+        );
+        packages.get_mut("dep").unwrap().is_root = false;
+
+        // Non-prod: dev edge IS traversed → all features active.
+        let active = super::compute_active_features(&packages, None, /* prod */ false).unwrap();
+        let dep_active = active.get("dep").unwrap();
+        assert!(dep_active.contains("native"));
+        assert!(
+            dep_active.contains("experimental"),
+            "non-prod should honour dev-dependency shorthand = all features"
+        );
+
+        // Prod: dev edge is NOT traversed → only the `dependencies` restriction applies.
+        let active_prod = super::compute_active_features(&packages, None, /* prod */ true).unwrap();
+        let dep_active_prod = active_prod.get("dep").unwrap();
+        assert!(dep_active_prod.contains("native"));
+        assert!(
+            !dep_active_prod.contains("experimental"),
+            "prod must not inherit the dev-dependency shorthand's all-features request"
+        );
     }
 }
