@@ -216,6 +216,7 @@ struct AsyncWatchArgs<'a> {
     plain_output: bool,
     clear_screen: bool,
     prod: bool,
+    features: Option<Vec<String>>,
 }
 
 async fn async_watch(
@@ -232,6 +233,7 @@ async fn async_watch(
         plain_output,
         clear_screen,
         prod,
+        features,
     }: AsyncWatchArgs<'_>,
 ) -> Result<()> {
     let mut build_state = initial_build_state;
@@ -468,6 +470,7 @@ async fn async_watch(
                     plain_output,
                     build_state.get_warn_error_override(),
                     prod,
+                    features.clone(),
                 )
                 .expect("Could not initialize build");
 
@@ -544,6 +547,7 @@ pub fn start(
     warn_error: Option<String>,
     clear_screen: bool,
     prod: bool,
+    features: Option<Vec<String>>,
 ) -> Result<()> {
     futures::executor::block_on(async {
         let queue = Arc::new(FifoQueue::<Result<Event, Error>>::new());
@@ -564,6 +568,7 @@ pub fn start(
             plain_output,
             warn_error.clone(),
             prod,
+            features.clone(),
         )
         .with_context(|| "Could not initialize build")?;
 
@@ -584,6 +589,7 @@ pub fn start(
             plain_output,
             clear_screen,
             prod,
+            features,
         })
         .await
     })
@@ -661,6 +667,7 @@ mod tests {
             test_project_context(root),
             packages,
             compiler,
+            None,
             None,
         );
         build_state.insert_module(module_name, module);

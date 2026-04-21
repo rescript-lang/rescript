@@ -46,6 +46,7 @@ fn main() -> Result<()> {
             std::process::exit(0);
         }
         cli::Command::Build(build_args) => {
+            let features = build_args.features.parsed();
             match build::build(
                 &build_args.filter,
                 Path::new(&build_args.folder as &str),
@@ -55,6 +56,7 @@ fn main() -> Result<()> {
                 plain_output,
                 (*build_args.warn_error).clone(),
                 build_args.prod,
+                features,
             ) {
                 Err(e) => {
                     eprintln!("{:#}", e);
@@ -71,6 +73,7 @@ fn main() -> Result<()> {
         cli::Command::Watch(watch_args) => {
             let _lock = get_lock_or_exit(LockKind::Watch, &watch_args.folder);
 
+            let features = watch_args.features.parsed();
             match watcher::start(
                 &watch_args.filter,
                 show_progress,
@@ -81,6 +84,7 @@ fn main() -> Result<()> {
                 (*watch_args.warn_error).clone(),
                 watch_args.clear_screen,
                 watch_args.prod,
+                features,
             ) {
                 Err(e) => {
                     eprintln!("{:#}", e);

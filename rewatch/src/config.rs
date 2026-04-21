@@ -2,6 +2,7 @@ use crate::build::packages;
 use crate::helpers;
 use crate::helpers::deserialize::*;
 use crate::project_context::ProjectContext;
+use ahash::AHashSet;
 use anyhow::{Result, anyhow};
 use convert_case::{Case, Casing};
 use serde::de::{Error as DeError, Visitor};
@@ -31,6 +32,10 @@ pub struct PackageSource {
     pub subdirs: Option<Subdirs>,
     #[serde(rename = "type")]
     pub type_: Option<String>,
+    /// Optional feature tag. When set, this source directory is only included in the build when
+    /// the package's active feature set contains this feature (or a feature that transitively
+    /// implies it through the top-level `features` map).
+    pub feature: Option<String>,
 }
 
 impl PackageSource {
@@ -38,6 +43,15 @@ impl PackageSource {
         match &self.type_ {
             Some(type_) => type_ == "dev",
             None => false,
+        }
+    }
+
+    /// Returns true when the source directory is part of the active feature set.
+    /// Untagged directories (no `feature` set) are always included.
+    pub fn is_feature_enabled(&self, active_features: &AHashSet<String>) -> bool {
+        match &self.feature {
+            None => true,
+            Some(name) => active_features.contains(name),
         }
     }
 }
@@ -65,10 +79,39 @@ impl Source {
                 dir: dir.to_string(),
                 subdirs: None,
                 type_: Some(type_),
+                feature: None,
             }),
             (Source::Qualified(package_source), type_) => Source::Qualified(PackageSource {
                 type_,
                 ..package_source.clone()
+            }),
+            (source, _) => source.clone(),
+        }
+    }
+
+    pub fn get_feature(&self) -> Option<String> {
+        match self {
+            Source::Shorthand(_) => None,
+            Source::Qualified(PackageSource { feature, .. }) => feature.clone(),
+        }
+    }
+
+    /// Propagate a feature tag down into nested subdirs. A child source's own explicit feature is
+    /// preserved; only when it has none does it inherit from the parent. This mirrors how `type:
+    /// "dev"` cascades today.
+    pub fn set_feature(&self, feature: Option<String>) -> Source {
+        match (self, feature) {
+            (Source::Qualified(ps), parent_feature) if ps.feature.is_none() => {
+                Source::Qualified(PackageSource {
+                    feature: parent_feature,
+                    ..ps.clone()
+                })
+            }
+            (Source::Shorthand(dir), Some(feature)) => Source::Qualified(PackageSource {
+                dir: dir.to_string(),
+                subdirs: None,
+                type_: None,
+                feature: Some(feature),
             }),
             (source, _) => source.clone(),
         }
@@ -87,10 +130,12 @@ impl Source {
                     .to_string(),
                 subdirs: None,
                 type_: self.get_type(),
+                feature: self.get_feature(),
             },
             Source::Qualified(PackageSource {
                 dir,
                 type_,
+                feature,
                 subdirs: Some(Subdirs::Recurse(should_recurse)),
             }) => PackageSource {
                 dir: sub_path
@@ -100,8 +145,11 @@ impl Source {
                     .to_string(),
                 subdirs: Some(Subdirs::Recurse(*should_recurse)),
                 type_: type_.to_owned(),
+                feature: feature.to_owned(),
             },
-            Source::Qualified(PackageSource { dir, type_, .. }) => PackageSource {
+            Source::Qualified(PackageSource {
+                dir, type_, feature, ..
+            }) => PackageSource {
                 dir: sub_path
                     .map(|p| p.join(Path::new(dir)))
                     .unwrap_or(Path::new(dir).to_path_buf())
@@ -109,6 +157,7 @@ impl Source {
                     .to_string(),
                 subdirs: None,
                 type_: type_.to_owned(),
+                feature: feature.to_owned(),
             },
         }
     }
@@ -270,6 +319,42 @@ impl GenTypeModuleResolution {
     }
 }
 
+/// A dependency entry in `dependencies` or `dev-dependencies`. Can be either the legacy shorthand
+/// form (just the package name), or a qualified object form that can restrict which features of
+/// the dependency should be built.
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+#[serde(untagged)]
+pub enum Dependency {
+    Shorthand(String),
+    Qualified(QualifiedDependency),
+}
+
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct QualifiedDependency {
+    pub name: String,
+    /// When set, only these features (and their transitive expansion through the dependency's
+    /// own `features` map) are active when compiling this dependency. When omitted, all of the
+    /// dependency's features are active.
+    pub features: Option<Vec<String>>,
+}
+
+impl Dependency {
+    pub fn name(&self) -> &str {
+        match self {
+            Dependency::Shorthand(name) => name,
+            Dependency::Qualified(q) => &q.name,
+        }
+    }
+
+    /// `Some(list)` restricts to those features; `None` means "all features" for this dep.
+    pub fn features(&self) -> Option<&Vec<String>> {
+        match self {
+            Dependency::Shorthand(_) => None,
+            Dependency::Qualified(q) => q.features.as_ref(),
+        }
+    }
+}
+
 /// Accepts either an object `{ "From": "To", ... }` or (deprecated) an array of
 /// `"From=To"` strings.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -388,9 +473,13 @@ pub struct Config {
     pub warnings: Option<Warnings>,
     pub suffix: Option<String>,
     #[serde(alias = "bs-dependencies")]
-    pub dependencies: Option<Vec<String>>,
+    pub dependencies: Option<Vec<Dependency>>,
     #[serde(rename = "dev-dependencies", alias = "bs-dev-dependencies")]
-    pub dev_dependencies: Option<Vec<String>>,
+    pub dev_dependencies: Option<Vec<Dependency>>,
+    /// Optional feature declarations. Each key is a feature name and the value lists other
+    /// features it implies. Leaf features (no implications) don't need to be declared here —
+    /// any feature name used as a `feature:` tag on a source is auto-recognized.
+    pub features: Option<HashMap<String, Vec<String>>>,
     #[serde(rename = "ppx-flags")]
     pub ppx_flags: Option<Vec<OneOrMore<String>>>,
 
@@ -782,7 +871,7 @@ impl Config {
         if let Some(deps) = &self.dependencies {
             for dep in deps {
                 args.push("-bs-gentype-dep".to_string());
-                args.push(dep.clone());
+                args.push(dep.name().to_string());
             }
         }
         for dir in source_dirs {
@@ -871,6 +960,68 @@ impl Config {
             .unwrap_or(".js".to_string())
     }
 
+    /// Returns the names of dependencies as plain strings (without feature restrictions).
+    /// Use `self.dependencies` directly when you need to know which features each consumer
+    /// requested for a dependency.
+    pub fn get_dependency_names(&self) -> Vec<String> {
+        self.dependencies
+            .as_ref()
+            .map(|deps| deps.iter().map(|d| d.name().to_string()).collect())
+            .unwrap_or_default()
+    }
+
+    pub fn get_dev_dependency_names(&self) -> Vec<String> {
+        self.dev_dependencies
+            .as_ref()
+            .map(|deps| deps.iter().map(|d| d.name().to_string()).collect())
+            .unwrap_or_default()
+    }
+
+    /// Collects every feature name that is known to this package: features declared in the
+    /// `features` map, features declared as keys on implied-lists, and any feature name used as
+    /// a `feature:` tag on a source directory. Used to compute the "all features active" default
+    /// when no explicit feature restriction was requested.
+    pub fn collect_declared_features(&self) -> AHashSet<String> {
+        let mut set = AHashSet::new();
+
+        if let Some(map) = &self.features {
+            for (name, implies) in map {
+                set.insert(name.clone());
+                for implied in implies {
+                    set.insert(implied.clone());
+                }
+            }
+        }
+
+        fn walk(set: &mut AHashSet<String>, source: &Source) {
+            match source {
+                Source::Shorthand(_) => {}
+                Source::Qualified(PackageSource { feature, subdirs, .. }) => {
+                    if let Some(f) = feature {
+                        set.insert(f.clone());
+                    }
+                    if let Some(Subdirs::Qualified(children)) = subdirs {
+                        for child in children {
+                            walk(set, child);
+                        }
+                    }
+                }
+            }
+        }
+
+        match &self.sources {
+            None => {}
+            Some(OneOrMore::Single(s)) => walk(&mut set, s),
+            Some(OneOrMore::Multiple(sources)) => {
+                for s in sources {
+                    walk(&mut set, s);
+                }
+            }
+        }
+
+        set
+    }
+
     pub fn find_is_type_dev_for_path(&self, relative_path: &Path) -> bool {
         let relative_parent = match relative_path.parent() {
             None => return false,
@@ -949,6 +1100,58 @@ impl Config {
     fn handle_deprecations(&mut self) -> Result<()> {
         Ok(())
     }
+}
+
+/// Expands `requested` into the transitive closure under `features_map`. Each key in
+/// `features_map` is a feature name that implies the feature names in its value list. Unknown
+/// feature names (requested but not in the map) are kept in the output — they're treated as leaf
+/// features.
+///
+/// Errors if a cycle is detected (e.g. `full -> native -> full`). The error message names the
+/// cycle participants so the user can fix their config.
+pub fn resolve_active_features(
+    requested: &AHashSet<String>,
+    features_map: Option<&HashMap<String, Vec<String>>>,
+) -> Result<AHashSet<String>> {
+    let mut closure: AHashSet<String> = AHashSet::new();
+
+    for feature in requested {
+        expand_feature(feature, features_map, &mut closure, &mut Vec::new())?;
+    }
+
+    Ok(closure)
+}
+
+fn expand_feature(
+    feature: &str,
+    features_map: Option<&HashMap<String, Vec<String>>>,
+    closure: &mut AHashSet<String>,
+    stack: &mut Vec<String>,
+) -> Result<()> {
+    if stack.iter().any(|s| s == feature) {
+        let mut chain = stack.clone();
+        chain.push(feature.to_string());
+        return Err(anyhow!(
+            "Cycle detected in `features` map: {}",
+            chain.join(" -> ")
+        ));
+    }
+
+    if !closure.insert(feature.to_string()) {
+        return Ok(());
+    }
+
+    if let Some(map) = features_map
+        && let Some(implied) = map.get(feature)
+    {
+        stack.push(feature.to_string());
+        for child in implied {
+            expand_feature(child, features_map, closure, stack)?;
+        }
+        stack.pop();
+    }
+
+    Ok(())
 }
 
 fn validate_package_specs_value(value: &serde_json::Value) -> Result<()> {
@@ -1069,8 +1272,14 @@ pub mod tests {
             package_specs: None,
             warnings: None,
             suffix: None,
-            dependencies: Some(args.bs_deps),
-            dev_dependencies: Some(args.build_dev_deps),
+            dependencies: Some(args.bs_deps.into_iter().map(Dependency::Shorthand).collect()),
+            dev_dependencies: Some(
+                args.build_dev_deps
+                    .into_iter()
+                    .map(Dependency::Shorthand)
+                    .collect(),
+            ),
+            features: None,
             ppx_flags: None,
             compiler_flags: None,
             namespace: None,
@@ -1424,7 +1633,10 @@ pub mod tests {
         "#;
 
         let config = Config::new_from_json_string(json).expect("a valid json string");
-        assert_eq!(config.dependencies, Some(vec!["@testrepo/main".to_string()]));
+        assert_eq!(
+            config.dependencies,
+            Some(vec![Dependency::Shorthand("@testrepo/main".to_string())])
+        );
         assert!(config.get_deprecations().is_empty());
     }
 
@@ -1474,7 +1686,10 @@ pub mod tests {
         "#;
 
         let config = Config::new_from_json_string(json).expect("a valid json string");
-        assert_eq!(config.dev_dependencies, Some(vec!["@testrepo/main".to_string()]));
+        assert_eq!(
+            config.dev_dependencies,
+            Some(vec![Dependency::Shorthand("@testrepo/main".to_string())])
+        );
         assert!(config.get_deprecations().is_empty());
     }
 
@@ -1698,6 +1913,7 @@ pub mod tests {
                 dir: String::from("src"),
                 subdirs: None,
                 type_: Some(String::from("dev")),
+                feature: None,
             })),
             Path::new("src/Foo.res"),
             true,
@@ -1711,6 +1927,7 @@ pub mod tests {
                 dir: String::from("src"),
                 subdirs: None,
                 type_: None,
+                feature: None,
             })),
             Path::new("src/Foo.res"),
             false,
@@ -1724,6 +1941,7 @@ pub mod tests {
                 dir: String::from("src"),
                 subdirs: None,
                 type_: Some(String::from("dev")),
+                feature: None,
             })]),
             Path::new("src/Foo.res"),
             true,
@@ -1746,6 +1964,7 @@ pub mod tests {
                 dir: String::from("src"),
                 subdirs: Some(Subdirs::Recurse(true)),
                 type_: Some(String::from("dev")),
+                feature: None,
             })]),
             Path::new("src/bar/Foo.res"),
             true,
@@ -1761,8 +1980,10 @@ pub mod tests {
                     dir: String::from("bar"),
                     subdirs: None,
                     type_: None,
+                    feature: None,
                 })])),
                 type_: Some(String::from("dev")),
+                feature: None,
             })]),
             Path::new("src/bar/Foo.res"),
             true,
@@ -1776,6 +1997,7 @@ pub mod tests {
                 dir: String::from("src"),
                 subdirs: Some(Subdirs::Qualified(vec![Source::Shorthand(String::from("bar"))])),
                 type_: Some(String::from("dev")),
+                feature: None,
             })]),
             Path::new("src/bar/Foo.res"),
             true,
@@ -1903,5 +2125,218 @@ pub mod tests {
                 .get_deprecations()
                 .contains(&DeprecationWarning::BsconfigJson)
         );
+    }
+
+    #[test]
+    fn test_source_with_feature_tag_parses() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": [
+                { "dir": "src" },
+                { "dir": "src-native", "feature": "native" }
+            ]
+        }
+        "#;
+
+        let config = Config::new_from_json_string(json).expect("a valid json string");
+        if let Some(OneOrMore::Multiple(sources)) = &config.sources {
+            let native = sources[1].to_qualified_without_children(None);
+            assert_eq!(native.feature, Some(String::from("native")));
+        } else {
+            unreachable!()
+        }
+    }
+
+    #[test]
+    fn test_features_map_parses() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": { "dir": "src" },
+            "features": {
+                "full": ["native", "experimental"],
+                "native": [],
+                "experimental": []
+            }
+        }
+        "#;
+
+        let config = Config::new_from_json_string(json).expect("a valid json string");
+        let features = config.features.expect("features map should parse");
+        assert_eq!(
+            features.get("full"),
+            Some(&vec!["native".to_string(), "experimental".to_string()])
+        );
+        assert_eq!(features.get("native"), Some(&vec![]));
+    }
+
+    #[test]
+    fn test_dependency_qualified_form_parses() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": { "dir": "src" },
+            "dependencies": [
+                "@plain/dep",
+                { "name": "@tagged/dep", "features": ["native"] }
+            ]
+        }
+        "#;
+
+        let config = Config::new_from_json_string(json).expect("a valid json string");
+        let deps = config.dependencies.expect("dependencies should parse");
+        assert_eq!(deps.len(), 2);
+        assert_eq!(deps[0], Dependency::Shorthand("@plain/dep".to_string()));
+        match &deps[1] {
+            Dependency::Qualified(q) => {
+                assert_eq!(q.name, "@tagged/dep");
+                assert_eq!(q.features, Some(vec!["native".to_string()]));
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn test_is_feature_enabled_untagged_is_always_active() {
+        let source = PackageSource {
+            dir: "src".into(),
+            subdirs: None,
+            type_: None,
+            feature: None,
+        };
+        let empty: AHashSet<String> = AHashSet::new();
+        assert!(source.is_feature_enabled(&empty));
+    }
+
+    #[test]
+    fn test_is_feature_enabled_tagged_requires_membership() {
+        let source = PackageSource {
+            dir: "src-native".into(),
+            subdirs: None,
+            type_: None,
+            feature: Some("native".to_string()),
+        };
+        let mut active: AHashSet<String> = AHashSet::new();
+        assert!(!source.is_feature_enabled(&active));
+        active.insert("native".to_string());
+        assert!(source.is_feature_enabled(&active));
+    }
+
+    #[test]
+    fn test_resolve_active_features_expands_transitive() {
+        let mut map: HashMap<String, Vec<String>> = HashMap::new();
+        map.insert(
+            "full".to_string(),
+            vec!["native".to_string(), "experimental".to_string()],
+        );
+        map.insert("native".to_string(), vec![]);
+        map.insert("experimental".to_string(), vec![]);
+
+        let mut requested: AHashSet<String> = AHashSet::new();
+        requested.insert("full".to_string());
+
+        let closure = resolve_active_features(&requested, Some(&map)).unwrap();
+        assert!(closure.contains("full"));
+        assert!(closure.contains("native"));
+        assert!(closure.contains("experimental"));
+    }
+
+    #[test]
+    fn test_resolve_active_features_no_map_is_identity() {
+        let mut requested: AHashSet<String> = AHashSet::new();
+        requested.insert("native".to_string());
+        let closure = resolve_active_features(&requested, None).unwrap();
+        assert_eq!(closure.len(), 1);
+        assert!(closure.contains("native"));
+    }
+
+    #[test]
+    fn test_resolve_active_features_detects_cycle() {
+        let mut map: HashMap<String, Vec<String>> = HashMap::new();
+        map.insert("a".to_string(), vec!["b".to_string()]);
+        map.insert("b".to_string(), vec!["a".to_string()]);
+
+        let mut requested: AHashSet<String> = AHashSet::new();
+        requested.insert("a".to_string());
+
+        let err = resolve_active_features(&requested, Some(&map))
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("Cycle detected"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn test_collect_declared_features_unions_map_and_tags() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": [
+                { "dir": "src" },
+                { "dir": "src-a", "feature": "a" },
+                { "dir": "src-undeclared", "feature": "leaf-only" }
+            ],
+            "features": {
+                "bundle": ["a", "b"]
+            }
+        }
+        "#;
+
+        let config = Config::new_from_json_string(json).expect("a valid json string");
+        let declared = config.collect_declared_features();
+        assert!(declared.contains("bundle"));
+        assert!(declared.contains("a"));
+        assert!(declared.contains("b"));
+        assert!(declared.contains("leaf-only"));
+    }
+
+    #[test]
+    fn test_feature_cascades_to_qualified_subdirs() {
+        // Parent source is tagged; a nested shorthand subdir should inherit the feature.
+        let parent = Source::Qualified(PackageSource {
+            dir: String::from("src"),
+            subdirs: Some(Subdirs::Qualified(vec![Source::Shorthand(String::from(
+                "native",
+            ))])),
+            type_: None,
+            feature: Some(String::from("native")),
+        });
+        let child_source = match &parent {
+            Source::Qualified(ps) => match &ps.subdirs {
+                Some(Subdirs::Qualified(children)) => children[0].clone(),
+                _ => unreachable!(),
+            },
+            _ => unreachable!(),
+        };
+        let propagated = child_source
+            .set_type(parent.get_type())
+            .set_feature(parent.get_feature());
+        assert_eq!(propagated.get_feature(), Some(String::from("native")));
+    }
+
+    #[test]
+    fn test_feature_cascade_does_not_overwrite_explicit_child() {
+        let child = Source::Qualified(PackageSource {
+            dir: String::from("nested"),
+            subdirs: None,
+            type_: None,
+            feature: Some(String::from("experimental")),
+        });
+        let propagated = child.set_feature(Some(String::from("native")));
+        assert_eq!(propagated.get_feature(), Some(String::from("experimental")));
+    }
+
+    #[test]
+    fn test_dependency_helpers_return_name_and_features() {
+        let shorthand = Dependency::Shorthand("@a/b".into());
+        assert_eq!(shorthand.name(), "@a/b");
+        assert!(shorthand.features().is_none());
+
+        let qualified = Dependency::Qualified(QualifiedDependency {
+            name: "@a/b".into(),
+            features: Some(vec!["x".into()]),
+        });
+        assert_eq!(qualified.name(), "@a/b");
+        assert_eq!(qualified.features().cloned(), Some(vec!["x".to_string()]));
     }
 }

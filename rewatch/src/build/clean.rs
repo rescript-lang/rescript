@@ -335,7 +335,10 @@ pub fn cleanup_after_build(build_state: &BuildCommandState) {
 pub fn clean(path: &Path, show_progress: bool, plain_output: bool, prod: bool) -> Result<()> {
     let project_context = ProjectContext::new(path)?;
     let compiler_info = build::get_compiler_info(&project_context)?;
-    let packages = packages::make(&None, &project_context, show_progress, prod)?;
+    // `clean` always acts on the full set of source directories regardless of which features are
+    // active. We explicitly pass `None` so every tagged source folder is included and its
+    // artifacts can be removed, even for features the user hasn't enabled for this build.
+    let packages = packages::make(&None, &project_context, show_progress, prod, None)?;
 
     let timing_clean_compiler_assets = Instant::now();
     if !plain_output && show_progress {
