@@ -1,6 +1,6 @@
 exception Stack_overflow
 exception Sys_error(string)
-let _ = (Js.Int.toString, Js.Float.isNaN)
+let _ = (Int.toString, Float.isNaN)
 
 /* make sure exception runtime is there */
 let f = x =>

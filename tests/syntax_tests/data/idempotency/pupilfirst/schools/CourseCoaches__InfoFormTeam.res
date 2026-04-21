@@ -23,13 +23,13 @@ let deleteTeamEnrollment = (team, coach, setDeleting, removeTeamEnrollmentCB, ev
       setDeleting(_ => true)
       DeleteCoachTeamEnrollmentQuery.make(~teamId=Team.id(team), ~coachId=CourseCoach.id(coach), ())
       ->GraphqlQuery.sendQuery
-      ->Js.Promise.then_(response => {
+      ->Promise.then(response => {
         if response["deleteCoachTeamEnrollment"]["success"] {
           removeTeamEnrollmentCB(Team.id(team))
         } else {
           setDeleting(_ => false)
         }
-        response->Js.Promise.resolve
+        response->Promise.resolve
       })
       ->ignore
     },
@@ -47,9 +47,8 @@ let make = (~team, ~coach, ~removeTeamEnrollmentCB) => {
       <div className="font-semibold w-1/2">
         {team
         ->Team.students
-        ->Js.Array.mapi((student, index) =>
-          <div className="p-1" key={index->string_of_int}> {student->str} </div>
-        )
+        ->Array.mapWithIndex((student, index) =>
+          <div className="p-1" key={index->string_of_int}> {student->str} </div>)
         ->React.array}
       </div>
       {team->Team.students->Array.length > 1

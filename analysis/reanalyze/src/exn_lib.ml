@@ -195,7 +195,6 @@ let raises_lib_table : (Name.t, Exceptions.t) Hashtbl.t =
     ("Error", stdlib_error);
     ("Exn", stdlib_exn);
     ("JsError", stdlib_js_error);
-    ("Js.Json", [("parseExn", [js_exn])]);
     ("JSON", stdlib_json);
     ("Json_decode", bs_json);
     ("Json.Decode", bs_json);

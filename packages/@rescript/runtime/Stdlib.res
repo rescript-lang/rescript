@@ -2,6 +2,7 @@ include Stdlib_Global
 
 module Array = Stdlib_Array
 module BigInt = Stdlib_BigInt
+module Blob = Stdlib_Blob
 module Bool = Stdlib_Bool
 module Console = Stdlib_Console
 module DataView = Stdlib_DataView
@@ -9,6 +10,7 @@ module Date = Stdlib_Date
 module Dict = Stdlib_Dict
 module Exn = Stdlib_Exn
 module Error = Stdlib_Error
+module File = Stdlib_File
 module Float = Stdlib_Float
 module Int = Stdlib_Int
 module Intl = Stdlib_Intl

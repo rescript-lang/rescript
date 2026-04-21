@@ -55,7 +55,7 @@ let f = {
     let arr = init(10000000, i => float_of_int(i))
     let b = arr->map(i => i +. i -. 1.)
     let v = b->reduceReverse(0., \"+.")
-    v->Js.Float.toString->Console.log
+    v->Float.toString->Console.log
   }
 }
 
@@ -64,7 +64,7 @@ let f2 = () => {
   let arr = init(30_000_000, i => float_of_int(i))
   let b = arr->map(i => i +. i -. 1.)
   let v = b->reduceReverse(0., \"+.")
-  v->Js.Float.toString->Console.log
+  v->Float.toString->Console.log
 }
 
 /* let time label f = */

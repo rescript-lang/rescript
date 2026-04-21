@@ -48,7 +48,7 @@ let closeOverlay = course =>
 
 let loadTargetDetails = (target, send, ()) => {
   {
-    open Js.Promise
+    open Promise
     Fetch.fetch("/targets/" ++ ((target->Target.id) ++ "/details_v2"))
     ->then_(Fetch.Response.json)
     ->then_(json => send(SetTargetDetails(json->TargetDetails.decode))->resolve)
@@ -90,7 +90,7 @@ let tabClasses = (selection, tab) =>
       : " bg-gray-100 hover:text-primary-400 hover:bg-gray-200 cursor-pointer"
   )
 
-let scrollCompleteButtonIntoViewEventually = () => Js.Global.setTimeout(() => {
+let scrollCompleteButtonIntoViewEventually = () => setTimeout(() => {
     let element = Webapi.Dom.document->Webapi.Dom.Document.getElementById("auto-verify-target")
     switch element {
     | Some(e) =>
@@ -180,7 +180,7 @@ let addVerifiedSubmission = (target, state, send, addSubmissionCB, submission) =
 }
 
 let targetStatusClass = (prefix, targetStatus) =>
-  prefix ++ (targetStatus->TargetStatus.statusToString->Js.String.toLowerCase)
+  prefix ++ (targetStatus->TargetStatus.statusToString->String.toLowerCase)
 
 let targetStatusClasses = targetStatus =>
   "curriculum__target-status bg-white text-xs mt-2 md:mt-0 py-1 px-2 md:px-4 " ++

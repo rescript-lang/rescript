@@ -1,8 +1,8 @@
 open Mocha
 open Test_utils
 
-let ff = v => Js.Float.toString(v)
-let f = v => Js.Int.toString(v)
+let ff = v => Float.toString(v)
+let f = v => Int.toString(v)
 
 describe(__MODULE__, () => {
   test("infinity to string", () => eq(__LOC__, ff(infinity), "Infinity"))

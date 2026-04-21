@@ -13,8 +13,8 @@ let foo = () => {
         // Comment right in the pattern
         "one",
     } =>
-    Js.log("one")
-  | _ => Js.log("not one")
+    Console.log("one")
+  | _ => Console.log("not one")
   }
 
   let _ = switch someDict {
@@ -28,8 +28,8 @@ let foo = () => {
       "fooooour": 4,
       "fiiiive": 5,
     } =>
-    Js.log("one")
-  | _ => Js.log("not one")
+    Console.log("one")
+  | _ => Console.log("not one")
   }
 
   let _ = switch someDict {
@@ -43,7 +43,7 @@ let foo = () => {
       "fooooour": 4,
       "fiiiive": 5,
     } =>
-    Js.log("one")
-  | _ => Js.log("not one")
+    Console.log("one")
+  | _ => Console.log("not one")
   }
 }

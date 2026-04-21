@@ -6,11 +6,11 @@ let _ = <div className={js|menu|js}></div>
 let _ = <div className={js|menu|js}></div>
 let _ =
   <div className={js|menu|js} onClick=((fun [arity:1]_ ->
-                                          Js.log {js|click|js})
+                                          Console.log {js|click|js})
   [@res.braces ])></div>
 let _ =
   <div className={js|menu|js} onClick=((fun [arity:1]_ ->
-                                          Js.log {js|click|js})
+                                          Console.log {js|click|js})
   [@res.braces ])></div>
 let _ = <Navbar />
 let _ = <Navbar></Navbar>
@@ -172,7 +172,7 @@ let _ =
                    handleChange eventWithLongIdent)
   [@res.braces ]) />
 let _ =
-  <div onClick=((fun [arity:1]event -> ((Js.log event; handleChange event)
+  <div onClick=((fun [arity:1]event -> ((Console.log event; handleChange event)
                    [@res.braces ]))
   [@res.braces ]) />
 let _ =
@@ -275,10 +275,10 @@ let _ =
                    [@res.braces ])</option>)))
             -> Array.of_list)
            -> ReasonReact.array)[@res.braces ])</div>
-;;<div>((Js.log (a <= 10))[@res.braces ])</div>
-;;<div><div>((Js.log (a <= 10))[@res.braces ])</div></div>
-;;<div><div onClick=((fun [arity:1]_ -> Js.log (a <= 10))
-  [@res.braces ])><div>((Js.log (a <= 10))[@res.braces ])</div></div></div>
+;;<div>((Console.log (a <= 10))[@res.braces ])</div>
+;;<div><div>((Console.log (a <= 10))[@res.braces ])</div></div>
+;;<div><div onClick=((fun [arity:1]_ -> Console.log (a <= 10))
+  [@res.braces ])><div>((Console.log (a <= 10))[@res.braces ])</div></div></div>
 let _ = <A x={js|y|js} {...str} />
 let _ = <p-x-y></p-x-y>
 let _ = <V.x-y></V.x-y>

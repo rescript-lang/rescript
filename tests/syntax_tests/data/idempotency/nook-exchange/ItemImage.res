@@ -83,7 +83,7 @@ let make = (
   <div className={Cn.make(list{Styles.root, Cn.unpack(className)})}>
     {numCollapsedVariants > 1
       ? <button
-          onClick={_ => setOffset(offset => Js.Math.max_int(offset - 1, 0))}
+          onClick={_ => setOffset(offset => Math.Int.max(offset - 1, 0))}
           className={Cn.make(list{
             Styles.variantButton,
             Styles.variantButtonLeft,
@@ -126,7 +126,7 @@ let make = (
     </div>
     {numCollapsedVariants > 1
       ? <button
-          onClick={_ => setOffset(offset => Js.Math.min_int(offset + 1, numCollapsedVariants - 1))}
+          onClick={_ => setOffset(offset => Math.Int.min(offset + 1, numCollapsedVariants - 1))}
           className={Cn.make(list{
             Styles.variantButton,
             Styles.variantButtonRight,

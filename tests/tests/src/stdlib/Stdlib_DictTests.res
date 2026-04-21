@@ -22,7 +22,7 @@ module PatternMatching = {
     switch dict {
     | dict{"one": 1, "three": 3, "four": 4} =>
       // Make sure that the dict is of correct type
-      dict->Js.Dict.set("five", 5)
+      dict->Dict.set("five", 5)
     | dict{"two": 1} => Console.log("two")
     | _ => Console.log("not one")
     }

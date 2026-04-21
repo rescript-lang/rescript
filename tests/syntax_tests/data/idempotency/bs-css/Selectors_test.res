@@ -15,7 +15,7 @@ open Jest
 open Expect
 open CssForTest
 
-let toBeJson = x => Expect.toBe(x->Js.Json.stringifyAny)
+let toBeJson = x => Expect.toBe(x->JSON.stringifyAny)
 let r = x => toJson(list{x}) /* simple rule for more readable tests */
 let ruleSelector = display(block)
 let ruleJson = {"display": "block"}
@@ -55,7 +55,7 @@ describe("Pseudo classes", () => {
         r(target(list{ruleSelector})),
         r(valid(list{ruleSelector})),
         r(visited(list{ruleSelector})),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson((
       {":active": ruleJson},
       {":checked": ruleJson},
@@ -96,12 +96,12 @@ describe("Pseudo classes", () => {
       (
         r(host(list{ruleSelector})),
         r(host(~selector=".special-custom-element", list{ruleSelector})),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson(({":host": ruleJson}, {":host(.special-custom-element)": ruleJson}))
   )
 
   test("test not", () =>
-    expect(r(not__("p", list{ruleSelector}))->Js.Json.stringifyAny)->toBeJson({
+    expect(r(not__("p", list{ruleSelector}))->JSON.stringifyAny)->toBeJson({
       ":not(p)": ruleJson,
     })
   )
@@ -113,7 +113,7 @@ describe("Pseudo classes", () => {
         r(nthChild(#even, list{ruleSelector})),
         r(nthChild(#n(2), list{ruleSelector})),
         r(nthChild(#add(3, 4), list{ruleSelector})),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson((
       {":nth-child(odd)": ruleJson},
       {":nth-child(even)": ruleJson},
@@ -129,7 +129,7 @@ describe("Pseudo classes", () => {
         r(nthLastChild(#even, list{ruleSelector})),
         r(nthLastChild(#n(2), list{ruleSelector})),
         r(nthLastChild(#add(3, 4), list{ruleSelector})),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson((
       {":nth-last-child(odd)": ruleJson},
       {":nth-last-child(even)": ruleJson},
@@ -145,7 +145,7 @@ describe("Pseudo classes", () => {
         r(nthLastOfType(#even, list{ruleSelector})),
         r(nthLastOfType(#n(2), list{ruleSelector})),
         r(nthLastOfType(#add(3, 4), list{ruleSelector})),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson((
       {":nth-last-of-type(odd)": ruleJson},
       {":nth-last-of-type(even)": ruleJson},
@@ -161,7 +161,7 @@ describe("Pseudo classes", () => {
         r(nthOfType(#even, list{ruleSelector})),
         r(nthOfType(#n(2), list{ruleSelector})),
         r(nthOfType(#add(3, 4), list{ruleSelector})),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson((
       {":nth-of-type(odd)": ruleJson},
       {":nth-of-type(even)": ruleJson},
@@ -181,7 +181,7 @@ describe("Pseudo classes", () =>
         r(firstLine(list{ruleSelector})),
         r(placeholder(list{ruleSelector})),
         r(selection(list{ruleSelector})),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson((
       {"::after": ruleJson},
       {"::before": ruleJson},
@@ -201,7 +201,7 @@ describe("Combinators", () =>
         r(children(list{ruleSelector})),
         r(siblings(list{ruleSelector})),
         r(directSibling(list{ruleSelector})),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson(({" > li": ruleJson}, {" > *": ruleJson}, {" ~ ": ruleJson}, {" + ": ruleJson}))
   )
 )

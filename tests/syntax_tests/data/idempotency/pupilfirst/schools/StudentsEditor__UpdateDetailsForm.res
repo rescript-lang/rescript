@@ -15,7 +15,7 @@ type state = {
   title: string,
   affiliation: string,
   saving: bool,
-  accessEndsAt: option<Js.Date.t>,
+  accessEndsAt: option<Date.t>,
 }
 
 type action =
@@ -29,7 +29,7 @@ type action =
   | UpdateTitle(string)
   | UpdateAffiliation(string)
   | UpdateSaving(bool)
-  | UpdateAccessEndsAt(option<Js.Date.t>)
+  | UpdateAccessEndsAt(option<Date.t>)
 
 let str = ReasonReact.string
 
@@ -51,7 +51,7 @@ let handleErrorCB = (send, ()) => send(UpdateSaving(false))
 let successMessage = (accessEndsAt, isSingleFounder) =>
   switch accessEndsAt {
   | Some(date) =>
-    switch (date->DateFns.isBefore(Js.Date.make()), isSingleFounder) {
+    switch (date->DateFns.isBefore(Date.make()), isSingleFounder) {
     | (true, true) => "Student has been updated, and moved to list of inactive students"
     | (true, false) => "Team has been updated, and moved to list of inactive students"
     | (false, true)
@@ -62,7 +62,7 @@ let successMessage = (accessEndsAt, isSingleFounder) =>
 
 let enrolledCoachIds = teamCoaches =>
   teamCoaches
-  ->Js.Array.filter(((_, _, selected)) => selected == true)
+  ->Array.filter(((_, _, selected)) => selected == true)
   ->Array.map(((key, _, _)) => key)
 
 let handleResponseCB = (updateFormCB, state, student, oldTeam, _json) => {
@@ -98,9 +98,9 @@ let handleResponseCB = (updateFormCB, state, student, oldTeam, _json) => {
 
 let updateStudent = (student, state, send, responseCB) => {
   send(UpdateSaving(true))
-  let payload = Js.Dict.empty()
+  let payload = Dict.make()
 
-  Js.Dict.set(payload, "authenticity_token", AuthenticityToken.fromHead()->Js.Json.string)
+  Dict.set(payload, "authenticity_token", AuthenticityToken.fromHead()->JSON.string)
 
   let updatedStudent = Student.updateInfo(
     ~name=state.name,
@@ -109,8 +109,8 @@ let updateStudent = (student, state, send, responseCB) => {
     ~affiliation=Some(state.affiliation),
     ~student,
   )
-  Js.Dict.set(payload, "founder", Student.encode(state.teamName, updatedStudent))
-  Js.Dict.set(
+  Dict.set(payload, "founder", Student.encode(state.teamName, updatedStudent))
+  Dict.set(
     payload,
     "tags",
     state.tagsToApply->{
@@ -118,7 +118,7 @@ let updateStudent = (student, state, send, responseCB) => {
       array(string)
     },
   )
-  Js.Dict.set(
+  Dict.set(
     payload,
     "coach_ids",
     state.teamCoaches->{
@@ -127,11 +127,11 @@ let updateStudent = (student, state, send, responseCB) => {
     },
   )
 
-  Js.Dict.set(
+  Dict.set(
     payload,
     "access_ends_at",
     state.accessEndsAt
-    ->OptionUtils.map(Js.Date.toString)
+    ->OptionUtils.map(Date.toString)
     ->OptionUtils.default("")
     ->{
       open Json.Encode
@@ -153,7 +153,7 @@ let handleTeamCoachList = (schoolCoaches, team) => {
   schoolCoaches->Array.map(coach => {
     let coachId = coach->Coach.id
     let selected =
-      selectedTeamCoachIds->Js.Array.findIndex(selectedCoachId => coachId == selectedCoachId) > -1
+      selectedTeamCoachIds->Array.findIndex(selectedCoachId => coachId == selectedCoachId) > -1
 
     (coach->Coach.id, coach->Coach.name, selected)
   })
@@ -171,13 +171,13 @@ module SelectablePrerequisiteTargets = {
 let setTeamCoachSearch = (send, value) => send(UpdateCoachSearchInput(value))
 
 let selectTeamCoach = (send, state, coach) => {
-  let updatedTeamCoaches = state.teamCoaches->Js.Array.concat([coach->Coach.id])
+  let updatedTeamCoaches = state.teamCoaches->Array.concat([coach->Coach.id])
   send(UpdateCoachesList(updatedTeamCoaches))
 }
 
 let deSelectTeamCoach = (send, state, coach) => {
   let updatedTeamCoaches =
-    state.teamCoaches->Js.Array.filter(coachId => coachId != Coach.id(coach))
+    state.teamCoaches->Array.filter(coachId => coachId != Coach.id(coach))
   send(UpdateCoachesList(updatedTeamCoaches))
 }
 
@@ -186,12 +186,12 @@ module MultiselectForTeamCoaches = MultiselectInline.Make(SelectablePrerequisite
 let teamCoachesEditor = (courseCoaches, state, send) => {
   let selected =
     courseCoaches
-    ->Js.Array.filter(coach => state.teamCoaches->Array.mem(Coach.id(coach)))
+    ->Array.filter(coach => state.teamCoaches->Array.mem(Coach.id(coach)))
     ->Array.map(coach => SelectablePrerequisiteTargets.make(coach))
 
   let unselected =
     courseCoaches
-    ->Js.Array.filter(coach => !(state.teamCoaches->Array.mem(Coach.id(coach))))
+    ->Array.filter(coach => !(state.teamCoaches->Array.mem(Coach.id(coach))))
     ->Array.map(coach => SelectablePrerequisiteTargets.make(coach))
   <div className="mt-2">
     <MultiselectForTeamCoaches
@@ -231,7 +231,7 @@ let reducer = (state, action) =>
     }
   | RemoveTag(tag) => {
       ...state,
-      tagsToApply: state.tagsToApply->Js.Array.filter(t => t !== tag),
+      tagsToApply: state.tagsToApply->Array.filter(t => t !== tag),
     }
   | UpdateCoachesList(teamCoaches) => {...state, teamCoaches: teamCoaches}
   | UpdateCoachSearchInput(teamCoachSearchInput) => {
@@ -342,9 +342,8 @@ let make = (~student, ~team, ~studentTags, ~courseCoaches, ~updateFormCB) => {
       <div className="mt-5">
         <div className="mb-2 text-xs font-semibold"> {"Tags applied:"->str} </div>
         <StudentsEditor__SearchableTagList
-          unselectedTags={studentTags->Js.Array.filter(tag =>
-            !(state.tagsToApply->Array.mem(tag))
-          )}
+          unselectedTags={studentTags->Array.filter(tag =>
+            !(state.tagsToApply->Array.mem(tag)))}
           selectedTags=state.tagsToApply
           addTagCB={tag => send(AddTag(tag))}
           removeTagCB={tag => send(RemoveTag(tag))}

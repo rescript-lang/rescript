@@ -45,7 +45,7 @@ let api = Restorative.createStore(
         LoggedIn({
           ...user,
           followeeIds: user.followeeIds->Belt.Option.map(followeeIds =>
-            Js.Array.includes(followeeId, followeeIds)
+            Array.includes(followeeIds, followeeId)
               ? followeeIds
               : followeeIds->Belt.Array.concat([followeeId])
           ),
@@ -75,7 +75,7 @@ let useMe = () =>
 let useItem = (~itemId, ~variation) => {
   let selector = React.useCallback2((state: state) =>
     switch state {
-    | LoggedIn(user) => user.items->Js.Dict.get(User.getItemKey(~itemId, ~variation))
+    | LoggedIn(user) => user.items->Dict.get(User.getItemKey(~itemId, ~variation))
     | _ => None
     }
   , (itemId, variation))
@@ -95,7 +95,7 @@ let getUser = () =>
   }
 let getItem = (~itemId, ~variation) =>
   switch api.getState() {
-  | LoggedIn(user) => user.items->Js.Dict.get(User.getItemKey(~itemId, ~variation))
+  | LoggedIn(user) => user.items->Dict.get(User.getItemKey(~itemId, ~variation))
   | _ => None
   }
 
@@ -124,7 +124,7 @@ let handleServerResponse = (url, responseResult) =>
       ~eventName="Error Dialog Shown",
       ~eventProperties={
         "url": url,
-        "errorResponse": Js.Json.stringifyAny(
+        "errorResponse": JSON.stringifyAny(
           switch responseResult {
           | Ok(response) => {
               "status": Fetch.Response.status(response),
@@ -142,7 +142,7 @@ let makeAuthenticatedPostRequest = (~url, ~bodyJson) =>
     url,
     Fetch.RequestInit.make(
       ~method_=Post,
-      ~body=Fetch.BodyInit.make(Js.Json.stringify(Json.Encode.object_(bodyJson))),
+      ~body=Fetch.BodyInit.make(JSON.stringify(Json.Encode.object_(bodyJson))),
       ~headers=Fetch.HeadersInit.make({
         "X-Client-Version": Constants.gitCommitRef,
         "Content-Type": "application/json",
@@ -163,8 +163,8 @@ let setItemStatus = (~itemId: int, ~variation: int, ~status: User.itemStatus) =>
   }
   let user = getUser()
   let itemKey = User.getItemKey(~itemId, ~variation)
-  let timeUpdated = Some(Js.Date.now() /. 1000.)
-  let userItem = switch user.items->Js.Dict.get(itemKey) {
+  let timeUpdated = Some(Date.now() /. 1000.)
+  let userItem = switch user.items->Dict.get(itemKey) {
   | Some(item) => {...item, status: status, timeUpdated: timeUpdated}
   | None => {status: status, note: "", priorityTimestamp: None, timeUpdated: timeUpdated}
   }
@@ -172,7 +172,7 @@ let setItemStatus = (~itemId: int, ~variation: int, ~status: User.itemStatus) =>
     ...user,
     items: {
       let clone = Utils.cloneJsDict(user.items)
-      clone->Js.Dict.set(itemKey, userItem)
+      clone->Dict.set(itemKey, userItem)
       clone
     },
   }
@@ -186,9 +186,9 @@ let setItemStatus = (~itemId: int, ~variation: int, ~status: User.itemStatus) =>
       ~status,
     )
     handleServerResponse("/@me/items/status", responseResult)
-    Promise.resolved()
+    Promise.resolve()
   })->ignore
-  if numItemUpdatesLogged.contents < 2 || updatedUser.items->Js.Dict.keys->Js.Array.length < 4 {
+  if numItemUpdatesLogged.contents < 2 || updatedUser.items->Dict.keysToArray->Array.length < 4 {
     Analytics.Amplitude.logEventWithProperties(
       ~eventName="Item Status Updated",
       ~eventProperties={
@@ -199,7 +199,7 @@ let setItemStatus = (~itemId: int, ~variation: int, ~status: User.itemStatus) =>
     )
     numItemUpdatesLogged := numItemUpdatesLogged.contents + 1
   }
-  Analytics.Amplitude.setItemCount(~itemCount=Js.Dict.keys(updatedUser.items)->Js.Array.length)
+  Analytics.Amplitude.setItemCount(~itemCount=Dict.keysToArray(updatedUser.items)->Array.length)
 }
 
 let setItemStatusBatch = (~items: array<(int, int)>, ~status) => {
@@ -208,11 +208,11 @@ let setItemStatusBatch = (~items: array<(int, int)>, ~status) => {
     ...user,
     items: {
       let clone = Utils.cloneJsDict(user.items)
-      items->Js.Array.forEach(((itemId, variant)) => {
+      items->Array.forEach(((itemId, variant)) => {
         let itemKey = User.getItemKey(~itemId, ~variation=variant)
-        clone->Js.Dict.set(
+        clone->Dict.set(
           itemKey,
-          switch user.items->Js.Dict.get(itemKey) {
+          switch user.items->Dict.get(itemKey) {
           | Some(item) => {...item, status: status}
           | None => {
               status: status,
@@ -237,13 +237,13 @@ let setItemStatusBatch = (~items: array<(int, int)>, ~status) => {
     Analytics.Amplitude.logEventWithProperties(
       ~eventName="Item Status Batch Updated",
       ~eventProperties={
-        "numItems": Js.Array.length(items),
+        "numItems": Array.length(items),
         "status": User.itemStatusToJs(status),
       },
     )
-    Promise.resolved()
+    Promise.resolve()
   })->ignore
-  Analytics.Amplitude.setItemCount(~itemCount=Js.Dict.keys(updatedUser.items)->Js.Array.length)
+  Analytics.Amplitude.setItemCount(~itemCount=Dict.keysToArray(updatedUser.items)->Array.length)
 }
 
 let setItemNote = (~itemId: int, ~variation: int, ~note: string) => {
@@ -254,14 +254,14 @@ let setItemNote = (~itemId: int, ~variation: int, ~note: string) => {
   let user = getUser()
   let itemKey = User.getItemKey(~itemId, ~variation)
   let userItem = {
-    ...Belt.Option.getExn(user.items->Js.Dict.get(itemKey)),
+    ...Belt.Option.getExn(user.items->Dict.get(itemKey)),
     note: note,
   }
   let updatedUser = {
     ...user,
     items: {
       let clone = Utils.cloneJsDict(user.items)
-      clone->Js.Dict.set(itemKey, userItem)
+      clone->Dict.set(itemKey, userItem)
       clone
     },
   }
@@ -276,9 +276,9 @@ let setItemNote = (~itemId: int, ~variation: int, ~note: string) => {
       ~note,
     )
     handleServerResponse("/@me/items/note", responseResult)
-    Promise.resolved()
+    Promise.resolve()
   })->ignore
-  if numItemUpdatesLogged.contents < 2 || updatedUser.items->Js.Dict.keys->Js.Array.length < 4 {
+  if numItemUpdatesLogged.contents < 2 || updatedUser.items->Dict.keysToArray->Array.length < 4 {
     Analytics.Amplitude.logEventWithProperties(
       ~eventName="Item Note Updated",
       ~eventProperties={
@@ -296,14 +296,14 @@ let setItemPriority = (~itemId: int, ~variant: int, ~isPriority: bool) => {
   let user = getUser()
   let itemKey = User.getItemKey(~itemId, ~variation=variant)
   let userItem = {
-    ...Belt.Option.getExn(user.items->Js.Dict.get(itemKey)),
-    priorityTimestamp: isPriority ? Some(Js.Date.now()) : None,
+    ...Belt.Option.getExn(user.items->Dict.get(itemKey)),
+    priorityTimestamp: isPriority ? Some(Date.now()) : None,
   }
   let updatedUser = {
     ...user,
     items: {
       let clone = Utils.cloneJsDict(user.items)
-      clone->Js.Dict.set(itemKey, userItem)
+      clone->Dict.set(itemKey, userItem)
       clone
     },
   }
@@ -317,7 +317,7 @@ let setItemPriority = (~itemId: int, ~variant: int, ~isPriority: bool) => {
       ~isPriority,
     )
     handleServerResponse("/@me/items/priority", responseResult)
-    Promise.resolved()
+    Promise.resolve()
   })->ignore
   if !didLogItemPriority.contents {
     Analytics.Amplitude.logEventWithProperties(
@@ -336,7 +336,7 @@ let numItemRemovesLogged = ref(0)
 let removeItem = (~itemId, ~variation) => {
   let user = getUser()
   let key = User.getItemKey(~itemId, ~variation)
-  if user.items->Js.Dict.get(key)->Option.isSome {
+  if user.items->Dict.get(key)->Option.isSome {
     let updatedUser = {
       ...user,
       items: {
@@ -362,9 +362,9 @@ let removeItem = (~itemId, ~variation) => {
         ~variant=variation,
       )
       handleServerResponse("/@me/items/remove", responseResult)
-      Promise.resolved()
+      Promise.resolve()
     })->ignore
-    Analytics.Amplitude.setItemCount(~itemCount=Js.Dict.keys(updatedUser.items)->Js.Array.length)
+    Analytics.Amplitude.setItemCount(~itemCount=Dict.keysToArray(updatedUser.items)->Array.length)
   }
 }
 
@@ -374,7 +374,7 @@ let removeItems = (~items: array<(int, int)>) => {
     ...user,
     items: {
       let clone = Utils.cloneJsDict(user.items)
-      items->Js.Array.forEach(((itemId, variant)) => {
+      items->Array.forEach(((itemId, variant)) => {
         let key = User.getItemKey(~itemId, ~variation=variant)
         Utils.deleteJsDictKey(clone, key)
       })
@@ -387,11 +387,11 @@ let removeItems = (~items: array<(int, int)>) => {
     handleServerResponse("/@me/items/batch/remove", responseResult)
     Analytics.Amplitude.logEventWithProperties(
       ~eventName="Item Batch Removed",
-      ~eventProperties={"numItems": Js.Array.length(items)},
+      ~eventProperties={"numItems": Array.length(items)},
     )
-    Promise.resolved()
+    Promise.resolve()
   })->ignore
-  Analytics.Amplitude.setItemCount(~itemCount=Js.Dict.keys(updatedUser.items)->Js.Array.length)
+  Analytics.Amplitude.setItemCount(~itemCount=Dict.keysToArray(updatedUser.items)->Array.length)
 }
 
 let updateProfileText = (~profileText) => {
@@ -405,7 +405,7 @@ let updateProfileText = (~profileText) => {
       ~profileText,
     )
     handleServerResponse("/@me/profileText", responseResult)
-    Promise.resolved()
+    Promise.resolve()
   })->ignore
   Analytics.Amplitude.logEventWithProperties(
     ~eventName="Profile Text Updated",
@@ -443,7 +443,7 @@ let patchMe = (~username=?, ~newPassword=?, ~email=?, ~oldPassword=?, ()) => {
           "email": email,
         },
       )
-      Promise.resolved(Ok())
+      Promise.resolve(Ok())
     } else {
       %Repromise.JsExn({
         let error = Fetch.Response.text(response)
@@ -451,7 +451,7 @@ let patchMe = (~username=?, ~newPassword=?, ~email=?, ~oldPassword=?, ()) => {
           ~eventName="Account Update Failed",
           ~eventProperties={"error": error},
         )
-        Promise.resolved(Error(error))
+        Promise.resolve(Error(error))
       })
     }
   })
@@ -466,10 +466,10 @@ let toggleCatalogCheckboxSetting = (~enabled) => {
       ~userId=user.id,
       ~sessionId=sessionId.contents,
       ~settingKey="enableCatalog",
-      ~settingValue=Js.Json.boolean(enabled),
+      ~settingValue=JSON.boolean(enabled),
     )
     handleServerResponse("/@me/toggleCatalogCheckboxSetting", responseResult)
-    Promise.resolved()
+    Promise.resolve()
   })->ignore
   Analytics.Amplitude.logEventWithProperties(
     ~eventName="Catalog Checkbox Setting Toggled",
@@ -485,11 +485,11 @@ let register = (~username, ~email, ~password) =>
       Fetch.RequestInit.make(
         ~method_=Post,
         ~body=Fetch.BodyInit.make(
-          Js.Json.stringify(
+          JSON.stringify(
             Json.Encode.object_(list{
-              ("username", Js.Json.string(username)),
-              ("email", Js.Json.string(email)),
-              ("password", Js.Json.string(password)),
+              ("username", JSON.string(username)),
+              ("email", JSON.string(email)),
+              ("password", JSON.string(password)),
             }),
           ),
         ),
@@ -515,19 +515,19 @@ let register = (~username, ~email, ~password) =>
         api.dispatch(Login(user))
         Analytics.Amplitude.setUserId(~userId=Some(user.id))
         Analytics.Amplitude.setUsername(~username, ~email)
-        Promise.resolved(Ok(user))
+        Promise.resolve(Ok(user))
       })
     } else {
       %Repromise.JsExn({
         let text = Fetch.Response.text(response)
-        let result = text->Js.Re.exec_(errorQuotationMarksRegex)
+        let result = text->RegExp.exec(errorQuotationMarksRegex)
         let text = switch result {
         | Some(match_) =>
-          let captures = Js.Re.captures(match_)
-          captures[1]->Option.getExn->Js.Nullable.toOption->Option.getExn
+          let captures = RegExp.Result.matches(match_)
+          captures[1]->Option.getExn->Nullable.toOption->Option.getExn
         | None => text
         }
-        Promise.resolved(Error(text))
+        Promise.resolve(Error(text))
       })
     }
   })
@@ -539,10 +539,10 @@ let loginWithDiscord = (~code, ~isRegister) =>
       Fetch.RequestInit.make(
         ~method_=Post,
         ~body=Fetch.BodyInit.make(
-          Js.Json.stringify(
+          JSON.stringify(
             Json.Encode.object_(list{
-              ("code", Js.Json.string(code)),
-              ("isRegister", Js.Json.boolean(isRegister)),
+              ("code", JSON.string(code)),
+              ("isRegister", JSON.boolean(isRegister)),
             }),
           ),
         ),
@@ -586,19 +586,19 @@ let loginWithDiscord = (~code, ~isRegister) =>
             },
           )
         }
-        Promise.resolved(Ok((user, isRegister)))
+        Promise.resolve(Ok((user, isRegister)))
       })
     } else {
       %Repromise.JsExn({
         let text = Fetch.Response.text(response)
-        let result = text->Js.Re.exec_(errorQuotationMarksRegex)
+        let result = text->RegExp.exec(errorQuotationMarksRegex)
         let text = switch result {
         | Some(match_) =>
-          let captures = Js.Re.captures(match_)
-          captures[1]->Option.getExn->Js.Nullable.toOption->Option.getExn
+          let captures = RegExp.Result.matches(match_)
+          captures[1]->Option.getExn->Nullable.toOption->Option.getExn
         | None => text
         }
-        Promise.resolved(Error(text))
+        Promise.resolve(Error(text))
       })
     }
   })
@@ -610,7 +610,7 @@ let followUser = (~userId) =>
     | Ok() => api.dispatch(FollowUser(userId))
     | Error(_) => ()
     }
-    Promise.resolved(response)
+    Promise.resolve(response)
   })
 
 let unfollowUser = (~userId) =>
@@ -620,7 +620,7 @@ let unfollowUser = (~userId) =>
     | Ok() => api.dispatch(UnfollowUser(userId))
     | Error(_) => ()
     }
-    Promise.resolved(response)
+    Promise.resolve(response)
   })
 
 let login = (~username, ~password) =>
@@ -630,11 +630,11 @@ let login = (~username, ~password) =>
       Fetch.RequestInit.make(
         ~method_=Post,
         ~body=Fetch.BodyInit.make(
-          Js.Json.stringify(
-            Js.Json.object_(
-              Js.Dict.fromArray([
-                ("username", Js.Json.string(username)),
-                ("password", Js.Json.string(password)),
+          JSON.stringify(
+            JSON.object_(
+              Dict.fromArray([
+                ("username", JSON.string(username)),
+                ("password", JSON.string(password)),
               ]),
             ),
           ),
@@ -660,10 +660,10 @@ let login = (~username, ~password) =>
         let user = User.fromAPI(json)
         api.dispatch(Login(user))
         Analytics.Amplitude.setUserId(~userId=Some(user.id))
-        Promise.resolved(Ok(user))
+        Promise.resolve(Ok(user))
       })
     } else {
-      Promise.resolved(Error())
+      Promise.resolve(Error())
     }
   })
 
@@ -690,7 +690,7 @@ let logout = () => {
         (),
       ),
     )
-    Promise.resolved()
+    Promise.resolve()
   })
 }
 
@@ -703,11 +703,11 @@ let removeAllItems = () => {
     | Ok(response) =>
       if Fetch.Response.status(response) < 300 {
         let user = getUser()
-        api.dispatch(UpdateUser({...user, items: Js.Dict.empty()}))
+        api.dispatch(UpdateUser({...user, items: Dict.make()}))
       }
     | Error(_) => ()
     }
-    Promise.resolved()
+    Promise.resolve()
   })
 }
 
@@ -727,7 +727,7 @@ let deleteAccount = () => {
       }
     | Error(_) => ()
     }
-    Promise.resolved()
+    Promise.resolve()
   })
 }
 
@@ -746,7 +746,7 @@ let connectDiscordAccount = (~code) => {
         }
         api.dispatch(ConnectDiscordId(discordId))
         ReasonReactRouter.push("/settings")
-        Promise.resolved()
+        Promise.resolve()
       })
     })->ignore
   // TODO: error
@@ -800,11 +800,11 @@ let init = () =>
           let user = User.fromAPI(json)
           api.dispatch(Login(user))
           Analytics.Amplitude.setUserId(~userId=Some(user.id))
-          Promise.resolved()
+          Promise.resolve()
         })
       } else {
         api.dispatch(FetchMeFailed)
-        Promise.resolved()
+        Promise.resolve()
       }
     })->ignore
   | None => ()

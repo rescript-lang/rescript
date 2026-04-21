@@ -13,7 +13,7 @@
     mutable tail : 'a opt_cell
   }
 
-  and 'a opt_cell = 'a cell Js.null
+  and 'a opt_cell = 'a cell Primitive_js_extern.null
 
   and 'a t = {
     length : int ;
@@ -468,7 +468,7 @@ let shuffle = xs => {
     A.setUnsafe arr i (f h [@bs]) ;
     fillAuxMap arr (i + 1) t f */
 
-/* module J = Js_json */
+/* module J = Stdlib_JSON */
 /* type json = J.t */
 /* let toJson x f = */
 /* let len = length x in */

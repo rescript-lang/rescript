@@ -61,7 +61,7 @@ let getStudentSubmissions = (studentId, cursor, setState, submissions, updateSub
   | None => StudentSubmissionsQuery.make(~studentId, ())
   }
   ->GraphqlQuery.sendQuery
-  ->Js.Promise.then_(response => {
+  ->Promise.then(response => {
     response["studentSubmissions"]["nodes"]->updateStudentSubmissions(
       setState,
       updateSubmissionsCB,
@@ -69,7 +69,7 @@ let getStudentSubmissions = (studentId, cursor, setState, submissions, updateSub
       response["studentSubmissions"]["pageInfo"]["hasNextPage"],
       submissions,
     )
-    Js.Promise.resolve()
+    Promise.resolve()
   })
   ->ignore
 }

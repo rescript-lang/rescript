@@ -3,7 +3,6 @@
 let _ = ShadowedBelt.List.map
 //                         ^def
 
-open Js
 module Before = {
   open Belt
   let _ = Id.getCmpInternal

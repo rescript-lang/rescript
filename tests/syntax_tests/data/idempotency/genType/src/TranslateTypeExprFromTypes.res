@@ -552,7 +552,7 @@ and translateTypeExprFromTypes_ = (
       {dependencies: list{}, type_: type_}
 
     | {noPayloads: list{}, payloads: list{(_label, t)}, unknowns: list{}} =>
-      /* Handle ReScript's "Arity_" encoding in first argument of Js.Internal.fn(_,_) for uncurried functions.
+      /* Handle ReScript's "Arity_" encoding in first argument of Internal.fn(_, _) for uncurried functions.
        Return the argument tuple. */
       t->translateTypeExprFromTypes_(
         ~config,

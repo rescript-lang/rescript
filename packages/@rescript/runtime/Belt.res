@@ -6,7 +6,7 @@
 
 /*** The ReScript standard library.
 
-Belt is currently mostly covering collection types. It has no string or date functions yet, although Belt.String is in the works. In the meantime, use [Js.String](js/string) for string functions and [Js.Date](js/date) for date functions.
+Belt mostly covers collection types. Use the top-level `String` and `Date` modules for string and date functions.
 
 ## Motivation
 
@@ -56,7 +56,7 @@ let greaterThan2UniqueAndSorted =
   ->Belt.Set.Int.fromArray
   ->Belt.Set.Int.toArray // output is already sorted
 
-Js.log2("result", greaterThan2UniqueAndSorted)
+Console.log2("result", greaterThan2UniqueAndSorted)
 ```
 
 ## Specialized Collections
@@ -80,7 +80,7 @@ One common confusion comes from the way Belt handles array access. It differs fr
 ```rescript
 let letters = ["a", "b", "c"]
 let a = letters[0] // a == "a"
-let capitalA = Js.String.toUpperCase(a)
+let capitalA = String.toUpperCase(a)
 let k = letters[10] // Throws an exception! The 10th index doesn't exist.
 ```
 
@@ -92,7 +92,7 @@ Because Belt avoids exceptions and returns `options` instead, this code behaves 
 open Belt
 let letters = ["a", "b", "c"]
 let a = letters[0] // a == Some("a")
-let captialA = Js.String.toUpperCase(a) // Type error! This code will not compile.
+let captialA = String.toUpperCase(a) // Type error! This code will not compile.
 let k = letters[10] // k == None
 ```
 
@@ -113,7 +113,7 @@ let a = letters[0]
 
 // Use a switch statement:
 let capitalA = switch a {
-| Some(a) => Some(Js.String.toUpperCase(a))
+| Some(a) => Some(String.toUpperCase(a))
 | None => None
 }
 

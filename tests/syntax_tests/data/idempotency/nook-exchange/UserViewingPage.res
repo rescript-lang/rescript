@@ -93,7 +93,7 @@ module FollowLink = {
                       },
                     )
                   }
-                  Promise.resolved()
+                  Promise.resolve()
                 })->ignore
               } else {
                 showLogin()
@@ -130,7 +130,7 @@ let make = (~username, ~urlRest, ~url: ReasonReactRouter.url, ~showLogin) => {
     switch (me, user) {
     | (Some(me), Some(user: User.t)) =>
       switch me.followeeIds {
-      | Some(followeeIds) => followeeIds->Js.Array.includes(user.id)
+      | Some(followeeIds) => followeeIds->Array.includes(user.id)
       | None => false
       }
     | _ => false
@@ -159,9 +159,9 @@ let make = (~username, ~urlRest, ~url: ReasonReactRouter.url, ~showLogin) => {
           if React.Ref.current(isMountedRef) {
             setUser(_ => Some(User.fromAPI(json)))
           }
-          Promise.resolved()
+          Promise.resolve()
         })
-      | _ => Promise.resolved()
+      | _ => Promise.resolve()
       }
     })->ignore
     None
@@ -173,7 +173,7 @@ let make = (~username, ~urlRest, ~url: ReasonReactRouter.url, ~showLogin) => {
     | "wishlist" =>
       if urlRest == list{} {
         ReasonReactRouter.replace(
-          "/" ++ (Js.Array.joinWith("/", Belt.List.toArray(url.path)) ++ ("/" ++ url.hash)),
+          "/" ++ (Array.joinUnsafe(Belt.List.toArray(url.path), "/") ++ ("/" ++ url.hash)),
         )
       }
     | _ => ()
@@ -207,11 +207,11 @@ let make = (~username, ~urlRest, ~url: ReasonReactRouter.url, ~showLogin) => {
         {switch list {
         | Some(list) => <UserListBrowser user list url />
         | None =>
-          if user.items->Js.Dict.keys->Js.Array.length > 0 {
+          if user.items->Dict.keysToArray->Array.length > 0 {
             <UserProfileBrowser
               username
               userItems={user.items
-              ->Js.Dict.entries
+              ->Dict.toArray
               ->Belt.Array.keepMapU(((itemKey, item)) =>
                 User.fromItemKey(~key=itemKey)->Belt.Option.map(x => (x, item))
               )}

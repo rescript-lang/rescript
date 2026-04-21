@@ -132,7 +132,7 @@ let getTeams = (send, courseId, cursor, filter) => {
 
   TeamsQuery.make(~courseId, ~after=?cursor, ~levelId?, ~coachId?, ~search=?filter.nameOrEmail, ())
   ->GraphqlQuery.sendQuery
-  ->Js.Promise.then_(response => {
+  ->Promise.then(response => {
     let newTeams = switch response["teams"]["nodes"] {
     | None => []
     | Some(teamsArray) => teamsArray->TeamInfo.makeArrayFromJs
@@ -146,12 +146,12 @@ let getTeams = (send, courseId, cursor, filter) => {
       ),
     )
 
-    Js.Promise.resolve()
+    Promise.resolve()
   })
   ->ignore
 }
 
-let applicableLevels = levels => levels->Js.Array.filter(level => Level.number(level) != 0)
+let applicableLevels = levels => levels->Array.filter(level => Level.number(level) != 0)
 
 module Selectable = {
   type t =
@@ -198,22 +198,20 @@ module Multiselect = MultiselectDropdown.Make(Selectable)
 let unselected = (levels, coaches, currentCoachId, state) => {
   let unselectedLevels =
     levels
-    ->Js.Array.filter(level =>
+    ->Array.filter(level =>
       state.filter.level->OptionUtils.mapWithDefault(
         selectedLevel => level->Level.id != (selectedLevel->Level.id),
         true,
-      )
-    )
+      ))
     ->Array.map(Selectable.level)
 
   let unselectedCoaches =
     coaches
-    ->Js.Array.filter(coach =>
+    ->Array.filter(coach =>
       state.filter.coach->OptionUtils.mapWithDefault(
         selectedCoach => coach->Coach.id != Coach.id(selectedCoach),
         true,
-      )
-    )
+      ))
     ->Array.map(coach => Selectable.assignedToCoach(coach, currentCoachId))
 
   let trimmedFilterString = state.filterString->String.trim

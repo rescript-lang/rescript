@@ -1,4 +1,4 @@
-let f = a => Js.Promise.resolve(a + a)
+let f = a => Promise.resolve(a + a)
 
 @@jsxConfig({version: 4})
 

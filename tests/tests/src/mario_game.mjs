@@ -1463,8 +1463,8 @@ function clear_canvas(canvas) {
 }
 
 function hud(canvas, score, coins) {
-  let score_string = score.toString();
-  let coin_string = coins.toString();
+  let score_string = String(score);
+  let coin_string = String(coins);
   let context = canvas.getContext("2d");
   context.font = "10px 'Press Start 2P'";
   context.fillText("Score: " + score_string, canvas.width - 140, 18);

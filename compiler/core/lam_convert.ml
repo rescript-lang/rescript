@@ -37,7 +37,7 @@ let lam_extension_id loc (head : Lam.t) =
     ]}
     we approximate that if [id] is destructed or not.
     If it is destructed, we need pack it in case it is JS exception.
-    The packing is called Js.Exn.internalTOOCamlException, which is a nop for OCaml exception, 
+    The packing is called Primitive_exceptions.internalToException, which is a nop for OCaml exception,
     but will wrap as (Error e) when it is an JS exception. 
 
     {[

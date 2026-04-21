@@ -35,21 +35,20 @@ module Example = {
         "Squash",
         "Boxing",
       ]->Array.map(sportName => Selectable.makeSport(sportName))
-    searchCollection->Js.Array.filter(sport => !(selected->Array.mem(sport)))
+    searchCollection->Array.filter(sport => !(selected->Array.mem(sport)))
   }
 
   let setSportSearch = (setState, value) => setState(state => {...state, searchInput: value})
 
   let select = (setState, state, sport) => {
-    let selected = state.selected->Js.Array.concat([sport])
+    let selected = state.selected->Array.concat([sport])
     setState(_state => {searchInput: "", selected: selected})
   }
 
   let deSelect = (setState, state, sport) => {
     let selected =
-      state.selected->Js.Array.filter(selected =>
-        Selectable.value(sport) != Selectable.value(selected)
-      )
+      state.selected->Array.filter(selected =>
+        Selectable.value(sport) != Selectable.value(selected))
     setState(_state => {searchInput: "", selected: selected})
   }
 

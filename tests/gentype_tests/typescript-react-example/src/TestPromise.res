@@ -1,4 +1,4 @@
-@genType type promise<'a> = Js.Promise.t<'a>
+@genType type promise<'a> = Promise.t<'a>
 
 @genType
 type fromPayload = {
@@ -8,6 +8,6 @@ type fromPayload = {
 
 @genType type toPayload = {result: string}
 
-@genType let convert = p => Js.Promise.then_(({s}) => Js.Promise.resolve({result: s}), p)
+@genType let convert = p => Promise.then(p, ({s}) => Promise.resolve({result: s}))
 
-@genType let barx = (~x=Js.Promise.resolve(Some("a")), ()) => x == x
+@genType let barx = (~x=Promise.resolve(Some("a")), ()) => x == x

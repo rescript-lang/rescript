@@ -26,7 +26,7 @@ let shuffle: t<'a> => t<'a>
 
 let reverse: t<'a> => t<'a>
 
-let makeUninitialized: int => t<Js.undefined<'a>>
+let makeUninitialized: int => t<undefined<'a>>
 
 let makeUninitializedUnsafe: int => t<'a>
 

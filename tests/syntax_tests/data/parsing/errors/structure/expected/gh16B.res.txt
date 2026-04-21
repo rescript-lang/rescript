@@ -7,7 +7,7 @@
   19 │ })))))))))))))))))))))))))))))); // this ")" here, this can even be "))
      │ ))))))))))))))" and should error
   20 │ 
-  21 │ Js.log("test") // should not be omitted
+  21 │ Console.log("test") // should not be omitted
 
   I'm not sure what to parse here when looking at ")".
 
@@ -15,7 +15,7 @@ open Ws
 let wss = Server.make { port = 82 }
 let address = wss -> Server.address
 let log [arity:1]msg =
-  Js.log
+  Console.log
     (((((({js|> Server: |js})[@res.template ]) ++ msg)[@res.template ]) ++
         (({js||js})[@res.template ]))[@res.template ])
 ;;log
@@ -37,4 +37,4 @@ module ClientSet =
                                end)
     let empty = Belt.Set.make ~id:(module T)
   end
-;;Js.log {js|test|js}
+;;Console.log {js|test|js}

@@ -19,6 +19,6 @@ external make: (
   ~maxHeight: int=?,
   ~placeholder: string=?,
   ~isClearable: bool=?,
-  ~onChange: Js.Nullable.t<array<selectOption<'a>>> => unit=?,
+  ~onChange: nullable<array<selectOption<'a>>> => unit=?,
   ~noOptionsMessage: unit => option<React.element>,
 ) => React.element = "default"

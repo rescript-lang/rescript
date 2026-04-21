@@ -17,9 +17,9 @@ module Input = {
       onChange
       value={switch value {
       | Float(float) =>
-        float->Js.Option.map((int) => Js.Float.toString(int))->Js.Option.getWithDefault("")
+        float->Option.map((int) => Float.toString(int))->Option.getWithDefault("")
       | Number(int) =>
-        int->Js.Option.map((int) => Js.Int.toString(int))->Js.Option.getWithDefault("")
+        int->Option.map((int) => Int.toString(int))->Option.getWithDefault("")
       | Text(text) => text
       }}
       placeholder=label
@@ -92,7 +92,7 @@ module Radio = {
     }
   }
   @react.component
-  let make = (~values, ~selectedValue, ~format, ~getKey=Js.String.make, ~onChange) =>
+  let make = (~values, ~selectedValue, ~format, ~getKey=String.make, ~onChange) =>
     <div className="flex flex-col">
       {Belt.Array.mapU(values, (value) => {
         let text = format(value)
@@ -165,7 +165,7 @@ module Locations = {
           key=location.Location.id
           location
           onClick={removedId =>
-            setLocations(locations => Js.Array.filter(id => id != removedId, locations))}
+            setLocations(locations => Array.filter(locations, id => id != removedId))}
         />
       )->React.array}
       <div className="pt-1">
@@ -174,10 +174,10 @@ module Locations = {
             ReactSelect.value: id,
             label: text,
           })}
-          components={"IndicatorSeparator": Js.null}
+          components={"IndicatorSeparator": null}
           styles={
             "control": base =>
-              Js.Obj.assign(
+              Object.assign(
                 base,
                 {
                   "color": Colors.colors["fggray"],
@@ -192,8 +192,8 @@ module Locations = {
                   "borderRadius": "4px",
                 },
               ),
-            "option": base => Js.Obj.assign(base, {"fontSize": "14px"}),
-            "noOptionsMessage": base => Js.Obj.assign(base, {"fontSize": "14px"}),
+            "option": base => Object.assign(base, {"fontSize": "14px"}),
+            "noOptionsMessage": base => Object.assign(base, {"fontSize": "14px"}),
           }
           controlShouldRenderValue=false
           isMulti=true
@@ -202,7 +202,7 @@ module Locations = {
           placeholder="Add location"
           isClearable=false
           onChange={newSelection =>
-            switch Js.Nullable.toOption(newSelection) {
+            switch Nullable.toOption(newSelection) {
             | Some(newSelection) =>
               setLocations(_ =>
                 Belt.Array.mapU(newSelection, ({ReactSelect.value: value}) => value)
@@ -245,10 +245,10 @@ module CalendarInput = {
     ) =>
       <div className="p-1">
         <button
-          ref=?{Belt.Option.map(Js.Nullable.toOption(forwardedRef), ReactDOMRe.Ref.domRef)}
+          ref=?{Belt.Option.map(Nullable.toOption(forwardedRef), ReactDOMRe.Ref.domRef)}
           className="bg-bggray text-base border-bggray border date-range-button"
           onClick>
-          {React.string(Js.Date.fromString(value)->Js.Date.toLocaleDateString)}
+          {React.string(Date.fromString(value)->Date.toLocaleDateString)}
         </button>
       </div>
     )

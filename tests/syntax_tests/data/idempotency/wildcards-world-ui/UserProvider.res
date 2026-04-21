@@ -46,9 +46,9 @@ type displayName =
 
 let useDisplayName: Web3.ethAddress => displayName = ethAddress => {
   let userContext = useUserInfoContext()
-  let ethAddressLower = Js.String.toLowerCase(ethAddress)
+  let ethAddressLower = String.toLowerCase(ethAddress)
 
-  let opt3box = \"<$>"(Js.Dict.get(userContext.userInfo, ethAddressLower), a => a.threeBox)
+  let opt3box = \"<$>"(Dict.get(userContext.userInfo, ethAddressLower), a => a.threeBox)
 
   let opt3boxName = \">>="(\">>="(opt3box, a => a.profile), a => a.name)
 
@@ -64,9 +64,9 @@ let useDisplayName: Web3.ethAddress => displayName = ethAddress => {
 
 let use3BoxUserData: string => option<threeBoxUserInfo> = ethAddress => {
   let userContext = useUserInfoContext()
-  let ethAddressLower = Js.String.toLowerCase(ethAddress)
+  let ethAddressLower = String.toLowerCase(ethAddress)
 
-  switch Js.Dict.get(userContext.userInfo, ethAddressLower) {
+  switch Dict.get(userContext.userInfo, ethAddressLower) {
   | None => None
   | Some(userInfo) => Some(userInfo.threeBox)
   }

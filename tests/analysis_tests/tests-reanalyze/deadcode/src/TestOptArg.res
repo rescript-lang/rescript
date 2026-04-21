@@ -1,10 +1,10 @@
-Js.log(OptArg.bar(~z=3, ~y=3, 4))
+Console.log(OptArg.bar(~z=3, ~y=3, 4))
 
 let foo = (~x=3, y) => x + y
 
 let bar = () => foo(~x=12, 3)
 
-Js.log(bar)
+Console.log(bar)
 
 let notSuppressesOptArgs = (~x=1, ~y=2, ~z=3, w) => x + y + z + w
 

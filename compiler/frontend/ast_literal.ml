@@ -51,24 +51,19 @@ module Lid = struct
 
   let pervasives : t = Lident Primitive_modules.pervasives
 
-  (* FIXME: Use primitive module *)
-  let js_oo : t = Lident "Js_OO"
+  let js_extern : t = Lident Primitive_modules.js_extern
 
-  (* FIXME: Use primitive module *)
-  let js_meth_callback : t = Ldot (js_oo, "Callback")
+  let method_callback : t = Ldot (js_extern, "Callback")
 
   let ignore_id : t = Ldot (pervasives, "ignore")
 
   let hidden_field n : t = Lident ("I" ^ n)
 
-  (* FIXME: Use primitive module *)
-  let js_null : t = Ldot (Lident "Js", "null")
+  let js_null : t = Ldot (Ldot (Lident "Stdlib", "Null"), "t")
 
-  (* FIXME: Use primitive module *)
-  let js_undefined : t = Ldot (Lident "Js", "undefined")
+  let js_undefined : t = Lident "undefined"
 
-  (* FIXME: Use primitive module *)
-  let js_null_undefined : t = Ldot (Lident "Js", "null_undefined")
+  let js_null_undefined : t = Ldot (Ldot (Lident "Stdlib", "Nullable"), "t")
 
   let regexp_id : t = Ldot (Lident "Stdlib_RegExp", "t")
 end

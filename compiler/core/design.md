@@ -5,7 +5,7 @@
 - printing
 
 ```ocaml
-Js.log true
+Console.log true
 ```
 
 - pattern match

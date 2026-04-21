@@ -14,13 +14,13 @@ let steve =
 let steve =
   ((([%obj { name = {js|Steve|js}; age = 30 }] : < user ;age: int   > ))
   [@res.braces ])
-let printFullUser [arity:1](steve : < user ;age: int   > ) = Js.log steve
+let printFullUser [arity:1](steve : < user ;age: int   > ) = Console.log steve
 let printFullUser [arity:1]~user:(user : < user ;age: int   > )  =
-  Js.log steve
+  Console.log steve
 let printFullUser [arity:1]~user:(user : < user ;age: int   > )  =
-  Js.log steve
+  Console.log steve
 let printFullUser [arity:1]?(user= (steve : < user ;age: int   > ))  =
-  Js.log steve
+  Console.log steve
 external steve : < user ;age: int   >  = "steve"[@@val ]
 let makeCeoOf30yearsOld [arity:1]name =
   ([%obj { name; age = 30 }] : < user ;age: int   > )

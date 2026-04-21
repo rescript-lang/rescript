@@ -6,8 +6,11 @@
 
 module Float = Primitive_float_extern
 module Obj = Primitive_object_extern
-module Js = Primitive_js_extern
 module String = Primitive_string_extern
+
+// Note: this only works as intended as long as the runtime is compiled
+// with -bs-cross-module-opt.
+let typeof = Primitive_js_extern.typeof
 
 @send external charCodeAt: (string, int) => int = "charCodeAt"
 
@@ -120,11 +123,11 @@ let hash_mix_string = (h, s) => {
 
 let hash = (count: int, _limit, seed: int, obj: Obj.t): int => {
   let s = ref(seed)
-  if Js.typeof(obj) == "number" {
+  if typeof(obj) == "number" {
     let u = Float.toInt(Obj.magic(obj))
     s.contents = hash_mix_int(s.contents, u + u + 1)
     hash_final_mix(s.contents)
-  } else if Js.typeof(obj) == "string" {
+  } else if typeof(obj) == "string" {
     s.contents = hash_mix_string(s.contents, (Obj.magic(obj): string))
     hash_final_mix(s.contents)
   } else {
@@ -139,20 +142,20 @@ let hash = (count: int, _limit, seed: int, obj: Obj.t): int => {
 
     while !is_empty_queue(queue) && num.contents > 0 {
       let obj = unsafe_pop(queue)
-      if Js.typeof(obj) == "number" {
+      if typeof(obj) == "number" {
         let u = Float.toInt(Obj.magic(obj))
         s.contents = hash_mix_int(s.contents, u + u + 1)
         num.contents = num.contents - 1
-      } else if Js.typeof(obj) == "string" {
+      } else if typeof(obj) == "string" {
         s.contents = hash_mix_string(s.contents, (Obj.magic(obj): string))
         num.contents = num.contents - 1
-      } else if Js.typeof(obj) == "boolean" {
+      } else if typeof(obj) == "boolean" {
         ()
-      } else if Js.typeof(obj) == "undefined" {
+      } else if typeof(obj) == "undefined" {
         ()
-      } else if Js.typeof(obj) == "symbol" {
+      } else if typeof(obj) == "symbol" {
         ()
-      } else if Js.typeof(obj) == "function" {
+      } else if typeof(obj) == "function" {
         ()
       } else {
         let size = Obj.size(obj)

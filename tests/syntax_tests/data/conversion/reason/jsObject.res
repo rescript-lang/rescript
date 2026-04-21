@@ -8,7 +8,7 @@ let y = {"age": 30, "name": "steve"}
 type propField<'a> = {.}
 type propField<'a> = {..} as 'a
 type propField<'a> = {..} as 'a
-type propField<'a> = Js.nullable<{..} as 'a>
+type propField<'a> = nullable<{..} as 'a>
 
 type propField<'a> = {"a": b}
 type propField<'a> = {.."a": b}

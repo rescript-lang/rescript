@@ -1,5 +1,5 @@
 /* Source: https://gist.github.com/dperini/729294 */
-let urlRegex = Js.Re.fromStringWithFlags(
+let urlRegex = RegExp.fromStringWithFlags(
   "^" ++
   ("(?:(?:(?:https?|ftp):)?\\/\\/)" ++
   ("(?:\\S+(?::\\S*)?@)?" ++
@@ -26,7 +26,7 @@ let urlRegex = Js.Re.fromStringWithFlags(
 
 let isInvalid = (allowBlank, url) =>
   if url->String.trim->String.length > 0 {
-    !Js.Re.test_(urlRegex, url)
+    !RegExp.test(urlRegex, url)
   } else {
     !allowBlank
   }

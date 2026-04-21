@@ -11,10 +11,7 @@ function raiseWhenNotFound(x) {
   return x;
 }
 
-let Js;
-
 export {
-  Js,
   raiseWhenNotFound,
 }
 /* No side effect */

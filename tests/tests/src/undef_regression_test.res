@@ -1,11 +1,11 @@
-@get external size_of_t: Obj.t => Js.undefined<'a> = "length"
+@get external size_of_t: Obj.t => option<'a> = "length"
 
 let f = obj =>
-  if Js.typeof(obj) == "function" {
+  if typeof(obj) == #function {
     ()
   } else {
     let size = size_of_t(obj)
-    switch Js.Undefined.toOption(size) {
+    switch size {
     | None => ()
     | Some(s) => Console.log(s)
     }

@@ -7,14 +7,14 @@ module Impl = (
     type t
   },
 ) => {
-  let asHtmlElement: T.t => Js.null<Dom.htmlElement> = %raw(`
+  let asHtmlElement: T.t => null<Dom.htmlElement> = %raw(`
     function (element) {
       // BEWARE: Assumes "contentEditable" uniquely identifies an HTMLELement
       return element.contentEditable !== undefined ?  element : null;
     }
   `)
   @deprecated("asHtmlElement uses a weak heuristic, consider using unsafeAsHtmlElement instead")
-  let asHtmlElement: T.t => option<Dom.htmlElement> = self => Js.Null.toOption(asHtmlElement(self))
+  let asHtmlElement: T.t => option<Dom.htmlElement> = self => Null.toOption(asHtmlElement(self))
 
   external unsafeAsHtmlElement: T.t => Dom.htmlElement = "%identity"
   let ofNode: Dom.node => option<T.t> = ofNode

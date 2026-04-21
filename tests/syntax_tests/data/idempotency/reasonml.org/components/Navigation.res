@@ -243,7 +243,7 @@ module SubNav = {
           <ul className=sectionUl>
             {jsItems
             ->Belt.Array.mapWithIndex((idx, (title, href)) => {
-              let active = Js.String2.startsWith(route, href) ? "text-primary" : ""
+              let active = String.startsWith(route, href) ? "text-primary" : ""
               <li className="w-1/2 xs:w-1/2 h-10" key={Belt.Int.toString(idx)}>
                 <Link href>
                   <a className={"text-white-80 hover:text-white hover:cursor-pointer " ++ active}>
@@ -344,7 +344,7 @@ let make = (~overlayState: (bool, (bool => bool) => unit)) => {
   let resetCollapsibles = () =>
     setCollapsibles(prev => Belt.Array.map(prev, c => {...c, state: Closed}))
 
-  let outerRef = React.useRef(Js.Nullable.null)
+  let outerRef = React.useRef(Nullable.null)
   useOutsideClick(ReactDOMRe.Ref.domRef(outerRef), resetCollapsibles)
 
   let windowWidth = useWindowWidth()
@@ -434,7 +434,7 @@ let make = (~overlayState: (bool, (bool => bool) => unit)) => {
               key={idx->Belt.Int.toString}
               allowHover
               title
-              active={Js.String2.startsWith(route, href)}
+              active={String.startsWith(route, href)}
               state>
               {children(route)}
             </CollapsibleLink>

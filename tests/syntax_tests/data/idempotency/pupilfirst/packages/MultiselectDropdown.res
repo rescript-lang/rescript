@@ -24,12 +24,11 @@ module type Selectable = {
 
 module Make = (Selectable: Selectable) => {
   let search = (searchString, selections) =>
-    (selections->Js.Array.filter(selection =>
+    (selections->Array.filter(selection =>
       selection
       ->Selectable.searchString
       ->String.lowercase_ascii
-      ->Js.String.includes(searchString->String.lowercase_ascii)
-    ))
+      ->String.includes(searchString->String.lowercase_ascii)))
       ->Belt.SortArray.stableSortBy((x, y) =>
         String.compare(x->Selectable.value, y->Selectable.value)
       )
@@ -66,8 +65,8 @@ module Make = (Selectable: Selectable) => {
     // Remove all excess space characters from the user input.
     let normalizedString =
       searchInput
-      ->Js.String.trim
-      ->Js.String.replaceByRe(Js.Re.fromStringWithFlags("\\s+", ~flags="g"), " ")
+      ->String.trim
+      ->String.replaceRegExp(RegExp.fromStringWithFlags("\\s+", ~flags="g"), " ")
 
     switch normalizedString {
     | "" => []
@@ -138,8 +137,8 @@ module Make = (Selectable: Selectable) => {
       | Some(id) => id
       | None =>
         "re-multiselect-" ++
-        ((Js.Date.now()->Js.Float.toString) ++
-        ("-" ++ (Js.Math.random_int(100000, 999999)->string_of_int)))
+        ((Date.now()->Float.toString) ++
+        ("-" ++ (Math.Int.random(100000, 999999)->string_of_int)))
       }
     )
 

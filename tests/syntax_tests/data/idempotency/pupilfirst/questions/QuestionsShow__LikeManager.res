@@ -67,21 +67,21 @@ let handleAnswerLike = (
           let id = Like.likeByCurrentUser(answerId, currentUserId, likes)->List.hd->Like.id
           DestroyAnswerLikeQuery.make(~id, ())
           ->GraphqlQuery.sendQuery
-          ->Js.Promise.then_(_response => {
+          ->Promise.then(_response => {
             removeLikeCB(id)
             setSaving(_ => false)
-            Js.Promise.resolve()
+            Promise.resolve()
           })
           ->ignore
         } else {
           CreateAnswerLikeQuery.make(~answerId, ())
           ->GraphqlQuery.sendQuery
-          ->Js.Promise.then_(response =>
+          ->Promise.then(response =>
             switch response["createAnswerLike"] {
             | #AnswerLikeId(answerLikeId) =>
               handleCreateResponse(answerLikeId, currentUserId, answerId, setSaving, addLikeCB)
-              Js.Promise.resolve()
-            | #Errors(errors) => Js.Promise.reject(CreateAnswerLikeErrorHandler.Errors(errors))
+              Promise.resolve()
+            | #Errors(errors) => Promise.reject(CreateAnswerLikeErrorHandler.Errors(errors))
             }
           )
           ->CreateAnswerLikeErrorHandler.catch(() => setSaving(_ => false))

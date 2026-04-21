@@ -58,6 +58,10 @@ describe(__MODULE__, () => {
   test("hash_variant_test2", () => eq(__LOC__, hash_variant2("xxyyzxzzyy"), -449896130))
   test("int_literal_flow", () => eq(__LOC__, -1, 0xffffffff))
   test("int_literal_flow2", () => eq(__LOC__, -1, -1))
-  test("float_conversion_test1", () => eq(__LOC__, int_of_float(Js.Float.fromString("3")), 3))
-  test("float_conversion_test2", () => eq(__LOC__, int_of_float(Js.Float.fromString("3.2")), 3))
+  test("float_conversion_test1", () =>
+    eq(__LOC__, Float.fromString("3")->Option.map(int_of_float), Some(3))
+  )
+  test("float_conversion_test2", () =>
+    eq(__LOC__, Float.fromString("3.2")->Option.map(int_of_float), Some(3))
+  )
 })

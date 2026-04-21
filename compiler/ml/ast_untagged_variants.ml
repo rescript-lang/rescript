@@ -238,7 +238,7 @@ let type_is_builtin_object (t : Types.type_expr) =
   | Tconstr (Path.Pident ident, [_], _) when Ident.name ident = "dict" -> true
   | Tconstr (path, _, _) ->
     let name = Path.name path in
-    name = "Js.Dict.t" || name = "Js_dict.t"
+    name = "Stdlib.Dict.t" || name = "Stdlib_Dict.t"
   | _ -> false
 
 let type_to_instanceof_backed_obj (t : Types.type_expr) =
@@ -263,8 +263,8 @@ let type_to_instanceof_backed_obj (t : Types.type_expr) =
     | "Stdlib.Uint32Array.t" -> Some Uint32Array
     | "Stdlib.Uint8Array.t" -> Some Uint8Array
     | "Stdlib.Uint8ClampedArray.t" -> Some Uint8ClampedArray
-    | "Js_file.t" -> Some File
-    | "Js_blob.t" -> Some Blob
+    | "Stdlib_File.t" -> Some File
+    | "Stdlib_Blob.t" -> Some Blob
     | "Stdlib.Set.t" -> Some Set
     | "Stdlib.Map.t" -> Some Map
     | "Stdlib.WeakSet.t" -> Some WeakSet

@@ -86,7 +86,7 @@ module DetailedExample = {
       )
 
     let searchSuggestion =
-      searchInput->Js.String.trim == "" ? [] : [Selectable.makeSearch(searchInput)]
+      searchInput->String.trim == "" ? [] : [Selectable.makeSearch(searchInput)]
 
     searchSuggestion
     ->Array.append(citySuggestions)
@@ -101,7 +101,7 @@ module DetailedExample = {
     })
 
   let deselect = (selected, setState, selectable) => {
-    let newSelected = selected->Js.Array.filter(s => s != selectable)
+    let newSelected = selected->Array.filter(s => s != selectable)
     setState(_ => {searchInput: "", selected: newSelected})
   }
 
@@ -172,7 +172,7 @@ module MinimalExample = {
   ]
 
   let deselect = (selected, setState, selectable) => {
-    let newSelected = selected->Js.Array.filter(s => s != selectable)
+    let newSelected = selected->Array.filter(s => s != selectable)
     setState(_ => {searchString: "", selected: newSelected})
   }
 

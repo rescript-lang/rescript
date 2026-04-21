@@ -61,7 +61,7 @@ module UrlBox = {
         <>
           <P> imgEl {headChildren->toReactElement} </P>
           {if length > 1 {
-            arr->Js.Array2.slice(~start=1, ~end_=length)->Mdx.arrToReactElement
+            arr->Array.slice(~start=1, ~end=length)->Mdx.arrToReactElement
           } else {
             React.null
           }}
@@ -70,7 +70,7 @@ module UrlBox = {
         React.null
       }
     | Unknown(el) =>
-      Js.log2("Received unknown", el)
+      Console.log2("Received unknown", el)
       React.null
     }
 
@@ -98,7 +98,7 @@ module Anchor = {
   // everything to a single string first before we are able to use this id transformation
   // function
   let idFormat = (id: string): string =>
-    id /* Js.String2.(id->toLowerCase->Js.String2.replaceByRe([%re "/\\s/g"], "-")); */
+    id /* String.(id->toLowerCase->String.replaceRegExp([%re "/\\s/g"], "-")); */
   @react.component
   let make = (~id: string) => {
     let style = ReactDOMRe.Style.make(~position="absolute", ~top="-7rem", ())
@@ -212,7 +212,7 @@ module Code = {
     let codeElement = switch metastring {
     | None => <CodeExample code lang />
     | Some(metastring) =>
-      let metaSplits = Js.String.split(" ", metastring)->Belt.List.fromArray
+      let metaSplits = String.split(metastring, " ")->Belt.List.fromArray
 
       if Belt.List.has(metaSplits, "example", \"=") {
         <CodeExample code lang />
@@ -231,7 +231,7 @@ module Code = {
     let lang = switch className {
     | None => "text"
     | Some(str) =>
-      switch Js.String.split("-", str) {
+      switch String.split(str, "-") {
       | ["language", ""] => "text"
       | ["language", lang] => lang
       | _ => "text"
@@ -258,7 +258,7 @@ module Code = {
  */
     if isArray(children) {
       // Scenario 1
-      let code = children->asStringArray->Js.Array2.joinWith("")
+      let code = children->asStringArray->Array.joinUnsafe("")
       <InlineCode> {code->s} </InlineCode>
     } else if isObject(children) {
       // Scenario 2
@@ -312,9 +312,9 @@ module A = {
       // but it's very unlikely we'd refer to an absolute URL ending
       // with .md
       let regex = /\.md(x)?|\.html$/
-      let href = switch Js.String2.split(href, "#") {
-      | [pathname, anchor] => Js.String2.replaceByRe(pathname, regex, "") ++ ("#" ++ anchor)
-      | [pathname] => Js.String2.replaceByRe(pathname, regex, "")
+      let href = switch String.split(href, "#") {
+      | [pathname, anchor] => String.replaceRegExp(pathname, regex, "") ++ ("#" ++ anchor)
+      | [pathname] => String.replaceRegExp(pathname, regex, "")
       | _ => href
       }
       <Next.Link href>
@@ -360,7 +360,7 @@ module Li = {
         arr->getExn(arr->length - 1)
       }
 
-      let head = Js.Array2.slice(arr, ~start=0, ~end_=arr->Belt.Array.length - 1)
+      let head = Array.slice(arr, ~start=0, ~end=arr->Belt.Array.length - 1)
 
       let first = Belt.Array.getExn(head, 0)
 
@@ -401,7 +401,7 @@ module Li = {
 
 // Useful for debugging injected values in props
 /*
- let mdxTestComponent: React.component(Js.t({.})) = [%raw
+ let mdxTestComponent: React.component(object({.})) = [%raw
    {|
  function(children) {
    console.log(children);

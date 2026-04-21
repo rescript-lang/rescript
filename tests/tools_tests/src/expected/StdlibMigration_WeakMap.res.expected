@@ -1,3 +1,0 @@
-// Type alias migration for Js.WeakMap.t
-external wm: WeakMap.t<{..}, int> = "wm"
-

@@ -1,6 +1,6 @@
 let f [arity:1]x = x + 1
-let f [arity:1]_ = Js.log {js|test|js}
-let f [arity:1]() = Js.log {js|unit|js}
+let f [arity:1]_ = Console.log {js|test|js}
+let f [arity:1]() = Console.log {js|unit|js}
 let f [arity:1](Reducer (inst, comp)) = inst.render comp
 let f [arity:1](Instance) = ()
 let f [arity:2]a b = a + b

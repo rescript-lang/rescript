@@ -27,9 +27,9 @@ module Test2 = {
     // this is matched only if `name` isn't "Mary" or "Joe"
     `Hello ${name}.`
   | Student({name, reportCard: {passing: true, gpa}}) =>
-    `Congrats ${name}, nice GPA of ${Js.Float.toString(gpa)} you got there!`
+    `Congrats ${name}, nice GPA of ${Float.toString(gpa)} you got there!`
   | Student({reportCard: {gpa: 0.0}, status: Vacations(daysLeft) | Sabbatical(daysLeft)}) =>
-    `Come back in ${Js.Int.toString(daysLeft)} days!`
+    `Come back in ${Int.toString(daysLeft)} days!`
   | Student({status: Sick}) => `How are you feeling?`
   | Student({name}) => `Good luck next semester ${name}!`
   }

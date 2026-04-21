@@ -5,7 +5,7 @@ let str = ReasonReact.string
 type state = {
   name: string,
   description: string,
-  endsAt: option<Js.Date.t>,
+  endsAt: option<Date.t>,
   hasNameError: bool,
   hasDescriptionError: bool,
   hasDateError: bool,
@@ -19,7 +19,7 @@ type state = {
 type action =
   | UpdateName(string, bool)
   | UpdateDescription(string, bool)
-  | UpdateEndsAt(option<Js.Date.t>)
+  | UpdateEndsAt(option<Date.t>)
   | UpdateSaving
   | UpdateAbout(string)
   | UpdatePublicSignup(bool)
@@ -114,7 +114,7 @@ let createCourse = (state, send, updateCourseCB) => {
   let createCourseQuery = CreateCourseQuery.make(
     ~name=state.name,
     ~description=state.description,
-    ~endsAt=?state.endsAt->OptionUtils.map(Date.iso8601)->OptionUtils.map(Js.Json.string),
+    ~endsAt=?state.endsAt->OptionUtils.map(Date.iso8601)->OptionUtils.map(JSON.string),
     ~about=state.about,
     ~publicSignup=state.publicSignup,
     ~featured=state.featured,
@@ -123,9 +123,9 @@ let createCourse = (state, send, updateCourseCB) => {
 
   createCourseQuery
   ->GraphqlQuery.sendQuery
-  ->Js.Promise.then_(result => {
+  ->Promise.then(result => {
     handleResponseCB(result["createCourse"]["course"]["id"], state, updateCourseCB, None)
-    Js.Promise.resolve()
+    Promise.resolve()
   })
   ->ignore
 }
@@ -137,7 +137,7 @@ let updateCourse = (state, send, updateCourseCB, course) => {
     ~id=course->Course.id,
     ~name=state.name,
     ~description=state.description,
-    ~endsAt=?state.endsAt->OptionUtils.map(Date.iso8601)->OptionUtils.map(Js.Json.string),
+    ~endsAt=?state.endsAt->OptionUtils.map(Date.iso8601)->OptionUtils.map(JSON.string),
     ~about=state.about,
     ~publicSignup=state.publicSignup,
     ~featured=state.featured,
@@ -146,9 +146,9 @@ let updateCourse = (state, send, updateCourseCB, course) => {
 
   updateCourseQuery
   ->GraphqlQuery.sendQuery
-  ->Js.Promise.then_(result => {
+  ->Promise.then(result => {
     handleResponseCB(result["updateCourse"]["course"]["id"], state, updateCourseCB, Some(course))
-    Js.Promise.resolve()
+    Promise.resolve()
   })
   ->ignore
 }

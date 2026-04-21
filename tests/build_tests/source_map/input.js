@@ -124,7 +124,7 @@ const originalDebuggerPositions = findTokenPositions(demoSource, "%debugger");
 assert.equal(originalDebuggerPositions.length, 2);
 const originalRaiseErrorPositions = findTokenPositions(
   demoSource,
-  "Js.Exn.raiseError",
+  "Exn.raiseError",
 );
 assert.equal(originalRaiseErrorPositions.length, 2);
 const originalPipeCallPositions = findTokenPositions(demoSource, "input->fn");
@@ -135,7 +135,7 @@ const originalPatternBranchPositions = [
 ];
 const originalHelperRaiseErrorPositions = findTokenPositions(
   helperSource,
-  "Js.Exn.raiseError",
+  "Exn.raiseError",
 );
 assert.equal(originalHelperRaiseErrorPositions.length, 1);
 const originalHelperPipeCallPositions = findTokenPositions(

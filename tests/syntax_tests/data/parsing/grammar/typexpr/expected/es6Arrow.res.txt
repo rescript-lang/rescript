@@ -30,5 +30,5 @@ type nonrec t =
   [@attrBeforeLblA ])
 type nonrec t = a:int[@attr ] -> unit
 type nonrec 'a getInitialPropsFn =
-  < query: string dict  ;req: 'a Js.t Js.Nullable.t   >  ->
-    'a Js.t Js.Promise.t (a:1)
+  < query: string dict  ;req: < .. >  nullable   >  ->
+    < .. >  Promise.t (a:1)

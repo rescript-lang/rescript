@@ -51,7 +51,7 @@ function f(g) {
 }
 
 Mocha.describe("Exception_rebound_err_test", () => {
-  Mocha.test("exception rebound error test", () => Test_utils.eq("File \"exception_rebound_err_test.res\", line 29, characters 7-14", test_js_error4(), 7));
+  Mocha.test("exception rebound error test", () => Test_utils.eq("File \"exception_rebound_err_test.res\", line 28, characters 7-14", test_js_error4(), 7));
 });
 
 export {

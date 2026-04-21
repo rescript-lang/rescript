@@ -66,7 +66,7 @@ let make = (
         : <button
             onClick={handleRestoreVersion(
               handleRestoreVersionCB,
-              selectedVersion->Js.Json.string,
+              selectedVersion->JSON.string,
             )}
             className="btn btn-warning border border-orange-500 mr-4">
             {"Restore this version"->str}

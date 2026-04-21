@@ -119,7 +119,7 @@ See [`Intl.DateTimeFormat`](https://developer.mozilla.org/en-US/docs/Web/JavaScr
 
 ```rescript
 let formatter = Intl.DateTimeFormat.make(~locales=["en-US"], ~options={timeStyle: #short})
-let sampleDate = Js.Date.makeWithYMD(~year=2024, ~month=0, ~date=1)
+let sampleDate = Date.makeWithYMD(~year=2024, ~month=0, ~day=1)
 formatter->Intl.DateTimeFormat.format(sampleDate)->String.length > 0
 ```
 */
@@ -161,7 +161,7 @@ Intl.DateTimeFormat.resolvedOptions(formatter).locale == "en-US"
 
 ```rescript
 let formatter = Intl.DateTimeFormat.make(~locales=["en"])
-let date = Js.Date.makeWithYMD(~year=2024, ~month=0, ~date=1)
+let date = Date.makeWithYMD(~year=2024, ~month=0, ~day=1)
 formatter->Intl.DateTimeFormat.format(date)->String.length > 0
 ```
 */
@@ -176,7 +176,7 @@ See [`Intl.DateTimeFormat.prototype.formatToParts`](https://developer.mozilla.or
 
 ```rescript
 let formatter = Intl.DateTimeFormat.make(~locales=["en"])
-let date = Js.Date.makeWithYMD(~year=2024, ~month=0, ~date=1)
+let date = Date.makeWithYMD(~year=2024, ~month=0, ~day=1)
 formatter->Intl.DateTimeFormat.formatToParts(date)->Array.length > 0
 ```
 */
@@ -191,8 +191,8 @@ See [`Intl.DateTimeFormat.prototype.formatRange`](https://developer.mozilla.org/
 
 ```rescript
 let formatter = Intl.DateTimeFormat.make(~locales=["en-US"], ~options={dateStyle: #short})
-let startDate = Js.Date.makeWithYMD(~year=2024, ~month=0, ~date=1)
-let endDate = Js.Date.makeWithYMD(~year=2024, ~month=1, ~date=1)
+let startDate = Date.makeWithYMD(~year=2024, ~month=0, ~day=1)
+let endDate = Date.makeWithYMD(~year=2024, ~month=1, ~day=1)
 formatter->Intl.DateTimeFormat.formatRange(~startDate=startDate, ~endDate=endDate)->String.length > 0
 ```
 */
@@ -209,8 +209,8 @@ See [`Intl.DateTimeFormat.prototype.formatRangeToParts`](https://developer.mozil
 
 ```rescript
 let formatter = Intl.DateTimeFormat.make(~locales=["en-US"], ~options={dateStyle: #short})
-let startDate = Js.Date.makeWithYMD(~year=2024, ~month=0, ~date=1)
-let endDate = Js.Date.makeWithYMD(~year=2024, ~month=1, ~date=1)
+let startDate = Date.makeWithYMD(~year=2024, ~month=0, ~day=1)
+let endDate = Date.makeWithYMD(~year=2024, ~month=1, ~day=1)
 formatter->Intl.DateTimeFormat.formatRangeToParts(~startDate=startDate, ~endDate=endDate)->Array.length > 0
 ```
 */

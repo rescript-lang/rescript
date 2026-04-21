@@ -60,7 +60,7 @@ Mocha.describe("Array_subtle_test", () => {
       3,
       3
     ];
-    Test_utils.eq("File \"array_subtle_test.res\", line 43, characters 7-14", 5, v.push(3));
+    v.push(3);
     Test_utils.eq("File \"array_subtle_test.res\", line 44, characters 7-14", 5, v.length);
     Test_utils.eq("File \"array_subtle_test.res\", line 45, characters 7-14", 5, v.length);
   });

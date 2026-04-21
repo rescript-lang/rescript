@@ -70,7 +70,7 @@ let checklistDropdown = (checklistItem, allowFileKind, updateChecklistItemCB) =>
 
   let contents =
     allowedKindTypes
-    ->Js.Array.filter(kind => kind != selectedKind)
+    ->Array.filter(kind => kind != selectedKind)
     ->Array.mapi((index, kind) =>
       <button
         key={index->string_of_int}
@@ -167,10 +167,9 @@ let isRequiredStepTitleDuplicated = (checklist, item) => {
     false
   } else {
     checklist
-    ->Js.Array.filter(item => !ChecklistItem.optional(item))
-    ->Js.Array.filter(checklistItem =>
-      checklistItem->ChecklistItem.title->String.trim == trimmedTitle
-    )
+    ->Array.filter(item => !ChecklistItem.optional(item))
+    ->Array.filter(checklistItem =>
+      checklistItem->ChecklistItem.title->String.trim == trimmedTitle)
     ->Array.length > 1
   }
 }

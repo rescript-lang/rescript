@@ -28,13 +28,13 @@ let updateReviewChecklist = (targetId, reviewChecklist, setState, updateReviewCh
     (),
   )
   ->GraphqlQuery.sendQuery
-  ->Js.Promise.then_(response => {
+  ->Promise.then(response => {
     if response["updateReviewChecklist"]["success"] {
       updateReviewChecklistCB(trimmedChecklist)
     }
 
     setState(state => {...state, saving: false})
-    Js.Promise.resolve()
+    Promise.resolve()
   })
   ->ignore
 }
@@ -105,7 +105,7 @@ let removeChecklistResult = (itemIndex, resultIndex, reviewChecklistItem, setSta
 let removeChecklistItem = (itemIndex, setState) =>
   setState(state => {
     ...state,
-    reviewChecklist: state.reviewChecklist->Js.Array.filteri((_el, i) => i != itemIndex),
+    reviewChecklist: state.reviewChecklist->Array.filterWithIndex((_el, i) => i != itemIndex),
   })
 
 let initialStateForReviewChecklist = reviewChecklist =>
@@ -119,10 +119,10 @@ let invalidChecklist = reviewChecklist =>
     reviewChecklistItem->ReviewChecklistItem.title->invalidTitle ||
       reviewChecklistItem
       ->ReviewChecklistItem.result
-      ->Js.Array.filter(resultItem => resultItem->ReviewChecklistResult.title->invalidTitle)
+      ->Array.filter(resultItem => resultItem->ReviewChecklistResult.title->invalidTitle)
       ->ArrayUtils.isNotEmpty
   )
-  ->Js.Array.filter(valid => valid)
+  ->Array.filter(valid => valid)
   ->ArrayUtils.isNotEmpty
 
 @react.component

@@ -3,7 +3,7 @@ let f = () => id
 
 if isArray(children) {
   // Scenario 1
-  let code = children->asStringArray->Js.Array2.joinWith("")
+  let code = children->asStringArray->Array.joinUnsafe("")
   <InlineCode> {code->s} </InlineCode>
 } else if isObject(children) {
   // Scenario 2

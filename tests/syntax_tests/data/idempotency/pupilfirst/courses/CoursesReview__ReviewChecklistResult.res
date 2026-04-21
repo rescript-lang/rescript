@@ -7,7 +7,7 @@ let feedback = t => t.feedback
 
 let make = (~title, ~feedback) => {title: title, feedback: feedback}
 
-let makeFromJs = data => data->Js.Array.map(r => make(~title=r["title"], ~feedback=r["feedback"]))
+let makeFromJs = data => data->Array.map(r => make(~title=r["title"], ~feedback=r["feedback"]))
 
 let emptyTemplate = () => [
   make(~title="Yes", ~feedback=Some("Sample feedback for yes")),
@@ -23,7 +23,7 @@ let updateTitle = (title, t, index, checklist) =>
   checklist->replace(make(~title, ~feedback=t.feedback), index)
 
 let updateFeedback = (feedback, t, index, checklist) => {
-  let optionalFeedback = feedback->Js.String.trim == "" ? None : Some(feedback)
+  let optionalFeedback = feedback->String.trim == "" ? None : Some(feedback)
 
   checklist->replace(make(~title=t.title, ~feedback=optionalFeedback), index)
 }

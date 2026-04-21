@@ -43,9 +43,9 @@ let addTags = (oldtags, newTags) =>
 
 let teamUp = (selectedStudents, responseCB) => {
   let studentIds = selectedStudents->Array.map(s => s->SelectedStudent.id)
-  let payload = Js.Dict.empty()
-  Js.Dict.set(payload, "authenticity_token", AuthenticityToken.fromHead()->Js.Json.string)
-  Js.Dict.set(
+  let payload = Dict.make()
+  Dict.set(payload, "authenticity_token", AuthenticityToken.fromHead()->JSON.string)
+  Dict.set(
     payload,
     "founder_ids",
     studentIds->{
@@ -76,9 +76,8 @@ let reducer = (state, action) =>
 
   | DeselectStudent(id) => {
       ...state,
-      selectedStudents: state.selectedStudents->Js.Array.filter(s =>
-        s->SelectedStudent.id != id
-      ),
+      selectedStudents: state.selectedStudents->Array.filter(s =>
+        s->SelectedStudent.id != id),
     }
 
   | UpdateFormVisible(formVisible) => {...state, formVisible: formVisible}
@@ -185,7 +184,7 @@ let make = (~courseId, ~courseCoachIds, ~schoolCoaches, ~levels, ~studentTags) =
     | UpdateForm(student, teamId) =>
       let team = teamId->Team.unsafeFind(state.pagedTeams->Page.teams, "Root")
       let courseCoaches =
-        schoolCoaches->Js.Array.filter(coach => courseCoachIds->Array.mem(Coach.id(coach)))
+        schoolCoaches->Array.filter(coach => courseCoachIds->Array.mem(Coach.id(coach)))
       <SchoolAdmin__EditorDrawer closeDrawerCB={() => send(UpdateFormVisible(None))}>
         <StudentsEditor__UpdateForm
           student

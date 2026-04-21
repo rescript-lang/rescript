@@ -13,11 +13,11 @@
 
 
   Syntax error!
-  syntax_tests/data/parsing/infiniteLoops/nonRecTypes.res:19:45-51
+  syntax_tests/data/parsing/infiniteLoops/nonRecTypes.res:19:42-48
 
   17 ┆   ~size: int,
   18 ┆   ~root: option(node('value)),
-  19 ┆   ~compare: Js.Internal.fn([ | `Arity_2('value, 'value)], int)
+  19 ┆   ~compare: Function.fn([ | `Arity_2('value, 'value)], int)
   20 ┆ ) =>
   21 ┆ t('value) =
 
@@ -51,13 +51,13 @@
 
 
   Syntax error!
-  syntax_tests/data/parsing/infiniteLoops/nonRecTypes.res:428:31-38
+  syntax_tests/data/parsing/infiniteLoops/nonRecTypes.res:420:31-38
 
-  426 │     updateSum(Some(node), ~delta);
-  427 │   };
-  428 │ type nonrec oldNewVisibleNodes('value) = {
-  429 │   mutable old: array('value),
-  430 │   mutable new_: array('value),
+  418 │     updateSum(Some(node), ~delta);
+  419 │   };
+  420 │ type nonrec oldNewVisibleNodes('value) = {
+  421 │   mutable old: array('value),
+  422 │   mutable new_: array('value),
 
   Type parameters require angle brackets:
   oldNewVisibleNodes<'value>
@@ -70,7 +70,7 @@ include
           {
           mutable size: int ;
           mutable root: 'value node option ;
-          compare: [ [%rescript.typehole ]] Js.Internal.fn }
+          compare: [ [%rescript.typehole ]] Function.fn }
         ;;(({js|Arity_2('value, 'value)], int),
                       };
                     }: {
@@ -82,7 +82,7 @@ include
             (
               ~size: int,
               ~root: option(node('value)),
-              ~compare: Js.Internal.fn([ | |js})
+              ~compare: Function.fn([ | |js})
           [@res.template ])
         ;;Arity_2 (value, value)
         ;;int
@@ -108,12 +108,12 @@ include
         ;;[|(({js|use compareGet instead or use {abstract = light} explicitly|js})
             [@ocaml.deprecated ])|]
         external compare :
-          'value t -> [ [%rescript.typehole ]] Js.Internal.fn (a:1)
+          'value t -> [ [%rescript.typehole ]] Function.fn (a:1)
         ;;(({js|Arity_2('value, 'value)], int) =
             ""
             "BS:6.0.1\x84\x95\xa6\xbe\0\0\0\x13\0\0\0\x07\0\0\0\x14\0\0\0\x13\xb0\xa0\xa0A\x91@@A\x98\xa0'compare@";
           external compareGet:
-            t('value) => Js.Internal.fn([ | |js})
+            t('value) => Function.fn([ | |js})
           [@res.template ])
         ;;Arity_2 (value, value)
         ;;int
@@ -141,12 +141,9 @@ include
           match successor with
           | None ->
               let leaf =
-                createNode ~value:(Js.Internal.raw_expr {js|0|js})
-                  ~color:Black ~height:0. in
-              let isLeaf = Js.Internal.fn_mk1 (fun [arity:1]x -> x === leaf) in
-              (leaf, isLeaf)
-          | Some successor ->
-              (successor, (Js.Internal.fn_mk1 (fun [arity:1]_ -> false))) in
+                createNode ~value:([%raw {js|0|js}]) ~color:Black ~height:0. in
+              let isLeaf [arity:1]x = x === leaf in (leaf, isLeaf)
+          | Some successor -> (successor, ((fun [arity:1]_ -> false))) in
         let nodeParent = parentGet nodeToRemove in
         parentSet successor nodeParent;
         (match nodeParent with
@@ -269,7 +266,7 @@ include
                                   Black;
                                 rotateLeft rbt successorParent))))
                 done));
-        if Js.Internal.fn_run1 isLeaf successor
+        if isLeaf successor
         then
           (if (rootGet rbt) === (Some successor) then rootSet rbt None;
            (match parentGet successor with
@@ -288,7 +285,7 @@ include
           match node with
           | None -> None
           | Some node ->
-              let cmp = Js.Internal.fn_run1 cb (valueGet node) in
+              let cmp = cb (valueGet node) in
               if cmp === 0
               then Some node
               else
@@ -309,16 +306,12 @@ include
           else
             if
               ((!==) lhs None) &&
-                ((Js.Internal.fn_run2 (compareGet rbt) (valueGet n)
-                    (castNotOption lhs))
-                   < 0)
+                (((compareGet rbt) (valueGet n) (castNotOption lhs)) < 0)
             then heightOfInterval rbt (rightGet n) lhs rhs
             else
               if
                 ((!==) rhs None) &&
-                  ((Js.Internal.fn_run2 (compareGet rbt) (valueGet n)
-                      (castNotOption rhs))
-                     > 0)
+                  (((compareGet rbt) (valueGet n) (castNotOption rhs)) > 0)
               then heightOfInterval rbt (leftGet n) lhs rhs
               else
                 ((heightGet n) +. (heightOfInterval rbt (leftGet n) lhs None))
@@ -383,7 +376,7 @@ include
       (sumLeftSpine node ~fromRightChild:true) -. (heightGet node)
     let linearSearch [arity:2]rbt callback =
       ((let rec find [arity:2]node callback =
-          if Js.Internal.fn_run1 callback (valueGet node)
+          if callback (valueGet node)
           then Some (valueGet node)
           else
             (match nextNode node with
@@ -397,10 +390,10 @@ include
       match firstNode with
       | None -> ()
       | Some node ->
-          (if inclusive then Js.Internal.fn_run1 callback node;
+          (if inclusive then callback node;
            if (!==) firstNode lastNode
            then
-             (if not inclusive then Js.Internal.fn_run1 callback node;
+             (if not inclusive then callback node;
               iterate ~inclusive (nextNode node) lastNode ~callback))
     let rec iterateWithY [arity:5]?y  ~inclusive  firstNode lastNode
       ~callback  =
@@ -408,10 +401,10 @@ include
       | None -> ()
       | Some node ->
           let y = match y with | None -> getY node | Some y -> y in
-          (if inclusive then Js.Internal.fn_run2 callback node y;
+          (if inclusive then callback node y;
            if (!==) firstNode lastNode
            then
-             (if not inclusive then Js.Internal.fn_run2 callback node y;
+             (if not inclusive then callback node y;
               iterateWithY ~y:(y +. (heightGet node)) ~inclusive
                 (nextNode node) lastNode ~callback))
     let rec updateSum [arity:2]node ~delta  =

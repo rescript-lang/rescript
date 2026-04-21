@@ -13,7 +13,7 @@
     mutable tail : 'a opt_cell
   }
 
-  and 'a opt_cell = 'a cell Js.null
+  and 'a opt_cell = 'a cell Primitive_js_extern.null
 
   and 'a t = {
     length : int ;

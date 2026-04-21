@@ -31,7 +31,7 @@ let saveNote = (studentId, setState, state, addNoteCB) => {
   setState(state => {...state, saving: true})
   CreateCoachNotesMutation.make(~studentId, ~note=state.newNote, ())
   ->GraphqlQuery.sendQuery
-  ->Js.Promise.then_(response => {
+  ->Promise.then(response => {
     switch response["createCoachNote"]["coachNote"] {
     | Some(note) =>
       let newNote = CoachNote.makeFromJs(note)
@@ -39,11 +39,11 @@ let saveNote = (studentId, setState, state, addNoteCB) => {
       setState(_ => {newNote: "", saving: false})
     | None => setState(state => {...state, saving: false})
     }
-    Js.Promise.resolve()
+    Promise.resolve()
   })
-  ->Js.Promise.catch(_error => {
+  ->Promise.catch(_error => {
     setState(state => {...state, saving: false})
-    Js.Promise.resolve()
+    Promise.resolve()
   })
   ->ignore
 }

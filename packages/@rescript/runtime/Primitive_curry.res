@@ -6,14 +6,13 @@
 
 module Array = Primitive_array_extern
 module Obj = Primitive_object_extern
-module Js = Primitive_js_extern
 
 @@uncurried
 
 external function_arity: 'a => int = "%function_arity"
 
-@send external apply_args: ('a => 'b, Js.null<_>, array<_>) => 'b = "apply"
-let apply_args = (f, args) => apply_args(f, Js.null, args)
+@send external apply_args: ('a => 'b, Primitive_js_extern.null<_>, array<_>) => 'b = "apply"
+let apply_args = (f, args) => apply_args(f, Primitive_js_extern.null, args)
 
 /* Public */
 let rec app = (f, args) => {

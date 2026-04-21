@@ -64,9 +64,9 @@ let handleDelete = (state, send, removeLinkCB, id, event) => {
 
     DestroySchoolLinkQuery.make(~id, ())
     ->GraphqlQuery.sendQuery
-    ->Js.Promise.then_(_response => {
+    ->Promise.then(_response => {
       removeLinkCB(id)
-      Js.Promise.resolve()
+      Promise.resolve()
     })
     ->ignore
   }
@@ -193,14 +193,14 @@ let handleAddLink = (state, send, addLinkCB, event) => {
     | SocialLink => CreateSchoolLinkQuery.make(~kind="social", ~url=state.url, ())
     }
     ->GraphqlQuery.sendQuery
-    ->Js.Promise.then_(response =>
+    ->Promise.then(response =>
       switch response["createSchoolLink"] {
       | #SchoolLink(schoolLink) =>
         schoolLink["id"]->displayNewLink(state, addLinkCB)
         send(ClearForm)
         Notification.success("Done!", "A custom link has been added.")
-        Js.Promise.resolve()
-      | #Errors(errors) => Js.Promise.reject(CreateLinkErrorHandler.Errors(errors))
+        Promise.resolve()
+      | #Errors(errors) => Promise.reject(CreateLinkErrorHandler.Errors(errors))
       }
     )
     ->CreateLinkErrorHandler.catch(() => send(EnableForm))

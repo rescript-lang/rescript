@@ -63,7 +63,7 @@ let getNumResultsPerPage = () => {
 
 let getUrl = (~url: ReasonReactRouter.url, ~urlSearchParams: Webapi.Url.URLSearchParams.t) =>
   "/" ++
-  (Js.Array.joinWith("/", Belt.List.toArray(url.path)) ++
+  (Array.joinUnsafe(Belt.List.toArray(url.path), "/") ++
   switch Webapi.Url.URLSearchParams.toString(urlSearchParams) {
   | "" => ""
   | search => "?" ++ search
@@ -97,7 +97,7 @@ let make = (~showLogin, ~url: ReasonReactRouter.url) => {
       React.Ref.setCurrent(numFiltersChangeLogged, React.Ref.current(numFiltersChangeLogged) + 1)
     }
   }
-  let rootRef = React.useRef(Js.Nullable.null)
+  let rootRef = React.useRef(Nullable.null)
   let setPageOffset = f => {
     let nextPageOffset = f(pageOffset)
     let urlSearchParams = Webapi.Url.URLSearchParams.makeWithArray(
@@ -105,43 +105,43 @@ let make = (~showLogin, ~url: ReasonReactRouter.url) => {
     )
     ReasonReactRouter.push(getUrl(~url, ~urlSearchParams))
   }
-  let excludeString = filters.exclude->Js.Array.joinWith(",")
+  let excludeString = filters.exclude->Array.joinUnsafe(",")
   let excludeUserItemIds = React.useMemo2(() =>
-    if isLoggedIn && Js.Array.length(filters.exclude) > 0 {
+    if isLoggedIn && Array.length(filters.exclude) > 0 {
       let userItems = UserStore.getUser().items
-      let userItemMap = Js.Dict.empty()
+      let userItemMap = Dict.make()
       userItems
-      ->Js.Dict.entries
+      ->Dict.toArray
       ->Belt.Array.forEach(((itemKey, userItem)) =>
         if (
           switch userItem.status {
-          | Wishlist => filters.exclude->Js.Array.includes(ItemFilters.Wishlist)
+          | Wishlist => filters.exclude->Array.includes(ItemFilters.Wishlist)
           | CanCraft =>
-            filters.exclude->Js.Array.includes(ItemFilters.Catalog) ||
-              filters.exclude->Js.Array.includes(ItemFilters.CanCraft)
+            filters.exclude->Array.includes(ItemFilters.Catalog) ||
+              filters.exclude->Array.includes(ItemFilters.CanCraft)
           | CatalogOnly
           | ForTrade =>
-            filters.exclude->Js.Array.includes(ItemFilters.Catalog)
+            filters.exclude->Array.includes(ItemFilters.Catalog)
           }
         ) {
           let (itemId, variant) = User.fromItemKey(~key=itemKey)->Belt.Option.getExn
-          let itemVariantList = switch Js.Dict.get(userItemMap, string_of_int(itemId)) {
+          let itemVariantList = switch Dict.get(userItemMap, string_of_int(itemId)) {
           | Some(list) => list
           | None =>
             let list = []
-            userItemMap->Js.Dict.set(string_of_int(itemId), list)
+            userItemMap->Dict.set(string_of_int(itemId), list)
             list
           }
-          itemVariantList->Js.Array.push(variant)->ignore
+          itemVariantList->Array.push(variant)->ignore
         }
       )
       userItemMap
-      ->Js.Dict.entries
+      ->Dict.toArray
       ->Belt.Array.keepMap(((itemId, variantList)) => {
         let itemId = int_of_string(itemId)
         let numVariations = Item.getCollapsedVariants(~item=Item.getItem(~itemId))
         // Exclude item only if user has all variants
-        if Js.Array.length(variantList) >= Js.Array.length(numVariations) {
+        if Array.length(variantList) >= Array.length(numVariations) {
           Some(itemId)
         } else {
           None
@@ -155,12 +155,12 @@ let make = (~showLogin, ~url: ReasonReactRouter.url) => {
     () =>
       Item.all->Belt.Array.keep(item =>
         !(
-          Js.Array.includes(item.id, excludeUserItemIds) ||
+          Array.includes(excludeUserItemIds, item.id) ||
           (Item.isRecipe(~item) &&
-          Js.Array.includes(Item.getItemIdForRecipe(~recipe=item), excludeUserItemIds))
+          Array.includes(excludeUserItemIds, Item.getItemIdForRecipe(~recipe=item)))
         ) &&
         ItemFilters.doesItemMatchFilters(~item, ~filters)
-      )->Js.Array.sortInPlaceWith(ItemFilters.getSort(~sort=filters.sort)),
+      )->Array.toSorted((a, b) => Ordering.fromInt((ItemFilters.getSort(~sort=filters.sort))(a, b))),
     (filters, excludeUserItemIds),
   )
   let numResults = filteredItems->Belt.Array.length
@@ -212,7 +212,7 @@ let make = (~showLogin, ~url: ReasonReactRouter.url) => {
         numResults pageOffset numResultsPerPage setPageOffset={f => setPageOffset(f)}
       />
     </div>
-    {if Js.Array.length(filteredItems) == 0 {
+    {if Array.length(filteredItems) == 0 {
       <div className=Styles.noResults>
         {React.string("There are no results. Try changing or ")}
         <a

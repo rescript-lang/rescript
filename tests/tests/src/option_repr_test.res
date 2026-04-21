@@ -114,15 +114,15 @@ let all_true = xs => Belt.List.every(xs, x => x)
 
 describe(__MODULE__, () => {
   test("option comparison operations", () => {
-    ok(__LOC__, None < Some(Js.null))
-    ok(__LOC__, !(None > Some(Js.null)))
-    ok(__LOC__, Some(Js.null) > None)
-    ok(__LOC__, None < Some(Js.undefined))
-    ok(__LOC__, Some(Js.undefined) > None)
+    ok(__LOC__, None < Some(null))
+    ok(__LOC__, !(None > Some(null)))
+    ok(__LOC__, Some(null) > None)
+    ok(__LOC__, None < Some(undefined))
+    ok(__LOC__, Some(undefined) > None)
   })
 
   test("option greater than operations", () => {
-    ok(__LOC__, all_true(list{gtx(Some(Some(Js.null)), Some(None))}))
+    ok(__LOC__, all_true(list{gtx(Some(Some(null)), Some(None))}))
   })
 
   test("option less than operations", () => {
@@ -137,9 +137,9 @@ describe(__MODULE__, () => {
         ltx(Some(false), Some(true)),
         ltx(Some(Some(false)), Some(Some(true))),
         ltx(None, Some(None)),
-        ltx(None, Some(Js.null)),
+        ltx(None, Some(null)),
         ltx(None, Some(x => x)),
-        ltx(Some(Js.null), Some(Js.Null.return(3))),
+        ltx(Some(null), Some(Nullable.make(3))),
       }),
     )
   })
@@ -149,7 +149,7 @@ describe(__MODULE__, () => {
       __LOC__,
       all_true(list{
         eqx(None, None),
-        neqx(None, Some(Js.null)),
+        neqx(None, Some(null)),
         eqx(Some(None), Some(None)),
         eqx(Some(Some(None)), Some(Some(None))),
         neqx(Some(Some(Some(None))), Some(Some(None))),

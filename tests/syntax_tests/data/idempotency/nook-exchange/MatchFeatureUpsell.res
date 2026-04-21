@@ -2,7 +2,7 @@ module PersistConfig = {
   let key = "dismiss_match_list_notice"
   let value = ref(Dom.Storage.localStorage->Dom.Storage.getItem(key))
   let dismiss = () => {
-    let nowString = Js.Date.now()->Js.Float.toString
+    let nowString = Date.now()->Float.toString
     value := Some(nowString)
     Dom.Storage.localStorage->Dom.Storage.setItem(key, nowString)
   }

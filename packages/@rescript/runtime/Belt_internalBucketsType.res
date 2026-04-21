@@ -3,7 +3,7 @@
  *
  * SPDX-License-Identifier: MIT
  */
-type opt<'a> = Js.undefined<'a>
+type opt<'a> = Primitive_js_extern.undefined<'a>
 
 type container<'hash, 'eq, 'c> = {
   mutable size: int /* number of entries */,
@@ -16,7 +16,7 @@ module A = Belt_Array
 external toOpt: opt<'a> => option<'a> = "%identity"
 external return: 'a => opt<'a> = "%identity"
 
-let emptyOpt = Js.undefined
+let emptyOpt = Primitive_js_extern.undefined
 let rec power_2_above = (x, n) =>
   if x >= n {
     x

@@ -2,7 +2,7 @@ open Belt
 open Mocha
 open Test_utils
 
-let test_strings = Array.init(32, i => Js.String2.fromCodePoint(i)->Js.String2.repeat(i))
+let test_strings = Array.init(32, i => String.fromCodePoint(i)->String.repeat(i))
 
 let test_strings_hash_results = [
   0,

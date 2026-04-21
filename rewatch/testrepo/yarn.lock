@@ -179,7 +179,7 @@ __metadata:
   resolution: "@testrepo/with-dev-deps@workspace:packages/with-dev-deps"
   dependencies:
     "@rescript/webapi": "patch:@rescript/webapi@npm%3A0.1.0-experimental-73e6a0d#~/.yarn/patches/@rescript-webapi-npm-0.1.0-experimental-73e6a0d-288a2072f7.patch"
-    rescript-nodejs: "patch:rescript-nodejs@npm%3A16.1.0#~/.yarn/patches/rescript-nodejs-npm-16.1.0-1841fa6174.patch"
+    rescript-nodejs: "npm:17.0.0"
   languageName: unknown
   linkType: soft
 
@@ -187,9 +187,9 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@testrepo/with-ppx@workspace:packages/with-ppx"
   dependencies:
-    rescript-nodejs: "patch:rescript-nodejs@npm%3A16.1.0#~/.yarn/patches/rescript-nodejs-npm-16.1.0-1841fa6174.patch"
-    sury: "npm:^11.0.0-alpha.2"
-    sury-ppx: "npm:^11.0.0-alpha.2"
+    rescript-nodejs: "npm:17.0.0"
+    sury: "npm:11.0.0-rc.0"
+    sury-ppx: "npm:11.0.0-rc.0"
   languageName: unknown
   linkType: soft
 
@@ -204,24 +204,17 @@ __metadata:
 
 "rescript-bun@patch:rescript-bun@npm%3A2.1.0#~/.yarn/patches/rescript-bun-npm-2.1.0-d9adc91a04.patch":
   version: 2.1.0
-  resolution: "rescript-bun@patch:rescript-bun@npm%3A2.1.0#~/.yarn/patches/rescript-bun-npm-2.1.0-d9adc91a04.patch::version=2.1.0&hash=05b3ce"
+  resolution: "rescript-bun@patch:rescript-bun@npm%3A2.1.0#~/.yarn/patches/rescript-bun-npm-2.1.0-d9adc91a04.patch::version=2.1.0&hash=cc7d77"
   peerDependencies:
     rescript: ">= 12.0.0-alpha.4"
-  checksum: 10c0/bbc6b65d58a6bbfa556d915d2a43a76e8abbf2cae6d90ce8ffd1dad8d8d02f87b83936a8243393584667a6dd45ea8869150e4ef90b34ea63394fdc2e47ce3716
+  checksum: 10c0/e58a68cc5cc0b3aef0198ad44ad80535f962c4a50d1085b9aaa2d8454fa4203907aa2b4e14939e909778b0c52ba6767175469ec51ddc5238d2674fe6d65f6a79
   languageName: node
   linkType: hard
 
-"rescript-nodejs@npm:16.1.0":
-  version: 16.1.0
-  resolution: "rescript-nodejs@npm:16.1.0"
-  checksum: 10c0/2ea271dbddebdceec79bf5ee6089c15474f2c014cb22c1cc39d43ef27fd363fcb1cd8e1244d0cb998cd6b426d7474e3055e41277951fb01ee1eeecf68bbe01ab
-  languageName: node
-  linkType: hard
-
-"rescript-nodejs@patch:rescript-nodejs@npm%3A16.1.0#~/.yarn/patches/rescript-nodejs-npm-16.1.0-1841fa6174.patch":
-  version: 16.1.0
-  resolution: "rescript-nodejs@patch:rescript-nodejs@npm%3A16.1.0#~/.yarn/patches/rescript-nodejs-npm-16.1.0-1841fa6174.patch::version=16.1.0&hash=8a6725"
-  checksum: 10c0/5ac79b6ff832413bc448fc139c139e0703e1f41f6eb3c0d58937630794e18081185f93c69781503530d635a4d6721c94064d54c49ecfaa67c9150ca1b0d27752
+"rescript-nodejs@npm:17.0.0":
+  version: 17.0.0
+  resolution: "rescript-nodejs@npm:17.0.0"
+  checksum: 10c0/2c35fb20a208e4e62b462b588253457a66841201ecddb703ab4cdfb1119d4d496ee8663c6224114bcb5216cdbff8f33832f3fd22fa47c058a164db97a7b8a007
   languageName: node
   linkType: hard
 
@@ -285,24 +278,24 @@ __metadata:
   languageName: node
   linkType: hard
 
-"sury-ppx@npm:^11.0.0-alpha.2":
-  version: 11.0.0-alpha.2
-  resolution: "sury-ppx@npm:11.0.0-alpha.2"
+"sury-ppx@npm:11.0.0-rc.0":
+  version: 11.0.0-rc.0
+  resolution: "sury-ppx@npm:11.0.0-rc.0"
   peerDependencies:
-    sury: ^11.0.0-alpha.2
-  checksum: 10c0/ae9190fa4e406de46e88b67db233e757db36f5377301227cf5b084b5b81d360725d6fc4781e24c56cb87476cd3a42af5acc0cfc49f0c7ea17435caf065ba22ab
+    sury: ^11.0.0-rc.0
+  checksum: 10c0/18111b21004481103501171b913433531804071de161e6fd51083a4bae3988648d5d52a88ccba77f2f7429c60375cfc5fd7797476867e52b71cdb983bcec603e
   languageName: node
   linkType: hard
 
-"sury@npm:^11.0.0-alpha.2":
-  version: 11.0.0-alpha.2
-  resolution: "sury@npm:11.0.0-alpha.2"
+"sury@npm:11.0.0-rc.0":
+  version: 11.0.0-rc.0
+  resolution: "sury@npm:11.0.0-rc.0"
   peerDependencies:
-    rescript: 11.x
+    rescript: 12.x
   peerDependenciesMeta:
     rescript:
       optional: true
-  checksum: 10c0/254dd708608b125defc6b4be0f038df0f6704290df60504b70b7cd613f1e840d150ff65a3f23dbc7213f2b18b86fdc60400b4361ca46f5c86bbe7360eff9c84a
+  checksum: 10c0/0fa5cb3404f436205fcf87fb0b0003f64c1e4e90fab78cf029e276ed7ea76aa1683ac9e740cabbf9e95de33adf287a7706ce8d4c2552c045a0f7c2b5bcc95a5d
   languageName: node
   linkType: hard
 

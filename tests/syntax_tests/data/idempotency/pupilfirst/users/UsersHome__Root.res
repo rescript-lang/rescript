@@ -114,7 +114,7 @@ let ctaFooter = (course, currentSchoolAdmin) => {
 let communityLinks = (communityIds, communities) =>
   communityIds
   ->Array.map(id => {
-    let community = communities->Js.Array.find(c => c->Community.id == id)
+    let community = communities->Array.find(c => c->Community.id == id)
     switch community {
     | Some(c) =>
       <a

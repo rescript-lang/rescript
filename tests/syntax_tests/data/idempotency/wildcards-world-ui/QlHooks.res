@@ -1,21 +1,21 @@
 open Globals
 module QueryFetchPolicy = ApolloClient__React_Hooks_UseQuery.WatchQueryFetchPolicy
 
-type owner = {"address": Js.Json.t}
+type owner = {"address": JSON.t}
 
 type price = {"price": Eth.t}
 
 type wildcard = {
   id: string,
   tokenId: TokenId.t,
-  patronageNumerator: Js.Json.t,
+  patronageNumerator: JSON.t,
   owner: owner,
   price: price,
 }
 
-let decodeBN: Js.Json.t => BN.t = number =>
+let decodeBN: JSON.t => BN.t = number =>
   number
-  ->Js.Json.decodeString
+  ->JSON.decodeString
   ->Belt.Option.mapWithDefault("0", a => a) /* trusting that gql will be reliable here */
   ->BN.new_
 
@@ -53,7 +53,7 @@ module InitialLoad = %graphql(`
        }
      `)
 
-let createContext: Client.queryContext => Js.Json.t = Obj.magic
+let createContext: Client.queryContext => JSON.t = Obj.magic
 
 let useInitialDataLoad = (~chain) => {
   let initLoadQuery = InitialLoad.use(
@@ -422,13 +422,13 @@ let useDetailsPageNextPrevious = (currentToken: TokenId.t) => {
     prev: TokenId.fromStringUnsafe("0"),
   }
   let forwardNextLookup = React.useMemo1(() =>
-    homepageAnimalData->Array.reduce(Js.Dict.empty(), (dict, item) => {
-      dict->Js.Dict.set(item.id->TokenId.toString, item)
+    homepageAnimalData->Array.reduce(Dict.make(), (dict, item) => {
+      dict->Dict.set(item.id->TokenId.toString, item)
       dict
     })
   , [homepageAnimalData])
 
-  \"||||"(forwardNextLookup->Js.Dict.get(currentToken->TokenId.toString), defaultValue)
+  \"||||"(forwardNextLookup->Dict.get(currentToken->TokenId.toString), defaultValue)
 }
 
 @decco.decode
@@ -516,7 +516,7 @@ let useIsAnimalOwened = (~chain, ownedAnimal) => {
   let currentPatron =
     usePatron(~chain, ownedAnimal)->Belt.Option.mapWithDefault("no-patron-defined", a => a)
 
-  currentAccount->Js.String.toLowerCase == currentPatron->Js.String.toLocaleLowerCase
+  currentAccount->String.toLowerCase == currentPatron->String.toLocaleLowerCase
 }
 
 let useTimeAcquired: (~chain: Client.context, TokenId.t) => option<MomentRe.Moment.t> = (
@@ -568,14 +568,14 @@ let useTotalCollectedOrDue = () => {
   }
 }
 
-let getCurrentTimestamp = () => string_of_int(Js.Math.floor(Js.Date.now() /. 1000.))
+let getCurrentTimestamp = () => string_of_int(Math.floor(Date.now() /. 1000.))
 
 let useCurrentTime = () => {
   let (currentTime, setTimeLeft) = React.useState(() => getCurrentTimestamp())
 
   React.useEffect1(() => {
-    let interval = Js.Global.setInterval(() => setTimeLeft(_ => getCurrentTimestamp()), 2000)
-    Some(() => Js.Global.clearInterval(interval))
+    let interval = setInterval(() => setTimeLeft(_ => getCurrentTimestamp()), 2000)
+    Some(() => clearInterval(interval))
   }, [setTimeLeft])
   currentTime
 }
@@ -941,21 +941,21 @@ type artistOrg = {
 let useArtistOrgs = (~artistIdentifier) => {
   let artistData = useArtistData(~artistIdentifier)
   artistData->Option.map(data => {
-    let dict = Js.Dict.empty()
+    let dict = Dict.make()
     data.launchedWildcards
     ->Array.map(wildcard =>
       switch wildcard.organization {
       | Some(org) =>
         let orgId = org.id
-        switch dict->Js.Dict.get(orgId) {
+        switch dict->Dict.get(orgId) {
         | Some(orgObj) =>
           let newOrgObj = {
             ...orgObj,
             wildcards: orgObj.wildcards->Array.concat([wildcard.key]),
           }
-          dict->Js.Dict.set(orgId, newOrgObj)
+          dict->Dict.set(orgId, newOrgObj)
         | None =>
-          dict->Js.Dict.set(
+          dict->Dict.set(
             orgId,
             {
               id: orgId,
@@ -970,6 +970,6 @@ let useArtistOrgs = (~artistIdentifier) => {
       }
     )
     ->ignore
-    dict->Js.Dict.values
+    dict->Dict.valuesToArray
   })
 }

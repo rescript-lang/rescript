@@ -1,8 +1,7 @@
-Complete src/ConstructorCompletion__Json.res 0:22
-posCursor:[0:22] posNoWhite:[0:21] Found expr:[0:8->0:23]
-Pexp_construct Js
-Json
-Array:[0:8->0:21] [0:21->0:23]
+Complete src/ConstructorCompletion__Json.res 0:19
+posCursor:[0:19] posNoWhite:[0:18] Found expr:[0:8->0:20]
+Pexp_construct JSON
+Array:[0:8->0:18] [0:18->0:20]
 Completable: Cexpression CTypeAtPos()->variantPayload::Array($0)
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib

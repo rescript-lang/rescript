@@ -56,7 +56,7 @@ let selected = (filter, levels) => {
   | None => []
   }
   let searchString = switch filter->Filter.searchString {
-  | Some(s) => s->Js.String.trim == "" ? [] : [Selectable.makeNameOrEmail(s)]
+  | Some(s) => s->String.trim == "" ? [] : [Selectable.makeNameOrEmail(s)]
   | None => []
   }
 
@@ -68,14 +68,14 @@ let selected = (filter, levels) => {
 let unselected = (tags, levels, filter, searchInput) => {
   let tagSuggestions =
     tags
-    ->Js.Array.filter(t => !(filter->Filter.tags->Array.mem(t)))
+    ->Array.filter(t => !(filter->Filter.tags->Array.mem(t)))
     ->Array.map(t => Selectable.makeTag(t))
   let levelSuggestions = switch filter->Filter.levelId {
-  | Some(levelId) => levels->Js.Array.filter(l => l->Level.id != levelId)
+  | Some(levelId) => levels->Array.filter(l => l->Level.id != levelId)
   | None => levels
   }->Array.map(l => Selectable.makeLevel(l))
   let searchSuggestion =
-    searchInput->Js.String.trim == "" ? [] : [Selectable.makeNameOrEmail(searchInput)]
+    searchInput->String.trim == "" ? [] : [Selectable.makeNameOrEmail(searchInput)]
 
   searchSuggestion->Array.append(tagSuggestions)->Array.append(levelSuggestions)
 }

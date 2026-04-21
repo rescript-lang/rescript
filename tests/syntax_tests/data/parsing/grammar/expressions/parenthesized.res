@@ -33,9 +33,9 @@ let assertSmthing = (assert(true))
 let jsx = (<div className="cx"> foo </div>)
 
 let ifExpr = (if true {
-  Js.log(true)
+  Console.log(true)
 } else {
-  Js.log(false)
+  Console.log(false)
 })
 
 let forExpr = (for p in 0 to 10 { () })

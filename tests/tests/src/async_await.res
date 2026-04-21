@@ -2,7 +2,7 @@ let next = n => n + 1
 let useNext = async () => next(3)
 
 module type Impl = {
-  let get: string => Js.Promise.t<string>
+  let get: string => Promise.t<string>
 }
 
 module Make = (I: Impl) => {
@@ -16,7 +16,7 @@ let toplevelAwait = await topFoo()
 let toplevelAwait2 = arr[await topFoo()]
 
 let f = async (type input, value: input) => {
-  await Js.Promise.resolve(1)
+  await Promise.resolve(1)
 }
 
 module type MT = module type of Belt.Option

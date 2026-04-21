@@ -1460,8 +1460,8 @@ module Draw: {
 
   /* Displays the text for score and coins. */
   let hud = (canvas, score, coins) => {
-    let score_string = Js.Int.toString(score)
-    let coin_string = Js.Int.toString(coins)
+    let score_string = Int.toString(score)
+    let coin_string = Int.toString(coins)
     let canvas = Dom_html.canvasElementToJsObj(canvas)
     let context = Dom_html.canvasRenderingContext2DToJsObj(canvas["getContext"]("2d"))
     ignore(context["font"] = "10px 'Press Start 2P'")
@@ -1473,7 +1473,7 @@ module Draw: {
 
   /* Displays the fps. */
   let fps = (canvas, fps_val) => {
-    let fps_str = fps_val->Js.Float.toFixed
+    let fps_str = fps_val->Stdlib_Float.toFixed
     let canvas = Dom_html.canvasElementToJsObj(canvas)
     let context = Dom_html.canvasRenderingContext2DToJsObj(canvas["getContext"]("2d"))
     ignore(context["fillText"](fps_str, 10., 18.))

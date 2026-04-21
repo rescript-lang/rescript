@@ -39,7 +39,7 @@ let showEvaluationCriterion = (evaluationCriterion, setState) =>
 let addOrUpdateCriterionCB = (state, setState, criterion) => {
   let updatedCriteria =
     state.evaluationCriteria
-    ->Js.Array.filter(ec => EvaluationCriterion.id(ec) != EvaluationCriterion.id(criterion))
+    ->Array.filter(ec => EvaluationCriterion.id(ec) != EvaluationCriterion.id(criterion))
     ->Array.append([criterion])
   setState(_ => {evaluationCriteria: updatedCriteria, editorAction: Hidden})
 }

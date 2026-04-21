@@ -25,7 +25,7 @@ let decode = json => {
   {
     id: json->field("id", string),
     name: json->field("name", string),
-    description: json->field("description", nullable(string))->Js.Null.toOption,
+    description: json->field("description", nullable(string))->Null.toOption,
     levelId: json->field("levelId", string),
     milestone: json->field("milestone", bool),
     sortIndex: json->field("sortIndex", int),

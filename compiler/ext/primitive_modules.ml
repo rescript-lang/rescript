@@ -52,4 +52,6 @@ let curry = "Primitive_curry"
 
 let util = "Primitive_util"
 
+let js_extern = "Primitive_js_extern"
+
 let pervasives = "Pervasives"

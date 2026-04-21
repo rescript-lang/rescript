@@ -11,7 +11,7 @@ function generic_basename(is_dir_sep, current_dir_name, name) {
     while (true) {
       let n = _n;
       if (n < 0) {
-        return name.substr(0, 1);
+        return name.substring(0, 1);
       }
       if (!is_dir_sep(name, n)) {
         let _n$1 = n;
@@ -19,10 +19,10 @@ function generic_basename(is_dir_sep, current_dir_name, name) {
         while (true) {
           let n$1 = _n$1;
           if (n$1 < 0) {
-            return name.substr(0, p);
+            return name.substring(0, p);
           }
           if (is_dir_sep(name, n$1)) {
-            return name.substr(n$1 + 1 | 0, (p - n$1 | 0) - 1 | 0);
+            return name.substring(n$1 + 1 | 0, p);
           }
           _n$1 = n$1 - 1 | 0;
           continue;

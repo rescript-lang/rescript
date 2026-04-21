@@ -87,7 +87,7 @@ module WithRef = {
   @genType @react.component
   let make = React.forwardRef((~vehicle, ref) => {
     let _ = 34
-    switch ref->Js.Nullable.toOption {
+    switch ref->Stdlib.Nullable.toOption {
     | Some(ref) => <button ref={ReactDOM.Ref.domRef(ref)}> {React.string(vehicle.name)} </button>
     | None => React.null
     }
@@ -140,5 +140,5 @@ module WithChildren = {
 
 module DD = {
   @genType @react.component
-  let make = (~array as _: Js.TypedArray2.Uint8Array.t, ~name: string) => React.string(name)
+  let make = (~array as _: Stdlib.Uint8Array.t, ~name: string) => React.string(name)
 }

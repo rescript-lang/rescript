@@ -13,7 +13,7 @@ let () = {
   let response = await fetch("/users.json"); // get users list
   let users = await response.json(); // parse JSON
   let comments = (await (await fetch("comment.json")).json())[0];
-  Js.log2(users, comments)
+  Console.log2(users, comments)
 }
 
 let () = {
@@ -25,7 +25,7 @@ let () = {
     await delay(20)
 }
 
-let forEach = await @a @b Js.Import(Belt.List.forEach)
+let forEach = await @a @b import(Belt.List.forEach)
 
 module M = await @a @b Belt.List
 

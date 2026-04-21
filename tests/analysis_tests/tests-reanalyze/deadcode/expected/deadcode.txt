@@ -56,7 +56,7 @@
   addTypeReference DeadExn.res:8:16 --> DeadExn.res:1:0
   addValueReference DeadExn.res:10:4 --> DeadExn.res:4:2
   addTypeReference DeadExn.res:10:14 --> DeadExn.res:4:2
-  addValueReference DeadExn.res:12:7 --> DeadExn.res:10:4
+  addValueReference DeadExn.res:12:12 --> DeadExn.res:10:4
   Scanning DeadExn.cmti Source:DeadExn.resi
   Scanning DeadRT.cmt Source:DeadRT.res
   addValueDeclaration +emitModuleAccessPath DeadRT.res:5:8 path:+DeadRT
@@ -64,7 +64,7 @@
   addVariantCaseDeclaration Kaboom DeadRT.res:3:2 path:+DeadRT.moduleAccessPath
   addValueReference DeadRT.res:5:8 --> DeadRT.res:7:9
   addValueReference DeadRT.res:5:8 --> DeadRT.res:5:31
-  addTypeReference DeadRT.res:11:16 --> DeadRT.res:3:2
+  addTypeReference DeadRT.res:11:21 --> DeadRT.res:3:2
   Scanning DeadRT.cmti Source:DeadRT.resi
   addVariantCaseDeclaration Root DeadRT.resi:2:2 path:DeadRT.moduleAccessPath
   addVariantCaseDeclaration Kaboom DeadRT.resi:3:2 path:DeadRT.moduleAccessPath
@@ -102,7 +102,7 @@
   addValueDeclaration +funWithInnerVars DeadTest.res:151:4 path:+DeadTest
   addValueDeclaration +deadIncorrect DeadTest.res:160:4 path:+DeadTest
   addValueDeclaration +ira DeadTest.res:166:4 path:+DeadTest
-  addValueReference DeadTest.res:1:15 --> ImmutableArray.resi:9:0
+  addValueReference DeadTest.res:1:20 --> ImmutableArray.resi:9:0
   addValueReference DeadTest.res:8:7 --> DeadTest.res:7:4
   addValueReference DeadTest.res:11:7 --> DeadTest.res:10:4
   addValueReference DeadTest.res:12:7 --> DeadTest.res:10:4
@@ -131,8 +131,8 @@
   addValueDeclaration +x DeadTest.res:64:6 path:+DeadTest.MM
   addValueReference DeadTest.res:64:6 --> DeadTest.res:63:6
   addValueDeclaration +valueOnlyInImplementation DeadTest.res:65:6 path:+DeadTest.MM
-  addValueReference DeadTest.res:69:9 --> DeadTest.res:60:2
-  addValueReference DeadTest.res:73:16 --> DeadValueTest.resi:1:0
+  addValueReference DeadTest.res:69:14 --> DeadTest.res:60:2
+  addValueReference DeadTest.res:73:21 --> DeadValueTest.resi:1:0
   addValueReference DeadTest.res:75:8 --> DeadTest.res:75:8
   addValueReference DeadTest.res:77:8 --> DeadTest.res:77:20
   addValueReference DeadTest.res:77:8 --> DeadTest.res:77:8
@@ -148,21 +148,21 @@
   addValueReference DeadTest.res:96:4 --> DeadTest.res:96:42
   addValueReference DeadTest.res:96:4 --> DeadTest.res:96:24
   addValueReference DeadTest.res:96:4 --> DeadTest.res:96:45
-  addTypeReference DeadTest.res:98:16 --> DeadRT.resi:2:2
+  addTypeReference DeadTest.res:98:21 --> DeadRT.resi:2:2
   addValueDeclaration +a1 DeadTest.res:105:6 path:+DeadTest
   addValueDeclaration +a2 DeadTest.res:106:6 path:+DeadTest
   addValueDeclaration +a3 DeadTest.res:107:6 path:+DeadTest
-  addValueReference DeadTest.res:110:17 --> DynamicallyLoadedComponent.res:2:4
+  addValueReference DeadTest.res:110:22 --> DynamicallyLoadedComponent.res:2:4
   addRecordLabelDeclaration s DeadTest.res:117:12 path:+DeadTest.props
   addValueReference DeadTest.res:117:32 --> DeadTest.res:117:12
   addValueReference DeadTest.res:117:19 --> React.res:7:0
   addTypeReference _none_:1:-1 --> DeadTest.res:117:12
   addValueReference DeadTest.res:117:4 --> React.res:16:0
-  addValueReference DeadTest.res:119:16 --> DeadTest.res:117:4
+  addValueReference DeadTest.res:119:21 --> DeadTest.res:117:4
   addVariantCaseDeclaration A DeadTest.res:140:11 path:+DeadTest.WithInclude.t
   addVariantCaseDeclaration A DeadTest.res:143:13 path:+DeadTest.WithInclude.T.t
   addVariantCaseDeclaration A DeadTest.res:143:13 path:+DeadTest.WithInclude.t
-  addTypeReference DeadTest.res:148:7 --> DeadTest.res:140:11
+  addTypeReference DeadTest.res:148:12 --> DeadTest.res:140:11
   addValueDeclaration +x DeadTest.res:152:6 path:+DeadTest
   addValueDeclaration +y DeadTest.res:153:6 path:+DeadTest
   addValueReference DeadTest.res:151:4 --> DeadTest.res:152:6
@@ -992,7 +992,7 @@
   addValueDeclaration +ddjdj ModuleExceptionBug.res:7:4 path:+ModuleExceptionBug
   addValueReference ModuleExceptionBug.res:2:6 --> ModuleExceptionBug.res:2:21
   addExceptionDeclaration MyOtherException ModuleExceptionBug.res:5:0 path:+ModuleExceptionBug
-  addValueReference ModuleExceptionBug.res:8:7 --> ModuleExceptionBug.res:7:4
+  addValueReference ModuleExceptionBug.res:8:12 --> ModuleExceptionBug.res:7:4
   Scanning NestedModules.cmt Source:NestedModules.res
   addValueDeclaration +notNested NestedModules.res:2:4 path:+NestedModules
   addValueDeclaration +theAnswer NestedModules.res:6:6 path:+NestedModules.Universe
@@ -1094,9 +1094,9 @@
   addValueReference Newton.res:29:4 --> Newton.res:25:4
   addValueReference Newton.res:29:4 --> Newton.res:27:4
   addValueReference Newton.res:29:4 --> Newton.res:6:4
-  addValueReference Newton.res:31:8 --> Newton.res:29:4
-  addValueReference Newton.res:31:18 --> Newton.res:29:4
-  addValueReference Newton.res:31:16 --> Newton.res:25:4
+  addValueReference Newton.res:31:13 --> Newton.res:29:4
+  addValueReference Newton.res:31:23 --> Newton.res:29:4
+  addValueReference Newton.res:31:21 --> Newton.res:25:4
   Scanning OcamlWarningSuppressToplevel.cmt Source:OcamlWarningSuppressToplevel.res
   addValueDeclaration +suppressed1 OcamlWarningSuppressToplevel.res:3:4 path:+OcamlWarningSuppressToplevel
   addValueDeclaration +suppressed2 OcamlWarningSuppressToplevel.res:4:4 path:+OcamlWarningSuppressToplevel
@@ -1126,10 +1126,10 @@
   addValueReference OptArg.res:1:4 --> OptArg.res:1:29
   addValueReference OptArg.res:3:4 --> OptArg.res:3:17
   addValueReference OptArg.res:3:4 --> OptArg.res:3:27
-  DeadOptionalArgs.addReferences foo called with optional argNames:x argNamesMaybe: OptArg.res:5:7
-  addValueReference OptArg.res:5:7 --> OptArg.res:1:4
-  DeadOptionalArgs.addReferences bar called with optional argNames: argNamesMaybe: OptArg.res:7:7
-  addValueReference OptArg.res:7:7 --> OptArg.res:3:4
+  DeadOptionalArgs.addReferences foo called with optional argNames:x argNamesMaybe: OptArg.res:5:12
+  addValueReference OptArg.res:5:12 --> OptArg.res:1:4
+  DeadOptionalArgs.addReferences bar called with optional argNames: argNamesMaybe: OptArg.res:7:12
+  addValueReference OptArg.res:7:12 --> OptArg.res:3:4
   addValueReference OptArg.res:9:4 --> OptArg.res:9:20
   addValueReference OptArg.res:9:4 --> OptArg.res:9:26
   addValueReference OptArg.res:9:4 --> OptArg.res:9:32
@@ -1137,17 +1137,17 @@
   addValueReference OptArg.res:9:4 --> OptArg.res:9:23
   addValueReference OptArg.res:9:4 --> OptArg.res:9:29
   addValueReference OptArg.res:9:4 --> OptArg.res:9:35
-  DeadOptionalArgs.addReferences threeArgs called with optional argNames:c, a argNamesMaybe: OptArg.res:11:7
-  addValueReference OptArg.res:11:7 --> OptArg.res:9:4
-  DeadOptionalArgs.addReferences threeArgs called with optional argNames:a argNamesMaybe: OptArg.res:12:7
-  addValueReference OptArg.res:12:7 --> OptArg.res:9:4
+  DeadOptionalArgs.addReferences threeArgs called with optional argNames:c, a argNamesMaybe: OptArg.res:11:12
+  addValueReference OptArg.res:11:12 --> OptArg.res:9:4
+  DeadOptionalArgs.addReferences threeArgs called with optional argNames:a argNamesMaybe: OptArg.res:12:12
+  addValueReference OptArg.res:12:12 --> OptArg.res:9:4
   addValueReference OptArg.res:14:4 --> OptArg.res:14:18
   addValueReference OptArg.res:14:4 --> OptArg.res:14:24
   addValueReference OptArg.res:14:4 --> OptArg.res:14:15
   addValueReference OptArg.res:14:4 --> OptArg.res:14:21
   addValueReference OptArg.res:14:4 --> OptArg.res:14:27
-  DeadOptionalArgs.addReferences twoArgs called with optional argNames: argNamesMaybe: OptArg.res:16:7
-  addValueReference OptArg.res:16:10 --> OptArg.res:14:4
+  DeadOptionalArgs.addReferences twoArgs called with optional argNames: argNamesMaybe: OptArg.res:16:12
+  addValueReference OptArg.res:16:15 --> OptArg.res:14:4
   addValueReference OptArg.res:18:4 --> OptArg.res:18:17
   addValueReference OptArg.res:18:4 --> OptArg.res:18:14
   addValueReference OptArg.res:18:4 --> OptArg.res:18:24
@@ -1155,8 +1155,8 @@
   addValueReference OptArg.res:20:4 --> OptArg.res:20:18
   addValueReference OptArg.res:20:4 --> OptArg.res:20:24
   addValueReference OptArg.res:20:4 --> OptArg.res:18:4
-  DeadOptionalArgs.addReferences wrapOneArg called with optional argNames:a argNamesMaybe: OptArg.res:22:7
-  addValueReference OptArg.res:22:7 --> OptArg.res:20:4
+  DeadOptionalArgs.addReferences wrapOneArg called with optional argNames:a argNamesMaybe: OptArg.res:22:12
+  addValueReference OptArg.res:22:12 --> OptArg.res:20:4
   addValueReference OptArg.res:24:4 --> OptArg.res:24:19
   addValueReference OptArg.res:24:4 --> OptArg.res:24:25
   addValueReference OptArg.res:24:4 --> OptArg.res:24:31
@@ -1172,10 +1172,10 @@
   addValueReference OptArg.res:26:4 --> OptArg.res:26:32
   addValueReference OptArg.res:26:4 --> OptArg.res:26:38
   addValueReference OptArg.res:26:4 --> OptArg.res:24:4
-  DeadOptionalArgs.addReferences wrapfourArgs called with optional argNames:c, a argNamesMaybe: OptArg.res:28:7
-  addValueReference OptArg.res:28:7 --> OptArg.res:26:4
-  DeadOptionalArgs.addReferences wrapfourArgs called with optional argNames:c, b argNamesMaybe: OptArg.res:29:7
-  addValueReference OptArg.res:29:7 --> OptArg.res:26:4
+  DeadOptionalArgs.addReferences wrapfourArgs called with optional argNames:c, a argNamesMaybe: OptArg.res:28:12
+  addValueReference OptArg.res:28:12 --> OptArg.res:26:4
+  DeadOptionalArgs.addReferences wrapfourArgs called with optional argNames:c, b argNamesMaybe: OptArg.res:29:12
+  addValueReference OptArg.res:29:12 --> OptArg.res:26:4
   addValueReference OptArg.resi:1:0 --> OptArg.res:1:4
   OptionalArgs.addFunctionReference OptArg.resi:1:0 OptArg.res:1:4
   addValueReference OptArg.resi:2:0 --> OptArg.res:3:4
@@ -1280,12 +1280,12 @@
   addRecordLabelDeclaration address2 Records.res:92:2 path:+Records.business2
   addTypeReference Records.res:97:2 --> Records.res:92:2
   addValueReference Records.res:96:4 --> Records.res:96:20
-  addValueReference Records.res:96:4 --> Records.res:97:58
+  addValueReference Records.res:96:4 --> Records.res:97:55
   addValueReference Records.res:96:4 --> Records.res:36:4
   addValueReference Records.res:107:4 --> Records.res:107:20
   addValueReference Records.res:107:4 --> Records.res:107:20
   addValueReference Records.res:107:4 --> Records.res:107:20
-  addValueReference Records.res:107:4 --> Records.res:108:75
+  addValueReference Records.res:107:4 --> Records.res:108:72
   addValueReference Records.res:111:4 --> Records.res:111:20
   addValueReference Records.res:111:4 --> Records.res:111:20
   addValueReference Records.res:111:4 --> Records.res:111:20
@@ -1342,7 +1342,7 @@
   addValueReference RepeatedLabel.res:12:4 --> RepeatedLabel.res:12:20
   addTypeReference RepeatedLabel.res:12:16 --> RepeatedLabel.res:7:2
   addTypeReference RepeatedLabel.res:12:16 --> RepeatedLabel.res:8:2
-  addValueReference RepeatedLabel.res:14:7 --> RepeatedLabel.res:12:4
+  addValueReference RepeatedLabel.res:14:12 --> RepeatedLabel.res:12:4
   Scanning RequireCond.cmt Source:RequireCond.res
   Scanning ScopedAnnotationsLiveVsDead.cmt Source:ScopedAnnotationsLiveVsDead.res
   addValueDeclaration +leafLive ScopedAnnotationsLiveVsDead.res:1:4 path:+ScopedAnnotationsLiveVsDead
@@ -1420,14 +1420,14 @@
   addValueDeclaration +bar TestOptArg.res:5:4 path:+TestOptArg
   addValueDeclaration +notSuppressesOptArgs TestOptArg.res:9:4 path:+TestOptArg
   addValueDeclaration +liveSuppressesOptArgs TestOptArg.res:14:4 path:+TestOptArg
-  DeadOptionalArgs.addReferences OptArg.bar called with optional argNames:z argNamesMaybe: TestOptArg.res:1:7
-  addValueReference TestOptArg.res:1:7 --> OptArg.resi:2:0
+  DeadOptionalArgs.addReferences OptArg.bar called with optional argNames:z argNamesMaybe: TestOptArg.res:1:12
+  addValueReference TestOptArg.res:1:12 --> OptArg.resi:2:0
   addValueReference TestOptArg.res:3:4 --> TestOptArg.res:3:14
   addValueReference TestOptArg.res:3:4 --> TestOptArg.res:3:11
   addValueReference TestOptArg.res:3:4 --> TestOptArg.res:3:17
   DeadOptionalArgs.addReferences foo called with optional argNames:x argNamesMaybe: TestOptArg.res:5:16
   addValueReference TestOptArg.res:5:4 --> TestOptArg.res:3:4
-  addValueReference TestOptArg.res:7:7 --> TestOptArg.res:5:4
+  addValueReference TestOptArg.res:7:12 --> TestOptArg.res:5:4
   addValueReference TestOptArg.res:9:4 --> TestOptArg.res:9:31
   addValueReference TestOptArg.res:9:4 --> TestOptArg.res:9:37
   addValueReference TestOptArg.res:9:4 --> TestOptArg.res:9:43
@@ -1451,8 +1451,9 @@
   addRecordLabelDeclaration x TestPromise.res:6:2 path:+TestPromise.fromPayload
   addRecordLabelDeclaration s TestPromise.res:7:2 path:+TestPromise.fromPayload
   addRecordLabelDeclaration result TestPromise.res:11:18 path:+TestPromise.toPayload
-  addValueReference TestPromise.res:14:4 --> TestPromise.res:14:33
-  addTypeReference TestPromise.res:14:32 --> TestPromise.res:7:2
+  addValueReference TestPromise.res:14:4 --> TestPromise.res:14:14
+  addValueReference TestPromise.res:14:4 --> TestPromise.res:14:49
+  addTypeReference TestPromise.res:14:48 --> TestPromise.res:7:2
   Scanning ToSuppress.cmt Source:ToSuppress.res
   addValueDeclaration +toSuppress ToSuppress.res:1:4 path:+ToSuppress
   Scanning TransitiveType1.cmt Source:TransitiveType1.res
@@ -1570,16 +1571,14 @@
   addValueDeclaration +selfRecursiveConverter Types.res:42:4 path:+Types
   addValueDeclaration +mutuallyRecursiveConverter Types.res:49:4 path:+Types
   addValueDeclaration +testFunctionOnOptionsAsArgument Types.res:52:4 path:+Types
-  addValueDeclaration +jsStringT Types.res:60:4 path:+Types
-  addValueDeclaration +jsString2T Types.res:63:4 path:+Types
-  addValueDeclaration +jsonStringify Types.res:75:4 path:+Types
-  addValueDeclaration +testConvertNull Types.res:89:4 path:+Types
-  addValueDeclaration +testMarshalFields Types.res:109:4 path:+Types
-  addValueDeclaration +setMatch Types.res:125:4 path:+Types
-  addValueDeclaration +testInstantiateTypeParameter Types.res:135:4 path:+Types
-  addValueDeclaration +currentTime Types.res:144:4 path:+Types
-  addValueDeclaration +i64Const Types.res:153:4 path:+Types
-  addValueDeclaration +optFunction Types.res:156:4 path:+Types
+  addValueDeclaration +jsonStringify Types.res:69:4 path:+Types
+  addValueDeclaration +testConvertNull Types.res:83:4 path:+Types
+  addValueDeclaration +testMarshalFields Types.res:103:4 path:+Types
+  addValueDeclaration +setMatch Types.res:119:4 path:+Types
+  addValueDeclaration +testInstantiateTypeParameter Types.res:129:4 path:+Types
+  addValueDeclaration +currentTime Types.res:138:4 path:+Types
+  addValueDeclaration +i64Const Types.res:147:4 path:+Types
+  addValueDeclaration +optFunction Types.res:150:4 path:+Types
   addVariantCaseDeclaration A Types.res:12:2 path:+Types.typeWithVars
   addVariantCaseDeclaration B Types.res:13:2 path:+Types.typeWithVars
   addValueReference Types.res:23:8 --> Types.res:23:16
@@ -1599,14 +1598,14 @@
   addValueReference Types.res:52:4 --> Types.res:52:54
   addVariantCaseDeclaration A Types.res:56:2 path:+Types.opaqueVariant
   addVariantCaseDeclaration B Types.res:57:2 path:+Types.opaqueVariant
-  addRecordLabelDeclaration i Types.res:84:2 path:+Types.record
-  addRecordLabelDeclaration s Types.res:85:2 path:+Types.record
-  addValueReference Types.res:89:4 --> Types.res:89:23
-  addValueReference Types.res:109:4 --> Types.res:109:39
-  addValueReference Types.res:125:4 --> Types.res:125:16
-  addRecordLabelDeclaration id Types.res:130:19 path:+Types.someRecord
-  addValueReference Types.res:135:4 --> Types.res:135:36
-  addValueDeclaration +x Types.res:163:6 path:+Types.ObjectId
+  addRecordLabelDeclaration i Types.res:78:2 path:+Types.record
+  addRecordLabelDeclaration s Types.res:79:2 path:+Types.record
+  addValueReference Types.res:83:4 --> Types.res:83:23
+  addValueReference Types.res:103:4 --> Types.res:103:39
+  addValueReference Types.res:119:4 --> Types.res:119:16
+  addRecordLabelDeclaration id Types.res:124:19 path:+Types.someRecord
+  addValueReference Types.res:129:4 --> Types.res:129:36
+  addValueDeclaration +x Types.res:157:6 path:+Types.ObjectId
   Scanning Unboxed.cmt Source:Unboxed.res
   addValueDeclaration +testV1 Unboxed.res:8:4 path:+Unboxed
   addValueDeclaration +r2Test Unboxed.res:17:4 path:+Unboxed
@@ -1770,18 +1769,18 @@
   addRecordLabelDeclaration x VariantsWithPayload.res:2:2 path:+VariantsWithPayload.payload
   addRecordLabelDeclaration y VariantsWithPayload.res:3:2 path:+VariantsWithPayload.payload
   addValueReference VariantsWithPayload.res:16:4 --> VariantsWithPayload.res:16:23
-  addTypeReference VariantsWithPayload.res:26:57 --> VariantsWithPayload.res:2:2
+  addTypeReference VariantsWithPayload.res:26:62 --> VariantsWithPayload.res:2:2
   addValueReference VariantsWithPayload.res:19:4 --> VariantsWithPayload.res:26:7
-  addTypeReference VariantsWithPayload.res:26:74 --> VariantsWithPayload.res:3:2
+  addTypeReference VariantsWithPayload.res:26:79 --> VariantsWithPayload.res:3:2
   addValueReference VariantsWithPayload.res:19:4 --> VariantsWithPayload.res:26:7
   addValueReference VariantsWithPayload.res:19:4 --> VariantsWithPayload.res:19:31
   addValueReference VariantsWithPayload.res:37:4 --> VariantsWithPayload.res:37:24
   addValueReference VariantsWithPayload.res:40:4 --> VariantsWithPayload.res:42:9
   addValueReference VariantsWithPayload.res:40:4 --> VariantsWithPayload.res:43:9
   addValueReference VariantsWithPayload.res:40:4 --> VariantsWithPayload.res:43:13
-  addTypeReference VariantsWithPayload.res:44:55 --> VariantsWithPayload.res:2:2
+  addTypeReference VariantsWithPayload.res:44:60 --> VariantsWithPayload.res:2:2
   addValueReference VariantsWithPayload.res:40:4 --> VariantsWithPayload.res:44:11
-  addTypeReference VariantsWithPayload.res:44:72 --> VariantsWithPayload.res:3:2
+  addTypeReference VariantsWithPayload.res:44:77 --> VariantsWithPayload.res:3:2
   addValueReference VariantsWithPayload.res:40:4 --> VariantsWithPayload.res:44:11
   addValueReference VariantsWithPayload.res:40:4 --> VariantsWithPayload.res:40:25
   addVariantCaseDeclaration A VariantsWithPayload.res:49:2 path:+VariantsWithPayload.simpleVariant
@@ -1954,11 +1953,11 @@
   addTypeReference TypeReexport.res:28:4 --> TypeReexport.res:33:4
   extendTypeDependencies TypeReexport.res:28:4 --> TypeReexport.res:33:4
   addTypeReference TypeReexport.res:33:4 --> TypeReexport.res:28:4
-  addValueReference TestDeadExn.res:1:7 --> DeadExn.res:1:0
+  addValueReference TestDeadExn.res:1:12 --> DeadExn.res:1:0
   
 Forward Liveness Analysis
 
-    decls: 702
+    decls: 700
     roots(external targets): 137
     decl-deps: decls_with_out=411 edges_to_decls=289
 
@@ -1966,48 +1965,47 @@ Forward Liveness Analysis
     Root (external ref): VariantCase DeadRT.moduleAccessPath.Root
     Root (external ref): Value +TypeReexport.VariantUseOriginal.+value
     Root (annotated): Value +NestedModules.Universe.Nested2.Nested3.+nested3Function
+    Root (annotated): Value +Records.+someBusiness2
+    Root (annotated): Value +Types.+setMatch
+    Root (annotated): Value +Uncurried.+sumCurried
     Root (annotated): Value +ImportJsValue.+areaValue
+    Root (annotated): Value +Types.+testConvertNull
     Root (external ref): Value +CreateErrorHandler2.Error2.+notification
-    Root (annotated): Value +DeadTest.+fortyTwoButExported
     Root (annotated): Value +ScopedAnnotationsOverride.M.+live1
+    Root (annotated): Value +VariantsWithPayload.+testSimpleVariant
     Root (annotated): Value +Docstrings.+twoU
     Root (external ref): RecordLabel +TypeReexportCrossFileB.reexportedRecord.usedField
     Root (annotated): Value +NestedModules.Universe.Nested2.+nested2Function
-    Root (annotated): Value +Tuples.+marry
+    Root (external ref): Value +OptArg.+wrapfourArgs
     Root (annotated): Value +Docstrings.+unitArgWithoutConversionU
-    Root (annotated): Value +Types.+i64Const
     Root (external ref): VariantCase +DeadTypeTest.deadType.OnlyInImplementation
     Root (annotated): Value +TestImport.+valueStartingWithUpperCaseLetter
     Root (external ref): Value +TypeReexport.VariantUseReexported.+value
-    Root (annotated): RecordLabel +DeadTest.inlineRecord.IR.e
     Root (external ref): Value +OptionalArgsLiveDead.+liveCaller
+    Root (annotated): Value +Types.+testInstantiateTypeParameter
     Root (annotated): RecordLabel +ImportHookDefault.props.renderMe
     Root (annotated): Value +TypeParams3.+test
+    Root (annotated): Value +Types.+optFunction
     Root (annotated): Value +Variants.+sunday
     Root (annotated): Value +NestedModules.Universe.Nested2.Nested3.+nested3Value
     Root (external ref): RecordLabel +Unison.t.doc
     Root (annotated): Value +Tuples.+computeAreaWithIdent
     Root (annotated): Value +LetPrivate.+y
     Root (annotated): Value +TestImport.+innerStuffContentsAsEmptyObject
-    Root (external ref): Value +TestOptArg.+notSuppressesOptArgs
     Root (annotated): Value +Types.+testFunctionOnOptionsAsArgument
     Root (annotated): Value +Docstrings.+two
-    Root (annotated): Value +Tuples.+getFirstName
     Root (annotated): Value +Uncurried.+uncurried3
     Root (external ref): Value +Newton.+f
     Root (external ref): RecordLabel +Records.record.v
-    Root (external ref): VariantCase +DeadTest.VariantUsedOnlyInImplementation.t.A
     Root (external ref): RecordLabel +Records.person.address
     Root (annotated): Value +Variants.+testConvert2
     Root (annotated): Value +Tuples.+coord2d
     Root (external ref): Value +CreateErrorHandler1.Error1.+notification
-    Root (annotated): Value +Uncurried.+sumU2
     Root (annotated): Value +TransitiveType3.+convertT3
     Root (annotated): Value +Variants.+swap
     Root (annotated): Value +Shadow.+test
     Root (annotated): Value +Uncurried.+uncurried1
     Root (annotated): Value +Variants.+testConvert3
-    Root (annotated): Value +DeadTest.+thisIsMarkedLive
     Root (annotated): Value +NestedModules.+notNested
     Root (annotated): Value +Records.+computeArea
     Root (external ref): RecordLabel +TypeReexport.UseOriginal.reexportedType.directlyUsed
@@ -2018,41 +2016,45 @@ Forward Liveness Analysis
     Root (annotated): RecordLabel +ImportIndex.props.method
     Root (annotated): Value +Docstrings.+unnamed2U
     Root (external ref): RecordLabel +RecordRest.config.name
+    Root (annotated): Value +Records.+testMyRecBsAs
     Root (external ref): Value +FirstClassModules.M.Z.+u
     Root (annotated): Value +Uncurried.+callback2U
     Root (annotated): Value +ImportJsValue.+default
-    Root (annotated): Value +VariantsWithPayload.+testVariant1Int
     Root (external ref): Value +DynamicallyLoadedComponent.+make
     Root (annotated): Value +Hooks.RenderPropRequiresConversion.+make
     Root (annotated): Value +Uncurried.+uncurried2
     Root (annotated): Value +UseImportJsValue.+useTypeImportedInOtherModule
     Root (annotated): Value +Hooks.Inner.+make
+    Root (external ref): RecordLabel +DeadTest.inlineRecord.IR.c
     Root (external ref): Value +OptArg.+foo
     Root (annotated): Value +Variants.+fortytwoOK
+    Root (annotated): Value +TestOptArg.+liveSuppressesOptArgs
+    Root (annotated): Value +Uncurried.+sumU2
     Root (external ref): Value OptArg.+bar
     Root (annotated): Value +Records.+payloadValue
-    Root (external ref): RecordLabel +DeadTest.props.s
     Root (annotated): Value +Hooks.+default
+    Root (annotated): Value +Types.+currentTime
+    Root (annotated): Value +VariantsWithPayload.+testVariant1Object
     Root (external ref): VariantCase +Unison.break_.Never
+    Root (annotated): Value +Records.+computeArea3
     Root (annotated): Value +TestEmitInnerModules.Inner.+y
     Root (external ref): VariantCase InnerModuleTypes.I.t.Foo
     Root (annotated): Value +Types.+selfRecursiveConverter
-    Root (external ref): Value +DeadTest.+thisIsUsedTwice
     Root (annotated): Value +Opaque.+testConvertNestedRecordFromOtherFile
+    Root (external ref): RecordLabel +DeadTest.inlineRecord.IR.b
     Root (external ref): Value +OptArg.+bar
     Root (annotated): Value +TestFirstClassModules.+convertRecord
+    Root (external ref): RecordLabel +TestPromise.fromPayload.s
     Root (external ref): VariantCase DeadTypeTest.deadType.OnlyInInterface
-    Root (external ref): RecordLabel +Records.myRecBsAs.type_
     Root (annotated): Value +ImportJsValue.+higherOrder
     Root (annotated): Value +Variants.+restResult3
-    Root (external ref): RecordLabel +Tuples.person.name
     Root (external ref): Value +FirstClassModules.M.InnerModule3.+k3
+    Root (annotated): Value +DeadTest.+fortyTwoButExported
+    Root (external ref): VariantCase +DeadTest.VariantUsedOnlyInImplementation.t.A
     Root (external ref): RecordLabel +Records.coord.x
     Root (annotated): RecordLabel +DeadTypeTest.record.y
     Root (annotated): Value +TestImport.+defaultValue
-    Root (external ref): Value +OptArg.+threeArgs
-    Root (annotated): Value +Types.+setMatch
-    Root (external ref): Value +DeadTest.+deadIncorrect
+    Root (annotated): Value +DeadTest.GloobLive.+globallyLive2
     Root (external ref): RecordLabel +TypeReexport.UseReexported.reexportedType.usedField
     Root (annotated): Value +Docstrings.+signMessage
     Root (external ref): RecordLabel +Hooks.Inner.Inner2.props.vehicle
@@ -2064,25 +2066,25 @@ Forward Liveness Analysis
     Root (annotated): Value +TransitiveType1.+convert
     Root (annotated): Value +ImportHooks.+make
     Root (external ref): VariantCase +Unison.break_.IfNeed
-    Root (external ref): Value +DeadTest.+make
-    Root (annotated): Value +Records.+testMyRecBsAs
-    Root (external ref): RecordLabel +DeadTest.inlineRecord.IR.c
+    Root (external ref): VariantCase +DeadTest.WithInclude.t.A
     Root (annotated): Value +Records.+origin
     Root (annotated): Value +Variants.+onlySunday
     Root (annotated): Value +Docstrings.+treeU
     Root (annotated): Value +Docstrings.+unnamed1
     Root (annotated): Value +TypeParams3.+test2
     Root (annotated): Value +Tuples.+origin
-    Root (annotated): Value +Uncurried.+sumCurried
     Root (annotated): Value +Docstrings.+unitArgWithConversionU
+    Root (annotated): Value +Records.+computeArea4
     Root (annotated): Value +Tuples.+computeArea
     Root (annotated): Value +References.+get
     Root (annotated): Value +ModuleAliases.+testNested
+    Root (external ref): Value +OptArg.+threeArgs
+    Root (annotated): Value +Types.+jsonStringify
     Root (external ref): Value +FirstClassModules.SomeFunctor.+ww
+    Root (annotated): Value +Types.+testMarshalFields
     Root (annotated): Value +Hooks.Inner.Inner2.+make
     Root (annotated): Value +ImportJsValue.+area
-    Root (annotated): Value +Records.+testMyRec
-    Root (annotated): Value +DeadTest.GloobLive.+globallyLive3
+    Root (external ref): Value +DeadTest.MM.+x
     Root (external ref): RecordLabel +Uncurried.auth.login
     Root (annotated): Value +ImportJsValue.+roundedNumber
     Root (external ref): RecordLabel +RepeatedLabel.tabState.a
@@ -2091,7 +2093,6 @@ Forward Liveness Analysis
     Root (annotated): Value +Shadow.+test
     Root (external ref): RecordLabel +Types.mutuallyRecursiveA.b
     Root (annotated): RecordLabel +ImportHooks.props.renderMe
-    Root (annotated): Value +TestPromise.+convert
     Root (external ref): Value +EmptyArray.Z.+make
     Root (annotated): Value +ScopedAnnotationsLiveVsDead.LiveScope.+root
     Root (external ref): Value +Newton.+result
@@ -2100,135 +2101,130 @@ Forward Liveness Analysis
     Root (annotated): Value +ImportJsValue.+useGetProp
     Root (annotated): Value +Variants.+id2
     Root (annotated): Value +Uncurried.+sumU
-    Root (external ref): Value +TestOptArg.+bar
-    Root (external ref): RecordLabel +DeadTest.record.yyy
+    Root (annotated): Value +DeadTest.+thisIsMarkedLive
     Root (annotated): Value +Docstrings.+one
-    Root (external ref): Value +OptArg.+twoArgs
     Root (annotated): Value +OcamlWarningSuppressToplevel.+suppressed1
-    Root (external ref): RecordLabel +Records.business2.address2
     Root (annotated): Value +Tuples.+testTuple
-    Root (annotated): Value +Records.+testMyObj2
+    Root (external ref): Value +OptArg.+wrapOneArg
     Root (annotated): Value +Uncurried.+callback2
-    Root (external ref): Value +DeadTest.VariantUsedOnlyInImplementation.+a
     Root (annotated): Value +ImportMyBanner.+make
+    Root (annotated): Value +VariantsWithPayload.+testVariantWithPayloads
     Root (external ref): RecordLabel +Records.payload.payload
+    Root (annotated): Value +Tuples.+marry
     Root (annotated): Value +ImportJsValue.+returnMixedArray
     Root (annotated): Value +TestEmitInnerModules.Outer.Medium.Inner.+y
     Root (annotated): Value +TestEmitInnerModules.Inner.+x
-    Root (external ref): Value +OptArg.+wrapOneArg
+    Root (annotated): Value +Tuples.+changeSecondAge
     Root (external ref): RecordLabel +ComponentAsProp.props.title
     Root (annotated): Value +Records.+findAddress
     Root (annotated): Value +Uncurried.+callback
+    Root (external ref): Value +DeadTest.+thisIsUsedTwice
     Root (annotated): Value +VariantsWithPayload.+printVariantWithPayload
     Root (annotated): Value +TestImmutableArray.+testImmutableArrayGet
+    Root (annotated): Value +VariantsWithPayload.+printManyPayloads
     Root (external ref): Value +TypeReexport.UseOriginal.+value
     Root (annotated): Value +Docstrings.+unnamed2
     Root (annotated): Value +LetPrivate.local_1.+x
     Root (annotated): Value +TestImport.+make
-    Root (annotated): Value +DeadTest.GloobLive.+globallyLive1
     Root (annotated): Value +Docstrings.+grouped
     Root (annotated): Value +OcamlWarningSuppressToplevel.M.+suppressed4
-    Root (annotated): Value +Types.+optFunction
-    Root (annotated): Value +Records.+getPayloadRecordPlusOne
     Root (external ref): VariantCase +DeadTest.inlineRecord.IR
+    Root (annotated): Value +Records.+getPayloadRecordPlusOne
     Root (annotated): Value +Types.+swap
-    Root (annotated): Value +Types.+jsonStringify
     Root (annotated): RecordLabel +ImportHookDefault.props.person
     Root (annotated): Value +Variants.+saturday
     Root (external ref): VariantCase +Docstrings.t.A
     Root (annotated): Value +OcamlWarningSuppressToplevel.M.+suppressed3
-    Root (annotated): Value +Records.+findAddress2
     Root (annotated): Value +Uncurried.+uncurried0
     Root (annotated): Value +Records.+someBusiness
     Root (external ref): RecordLabel +Hooks.vehicle.name
-    Root (annotated): Value +Uncurried.+sumLblCurried
+    Root (external ref): RecordLabel +Tuples.person.age
     Root (annotated): Value +RecordRest.+getRest
     Root (annotated): Value +References.+preserveRefIdentity
-    Root (annotated): Value +Types.+jsStringT
     Root (annotated): Value +Variants.+restResult1
+    Root (external ref): Value +TestOptArg.+notSuppressesOptArgs
+    Root (external ref): RecordLabel +Records.myRecBsAs.type_
     Root (external ref): VariantCase +TypeReexport.VariantUseReexported.reexportedType.A
     Root (external ref): Value +Unison.+toString
     Root (annotated): Value +ImportJsValue.+polymorphic
     Root (annotated): Value +References.+set
-    Root (external ref): Value +DeadTest.MM.+x
+    Root (annotated): Value +Records.+testMyRecBsAs2
     Root (annotated): Value +ModuleAliases.+testInner
     Root (external ref): RecordLabel +ComponentAsProp.props.description
     Root (annotated): Value +Docstrings.+useParamU
     Root (annotated): Value +ImportJsValue.+useColor
-    Root (annotated): Value +Tuples.+changeSecondAge
     Root (external ref): Value +Unison.+group
     Root (external ref): RecordLabel +RecordRest.SubConfig.t.version
     Root (annotated): Value +Docstrings.+unnamed1U
     Root (annotated): Value +Records.+recordValue
     Root (annotated): Value +ImportHookDefault.+make
     Root (annotated): Value +Types.+map
-    Root (annotated): Value +Types.+testInstantiateTypeParameter
     Root (annotated): RecordLabel +DeadTypeTest.record.x
+    Root (external ref): Value +TestOptArg.+bar
     Root (external ref): RecordLabel +Records.myRec.type_
-    Root (annotated): Value +TestOptArg.+liveSuppressesOptArgs
+    Root (external ref): Value +DeadTest.+make
     Root (annotated): Value NestedModulesInSignature.Universe.+theAnswer
     Root (annotated): Value +Docstrings.+unitArgWithoutConversion
     Root (annotated): Value +References.+create
-    Root (annotated): Value +Types.+currentTime
-    Root (annotated): Value +Records.+someBusiness2
-    Root (external ref): Value +DeadTest.+ira
     Root (annotated): Value +FirstClassModules.+testConvert
     Root (external ref): RecordLabel +Records.coord.z
     Root (annotated): Value +Types.+someIntList
-    Root (annotated): Value +Types.+jsString2T
+    Root (annotated): Value +Types.+i64Const
     Root (external ref): VariantCase +Unison.stack.Empty
     Root (annotated): Value +Records.+coord2d
     Root (external ref): RecordLabel +DynamicallyLoadedComponent.props.s
-    Root (external ref): RecordLabel +Tuples.person.age
     Root (annotated): Value +NestedModules.Universe.+someString
     Root (external ref): VariantCase +Unison.break_.Always
+    Root (external ref): RecordLabel +DeadTest.record.xxx
+    Root (external ref): RecordLabel +DeadTest.record.yyy
     Root (annotated): Value +TestFirstClassModules.+convertInterface
-    Root (external ref): RecordLabel +TestPromise.fromPayload.s
-    Root (annotated): Value +Types.+testMarshalFields
     Root (external ref): RecordLabel +VariantsWithPayload.payload.x
+    Root (annotated): RecordLabel +DeadTest.inlineRecord.IR.e
     Root (annotated): RecordLabel +ImportHooks.props.children
+    Root (external ref): RecordLabel +DeadTest.props.s
     Root (external ref): VariantCase +DeadTypeTest.t.A
     Root (annotated): Value +Docstrings.+oneU
     Root (annotated): RecordLabel +DeadTypeTest.record.z
+    Root (annotated): Value +Records.+testMyObj2
     Root (annotated): Value +Docstrings.+flat
     Root (annotated): Value +NestedModules.Universe.Nested2.+nested2Value
-    Root (annotated): Value +Records.+testMyObj
+    Root (external ref): RecordLabel +Records.business2.address2
     Root (external ref): VariantCase DeadTypeTest.deadType.InBoth
     Root (annotated): Value +ScopedAnnotationsOverride.M.+live2
-    Root (annotated): Value +Records.+testMyRecBsAs2
-    Root (annotated): Value +VariantsWithPayload.+testManyPayloads
     Root (annotated): Value +FirstClassModules.+someFunctorAsFunction
-    Root (annotated): Value +Records.+computeArea3
     Root (annotated): Value +Variants.+fortytwoBAD
-    Root (external ref): Value +DeadTest.+thisIsUsedOnce
     Root (external ref): RecordLabel +Unison.t.break_
     Root (external ref): RecordLabel +Hooks.Inner.props.vehicle
     Root (external ref): Value ImmutableArray.+fromArray
     Root (external ref): Value +RepeatedLabel.+userData
     Root (annotated): Value +Variants.+testConvert2to3
-    Root (external ref): Value +OptArg.+wrapfourArgs
+    Root (external ref): Value +DeadTest.+thisIsUsedOnce
     Root (annotated): Value +ImportJsValue.+round
     Root (annotated): Value +TestModuleAliases.+testInner2
-    Root (annotated): Value +VariantsWithPayload.+testSimpleVariant
+    Root (annotated): Value +Tuples.+getFirstName
     Root (annotated): Value +TestFirstClassModules.+convert
+    Root (annotated): Value +Records.+testMyRec
     Root (external ref): VariantCase +DeadRT.moduleAccessPath.Kaboom
     Root (external ref): Value +TypeReexport.UseReexported.+value
+    Root (external ref): Value +DeadTest.+deadIncorrect
     Root (external ref): Value +DeadCodeImplementation.M.+x
-    Root (annotated): Value +VariantsWithPayload.+testVariantWithPayloads
     Root (annotated): Value +Variants.+restResult2
     Root (annotated): Value +Docstrings.+useParam
     Root (annotated): Value +Records.+getPayload
+    Root (annotated): Value +VariantsWithPayload.+printVariantWithPayloads
     Root (annotated): Value +ScopedAnnotationsOverride.M.NestedInLive.+nestedLive
     Root (external ref): Value +FirstClassModules.M.+y
+    Root (annotated): Value +Records.+findAddress2
     Root (external ref): RecordLabel +Uncurried.authU.loginU
+    Root (external ref): RecordLabel +Tuples.person.name
     Root (annotated): Value +ModuleAliases.+testInner2
     Root (annotated): RecordLabel +ImportHooks.props.person
     Root (external ref): Value DeadValueTest.+valueAlive
+    Root (external ref): Value +DeadTest.+ira
     Root (external ref): RecordLabel +Hooks.RenderPropRequiresConversion.props.renderVehicle
     Root (annotated): Value +Shadow.M.+test
+    Root (annotated): Value +Uncurried.+sumLblCurried
     Root (annotated): Value +ComponentAsProp.+make
-    Root (annotated): Value +Records.+testMyRec2
-    Root (annotated): Value +VariantsWithPayload.+printManyPayloads
     Root (annotated): Value +TestFirstClassModules.+convertFirstClassModuleWithTypeEquations
     Root (annotated): Value +TransitiveType1.+convertAlias
     Root (annotated): Value +ForOf.+keep
@@ -2237,12 +2233,13 @@ Forward Liveness Analysis
     Root (annotated): Value +TestImport.+defaultValue2
     Root (external ref): Exception +DeadExn.Etoplevel
     Root (annotated): Value +Variants.+monday
-    Root (annotated): Value +VariantsWithPayload.+printVariantWithPayloads
     Root (annotated): Value +Unboxed.+r2Test
     Root (external ref): RecordLabel +Records.coord.y
-    Root (external ref): RecordLabel +DeadTest.record.xxx
+    Root (annotated): Value +Records.+testMyObj
+    Root (annotated): Value +TestPromise.+convert
     Root (annotated): Value +FirstClassModules.+firstClassModule
     Root (external ref): RecordLabel +Hooks.props.vehicle
+    Root (external ref): Value +DeadTest.VariantUsedOnlyInImplementation.+a
     Root (annotated): Value +ImportJsValue.+useGetAbs
     Root (external ref): Value +JsxV4.C.+make
     Root (external ref): RecordLabel +Types.selfRecursive.self
@@ -2250,86 +2247,87 @@ Forward Liveness Analysis
     Root (annotated): Value +Variants.+polyWithOpt
     Root (annotated): Value +References.+destroysRefIdentity
     Root (external ref): Value +Hooks.RenderPropRequiresConversion.+car
+    Root (external ref): Value +OptArg.+twoArgs
     Root (external ref): Value +FirstClassModules.M.+x
     Root (external ref): Value +TypeReexportCrossFileB.+recordValue
-    Root (annotated): Value +Records.+computeArea4
     Root (annotated): Value +TestModuleAliases.+testInner1Expanded
     Root (external ref): Value +TypeReexport.OnlyReexportedDead.+value
+    Root (annotated): Value +DeadTest.GloobLive.+globallyLive3
+    Root (annotated): Value +VariantsWithPayload.+testVariant1Int
     Root (annotated): Value +ImportIndex.+make
-    Root (external ref): RecordLabel +DeadTest.inlineRecord.IR.b
     Root (annotated): Value +Unboxed.+testV1
     Root (annotated): Value +NestedModules.Universe.+theAnswer
     Root (annotated): Value +References.+access
     Root (annotated): Value +TestModuleAliases.+testInner2Expanded
     Root (annotated): Value +Variants.+isWeekend
     Root (annotated): Value +Variants.+testConvert
+    Root (annotated): Value +DeadTest.GloobLive.+globallyLive1
     Root (annotated): Value +Variants.+id1
-    Root (annotated): Value +VariantsWithPayload.+testVariant1Object
     Root (annotated): Value +References.+update
     Root (annotated): Value +Opaque.+noConversion
     Root (external ref): RecordLabel +RepeatedLabel.tabState.b
-    Root (annotated): Value +DeadTest.GloobLive.+globallyLive2
+    Root (annotated): Value +VariantsWithPayload.+testManyPayloads
     Root (external ref): RecordLabel +TypeReexport.OnlyReexportedDead.reexportedType.usedField
     Root (annotated): Value +Docstrings.+unitArgWithConversion
     Root (external ref): RecordLabel +Records.business.owner
-    Root (external ref): VariantCase +DeadTest.WithInclude.t.A
     Root (external ref): VariantCase +DeadTypeTest.deadType.InBoth
     Root (external ref): RecordLabel +Records.business.address
     Root (external ref): RecordLabel +VariantsWithPayload.payload.y
     Root (annotated): RecordLabel +ImportHookDefault.props.children
+    Root (annotated): Value +Records.+testMyRec2
     Root (annotated): Value +TestModuleAliases.+testInner1
     Root (annotated): Value +ForAwaitOf.+keep
     Root (annotated): Value +OcamlWarningSuppressToplevel.+suppressed2
     Root (annotated): Value +VariantsWithPayload.+testWithPayload
-    Root (annotated): Value +Types.+testConvertNull
     Root (annotated): Value +Records.+getPayloadRecord
     Root (annotated): Value +Tuples.+computeAreaNoConverters
     Root (annotated): Value +Types.+mutuallyRecursiveConverter
     Root (annotated): Value +UseImportJsValue.+useGetProp
     Root (annotated): Value +Hooks.+functionWithRenamedArgs
   
-  325 roots found
+  323 roots found
 
     Propagate: DeadRT.moduleAccessPath.Root -> +DeadRT.moduleAccessPath.Root
     Propagate: +TypeReexportCrossFileB.reexportedRecord.usedField -> +TypeReexportCrossFileA.originalRecord.usedField
+    Propagate: +OptArg.+wrapfourArgs -> +OptArg.+fourArgs
     Propagate: +DeadTypeTest.deadType.OnlyInImplementation -> DeadTypeTest.deadType.OnlyInImplementation
     Propagate: +OptionalArgsLiveDead.+liveCaller -> +OptionalArgsLiveDead.+formatDate
     Propagate: +Newton.+f -> +Newton.+-
     Propagate: +Newton.+f -> +Newton.++
     Propagate: +Newton.+f -> +Newton.+*
-    Propagate: +DeadTest.VariantUsedOnlyInImplementation.t.A -> +DeadTest.VariantUsedOnlyInImplementation.t.A
-    Propagate: +DeadTest.+thisIsMarkedLive -> +DeadTest.+thisIsKeptAlive
     Propagate: +TypeReexport.UseOriginal.reexportedType.directlyUsed -> +TypeReexport.UseOriginal.originalType.directlyUsed
     Propagate: +Hooks.+default -> +Hooks.+make
     Propagate: InnerModuleTypes.I.t.Foo -> +InnerModuleTypes.I.t.Foo
     Propagate: DeadTypeTest.deadType.OnlyInInterface -> +DeadTypeTest.deadType.OnlyInInterface
+    Propagate: +DeadTest.VariantUsedOnlyInImplementation.t.A -> +DeadTest.VariantUsedOnlyInImplementation.t.A
     Propagate: +TypeReexport.UseReexported.reexportedType.usedField -> +TypeReexport.UseReexported.originalType.usedField
+    Propagate: +DeadTest.WithInclude.t.A -> +DeadTest.WithInclude.t.A
     Propagate: +References.+get -> +References.R.+get
+    Propagate: +DeadTest.MM.+x -> +DeadTest.MM.+x
     Propagate: ErrorHandler.Make.+notify -> +ErrorHandler.Make.+notify
     Propagate: +References.+make -> +References.R.+make
     Propagate: +ScopedAnnotationsLiveVsDead.LiveScope.+root -> +ScopedAnnotationsLiveVsDead.+middleLive
     Propagate: +Newton.+result -> +Newton.+newton
     Propagate: +Newton.+result -> +Newton.+fPrimed
     Propagate: +Records.+findAllAddresses -> +Records.+getOpt
-    Propagate: +TestOptArg.+bar -> +TestOptArg.+foo
-    Propagate: +DeadTest.VariantUsedOnlyInImplementation.+a -> +DeadTest.VariantUsedOnlyInImplementation.+a
+    Propagate: +DeadTest.+thisIsMarkedLive -> +DeadTest.+thisIsKeptAlive
     Propagate: +OptArg.+wrapOneArg -> +OptArg.+oneArg
     Propagate: +TestImmutableArray.+testImmutableArrayGet -> ImmutableArray.Array.+get
     Propagate: +TypeReexport.VariantUseReexported.reexportedType.A -> +TypeReexport.VariantUseReexported.originalType.A
     Propagate: +Unison.+toString -> +Unison.+fits
     Propagate: +References.+set -> +References.R.+set
-    Propagate: +DeadTest.MM.+x -> +DeadTest.MM.+x
+    Propagate: +TestOptArg.+bar -> +TestOptArg.+foo
     Propagate: NestedModulesInSignature.Universe.+theAnswer -> +NestedModulesInSignature.Universe.+theAnswer
     Propagate: +DeadTypeTest.t.A -> DeadTypeTest.t.A
     Propagate: ImmutableArray.+fromArray -> +ImmutableArray.+fromArray
-    Propagate: +OptArg.+wrapfourArgs -> +OptArg.+fourArgs
     Propagate: +DeadRT.moduleAccessPath.Kaboom -> DeadRT.moduleAccessPath.Kaboom
     Propagate: DeadValueTest.+valueAlive -> +DeadValueTest.+valueAlive
+    Propagate: +DeadTest.VariantUsedOnlyInImplementation.+a -> +DeadTest.VariantUsedOnlyInImplementation.+a
     Propagate: +ImportJsValue.+useGetAbs -> +ImportJsValue.AbsoluteValue.+getAbs
     Propagate: +TypeReexport.VariantUseOriginal.reexportedType.A -> +TypeReexport.VariantUseOriginal.originalType.A
     Propagate: +TypeReexport.OnlyReexportedDead.reexportedType.usedField -> +TypeReexport.OnlyReexportedDead.originalType.usedField
-    Propagate: +DeadTest.WithInclude.t.A -> +DeadTest.WithInclude.t.A
     Propagate: +References.R.+get -> +References.R.+get
+    Propagate: +DeadTest.MM.+x -> +DeadTest.MM.+y
     Propagate: +References.R.+make -> +References.R.+make
     Propagate: +ScopedAnnotationsLiveVsDead.+middleLive -> +ScopedAnnotationsLiveVsDead.+leafLive
     Propagate: +Newton.+newton -> +Newton.+/
@@ -2341,7 +2339,6 @@ Forward Liveness Analysis
     Propagate: +Newton.+newton -> +Newton.+next
     Propagate: ImmutableArray.Array.+get -> +ImmutableArray.+get
     Propagate: +References.R.+set -> +References.R.+set
-    Propagate: +DeadTest.MM.+x -> +DeadTest.MM.+y
     Propagate: +ImportJsValue.AbsoluteValue.+getAbs -> +ImportJsValue.AbsoluteValue.+getAbs
   
   53 declarations marked live via propagation
@@ -3867,8 +3864,6 @@ Forward Liveness Analysis
   Live (annotated) Value +Types.+testFunctionOnOptionsAsArgument
   Dead VariantCase +Types.opaqueVariant.A
   Dead VariantCase +Types.opaqueVariant.B
-  Live (annotated) Value +Types.+jsStringT
-  Live (annotated) Value +Types.+jsString2T
   Live (annotated) Value +Types.+jsonStringify
   Dead RecordLabel +Types.record.i
   Dead RecordLabel +Types.record.s
@@ -4118,7 +4113,7 @@ Forward Liveness Analysis
   deadRef is never used
 
   Warning Dead Value With Side Effects
-  DeadTest.res:121:1-40
+  DeadTest.res:121:1-45
   theSideEffectIsLogging is never used and could have side effects
 
   Warning Dead Value With Side Effects
@@ -4538,7 +4533,7 @@ Forward Liveness Analysis
   reverse is never used
 
   Warning Dead Value
-  ImmutableArray.resi:29:1-49
+  ImmutableArray.resi:29:1-46
   makeUninitialized is never used
 
   Warning Dead Value
@@ -4954,7 +4949,7 @@ Forward Liveness Analysis
   business2.name is a record label never used to read a value
 
   Warning Dead Type
-  Records.res:91:3-30
+  Records.res:91:3-25
   business2.owner is a record label never used to read a value
 
   Warning Dead Type
@@ -5110,23 +5105,23 @@ Forward Liveness Analysis
   opaqueVariant.B is a variant case which is never constructed
 
   Warning Dead Type
-  Types.res:84:3-8
+  Types.res:78:3-8
   record.i is a record label never used to read a value
 
   Warning Dead Type
-  Types.res:85:3-11
+  Types.res:79:3-11
   record.s is a record label never used to read a value
 
   Warning Dead Type
-  Types.res:130:20-26
+  Types.res:124:20-26
   someRecord.id is a record label never used to read a value
 
   Warning Dead Module
-  Types.res:158:8-79
+  Types.res:152:8-79
   Types.ObjectId is a dead module as all its items are dead.
 
   Warning Dead Value
-  Types.res:163:3-11
+  Types.res:157:3-11
   ObjectId.x is never used
 
   Warning Dead Type
@@ -5201,21 +5196,17 @@ Forward Liveness Analysis
   VariantsWithPayload.res:96:23-32
   variant1Object.R is a variant case which is never constructed
 
+  Warning Redundant Optional Argument
+  OptArg.res:26:1-70
+  optional argument c of function wrapfourArgs is always supplied (2 calls)
+
+  Warning Redundant Optional Argument
+  TestOptArg.res:3:1-28
+  optional argument x of function foo is always supplied (1 calls)
+
   Warning Unused Argument
   OptArg.res:24:1-63
   optional argument d of function fourArgs is never used
-
-  Warning Unused Argument
-  TestOptArg.res:9:1-65
-  optional argument x of function notSuppressesOptArgs is never used
-
-  Warning Unused Argument
-  TestOptArg.res:9:1-65
-  optional argument y of function notSuppressesOptArgs is never used
-
-  Warning Unused Argument
-  TestOptArg.res:9:1-65
-  optional argument z of function notSuppressesOptArgs is never used
 
   Warning Unused Argument
   OptArg.res:1:1-48
@@ -5238,6 +5229,10 @@ Forward Liveness Analysis
   optional argument x of function bar is never used
 
   Warning Unused Argument
+  OptionalArgsLiveDead.res:1:1-33
+  optional argument fmt of function formatDate is never used
+
+  Warning Unused Argument
   OptArg.res:9:1-54
   optional argument b of function threeArgs is never used
 
@@ -5245,9 +5240,25 @@ Forward Liveness Analysis
   OptArg.res:9:1-54
   optional argument a of function threeArgs is always supplied (2 calls)
 
+  Warning Redundant Optional Argument
+  OptArg.res:20:1-51
+  optional argument a of function wrapOneArg is always supplied (1 calls)
+
   Warning Unused Argument
-  OptionalArgsLiveDead.res:1:1-33
-  optional argument fmt of function formatDate is never used
+  TestOptArg.res:9:1-65
+  optional argument x of function notSuppressesOptArgs is never used
+
+  Warning Unused Argument
+  TestOptArg.res:9:1-65
+  optional argument y of function notSuppressesOptArgs is never used
+
+  Warning Unused Argument
+  TestOptArg.res:9:1-65
+  optional argument z of function notSuppressesOptArgs is never used
+
+  Warning Redundant Optional Argument
+  Unison.res:17:1-55
+  optional argument break_ of function group is always supplied (2 calls)
 
   Warning Unused Argument
   OptArg.res:14:1-42
@@ -5256,21 +5267,5 @@ Forward Liveness Analysis
   Warning Unused Argument
   OptArg.res:14:1-42
   optional argument b of function twoArgs is never used
-
-  Warning Redundant Optional Argument
-  TestOptArg.res:3:1-28
-  optional argument x of function foo is always supplied (1 calls)
-
-  Warning Redundant Optional Argument
-  OptArg.res:20:1-51
-  optional argument a of function wrapOneArg is always supplied (1 calls)
-
-  Warning Redundant Optional Argument
-  Unison.res:17:1-55
-  optional argument break_ of function group is always supplied (2 calls)
-
-  Warning Redundant Optional Argument
-  OptArg.res:26:1-70
-  optional argument c of function wrapfourArgs is always supplied (2 calls)
   
   Analysis reported 319 issues (Incorrect Dead Annotation:1, Warning Dead Exception:2, Warning Dead Module:22, Warning Dead Type:94, Warning Dead Value:177, Warning Dead Value With Side Effects:5, Warning Redundant Optional Argument:6, Warning Unused Argument:12)

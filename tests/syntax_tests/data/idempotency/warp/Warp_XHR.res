@@ -25,21 +25,21 @@ let decodeReadyState = readyState =>
 let readyState = (xhr: t) => decodeReadyState(readyStateExternal(xhr))
 
 @get
-external responseArrayBuffer: t => Js.Nullable.t<Js.Typed_array.array_buffer> = "response"
+external responseArrayBuffer: t => nullable<ArrayBuffer.t> = "response"
 
 @get
-external responseDocument: t => Js.Nullable.t<Dom.document> = "response"
+external responseDocument: t => nullable<Dom.document> = "response"
 
-@get external responseJson: t => Js.Nullable.t<Js.Json.t> = "response"
+@get external responseJson: t => nullable<JSON.t> = "response"
 
-@get external responseText: t => Js.Nullable.t<string> = "responseText"
+@get external responseText: t => nullable<string> = "responseText"
 
 @get external responseType: t => string = "responseType"
 
-@get external responseUrl: t => Js.Nullable.t<string> = "responseUrl"
+@get external responseUrl: t => nullable<string> = "responseUrl"
 
 @get
-external responseXml: t => Js.Nullable.t<Dom.xmlDocument> = "responseXml"
+external responseXml: t => nullable<Dom.xmlDocument> = "responseXml"
 
 @set
 external setResponseType: (
@@ -68,10 +68,10 @@ external setResponseType: (
 @send external abort: t => unit = "abort"
 
 @send
-external getAllResponseHeaders: t => Js.Nullable.t<string> = "getAllResponseHeaders"
+external getAllResponseHeaders: t => nullable<string> = "getAllResponseHeaders"
 
 @send
-external getResponseHeader: (t, string) => Js.Nullable.t<string> = "getResponseHeader"
+external getResponseHeader: (t, string) => nullable<string> = "getResponseHeader"
 
 @send
 external open_: (
@@ -89,7 +89,7 @@ external open_: (
 @send external send: t => unit = "send"
 
 @send
-external sendArrayBuffer: (t, Js.Typed_array.array_buffer) => unit = "send"
+external sendArrayBuffer: (t, ArrayBuffer.t) => unit = "send"
 
 @send external sendDocument: (t, Dom.document) => unit = "send"
 

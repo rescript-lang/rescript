@@ -2,7 +2,7 @@ let topLevelAsyncFunction = async () => {
   for innerScopeVal in 0 to 3 {
     let asyncClosureAccessingScopedVal = async () => {
       Console.log2("Accessing scoped var inside loop", innerScopeVal)
-      await Js.Promise.resolve()
+      await Promise.resolve()
     }
 
     await asyncClosureAccessingScopedVal()

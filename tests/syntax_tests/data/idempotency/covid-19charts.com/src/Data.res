@@ -11,14 +11,14 @@ module Map: {
   let empty: unit => t<'key, 'value>
 } = {
   type t<'key, 'value> = dict<'value> constraint 'key = string
-  let keys = Js.Dict.keys
-  let get = Js.Dict.unsafeGet
-  let get_opt = Js.Dict.get
-  let map = Js.Dict.map
-  let entries = Js.Dict.entries
-  let fromArray = Js.Dict.fromArray
-  let set = Js.Dict.set
-  let empty = Js.Dict.empty
+  let keys = Dict.keysToArray
+  let get = Dict.getUnsafe
+  let get_opt = Dict.get
+  let map = Dict.mapValues
+  let entries = Dict.toArray
+  let fromArray = Dict.fromArray
+  let set = Dict.set
+  let empty = Dict.make
 }
 
 @val external require: string => 'a = "require"
@@ -41,13 +41,13 @@ let days: array<day> = require("../data/days.json")
 let data: Map.t<countryId, dataPoints> = require("../data/data.json")
 let countryIds = Map.keys(locations)
 
-let startDate = Js.Date.fromString(days[0])
-let endDate = Js.Date.fromString(days[Js.Array.length(days) - 1])
+let startDate = Date.fromString(days[0])
+let endDate = Date.fromString(days[Array.length(days) - 1])
 
-let dayToIndex = Js.Array.mapi((day, index) => (day, index), days)->Map.fromArray
+let dayToIndex = Array.mapWithIndex(days, (day, index) => (day, index))->Map.fromArray
 
 type xValue =
-  | Date(Js.Date.t)
+  | Date(Date.t)
   | Day(int)
 
 type value =
@@ -56,10 +56,10 @@ type value =
 
 let dataWithGrowth =
   Map.entries(data)
-  ->Js.Array.map(((countryId, dataPoints)) => {
+  ->Array.map(((countryId, dataPoints)) => {
     let data = Lazy.from_fun(() => {
       let countryDataWithGrowth = Map.empty()
-      let _ = Js.Array.reduce((prevRecord, day) => {
+      let _ = Array.reduce(days, None, (prevRecord, day) => {
         let record = Map.get(dataPoints, day)
         Map.set(
           countryDataWithGrowth,
@@ -70,7 +70,7 @@ let dataWithGrowth =
           },
         )
         Some(record)
-      }, None, days)
+      })
       countryDataWithGrowth
     })
     (countryId, data)
@@ -85,39 +85,35 @@ type item = {
 
 type t = array<item>
 
-let calendar: t = Js.Array.mapi((day, index) => {
-  let values = Belt.HashMap.String.make(~hintSize=Js.Array.length(countryIds))
-  Js.Array.forEach(
-    countryId =>
+let calendar: t = Array.mapWithIndex(days, (day, index) => {
+  let values = Belt.HashMap.String.make(~hintSize=Array.length(countryIds))
+  Array.forEach(countryIds, countryId =>
       Belt.HashMap.String.set(
         values,
         Map.get(locations, countryId).name,
         Lazy.from_fun(() => Map.get(Belt.Map.String.getExn(dataWithGrowth, countryId)->Lazy.force, day)),
-      ),
-    countryIds,
-  )
+      ))
   {
-    x: Date(Js.Date.fromString(day)),
+    x: Date(Date.fromString(day)),
     index: index,
     values: countryId =>
-      Belt.HashMap.String.get(values, countryId)->Js.Option.map((x) => Lazy.force(x)),
+      Belt.HashMap.String.get(values, countryId)->Option.map((x) => Lazy.force(x)),
   }
-}, days)
+})
 
 let isInitialRange = (selectedStartDate, selectedEndDate) =>
-  Js.Date.getTime(selectedEndDate) == Js.Date.getTime(endDate) &&
-    Js.Date.getDate(selectedStartDate) == Js.Date.getTime(startDate)
+  Date.getTime(selectedEndDate) == Date.getTime(endDate) &&
+    Date.getDate(selectedStartDate) == Date.getTime(startDate)
 
 let calendar = (selectedStartDate, selectedEndDate) =>
   if isInitialRange(selectedStartDate, selectedEndDate) {
     calendar
   } else {
-    Js.Array.filter(({x}) =>
+    Array.filter(calendar, ({x}) =>
       switch x {
       | Date(date) => date >= selectedStartDate && date <= selectedEndDate
       | _ => false
-      }
-    , calendar)
+      })
   }
 
 type dataType =
@@ -143,20 +139,20 @@ let alignToDay0 = (dataType, threshold) => {
     Lazy.from_fun(() => {
       let dataPoints = Lazy.force(dataPoints)
       Map.entries(dataPoints)
-      ->Js.Array.map(((date, value)) => (Map.get(dayToIndex, date), value))
-      ->Js.Array.sortInPlaceWith((a, b) => compare(a->fst, b->fst))
-      ->Js.Array.map(((_, value)) => value)
-      ->Js.Array.filter(value => getValue(dataType, value) >= threshold)
-      ->Js.Array.mapi((value, index) => (index, value))
+      ->Array.map(((date, value)) => (Map.get(dayToIndex, date), value))
+      ->Array.toSorted((a, b) => Ordering.fromInt(((a, b) => compare(a->fst, b->fst))(a, b)))
+      ->Array.map(((_, value)) => value)
+      ->Array.filter(value => getValue(dataType, value) >= threshold)
+      ->Array.mapWithIndex((value, index) => (index, value))
       ->Belt.Map.Int.fromArray
     })
   )
 
-  Array.init(Js.Array.length(days), day => {
+  Array.init(Array.length(days), day => {
     x: Day(day),
     index: day,
     values: countryId =>
-      Belt.Map.String.get(data, countryId)->Js.Option.andThen((countryData) =>
+      Belt.Map.String.get(data, countryId)->Option.andThen((countryData) =>
         Belt.Map.Int.get(Lazy.force(countryData), day)
       ),
   })
@@ -166,18 +162,18 @@ let getGrowth = (dataType, x) =>
   switch x {
   | First(_) => 0.
   | Pair({prevRecord, record}) =>
-    let numberOfCasesF = Js.Int.toFloat(getValueFromRecord(dataType, record))
+    let numberOfCasesF = Int.toFloat(getValueFromRecord(dataType, record))
     let prevNumberOfCases = getValueFromRecord(dataType, prevRecord)
-    let prevNumberOfCasesF = Js.Int.toFloat(prevNumberOfCases)
+    let prevNumberOfCasesF = Int.toFloat(prevNumberOfCases)
     prevNumberOfCases == 0 ? 0. : numberOfCasesF /. prevNumberOfCasesF -. 1.
   }
 
 let getTotalMortailityRate = x =>
   switch x {
   | First({confirmed, deaths}) if confirmed > 0 =>
-    Js.Int.toFloat(deaths) /. Js.Int.toFloat(confirmed)
+    Int.toFloat(deaths) /. Int.toFloat(confirmed)
   | Pair({record: {confirmed, deaths}}) if confirmed > 0 =>
-    Js.Int.toFloat(deaths) /. Js.Int.toFloat(confirmed)
+    Int.toFloat(deaths) /. Int.toFloat(confirmed)
   | _ => 0.
   }
 
@@ -193,7 +189,7 @@ let getDailyNewCases = x =>
 let getDailyMortailityRate = x => {
   let {confirmed, deaths} = getDailyNewCases(x)
   if confirmed > 0 {
-    Js.Int.toFloat(deaths) /. Js.Int.toFloat(confirmed)
+    Int.toFloat(deaths) /. Int.toFloat(confirmed)
   } else {
     0.
   }
@@ -202,9 +198,9 @@ let getDailyMortailityRate = x => {
 /*
  * let allLocations =
  *   Map.entries(locations)
- *   ->Js.Array.map(((locationId, value)) =>
+ *   ->Array.map(((locationId, value)) =>
  *        {ReactSelect.label: value.name, value: locationId}
- *      );
+ *);
  */
 
 /* Workaround Datepicker bug/feature.

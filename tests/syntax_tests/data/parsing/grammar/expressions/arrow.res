@@ -1,8 +1,8 @@
 let f = x => x + 1
 
-let f = _ => Js.log("test")
+let f = _ => Console.log("test")
 
-let f = () => Js.log("unit")
+let f = () => Console.log("unit")
 
 // pattern
 let f = (Reducer(inst, comp)) => inst.render(comp)

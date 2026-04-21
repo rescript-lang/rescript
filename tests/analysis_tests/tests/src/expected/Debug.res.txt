@@ -7,38 +7,14 @@ Definition src/Debug.res 2:27
   "uri": "file:///ShadowedBelt.res"
 }
 
-Complete src/Debug.res 11:8
-posCursor:[11:8] posNoWhite:[11:7] Found expr:[11:5->11:8]
-Pexp_ident eqN:[11:5->11:8]
+Complete src/Debug.res 10:8
+posCursor:[10:8] posNoWhite:[10:7] Found expr:[10:5->10:8]
+Pexp_ident eqN:[10:5->10:8]
 Completable: Cpath Value[eqN]
-Raw opens: 1 Js.place holder
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
-Resolved opens 2 Stdlib Js
+Resolved opens 1 Stdlib
 ContextPath Value[eqN]
 Path eqN
-[
-  {
-    "deprecated": true,
-    "detail": "('a, nullable<'a>) => bool",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use `eqNullable` directly instead.\n\n"
-    },
-    "kind": 12,
-    "label": "eqNullable",
-    "tags": [ 1 ]
-  },
-  {
-    "deprecated": true,
-    "detail": "('a, null<'a>) => bool",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use `eqNull` directly instead.\n\n"
-    },
-    "kind": 12,
-    "label": "eqNull",
-    "tags": [ 1 ]
-  }
-]
+[]
 
 

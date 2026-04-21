@@ -16,12 +16,12 @@ open Jest
 open Expect
 open CssForTest
 
-let toBeJson = x => Expect.toBe(x->Js.Json.stringifyAny)
+let toBeJson = x => Expect.toBe(x->JSON.stringifyAny)
 let r = x => toJson(list{x}) /* simple rule for more readable tests */
 
 describe("Var", () => {
   test("test usage (limited)", () =>
-    expect((r(color(var("foo"))), r(marginTop(var("--bar"))))->Js.Json.stringifyAny)->toBeJson((
+    expect((r(color(var("foo"))), r(marginTop(var("--bar"))))->JSON.stringifyAny)->toBeJson((
       {"color": "var(--foo)"},
       {"marginTop": "var(--bar)"},
     ))
@@ -32,7 +32,7 @@ describe("Var", () => {
       (
         r(textDecoration(varDefault("foo", "default"))),
         r(alignItems(varDefault("--bar", "default"))),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson(({"textDecoration": "var(--foo,default)"}, {"alignItems": "var(--bar,default)"}))
   )
 })
@@ -49,7 +49,7 @@ describe("Color style", () =>
         r(color(transparent)),
         r(color(hex("FFF"))),
         r(color(currentColor)),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson((
       {"color": "rgb(1, 2, 3)"},
       {"color": "rgba(4, 5, 6, 0.3)"},
@@ -64,7 +64,7 @@ describe("Color style", () =>
 )
 
 describe("Label", () =>
-  test("test value", () => expect(r(label("a"))->Js.Json.stringifyAny)->toBeJson({"label": "a"}))
+  test("test value", () => expect(r(label("a"))->JSON.stringifyAny)->toBeJson({"label": "a"}))
 )
 //  test("test classname", () =>
 //    expect(style([label("theName")]))->toContainString("theName")
@@ -84,7 +84,7 @@ describe("Filter", () =>
         r(filter(list{#initial})),
         r(filter(list{#unset})),
         r(filter(list{#url("myurl")})),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson((
       {"filter": "opacity(10%) invert(20%)"},
       {"filter": "blur(20px) brightness(20%)"},
@@ -108,7 +108,7 @@ describe("Angle", () =>
         r(transform(rotate(rad(6.28)))),
         r(transform(rotate(grad(38.8)))),
         r(transform(rotate(turn(0.25)))),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson((
       {"transform": "rotate(1deg)"},
       {"transform": "rotate(6.28rad)"},
@@ -128,7 +128,7 @@ describe("Direction", () =>
         r(direction(inherit_)),
         r(direction(unset)),
         r(direction(initial)),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson((
       {"direction": "ltr"},
       {"direction": "ltr"},
@@ -153,7 +153,7 @@ describe("Resize", () =>
         r(resize(inherit_)),
         r(resize(unset)),
         r(resize(initial)),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson((
       {"resize": "none"},
       {"resize": "both"},
@@ -178,7 +178,7 @@ describe("Backdrop filter", () =>
         r(backdropFilter(list{#grayscale(#percent(99.9)), #hueRotate(#deg(90.0))})),
         r(backdropFilter(list{#invert(#num(30)), #opacity(#percent(10.0))})),
         r(backdropFilter(list{#saturate(#num(30)), #sepia(#percent(10.0))})),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson((
       {"backdrop-filter": "none"},
       {"backdrop-filter": "blur(10px), brightness(42%)"},
@@ -211,7 +211,7 @@ describe("Gradient background", () =>
             }),
           ),
         ),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson((
       {"background": "linear-gradient(45deg, #FF0000 0, #0000FF 100%)"},
       {
@@ -233,7 +233,7 @@ describe("Position", () => {
         r(right(rem(1.))),
         r(bottom(pct(20.))),
         r(left(vh(4.))),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson(({"top": "10px"}, {"right": "1rem"}, {"bottom": "20%"}, {"left": "4vh"}))
   )
 
@@ -244,7 +244,7 @@ describe("Position", () => {
         r(right(inherit_)),
         r(bottom(unset)),
         r(left(initial)),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson((
       {"top": "initial"},
       {"right": "inherit"},
@@ -266,7 +266,7 @@ describe("object-fit", () =>
         r(objectFit(#inherit_)),
         r(objectFit(#initial)),
         r(objectFit(#unset)),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson((
       {"objectFit": "fill"},
       {"objectFit": "contain"},
@@ -286,7 +286,7 @@ describe("box-shadow", () => {
       (
         r(boxShadow(Shadow.box(green))),
         r(boxShadows(list{Shadow.box(yellow), Shadow.box(red)})),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson((
       {"boxShadow": "0 0 0 0 #008000"},
       {"boxShadow": "0 0 0 0 #FFFF00, 0 0 0 0 #FF0000"},
@@ -298,7 +298,7 @@ describe("box-shadow", () => {
       (
         r(boxShadow(Shadow.box(~x=px(1), ~y=px(2), red))),
         r(boxShadow(Shadow.box(~inset=true, red))),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson(({"boxShadow": "1px 2px 0 0 #FF0000"}, {"boxShadow": "0 0 0 0 #FF0000 inset"}))
   )
 
@@ -310,7 +310,7 @@ describe("box-shadow", () => {
         r(boxShadow(initial)),
         r(boxShadow(unset)),
         r(important(boxShadow(none))),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson((
       {"boxShadow": "none"},
       {"boxShadow": "inherit"},
@@ -327,7 +327,7 @@ describe("text-shadow", () => {
       (
         r(textShadow(Shadow.text(green))),
         r(textShadows(list{Shadow.text(yellow), Shadow.text(red)})),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson(({"textShadow": "0 0 0 #008000"}, {"textShadow": "0 0 0 #FFFF00, 0 0 0 #FF0000"}))
   )
 
@@ -336,7 +336,7 @@ describe("text-shadow", () => {
       (
         r(textShadow(Shadow.text(~x=px(1), ~y=px(2), red))),
         r(textShadow(Shadow.text(~blur=vh(1.), red))),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson(({"textShadow": "1px 2px 0 #FF0000"}, {"textShadow": "0 0 1vh #FF0000"}))
   )
 
@@ -348,7 +348,7 @@ describe("text-shadow", () => {
         r(textShadow(initial)),
         r(textShadow(unset)),
         r(important(textShadow(none))),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson((
       {"textShadow": "none"},
       {"textShadow": "inherit"},
@@ -365,7 +365,7 @@ describe("transitions", () => {
       (
         r(transition("transform")),
         r(transitions(list{Transition.shorthand("height"), Transition.shorthand("top")})),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson((
       {"transition": "0ms ease 0ms transform"},
       {"transition": "0ms ease 0ms height, 0ms ease 0ms top"},
@@ -374,7 +374,7 @@ describe("transitions", () => {
 
   test("should use options when present", () =>
     expect(
-      r(transition(~duration=3, ~delay=4, ~timingFunction=easeOut, "top"))->Js.Json.stringifyAny,
+      r(transition(~duration=3, ~delay=4, ~timingFunction=easeOut, "top"))->JSON.stringifyAny,
     )->toBeJson({"transition": "3ms ease-out 4ms top"})
   )
 })
@@ -392,7 +392,7 @@ describe("animation", () => {
             Animation.shorthand(toAnimationName("a2")),
           }),
         ),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson((
       {"animation": "a 0ms ease 0ms 1 normal none running"},
       {
@@ -414,7 +414,7 @@ describe("animation", () => {
           ~iterationCount=infinite,
           toAnimationName("a"),
         ),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson({
       "animation": "a 300ms linear 400ms infinite reverse forwards running",
     })
@@ -429,7 +429,7 @@ describe("Word spacing", () =>
         r(wordSpacing(vh(1.))),
         r(wordSpacing(pct(50.))),
         r(wordSpacing(inherit_)),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson((
       {"wordSpacing": "normal"},
       {"wordSpacing": "1vh"},
@@ -448,7 +448,7 @@ describe("gridTemplateAreas", () => {
         r(gridTemplateAreas(#inherit_)),
         r(gridTemplateAreas(#initial)),
         r(gridTemplateAreas(#unset)),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson((
       {"gridTemplateAreas": "none"},
       {"gridTemplateAreas": "'a'"},
@@ -459,7 +459,7 @@ describe("gridTemplateAreas", () => {
   )
 
   test("sucessfully combines list", () =>
-    expect(r(gridTemplateAreas(#areas(list{"a a a", "b b b"})))->Js.Json.stringifyAny)->toBeJson({
+    expect(r(gridTemplateAreas(#areas(list{"a a a", "b b b"})))->JSON.stringifyAny)->toBeJson({
       "gridTemplateAreas": "'a a a' 'b b b'",
     })
   )
@@ -478,7 +478,7 @@ describe("GridArea", () => {
         r(gridArea(#inherit_)),
         r(gridArea(#initial)),
         r(gridArea(#unset)),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson((
       {"gridArea": "auto"},
       {"gridArea": "a"},
@@ -498,7 +498,7 @@ describe("GridArea", () => {
         r(gridArea2(#auto, #num(1))),
         r(gridArea3(#ident("a"), #numIdent(1, "a"), #auto)),
         r(gridArea4(#num(5), #span(#num(16)), #span(#ident("b")), #auto)),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson((
       {"gridArea": "auto / 1"},
       {"gridArea": "a / 1 a / auto"},
@@ -510,7 +510,7 @@ describe("GridArea", () => {
 describe("gridTemplateCoumns", () => {
   test("concatenates list", () =>
     expect(
-      r(gridTemplateColumns(list{#fr(1.), #px(100), #auto}))->Js.Json.stringifyAny,
+      r(gridTemplateColumns(list{#fr(1.), #px(100), #auto}))->JSON.stringifyAny,
     )->toBeJson({"gridTemplateColumns": "1fr 100px auto"})
   )
 
@@ -523,7 +523,7 @@ describe("gridTemplateCoumns", () => {
         r(gridTemplateColumns(list{#repeat(#num(4), #maxContent)})),
         r(gridTemplateColumns(list{#repeat(#num(4), #minmax(#px(100), #fr(1.)))})),
         // r(gridTemplateColumns([`repeat(`num(4), `fitContent(`px(200)))])),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson((
       {"gridTemplateColumns": "repeat(4, 1fr)"},
       {"gridTemplateColumns": "repeat(4, auto)"},
@@ -548,7 +548,7 @@ describe("backgroundPosition", () => {
         r(backgroundPosition(initial)),
         r(backgroundPosition(inherit_)),
         r(backgroundPosition(unset)),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson((
       {"backgroundPosition": "left"},
       {"backgroundPosition": "right"},
@@ -569,7 +569,7 @@ describe("backgroundPosition", () => {
         r(backgroundPosition(#hv(#right, pct(50.)))),
         r(backgroundPosition(#hv(pct(50.), #top))),
         r(backgroundPosition(#hv(pct(50.), pct(50.)))),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson((
       {"backgroundPosition": "left center"},
       {"backgroundPosition": "right 50%"},
@@ -580,7 +580,7 @@ describe("backgroundPosition", () => {
 
   test("test multiple positions", () =>
     expect(
-      r(backgroundPositions(list{#hv(px(0), px(0)), center}))->Js.Json.stringifyAny,
+      r(backgroundPositions(list{#hv(px(0), px(0)), center}))->JSON.stringifyAny,
     )->toBeJson({"backgroundPosition": "0px 0px, center"})
   )
 
@@ -588,7 +588,7 @@ describe("backgroundPosition", () => {
     expect(
       r(
         backgroundPosition4(~y=#top, ~offsetY=px(10), ~x=#right, ~offsetX=px(50)),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson({"backgroundPosition": "right 50px top 10px"})
   )
 })
@@ -604,7 +604,7 @@ describe("backgroundRepeat", () => {
         r(backgroundRepeat(round)),
         r(backgroundRepeat(noRepeat)),
         r(backgroundRepeat(inherit_)),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson((
       {"backgroundRepeat": "repeat-x"},
       {"backgroundRepeat": "repeat-y"},
@@ -623,7 +623,7 @@ describe("backgroundRepeat", () => {
         r(backgroundRepeat(#hv(repeat, repeat))),
         r(backgroundRepeat(#hv(round, space))),
         r(backgroundRepeat(#hv(noRepeat, round))),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson((
       {"backgroundRepeat": "repeat space"},
       {"backgroundRepeat": "repeat repeat"},
@@ -643,7 +643,7 @@ describe("backgroundImage", () =>
         r(backgroundImage(repeatingLinearGradient(rad(6.), list{(pct(20.), black)}))),
         r(backgroundImage(radialGradient(list{(pct(30.), yellow)}))),
         r(backgroundImage(repeatingRadialGradient(list{(pct(30.), yellow)}))),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson((
       {"backgroundImage": "none"},
       {"backgroundImage": "url(x)"},
@@ -663,7 +663,7 @@ describe("background shorhand", () =>
         r(background(url("x"))),
         r(background(linearGradient(deg(5.), list{(pct(10.), red)}))),
         r(background(none)),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson((
       {"background": "rgb(1, 2, 3)"},
       {"background": "url(x)"},
@@ -689,7 +689,7 @@ describe("clipPath", () =>
         r(clipPath(inherit_)),
         r(clipPath(initial)),
         r(clipPath(unset)),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson((
       {"clipPath": "none"},
       {"clipPath": "url(x)"},
@@ -718,7 +718,7 @@ describe("columnGap", () =>
         r(columnGap(inherit_)),
         r(columnGap(initial)),
         r(columnGap(unset)),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson((
       {"columnGap": "normal"},
       {"columnGap": "3px"},
@@ -771,7 +771,7 @@ describe("cursor", () =>
         r(cursor(nwseResize)),
         r(cursor(zoomIn)),
         r(cursor(zoomOut)),
-      )->Js.Json.stringifyAny,
+      )->JSON.stringifyAny,
     )->toBeJson((
       {"cursor": "context-menu"},
       {"cursor": "help"},

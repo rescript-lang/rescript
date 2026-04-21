@@ -13,11 +13,11 @@ module Color = {
 }
 
 let () = switch (Color.red, Color.blue, Color.green) {
-| (Color.Red, Blue, Green) => Js.log("hello world")
+| (Color.Red, Blue, Green) => Console.log("hello world")
 | _ => ()
 }
 
 let () = switch [Color.red, Color.blue, Color.green] {
-| [Color.Red, Blue, Green] => Js.log("hello world")
+| [Color.Red, Blue, Green] => Console.log("hello world")
 | _ => ()
 }

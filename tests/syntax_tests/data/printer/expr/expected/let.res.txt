@@ -43,14 +43,14 @@ let highlight_dumb = (ppf, lb, loc) => {
 let f = x => {
   let a =
     x
-    ->Js.Dict.get("wm-received")
-    ->Option.flatMap(Js.Json.decodeString)
-    ->Option.map(Js.Date.fromString)
+    ->Dict.get("wm-received")
+    ->Option.flatMap(JSON.decodeString)
+    ->Option.map(Date.fromString)
 
   let b =
     x
-    ->Js.Dict.get("wm-property")
-    ->Option.flatMap(Js.Json.decodeString)
+    ->Dict.get("wm-property")
+    ->Option.flatMap(JSON.decodeString)
     ->Option.flatMap(x =>
       switch x {
       | "like-of" => Some(#like)

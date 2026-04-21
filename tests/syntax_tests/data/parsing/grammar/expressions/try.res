@@ -3,13 +3,13 @@ try {
   let y = 2
   dangerousCall(x + y)
 } catch {
-| Foo => Js.log("catched Foo")
-| Exit => Js.log("catched exit")
+| Foo => Console.log("catched Foo")
+| Exit => Console.log("catched exit")
 }
 
 @attr
 try myDangerousFn() catch {
-| Foo => Js.log("catched Foo")
+| Foo => Console.log("catched Foo")
 }
 
 let x = {

@@ -1,24 +1,24 @@
 open Belt
 
 module type Config = {
-  let configx: Js.Json.t
+  let configx: JSON.t
 }
 module WebpackConfig: Config = {
-  @module external configx: Js.Json.t = "../../../webpack.config.js"
+  @module external configx: JSON.t = "../../../webpack.config.js"
 }
 
 module WebpackDevMiddlewareConfig: Config = {
-  @module external configx: Js.Json.t = "../../../webpack.middleware.config.js"
+  @module external configx: JSON.t = "../../../webpack.middleware.config.js"
 }
 
 @module("../../../webpack.middleware.config.js") @val
-external configX: unit => Js.Json.t = "configX"
+external configX: unit => JSON.t = "configX"
 
 let configX = configX
 module U: {
-  let configX: unit => Js.Json.t
+  let configX: unit => JSON.t
 } = {
-  @module("../../../webpack.config.js") @val external configX: unit => Js.Json.t = "configX"
+  @module("../../../webpack.config.js") @val external configX: unit => JSON.t = "configX"
 }
 @module("List") external hey: unit => unit = "xx"
 module A = {

@@ -106,14 +106,14 @@ module WithUser = {
             let url = ReasonReactRouter.dangerouslyGetInitialUrl()
             switch url.path {
             | list{"u", pathUsername, ..._} =>
-              if Js.String.toLowerCase(pathUsername) == Js.String.toLowerCase(prevUsername) {
+              if String.toLowerCase(pathUsername) == String.toLowerCase(prevUsername) {
                 ReasonReactRouter.push("/u/" ++ username)
               }
             | _ => ()
             }
           | None => ()
           }
-          Promise.resolved()
+          Promise.resolve()
         })
       }->ignore
     }
@@ -136,7 +136,7 @@ module WithUser = {
               <div>
                 <button
                   onClick={_ => {
-                    let state = "connect_" ++ string_of_int(Js.Math.random_int(100000, 999999))
+                    let state = "connect_" ++ string_of_int(Math.Int.random(100000, 999999))
 
                     {
                       open Dom.Storage

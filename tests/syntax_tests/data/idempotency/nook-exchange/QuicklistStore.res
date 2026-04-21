@@ -70,7 +70,7 @@ let startList = () => {
         let url = ReasonReactRouter.dangerouslyGetInitialUrl()
         switch url.path {
         | list{"u", username, ..._} =>
-          Js.String.toLowerCase(username) == Js.String.toLowerCase(user.username)
+          String.toLowerCase(username) == String.toLowerCase(user.username)
         | _ => false
         }
       | None => false
@@ -100,12 +100,12 @@ let saveList = () => {
           ~eventName="Item List Updated",
           ~eventProperties={
             "listId": listId,
-            "numItems": Js.Array.length(itemIds),
+            "numItems": Array.length(itemIds),
           },
         )
         hasLoggedItemListUpdate := true
       }
-      Promise.resolved(listId)
+      Promise.resolve(listId)
     })
   | None =>
     %Repromise({
@@ -125,10 +125,10 @@ let saveList = () => {
           ~eventName="Item List Created",
           ~eventProperties={
             "listId": listId,
-            "numItems": Js.Array.length(itemIds),
+            "numItems": Array.length(itemIds),
           },
         )
-        Promise.resolved(listId)
+        Promise.resolve(listId)
       })
     })
   }
@@ -188,7 +188,7 @@ let updateListTitle = (~listId, ~title: option<string>) => {
       ~eventName="Item List Title Updated",
       ~eventProperties={"listId": listId, "title": title},
     )
-    Promise.resolved()
+    Promise.resolve()
   })
 }
 

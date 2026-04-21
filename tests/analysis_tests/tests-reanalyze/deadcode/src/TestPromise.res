@@ -1,5 +1,5 @@
 @genType
-type promise<'a> = Js.Promise.t<'a>
+type promise<'a> = Promise.t<'a>
 
 @genType
 type fromPayload = {
@@ -11,5 +11,4 @@ type fromPayload = {
 type toPayload = {result: string}
 
 @genType
-let convert = Js.Promise.then_(({s}) => Js.Promise.resolve({result: s}), ...)
-
+let convert = promise => promise->Promise.then(({s}) => Promise.resolve({result: s}))

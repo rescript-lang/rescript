@@ -29,7 +29,7 @@ let createPermitSig = (provider, verifyingContract, nonce, chainId, holder, spen
     "primaryType": "Permit",
     "message": message,
   }
-  let dataString = data->Obj.magic->Js.Json.stringifyAny->Option.getWithDefault("")
+  let dataString = data->Obj.magic->JSON.stringifyAny->Option.getWithDefault("")
 
   let exampleRpcDefinition = {
     // method: "eth_signTypedData",
@@ -39,12 +39,12 @@ let createPermitSig = (provider, verifyingContract, nonce, chainId, holder, spen
     from: holder,
   }
 
-  Js.Promise.make((~resolve, ~reject) =>
+  Promise.make((resolve, reject) =>
     provider
     ->Web3.sendAsync(exampleRpcDefinition, (err, result) =>
-      switch err->Js.Nullable.toOption {
+      switch err->Nullable.toOption {
       | Some(err) =>
-        Js.log2("There was an error", err)
+        Console.log2("There was an error", err)
         reject(err->Obj.magic)
       | None =>
         let sigString = result.result->Obj.magic
@@ -52,8 +52,7 @@ let createPermitSig = (provider, verifyingContract, nonce, chainId, holder, spen
         resolve(ContractUtil.getEthSig(sigString))
       }
     )
-    ->ignore
-  )
+    ->ignore)
 }
 
 type v = int

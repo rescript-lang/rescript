@@ -1,3 +1,0 @@
-// Type alias migration for Js.WeakSet.t
-external ws: WeakSet.t<{..}> = "ws"
-

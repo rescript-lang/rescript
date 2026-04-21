@@ -23,8 +23,8 @@ function testFunctionOnOptionsAsArgument(a, foo) {
   return foo(a);
 }
 
-function jsonStringify(prim) {
-  return JSON.stringify(prim);
+function jsonStringify(value) {
+  return JSON.stringify(value);
 }
 
 function testConvertNull(x) {
@@ -76,10 +76,6 @@ let map = Belt_List.map;
 
 let stringT = "a";
 
-let jsStringT = "a";
-
-let jsString2T = "a";
-
 export {
   someIntList,
   map,
@@ -88,8 +84,6 @@ export {
   mutuallyRecursiveConverter,
   testFunctionOnOptionsAsArgument,
   stringT,
-  jsStringT,
-  jsString2T,
   jsonStringify,
   testConvertNull,
   testConvertLocation,

@@ -3,7 +3,7 @@
   syntax_tests/data/parsing/errors/expressions/ifLet.res:1:1-3:1
 
   1 │ if let Some(x) = result {
-  2 │   Js.log("The sky is blue")
+  2 │   Console.log("The sky is blue")
   3 │ }
   4 │ 
   5 │ if let Error(x) = result {
@@ -11,7 +11,7 @@
   If-let is currently highly experimental. Use a regular `switch` with pattern matching instead:
 
 switch result {
-| Some(x) => Js.log("The sky is blue")
+| Some(x) => Console.log("The sky is blue")
 | _ => ()
 }
 
@@ -20,9 +20,9 @@ switch result {
   syntax_tests/data/parsing/errors/expressions/ifLet.res:7:8-11:1
 
    5 │ if let Error(x) = result {
-   6 │   Js.log("The sky is red")
+   6 │   Console.log("The sky is red")
    7 │ } else if let Ok(y) = result {
-   8 │   Js.log("The sky is blue")
+   8 │   Console.log("The sky is blue")
    9 │ } else {
   10 │   ()
   11 │ }
@@ -31,16 +31,16 @@ switch result {
   If-let is currently highly experimental. Use a regular `switch` with pattern matching instead:
 
 switch result {
-| Ok(y) => Js.log("The sky is blue")
+| Ok(y) => Console.log("The sky is blue")
 | _ => ()
 }
 
-;;((match result with | Some x -> Js.log {js|The sky is blue|js} | _ -> ())
+;;((match result with | Some x -> Console.log {js|The sky is blue|js} | _ -> ())
   [@res.iflet ][@warning "-4"])
 ;;((match result with
-    | Error x -> Js.log {js|The sky is red|js}
+    | Error x -> Console.log {js|The sky is red|js}
     | _ ->
         (((match result with
-           | Ok y -> Js.log {js|The sky is blue|js}
+           | Ok y -> Console.log {js|The sky is blue|js}
            | _ -> ()))
         [@res.iflet ][@warning "-4"]))[@res.iflet ][@warning "-4"])

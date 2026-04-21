@@ -2,7 +2,7 @@
 
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
-import * as Js_undefined from "@rescript/runtime/lib/es6/Js_undefined.mjs";
+import * as Stdlib_Option from "@rescript/runtime/lib/es6/Stdlib_Option.mjs";
 import * as Primitive_option from "@rescript/runtime/lib/es6/Primitive_option.mjs";
 import * as Belt_MutableQueue from "@rescript/runtime/lib/es6/Belt_MutableQueue.mjs";
 import * as Belt_MutableStack from "@rescript/runtime/lib/es6/Belt_MutableStack.mjs";
@@ -11,17 +11,17 @@ function inOrder(v) {
   let current = v;
   let s = Belt_MutableStack.make();
   let q = Belt_MutableQueue.make();
-  while (current !== undefined) {
+  while (Stdlib_Option.isSome(current)) {
     let v$1 = current;
     Belt_MutableStack.push(s, v$1);
     current = v$1.left;
   };
   while (!Belt_MutableStack.isEmpty(s)) {
-    current = Belt_MutableStack.popOrThrow(s);
+    current = Primitive_option.some(Belt_MutableStack.popOrThrow(s));
     let v$2 = current;
     Belt_MutableQueue.add(q, v$2.value);
     current = v$2.right;
-    while (current !== undefined) {
+    while (Stdlib_Option.isSome(current)) {
       let v$3 = current;
       Belt_MutableStack.push(s, v$3);
       current = v$3.left;
@@ -34,7 +34,7 @@ function inOrder3(v) {
   let current = v;
   let s = Belt_MutableStack.make();
   let q = Belt_MutableQueue.make();
-  while (current !== undefined) {
+  while (Stdlib_Option.isSome(current)) {
     let v$1 = current;
     Belt_MutableStack.push(s, v$1);
     current = v$1.left;
@@ -42,7 +42,7 @@ function inOrder3(v) {
   Belt_MutableStack.dynamicPopIter(s, popped => {
     Belt_MutableQueue.add(q, popped.value);
     let current = popped.right;
-    while (current !== undefined) {
+    while (Stdlib_Option.isSome(current)) {
       let v = current;
       Belt_MutableStack.push(s, v);
       current = v.left;
@@ -51,60 +51,46 @@ function inOrder3(v) {
   return Belt_MutableQueue.toArray(q);
 }
 
-function inOrder2(v) {
-  let todo = true;
-  let cursor = v;
-  let s = Belt_MutableStack.make();
-  let q = Belt_MutableQueue.make();
-  while (todo) {
-    if (cursor !== undefined) {
-      let v$1 = cursor;
-      Belt_MutableStack.push(s, v$1);
-      cursor = v$1.left;
-    } else if (Belt_MutableStack.isEmpty(s)) {
-      todo = false;
-    } else {
-      cursor = Belt_MutableStack.popOrThrow(s);
-      let current = cursor;
-      Belt_MutableQueue.add(q, current.value);
-      cursor = current.right;
-    }
-  };
-}
-
 function n(l, r, a) {
   return {
     value: a,
-    left: Js_undefined.fromOption(l),
-    right: Js_undefined.fromOption(r)
+    left: l,
+    right: r
   };
 }
 
-let test1 = n(Primitive_option.some(n(Primitive_option.some(n(undefined, undefined, 4)), Primitive_option.some(n(undefined, undefined, 5)), 2)), Primitive_option.some(n(undefined, undefined, 3)), 1);
-
-function pushAllLeft(st1, s1) {
-  let current = st1;
-  while (current !== undefined) {
-    let v = current;
-    Belt_MutableStack.push(s1, v);
-    current = v.left;
-  };
-}
-
-let test2 = n(Primitive_option.some(n(Primitive_option.some(n(Primitive_option.some(n(Primitive_option.some(n(undefined, undefined, 4)), undefined, 2)), undefined, 5)), undefined, 1)), undefined, 3);
-
-let test3 = n(Primitive_option.some(n(Primitive_option.some(n(Primitive_option.some(n(undefined, undefined, 4)), undefined, 2)), undefined, 5)), Primitive_option.some(n(undefined, undefined, 3)), 1);
+let test1 = {
+  value: 1,
+  left: {
+    value: 2,
+    left: {
+      value: 4,
+      left: undefined,
+      right: undefined
+    },
+    right: {
+      value: 5,
+      left: undefined,
+      right: undefined
+    }
+  },
+  right: {
+    value: 3,
+    left: undefined,
+    right: undefined
+  }
+};
 
 Mocha.describe("Bs_stack_test", () => {
   Mocha.test("tree in-order traversal", () => {
-    Test_utils.eq("File \"bs_stack_test.res\", line 99, characters 7-14", inOrder(test1), [
+    Test_utils.eq("File \"bs_stack_test.res\", line 79, characters 7-14", inOrder(Primitive_option.some(test1)), [
       4,
       2,
       5,
       1,
       3
     ]);
-    Test_utils.eq("File \"bs_stack_test.res\", line 100, characters 7-14", inOrder3(test1), [
+    Test_utils.eq("File \"bs_stack_test.res\", line 80, characters 7-14", inOrder3(Primitive_option.some(test1)), [
       4,
       2,
       5,
@@ -123,11 +109,7 @@ export {
   Q,
   inOrder,
   inOrder3,
-  inOrder2,
   n,
   test1,
-  pushAllLeft,
-  test2,
-  test3,
 }
-/* test1 Not a pure module */
+/*  Not a pure module */

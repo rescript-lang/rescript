@@ -3,7 +3,7 @@ let f = (a, b, _) => a + b
 let f2 = a => f(a, 1, ...)
 
 let (a, b, c) = (
-  Js.Int.toString(f(1, 2, 3)),
+  Int.toString(f(1, 2, 3)),
   {
     let f3 = f2(100)
     f3(2)

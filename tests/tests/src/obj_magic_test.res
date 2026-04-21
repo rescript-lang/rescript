@@ -6,7 +6,7 @@
 
 /* let empty_backtrace  = Obj.obj (Obj.new_block Obj.abstract_tag 0) */
 
-let is_block = x => Js.typeof(Obj.repr(x)) != "number"
+let is_block = x => typeof(Obj.repr(x)) != #number
 
 open Mocha
 open Test_utils

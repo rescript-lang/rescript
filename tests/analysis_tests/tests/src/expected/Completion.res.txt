@@ -582,7 +582,7 @@ Path Array.
     "detail": "array<'a> => IteratorObject.t<(int, 'a), unit, unknown>",
     "documentation": {
       "kind": "markdown",
-      "value": "\n`entries(array)` returns a new array iterator object that contains the key/value pairs for each index in the array.\n\nSee [Array.prototype.entries](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/entries) on MDN.\n\n## Examples\n\n```rescript\nlet array = [5, 6, 7]\nlet iterator: IteratorObject.t<(int, int), unit, unknown> = array->Array.entries\niterator->IteratorObject.toArray == [(0, 5), (1, 6), (2, 7)]\n```\n"
+      "value": "\n`entries(array)` returns a new array iterator object that contains the key/value pairs for each index in the array.\n\nSee [Array.prototype.entries](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/entries) on MDN.\n\n## Examples\n\n```rescript\nlet array = [5, 6, 7]\nlet iterator: IteratorObject.t<(int, int), unit, unknown> = array->Array.entries\niterator->IteratorObject.asIterable->Array.fromIterable == [(0, 5), (1, 6), (2, 7)]\n```\n"
     },
     "kind": 12,
     "label": "entries",
@@ -682,7 +682,7 @@ Path Array.
     "detail": "array<'a> => IteratorObject.t<'a, unit, unknown>",
     "documentation": {
       "kind": "markdown",
-      "value": "\n`values(array)` returns a new array iterator object that contains the values for each index in the array.\n\nSee [Array.prototype.values](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/values) on MDN.\n\n## Examples\n\n```rescript\nlet array = [5, 6, 7]\nlet iterator: IteratorObject.t<int, unit, unknown> = array->Array.values\niterator->IteratorObject.toArray == [5, 6, 7]\n```\n "
+      "value": "\n`values(array)` returns a new array iterator object that contains the values for each index in the array.\n\nSee [Array.prototype.values](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/values) on MDN.\n\n## Examples\n\n```rescript\nlet array = [5, 6, 7]\nlet iterator: IteratorObject.t<int, unit, unknown> = array->Array.values\niterator->IteratorObject.asIterable->Array.fromIterable == [5, 6, 7]\n```\n "
     },
     "kind": 12,
     "label": "values",

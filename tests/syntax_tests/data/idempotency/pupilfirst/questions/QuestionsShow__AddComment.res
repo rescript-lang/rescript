@@ -67,13 +67,13 @@ let make = (~commentableType, ~commentableId, ~addCommentCB, ~currentUserId) => 
 
       CreateCommentQuery.make(~value, ~commentableId, ~commentableType, ())
       ->GraphqlQuery.sendQuery
-      ->Js.Promise.then_(response =>
+      ->Promise.then(response =>
         switch response["createComment"] {
         | #CommentId(commentId) =>
           handleResponseCB(commentId)
           Notification.success("Done!", "Comment has been saved.")
-          Js.Promise.resolve()
-        | #Errors(errors) => Js.Promise.reject(CreateCommentErrorHandler.Errors(errors))
+          Promise.resolve()
+        | #Errors(errors) => Promise.reject(CreateCommentErrorHandler.Errors(errors))
         }
       )
       ->CreateCommentErrorHandler.catch(() => setSaving(_ => false))

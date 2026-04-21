@@ -37,7 +37,7 @@ switch count {
 // Block
 | 6 => {
     let _ = 123
-    Js.Console.log("Must be block")
+    Console.log("Must be block")
   }
 }
 

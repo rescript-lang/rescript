@@ -57,28 +57,22 @@ type opaqueVariant =
   | B
 
 @genType
-let jsStringT: Js.String.t = "a"
-
-@genType
-let jsString2T: Js.String2.t = "a"
-
-@genType
 type twice<'a> = ('a, 'a)
 
 @gentype
 type genTypeMispelled = int
 
 @genType
-type dictString = Js.Dict.t<string>
+type dictString = dict<string>
 
 @genType
-let jsonStringify = Js.Json.stringify
+let jsonStringify = JSON.stringify
 
 @genType
-type nullOrString = Js.Null.t<string>
+type nullOrString = Null.t<string>
 
 @genType
-type nullOrString2 = Js.null<string>
+type nullOrString2 = null<string>
 
 type record = {
   i: int,
@@ -86,7 +80,7 @@ type record = {
 }
 
 @genType
-let testConvertNull = (x: Js.Null.t<record>) => x
+let testConvertNull = (x: Null.t<record>) => x
 
 @genType
 type decorator<'a, 'b> = 'a => 'b constraint 'a = int constraint 'b = _ => _
@@ -138,10 +132,10 @@ let testInstantiateTypeParameter = (x: instantiateTypeParameter) => x
 type vector<'a> = ('a, 'a)
 
 @genType
-type date = Js.Date.t
+type date = Date.t
 
 @genType
-let currentTime = Js.Date.make()
+let currentTime = Date.make()
 
 @genType
 type i64A = int
@@ -162,4 +156,3 @@ module ObjectId: {
   type t = int
   let x = 1
 }
-

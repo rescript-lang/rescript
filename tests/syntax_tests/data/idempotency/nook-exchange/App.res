@@ -59,22 +59,22 @@ let make = () => {
   let url = ReasonReactRouter.useUrl()
   let (showLogin, setShowLogin) = React.useState(() => false)
   let itemDetails = {
-    let result = url.hash->Js.Re.exec_(/i(-?\d+)(:(\d+))?/g)
+    let result = url.hash->RegExp.exec(/i(-?\d+)(:(\d+))?/g)
     switch result {
     | Some(match_) =>
-      let captures = Js.Re.captures(match_)
-      let itemId = captures[1]->Js.Nullable.toOption->Belt.Option.getExn
+      let captures = RegExp.Result.matches(match_)
+      let itemId = captures[1]->Nullable.toOption->Belt.Option.getExn
       Item.itemMap
-      ->Js.Dict.get(itemId)
+      ->Dict.get(itemId)
       ->Belt.Option.map(item => (
         item,
-        captures[3]->Js.Nullable.toOption->Belt.Option.map(int_of_string),
+        captures[3]->Nullable.toOption->Belt.Option.map(int_of_string),
       ))
     | None => None
     }
   }
 
-  let pathString = "/" ++ Js.Array.joinWith("/", Belt.List.toArray(url.path))
+  let pathString = "/" ++ Array.joinUnsafe(Belt.List.toArray(url.path), "/")
   React.useEffect0(() => {
     Analytics.Amplitude.logEventWithProperties(
       ~eventName="Session Started",
@@ -143,9 +143,9 @@ let make = () => {
         }
         DiscordOauth.process(
           ~code,
-          ~isLogin=state->Js.String.startsWith("login"),
-          ~isRegister=state->Js.String.startsWith("register"),
-          ~isConnect=state->Js.String.startsWith("connect"),
+          ~isLogin=state->String.startsWith("login"),
+          ~isRegister=state->String.startsWith("register"),
+          ~isConnect=state->String.startsWith("connect"),
         )->ignore
         ReasonReactRouter.replace("/")
       | _ => ()
