@@ -940,15 +940,45 @@ fn compile_file(
 
             if helpers::contains_ascii_characters(&err) {
                 if package.is_local_dep {
-                    // suppress warnings of external deps
                     Ok(Some(err))
                 } else {
-                    Ok(None)
+                    // Warnings from external deps are suppressed by default —
+                    // users can't act on them. A small allow-list of critical
+                    // deprecations still gets through so breakage signals are
+                    // visible (and can be reported upstream).
+                    Ok(retain_critical_external_warnings(&err))
                 }
             } else {
                 Ok(None)
             }
         }
+    }
+}
+
+/// Filter a bsc stderr capture to the warning blocks the user needs to see
+/// even when they originate in an external dependency.
+///
+/// Currently preserved:
+/// - Warning 3 deprecations mentioning the legacy `(. ...)` uncurried syntax.
+///   These indicate source that parses today but is scheduled for removal, so
+///   consumers need to hear about them even when the code isn't theirs.
+pub(super) fn retain_critical_external_warnings(stderr: &str) -> Option<String> {
+    const UNCURRIED_DOT_MARKER: &str = "`(. ...)` uncurried syntax";
+    if !stderr.contains(UNCURRIED_DOT_MARKER) {
+        return None;
+    }
+    // bsc prints each warning as its own block separated by a blank-line pair
+    // (three consecutive newlines). Split on that boundary, keep the blocks
+    // that mention the marker, and re-join with the same separator so the
+    // output is indistinguishable from the original.
+    let kept: Vec<&str> = stderr
+        .split("\n\n\n")
+        .filter(|block| block.contains(UNCURRIED_DOT_MARKER))
+        .collect();
+    if kept.is_empty() {
+        None
+    } else {
+        Some(kept.join("\n\n\n"))
     }
 }
 
@@ -1047,4 +1077,27 @@ pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildCommandState)
             module.compile_dirty = true;
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn retain_critical_external_warnings_returns_none_without_marker() {
+        let input = "\n  Warning number 26\n  foo.res:1:1\n\n  unused variable x.\n";
+        assert_eq!(retain_critical_external_warnings(input), None);
+    }
+
+    #[test]
+    fn retain_critical_external_warnings_keeps_uncurried_dot_block() {
+        let input = concat!(
+            "\n  Warning number 26\n  foo.res:1:1\n\n  unused variable x.\n",
+            "\n\n\n  Warning number 3\n  bar.res:5:10\n\n  ",
+            "deprecated: The `(. ...)` uncurried syntax is deprecated.\n",
+        );
+        let kept = retain_critical_external_warnings(input).expect("uncurried-dot warning should survive");
+        assert!(kept.contains("`(. ...)` uncurried syntax"));
+        assert!(!kept.contains("unused variable"));
+    }
 }
