@@ -1893,12 +1893,12 @@ and parse_parameter p =
   if
     p.Parser.token = Token.Typ || p.token = Tilde || p.token = Dot
     || Grammar.is_pattern_start p.token
-  then
+  then (
     let start_pos = p.Parser.start_pos in
-    (if p.Parser.token = Token.Dot then
-       let dot_loc = mk_loc start_pos p.end_pos in
-       Parser.next p;
-       warn_uncurried_dot_syntax ~loc:dot_loc);
+    if p.Parser.token = Token.Dot then (
+      let dot_loc = mk_loc start_pos p.end_pos in
+      Parser.next p;
+      warn_uncurried_dot_syntax ~loc:dot_loc);
     let attrs = parse_attributes p in
     if p.Parser.token = Typ then (
       Parser.next p;
@@ -1983,7 +1983,7 @@ and parse_parameter p =
       | _ ->
         Some
           (TermParameter
-             {attrs; p_label = lbl; expr = None; pat; p_pos = start_pos})
+             {attrs; p_label = lbl; expr = None; pat; p_pos = start_pos}))
   else None
 
 and parse_parameter_list p =
@@ -2047,10 +2047,10 @@ and parse_parameters p : fundef_type_param option * fundef_term_param list =
       ] )
   | Lparen ->
     Parser.next p;
-    (if p.Parser.token = Token.Dot then
-       let dot_loc = mk_loc p.start_pos p.end_pos in
-       Parser.next p;
-       warn_uncurried_dot_syntax ~loc:dot_loc);
+    if p.Parser.token = Token.Dot then (
+      let dot_loc = mk_loc p.start_pos p.end_pos in
+      Parser.next p;
+      warn_uncurried_dot_syntax ~loc:dot_loc);
     let type_params, term_params = parse_parameter_list p in
     let term_params =
       if term_params <> [] then term_params else [unit_term_parameter ()]
@@ -3999,11 +3999,11 @@ and parse_argument p : argument option =
     || Grammar.is_expr_start p.token
   then
     match p.Parser.token with
-    | Dot ->
+    | Dot -> (
       let dot_loc = mk_loc p.start_pos p.end_pos in
       Parser.next p;
       warn_uncurried_dot_syntax ~loc:dot_loc;
-      (match p.token with
+      match p.token with
       (* apply(.) — legacy uncurried unit call *)
       | Rparen ->
         let unit_expr =
@@ -4728,12 +4728,12 @@ and parse_type_parameter ?current_type_name_path ?inline_types_context
     p.Parser.token = Token.Tilde
     || p.token = Dot
     || Grammar.is_typ_expr_start p.token
-  then
+  then (
     let start_pos = p.Parser.start_pos in
-    (if p.Parser.token = Token.Dot then
-       let dot_loc = mk_loc start_pos p.end_pos in
-       Parser.next p;
-       warn_uncurried_dot_syntax ~loc:dot_loc);
+    if p.Parser.token = Token.Dot then (
+      let dot_loc = mk_loc start_pos p.end_pos in
+      Parser.next p;
+      warn_uncurried_dot_syntax ~loc:dot_loc);
     let attrs = doc_attr @ parse_attributes p in
     match p.Parser.token with
     | Tilde -> (
@@ -4805,7 +4805,7 @@ and parse_type_parameter ?current_type_name_path ?inline_types_context
       let typ_with_attributes =
         {typ with ptyp_attributes = List.concat [attrs; typ.ptyp_attributes]}
       in
-      Some {attrs = []; label = Nolabel; typ = typ_with_attributes; start_pos}
+      Some {attrs = []; label = Nolabel; typ = typ_with_attributes; start_pos})
   else None
 
 (* (int, ~x:string, float) *)
