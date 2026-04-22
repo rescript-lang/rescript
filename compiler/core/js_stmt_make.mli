@@ -142,6 +142,12 @@ val for_ :
   J.block ->
   t
 
+val for_of :
+  ?comment:string -> ?label:J.label -> J.expression -> J.ident -> J.block -> t
+
+val for_await_of :
+  ?comment:string -> ?label:J.label -> J.expression -> J.ident -> J.block -> t
+
 val try_ :
   ?comment:string ->
   ?with_:J.ident * J.block ->

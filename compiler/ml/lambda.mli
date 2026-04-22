@@ -339,6 +339,8 @@ type lambda =
   | Lcontinue
   | Lwhile of lambda * lambda
   | Lfor of Ident.t * lambda * lambda * direction_flag * lambda
+  | Lfor_of of Ident.t * lambda * lambda
+  | Lfor_await_of of Ident.t * lambda * lambda
   | Lassign of Ident.t * lambda
   | Lsend of string * lambda * Location.t
 

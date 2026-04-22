@@ -304,23 +304,13 @@ let valuesToArray = Belt_internalAVLtree.valuesToArray;
 
 let minKey = Belt_internalAVLtree.minKey;
 
-let minKeyUndefined = Belt_internalAVLtree.minKeyUndefined;
-
 let maxKey = Belt_internalAVLtree.maxKey;
-
-let maxKeyUndefined = Belt_internalAVLtree.maxKeyUndefined;
 
 let minimum = Belt_internalAVLtree.minimum;
 
-let minUndefined = Belt_internalAVLtree.minUndefined;
-
 let maximum = Belt_internalAVLtree.maximum;
 
-let maxUndefined = Belt_internalAVLtree.maxUndefined;
-
 let get = Belt_internalAVLtree.get;
-
-let getUndefined = Belt_internalAVLtree.getUndefined;
 
 let getWithDefault = Belt_internalAVLtree.getWithDefault;
 
@@ -374,15 +364,10 @@ exports.fromArray = fromArray;
 exports.keysToArray = keysToArray;
 exports.valuesToArray = valuesToArray;
 exports.minKey = minKey;
-exports.minKeyUndefined = minKeyUndefined;
 exports.maxKey = maxKey;
-exports.maxKeyUndefined = maxKeyUndefined;
 exports.minimum = minimum;
-exports.minUndefined = minUndefined;
 exports.maximum = maximum;
-exports.maxUndefined = maxUndefined;
 exports.get = get;
-exports.getUndefined = getUndefined;
 exports.getWithDefault = getWithDefault;
 exports.getExn = getExn;
 exports.getOrThrow = getOrThrow;

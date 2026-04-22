@@ -114,6 +114,21 @@ Test.run(
   ["a", "b", "c"],
 )
 
+{
+  let arrays = [[1, 2], [3], [4, 5]]
+  let result = Array.concatAll(arrays)
+
+  Test.run(__POS_OF__("concatAll concatenates arrays"), result, eq, [1, 2, 3, 4, 5])
+  Test.run(
+    __POS_OF__("concatAll leaves source arrays unchanged"),
+    arrays,
+    eq,
+    [[1, 2], [3], [4, 5]],
+  )
+}
+
+Test.run(__POS_OF__("concatAll - empty"), Array.concatAll([]), eq, [])
+
 Test.run(
   __POS_OF__("Map.fromIterable"),
   Map.fromIterable([("one", 1), ("two", 2)]->Array.asIterable)->Map.size,

@@ -295,26 +295,14 @@ let valuesToArray: t<'k, 'v, 'id> => array<'v>
 /** `minKey(s)` returns the minimum key, None if not exist. */
 let minKey: t<'k, _, _> => option<'k>
 
-/** See `Belt.Map.minKey` */
-let minKeyUndefined: t<'k, _, _> => Js.undefined<'k>
-
 /** `maxKey(s)` returns the maximum key, None if not exist. */
 let maxKey: t<'k, _, _> => option<'k>
-
-/** See `Belt.Map.maxKey` */
-let maxKeyUndefined: t<'k, _, _> => Js.undefined<'k>
 
 /** `minimum(s)` returns the minimum key value pair, None if not exist. */
 let minimum: t<'k, 'v, _> => option<('k, 'v)>
 
-/** See `Belt.Map.minimum` */
-let minUndefined: t<'k, 'v, _> => Js.undefined<('k, 'v)>
-
 /** `maximum(s)` returns the maximum key value pair, None if not exist. */
 let maximum: t<'k, 'v, _> => option<('k, 'v)>
-
-/** See `Belt.Map.maximum` */
-let maxUndefined: t<'k, 'v, _> => Js.undefined<('k, 'v)>
 
 /** 
  `get(s, k)`
@@ -333,9 +321,6 @@ Belt.Map.get(Belt.Map.fromArray([(2, "2"), (1, "1"), (3, "3")], ~id=module(IntCm
 ```
 */
 let get: (t<'k, 'v, 'id>, 'k) => option<'v>
-
-/** See `Belt.Map.get`. Returns `undefined` when not found*/
-let getUndefined: (t<'k, 'v, 'id>, 'k) => Js.undefined<'v>
 
 /** 
 `getWithDefault(s, k, default)`

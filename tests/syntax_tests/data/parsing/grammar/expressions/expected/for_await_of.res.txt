@@ -1,0 +1,2 @@
+let iterable = asyncIterable
+;;for await x of iterable do x + 1 done

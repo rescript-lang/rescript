@@ -38,7 +38,7 @@ fi
 success "No stale rescript processes found"
 
 bold "Yarn install"
-(cd ../testrepo && yarn && cp node_modules/rescript-nodejs/bsconfig.json node_modules/rescript-nodejs/rescript.json)
+(cd ../testrepo && yarn)
 
 bold "Rescript version"
 (cd ../testrepo && ./node_modules/.bin/rescript --version)

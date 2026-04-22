@@ -97,6 +97,12 @@ let count_helper (lam : Lam.t) : collection =
       count l1;
       count l2;
       count l3
+    | Lfor_of (_, l1, l2) ->
+      count l1;
+      count l2
+    | Lfor_await_of (_, l1, l2) ->
+      count l1;
+      count l2
     | Lassign (_, l) -> count l
   and count_default sw =
     match sw.sw_failaction with

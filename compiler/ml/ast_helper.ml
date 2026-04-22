@@ -181,6 +181,9 @@ module Exp = struct
   let continue ?loc ?attrs () = mk ?loc ?attrs Pexp_continue
   let while_ ?loc ?attrs a b = mk ?loc ?attrs (Pexp_while (a, b))
   let for_ ?loc ?attrs a b c d e = mk ?loc ?attrs (Pexp_for (a, b, c, d, e))
+  let for_of ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_for_of (a, b, c))
+  let for_await_of ?loc ?attrs a b c =
+    mk ?loc ?attrs (Pexp_for_await_of (a, b, c))
   let constraint_ ?loc ?attrs a b = mk ?loc ?attrs (Pexp_constraint (a, b))
   let coerce ?loc ?attrs a c = mk ?loc ?attrs (Pexp_coerce (a, (), c))
   let send ?loc ?attrs a b = mk ?loc ?attrs (Pexp_send (a, b))

@@ -17,6 +17,11 @@ val has_await_attribute : Parsetree.attributes -> bool
 val has_inline_record_definition_attribute : Parsetree.attributes -> bool
 val has_res_pat_variant_spread_attribute : Parsetree.attributes -> bool
 val has_dict_pattern_attribute : Parsetree.attributes -> bool
+val has_dict_spread_attribute : Parsetree.attributes -> bool
+
+type dict_expr_part =
+  | DictExprRows of Parsetree.expression
+  | DictExprSpread of Parsetree.expression
 
 type if_condition_kind =
   | If of Parsetree.expression
@@ -131,6 +136,9 @@ val has_template_literal_attr : Parsetree.attributes -> bool
 val is_spread_belt_list_concat : Parsetree.expression -> bool
 
 val is_spread_belt_array_concat : Parsetree.expression -> bool
+
+val collect_spread_dict_expr_parts :
+  Parsetree.expression -> dict_expr_part list option
 
 val collect_or_pattern_chain : Parsetree.pattern -> Parsetree.pattern list
 

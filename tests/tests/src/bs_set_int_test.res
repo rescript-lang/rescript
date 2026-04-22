@@ -108,11 +108,10 @@ describe(__MODULE__, () => {
 
     let ss = [1, 222, 3, 4, 2, 0, 33, -1]
     let v = ofA([1, 222, 3, 4, 2, 0, 33, -1])
-    let (minv, maxv) = (N.minUndefined(v), N.maxUndefined(v))
-    let approx = (loc, x: int, y) => ok(loc, Js.eqUndefined(x, y))
+    let (minv, maxv) = (N.minimum(v), N.maximum(v))
     eq(__LOC__, N.reduce(v, 0, (x, y) => x + y), A.reduce(ss, 0, (a, b) => a + b))
-    approx(__LOC__, -1, minv)
-    approx(__LOC__, 222, maxv)
+    eq(__LOC__, minv, Some(-1))
+    eq(__LOC__, maxv, Some(222))
     let v = N.remove(v, 3)
     let (minv, maxv) = (N.minimum(v), N.maximum(v))
     eq(__LOC__, minv, Some(-1))

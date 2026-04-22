@@ -471,6 +471,78 @@ Test.run(
   [2, 3],
 )
 
+let asyncIterableForAwaitValues = ref([])
+let asyncIterableForAwait: AsyncIterable.t<int> = %raw(`(async function* () {
+  yield 1
+  yield 2
+  yield 3
+})()`)
+
+for await value of asyncIterableForAwait {
+  asyncIterableForAwaitValues := [...asyncIterableForAwaitValues.contents, value]
+}
+
+Test.run(__POS_OF__("for await...of"), asyncIterableForAwaitValues.contents, eq, [1, 2, 3])
+
+let asyncIterableForAwaitLoopControlValues = ref([])
+let asyncIterableForAwaitLoopControl: AsyncIterable.t<int> = %raw(`(async function* () {
+  yield 1
+  yield 2
+  yield 3
+  yield 4
+})()`)
+
+for await value of asyncIterableForAwaitLoopControl {
+  switch value {
+  | 1 => continue
+  | 3 => break
+  | _ =>
+    asyncIterableForAwaitLoopControlValues :=
+      [...asyncIterableForAwaitLoopControlValues.contents, value]
+  }
+}
+
+Test.run(
+  __POS_OF__("for await...of break/continue"),
+  asyncIterableForAwaitLoopControlValues.contents,
+  eq,
+  [2],
+)
+
+let collectStartupMessages = async (logs: AsyncIterable.t<string>) => {
+  let messages = []
+
+  for await line of logs {
+    if line == ":heartbeat" {
+      continue
+    }
+
+    if line == "server ready" {
+      break
+    }
+
+    messages->Array.push(line)
+  }
+
+  messages
+}
+
+let startupLogs: AsyncIterable.t<string> = %raw(`(async function* () {
+  yield ":heartbeat"
+  yield "Booting app"
+  yield ":heartbeat"
+  yield "Connecting to database"
+  yield "server ready"
+  yield "This line should not be collected"
+})()`)
+
+Test.run(
+  __POS_OF__("for await...of realistic break/continue"),
+  await collectStartupMessages(startupLogs),
+  eq,
+  ["Booting app", "Connecting to database"],
+)
+
 let _asyncIterableView: AsyncIterable.t<int> = (
   %raw(`(async function* () {
       yield 1

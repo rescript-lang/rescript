@@ -40,13 +40,6 @@ function peek(q) {
   }
 }
 
-function peekUndefined(q) {
-  let v = q.first;
-  if (v !== undefined) {
-    return v.content;
-  }
-}
-
 function peekOrThrow(q) {
   let v = q.first;
   if (v !== undefined) {
@@ -91,22 +84,6 @@ function popOrThrow(q) {
     RE_EXN_ID: "Not_found",
     Error: new Error()
   };
-}
-
-function popUndefined(q) {
-  let x = q.first;
-  if (x === undefined) {
-    return;
-  }
-  let next = x.next;
-  if (next === undefined) {
-    clear(q);
-    return x.content;
-  } else {
-    q.length = q.length - 1 | 0;
-    q.first = next;
-    return x.content;
-  }
 }
 
 function copy(q) {
@@ -275,11 +252,9 @@ export {
   fromArray,
   add,
   peek,
-  peekUndefined,
   peekExn,
   peekOrThrow,
   pop,
-  popUndefined,
   popExn,
   popOrThrow,
   copy,

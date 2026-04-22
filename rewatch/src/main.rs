@@ -36,9 +36,9 @@ fn main() -> Result<()> {
     let is_tty: bool = Term::stdout().is_term() && Term::stderr().is_term();
     let plain_output = !is_tty;
 
-    // The 'normal run' mode will show the 'pretty' formatted progress. But if we turn off the log
-    // level, we should never show that.
-    let show_progress = log_level_filter == LevelFilter::Info;
+    // Show progress messages (e.g. "Finished compilation") as long as logging is at Info level
+    // or more verbose. This way `-v` and `-vv` add debug output without suppressing progress.
+    let show_progress = log_level_filter >= LevelFilter::Info;
 
     match cli.command {
         cli::Command::CompilerArgs { path } => {
@@ -79,6 +79,7 @@ fn main() -> Result<()> {
                 true, // create_sourcedirs is now always enabled
                 plain_output,
                 (*watch_args.warn_error).clone(),
+                watch_args.clear_screen,
                 watch_args.prod,
             ) {
                 Err(e) => {

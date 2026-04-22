@@ -60,15 +60,6 @@ no bounds checking; this would cause type error if `i` does not stay within rang
 external getUnsafe: (t<'a>, int) => 'a = "%array_unsafe_get"
 
 /**
-`getUndefined(arr, i)`
-
-It does the samething in the runtime as [`getUnsafe`]();
-it is _type safe_ since the return type still track whether it is
-in range or not
-*/
-external getUndefined: (t<'a>, int) => Js.undefined<'a> = "%array_unsafe_get"
-
-/**
 `set(arr, n, x)` modifies `arr` in place; it replaces the nth element of `arr`
 with `x`. Returning `false` means not updated due to out of range.
 */

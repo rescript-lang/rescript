@@ -1,12 +1,10 @@
 
   Syntax error!
-  syntax_tests/data/parsing/errors/other/for.res:1:6-2:0
+  syntax_tests/data/parsing/errors/other/for.res:2:1
 
   1 │ for x
   2 │ 
 
-  Did you forget a `in` here?
+  A for-loop has the following form: `for i in 0 to 10` or `for item of items`. Did you forget an `in` or `of` here?
 
-;;for x = [%rescript.exprhole ] to [%rescript.exprhole ] do
-    [%rescript.exprhole ]
-  done
+;;[%rescript.exprhole ]

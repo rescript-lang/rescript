@@ -62,6 +62,7 @@ let rec exprNoSideEffects (expr : Typedtree.expression) =
   | Texp_for (_id, _pat, e1, e2, _dir, e3) ->
     e1 |> exprNoSideEffects && e2 |> exprNoSideEffects
     && e3 |> exprNoSideEffects
+  | Texp_for_of _ | Texp_for_await_of _ -> false
   | Texp_send _ -> false
   | Texp_letexception (_ec, e) -> e |> exprNoSideEffects
   | Texp_pack _ -> false

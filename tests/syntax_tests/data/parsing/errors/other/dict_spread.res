@@ -1,2 +1,1 @@
-let x = dict{...foo, "bar": 3}
-
+let x = dict{...}

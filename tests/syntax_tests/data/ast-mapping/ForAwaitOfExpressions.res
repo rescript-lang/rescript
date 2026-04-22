@@ -1,0 +1,16 @@
+// Test for await..of AST mapping
+
+let testForAwaitOf = async () => {
+  let iterable = asyncIterable
+
+  // Basic for await..of
+  for await x of iterable {
+    Console.log(x)
+  }
+
+  // Nested async loop body
+  for await item of iterable {
+    let result = await Promise.resolve(item + 1)
+    Console.log(result)
+  }
+}

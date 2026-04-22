@@ -186,6 +186,20 @@ module Exp : sig
     direction_flag ->
     expression ->
     expression
+  val for_of :
+    ?loc:loc ->
+    ?attrs:attrs ->
+    pattern ->
+    expression ->
+    expression ->
+    expression
+  val for_await_of :
+    ?loc:loc ->
+    ?attrs:attrs ->
+    pattern ->
+    expression ->
+    expression ->
+    expression
   val coerce : ?loc:loc -> ?attrs:attrs -> expression -> core_type -> expression
   val constraint_ :
     ?loc:loc -> ?attrs:attrs -> expression -> core_type -> expression

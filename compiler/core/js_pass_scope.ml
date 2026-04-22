@@ -238,7 +238,9 @@ let record_scope_pass =
     statement =
       (fun self state x ->
         match x.statement_desc with
-        | ForRange (_, _, _, loop_id, _, _) ->
+        | ForRange (_, _, _, loop_id, _, _)
+        | ForOf (_, loop_id, _, _)
+        | ForAwaitOf (_, loop_id, _, _) ->
           (* TODO: simplify definition of For *)
           let {
             defined_idents = defined_idents';

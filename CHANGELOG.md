@@ -16,12 +16,16 @@
 
 - Support for `break` and `continue` in loops. `break` and `continue` are new keywords. https://github.com/rescript-lang/rescript/pull/8348
 - Fix iterator / iterable typedefs, add generator typedefs. https://github.com/rescript-lang/rescript/pull/8355
+- Remove deprecated %external extension. https://github.com/rescript-lang/rescript/pull/8376
 
 #### :eyeglasses: Spec Compliance
 
 #### :rocket: New Feature
 
 - Rewatch: add `--prod` flag to `build`, `watch`, and `clean` to skip dev-dependencies and dev sources (`"type": "dev"`), enabling builds in environments where dev packages aren't installed (e.g. after `pnpm install --prod`). https://github.com/rescript-lang/rescript/pull/8347
+- Add `Dict.assignMany`, `Dict.concat`, `Dict.concatMany`, `Dict.concatAll`, `Array.concatAll` to the stdlib. https://github.com/rescript-lang/rescript/pull/8364
+- Implement `for...of` and `for await...of` loops. https://github.com/rescript-lang/rescript/pull/7887
+- Add support for dict spreads: `dict{...foo, "bar": 2, ...qux}`. https://github.com/rescript-lang/rescript/pull/8369
 
 #### :bug: Bug fix
 
@@ -37,8 +41,11 @@
 
 - Allow builds while watchers are running. https://github.com/rescript-lang/rescript/pull/8349
 - Restore parsing of the legacy `(. ...)` uncurried syntax for backwards compatibility with libraries still on older ReScript versions; emit a deprecation warning when it is used. Rewatch also surfaces this specific deprecation when it originates from an external dependency so users can report breakage upstream. https://github.com/rescript-lang/rescript/pull/8383
+- Rewatch: replace wave-based compile scheduler with a work-stealing DAG dispatcher ordered by critical-path priority, avoiding the per-wave stall on the slowest file. https://github.com/rescript-lang/rescript/pull/8374
 
 #### :house: Internal
+
+- Move `rescript.json` reading out of `bsc` into rewatch; remove the custom OCaml JSON parser. https://github.com/rescript-lang/rescript/pull/8365
 
 # 13.0.0-alpha.3
 

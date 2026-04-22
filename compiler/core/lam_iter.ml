@@ -80,6 +80,12 @@ let inner_iter (l : t) (f : t -> unit) : unit =
     f e1;
     f e2;
     f e3
+  | Lfor_of (_v, e1, e2) ->
+    f e1;
+    f e2
+  | Lfor_await_of (_v, e1, e2) ->
+    f e1;
+    f e2
   | Lassign (_id, e) -> f e
 
 let inner_exists (l : t) (f : t -> bool) : bool =
@@ -114,4 +120,5 @@ let inner_exists (l : t) (f : t -> bool) : bool =
   | Lbreak | Lcontinue -> false
   | Lwhile (e1, e2) -> f e1 || f e2
   | Lfor (_v, e1, e2, _dir, e3) -> f e1 || f e2 || f e3
+  | Lfor_of (_v, e1, e2) | Lfor_await_of (_v, e1, e2) -> f e1 || f e2
   | Lassign (_id, e) -> f e

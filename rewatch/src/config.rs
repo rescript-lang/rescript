@@ -155,9 +155,9 @@ pub struct PackageSpec {
 
 #[derive(Deserialize, Debug, Clone, Eq, PartialEq)]
 pub enum PackageModule {
-    #[serde(rename = "commonjs")]
+    #[serde(rename = "commonjs", alias = "cjs")]
     CommonJs,
-    #[serde(rename = "esmodule")]
+    #[serde(rename = "esmodule", alias = "es6")]
     EsModule,
 }
 
@@ -233,8 +233,95 @@ pub struct JsxSpecs {
     pub preserve: Option<bool>,
 }
 
-/// We do not care about the internal structure because the gentype config is loaded by bsc.
-pub type GenTypeConfig = serde_json::Value;
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
+pub enum GenTypeModule {
+    #[serde(rename = "commonjs")]
+    CommonJs,
+    #[serde(rename = "esmodule")]
+    EsModule,
+}
+
+impl GenTypeModule {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            GenTypeModule::CommonJs => "commonjs",
+            GenTypeModule::EsModule => "esmodule",
+        }
+    }
+}
+
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
+pub enum GenTypeModuleResolution {
+    #[serde(rename = "node")]
+    Node,
+    #[serde(rename = "node16")]
+    Node16,
+    #[serde(rename = "bundler")]
+    Bundler,
+}
+
+impl GenTypeModuleResolution {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            GenTypeModuleResolution::Node => "node",
+            GenTypeModuleResolution::Node16 => "node16",
+            GenTypeModuleResolution::Bundler => "bundler",
+        }
+    }
+}
+
+/// Accepts either an object `{ "From": "To", ... }` or (deprecated) an array of
+/// `"From=To"` strings.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct GenTypeShims(pub HashMap<String, String>);
+
+impl<'de> Deserialize<'de> for GenTypeShims {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum Repr {
+            Map(HashMap<String, String>),
+            List(Vec<String>),
+        }
+        match Repr::deserialize(deserializer)? {
+            Repr::Map(m) => Ok(GenTypeShims(m)),
+            Repr::List(entries) => {
+                let mut map = HashMap::with_capacity(entries.len());
+                for entry in entries {
+                    match entry.split_once('=') {
+                        Some((from, to)) => {
+                            map.insert(from.trim().to_string(), to.trim().to_string());
+                        }
+                        None => {
+                            return Err(DeError::custom(format!(
+                                "Invalid gentypeconfig.shims entry '{entry}': expected 'From=To'",
+                            )));
+                        }
+                    }
+                }
+                Ok(GenTypeShims(map))
+            }
+        }
+    }
+}
+
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Default)]
+pub struct GenTypeConfig {
+    pub module: Option<GenTypeModule>,
+    #[serde(rename = "moduleResolution")]
+    pub module_resolution: Option<GenTypeModuleResolution>,
+    #[serde(rename = "exportInterfaces")]
+    pub export_interfaces: Option<bool>,
+    #[serde(rename = "generatedFileExtension")]
+    pub generated_file_extension: Option<String>,
+    #[serde(default)]
+    pub shims: GenTypeShims,
+    #[serde(default)]
+    pub debug: HashMap<String, bool>,
+}
 
 /// Configuration for running a command after each JavaScript file is compiled.
 /// Note: Unlike bsb, rewatch passes absolute paths to the command for clarity.
@@ -244,7 +331,14 @@ pub struct JsPostBuild {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
-pub enum DeprecationWarning {}
+pub enum DeprecationWarning {
+    BsconfigJson,
+    BsDependencies,
+    BsDevDependencies,
+    BscFlags,
+    CjsModule,
+    Es6Module,
+}
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum ExperimentalFeature {
@@ -293,13 +387,14 @@ pub struct Config {
     pub package_specs: Option<OneOrMore<PackageSpec>>,
     pub warnings: Option<Warnings>,
     pub suffix: Option<String>,
+    #[serde(alias = "bs-dependencies")]
     pub dependencies: Option<Vec<String>>,
-    #[serde(rename = "dev-dependencies")]
+    #[serde(rename = "dev-dependencies", alias = "bs-dev-dependencies")]
     pub dev_dependencies: Option<Vec<String>>,
     #[serde(rename = "ppx-flags")]
     pub ppx_flags: Option<Vec<OneOrMore<String>>>,
 
-    #[serde(rename = "compiler-flags")]
+    #[serde(rename = "compiler-flags", alias = "bsc-flags")]
     pub compiler_flags: Option<Vec<OneOrMore<String>>>,
 
     pub namespace: Option<NamespaceConfig>,
@@ -459,8 +554,9 @@ impl Config {
 
     /// Try to convert a config from a string to a config struct
     pub fn new_from_json_string(config_str: &str) -> Result<Self> {
-        if let Ok(value) = serde_json::from_str::<serde_json::Value>(config_str) {
-            validate_package_specs_value(&value)?;
+        let raw_value = serde_json::from_str::<serde_json::Value>(config_str).ok();
+        if let Some(value) = raw_value.as_ref() {
+            validate_package_specs_value(value)?;
         }
 
         let mut deserializer = serde_json::Deserializer::from_str(config_str);
@@ -478,6 +574,29 @@ impl Config {
                     }
                 })?;
 
+        if let Some(value) = raw_value.as_ref().and_then(|v| v.as_object()) {
+            for (raw_key, warning) in [
+                ("bs-dependencies", DeprecationWarning::BsDependencies),
+                ("bs-dev-dependencies", DeprecationWarning::BsDevDependencies),
+                ("bsc-flags", DeprecationWarning::BscFlags),
+            ] {
+                if value.contains_key(raw_key) {
+                    config.deprecation_warnings.push(warning);
+                }
+            }
+        }
+
+        if let Some(value) = raw_value.as_ref() {
+            for (legacy_module, warning) in [
+                ("cjs", DeprecationWarning::CjsModule),
+                ("es6", DeprecationWarning::Es6Module),
+            ] {
+                if uses_module_alias(value, legacy_module) {
+                    config.deprecation_warnings.push(warning);
+                }
+            }
+        }
+
         config.handle_deprecations()?;
         config.unknown_fields = unknown_fields;
 
@@ -485,6 +604,9 @@ impl Config {
     }
 
     fn set_path(&mut self, path: PathBuf) -> Result<()> {
+        if path.file_name().and_then(|n| n.to_str()) == Some("bsconfig.json") {
+            self.deprecation_warnings.push(DeprecationWarning::BsconfigJson);
+        }
         self.path = path;
         Ok(())
     }
@@ -598,11 +720,100 @@ impl Config {
         }
     }
 
-    pub fn get_gentype_arg(&self) -> Vec<String> {
-        match &self.gentype_config {
-            Some(_) => vec!["-bs-gentype".to_string()],
-            None => vec![],
+    /// Build the full set of `-bs-gentype-*` CLI flags for a bsc invocation.
+    /// `source_dirs` are pre-expanded directories relative to the package root.
+    pub fn get_gentype_args(
+        &self,
+        source_dirs: &[PathBuf],
+        bsb_project_root: Option<&Path>,
+        dep_paths: &[(String, PathBuf)],
+    ) -> Vec<String> {
+        let Some(gt) = &self.gentype_config else {
+            return vec![];
+        };
+        let mut args = vec!["-bs-gentype".to_string()];
+
+        // Match the pre-refactor precedence: gentypeconfig.module wins, then
+        // object-form package-specs.module is used as a fallback, otherwise
+        // leave bsc to apply its own default (ESModule).
+        let module_override =
+            gt.module
+                .as_ref()
+                .map(|m| m.as_str().to_string())
+                .or_else(|| match &self.package_specs {
+                    Some(OneOrMore::Single(spec)) => Some(spec.module.as_str().to_string()),
+                    _ => None,
+                });
+        if let Some(module) = module_override {
+            args.push("-bs-gentype-module".to_string());
+            args.push(module);
         }
+        if let Some(resolution) = &gt.module_resolution {
+            args.push("-bs-gentype-module-resolution".to_string());
+            args.push(resolution.as_str().to_string());
+        }
+        if gt.export_interfaces == Some(true) {
+            args.push("-bs-gentype-export-interfaces".to_string());
+        }
+        if let Some(ext) = &gt.generated_file_extension {
+            args.push("-bs-gentype-generated-extension".to_string());
+            args.push(ext.clone());
+        }
+        if let Some(suffix) = &self.suffix {
+            args.push("-bs-gentype-suffix".to_string());
+            args.push(suffix.clone());
+        }
+        let mut shims: Vec<(&String, &String)> = gt.shims.0.iter().collect();
+        shims.sort_by(|a, b| a.0.cmp(b.0));
+        for (from_, to) in shims {
+            args.push("-bs-gentype-shim".to_string());
+            args.push(format!("{from_}={to}"));
+        }
+        let mut debug_items: Vec<&String> = gt
+            .debug
+            .iter()
+            .filter_map(|(k, v)| if *v { Some(k) } else { None })
+            .collect();
+        debug_items.sort();
+        for item in debug_items {
+            args.push("-bs-gentype-debug".to_string());
+            args.push(item.clone());
+        }
+        if let Some(deps) = &self.dependencies {
+            for dep in deps {
+                args.push("-bs-gentype-dep".to_string());
+                args.push(dep.clone());
+            }
+        }
+        for dir in source_dirs {
+            args.push("-bs-gentype-source-dir".to_string());
+            args.push(dir.to_string_lossy().to_string());
+        }
+        // Preserve caller's order so the resulting Hashtbl has last-added
+        // semantics equivalent to the old pkgs-array iteration.
+        for (name, path) in dep_paths {
+            args.push("-bs-gentype-dep-path".to_string());
+            args.push(format!("{}={}", name, path.to_string_lossy()));
+        }
+        if let Some(root) = bsb_project_root {
+            args.push("-bs-gentype-bsb-project-root".to_string());
+            args.push(root.to_string_lossy().to_string());
+        }
+        args
+    }
+
+    /// Directory containing the `rescript.json` this config was parsed from.
+    pub fn get_package_root(&self) -> &Path {
+        self.path
+            .parent()
+            .expect("rescript.json path should always have a parent directory")
+    }
+
+    pub fn get_project_root_args(&self) -> Vec<String> {
+        vec![
+            "-bs-project-root".to_string(),
+            self.get_package_root().to_string_lossy().to_string(),
+        ]
     }
 
     pub fn get_warning_args(&self, is_local_dep: bool, warn_error_override: Option<String>) -> Vec<String> {
@@ -805,6 +1016,19 @@ fn resolve_spec_in_source(spec: &serde_json::Value) -> bool {
         .unwrap_or(true)
 }
 
+fn uses_module_alias(value: &serde_json::Value, alias: &str) -> bool {
+    let specs = match value.get("package-specs") {
+        Some(specs) => specs,
+        None => return false,
+    };
+    let spec_has_alias =
+        |spec: &serde_json::Value| -> bool { spec.get("module").and_then(|m| m.as_str()) == Some(alias) };
+    match specs {
+        serde_json::Value::Array(specs) => specs.iter().any(spec_has_alias),
+        _ => spec_has_alias(specs),
+    }
+}
+
 fn validate_package_spec_value(value: &serde_json::Value) -> Result<()> {
     let module = match value.get("module") {
         Some(module) => module,
@@ -817,7 +1041,7 @@ fn validate_package_spec_value(value: &serde_json::Value) -> Result<()> {
     };
 
     match module {
-        "commonjs" | "esmodule" => Ok(()),
+        "commonjs" | "cjs" | "esmodule" | "es6" => Ok(()),
         other => Err(anyhow!(
             "Module system \"{other}\" is unsupported. Expected \"commonjs\" or \"esmodule\"."
         )),
@@ -1019,8 +1243,82 @@ pub mod tests {
         "#;
 
         let config = serde_json::from_str::<Config>(json).unwrap();
-        assert!(config.gentype_config.is_some());
-        assert_eq!(config.get_gentype_arg(), vec!["-bs-gentype".to_string()]);
+        let gt = config.gentype_config.as_ref().unwrap();
+        assert_eq!(gt.module, Some(GenTypeModule::EsModule));
+        assert_eq!(gt.generated_file_extension.as_deref(), Some(".gen.tsx"));
+
+        let args = config.get_gentype_args(&[], None, &[]);
+        assert!(args.contains(&"-bs-gentype".to_string()));
+        assert!(args.contains(&"-bs-gentype-module".to_string()));
+        assert!(args.contains(&"esmodule".to_string()));
+        assert!(args.contains(&"-bs-gentype-generated-extension".to_string()));
+        assert!(args.contains(&".gen.tsx".to_string()));
+        assert!(args.contains(&"-bs-gentype-suffix".to_string()));
+        assert!(args.contains(&".mjs".to_string()));
+        assert!(args.contains(&"-bs-gentype-dep".to_string()));
+        assert!(args.contains(&"@teamwalnut/app".to_string()));
+    }
+
+    #[test]
+    fn test_gentype_shims_object_and_array_forms() {
+        let object_form = serde_json::from_str::<GenTypeShims>(r#"{"From": "To"}"#).unwrap();
+        assert_eq!(object_form.0.get("From"), Some(&"To".to_string()));
+
+        let array_form = serde_json::from_str::<GenTypeShims>(r#"["From=To", "A=B"]"#).unwrap();
+        assert_eq!(array_form.0.get("From"), Some(&"To".to_string()));
+        assert_eq!(array_form.0.get("A"), Some(&"B".to_string()));
+    }
+
+    #[test]
+    fn test_gentype_module_falls_back_to_package_specs_module() {
+        // If gentypeconfig.module is omitted but package-specs is a single
+        // object with "module": "commonjs", the old JSON-reading code used
+        // that as the fallback. Preserve that behavior via the CLI flags.
+        let json = r#"
+        {
+            "name": "pkg",
+            "sources": [ { "dir": "src", "subdirs": true } ],
+            "package-specs": { "module": "commonjs", "in-source": true },
+            "suffix": ".bs.js",
+            "gentypeconfig": {
+                "generatedFileExtension": ".gen.tsx"
+            }
+        }
+        "#;
+        let config = serde_json::from_str::<Config>(json).unwrap();
+        let args = config.get_gentype_args(&[], None, &[]);
+        let module_idx = args.iter().position(|s| s == "-bs-gentype-module").unwrap();
+        assert_eq!(args[module_idx + 1], "commonjs");
+    }
+
+    #[test]
+    fn test_gentype_module_explicit_wins_over_package_specs() {
+        let json = r#"
+        {
+            "name": "pkg",
+            "sources": [ { "dir": "src", "subdirs": true } ],
+            "package-specs": { "module": "commonjs", "in-source": true },
+            "gentypeconfig": {
+                "module": "esmodule"
+            }
+        }
+        "#;
+        let config = serde_json::from_str::<Config>(json).unwrap();
+        let args = config.get_gentype_args(&[], None, &[]);
+        let module_idx = args.iter().position(|s| s == "-bs-gentype-module").unwrap();
+        assert_eq!(args[module_idx + 1], "esmodule");
+    }
+
+    #[test]
+    fn test_gentype_args_without_gentype_config() {
+        let json = r#"
+        {
+            "name": "pkg",
+            "sources": [ { "dir": "src/", "subdirs": true } ]
+        }
+        "#;
+        let config = serde_json::from_str::<Config>(json).unwrap();
+        assert!(config.get_gentype_args(&[], None, &[]).is_empty());
     }
 
     #[test]
@@ -1131,6 +1429,31 @@ pub mod tests {
     }
 
     #[test]
+    fn test_bs_dependencies_alias() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": {
+                "dir": "src",
+                "subdirs": true
+            },
+            "package-specs": [
+                {
+                "module": "esmodule",
+                "in-source": true
+                }
+            ],
+            "suffix": ".mjs",
+            "bs-dependencies": [ "@testrepo/main" ]
+        }
+        "#;
+
+        let config = Config::new_from_json_string(json).expect("a valid json string");
+        assert_eq!(config.dependencies, Some(vec!["@testrepo/main".to_string()]));
+        assert_eq!(config.get_deprecations(), [DeprecationWarning::BsDependencies]);
+    }
+
+    #[test]
     fn test_dev_dependencies() {
         let json = r#"
         {
@@ -1153,6 +1476,31 @@ pub mod tests {
         let config = Config::new_from_json_string(json).expect("a valid json string");
         assert_eq!(config.dev_dependencies, Some(vec!["@testrepo/main".to_string()]));
         assert!(config.get_deprecations().is_empty());
+    }
+
+    #[test]
+    fn test_bs_dev_dependencies_alias() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": {
+                "dir": "src",
+                "subdirs": true
+            },
+            "package-specs": [
+                {
+                "module": "esmodule",
+                "in-source": true
+                }
+            ],
+            "suffix": ".mjs",
+            "bs-dev-dependencies": [ "@testrepo/main" ]
+        }
+        "#;
+
+        let config = Config::new_from_json_string(json).expect("a valid json string");
+        assert_eq!(config.dev_dependencies, Some(vec!["@testrepo/main".to_string()]));
+        assert_eq!(config.get_deprecations(), [DeprecationWarning::BsDevDependencies]);
     }
 
     #[test]
@@ -1180,27 +1528,21 @@ pub mod tests {
     }
 
     #[test]
-    fn test_package_specs_es6_deprecation() {
+    fn test_es6_module_alias() {
         let json = r#"
         {
             "name": "testrepo",
-            "sources": {
-                "dir": "src",
-                "subdirs": true
-            },
-            "package-specs": [
-                {
-                "module": "es6",
-                "in-source": true
-                }
-            ],
+            "sources": { "dir": "src", "subdirs": true },
+            "package-specs": [ { "module": "es6", "in-source": true } ],
             "suffix": ".mjs"
         }
         "#;
 
-        let err = Config::new_from_json_string(json).unwrap_err();
-        let message = err.to_string();
-        assert!(message.contains("Module system \"es6\" is unsupported"));
+        let config = Config::new_from_json_string(json).expect("a valid json string");
+        let specs = config.get_package_specs();
+        assert_eq!(specs.len(), 1);
+        assert_eq!(specs[0].module, PackageModule::EsModule);
+        assert_eq!(config.get_deprecations(), [DeprecationWarning::Es6Module]);
     }
 
     #[test]
@@ -1294,6 +1636,49 @@ pub mod tests {
             unreachable!("Expected compiler flags to be Some");
         }
         assert!(config.get_deprecations().is_empty());
+    }
+
+    #[test]
+    fn test_cjs_module_alias() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": { "dir": "src", "subdirs": true },
+            "package-specs": [ { "module": "cjs", "in-source": true } ],
+            "suffix": ".js"
+        }
+        "#;
+
+        let config = Config::new_from_json_string(json).expect("a valid json string");
+        let specs = config.get_package_specs();
+        assert_eq!(specs.len(), 1);
+        assert_eq!(specs[0].module, PackageModule::CommonJs);
+        assert_eq!(config.get_deprecations(), [DeprecationWarning::CjsModule]);
+    }
+
+    #[test]
+    fn test_bsc_flags_alias() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": {
+                "dir": "src",
+                "subdirs": true
+            },
+            "package-specs": [
+                {
+                "module": "esmodule",
+                "in-source": true
+                }
+            ],
+            "suffix": ".mjs",
+            "bsc-flags": [ "-w" ]
+        }
+        "#;
+
+        let config = Config::new_from_json_string(json).expect("a valid json string");
+        assert!(config.compiler_flags.is_some());
+        assert_eq!(config.get_deprecations(), [DeprecationWarning::BscFlags]);
     }
 
     fn test_find_is_type_dev(source: OneOrMore<Source>, path: &Path, expected: bool) {
@@ -1499,6 +1884,24 @@ pub mod tests {
         assert!(
             error.contains(path.to_string_lossy().as_ref()),
             "Error should include the missing config path, got: {error}"
+        );
+    }
+
+    #[test]
+    fn test_bsconfig_json_filename_deprecation() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let path = tmp.path().join("bsconfig.json");
+        std::fs::write(
+            &path,
+            r#"{ "name": "legacy", "sources": { "dir": "src", "subdirs": true } }"#,
+        )
+        .expect("write");
+
+        let config = Config::new(&path).expect("a valid bsconfig.json");
+        assert!(
+            config
+                .get_deprecations()
+                .contains(&DeprecationWarning::BsconfigJson)
         );
     }
 }

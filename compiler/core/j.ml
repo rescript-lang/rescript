@@ -266,6 +266,8 @@ and statement_desc =
       * for_ident
       * for_direction
       * block
+  | ForOf of label option * for_ident * expression * block
+  | ForAwaitOf of label option * for_ident * expression * block
   | Continue of label option
   | Break of label option (* only used when inline a fucntion *)
   | Return of expression

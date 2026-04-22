@@ -3,7 +3,6 @@ let suites =
     [
       Ounit_vec_test.suites;
       Ounit_json_tests.suites;
-      Ounit_ext_json_tests.suites;
       Ounit_array_tests.suites;
       Ounit_scc_tests.suites;
       Ounit_list_test.suites;
@@ -18,6 +17,7 @@ let suites =
       Ounit_utf8_test.suites;
       Ounit_unicode_tests.suites;
       Ounit_util_tests.suites;
+      Ounit_js_analyzer_tests.suites;
       Ounit_jsx_loc_tests.suites;
     ]
 

@@ -196,23 +196,13 @@ let valuesToArray = Belt_internalAVLtree.valuesToArray;
 
 let minKey = Belt_internalAVLtree.minKey;
 
-let minKeyUndefined = Belt_internalAVLtree.minKeyUndefined;
-
 let maxKey = Belt_internalAVLtree.maxKey;
-
-let maxKeyUndefined = Belt_internalAVLtree.maxKeyUndefined;
 
 let minimum = Belt_internalAVLtree.minimum;
 
-let minUndefined = Belt_internalAVLtree.minUndefined;
-
 let maximum = Belt_internalAVLtree.maximum;
 
-let maxUndefined = Belt_internalAVLtree.maxUndefined;
-
 let get = Belt_internalMapInt.get;
-
-let getUndefined = Belt_internalMapInt.getUndefined;
 
 let getWithDefault = Belt_internalMapInt.getWithDefault;
 
@@ -271,15 +261,10 @@ export {
   keysToArray,
   valuesToArray,
   minKey,
-  minKeyUndefined,
   maxKey,
-  maxKeyUndefined,
   minimum,
-  minUndefined,
   maximum,
-  maxUndefined,
   get,
-  getUndefined,
   getWithDefault,
   getExn,
   getOrThrow,

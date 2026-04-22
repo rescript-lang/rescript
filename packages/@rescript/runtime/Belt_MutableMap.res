@@ -136,13 +136,9 @@ let clear = m => m.data = None
 let isEmpty = d => N.isEmpty(d.data)
 
 let minKey = m => N.minKey(m.data)
-let minKeyUndefined = m => N.minKeyUndefined(m.data)
 let maxKey = m => N.maxKey(m.data)
-let maxKeyUndefined = m => N.maxKeyUndefined(m.data)
 let minimum = m => N.minimum(m.data)
-let minUndefined = m => N.minUndefined(m.data)
 let maximum = m => N.maximum(m.data)
-let maxUndefined = m => N.maxUndefined(m.data)
 
 let forEach = (d, f) => N.forEach(d.data, f)
 let reduce = (d, acc, cb) => N.reduce(d.data, acc, cb)
@@ -167,8 +163,6 @@ let eq = (m1, m2, cmp) => N.eq(~kcmp=m1.cmp, ~veq=cmp, m1.data, m2.data)
 let map = (m, f) => {cmp: m.cmp, data: N.map(m.data, f)}
 let mapWithKey = (m, f) => {cmp: m.cmp, data: N.mapWithKey(m.data, f)}
 let get = (m, x) => N.get(~cmp=m.cmp, m.data, x)
-
-let getUndefined = (m, x) => N.getUndefined(~cmp=m.cmp, m.data, x)
 
 let getWithDefault = (m, x, def) => N.getWithDefault(~cmp=m.cmp, m.data, x, def)
 

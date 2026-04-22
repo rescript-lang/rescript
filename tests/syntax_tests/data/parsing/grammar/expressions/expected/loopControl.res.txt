@@ -8,3 +8,6 @@
     done
 ;;for i = 0 to 10 do match i with | 3 -> continue | 8 -> break | _ -> work ()
   done
+;;for i of [|0;1;2;3;4;5|] do
+    match i with | 1 -> continue | 4 -> break | _ -> work ()
+  done

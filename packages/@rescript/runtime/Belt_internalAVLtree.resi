@@ -25,16 +25,12 @@ let singleton: ('a, 'b) => t<'a, 'b>
 let updateValue: (node<'k, 'v>, 'v) => node<'k, 'v>
 
 let minKey: t<'a, 'b> => option<'a>
-let minKeyUndefined: t<'a, 'b> => Js.undefined<'a>
 
 let maxKey: t<'a, 'b> => option<'a>
-let maxKeyUndefined: t<'a, 'b> => Js.undefined<'a>
 
 let minimum: t<'a, 'b> => option<('a, 'b)>
-let minUndefined: t<'a, 'b> => Js.undefined<('a, 'b)>
 
 let maximum: t<'a, 'b> => option<('a, 'b)>
-let maxUndefined: t<'a, 'b> => Js.undefined<('a, 'b)>
 
 let removeMinAuxWithRef: (node<'a, 'b>, ref<'a>, ref<'b>) => t<'a, 'b>
 
@@ -92,8 +88,6 @@ let cmp: (t<'a, 'b>, t<'a, 'c>, ~kcmp: cmp<'a, _>, ~vcmp: ('b, 'c) => int) => in
 let eq: (t<'a, 'b>, t<'a, 'c>, ~kcmp: cmp<'a, _>, ~veq: ('b, 'c) => bool) => bool
 
 let get: (t<'a, 'b>, 'a, ~cmp: cmp<'a, _>) => option<'b>
-
-let getUndefined: (t<'a, 'b>, 'a, ~cmp: cmp<'a, _>) => Js.undefined<'b>
 
 let getWithDefault: (t<'a, 'b>, 'a, 'b, ~cmp: cmp<'a, _>) => 'b
 let getOrThrow: (t<'a, 'b>, 'a, ~cmp: cmp<'a, _>) => 'b
