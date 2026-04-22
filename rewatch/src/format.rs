@@ -36,7 +36,8 @@ fn get_files_in_scope() -> Result<Vec<String>> {
     let current_dir = std::env::current_dir()?;
     let project_context = project_context::ProjectContext::new(&current_dir)?;
 
-    let packages = packages::make(&None, &project_context, false, false)?;
+    // Format walks all source files regardless of feature selection.
+    let packages = packages::make(&None, &project_context, false, false, None)?;
     let mut files: Vec<String> = Vec::new();
     let packages_to_format = project_context.get_scoped_local_packages();
 

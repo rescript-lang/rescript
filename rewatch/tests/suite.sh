@@ -119,6 +119,14 @@ fi
 # Experimental-invalid tests
 ./experimental-invalid/01-invalid-experimental-key.sh &&
 
+# Features tests
+./features/01-features-default-all-active.sh &&
+./features/02-features-cli-restricts-to-one.sh &&
+./features/03-features-transitive-expansion.sh &&
+./features/04-features-toggle-cleans-artifacts.sh &&
+./features/05-features-cycle-errors.sh &&
+./features/06-features-empty-flag-rejected.sh &&
+
 # Compiler-args tests
 ./compiler-args/01-compiler-args-cwd-invariant.sh &&
 ./compiler-args/02-warnings-in-parser-and-compiler.sh

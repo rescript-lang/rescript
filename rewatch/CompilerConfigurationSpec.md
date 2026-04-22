@@ -13,7 +13,10 @@ This document contains a list of all config parameters with remarks, and whether
 | sources               | array of Source         |                                                             |     [x]      |
 | ignored-dirs          | array of string         |                                                             |     [_]      |
 | dependencies          | array of string         |                                                             |     [x]      |
+| dependencies          | array of Dependency     | See [Features.md](./Features.md). rewatch extension.        |     [x]      |
 | dev-dependencies      | array of string         |                                                             |     [x]      |
+| dev-dependencies      | array of Dependency     | See [Features.md](./Features.md). rewatch extension.        |     [x]      |
+| features              | map of string to array  | See [Features.md](./Features.md). rewatch extension.        |     [x]      |
 | generators            | array of Rule-Generator |                                                             |     [_]      |
 | cut-generators        | boolean                 |                                                             |     [_]      |
 | jsx                   | JSX                     |                                                             |     [x]      |
@@ -34,10 +37,11 @@ This document contains a list of all config parameters with remarks, and whether
 
 ### Source
 
-| Parameter        | JSON type                | Remark | Implemented? |
-| ---------------- | ------------------------ | ------ | :----------: |
-| dir              | string                   |        |     [x]      |
-| type             | "dev"                    |        |     [x]      |
+| Parameter        | JSON type                | Remark                                                  | Implemented? |
+| ---------------- | ------------------------ | ------------------------------------------------------- | :----------: |
+| dir              | string                   |                                                         |     [x]      |
+| type             | "dev"                    |                                                         |     [x]      |
+| feature          | string                   | See [Features.md](./Features.md). rewatch extension.    |     [x]      |
 | files            | array of string          |        |     [_]      |
 | files            | File-Object              |        |     [_]      |
 | generators       | array of Build-Generator |        |     [_]      |

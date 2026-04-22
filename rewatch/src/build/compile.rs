@@ -693,7 +693,10 @@ pub fn compiler_args(
                 .dependencies
                 .iter()
                 .flatten()
-                .filter_map(|name| pkgs.get(name).map(|pkg| (name.clone(), pkg.path.clone())))
+                .filter_map(|dep| {
+                    let name = dep.name();
+                    pkgs.get(name).map(|pkg| (name.to_string(), pkg.path.clone()))
+                })
                 .collect::<Vec<_>>()
         });
         resolved.unwrap_or_default()
@@ -816,20 +819,16 @@ fn get_dependency_paths(
     packages: &Option<&AHashMap<String, packages::Package>>,
     is_file_type_dev: bool,
 ) -> Vec<String> {
-    let normal_deps = config
-        .dependencies
-        .clone()
-        .unwrap_or_default()
+    let normal_deps: Vec<DependentPackage> = config
+        .get_dependency_names()
         .into_iter()
         .map(DependentPackage::Normal)
         .collect();
 
     // We can only access dev dependencies for source_files that are marked as "type":"dev"
-    let dev_deps = if is_file_type_dev {
+    let dev_deps: Vec<DependentPackage> = if is_file_type_dev {
         config
-            .dev_dependencies
-            .clone()
-            .unwrap_or_default()
+            .get_dev_dependency_names()
             .into_iter()
             .map(DependentPackage::Dev)
             .collect()
