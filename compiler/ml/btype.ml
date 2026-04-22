@@ -186,6 +186,26 @@ let static_row row =
          | _ -> true)
        row.row_fields
 
+(* Produce a residual row: the given [matched_tags] are marked [Rabsent];
+   every other field is preserved as-is. [row_closed] and [row_fixed] are
+   inherited. [row_name] is dropped (the residual is anonymous) and
+   [row_more] is a fresh variable so subsequent unification on the
+   residual cannot leak into the source row. *)
+let narrow_row_by_tags matched_tags row =
+  let row = row_repr row in
+  let fields =
+    row.row_fields
+    |> List.map (fun (tag, f) ->
+           if List.mem tag matched_tags then (tag, Rabsent) else (tag, f))
+  in
+  {
+    row_fields = fields;
+    row_more = newgenvar ();
+    row_closed = row.row_closed;
+    row_fixed = row.row_fixed;
+    row_name = None;
+  }
+
 let hash_variant s =
   let accu = ref 0 in
   for i = 0 to String.length s - 1 do

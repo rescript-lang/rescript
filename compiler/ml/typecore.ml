@@ -642,6 +642,45 @@ let extract_type_from_pat_variant_spread env lid expected_ty =
 
 let build_ppat_or_for_variant_spread pat env expected_ty =
   match pat with
+  | {
+   ppat_desc = Ppat_type {txt = Longident.Lident name; loc = name_loc};
+   ppat_attributes;
+   ppat_loc;
+  }
+    when Variant_coercion.has_res_pat_variant_spread_attribute ppat_attributes
+         &&
+         match (Ctype.expand_head !env expected_ty).desc with
+         | Tvariant _ -> true
+         | _ -> false ->
+    (* Polymorphic-variant narrowing: rewrite to [Ppat_var] carrying the
+       matched-tags attribute attached by the pre-pass. The [Ppat_var]
+       handler reads the attribute and constructs the narrowed binding
+       type from [expected_ty]. The residual type returned here is used
+       by [Ppat_alias] to propagate the narrowed type onto any outer
+       [as] alias. *)
+    let row =
+      match (Ctype.expand_head !env expected_ty).desc with
+      | Tvariant row -> row
+      | _ -> assert false
+    in
+    let matched_tags =
+      Variant_type_spread.get_poly_variant_narrow_matched_tags ppat_attributes
+      |> Option.value ~default:[]
+    in
+    let narrowed_ty =
+      Btype.newgenty (Tvariant (Btype.narrow_row_by_tags matched_tags row))
+    in
+    let matched_tags_attr =
+      Variant_type_spread.mk_poly_variant_narrow_matched_tags_attr matched_tags
+    in
+    let new_pat =
+      {
+        ppat_desc = Ppat_var (Location.mkloc name name_loc);
+        ppat_loc;
+        ppat_attributes = matched_tags_attr :: ppat_attributes;
+      }
+    in
+    Some (new_pat, narrowed_ty)
   | {ppat_desc = Ppat_type lident; ppat_attributes}
     when Variant_coercion.has_res_pat_variant_spread_attribute ppat_attributes
     ->
@@ -1182,6 +1221,182 @@ let set_state s env =
   Ctype.set_levels s.levels;
   env := s.env
 
+(* Polymorphic-variant narrowing: a `...rest` pattern on a poly-variant
+   position binds [rest] to the residual row (the scrutinee's row at that
+   position minus the tags matched by earlier arms at the same path).
+
+   Implementation is an attribute-based pre-pass. Before typing, each
+   `Ppat_type + res.patFromVariantSpread` node is annotated with a
+   [res.polyVariantNarrowMatchedTags] attribute carrying the list of tag
+   names matched at the node's structural path by earlier (unguarded) arms.
+   During typing, [build_ppat_or_for_variant_spread] decides — based on the
+   expected type at that position — whether to rewrite the node to a
+   [Ppat_var] (poly-variant case: produce a narrowed row) or to continue
+   with the existing regular-variant spread expansion. The matched-tags
+   attribute is ignored on the regular-variant path. *)
+
+type narrow_path_step =
+  | Step_construct of string
+  | Step_variant of string
+  | Step_tuple of int
+  | Step_record of string
+
+let rec longident_to_string = function
+  | Longident.Lident s -> s
+  | Longident.Ldot (l, s) -> longident_to_string l ^ "." ^ s
+  | Longident.Lapply (l1, l2) ->
+    longident_to_string l1 ^ "(" ^ longident_to_string l2 ^ ")"
+
+(* Set of (path, tag) pairs. Paths are leaf-first lists of path steps. *)
+type matched_set = (narrow_path_step list * string) list
+
+let union_matched (a : matched_set) (b : matched_set) : matched_set =
+  List.fold_left (fun acc x -> if List.mem x acc then acc else x :: acc) a b
+
+(* A sub-pattern is "permissive" at its position if it matches every value
+   of the expected type there. Only permissive siblings allow us to lift a
+   deeper tag match to the parent position unconditionally: in [(#A, #B)]
+   neither #A nor #B is lifted (each is conditional on the sibling), but in
+   [(#A, _)] the #A is unconditional. *)
+let rec is_permissive_pattern (p : Parsetree.pattern) =
+  match p.ppat_desc with
+  | Ppat_any | Ppat_var _ -> true
+  | Ppat_alias (p, _) | Ppat_constraint (p, _) -> is_permissive_pattern p
+  | _ -> false
+
+let rec extract_matched_at_path (path : narrow_path_step list)
+    (p : Parsetree.pattern) : matched_set =
+  match p.ppat_desc with
+  | Ppat_variant (tag, None) -> [(path, tag)]
+  | Ppat_variant (tag, Some payload) ->
+    (path, tag) :: extract_matched_at_path (Step_variant tag :: path) payload
+  | Ppat_or (p1, p2) ->
+    (* An or-pattern handles every tag either branch handles. *)
+    union_matched
+      (extract_matched_at_path path p1)
+      (extract_matched_at_path path p2)
+  | Ppat_alias (p, _) | Ppat_constraint (p, _) -> extract_matched_at_path path p
+  | Ppat_construct ({txt}, Some payload) ->
+    extract_matched_at_path
+      (Step_construct (longident_to_string txt) :: path)
+      payload
+  | Ppat_construct (_, None) -> []
+  | Ppat_tuple ps ->
+    let items = List.mapi (fun i p -> (i, p)) ps in
+    List.concat_map
+      (fun (i, p) ->
+        if List.for_all (fun (j, q) -> j = i || is_permissive_pattern q) items
+        then extract_matched_at_path (Step_tuple i :: path) p
+        else [])
+      items
+  | Ppat_record (fields, _) ->
+    List.concat_map
+      (fun (re : _ Parsetree.record_element) ->
+        if
+          List.for_all
+            (fun (re' : _ Parsetree.record_element) ->
+              re'.lid.txt = re.lid.txt || is_permissive_pattern re'.x)
+            fields
+        then
+          extract_matched_at_path
+            (Step_record (longident_to_string re.lid.txt) :: path)
+            re.x
+        else [])
+      fields
+  | _ -> []
+
+let matched_tags_at_path (matched : matched_set) (path : narrow_path_step list)
+    =
+  List.filter_map (fun (p, t) -> if p = path then Some t else None) matched
+
+(* Walk [p] at [path] annotating each Ppat_type+spread-attr node with the
+   tags matched at that path in [matched]. *)
+let rec annotate_rest_at_path (matched : matched_set)
+    (path : narrow_path_step list) (p : Parsetree.pattern) : Parsetree.pattern =
+  match p.ppat_desc with
+  | Ppat_type _
+    when Variant_coercion.has_res_pat_variant_spread_attribute p.ppat_attributes
+    ->
+    let tags = matched_tags_at_path matched path in
+    {
+      p with
+      ppat_attributes =
+        Variant_type_spread.mk_poly_variant_narrow_matched_tags_attr tags
+        :: p.ppat_attributes;
+    }
+  | Ppat_alias (inner, name) ->
+    {
+      p with
+      ppat_desc = Ppat_alias (annotate_rest_at_path matched path inner, name);
+    }
+  | Ppat_or (p1, p2) ->
+    {
+      p with
+      ppat_desc =
+        Ppat_or
+          ( annotate_rest_at_path matched path p1,
+            annotate_rest_at_path matched path p2 );
+    }
+  | Ppat_constraint (inner, ct) ->
+    {
+      p with
+      ppat_desc = Ppat_constraint (annotate_rest_at_path matched path inner, ct);
+    }
+  | Ppat_construct (ctor, Some payload) ->
+    let step = Step_construct (longident_to_string ctor.txt) in
+    {
+      p with
+      ppat_desc =
+        Ppat_construct
+          (ctor, Some (annotate_rest_at_path matched (step :: path) payload));
+    }
+  | Ppat_variant (tag, Some payload) ->
+    let step = Step_variant tag in
+    {
+      p with
+      ppat_desc =
+        Ppat_variant
+          (tag, Some (annotate_rest_at_path matched (step :: path) payload));
+    }
+  | Ppat_tuple ps ->
+    {
+      p with
+      ppat_desc =
+        Ppat_tuple
+          (List.mapi
+             (fun i p -> annotate_rest_at_path matched (Step_tuple i :: path) p)
+             ps);
+    }
+  | Ppat_record (fields, flag) ->
+    {
+      p with
+      ppat_desc =
+        Ppat_record
+          ( List.map
+              (fun (re : _ Parsetree.record_element) ->
+                {
+                  re with
+                  x =
+                    annotate_rest_at_path matched
+                      (Step_record (longident_to_string re.lid.txt) :: path)
+                      re.x;
+                })
+              fields,
+            flag );
+    }
+  | _ -> p
+
+let annotate_rest_nodes_with_matched_tags (caselist : Parsetree.case list) :
+    Parsetree.case list =
+  let earlier_matched : matched_set ref = ref [] in
+  List.map
+    (fun ({pc_lhs; pc_guard} as case : Parsetree.case) ->
+      let new_lhs = annotate_rest_at_path !earlier_matched [] pc_lhs in
+      if pc_guard = None then
+        earlier_matched := !earlier_matched @ extract_matched_at_path [] pc_lhs;
+      {case with pc_lhs = new_lhs})
+    caselist
+
 (* type_pat does not generate local constraints inside or patterns *)
 type type_pat_mode =
   | Normal
@@ -1239,11 +1454,26 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
           expected_ty k
     else k' Tpat_any
   | Ppat_var name ->
+    let binding_ty =
+      match
+        Variant_type_spread.get_poly_variant_narrow_matched_tags
+          sp.ppat_attributes
+      with
+      | Some matched_tags -> (
+        match (Ctype.expand_head !env expected_ty).desc with
+        | Tvariant row ->
+          Btype.newgenty (Tvariant (Btype.narrow_row_by_tags matched_tags row))
+        | _ -> expected_ty)
+      | None -> expected_ty
+    in
     let id =
       (* PR#7330 *)
       if name.txt = "*extension*" then Ident.create name.txt
-      else enter_variable loc name expected_ty
+      else enter_variable loc name binding_ty
     in
+    (* Keep [pat_type] at [expected_ty] so arm-wise unification in
+       [type_cases] sees a full catch-all; the narrowed type only
+       affects the variable's binding. *)
     rp k
       {
         pat_desc = Tpat_var (id, name);
@@ -4080,6 +4310,7 @@ and type_cases ~(call_context : [`LetUnwrap | `Switch | `Function | `Try])
     ?in_function env ty_arg ty_res partial_flag loc caselist :
     _ * Typedtree.partial =
   (* ty_arg is _fully_ generalized *)
+  let caselist = annotate_rest_nodes_with_matched_tags caselist in
   let patterns = List.map (fun {pc_lhs = p} -> p) caselist in
   let contains_polyvars = List.exists contains_polymorphic_variant patterns in
   let erase_either = contains_polyvars && contains_variant_either ty_arg

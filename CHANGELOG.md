@@ -27,6 +27,7 @@
 - Add `Dict.assignMany`, `Dict.concat`, `Dict.concatMany`, `Dict.concatAll`, `Array.concatAll` to the stdlib. https://github.com/rescript-lang/rescript/pull/8364
 - Implement `for...of` and `for await...of` loops. https://github.com/rescript-lang/rescript/pull/7887
 - Add support for dict spreads: `dict{...foo, "bar": 2, ...qux}`. https://github.com/rescript-lang/rescript/pull/8369
+- Narrow the residual row at `...rest` catch-alls in polymorphic-variant matches. `| ...rest =>` (and `...rest as r`) now binds `rest` to the scrutinee's row minus the tags matched by earlier arms — for closed and open rows, at top-level and nested positions (`Error(...rest)`, `{field: ...rest}`, tuples with permissive siblings).
 
 #### :bug: Bug fix
 

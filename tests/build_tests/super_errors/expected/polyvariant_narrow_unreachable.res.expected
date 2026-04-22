@@ -1,0 +1,11 @@
+
+  [1;33mWarning number 11[0m
+  [36m/.../fixtures/polyvariant_narrow_unreachable.res[0m:[2m5:5-12[0m
+
+  3 [2m┆[0m | #A => 1
+  4 [2m┆[0m | #B => 2
+  [1;33m5[0m [2m┆[0m | [1;33m..._rest[0m => 3
+  6 [2m┆[0m }
+  7 [2m┆[0m 
+
+  this match case is unused.

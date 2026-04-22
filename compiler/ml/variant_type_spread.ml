@@ -11,6 +11,36 @@ let is_pat_from_variant_spread_attr pat =
          | {txt = "res.patFromVariantSpread"}, PStr [] -> true
          | _ -> false)
 
+(* Attribute carrying the tags matched by earlier arms at this pattern's
+   structural path. Attached by the type_cases pre-pass, consumed by
+   build_ppat_or_for_variant_spread (on a poly-variant expected type) and
+   by the Ppat_var handler (after rewriting). *)
+let mk_poly_variant_narrow_matched_tags_attr (tags : string list) :
+    Parsetree.attribute =
+  let items =
+    tags
+    |> List.map (fun tag ->
+           Ast_helper.Str.eval
+             (Ast_helper.Exp.constant (Pconst_string (tag, None))))
+  in
+  (Location.mknoloc "res.polyVariantNarrowMatchedTags", PStr items)
+
+let get_poly_variant_narrow_matched_tags (attrs : Parsetree.attributes) =
+  attrs
+  |> List.find_map (fun (a : Parsetree.attribute) ->
+         match a with
+         | {txt = "res.polyVariantNarrowMatchedTags"}, PStr items ->
+           Some
+             (items
+             |> List.filter_map (fun (item : Parsetree.structure_item) ->
+                    match item.pstr_desc with
+                    | Pstr_eval
+                        ({pexp_desc = Pexp_constant (Pconst_string (s, _))}, _)
+                      ->
+                      Some s
+                    | _ -> None))
+         | _ -> None)
+
 type variant_type_spread_error =
   | CouldNotFindType
   | HasTypeParams
