@@ -65,7 +65,7 @@ When consuming another ReScript package that uses features, switch the entry in 
 Rules:
 
 - **Shorthand (`"@plain/dep"`)** — the consumer wants every feature of that dependency. This is the existing behavior; nothing changes for configs that don't opt into features.
-- **Object with `features`** — the consumer restricts the dependency to the listed features (and whatever they transitively imply through the dependency's own `features` map).
+- **Object with `features`** — the consumer restricts the dependency to the listed features (and whatever they transitively imply through the dependency's own `features` map). An explicit empty list (`"features": []`) means "only untagged source dirs, no feature-gated code".
 - **Object without `features`** — equivalent to the shorthand. All features active.
 
 When the same dependency is referenced by multiple consumers with different feature sets, the union of requests wins. If any consumer asks for all features, the dependency builds with all of its features. Features are always additive — enabling more features never removes modules, so the union is always safe.

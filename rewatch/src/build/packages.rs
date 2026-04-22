@@ -780,6 +780,7 @@ pub fn compute_active_features(
 
     for (package_name, package) in packages {
         let mut any_all_request = false;
+        let mut saw_consumer_entry = false;
         let mut requested: AHashSet<String> = AHashSet::new();
 
         if package.is_root {
@@ -795,6 +796,7 @@ pub fn compute_active_features(
                         if dep.name() != package_name {
                             continue;
                         }
+                        saw_consumer_entry = true;
                         match dep.features() {
                             None => any_all_request = true,
                             Some(list) => requested.extend(list.iter().cloned()),
@@ -811,6 +813,7 @@ pub fn compute_active_features(
                         if dep.name() != package_name {
                             continue;
                         }
+                        saw_consumer_entry = true;
                         match dep.features() {
                             None => any_all_request = true,
                             Some(list) => requested.extend(list.iter().cloned()),
@@ -819,9 +822,10 @@ pub fn compute_active_features(
                 }
             }
 
-            // Defensive: a package with no consumers (shouldn't happen in practice, but don't
-            // accidentally strip everything) is treated as all-features.
-            if !any_all_request && requested.is_empty() {
+            // Defensive: if no consumer edge was found at all, keep all features. An empty
+            // `requested` set by itself is a *valid* request (`"features": []` means
+            // "untagged only"), so only fall back when we truly observed no entries.
+            if !saw_consumer_entry {
                 any_all_request = true;
             }
         }
@@ -1622,6 +1626,7 @@ mod test {
                 modules: None,
                 path: PathBuf::from("."),
                 dirs: None,
+                gentype_dirs: None,
                 is_local_dep: true,
                 is_root: true,
             },
@@ -1656,6 +1661,65 @@ mod test {
         assert!(
             !dep_active_prod.contains("experimental"),
             "prod must not inherit the dev-dependency shorthand's all-features request"
+        );
+    }
+
+    #[test]
+    fn compute_active_features_honours_explicit_empty_features_list() {
+        // Regression: `{"name": "dep", "features": []}` must be honoured as "no features, only
+        // untagged dirs". Previously the fallback for "no consumer edges" fired when `requested`
+        // was empty, forcing all features on even though the consumer explicitly asked for none.
+        let mut packages: AHashMap<String, super::Package> = AHashMap::new();
+
+        let mut root_config = config::tests::create_config(config::tests::CreateConfigArgs {
+            name: "root".to_string(),
+            bs_deps: vec![],
+            build_dev_deps: vec![],
+            allowed_dependents: None,
+            path: PathBuf::from("./rescript.json"),
+        });
+        root_config.sources = Some(config::OneOrMore::Single(config::Source::Shorthand(
+            "src".to_string(),
+        )));
+        root_config.dependencies = Some(vec![config::Dependency::Qualified(config::QualifiedDependency {
+            name: "dep".to_string(),
+            features: Some(vec![]),
+        })]);
+        packages.insert(
+            "root".to_string(),
+            super::Package {
+                name: "root".to_string(),
+                config: root_config,
+                source_folders: AHashSet::new(),
+                source_files: None,
+                namespace: super::Namespace::NoNamespace,
+                modules: None,
+                path: PathBuf::from("."),
+                dirs: None,
+                gentype_dirs: None,
+                is_local_dep: true,
+                is_root: true,
+            },
+        );
+
+        packages.insert(
+            "dep".to_string(),
+            root_package_with_features(
+                None,
+                vec![
+                    ("src", None),
+                    ("src-native", Some("native")),
+                    ("src-experimental", Some("experimental")),
+                ],
+            ),
+        );
+        packages.get_mut("dep").unwrap().is_root = false;
+
+        let active = super::compute_active_features(&packages, None, false).unwrap();
+        let dep_active = active.get("dep").unwrap();
+        assert!(
+            dep_active.is_empty(),
+            "an explicit empty features list should activate no feature-tagged dirs, got {dep_active:?}"
         );
     }
 }

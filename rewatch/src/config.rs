@@ -1661,7 +1661,10 @@ pub mod tests {
         "#;
 
         let config = Config::new_from_json_string(json).expect("a valid json string");
-        assert_eq!(config.dependencies, Some(vec!["@testrepo/main".to_string()]));
+        assert_eq!(
+            config.dependencies,
+            Some(vec![Dependency::Shorthand("@testrepo/main".to_string())])
+        );
         assert_eq!(config.get_deprecations(), [DeprecationWarning::BsDependencies]);
     }
 
@@ -1714,7 +1717,10 @@ pub mod tests {
         "#;
 
         let config = Config::new_from_json_string(json).expect("a valid json string");
-        assert_eq!(config.dev_dependencies, Some(vec!["@testrepo/main".to_string()]));
+        assert_eq!(
+            config.dev_dependencies,
+            Some(vec![Dependency::Shorthand("@testrepo/main".to_string())])
+        );
         assert_eq!(config.get_deprecations(), [DeprecationWarning::BsDevDependencies]);
     }
 
