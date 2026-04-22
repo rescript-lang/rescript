@@ -178,7 +178,7 @@ let is_pattern_start = function
   | _ -> false
 
 let is_parameter_start = function
-  | Token.Typ | Tilde -> true
+  | Token.Typ | Tilde | Dot -> true
   | token when is_pattern_start token -> true
   | _ -> false
 
@@ -206,7 +206,7 @@ let is_typ_expr_start = function
   | _ -> false
 
 let is_type_parameter_start = function
-  | Token.Tilde -> true
+  | Token.Tilde | Dot -> true
   | token when is_typ_expr_start token -> true
   | _ -> false
 
@@ -239,7 +239,7 @@ let is_record_row_string_key_start = function
   | _ -> false
 
 let is_argument_start = function
-  | Token.Tilde | Underscore -> true
+  | Token.Tilde | Dot | Underscore -> true
   | t when is_expr_start t -> true
   | _ -> false
 
