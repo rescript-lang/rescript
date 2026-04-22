@@ -40,6 +40,7 @@
 #### :nail_care: Polish
 
 - Allow builds while watchers are running. https://github.com/rescript-lang/rescript/pull/8349
+- Rewatch: replace wave-based compile scheduler with a work-stealing DAG dispatcher ordered by critical-path priority, avoiding the per-wave stall on the slowest file. https://github.com/rescript-lang/rescript/pull/8374
 
 #### :house: Internal
 
