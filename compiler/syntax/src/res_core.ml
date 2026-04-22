@@ -286,6 +286,19 @@ let tagged_template_literal_attr =
 
 let spread_attr = (Location.mknoloc "res.spread", Parsetree.PStr [])
 
+(* Emit a deprecation warning when the legacy [(. ...)] uncurried syntax is
+   encountered. Uncurried is the default since ReScript v11, so the leading
+   dot is no longer meaningful; we still accept it so dependencies on older
+   libraries keep parsing. *)
+let warn_uncurried_dot_syntax ~loc =
+  Location.prerr_warning loc
+    (Warnings.Deprecated
+       ( "The `(. ...)` uncurried syntax is deprecated. Uncurried is now the \
+          default in ReScript — remove the leading dot.",
+         loc,
+         loc,
+         false ))
+
 type argument = {label: Asttypes.arg_label; expr: Parsetree.expression}
 
 type type_parameter = {
@@ -1858,6 +1871,9 @@ and parse_es6_arrow_expression ?(arrow_attrs = []) ?(arrow_start_pos = None)
   {arrow_expr with pexp_loc = {arrow_expr.pexp_loc with loc_start = start_pos}}
 
 (*
+ * dotted_parameter ::=
+ *   | . parameter                 (* deprecated uncurried syntax *)
+ *
  * parameter ::=
  *   | pattern
  *   | pattern : type
@@ -1875,10 +1891,14 @@ and parse_es6_arrow_expression ?(arrow_attrs = []) ?(arrow_start_pos = None)
  *)
 and parse_parameter p =
   if
-    p.Parser.token = Token.Typ || p.token = Tilde
+    p.Parser.token = Token.Typ || p.token = Tilde || p.token = Dot
     || Grammar.is_pattern_start p.token
   then
     let start_pos = p.Parser.start_pos in
+    (if p.Parser.token = Token.Dot then
+       let dot_loc = mk_loc start_pos p.end_pos in
+       Parser.next p;
+       warn_uncurried_dot_syntax ~loc:dot_loc);
     let attrs = parse_attributes p in
     if p.Parser.token = Typ then (
       Parser.next p;
@@ -1978,6 +1998,7 @@ and parse_parameter_list p =
  *   | _
  *   | lident
  *   | ()
+ *   | (.)                                   (* deprecated uncurried syntax *)
  *   | ( parameter {, parameter} [,] )
  *)
 and parse_parameters p : fundef_type_param option * fundef_term_param list =
@@ -2026,6 +2047,10 @@ and parse_parameters p : fundef_type_param option * fundef_term_param list =
       ] )
   | Lparen ->
     Parser.next p;
+    (if p.Parser.token = Token.Dot then
+       let dot_loc = mk_loc p.start_pos p.end_pos in
+       Parser.next p;
+       warn_uncurried_dot_syntax ~loc:dot_loc);
     let type_params, term_params = parse_parameter_list p in
     let term_params =
       if term_params <> [] then term_params else [unit_term_parameter ()]
@@ -3964,13 +3989,31 @@ and parse_switch_expression p =
  *   | ~ label-name = ? _           (* syntax sugar *)
  *   | ~ label-name = ? expr : type
  *
+ *  dotted_argument ::=
+ *   | . argument                   (* deprecated uncurried syntax *)
  *)
 and parse_argument p : argument option =
   if
     p.Parser.token = Token.Tilde
-    || p.token = Underscore
+    || p.token = Dot || p.token = Underscore
     || Grammar.is_expr_start p.token
-  then parse_argument2 p
+  then
+    match p.Parser.token with
+    | Dot ->
+      let dot_loc = mk_loc p.start_pos p.end_pos in
+      Parser.next p;
+      warn_uncurried_dot_syntax ~loc:dot_loc;
+      (match p.token with
+      (* apply(.) — legacy uncurried unit call *)
+      | Rparen ->
+        let unit_expr =
+          Ast_helper.Exp.construct
+            (Location.mknoloc (Longident.Lident "()"))
+            None
+        in
+        Some {label = Asttypes.Nolabel; expr = unit_expr}
+      | _ -> parse_argument2 p)
+    | _ -> parse_argument2 p
   else None
 
 and parse_argument2 p : argument option =
@@ -4668,6 +4711,9 @@ and parse_type_alias p typ =
  * note:
  *  | attrs ~ident: type_expr    -> attrs are on the arrow
  *  | attrs type_expr            -> attrs are here part of the type_expr
+ *
+ * dotted_type_parameter ::=
+ *  | . type_parameter           (* deprecated uncurried syntax *)
  *)
 and parse_type_parameter ?current_type_name_path ?inline_types_context
     ?positional_type_name_path p =
@@ -4678,8 +4724,16 @@ and parse_type_parameter ?current_type_name_path ?inline_types_context
       [doc_comment_to_attribute loc s]
     | _ -> []
   in
-  if p.Parser.token = Token.Tilde || Grammar.is_typ_expr_start p.token then
+  if
+    p.Parser.token = Token.Tilde
+    || p.token = Dot
+    || Grammar.is_typ_expr_start p.token
+  then
     let start_pos = p.Parser.start_pos in
+    (if p.Parser.token = Token.Dot then
+       let dot_loc = mk_loc start_pos p.end_pos in
+       Parser.next p;
+       warn_uncurried_dot_syntax ~loc:dot_loc);
     let attrs = doc_attr @ parse_attributes p in
     match p.Parser.token with
     | Tilde -> (

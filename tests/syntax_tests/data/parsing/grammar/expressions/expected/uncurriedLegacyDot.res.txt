@@ -1,0 +1,77 @@
+
+  Warning number 3
+  syntax_tests/data/parsing/grammar/expressions/uncurriedLegacyDot.res:4:10
+
+  2 │ // but emits a deprecation warning.
+  3 │ 
+  4 │ let f = (. x) => x + 1
+  5 │ let g = (. a, b) => a + b
+  6 │ let h = (.) => 42
+
+  deprecated: The `(. ...)` uncurried syntax is deprecated. Uncurried is now the default in ReScript — remove the leading dot.
+
+
+  Warning number 3
+  syntax_tests/data/parsing/grammar/expressions/uncurriedLegacyDot.res:5:10
+
+  3 │ 
+  4 │ let f = (. x) => x + 1
+  5 │ let g = (. a, b) => a + b
+  6 │ let h = (.) => 42
+  7 │ 
+
+  deprecated: The `(. ...)` uncurried syntax is deprecated. Uncurried is now the default in ReScript — remove the leading dot.
+
+
+  Warning number 3
+  syntax_tests/data/parsing/grammar/expressions/uncurriedLegacyDot.res:6:10
+
+  4 │ let f = (. x) => x + 1
+  5 │ let g = (. a, b) => a + b
+  6 │ let h = (.) => 42
+  7 │ 
+  8 │ let r1 = f(. 3)
+
+  deprecated: The `(. ...)` uncurried syntax is deprecated. Uncurried is now the default in ReScript — remove the leading dot.
+
+
+  Warning number 3
+  syntax_tests/data/parsing/grammar/expressions/uncurriedLegacyDot.res:8:12
+
+   6 │ let h = (.) => 42
+   7 │ 
+   8 │ let r1 = f(. 3)
+   9 │ let r2 = g(. 1, 2)
+  10 │ let r3 = h(.)
+
+  deprecated: The `(. ...)` uncurried syntax is deprecated. Uncurried is now the default in ReScript — remove the leading dot.
+
+
+  Warning number 3
+  syntax_tests/data/parsing/grammar/expressions/uncurriedLegacyDot.res:9:12
+
+   7 │ 
+   8 │ let r1 = f(. 3)
+   9 │ let r2 = g(. 1, 2)
+  10 │ let r3 = h(.)
+  11 │ 
+
+  deprecated: The `(. ...)` uncurried syntax is deprecated. Uncurried is now the default in ReScript — remove the leading dot.
+
+
+  Warning number 3
+  syntax_tests/data/parsing/grammar/expressions/uncurriedLegacyDot.res:10:12
+
+   8 │ let r1 = f(. 3)
+   9 │ let r2 = g(. 1, 2)
+  10 │ let r3 = h(.)
+  11 │ 
+
+  deprecated: The `(. ...)` uncurried syntax is deprecated. Uncurried is now the default in ReScript — remove the leading dot.
+
+let f [arity:1]x = x + 1
+let g [arity:2]a b = a + b
+let h [arity:1]() = 42
+let r1 = f 3
+let r2 = g 1 2
+let r3 = h ()

@@ -36,6 +36,7 @@
 #### :nail_care: Polish
 
 - Allow builds while watchers are running. https://github.com/rescript-lang/rescript/pull/8349
+- Restore parsing of the legacy `(. ...)` uncurried syntax for backwards compatibility with libraries still on older ReScript versions; emit a deprecation warning when it is used.
 
 #### :house: Internal
 
