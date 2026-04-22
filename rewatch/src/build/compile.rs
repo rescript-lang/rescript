@@ -968,10 +968,12 @@ pub(super) fn retain_critical_external_warnings(stderr: &str) -> Option<String> 
         return None;
     }
     // bsc prints each warning as its own block separated by a blank-line pair
-    // (three consecutive newlines). Split on that boundary, keep the blocks
-    // that mention the marker, and re-join with the same separator so the
-    // output is indistinguishable from the original.
-    let kept: Vec<&str> = stderr
+    // (three consecutive newlines). On Windows the same stream uses CRLF, so
+    // normalize before splitting to keep the block boundary recognizable —
+    // otherwise the whole stderr would be treated as a single block and
+    // unrelated warnings would leak through alongside the critical one.
+    let normalized = stderr.replace("\r\n", "\n");
+    let kept: Vec<&str> = normalized
         .split("\n\n\n")
         .filter(|block| block.contains(UNCURRIED_DOT_MARKER))
         .collect();
@@ -1097,6 +1099,22 @@ mod tests {
             "deprecated: The `(. ...)` uncurried syntax is deprecated.\n",
         );
         let kept = retain_critical_external_warnings(input).expect("uncurried-dot warning should survive");
+        assert!(kept.contains("`(. ...)` uncurried syntax"));
+        assert!(!kept.contains("unused variable"));
+    }
+
+    #[test]
+    fn retain_critical_external_warnings_handles_crlf_line_endings() {
+        // Windows stderr from bsc uses CRLF. Without normalization the "\n\n\n"
+        // splitter would find no boundary and return the entire stream, which
+        // would effectively disable suppression for external deps on Windows.
+        let input = concat!(
+            "\r\n  Warning number 26\r\n  foo.res:1:1\r\n\r\n  unused variable x.\r\n",
+            "\r\n\r\n\r\n  Warning number 3\r\n  bar.res:5:10\r\n\r\n  ",
+            "deprecated: The `(. ...)` uncurried syntax is deprecated.\r\n",
+        );
+        let kept = retain_critical_external_warnings(input)
+            .expect("uncurried-dot warning should survive on Windows too");
         assert!(kept.contains("`(. ...)` uncurried syntax"));
         assert!(!kept.contains("unused variable"));
     }
