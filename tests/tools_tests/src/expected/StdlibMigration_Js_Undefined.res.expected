@@ -27,10 +27,10 @@ let toOption2 = Nullable.toOption(Nullable.make(3))
 let to_opt1 = Nullable.make(4)->Nullable.toOption
 let to_opt2 = Nullable.toOption(Nullable.make(4))
 
-let test1 = Js.Undefined.empty->Js.Undefined.test
-let test2 = Js.Undefined.test(Js.Undefined.empty)
-let test3 = Js.Undefined.return(5)->Js.Undefined.bind(v => v)->Js.Undefined.test
+let test1 = Nullable.undefined->Js.Undefined.test
+let test2 = Js.Undefined.test(Nullable.undefined)
+let test3 = Nullable.make(5)->Nullable.map(v => v)->Js.Undefined.test
 
-let testAny1 = Js.Undefined.testAny(Js.Undefined.empty)
-let testAny2 = Js.Undefined.empty->Js.Undefined.testAny
+let testAny1 = Js.Undefined.testAny(Nullable.undefined)
+let testAny2 = Nullable.undefined->Js.Undefined.testAny
 

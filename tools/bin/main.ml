@@ -72,12 +72,14 @@ let main () =
   | "migrate" :: file :: opts -> (
     let isStdout = List.mem "--stdout" opts in
     let outputMode = if isStdout then `Stdout else `File in
-    match
-      (Tools.Migrate.migrate ~entryPointFile:file ~outputMode, outputMode)
-    with
-    | Ok content, `Stdout -> print_endline content
-    | result, `File -> logAndExit result
-    | Error e, _ -> logAndExit (Error e))
+    let base = Filename.basename file in
+    match Tools.Migrate.migrate ~outputMode file with
+    | Ok (`Changed content | `Unchanged content) when isStdout ->
+      print_endline content
+    | Ok (`Changed _) -> logAndExit (Ok (base ^ ": File migrated successfully"))
+    | Ok (`Unchanged _) ->
+      logAndExit (Ok (base ^ ": File did not need migration"))
+    | Error e -> logAndExit (Error e))
   | "migrate-all" :: root :: _opts -> (
     let rootPath =
       if Filename.is_relative root then Unix.realpath root else root
@@ -107,24 +109,28 @@ let main () =
       let total = List.length files in
       if total = 0 then logAndExit (Ok "No source files found to migrate")
       else
+        let canonical p = try Unix.realpath p with _ -> p in
+        let dependency_paths =
+          Analysis.SharedTypes.FileSet.fold
+            (fun p acc ->
+              acc
+              |> Analysis.SharedTypes.FileSet.add p
+              |> Analysis.SharedTypes.FileSet.add (canonical p))
+            package.dependenciesFiles Analysis.SharedTypes.FileSet.empty
+        in
         let process_one file =
-          (file, Tools.Migrate.migrate ~entryPointFile:file ~outputMode:`File)
+          ( file,
+            Tools.Migrate.migrate ~package ~dependency_paths ~outputMode:`File
+              file )
         in
         let results = List.map process_one files in
         let migrated, unchanged, failures =
           results
           |> List.fold_left
-               (fun (migrated, unchanged, failures) (file, res) ->
+               (fun (migrated, unchanged, failures) (_file, res) ->
                  match res with
-                 | Ok msg ->
-                   let base = Filename.basename file in
-                   if msg = base ^ ": File migrated successfully" then
-                     (migrated + 1, unchanged, failures)
-                   else if msg = base ^ ": File did not need migration" then
-                     (migrated, unchanged + 1, failures)
-                   else
-                     (* Unknown OK message, count as unchanged *)
-                     (migrated, unchanged + 1, failures)
+                 | Ok (`Changed _) -> (migrated + 1, unchanged, failures)
+                 | Ok (`Unchanged _) -> (migrated, unchanged + 1, failures)
                  | Error _ -> (migrated, unchanged, failures + 1))
                (0, 0, 0)
         in

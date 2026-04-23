@@ -1,0 +1,11 @@
+{
+  "name": "deprecatedlib",
+  "version": "0.0.1",
+  "scripts": {
+    "build": "rescript-legacy build",
+    "clean": "rescript clean"
+  },
+  "dependencies": {
+    "rescript": "workspace:^"
+  }
+}
