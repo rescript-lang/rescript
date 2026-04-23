@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/optional_default_arg_type_mismatch.res[0m:[2m1:29-30[0m
+
+  [1;31m1[0m [2m│[0m let f = (~test: option<int>=[1;31m42[0m) => {
+  2 [2m│[0m   let _: int = test
+  3 [2m│[0m   ()
+
+  This has type: [1;31mint[0m
+  But it's expected to have type: [1;33moption<int>[0m
