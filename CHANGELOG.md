@@ -10,37 +10,37 @@
 > - :nail_care: [Polish]
 > - :house: [Internal]
 
-# 13.0.0-alpha.4 (Unreleased)
+# 13.0.0-alpha.4
 
 #### :boom: Breaking Change
 
 - Support for `break` and `continue` in loops. `break` and `continue` are new keywords. https://github.com/rescript-lang/rescript/pull/8348
 - Fix iterator / iterable typedefs, add generator typedefs. https://github.com/rescript-lang/rescript/pull/8355
-- Remove deprecated %external extension. https://github.com/rescript-lang/rescript/pull/8376
-
-#### :eyeglasses: Spec Compliance
+- Remove deprecated `%external` extension. https://github.com/rescript-lang/rescript/pull/8376
+- Remove Belt API functions returning `undefined<'a>` (e.g., `Belt.Array.getUndefined`). Functions returning `option<'a>` should be used instead (e.g., `Belt.Array.get`). https://github.com/rescript-lang/rescript/pull/8377
 
 #### :rocket: New Feature
 
-- Rewatch: add `--prod` flag to `build`, `watch`, and `clean` to skip dev-dependencies and dev sources (`"type": "dev"`), enabling builds in environments where dev packages aren't installed (e.g. after `pnpm install --prod`). https://github.com/rescript-lang/rescript/pull/8347
-- Rewatch: feature-gated source directories. Tag a source entry with `"feature": "<name>"` and select with `--features a,b` (or per-dep in `dependencies` / `dev-dependencies`) to include optional slices of a package's source tree at build time. Top-level `features` map supports transitive implications. https://github.com/rescript-lang/rescript/pull/8379
-- Add `Dict.assignMany`, `Dict.concat`, `Dict.concatMany`, `Dict.concatAll`, `Array.concatAll` to the stdlib. https://github.com/rescript-lang/rescript/pull/8364
 - Implement `for...of` and `for await...of` loops. https://github.com/rescript-lang/rescript/pull/7887
 - Add support for dict spreads: `dict{...foo, "bar": 2, ...qux}`. https://github.com/rescript-lang/rescript/pull/8369
+- Rewatch: add `--prod` flag to `build`, `watch`, and `clean` to skip dev-dependencies and dev sources (`"type": "dev"`), enabling builds in environments where dev packages aren't installed (e.g. after `pnpm install --prod`). https://github.com/rescript-lang/rescript/pull/8347
+- Rewatch: feature-gated source directories. Tag a source entry with `"feature": "<name>"` and select with `--features a,b` (or per-dep in `dependencies` / `dev-dependencies`) to include optional slices of a package's source tree at build time. Top-level `features` map supports transitive implications. https://github.com/rescript-lang/rescript/pull/8379
+- Rewatch: improve watch output and add `--clear-screen` option. https://github.com/rescript-lang/rescript/pull/8373
+- Add `Dict.assignMany`, `Dict.concat`, `Dict.concatMany`, `Dict.concatAll`, `Array.concatAll` to the stdlib. https://github.com/rescript-lang/rescript/pull/8364
 
 #### :bug: Bug fix
 
 - Fix partial application generalization for `...`. https://github.com/rescript-lang/rescript/pull/8343
 - Rewatch: preserve warnings after atomic-save full rebuilds. https://github.com/rescript-lang/rescript/pull/8358
-
 - Preserve JSX prop locations across the AST0 translation layer, fixing `0:0` editor diagnostics in PPX-related flows. https://github.com/rescript-lang/rescript/pull/8350
 - Fix type lowering for `dict{}` and `async`, so you don't need to annotate one extra time when the type is known. https://github.com/rescript-lang/rescript/pull/8359
-
-#### :memo: Documentation
+- Rewatch: don't suppress progress messages under `-v`/`-vv`. https://github.com/rescript-lang/rescript/pull/8371
+- Rewatch: print 'Finished compilation' in watch plain output mode. https://github.com/rescript-lang/rescript/pull/8372
 
 #### :nail_care: Polish
 
 - Allow builds while watchers are running. https://github.com/rescript-lang/rescript/pull/8349
+- Rewatch: restore backward compatibility for `bsconfig.json`. https://github.com/rescript-lang/rescript/pull/8368
 - Restore parsing of the legacy `(. ...)` uncurried syntax for backwards compatibility with libraries still on older ReScript versions; emit a deprecation warning when it is used. Rewatch also surfaces this specific deprecation when it originates from an external dependency so users can report breakage upstream. https://github.com/rescript-lang/rescript/pull/8383
 - Rewatch: replace wave-based compile scheduler with a work-stealing DAG dispatcher ordered by critical-path priority, avoiding the per-wave stall on the slowest file. https://github.com/rescript-lang/rescript/pull/8374
 
