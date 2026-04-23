@@ -3,9 +3,13 @@ let docHelp =
 
 Output documentation to standard output
 
-Usage: rescript-tools doc <FILE>
+Usage: rescript-tools doc <FILE> [--build]
 
-Example: rescript-tools doc ./path/to/EntryPointLib.res|}
+Options:
+  --build    Build the project before extracting documentation
+
+Example: rescript-tools doc ./path/to/EntryPointLib.res
+         rescript-tools doc ./path/to/EntryPointLib.res --build|}
 
 let formatCodeblocksHelp =
   {|ReScript Tools
@@ -34,7 +38,8 @@ Commands:
 
 migrate <file> [--stdout]               Runs the migration tool on the given file
 migrate-all <root>                      Runs migrations for all project sources under <root>
-doc <file>                              Generate documentation
+doc <file> [--build]                    Generate documentation
+  [--build]                               Build project before extracting docs
 format-codeblocks <file>                Format ReScript code blocks
   [--stdout]                              Output to stdout
   [--transform-assert-equal]              Transform `assertEqual` to `==`
@@ -55,6 +60,45 @@ let logAndExit = function
 
 let version = Version.version
 
+(* Find the rescript binary relative to the current executable *)
+let getRescriptBinary () =
+  let toolsExePath = Sys.executable_name in
+  let binDir = Filename.dirname toolsExePath in
+  (* ReScript binaries use .exe extension on all platforms *)
+  Filename.concat binDir "rescript.exe"
+
+(* Build the project using the rescript binary *)
+let buildProject ~rootPath =
+  let rescriptBin = getRescriptBinary () in
+  if not (Sys.file_exists rescriptBin) then
+    Error
+      (Printf.sprintf
+         "Could not find rescript binary at %s. Please ensure rescript is \
+          installed."
+         rescriptBin)
+  else
+    let originalDir = Sys.getcwd () in
+    try
+      (* Change to project root to run build *)
+      Sys.chdir rootPath;
+      let pid =
+        Unix.create_process rescriptBin [|rescriptBin; "build"|] Unix.stdin
+          Unix.stdout Unix.stderr
+      in
+      let _, status = Unix.waitpid [] pid in
+      Sys.chdir originalDir;
+      match status with
+      | Unix.WEXITED 0 -> Ok ()
+      | Unix.WEXITED code ->
+        Error (Printf.sprintf "Build failed with exit code %d" code)
+      | Unix.WSIGNALED signal ->
+        Error (Printf.sprintf "Build killed by signal %d" signal)
+      | Unix.WSTOPPED signal ->
+        Error (Printf.sprintf "Build stopped by signal %d" signal)
+    with e ->
+      Sys.chdir originalDir;
+      Error (Printf.sprintf "Build error: %s" (Printexc.to_string e))
+
 let main () =
   match Sys.argv |> Array.to_list |> List.tl with
   | "doc" :: rest -> (
@@ -68,6 +112,36 @@ let main () =
         | _ -> ()
       in
       logAndExit (Tools.extractDocs ~entryPointFile:path ~debug:false)
+    | ["--build"; path] | [path; "--build"] -> (
+      (* Build first, then extract docs *)
+      let rootPath =
+        let absPath =
+          if Filename.is_relative path then Unix.realpath path else path
+        in
+        (* Find the project root by looking for rescript.json *)
+        let rec findProjectRoot dir =
+          let rescriptJson = Filename.concat dir "rescript.json" in
+          let bsconfigJson = Filename.concat dir "bsconfig.json" in
+          if Sys.file_exists rescriptJson || Sys.file_exists bsconfigJson then
+            dir
+          else
+            let parent = Filename.dirname dir in
+            if parent = dir then
+              (* Reached filesystem root, use current directory *)
+              Filename.dirname absPath
+            else findProjectRoot parent
+        in
+        findProjectRoot (Filename.dirname absPath)
+      in
+      match buildProject ~rootPath with
+      | Ok () ->
+        let () =
+          match Sys.getenv_opt "FROM_COMPILER" with
+          | Some "true" -> Analysis.Cfg.isDocGenFromCompiler := true
+          | _ -> ()
+        in
+        logAndExit (Tools.extractDocs ~entryPointFile:path ~debug:false)
+      | Error e -> logAndExit (Error e))
     | _ -> logAndExit (Error docHelp))
   | "migrate" :: file :: opts -> (
     let isStdout = List.mem "--stdout" opts in
