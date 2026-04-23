@@ -1,3 +1,3 @@
 let f = (~test: option<int>=42) => {
-  let _: string = test
+  let _: int = test
 }

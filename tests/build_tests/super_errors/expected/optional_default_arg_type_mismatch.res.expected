@@ -1,10 +1,13 @@
 
   [1;31mWe've found a bug for you![0m
-  [36m/.../fixtures/optional_default_arg_type_mismatch.res[0m:[2m1:29-30[0m
+  [36m/.../fixtures/optional_default_arg_type_mismatch.res[0m:[2m2:19-22[0m
 
-  [1;31m1[0m [2m│[0m let f = (~test: option<int>=[1;31m42[0m) => {
-  2 [2m│[0m   let _: int = test
-  3 [2m│[0m   ()
+  1 [2m│[0m let f = (~test: option<int>=42) => {
+  [1;31m2[0m [2m│[0m   let _: string = [1;31mtest[0m
+  3 [2m│[0m }
+  4 [2m│[0m 
 
   This has type: [1;31mint[0m
-  But it's expected to have type: [1;33moption<int>[0m
+  But it's expected to have type: [1;33mstring[0m
+  
+  You can convert [1;33mint[0m to [1;33mstring[0m with [1;33mInt.toString[0m.
