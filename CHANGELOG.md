@@ -34,6 +34,7 @@
 - Rewatch: preserve warnings after atomic-save full rebuilds. https://github.com/rescript-lang/rescript/pull/8358
 - Preserve JSX prop locations across the AST0 translation layer, fixing `0:0` editor diagnostics in PPX-related flows. https://github.com/rescript-lang/rescript/pull/8350
 - Fix type lowering for `dict{}` and `async`, so you don't need to annotate one extra time when the type is known. https://github.com/rescript-lang/rescript/pull/8359
+- Fix optional default-arg typing in plain functions and JSX components, and improve generated match errors. https://github.com/rescript-lang/rescript/pull/8386
 - Rewatch: don't suppress progress messages under `-v`/`-vv`. https://github.com/rescript-lang/rescript/pull/8371
 - Rewatch: print 'Finished compilation' in watch plain output mode. https://github.com/rescript-lang/rescript/pull/8372
 
