@@ -510,6 +510,9 @@ let vb_match ~expr (name, default, pattern, _alias, loc, _) =
   match default with
   | Some default ->
     let resolved_name = "__" ^ label ^ "_value" in
+    let resolved_pattern =
+      Parsetree_utils.adapt_pattern_for_resolved_default pattern
+    in
     let value_binding =
       Vb.mk
         (Pat.var (Location.mkloc resolved_name loc))
@@ -528,7 +531,10 @@ let vb_match ~expr (name, default, pattern, _alias, loc, _) =
     in
     Exp.let_ Nonrecursive [value_binding]
       (Exp.let_ Nonrecursive
-         [Vb.mk pattern (Exp.ident (Location.mknoloc @@ Lident resolved_name))]
+         [
+           Vb.mk resolved_pattern
+             (Exp.ident (Location.mknoloc @@ Lident resolved_name));
+         ]
          expr)
   | None -> expr
 
