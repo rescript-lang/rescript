@@ -268,28 +268,7 @@ let compile output_prefix =
           dynamic_import,
           String.concat "$" (root_name :: denamespace_segment head :: rest) )
   in
-  let rec extract_nested_external_component_segments segments (lam : Lam.t) :
-      (Ident.t * bool * string list) option =
-    match lam with
-    | Lprim
-        {
-          primitive = Pfield (_, Fld_module {name; jsx_component = _});
-          args = [arg];
-          _;
-        } ->
-      extract_nested_external_component_segments (name :: segments) arg
-    | Lprim {primitive = Pawait; args = [arg]; _} ->
-      extract_nested_external_component_segments segments arg
-    | Lvar id -> (
-      match Map_ident.find_opt !local_module_aliases id with
-      | Some alias_lam ->
-        extract_nested_external_component_segments segments alias_lam
-      | None -> Some (id, false, List.rev segments))
-    | Lglobal_module (id, dynamic_import) ->
-      Some (id, dynamic_import, List.rev segments)
-    | _ -> None
-  in
-  let rec extract_static_nested_external_component_segments segments
+  let rec extract_component_segments ~allow_import ~allow_unbound_var segments
       (lam : Lam.t) : (Ident.t * bool * string list) option =
     match lam with
     | Lprim
@@ -298,23 +277,29 @@ let compile output_prefix =
           args = [arg];
           _;
         } ->
-      extract_static_nested_external_component_segments (name :: segments) arg
+      extract_component_segments ~allow_import ~allow_unbound_var
+        (name :: segments) arg
     | Lprim {primitive = Pawait; args = [arg]; _} ->
-      extract_static_nested_external_component_segments segments arg
-    | Lprim {primitive = Pimport; args = [arg]; _} ->
-      extract_static_nested_external_component_segments segments arg
+      extract_component_segments ~allow_import ~allow_unbound_var segments arg
+    | Lprim {primitive = Pimport; args = [arg]; _} when allow_import ->
+      extract_component_segments ~allow_import ~allow_unbound_var segments arg
     | Lvar id -> (
       match Map_ident.find_opt !local_module_aliases id with
       | Some alias_lam ->
-        extract_static_nested_external_component_segments segments alias_lam
-      | None -> None)
+        extract_component_segments ~allow_import ~allow_unbound_var segments
+          alias_lam
+      | None ->
+        if allow_unbound_var then Some (id, false, List.rev segments) else None)
     | Lglobal_module (id, dynamic_import) ->
       Some (id, dynamic_import, List.rev segments)
     | _ -> None
   in
   let extract_nested_external_component_path (lam : Lam.t) :
       (Ident.t * bool * string) option =
-    match extract_nested_external_component_segments [] lam with
+    match
+      extract_component_segments ~allow_import:false ~allow_unbound_var:true []
+        lam
+    with
     | Some (id, dynamic_import, segments) ->
       nested_component_path id dynamic_import segments
     | None -> None
@@ -333,7 +318,10 @@ let compile output_prefix =
   in
   let extract_static_nested_external_component_path (lam : Lam.t) :
       (Ident.t * bool * string) option =
-    match extract_static_nested_external_component_segments [] lam with
+    match
+      extract_component_segments ~allow_import:true ~allow_unbound_var:false []
+        lam
+    with
     | Some (id, dynamic_import, segments) ->
       nested_component_path id dynamic_import segments
     | None -> None
