@@ -30,6 +30,8 @@
 
 #### :house: Internal
 
+- Remove `Primitive_option.toUndefined`; use `valFromOption` for optional ffi args. https://github.com/rescript-lang/rescript/pull/8380
+
 # 13.0.0-alpha.4
 
 #### :boom: Breaking Change
