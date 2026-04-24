@@ -20,6 +20,8 @@
 
 #### :bug: Bug fix
 
+- Fix directive `@warning("-102")` not working. https://github.com/rescript-lang/rescript/pull/8322
+
 #### :memo: Documentation
 
 #### :nail_care: Polish
