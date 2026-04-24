@@ -1,6 +1,6 @@
 [package]
 name = "rescript"
-version = "13.0.0-alpha.4"
+version = "13.0.0-alpha.5"
 edition = "2024"
 rust-version = "1.91"
 
