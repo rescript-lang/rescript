@@ -24,6 +24,8 @@
 
 #### :nail_care: Polish
 
+- Improve default argument type mismatch errors. https://github.com/rescript-lang/rescript/pull/8389
+
 #### :house: Internal
 
 # 13.0.0-alpha.4
