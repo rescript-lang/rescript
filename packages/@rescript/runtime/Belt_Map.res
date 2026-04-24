@@ -101,17 +101,11 @@ let toArray = m => Dict.toArray(m.data)
 let keysToArray = m => Dict.keysToArray(m.data)
 let valuesToArray = m => Dict.valuesToArray(m.data)
 let minKey = m => Dict.minKey(m.data)
-let minKeyUndefined = m => Dict.minKeyUndefined(m.data)
 let maxKey = m => Dict.maxKey(m.data)
-let maxKeyUndefined = m => Dict.maxKeyUndefined(m.data)
 let minimum = m => Dict.minimum(m.data)
-let minUndefined = m => Dict.minUndefined(m.data)
 let maximum = m => Dict.maximum(m.data)
-let maxUndefined = m => Dict.maxUndefined(m.data)
 
 let get = (map, x) => Dict.get(~cmp=map.cmp, map.data, x)
-
-let getUndefined = (map, x) => Dict.getUndefined(~cmp=map.cmp, map.data, x)
 
 let getWithDefault = (map, x, def) => Dict.getWithDefault(~cmp=map.cmp, map.data, x, def)
 

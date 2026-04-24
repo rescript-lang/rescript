@@ -65,6 +65,8 @@ val syntax_only : bool ref
 
 val binary_ast : bool ref
 
+val test_ast_conversion : bool ref
+
 val debug : bool ref
 
 val cmi_only : bool ref

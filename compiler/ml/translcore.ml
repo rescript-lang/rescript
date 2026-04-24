@@ -439,6 +439,19 @@ let specialize_primitive p env ty (* ~has_constant_constructor *) =
       | None -> table.objcomp
     with Not_found -> find_primitive p.prim_name)
 
+let is_null_undefined_constant = function
+  | Lprim ((Pnull | Pundefined), [], _) -> true
+  | _ -> false
+
+let warn_polymorphic_comparison loc prim args =
+  match (prim, args) with
+  | Pobjcomp (Ceq | Cneq), [arg1; arg2]
+    when is_null_undefined_constant arg1 || is_null_undefined_constant arg2 ->
+    ()
+  | (Pobjcomp _ | Pobjorder | Pobjmin | Pobjmax), _ ->
+    Location.prerr_warning loc Warnings.Bs_polymorphic_comparison
+  | _ -> ()
+
 (* Eta-expand a primitive *)
 
 let transl_primitive loc p env ty =
@@ -447,6 +460,7 @@ let transl_primitive loc p env ty =
     try specialize_primitive p env ty (* ~has_constant_constructor:false *)
     with Not_found -> Pccall p
   in
+  warn_polymorphic_comparison loc prim [];
   match prim with
   | Ploc kind -> (
     let lam = lam_of_loc kind loc in
@@ -658,8 +672,9 @@ let has_jsx_component_path_attr (exp : Typedtree.expression) =
     exp.exp_attributes
 
 let rec transl_exp e =
-  List.iter (Translattribute.check_attribute e) e.exp_attributes;
-  transl_exp0 e
+  Builtin_attributes.warning_scope ~ppwarning:false e.exp_attributes (fun () ->
+      List.iter (Translattribute.check_attribute e) e.exp_attributes;
+      transl_exp0 e)
 
 and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
   match e.exp_desc with
@@ -741,6 +756,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
     let prim =
       transl_primitive_application e.exp_loc p e.exp_env prim_type args
     in
+    warn_polymorphic_comparison e.exp_loc prim argl;
     match (prim, args) with
     | Praise k, [_] ->
       let targ = List.hd argl in
@@ -907,9 +923,15 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
     Lifthenelse (transl_exp cond, transl_exp ifso, lambda_unit)
   | Texp_sequence (expr1, expr2) ->
     Lsequence (transl_exp expr1, transl_exp expr2)
+  | Texp_break -> Lbreak
+  | Texp_continue -> Lcontinue
   | Texp_while (cond, body) -> Lwhile (transl_exp cond, transl_exp body)
   | Texp_for (param, _, low, high, dir, body) ->
     Lfor (param, transl_exp low, transl_exp high, dir, transl_exp body)
+  | Texp_for_of (param, _, iterable, body) ->
+    Lfor_of (param, transl_exp iterable, transl_exp body)
+  | Texp_for_await_of (param, _, iterable, body) ->
+    Lfor_await_of (param, transl_exp iterable, transl_exp body)
   | Texp_send (expr, Tmeth_name nm, _) ->
     let obj = transl_exp expr in
     Lsend (nm, obj, e.exp_loc)
@@ -1083,7 +1105,10 @@ and transl_let rec_flag pat_expr_list body =
     let rec transl = function
       | [] -> body
       | {vb_pat = pat; vb_expr = expr; vb_attributes = attr; vb_loc} :: rem ->
-        let lam = transl_exp expr in
+        let lam =
+          Builtin_attributes.warning_scope ~ppwarning:false attr (fun () ->
+              transl_exp expr)
+        in
         let lam = Translattribute.add_inline_attribute lam vb_loc attr in
         Matching.for_let pat.pat_loc lam pat (transl rem)
     in
@@ -1099,7 +1124,10 @@ and transl_let rec_flag pat_expr_list body =
            Only variables are allowed as left-hand side of `let rec'
         *)
       in
-      let lam = transl_exp expr in
+      let lam =
+        Builtin_attributes.warning_scope ~ppwarning:false vb_attributes
+          (fun () -> transl_exp expr)
+      in
       let lam = Translattribute.add_inline_attribute lam vb_loc vb_attributes in
       (id, lam)
     in

@@ -38,7 +38,7 @@ fi
 success "No stale rescript processes found"
 
 bold "Yarn install"
-(cd ../testrepo && yarn && cp node_modules/rescript-nodejs/bsconfig.json node_modules/rescript-nodejs/rescript.json)
+(cd ../testrepo && yarn)
 
 bold "Rescript version"
 (cd ../testrepo && ./node_modules/.bin/rescript --version)
@@ -79,6 +79,8 @@ fi
 ./compile/11-dev-dependency-non-dev-source.sh &&
 ./compile/12-compile-dev-dependencies.sh &&
 ./compile/13-no-infinite-loop-with-cycle.sh &&
+./compile/17-prod-flag.sh &&
+./compile/18-external-dep-uncurried-dot.sh &&
 ./compile/14-no-testrepo-changes.sh &&
 ./compile/15-no-new-files.sh &&
 ./compile/16-snapshots-unchanged.sh &&
@@ -86,6 +88,7 @@ fi
 # Watch tests
 ./watch/01-watch-recompile.sh &&
 ./watch/02-watch-warnings-persist.sh &&
+./watch/02-watch-warnings-persist-atomic-save.sh &&
 ./watch/03-watch-new-file.sh &&
 ./watch/04-watch-config-change.sh &&
 ./watch/05-watch-ignores-non-source.sh &&
@@ -116,6 +119,14 @@ fi
 
 # Experimental-invalid tests
 ./experimental-invalid/01-invalid-experimental-key.sh &&
+
+# Features tests
+./features/01-features-default-all-active.sh &&
+./features/02-features-cli-restricts-to-one.sh &&
+./features/03-features-transitive-expansion.sh &&
+./features/04-features-toggle-cleans-artifacts.sh &&
+./features/05-features-cycle-errors.sh &&
+./features/06-features-empty-flag-rejected.sh &&
 
 # Compiler-args tests
 ./compiler-args/01-compiler-args-cwd-invariant.sh &&

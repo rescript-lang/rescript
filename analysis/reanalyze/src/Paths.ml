@@ -1,5 +1,3 @@
-module StringMap = Map_string
-
 let rescriptJson = "rescript.json"
 
 let readFile filename =
@@ -127,79 +125,6 @@ let handleNamespace cmt =
 
 let getModuleName cmt = cmt |> handleNamespace |> Filename.basename
 
-let readDirsFromConfig ~configSources =
-  let dirs = ref [] in
-  let root = runConfig.projectRoot in
-  let rec processDir ~subdirs dir =
-    let absDir =
-      match dir = "" with
-      | true -> root
-      | false -> Filename.concat root dir
-    in
-    if Sys.file_exists absDir && Sys.is_directory absDir then (
-      dirs := dir :: !dirs;
-      if subdirs then
-        absDir |> Sys.readdir
-        |> Array.iter (fun d -> processDir ~subdirs (Filename.concat dir d)))
-  in
-  let rec processSourceItem (sourceItem : Ext_json_types.t) =
-    match sourceItem with
-    | Str {str} -> str |> processDir ~subdirs:false
-    | Obj {map} -> (
-      match StringMap.find_opt map "dir" with
-      | Some (Str {str}) ->
-        let subdirs =
-          match StringMap.find_opt map "subdirs" with
-          | Some (True _) -> true
-          | Some (False _) -> false
-          | _ -> false
-        in
-        str |> processDir ~subdirs
-      | _ -> ())
-    | Arr {content = arr} -> arr |> Array.iter processSourceItem
-    | _ -> ()
-  in
-  (match configSources with
-  | Some sourceItem -> processSourceItem sourceItem
-  | None -> ());
-  !dirs
-
-let readSourceDirs ~configSources =
-  let sourceDirs =
-    ["lib"; "bs"; ".sourcedirs.json"]
-    |> List.fold_left Filename.concat runConfig.bsbProjectRoot
-  in
-  let dirs = ref [] in
-  let readDirs json =
-    match json with
-    | Ext_json_types.Obj {map} -> (
-      match StringMap.find_opt map "dirs" with
-      | Some (Arr {content = arr}) ->
-        arr
-        |> Array.iter (fun x ->
-               match x with
-               | Ext_json_types.Str {str} -> dirs := str :: !dirs
-               | _ -> ());
-        ()
-      | _ -> ())
-    | _ -> ()
-  in
-  if sourceDirs |> Sys.file_exists then
-    let jsonOpt = sourceDirs |> Ext_json_parse.parse_json_from_file in
-    match jsonOpt with
-    | exception _ -> ()
-    | json ->
-      if runConfig.bsbProjectRoot <> runConfig.projectRoot then (
-        readDirs json;
-        dirs := readDirsFromConfig ~configSources)
-      else readDirs json
-  else (
-    if !Cli.debug then (
-      Log_.item "Warning: can't find source dirs: %s\n" sourceDirs;
-      Log_.item "Types for cross-references will not be found.\n");
-    dirs := readDirsFromConfig ~configSources);
-  !dirs
-
 type cmt_scan_entry = {
   build_root: string;
   scan_dirs: string list;
@@ -220,51 +145,31 @@ let readCmtScan () =
     ["lib"; "bs"; ".sourcedirs.json"]
     |> List.fold_left Filename.concat runConfig.bsbProjectRoot
   in
-  let entries = ref [] in
-  let read_entry (json : Ext_json_types.t) =
-    match json with
-    | Ext_json_types.Obj {map} -> (
-      let build_root =
-        match StringMap.find_opt map "build_root" with
-        | Some (Ext_json_types.Str {str}) -> Some str
-        | _ -> None
-      in
-      let scan_dirs =
-        match StringMap.find_opt map "scan_dirs" with
-        | Some (Ext_json_types.Arr {content = arr}) ->
-          arr |> Array.to_list
-          |> List.filter_map (fun x ->
-                 match x with
-                 | Ext_json_types.Str {str} -> Some str
-                 | _ -> None)
-        | _ -> []
-      in
-      let also_scan_build_root =
-        match StringMap.find_opt map "also_scan_build_root" with
-        | Some (Ext_json_types.True _) -> true
-        | Some (Ext_json_types.False _) -> false
-        | _ -> false
-      in
-      match build_root with
-      | Some build_root ->
-        entries := {build_root; scan_dirs; also_scan_build_root} :: !entries
-      | None -> ())
-    | _ -> ()
+  let get key fn json =
+    Json.get key json |> Option.to_list |> List.filter_map fn
   in
-  let read_cmt_scan (json : Ext_json_types.t) =
-    match json with
-    | Ext_json_types.Obj {map} -> (
-      match StringMap.find_opt map "cmt_scan" with
-      | Some (Ext_json_types.Arr {content = arr}) ->
-        arr |> Array.iter read_entry
-      | _ -> ())
-    | _ -> ()
+  let read_entry (json : Json.t) =
+    let build_root = json |> get "build_root" Json.string in
+    let scan_dirs =
+      match json |> get "scan_dirs" Json.array with
+      | [arr] -> arr |> List.filter_map Json.string
+      | _ -> []
+    in
+    let also_scan_build_root =
+      match json |> get "also_scan_build_root" Json.bool with
+      | [b] -> b
+      | _ -> false
+    in
+    match build_root with
+    | [build_root] -> Some {build_root; scan_dirs; also_scan_build_root}
+    | _ -> None
   in
-  if sourceDirsFile |> Sys.file_exists then (
-    let jsonOpt = sourceDirsFile |> Ext_json_parse.parse_json_from_file in
-    match jsonOpt with
-    | exception _ -> []
-    | json ->
-      read_cmt_scan json;
-      !entries |> List.rev)
-  else []
+  match readFile sourceDirsFile with
+  | None -> []
+  | Some text -> (
+    match Json.parse text with
+    | None -> []
+    | Some json -> (
+      match json |> get "cmt_scan" Json.array with
+      | [arr] -> arr |> List.filter_map read_entry
+      | _ -> []))

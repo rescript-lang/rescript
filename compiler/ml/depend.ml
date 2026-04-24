@@ -256,6 +256,7 @@ let rec add_expr bv exp =
   | Pexp_sequence (e1, e2) ->
     add_expr bv e1;
     add_expr bv e2
+  | Pexp_break | Pexp_continue -> ()
   | Pexp_while (e1, e2) ->
     add_expr bv e1;
     add_expr bv e2
@@ -263,6 +264,14 @@ let rec add_expr bv exp =
     add_expr bv e1;
     add_expr bv e2;
     add_expr bv e3
+  | Pexp_for_of (pat, e1, e2) ->
+    add_pattern bv pat |> ignore;
+    add_expr bv e1;
+    add_expr bv e2
+  | Pexp_for_await_of (pat, e1, e2) ->
+    add_pattern bv pat |> ignore;
+    add_expr bv e1;
+    add_expr bv e2
   | Pexp_coerce (e1, (), ty3) ->
     add_expr bv e1;
     add_type bv ty3

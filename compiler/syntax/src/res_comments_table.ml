@@ -1220,6 +1220,7 @@ and walk_expression expr t comments =
     attach t.trailing typexpr.ptyp_loc trailing
   | Pexp_tuple []
   | Pexp_array []
+  | Pexp_break | Pexp_continue
   | Pexp_construct ({txt = Longident.Lident "[]"}, _) ->
     attach t.inside expr.pexp_loc comments
   | Pexp_construct ({txt = Longident.Lident "::"}, _) ->
@@ -1487,6 +1488,22 @@ and walk_expression expr t comments =
     attach t.trailing expr.pexp_loc after_expr;
     walk_list (cases |> List.map (fun case -> Case case)) t rest
     (* unary expression: todo use parsetreeviewer *)
+  | Pexp_apply _
+    when Option.is_some
+           (Res_parsetree_viewer.collect_spread_dict_expr_parts expr) -> (
+    match Res_parsetree_viewer.collect_spread_dict_expr_parts expr with
+    | Some parts ->
+      let part_exprs =
+        List.map
+          (function
+            | Res_parsetree_viewer.DictExprRows rows_expr ->
+              Expression rows_expr
+            | Res_parsetree_viewer.DictExprSpread spread_expr ->
+              Expression spread_expr)
+          parts
+      in
+      walk_list part_exprs t comments
+    | None -> assert false)
   | Pexp_apply
       {
         funct =
@@ -1806,6 +1823,11 @@ and walk_expression expr t comments =
        Comments after the closing tag will already be taking into account by the parent node. *)
     )
   | Pexp_await expr -> walk_expression expr t comments
+  | Pexp_for_of (pattern, expr1, expr2)
+  | Pexp_for_await_of (pattern, expr1, expr2) ->
+    walk_pattern pattern t comments;
+    walk_expression expr1 t comments;
+    walk_expression expr2 t comments
   | Pexp_send _ -> ()
 
 and walk_expr_parameter (_attrs, _argLbl, expr_opt, pattern) t comments =

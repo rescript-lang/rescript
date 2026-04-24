@@ -396,6 +396,9 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
     | Pexp_await e ->
       check_await ();
       Ast_await.create_await_expression e
+    | Pexp_for_await_of _ ->
+      check_await ();
+      result
     | _ -> result)
 
 let typ_mapper (self : mapper) (typ : Parsetree.core_type) =

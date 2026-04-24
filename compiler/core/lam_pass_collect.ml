@@ -137,6 +137,7 @@ let collect_info (meta : Lam_stats.t) (lam : Lam.t) =
     | Lsequence (l1, l2) ->
       collect l1;
       collect l2
+    | Lbreak | Lcontinue -> ()
     | Lwhile (l1, l2) ->
       collect l1;
       collect l2
@@ -144,6 +145,12 @@ let collect_info (meta : Lam_stats.t) (lam : Lam.t) =
       collect l1;
       collect l2;
       collect l3
+    | Lfor_of (_, l1, l2) ->
+      collect l1;
+      collect l2
+    | Lfor_await_of (_, l1, l2) ->
+      collect l1;
+      collect l2
     | Lassign (_v, l) ->
       (* Lalias-bound variables are never assigned, so don't increase
          v's refcollect *)

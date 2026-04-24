@@ -201,4 +201,6 @@ let capitalize = s =>
 
 external ignore: string => unit = "%ignore"
 
+external asIterable: string => Stdlib_Iterable.t<string> = "%identity"
+
 @get_index external getSymbolUnsafe: (string, Stdlib_Symbol.t) => 'a = ""

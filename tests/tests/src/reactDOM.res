@@ -67,8 +67,8 @@ module FormData = {
 
   @send external set: (string, string) => unit = "set"
   @send external has: string => bool = "has"
-  // @send external keys: t => Iterator.t<string> = "keys";
-  // @send external values: t => Iterator.t<value> = "values";
+  // @send external keys: t => IteratorObject.t<string> = "keys";
+  // @send external values: t => IteratorObject.t<value> = "values";
 }
 
 @module("react-dom")

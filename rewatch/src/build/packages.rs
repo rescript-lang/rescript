@@ -63,6 +63,11 @@ pub struct Package {
     // canonicalized dir of the package
     pub path: PathBuf,
     pub dirs: Option<AHashSet<PathBuf>>,
+    /// Every directory reachable from `source_folders` (honoring
+    /// `subdirs: true`), relative to the package root — including ones that
+    /// hold only `.ts` shim files and therefore are absent from `dirs`.
+    /// Populated during package discovery only when gentype is enabled.
+    pub gentype_dirs: Option<Vec<PathBuf>>,
     pub is_local_dep: bool,
     pub is_root: bool,
 }
@@ -234,7 +239,12 @@ fn get_source_dirs(source: config::Source, sub_path: Option<PathBuf>) -> AHashSe
             .unwrap_or(vec![])
             .par_iter()
             .map(|subsource| {
-                get_source_dirs(subsource.set_type(source.get_type()), Some(sub_path.to_owned()))
+                get_source_dirs(
+                    subsource
+                        .set_type(source.get_type())
+                        .set_feature(source.get_feature()),
+                    Some(sub_path.to_owned()),
+                )
             })
             .collect::<Vec<AHashSet<config::PackageSource>>>()
             .into_iter()
@@ -246,7 +256,13 @@ fn get_source_dirs(source: config::Source, sub_path: Option<PathBuf>) -> AHashSe
 
 pub fn read_config(package_dir: &Path) -> Result<Config> {
     let rescript_json_path = package_dir.join("rescript.json");
-    Config::new(&rescript_json_path)
+    let bsconfig_json_path = package_dir.join("bsconfig.json");
+
+    if rescript_json_path.exists() {
+        Config::new(&rescript_json_path)
+    } else {
+        Config::new(&bsconfig_json_path)
+    }
 }
 
 pub fn read_dependency(
@@ -285,12 +301,13 @@ fn read_dependencies(
     package_config: &Config,
     show_progress: bool,
     is_local_dep: bool,
+    prod: bool,
 ) -> Vec<Dependency> {
-    let mut dependencies = package_config.dependencies.to_owned().unwrap_or_default();
+    let mut dependencies: Vec<String> = package_config.get_dependency_names();
 
-    // Concatenate dev dependencies if is_local_dep is true
-    if is_local_dep && let Some(dev_deps) = package_config.dev_dependencies.to_owned() {
-        dependencies.extend(dev_deps);
+    // Concatenate dev dependencies if is_local_dep is true and not in prod mode
+    if is_local_dep && !prod {
+        dependencies.extend(package_config.get_dev_dependency_names());
     }
 
     dependencies
@@ -395,6 +412,7 @@ fn read_dependencies(
                 &config,
                 show_progress,
                 is_local_dep,
+                prod,
             );
 
             Dependency {
@@ -441,10 +459,50 @@ pub fn read_package_name(package_dir: &Path) -> Result<String> {
         return Ok(name);
     }
 
+    if let Some(name) = read_name("bsconfig.json")? {
+        return Ok(name);
+    }
+
     Err(anyhow!(
         "No name field found in package.json or rescript.json in {}",
         package_dir.to_string_lossy()
     ))
+}
+
+/// Looks up the best-effort issue tracker URL for a package by reading its
+/// package.json, preferring `bugs.url`, then deriving from `repository`.
+/// Returns None if no tracker could be inferred.
+pub fn read_issue_tracker_url(package_dir: &Path) -> Option<String> {
+    let contents = fs::read_to_string(package_dir.join("package.json")).ok()?;
+    let json: serde_json::Value = serde_json::from_str(&contents).ok()?;
+
+    let extract_url = |v: &serde_json::Value| -> Option<String> {
+        match v {
+            serde_json::Value::String(s) => Some(s.to_owned()),
+            serde_json::Value::Object(o) => o.get("url").and_then(|u| u.as_str()).map(String::from),
+            _ => None,
+        }
+    };
+
+    if let Some(bugs_url) = json.get("bugs").and_then(extract_url) {
+        return Some(bugs_url);
+    }
+
+    json.get("repository")
+        .and_then(extract_url)
+        .map(|repo| issues_url_from_repository(&repo))
+}
+
+fn issues_url_from_repository(repo: &str) -> String {
+    let cleaned = repo.trim_start_matches("git+").trim_end_matches(".git");
+
+    // npm shorthand (no scheme, no user@): treat as github-style "owner/repo"
+    if !cleaned.contains("://") && !cleaned.contains('@') {
+        let path = cleaned.trim_start_matches("github:");
+        return format!("https://github.com/{path}/issues");
+    }
+
+    format!("{cleaned}/issues")
 }
 
 fn make_package(
@@ -504,12 +562,17 @@ This inconsistency will cause issues with package resolution.\n",
             .map(StrippedVerbatimPath::to_stripped_verbatim_path)
             .expect("Could not canonicalize"),
         dirs: None,
+        gentype_dirs: None,
         is_local_dep,
         is_root,
     })
 }
 
-fn read_packages(project_context: &ProjectContext, show_progress: bool) -> Result<AHashMap<String, Package>> {
+fn read_packages(
+    project_context: &ProjectContext,
+    show_progress: bool,
+    prod: bool,
+) -> Result<AHashMap<String, Package>> {
     // Store all packages and completely deduplicate them
     let mut map: AHashMap<String, Package> = AHashMap::new();
 
@@ -531,6 +594,7 @@ fn read_packages(project_context: &ProjectContext, show_progress: bool) -> Resul
         &project_context.current_config,
         show_progress,
         /* is local dep */ true,
+        prod,
     ));
 
     for d in dependencies.iter() {
@@ -594,6 +658,7 @@ pub fn get_source_files(
 fn extend_with_children(
     filter: &Option<regex::Regex>,
     mut build: AHashMap<String, Package>,
+    prod: bool,
 ) -> AHashMap<String, Package> {
     for (_key, package) in build.iter_mut() {
         let mut map: AHashMap<PathBuf, SourceFileMeta> = AHashMap::new();
@@ -606,7 +671,7 @@ fn extend_with_children(
                     Path::new(&package.path),
                     filter,
                     source,
-                    package.is_local_dep,
+                    package.is_local_dep && !prod,
                 )
             })
             .collect::<Vec<AHashMap<PathBuf, SourceFileMeta>>>()
@@ -633,9 +698,149 @@ fn extend_with_children(
             dirs.insert(dir.to_owned());
         });
         package.dirs = Some(dirs);
+        if package.config.gentype_config.is_some() {
+            package.gentype_dirs = Some(collect_gentype_source_dirs(package));
+        }
         package.source_files = Some(map);
     }
     build
+}
+
+/// Walks a package's declared source folders and returns every directory
+/// reachable under them (honoring `subdirs: true`), relative to the package
+/// root. Gentype needs every such directory — including ones containing only
+/// `.ts` shims — to resolve cross-file imports, so `package.dirs` (which
+/// tracks only dirs with `.res` source files) isn't enough.
+fn collect_gentype_source_dirs(package: &Package) -> Vec<PathBuf> {
+    let mut out: Vec<PathBuf> = Vec::new();
+    let root = &package.path;
+
+    fn walk_recursive(root: &Path, rel: &Path, out: &mut Vec<PathBuf>) {
+        let abs = if rel.as_os_str().is_empty() {
+            root.to_path_buf()
+        } else {
+            root.join(rel)
+        };
+        let Ok(meta) = std::fs::metadata(&abs) else {
+            return;
+        };
+        if !meta.is_dir() {
+            return;
+        }
+        out.push(rel.to_path_buf());
+        let Ok(entries) = std::fs::read_dir(&abs) else {
+            return;
+        };
+        for entry in entries.flatten() {
+            let Ok(child_meta) = entry.metadata() else {
+                continue;
+            };
+            if child_meta.is_dir() {
+                walk_recursive(root, &rel.join(entry.file_name()), out);
+            }
+        }
+    }
+
+    for source in &package.source_folders {
+        let rel = PathBuf::from(&source.dir);
+        match &source.subdirs {
+            Some(config::Subdirs::Recurse(true)) => walk_recursive(root, &rel, &mut out),
+            _ => {
+                if root.join(&rel).is_dir() {
+                    out.push(rel);
+                }
+            }
+        }
+    }
+    out
+}
+
+/// Computes the active feature set for every package. Rules:
+///
+/// - The root package's active set comes from the `--features` CLI flag. When the flag is
+///   absent, all features declared in the root config are active (default = all).
+/// - For every other package, we scan every consumer (any package that lists this one in its
+///   `dependencies` or `dev-dependencies`). A shorthand entry (or an object entry without a
+///   `features` field) means the consumer wants all features of the dep. An entry with a
+///   `features` list means the consumer wants exactly those. When any consumer requests "all"
+///   or no consumer requests anything, the dep builds with all of its declared features.
+///   Otherwise we take the union of specific feature requests and pass it through the dep's
+///   own `features` map for transitive expansion.
+///
+/// `dev-dependencies` only contribute when that edge is actually traversed by
+/// `read_dependencies` — i.e. when the consumer is a local dep and we're not in `--prod`. This
+/// keeps dev-only feature requests (e.g. a shorthand `dev-dependencies` entry that would flip
+/// everything to "all features") from leaking into production builds.
+pub fn compute_active_features(
+    packages: &AHashMap<String, Package>,
+    cli_features: Option<&Vec<String>>,
+    prod: bool,
+) -> Result<AHashMap<String, AHashSet<String>>> {
+    let mut result: AHashMap<String, AHashSet<String>> = AHashMap::new();
+
+    for (package_name, package) in packages {
+        let mut any_all_request = false;
+        let mut saw_consumer_entry = false;
+        let mut requested: AHashSet<String> = AHashSet::new();
+
+        if package.is_root {
+            match cli_features {
+                None => any_all_request = true,
+                Some(list) => requested.extend(list.iter().cloned()),
+            }
+        } else {
+            for consumer in packages.values() {
+                // `dependencies` always contribute.
+                if let Some(deps) = consumer.config.dependencies.as_ref() {
+                    for dep in deps {
+                        if dep.name() != package_name {
+                            continue;
+                        }
+                        saw_consumer_entry = true;
+                        match dep.features() {
+                            None => any_all_request = true,
+                            Some(list) => requested.extend(list.iter().cloned()),
+                        }
+                    }
+                }
+                // `dev-dependencies` only contribute when that edge is actually traversed:
+                // local consumer, not `--prod`. Matches `read_dependencies`.
+                if consumer.is_local_dep
+                    && !prod
+                    && let Some(dev_deps) = consumer.config.dev_dependencies.as_ref()
+                {
+                    for dep in dev_deps {
+                        if dep.name() != package_name {
+                            continue;
+                        }
+                        saw_consumer_entry = true;
+                        match dep.features() {
+                            None => any_all_request = true,
+                            Some(list) => requested.extend(list.iter().cloned()),
+                        }
+                    }
+                }
+            }
+
+            // Defensive: if no consumer edge was found at all, keep all features. An empty
+            // `requested` set by itself is a *valid* request (`"features": []` means
+            // "untagged only"), so only fall back when we truly observed no entries.
+            if !saw_consumer_entry {
+                any_all_request = true;
+            }
+        }
+
+        let closure = if any_all_request {
+            package.config.collect_declared_features()
+        } else {
+            config::resolve_active_features(&requested, package.config.features.as_ref())
+                .map_err(|e| anyhow!("Invalid features for package '{}': {}", package_name, e))?
+        };
+
+        result.insert(package_name.clone(), closure);
+    }
+
+    Ok(result)
 }
 
 /// Make turns a folder, that should contain a config, into a tree of Packages.
@@ -649,12 +854,26 @@ pub fn make(
     filter: &Option<regex::Regex>,
     project_context: &ProjectContext,
     show_progress: bool,
+    prod: bool,
+    cli_features: Option<&Vec<String>>,
 ) -> Result<AHashMap<String, Package>> {
-    let map = read_packages(project_context, show_progress)?;
+    let mut map = read_packages(project_context, show_progress, prod)?;
+
+    let active_features = compute_active_features(&map, cli_features, prod)?;
+
+    // Drop source directories whose feature tag is not in the package's active set.
+    // Untagged source dirs remain; they're included regardless of the feature selection.
+    for (package_name, package) in map.iter_mut() {
+        if let Some(active) = active_features.get(package_name) {
+            package
+                .source_folders
+                .retain(|source| source.is_feature_enabled(active));
+        }
+    }
 
     /* Once we have the deduplicated packages, we can add the source files for each - to minimize
      * the IO */
-    let result = extend_with_children(filter, map);
+    let result = extend_with_children(filter, map, prod);
 
     Ok(result)
 }
@@ -965,8 +1184,8 @@ pub fn validate_packages_dependencies(packages: &AHashMap<String, Package>) -> b
     let mut detected_unallowed_dependencies: AHashMap<String, UnallowedDependency> = AHashMap::new();
 
     for (package_name, package) in packages {
-        let dependencies = &package.config.dependencies.to_owned().unwrap_or(vec![]);
-        let dev_dependencies = &package.config.dev_dependencies.to_owned().unwrap_or(vec![]);
+        let dependencies = &package.config.get_dependency_names();
+        let dev_dependencies = &package.config.get_dev_dependency_names();
 
         [
             ("dependencies", dependencies),
@@ -1030,7 +1249,7 @@ pub fn validate_packages_dependencies(packages: &AHashMap<String, Package>) -> b
 mod test {
     use crate::config;
 
-    use super::{Namespace, Package, read_package_name};
+    use super::{Namespace, Package, read_issue_tracker_url, read_package_name};
     use ahash::{AHashMap, AHashSet};
     use std::fs;
     use std::path::PathBuf;
@@ -1059,6 +1278,7 @@ mod test {
             modules: None,
             path: PathBuf::from("./something"),
             dirs: None,
+            gentype_dirs: None,
             is_root: false,
             is_local_dep: false,
         }
@@ -1162,6 +1382,344 @@ mod test {
                 "No name field found in package.json or rescript.json in {}",
                 package_dir.to_string_lossy()
             )
+        );
+    }
+
+    fn write_pkg_json(dir: &std::path::Path, body: &str) {
+        fs::write(dir.join("package.json"), body).expect("package.json should be written");
+    }
+
+    #[test]
+    fn issue_tracker_url_prefers_bugs_url_string() {
+        let temp_dir = TempDir::new().unwrap();
+        write_pkg_json(
+            temp_dir.path(),
+            r#"{"name":"x","bugs":"https://example.com/issues"}"#,
+        );
+        assert_eq!(
+            read_issue_tracker_url(temp_dir.path()),
+            Some("https://example.com/issues".to_string())
+        );
+    }
+
+    #[test]
+    fn issue_tracker_url_prefers_bugs_object_url() {
+        let temp_dir = TempDir::new().unwrap();
+        write_pkg_json(
+            temp_dir.path(),
+            r#"{"name":"x","bugs":{"url":"https://example.com/report"}}"#,
+        );
+        assert_eq!(
+            read_issue_tracker_url(temp_dir.path()),
+            Some("https://example.com/report".to_string())
+        );
+    }
+
+    #[test]
+    fn issue_tracker_url_derives_from_repository_git_url() {
+        let temp_dir = TempDir::new().unwrap();
+        write_pkg_json(
+            temp_dir.path(),
+            r#"{"name":"x","repository":"git+https://github.com/owner/repo.git"}"#,
+        );
+        assert_eq!(
+            read_issue_tracker_url(temp_dir.path()),
+            Some("https://github.com/owner/repo/issues".to_string())
+        );
+    }
+
+    #[test]
+    fn issue_tracker_url_derives_from_repository_object() {
+        let temp_dir = TempDir::new().unwrap();
+        write_pkg_json(
+            temp_dir.path(),
+            r#"{"name":"x","repository":{"type":"git","url":"https://github.com/owner/repo.git"}}"#,
+        );
+        assert_eq!(
+            read_issue_tracker_url(temp_dir.path()),
+            Some("https://github.com/owner/repo/issues".to_string())
+        );
+    }
+
+    #[test]
+    fn issue_tracker_url_handles_shorthand() {
+        let temp_dir = TempDir::new().unwrap();
+        write_pkg_json(temp_dir.path(), r#"{"name":"x","repository":"owner/repo"}"#);
+        assert_eq!(
+            read_issue_tracker_url(temp_dir.path()),
+            Some("https://github.com/owner/repo/issues".to_string())
+        );
+    }
+
+    #[test]
+    fn issue_tracker_url_returns_none_without_hints() {
+        let temp_dir = TempDir::new().unwrap();
+        write_pkg_json(temp_dir.path(), r#"{"name":"x"}"#);
+        assert_eq!(read_issue_tracker_url(temp_dir.path()), None);
+    }
+
+    fn root_package_with_features(
+        features_map: Option<std::collections::HashMap<String, Vec<String>>>,
+        tagged_sources: Vec<(&str, Option<&str>)>,
+    ) -> super::Package {
+        let sources: Vec<config::Source> = tagged_sources
+            .into_iter()
+            .map(|(dir, feature)| {
+                config::Source::Qualified(config::PackageSource {
+                    dir: dir.to_string(),
+                    subdirs: None,
+                    type_: None,
+                    feature: feature.map(|s| s.to_string()),
+                })
+            })
+            .collect();
+        let mut config = config::tests::create_config(config::tests::CreateConfigArgs {
+            name: "root".to_string(),
+            bs_deps: vec![],
+            build_dev_deps: vec![],
+            allowed_dependents: None,
+            path: PathBuf::from("./rescript.json"),
+        });
+        config.sources = Some(config::OneOrMore::Multiple(sources));
+        config.features = features_map;
+        super::Package {
+            name: "root".to_string(),
+            config,
+            source_folders: AHashSet::new(),
+            source_files: None,
+            namespace: super::Namespace::NoNamespace,
+            modules: None,
+            path: PathBuf::from("."),
+            dirs: None,
+            gentype_dirs: None,
+            is_local_dep: true,
+            is_root: true,
+        }
+    }
+
+    #[test]
+    fn compute_active_features_returns_all_when_cli_absent() {
+        let mut packages: AHashMap<String, super::Package> = AHashMap::new();
+        let mut features_map = std::collections::HashMap::new();
+        features_map.insert("full".to_string(), vec!["native".to_string()]);
+        packages.insert(
+            "root".to_string(),
+            root_package_with_features(
+                Some(features_map),
+                vec![("src", None), ("src-native", Some("native"))],
+            ),
+        );
+
+        let active = super::compute_active_features(&packages, None, false).unwrap();
+        let root = active.get("root").unwrap();
+        assert!(root.contains("native"));
+        assert!(root.contains("full"));
+    }
+
+    #[test]
+    fn compute_active_features_honours_cli_restriction_and_expands_transitive() {
+        let mut packages: AHashMap<String, super::Package> = AHashMap::new();
+        let mut features_map = std::collections::HashMap::new();
+        features_map.insert(
+            "full".to_string(),
+            vec!["native".to_string(), "experimental".to_string()],
+        );
+        packages.insert(
+            "root".to_string(),
+            root_package_with_features(
+                Some(features_map),
+                vec![
+                    ("src", None),
+                    ("src-native", Some("native")),
+                    ("src-experimental", Some("experimental")),
+                ],
+            ),
+        );
+
+        let cli = vec!["full".to_string()];
+        let active = super::compute_active_features(&packages, Some(&cli), false).unwrap();
+        let root = active.get("root").unwrap();
+        assert!(root.contains("full"));
+        assert!(root.contains("native"));
+        assert!(root.contains("experimental"));
+    }
+
+    #[test]
+    fn compute_active_features_dep_uses_consumer_restriction() {
+        // Root consumes a dep with a restricted feature set.
+        let mut packages: AHashMap<String, super::Package> = AHashMap::new();
+
+        let mut root_config = config::tests::create_config(config::tests::CreateConfigArgs {
+            name: "root".to_string(),
+            bs_deps: vec![],
+            build_dev_deps: vec![],
+            allowed_dependents: None,
+            path: PathBuf::from("./rescript.json"),
+        });
+        root_config.sources = Some(config::OneOrMore::Single(config::Source::Shorthand(
+            "src".to_string(),
+        )));
+        root_config.dependencies = Some(vec![config::Dependency::Qualified(config::QualifiedDependency {
+            name: "dep".to_string(),
+            features: Some(vec!["native".to_string()]),
+        })]);
+        packages.insert(
+            "root".to_string(),
+            super::Package {
+                name: "root".to_string(),
+                config: root_config,
+                source_folders: AHashSet::new(),
+                source_files: None,
+                namespace: super::Namespace::NoNamespace,
+                modules: None,
+                path: PathBuf::from("."),
+                dirs: None,
+                gentype_dirs: None,
+                is_local_dep: true,
+                is_root: true,
+            },
+        );
+
+        packages.insert(
+            "dep".to_string(),
+            root_package_with_features(None, vec![("src", None), ("src-native", Some("native"))]),
+        );
+        // Flip the dep's is_root flag to false since root_package_with_features sets it to true.
+        packages.get_mut("dep").unwrap().is_root = false;
+
+        let active = super::compute_active_features(&packages, None, false).unwrap();
+        let dep_active = active.get("dep").unwrap();
+        assert!(dep_active.contains("native"));
+    }
+
+    #[test]
+    fn compute_active_features_prod_ignores_dev_dependency_feature_requests() {
+        // Regression: a dep that appears in both `dependencies` (restricted to `native`) and
+        // `dev-dependencies` (shorthand = all features). In `--prod` the dev edge isn't
+        // traversed by `read_dependencies`, so its broader feature request must not flip the
+        // dep's active set to "all features". Only the non-dev restriction applies.
+        let mut packages: AHashMap<String, super::Package> = AHashMap::new();
+
+        let mut root_config = config::tests::create_config(config::tests::CreateConfigArgs {
+            name: "root".to_string(),
+            bs_deps: vec![],
+            build_dev_deps: vec![],
+            allowed_dependents: None,
+            path: PathBuf::from("./rescript.json"),
+        });
+        root_config.sources = Some(config::OneOrMore::Single(config::Source::Shorthand(
+            "src".to_string(),
+        )));
+        root_config.dependencies = Some(vec![config::Dependency::Qualified(config::QualifiedDependency {
+            name: "dep".to_string(),
+            features: Some(vec!["native".to_string()]),
+        })]);
+        root_config.dev_dependencies = Some(vec![config::Dependency::Shorthand("dep".to_string())]);
+        packages.insert(
+            "root".to_string(),
+            super::Package {
+                name: "root".to_string(),
+                config: root_config,
+                source_folders: AHashSet::new(),
+                source_files: None,
+                namespace: super::Namespace::NoNamespace,
+                modules: None,
+                path: PathBuf::from("."),
+                dirs: None,
+                gentype_dirs: None,
+                is_local_dep: true,
+                is_root: true,
+            },
+        );
+
+        packages.insert(
+            "dep".to_string(),
+            root_package_with_features(
+                None,
+                vec![
+                    ("src", None),
+                    ("src-native", Some("native")),
+                    ("src-experimental", Some("experimental")),
+                ],
+            ),
+        );
+        packages.get_mut("dep").unwrap().is_root = false;
+
+        // Non-prod: dev edge IS traversed → all features active.
+        let active = super::compute_active_features(&packages, None, /* prod */ false).unwrap();
+        let dep_active = active.get("dep").unwrap();
+        assert!(dep_active.contains("native"));
+        assert!(
+            dep_active.contains("experimental"),
+            "non-prod should honour dev-dependency shorthand = all features"
+        );
+
+        // Prod: dev edge is NOT traversed → only the `dependencies` restriction applies.
+        let active_prod = super::compute_active_features(&packages, None, /* prod */ true).unwrap();
+        let dep_active_prod = active_prod.get("dep").unwrap();
+        assert!(dep_active_prod.contains("native"));
+        assert!(
+            !dep_active_prod.contains("experimental"),
+            "prod must not inherit the dev-dependency shorthand's all-features request"
+        );
+    }
+
+    #[test]
+    fn compute_active_features_honours_explicit_empty_features_list() {
+        // Regression: `{"name": "dep", "features": []}` must be honoured as "no features, only
+        // untagged dirs". Previously the fallback for "no consumer edges" fired when `requested`
+        // was empty, forcing all features on even though the consumer explicitly asked for none.
+        let mut packages: AHashMap<String, super::Package> = AHashMap::new();
+
+        let mut root_config = config::tests::create_config(config::tests::CreateConfigArgs {
+            name: "root".to_string(),
+            bs_deps: vec![],
+            build_dev_deps: vec![],
+            allowed_dependents: None,
+            path: PathBuf::from("./rescript.json"),
+        });
+        root_config.sources = Some(config::OneOrMore::Single(config::Source::Shorthand(
+            "src".to_string(),
+        )));
+        root_config.dependencies = Some(vec![config::Dependency::Qualified(config::QualifiedDependency {
+            name: "dep".to_string(),
+            features: Some(vec![]),
+        })]);
+        packages.insert(
+            "root".to_string(),
+            super::Package {
+                name: "root".to_string(),
+                config: root_config,
+                source_folders: AHashSet::new(),
+                source_files: None,
+                namespace: super::Namespace::NoNamespace,
+                modules: None,
+                path: PathBuf::from("."),
+                dirs: None,
+                gentype_dirs: None,
+                is_local_dep: true,
+                is_root: true,
+            },
+        );
+
+        packages.insert(
+            "dep".to_string(),
+            root_package_with_features(
+                None,
+                vec![
+                    ("src", None),
+                    ("src-native", Some("native")),
+                    ("src-experimental", Some("experimental")),
+                ],
+            ),
+        );
+        packages.get_mut("dep").unwrap().is_root = false;
+
+        let active = super::compute_active_features(&packages, None, false).unwrap();
+        let dep_active = active.get("dep").unwrap();
+        assert!(
+            dep_active.is_empty(),
+            "an explicit empty features list should activate no feature-tagged dirs, got {dep_active:?}"
         );
     }
 }

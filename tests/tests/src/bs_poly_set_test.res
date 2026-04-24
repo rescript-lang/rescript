@@ -45,8 +45,8 @@ describe(__MODULE__, () => {
     ok(__LOC__, u0 !== u1)
     ok(__LOC__, u2 === u1)
     eq(__LOC__, N.size(u4), 28)
-    ok(__LOC__, Js.eqUndefined(29, N.maxUndefined(u4)))
-    ok(__LOC__, Js.eqUndefined(1, N.minUndefined(u4)))
+    eq(__LOC__, N.maximum(u4), Some(29))
+    eq(__LOC__, N.minimum(u4), Some(1))
     ok(__LOC__, u4 === u5)
     ok(__LOC__, N.isEmpty(u6))
     eq(__LOC__, N.size(u7), 3)
@@ -90,16 +90,12 @@ describe(__MODULE__, () => {
     ok(__LOC__, !N.subset(u18, u23))
     ok(__LOC__, N.subset(u22, u17))
     ok(__LOC__, N.subset(u21, u17) && N.subset(u21, u18))
-    ok(__LOC__, Js.eqUndefined(47, N.getUndefined(u22, 47)))
     ok(__LOC__, Some(47) == N.get(u22, 47))
-    ok(__LOC__, N.getUndefined(u22, 59) == Js.undefined)
     ok(__LOC__, None == N.get(u22, 59))
 
     eq(__LOC__, N.size(u25), 60)
     ok(__LOC__, N.minimum(N.make(~id=module(IntCmp))) == None)
     ok(__LOC__, N.maximum(N.make(~id=module(IntCmp))) == None)
-    ok(__LOC__, N.minUndefined(N.make(~id=module(IntCmp))) == Js.undefined)
-    ok(__LOC__, N.maxUndefined(N.make(~id=module(IntCmp))) == Js.undefined)
   })
 
   test("set iteration and comparison operations", () => {

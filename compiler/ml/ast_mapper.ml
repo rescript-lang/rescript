@@ -319,11 +319,19 @@ module E = struct
         (map_opt (sub.expr sub) e3)
     | Pexp_sequence (e1, e2) ->
       sequence ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)
+    | Pexp_break -> break ~loc ~attrs ()
+    | Pexp_continue -> continue ~loc ~attrs ()
     | Pexp_while (e1, e2) ->
       while_ ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)
     | Pexp_for (p, e1, e2, d, e3) ->
       for_ ~loc ~attrs (sub.pat sub p) (sub.expr sub e1) (sub.expr sub e2) d
         (sub.expr sub e3)
+    | Pexp_for_of (p, e1, e2) ->
+      Exp.mk ~loc ~attrs
+        (Pexp_for_of (sub.pat sub p, sub.expr sub e1, sub.expr sub e2))
+    | Pexp_for_await_of (p, e1, e2) ->
+      Exp.mk ~loc ~attrs
+        (Pexp_for_await_of (sub.pat sub p, sub.expr sub e1, sub.expr sub e2))
     | Pexp_coerce (e, (), t2) ->
       coerce ~loc ~attrs (sub.expr sub e) (sub.typ sub t2)
     | Pexp_constraint (e, t) ->

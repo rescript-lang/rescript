@@ -62,6 +62,9 @@ let compile_group output_prefix (meta : Lam_stats.t)
     (* ([Js_stmt_make.comment (Gen_of_env.query_type id  env )], None)  ++ *)
     Lam_compile.compile_lambda ~output_prefix { continuation = Declare (kind, id);
                                  jmp_table = Lam_compile_context.empty_handler_map;
+                                 switch_depth = 0;
+                                 loop_stack = [];
+                                 loop_label_counter = ref 0;
                                  meta
                                } lam
 
@@ -69,12 +72,18 @@ let compile_group output_prefix (meta : Lam_stats.t)
     Lam_compile.compile_recursive_lets ~output_prefix
       { continuation = EffectCall Not_tail; 
         jmp_table = Lam_compile_context.empty_handler_map;
+        switch_depth = 0;
+        loop_stack = [];
+        loop_label_counter = ref 0;
         meta
       } 
       id_lams
   | Nop lam -> (* TODO: Side effect callls, log and see statistics *)
     Lam_compile.compile_lambda ~output_prefix {continuation = EffectCall Not_tail;
                                 jmp_table = Lam_compile_context.empty_handler_map;
+                                switch_depth = 0;
+                                loop_stack = [];
+                                loop_label_counter = ref 0;
                                 meta
                                } lam
 
@@ -308,12 +317,12 @@ let lambda_as_module
         let basename =  
           Ext_namespace.change_ext_ns_suffix (Filename.basename output_prefix) suffix
         in
-        let target_file = 
-          (Lazy.force Ext_path.package_dir //
+        let target_file =
+          (Ext_path.package_dir () //
            path //
            basename
            (* #913 only generate little-case js file *)
-          ) in     
+          ) in
         (if not !Clflags.dont_write_files then 
            Ext_pervasives.with_file_as_chan
              target_file output_chan );

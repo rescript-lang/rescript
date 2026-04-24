@@ -42,6 +42,7 @@ type return_label = {
 type value = {exit_id: Ident.t; bindings: Ident.t list; order_id: int}
 
 type let_kind = Lam_compat.let_kind
+type loop_frame = {mutable label: J.label option}
 
 type tail = {label: return_label option; in_staticcatch: bool}
 
@@ -67,9 +68,19 @@ type jmp_table = value Map_int.t
 
 val continuation_is_return : continuation -> bool
 
-type t = {continuation: continuation; jmp_table: jmp_table; meta: Lam_stats.t}
+type t = {
+  continuation: continuation;
+  jmp_table: jmp_table;
+  meta: Lam_stats.t;
+  switch_depth: int;
+  loop_stack: loop_frame list;
+  loop_label_counter: int ref;
+}
 
 val empty_handler_map : jmp_table
+val enter_switch : t -> t
+val push_loop : t -> t * loop_frame
+val ensure_loop_label : t -> loop_frame -> J.label
 
 type handler = {label: jbl_label; handler: Lam.t; bindings: Ident.t list}
 

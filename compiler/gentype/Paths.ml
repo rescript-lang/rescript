@@ -85,10 +85,4 @@ let get_cmt_file cmt =
   in
   cmt_file
 
-let get_config_file ~project_root =
-  let config = concat project_root Config.compiler_config_file in
-  match config |> Sys.file_exists with
-  | true -> Some config
-  | false -> None
-
-let read_config ~namespace = Config.read_config ~get_config_file ~namespace
+let read_config ~namespace = Config.build_config ~namespace

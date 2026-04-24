@@ -122,9 +122,13 @@ pub struct BuildState {
 /// - This prevents the "code smell" of optional fields that are None for some commands
 #[derive(Debug)]
 pub struct BuildCommandState {
+    pub root_folder: PathBuf,
     pub build_state: BuildState,
     // Command-line --warn-error flag override (takes precedence over rescript.json config)
     pub warn_error_override: Option<String>,
+    // Command-line --features override. `None` means all features are active; `Some(list)`
+    // restricts the root package to those features (and whatever they transitively imply).
+    pub features: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone)]
@@ -171,19 +175,27 @@ impl BuildState {
 
 impl BuildCommandState {
     pub fn new(
+        root_folder: PathBuf,
         project_context: ProjectContext,
         packages: AHashMap<String, Package>,
         compiler: CompilerInfo,
         warn_error_override: Option<String>,
+        features: Option<Vec<String>>,
     ) -> Self {
         Self {
+            root_folder,
             build_state: BuildState::new(project_context, packages, compiler),
             warn_error_override,
+            features,
         }
     }
 
     pub fn get_warn_error_override(&self) -> Option<String> {
         self.warn_error_override.clone()
+    }
+
+    pub fn get_features(&self) -> Option<Vec<String>> {
+        self.features.clone()
     }
 
     pub fn module_name_package_pairs(&self) -> Vec<(String, String)> {

@@ -202,6 +202,40 @@ pub struct WarnErrorArg {
     pub warn_error: Option<String>,
 }
 
+fn validate_features_string(s: &str) -> Result<String, String> {
+    let trimmed_parts: Vec<&str> = s.split(',').map(str::trim).filter(|p| !p.is_empty()).collect();
+    if trimmed_parts.is_empty() {
+        return Err(
+            "--features must not be empty. Omit the flag to build with all features active.".to_string(),
+        );
+    }
+    Ok(s.to_string())
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct FeaturesArg {
+    /// Restrict the current package to a comma-separated set of features. Only source
+    /// directories tagged with one of these features (plus untagged ones, and features they
+    /// transitively imply through the top-level `features` map) are compiled. Omit the flag to
+    /// build with all features active.
+    /// Example: --features native,experimental
+    #[arg(long = "features", value_parser = validate_features_string)]
+    pub features: Option<String>,
+}
+
+impl FeaturesArg {
+    /// Splits the raw `--features` value into a list of feature names. Returns `None` when the
+    /// flag was omitted.
+    pub fn parsed(&self) -> Option<Vec<String>> {
+        self.features.as_ref().map(|s| {
+            s.split(',')
+                .map(|p| p.trim().to_string())
+                .filter(|p| !p.is_empty())
+                .collect()
+        })
+    }
+}
+
 #[derive(Args, Debug, Clone)]
 pub struct BuildArgs {
     #[command(flatten)]
@@ -216,9 +250,16 @@ pub struct BuildArgs {
     #[command(flatten)]
     pub warn_error: WarnErrorArg,
 
+    #[command(flatten)]
+    pub features: FeaturesArg,
+
     /// Disable output timing
     #[arg(short, long, default_value_t = false, num_args = 0..=1)]
     pub no_timing: bool,
+
+    /// Skip dev-dependencies and dev sources (type: "dev")
+    #[arg(long, default_value_t = false)]
+    pub prod: bool,
 }
 
 #[cfg(test)]
@@ -348,6 +389,67 @@ mod tests {
         assert_eq!(err.kind(), ErrorKind::DisplayVersion);
     }
 
+    // --prod flag tests.
+    #[test]
+    fn build_prod_flag_is_parsed() {
+        let cli = parse(&["rescript", "build", "--prod"]).expect("expected build command");
+
+        match cli.command {
+            Command::Build(build_args) => assert!(build_args.prod),
+            other => panic!("expected build command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn build_prod_flag_defaults_to_false() {
+        let cli = parse(&["rescript", "build"]).expect("expected build command");
+
+        match cli.command {
+            Command::Build(build_args) => assert!(!build_args.prod),
+            other => panic!("expected build command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn watch_prod_flag_is_parsed() {
+        let cli = parse(&["rescript", "watch", "--prod"]).expect("expected watch command");
+
+        match cli.command {
+            Command::Watch(watch_args) => assert!(watch_args.prod),
+            other => panic!("expected watch command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn watch_clear_screen_flag_is_parsed() {
+        let cli = parse(&["rescript", "watch", "--clear-screen"]).expect("expected watch command");
+
+        match cli.command {
+            Command::Watch(watch_args) => assert!(watch_args.clear_screen),
+            other => panic!("expected watch command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn clean_prod_flag_is_parsed() {
+        let cli = parse(&["rescript", "clean", "--prod"]).expect("expected clean command");
+
+        match cli.command {
+            Command::Clean { prod, .. } => assert!(prod),
+            other => panic!("expected clean command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn prod_flag_defaults_to_build_command() {
+        let cli = parse(&["rescript", "--prod"]).expect("expected default build command");
+
+        match cli.command {
+            Command::Build(build_args) => assert!(build_args.prod),
+            other => panic!("expected build command, got {other:?}"),
+        }
+    }
+
     #[cfg(unix)]
     #[test]
     fn non_utf_argument_returns_error() {
@@ -356,6 +458,79 @@ mod tests {
         let args = vec![OsString::from("rescript"), OsString::from_vec(vec![0xff])];
         let err = parse_with_default_from(&args).expect_err("expected clap to report invalid utf8");
         assert_eq!(err.kind(), ErrorKind::InvalidUtf8);
+    }
+
+    // --features flag tests.
+    #[test]
+    fn build_features_flag_is_parsed() {
+        let cli = parse(&["rescript", "build", "--features", "native,experimental"])
+            .expect("expected build command");
+        match cli.command {
+            Command::Build(build_args) => assert_eq!(
+                build_args.features.parsed(),
+                Some(vec!["native".to_string(), "experimental".to_string()])
+            ),
+            other => panic!("expected build command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn build_features_flag_defaults_to_none() {
+        let cli = parse(&["rescript", "build"]).expect("expected build command");
+        match cli.command {
+            Command::Build(build_args) => assert!(build_args.features.parsed().is_none()),
+            other => panic!("expected build command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn build_features_flag_rejects_empty_string() {
+        let err = parse(&["rescript", "build", "--features", ""])
+            .expect_err("expected empty --features to fail parsing");
+        let rendered = err.to_string();
+        assert!(
+            rendered.contains("must not be empty"),
+            "unexpected error: {rendered}"
+        );
+    }
+
+    #[test]
+    fn watch_features_flag_is_parsed() {
+        let cli = parse(&["rescript", "watch", "--features", "native"]).expect("expected watch command");
+        match cli.command {
+            Command::Watch(watch_args) => {
+                assert_eq!(watch_args.features.parsed(), Some(vec!["native".to_string()]))
+            }
+            other => panic!("expected watch command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn features_flag_round_trips_through_build_to_watch_args() {
+        let cli = parse(&["rescript", "build", "--features", "a,b"]).expect("expected build command");
+        match cli.command {
+            Command::Build(build_args) => {
+                let watch_args: WatchArgs = build_args.into();
+                assert_eq!(
+                    watch_args.features.parsed(),
+                    Some(vec!["a".to_string(), "b".to_string()])
+                );
+            }
+            other => panic!("expected build command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn build_features_flag_strips_whitespace() {
+        let cli = parse(&["rescript", "build", "--features", " native , experimental "])
+            .expect("expected build command");
+        match cli.command {
+            Command::Build(build_args) => assert_eq!(
+                build_args.features.parsed(),
+                Some(vec!["native".to_string(), "experimental".to_string()])
+            ),
+            other => panic!("expected build command, got {other:?}"),
+        }
     }
 }
 
@@ -372,6 +547,17 @@ pub struct WatchArgs {
 
     #[command(flatten)]
     pub warn_error: WarnErrorArg,
+
+    #[command(flatten)]
+    pub features: FeaturesArg,
+
+    /// Clear terminal screen before each rebuild in interactive watch mode.
+    #[arg(long, default_value_t = false)]
+    pub clear_screen: bool,
+
+    /// Skip dev-dependencies and dev sources (type: "dev")
+    #[arg(long, default_value_t = false)]
+    pub prod: bool,
 }
 
 impl From<BuildArgs> for WatchArgs {
@@ -381,6 +567,9 @@ impl From<BuildArgs> for WatchArgs {
             filter: build_args.filter,
             after_build: build_args.after_build,
             warn_error: build_args.warn_error,
+            features: build_args.features,
+            clear_screen: false,
+            prod: build_args.prod,
         }
     }
 }
@@ -395,6 +584,10 @@ pub enum Command {
     Clean {
         #[command(flatten)]
         folder: FolderArg,
+
+        /// Skip dev-dependencies and dev sources (type: "dev")
+        #[arg(long, default_value_t = false)]
+        prod: bool,
     },
     /// Format ReScript files.
     Format {
@@ -453,5 +646,13 @@ impl Deref for WarnErrorArg {
 
     fn deref(&self) -> &Self::Target {
         &self.warn_error
+    }
+}
+
+impl Deref for FeaturesArg {
+    type Target = Option<String>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.features
     }
 }

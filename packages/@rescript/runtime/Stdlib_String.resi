@@ -1210,12 +1210,18 @@ external localeCompare: (
 external ignore: string => unit = "%ignore"
 
 /**
+`asIterable(str)` views `str` as an `Iterable.t<string>` where each yielded
+value is one string element.
+*/
+external asIterable: string => Stdlib_Iterable.t<string> = "%identity"
+
+/**
 `getSymbolUnsafe(str, symbol)` returns the value of the symbol property of a string.
 
 ## Examples
 
 ```rescript
-let it: Iterator.t<string> = ("foo"->String.getSymbolUnsafe(Symbol.iterator))()
+let it: IteratorObject.t<string, unit, unknown> = ("foo"->String.getSymbolUnsafe(Symbol.iterator))()
 Nullable.make(it)->Nullable.isNullable == false
 ```
 

@@ -44,7 +44,9 @@ const buildHelp =
   "  -a, --after-build <AFTER_BUILD>  Run an additional command after build. E.g., play a sound or run a test suite when done compiling\n" +
   "  -q, --quiet...                   Decrease logging verbosity\n" +
   '      --warn-error <WARN_ERROR>    Override warning configuration from rescript.json. Example: --warn-error "+3+8+11+12+26+27+31+32+33+34+35+39+44+45+110"\n' +
+  "      --features <FEATURES>        Restrict the current package to a comma-separated set of features. Only source directories tagged with one of these features (plus untagged ones, and features they transitively imply through the top-level `features` map) are compiled. Omit the flag to build with all features active. Example: --features native,experimental\n" +
   "  -n, --no-timing [<NO_TIMING>]    Disable output timing [default: false] [possible values: true, false]\n" +
+  '      --prod                       Skip dev-dependencies and dev sources (type: "dev")\n' +
   "  -h, --help                       Print help\n";
 
 const cleanHelp =
@@ -56,6 +58,7 @@ const cleanHelp =
   "  [FOLDER]  Path to the project or subproject. This folder must contain a rescript.json file [default: .]\n" +
   "\n" +
   "Options:\n" +
+  '      --prod        Skip dev-dependencies and dev sources (type: "dev")\n' +
   "  -v, --verbose...  Increase logging verbosity\n" +
   "  -q, --quiet...    Decrease logging verbosity\n" +
   "  -h, --help        Print help\n";

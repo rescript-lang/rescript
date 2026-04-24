@@ -17,8 +17,8 @@ Mocha.describe("Bs_mutable_set_test", () => {
     Test_utils.ok("File \"bs_mutable_set_test.res\", line 19, characters 7-14", Belt_MutableSetInt.removeCheck(u, 20));
     Test_utils.eq("File \"bs_mutable_set_test.res\", line 20, characters 7-14", Belt_MutableSetInt.size(u), 28);
     let r = Array_data_util.randomRange(0, 30);
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 22, characters 7-14", 29 === Belt_MutableSetInt.maxUndefined(u));
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 23, characters 7-14", 1 === Belt_MutableSetInt.minUndefined(u));
+    Test_utils.eq("File \"bs_mutable_set_test.res\", line 22, characters 7-14", Belt_MutableSetInt.maximum(u), 29);
+    Test_utils.eq("File \"bs_mutable_set_test.res\", line 23, characters 7-14", Belt_MutableSetInt.minimum(u), 1);
     Belt_MutableSetInt.add(u, 3);
     for (let i = 0, i_finish = r.length; i < i_finish; ++i) {
       Belt_MutableSetInt.remove(u, r[i]);
@@ -76,48 +76,46 @@ Mocha.describe("Bs_mutable_set_test", () => {
     Test_utils.ok("File \"bs_mutable_set_test.res\", line 85, characters 7-14", Belt_MutableSetInt.isEmpty(Belt_MutableSetInt.make()));
     Test_utils.eq("File \"bs_mutable_set_test.res\", line 86, characters 7-14", Belt_MutableSetInt.minimum(v), 500);
     Test_utils.eq("File \"bs_mutable_set_test.res\", line 87, characters 7-14", Belt_MutableSetInt.maximum(v), 2000);
-    Test_utils.eq("File \"bs_mutable_set_test.res\", line 88, characters 7-14", Belt_MutableSetInt.minUndefined(v), 500);
-    Test_utils.eq("File \"bs_mutable_set_test.res\", line 89, characters 7-14", Belt_MutableSetInt.maxUndefined(v), 2000);
-    Test_utils.eq("File \"bs_mutable_set_test.res\", line 90, characters 7-14", Belt_MutableSetInt.reduce(v, 0, (x, y) => x + y | 0), 1876250);
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 91, characters 7-14", Belt_List.eq(Belt_MutableSetInt.toList(v), Belt_List.makeBy(1501, i => i + 500 | 0), (x, y) => x === y));
-    Test_utils.eq("File \"bs_mutable_set_test.res\", line 92, characters 7-14", Belt_MutableSetInt.toArray(v), Array_data_util.range(500, 2000));
+    Test_utils.eq("File \"bs_mutable_set_test.res\", line 88, characters 7-14", Belt_MutableSetInt.reduce(v, 0, (x, y) => x + y | 0), 1876250);
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 89, characters 7-14", Belt_List.eq(Belt_MutableSetInt.toList(v), Belt_List.makeBy(1501, i => i + 500 | 0), (x, y) => x === y));
+    Test_utils.eq("File \"bs_mutable_set_test.res\", line 90, characters 7-14", Belt_MutableSetInt.toArray(v), Array_data_util.range(500, 2000));
     Belt_MutableSetInt.checkInvariantInternal(v);
-    Test_utils.eq("File \"bs_mutable_set_test.res\", line 94, characters 7-14", Belt_MutableSetInt.get(v, 3), undefined);
-    Test_utils.eq("File \"bs_mutable_set_test.res\", line 95, characters 7-14", Belt_MutableSetInt.get(v, 1200), 1200);
+    Test_utils.eq("File \"bs_mutable_set_test.res\", line 92, characters 7-14", Belt_MutableSetInt.get(v, 3), undefined);
+    Test_utils.eq("File \"bs_mutable_set_test.res\", line 93, characters 7-14", Belt_MutableSetInt.get(v, 1200), 1200);
     let match = Belt_MutableSetInt.split(v, 1000);
     let match$1 = match[0];
     let bb = match$1[1];
     let aa = match$1[0];
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 97, characters 7-14", match[1]);
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 98, characters 7-14", Belt_Array.eq(Belt_MutableSetInt.toArray(aa), Array_data_util.range(500, 999), (x, y) => x === y));
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 99, characters 7-14", Belt_Array.eq(Belt_MutableSetInt.toArray(bb), Array_data_util.range(1001, 2000), (x, y) => x === y));
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 100, characters 7-14", Belt_MutableSetInt.subset(aa, v));
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 101, characters 7-14", Belt_MutableSetInt.subset(bb, v));
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 102, characters 7-14", Belt_MutableSetInt.isEmpty(Belt_MutableSetInt.intersect(aa, bb)));
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 95, characters 7-14", match[1]);
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 96, characters 7-14", Belt_Array.eq(Belt_MutableSetInt.toArray(aa), Array_data_util.range(500, 999), (x, y) => x === y));
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 97, characters 7-14", Belt_Array.eq(Belt_MutableSetInt.toArray(bb), Array_data_util.range(1001, 2000), (x, y) => x === y));
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 98, characters 7-14", Belt_MutableSetInt.subset(aa, v));
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 99, characters 7-14", Belt_MutableSetInt.subset(bb, v));
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 100, characters 7-14", Belt_MutableSetInt.isEmpty(Belt_MutableSetInt.intersect(aa, bb)));
     let c = Belt_MutableSetInt.removeCheck(v, 1000);
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 104, characters 7-14", c);
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 102, characters 7-14", c);
     let match$2 = Belt_MutableSetInt.split(v, 1000);
     let match$3 = match$2[0];
     let bb$1 = match$3[1];
     let aa$1 = match$3[0];
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 106, characters 7-14", !match$2[1]);
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 107, characters 7-14", Belt_Array.eq(Belt_MutableSetInt.toArray(aa$1), Array_data_util.range(500, 999), (x, y) => x === y));
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 108, characters 7-14", Belt_Array.eq(Belt_MutableSetInt.toArray(bb$1), Array_data_util.range(1001, 2000), (x, y) => x === y));
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 109, characters 7-14", Belt_MutableSetInt.subset(aa$1, v));
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 110, characters 7-14", Belt_MutableSetInt.subset(bb$1, v));
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 111, characters 7-14", Belt_MutableSetInt.isEmpty(Belt_MutableSetInt.intersect(aa$1, bb$1)));
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 104, characters 7-14", !match$2[1]);
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 105, characters 7-14", Belt_Array.eq(Belt_MutableSetInt.toArray(aa$1), Array_data_util.range(500, 999), (x, y) => x === y));
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 106, characters 7-14", Belt_Array.eq(Belt_MutableSetInt.toArray(bb$1), Array_data_util.range(1001, 2000), (x, y) => x === y));
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 107, characters 7-14", Belt_MutableSetInt.subset(aa$1, v));
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 108, characters 7-14", Belt_MutableSetInt.subset(bb$1, v));
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 109, characters 7-14", Belt_MutableSetInt.isEmpty(Belt_MutableSetInt.intersect(aa$1, bb$1)));
   });
   Mocha.test("mutable set union operations", () => {
     let aa = Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 100));
     let bb = Belt_MutableSetInt.fromArray(Array_data_util.randomRange(40, 120));
     let cc = Belt_MutableSetInt.union(aa, bb);
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 121, characters 7-14", Belt_MutableSetInt.eq(cc, Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 120))));
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 124, characters 6-13", Belt_MutableSetInt.eq(Belt_MutableSetInt.union(Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 20)), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(21, 40))), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 40))));
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 119, characters 7-14", Belt_MutableSetInt.eq(cc, Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 120))));
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 122, characters 6-13", Belt_MutableSetInt.eq(Belt_MutableSetInt.union(Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 20)), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(21, 40))), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 40))));
     let dd = Belt_MutableSetInt.intersect(aa, bb);
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 128, characters 7-14", Belt_MutableSetInt.eq(dd, Belt_MutableSetInt.fromArray(Array_data_util.randomRange(40, 100))));
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 129, characters 7-14", Belt_MutableSetInt.eq(Belt_MutableSetInt.intersect(Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 20)), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(21, 40))), Belt_MutableSetInt.make()));
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 130, characters 7-14", Belt_MutableSetInt.eq(Belt_MutableSetInt.intersect(Belt_MutableSetInt.fromArray(Array_data_util.randomRange(21, 40)), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 20))), Belt_MutableSetInt.make()));
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 131, characters 7-14", Belt_MutableSetInt.eq(Belt_MutableSetInt.intersect(Belt_MutableSetInt.fromArray([
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 126, characters 7-14", Belt_MutableSetInt.eq(dd, Belt_MutableSetInt.fromArray(Array_data_util.randomRange(40, 100))));
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 127, characters 7-14", Belt_MutableSetInt.eq(Belt_MutableSetInt.intersect(Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 20)), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(21, 40))), Belt_MutableSetInt.make()));
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 128, characters 7-14", Belt_MutableSetInt.eq(Belt_MutableSetInt.intersect(Belt_MutableSetInt.fromArray(Array_data_util.randomRange(21, 40)), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 20))), Belt_MutableSetInt.make()));
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 129, characters 7-14", Belt_MutableSetInt.eq(Belt_MutableSetInt.intersect(Belt_MutableSetInt.fromArray([
       1,
       3,
       4,
@@ -135,11 +133,11 @@ Mocha.describe("Bs_mutable_set_test", () => {
       4,
       5
     ])));
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 132, characters 7-14", Belt_MutableSetInt.eq(Belt_MutableSetInt.diff(aa, bb), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 39))));
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 133, characters 7-14", Belt_MutableSetInt.eq(Belt_MutableSetInt.diff(bb, aa), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(101, 120))));
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 135, characters 6-13", Belt_MutableSetInt.eq(Belt_MutableSetInt.diff(Belt_MutableSetInt.fromArray(Array_data_util.randomRange(21, 40)), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 20))), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(21, 40))));
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 139, characters 6-13", Belt_MutableSetInt.eq(Belt_MutableSetInt.diff(Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 20)), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(21, 40))), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 20))));
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 144, characters 6-13", Belt_MutableSetInt.eq(Belt_MutableSetInt.diff(Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 20)), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 40))), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, -1))));
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 130, characters 7-14", Belt_MutableSetInt.eq(Belt_MutableSetInt.diff(aa, bb), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 39))));
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 131, characters 7-14", Belt_MutableSetInt.eq(Belt_MutableSetInt.diff(bb, aa), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(101, 120))));
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 133, characters 6-13", Belt_MutableSetInt.eq(Belt_MutableSetInt.diff(Belt_MutableSetInt.fromArray(Array_data_util.randomRange(21, 40)), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 20))), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(21, 40))));
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 137, characters 6-13", Belt_MutableSetInt.eq(Belt_MutableSetInt.diff(Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 20)), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(21, 40))), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 20))));
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 142, characters 6-13", Belt_MutableSetInt.eq(Belt_MutableSetInt.diff(Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 20)), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 40))), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, -1))));
   });
   Mocha.test("mutable set keep/partition operations", () => {
     let a0 = Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 1000));
@@ -148,8 +146,8 @@ Mocha.describe("Bs_mutable_set_test", () => {
     let match = Belt_MutableSetInt.partition(a0, x => x % 2 === 0);
     let a4 = match[1];
     let a3 = match[0];
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 153, characters 7-14", Belt_MutableSetInt.eq(a1, a3));
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 154, characters 7-14", Belt_MutableSetInt.eq(a2, a4));
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 151, characters 7-14", Belt_MutableSetInt.eq(a1, a3));
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 152, characters 7-14", Belt_MutableSetInt.eq(a2, a4));
     Belt_List.forEach({
       hd: a0,
       tl: {
@@ -173,45 +171,45 @@ Mocha.describe("Bs_mutable_set_test", () => {
       Belt_MutableSetInt.add(v, i);
     }
     Belt_MutableSetInt.checkInvariantInternal(v);
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 164, characters 7-14", Belt_Range.every(0, 100000, i => Belt_MutableSetInt.has(v, i)));
-    Test_utils.eq("File \"bs_mutable_set_test.res\", line 165, characters 7-14", Belt_MutableSetInt.size(v), 100001);
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 162, characters 7-14", Belt_Range.every(0, 100000, i => Belt_MutableSetInt.has(v, i)));
+    Test_utils.eq("File \"bs_mutable_set_test.res\", line 163, characters 7-14", Belt_MutableSetInt.size(v), 100001);
   });
   Mocha.test("mutable set merge operations", () => {
     let u = Belt_Array.concat(Array_data_util.randomRange(30, 100), Array_data_util.randomRange(40, 120));
     let v = Belt_MutableSetInt.make();
     Belt_MutableSetInt.mergeMany(v, u);
-    Test_utils.eq("File \"bs_mutable_set_test.res\", line 172, characters 7-14", Belt_MutableSetInt.size(v), 91);
-    Test_utils.eq("File \"bs_mutable_set_test.res\", line 173, characters 7-14", Belt_MutableSetInt.toArray(v), Array_data_util.range(30, 120));
+    Test_utils.eq("File \"bs_mutable_set_test.res\", line 170, characters 7-14", Belt_MutableSetInt.size(v), 91);
+    Test_utils.eq("File \"bs_mutable_set_test.res\", line 171, characters 7-14", Belt_MutableSetInt.toArray(v), Array_data_util.range(30, 120));
   });
   Mocha.test("mutable set remove many operations", () => {
     let u = Belt_Array.concat(Array_data_util.randomRange(0, 100000), Array_data_util.randomRange(0, 100));
     let v = Belt_MutableSetInt.fromArray(u);
-    Test_utils.eq("File \"bs_mutable_set_test.res\", line 179, characters 7-14", Belt_MutableSetInt.size(v), 100001);
+    Test_utils.eq("File \"bs_mutable_set_test.res\", line 177, characters 7-14", Belt_MutableSetInt.size(v), 100001);
     let u$1 = Array_data_util.randomRange(50000, 80000);
     for (let i = 0, i_finish = u$1.length; i < i_finish; ++i) {
       Belt_MutableSetInt.remove(v, i);
     }
-    Test_utils.eq("File \"bs_mutable_set_test.res\", line 186, characters 7-14", Belt_MutableSetInt.size(v), 70000);
+    Test_utils.eq("File \"bs_mutable_set_test.res\", line 184, characters 7-14", Belt_MutableSetInt.size(v), 70000);
     let vv = Array_data_util.randomRange(0, 100000);
     for (let i$1 = 0, i_finish$1 = vv.length; i$1 < i_finish$1; ++i$1) {
       Belt_MutableSetInt.remove(v, vv[i$1]);
     }
-    Test_utils.eq("File \"bs_mutable_set_test.res\", line 192, characters 7-14", Belt_MutableSetInt.size(v), 0);
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 193, characters 7-14", Belt_MutableSetInt.isEmpty(v));
+    Test_utils.eq("File \"bs_mutable_set_test.res\", line 190, characters 7-14", Belt_MutableSetInt.size(v), 0);
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 191, characters 7-14", Belt_MutableSetInt.isEmpty(v));
   });
   Mocha.test("mutable set min/max operations", () => {
     let v = Belt_MutableSetInt.fromArray(Belt_Array.makeBy(30, i => i));
     Belt_MutableSetInt.remove(v, 30);
     Belt_MutableSetInt.remove(v, 29);
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 200, characters 7-14", 28 === Belt_MutableSetInt.maxUndefined(v));
+    Test_utils.eq("File \"bs_mutable_set_test.res\", line 198, characters 7-14", Belt_MutableSetInt.maximum(v), 28);
     Belt_MutableSetInt.remove(v, 0);
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 202, characters 7-14", 1 === Belt_MutableSetInt.minUndefined(v));
-    Test_utils.eq("File \"bs_mutable_set_test.res\", line 203, characters 7-14", Belt_MutableSetInt.size(v), 28);
+    Test_utils.eq("File \"bs_mutable_set_test.res\", line 200, characters 7-14", Belt_MutableSetInt.minimum(v), 1);
+    Test_utils.eq("File \"bs_mutable_set_test.res\", line 201, characters 7-14", Belt_MutableSetInt.size(v), 28);
     let vv = Array_data_util.randomRange(1, 28);
     for (let i = 0, i_finish = vv.length; i < i_finish; ++i) {
       Belt_MutableSetInt.remove(v, vv[i]);
     }
-    Test_utils.eq("File \"bs_mutable_set_test.res\", line 208, characters 7-14", Belt_MutableSetInt.size(v), 0);
+    Test_utils.eq("File \"bs_mutable_set_test.res\", line 206, characters 7-14", Belt_MutableSetInt.size(v), 0);
   });
   Mocha.test("mutable set fromSortedArrayUnsafe", () => {
     let id = (loc, x) => {
@@ -219,31 +217,31 @@ Mocha.describe("Bs_mutable_set_test", () => {
       Belt_MutableSetInt.checkInvariantInternal(u);
       Test_utils.ok(loc, Belt_Array.every2(Belt_MutableSetInt.toArray(u), x, (x, y) => x === y));
     };
-    id("File \"bs_mutable_set_test.res\", line 218, characters 7-14", []);
-    id("File \"bs_mutable_set_test.res\", line 219, characters 7-14", [0]);
-    id("File \"bs_mutable_set_test.res\", line 220, characters 7-14", [
+    id("File \"bs_mutable_set_test.res\", line 216, characters 7-14", []);
+    id("File \"bs_mutable_set_test.res\", line 217, characters 7-14", [0]);
+    id("File \"bs_mutable_set_test.res\", line 218, characters 7-14", [
       0,
       1
     ]);
-    id("File \"bs_mutable_set_test.res\", line 221, characters 7-14", [
+    id("File \"bs_mutable_set_test.res\", line 219, characters 7-14", [
       0,
       1,
       2
     ]);
-    id("File \"bs_mutable_set_test.res\", line 222, characters 7-14", [
+    id("File \"bs_mutable_set_test.res\", line 220, characters 7-14", [
       0,
       1,
       2,
       3
     ]);
-    id("File \"bs_mutable_set_test.res\", line 223, characters 7-14", [
+    id("File \"bs_mutable_set_test.res\", line 221, characters 7-14", [
       0,
       1,
       2,
       3,
       4
     ]);
-    id("File \"bs_mutable_set_test.res\", line 224, characters 7-14", [
+    id("File \"bs_mutable_set_test.res\", line 222, characters 7-14", [
       0,
       1,
       2,
@@ -251,7 +249,7 @@ Mocha.describe("Bs_mutable_set_test", () => {
       4,
       5
     ]);
-    id("File \"bs_mutable_set_test.res\", line 225, characters 7-14", [
+    id("File \"bs_mutable_set_test.res\", line 223, characters 7-14", [
       0,
       1,
       2,
@@ -259,7 +257,7 @@ Mocha.describe("Bs_mutable_set_test", () => {
       4,
       6
     ]);
-    id("File \"bs_mutable_set_test.res\", line 226, characters 7-14", [
+    id("File \"bs_mutable_set_test.res\", line 224, characters 7-14", [
       0,
       1,
       2,
@@ -268,7 +266,7 @@ Mocha.describe("Bs_mutable_set_test", () => {
       6,
       7
     ]);
-    id("File \"bs_mutable_set_test.res\", line 227, characters 7-14", [
+    id("File \"bs_mutable_set_test.res\", line 225, characters 7-14", [
       0,
       1,
       2,
@@ -278,7 +276,7 @@ Mocha.describe("Bs_mutable_set_test", () => {
       7,
       8
     ]);
-    id("File \"bs_mutable_set_test.res\", line 228, characters 7-14", [
+    id("File \"bs_mutable_set_test.res\", line 226, characters 7-14", [
       0,
       1,
       2,
@@ -289,7 +287,7 @@ Mocha.describe("Bs_mutable_set_test", () => {
       8,
       9
     ]);
-    id("File \"bs_mutable_set_test.res\", line 229, characters 7-14", Array_data_util.range(0, 1000));
+    id("File \"bs_mutable_set_test.res\", line 227, characters 7-14", Array_data_util.range(0, 1000));
   });
   Mocha.test("mutable set keep/partition with mod 8", () => {
     let v = Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 1000));
@@ -299,35 +297,35 @@ Mocha.describe("Bs_mutable_set_test", () => {
     for (let i = 0; i <= 200; ++i) {
       Belt_MutableSetInt.remove(v, i);
     }
-    Test_utils.eq("File \"bs_mutable_set_test.res\", line 240, characters 7-14", Belt_MutableSetInt.size(copyV), 126);
-    Test_utils.eq("File \"bs_mutable_set_test.res\", line 241, characters 7-14", Belt_MutableSetInt.toArray(copyV), Belt_Array.makeBy(126, i => (i << 3)));
-    Test_utils.eq("File \"bs_mutable_set_test.res\", line 242, characters 7-14", Belt_MutableSetInt.size(v), 800);
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 243, characters 7-14", Belt_MutableSetInt.eq(copyV, match[0]));
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 244, characters 7-14", Belt_MutableSetInt.eq(cc, match[1]));
+    Test_utils.eq("File \"bs_mutable_set_test.res\", line 238, characters 7-14", Belt_MutableSetInt.size(copyV), 126);
+    Test_utils.eq("File \"bs_mutable_set_test.res\", line 239, characters 7-14", Belt_MutableSetInt.toArray(copyV), Belt_Array.makeBy(126, i => (i << 3)));
+    Test_utils.eq("File \"bs_mutable_set_test.res\", line 240, characters 7-14", Belt_MutableSetInt.size(v), 800);
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 241, characters 7-14", Belt_MutableSetInt.eq(copyV, match[0]));
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 242, characters 7-14", Belt_MutableSetInt.eq(cc, match[1]));
   });
   Mocha.test("mutable set split operations", () => {
     let v = Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 1000));
     let match = Belt_MutableSetInt.split(v, 400);
     let match$1 = match[0];
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 250, characters 7-14", Belt_MutableSetInt.eq(match$1[0], Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 399))));
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 251, characters 7-14", Belt_MutableSetInt.eq(match$1[1], Belt_MutableSetInt.fromArray(Array_data_util.randomRange(401, 1000))));
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 248, characters 7-14", Belt_MutableSetInt.eq(match$1[0], Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 399))));
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 249, characters 7-14", Belt_MutableSetInt.eq(match$1[1], Belt_MutableSetInt.fromArray(Array_data_util.randomRange(401, 1000))));
     let d = Belt_MutableSetInt.fromArray(Belt_Array.map(Array_data_util.randomRange(0, 1000), x => (x << 1)));
     let match$2 = Belt_MutableSetInt.split(d, 1001);
     let match$3 = match$2[0];
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 254, characters 7-14", Belt_MutableSetInt.eq(match$3[0], Belt_MutableSetInt.fromArray(Belt_Array.makeBy(501, x => (x << 1)))));
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 255, characters 7-14", Belt_MutableSetInt.eq(match$3[1], Belt_MutableSetInt.fromArray(Belt_Array.makeBy(500, x => 1002 + (x << 1) | 0))));
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 252, characters 7-14", Belt_MutableSetInt.eq(match$3[0], Belt_MutableSetInt.fromArray(Belt_Array.makeBy(501, x => (x << 1)))));
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 253, characters 7-14", Belt_MutableSetInt.eq(match$3[1], Belt_MutableSetInt.fromArray(Belt_Array.makeBy(500, x => 1002 + (x << 1) | 0))));
   });
   Mocha.test("mutable set final union operations", () => {
     let aa = Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 100));
     let bb = Belt_MutableSetInt.fromArray(Array_data_util.randomRange(40, 120));
     let cc = Belt_MutableSetInt.union(aa, bb);
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 265, characters 7-14", Belt_MutableSetInt.eq(cc, Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 120))));
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 268, characters 6-13", Belt_MutableSetInt.eq(Belt_MutableSetInt.union(Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 20)), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(21, 40))), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 40))));
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 263, characters 7-14", Belt_MutableSetInt.eq(cc, Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 120))));
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 266, characters 6-13", Belt_MutableSetInt.eq(Belt_MutableSetInt.union(Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 20)), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(21, 40))), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 40))));
     let dd = Belt_MutableSetInt.intersect(aa, bb);
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 272, characters 7-14", Belt_MutableSetInt.eq(dd, Belt_MutableSetInt.fromArray(Array_data_util.randomRange(40, 100))));
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 273, characters 7-14", Belt_MutableSetInt.eq(Belt_MutableSetInt.intersect(Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 20)), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(21, 40))), Belt_MutableSetInt.make()));
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 274, characters 7-14", Belt_MutableSetInt.eq(Belt_MutableSetInt.intersect(Belt_MutableSetInt.fromArray(Array_data_util.randomRange(21, 40)), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 20))), Belt_MutableSetInt.make()));
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 275, characters 7-14", Belt_MutableSetInt.eq(Belt_MutableSetInt.intersect(Belt_MutableSetInt.fromArray([
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 270, characters 7-14", Belt_MutableSetInt.eq(dd, Belt_MutableSetInt.fromArray(Array_data_util.randomRange(40, 100))));
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 271, characters 7-14", Belt_MutableSetInt.eq(Belt_MutableSetInt.intersect(Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 20)), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(21, 40))), Belt_MutableSetInt.make()));
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 272, characters 7-14", Belt_MutableSetInt.eq(Belt_MutableSetInt.intersect(Belt_MutableSetInt.fromArray(Array_data_util.randomRange(21, 40)), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 20))), Belt_MutableSetInt.make()));
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 273, characters 7-14", Belt_MutableSetInt.eq(Belt_MutableSetInt.intersect(Belt_MutableSetInt.fromArray([
       1,
       3,
       4,
@@ -345,11 +343,11 @@ Mocha.describe("Bs_mutable_set_test", () => {
       4,
       5
     ])));
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 276, characters 7-14", Belt_MutableSetInt.eq(Belt_MutableSetInt.diff(aa, bb), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 39))));
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 277, characters 7-14", Belt_MutableSetInt.eq(Belt_MutableSetInt.diff(bb, aa), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(101, 120))));
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 279, characters 6-13", Belt_MutableSetInt.eq(Belt_MutableSetInt.diff(Belt_MutableSetInt.fromArray(Array_data_util.randomRange(21, 40)), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 20))), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(21, 40))));
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 283, characters 6-13", Belt_MutableSetInt.eq(Belt_MutableSetInt.diff(Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 20)), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(21, 40))), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 20))));
-    Test_utils.ok("File \"bs_mutable_set_test.res\", line 288, characters 6-13", Belt_MutableSetInt.eq(Belt_MutableSetInt.diff(Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 20)), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 40))), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, -1))));
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 274, characters 7-14", Belt_MutableSetInt.eq(Belt_MutableSetInt.diff(aa, bb), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 39))));
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 275, characters 7-14", Belt_MutableSetInt.eq(Belt_MutableSetInt.diff(bb, aa), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(101, 120))));
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 277, characters 6-13", Belt_MutableSetInt.eq(Belt_MutableSetInt.diff(Belt_MutableSetInt.fromArray(Array_data_util.randomRange(21, 40)), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 20))), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(21, 40))));
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 281, characters 6-13", Belt_MutableSetInt.eq(Belt_MutableSetInt.diff(Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 20)), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(21, 40))), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 20))));
+    Test_utils.ok("File \"bs_mutable_set_test.res\", line 286, characters 6-13", Belt_MutableSetInt.eq(Belt_MutableSetInt.diff(Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 20)), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, 40))), Belt_MutableSetInt.fromArray(Array_data_util.randomRange(0, -1))));
   });
 });
 

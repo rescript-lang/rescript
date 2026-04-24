@@ -114,11 +114,13 @@ let rec no_side_effects (lam : Lam.t) : bool =
   | Lifthenelse (a, b, c) ->
     no_side_effects a && no_side_effects b && no_side_effects c
   | Lsequence (a, b) -> no_side_effects a && no_side_effects b
+  | Lbreak | Lcontinue -> false
   | Lletrec (bindings, body) ->
     Ext_list.for_all_snd bindings no_side_effects && no_side_effects body
   | Lwhile _ ->
     false (* conservative here, non-terminating loop does have side effect *)
   | Lfor _ -> false
+  | Lfor_of _ | Lfor_await_of _ -> false
   | Lassign _ -> false (* actually it depends ... *)
   (* | Lsend _ -> false  *)
   | Lapply
@@ -182,8 +184,10 @@ let rec size (lam : Lam.t) =
     | Ltrywith _ -> really_big ()
     | Lifthenelse (l1, l2, l3) -> 1 + size l1 + size l2 + size l3
     | Lsequence (l1, l2) -> size l1 + size l2
+    | Lbreak | Lcontinue -> 1
     | Lwhile _ -> really_big ()
     | Lfor _ -> really_big ()
+    | Lfor_of _ | Lfor_await_of _ -> really_big ()
     | Lassign (_, v) -> 1 + size v
     (* This is side effectful,  be careful *)
     (* | Lsend _  ->  really_big () *)

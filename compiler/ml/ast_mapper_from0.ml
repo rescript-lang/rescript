@@ -25,6 +25,19 @@ open Ast_helper
 open Location
 module Pt = Parsetree
 
+let jsx_prop_loc_attr = "res.jsxPropLoc"
+let jsx_spread_loc_attr = "res.jsxSpreadLoc"
+
+let extract_internal_loc_attr attr_name attrs =
+  let rec loop rev_acc = function
+    | [] -> (None, List.rev rev_acc)
+    | (({txt; loc}, payload) as attr) :: rest ->
+      if txt = attr_name && payload = PStr [] then
+        (Some loc, List.rev_append rev_acc rest)
+      else loop (attr :: rev_acc) rest
+  in
+  loop [] attrs
+
 type mapper = {
   attribute: mapper -> attribute -> Pt.attribute;
   attributes: mapper -> attribute list -> Pt.attribute list;
@@ -74,6 +87,9 @@ let map_constant = function
   | Pconst_char c -> Pconst_char c
   | Pconst_string (s, q) -> Pconst_string (s, q)
   | Pconst_float (s, suffix) -> Pconst_float (s, suffix)
+
+let for_of_attr_name = "_res.for_of"
+let for_await_of_attr_name = "_res.for_await_of"
 
 let map_loc sub {loc; txt} = {loc = sub.location sub loc; txt}
 
@@ -310,6 +326,37 @@ module E = struct
         | _ -> true)
       attrs
 
+  let extract_for_of_attribute attrs =
+    List.find_map
+      (function
+        | {Location.txt}, Pt.PPat (_, Some expr) when txt = for_of_attr_name ->
+          Some expr
+        | _ -> None)
+      attrs
+
+  let extract_for_await_of_attribute attrs =
+    List.find_map
+      (function
+        | {Location.txt}, Pt.PPat (_, Some expr)
+          when txt = for_await_of_attr_name ->
+          Some expr
+        | _ -> None)
+      attrs
+
+  let remove_for_of_attribute attrs =
+    List.filter
+      (function
+        | {Location.txt}, _ when txt = for_of_attr_name -> false
+        | _ -> true)
+      attrs
+
+  let remove_for_await_of_attribute attrs =
+    List.filter
+      (function
+        | {Location.txt}, _ when txt = for_await_of_attr_name -> false
+        | _ -> true)
+      attrs
+
   let map_jsx_children sub (e : expression) : Pt.jsx_children =
     let rec visit (e : expression) : Pt.expression list =
       match e.pexp_desc with
@@ -331,9 +378,22 @@ module E = struct
 
   let try_map_jsx_prop (sub : mapper) (lbl : Asttypes.Noloc.arg_label)
       (e : expression) : Parsetree.jsx_prop option =
+    let map_expr_with_loc_attr attr_name fallback make_prop =
+      let loc, attrs = extract_internal_loc_attr attr_name e.pexp_attributes in
+      let e = {e with pexp_attributes = attrs} in
+      let expr = sub.expr sub e in
+      make_prop
+        (match loc with
+        | Some loc -> loc
+        | None -> fallback expr)
+        expr
+    in
     match (lbl, e) with
-    | Asttypes.Noloc.Labelled "_spreadProps", expr ->
-      Some (Parsetree.JSXPropSpreading (Location.none, sub.expr sub expr))
+    | Asttypes.Noloc.Labelled "_spreadProps", _expr ->
+      Some
+        (map_expr_with_loc_attr jsx_spread_loc_attr
+           (fun expr -> expr.pexp_loc)
+           (fun loc expr -> Parsetree.JSXPropSpreading (loc, expr)))
     | ( Asttypes.Noloc.Labelled name,
         {pexp_desc = Pexp_ident {txt = Longident.Lident v}; pexp_loc = name_loc}
       )
@@ -344,14 +404,18 @@ module E = struct
       )
       when name = v ->
       Some (Parsetree.JSXPropPunning (true, {txt = name; loc = name_loc}))
-    | Asttypes.Noloc.Labelled name, exp ->
+    | Asttypes.Noloc.Labelled name, _exp ->
       Some
-        (Parsetree.JSXPropValue
-           ({txt = name; loc = Location.none}, false, sub.expr sub exp))
-    | Asttypes.Noloc.Optional name, exp ->
+        (map_expr_with_loc_attr jsx_prop_loc_attr
+           (fun expr -> expr.pexp_loc)
+           (fun loc expr ->
+             Parsetree.JSXPropValue ({txt = name; loc}, false, expr)))
+    | Asttypes.Noloc.Optional name, _exp ->
       Some
-        (Parsetree.JSXPropValue
-           ({txt = name; loc = Location.none}, true, sub.expr sub exp))
+        (map_expr_with_loc_attr jsx_prop_loc_attr
+           (fun expr -> expr.pexp_loc)
+           (fun loc expr ->
+             Parsetree.JSXPropValue ({txt = name; loc}, true, expr)))
     | _ -> None
 
   let extract_props_and_children (sub : mapper) items =
@@ -522,11 +586,27 @@ module E = struct
         (map_opt (sub.expr sub) e3)
     | Pexp_sequence (e1, e2) ->
       sequence ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)
+    | Pexp_extension ({txt = "res.break"; _}, PStr []) -> break ~loc ~attrs ()
+    | Pexp_extension ({txt = "res.continue"; _}, PStr []) ->
+      continue ~loc ~attrs ()
     | Pexp_while (e1, e2) ->
       while_ ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)
-    | Pexp_for (p, e1, e2, d, e3) ->
-      for_ ~loc ~attrs (sub.pat sub p) (sub.expr sub e1) (sub.expr sub e2) d
-        (sub.expr sub e3)
+    | Pexp_for (p, e1, e2, d, e3) -> (
+      let async_iterable_expr = extract_for_await_of_attribute attrs in
+      let array_expr = extract_for_of_attribute attrs in
+      let attrs =
+        remove_for_await_of_attribute (remove_for_of_attribute attrs)
+      in
+      match (async_iterable_expr, array_expr) with
+      | Some iterable, _ ->
+        for_await_of ~loc ~attrs (sub.pat sub p) iterable (sub.expr sub e3)
+      | None, Some array ->
+        (* This is actually a for...of loop, decode it *)
+        for_of ~loc ~attrs (sub.pat sub p) array (sub.expr sub e3)
+      | None, None ->
+        (* Regular for loop *)
+        for_ ~loc ~attrs (sub.pat sub p) (sub.expr sub e1) (sub.expr sub e2) d
+          (sub.expr sub e3))
     | Pexp_coerce (e, (), t2) ->
       coerce ~loc ~attrs (sub.expr sub e) (sub.typ sub t2)
     | Pexp_constraint (e, t) ->

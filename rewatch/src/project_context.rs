@@ -121,13 +121,17 @@ fn read_local_packages(
 }
 
 fn monorepo_or_single_project(path: &Path, current_config: Config) -> Result<ProjectContext> {
-    let local_dependencies = match &current_config.dependencies {
-        None => AHashSet::<String>::new(),
-        Some(deps) => read_local_packages(path, deps)?,
+    let dep_names = current_config.get_dependency_names();
+    let dev_dep_names = current_config.get_dev_dependency_names();
+    let local_dependencies = if dep_names.is_empty() {
+        AHashSet::<String>::new()
+    } else {
+        read_local_packages(path, &dep_names)?
     };
-    let local_dev_dependencies = match &current_config.dev_dependencies {
-        None => AHashSet::<String>::new(),
-        Some(deps) => read_local_packages(path, deps)?,
+    let local_dev_dependencies = if dev_dep_names.is_empty() {
+        AHashSet::<String>::new()
+    } else {
+        read_local_packages(path, &dev_dep_names)?
     };
     if local_dependencies.is_empty() && local_dev_dependencies.is_empty() {
         Ok(ProjectContext {
@@ -151,15 +155,11 @@ fn monorepo_or_single_project(path: &Path, current_config: Config) -> Result<Pro
 
 fn is_config_listed_in_workspace(current_config: &Config, workspace_config: &Config) -> bool {
     workspace_config
-        .dependencies
-        .to_owned()
-        .unwrap_or_default()
+        .get_dependency_names()
         .iter()
         .any(|dep| dep == &current_config.name)
         || workspace_config
-            .dev_dependencies
-            .to_owned()
-            .unwrap_or_default()
+            .get_dev_dependency_names()
             .iter()
             .any(|dep| dep == &current_config.name)
 }

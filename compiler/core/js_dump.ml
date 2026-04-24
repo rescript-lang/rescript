@@ -237,15 +237,6 @@ let debugger_nl f =
   semi f;
   P.newline f
 
-let break_nl f =
-  P.string f L.break;
-  semi f;
-  P.newline f
-
-let continue f =
-  P.string f L.continue;
-  semi f
-
 let formal_parameter_list cxt f l = iter_lst cxt f l Ext_pp_scope.ident comma_sp
 
 (* IdentMap *)
@@ -1390,9 +1381,18 @@ and statement_desc top cxt f (s : J.statement_desc) : cxt =
       P.string f L.else_;
       P.space f;
       brace_block cxt f s2)
-  | While (e, s) ->
+  | While (label, e, s) ->
     (*  FIXME: print scope as well *)
     let cxt =
+      let cxt =
+        match label with
+        | None -> cxt
+        | Some label ->
+          P.string f label;
+          P.string f L.colon;
+          P.space f;
+          cxt
+      in
       match e.expression_desc with
       | Number (Int {i = 1l}) ->
         P.string f L.while_;
@@ -1412,9 +1412,18 @@ and statement_desc top cxt f (s : J.statement_desc) : cxt =
     let cxt = brace_block cxt f s in
     semi f;
     cxt
-  | ForRange (for_ident_expression, finish, id, direction, s) ->
+  | ForRange (label, for_ident_expression, finish, id, direction, s) ->
     let action cxt =
       P.vgroup f 0 (fun _ ->
+          let cxt =
+            match label with
+            | None -> cxt
+            | Some label ->
+              P.string f label;
+              P.string f L.colon;
+              P.space f;
+              cxt
+          in
           let cxt =
             P.group f 0 (fun _ ->
                 (* The only place that [semi] may have semantics here *)
@@ -1489,15 +1498,81 @@ and statement_desc top cxt f (s : J.statement_desc) : cxt =
           brace_block cxt f s)
     in
     action cxt
-  | Continue ->
-    continue f;
+  | ForOf (label, id, iterable, s) ->
+    P.vgroup f 0 (fun _ ->
+        let cxt =
+          P.group f 0 (fun _ ->
+              let cxt =
+                match label with
+                | None -> cxt
+                | Some label ->
+                  P.string f label;
+                  P.string f L.colon;
+                  P.space f;
+                  cxt
+              in
+              P.string f L.for_;
+              P.space f;
+              P.paren_group f 1 (fun _ ->
+                  P.string f L.let_;
+                  P.space f;
+                  let cxt = Ext_pp_scope.ident cxt f id in
+                  P.space f;
+                  P.string f L.of_;
+                  P.space f;
+                  expression ~level:0 cxt f iterable))
+        in
+        P.space f;
+        brace_block cxt f s)
+  | ForAwaitOf (label, id, iterable, s) ->
+    P.vgroup f 0 (fun _ ->
+        let cxt =
+          P.group f 0 (fun _ ->
+              let cxt =
+                match label with
+                | None -> cxt
+                | Some label ->
+                  P.string f label;
+                  P.string f L.colon;
+                  P.space f;
+                  cxt
+              in
+              P.string f L.for_;
+              P.space f;
+              P.string f L.await;
+              P.space f;
+              P.paren_group f 1 (fun _ ->
+                  P.string f L.let_;
+                  P.space f;
+                  let cxt = Ext_pp_scope.ident cxt f id in
+                  P.space f;
+                  P.string f L.of_;
+                  P.space f;
+                  expression ~level:0 cxt f iterable))
+        in
+        P.space f;
+        brace_block cxt f s)
+  | Continue label ->
+    P.string f L.continue;
+    (match label with
+    | None -> ()
+    | Some label ->
+      P.space f;
+      P.string f label);
+    semi f;
     cxt
   (* P.newline f;  #2642 *)
   | Debugger ->
     debugger_nl f;
     cxt
-  | Break ->
-    break_nl f;
+  | Break label ->
+    P.string f L.break;
+    (match label with
+    | None -> ()
+    | Some label ->
+      P.space f;
+      P.string f label);
+    semi f;
     cxt
   | Return e -> (
     match e.expression_desc with

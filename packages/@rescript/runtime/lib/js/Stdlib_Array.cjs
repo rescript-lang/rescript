@@ -71,6 +71,10 @@ function compare(a, b, cmp) {
   }
 }
 
+function concatAll(arrays) {
+  return [].concat(...arrays);
+}
+
 function indexOfOpt(arr, item) {
   let index = arr.indexOf(item);
   if (index !== -1) {
@@ -263,6 +267,7 @@ exports.fromInitializer = fromInitializer;
 exports.equal = equal;
 exports.compare = compare;
 exports.isEmpty = isEmpty;
+exports.concatAll = concatAll;
 exports.indexOfOpt = indexOfOpt;
 exports.lastIndexOfOpt = lastIndexOfOpt;
 exports.reduce = reduce;

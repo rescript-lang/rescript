@@ -389,23 +389,19 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
               || E.is_null_undefined_constant e2) ->
       E.neq_null_undefined_boolean e1 e2
     | [e1; e2] ->
-      Location.prerr_warning loc Warnings.Bs_polymorphic_comparison;
       E.runtime_call Primitive_modules.object_
         (Lam_compile_util.runtime_of_comp cmp)
         args
     | _ -> assert false)
   | Pobjorder -> (
-    Location.prerr_warning loc Warnings.Bs_polymorphic_comparison;
     match args with
     | [a; b] -> E.runtime_call Primitive_modules.object_ "compare" args
     | _ -> assert false)
   | Pobjmin -> (
-    Location.prerr_warning loc Warnings.Bs_polymorphic_comparison;
     match args with
     | [a; b] -> E.runtime_call Primitive_modules.object_ "min" args
     | _ -> assert false)
   | Pobjmax -> (
-    Location.prerr_warning loc Warnings.Bs_polymorphic_comparison;
     match args with
     | [a; b] -> E.runtime_call Primitive_modules.object_ "max" args
     | _ -> assert false)

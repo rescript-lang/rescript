@@ -1,4 +1,5 @@
 use super::build_types::*;
+use super::compile::retain_critical_external_warnings;
 use super::logs;
 use super::namespaces;
 use crate::build::packages::Package;
@@ -139,7 +140,18 @@ pub fn generate_asts(
                             logs::append(package, &stderr_warnings);
                             stderr.push_str(&stderr_warnings);
                         }
-                        Ok((_path, Some(_))) | Ok((_path, None)) => {
+                        Ok((_path, Some(stderr_warnings))) => {
+                            source_file.implementation.parse_state = ParseState::Success;
+                            source_file.implementation.parse_dirty = false;
+                            // External dep: surface only the critical warnings
+                            // (e.g. legacy `(. ...)` uncurried syntax) so
+                            // downstream users can report breakage upstream.
+                            if let Some(kept) = retain_critical_external_warnings(&stderr_warnings) {
+                                logs::append(package, &kept);
+                                stderr.push_str(&kept);
+                            }
+                        }
+                        Ok((_path, None)) => {
                             source_file.implementation.parse_state = ParseState::Success;
                             source_file.implementation.parse_dirty = false;
                         }
@@ -167,7 +179,17 @@ pub fn generate_asts(
                             logs::append(package, &stderr_warnings);
                             stderr.push_str(&stderr_warnings);
                         }
-                        Ok(Some((_, None))) | Ok(Some((_, Some(_)))) => {
+                        Ok(Some((_, Some(stderr_warnings)))) => {
+                            if let Some(interface) = source_file.interface.as_mut() {
+                                interface.parse_state = ParseState::Success;
+                                interface.parse_dirty = false;
+                            }
+                            if let Some(kept) = retain_critical_external_warnings(&stderr_warnings) {
+                                logs::append(package, &kept);
+                                stderr.push_str(&kept);
+                            }
+                        }
+                        Ok(Some((_, None))) => {
                             if let Some(interface) = source_file.interface.as_mut() {
                                 interface.parse_state = ParseState::Success;
                                 interface.parse_dirty = false;

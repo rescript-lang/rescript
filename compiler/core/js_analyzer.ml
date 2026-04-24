@@ -132,9 +132,10 @@ let no_side_effect_obj =
     statement =
       (fun self s ->
         match s.statement_desc with
-        | Throw _ | Debugger | Break | Variable _ | Continue ->
+        | Throw _ | Debugger | Break _ | Variable _ | Continue _ ->
           raise_notrace Not_found
         | Exp e -> self.expression self e
+        | ForOf _ | ForAwaitOf _ -> raise_notrace Not_found
         | Int_switch _ | String_switch _ | ForRange _ | If _ | While _ | Block _
         | Return _ | Try _ ->
           super.statement self s);
@@ -250,13 +251,13 @@ and eq_statement ({statement_desc = x0} : J.statement)
     | Return b -> eq_expression a b
     | _ -> false)
   | Debugger -> y0 = Debugger
-  | Break -> y0 = Break
+  | Break label -> y0 = Break label
   | Block xs0 -> (
     match y0 with
     | Block ys0 -> eq_block xs0 ys0
     | _ -> false)
-  | Variable _ | If _ | While _ | ForRange _ | Continue | Int_switch _
-  | String_switch _ | Throw _ | Try _ ->
+  | Variable _ | If _ | While _ | ForRange _ | ForOf _ | ForAwaitOf _
+  | Continue _ | Int_switch _ | String_switch _ | Throw _ | Try _ ->
     false
 
 let rev_flatten_seq (x : J.expression) =

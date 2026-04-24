@@ -15,10 +15,13 @@ use anyhow::{Result, anyhow};
 use console::style;
 use log::{debug, info, trace, warn};
 use rayon::prelude::*;
+use std::cmp::Ordering;
+use std::collections::BinaryHeap;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
 use std::sync::OnceLock;
+use std::sync::mpsc;
 use std::time::SystemTime;
 
 /// Execute js-post-build command for a compiled JavaScript file.
@@ -72,13 +75,185 @@ fn execute_post_build_command(cmd: &str, js_file_path: &Path, working_dir: &Path
     }
 }
 
+/// A unit of work in the ready queue. Ordered by `priority` so that the
+/// `BinaryHeap` pops the module with the longest remaining critical path first.
+#[derive(Debug)]
+struct WorkUnit {
+    priority: i64,
+    module_name: String,
+}
+
+impl PartialEq for WorkUnit {
+    fn eq(&self, other: &Self) -> bool {
+        self.priority == other.priority
+    }
+}
+impl Eq for WorkUnit {}
+impl PartialOrd for WorkUnit {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl Ord for WorkUnit {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.priority.cmp(&other.priority)
+    }
+}
+
+/// Result of a single module compilation, sent from a worker back to the
+/// dispatcher on the main thread. Mirrors the tuple shape the wave-based
+/// scheduler used to return.
+struct CompletionMsg {
+    module_name: String,
+    result: Result<Option<String>>,
+    interface_result: Option<Result<Option<String>>>,
+    is_clean: bool,
+    is_compiled: bool,
+}
+
+/// Compute the critical-path priority of every module in the universe:
+/// `priority(m) = 1 + max(priority(d) for d in in-universe dependents of m)`.
+/// Runs a reverse-topological sweep from leaves to roots. Modules stuck in a
+/// cycle get priority 0, and the actual cycle is diagnosed later by
+/// `dependency_cycle::find` when the dispatcher detects a stall.
+fn compute_critical_path_priorities(
+    universe: &AHashSet<String>,
+    build_state: &BuildState,
+) -> AHashMap<String, i64> {
+    let mut priorities: AHashMap<String, i64> = AHashMap::with_capacity(universe.len());
+    let mut remaining_dependents: AHashMap<String, usize> = AHashMap::with_capacity(universe.len());
+    let mut queue: Vec<String> = Vec::new();
+
+    for name in universe {
+        let module = build_state.get_module(name).unwrap();
+        let count = module.dependents.iter().filter(|d| universe.contains(*d)).count();
+        remaining_dependents.insert(name.clone(), count);
+        if count == 0 {
+            queue.push(name.clone());
+        }
+    }
+
+    while let Some(name) = queue.pop() {
+        let module = build_state.get_module(&name).unwrap();
+        let max_dep_priority = module
+            .dependents
+            .iter()
+            .filter(|d| universe.contains(*d))
+            .filter_map(|d| priorities.get(d).copied())
+            .max()
+            .unwrap_or(0);
+        priorities.insert(name.clone(), max_dep_priority + 1);
+
+        for dep in &module.deps {
+            if !universe.contains(dep) {
+                continue;
+            }
+            if let Some(count) = remaining_dependents.get_mut(dep) {
+                *count -= 1;
+                if *count == 0 {
+                    queue.push(dep.clone());
+                }
+            }
+        }
+    }
+
+    for name in universe {
+        priorities.entry(name.clone()).or_insert(0);
+    }
+    priorities
+}
+
+/// Run the short-circuit check or actual `bsc` invocation for a single module.
+/// Invoked from worker threads inside the dispatcher scope; only reads
+/// `BuildState`, never mutates it.
+fn compile_one(
+    build_state: &BuildState,
+    module_name: &str,
+    is_dirty: bool,
+    warn_error_override: Option<String>,
+) -> CompletionMsg {
+    let module = build_state.get_module(module_name).unwrap();
+    let package = build_state
+        .get_package(&module.package_name)
+        .expect("Package not found");
+
+    if !is_dirty {
+        return CompletionMsg {
+            module_name: module_name.to_string(),
+            result: Ok(None),
+            interface_result: Some(Ok(None)),
+            is_clean: true,
+            is_compiled: false,
+        };
+    }
+
+    match &module.source_type {
+        SourceType::MlMap(_) => {
+            // The mlmap is compiled during AST generation; the entry here just
+            // marks it compiled so its namespace members can proceed.
+            CompletionMsg {
+                module_name: package.namespace.to_suffix().unwrap(),
+                result: Ok(None),
+                interface_result: Some(Ok(None)),
+                is_clean: false,
+                is_compiled: false,
+            }
+        }
+        SourceType::SourceFile(source_file) => {
+            let cmi_path = helpers::get_compiler_asset(
+                package,
+                &package.namespace,
+                &source_file.implementation.path,
+                "cmi",
+            );
+            let cmi_digest = helpers::compute_file_hash(Path::new(&cmi_path));
+
+            let interface_result = source_file.interface.as_ref().map(|iface| {
+                compile_file(
+                    package,
+                    &helpers::get_ast_path(&iface.path),
+                    module,
+                    true,
+                    build_state,
+                    warn_error_override.clone(),
+                )
+            });
+            let result = compile_file(
+                package,
+                &helpers::get_ast_path(&source_file.implementation.path),
+                module,
+                false,
+                build_state,
+                warn_error_override,
+            );
+            let cmi_digest_after = helpers::compute_file_hash(Path::new(&cmi_path));
+
+            // If the cmi is byte-for-byte unchanged, downstream modules can
+            // short-circuit — we check both interface and implementation
+            // because e.g. `include MyModule` exposes implementation changes
+            // through the cmi even when the .resi is untouched.
+            let is_clean_cmi = matches!(
+                (cmi_digest, cmi_digest_after),
+                (Some(a), Some(b)) if a == b
+            );
+
+            CompletionMsg {
+                module_name: module_name.to_string(),
+                result,
+                interface_result,
+                is_clean: is_clean_cmi,
+                is_compiled: true,
+            }
+        }
+    }
+}
+
 pub fn compile(
     build_state: &mut BuildCommandState,
     show_progress: bool,
     inc: impl Fn() + std::marker::Sync,
     set_length: impl Fn(u64),
 ) -> anyhow::Result<(String, String, usize)> {
-    let mut compiled_modules = AHashSet::<String>::new();
     let dirty_modules = build_state
         .modules
         .iter()
@@ -91,356 +266,313 @@ pub fn compile(
         })
         .collect::<AHashSet<String>>();
 
-    // dirty_modules.iter().for_each(|m| println!("dirty module: {}", m));
-    // println!("{} dirty modules", dirty_modules.len());
-    let mut sorted_dirty_modules = dirty_modules.iter().collect::<Vec<&String>>();
-    sorted_dirty_modules.sort();
-    // dirty_modules.iter().for_each(|m| println!("dirty module: {}", m));
-    // sorted_dirty_modules
-    //     .iter()
-    //     .for_each(|m| println!("dirty module: {}", m));
-
-    // for sure clean modules -- after checking the hash of the cmi
-    let mut clean_modules = AHashSet::<String>::new();
-
-    // TODO: calculate the real dirty modules from the original dirty modules in each iteration
-    // taken into account the modules that we know are clean, so they don't propagate through the
-    // deps graph
-    // create a hashset of all clean modules from the file-hashes
-    let mut loop_count = 0;
-    let mut files_total_count = compiled_modules.len();
-    let mut files_current_loop_count;
-    let mut compile_errors = "".to_string();
-    let mut compile_warnings = "".to_string();
-    let mut num_compiled_modules = 0;
-    let mut sorted_modules = build_state.module_names.iter().collect::<Vec<&String>>();
-    sorted_modules.sort();
-
-    // this is the whole "compile universe" all modules that might be dirty
-    // we get this by expanding the dependents from the dirty modules
-
+    // Expand the compile universe: every dirty module plus everything that
+    // transitively depends on it.
     let mut compile_universe = dirty_modules.clone();
-    let mut current_step_modules = compile_universe.clone();
+    let mut frontier = compile_universe.clone();
     loop {
         let mut dependents: AHashSet<String> = AHashSet::new();
-        for dirty_module in current_step_modules.iter() {
-            dependents.extend(build_state.get_module(dirty_module).unwrap().dependents.clone());
+        for module_name in frontier.iter() {
+            dependents.extend(build_state.get_module(module_name).unwrap().dependents.clone());
         }
-
-        current_step_modules = dependents
+        frontier = dependents
             .difference(&compile_universe)
-            .map(|s| s.to_string())
+            .cloned()
             .collect::<AHashSet<String>>();
-
-        compile_universe.extend(current_step_modules.to_owned());
-        if current_step_modules.is_empty() {
+        if frontier.is_empty() {
             break;
         }
+        compile_universe.extend(frontier.iter().cloned());
     }
 
     let compile_universe_count = compile_universe.len();
     set_length(compile_universe_count as u64);
 
-    // start off with all modules that have no deps in this compile universe
-    let mut in_progress_modules = compile_universe
+    let priorities = compute_critical_path_priorities(&compile_universe, &build_state.build_state);
+
+    // Count of not-yet-completed in-universe dependencies for each module.
+    // Only touched on the main thread.
+    let mut pending_deps: AHashMap<String, usize> = compile_universe
         .iter()
-        .filter(|module_name| {
-            let module = build_state.get_module(module_name).unwrap();
-            module.deps.intersection(&compile_universe).count() == 0
+        .map(|name| {
+            let module = build_state.get_module(name).unwrap();
+            let count = module
+                .deps
+                .iter()
+                .filter(|d| compile_universe.contains(*d))
+                .count();
+            (name.clone(), count)
         })
-        .map(|module_name| module_name.to_string())
-        .collect::<AHashSet<String>>();
+        .collect();
 
-    loop {
-        files_current_loop_count = 0;
-        loop_count += 1;
+    let mut ready_heap: BinaryHeap<WorkUnit> = compile_universe
+        .iter()
+        .filter(|name| pending_deps[*name] == 0)
+        .map(|name| WorkUnit {
+            priority: *priorities.get(name).unwrap_or(&0),
+            module_name: name.clone(),
+        })
+        .collect();
 
-        trace!(
-            "Compiled: {} out of {}. Compile loop: {}",
-            files_total_count,
-            compile_universe.len(),
-            loop_count,
+    // Dirtiness propagation tracked locally: when a module's cmi changes, its
+    // dependents are forced dirty. This mirrors the old `compile_dirty` flag
+    // mutation but keeps build_state borrow-free while workers are running.
+    let mut dirty_set: AHashSet<String> = dirty_modules;
+
+    let warn_error_override = build_state.get_warn_error_override();
+    let build_state_ref: &BuildState = &build_state.build_state;
+
+    let (tx, rx) = mpsc::channel::<CompletionMsg>();
+    // Bound concurrency to rayon's pool size so the priority heap actually
+    // orders work — dumping everything into rayon's deque would defeat #2.
+    let capacity = rayon::current_num_threads().max(1);
+
+    let mut completed: AHashSet<String> = AHashSet::new();
+    let mut results_buffer: Vec<CompletionMsg> = Vec::with_capacity(compile_universe_count);
+    let mut has_errors = false;
+    let mut stalled = false;
+
+    rayon::in_place_scope(|scope| {
+        let mut in_flight: usize = 0;
+        loop {
+            while in_flight < capacity && !has_errors {
+                let Some(work) = ready_heap.pop() else { break };
+                let module_name = work.module_name.clone();
+                let is_dirty = dirty_set.contains(&module_name);
+                let warn_override = warn_error_override.clone();
+                let tx = tx.clone();
+                let inc_ref = &inc;
+                in_flight += 1;
+                scope.spawn(move |_| {
+                    let msg = compile_one(build_state_ref, &module_name, is_dirty, warn_override);
+                    if show_progress {
+                        inc_ref();
+                    }
+                    // Receiver lives for the full scope, so send cannot fail
+                    // unless the dispatcher has already hung up on purpose.
+                    let _ = tx.send(msg);
+                });
+            }
+
+            if in_flight == 0 {
+                if !ready_heap.is_empty() {
+                    // Errors suppressed new spawns; nothing left to drain.
+                    break;
+                }
+                if completed.len() < compile_universe_count && !has_errors {
+                    stalled = true;
+                }
+                break;
+            }
+
+            let Ok(msg) = rx.recv() else { break };
+            in_flight -= 1;
+
+            if msg.result.is_err() || msg.interface_result.as_ref().is_some_and(|r| r.is_err()) {
+                has_errors = true;
+            }
+
+            let is_clean = msg.is_clean;
+            let finished_name = msg.module_name.clone();
+            completed.insert(finished_name.clone());
+            results_buffer.push(msg);
+
+            // Look up dependents from the node the scheduler scheduled under —
+            // for mlmap, compile_one returns the namespace suffix, which is the
+            // key modules use to refer to the namespace entry.
+            let dependents = build_state.get_module(&finished_name).unwrap().dependents.clone();
+
+            for dep in &dependents {
+                if !compile_universe.contains(dep) {
+                    continue;
+                }
+                if !is_clean {
+                    dirty_set.insert(dep.clone());
+                }
+                let count = pending_deps.get_mut(dep).unwrap();
+                *count -= 1;
+                if *count == 0 && !completed.contains(dep) {
+                    ready_heap.push(WorkUnit {
+                        priority: priorities[dep],
+                        module_name: dep.clone(),
+                    });
+                }
+            }
+        }
+    });
+    // Close our sender handle so any lingering clones in already-spawned
+    // workers don't keep the channel open past the scope.
+    drop(tx);
+
+    trace!(
+        "Compiled {} out of {} in the universe",
+        completed.len(),
+        compile_universe_count,
+    );
+
+    let mut compile_errors = String::new();
+    let mut compile_warnings = String::new();
+    let mut num_compiled_modules = 0;
+
+    // Persist propagated dirtiness back onto build_state. Modules that were
+    // marked dirty (because a predecessor's cmi changed) but never scheduled
+    // — e.g. the first compile error aborted further dispatch — must keep
+    // compile_dirty = true so the next incremental build recompiles them.
+    // Successful recompiles in the result loop below override this back to
+    // false for the modules that actually ran.
+    for name in &dirty_set {
+        if let Some(module) = build_state.build_state.modules.get_mut(name) {
+            module.compile_dirty = true;
+        }
+    }
+
+    // Sort by module name so the accumulated error/warning strings and the
+    // per-package compile.log writes are deterministic across runs, even
+    // though modules complete in arbitrary order.
+    results_buffer.sort_by(|a, b| a.module_name.cmp(&b.module_name));
+
+    for msg in results_buffer {
+        let CompletionMsg {
+            module_name,
+            result,
+            interface_result,
+            is_compiled,
+            ..
+        } = msg;
+
+        if is_compiled {
+            num_compiled_modules += 1;
+        }
+
+        let package_name = {
+            let module = build_state
+                .build_state
+                .modules
+                .get(&module_name)
+                .ok_or_else(|| anyhow!("Module not found"))?;
+            module.package_name.clone()
+        };
+        let package = build_state
+            .build_state
+            .packages
+            .get(&package_name)
+            .ok_or_else(|| anyhow!("Package name not found"))?;
+
+        let (compile_warning, compile_error, interface_warning, interface_error) = {
+            let module = build_state
+                .build_state
+                .modules
+                .get_mut(&module_name)
+                .ok_or_else(|| anyhow!("Module not found"))?;
+
+            let (compile_warning, compile_error) = match module.source_type {
+                SourceType::MlMap(ref mut mlmap) => {
+                    module.compile_dirty = false;
+                    mlmap.parse_dirty = false;
+                    (None, None)
+                }
+                SourceType::SourceFile(ref mut source_file) => match &result {
+                    Ok(Some(err)) => {
+                        let warning_text = err.to_string();
+                        source_file.implementation.compile_state = CompileState::Warning;
+                        source_file.implementation.compile_warnings = Some(warning_text.clone());
+                        (Some(warning_text), None)
+                    }
+                    Ok(None) => {
+                        source_file.implementation.compile_state = CompileState::Success;
+                        source_file.implementation.compile_warnings = None;
+                        (None, None)
+                    }
+                    Err(err) => {
+                        source_file.implementation.compile_state = CompileState::Error;
+                        source_file.implementation.compile_warnings = None;
+                        (None, Some(err.to_string()))
+                    }
+                },
+            };
+
+            let (interface_warning, interface_error) = if let SourceType::SourceFile(ref mut source_file) =
+                module.source_type
+            {
+                match &interface_result {
+                    Some(Ok(Some(err))) => {
+                        let warning_text = err.to_string();
+                        source_file.interface.as_mut().unwrap().compile_state = CompileState::Warning;
+                        source_file.interface.as_mut().unwrap().compile_warnings = Some(warning_text.clone());
+                        (Some(warning_text), None)
+                    }
+                    Some(Ok(None)) => {
+                        if let Some(interface) = source_file.interface.as_mut() {
+                            interface.compile_state = CompileState::Success;
+                            interface.compile_warnings = None;
+                        }
+                        (None, None)
+                    }
+                    Some(Err(err)) => {
+                        source_file.interface.as_mut().unwrap().compile_state = CompileState::Error;
+                        source_file.interface.as_mut().unwrap().compile_warnings = None;
+                        (None, Some(err.to_string()))
+                    }
+                    _ => (None, None),
+                }
+            } else {
+                (None, None)
+            };
+
+            if result.is_ok() && interface_result.as_ref().is_none_or(|r| r.is_ok()) {
+                module.compile_dirty = false;
+                module.last_compiled_cmi = Some(SystemTime::now());
+                module.last_compiled_cmt = Some(SystemTime::now());
+            }
+
+            (compile_warning, compile_error, interface_warning, interface_error)
+        };
+
+        if let Some(warning) = compile_warning {
+            logs::append(package, &warning);
+            compile_warnings.push_str(&warning);
+        }
+        if let Some(error) = compile_error {
+            logs::append(package, &error);
+            compile_errors.push_str(&error);
+        }
+        if let Some(warning) = interface_warning {
+            logs::append(package, &warning);
+            compile_warnings.push_str(&warning);
+        }
+        if let Some(error) = interface_error {
+            logs::append(package, &error);
+            compile_errors.push_str(&error);
+        }
+    }
+
+    if stalled {
+        let cycle = dependency_cycle::find(
+            &compile_universe
+                .iter()
+                .map(|s| (s, build_state.get_module(s).unwrap()))
+                .collect::<Vec<(&String, &Module)>>(),
         );
 
-        let current_in_progres_modules = in_progress_modules.clone();
+        let guidance = "Possible solutions:\n- Extract shared code into a new module both depend on.\n";
+        let message = format!(
+            "\n{}\n{}\n{}",
+            style("Can't continue... Found a circular dependency in your code:").red(),
+            dependency_cycle::format(&cycle, build_state),
+            guidance
+        );
 
-        let results = current_in_progres_modules
-            .par_iter()
-            .filter_map(|module_name| {
-                let module = build_state.get_module(module_name).unwrap();
-                let package = build_state
-                    .get_package(&module.package_name)
-                    .expect("Package not found");
-                // all dependencies that we care about are compiled
-                if module
-                    .deps
-                    .intersection(&compile_universe)
-                    .all(|dep| compiled_modules.contains(dep))
-                {
-                    if !module.compile_dirty {
-                        // we are sure we don't have to compile this, so we can mark it as compiled and clean
-                        return Some((module_name.to_string(), Ok(None), Some(Ok(None)), true, false));
-                    }
-                    match module.source_type.to_owned() {
-                        SourceType::MlMap(_) => {
-                            // the mlmap needs to be compiled before the files are compiled
-                            // in the same namespace, otherwise we get a compile error
-                            // this is why mlmap is compiled in the AST generation stage
-                            // compile_mlmap(&module.package, module_name, &project_root);
-                            Some((
-                                package.namespace.to_suffix().unwrap(),
-                                Ok(None),
-                                Some(Ok(None)),
-                                false,
-                                false,
-                            ))
-                        }
-                        SourceType::SourceFile(source_file) => {
-                            let cmi_path = helpers::get_compiler_asset(
-                                package,
-                                &package.namespace,
-                                &source_file.implementation.path,
-                                "cmi",
-                            );
-
-                            let cmi_digest = helpers::compute_file_hash(Path::new(&cmi_path));
-
-                            let package = build_state
-                                .get_package(&module.package_name)
-                                .expect("Package not found");
-
-                            let interface_result = match source_file.interface.to_owned() {
-                                Some(Interface { path, .. }) => {
-                                    let result = compile_file(
-                                        package,
-                                        &helpers::get_ast_path(&path),
-                                        module,
-                                        true,
-                                        build_state,
-                                        build_state.get_warn_error_override(),
-                                    );
-                                    Some(result)
-                                }
-                                _ => None,
-                            };
-                            let result = compile_file(
-                                package,
-                                &helpers::get_ast_path(&source_file.implementation.path),
-                                module,
-                                false,
-                                build_state,
-                                build_state.get_warn_error_override(),
-                            );
-                            let cmi_digest_after = helpers::compute_file_hash(Path::new(&cmi_path));
-
-                            // we want to compare both the hash of interface and the implementation
-                            // compile assets to verify that nothing changed. We also need to checke the interface
-                            // because we can include MyModule, so the modules that depend on this module might
-                            // change when this modules interface does not change, but the implementation does
-                            let is_clean_cmi = match (cmi_digest, cmi_digest_after) {
-                                (Some(cmi_digest), Some(cmi_digest_after)) => {
-                                    cmi_digest.eq(&cmi_digest_after)
-                                }
-
-                                _ => false,
-                            };
-
-                            Some((
-                                module_name.to_string(),
-                                result,
-                                interface_result,
-                                is_clean_cmi,
-                                true,
-                            ))
-                        }
-                    }
-                } else {
-                    None
-                }
-                .inspect(|_res| {
-                    if show_progress {
-                        inc();
-                    }
-                })
-            })
-            .collect::<Vec<_>>();
-
-        for result in results.iter() {
-            let (module_name, result, interface_result, is_clean, is_compiled) = result;
-            in_progress_modules.remove(module_name);
-
-            if *is_compiled {
-                num_compiled_modules += 1;
-            }
-
-            files_current_loop_count += 1;
-            compiled_modules.insert(module_name.to_string());
-
-            if *is_clean {
-                // actually add it to a list of clean modules
-                clean_modules.insert(module_name.to_string());
-            }
-
-            let module_dependents = build_state.get_module(module_name).unwrap().dependents.clone();
-
-            // if not clean -- compile modules that depend on this module
-            for dep in module_dependents.iter() {
-                //  mark the reverse dep as dirty when the source is not clean
-                if !*is_clean {
-                    let dep_module = build_state.modules.get_mut(dep).unwrap();
-                    //  mark the reverse dep as dirty when the source is not clean
-                    dep_module.compile_dirty = true;
-                }
-                if !compiled_modules.contains(dep) {
-                    in_progress_modules.insert(dep.to_string());
-                }
-            }
-
-            let package_name = {
-                let module = build_state
-                    .build_state
-                    .modules
-                    .get(module_name)
-                    .ok_or(anyhow!("Module not found"))?;
-                module.package_name.clone()
-            };
-
-            let package = build_state
-                .build_state
-                .packages
-                .get(&package_name)
-                .ok_or(anyhow!("Package name not found"))?;
-
-            // Process results and update module state
-            let (compile_warning, compile_error, interface_warning, interface_error) = {
-                let module = build_state
-                    .build_state
-                    .modules
-                    .get_mut(module_name)
-                    .ok_or(anyhow!("Module not found"))?;
-
-                let (compile_warning, compile_error) = match module.source_type {
-                    SourceType::MlMap(ref mut mlmap) => {
-                        module.compile_dirty = false;
-                        mlmap.parse_dirty = false;
-                        (None, None)
-                    }
-                    SourceType::SourceFile(ref mut source_file) => match result {
-                        Ok(Some(err)) => {
-                            let warning_text = err.to_string();
-                            source_file.implementation.compile_state = CompileState::Warning;
-                            source_file.implementation.compile_warnings = Some(warning_text.clone());
-                            (Some(warning_text), None)
-                        }
-                        Ok(None) => {
-                            source_file.implementation.compile_state = CompileState::Success;
-                            source_file.implementation.compile_warnings = None;
-                            (None, None)
-                        }
-                        Err(err) => {
-                            source_file.implementation.compile_state = CompileState::Error;
-                            source_file.implementation.compile_warnings = None;
-                            (None, Some(err.to_string()))
-                        }
-                    },
-                };
-
-                let (interface_warning, interface_error) =
-                    if let SourceType::SourceFile(ref mut source_file) = module.source_type {
-                        match interface_result {
-                            Some(Ok(Some(err))) => {
-                                let warning_text = err.to_string();
-                                source_file.interface.as_mut().unwrap().compile_state = CompileState::Warning;
-                                source_file.interface.as_mut().unwrap().compile_warnings =
-                                    Some(warning_text.clone());
-                                (Some(warning_text), None)
-                            }
-                            Some(Ok(None)) => {
-                                if let Some(interface) = source_file.interface.as_mut() {
-                                    interface.compile_state = CompileState::Success;
-                                    interface.compile_warnings = None;
-                                }
-                                (None, None)
-                            }
-                            Some(Err(err)) => {
-                                source_file.interface.as_mut().unwrap().compile_state = CompileState::Error;
-                                source_file.interface.as_mut().unwrap().compile_warnings = None;
-                                (None, Some(err.to_string()))
-                            }
-                            _ => (None, None),
-                        }
-                    } else {
-                        (None, None)
-                    };
-
-                // Update compilation timestamps for successful compilation
-                if result.is_ok() && interface_result.as_ref().is_none_or(|r| r.is_ok()) {
-                    module.compile_dirty = false;
-                    module.last_compiled_cmi = Some(SystemTime::now());
-                    module.last_compiled_cmt = Some(SystemTime::now());
-                }
-
-                (compile_warning, compile_error, interface_warning, interface_error)
-            };
-
-            // Handle logging outside the mutable borrow
-            if let Some(warning) = compile_warning {
-                logs::append(package, &warning);
-                compile_warnings.push_str(&warning);
-            }
-            if let Some(error) = compile_error {
-                logs::append(package, &error);
-                compile_errors.push_str(&error);
-            }
-            if let Some(warning) = interface_warning {
-                logs::append(package, &warning);
-                compile_warnings.push_str(&warning);
-            }
-            if let Some(error) = interface_error {
-                logs::append(package, &error);
-                compile_errors.push_str(&error);
+        let mut touched_packages = AHashSet::<String>::new();
+        for module_name in cycle.iter() {
+            if let Some(module) = build_state.get_module(module_name)
+                && touched_packages.insert(module.package_name.clone())
+                && let Some(package) = build_state.get_package(&module.package_name)
+            {
+                logs::append(package, &message);
             }
         }
 
-        files_total_count += files_current_loop_count;
-
-        if files_total_count == compile_universe_count {
-            break;
-        }
-        if in_progress_modules.is_empty() || in_progress_modules.eq(&current_in_progres_modules) {
-            // find the dependency cycle
-            let cycle = dependency_cycle::find(
-                &compile_universe
-                    .iter()
-                    .map(|s| (s, build_state.get_module(s).unwrap()))
-                    .collect::<Vec<(&String, &Module)>>(),
-            );
-
-            let guidance = "Possible solutions:\n- Extract shared code into a new module both depend on.\n";
-            let message = format!(
-                "\n{}\n{}\n{}",
-                style("Can't continue... Found a circular dependency in your code:").red(),
-                dependency_cycle::format(&cycle, build_state),
-                guidance
-            );
-
-            // Append the error to the logs of all packages involved in the cycle,
-            // so editor tooling can surface it from .compiler.log
-            let mut touched_packages = AHashSet::<String>::new();
-            for module_name in cycle.iter() {
-                if let Some(module) = build_state.get_module(module_name)
-                    && touched_packages.insert(module.package_name.clone())
-                    && let Some(package) = build_state.get_package(&module.package_name)
-                {
-                    logs::append(package, &message);
-                }
-            }
-
-            compile_errors.push_str(&message)
-        }
-        if !compile_errors.is_empty() {
-            break;
-        };
+        compile_errors.push_str(&message);
     }
 
     // Collect warnings from modules that were not recompiled in this build
@@ -520,6 +652,9 @@ pub fn compiler_args(
     is_local_dep: bool,
     // Command-line --warn-error flag override (takes precedence over rescript.json config)
     warn_error_override: Option<String>,
+    // Pre-expanded source directories for the current package (used by gentype).
+    // Pass an empty slice when unavailable (e.g. the compiler-args CLI command).
+    current_package_dirs: &[PathBuf],
 ) -> Result<Vec<String>> {
     let bsc_flags = config::flatten_flags(&config.compiler_flags);
     let dependency_paths = get_dependency_paths(config, project_context, packages, is_type_dev);
@@ -551,7 +686,24 @@ pub fn compiler_args(
     let jsx_module_args = root_config.get_jsx_module_args();
     let jsx_mode_args = root_config.get_jsx_mode_args();
     let jsx_preserve_args = root_config.get_jsx_preserve_args();
-    let gentype_arg = config.get_gentype_arg();
+    let bsb_project_root = project_context.get_root_path();
+    let dep_paths: Vec<(String, PathBuf)> = if config.gentype_config.is_some() {
+        let resolved = packages.as_ref().map(|pkgs| {
+            config
+                .dependencies
+                .iter()
+                .flatten()
+                .filter_map(|dep| {
+                    let name = dep.name();
+                    pkgs.get(name).map(|pkg| (name.to_string(), pkg.path.clone()))
+                })
+                .collect::<Vec<_>>()
+        });
+        resolved.unwrap_or_default()
+    } else {
+        Vec::new()
+    };
+    let gentype_arg = config.get_gentype_args(current_package_dirs, Some(bsb_project_root), &dep_paths);
     let experimental_args = root_config.get_experimental_features_args();
     let warning_args = config.get_warning_args(is_local_dep, warn_error_override);
 
@@ -567,6 +719,7 @@ pub fn compiler_args(
     };
 
     let package_name_arg = vec!["-bs-package-name".to_string(), config.name.to_owned()];
+    let project_root_args = config.get_project_root_args();
 
     let implementation_args = if is_interface {
         debug!("Compiling interface file: {}", &module_name);
@@ -627,6 +780,7 @@ pub fn compiler_args(
         // we should probably parse the right ones from the package config
         // vec!["-w".to_string(), "a".to_string()],
         package_name_arg,
+        project_root_args,
         implementation_args,
         // vec![
         //     "-I".to_string(),
@@ -665,20 +819,16 @@ fn get_dependency_paths(
     packages: &Option<&AHashMap<String, packages::Package>>,
     is_file_type_dev: bool,
 ) -> Vec<String> {
-    let normal_deps = config
-        .dependencies
-        .clone()
-        .unwrap_or_default()
+    let normal_deps: Vec<DependentPackage> = config
+        .get_dependency_names()
         .into_iter()
         .map(DependentPackage::Normal)
         .collect();
 
     // We can only access dev dependencies for source_files that are marked as "type":"dev"
-    let dev_deps = if is_file_type_dev {
+    let dev_deps: Vec<DependentPackage> = if is_file_type_dev {
         config
-            .dev_dependencies
-            .clone()
-            .unwrap_or_default()
+            .get_dev_dependency_names()
             .into_iter()
             .map(DependentPackage::Dev)
             .collect()
@@ -753,6 +903,9 @@ fn compile_file(
         helpers::file_path_to_compiler_asset_basename(implementation_file_path, &package.namespace);
     let has_interface = module.get_interface().is_some();
     let is_type_dev = module.is_type_dev;
+    // `gentype_dirs` is populated once during package discovery, so we just
+    // borrow the cached slice here (empty when gentype is off).
+    let current_package_dirs: &[PathBuf] = package.gentype_dirs.as_deref().unwrap_or(&[]);
     let to_mjs_args = compiler_args(
         &package.config,
         ast_path,
@@ -764,6 +917,7 @@ fn compile_file(
         is_type_dev,
         package.is_local_dep,
         warn_error_override,
+        current_package_dirs,
     )?;
 
     let to_mjs = Command::new(&compiler_info.bsc_path)
@@ -940,15 +1094,47 @@ fn compile_file(
 
             if helpers::contains_ascii_characters(&err) {
                 if package.is_local_dep {
-                    // suppress warnings of external deps
                     Ok(Some(err))
                 } else {
-                    Ok(None)
+                    // Warnings from external deps are suppressed by default —
+                    // users can't act on them. A small allow-list of critical
+                    // deprecations still gets through so breakage signals are
+                    // visible (and can be reported upstream).
+                    Ok(retain_critical_external_warnings(&err))
                 }
             } else {
                 Ok(None)
             }
         }
+    }
+}
+
+/// Filter a bsc stderr capture to the warning blocks the user needs to see
+/// even when they originate in an external dependency.
+///
+/// Currently preserved:
+/// - Warning 3 deprecations mentioning the legacy `(. ...)` uncurried syntax.
+///   These indicate source that parses today but is scheduled for removal, so
+///   consumers need to hear about them even when the code isn't theirs.
+pub(super) fn retain_critical_external_warnings(stderr: &str) -> Option<String> {
+    const UNCURRIED_DOT_MARKER: &str = "`(. ...)` uncurried syntax";
+    if !stderr.contains(UNCURRIED_DOT_MARKER) {
+        return None;
+    }
+    // bsc prints each warning as its own block separated by a blank-line pair
+    // (three consecutive newlines). On Windows the same stream uses CRLF, so
+    // normalize before splitting to keep the block boundary recognizable —
+    // otherwise the whole stderr would be treated as a single block and
+    // unrelated warnings would leak through alongside the critical one.
+    let normalized = stderr.replace("\r\n", "\n");
+    let kept: Vec<&str> = normalized
+        .split("\n\n\n")
+        .filter(|block| block.contains(UNCURRIED_DOT_MARKER))
+        .collect();
+    if kept.is_empty() {
+        None
+    } else {
+        Some(kept.join("\n\n\n"))
     }
 }
 
@@ -1047,4 +1233,43 @@ pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildCommandState)
             module.compile_dirty = true;
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn retain_critical_external_warnings_returns_none_without_marker() {
+        let input = "\n  Warning number 26\n  foo.res:1:1\n\n  unused variable x.\n";
+        assert_eq!(retain_critical_external_warnings(input), None);
+    }
+
+    #[test]
+    fn retain_critical_external_warnings_keeps_uncurried_dot_block() {
+        let input = concat!(
+            "\n  Warning number 26\n  foo.res:1:1\n\n  unused variable x.\n",
+            "\n\n\n  Warning number 3\n  bar.res:5:10\n\n  ",
+            "deprecated: The `(. ...)` uncurried syntax is deprecated.\n",
+        );
+        let kept = retain_critical_external_warnings(input).expect("uncurried-dot warning should survive");
+        assert!(kept.contains("`(. ...)` uncurried syntax"));
+        assert!(!kept.contains("unused variable"));
+    }
+
+    #[test]
+    fn retain_critical_external_warnings_handles_crlf_line_endings() {
+        // Windows stderr from bsc uses CRLF. Without normalization the "\n\n\n"
+        // splitter would find no boundary and return the entire stream, which
+        // would effectively disable suppression for external deps on Windows.
+        let input = concat!(
+            "\r\n  Warning number 26\r\n  foo.res:1:1\r\n\r\n  unused variable x.\r\n",
+            "\r\n\r\n\r\n  Warning number 3\r\n  bar.res:5:10\r\n\r\n  ",
+            "deprecated: The `(. ...)` uncurried syntax is deprecated.\r\n",
+        );
+        let kept = retain_critical_external_warnings(input)
+            .expect("uncurried-dot warning should survive on Windows too");
+        assert!(kept.contains("`(. ...)` uncurried syntax"));
+        assert!(!kept.contains("unused variable"));
+    }
 }

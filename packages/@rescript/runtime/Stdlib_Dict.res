@@ -12,7 +12,8 @@ let delete = (dict, string) => {
 @obj external make: unit => dict<'a> = ""
 
 @val external fromArray: array<(string, 'a)> => dict<'a> = "Object.fromEntries"
-@val external fromIterator: Stdlib_Iterator.t<(string, 'a)> => dict<'a> = "Object.fromEntries"
+@val
+external fromIterable: Stdlib_Iterable.t<(string, 'a)> => dict<'a> = "Object.fromEntries"
 
 @val external toArray: dict<'a> => array<(string, 'a)> = "Object.entries"
 
@@ -21,6 +22,15 @@ let delete = (dict, string) => {
 @val external valuesToArray: dict<'a> => array<'a> = "Object.values"
 
 @val external assign: (dict<'a>, dict<'a>) => dict<'a> = "Object.assign"
+
+@variadic @val external assignMany: (dict<'a>, array<dict<'a>>) => dict<'a> = "Object.assign"
+
+@val external concat: (@as(json`{}`) _, dict<'a>, dict<'a>) => dict<'a> = "Object.assign"
+
+@variadic @val
+external concatMany: (@as(json`{}`) _, dict<'a>, array<dict<'a>>) => dict<'a> = "Object.assign"
+
+@variadic @val external concatAll: (@as(json`{}`) _, array<dict<'a>>) => dict<'a> = "Object.assign"
 
 @val external copy: (@as(json`{}`) _, dict<'a>) => dict<'a> = "Object.assign"
 

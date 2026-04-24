@@ -1,12 +1,12 @@
 // Exmple of several DCE checks operating in unison
 
-type break =
+type break_ =
   | IfNeed
   | Never
   | Always
 
 type t = {
-  break: break,
+  break_: break_,
   doc: string,
 }
 
@@ -14,7 +14,7 @@ type rec stack =
   | Empty
   | Cons(t, stack)
 
-let group = (~break=IfNeed, doc) => {break: break, doc: doc}
+let group = (~break_=IfNeed, doc) => {break_, doc: doc}
 
 let rec fits = (w, stack) =>
   switch stack {
@@ -25,8 +25,8 @@ let rec fits = (w, stack) =>
 
 let rec toString = (~width, stack) =>
   switch stack {
-  | Cons({break, doc}, stack) =>
-    switch break {
+  | Cons({break_, doc}, stack) =>
+    switch break_ {
     | IfNeed => (fits(width, stack) ? "fits " : "no ") ++ (stack |> toString(~width=width - 1))
     | Never => "never " ++ (doc ++ (stack |> toString(~width=width - 1)))
     | Always => "always " ++ (doc ++ (stack |> toString(~width=width - 1)))
@@ -35,5 +35,5 @@ let rec toString = (~width, stack) =>
   }
 
 toString(~width=80, Empty)
-toString(~width=80, Cons(group(~break=Never, "abc"), Empty))
-toString(~width=80, Cons(group(~break=Always, "d"), Empty))
+toString(~width=80, Cons(group(~break_=Never, "abc"), Empty))
+toString(~width=80, Cons(group(~break_=Always, "d"), Empty))

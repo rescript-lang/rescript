@@ -26,6 +26,9 @@ let rec exprNoSideEffects (expr : Typedtree.expression) =
   | Texp_ident _ | Texp_constant _ -> true
   | Texp_construct (_, _, el) -> el |> List.for_all exprNoSideEffects
   | Texp_function _ -> true
+  (* Loop control changes whether subsequent code in the enclosing loop runs,
+     so it should not be treated as a removable pure expression. *)
+  | Texp_break | Texp_continue -> false
   | Texp_apply {funct = {exp_desc = Texp_ident (path, _, _)}; args}
     when path |> pathIsWhitelistedForSideEffects ->
     args |> List.for_all (fun (_, eo) -> eo |> exprOptNoSideEffects)
@@ -59,6 +62,7 @@ let rec exprNoSideEffects (expr : Typedtree.expression) =
   | Texp_for (_id, _pat, e1, e2, _dir, e3) ->
     e1 |> exprNoSideEffects && e2 |> exprNoSideEffects
     && e3 |> exprNoSideEffects
+  | Texp_for_of _ | Texp_for_await_of _ -> false
   | Texp_send _ -> false
   | Texp_letexception (_ec, e) -> e |> exprNoSideEffects
   | Texp_pack _ -> false

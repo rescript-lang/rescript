@@ -263,11 +263,20 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
       string_call Js_packages_state.update_npm_package_path,
       "*internal* Set npm-output-path: [opt_module]:path, for example: \
        'lib/cjs', 'amdjs:lib/amdjs', 'es6:lib/es6' " );
+    ( "-bs-project-root",
+      string_call (fun s ->
+          Ext_path.project_root := Some s;
+          GenTypeConfig.project_root := s),
+      "*internal* Set the project root directory" );
     ( "-bs-ast",
       unit_call (fun _ ->
           Js_config.binary_ast := true;
           Js_config.syntax_only := true),
       "*internal* Generate binary .mli_ast and ml_ast and stop" );
+    ( "-bs-test-ast-conversion",
+      set Js_config.test_ast_conversion,
+      "*internal* Roundtrip the parsed AST through Parsetree0 before continuing"
+    );
     ( "-bs-syntax-only",
       set Js_config.syntax_only,
       "*internal* Only check syntax" );
@@ -289,6 +298,49 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
       set Clflags.transparent_modules,
       "*internal*Do not record dependencies for module aliases" );
     ("-bs-gentype", set Clflags.bs_gentype, "*internal* Pass gentype command");
+    ( "-bs-gentype-module",
+      string_call (fun s ->
+          GenTypeConfig.module_flag := GenTypeConfig.module_of_string s),
+      "*internal* Set gentype module system: commonjs|esmodule" );
+    ( "-bs-gentype-module-resolution",
+      string_call (fun s ->
+          GenTypeConfig.module_resolution_flag :=
+            GenTypeConfig.module_resolution_of_string s),
+      "*internal* Set gentype module resolution strategy: node|node16|bundler"
+    );
+    ( "-bs-gentype-export-interfaces",
+      set GenTypeConfig.export_interfaces_flag,
+      "*internal* Emit gentype interface files" );
+    ( "-bs-gentype-generated-extension",
+      string_call (fun s ->
+          GenTypeConfig.generated_file_extension_flag := Some s),
+      "*internal* Set gentype generated-file extension (e.g. .gen.tsx)" );
+    ( "-bs-gentype-suffix",
+      string_call (fun s -> GenTypeConfig.suffix_flag := Some s),
+      "*internal* Set gentype import-path suffix (e.g. .bs.js, .mjs)" );
+    ( "-bs-gentype-shim",
+      string_call GenTypeConfig.add_shim,
+      "*internal* Register a gentype shim mapping: From=To (repeatable)" );
+    ( "-bs-gentype-debug",
+      string_call Debug.set_item,
+      "*internal* Enable a gentype debug category (repeatable): \
+       all|basic|codeItems|config|converter|dependencies|moduleResolution|notImplemented|translation|typeEnv|typeResolution"
+    );
+    ( "-bs-gentype-dep",
+      string_call GenTypeConfig.add_bs_dependency,
+      "*internal* Register a gentype bsb dependency (repeatable)" );
+    ( "-bs-gentype-source-dir",
+      string_call GenTypeConfig.add_source_dir,
+      "*internal* Register a gentype source directory relative to the project \
+       root (repeatable)" );
+    ( "-bs-gentype-dep-path",
+      string_call GenTypeConfig.add_dep_path,
+      "*internal* Register a gentype dependency install path: \
+       <name>=<absolute-path> (repeatable)" );
+    ( "-bs-gentype-bsb-project-root",
+      string_call (fun s -> GenTypeConfig.bsb_project_root := s),
+      "*internal* Set gentype bsb project root (workspace root containing \
+       .sourcedirs.json)" );
     (******************************************************************************)
     ( "-unboxed-types",
       set Clflags.unboxed_types,

@@ -238,7 +238,9 @@ let record_scope_pass =
     statement =
       (fun self state x ->
         match x.statement_desc with
-        | ForRange (_, _, loop_id, _, _) ->
+        | ForRange (_, _, _, loop_id, _, _)
+        | ForOf (_, loop_id, _, _)
+        | ForAwaitOf (_, loop_id, _, _) ->
           (* TODO: simplify definition of For *)
           let {
             defined_idents = defined_idents';
@@ -287,7 +289,7 @@ let record_scope_pass =
             closured_idents =
               Set_ident.union state.closured_idents lexical_scope;
           }
-        | While (pred, body) ->
+        | While (_, pred, body) ->
           with_in_loop
             (self.block self
                (with_in_loop (self.expression self state pred) true)

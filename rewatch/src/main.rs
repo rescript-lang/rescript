@@ -3,7 +3,11 @@ use console::Term;
 use log::LevelFilter;
 use std::{io::Write, path::Path};
 
-use rescript::{build, cli, cmd, format, lock, watcher};
+use rescript::{
+    build, cli, cmd, format,
+    lock::{LockKind, drop_lock, get_lock_or_exit},
+    watcher,
+};
 
 fn main() -> Result<()> {
     let cli = cli::parse_with_default().unwrap_or_else(|err| err.exit());
@@ -32,9 +36,9 @@ fn main() -> Result<()> {
     let is_tty: bool = Term::stdout().is_term() && Term::stderr().is_term();
     let plain_output = !is_tty;
 
-    // The 'normal run' mode will show the 'pretty' formatted progress. But if we turn off the log
-    // level, we should never show that.
-    let show_progress = log_level_filter == LevelFilter::Info;
+    // Show progress messages (e.g. "Finished compilation") as long as logging is at Info level
+    // or more verbose. This way `-v` and `-vv` add debug output without suppressing progress.
+    let show_progress = log_level_filter >= LevelFilter::Info;
 
     match cli.command {
         cli::Command::CompilerArgs { path } => {
@@ -42,8 +46,7 @@ fn main() -> Result<()> {
             std::process::exit(0);
         }
         cli::Command::Build(build_args) => {
-            let _lock = get_lock(&build_args.folder);
-
+            let features = build_args.features.parsed();
             match build::build(
                 &build_args.filter,
                 Path::new(&build_args.folder as &str),
@@ -52,6 +55,8 @@ fn main() -> Result<()> {
                 true, // create_sourcedirs is now always enabled
                 plain_output,
                 (*build_args.warn_error).clone(),
+                build_args.prod,
+                features,
             ) {
                 Err(e) => {
                     eprintln!("{:#}", e);
@@ -66,8 +71,9 @@ fn main() -> Result<()> {
             };
         }
         cli::Command::Watch(watch_args) => {
-            let _lock = get_lock(&watch_args.folder);
+            let _lock = get_lock_or_exit(LockKind::Watch, &watch_args.folder);
 
+            let features = watch_args.features.parsed();
             match watcher::start(
                 &watch_args.filter,
                 show_progress,
@@ -76,6 +82,9 @@ fn main() -> Result<()> {
                 true, // create_sourcedirs is now always enabled
                 plain_output,
                 (*watch_args.warn_error).clone(),
+                watch_args.clear_screen,
+                watch_args.prod,
+                features,
             ) {
                 Err(e) => {
                     eprintln!("{:#}", e);
@@ -84,21 +93,14 @@ fn main() -> Result<()> {
                 Ok(_) => Ok(()),
             }
         }
-        cli::Command::Clean { folder } => {
-            let _lock = get_lock(&folder);
-            build::clean::clean(Path::new(&folder as &str), show_progress, plain_output)
+        cli::Command::Clean { folder, prod } => {
+            let _lock = get_lock_or_exit(LockKind::Build, &folder);
+            let result = build::clean::clean(Path::new(&folder as &str), show_progress, plain_output, prod);
+            let _lock = drop_lock(LockKind::Build, &folder);
+
+            result
         }
         cli::Command::Format { stdin, check, files } => format::format(stdin, check, files),
-    }
-}
-
-fn get_lock(folder: &str) -> lock::Lock {
-    match lock::get(folder) {
-        lock::Lock::Error(error) => {
-            eprintln!("Could not start ReScript build: {error}");
-            std::process::exit(1);
-        }
-        acquired_lock => acquired_lock,
     }
 }
 

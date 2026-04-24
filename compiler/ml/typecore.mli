@@ -107,12 +107,15 @@ type error =
   | Unqualified_gadt_pattern of Path.t * string
   | Invalid_interval
   | Invalid_for_loop_index
+  | Invalid_for_of_pattern
   | No_value_clauses
   | Exception_pattern_below_toplevel
   | Inlined_record_escape
   | Inlined_record_expected
   | Invalid_extension_constructor_payload
   | Not_an_extension_constructor
+  | Break_outside_loop
+  | Continue_outside_loop
   | Literal_overflow of string
   | Unknown_literal of string * char
   | Illegal_letrec_pat

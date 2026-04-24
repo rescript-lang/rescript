@@ -104,8 +104,12 @@ module Types = struct
     | Ltrywith of t * ident * t
     | Lifthenelse of t * t * t
     | Lsequence of t * t
+    | Lbreak
+    | Lcontinue
     | Lwhile of t * t
     | Lfor of ident * t * t * Asttypes.direction_flag * t
+    | Lfor_of of ident * t * t
+    | Lfor_await_of of ident * t * t
     | Lassign of ident * t
   (* | Lsend of Lam_compat.meth_kind * t * t * t list * Location.t *)
 end
@@ -156,8 +160,12 @@ module X = struct
     | Ltrywith of t * ident * t
     | Lifthenelse of t * t * t
     | Lsequence of t * t
+    | Lbreak
+    | Lcontinue
     | Lwhile of t * t
     | Lfor of ident * t * t * Asttypes.direction_flag * t
+    | Lfor_of of ident * t * t
+    | Lfor_await_of of ident * t * t
     | Lassign of ident * t
   (* | Lsend of Lam_compat.meth_kind * t * t * t list * Location.t *)
 end
@@ -237,6 +245,8 @@ let inner_map (l : t) (f : t -> X.t) : X.t =
     let e1 = f e1 in
     let e2 = f e2 in
     Lsequence (e1, e2)
+  | Lbreak -> Lbreak
+  | Lcontinue -> Lcontinue
   | Lwhile (e1, e2) ->
     let e1 = f e1 in
     let e2 = f e2 in
@@ -246,6 +256,14 @@ let inner_map (l : t) (f : t -> X.t) : X.t =
     let e2 = f e2 in
     let e3 = f e3 in
     Lfor (v, e1, e2, dir, e3)
+  | Lfor_of (v, e1, e2) ->
+    let e1 = f e1 in
+    let e2 = f e2 in
+    Lfor_of (v, e1, e2)
+  | Lfor_await_of (v, e1, e2) ->
+    let e1 = f e1 in
+    let e2 = f e2 in
+    Lfor_await_of (v, e1, e2)
   | Lassign (id, e) ->
     let e = f e in
     Lassign (id, e)
@@ -373,6 +391,8 @@ let rec eq_approx (l1 : t) (l2 : t) =
     match l2 with
     | Lsequence (a0, b0) -> eq_approx a a0 && eq_approx b b0
     | _ -> false)
+  | Lbreak -> l2 = Lbreak
+  | Lcontinue -> l2 = Lcontinue
   | Lwhile (p, b) -> (
     match l2 with
     | Lwhile (p0, b0) -> eq_approx p p0 && eq_approx b b0
@@ -401,7 +421,9 @@ let rec eq_approx (l1 : t) (l2 : t) =
   | Lfunction _
   | Llet (_, _, _, _)
   | Lletrec _ | Lswitch _ | Lstaticcatch _ | Ltrywith _
-  | Lfor (_, _, _, _, _) ->
+  | Lfor (_, _, _, _, _)
+  | Lfor_of (_, _, _)
+  | Lfor_await_of (_, _, _) ->
     false
 
 and eq_option l1 l2 =
@@ -437,6 +459,8 @@ let stringswitch (lam : t) cases default : t =
 let true_ : t = Lconst Const_js_true
 let false_ : t = Lconst Const_js_false
 let unit : t = Lconst (Const_js_undefined {is_unit = true})
+let break : t = Lbreak
+let continue : t = Lcontinue
 
 let rec seq (a : t) b : t =
   match a with
@@ -459,6 +483,8 @@ let letrec bindings body : t = Lletrec (bindings, body)
 let while_ a b : t = Lwhile (a, b)
 let try_ body id handler : t = Ltrywith (body, id, handler)
 let for_ v e1 e2 dir e3 : t = Lfor (v, e1, e2, dir, e3)
+let for_of v e1 e2 : t = Lfor_of (v, e1, e2)
+let for_await_of v e1 e2 : t = Lfor_await_of (v, e1, e2)
 let assign v l : t = Lassign (v, l)
 let staticcatch a b c : t = Lstaticcatch (a, b, c)
 let staticraise a b : t = Lstaticraise (a, b)

@@ -341,6 +341,8 @@ and expression i ppf x =
     line i ppf "Texp_sequence\n";
     expression i ppf e1;
     expression i ppf e2
+  | Texp_break -> line i ppf "Texp_break\n"
+  | Texp_continue -> line i ppf "Texp_continue\n"
   | Texp_while (e1, e2) ->
     line i ppf "Texp_while\n";
     expression i ppf e1;
@@ -350,6 +352,14 @@ and expression i ppf x =
     expression i ppf e1;
     expression i ppf e2;
     expression i ppf e3
+  | Texp_for_of (s, _, e1, e2) ->
+    line i ppf "Texp_for_of \"%a\"\n" fmt_ident s;
+    expression i ppf e1;
+    expression i ppf e2
+  | Texp_for_await_of (s, _, e1, e2) ->
+    line i ppf "Texp_for_await_of \"%a\"\n" fmt_ident s;
+    expression i ppf e1;
+    expression i ppf e2
   | Texp_send (e, Tmeth_name s, eo) ->
     line i ppf "Texp_send \"%s\"\n" s;
     expression i ppf e;

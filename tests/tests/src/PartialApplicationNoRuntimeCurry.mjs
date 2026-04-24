@@ -18,9 +18,18 @@ function add5(extra) {
   return 5 + extra | 0;
 }
 
+function addHookPartial(extra) {
+  addHook(hook, extra);
+}
+
+addHook(hook, _x => {});
+
+addHook(hook, _x => {});
+
 export {
   f,
   add$1 as add,
   add5,
+  addHookPartial,
 }
-/* No side effect */
+/*  Not a pure module */

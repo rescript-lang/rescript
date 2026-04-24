@@ -14,6 +14,7 @@ use crate::build::compile::{mark_modules_with_deleted_deps_dirty, mark_modules_w
 use crate::build::compiler_info::{CompilerCheckResult, verify_compiler_info, write_compiler_info};
 use crate::helpers::emojis::*;
 use crate::helpers::{self};
+use crate::lock::{LockKind, drop_lock, get_lock_or_exit};
 use crate::project_context::ProjectContext;
 use crate::sourcedirs;
 use anyhow::{Context, Result, anyhow};
@@ -53,6 +54,43 @@ fn is_dirty(module: &Module) -> bool {
 pub struct CompilerArgs {
     pub compiler_args: Vec<String>,
     pub parser_args: Vec<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CompilationOutcome {
+    Clean,
+    Warnings,
+}
+
+fn has_output(output: &str) -> bool {
+    helpers::contains_ascii_characters(output)
+}
+
+fn has_config_warnings(build_state: &BuildCommandState) -> bool {
+    build_state.packages.iter().any(|(_, package)| {
+        package.is_local_dep
+            && (!package.config.get_unsupported_fields().is_empty()
+                || !package.config.get_unknown_fields().is_empty())
+    })
+}
+
+pub fn format_finished_compilation_message(
+    compilation_kind: Option<&str>,
+    outcome: CompilationOutcome,
+    duration: Duration,
+) -> String {
+    let compilation_kind = compilation_kind
+        .map(|kind| format!("{kind} "))
+        .unwrap_or_default();
+    let (status, warning_suffix) = match outcome {
+        CompilationOutcome::Clean => (CHECKMARK, ""),
+        CompilationOutcome::Warnings => (WARNING, " with warnings"),
+    };
+
+    format!(
+        "{LINE_CLEAR}{status}Finished {compilation_kind}compilation{warning_suffix} in {:.2}s",
+        duration.as_secs_f64()
+    )
 }
 
 pub fn get_compiler_args(rescript_file_path: &Path) -> Result<String> {
@@ -102,6 +140,7 @@ pub fn get_compiler_args(rescript_file_path: &Path) -> Result<String> {
         is_type_dev,
         true,
         None, // No warn_error_override for compiler-args command
+        &[],  // Source dirs not available outside full build; gentype falls back to defaults.
     )?;
 
     let result = serde_json::to_string_pretty(&CompilerArgs {
@@ -126,6 +165,7 @@ pub fn get_compiler_info(project_context: &ProjectContext) -> Result<CompilerInf
     })
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn initialize_build(
     default_timing: Option<Duration>,
     filter: &Option<regex::Regex>,
@@ -133,12 +173,14 @@ pub fn initialize_build(
     path: &Path,
     plain_output: bool,
     warn_error: Option<String>,
+    prod: bool,
+    features: Option<Vec<String>>,
 ) -> Result<BuildCommandState> {
     let project_context = ProjectContext::new(path)?;
     let compiler = get_compiler_info(&project_context)?;
 
     let timing_clean_start = Instant::now();
-    let packages = packages::make(filter, &project_context, show_progress)?;
+    let packages = packages::make(filter, &project_context, show_progress, prod, features.as_ref())?;
 
     let compiler_check = verify_compiler_info(&packages, &compiler);
 
@@ -146,7 +188,14 @@ pub fn initialize_build(
         return Err(anyhow!("Failed to validate package dependencies"));
     }
 
-    let mut build_state = BuildCommandState::new(project_context, packages, compiler, warn_error);
+    let mut build_state = BuildCommandState::new(
+        path.to_path_buf(),
+        project_context,
+        packages,
+        compiler,
+        warn_error,
+        features,
+    );
     packages::parse_packages(&mut build_state)?;
 
     let compile_assets_state = read_compile_state::read(&mut build_state)?;
@@ -237,7 +286,11 @@ pub fn incremental_build(
     only_incremental: bool,
     create_sourcedirs: bool,
     plain_output: bool,
-) -> Result<(), IncrementalBuildError> {
+) -> Result<CompilationOutcome, IncrementalBuildError> {
+    let build_folder = build_state.root_folder.to_string_lossy().to_string();
+
+    let _lock = get_lock_or_exit(LockKind::Build, &build_folder);
+
     logs::initialize(&build_state.packages);
     let num_dirty_modules = build_state.modules.values().filter(|m| is_dirty(m)).count() as u64;
     let pb = if !plain_output && show_progress {
@@ -251,7 +304,7 @@ pub fn incremental_build(
         ProgressStyle::with_template(&format!(
             "{} {}Parsing... {{spinner}} {{pos}}/{{len}} {{msg}}",
             format_step(current_step, total_steps),
-            CODE
+            PARSE
         ))
         .unwrap(),
     );
@@ -281,6 +334,8 @@ pub fn incremental_build(
             }
 
             eprintln!("{}", &err);
+            let _lock = drop_lock(LockKind::Build, &build_folder);
+
             return Err(IncrementalBuildError {
                 kind: IncrementalBuildErrorKind::SourceFileParseError,
                 plain_output,
@@ -299,13 +354,14 @@ pub fn incremental_build(
                 "{}{} {}Parsed {} source files in {:.2}s",
                 LINE_CLEAR,
                 format_step(current_step, total_steps),
-                CODE,
+                PARSE,
                 num_dirty_modules,
                 default_timing.unwrap_or(timing_parse_total).as_secs_f64()
             );
         }
     }
-    if helpers::contains_ascii_characters(&parse_warnings) {
+    let has_parse_warnings = has_output(&parse_warnings);
+    if has_parse_warnings {
         eprintln!("{}", &parse_warnings);
     }
 
@@ -343,9 +399,13 @@ pub fn incremental_build(
         || pb.inc(1),
         |size| pb.set_length(size),
     )
-    .map_err(|e| IncrementalBuildError {
-        kind: IncrementalBuildErrorKind::CompileError(Some(e.to_string())),
-        plain_output,
+    .map_err(|e| {
+        let _lock = drop_lock(LockKind::Build, &build_folder);
+
+        IncrementalBuildError {
+            kind: IncrementalBuildErrorKind::CompileError(Some(e.to_string())),
+            plain_output,
+        }
     })?;
 
     let compile_duration = start_compiling.elapsed();
@@ -370,20 +430,31 @@ pub fn incremental_build(
                 );
             }
         }
-        if helpers::contains_ascii_characters(&compile_warnings) {
+        if has_output(&compile_warnings) {
             eprintln!("{}", &compile_warnings);
         }
         if initial_build {
             log_config_warnings(build_state);
         }
-        if helpers::contains_ascii_characters(&compile_errors) {
+        if has_output(&compile_errors) {
             eprintln!("{}", &compile_errors);
         }
+
+        let _lock = drop_lock(LockKind::Build, &build_folder);
+
         Err(IncrementalBuildError {
             kind: IncrementalBuildErrorKind::CompileError(None),
             plain_output,
         })
     } else {
+        let has_compile_warnings = has_output(&compile_warnings);
+        let has_config_warning_output = initial_build && has_config_warnings(build_state);
+        let outcome = if has_parse_warnings || has_compile_warnings || has_config_warning_output {
+            CompilationOutcome::Warnings
+        } else {
+            CompilationOutcome::Clean
+        };
+
         if show_progress {
             if plain_output {
                 println!("Compiled {num_compiled_modules} modules")
@@ -399,7 +470,7 @@ pub fn incremental_build(
             }
         }
 
-        if helpers::contains_ascii_characters(&compile_warnings) {
+        if has_compile_warnings {
             eprintln!("{}", &compile_warnings);
         }
         if initial_build {
@@ -409,13 +480,27 @@ pub fn incremental_build(
         // Write per-package compiler metadata to `lib/bs/compiler-info.json` (idempotent)
         write_compiler_info(build_state);
 
-        Ok(())
+        let _lock = drop_lock(LockKind::Build, &build_folder);
+        Ok(outcome)
     }
 }
 
 fn log_config_warnings(build_state: &BuildCommandState) {
-    build_state.packages.iter().for_each(|(_, package)| {
-        // Only warn for local dependencies, not external packages
+    let mut packages: Vec<_> = build_state.packages.values().collect();
+    packages.sort_by(|a, b| a.name.cmp(&b.name));
+    packages.iter().for_each(|package| {
+        let deprecations = package.config.get_deprecations();
+        if !deprecations.is_empty() {
+            // External consumers can't fix deprecations themselves, so we
+            // point them at the package's issue tracker when we can find one.
+            let issue_tracker_url = if package.is_local_dep {
+                None
+            } else {
+                crate::build::packages::read_issue_tracker_url(&package.path)
+            };
+            log_deprecations(&package.name, deprecations, issue_tracker_url.as_deref());
+        }
+
         if package.is_local_dep {
             package
                 .config
@@ -430,6 +515,44 @@ fn log_config_warnings(build_state: &BuildCommandState) {
                 .for_each(|field| log_unknown_config_field(&package.name, field));
         }
     });
+}
+
+fn log_deprecations(
+    package_name: &str,
+    deprecations: &[crate::config::DeprecationWarning],
+    issue_tracker_url: Option<&str>,
+) {
+    let mut message = format!(
+        "Package '{package_name}' uses deprecated config (support will be removed in a future version):"
+    );
+    for deprecation in deprecations {
+        let line = match deprecation {
+            crate::config::DeprecationWarning::BsconfigJson => {
+                "  - filename 'bsconfig.json' — rename to 'rescript.json'"
+            }
+            crate::config::DeprecationWarning::BsDependencies => {
+                "  - field 'bs-dependencies' — use 'dependencies' instead"
+            }
+            crate::config::DeprecationWarning::BsDevDependencies => {
+                "  - field 'bs-dev-dependencies' — use 'dev-dependencies' instead"
+            }
+            crate::config::DeprecationWarning::BscFlags => {
+                "  - field 'bsc-flags' — use 'compiler-flags' instead"
+            }
+            crate::config::DeprecationWarning::CjsModule => {
+                "  - module 'cjs' in package-specs — use 'commonjs' instead"
+            }
+            crate::config::DeprecationWarning::Es6Module => {
+                "  - module 'es6' in package-specs — use 'esmodule' instead"
+            }
+        };
+        message.push('\n');
+        message.push_str(line);
+    }
+    if let Some(url) = issue_tracker_url {
+        message.push_str(&format!("\nPlease report this to the package maintainer: {url}"));
+    }
+    eprintln!("\n{}", style(message).yellow());
 }
 
 fn log_unsupported_config_field(package_name: &str, field_name: &str) {
@@ -468,6 +591,8 @@ pub fn build(
     create_sourcedirs: bool,
     plain_output: bool,
     warn_error: Option<String>,
+    prod: bool,
+    features: Option<Vec<String>>,
 ) -> Result<BuildCommandState> {
     let default_timing: Option<std::time::Duration> = if no_timing {
         Some(std::time::Duration::new(0.0 as u64, 0.0 as u32))
@@ -482,6 +607,8 @@ pub fn build(
         path,
         plain_output,
         warn_error,
+        prod,
+        features,
     )
     .with_context(|| "Could not initialize build")?;
 
@@ -494,14 +621,16 @@ pub fn build(
         create_sourcedirs,
         plain_output,
     ) {
-        Ok(_) => {
+        Ok(result) => {
             if !plain_output && show_progress {
                 let timing_total_elapsed = timing_total.elapsed();
                 println!(
-                    "\n{}{}Finished Compilation in {:.2}s",
-                    LINE_CLEAR,
-                    SPARKLES,
-                    default_timing.unwrap_or(timing_total_elapsed).as_secs_f64()
+                    "\n{}",
+                    format_finished_compilation_message(
+                        None,
+                        result,
+                        default_timing.unwrap_or(timing_total_elapsed),
+                    )
                 );
             }
             clean::cleanup_after_build(&build_state);
@@ -513,5 +642,33 @@ pub fn build(
             write_build_ninja(&build_state);
             Err(anyhow!("Incremental build failed. Error: {e}"))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn formats_successful_completion_message() {
+        assert_eq!(
+            format_finished_compilation_message(None, CompilationOutcome::Clean, Duration::from_millis(1500),),
+            format!("{LINE_CLEAR}{}Finished compilation in 1.50s", CHECKMARK)
+        );
+    }
+
+    #[test]
+    fn formats_warning_completion_message() {
+        assert_eq!(
+            format_finished_compilation_message(
+                Some("incremental"),
+                CompilationOutcome::Warnings,
+                Duration::from_millis(1500),
+            ),
+            format!(
+                "{LINE_CLEAR}{}Finished incremental compilation with warnings in 1.50s",
+                WARNING
+            )
+        );
     }
 }

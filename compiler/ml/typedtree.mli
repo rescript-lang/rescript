@@ -210,6 +210,8 @@ and expression_desc =
   | Texp_array of expression list
   | Texp_ifthenelse of expression * expression * expression option
   | Texp_sequence of expression * expression
+  | Texp_break
+  | Texp_continue
   | Texp_while of expression * expression
   | Texp_for of
       Ident.t
@@ -218,6 +220,8 @@ and expression_desc =
       * expression
       * direction_flag
       * expression
+  | Texp_for_of of Ident.t * Parsetree.pattern * expression * expression
+  | Texp_for_await_of of Ident.t * Parsetree.pattern * expression * expression
   | Texp_send of expression * meth * expression option
   | Texp_letmodule of Ident.t * string loc * module_expr * expression
   | Texp_letexception of extension_constructor * expression

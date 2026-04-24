@@ -5,11 +5,11 @@ use crate::cmd;
 use crate::config;
 use crate::helpers;
 use crate::helpers::StrippedVerbatimPath;
-use crate::helpers::emojis::*;
-use crate::lock::LOCKFILE;
+use crate::lock::LockKind;
 use crate::queue::FifoQueue;
 use crate::queue::*;
 use anyhow::{Context, Result};
+use console::Term;
 use futures_timer::Delay;
 use notify::event::ModifyKind;
 use notify::{Config, Error, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
@@ -109,7 +109,7 @@ fn compute_watch_paths(build_state: &BuildCommandState, root: &Path) -> Vec<(Pat
         }
     }
 
-    // Watch the lib/ directory for the lockfile (rescript.lock lives in lib/)
+    // Watch the lib/ directory for the watcher lockfile (watch.lock lives in lib/)
     let lib_dir = root.join("lib");
     if lib_dir.exists() {
         insert(lib_dir, RecursiveMode::NonRecursive);
@@ -140,6 +140,69 @@ fn unregister_watches(watcher: &mut RecommendedWatcher, watch_paths: &[(PathBuf,
     }
 }
 
+fn carry_forward_compile_warnings(previous: &BuildCommandState, next: &mut BuildCommandState) {
+    for (module_name, next_module) in next.build_state.modules.iter_mut() {
+        let Some(previous_module) = previous.build_state.modules.get(module_name) else {
+            continue;
+        };
+        if previous_module.package_name != next_module.package_name {
+            continue;
+        }
+
+        match (&previous_module.source_type, &mut next_module.source_type) {
+            (SourceType::SourceFile(previous_source), SourceType::SourceFile(next_source)) => {
+                if previous_source.implementation.path == next_source.implementation.path {
+                    next_source.implementation.compile_warnings =
+                        previous_source.implementation.compile_warnings.clone();
+
+                    if next_source.implementation.compile_warnings.is_some() {
+                        next_source.implementation.compile_state =
+                            previous_source.implementation.compile_state.clone();
+                    }
+                }
+
+                if let (Some(previous_interface), Some(next_interface)) =
+                    (&previous_source.interface, &mut next_source.interface)
+                    && previous_interface.path == next_interface.path
+                {
+                    next_interface.compile_warnings = previous_interface.compile_warnings.clone();
+
+                    if next_interface.compile_warnings.is_some() {
+                        next_interface.compile_state = previous_interface.compile_state.clone();
+                    }
+                }
+            }
+            (SourceType::MlMap(_), SourceType::MlMap(_)) => (),
+            _ => (),
+        }
+    }
+}
+
+fn should_clear_screen(
+    clear_screen: bool,
+    show_progress: bool,
+    plain_output: bool,
+    initial_build: bool,
+) -> bool {
+    clear_screen && show_progress && !plain_output && !initial_build
+}
+
+fn clear_terminal_screen() {
+    let _ = Term::stdout().clear_screen();
+}
+
+fn print_rebuild_header(compile_type: CompileType) {
+    match compile_type {
+        CompileType::Incremental => println!("Change detected. Rebuilding..."),
+        CompileType::Full => println!("Change detected. Full rebuild..."),
+        CompileType::None => (),
+    }
+}
+
+fn print_build_failed_footer() {
+    println!("\nBuild failed. Watching for changes...");
+}
+
 struct AsyncWatchArgs<'a> {
     watcher: &'a mut RecommendedWatcher,
     current_watch_paths: Vec<(PathBuf, RecursiveMode)>,
@@ -151,6 +214,9 @@ struct AsyncWatchArgs<'a> {
     after_build: Option<String>,
     create_sourcedirs: bool,
     plain_output: bool,
+    clear_screen: bool,
+    prod: bool,
+    features: Option<Vec<String>>,
 }
 
 async fn async_watch(
@@ -165,6 +231,9 @@ async fn async_watch(
         after_build,
         create_sourcedirs,
         plain_output,
+        clear_screen,
+        prod,
+        features,
     }: AsyncWatchArgs<'_>,
 ) -> Result<()> {
     let mut build_state = initial_build_state;
@@ -202,8 +271,11 @@ async fn async_watch(
         }
 
         for event in events {
-            // if there is a file named rescript.lock in the events path, we can quit the watcher
-            if event.paths.iter().any(|path| path.ends_with(LOCKFILE))
+            // If watch.lock is removed, we can quit the watcher.
+            if event
+                .paths
+                .iter()
+                .any(|path| path.ends_with(LockKind::Watch.file_name()))
                 && let EventKind::Remove(_) = event.kind
             {
                 if show_progress {
@@ -213,17 +285,17 @@ async fn async_watch(
                 return Ok(());
             }
 
-            // Detect rescript.json changes and trigger a full rebuild
-            if event
-                .paths
-                .iter()
-                .any(|p| p.file_name().map(|name| name == "rescript.json").unwrap_or(false))
-                && matches!(
-                    event.kind,
-                    EventKind::Modify(_) | EventKind::Create(_) | EventKind::Remove(_)
-                )
-            {
-                log::debug!("rescript.json changed -> full compile");
+            // Detect config-file changes and trigger a full rebuild.
+            // Legacy bsconfig.json is accepted for backward compatibility.
+            if event.paths.iter().any(|p| {
+                p.file_name()
+                    .map(|name| name == "rescript.json" || name == "bsconfig.json")
+                    .unwrap_or(false)
+            }) && matches!(
+                event.kind,
+                EventKind::Modify(_) | EventKind::Create(_) | EventKind::Remove(_)
+            ) {
+                log::debug!("config file changed -> full compile");
                 needs_compile_type = CompileType::Full;
                 continue;
             }
@@ -335,8 +407,13 @@ async fn async_watch(
 
         match needs_compile_type {
             CompileType::Incremental => {
+                if should_clear_screen(clear_screen, show_progress, plain_output, initial_build) {
+                    clear_terminal_screen();
+                    print_rebuild_header(CompileType::Incremental);
+                }
+
                 let timing_total = Instant::now();
-                if build::incremental_build(
+                let result = build::incremental_build(
                     &mut build_state,
                     None,
                     initial_build,
@@ -344,49 +421,71 @@ async fn async_watch(
                     !initial_build,
                     create_sourcedirs,
                     plain_output,
-                )
-                .is_ok()
-                {
-                    if let Some(a) = after_build.clone() {
-                        cmd::run(a)
+                );
+
+                match result {
+                    Ok(result) => {
+                        if let Some(a) = after_build.clone() {
+                            cmd::run(a)
+                        }
+                        let timing_total_elapsed = timing_total.elapsed();
+                        if show_progress {
+                            let compilation_type = if initial_build { "initial" } else { "incremental" };
+                            if plain_output {
+                                println!("Finished {compilation_type} compilation")
+                            } else {
+                                println!(
+                                    "\n{}\n",
+                                    build::format_finished_compilation_message(
+                                        Some(compilation_type),
+                                        result,
+                                        timing_total_elapsed,
+                                    )
+                                );
+                            }
+                        }
                     }
-                    let timing_total_elapsed = timing_total.elapsed();
-                    if show_progress {
-                        let compilation_type = if initial_build { "initial" } else { "incremental" };
-                        if plain_output {
-                            println!("Finished {compilation_type} compilation")
-                        } else {
-                            println!(
-                                "\n{}{}Finished {} compilation in {:.2}s\n",
-                                LINE_CLEAR,
-                                SPARKLES,
-                                compilation_type,
-                                timing_total_elapsed.as_secs_f64()
-                            );
+                    Err(_) => {
+                        if should_clear_screen(clear_screen, show_progress, plain_output, initial_build) {
+                            print_build_failed_footer();
                         }
                     }
                 }
+
                 needs_compile_type = CompileType::None;
                 initial_build = false;
             }
             CompileType::Full => {
+                if should_clear_screen(clear_screen, show_progress, plain_output, initial_build) {
+                    clear_terminal_screen();
+                    print_rebuild_header(CompileType::Full);
+                }
+
                 let timing_total = Instant::now();
-                build_state = build::initialize_build(
+                let mut next_build_state = build::initialize_build(
                     None,
                     filter,
                     show_progress,
                     path,
                     plain_output,
                     build_state.get_warn_error_override(),
+                    prod,
+                    features.clone(),
                 )
                 .expect("Could not initialize build");
+
+                // Full rebuilds can be triggered by editor atomic saves that surface as rename events.
+                // Preserve warning state for unchanged modules so their warnings are re-emitted after the
+                // fresh build state replaces the previous one.
+                carry_forward_compile_warnings(&build_state, &mut next_build_state);
+                build_state = next_build_state;
 
                 // Re-register watches based on the new build state
                 unregister_watches(watcher, &current_watch_paths);
                 current_watch_paths = compute_watch_paths(&build_state, path);
                 register_watches(watcher, &current_watch_paths);
 
-                let _ = build::incremental_build(
+                let result = build::incremental_build(
                     &mut build_state,
                     None,
                     initial_build,
@@ -395,21 +494,36 @@ async fn async_watch(
                     create_sourcedirs,
                     plain_output,
                 );
-                if let Some(a) = after_build.clone() {
-                    cmd::run(a)
+                match result {
+                    Ok(result) => {
+                        if let Some(a) = after_build.clone() {
+                            cmd::run(a)
+                        }
+
+                        let timing_total_elapsed = timing_total.elapsed();
+                        if show_progress {
+                            if plain_output {
+                                println!("Finished compilation")
+                            } else {
+                                println!(
+                                    "\n{}\n",
+                                    build::format_finished_compilation_message(
+                                        None,
+                                        result,
+                                        timing_total_elapsed,
+                                    )
+                                );
+                            }
+                        }
+                    }
+                    Err(_) => {
+                        if should_clear_screen(clear_screen, show_progress, plain_output, initial_build) {
+                            print_build_failed_footer();
+                        }
+                    }
                 }
 
                 build::write_build_ninja(&build_state);
-
-                let timing_total_elapsed = timing_total.elapsed();
-                if !plain_output && show_progress {
-                    println!(
-                        "\n{}{}Finished compilation in {:.2}s\n",
-                        LINE_CLEAR,
-                        SPARKLES,
-                        timing_total_elapsed.as_secs_f64()
-                    );
-                }
                 needs_compile_type = CompileType::None;
                 initial_build = false;
             }
@@ -431,6 +545,9 @@ pub fn start(
     create_sourcedirs: bool,
     plain_output: bool,
     warn_error: Option<String>,
+    clear_screen: bool,
+    prod: bool,
+    features: Option<Vec<String>>,
 ) -> Result<()> {
     futures::executor::block_on(async {
         let queue = Arc::new(FifoQueue::<Result<Event, Error>>::new());
@@ -450,6 +567,8 @@ pub fn start(
             path,
             plain_output,
             warn_error.clone(),
+            prod,
+            features.clone(),
         )
         .with_context(|| "Could not initialize build")?;
 
@@ -468,7 +587,215 @@ pub fn start(
             after_build,
             create_sourcedirs,
             plain_output,
+            clear_screen,
+            prod,
+            features,
         })
         .await
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::build::build_types::{
+        CompileState, CompilerInfo, Implementation, Interface, Module, ParseState, SourceFile, SourceType,
+    };
+    use crate::build::packages::{Namespace, Package};
+    use crate::config;
+    use crate::project_context::ProjectContext;
+    use ahash::{AHashMap, AHashSet};
+    use std::path::PathBuf;
+    use std::sync::RwLock;
+    use std::time::SystemTime;
+
+    fn test_project_context(root: &str) -> ProjectContext {
+        let root_path = PathBuf::from(root);
+        let config = config::tests::create_config(config::tests::CreateConfigArgs {
+            name: "test-root".to_string(),
+            bs_deps: vec![],
+            build_dev_deps: vec![],
+            allowed_dependents: None,
+            path: root_path.clone(),
+        });
+
+        ProjectContext {
+            current_config: config,
+            monorepo_context: None,
+            node_modules_exist_cache: RwLock::new(AHashMap::new()),
+            packages_cache: RwLock::new(AHashMap::new()),
+        }
+    }
+
+    fn test_package(name: &str, path: &str) -> Package {
+        let package_path = PathBuf::from(path);
+        Package {
+            name: name.to_string(),
+            config: config::tests::create_config(config::tests::CreateConfigArgs {
+                name: name.to_string(),
+                bs_deps: vec![],
+                build_dev_deps: vec![],
+                allowed_dependents: None,
+                path: package_path.clone(),
+            }),
+            source_folders: AHashSet::new(),
+            source_files: None,
+            namespace: Namespace::NoNamespace,
+            modules: None,
+            path: package_path,
+            dirs: None,
+            gentype_dirs: None,
+            is_local_dep: true,
+            is_root: true,
+        }
+    }
+
+    fn test_build_state(module_name: &str, module: Module) -> BuildCommandState {
+        let root = "/tmp/rewatch-warning-carry-forward";
+        let package = test_package("test-package", root);
+        let mut packages = AHashMap::new();
+        packages.insert(package.name.clone(), package);
+
+        let compiler = CompilerInfo {
+            bsc_path: PathBuf::from("/tmp/bsc"),
+            bsc_hash: blake3::hash(b"test-bsc"),
+            runtime_path: PathBuf::from("/tmp/runtime"),
+        };
+
+        let mut build_state = BuildCommandState::new(
+            PathBuf::from(root),
+            test_project_context(root),
+            packages,
+            compiler,
+            None,
+            None,
+        );
+        build_state.insert_module(module_name, module);
+        build_state
+    }
+
+    fn test_module(
+        implementation_path: &str,
+        implementation_warning: Option<&str>,
+        interface_path: Option<&str>,
+        interface_warning: Option<&str>,
+    ) -> Module {
+        let implementation_compile_state = if implementation_warning.is_some() {
+            CompileState::Warning
+        } else {
+            CompileState::Success
+        };
+        let interface_compile_state = if interface_warning.is_some() {
+            CompileState::Warning
+        } else {
+            CompileState::Success
+        };
+
+        Module {
+            source_type: SourceType::SourceFile(SourceFile {
+                implementation: Implementation {
+                    path: PathBuf::from(implementation_path),
+                    parse_state: ParseState::Success,
+                    compile_state: implementation_compile_state,
+                    last_modified: SystemTime::UNIX_EPOCH,
+                    parse_dirty: false,
+                    compile_warnings: implementation_warning.map(str::to_string),
+                },
+                interface: interface_path.map(|interface_path| Interface {
+                    path: PathBuf::from(interface_path),
+                    parse_state: ParseState::Success,
+                    compile_state: interface_compile_state,
+                    last_modified: SystemTime::UNIX_EPOCH,
+                    parse_dirty: false,
+                    compile_warnings: interface_warning.map(str::to_string),
+                }),
+            }),
+            deps: AHashSet::new(),
+            dependents: AHashSet::new(),
+            package_name: "test-package".to_string(),
+            compile_dirty: false,
+            last_compiled_cmi: None,
+            last_compiled_cmt: None,
+            deps_dirty: false,
+            is_type_dev: false,
+        }
+    }
+
+    #[test]
+    fn clears_screen_only_for_non_initial_interactive_rebuilds() {
+        assert!(should_clear_screen(true, true, false, false));
+        assert!(!should_clear_screen(true, true, false, true));
+        assert!(!should_clear_screen(true, true, true, false));
+        assert!(!should_clear_screen(true, false, false, false));
+        assert!(!should_clear_screen(false, true, false, false));
+    }
+
+    #[test]
+    fn carries_forward_implementation_warnings_for_matching_module_paths() {
+        let previous = test_build_state(
+            "ModuleA",
+            test_module("src/ModuleA.res", Some("warning: impl"), None, None),
+        );
+        let mut next = test_build_state("ModuleA", test_module("src/ModuleA.res", None, None, None));
+
+        carry_forward_compile_warnings(&previous, &mut next);
+
+        let module = next.get_module("ModuleA").expect("module should exist");
+        let SourceType::SourceFile(source_file) = &module.source_type else {
+            panic!("expected source file module");
+        };
+
+        assert_eq!(
+            source_file.implementation.compile_warnings.as_deref(),
+            Some("warning: impl")
+        );
+        assert_eq!(source_file.implementation.compile_state, CompileState::Warning);
+    }
+
+    #[test]
+    fn does_not_carry_forward_warnings_when_module_paths_change() {
+        let previous = test_build_state(
+            "ModuleA",
+            test_module("src/ModuleA.res", Some("warning: impl"), None, None),
+        );
+        let mut next = test_build_state("ModuleA", test_module("src/ModuleARenamed.res", None, None, None));
+
+        carry_forward_compile_warnings(&previous, &mut next);
+
+        let module = next.get_module("ModuleA").expect("module should exist");
+        let SourceType::SourceFile(source_file) = &module.source_type else {
+            panic!("expected source file module");
+        };
+
+        assert_eq!(source_file.implementation.compile_warnings, None);
+        assert_eq!(source_file.implementation.compile_state, CompileState::Success);
+    }
+
+    #[test]
+    fn carries_forward_interface_warnings_for_matching_interface_paths() {
+        let previous = test_build_state(
+            "ModuleA",
+            test_module(
+                "src/ModuleA.res",
+                None,
+                Some("src/ModuleA.resi"),
+                Some("warning: interface"),
+            ),
+        );
+        let mut next = test_build_state(
+            "ModuleA",
+            test_module("src/ModuleA.res", None, Some("src/ModuleA.resi"), None),
+        );
+
+        carry_forward_compile_warnings(&previous, &mut next);
+
+        let module = next.get_module("ModuleA").expect("module should exist");
+        let SourceType::SourceFile(source_file) = &module.source_type else {
+            panic!("expected source file module");
+        };
+        let interface = source_file.interface.as_ref().expect("interface should exist");
+
+        assert_eq!(interface.compile_warnings.as_deref(), Some("warning: interface"));
+        assert_eq!(interface.compile_state, CompileState::Warning);
+    }
 }

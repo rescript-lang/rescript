@@ -617,6 +617,8 @@ let compile output_prefix =
                 (Maybe_tail_is_return
                    (Tail_with_name {label = Some ret; in_staticcatch = false}));
             jmp_table = Lam_compile_context.empty_handler_map;
+            switch_depth = 0;
+            loop_stack = [];
           }
           body
       in
@@ -852,13 +854,14 @@ let compile output_prefix =
               List.filter (fun (_, lam1) -> not (Lam.eq_approx lam lam1)) cases
             | _ -> cases
           in
+          let switch_cxt = Lam_compile_context.enter_switch cxt in
           let default =
             match default with
             | Complete -> None
             | NonComplete -> None
             | Default lam -> (
               let statements =
-                Js_output.output_as_block (compile_lambda cxt lam)
+                Js_output.output_as_block (compile_lambda switch_cxt lam)
               in
               match statements with
               | [] -> None
@@ -869,7 +872,7 @@ let compile output_prefix =
                 if last then
                   (* merge and shared *)
                   let switch_body, should_break =
-                    Js_output.to_break_block (compile_lambda cxt lam)
+                    Js_output.to_break_block (compile_lambda switch_cxt lam)
                   in
                   let should_break =
                     if
@@ -1420,15 +1423,16 @@ let compile output_prefix =
         | [] -> e
         | _ -> E.of_block block ~e
       in
-      let block =
-        [
-          S.while_ e
-            (Js_output.output_as_block
-            @@ compile_lambda
-                 {lambda_cxt with continuation = EffectCall Not_tail}
-                 body);
-        ]
+      let loop_cxt, loop_frame = Lam_compile_context.push_loop lambda_cxt in
+      let body_block =
+        Js_output.output_as_block
+        @@ compile_lambda
+             {loop_cxt with continuation = EffectCall Not_tail}
+             body
       in
+      (* The label stays absent for ordinary loops and is filled in lazily if a
+         nested switch emits break/continue for this loop. *)
+      let block = [S.while_ ?label:loop_frame.label e body_block] in
       Js_output.output_of_block_and_expression lambda_cxt.continuation block
         E.unit
   (* all non-tail
@@ -1458,15 +1462,21 @@ let compile output_prefix =
              we can guarantee e1 is pure, if it literally contains a side effect call,
              put it in the beginning
         *)
+        let loop_cxt, loop_frame = Lam_compile_context.push_loop lambda_cxt in
         let block_body =
           Js_output.output_as_block
             (compile_lambda
-               {lambda_cxt with continuation = EffectCall Not_tail}
+               {loop_cxt with continuation = EffectCall Not_tail}
                body)
         in
+        let make_for for_ident_expression =
+          (* See compile_while above: only loops that need labeled control flow
+             end up with a concrete JS label. *)
+          S.for_ ?label:loop_frame.label for_ident_expression e2 id direction
+            block_body
+        in
         match (b1, b2) with
-        | _, [] ->
-          Ext_list.append_one b1 (S.for_ (Some e1) e2 id direction block_body)
+        | _, [] -> Ext_list.append_one b1 (make_for (Some e1))
         | _, _
           when Js_analyzer.no_side_effect_expression e1
                (*
@@ -1475,13 +1485,57 @@ let compile output_prefix =
                      b2 > e1 > e2
                    *)
           ->
-          Ext_list.append b1
-            (Ext_list.append_one b2
-               (S.for_ (Some e1) e2 id direction block_body))
+          Ext_list.append b1 (Ext_list.append_one b2 (make_for (Some e1)))
         | _, _ ->
           Ext_list.append b1
             (S.define_variable ~kind:Variable id e1
-            :: Ext_list.append_one b2 (S.for_ None e2 id direction block_body)))
+            :: Ext_list.append_one b2 (make_for None)))
+    in
+    Js_output.output_of_block_and_expression lambda_cxt.continuation block
+      E.unit
+  and compile_for_of (id : J.for_ident) (iterable : Lam.t) (body : Lam.t)
+      (lambda_cxt : Lam_compile_context.t) =
+    let new_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
+    let emitted_id =
+      if Set_ident.mem (Lam_free_variables.pass_free_variables body) id then id
+      else Ext_ident.create_tmp ~name:"_for_of" ()
+    in
+    let block =
+      match compile_lambda new_cxt iterable with
+      | {value = None} -> assert false
+      | {block = b1; value = Some e1} ->
+        let loop_cxt, loop_frame = Lam_compile_context.push_loop lambda_cxt in
+        let block_body =
+          Js_output.output_as_block
+            (compile_lambda
+               {loop_cxt with continuation = EffectCall Not_tail}
+               body)
+        in
+        Ext_list.append b1
+          [S.for_of ?label:loop_frame.label e1 emitted_id block_body]
+    in
+    Js_output.output_of_block_and_expression lambda_cxt.continuation block
+      E.unit
+  and compile_for_await_of (id : J.for_ident) (iterable : Lam.t) (body : Lam.t)
+      (lambda_cxt : Lam_compile_context.t) =
+    let new_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
+    let emitted_id =
+      if Set_ident.mem (Lam_free_variables.pass_free_variables body) id then id
+      else Ext_ident.create_tmp ~name:"_for_await_of" ()
+    in
+    let block =
+      match compile_lambda new_cxt iterable with
+      | {value = None} -> assert false
+      | {block = b1; value = Some e1} ->
+        let loop_cxt, loop_frame = Lam_compile_context.push_loop lambda_cxt in
+        let block_body =
+          Js_output.output_as_block
+            (compile_lambda
+               {loop_cxt with continuation = EffectCall Not_tail}
+               body)
+        in
+        Ext_list.append b1
+          [S.for_await_of ?label:loop_frame.label e1 emitted_id block_body]
     in
     Js_output.output_of_block_and_expression lambda_cxt.continuation block
       E.unit
@@ -1836,8 +1890,9 @@ let compile output_prefix =
           Map_ident.disjoint_merge_exn new_params ret.new_params (fun _ _ _ ->
               assert false);
         let block =
-          Ext_list.map_append assigned_params [S.continue_] (fun (param, arg) ->
-              S.assign param arg)
+          Ext_list.map_append assigned_params
+            [S.continue_ ()]
+            (fun (param, arg) -> S.assign param arg)
         in
         (* Note true and continue needed to be handled together*)
         Js_output.make ~output_finished:True (Ext_list.append args_code block)
@@ -2119,6 +2174,8 @@ let compile output_prefix =
                        (Maybe_tail_is_return
                           (Tail_with_name {label = None; in_staticcatch = false}));
                    jmp_table = Lam_compile_context.empty_handler_map;
+                   switch_depth = 0;
+                   loop_stack = [];
                  }
                  body)))
     | Lapply appinfo -> compile_apply appinfo lambda_cxt
@@ -2179,6 +2236,38 @@ let compile output_prefix =
     | Lswitch (switch_arg, sw) -> compile_switch switch_arg sw lambda_cxt
     | Lstaticraise (i, largs) -> compile_staticraise i largs lambda_cxt
     | Lstaticcatch _ -> compile_staticcatch cur_lam lambda_cxt
+    | Lbreak -> (
+      match lambda_cxt.loop_stack with
+      | [] -> assert false
+      | frame :: _ ->
+        let stmt =
+          if lambda_cxt.switch_depth > 0 then
+            (* In JS, break inside a switch breaks the switch unless we target
+               the enclosing loop explicitly. *)
+            let label =
+              Lam_compile_context.ensure_loop_label lambda_cxt frame
+            in
+            S.break_ ~label ()
+          else S.break_ ()
+        in
+        (* [break] is accepted inside braced expressions like [{break}], so keep
+           the usual NeedValue invariant even though JS only has a statement form. *)
+        Js_output.make [stmt] ~value:E.undefined ~output_finished:True)
+    | Lcontinue -> (
+      match lambda_cxt.loop_stack with
+      | [] -> assert false
+      | frame :: _ ->
+        let stmt =
+          if lambda_cxt.switch_depth > 0 then
+            (* Keep continue consistent with break by routing nested-switch loop
+               control through the same labeled path. *)
+            let label =
+              Lam_compile_context.ensure_loop_label lambda_cxt frame
+            in
+            S.continue_ ~label ()
+          else S.continue_ ()
+        in
+        Js_output.make [stmt] ~value:E.undefined ~output_finished:True)
     | Lwhile (p, body) -> compile_while p body lambda_cxt
     | Lfor (id, start, finish, direction, body) -> (
       match (direction, finish) with
@@ -2194,6 +2283,9 @@ let compile output_prefix =
         compile_for id start finish
           (if direction = Upto then Upto else Downto)
           body lambda_cxt)
+    | Lfor_of (id, iterable, body) -> compile_for_of id iterable body lambda_cxt
+    | Lfor_await_of (id, iterable, body) ->
+      compile_for_await_of id iterable body lambda_cxt
     | Lassign (id, lambda) -> compile_assign id lambda lambda_cxt
     | Ltrywith (lam, id, catch) ->
       (* generate documentation *)

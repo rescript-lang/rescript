@@ -178,7 +178,7 @@ let is_pattern_start = function
   | _ -> false
 
 let is_parameter_start = function
-  | Token.Typ | Tilde -> true
+  | Token.Typ | Tilde | Dot -> true
   | token when is_pattern_start token -> true
   | _ -> false
 
@@ -206,7 +206,7 @@ let is_typ_expr_start = function
   | _ -> false
 
 let is_type_parameter_start = function
-  | Token.Tilde -> true
+  | Token.Tilde | Dot -> true
   | token when is_typ_expr_start token -> true
   | _ -> false
 
@@ -224,7 +224,7 @@ let is_mod_expr_start = function
   | _ -> false
 
 let is_dict_row_start = function
-  | Token.String _ -> true
+  | Token.DotDotDot | String _ -> true
   | _ -> false
 
 let is_record_row_start = function
@@ -239,7 +239,7 @@ let is_record_row_string_key_start = function
   | _ -> false
 
 let is_argument_start = function
-  | Token.Tilde | Underscore -> true
+  | Token.Tilde | Dot | Underscore -> true
   | t when is_expr_start t -> true
   | _ -> false
 
@@ -264,11 +264,11 @@ let is_attribute_start = function
 let is_jsx_child_start = is_atomic_expr_start
 
 let is_block_expr_start = function
-  | Token.Assert | At | Await | Backtick | Bang | Codepoint _ | Exception
-  | False | Float _ | For | Forwardslash | ForwardslashDot | Hash | If | Int _
-  | Lbrace | Lbracket | LessThan | Let _ | Lident _ | List | Lparen | Minus
-  | MinusDot | Module | Open | Percent | Plus | PlusDot | String _ | Switch
-  | True | Try | Uident _ | Underscore | While | Dict ->
+  | Token.Assert | At | Await | Backtick | Bang | Break | Codepoint _ | Continue
+  | Exception | False | Float _ | For | Forwardslash | ForwardslashDot | Hash
+  | If | Int _ | Lbrace | Lbracket | LessThan | Let _ | Lident _ | List | Lparen
+  | Minus | MinusDot | Module | Open | Percent | Plus | PlusDot | String _
+  | Switch | True | Try | Uident _ | Underscore | While | Dict ->
     true
   | _ -> false
 

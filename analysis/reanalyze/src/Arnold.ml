@@ -982,9 +982,15 @@ module Compile = struct
     | Texp_while _ ->
       notImplemented "Texp_while";
       assert false
-    | Texp_for _ ->
-      notImplemented "Texp_for";
-      assert false
+    | Texp_for (_id, _pat, e1, e2, _dir, e3) ->
+      let open Command in
+      expression ~ctx e1 +++ expression ~ctx e2 +++ expression ~ctx e3
+    | Texp_for_of (_id, _pat, e1, e2) ->
+      let open Command in
+      expression ~ctx e1 +++ expression ~ctx e2
+    | Texp_for_await_of (_id, _pat, e1, e2) ->
+      let open Command in
+      expression ~ctx e1 +++ expression ~ctx e2
     | Texp_send _ ->
       notImplemented "Texp_send";
       assert false
