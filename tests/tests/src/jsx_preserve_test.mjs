@@ -229,7 +229,7 @@ let Y = {
   make: make$1
 };
 
-<42 />;
+<Y.make />;
 
 let context = React.createContext(0);
 
