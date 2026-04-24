@@ -14,7 +14,6 @@
 
 #### :boom: Breaking Change
 
-- Change `Intl.Collator.compare` return type from `int` to `Ordering.t` (`float`). https://github.com/rescript-lang/rescript/pull/8289
 - Nested React component modules now export only the namespaced component value instead of a public `make` wrapper, and GenType mirrors that new boundary shape. https://github.com/rescript-lang/rescript/pull/8293
 
 #### :eyeglasses: Spec Compliance
