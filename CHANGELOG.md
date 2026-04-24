@@ -39,6 +39,7 @@
 - Improve error message for dependency without `rescript.json`. https://github.com/rescript-lang/rescript/pull/8292
 - Resolve workspace dependencies in editor analysis. https://github.com/rescript-lang/rescript/pull/8392
 - Improve deprecated attribute extraction and support record form. https://github.com/rescript-lang/rescript/pull/8396
+- Improve default argument type mismatch errors. https://github.com/rescript-lang/rescript/pull/8389
 
 # 12.2.0
 
