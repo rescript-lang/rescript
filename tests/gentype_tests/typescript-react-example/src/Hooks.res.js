@@ -204,10 +204,6 @@ let make$1 = Hooks;
 
 let $$default = Hooks;
 
-let Hooks$Inner$jsx = true;
-
-let Hooks$Inner$Inner2$jsx = true;
-
 let Hooks$WithRef = make;
 
 export {
@@ -222,9 +218,7 @@ export {
   Fun,
   WithChildren,
   Hooks$Inner,
-  Hooks$Inner$jsx,
   Hooks$Inner$Inner2,
-  Hooks$Inner$Inner2$jsx,
   Hooks$NoProps,
   Hooks$WithRef,
   Hooks$RenderPropRequiresConversion,

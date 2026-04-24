@@ -251,11 +251,7 @@ let Jsx_preserve_test$A = QueryClientProvider;
 
 let make$3 = Jsx_preserve_test;
 
-let Jsx_preserve_test$A$jsx = true;
-
 let Jsx_preserve_test$Y$1 = make$1;
-
-let Jsx_preserve_test$Y$jsx = true;
 
 export {
   _single_element_child,
@@ -287,11 +283,9 @@ export {
   make$3 as make,
   Jsx_preserve_test$Icon,
   Jsx_preserve_test$A,
-  Jsx_preserve_test$A$jsx,
   Jsx_preserve_test$B,
   Jsx_preserve_test$MyWeirdComponent,
   Jsx_preserve_test$ComponentWithOptionalProps,
   Jsx_preserve_test$Y$1 as Jsx_preserve_test$Y,
-  Jsx_preserve_test$Y$jsx,
 }
 /* _single_element_child Not a pure module */
