@@ -241,8 +241,34 @@ let compile output_prefix =
       | Some index -> String.sub id.name 0 index
       | None -> id.name)
   in
-  let rec extract_nested_external_component_segments segments
-      ((lam : Lam.t), (make_dynamic_import : bool option ref)) :
+  let nested_component_path id dynamic_import segments =
+    let root_name = root_module_name id in
+    let denamespace_segment segment =
+      let namespaced_prefix = root_name ^ "$" in
+      if Ext_string.starts_with segment namespaced_prefix then
+        match String.split_on_char '$' segment with
+        | root :: _namespace :: rest when rest <> [] ->
+          String.concat "$" (root :: rest)
+        | _ -> segment
+      else segment
+    in
+    let segments =
+      match segments with
+      | head :: rest
+        when head = id.name || head = root_name
+             || Ext_string.starts_with head (root_name ^ "$") ->
+        rest
+      | _ -> segments
+    in
+    match segments with
+    | [] -> None
+    | head :: rest ->
+      Some
+        ( id,
+          dynamic_import,
+          String.concat "$" (root_name :: denamespace_segment head :: rest) )
+  in
+  let rec extract_nested_external_component_segments segments (lam : Lam.t) :
       (Ident.t * bool * string list) option =
     match lam with
     | Lprim
@@ -251,21 +277,15 @@ let compile output_prefix =
           args = [arg];
           _;
         } ->
-      extract_nested_external_component_segments (name :: segments)
-        (arg, make_dynamic_import)
+      extract_nested_external_component_segments (name :: segments) arg
     | Lprim {primitive = Pawait; args = [arg]; _} ->
-      extract_nested_external_component_segments segments
-        (arg, make_dynamic_import)
+      extract_nested_external_component_segments segments arg
     | Lvar id -> (
       match Map_ident.find_opt !local_module_aliases id with
       | Some alias_lam ->
-        extract_nested_external_component_segments segments
-          (alias_lam, make_dynamic_import)
-      | None ->
-        make_dynamic_import := Some false;
-        Some (id, false, List.rev segments))
+        extract_nested_external_component_segments segments alias_lam
+      | None -> Some (id, false, List.rev segments))
     | Lglobal_module (id, dynamic_import) ->
-      make_dynamic_import := Some dynamic_import;
       Some (id, dynamic_import, List.rev segments)
     | _ -> None
   in
@@ -294,42 +314,9 @@ let compile output_prefix =
   in
   let extract_nested_external_component_path (lam : Lam.t) :
       (Ident.t * bool * string) option =
-    let dynamic_import = ref None in
-    match
-      extract_nested_external_component_segments [] (lam, dynamic_import)
-    with
-    | Some (id, dynamic_import, segments) -> (
-      let denamespace_segment segment =
-        let root_name = root_module_name id in
-        let namespaced_prefix = root_name ^ "$" in
-        if Ext_string.starts_with segment namespaced_prefix then
-          match String.split_on_char '$' segment with
-          | root :: _namespace :: rest when rest <> [] ->
-            String.concat "$" (root :: rest)
-          | _ -> segment
-        else segment
-      in
-      let segments =
-        match segments with
-        | head :: rest
-          when head = id.name
-               || head = root_module_name id
-               || Ext_string.starts_with head (root_module_name id ^ "$") ->
-          rest
-        | _ -> segments
-      in
-      let segments =
-        match segments with
-        | head :: rest -> denamespace_segment head :: rest
-        | [] -> []
-      in
-      match segments with
-      | [] -> None
-      | _ ->
-        Some
-          ( id,
-            dynamic_import,
-            String.concat "$" (root_module_name id :: segments) ))
+    match extract_nested_external_component_segments [] lam with
+    | Some (id, dynamic_import, segments) ->
+      nested_component_path id dynamic_import segments
     | None -> None
   in
   let extract_nested_external_component_field (lam : Lam.t) :
@@ -347,38 +334,8 @@ let compile output_prefix =
   let extract_static_nested_external_component_path (lam : Lam.t) :
       (Ident.t * bool * string) option =
     match extract_static_nested_external_component_segments [] lam with
-    | Some (id, dynamic_import, segments) -> (
-      let denamespace_segment segment =
-        let root_name = root_module_name id in
-        let namespaced_prefix = root_name ^ "$" in
-        if Ext_string.starts_with segment namespaced_prefix then
-          match String.split_on_char '$' segment with
-          | root :: _namespace :: rest when rest <> [] ->
-            String.concat "$" (root :: rest)
-          | _ -> segment
-        else segment
-      in
-      let segments =
-        match segments with
-        | head :: rest
-          when head = id.name
-               || head = root_module_name id
-               || Ext_string.starts_with head (root_module_name id ^ "$") ->
-          rest
-        | _ -> segments
-      in
-      let segments =
-        match segments with
-        | head :: rest -> denamespace_segment head :: rest
-        | [] -> []
-      in
-      match segments with
-      | [] -> None
-      | _ ->
-        Some
-          ( id,
-            dynamic_import,
-            String.concat "$" (root_module_name id :: segments) ))
+    | Some (id, dynamic_import, segments) ->
+      nested_component_path id dynamic_import segments
     | None -> None
   in
   let normalize_hidden_component_name (id : Ident.t) (hidden_name : string) =
