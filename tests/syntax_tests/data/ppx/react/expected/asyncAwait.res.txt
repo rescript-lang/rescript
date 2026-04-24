@@ -35,5 +35,5 @@ module C1 = {
     \"AsyncAwait$C1"
   }
 }
-@warning("-32") let \"AsyncAwait$C0" = C0.make @warning("-32") and \"AsyncAwait$C0$jsx" = true
-@warning("-32") let \"AsyncAwait$C1" = C1.make @warning("-32") and \"AsyncAwait$C1$jsx" = true
+@warning("-32") let \"AsyncAwait$C0" = C0.make
+@warning("-32") let \"AsyncAwait$C1" = C1.make

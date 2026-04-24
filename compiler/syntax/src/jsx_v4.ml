@@ -96,9 +96,9 @@ let props_longident_for_nested_module nested_modules =
     in
     Ldot (mod_path, "props")
 
-(* Hoisted File$Nested / File$Nested$jsx exist for JS/RSC exports; they are not
-   always referenced from ReScript when a nested module is absent from the
-   [.resi], so suppress unused-value (32) on these bindings only. *)
+(* Hoisted File$Nested aliases exist for JS/RSC exports; they are not always
+   referenced from ReScript when a nested module is absent from the [.resi], so
+   suppress unused-value (32) on these bindings only. *)
 let jsx_hoisted_binding_warning_attrs =
   [
     ( Location.mknoloc "warning",
@@ -110,7 +110,6 @@ let make_hoisted_component_binding ~empty_loc ~full_module_name nested_modules =
     nested_modules |> List.rev |> longident_of_segments |> fun txt ->
     {loc = empty_loc; txt = Ldot (txt, "make")}
   in
-  let marker_name = full_module_name ^ "$jsx" in
   {
     pstr_loc = empty_loc;
     pstr_desc =
@@ -120,11 +119,6 @@ let make_hoisted_component_binding ~empty_loc ~full_module_name nested_modules =
             Vb.mk ~loc:empty_loc ~attrs:jsx_hoisted_binding_warning_attrs
               (Pat.var ~loc:empty_loc {loc = empty_loc; txt = full_module_name})
               (Exp.ident ~loc:empty_loc path);
-            Vb.mk ~loc:empty_loc ~attrs:jsx_hoisted_binding_warning_attrs
-              (Pat.var ~loc:empty_loc {loc = empty_loc; txt = marker_name})
-              (Exp.construct ~loc:empty_loc
-                 {loc = empty_loc; txt = Lident "true"}
-                 None);
           ] );
   }
 
@@ -162,40 +156,24 @@ let maybe_hoist_nested_make_component ~(config : Jsx_common.jsx_config)
 
 let make_hoisted_component_signature ~empty_loc ~full_module_name
     (component_type : Parsetree.core_type) =
-  let marker_name = full_module_name ^ "$jsx" in
-  let bool_ty =
-    Typ.constr ~loc:empty_loc {loc = empty_loc; txt = Lident "bool"} []
-  in
-  let full_sig =
-    {
-      psig_loc = empty_loc;
-      psig_desc =
-        Psig_value
-          (Val.mk ~loc:empty_loc
-             {loc = empty_loc; txt = full_module_name}
-             component_type);
-    }
-  in
-  let jsx_sig =
-    {
-      psig_loc = empty_loc;
-      psig_desc =
-        Psig_value
-          (Val.mk ~loc:empty_loc {loc = empty_loc; txt = marker_name} bool_ty);
-    }
-  in
-  (full_sig, jsx_sig)
+  {
+    psig_loc = empty_loc;
+    psig_desc =
+      Psig_value
+        (Val.mk ~loc:empty_loc
+           {loc = empty_loc; txt = full_module_name}
+           component_type);
+  }
 
 let maybe_hoist_nested_make_signature ~(config : Jsx_common.jsx_config)
     ~empty_loc ~full_module_name ~component_type fn_name =
   match (fn_name, config.nested_modules, config.functor_depth) with
   | "make", _ :: _, 0 ->
-    let full_sig, jsx_sig =
+    let full_sig =
       make_hoisted_component_signature ~empty_loc ~full_module_name
         component_type
     in
-    config.hoisted_signature_items <-
-      jsx_sig :: full_sig :: config.hoisted_signature_items
+    config.hoisted_signature_items <- full_sig :: config.hoisted_signature_items
   | _ -> ()
 
 (* Build a string representation of a module name with segments separated by $ *)

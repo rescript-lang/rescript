@@ -17,4 +17,4 @@ module V4A = {
     \"TopLevel$V4A"
   }
 }
-@warning("-32") let \"TopLevel$V4A" = V4A.make @warning("-32") and \"TopLevel$V4A$jsx" = true
+@warning("-32") let \"TopLevel$V4A" = V4A.make

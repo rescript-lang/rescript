@@ -48,10 +48,6 @@ module Async = {
   }
 }
 @warning("-32") let \"ReturnConstraint$Standard" = Standard.make
-@warning("-32") and \"ReturnConstraint$Standard$jsx" = true
 @warning("-32") let \"ReturnConstraint$ForwardRef" = ForwardRef.make
-@warning("-32") and \"ReturnConstraint$ForwardRef$jsx" = true
 @warning("-32") let \"ReturnConstraint$WithProps" = WithProps.make
-@warning("-32") and \"ReturnConstraint$WithProps$jsx" = true
 @warning("-32") let \"ReturnConstraint$Async" = Async.make
-@warning("-32") and \"ReturnConstraint$Async$jsx" = true

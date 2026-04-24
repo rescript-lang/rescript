@@ -20,11 +20,8 @@ let Rec = {
 
 let Recursive_component_test$Rec = make;
 
-let Recursive_component_test$Rec$jsx = true;
-
 export {
   Rec,
   Recursive_component_test$Rec,
-  Recursive_component_test$Rec$jsx,
 }
 /* No side effect */

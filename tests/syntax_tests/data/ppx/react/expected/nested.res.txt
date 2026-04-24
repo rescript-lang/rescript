@@ -22,5 +22,4 @@ module Outer = {
   }
 }
 @warning("-32") let \"Nested$Outer$Inner" = Outer.Inner.make
-@warning("-32") and \"Nested$Outer$Inner$jsx" = true
-@warning("-32") let \"Nested$Outer" = Outer.make @warning("-32") and \"Nested$Outer$jsx" = true
+@warning("-32") let \"Nested$Outer" = Outer.make

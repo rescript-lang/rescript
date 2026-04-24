@@ -92,32 +92,24 @@ module V4AUncurried: {
 let \"ForwardRef$V4C$FancyInput": React.component<
   V4C.FancyInput.props<string, React.element, ReactDOM.Ref.currentDomRef>,
 >
-let \"ForwardRef$V4C$FancyInput$jsx": bool
 let \"ForwardRef$V4C$ForwardRef": React.component<
   V4C.ForwardRef.props<React.ref<Js.Nullable.t<inputRef>>>,
 >
-let \"ForwardRef$V4C$ForwardRef$jsx": bool
 let \"ForwardRef$V4CUncurried$FancyInput": React.component<
   V4CUncurried.FancyInput.props<string, React.element, ReactDOM.Ref.currentDomRef>,
 >
-let \"ForwardRef$V4CUncurried$FancyInput$jsx": bool
 let \"ForwardRef$V4CUncurried$ForwardRef": React.component<
   V4CUncurried.ForwardRef.props<React.ref<Js.Nullable.t<inputRef>>>,
 >
-let \"ForwardRef$V4CUncurried$ForwardRef$jsx": bool
 let \"ForwardRef$V4A$FancyInput": React.component<
   V4A.FancyInput.props<string, React.element, ReactDOM.Ref.currentDomRef>,
 >
-let \"ForwardRef$V4A$FancyInput$jsx": bool
 let \"ForwardRef$V4A$ForwardRef": React.component<
   V4A.ForwardRef.props<React.ref<Js.Nullable.t<inputRef>>>,
 >
-let \"ForwardRef$V4A$ForwardRef$jsx": bool
 let \"ForwardRef$V4AUncurried$FancyInput": React.component<
   V4AUncurried.FancyInput.props<string, React.element, ReactDOM.Ref.currentDomRef>,
 >
-let \"ForwardRef$V4AUncurried$FancyInput$jsx": bool
 let \"ForwardRef$V4AUncurried$ForwardRef": React.component<
   V4AUncurried.ForwardRef.props<React.ref<Js.Nullable.t<inputRef>>>,
 >
-let \"ForwardRef$V4AUncurried$ForwardRef$jsx": bool

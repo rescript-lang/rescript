@@ -34,6 +34,4 @@ module C0 = {
   }
 }
 @warning("-32") let \"DefaultPatternProp$C0$M" = C0.M.make
-@warning("-32") and \"DefaultPatternProp$C0$M$jsx" = true
 @warning("-32") let \"DefaultPatternProp$C0" = C0.make
-@warning("-32") and \"DefaultPatternProp$C0$jsx" = true

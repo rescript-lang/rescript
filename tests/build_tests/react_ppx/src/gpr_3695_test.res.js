@@ -12,13 +12,10 @@ function test(className) {
 
 let Gpr_3695_test$Test = Foo;
 
-let Gpr_3695_test$Test$jsx = true;
-
 export {
   React,
   Test,
   test,
   Gpr_3695_test$Test,
-  Gpr_3695_test$Test$jsx,
 }
 /* Gpr_3695_test$Test Not a pure module */

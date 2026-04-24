@@ -19,4 +19,3 @@ module User = {
   }
 }
 @warning("-32") let \"OptimizeAutomaticMode$User" = User.make
-@warning("-32") and \"OptimizeAutomaticMode$User$jsx" = true

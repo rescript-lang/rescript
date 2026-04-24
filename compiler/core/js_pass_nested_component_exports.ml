@@ -26,7 +26,7 @@ module E = Js_exp_make
 
 module StringSet = Set.Make (String)
 
-type candidate = {module_ident: Ident.t; hidden_export_name: string}
+type candidate = {module_ident: Ident.t}
 
 let dynamic_import_module_root (expr : J.expression) =
   match expr.expression_desc with
@@ -51,8 +51,6 @@ let dynamic_import_module_root (expr : J.expression) =
       Some (strip_suffix suffixes)
     | _ -> None)
   | _ -> None
-
-let marker_name hidden_export_name = hidden_export_name ^ "$jsx"
 
 let hidden_component_suffix (module_ident : Ident.t) =
   "$" ^ Ident.name module_ident
@@ -108,7 +106,7 @@ let candidate_of_statement block exports (st : J.statement) =
     in
     match hidden_ident with
     | Some hidden_ident when has_export_name exports hidden_ident.name ->
-      Some {module_ident; hidden_export_name = hidden_ident.name}
+      Some {module_ident}
     | Some _ | None -> None)
   | _ -> None
 
@@ -117,13 +115,7 @@ let collect_candidates block exports =
 
 let hidden_export_names_to_remove candidates =
   Ext_list.fold_left candidates StringSet.empty (fun acc candidate ->
-      acc
-      |> StringSet.add (Ident.name candidate.module_ident)
-      |> StringSet.add (marker_name candidate.hidden_export_name))
-
-let marker_names_to_remove_from_block candidates =
-  Ext_list.fold_left candidates StringSet.empty (fun acc candidate ->
-      StringSet.add (marker_name candidate.hidden_export_name) acc)
+      StringSet.add (Ident.name candidate.module_ident) acc)
 
 let candidate_by_module_ident candidates module_ident =
   List.find_map
@@ -132,16 +124,14 @@ let candidate_by_module_ident candidates module_ident =
       else None)
     candidates
 
-let rewrite_block block candidates removed_marker_names =
+let rewrite_block block candidates =
   List.concat_map
     (fun (st : J.statement) ->
       match st.statement_desc with
-      | Variable {ident; value; property; ident_info} -> (
+      | Variable {ident; _} -> (
         match candidate_by_module_ident candidates ident with
         | Some _ -> [st]
-        | None ->
-          if StringSet.mem (Ident.name ident) removed_marker_names then []
-          else [st])
+        | None -> [st])
       | _ -> [st])
     block
 
@@ -200,14 +190,12 @@ let rewrite_dynamic_import_block block =
 let program (js : J.program) : J.program =
   let candidates = collect_candidates js.block js.exports in
   let removed_export_names = hidden_export_names_to_remove candidates in
-  let removed_marker_names = marker_names_to_remove_from_block candidates in
   let exports =
     Ext_list.filter js.exports (fun (ident : Ident.t) ->
         not (StringSet.mem (Ident.name ident) removed_export_names))
   in
   let export_set = Set_ident.of_list exports in
   let block =
-    rewrite_dynamic_import_block
-      (rewrite_block js.block candidates removed_marker_names)
+    rewrite_dynamic_import_block (rewrite_block js.block candidates)
   in
   {J.block; exports; export_set}

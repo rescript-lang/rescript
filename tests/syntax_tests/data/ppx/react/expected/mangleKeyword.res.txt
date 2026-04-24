@@ -28,6 +28,4 @@ module C4A1 = {
 let c4a0 = React.jsx(@res.jsxComponentPath C4A0.make, {_open: "x", _type: "t"})
 let c4a1 = React.jsx(@res.jsxComponentPath C4A1.make, {_open: "x", _type: "t"})
 @warning("-32") let \"MangleKeyword$C4A0" = C4A0.make
-@warning("-32") and \"MangleKeyword$C4A0$jsx" = true
 @warning("-32") let \"MangleKeyword$C4A1" = C4A1.make
-@warning("-32") and \"MangleKeyword$C4A1$jsx" = true

@@ -41,8 +41,5 @@ module V4C = {
   }
 }
 @warning("-32") let \"NoPropsWithKey$V4CA" = V4CA.make
-@warning("-32") and \"NoPropsWithKey$V4CA$jsx" = true
 @warning("-32") let \"NoPropsWithKey$V4CB" = V4CB.make
-@warning("-32") and \"NoPropsWithKey$V4CB$jsx" = true
 @warning("-32") let \"NoPropsWithKey$V4C" = V4C.make
-@warning("-32") and \"NoPropsWithKey$V4C$jsx" = true

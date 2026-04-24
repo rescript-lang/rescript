@@ -92,10 +92,6 @@ module C3 = {
   }
 }
 @warning("-32") let \"DefaultValueProp$C0" = C0.make
-@warning("-32") and \"DefaultValueProp$C0$jsx" = true
 @warning("-32") let \"DefaultValueProp$C1" = C1.make
-@warning("-32") and \"DefaultValueProp$C1$jsx" = true
 @warning("-32") let \"DefaultValueProp$C2" = C2.make
-@warning("-32") and \"DefaultValueProp$C2$jsx" = true
 @warning("-32") let \"DefaultValueProp$C3" = C3.make
-@warning("-32") and \"DefaultValueProp$C3$jsx" = true

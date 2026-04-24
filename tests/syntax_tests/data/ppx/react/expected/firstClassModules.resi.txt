@@ -30,4 +30,3 @@ let \"FirstClassModules$Select": React.component<
     array<'a>,
   >,
 >
-let \"FirstClassModules$Select$jsx": bool
