@@ -1,6 +1,6 @@
 {
   "name": "@rescript/runtime",
-  "version": "13.0.0-alpha.4",
+  "version": "13.0.0-alpha.5",
   "description": "ReScript runtime modules",
   "type": "module",
   "license": "MIT",

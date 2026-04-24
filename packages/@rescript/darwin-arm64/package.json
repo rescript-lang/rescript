@@ -1,6 +1,6 @@
 {
   "name": "@rescript/darwin-arm64",
-  "version": "13.0.0-alpha.4",
+  "version": "13.0.0-alpha.5",
   "description": "ReScript binaries for MacOS ARM64",
   "type": "module",
   "license": "(LGPL-3.0-or-later AND MIT)",
