@@ -142,9 +142,7 @@ let wrap_recursive_component_self_references ~config ~fn_name expr =
                      })
             in
             let body_mapper = mapper (shadowed || bindings_shadow_name) in
-            let body =
-              body_mapper.expr body_mapper body
-            in
+            let body = body_mapper.expr body_mapper body in
             {expr with pexp_desc = Pexp_let (rec_flag, bindings, body)}
           | Pexp_fun ({default; lhs; rhs} as desc) ->
             (* Optional default expressions are evaluated outside the argument
@@ -157,9 +155,7 @@ let wrap_recursive_component_self_references ~config ~fn_name expr =
             let rhs_mapper =
               mapper (shadowed || pattern_binds_name fn_name lhs)
             in
-            let rhs =
-              rhs_mapper.expr rhs_mapper rhs
-            in
+            let rhs = rhs_mapper.expr rhs_mapper rhs in
             {expr with pexp_desc = Pexp_fun {desc with default; rhs}}
           | Pexp_apply ({funct; args} as apply) when accepts_component funct ->
             let funct = ast_mapper.expr ast_mapper funct in
