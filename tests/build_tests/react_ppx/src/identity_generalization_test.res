@@ -1,8 +1,8 @@
-external id: 'a => 'a = "%identity"
+external componentId: 'a => 'a = "%component_identity"
 
-// `%identity` applications should generalize like the wrapped expression.
+// `%component_identity` applications should generalize like the wrapped expression.
 // Otherwise, `f` becomes monomorphic and one of these calls fails to typecheck.
-let f = id(x => x)
+let f = componentId(x => x)
 
 let intValue = f(1)
 let stringValue = f("one")

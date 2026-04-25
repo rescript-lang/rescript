@@ -23,4 +23,4 @@ type componentLike<'props, 'return> = 'props => 'return
 type component<-'props>
 
 /* this function exists to prepare for making `component` abstract */
-external component: componentLike<'props, element> => component<'props> = "%identity"
+external component: componentLike<'props, element> => component<'props> = "%component_identity"

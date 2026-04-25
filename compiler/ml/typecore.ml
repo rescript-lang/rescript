@@ -1808,9 +1808,21 @@ let rec final_subexpression sexp =
 
 (* Generalization criterion for expressions *)
 
-let is_identity = function
-  | Texp_ident (_, _, {val_kind = Val_prim {Primitive.prim_name = "%identity"}})
+let is_component_identity = function
+  | Texp_ident
+      (_, _, {val_kind = Val_prim {Primitive.prim_name = "%component_identity"}})
     ->
+    true
+  | _ -> false
+
+let is_identity_coercion = function
+  | Texp_ident
+      ( _,
+        _,
+        {
+          val_kind =
+            Val_prim {Primitive.prim_name = "%identity" | "%component_identity"};
+        } ) ->
     true
   | _ -> false
 
@@ -1828,7 +1840,7 @@ let rec is_nonexpansive exp =
     List.for_all (fun vb -> is_nonexpansive vb.vb_expr) pat_exp_list
     && is_nonexpansive body
   | Texp_function _ -> true
-  (* `%identity` is a typed no-op coercion. Treating it like an ordinary
+  (* `%component_identity` is a typed no-op coercion. Treating it like an ordinary
      function call makes values such as `React.component(fn)` expansive, which
      prevents generalization of polymorphic props:
 
@@ -1841,10 +1853,11 @@ let rec is_nonexpansive exp =
          }
 
      The JSX transform emits a function value and then coerces it through
-     `React.component`, whose implementation is `%identity`. Since no runtime
+     `React.component`, whose implementation is `%component_identity`. Since no runtime
      computation happens beyond evaluating the argument, the application is
      non-expansive exactly when all supplied arguments are non-expansive. *)
-  | Texp_apply {funct = {exp_desc}; args; _} when is_identity exp_desc ->
+  | Texp_apply {funct = {exp_desc}; args; _} when is_component_identity exp_desc
+    ->
     List.for_all is_nonexpansive_opt (List.map snd args)
   | Texp_apply {partial = true; _} ->
     (* ReScript partial applications (`foo(args, ...)`) lower to wrapper
@@ -3846,8 +3859,10 @@ and type_application ~context total_app env funct (sargs : sargs) :
           (* This is a total application when the toplevel type is a polymorphic variable,
           so the function type including arity can be inferred. *)
           let t1 = newvar () and t2 = newvar () in
-          if ty_fun.level >= t1.level && not (is_identity funct.exp_desc) then
-            Location.prerr_warning sarg1.pexp_loc Warnings.Unused_argument;
+          if
+            ty_fun.level >= t1.level
+            && not (is_identity_coercion funct.exp_desc)
+          then Location.prerr_warning sarg1.pexp_loc Warnings.Unused_argument;
           unify env ty_fun
             (newty
                (Tarrow
