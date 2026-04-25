@@ -10,7 +10,7 @@
     "serve-bundle": "node serve-bundle.mjs"
   },
   "dependencies": {
-    "@rescript/react": "^0.14.0",
+    "@rescript/react": "patch:@rescript/react@npm%3A0.14.0#~/.yarn/patches/@rescript-react-npm-0.14.0-e462ba0c5d.patch",
     "rescript": "workspace:^"
   },
   "devDependencies": {
