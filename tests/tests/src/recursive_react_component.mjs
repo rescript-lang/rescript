@@ -20,10 +20,41 @@ let ShadowedSelfReference = {
   make: Recursive_react_component$ShadowedSelfReference
 };
 
+function Recursive_react_component$Leaf(props) {
+  return props.foo;
+}
+
+let Leaf = {
+  make: Recursive_react_component$Leaf
+};
+
+function Recursive_react_component$ShadowedByLocalLet(props) {
+  return React.createElement(Recursive_react_component$Leaf, {
+    foo: props.foo
+  });
+}
+
+let ShadowedByLocalLet = {
+  make: Recursive_react_component$ShadowedByLocalLet
+};
+
+function Recursive_react_component$ShadowedByNestedParameter(props) {
+  return React.createElement(Recursive_react_component$Leaf, {
+    foo: props.foo
+  });
+}
+
+let ShadowedByNestedParameter = {
+  make: Recursive_react_component$ShadowedByNestedParameter
+};
+
 let make$1 = Recursive_react_component;
 
 export {
   make$1 as make,
   ShadowedSelfReference,
+  Leaf,
+  ShadowedByLocalLet,
+  ShadowedByNestedParameter,
 }
 /* react Not a pure module */

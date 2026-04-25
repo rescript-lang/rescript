@@ -80,9 +80,15 @@ let rec pattern_binds_name name pattern =
     false
 
 (* In a recursive component, [fn_name] still refers to the implementation
-   function so recursive calls like `make(props)` keep working. But React APIs
-   such as `React.createElement(make, props)` now expect an abstract component,
-   so wrap that direct self-reference as `React.component(make)`. *)
+   function, so direct recursive calls like `make(props)` keep working. React
+   APIs such as `React.createElement(make, props)` now expect an abstract
+   component, so wrap only that direct self-reference as
+   `React.component(make)`.
+
+   The rewrite is scope-aware. If a nested binding or pattern introduces the
+   same name, references below that binder point at the local value, not at the
+   recursive component. In that shadowed scope we keep traversing normally but
+   disable the self-reference coercion. *)
 let wrap_recursive_component_self_references ~config ~fn_name expr =
   let jsx_module = String.capitalize_ascii config.Jsx_common.module_ in
   let accepts_component = function
@@ -100,32 +106,124 @@ let wrap_recursive_component_self_references ~config ~fn_name expr =
       module_name = jsx_module
     | _ -> false
   in
-  let mapper =
+  (* [shadowed] means the current lexical scope has rebound [fn_name]. The
+     custom cases below are only the binders that can change that state; every
+     other expression shape can use the default mapper. *)
+  let rec mapper shadowed =
     {
       Ast_mapper.default_mapper with
       expr =
-        (fun mapper expr ->
+        (fun ast_mapper expr ->
           match expr.pexp_desc with
+          | Pexp_let (rec_flag, bindings, body) ->
+            (* Non-recursive bindings are not in scope for their own RHS, while
+               recursive bindings are. The let body is shadowed by any binding
+               in the group either way. *)
+            let bindings_shadow_name =
+              List.exists
+                (fun binding -> pattern_binds_name fn_name binding.pvb_pat)
+                bindings
+            in
+            let bindings =
+              bindings
+              |> List.map (fun binding ->
+                     let binding_shadowed =
+                       shadowed
+                       ||
+                       match rec_flag with
+                       | Recursive -> bindings_shadow_name
+                       | Nonrecursive -> false
+                     in
+                     let binding_mapper = mapper binding_shadowed in
+                     {
+                       binding with
+                       pvb_expr =
+                         binding_mapper.expr binding_mapper binding.pvb_expr;
+                     })
+            in
+            let body_mapper = mapper (shadowed || bindings_shadow_name) in
+            let body =
+              body_mapper.expr body_mapper body
+            in
+            {expr with pexp_desc = Pexp_let (rec_flag, bindings, body)}
+          | Pexp_fun ({default; lhs; rhs} as desc) ->
+            (* Optional default expressions are evaluated outside the argument
+               pattern's scope; the function body is inside it. *)
+            let default =
+              match default with
+              | Some default -> Some (ast_mapper.expr ast_mapper default)
+              | None -> None
+            in
+            let rhs_mapper =
+              mapper (shadowed || pattern_binds_name fn_name lhs)
+            in
+            let rhs =
+              rhs_mapper.expr rhs_mapper rhs
+            in
+            {expr with pexp_desc = Pexp_fun {desc with default; rhs}}
           | Pexp_apply ({funct; args} as apply) when accepts_component funct ->
-            let funct = mapper.expr mapper funct in
+            let funct = ast_mapper.expr ast_mapper funct in
             let args =
               args
-              |> List.map (fun (label, arg) -> (label, mapper.expr mapper arg))
+              |> List.map (fun (label, arg) ->
+                     (label, ast_mapper.expr ast_mapper arg))
             in
             let args =
-              match args with
-              | ( Nolabel,
-                  ({pexp_desc = Pexp_ident {txt = Lident name}; pexp_loc = loc}
-                   as self_ref) )
-                :: rest
+              match (shadowed, args) with
+              | ( false,
+                  ( Nolabel,
+                    ({
+                       pexp_desc = Pexp_ident {txt = Lident name};
+                       pexp_loc = loc;
+                     } as self_ref) )
+                  :: rest )
                 when name = fn_name ->
                 (Nolabel, jsx_component_expr config ~loc self_ref) :: rest
               | _ -> args
             in
             {expr with pexp_desc = Pexp_apply {apply with funct; args}}
-          | _ -> Ast_mapper.default_mapper.expr mapper expr);
+          | Pexp_match (scrutinee, cases) ->
+            let scrutinee = ast_mapper.expr ast_mapper scrutinee in
+            let cases =
+              cases
+              |> List.map (fun ({pc_lhs; pc_guard; pc_rhs} as case) ->
+                     let case_shadowed =
+                       shadowed || pattern_binds_name fn_name pc_lhs
+                     in
+                     let case_mapper = mapper case_shadowed in
+                     {
+                       case with
+                       pc_guard =
+                         Option.map
+                           (fun guard -> case_mapper.expr case_mapper guard)
+                           pc_guard;
+                       pc_rhs = case_mapper.expr case_mapper pc_rhs;
+                     })
+            in
+            {expr with pexp_desc = Pexp_match (scrutinee, cases)}
+          | Pexp_try (body, cases) ->
+            let body = ast_mapper.expr ast_mapper body in
+            let cases =
+              cases
+              |> List.map (fun ({pc_lhs; pc_guard; pc_rhs} as case) ->
+                     let case_shadowed =
+                       shadowed || pattern_binds_name fn_name pc_lhs
+                     in
+                     let case_mapper = mapper case_shadowed in
+                     {
+                       case with
+                       pc_guard =
+                         Option.map
+                           (fun guard -> case_mapper.expr case_mapper guard)
+                           pc_guard;
+                       pc_rhs = case_mapper.expr case_mapper pc_rhs;
+                     })
+            in
+            {expr with pexp_desc = Pexp_try (body, cases)}
+          | _ -> Ast_mapper.default_mapper.expr ast_mapper expr);
     }
   in
+  let mapper = mapper false in
   mapper.expr mapper expr
 
 (* Helper method to filter out any attribute that isn't [@react.component] *)
