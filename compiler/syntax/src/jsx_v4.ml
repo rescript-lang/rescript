@@ -659,11 +659,11 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name binding =
        Putting the coercion directly around the function argument, as in
        `React.component(props => make(props))`, hides the function under an
        application during typing and breaks inference for polymorphic props.
-       The typechecker treats this `%identity` coercion as non-expansive, so
+       The typechecker treats this `%component_identity` coercion as non-expansive, so
        the inferred prop type can still be generalized. *)
     let full_expression =
       if has_forward_ref then full_expression
-      else jsx_component_expr config ~loc:pstr_loc full_expression
+      else jsx_component_expr config ~loc:empty_loc full_expression
     in
     let rec returned_expression patterns_with_label patterns_with_nolabel
         ({pexp_desc} as expr) =
