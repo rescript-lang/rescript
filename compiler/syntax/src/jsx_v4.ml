@@ -531,7 +531,7 @@ let vb_match_expr named_arg_list expr =
   in
   aux (List.rev named_arg_list)
 
-let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
+let map_binding ~config ~empty_loc ~pstr_loc ~file_name binding =
   (* Traverse the component body and force every reachable return expression to
    be annotated as `Jsx.element`. This walks through the wrapper constructs the
    PPX introduces (fun/newtype/let/sequence) so that the constraint ends up on
@@ -801,7 +801,6 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
       }
     in
     let fn_name = get_fn_name modified_binding.pvb_pat in
-    let internal_fn_name = fn_name ^ "$Internal" in
     let full_module_name =
       make_module_name file_name config.nested_modules fn_name
     in
@@ -850,15 +849,7 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
       in
       let applied_expression =
         Exp.apply
-          (Exp.ident
-             {
-               txt =
-                 Lident
-                   (match rec_flag with
-                   | Recursive -> internal_fn_name
-                   | Nonrecursive -> fn_name);
-               loc;
-             })
+          (Exp.ident {txt = Lident fn_name; loc})
           [(Nolabel, Exp.ident {txt = Lident "props"; loc})]
       in
       let applied_expression =
@@ -884,11 +875,7 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
     in
 
     let new_binding =
-      match rec_flag with
-      | Recursive -> None
-      | Nonrecursive ->
-        Some
-          (make_new_binding ~loc:empty_loc ~full_module_name modified_binding)
+      Some (make_new_binding ~loc:empty_loc ~full_module_name modified_binding)
     in
     let binding_expr =
       {
@@ -994,7 +981,7 @@ let transform_structure_item ~config item =
     let empty_loc = Location.in_file file_name in
     let process_binding binding (new_items, bindings, new_bindings) =
       let new_item, binding, new_binding =
-        map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding
+        map_binding ~config ~empty_loc ~pstr_loc ~file_name binding
       in
       let new_items =
         match new_item with

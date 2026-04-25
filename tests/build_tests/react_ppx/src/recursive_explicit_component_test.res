@@ -20,3 +20,5 @@ module ComponentWithProps = {
       React.createElement(React.component(make), {foo: props.foo - 1})
     }
 }
+
+let componentWithPropsElement = React.createElement(ComponentWithProps.make, {foo: 1})
