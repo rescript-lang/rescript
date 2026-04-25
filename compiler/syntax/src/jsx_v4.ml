@@ -54,6 +54,10 @@ let jsx_component_expr config ~loc expr =
     (Exp.ident ~loc {loc; txt = module_access_name config "component"})
     [(Nolabel, expr)]
 
+(* Check whether a generated props pattern introduces a binding with this name.
+   This is intentionally narrower than full lexical scope tracking: it only
+   guards the recursive component rewrite from confusing a prop named `make`
+   with the recursive function named `make`. *)
 let rec pattern_binds_name name pattern =
   match pattern.ppat_desc with
   | Ppat_var {txt} | Ppat_unpack {txt} -> txt = name
@@ -75,6 +79,10 @@ let rec pattern_binds_name name pattern =
   | Ppat_extension _ ->
     false
 
+(* In a recursive component, [fn_name] still refers to the implementation
+   function so recursive calls like `make(props)` keep working. But React APIs
+   such as `React.createElement(make, props)` now expect an abstract component,
+   so wrap that direct self-reference as `React.component(make)`. *)
 let wrap_recursive_component_self_references ~config ~fn_name expr =
   let jsx_module = String.capitalize_ascii config.Jsx_common.module_ in
   let accepts_component = function

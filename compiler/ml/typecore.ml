@@ -1808,6 +1808,12 @@ let rec final_subexpression sexp =
 
 (* Generalization criterion for expressions *)
 
+let is_identity = function
+  | Texp_ident (_, _, {val_kind = Val_prim {Primitive.prim_name = "%identity"}})
+    ->
+    true
+  | _ -> false
+
 let rec is_nonexpansive exp =
   List.exists
     (function
@@ -1838,17 +1844,7 @@ let rec is_nonexpansive exp =
      `React.component`, whose implementation is `%identity`. Since no runtime
      computation happens beyond evaluating the argument, the application is
      non-expansive exactly when all supplied arguments are non-expansive. *)
-  | Texp_apply
-      {
-        funct =
-          {
-            exp_desc =
-              Texp_ident
-                (_, _, {val_kind = Val_prim {Primitive.prim_name = "%identity"}});
-          };
-        args;
-        _;
-      } ->
+  | Texp_apply {funct = {exp_desc}; args; _} when is_identity exp_desc ->
     List.for_all is_nonexpansive_opt (List.map snd args)
   | Texp_apply {partial = true; _} ->
     (* ReScript partial applications (`foo(args, ...)`) lower to wrapper
@@ -2265,12 +2261,6 @@ let is_ignore ~env ~arity funct =
       true
     with Unify _ -> false)
   | _ -> false
-
-let not_identity = function
-  | Texp_ident (_, _, {val_kind = Val_prim {Primitive.prim_name = "%identity"}})
-    ->
-    false
-  | _ -> true
 
 let rec lower_args env seen ty_fun =
   let ty = expand_head env ty_fun in
@@ -3856,7 +3846,7 @@ and type_application ~context total_app env funct (sargs : sargs) :
           (* This is a total application when the toplevel type is a polymorphic variable,
           so the function type including arity can be inferred. *)
           let t1 = newvar () and t2 = newvar () in
-          if ty_fun.level >= t1.level && not_identity funct.exp_desc then
+          if ty_fun.level >= t1.level && not (is_identity funct.exp_desc) then
             Location.prerr_warning sarg1.pexp_loc Warnings.Unused_argument;
           unify env ty_fun
             (newty

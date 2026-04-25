@@ -10,14 +10,6 @@ function make(param) {
 
 let Recursive_react_component = make;
 
-function Recursive_react_component$ShadowedSelfReference$Child(props) {
-  return props.foo;
-}
-
-let Child = {
-  make: Recursive_react_component$ShadowedSelfReference$Child
-};
-
 function Recursive_react_component$ShadowedSelfReference(props) {
   return React.createElement(props.make, {
     foo: props.foo
@@ -25,7 +17,6 @@ function Recursive_react_component$ShadowedSelfReference(props) {
 }
 
 let ShadowedSelfReference = {
-  Child: Child,
   make: Recursive_react_component$ShadowedSelfReference
 };
 
