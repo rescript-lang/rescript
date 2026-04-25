@@ -8,7 +8,7 @@
 })
 
 @react.component
-let rec make = (~foo) => React.createElement(make, {foo: foo})
+let rec make = (~foo) => React.createElement(React.component(make), {foo: foo})
 
 module ShadowedSelfReference = {
   type childProps = {foo: int}
