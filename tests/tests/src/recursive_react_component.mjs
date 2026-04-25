@@ -10,9 +10,29 @@ function make(param) {
 
 let Recursive_react_component = make;
 
+function Recursive_react_component$ShadowedSelfReference$Child(props) {
+  return props.foo;
+}
+
+let Child = {
+  make: Recursive_react_component$ShadowedSelfReference$Child
+};
+
+function Recursive_react_component$ShadowedSelfReference(props) {
+  return React.createElement(props.make, {
+    foo: props.foo
+  });
+}
+
+let ShadowedSelfReference = {
+  Child: Child,
+  make: Recursive_react_component$ShadowedSelfReference
+};
+
 let make$1 = Recursive_react_component;
 
 export {
   make$1 as make,
+  ShadowedSelfReference,
 }
 /* react Not a pure module */

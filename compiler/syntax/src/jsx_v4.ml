@@ -54,6 +54,27 @@ let jsx_component_expr config ~loc expr =
     (Exp.ident ~loc {loc; txt = module_access_name config "component"})
     [(Nolabel, expr)]
 
+let rec pattern_binds_name name pattern =
+  match pattern.ppat_desc with
+  | Ppat_var {txt} | Ppat_unpack {txt} -> txt = name
+  | Ppat_alias (pattern, {txt}) -> txt = name || pattern_binds_name name pattern
+  | Ppat_tuple patterns | Ppat_array patterns ->
+    List.exists (pattern_binds_name name) patterns
+  | Ppat_construct (_, pattern) | Ppat_variant (_, pattern) -> (
+    match pattern with
+    | Some pattern -> pattern_binds_name name pattern
+    | None -> false)
+  | Ppat_exception pattern -> pattern_binds_name name pattern
+  | Ppat_record (fields, _) ->
+    List.exists (fun {x = pattern} -> pattern_binds_name name pattern) fields
+  | Ppat_or (left, right) ->
+    pattern_binds_name name left || pattern_binds_name name right
+  | Ppat_constraint (pattern, _) | Ppat_open (_, pattern) ->
+    pattern_binds_name name pattern
+  | Ppat_any | Ppat_constant _ | Ppat_interval _ | Ppat_type _
+  | Ppat_extension _ ->
+    false
+
 let wrap_recursive_component_self_references ~config ~fn_name expr =
   let jsx_module = String.capitalize_ascii config.Jsx_common.module_ in
   let accepts_component = function
@@ -804,6 +825,9 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
       | [] -> Pat.any ()
       | _ -> Pat.record (List.rev patterns_with_label) Open
     in
+    let self_reference_is_shadowed_by_props =
+      pattern_binds_name fn_name record_pattern
+    in
     let expression =
       (* Shape internal implementation to match wrapper: uncurried when using forwardRef. *)
       let total_arity = if has_forward_ref then 2 else 1 in
@@ -839,8 +863,14 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
 
            Wrap only those self-references in the `%identity` component
            coercion. The generated JavaScript still receives the same function,
-           while the typed AST sees a `React.component<_>`. *)
-        wrap_recursive_component_self_references ~config ~fn_name expression
+           while the typed AST sees a `React.component<_>`.
+
+           If the generated props pattern itself binds `make`, then references
+           inside the body point at that prop, not at the recursive function. In
+           that case there is no self-reference to coerce. *)
+        if self_reference_is_shadowed_by_props then expression
+        else
+          wrap_recursive_component_self_references ~config ~fn_name expression
     in
     (* let make = ({id, name, ...}: props<'id, 'name, ...>) => { ... } *)
     let binding =
