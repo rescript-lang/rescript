@@ -4,10 +4,10 @@ type props<'x, 'y> = {
   y: 'y,
 }
 let make = ({x, y, _}: props<string, string>): React.element => React.string(x ++ y)
-let make = {
+let make = React.component({
   let \"V4" = (props: props<_>) => make(props)
   \"V4"
-}
+})
 
 module AnotherName = {
   @res.jsxComponentProps
@@ -17,11 +17,11 @@ module AnotherName = {
   }
 
   let anotherName = ({x, _}: props<_>): React.element => React.string(x)
-  let anotherName = {
+  let anotherName = React.component({
     let \"V4$AnotherName$anotherName" = (props: props<_>) => anotherName(props)
 
     \"V4$AnotherName$anotherName"
-  }
+  })
 }
 
 module Uncurried = {
@@ -31,11 +31,11 @@ module Uncurried = {
   }
 
   let make = ({x, _}: props<_>): React.element => React.string(x)
-  let make = {
+  let make = React.component({
     let \"V4$Uncurried" = (props: props<_>) => make(props)
 
     \"V4$Uncurried"
-  }
+  })
 }
 
 module type TUncurried = {
@@ -69,50 +69,42 @@ module Rec = {
   @res.jsxComponentProps
   type props = {}
 
-  let rec make = {
-    let \"make$Internal" = (_: props): React.element => {
-      make(({}: props))
-    }
-    let make = {
-      let \"V4$Rec" = props => \"make$Internal"(props)
-
-      \"V4$Rec"
-    }
-    make
+  let rec make = (_: props): React.element => {
+    make(({}: props))
   }
+  let make = React.component({
+    let \"V4$Rec" = props => make(props)
+
+    \"V4$Rec"
+  })
 }
 
 module Rec1 = {
   @res.jsxComponentProps
   type props = {}
 
-  let rec make = {
-    let \"make$Internal" = (_: props): React.element => {
-      React.null
-    }
-    let make = {
-      let \"V4$Rec1" = props => \"make$Internal"(props)
-
-      \"V4$Rec1"
-    }
-    make
+  let rec make = (_: props): React.element => {
+    React.null
   }
+  let make = React.component({
+    let \"V4$Rec1" = props => make(props)
+
+    \"V4$Rec1"
+  })
 }
 
 module Rec2 = {
   @res.jsxComponentProps
   type props = {}
 
-  let rec make = {
-    let \"make$Internal" = (_: props): React.element => {
-      mm(({}: props))
-    }
-    let make = {
-      let \"V4$Rec2" = props => \"make$Internal"(props)
-
-      \"V4$Rec2"
-    }
-    make
+  let rec make = (_: props): React.element => {
+    mm(({}: props))
   }
+
   and mm = x => make(x)
+  let make = React.component({
+    let \"V4$Rec2" = props => make(props)
+
+    \"V4$Rec2"
+  })
 }

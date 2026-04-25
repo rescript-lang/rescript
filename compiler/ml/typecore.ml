@@ -1822,6 +1822,34 @@ let rec is_nonexpansive exp =
     List.for_all (fun vb -> is_nonexpansive vb.vb_expr) pat_exp_list
     && is_nonexpansive body
   | Texp_function _ -> true
+  (* `%identity` is a typed no-op coercion. Treating it like an ordinary
+     function call makes values such as `React.component(fn)` expansive, which
+     prevents generalization of polymorphic props:
+
+       @react.component
+       let make = (~x) =>
+         switch x {
+         | #a => React.string("A")
+         | #b => React.string("B")
+         | _ => React.string("other")
+         }
+
+     The JSX transform emits a function value and then coerces it through
+     `React.component`, whose implementation is `%identity`. Since no runtime
+     computation happens beyond evaluating the argument, the application is
+     non-expansive exactly when all supplied arguments are non-expansive. *)
+  | Texp_apply
+      {
+        funct =
+          {
+            exp_desc =
+              Texp_ident
+                (_, _, {val_kind = Val_prim {Primitive.prim_name = "%identity"}});
+          };
+        args;
+        _;
+      } ->
+    List.for_all is_nonexpansive_opt (List.map snd args)
   | Texp_apply {partial = true; _} ->
     (* ReScript partial applications (`foo(args, ...)`) lower to wrapper
        functions in codegen, so creating the partial itself is nonexpansive

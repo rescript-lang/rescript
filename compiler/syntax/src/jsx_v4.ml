@@ -49,6 +49,56 @@ let ref_type loc =
 let jsx_element_type config ~loc =
   Typ.constr ~loc {loc; txt = module_access_name config "element"} []
 
+let jsx_component_expr config ~loc expr =
+  Exp.apply ~loc
+    (Exp.ident ~loc {loc; txt = module_access_name config "component"})
+    [(Nolabel, expr)]
+
+let wrap_recursive_component_self_references ~config ~fn_name expr =
+  let jsx_module = String.capitalize_ascii config.Jsx_common.module_ in
+  let accepts_component = function
+    | {
+        pexp_desc =
+          Pexp_ident
+            {
+              txt =
+                Ldot
+                  ( Lident module_name,
+                    ( "createElement" | "createElementVariadic" | "jsx"
+                    | "jsxKeyed" | "jsxs" | "jsxsKeyed" ) );
+            };
+      } ->
+      module_name = jsx_module
+    | _ -> false
+  in
+  let mapper =
+    {
+      Ast_mapper.default_mapper with
+      expr =
+        (fun mapper expr ->
+          match expr.pexp_desc with
+          | Pexp_apply ({funct; args} as apply) when accepts_component funct ->
+            let funct = mapper.expr mapper funct in
+            let args =
+              args
+              |> List.map (fun (label, arg) -> (label, mapper.expr mapper arg))
+            in
+            let args =
+              match args with
+              | ( Nolabel,
+                  ({pexp_desc = Pexp_ident {txt = Lident name}; pexp_loc = loc}
+                   as self_ref) )
+                :: rest
+                when name = fn_name ->
+                (Nolabel, jsx_component_expr config ~loc self_ref) :: rest
+              | _ -> args
+            in
+            {expr with pexp_desc = Pexp_apply {apply with funct; args}}
+          | _ -> Ast_mapper.default_mapper.expr mapper expr);
+    }
+  in
+  mapper.expr mapper expr
+
 (* Helper method to filter out any attribute that isn't [@react.component] *)
 let other_attrs_pure (loc, _) =
   match loc.txt with
@@ -64,20 +114,6 @@ let rec get_fn_name binding =
   | {ppat_desc = Ppat_constraint (pat, _)} -> get_fn_name pat
   | {ppat_loc} ->
     Jsx_common.raise_error ~loc:ppat_loc
-      "JSX component calls cannot be destructured."
-
-let make_new_binding binding expression new_name =
-  match binding with
-  | {pvb_pat = {ppat_desc = Ppat_var ppat_var} as pvb_pat} ->
-    {
-      binding with
-      pvb_pat =
-        {pvb_pat with ppat_desc = Ppat_var {ppat_var with txt = new_name}};
-      pvb_expr = expression;
-      pvb_attributes = [];
-    }
-  | {pvb_loc} ->
-    Jsx_common.raise_error ~loc:pvb_loc
       "JSX component calls cannot be destructured."
 
 (* Lookup the filename from the location information on the AST node and turn it into a valid module identifier *)
@@ -590,7 +626,6 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
       }
     in
     let fn_name = get_fn_name binding.pvb_pat in
-    let internal_fn_name = fn_name ^ "$Internal" in
     let full_module_name =
       make_module_name file_name config.nested_modules fn_name
     in
@@ -611,12 +646,7 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
     in
     let inner_expression =
       Exp.apply
-        (Exp.ident
-           (Location.mknoloc
-           @@ Lident
-                (match rec_flag with
-                | Recursive -> internal_fn_name
-                | Nonrecursive -> fn_name)))
+        (Exp.ident (Location.mknoloc @@ Lident fn_name))
         ([(Nolabel, Exp.ident (Location.mknoloc @@ Lident "props"))]
         @
         match has_forward_ref with
@@ -662,6 +692,23 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
               full_expression;
           ]
           (Exp.ident ~loc:pstr_loc {loc = empty_loc; txt = Lident txt})
+    in
+    (* Build a plain function first, then coerce that function to the abstract
+       component type:
+
+         let make = React.component({
+           let "File$Component" = props => make(props)
+           "File$Component"
+         })
+
+       Putting the coercion directly around the function argument, as in
+       `React.component(props => make(props))`, hides the function under an
+       application during typing and breaks inference for polymorphic props.
+       The typechecker treats this `%identity` coercion as non-expansive, so
+       the inferred prop type can still be generalized. *)
+    let full_expression =
+      if has_forward_ref then full_expression
+      else jsx_component_expr config ~loc:pstr_loc full_expression
     in
     let rec returned_expression patterns_with_label patterns_with_nolabel
         ({pexp_desc} as expr) =
@@ -780,29 +827,30 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
       newtypes
       |> List.fold_left (fun e newtype -> Exp.newtype newtype e) expression
     in
-    (* let make = ({id, name, ...}: props<'id, 'name, ...>) => { ... } *)
-    let binding, new_binding =
+    let expression =
       match rec_flag with
+      | Nonrecursive -> expression
       | Recursive ->
-        ( binding_wrapper
-            (Exp.let_ ~loc:empty_loc Nonrecursive
-               [make_new_binding binding expression internal_fn_name]
-               (Exp.let_ ~loc:empty_loc Nonrecursive
-                  [
-                    Vb.mk
-                      (Pat.var {loc = empty_loc; txt = fn_name})
-                      full_expression;
-                  ]
-                  (Exp.ident {loc = empty_loc; txt = Lident fn_name}))),
-          None )
-      | Nonrecursive ->
-        ( {
-            binding with
-            pvb_expr = expression;
-            pvb_pat = Pat.var {txt = fn_name; loc = Location.none};
-          },
-          Some (binding_wrapper full_expression) )
+        (* Inside `let rec make = ...`, `make` still has to be the callable
+           implementation so recursive calls like `make(props)` keep working.
+           But component-position APIs now expect the abstract component type:
+
+             React.createElement(make, props)
+
+           Wrap only those self-references in the `%identity` component
+           coercion. The generated JavaScript still receives the same function,
+           while the typed AST sees a `React.component<_>`. *)
+        wrap_recursive_component_self_references ~config ~fn_name expression
     in
+    (* let make = ({id, name, ...}: props<'id, 'name, ...>) => { ... } *)
+    let binding =
+      {
+        binding with
+        pvb_expr = expression;
+        pvb_pat = Pat.var {txt = fn_name; loc = Location.none};
+      }
+    in
+    let new_binding = Some (binding_wrapper full_expression) in
     (Some props_record_type, binding, new_binding))
   else if Jsx_common.has_attr_on_binding Jsx_common.has_attr_with_props binding
   then
@@ -860,7 +908,6 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
           | _ -> Pat.var {txt = "props"; loc})
         | _ -> Pat.var {txt = "props"; loc}
       in
-
       let applied_expression =
         Exp.apply
           (Exp.ident
@@ -886,6 +933,9 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
         Exp.let_ Nonrecursive
           [Vb.mk (Pat.var {txt = full_module_name; loc}) wrapper_expr]
           (Exp.ident {txt = Lident full_module_name; loc})
+      in
+      let internal_expression =
+        jsx_component_expr config ~loc internal_expression
       in
 
       Vb.mk ~attrs:modified_binding.pvb_attributes
@@ -1027,7 +1077,12 @@ let transform_structure_item ~config item =
     match new_bindings with
     | [] -> []
     | new_bindings ->
-      [{pstr_loc = empty_loc; pstr_desc = Pstr_value (rec_flag, new_bindings)}])
+      [
+        {
+          pstr_loc = empty_loc;
+          pstr_desc = Pstr_value (Nonrecursive, new_bindings);
+        };
+      ])
   | _ -> [item]
 
 let transform_signature_item ~config item =

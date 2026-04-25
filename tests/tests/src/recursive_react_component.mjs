@@ -2,13 +2,17 @@
 
 import * as React from "react";
 
-function make(props) {
+function make(param) {
   return React.createElement(make, {
-    foo: props.foo
+    foo: param.foo
   });
 }
 
+let Recursive_react_component = make;
+
+let make$1 = Recursive_react_component;
+
 export {
-  make,
+  make$1 as make,
 }
 /* react Not a pure module */

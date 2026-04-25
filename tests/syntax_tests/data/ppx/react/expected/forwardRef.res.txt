@@ -51,11 +51,11 @@ module V4A = {
       ): React.element
     )
   }
-  let make = {
+  let make = React.component({
     let \"ForwardRef$V4A" = props => make(props)
 
     \"ForwardRef$V4A"
-  }
+  })
 }
 
 module V4AUncurried = {
@@ -109,9 +109,9 @@ module V4AUncurried = {
       ): React.element
     )
   }
-  let make = {
+  let make = React.component({
     let \"ForwardRef$V4AUncurried" = props => make(props)
 
     \"ForwardRef$V4AUncurried"
-  }
+  })
 }

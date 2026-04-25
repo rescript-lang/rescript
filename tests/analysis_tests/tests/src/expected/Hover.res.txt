@@ -22,10 +22,10 @@ Hover src/Hover.res 33:4
 {"contents": {"kind": "markdown", "value": "```rescript\nunit => int\n```\n---\nDoc comment for functionWithTypeAnnotation"}}
 
 Hover src/Hover.res 37:13
-{"contents": {"kind": "markdown", "value": "```rescript\nstring\n```"}}
+{"contents": {"kind": "markdown", "value": "```rescript\nReact.componentLike<\n  props<string>,\n  React.element,\n> => React.component<props<string>>\n```\n\n---\n\n```\n \n```\n```rescript\ntype React.componentLike<\n  'props,\n  'return,\n> = Jsx.componentLike<'props, 'return>\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22React.res%22%2C10%2C0%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype props<'name> = {name: 'name}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C36%2C0%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype React.element = Jsx.element\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22React.res%22%2C0%2C0%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype React.component<'props> = Jsx.component<'props>\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22React.res%22%2C12%2C0%5D)\n"}}
 
 Hover src/Hover.res 42:15
-{"contents": {"kind": "markdown", "value": "```rescript\nstring\n```"}}
+{"contents": {"kind": "markdown", "value": "```rescript\nReact.componentLike<\n  props<string>,\n  React.element,\n> => React.component<props<string>>\n```\n\n---\n\n```\n \n```\n```rescript\ntype React.componentLike<\n  'props,\n  'return,\n> = Jsx.componentLike<'props, 'return>\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22React.res%22%2C10%2C0%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype props<'name> = {name: 'name}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C41%2C2%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype React.element = Jsx.element\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22React.res%22%2C0%2C0%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype React.component<'props> = Jsx.component<'props>\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22React.res%22%2C12%2C0%5D)\n"}}
 
 Hover src/Hover.res 46:10
 {"contents": {"kind": "markdown", "value": "```rescript\nint\n```"}}

@@ -26,6 +26,7 @@ let makeContainer = text => {
 module Gpr3987ReproOk = {
   type props = {value: string, onChange: (string, int) => unit}
 
+  @react.componentWithProps
   let make = (_props: props) => React.null
 }
 
