@@ -228,6 +228,12 @@ let is_variant_type ~(extract_concrete_typedecl : extract_concrete_typedecl)
     | _ -> false
   with _ -> false
 
+let is_jsx_component_type ~env ty =
+  match Ctype.expand_head env ty with
+  | {desc = Tconstr (Pdot (Pident {name = "Jsx"}, "component", _), _, _)} ->
+    true
+  | _ -> false
+
 let get_variant_constructors
     ~(extract_concrete_typedecl : extract_concrete_typedecl) ~env ty =
   match extract_concrete_typedecl env ty with
@@ -438,6 +444,17 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       \  - Use a tuple, if your array is of fixed length. Tuples can mix types \
        freely, and compiles to a JavaScript array. Example of a tuple: `let \
        myTuple = (10, \"hello\", 15.5, true)"
+  | _, Some ({desc = Tarrow _}, expected)
+    when is_jsx_component_type ~env expected ->
+    fprintf ppf
+      "\n\n\
+      \  A React component is expected here, but this expression is a plain \
+       function.\n\n\
+      \  Possible solutions:\n\
+      \  - Extract it to a component annotated with @{<info>@react.component@} \
+       or @{<info>@react.componentWithProps@}\n\
+      \  - If this is already a valid component-like value, wrap it with \
+       @{<info>React.component(...)@}"
   | _, Some (_, {desc = Tconstr (p2, _, _)}) when Path.same Predef.path_dict p2
     ->
     fprintf ppf
