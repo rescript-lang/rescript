@@ -1840,9 +1840,10 @@ let rec is_nonexpansive exp =
     List.for_all (fun vb -> is_nonexpansive vb.vb_expr) pat_exp_list
     && is_nonexpansive body
   | Texp_function _ -> true
-  (* `%component_identity` is a typed no-op coercion. Treating it like an ordinary
-     function call makes values such as `React.component(fn)` expansive, which
-     prevents generalization of polymorphic props:
+  (* `%component_identity` is a typed no-op coercion that lets generated
+     component wrappers keep the same generalization behavior as their
+     underlying function values. This preserves polymorphic props for
+     components such as:
 
        @react.component
        let make = (~x) =>
@@ -1853,9 +1854,9 @@ let rec is_nonexpansive exp =
          }
 
      The JSX transform emits a function value and then coerces it through
-     `React.component`, whose implementation is `%component_identity`. Since no runtime
-     computation happens beyond evaluating the argument, the application is
-     non-expansive exactly when all supplied arguments are non-expansive. *)
+     `React.component`, whose implementation is `%component_identity`. Since no
+     runtime computation happens beyond evaluating the argument, the application
+     is non-expansive exactly when all supplied arguments are non-expansive. *)
   | Texp_apply {funct = {exp_desc}; args; _} when is_component_identity exp_desc
     ->
     List.for_all is_nonexpansive_opt (List.map snd args)
