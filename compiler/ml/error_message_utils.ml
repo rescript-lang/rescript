@@ -107,6 +107,7 @@ type type_clash_context =
       is_constant: string option;
     }
   | FunctionArgument of {optional: bool; name: string option}
+  | JsxComponent
   | BracedIdent
   | Statement of type_clash_statement
   | ForLoopCondition
@@ -127,6 +128,7 @@ let context_to_string = function
   | Some TryReturn -> "TryReturn"
   | Some StringConcat -> "StringConcat"
   | Some (FunctionArgument _) -> "FunctionArgument"
+  | Some JsxComponent -> "JsxComponent"
   | Some ComparisonOperator -> "ComparisonOperator"
   | Some IfReturn -> "IfReturn"
   | Some TernaryReturn -> "TernaryReturn"
@@ -145,6 +147,7 @@ let error_type_text ppf type_clash_context =
     | Some ArrayValue -> "This array item has type:"
     | Some (SetRecordField _) ->
       "You're assigning something to this field that has type:"
+    | Some JsxComponent -> "This JSX tag resolves to:"
     | _ -> "This has type:"
   in
   fprintf ppf "%s" text
@@ -162,6 +165,7 @@ let error_expected_type_text ppf type_clash_context =
     | None -> ());
 
     fprintf ppf " is expecting:"
+  | Some JsxComponent -> fprintf ppf "But JSX component positions require:"
   | Some ComparisonOperator ->
     fprintf ppf "But it's being compared to something of type:"
   | Some SwitchReturn -> fprintf ppf "But this switch is expected to return:"
@@ -396,6 +400,17 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       \  - Remove the @{<info>await@} if this is not expected to be a promise\n\
       \  - Wrap the expression in @{<info>Promise.resolve@} to convert the \
        expression to a promise"
+  | Some JsxComponent, _ ->
+    fprintf ppf
+      "\n\n\
+      \  JSX tags must resolve to a React component, not a plain function.\n\n\
+      \  Possible solutions:\n\
+      \  - If this function takes labeled props, annotate it with \
+       @{<info>@react.component@}\n\
+      \  - If this function takes a single props record, annotate it with \
+       @{<info>@react.componentWithProps@}\n\
+      \  - If this is already a valid component-like value, wrap it with \
+       @{<info>React.component(...)@}"
   | Some IfReturn, _ ->
     fprintf ppf
       "\n\n\

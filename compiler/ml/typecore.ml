@@ -2525,7 +2525,10 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
     wrap_trace_gadt_instances env (lower_args env []) ty;
     begin_def ();
     let total_app = not partial in
-    let context = type_clash_context_from_function sexp sfunct in
+    let context =
+      if transformed_jsx then Some JsxComponent
+      else type_clash_context_from_function sexp sfunct
+    in
     let args, ty_res, fully_applied =
       match translate_unified_ops env funct sargs with
       | Some (targs, result_type) -> (targs, result_type, true)
@@ -3925,15 +3928,19 @@ and type_application ~context total_app env funct (sargs : sargs) :
           if (not optional) && is_optional l' then
             Location.prerr_warning sarg0.pexp_loc
               (Warnings.Nonoptional_label (Printtyp.string_of_label l));
+          let argument_context =
+            match (context, args) with
+            | Some JsxComponent, [] -> Some JsxComponent
+            | Some JsxComponent, _ ->
+              type_clash_context_for_function_argument ~label:l' None sarg0
+            | _ ->
+              type_clash_context_for_function_argument ~label:l' context sarg0
+          in
           ( sargs,
             omitted,
             Some
               (if (not optional) || is_optional l' then fun () ->
-                 type_argument
-                   ~context:
-                     (type_clash_context_for_function_argument ~label:l' context
-                        sarg0)
-                   env sarg0 ty ty0
+                 type_argument ~context:argument_context env sarg0 ty ty0
                else fun () ->
                  option_some
                    (type_argument
