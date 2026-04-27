@@ -173,6 +173,13 @@ let add_mapping builder ~generated_line ~generated_column (loc : Location.t) =
         :: builder.mappings;
       builder.last_generated <- Some (generated_line, generated_column)
 
+let take_marker_loc id =
+  match Hashtbl.find_opt marker_locs id with
+  | None -> None
+  | Some loc ->
+    Hashtbl.remove marker_locs id;
+    Some loc
+
 let mark_comment fmt comment =
   if is_prefix ~prefix:marker_prefix comment then (
     let prefix_len = String.length marker_prefix in
@@ -180,7 +187,7 @@ let mark_comment fmt comment =
       int_of_string
         (String.sub comment prefix_len (String.length comment - prefix_len))
     in
-    (match (!current, Hashtbl.find_opt marker_locs id) with
+    (match (!current, take_marker_loc id) with
     | Some builder, Some loc ->
       let generated_line, generated_column = Ext_pp.position fmt in
       add_mapping builder ~generated_line ~generated_column loc
