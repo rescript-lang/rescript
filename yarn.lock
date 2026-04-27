@@ -808,6 +808,23 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@tests/sourcedirs-dependency-lib@workspace:*, @tests/sourcedirs-dependency-lib@workspace:tests/analysis_tests/tests-sourcedirs-dependency/dependency":
+  version: 0.0.0-use.local
+  resolution: "@tests/sourcedirs-dependency-lib@workspace:tests/analysis_tests/tests-sourcedirs-dependency/dependency"
+  dependencies:
+    rescript: "workspace:^"
+  languageName: unknown
+  linkType: soft
+
+"@tests/sourcedirs-dependency@workspace:tests/analysis_tests/tests-sourcedirs-dependency":
+  version: 0.0.0-use.local
+  resolution: "@tests/sourcedirs-dependency@workspace:tests/analysis_tests/tests-sourcedirs-dependency"
+  dependencies:
+    "@tests/sourcedirs-dependency-lib": "workspace:*"
+    rescript: "workspace:^"
+  languageName: unknown
+  linkType: soft
+
 "@tests/tools@workspace:tests/tools_tests":
   version: 0.0.0-use.local
   resolution: "@tests/tools@workspace:tests/tools_tests"
