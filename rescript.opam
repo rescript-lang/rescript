@@ -26,7 +26,7 @@ depends: [
   "dune" {>= "3.17"}
   "flow_parser" {= "0.267.0"}
   "ocamlformat" {with-test & = "0.27.0"}
-  "yojson" {with-test & = "2.2.2"}
+  "yojson" {= "2.2.2"}
   "ounit2" {with-test & = "2.2.7"}
   "odoc" {with-doc}
   "ocaml-lsp-server" {with-dev-setup & = "1.22.0"}

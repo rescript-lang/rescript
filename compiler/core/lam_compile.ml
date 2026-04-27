@@ -25,6 +25,64 @@
 module E = Js_exp_make
 module S = Js_stmt_make
 
+let source_map_comment = Js_source_map.comment_of_loc
+
+let with_source_loc loc (exp : J.expression) =
+  match (source_map_comment loc, exp.comment) with
+  | Some comment, None -> {exp with comment = Some comment}
+  | _ -> exp
+
+let rec source_loc_of_lam (lam : Lam.t) =
+  match lam with
+  | Lapply {ap_info = {ap_loc}} -> Some ap_loc
+  | Lprim {loc} | Lfunction {loc} -> Some loc
+  | Llet (_, _, arg, body) -> (
+    match source_loc_of_lam arg with
+    | Some _ as loc -> loc
+    | None -> source_loc_of_lam body)
+  | Lletrec (_, body) | Lsequence (_, body) -> source_loc_of_lam body
+  | Lifthenelse (_, then_, _) -> source_loc_of_lam then_
+  | Lstaticcatch (body, _, _) | Ltrywith (body, _, _) -> source_loc_of_lam body
+  | Lstringswitch (_, cases, default) -> (
+    match cases with
+    | (_, body) :: _ -> source_loc_of_lam body
+    | [] -> (
+      match default with
+      | Some body -> source_loc_of_lam body
+      | None -> None))
+  | Lswitch (_, sw) -> (
+    match (sw.sw_consts, sw.sw_blocks, sw.sw_failaction) with
+    | (_, body) :: _, _, _ | _, (_, body) :: _, _ -> source_loc_of_lam body
+    | [], [], Some body -> source_loc_of_lam body
+    | [], [], None -> None)
+  | Lstaticraise (_, args) -> (
+    match args with
+    | arg :: _ -> source_loc_of_lam arg
+    | [] -> None)
+  | Lwhile (_, body)
+  | Lfor (_, _, _, _, body)
+  | Lfor_of (_, _, body)
+  | Lfor_await_of (_, _, body) ->
+    source_loc_of_lam body
+  | Lassign (_, body) -> source_loc_of_lam body
+  | Lvar _ | Lglobal_module _ | Lconst _ | Lbreak | Lcontinue -> None
+
+let source_map_comment_of_lam lam =
+  match source_loc_of_lam lam with
+  | Some loc -> source_map_comment loc
+  | None -> None
+
+let with_statement_comment comment (stmt : J.statement) =
+  match (comment, stmt.comment) with
+  | Some comment, None -> {stmt with comment = Some comment}
+  | _ -> stmt
+
+let with_block_source_loc lam block =
+  match block with
+  | [] -> []
+  | stmt :: rest ->
+    with_statement_comment (source_map_comment_of_lam lam) stmt :: rest
+
 let args_either_function_or_const (args : Lam.t list) =
   Ext_list.for_all args (fun x ->
       match x with
@@ -315,6 +373,7 @@ let compile output_prefix =
           | Single x ->
             apply_with_arity fn ~arity:(Lam_arity.extract_arity x) args)
       in
+      let expression = with_source_loc appinfo.ap_info.ap_loc expression in
       Js_output.output_of_block_and_expression lambda_cxt.continuation args_code
         expression
   (*
@@ -329,7 +388,12 @@ let compile output_prefix =
       (id : Ident.t) (arg : Lam.t) : Js_output.t * initialization =
     match arg with
     | Lfunction
-        {params; body; attr = {return_unit; async; one_unit_arg; directive}} ->
+        {
+          params;
+          body;
+          attr = {return_unit; async; one_unit_arg; directive};
+          loc;
+        } ->
       (* TODO: Think about recursive value
          {[
            let rec v = ref (fun _ ...
@@ -361,11 +425,13 @@ let compile output_prefix =
           }
           body
       in
+      let comment = source_map_comment loc in
       let result =
         if ret.triggered then
           let body_block = Js_output.output_as_block output in
           E.ocaml_fun
-          (* TODO:  save computation of length several times
+            ?comment
+              (* TODO:  save computation of length several times
              Here we always create [ocaml_fun],
              it will be renamed into [method]
              when it is detected by a primitive
@@ -382,7 +448,7 @@ let compile output_prefix =
             ]
         else
           (* TODO:  save computation of length several times *)
-          E.ocaml_fun params
+          E.ocaml_fun ?comment params
             (Js_output.output_as_block output)
             ~return_unit ~async ~one_unit_arg ?directive
       in
@@ -539,8 +605,12 @@ let compile output_prefix =
           (a * J.case_clause) list ->
           J.statement) ~(switch_exp : J.expression) ~(default : default_case)
        ?(merge_cases = fun _ _ -> true) (cases : (a * Lam.t) list) ->
+    let output_block_with_source_loc cxt lam =
+      compile_lambda cxt lam |> Js_output.output_as_block
+      |> with_block_source_loc lam
+    in
     match (cases, default) with
-    | [], Default lam -> Js_output.output_as_block (compile_lambda cxt lam)
+    | [], Default lam -> output_block_with_source_loc cxt lam
     | [], (Complete | NonComplete) -> []
     | [(_, lam)], Complete ->
       (* To take advantage of such optimizations,
@@ -549,18 +619,18 @@ let compile output_prefix =
           otherwise the compiler engine would think that
           it's also complete
       *)
-      Js_output.output_as_block (compile_lambda cxt lam)
+      output_block_with_source_loc cxt lam
     | [(id, lam)], NonComplete ->
       morph_declare_to_assign cxt (fun cxt define ->
           [
             S.if_ ?declaration:define
               (eq_exp None switch_exp (Some id) (make_exp id))
-              (Js_output.output_as_block (compile_lambda cxt lam));
+              (output_block_with_source_loc cxt lam);
           ])
     | [(id, lam)], Default x | [(id, lam); (_, x)], Complete ->
       morph_declare_to_assign cxt (fun cxt define ->
-          let else_block = Js_output.output_as_block (compile_lambda cxt x) in
-          let then_block = Js_output.output_as_block (compile_lambda cxt lam) in
+          let else_block = output_block_with_source_loc cxt x in
+          let then_block = output_block_with_source_loc cxt lam in
           [
             S.if_ ?declaration:define
               (eq_exp None switch_exp (Some id) (make_exp id))
@@ -599,9 +669,7 @@ let compile output_prefix =
             | Complete -> None
             | NonComplete -> None
             | Default lam -> (
-              let statements =
-                Js_output.output_as_block (compile_lambda switch_cxt lam)
-              in
+              let statements = output_block_with_source_loc switch_cxt lam in
               match statements with
               | [] -> None
               | _ -> Some statements)
@@ -613,6 +681,7 @@ let compile output_prefix =
                   let switch_body, should_break =
                     Js_output.to_break_block (compile_lambda switch_cxt lam)
                   in
+                  let switch_body = with_block_source_loc lam switch_body in
                   let should_break =
                     if
                       not
@@ -621,10 +690,20 @@ let compile output_prefix =
                     then should_break
                     else should_break && Lam_exit_code.has_exit lam
                   in
-                  (switch_case, J.{switch_body; should_break; comment = None})
+                  ( switch_case,
+                    J.
+                      {
+                        switch_body;
+                        should_break;
+                        comment = source_map_comment_of_lam lam;
+                      } )
                 else
                   ( switch_case,
-                    {switch_body = []; should_break = false; comment = None} ))
+                    {
+                      switch_body = [];
+                      should_break = false;
+                      comment = source_map_comment_of_lam lam;
+                    } ))
             (* TODO: we should also group default *)
             (* The last clause does not need [break]
                 common break through, *)
@@ -1630,11 +1709,12 @@ let compile output_prefix =
       | _ ->
         Js_output.output_of_block_and_expression lambda_cxt.continuation
           args_code
-          (E.call
-             ~info:
-               (call_info_of_ap_status appinfo.ap_transformed_jsx
-                  appinfo.ap_info.ap_status)
-             fn_code args))
+          (with_source_loc appinfo.ap_info.ap_loc
+             (E.call
+                ~info:
+                  (call_info_of_ap_status appinfo.ap_transformed_jsx
+                     appinfo.ap_info.ap_status)
+                fn_code args)))
   and compile_prim (prim_info : Lam.prim_info)
       (lambda_cxt : Lam_compile_context.t) =
     match prim_info with
@@ -1648,13 +1728,14 @@ let compile output_prefix =
       | Fld_module {name = field} ->
         compile_external_field ~dynamic_import lambda_cxt id field
       | _ -> assert false)
-    | {primitive = Praise; args = [e]; _} -> (
+    | {primitive = Praise; args = [e]; loc} -> (
       match
         compile_lambda {lambda_cxt with continuation = NeedValue Not_tail} e
       with
       | {block; value = Some v} ->
+        let comment = source_map_comment loc in
         Js_output.make
-          (Ext_list.append_one block (S.throw_stmt v))
+          (Ext_list.append_one block (S.throw_stmt ?comment v))
           ~value:E.undefined ~output_finished:True
       (* FIXME -- breaks invariant when NeedValue, reason is that js [throw] is statement
          while ocaml it's an expression, we should remove such things in lambda optimizations
@@ -1721,9 +1802,10 @@ let compile output_prefix =
     | {primitive = Pjs_unsafe_downgrade _; args} -> assert false
     | {primitive = Pjs_fn_method; args = args_lambda} -> (
       match args_lambda with
-      | [Lfunction {params; body; attr = {return_unit; async}}] ->
+      | [Lfunction {params; body; attr = {return_unit; async}; loc}] ->
+        let comment = source_map_comment loc in
         Js_output.output_of_block_and_expression lambda_cxt.continuation []
-          (E.method_ ~async ~return_unit params
+          (E.method_ ?comment ~async ~return_unit params
              (* Invariant:  jmp_table can not across function boundary,
                 here we share env
              *)
@@ -1782,7 +1864,7 @@ let compile output_prefix =
             [args_expr]
         in
         Js_output.output_of_block_and_expression lambda_cxt.continuation
-          args_code exp
+          args_code (with_source_loc loc exp)
       | Lfunction
           {
             body =
@@ -1811,7 +1893,7 @@ let compile output_prefix =
             [args_expr]
         in
         Js_output.output_of_block_and_expression lambda_cxt.continuation
-          args_code exp
+          args_code (with_source_loc loc exp)
       | _ ->
         Location.raise_errorf ~loc
           "Invalid argument: unsupported argument to dynamic import. If you \
@@ -1833,15 +1915,22 @@ let compile output_prefix =
           args_expr
       in
       Js_output.output_of_block_and_expression lambda_cxt.continuation args_code
-        exp
+        (with_source_loc loc exp)
   and compile_lambda (lambda_cxt : Lam_compile_context.t) (cur_lam : Lam.t) :
       Js_output.t =
     match cur_lam with
     | Lfunction
-        {params; body; attr = {return_unit; async; one_unit_arg; directive}} ->
+        {
+          params;
+          body;
+          attr = {return_unit; async; one_unit_arg; directive};
+          loc;
+        } ->
+      let comment = source_map_comment loc in
       Js_output.output_of_expression lambda_cxt.continuation
         ~no_effects:no_effects_const
-        (E.ocaml_fun params ~return_unit ~async ~one_unit_arg ?directive
+        (E.ocaml_fun ?comment params ~return_unit ~async ~one_unit_arg
+           ?directive
            (* Invariant:  jmp_table can not across function boundary,
               here we share env
            *)

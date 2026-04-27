@@ -26,6 +26,7 @@
 
 type jsx_version = Jsx_v4
 type jsx_module = React | Generic of {module_name: string}
+type source_map = No_source_map | Linked
 
 let no_version_header = ref false
 
@@ -53,6 +54,9 @@ let jsx_version = ref None
 let jsx_module = ref React
 let jsx_preserve = ref false
 let js_stdout = ref true
+let source_map = ref No_source_map
+let source_map_sources_content = ref false
+let source_map_root = ref ""
 let all_module_aliases = ref false
 let no_stdlib = ref false
 let no_export = ref false

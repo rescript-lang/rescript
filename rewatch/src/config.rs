@@ -282,6 +282,13 @@ pub struct JsxSpecs {
     pub preserve: Option<bool>,
 }
 
+#[derive(Deserialize, Debug, Clone, Eq, PartialEq)]
+#[serde(untagged)]
+pub enum SourceMapConfig {
+    Bool(bool),
+    String(String),
+}
+
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
 pub enum GenTypeModule {
     #[serde(rename = "commonjs")]
@@ -488,6 +495,12 @@ pub struct Config {
 
     pub namespace: Option<NamespaceConfig>,
     pub jsx: Option<JsxSpecs>,
+    #[serde(rename = "sourceMap")]
+    pub source_map: Option<SourceMapConfig>,
+    #[serde(rename = "sourceMapSourcesContent")]
+    pub source_map_sources_content: Option<bool>,
+    #[serde(rename = "sourceMapRoot")]
+    pub source_map_root: Option<String>,
     #[serde(rename = "experimental-features")]
     pub experimental_features: Option<HashMap<ExperimentalFeature, bool>>,
     #[serde(rename = "gentypeconfig")]
@@ -788,6 +801,35 @@ impl Config {
             },
             _ => vec![],
         }
+    }
+
+    pub fn get_source_map_args(&self) -> Vec<String> {
+        let mut args = Vec::new();
+
+        if let Some(source_map) = &self.source_map {
+            let value = match source_map {
+                SourceMapConfig::Bool(true) => "true".to_string(),
+                SourceMapConfig::Bool(false) => "false".to_string(),
+                SourceMapConfig::String(value) => match value.as_str() {
+                    "true" | "linked" | "false" | "none" => value.to_string(),
+                    _ => panic!("sourceMap value {value} is unsupported"),
+                },
+            };
+            args.extend(["-bs-source-map".to_string(), value]);
+        }
+
+        if let Some(sources_content) = self.source_map_sources_content {
+            args.extend([
+                "-bs-source-map-sources-content".to_string(),
+                sources_content.to_string(),
+            ]);
+        }
+
+        if let Some(source_root) = &self.source_map_root {
+            args.extend(["-bs-source-map-root".to_string(), source_root.to_string()]);
+        }
+
+        args
     }
 
     pub fn get_experimental_features_args(&self) -> Vec<String> {
@@ -1284,6 +1326,9 @@ pub mod tests {
             compiler_flags: None,
             namespace: None,
             jsx: None,
+            source_map: None,
+            source_map_sources_content: None,
+            source_map_root: None,
             gentype_config: None,
             js_post_build: None,
             editor: None,
@@ -1584,6 +1629,39 @@ pub mod tests {
                 preserve: Some(true),
             },
         );
+    }
+
+    #[test]
+    fn test_source_map_args() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": [ { "dir": "src/", "subdirs": true } ],
+            "sourceMap": true,
+            "sourceMapSourcesContent": true
+        }
+        "#;
+
+        let config = serde_json::from_str::<Config>(json).unwrap();
+        assert_eq!(
+            config.get_source_map_args(),
+            vec!["-bs-source-map", "true", "-bs-source-map-sources-content", "true",]
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "sourceMap value inline is unsupported")]
+    fn test_source_map_rejects_inline_for_mvp() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": [ { "dir": "src/", "subdirs": true } ],
+            "sourceMap": "inline"
+        }
+        "#;
+
+        let config = serde_json::from_str::<Config>(json).unwrap();
+        let _ = config.get_source_map_args();
     }
 
     #[test]

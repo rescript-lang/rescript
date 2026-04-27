@@ -33,10 +33,15 @@ fn remove_iast(package: &packages::Package, source_file: &Path) {
 }
 
 fn remove_mjs_file(source_file: &Path, suffix: &str) {
-    let _ = std::fs::remove_file(source_file.with_extension(
+    let js_file = source_file.with_extension(
         // suffix.to_string includes the ., so we need to remove it
         &suffix[1..],
-    ));
+    );
+    let _ = std::fs::remove_file(&js_file);
+
+    let mut map_file = js_file.into_os_string();
+    map_file.push(".map");
+    let _ = std::fs::remove_file(PathBuf::from(map_file));
 }
 
 fn remove_compile_asset(package: &packages::Package, source_file: &Path, extension: &str) {

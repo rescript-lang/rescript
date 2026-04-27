@@ -209,6 +209,20 @@ let[@inline] string_optional_set s : Bsc_args.spec =
 let[@inline] unit_call s : Bsc_args.spec = Unit (Unit_call s)
 let[@inline] string_list_add s : Bsc_args.spec = String (String_list_add s)
 
+let parse_source_map value =
+  Js_config.source_map :=
+    match String.lowercase_ascii value with
+    | "true" | "linked" -> Linked
+    | "false" | "none" -> No_source_map
+    | value -> Bsc_args.bad_arg ("Unsupported sourceMap value: " ^ value)
+
+let parse_bool_ref target value =
+  target :=
+    match String.lowercase_ascii value with
+    | "true" -> true
+    | "false" -> false
+    | value -> Bsc_args.bad_arg ("Expected true or false, got: " ^ value)
+
 (* mostly common used to list in the beginning to make search fast
 *)
 let command_line_flags : (string * Bsc_args.spec * string) array =
@@ -259,6 +273,15 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
       string_call ignore,
       "*internal* Set jsx mode, this is no longer used and is a no-op." );
     ("-bs-jsx-preserve", set Js_config.jsx_preserve, "*internal* Preserve jsx");
+    ( "-bs-source-map",
+      string_call parse_source_map,
+      "*internal* Configure source map output" );
+    ( "-bs-source-map-sources-content",
+      string_call (parse_bool_ref Js_config.source_map_sources_content),
+      "*internal* Include original source text in source maps" );
+    ( "-bs-source-map-root",
+      string_call (fun value -> Js_config.source_map_root := value),
+      "*internal* Set sourceRoot in source maps" );
     ( "-bs-package-output",
       string_call Js_packages_state.update_npm_package_path,
       "*internal* Set npm-output-path: [opt_module]:path, for example: \

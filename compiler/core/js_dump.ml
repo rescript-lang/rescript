@@ -1291,6 +1291,7 @@ and variable_declaration top cxt f (variable : J.variable_declaration) : cxt =
     | _ -> (
       match e.expression_desc with
       | Fun {is_method; params; body; env; return_unit; async; directive} ->
+        pp_comment_option f e.comment;
         pp_function ?directive ~is_method ~return_unit ~async
           ~fn_state:(if top then Name_top name else Name_non_top name)
           cxt f params body env
@@ -1311,7 +1312,8 @@ and ipp_comment : 'a. P.t -> 'a -> unit = fun _f _comment -> ()
 *)
 
 and pp_comment f comment =
-  if String.length comment > 0 then (
+  if Js_source_map.mark_comment f comment then ()
+  else if String.length comment > 0 then (
     P.string f "/* ";
     P.string f comment;
     P.string f " */")
