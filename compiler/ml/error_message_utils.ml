@@ -107,6 +107,7 @@ type type_clash_context =
       is_constant: string option;
     }
   | FunctionArgument of {optional: bool; name: string option}
+  | JsxComponent
   | BracedIdent
   | Statement of type_clash_statement
   | ForLoopCondition
@@ -127,6 +128,7 @@ let context_to_string = function
   | Some TryReturn -> "TryReturn"
   | Some StringConcat -> "StringConcat"
   | Some (FunctionArgument _) -> "FunctionArgument"
+  | Some JsxComponent -> "JsxComponent"
   | Some ComparisonOperator -> "ComparisonOperator"
   | Some IfReturn -> "IfReturn"
   | Some TernaryReturn -> "TernaryReturn"
@@ -145,6 +147,7 @@ let error_type_text ppf type_clash_context =
     | Some ArrayValue -> "This array item has type:"
     | Some (SetRecordField _) ->
       "You're assigning something to this field that has type:"
+    | Some JsxComponent -> "This JSX tag has type:"
     | _ -> "This has type:"
   in
   fprintf ppf "%s" text
@@ -162,6 +165,7 @@ let error_expected_type_text ppf type_clash_context =
     | None -> ());
 
     fprintf ppf " is expecting:"
+  | Some JsxComponent -> fprintf ppf "But JSX component positions require:"
   | Some ComparisonOperator ->
     fprintf ppf "But it's being compared to something of type:"
   | Some SwitchReturn -> fprintf ppf "But this switch is expected to return:"
@@ -223,6 +227,12 @@ let is_variant_type ~(extract_concrete_typedecl : extract_concrete_typedecl)
     | _, _, {Types.type_kind = Type_variant _; _} -> true
     | _ -> false
   with _ -> false
+
+let is_jsx_component_type ~env ty =
+  match Ctype.expand_head env ty with
+  | {desc = Tconstr (Pdot (Pident {name = "Jsx"}, "component", _), _, _)} ->
+    true
+  | _ -> false
 
 let get_variant_constructors
     ~(extract_concrete_typedecl : extract_concrete_typedecl) ~env ty =
@@ -396,6 +406,17 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       \  - Remove the @{<info>await@} if this is not expected to be a promise\n\
       \  - Wrap the expression in @{<info>Promise.resolve@} to convert the \
        expression to a promise"
+  | Some JsxComponent, _ ->
+    fprintf ppf
+      "\n\n\
+      \  JSX tags must be React components, not plain functions.\n\n\
+      \  Possible solutions:\n\
+      \  - If this function takes labeled props, annotate it with \
+       @{<info>@react.component@}\n\
+      \  - If this function takes a single props record, annotate it with \
+       @{<info>@react.componentWithProps@}\n\
+      \  - If this is already a valid component-like value, wrap it with \
+       @{<info>React.component(...)@}"
   | Some IfReturn, _ ->
     fprintf ppf
       "\n\n\
@@ -423,6 +444,17 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       \  - Use a tuple, if your array is of fixed length. Tuples can mix types \
        freely, and compiles to a JavaScript array. Example of a tuple: `let \
        myTuple = (10, \"hello\", 15.5, true)"
+  | _, Some ({desc = Tarrow _}, expected)
+    when is_jsx_component_type ~env expected ->
+    fprintf ppf
+      "\n\n\
+      \  A React component is expected here, but this expression is a plain \
+       function.\n\n\
+      \  Possible solutions:\n\
+      \  - Extract it to a component annotated with @{<info>@react.component@} \
+       or @{<info>@react.componentWithProps@}\n\
+      \  - If this is already a valid component-like value, wrap it with \
+       @{<info>React.component(...)@}"
   | _, Some (_, {desc = Tconstr (p2, _, _)}) when Path.same Predef.path_dict p2
     ->
     fprintf ppf

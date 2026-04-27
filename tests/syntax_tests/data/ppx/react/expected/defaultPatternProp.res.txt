@@ -6,11 +6,11 @@ module C0 = {
     type props = {}
 
     let make = (_: props): React.element => React.null
-    let make = {
+    let make = React.component({
       let \"DefaultPatternProp$C0$M" = props => make(props)
 
       \"DefaultPatternProp$C0$M"
-    }
+    })
   }
 
   module type S = module type of M
@@ -27,9 +27,9 @@ module C0 = {
     let module(C: S) = __component_value
     (React.jsx(C.make, {}): React.element)
   }
-  let make = {
+  let make = React.component({
     let \"DefaultPatternProp$C0" = (props: props<_>) => make(props)
 
     \"DefaultPatternProp$C0"
-  }
+  })
 }

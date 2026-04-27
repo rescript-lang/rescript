@@ -14,6 +14,8 @@
 
 #### :boom: Breaking Change
 
+- Make Jsx.component abstract. https://github.com/rescript-lang/rescript/pull/8390
+
 #### :eyeglasses: Spec Compliance
 
 #### :rocket: New Feature

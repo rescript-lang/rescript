@@ -1,0 +1,13 @@
+diff --git a/src/React.res b/src/React.res
+index 0676012234c8a9cdd93030d732274b5ed3914b11..1ff7a036a06a69e76a680b0396a3f8a67a59c328 100644
+--- a/src/React.res
++++ b/src/React.res
+@@ -13,7 +13,7 @@ type componentLike<'props, 'return> = Jsx.componentLike<'props, 'return>
+ 
+ type component<'props> = Jsx.component<'props>
+ 
+-external component: componentLike<'props, element> => component<'props> = "%identity"
++external component: componentLike<'props, element> => component<'props> = "%component_identity"
+ 
+ @module("react")
+ external createElement: (component<'props>, 'props) => element = "createElement"
