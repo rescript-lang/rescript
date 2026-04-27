@@ -147,7 +147,7 @@ let error_type_text ppf type_clash_context =
     | Some ArrayValue -> "This array item has type:"
     | Some (SetRecordField _) ->
       "You're assigning something to this field that has type:"
-    | Some JsxComponent -> "This JSX tag resolves to:"
+    | Some JsxComponent -> "This JSX tag has type:"
     | _ -> "This has type:"
   in
   fprintf ppf "%s" text
@@ -409,7 +409,7 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
   | Some JsxComponent, _ ->
     fprintf ppf
       "\n\n\
-      \  JSX tags must resolve to a React component, not a plain function.\n\n\
+      \  JSX tags must be React components, not plain functions.\n\n\
       \  Possible solutions:\n\
       \  - If this function takes labeled props, annotate it with \
        @{<info>@react.component@}\n\

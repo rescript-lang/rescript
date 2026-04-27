@@ -7,11 +7,11 @@
   [1;31m26[0m [2m│[0m let _ = <[1;31mWrapper[0m value="hello" />
   27 [2m│[0m 
 
-  This JSX tag resolves to: [1;31mWrapper.props => Jsx.element[0m
+  This JSX tag has type: [1;31mWrapper.props => Jsx.element[0m
   But JSX component positions require:
     [1;33mReact.component<'a>[0m [2m(defined as[0m [1;33mJsx.component<'a>[0m[2m)[0m
 
-  JSX tags must resolve to a React component, not a plain function.
+  JSX tags must be React components, not plain functions.
 
   Possible solutions:
   - If this function takes labeled props, annotate it with [1;33m@react.component[0m
