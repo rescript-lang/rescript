@@ -76,17 +76,26 @@ let repeat x n =
   let rec loop acc n = if n <= 0 then acc else loop (x :: acc) (n - 1) in
   loop [] n
 
+let drive_root parts =
+  match parts with
+  | drive :: _ when String.length drive = 2 && drive.[1] = ':' ->
+    Some (String.uppercase_ascii drive)
+  | _ -> None
+
 let relative_path ~from_dir ~to_file =
   let from_dir = absolute_path from_dir in
   let to_file = absolute_path to_file in
   let from_parts = split_path from_dir in
   let to_parts = split_path to_file in
-  match (from_parts, to_parts) with
-  | from_root :: _, to_root :: _ when from_root = to_root ->
+  match (drive_root from_parts, drive_root to_parts) with
+  (* Cross-drive Windows paths cannot be represented as a filesystem-relative path. *)
+  | Some from_drive, Some to_drive when from_drive <> to_drive ->
+    normalize_slashes to_file
+  | Some _, None | None, Some _ -> normalize_slashes to_file
+  | _ ->
     let from_rest, to_rest = drop_common from_parts to_parts in
     let parts = repeat ".." (List.length from_rest) @ to_rest in
     if parts = [] then Filename.basename to_file else String.concat "/" parts
-  | _ -> Filename.basename to_file
 
 let make ~generated_file ~source_root ~sources_content =
   {
