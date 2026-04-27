@@ -91,5 +91,27 @@
       }
       }
     }]
+  }, 
+  {
+    "id": "DocExtraction2.log",
+    "kind": "value",
+    "name": "log",
+    "deprecated": "Use log instead",
+    "signature": "let log: 'a => unit",
+    "docstrings": [],
+    "source": {
+      "filepath": "src/DocExtraction2.resi",
+      "line": 25,
+      "col": 1
+    },
+    "detail": 
+    {
+      "kind": "signature",
+      "details": {
+      "returnType": {
+        "path": "unit"
+      }
+    }
+    }
   }]
 }
