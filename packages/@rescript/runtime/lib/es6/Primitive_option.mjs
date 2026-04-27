@@ -57,14 +57,6 @@ function valFromOption(x) {
   }
 }
 
-function toUndefined(x) {
-  if (x === undefined) {
-    return;
-  } else {
-    return valFromOption(x);
-  }
-}
-
 function unwrapPolyVar(x) {
   if (x !== undefined) {
     return x.VAL;
@@ -80,7 +72,6 @@ export {
   valFromOption,
   some,
   isNested,
-  toUndefined,
   unwrapPolyVar,
 }
 /* No side effect */
