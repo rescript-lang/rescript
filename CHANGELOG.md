@@ -23,6 +23,7 @@
 #### :bug: Bug fix
 
 - Fix directive `@warning("-102")` not working. https://github.com/rescript-lang/rescript/pull/8322
+- Fix duplicated comments in `for`..`of` formatter. https://github.com/rescript-lang/rescript/pull/8395
 
 #### :memo: Documentation
 
