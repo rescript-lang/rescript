@@ -136,20 +136,25 @@ let print ~is_warning ~src ~(start_pos : Lexing.position)
   (* 3 for separator + the 2 spaces around it *)
   let line_width = 78 - max_line_digits_count - indent - 3 in
   let lines =
-    String.sub src start_line_line_offset
-      (end_line_line_end_offset - start_line_line_offset)
-    |> String.split_on_char '\n'
-    |> filter_mapi (fun i line ->
-           let line_number = i + first_shown_line in
-           if more_than_5_highlighted_lines then
-             if line_number = highlight_line_start_line + 2 then
-               Some (Elided, line)
-             else if
-               line_number > highlight_line_start_line + 2
-               && line_number < highlight_line_end_line - 1
-             then None
-             else Some (Number line_number, line)
-           else Some (Number line_number, line))
+    if
+      start_line_line_offset >= 0
+      && end_line_line_end_offset >= start_line_line_offset
+    then
+      String.sub src start_line_line_offset
+        (end_line_line_end_offset - start_line_line_offset)
+      |> String.split_on_char '\n'
+      |> filter_mapi (fun i line ->
+             let line_number = i + first_shown_line in
+             if more_than_5_highlighted_lines then
+               if line_number = highlight_line_start_line + 2 then
+                 Some (Elided, line)
+               else if
+                 line_number > highlight_line_start_line + 2
+                 && line_number < highlight_line_end_line - 1
+               then None
+               else Some (Number line_number, line)
+             else Some (Number line_number, line))
+    else []
   in
   let leading_space_to_cut =
     lines

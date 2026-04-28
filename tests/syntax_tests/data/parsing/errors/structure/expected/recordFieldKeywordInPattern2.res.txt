@@ -1,0 +1,10 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/structure/recordFieldKeywordInPattern2.res:1:12-15
+
+  1 │ let {a: _, type: x} = r
+  2 │ 
+
+  Cannot use keyword `type` here. Keywords are not allowed as record field names.
+
+let { a = _; type_ = x } = r

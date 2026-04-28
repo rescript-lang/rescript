@@ -27,14 +27,17 @@ let pow3 = 2n ** 2n
 
 let pow_overflow = 2147483647 ** 2
 
-let bnot_int = a => ~a
-let bnot_bigint = (a: bigint) => ~a
+let bnot_int = a => ~~~a
+let bnot_bigint = (a: bigint) => ~~~a
 
-let bxor_int = (a, b) => a ^ b
-let bxor_bigint = (a: bigint, b) => a ^ b
+let bor_int = (a, b) => a ||| b
+let bor_bigint = (a: bigint, b) => a ||| b
 
-let band_int = (a, b) => a & b
-let band_bigint = (a: bigint, b) => a & b
+let bxor_int = (a, b) => a ^^^ b
+let bxor_bigint = (a: bigint, b) => a ^^^ b
+
+let band_int = (a, b) => a &&& b
+let band_bigint = (a: bigint, b) => a &&& b
 
 let intShiftLeft = 1 << 2
 let intShiftRight = 8 >> 2

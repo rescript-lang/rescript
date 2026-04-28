@@ -23,6 +23,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 val to_method_callback :
+  async:bool ->
   Location.t ->
   Bs_ast_mapper.mapper ->
   Asttypes.arg_label ->

@@ -14,7 +14,7 @@ let calculateMaxValue = (dataType, locations, data) =>
       Js.Array.reduce(
         (maxValue, location) =>
           values(location.Location.id)
-          ->Js.Option.map((. value) => Js.Math.max_int(maxValue, Data.getValue(dataType, value)))
+          ->Js.Option.map((value) => Js.Math.max_int(maxValue, Data.getValue(dataType, value)))
           ->Js.Option.getWithDefault(maxValue),
         maxValue,
         locations,
@@ -52,7 +52,7 @@ let renderTooltipValues = (~chartType, ~payload, ~separator) =>
         | Filters.Number(dataType) =>
           let growthString =
             currentDataItem
-            ->Js.Option.map((. dataItem) =>
+            ->Js.Option.map((dataItem) =>
               " (+" ++ ((Data.getGrowth(dataType, dataItem) *. 100.->Js.Float.toFixed) ++ "%)")
             )
             ->Js.Option.getWithDefault("")
@@ -60,7 +60,7 @@ let renderTooltipValues = (~chartType, ~payload, ~separator) =>
         | Filters.PercentageGrowthOfCases =>
           let growthString =
             currentDataItem
-            ->Js.Option.map((. dataItem) =>
+            ->Js.Option.map((dataItem) =>
               " (+" ++ ((Data.getDailyNewCases(dataItem).confirmed->Js.Int.toString) ++ ")")
             )
             ->Js.Option.getWithDefault("")
@@ -73,7 +73,7 @@ let renderTooltipValues = (~chartType, ~payload, ~separator) =>
         | Filters.TotalMortalityRate =>
           let growthString =
             currentDataItem
-            ->Js.Option.map((. dataItem) => {
+            ->Js.Option.map((dataItem) => {
               let {Data.confirmed: confirmed, deaths} = Data.getRecord(dataItem)
               " (" ++ (Js.Int.toString(deaths) ++ ("/" ++ Js.Int.toString(confirmed)) ++ ")")
             })

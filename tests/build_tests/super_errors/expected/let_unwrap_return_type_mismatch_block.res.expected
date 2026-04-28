@@ -1,0 +1,19 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/let_unwrap_return_type_mismatch_block.res[0m:[2m10:12-18[0m
+
+   8 [2m┆[0m   1
+   9 [2m┆[0m } else {
+  [1;31m10[0m [2m┆[0m   let? [1;31mSome(x)[0m = None
+  11 [2m┆[0m   Some(x)
+  12 [2m┆[0m }
+
+  This has type: [1;31moption<'a>[0m
+  But this [1;33mlet?[0m is used where this type is expected: [1;33mint[0m
+
+  This [1;33mlet?[0m unwraps an [1;33moption[0m; use it where the enclosing function or let binding returns an [1;33moption[0m so [1;33mNone[0m can propagate.
+
+  Possible solutions:
+  - Change the enclosing function or let binding to return [1;33moption<'t>[0m and use [1;33mSome[0m for success; [1;33mlet?[0m will propagate [1;33mNone[0m.
+  - Replace [1;33mlet?[0m with a [1;33mswitch[0m and handle the [1;33mNone[0m case explicitly.
+  - If you want a default value instead of early return, unwrap using [1;33mOption.getOr(default)[0m.

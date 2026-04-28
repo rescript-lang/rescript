@@ -107,19 +107,6 @@ let add_char_string b c s =
   Ext_bytes.unsafe_blit_string s 0 b_buffer (b_position + 1) s_len;
   b.position <- new_position
 
-(* equivalent to add_char " "; add_char "$"; add_string s  *)
-let add_ninja_prefix_var b s =
-  let s_len = String.length s in
-  let len = s_len + 2 in
-  let new_position = b.position + len in
-  if new_position > b.length then resize b len;
-  let b_buffer = b.buffer in
-  let b_position = b.position in
-  Bytes.unsafe_set b_buffer b_position ' ';
-  Bytes.unsafe_set b_buffer (b_position + 1) '$';
-  Ext_bytes.unsafe_blit_string s 0 b_buffer (b_position + 2) s_len;
-  b.position <- new_position
-
 (* let add_bytes b s = add_string b (Bytes.unsafe_to_string s)
 
    let add_buffer b bs =

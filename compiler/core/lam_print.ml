@@ -401,6 +401,8 @@ let lambda ppf v =
       fprintf ppf "@[<2>(if@ %a@ %a@ %a)@]" lam lcond lam lif lam lelse
     | Lsequence (l1, l2) ->
       fprintf ppf "@[<2>(seq@ %a@ %a)@]" lam l1 sequence l2
+    | Lbreak -> fprintf ppf "break"
+    | Lcontinue -> fprintf ppf "continue"
     | Lwhile (lcond, lbody) ->
       fprintf ppf "@[<2>(while@ %a@ %a)@]" lam lcond lam lbody
     | Lfor (param, lo, hi, dir, body) ->
@@ -409,6 +411,12 @@ let lambda ppf v =
         | Upto -> "to"
         | Downto -> "downto")
         lam hi lam body
+    | Lfor_of (param, iterable, body) ->
+      fprintf ppf "@[<2>(for %a@ of@ %a@ %a)@]" Ident.print param lam iterable
+        lam body
+    | Lfor_await_of (param, iterable, body) ->
+      fprintf ppf "@[<2>(for await %a@ of@ %a@ %a)@]" Ident.print param lam
+        iterable lam body
     | Lassign (id, expr) ->
       fprintf ppf "@[<2>(assign@ %a@ %a)@]" Ident.print id lam expr
   and sequence ppf = function

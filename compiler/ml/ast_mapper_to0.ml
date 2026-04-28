@@ -25,6 +25,13 @@ open Ast_helper0
 open Location
 module Pt = Parsetree0
 
+let jsx_prop_loc_attr = "res.jsxPropLoc"
+let jsx_spread_loc_attr = "res.jsxSpreadLoc"
+
+let wrap_with_loc_attr attr_name loc (expr : Pt.expression) =
+  let attr : Pt.attribute = (Location.mkloc attr_name loc, Pt.PStr []) in
+  {expr with pexp_attributes = attr :: expr.pexp_attributes}
+
 type mapper = {
   attribute: mapper -> attribute -> Pt.attribute;
   attributes: mapper -> attribute list -> Pt.attribute list;
@@ -75,6 +82,9 @@ let map_constant = function
   | Pconst_string (s, q) -> Pconst_string (s, q)
   | Pconst_float (s, suffix) -> Pconst_float (s, suffix)
 
+let for_of_attr_name = "_res.for_of"
+let for_await_of_attr_name = "_res.for_await_of"
+
 let map_loc sub {loc; txt} = {loc = sub.location sub loc; txt}
 
 module T = struct
@@ -98,9 +108,13 @@ module T = struct
     match desc with
     | Ptyp_any -> any ~loc ~attrs ()
     | Ptyp_var s -> var ~loc ~attrs s
-    | Ptyp_arrow {lbl; arg; ret; arity} -> (
-      let lbl = Asttypes.to_noloc lbl in
-      let typ0 = arrow ~loc ~attrs lbl (sub.typ sub arg) (sub.typ sub ret) in
+    | Ptyp_arrow {arg; ret; arity} -> (
+      let lbl = Asttypes.to_noloc arg.lbl in
+      let typ0 =
+        arrow ~loc
+          ~attrs:(attrs @ sub.attributes sub arg.attrs)
+          lbl (sub.typ sub arg.typ) (sub.typ sub ret)
+      in
       match arity with
       | None -> typ0
       | Some arity ->
@@ -330,14 +344,16 @@ module E = struct
              if is_optional then Asttypes.Noloc.Optional name.txt
              else Asttypes.Noloc.Labelled name.txt
            in
-           (label, sub.expr sub value)
-         | JSXPropSpreading (_, value) ->
-           (Asttypes.Noloc.Labelled "_spreadProps", sub.expr sub value))
+           ( label,
+             sub.expr sub value |> wrap_with_loc_attr jsx_prop_loc_attr name.loc
+           )
+         | JSXPropSpreading (loc, value) ->
+           ( Asttypes.Noloc.Labelled "_spreadProps",
+             sub.expr sub value |> wrap_with_loc_attr jsx_spread_loc_attr loc ))
 
   let map_jsx_children sub loc children =
     match children with
-    | JSXChildrenSpreading e -> sub.expr sub e
-    | JSXChildrenItems xs ->
+    | xs ->
       let list_expr = Ast_helper.Exp.make_list_expression loc xs None in
       sub.expr sub list_expr
 
@@ -442,11 +458,40 @@ module E = struct
         (map_opt (sub.expr sub) e3)
     | Pexp_sequence (e1, e2) ->
       sequence ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)
+    | Pexp_break ->
+      extension ~loc ~attrs (Location.mkloc "res.break" loc, PStr [])
+    | Pexp_continue ->
+      extension ~loc ~attrs (Location.mkloc "res.continue" loc, PStr [])
     | Pexp_while (e1, e2) ->
       while_ ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)
     | Pexp_for (p, e1, e2, d, e3) ->
       for_ ~loc ~attrs (sub.pat sub p) (sub.expr sub e1) (sub.expr sub e2) d
         (sub.expr sub e3)
+    | Pexp_for_of (pat, array_expr, body_expr) ->
+      (* Encode for...of as a for loop with attributes *)
+      let for_of_attr =
+        sub.attribute sub
+          ( Location.mkloc for_of_attr_name loc,
+            PPat (Ast_helper.Pat.any (), Some array_expr) )
+      in
+      (* Use dummy bounds since the iterable is carried by the internal attribute. *)
+      let start_expr = Exp.constant ~loc (Pconst_integer ("0", None)) in
+      let end_expr = Exp.constant ~loc (Pconst_integer ("0", None)) in
+      (* Use Upto direction flag (arbitrary choice) *)
+      for_ ~loc ~attrs:(for_of_attr :: attrs) (sub.pat sub pat) start_expr
+        end_expr Asttypes.Upto (sub.expr sub body_expr)
+    | Pexp_for_await_of (pat, iterable_expr, body_expr) ->
+      let for_await_of_attr =
+        sub.attribute sub
+          ( Location.mkloc for_await_of_attr_name loc,
+            PPat (Ast_helper.Pat.any (), Some iterable_expr) )
+      in
+      let start_expr = Exp.constant ~loc (Pconst_integer ("0", None)) in
+      let end_expr = Exp.constant ~loc (Pconst_integer ("0", None)) in
+      for_ ~loc
+        ~attrs:(for_await_of_attr :: attrs)
+        (sub.pat sub pat) start_expr end_expr Asttypes.Upto
+        (sub.expr sub body_expr)
     | Pexp_coerce (e, (), t2) ->
       coerce ~loc ~attrs (sub.expr sub e) (sub.typ sub t2)
     | Pexp_constraint (e, t) ->
@@ -493,7 +538,9 @@ module E = struct
              jsx_unary_element_tag_name = tag_name;
              jsx_unary_element_props = props;
            }) ->
-      let tag_ident = map_loc sub tag_name in
+      let tag_ident : Longident.t Location.loc =
+        tag_name |> Location.map_loc Ast_helper.Jsx.longident_of_jsx_tag_name
+      in
       let props = map_jsx_props sub props in
       let children_expr =
         let loc =
@@ -523,7 +570,9 @@ module E = struct
              jsx_container_element_props = props;
              jsx_container_element_children = children;
            }) ->
-      let tag_ident = map_loc sub tag_name in
+      let tag_ident : Longident.t Location.loc =
+        tag_name |> Location.map_loc Ast_helper.Jsx.longident_of_jsx_tag_name
+      in
       let props = map_jsx_props sub props in
       let children_expr = map_jsx_children sub loc children in
       apply ~loc ~attrs:(jsx_attr sub :: attrs) (ident tag_ident)

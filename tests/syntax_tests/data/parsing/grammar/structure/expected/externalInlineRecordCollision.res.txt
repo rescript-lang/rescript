@@ -1,0 +1,4 @@
+type nonrec f = string
+type f.arg0 = {
+  z: int }[@@res.inlineRecordDefinition ]
+external f : f.arg0 -> unit (a:1) = "f"

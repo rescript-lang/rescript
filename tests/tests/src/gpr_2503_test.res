@@ -1,29 +1,27 @@
-let suites = ref(list{})
-let test_id = ref(0)
-let eq = (loc, x, y) => Mt.eq_suites(~suites, ~test_id, loc, x, y)
+open Mocha
+open Test_utils
 
-let b = (loc, b) => Mt.bool_suites(~suites, ~test_id, loc, b)
 /* TODO: */
 
 @obj external make: (~foo: [#a | #b]=?, unit) => _ = ""
 
-let makeWrapper = (~foo=?, ()) => Js.log(make(~foo?, ()))
+let makeWrapper = (~foo=?, ()) => Console.log(make(~foo?, ()))
 
 @obj external make2: (~foo: [#a | #b], unit) => _ = ""
 
-let makeWrapper2 = (foo, ()) => Js.log(make2(~foo, ()))
+let makeWrapper2 = (foo, ()) => Console.log(make2(~foo, ()))
 
 let _ = makeWrapper2(#a, ())
 
 @obj external make3: (~foo: [#a | #b]=?, unit) => _ = ""
 
 let makeWrapper3 = (~foo=?, ()) => {
-  Js.log(2)
+  Console.log(2)
   make(~foo?, ())
 }
 
 let makeWrapper4 = (foo, ()) => {
-  Js.log(2)
+  Console.log(2)
   make(
     ~foo=?if foo > 100 {
       None
@@ -36,14 +34,12 @@ let makeWrapper4 = (foo, ()) => {
   )
 }
 
-b(__LOC__, Js.eqUndefined(#a, makeWrapper3(~foo=#a, ())["foo"]))
-
-b(__LOC__, Js.undefined == makeWrapper3()["foo"])
-
-b(__LOC__, Js.eqUndefined(#a, makeWrapper4(1, ())["foo"]))
-
-b(__LOC__, Js.eqUndefined(#b, makeWrapper4(11, ())["foo"]))
-
-b(__LOC__, Js.undefined == makeWrapper4(111, ())["foo"])
-
-Mt.from_pair_suites(__MODULE__, suites.contents)
+describe(__MODULE__, () => {
+  test("gpr_2503 polymorphic variant optional parameter test", () => {
+    ok(__LOC__, Js.eqUndefined(#a, makeWrapper3(~foo=#a, ())["foo"]))
+    ok(__LOC__, Js.undefined == makeWrapper3()["foo"])
+    ok(__LOC__, Js.eqUndefined(#a, makeWrapper4(1, ())["foo"]))
+    ok(__LOC__, Js.eqUndefined(#b, makeWrapper4(11, ())["foo"]))
+    ok(__LOC__, Js.undefined == makeWrapper4(111, ())["foo"])
+  })
+})

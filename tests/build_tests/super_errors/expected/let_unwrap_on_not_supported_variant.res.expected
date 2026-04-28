@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/let_unwrap_on_not_supported_variant.res[0m:[2m13:8-16[0m
+
+  11 [2m│[0m 
+  12 [2m│[0m let ff = {
+  [1;31m13[0m [2m│[0m   let? [1;31mFailed(x)[0m = xx
+  14 [2m│[0m   Ok(x)
+  15 [2m│[0m }
+
+  `let?` is only supported in let bindings targeting the `result` or `option` type.

@@ -79,8 +79,8 @@ let print_all_composite = all_tickers =>
     | {type_: Market, _} => ()
     | {type_: Binary_op(_), ticker_name, value} =>
       switch value {
-      | Some(v) => Js.log(ticker_name)
-      | None => Js.log(ticker_name)
+      | Some(v) => Console.log(ticker_name)
+      | None => Console.log(ticker_name)
       }
     }
   )

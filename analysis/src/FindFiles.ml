@@ -135,14 +135,42 @@ let collectFiles directory =
          | None -> None
          | Some res -> Some (modName, SharedTypes.Impl {cmt; res}))
 
+(* Dependency resolution uses the package graph recorded by the build system in
+   .sourcedirs.json when available. If a package is not listed there, analysis
+   falls back to walking up node_modules from the project root. *)
+let readSourcedirsPackageRoots base =
+  let sourceDirsFile = base /+ "lib" /+ "bs" /+ ".sourcedirs.json" in
+  let readPackageEntry = function
+    | Json.Array [Json.String name; Json.String path] ->
+      let path = if Filename.is_relative path then base /+ path else path in
+      Some (name, path)
+    | _ -> None
+  in
+  match Files.readFile sourceDirsFile with
+  | None -> []
+  | Some text -> (
+    match Json.parse text with
+    | None -> []
+    | Some json -> (
+      match json |> Json.get "pkgs" |> bind Json.array with
+      | None -> []
+      | Some packages -> packages |> List.filter_map readPackageEntry))
+
+let findPackageRoot ~base ~sourcedirsPackageRoots name =
+  match List.assoc_opt name sourcedirsPackageRoots with
+  | Some path when Files.exists path -> Some path
+  | _ -> ModuleResolution.resolveNodeModulePath ~startPath:base name
+
 (* returns a list of (absolute path to cmt(i), relative path from base to source file) *)
 let findProjectFiles ~public ~namespace ~path ~sourceDirectories ~libBs =
   let dirs =
     sourceDirectories |> List.map (Filename.concat path) |> StringSet.of_list
   in
   let files =
+    (* Use maxDepth to prevent infinite recursion where `rescript` depends on `@rescript/runtime`,
+       but `@rescript/runtime` also has `rescript` as a dev dependency *)
     dirs |> StringSet.elements
-    |> List.map (fun name -> Files.collect name isSourceFile)
+    |> List.map (fun name -> Files.collect ~maxDepth:2 name isSourceFile)
     |> List.concat |> StringSet.of_list
   in
   dirs
@@ -213,28 +241,32 @@ let findProjectFiles ~public ~namespace ~path ~sourceDirectories ~libBs =
 
 let findDependencyFiles base config =
   let deps =
-    config |> Json.get "bs-dependencies" |> bind Json.array
-    |> Option.value ~default:[]
-    |> List.filter_map Json.string
+    match
+      ( config |> Json.get "dependencies" |> bind Json.array,
+        config |> Json.get "bs-dependencies" |> bind Json.array )
+    with
+    | None, None -> []
+    | Some deps, None | _, Some deps -> deps |> List.filter_map Json.string
   in
   let devDeps =
-    config
-    |> Json.get "bs-dev-dependencies"
-    |> bind Json.array
-    |> Option.map (List.filter_map Json.string)
-    |> Option.value ~default:[]
+    match
+      ( config |> Json.get "dev-dependencies" |> bind Json.array,
+        config |> Json.get "bs-dev-dependencies" |> bind Json.array )
+    with
+    | None, None -> []
+    | Some devDeps, None | _, Some devDeps ->
+      devDeps |> List.filter_map Json.string
   in
   let deps = deps @ devDeps in
   Log.log ("Dependencies: " ^ String.concat " " deps);
+  let sourcedirsPackageRoots = readSourcedirsPackageRoots base in
   let depFiles =
     deps
     |> List.map (fun name ->
            let result =
-             Json.bind
-               (ModuleResolution.resolveNodeModulePath ~startPath:base name)
+             Json.bind (findPackageRoot ~base ~sourcedirsPackageRoots name)
                (fun path ->
                  let rescriptJsonPath = path /+ "rescript.json" in
-                 let bsconfigJsonPath = path /+ "bsconfig.json" in
 
                  let parseText text =
                    match Json.parse text with
@@ -265,10 +297,7 @@ let findDependencyFiles base config =
 
                  match Files.readFile rescriptJsonPath with
                  | Some text -> parseText text
-                 | None -> (
-                   match Files.readFile bsconfigJsonPath with
-                   | Some text -> parseText text
-                   | None -> None))
+                 | None -> None)
            in
 
            match result with

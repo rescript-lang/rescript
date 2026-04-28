@@ -1,7 +1,7 @@
 type translations
 
 @module("react-translate")
-external useTranslate: (. string, . string) => string = "useTranslate"
+external useTranslate: (string, string) => string = "useTranslate"
 
 type translationModeContext = {
   translationMode: string,

@@ -9,7 +9,7 @@ let string_of_associative_type = x =>
   | A_hashtable => "Hashtbl.t"
   }
 
-Js.log(string_of_associative_type(A_list))
+Console.log(string_of_associative_type(A_list))
 
 type t2 =
   | A_list
@@ -22,7 +22,7 @@ let string_of_associative_type = x =>
   | A_bad => "bad"
   }
 
-Js.log(string_of_associative_type(A_list))
+Console.log(string_of_associative_type(A_list))
 
 let v = Some(3)
 
@@ -32,7 +32,7 @@ let f = x =>
   | None => "None"
   }
 let u = v => f(Some(v))
-Js.log((f(v), f(None), f(Some(3))))
+Console.log((f(v), f(None), f(Some(3))))
 
 type v =
   | A(int)
@@ -56,7 +56,7 @@ let ff = x =>
   | H(_) => "H"
   }
 
-Js.log((
+Console.log((
   ff(A(3)),
   (
     x =>

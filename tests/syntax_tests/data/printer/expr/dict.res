@@ -1,6 +1,12 @@
 // empty dict
 let x = dict{}
 
+// empty dict with inside comment
+let x = dict{
+  // inside comment
+
+}
+
 // one value
 let x = dict{"foo": "bar"}
 
@@ -53,4 +59,27 @@ let x = dict{
 	"foo": "bar" /* foo */,
 	"bar": "baz" /* bar */,
 	"baz": baz /* bar */
+}
+
+let foo = dict{"a": 1}
+let qux = dict{"c": 3}
+
+let x = dict{...foo, "bar": 2, ...qux}
+
+let x = dict{
+  "before": 1,
+  ...foo,
+  "after": 2,
+}
+
+let x = dict{
+  /* before foo */ ...foo,
+  /* before bar */ "bar": 2,
+  /* before baz */ ...qux,
+}
+
+let x = dict{
+  ...foo /* after foo */,
+  "bar": 2,
+  ...qux /* after qux */,
 }

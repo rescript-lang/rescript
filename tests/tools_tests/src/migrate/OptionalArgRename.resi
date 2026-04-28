@@ -1,0 +1,5 @@
+@deprecated({
+  reason: "Use new label name",
+  migrate: OptionalArgRename.Target.doStuff(~newName=%insert.labelledArgument("oldName")),
+})
+external doStuff: (~oldName: option<int>=?) => unit = "doStuff"

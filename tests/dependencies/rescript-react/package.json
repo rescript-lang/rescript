@@ -1,4 +1,9 @@
 {
-  "name": "@tests/rescript-react",
-  "private": true
+  "name": "@rescript/react",
+  "version": "0.14.0",
+  "private": true,
+  "description": "React bindings for ReScript",
+  "dependencies": {
+    "rescript": "workspace:^"
+  }
 }

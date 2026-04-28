@@ -19,4 +19,4 @@ let ff = {
     "A"
   }
 }
-let () = Js.log((f(#A), ff, f1(#A)))
+let () = Console.log((f(#A), ff, f1(#A)))

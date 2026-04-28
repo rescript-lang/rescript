@@ -43,7 +43,7 @@ type t =
   | Const_js_false
   | Const_int of {i: int32; comment: pointer_info}
   | Const_char of int
-  | Const_string of {s: string; unicode: bool}
+  | Const_string of {s: string; delim: External_arg_spec.delim option}
   | Const_float of string
   | Const_bigint of bool * string
   | Const_pointer of string

@@ -5,14 +5,15 @@ let f = (h, (), x, y) => h(x, y)
 
 let f = (h, ()) => {
   let u = 1 + 2
-  Js.log(u)
+  Console.log(u)
   (x, y) => h(x, y)
 }
 
-Mt.from_pair_suites(
-  __MODULE__,
-  {
-    open Mt
-    list{(__LOC__, _ => Eq(f(\"+", ())(1, 2), 3))}
-  },
-)
+open Mocha
+open Test_utils
+
+describe(__MODULE__, () => {
+  test(__LOC__, () => {
+    eq(__LOC__, 3, f(\"+", ())(1, 2))
+  })
+})

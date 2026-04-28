@@ -1,15 +1,15 @@
 let for_ = x =>
   for i in 0 to {
-    Js.log("hi")
+    Console.log("hi")
     ignore(3)
     Belt.Array.length(x)
   } {
-    Js.log(x[i])
+    Console.log(x[i])
   }
 
 let for_2 = x =>
   for i in 0 to Belt.Array.length(x) {
-    Js.log(x[i])
+    Console.log(x[i])
   }
 
 let for_3 = x => {

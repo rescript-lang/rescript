@@ -15,17 +15,16 @@
     },
     "exportInterfaces": false
   },
-  "name": "sample-typescript-app",
-  "bsc-flags": [],
+  "name": "@tests/gentype-react-example",
+  "compiler-flags": [],
   "jsx": { "version": 4 },
-  "bs-dependencies": ["@rescript/react"],
+  "dependencies": ["@rescript/react"],
   "sources": [
     {
       "dir": "src",
       "subdirs": true
     }
   ],
-  "uncurried": true,
   "package-specs": {
     "module": "esmodule",
     "in-source": true

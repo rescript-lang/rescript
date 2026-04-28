@@ -1,4 +1,12 @@
 let s = {js|some unicode é £ |js}
+let s =
+  match foo with
+  | (({js|bar|js})[@res.template ]) -> {js|bar|js}
+  | {js|foo|js} -> {js|foo|js}
+  | _ -> {js|baz|js}
+let s = (({js|你好，
+世界|js})[@res.template ])
+let s = (({js|"|js})[@res.template ])
 let s = (({js|foo|js})[@res.template ])
 let s =
   (((((({js|foo |js})[@res.template ]) ++ bar)[@res.template ]) ++

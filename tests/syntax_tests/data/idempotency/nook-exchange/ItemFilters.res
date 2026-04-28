@@ -513,7 +513,7 @@ module CategoryButtons = {
         })}>
         <option value=""> {React.string("-- Categories")} </option>
         {selectCategories
-        ->Belt.Array.mapU((. category) =>
+        ->Belt.Array.mapU((category) =>
           shouldRenderCategory(category)
             ? <option value=category key=category>
                 {React.string(getCategoryLabel(category))}
@@ -672,7 +672,7 @@ module UserCategorySelector = {
       })}>
       <option value=""> {React.string("All categories")} </option>
       {Item.validCategoryStrings
-      ->Belt.Array.mapU((. category) =>
+      ->Belt.Array.mapU((category) =>
         shouldRenderCategory(category)
           ? <option value=category key=category>
               {React.string(Utils.capitalizeFirstLetter(category))}

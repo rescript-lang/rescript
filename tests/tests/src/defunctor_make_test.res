@@ -164,7 +164,7 @@ let v0 = empty(module(V0))
 let v1 = empty(module(V1))
 
 let v3 = add(3, "a", v0)
-Js.log(v3)
+Console.log(v3)
 /* let () = v0 = v1 */
 
 /* let v1 = empty */

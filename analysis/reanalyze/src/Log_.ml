@@ -1,5 +1,3 @@
-open Common
-
 module Color = struct
   let color_enabled = lazy (Unix.isatty Unix.stdout)
   let forceColor = ref false
@@ -97,39 +95,35 @@ let item x =
   Format.fprintf Format.std_formatter "  ";
   Format.fprintf Format.std_formatter x
 
-let missingRaiseInfoToText {missingAnnotations; locFull} =
+let missingRaiseInfoToText {Issue.missingAnnotations; locFull} =
   let missingTxt =
     Format.asprintf "%a" (Exceptions.pp ~exnTable:None) missingAnnotations
   in
   if !Cli.json then
-    EmitJson.emitAnnotate ~action:"Add @raises annotation"
+    EmitJson.emitAnnotate ~action:"Add @throws annotation"
       ~pos:(EmitJson.locToPos locFull)
-      ~text:(Format.asprintf "@raises(%s)\\n" missingTxt)
+      ~text:(Format.asprintf "@throws(%s)\\n" missingTxt)
   else ""
 
-let logAdditionalInfo ~(description : description) =
+let logAdditionalInfo ~(description : Issue.description) =
   match description with
-  | DeadWarning {lineAnnotation; shouldWriteLineAnnotation} ->
-    if shouldWriteLineAnnotation then
-      WriteDeadAnnotations.lineAnnotationToString lineAnnotation
-    else ""
   | ExceptionAnalysisMissing missingRaiseInfo ->
     missingRaiseInfoToText missingRaiseInfo
   | _ -> ""
 
-let missingRaiseInfoToMessage {exnTable; exnName; missingAnnotations; raiseSet}
-    =
-  let raisesTxt =
-    Format.asprintf "%a" (Exceptions.pp ~exnTable:(Some exnTable)) raiseSet
+let missingThrowInfoToMessage
+    {Issue.exnTable; exnName; missingAnnotations; throwSet} =
+  let throwsTxt =
+    Format.asprintf "%a" (Exceptions.pp ~exnTable:(Some exnTable)) throwSet
   in
   let missingTxt =
     Format.asprintf "%a" (Exceptions.pp ~exnTable:None) missingAnnotations
   in
   Format.asprintf
-    "@{<info>%s@} might raise %s and is not annotated with @raises(%s)" exnName
-    raisesTxt missingTxt
+    "@{<info>%s@} might throw %s and is not annotated with @throws(%s)" exnName
+    throwsTxt missingTxt
 
-let descriptionToMessage (description : description) =
+let descriptionToMessage (description : Issue.description) =
   match description with
   | Circular {message} -> message
   | DeadModule {message} -> message
@@ -138,10 +132,10 @@ let descriptionToMessage (description : description) =
     Format.asprintf "@{<info>%s@} %s" path message
   | ExceptionAnalysis {message} -> message
   | ExceptionAnalysisMissing missingRaiseInfo ->
-    missingRaiseInfoToMessage missingRaiseInfo
+    missingThrowInfoToMessage missingRaiseInfo
   | Termination {message} -> message
 
-let descriptionToName (description : description) =
+let descriptionToName (description : Issue.description) =
   match description with
   | Circular _ -> Issues.warningDeadAnalysisCycle
   | DeadModule _ -> Issues.warningDeadModule
@@ -166,10 +160,10 @@ let descriptionToName (description : description) =
   | Termination {termination = TerminationAnalysisInternal} ->
     Issues.terminationAnalysisInternal
 
-let logIssue ~(issue : issue) =
+let logIssue ~config ~(issue : Issue.t) =
   let open Format in
   let loc = issue.loc in
-  if !Cli.json then
+  if config.DceConfig.cli.json then
     let file = Json.escape loc.loc_start.pos_fname in
     let startLine = loc.loc_start.pos_lnum - 1 in
     let startCharacter = loc.loc_start.pos_cnum - loc.loc_start.pos_bol in
@@ -188,7 +182,7 @@ let logIssue ~(issue : issue) =
           ~message)
       ()
       (logAdditionalInfo ~description:issue.description)
-      (if !Cli.json then EmitJson.emitClose () else "")
+      (if config.DceConfig.cli.json then EmitJson.emitClose () else "")
   else
     let color =
       match issue.severity with
@@ -201,13 +195,14 @@ let logIssue ~(issue : issue) =
 
 module Stats = struct
   let issues = ref []
-  let addIssue (issue : issue) = issues := issue :: !issues
+  let addIssue (issue : Issue.t) = issues := issue :: !issues
   let clear () = issues := []
+  let get_issue_count () = List.length !issues
 
   let getSortedIssues () =
     let counters2 = Hashtbl.create 1 in
     !issues
-    |> List.iter (fun (issue : issue) ->
+    |> List.iter (fun (issue : Issue.t) ->
            let counter =
              match Hashtbl.find_opt counters2 issue.name with
              | Some counter -> counter
@@ -225,11 +220,11 @@ module Stats = struct
     in
     (issues |> List.sort (fun (n1, _) (n2, _) -> String.compare n1 n2), nIssues)
 
-  let report () =
+  let report ~config =
     !issues |> List.rev
-    |> List.iter (fun issue -> logIssue ~issue |> print_string);
+    |> List.iter (fun issue -> logIssue ~config ~issue |> print_string);
     let sortedIssues, nIssues = getSortedIssues () in
-    if not !Cli.json then (
+    if not config.DceConfig.cli.json then (
       if sortedIssues <> [] then item "@.";
       item "Analysis reported %d issues%s@." nIssues
         (match sortedIssues with

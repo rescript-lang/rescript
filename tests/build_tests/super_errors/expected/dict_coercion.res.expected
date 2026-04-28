@@ -7,4 +7,4 @@
   [1;31m7[0m [2m│[0m let d = ([1;31mdict :> fakeDict<int>[0m)
   8 [2m│[0m 
 
-  Type Js.Dict.t<int> = dict<int> is not a subtype of fakeDict<int>
+  Type dict<int> is not a subtype of fakeDict<int>

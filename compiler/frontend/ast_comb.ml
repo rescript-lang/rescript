@@ -33,30 +33,6 @@ open Ast_helper
     [Exp.constraint_ ~loc e
        (Ast_literal.type_unit ~loc ())] *)
 
-let tuple_type_pair ?loc kind arity =
-  let prefix = "a" in
-  if arity = 0 then
-    let ty = Typ.var ?loc (prefix ^ "0") in
-    match kind with
-    | `Run -> (ty, [], ty)
-    | `Make ->
-      ( Ast_compatible.arrow ?loc ~arity:None (Ast_literal.type_unit ?loc ()) ty,
-        [],
-        ty )
-  else
-    let number = arity + 1 in
-    let tys =
-      Ext_list.init number (fun i ->
-          Typ.var ?loc (prefix ^ string_of_int (number - i - 1)))
-    in
-    match tys with
-    | result :: rest ->
-      ( Ext_list.reduce_from_left tys (fun r arg ->
-            Ast_compatible.arrow ?loc ~arity:None arg r),
-        List.rev rest,
-        result )
-    | [] -> assert false
-
 let regexp_id = Ast_literal.Lid.regexp_id
 
 let to_regexp_type loc = Typ.constr ~loc {txt = regexp_id; loc} []

@@ -33,8 +33,6 @@
 
 val is_dir_sep : char -> bool
 
-val maybe_quote : string -> string
-
 val chop_extension_maybe : string -> string
 
 (* return an empty string if no extension found *)

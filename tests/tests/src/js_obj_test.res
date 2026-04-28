@@ -1,13 +1,15 @@
 open Js_obj
+open Mocha
+open Test_utils
 
 type x = {"say": int => int}
 
-let suites = {
-  open Mt
-  list{
-    ("empty", _ => Eq(0, Belt.Array.length(keys(empty())))),
-    ("assign", _ => Eq({"a": 1}, assign(empty(), {"a": 1}))),
-  }
-}
+describe(__MODULE__, () => {
+  test("empty", () => {
+    eq(__LOC__, 0, Belt.Array.length(keys(empty())))
+  })
 
-Mt.from_pair_suites(__MODULE__, suites)
+  test("assign", () => {
+    eq(__LOC__, {"a": 1}, assign(empty(), {"a": 1}))
+  })
+})

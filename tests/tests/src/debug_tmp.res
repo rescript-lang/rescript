@@ -19,4 +19,4 @@ let f x ~y = x + y in
 
 /* let f x ~y = x + y
 
-;; Js.log (f 2 3) */
+;; Console.log (f 2 3) */

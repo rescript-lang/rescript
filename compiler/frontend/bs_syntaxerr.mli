@@ -47,6 +47,8 @@ type error =
   | Misplaced_label_syntax
   | Optional_in_uncurried_bs_attribute
   | Bs_this_simple_pattern
+  | Experimental_feature_not_enabled of Experimental_features.feature
+  | LetUnwrap_not_supported_in_position of [`Toplevel | `Unsupported_type]
 
 val err : Location.t -> error -> 'a
 

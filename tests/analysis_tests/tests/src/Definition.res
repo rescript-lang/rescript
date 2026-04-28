@@ -19,10 +19,10 @@ open ShadowedBelt
 let m2 = List.map
 //            ^hov
 
-let uncurried = (. x, y) => x + y
+let uncurried = (x, y) => x + y
 
-uncurried(. 3, 12)->ignore
+uncurried(3, 12)->ignore
 // ^hov
 
-uncurried(. 3, 12)->ignore
+uncurried(3, 12)->ignore
 // ^def

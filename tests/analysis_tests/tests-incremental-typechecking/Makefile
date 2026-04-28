@@ -1,7 +1,7 @@
 SHELL = /bin/bash
 
 build:
-	yarn build > /dev/null || true
+	yarn build > /dev/null 2>&1 || true
 
 test: build
 	./test.sh

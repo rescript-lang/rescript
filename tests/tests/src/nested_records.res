@@ -15,3 +15,18 @@ let options = {
     otherExtra: Some({test: true, anotherInlined: {record: true}}),
   },
 }
+
+type location = {
+  @as("location_area")
+  locationArea: {
+    name: string,
+    url: string,
+  },
+}
+
+let location = {
+  locationArea: {
+    name: "test",
+    url: "test",
+  },
+}

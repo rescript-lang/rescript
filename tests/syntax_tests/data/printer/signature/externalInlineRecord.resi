@@ -1,0 +1,9 @@
+@module("node:fs")
+external readFileSync: (string, ~options: {
+    encoding?: [#utf8 | #ascii | #base64],
+    flag?: string,
+    misc?: {
+      mode?: int
+    }
+}) => option<{filename: string, size: string}> = "fs.readFileSync"
+

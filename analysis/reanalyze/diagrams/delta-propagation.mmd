@@ -1,0 +1,26 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f4fd', 'primaryTextColor': '#1a1a1a', 'primaryBorderColor': '#4a90d9', 'lineColor': '#4a90d9'}}}%%
+sequenceDiagram
+    participant FS as File System
+    participant RFC as ReactiveFileCollection
+    participant FD as file_data
+    participant DECLS as decls
+    participant DBP as decl_by_path
+    participant REFS as refs
+    participant SOLVER as Solver
+
+    Note over FS,SOLVER: File.cmt changes on disk
+
+    FS->>RFC: mtime/size changed
+    RFC->>RFC: read_cmt + process
+    RFC->>FD: Set("File.res", new_file_data)
+
+    FD->>DECLS: Remove(old_pos₁), Remove(old_pos₂), ...
+    FD->>DECLS: Set(new_pos₁, decl₁), Set(new_pos₂, decl₂), ...
+
+    DECLS->>DBP: Update affected paths only
+    DBP->>DBP: Recalculate merged lists
+
+    DBP->>REFS: Set(pos, updated_refs)
+    
+    Note over SOLVER: Solver sees updated refs immediately
+

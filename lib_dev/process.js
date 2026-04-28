@@ -25,12 +25,14 @@ const signals = {
 export const {
   shell,
   node,
+  npm,
   yarn,
   mocha,
   bsc,
-  rescript,
   execBin,
+  rescript,
   execBuild,
+  execBuildOrThrow,
   execClean,
 } = setup();
 
@@ -119,6 +121,18 @@ export function setup(cwd = process.cwd()) {
     },
 
     /**
+     * Execute npm command
+     *
+     * @param {string} command
+     * @param {string[]} [args]
+     * @param {ExecOptions} [options]
+     * @return {Promise<ExecResult>}
+     */
+    npm(command, args = [], options = {}) {
+      return exec("npm", [...command.split(" "), ...args], options);
+    },
+
+    /**
      * Execute Yarn command
      *
      * @param {string} command
@@ -144,13 +158,23 @@ export function setup(cwd = process.cwd()) {
     },
 
     /**
+     * `bsc` CLI
+     *
+     * @param {string[]} [args]
+     * @param {ExecOptions} [options]
+     * @return {Promise<ExecResult>}
+     */
+    bsc(args = [], options = {}) {
+      return exec(bsc_exe, args, options);
+    },
+
+    /**
      * `rescript` CLI
      *
      * @param {(
      *   | "build"
      *   | "clean"
      *   | "format"
-     *   | "dump"
      *   | (string & {})
      * )} command
      * @param {string[]} [args]
@@ -163,17 +187,6 @@ export function setup(cwd = process.cwd()) {
     },
 
     /**
-     * `bsc` CLI
-     *
-     * @param {string[]} [args]
-     * @param {ExecOptions} [options]
-     * @return {Promise<ExecResult>}
-     */
-    bsc(args = [], options = {}) {
-      return exec(bsc_exe, args, options);
-    },
-
-    /**
      * Execute ReScript `build` command directly
      *
      * @param {string[]} [args]
@@ -182,6 +195,25 @@ export function setup(cwd = process.cwd()) {
      */
     execBuild(args = [], options = {}) {
       return exec(rescript_exe, ["build", ...args], options);
+    },
+
+    /**
+     * Execute ReScript `build` command directly and throw on non-zero exit
+     * while preserving captured stdout/stderr for quiet successful tests.
+     *
+     * @param {string[]} [args]
+     * @param {ExecOptions} [options]
+     * @return {Promise<ExecResult>}
+     */
+    async execBuildOrThrow(args = [], options = {}) {
+      const out = await exec(rescript_exe, ["build", ...args], options);
+      if (out.status !== 0) {
+        const err = new Error("ReScript build failed");
+        err.stack = out.stdout + out.stderr;
+        Object.assign(err, { execResult: out });
+        throw err;
+      }
+      return out;
     },
 
     /**

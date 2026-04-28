@@ -17,9 +17,9 @@ module Input = {
       onChange
       value={switch value {
       | Float(float) =>
-        float->Js.Option.map((. int) => Js.Float.toString(int))->Js.Option.getWithDefault("")
+        float->Js.Option.map((int) => Js.Float.toString(int))->Js.Option.getWithDefault("")
       | Number(int) =>
-        int->Js.Option.map((. int) => Js.Int.toString(int))->Js.Option.getWithDefault("")
+        int->Js.Option.map((int) => Js.Int.toString(int))->Js.Option.getWithDefault("")
       | Text(text) => text
       }}
       placeholder=label
@@ -94,7 +94,7 @@ module Radio = {
   @react.component
   let make = (~values, ~selectedValue, ~format, ~getKey=Js.String.make, ~onChange) =>
     <div className="flex flex-col">
-      {Belt.Array.mapU(values, (. value) => {
+      {Belt.Array.mapU(values, (value) => {
         let text = format(value)
         let selected = value == selectedValue
         let fontWeight = selected ? "font-bold" : "font-regular"
@@ -160,7 +160,7 @@ module Locations = {
   let make = (~allLocations, ~locations, ~setLocations) =>
     <div>
       <H2 text="Locations" />
-      {Belt.Array.mapU(locations, (. location) =>
+      {Belt.Array.mapU(locations, (location) =>
         <Button
           key=location.Location.id
           location
@@ -170,7 +170,7 @@ module Locations = {
       )->React.array}
       <div className="pt-1">
         <ReactSelect
-          value={Belt.Array.mapU(locations, (. {Location.text: text, id}) => {
+          value={Belt.Array.mapU(locations, ({Location.text: text, id}) => {
             ReactSelect.value: id,
             label: text,
           })}
@@ -205,7 +205,7 @@ module Locations = {
             switch Js.Nullable.toOption(newSelection) {
             | Some(newSelection) =>
               setLocations(_ =>
-                Belt.Array.mapU(newSelection, (. {ReactSelect.value: value}) => value)
+                Belt.Array.mapU(newSelection, ({ReactSelect.value: value}) => value)
               )
             | None => setLocations(_ => [])
             }}

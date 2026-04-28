@@ -1,0 +1,9 @@
+/* Implementation to satisfy interface build for tests */
+
+external arr: array<int> = "arr"
+external reT: RegExp.t = "re"
+external json: JSON.t = "json"
+external nestedArr: array<RegExp.t> = "nestedArr"
+
+external useSet: Set.t<int> => unit = "useSet"
+

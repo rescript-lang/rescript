@@ -9,5 +9,5 @@ type myType = [
 @val external x: myType = "myVariable"
 
 switch x {
-| #first => Js.log("first")
+| #first => Console.log("first")
 }

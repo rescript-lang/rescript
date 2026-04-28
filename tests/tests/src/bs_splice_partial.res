@@ -16,7 +16,7 @@ let test_hi = x =>
   switch x->hi([1, 2, 3]) {
   | None => 1
   | Some(y) =>
-    Js.log(y)
+    Console.log(y)
     2
   }
 

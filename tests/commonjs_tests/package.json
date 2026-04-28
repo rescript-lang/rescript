@@ -1,0 +1,5 @@
+{
+  "name": "rescript-commonjs-tests",
+  "private": true,
+  "type": "commonjs"
+}

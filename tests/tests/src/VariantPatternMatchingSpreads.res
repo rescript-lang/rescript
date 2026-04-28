@@ -5,39 +5,39 @@ type d = | ...b | ...c
 
 let doWithA = (a: a) => {
   switch a {
-  | One => Js.log("aaa")
-  | Two => Js.log("twwwoooo")
-  | Three => Js.log("threeeee")
+  | One => Console.log("aaa")
+  | Two => Console.log("twwwoooo")
+  | Three => Console.log("threeeee")
   }
 }
 
 let doWithB = (b: b) => {
   switch b {
-  | One => Js.log("aaa")
-  | _ => Js.log("twwwoooo")
+  | One => Console.log("aaa")
+  | _ => Console.log("twwwoooo")
   }
 }
 
 let lookup = (b: b) =>
   switch b {
   | ...a as a => doWithA(a)
-  | Four => Js.log("four")
-  | Five => Js.log("five")
+  | Four => Console.log("four")
+  | Five => Console.log("five")
   }
 
 let lookup2 = (d: d) =>
   switch d {
   | ...a as a => doWithA(a)
   | ...b as b => doWithB(b)
-  | Six | Seven => Js.log("Got rest of d")
+  | Six | Seven => Console.log("Got rest of d")
   }
 
 let lookupOpt = (b: option<b>) =>
   switch b {
   | Some(...a as a) => doWithA(a)
-  | Some(Four) => Js.log("four")
-  | Some(Five) => Js.log("five")
-  | None => Js.log("None")
+  | Some(Four) => Console.log("four")
+  | Some(Five) => Console.log("five")
+  | None => Console.log("None")
   }
 
 module Foo = {
@@ -47,12 +47,12 @@ module Foo = {
 
 let doWithZ = (z: Foo.zz) =>
   switch z {
-  | First => Js.log("First")
-  | Second => Js.log("Second")
+  | First => Console.log("First")
+  | Second => Console.log("Second")
   }
 
 let lookup3 = (d: Foo.xx) =>
   switch d {
-  | ...Foo.zz as z => Js.log(z)
-  | Third => Js.log("Third")
+  | ...Foo.zz as z => Console.log(z)
+  | Third => Console.log("Third")
   }

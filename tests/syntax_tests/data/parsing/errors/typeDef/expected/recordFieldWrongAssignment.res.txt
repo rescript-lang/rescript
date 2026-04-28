@@ -1,0 +1,11 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typeDef/recordFieldWrongAssignment.res:1:14
+
+  1 │ type t = {foo=string}
+  2 │ 
+
+  Record fields in type declarations use `:`. Example: `{field: string}`
+
+type nonrec t = {
+  foo: string }

@@ -1,0 +1,13 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/expressions/typeDefInFunction.res:2:3-14
+
+  1 │ let f = () => {
+  2 │   type t = int
+  3 │   1
+  4 │ }
+
+  Type definitions are not allowed inside functions.
+  Move this `type` declaration to the top level or into a module.
+
+let f [arity:1]() = ((1)[@res.braces ])

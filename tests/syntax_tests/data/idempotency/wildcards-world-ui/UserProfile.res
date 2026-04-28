@@ -148,7 +148,7 @@ module UserDetails = {
           a.contentUrl
         ),
         content => Js.Dict.get(content, "/"),
-      )->Option.mapWithDefault(Blockie.makeBlockie(. userAddress), hash =>
+      )->Option.mapWithDefault(Blockie.makeBlockie(userAddress), hash =>
         "https://ipfs.infura.io/ipfs/" ++ hash
       )
     let optName = \">>="(optProfile, a => a.name)

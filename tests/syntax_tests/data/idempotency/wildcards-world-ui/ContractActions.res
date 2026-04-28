@@ -4,7 +4,7 @@ open Ethers
 type txHash = string
 type tx = {
   hash: txHash,
-  wait: (. unit) => Promise.Js.t<txResult, txError>,
+  wait: (unit) => Promise.Js.t<txResult, txError>,
 }
 type parsedUnits
 type txOptions = {
@@ -13,17 +13,17 @@ type txOptions = {
 }
 type tokenIdString = string
 type estimateBuy = {
-  buy: // (. string, parsedUnits, txOptions) =>
-  (. string, parsedUnits, parsedUnits, txOptions) => Promise.Js.t<string, string>,
+  buy: // (string, parsedUnits, txOptions) =>
+  (string, parsedUnits, parsedUnits, txOptions) => Promise.Js.t<string, string>,
 }
 type stewardContract = {
   estimate: estimateBuy,
-  buy: (. tokenIdString, parsedUnits, parsedUnits, string, txOptions) => Promise.Js.t<tx, txError>,
-  buyAuction: (. tokenIdString, parsedUnits, string, txOptions) => Promise.Js.t<tx, txError>,
-  depositWei: (. txOptions) => Promise.Js.t<tx, txError>,
-  withdrawDeposit: (. parsedUnits, txOptions) => Promise.Js.t<tx, txError>,
-  _collectPatronagePatron: (. string, txOptions) => Promise.Js.t<tx, txError>,
-  changePrice: (. tokenIdString, parsedUnits, txOptions) => Promise.Js.t<tx, txError>,
+  buy: (tokenIdString, parsedUnits, parsedUnits, string, txOptions) => Promise.Js.t<tx, txError>,
+  buyAuction: (tokenIdString, parsedUnits, string, txOptions) => Promise.Js.t<tx, txError>,
+  depositWei: (txOptions) => Promise.Js.t<tx, txError>,
+  withdrawDeposit: (parsedUnits, txOptions) => Promise.Js.t<tx, txError>,
+  _collectPatronagePatron: (string, txOptions) => Promise.Js.t<tx, txError>,
+  changePrice: (tokenIdString, parsedUnits, txOptions) => Promise.Js.t<tx, txError>,
 }
 
 type ethersBnFormat
@@ -31,9 +31,9 @@ type ethersBnFormat
 
 type loyaltyTokenContract = {
   // approve(address to, uint256 tokenId)
-  allowance: (. Web3.ethAddress, Web3.ethAddress) => Js.Promise.t<ethersBnFormat>,
-  balanceOf: (. Web3.ethAddress) => Js.Promise.t<ethersBnFormat>,
-  approve: (. Web3.ethAddress, string, txOptions) => Promise.Js.t<tx, txError>,
+  allowance: (Web3.ethAddress, Web3.ethAddress) => Js.Promise.t<ethersBnFormat>,
+  balanceOf: (Web3.ethAddress) => Js.Promise.t<ethersBnFormat>,
+  approve: (Web3.ethAddress, string, txOptions) => Promise.Js.t<tx, txError>,
 }
 
 @new @module("ethers")
@@ -50,7 +50,7 @@ external getLoyaltyTokenContract: (
 external loyaltyTokenAbi: Web3.abi = "loyaltyToken"
 
 @module("ethers") @scope("utils")
-external parseUnits: (. string, int) => parsedUnits = "parseUnits"
+external parseUnits: (string, int) => parsedUnits = "parseUnits"
 
 let getExchangeContract = (stewardAddress, stewardAbi, library, account) =>
   getContract(stewardAddress, stewardAbi, ContractUtil.getProviderOrSigner(library, account))
@@ -419,16 +419,15 @@ let useBuy = (
     )
   | Client.MainnetQuery => (
       (newPrice, oldPrice, wildcardsPercentage, value: string) => {
-        let newPriceEncoded = parseUnits(. newPrice, 18)
+        let newPriceEncoded = parseUnits(newPrice, 18)
 
-        let value = parseUnits(. value, 0)
-        let oldPriceParsed = parseUnits(. oldPrice, 0)
+        let value = parseUnits(value, 0)
+        let oldPriceParsed = parseUnits(oldPrice, 0)
 
         setTxState(_ => Created)
         switch optSteward {
         | Some(steward) =>
-          let buyPromise = steward.buy(.
-            animalId,
+          let buyPromise = steward.buy(animalId,
             newPriceEncoded,
             oldPriceParsed,
             wildcardsPercentage,
@@ -439,7 +438,7 @@ let useBuy = (
           )->Promise.Js.toResult
           buyPromise->Promise.getOk(tx => {
             setTxState(_ => SignedAndSubmitted(tx.hash))
-            let txMinedPromise = tx.wait(.)->Promise.Js.toResult
+            let txMinedPromise = tx.wait()->Promise.Js.toResult
             txMinedPromise->Promise.getOk(txOutcome => {
               Js.log(txOutcome)
               setTxState(_ => Complete(txOutcome))
@@ -527,16 +526,15 @@ let useBuyAuction = (~chain, animal, library: option<Web3.web3Library>, account,
     )
   | Client.MainnetQuery => (
       (newPrice, wildcardsPercentage, value: string) => {
-        let newPriceEncoded = parseUnits(. newPrice, 18)
+        let newPriceEncoded = parseUnits(newPrice, 18)
 
-        let value = parseUnits(. value, 0)
+        let value = parseUnits(value, 0)
 
         setTxState(_ => Created)
         switch optSteward {
         | Some(steward) =>
           // let buyPromise =
-          let buyPromise = steward.buyAuction(.
-            animalId,
+          let buyPromise = steward.buyAuction(animalId,
             newPriceEncoded,
             wildcardsPercentage,
             {
@@ -546,7 +544,7 @@ let useBuyAuction = (~chain, animal, library: option<Web3.web3Library>, account,
           )->Promise.Js.toResult
           buyPromise->Promise.getOk(tx => {
             setTxState(_ => SignedAndSubmitted(tx.hash))
-            let txMinedPromise = tx.wait(.)->Promise.Js.toResult
+            let txMinedPromise = tx.wait()->Promise.Js.toResult
             txMinedPromise->Promise.getOk(txOutcome => {
               Js.log(txOutcome)
               setTxState(_ => Complete(txOutcome))
@@ -571,13 +569,12 @@ let useRedeemLoyaltyTokens = (patron: string) => {
   let (txState, setTxState) = React.useState(() => UnInitialised)
   let optSteward = useStewardContract()
   let buyFunction = () => {
-    let value = parseUnits(. "0", 0)
+    let value = parseUnits("0", 0)
 
     setTxState(_ => Created)
     switch optSteward {
     | Some(steward) =>
-      let claimLoyaltyTokenPromise = steward._collectPatronagePatron(.
-        patron,
+      let claimLoyaltyTokenPromise = steward._collectPatronagePatron(patron,
         {
           gasLimit: "500302", //calculateGasMargin(estimatedGasLimit, GAS_MARGIN),
           value: value,
@@ -585,7 +582,7 @@ let useRedeemLoyaltyTokens = (patron: string) => {
       )->Promise.Js.toResult
       claimLoyaltyTokenPromise->Promise.getOk(tx => {
         setTxState(_ => SignedAndSubmitted(tx.hash))
-        let txMinedPromise = tx.wait(.)->Promise.Js.toResult
+        let txMinedPromise = tx.wait()->Promise.Js.toResult
         txMinedPromise->Promise.getOk(txOutcome => {
           Js.log(txOutcome)
           setTxState(_ => Complete(txOutcome))
@@ -668,18 +665,18 @@ let useUpdateDeposit = (~chain, library: option<Web3.web3Library>, account, pare
     )
   | Client.MainnetQuery => (
       (value: string) => {
-        let value = parseUnits(. value, 0)
+        let value = parseUnits(value, 0)
 
         setTxState(_ => Created)
         switch optSteward {
         | Some(steward) =>
-          let updateDepositPromise = steward.depositWei(. {
+          let updateDepositPromise = steward.depositWei({
             gasLimit: "500302", //calculateGasMargin(estimatedGasLimit, GAS_MARGIN),
             value: value,
           })->Promise.Js.toResult
           updateDepositPromise->Promise.getOk(tx => {
             setTxState(_ => SignedAndSubmitted(tx.hash))
-            let txMinedPromise = tx.wait(.)->Promise.Js.toResult
+            let txMinedPromise = tx.wait()->Promise.Js.toResult
             txMinedPromise->Promise.getOk(txOutcome => setTxState(_ => Complete(txOutcome)))
             txMinedPromise->Promise.getError(_error => setTxState(_ => Failed))
             ()
@@ -730,14 +727,13 @@ let useWithdrawDeposit = (~chain, library: option<Web3.web3Library>, account, pa
     )
   | Client.MainnetQuery => (
       amountToWithdraw => {
-        let value = parseUnits(. "0", 0)
-        let amountToWithdrawEncoded = parseUnits(. amountToWithdraw, 0)
+        let value = parseUnits("0", 0)
+        let amountToWithdrawEncoded = parseUnits(amountToWithdraw, 0)
 
         setTxState(_ => Created)
         switch optSteward {
         | Some(steward) =>
-          let updateDepositPromise = steward.withdrawDeposit(.
-            amountToWithdrawEncoded,
+          let updateDepositPromise = steward.withdrawDeposit(amountToWithdrawEncoded,
             {
               gasLimit: "500302", //calculateGasMargin(estimatedGasLimit, GAS_MARGIN),
               value: value,
@@ -745,7 +741,7 @@ let useWithdrawDeposit = (~chain, library: option<Web3.web3Library>, account, pa
           )->Promise.Js.toResult
           updateDepositPromise->Promise.getOk(tx => {
             setTxState(_ => SignedAndSubmitted(tx.hash))
-            let txMinedPromise = tx.wait(.)->Promise.Js.toResult
+            let txMinedPromise = tx.wait()->Promise.Js.toResult
             txMinedPromise->Promise.getOk(txOutcome => {
               Js.log(txOutcome)
               setTxState(_ => Complete(txOutcome))
@@ -776,7 +772,7 @@ let useUserLoyaltyTokenBalance = (address: Web3.ethAddress) => {
     switch optSteward {
     | Some(steward) =>
       let _ = %Async({
-        let balance = steward.balanceOf(. address)
+        let balance = steward.balanceOf(address)
         let balanceString = balance->ethersBnToString
         setResult(_ => Some(BN.new_(balanceString)))
         ()->async
@@ -797,14 +793,13 @@ let useChangePrice = animal => {
 
   (
     newPrice => {
-      let value = parseUnits(. "0", 0)
-      let newPriceEncoded = parseUnits(. newPrice, 0)
+      let value = parseUnits("0", 0)
+      let newPriceEncoded = parseUnits(newPrice, 0)
 
       setTxState(_ => Created)
       switch optSteward {
       | Some(steward) =>
-        let updatePricePromise = steward.changePrice(.
-          animalId,
+        let updatePricePromise = steward.changePrice(animalId,
           newPriceEncoded,
           {
             gasLimit: "500302", //calculateGasMargin(estimatedGasLimit, GAS_MARGIN),
@@ -813,7 +808,7 @@ let useChangePrice = animal => {
         )->Promise.Js.toResult
         updatePricePromise->Promise.getOk(tx => {
           setTxState(_ => SignedAndSubmitted(tx.hash))
-          let txMinedPromise = tx.wait(.)->Promise.Js.toResult
+          let txMinedPromise = tx.wait()->Promise.Js.toResult
           txMinedPromise->Promise.getOk(txOutcome => {
             Js.log(txOutcome)
             setTxState(_ => Complete(txOutcome))

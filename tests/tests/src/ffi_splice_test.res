@@ -1,13 +1,5 @@
-let suites: ref<Mt.pair_suites> = ref(list{})
-let test_id = ref(0)
-let eq = (loc, x, y) => {
-  incr(test_id)
-  suites :=
-    list{
-      (loc ++ (" id " ++ Js.Int.toString(test_id.contents)), _ => Mt.Eq(x, y)),
-      ...suites.contents,
-    }
-}
+open Mocha
+open Test_utils
 
 %%raw(`
 function Make (){
@@ -23,11 +15,11 @@ Make.prototype.sum = function(){
     result = result + this.data[k]
   };
   return result
-}  
+}
 
 Make.prototype.add = function(){
-  
-} 
+
+}
 `)
 
 type t
@@ -40,17 +32,19 @@ type t
 /* external join : string  -> string = "" [@@module "path"] [@@variadic] */
 @module("path") @variadic external join: array<string> => string = "join"
 
-@send @variadic external test: (t, array<string>) => t = "test" /* FIXME */
+@send @variadic external testT: (t, array<string>) => t = "test" /* FIXME */
 
 /* compile error */
 let u = ["x", "d"]
-let f = x => x->test(["a", "b"])->test(["a", "b"])
-/* |> test u */
+let f = x => x->testT(["a", "b"])->testT(["a", "b"])
+/* ->testT(u) */
 
 let v = make(1, 2, 3, 4)
 
 let u = sum(v, ())
 
-let () = eq(__LOC__, u, 10)
-
-Mt.from_pair_suites(__MODULE__, suites.contents)
+describe(__MODULE__, () => {
+  test("ffi splice test", () => {
+    eq(__LOC__, u, 10)
+  })
+})

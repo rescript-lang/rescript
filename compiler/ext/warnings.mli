@@ -24,7 +24,7 @@ type top_level_unit_help = FunctionCall | Other
 type t =
   | Comment_start (*  1 *)
   | Comment_not_end (*  2 *)
-  | Deprecated of string * loc * loc (*  3 *)
+  | Deprecated of string * loc * loc * bool (*  3 *)
   | Fragile_match of string (*  4 *)
   | Partial_application (*  5 *)
   | Method_override of string list (*  7 *)

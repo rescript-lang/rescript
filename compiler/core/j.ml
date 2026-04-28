@@ -75,7 +75,7 @@ and for_ident = ident
 and for_direction = Js_op.direction_flag
 and property_map = (property_name * expression) list
 and length_object = Js_op.length_object
-and delim = External_arg_spec.delim = DNone | DStarJ | DNoQuotes
+and delim = External_arg_spec.delim = DNone | DStarJ | DNoQuotes | DBackQuotes
 
 and expression_desc =
   | Length of expression * length_object
@@ -249,6 +249,7 @@ and case_clause = {
 
 and string_clause = Ast_untagged_variants.tag_type * case_clause
 and int_clause = int * case_clause
+and label = string
 
 and statement_desc =
   | Block of block
@@ -256,16 +257,19 @@ and statement_desc =
   (* Function declaration and Variable declaration  *)
   | Exp of expression
   | If of expression * block * block
-  | While of expression * block
+  | While of label option * expression * block
     (* check if it contains loop mutable values, happens in nested loop *)
   | ForRange of
-      for_ident_expression option
+      label option
+      * for_ident_expression option
       * finish_ident_expression
       * for_ident
       * for_direction
       * block
-  | Continue
-  | Break (* only used when inline a fucntion *)
+  | ForOf of label option * for_ident * expression * block
+  | ForAwaitOf of label option * for_ident * expression * block
+  | Continue of label option
+  | Break of label option (* only used when inline a fucntion *)
   | Return of expression
   (* Here we need track back a bit ?, move Return to Function ...
      Then we can only have one Return, which is not good *)

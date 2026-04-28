@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/duplicate_as_tag_inline_record.res[0m:[2m1:35-37[0m
+
+  [1;31m1[0m [2m│[0m type animal = Cat({@as("catName") [1;31m@as[0m("catName2") name: string})
+  2 [2m│[0m 
+
+  duplicate @as

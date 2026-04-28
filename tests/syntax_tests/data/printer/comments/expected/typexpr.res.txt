@@ -26,7 +26,9 @@ type t = /* c0 */ module(/* c1 */ Hashmap /* c2 */ with
 type t = /* c0 */ string /* c1 */ as 'x // after
 
 // Ptyp_poly
-type fn = {f: /* c0 */ 'a /* c1 */ 'b /* c2 */. /* c3 */ string /* c4 */}
+type fn = {
+  f: /* c0 */ 'a /* c1 */ 'b /* c2 */. /* c3 */ string /* c4 */,
+}
 
 type fn = {
   /* comment1 */

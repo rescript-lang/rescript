@@ -1,10 +1,10 @@
+open Mocha
+open Test_utils
+
 let length = _ => 3
 
 /* Test name collision */
-Mt.from_pair_suites(
-  __MODULE__,
-  list{
-    ("list_length", _ => Eq(Belt.List.length(list{1, 2}), 2)),
-    ("length", _ => Eq(length(list{1, 2}), 3)),
-  },
-)
+describe(__MODULE__, () => {
+  test("list_length", () => eq(__LOC__, 2, Belt.List.length(list{1, 2})))
+  test("length", () => eq(__LOC__, 3, length(list{1, 2})))
+})

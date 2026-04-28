@@ -1,3 +1,6 @@
+open Mocha
+open Test_utils
+
 @send external map: (array<'a>, 'a => 'b) => array<'b> = "map"
 @send external mapi: (array<'a>, ('a, int) => 'b) => array<'b> = "map"
 
@@ -22,8 +25,8 @@ let u = () => 3
 let vvv = ref(0)
 let fff = () => {
   /* No inline */
-  Js.log("x")
-  Js.log("x")
+  Console.log("x")
+  Console.log("x")
   incr(vvv)
 }
 
@@ -33,8 +36,8 @@ let g = () => fff()
   not {[ var g = fff ]}
 */
 let abc = (x, y, z) => {
-  Js.log("xx")
-  Js.log("yy")
+  Console.log("xx")
+  Console.log("yy")
   x + y + z
 }
 
@@ -43,26 +46,20 @@ let abc_u = (x, y, z) => abc(x, y, z)
 {[ var absc_u = abc ]}
 */
 let () = g()
-Mt.from_pair_suites(
-  __MODULE__,
-  {
-    open Mt
-    list{
-      (__LOC__, _ => Eq(v, [0, 1, 4])),
-      (__LOC__, _ => Eq(vv, [1, 3, 5])),
-      (__LOC__, _ => Eq(hh, [1, 2, 3])),
-      /* __LOC__, (fun _ -> Eq(  
-         
-         map (map [| 1;2;3|]  ( (fun [@bs] x -> fun y -> x + y))) 
-          ( fun [@bs] y -> (y 0)  * (y 1) ), [|2; 6 ; 12|]
-      )); */
-      /* __LOC__, (fun _ -> Eq(
-        mapi [|1;2;3|] (Js.Internal.fn_mk2 (fun x  -> let y =  x * x in fun i -> y + i )), 
-        [|1; 5 ; 11|]        
-      )) */
-    }
-  },
-)
+
+describe(__MODULE__, () => {
+  test("mapi with function", () => {
+    eq(__LOC__, v, [0, 1, 4])
+  })
+
+  test("mapi with addition", () => {
+    eq(__LOC__, vv, [1, 3, 5])
+  })
+
+  test("map with parseInt", () => {
+    eq(__LOC__, hh, [1, 2, 3])
+  })
+})
 
 /* FIXME: */
 let bar = fn => fn()

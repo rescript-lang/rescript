@@ -2,12 +2,12 @@
   "name": "@tests/tools",
   "private": true,
   "scripts": {
-    "build": "rescript",
-    "clean": "rescript clean -with-deps",
-    "dev": "rescript -w"
+    "build": "rescript build",
+    "clean": "rescript clean",
+    "dev": "rescript --watch"
   },
   "dependencies": {
-    "@rescript/react": "link:../dependencies/rescript-react",
+    "@rescript/react": "workspace:^",
     "rescript": "workspace:^"
   }
 }

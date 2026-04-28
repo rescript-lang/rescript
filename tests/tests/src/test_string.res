@@ -1,5 +1,3 @@
-module String = Ocaml_String
-
 let f = x =>
   switch x {
   | "aaaabb" => 0
@@ -15,4 +13,4 @@ let c = (x, y) => x ++ "hello" ++ ("hi" ++ ("u" ++ ("hi" ++ y)))
 
 let v = String.length("xx")
 
-let h = (s: string) => String.get(s, 0) == 'a'
+let h = (s: string) => String.codePointAt(s, 0) === Some(97)

@@ -408,8 +408,7 @@ type response = {
 }
 
 let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
-    (arg_types_ty : Ast_core_type.param_type list)
-    (result_type : Ast_core_type.t) :
+    (arg_types_ty : Parsetree.arg list) (result_type : Ast_core_type.t) :
     int * Parsetree.core_type * External_ffi_types.t =
   match st with
   | {
@@ -434,17 +433,14 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
     if String.length prim_name <> 0 then
       Location.raise_errorf ~loc
         "%@obj expect external names to be empty string";
-    let ( arg_kinds,
-          new_arg_types_ty,
-          (result_types : Parsetree.object_field list) ) =
+    let arg_kinds, args, (result_types : Parsetree.object_field list) =
       Ext_list.fold_right arg_types_ty ([], [], [])
         (fun
           param_type
-          (arg_labels, (arg_types : Ast_core_type.param_type list), result_types)
+          (arg_labels, (arg_types : Parsetree.arg list), result_types)
         ->
-          let arg_label = param_type.label in
-          let loc = param_type.loc in
-          let ty = param_type.ty in
+          let arg_label = param_type.lbl in
+          let ty = param_type.typ in
           let new_arg_label, new_arg_types, output_tys =
             match arg_label with
             | Nolabel -> (
@@ -459,7 +455,7 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
             | Labelled {txt = label} -> (
               let field_name =
                 match
-                  Ast_attributes.iter_process_bs_string_as param_type.attr
+                  Ast_attributes.iter_process_bs_string_as param_type.attrs
                 with
                 | Some alias -> alias
                 | None -> label
@@ -518,7 +514,7 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
             | Optional {txt = label} -> (
               let field_name =
                 match
-                  Ast_attributes.iter_process_bs_string_as param_type.attr
+                  Ast_attributes.iter_process_bs_string_as param_type.attrs
                 with
                 | Some alias -> alias
                 | None -> label
@@ -593,8 +589,8 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
       (* result type can not be labeled *)
     in
 
-    ( List.length new_arg_types_ty,
-      Ast_core_type.mk_fn_type new_arg_types_ty result,
+    ( List.length args,
+      Ast_helper.Typ.arrows ~loc args result,
       External_ffi_types.ffi_obj_create arg_kinds )
   | _ -> Location.raise_errorf ~loc "Attribute found that conflicts with %@obj"
 
@@ -903,7 +899,12 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
    tagged_template = _;
   } ->
     if arg_type_specs_length = 1 then
-      Js_get {js_get_name = name; js_get_scopes = scopes}
+      (* Check if the first argument is unit, which is invalid for @get *)
+      match arg_type_specs with
+      | [{arg_type = Extern_unit}] ->
+        Location.raise_errorf ~loc
+          "Ill defined attribute %@get (unit argument is not allowed)"
+      | _ -> Js_get {js_get_name = name; js_get_scopes = scopes}
     else
       Location.raise_errorf ~loc
         "Ill defined attribute %@get (only one argument)"
@@ -940,13 +941,12 @@ let handle_attributes (loc : Bs_loc.t) (type_annotation : Parsetree.core_type)
     (build_uncurried_type ~arity new_type, spec, unused_attrs, false)
   else
     let splice = external_desc.splice in
-    let arg_type_specs, new_arg_types_ty, arg_type_specs_length =
+    let arg_type_specs, args, arg_type_specs_length =
       Ext_list.fold_right arg_types_ty
-        (([], [], 0)
-          : External_arg_spec.params * Ast_core_type.param_type list * int)
+        (([], [], 0) : External_arg_spec.params * Parsetree.arg list * int)
         (fun param_type (arg_type_specs, arg_types, i) ->
-          let arg_label = param_type.label in
-          let ty = param_type.ty in
+          let arg_label = param_type.lbl in
+          let ty = param_type.typ in
           (if i = 0 && splice then
              match arg_label with
              | Optional _ ->
@@ -997,6 +997,24 @@ let handle_attributes (loc : Bs_loc.t) (type_annotation : Parsetree.core_type)
             new_arg_types,
             if arg_type = Ignore then i else i + 1 ))
     in
+    (* If every original argument was erased (e.g. all `@as(json ...) _`),
+       keep the external binding callable by threading a final `unit`
+       parameter through the type and arg specs. *)
+    let args, arg_type_specs =
+      match (args, arg_type_specs_length) with
+      | [], n when n > 0 ->
+        let unit_type =
+          Ast_helper.Typ.constr ~loc
+            (Location.mkloc (Longident.Lident "unit") loc)
+            []
+        in
+        let unit_arg = {Parsetree.attrs = []; lbl = Nolabel; typ = unit_type} in
+        ( [unit_arg],
+          arg_type_specs
+          @ [{External_arg_spec.arg_label = Arg_empty; arg_type = Extern_unit}]
+        )
+      | _ -> (args, arg_type_specs)
+    in
     let ffi : External_ffi_types.external_spec =
       external_desc_of_non_obj loc external_desc prim_name_with_source
         arg_type_specs_length arg_types_ty arg_type_specs
@@ -1008,8 +1026,7 @@ let handle_attributes (loc : Bs_loc.t) (type_annotation : Parsetree.core_type)
     let return_wrapper =
       check_return_wrapper loc external_desc.return_wrapper result_type
     in
-    let fn_type = Ast_core_type.mk_fn_type new_arg_types_ty result_type in
-    ( build_uncurried_type ~arity:(List.length new_arg_types_ty) fn_type,
+    ( Ast_helper.Typ.arrows ~loc args result_type,
       External_ffi_types.ffi_bs arg_type_specs return_wrapper ffi,
       unused_attrs,
       relative )

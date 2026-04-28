@@ -18,7 +18,7 @@ let x = (%extension).x
 let x = user.name.last
 let x = streets[0].house
 let x = apply(arg1, arg2).field
-let x = apply(. arg1, arg2).field
+let x = apply(arg1, arg2).field
 let x = (-1).x
 let x = (!true).x
 let x = (x => print(x)).x

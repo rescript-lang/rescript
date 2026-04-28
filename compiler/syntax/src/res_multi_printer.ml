@@ -1,5 +1,3 @@
-let default_print_width = 100
-
 (* print res files to res syntax *)
 let print_res ~ignore_parse_errors ~is_interface ~filename =
   if is_interface then (
@@ -9,7 +7,7 @@ let print_res ~ignore_parse_errors ~is_interface ~filename =
     if parse_result.invalid then (
       Res_diagnostics.print_report parse_result.diagnostics parse_result.source;
       if not ignore_parse_errors then exit 1);
-    Res_printer.print_interface ~width:default_print_width
+    Res_printer.print_interface ~width:Res_printer.default_print_width
       ~comments:parse_result.comments parse_result.parsetree)
   else
     let parse_result =
@@ -18,7 +16,7 @@ let print_res ~ignore_parse_errors ~is_interface ~filename =
     if parse_result.invalid then (
       Res_diagnostics.print_report parse_result.diagnostics parse_result.source;
       if not ignore_parse_errors then exit 1);
-    Res_printer.print_implementation ~width:default_print_width
+    Res_printer.print_implementation ~width:Res_printer.default_print_width
       ~comments:parse_result.comments parse_result.parsetree
 [@@raises exit]
 

@@ -43,6 +43,7 @@ let check_div_by_zero = ref true
 let get_check_div_by_zero () = !check_div_by_zero
 let syntax_only = ref false
 let binary_ast = ref false
+let test_ast_conversion = ref false
 let debug = ref false
 let cmi_only = ref false
 let cmj_only = ref false
@@ -70,7 +71,5 @@ let jsx_module_of_string = function
   | "react" -> React
   | module_name -> Generic {module_name}
 
-(* option to config `@rescript/std`*)
-let customize_runtime : string option ref = ref None
 let as_pp = ref false
 let self_stack : string Stack.t = Stack.create ()

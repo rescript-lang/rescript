@@ -23,13 +23,15 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 let init_path () =
-  let dirs = !Clflags.include_dirs in
-  let exp_dirs =
-    List.map (Misc.expand_directory Config.standard_library) dirs
+  let stdlib_dir =
+    let ( // ) = Filename.concat in
+    !Runtime_package.path // "lib" // "ocaml"
   in
+  let dirs = !Clflags.include_dirs in
+  let exp_dirs = List.map (Misc.expand_directory stdlib_dir) dirs in
   Config.load_path :=
     if !Js_config.no_stdlib then exp_dirs
-    else List.rev_append exp_dirs [Config.standard_library];
+    else List.rev_append exp_dirs [stdlib_dir];
   Env.reset_cache ()
 
 (* Return the initial environment in which compilation proceeds. *)

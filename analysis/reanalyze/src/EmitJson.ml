@@ -1,5 +1,7 @@
 let items = ref 0
-let start () = Printf.printf "["
+let start () =
+  items := 0;
+  Printf.printf "["
 let finish () = Printf.printf "\n]\n"
 let emitClose () = "\n}"
 

@@ -22,8 +22,6 @@ let getExn: (t<'a>, int) => 'a
 
 let getUnsafe: (t<'a>, int) => 'a
 
-let getUndefined: (t<'a>, int) => Js.undefined<'a>
-
 let shuffle: t<'a> => t<'a>
 
 let reverse: t<'a> => t<'a>

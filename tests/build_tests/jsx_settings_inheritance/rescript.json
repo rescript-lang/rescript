@@ -14,5 +14,5 @@
     "suffix": ".res.js"
   },
   "namespace": true,
-  "bs-dependencies": ["@rescript/react", "a", "b"]
+  "dependencies": ["@rescript/react", "a", "b"]
 }

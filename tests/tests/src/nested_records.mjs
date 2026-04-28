@@ -16,7 +16,15 @@ let options = {
   }
 };
 
+let location = {
+  location_area: {
+    name: "test",
+    url: "test"
+  }
+};
+
 export {
   options,
+  location,
 }
 /* No side effect */

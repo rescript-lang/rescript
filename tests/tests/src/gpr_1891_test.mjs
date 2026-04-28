@@ -29,7 +29,6 @@ function foo4(x, h) {
   if (typeof x === "object" && x.NAME === "Foo" && x.VAL === 3) {
     return h();
   }
-  
 }
 
 function foo5(x) {

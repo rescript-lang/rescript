@@ -1,0 +1,16 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/polyvariant_constructor_payload_mismatch.res[0m:[2m4:16[0m
+
+  2 [2m│[0m type test2 = [#Click(string)]
+  3 [2m│[0m let a: test = #Click(1)
+  [1;31m4[0m [2m│[0m let b: test2 = [1;31ma[0m
+  5 [2m│[0m 
+
+  This has type: [1;31mtest[0m
+  But it's expected to have type: [1;33mtest2[0m
+  
+  Both polymorphic variants have the constructor [1;33m#Click[0m, but their payload types are incompatible.
+  Make sure the payload types for [1;33m#Click[0m match exactly in both polymorphic variants.
+  
+  You can convert [1;33mint[0m to [1;33mstring[0m with [1;33mInt.toString[0m.

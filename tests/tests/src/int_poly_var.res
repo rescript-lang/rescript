@@ -1,6 +1,6 @@
-let {eq_suites} = module(Mt)
-let test_id = ref(0)
-let suites = ref(list{})
+open Mocha
+open Test_utils
+
 let u = #1
 
 type t = [
@@ -76,8 +76,6 @@ let tuple = (
 )
 
 let begin = 3
-eq_suites(~test_id, ~suites, __LOC__, hihi, 3)
-eq_suites(~test_id, ~suites, __LOC__, tuple, (0, 1, 2, 3, 4, 5, 5, 3, 6, true, false))
 
 let hh0 = (x: list<t>) => (x :> list<int>)
 let hh1 = (x: list<[#a | #b]>) => (x :> list<string>)
@@ -98,4 +96,10 @@ let f = (x: u) => {
   | #1(x) => x
   }
 }
-Mt.from_pair_suites(__FILE__, suites.contents)
+
+describe(__MODULE__, () => {
+  test("int poly var test", () => {
+    eq(__LOC__, hihi, 3)
+    eq(__LOC__, tuple, (0, 1, 2, 3, 4, 5, 5, 3, 6, true, false))
+  })
+})

@@ -10,7 +10,7 @@ let eq_A = (x: t, y) =>
   }
 
 module Test = () => {
-  let () = Js.log("no inline")
+  let () = Console.log("no inline")
   let u = A(3)
   module Block = {}
   let y = 32
@@ -18,7 +18,7 @@ module Test = () => {
 }
 
 module Test2 = () => {
-  let () = Js.log("no inline")
+  let () = Console.log("no inline")
 
   module Block = {}
   let y = 32

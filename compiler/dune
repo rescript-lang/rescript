@@ -1,8 +1,4 @@
 (dirs
- bsb
- bsb_exe
- bsb_helper
- bsb_helper_exe
  bsc
  common
  core

@@ -1,0 +1,19 @@
+{
+  "gentypeconfig": {
+    "language": "typescript",
+    "module": "esmodule",
+    "importPath": "relative",
+    "debug": { "all": false },
+    "exportInterfaces": false
+  },
+  "name": "@tests/gentype-stdlib-no-shims",
+  "sources": [
+    { "dir": "src", "subdirs": true }
+  ],
+  "package-specs": {
+    "module": "esmodule",
+    "in-source": true
+  },
+  "suffix": ".res.js"
+}
+

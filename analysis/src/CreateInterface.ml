@@ -102,7 +102,7 @@ let printSignature ~extractor ~signature =
   Printtyp.reset_names ();
   let sigItemToString (item : Outcometree.out_sig_item) =
     item |> Res_outcome_printer.print_out_sig_item_doc
-    |> Res_doc.to_string ~width:Res_multi_printer.default_print_width
+    |> Res_doc.to_string ~width:Res_printer.default_print_width
   in
 
   let genSigStrForInlineAttr lines attributes id vd =
@@ -124,7 +124,10 @@ let printSignature ~extractor ~signature =
     in
     match typ.desc with
     | Tarrow
-        (_, {desc = Tconstr (Path.Pident propsId, typeArgs, _)}, retType, _, _)
+        ( {typ = {desc = Tconstr (Path.Pident propsId, typeArgs, _)}},
+          retType,
+          _,
+          _ )
       when Ident.name propsId = "props" ->
       Some (typeArgs, retType)
     | Tconstr
@@ -170,12 +173,13 @@ let printSignature ~extractor ~signature =
             in
             let lblName = labelDecl.ld_id |> Ident.name in
             let lbl =
-              if labelDecl.ld_optional then Asttypes.Noloc.Optional lblName
-              else Labelled lblName
+              if labelDecl.ld_optional then
+                Asttypes.Optional {txt = lblName; loc = Location.none}
+              else Asttypes.Labelled {txt = lblName; loc = Location.none}
             in
             {
               retType with
-              desc = Tarrow (lbl, propType, mkFunType rest, Cok, None);
+              desc = Tarrow ({lbl; typ = propType}, mkFunType rest, Cok, None);
             }
         in
         let funType =
@@ -183,7 +187,10 @@ let printSignature ~extractor ~signature =
             let tUnit =
               Ctype.newconstr (Path.Pident (Ident.create "unit")) []
             in
-            {retType with desc = Tarrow (Nolabel, tUnit, retType, Cok, None)}
+            {
+              retType with
+              desc = Tarrow ({lbl = Nolabel; typ = tUnit}, retType, Cok, None);
+            }
           else mkFunType labelDecls
         in
         sigItemToString
@@ -243,12 +250,13 @@ let printSignature ~extractor ~signature =
       in
       Buffer.add_string buf (indent ^ newItemStr ^ "\n");
       processSignature ~indent items
-    | Sig_type (id, typeDecl, resStatus) :: items ->
-      let newItemStr =
-        sigItemToString
-          (Printtyp.tree_of_type_declaration id typeDecl resStatus)
+    | Sig_type (_id, typeDecl, _recStatus) :: items ->
+      let lines =
+        let posStart, posEnd = Loc.range typeDecl.type_loc in
+        extractor |> SourceFileExtractor.extract ~posStart ~posEnd
       in
-      Buffer.add_string buf (indent ^ newItemStr ^ "\n");
+      (* Copy the type declaration verbatim to preserve attributes *)
+      Buffer.add_string buf ((lines |> String.concat "\n") ^ "\n");
       processSignature ~indent items
     | Sig_typext (id, extConstr, extStatus) :: items ->
       let newItemStr =

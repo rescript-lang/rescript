@@ -1,0 +1,1 @@
+let hash: 'a => int

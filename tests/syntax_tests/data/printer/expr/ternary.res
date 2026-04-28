@@ -60,8 +60,8 @@ let x = truth
 
 let x = truth ? create(a, b) : create(b, c)
 let x = truth ? create(thisIsASuperLongIdentifieeeeeeeer, thisIsASuperLongIdentifieeeeeeeer2, thisIsASuperLongIdentifieeeeeeeer3) : create(thisIsASuperLongIdentifieeeeeeeer, thisIsASuperLongIdentifieeeeeeeer2, thisIsASuperLongIdentifieeeeeeeer3)
-let x = truth ? create(. a, b) : create(. b, c)
-let x = truth ? create(. thisIsASuperLongIdentifieeeeeeeer, thisIsASuperLongIdentifieeeeeeeer2, thisIsASuperLongIdentifieeeeeeeer3) : create(. thisIsASuperLongIdentifieeeeeeeer, thisIsASuperLongIdentifieeeeeeeer2, thisIsASuperLongIdentifieeeeeeeer3)
+let x = truth ? create(a, b) : create(b, c)
+let x = truth ? create(thisIsASuperLongIdentifieeeeeeeer, thisIsASuperLongIdentifieeeeeeeer2, thisIsASuperLongIdentifieeeeeeeer3) : create(thisIsASuperLongIdentifieeeeeeeer, thisIsASuperLongIdentifieeeeeeeer2, thisIsASuperLongIdentifieeeeeeeer3)
 
 let street = newYork ? streets[0] : streets[20]
 let street = newYork ? thisIsASuperLongIdentifieeeeeeeer[0] : thisIsASuperLongIdentifieeeeeeeer[20]

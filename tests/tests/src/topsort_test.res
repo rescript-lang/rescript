@@ -29,7 +29,7 @@ let rec dfs1 = (nodes, graph, visited) =>
     if visited->List.has(x, \"==") {
       dfs1(xs, graph, visited)
     } else {
-      Js.log(x)
+      Console.log(x)
       dfs1(\"@"(nexts(x, graph), xs), graph, list{x, ...visited})
     }
   }
@@ -37,7 +37,7 @@ let rec dfs1 = (nodes, graph, visited) =>
 let () = {
   assert(dfs1(list{"a"}, graph, list{}) == list{"a", "d", "e", "g", "f", "c", "b"})
 
-  Js.log()
+  Console.log()
   assert(dfs1(list{"b"}, list{("f", "d"), ...graph}, list{}) == list{"b", "e", "g", "f", "d"})
 }
 

@@ -7,6 +7,6 @@ let f = obj =>
     let size = size_of_t(obj)
     switch Js.Undefined.toOption(size) {
     | None => ()
-    | Some(s) => Js.log(s)
+    | Some(s) => Console.log(s)
     }
   } /* TODO: This case should be peepwholed .. */

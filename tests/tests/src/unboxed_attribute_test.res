@@ -1,6 +1,5 @@
-let suites: ref<Mt.pair_suites> = ref(list{})
-let test_id = ref(0)
-let eq = (loc, x, y) => Mt.eq_suites(~test_id, ~suites, loc, x, y)
+open Mocha
+open Test_utils
 
 @unboxed type t = A(int)
 
@@ -53,4 +52,9 @@ let get = (A(x)) => x
 type rec r = A(r)
 let rec y = A(y)
 
-let () = Mt.from_pair_suites(__FILE__, suites.contents)
+describe(__MODULE__, () => {
+  test("unboxed_attribute_tests", () => {
+    // All tests are already run as standalone assertions above
+    ok(__LOC__, true)
+  })
+})

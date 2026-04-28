@@ -3,11 +3,11 @@ module CssForTest = {
   include Css_Legacy_Core.Make({
     exception NotImplemented
 
-    let mergeStyles = (. _) => throw(NotImplemented)
-    let make = (. _) => throw(NotImplemented)
-    let injectRule = (. _) => throw(NotImplemented)
-    let injectRaw = (. _) => throw(NotImplemented)
-    let makeKeyFrames = (. _) => throw(NotImplemented)
+    let mergeStyles = (_) => throw(NotImplemented)
+    let make = (_) => throw(NotImplemented)
+    let injectRule = (_) => throw(NotImplemented)
+    let injectRaw = (_) => throw(NotImplemented)
+    let makeKeyFrames = (_) => throw(NotImplemented)
   })
 }
 

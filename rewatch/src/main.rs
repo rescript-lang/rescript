@@ -1,177 +1,150 @@
 use anyhow::Result;
-use clap::{Parser, ValueEnum};
-use clap_verbosity_flag::InfoLevel;
+use console::Term;
 use log::LevelFilter;
-use regex::Regex;
-use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::{io::Write, path::Path};
 
-use rewatch::{build, cmd, lock, watcher};
+use rescript::{
+    build, cli, cmd, format,
+    lock::{LockKind, drop_lock, get_lock_or_exit},
+    telemetry, watcher,
+};
 
-#[derive(Debug, Clone, ValueEnum)]
-enum Command {
-    /// Build using Rewatch
-    Build,
-    /// Build, then start a watcher
-    Watch,
-    /// Clean the build artifacts
-    Clean,
+fn main() {
+    // Initialize telemetry (only active if OTEL_EXPORTER_OTLP_ENDPOINT is set)
+    let telemetry_guard = telemetry::init_telemetry();
+    let otel_enabled = telemetry_guard.otel_enabled();
+
+    let exit_code = run_main(otel_enabled);
+
+    // std::process::exit terminates the process without running Drops for
+    // values still on the stack, so the TelemetryGuard's Drop (which flushes
+    // buffered OTLP spans) would be skipped. Drop explicitly first.
+    drop(telemetry_guard);
+
+    std::process::exit(exit_code);
 }
 
-/// Rewatch is an alternative build system for the Rescript Compiler bsb (which uses Ninja internally). It strives
-/// to deliver consistent and faster builds in monorepo setups with multiple packages, where the
-/// default build system fails to pick up changed interfaces across multiple packages.
-#[derive(Parser, Debug)]
-#[command(version)]
-struct Args {
-    #[arg(value_enum)]
-    command: Option<Command>,
+fn run_main(otel_enabled: bool) -> i32 {
+    let cli = cli::parse_with_default().unwrap_or_else(|err| err.exit());
 
-    /// The relative path to where the main rescript.json resides. IE - the root of your project.
-    folder: Option<String>,
+    let log_level_filter = cli.verbose.log_level_filter();
 
-    /// Filter allows for a regex to be supplied which will filter the files to be compiled. For
-    /// instance, to filter out test files for compilation while doing feature work.
-    #[arg(short, long)]
-    filter: Option<String>,
+    // Only set up custom logger if OTEL is not enabled (OTEL sets up its own subscriber)
+    if !otel_enabled {
+        let stdout_logger = env_logger::Builder::new()
+            .format(|buf, record| writeln!(buf, "{}:\n{}", record.level(), record.args()))
+            .filter_level(log_level_filter)
+            .target(env_logger::fmt::Target::Stdout)
+            .build();
 
-    /// This allows one to pass an additional command to the watcher, which allows it to run when
-    /// finished. For instance, to play a sound when done compiling, or to run a test suite.
-    /// NOTE - You may need to add '--color=always' to your subcommand in case you want to output
-    /// colour as well
-    #[arg(short, long)]
-    after_build: Option<String>,
+        let stderr_logger = env_logger::Builder::new()
+            .format(|buf, record| writeln!(buf, "{}:\n{}", record.level(), record.args()))
+            .filter_level(log_level_filter)
+            .target(env_logger::fmt::Target::Stderr)
+            .build();
 
-    // Disable timing on the output
-    #[arg(short, long, default_value = "false", num_args = 0..=1)]
-    no_timing: bool,
+        log::set_max_level(log_level_filter);
+        log::set_boxed_logger(Box::new(SplitLogger {
+            stdout: stdout_logger,
+            stderr: stderr_logger,
+        }))
+        .expect("Failed to initialize logger");
+    }
 
-    // simple output for snapshot testing
-    #[arg(short, long, default_value = "false", num_args = 0..=1)]
-    snapshot_output: bool,
+    let is_tty: bool = Term::stdout().is_term() && Term::stderr().is_term();
+    let plain_output = !is_tty;
 
-    /// Verbosity:
-    /// -v -> Debug
-    /// -vv -> Trace
-    /// -q -> Warn
-    /// -qq -> Error
-    /// -qqq -> Off.
-    /// Default (/ no argument given): 'info'
-    #[command(flatten)]
-    verbose: clap_verbosity_flag::Verbosity<InfoLevel>,
+    // Show progress messages (e.g. "Finished compilation") as long as logging is at Info level
+    // or more verbose. This way `-v` and `-vv` add debug output without suppressing progress.
+    let show_progress = log_level_filter >= LevelFilter::Info;
 
-    /// This creates a source_dirs.json file at the root of the monorepo, which is needed when you
-    /// want to use Reanalyze
-    #[arg(short, long, default_value_t = false, num_args = 0..=1)]
-    create_sourcedirs: bool,
-
-    /// This prints the compiler arguments. It expects the path to a rescript.json file.
-    /// This also requires --bsc-path and --rescript-version to be present
-    #[arg(long)]
-    compiler_args: Option<String>,
-
-    /// This is the flag to also compile development dependencies
-    /// It's important to know that we currently do not discern between project src, and
-    /// dependencies. So enabling this flag will enable building _all_ development dependencies of
-    /// _all_ packages
-    #[arg(long, default_value_t = false, num_args = 0..=1)]
-    dev: bool,
-
-    /// To be used in conjunction with compiler_args
-    #[arg(long)]
-    rescript_version: Option<String>,
-
-    /// A custom path to bsc
-    #[arg(long)]
-    bsc_path: Option<String>,
-}
-
-fn main() -> Result<()> {
-    let args = Args::parse();
-    let log_level_filter = args.verbose.log_level_filter();
-
-    env_logger::Builder::new()
-        .format(|buf, record| writeln!(buf, "{}:\n{}", record.level(), record.args()))
-        .filter_level(log_level_filter)
-        .target(env_logger::fmt::Target::Stdout)
-        .init();
-
-    let command = args.command.unwrap_or(Command::Build);
-    let folder = args.folder.unwrap_or(".".to_string());
-    let filter = args
-        .filter
-        .map(|filter| Regex::new(filter.as_ref()).expect("Could not parse regex"));
-
-    match args.compiler_args {
-        None => (),
-        Some(path) => {
-            println!(
-                "{}",
-                build::get_compiler_args(
-                    Path::new(&path),
-                    args.rescript_version,
-                    &args.bsc_path.map(PathBuf::from),
-                    args.dev
-                )?
+    match cli.command {
+        cli::Command::CompilerArgs { path } => {
+            exit_code(build::get_compiler_args(Path::new(&path)).map(|args| println!("{}", args)))
+        }
+        cli::Command::Build(build_args) => {
+            let features = build_args.features.parsed();
+            let result = build::build(
+                &build_args.filter,
+                build_args.folder.as_ref(),
+                show_progress,
+                build_args.no_timing,
+                true, // create_sourcedirs is now always enabled
+                plain_output,
+                (*build_args.warn_error).clone(),
+                build_args.prod,
+                features,
             );
-            std::process::exit(0);
+            if result.is_ok()
+                && let Some(args_after_build) = (*build_args.after_build).clone()
+            {
+                cmd::run(args_after_build);
+            }
+            exit_code(result.map(|_| ()))
+        }
+        cli::Command::Watch(watch_args) => {
+            let _lock = get_lock_or_exit(LockKind::Watch, &watch_args.folder);
+
+            let features = watch_args.features.parsed();
+            exit_code(watcher::start(
+                &watch_args.filter,
+                show_progress,
+                &watch_args.folder,
+                (*watch_args.after_build).clone(),
+                true, // create_sourcedirs is now always enabled
+                plain_output,
+                (*watch_args.warn_error).clone(),
+                watch_args.clear_screen,
+                watch_args.prod,
+                features,
+            ))
+        }
+        cli::Command::Clean { folder, prod } => {
+            let _lock = get_lock_or_exit(LockKind::Build, &folder);
+            let code = exit_code(build::clean::clean(
+                folder.as_ref(),
+                show_progress,
+                plain_output,
+                prod,
+            ));
+            let _ = drop_lock(LockKind::Build, &folder);
+
+            code
+        }
+        cli::Command::Format { stdin, check, files } => exit_code(format::format(stdin, check, files)),
+    }
+}
+
+/// Map a command's Result<()> to a process exit code, printing the error on failure.
+fn exit_code(result: Result<()>) -> i32 {
+    match result {
+        Ok(()) => 0,
+        Err(e) => {
+            eprintln!("{:#}", e);
+            1
+        }
+    }
+}
+
+struct SplitLogger {
+    stdout: env_logger::Logger,
+    stderr: env_logger::Logger,
+}
+
+impl log::Log for SplitLogger {
+    fn enabled(&self, metadata: &log::Metadata) -> bool {
+        self.stdout.enabled(metadata) || self.stderr.enabled(metadata)
+    }
+
+    fn log(&self, record: &log::Record) {
+        match record.level() {
+            log::Level::Error | log::Level::Warn => self.stderr.log(record),
+            _ => self.stdout.log(record),
         }
     }
 
-    // The 'normal run' mode will show the 'pretty' formatted progress. But if we turn off the log
-    // level, we should never show that.
-    let show_progress = log_level_filter == LevelFilter::Info;
-
-    match lock::get(&folder) {
-        lock::Lock::Error(ref e) => {
-            println!("Could not start Rewatch: {e}");
-            std::process::exit(1)
-        }
-        lock::Lock::Aquired(_) => match command {
-            Command::Clean => build::clean::clean(
-                Path::new(&folder),
-                show_progress,
-                &args.bsc_path.map(PathBuf::from),
-                args.dev,
-                args.snapshot_output,
-            ),
-            Command::Build => {
-                match build::build(
-                    &filter,
-                    Path::new(&folder),
-                    show_progress,
-                    args.no_timing,
-                    args.create_sourcedirs,
-                    &args.bsc_path.map(PathBuf::from),
-                    args.dev,
-                    args.snapshot_output,
-                ) {
-                    Err(e) => {
-                        println!("{e}");
-                        std::process::exit(1)
-                    }
-                    Ok(_) => {
-                        if let Some(args_after_build) = args.after_build {
-                            cmd::run(args_after_build)
-                        }
-                        std::process::exit(0)
-                    }
-                };
-            }
-            Command::Watch => {
-                watcher::start(
-                    &filter,
-                    show_progress,
-                    &folder,
-                    args.after_build,
-                    args.create_sourcedirs,
-                    args.dev,
-                    args.bsc_path,
-                    args.snapshot_output,
-                );
-
-                Ok(())
-            }
-        },
+    fn flush(&self) {
+        self.stdout.flush();
+        self.stderr.flush();
     }
 }

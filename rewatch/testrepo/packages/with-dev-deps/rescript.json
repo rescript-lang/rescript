@@ -9,8 +9,10 @@
       "type": "dev"
     }
   ],
+  "dependencies": ["rescript-nodejs"],
+  "dev-dependencies": ["@rescript/webapi"],
   "package-specs": {
-    "module": "es6",
+    "module": "esmodule",
     "in-source": true
   },
   "suffix": ".res.js"

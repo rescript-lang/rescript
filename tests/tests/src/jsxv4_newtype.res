@@ -28,6 +28,6 @@ module V4A3 = {
   @react.component
   let make = (type a, ~foo) => {
     module T = unpack(foo: T with type t = a)
-    foo
+    React.null
   }
 }

@@ -885,4 +885,4 @@ function factory(ReactComponent, isValidElement, ReactNoopUpdateQueue) {
 
 let reactNoopUpdateQueue = newReactComponent()["updater"]
 
-let createClass = factory(. reactComponent, reactIsValidElement, reactNoopUpdateQueue)
+let createClass = factory(reactComponent, reactIsValidElement, reactNoopUpdateQueue)

@@ -24,13 +24,13 @@ import {
 } from "./common.mjs";
 
 exec("yarn rescript clean");
-exec("yarn rescript");
+exec("yarn rescript build");
 
 // We need to build the compiler's builtin modules as a separate cmij.
 // Otherwise we can't use them for compilation within the playground.
-buildCmij(compilerRootDir, "compiler-builtins");
+buildCmij(path.join(compilerRootDir, "packages", "@rescript", "runtime"), "compiler-builtins");
 
-const packages = resConfig["bs-dependencies"];
+const packages = resConfig["dependencies"];
 for (const pkgName of packages) {
   buildCmij(
     path.join(compilerRootDir, "node_modules", pkgName),
@@ -58,7 +58,7 @@ function buildCmij(pkgDir, pkgName) {
 }
 
 /**
- * @param {string} basename 
+ * @param {string} basename
  * @return {boolean}
  */
 function isCmij(basename) {

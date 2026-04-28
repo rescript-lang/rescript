@@ -1,6 +1,5 @@
-let suites: ref<Mt.pair_suites> = ref(list{})
-let test_id = ref(0)
-let eq = (loc, x, y) => Mt.eq_suites(~test_id, ~suites, loc, x, y)
+open Mocha
+open Test_utils
 
 type rec node = {
   value: int,
@@ -22,7 +21,7 @@ let inOrder = (v: t): array<int> => {
     current := leftGet(v)
   }
   while !S.isEmpty(s) {
-    current := S.popUndefined(s)
+    current := Js.Undefined.return(S.popOrThrow(s))
     let v = Js.Undefined.getUnsafe(current.contents)
     Q.add(q, valueGet(v))
     current := rightGet(v)
@@ -67,7 +66,7 @@ let inOrder2 = (v: t) => {
       S.push(s, v)
       cursor := leftGet(v)
     } else if !S.isEmpty(s) {
-      cursor := S.popUndefined(s)
+      cursor := Js.Undefined.return(S.popOrThrow(s))
       let current = Js.Undefined.getUnsafe(cursor.contents)
       Q.add(q, valueGet(current))
       cursor := rightGet(current)
@@ -95,7 +94,9 @@ let test2 = n(3, ~l=n(1, ~l=n(5, ~l=n(2, ~l=n(4)))))
 
 let test3 = n(1, ~l=n(5, ~l=n(2, ~l=n(4))), ~r=n(3))
 
-eq(__LOC__, inOrder(Js.Undefined.return(test1)), [4, 2, 5, 1, 3])
-eq(__LOC__, inOrder3(Js.Undefined.return(test1)), [4, 2, 5, 1, 3])
-
-Mt.from_pair_suites(__FILE__, suites.contents)
+describe(__MODULE__, () => {
+  test("tree in-order traversal", () => {
+    eq(__LOC__, inOrder(Js.Undefined.return(test1)), [4, 2, 5, 1, 3])
+    eq(__LOC__, inOrder3(Js.Undefined.return(test1)), [4, 2, 5, 1, 3])
+  })
+})

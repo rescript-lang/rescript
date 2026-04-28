@@ -6,25 +6,288 @@ use super::build_types::*;
 use super::logs;
 use super::packages;
 use crate::config;
+use crate::config::Config;
 use crate::helpers;
 use crate::helpers::StrippedVerbatimPath;
+use crate::project_context::ProjectContext;
 use ahash::{AHashMap, AHashSet};
-use anyhow::anyhow;
+use anyhow::{Result, anyhow};
 use console::style;
-use log::{debug, trace};
+use log::{debug, info, trace, warn};
 use rayon::prelude::*;
-use std::path::{Path, PathBuf};
+use std::cmp::Ordering;
+use std::collections::BinaryHeap;
+use std::path::Path;
+use std::path::PathBuf;
 use std::process::Command;
+use std::sync::OnceLock;
+use std::sync::mpsc;
 use std::time::SystemTime;
+use tracing::{info_span, instrument};
 
+/// Execute js-post-build command for a compiled JavaScript file.
+/// The command runs in the directory containing the rescript.json that defines it.
+/// The absolute path to the JS file is passed as an argument.
+fn execute_post_build_command(cmd: &str, js_file_path: &Path, working_dir: &Path) -> Result<()> {
+    let full_command = format!("{} {}", cmd, js_file_path.display());
+
+    let _span = info_span!(
+        "build.js_post_build",
+        command = %cmd,
+        js_file = %js_file_path.display(),
+    )
+    .entered();
+
+    debug!(
+        "Executing js-post-build: {} (in {})",
+        full_command,
+        working_dir.display()
+    );
+
+    let output = if cfg!(target_os = "windows") {
+        Command::new("cmd")
+            .args(["/C", &full_command])
+            .current_dir(working_dir)
+            .output()
+    } else {
+        Command::new("sh")
+            .args(["-c", &full_command])
+            .current_dir(working_dir)
+            .output()
+    };
+
+    match output {
+        Ok(output) => {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            let stdout = String::from_utf8_lossy(&output.stdout);
+
+            // Always log stdout/stderr - the user explicitly configured this command
+            // and likely cares about its output
+            if !stdout.is_empty() {
+                info!("{}", stdout.trim());
+            }
+            if !stderr.is_empty() {
+                warn!("{}", stderr.trim());
+            }
+
+            if !output.status.success() {
+                Err(anyhow!(
+                    "js-post-build command failed for {}",
+                    js_file_path.display()
+                ))
+            } else {
+                Ok(())
+            }
+        }
+        Err(e) => Err(anyhow!("Failed to execute js-post-build command: {}", e)),
+    }
+}
+
+/// A unit of work in the ready queue. Ordered by `priority` so that the
+/// `BinaryHeap` pops the module with the longest remaining critical path first.
+#[derive(Debug)]
+struct WorkUnit {
+    priority: i64,
+    module_name: String,
+}
+
+impl PartialEq for WorkUnit {
+    fn eq(&self, other: &Self) -> bool {
+        self.priority == other.priority
+    }
+}
+impl Eq for WorkUnit {}
+impl PartialOrd for WorkUnit {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl Ord for WorkUnit {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.priority.cmp(&other.priority)
+    }
+}
+
+/// Result of a single module compilation, sent from a worker back to the
+/// dispatcher on the main thread. Mirrors the tuple shape the wave-based
+/// scheduler used to return.
+struct CompletionMsg {
+    module_name: String,
+    result: Result<Option<String>>,
+    interface_result: Option<Result<Option<String>>>,
+    is_clean: bool,
+    is_compiled: bool,
+}
+
+/// Compute the critical-path priority of every module in the universe:
+/// `priority(m) = 1 + max(priority(d) for d in in-universe dependents of m)`.
+/// Runs a reverse-topological sweep from leaves to roots. Modules stuck in a
+/// cycle get priority 0, and the actual cycle is diagnosed later by
+/// `dependency_cycle::find` when the dispatcher detects a stall.
+fn compute_critical_path_priorities(
+    universe: &AHashSet<String>,
+    build_state: &BuildState,
+) -> AHashMap<String, i64> {
+    let mut priorities: AHashMap<String, i64> = AHashMap::with_capacity(universe.len());
+    let mut remaining_dependents: AHashMap<String, usize> = AHashMap::with_capacity(universe.len());
+    let mut queue: Vec<String> = Vec::new();
+
+    for name in universe {
+        let module = build_state.get_module(name).unwrap();
+        let count = module.dependents.iter().filter(|d| universe.contains(*d)).count();
+        remaining_dependents.insert(name.clone(), count);
+        if count == 0 {
+            queue.push(name.clone());
+        }
+    }
+
+    while let Some(name) = queue.pop() {
+        let module = build_state.get_module(&name).unwrap();
+        let max_dep_priority = module
+            .dependents
+            .iter()
+            .filter(|d| universe.contains(*d))
+            .filter_map(|d| priorities.get(d).copied())
+            .max()
+            .unwrap_or(0);
+        priorities.insert(name.clone(), max_dep_priority + 1);
+
+        for dep in &module.deps {
+            if !universe.contains(dep) {
+                continue;
+            }
+            if let Some(count) = remaining_dependents.get_mut(dep) {
+                *count -= 1;
+                if *count == 0 {
+                    queue.push(dep.clone());
+                }
+            }
+        }
+    }
+
+    for name in universe {
+        priorities.entry(name.clone()).or_insert(0);
+    }
+    priorities
+}
+
+/// Run the short-circuit check or actual `bsc` invocation for a single module.
+/// Invoked from worker threads inside the dispatcher scope; only reads
+/// `BuildState`, never mutates it.
+fn compile_one(
+    build_state: &BuildState,
+    module_name: &str,
+    is_dirty: bool,
+    warn_error_override: Option<String>,
+) -> CompletionMsg {
+    let module = build_state.get_module(module_name).unwrap();
+    let package = build_state
+        .get_package(&module.package_name)
+        .expect("Package not found");
+
+    if !is_dirty {
+        return CompletionMsg {
+            module_name: module_name.to_string(),
+            result: Ok(None),
+            interface_result: Some(Ok(None)),
+            is_clean: true,
+            is_compiled: false,
+        };
+    }
+
+    match &module.source_type {
+        SourceType::MlMap(_) => {
+            // The mlmap is compiled during AST generation; the entry here just
+            // marks it compiled so its namespace members can proceed.
+            CompletionMsg {
+                module_name: package.namespace.to_suffix().unwrap(),
+                result: Ok(None),
+                interface_result: Some(Ok(None)),
+                is_clean: false,
+                is_compiled: false,
+            }
+        }
+        SourceType::SourceFile(source_file) => {
+            // Construct span + attributes only when a subscriber is listening.
+            // Otherwise root_config.get_package_specs() (which clones) and the
+            // attribute formatting run per-module on the build hot path.
+            let _file_span = if tracing::enabled!(tracing::Level::INFO) {
+                let root_config = build_state.get_root_config();
+                let specs = root_config.get_package_specs();
+                // A package can be built under multiple specs (e.g. ESM + CJS).
+                // Report all of them joined by "," instead of silently picking
+                // the first — the compile_file span covers work for every spec.
+                let suffix = specs
+                    .iter()
+                    .map(|s| root_config.get_suffix(s))
+                    .collect::<Vec<_>>()
+                    .join(",");
+                let module_system = specs
+                    .iter()
+                    .map(|s| s.module.as_str())
+                    .collect::<Vec<_>>()
+                    .join(",");
+                let namespace = package.namespace.to_suffix().unwrap_or_default();
+                info_span!("build.compile_file", module = %module_name, package = %package.name, suffix, module_system, namespace).entered()
+            } else {
+                tracing::Span::none().entered()
+            };
+
+            let cmi_path = helpers::get_compiler_asset(
+                package,
+                &package.namespace,
+                &source_file.implementation.path,
+                "cmi",
+            );
+            let cmi_digest = helpers::compute_file_hash(Path::new(&cmi_path));
+
+            let interface_result = source_file.interface.as_ref().map(|iface| {
+                compile_file(
+                    package,
+                    &helpers::get_ast_path(&iface.path),
+                    module,
+                    true,
+                    build_state,
+                    warn_error_override.clone(),
+                )
+            });
+            let result = compile_file(
+                package,
+                &helpers::get_ast_path(&source_file.implementation.path),
+                module,
+                false,
+                build_state,
+                warn_error_override,
+            );
+            let cmi_digest_after = helpers::compute_file_hash(Path::new(&cmi_path));
+
+            // If the cmi is byte-for-byte unchanged, downstream modules can
+            // short-circuit — we check both interface and implementation
+            // because e.g. `include MyModule` exposes implementation changes
+            // through the cmi even when the .resi is untouched.
+            let is_clean_cmi = matches!(
+                (cmi_digest, cmi_digest_after),
+                (Some(a), Some(b)) if a == b
+            );
+
+            CompletionMsg {
+                module_name: module_name.to_string(),
+                result,
+                interface_result,
+                is_clean: is_clean_cmi,
+                is_compiled: true,
+            }
+        }
+    }
+}
+
+#[instrument(name = "build.compile", skip_all)]
 pub fn compile(
-    build_state: &mut BuildState,
+    build_state: &mut BuildCommandState,
     show_progress: bool,
     inc: impl Fn() + std::marker::Sync,
     set_length: impl Fn(u64),
-    build_dev_deps: bool,
 ) -> anyhow::Result<(String, String, usize)> {
-    let mut compiled_modules = AHashSet::<String>::new();
     let dirty_modules = build_state
         .modules
         .iter()
@@ -37,339 +300,401 @@ pub fn compile(
         })
         .collect::<AHashSet<String>>();
 
-    // dirty_modules.iter().for_each(|m| println!("dirty module: {}", m));
-    // println!("{} dirty modules", dirty_modules.len());
-    let mut sorted_dirty_modules = dirty_modules.iter().collect::<Vec<&String>>();
-    sorted_dirty_modules.sort();
-    // dirty_modules.iter().for_each(|m| println!("dirty module: {}", m));
-    // sorted_dirty_modules
-    //     .iter()
-    //     .for_each(|m| println!("dirty module: {}", m));
-
-    // for sure clean modules -- after checking the hash of the cmi
-    let mut clean_modules = AHashSet::<String>::new();
-
-    // TODO: calculate the real dirty modules from the original dirty modules in each iteration
-    // taken into account the modules that we know are clean, so they don't propagate through the
-    // deps graph
-    // create a hashset of all clean modules from the file-hashes
-    let mut loop_count = 0;
-    let mut files_total_count = compiled_modules.len();
-    let mut files_current_loop_count;
-    let mut compile_errors = "".to_string();
-    let mut compile_warnings = "".to_string();
-    let mut num_compiled_modules = 0;
-    let mut sorted_modules = build_state.module_names.iter().collect::<Vec<&String>>();
-    sorted_modules.sort();
-
-    // this is the whole "compile universe" all modules that might be dirty
-    // we get this by expanding the dependents from the dirty modules
-
+    // Expand the compile universe: every dirty module plus everything that
+    // transitively depends on it.
     let mut compile_universe = dirty_modules.clone();
-    let mut current_step_modules = compile_universe.clone();
+    let mut frontier = compile_universe.clone();
     loop {
         let mut dependents: AHashSet<String> = AHashSet::new();
-        for dirty_module in current_step_modules.iter() {
-            dependents.extend(build_state.get_module(dirty_module).unwrap().dependents.clone());
+        for module_name in frontier.iter() {
+            dependents.extend(build_state.get_module(module_name).unwrap().dependents.clone());
         }
-
-        current_step_modules = dependents
+        frontier = dependents
             .difference(&compile_universe)
-            .map(|s| s.to_string())
+            .cloned()
             .collect::<AHashSet<String>>();
-
-        compile_universe.extend(current_step_modules.to_owned());
-        if current_step_modules.is_empty() {
+        if frontier.is_empty() {
             break;
         }
+        compile_universe.extend(frontier.iter().cloned());
     }
 
     let compile_universe_count = compile_universe.len();
     set_length(compile_universe_count as u64);
 
-    // start off with all modules that have no deps in this compile universe
-    let mut in_progress_modules = compile_universe
+    let priorities = compute_critical_path_priorities(&compile_universe, &build_state.build_state);
+
+    // Count of not-yet-completed in-universe dependencies for each module.
+    // Only touched on the main thread.
+    let mut pending_deps: AHashMap<String, usize> = compile_universe
         .iter()
-        .filter(|module_name| {
-            let module = build_state.get_module(module_name).unwrap();
-            module.deps.intersection(&compile_universe).count() == 0
+        .map(|name| {
+            let module = build_state.get_module(name).unwrap();
+            let count = module
+                .deps
+                .iter()
+                .filter(|d| compile_universe.contains(*d))
+                .count();
+            (name.clone(), count)
         })
-        .map(|module_name| module_name.to_string())
-        .collect::<AHashSet<String>>();
+        .collect();
 
-    loop {
-        files_current_loop_count = 0;
-        loop_count += 1;
+    let mut ready_heap: BinaryHeap<WorkUnit> = compile_universe
+        .iter()
+        .filter(|name| pending_deps[*name] == 0)
+        .map(|name| WorkUnit {
+            priority: *priorities.get(name).unwrap_or(&0),
+            module_name: name.clone(),
+        })
+        .collect();
 
-        trace!(
-            "Compiled: {} out of {}. Compile loop: {}",
-            files_total_count,
-            compile_universe.len(),
-            loop_count,
-        );
+    // Dirtiness propagation tracked locally: when a module's cmi changes, its
+    // dependents are forced dirty. This mirrors the old `compile_dirty` flag
+    // mutation but keeps build_state borrow-free while workers are running.
+    let mut dirty_set: AHashSet<String> = dirty_modules;
 
-        let current_in_progres_modules = in_progress_modules.clone();
+    let warn_error_override = build_state.get_warn_error_override();
+    let build_state_ref: &BuildState = &build_state.build_state;
+    let compile_span = tracing::Span::current();
 
-        let results = current_in_progres_modules
-            .par_iter()
-            .filter_map(|module_name| {
-                let module = build_state.get_module(module_name).unwrap();
-                let package = build_state
-                    .get_package(&module.package_name)
-                    .expect("Package not found");
-                // all dependencies that we care about are compiled
-                if module
-                    .deps
-                    .intersection(&compile_universe)
-                    .all(|dep| compiled_modules.contains(dep))
-                {
-                    if !module.compile_dirty {
-                        // we are sure we don't have to compile this, so we can mark it as compiled and clean
-                        return Some((module_name.to_string(), Ok(None), Some(Ok(None)), true, false));
-                    }
-                    match module.source_type.to_owned() {
-                        SourceType::MlMap(_) => {
-                            // the mlmap needs to be compiled before the files are compiled
-                            // in the same namespace, otherwise we get a compile error
-                            // this is why mlmap is compiled in the AST generation stage
-                            // compile_mlmap(&module.package, module_name, &project_root);
-                            Some((
-                                package.namespace.to_suffix().unwrap(),
-                                Ok(None),
-                                Some(Ok(None)),
-                                false,
-                                false,
-                            ))
-                        }
-                        SourceType::SourceFile(source_file) => {
-                            let cmi_path = helpers::get_compiler_asset(
-                                package,
-                                &package.namespace,
-                                &source_file.implementation.path,
-                                "cmi",
-                            );
+    let (tx, rx) = mpsc::channel::<CompletionMsg>();
+    // Bound concurrency to rayon's pool size so the priority heap actually
+    // orders work — dumping everything into rayon's deque would defeat #2.
+    let capacity = rayon::current_num_threads().max(1);
 
-                            let cmi_digest = helpers::compute_file_hash(Path::new(&cmi_path));
+    let mut completed: AHashSet<String> = AHashSet::new();
+    let mut results_buffer: Vec<CompletionMsg> = Vec::with_capacity(compile_universe_count);
+    let mut has_errors = false;
+    let mut stalled = false;
 
-                            let package = build_state
-                                .get_package(&module.package_name)
-                                .expect("Package not found");
-
-                            let root_package =
-                                build_state.get_package(&build_state.root_config_name).unwrap();
-
-                            let interface_result = match source_file.interface.to_owned() {
-                                Some(Interface { path, .. }) => {
-                                    let result = compile_file(
-                                        package,
-                                        root_package,
-                                        &helpers::get_ast_path(&path),
-                                        module,
-                                        &build_state.rescript_version,
-                                        true,
-                                        &build_state.bsc_path,
-                                        &build_state.packages,
-                                        &build_state.project_root,
-                                        &build_state.workspace_root,
-                                        build_dev_deps,
-                                    );
-                                    Some(result)
-                                }
-                                _ => None,
-                            };
-                            let result = compile_file(
-                                package,
-                                root_package,
-                                &helpers::get_ast_path(&source_file.implementation.path),
-                                module,
-                                &build_state.rescript_version,
-                                false,
-                                &build_state.bsc_path,
-                                &build_state.packages,
-                                &build_state.project_root,
-                                &build_state.workspace_root,
-                                build_dev_deps,
-                            );
-                            let cmi_digest_after = helpers::compute_file_hash(Path::new(&cmi_path));
-
-                            // we want to compare both the hash of interface and the implementation
-                            // compile assets to verify that nothing changed. We also need to checke the interface
-                            // because we can include MyModule, so the modules that depend on this module might
-                            // change when this modules interface does not change, but the implementation does
-                            let is_clean_cmi = match (cmi_digest, cmi_digest_after) {
-                                (Some(cmi_digest), Some(cmi_digest_after)) => {
-                                    cmi_digest.eq(&cmi_digest_after)
-                                }
-
-                                _ => false,
-                            };
-
-                            Some((
-                                module_name.to_string(),
-                                result,
-                                interface_result,
-                                is_clean_cmi,
-                                true,
-                            ))
-                        }
-                    }
-                } else {
-                    None
-                }
-                .inspect(|_res| {
+    rayon::in_place_scope(|scope| {
+        let mut in_flight: usize = 0;
+        loop {
+            while in_flight < capacity && !has_errors {
+                let Some(work) = ready_heap.pop() else { break };
+                let module_name = work.module_name.clone();
+                let is_dirty = dirty_set.contains(&module_name);
+                let warn_override = warn_error_override.clone();
+                let parent_span = compile_span.clone();
+                let tx = tx.clone();
+                let inc_ref = &inc;
+                in_flight += 1;
+                scope.spawn(move |_| {
+                    let _guard = parent_span.enter();
+                    let msg = compile_one(build_state_ref, &module_name, is_dirty, warn_override);
                     if show_progress {
-                        inc();
+                        inc_ref();
                     }
-                })
-            })
-            .collect::<Vec<_>>();
-
-        for result in results.iter() {
-            let (module_name, result, interface_result, is_clean, is_compiled) = result;
-            in_progress_modules.remove(module_name);
-
-            if *is_compiled {
-                num_compiled_modules += 1;
+                    // Receiver lives for the full scope, so send cannot fail
+                    // unless the dispatcher has already hung up on purpose.
+                    let _ = tx.send(msg);
+                });
             }
 
-            files_current_loop_count += 1;
-            compiled_modules.insert(module_name.to_string());
-
-            if *is_clean {
-                // actually add it to a list of clean modules
-                clean_modules.insert(module_name.to_string());
-            }
-
-            let module_dependents = build_state.get_module(module_name).unwrap().dependents.clone();
-
-            // if not clean -- compile modules that depend on this module
-            for dep in module_dependents.iter() {
-                //  mark the reverse dep as dirty when the source is not clean
-                if !*is_clean {
-                    let dep_module = build_state.modules.get_mut(dep).unwrap();
-                    //  mark the reverse dep as dirty when the source is not clean
-                    dep_module.compile_dirty = true;
+            if in_flight == 0 {
+                if !ready_heap.is_empty() {
+                    // Errors suppressed new spawns; nothing left to drain.
+                    break;
                 }
-                if !compiled_modules.contains(dep) {
-                    in_progress_modules.insert(dep.to_string());
+                if completed.len() < compile_universe_count && !has_errors {
+                    stalled = true;
                 }
+                break;
             }
 
+            let Ok(msg) = rx.recv() else { break };
+            in_flight -= 1;
+
+            if msg.result.is_err() || msg.interface_result.as_ref().is_some_and(|r| r.is_err()) {
+                has_errors = true;
+            }
+
+            let is_clean = msg.is_clean;
+            let finished_name = msg.module_name.clone();
+            completed.insert(finished_name.clone());
+            results_buffer.push(msg);
+
+            // Look up dependents from the node the scheduler scheduled under —
+            // for mlmap, compile_one returns the namespace suffix, which is the
+            // key modules use to refer to the namespace entry.
+            let dependents = build_state.get_module(&finished_name).unwrap().dependents.clone();
+
+            for dep in &dependents {
+                if !compile_universe.contains(dep) {
+                    continue;
+                }
+                if !is_clean {
+                    dirty_set.insert(dep.clone());
+                }
+                let count = pending_deps.get_mut(dep).unwrap();
+                *count -= 1;
+                if *count == 0 && !completed.contains(dep) {
+                    ready_heap.push(WorkUnit {
+                        priority: priorities[dep],
+                        module_name: dep.clone(),
+                    });
+                }
+            }
+        }
+    });
+    // Close our sender handle so any lingering clones in already-spawned
+    // workers don't keep the channel open past the scope.
+    drop(tx);
+
+    trace!(
+        "Compiled {} out of {} in the universe",
+        completed.len(),
+        compile_universe_count,
+    );
+
+    let mut compile_errors = String::new();
+    let mut compile_warnings = String::new();
+    let mut num_compiled_modules = 0;
+
+    // Persist propagated dirtiness back onto build_state. Modules that were
+    // marked dirty (because a predecessor's cmi changed) but never scheduled
+    // — e.g. the first compile error aborted further dispatch — must keep
+    // compile_dirty = true so the next incremental build recompiles them.
+    // Successful recompiles in the result loop below override this back to
+    // false for the modules that actually ran.
+    for name in &dirty_set {
+        if let Some(module) = build_state.build_state.modules.get_mut(name) {
+            module.compile_dirty = true;
+        }
+    }
+
+    // Sort by module name so the accumulated error/warning strings and the
+    // per-package compile.log writes are deterministic across runs, even
+    // though modules complete in arbitrary order.
+    results_buffer.sort_by(|a, b| a.module_name.cmp(&b.module_name));
+
+    for msg in results_buffer {
+        let CompletionMsg {
+            module_name,
+            result,
+            interface_result,
+            is_compiled,
+            ..
+        } = msg;
+
+        if is_compiled {
+            num_compiled_modules += 1;
+        }
+
+        let package_name = {
             let module = build_state
+                .build_state
                 .modules
-                .get_mut(module_name)
-                .ok_or(anyhow!("Module not found"))?;
+                .get(&module_name)
+                .ok_or_else(|| anyhow!("Module not found"))?;
+            module.package_name.clone()
+        };
+        let package = build_state
+            .build_state
+            .packages
+            .get(&package_name)
+            .ok_or_else(|| anyhow!("Package name not found"))?;
 
-            let package = build_state
-                .packages
-                .get(&module.package_name)
-                .ok_or(anyhow!("Package name not found"))?;
+        let (compile_warning, compile_error, interface_warning, interface_error) = {
+            let module = build_state
+                .build_state
+                .modules
+                .get_mut(&module_name)
+                .ok_or_else(|| anyhow!("Module not found"))?;
 
-            match module.source_type {
+            let (compile_warning, compile_error) = match module.source_type {
                 SourceType::MlMap(ref mut mlmap) => {
                     module.compile_dirty = false;
                     mlmap.parse_dirty = false;
+                    (None, None)
                 }
-                SourceType::SourceFile(ref mut source_file) => {
-                    match result {
-                        Ok(Some(err)) => {
-                            source_file.implementation.compile_state = CompileState::Warning;
-                            logs::append(package, err);
-                            compile_warnings.push_str(err);
-                        }
-                        Ok(None) => {
-                            source_file.implementation.compile_state = CompileState::Success;
-                        }
-                        Err(err) => {
-                            source_file.implementation.compile_state = CompileState::Error;
-                            logs::append(package, &err.to_string());
-                            compile_errors.push_str(&err.to_string());
-                        }
-                    };
-                    match interface_result {
-                        Some(Ok(Some(err))) => {
-                            source_file.interface.as_mut().unwrap().compile_state = CompileState::Warning;
-                            logs::append(package, &err.to_string());
-                            compile_warnings.push_str(&err.to_string());
-                        }
-                        Some(Ok(None)) => {
-                            if let Some(interface) = source_file.interface.as_mut() {
-                                interface.compile_state = CompileState::Success;
-                            }
-                        }
-
-                        Some(Err(err)) => {
-                            source_file.interface.as_mut().unwrap().compile_state = CompileState::Error;
-                            logs::append(package, &err.to_string());
-                            compile_errors.push_str(&err.to_string());
-                        }
-                        _ => (),
-                    };
-
-                    match (result, interface_result) {
-                        // successfull compilation
-                        (Ok(None), Some(Ok(None))) | (Ok(None), None) => {
-                            module.compile_dirty = false;
-                            module.last_compiled_cmi = Some(SystemTime::now());
-                            module.last_compiled_cmt = Some(SystemTime::now());
-                        }
-                        // some error or warning
-                        (Err(_), _) | (_, Some(Err(_))) | (Ok(Some(_)), _) | (_, Some(Ok(Some(_)))) => {
-                            module.compile_dirty = true;
-                        }
+                SourceType::SourceFile(ref mut source_file) => match &result {
+                    Ok(Some(err)) => {
+                        let warning_text = err.to_string();
+                        source_file.implementation.compile_state = CompileState::Warning;
+                        source_file.implementation.compile_warnings = Some(warning_text.clone());
+                        (Some(warning_text), None)
                     }
+                    Ok(None) => {
+                        source_file.implementation.compile_state = CompileState::Success;
+                        source_file.implementation.compile_warnings = None;
+                        (None, None)
+                    }
+                    Err(err) => {
+                        source_file.implementation.compile_state = CompileState::Error;
+                        source_file.implementation.compile_warnings = None;
+                        (None, Some(err.to_string()))
+                    }
+                },
+            };
+
+            let (interface_warning, interface_error) = if let SourceType::SourceFile(ref mut source_file) =
+                module.source_type
+            {
+                match &interface_result {
+                    Some(Ok(Some(err))) => {
+                        let warning_text = err.to_string();
+                        source_file.interface.as_mut().unwrap().compile_state = CompileState::Warning;
+                        source_file.interface.as_mut().unwrap().compile_warnings = Some(warning_text.clone());
+                        (Some(warning_text), None)
+                    }
+                    Some(Ok(None)) => {
+                        if let Some(interface) = source_file.interface.as_mut() {
+                            interface.compile_state = CompileState::Success;
+                            interface.compile_warnings = None;
+                        }
+                        (None, None)
+                    }
+                    Some(Err(err)) => {
+                        source_file.interface.as_mut().unwrap().compile_state = CompileState::Error;
+                        source_file.interface.as_mut().unwrap().compile_warnings = None;
+                        (None, Some(err.to_string()))
+                    }
+                    _ => (None, None),
                 }
+            } else {
+                (None, None)
+            };
+
+            if result.is_ok() && interface_result.as_ref().is_none_or(|r| r.is_ok()) {
+                module.compile_dirty = false;
+                module.last_compiled_cmi = Some(SystemTime::now());
+                module.last_compiled_cmt = Some(SystemTime::now());
+            }
+
+            (compile_warning, compile_error, interface_warning, interface_error)
+        };
+
+        if let Some(warning) = compile_warning {
+            logs::append(package, &warning);
+            compile_warnings.push_str(&warning);
+        }
+        if let Some(error) = compile_error {
+            logs::append(package, &error);
+            compile_errors.push_str(&error);
+        }
+        if let Some(warning) = interface_warning {
+            logs::append(package, &warning);
+            compile_warnings.push_str(&warning);
+        }
+        if let Some(error) = interface_error {
+            logs::append(package, &error);
+            compile_errors.push_str(&error);
+        }
+    }
+
+    if stalled {
+        let cycle = dependency_cycle::find(
+            &compile_universe
+                .iter()
+                .map(|s| (s, build_state.get_module(s).unwrap()))
+                .collect::<Vec<(&String, &Module)>>(),
+        );
+
+        let guidance = "Possible solutions:\n- Extract shared code into a new module both depend on.\n";
+        let message = format!(
+            "\n{}\n{}\n{}",
+            style("Can't continue... Found a circular dependency in your code:").red(),
+            dependency_cycle::format(&cycle, build_state),
+            guidance
+        );
+
+        let mut touched_packages = AHashSet::<String>::new();
+        for module_name in cycle.iter() {
+            if let Some(module) = build_state.get_module(module_name)
+                && touched_packages.insert(module.package_name.clone())
+                && let Some(package) = build_state.get_package(&module.package_name)
+            {
+                logs::append(package, &message);
             }
         }
 
-        files_total_count += files_current_loop_count;
+        compile_errors.push_str(&message);
+    }
 
-        if files_total_count == compile_universe_count {
-            break;
+    // Collect warnings from modules that were not recompiled in this build
+    // but still have stored warnings from a previous compilation.
+    // This ensures warnings are not lost during incremental builds in watch mode.
+    for (module_name, module) in build_state.modules.iter() {
+        if compile_universe.contains(module_name) {
+            continue;
         }
-        if in_progress_modules.is_empty() || in_progress_modules.eq(&current_in_progres_modules) {
-            // find the dependency cycle
-            let cycle = dependency_cycle::find(
-                &compile_universe
-                    .iter()
-                    .map(|s| (s, build_state.get_module(s).unwrap()))
-                    .collect::<Vec<(&String, &Module)>>(),
-            );
-
-            compile_errors.push_str(&format!(
-                "\n{}\n{}\n",
-                style("Can't continue... Found a circular dependency in your code:").red(),
-                dependency_cycle::format(&cycle)
-            ))
+        if let SourceType::SourceFile(ref source_file) = module.source_type {
+            let package = build_state.get_package(&module.package_name);
+            if let Some(ref warning) = source_file.implementation.compile_warnings {
+                if let Some(package) = package {
+                    logs::append(package, warning);
+                }
+                compile_warnings.push_str(warning);
+            }
+            if let Some(ref interface) = source_file.interface
+                && let Some(ref warning) = interface.compile_warnings
+            {
+                if let Some(package) = package {
+                    logs::append(package, warning);
+                }
+                compile_warnings.push_str(warning);
+            }
         }
-        if !compile_errors.is_empty() {
-            break;
-        };
     }
 
     Ok((compile_errors, compile_warnings, num_compiled_modules))
 }
 
+static RUNTIME_PATH_MEMO: OnceLock<PathBuf> = OnceLock::new();
+
+pub fn get_runtime_path(package_config: &Config, project_context: &ProjectContext) -> Result<PathBuf> {
+    if let Some(p) = RUNTIME_PATH_MEMO.get() {
+        return Ok(p.clone());
+    }
+
+    let resolved = match std::env::var("RESCRIPT_RUNTIME") {
+        Ok(runtime_path) => Ok(PathBuf::from(runtime_path)),
+        Err(_) => match helpers::try_package_path(package_config, project_context, "@rescript/runtime") {
+            Ok(runtime_path) => Ok(runtime_path),
+            Err(err) => Err(anyhow!(
+                "The rescript runtime package could not be found.\nPlease set RESCRIPT_RUNTIME environment variable or make sure the runtime package is installed.\nError: {err}"
+            )),
+        },
+    }?;
+
+    let _ = RUNTIME_PATH_MEMO.set(resolved.clone());
+    Ok(resolved)
+}
+
+pub fn get_runtime_path_args(
+    package_config: &Config,
+    project_context: &ProjectContext,
+) -> Result<Vec<String>> {
+    let runtime_path = get_runtime_path(package_config, project_context)?;
+    Ok(vec![
+        "-runtime-path".to_string(),
+        runtime_path.to_string_lossy().to_string(),
+    ])
+}
+
 pub fn compiler_args(
     config: &config::Config,
-    root_config: &config::Config,
     ast_path: &Path,
-    version: &str,
     file_path: &Path,
     is_interface: bool,
     has_interface: bool,
-    project_root: &Path,
-    workspace_root: &Option<PathBuf>,
+    project_context: &ProjectContext,
     // if packages are known, we pass a reference here
-    // this saves us a scan to find their paths
+    // this saves us a scan to find their paths.
+    // This is None when called by build::get_compiler_args
     packages: &Option<&AHashMap<String, packages::Package>>,
-    build_dev_deps: bool,
-) -> Vec<String> {
-    let bsc_flags = config::flatten_flags(&config.bsc_flags);
-
-    let dependency_paths =
-        get_dependency_paths(config, project_root, workspace_root, packages, build_dev_deps);
-
+    // Is the file listed as "type":"dev"?
+    is_type_dev: bool,
+    is_local_dep: bool,
+    // Command-line --warn-error flag override (takes precedence over rescript.json config)
+    warn_error_override: Option<String>,
+    // Pre-expanded source directories for the current package (used by gentype).
+    // Pass an empty slice when unavailable (e.g. the compiler-args CLI command).
+    current_package_dirs: &[PathBuf],
+) -> Result<Vec<String>> {
+    let bsc_flags = config::flatten_flags(&config.compiler_flags);
+    let dependency_paths = get_dependency_paths(config, project_context, packages, is_type_dev);
     let module_name = helpers::file_path_to_module_name(file_path, &config.get_namespace());
 
     let namespace_args = match &config.get_namespace() {
@@ -393,32 +718,31 @@ pub fn compiler_args(
         packages::Namespace::NoNamespace => vec![],
     };
 
-    let uncurried_args = root_config.get_uncurried_args(version);
-    let gentype_arg = config.get_gentype_arg();
-
-    let warning_args: Vec<String> = match config.warnings.to_owned() {
-        None => vec![],
-        Some(warnings) => {
-            let warn_number = match warnings.number {
-                None => vec![],
-                Some(warnings) => {
-                    vec!["-w".to_string(), warnings.to_string()]
-                }
-            };
-
-            let warn_error = match warnings.error {
-                Some(config::Error::Catchall(true)) => {
-                    vec!["-warn-error".to_string(), "A".to_string()]
-                }
-                Some(config::Error::Qualified(errors)) => {
-                    vec!["-warn-error".to_string(), errors.to_string()]
-                }
-                _ => vec![],
-            };
-
-            [warn_number, warn_error].concat()
-        }
+    let root_config = project_context.get_root_config();
+    let jsx_args = root_config.get_jsx_args();
+    let jsx_module_args = root_config.get_jsx_module_args();
+    let jsx_mode_args = root_config.get_jsx_mode_args();
+    let jsx_preserve_args = root_config.get_jsx_preserve_args();
+    let bsb_project_root = project_context.get_root_path();
+    let dep_paths: Vec<(String, PathBuf)> = if config.gentype_config.is_some() {
+        let resolved = packages.as_ref().map(|pkgs| {
+            config
+                .dependencies
+                .iter()
+                .flatten()
+                .filter_map(|dep| {
+                    let name = dep.name();
+                    pkgs.get(name).map(|pkg| (name.to_string(), pkg.path.clone()))
+                })
+                .collect::<Vec<_>>()
+        });
+        resolved.unwrap_or_default()
+    } else {
+        Vec::new()
     };
+    let gentype_arg = config.get_gentype_args(current_package_dirs, Some(bsb_project_root), &dep_paths);
+    let experimental_args = root_config.get_experimental_features_args();
+    let warning_args = config.get_warning_args(is_local_dep, warn_error_override);
 
     let read_cmi_args = match has_interface {
         true => {
@@ -432,6 +756,7 @@ pub fn compiler_args(
     };
 
     let package_name_arg = vec!["-bs-package-name".to_string(), config.name.to_owned()];
+    let project_root_args = config.get_project_root_args();
 
     let implementation_args = if is_interface {
         debug!("Compiling interface file: {}", &module_name);
@@ -442,12 +767,12 @@ pub fn compiler_args(
 
         specs
             .iter()
-            .map(|spec| {
-                return vec![
+            .flat_map(|spec| {
+                vec![
                     "-bs-package-output".to_string(),
                     format!(
                         "{}:{}:{}",
-                        spec.module,
+                        spec.module.as_str(),
                         if spec.in_source {
                             file_path.parent().unwrap().to_str().unwrap().to_string()
                         } else {
@@ -462,39 +787,45 @@ pub fn compiler_args(
                         },
                         root_config.get_suffix(spec),
                     ),
-                ];
+                ]
             })
-            .flatten()
             .collect()
     };
 
-    vec![
+    let runtime_path_args = get_runtime_path_args(config, project_context)?;
+
+    Ok(vec![
         namespace_args,
         read_cmi_args,
         vec![
             "-I".to_string(),
             Path::new("..").join("ocaml").to_string_lossy().to_string(),
         ],
-        dependency_paths.concat(),
-        uncurried_args,
+        runtime_path_args,
+        dependency_paths,
+        jsx_args,
+        jsx_module_args,
+        jsx_mode_args,
+        jsx_preserve_args,
         bsc_flags.to_owned(),
         warning_args,
         gentype_arg,
+        experimental_args,
         // vec!["-warn-error".to_string(), "A".to_string()],
         // ^^ this one fails for bisect-ppx
         // this is the default
         // we should probably parse the right ones from the package config
         // vec!["-w".to_string(), "a".to_string()],
         package_name_arg,
+        project_root_args,
         implementation_args,
         // vec![
         //     "-I".to_string(),
         //     abs_node_modules_path.to_string() + "/rescript/ocaml",
         // ],
-        vec!["-bs-v".to_string(), format!("{}", version)],
         vec![ast_path.to_string_lossy().to_string()],
     ]
-    .concat()
+    .concat())
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -521,23 +852,20 @@ impl DependentPackage {
 
 fn get_dependency_paths(
     config: &config::Config,
-    project_root: &Path,
-    workspace_root: &Option<PathBuf>,
+    project_context: &ProjectContext,
     packages: &Option<&AHashMap<String, packages::Package>>,
-    build_dev_deps: bool,
-) -> Vec<Vec<String>> {
-    let normal_deps = config
-        .bs_dependencies
-        .clone()
-        .unwrap_or_default()
+    is_file_type_dev: bool,
+) -> Vec<String> {
+    let normal_deps: Vec<DependentPackage> = config
+        .get_dependency_names()
         .into_iter()
         .map(DependentPackage::Normal)
         .collect();
-    let dev_deps = if build_dev_deps {
+
+    // We can only access dev dependencies for source_files that are marked as "type":"dev"
+    let dev_deps: Vec<DependentPackage> = if is_file_type_dev {
         config
-            .bs_dev_dependencies
-            .clone()
-            .unwrap_or_default()
+            .get_dev_dependency_names()
             .into_iter()
             .map(DependentPackage::Dev)
             .collect()
@@ -556,7 +884,9 @@ fn get_dependency_paths(
                     .as_ref()
                     .map(|package| package.path.clone())
             } else {
-                packages::read_dependency(package_name, project_root, project_root, workspace_root).ok()
+                // packages will only be None when called by build::get_compiler_args
+                // in that case we can safely pass config as the package config.
+                packages::read_dependency(package_name, config, project_context).ok()
             }
             .map(|canonicalized_path| {
                 vec![
@@ -577,48 +907,57 @@ fn get_dependency_paths(
             dependency_path
         })
         .collect::<Vec<Vec<String>>>()
+        .concat()
 }
 
 fn compile_file(
     package: &packages::Package,
-    root_package: &packages::Package,
     ast_path: &Path,
     module: &Module,
-    version: &str,
     is_interface: bool,
-    bsc_path: &Path,
-    packages: &AHashMap<String, packages::Package>,
-    project_root: &Path,
-    workspace_root: &Option<PathBuf>,
-    build_dev_deps: bool,
-) -> Result<Option<String>, String> {
+    build_state: &BuildState,
+    warn_error_override: Option<String>,
+) -> Result<Option<String>> {
+    let BuildState {
+        packages,
+        project_context,
+        compiler_info,
+        ..
+    } = build_state;
+    let root_config = build_state.get_root_config();
     let ocaml_build_path_abs = package.get_ocaml_build_path();
     let build_path_abs = package.get_build_path();
     let implementation_file_path = match &module.source_type {
-        SourceType::SourceFile(ref source_file) => Ok(&source_file.implementation.path),
+        SourceType::SourceFile(source_file) => Ok(&source_file.implementation.path),
         sourcetype => Err(format!(
             "Tried to compile a file that is not a source file ({}). Path to AST: {}. ",
             sourcetype,
             ast_path.to_string_lossy()
         )),
-    }?;
-    let module_name = helpers::file_path_to_module_name(implementation_file_path, &package.namespace);
+    }
+    .map_err(|e| anyhow!(e))?;
+    let basename =
+        helpers::file_path_to_compiler_asset_basename(implementation_file_path, &package.namespace);
     let has_interface = module.get_interface().is_some();
+    let is_type_dev = module.is_type_dev;
+    // `gentype_dirs` is populated once during package discovery, so we just
+    // borrow the cached slice here (empty when gentype is off).
+    let current_package_dirs: &[PathBuf] = package.gentype_dirs.as_deref().unwrap_or(&[]);
     let to_mjs_args = compiler_args(
         &package.config,
-        &root_package.config,
         ast_path,
-        version,
         implementation_file_path,
         is_interface,
         has_interface,
-        project_root,
-        workspace_root,
+        project_context,
         &Some(packages),
-        build_dev_deps,
-    );
+        is_type_dev,
+        package.is_local_dep,
+        warn_error_override,
+        current_package_dirs,
+    )?;
 
-    let to_mjs = Command::new(bsc_path)
+    let to_mjs = Command::new(&compiler_info.bsc_path)
         .current_dir(
             build_path_abs
                 .canonicalize()
@@ -633,18 +972,17 @@ fn compile_file(
         Ok(x) if !x.status.success() => {
             let stderr = String::from_utf8_lossy(&x.stderr);
             let stdout = String::from_utf8_lossy(&x.stdout);
-            Err(stderr.to_string() + &stdout)
+            Err(anyhow!(stderr.to_string() + &stdout))
         }
-        Err(e) => Err(format!(
-            "Could not compile file. Error: {}. Path to AST: {:?}",
-            e, ast_path
+        Err(e) => Err(anyhow!(
+            "Could not compile file. Error: {e}. Path to AST: {ast_path:?}"
         )),
         Ok(x) => {
             let err = std::str::from_utf8(&x.stderr)
                 .expect("stdout should be non-null")
                 .to_string();
 
-            let dir = std::path::Path::new(implementation_file_path).parent().unwrap();
+            let dir = Path::new(implementation_file_path).parent().unwrap();
 
             // perhaps we can do this copying somewhere else
             if !is_interface {
@@ -655,15 +993,12 @@ fn compile_file(
                         // because editor tooling doesn't support namespace entries yet
                         // we just remove the @ for now. This makes sure the editor support
                         // doesn't break
-                        .join(format!("{}.cmi", module_name)),
-                    ocaml_build_path_abs.join(format!("{}.cmi", module_name)),
+                        .join(format!("{basename}.cmi")),
+                    ocaml_build_path_abs.join(format!("{basename}.cmi")),
                 );
                 let _ = std::fs::copy(
-                    package
-                        .get_build_path()
-                        .join(dir)
-                        .join(format!("{}.cmj", module_name)),
-                    ocaml_build_path_abs.join(format!("{}.cmj", module_name)),
+                    package.get_build_path().join(dir).join(format!("{basename}.cmj")),
+                    ocaml_build_path_abs.join(format!("{basename}.cmj")),
                 );
                 let _ = std::fs::copy(
                     package
@@ -672,113 +1007,171 @@ fn compile_file(
                         // because editor tooling doesn't support namespace entries yet
                         // we just remove the @ for now. This makes sure the editor support
                         // doesn't break
-                        .join(format!("{}.cmt", module_name)),
-                    ocaml_build_path_abs.join(format!("{}.cmt", module_name)),
+                        .join(format!("{basename}.cmt")),
+                    ocaml_build_path_abs.join(format!("{basename}.cmt")),
                 );
             } else {
                 let _ = std::fs::copy(
                     package
                         .get_build_path()
                         .join(dir)
-                        .join(format!("{}.cmti", module_name)),
-                    ocaml_build_path_abs.join(format!("{}.cmti", module_name)),
+                        .join(format!("{basename}.cmti")),
+                    ocaml_build_path_abs.join(format!("{basename}.cmti")),
                 );
                 let _ = std::fs::copy(
-                    package
-                        .get_build_path()
-                        .join(dir)
-                        .join(format!("{}.cmi", module_name)),
-                    ocaml_build_path_abs.join(format!("{}.cmi", module_name)),
+                    package.get_build_path().join(dir).join(format!("{basename}.cmi")),
+                    ocaml_build_path_abs.join(format!("{basename}.cmi")),
                 );
             }
 
-            match &module.source_type {
-                SourceType::SourceFile(SourceFile {
-                    interface: Some(Interface { path, .. }),
-                    ..
-                }) => {
-                    // we need to copy the source file to the build directory.
-                    // editor tools expects the source file in lib/bs for finding the current package
-                    // and in lib/ocaml when referencing modules in other packages
-                    let _ = std::fs::copy(
-                        Path::new(&package.path).join(path),
-                        package.get_build_path().join(path),
-                    )
-                    .expect("copying source file failed");
+            if let SourceType::SourceFile(SourceFile {
+                interface: Some(Interface { path, .. }),
+                ..
+            }) = &module.source_type
+            {
+                // we need to copy the source file to the build directory.
+                // editor tools expects the source file in lib/bs for finding the current package
+                // and in lib/ocaml when referencing modules in other packages
+                let _ = std::fs::copy(
+                    Path::new(&package.path).join(path),
+                    package.get_build_path().join(path),
+                )
+                .expect("copying source file failed");
 
-                    let _ = std::fs::copy(
-                        Path::new(&package.path).join(path),
-                        package
-                            .get_ocaml_build_path()
-                            .join(std::path::Path::new(path).file_name().unwrap()),
-                    )
-                    .expect("copying source file failed");
-                }
-                _ => (),
+                let _ = std::fs::copy(
+                    Path::new(&package.path).join(path),
+                    package
+                        .get_ocaml_build_path()
+                        .join(std::path::Path::new(path).file_name().unwrap()),
+                )
+                .expect("copying source file failed");
             }
-            match &module.source_type {
-                SourceType::SourceFile(SourceFile {
-                    implementation: Implementation { path, .. },
-                    ..
-                }) => {
-                    // we need to copy the source file to the build directory.
-                    // editor tools expects the source file in lib/bs for finding the current package
-                    // and in lib/ocaml when referencing modules in other packages
-                    let _ = std::fs::copy(
-                        Path::new(&package.path).join(path),
-                        package.get_build_path().join(path),
-                    )
-                    .expect("copying source file failed");
+            if let SourceType::SourceFile(SourceFile {
+                implementation: Implementation { path, .. },
+                ..
+            }) = &module.source_type
+            {
+                // we need to copy the source file to the build directory.
+                // editor tools expects the source file in lib/bs for finding the current package
+                // and in lib/ocaml when referencing modules in other packages
+                let _ = std::fs::copy(
+                    Path::new(&package.path).join(path),
+                    package.get_build_path().join(path),
+                )
+                .expect("copying source file failed");
 
-                    let _ = std::fs::copy(
-                        Path::new(&package.path).join(path),
-                        package
-                            .get_ocaml_build_path()
-                            .join(std::path::Path::new(path).file_name().unwrap()),
-                    )
-                    .expect("copying source file failed");
-                }
-                _ => (),
+                let _ = std::fs::copy(
+                    Path::new(&package.path).join(path),
+                    package
+                        .get_ocaml_build_path()
+                        .join(std::path::Path::new(path).file_name().unwrap()),
+                )
+                .expect("copying source file failed");
             }
 
             // copy js file
-            root_package.config.get_package_specs().iter().for_each(|spec| {
-                if spec.in_source {
-                    match &module.source_type {
-                        SourceType::SourceFile(SourceFile {
-                            implementation: Implementation { path, .. },
-                            ..
-                        }) => {
-                            let source = helpers::get_source_file_from_rescript_file(
-                                &Path::new(&package.path).join(path),
-                                &root_package.config.get_suffix(spec),
-                            );
-                            let destination = helpers::get_source_file_from_rescript_file(
-                                &package.get_build_path().join(path),
-                                &root_package.config.get_suffix(spec),
-                            );
+            root_config.get_package_specs().iter().for_each(|spec| {
+                if spec.in_source
+                    && let SourceType::SourceFile(SourceFile {
+                        implementation: Implementation { path, .. },
+                        ..
+                    }) = &module.source_type
+                {
+                    let source = helpers::get_source_file_from_rescript_file(
+                        &Path::new(&package.path).join(path),
+                        &root_config.get_suffix(spec),
+                    );
+                    let destination = helpers::get_source_file_from_rescript_file(
+                        &package.get_build_path().join(path),
+                        &root_config.get_suffix(spec),
+                    );
 
-                            if source.exists() {
-                                let _ =
-                                    std::fs::copy(&source, &destination).expect("copying source file failed");
-                            }
-                        }
-                        _ => (),
+                    if source.exists() {
+                        let _ = std::fs::copy(&source, &destination).expect("copying source file failed");
                     }
                 }
             });
 
+            // Execute js-post-build command if configured
+            // Only run for implementation files (not interfaces)
+            if !is_interface
+                && let Some(js_post_build) = &package.config.js_post_build
+                && let SourceType::SourceFile(SourceFile {
+                    implementation: Implementation { path, .. },
+                    ..
+                }) = &module.source_type
+            {
+                // Execute post-build command for each package spec (each output format)
+                for spec in root_config.get_package_specs() {
+                    // Determine the correct JS file path based on in-source setting:
+                    // - in-source: true  -> next to the source file (e.g., src/Foo.js)
+                    // - in-source: false -> in lib/<module>/ directory (e.g., lib/es6/src/Foo.js)
+                    let js_file = if spec.in_source {
+                        helpers::get_source_file_from_rescript_file(
+                            &Path::new(&package.path).join(path),
+                            &root_config.get_suffix(&spec),
+                        )
+                    } else {
+                        helpers::get_source_file_from_rescript_file(
+                            &Path::new(&package.path)
+                                .join("lib")
+                                .join(spec.get_out_of_source_dir())
+                                .join(path),
+                            &root_config.get_suffix(&spec),
+                        )
+                    };
+
+                    if js_file.exists() {
+                        // Fail the build if post-build command fails (matches bsb behavior with &&)
+                        // Run in the package's directory (where rescript.json is defined)
+                        execute_post_build_command(&js_post_build.cmd, &js_file, &package.path)?;
+                    }
+                }
+            }
+
             if helpers::contains_ascii_characters(&err) {
-                if package.is_pinned_dep || package.is_local_dep {
-                    // supress warnings of external deps
+                if package.is_local_dep {
                     Ok(Some(err))
                 } else {
-                    Ok(None)
+                    // Warnings from external deps are suppressed by default —
+                    // users can't act on them. A small allow-list of critical
+                    // deprecations still gets through so breakage signals are
+                    // visible (and can be reported upstream).
+                    Ok(retain_critical_external_warnings(&err))
                 }
             } else {
                 Ok(None)
             }
         }
+    }
+}
+
+/// Filter a bsc stderr capture to the warning blocks the user needs to see
+/// even when they originate in an external dependency.
+///
+/// Currently preserved:
+/// - Warning 3 deprecations mentioning the legacy `(. ...)` uncurried syntax.
+///   These indicate source that parses today but is scheduled for removal, so
+///   consumers need to hear about them even when the code isn't theirs.
+pub(super) fn retain_critical_external_warnings(stderr: &str) -> Option<String> {
+    const UNCURRIED_DOT_MARKER: &str = "`(. ...)` uncurried syntax";
+    if !stderr.contains(UNCURRIED_DOT_MARKER) {
+        return None;
+    }
+    // bsc prints each warning as its own block separated by a blank-line pair
+    // (three consecutive newlines). On Windows the same stream uses CRLF, so
+    // normalize before splitting to keep the block boundary recognizable —
+    // otherwise the whole stderr would be treated as a single block and
+    // unrelated warnings would leak through alongside the critical one.
+    let normalized = stderr.replace("\r\n", "\n");
+    let kept: Vec<&str> = normalized
+        .split("\n\n\n")
+        .filter(|block| block.contains(UNCURRIED_DOT_MARKER))
+        .collect();
+    if kept.is_empty() {
+        None
+    } else {
+        Some(kept.join("\n\n\n"))
     }
 }
 
@@ -804,7 +1197,7 @@ pub fn mark_modules_with_deleted_deps_dirty(build_state: &mut BuildState) {
 //
 // We could clean up the build after errors. But I think we probably still need
 // to do this, because people can also force quit the watcher of
-pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildState) {
+pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildCommandState) {
     let mut modules_with_expired_deps: AHashSet<String> = AHashSet::new();
     build_state
         .modules
@@ -863,10 +1256,9 @@ pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildState) {
 
                             if let (Some(last_compiled_dependent), Some(last_compiled)) =
                                 (dependent_module.last_compiled_cmt, module.last_compiled_cmt)
+                                && last_compiled_dependent < last_compiled
                             {
-                                if last_compiled_dependent < last_compiled {
-                                    modules_with_expired_deps.insert(dependent.to_string());
-                                }
+                                modules_with_expired_deps.insert(dependent.to_string());
                             }
                         }
                     }
@@ -878,4 +1270,43 @@ pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildState) {
             module.compile_dirty = true;
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn retain_critical_external_warnings_returns_none_without_marker() {
+        let input = "\n  Warning number 26\n  foo.res:1:1\n\n  unused variable x.\n";
+        assert_eq!(retain_critical_external_warnings(input), None);
+    }
+
+    #[test]
+    fn retain_critical_external_warnings_keeps_uncurried_dot_block() {
+        let input = concat!(
+            "\n  Warning number 26\n  foo.res:1:1\n\n  unused variable x.\n",
+            "\n\n\n  Warning number 3\n  bar.res:5:10\n\n  ",
+            "deprecated: The `(. ...)` uncurried syntax is deprecated.\n",
+        );
+        let kept = retain_critical_external_warnings(input).expect("uncurried-dot warning should survive");
+        assert!(kept.contains("`(. ...)` uncurried syntax"));
+        assert!(!kept.contains("unused variable"));
+    }
+
+    #[test]
+    fn retain_critical_external_warnings_handles_crlf_line_endings() {
+        // Windows stderr from bsc uses CRLF. Without normalization the "\n\n\n"
+        // splitter would find no boundary and return the entire stream, which
+        // would effectively disable suppression for external deps on Windows.
+        let input = concat!(
+            "\r\n  Warning number 26\r\n  foo.res:1:1\r\n\r\n  unused variable x.\r\n",
+            "\r\n\r\n\r\n  Warning number 3\r\n  bar.res:5:10\r\n\r\n  ",
+            "deprecated: The `(. ...)` uncurried syntax is deprecated.\r\n",
+        );
+        let kept = retain_critical_external_warnings(input)
+            .expect("uncurried-dot warning should survive on Windows too");
+        assert!(kept.contains("`(. ...)` uncurried syntax"));
+        assert!(!kept.contains("unused variable"));
+    }
 }

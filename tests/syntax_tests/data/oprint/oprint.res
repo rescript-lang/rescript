@@ -219,9 +219,9 @@ type exoticUser = {
   \"Upper": int
 }
 
-type arity1a = (. ()) => int
-type arity1b = (. int) => int
-type arity2 = (. int, int) => int
+type arity1a = (()) => int
+type arity1b = (int) => int
+type arity2 = (int, int) => int
 
 type obj1<'a> = option<{"a": int}>
 type obj2 = {"a": int}

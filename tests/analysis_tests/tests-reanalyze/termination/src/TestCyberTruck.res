@@ -145,7 +145,7 @@ module Parser = {
     | Asterisk => "*"
     | Eof => "Eof"
     | Lparen => "("
-    | Int(n) => string_of_int(n)
+    | Int(n) => Int.toString(n)
     | Plus => "+"
     | Rparen => ")"
     }
@@ -256,7 +256,7 @@ module UITermination = {
 
   let counter = (state: state, ~setState: setState) => {
     setState(~f=initState)
-    div(~text=string_of_int(state), ~onClick=() => setState(~f=increment))
+    div(~text=Int.toString(state), ~onClick=() => setState(~f=increment))
   }
 
   @progress(initState)
@@ -265,7 +265,7 @@ module UITermination = {
     | None => ()
     | Some(newState) => ignore(counterCompiled(newState))
     }
-    ignore(string_of_int(state))
+    ignore(Int.toString(state))
   }
 
   and onClick1 = state =>
@@ -276,7 +276,7 @@ module UITermination = {
 
   let countRenders = (state: state, ~setState: setState) => {
     setState(~f=increment)
-    div(~text="I have been rendered " ++ (string_of_int(state) ++ " times"), ~onClick=nothing)
+    div(~text="I have been rendered " ++ (Int.toString(state) ++ " times"), ~onClick=nothing)
   }
 
   @progress(initState)
@@ -285,7 +285,7 @@ module UITermination = {
     | None => ()
     | Some(newState) => ignore(countRendersCompiled(newState))
     }
-    ignore("I have been rendered " ++ (string_of_int(state) ++ " times"))
+    ignore("I have been rendered " ++ (Int.toString(state) ++ " times"))
   }
 }
 

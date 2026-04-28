@@ -1,1 +1,1 @@
-type t = Commonjs | Esmodule | Es6_global
+type t = Commonjs | Esmodule

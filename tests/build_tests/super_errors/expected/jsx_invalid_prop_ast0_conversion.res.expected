@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/jsx_invalid_prop_ast0_conversion.res[0m:[2m18:20-22[0m
+
+  16 [2m│[0m }
+  17 [2m│[0m 
+  [1;31m18[0m [2m│[0m let _ = <Component [1;31mbar[0m="hello" />
+  19 [2m│[0m 
+
+  The prop [1;31mbar[0m does not belong to the JSX component [1;33m<Component />[0m

@@ -1,4 +1,5 @@
-output="expected/deadcode.txt"
+DEBUG_FLAG="-debug"
+
 if [ "$RUNNER_OS" == "Windows" ]; then
   exclude_dirs="src\exception"
   suppress="src\ToSuppress.res"
@@ -6,7 +7,10 @@ else
   exclude_dirs="src/exception"
   suppress="src/ToSuppress.res"
 fi
-dune exec rescript-editor-analysis -- reanalyze -config -debug -ci -exclude-paths $exclude_dirs -live-names globallyLive1 -live-names globallyLive2,globallyLive3 -suppress $suppress > $output
+
+# Generate expected files (sequential)
+output="expected/deadcode.txt"
+dune exec rescript-tools -- reanalyze -config $DEBUG_FLAG -ci -exclude-paths $exclude_dirs -live-names globallyLive1 -live-names globallyLive2,globallyLive3 -suppress $suppress > $output
 # CI. We use LF, and the CI OCaml fork prints CRLF. Convert.
 if [ "$RUNNER_OS" == "Windows" ]; then
   perl -pi -e 's/\r\n/\n/g' -- $output
@@ -18,12 +22,11 @@ if [ "$RUNNER_OS" == "Windows" ]; then
 else
   unsuppress_dirs="src/exception"
 fi
-dune exec rescript-editor-analysis -- reanalyze -exception -ci -suppress src -unsuppress $unsuppress_dirs > $output
+dune exec rescript-tools -- reanalyze -exception -ci -suppress src -unsuppress $unsuppress_dirs > $output
 # CI. We use LF, and the CI OCaml fork prints CRLF. Convert.
 if [ "$RUNNER_OS" == "Windows" ]; then
   perl -pi -e 's/\r\n/\n/g' -- $output
 fi
-
 
 warningYellow='\033[0;33m'
 successGreen='\033[0;32m'

@@ -13,5 +13,4 @@
   You're passing a [1;31mReScript object[0m where a [1;33mrecord[0m is expected. Objects are written with quoted keys, and records with unquoted keys.
   
   Possible solutions: 
-  - Rewrite the object to a record, like: [1;33m{one: true}
-[0m
+  - Rewrite the object to a record, like: [1;33m{one: true}[0m

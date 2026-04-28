@@ -5,13 +5,13 @@ type t
 type abi
 
 type ethAddress = string
-type ethersBigNumber = {toString: (. unit) => string}
+type ethersBigNumber = {toString: (unit) => string}
 
 type rawProvider
 
 type rec web3Library = {
-  getBalance: (. ethAddress) => Promise.promise<option<ethersBigNumber>>,
-  getSigner: (. ethAddress) => web3Library,
+  getBalance: (ethAddress) => Promise.promise<option<ethersBigNumber>>,
+  getSigner: (ethAddress) => web3Library,
   provider: rawProvider,
 }
 
@@ -29,7 +29,7 @@ type rpcResult = {result: result}
 external sendAsync: (
   rawProvider,
   rpcDefinition,
-  (. Js.Nullable.t<error>, rpcResult) => unit,
+  (Js.Nullable.t<error>, rpcResult) => unit,
 ) => unit = "sendAsync"
 
 @new @module("web3") external new_: rawProvider => t = "default"
@@ -53,7 +53,7 @@ module Contract = {
   // external getContract: (t, abi, ethAddress) => contract = "Contract";
 
   // Temporary code until I work out how to make the above binding work...
-  let getContract: (. t, abi, ethAddress) => contract = %raw(`
+  let getContract: (t, abi, ethAddress) => contract = %raw(`
       (web3, abi, contractAddress) => new web3.eth.Contract(abi, contractAddress)
     `)
 
@@ -132,6 +132,6 @@ module Contract = {
     external stewardMaticAbi: abi = "stewardMatic"
 
     let getStewardContract = (web3, address): steward =>
-      getContract(. web3, stewardMaticAbi, address)->Obj.magic
+      getContract(web3, stewardMaticAbi, address)->Obj.magic
   }
 }

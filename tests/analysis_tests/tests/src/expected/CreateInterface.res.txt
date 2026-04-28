@@ -73,34 +73,34 @@ module rec RM: ModTyp
 and D: ModTyp
 module type OptT = {
   @react.component
-  let withOpt1: (~x: int=?, ~y: int) => int
+  let withOpt1: (~x: int=?, ~y: int) => React.element
   module type Opt2 = {
     @react.component
-    let withOpt2: (~x: int=?, ~y: int) => int
+    let withOpt2: (~x: int=?, ~y: int) => React.element
   }
   module type Opt3 = {
     @react.component
-    let withOpt3: (~x: option<int>, ~y: int) => int
+    let withOpt3: (~x: option<int>, ~y: int) => React.element
   }
 }
 module Opt: {
   @react.component
-  let withOpt1: (~x: int=?, ~y: int) => int
+  let withOpt1: (~x: int=?, ~y: int) => React.element
   module Opt2: {
     @react.component
-    let withOpt2: (~x: int=?, ~y: int) => int
+    let withOpt2: (~x: int=?, ~y: int) => React.element
   }
   module type Opt2 = {
     @react.component
-    let withOpt2: (~x: int=?, ~y: int) => int
+    let withOpt2: (~x: int=?, ~y: int) => React.element
   }
   module Opt3: {
     @react.component
-    let withOpt3: (~x: option<int>, ~y: int) => int
+    let withOpt3: (~x: option<int>, ~y: int) => React.element
   }
   module type Opt3 = {
     @react.component
-    let withOpt3: (~x: option<int>, ~y: int) => int
+    let withOpt3: (~x: option<int>, ~y: int) => React.element
   }
 }
 module Opt2: OptT
@@ -108,5 +108,28 @@ module Opt3 = Opt
 module Memo: {
   @react.component
   let make: (~name: string) => React.element
+}
+external x: (@as("bar") ~foo: int) => unit = "myexternal"
+type record = {
+  @as("foo_bar")
+  fooBar: int
+}
+type poly = [#a(int) | #b(string) | #c(float)]
+type red = [#Ruby | #Redwood | #Rust]
+type blue = [#Sapphire | #Neon | #Navy]
+type color = [red | blue | #Papayawhip]
+external upperBound: ([< #d | #e | #f]) => unit = "myexternal"
+external lowerBound: ([> #d | #e | #f]) => unit = "myexternal"
+module ComponentWithPolyProp: {
+  @react.component
+  let make: (~size: [< #large | #small]=?) => React.element
+}
+module OrderedSet: {
+  type t<'a, 'identity> = {
+    cmp: ('a, 'a) => int,
+    set: Belt.Set.t<'a, 'identity>,
+    array: array<'a>,
+  }
+  let make: (~id: module(Belt.Id.Comparable with type identity = 'a and type t = 'b)) => t<'b, 'a>
 }
 

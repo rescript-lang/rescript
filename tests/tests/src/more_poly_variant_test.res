@@ -46,7 +46,7 @@ type x = [#a | #b | #c]
 let f2 = x =>
   switch x {
   | #...myvariant2 as x =>
-    Js.log(x)
+    Console.log(x)
     2
   | #hello => 3
   | #h => 2

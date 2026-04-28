@@ -35,6 +35,7 @@ val type_expression :
   Typedtree.expression
 val check_partial :
   ?lev:int ->
+  ?partial_match_warning_hint:string ->
   Env.t ->
   type_expr ->
   Location.t ->
@@ -58,7 +59,12 @@ val name_pattern : string -> Typedtree.case list -> Ident.t
 
 type error =
   | Polymorphic_label of Longident.t
-  | Constructor_arity_mismatch of Longident.t * int * int
+  | Constructor_arity_mismatch of {
+      name: Longident.t;
+      constuctor: constructor_description;
+      expected: int;
+      provided: int;
+    }
   | Label_mismatch of Longident.t * (type_expr * type_expr) list
   | Pattern_type_clash of (type_expr * type_expr) list
   | Or_pattern_type_clash of Ident.t * (type_expr * type_expr) list
@@ -69,7 +75,7 @@ type error =
       context: Error_message_utils.type_clash_context option;
     }
   | Apply_non_function of type_expr
-  | Apply_wrong_label of Noloc.arg_label * type_expr
+  | Apply_wrong_label of arg_label * type_expr
   | Label_multiply_defined of {
       label: string;
       jsx_component_info: Error_message_utils.jsx_prop_error_info option;
@@ -88,7 +94,7 @@ type error =
   | Not_subtype of
       Ctype.type_pairs * Ctype.type_pairs * Ctype.subtype_context option
   | Too_many_arguments of bool * type_expr
-  | Abstract_wrong_label of Noloc.arg_label * type_expr
+  | Abstract_wrong_label of arg_label * type_expr
   | Scoping_let_module of string * type_expr
   | Not_a_variant_type of Longident.t
   | Incoherent_label_order
@@ -101,21 +107,31 @@ type error =
   | Unqualified_gadt_pattern of Path.t * string
   | Invalid_interval
   | Invalid_for_loop_index
+  | Invalid_for_of_pattern
   | No_value_clauses
   | Exception_pattern_below_toplevel
   | Inlined_record_escape
   | Inlined_record_expected
   | Invalid_extension_constructor_payload
   | Not_an_extension_constructor
+  | Break_outside_loop
+  | Continue_outside_loop
   | Literal_overflow of string
   | Unknown_literal of string * char
   | Illegal_letrec_pat
   | Empty_record_literal
-  | Uncurried_arity_mismatch of
-      type_expr * int * int * Asttypes.Noloc.arg_label list
+  | Uncurried_arity_mismatch of {
+      function_type: type_expr;
+      expected_arity: int;
+      provided_arity: int;
+      provided_args: Asttypes.arg_label list;
+      function_name: Longident.t option;
+    }
   | Field_not_optional of string * type_expr
   | Type_params_not_supported of Longident.t
   | Field_access_on_dict_type
+  | Jsx_not_enabled
+
 exception Error of Location.t * Env.t * error
 exception Error_forward of Location.error
 

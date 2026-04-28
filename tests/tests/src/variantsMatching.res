@@ -172,7 +172,7 @@ module MyNullable = {
     }
 
   let expectSeven = plus(Present(3), Present(4))
-  Js.log2("expect 7:", expectSeven)
+  Console.log2("expect 7:", expectSeven)
 }
 
 module MyNullableExtended = {
@@ -212,7 +212,7 @@ module MyNullableExtended = {
     }
 
   let expectSeven = plus(Present({x: 4., y: 3.}), Present({x: 3., y: 4.}))
-  Js.log2("expect {x:7, y:7}:", expectSeven)
+  Console.log2("expect {x:7, y:7}:", expectSeven)
 }
 
 module TaggedUnions = {

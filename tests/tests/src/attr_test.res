@@ -16,4 +16,4 @@ let hh = max2(1., 2.)
 
 @val external des: (string, unit => unit) => unit = "des"
 
-let f = x => des(x, () => Js.log("hei"))
+let f = x => des(x, () => Console.log("hei"))

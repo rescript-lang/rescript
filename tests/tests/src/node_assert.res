@@ -5,4 +5,4 @@
 external notDeepEqual: ('a, 'a, ~message: string=?) => unit = "notDeepStrictEqual"
 @module("node:assert") external fail: (~message: string=?) => unit = "fail"
 @module("node:assert")
-external throws: (unit => unit, ~error: 'a=?, ~message: string=?) => unit = "throws"
+external throws: (unit => 'a, ~error: 'b=?, ~message: string=?) => unit = "throws"

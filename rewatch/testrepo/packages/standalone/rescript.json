@@ -1,0 +1,13 @@
+{
+    "name": "standalone",
+    "sources": {
+        "dir": "src",
+        "subdirs": true
+    },
+    "package-specs": {
+        "module": "esmodule",
+        "in-source": true
+    },
+    "suffix": ".mjs",
+    "dependencies": ["@testrepo/dep01"]
+}

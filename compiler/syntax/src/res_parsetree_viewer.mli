@@ -4,9 +4,7 @@
 val arrow_type :
   ?max_arity:int ->
   Parsetree.core_type ->
-  Parsetree.attributes
-  * (Parsetree.attributes * Asttypes.arg_label * Parsetree.core_type) list
-  * Parsetree.core_type
+  Parsetree.attributes * Parsetree.arg list * Parsetree.core_type
 
 val functor_type :
   Parsetree.module_type ->
@@ -19,6 +17,11 @@ val has_await_attribute : Parsetree.attributes -> bool
 val has_inline_record_definition_attribute : Parsetree.attributes -> bool
 val has_res_pat_variant_spread_attribute : Parsetree.attributes -> bool
 val has_dict_pattern_attribute : Parsetree.attributes -> bool
+val has_dict_spread_attribute : Parsetree.attributes -> bool
+
+type dict_expr_part =
+  | DictExprRows of Parsetree.expression
+  | DictExprSpread of Parsetree.expression
 
 type if_condition_kind =
   | If of Parsetree.expression
@@ -68,7 +71,6 @@ val operator_precedence : string -> int
 
 val not_ghost_operator : string -> Location.t -> bool
 val is_unary_expression : Parsetree.expression -> bool
-val is_unary_bitnot_expression : Parsetree.expression -> bool
 val is_binary_operator : string -> bool
 val is_binary_expression : Parsetree.expression -> bool
 val is_rhs_binary_operator : string -> bool
@@ -135,6 +137,9 @@ val is_spread_belt_list_concat : Parsetree.expression -> bool
 
 val is_spread_belt_array_concat : Parsetree.expression -> bool
 
+val collect_spread_dict_expr_parts :
+  Parsetree.expression -> dict_expr_part list option
+
 val collect_or_pattern_chain : Parsetree.pattern -> Parsetree.pattern list
 
 val process_braces_attr :
@@ -148,6 +153,9 @@ val is_single_pipe_expr : Parsetree.expression -> bool
 
 (* (__x) => f(a, __x, c) -----> f(a, _, c)  *)
 val rewrite_underscore_apply : Parsetree.expression -> Parsetree.expression
+
+val rewrite_underscore_apply_in_pipe :
+  Parsetree.expression -> Parsetree.expression
 
 (* (__x) => f(a, __x, c) -----> f(a, _, c)  *)
 val is_underscore_apply_sugar : Parsetree.expression -> bool

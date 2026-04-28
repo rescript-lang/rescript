@@ -26,9 +26,9 @@ module StandardNotation = {
 
   type counter
   @set external setIncrementC: (counter, @this (counter, int) => unit) => unit = "increment"
-  let tsiC = c => setIncrementC(c, @this (me, amount) => Js.log(me))
+  let tsiC = c => setIncrementC(c, @this (me, amount) => Console.log(me))
   @set external setIncrementU: (counter, @this (counter, int) => unit) => unit = "increment"
-  let tsiU = c => setIncrementU(c, @this (me, amount) => Js.log(me))
+  let tsiU = c => setIncrementU(c, @this (me, amount) => Console.log(me))
 
   @module("react")
   external useState: (unit => 'state) => ('state, ('state => 'state) => unit) = "useState"
@@ -36,3 +36,17 @@ module StandardNotation = {
 }
 
 let methodWithAsync = @this this => async arg => this + arg
+
+module AsyncMethod = {
+  type pluginContext
+  type changeEvent
+
+  type p = {watch: @this (pluginContext, string, changeEvent) => promise<unit>}
+
+  let p1 = {
+    watch: @this
+    async (pc, name, ev) => {
+      Console.log(pc)
+    },
+  }
+}

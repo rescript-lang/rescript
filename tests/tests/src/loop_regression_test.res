@@ -1,3 +1,6 @@
+open Mocha
+open Test_utils
+
 let f = () => {
   let v = ref(0)
   let acc = ref(0)
@@ -13,9 +16,8 @@ let f = () => {
   loop(10)
 }
 
-let suites = {
-  open Mt
-  list{("sum", _ => Eq(55, f()))}
-}
-
-Mt.from_pair_suites(__MODULE__, suites)
+describe(__MODULE__, () => {
+  test("sum", () => {
+    eq(__LOC__, 55, f())
+  })
+})

@@ -52,7 +52,7 @@ let v = (a, ()): unit =>
     ignore(true)
     a(3)
   } {
-    ignore(Js.log(3))
+    ignore(Console.log(3))
   }
 
 type cxt =

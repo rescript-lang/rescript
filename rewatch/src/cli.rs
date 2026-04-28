@@ -1,0 +1,664 @@
+// We currently use https://docs.rs/clap/latest/clap/ v4 for command line parsing.
+// However, it does not fully fit our use case as it does not support default commands,
+// but we want to default to the "build" command if no other command is specified.
+//
+// Various workarounds exist, but each with its own drawbacks.
+// The workaround implemented here (injecting "build" into the args at the right place
+// and then parsing again if no other command matches at the first parse attempt)
+// avoids flattening all build command options into the root help, but requires careful
+// handling of edge cases regarding global flags.
+// Correctness is ensured by a comprehensive test suite.
+//
+// However, we may want to revisit the decision to use clap after the v12 release.
+
+use std::{env, ffi::OsString, ops::Deref, path::Path};
+
+use clap::{Args, CommandFactory, Parser, Subcommand, error::ErrorKind};
+use clap_verbosity_flag::InfoLevel;
+use regex::Regex;
+
+fn parse_regex(s: &str) -> Result<Regex, regex::Error> {
+    Regex::new(s)
+}
+
+use clap::ValueEnum;
+
+#[derive(Debug, Clone, ValueEnum)]
+pub enum FileExtension {
+    #[value(name = ".res")]
+    Res,
+    #[value(name = ".resi")]
+    Resi,
+}
+
+/// ReScript - Fast, Simple, Fully Typed JavaScript from the Future
+#[derive(Parser, Debug)]
+// The shipped binary is `rescript.exe` everywhere, but users invoke it as `rescript` (e.g.
+// via `npm run rescript`). Without forcing `bin_name`, clap would print `rescript.exe` in help,
+// which leaks the packaging detail into the CLI UX.
+#[command(name = "rescript", bin_name = "rescript")]
+#[command(version)]
+#[command(after_help = "[1m[1m[4mNotes:[0m
+  - If no command is provided, the [1mbuild[0m command is run by default. See `rescript help build` for more information.
+  - To create a new ReScript project, or to add ReScript to an existing project, use https://github.com/rescript-lang/create-rescript-app.")]
+pub struct Cli {
+    /// Verbosity:
+    /// -v -> Debug
+    /// -vv -> Trace
+    /// -q -> Warn
+    /// -qq -> Error
+    /// -qqq -> Off.
+    /// Default (/ no argument given): 'info'
+    #[command(flatten)]
+    pub verbose: clap_verbosity_flag::Verbosity<InfoLevel>,
+
+    /// The command to run. If not provided it will default to build.
+    #[command(subcommand)]
+    pub command: Command,
+}
+
+/// Parse argv from the current process while treating `build` as the implicit default subcommand
+/// when clap indicates the user omitted one. This keeps the top-level help compact while still
+/// supporting bare `rescript …` invocations that expect to run the build.
+pub fn parse_with_default() -> Result<Cli, clap::Error> {
+    // Use `args_os` so non-UTF bytes still reach clap for proper error reporting on platforms that
+    // allow arbitrary argv content.
+    let raw_args: Vec<OsString> = env::args_os().collect();
+    parse_with_default_from(&raw_args)
+}
+
+/// Parse the provided argv while applying the implicit `build` defaulting rules.
+pub fn parse_with_default_from(raw_args: &[OsString]) -> Result<Cli, clap::Error> {
+    match Cli::try_parse_from(raw_args) {
+        Ok(cli) => Ok(cli),
+        Err(err) => {
+            if should_default_to_build(&err, raw_args) {
+                let fallback_args = build_default_args(raw_args);
+                Cli::try_parse_from(&fallback_args)
+            } else {
+                Err(err)
+            }
+        }
+    }
+}
+
+fn should_default_to_build(err: &clap::Error, args: &[OsString]) -> bool {
+    match err.kind() {
+        ErrorKind::MissingSubcommand
+        | ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand
+        | ErrorKind::UnknownArgument
+        | ErrorKind::InvalidSubcommand => {
+            let first_non_global = first_non_global_arg(args);
+            match first_non_global {
+                Some(arg) => !is_known_subcommand(arg),
+                None => true,
+            }
+        }
+        _ => false,
+    }
+}
+
+fn is_global_flag(arg: &OsString) -> bool {
+    matches!(
+        arg.to_str(),
+        Some(
+            "-v" | "-vv"
+                | "-vvv"
+                | "-vvvv"
+                | "-q"
+                | "-qq"
+                | "-qqq"
+                | "-qqqq"
+                | "--verbose"
+                | "--quiet"
+                | "-h"
+                | "--help"
+                | "-V"
+                | "--version"
+        )
+    )
+}
+
+fn first_non_global_arg(args: &[OsString]) -> Option<&OsString> {
+    args.iter().skip(1).find(|arg| !is_global_flag(arg))
+}
+
+fn is_known_subcommand(arg: &OsString) -> bool {
+    let Some(arg_str) = arg.to_str() else {
+        return false;
+    };
+
+    Cli::command().get_subcommands().any(|subcommand| {
+        subcommand.get_name() == arg_str || subcommand.get_all_aliases().any(|alias| alias == arg_str)
+    })
+}
+
+fn build_default_args(raw_args: &[OsString]) -> Vec<OsString> {
+    // Preserve clap's global flag handling semantics by keeping `-v/-q/-h/-V` in front of the
+    // inserted `build` token while leaving the rest of the argv untouched. This mirrors clap's own
+    // precedence rules so the second parse sees an argument layout it would have produced if the
+    // user had typed `rescript build …` directly.
+    let mut result = Vec::with_capacity(raw_args.len() + 1);
+    if raw_args.is_empty() {
+        return vec![OsString::from("build")];
+    }
+
+    let mut globals = Vec::new();
+    let mut others = Vec::new();
+    let mut saw_double_dash = false;
+
+    for arg in raw_args.iter().skip(1) {
+        if !saw_double_dash {
+            if arg == "--" {
+                saw_double_dash = true;
+                others.push(arg.clone());
+                continue;
+            }
+
+            if is_global_flag(arg) {
+                globals.push(arg.clone());
+                continue;
+            }
+        }
+
+        others.push(arg.clone());
+    }
+
+    result.push(raw_args[0].clone());
+    result.extend(globals);
+    result.push(OsString::from("build"));
+    result.extend(others);
+    result
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct FolderArg {
+    /// Path to the project or subproject. This folder must contain a rescript.json file.
+    #[arg(default_value = ".")]
+    pub folder: String,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct FilterArg {
+    /// Filter source files by regex.
+    /// E.g., filter out test files for compilation while doing feature work.
+    #[arg(short, long, value_parser = parse_regex)]
+    pub filter: Option<Regex>,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct AfterBuildArg {
+    /// Run an additional command after build.
+    /// E.g., play a sound or run a test suite when done compiling.
+    #[arg(short, long)]
+    pub after_build: Option<String>,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct WarnErrorArg {
+    /// Override warning configuration from rescript.json.
+    /// Example: --warn-error "+3+8+11+12+26+27+31+32+33+34+35+39+44+45+110"
+    #[arg(long)]
+    pub warn_error: Option<String>,
+}
+
+fn validate_features_string(s: &str) -> Result<String, String> {
+    let trimmed_parts: Vec<&str> = s.split(',').map(str::trim).filter(|p| !p.is_empty()).collect();
+    if trimmed_parts.is_empty() {
+        return Err(
+            "--features must not be empty. Omit the flag to build with all features active.".to_string(),
+        );
+    }
+    Ok(s.to_string())
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct FeaturesArg {
+    /// Restrict the current package to a comma-separated set of features. Only source
+    /// directories tagged with one of these features (plus untagged ones, and features they
+    /// transitively imply through the top-level `features` map) are compiled. Omit the flag to
+    /// build with all features active.
+    /// Example: --features native,experimental
+    #[arg(long = "features", value_parser = validate_features_string)]
+    pub features: Option<String>,
+}
+
+impl FeaturesArg {
+    /// Splits the raw `--features` value into a list of feature names. Returns `None` when the
+    /// flag was omitted.
+    pub fn parsed(&self) -> Option<Vec<String>> {
+        self.features.as_ref().map(|s| {
+            s.split(',')
+                .map(|p| p.trim().to_string())
+                .filter(|p| !p.is_empty())
+                .collect()
+        })
+    }
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct BuildArgs {
+    #[command(flatten)]
+    pub folder: FolderArg,
+
+    #[command(flatten)]
+    pub filter: FilterArg,
+
+    #[command(flatten)]
+    pub after_build: AfterBuildArg,
+
+    #[command(flatten)]
+    pub warn_error: WarnErrorArg,
+
+    #[command(flatten)]
+    pub features: FeaturesArg,
+
+    /// Disable output timing
+    #[arg(short, long, default_value_t = false, num_args = 0..=1)]
+    pub no_timing: bool,
+
+    /// Skip dev-dependencies and dev sources (type: "dev")
+    #[arg(long, default_value_t = false)]
+    pub prod: bool,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use clap::error::ErrorKind;
+    use log::LevelFilter;
+
+    fn parse(args: &[&str]) -> Result<Cli, clap::Error> {
+        let raw_args: Vec<OsString> = args.iter().map(OsString::from).collect();
+        parse_with_default_from(&raw_args)
+    }
+
+    // Default command behaviour.
+    #[test]
+    fn no_subcommand_defaults_to_build() {
+        let cli = parse(&["rescript"]).expect("expected default build command");
+        assert!(matches!(cli.command, Command::Build(_)));
+    }
+
+    #[test]
+    fn defaults_to_build_with_folder_shortcut() {
+        let cli = parse(&["rescript", "someFolder"]).expect("expected build command");
+
+        match cli.command {
+            Command::Build(build_args) => assert_eq!(build_args.folder.folder, "someFolder"),
+            other => panic!("expected build command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn trailing_global_flag_is_treated_as_global() {
+        let cli = parse(&["rescript", "my-project", "-v"]).expect("expected build command");
+
+        assert_eq!(cli.verbose.log_level_filter(), LevelFilter::Debug);
+        match cli.command {
+            Command::Build(build_args) => assert_eq!(build_args.folder.folder, "my-project"),
+            other => panic!("expected build command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn double_dash_keeps_following_args_positional() {
+        let cli = parse(&["rescript", "--", "-v"]).expect("expected build command");
+
+        assert_eq!(cli.verbose.log_level_filter(), LevelFilter::Info);
+        match cli.command {
+            Command::Build(build_args) => assert_eq!(build_args.folder.folder, "-v"),
+            other => panic!("expected build command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn unknown_subcommand_help_uses_global_help() {
+        let err = parse(&["rescript", "xxx", "--help"]).expect_err("expected global help");
+        assert_eq!(err.kind(), ErrorKind::DisplayHelp);
+    }
+
+    // Build command specifics.
+    #[test]
+    fn build_help_shows_subcommand_help() {
+        let err = parse(&["rescript", "build", "--help"]).expect_err("expected subcommand help");
+        assert_eq!(err.kind(), ErrorKind::DisplayHelp);
+        let rendered = err.to_string();
+        assert!(
+            rendered.contains("Usage: rescript build"),
+            "unexpected help: {rendered:?}"
+        );
+        assert!(!rendered.contains("Usage: rescript [OPTIONS] <COMMAND>"));
+    }
+
+    #[test]
+    fn build_allows_global_verbose_flag() {
+        let cli = parse(&["rescript", "build", "-v"]).expect("expected build command");
+        assert_eq!(cli.verbose.log_level_filter(), LevelFilter::Debug);
+        assert!(matches!(cli.command, Command::Build(_)));
+    }
+
+    #[test]
+    fn build_option_is_parsed_normally() {
+        let cli = parse(&["rescript", "build", "--no-timing"]).expect("expected build command");
+
+        match cli.command {
+            Command::Build(build_args) => assert!(build_args.no_timing),
+            other => panic!("expected build command, got {other:?}"),
+        }
+    }
+
+    // Subcommand flag handling.
+    #[test]
+    fn respects_global_flag_before_subcommand() {
+        let cli = parse(&["rescript", "-v", "watch"]).expect("expected watch command");
+
+        assert!(matches!(cli.command, Command::Watch(_)));
+    }
+
+    #[test]
+    fn invalid_option_for_subcommand_does_not_fallback() {
+        let err = parse(&["rescript", "watch", "--no-timing"]).expect_err("expected watch parse failure");
+        assert_eq!(err.kind(), ErrorKind::UnknownArgument);
+    }
+
+    // Version/help flag handling.
+    #[test]
+    fn version_flag_before_subcommand_displays_version() {
+        let err = parse(&["rescript", "-V", "build"]).expect_err("expected version display");
+        assert_eq!(err.kind(), ErrorKind::DisplayVersion);
+    }
+
+    #[test]
+    fn version_flag_after_subcommand_is_rejected() {
+        let err = parse(&["rescript", "build", "-V"]).expect_err("expected unexpected argument");
+        assert_eq!(err.kind(), ErrorKind::UnknownArgument);
+    }
+
+    #[test]
+    fn global_help_flag_shows_help() {
+        let err = parse(&["rescript", "--help"]).expect_err("expected clap help error");
+        assert_eq!(err.kind(), ErrorKind::DisplayHelp);
+        let rendered = err.to_string();
+        assert!(rendered.contains("Usage: rescript [OPTIONS] <COMMAND>"));
+    }
+
+    #[test]
+    fn global_version_flag_shows_version() {
+        let err = parse(&["rescript", "--version"]).expect_err("expected clap version error");
+        assert_eq!(err.kind(), ErrorKind::DisplayVersion);
+    }
+
+    // --prod flag tests.
+    #[test]
+    fn build_prod_flag_is_parsed() {
+        let cli = parse(&["rescript", "build", "--prod"]).expect("expected build command");
+
+        match cli.command {
+            Command::Build(build_args) => assert!(build_args.prod),
+            other => panic!("expected build command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn build_prod_flag_defaults_to_false() {
+        let cli = parse(&["rescript", "build"]).expect("expected build command");
+
+        match cli.command {
+            Command::Build(build_args) => assert!(!build_args.prod),
+            other => panic!("expected build command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn watch_prod_flag_is_parsed() {
+        let cli = parse(&["rescript", "watch", "--prod"]).expect("expected watch command");
+
+        match cli.command {
+            Command::Watch(watch_args) => assert!(watch_args.prod),
+            other => panic!("expected watch command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn watch_clear_screen_flag_is_parsed() {
+        let cli = parse(&["rescript", "watch", "--clear-screen"]).expect("expected watch command");
+
+        match cli.command {
+            Command::Watch(watch_args) => assert!(watch_args.clear_screen),
+            other => panic!("expected watch command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn clean_prod_flag_is_parsed() {
+        let cli = parse(&["rescript", "clean", "--prod"]).expect("expected clean command");
+
+        match cli.command {
+            Command::Clean { prod, .. } => assert!(prod),
+            other => panic!("expected clean command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn prod_flag_defaults_to_build_command() {
+        let cli = parse(&["rescript", "--prod"]).expect("expected default build command");
+
+        match cli.command {
+            Command::Build(build_args) => assert!(build_args.prod),
+            other => panic!("expected build command, got {other:?}"),
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn non_utf_argument_returns_error() {
+        use std::os::unix::ffi::OsStringExt;
+
+        let args = vec![OsString::from("rescript"), OsString::from_vec(vec![0xff])];
+        let err = parse_with_default_from(&args).expect_err("expected clap to report invalid utf8");
+        assert_eq!(err.kind(), ErrorKind::InvalidUtf8);
+    }
+
+    // --features flag tests.
+    #[test]
+    fn build_features_flag_is_parsed() {
+        let cli = parse(&["rescript", "build", "--features", "native,experimental"])
+            .expect("expected build command");
+        match cli.command {
+            Command::Build(build_args) => assert_eq!(
+                build_args.features.parsed(),
+                Some(vec!["native".to_string(), "experimental".to_string()])
+            ),
+            other => panic!("expected build command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn build_features_flag_defaults_to_none() {
+        let cli = parse(&["rescript", "build"]).expect("expected build command");
+        match cli.command {
+            Command::Build(build_args) => assert!(build_args.features.parsed().is_none()),
+            other => panic!("expected build command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn build_features_flag_rejects_empty_string() {
+        let err = parse(&["rescript", "build", "--features", ""])
+            .expect_err("expected empty --features to fail parsing");
+        let rendered = err.to_string();
+        assert!(
+            rendered.contains("must not be empty"),
+            "unexpected error: {rendered}"
+        );
+    }
+
+    #[test]
+    fn watch_features_flag_is_parsed() {
+        let cli = parse(&["rescript", "watch", "--features", "native"]).expect("expected watch command");
+        match cli.command {
+            Command::Watch(watch_args) => {
+                assert_eq!(watch_args.features.parsed(), Some(vec!["native".to_string()]))
+            }
+            other => panic!("expected watch command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn features_flag_round_trips_through_build_to_watch_args() {
+        let cli = parse(&["rescript", "build", "--features", "a,b"]).expect("expected build command");
+        match cli.command {
+            Command::Build(build_args) => {
+                let watch_args: WatchArgs = build_args.into();
+                assert_eq!(
+                    watch_args.features.parsed(),
+                    Some(vec!["a".to_string(), "b".to_string()])
+                );
+            }
+            other => panic!("expected build command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn build_features_flag_strips_whitespace() {
+        let cli = parse(&["rescript", "build", "--features", " native , experimental "])
+            .expect("expected build command");
+        match cli.command {
+            Command::Build(build_args) => assert_eq!(
+                build_args.features.parsed(),
+                Some(vec!["native".to_string(), "experimental".to_string()])
+            ),
+            other => panic!("expected build command, got {other:?}"),
+        }
+    }
+}
+
+#[derive(Args, Clone, Debug)]
+pub struct WatchArgs {
+    #[command(flatten)]
+    pub folder: FolderArg,
+
+    #[command(flatten)]
+    pub filter: FilterArg,
+
+    #[command(flatten)]
+    pub after_build: AfterBuildArg,
+
+    #[command(flatten)]
+    pub warn_error: WarnErrorArg,
+
+    #[command(flatten)]
+    pub features: FeaturesArg,
+
+    /// Clear terminal screen before each rebuild in interactive watch mode.
+    #[arg(long, default_value_t = false)]
+    pub clear_screen: bool,
+
+    /// Skip dev-dependencies and dev sources (type: "dev")
+    #[arg(long, default_value_t = false)]
+    pub prod: bool,
+}
+
+impl From<BuildArgs> for WatchArgs {
+    fn from(build_args: BuildArgs) -> Self {
+        Self {
+            folder: build_args.folder,
+            filter: build_args.filter,
+            after_build: build_args.after_build,
+            warn_error: build_args.warn_error,
+            features: build_args.features,
+            clear_screen: false,
+            prod: build_args.prod,
+        }
+    }
+}
+
+#[derive(Subcommand, Clone, Debug)]
+pub enum Command {
+    /// Build the project (default command)
+    Build(BuildArgs),
+    /// Build, then start a watcher
+    Watch(WatchArgs),
+    /// Clean the build artifacts
+    Clean {
+        #[command(flatten)]
+        folder: FolderArg,
+
+        /// Skip dev-dependencies and dev sources (type: "dev")
+        #[arg(long, default_value_t = false)]
+        prod: bool,
+    },
+    /// Format ReScript files.
+    Format {
+        /// Check formatting status without applying changes.
+        #[arg(short, long)]
+        check: bool,
+
+        /// Read the code from stdin and print the formatted code to stdout.
+        #[arg(
+            short,
+            long,
+            group = "format_input_mode",
+            value_enum,
+            conflicts_with = "check"
+        )]
+        stdin: Option<FileExtension>,
+
+        /// Files to format. If no files are provided, all files are formatted.
+        #[arg(group = "format_input_mode")]
+        files: Vec<String>,
+    },
+    /// Print the compiler arguments for a ReScript source file.
+    CompilerArgs {
+        /// Path to a ReScript source file (.res or .resi)
+        #[command()]
+        path: String,
+    },
+}
+
+impl Deref for FolderArg {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        &self.folder
+    }
+}
+
+impl AsRef<Path> for FolderArg {
+    fn as_ref(&self) -> &Path {
+        Path::new(&self.folder)
+    }
+}
+
+impl Deref for FilterArg {
+    type Target = Option<Regex>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.filter
+    }
+}
+
+impl Deref for AfterBuildArg {
+    type Target = Option<String>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.after_build
+    }
+}
+
+impl Deref for WarnErrorArg {
+    type Target = Option<String>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.warn_error
+    }
+}
+
+impl Deref for FeaturesArg {
+    type Target = Option<String>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.features
+    }
+}

@@ -3,7 +3,7 @@ include Belt.Array
 
 let at = get
 
-let includes = Js.Array2.includes
+let includes = Array.includes
 
 let head = t => t->get(0)
 
@@ -21,15 +21,15 @@ let prepend = (t, v) => [v]->concat(t)
 
 let flatMap = (t, fn) => t->map(fn)->concatMany
 
-let mapi = Js.Array2.mapi
+let mapi = Array.mapWithIndex
 
 let flatten = t => t->flatMap(x => x)
 
-let find = (t, fn) => Js.Array.find(fn, t)
+let find = (t, fn) => Array.find(fn, t)
 
-let findIndex = (t, fn) => Js.Array.findIndex(fn, t)
+let findIndex = (t, fn) => Array.findIndex(fn, t)
 
-let filter = Js.Array2.filter
+let filter = Array.filter
 
 let reject = (t, fn) => t->filter(el => !fn(el))
 
@@ -45,7 +45,7 @@ let sortBy = (t, fn) =>
 let sortByRaw = Belt.SortArray.stableSortBy
 
 module String = {
-  let joinWith = Js.Array2.joinWith
+  let joinWith = Array.join
   let join = joinWith(_, "")
 }
 
@@ -164,7 +164,7 @@ let drop = (t, i) => {
   t->sliceToEnd(start)
 }
 
-let unsafePop = Js.Array.pop
+let unsafePop = Array.pop
 
 module Int = {
   let sum = xs => reduce(xs, 0, (a, b) => a + b)

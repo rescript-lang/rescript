@@ -15,11 +15,11 @@ include (
 
     let assert_test = () =>
       if m->IntMap.get(10) == Some('a') {
-        Js.log("hi")
+        Console.log("hi")
       } else {
         /* log ('a', "succeed") */
 
-        Js.log("hi")
+        Console.log("hi")
       }
   }: {}
 )

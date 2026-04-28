@@ -13,9 +13,9 @@ module Make = (
     let say: (int, int) => int
   },
 ) => {
-  /* let () = Js.log "no inline" */
+  /* let () = Console.log "no inline" */
   let h = (x, x) => {
-    Js.log(f(x, x))
+    Console.log(f(x, x))
     U.say(x, x)
   }
 }

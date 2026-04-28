@@ -111,7 +111,7 @@ let getNumResultsPerPage = (~viewportWidth) =>
   }
 
 let userItemsHasOneWithStatus = (~userItems, ~status) =>
-  userItems->Js.Dict.values->Belt.Array.someU((. item: User.item) => item.status == status)
+  userItems->Js.Dict.values->Belt.Array.someU((item: User.item) => item.status == status)
 
 module BulkActions = {
   module Styles = {
@@ -278,14 +278,14 @@ let make = (~user: User.t, ~list: ViewingList.t, ~url: ReasonReactRouter.url, ~m
     () =>
       user.items
       ->Js.Dict.entries
-      ->Belt.Array.keepMapU((. (itemKey, item: User.item)) =>
+      ->Belt.Array.keepMapU(((itemKey, item: User.item)) =>
         ViewingList.doesUserItemStatusMatchViewingList(item.status, list)
           ? User.fromItemKey(~key=itemKey)->Belt.Option.map(x => (x, item))
           : None
       ),
     (user, list),
   )
-  let userItemIds = userItems->Belt.Array.mapU((. ((itemId, _variant), _)) => itemId)
+  let userItemIds = userItems->Belt.Array.mapU((((itemId, _variant), _)) => itemId)
 
   let url = ReasonReactRouter.useUrl()
   let showMini = {
@@ -490,7 +490,7 @@ let make = (~user: User.t, ~list: ViewingList.t, ~url: ReasonReactRouter.url, ~m
         ->(showMini
           ? x => x
           : Belt.Array.slice(~offset=pageOffset * numResultsPerPage, ~len=numResultsPerPage))
-        ->Belt.Array.mapU((. ((itemId, variation), userItem)) =>
+        ->Belt.Array.mapU((((itemId, variation), userItem)) =>
           showMini
             ? <UserProfileBrowser.UserItemCardMini
                 itemId variation key={string_of_int(itemId) ++ string_of_int(variation)}

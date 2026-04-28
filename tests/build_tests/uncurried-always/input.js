@@ -2,7 +2,7 @@
 
 import { setup } from "#dev/process";
 
-const { execBuild, execClean } = setup(import.meta.dirname);
+const { execBuildOrThrow, execClean } = setup(import.meta.dirname);
 
+await execBuildOrThrow();
 await execClean();
-await execBuild();

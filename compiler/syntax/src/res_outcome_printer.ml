@@ -123,19 +123,6 @@ let rec print_out_type_doc (out_type : Outcometree.out_type) =
            (if non_gen then Doc.text "_" else Doc.nil);
            Doc.lbracket;
            Doc.indent (Doc.concat [opening; print_out_variant out_variant]);
-           (match labels with
-           | None | Some [] -> Doc.nil
-           | Some tags ->
-             Doc.group
-               (Doc.concat
-                  [
-                    Doc.space;
-                    Doc.join ~sep:Doc.space
-                      (List.map
-                         (fun lbl ->
-                           Printer.print_ident_like ~allow_uident:true lbl)
-                         tags);
-                  ]));
            Doc.soft_line;
            Doc.rbracket;
          ])
@@ -230,14 +217,18 @@ let rec print_out_type_doc (out_type : Outcometree.out_type) =
           Doc.join ~sep:Doc.line
             ((List.map2 [@doesNotRaise])
                (fun lbl typ ->
-                 Doc.concat
-                   [
-                     Doc.text
-                       (if i.contents > 0 then "and type " else "with type ");
-                     Doc.text lbl;
-                     Doc.text " = ";
-                     print_out_type_doc typ;
-                   ])
+                 let result =
+                   Doc.concat
+                     [
+                       Doc.text
+                         (if i.contents > 0 then "and type " else "with type ");
+                       Doc.text lbl;
+                       Doc.text " = ";
+                       print_out_type_doc typ;
+                     ]
+                 in
+                 incr i;
+                 result)
                labels types)
         in
         Doc.indent (Doc.concat [Doc.line; package])

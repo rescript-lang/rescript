@@ -25,6 +25,19 @@ open Ast_helper
 open Location
 module Pt = Parsetree
 
+let jsx_prop_loc_attr = "res.jsxPropLoc"
+let jsx_spread_loc_attr = "res.jsxSpreadLoc"
+
+let extract_internal_loc_attr attr_name attrs =
+  let rec loop rev_acc = function
+    | [] -> (None, List.rev rev_acc)
+    | (({txt; loc}, payload) as attr) :: rest ->
+      if txt = attr_name && payload = PStr [] then
+        (Some loc, List.rev_append rev_acc rest)
+      else loop (attr :: rev_acc) rest
+  in
+  loop [] attrs
+
 type mapper = {
   attribute: mapper -> attribute -> Pt.attribute;
   attributes: mapper -> attribute list -> Pt.attribute list;
@@ -75,6 +88,9 @@ let map_constant = function
   | Pconst_string (s, q) -> Pconst_string (s, q)
   | Pconst_float (s, suffix) -> Pconst_float (s, suffix)
 
+let for_of_attr_name = "_res.for_of"
+let for_await_of_attr_name = "_res.for_await_of"
+
 let map_loc sub {loc; txt} = {loc = sub.location sub loc; txt}
 
 module T = struct
@@ -92,19 +108,20 @@ module T = struct
     | Oinherit t -> Oinherit (sub.typ sub t)
 
   let map sub {ptyp_desc = desc; ptyp_loc = loc; ptyp_attributes = attrs} =
-    let open Typ in
     let loc = sub.location sub loc in
     let attrs = sub.attributes sub attrs in
     match desc with
-    | Ptyp_any -> any ~loc ~attrs ()
-    | Ptyp_var s -> var ~loc ~attrs s
-    | Ptyp_arrow (lab, t1, t2) ->
-      let lab = Asttypes.to_arg_label lab in
-      arrow ~loc ~attrs ~arity:None lab (sub.typ sub t1) (sub.typ sub t2)
-    | Ptyp_tuple tyl -> tuple ~loc ~attrs (List.map (sub.typ sub) tyl)
+    | Ptyp_any -> Typ.any ~loc ~attrs ()
+    | Ptyp_var s -> Typ.var ~loc ~attrs s
+    | Ptyp_arrow (lbl, t1, t2) ->
+      let lbl = Asttypes.to_arg_label lbl in
+      Typ.arrow ~loc ~arity:None
+        {attrs; lbl; typ = sub.typ sub t1}
+        (sub.typ sub t2)
+    | Ptyp_tuple tyl -> Typ.tuple ~loc ~attrs (List.map (sub.typ sub) tyl)
     | Ptyp_constr (lid, tl) -> (
       let typ0 =
-        constr ~loc ~attrs (map_loc sub lid) (List.map (sub.typ sub) tl)
+        Typ.constr ~loc ~attrs (map_loc sub lid) (List.map (sub.typ sub) tl)
       in
       match typ0.ptyp_desc with
       | Ptyp_constr (lid, [({ptyp_desc = Ptyp_arrow arr} as fun_t); t_arity])
@@ -123,17 +140,17 @@ module T = struct
         {fun_t with ptyp_desc = Ptyp_arrow {arr with arity = Some arity}}
       | _ -> typ0)
     | Ptyp_object (l, o) ->
-      object_ ~loc ~attrs (List.map (object_field sub) l) o
+      Typ.object_ ~loc ~attrs (List.map (object_field sub) l) o
     | Ptyp_class () -> assert false
-    | Ptyp_alias (t, s) -> alias ~loc ~attrs (sub.typ sub t) s
+    | Ptyp_alias (t, s) -> Typ.alias ~loc ~attrs (sub.typ sub t) s
     | Ptyp_variant (rl, b, ll) ->
-      variant ~loc ~attrs (List.map (row_field sub) rl) b ll
+      Typ.variant ~loc ~attrs (List.map (row_field sub) rl) b ll
     | Ptyp_poly (sl, t) ->
-      poly ~loc ~attrs (List.map (map_loc sub) sl) (sub.typ sub t)
+      Typ.poly ~loc ~attrs (List.map (map_loc sub) sl) (sub.typ sub t)
     | Ptyp_package (lid, l) ->
-      package ~loc ~attrs (map_loc sub lid)
+      Typ.package ~loc ~attrs (map_loc sub lid)
         (List.map (map_tuple (map_loc sub) (sub.typ sub)) l)
-    | Ptyp_extension x -> extension ~loc ~attrs (sub.extension sub x)
+    | Ptyp_extension x -> Typ.extension ~loc ~attrs (sub.extension sub x)
 
   let map_type_declaration sub
       {
@@ -309,6 +326,37 @@ module E = struct
         | _ -> true)
       attrs
 
+  let extract_for_of_attribute attrs =
+    List.find_map
+      (function
+        | {Location.txt}, Pt.PPat (_, Some expr) when txt = for_of_attr_name ->
+          Some expr
+        | _ -> None)
+      attrs
+
+  let extract_for_await_of_attribute attrs =
+    List.find_map
+      (function
+        | {Location.txt}, Pt.PPat (_, Some expr)
+          when txt = for_await_of_attr_name ->
+          Some expr
+        | _ -> None)
+      attrs
+
+  let remove_for_of_attribute attrs =
+    List.filter
+      (function
+        | {Location.txt}, _ when txt = for_of_attr_name -> false
+        | _ -> true)
+      attrs
+
+  let remove_for_await_of_attribute attrs =
+    List.filter
+      (function
+        | {Location.txt}, _ when txt = for_await_of_attr_name -> false
+        | _ -> true)
+      attrs
+
   let map_jsx_children sub (e : expression) : Pt.jsx_children =
     let rec visit (e : expression) : Pt.expression list =
       match e.pexp_desc with
@@ -325,14 +373,27 @@ module E = struct
     match e.pexp_desc with
     | Pexp_construct ({txt = Longident.Lident "[]" | Longident.Lident "::"}, _)
       ->
-      JSXChildrenItems (visit e)
-    | _ -> JSXChildrenSpreading (sub.expr sub e)
+      visit e
+    | _ -> [sub.expr sub e]
 
   let try_map_jsx_prop (sub : mapper) (lbl : Asttypes.Noloc.arg_label)
       (e : expression) : Parsetree.jsx_prop option =
+    let map_expr_with_loc_attr attr_name fallback make_prop =
+      let loc, attrs = extract_internal_loc_attr attr_name e.pexp_attributes in
+      let e = {e with pexp_attributes = attrs} in
+      let expr = sub.expr sub e in
+      make_prop
+        (match loc with
+        | Some loc -> loc
+        | None -> fallback expr)
+        expr
+    in
     match (lbl, e) with
-    | Asttypes.Noloc.Labelled "_spreadProps", expr ->
-      Some (Parsetree.JSXPropSpreading (Location.none, sub.expr sub expr))
+    | Asttypes.Noloc.Labelled "_spreadProps", _expr ->
+      Some
+        (map_expr_with_loc_attr jsx_spread_loc_attr
+           (fun expr -> expr.pexp_loc)
+           (fun loc expr -> Parsetree.JSXPropSpreading (loc, expr)))
     | ( Asttypes.Noloc.Labelled name,
         {pexp_desc = Pexp_ident {txt = Longident.Lident v}; pexp_loc = name_loc}
       )
@@ -343,14 +404,18 @@ module E = struct
       )
       when name = v ->
       Some (Parsetree.JSXPropPunning (true, {txt = name; loc = name_loc}))
-    | Asttypes.Noloc.Labelled name, exp ->
+    | Asttypes.Noloc.Labelled name, _exp ->
       Some
-        (Parsetree.JSXPropValue
-           ({txt = name; loc = Location.none}, false, sub.expr sub exp))
-    | Asttypes.Noloc.Optional name, exp ->
+        (map_expr_with_loc_attr jsx_prop_loc_attr
+           (fun expr -> expr.pexp_loc)
+           (fun loc expr ->
+             Parsetree.JSXPropValue ({txt = name; loc}, false, expr)))
+    | Asttypes.Noloc.Optional name, _exp ->
       Some
-        (Parsetree.JSXPropValue
-           ({txt = name; loc = Location.none}, true, sub.expr sub exp))
+        (map_expr_with_loc_attr jsx_prop_loc_attr
+           (fun expr -> expr.pexp_loc)
+           (fun loc expr ->
+             Parsetree.JSXPropValue ({txt = name; loc}, true, expr)))
     | _ -> None
 
   let extract_props_and_children (sub : mapper) items =
@@ -395,10 +460,23 @@ module E = struct
       when has_jsx_attribute () -> (
       let attrs = attrs |> List.filter (fun ({txt}, _) -> txt <> "JSX") in
       let props, children = extract_props_and_children sub args in
+      let jsx_tag : Pt.jsx_tag_name =
+        match tag_name.txt with
+        | Longident.Lident s
+          when String.length s > 0 && Char.lowercase_ascii s.[0] = s.[0] ->
+          Pt.JsxLowerTag s
+        | Longident.Lident _ -> Pt.JsxUpperTag tag_name.txt
+        | Longident.Ldot (path, last)
+          when String.length last > 0
+               && Char.lowercase_ascii last.[0] = last.[0] ->
+          Pt.JsxQualifiedLowerTag {path; name = last}
+        | _ -> Pt.JsxUpperTag tag_name.txt
+      in
+      let jsx_tag_name = {txt = jsx_tag; loc = tag_name.loc} in
       match children with
-      | None -> jsx_unary_element ~loc ~attrs tag_name props
+      | None -> jsx_unary_element ~loc ~attrs jsx_tag_name props
       | Some children ->
-        jsx_container_element ~loc ~attrs tag_name props Lexing.dummy_pos
+        jsx_container_element ~loc ~attrs jsx_tag_name props Lexing.dummy_pos
           children None)
     | Pexp_apply (e, l) ->
       let e =
@@ -508,11 +586,27 @@ module E = struct
         (map_opt (sub.expr sub) e3)
     | Pexp_sequence (e1, e2) ->
       sequence ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)
+    | Pexp_extension ({txt = "res.break"; _}, PStr []) -> break ~loc ~attrs ()
+    | Pexp_extension ({txt = "res.continue"; _}, PStr []) ->
+      continue ~loc ~attrs ()
     | Pexp_while (e1, e2) ->
       while_ ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)
-    | Pexp_for (p, e1, e2, d, e3) ->
-      for_ ~loc ~attrs (sub.pat sub p) (sub.expr sub e1) (sub.expr sub e2) d
-        (sub.expr sub e3)
+    | Pexp_for (p, e1, e2, d, e3) -> (
+      let async_iterable_expr = extract_for_await_of_attribute attrs in
+      let array_expr = extract_for_of_attribute attrs in
+      let attrs =
+        remove_for_await_of_attribute (remove_for_of_attribute attrs)
+      in
+      match (async_iterable_expr, array_expr) with
+      | Some iterable, _ ->
+        for_await_of ~loc ~attrs (sub.pat sub p) iterable (sub.expr sub e3)
+      | None, Some array ->
+        (* This is actually a for...of loop, decode it *)
+        for_of ~loc ~attrs (sub.pat sub p) array (sub.expr sub e3)
+      | None, None ->
+        (* Regular for loop *)
+        for_ ~loc ~attrs (sub.pat sub p) (sub.expr sub e1) (sub.expr sub e2) d
+          (sub.expr sub e3))
     | Pexp_coerce (e, (), t2) ->
       coerce ~loc ~attrs (sub.expr sub e) (sub.typ sub t2)
     | Pexp_constraint (e, t) ->

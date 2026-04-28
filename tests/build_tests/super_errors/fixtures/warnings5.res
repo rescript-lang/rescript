@@ -9,21 +9,21 @@ type someRecord = {
 @val external y: someRecord = "otherVariable"
 
 switch y {
-| {otherValue: false} => Js.log("first")
+| {otherValue: false} => Console.log("first")
 }
 
 switch y {
-| {typ: WithPayload(true)} => Js.log("first")
+| {typ: WithPayload(true)} => Console.log("first")
 }
 
 let arr = [1]
 
 switch arr {
-| [] => Js.log("")
+| [] => Console.log("")
 }
 
 switch arr {
-| [one] => Js.log(one)
+| [one] => Console.log(one)
 }
 
 switch arr {

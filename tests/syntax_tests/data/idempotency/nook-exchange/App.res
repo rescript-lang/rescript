@@ -22,7 +22,7 @@ module Styles = {
 }
 
 @val @scope("window")
-external gtag: option<(. string, string, {"page_path": string}) => unit> = "gtag"
+external gtag: option<(string, string, {"page_path": string}) => unit> = "gtag"
 
 module TooltipConfigContextProvider = {
   type tooltipModifiers = array<{"name": string, "options": {"offset": array<int>}}>
@@ -94,7 +94,7 @@ let make = () => {
   })
   React.useEffect1(() => {
     switch gtag {
-    | Some(gtag) => gtag(. "config", Constants.gtagId, {"page_path": pathString})
+    | Some(gtag) => gtag("config", Constants.gtagId, {"page_path": pathString})
     | None => ()
     }
 

@@ -4,11 +4,11 @@ type t = JsxDOMStyle.t
 @val
 external combine: (@as(json`{}`) _, t, t) => t = "Object.assign"
 
-external _dictToStyle: Js.Dict.t<string> => t = "%identity"
+external _dictToStyle: dict<string> => t = "%identity"
 
 let unsafeAddProp = (style, key, value) => {
-  let dict = Js.Dict.empty()
-  Js.Dict.set(dict, key, value)
+  let dict = dict{}
+  Dict.set(dict, key, value)
   combine(style, _dictToStyle(dict))
 }
 

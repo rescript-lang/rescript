@@ -1,6 +1,5 @@
 {
   "name": "@rescript/tools",
-  "version": "0.6.4",
   "sources": [
     {
       "dir": "npm"

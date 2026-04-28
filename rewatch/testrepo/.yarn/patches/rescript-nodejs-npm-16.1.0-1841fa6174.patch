@@ -1,0 +1,24 @@
+diff --git a/src/Zlib.res b/src/Zlib.res
+index af800a0fa8751d49a56c9fcf98feec5f778e2e06..29ca39958e0349a4e0564faf103e0ce5e12ed3d0 100644
+--- a/src/Zlib.res
++++ b/src/Zlib.res
+@@ -1,4 +1,4 @@
+ @module("node:zlib") external deflateRawSync: Buffer.t => Buffer.t = "deflateRawSync"
+-@module("node:zlib") external deflateRaw: (Buffer.t, (. Buffer.t) => unit) => unit = "deflateRaw"
++@module("node:zlib") external deflateRaw: (Buffer.t, Buffer.t => unit) => unit = "deflateRaw"
+ @module("node:zlib") external inflateRawSync: Buffer.t => Buffer.t = "inflateRawSync"
+-@module("node:zlib") external inflateRaw: (Buffer.t, (. Buffer.t) => unit) => unit = "inflateRaw"
++@module("node:zlib") external inflateRaw: (Buffer.t, Buffer.t => unit) => unit = "inflateRaw"
+diff --git a/test/atomic/BigInt.test.res b/test/atomic/BigInt.test.res
+index fa3288442176de12af6911f6cde96dadab52ff9c..c751b6e77e85a040957a7e31396323170a144446 100644
+--- a/test/atomic/BigInt.test.res
++++ b/test/atomic/BigInt.test.res
+@@ -9,7 +9,7 @@ zoraBlock("BigInt", t => {
+   t->block(
+     "'BigInt.fromInt' and 'BigInt.toInt' are associative operations for all 32-bit integers",
+     t => {
+-      let arrA = Belt.Array.makeByU(1000, (. _) => Random.int(1000000))
++      let arrA = Belt.Array.makeByU(1000, _ => Random.int(1000000))
+       let arrB = Belt.Array.map(arrA, BigInt.fromInt)
+       let arrC = Belt.Array.map(arrB, BigInt.toInt)
+       t->equal(arrA, arrC, "")

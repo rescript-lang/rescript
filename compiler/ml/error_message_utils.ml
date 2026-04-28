@@ -41,9 +41,13 @@ end = struct
     String.sub src start_offset (end_offset - start_offset)
 
   let extract_text_at_loc loc =
-    (* TODO: Maybe cache later on *)
-    let src = Ext_io.load_file loc.Location.loc_start.pos_fname in
-    extract_location_string ~src loc
+    if loc.Location.loc_start.pos_fname = "_none_" then ""
+    else
+      try
+        (* TODO: Maybe cache later on *)
+        let src = Ext_io.load_file loc.Location.loc_start.pos_fname in
+        extract_location_string ~src loc
+      with _ -> ""
 
   let parse_expr_at_loc loc =
     let sub_src = extract_text_at_loc loc in
@@ -59,7 +63,8 @@ end = struct
     match parse_expr_at_loc loc with
     | Some (exp, comments) -> (
       match mapper exp with
-      | Some exp -> Some (!reprint_source (wrap_in_structure exp) comments)
+      | Some exp ->
+        Some (!reprint_source (wrap_in_structure exp) comments |> String.trim)
       | None -> None)
     | None -> None
 end
@@ -89,7 +94,9 @@ type type_clash_context =
   | IfCondition
   | AssertCondition
   | IfReturn
+  | TernaryReturn
   | SwitchReturn
+  | LetUnwrapReturn
   | TryReturn
   | StringConcat
   | ComparisonOperator
@@ -100,6 +107,8 @@ type type_clash_context =
       is_constant: string option;
     }
   | FunctionArgument of {optional: bool; name: string option}
+  | JsxComponent
+  | BracedIdent
   | Statement of type_clash_statement
   | ForLoopCondition
   | Await
@@ -119,9 +128,13 @@ let context_to_string = function
   | Some TryReturn -> "TryReturn"
   | Some StringConcat -> "StringConcat"
   | Some (FunctionArgument _) -> "FunctionArgument"
+  | Some JsxComponent -> "JsxComponent"
   | Some ComparisonOperator -> "ComparisonOperator"
   | Some IfReturn -> "IfReturn"
+  | Some TernaryReturn -> "TernaryReturn"
   | Some Await -> "Await"
+  | Some BracedIdent -> "BracedIdent"
+  | Some LetUnwrapReturn -> "LetUnwrapReturn"
   | None -> "None"
 
 let fprintf = Format.fprintf
@@ -134,6 +147,7 @@ let error_type_text ppf type_clash_context =
     | Some ArrayValue -> "This array item has type:"
     | Some (SetRecordField _) ->
       "You're assigning something to this field that has type:"
+    | Some JsxComponent -> "This JSX tag has type:"
     | _ -> "This has type:"
   in
   fprintf ppf "%s" text
@@ -151,9 +165,12 @@ let error_expected_type_text ppf type_clash_context =
     | None -> ());
 
     fprintf ppf " is expecting:"
+  | Some JsxComponent -> fprintf ppf "But JSX component positions require:"
   | Some ComparisonOperator ->
     fprintf ppf "But it's being compared to something of type:"
   | Some SwitchReturn -> fprintf ppf "But this switch is expected to return:"
+  | Some LetUnwrapReturn ->
+    fprintf ppf "But this @{<info>let?@} is used where this type is expected:"
   | Some TryReturn -> fprintf ppf "But this try/catch is expected to return:"
   | Some WhileCondition ->
     fprintf ppf "But a @{<info>while@} loop condition must always be of type:"
@@ -164,6 +181,7 @@ let error_expected_type_text ppf type_clash_context =
   | Some AssertCondition -> fprintf ppf "But assertions must always be of type:"
   | Some IfReturn ->
     fprintf ppf "But this @{<info>if@} statement is expected to return:"
+  | Some TernaryReturn -> fprintf ppf "But this ternary is expected to return:"
   | Some ArrayValue ->
     fprintf ppf "But this array is expected to have items of type:"
   | Some (SetRecordField _) -> fprintf ppf "But the record field is of type:"
@@ -191,18 +209,51 @@ let error_expected_type_text ppf type_clash_context =
     fprintf ppf
       "But you're using @{<info>await@} on this expression, so it is expected \
        to be of type:"
-  | Some MaybeUnwrapOption | None ->
+  | Some MaybeUnwrapOption | Some BracedIdent | None ->
     fprintf ppf "But it's expected to have type:"
 
-let is_record_type ~extract_concrete_typedecl ~env ty =
+let is_record_type ~(extract_concrete_typedecl : extract_concrete_typedecl) ~env
+    ty =
   try
     match extract_concrete_typedecl env ty with
     | _, _, {Types.type_kind = Type_record _; _} -> true
     | _ -> false
   with _ -> false
 
+let is_variant_type ~(extract_concrete_typedecl : extract_concrete_typedecl)
+    ~env ty =
+  try
+    match extract_concrete_typedecl env ty with
+    | _, _, {Types.type_kind = Type_variant _; _} -> true
+    | _ -> false
+  with _ -> false
+
+let is_jsx_component_type ~env ty =
+  match Ctype.expand_head env ty with
+  | {desc = Tconstr (Pdot (Pident {name = "Jsx"}, "component", _), _, _)} ->
+    true
+  | _ -> false
+
+let get_variant_constructors
+    ~(extract_concrete_typedecl : extract_concrete_typedecl) ~env ty =
+  match extract_concrete_typedecl env ty with
+  | _, _, {Types.type_kind = Type_variant constructors; _} -> constructors
+  | _ -> []
+
+let extract_string_constant text =
+  match !Parser.parse_source text with
+  | ( [
+        {
+          Parsetree.pstr_desc =
+            Pstr_eval ({pexp_desc = Pexp_constant (Pconst_string (s, _))}, _);
+        };
+      ],
+      _ ) ->
+    Some s
+  | _ -> None
+
 let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
-    (bottom_aliases : (Types.type_expr * Types.type_expr) option)
+    (bottom_aliases : (Types.type_expr * Types.type_expr) option) trace
     type_clash_context =
   match (type_clash_context, bottom_aliases) with
   | Some (MathOperator {for_float; operator; is_constant}), _ -> (
@@ -277,6 +328,65 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       "\n\n\
       \  All branches in a @{<info>switch@} must return the same type.@,\
        To fix this, change your branch to return the expected type."
+  | Some LetUnwrapReturn, bottom_aliases -> (
+    let kind =
+      match bottom_aliases with
+      | Some ({Types.desc = Tconstr (p, _, _)}, _)
+        when Path.same p Predef.path_option ->
+        `Option
+      | Some (_, {Types.desc = Tconstr (p, _, _)})
+        when Path.same p Predef.path_option ->
+        `Option
+      | Some ({Types.desc = Tconstr (p, _, _)}, _)
+        when Path.same p Predef.path_result ->
+        `Result
+      | Some (_, {Types.desc = Tconstr (p, _, _)})
+        when Path.same p Predef.path_result ->
+        `Result
+      | _ -> `Unknown
+    in
+    match kind with
+    | `Option ->
+      fprintf ppf
+        "\n\n\
+        \  This @{<info>let?@} unwraps an @{<info>option@}; use it where the \
+         enclosing function or let binding returns an @{<info>option@} so \
+         @{<info>None@} can propagate.\n\n\
+        \  Possible solutions:\n\
+        \  - Change the enclosing function or let binding to return \
+         @{<info>option<'t>@} and use @{<info>Some@} for success; \
+         @{<info>let?@} will propagate @{<info>None@}.\n\
+        \  - Replace @{<info>let?@} with a @{<info>switch@} and handle the \
+         @{<info>None@} case explicitly.\n\
+        \  - If you want a default value instead of early return, unwrap using \
+         @{<info>Option.getOr(default)@}."
+    | `Result ->
+      fprintf ppf
+        "\n\n\
+        \  This @{<info>let?@} unwraps a @{<info>result@}; use it where the \
+         enclosing function or let binding returns a @{<info>result@} so \
+         @{<info>Error@} can propagate.\n\n\
+        \  Possible solutions:\n\
+        \  - Change the enclosing function or let binding to return \
+         @{<info>result<'ok, 'error>@}; use @{<info>Ok@} for success, and \
+         @{<info>let?@} will propagate @{<info>Error@}.\n\
+        \  - Replace @{<info>let?@} with a @{<info>switch@} and handle the \
+         @{<info>Error@} case explicitly.\n\
+        \  - If you want a default value instead of early return, unwrap using \
+         @{<info>Result.getOr(default)@}."
+    | `Unknown ->
+      fprintf ppf
+        "\n\n\
+        \  @{<info>let?@} can only be used in a context that expects \
+         @{<info>option@} or @{<info>result@}.\n\n\
+        \  Possible solutions:\n\
+        \  - Change the enclosing function or let binding to return an \
+         @{<info>option<'t>@} or @{<info>result<'ok, 'error>@} and propagate \
+         with @{<info>Some/Ok@}.\n\
+        \  - Replace @{<info>let?@} with a @{<info>switch@} and handle the \
+         @{<info>None/Error@} case explicitly.\n\
+        \  - If you want a default value instead of early return, unwrap using \
+         @{<info>Option.getOr(default)@} or @{<info>Result.getOr(default)@}.")
   | Some TryReturn, _ ->
     fprintf ppf
       "\n\n\
@@ -296,11 +406,27 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       \  - Remove the @{<info>await@} if this is not expected to be a promise\n\
       \  - Wrap the expression in @{<info>Promise.resolve@} to convert the \
        expression to a promise"
+  | Some JsxComponent, _ ->
+    fprintf ppf
+      "\n\n\
+      \  JSX tags must be React components, not plain functions.\n\n\
+      \  Possible solutions:\n\
+      \  - If this function takes labeled props, annotate it with \
+       @{<info>@react.component@}\n\
+      \  - If this function takes a single props record, annotate it with \
+       @{<info>@react.componentWithProps@}\n\
+      \  - If this is already a valid component-like value, wrap it with \
+       @{<info>React.component(...)@}"
   | Some IfReturn, _ ->
     fprintf ppf
       "\n\n\
       \  @{<info>if@} expressions must return the same type in all branches \
        (@{<info>if@}, @{<info>else if@}, @{<info>else@})."
+  | Some TernaryReturn, _ ->
+    fprintf ppf
+      "\n\n\
+      \  Ternaries (@{<info>?@} and @{<info>:@}) must return the same type in \
+       both branches."
   | Some MaybeUnwrapOption, _ ->
     fprintf ppf
       "\n\n\
@@ -318,18 +444,44 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       \  - Use a tuple, if your array is of fixed length. Tuples can mix types \
        freely, and compiles to a JavaScript array. Example of a tuple: `let \
        myTuple = (10, \"hello\", 15.5, true)"
+  | _, Some ({desc = Tarrow _}, expected)
+    when is_jsx_component_type ~env expected ->
+    fprintf ppf
+      "\n\n\
+      \  A React component is expected here, but this expression is a plain \
+       function.\n\n\
+      \  Possible solutions:\n\
+      \  - Extract it to a component annotated with @{<info>@react.component@} \
+       or @{<info>@react.componentWithProps@}\n\
+      \  - If this is already a valid component-like value, wrap it with \
+       @{<info>React.component(...)@}"
   | _, Some (_, {desc = Tconstr (p2, _, _)}) when Path.same Predef.path_dict p2
     ->
     fprintf ppf
       "@,@,Dicts are written like: @{<info>dict{\"a\": 1, \"b\": 2}@}@,"
-  | _, Some ({Types.desc = Tconstr (_p1, _, _)}, {desc = Tconstr (p2, _, _)})
+  | ( _,
+      Some
+        (({Types.desc = Tconstr (_p1, _, _)} as ty), {desc = Tconstr (p2, _, _)})
+    )
     when Path.same Predef.path_unit p2 ->
-    fprintf ppf
-      "\n\n\
-      \  - Did you mean to assign this to a variable?\n\
-      \  - If you don't care about the result of this expression, you can \
-       assign it to @{<info>_@} via @{<info>let _ = ...@} or pipe it to \
-       @{<info>ignore@} via @{<info>expression->ignore@}\n\n"
+    fprintf ppf "\n\n";
+    let is_jsx_element =
+      match Ctype.expand_head env ty with
+      | {desc = Tconstr (Pdot (Pident {name = "Jsx"}, "element", _), _, _)} ->
+        true
+      | _ -> false
+    in
+    if is_jsx_element then
+      fprintf ppf
+        "  - Did you forget to wrap this + adjacent JSX in a JSX fragment \
+         (@{<info><></>@})?\n\
+        \  - Did you mean to assign this to a variable?\n\n"
+    else
+      fprintf ppf
+        "  - Did you mean to assign this to a variable?\n\
+        \  - If you don't care about the result of this expression, you can \
+         assign it to @{<info>_@} via @{<info>let _ = ...@} or pipe it to \
+         @{<info>ignore@} via @{<info>expression->ignore@}\n\n"
   | _, Some ({desc = Tobject _}, ({Types.desc = Tconstr _} as t1))
     when is_record_type ~extract_concrete_typedecl ~env t1 ->
     fprintf ppf
@@ -492,14 +644,146 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
        with @{<info>?@} to show you want to pass the option, like: \
        @{<info>?%s@}"
       (Parser.extract_text_at_loc loc)
-  | _, Some (t1, t2) ->
-    let is_subtype =
-      try
-        Ctype.subtype env t1 t2 ();
-        true
-      with _ -> false
+  | Some BracedIdent, Some (_, ({desc = Tconstr (_, _, _)} as t))
+    when is_record_type ~extract_concrete_typedecl ~env t ->
+    fprintf ppf
+      "@,\
+       @,\
+       You might have meant to pass this as a record, but wrote it as a block.@,\
+       Braces with a single identifier counts as a block, not a record with a \
+       single (punned) field.@,\
+       @,\
+       Possible solutions: @,\
+       - Write out the full record with field and value, like: @{<info>%s@}@,\
+       - Return the expected record from the block"
+      (match
+         Parser.reprint_expr_at_loc
+           ~mapper:(fun e ->
+             match e.pexp_desc with
+             | Pexp_ident {txt} ->
+               Some
+                 {
+                   e with
+                   pexp_desc =
+                     Pexp_record
+                       ([{lid = Location.mknoloc txt; opt = false; x = e}], None);
+                 }
+             | _ -> None)
+           loc
+       with
+      | None -> ""
+      | Some s -> s)
+  | _, Some ({Types.desc = Tconstr (p1, _, _)}, {desc = Tvariant row_desc})
+    when Path.same Predef.path_string p1 -> (
+    (* Check if we have a string constant that could be a polymorphic variant constructor *)
+    let target_expr_text = Parser.extract_text_at_loc loc in
+    match extract_string_constant target_expr_text with
+    | Some string_value -> (
+      let variant_constructors = List.map fst row_desc.row_fields in
+      let reprinted =
+        Parser.reprint_expr_at_loc loc ~mapper:(fun exp ->
+            match exp.Parsetree.pexp_desc with
+            | Pexp_constant (Pconst_string (s, _)) ->
+              Some {exp with Parsetree.pexp_desc = Pexp_variant (s, None)}
+            | _ -> None)
+      in
+      match (reprinted, List.mem string_value variant_constructors) with
+      | Some reprinted, true ->
+        fprintf ppf
+          "\n\n\
+          \  Possible solutions:\n\
+          \  - The constant passed matches one of the expected polymorphic \
+           variant constructors. Did you mean to pass this as a polymorphic \
+           variant? If so, rewrite @{<info>\"%s\"@} to @{<info>%s@}"
+          string_value reprinted
+      | _ -> ())
+    | None -> ())
+  | _, Some ({Types.desc = Tconstr (p1, _, _)}, ({desc = Tconstr _} as t2))
+    when Path.same Predef.path_string p1
+         && is_variant_type ~extract_concrete_typedecl ~env t2 -> (
+    (* Check if we have a string constant that could be a regular variant constructor *)
+    let target_expr_text = Parser.extract_text_at_loc loc in
+    match extract_string_constant target_expr_text with
+    | Some string_value -> (
+      let constructors =
+        get_variant_constructors ~extract_concrete_typedecl ~env t2
+      in
+      (* Extract runtime representations from constructor declarations *)
+      let constructor_mappings =
+        List.filter_map
+          (fun (cd : Types.constructor_declaration) ->
+            let constructor_name = Ident.name cd.cd_id in
+            let runtime_repr =
+              match Ast_untagged_variants.process_tag_type cd.cd_attributes with
+              | Some (String s) -> Some s (* @as("string_value") *)
+              | Some _ -> None (* @as with non-string values *)
+              | None -> Some constructor_name (* No @as, use constructor name *)
+            in
+            match runtime_repr with
+            | Some repr -> Some (repr, constructor_name)
+            | None -> None)
+          constructors
+      in
+      let matching_constructor =
+        List.find_opt
+          (fun (runtime_repr, _) -> runtime_repr = string_value)
+          constructor_mappings
+      in
+      match matching_constructor with
+      | Some (_, constructor_name) -> (
+        let reprinted =
+          Parser.reprint_expr_at_loc loc ~mapper:(fun exp ->
+              match exp.Parsetree.pexp_desc with
+              | Pexp_constant (Pconst_string (_, _)) ->
+                Some
+                  {
+                    exp with
+                    Parsetree.pexp_desc =
+                      Pexp_construct
+                        ( {txt = Lident constructor_name; loc = exp.pexp_loc},
+                          None );
+                  }
+              | _ -> None)
+        in
+        match reprinted with
+        | Some reprinted ->
+          fprintf ppf
+            "\n\n\
+            \  Possible solutions:\n\
+            \  - The constant passed matches the runtime representation of one \
+             of the expected variant constructors. Did you mean to pass this \
+             as a variant constructor? If so, rewrite @{<info>\"%s\"@} to \
+             @{<info>%s@}"
+            string_value reprinted
+        | None -> ())
+      | None -> ())
+    | _ -> ())
+  | _, Some (_supplied_type, target_type) ->
+    (* Coercion should always target the top level types. *)
+    let top_level_types =
+      match trace with
+      | (_, t1_top) :: (_, t2_top) :: _ -> Some (t1_top, t2_top)
+      | _ -> None
     in
-    let target_type_string = Format.asprintf "%a" type_expr t2 in
+    let can_show_coercion_message =
+      match top_level_types with
+      | Some ({Types.desc = Tvariant _}, {Types.desc = Tvariant _}) ->
+        (* Subtyping polymorphic variants give some weird messages sometimes,
+        so let's turn it off for now. For an example, turn them on again and try:
+        ```
+        let a: [#Resize | #KeyDown] = #Resize
+        let b: [#Click] = a
+        ```
+        *)
+        false
+      | Some (t1, t2) -> (
+        try
+          Ctype.subtype env t1 t2 ();
+          true
+        with _ -> false)
+      | None -> false
+    in
+    let target_type_string = Format.asprintf "%a" type_expr target_type in
     let target_expr_text = Parser.extract_text_at_loc loc in
     let suggested_rewrite =
       match
@@ -519,7 +803,7 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       | _ -> false
     in
 
-    if is_subtype && not is_constant then (
+    if can_show_coercion_message && not is_constant then (
       fprintf ppf
         "@,\
          @,\
@@ -587,7 +871,7 @@ let type_clash_context_maybe_option ty_expected ty_res =
 
 let type_clash_context_in_statement sexp =
   match sexp.Parsetree.pexp_desc with
-  | Pexp_apply _ -> Some (Statement FunctionCall)
+  | Pexp_apply {transformed_jsx = false} -> Some (Statement FunctionCall)
   | _ -> None
 
 let print_contextual_unification_error ppf t1 t2 =

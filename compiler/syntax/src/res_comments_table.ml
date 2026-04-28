@@ -319,27 +319,28 @@ let arrow_type ct =
   let rec process attrs_before acc typ =
     match typ with
     | {
-     ptyp_desc = Ptyp_arrow {lbl = Nolabel as lbl; arg; ret};
+     ptyp_desc = Ptyp_arrow {arg = {lbl = Nolabel} as arg; ret};
      ptyp_attributes = [];
     } ->
-      let arg = ([], lbl, arg) in
+      let arg = ([], arg.lbl, arg.typ) in
       process attrs_before (arg :: acc) ret
     | {
-     ptyp_desc = Ptyp_arrow {lbl = Nolabel as lbl; arg; ret};
+     ptyp_desc = Ptyp_arrow {arg = {lbl = Nolabel} as arg; ret};
      ptyp_attributes = [({txt = "bs"}, _)] as attrs;
     } ->
-      let arg = (attrs, lbl, arg) in
+      let arg = (attrs, arg.lbl, arg.typ) in
       process attrs_before (arg :: acc) ret
-    | {ptyp_desc = Ptyp_arrow {lbl = Nolabel}} as return_type ->
+    | {ptyp_desc = Ptyp_arrow {arg = {lbl = Nolabel}}} as return_type ->
       let args = List.rev acc in
       (attrs_before, args, return_type)
-    | {ptyp_desc = Ptyp_arrow {lbl; arg; ret}; ptyp_attributes = attrs} ->
-      let arg = (attrs, lbl, arg) in
+    | {ptyp_desc = Ptyp_arrow {arg; ret}; ptyp_attributes = attrs} ->
+      let arg = (attrs, arg.lbl, arg.typ) in
       process attrs_before (arg :: acc) ret
     | typ -> (attrs_before, List.rev acc, typ)
   in
   match ct with
-  | {ptyp_desc = Ptyp_arrow {lbl = Nolabel}; ptyp_attributes = attrs} as typ ->
+  | {ptyp_desc = Ptyp_arrow {arg = {lbl = Nolabel}}; ptyp_attributes = attrs} as
+    typ ->
     process attrs [] {typ with ptyp_attributes = []}
   | typ -> process [] [] typ
 
@@ -1027,6 +1028,38 @@ and walk_value_binding vb t comments =
 
 and walk_expression expr t comments =
   let open Location in
+  let walk_apply_expr call_expr arguments t comments =
+    let before, inside, after =
+      partition_by_loc comments call_expr.Parsetree.pexp_loc
+    in
+    let after =
+      if is_block_expr call_expr then (
+        let after_expr, rest =
+          partition_adjacent_trailing call_expr.Parsetree.pexp_loc after
+        in
+        walk_expression call_expr t (List.concat [before; inside; after_expr]);
+        rest)
+      else (
+        attach t.leading call_expr.Parsetree.pexp_loc before;
+        walk_expression call_expr t inside;
+        after)
+    in
+    let after_expr, rest =
+      partition_adjacent_trailing call_expr.Parsetree.pexp_loc after
+    in
+    attach t.trailing call_expr.Parsetree.pexp_loc after_expr;
+    walk_list
+      (arguments
+      |> List.map (fun (lbl, expr) ->
+             let loc =
+               match lbl with
+               | Asttypes.Labelled {loc} | Optional {loc} ->
+                 {loc with loc_end = expr.Parsetree.pexp_loc.loc_end}
+               | _ -> expr.pexp_loc
+             in
+             ExprArgument {expr; loc}))
+      t rest
+  in
   match expr.Parsetree.pexp_desc with
   | _ when comments = [] -> ()
   | Pexp_constant _ ->
@@ -1187,6 +1220,7 @@ and walk_expression expr t comments =
     attach t.trailing typexpr.ptyp_loc trailing
   | Pexp_tuple []
   | Pexp_array []
+  | Pexp_break | Pexp_continue
   | Pexp_construct ({txt = Longident.Lident "[]"}, _) ->
     attach t.inside expr.pexp_loc comments
   | Pexp_construct ({txt = Longident.Lident "::"}, _) ->
@@ -1454,6 +1488,22 @@ and walk_expression expr t comments =
     attach t.trailing expr.pexp_loc after_expr;
     walk_list (cases |> List.map (fun case -> Case case)) t rest
     (* unary expression: todo use parsetreeviewer *)
+  | Pexp_apply _
+    when Option.is_some
+           (Res_parsetree_viewer.collect_spread_dict_expr_parts expr) -> (
+    match Res_parsetree_viewer.collect_spread_dict_expr_parts expr with
+    | Some parts ->
+      let part_exprs =
+        List.map
+          (function
+            | Res_parsetree_viewer.DictExprRows rows_expr ->
+              Expression rows_expr
+            | Res_parsetree_viewer.DictExprSpread spread_expr ->
+              Expression spread_expr)
+          parts
+      in
+      walk_list part_exprs t comments
+    | None -> assert false)
   | Pexp_apply
       {
         funct =
@@ -1463,7 +1513,7 @@ and walk_expression expr t comments =
                 {
                   txt =
                     Longident.Lident
-                      ("~+" | "~+." | "~-" | "~-." | "~~" | "not" | "!");
+                      ("~+" | "~+." | "~-" | "~-." | "~~~" | "not" | "!");
                 };
           };
         args = [(Nolabel, arg_expr)];
@@ -1484,7 +1534,8 @@ and walk_expression expr t comments =
                     Longident.Lident
                       ( ":=" | "||" | "&&" | "==" | "===" | "<" | ">" | "!="
                       | "!==" | "<=" | ">=" | "+" | "+." | "-" | "-." | "++"
-                      | "^" | "*" | "*." | "/" | "/." | "**" | "->" | "<>" );
+                      | "|||" | "^^^" | "&&&" | "*" | "*." | "/" | "/." | "**"
+                      | "->" | "<>" );
                 };
           };
         args = [(Nolabel, operand1); (Nolabel, operand2)];
@@ -1538,35 +1589,34 @@ and walk_expression expr t comments =
       }
     when Res_parsetree_viewer.is_tuple_array key_values ->
     walk_list [Expression key_values] t comments
-  | Pexp_apply {funct = call_expr; args = arguments} ->
-    let before, inside, after = partition_by_loc comments call_expr.pexp_loc in
-    let after =
-      if is_block_expr call_expr then (
-        let after_expr, rest =
-          partition_adjacent_trailing call_expr.pexp_loc after
+  | Pexp_apply {funct = call_expr; args = arguments} -> (
+    (* Special handling for Belt.Array.concatMany - treat like an array *)
+    match call_expr.pexp_desc with
+    | Pexp_ident
+        {
+          txt =
+            Longident.Ldot
+              (Longident.Ldot (Longident.Lident "Belt", "Array"), "concatMany");
+        }
+      when List.length arguments = 1 -> (
+      match arguments with
+      | [(_, {pexp_desc = Pexp_array sub_arrays})] ->
+        (* Collect all individual expressions from sub-arrays *)
+        let all_exprs =
+          List.fold_left
+            (fun acc sub_array ->
+              match sub_array.Parsetree.pexp_desc with
+              | Pexp_array exprs -> acc @ exprs
+              | _ -> acc @ [sub_array])
+            [] sub_arrays
         in
-        walk_expression call_expr t (List.concat [before; inside; after_expr]);
-        rest)
-      else (
-        attach t.leading call_expr.pexp_loc before;
-        walk_expression call_expr t inside;
-        after)
-    in
-    let after_expr, rest =
-      partition_adjacent_trailing call_expr.pexp_loc after
-    in
-    attach t.trailing call_expr.pexp_loc after_expr;
-    walk_list
-      (arguments
-      |> List.map (fun (lbl, expr) ->
-             let loc =
-               match lbl with
-               | Asttypes.Labelled {loc} | Optional {loc} ->
-                 {loc with loc_end = expr.Parsetree.pexp_loc.loc_end}
-               | _ -> expr.pexp_loc
-             in
-             ExprArgument {expr; loc}))
-      t rest
+        walk_list (all_exprs |> List.map (fun e -> Expression e)) t comments
+      | _ ->
+        (* Fallback to regular apply handling *)
+        walk_apply_expr call_expr arguments t comments)
+    | _ ->
+      (* Regular apply handling *)
+      walk_apply_expr call_expr arguments t comments)
   | Pexp_fun _ | Pexp_newtype _ -> (
     let _, parameters, return_expr = fun_expr expr in
     let comments =
@@ -1626,12 +1676,7 @@ and walk_expression expr t comments =
     let opening_token = {expr.pexp_loc with loc_end = opening_greater_than} in
     let on_same_line, rest = partition_by_on_same_line opening_token comments in
     attach t.trailing opening_token on_same_line;
-    let exprs =
-      match children with
-      | Parsetree.JSXChildrenSpreading e -> [e]
-      | Parsetree.JSXChildrenItems xs -> xs
-    in
-    let xs = exprs |> List.map (fun e -> Expression e) in
+    let xs = children |> List.map (fun e -> Expression e) in
     walk_list xs t rest
   | Pexp_jsx_element
       (Jsx_unary_element
@@ -1650,12 +1695,14 @@ and walk_expression expr t comments =
         | [] -> closing_token_loc
         | head :: _ -> ParsetreeViewer.get_jsx_prop_loc head
       in
-      partition_adjacent_trailing_before_next_token_on_same_line tag_name.loc
+      let name_loc = tag_name.loc in
+      partition_adjacent_trailing_before_next_token_on_same_line name_loc
         next_token comments
     in
 
     (* Only attach comments to the element name if they are on the same line *)
-    attach t.trailing tag_name.loc after_opening_tag_name;
+    let name_loc = tag_name.loc in
+    attach t.trailing name_loc after_opening_tag_name;
     match props with
     | [] ->
       let before_closing_token, _rest =
@@ -1694,11 +1741,13 @@ and walk_expression expr t comments =
         | [] -> opening_greater_than_loc
         | head :: _ -> ParsetreeViewer.get_jsx_prop_loc head
       in
-      partition_adjacent_trailing_before_next_token_on_same_line
-        tag_name_start.loc next_token comments
+      let name_loc = tag_name_start.loc in
+      partition_adjacent_trailing_before_next_token_on_same_line name_loc
+        next_token comments
     in
     (* Only attach comments to the element name if they are on the same line *)
-    attach t.trailing tag_name_start.loc after_opening_tag_name;
+    let name_loc = tag_name_start.loc in
+    attach t.trailing name_loc after_opening_tag_name;
     let rest =
       match props with
       | [] ->
@@ -1733,7 +1782,7 @@ and walk_expression expr t comments =
         partition_leading_trailing rest closing_tag_loc
     in
     match children with
-    | Parsetree.JSXChildrenItems [] -> (
+    | [] -> (
       (* attach all comments to the closing tag if there are no children *)
       match closing_tag with
       | None ->
@@ -1765,11 +1814,7 @@ and walk_expression expr t comments =
           (* if the closing tag is on the same line, attach comments to the opening tag *)
           attach t.leading closing_tag_loc comments_for_children)
     | children ->
-      let children_nodes =
-        match children with
-        | Parsetree.JSXChildrenSpreading e -> [Expression e]
-        | Parsetree.JSXChildrenItems xs -> List.map (fun e -> Expression e) xs
-      in
+      let children_nodes = List.map (fun e -> Expression e) children in
 
       walk_list children_nodes t comments_for_children
     (* It is less likely that there are comments inside the closing tag, 
@@ -1778,6 +1823,30 @@ and walk_expression expr t comments =
        Comments after the closing tag will already be taking into account by the parent node. *)
     )
   | Pexp_await expr -> walk_expression expr t comments
+  | Pexp_for_of (pattern, expr1, expr2)
+  | Pexp_for_await_of (pattern, expr1, expr2) ->
+    let leading, inside, trailing =
+      partition_by_loc comments pattern.ppat_loc
+    in
+    attach t.leading pattern.ppat_loc leading;
+    walk_pattern pattern t inside;
+    let after_pattern, rest =
+      partition_adjacent_trailing pattern.ppat_loc trailing
+    in
+    attach t.trailing pattern.ppat_loc after_pattern;
+    let leading, inside, trailing = partition_by_loc rest expr1.pexp_loc in
+    attach t.leading expr1.pexp_loc leading;
+    walk_expression expr1 t inside;
+    let after_expr, rest =
+      partition_adjacent_trailing expr1.pexp_loc trailing
+    in
+    attach t.trailing expr1.pexp_loc after_expr;
+    if is_block_expr expr2 then walk_expression expr2 t rest
+    else
+      let leading, inside, trailing = partition_by_loc rest expr2.pexp_loc in
+      attach t.leading expr2.pexp_loc leading;
+      walk_expression expr2 t inside;
+      attach t.trailing expr2.pexp_loc trailing
   | Pexp_send _ -> ()
 
 and walk_expr_parameter (_attrs, _argLbl, expr_opt, pattern) t comments =

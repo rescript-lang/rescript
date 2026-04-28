@@ -22,8 +22,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. */
 
-module String = Ocaml_String
-
 external reraise: exn => 'a = "%raise"
 
 let finally = (v, action, f) =>
@@ -39,7 +37,7 @@ let finally = (v, action, f) =>
 let hash_variant = s => {
   let accu = ref(0)
   for i in 0 to String.length(s) - 1 {
-    accu := 223 * accu.contents + Char.code(String.get(s, i))
+    accu := 223 * accu.contents + String.codePointAt(s, i)->Option.getUnsafe
   }
   /* reduce to 31 bits */
   accu := land(accu.contents, lsl(1, 31) - 1)

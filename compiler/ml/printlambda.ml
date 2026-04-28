@@ -377,6 +377,8 @@ let rec lam ppf = function
   | Lifthenelse (lcond, lif, lelse) ->
     fprintf ppf "@[<2>(if@ %a@ %a@ %a)@]" lam lcond lam lif lam lelse
   | Lsequence (l1, l2) -> fprintf ppf "@[<2>(seq@ %a@ %a)@]" lam l1 sequence l2
+  | Lbreak -> fprintf ppf "break"
+  | Lcontinue -> fprintf ppf "continue"
   | Lwhile (lcond, lbody) ->
     fprintf ppf "@[<2>(while@ %a@ %a)@]" lam lcond lam lbody
   | Lfor (param, lo, hi, dir, body) ->
@@ -385,6 +387,12 @@ let rec lam ppf = function
       | Upto -> "to"
       | Downto -> "downto")
       lam hi lam body
+  | Lfor_of (param, iterable, body) ->
+    fprintf ppf "@[<2>(for_of %a@ %a@ %a)@]" Ident.print param lam iterable lam
+      body
+  | Lfor_await_of (param, iterable, body) ->
+    fprintf ppf "@[<2>(for_await_of %a@ %a@ %a)@]" Ident.print param lam
+      iterable lam body
   | Lassign (id, expr) ->
     fprintf ppf "@[<2>(assign@ %a@ %a)@]" Ident.print id lam expr
   | Lsend (name, obj, _) -> fprintf ppf "@[<2>(send%s@ %a@ )@]" name lam obj

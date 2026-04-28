@@ -238,11 +238,17 @@ let expr sub x =
         (sub.expr sub exp1, sub.expr sub exp2, opt (sub.expr sub) expo)
     | Texp_sequence (exp1, exp2) ->
       Texp_sequence (sub.expr sub exp1, sub.expr sub exp2)
+    | Texp_break -> Texp_break
+    | Texp_continue -> Texp_continue
     | Texp_while (exp1, exp2) ->
       Texp_while (sub.expr sub exp1, sub.expr sub exp2)
     | Texp_for (id, p, exp1, exp2, dir, exp3) ->
       Texp_for
         (id, p, sub.expr sub exp1, sub.expr sub exp2, dir, sub.expr sub exp3)
+    | Texp_for_of (id, p, exp1, exp2) ->
+      Texp_for_of (id, p, sub.expr sub exp1, sub.expr sub exp2)
+    | Texp_for_await_of (id, p, exp1, exp2) ->
+      Texp_for_await_of (id, p, sub.expr sub exp1, sub.expr sub exp2)
     | Texp_send (exp, meth, expo) ->
       Texp_send (sub.expr sub exp, meth, opt (sub.expr sub) expo)
     | Texp_letmodule (id, s, mexpr, exp) ->
@@ -359,8 +365,8 @@ let typ sub x =
   let ctyp_desc =
     match x.ctyp_desc with
     | (Ttyp_any | Ttyp_var _) as d -> d
-    | Ttyp_arrow (label, ct1, ct2, arity) ->
-      Ttyp_arrow (label, sub.typ sub ct1, sub.typ sub ct2, arity)
+    | Ttyp_arrow (arg, ret, arity) ->
+      Ttyp_arrow ({arg with typ = sub.typ sub arg.typ}, sub.typ sub ret, arity)
     | Ttyp_tuple list -> Ttyp_tuple (List.map (sub.typ sub) list)
     | Ttyp_constr (path, lid, list) ->
       Ttyp_constr (path, lid, List.map (sub.typ sub) list)

@@ -3,6 +3,8 @@ module Comment = Res_comment
 type t =
   | Await
   | Open
+  | Break
+  | Continue
   | True
   | False
   | Codepoint of {c: int; original: string}
@@ -17,7 +19,7 @@ type t =
   | DotDotDot
   | Bang
   | Semicolon
-  | Let
+  | Let of {unwrap: bool}
   | And
   | Rec
   | Underscore
@@ -25,6 +27,7 @@ type t =
   | Equal
   | EqualEqual
   | EqualEqualEqual
+  | Ampersand
   | Bar
   | Lparen
   | Rparen
@@ -52,7 +55,6 @@ type t =
   | ColonGreaterThan
   | GreaterThan
   | LessThan
-  | LessThanSlash
   | Hash
   | HashEqual
   | Assert
@@ -77,7 +79,10 @@ type t =
   | Of
   | Land
   | Lor
-  | Band (* Bitwise and: & *)
+  | Bnot (* Bitwise not: ~~~ *)
+  | Bor (* Bitwise or: ||| *)
+  | Bxor (* Bitwise xor: ^^^ *)
+  | Band (* Bitwise and: &&& *)
   | Caret
   | BangEqual
   | BangEqualEqual
@@ -105,22 +110,25 @@ let precedence = function
   | HashEqual | ColonEqual -> 1
   | Lor -> 2
   | Land -> 3
-  | Caret -> 4
-  | Band -> 5
+  | Bor -> 4
+  | Bxor -> 5
+  | Band -> 6
   | Equal | EqualEqual | EqualEqualEqual | LessThan | GreaterThan | BangEqual
   | BangEqualEqual | LessEqual | GreaterEqual ->
-    6
-  | LeftShift | RightShift | RightShiftUnsigned -> 7
-  | Plus | PlusDot | Minus | MinusDot | PlusPlus -> 8
-  | Asterisk | AsteriskDot | Forwardslash | ForwardslashDot | Percent -> 9
-  | Exponentiation -> 10
-  | MinusGreater -> 11
-  | Dot -> 12
+    7
+  | LeftShift | RightShift | RightShiftUnsigned -> 8
+  | Plus | PlusDot | Minus | MinusDot | PlusPlus -> 9
+  | Asterisk | AsteriskDot | Forwardslash | ForwardslashDot | Percent -> 10
+  | Exponentiation -> 11
+  | MinusGreater -> 12
+  | Dot -> 13
   | _ -> 0
 
 let to_string = function
   | Await -> "await"
   | Open -> "open"
+  | Break -> "break"
+  | Continue -> "continue"
   | True -> "true"
   | False -> "false"
   | Codepoint {original} -> "codepoint '" ^ original ^ "'"
@@ -134,7 +142,8 @@ let to_string = function
   | Float {f} -> "Float: " ^ f
   | Bang -> "!"
   | Semicolon -> ";"
-  | Let -> "let"
+  | Let {unwrap = true} -> "let?"
+  | Let {unwrap = false} -> "let"
   | And -> "and"
   | Rec -> "rec"
   | Underscore -> "_"
@@ -143,6 +152,7 @@ let to_string = function
   | EqualEqual -> "=="
   | EqualEqualEqual -> "==="
   | Eof -> "eof"
+  | Ampersand -> "&"
   | Bar -> "|"
   | As -> "as"
   | Lparen -> "("
@@ -169,7 +179,6 @@ let to_string = function
   | HashEqual -> "#="
   | GreaterThan -> ">"
   | LessThan -> "<"
-  | LessThanSlash -> "</"
   | Asterisk -> "*"
   | AsteriskDot -> "*."
   | Exponentiation -> "**"
@@ -194,7 +203,10 @@ let to_string = function
   | Module -> "module"
   | Of -> "of"
   | Lor -> "||"
-  | Band -> "&"
+  | Bnot -> "~~~"
+  | Bor -> "|||"
+  | Bxor -> "^^^"
+  | Band -> "&&&"
   | Caret -> "^"
   | Land -> "&&"
   | BangEqual -> "!="
@@ -224,7 +236,9 @@ let keyword_table = function
   | "as" -> As
   | "assert" -> Assert
   | "await" -> Await
+  | "break" -> Break
   | "constraint" -> Constraint
+  | "continue" -> Continue
   | "else" -> Else
   | "exception" -> Exception
   | "external" -> External
@@ -233,7 +247,8 @@ let keyword_table = function
   | "if" -> If
   | "in" -> In
   | "include" -> Include
-  | "let" -> Let
+  | "let?" -> Let {unwrap = true}
+  | "let" -> Let {unwrap = false}
   | "list{" -> List
   | "dict{" -> Dict
   | "module" -> Module
@@ -252,9 +267,10 @@ let keyword_table = function
 [@@raises Not_found]
 
 let is_keyword = function
-  | Await | And | As | Assert | Constraint | Else | Exception | External | False
-  | For | If | In | Include | Land | Let | List | Lor | Module | Mutable | Of
-  | Open | Private | Rec | Switch | True | Try | Typ | When | While | Dict ->
+  | Await | Break | Continue | And | As | Assert | Constraint | Else | Exception
+  | External | False | For | If | In | Include | Land | Let _ | List | Lor
+  | Module | Mutable | Of | Open | Private | Rec | Switch | True | Try | Typ
+  | When | While | Dict ->
     true
   | _ -> false
 

@@ -7,11 +7,11 @@ type animationName
 
 module Make: Css_Core.CssImplementationIntf =>
 {
-  let global: (. string, array<rule>) => unit
-  let insertRule: (. string) => unit
-  let merge: (. array<string>) => string
-  let style: (. array<rule>) => string
-  let keyframes: (. array<(int, array<rule>)>) => animationName
+  let global: (string, array<rule>) => unit
+  let insertRule: (string) => unit
+  let merge: (array<string>) => string
+  let style: (array<rule>) => string
+  let keyframes: (array<(int, array<rule>)>) => animationName
 }
 
 let toJson: array<rule> => Js.Json.t

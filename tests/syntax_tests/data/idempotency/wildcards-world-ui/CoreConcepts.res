@@ -7,7 +7,7 @@ module CoreConcepts = {
   @react.component
   let make = () => {
     let usedtranslationModeContext = ReactTranslate.useTranslationModeContext()
-    let translation = ReactTranslate.useTranslate(. usedtranslationModeContext.translationMode)
+    let translation = ReactTranslate.useTranslate(usedtranslationModeContext.translationMode)
 
     <Box className=Styles.infoBackground>
       <Flex flexWrap="wrap">
@@ -22,12 +22,12 @@ module CoreConcepts = {
             <br />
             <hr />
             <br />
-            <Heading _as="h3"> {translation(. "nft")->restr} </Heading>
+            <Heading _as="h3"> {translation("nft")->restr} </Heading>
             <br />
             <Text>
               {"A "->restr}
-              <strong> {translation(. "nft")->restr} </strong>
-              {translation(. "whatIsANFT")->restr}
+              <strong> {translation("nft")->restr} </strong>
+              {translation("whatIsANFT")->restr}
             </Text>
             <br />
             <Heading _as="h3"> {"Always for Sale"->restr} </Heading>
@@ -38,11 +38,11 @@ module CoreConcepts = {
               {", forever!"->restr}
             </Text>
             <br />
-            <Heading _as="h3"> {translation(. "harbergerTax")->restr} </Heading>
+            <Heading _as="h3"> {translation("harbergerTax")->restr} </Heading>
             <br />
             <Text>
               {"The owner of an asset pays a "->restr}
-              <strong> {translation(. "harbergerTax")->restr} </strong>
+              <strong> {translation("harbergerTax")->restr} </strong>
               {"  which is a percentage of the selling price they stipulate."->restr}
             </Text>
           </Card>

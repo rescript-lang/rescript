@@ -1,0 +1,5 @@
+type nonrec foo = string
+type t.foo = {
+  x: int }[@@res.inlineRecordDefinition ]
+and t = {
+  foo: t.foo }

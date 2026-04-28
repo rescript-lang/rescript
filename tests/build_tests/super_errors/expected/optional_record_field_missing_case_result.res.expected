@@ -1,0 +1,14 @@
+
+  [1;33mWarning number 8[0m
+  [36m/.../fixtures/optional_record_field_missing_case_result.res[0m:[2m4:3-7:3[0m
+
+  2 [2m│[0m 
+  3 [2m│[0m let f = v =>
+  [1;33m4[0m [2m│[0m   [1;33mswitch v {[0m
+  [1;33m5[0m [2m│[0m [1;33m  | {b: Ok(x)} => x[0m
+  [1;33m6[0m [2m│[0m [1;33m  | {b: Error(y)} => y[0m
+  [1;33m7[0m [2m│[0m [1;33m  }[0m
+  8 [2m│[0m 
+
+  You forgot to handle a possible case here, for example: 
+  | {b: ?None}

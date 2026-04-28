@@ -1,4 +1,5 @@
-module String = Ocaml_String
+open Mocha
+open Test_utils
 
 let generic_basename = (is_dir_sep, current_dir_name, name) => {
   let rec find_end = n =>
@@ -25,11 +26,10 @@ let generic_basename = (is_dir_sep, current_dir_name, name) => {
   }
 }
 
-let basename = generic_basename((s, i) => String.get(s, i) == '/', "", ...)
+let basename = generic_basename((s, i) => String.getUnsafe(s, i) == "/", "", ...)
 
-let suites = {
-  open Mt
-  list{("basename", _ => Eq(basename("b/c/a.b"), "a.b"))}
-}
-
-Mt.from_pair_suites(__MODULE__, suites)
+describe(__MODULE__, () => {
+  test("basename", () => {
+    eq(__LOC__, basename("b/c/a.b"), "a.b")
+  })
+})

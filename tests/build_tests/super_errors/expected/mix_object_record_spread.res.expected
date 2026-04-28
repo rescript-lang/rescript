@@ -1,0 +1,12 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/mix_object_record_spread.res[0m:[2m5:3-15[0m
+
+  3 [2m│[0m type props = {
+  4 [2m│[0m   ...baseProps,
+  [1;31m5[0m [2m│[0m   [1;31mlabel: string[0m,
+  6 [2m│[0m }
+  7 [2m│[0m 
+
+  You cannot mix a record field with an object type spread.
+  Remove the record field or change it to an object field (e.g. "label": ...).

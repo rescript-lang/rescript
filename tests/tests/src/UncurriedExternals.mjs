@@ -69,8 +69,20 @@ function methodWithAsync(param) {
   return (async arg => $$this + arg | 0)(param);
 }
 
+let p1 = {
+  watch: async function (name, ev) {
+    let pc = this ;
+    console.log(pc);
+  }
+};
+
+let AsyncMethod = {
+  p1: p1
+};
+
 export {
   StandardNotation,
   methodWithAsync,
+  AsyncMethod,
 }
 /* h Not a pure module */

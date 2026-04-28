@@ -12,7 +12,7 @@ let nested2 = (x, y, z) => List.length(_)
 
 let l = [1, 2, 3]->List.map(i => i + 1, _)->List.filter(i => i > 0, _)
 
-let l = (i => i + 1)->List.map(_, [1, 2, 3])
+let l = (i => i + 1)->List.map([1, 2, 3])
 
 let x = List.length(_)
 
@@ -52,8 +52,8 @@ f(a, b, _)[ix] = 2
 
 getDirector(a, b, _).name = "Steve"
 
-filterNone->Array.get(_, 0)
-filterNone->Array.get(_, 0)
+filterNone->Array.get(0)
+filterNone->Array.get(0)
 Array.get(_, 0)
 1 + Array.get(_, 0)
 Array.get(_, 1) + Array.get(_, 0)
@@ -71,3 +71,9 @@ let status =
   json
   ->optional(field("status", string, _), _)
   ->Option.mapOr(Status.Active, Status.fromString)
+
+a->map2(fn)
+
+a->map2(fn)
+
+a->f(_, _, b)

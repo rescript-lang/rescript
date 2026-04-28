@@ -1,0 +1,16 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/expressions/oldArraySyntax.res:2:10
+
+  1 │ // Old Reason array literal
+  2 │ let s = [|1, 2, 3|]
+  3 │ 
+  4 │ 
+
+  I'm not sure what to parse here when looking at "|".
+
+  Did you mean to write an array literal? Arrays are written with `[ ... ]` (not `[| ... |]`).
+  Quick fix: replace `[|` with `[` and `|]` with `]`.
+  Example: `[|1, 2, 3|]` -> `[1, 2, 3]`
+
+let s = [|1;2;3|]

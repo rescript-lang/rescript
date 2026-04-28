@@ -275,6 +275,30 @@ let rename ~path ~pos ~newName ~debug =
   in
   print_endline result
 
+let prepareRename ~path ~pos ~debug =
+  match Cmt.loadFullCmtFromPath ~path with
+  | None -> print_endline Protocol.null
+  | Some full -> (
+    match References.getLocItem ~full ~pos ~debug with
+    | None -> print_endline Protocol.null
+    | Some locItem ->
+      let range = Utils.cmtLocToRange locItem.loc in
+      let placeholderOpt =
+        match locItem.locType with
+        | Typed (name, _, _) | TopLevelModule name | TypeDefinition (name, _, _)
+          ->
+          Some name
+        | _ -> None
+      in
+      let fields =
+        [("range", Some (Protocol.stringifyRange range))]
+        @
+        match placeholderOpt with
+        | None -> []
+        | Some s -> [("placeholder", Some (Protocol.wrapInQuotes s))]
+      in
+      print_endline (Protocol.stringifyObject fields))
+
 let format ~path =
   if Filename.check_suffix path ".res" then
     let {Res_driver.parsetree = structure; comments; diagnostics} =
@@ -282,17 +306,13 @@ let format ~path =
         ~filename:path
     in
     if List.length diagnostics > 0 then ""
-    else
-      Res_printer.print_implementation
-        ~width:Res_multi_printer.default_print_width ~comments structure
+    else Res_printer.print_implementation ~comments structure
   else if Filename.check_suffix path ".resi" then
     let {Res_driver.parsetree = signature; comments; diagnostics} =
       Res_driver.parsing_engine.parse_interface ~for_printer:true ~filename:path
     in
     if List.length diagnostics > 0 then ""
-    else
-      Res_printer.print_interface ~width:Res_multi_printer.default_print_width
-        ~comments signature
+    else Res_printer.print_interface ~comments signature
   else ""
 
 let diagnosticSyntax ~path =
@@ -419,6 +439,11 @@ let test ~path =
               ("References " ^ path ^ " " ^ string_of_int line ^ ":"
              ^ string_of_int col);
             references ~path ~pos:(line, col) ~debug:true
+          | "pre" ->
+            print_endline
+              ("PrepareRename " ^ path ^ " " ^ string_of_int line ^ ":"
+             ^ string_of_int col);
+            prepareRename ~path ~pos:(line, col) ~debug:true
           | "ren" ->
             let newName = String.sub rest 4 (len - mlen - 4) in
             let () =
@@ -502,6 +527,7 @@ let test ~path =
             let currentFile = createCurrentFile () in
             DumpAst.dump ~pos:(line, col) ~currentFile;
             Sys.remove currentFile
+          | "sem" -> SemanticTokens.semanticTokens ~currentFile:path
           | _ -> ());
           print_newline ())
     in

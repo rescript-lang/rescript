@@ -855,7 +855,6 @@ let parseImplementation ~filename =
     let structure = [Ast_helper.Str.eval ~loc:expr.pexp_loc expr] in
     structure
     |> Res_printer.print_implementation
-         ~width:Res_multi_printer.default_print_width
          ~comments:(comments |> filterComments ~loc:expr.pexp_loc)
     |> Utils.indent range.start.character
   in
@@ -864,14 +863,12 @@ let parseImplementation ~filename =
     let structure = [item] in
     structure
     |> Res_printer.print_implementation
-         ~width:Res_multi_printer.default_print_width
          ~comments:(comments |> filterComments ~loc:item.pstr_loc)
     |> Utils.indent range.start.character
   in
   let printStandaloneStructure ~(loc : Location.t) structure =
     structure
     |> Res_printer.print_implementation
-         ~width:Res_multi_printer.default_print_width
          ~comments:(comments |> filterComments ~loc)
   in
   (structure, printExpr, printStructureItem, printStandaloneStructure)
@@ -891,7 +888,7 @@ let parseInterface ~filename =
       (item : Parsetree.signature_item) =
     let signature_item = [item] in
     signature_item
-    |> Res_printer.print_interface ~width:Res_multi_printer.default_print_width
+    |> Res_printer.print_interface
          ~comments:(comments |> filterComments ~loc:item.psig_loc)
     |> Utils.indent range.start.character
   in

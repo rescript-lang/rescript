@@ -42,3 +42,9 @@ type nonrec t = {
 type nonrec t = private {
   x: int ;
   y: int }
+type nonrec t = {
+  x: int }
+type nonrec t = {
+  x: int }
+type nonrec t = ..
+type nonrec t = ..

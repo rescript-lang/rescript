@@ -11,6 +11,6 @@ let test = () => {
   }
 }
 
-let () = /* Js.log "start" ; */
+let () = /* Console.log "start" ; */
 test()
-/* Js.log "finish" */
+/* Console.log "finish" */

@@ -1,17 +1,5 @@
 
   Syntax error!
-  syntax_tests/data/parsing/errors/typexpr/objectSpread.res:5:16-18
-
-  3 │ type u = private {...a, u: int}
-  4 │ 
-  5 │ type x = Type({...a, u: int})
-  6 │ 
-  7 │ type u = {...a, "u": int, v: int}
-
-  A record type declaration doesn't support the ... spread. Only an object (with quoted field names) does.
-
-
-  Syntax error!
   syntax_tests/data/parsing/errors/typexpr/objectSpread.res:9:14
 
    7 │ type u = {...a, "u": int, v: int}
@@ -28,6 +16,8 @@ type nonrec u = private {
   ...: a ;
   u: int }
 type nonrec x =
-  | Type of < a ;u: int   >  
+  | Type of {
+  ...: a ;
+  u: int } 
 type nonrec u = < a ;u: int  ;v: int   > 
 let f [arity:1](x : < a: int  ;b: int   > ) = ()

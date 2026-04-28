@@ -299,7 +299,7 @@ let readConfig = (~bsVersion, ~getConfigFile, ~getBsConfigFile, ~namespace) => {
       | Some(True(_)) => {...config, namespace: namespace}
       | _ => config
       }
-      let config = switch map->String_map.find_opt("bs-dependencies") {
+      let config = switch map->String_map.find_opt("dependencies") {
       | Some(Arr({content})) =>
         let strings = ref(list{})
         content->Array.iter(x =>

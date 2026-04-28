@@ -8,14 +8,20 @@
 
 let is_block = x => Js.typeof(Obj.repr(x)) != "number"
 
-let suites = {
-  open Mt
-  list{
-    ("is_block_test1", _ => Eq(false, is_block(3))),
-    ("is_block_test2", _ => Eq(true, is_block(list{3}))),
-    ("is_block_test3", _ => Eq(true, is_block("x"))),
-    ("is_block_test4", _ => Eq(false, is_block(3.0))),
-  }
-}
+open Mocha
+open Test_utils
 
-Mt.from_pair_suites(__MODULE__, suites)
+describe(__MODULE__, () => {
+  test("is_block_test1", () => {
+    eq(__LOC__, false, is_block(3))
+  })
+  test("is_block_test2", () => {
+    eq(__LOC__, true, is_block(list{3}))
+  })
+  test("is_block_test3", () => {
+    eq(__LOC__, true, is_block("x"))
+  })
+  test("is_block_test4", () => {
+    eq(__LOC__, false, is_block(3.0))
+  })
+})

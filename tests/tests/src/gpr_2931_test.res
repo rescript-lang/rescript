@@ -1,6 +1,5 @@
-let suites: ref<Mt.pair_suites> = ref(list{})
-let test_id = ref(0)
-let eq = (loc, x, y) => Mt.eq_suites(~test_id, ~suites, loc, x, y)
+open Mocha
+open Test_utils
 
 let fake_c2 = (a_type, b_type) =>
   switch (a_type, b_type) {
@@ -12,5 +11,8 @@ let fake_c2 = (a_type, b_type) =>
   | _ => 0
   }
 
-eq(__LOC__, 3, fake_c2("number", "xx"))
-Mt.from_pair_suites(__MODULE__, suites.contents)
+describe(__MODULE__, () => {
+  test("fake comparison function", () => {
+    eq(__LOC__, 3, fake_c2("number", "xx"))
+  })
+})

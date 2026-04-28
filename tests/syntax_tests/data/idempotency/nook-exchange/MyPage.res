@@ -162,7 +162,7 @@ let make = (~user: User.t, ~urlRest, ~url) => {
           username=user.username
           userItems={user.items
           ->Js.Dict.entries
-          ->Belt.Array.mapU((. (itemKey, item)) => (
+          ->Belt.Array.mapU(((itemKey, item)) => (
             Belt.Option.getExn(User.fromItemKey(~key=itemKey)),
             item,
           ))}

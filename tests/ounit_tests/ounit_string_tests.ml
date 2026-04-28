@@ -423,9 +423,6 @@ let suites =
              cmp0 a b =~ cmp1 a b;
              cmp0 b a =~ cmp1 b a
            in
-           (* This is needed since deserialization/serialization
-              needs to be synced up for .bsbuild decoding
-           *)
            f "a" "A";
            f "bcdef" "abcdef";
            f "" "A";

@@ -11,3 +11,4 @@
   (~a: int, ~b: int) => int
   
   - Missing arguments that must be provided: ~b
+  - Hint: Did you want to partially apply the function? You can do that by putting `...` just before the closing parens of the function call. Example: [1;33myourFn(~arg1=someVar, ...)[0m

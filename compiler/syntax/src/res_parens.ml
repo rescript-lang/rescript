@@ -52,7 +52,7 @@ let call_expr expr =
      pexp_desc =
        ( Pexp_assert _ | Pexp_fun _ | Pexp_newtype _ | Pexp_constraint _
        | Pexp_setfield _ | Pexp_match _ | Pexp_try _ | Pexp_while _ | Pexp_for _
-       | Pexp_ifthenelse _ );
+       | Pexp_for_of _ | Pexp_for_await_of _ | Pexp_ifthenelse _ );
     } ->
       Parenthesized
     | _ when Ast_uncurried.expr_is_uncurried_fun expr -> Parenthesized
@@ -103,8 +103,8 @@ let unary_expr_operand expr =
      pexp_desc =
        ( Pexp_assert _ | Pexp_fun _ | Pexp_newtype _ | Pexp_constraint _
        | Pexp_setfield _ | Pexp_extension _ (* readability? maybe remove *)
-       | Pexp_match _ | Pexp_try _ | Pexp_while _ | Pexp_for _
-       | Pexp_ifthenelse _ );
+       | Pexp_match _ | Pexp_try _ | Pexp_while _ | Pexp_for _ | Pexp_for_of _
+       | Pexp_for_await_of _ | Pexp_ifthenelse _ );
     } ->
       Parenthesized
     | _ when ParsetreeViewer.expr_is_await expr -> Parenthesized
@@ -129,7 +129,6 @@ let binary_expr_operand ~is_lhs expr =
     | _ when Ast_uncurried.expr_is_uncurried_fun expr -> Parenthesized
     | expr when ParsetreeViewer.is_binary_expression expr -> Parenthesized
     | expr when ParsetreeViewer.is_ternary_expr expr -> Parenthesized
-    | expr when ParsetreeViewer.is_unary_bitnot_expression expr -> Parenthesized
     | {pexp_desc = Pexp_assert _} when is_lhs -> Parenthesized
     | _ when ParsetreeViewer.expr_is_await expr -> Parenthesized
     | {Parsetree.pexp_attributes = attrs} ->
@@ -223,7 +222,7 @@ let assert_or_await_expr_rhs ?(in_await = false) expr =
      pexp_desc =
        ( Pexp_assert _ | Pexp_fun _ | Pexp_newtype _ | Pexp_constraint _
        | Pexp_setfield _ | Pexp_match _ | Pexp_try _ | Pexp_while _ | Pexp_for _
-       | Pexp_ifthenelse _ );
+       | Pexp_for_of _ | Pexp_for_await_of _ | Pexp_ifthenelse _ );
     } ->
       Parenthesized
     | _ when (not in_await) && ParsetreeViewer.expr_is_await expr ->
@@ -268,8 +267,8 @@ let field_expr expr =
      pexp_desc =
        ( Pexp_assert _ | Pexp_extension _ (* %extension.x vs (%extension).x *)
        | Pexp_fun _ | Pexp_newtype _ | Pexp_constraint _ | Pexp_setfield _
-       | Pexp_match _ | Pexp_try _ | Pexp_while _ | Pexp_for _
-       | Pexp_ifthenelse _ );
+       | Pexp_match _ | Pexp_try _ | Pexp_while _ | Pexp_for _ | Pexp_for_of _
+       | Pexp_for_await_of _ | Pexp_ifthenelse _ );
     } ->
       Parenthesized
     | _ when ParsetreeViewer.expr_is_await expr -> Parenthesized

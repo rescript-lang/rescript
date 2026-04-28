@@ -28,7 +28,7 @@ let hook = (makeInitial, ~queryFragment, ~coder) => {
 
       {
         open Window
-        window.history.replaceState(. state, "", `$protocol//$host$pathname$search`)
+        window.history.replaceState(state, "", `$protocol//$host$pathname$search`)
       }
 
       None

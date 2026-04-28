@@ -1,6 +1,5 @@
 {
   "name": "b",
-  "version": "0.1.0",
   "sources": {
     "dir": "src",
     "subdirs": true
@@ -10,7 +9,7 @@
     "in-source": true,
     "suffix": ".res.js"
   },
-  "bs-dependencies": ["c"],
+  "dependencies": ["c"],
   "warnings": { "error": "+101" },
   "namespace": true
 }

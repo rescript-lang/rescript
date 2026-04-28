@@ -1,0 +1,11 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/expressions/letUnwrapRec.res:1:1-9
+
+  1 │ let? rec Some(baz) = someOption 
+  2 │ and Some(bar) = baz
+
+  let? is not allowed to be recursive. Use a regular `let` or remove `rec`.
+
+let rec Some baz = someOption[@@let.unwrap ]
+and Some bar = baz[@@let.unwrap ]

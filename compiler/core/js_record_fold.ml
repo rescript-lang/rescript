@@ -234,19 +234,29 @@ let statement_desc : 'a. ('a, statement_desc) fn =
     let st = _self.block _self st _x1 in
     let st = _self.block _self st _x2 in
     st
-  | While (_x0, _x1) ->
+  | While (_label, _x0, _x1) ->
     let st = _self.expression _self st _x0 in
     let st = _self.block _self st _x1 in
     st
-  | ForRange (_x0, _x1, _x2, _x3, _x4) ->
+  | ForRange (_label, _x0, _x1, _x2, _x3, _x4) ->
     let st = option for_ident_expression _self st _x0 in
     let st = finish_ident_expression _self st _x1 in
     let st = _self.for_ident _self st _x2 in
     let st = for_direction _self st _x3 in
     let st = _self.block _self st _x4 in
     st
-  | Continue -> st
-  | Break -> st
+  | ForOf (_label, _x0, _x1, _x2) ->
+    let st = _self.for_ident _self st _x0 in
+    let st = _self.expression _self st _x1 in
+    let st = _self.block _self st _x2 in
+    st
+  | ForAwaitOf (_label, _x0, _x1, _x2) ->
+    let st = _self.for_ident _self st _x0 in
+    let st = _self.expression _self st _x1 in
+    let st = _self.block _self st _x2 in
+    st
+  | Continue _ -> st
+  | Break _ -> st
   | Return _x0 ->
     let st = _self.expression _self st _x0 in
     st

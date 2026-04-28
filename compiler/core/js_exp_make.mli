@@ -111,6 +111,7 @@ val ocaml_fun :
 val method_ :
   ?comment:string ->
   ?immutable_mask:bool array ->
+  async:bool ->
   return_unit:bool ->
   J.ident list ->
   J.block ->

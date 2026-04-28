@@ -37,24 +37,14 @@
 
 type typ = Parsetree.core_type
 
-type 'a cxt = Ast_helper.loc -> Bs_ast_mapper.mapper -> 'a
-
-type uncurry_type_gen =
-  (Asttypes.arg_label ->
-  (* label for error checking *)
+val to_method_callback_type :
+  Ast_helper.loc ->
+  Bs_ast_mapper.mapper ->
+  arity:int option ->
   typ ->
-  (* First arg *)
-  typ ->
-  (* Tail *)
-  typ)
-  cxt
+  (* Method type *)
+  typ
 
-val to_uncurry_type : uncurry_type_gen
-(** syntax : 
-    {[ int -> int -> int [@bs]]}
-*)
-
-val to_method_callback_type : uncurry_type_gen
 (** syntax:
     {[ 'obj -> int -> int [@this] ]}
 *)

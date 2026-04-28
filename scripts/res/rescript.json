@@ -6,7 +6,7 @@
       "dir": "./"
     }
   ],
-  "bs-dependencies": ["@tests/docstring-tests"],
+  "dependencies": ["@tests/docstring-tests"],
   "package-specs": {
     "module": "esmodule",
     "in-source": true
