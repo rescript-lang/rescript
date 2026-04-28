@@ -30,6 +30,7 @@
 #### :nail_care: Polish
 
 - Improve default argument type mismatch errors. https://github.com/rescript-lang/rescript/pull/8389
+- Resolve workspace dependencies in editor analysis. https://github.com/rescript-lang/rescript/pull/8392
 
 #### :house: Internal
 
