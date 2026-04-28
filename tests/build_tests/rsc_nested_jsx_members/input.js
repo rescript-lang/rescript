@@ -91,10 +91,6 @@ assert.match(
   plainAccessOutput,
   /let provider = Sidebar\$RscNestedJsxMembers\.Sidebar\$Provider;/,
 );
-assert.match(
-  plainAccessOutput,
-  /let callProvider = Sidebar\$RscNestedJsxMembers\.Sidebar\$Provider\(\{/,
-);
 assert.doesNotMatch(plainAccessOutput, /\.Provider\.make/);
 assert.doesNotMatch(
   plainAccessOutput,

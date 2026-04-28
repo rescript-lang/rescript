@@ -57,7 +57,7 @@ JsxRuntime.jsx(Gpr_3987_test$Gpr3987ReproError, {
 
 export {
   makeContainer,
-  Gpr3987ReproOk,
+  Gpr_3987_test$Gpr3987ReproOk,
   Gpr_3987_test$Gpr3987ReproOk2,
   Gpr_3987_test$Gpr3987ReproError,
 }

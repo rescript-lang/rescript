@@ -20,8 +20,6 @@ let Rec = {
   make: Recursive_component_test$Rec
 };
 
-let Recursive_component_test$Rec = make;
-
 export {
   Rec,
   Recursive_component_test$Rec,
