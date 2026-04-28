@@ -11,7 +11,7 @@
 //
 // However, we may want to revisit the decision to use clap after the v12 release.
 
-use std::{env, ffi::OsString, ops::Deref};
+use std::{env, ffi::OsString, ops::Deref, path::Path};
 
 use clap::{Args, CommandFactory, Parser, Subcommand, error::ErrorKind};
 use clap_verbosity_flag::InfoLevel;
@@ -622,6 +622,12 @@ impl Deref for FolderArg {
 
     fn deref(&self) -> &Self::Target {
         &self.folder
+    }
+}
+
+impl AsRef<Path> for FolderArg {
+    fn as_ref(&self) -> &Path {
+        Path::new(&self.folder)
     }
 }
 

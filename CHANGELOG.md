@@ -30,6 +30,8 @@
 #### :nail_care: Polish
 
 - Improve default argument type mismatch errors. https://github.com/rescript-lang/rescript/pull/8389
+- Resolve workspace dependencies in editor analysis. https://github.com/rescript-lang/rescript/pull/8392
+- Build system: Add OpenTelemetry tracing support for cli commands. https://github.com/rescript-lang/rescript/pull/8370
 - Improve deprecated attribute extraction and support record form. https://github.com/rescript-lang/rescript/pull/8396
 
 #### :house: Internal
