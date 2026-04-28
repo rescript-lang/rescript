@@ -1,6 +1,8 @@
 {
   "name": "source_map",
   "sources": ["src"],
-  "sourceMap": true,
-  "sourceMapSourcesContent": true
+  "sourceMap": {
+    "mode": "linked",
+    "sourcesContent": true
+  }
 }

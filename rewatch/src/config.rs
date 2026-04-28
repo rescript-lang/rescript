@@ -286,7 +286,15 @@ pub struct JsxSpecs {
 #[serde(untagged)]
 pub enum SourceMapConfig {
     Bool(bool),
-    String(String),
+    Options(SourceMapOptions),
+}
+
+#[derive(Deserialize, Debug, Clone, Eq, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct SourceMapOptions {
+    pub mode: String,
+    pub sources_content: Option<bool>,
+    pub source_root: Option<String>,
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
@@ -497,10 +505,6 @@ pub struct Config {
     pub jsx: Option<JsxSpecs>,
     #[serde(rename = "sourceMap")]
     pub source_map: Option<SourceMapConfig>,
-    #[serde(rename = "sourceMapSourcesContent")]
-    pub source_map_sources_content: Option<bool>,
-    #[serde(rename = "sourceMapRoot")]
-    pub source_map_root: Option<String>,
     #[serde(rename = "experimental-features")]
     pub experimental_features: Option<HashMap<ExperimentalFeature, bool>>,
     #[serde(rename = "gentypeconfig")]
@@ -807,26 +811,31 @@ impl Config {
         let mut args = Vec::new();
 
         if let Some(source_map) = &self.source_map {
-            let value = match source_map {
-                SourceMapConfig::Bool(true) => "true".to_string(),
-                SourceMapConfig::Bool(false) => "false".to_string(),
-                SourceMapConfig::String(value) => match value.as_str() {
-                    "true" | "linked" | "false" | "none" => value.to_string(),
-                    _ => panic!("sourceMap value {value} is unsupported"),
-                },
-            };
-            args.extend(["-bs-source-map".to_string(), value]);
-        }
+            match source_map {
+                SourceMapConfig::Bool(false) => {
+                    args.extend(["-bs-source-map".to_string(), "false".to_string()]);
+                }
+                SourceMapConfig::Bool(true) => {
+                    panic!("sourceMap true is unsupported; use {{ \"mode\": \"linked\" }}")
+                }
+                SourceMapConfig::Options(options) => {
+                    match options.mode.as_str() {
+                        "linked" => args.extend(["-bs-source-map".to_string(), "linked".to_string()]),
+                        value => panic!("sourceMap.mode value {value} is unsupported"),
+                    }
 
-        if let Some(sources_content) = self.source_map_sources_content {
-            args.extend([
-                "-bs-source-map-sources-content".to_string(),
-                sources_content.to_string(),
-            ]);
-        }
+                    if let Some(sources_content) = options.sources_content {
+                        args.extend([
+                            "-bs-source-map-sources-content".to_string(),
+                            sources_content.to_string(),
+                        ]);
+                    }
 
-        if let Some(source_root) = &self.source_map_root {
-            args.extend(["-bs-source-map-root".to_string(), source_root.to_string()]);
+                    if let Some(source_root) = &options.source_root {
+                        args.extend(["-bs-source-map-root".to_string(), source_root.to_string()]);
+                    }
+                }
+            }
         }
 
         args
@@ -1327,8 +1336,6 @@ pub mod tests {
             namespace: None,
             jsx: None,
             source_map: None,
-            source_map_sources_content: None,
-            source_map_root: None,
             gentype_config: None,
             js_post_build: None,
             editor: None,
@@ -1637,26 +1644,67 @@ pub mod tests {
         {
             "name": "testrepo",
             "sources": [ { "dir": "src/", "subdirs": true } ],
-            "sourceMap": true,
-            "sourceMapSourcesContent": true
+            "sourceMap": {
+                "mode": "linked",
+                "sourcesContent": true,
+                "sourceRoot": "webpack://testrepo/"
+            }
         }
         "#;
 
         let config = serde_json::from_str::<Config>(json).unwrap();
         assert_eq!(
             config.get_source_map_args(),
-            vec!["-bs-source-map", "true", "-bs-source-map-sources-content", "true",]
+            vec![
+                "-bs-source-map",
+                "linked",
+                "-bs-source-map-sources-content",
+                "true",
+                "-bs-source-map-root",
+                "webpack://testrepo/",
+            ]
         );
     }
 
     #[test]
-    #[should_panic(expected = "sourceMap value inline is unsupported")]
+    fn test_source_map_false_args() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": [ { "dir": "src/", "subdirs": true } ],
+            "sourceMap": false
+        }
+        "#;
+
+        let config = serde_json::from_str::<Config>(json).unwrap();
+        assert_eq!(config.get_source_map_args(), vec!["-bs-source-map", "false",]);
+    }
+
+    #[test]
+    #[should_panic(expected = "sourceMap true is unsupported")]
+    fn test_source_map_rejects_true_for_nested_config() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": [ { "dir": "src/", "subdirs": true } ],
+            "sourceMap": true
+        }
+        "#;
+
+        let config = serde_json::from_str::<Config>(json).unwrap();
+        let _ = config.get_source_map_args();
+    }
+
+    #[test]
+    #[should_panic(expected = "sourceMap.mode value inline is unsupported")]
     fn test_source_map_rejects_inline_for_mvp() {
         let json = r#"
         {
             "name": "testrepo",
             "sources": [ { "dir": "src/", "subdirs": true } ],
-            "sourceMap": "inline"
+            "sourceMap": {
+                "mode": "inline"
+            }
         }
         "#;
 
