@@ -652,6 +652,7 @@ pub fn compiler_args(
     is_local_dep: bool,
     // Command-line --warn-error flag override (takes precedence over rescript.json config)
     warn_error_override: Option<String>,
+    source_map_command: config::SourceMapCommand,
     // Pre-expanded source directories for the current package (used by gentype).
     // Pass an empty slice when unavailable (e.g. the compiler-args CLI command).
     current_package_dirs: &[PathBuf],
@@ -686,7 +687,7 @@ pub fn compiler_args(
     let jsx_module_args = root_config.get_jsx_module_args();
     let jsx_mode_args = root_config.get_jsx_mode_args();
     let jsx_preserve_args = root_config.get_jsx_preserve_args();
-    let source_map_args = root_config.get_source_map_args();
+    let source_map_args = root_config.get_source_map_args(source_map_command);
     let bsb_project_root = project_context.get_root_path();
     let dep_paths: Vec<(String, PathBuf)> = if config.gentype_config.is_some() {
         let resolved = packages.as_ref().map(|pkgs| {
@@ -919,6 +920,7 @@ fn compile_file(
         is_type_dev,
         package.is_local_dep,
         warn_error_override,
+        build_state.source_map_command,
         current_package_dirs,
     )?;
 

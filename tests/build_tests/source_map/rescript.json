@@ -2,6 +2,7 @@
   "name": "source_map",
   "sources": ["src"],
   "sourceMap": {
+    "enabled": "always",
     "mode": "linked",
     "sourcesContent": true
   }

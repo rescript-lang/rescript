@@ -2,7 +2,7 @@ use super::build_types::*;
 use super::packages;
 use crate::build;
 use crate::build::packages::Package;
-use crate::config::Config;
+use crate::config::{Config, SourceMapCommand};
 use crate::helpers;
 use crate::helpers::emojis::*;
 use crate::project_context::ProjectContext;
@@ -373,7 +373,7 @@ pub fn clean(path: &Path, show_progress: bool, plain_output: bool, prod: bool) -
     }
 
     let timing_clean_mjs = Instant::now();
-    let mut build_state = BuildState::new(project_context, packages, compiler_info);
+    let mut build_state = BuildState::new(project_context, packages, compiler_info, SourceMapCommand::Build);
     packages::parse_packages(&mut build_state)?;
     let root_config = build_state.get_root_config();
     let suffix_for_print = match root_config.package_specs {

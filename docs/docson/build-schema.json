@@ -56,6 +56,10 @@
         {
           "type": "object",
           "properties": {
+            "enabled": {
+              "enum": ["dev", "always"],
+              "description": "`dev` generates source maps only during watch mode. `always` generates source maps during both build and watch."
+            },
             "mode": {
               "enum": ["linked"],
               "description": "Generate a separate .js.map file next to each generated JavaScript file and append a sourceMappingURL comment. Only linked source maps are supported for now."
@@ -69,7 +73,7 @@
               "description": "Optional sourceRoot value written to the generated source map."
             }
           },
-          "required": ["mode"],
+          "required": ["enabled", "mode"],
           "additionalProperties": false
         }
       ]
