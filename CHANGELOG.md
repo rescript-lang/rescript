@@ -41,6 +41,7 @@
 - Reanalyze server: redesign incremental fixpoint with delete-then-rederive strategy and predecessor tracking, improving speed on deletions. https://github.com/rescript-lang/rescript/pull/8276
 - Improve error message for dependency without `rescript.json`. https://github.com/rescript-lang/rescript/pull/8292
 - Resolve workspace dependencies in editor analysis. https://github.com/rescript-lang/rescript/pull/8392
+- Improve deprecated attribute extraction and support record form. https://github.com/rescript-lang/rescript/pull/8396
 
 #### :house: Internal
 
