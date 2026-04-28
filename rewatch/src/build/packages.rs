@@ -680,10 +680,13 @@ fn extend_with_children(
             .into_iter()
             .for_each(|source| map.extend(source));
 
-        let mut modules = AHashSet::from_iter(
-            map.keys()
-                .map(|key| helpers::file_path_to_module_name(key, &package.namespace)),
-        );
+        let mut modules = AHashSet::from_iter(map.keys().filter_map(|key| {
+            helpers::file_path_to_constructible_module_name(
+                key,
+                &package.namespace,
+                package.config.is_multi_entry_enabled(),
+            )
+        }));
         match package.namespace.to_owned() {
             Namespace::Namespace(namespace) => {
                 let _ = modules.insert(namespace);
@@ -886,6 +889,7 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
     let packages = build_state.packages.clone();
     for (package_name, package) in packages.iter() {
         debug!("Parsing package: {package_name}");
+        let multi_entry = package.config.is_multi_entry_enabled();
         if let Some(package_modules) = package.modules.to_owned() {
             build_state.module_names.extend(package_modules)
         }
@@ -942,7 +946,13 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
 
             let depending_modules = source_files
                 .iter()
-                .map(|path| helpers::file_path_to_module_name(path, &packages::Namespace::NoNamespace))
+                .filter_map(|path| {
+                    helpers::file_path_to_constructible_module_name(
+                        path,
+                        &packages::Namespace::NoNamespace,
+                        multi_entry,
+                    )
+                })
                 .filter(|module_name| {
                     if let Some(entry) = entry {
                         module_name != entry
@@ -959,13 +969,18 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
             // compile_mlmap(&package, namespace, &project_root);
             let deps = source_files
                 .iter()
-                .filter(|path| {
-                    helpers::is_non_exotic_module_name(&helpers::file_path_to_module_name(
+                .filter_map(|path| {
+                    helpers::file_path_to_constructible_module_name(
                         path,
                         &packages::Namespace::NoNamespace,
-                    ))
+                        multi_entry,
+                    )
+                    .map(|module_name| (path, module_name))
                 })
-                .map(|path| helpers::file_path_to_module_name(path, &package.namespace))
+                .filter(|(_, module_name)| helpers::is_non_exotic_module_name(module_name))
+                .filter_map(|(path, _)| {
+                    helpers::file_path_to_constructible_module_name(path, &package.namespace, multi_entry)
+                })
                 .filter(|module_name| {
                     if let Some(entry) = entry {
                         module_name != entry
@@ -998,12 +1013,14 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
                 let namespace = package.namespace.to_owned();
 
                 let extension = file.extension().unwrap().to_str().unwrap();
-                let module_name = helpers::file_path_to_module_name(file, &namespace);
+                let module_key =
+                    helpers::file_path_to_module_key(file, &namespace, &package.name, multi_entry);
+                let canonical_module_name = helpers::file_path_to_module_name(file, &namespace);
 
                 if helpers::is_implementation_file(extension) {
                     // Store duplicate paths in an Option so we can build the error after the entry borrow ends.
                     let mut duplicate_paths: Option<(PathBuf, PathBuf)> = None;
-                    match build_state.modules.entry(module_name.to_string()) {
+                    match build_state.modules.entry(module_key.to_string()) {
                         Entry::Occupied(mut entry) => {
                             let module = entry.get_mut();
                             if let SourceType::SourceFile(ref mut source_file) = module.source_type {
@@ -1053,7 +1070,7 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
                             std::mem::swap(&mut first, &mut second);
                         }
                         return Err(anyhow!(
-                            "Duplicate module name: {module_name}. Found in {} and {}. Rename one of these files.",
+                            "Duplicate module name: {module_key}. Found in {} and {}. Rename one of these files.",
                             first,
                             second
                         ));
@@ -1071,7 +1088,8 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
                             if let Some(implementation_path) = source_files.keys().find(|path| {
                                 let extension = path.extension().and_then(|ext| ext.to_str());
                                 matches!(extension, Some(ext) if helpers::is_implementation_file(ext))
-                                    && helpers::file_path_to_module_name(path, &namespace) == module_name
+                                    && helpers::file_path_to_module_name(path, &namespace)
+                                        == canonical_module_name
                             }) {
                                 let implementation_display =
                                     implementation_path.to_string_lossy().to_string();
@@ -1091,7 +1109,7 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
                         Some(_) => {
                             build_state
                                 .modules
-                                .entry(module_name.to_string())
+                                .entry(module_key.to_string())
                                 .and_modify(|module| {
                                     if let SourceType::SourceFile(ref mut source_file) = module.source_type {
                                         source_file.interface = Some(Interface {

@@ -494,6 +494,8 @@ pub struct Config {
     pub gentype_config: Option<GenTypeConfig>,
     #[serde(rename = "js-post-build")]
     pub js_post_build: Option<JsPostBuild>,
+    #[serde(rename = "multi-entry", default)]
+    pub multi_entry: bool,
     // Used by the VS Code extension; ignored by rewatch but should not emit warnings.
     // Payload is not validated here, only in the VS Code extension.
     pub editor: Option<serde_json::Value>,
@@ -698,6 +700,10 @@ impl Config {
         }
         self.path = path;
         Ok(())
+    }
+
+    pub fn is_multi_entry_enabled(&self) -> bool {
+        self.multi_entry
     }
 
     pub fn get_namespace(&self) -> packages::Namespace {
@@ -1286,6 +1292,7 @@ pub mod tests {
             jsx: None,
             gentype_config: None,
             js_post_build: None,
+            multi_entry: false,
             editor: None,
             reanalyze: None,
             namespace_entry: None,
@@ -1528,6 +1535,35 @@ pub mod tests {
         "#;
         let config = serde_json::from_str::<Config>(json).unwrap();
         assert!(config.get_gentype_args(&[], None, &[]).is_empty());
+    }
+
+    #[test]
+    fn test_multi_entry_defaults_to_false() {
+        let json = r#"
+        {
+            "name": "my-monorepo",
+            "sources": "src"
+        }
+        "#;
+
+        let config = Config::new_from_json_string(json).unwrap();
+        assert!(!config.is_multi_entry_enabled());
+        assert!(config.get_unknown_fields().is_empty());
+    }
+
+    #[test]
+    fn test_multi_entry_can_be_enabled() {
+        let json = r#"
+        {
+            "name": "my-monorepo",
+            "sources": "src",
+            "multi-entry": true
+        }
+        "#;
+
+        let config = Config::new_from_json_string(json).unwrap();
+        assert!(config.is_multi_entry_enabled());
+        assert!(config.get_unknown_fields().is_empty());
     }
 
     #[test]

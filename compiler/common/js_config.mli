@@ -88,6 +88,8 @@ val js_stdout : bool ref
 
 val all_module_aliases : bool ref
 
+val multi_entry : bool ref
+
 val no_stdlib : bool ref
 
 val no_export : bool ref

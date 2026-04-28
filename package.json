@@ -76,15 +76,13 @@
     "#cli/*": "./cli/common/*.js",
     "#dev/*": "./lib_dev/*.js"
   },
-  "dependencies": {
-    "@rescript/runtime": "workspace:packages/@rescript/runtime"
-  },
   "optionalDependencies": {
-    "@rescript/darwin-arm64": "workspace:packages/@rescript/darwin-arm64",
-    "@rescript/darwin-x64": "workspace:packages/@rescript/darwin-x64",
-    "@rescript/linux-arm64": "workspace:packages/@rescript/linux-arm64",
-    "@rescript/linux-x64": "workspace:packages/@rescript/linux-x64",
-    "@rescript/win32-x64": "workspace:packages/@rescript/win32-x64"
+    "@rescript/darwin-arm64": "workspace:*",
+    "@rescript/darwin-x64": "workspace:*",
+    "@rescript/linux-arm64": "workspace:*",
+    "@rescript/linux-x64": "workspace:*",
+    "@rescript/runtime": "workspace:*",
+    "@rescript/win32-x64": "workspace:*"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.10",
@@ -97,8 +95,7 @@
     "typescript": "6.0.3"
   },
   "workspaces": [
-    "packages/playground",
-    "packages/@rescript/*",
+    "packages/**",
     "tests/dependencies/**",
     "tests/analysis_tests/**",
     "tests/docstring_tests",

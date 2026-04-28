@@ -695,10 +695,14 @@ pub fn compiler_args(
 ) -> Result<Vec<String>> {
     let bsc_flags = config::flatten_flags(&config.compiler_flags);
     let dependency_paths = get_dependency_paths(config, project_context, packages, is_type_dev);
-    let module_name = helpers::file_path_to_module_name(file_path, &config.get_namespace());
+    let multi_entry = config.is_multi_entry_enabled();
+    let module_name =
+        helpers::file_path_to_constructible_module_name(file_path, &config.get_namespace(), multi_entry);
 
     let namespace_args = match &config.get_namespace() {
-        packages::Namespace::NamespaceWithEntry { namespace: _, entry } if &module_name == entry => {
+        packages::Namespace::NamespaceWithEntry { namespace: _, entry }
+            if module_name.as_ref() == Some(entry) =>
+        {
             // if the module is the entry we just want to open the namespace
             vec![
                 "-open".to_string(),
@@ -758,11 +762,23 @@ pub fn compiler_args(
     let package_name_arg = vec!["-bs-package-name".to_string(), config.name.to_owned()];
     let project_root_args = config.get_project_root_args();
 
+    let multi_entry_arg = if multi_entry {
+        vec!["-bs-multi-entry".to_string()]
+    } else {
+        vec![]
+    };
+
     let implementation_args = if is_interface {
-        debug!("Compiling interface file: {}", &module_name);
+        debug!(
+            "Compiling interface file: {}",
+            module_name.as_deref().unwrap_or("<private file module>")
+        );
         vec![]
     } else {
-        debug!("Compiling file: {}", &module_name);
+        debug!(
+            "Compiling file: {}",
+            module_name.as_deref().unwrap_or("<private file module>")
+        );
         let specs = root_config.get_package_specs();
 
         specs
@@ -811,6 +827,7 @@ pub fn compiler_args(
         warning_args,
         gentype_arg,
         experimental_args,
+        multi_entry_arg,
         // vec!["-warn-error".to_string(), "A".to_string()],
         // ^^ this one fails for bisect-ppx
         // this is the default
@@ -938,6 +955,12 @@ fn compile_file(
     .map_err(|e| anyhow!(e))?;
     let basename =
         helpers::file_path_to_compiler_asset_basename(implementation_file_path, &package.namespace);
+    let is_constructible_module = helpers::file_path_to_constructible_module_name(
+        implementation_file_path,
+        &package.namespace,
+        package.config.is_multi_entry_enabled(),
+    )
+    .is_some();
     let has_interface = module.get_interface().is_some();
     let is_type_dev = module.is_type_dev;
     // `gentype_dirs` is populated once during package discovery, so we just
@@ -985,7 +1008,7 @@ fn compile_file(
             let dir = Path::new(implementation_file_path).parent().unwrap();
 
             // perhaps we can do this copying somewhere else
-            if !is_interface {
+            if !is_interface && is_constructible_module {
                 let _ = std::fs::copy(
                     package
                         .get_build_path()
@@ -1010,7 +1033,7 @@ fn compile_file(
                         .join(format!("{basename}.cmt")),
                     ocaml_build_path_abs.join(format!("{basename}.cmt")),
                 );
-            } else {
+            } else if is_interface && is_constructible_module {
                 let _ = std::fs::copy(
                     package
                         .get_build_path()
@@ -1038,13 +1061,15 @@ fn compile_file(
                 )
                 .expect("copying source file failed");
 
-                let _ = std::fs::copy(
-                    Path::new(&package.path).join(path),
-                    package
-                        .get_ocaml_build_path()
-                        .join(std::path::Path::new(path).file_name().unwrap()),
-                )
-                .expect("copying source file failed");
+                if is_constructible_module {
+                    let _ = std::fs::copy(
+                        Path::new(&package.path).join(path),
+                        package
+                            .get_ocaml_build_path()
+                            .join(std::path::Path::new(path).file_name().unwrap()),
+                    )
+                    .expect("copying source file failed");
+                }
             }
             if let SourceType::SourceFile(SourceFile {
                 implementation: Implementation { path, .. },
@@ -1060,13 +1085,15 @@ fn compile_file(
                 )
                 .expect("copying source file failed");
 
-                let _ = std::fs::copy(
-                    Path::new(&package.path).join(path),
-                    package
-                        .get_ocaml_build_path()
-                        .join(std::path::Path::new(path).file_name().unwrap()),
-                )
-                .expect("copying source file failed");
+                if is_constructible_module {
+                    let _ = std::fs::copy(
+                        Path::new(&package.path).join(path),
+                        package
+                            .get_ocaml_build_path()
+                            .join(std::path::Path::new(path).file_name().unwrap()),
+                    )
+                    .expect("copying source file failed");
+                }
             }
 
             // copy js file

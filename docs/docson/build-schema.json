@@ -364,6 +364,10 @@
       "$ref": "#/definitions/namespace-spec",
       "description": "can be true/false or a customized name"
     },
+    "multi-entry": {
+      "type": "boolean",
+      "description": "Default: false. When true, lowercase source files are compiled as private file-level modules without capitalizing their file module name. They cannot be referenced from ReScript code, are not exported through namespaces, and duplicate lowercase file stems are allowed across source folders. Pascal-case file modules keep the normal globally unique module behavior."
+    },
     "sources": {
       "$ref": "#/definitions/sources",
       "description": "Source code location"
