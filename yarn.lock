@@ -446,59 +446,11 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rescript/react@link:../../../dependencies/rescript-react::locator=%40tests%2Freanalyze-benchmark%40workspace%3Atests%2Fanalysis_tests%2Ftests-reanalyze%2Fdeadcode-benchmark":
-  version: 0.0.0-use.local
-  resolution: "@rescript/react@link:../../../dependencies/rescript-react::locator=%40tests%2Freanalyze-benchmark%40workspace%3Atests%2Fanalysis_tests%2Ftests-reanalyze%2Fdeadcode-benchmark"
-  languageName: node
-  linkType: soft
-
-"@rescript/react@link:../../../dependencies/rescript-react::locator=%40tests%2Freanalyze-deadcode%40workspace%3Atests%2Fanalysis_tests%2Ftests-reanalyze%2Fdeadcode":
-  version: 0.0.0-use.local
-  resolution: "@rescript/react@link:../../../dependencies/rescript-react::locator=%40tests%2Freanalyze-deadcode%40workspace%3Atests%2Fanalysis_tests%2Ftests-reanalyze%2Fdeadcode"
-  languageName: node
-  linkType: soft
-
-"@rescript/react@link:../../dependencies/rescript-react::locator=%40tests%2Fanalysis%40workspace%3Atests%2Fanalysis_tests%2Ftests":
-  version: 0.0.0-use.local
-  resolution: "@rescript/react@link:../../dependencies/rescript-react::locator=%40tests%2Fanalysis%40workspace%3Atests%2Fanalysis_tests%2Ftests"
-  languageName: node
-  linkType: soft
-
-"@rescript/react@link:../dependencies/rescript-react::locator=%40tests%2Fdocstring-tests%40workspace%3Atests%2Fdocstring_tests":
-  version: 0.0.0-use.local
-  resolution: "@rescript/react@link:../dependencies/rescript-react::locator=%40tests%2Fdocstring-tests%40workspace%3Atests%2Fdocstring_tests"
-  languageName: node
-  linkType: soft
-
-"@rescript/react@link:../dependencies/rescript-react::locator=%40tests%2Ftools%40workspace%3Atests%2Ftools_tests":
-  version: 0.0.0-use.local
-  resolution: "@rescript/react@link:../dependencies/rescript-react::locator=%40tests%2Ftools%40workspace%3Atests%2Ftools_tests"
-  languageName: node
-  linkType: soft
-
-"@rescript/react@npm:0.14.0":
-  version: 0.14.0
-  resolution: "@rescript/react@npm:0.14.0"
-  peerDependencies:
-    react: ">=19.0.0"
-    react-dom: ">=19.0.0"
-  checksum: 10c0/9463eb027df1d28aab60879d3779f0832270580b381fc7b980387ffe080b821548242fef419cfe0a625d9d9866c4f7d676ed77f500374c22b2affd83ebd8bbaa
-  languageName: node
-  linkType: hard
-
-"@rescript/react@patch:@rescript/react@npm%3A0.14.0#~/.yarn/patches/@rescript-react-npm-0.14.0-e462ba0c5d.patch":
-  version: 0.14.0
-  resolution: "@rescript/react@patch:@rescript/react@npm%3A0.14.0#~/.yarn/patches/@rescript-react-npm-0.14.0-e462ba0c5d.patch::version=0.14.0&hash=fe24f5"
-  peerDependencies:
-    react: ">=19.0.0"
-    react-dom: ">=19.0.0"
-  checksum: 10c0/f55f81dca3908901df7232fd499d048d12ea9165c1d4a273d130205286b98c5c2050058be8295a05363638914a897236e8716debdd7bb13a69996b15b9a90b3f
-  languageName: node
-  linkType: hard
-
-"@rescript/react@workspace:tests/dependencies/rescript-react":
+"@rescript/react@workspace:^, @rescript/react@workspace:tests/dependencies/rescript-react":
   version: 0.0.0-use.local
   resolution: "@rescript/react@workspace:tests/dependencies/rescript-react"
+  dependencies:
+    rescript: "workspace:^"
   languageName: unknown
   linkType: soft
 
@@ -729,7 +681,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@tests/analysis@workspace:tests/analysis_tests/tests"
   dependencies:
-    "@rescript/react": "link:../../dependencies/rescript-react"
+    "@rescript/react": "workspace:^"
     rescript: "workspace:^"
   languageName: unknown
   linkType: soft
@@ -738,7 +690,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@tests/docstring-tests@workspace:tests/docstring_tests"
   dependencies:
-    "@rescript/react": "link:../dependencies/rescript-react"
+    "@rescript/react": "workspace:^"
     rescript: "workspace:^"
   languageName: unknown
   linkType: soft
@@ -755,7 +707,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@tests/gentype-react-example@workspace:tests/gentype_tests/typescript-react-example"
   dependencies:
-    "@rescript/react": "patch:@rescript/react@npm%3A0.14.0#~/.yarn/patches/@rescript-react-npm-0.14.0-e462ba0c5d.patch"
+    "@rescript/react": "workspace:^"
     "@types/react": "npm:^18.3.3"
     "@types/react-dom": "npm:^18.3.0"
     react: "npm:^18.3.1"
@@ -786,7 +738,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@tests/reanalyze-benchmark@workspace:tests/analysis_tests/tests-reanalyze/deadcode-benchmark"
   dependencies:
-    "@rescript/react": "link:../../../dependencies/rescript-react"
+    "@rescript/react": "workspace:^"
     rescript: "workspace:^"
   languageName: unknown
   linkType: soft
@@ -795,7 +747,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@tests/reanalyze-deadcode@workspace:tests/analysis_tests/tests-reanalyze/deadcode"
   dependencies:
-    "@rescript/react": "link:../../../dependencies/rescript-react"
+    "@rescript/react": "workspace:^"
     rescript: "workspace:^"
   languageName: unknown
   linkType: soft
@@ -829,7 +781,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@tests/tools@workspace:tests/tools_tests"
   dependencies:
-    "@rescript/react": "link:../dependencies/rescript-react"
+    "@rescript/react": "workspace:^"
     rescript: "workspace:^"
   languageName: unknown
   linkType: soft
@@ -2353,7 +2305,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "playground@workspace:packages/playground"
   dependencies:
-    "@rescript/react": "patch:@rescript/react@npm%3A0.14.0#~/.yarn/patches/@rescript-react-npm-0.14.0-e462ba0c5d.patch"
+    "@rescript/react": "workspace:^"
     "@rollup/plugin-node-resolve": "npm:^16.0.0"
     h3: "npm:2.0.1-rc.20"
     rescript: "workspace:^"
@@ -2450,6 +2402,15 @@ __metadata:
 "rescript-commonjs-tests@workspace:tests/commonjs_tests":
   version: 0.0.0-use.local
   resolution: "rescript-commonjs-tests@workspace:tests/commonjs_tests"
+  languageName: unknown
+  linkType: soft
+
+"rescript-tests@workspace:tests/tests":
+  version: 0.0.0-use.local
+  resolution: "rescript-tests@workspace:tests/tests"
+  dependencies:
+    "@rescript/react": "workspace:^"
+    rescript: "workspace:^"
   languageName: unknown
   linkType: soft
 
