@@ -446,18 +446,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rescript/react@link:../../../dependencies/rescript-react::locator=%40tests%2Freanalyze-benchmark%40workspace%3Atests%2Fanalysis_tests%2Ftests-reanalyze%2Fdeadcode-benchmark":
-  version: 0.0.0-use.local
-  resolution: "@rescript/react@link:../../../dependencies/rescript-react::locator=%40tests%2Freanalyze-benchmark%40workspace%3Atests%2Fanalysis_tests%2Ftests-reanalyze%2Fdeadcode-benchmark"
-  languageName: node
-  linkType: soft
-
-"@rescript/react@link:../dependencies/rescript-react::locator=%40tests%2Fdocstring-tests%40workspace%3Atests%2Fdocstring_tests":
-  version: 0.0.0-use.local
-  resolution: "@rescript/react@link:../dependencies/rescript-react::locator=%40tests%2Fdocstring-tests%40workspace%3Atests%2Fdocstring_tests"
-  languageName: node
-  linkType: soft
-
 "@rescript/react@workspace:^, @rescript/react@workspace:tests/dependencies/rescript-react":
   version: 0.0.0-use.local
   resolution: "@rescript/react@workspace:tests/dependencies/rescript-react"
@@ -702,7 +690,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@tests/docstring-tests@workspace:tests/docstring_tests"
   dependencies:
-    "@rescript/react": "link:../dependencies/rescript-react"
+    "@rescript/react": "workspace:^"
     rescript: "workspace:^"
   languageName: unknown
   linkType: soft
@@ -750,7 +738,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@tests/reanalyze-benchmark@workspace:tests/analysis_tests/tests-reanalyze/deadcode-benchmark"
   dependencies:
-    "@rescript/react": "link:../../../dependencies/rescript-react"
+    "@rescript/react": "workspace:^"
     rescript: "workspace:^"
   languageName: unknown
   linkType: soft
