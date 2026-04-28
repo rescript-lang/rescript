@@ -34,7 +34,6 @@ let getReScriptVersion () =
 
 let newBsPackage ~rootPath =
   let rescriptJson = Filename.concat rootPath "rescript.json" in
-  let bsconfigJson = Filename.concat rootPath "bsconfig.json" in
 
   let parseRaw raw =
     let libBs =
@@ -50,12 +49,6 @@ let newBsPackage ~rootPath =
         match config |> Json.get "suffix" with
         | Some (String suffix) -> suffix
         | _ -> ".js"
-      in
-      let uncurried =
-        let ns = config |> Json.get "uncurried" in
-        match (rescriptVersion, ns) with
-        | (major, _), None when major >= 11 -> Some true
-        | _, ns -> Option.bind ns Json.bool
       in
       let genericJsxModule =
         let jsxConfig = config |> Json.get "jsx" in
@@ -88,7 +81,6 @@ let newBsPackage ~rootPath =
           | _ -> Misc.StringMap.empty)
         | None -> Misc.StringMap.empty
       in
-      let uncurried = uncurried = Some true in
       match libBs with
       | None -> None
       | Some libBs ->
@@ -138,15 +130,20 @@ let newBsPackage ~rootPath =
                [path]
            in
            let bind f x = Option.bind x f in
-           let bsc_flags =
-             Json.get "bsc-flags" config
-             |> bind Json.array |> Option.value ~default:[]
+           let compiler_flags =
+             match
+               ( Json.get "compiler-flags" config |> bind Json.array,
+                 Json.get "bsc-flags" config |> bind Json.array )
+             with
+             | Some compiler_flags, None | _, Some compiler_flags ->
+               compiler_flags
+             | None, None -> []
            in
            let no_pervasives =
-             bsc_flags
+             compiler_flags
              |> List.exists (fun s -> Json.string s = Some "-nopervasives")
            in
-           let opens_from_bsc_flags =
+           let opens_from_compiler_flags =
              List.fold_left
                (fun opens item ->
                  match item |> Json.string with
@@ -158,7 +155,7 @@ let newBsPackage ~rootPath =
                      let path = name |> String.split_on_char '.' in
                      path :: opens
                    | _ -> opens))
-               [] bsc_flags
+               [] compiler_flags
            in
            let opens_from_pervasives =
              if no_pervasives then []
@@ -166,7 +163,7 @@ let newBsPackage ~rootPath =
            in
            let opens =
              opens_from_pervasives @ opens_from_namespace
-             |> List.rev_append opens_from_bsc_flags
+             |> List.rev_append opens_from_compiler_flags
              |> List.map (fun path -> path @ ["place holder"])
            in
            {
@@ -179,7 +176,6 @@ let newBsPackage ~rootPath =
              pathsForModule;
              opens;
              namespace;
-             uncurried;
              autocomplete;
            }))
     | None -> None
@@ -187,23 +183,17 @@ let newBsPackage ~rootPath =
 
   match Files.readFile rescriptJson with
   | Some raw -> parseRaw raw
-  | None -> (
+  | None ->
     Log.log ("Unable to read " ^ rescriptJson);
-    match Files.readFile bsconfigJson with
-    | Some raw -> parseRaw raw
-    | None ->
-      Log.log ("Unable to read " ^ bsconfigJson);
-      None)
+    None
 
 let findRoot ~uri packagesByRoot =
   let path = Uri.toPath uri in
   let rec loop path =
     if path = "/" then None
     else if Hashtbl.mem packagesByRoot path then Some (`Root path)
-    else if
-      Files.exists (Filename.concat path "rescript.json")
-      || Files.exists (Filename.concat path "bsconfig.json")
-    then Some (`Bs path)
+    else if Files.exists (Filename.concat path "rescript.json") then
+      Some (`Bs path)
     else
       let parent = Filename.dirname path in
       if parent = path then (* reached root *) None else loop parent

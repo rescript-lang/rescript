@@ -4,32 +4,22 @@ let arrow_type ?(max_arity = max_int) ct =
   let has_as_attr attrs =
     Ext_list.exists attrs (fun (x, _) -> x.Asttypes.txt = "as")
   in
-  let rec process attrs_before acc typ arity =
+  let rec process attrs_before acc typ max_arity =
     match typ with
-    | _ when arity < 0 -> (attrs_before, List.rev acc, typ)
-    | {ptyp_desc = Ptyp_arrow {arity = Some _}; ptyp_attributes = []}
+    | _ when max_arity < 0 -> (attrs_before, List.rev acc, typ)
+    | {ptyp_desc = Ptyp_arrow {arity = Some _; arg = {attrs = []}}}
       when acc <> [] ->
       (attrs_before, List.rev acc, typ)
-    | {
-     ptyp_desc = Ptyp_arrow {lbl = Nolabel as lbl; arg; ret};
-     ptyp_attributes = [];
-    } ->
-      let arg = ([], lbl, arg) in
-      process attrs_before (arg :: acc) ret (arity - 1)
-    | {
-     ptyp_desc = Ptyp_arrow {lbl = Nolabel};
-     ptyp_attributes = [({txt = "bs"}, _)];
-    } ->
-      (* stop here, the uncurried attribute always indicates the beginning of an arrow function
-       * e.g. `(. int) => (. int)` instead of `(. int, . int)` *)
-      (attrs_before, List.rev acc, typ)
-    | {ptyp_desc = Ptyp_arrow {lbl = Nolabel}; ptyp_attributes = _attrs} as
-      return_type ->
+    | {ptyp_desc = Ptyp_arrow {arg = {lbl = Nolabel; attrs = []} as arg; ret}}
+      ->
+      process attrs_before (arg :: acc) ret (max_arity - 1)
+    | {ptyp_desc = Ptyp_arrow {arg = {lbl = Nolabel}}; ptyp_attributes = _attrs}
+      as return_type ->
       let args = List.rev acc in
       (attrs_before, args, return_type)
     | {
-     ptyp_desc = Ptyp_arrow {lbl = (Labelled _ | Optional _) as lbl; arg; ret};
-     ptyp_attributes = attrs;
+     ptyp_desc = Ptyp_arrow {arg = {lbl = Labelled _ | Optional _} as arg; ret};
+     ptyp_attributes = _attrs;
     } ->
       (* Res_core.parse_es6_arrow_type has a workaround that removed an extra arity for the function if the
          argument is a Ptyp_any with @as attribute i.e. ~x: @as(`{prop: value}`) _.
@@ -37,18 +27,17 @@ let arrow_type ?(max_arity = max_int) ct =
          When this case is encountered we add that missing arity so the arrow is printed properly.
       *)
       let arity =
-        match arg with
+        match arg.typ with
         | {ptyp_desc = Ptyp_any; ptyp_attributes = attrs1}
           when has_as_attr attrs1 ->
-          arity
-        | _ -> arity - 1
+          max_arity
+        | _ -> max_arity - 1
       in
-      let arg = (attrs, lbl, arg) in
       process attrs_before (arg :: acc) ret arity
     | typ -> (attrs_before, List.rev acc, typ)
   in
   match ct with
-  | {ptyp_desc = Ptyp_arrow {lbl = Nolabel}; ptyp_attributes = attrs1} as typ ->
+  | {ptyp_desc = Ptyp_arrow _; ptyp_attributes = attrs1} as typ ->
     process attrs1 [] {typ with ptyp_attributes = []} max_arity
   | typ -> process [] [] typ max_arity
 
@@ -96,6 +85,16 @@ let has_dict_pattern_attribute attrs =
   |> List.find_opt (fun (({txt}, _) : Parsetree.attribute) ->
          txt = "res.dictPattern")
   |> Option.is_some
+
+let has_dict_spread_attribute attrs =
+  attrs
+  |> List.find_opt (fun (({txt}, _) : Parsetree.attribute) ->
+         txt = "res.dictSpread")
+  |> Option.is_some
+
+type dict_expr_part =
+  | DictExprRows of Parsetree.expression
+  | DictExprSpread of Parsetree.expression
 
 let collect_array_expressions expr =
   match expr.pexp_desc with
@@ -150,6 +149,56 @@ let rewrite_underscore_apply expr =
             transformed_jsx = false;
           };
     }
+  | _ -> expr
+
+(* For pipe RHS: (__x) => f(__x, a, b) -----> f(a, b)
+   Note: Ppat_var "__x" and Pexp_ident "__x" represent `_` placeholders in user code.
+   Omits the first __x argument only if it's the sole occurrence.
+   If multiple __x exist (e.g., f(__x, __x, b)), keeps all to preserve semantics. *)
+let rewrite_underscore_apply_in_pipe expr =
+  let is_underscore_arg = function
+    | _, {pexp_desc = Pexp_ident {txt = Longident.Lident "__x"}} -> true
+    | _ -> false
+  in
+  let convert_underscore_to_placeholder arg =
+    match arg with
+    | ( lbl,
+        ({pexp_desc = Pexp_ident ({txt = Longident.Lident "__x"} as lid)} as
+         arg_expr) ) ->
+      ( lbl,
+        {
+          arg_expr with
+          pexp_desc = Pexp_ident {lid with txt = Longident.Lident "_"};
+        } )
+    | arg -> arg
+  in
+  match expr.pexp_desc with
+  | Pexp_fun
+      {
+        arg_label = Nolabel;
+        default = None;
+        lhs = {ppat_desc = Ppat_var {txt = "__x"}};
+        rhs = {pexp_desc = Pexp_apply {funct; args}} as e;
+      } -> (
+    match args with
+    | first_arg :: rest_args when is_underscore_arg first_arg ->
+      if List.exists is_underscore_arg rest_args then
+        (* Multiple __x - keep all to preserve semantics *)
+        rewrite_underscore_apply expr
+      else
+        (* Single __x in first position - safe to omit *)
+        {
+          e with
+          pexp_desc =
+            Pexp_apply
+              {
+                funct;
+                args = List.map convert_underscore_to_placeholder rest_args;
+                partial = false;
+                transformed_jsx = false;
+              };
+        }
+    | _ -> rewrite_underscore_apply expr)
   | _ -> expr
 
 type fun_param_kind =
@@ -211,7 +260,7 @@ let filter_parsing_attrs attrs =
             Location.txt =
               ( "res.braces" | "ns.braces" | "res.iflet" | "res.ternary"
               | "res.await" | "res.template" | "res.taggedTemplate"
-              | "res.patVariantSpread" | "res.dictPattern"
+              | "res.patVariantSpread" | "res.dictPattern" | "res.dictSpread"
               | "res.inlineRecordDefinition" );
           },
           _ ) ->
@@ -278,19 +327,20 @@ let operator_precedence operator =
   | ":=" -> 1
   | "||" -> 2
   | "&&" -> 3
-  | "^" -> 4
-  | "&" -> 5
-  | "==" | "===" | "<" | ">" | "!=" | "<>" | "!==" | "<=" | ">=" -> 6
-  | "<<" | ">>" | ">>>" -> 7
-  | "+" | "+." | "-" | "-." | "++" -> 8
-  | "*" | "*." | "/" | "/." | "%" -> 9
-  | "**" -> 10
-  | "#" | "##" | "->" -> 11
+  | "|||" -> 4
+  | "^^^" -> 5
+  | "&&&" -> 6
+  | "==" | "===" | "<" | ">" | "!=" | "<>" | "!==" | "<=" | ">=" -> 7
+  | "<<" | ">>" | ">>>" -> 8
+  | "+" | "+." | "-" | "-." | "++" -> 9
+  | "*" | "*." | "/" | "/." | "%" -> 10
+  | "**" -> 11
+  | "#" | "##" | "->" -> 12
   | _ -> 0
 
 let is_unary_operator operator =
   match operator with
-  | "~+" | "~+." | "~-" | "~-." | "~~" | "not" -> true
+  | "~+" | "~+." | "~-" | "~-." | "~~~" | "not" -> true
   | _ -> false
 
 let is_unary_expression expr =
@@ -304,21 +354,11 @@ let is_unary_expression expr =
     true
   | _ -> false
 
-let is_unary_bitnot_expression expr =
-  match expr.pexp_desc with
-  | Pexp_apply
-      {
-        funct = {pexp_desc = Pexp_ident {txt = Longident.Lident "~~"}};
-        args = [(Nolabel, _arg)];
-      } ->
-    true
-  | _ -> false
-
 let is_binary_operator operator =
   match operator with
   | ":=" | "||" | "&&" | "==" | "===" | "<" | ">" | "!=" | "!==" | "<=" | ">="
   | "+" | "+." | "-" | "-." | "++" | "*" | "*." | "/" | "/." | "**" | "->"
-  | "<>" | "%" | "&" | "^" | "<<" | ">>" | ">>>" ->
+  | "<>" | "%" | "|||" | "^^^" | "&&&" | "<<" | ">>" | ">>>" ->
     true
   | _ -> false
 
@@ -545,7 +585,8 @@ let should_inline_rhs_binary_expr rhs =
   match rhs.pexp_desc with
   | Parsetree.Pexp_constant _ | Pexp_let _ | Pexp_letmodule _
   | Pexp_letexception _ | Pexp_sequence _ | Pexp_open _ | Pexp_ifthenelse _
-  | Pexp_for _ | Pexp_while _ | Pexp_try _ | Pexp_array _ | Pexp_record _ ->
+  | Pexp_for _ | Pexp_for_of _ | Pexp_for_await_of _ | Pexp_while _ | Pexp_try _
+  | Pexp_array _ | Pexp_record _ ->
     true
   | _ -> false
 
@@ -554,7 +595,8 @@ let is_printable_attribute attr =
   | ( {
         Location.txt =
           ( "res.iflet" | "res.braces" | "ns.braces" | "JSX" | "res.await"
-          | "res.template" | "res.ternary" | "res.inlineRecordDefinition" );
+          | "res.template" | "res.taggedTemplate" | "res.ternary"
+          | "res.inlineRecordDefinition" | "res.dictSpread" );
       },
       _ ) ->
     false
@@ -587,7 +629,7 @@ let partition_doc_comment_attributes attrs =
 let is_fun_newtype expr =
   match expr.pexp_desc with
   | Pexp_fun _ | Pexp_newtype _ -> true
-  | _ -> Ast_uncurried.expr_is_uncurried_fun expr
+  | _ -> false
 
 let requires_special_callback_printing_last_arg args =
   let rec loop args =
@@ -706,6 +748,68 @@ let is_spread_belt_array_concat expr =
     has_spread_attr expr.pexp_attributes
   | _ -> false
 
+let is_tuple_array (expr : Parsetree.expression) =
+  let is_plain_tuple (expr : Parsetree.expression) =
+    match expr with
+    | {pexp_desc = Pexp_tuple _} -> true
+    | _ -> false
+  in
+  match expr with
+  | {pexp_desc = Pexp_array items} -> List.for_all is_plain_tuple items
+  | _ -> false
+
+let collect_spread_dict_expr_parts expr =
+  let extract_literal_dict_rows (expr : Parsetree.expression) =
+    match expr with
+    | {
+     pexp_desc =
+       Pexp_apply
+         {
+           funct =
+             {
+               pexp_desc =
+                 Pexp_ident
+                   {txt = Longident.Ldot (Lident "Primitive_dict", "make")};
+             };
+           args = [(Nolabel, key_values)];
+         };
+    }
+      when is_tuple_array key_values ->
+      Some key_values
+    | _ -> None
+  in
+  let is_empty_tuple_array (expr : Parsetree.expression) =
+    match expr.pexp_desc with
+    | Pexp_array [] -> true
+    | _ -> false
+  in
+  match expr with
+  | {
+   pexp_desc =
+     Pexp_apply
+       {
+         funct =
+           {
+             pexp_desc =
+               Pexp_ident
+                 {txt = Longident.Ldot (Lident "Primitive_dict", "spread")};
+             pexp_attributes;
+           };
+         args =
+           [(Nolabel, target_expr); (Nolabel, {pexp_desc = Pexp_array sources})];
+       };
+  }
+    when has_dict_spread_attribute pexp_attributes ->
+    let to_part expr =
+      match extract_literal_dict_rows expr with
+      | Some rows_expr ->
+        if is_empty_tuple_array rows_expr then None
+        else Some (DictExprRows rows_expr)
+      | None -> Some (DictExprSpread expr)
+    in
+    Some (List.filter_map to_part (target_expr :: sources))
+  | _ -> None
+
 (* Blue | Red | Green -> [Blue; Red; Green] *)
 let collect_or_pattern_chain pat =
   let rec loop pattern chain =
@@ -763,16 +867,6 @@ let is_underscore_apply_sugar expr =
 let is_rewritten_underscore_apply_sugar expr =
   match expr.pexp_desc with
   | Pexp_ident {txt = Longident.Lident "_"} -> true
-  | _ -> false
-
-let is_tuple_array (expr : Parsetree.expression) =
-  let is_plain_tuple (expr : Parsetree.expression) =
-    match expr with
-    | {pexp_desc = Pexp_tuple _} -> true
-    | _ -> false
-  in
-  match expr with
-  | {pexp_desc = Pexp_array items} -> List.for_all is_plain_tuple items
   | _ -> false
 
 let get_jsx_prop_loc = function

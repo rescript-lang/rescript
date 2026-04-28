@@ -30,7 +30,7 @@ module ArtistDetails = {
           a.contentUrl
         ),
         content => Js.Dict.get(content, "/"),
-      )->Option.mapWithDefault(Blockie.makeBlockie(. artistEthAddress), hash =>
+      )->Option.mapWithDefault(Blockie.makeBlockie(artistEthAddress), hash =>
         "https://ipfs.infura.io/ipfs/" ++ hash
       )
     let optName = \">>="(optProfile, a => a.name)

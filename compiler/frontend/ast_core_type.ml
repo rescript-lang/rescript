@@ -93,10 +93,11 @@ let from_labels ~loc arity labels : t =
       (Ext_list.map2 labels tyvars (fun x y -> Parsetree.Otag (x, [], y)))
       Closed
   in
-  Ext_list.fold_right2 labels tyvars result_type
-    (fun label (* {loc ; txt = label }*) tyvar acc ->
-      Ast_compatible.label_arrow ~loc:label.loc ~arity:(Some arity) label.txt
-        tyvar acc)
+  let args =
+    Ext_list.map2 labels tyvars (fun label tyvar ->
+        {Parsetree.attrs = []; lbl = Asttypes.Labelled label; typ = tyvar})
+  in
+  Typ.arrows ~loc args result_type
 
 let make_obj ~loc xs = Typ.object_ ~loc xs Closed
 
@@ -130,37 +131,11 @@ let get_curry_arity (ty : t) =
 
 let is_arity_one ty = get_curry_arity ty = 1
 
-type param_type = {
-  label: Asttypes.arg_label;
-  ty: Parsetree.core_type;
-  attr: Parsetree.attributes;
-  loc: loc;
-}
-
-let mk_fn_type (new_arg_types_ty : param_type list) (result : t) : t =
-  let t =
-    Ext_list.fold_right new_arg_types_ty result
-      (fun {label; ty; attr; loc} acc ->
-        {
-          ptyp_desc = Ptyp_arrow {lbl = label; arg = ty; ret = acc; arity = None};
-          ptyp_loc = loc;
-          ptyp_attributes = attr;
-        })
-  in
-  match t.ptyp_desc with
-  | Ptyp_arrow arr ->
-    let arity = List.length new_arg_types_ty in
-    {t with ptyp_desc = Ptyp_arrow {arr with arity = Some arity}}
-  | _ -> t
-
-let list_of_arrow (ty : t) : t * param_type list =
+let list_of_arrow (ty : t) : t * Parsetree.arg list =
   let rec aux (ty : t) acc =
     match ty.ptyp_desc with
-    | Ptyp_arrow {lbl = label; arg; ret; arity} when arity = None || acc = [] ->
-      aux ret
-        (({label; ty = arg; attr = ty.ptyp_attributes; loc = ty.ptyp_loc}
-           : param_type)
-        :: acc)
+    | Ptyp_arrow {arg; ret; arity} when arity = None || acc = [] ->
+      aux ret (arg :: acc)
     | Ptyp_poly (_, ty) ->
       (* should not happen? *)
       Bs_syntaxerr.err ty.ptyp_loc Unhandled_poly_type
@@ -170,6 +145,6 @@ let list_of_arrow (ty : t) : t * param_type list =
 
 let add_last_obj (ty : t) (obj : t) =
   let result, params = list_of_arrow ty in
-  mk_fn_type
-    (params @ [{label = Nolabel; ty = obj; attr = []; loc = obj.ptyp_loc}])
+  Typ.arrows ~loc:obj.ptyp_loc
+    (params @ [{lbl = Nolabel; typ = obj; attrs = []}])
     result

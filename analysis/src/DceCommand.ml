@@ -1,5 +1,8 @@
 let command () =
   Reanalyze.RunConfig.dce ();
-  Reanalyze.runAnalysis ~cmtRoot:None;
+  let dce_config = Reanalyze.DceConfig.current () in
+  Reanalyze.runAnalysis ~dce_config ~cmtRoot:None ~reactive_collection:None
+    ~reactive_merge:None ~reactive_liveness:None ~reactive_solver:None
+    ~skip_file:None ();
   let issues = !Reanalyze.Log_.Stats.issues in
   Printf.printf "issues:%d\n" (List.length issues)

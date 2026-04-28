@@ -61,8 +61,8 @@ and translate (x : Lam_constant.t) : J.expression =
   | Const_char i -> Js_of_lam_string.const_char i
   | Const_bigint (sign, i) -> E.bigint sign i
   | Const_float f -> E.float f (* TODO: preserve float *)
-  | Const_string {s; unicode = false} -> E.str s
-  | Const_string {s; unicode = true} -> E.str ~delim:DStarJ s
+  | Const_string {s; delim = None | Some DNoQuotes} -> E.str s
+  | Const_string {s; delim = Some delim} -> E.str ~delim s
   | Const_pointer name -> E.str name
   | Const_block (tag, tag_info, xs) ->
     Js_of_lam_block.make_block NA tag_info (E.small_int tag)

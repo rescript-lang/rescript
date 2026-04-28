@@ -2,8 +2,8 @@
   "name": "@tests/incremental-typechecking",
   "private": true,
   "scripts": {
-    "build": "rescript",
-    "clean": "rescript clean -with-deps"
+    "build": "rescript build",
+    "clean": "rescript clean"
   },
   "dependencies": {
     "rescript": "workspace:^"

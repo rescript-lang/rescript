@@ -1,5 +1,3 @@
-module Array = Ocaml_Array
-
 module type S = module type of String
 
 module XX = {
@@ -9,6 +7,6 @@ module XX = {
 let u = [module(String: S)]
 
 let hh = {
-  let module(String: S) = u[0]
+  let module(String: S) = u->Array.getUnsafe(0)
   String.length("x")
 }

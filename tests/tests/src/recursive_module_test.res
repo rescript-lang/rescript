@@ -1,14 +1,5 @@
-let suites: ref<Mt.pair_suites> = ref(list{})
-let test_id = ref(0)
-let eq = (loc, x, y) => {
-  incr(test_id)
-  suites :=
-    list{
-      (loc ++ (" id " ++ Js.Int.toString(test_id.contents)), _ => Mt.Eq(x, y)),
-      ...suites.contents,
-    }
-}
-let add = suite => suites := list{suite, ...suites.contents}
+open Mocha
+open Test_utils
 
 module rec Int3: {
   let u: int => int
@@ -29,8 +20,12 @@ module Fact = {
   include M
 }
 
-let () = eq(__LOC__, 120, Fact.fact(5))
+describe(__MODULE__, () => {
+  test("recursive module factorial", () => {
+    eq(__LOC__, 120, Fact.fact(5))
+  })
 
-let () = add((__LOC__, _ => Mt.ThrowAny(_ => ignore(Int3.u(3)))))
-
-let () = Mt.from_pair_suites(__MODULE__, suites.contents)
+  test("recursive module exception", () => {
+    throws(__LOC__, () => ignore(Int3.u(3)))
+  })
+})

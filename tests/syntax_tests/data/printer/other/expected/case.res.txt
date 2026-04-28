@@ -9,7 +9,7 @@ let printExprFunParameters = (~uncurried, parameters) =>
     Doc.text("()")
   | parameters =>
     let lparen = if uncurried {
-      Doc.text("(. ")
+      Doc.text("(")
     } else {
       Doc.lparen
     }

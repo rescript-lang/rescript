@@ -77,8 +77,12 @@ and t = private
   | Ltrywith of t * ident * t
   | Lifthenelse of t * t * t
   | Lsequence of t * t
+  | Lbreak
+  | Lcontinue
   | Lwhile of t * t
   | Lfor of ident * t * t * Asttypes.direction_flag * t
+  | Lfor_of of ident * t * t
+  | Lfor_await_of of ident * t * t
   | Lassign of ident * t
 
 (* | Lsend of Lambda.meth_kind * t * t * t list * Location.t *)
@@ -148,6 +152,10 @@ val not_ : Location.t -> t -> t
 val seq : t -> t -> t
 (** drop unused block *)
 
+val break : t
+
+val continue : t
+
 val while_ : t -> t -> t
 
 (* val event : t -> Lambda.lambda_event -> t   *)
@@ -163,6 +171,10 @@ val staticcatch : t -> int * ident list -> t -> t
 val staticraise : int -> t list -> t
 
 val for_ : ident -> t -> t -> Asttypes.direction_flag -> t -> t
+
+val for_of : ident -> t -> t -> t
+
+val for_await_of : ident -> t -> t -> t
 
 (**************************************************************)
 

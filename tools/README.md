@@ -37,7 +37,7 @@ rescript-tools reanalyze --help
 Add to `bs-dev-dependencies`:
 
 ```json
-"bs-dev-dependencies": ["@rescript/tools"]
+"dev-dependencies": ["@rescript/tools"]
 ```
 
 ```rescript

@@ -41,15 +41,15 @@ let createPermitSig = (provider, verifyingContract, nonce, chainId, holder, spen
 
   Js.Promise.make((~resolve, ~reject) =>
     provider
-    ->Web3.sendAsync(exampleRpcDefinition, (. err, result) =>
+    ->Web3.sendAsync(exampleRpcDefinition, (err, result) =>
       switch err->Js.Nullable.toOption {
       | Some(err) =>
         Js.log2("There was an error", err)
-        reject(. err->Obj.magic)
+        reject(err->Obj.magic)
       | None =>
         let sigString = result.result->Obj.magic
 
-        resolve(. ContractUtil.getEthSig(sigString))
+        resolve(ContractUtil.getEthSig(sigString))
       }
     )
     ->ignore

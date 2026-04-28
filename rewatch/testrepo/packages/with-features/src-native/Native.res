@@ -1,0 +1,1 @@
+let native = () => "native-only"

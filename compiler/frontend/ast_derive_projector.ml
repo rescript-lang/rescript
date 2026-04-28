@@ -46,13 +46,12 @@ let init () =
                   ->
                     let txt = "param" in
                     Ast_comb.single_non_rec_value ?attrs:gentype_attrs pld_name
+                      (* arity will always be 1 since these are single param functions *)
                       (Ast_compatible.fun_ ~arity:(Some 1)
                          (Pat.constraint_ (Pat.var {txt; loc}) core_type)
                          (Exp.field
                             (Exp.ident {txt = Lident txt; loc})
-                            {txt = Longident.Lident pld_label; loc})
-                      (*arity will alwys be 1 since these are single param functions*)
-                      |> handle_uncurried_accessor_tranform ~arity:1))
+                            {txt = Longident.Lident pld_label; loc})))
               | Ptype_variant constructor_declarations ->
                 Ext_list.map constructor_declarations
                   (fun
@@ -136,7 +135,8 @@ let init () =
               | Ptype_record label_declarations ->
                 Ext_list.map label_declarations (fun {pld_name; pld_type} ->
                     Ast_comb.single_non_rec_val ?attrs:gentype_attrs pld_name
-                      (Ast_compatible.arrow ~arity:(Some 1) core_type
+                      (Ast_helper.Typ.arrows
+                         [{attrs = []; lbl = Nolabel; typ = core_type}]
                          pld_type
                          (*arity will alwys be 1 since these are single param functions*)))
               | Ptype_variant constructor_declarations ->
@@ -155,21 +155,19 @@ let init () =
                       | Pcstr_record _ ->
                         raise_unsupported_vaiant_record_arg pcd_loc
                     in
-                    let arity = pcd_args |> List.length in
                     let annotate_type =
                       match pcd_res with
                       | Some x -> x
                       | None -> core_type
                     in
-                    let add_arity ~arity t =
-                      if arity > 0 then Ast_uncurried.uncurried_type ~arity t
-                      else t
-                    in
                     Ast_comb.single_non_rec_val ?attrs:gentype_attrs
                       {loc; txt = Ext_string.uncapitalize_ascii con_name}
-                      (Ext_list.fold_right pcd_args annotate_type (fun x acc ->
-                           Ast_compatible.arrow ~arity:None x acc)
-                      |> add_arity ~arity))
+                      (let args =
+                         Ext_list.map pcd_args (fun x ->
+                             ({attrs = []; lbl = Nolabel; typ = x}
+                               : Parsetree.arg))
+                       in
+                       Ast_helper.Typ.arrows ~loc args annotate_type))
               | Ptype_open | Ptype_abstract ->
                 Ast_derive_util.not_applicable tdcl.ptype_loc deriving_name;
                 []

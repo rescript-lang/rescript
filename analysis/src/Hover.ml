@@ -26,7 +26,10 @@ let showModuleTopLevel ~docstring ~isType ~name (topLevel : Module.item list) =
   let doc =
     match docstring with
     | [] -> ""
-    | _ :: _ -> "\n" ^ (docstring |> String.concat "\n") ^ "\n"
+    | _ :: _ ->
+      "\n"
+      ^ (docstring |> String.concat "\n")
+      ^ Markdown.divider ^ Markdown.spacing
   in
   Some (doc ^ full)
 
@@ -150,8 +153,8 @@ let expandTypes ~file ~package ~supportsMarkdownLinks typ =
       `Default )
 
 (* Produces a hover with relevant types expanded in the main type being hovered. *)
-let hoverWithExpandedTypes ~file ~package ~supportsMarkdownLinks ?constructor
-    typ =
+let hoverWithExpandedTypes ~file ~package ~supportsMarkdownLinks ?docstring
+    ?constructor typ =
   let expandedTypes, expansionType =
     expandTypes ~file ~package ~supportsMarkdownLinks typ
   in
@@ -164,7 +167,15 @@ let hoverWithExpandedTypes ~file ~package ~supportsMarkdownLinks ?constructor
         typeString ^ "\n" ^ CompletionBackEnd.showConstructor constructor
       | None -> typeString
     in
-    Markdown.codeBlock typeString :: expandedTypes |> String.concat "\n"
+    let typeString =
+      match docstring with
+      | Some [] | None -> Markdown.codeBlock typeString
+      | Some docstring ->
+        Markdown.codeBlock typeString
+        ^ Markdown.divider
+        ^ (docstring |> String.concat "\n")
+    in
+    typeString :: expandedTypes |> String.concat "\n"
   | `InlineType -> expandedTypes |> String.concat "\n"
 
 (* Leverages autocomplete functionality to produce a hover for a position. This
@@ -191,10 +202,10 @@ let getHoverViaCompletions ~debug ~path ~pos ~currentFile ~forHover
       with
       | Some (typ, _env) ->
         let typeString =
-          hoverWithExpandedTypes ~file ~package ~supportsMarkdownLinks typ
+          hoverWithExpandedTypes ~file ~package ~docstring
+            ~supportsMarkdownLinks typ
         in
-        let parts = docstring @ [typeString] in
-        Some (Protocol.stringifyHover (String.concat "\n\n" parts))
+        Some (Protocol.stringifyHover typeString)
       | None -> None)
     | {env} :: _ -> (
       let opens = CompletionBackEnd.getOpens ~debug ~rawOpens ~package ~env in
@@ -276,23 +287,29 @@ let newHover ~full:{file; package} ~supportsMarkdownLinks locItem =
          | Const_int32 _ -> "int32"
          | Const_int64 _ -> "int64"
          | Const_bigint _ -> "bigint"))
-  | Typed (_, t, locKind) ->
-    let fromType ?constructor typ =
-      hoverWithExpandedTypes ~file ~package ~supportsMarkdownLinks ?constructor
-        typ
+  | Typed (_, t, locKind) -> (
+    let fromType ?docstring ?constructor typ =
+      hoverWithExpandedTypes ~file ~package ~supportsMarkdownLinks ?docstring
+        ?constructor typ
     in
-    let parts =
-      match References.definedForLoc ~file ~package locKind with
-      | None ->
-        let typeString = t |> fromType in
-        [typeString]
-      | Some (docstring, res) -> (
-        match res with
-        | `Declared | `Field ->
-          let typeString = t |> fromType in
-          typeString :: docstring
-        | `Constructor constructor ->
-          let typeString = t |> fromType ~constructor in
-          typeString :: constructor.docstring)
-    in
-    Some (String.concat Markdown.divider parts)
+    (* Expand first-class modules to the underlying module type signature. *)
+    let t = Shared.dig t in
+    match t.desc with
+    | Tpackage (path, _lids, _tys) -> (
+      let env = QueryEnv.fromFile file in
+      match ResolvePath.resolveModuleFromCompilerPath ~env ~package path with
+      | None -> Some (fromType t)
+      | Some (envForModule, Some declared) ->
+        let name = Path.name path in
+        showModule ~docstring:declared.docstring ~name ~file:envForModule.file
+          ~package (Some declared)
+      | Some (_, None) -> Some (fromType t))
+    | _ ->
+      Some
+        (match References.definedForLoc ~file ~package locKind with
+        | None -> t |> fromType
+        | Some (docstring, res) -> (
+          match res with
+          | `Declared | `Field -> t |> fromType ~docstring
+          | `Constructor constructor ->
+            t |> fromType ~docstring:constructor.docstring ~constructor)))

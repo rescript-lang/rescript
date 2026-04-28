@@ -106,7 +106,7 @@ let rec add_type bv ty =
   | Ptyp_any -> ()
   | Ptyp_var _ -> ()
   | Ptyp_arrow {arg; ret} ->
-    add_type bv arg;
+    add_type bv arg.typ;
     add_type bv ret
   | Ptyp_tuple tl -> List.iter (add_type bv) tl
   | Ptyp_constr (c, tl) ->
@@ -256,6 +256,7 @@ let rec add_expr bv exp =
   | Pexp_sequence (e1, e2) ->
     add_expr bv e1;
     add_expr bv e2
+  | Pexp_break | Pexp_continue -> ()
   | Pexp_while (e1, e2) ->
     add_expr bv e1;
     add_expr bv e2
@@ -263,6 +264,14 @@ let rec add_expr bv exp =
     add_expr bv e1;
     add_expr bv e2;
     add_expr bv e3
+  | Pexp_for_of (pat, e1, e2) ->
+    add_pattern bv pat |> ignore;
+    add_expr bv e1;
+    add_expr bv e2
+  | Pexp_for_await_of (pat, e1, e2) ->
+    add_pattern bv pat |> ignore;
+    add_expr bv e1;
+    add_expr bv e2
   | Pexp_coerce (e1, (), ty3) ->
     add_expr bv e1;
     add_type bv ty3
@@ -294,7 +303,10 @@ let rec add_expr bv exp =
       (Jsx_unary_element
          {jsx_unary_element_tag_name = name; jsx_unary_element_props = props})
     ->
-    add bv name;
+    (* Conservatively add all module path segments referenced by the tag name *)
+    (match name.txt with
+    | JsxLowerTag _ | JsxTagInvalid _ -> ()
+    | JsxQualifiedLowerTag {path; _} | JsxUpperTag path -> add_path bv path);
     and_jsx_props bv props
   | Pexp_jsx_element
       (Jsx_container_element
@@ -303,13 +315,13 @@ let rec add_expr bv exp =
            jsx_container_element_props = props;
            jsx_container_element_children = children;
          }) ->
-    add bv name;
+    (match name.txt with
+    | JsxLowerTag _ | JsxTagInvalid _ -> ()
+    | JsxQualifiedLowerTag {path; _} | JsxUpperTag path -> add_path bv path);
     and_jsx_props bv props;
     add_jsx_children bv children
 
-and add_jsx_children bv = function
-  | JSXChildrenSpreading e -> add_expr bv e
-  | JSXChildrenItems xs -> List.iter (add_expr bv) xs
+and add_jsx_children bv xs = List.iter (add_expr bv) xs
 
 and add_jsx_prop bv = function
   | JSXPropPunning (_, _) -> ()

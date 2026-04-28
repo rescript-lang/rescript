@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/continue_outside_loop.res[0m:[2m2:3-10[0m
+
+  1 [2m│[0m let _ = {
+  [1;31m2[0m [2m│[0m   [1;31mcontinue[0m
+  3 [2m│[0m   ()
+  4 [2m│[0m }
+
+  `continue` can only be used inside a loop body.

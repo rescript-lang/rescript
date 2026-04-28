@@ -1,7 +1,7 @@
 let foo = x =>
   switch x {
-  | #Foo(3) => Js.log("1")
-  | _ => Js.log("2")
+  | #Foo(3) => Console.log("1")
+  | _ => Console.log("2")
   }
 
 let foo2 = x =>
@@ -24,6 +24,6 @@ let foo4 = (x, h) =>
 
 let foo5 = x =>
   switch x {
-  | #Foo(3) => Js.log("hi")
-  | _ => Js.log("x")
+  | #Foo(3) => Console.log("hi")
+  | _ => Console.log("x")
   }

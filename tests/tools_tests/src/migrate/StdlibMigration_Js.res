@@ -1,0 +1,5 @@
+let consoleLog1 = Js.log("Hello")
+let consoleLog2 = Js.log2("Hello", "World")
+let consoleLog3 = Js.log3("Hello", "World", "!")
+let consoleLog4 = Js.log4("Hello", "World", "!", "!")
+let consoleLogMany = Js.logMany(["Hello", "World"])

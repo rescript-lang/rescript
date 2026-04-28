@@ -2,134 +2,92 @@
 
 // @ts-check
 
-// This script is supposed to be running in project root directory
-// It matters since we need read .sourcedirs(location)
-// and its content are file/directories with regard to project root
-
-import * as tty from "node:tty";
-import * as fs from "node:fs";
-
-import { bsc_exe, rescript_exe } from "./common/bins.js";
-import * as bsb from "./common/bsb.js";
-
-const cwd = process.cwd();
-process.env.BSB_PROJECT_ROOT = cwd;
-
-if (process.env.FORCE_COLOR === undefined) {
-  if (tty.isatty(1)) {
-    process.env.FORCE_COLOR = "1";
-    process.env.NINJA_ANSI_FORCED = "1";
-  }
-} else {
-  if (
-    process.env.FORCE_COLOR === "1" &&
-    process.env.NINJA_ANSI_FORCED === undefined
-  ) {
-    process.env.NINJA_ANSI_FORCED = "1";
-  }
-  if (process.argv.includes("-verbose")) {
-    console.log(`FORCE_COLOR: "${process.env.FORCE_COLOR}"`);
-  }
-}
-
-const helpMessage = `Usage: rescript <options> <subcommand>
-
-\`rescript\` is equivalent to \`rescript build\`
-
-Options:
-  -v, -version  display version number
-  -h, -help     display help
-
-Subcommands:
-  build
-  clean
-  format
-  dump
-  help
-
-Run \`rescript <subcommand> -h\` for subcommand help. Examples:
-  rescript build -h
-  rescript format -h`;
-
-function onUncaughtException(err) {
-  console.error("Uncaught Exception", err);
-  bsb.releaseBuild();
-  process.exit(1);
-}
-
-function exitProcess() {
-  bsb.releaseBuild();
-  process.exit(0);
-}
-
-process.on("uncaughtException", onUncaughtException);
-
-// OS signal handlers
-// Ctrl+C
-process.on("SIGINT", exitProcess);
-// kill pid
-try {
-  process.on("SIGUSR1", exitProcess);
-  process.on("SIGUSR2", exitProcess);
-  process.on("SIGTERM", exitProcess);
-  process.on("SIGHUP", exitProcess);
-} catch (_e) {
-  // Deno might throw an error here, see https://github.com/denoland/deno/issues/9995
-  // TypeError: Windows only supports ctrl-c (SIGINT) and ctrl-break (SIGBREAK).
-}
+import * as child_process from "node:child_process";
+import { rescript_exe } from "./common/bins.js";
+import { runtimePath } from "./common/runtime.js";
 
 const args = process.argv.slice(2);
-const argPatterns = {
-  help: ["help", "-h", "-help", "--help"],
-  version: ["version", "-v", "-version", "--version"],
+
+// We intentionally use spawn (async) instead of execFileSync (sync) here.
+// Rationale:
+// - execFileSync blocks Node's event loop, so Ctrl+C (SIGINT) causes Node to
+//   exit immediately without giving us a chance to forward the signal to the
+//   child and wait for its cleanup. In watch mode, the Rust watcher prints
+//   "Exiting..." on SIGINT and performs cleanup; with execFileSync that output
+//   may appear after the shell prompt and sometimes requires an extra keypress.
+// - spawn lets us install signal handlers, forward them to the child, and then
+//   exit the parent with the correct status only after the child has exited.
+const child = child_process.spawn(rescript_exe, args, {
+  stdio: "inherit",
+  env: { ...process.env, RESCRIPT_RUNTIME: runtimePath },
+});
+
+// Map POSIX signal names to conventional exit status numbers so we can
+// reproduce the usual 128 + signal behavior when exiting due to a signal.
+/** @type {Record<string, number>} */
+const signalToNumber = { SIGINT: 2, SIGTERM: 15, SIGHUP: 1, SIGQUIT: 3 };
+
+let forwardedSignal = false;
+/**
+ * @param {NodeJS.Signals} signal
+ */
+const handleSignal = signal => {
+  // Intercept the signal in the parent, forward it to the child, and let the
+  // child perform its own cleanup. This ensures ordered shutdown in watch mode.
+  // Guard against double-forwarding since terminals or OSes can deliver
+  // multiple signals (e.g., repeated Ctrl+C).
+  // Prevent Node from exiting immediately; forward to child first
+  if (forwardedSignal) return;
+  forwardedSignal = true;
+  try {
+    if (child.exitCode === null && child.signalCode == null) {
+      child.kill(signal);
+    }
+  } catch {
+    // best effort
+  }
 };
 
-const helpArgIndex = args.findIndex(arg => argPatterns.help.includes(arg));
-const firstPositionalArgIndex = args.findIndex(arg => !arg.startsWith("-"));
+process.on("SIGINT", handleSignal);
+process.on("SIGTERM", handleSignal);
+process.on("SIGHUP", handleSignal);
+process.on("SIGQUIT", handleSignal);
 
-if (
-  helpArgIndex !== -1 &&
-  (firstPositionalArgIndex === -1 || helpArgIndex <= firstPositionalArgIndex)
-) {
-  console.log(helpMessage);
-} else if (argPatterns.version.includes(args[0])) {
-  const packageSpec = JSON.parse(
-    fs.readFileSync(new URL("../package.json", import.meta.url), "utf-8")
-  );
+// Cross-platform note:
+// - On Unix, Ctrl+C sends SIGINT to the process group; we also explicitly
+//   forward it to the child to be robust.
+// - On Windows, Node maps kill('SIGINT'/'SIGTERM') to console control events;
+//   the Rust watcher (via the ctrlc crate) handles these and exits cleanly.
 
-  console.log(packageSpec.version);
-} else if (firstPositionalArgIndex !== -1) {
-  const subcmd = args[firstPositionalArgIndex];
-  const subcmdArgs = args.slice(firstPositionalArgIndex + 1);
-
-  switch (subcmd) {
-    case "info": {
-      bsb.info(subcmdArgs);
-      break;
-    }
-    case "clean": {
-      bsb.clean(subcmdArgs);
-      break;
-    }
-    case "build": {
-      bsb.build(subcmdArgs);
-      break;
-    }
-    case "format": {
-      const mod = await import("./rescript/format.js");
-      await mod.main(subcmdArgs, rescript_exe, bsc_exe);
-      break;
-    }
-    case "dump": {
-      const mod = await import("./rescript/dump.js");
-      mod.main(subcmdArgs, rescript_exe, bsc_exe);
-      break;
-    }
-    default: {
-      console.error(`Error: Unknown command "${subcmd}".\n${helpMessage}`);
-      process.exit(2);
+// Ensure no orphaned process if parent exits unexpectedly
+process.on("exit", () => {
+  if (child.exitCode === null && child.signalCode == null) {
+    try {
+      child.kill("SIGTERM");
+    } catch {
+      // ignore
     }
   }
-} else {
-  bsb.build(args);
-}
+});
+
+child.on("exit", (code, signal) => {
+  process.removeListener("SIGINT", handleSignal);
+  process.removeListener("SIGTERM", handleSignal);
+  process.removeListener("SIGHUP", handleSignal);
+  process.removeListener("SIGQUIT", handleSignal);
+
+  // If the child exited due to a signal, emulate the conventional exit status
+  // (128 + signalNumber). Otherwise, pass through the child's numeric exit code.
+  if (signal) {
+    const n = signalToNumber[signal];
+    process.exit(typeof n === "number" ? 128 + n : 1);
+  } else {
+    process.exit(typeof code === "number" ? code : 0);
+  }
+});
+
+// Surface spawn errors (e.g., executable not found) and exit with failure.
+child.on("error", err => {
+  console.error(err?.message ?? String(err));
+  process.exit(1);
+});

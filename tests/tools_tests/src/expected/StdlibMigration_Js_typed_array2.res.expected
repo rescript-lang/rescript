@@ -1,0 +1,19 @@
+let arr = Int8Array.fromArray([1, 2, 3])
+
+let len1 = arr->TypedArray.length
+let includes1 = arr->TypedArray.includes(2)
+let idxFrom1 = arr->TypedArray.indexOfFrom(2, 1)
+
+let slice1 = arr->TypedArray.slice(~start=1, ~end=2)
+let sliceFrom1 = arr->TypedArray.sliceToEnd(~start=1)
+
+let map1 = arr->TypedArray.map(x => x + 1)
+let reduce1 = arr->TypedArray.reduce((acc, x) => acc + x, 0)
+
+let bytes = Int8Array.Constants.bytesPerElement
+
+let fromBufToEnd = Int8Array.fromBufferToEnd(ArrayBuffer.make(8), ~byteOffset=2)
+let fromBufRange = Int8Array.fromBufferWithRange(ArrayBuffer.make(8), ~byteOffset=2, ~length=2)
+
+let fromLength = Int8Array.fromLength(3)
+

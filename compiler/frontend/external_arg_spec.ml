@@ -24,7 +24,7 @@
 
 (** type definitions for arguments to a function declared external *)
 
-type delim = DNone | DStarJ | DNoQuotes
+type delim = DNone | DStarJ | DNoQuotes | DBackQuotes
 
 type cst = Arg_int_lit of int | Arg_string_lit of string * delim
 

@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/variant_constructor_expects_inline_record.res[0m:[2m2:9-11[0m
+
+  1 [2m│[0m type x = One({test: bool})
+  [1;31m2[0m [2m│[0m let f = [1;31mOne[0m
+  3 [2m│[0m 
+
+  This variant constructor [1;33mOne[0m expects an inline record as payload, but it's not being passed any arguments.

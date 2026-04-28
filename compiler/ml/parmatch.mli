@@ -69,6 +69,7 @@ val ppat_of_type :
 
 val pressure_variants : Env.t -> pattern list -> unit
 val check_partial_gadt :
+  ?partial_match_warning_hint:string ->
   ((string, constructor_description) Hashtbl.t ->
   (string, label_description) Hashtbl.t ->
   Parsetree.pattern ->

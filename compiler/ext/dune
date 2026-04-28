@@ -15,8 +15,6 @@
   (language c)
   (names ext_basic_hash_stubs)))
 
-(ocamllex ext_json_parse)
-
 (rule
  (targets hash_set_string.ml)
  (deps hash_set.cppo.ml)

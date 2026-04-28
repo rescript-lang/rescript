@@ -109,27 +109,27 @@ module type OptT = {
 
 module Opt = {
   @react.component
-  let withOpt1 = (~x=3, ~y) => x + y
+  let withOpt1 = (~x=3, ~y) => React.int(x + y)
 
   module Opt2 = {
     @react.component
     let withOpt2 = (~x: option<int>=?, ~y: int) =>
-      switch x {
+      React.int(switch x {
       | None => 0
       | Some(x) => x
       } +
-      y
+      y)
   }
   module type Opt2 = module type of Opt2
 
   module Opt3 = {
     @react.component
     let withOpt3 = (~x: option<int>, ~y: int) =>
-      switch x {
+      React.int(switch x {
       | None => 0
       | Some(x) => x
       } +
-      y
+      y)
   }
   module type Opt3 = module type of Opt3
 }
@@ -142,4 +142,53 @@ module Memo = {
   let make = (~name) => React.string(name)
 
   let make = React.memo(make)
+}
+
+external x: (@as("bar") ~foo: int) => unit = "myexternal"
+
+type record = {
+  @as("foo_bar")
+  fooBar: int
+}
+
+type poly = [#a(int) | #b(string) | #c(float)]
+
+type red = [#Ruby | #Redwood | #Rust]
+type blue = [#Sapphire | #Neon | #Navy]
+type color = [red | blue | #Papayawhip]
+
+external upperBound: ([< #d | #e | #f]) => unit = "myexternal"
+external lowerBound: ([> #d | #e | #f]) => unit = "myexternal"
+
+module ComponentWithPolyProp = {
+  @react.component
+  let make = (~size=#large) => {
+    let className = switch size {
+    | #large => "text-lg"
+    | #small => "text-sm"
+    }
+
+    <div className />
+  }
+}
+
+module OrderedSet = {
+  type t<'a, 'identity> = {
+    cmp: ('a, 'a) => int,
+    set: Belt.Set.t<'a, 'identity>,
+    array: array<'a>,
+  }
+
+  let make = (
+    type value identity,
+    ~id: module(Belt.Id.Comparable with type t = value and type identity = identity),
+  ): t<value, identity> => {
+    let module(M) = id
+
+    {
+      cmp: M.cmp->Belt.Id.getCmpInternal,
+      set: Belt.Set.make(~id),
+      array: [],
+    }
+  }
 }

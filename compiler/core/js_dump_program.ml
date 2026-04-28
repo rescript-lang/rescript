@@ -70,7 +70,7 @@ let[@inline] is_default (x : Js_op.kind) =
   | External {default} -> default
   | _ -> false
 
-let node_program ~output_dir f (x : J.deps_program) =
+let commonjs_program ~output_dir f (x : J.deps_program) =
   P.string f L.strict_directive;
   P.newline f;
   let cxt =
@@ -87,7 +87,7 @@ let node_program ~output_dir f (x : J.deps_program) =
   in
   program f cxt x.program
 
-let es6_program ~output_dir fmt f (x : J.deps_program) =
+let esmodule_program ~output_dir fmt f (x : J.deps_program) =
   let cxt =
     Js_dump_import_export.imports Ext_pp_scope.empty f
       (* Not be emitted in import statements *)
@@ -105,7 +105,7 @@ let es6_program ~output_dir fmt f (x : J.deps_program) =
   in
   let () = P.at_least_two_lines f in
   let cxt = Js_dump.statements true cxt f x.program.block in
-  Js_dump_import_export.es6_export cxt f x.program.exports
+  Js_dump_import_export.esmodule_export cxt f x.program.exports
 
 let pp_deps_program ~(output_prefix : string)
     (kind : Js_packages_info.module_system) (program : J.deps_program)
@@ -128,8 +128,8 @@ let pp_deps_program ~(output_prefix : string)
     let output_dir = Filename.dirname output_prefix in
     ignore
       (match kind with
-      | Esmodule | Es6_global -> es6_program ~output_dir kind f program
-      | Commonjs -> node_program ~output_dir f program);
+      | Esmodule -> esmodule_program ~output_dir kind f program
+      | Commonjs -> commonjs_program ~output_dir f program);
     P.newline f;
     P.string f
       (match program.side_effect with

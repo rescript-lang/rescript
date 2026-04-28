@@ -271,6 +271,7 @@ end = struct
     | Texp_sequence (exp1, exp2) ->
       iter_expression exp1;
       iter_expression exp2
+    | Texp_break | Texp_continue -> ()
     | Texp_while (exp1, exp2) ->
       iter_expression exp1;
       iter_expression exp2
@@ -278,6 +279,12 @@ end = struct
       iter_expression exp1;
       iter_expression exp2;
       iter_expression exp3
+    | Texp_for_of (_id, _, exp1, exp2) ->
+      iter_expression exp1;
+      iter_expression exp2
+    | Texp_for_await_of (_id, _, exp1, exp2) ->
+      iter_expression exp1;
+      iter_expression exp2
     | Texp_send (exp, _meth, expo) -> (
       iter_expression exp;
       match expo with
@@ -375,9 +382,9 @@ end = struct
     (match ct.ctyp_desc with
     | Ttyp_any -> ()
     | Ttyp_var _ -> ()
-    | Ttyp_arrow (_label, ct1, ct2, _) ->
-      iter_core_type ct1;
-      iter_core_type ct2
+    | Ttyp_arrow (arg, ret, _) ->
+      iter_core_type arg.typ;
+      iter_core_type ret
     | Ttyp_tuple list -> List.iter iter_core_type list
     | Ttyp_constr (_path, _, list) -> List.iter iter_core_type list
     | Ttyp_object (list, _o) -> List.iter iter_object_field list

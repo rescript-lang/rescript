@@ -37,7 +37,7 @@ let xxx = "a"
 let a = String.get(xxx, 0)
 let u = b => {
   let a = if b {
-    Js.log(1)
+    Console.log(1)
     32
   } else {
     3 + 4
@@ -47,7 +47,7 @@ let u = b => {
 let f = (h, b, ()) =>
   h(
     if b {
-      Js.log(1)
+      Console.log(1)
       32
     } else {
       3 + 4

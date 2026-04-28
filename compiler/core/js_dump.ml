@@ -237,15 +237,6 @@ let debugger_nl f =
   semi f;
   P.newline f
 
-let break_nl f =
-  P.string f L.break;
-  semi f;
-  P.newline f
-
-let continue f =
-  P.string f L.continue;
-  semi f
-
 let formal_parameter_list cxt f l = iter_lst cxt f l Ext_pp_scope.ident comma_sp
 
 (* IdentMap *)
@@ -533,12 +524,13 @@ and expression_desc cxt ~(level : int) f x : cxt =
       ( ({
            expression_desc =
              J.Var
-               (J.Qualified
-                  ( _,
-                    Some fnName
-                    (* We care about the function name when it is jsxs,
+               ( Id {name = fnName}
+               | J.Qualified
+                   ( _,
+                     Some fnName
+                     (* We care about the function name when it is jsxs,
                        If this is the case, we need to unpack an array later on *)
-                  ));
+                   ) );
          } as e),
         el,
         {call_transformed_jsx = true} )
@@ -728,6 +720,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
       | DStarJ -> P.string f ("\"" ^ txt ^ "\"")
       | DNoQuotes -> P.string f txt
       | DNone -> Js_dump_string.pp_string f txt
+      | DBackQuotes -> P.string f ("`" ^ txt ^ "`")
     in
     cxt
   | Raw_js_code {code = s; code_info = info} -> (
@@ -797,9 +790,14 @@ and expression_desc cxt ~(level : int) f x : cxt =
         P.string f " in ";
         expression ~level:0 cxt f obj)
   | Typeof e ->
+    let is_fun =
+      match e.expression_desc with
+      | Fun _ -> true
+      | _ -> false
+    in
     P.string f "typeof";
     P.space f;
-    expression ~level:13 cxt f e
+    P.cond_paren_group f is_fun (fun _ -> expression ~level:13 cxt f e)
   | Bin
       ( Minus,
         {
@@ -949,7 +947,8 @@ and expression_desc cxt ~(level : int) f x : cxt =
               | false, 1 -> Js_op.Lit Literals.tl
               | _ -> Js_op.Lit ("_" ^ string_of_int i)),
               e ))
-          (if !Js_config.debug && not_is_cons then [(name_symbol, E.str p.name)]
+          (if !Js_config.debug && (not untagged) && not_is_cons then
+             [(name_symbol, E.str p.name)]
            else [])
       in
       if untagged || (not_is_cons = false && p.num_nonconst = 1) then tails
@@ -1097,6 +1096,14 @@ and print_indented_list (f : P.t) (parent_expr_level : int) (cxt : cxt)
 and print_jsx cxt ?(spread_props : J.expression option)
     ?(key : J.expression option) ~(level : int) f (fnName : string)
     (tag : J.expression) (fields : (string * J.expression) list) : cxt =
+  (* TODO: make fragment detection respect custom JSX runtime modules instead of
+     assuming "JsxRuntime". *)
+  let is_fragment =
+    match tag.expression_desc with
+    | J.Var (J.Qualified ({id = {name = "JsxRuntime"}}, Some "Fragment")) ->
+      true
+    | _ -> false
+  in
   let print_tag cxt =
     match tag.expression_desc with
     (* "div" or any other primitive tag *)
@@ -1104,7 +1111,7 @@ and print_jsx cxt ?(spread_props : J.expression option)
       P.string f txt;
       cxt
     (* fragment *)
-    | J.Var (J.Qualified ({id = {name = "JsxRuntime"}}, Some "Fragment")) -> cxt
+    | _ when is_fragment -> cxt
     (* A user defined component or external component *)
     | _ -> expression ~level cxt f tag
   in
@@ -1121,6 +1128,11 @@ and print_jsx cxt ?(spread_props : J.expression option)
           else Some [e]
         else None)
       fields
+    (* For fragments without children we normalize to an empty list so they
+       print as <></> instead of </> which is invalid JSX. *)
+    |> function
+    | None when is_fragment -> Some []
+    | other -> other
   in
   let print_props cxt props =
     (* If a key is present, should be printed before the spread props,
@@ -1161,7 +1173,7 @@ and print_jsx cxt ?(spread_props : J.expression option)
       match children_opt with
       | Some _ -> cxt
       | None ->
-        (* Put a space the tag name and /> *)
+        (* Put a space between the tag name and /> *)
         P.space f;
         cxt)
     else
@@ -1357,9 +1369,7 @@ and statement_desc top cxt f (s : J.statement_desc) : cxt =
     P.space f;
     let cxt = brace_block cxt f s1 in
     match s2 with
-    | [] | [{statement_desc = Block [] | Exp {expression_desc = Var _}}] ->
-      P.newline f;
-      cxt
+    | [] | [{statement_desc = Block [] | Exp {expression_desc = Var _}}] -> cxt
     | [({statement_desc = If _} as nest)]
     | [{statement_desc = Block [({statement_desc = If _; _} as nest)]; _}] ->
       P.space f;
@@ -1371,9 +1381,18 @@ and statement_desc top cxt f (s : J.statement_desc) : cxt =
       P.string f L.else_;
       P.space f;
       brace_block cxt f s2)
-  | While (e, s) ->
+  | While (label, e, s) ->
     (*  FIXME: print scope as well *)
     let cxt =
+      let cxt =
+        match label with
+        | None -> cxt
+        | Some label ->
+          P.string f label;
+          P.string f L.colon;
+          P.space f;
+          cxt
+      in
       match e.expression_desc with
       | Number (Int {i = 1l}) ->
         P.string f L.while_;
@@ -1393,9 +1412,18 @@ and statement_desc top cxt f (s : J.statement_desc) : cxt =
     let cxt = brace_block cxt f s in
     semi f;
     cxt
-  | ForRange (for_ident_expression, finish, id, direction, s) ->
+  | ForRange (label, for_ident_expression, finish, id, direction, s) ->
     let action cxt =
       P.vgroup f 0 (fun _ ->
+          let cxt =
+            match label with
+            | None -> cxt
+            | Some label ->
+              P.string f label;
+              P.string f L.colon;
+              P.space f;
+              cxt
+          in
           let cxt =
             P.group f 0 (fun _ ->
                 (* The only place that [semi] may have semantics here *)
@@ -1470,15 +1498,81 @@ and statement_desc top cxt f (s : J.statement_desc) : cxt =
           brace_block cxt f s)
     in
     action cxt
-  | Continue ->
-    continue f;
+  | ForOf (label, id, iterable, s) ->
+    P.vgroup f 0 (fun _ ->
+        let cxt =
+          P.group f 0 (fun _ ->
+              let cxt =
+                match label with
+                | None -> cxt
+                | Some label ->
+                  P.string f label;
+                  P.string f L.colon;
+                  P.space f;
+                  cxt
+              in
+              P.string f L.for_;
+              P.space f;
+              P.paren_group f 1 (fun _ ->
+                  P.string f L.let_;
+                  P.space f;
+                  let cxt = Ext_pp_scope.ident cxt f id in
+                  P.space f;
+                  P.string f L.of_;
+                  P.space f;
+                  expression ~level:0 cxt f iterable))
+        in
+        P.space f;
+        brace_block cxt f s)
+  | ForAwaitOf (label, id, iterable, s) ->
+    P.vgroup f 0 (fun _ ->
+        let cxt =
+          P.group f 0 (fun _ ->
+              let cxt =
+                match label with
+                | None -> cxt
+                | Some label ->
+                  P.string f label;
+                  P.string f L.colon;
+                  P.space f;
+                  cxt
+              in
+              P.string f L.for_;
+              P.space f;
+              P.string f L.await;
+              P.space f;
+              P.paren_group f 1 (fun _ ->
+                  P.string f L.let_;
+                  P.space f;
+                  let cxt = Ext_pp_scope.ident cxt f id in
+                  P.space f;
+                  P.string f L.of_;
+                  P.space f;
+                  expression ~level:0 cxt f iterable))
+        in
+        P.space f;
+        brace_block cxt f s)
+  | Continue label ->
+    P.string f L.continue;
+    (match label with
+    | None -> ()
+    | Some label ->
+      P.space f;
+      P.string f label);
+    semi f;
     cxt
   (* P.newline f;  #2642 *)
   | Debugger ->
     debugger_nl f;
     cxt
-  | Break ->
-    break_nl f;
+  | Break label ->
+    P.string f L.break;
+    (match label with
+    | None -> ()
+    | Some label ->
+      P.space f;
+      P.string f label);
+    semi f;
     cxt
   | Return e -> (
     match e.expression_desc with

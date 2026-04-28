@@ -4,7 +4,7 @@ let (x, y) = (ref(a), ref(b))
 
 let f = ((c, d)) => {
   let (a, b) = (ref(c), ref(d))
-  Js.log2(a, b)
+  Console.log2(a, b)
 }
 
 /* escape analysis to avoid allocation
@@ -36,8 +36,8 @@ let a0 = f => {
   switch u {
   | None => 0
   | Some(x) =>
-    Js.log(x)
-    Js.log(x)
+    Console.log(x)
+    Console.log(x)
     1
   }
 }

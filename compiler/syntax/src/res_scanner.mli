@@ -1,4 +1,4 @@
-type mode = Jsx | Diamond
+type mode = Diamond
 
 type char_encoding
 
@@ -26,13 +26,16 @@ val scan : t -> Lexing.position * Lexing.position * Res_token.t
 
 val is_binary_op : string -> int -> int -> bool
 
-val set_jsx_mode : t -> unit
 val set_diamond_mode : t -> unit
 val pop_mode : t -> mode -> unit
-
-val reconsider_less_than : t -> Res_token.t
 
 val scan_template_literal_token :
   t -> Lexing.position * Lexing.position * Res_token.t
 
 val scan_regex : t -> Lexing.position * Lexing.position * Res_token.t
+
+(* Look ahead to see if the next non-whitespace character is a minus *)
+val peekMinus : t -> bool
+
+(* Look ahead to see if the next non-whitespace character is a slash *)
+val peekSlash : t -> bool

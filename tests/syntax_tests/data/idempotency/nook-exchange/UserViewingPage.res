@@ -212,7 +212,7 @@ let make = (~username, ~urlRest, ~url: ReasonReactRouter.url, ~showLogin) => {
               username
               userItems={user.items
               ->Js.Dict.entries
-              ->Belt.Array.keepMapU((. (itemKey, item)) =>
+              ->Belt.Array.keepMapU(((itemKey, item)) =>
                 User.fromItemKey(~key=itemKey)->Belt.Option.map(x => (x, item))
               )}
               editable=false

@@ -4,7 +4,7 @@ include (
       let v = ref(0)
       {
         incr(v)
-        v.contents->Js.Int.toString->Js.log
+        v.contents->Js.Int.toString->Console.log
       }
       let u = 3
       let use_v = () => v.contents

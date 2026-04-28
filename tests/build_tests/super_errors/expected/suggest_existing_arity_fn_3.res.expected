@@ -1,0 +1,14 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/suggest_existing_arity_fn_3.res[0m:[2m1:1-12[0m
+
+  [1;31m1[0m [2m│[0m [1;31mConsole.log4[0m(1, 2)
+  2 [2m│[0m 
+
+  This function call is incorrect.
+  The function has type:
+  (int, int, 'a, 'b) => unit
+  
+  - The function takes [1;33m4[0m unlabelled arguments, but is called with [1;31mjust 2[0m
+  
+  Hint: Try [1;33mConsole.log2[0m instead (takes [1;33m2[0m arguments).

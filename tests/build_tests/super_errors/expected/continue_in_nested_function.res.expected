@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/continue_in_nested_function.res[0m:[2m3:5-12[0m
+
+  1 [2m│[0m while true {
+  2 [2m│[0m   let skip = () => {
+  [1;31m3[0m [2m│[0m     [1;31mcontinue[0m
+  4 [2m│[0m     ()
+  5 [2m│[0m   }
+
+  `continue` can only be used inside a loop body.

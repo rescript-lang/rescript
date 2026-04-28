@@ -1,7 +1,6 @@
 /* [@@@config {flags = [|"-dsource"|]}] */
-let suites: ref<Mt.pair_suites> = ref(list{})
-let test_id = ref(0)
-let eq = (loc, x, y) => Mt.eq_suites(~test_id, ~suites, loc, x, y)
+open Mocha
+open Test_utils
 
 type rec t = {
   a: option<int>,
@@ -45,14 +44,16 @@ module N0: {
   external f: int => int = "%identity"
 }
 
-Js.log2("hei", v)
+Console.log2("hei", v)
 
 let (a, c) = ((1, 2, 2, 4, 3), [1, 2, 3, 4, 5])
-Js.log2(a, c)
+Console.log2(a, c)
 
 %%private(let i = 3)
 %%private(let a = (``, `a`))
 
-eq(__LOC__, a, ("", "a"))
-
-Mt.from_pair_suites(__FILE__, suites.contents)
+describe(__FILE__, () => {
+  test("private attribute test", () => {
+    eq(__LOC__, a, ("", "a"))
+  })
+})

@@ -61,13 +61,6 @@ let handle_extension e (self : Bs_ast_mapper.mapper)
     Exp.constraint_ ~loc
       (Ast_exp_handle_external.handle_raw ~kind:Raw_re loc payload)
       (Ast_comb.to_regexp_type loc)
-  | "external" -> (
-    Location.deprecated loc
-      "%external is deprecated, use %raw or regular FFI syntax instead.";
-    match Ast_payload.as_ident payload with
-    | Some {txt = Lident x} -> Ast_exp_handle_external.handle_external loc x
-    | None | Some _ ->
-      Location.raise_errorf ~loc "external expects a single identifier")
   | "debugger" ->
     {e with pexp_desc = Ast_exp_handle_external.handle_debugger loc payload}
   | "obj" -> (

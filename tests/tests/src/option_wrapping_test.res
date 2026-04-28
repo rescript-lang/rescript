@@ -26,7 +26,15 @@ let x29 = Some(JsError.make(""))
 let x30 = Some(ArrayBuffer.make(0))
 let x31 = Some(ArrayBuffer.make(0)->DataView.fromBuffer)
 let x32 = Some((Map.make(): Map.t<string, string>)->Map.values)
-let x33 = Some(AsyncIterator.make(_ => AsyncIterator.value(true)->Promise.resolve))
+let x33 = Some(
+  (
+    AsyncIterator.make(_ => AsyncIterator.value(true)->Promise.resolve): AsyncIterator.t<
+      bool,
+      unit,
+      unit,
+    >
+  ),
+)
 
 let x34 = Some(Intl.ListFormat.make())
 let x35 = Some(Intl.Segmenter.make())

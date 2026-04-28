@@ -1,0 +1,6 @@
+let consoleLog1 = Console.log("Hello")
+let consoleLog2 = Console.log2("Hello", "World")
+let consoleLog3 = Console.log3("Hello", "World", "!")
+let consoleLog4 = Console.log4("Hello", "World", "!", "!")
+let consoleLogMany = Console.logMany(["Hello", "World"])
+

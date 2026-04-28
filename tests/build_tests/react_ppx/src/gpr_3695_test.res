@@ -1,6 +1,6 @@
 module React = {
   type element
-  type componentLike<'props, 'return> = 'props => 'return
+  type component<'props> = 'props => element
 }
 
 module Test = {

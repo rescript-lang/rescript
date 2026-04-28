@@ -1997,7 +1997,8 @@ let make = (~width="760", ~height="380") =>
         y1="180.64"
         x2="362.765"
         y2="435.722"
-        gradientUnits="userSpaceOnUse">
+        gradientUnits="userSpaceOnUse"
+      >
         <stop offset="0.0658436" stopColor="#3A7DDD" />
         <stop offset="0.4001" stopColor="#265291" />
         <stop offset="0.571" stopColor="#1D3E6E" />

@@ -8,7 +8,7 @@ Hover src/Hover.res 6:7
 {"contents": {"kind": "markdown", "value": "```rescript\nmodule Id: {\n  type x = int\n}\n```"}}
 
 Hover src/Hover.res 19:11
-{"contents": {"kind": "markdown", "value": "\nThis module is commented\n```rescript\nmodule Dep: {\n  let customDouble: int => int\n}\n```"}}
+{"contents": {"kind": "markdown", "value": "\nThis module is commented\n---\n\n```\n \n```\n```rescript\nmodule Dep: {\n  let customDouble: int => int\n}\n```"}}
 
 Hover src/Hover.res 22:11
 {"contents": {"kind": "markdown", "value": "```rescript\nint => int\n```\n---\nSome doc comment"}}
@@ -295,13 +295,13 @@ Path Hover.someField
 Path someField
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
-{"contents": {"kind": "markdown", "value": " Mighty fine field here. \n\n```rescript\nbool\n```"}}
+{"contents": {"kind": "markdown", "value": "```rescript\nbool\n```\n---\n Mighty fine field here. "}}
 
 Hover src/Hover.res 248:19
 {"contents": {"kind": "markdown", "value": "```rescript\nbool\n```\n---\n Mighty fine field here. "}}
 
 Hover src/Hover.res 253:20
-{"contents": {"kind": "markdown", "value": "```rescript\nvariant\nCoolVariant\n```\n\n---\n\n```\n \n```\n```rescript\ntype variant = CoolVariant | OtherCoolVariant\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C251%2C0%5D)\n\n---\n Cool variant! "}}
+{"contents": {"kind": "markdown", "value": "```rescript\nvariant\nCoolVariant\n```\n---\n Cool variant! \n\n---\n\n```\n \n```\n```rescript\ntype variant = CoolVariant | OtherCoolVariant\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C251%2C0%5D)\n"}}
 
 Hover src/Hover.res 258:22
 {"contents": {"kind": "markdown", "value": "```rescript\npayloadVariants\nInlineRecord({field1: int, field2: bool})\n```\n\n---\n\n```\n \n```\n```rescript\ntype payloadVariants =\n  | InlineRecord({field1: int, field2: bool})\n  | Args(int, bool)\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C256%2C0%5D)\n"}}
@@ -343,7 +343,7 @@ Path x
 {"contents": {"kind": "markdown", "value": "```rescript\nbool\n```"}}
 
 Hover src/Hover.res 278:8
-{"contents": {"kind": "markdown", "value": "\n [`Belt.Array`]()\n\n  **mutable array**: Utilities functions\n\n```rescript\nmodule Array: {\n  module Id\n  module Array\n  module SortArray\n  module MutableQueue\n  module MutableStack\n  module List\n  module Range\n  module Set\n  module Map\n  module MutableSet\n  module MutableMap\n  module HashSet\n  module HashMap\n  module Option\n  module Result\n  module Int\n  module Float\n}\n```"}}
+{"contents": {"kind": "markdown", "value": "\n [`Belt.Array`]()\n\n  **mutable array**: Utilities functions\n\n---\n\n```\n \n```\n```rescript\nmodule Array: {\n  module Id\n  module Array\n  module SortArray\n  module MutableQueue\n  module MutableStack\n  module List\n  module Range\n  module Set\n  module Map\n  module MutableSet\n  module MutableMap\n  module HashSet\n  module HashMap\n  module Option\n  module Result\n  module Int\n  module Float\n}\n```"}}
 
 Hover src/Hover.res 281:6
 {"contents": {"kind": "markdown", "value": "```rescript\ntype aliased = variant\n```\n\n---\n\n```\n \n```\n```rescript\ntype variant = CoolVariant | OtherCoolVariant\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C251%2C0%5D)\n"}}

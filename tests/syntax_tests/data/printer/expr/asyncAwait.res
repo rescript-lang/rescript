@@ -7,10 +7,10 @@ let sequentialAwait = async () => {
 }
 
 let f = async () => ()
-let f = async (.) => ()
+let f = async () => ()
 let f = async f => f()
 let f = async (a, b) => a + b
-let f = async (. a, b) => a + b
+let f = async (a, b) => a + b
 
 
 let maybeSomeValue = switch await fetchData(url) {    
@@ -33,8 +33,8 @@ user.data = await fetch()
 let inBinaryExpression = await x->Js.Promise.resolve + 1
 let inBinaryExpression = await x->Js.Promise.resolve + await y->Js.Promise.resolve
 
-let withCallback = async (. ()) => {
-    async (. x) => await (x->Js.promise.resolve) + 1
+let withCallback = async (()) => {
+    async (x) => await (x->Js.promise.resolve) + 1
 }
 
 let () = await (await fetch(url))->(await resolve)
@@ -57,7 +57,7 @@ let _ = await (user.name = "Steve")
 let _ = await (if 20 { true } else {false})
 let _ = await (condition() ? true : false)
 let _ = await f(x)
-let _ = await f(. x)
+let _ = await f(x)
 let _ = await (f(x) : Js.Promise.t<unit>)
 let _ = await (while true { infiniteLoop() })
 let _ = await (try ok() catch { | _  =>  logError() })
@@ -90,7 +90,7 @@ let f7 = async x => async (~y) => 3
 let f8 = async (~x1, ~x2) => async (~y) => 3
 let f9 = x => async (~y) => 3
 let f10 = x => async y => 3
-let f11 = (. ~x) => (. ~y) => 3
+let f11 = (~x) => (~y) => 3
 
 let f12 = @a (@b x) => 3
 let f13 = @a @b (~x) => 3
@@ -113,11 +113,11 @@ let b3 = await (foo->bar(~arg))
 let b4 = await (foo.bar.baz)
 
 let c1 = @foo x => @bar y => x + y
-let c2 = (. x) => y => x+y
-let c3 = (. x) => @foo y => x+y
+let c2 = (x) => y => x+y
+let c3 = (x) => @foo y => x+y
 
-type t1 = (. int) => string => bool
-type t2 = (. int, string) => bool
+type t1 = (int) => string => bool
+type t2 = (int, string) => bool
 
 let f = async (type a, ()) => {
   await Js.Promise.resolve(())

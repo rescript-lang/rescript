@@ -1,13 +1,14 @@
 open GenTypeCommon
 open! TranslateTypeExprFromTypes
 
-let remove_option ~(label : Asttypes.Noloc.arg_label)
+let remove_option ~(label : Asttypes.arg_label)
     (core_type : Typedtree.core_type) =
   match (core_type.ctyp_desc, label) with
-  | Ttyp_constr (Path.Pident id, _, [t]), Optional lbl
+  | Ttyp_constr (Path.Pident id, _, [t]), Optional {txt = lbl}
     when Ident.name id = "option" ->
     Some (lbl, t)
-  | Ttyp_constr (Pdot (Path.Pident name_space, id, _), _, [t]), Optional lbl
+  | ( Ttyp_constr (Pdot (Path.Pident name_space, id, _), _, [t]),
+      Optional {txt = lbl} )
     when (* This has a different representation in 4.03+  *)
          Ident.name name_space = "FB" && id = "option" ->
     Some (lbl, t)
@@ -52,7 +53,7 @@ let rec translate_arrow_type ~config ~type_vars_gen
     ~no_function_return_dependencies ~type_env ~rev_arg_deps ~rev_args
     (core_type : Typedtree.core_type) =
   match core_type.ctyp_desc with
-  | Ttyp_arrow (Nolabel, core_type1, core_type2, arity)
+  | Ttyp_arrow ({lbl = Nolabel; typ = core_type1}, core_type2, arity)
     when arity = None || rev_args = [] ->
     let {dependencies; type_} =
       core_type1 |> fun __x ->
@@ -64,7 +65,12 @@ let rec translate_arrow_type ~config ~type_vars_gen
          ~no_function_return_dependencies ~type_env ~rev_arg_deps:next_rev_deps
          ~rev_args:((Nolabel, type_) :: rev_args)
   | Ttyp_arrow
-      (((Labelled lbl | Optional lbl) as label), core_type1, core_type2, arity)
+      ( {
+          lbl = (Labelled {txt = lbl} | Optional {txt = lbl}) as label;
+          typ = core_type1;
+        },
+        core_type2,
+        arity )
     when arity = None || rev_args = [] -> (
     let as_label =
       match core_type.ctyp_attributes |> Annotation.get_gentype_as_renaming with

@@ -97,7 +97,7 @@ module T = struct
     match desc with
     | Ptyp_any | Ptyp_var _ -> ()
     | Ptyp_arrow {arg; ret} ->
-      sub.typ sub arg;
+      sub.typ sub arg.typ;
       sub.typ sub ret
     | Ptyp_tuple tyl -> List.iter (sub.typ sub) tyl
     | Ptyp_constr (lid, tl) ->
@@ -267,9 +267,7 @@ module M = struct
 end
 
 module E = struct
-  let iter_jsx_children sub = function
-    | JSXChildrenSpreading e -> sub.expr sub e
-    | JSXChildrenItems xs -> List.iter (sub.expr sub) xs
+  let iter_jsx_children sub xs = List.iter (sub.expr sub) xs
 
   let iter_jsx_prop sub = function
     | JSXPropPunning (_, name) -> iter_loc sub name
@@ -331,6 +329,7 @@ module E = struct
     | Pexp_sequence (e1, e2) ->
       sub.expr sub e1;
       sub.expr sub e2
+    | Pexp_break | Pexp_continue -> ()
     | Pexp_while (e1, e2) ->
       sub.expr sub e1;
       sub.expr sub e2
@@ -339,6 +338,14 @@ module E = struct
       sub.expr sub e1;
       sub.expr sub e2;
       sub.expr sub e3
+    | Pexp_for_of (p, e1, e2) ->
+      sub.pat sub p;
+      sub.expr sub e1;
+      sub.expr sub e2
+    | Pexp_for_await_of (p, e1, e2) ->
+      sub.pat sub p;
+      sub.expr sub e1;
+      sub.expr sub e2
     | Pexp_coerce (e, (), t2) ->
       sub.expr sub e;
       sub.typ sub t2

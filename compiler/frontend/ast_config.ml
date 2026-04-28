@@ -52,7 +52,7 @@ let process_directives str =
            | None -> Bs_syntaxerr.err item.pstr_loc Expect_string_literal)
          | _ -> ())
 
-let rec iter_on_bs_config_str (x : Parsetree.structure) =
+let rec iter_on_config_str (x : Parsetree.structure) =
   match x with
   | [] -> ()
   | {pstr_desc = Pstr_attribute (({txt = "config"; loc}, payload) as attr)} :: _
@@ -61,14 +61,14 @@ let rec iter_on_bs_config_str (x : Parsetree.structure) =
     Ext_list.iter
       (Ast_payload.ident_or_record_as_config loc payload)
       (Ast_payload.table_dispatch !structural_config_table)
-  | {pstr_desc = Pstr_attribute _} :: rest -> iter_on_bs_config_str rest
+  | {pstr_desc = Pstr_attribute _} :: rest -> iter_on_config_str rest
   | _ :: _ -> ()
 
 let process_str str =
-  iter_on_bs_config_str str;
+  iter_on_config_str str;
   process_directives str
 
-let rec iter_on_bs_config_sig (x : Parsetree.signature) =
+let rec iter_on_config_sig (x : Parsetree.signature) =
   match x with
   | [] -> ()
   | {psig_desc = Psig_attribute (({txt = "config"; loc}, payload) as attr)} :: _
@@ -77,7 +77,7 @@ let rec iter_on_bs_config_sig (x : Parsetree.signature) =
     Ext_list.iter
       (Ast_payload.ident_or_record_as_config loc payload)
       (Ast_payload.table_dispatch !signature_config_table)
-  | {psig_desc = Psig_attribute _} :: rest -> iter_on_bs_config_sig rest
+  | {psig_desc = Psig_attribute _} :: rest -> iter_on_config_sig rest
   | _ :: _ -> ()
 
-let process_sig s = iter_on_bs_config_sig s
+let process_sig s = iter_on_config_sig s

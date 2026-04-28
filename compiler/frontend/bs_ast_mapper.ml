@@ -94,28 +94,29 @@ module T = struct
     | Oinherit t -> Oinherit (sub.typ sub t)
 
   let map sub {ptyp_desc = desc; ptyp_loc = loc; ptyp_attributes = attrs} =
-    let open Typ in
     let loc = sub.location sub loc in
     let attrs = sub.attributes sub attrs in
     match desc with
-    | Ptyp_any -> any ~loc ~attrs ()
-    | Ptyp_var s -> var ~loc ~attrs s
-    | Ptyp_arrow {lbl; arg; ret; arity} ->
-      arrow ~loc ~attrs ~arity lbl (sub.typ sub arg) (sub.typ sub ret)
-    | Ptyp_tuple tyl -> tuple ~loc ~attrs (List.map (sub.typ sub) tyl)
+    | Ptyp_any -> Typ.any ~loc ~attrs ()
+    | Ptyp_var s -> Typ.var ~loc ~attrs s
+    | Ptyp_arrow {arg; ret; arity} ->
+      Typ.arrow ~loc ~attrs ~arity
+        {arg with typ = sub.typ sub arg.typ}
+        (sub.typ sub ret)
+    | Ptyp_tuple tyl -> Typ.tuple ~loc ~attrs (List.map (sub.typ sub) tyl)
     | Ptyp_constr (lid, tl) ->
-      constr ~loc ~attrs (map_loc sub lid) (List.map (sub.typ sub) tl)
+      Typ.constr ~loc ~attrs (map_loc sub lid) (List.map (sub.typ sub) tl)
     | Ptyp_object (l, o) ->
-      object_ ~loc ~attrs (List.map (object_field sub) l) o
-    | Ptyp_alias (t, s) -> alias ~loc ~attrs (sub.typ sub t) s
+      Typ.object_ ~loc ~attrs (List.map (object_field sub) l) o
+    | Ptyp_alias (t, s) -> Typ.alias ~loc ~attrs (sub.typ sub t) s
     | Ptyp_variant (rl, b, ll) ->
-      variant ~loc ~attrs (List.map (row_field sub) rl) b ll
+      Typ.variant ~loc ~attrs (List.map (row_field sub) rl) b ll
     | Ptyp_poly (sl, t) ->
-      poly ~loc ~attrs (List.map (map_loc sub) sl) (sub.typ sub t)
+      Typ.poly ~loc ~attrs (List.map (map_loc sub) sl) (sub.typ sub t)
     | Ptyp_package (lid, l) ->
-      package ~loc ~attrs (map_loc sub lid)
+      Typ.package ~loc ~attrs (map_loc sub lid)
         (List.map (map_tuple (map_loc sub) (sub.typ sub)) l)
-    | Ptyp_extension x -> extension ~loc ~attrs (sub.extension sub x)
+    | Ptyp_extension x -> Typ.extension ~loc ~attrs (sub.extension sub x)
 
   let map_type_declaration sub
       {
@@ -151,7 +152,7 @@ module T = struct
     | Ptype_record l -> Ptype_record (List.map (sub.label_declaration sub) l)
     | Ptype_open -> Ptype_open
 
-  let map_constructor_arguments sub = function
+  let map_constructor_arguments (sub : mapper) = function
     | Pcstr_tuple l -> Pcstr_tuple (List.map (sub.typ sub) l)
     | Pcstr_record l -> Pcstr_record (List.map (sub.label_declaration sub) l)
 
@@ -291,9 +292,7 @@ module M = struct
 end
 
 module E = struct
-  let map_jsx_children sub = function
-    | JSXChildrenSpreading e -> JSXChildrenSpreading (sub.expr sub e)
-    | JSXChildrenItems xs -> JSXChildrenItems (List.map (sub.expr sub) xs)
+  let map_jsx_children sub xs = List.map (sub.expr sub) xs
 
   let map_jsx_prop sub = function
     | JSXPropPunning (optional, name) ->
@@ -357,6 +356,8 @@ module E = struct
         (map_opt (sub.expr sub) e3)
     | Pexp_sequence (e1, e2) ->
       sequence ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)
+    | Pexp_break -> break ~loc ~attrs ()
+    | Pexp_continue -> continue ~loc ~attrs ()
     | Pexp_while (e1, e2) ->
       while_ ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)
     | Pexp_for (p, e1, e2, d, e3) ->
@@ -395,6 +396,12 @@ module E = struct
            {jsx_unary_element_tag_name = name; jsx_unary_element_props = props})
       ->
       jsx_unary_element ~loc ~attrs name (map_jsx_props sub props)
+    | Pexp_for_of (pat, e1, e2) ->
+      Exp.mk ~loc ~attrs
+        (Pexp_for_of (sub.pat sub pat, sub.expr sub e1, sub.expr sub e2))
+    | Pexp_for_await_of (pat, e1, e2) ->
+      Exp.mk ~loc ~attrs
+        (Pexp_for_await_of (sub.pat sub pat, sub.expr sub e1, sub.expr sub e2))
     | Pexp_jsx_element
         (Jsx_container_element
            {

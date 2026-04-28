@@ -2,11 +2,11 @@
   "name": "@tests/reanalyze-deadcode",
   "private": true,
   "scripts": {
-    "build": "rescript",
-    "clean": "rescript clean -with-deps"
+    "build": "rescript build",
+    "clean": "rescript clean"
   },
   "dependencies": {
-    "@rescript/react": "link:../../../dependencies/rescript-react",
+    "@rescript/react": "workspace:^",
     "rescript": "workspace:^"
   }
 }

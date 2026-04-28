@@ -26,24 +26,40 @@ type outcome = Eval_false | Eval_true | Eval_unknown
 
 let id_is_for_sure_true_in_boolean (tbl : Lam_stats.ident_tbl) id =
   match Hash_ident.find_opt tbl id with
-  | Some (ImmutableBlock _)
-  | Some (Normal_optional _)
-  | Some (MutableBlock _)
-  | Some (Constant (Const_block _ | Const_js_true)) ->
-    Eval_true
+  | Some
+      (Normal_optional
+         (Lconst (Const_js_false | Const_js_null | Const_js_undefined _))) ->
+    Eval_false
+  | Some (Constant Const_js_true) -> Eval_true
   | Some (Constant (Const_int {i})) -> if i = 0l then Eval_false else Eval_true
   | Some (Constant (Const_js_false | Const_js_null | Const_js_undefined _)) ->
     Eval_false
   | Some
-      ( Constant _ | Module _ | FunctionId _ | Exception | Parameter | NA
+      ( Normal_optional _ | ImmutableBlock _ | MutableBlock _ | Constant _
+      | Module _ | FunctionId _ | Exception | Parameter | NA
       | OptionalBlock (_, (Undefined | Null | Null_undefined)) )
   | None ->
     Eval_unknown
+
+let is_const_some (cst : Lam_constant.t) : bool =
+  match cst with
+  | Const_some _ -> true
+  | Const_block (_, (Lambda.Blk_some | Lambda.Blk_some_not_nested), _) -> true
+  | _ -> false
 
 let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
   let rec simpl (lam : Lam.t) : Lam.t =
     match lam with
     | Lvar _ -> lam
+    (* 7432: prevent optimization in JSX preserve mode *)
+    | Lprim
+        {
+          primitive = Pjs_call {prim_name = "jsx" | "jsxs"} as primitive;
+          args = (Lprim {primitive = Pfield (_, _)} as field_arg) :: rest;
+          loc;
+        }
+      when !Js_config.jsx_preserve ->
+      Lam.prim ~primitive ~args:(field_arg :: Ext_list.map rest simpl) loc
     | Lprim {primitive = Pfield (i, info) as primitive; args = [arg]; loc} -> (
       (* ATTENTION:
          Main use case, we should detect inline all immutable block .. *)
@@ -68,6 +84,7 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
         ((Lprim {primitive = Pis_not_none; args = [Lvar id]} as l1), l2, l3)
       -> (
       match Hash_ident.find_opt meta.ident_tbl id with
+      | Some (Constant c) when is_const_some c -> simpl l2
       | Some (ImmutableBlock _ | MutableBlock _ | Normal_optional _) -> simpl l2
       | Some (OptionalBlock (l, Null)) ->
         Lam.if_
@@ -262,9 +279,14 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
     | Lstaticcatch (l1, ids, l2) -> Lam.staticcatch (simpl l1) ids (simpl l2)
     | Ltrywith (l1, v, l2) -> Lam.try_ (simpl l1) v (simpl l2)
     | Lsequence (l1, l2) -> Lam.seq (simpl l1) (simpl l2)
+    | Lbreak -> Lam.break
+    | Lcontinue -> Lam.continue
     | Lwhile (l1, l2) -> Lam.while_ (simpl l1) (simpl l2)
     | Lfor (flag, l1, l2, dir, l3) ->
       Lam.for_ flag (simpl l1) (simpl l2) dir (simpl l3)
+    | Lfor_of (flag, l1, l2) -> Lam.for_of flag (simpl l1) (simpl l2)
+    | Lfor_await_of (flag, l1, l2) ->
+      Lam.for_await_of flag (simpl l1) (simpl l2)
     | Lassign (v, l) ->
       (* Lalias-bound variables are never assigned, so don't increase
          v's refsimpl *)

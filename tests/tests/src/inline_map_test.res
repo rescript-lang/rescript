@@ -1,3 +1,6 @@
+open Mocha
+open Test_utils
+
 module Ord = {
   type t = int
 }
@@ -412,4 +415,8 @@ let m = Belt.List.reduceReverse(list{(10, 'a'), (3, 'b'), (7, 'c'), (20, 'd')}, 
 
 @val("console.log") external log: 'a => unit = ""
 
-Mt.from_pair_suites(__MODULE__, list{("find", _ => Mt.Eq(find(10, m), 'a'))})
+describe(__MODULE__, () => {
+  test("inline map test", () => {
+    eq(__LOC__, find(10, m), 'a')
+  })
+})

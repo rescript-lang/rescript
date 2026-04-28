@@ -1,0 +1,20 @@
+{
+    "TAG": "Ok",
+    "_0": [{
+    "id": "FormatDocstringsTest1.testFunction3",
+    "name": "testFunction3",
+    "code": "let processUsers = (users: array<user>) => {\n  users\n  ->Array.map(user => {...user, active: false})\n  ->Array.filter(u => u.age > 21)\n}\n\ntype status = Loading | Success(string) | Error(option<string>)"
+  }, {
+    "id": "FormatDocstringsTest1.Nested.testFunction2",
+    "name": "testFunction2",
+    "code": "module UserService = {\n  let validate = user => user.age >= 18 && user.name !== \"\"\n  let getName = user => user.name\n}"
+  }, {
+    "id": "FormatDocstringsTest1.testFunction1-2",
+    "name": "testFunction1",
+    "code": "type user = {name: string, age: int, active: bool}\nlet createUser = (name, age) => {name, age, active: true}"
+  }, {
+    "id": "FormatDocstringsTest1.testFunction1-1",
+    "name": "testFunction1",
+    "code": "let badly_formatted = (x, y) => {\n  let result = x + y\n  if result > 0 {\n    Console.log(\"positive\")\n  } else {\n    Console.log(\"negative\")\n  }\n  result\n}"
+  }]
+  }

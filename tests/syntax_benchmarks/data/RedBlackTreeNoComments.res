@@ -266,15 +266,15 @@ let removeNode = (rbt, node) => {
         rbt.root = Some(successor)
       }
     } else {
-      let break = ref(false)
+      let break_ = ref(false)
       let successorRef = ref(successor)
-      while !break.contents {
+      while !break_.contents {
         let successor = successorRef.contents
 
         switch successor.parent {
         | None =>
           rbt.root = Some(successor)
-          break.contents = true
+          break_.contents = true
         | Some(successorParent) =>
           let sibling = siblingOf(successor)
           if sibling !== None && (sibling->castNotOption).color === Red {
@@ -311,7 +311,7 @@ let removeNode = (rbt, node) => {
               siblingNN.color = Red
             }
             successorParent.color = Black
-            break.contents = true
+            break_.contents = true
           } else if sibling !== None && (sibling->castNotOption).color === Black {
             let sibling = sibling->castNotOption
             if (
@@ -333,7 +333,7 @@ let removeNode = (rbt, node) => {
               (sibling.right->castNotOption).color = Black
               rotateLeft(rbt, sibling)
             }
-            break.contents = true
+            break_.contents = true
           } else {
             let sibling = siblingOf(successor)
             let sibling = sibling->castNotOption

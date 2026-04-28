@@ -1,7 +1,5 @@
 let ( >:: ), ( >::: ) = OUnit.(( >:: ), ( >::: ))
 
-(* open Ext_json *)
-
 let v = Vec_int.init 10 (fun i -> i)
 let ( =~ ) x y =
   OUnit.assert_equal ~cmp:(Vec_int.equal (fun (x : int) y -> x = y)) x y

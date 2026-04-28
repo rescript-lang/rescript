@@ -68,8 +68,8 @@ let exports cxt f (idents : Ident.t list) =
     (fun _ -> P.newline f);
   outer_cxt
 
-(** Print module in ES6 format, it is ES6, trailing comma is valid ES6 code *)
-let es6_export cxt f (idents : Ident.t list) =
+(** Print module in ESModule format, it is ESModule, trailing comma is valid ES code *)
+let esmodule_export cxt f (idents : Ident.t list) =
   P.at_least_two_lines f;
   match idents with
   | [] -> cxt

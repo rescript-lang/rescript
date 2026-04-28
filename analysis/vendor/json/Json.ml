@@ -1,7 +1,5 @@
 (** # Json parser
  *
- * Works with bucklescript and bsb-native
- *
  * ## Basics
  *
  * ```

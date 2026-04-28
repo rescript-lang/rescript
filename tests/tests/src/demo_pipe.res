@@ -8,4 +8,4 @@ external on: (
     | #close(unit => unit)
   ],
 ) => readline = "on"
-let register = rl => rl->on(#line(x => Js.log(x)))->on(#close(() => Js.log("finished")))
+let register = rl => rl->on(#line(x => Console.log(x)))->on(#close(() => Console.log("finished")))

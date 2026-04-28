@@ -1,5 +1,5 @@
 let f = (x, y) => {
-  Js.log((x, y))
+  Console.log((x, y))
   x + y
 }
 
@@ -14,7 +14,7 @@ let g = () => {
 let exterme_g = () => {
   ignore(f(1, 2))
   let v = %debugger
-  Js.log(v)
+  Console.log(v)
   ignore(f(1, 2))
   %debugger
   3

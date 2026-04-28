@@ -1,7 +1,5 @@
-let suites: ref<Mt.pair_suites> = ref(list{})
-let test_id = ref(0)
-let eq = (loc, x, y) => Mt.eq_suites(loc, x, y, ~test_id, ~suites)
-let b = (loc, x) => Mt.bool_suites(loc, x, ~test_id, ~suites)
+open Mocha
+open Test_utils
 
 let f = x =>
   switch x() {
@@ -29,10 +27,12 @@ let f33 = x =>
   | _ => 'x'
   }
 
-eq(__LOC__, f(_ => 1), 'a')
-eq(__LOC__, f(_ => 2), 'b')
-eq(__LOC__, f(_ => 3), 'c')
-eq(__LOC__, f(_ => 0), 'x')
-eq(__LOC__, f(_ => -1), 'x')
-
-Mt.from_pair_suites(__MODULE__, suites.contents)
+describe(__MODULE__, () => {
+  test("integer switch function", () => {
+    eq(__LOC__, f(_ => 1), 'a')
+    eq(__LOC__, f(_ => 2), 'b')
+    eq(__LOC__, f(_ => 3), 'c')
+    eq(__LOC__, f(_ => 0), 'x')
+    eq(__LOC__, f(_ => -1), 'x')
+  })
+})

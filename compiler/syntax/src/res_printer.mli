@@ -1,3 +1,5 @@
+val default_print_width : int
+
 val print_type_params :
   (Parsetree.core_type * Asttypes.variance) list ->
   Res_comments_table.t ->
@@ -18,9 +20,9 @@ val print_structure : Parsetree.structure -> Res_comments_table.t -> Res_doc.t
 [@@live]
 
 val print_implementation :
-  width:int -> Parsetree.structure -> comments:Res_comment.t list -> string
+  ?width:int -> Parsetree.structure -> comments:Res_comment.t list -> string
 val print_interface :
-  width:int -> Parsetree.signature -> comments:Res_comment.t list -> string
+  ?width:int -> Parsetree.signature -> comments:Res_comment.t list -> string
 
 val print_ident_like :
   ?allow_uident:bool -> ?allow_hyphen:bool -> string -> Res_doc.t

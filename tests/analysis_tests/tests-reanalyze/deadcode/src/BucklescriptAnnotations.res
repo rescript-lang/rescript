@@ -11,19 +11,16 @@ type someMutableFields = {
 
 @genType
 type someMethods = {
-  @meth
   "send": string => unit,
-  @meth
-  "on": (string, (. int) => unit) => unit,
-  @meth
+  "on": (string, (int) => unit) => unit,
   "threeargs": (int, string, int) => string,
-  "twoArgs": (. int, string) => int,
+  "twoArgs": (int, string) => int,
 }
 
 // let foo = (x: someMethods) => x["threeargs"](3, "a", 4)
 
 let bar = (x: someMethods) => {
   let f = x["twoArgs"]
-  f(. 3, "a")
+  f(3, "a")
 }
 

@@ -1,10 +1,10 @@
+open Mocha
+open Test_utils
+
 let ff = v => Js.Float.toString(v)
 let f = v => Js.Int.toString(v)
 
-Mt.from_pair_suites(
-  __MODULE__,
-  list{
-    (__LOC__, _ => Eq(ff(infinity), "Infinity")),
-    (__LOC__, _ => Eq(ff(neg_infinity), "-Infinity")),
-  },
-)
+describe(__MODULE__, () => {
+  test("infinity to string", () => eq(__LOC__, ff(infinity), "Infinity"))
+  test("neg_infinity to string", () => eq(__LOC__, ff(neg_infinity), "-Infinity"))
+})

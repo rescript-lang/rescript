@@ -29,7 +29,7 @@ type ('a, 'b) st = {get: 'a option; set: 'b option}
 
 val process_method_attributes_rev : t -> (bool * bool, [`Get | `No_get]) st * t
 
-type attr_kind = Nothing | Meth_callback of attr | Method of attr
+type attr_kind = Nothing | Meth_callback of attr
 
 val process_attributes_rev : t -> attr_kind * t
 
@@ -45,6 +45,8 @@ val iter_process_bs_string_int_unwrap_uncurry :
 val iter_process_bs_string_as : t -> string option
 
 val has_bs_optional : t -> bool
+
+val has_unwrap_attr : t -> bool
 
 val iter_process_bs_int_as : t -> int option
 

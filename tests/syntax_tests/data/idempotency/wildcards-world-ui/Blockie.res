@@ -1,2 +1,2 @@
 @module("./blockie-default.js")
-external makeBlockie: (. string) => string = "default"
+external makeBlockie: (string) => string = "default"

@@ -1,0 +1,12 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/for_of_string_requires_iterable.res[0m:[2m4:10-14[0m
+
+  2 [2m│[0m let chars = "abc"
+  3 [2m│[0m 
+  [1;31m4[0m [2m│[0m for x of [1;31mchars[0m {
+  5 [2m│[0m   Console.log(x)
+  6 [2m│[0m }
+
+  This has type: [1;31mstring[0m
+  But it's expected to have type: [1;33miterable<'a>[0m

@@ -275,35 +275,69 @@ module Delim = struct
     | None -> Some External_arg_spec.DNone
     | Some "json" -> Some DNoQuotes
     | Some "*j" -> Some DStarJ
+    | Some "bq" -> Some DBackQuotes
     | _ -> None
 
   type interpolation =
-    | Js (* string interpolation *)
+    | BackQuotes (* string interpolation *)
+    | Js (* simple double quoted string *)
     | Unrecognized (* no interpolation: delimiter not recognized *)
-  let parse_unprocessed = function
-    | "js" -> Js
+  let parse_unprocessed is_template = function
+    | "js" -> if is_template then BackQuotes else Js
     | _ -> Unrecognized
 
   let escaped_j_delimiter = "*j" (* not user level syntax allowed *)
+  let escaped_back_quote_delimiter = "bq"
+  let some_escaped_back_quote_delimiter = Some "bq"
   let unescaped_js_delimiter = "js"
-  let escaped = Some escaped_j_delimiter
+  let some_escaped_j_delimiter = Some escaped_j_delimiter
 end
 
 let transform_exp (e : Parsetree.expression) s delim : Parsetree.expression =
-  match Delim.parse_unprocessed delim with
+  let is_template =
+    Ext_list.exists e.pexp_attributes (fun ({txt}, _) ->
+        match txt with
+        | "res.template" | "res.taggedTemplate" -> true
+        | _ -> false)
+  in
+  match Delim.parse_unprocessed is_template delim with
   | Js ->
     let js_str = Ast_utf8_string.transform e.pexp_loc s in
-    {e with pexp_desc = Pexp_constant (Pconst_string (js_str, Delim.escaped))}
+    {
+      e with
+      pexp_desc =
+        Pexp_constant (Pconst_string (js_str, Delim.some_escaped_j_delimiter));
+    }
+  | BackQuotes ->
+    {
+      e with
+      pexp_desc =
+        Pexp_constant
+          (Pconst_string (s, Delim.some_escaped_back_quote_delimiter));
+    }
   | Unrecognized -> e
 
 let transform_pat (p : Parsetree.pattern) s delim : Parsetree.pattern =
-  match Delim.parse_unprocessed delim with
+  match Delim.parse_unprocessed false delim with
   | Js ->
     let js_str = Ast_utf8_string.transform p.ppat_loc s in
-    {p with ppat_desc = Ppat_constant (Pconst_string (js_str, Delim.escaped))}
+    {
+      p with
+      ppat_desc =
+        Ppat_constant (Pconst_string (js_str, Delim.some_escaped_j_delimiter));
+    }
+  | BackQuotes ->
+    {
+      p with
+      ppat_desc =
+        Ppat_constant
+          (Pconst_string (s, Delim.some_escaped_back_quote_delimiter));
+    }
   | Unrecognized -> p
 
-let is_unicode_string opt = Ext_string.equal opt Delim.escaped_j_delimiter
+let is_unicode_string opt =
+  Ext_string.equal opt Delim.escaped_j_delimiter
+  || Ext_string.equal opt Delim.escaped_back_quote_delimiter
 
 let is_unescaped s = Ext_string.equal s Delim.unescaped_js_delimiter
 

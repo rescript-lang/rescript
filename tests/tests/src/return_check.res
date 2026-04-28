@@ -8,7 +8,7 @@ let test = dom => {
   switch elem {
   | None => 1
   | Some(ui) =>
-    Js.log(ui)
+    Console.log(ui)
     2
   }
 }
@@ -26,7 +26,7 @@ let f_undefined = (xs, i) =>
 
 let f_escaped_not = (xs, i) => {
   let x = get_undefined(xs, i)
-  Js.log("hei")
+  Console.log("hei")
   switch x {
   | Some(k) => k
   | None => 1
@@ -42,7 +42,7 @@ let f_escaped_1 = (xs, i) => {
     }
 } /* still okay */
 
-let f_escaped_2 = (xs, i) => Js.log(get_undefined(xs, i))
+let f_escaped_2 = (xs, i) => Console.log(get_undefined(xs, i))
 
 @get_index @return(null_to_opt) external get_null: (array<int>, int) => option<int> = ""
 

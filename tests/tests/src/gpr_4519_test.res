@@ -1,6 +1,5 @@
-let suites: ref<Mt.pair_suites> = ref(list{})
-let test_id = ref(0)
-let eq = (loc, x, y) => Mt.eq_suites(~test_id, ~suites, loc, x, y)
+open Mocha
+open Test_utils
 
 type t =
   | Required
@@ -13,5 +12,8 @@ let nextFor = (x: option<t>) =>
   | None => Some(Required)
   }
 
-eq(__LOC__, nextFor(Some(Required)), Some(Optional))
-let () = Mt.from_pair_suites(__MODULE__, suites.contents)
+describe(__MODULE__, () => {
+  test("option type pattern matching", () => {
+    eq(__LOC__, nextFor(Some(Required)), Some(Optional))
+  })
+})

@@ -1,6 +1,6 @@
 let f = x => {
   let unused_f = x => {
-    Js.log("x")
+    Console.log("x")
     x + x
   }
   let unused_h = x => unused_f(3)

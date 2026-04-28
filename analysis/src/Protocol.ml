@@ -137,6 +137,11 @@ let optWrapInQuotes s =
   | None -> None
   | Some s -> Some (wrapInQuotes s)
 
+let stringifyResult = function
+  | Ok r -> stringifyObject [("TAG", Some (wrapInQuotes "Ok")); ("_0", Some r)]
+  | Error e ->
+    stringifyObject [("TAG", Some (wrapInQuotes "Error")); ("_0", Some e)]
+
 let stringifyCompletionItem c =
   stringifyObject
     [

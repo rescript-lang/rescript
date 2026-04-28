@@ -17,8 +17,8 @@ case "$(uname -s)" in
     fi
 
     echo "Checking ReScript code formatting..."
-    files=$(find runtime tests -type f \( -name "*.res" -o -name "*.resi" \) ! -name "syntaxErrors*" ! -name "generated_mocha_test.res" ! -path "tests/syntax_tests*" ! -path "tests/analysis_tests/tests*" ! -path "*/node_modules/*")
-    if ./cli/rescript.js format -check $files; then
+    files=$(find packages tests -type f \( -name "*.res" -o -name "*.resi" \) ! -name "syntaxErrors*" ! -name "generated_mocha_test.res" ! -path "tests/build_tests/super_errors/fixtures/break_keyword_binding.res" ! -path "tests/syntax_tests*" ! -path "tests/analysis_tests/tests*" ! -path "*/node_modules/*")
+    if ./cli/rescript.js format --check $files; then
       printf "${successGreen}✅ ReScript code formatting ok.${reset}\n"
     else
       printf "${warningYellow}⚠️ ReScript code formatting issues found. Run 'make format' to fix.${reset}\n"
@@ -30,5 +30,18 @@ case "$(uname -s)" in
     echo "Code formatting checks skipped for this platform."
 esac
 
-echo "Biome format check"
-yarn check
+echo "Checking JS code formatting..."
+if yarn check; then
+  printf "${successGreen}✅ JS code formatting ok.${reset}\n"
+else
+  printf "${warningYellow}⚠️ JS code formatting issues found.${reset}\n"
+  exit 1
+fi
+
+echo "Checking Rust code formatting..."
+if cargo fmt --check --manifest-path rewatch/Cargo.toml; then
+  printf "${successGreen}✅ Rust code formatting ok.${reset}\n"
+else
+  printf "${warningYellow}⚠️ Rust code formatting issues found.${reset}\n"
+  exit 1
+fi

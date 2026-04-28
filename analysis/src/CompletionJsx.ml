@@ -247,7 +247,8 @@ let getJsxLabels ~componentPath ~findTypeOfValue ~package =
         match propsType |> getPropsType with
         | Some (path, typeArgs) -> getFields ~path ~typeArgs
         | None -> [])
-      | Tarrow (Nolabel, {desc = Tconstr (path, typeArgs, _)}, _, _, _)
+      | Tarrow
+          ({lbl = Nolabel; typ = {desc = Tconstr (path, typeArgs, _)}}, _, _, _)
         when Path.last path = "props" ->
         getFields ~path ~typeArgs
       | Tconstr (clPath, [{desc = Tconstr (path, typeArgs, _)}; _], _)
@@ -255,7 +256,7 @@ let getJsxLabels ~componentPath ~findTypeOfValue ~package =
              && Path.last path = "props" ->
         (* JSX V4 external or interface *)
         getFields ~path ~typeArgs
-      | Tarrow (Nolabel, typ, _, _, _) -> (
+      | Tarrow ({lbl = Nolabel; typ}, _, _, _) -> (
         (* Component without the JSX PPX, like a make fn taking a hand-written
            type props. *)
         let rec digToConstr typ =
@@ -459,8 +460,8 @@ let extractJsxProps ~(compName : Longident.t Location.loc) ~props ~children =
   let open Parsetree in
   let childrenStart =
     match children with
-    | JSXChildrenItems [] -> None
-    | JSXChildrenSpreading child | JSXChildrenItems (child :: _) ->
+    | [] -> None
+    | child :: _ ->
       if child.pexp_loc.loc_ghost then None else Some (Loc.start child.pexp_loc)
   in
   let props =

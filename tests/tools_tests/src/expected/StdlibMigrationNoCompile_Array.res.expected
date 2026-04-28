@@ -1,0 +1,4 @@
+// Migrations that will not compile after migration (by design)
+let sortInPlaceWith1 = [3, 1, 2]->Array.sort((a, b) => a - b)
+let sortInPlaceWith2 = Array.sort([3, 1, 2], (a, b) => a - b)
+

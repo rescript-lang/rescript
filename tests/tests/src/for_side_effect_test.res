@@ -1,9 +1,9 @@
 let tst = () =>
   for i in {
-    Js.log("hi")
+    Console.log("hi")
     0
   } to {
-    Js.log("hello")
+    Console.log("hello")
     3
   } {
     ()
@@ -22,11 +22,12 @@ let test2 = () => {
   }
   v.contents
 }
-open Mt
 
-let suites = {
-  open Mt
-  list{("for_order", _ => Eq(10, test2()))}
-}
+open Mocha
+open Test_utils
 
-Mt.from_pair_suites(__MODULE__, suites)
+describe(__MODULE__, () => {
+  test("for_order", () => {
+    eq(__LOC__, 10, test2())
+  })
+})

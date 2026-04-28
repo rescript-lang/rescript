@@ -121,9 +121,9 @@ let option i f ppf x =
 let longident i ppf li = line i ppf "%a\n" fmt_longident li
 let string i ppf s = line i ppf "\"%s\"\n" s
 let arg_label i ppf = function
-  | Noloc.Nolabel -> line i ppf "Nolabel\n"
-  | Optional s -> line i ppf "Optional \"%s\"\n" s
-  | Labelled s -> line i ppf "Labelled \"%s\"\n" s
+  | Nolabel -> line i ppf "Nolabel\n"
+  | Optional {txt} -> line i ppf "Optional \"%s\"\n" txt
+  | Labelled {txt} -> line i ppf "Labelled \"%s\"\n" txt
 
 let record_representation i ppf =
   let open Types in
@@ -149,11 +149,12 @@ let rec core_type i ppf x =
   match x.ctyp_desc with
   | Ttyp_any -> line i ppf "Ttyp_any\n"
   | Ttyp_var s -> line i ppf "Ttyp_var %s\n" s
-  | Ttyp_arrow (l, ct1, ct2, _) ->
+  | Ttyp_arrow (arg, ret, _) ->
     line i ppf "Ttyp_arrow\n";
-    arg_label i ppf l;
-    core_type i ppf ct1;
-    core_type i ppf ct2
+    arg_label i ppf arg.lbl;
+    attributes i ppf arg.attrs;
+    core_type i ppf arg.typ;
+    core_type i ppf ret
   | Ttyp_tuple l ->
     line i ppf "Ttyp_tuple\n";
     list i core_type ppf l
@@ -340,6 +341,8 @@ and expression i ppf x =
     line i ppf "Texp_sequence\n";
     expression i ppf e1;
     expression i ppf e2
+  | Texp_break -> line i ppf "Texp_break\n"
+  | Texp_continue -> line i ppf "Texp_continue\n"
   | Texp_while (e1, e2) ->
     line i ppf "Texp_while\n";
     expression i ppf e1;
@@ -349,6 +352,14 @@ and expression i ppf x =
     expression i ppf e1;
     expression i ppf e2;
     expression i ppf e3
+  | Texp_for_of (s, _, e1, e2) ->
+    line i ppf "Texp_for_of \"%a\"\n" fmt_ident s;
+    expression i ppf e1;
+    expression i ppf e2
+  | Texp_for_await_of (s, _, e1, e2) ->
+    line i ppf "Texp_for_await_of \"%a\"\n" fmt_ident s;
+    expression i ppf e1;
+    expression i ppf e2
   | Texp_send (e, Tmeth_name s, eo) ->
     line i ppf "Texp_send \"%s\"\n" s;
     expression i ppf e;

@@ -21,5 +21,5 @@ while (
 }
 
 let x = @attr while true {
- break()
+ break_()
 }

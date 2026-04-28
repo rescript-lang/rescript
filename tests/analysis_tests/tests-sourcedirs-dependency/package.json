@@ -1,0 +1,12 @@
+{
+  "name": "@tests/sourcedirs-dependency",
+  "private": true,
+  "scripts": {
+    "build": "rescript build",
+    "clean": "rescript clean"
+  },
+  "dependencies": {
+    "@tests/sourcedirs-dependency-lib": "workspace:*",
+    "rescript": "workspace:^"
+  }
+}

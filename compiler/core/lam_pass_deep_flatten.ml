@@ -256,9 +256,13 @@ let deep_flatten (lam : Lam.t) : Lam.t =
     | Lstaticcatch (l1, ids, l2) -> Lam.staticcatch (aux l1) ids (aux l2)
     | Ltrywith (l1, v, l2) -> Lam.try_ (aux l1) v (aux l2)
     | Lifthenelse (l1, l2, l3) -> Lam.if_ (aux l1) (aux l2) (aux l3)
+    | Lbreak -> Lam.break
+    | Lcontinue -> Lam.continue
     | Lwhile (l1, l2) -> Lam.while_ (aux l1) (aux l2)
     | Lfor (flag, l1, l2, dir, l3) ->
       Lam.for_ flag (aux l1) (aux l2) dir (aux l3)
+    | Lfor_of (flag, l1, l2) -> Lam.for_of flag (aux l1) (aux l2)
+    | Lfor_await_of (flag, l1, l2) -> Lam.for_await_of flag (aux l1) (aux l2)
     | Lassign (v, l) ->
       (* Lalias-bound variables are never assigned, so don't increase
          v's refaux *)

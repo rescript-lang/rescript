@@ -1,0 +1,38 @@
+
+  Warning number 3
+  syntax_tests/data/parsing/grammar/typexpr/uncurriedLegacyDot.res:4:12
+
+  2 │ // compatibility but emits a deprecation warning.
+  3 │ 
+  4 │ type t1 = (. int) => int
+  5 │ type t2 = (. int, int) => int
+  6 │ type t3 = (. unit) => unit
+
+  deprecated: The `(. ...)` uncurried syntax is deprecated. Uncurried is now the default in ReScript — remove the leading dot.
+
+
+  Warning number 3
+  syntax_tests/data/parsing/grammar/typexpr/uncurriedLegacyDot.res:5:12
+
+  3 │ 
+  4 │ type t1 = (. int) => int
+  5 │ type t2 = (. int, int) => int
+  6 │ type t3 = (. unit) => unit
+  7 │ 
+
+  deprecated: The `(. ...)` uncurried syntax is deprecated. Uncurried is now the default in ReScript — remove the leading dot.
+
+
+  Warning number 3
+  syntax_tests/data/parsing/grammar/typexpr/uncurriedLegacyDot.res:6:12
+
+  4 │ type t1 = (. int) => int
+  5 │ type t2 = (. int, int) => int
+  6 │ type t3 = (. unit) => unit
+  7 │ 
+
+  deprecated: The `(. ...)` uncurried syntax is deprecated. Uncurried is now the default in ReScript — remove the leading dot.
+
+type nonrec t1 = int -> int (a:1)
+type nonrec t2 = int -> int -> int (a:2)
+type nonrec t3 = unit -> unit (a:1)

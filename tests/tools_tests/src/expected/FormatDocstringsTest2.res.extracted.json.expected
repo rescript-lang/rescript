@@ -1,0 +1,20 @@
+{
+    "TAG": "Ok",
+    "_0": [{
+    "id": "FormatDocstringsTest2.testResi",
+    "name": "testResi",
+    "code": "type x = int\nlet x: int => string\nmodule M: {\n  let ff: string => int\n}"
+  }, {
+    "id": "FormatDocstringsTest2.testPipes",
+    "name": "testPipes",
+    "code": "let processData = (data: array<int>) => {\n  data\n  ->Array.filter(x => x > 0)\n  ->Array.map(x => x * 2)\n  ->Array.reduce(0, (acc, x) => acc + x)\n}\n\nlet asyncExample = async () => {\n  let data = await fetchData()\n  let processed = await processData(data)\n  Console.log(processed)\n}"
+  }, {
+    "id": "FormatDocstringsTest2.testJsx-2",
+    "name": "testJsx",
+    "code": "let handleResult = (result: result<string, string>) => {\n  switch result {\n  | Ok(value) => Console.log(`Success: ${value}`)\n  | Error(error) => Console.error(`Error: ${error}`)\n  }\n}"
+  }, {
+    "id": "FormatDocstringsTest2.testJsx-1",
+    "name": "testJsx",
+    "code": "let component = () => {\n  <div className=\"container\">\n    <h1> {\"Title\"->React.string} </h1>\n    <button onClick={_ => Console.log(\"clicked\")}> {\"Click me\"->React.string} </button>\n  </div>\n}"
+  }]
+  }

@@ -1,3 +1,3 @@
 open Array
-let log = () => ["a", "b"]->forEach(Js.log)
-Js.log(NS.Alias.hello_world())
+let log = () => ["a", "b"]->forEach(Console.log)
+Console.log(NS.Alias.hello_world())

@@ -15,12 +15,17 @@ let make = (~vehicle) => {
       )}
     </p>
     <button onClick={_ => setCount(_ => count + 1)}> {React.string("Click me")} </button>
-    <ImportHooks person={name: "Mary", age: 71} renderMe={x => React.string(x["randomString"])}>
+    <ImportHooks
+      person={name: "Mary", age: 71}
+      renderMe={React.component(x => React.string(x["randomString"]))}
+    >
       {React.string("child1")}
       {React.string("child2")}
     </ImportHooks>
     <ImportHookDefault
-      person={name: "DefaultImport", age: 42} renderMe={x => React.string(x["randomString"])}>
+      person={name: "DefaultImport", age: 42}
+      renderMe={React.component(x => React.string(x["randomString"]))}
+    >
       {React.string("child1")}
       {React.string("child2")}
     </ImportHookDefault>
@@ -80,17 +85,14 @@ module WithRename = {
 
 module WithRef = {
   @genType @react.component
-  let makeWithRef = (~vehicle) => {
+  let make = React.forwardRef((~vehicle, ref) => {
     let _ = 34
-    ref =>
-      switch ref->Js.Nullable.toOption {
-      | Some(ref) => <button ref={ReactDOM.Ref.domRef(ref)}> {React.string(vehicle.name)} </button>
-      | None => React.null
-      }
-  }
+    switch ref->Js.Nullable.toOption {
+    | Some(ref) => <button ref={ReactDOM.Ref.domRef(ref)}> {React.string(vehicle.name)} </button>
+    | None => React.null
+    }
+  })
 }
-
-@genType let testForwardRef = React.forwardRef((x, y) => WithRef.makeWithRef(x)(y))
 
 type r = {x: string}
 
@@ -103,7 +105,7 @@ module ForwardRef = {
 
 @genType type testReactContext = React.Context.t<int>
 
-@genType type testReactRef = React.Ref.t<int>
+@genType type testReactRef = React.ref<int>
 
 @genType type testDomRef = ReactDOM.domRef
 

@@ -20,7 +20,6 @@ type state = {
 }
 
 type state = {
-  @meth
   "send": string =>
 }
 

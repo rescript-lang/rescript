@@ -1,33 +1,43 @@
 open Js_undefined
+open Mocha
+open Test_utils
 
-let suites = {
-  open Mt
-  list{
-    ("toOption - empty", _ => Eq(None, toOption(empty))),
-    (__LOC__, _ => Eq(None, toOption(return()))),
-    ("return", _ => Eq(Some("something"), toOption(return("something")))),
-    ("test - empty", _ => Eq(true, empty == Js.undefined)),
-    (__LOC__, _ => Eq(true, return() == Js.undefined)),
-    ("bind - empty", _ => Eq(empty, bind(empty, v => v))),
-    ("bind - 'a", _ => Eq(return(4), bind(return(2), n => n * 2))),
-    (
-      "iter - empty",
-      _ => {
-        let hit = ref(false)
-        let _ = iter(empty, _ => hit := true)
-        Eq(false, hit.contents)
-      },
-    ),
-    (
-      "iter - 'a",
-      _ => {
-        let hit = ref(0)
-        let _ = iter(return(2), v => hit := v)
-        Eq(2, hit.contents)
-      },
-    ),
-    ("fromOption - None", _ => Eq(empty, fromOption(None))),
-    ("fromOption - Some", _ => Eq(return(2), fromOption(Some(2)))),
-  }
-}
-Mt.from_pair_suites(__MODULE__, suites)
+describe(__MODULE__, () => {
+  test("toOption - empty", () => {
+    eq(__LOC__, None, toOption(empty))
+  })
+  test("toOption - return", () => {
+    eq(__LOC__, None, toOption(return()))
+  })
+  test("return", () => {
+    eq(__LOC__, Some("something"), toOption(return("something")))
+  })
+  test("test - empty", () => {
+    eq(__LOC__, true, empty == Js.undefined)
+  })
+  test("test - return", () => {
+    eq(__LOC__, true, return() == Js.undefined)
+  })
+  test("bind - empty", () => {
+    eq(__LOC__, empty, bind(empty, v => v))
+  })
+  test("bind - 'a", () => {
+    eq(__LOC__, return(4), bind(return(2), n => n * 2))
+  })
+  test("iter - empty", () => {
+    let hit = ref(false)
+    let _ = iter(empty, _ => hit := true)
+    eq(__LOC__, false, hit.contents)
+  })
+  test("iter - 'a", () => {
+    let hit = ref(0)
+    let _ = iter(return(2), v => hit := v)
+    eq(__LOC__, 2, hit.contents)
+  })
+  test("fromOption - None", () => {
+    eq(__LOC__, empty, fromOption(None))
+  })
+  test("fromOption - Some", () => {
+    eq(__LOC__, return(2), fromOption(Some(2)))
+  })
+})

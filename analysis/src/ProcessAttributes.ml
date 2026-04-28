@@ -22,15 +22,25 @@ let rec findDeprecatedAttribute attributes =
   match attributes with
   | [] -> None
   | ( {Asttypes.txt = "deprecated"},
-      PStr
-        [
-          {
-            pstr_desc =
-              Pstr_eval ({pexp_desc = Pexp_constant (Pconst_string (msg, _))}, _);
-          };
-        ] )
-    :: _ ->
-    Some msg
+      PStr [{pstr_desc = Pstr_eval ({pexp_desc = expr}, _)}] )
+    :: _ -> (
+    match expr with
+    (* Simple deprecated attr @deprecated("message") *)
+    | Pexp_constant (Pconst_string (_msg, _)) -> Some _msg
+    (* deprecated attr with record *)
+    | Pexp_record (fields, _) ->
+      let reason = ref "" in
+
+      fields
+      |> List.iter (fun {lid = {txt}; x} ->
+             match (txt, x) with
+             | ( Lident "reason",
+                 {pexp_desc = Pexp_constant (Pconst_string (msg, _))} ) ->
+               reason := msg
+             | _ -> ());
+
+      Some !reason
+    | _ -> None)
   | ({Asttypes.txt = "deprecated"}, _) :: _ -> Some ""
   | _ :: rest -> findDeprecatedAttribute rest
 
@@ -41,7 +51,7 @@ let newDeclared ~item ~extent ~name ~stamp ~modulePath isExported attributes =
     extentLoc = extent;
     isExported;
     modulePath;
-    deprecated = findDeprecatedAttribute attributes;
+    deprecated = findDeprecatedAttribute (List.rev attributes);
     docstring =
       (match findDocAttribute attributes with
       | None -> []

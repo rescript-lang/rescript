@@ -11,4 +11,4 @@ let mk = fn => fn()
 */
 mk(%raw(`(_)=> console.log('should works')`))
 
-Js.log((() => 1)())
+Console.log((() => 1)())

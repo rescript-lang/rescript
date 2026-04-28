@@ -1,12 +1,52 @@
 module Instance = struct
-  type t = Array | Blob | Date | File | Promise | RegExp
+  type t =
+    | Array
+    | ArrayBuffer
+    | BigInt64Array
+    | BigUint64Array
+    | Blob
+    | DataView
+    | Date
+    | File
+    | Float32Array
+    | Float64Array
+    | Int16Array
+    | Int32Array
+    | Int8Array
+    | Promise
+    | RegExp
+    | Uint16Array
+    | Uint32Array
+    | Uint8Array
+    | Uint8ClampedArray
+    | Set
+    | Map
+    | WeakSet
+    | WeakMap
   let to_string = function
     | Array -> "Array"
+    | ArrayBuffer -> "ArrayBuffer"
+    | BigInt64Array -> "BigInt64Array"
+    | BigUint64Array -> "BigUint64Array"
     | Blob -> "Blob"
+    | DataView -> "DataView"
     | Date -> "Date"
     | File -> "File"
+    | Float32Array -> "Float32Array"
+    | Float64Array -> "Float64Array"
+    | Int16Array -> "Int16Array"
+    | Int32Array -> "Int32Array"
+    | Int8Array -> "Int8Array"
     | Promise -> "Promise"
     | RegExp -> "RegExp"
+    | Uint16Array -> "Uint16Array"
+    | Uint32Array -> "Uint32Array"
+    | Uint8Array -> "Uint8Array"
+    | Uint8ClampedArray -> "Uint8ClampedArray"
+    | Set -> "Set"
+    | Map -> "Map"
+    | WeakSet -> "WeakSet"
+    | WeakMap -> "WeakMap"
 end
 
 type untagged_error =
@@ -25,6 +65,7 @@ type error =
   | Duplicated_bs_as
   | InvalidVariantTagAnnotation
   | InvalidUntaggedVariantDefinition of untagged_error
+  | TagFieldNameConflict of string * string * string
 exception Error of Location.t * error
 
 let report_error ppf =
@@ -58,6 +99,12 @@ let report_error ppf =
       | DuplicateLiteral s -> "Duplicate literal " ^ s ^ "."
       | ConstructorMoreThanOneArg name ->
         "Constructor " ^ name ^ " has more than one argument.")
+  | TagFieldNameConflict (constructor_name, field_name, runtime_value) ->
+    fprintf ppf
+      "Constructor \"%s\": the @tag name \"%s\" conflicts with the runtime \
+       value of inline record field \"%s\". Use a different @tag name or \
+       rename the field."
+      constructor_name runtime_value field_name
 
 (* Type of the runtime representation of an untagged block (case with payoad) *)
 type block_type =
@@ -200,37 +247,58 @@ let type_to_instanceof_backed_obj (t : Types.type_expr) =
   | Tconstr (path, _, _) when Path.same path Predef.path_array -> Some Array
   | Tconstr (path, _, _) -> (
     match Path.name path with
+    | "Stdlib_ArrayBuffer.t" -> Some ArrayBuffer
+    | "Stdlib.BigInt64Array.t" -> Some BigInt64Array
+    | "Stdlib.BigUint64Array.t" -> Some BigUint64Array
+    | "Stdlib.DataView.t" -> Some DataView
     | "Stdlib_Date.t" -> Some Date
+    | "Stdlib.Float32Array.t" -> Some Float32Array
+    | "Stdlib.Float64Array.t" -> Some Float64Array
+    | "Stdlib.Int16Array.t" -> Some Int16Array
+    | "Stdlib.Int32Array.t" -> Some Int32Array
+    | "Stdlib.Int8Array.t" -> Some Int8Array
     | "Stdlib_RegExp.t" -> Some RegExp
+    | "Stdlib.Uint16Array.t" -> Some Uint16Array
+    | "Stdlib.Uint32Array.t" -> Some Uint32Array
+    | "Stdlib.Uint8Array.t" -> Some Uint8Array
+    | "Stdlib.Uint8ClampedArray.t" -> Some Uint8ClampedArray
     | "Js_file.t" -> Some File
     | "Js_blob.t" -> Some Blob
+    | "Stdlib.Set.t" -> Some Set
+    | "Stdlib.Map.t" -> Some Map
+    | "Stdlib.WeakSet.t" -> Some WeakSet
+    | "Stdlib.WeakMap.t" -> Some WeakMap
     | _ -> None)
   | _ -> None
 
 let get_block_type_from_typ ~env (t : Types.type_expr) : block_type option =
-  let t = !expand_head env t in
-  match t with
-  | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_string ->
-    Some StringType
-  | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_int ->
-    Some IntType
-  | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_float ->
-    Some FloatType
-  | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_bigint ->
-    Some BigintType
-  | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_bool ->
-    Some BooleanType
-  | {desc = Tarrow _} -> Some FunctionType
-  | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_string ->
-    Some StringType
-  | {desc = Tconstr _} as t when type_is_builtin_object t -> Some ObjectType
-  | {desc = Tconstr _} as t
-    when type_to_instanceof_backed_obj t |> Option.is_some -> (
-    match type_to_instanceof_backed_obj t with
-    | None -> None
-    | Some instance_type -> Some (InstanceType instance_type))
-  | {desc = Ttuple _} -> Some (InstanceType Array)
-  | _ -> None
+  (* First check the original (unexpanded) type for typed arrays and other instance types *)
+  match type_to_instanceof_backed_obj t with
+  | Some instance_type -> Some (InstanceType instance_type)
+  | None -> (
+    (* If original type didn't match, expand and try standard checks *)
+    let expanded_t = !expand_head env t in
+    match expanded_t with
+    | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_string ->
+      Some StringType
+    | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_int ->
+      Some IntType
+    | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_float ->
+      Some FloatType
+    | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_bigint ->
+      Some BigintType
+    | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_bool ->
+      Some BooleanType
+    | {desc = Tarrow _} -> Some FunctionType
+    | {desc = Tconstr _} as expanded_t when type_is_builtin_object expanded_t ->
+      Some ObjectType
+    | {desc = Tconstr _} as expanded_t
+      when type_to_instanceof_backed_obj expanded_t |> Option.is_some -> (
+      match type_to_instanceof_backed_obj expanded_t with
+      | None -> None
+      | Some instance_type -> Some (InstanceType instance_type))
+    | {desc = Ttuple _} -> Some (InstanceType Array)
+    | _ -> None)
 
 let get_block_type ~env (cstr : Types.constructor_declaration) :
     block_type option =
@@ -413,12 +481,44 @@ let names_from_type_variant ?(is_untagged_def = false) ~env
   let blocks = Ext_array.reverse_of_list blocks in
   Some {consts; blocks}
 
+let check_tag_field_conflicts (cstrs : Types.constructor_declaration list) =
+  List.iter
+    (fun (cstr : Types.constructor_declaration) ->
+      let constructor_name = Ident.name cstr.cd_id in
+      let effective_tag_name =
+        match process_tag_name cstr.cd_attributes with
+        | Some explicit_tag -> explicit_tag
+        | None -> constructor_name
+      in
+      match cstr.cd_args with
+      | Cstr_record fields ->
+        List.iter
+          (fun (field : Types.label_declaration) ->
+            let field_name = Ident.name field.ld_id in
+            let effective_field_name =
+              match process_tag_type field.ld_attributes with
+              | Some (String as_name) -> as_name
+              (* @as payload types other than string have no effect on record fields *)
+              | Some _ | None -> field_name
+            in
+            (* Check if effective field name conflicts with tag *)
+            if effective_field_name = effective_tag_name then
+              raise
+                (Error
+                   ( cstr.cd_loc,
+                     TagFieldNameConflict
+                       (constructor_name, field_name, effective_field_name) )))
+          fields
+      | _ -> ())
+    cstrs
+
 type well_formedness_check = {
   is_untagged_def: bool;
   cstrs: Types.constructor_declaration list;
 }
 
 let check_well_formed ~env {is_untagged_def; cstrs} =
+  check_tag_field_conflicts cstrs;
   ignore (names_from_type_variant ~env ~is_untagged_def cstrs)
 
 let has_undefined_literal attrs = process_tag_type attrs = Some Undefined

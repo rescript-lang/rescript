@@ -1,6 +1,6 @@
 type t = option<string>
 
-let break = (~indent) =>
+let break_ = (~indent) =>
   switch indent {
   | None => ""
   | Some(s) => "\n" ++ s
@@ -19,6 +19,6 @@ let heuristicFields = (~indent, fields) => {
 
 let heuristicVariants = (~indent, rendered) => {
   let threshold = 40
-  let break = rendered->String.concat(" ")->String.length > threshold
-  break && indent == None ? Some("  ") : indent
+  let break_ = rendered->String.concat(" ")->String.length > threshold
+  break_ && indent == None ? Some("  ") : indent
 }

@@ -1,8 +1,13 @@
 let v = %raw(`Number.EPSILON?Number.EPSILON:2.220446049250313e-16`)
 
-let suites = {
-  open Mt
-  list{("epsilon", _ => Eq(epsilon_float, v)), ("raw_epsilon", _ => Eq(2.220446049250313e-16, v))}
-}
+open Mocha
+open Test_utils
 
-Mt.from_pair_suites(__MODULE__, suites)
+describe(__MODULE__, () => {
+  test("epsilon", () => {
+    eq(__LOC__, epsilon_float, v)
+  })
+  test("raw_epsilon", () => {
+    eq(__LOC__, 2.220446049250313e-16, v)
+  })
+})

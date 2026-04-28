@@ -2,7 +2,11 @@
   "name": "ReScript Compiler",
   "build": {
     "context": ".",
-    "dockerfile": "Dockerfile"
+    "dockerfile": "Dockerfile",
+    "args": {
+      "USER_UID": "${localEnv:UID}",
+      "USER_GID": "${localEnv:GID}"
+    }
   },
   "features": {
     "ghcr.io/devcontainers/features/github-cli:1": {
@@ -10,7 +14,8 @@
       "version": "latest"
     },
     "ghcr.io/devcontainers/features/node:1": {
-      "version": "20"
+      "version": "22",
+      "installYarnUsingApt": false
     }
   },
   "customizations": {
@@ -23,5 +28,7 @@
       ]
     }
   },
-  "postCreateCommand": ".devcontainer/postCreate.sh"
+  "postCreateCommand": ".devcontainer/postCreate.sh",
+  "remoteUser": "vscode",
+  "containerUser": "vscode"
 }

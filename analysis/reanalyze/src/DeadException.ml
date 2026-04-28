@@ -1,33 +1,47 @@
 open DeadCommon
-open Common
 
-type item = {exceptionPath: Path.t; locFrom: Location.t}
+module PathMap = Map.Make (struct
+  type t = DcePath.t
 
-let delayedItems = ref []
-let declarations = Hashtbl.create 1
+  let compare = Stdlib.compare
+end)
 
-let add ~path ~loc ~(strLoc : Location.t) name =
-  let exceptionPath = name :: path in
-  Hashtbl.add declarations exceptionPath loc;
+let find_exception_from_decls (decls : Declarations.t) :
+    DcePath.t -> Location.t option =
+  let index =
+    Declarations.fold
+      (fun _pos (decl : Decl.t) acc ->
+        match decl.Decl.declKind with
+        | Exception ->
+          (* Use raw decl positions: reference graph keys are raw positions. *)
+          let loc : Location.t =
+            {
+              Location.loc_start = decl.pos;
+              loc_end = decl.posEnd;
+              loc_ghost = false;
+            }
+          in
+          PathMap.add decl.path loc acc
+        | _ -> acc)
+      decls PathMap.empty
+  in
+  fun path -> PathMap.find_opt path index
+
+let add ~config ~decls ~file ~path ~loc ~(strLoc : Location.t)
+    ~(moduleLoc : Location.t) name =
+  addDeclaration_ ~config ~decls ~file ~posEnd:strLoc.loc_end
+    ~posStart:strLoc.loc_start ~declKind:Exception ~moduleLoc ~path ~loc name;
   name
-  |> addDeclaration_ ~posEnd:strLoc.loc_end ~posStart:strLoc.loc_start
-       ~declKind:Exception ~moduleLoc:(ModulePath.getCurrent ()).loc ~path ~loc
 
-let forceDelayedItems () =
-  let items = !delayedItems |> List.rev in
-  delayedItems := [];
-  items
-  |> List.iter (fun {exceptionPath; locFrom} ->
-         match Hashtbl.find_opt declarations exceptionPath with
-         | None -> ()
-         | Some locTo ->
-           addValueReference ~addFileReference:true ~locFrom ~locTo)
-
-let markAsUsed ~(locFrom : Location.t) ~(locTo : Location.t) path_ =
+let markAsUsed ~config ~refs ~file_deps ~cross_file ~(binding : Location.t)
+    ~(locFrom : Location.t) ~(locTo : Location.t) path_ =
   if locTo.loc_ghost then
     (* Probably defined in another file, delay processing and check at the end *)
     let exceptionPath =
-      path_ |> Path.fromPathT |> Path.moduleToImplementation
+      path_ |> DcePath.fromPathT |> DcePath.moduleToImplementation
     in
-    delayedItems := {exceptionPath; locFrom} :: !delayedItems
-  else addValueReference ~addFileReference:true ~locFrom ~locTo
+    CrossFileItems.add_exception_ref cross_file ~exception_path:exceptionPath
+      ~loc_from:locFrom
+  else
+    addValueReference ~config ~refs ~file_deps ~binding ~addFileReference:true
+      ~locFrom ~locTo

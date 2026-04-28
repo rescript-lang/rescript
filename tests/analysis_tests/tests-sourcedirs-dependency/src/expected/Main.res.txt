@@ -1,0 +1,16 @@
+Complete src/Main.res 2:16
+posCursor:[2:16] posNoWhite:[2:15] Found expr:[2:3->2:21]
+Pexp_ident WorkspaceDep.value:[2:3->2:21]
+Completable: Cpath Value[WorkspaceDep, value]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[WorkspaceDep, value]
+Path WorkspaceDep.value
+[{
+    "label": "valueFromDependency",
+    "kind": 12,
+    "tags": [],
+    "detail": "int",
+    "documentation": null
+  }]
+

@@ -16,15 +16,15 @@ function makeContainer(text) {
   return content;
 }
 
-function make(_props) {
+function Gpr_3987_test$Gpr3987ReproOk(props) {
   return null;
 }
 
 let Gpr3987ReproOk = {
-  make: make
+  make: Gpr_3987_test$Gpr3987ReproOk
 };
 
-JsxRuntime.jsx(make, {
+JsxRuntime.jsx(Gpr_3987_test$Gpr3987ReproOk, {
   value: "test",
   onChange: (param, param$1) => {}
 });

@@ -242,8 +242,8 @@ let rec renderType = (~config, ~indent=None, ~typeNameIsInterface, ~inFunType, t
     })
     let rendered = \"@"(noPayloadsRendered, payloadsRendered)
     let indent1 = rendered->Indent.heuristicVariants(~indent)
-    (indent1 == None ? "" : Indent.break(~indent=indent1) ++ "  ") ++
-    (rendered->String.concat((indent1 == None ? " " : Indent.break(~indent=indent1)) ++ "| "))
+    (indent1 == None ? "" : Indent.break_(~indent=indent1) ++ "  ") ++
+    (rendered->String.concat((indent1 == None ? " " : Indent.break_(~indent=indent1)) ++ "| "))
   }
 and renderField = (
   ~config,
@@ -254,7 +254,7 @@ and renderField = (
 ) => {
   let optMarker = optional === Optional ? "?" : ""
   let mutMarker = mutable_ == Immutable ? config.language == Flow ? "+" : "readonly " : ""
-  Indent.break(~indent) ++
+  Indent.break_(~indent) ++
   (mutMarker ++
   (lbl ++
   (optMarker ++
@@ -267,11 +267,11 @@ and renderFields = (~closedFlag, ~config, ~indent, ~inFunType, ~typeNameIsInterf
   let renderedFields =
     fields->List.map(renderField(~config, ~indent=indent1, ~typeNameIsInterface, ~inFunType))
   let dotdotdot =
-    config.language == Flow && !exact ? list{Indent.break(~indent=indent1) ++ "..."} : list{}
+    config.language == Flow && !exact ? list{Indent.break_(~indent=indent1) ++ "..."} : list{}
   (exact ? "{|" : "{") ++
   space ++
   (String.concat(config.language == TypeScript ? "; " : ", ", \"@"(renderedFields, dotdotdot)) ++
-  (Indent.break(~indent) ++ (space ++ (exact ? "|}" : "}"))))
+  (Indent.break_(~indent) ++ (space ++ (exact ? "|}" : "}"))))
 }
 and renderFunType = (
   ~config,
@@ -533,12 +533,12 @@ let emitPropTypes = (~config, ~emitters, ~indent, ~name, fields) => {
       let indent1 = indent->Indent.more
       prefix("shape") ++
       ("({" ++
-      (Indent.break(~indent=indent1) ++
+      (Indent.break_(~indent=indent1) ++
       ((fields
       ->List.filter(({nameJS}: field) => nameJS != "children")
       ->List.map(emitField(~indent=indent1))
-      ->String.concat("," ++ Indent.break(~indent=indent1))) ++
-      (Indent.break(~indent) ++ "})"))))
+      ->String.concat("," ++ Indent.break_(~indent=indent1))) ++
+      (Indent.break_(~indent) ++ "})"))))
 
     | Ident(_)
     | Null(_)
@@ -560,11 +560,11 @@ let emitPropTypes = (~config, ~emitters, ~indent, ~name, fields) => {
   name ++
   (".propTypes = " ++
   ("{" ++
-  (Indent.break(~indent=indent1) ++
+  (Indent.break_(~indent=indent1) ++
   ((fields
   ->List.filter(({nameJS}: field) => nameJS != "children")
   ->List.map(emitField(~indent=indent1))
-  ->String.concat("," ++ Indent.break(~indent=indent1))) ++ (Indent.break(~indent) ++ "};")))))
+  ->String.concat("," ++ Indent.break_(~indent=indent1))) ++ (Indent.break_(~indent) ++ "};")))))
     ->Emitters.\"export"(~emitters)
 }
 

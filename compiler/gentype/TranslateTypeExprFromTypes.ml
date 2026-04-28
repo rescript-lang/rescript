@@ -2,11 +2,11 @@ open GenTypeCommon
 
 type translation = {dependencies: dep list; type_: type_}
 
-let rec remove_option ~(label : Asttypes.Noloc.arg_label)
+let rec remove_option ~(label : Asttypes.arg_label)
     (type_expr : Types.type_expr) =
   match (type_expr.desc, label) with
-  | Tconstr (Path.Pident id, [t], _), Optional lbl when Ident.name id = "option"
-    ->
+  | Tconstr (Path.Pident id, [t], _), Optional {txt = lbl}
+    when Ident.name id = "option" ->
     Some (lbl, t)
   | Tlink t, _ -> t |> remove_option ~label
   | _ -> None
@@ -118,6 +118,189 @@ let translate_constr ~config ~params_translation ~(path : Path.t) ~type_env =
     }
   | (["Js"; "Re"; "t"] | ["RegExp"; "t"] | ["Stdlib"; "RegExp"; "t"]), [] ->
     {dependencies = []; type_ = regexp_t}
+  | ["Stdlib"; "ArrayBuffer"; "t"], [] ->
+    {dependencies = []; type_ = ident "ArrayBuffer"}
+  | ["Stdlib"; "DataView"; "t"], [] ->
+    {dependencies = []; type_ = ident "DataView"}
+  | ["Stdlib"; "Int8Array"; "t"], [] ->
+    {dependencies = []; type_ = ident "Int8Array"}
+  | ["Stdlib"; "Uint8Array"; "t"], [] ->
+    {dependencies = []; type_ = ident "Uint8Array"}
+  | ["Stdlib"; "Uint8ClampedArray"; "t"], [] ->
+    {dependencies = []; type_ = ident "Uint8ClampedArray"}
+  | ["Stdlib"; "Int16Array"; "t"], [] ->
+    {dependencies = []; type_ = ident "Int16Array"}
+  | ["Stdlib"; "Uint16Array"; "t"], [] ->
+    {dependencies = []; type_ = ident "Uint16Array"}
+  | ["Stdlib"; "Int32Array"; "t"], [] ->
+    {dependencies = []; type_ = ident "Int32Array"}
+  | ["Stdlib"; "Uint32Array"; "t"], [] ->
+    {dependencies = []; type_ = ident "Uint32Array"}
+  | ["Stdlib"; "Float32Array"; "t"], [] ->
+    {dependencies = []; type_ = ident "Float32Array"}
+  | ["Stdlib"; "Float64Array"; "t"], [] ->
+    {dependencies = []; type_ = ident "Float64Array"}
+  | ["Stdlib"; "BigInt64Array"; "t"], [] ->
+    {dependencies = []; type_ = ident "BigInt64Array"}
+  | ["Stdlib"; "BigUint64Array"; "t"], [] ->
+    {dependencies = []; type_ = ident "BigUint64Array"}
+  | ["Stdlib"; "Symbol"; "t"], [] -> {dependencies = []; type_ = ident "symbol"}
+  | ["Stdlib"; "Intl"; intl_module; "t"], [] ->
+    {dependencies = []; type_ = ident ("Intl." ^ intl_module)}
+  | (["Stdlib"; "Error"; "t"] | ["Stdlib"; "JsError"; "t"]), [] ->
+    {dependencies = []; type_ = ident "Error"}
+  | (["Stdlib"; "Iterable"; "t"] | ["iterable"]), [param_translation] ->
+    {
+      dependencies = param_translation.dependencies;
+      type_ = ident ~type_args:[param_translation.type_] "Iterable";
+    }
+  | ( ["Stdlib"; "Iterator"; "t"],
+      [yield_translation; return_translation; next_translation] ) ->
+    {
+      dependencies =
+        List.concat
+          [
+            yield_translation.dependencies;
+            return_translation.dependencies;
+            next_translation.dependencies;
+          ];
+      type_ =
+        ident
+          ~type_args:
+            [
+              yield_translation.type_;
+              return_translation.type_;
+              next_translation.type_;
+            ]
+          "Iterator";
+    }
+  | ( ["Stdlib"; "IteratorObject"; "t"],
+      [yield_translation; return_translation; next_translation] ) ->
+    {
+      dependencies =
+        List.concat
+          [
+            yield_translation.dependencies;
+            return_translation.dependencies;
+            next_translation.dependencies;
+          ];
+      type_ =
+        ident
+          ~type_args:
+            [
+              yield_translation.type_;
+              return_translation.type_;
+              next_translation.type_;
+            ]
+          "IteratorObject";
+    }
+  | ( ["Stdlib"; "IterableIterator"; "t"],
+      [yield_translation; return_translation; next_translation] ) ->
+    {
+      dependencies =
+        List.concat
+          [
+            yield_translation.dependencies;
+            return_translation.dependencies;
+            next_translation.dependencies;
+          ];
+      type_ =
+        ident
+          ~type_args:
+            [
+              yield_translation.type_;
+              return_translation.type_;
+              next_translation.type_;
+            ]
+          "IterableIterator";
+    }
+  | ( ["Stdlib"; "Generator"; "t"],
+      [yield_translation; return_translation; next_translation] ) ->
+    {
+      dependencies =
+        List.concat
+          [
+            yield_translation.dependencies;
+            return_translation.dependencies;
+            next_translation.dependencies;
+          ];
+      type_ =
+        ident
+          ~type_args:
+            [
+              yield_translation.type_;
+              return_translation.type_;
+              next_translation.type_;
+            ]
+          "Generator";
+    }
+  | (["Stdlib"; "AsyncIterable"; "t"] | ["asyncIterable"]), [param_translation]
+    ->
+    {
+      dependencies = param_translation.dependencies;
+      type_ = ident ~type_args:[param_translation.type_] "AsyncIterable";
+    }
+  | ( ["Stdlib"; "AsyncIterator"; "t"],
+      [yield_translation; return_translation; next_translation] ) ->
+    {
+      dependencies =
+        List.concat
+          [
+            yield_translation.dependencies;
+            return_translation.dependencies;
+            next_translation.dependencies;
+          ];
+      type_ =
+        ident
+          ~type_args:
+            [
+              yield_translation.type_;
+              return_translation.type_;
+              next_translation.type_;
+            ]
+          "AsyncIterator";
+    }
+  | ( ["Stdlib"; "AsyncIterableIterator"; "t"],
+      [yield_translation; return_translation; next_translation] ) ->
+    {
+      dependencies =
+        List.concat
+          [
+            yield_translation.dependencies;
+            return_translation.dependencies;
+            next_translation.dependencies;
+          ];
+      type_ =
+        ident
+          ~type_args:
+            [
+              yield_translation.type_;
+              return_translation.type_;
+              next_translation.type_;
+            ]
+          "AsyncIterableIterator";
+    }
+  | ( ["Stdlib"; "AsyncGenerator"; "t"],
+      [yield_translation; return_translation; next_translation] ) ->
+    {
+      dependencies =
+        List.concat
+          [
+            yield_translation.dependencies;
+            return_translation.dependencies;
+            next_translation.dependencies;
+          ];
+      type_ =
+        ident
+          ~type_args:
+            [
+              yield_translation.type_;
+              return_translation.type_;
+              next_translation.type_;
+            ]
+          "AsyncGenerator";
+    }
+  | ["Stdlib"; "Ordering"; "t"], [] -> {dependencies = []; type_ = number_t}
   | ["unit"], [] -> {dependencies = []; type_ = unit_t}
   | (["array"] | ["Js"; ("Array" | "Array2"); "t"]), [param_translation] ->
     {param_translation with type_ = Array (param_translation.type_, Mutable)}
@@ -290,7 +473,7 @@ let rec translate_arrow_type ~config ~type_vars_gen ~type_env ~rev_arg_deps
   | Tlink t ->
     translate_arrow_type ~config ~type_vars_gen ~type_env ~rev_arg_deps
       ~rev_args t
-  | Tarrow (Nolabel, type_expr1, type_expr2, _, arity)
+  | Tarrow ({lbl = Nolabel; typ = type_expr1}, type_expr2, _, arity)
     when arity = None || rev_args = [] ->
     let {dependencies; type_} =
       type_expr1 |> fun __x ->
@@ -302,8 +485,10 @@ let rec translate_arrow_type ~config ~type_vars_gen ~type_env ~rev_arg_deps
          ~rev_arg_deps:next_rev_deps
          ~rev_args:((Nolabel, type_) :: rev_args)
   | Tarrow
-      ( ((Labelled lbl | Optional lbl) as label),
-        type_expr1,
+      ( {
+          lbl = (Labelled {txt = lbl} | Optional {txt = lbl}) as label;
+          typ = type_expr1;
+        },
         type_expr2,
         _,
         arity )

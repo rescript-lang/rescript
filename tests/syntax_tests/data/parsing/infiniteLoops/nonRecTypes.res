@@ -103,14 +103,14 @@ let removeNode = (rbt, node) => {
         rootSet(rbt, Some(successor));
       };
     } else {
-      let break = ref(false);
+      let break_ = ref(false);
       let successorRef = ref(successor);
-      while (!break.contents) {
+      while (!break_.contents) {
         let successor = successorRef.contents;
         switch (parentGet(successor)) {
         | None =>
           rootSet(rbt, Some(successor));
-          break.contents = true;
+          break_.contents = true;
         | Some(successorParent) =>
           let sibling = siblingOf(successor);
           if (sibling !== None && colorGet(castNotOption(sibling)) === Red) {
@@ -164,7 +164,7 @@ let removeNode = (rbt, node) => {
               colorSet(siblingNN, Red);
             };
             colorSet(successorParent, Black);
-            break.contents = true;
+            break_.contents = true;
           } else if (sibling !== None
                      && colorGet(castNotOption(sibling)) === Black) {
             let sibling = castNotOption(sibling);
@@ -199,7 +199,7 @@ let removeNode = (rbt, node) => {
               colorSet(castNotOption(rightGet(sibling)), Black);
               rotateLeft(rbt, sibling);
             };
-            break.contents = true;
+            break_.contents = true;
           } else {
             let sibling = siblingOf(successor);
             let sibling = castNotOption(sibling);

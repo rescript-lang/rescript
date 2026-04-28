@@ -67,31 +67,31 @@ type t = @attr (fooWithSuperLongIdentifierNameLooooooooooooooooooooooooooooooooo
 type t = @attr @attrWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong @attrWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong (fooWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong, barWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong, bazWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong) => @attr2 @attrWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong @attrWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong (stringWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong, floatWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong) => unit
 
 
-external debounce: (int, @meth unit) => unit = "debounce";
+external debounce: (int, unit) => unit = "debounce";
 
-external debounce: int => @meth (unit => unit) = "debounce";
+external debounce: int => (unit => unit) = "debounce";
 
-external debounce: (int, @meth (unit => unit)) => @meth (unit => unit) = "debounce";
+external debounce: (int, (unit => unit)) => (unit => unit) = "debounce";
 
-external debounce: (int, @meth (unit => unit), @meth (unit => unit)) => @meth (unit => unit) = "debounce";
+external debounce: (int, (unit => unit), (unit => unit)) => (unit => unit) = "debounce";
 
-external debounce: (int, @meth (unit => unit), @meth ( unit => @meth (unit => unit))) => @meth (unit => unit) = "debounce";
+external debounce: (int, (unit => unit), ( unit => (unit => unit))) => (unit => unit) = "debounce";
 
 type returnTyp = (int, int) => @magic float
 type returnTyp = (intWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong, intWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong) => @magic float
 type returnTyp = (intWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong, intWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong) => @magic @magicWithSuperLongIdentiefierNameLoooooooooooooooooooooooong @magicWithSuperLongIdentiefierNameLoooooooooooooooooooooooong float
 
 // uncurried
-type t = (. int) => int
-type t = (. int, int) => int
-type t = (. int, . int) => int
-type t = (. int, int, . int, int) => int
+type t = (int) => int
+type t = (int, int) => int
+type t = (int, int) => int
+type t = (int, int, int, int) => int
 
 
-type t = (. @attr int) => unit 
-type t = (. @attr int, . @attr2 int) => unit 
-type t = (. @attrOnInt int, @attrOnInt int, . @attrOnInt int, @attrOnInt int) => int
-type t = (. @attr ~x: int, ~y: int, . @attr ~z: int, @attr ~omega: int) => unit 
+type t = (@attr int) => unit 
+type t = (@attr int, @attr2 int) => unit 
+type t = (@attrOnInt int, @attrOnInt int, @attrOnInt int, @attrOnInt int) => int
+type t = (@attr ~x: int, ~y: int, @attr ~z: int, @attr ~omega: int) => unit 
 
 @val external requestAnimationFrame: (float => unit) => unit = "requestAnimationFrame"
 @val external requestAnimationFrame: @attr (float => unit) => unit = "requestAnimationFrame"

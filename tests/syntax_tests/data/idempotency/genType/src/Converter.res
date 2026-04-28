@@ -410,7 +410,7 @@ let rec apply = (~config, ~converter, ~indent, ~nameGen, ~toJS, ~variantTables, 
       (" = " ++
       (x ++
       (";" ++
-      (Indent.break(~indent=indent1) ++
+      (Indent.break_(~indent=indent1) ++
       ("return " ++
       (resultName->apply(
         ~config,
@@ -497,7 +497,7 @@ let rec apply = (~config, ~converter, ~indent, ~nameGen, ~toJS, ~variantTables, 
       | list{props} if isHook =>
         let propsName = "$props"->EmitText.name(~nameGen)
         (
-          Indent.break(~indent=indent1) ++ ("const " ++ (propsName ++ (" = " ++ (props ++ ";")))),
+          Indent.break_(~indent=indent1) ++ ("const " ++ (propsName ++ (" = " ++ (props ++ ";")))),
           list{value, propsName},
         )
 
@@ -505,7 +505,7 @@ let rec apply = (~config, ~converter, ~indent, ~nameGen, ~toJS, ~variantTables, 
       }
 
       declareProps ++
-      (Indent.break(~indent=indent1) ++
+      (Indent.break_(~indent=indent1) ++
       (functionName->EmitText.funCall(~args, ~useCurry)->mkReturn))
     }
 

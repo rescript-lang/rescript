@@ -293,7 +293,7 @@ module Section = {
         ->(showMini
           ? x => x
           : Belt.Array.slice(~offset=0, ~len=numResults > maxResults ? maxResults - 1 : maxResults))
-        ->Belt.Array.mapU((. ((itemId, variation), userItem)) =>
+        ->Belt.Array.mapU((((itemId, variation), userItem)) =>
           showMini
             ? <UserItemCardMini
                 itemId variation key={string_of_int(itemId) ++ string_of_int(variation)}
@@ -335,9 +335,9 @@ module Section = {
 
 @react.component
 let make = (~username, ~userItems: array<((int, int), User.item)>, ~editable) => {
-  let wishlist = userItems->Array.keepU((. (_, item: User.item)) => item.status == Wishlist)
-  let forTradeList = userItems->Array.keepU((. (_, item: User.item)) => item.status == ForTrade)
-  let canCraftList = userItems->Array.keepU((. (_, item: User.item)) => item.status == CanCraft)
+  let wishlist = userItems->Array.keepU(((_, item: User.item)) => item.status == Wishlist)
+  let forTradeList = userItems->Array.keepU(((_, item: User.item)) => item.status == ForTrade)
+  let canCraftList = userItems->Array.keepU(((_, item: User.item)) => item.status == CanCraft)
   let hasForTrade = forTradeList->Array.length > 0
   let hasCanCraft = canCraftList->Array.length > 0
   let hasWishlist = wishlist->Array.length > 0
@@ -366,7 +366,7 @@ let make = (~username, ~userItems: array<((int, int), User.item)>, ~editable) =>
       <Section
         username
         list=Catalog
-        userItems={userItems->Array.keepU((. (_, item: User.item)) =>
+        userItems={userItems->Array.keepU(((_, item: User.item)) =>
           switch item.status {
           | CanCraft
           | ForTrade

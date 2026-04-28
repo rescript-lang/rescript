@@ -1,6 +1,5 @@
 {
   "name": "playground",
-  "version": "0.1.0",
   "sources": {
     "dir": "src",
     "subdirs": true
@@ -10,7 +9,7 @@
     "in-source": false,
     "suffix": ".res.js"
   },
-  "bs-dependencies": [
+  "dependencies": [
     "@rescript/react"
   ]
 }

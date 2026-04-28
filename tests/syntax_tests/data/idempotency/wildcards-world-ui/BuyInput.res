@@ -6,7 +6,7 @@ type debounceOptions = {
 
 @module("use-debounce")
 external useDebouncedCallback: (
-  . 'callback,
+  'callback,
   int,
   debounceOptions,
 ) => ('callback, unit => unit, unit => unit) = "useDebouncedCallback"
@@ -51,8 +51,7 @@ let make = (
     None
   }, (deposit, setDepositSlider))
 
-  let (debouncedSetDeposit, _, _) = useDebouncedCallback(.
-    // debounced function
+  let (debouncedSetDeposit, _, _) = useDebouncedCallback(// debounced function
     setDeposit,
     // delay in ms
     50,

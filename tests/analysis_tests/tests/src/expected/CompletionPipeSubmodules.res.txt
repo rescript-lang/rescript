@@ -1,4 +1,6 @@
 Complete src/CompletionPipeSubmodules.res 13:20
+posCursor:[13:20] posNoWhite:[13:19] Found expr:[13:11->23:23]
+Pexp_apply ...[21:9->21:10] (...[13:11->21:8], ...[23:2->23:23])
 posCursor:[13:20] posNoWhite:[13:19] Found expr:[13:11->21:8]
 Completable: Cpath Value[A, B1, xx]->
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -18,6 +20,8 @@ Path
   }]
 
 Complete src/CompletionPipeSubmodules.res 17:18
+posCursor:[17:18] posNoWhite:[17:17] Found expr:[17:11->23:23]
+Pexp_apply ...[21:9->21:10] (...[17:11->21:8], ...[23:2->23:23])
 posCursor:[17:18] posNoWhite:[17:17] Found expr:[17:11->21:8]
 Completable: Cpath Value[A, x].v->
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder

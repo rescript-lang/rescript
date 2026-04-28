@@ -6,6 +6,7 @@ The major contributions from contributors include
 
 - `super_errors` from [Cheng](https://github.com/chenglou) and [Cristiano](https://github.com/cristianoc)
 - `react_jsx_ppx` from [Ricky](https://github.com/rickyvetter)
+- `rewatch` (the new ReScript build system) from [Roland](https://github.com/rolandpeelen) and [Jaap](https://github.com/jfrolich)
 
 Cristiano also contributed to several important patches in the upstream native compiler,
 in particular, the pattern match compilation.
@@ -42,10 +43,6 @@ This file was imported but changed significantly in iterations later.
 `tests/tests` is based on [`ocaml/testsuite`](ocaml/testsuite).
 
 ReScript compiler unit test builds on [OUnit](http://ounit.forge.ocamlcore.org/)
-
-## Ninja
-
-Thanks to [ninja-build](https://ninja-build.org), ReScript also comes with a blazing fast build tool on top of it, `ninja` is a truly [well engineered](http://aosabook.org/en/posa/ninja.html) scalable build tool.
 
 ## Bloomberg and Facebook
 

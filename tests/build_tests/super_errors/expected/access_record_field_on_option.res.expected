@@ -1,0 +1,15 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/access_record_field_on_option.res[0m:[2m12:15[0m
+
+  10 [2m│[0m }
+  11 [2m│[0m 
+  [1;31m12[0m [2m│[0m let f = X.x.c.[1;31md[0m
+  13 [2m│[0m 
+
+  You're trying to access the record field [1;33md[0m, but the value you're trying to access it on is an [1;33moption[0m.
+  You need to unwrap the option first before accessing the record field.
+  
+  Possible solutions:
+  - Use [1;33mOption.map[0m to transform the option: [1;33mxx->Option.map(field => field.d)[0m
+  - Or use [1;33mOption.getOr[0m with a default: [1;33mxx->Option.getOr(defaultRecord).d[0m

@@ -1,0 +1,4 @@
+{
+    "TAG": "Error",
+    "_0": "\n  Syntax error in code block in docstring\n  FormatDocstringsTestError.res:5:10-6:3\n\n  3 │ \n  4 │ \n  5 │ let name= \n  6 │ let x=12\n\n  This let-binding misses an expression\n\n"
+  }

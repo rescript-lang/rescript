@@ -43,6 +43,7 @@ let hit_variables (fv : Set_ident.t) (l : t) : bool =
     | Llet (_str, _id, arg, body) -> hit arg || hit body
     | Lletrec (decl, body) -> hit body || hit_list_snd decl
     | Lfor (_v, e1, e2, _dir, e3) -> hit e1 || hit e2 || hit e3
+    | Lfor_of (_v, e1, e2) | Lfor_await_of (_v, e1, e2) -> hit e1 || hit e2
     | Lconst _ -> false
     | Lapply {ap_func; ap_args; _} -> hit ap_func || hit_list ap_args
     | Lglobal_module _ (* global persistent module, play safe *) -> false
@@ -55,6 +56,7 @@ let hit_variables (fv : Set_ident.t) (l : t) : bool =
     | Lstaticraise (_, args) -> hit_list args
     | Lifthenelse (e1, e2, e3) -> hit e1 || hit e2 || hit e3
     | Lsequence (e1, e2) -> hit e1 || hit e2
+    | Lbreak | Lcontinue -> false
     | Lwhile (e1, e2) -> hit e1 || hit e2
   in
   hit l
@@ -78,6 +80,7 @@ let hit_variable (fv : Ident.t) (l : t) : bool =
     | Llet (_str, _id, arg, body) -> hit arg || hit body
     | Lletrec (decl, body) -> hit body || hit_list_snd decl
     | Lfor (_v, e1, e2, _dir, e3) -> hit e1 || hit e2 || hit e3
+    | Lfor_of (_v, e1, e2) | Lfor_await_of (_v, e1, e2) -> hit e1 || hit e2
     | Lconst _ -> false
     | Lapply {ap_func; ap_args; _} -> hit ap_func || hit_list ap_args
     | Lglobal_module _ (* global persistent module, play safe *) -> false
@@ -90,6 +93,7 @@ let hit_variable (fv : Ident.t) (l : t) : bool =
     | Lstaticraise (_, args) -> hit_list args
     | Lifthenelse (e1, e2, e3) -> hit e1 || hit e2 || hit e3
     | Lsequence (e1, e2) -> hit e1 || hit e2
+    | Lbreak | Lcontinue -> false
     | Lwhile (e1, e2) -> hit e1 || hit e2
   in
   hit l

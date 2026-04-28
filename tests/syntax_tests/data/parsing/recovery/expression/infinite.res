@@ -1,2 +1,2 @@
 let smallest =
-  heap.compare(.) < a->f(b)
+  heap.compare() < a->f(b)

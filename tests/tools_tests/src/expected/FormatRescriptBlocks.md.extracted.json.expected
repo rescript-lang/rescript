@@ -1,0 +1,12 @@
+{
+    "TAG": "Ok",
+    "_0": [{
+    "id": "codeblock-1",
+    "name": "codeblock-1",
+    "code": "type user = {name: string, age: int, active: bool}\nlet createUser = (name, age) => {name, age, active: true}"
+  }, {
+    "id": "codeblock-2",
+    "name": "codeblock-2",
+    "code": "let badly_formatted = (x, y) => {\n  let result = x + y\n  if result > 0 {\n    Console.log(\"positive\")\n  } else {\n    Console.log(\"negative\")\n  }\n  result\n}"
+  }]
+  }

@@ -1,0 +1,3 @@
+// Float32 constants migration coverage for legacy Js.Typed_array
+let bytesF32 = Float32Array.Constants.bytesPerElement
+

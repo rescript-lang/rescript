@@ -1,0 +1,14 @@
+
+  [1;33mWarning number 8[0m
+  [36m/.../fixtures/let_without_unwrap_but_elgible.res[0m:[2m6:7-11[0m
+
+  4 [2m│[0m 
+  5 [2m│[0m let f = {
+  [1;33m6[0m [2m│[0m   let [1;33mOk(_)[0m = x
+  7 [2m│[0m   Ok(1)
+  8 [2m│[0m }
+
+  You forgot to handle a possible case here, for example: 
+  | Error(_)
+
+  Hint: You can use `let?` to automatically unwrap this expression.

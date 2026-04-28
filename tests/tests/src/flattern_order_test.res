@@ -1,7 +1,7 @@
 /* such recursive value not allowed in 4.06 */
 
 /* and us = 3 in */
-/* Js.log us; */
+/* Console.log us; */
 
 /*
 let second xs =

@@ -1,0 +1,8 @@
+{
+  "name": "@testrepo/pure-dev",
+  "sources": {
+    "dir": "dev",
+    "subdirs": true,
+    "type": "dev"
+  }
+}

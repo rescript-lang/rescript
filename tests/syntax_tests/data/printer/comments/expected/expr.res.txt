@@ -121,10 +121,7 @@ let user = /* before */ {
   /* c4 */ "age" /* c5 */: /* c6 */ 31 /* c7 */,
 } // after
 
-let spreadUser = {
-  /* before */ ...user1 /* after */,
-  /* c0 */ age /* c1 */: /* c2 */ 32 /* c3 */,
-}
+let spreadUser = {/* before */ ...user1 /* after */, /* c0 */ age /* c1 */: /* c2 */ 32 /* c3 */}
 
 // Pexp_field
 let x = /* before */ user /* c0 */./* c1 */ name /* c2 */
@@ -175,6 +172,18 @@ while /* c0 */ condition.contents /* c1 */ {
 // Pexp_for
 for /* c0 */ i /* c1 */ in /* c2 */ 0 /* c3 */ to /* c4 */ 10 /* c5 */ {
   /* c6 */ doStuff() /* c7 */
+} // trailing
+
+// Pexp_for_of
+for /* c0 */ x /* c1 */ of /* c2 */ xs /* c3 */ {
+  // c4
+  doStuff()
+} // trailing
+
+// Pexp_for_await_of
+for await /* c0 */ x /* c1 */ of /* c2 */ xs /* c3 */ {
+  // c4
+  doStuff()
 } // trailing
 
 // Pexp_pack

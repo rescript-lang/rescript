@@ -10,13 +10,19 @@ function eq(loc, a, b) {
   Nodeassert.deepStrictEqual(a, b, loc);
 }
 
-function $$throw(loc, f) {
+function throws(loc, f) {
   Nodeassert.throws(f, undefined, loc);
+}
+
+function approxEq(loc, threshold, a, b) {
+  let diff = Math.abs(a - b);
+  Nodeassert.ok(diff <= threshold, loc);
 }
 
 export {
   ok,
   eq,
-  $$throw,
+  throws,
+  approxEq,
 }
 /* node:assert Not a pure module */

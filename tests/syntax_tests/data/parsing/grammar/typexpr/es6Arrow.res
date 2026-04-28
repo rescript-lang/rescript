@@ -49,7 +49,7 @@ type getInitialPropsFn<'a> = {
 // }
 
 // type stepFn = (value: float, isDone: bool) => unit
-// type stepFn = (. value: float, isDone: bool) => unit
+// type stepFn = (value: float, isDone: bool) => unit
 // type stepFn = (@attr value: float, @attr isDone: bool) => unit
 
 // type f = (constr, constr2) => unit

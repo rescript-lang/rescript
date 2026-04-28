@@ -10,5 +10,4 @@
   This has type: [1;31marray<'a>[0m
   But it's expected to have type: [1;33m(string, string)[0m
 
-  - Fix this by passing a tuple instead of an array, like: [1;33m("hello", "world")
-[0m
+  - Fix this by passing a tuple instead of an array, like: [1;33m("hello", "world")[0m

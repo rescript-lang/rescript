@@ -1,0 +1,22 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/structure/recordFieldKeywordInPattern.res:1:6-9
+
+  1 │ let {type} = r
+  2 │ 
+  3 │ 
+
+  Cannot use keyword `type` here. Keywords are not allowed as record field names.
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/structure/recordFieldKeywordInPattern.res:1:10
+
+  1 │ let {type} = r
+  2 │ 
+  3 │ 
+
+  I'm not sure what to parse here when looking at "}".
+
+let {  } = [%rescript.exprhole ]
+;;r

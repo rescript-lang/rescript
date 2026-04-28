@@ -1,7 +1,6 @@
 {
   "name": "cycle1",
   "namespace": true,
-  "version": "0.1.0",
   "sources": {
     "dir": "src",
     "subdirs": true

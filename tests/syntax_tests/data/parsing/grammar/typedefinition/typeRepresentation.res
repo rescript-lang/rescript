@@ -26,3 +26,9 @@ type t = private Blue | Red | Green
 type t = {x: int, y: int}
 // private record declaration
 type t = private {x: int, y: int}
+
+// attributes can precede record or open variant markers
+type t = @attr {x: int}
+type t = @attr /**doc before record*/ {x: int}
+type t = @attr ..
+type t = @attr /**doc before open*/ ..

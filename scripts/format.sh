@@ -1,10 +1,20 @@
 #!/bin/bash
 
+set -e
+
 shopt -s extglob
 
-dune build @fmt --auto-promote
+echo Formatting OCaml code...
+opam exec -- dune build @fmt --auto-promote
 
-files=$(find runtime tests -type f \( -name "*.res" -o -name "*.resi" \) ! -name "syntaxErrors*" ! -name "generated_mocha_test.res" ! -path "tests/syntax_tests*" ! -path "tests/analysis_tests/tests*" ! -path "*/node_modules/*")
+echo Formatting ReScript code...
+files=$(find packages tests -type f \( -name "*.res" -o -name "*.resi" \) ! -name "syntaxErrors*" ! -name "generated_mocha_test.res" ! -path "tests/build_tests/super_errors/fixtures/break_keyword_binding.res" ! -path "tests/syntax_tests*" ! -path "tests/analysis_tests/tests*" ! -path "*/node_modules/*")
 ./cli/rescript.js format $files
 
+echo Formatting JS code...
 yarn format
+
+echo Formatting Rust code...
+cargo fmt --manifest-path rewatch/Cargo.toml
+
+echo Done.

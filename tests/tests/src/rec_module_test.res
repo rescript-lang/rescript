@@ -1,3 +1,6 @@
+open Mocha
+open Test_utils
+
 module rec A: {
   let even: int => bool
 } = {
@@ -63,16 +66,28 @@ and Odd: {
   type t = Succ(Even.t)
 }
 
-let suites = {
-  open Mt
-  list{
-    ("test1", _ => Eq((true, true, false, false), (A.even(2), AA.even(4), B.odd(2), BB.odd(4)))),
-    ("test2", _ => Eq(BB.y(), 32)),
-    ("test3", _ => Eq(AA.x(), 35)),
-    ("test4", _ => Eq(true, A.even(2))),
-    ("test4", _ => Eq(true, AA.even(4))),
-    ("test5", _ => Eq(false, B.odd(2))),
-  }
-}
+describe(__MODULE__, () => {
+  test("test1", () => {
+    eq(__LOC__, (true, true, false, false), (A.even(2), AA.even(4), B.odd(2), BB.odd(4)))
+  })
 
-Mt.from_pair_suites(__MODULE__, suites)
+  test("test2", () => {
+    eq(__LOC__, BB.y(), 32)
+  })
+
+  test("test3", () => {
+    eq(__LOC__, AA.x(), 35)
+  })
+
+  test("test4 - A.even", () => {
+    eq(__LOC__, true, A.even(2))
+  })
+
+  test("test4 - AA.even", () => {
+    eq(__LOC__, true, AA.even(4))
+  })
+
+  test("test5", () => {
+    eq(__LOC__, false, B.odd(2))
+  })
+})

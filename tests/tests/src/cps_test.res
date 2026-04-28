@@ -1,4 +1,7 @@
-let test = () => {
+open Mocha
+open Test_utils
+
+let test_sum = () => {
   let v = ref(0)
   let rec f = (n, acc) =>
     if n == 0 {
@@ -36,14 +39,8 @@ let test_closure2 = () => {
   v.contents
 }
 
-Mt.from_pair_suites(
-  __MODULE__,
-  {
-    open Mt
-    list{
-      ("cps_test_sum", _ => Eq(55, test())),
-      ("cps_test_closure", _ => Eq(15, test_closure())),
-      ("cps_test_closure2", _ => Eq(30, test_closure2())),
-    }
-  },
-)
+describe(__MODULE__, () => {
+  test("cps_test_sum", () => eq(__LOC__, 55, test_sum()))
+  test("cps_test_closure", () => eq(__LOC__, 15, test_closure()))
+  test("cps_test_closure2", () => eq(__LOC__, 30, test_closure2()))
+})

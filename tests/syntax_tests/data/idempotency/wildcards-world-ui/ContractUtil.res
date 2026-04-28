@@ -1,6 +1,6 @@
 let getProviderOrSigner = (library: Web3.web3Library, account: option<Web3.ethAddress>) =>
   switch account {
-  | Some(account) => library.getSigner(. account)
+  | Some(account) => library.getSigner(account)
   | None => library
   }
 

@@ -3,8 +3,8 @@ overwrite() { echo -e "\r\033[1A\033[0K$@"; }
 success() { echo -e "- ✅ \033[32m$1\033[0m"; }
 error() { echo -e "- 🛑 \033[31m$1\033[0m"; }
 bold() { echo -e "\033[1m$1\033[0m"; }
-rewatch() { RUST_BACKTRACE=1 $REWATCH_EXECUTABLE --no-timing=true --snapshot-output=true $@; }
-rewatch_bg() { RUST_BACKTRACE=1 nohup $REWATCH_EXECUTABLE --no-timing=true --snapshot-output=true $@; }
+rewatch() { RUST_BACKTRACE=1 $REWATCH_EXECUTABLE $@; }
+rewatch_bg() { RUST_BACKTRACE=1 nohup $REWATCH_EXECUTABLE $@; }
 
 # Detect if running on Windows
 is_windows() {
@@ -49,4 +49,32 @@ replace() {
   else
     sed -i $1 $2;
   fi
+}
+
+exit_watcher() {
+  rm -f lib/watch.lock
+}
+
+clear_locks() {
+  rm -f lib/watch.lock lib/build.lock
+}
+
+wait_for_file() {
+  local file="$1"; local timeout="${2:-30}"
+  while [ "$timeout" -gt 0 ]; do
+    [ -f "$file" ] && return 0
+    sleep 1
+    timeout=$((timeout - 1))
+  done
+  return 1
+}
+
+wait_for_file_gone() {
+  local file="$1"; local timeout="${2:-30}"
+  while [ "$timeout" -gt 0 ]; do
+    [ ! -f "$file" ] && return 0
+    sleep 1
+    timeout=$((timeout - 1))
+  done
+  return 1
 }

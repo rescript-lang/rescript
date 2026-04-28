@@ -1,0 +1,8 @@
+
+  [1;31mSyntax error![0m
+  [36m/.../fixtures/break_keyword_binding.res[0m:[2m1:5-9[0m
+
+  [1;31m1[0m [2m│[0m let [1;31mbreak[0m = 1
+  2 [2m│[0m 
+
+  `break` is a reserved keyword. Keywords need to be escaped: \"break"

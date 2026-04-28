@@ -10,7 +10,7 @@ module rec PA: {
 and P: {
   let print: int => unit
 } = {
-  let print = i => Js.log2("%d", i)
+  let print = i => Console.log2("%d", i)
 }
 
 let () = PA.print([1, 2])

@@ -1,0 +1,14 @@
+
+  [1;33mWarning number 8[0m
+  [36m/.../fixtures/optional_record_field_missing_case_inline.res[0m:[2m5:9-8:1[0m
+
+  3 [2m│[0m let v: t = Obj.magic()
+  4 [2m│[0m 
+  [1;33m5[0m [2m│[0m let _ = [1;33mswitch v {[0m
+  [1;33m6[0m [2m│[0m [1;33m| A({b: None}) => ()[0m
+  [1;33m7[0m [2m│[0m [1;33m| A({b: Some(_)}) => ()[0m
+  [1;33m8[0m [2m│[0m [1;33m}[0m
+  9 [2m│[0m 
+
+  You forgot to handle a possible case here, for example: 
+  | A({b: ?None})

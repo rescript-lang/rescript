@@ -26,3 +26,25 @@ type complexNumbericPolyVar = [
   | #1(string)
   | #2(int, string)
 ]
+
+// Doc comments on polymorphic variants
+type withDocComments = [
+  /** First variant */
+  | #Foo
+  /** Second variant */
+  | #Bar
+  /** Third variant with args */
+  | #Baz(int, string)
+]
+
+type singleDocComment = [
+  /** Single variant */
+  #Only
+]
+
+type mixedDocComments = [
+  | #NoComment
+  /** With comment */
+  | #WithComment
+  | #AnotherNoComment
+]

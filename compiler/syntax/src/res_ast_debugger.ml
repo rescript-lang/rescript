@@ -657,6 +657,8 @@ module SexpAst = struct
       | Pexp_sequence (expr1, expr2) ->
         Sexp.list
           [Sexp.atom "Pexp_sequence"; expression expr1; expression expr2]
+      | Pexp_break -> Sexp.atom "Pexp_break"
+      | Pexp_continue -> Sexp.atom "Pexp_continue"
       | Pexp_while (expr1, expr2) ->
         Sexp.list [Sexp.atom "Pexp_while"; expression expr1; expression expr2]
       | Pexp_for (pat, e1, e2, flag, e3) ->
@@ -668,6 +670,17 @@ module SexpAst = struct
             expression e2;
             direction_flag flag;
             expression e3;
+          ]
+      | Pexp_for_of (pat, e1, e2) ->
+        Sexp.list
+          [Sexp.atom "Pexp_for_of"; pattern pat; expression e1; expression e2]
+      | Pexp_for_await_of (pat, e1, e2) ->
+        Sexp.list
+          [
+            Sexp.atom "Pexp_for_await_of";
+            pattern pat;
+            expression e1;
+            expression e2;
           ]
       | Pexp_constraint (expr, typexpr) ->
         Sexp.list
@@ -707,12 +720,7 @@ module SexpAst = struct
       | Pexp_extension ext ->
         Sexp.list [Sexp.atom "Pexp_extension"; extension ext]
       | Pexp_await e -> Sexp.list [Sexp.atom "Pexp_await"; expression e]
-      | Pexp_jsx_element (Jsx_fragment {jsx_fragment_children = children}) ->
-        let xs =
-          match children with
-          | JSXChildrenSpreading e -> [e]
-          | JSXChildrenItems xs -> xs
-        in
+      | Pexp_jsx_element (Jsx_fragment {jsx_fragment_children = xs}) ->
         Sexp.list
           [
             Sexp.atom "Pexp_jsx_fragment"; Sexp.list (map_empty ~f:expression xs);
@@ -728,13 +736,8 @@ module SexpAst = struct
           (Jsx_container_element
              {
                jsx_container_element_props = props;
-               jsx_container_element_children = children;
+               jsx_container_element_children = xs;
              }) ->
-        let xs =
-          match children with
-          | JSXChildrenSpreading e -> [e]
-          | JSXChildrenItems xs -> xs
-        in
         Sexp.list
           [
             Sexp.atom "Pexp_jsx_container_element";
@@ -875,12 +878,12 @@ module SexpAst = struct
       match typexpr.ptyp_desc with
       | Ptyp_any -> Sexp.atom "Ptyp_any"
       | Ptyp_var var -> Sexp.list [Sexp.atom "Ptyp_var"; string var]
-      | Ptyp_arrow {lbl; arg; ret} ->
+      | Ptyp_arrow {arg; ret} ->
         Sexp.list
           [
             Sexp.atom "Ptyp_arrow";
-            arg_label_loc lbl;
-            core_type arg;
+            arg_label_loc arg.lbl;
+            core_type arg.typ;
             core_type ret;
           ]
       | Ptyp_tuple types ->

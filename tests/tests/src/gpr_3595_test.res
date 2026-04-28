@@ -1,6 +1,5 @@
-let suites: ref<Mt.pair_suites> = ref(list{})
-let test_id = ref(0)
-let eq = (loc, x, y) => Mt.eq_suites(~test_id, ~suites, loc, x, y)
+open Mocha
+open Test_utils
 
 @@warning("-a")
 
@@ -8,8 +7,9 @@ let eq = (loc, x, y) => Mt.eq_suites(~test_id, ~suites, loc, x, y)
 
 let x = 1
 
-/* let () = 
-  eq __LOC__ a 1 
-
-
-let () = Mt.from_pair_suites __FILE__ !suites */
+describe(__MODULE__, () => {
+  test("commented out pattern test", () => {
+    // This test is mostly commented out, just checking compilation
+    eq(__LOC__, x, 1)
+  })
+})

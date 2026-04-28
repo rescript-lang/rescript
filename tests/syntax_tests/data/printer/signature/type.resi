@@ -6,3 +6,11 @@ type color =
   | Red
   | Blue
   | Black
+
+type options = {
+  permissions: {
+    all: {
+      stuff: bool
+    }
+  }
+}

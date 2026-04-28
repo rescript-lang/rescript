@@ -47,10 +47,7 @@ let setup_env () =
   Matching.names_from_construct_pattern :=
     Matching_polyfill.names_from_construct_pattern;
 
-  Rescript_cpp.replace_directive_bool "BS" true;
-  Rescript_cpp.replace_directive_bool "JS" true;
-  Printtyp.print_res_poly_identifier := Res_printer.polyvar_ident_to_string;
-  Rescript_cpp.replace_directive_string "BS_VERSION" Bs_version.version
+  Printtyp.print_res_poly_identifier := Res_printer.polyvar_ident_to_string
 (*; Switch.cut := 100*)
 (* tweakable but not very useful *)
 

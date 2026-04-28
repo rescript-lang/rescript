@@ -27,7 +27,12 @@
    ocaml.boxed / ocaml.unboxed
 *)
 
-val check_deprecated : Location.t -> Parsetree.attributes -> string -> unit
+val check_deprecated :
+  ?deprecated_context:Cmt_utils.deprecated_used_context ->
+  Location.t ->
+  Parsetree.attributes ->
+  string ->
+  unit
 val check_deprecated_inclusion :
   def:Location.t ->
   use:Location.t ->

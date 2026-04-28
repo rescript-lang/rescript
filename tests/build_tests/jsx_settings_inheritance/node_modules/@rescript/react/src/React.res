@@ -12,7 +12,7 @@ type componentLike<'props, 'return> = Jsx.componentLike<'props, 'return>
 
 type component<'props> = Jsx.component<'props>
 
-external component: componentLike<'props, element> => component<'props> = "%identity"
+external component: componentLike<'props, element> => component<'props> = "%component_identity"
 
 @module("react")
 external createElement: (component<'props>, 'props) => element = "createElement"

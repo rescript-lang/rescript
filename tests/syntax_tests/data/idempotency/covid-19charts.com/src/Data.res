@@ -4,7 +4,7 @@ module Map: {
   let keys: t<'key, 'value> => array<'key>
   let get: (t<'key, 'value>, 'key) => 'value
   let get_opt: (t<'key, 'value>, 'key) => option<'value>
-  let map: ((. 'value) => 'b, t<'key, 'value>) => t<'key, 'b>
+  let map: (('value) => 'b, t<'key, 'value>) => t<'key, 'b>
   let entries: t<'key, 'value> => array<('key, 'value)>
   let fromArray: array<('key, 'value)> => t<'key, 'value>
   let set: (t<'key, 'value>, 'key, 'value) => unit
@@ -100,7 +100,7 @@ let calendar: t = Js.Array.mapi((day, index) => {
     x: Date(Js.Date.fromString(day)),
     index: index,
     values: countryId =>
-      Belt.HashMap.String.get(values, countryId)->Js.Option.map((. x) => Lazy.force(x)),
+      Belt.HashMap.String.get(values, countryId)->Js.Option.map((x) => Lazy.force(x)),
   }
 }, days)
 
@@ -139,7 +139,7 @@ let getValueFromRecord = (dataType, record) =>
 let getValue = (dataType, dataItem) => getValueFromRecord(dataType, getRecord(dataItem))
 
 let alignToDay0 = (dataType, threshold) => {
-  let data = Belt.Map.String.mapU(dataWithGrowth, (. dataPoints) =>
+  let data = Belt.Map.String.mapU(dataWithGrowth, (dataPoints) =>
     Lazy.from_fun(() => {
       let dataPoints = Lazy.force(dataPoints)
       Map.entries(dataPoints)
@@ -156,7 +156,7 @@ let alignToDay0 = (dataType, threshold) => {
     x: Day(day),
     index: day,
     values: countryId =>
-      Belt.Map.String.get(data, countryId)->Js.Option.andThen((. countryData) =>
+      Belt.Map.String.get(data, countryId)->Js.Option.andThen((countryData) =>
         Belt.Map.Int.get(Lazy.force(countryData), day)
       ),
   })

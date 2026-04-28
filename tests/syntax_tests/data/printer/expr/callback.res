@@ -73,8 +73,8 @@ let _ = {
     ()
   }
 
-let trees = possibilities->Belt.Array.mapU((. combination) =>
-  combination->Belt.Array.reduceU(Nil, (. tree, curr) => tree->insert(curr))
+let trees = possibilities->Belt.Array.mapU((combination) =>
+  combination->Belt.Array.reduceU(Nil, (tree, curr) => tree->insert(curr))
 )
 
 let set = mapThatHasAVeryLongName->Belt.Map.String.getExn(website)->Belt.Set.Int.add(user)
@@ -95,8 +95,8 @@ let add2 = (y: coll, e: key) =>
 
 
 let add2 = (y: coll, e: key) =>
-  if possibilities->Belt.Array.mapU((. combination) =>
-  combination->Belt.Array.reduceU(Nil, (. tree, curr) => tree->insert(curr))
+  if possibilities->Belt.Array.mapU((combination) =>
+  combination->Belt.Array.reduceU(Nil, (tree, curr) => tree->insert(curr))
 ) {
     y;
   } else {

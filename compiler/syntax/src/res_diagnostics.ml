@@ -131,28 +131,60 @@ let explain t =
 
 let make ~start_pos ~end_pos category = {start_pos; end_pos; category}
 
-let print_report diagnostics src =
+let print_report ?(custom_intro = None) ?(formatter = Format.err_formatter)
+    diagnostics src =
   let rec print diagnostics src =
     match diagnostics with
     | [] -> ()
     | d :: rest ->
-      Location.report_error ~src:(Some src) Format.err_formatter
+      (* A few specializations for best-effort error messages for old syntax etc. *)
+      let msg =
+        match d.category with
+        | Unexpected {token = Token.Bar; _} ->
+          let idx_prev = d.start_pos.pos_cnum - 1 in
+          let idx_next = d.end_pos.pos_cnum in
+          if
+            idx_prev >= 0
+            && idx_prev < String.length src
+            && String.get src idx_prev = '['
+          then
+            let base = explain d in
+            base
+            ^ "\n\n\
+              \  Did you mean to write an array literal? Arrays are written \
+               with `[ ... ]` (not `[| ... |]`)."
+            ^ "\n  Quick fix: replace `[|` with `[` and `|]` with `]`."
+            ^ "\n  Example: `[|1, 2, 3|]` -> `[1, 2, 3]`"
+          else if
+            idx_next >= 0
+            && idx_next < String.length src
+            && String.get src idx_next = '>'
+          then
+            let base = explain d in
+            base
+            ^ "\n\n\
+              \  The old data-last pipe `|>` has been removed from the language.\n\
+              \  Refactor to use a data-first `->` pipe instead."
+          else explain d
+        | _ -> explain d
+      in
+      Location.report_error ~custom_intro ~src:(Some src) formatter
         Location.
           {
             loc =
               {loc_start = d.start_pos; loc_end = d.end_pos; loc_ghost = false};
-            msg = explain d;
+            msg;
             sub = [];
             if_highlight = "";
           };
       (match rest with
       | [] -> ()
-      | _ -> Format.fprintf Format.err_formatter "@.");
+      | _ -> Format.fprintf formatter "@.");
       print rest src
   in
-  Format.fprintf Format.err_formatter "@[<v>";
+  Format.fprintf formatter "@[<v>";
   print (List.rev diagnostics) src;
-  Format.fprintf Format.err_formatter "@]@."
+  Format.fprintf formatter "@]@."
 
 let unexpected token context = Unexpected {token; context}
 

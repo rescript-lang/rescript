@@ -152,9 +152,9 @@ let print_name ppf = function
   | Some name -> fprintf ppf "\"%s\"" name
 
 let string_of_label = function
-  | Noloc.Nolabel -> ""
-  | Labelled s -> s
-  | Optional s -> "?" ^ s
+  | Nolabel -> ""
+  | Labelled {txt} -> txt
+  | Optional {txt} -> "?" ^ txt
 
 let string_of_arity = function
   | None -> ""
@@ -173,10 +173,10 @@ and raw_type_list tl = raw_list raw_type tl
 
 and raw_type_desc ppf = function
   | Tvar name -> fprintf ppf "Tvar %a" print_name name
-  | Tarrow (l, t1, t2, c, a) ->
+  | Tarrow (arg, ret, c, a) ->
     fprintf ppf "@[<hov1>Tarrow(\"%s\",@,%a,@,%a,@,%s,@,%s)@]"
-      (string_of_label l) raw_type t1 raw_type t2 (safe_commu_repr [] c)
-      (string_of_arity a)
+      (string_of_label arg.lbl) raw_type arg.typ raw_type ret
+      (safe_commu_repr [] c) (string_of_arity a)
   | Ttuple tl -> fprintf ppf "@[<1>Ttuple@,%a@]" raw_type_list tl
   | Tconstr (p, tl, abbrev) ->
     fprintf ppf "@[<hov1>Tconstr(@,%a,@,%a,@,%a)@]" path p raw_type_list tl
@@ -516,9 +516,9 @@ let rec mark_loops_rec visited ty =
     let visited = px :: visited in
     match ty.desc with
     | Tvar _ -> add_named_var ty
-    | Tarrow (_, ty1, ty2, _, _) ->
-      mark_loops_rec visited ty1;
-      mark_loops_rec visited ty2
+    | Tarrow (arg, ret, _, _) ->
+      mark_loops_rec visited arg.typ;
+      mark_loops_rec visited ret
     | Ttuple tyl -> List.iter (mark_loops_rec visited) tyl
     | Tconstr (p, tyl, _) ->
       let _p', s = best_type_path p in
@@ -621,22 +621,18 @@ let rec tree_of_typexp ?(printing_context : printing_context option) sch ty =
         let non_gen = is_non_gen sch ty in
         let name_gen = if non_gen then new_weak_name ty else new_name in
         Otyp_var (non_gen, name_of_type name_gen ty)
-      | Tarrow (l, ty1, ty2, _, arity) ->
-        let pr_arrow l ty1 ty2 =
-          let lab = string_of_label l in
-          let t1 =
-            if is_optional l then
-              match (repr ty1).desc with
-              | Tconstr (path, [ty], _) when Path.same path Predef.path_option
-                ->
-                tree_of_typexp ?printing_context sch ty
-              | _ -> Otyp_stuff "<hidden>"
-            else tree_of_typexp ?printing_context sch ty1
-          in
-          (* should pass arity here? *)
-          Otyp_arrow (lab, t1, tree_of_typexp ?printing_context sch ty2, arity)
+      | Tarrow (arg, ret, _, arity) ->
+        let lab = string_of_label arg.lbl in
+        let t1 =
+          if is_optional arg.lbl then
+            match (repr arg.typ).desc with
+            | Tconstr (path, [ty], _) when Path.same path Predef.path_option ->
+              tree_of_typexp ?printing_context sch ty
+            | _ -> Otyp_stuff "<hidden>"
+          else tree_of_typexp ?printing_context sch arg.typ
         in
-        pr_arrow l ty1 ty2
+        (* should pass arity here? *)
+        Otyp_arrow (lab, t1, tree_of_typexp ?printing_context sch ret, arity)
       | Ttuple tyl -> Otyp_tuple (tree_of_typlist ?printing_context sch tyl)
       | Tconstr (p, _tyl, _abbrev)
         when printing_context
@@ -1352,13 +1348,29 @@ let explanation unif t3 t4 ppf =
     fprintf ppf "@,Self type cannot be unified with a closed object type"
   | _, Tfield (lab, _, _, _) when lab = dummy_method ->
     fprintf ppf "@,Self type cannot be unified with a closed object type"
-  | Tfield (l, _, _, {desc = Tnil}), Tfield (l', _, _, {desc = Tnil})
+  | Tfield (l, _, f1, {desc = Tnil}), Tfield (l', _, f2, {desc = Tnil})
     when l = l' ->
-    fprintf ppf "@,Types for method %s are incompatible" l
-  | (Tnil | Tconstr _), Tfield (l, _, _, _) ->
-    fprintf ppf "@,@[The first object type has no field %s@]" l
-  | Tfield (l, _, _, _), (Tnil | Tconstr _) ->
-    fprintf ppf "@,@[The second object type has no field %s@]" l
+    fprintf ppf
+      "@,\
+       @,\
+       Types for field @{<info>\"%s\"@} are incompatible:@,\
+       Field @{<info>\"%s\"@} in the passed object has type @{<error>%a@}, but \
+       is expected to have type @{<info>%a@}."
+      l l type_expr f1 type_expr f2
+  | (Tnil | Tconstr _), Tfield (l, _, f1, _) ->
+    fprintf ppf
+      "@,\
+       @,\
+       @[The first object is expected to have a field @{<info>\"%s\"@} of type \
+       @{<info>%a@}, but it does not.@]"
+      l type_expr f1
+  | Tfield (l, _, f1, _), (Tnil | Tconstr _) ->
+    fprintf ppf
+      "@,\
+       @,\
+       @[The second object is expected to have a field @{<info>\"%s\"@} of \
+       type @{<info>%a@}, but it does not.@]"
+      l type_expr f1
   | Tnil, Tconstr _ | Tconstr _, Tnil ->
     fprintf ppf
       "@,@[The %s object type has an abstract row, it cannot be closed@]"
@@ -1369,17 +1381,54 @@ let explanation unif t3 t4 ppf =
       (row1.row_fields, row1.row_closed, row2.row_fields, row2.row_closed)
     with
     | [], true, [], true ->
-      fprintf ppf "@,These two variant types have no intersection"
+      fprintf ppf
+        "@,\
+         @,\
+         These polymorphic variants are incompatible - they share no common \
+         constructors."
     | [], true, (_ :: _ as fields), _ ->
+      (* TODO(ai) Future opportunity to provide a way for an LLM to lookup the 
+      full polyvariant type definitions if wanted.*)
+      let constructors_txt =
+        if List.length fields = 1 then "constructor" else "constructors"
+      in
       fprintf ppf
-        "@,@[The first variant type does not allow tag(s)@ @[<hov>%a@]@]"
-        print_tags fields
+        "@,\
+         @,\
+         The first polymorphic variant is @{<info>closed@} and doesn't include \
+         the %s: @{<error>%a@}.@,\
+         @,\
+         Possible solutions:\n\
+        \  - Either make the first variant @{<info>open@} so it can accept \
+         additional constructors. To do this, make sure the type starts with \
+         @{<info>[>@} instead of @{<info>[@}\n\
+        \  - Or add the missing %s to it."
+        constructors_txt print_tags fields constructors_txt
     | (_ :: _ as fields), _, [], true ->
+      let constructors_txt =
+        if List.length fields = 1 then "constructor" else "constructors"
+      in
       fprintf ppf
-        "@,@[The second variant type does not allow tag(s)@ @[<hov>%a@]@]"
-        print_tags fields
+        "@,\
+         @,\
+         The second polymorphic variant is @{<info>closed@} and doesn't \
+         include the %s: @{<error>%a@}.@,\
+         @,\
+         Possible solutions:\n\
+        \  - Either make the second variant @{<info>open@} so it can accept \
+         additional constructors. To do this, make sure the type starts with \
+         @{<info>[>@} instead of @{<info>[@}\n\
+        \  - Or add the missing %s to it."
+        constructors_txt print_tags fields constructors_txt
     | [(l1, _)], true, [(l2, _)], true when l1 = l2 ->
-      fprintf ppf "@,Types for tag %s are incompatible"
+      fprintf ppf
+        "@,\
+         @,\
+         Both polymorphic variants have the constructor @{<info>%s@}, but \
+         their payload types are incompatible.@,\
+         Make sure the payload types for @{<info>%s@} match exactly in both \
+         polymorphic variants."
+        (!print_res_poly_identifier l1)
         (!print_res_poly_identifier l1)
     | _ -> ())
   | _ -> ()

@@ -1,4 +1,4 @@
-open Common
+module ExnSet = Set.Make (Exn)
 
 type t = ExnSet.t
 
@@ -22,11 +22,11 @@ let pp ~exnTable ppf exceptions =
       match Hashtbl.find_opt exnTable exn with
       | Some locSet ->
         let positions =
-          locSet |> Common.LocSet.elements
+          locSet |> LocSet.elements
           |> List.map (fun loc -> loc.Location.loc_start)
         in
         Format.fprintf ppf "%s@{<info>%s@} (@{<filename>%s@})" separator name
-          (positions |> List.map posToString |> String.concat " ")
+          (positions |> List.map Pos.toString |> String.concat " ")
       | None -> Format.fprintf ppf "%s@{<info>%s@}" separator name)
     | None -> Format.fprintf ppf "%s@{<info>%s@}" separator name
   in

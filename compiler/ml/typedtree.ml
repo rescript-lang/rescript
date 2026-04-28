@@ -75,7 +75,7 @@ and expression_desc =
   | Texp_constant of constant
   | Texp_let of rec_flag * value_binding list * expression
   | Texp_function of {
-      arg_label: Noloc.arg_label;
+      arg_label: arg_label;
       arity: arity;
       param: Ident.t;
       case: case;
@@ -84,7 +84,7 @@ and expression_desc =
     }
   | Texp_apply of {
       funct: expression;
-      args: (Noloc.arg_label * expression option) list;
+      args: (arg_label * expression option) list;
       partial: bool;
       transformed_jsx: bool;
     }
@@ -109,6 +109,8 @@ and expression_desc =
   | Texp_array of expression list
   | Texp_ifthenelse of expression * expression * expression option
   | Texp_sequence of expression * expression
+  | Texp_break
+  | Texp_continue
   | Texp_while of expression * expression
   | Texp_for of
       Ident.t
@@ -117,6 +119,8 @@ and expression_desc =
       * expression
       * direction_flag
       * expression
+  | Texp_for_of of Ident.t * Parsetree.pattern * expression * expression
+  | Texp_for_await_of of Ident.t * Parsetree.pattern * expression * expression
   | Texp_send of expression * meth * expression option
   | Texp_letmodule of Ident.t * string loc * module_expr * expression
   | Texp_letexception of extension_constructor * expression
@@ -303,10 +307,12 @@ and core_type = {
   ctyp_attributes: attribute list;
 }
 
+and arg = {attrs: attributes; lbl: arg_label; typ: core_type}
+
 and core_type_desc =
   | Ttyp_any
   | Ttyp_var of string
-  | Ttyp_arrow of Noloc.arg_label * core_type * core_type * arity
+  | Ttyp_arrow of arg * core_type * arity
   | Ttyp_tuple of core_type list
   | Ttyp_constr of Path.t * Longident.t loc * core_type list
   | Ttyp_object of object_field list * closed_flag

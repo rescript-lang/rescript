@@ -6,7 +6,7 @@ let wrapSomethingAsync: unit => unit = () => {
   let _ = (
     async _ => {
       let test = await Js.Promise.resolve("Test")
-      Js.log(test)
+      Console.log(test)
     }
   )(777)
 }
@@ -17,7 +17,7 @@ let wrapSomethingAsync2 = () =>
   (
     async () => {
       let test = await Js.Promise.resolve("Test")
-      Js.log(test)
+      Console.log(test)
     }
   )()->ignorePromise
 

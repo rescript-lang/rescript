@@ -1,7 +1,7 @@
 let rec f = (x, y) => f(y, x)
 
 let rec f1 = (x, y, z) => {
-  Js.log(z)
+  Console.log(z)
   f1(y, z, x)
 }
 

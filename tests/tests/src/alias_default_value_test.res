@@ -30,7 +30,7 @@ module C3 = {
 
 module C4 = {
   @react.component
-  let make = (~a as b, ~x=true) => b
+  let make = (~a as b, ~x=true) => React.int(b)
 }
 
 module C6 = {
@@ -41,7 +41,7 @@ module C6 = {
   }
 
   @react.component
-  let make = (~comp as module(Comp: Comp), ~x as (a, b)) => Comp.xx
+  let make = (~comp as module(Comp: Comp), ~x as (a, b)) => React.int(Comp.xx)
 }
 
 module C7 = {

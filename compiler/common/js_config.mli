@@ -65,6 +65,8 @@ val syntax_only : bool ref
 
 val binary_ast : bool ref
 
+val test_ast_conversion : bool ref
+
 val debug : bool ref
 
 val cmi_only : bool ref
@@ -97,8 +99,6 @@ val string_of_jsx_module : jsx_module -> string
 val jsx_version_of_int : int -> jsx_version option
 
 val jsx_module_of_string : string -> jsx_module
-
-val customize_runtime : string option ref
 
 val as_pp : bool ref
 

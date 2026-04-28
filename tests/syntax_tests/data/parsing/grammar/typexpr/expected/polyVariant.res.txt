@@ -13,3 +13,10 @@ type nonrec t = [ s]
 type nonrec t = [ ListStyleType.t]
 type nonrec number = [ `1  | `42  | `4244 ]
 type nonrec complexNumbericPolyVar = [ `1 of string  | `2 of (int * string) ]
+type nonrec withDocComments =
+  [ `Foo [@res.doc " First variant "] | `Bar [@res.doc " Second variant "]
+  | `Baz of (int * string) [@res.doc " Third variant with args "]]
+type nonrec singleDocComment = [ `Only [@res.doc " Single variant "]]
+type nonrec mixedDocComments =
+  [ `NoComment  | `WithComment [@res.doc " With comment "]
+  | `AnotherNoComment ]

@@ -37,13 +37,13 @@ let f_0 = () => hi(() => ())
 let f_01 = () =>
   hi((() as x) =>
     if x == () {
-      Js.log("x")
+      Console.log("x")
     }
   ) /* FIXME: not inlined */
 let f_02 = xs =>
   hi((() as x) => {
     xs := x
-    Js.log("x")
+    Console.log("x")
   })
 let f_03 = (xs, u) => hi(u)
 /* arity adjust to [0] [ function (){return u (0)}] */
@@ -62,7 +62,7 @@ let h4 = x => ff1(x, add3(1))
 
 let h5 = x => ff2(x, add3(2))
 let add = (x, y) => {
-  Js.log((x, y))
+  Console.log((x, y))
   x + y
 }
 
@@ -76,9 +76,9 @@ external optional_cb: (
 ) => int = "optional_cb"
 
 /*
-let fishy_unit = fun () -> Js.log 1 
+let fishy_unit = fun () -> Console.log 1
 
-let fishy_unit_2 = fun [@bs] (() as x) -> Js.log x
+let fishy_unit_2 = fun [@bs] (() as x) -> Console.log x
 
 let v = fishy_unit_2 () [@bs]
 
@@ -88,78 +88,76 @@ let v = fishy_unit_2 () [@bs]
 /* ^ should be an error instead of warning */
 
 /*
-external ff : 
-    int -> 
-    (unit -> unit) -> 
-    int = 
+external ff :
+    int ->
+    (unit -> unit) ->
+    int =
     ""
 [@@val]
 */
 
 /*
-So if we pass 
-{[ (fun (() as x) ->  Js.log x  ) ]}
+So if we pass
+{[ (fun (() as x) ->  Console.log x  ) ]}
 
-Then we call it on JS side 
-[g ()], we are passing undefined 
+Then we call it on JS side
+[g ()], we are passing undefined
 to [x] which is incorrect.
 
-We can also blame users 
-[()=>] is really not representable  in OCaml 
-You are writing the wrong FFI.... 
+We can also blame users
+[()=>] is really not representable  in OCaml
+You are writing the wrong FFI....
 
 They need (fun ()[@bs] -> ..)
-Maybe we can create a sugar 
-{[ begin [@bs]  .... end  ]} 
+Maybe we can create a sugar
+{[ begin [@bs]  .... end  ]}
 */
 
 /*
-external config : 
-    hi: (int -> int) ->    
-    lo: int -> 
-    unit -> 
+external config :
+    hi: (int -> int) ->
+    lo: int ->
+    unit ->
     _ = "" [@@obj]
 
-type expected = 
-    < hi : int -> int [@bs]; 
-      lo : int >  
+type expected =
+    < hi : int -> int [@bs];
+      lo : int >
 
-let f : expected = 
-    config 
+let f : expected =
+    config
     ~hi:(fun x -> x + 1 )
-    ~lo:3 
+    ~lo:3
     ()
 */
 /*
-" we auto-uncurry 
-so the inferred type would be 
+" we auto-uncurry
+so the inferred type would be
 */
 /*
-let v = ref 0  
+let v = ref 0
 
 
 
 (**
-There is a semantics mismatch when converting curried function into uncurried function 
-for example 
+There is a semantics mismatch when converting curried function into uncurried function
+for example
 `let u = f a b c in u d ` may have a side effect here when creating [u].
 We should document it clearly
 *)
 let a4 = Js.Internal.js_fn_mk4 (fun x y z -> incr v ;  fun d -> 1 + d)
 
 
-let () = 
+let () =
     ignore @@ a4 0 1 2 3 [@bs]
     ignore @@ a4 0 1 2 3 [@bs]
 
 ;;
-
-Mt.from_pair_suites __MODULE__ !suites
 */
 
 let unit_magic = () => {
-  Js.log("noinline")
-  Js.log("noinline")
+  Console.log("noinline")
+  Console.log("noinline")
   3
 }
 
