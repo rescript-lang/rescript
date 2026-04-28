@@ -31,6 +31,7 @@
 
 - Improve default argument type mismatch errors. https://github.com/rescript-lang/rescript/pull/8389
 - Resolve workspace dependencies in editor analysis. https://github.com/rescript-lang/rescript/pull/8392
+- Build system: Add OpenTelemetry tracing support for cli commands. https://github.com/rescript-lang/rescript/pull/8370
 
 #### :house: Internal
 
