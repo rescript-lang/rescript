@@ -1,11 +1,11 @@
 
   [1;31mWe've found a bug for you![0m
-  [36m/.../fixtures/jsx_custom_component_optional_prop.res[0m:[2m33:34[0m
+  [36m/.../fixtures/jsx_custom_component_optional_prop.res[0m:[2m34:34[0m
 
-  31 [2m│[0m let o = Some(1.)
-  32 [2m│[0m 
-  [1;31m33[0m [2m│[0m let x = <CustomComponent someOpt=[1;31mo[0m />
-  34 [2m│[0m 
+  32 [2m│[0m let o = Some(1.)
+  33 [2m│[0m 
+  [1;31m34[0m [2m│[0m let x = <CustomComponent someOpt=[1;31mo[0m />
+  35 [2m│[0m 
 
   This has type: [1;31moption<float>[0m
   But the component prop [1;33msomeOpt[0m is expected to have type: [1;33mfloat[0m

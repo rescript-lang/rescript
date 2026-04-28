@@ -208,12 +208,12 @@ let _youtube_iframe = <iframe
   referrerPolicy={"strict-origin-when-cross-origin"}
 />;
 
-function make(_props) {
+function Jsx_preserve_test$X(props) {
   return null;
 }
 
 let X = {
-  make: make
+  make: Jsx_preserve_test$X
 };
 
 <X.make />;
@@ -222,21 +222,21 @@ function Jsx_preserve_test$Y(props) {
   return null;
 }
 
-let make$1 = React.memo(Jsx_preserve_test$Y);
+let make = React.memo(Jsx_preserve_test$Y);
 
 let Y = {
   x: 42,
-  make: make$1
+  make: make
 };
 
 <Y.make />;
 
 let context = React.createContext(0);
 
-let make$2 = context.Provider;
+let make$1 = context.Provider;
 
 let ContextProvider = {
-  make: make$2
+  make: make$1
 };
 
 function Jsx_preserve_test(props) {
@@ -249,9 +249,9 @@ function Jsx_preserve_test(props) {
 
 let Jsx_preserve_test$A = QueryClientProvider;
 
-let make$3 = Jsx_preserve_test;
+let make$2 = Jsx_preserve_test;
 
-let Jsx_preserve_test$Y$1 = make$1;
+let Jsx_preserve_test$Y$1 = make;
 
 export {
   _single_element_child,
@@ -276,16 +276,16 @@ export {
   _empty_fragment,
   _fragment,
   _youtube_iframe,
-  X,
   Y,
   context,
   ContextProvider,
-  make$3 as make,
+  make$2 as make,
   Jsx_preserve_test$Icon,
   Jsx_preserve_test$A,
   Jsx_preserve_test$B,
   Jsx_preserve_test$MyWeirdComponent,
   Jsx_preserve_test$ComponentWithOptionalProps,
+  Jsx_preserve_test$X,
   Jsx_preserve_test$Y$1 as Jsx_preserve_test$Y,
 }
 /* _single_element_child Not a pure module */

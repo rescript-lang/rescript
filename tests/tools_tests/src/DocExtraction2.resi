@@ -17,3 +17,9 @@ module InnerModule: {
 }
 
 // ^dex
+
+@deprecated({
+  reason: "Use log instead",
+  migrate: Console.log(),
+})
+let log: 'a => unit

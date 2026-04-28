@@ -15,6 +15,7 @@
 #### :boom: Breaking Change
 
 - Nested React component modules now export only the namespaced component value instead of a public `make` wrapper, and GenType mirrors that new boundary shape. https://github.com/rescript-lang/rescript/pull/8293
+- Make Jsx.component abstract. https://github.com/rescript-lang/rescript/pull/8390
 
 #### :eyeglasses: Spec Compliance
 
@@ -23,14 +24,21 @@
 #### :bug: Bug fix
 
 - Fix directive `@warning("-102")` not working. https://github.com/rescript-lang/rescript/pull/8322
+- Fix duplicated comments in `for`..`of` formatter. https://github.com/rescript-lang/rescript/pull/8395
 
 #### :memo: Documentation
 
 #### :nail_care: Polish
 
 - Improve default argument type mismatch errors. https://github.com/rescript-lang/rescript/pull/8389
+- Resolve workspace dependencies in editor analysis. https://github.com/rescript-lang/rescript/pull/8392
+- Build system: Add OpenTelemetry tracing support for cli commands. https://github.com/rescript-lang/rescript/pull/8370
+- Use a single vendored @rescript/react package across the repo. https://github.com/rescript-lang/rescript/pull/7525
+- Improve deprecated attribute extraction and support record form. https://github.com/rescript-lang/rescript/pull/8396
 
 #### :house: Internal
+
+- Remove `Primitive_option.toUndefined`; use `valFromOption` for optional ffi args. https://github.com/rescript-lang/rescript/pull/8380
 
 # 13.0.0-alpha.4
 

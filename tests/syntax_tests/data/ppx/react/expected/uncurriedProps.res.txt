@@ -12,11 +12,11 @@ let make = ({a: ?__a, _}: props<unit => unit>) => {
   let a: unit => unit = __a_value
   (React.null: React.element)
 }
-let make = {
+let make = React.component({
   let \"UncurriedProps" = (props: props<_>) => make(props)
 
   \"UncurriedProps"
-}
+})
 
 let func = (~callback: (string, bool, bool) => unit=(_, _, _) => (), ()) => {
   let _ = callback
@@ -46,11 +46,11 @@ module Foo = {
       }: React.element
     )
   }
-  let make = {
+  let make = React.component({
     let \"UncurriedProps$Foo" = (props: props<_>) => make(props)
 
     \"UncurriedProps$Foo"
-  }
+  })
 }
 
 module Bar = {
@@ -59,11 +59,11 @@ module Bar = {
 
   let make = (_: props): React.element =>
     React.jsx(@res.jsxComponentPath Foo.make, {callback: {(_, _, _) => ()}})
-  let make = {
+  let make = React.component({
     let \"UncurriedProps$Bar" = props => make(props)
 
     \"UncurriedProps$Bar"
-  }
+  })
 }
 @warning("-32") let \"UncurriedProps$Foo" = Foo.make
 @warning("-32") let \"UncurriedProps$Bar" = Bar.make

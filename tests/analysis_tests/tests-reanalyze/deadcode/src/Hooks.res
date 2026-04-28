@@ -11,11 +11,14 @@ let make = (~vehicle) => {
       )}
     </p>
     <button onClick={_ => setCount(_ => count + 1)}> {React.string("Click me")} </button>
-    <ImportHooks person={name: "Mary", age: 71} renderMe={x => React.string(x["randomString"])}>
+    <ImportHooks
+      person={name: "Mary", age: 71}
+      renderMe={React.component(x => React.string(x["randomString"]))}>
       {React.string("child1")} {React.string("child2")}
     </ImportHooks>
     <ImportHookDefault
-      person={name: "DefaultImport", age: 42} renderMe={x => React.string(x["randomString"])}>
+      person={name: "DefaultImport", age: 42}
+      renderMe={React.component(x => React.string(x["randomString"]))}>
       {React.string("child1")} {React.string("child2")}
     </ImportHookDefault>
   </div>

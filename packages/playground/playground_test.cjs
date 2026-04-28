@@ -29,6 +29,7 @@ const result = compiler.rescript.compile(`
   module B = {
     type props = { a: string }
 
+    @react.componentWithProps
     let make = ({a}) => {
       <A a/>
     }

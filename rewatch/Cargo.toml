@@ -12,7 +12,12 @@ clap = { version = "4.3", features = ["derive"] }
 clap-verbosity-flag = "2.2"
 console = "0.15.5"
 convert_case = "0.6.0"
-ctrlc = "3.4.4"
+# The "termination" feature extends ctrlc's handler to also catch SIGTERM and
+# SIGHUP (not just SIGINT). This is required so the telemetry guard's Drop
+# runs on those signals and buffered OTLP spans get flushed before exit.
+# Without it, `kill <pid>` or a container/systemd stop would silently drop
+# the last batch of traces.
+ctrlc = { version = "3.4.4", features = ["termination"] }
 env_logger = "0.10"
 futures = "0.3.25"
 futures-timer = "3.0.2"
@@ -29,6 +34,20 @@ serde_path_to_error = "0.1.16"
 sysinfo = "0.29.10"
 tempfile = "3.10.1"
 
+# OpenTelemetry for tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-opentelemetry = "0.32"
+opentelemetry = "0.31"
+opentelemetry_sdk = "0.31"
+# default-features disabled to skip metrics/logs support and the internal-logs
+# feature we don't need. We only use HTTP/protobuf trace export via blocking
+# reqwest — no Tokio runtime required.
+opentelemetry-otlp = { version = "0.31", default-features = false, features = [
+    "http-proto",
+    "reqwest-blocking-client",
+    "trace",
+] }
 
 [profile.release]
 codegen-units = 1

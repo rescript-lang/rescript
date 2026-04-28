@@ -10,11 +10,11 @@ module C0 = {
     let a = await f(a)
     (ReactDOM.jsx("div", {children: ?ReactDOM.someElement({React.int(a)})}): React.element)
   }
-  let make = {
+  let make = React.component({
     let \"AsyncAwait$C0" = (props: props<_>) => Jsx.promise(make(props))
 
     \"AsyncAwait$C0"
-  }
+  })
 }
 
 module C1 = {
@@ -29,11 +29,11 @@ module C1 = {
     | #off => React.string("off")
     }
   }
-  let make = {
+  let make = React.component({
     let \"AsyncAwait$C1" = (props: props<_>) => Jsx.promise(make(props))
 
     \"AsyncAwait$C1"
-  }
+  })
 }
 @warning("-32") let \"AsyncAwait$C0" = C0.make
 @warning("-32") let \"AsyncAwait$C1" = C1.make

@@ -9,11 +9,11 @@ module C4A0 = {
 
   let make = ({@as("open") _open, @as("type") _type, _}: props<_, string>): React.element =>
     React.string(_open)
-  let make = {
+  let make = React.component({
     let \"MangleKeyword$C4A0" = (props: props<_>) => make(props)
 
     \"MangleKeyword$C4A0"
-  }
+  })
 }
 module C4A1 = {
   @res.jsxComponentProps @live

@@ -1,0 +1,1 @@
+let valueFromDependency = 1

@@ -31,6 +31,7 @@
   addTypeReference _none_:1:-1 --> ComponentAsProp.res:6:12
   addTypeReference _none_:1:-1 --> ComponentAsProp.res:6:20
   addTypeReference _none_:1:-1 --> ComponentAsProp.res:6:34
+  addValueReference ComponentAsProp.res:6:4 --> React.res:16:0
   Scanning CreateErrorHandler1.cmt Source:CreateErrorHandler1.res
   addValueDeclaration +notification CreateErrorHandler1.res:3:6 path:+CreateErrorHandler1.Error1
   addValueReference CreateErrorHandler1.res:3:6 --> CreateErrorHandler1.res:3:21
@@ -156,6 +157,7 @@
   addValueReference DeadTest.res:117:32 --> DeadTest.res:117:12
   addValueReference DeadTest.res:117:19 --> React.res:7:0
   addTypeReference _none_:1:-1 --> DeadTest.res:117:12
+  addValueReference DeadTest.res:117:4 --> React.res:16:0
   addValueReference DeadTest.res:119:16 --> DeadTest.res:117:4
   addVariantCaseDeclaration A DeadTest.res:140:11 path:+DeadTest.WithInclude.t
   addVariantCaseDeclaration A DeadTest.res:143:13 path:+DeadTest.WithInclude.T.t
@@ -297,8 +299,10 @@
   addValueReference DynamicallyLoadedComponent.res:2:32 --> DynamicallyLoadedComponent.res:2:12
   addValueReference DynamicallyLoadedComponent.res:2:19 --> React.res:7:0
   addTypeReference _none_:1:-1 --> DynamicallyLoadedComponent.res:2:12
+  addValueReference DynamicallyLoadedComponent.res:2:4 --> React.res:16:0
   Scanning EmptyArray.cmt Source:EmptyArray.res
   addValueDeclaration +make EmptyArray.res:5:6 path:+EmptyArray.Z
+  addValueReference EmptyArray.res:5:6 --> React.res:16:0
   addValueReference EmptyArray.res:10:9 --> EmptyArray.res:5:6
   Scanning ErrorHandler.cmt Source:ErrorHandler.res
   addValueDeclaration +notify ErrorHandler.res:7:6 path:+ErrorHandler.Make
@@ -364,12 +368,12 @@
   addValueReference ForOf.res:10:4 --> ForOf.res:8:0
   Scanning Hooks.cmt Source:Hooks.res
   addValueDeclaration +make Hooks.res:4:4 path:+Hooks
-  addValueDeclaration +default Hooks.res:25:4 path:+Hooks
-  addValueDeclaration +make Hooks.res:29:6 path:+Hooks.Inner
-  addValueDeclaration +make Hooks.res:33:8 path:+Hooks.Inner.Inner2
-  addValueDeclaration +make Hooks.res:39:6 path:+Hooks.NoProps
-  addValueDeclaration +functionWithRenamedArgs Hooks.res:45:4 path:+Hooks
-  addValueDeclaration +make Hooks.res:63:6 path:+Hooks.RenderPropRequiresConversion
+  addValueDeclaration +default Hooks.res:28:4 path:+Hooks
+  addValueDeclaration +make Hooks.res:32:6 path:+Hooks.Inner
+  addValueDeclaration +make Hooks.res:36:8 path:+Hooks.Inner.Inner2
+  addValueDeclaration +make Hooks.res:42:6 path:+Hooks.NoProps
+  addValueDeclaration +functionWithRenamedArgs Hooks.res:48:4 path:+Hooks
+  addValueDeclaration +make Hooks.res:66:6 path:+Hooks.RenderPropRequiresConversion
   addRecordLabelDeclaration name Hooks.res:1:16 path:+Hooks.vehicle
   addRecordLabelDeclaration vehicle Hooks.res:4:12 path:+Hooks.props
   addValueReference Hooks.res:5:26 --> React.res:134:0
@@ -386,52 +390,59 @@
   addValueReference Hooks.res:13:40 --> Hooks.res:5:7
   addValueReference Hooks.res:13:26 --> Hooks.res:5:14
   addValueReference Hooks.res:14:5 --> ImportHooks.res:13:0
-  addValueReference Hooks.res:15:7 --> React.res:7:0
-  addValueReference Hooks.res:15:32 --> React.res:7:0
-  addValueReference Hooks.res:14:76 --> Hooks.res:14:57
-  addValueReference Hooks.res:14:63 --> React.res:7:0
-  addValueReference Hooks.res:17:5 --> ImportHookDefault.res:6:0
-  addValueReference Hooks.res:19:7 --> React.res:7:0
-  addValueReference Hooks.res:19:32 --> React.res:7:0
-  addValueReference Hooks.res:18:74 --> Hooks.res:18:55
-  addValueReference Hooks.res:18:61 --> React.res:7:0
+  addValueReference Hooks.res:17:7 --> React.res:7:0
+  addValueReference Hooks.res:17:32 --> React.res:7:0
+  addValueReference Hooks.res:16:50 --> Hooks.res:16:32
+  addValueReference Hooks.res:16:37 --> React.res:7:0
+  addValueReference Hooks.res:16:16 --> React.res:16:0
+  addValueReference Hooks.res:19:5 --> ImportHookDefault.res:6:0
+  addValueReference Hooks.res:22:7 --> React.res:7:0
+  addValueReference Hooks.res:22:32 --> React.res:7:0
+  addValueReference Hooks.res:21:50 --> Hooks.res:21:32
+  addValueReference Hooks.res:21:37 --> React.res:7:0
+  addValueReference Hooks.res:21:16 --> React.res:16:0
   addTypeReference _none_:1:-1 --> Hooks.res:4:12
-  addValueReference Hooks.res:25:4 --> Hooks.res:4:4
-  addRecordLabelDeclaration vehicle Hooks.res:29:14 path:+Hooks.Inner.props
-  addRecordLabelDeclaration vehicle Hooks.res:33:16 path:+Hooks.Inner.Inner2.props
-  addRecordLabelDeclaration vehicle Hooks.res:29:14 path:+Hooks.Inner.props
-  addTypeReference Hooks.res:29:66 --> Hooks.res:1:16
-  addValueReference Hooks.res:29:66 --> Hooks.res:29:14
-  addValueReference Hooks.res:29:34 --> React.res:7:0
-  addTypeReference Hooks.res:29:66 --> Hooks.res:1:16
-  addValueReference Hooks.res:29:66 --> Hooks.res:29:14
-  addValueReference Hooks.res:29:34 --> React.res:7:0
-  addTypeReference _none_:1:-1 --> Hooks.res:29:14
-  addRecordLabelDeclaration vehicle Hooks.res:33:16 path:+Hooks.Inner.Inner2.props
-  addRecordLabelDeclaration vehicle Hooks.res:33:16 path:+Hooks.Inner.Inner2.props
-  addTypeReference Hooks.res:33:68 --> Hooks.res:1:16
-  addValueReference Hooks.res:33:68 --> Hooks.res:33:16
-  addValueReference Hooks.res:33:36 --> React.res:7:0
-  addTypeReference Hooks.res:33:68 --> Hooks.res:1:16
-  addValueReference Hooks.res:33:68 --> Hooks.res:33:16
-  addValueReference Hooks.res:33:36 --> React.res:7:0
-  addTypeReference _none_:1:-1 --> Hooks.res:33:16
-  addValueReference Hooks.res:39:25 --> React.res:3:0
-  addValueReference Hooks.res:39:25 --> React.res:3:0
-  addTypeReference Hooks.res:47:2 --> Hooks.res:1:16
-  addValueReference Hooks.res:45:4 --> Hooks.res:45:31
-  addTypeReference Hooks.res:47:14 --> Hooks.res:1:16
-  addValueReference Hooks.res:45:4 --> Hooks.res:45:37
-  addValueReference Hooks.res:45:4 --> Hooks.res:45:31
-  addValueReference Hooks.res:45:4 --> Hooks.res:45:45
-  addRecordLabelDeclaration x Hooks.res:50:10 path:+Hooks.r
-  addRecordLabelDeclaration renderVehicle Hooks.res:63:14 path:+Hooks.RenderPropRequiresConversion.props
-  addRecordLabelDeclaration renderVehicle Hooks.res:63:14 path:+Hooks.RenderPropRequiresConversion.props
-  addValueDeclaration +car Hooks.res:64:8 path:+Hooks.RenderPropRequiresConversion
-  addValueReference Hooks.res:65:30 --> Hooks.res:64:8
-  addValueReference Hooks.res:65:18 --> Hooks.res:65:18
-  addValueReference Hooks.res:65:4 --> Hooks.res:63:14
-  addTypeReference _none_:1:-1 --> Hooks.res:63:14
+  addValueReference Hooks.res:4:4 --> React.res:16:0
+  addValueReference Hooks.res:28:4 --> Hooks.res:4:4
+  addRecordLabelDeclaration vehicle Hooks.res:32:14 path:+Hooks.Inner.props
+  addRecordLabelDeclaration vehicle Hooks.res:36:16 path:+Hooks.Inner.Inner2.props
+  addRecordLabelDeclaration vehicle Hooks.res:32:14 path:+Hooks.Inner.props
+  addTypeReference Hooks.res:32:66 --> Hooks.res:1:16
+  addValueReference Hooks.res:32:66 --> Hooks.res:32:14
+  addValueReference Hooks.res:32:34 --> React.res:7:0
+  addTypeReference Hooks.res:32:66 --> Hooks.res:1:16
+  addValueReference Hooks.res:32:66 --> Hooks.res:32:14
+  addValueReference Hooks.res:32:34 --> React.res:7:0
+  addTypeReference _none_:1:-1 --> Hooks.res:32:14
+  addValueReference Hooks.res:32:6 --> React.res:16:0
+  addRecordLabelDeclaration vehicle Hooks.res:36:16 path:+Hooks.Inner.Inner2.props
+  addRecordLabelDeclaration vehicle Hooks.res:36:16 path:+Hooks.Inner.Inner2.props
+  addTypeReference Hooks.res:36:68 --> Hooks.res:1:16
+  addValueReference Hooks.res:36:68 --> Hooks.res:36:16
+  addValueReference Hooks.res:36:36 --> React.res:7:0
+  addTypeReference Hooks.res:36:68 --> Hooks.res:1:16
+  addValueReference Hooks.res:36:68 --> Hooks.res:36:16
+  addValueReference Hooks.res:36:36 --> React.res:7:0
+  addTypeReference _none_:1:-1 --> Hooks.res:36:16
+  addValueReference Hooks.res:36:8 --> React.res:16:0
+  addValueReference Hooks.res:42:25 --> React.res:3:0
+  addValueReference Hooks.res:42:25 --> React.res:3:0
+  addValueReference Hooks.res:42:6 --> React.res:16:0
+  addTypeReference Hooks.res:50:2 --> Hooks.res:1:16
+  addValueReference Hooks.res:48:4 --> Hooks.res:48:31
+  addTypeReference Hooks.res:50:14 --> Hooks.res:1:16
+  addValueReference Hooks.res:48:4 --> Hooks.res:48:37
+  addValueReference Hooks.res:48:4 --> Hooks.res:48:31
+  addValueReference Hooks.res:48:4 --> Hooks.res:48:45
+  addRecordLabelDeclaration x Hooks.res:53:10 path:+Hooks.r
+  addRecordLabelDeclaration renderVehicle Hooks.res:66:14 path:+Hooks.RenderPropRequiresConversion.props
+  addRecordLabelDeclaration renderVehicle Hooks.res:66:14 path:+Hooks.RenderPropRequiresConversion.props
+  addValueDeclaration +car Hooks.res:67:8 path:+Hooks.RenderPropRequiresConversion
+  addValueReference Hooks.res:68:30 --> Hooks.res:67:8
+  addValueReference Hooks.res:68:18 --> Hooks.res:68:18
+  addValueReference Hooks.res:68:4 --> Hooks.res:66:14
+  addTypeReference _none_:1:-1 --> Hooks.res:66:14
+  addValueReference Hooks.res:66:6 --> React.res:16:0
   Scanning IgnoreInterface.cmt Source:IgnoreInterface.res
   Scanning IgnoreInterface.cmti Source:IgnoreInterface.resi
   Scanning ImmutableArray.cmt Source:ImmutableArray.res
@@ -955,6 +966,7 @@
   Scanning JsxV4.cmt Source:JsxV4.res
   addValueDeclaration +make JsxV4.res:4:23 path:+JsxV4.C
   addValueReference JsxV4.res:4:36 --> React.res:3:0
+  addValueReference JsxV4.res:4:23 --> React.res:16:0
   addValueReference JsxV4.res:7:9 --> JsxV4.res:4:23
   Scanning LetPrivate.cmt Source:LetPrivate.res
   addValueDeclaration +y LetPrivate.res:7:4 path:+LetPrivate
@@ -1938,10 +1950,9 @@
 Forward Liveness Analysis
 
     decls: 698
-    roots(external targets): 134
-    decl-deps: decls_with_out=409 edges_to_decls=287
+    roots(external targets): 135
+    decl-deps: decls_with_out=410 edges_to_decls=287
 
-    Root (annotated): Value +Hooks.+default
     Root (external ref): Value +FirstClassModules.M.InnerModule2.+k
     Root (external ref): VariantCase DeadRT.moduleAccessPath.Root
     Root (external ref): Value +TypeReexport.VariantUseOriginal.+value
@@ -1965,7 +1976,6 @@ Forward Liveness Analysis
     Root (annotated): Value +TypeParams3.+test
     Root (annotated): Value +Variants.+sunday
     Root (annotated): Value +NestedModules.Universe.Nested2.Nested3.+nested3Value
-    Root (annotated): Value +Hooks.+functionWithRenamedArgs
     Root (external ref): RecordLabel +Unison.t.doc
     Root (annotated): Value +Tuples.+computeAreaWithIdent
     Root (annotated): Value +LetPrivate.+y
@@ -1978,7 +1988,6 @@ Forward Liveness Analysis
     Root (external ref): Value +Newton.+f
     Root (external ref): RecordLabel +Records.record.v
     Root (external ref): VariantCase +DeadTest.VariantUsedOnlyInImplementation.t.A
-    Root (external ref): Value +Hooks.RenderPropRequiresConversion.+car
     Root (external ref): RecordLabel +Records.person.address
     Root (annotated): Value +Variants.+testConvert2
     Root (annotated): Value +Tuples.+coord2d
@@ -2004,22 +2013,22 @@ Forward Liveness Analysis
     Root (annotated): Value +ImportJsValue.+default
     Root (annotated): Value +VariantsWithPayload.+testVariant1Int
     Root (external ref): Value +DynamicallyLoadedComponent.+make
+    Root (annotated): Value +Hooks.RenderPropRequiresConversion.+make
     Root (annotated): Value +Uncurried.+uncurried2
     Root (annotated): Value +UseImportJsValue.+useTypeImportedInOtherModule
-    Root (annotated): Value +Hooks.NoProps.+make
+    Root (annotated): Value +Hooks.Inner.+make
     Root (external ref): Value +OptArg.+foo
     Root (annotated): Value +Variants.+fortytwoOK
     Root (external ref): Value OptArg.+bar
     Root (annotated): Value +Records.+payloadValue
     Root (external ref): RecordLabel +DeadTest.props.s
+    Root (annotated): Value +Hooks.+default
     Root (external ref): VariantCase +Unison.break_.Never
     Root (annotated): Value +TestEmitInnerModules.Inner.+y
     Root (external ref): VariantCase InnerModuleTypes.I.t.Foo
     Root (annotated): Value +Types.+selfRecursiveConverter
     Root (external ref): Value +DeadTest.+thisIsUsedTwice
     Root (annotated): Value +Opaque.+testConvertNestedRecordFromOtherFile
-    Root (annotated): Value +Hooks.Inner.Inner2.+make
-    Root (external ref): RecordLabel +Hooks.Inner.Inner2.props.vehicle
     Root (external ref): Value +OptArg.+bar
     Root (annotated): Value +TestFirstClassModules.+convertRecord
     Root (external ref): VariantCase DeadTypeTest.deadType.OnlyInInterface
@@ -2036,6 +2045,7 @@ Forward Liveness Analysis
     Root (external ref): Value +DeadTest.+deadIncorrect
     Root (external ref): RecordLabel +TypeReexport.UseReexported.reexportedType.usedField
     Root (annotated): Value +Docstrings.+signMessage
+    Root (external ref): RecordLabel +Hooks.Inner.Inner2.props.vehicle
     Root (external ref): Value +DeadExn.+eInside
     Root (external ref): RecordLabel +ComponentAsProp.props.button
     Root (annotated): Value +ImportJsValue.+returnedFromHigherOrder
@@ -2059,6 +2069,7 @@ Forward Liveness Analysis
     Root (annotated): Value +References.+get
     Root (annotated): Value +ModuleAliases.+testNested
     Root (external ref): Value +FirstClassModules.SomeFunctor.+ww
+    Root (annotated): Value +Hooks.Inner.Inner2.+make
     Root (annotated): Value +ImportJsValue.+area
     Root (annotated): Value +Records.+testMyRec
     Root (annotated): Value +DeadTest.GloobLive.+globallyLive3
@@ -2075,13 +2086,13 @@ Forward Liveness Analysis
     Root (annotated): Value +ScopedAnnotationsLiveVsDead.LiveScope.+root
     Root (external ref): Value +Newton.+result
     Root (annotated): Value +Records.+findAllAddresses
+    Root (annotated): Value +Hooks.NoProps.+make
     Root (annotated): Value +ImportJsValue.+useGetProp
     Root (annotated): Value +Variants.+id2
     Root (annotated): Value +Uncurried.+sumU
     Root (external ref): Value +TestOptArg.+bar
     Root (external ref): RecordLabel +DeadTest.record.yyy
     Root (annotated): Value +Docstrings.+one
-    Root (annotated): Value +Hooks.Inner.+make
     Root (external ref): Value +OptArg.+twoArgs
     Root (annotated): Value +OcamlWarningSuppressToplevel.+suppressed1
     Root (external ref): RecordLabel +Records.business2.address2
@@ -2102,7 +2113,6 @@ Forward Liveness Analysis
     Root (annotated): Value +TestImmutableArray.+testImmutableArrayGet
     Root (external ref): Value +TypeReexport.UseOriginal.+value
     Root (annotated): Value +Docstrings.+unnamed2
-    Root (annotated): Value +Hooks.RenderPropRequiresConversion.+make
     Root (annotated): Value +LetPrivate.local_1.+x
     Root (annotated): Value +TestImport.+make
     Root (annotated): Value +DeadTest.GloobLive.+globallyLive1
@@ -2180,6 +2190,7 @@ Forward Liveness Analysis
     Root (annotated): Value +Variants.+fortytwoBAD
     Root (external ref): Value +DeadTest.+thisIsUsedOnce
     Root (external ref): RecordLabel +Unison.t.break_
+    Root (external ref): RecordLabel +Hooks.Inner.props.vehicle
     Root (external ref): Value ImmutableArray.+fromArray
     Root (external ref): Value +RepeatedLabel.+userData
     Root (annotated): Value +Variants.+testConvert2to3
@@ -2201,7 +2212,7 @@ Forward Liveness Analysis
     Root (annotated): Value +ModuleAliases.+testInner2
     Root (annotated): RecordLabel +ImportHooks.props.person
     Root (external ref): Value DeadValueTest.+valueAlive
-    Root (external ref): RecordLabel +Hooks.Inner.props.vehicle
+    Root (external ref): RecordLabel +Hooks.RenderPropRequiresConversion.props.renderVehicle
     Root (annotated): Value +Shadow.M.+test
     Root (annotated): Value +ComponentAsProp.+make
     Root (annotated): Value +Records.+testMyRec2
@@ -2226,6 +2237,7 @@ Forward Liveness Analysis
     Root (external ref): VariantCase +TypeReexport.VariantUseOriginal.reexportedType.A
     Root (annotated): Value +Variants.+polyWithOpt
     Root (annotated): Value +References.+destroysRefIdentity
+    Root (external ref): Value +Hooks.RenderPropRequiresConversion.+car
     Root (external ref): Value +FirstClassModules.M.+x
     Root (external ref): Value +TypeReexportCrossFileB.+recordValue
     Root (annotated): Value +Records.+computeArea4
@@ -2262,11 +2274,10 @@ Forward Liveness Analysis
     Root (annotated): Value +Tuples.+computeAreaNoConverters
     Root (annotated): Value +Types.+mutuallyRecursiveConverter
     Root (annotated): Value +UseImportJsValue.+useGetProp
-    Root (external ref): RecordLabel +Hooks.RenderPropRequiresConversion.props.renderVehicle
+    Root (annotated): Value +Hooks.+functionWithRenamedArgs
   
   322 roots found
 
-    Propagate: +Hooks.+default -> +Hooks.+make
     Propagate: DeadRT.moduleAccessPath.Root -> +DeadRT.moduleAccessPath.Root
     Propagate: +TypeReexportCrossFileB.reexportedRecord.usedField -> +TypeReexportCrossFileA.originalRecord.usedField
     Propagate: +DeadTypeTest.deadType.OnlyInImplementation -> DeadTypeTest.deadType.OnlyInImplementation
@@ -2277,6 +2288,7 @@ Forward Liveness Analysis
     Propagate: +DeadTest.VariantUsedOnlyInImplementation.t.A -> +DeadTest.VariantUsedOnlyInImplementation.t.A
     Propagate: +DeadTest.+thisIsMarkedLive -> +DeadTest.+thisIsKeptAlive
     Propagate: +TypeReexport.UseOriginal.reexportedType.directlyUsed -> +TypeReexport.UseOriginal.originalType.directlyUsed
+    Propagate: +Hooks.+default -> +Hooks.+make
     Propagate: InnerModuleTypes.I.t.Foo -> +InnerModuleTypes.I.t.Foo
     Propagate: DeadTypeTest.deadType.OnlyInInterface -> +DeadTypeTest.deadType.OnlyInInterface
     Propagate: +TypeReexport.UseReexported.reexportedType.usedField -> +TypeReexport.UseReexported.originalType.usedField
@@ -4239,7 +4251,7 @@ Forward Liveness Analysis
   sideEffects is never used and could have side effects
 
   Warning Dead Type
-  Hooks.res:50:11-19
+  Hooks.res:53:11-19
   r.x is a record label never used to read a value
 
   Warning Dead Value

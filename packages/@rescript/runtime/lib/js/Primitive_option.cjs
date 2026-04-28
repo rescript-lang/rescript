@@ -57,14 +57,6 @@ function valFromOption(x) {
   }
 }
 
-function toUndefined(x) {
-  if (x === undefined) {
-    return;
-  } else {
-    return valFromOption(x);
-  }
-}
-
 function unwrapPolyVar(x) {
   if (x !== undefined) {
     return x.VAL;
@@ -79,6 +71,5 @@ exports.fromNull = fromNull;
 exports.valFromOption = valFromOption;
 exports.some = some;
 exports.isNested = isNested;
-exports.toUndefined = toUndefined;
 exports.unwrapPolyVar = unwrapPolyVar;
 /* No side effect */
