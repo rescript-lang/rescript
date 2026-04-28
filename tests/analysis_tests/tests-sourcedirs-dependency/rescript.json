@@ -1,0 +1,12 @@
+{
+  "name": "@tests/sourcedirs-dependency",
+  "sources": [
+    {
+      "dir": "src",
+      "subdirs": true
+    }
+  ],
+  "dependencies": ["@tests/sourcedirs-dependency-lib"],
+  "package-specs": [{ "module": "commonjs", "in-source": false }],
+  "suffix": ".res.js"
+}
