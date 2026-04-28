@@ -10,3 +10,5 @@ module InnerModule = {
 }
 
 // ^dex
+
+let log = msg => Js.log(msg)
