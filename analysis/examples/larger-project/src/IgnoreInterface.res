@@ -1,2 +1,0 @@
-@gentype
-type t = int
