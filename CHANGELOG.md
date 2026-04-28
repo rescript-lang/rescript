@@ -30,6 +30,7 @@
 #### :nail_care: Polish
 
 - Improve default argument type mismatch errors. https://github.com/rescript-lang/rescript/pull/8389
+- Improve deprecated attribute extraction and support record form. https://github.com/rescript-lang/rescript/pull/8396
 
 #### :house: Internal
 
