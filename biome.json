@@ -61,7 +61,6 @@
       "**/tests/gentype_tests/typescript-react-example/**",
       "!**/tests/tests/**/src",
       "!**/tests/tools_tests/**/src",
-      "!**/analysis/examples/**/src",
       "!**/rewatch",
       "!**/lib/es6",
       "!**/lib/js",
