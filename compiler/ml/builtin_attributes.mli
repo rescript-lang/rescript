@@ -93,5 +93,7 @@ val explicit_arity : Parsetree.attributes -> bool
 
 val immediate : Parsetree.attributes -> bool
 
+val has_allow_mutation : Parsetree.attributes -> bool
+
 val has_unboxed : Parsetree.attributes -> bool
 val has_boxed : Parsetree.attributes -> bool

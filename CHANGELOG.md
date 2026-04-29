@@ -56,6 +56,7 @@
 - Rewatch: feature-gated source directories. Tag a source entry with `"feature": "<name>"` and select with `--features a,b` (or per-dep in `dependencies` / `dev-dependencies`) to include optional slices of a package's source tree at build time. Top-level `features` map supports transitive implications. https://github.com/rescript-lang/rescript/pull/8379
 - Rewatch: improve watch output and add `--clear-screen` option. https://github.com/rescript-lang/rescript/pull/8373
 - Add `Dict.assignMany`, `Dict.concat`, `Dict.concatMany`, `Dict.concatAll`, `Array.concatAll` to the stdlib. https://github.com/rescript-lang/rescript/pull/8364
+- Allow mutation of private record fields with @allowMutation https://github.com/rescript-lang/rescript/pull/8366
 
 #### :bug: Bug fix
 
