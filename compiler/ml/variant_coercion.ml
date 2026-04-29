@@ -46,7 +46,9 @@ let variant_has_same_runtime_representation_as_target ~(target_path : Path.t)
   (* Helper function to check if a constructor has the same runtime representation as the target type *)
   let has_same_runtime_representation (c : Types.constructor_declaration) =
     let args = c.cd_args in
-    let as_payload = Ast_untagged_variants.process_tag_type c.cd_attributes in
+    let as_payload =
+      Ast_untagged_variants.process_constructor_tag_type c.cd_attributes
+    in
 
     match args with
     | Cstr_tuple [{desc = Tconstr (p, [], _)}] when unboxed ->
@@ -152,11 +154,20 @@ let can_try_coerce_variant_to_primitive_opt p =
 let variant_representation_matches (c1_attrs : Parsetree.attributes)
     (c2_attrs : Parsetree.attributes) =
   match
-    ( Ast_untagged_variants.process_tag_type c1_attrs,
-      Ast_untagged_variants.process_tag_type c2_attrs )
+    ( Ast_untagged_variants.constructor_runtime_representation c1_attrs,
+      Ast_untagged_variants.constructor_runtime_representation c2_attrs )
   with
-  | None, None -> true
-  | Some s1, Some s2 when s1 = s2 -> true
+  | ( Ast_untagged_variants.Constructor_primitive_catchall p1,
+      Ast_untagged_variants.Constructor_primitive_catchall p2 )
+    when p1 = p2 ->
+    true
+  | ( Ast_untagged_variants.Constructor_tag None,
+      Ast_untagged_variants.Constructor_tag None ) ->
+    true
+  | ( Ast_untagged_variants.Constructor_tag (Some s1),
+      Ast_untagged_variants.Constructor_tag (Some s2) )
+    when s1 = s2 ->
+    true
   | _ -> false
 
 type variant_configuration_error =
@@ -264,15 +275,18 @@ let can_coerce_polyvariant_to_variant ~row_fields ~variant_constructors
           |> List.exists (fun (c : Types.constructor_declaration) ->
                  let constructor_name = Ident.name c.cd_id in
                  match
-                   Ast_untagged_variants.process_tag_type c.cd_attributes
+                   Ast_untagged_variants.constructor_runtime_representation
+                     c.cd_attributes
                  with
-                 | Some (String as_runtime_string) ->
+                 | Ast_untagged_variants.Constructor_tag
+                     (Some (String as_runtime_string)) ->
                    (* `@as("")`, does the configured string match the polyvariant value? *)
                    as_runtime_string = polyvariant_value
-                 | Some _ ->
+                 | Ast_untagged_variants.Constructor_tag (Some _)
+                 | Ast_untagged_variants.Constructor_primitive_catchall _ ->
                    (* Any other `@as` can't match since it's by definition not a string *)
                    false
-                 | None -> (
+                 | Ast_untagged_variants.Constructor_tag None -> (
                    (* No `@as` means the runtime representation will be the constructor
                       name as a string.
 

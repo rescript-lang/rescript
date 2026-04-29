@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/primitive_catchall_missing_tag_annotation.res[0m:[2m3:3-52[0m
+
+  1 [2m│[0m type t =
+  2 [2m│[0m   | @as("one") One({thing: string})
+  [1;31m3[0m [2m│[0m   [1;31m| @catch(string) Other({kind: string, thing: int})[0m
+  4 [2m│[0m 
+
+  Primitive catch-all @catch(int|float|string) requires an explicit @tag("...") annotation on the variant type
