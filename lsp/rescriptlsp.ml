@@ -44,14 +44,9 @@ module Chan : sig
   type input
   type output
 
-  (* eio *)
-  (* val of_source : 'a Eio.Flow.source -> input *)
-  (* val with_sink : 'a Eio.Flow.sink -> (output -> 'a) -> 'a *)
   val of_source : [> Eio__Flow.source_ty] Eio.Resource.t -> input
-  val with_sink :
-    [> Eio__Flow.sink_ty] Eio.Resource.t -> (output -> output) -> output
+  val with_sink : [> Eio__Flow.sink_ty] Eio.Resource.t -> (output -> 'a) -> 'a
 
-  (* lsp *)
   val read_line : input -> string option Io.t
   val read_exactly : input -> int -> string option Io.t
   val write : output -> string list -> unit Io.t
@@ -59,7 +54,6 @@ end = struct
   type input = {mutex: Eio.Mutex.t; buf: Eio.Buf_read.t}
   type output = {mutex: Eio.Mutex.t; buf: Eio.Buf_write.t}
 
-  (* TODO: magic numbers *)
   let initial_size = 1024
   let max_size = 1024 * 1024
 
@@ -68,31 +62,32 @@ end = struct
     let buf = Eio.Buf_read.of_flow ~initial_size ~max_size source in
     {mutex; buf}
 
-  let with_sink sink f : output =
+  let with_sink sink f =
     let mutex = Eio.Mutex.create () in
-    Eio.Buf_write.with_flow ~initial_size sink @@ fun buf -> f @@ {mutex; buf}
+    Eio.Buf_write.with_flow ~initial_size sink @@ fun buf -> f {mutex; buf}
 
   let read_line (input : input) =
-    (* let { mutex; buf } = input in *)
     Io.async @@ fun ~sw:_ ->
-    (* TODO: what this protect does? *)
     Eio.Mutex.use_rw ~protect:true input.mutex @@ fun () ->
-    match Eio.Buf_read.eof_seen input.buf with
-    | true -> Ok None
-    | false -> Ok (Some (Eio.Buf_read.line input.buf))
+    if Eio.Buf_read.eof_seen input.buf then Ok None
+    else
+      match Eio.Buf_read.line input.buf with
+      | line -> Ok (Some line)
+      | exception End_of_file -> Ok None
 
   let read_exactly (input : input) size =
     Io.async @@ fun ~sw:_ ->
     Eio.Mutex.use_rw ~protect:true input.mutex @@ fun () ->
-    match Eio.Buf_read.eof_seen input.buf with
-    | true -> Ok None
-    | false -> Ok (Some (Eio.Buf_read.take size input.buf))
+    if Eio.Buf_read.eof_seen input.buf then Ok None
+    else
+      match Eio.Buf_read.take size input.buf with
+      | data -> Ok (Some data)
+      | exception End_of_file -> Ok None
 
   let write (output : output) (str : string list) =
     Io.async @@ fun ~sw:_ ->
     Eio.Mutex.use_rw ~protect:true output.mutex @@ fun () ->
-    (* TODO(@aspeddro): Remove List.hd? *)
-    Ok (Eio.Buf_write.string output.buf (List.hd str))
+    Ok (List.iter (Eio.Buf_write.string output.buf) str)
 end
 
 module Lsp_Io = Lsp.Io.Make (Io) (Chan)
@@ -107,75 +102,39 @@ let notification_of_jsonrpc notification =
   | Ok notification -> notification
   | Error error -> raise (Lsp.Io.Error error)
 
-type channel = Chan.output
-
-type on_request = {
-  f:
-    'response.
-    channel ->
-    'response Lsp.Client_request.t ->
-    ('response, Jsonrpc.Response.Error.t) result;
-}
-
-let notify channel notification =
-  (* TODO: fork here *)
-  (* TODO: buffering and async? *)
-  let notification = Lsp.Server_notification.to_jsonrpc notification in
-  Io.await @@ Lsp_Io.write channel @@ Notification notification
-
 let respond channel response =
   Io.await @@ Lsp_Io.write channel @@ Response response
 
-let rec input_loop ~input ~output with_ =
-  (* TODO: buffering and async handling *)
+let rec input_loop ~input with_ =
   match Io.await @@ Lsp_Io.read input with
   | Some packet ->
     let () = with_ packet in
-    input_loop ~input ~output with_
-  | exception exn -> (* TODO: handle this exception *) raise exn
-  | None ->
-    (* TODO: this means EOF right? *)
-    ()
+    input_loop ~input with_
+  | exception exn -> raise exn
+  | None -> ()
 
 let listen ~input ~output ~on_request ~on_notification =
-  let on_request channel request =
-    (* TODO: error handling *)
-    let result =
-      let (E request) = request_of_jsonrpc request in
-      match on_request.f channel request with
-      | Ok result -> Ok (Lsp.Client_request.yojson_of_result request result)
-      | Error _error as error -> error
-    in
-    let response = Jsonrpc.Response.{id = request.id; result} in
-    respond channel response
+  let handle_request channel request =
+    respond channel (on_request channel request)
   in
-  let on_notification channel notification =
-    let notification = notification_of_jsonrpc notification in
-    on_notification channel notification
+  let handle_notification channel notification =
+    on_notification channel (notification_of_jsonrpc notification)
   in
-
   let input = Chan.of_source input in
-  let a = Chan.with_sink output in
   Chan.with_sink output @@ fun channel ->
-  input_loop ~input ~output @@ fun packet ->
-  (* TODO: make this async? *)
+  input_loop ~input @@ fun packet ->
   match packet with
-  | Notification notification -> on_notification channel notification
-  | Request request -> on_request channel request
+  | Notification notification -> handle_notification channel notification
+  | Request request -> handle_request channel request
   | Batch_call calls ->
-    (* TODO: what if one fails? It should not prevents the others *)
     List.iter
       (fun call ->
         match call with
-        | `Request request -> on_request channel request
-        | `Notification notification -> on_notification channel notification)
+        | `Request request -> handle_request channel request
+        | `Notification notification -> handle_notification channel notification)
       calls
-  (* TODO: can the server receive a response?
-      Yes but right now it will not be supported *)
-  | Response _ -> raise (Lsp.Io.Error "")
-  | Batch_response _ -> raise (Lsp.Io.Error "")
-
-(* open Lsp_error *)
+  | Response _ -> raise (Lsp.Io.Error "unexpected response")
+  | Batch_response _ -> raise (Lsp.Io.Error "unexpected batch response")
 
 let initialization =
   let open Lsp.Types in
@@ -195,6 +154,35 @@ let initialization =
   in
   InitializeResult.create ~capabilities ~serverInfo ()
 
-let main () = ()
+let on_request _channel (jsonrpc_request : Jsonrpc.Request.t) : Jsonrpc.Response.t =
+  let result =
+    let (E request) = request_of_jsonrpc jsonrpc_request in
+    match request with
+    | Lsp.Client_request.Initialize _ ->
+      Ok (Lsp.Client_request.yojson_of_result request initialization)
+    | Shutdown -> Ok (Lsp.Client_request.yojson_of_result request ())
+    | TextDocumentHover _ ->
+      Ok (Lsp.Client_request.yojson_of_result request None)
+    | _ ->
+      Error
+        (Jsonrpc.Response.Error.make
+           ~code:Jsonrpc.Response.Error.Code.MethodNotFound
+           ~message:"Method not supported" ())
+  in
+  Jsonrpc.Response.{id = jsonrpc_request.id; result}
 
-let () = print_endline "rescript-lsp lolll"
+let on_notification _channel notification =
+  match notification with
+  | Lsp.Client_notification.Initialized -> ()
+  | TextDocumentDidOpen _ -> ()
+  | TextDocumentDidChange _ -> ()
+  | Exit -> exit 0
+  | _ -> ()
+
+let main () =
+  Eio_main.run @@ fun env ->
+  let stdin = Eio.Stdenv.stdin env in
+  let stdout = Eio.Stdenv.stdout env in
+  listen ~input:stdin ~output:stdout ~on_request ~on_notification
+
+let () = main ()
