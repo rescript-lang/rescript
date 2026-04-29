@@ -132,9 +132,9 @@ module OrderedSet: {
   }
   let make: (~id: module(Belt.Id.Comparable with type identity = 'a and type t = 'b)) => t<'b, 'a>
 }
-let CreateInterface$Mod: Mod.props<string> => React.element
+let CreateInterface$Mod: React.component<Mod.props<string>>
 let CreateInterface$Memo: React.component<Memo.props<string>>
-let CreateInterface$ComponentWithPolyProp: ComponentWithPolyProp.props<
-  [< #large | #small],
-> => React.element
+let CreateInterface$ComponentWithPolyProp: React.component<
+  ComponentWithPolyProp.props<[< #large | #small]>,
+>
 
