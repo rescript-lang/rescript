@@ -46,6 +46,15 @@ let comment_of_loc (loc : Location.t) =
       Hashtbl.replace marker_locs id loc;
       Some (marker_prefix ^ string_of_int id)
 
+let with_marker_scope f =
+  let first_marker = !next_marker in
+  Ext_pervasives.finally ()
+    ~clean:(fun () ->
+      for id = first_marker to !next_marker - 1 do
+        Hashtbl.remove marker_locs id
+      done)
+    f
+
 let with_builder builder f =
   let old = !current in
   current := builder;
@@ -182,13 +191,6 @@ let add_mapping builder ~generated_line ~generated_column (loc : Location.t) =
         :: builder.mappings;
       builder.last_generated <- Some (generated_line, generated_column)
 
-let take_marker_loc id =
-  match Hashtbl.find_opt marker_locs id with
-  | None -> None
-  | Some loc ->
-    Hashtbl.remove marker_locs id;
-    Some loc
-
 let mark_comment fmt comment =
   if is_prefix ~prefix:marker_prefix comment then (
     let prefix_len = String.length marker_prefix in
@@ -196,7 +198,7 @@ let mark_comment fmt comment =
       int_of_string
         (String.sub comment prefix_len (String.length comment - prefix_len))
     in
-    (match (!current, take_marker_loc id) with
+    (match (!current, Hashtbl.find_opt marker_locs id) with
     | Some builder, Some loc ->
       let generated_line, generated_column = Ext_pp.position fmt in
       add_mapping builder ~generated_line ~generated_column loc

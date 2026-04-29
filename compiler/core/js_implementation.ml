@@ -141,17 +141,18 @@ let after_parsing_impl ppf outputprefix (ast : Parsetree.structure) =
       let typedtree_coercion = (typedtree, coercion) in
       print_if ppf Clflags.dump_typedtree
         Printtyped.implementation_with_coercion typedtree_coercion;
-      (if !Js_config.cmi_only then Warnings.check_fatal ()
-       else
-         let lambda, exports =
-           Translmod.transl_implementation modulename typedtree_coercion
-         in
-         let js_program =
-           print_if_pipe ppf Clflags.dump_rawlambda Printlambda.lambda lambda
-           |> Lam_compile_main.compile outputprefix exports
-         in
-         if not !Js_config.cmj_only then
-           Lam_compile_main.lambda_as_module js_program outputprefix);
+      Js_source_map.with_marker_scope (fun () ->
+          if !Js_config.cmi_only then Warnings.check_fatal ()
+          else
+            let lambda, exports =
+              Translmod.transl_implementation modulename typedtree_coercion
+            in
+            let js_program =
+              print_if_pipe ppf Clflags.dump_rawlambda Printlambda.lambda lambda
+              |> Lam_compile_main.compile outputprefix exports
+            in
+            if not !Js_config.cmj_only then
+              Lam_compile_main.lambda_as_module js_program outputprefix);
       process_with_gentype (outputprefix ^ ".cmt"))
 
 let implementation ~parser ppf ?outputprefix fname =
