@@ -128,7 +128,9 @@ let filename_from_loc (pstr_loc : Location.t) =
   file_name
 
 let unnamespace_module_name file_name =
-  match String.index_opt file_name '$' with
+  match
+    String.index_opt file_name Ext_modulename.nested_component_separator_char
+  with
   | Some index -> String.sub file_name 0 index
   | None -> (
     match Ext_namespace.try_split_module_name file_name with
@@ -167,7 +169,7 @@ let maybe_hoist_nested_make_signature ~(config : Jsx_common.jsx_config)
     config.hoisted_signature_items <- full_sig :: config.hoisted_signature_items
   | _ -> ()
 
-(* Build a string representation of a module name with segments separated by $ *)
+(* Build a string representation of a nested component module name. *)
 let make_module_name file_name nested_modules fn_name =
   let file_name = unnamespace_module_name file_name in
   let full_module_name =
@@ -179,7 +181,9 @@ let make_module_name file_name nested_modules fn_name =
     | file_name, nested_modules, fn_name ->
       file_name :: List.rev (fn_name :: nested_modules)
   in
-  let full_module_name = String.concat "$" full_module_name in
+  let full_module_name =
+    Ext_modulename.concat_nested_component_name full_module_name
+  in
   full_module_name
 
 (* make type params for make fn arguments *)

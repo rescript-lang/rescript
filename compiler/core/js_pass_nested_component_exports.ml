@@ -29,7 +29,7 @@ module StringSet = Set.Make (String)
 type candidate = {module_ident: Ident.t}
 
 let hidden_component_suffix (module_ident : Ident.t) =
-  "$" ^ Ident.name module_ident
+  Ext_modulename.nested_component_suffix (Ident.name module_ident)
 
 let is_hidden_component_name_for module_ident ident =
   Ext_string.ends_with (Ident.name ident) (hidden_component_suffix module_ident)
@@ -122,7 +122,9 @@ let known_hidden_component_exports block =
           (match expr.expression_desc with
           | Var (Qualified (_, Some name)) ->
             hidden_exports := StringSet.add name !hidden_exports
-          | Static_index (_, name, _) when String.contains name '$' ->
+          | Static_index (_, name, _)
+            when String.contains name
+                   Ext_modulename.nested_component_separator_char ->
             hidden_exports := StringSet.add name !hidden_exports
           | _ -> ());
           Js_record_map.super.expression self expr);
@@ -161,9 +163,12 @@ let rewrite_dynamic_import_component_access aliases known_hidden_exports
       let segments = List.rev segments in
       let hidden_name =
         match segments with
-        | first :: _ when Ext_string.starts_with first (module_root ^ "$") ->
-          String.concat "$" segments
-        | _ -> String.concat "$" (module_root :: segments)
+        | first :: _
+          when Ext_string.starts_with first
+                 (Ext_modulename.nested_component_prefix module_root) ->
+          Ext_modulename.concat_nested_component_name segments
+        | _ ->
+          Ext_modulename.concat_nested_component_name (module_root :: segments)
       in
       if StringSet.mem hidden_name known_hidden_exports then
         {expr with expression_desc = Static_index (E.var id, hidden_name, None)}

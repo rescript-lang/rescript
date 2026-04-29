@@ -237,18 +237,25 @@ let compile output_prefix =
     match Ext_namespace.try_split_module_name id.name with
     | Some (_namespace, module_name) -> module_name
     | None -> (
-      match String.index_opt id.name '$' with
+      match
+        String.index_opt id.name Ext_modulename.nested_component_separator_char
+      with
       | Some index -> String.sub id.name 0 index
       | None -> id.name)
   in
   let nested_component_path id dynamic_import segments =
     let root_name = root_module_name id in
     let denamespace_segment segment =
-      let namespaced_prefix = root_name ^ "$" in
+      let namespaced_prefix =
+        Ext_modulename.nested_component_prefix root_name
+      in
       if Ext_string.starts_with segment namespaced_prefix then
-        match String.split_on_char '$' segment with
+        match
+          String.split_on_char Ext_modulename.nested_component_separator_char
+            segment
+        with
         | root :: _namespace :: rest when rest <> [] ->
-          String.concat "$" (root :: rest)
+          Ext_modulename.concat_nested_component_name (root :: rest)
         | _ -> segment
       else segment
     in
@@ -256,7 +263,8 @@ let compile output_prefix =
       match segments with
       | head :: rest
         when head = id.name || head = root_name
-             || Ext_string.starts_with head (root_name ^ "$") ->
+             || Ext_string.starts_with head
+                  (Ext_modulename.nested_component_prefix root_name) ->
         rest
       | _ -> segments
     in
@@ -266,7 +274,8 @@ let compile output_prefix =
       Some
         ( id,
           dynamic_import,
-          String.concat "$" (root_name :: denamespace_segment head :: rest) )
+          Ext_modulename.concat_nested_component_name
+            (root_name :: denamespace_segment head :: rest) )
   in
   let rec extract_component_segments ~allow_import ~allow_unbound_var segments
       (lam : Lam.t) : (Ident.t * bool * string list) option =
@@ -328,13 +337,19 @@ let compile output_prefix =
   in
   let normalize_hidden_component_name (id : Ident.t) (hidden_name : string) =
     let root_name = root_module_name id in
-    let id_parts = String.split_on_char '$' id.name in
+    let id_parts =
+      String.split_on_char Ext_modulename.nested_component_separator_char
+        id.name
+    in
     let namespace_parts =
       match id_parts with
       | _root :: rest -> rest
       | [] -> []
     in
-    let hidden_parts = String.split_on_char '$' hidden_name in
+    let hidden_parts =
+      String.split_on_char Ext_modulename.nested_component_separator_char
+        hidden_name
+    in
     let hidden_parts_without_root =
       match hidden_parts with
       | first :: rest when String.equal first root_name -> rest
@@ -349,7 +364,7 @@ let compile output_prefix =
     let tail = drop_prefix namespace_parts hidden_parts_without_root in
     match tail with
     | [] -> hidden_name
-    | _ -> String.concat "$" (root_name :: tail)
+    | _ -> Ext_modulename.concat_nested_component_name (root_name :: tail)
   in
   let hidden_component_name_candidates (id : Ident.t) (hidden_name : string) =
     let candidates = ref [] in
@@ -357,9 +372,12 @@ let compile output_prefix =
       if not (List.mem candidate !candidates) then
         candidates := candidate :: !candidates
     in
-    (match String.split_on_char '$' hidden_name with
+    (match
+       String.split_on_char Ext_modulename.nested_component_separator_char
+         hidden_name
+     with
     | root :: _namespace :: rest when rest <> [] ->
-      push (String.concat "$" (root :: rest))
+      push (Ext_modulename.concat_nested_component_name (root :: rest))
     | _ -> ());
     push (normalize_hidden_component_name id hidden_name);
     push hidden_name;
