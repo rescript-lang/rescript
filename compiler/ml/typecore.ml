@@ -2503,6 +2503,29 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
     type_function ?in_function ~arity ~async loc sexp.pexp_attributes env
       ty_expected l
       [Ast_helper.Exp.case spat sbody]
+  | Pexp_apply {funct = {pexp_desc = Pexp_ident lid}; args = [(Nolabel, scond)]}
+    when match Env.lookup_value lid.txt env with
+         | _, {val_kind = Val_prim {Primitive.prim_name = "%assert"}} -> true
+         | _ -> false
+         | exception Not_found -> false ->
+    (* assert(cond) via the %assert primitive — same semantics as the keyword form *)
+    let cond =
+      type_expect ~context:(Some AssertCondition) env scond Predef.type_bool
+    in
+    let exp_type =
+      match cond.exp_desc with
+      | Texp_construct (_, {cstr_name = "false"}, _) -> instance env ty_expected
+      | _ -> instance_def Predef.type_unit
+    in
+    rue
+      {
+        exp_desc = Texp_assert cond;
+        exp_loc = loc;
+        exp_extra = [];
+        exp_type;
+        exp_attributes = sexp.pexp_attributes;
+        exp_env = env;
+      }
   | Pexp_apply {funct = sfunct; args = sargs; partial; transformed_jsx} ->
     assert (sargs <> []);
     begin_def ();

@@ -354,17 +354,17 @@ if {
   true
 } // trailing
 
-assert({
-  // here
+assert(// here
+{
   open /* inside */ Matrix
   // c
 
   // c2
   compare(m1, m2)
-  // after
-
-  // test
 })
+// after
+
+// test
 
 user.name = {
   // here

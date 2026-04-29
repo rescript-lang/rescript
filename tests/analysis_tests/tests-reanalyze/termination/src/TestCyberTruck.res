@@ -5,7 +5,7 @@ let progress = {
   let counter = ref((100))
   () => {
     if counter.contents < 0 {
-      assert false
+      assert(false)
     }
     counter := counter.contents - 1
   }
@@ -247,7 +247,7 @@ module UITermination = {
   let nothing: onClick = () => ()
 
   type div = (~text: string, ~onClick: onClick) => dom
-  let div: div = (~text, ~onClick) => assert false
+  let div: div = (~text, ~onClick) => assert(false)
 
   let initState = n => n == 0 ? Some(42) : None
   let increment = n => Some(n + 1)

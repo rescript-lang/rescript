@@ -722,6 +722,23 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
       {
         funct =
           {
+            exp_desc =
+              Texp_ident (_, _, {val_kind = Val_prim {prim_name = "%assert"}});
+          };
+        args = [(_, Some cond)];
+      } -> (
+    (* assert(cond) — same semantics as the old assert keyword *)
+    match cond.exp_desc with
+    | Texp_construct (_, {cstr_name = "false"}, _) ->
+      if !Clflags.no_assert_false then Lambda.lambda_assert_false
+      else assert_failed e
+    | _ ->
+      if !Clflags.noassert then lambda_unit
+      else Lifthenelse (transl_exp cond, lambda_unit, assert_failed e))
+  | Texp_apply
+      {
+        funct =
+          {
             exp_desc = Texp_ident (_, _, {val_kind = Val_prim p});
             exp_type = prim_type;
           } as funct;

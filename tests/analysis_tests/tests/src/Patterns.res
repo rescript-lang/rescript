@@ -13,7 +13,7 @@ module A = {
 
   type rec arr = A(array<arr>)
 
-  let A([v1, _, _]) | _ as v1 = assert false
+  let A([v1, _, _]) | _ as v1 = assert(false)
 
 }
 

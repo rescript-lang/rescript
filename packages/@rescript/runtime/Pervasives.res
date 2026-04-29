@@ -22,6 +22,8 @@ result == "Caught exception: Out of milk"
 */
 external throw: exn => 'a = "%raise"
 
+external assert: bool => 'a = "%assert"
+
 @deprecated({
   reason: "`raise` has been renamed to `throw` to align with JavaScript vocabulary. Please use `throw` instead",
   migrate: throw(),
