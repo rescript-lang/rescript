@@ -119,18 +119,7 @@ let emit_all_module_items ~config ~emitters ~file_name
     | _ -> false
   in
   let hidden_export_access resolved_name =
-    match List.rev resolved_name with
-    | "make" :: module_path_rev -> (
-      match List.rev module_path_rev with
-      | [] -> None
-      | module_path ->
-        Some
-          ((file_name |> ModuleName.for_js_file |> ModuleName.to_string)
-          ^ "."
-          ^ (file_name |> ModuleName.to_string)
-          ^ "$"
-          ^ String.concat "$" module_path))
-    | _ -> None
+    ModuleName.nested_make_hidden_export_access ~file_name resolved_name
   in
   let single_make_component_export export_module_item =
     match Hashtbl.length export_module_item with

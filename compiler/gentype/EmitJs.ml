@@ -145,21 +145,8 @@ let emit_code_item ~config ~emitters ~module_items_emitter ~env ~file_name
       | Runtime.Dot (path, module_item) ->
         flatten path @ [module_item |> Runtime.module_item_to_string]
     in
-    match flatten module_access_path with
-    | [] -> None
-    | _module_path :: _ as path -> (
-      match List.rev path with
-      | "make" :: module_path_rev -> (
-        match List.rev module_path_rev with
-        | [] -> None
-        | module_path ->
-          Some
-            ((file_name |> ModuleName.for_js_file |> ModuleName.to_string)
-            ^ "."
-            ^ (file_name |> ModuleName.to_string)
-            ^ "$"
-            ^ String.concat "$" module_path))
-      | _ -> None)
+    ModuleName.nested_make_hidden_export_access ~file_name
+      (flatten module_access_path)
   in
   if !Debug.code_items then
     Log_.item "Code Item: %s\n"
