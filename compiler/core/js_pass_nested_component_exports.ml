@@ -160,7 +160,6 @@ let rewrite_dynamic_import_component_access aliases known_hidden_exports
   | Static_index (inner, "make", _) -> (
     match collect_segments [] inner with
     | Some (id, module_root, segments) ->
-      let segments = List.rev segments in
       let hidden_name =
         match segments with
         | first :: _

@@ -88,10 +88,8 @@ let rec extract_component_segments aliases ~allow_import ~allow_unbound_var
     | Some alias_lam ->
       extract_component_segments aliases ~allow_import ~allow_unbound_var
         segments alias_lam
-    | None ->
-      if allow_unbound_var then Some (id, false, List.rev segments) else None)
-  | Lglobal_module (id, dynamic_import) ->
-    Some (id, dynamic_import, List.rev segments)
+    | None -> if allow_unbound_var then Some (id, false, segments) else None)
+  | Lglobal_module (id, dynamic_import) -> Some (id, dynamic_import, segments)
   | _ -> None
 
 let rec is_module_alias_candidate aliases (lam : Lam.t) =
