@@ -1,0 +1,6 @@
+path: .tmp-rewrite-tests/RewritePreferredTypeSyntax.resi
+status: rewritten
+rules:
+- preferred-type-syntax(4): rewrote `Dict.t<_>` into `dict<_>`
+
+summary: rewritten 1 files, unchanged 0, rules: preferred-type-syntax(4)

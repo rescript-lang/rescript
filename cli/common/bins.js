@@ -40,6 +40,7 @@ export const {
   binDir,
   binPaths: {
     bsc_exe,
+    rescript_assist_exe,
     rescript_editor_analysis_exe,
     rescript_tools_exe,
     rescript_exe,

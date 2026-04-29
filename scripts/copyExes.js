@@ -31,6 +31,7 @@ const shouldCopyRewatch = args.values.all || args.values.rewatch;
 
 if (shouldCopyCompiler) {
   copyExe(compilerBinDir, "rescript-editor-analysis");
+  copyExe(compilerBinDir, "rescript-assist");
   copyExe(compilerBinDir, "rescript-tools");
   copyExe(compilerBinDir, "bsc");
 }

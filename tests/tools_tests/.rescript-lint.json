@@ -1,0 +1,71 @@
+{
+  "$schema": "../../docs/docson/rescript-lint-schema.json",
+  "lint": {
+    "rules": {
+      "forbidden-reference": [
+        {
+          "severity": "error",
+          "items": [
+            {
+              "kind": "module",
+              "path": "Belt.Array",
+              "message": "Avoid Belt.Array module references here."
+            },
+            {
+              "kind": "value",
+              "path": "Belt.Array.forEach"
+            },
+            {
+              "kind": "value",
+              "path": "Belt.Array.map",
+              "message": "Prefer Array.map directly."
+            }
+          ],
+          "message": "Do not use Belt.Array helpers here. Prefer Stdlib/Array directly."
+        },
+        {
+          "severity": "warning",
+          "items": [
+            {
+              "kind": "type",
+              "path": "Js.Json.t",
+              "message": "Avoid Js.Json.t here."
+            }
+          ]
+        }
+      ],
+      "single-use-function": {
+        "severity": "warning",
+        "message": "Inline this helper unless it is a meaningful reusable abstraction."
+      },
+      "alias-avoidance": {
+        "severity": "warning"
+      },
+      "forbidden-source-root-reference": {
+        "severity": "error",
+        "roots": ["src/generated"],
+        "kinds": ["value", "type"]
+      },
+      "preferred-type-syntax": {
+        "severity": "warning",
+        "dict": true
+      }
+    }
+  },
+  "rewrite": {
+    "rules": {
+      "prefer-switch": {
+        "enabled": true,
+        "if": true,
+        "ternary": true
+      },
+      "no-optional-some": {
+        "enabled": true
+      },
+      "preferred-type-syntax": {
+        "enabled": true,
+        "dict": true
+      }
+    }
+  }
+}

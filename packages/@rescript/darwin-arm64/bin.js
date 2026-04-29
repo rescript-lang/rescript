@@ -6,6 +6,7 @@ export const binDir = path.join(import.meta.dirname, "bin");
 
 export const binPaths = {
   bsc_exe: path.join(binDir, "bsc.exe"),
+  rescript_assist_exe: path.join(binDir, "rescript-assist.exe"),
   rescript_tools_exe: path.join(binDir, "rescript-tools.exe"),
   rescript_editor_analysis_exe: path.join(
     binDir,

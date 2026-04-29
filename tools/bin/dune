@@ -12,3 +12,12 @@
  (libraries tools)
  (flags
   (:standard -w "+6+26+27+32+33+39")))
+
+(executable
+ (public_name rescript-assist)
+ (package tools)
+ (modes byte exe)
+ (name assist_main)
+ (libraries tools)
+ (flags
+  (:standard -w "+6+26+27+32+33+39")))

@@ -8,6 +8,7 @@
     "LICENSE.MIT",
     "README.md",
     "cli/bsc.js",
+    "cli/rescript-assist.js",
     "cli/common/args.js",
     "cli/common/bins.js",
     "cli/common/minisocket.js",
@@ -15,6 +16,7 @@
     "cli/rescript-tools.js",
     "cli/rescript.js",
     "docs/docson/build-schema.json",
+    "docs/docson/rescript-lint-schema.json",
     "package.json"
   ],
   "@rescript/runtime": [

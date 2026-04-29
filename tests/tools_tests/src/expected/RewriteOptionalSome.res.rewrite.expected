@@ -1,0 +1,7 @@
+path: .tmp-rewrite-tests/RewriteOptionalSome.res
+status: rewritten
+rules:
+- prefer-switch(1): rewrote `if` / ternary branches into `switch`
+- no-optional-some(3): rewrote `~label=?Some(expr)` into `~label=expr`
+
+summary: rewritten 1 files, unchanged 0, rules: prefer-switch(1), no-optional-some(3)

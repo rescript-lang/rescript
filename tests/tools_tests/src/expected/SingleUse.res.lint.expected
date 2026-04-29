@@ -1,0 +1,13 @@
+severity: warning
+rule: single-use-function
+path: src/lint/SingleUse.res
+range: 2:7-2:13
+message: Inline this helper unless it is a meaningful reusable abstraction.
+symbol: helper
+snippet:
+```text
+  1 | let run = () => {
+> 2 |   let helper = x => x + 1
+    |       ^^^^^^
+  3 |   helper(1)
+```

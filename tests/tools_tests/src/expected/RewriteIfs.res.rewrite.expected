@@ -1,0 +1,6 @@
+path: .tmp-rewrite-tests/RewriteIfs.res
+status: rewritten
+rules:
+- prefer-switch(4): rewrote `if` / ternary branches into `switch`
+
+summary: rewritten 1 files, unchanged 0, rules: prefer-switch(4)

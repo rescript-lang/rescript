@@ -1,5 +1,6 @@
 open Analysis
 
+module ActiveRules = Active_rules
 module StringSet = Set.Make (String)
 
 type fieldDoc = {
@@ -1294,3 +1295,7 @@ module ExtractCodeblocks = struct
 end
 
 module Migrate = Migrate
+module Lint = Lint
+module Rewrite = Rewrite
+module Show = Show
+module Find_references = Find_references
