@@ -166,10 +166,14 @@ let main () =
         (match allowForConstructorPayloads with
         | "true" -> true
         | _ -> false)
+  | [_; "inlayHint"; path; line_start; line_end; maxLength; currentFile] ->
+    Commands.inlayhint ~path
+      ~pos:(int_of_string line_start, int_of_string line_end)
+      ~maxLength ~currentFile:(Some currentFile) ~debug
   | [_; "inlayHint"; path; line_start; line_end; maxLength] ->
     Commands.inlayhint ~path
       ~pos:(int_of_string line_start, int_of_string line_end)
-      ~maxLength ~debug
+      ~maxLength ~currentFile:None ~debug
   | [_; "codeLens"; path] -> Commands.codeLens ~path ~debug
   | [_; "codeAction"; path; startLine; startCol; endLine; endCol; currentFile]
     ->
