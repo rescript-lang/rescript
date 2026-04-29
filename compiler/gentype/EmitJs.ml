@@ -359,7 +359,7 @@ let emit_code_item ~config ~emitters ~module_items_emitter ~env ~file_name
         (comp_type, None)
       | _ -> (type_, None)
     in
-    let is_react_component_export =
+    let is_jsx_component_export =
       match type_ with
       | Function {arg_types = [{a_type = Object (_, fields)}]; ret_type; _} ->
         ret_type |> EmitType.is_type_function_component ~fields
@@ -391,7 +391,7 @@ let emit_code_item ~config ~emitters ~module_items_emitter ~env ~file_name
     in
     let emitters =
       (match
-         ( original_name = make && is_react_component_export,
+         ( original_name = make && is_jsx_component_export,
            nested_make_hidden_export_access ~file_name module_access_path )
        with
       | true, Some hidden_access -> hidden_access

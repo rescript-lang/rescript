@@ -112,7 +112,7 @@ let rev_fold f tbl base =
 
 let emit_all_module_items ~config ~emitters ~file_name
     (export_module_items : export_module_items) =
-  let is_react_component_type type_ =
+  let is_jsx_component_type type_ =
     match type_ with
     | Function {arg_types = [{a_type = Object (_, fields)}]; ret_type; _} ->
       ret_type |> EmitType.is_type_function_component ~fields
@@ -125,7 +125,7 @@ let emit_all_module_items ~config ~emitters ~file_name
     match Hashtbl.length export_module_item with
     | 1 -> (
       match Hashtbl.find_opt export_module_item "make" with
-      | Some (S {path; type_; doc_string; _}) when is_react_component_type type_
+      | Some (S {path; type_; doc_string; _}) when is_jsx_component_type type_
         -> (
         match hidden_export_access path with
         | Some access -> Some (access, type_, doc_string)

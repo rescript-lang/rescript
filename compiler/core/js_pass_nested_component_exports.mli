@@ -22,7 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-(* Rewrite nested React component module exports from `{make: fn}` wrappers to
+(* Rewrite nested JSX component module exports from `{make: fn}` wrappers to
    direct component exports, while keeping `.make` as a self-reference for
    compatibility with existing generated call sites. *)
 val program : J.program -> J.program
