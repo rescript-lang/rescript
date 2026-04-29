@@ -238,15 +238,6 @@ let compile output_prefix =
     Lam_compile_nested_component.rewrite_jsx_component_expr local_module_aliases
       jsx_tag compiled_expr
   in
-  let rewrite_nested_component_make_expr (lam : Lam.t)
-      (compiled_expr : J.expression) : J.expression =
-    Lam_compile_nested_component.rewrite_component_make_expr
-      local_module_aliases lam compiled_expr
-  in
-  let is_module_alias_candidate lam =
-    Lam_compile_nested_component.is_module_alias_candidate local_module_aliases
-      lam
-  in
   let rewrite_transformed_jsx_args (appinfo : Lam.apply) args =
     if appinfo.ap_transformed_jsx then
       match (appinfo.ap_args, args) with
@@ -1708,7 +1699,8 @@ let compile output_prefix =
         | {block; value = Some compiled_arg} ->
           let compiled_expr = Js_of_lam_block.field fld_info compiled_arg 0l in
           let compiled_expr =
-            rewrite_nested_component_make_expr arg compiled_expr
+            Lam_compile_nested_component.rewrite_component_make_expr
+              local_module_aliases arg compiled_expr
           in
           Js_output.output_of_block_and_expression lambda_cxt.continuation block
             compiled_expr
@@ -1942,7 +1934,10 @@ let compile output_prefix =
           arg
       in
       let body_output =
-        if is_module_alias_candidate arg then (
+        if
+          Lam_compile_nested_component.is_module_alias_candidate
+            local_module_aliases arg
+        then (
           let previous_aliases = !local_module_aliases in
           local_module_aliases := Map_ident.add previous_aliases id arg;
           Fun.protect
