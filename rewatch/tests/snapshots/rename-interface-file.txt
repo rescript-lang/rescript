@@ -1,5 +1,4 @@
-[2K
- No implementation file found for interface file (skipping): src/ModuleWithInterface2.resi
+[2K No implementation file found for interface file (skipping): src/ModuleWithInterface2.resi
 Cleaned 1/432
 Parsed 2 source files
 Compiled 2 modules
@@ -27,6 +26,7 @@ Unknown field 'some-new-field' found in the package config of '@testrepo/depreca
 Package 'rescript-nodejs' uses deprecated config (support will be removed in a future version):
   - field 'bs-dependencies' — use 'dependencies' instead
   - field 'bs-dev-dependencies' — use 'dev-dependencies' instead
+  - filename 'bsconfig.json' — rename to 'rescript.json'
 Please report this to the package maintainer: https://github.com/TheSpyder/rescript-nodejs/issues
 
 Package 'sury' uses deprecated config (support will be removed in a future version):

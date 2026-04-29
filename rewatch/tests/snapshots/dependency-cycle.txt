@@ -25,6 +25,7 @@ Unknown field 'some-new-field' found in the package config of '@testrepo/depreca
 Package 'rescript-nodejs' uses deprecated config (support will be removed in a future version):
   - field 'bs-dependencies' — use 'dependencies' instead
   - field 'bs-dev-dependencies' — use 'dev-dependencies' instead
+  - filename 'bsconfig.json' — rename to 'rescript.json'
 Please report this to the package maintainer: https://github.com/TheSpyder/rescript-nodejs/issues
 
 Package 'sury' uses deprecated config (support will be removed in a future version):
@@ -40,5 +41,4 @@ Dep01 (packages/dep01/src/Dep01.res)
 Possible solutions:
 - Extract shared code into a new module both depend on.
 
-Incremental build failed. Error: [2K
-  Failed to Compile. See Errors Above
+Incremental build failed. Error: [2K  Failed to Compile. See Errors Above
