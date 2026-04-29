@@ -1686,7 +1686,7 @@ let compile output_prefix =
         exp
     | {
      primitive =
-       Pfield (_, (Fld_module {name = "make"; jsx_component = _} as fld_info));
+       Pfield (pos, (Fld_module {name = "make"; jsx_component = _} as fld_info));
      args = [arg];
      _;
     } -> (
@@ -1697,7 +1697,9 @@ let compile output_prefix =
         let new_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
         match compile_lambda new_cxt arg with
         | {block; value = Some compiled_arg} ->
-          let compiled_expr = Js_of_lam_block.field fld_info compiled_arg 0l in
+          let compiled_expr =
+            Js_of_lam_block.field fld_info compiled_arg (Int32.of_int pos)
+          in
           let compiled_expr =
             Lam_compile_nested_component.rewrite_component_make_expr
               local_module_aliases arg compiled_expr

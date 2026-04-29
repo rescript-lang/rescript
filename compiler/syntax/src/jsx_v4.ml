@@ -1409,12 +1409,22 @@ let expr ~(config : Jsx_common.jsx_config) mapper expression =
    pexp_attributes = attrs;
   } ->
     config.nested_modules <- name.txt :: config.nested_modules;
-    let mapped_module_expr = default_mapper.module_expr mapper module_expr in
-    let mapped_body = mapper.expr mapper body in
-    let () =
+    let pop_nested_module () =
       match config.nested_modules with
       | _ :: rest -> config.nested_modules <- rest
       | [] -> ()
+    in
+    let mapped_module_expr, mapped_body =
+      try
+        let mapped_module_expr =
+          default_mapper.module_expr mapper module_expr
+        in
+        let mapped_body = mapper.expr mapper body in
+        pop_nested_module ();
+        (mapped_module_expr, mapped_body)
+      with e ->
+        pop_nested_module ();
+        raise e
     in
     Exp.letmodule ~loc ~attrs name mapped_module_expr mapped_body
   | {
