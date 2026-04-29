@@ -357,16 +357,13 @@ if {
   true
 } // trailing
 
+// here
 assert({
-  // here 
   open /* inside */ Matrix
   // c
 
   // c2
   compare(m1, m2)
-  // after
-
-  // test
 })
 
 user.name = {
