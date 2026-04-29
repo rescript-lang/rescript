@@ -1686,7 +1686,7 @@ let compile output_prefix =
         exp
     | {
      primitive =
-       Pfield (_, (Fld_module {name = "make"; jsx_component = true} as fld_info));
+       Pfield (_, (Fld_module {name = "make"; jsx_component = _} as fld_info));
      args = [arg];
      _;
     } -> (
