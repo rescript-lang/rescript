@@ -10,12 +10,16 @@ const { execBuild, execClean } = setup(import.meta.dirname);
 await execClean();
 await execBuild();
 
-const outputPath = path.join(import.meta.dirname, "src", "MainLayout.res.mjs");
+const outputPath = path.join(
+  import.meta.dirname,
+  "src",
+  "MainLayout.custom.mjs",
+);
 const output = await fs.readFile(outputPath, "utf8");
 
 assert.match(
   output,
-  /let DynamicSidebar = await import\("\.\/Sidebar\.res\.mjs"\);/,
+  /let DynamicSidebar = await import\("\.\/Sidebar\.custom\.mjs"\);/,
 );
 assert.match(
   output,

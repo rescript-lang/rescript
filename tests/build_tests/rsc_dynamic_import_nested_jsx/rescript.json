@@ -10,7 +10,7 @@
   "package-specs": {
     "module": "esmodule",
     "in-source": true,
-    "suffix": ".res.mjs"
+    "suffix": ".custom.mjs"
   },
   "namespace": true
 }

@@ -93,6 +93,11 @@ let hidden_export_names_to_remove candidates =
   Ext_list.fold_left candidates StringSet.empty (fun acc candidate ->
       StringSet.add (Ident.name candidate.module_ident) acc)
 
+let chop_js_suffix basename =
+  match String.index_opt basename '.' with
+  | Some index -> String.sub basename 0 index
+  | None -> basename
+
 let dynamic_import_module_root (expr : J.expression) =
   match expr.expression_desc with
   | Await
@@ -103,17 +108,7 @@ let dynamic_import_module_root (expr : J.expression) =
       }
     when String.equal import_ident.name "import" -> (
     match arg.expression_desc with
-    | Str {txt; _} ->
-      let basename = Filename.basename txt in
-      let suffixes = [".res.mjs"; ".res.js"; ".mjs"; ".js"] in
-      let rec strip_suffix = function
-        | [] -> basename
-        | suffix :: rest -> (
-          match Ext_string.ends_with_then_chop basename suffix with
-          | Some basename -> basename
-          | None -> strip_suffix rest)
-      in
-      Some (strip_suffix suffixes)
+    | Str {txt; _} -> Some (Filename.basename txt |> chop_js_suffix)
     | _ -> None)
   | _ -> None
 
