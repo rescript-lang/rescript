@@ -1,0 +1,14 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/record_rest_field_missing.res[0m:[2m3:12-22[0m
+
+  1 [2m│[0m type source = {a: int, b: string, c: bool, d: float}
+  2 [2m│[0m type sub = {b: string}
+  [1;31m3[0m [2m│[0m let {a, ...[1;31msub as rest[0m} = ({a: 1, b: "x", c: true, d: 1.0}: source)
+  4 [2m│[0m 
+
+  The following fields are not part of the rest type `sub`:
+- c
+- d
+
+List these fields in the record pattern before the spread so they're not present in the rest record.

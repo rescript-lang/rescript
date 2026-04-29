@@ -76,7 +76,7 @@ let untype typed =
     | Tpat_variant (label, p_opt, _row_desc) ->
       let arg = Option.map loop p_opt in
       mkpat (Ppat_variant (label, arg))
-    | Tpat_record (subpatterns, closed_flag) ->
+    | Tpat_record (subpatterns, closed_flag, _rest) ->
       let fields, saw_optional_rewrite =
         List.fold_right
           (fun (_, lbl, p, opt) (fields, saw_optional_rewrite) ->
@@ -97,7 +97,7 @@ let untype typed =
           subpatterns ([], false)
       in
       let closed_flag = if saw_optional_rewrite then Closed else closed_flag in
-      mkpat (Ppat_record (fields, closed_flag))
+      mkpat (Ppat_record (fields, closed_flag, None))
     | Tpat_array lst -> mkpat (Ppat_array (List.map loop lst))
   in
   loop typed

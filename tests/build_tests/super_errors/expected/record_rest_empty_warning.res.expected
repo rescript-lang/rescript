@@ -1,0 +1,10 @@
+
+  [1;33mWarning number 111[0m
+  [36m/.../fixtures/record_rest_empty_warning.res[0m:[2m3:16-26[0m
+
+  1 [2m│[0m type source = {a: int, b?: string}
+  2 [2m│[0m type sub = {b?: string}
+  [1;33m3[0m [2m│[0m let {a, ?b, ...[1;33msub as rest[0m} = ({a: 1}: source)
+  4 [2m│[0m 
+
+  All fields of the rest type are already present in the explicit pattern. The rest record will always be empty.

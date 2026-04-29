@@ -102,12 +102,12 @@ and traversePattern (pat : Parsetree.pattern) ~patternPath ~locHasCursor
            [Completable.NTupleItem {itemNum}] @ patternPath)
          ~resultFromFoundItemNum:(fun itemNum ->
            [Completable.NTupleItem {itemNum = itemNum + 1}] @ patternPath)
-  | Ppat_record ([], _) ->
+  | Ppat_record ([], _, _rest) ->
     (* Empty fields means we're in a record body `{}`. Complete for the fields. *)
     someIfHasCursor
       ("", [Completable.NRecordBody {seenFields = []}] @ patternPath)
       "Ppat_record(empty)"
-  | Ppat_record (fields, _) -> (
+  | Ppat_record (fields, _, _rest) -> (
     let fieldWithCursor = ref None in
     let fieldWithPatHole = ref None in
     Ext_list.iter fields (fun {lid = fname; x = f} ->

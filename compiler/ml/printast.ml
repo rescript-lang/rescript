@@ -207,9 +207,14 @@ and pattern i ppf x =
   | Ppat_variant (l, po) ->
     line i ppf "Ppat_variant \"%s\"\n" l;
     option i pattern ppf po
-  | Ppat_record (l, c) ->
+  | Ppat_record (l, c, rest) -> (
     line i ppf "Ppat_record %a\n" fmt_closed_flag c;
-    list i longident_x_pattern ppf l
+    list i longident_x_pattern ppf l;
+    match rest with
+    | None -> ()
+    | Some {rest_name; rest_type; _} ->
+      line (i + 1) ppf "rest %a\n" fmt_string_loc rest_name;
+      option (i + 2) core_type ppf rest_type)
   | Ppat_array l ->
     line i ppf "Ppat_array\n";
     list i pattern ppf l

@@ -161,6 +161,12 @@ and pattern = {
   ppat_attributes: attributes; (* ... [@id1] [@id2] *)
 }
 
+and record_pat_rest = {
+  rest_loc: Location.t;
+  rest_name: string loc;
+  rest_type: core_type option;
+}
+
 and pattern_desc =
   | Ppat_any (* _ *)
   | Ppat_var of string loc (* x *)
@@ -184,9 +190,12 @@ and pattern_desc =
     (* `A             (None)
        `A P           (Some P)
     *)
-  | Ppat_record of pattern record_element list * closed_flag
-    (* { l1=P1; ...; ln=Pn }     (flag = Closed)
-       { l1=P1; ...; ln=Pn; _}   (flag = Open)
+  | Ppat_record of
+      pattern record_element list * closed_flag * record_pat_rest option
+    (* { l1=P1; ...; ln=Pn }        (flag = Closed, rest = None)
+       { l1=P1; ...; ln=Pn; _}      (flag = Open, rest = None)
+       { l1=P1; ...; ...T as r }    (rest = Some {rest_type = Some T; _})
+       { l1=P1; ...; ...restName }  (rest = Some {rest_type = None; _})
 
        Invariant: n > 0
     *)

@@ -116,6 +116,8 @@ let primitive ppf = function
   | Pfield (n, fld) -> fprintf ppf "field:%s/%i" (str_of_field_info fld) n
   | Psetfield (n, _) -> fprintf ppf "setfield %i" n
   | Pduprecord -> fprintf ppf "duprecord"
+  | Precord_rest excluded ->
+    fprintf ppf "record_rest(%s)" (String.concat ", " excluded)
   | Pccall p -> fprintf ppf "%s" p.prim_name
   | Praise k -> fprintf ppf "%s" (Lambda.raise_kind k)
   | Pobjcomp Ceq -> fprintf ppf "=="

@@ -1,0 +1,11 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/other/record_rest_duplicate.res:1:9-51
+
+  1 │ let {...Config.t as first, ...Config.t as second} = myRecord
+  2 │ 
+
+  Record patterns can only have one `...` rest clause.
+Use a single `...typeName as bindingName` clause to capture the remaining fields.
+
+let { ...Config.t as second } = myRecord

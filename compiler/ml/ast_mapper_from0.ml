@@ -93,6 +93,26 @@ let for_await_of_attr_name = "_res.for_await_of"
 
 let map_loc sub {loc; txt} = {loc = sub.location sub loc; txt}
 
+let record_rest_attr_name = "res.record_rest"
+
+let record_rest_of_pattern (rest : Pt.pattern) =
+  match rest.Pt.ppat_desc with
+  | Pt.Ppat_constraint ({ppat_desc = Pt.Ppat_var rest_name; _}, rest_type) ->
+    Some {Pt.rest_loc = rest.ppat_loc; rest_name; rest_type = Some rest_type}
+  | Pt.Ppat_var rest_name ->
+    Some {Pt.rest_loc = rest.ppat_loc; rest_name; rest_type = None}
+  | _ -> None
+
+let get_record_rest_attr attrs_ =
+  let rec remove_record_rest_attr acc = function
+    | ({Location.txt = attr_name; _}, Pt.PPat (rest, None)) :: attrs
+      when attr_name = record_rest_attr_name ->
+      (record_rest_of_pattern rest, List.rev_append acc attrs)
+    | attr :: attrs -> remove_record_rest_attr (attr :: acc) attrs
+    | [] -> (None, List.rev acc)
+  in
+  remove_record_rest_attr [] attrs_
+
 module T = struct
   (* Type expressions for the core language *)
 
@@ -656,7 +676,8 @@ module P = struct
       construct ~loc ~attrs (map_loc sub l) (map_opt (sub.pat sub) p)
     | Ppat_variant (l, p) -> variant ~loc ~attrs l (map_opt (sub.pat sub) p)
     | Ppat_record (lpl, cf) ->
-      record ~loc ~attrs
+      let rest, attrs = get_record_rest_attr attrs in
+      record ~loc ~attrs ?rest
         (Ext_list.map lpl (fun (lid, p) ->
              let lid1 = map_loc sub lid in
              let p1 = sub.pat sub p in

@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/record_rest_field_type_mismatch.res[0m:[2m4:12-16[0m
+
+  2 [2m│[0m type wrong = {b: int}
+  3 [2m│[0m 
+  [1;31m4[0m [2m│[0m let {a, ...[1;31mwrong[0m as rest} = ({a: 1, b: "x"}: source)
+  5 [2m│[0m 
+
+  This pattern matches values of type [1;31mint[0m
+  but a pattern was expected which matches values of type [1;33mstring[0m

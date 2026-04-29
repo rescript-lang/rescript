@@ -171,8 +171,8 @@ let pat sub x =
     | Tpat_construct (loc, cd, l) ->
       Tpat_construct (loc, cd, List.map (sub.pat sub) l)
     | Tpat_variant (l, po, rd) -> Tpat_variant (l, opt (sub.pat sub) po, rd)
-    | Tpat_record (l, closed) ->
-      Tpat_record (List.map (tuple4 id id (sub.pat sub) id) l, closed)
+    | Tpat_record (l, closed, rest) ->
+      Tpat_record (List.map (tuple4 id id (sub.pat sub) id) l, closed, rest)
     | Tpat_array l -> Tpat_array (List.map (sub.pat sub) l)
     | Tpat_or (p1, p2, rd) -> Tpat_or (sub.pat sub p1, sub.pat sub p2, rd)
     | Tpat_alias (p, id, s) -> Tpat_alias (sub.pat sub p, id, s)

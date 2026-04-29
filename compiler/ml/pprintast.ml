@@ -461,7 +461,7 @@ and simple_pattern ctxt (f : Format.formatter) (x : pattern) : unit =
     | Ppat_array l -> pp f "@[<2>[|%a|]@]" (list (pattern1 ctxt) ~sep:";") l
     | Ppat_unpack s -> pp f "(module@ %s)@ " s.txt
     | Ppat_type li -> pp f "#%a" longident_loc li
-    | Ppat_record (l, closed) -> (
+    | Ppat_record (l, closed, rest) -> (
       let longident_x_pattern f {lid = li; x = p; opt} =
         let opt_str = if opt then "?" else "" in
         match (li, p) with
@@ -472,9 +472,20 @@ and simple_pattern ctxt (f : Format.formatter) (x : pattern) : unit =
         | _ ->
           pp f "@[<2>%a%s@;=@;%a@]" longident_loc li opt_str (pattern1 ctxt) p
       in
-      match closed with
-      | Closed -> pp f "@[<2>{@;%a@;}@]" (list longident_x_pattern ~sep:";@;") l
-      | _ -> pp f "@[<2>{@;%a;_}@]" (list longident_x_pattern ~sep:";@;") l)
+      let pp_rest f = function
+        | {rest_name; rest_type = Some rest_type; _} ->
+          pp f "...%a as %s" (core_type ctxt) rest_type rest_name.txt
+        | {rest_name; rest_type = None; _} -> pp f "...%s" rest_name.txt
+      in
+      match (closed, rest) with
+      | Closed, None ->
+        pp f "@[<2>{@;%a@;}@]" (list longident_x_pattern ~sep:";@;") l
+      | Open, None ->
+        pp f "@[<2>{@;%a;_}@]" (list longident_x_pattern ~sep:";@;") l
+      | _, Some rest_pat ->
+        let pp_fields = list longident_x_pattern ~sep:";@;" in
+        if l = [] then pp f "@[<2>{@;%a@;}@]" pp_rest rest_pat
+        else pp f "@[<2>{@;%a;@;%a@;}@]" pp_fields l pp_rest rest_pat)
     | Ppat_tuple l ->
       pp f "@[<1>(%a)@]" (list ~sep:",@;" (pattern1 ctxt)) l (* level1*)
     | Ppat_constant c -> pp f "%a" constant c

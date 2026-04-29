@@ -98,6 +98,7 @@ type error =
   | Type_params_not_supported of Longident.t
   | Field_access_on_dict_type
   | Jsx_not_enabled
+  | Record_rest of Typecore_record_rest.error
 
 exception Error of Location.t * Env.t * error
 exception Error_forward of Location.error
@@ -515,8 +516,10 @@ let rec build_as_type env p =
            row_fixed = false;
            row_closed = false;
          })
-  | Tpat_record (lpl, _) ->
-    let lbl = snd4 (List.hd lpl) in
+  | Tpat_record ([], _, _rest) ->
+    (* Rest-only record patterns already carry the source record type. *)
+    p.pat_type
+  | Tpat_record (((_, lbl, _, _) :: _ as lpl), _, _rest) ->
     if lbl.lbl_private = Private then p.pat_type
     else
       let ty = newvar () in
@@ -1497,7 +1500,7 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
     match (sarg, arg_type) with
     | Some p, [ty] -> type_pat p ty (fun p -> k (Some p))
     | _ -> k None)
-  | Ppat_record (lid_sp_list, closed) ->
+  | Ppat_record (lid_sp_list, closed, rest) ->
     let has_dict_pattern_attr =
       Dict_type_helpers.has_dict_pattern_attribute sp.ppat_attributes
     in
@@ -1556,12 +1559,35 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
           k (label_lid, label, arg, opt))
     in
     let k' k lbl_pat_list =
+      (* When there's a rest pattern, use Open to suppress missing-field warnings *)
+      let effective_closed =
+        match rest with
+        | Some _ -> Asttypes.Open
+        | None -> closed
+      in
       check_recordpat_labels ~get_jsx_component_error_info loc lbl_pat_list
-        closed;
+        effective_closed;
       unify_pat_types loc !env record_ty expected_ty;
+      let typed_rest =
+        match rest with
+        | None -> None
+        | Some rest -> (
+          let check_not_private loc ty decl =
+            if decl.type_private = Private then
+              raise (Error (loc, !env, Private_type ty))
+          in
+          try
+            Some
+              (Typecore_record_rest.type_record_pat_rest ~env:!env
+                 ~pattern_force ~loc ~record_ty ~lbl_pat_list ~rest
+                 ~enter_variable:(fun loc name ty -> enter_variable loc name ty)
+                 ~unify_pat_types ~check_not_private)
+          with Typecore_record_rest.Error (loc, env, err) ->
+            raise (Error (loc, env, Record_rest err)))
+      in
       rp k
         {
-          pat_desc = Tpat_record (lbl_pat_list, closed);
+          pat_desc = Tpat_record (lbl_pat_list, closed, typed_rest);
           pat_loc = loc;
           pat_extra = [];
           pat_type = expected_ty;
@@ -2128,7 +2154,7 @@ let iter_ppat f p =
   | Ppat_open (_, p)
   | Ppat_constraint (p, _) ->
     f p
-  | Ppat_record (args, _flag) -> List.iter (fun {x = p} -> f p) args
+  | Ppat_record (args, _flag, _rest) -> List.iter (fun {x = p} -> f p) args
 
 let contains_polymorphic_variant p =
   let rec loop p =
@@ -5012,6 +5038,7 @@ let report_error env loc ppf error =
     fprintf ppf
       "Cannot compile JSX expression because JSX support is not enabled. Add \
        \"jsx\" settings to rescript.json to enable JSX support."
+  | Record_rest err -> Typecore_record_rest.report_error ppf err
 
 let report_error env loc ppf err =
   Printtyp.wrap_printing_env env (fun () -> report_error env loc ppf err)
