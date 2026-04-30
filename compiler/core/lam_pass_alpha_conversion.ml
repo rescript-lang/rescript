@@ -75,9 +75,9 @@ let alpha_conversion (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
     | Lprim {primitive = Pjs_fn_make_unit; args = [arg]; loc} ->
       let arg =
         match arg with
-        | Lfunction {arity = 1; params = [x]; attr; body}
+        | Lfunction {arity = 1; params = [x]; attr; body; loc}
           when Ident.name x = "param" (* "()" *) ->
-          Lam.function_ ~params:[x]
+          Lam.function_ ~loc ~params:[x]
             ~attr:{attr with one_unit_arg = true}
             ~body ~arity:1
         | _ -> arg
@@ -85,9 +85,9 @@ let alpha_conversion (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
       simpl arg
     | Lprim {primitive; args; loc} ->
       Lam.prim ~primitive ~args:(Ext_list.map args simpl) loc
-    | Lfunction {arity; params; body; attr} ->
+    | Lfunction {arity; params; body; attr; loc} ->
       (* Lam_mk.lfunction kind params (simpl l) *)
-      Lam.function_ ~arity ~params ~body:(simpl body) ~attr
+      Lam.function_ ~loc ~arity ~params ~body:(simpl body) ~attr
     | Lswitch
         ( l,
           {

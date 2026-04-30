@@ -61,12 +61,12 @@ let transform_under_supply n ap_info fn args =
        But it is dangerous to change the arity
        of an existing function which may cause inconsistency
     *)
-    Lam.function_ ~arity:n ~params:extra_args
+    Lam.function_ ~loc:Location.none ~arity:n ~params:extra_args
       ~attr:Lambda.default_function_attribute
       ~body:(Lam.apply fn (Ext_list.append args extra_lambdas) ap_info)
   | fn :: args, bindings ->
     let rest : Lam.t =
-      Lam.function_ ~arity:n ~params:extra_args
+      Lam.function_ ~loc:Location.none ~arity:n ~params:extra_args
         ~attr:Lambda.default_function_attribute
         ~body:(Lam.apply fn (Ext_list.append args extra_lambdas) ap_info)
     in
@@ -123,8 +123,8 @@ let unsafe_adjust_to_arity loc ~(to_ : int) ?(from : int option) (fn : Lam.t) :
     if from = to_ || is_async_fn then fn
     else if to_ = 0 then
       match fn with
-      | Lfunction {params = [param]; body} ->
-        Lam.function_ ~arity:0 ~attr:Lambda.default_function_attribute
+      | Lfunction {params = [param]; body; loc} ->
+        Lam.function_ ~loc ~arity:0 ~attr:Lambda.default_function_attribute
           ~params:[]
           ~body:(Lam.let_ Alias param Lam.unit body)
         (* could be only introduced by
@@ -148,7 +148,7 @@ let unsafe_adjust_to_arity loc ~(to_ : int) ?(from : int option) (fn : Lam.t) :
         in
 
         let cont =
-          Lam.function_ ~attr:Lambda.default_function_attribute ~arity:0
+          Lam.function_ ~loc ~attr:Lambda.default_function_attribute ~arity:0
             ~params:[]
             ~body:(Lam.apply new_fn [Lam.unit] ap_info)
         in
@@ -158,7 +158,7 @@ let unsafe_adjust_to_arity loc ~(to_ : int) ?(from : int option) (fn : Lam.t) :
         | Some partial_arg -> Lam.let_ Strict partial_arg fn cont)
     else if to_ > from then
       match fn with
-      | Lfunction {params; body} ->
+      | Lfunction {params; body; loc} ->
         (* {[fun x -> f]} ->
            {[ fun x y -> f y ]}
         *)
@@ -170,7 +170,7 @@ let unsafe_adjust_to_arity loc ~(to_ : int) ?(from : int option) (fn : Lam.t) :
           | [] -> body
           | var :: vars -> mk_apply (Lam.apply body [var] ap_info) vars
         in
-        Lam.function_ ~attr:Lambda.default_function_attribute ~arity:to_
+        Lam.function_ ~loc ~attr:Lambda.default_function_attribute ~arity:to_
           ~params:(Ext_list.append params extra_args)
           ~body:(mk_apply body (Ext_list.map extra_args Lam.var))
       | _ -> (
@@ -193,7 +193,7 @@ let unsafe_adjust_to_arity loc ~(to_ : int) ?(from : int option) (fn : Lam.t) :
             (Some partial_arg, Lam.var partial_arg)
         in
         let cont =
-          Lam.function_ ~arity ~attr:Lambda.default_function_attribute
+          Lam.function_ ~loc ~arity ~attr:Lambda.default_function_attribute
             ~params:extra_args
             ~body:
               (let first_args, rest_args = Ext_list.split_at extra_args from in
@@ -216,16 +216,16 @@ let unsafe_adjust_to_arity loc ~(to_ : int) ?(from : int option) (fn : Lam.t) :
          This is okay if the function is not held by other..
       *)
       match fn with
-      | Lfunction {params; body}
+      | Lfunction {params; body; loc}
       (* TODO check arity = List.length params in debug mode *) ->
         let arity = to_ in
         let extra_outer_args, extra_inner_args =
           Ext_list.split_at params arity
         in
-        Lam.function_ ~arity ~attr:Lambda.default_function_attribute
+        Lam.function_ ~loc ~arity ~attr:Lambda.default_function_attribute
           ~params:extra_outer_args
           ~body:
-            (Lam.function_ ~arity:(from - to_)
+            (Lam.function_ ~loc ~arity:(from - to_)
                ~attr:Lambda.default_function_attribute ~params:extra_inner_args
                ~body)
       | _ -> (
@@ -247,14 +247,14 @@ let unsafe_adjust_to_arity loc ~(to_ : int) ?(from : int option) (fn : Lam.t) :
             (Some partial_arg, Lam.var partial_arg)
         in
         let cont =
-          Lam.function_ ~arity:to_ ~params:extra_outer_args
+          Lam.function_ ~loc ~arity:to_ ~params:extra_outer_args
             ~attr:Lambda.default_function_attribute
             ~body:
               (let arity = from - to_ in
                let extra_inner_args =
                  Ext_list.init arity (fun _ -> Ident.create Literals.param)
                in
-               Lam.function_ ~arity ~params:extra_inner_args
+               Lam.function_ ~loc ~arity ~params:extra_inner_args
                  ~attr:Lambda.default_function_attribute
                  ~body:
                    (Lam.apply new_fn
@@ -285,7 +285,7 @@ let unsafe_adjust_to_arity loc ~(to_ : int) ?(from : int option) (fn : Lam.t) :
       in
 
       let cont =
-        Lam.function_ ~attr:Lambda.default_function_attribute ~arity:0
+        Lam.function_ ~loc ~attr:Lambda.default_function_attribute ~arity:0
           ~params:[]
           ~body:(Lam.apply new_fn [Lam.unit] ap_info)
       in

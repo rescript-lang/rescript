@@ -47,6 +47,37 @@
         }
       ]
     },
+    "source-map-spec": {
+      "oneOf": [
+        {
+          "enum": [false],
+          "description": "Disable source map generation."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "enum": ["dev", "always"],
+              "description": "`dev` generates source maps only during watch mode. `always` generates source maps during both build and watch."
+            },
+            "mode": {
+              "enum": ["linked"],
+              "description": "Generate a separate .js.map file next to each generated JavaScript file and append a sourceMappingURL comment. Only linked source maps are supported for now."
+            },
+            "sourcesContent": {
+              "type": "boolean",
+              "description": "Include original .res source text in the source map. Default: false."
+            },
+            "sourceRoot": {
+              "type": "string",
+              "description": "Optional sourceRoot value written to the generated source map."
+            }
+          },
+          "required": ["enabled", "mode"],
+          "additionalProperties": false
+        }
+      ]
+    },
     "package-specs": {
       "oneOf": [
         {
@@ -447,6 +478,10 @@
     "package-specs": {
       "$ref": "#/definitions/package-specs",
       "description": "ReScript can currently output to [Commonjs](https://en.wikipedia.org/wiki/CommonJS), and [ES6 modules](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import)"
+    },
+    "sourceMap": {
+      "$ref": "#/definitions/source-map-spec",
+      "description": "Configure Source Map v3 output for generated JavaScript."
     },
     "bs-external-includes": {
       "type": "array",

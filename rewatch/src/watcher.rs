@@ -2,7 +2,7 @@ use crate::build;
 use crate::build::build_types::{BuildCommandState, SourceType};
 use crate::build::clean;
 use crate::cmd;
-use crate::config;
+use crate::config::{self, SourceMapCommand};
 use crate::helpers;
 use crate::helpers::StrippedVerbatimPath;
 use crate::lock::LockKind;
@@ -477,6 +477,7 @@ async fn async_watch(
                     build_state.get_warn_error_override(),
                     prod,
                     features.clone(),
+                    SourceMapCommand::Watch,
                 )
                 .expect("Could not initialize build");
 
@@ -575,6 +576,7 @@ pub fn start(
             warn_error.clone(),
             prod,
             features.clone(),
+            SourceMapCommand::Watch,
         )
         .with_context(|| "Could not initialize build")?;
 
@@ -675,6 +677,7 @@ mod tests {
             compiler,
             None,
             None,
+            SourceMapCommand::Watch,
         );
         build_state.insert_module(module_name, module);
         build_state

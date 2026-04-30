@@ -297,6 +297,31 @@ js
 
 let (//) = Filename.concat  
 
+let source_map_enabled () =
+  match !Js_config.source_map with
+  | No_source_map -> false
+  | Linked -> true
+
+let dump_deps_program_with_source_map ~target_file ~output_prefix module_system
+    lambda_output chan =
+  let builder =
+    if source_map_enabled () then
+      Some
+        (Js_source_map.make ~generated_file:target_file
+           ~source_root:!Js_config.source_map_root
+           ~sources_content:!Js_config.source_map_sources_content)
+    else None
+  in
+  Js_source_map.with_builder builder (fun () ->
+      Js_dump_program.pp_deps_program ~output_prefix module_system lambda_output
+        (Ext_pp.from_channel chan));
+  match (builder, !Js_config.source_map) with
+  | Some builder, Linked ->
+    let map_file = target_file ^ ".map" in
+    output_string chan (Js_source_map.linked_comment ~map_file);
+    Ext_io.write_file map_file (Js_source_map.json builder)
+  | _ -> ()
+
 let lambda_as_module 
     (lambda_output : J.deps_program)
     (output_prefix : string)
@@ -306,11 +331,6 @@ let lambda_as_module
     Js_dump_program.dump_deps_program ~output_prefix Commonjs (lambda_output) stdout
   end else
     Js_packages_info.iter package_info (fun {module_system; path; suffix} -> 
-        let output_chan chan  = 
-          Js_dump_program.dump_deps_program ~output_prefix
-            module_system 
-            (lambda_output)
-            chan in
         let basename =  
           Ext_namespace.change_ext_ns_suffix (Filename.basename output_prefix) suffix
         in
@@ -320,6 +340,9 @@ let lambda_as_module
            basename
            (* #913 only generate little-case js file *)
           ) in
+        let output_chan chan  =
+          dump_deps_program_with_source_map ~target_file ~output_prefix
+            module_system (lambda_output) chan in
         (if not !Clflags.dont_write_files then 
            Ext_pervasives.with_file_as_chan
              target_file output_chan );

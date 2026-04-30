@@ -689,6 +689,7 @@ pub fn compiler_args(
     is_local_dep: bool,
     // Command-line --warn-error flag override (takes precedence over rescript.json config)
     warn_error_override: Option<String>,
+    source_map_command: config::SourceMapCommand,
     // Pre-expanded source directories for the current package (used by gentype).
     // Pass an empty slice when unavailable (e.g. the compiler-args CLI command).
     current_package_dirs: &[PathBuf],
@@ -723,6 +724,7 @@ pub fn compiler_args(
     let jsx_module_args = root_config.get_jsx_module_args();
     let jsx_mode_args = root_config.get_jsx_mode_args();
     let jsx_preserve_args = root_config.get_jsx_preserve_args();
+    let source_map_args = root_config.get_source_map_args(source_map_command);
     let bsb_project_root = project_context.get_root_path();
     let dep_paths: Vec<(String, PathBuf)> = if config.gentype_config.is_some() {
         let resolved = packages.as_ref().map(|pkgs| {
@@ -807,6 +809,7 @@ pub fn compiler_args(
         jsx_module_args,
         jsx_mode_args,
         jsx_preserve_args,
+        source_map_args,
         bsc_flags.to_owned(),
         warning_args,
         gentype_arg,
@@ -954,6 +957,7 @@ fn compile_file(
         is_type_dev,
         package.is_local_dep,
         warn_error_override,
+        build_state.source_map_command,
         current_package_dirs,
     )?;
 
@@ -1088,6 +1092,18 @@ fn compile_file(
 
                     if source.exists() {
                         let _ = std::fs::copy(&source, &destination).expect("copying source file failed");
+                    }
+
+                    let mut source_map = source.clone().into_os_string();
+                    source_map.push(".map");
+                    let source_map = PathBuf::from(source_map);
+                    let mut destination_map = destination.clone().into_os_string();
+                    destination_map.push(".map");
+                    let destination_map = PathBuf::from(destination_map);
+
+                    if source_map.exists() {
+                        let _ = std::fs::copy(&source_map, &destination_map)
+                            .expect("copying source map file failed");
                     }
                 }
             });
