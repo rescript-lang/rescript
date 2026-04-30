@@ -19,6 +19,7 @@ function Issue_7917_test(props) {
 let make = Issue_7917_test;
 
 export {
+  M,
   make,
   Issue_7917_test$M,
 }

@@ -21,17 +21,14 @@ assert.match(
   output,
   /let DynamicSidebar = await import\("\.\/Sidebar\.custom\.mjs"\);/,
 );
-assert.match(
-  output,
-  /let dynamicProvider = DynamicSidebar\.Sidebar\$Provider;/,
-);
+assert.match(output, /let dynamicProvider = DynamicSidebar\.Provider\.make;/);
 assert.match(
   output,
   /JsxRuntime\.jsx\(Sidebar\$RscDynamicImportNestedJsx\.Sidebar\$Provider,/,
 );
 assert.doesNotMatch(
   output,
-  /let dynamicProvider = DynamicSidebar\.Provider\.make;/,
+  /let dynamicProvider = DynamicSidebar\.Sidebar\$Provider;/,
 );
 assert.doesNotMatch(
   output,

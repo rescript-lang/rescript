@@ -50,7 +50,9 @@ let componentWithPropsElement = React.createElement(Recursive_explicit_component
 });
 
 export {
+  SelfCreateElement,
   RawSiblingCreateElement,
+  ComponentWithProps,
   componentWithPropsElement,
   Recursive_explicit_component_test$SelfCreateElement,
   Recursive_explicit_component_test$RawSiblingCreateElement,

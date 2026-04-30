@@ -133,8 +133,7 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
           ap_func =
             Lprim
               {
-                primitive =
-                  Pfield (_, Fld_module {name = fld_name; jsx_component = _});
+                primitive = Pfield (_, Fld_module {name = fld_name});
                 args = [Lglobal_module (ident, dynamic_import)];
                 _;
               } as l1;

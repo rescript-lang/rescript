@@ -14,7 +14,6 @@
 
 #### :boom: Breaking Change
 
-- Nested React component modules now export only the namespaced component value instead of a public `make` wrapper, and GenType mirrors that new boundary shape. https://github.com/rescript-lang/rescript/pull/8293
 - Make Jsx.component abstract. https://github.com/rescript-lang/rescript/pull/8390
 
 #### :eyeglasses: Spec Compliance
@@ -23,6 +22,7 @@
 
 #### :bug: Bug fix
 
+- JSX v4 nested React component tags now use generated direct component exports when available, while preserving normal nested module exports. https://github.com/rescript-lang/rescript/pull/8293
 - Fix directive `@warning("-102")` not working. https://github.com/rescript-lang/rescript/pull/8322
 - Fix duplicated comments in `for`..`of` formatter. https://github.com/rescript-lang/rescript/pull/8395
 

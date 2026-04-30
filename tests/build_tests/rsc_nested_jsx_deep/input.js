@@ -35,13 +35,13 @@ assert.doesNotMatch(sidebarOutput, /Sidebar\$Group\$jsx/);
 const brandIcons = await import("./src/BrandIcons.res.js");
 assert.deepStrictEqual(
   new Set(Object.keys(brandIcons)),
-  new Set(["BrandIcons$ReScript", "getIconForLanguageExtension"]),
+  new Set(["ReScript", "BrandIcons$ReScript", "getIconForLanguageExtension"]),
 );
 
 const multipleNested = await import("./src/MultipleNested.res.js");
 assert.deepStrictEqual(
   new Set(Object.keys(multipleNested)),
-  new Set(["MultipleNested$Group", "MultipleNested$Other"]),
+  new Set(["Group", "Other", "MultipleNested$Group", "MultipleNested$Other"]),
 );
 
 await execClean();
