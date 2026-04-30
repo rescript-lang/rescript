@@ -51,6 +51,10 @@ let update_position t s =
         loop (i + 1)
       | c ->
         let byte = Char.code c in
+        (* Source map columns are counted in UTF-16 code units, while OCaml
+           strings are UTF-8 bytes. Decode only enough UTF-8 structure to
+           advance the generated column correctly: 1-3 byte sequences are one
+           UTF-16 code unit, and 4-byte sequences are surrogate pairs. *)
         if byte < 0x80 then (
           t.column <- t.column + 1;
           loop (i + 1))

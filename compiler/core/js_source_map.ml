@@ -1,3 +1,32 @@
+(* Source Map v3 maps generated JavaScript positions back to original ReScript
+   positions. Both generated and original columns are UTF-16 code unit offsets,
+   which is the convention used by JavaScript engines and browsers.
+
+   Source map generation is tied to the JS printer:
+
+   1. Lambda-to-JS conversion attaches internal marker comments to JS nodes,
+      because it does not know the final generated line/column yet.
+   2. A source map builder is installed while one generated JS file is printed.
+      It tracks sources, optional source contents, and mapping entries for that
+      output file.
+   3. The JS printer updates its generated line/column as it writes text. When
+      it sees one of the internal marker comments, it suppresses the comment from
+      output and records the current generated position against the original
+      ReScript location.
+   4. After printing, the collected mappings are sorted and encoded into the
+      compact Source Map v3 "mappings" field using base64 VLQ. The JSON map is
+      emitted next to the generated JavaScript and the JS file receives a
+      sourceMappingURL comment.
+
+   Original locations come from OCaml Location.t values, whose columns are byte
+   offsets. When source contents are available, original columns are converted
+   from UTF-8 byte offsets to UTF-16 code unit offsets before being stored in the
+   map.
+
+   A compiled JS program can be printed more than once for multiple package
+   targets, such as CommonJS and ESM. Marker locations therefore remain available
+   for every print pass and are cleaned up when the compilation unit finishes. *)
+
 type source = {relative_path: string; content: string option}
 
 type mapping = {
