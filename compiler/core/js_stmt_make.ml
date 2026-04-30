@@ -339,4 +339,6 @@ let break_ ?label () : t = {statement_desc = Break label; comment = None}
 
 let continue_ ?label () : t = {statement_desc = Continue label; comment = None}
 
-let debugger_block : t list = [{statement_desc = Debugger; comment = None}]
+let debugger_stmt ?comment () : t = {statement_desc = Debugger; comment}
+
+let debugger_block : t list = [debugger_stmt ()]

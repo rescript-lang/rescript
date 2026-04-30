@@ -1743,11 +1743,13 @@ let compile output_prefix =
       | {value = None} -> assert false)
     | {primitive = Psequand; args = [l; r]; _} -> compile_sequand l r lambda_cxt
     | {primitive = Psequor; args = [l; r]} -> compile_sequor l r lambda_cxt
-    | {primitive = Pdebugger; _} ->
+    | {primitive = Pdebugger; loc; _} ->
       (* [%debugger] guarantees that the expression does not matter
          TODO: make it even safer *)
+      let comment = source_map_comment loc in
       Js_output.output_of_block_and_expression lambda_cxt.continuation
-        S.debugger_block E.unit
+        [S.debugger_stmt ?comment ()]
+        E.unit
       (* TODO:
          check the arity of fn before wrapping it
          we need mark something that such eta-conversion can not be simplified in some cases
