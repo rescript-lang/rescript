@@ -232,6 +232,40 @@ type initialization = J.block
 *)
 
 let compile output_prefix =
+  (* When compiling a read from another module, a nested source path like
+     Other.A.B.make reaches this point as nested module-field reads:
+
+       Pfield "make" (Pfield "B" (Pfield "A" (Lglobal_module Other)))
+
+     Normal compilation does not look up the full path.  It only queries the
+     first field, "A", and then emits the remaining fields as JS property
+     access: Other.A.B.make.  The "A" lookup may include Submodule arity data,
+     but it does not say whether A.B.make has a separate root-level export.
+
+     Hoisted functions need that extra question.  For them, query the separate
+     hoisted-values table with the full source path A.B.make.  If present, the
+     same key is the root-level JS export name, for example Other.A$B$make.
+     The table is only a marker set; normal export metadata still lives in the
+     regular .cmj values table. *)
+  let rec extract_field_path segments primitive args =
+    match (primitive, args) with
+    | ( Lam_primitive.Pfield (_, Fld_module {name}),
+        [Lam.Lprim {primitive; args; _}] ) ->
+      extract_field_path (name :: segments) primitive args
+    | ( Lam_primitive.Pfield (_, Fld_module {name}),
+        [Lam.Lglobal_module (id, dynamic_import)] ) ->
+      Some (id, dynamic_import, name :: segments)
+    | _ -> None
+  in
+  let hoisted_external_field_name primitive args =
+    match extract_field_path [] primitive args with
+    | Some (id, dynamic_import, (_ :: _ :: _ as segments)) ->
+      let name = Js_cmj_format.module_field_path_key segments in
+      if Lam_compile_env.has_hoisted_external_id ~dynamic_import id name then
+        Some (id, dynamic_import, name)
+      else None
+    | Some (_, _, ([] | [_])) | None -> None
+  in
   let rec compile_external_field (* Like [List.empty]*)
       ?(dynamic_import = false) (lamba_cxt : Lam_compile_context.t)
       (id : Ident.t) name : Js_output.t =
@@ -1637,17 +1671,47 @@ let compile output_prefix =
              fn_code args))
   and compile_prim (prim_info : Lam.prim_info)
       (lambda_cxt : Lam_compile_context.t) =
+    let compile_primitive_default primitive args loc =
+      let args_block, args_expr =
+        if args = [] then ([], [])
+        else
+          let new_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
+          Ext_list.split_map args (fun x ->
+              match compile_lambda new_cxt x with
+              | {block; value = Some b} -> (block, b)
+              | {value = None} -> assert false)
+      in
+      let args_code : J.block = List.concat args_block in
+      let exp =
+        (* TODO: all can be done in [compile_primitive] *)
+        Lam_compile_primitive.translate output_prefix loc lambda_cxt primitive
+          args_expr
+      in
+      Js_output.output_of_block_and_expression lambda_cxt.continuation args_code
+        exp
+    in
     match prim_info with
-    | {
-     primitive = Pfield (_, fld_info);
-     args = [Lglobal_module (id, dynamic_import)];
-     _;
-    } -> (
-      (* should be before Lglobal_global *)
-      match fld_info with
-      | Fld_module {name = field} ->
-        compile_external_field ~dynamic_import lambda_cxt id field
-      | _ -> assert false)
+    | {primitive = Pfield (_, Fld_module _); _} -> (
+      match hoisted_external_field_name prim_info.primitive prim_info.args with
+      | Some (id, dynamic_import, hoisted_name) ->
+        Js_output.output_of_expression lambda_cxt.continuation
+          ~no_effects:no_effects_const
+          (E.ml_var_dot ~dynamic_import id hoisted_name)
+      | None -> (
+        match prim_info with
+        | {
+         primitive = Pfield (_, fld_info);
+         args = [Lglobal_module (id, dynamic_import)];
+         _;
+        } -> (
+          (* should be before Lglobal_global *)
+          match fld_info with
+          | Fld_module {name = field} ->
+            compile_external_field ~dynamic_import lambda_cxt id field
+          | _ -> assert false)
+        | _ ->
+          compile_primitive_default prim_info.primitive prim_info.args
+            prim_info.loc))
     | {primitive = Praise; args = [e]; _} -> (
       match
         compile_lambda {lambda_cxt with continuation = NeedValue Not_tail} e
@@ -1816,24 +1880,7 @@ let compile output_prefix =
         Location.raise_errorf ~loc
           "Invalid argument: unsupported argument to dynamic import. If you \
            believe this should be supported, please open an issue.")
-    | {primitive; args; loc} ->
-      let args_block, args_expr =
-        if args = [] then ([], [])
-        else
-          let new_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
-          Ext_list.split_map args (fun x ->
-              match compile_lambda new_cxt x with
-              | {block; value = Some b} -> (block, b)
-              | {value = None} -> assert false)
-      in
-      let args_code : J.block = List.concat args_block in
-      let exp =
-        (* TODO: all can be done in [compile_primitive] *)
-        Lam_compile_primitive.translate output_prefix loc lambda_cxt primitive
-          args_expr
-      in
-      Js_output.output_of_block_and_expression lambda_cxt.continuation args_code
-        exp
+    | {primitive; args; loc} -> compile_primitive_default primitive args loc
   and compile_lambda (lambda_cxt : Lam_compile_context.t) (cur_lam : Lam.t) :
       Js_output.t =
     match cur_lam with

@@ -20,6 +20,7 @@ type t = {stamp: int; name: string; mutable flags: int}
 let[@inlnie] max (x : int) y = if x >= y then x else y
 let global_flag = 1
 let predef_exn_flag = 2
+let js_hoisted_flag = 4
 
 (* A stamp of 0 denotes a persistent identifier *)
 
@@ -70,6 +71,10 @@ let make_global i = i.flags <- i.flags lor global_flag
 let global i = i.flags land global_flag <> 0
 
 let is_predef_exn i = i.flags land predef_exn_flag <> 0
+
+let make_js_hoisted i = i.flags <- i.flags lor js_hoisted_flag
+
+let js_hoisted i = i.flags land js_hoisted_flag <> 0
 
 let print ppf i =
   match i.stamp with
