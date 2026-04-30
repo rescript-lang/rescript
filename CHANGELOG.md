@@ -15,6 +15,7 @@
 #### :boom: Breaking Change
 
 - Make Jsx.component abstract. https://github.com/rescript-lang/rescript/pull/8390
+- Drop Node.js version 20.x support, as it is reaching EOL. https://github.com/rescript-lang/rescript/pull/8401
 
 #### :eyeglasses: Spec Compliance
 
