@@ -105,34 +105,37 @@ let notification_of_jsonrpc notification =
 let respond channel response =
   Io.await @@ Lsp_Io.write channel @@ Response response
 
-let rec input_loop ~input with_ =
+let rec input_loop ~input ~state with_ =
   match Io.await @@ Lsp_Io.read input with
   | Some packet ->
-    let () = with_ packet in
-    input_loop ~input with_
+    let state = with_ state packet in
+    input_loop ~input ~state with_
   | exception exn -> raise exn
   | None -> ()
 
-let listen ~input ~output ~on_request ~on_notification =
-  let handle_request channel request =
-    respond channel (on_request channel request)
+let listen ~input ~output ~on_request ~on_notification ~state =
+  let handle_request state channel request =
+    let response, state = on_request state channel request in
+    respond channel response;
+    state
   in
-  let handle_notification channel notification =
-    on_notification channel (notification_of_jsonrpc notification)
+  let handle_notification state channel notification =
+    on_notification state channel (notification_of_jsonrpc notification)
   in
   let input = Chan.of_source input in
   Chan.with_sink output @@ fun channel ->
-  input_loop ~input @@ fun packet ->
+  input_loop ~input ~state @@ fun state packet ->
   match packet with
-  | Notification notification -> handle_notification channel notification
-  | Request request -> handle_request channel request
+  | Notification notification -> handle_notification state channel notification
+  | Request request -> handle_request state channel request
   | Batch_call calls ->
-    List.iter
-      (fun call ->
+    List.fold_left
+      (fun state call ->
         match call with
-        | `Request request -> handle_request channel request
-        | `Notification notification -> handle_notification channel notification)
-      calls
+        | `Request request -> handle_request state channel request
+        | `Notification notification ->
+          handle_notification state channel notification)
+      state calls
   | Response _ -> raise (Lsp.Io.Error "unexpected response")
   | Batch_response _ -> raise (Lsp.Io.Error "unexpected batch response")
 
@@ -149,12 +152,14 @@ let initialization =
     ServerCapabilities.create ~textDocumentSync ~hoverProvider:(`Bool true) ()
   in
   let serverInfo =
-    let version = "experimental" in
-    InitializeResult.create_serverInfo ~name:"rescriptlsp" ~version ()
+    let version = "2.0.0-aplha.1" in
+    InitializeResult.create_serverInfo ~name:"rescript-language-server" ~version
+      ()
   in
   InitializeResult.create ~capabilities ~serverInfo ()
 
-let on_request _channel (jsonrpc_request : Jsonrpc.Request.t) : Jsonrpc.Response.t =
+let on_request state _channel (jsonrpc_request : Jsonrpc.Request.t) :
+    Jsonrpc.Response.t * State.t =
   let result =
     let (E request) = request_of_jsonrpc jsonrpc_request in
     match request with
@@ -167,22 +172,32 @@ let on_request _channel (jsonrpc_request : Jsonrpc.Request.t) : Jsonrpc.Response
       Error
         (Jsonrpc.Response.Error.make
            ~code:Jsonrpc.Response.Error.Code.MethodNotFound
-           ~message:"Method not supported" ())
+           ~message:("Method not supported " ^ jsonrpc_request.method_)
+           ())
   in
-  Jsonrpc.Response.{id = jsonrpc_request.id; result}
+  (Jsonrpc.Response.{id = jsonrpc_request.id; result}, state)
 
-let on_notification _channel notification =
+let on_notification state _channel notification =
   match notification with
-  | Lsp.Client_notification.Initialized -> ()
-  | TextDocumentDidOpen _ -> ()
-  | TextDocumentDidChange _ -> ()
+  | Lsp.Client_notification.Initialized -> state
+  | TextDocumentDidOpen {textDocument = {uri; text; version; _}} ->
+    State.open_document state ~uri ~text ~version
+  | TextDocumentDidChange {textDocument = {uri; version; _}; contentChanges}
+    -> (
+    match List.rev contentChanges with
+    | {text; _} :: _ -> State.update_document state ~uri ~text ~version
+    | [] -> state)
+  | TextDocumentDidClose {textDocument = {uri; _}} ->
+    (* let uri = Lsp.Uri.to_string textDocument.uri in *)
+    State.close_document state ~uri
   | Exit -> exit 0
-  | _ -> ()
+  | _ -> state
 
 let main () =
   Eio_main.run @@ fun env ->
   let stdin = Eio.Stdenv.stdin env in
   let stdout = Eio.Stdenv.stdout env in
   listen ~input:stdin ~output:stdout ~on_request ~on_notification
+    ~state:State.empty
 
 let () = main ()
