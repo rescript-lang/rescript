@@ -91,3 +91,7 @@ module C3 = {
     \"DefaultValueProp$C3"
   })
 }
+@warning("-32") let \"DefaultValueProp$C0" = C0.make
+@warning("-32") let \"DefaultValueProp$C1" = C1.make
+@warning("-32") let \"DefaultValueProp$C2" = C2.make
+@warning("-32") let \"DefaultValueProp$C3" = C3.make

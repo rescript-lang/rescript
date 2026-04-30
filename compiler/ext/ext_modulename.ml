@@ -22,6 +22,17 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
+let nested_component_separator_char = '$'
+let nested_component_separator = String.make 1 nested_component_separator_char
+
+let nested_component_prefix module_name =
+  module_name ^ nested_component_separator
+
+let nested_component_suffix module_name =
+  nested_component_separator ^ module_name
+
+let concat_nested_component_name = String.concat nested_component_separator
+
 let good_hint_name module_name offset =
   let len = String.length module_name in
   len > offset

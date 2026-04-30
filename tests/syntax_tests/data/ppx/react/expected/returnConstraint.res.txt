@@ -47,3 +47,7 @@ module Async = {
     \"ReturnConstraint$Async"
   })
 }
+@warning("-32") let \"ReturnConstraint$Standard" = Standard.make
+@warning("-32") let \"ReturnConstraint$ForwardRef" = ForwardRef.make
+@warning("-32") let \"ReturnConstraint$WithProps" = WithProps.make
+@warning("-32") let \"ReturnConstraint$Async" = Async.make

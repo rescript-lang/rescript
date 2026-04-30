@@ -25,7 +25,7 @@ let GenericRenderProp = {
 };
 
 export {
-  PolyVariantLowerBound,
-  GenericRenderProp,
+  Abstract_component_test$PolyVariantLowerBound,
+  Abstract_component_test$GenericRenderProp,
 }
 /* No side effect */

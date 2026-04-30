@@ -32,4 +32,7 @@ module Other: {
   @react.component
   let make: (~name: string) => React.element
 }
+let JsxV4$M4: React.component<M4.props<string, string, string>>
+let JsxV4$MM: React.component<MM.props>
+let JsxV4$Other: React.component<Other.props<string>>
 

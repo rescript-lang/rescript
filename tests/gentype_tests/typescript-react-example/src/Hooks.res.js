@@ -204,20 +204,24 @@ let make$1 = Hooks;
 
 let $$default = Hooks;
 
+let Hooks$WithRef = make;
+
 export {
   make$1 as make,
   $$default as default,
   Another,
   Inner,
-  NoProps,
   functionWithRenamedArgs,
   WithRename,
-  WithRef,
   ForwardRef,
   Poly,
   Fun,
-  RenderPropRequiresConversion,
   WithChildren,
-  DD,
+  Hooks$Inner,
+  Hooks$Inner$Inner2,
+  Hooks$NoProps,
+  Hooks$WithRef,
+  Hooks$RenderPropRequiresConversion,
+  Hooks$DD,
 }
 /* make Not a pure module */

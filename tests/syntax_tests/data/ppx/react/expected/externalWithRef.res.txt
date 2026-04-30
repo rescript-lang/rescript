@@ -10,3 +10,4 @@ module V4C = {
   @module("componentForwardRef")
   external make: React.component<props<string, ReactDOM.Ref.currentDomRef>> = "component"
 }
+@warning("-32") let \"ExternalWithRef$V4C" = V4C.make

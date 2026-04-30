@@ -263,6 +263,9 @@ js
 |> (fun js -> ignore @@ Js_pass_scope.program  js ; js )
 |> Js_shake.shake_program
 |> _j "shake"
+|> (fun js ->
+      if !Js_config.cmj_only then js
+      else Js_pass_nested_component_exports.program js)
 |> ( fun (program:  J.program) -> 
     let external_module_ids : Lam_module_ident.t list = 
       if !Js_config.all_module_aliases then []

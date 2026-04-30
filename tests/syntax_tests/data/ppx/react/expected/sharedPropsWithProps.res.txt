@@ -76,3 +76,10 @@ module V4A7 = {
     \"SharedPropsWithProps$V4A7"
   })
 }
+@warning("-32") let \"SharedPropsWithProps$V4A1" = V4A1.make
+@warning("-32") let \"SharedPropsWithProps$V4A2" = V4A2.make
+@warning("-32") let \"SharedPropsWithProps$V4A3" = V4A3.make
+@warning("-32") let \"SharedPropsWithProps$V4A4" = V4A4.make
+@warning("-32") let \"SharedPropsWithProps$V4A5" = V4A5.make
+@warning("-32") let \"SharedPropsWithProps$V4A6" = V4A6.make
+@warning("-32") let \"SharedPropsWithProps$V4A7" = V4A7.make

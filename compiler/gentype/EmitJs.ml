@@ -139,6 +139,15 @@ let emit_export_from_type_declarations ~config ~emitters ~env
 let emit_code_item ~config ~emitters ~module_items_emitter ~env ~file_name
     ~output_file_relative ~resolver ~inline_one_level ~type_name_is_interface
     code_item =
+  let nested_make_hidden_export_access ~file_name module_access_path =
+    let rec flatten = function
+      | Runtime.Root s -> [s]
+      | Runtime.Dot (path, module_item) ->
+        flatten path @ [module_item |> Runtime.module_item_to_string]
+    in
+    ModuleName.nested_make_hidden_export_access ~file_name
+      (flatten module_access_path)
+  in
   if !Debug.code_items then
     Log_.item "Code Item: %s\n"
       (code_item |> code_item_to_string ~config ~type_name_is_interface);
@@ -350,6 +359,12 @@ let emit_code_item ~config ~emitters ~module_items_emitter ~env ~file_name
         (comp_type, None)
       | _ -> (type_, None)
     in
+    let is_jsx_component_export =
+      match type_ with
+      | Function {arg_types = [{a_type = Object (_, fields)}]; ret_type; _} ->
+        ret_type |> EmitType.is_type_function_component ~fields
+      | _ -> false
+    in
 
     resolved_name
     |> ExportModule.extend_export_modules ~doc_string ~module_items_emitter
@@ -375,9 +390,15 @@ let emit_code_item ~config ~emitters ~module_items_emitter ~env ~file_name
       | _ -> emitters
     in
     let emitters =
-      (file_name_js |> ModuleName.to_string)
-      ^ "."
-      ^ (module_access_path |> Runtime.emit_module_access_path ~config)
+      (match
+         ( original_name = make && is_jsx_component_export,
+           nested_make_hidden_export_access ~file_name module_access_path )
+       with
+      | true, Some hidden_access -> hidden_access
+      | _ ->
+        (file_name_js |> ModuleName.to_string)
+        ^ "."
+        ^ (module_access_path |> Runtime.emit_module_access_path ~config))
       |> EmitType.emit_export_const ~config ~doc_string ~early:false ~emitters
            ~name ~type_ ~type_name_is_interface
     in

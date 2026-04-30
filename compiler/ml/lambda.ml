@@ -113,7 +113,7 @@ let ref_tag_info : tag_info =
 
 type field_dbg_info =
   | Fld_record of {name: string; mutable_flag: Asttypes.mutable_flag}
-  | Fld_module of {name: string}
+  | Fld_module of {name: string; jsx_component: bool}
   | Fld_record_inline of {name: string}
   | Fld_record_extension of {name: string}
   | Fld_tuple
@@ -133,6 +133,8 @@ let fld_record (lbl : label) =
 let fld_record_extension (lbl : label) =
   Fld_record_extension
     {name = Ext_list.find_def lbl.lbl_attributes find_name lbl.lbl_name}
+
+let fld_module ~name ~jsx_component = Fld_module {name; jsx_component}
 
 let ref_field_info : field_dbg_info =
   Fld_record {name = "contents"; mutable_flag = Mutable}
@@ -638,10 +640,27 @@ let rec transl_normal_path = function
     else Lvar id
   | Pdot (p, s, pos) ->
     Lprim
-      ( Pfield (pos, Fld_module {name = s}),
+      ( Pfield (pos, Fld_module {name = s; jsx_component = false}),
         [transl_normal_path p],
         Location.none )
   | Papply _ -> assert false
+
+let transl_jsx_path path =
+  let rec aux ~is_final = function
+    | Path.Pident id ->
+      if Ident.global id then Lprim (Pgetglobal id, [], Location.none)
+      else Lvar id
+    | Pdot (p, s, pos) ->
+      Lprim
+        ( Pfield
+            ( pos,
+              Fld_module
+                {name = s; jsx_component = is_final && String.equal s "make"} ),
+          [aux ~is_final:false p],
+          Location.none )
+    | Papply _ -> assert false
+  in
+  aux ~is_final:true path
 
 (* Translation of identifiers *)
 
@@ -650,6 +669,9 @@ let transl_module_path ?(loc = Location.none) env path =
 
 let transl_value_path ?(loc = Location.none) env path =
   transl_normal_path (Env.normalize_path_prefix (Some loc) env path)
+
+let transl_jsx_value_path ?(loc = Location.none) env path =
+  transl_jsx_path (Env.normalize_path_prefix (Some loc) env path)
 
 let transl_extension_path = transl_value_path
 

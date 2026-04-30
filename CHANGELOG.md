@@ -14,6 +14,7 @@
 
 #### :boom: Breaking Change
 
+- Nested React component modules now export only the namespaced component value instead of a public `make` wrapper, and GenType mirrors that new boundary shape. https://github.com/rescript-lang/rescript/pull/8293
 - Make Jsx.component abstract. https://github.com/rescript-lang/rescript/pull/8390
 
 #### :eyeglasses: Spec Compliance

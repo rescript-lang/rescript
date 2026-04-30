@@ -25,7 +25,7 @@ module C0 = {
     | None => module(M: S)
     }
     let module(C: S) = __component_value
-    (React.jsx(C.make, {}): React.element)
+    (React.jsx(@res.jsxComponentPath C.make, {}): React.element)
   }
   let make = React.component({
     let \"DefaultPatternProp$C0" = (props: props<_>) => make(props)
@@ -33,3 +33,5 @@ module C0 = {
     \"DefaultPatternProp$C0"
   })
 }
+@warning("-32") let \"DefaultPatternProp$C0$M" = C0.M.make
+@warning("-32") let \"DefaultPatternProp$C0" = C0.make

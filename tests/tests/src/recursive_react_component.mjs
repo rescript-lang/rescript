@@ -52,9 +52,9 @@ let make$1 = Recursive_react_component;
 
 export {
   make$1 as make,
-  ShadowedSelfReference,
-  Leaf,
-  ShadowedByLocalLet,
-  ShadowedByNestedParameter,
+  Recursive_react_component$ShadowedSelfReference,
+  Recursive_react_component$Leaf,
+  Recursive_react_component$ShadowedByLocalLet,
+  Recursive_react_component$ShadowedByNestedParameter,
 }
 /* react Not a pure module */

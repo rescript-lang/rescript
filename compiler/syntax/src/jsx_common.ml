@@ -6,6 +6,17 @@ type jsx_config = {
   mutable module_: string;
   mutable nested_modules: string list;
   mutable has_component: bool;
+  mutable hoisted_structure_items: structure_item list;
+  mutable hoisted_signature_items: signature_item list;
+  (* Nesting depth of [structure] / [signature] while rewriting one file.
+     Used so we only clear/append hoisted items at the true file root — not for
+     nested [Pmod_structure] / [Pmty_signature] reached from inner traversal,
+     which would otherwise wipe hoists from earlier items. *)
+  mutable structure_depth: int;
+  (* Inside [Pmod_functor] / [Pmty_functor] bodies, hoisting [File$M = M.make]
+     at the file top would reference [M] as a functor (illegal). Skip hoists
+     when > 0. *)
+  mutable functor_depth: int;
 }
 
 (* Helper method to look up the [@react.component] attribute *)

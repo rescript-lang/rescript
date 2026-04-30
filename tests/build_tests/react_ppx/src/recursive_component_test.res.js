@@ -22,5 +22,6 @@ let Rec = {
 
 export {
   Rec,
+  Recursive_component_test$Rec,
 }
 /* No side effect */

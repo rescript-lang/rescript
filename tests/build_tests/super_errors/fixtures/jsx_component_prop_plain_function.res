@@ -13,7 +13,7 @@ module List = {
   type separatorProps = {index: int}
 
   @react.component
-  let make = (~itemSeparatorComponent: React.component<separatorProps>) => React.null
+  let make = (~itemSeparatorComponent as _: React.component<separatorProps>) => React.null
 }
 
 let _ = <List itemSeparatorComponent={_props => React.null} />

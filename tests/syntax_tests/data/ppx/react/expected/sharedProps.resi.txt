@@ -49,3 +49,11 @@ module V4A4: {
 
   let make: React.component<props>
 }
+let \"SharedProps$V4C1": React.component<V4C1.props>
+let \"SharedProps$V4C2": React.component<V4C2.props<_>>
+let \"SharedProps$V4C3": React.component<V4C3.props<_>>
+let \"SharedProps$V4C4": React.component<V4C4.props>
+let \"SharedProps$V4A1": React.component<V4A1.props>
+let \"SharedProps$V4A2": React.component<V4A2.props<_>>
+let \"SharedProps$V4A3": React.component<V4A3.props<_>>
+let \"SharedProps$V4A4": React.component<V4A4.props>

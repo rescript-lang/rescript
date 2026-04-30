@@ -8,16 +8,18 @@ module Outer = {
 
       let make = (_: props): React.element => ReactDOM.jsx("div", {})
       let make = React.component({
-        let \"Nested$Outer" = props => make(props)
+        let \"Nested$Outer$Inner" = props => make(props)
 
-        \"Nested$Outer"
+        \"Nested$Outer$Inner"
       })
     }
 
-    React.jsx(Inner.make, {})
+    React.jsx(@res.jsxComponentPath Inner.make, {})
   }
   let make = React.component({
     let \"Nested$Outer" = props => make(props)
     \"Nested$Outer"
   })
 }
+@warning("-32") let \"Nested$Outer$Inner" = Outer.Inner.make
+@warning("-32") let \"Nested$Outer" = Outer.make

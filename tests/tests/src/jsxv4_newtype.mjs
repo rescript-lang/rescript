@@ -34,9 +34,9 @@ let V4A3 = {
 };
 
 export {
-  V4A,
-  V4A1,
-  V4A2,
-  V4A3,
+  Jsxv4_newtype$V4A,
+  Jsxv4_newtype$V4A1,
+  Jsxv4_newtype$V4A2,
+  Jsxv4_newtype$V4A3,
 }
 /* No side effect */

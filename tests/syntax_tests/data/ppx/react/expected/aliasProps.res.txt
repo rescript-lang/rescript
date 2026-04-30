@@ -155,10 +155,17 @@ module C6 = {
   }
 
   let make = ({comp: module(Comp: Comp), x: (a, b), _}: props<_, _>): React.element =>
-    React.jsx(Comp.make, {})
+    React.jsx(@res.jsxComponentPath Comp.make, {})
   let make = React.component({
     let \"AliasProps$C6" = (props: props<_>) => make(props)
 
     \"AliasProps$C6"
   })
 }
+@warning("-32") let \"AliasProps$C0" = C0.make
+@warning("-32") let \"AliasProps$C1" = C1.make
+@warning("-32") let \"AliasProps$C2" = C2.make
+@warning("-32") let \"AliasProps$C3" = C3.make
+@warning("-32") let \"AliasProps$C4" = C4.make
+@warning("-32") let \"AliasProps$C5" = C5.make
+@warning("-32") let \"AliasProps$C6" = C6.make

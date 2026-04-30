@@ -67,3 +67,11 @@ module V4A8 = {
 
   external make: React.component<props> = "default"
 }
+@warning("-32") let \"SharedProps$V4A1" = V4A1.make
+@warning("-32") let \"SharedProps$V4A2" = V4A2.make
+@warning("-32") let \"SharedProps$V4A3" = V4A3.make
+@warning("-32") let \"SharedProps$V4A4" = V4A4.make
+@warning("-32") let \"SharedProps$V4A5" = V4A5.make
+@warning("-32") let \"SharedProps$V4A6" = V4A6.make
+@warning("-32") let \"SharedProps$V4A7" = V4A7.make
+@warning("-32") let \"SharedProps$V4A8" = V4A8.make

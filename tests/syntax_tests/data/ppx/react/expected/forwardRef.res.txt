@@ -45,7 +45,10 @@ module V4A = {
         "div",
         {
           children: ?ReactDOM.someElement(
-            React.jsx(FancyInput.make, {ref: input, children: {React.string("Click to focus")}}),
+            React.jsx(
+              @res.jsxComponentPath FancyInput.make,
+              {ref: input, children: {React.string("Click to focus")}},
+            ),
           ),
         },
       ): React.element
@@ -103,7 +106,10 @@ module V4AUncurried = {
         "div",
         {
           children: ?ReactDOM.someElement(
-            React.jsx(FancyInput.make, {ref: input, children: {React.string("Click to focus")}}),
+            React.jsx(
+              @res.jsxComponentPath FancyInput.make,
+              {ref: input, children: {React.string("Click to focus")}},
+            ),
           ),
         },
       ): React.element
@@ -115,3 +121,7 @@ module V4AUncurried = {
     \"ForwardRef$V4AUncurried"
   })
 }
+@warning("-32") let \"ForwardRef$V4A$FancyInput" = V4A.FancyInput.make
+@warning("-32") let \"ForwardRef$V4A" = V4A.make
+@warning("-32") let \"ForwardRef$V4AUncurried$FancyInput" = V4AUncurried.FancyInput.make
+@warning("-32") let \"ForwardRef$V4AUncurried" = V4AUncurried.make

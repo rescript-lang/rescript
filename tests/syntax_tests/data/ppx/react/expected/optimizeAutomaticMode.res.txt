@@ -18,3 +18,4 @@ module User = {
     \"OptimizeAutomaticMode$User"
   })
 }
+@warning("-32") let \"OptimizeAutomaticMode$User" = User.make

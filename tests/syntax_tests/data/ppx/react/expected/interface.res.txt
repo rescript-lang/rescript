@@ -21,3 +21,5 @@ module NoProps = {
     \"Interface$NoProps"
   })
 }
+@warning("-32") let \"Interface$A" = A.make
+@warning("-32") let \"Interface$NoProps" = NoProps.make

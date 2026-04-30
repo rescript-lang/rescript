@@ -43,7 +43,9 @@ let field (field_info : Lam_compat.field_dbg_info) e (i : int32) =
   | Fld_cons -> E.cons_access e i
   | Fld_record_inline {name} -> E.inline_record_access e name i
   | Fld_record {name} -> E.record_access e name i
-  | Fld_module {name} -> E.module_access e name i
+  | Fld_module {name; jsx_component = true} ->
+    if !Js_config.jsx_preserve then E.dot e name else E.module_access e name i
+  | Fld_module {name; jsx_component = false} -> E.module_access e name i
 
 let field_by_exp e i = E.array_index e i
 

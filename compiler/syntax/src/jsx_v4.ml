@@ -71,6 +71,48 @@ let rec get_fn_name binding =
     Jsx_common.raise_error ~loc:ppat_loc
       "JSX component calls cannot be destructured."
 
+let longident_of_segments = function
+  | [] -> assert false
+  | head :: rest ->
+    List.fold_left (fun acc name -> Ldot (acc, name)) (Lident head) rest
+
+(* [nested_modules] is the same stack as [config.nested_modules] while inside a
+   nested [module M: { ... }]: outermost submodule name is at the tail. *)
+let props_longident_for_nested_module nested_modules =
+  match List.rev nested_modules with
+  | [] -> Lident "props"
+  | m :: rest ->
+    let mod_path =
+      List.fold_left (fun acc name -> Ldot (acc, name)) (Lident m) rest
+    in
+    Ldot (mod_path, "props")
+
+(* Hoisted File$Nested aliases exist for JS/RSC exports; they are not always
+   referenced from ReScript when a nested module is absent from the [.resi], so
+   suppress unused-value (32) on these bindings only. *)
+let jsx_hoisted_binding_warning_attrs =
+  [
+    ( Location.mknoloc "warning",
+      PStr [Str.eval (Exp.constant (Pconst_string ("-32", None)))] );
+  ]
+
+let make_hoisted_component_binding ~empty_loc ~full_module_name nested_modules =
+  let path =
+    nested_modules |> List.rev |> longident_of_segments |> fun txt ->
+    {loc = empty_loc; txt = Ldot (txt, "make")}
+  in
+  {
+    pstr_loc = empty_loc;
+    pstr_desc =
+      Pstr_value
+        ( Nonrecursive,
+          [
+            Vb.mk ~loc:empty_loc ~attrs:jsx_hoisted_binding_warning_attrs
+              (Pat.var ~loc:empty_loc {loc = empty_loc; txt = full_module_name})
+              (Exp.ident ~loc:empty_loc path);
+          ] );
+  }
+
 (* Lookup the filename from the location information on the AST node and turn it into a valid module identifier *)
 let filename_from_loc (pstr_loc : Location.t) =
   let file_name =
@@ -85,8 +127,70 @@ let filename_from_loc (pstr_loc : Location.t) =
   let file_name = String.capitalize_ascii file_name in
   file_name
 
-(* Build a string representation of a module name with segments separated by $ *)
+let unnamespace_module_name file_name =
+  match
+    String.index_opt file_name Ext_modulename.nested_component_separator_char
+  with
+  | Some index -> String.sub file_name 0 index
+  | None -> (
+    match Ext_namespace.try_split_module_name file_name with
+    | Some (_namespace, module_name) -> module_name
+    | None -> file_name)
+
+let maybe_hoist_nested_make_component ~(config : Jsx_common.jsx_config)
+    ~empty_loc ~full_module_name fn_name =
+  match (fn_name, config.nested_modules, config.functor_depth) with
+  | "make", _ :: _, 0 ->
+    config.hoisted_structure_items <-
+      make_hoisted_component_binding ~empty_loc ~full_module_name
+        config.nested_modules
+      :: config.hoisted_structure_items
+  | _ -> ()
+
+let make_hoisted_component_signature ~empty_loc ~full_module_name
+    (component_type : Parsetree.core_type) =
+  {
+    psig_loc = empty_loc;
+    psig_desc =
+      Psig_value
+        (Val.mk ~loc:empty_loc
+           {loc = empty_loc; txt = full_module_name}
+           component_type);
+  }
+
+let maybe_hoist_nested_make_signature ~(config : Jsx_common.jsx_config)
+    ~empty_loc ~full_module_name ~component_type fn_name =
+  match (fn_name, config.nested_modules, config.functor_depth) with
+  | "make", _ :: _, 0 ->
+    let full_sig =
+      make_hoisted_component_signature ~empty_loc ~full_module_name
+        component_type
+    in
+    config.hoisted_signature_items <- full_sig :: config.hoisted_signature_items
+  | _ -> ()
+
+let component_with_props_type ~loc core_type =
+  match core_type.ptyp_desc with
+  | Ptyp_arrow {arg = {lbl = Nolabel; typ}; _} -> typ
+  | _ ->
+    Jsx_common.raise_error ~loc
+      "@react.componentWithProps expects a function taking one props argument."
+
+let props_type_for_hoist nested_modules core_type =
+  match core_type.ptyp_desc with
+  | Ptyp_constr (({txt = Lident "props"} as lid), args) ->
+    {
+      core_type with
+      ptyp_desc =
+        Ptyp_constr
+          ( {lid with txt = props_longident_for_nested_module nested_modules},
+            args );
+    }
+  | _ -> core_type
+
+(* Build a string representation of a nested component module name. *)
 let make_module_name file_name nested_modules fn_name =
+  let file_name = unnamespace_module_name file_name in
   let full_module_name =
     match (file_name, nested_modules, fn_name) with
     (* TODO: is this even reachable? It seems like the fileName always exists *)
@@ -96,7 +200,9 @@ let make_module_name file_name nested_modules fn_name =
     | file_name, nested_modules, fn_name ->
       file_name :: List.rev (fn_name :: nested_modules)
   in
-  let full_module_name = String.concat "$" full_module_name in
+  let full_module_name =
+    Ext_modulename.concat_nested_component_name full_module_name
+  in
   full_module_name
 
 (* make type params for make fn arguments *)
@@ -207,6 +313,8 @@ let make_type_decls_with_core_type props_name loc core_type typ_vars =
 let live_attr = ({txt = "live"; loc = Location.none}, PStr [])
 let jsx_component_props_attr =
   ({txt = "res.jsxComponentProps"; loc = Location.none}, PStr [])
+let jsx_component_path_attr =
+  ({txt = "res.jsxComponentPath"; loc = Location.none}, PStr [])
 
 (* type props<'x, 'y, ...> = { x: 'x, y?: 'y, ... } *)
 let make_props_record_type ~core_type_of_attr ~external_ ~typ_vars_of_core_type
@@ -791,6 +899,10 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name binding =
       }
     in
     let new_binding = Some (binding_wrapper full_expression) in
+    let () =
+      maybe_hoist_nested_make_component ~config ~empty_loc ~full_module_name
+        fn_name
+    in
     (Some props_record_type, binding, new_binding))
   else if Jsx_common.has_attr_on_binding Jsx_common.has_attr_with_props binding
   then
@@ -877,6 +989,10 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name binding =
     let new_binding =
       Some (make_new_binding ~loc:empty_loc ~full_module_name modified_binding)
     in
+    let () =
+      maybe_hoist_nested_make_component ~config ~empty_loc ~full_module_name
+        fn_name
+    in
     let binding_expr =
       {
         binding.pvb_expr with
@@ -910,7 +1026,8 @@ let transform_structure_item ~config item =
   | {
       pstr_loc;
       pstr_desc =
-        Pstr_primitive ({pval_attributes; pval_type} as value_description);
+        Pstr_primitive
+          ({pval_attributes; pval_type; pval_name} as value_description);
     } as pstr -> (
     match
       ( List.filter Jsx_common.has_attr pval_attributes,
@@ -971,6 +1088,15 @@ let transform_structure_item ~config item =
               };
         }
       in
+      let file_name = filename_from_loc pstr_loc in
+      let empty_loc = Location.in_file file_name in
+      let full_module_name =
+        make_module_name file_name config.nested_modules pval_name.txt
+      in
+      let () =
+        maybe_hoist_nested_make_component ~config ~empty_loc ~full_module_name
+          pval_name.txt
+      in
       [props_record_type; new_structure]
     | _ ->
       Jsx_common.raise_error ~loc:pstr_loc
@@ -1012,46 +1138,32 @@ let transform_structure_item ~config item =
       ])
   | _ -> [item]
 
-let transform_signature_item ~config item =
+let transform_signature_item ~(config : Jsx_common.jsx_config) item =
   match item with
   | {
       psig_loc;
-      psig_desc = Psig_value ({pval_attributes; pval_type} as psig_desc);
+      psig_desc =
+        Psig_value ({pval_attributes; pval_type; pval_name} as psig_desc);
     } as psig -> (
-    match List.filter Jsx_common.has_attr pval_attributes with
-    | [] -> [item]
-    | [_] ->
-      check_multiple_components ~config ~loc:psig_loc;
-      check_string_int_attribute_iter.signature_item
-        check_string_int_attribute_iter item;
-      let core_type_of_attr = Jsx_common.core_type_of_attrs pval_attributes in
-      let typ_vars_of_core_type =
-        core_type_of_attr
-        |> Option.map Jsx_common.typ_vars_of_core_type
-        |> Option.value ~default:[]
+    match
+      ( List.filter Jsx_common.has_attr pval_attributes,
+        List.filter Jsx_common.has_attr_with_props pval_attributes )
+    with
+    | [], [] -> [item]
+    | [], [_] ->
+      let props_type = component_with_props_type ~loc:psig_loc pval_type in
+      let hoisted_props_type =
+        props_type_for_hoist config.nested_modules props_type
       in
-      let prop_types = collect_prop_types [] pval_type in
-      let named_type_list = List.fold_left arg_to_concrete_type [] prop_types in
-      let ret_props_type =
-        Typ.constr
-          (Location.mkloc (Lident "props") psig_loc)
-          (match core_type_of_attr with
-          | None -> make_props_type_params named_type_list
-          | Some _ -> (
-            match typ_vars_of_core_type with
-            | [] -> []
-            | _ -> [Typ.any ()]))
-      in
-      let external_ = psig_desc.pval_prim <> [] in
-      let props_record_type =
-        make_props_record_type_sig ~core_type_of_attr ~external_
-          ~typ_vars_of_core_type "props" psig_loc named_type_list
-      in
-      (* can't be an arrow because it will defensively uncurry *)
       let new_external_type =
         Ptyp_constr
           ( {loc = psig_loc; txt = module_access_name config "component"},
-            [ret_props_type] )
+            [props_type] )
+      in
+      let new_external_type_for_hoist =
+        Ptyp_constr
+          ( {loc = psig_loc; txt = module_access_name config "component"},
+            [hoisted_props_type] )
       in
       let new_structure =
         {
@@ -1065,6 +1177,85 @@ let transform_signature_item ~config item =
               };
         }
       in
+      let file_name = filename_from_loc psig_loc in
+      let empty_loc = Location.in_file file_name in
+      let full_module_name =
+        make_module_name file_name config.nested_modules pval_name.txt
+      in
+      let component_type =
+        {pval_type with ptyp_desc = new_external_type_for_hoist}
+      in
+      maybe_hoist_nested_make_signature ~config ~empty_loc ~full_module_name
+        ~component_type pval_name.txt;
+      [new_structure]
+    | [_], [] ->
+      check_multiple_components ~config ~loc:psig_loc;
+      check_string_int_attribute_iter.signature_item
+        check_string_int_attribute_iter item;
+      let core_type_of_attr = Jsx_common.core_type_of_attrs pval_attributes in
+      let typ_vars_of_core_type =
+        core_type_of_attr
+        |> Option.map Jsx_common.typ_vars_of_core_type
+        |> Option.value ~default:[]
+      in
+      let prop_types = collect_prop_types [] pval_type in
+      let named_type_list = List.fold_left arg_to_concrete_type [] prop_types in
+      let props_type_args =
+        match core_type_of_attr with
+        | None -> make_props_type_params named_type_list
+        | Some _ -> (
+          match typ_vars_of_core_type with
+          | [] -> []
+          | _ -> [Typ.any ()])
+      in
+      let ret_props_type =
+        Typ.constr (Location.mkloc (Lident "props") psig_loc) props_type_args
+      in
+      let ret_props_type_for_hoist =
+        Typ.constr
+          (Location.mkloc
+             (props_longident_for_nested_module config.nested_modules)
+             psig_loc)
+          props_type_args
+      in
+      let external_ = psig_desc.pval_prim <> [] in
+      let props_record_type =
+        make_props_record_type_sig ~core_type_of_attr ~external_
+          ~typ_vars_of_core_type "props" psig_loc named_type_list
+      in
+      (* can't be an arrow because it will defensively uncurry *)
+      let new_external_type =
+        Ptyp_constr
+          ( {loc = psig_loc; txt = module_access_name config "component"},
+            [ret_props_type] )
+      in
+      let new_external_type_for_hoist =
+        Ptyp_constr
+          ( {loc = psig_loc; txt = module_access_name config "component"},
+            [ret_props_type_for_hoist] )
+      in
+      let new_structure =
+        {
+          psig with
+          psig_desc =
+            Psig_value
+              {
+                psig_desc with
+                pval_type = {pval_type with ptyp_desc = new_external_type};
+                pval_attributes = List.filter other_attrs_pure pval_attributes;
+              };
+        }
+      in
+      let file_name = filename_from_loc psig_loc in
+      let empty_loc = Location.in_file file_name in
+      let full_module_name =
+        make_module_name file_name config.nested_modules pval_name.txt
+      in
+      let component_type =
+        {pval_type with ptyp_desc = new_external_type_for_hoist}
+      in
+      maybe_hoist_nested_make_signature ~config ~empty_loc ~full_module_name
+        ~component_type pval_name.txt;
       [props_record_type; new_structure]
     | _ ->
       Jsx_common.raise_error ~loc:psig_loc
@@ -1268,10 +1459,34 @@ let mk_uppercase_tag_name_expr tag_name =
     | JsxUpperTag path -> Longident.Ldot (path, "make")
   in
   let loc = tag_name.loc in
-  Exp.ident ~loc {txt = tag_identifier; loc}
+  Exp.ident ~loc ~attrs:[jsx_component_path_attr] {txt = tag_identifier; loc}
 
 let expr ~(config : Jsx_common.jsx_config) mapper expression =
   match expression with
+  | {
+   pexp_desc = Pexp_letmodule (name, module_expr, body);
+   pexp_loc = loc;
+   pexp_attributes = attrs;
+  } ->
+    config.nested_modules <- name.txt :: config.nested_modules;
+    let pop_nested_module () =
+      match config.nested_modules with
+      | _ :: rest -> config.nested_modules <- rest
+      | [] -> ()
+    in
+    let mapped_module_expr, mapped_body =
+      try
+        let mapped_module_expr =
+          default_mapper.module_expr mapper module_expr
+        in
+        let mapped_body = mapper.expr mapper body in
+        pop_nested_module ();
+        (mapped_module_expr, mapped_body)
+      with e ->
+        pop_nested_module ();
+        raise e
+    in
+    Exp.letmodule ~loc ~attrs name mapped_module_expr mapped_body
   | {
    pexp_desc = Pexp_jsx_element jsx_element;
    pexp_loc = loc;

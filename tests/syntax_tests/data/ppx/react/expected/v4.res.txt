@@ -108,3 +108,9 @@ module Rec2 = {
     \"V4$Rec2"
   })
 }
+@warning("-32") let \"V4$Uncurried" = Uncurried.make
+@warning("-32") let \"V4$E" = E.make
+@warning("-32") let \"V4$EUncurried" = EUncurried.make
+@warning("-32") let \"V4$Rec" = Rec.make
+@warning("-32") let \"V4$Rec1" = Rec1.make
+@warning("-32") let \"V4$Rec2" = Rec2.make

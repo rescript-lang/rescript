@@ -42,7 +42,7 @@ let rec get_arity (meta : Lam_stats.t) (lam : Lam.t) : Lam_arity.t =
   | Llet (_, _, _, l) -> get_arity meta l
   | Lprim
       {
-        primitive = Pfield (_, Fld_module {name});
+        primitive = Pfield (_, Fld_module {name; jsx_component = _});
         args = [Lglobal_module (id, dynamic_import)];
         _;
       } -> (
@@ -58,7 +58,7 @@ let rec get_arity (meta : Lam_stats.t) (lam : Lam.t) : Lam_arity.t =
           [
             Lprim
               {
-                primitive = Pfield (_, Fld_module {name});
+                primitive = Pfield (_, Fld_module {name; jsx_component = _});
                 args = [Lglobal_module (id, dynamic_import)];
               };
           ];

@@ -29,8 +29,8 @@ module V4C = {
       React.jsxFragment,
       {
         children: React.array([
-          React.jsxKeyed(V4CA.make, {}, ~key="k", ()),
-          React.jsxKeyed(V4CB.make, {}, ~key="k", ()),
+          React.jsxKeyed(@res.jsxComponentPath V4CA.make, {}, ~key="k", ()),
+          React.jsxKeyed(@res.jsxComponentPath V4CB.make, {}, ~key="k", ()),
         ]),
       },
     )
@@ -40,3 +40,6 @@ module V4C = {
     \"NoPropsWithKey$V4C"
   })
 }
+@warning("-32") let \"NoPropsWithKey$V4CA" = V4CA.make
+@warning("-32") let \"NoPropsWithKey$V4CB" = V4CB.make
+@warning("-32") let \"NoPropsWithKey$V4C" = V4C.make

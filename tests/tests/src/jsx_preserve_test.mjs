@@ -247,10 +247,13 @@ function Jsx_preserve_test(props) {
   </ContextProvider.make>;
 }
 
+let Jsx_preserve_test$A = QueryClientProvider;
+
 let make$2 = Jsx_preserve_test;
 
+let Jsx_preserve_test$Y$1 = make;
+
 export {
-  Icon,
   _single_element_child,
   _multiple_element_children,
   _single_element_fragment,
@@ -265,21 +268,24 @@ export {
   _container_with_spread_props_keyed,
   _unary_element_with_only_spread_props,
   A,
-  B,
   _external_component_with_children,
-  MyWeirdComponent,
   _escaped_jsx_prop,
   _large_component,
-  ComponentWithOptionalProps,
   _optional_props,
   _props_with_hyphen,
   _empty_fragment,
   _fragment,
   _youtube_iframe,
-  X,
   Y,
   context,
   ContextProvider,
   make$2 as make,
+  Jsx_preserve_test$Icon,
+  Jsx_preserve_test$A,
+  Jsx_preserve_test$B,
+  Jsx_preserve_test$MyWeirdComponent,
+  Jsx_preserve_test$ComponentWithOptionalProps,
+  Jsx_preserve_test$X,
+  Jsx_preserve_test$Y$1 as Jsx_preserve_test$Y,
 }
 /* _single_element_child Not a pure module */

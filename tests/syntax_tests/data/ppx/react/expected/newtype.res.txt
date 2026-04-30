@@ -99,3 +99,8 @@ module Uncurried = {
     \"Newtype$Uncurried"
   })
 }
+@warning("-32") let \"Newtype$V4A" = V4A.make
+@warning("-32") let \"Newtype$V4A1" = V4A1.make
+@warning("-32") let \"Newtype$V4A2" = V4A2.make
+@warning("-32") let \"Newtype$V4A3" = V4A3.make
+@warning("-32") let \"Newtype$Uncurried" = Uncurried.make

@@ -22,6 +22,11 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
+val nested_component_separator_char : char
+val nested_component_prefix : string -> string
+val nested_component_suffix : string -> string
+val concat_nested_component_name : string list -> string
+
 val js_id_name_of_hint_name : string -> string
 (** Given an JS bundle name, generate a meaningful
     bounded module name

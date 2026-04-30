@@ -232,6 +232,20 @@ type initialization = J.block
 *)
 
 let compile output_prefix =
+  let local_module_aliases : Lam.t Map_ident.t ref = ref Map_ident.empty in
+  let rewrite_nested_jsx_component_expr (jsx_tag : Lam.t)
+      (compiled_expr : J.expression) : J.expression =
+    Lam_compile_nested_component.rewrite_jsx_component_expr local_module_aliases
+      jsx_tag compiled_expr
+  in
+  let rewrite_transformed_jsx_args (appinfo : Lam.apply) args =
+    if appinfo.ap_transformed_jsx then
+      match (appinfo.ap_args, args) with
+      | jsx_tag :: _, jsx_expr :: rest_args ->
+        rewrite_nested_jsx_component_expr jsx_tag jsx_expr :: rest_args
+      | _ -> args
+    else args
+  in
   let rec compile_external_field (* Like [List.empty]*)
       ?(dynamic_import = false) (lamba_cxt : Lam_compile_context.t)
       (id : Ident.t) name : Js_output.t =
@@ -300,7 +314,7 @@ let compile output_prefix =
                 (Ext_list.append block args_code, b :: args)
               | _ -> assert false)
       in
-
+      let args = rewrite_transformed_jsx_args appinfo args in
       let fn = E.ml_var_dot ~dynamic_import module_id ident_info.name in
       let expression =
         match appinfo.ap_info.ap_status with
@@ -1559,7 +1573,7 @@ let compile output_prefix =
          };
     } -> (
       match fld_info with
-      | Fld_module {name} ->
+      | Fld_module {name; jsx_component = _} ->
         compile_external_field_apply ~dynamic_import appinfo id name lambda_cxt
       | _ -> assert false)
     | _ -> (
@@ -1578,6 +1592,7 @@ let compile output_prefix =
               (Ext_list.append block args_code, b :: fn_code)
             | {value = None} -> assert false)
       in
+      let args = rewrite_transformed_jsx_args appinfo args in
       match (ap_func, lambda_cxt.continuation) with
       | ( Lvar fn_id,
           ( EffectCall (Maybe_tail_is_return (Tail_with_name {label = Some ret}))
@@ -1639,13 +1654,67 @@ let compile output_prefix =
       (lambda_cxt : Lam_compile_context.t) =
     match prim_info with
     | {
+     primitive =
+       Pjs_call
+         {
+           prim_name = "jsx" | "jsxs" | "jsxKeyed" | "jsxsKeyed";
+           transformed_jsx = true;
+           _;
+         };
+     args = jsx_tag :: rest_args;
+     loc;
+    } ->
+      let new_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
+      let tag_block, tag_expr =
+        match compile_lambda new_cxt jsx_tag with
+        | {block; value = Some b} ->
+          (block, rewrite_nested_jsx_component_expr jsx_tag b)
+        | {value = None} -> assert false
+      in
+      let rest_blocks, rest_exprs =
+        Ext_list.split_map rest_args (fun x ->
+            match compile_lambda new_cxt x with
+            | {block; value = Some b} -> (block, b)
+            | {value = None} -> assert false)
+      in
+      let args_code : J.block = List.concat (tag_block :: rest_blocks) in
+      let exp =
+        Lam_compile_primitive.translate output_prefix loc lambda_cxt
+          prim_info.primitive (tag_expr :: rest_exprs)
+      in
+      Js_output.output_of_block_and_expression lambda_cxt.continuation args_code
+        exp
+    | {
+     primitive =
+       Pfield (pos, (Fld_module {name = "make"; jsx_component = _} as fld_info));
+     args = [arg];
+     _;
+    } -> (
+      match arg with
+      | Lglobal_module (id, dynamic_import) ->
+        compile_external_field ~dynamic_import lambda_cxt id "make"
+      | _ -> (
+        let new_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
+        match compile_lambda new_cxt arg with
+        | {block; value = Some compiled_arg} ->
+          let compiled_expr =
+            Js_of_lam_block.field fld_info compiled_arg (Int32.of_int pos)
+          in
+          let compiled_expr =
+            Lam_compile_nested_component.rewrite_component_make_expr
+              local_module_aliases arg compiled_expr
+          in
+          Js_output.output_of_block_and_expression lambda_cxt.continuation block
+            compiled_expr
+        | {value = None} -> assert false))
+    | {
      primitive = Pfield (_, fld_info);
      args = [Lglobal_module (id, dynamic_import)];
      _;
     } -> (
       (* should be before Lglobal_global *)
       match fld_info with
-      | Fld_module {name = field} ->
+      | Fld_module {name = field; jsx_component = _} ->
         compile_external_field ~dynamic_import lambda_cxt id field
       | _ -> assert false)
     | {primitive = Praise; args = [e]; _} -> (
@@ -1866,7 +1935,19 @@ let compile output_prefix =
           {lambda_cxt with continuation = Declare (let_kind, id)}
           arg
       in
-      Js_output.append_output args_code (compile_lambda lambda_cxt body)
+      let body_output =
+        if
+          Lam_compile_nested_component.is_module_alias_candidate
+            local_module_aliases arg
+        then (
+          let previous_aliases = !local_module_aliases in
+          local_module_aliases := Map_ident.add previous_aliases id arg;
+          Fun.protect
+            ~finally:(fun () -> local_module_aliases := previous_aliases)
+            (fun () -> compile_lambda lambda_cxt body))
+        else compile_lambda lambda_cxt body
+      in
+      Js_output.append_output args_code body_output
     | Lletrec (id_args, body) ->
       (* There is a bug in our current design,
          it requires compile args first (register that some objects are jsidentifiers)

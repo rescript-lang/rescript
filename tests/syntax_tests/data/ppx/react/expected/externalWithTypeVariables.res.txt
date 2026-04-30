@@ -10,3 +10,4 @@ module V4C = {
   @module("c")
   external make: React.component<props<t<'a>, React.element>> = "component"
 }
+@warning("-32") let \"ExternalWithTypeVariables$V4C" = V4C.make

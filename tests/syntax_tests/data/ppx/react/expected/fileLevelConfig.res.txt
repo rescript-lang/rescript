@@ -15,3 +15,4 @@ module V4A = {
     \"FileLevelConfig$V4A"
   })
 }
+@warning("-32") let \"FileLevelConfig$V4A" = V4A.make

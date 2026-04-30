@@ -22,6 +22,18 @@ let for_js_file s = sanitize_id s ^ "JS"
 let for_inner_module ~file_name ~inner_module_name =
   (file_name |> for_js_file) ^ "." ^ inner_module_name
 
+let nested_make_hidden_export_access ~file_name path =
+  match List.rev path with
+  | "make" :: module_path_rev -> (
+    match List.rev module_path_rev with
+    | [] -> None
+    | module_path ->
+      Some
+        ((file_name |> for_js_file) ^ "."
+        ^ Ext_modulename.concat_nested_component_name (file_name :: module_path)
+        ))
+  | _ -> None
+
 let from_string_unsafe s = s
 let to_string s = s
 let compare (s1 : string) s2 = compare s1 s2
