@@ -10,9 +10,25 @@
 > - :nail_care: [Polish]
 > - :house: [Internal]
 
-# 12.2.0
+# 12.3.0-beta.1
 
 #### :boom: Breaking Change
+
+#### :eyeglasses: Spec Compliance
+
+#### :rocket: New Feature
+
+#### :bug: Bug fix
+
+#### :memo: Documentation
+
+#### :nail_care: Polish
+
+#### :house: Internal
+
+# 12.2.0
+
+#### :rocket: New Feature
 
 - Stdlib: Added Array.zip, Array.unzip, Array.zipBy, and Array.partition. https://github.com/rescript-lang/rescript/pull/8244
 
