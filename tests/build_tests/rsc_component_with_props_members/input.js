@@ -51,19 +51,19 @@ assert.doesNotMatch(sidebarOutput, /Sidebar\$Provider\$jsx/);
 assert.doesNotMatch(sidebarOutput, /Sidebar\$Inset\$jsx/);
 assert.match(
   plainAccessOutput,
-  /let provider = Sidebar\$RscComponentWithPropsMembers\.Sidebar\$Provider\$make;/,
+  /let provider = Sidebar\$RscComponentWithPropsMembers\.Provider\.make;/,
 );
 assert.match(
   plainAccessOutput,
-  /let inset = Sidebar\$RscComponentWithPropsMembers\.Sidebar\$Inset\$make;/,
+  /let inset = Sidebar\$RscComponentWithPropsMembers\.Inset\.make;/,
 );
 assert.doesNotMatch(
   plainAccessOutput,
-  /Sidebar\$RscComponentWithPropsMembers\.Provider\.make/,
+  /Sidebar\$RscComponentWithPropsMembers\.Sidebar\$Provider/,
 );
 assert.doesNotMatch(
   plainAccessOutput,
-  /Sidebar\$RscComponentWithPropsMembers\.Inset\.make/,
+  /Sidebar\$RscComponentWithPropsMembers\.Sidebar\$Inset/,
 );
 
 await execClean();
