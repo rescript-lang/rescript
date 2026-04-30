@@ -35,6 +35,8 @@ let Bar = {
 
 export {
   getNow,
+  Foo,
+  Bar,
   Async_jsx$Foo,
   Async_jsx$Bar,
 }

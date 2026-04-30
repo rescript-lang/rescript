@@ -92,6 +92,14 @@ let C8 = {
 };
 
 export {
+  C0,
+  C1,
+  C2,
+  C3,
+  C4,
+  C6,
+  C7,
+  C8,
   Alias_default_value_test$C0,
   Alias_default_value_test$C1,
   Alias_default_value_test$C2,

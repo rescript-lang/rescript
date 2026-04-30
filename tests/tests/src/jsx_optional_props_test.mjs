@@ -17,6 +17,7 @@ let _element = JsxRuntime.jsx(Jsx_optional_props_test$ComponentWithOptionalProps
 });
 
 export {
+  ComponentWithOptionalProps,
   _element,
   Jsx_optional_props_test$ComponentWithOptionalProps,
 }
