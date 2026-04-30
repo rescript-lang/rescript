@@ -39,6 +39,14 @@ const plainAccessOutputPath = path.join(
   "PlainAccess.res.js",
 );
 const plainAccessOutput = await fs.readFile(plainAccessOutputPath, "utf8");
+const buttonLayoutOutput = await fs.readFile(
+  path.join(import.meta.dirname, "src", "ButtonLayout.res.js"),
+  "utf8",
+);
+const buttonOutput = await fs.readFile(
+  path.join(import.meta.dirname, "src", "Button.res.js"),
+  "utf8",
+);
 
 assert.match(
   output,
@@ -96,5 +104,15 @@ assert.doesNotMatch(
   plainAccessOutput,
   /Sidebar\$RscNestedJsxMembers\.Provider/,
 );
+assert.match(
+  buttonLayoutOutput,
+  /JsxRuntime\.jsx\(Button\$RscNestedJsxMembers\.Button\$Button,/,
+);
+assert.doesNotMatch(buttonLayoutOutput, /\.Button\.make,/);
+assert.match(
+  buttonOutput,
+  /let Button = \{[\s\S]*make: Button\$Button[\s\S]*\};/s,
+);
+assert.match(buttonOutput, /export \{[\s\S]*Button\$Button[\s\S]*\}/s);
 
 await execClean();

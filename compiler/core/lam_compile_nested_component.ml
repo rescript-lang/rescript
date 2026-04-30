@@ -51,7 +51,7 @@ let nested_component_path id dynamic_import segments =
   let segments =
     match segments with
     | head :: rest
-      when head = id.name || head = root_name
+      when head = id.name
            || Ext_string.starts_with head
                 (Ext_modulename.nested_component_prefix root_name) ->
       rest

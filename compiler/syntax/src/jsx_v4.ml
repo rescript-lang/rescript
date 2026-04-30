@@ -169,6 +169,25 @@ let maybe_hoist_nested_make_signature ~(config : Jsx_common.jsx_config)
     config.hoisted_signature_items <- full_sig :: config.hoisted_signature_items
   | _ -> ()
 
+let component_with_props_type ~loc core_type =
+  match core_type.ptyp_desc with
+  | Ptyp_arrow {arg = {lbl = Nolabel; typ}; _} -> typ
+  | _ ->
+    Jsx_common.raise_error ~loc
+      "@react.componentWithProps expects a function taking one props argument."
+
+let props_type_for_hoist nested_modules core_type =
+  match core_type.ptyp_desc with
+  | Ptyp_constr (({txt = Lident "props"} as lid), args) ->
+    {
+      core_type with
+      ptyp_desc =
+        Ptyp_constr
+          ( {lid with txt = props_longident_for_nested_module nested_modules},
+            args );
+    }
+  | _ -> core_type
+
 (* Build a string representation of a nested component module name. *)
 let make_module_name file_name nested_modules fn_name =
   let file_name = unnamespace_module_name file_name in
@@ -1119,16 +1138,57 @@ let transform_structure_item ~config item =
       ])
   | _ -> [item]
 
-let transform_signature_item ~config item =
+let transform_signature_item ~(config : Jsx_common.jsx_config) item =
   match item with
   | {
       psig_loc;
       psig_desc =
         Psig_value ({pval_attributes; pval_type; pval_name} as psig_desc);
     } as psig -> (
-    match List.filter Jsx_common.has_attr pval_attributes with
-    | [] -> [item]
-    | [_] ->
+    match
+      ( List.filter Jsx_common.has_attr pval_attributes,
+        List.filter Jsx_common.has_attr_with_props pval_attributes )
+    with
+    | [], [] -> [item]
+    | [], [_] ->
+      let props_type = component_with_props_type ~loc:psig_loc pval_type in
+      let hoisted_props_type =
+        props_type_for_hoist config.nested_modules props_type
+      in
+      let new_external_type =
+        Ptyp_constr
+          ( {loc = psig_loc; txt = module_access_name config "component"},
+            [props_type] )
+      in
+      let new_external_type_for_hoist =
+        Ptyp_constr
+          ( {loc = psig_loc; txt = module_access_name config "component"},
+            [hoisted_props_type] )
+      in
+      let new_structure =
+        {
+          psig with
+          psig_desc =
+            Psig_value
+              {
+                psig_desc with
+                pval_type = {pval_type with ptyp_desc = new_external_type};
+                pval_attributes = List.filter other_attrs_pure pval_attributes;
+              };
+        }
+      in
+      let file_name = filename_from_loc psig_loc in
+      let empty_loc = Location.in_file file_name in
+      let full_module_name =
+        make_module_name file_name config.nested_modules pval_name.txt
+      in
+      let component_type =
+        {pval_type with ptyp_desc = new_external_type_for_hoist}
+      in
+      maybe_hoist_nested_make_signature ~config ~empty_loc ~full_module_name
+        ~component_type pval_name.txt;
+      [new_structure]
+    | [_], [] ->
       check_multiple_components ~config ~loc:psig_loc;
       check_string_int_attribute_iter.signature_item
         check_string_int_attribute_iter item;

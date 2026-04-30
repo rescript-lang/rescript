@@ -1,0 +1,8 @@
+@@jsxConfig({version: 4})
+
+module Sidebar: {
+  type props = {children: React.element}
+
+  let make: React.component<props>
+}
+let \"ComponentWithPropsInterface$Sidebar": React.component<Sidebar.props>
