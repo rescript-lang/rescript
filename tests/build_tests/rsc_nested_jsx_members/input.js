@@ -97,11 +97,11 @@ assert.match(
 );
 assert.match(
   plainAccessOutput,
-  /let provider = Sidebar\$RscNestedJsxMembers\.Provider\.make;/,
+  /let provider = Sidebar\$RscNestedJsxMembers\.Sidebar\$Provider\$make;/,
 );
 assert.doesNotMatch(
   plainAccessOutput,
-  /Sidebar\$RscNestedJsxMembers\.Sidebar\$Provider/,
+  /Sidebar\$RscNestedJsxMembers\.Provider\.make/,
 );
 assert.match(
   buttonLayoutOutput,

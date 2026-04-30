@@ -26,11 +26,11 @@ assert.match(
 assert.doesNotMatch(layoutOutput, /\.Provider\.make,/);
 assert.match(
   plainAccessOutput,
-  /let provider = Sidebar\$RscNestedJsxAliasChain\.Provider\.make;/,
+  /let provider = Sidebar\$RscNestedJsxAliasChain\.Sidebar\$Provider\$make;/,
 );
 assert.doesNotMatch(
   plainAccessOutput,
-  /Sidebar\$RscNestedJsxAliasChain\.Sidebar\$Provider/,
+  /Sidebar\$RscNestedJsxAliasChain\.Provider\.make/,
 );
 
 await execClean();

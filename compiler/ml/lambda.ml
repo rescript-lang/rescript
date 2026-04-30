@@ -643,13 +643,65 @@ let rec transl_normal_path = function
         Location.none )
   | Papply _ -> assert false
 
+let has_hoisted_value_attr attrs =
+  List.exists
+    (fun ({Location.txt; _}, _) -> String.equal txt "res.hoistedValue")
+    attrs
+
+let hoisted_value_root_name module_name =
+  match Ext_namespace.try_split_module_name module_name with
+  | Some (_namespace, module_name) -> module_name
+  | None -> (
+    match
+      String.index_opt module_name
+        Ext_modulename.nested_component_separator_char
+    with
+    | Some index -> String.sub module_name 0 index
+    | None -> module_name)
+
+let hoisted_value_path env path =
+  match Path.flatten path with
+  | `Ok (root, (_ :: _ as segments)) ->
+    let root_name = Ident.name root in
+    let hidden_path_for_global_root () =
+      let hidden_name =
+        Ext_modulename.concat_nested_component_name
+          (hoisted_value_root_name root_name :: segments)
+      in
+      Path.Pdot (Path.Pident root, hidden_name, Path.nopos)
+    in
+    let hidden_path_for_local_root () =
+      let unit_name = Env.get_unit_name () in
+      let hidden_segments =
+        if String.equal unit_name "" then
+          hoisted_value_root_name root_name :: segments
+        else hoisted_value_root_name unit_name :: root_name :: segments
+      in
+      let hidden_name =
+        Ext_modulename.concat_nested_component_name hidden_segments
+      in
+      match Env.lookup_value (Longident.Lident hidden_name) env with
+      | hidden_path, _ -> Some hidden_path
+      | exception Not_found -> None
+    in
+    if Ident.global root then Some (hidden_path_for_global_root ())
+    else hidden_path_for_local_root ()
+  | `Ok (_, []) | `Contains_apply -> None
+
 (* Translation of identifiers *)
 
 let transl_module_path ?(loc = Location.none) env path =
   transl_normal_path (Env.normalize_path (Some loc) env path)
 
 let transl_value_path ?(loc = Location.none) env path =
-  transl_normal_path (Env.normalize_path_prefix (Some loc) env path)
+  let path = Env.normalize_path_prefix (Some loc) env path in
+  match Env.find_value path env with
+  | desc when has_hoisted_value_attr desc.val_attributes -> (
+    match hoisted_value_path env path with
+    | Some hidden_path ->
+      transl_normal_path (Env.normalize_path_prefix None env hidden_path)
+    | None -> transl_normal_path path)
+  | _ | (exception Not_found) -> transl_normal_path path
 
 let transl_extension_path = transl_value_path
 
