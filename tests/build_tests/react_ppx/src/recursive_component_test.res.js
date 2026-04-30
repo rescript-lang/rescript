@@ -13,15 +13,15 @@ function mm(x) {
   });
 }
 
-let Recursive_component_test$Rec = make;
+let Recursive_component_test$Rec$make = make;
 
 let Rec = {
   mm: mm,
-  make: Recursive_component_test$Rec
+  make: Recursive_component_test$Rec$make
 };
 
 export {
   Rec,
-  Recursive_component_test$Rec,
+  Recursive_component_test$Rec$make,
 }
 /* No side effect */

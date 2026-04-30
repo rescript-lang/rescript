@@ -5,10 +5,11 @@ module Standard = {
   type props = {}
 
   let make = (_: props): React.element => React.string("ok")
+  @res.hoistedValue
   let make = React.component({
-    let \"ReturnConstraint$Standard" = props => make(props)
+    let \"ReturnConstraint$Standard$make" = props => make(props)
 
-    \"ReturnConstraint$Standard"
+    \"ReturnConstraint$Standard$make"
   })
 }
 
@@ -17,10 +18,11 @@ module ForwardRef = {
   type props = {}
 
   let make = (_: props, _ref): React.element => ReactDOM.jsx("div", {})
+  @res.hoistedValue
   let make = React.forwardRef({
-    let \"ReturnConstraint$ForwardRef" = (props, ref) => make(props, ref)
+    let \"ReturnConstraint$ForwardRef$make" = (props, ref) => make(props, ref)
 
-    \"ReturnConstraint$ForwardRef"
+    \"ReturnConstraint$ForwardRef$make"
   })
 }
 
@@ -29,9 +31,10 @@ module WithProps = {
 
   let make = (props: props): React.element =>
     ReactDOM.jsx("span", {children: ?ReactDOM.someElement({React.int(props.value)})})
+  @res.hoistedValue
   let make = React.component({
-    let \"ReturnConstraint$WithProps" = (props: props): React.element => make(props)
-    \"ReturnConstraint$WithProps"
+    let \"ReturnConstraint$WithProps$make" = (props: props): React.element => make(props)
+    \"ReturnConstraint$WithProps$make"
   })
 }
 
@@ -41,13 +44,14 @@ module Async = {
 
   let make = async (_: props): React.element =>
     ReactDOM.jsx("div", {children: ?ReactDOM.someElement({React.string("async")})})
+  @res.hoistedValue
   let make = React.component({
-    let \"ReturnConstraint$Async" = props => Jsx.promise(make(props))
+    let \"ReturnConstraint$Async$make" = props => Jsx.promise(make(props))
 
-    \"ReturnConstraint$Async"
+    \"ReturnConstraint$Async$make"
   })
 }
-@warning("-32") let \"ReturnConstraint$Standard" = Standard.make
-@warning("-32") let \"ReturnConstraint$ForwardRef" = ForwardRef.make
-@warning("-32") let \"ReturnConstraint$WithProps" = WithProps.make
-@warning("-32") let \"ReturnConstraint$Async" = Async.make
+@warning("-32") let \"ReturnConstraint$Standard$make" = Standard.make
+@warning("-32") let \"ReturnConstraint$ForwardRef$make" = ForwardRef.make
+@warning("-32") let \"ReturnConstraint$WithProps$make" = WithProps.make
+@warning("-32") let \"ReturnConstraint$Async$make" = Async.make

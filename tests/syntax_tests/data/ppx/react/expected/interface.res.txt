@@ -4,9 +4,10 @@ module A = {
     x: 'x,
   }
   let make = ({x, _}: props<_>): React.element => React.string(x)
+  @res.hoistedValue
   let make = React.component({
-    let \"Interface$A" = (props: props<_>) => make(props)
-    \"Interface$A"
+    let \"Interface$A$make" = (props: props<_>) => make(props)
+    \"Interface$A$make"
   })
 }
 
@@ -15,11 +16,12 @@ module NoProps = {
   type props = {}
 
   let make = (_: props): React.element => ReactDOM.jsx("div", {})
+  @res.hoistedValue
   let make = React.component({
-    let \"Interface$NoProps" = props => make(props)
+    let \"Interface$NoProps$make" = props => make(props)
 
-    \"Interface$NoProps"
+    \"Interface$NoProps$make"
   })
 }
-@warning("-32") let \"Interface$A" = A.make
-@warning("-32") let \"Interface$NoProps" = NoProps.make
+@warning("-32") let \"Interface$A$make" = A.make
+@warning("-32") let \"Interface$NoProps$make" = NoProps.make

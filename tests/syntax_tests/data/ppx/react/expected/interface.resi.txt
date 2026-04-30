@@ -3,6 +3,7 @@ module A: {
   type props<'x> = {
     x: 'x,
   }
+  @res.hoistedValue
   let make: React.component<props<string>>
 }
 
@@ -10,7 +11,8 @@ module NoProps: {
   @res.jsxComponentProps
   type props = {}
 
+  @res.hoistedValue
   let make: React.component<props>
 }
-let \"Interface$A": React.component<A.props<string>>
-let \"Interface$NoProps": React.component<NoProps.props>
+let \"Interface$A$make": React.component<A.props<string>>
+let \"Interface$NoProps$make": React.component<NoProps.props>

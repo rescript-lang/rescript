@@ -15,10 +15,11 @@ module C0 = {
     let text = __text_value
     (React.string(text): React.element)
   }
+  @res.hoistedValue
   let make = React.component({
-    let \"AliasProps$C0" = (props: props<_>) => make(props)
+    let \"AliasProps$C0$make" = (props: props<_>) => make(props)
 
-    \"AliasProps$C0"
+    \"AliasProps$C0$make"
   })
 }
 
@@ -37,10 +38,11 @@ module C1 = {
     let text = __text_value
     (React.string(p ++ text): React.element)
   }
+  @res.hoistedValue
   let make = React.component({
-    let \"AliasProps$C1" = (props: props<_>) => make(props)
+    let \"AliasProps$C1$make" = (props: props<_>) => make(props)
 
-    \"AliasProps$C1"
+    \"AliasProps$C1$make"
   })
 }
 
@@ -58,10 +60,11 @@ module C2 = {
     let bar = __foo_value
     (React.string(bar): React.element)
   }
+  @res.hoistedValue
   let make = React.component({
-    let \"AliasProps$C2" = (props: props<_>) => make(props)
+    let \"AliasProps$C2$make" = (props: props<_>) => make(props)
 
-    \"AliasProps$C2"
+    \"AliasProps$C2$make"
   })
 }
 
@@ -90,10 +93,11 @@ module C3 = {
       }: React.element
     )
   }
+  @res.hoistedValue
   let make = React.component({
-    let \"AliasProps$C3" = (props: props<_>) => make(props)
+    let \"AliasProps$C3$make" = (props: props<_>) => make(props)
 
-    \"AliasProps$C3"
+    \"AliasProps$C3$make"
   })
 }
 
@@ -112,10 +116,11 @@ module C4 = {
     let x = __x_value
     (ReactDOM.jsx("div", {children: ?ReactDOM.someElement(b)}): React.element)
   }
+  @res.hoistedValue
   let make = React.component({
-    let \"AliasProps$C4" = (props: props<_>) => make(props)
+    let \"AliasProps$C4$make" = (props: props<_>) => make(props)
 
-    \"AliasProps$C4"
+    \"AliasProps$C4$make"
   })
 }
 
@@ -134,10 +139,11 @@ module C5 = {
     let z = __z_value
     (x + y + z: React.element)
   }
+  @res.hoistedValue
   let make = React.component({
-    let \"AliasProps$C5" = (props: props<_>) => make(props)
+    let \"AliasProps$C5$make" = (props: props<_>) => make(props)
 
-    \"AliasProps$C5"
+    \"AliasProps$C5$make"
   })
 }
 
@@ -146,6 +152,7 @@ module C6 = {
     @res.jsxComponentProps
     type props = {}
 
+    @res.hoistedValue
     let make: React.component<props>
   }
   @res.jsxComponentProps
@@ -156,16 +163,17 @@ module C6 = {
 
   let make = ({comp: module(Comp: Comp), x: (a, b), _}: props<_, _>): React.element =>
     React.jsx(@res.jsxComponentPath Comp.make, {})
+  @res.hoistedValue
   let make = React.component({
-    let \"AliasProps$C6" = (props: props<_>) => make(props)
+    let \"AliasProps$C6$make" = (props: props<_>) => make(props)
 
-    \"AliasProps$C6"
+    \"AliasProps$C6$make"
   })
 }
-@warning("-32") let \"AliasProps$C0" = C0.make
-@warning("-32") let \"AliasProps$C1" = C1.make
-@warning("-32") let \"AliasProps$C2" = C2.make
-@warning("-32") let \"AliasProps$C3" = C3.make
-@warning("-32") let \"AliasProps$C4" = C4.make
-@warning("-32") let \"AliasProps$C5" = C5.make
-@warning("-32") let \"AliasProps$C6" = C6.make
+@warning("-32") let \"AliasProps$C0$make" = C0.make
+@warning("-32") let \"AliasProps$C1$make" = C1.make
+@warning("-32") let \"AliasProps$C2$make" = C2.make
+@warning("-32") let \"AliasProps$C3$make" = C3.make
+@warning("-32") let \"AliasProps$C4$make" = C4.make
+@warning("-32") let \"AliasProps$C5$make" = C5.make
+@warning("-32") let \"AliasProps$C6$make" = C6.make

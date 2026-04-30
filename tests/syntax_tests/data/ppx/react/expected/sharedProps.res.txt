@@ -4,10 +4,11 @@ module V4A1 = {
   type props = sharedProps<string>
 
   let make = ({x, y, _}: props): React.element => React.string(x ++ y)
+  @res.hoistedValue
   let make = React.component({
-    let \"SharedProps$V4A1" = props => make(props)
+    let \"SharedProps$V4A1$make" = props => make(props)
 
-    \"SharedProps$V4A1"
+    \"SharedProps$V4A1$make"
   })
 }
 
@@ -15,10 +16,11 @@ module V4A2 = {
   type props<'a> = sharedProps<'a>
 
   let make = ({x, y, _}: props<_>): React.element => React.string(x ++ y)
+  @res.hoistedValue
   let make = React.component({
-    let \"SharedProps$V4A2" = (props: props<_>) => make(props)
+    let \"SharedProps$V4A2$make" = (props: props<_>) => make(props)
 
-    \"SharedProps$V4A2"
+    \"SharedProps$V4A2$make"
   })
 }
 
@@ -26,10 +28,11 @@ module V4A3 = {
   type props<'a> = sharedProps<string, 'a>
 
   let make = ({x, y, _}: props<_>): React.element => React.string(x ++ y)
+  @res.hoistedValue
   let make = React.component({
-    let \"SharedProps$V4A3" = (props: props<_>) => make(props)
+    let \"SharedProps$V4A3$make" = (props: props<_>) => make(props)
 
-    \"SharedProps$V4A3"
+    \"SharedProps$V4A3$make"
   })
 }
 
@@ -37,41 +40,46 @@ module V4A4 = {
   type props = sharedProps
 
   let make = ({x, y, _}: props): React.element => React.string(x ++ y)
+  @res.hoistedValue
   let make = React.component({
-    let \"SharedProps$V4A4" = props => make(props)
+    let \"SharedProps$V4A4$make" = props => make(props)
 
-    \"SharedProps$V4A4"
+    \"SharedProps$V4A4$make"
   })
 }
 
 module V4A5 = {
   type props = sharedProps<string>
 
+  @res.hoistedValue
   external make: React.component<props> = "default"
 }
 
 module V4A6 = {
   type props<'a> = sharedProps<'a>
 
+  @res.hoistedValue
   external make: React.component<props<_>> = "default"
 }
 
 module V4A7 = {
   type props<'a> = sharedProps<string, 'a>
 
+  @res.hoistedValue
   external make: React.component<props<_>> = "default"
 }
 
 module V4A8 = {
   type props = sharedProps
 
+  @res.hoistedValue
   external make: React.component<props> = "default"
 }
-@warning("-32") let \"SharedProps$V4A1" = V4A1.make
-@warning("-32") let \"SharedProps$V4A2" = V4A2.make
-@warning("-32") let \"SharedProps$V4A3" = V4A3.make
-@warning("-32") let \"SharedProps$V4A4" = V4A4.make
-@warning("-32") let \"SharedProps$V4A5" = V4A5.make
-@warning("-32") let \"SharedProps$V4A6" = V4A6.make
-@warning("-32") let \"SharedProps$V4A7" = V4A7.make
-@warning("-32") let \"SharedProps$V4A8" = V4A8.make
+@warning("-32") let \"SharedProps$V4A1$make" = V4A1.make
+@warning("-32") let \"SharedProps$V4A2$make" = V4A2.make
+@warning("-32") let \"SharedProps$V4A3$make" = V4A3.make
+@warning("-32") let \"SharedProps$V4A4$make" = V4A4.make
+@warning("-32") let \"SharedProps$V4A5$make" = V4A5.make
+@warning("-32") let \"SharedProps$V4A6$make" = V4A6.make
+@warning("-32") let \"SharedProps$V4A7$make" = V4A7.make
+@warning("-32") let \"SharedProps$V4A8$make" = V4A8.make

@@ -21,7 +21,7 @@ const sidebarOutput = await fs.readFile(sidebarOutputPath, "utf8");
 
 assert.match(
   output,
-  /JsxRuntime\.jsx\(Sidebar\$RscNestedJsxDeep\.Sidebar\$Group,/,
+  /JsxRuntime\.jsx\(Sidebar\$RscNestedJsxDeep\.Sidebar\$Group\$make,/,
 );
 assert.doesNotMatch(output, /\.Group\.make,/);
 assert.match(
@@ -35,13 +35,22 @@ assert.doesNotMatch(sidebarOutput, /Sidebar\$Group\$jsx/);
 const brandIcons = await import("./src/BrandIcons.res.js");
 assert.deepStrictEqual(
   new Set(Object.keys(brandIcons)),
-  new Set(["ReScript", "BrandIcons$ReScript", "getIconForLanguageExtension"]),
+  new Set([
+    "ReScript",
+    "BrandIcons$ReScript$make",
+    "getIconForLanguageExtension",
+  ]),
 );
 
 const multipleNested = await import("./src/MultipleNested.res.js");
 assert.deepStrictEqual(
   new Set(Object.keys(multipleNested)),
-  new Set(["Group", "Other", "MultipleNested$Group", "MultipleNested$Other"]),
+  new Set([
+    "Group",
+    "Other",
+    "MultipleNested$Group$make",
+    "MultipleNested$Other$make",
+  ]),
 );
 
 await execClean();

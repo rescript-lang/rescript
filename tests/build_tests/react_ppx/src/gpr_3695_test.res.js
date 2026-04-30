@@ -10,12 +10,12 @@ function test(className) {
   return Foo;
 }
 
-let Gpr_3695_test$Test = Foo;
+let Gpr_3695_test$Test$make = Foo;
 
 export {
   React,
   Test,
   test,
-  Gpr_3695_test$Test,
+  Gpr_3695_test$Test$make,
 }
-/* Gpr_3695_test$Test Not a pure module */
+/* Gpr_3695_test$Test$make Not a pure module */

@@ -8,17 +8,17 @@ function make(param) {
   });
 }
 
-let Recursive_explicit_component_test$SelfCreateElement = make;
+let Recursive_explicit_component_test$SelfCreateElement$make = make;
 
 let SelfCreateElement = {
-  make: Recursive_explicit_component_test$SelfCreateElement
+  make: Recursive_explicit_component_test$SelfCreateElement$make
 };
 
 function other(param) {
   return param.foo.toString();
 }
 
-function Recursive_explicit_component_test$RawSiblingCreateElement(props) {
+function Recursive_explicit_component_test$RawSiblingCreateElement$make(props) {
   return React.createElement(other, {
     foo: props.foo
   });
@@ -26,7 +26,7 @@ function Recursive_explicit_component_test$RawSiblingCreateElement(props) {
 
 let RawSiblingCreateElement = {
   other: other,
-  make: Recursive_explicit_component_test$RawSiblingCreateElement
+  make: Recursive_explicit_component_test$RawSiblingCreateElement$make
 };
 
 function make$1(props) {
@@ -39,13 +39,13 @@ function make$1(props) {
   }
 }
 
-let Recursive_explicit_component_test$ComponentWithProps = make$1;
+let Recursive_explicit_component_test$ComponentWithProps$make = make$1;
 
 let ComponentWithProps = {
-  make: Recursive_explicit_component_test$ComponentWithProps
+  make: Recursive_explicit_component_test$ComponentWithProps$make
 };
 
-let componentWithPropsElement = React.createElement(Recursive_explicit_component_test$ComponentWithProps, {
+let componentWithPropsElement = React.createElement(Recursive_explicit_component_test$ComponentWithProps$make, {
   foo: 1
 });
 
@@ -54,8 +54,8 @@ export {
   RawSiblingCreateElement,
   ComponentWithProps,
   componentWithPropsElement,
-  Recursive_explicit_component_test$SelfCreateElement,
-  Recursive_explicit_component_test$RawSiblingCreateElement,
-  Recursive_explicit_component_test$ComponentWithProps,
+  Recursive_explicit_component_test$SelfCreateElement$make,
+  Recursive_explicit_component_test$RawSiblingCreateElement$make,
+  Recursive_explicit_component_test$ComponentWithProps$make,
 }
 /* componentWithPropsElement Not a pure module */

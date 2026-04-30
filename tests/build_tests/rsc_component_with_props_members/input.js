@@ -25,25 +25,25 @@ const plainAccessOutput = await fs.readFile(
 
 assert.match(
   output,
-  /JsxRuntime\.jsx\(Sidebar\$RscComponentWithPropsMembers\.Sidebar\$Provider,/,
+  /JsxRuntime\.jsx\(Sidebar\$RscComponentWithPropsMembers\.Sidebar\$Provider\$make,/,
 );
 assert.match(
   output,
-  /JsxRuntime\.jsx\(Sidebar\$RscComponentWithPropsMembers\.Sidebar\$Inset,/,
+  /JsxRuntime\.jsx\(Sidebar\$RscComponentWithPropsMembers\.Sidebar\$Inset\$make,/,
 );
 assert.doesNotMatch(output, /\.Provider\.make,/);
 assert.doesNotMatch(output, /\.Inset\.make,/);
 assert.match(
   sidebarOutput,
-  /let Provider = \{[\s\S]*make: Sidebar\$Provider[\s\S]*\};/s,
+  /let Provider = \{[\s\S]*make: Sidebar\$Provider\$make[\s\S]*\};/s,
 );
 assert.match(
   sidebarOutput,
-  /let Inset = \{[\s\S]*make: Sidebar\$Inset[\s\S]*\};/s,
+  /let Inset = \{[\s\S]*make: Sidebar\$Inset\$make[\s\S]*\};/s,
 );
 assert.match(
   sidebarOutput,
-  /export \{[\s\S]*Sidebar\$Provider,[\s\S]*Sidebar\$Inset[\s\S]*\}/s,
+  /export \{[\s\S]*Sidebar\$Provider\$make,[\s\S]*Sidebar\$Inset\$make[\s\S]*\}/s,
 );
 assert.doesNotMatch(sidebarOutput, /Provider\.make = Provider;/);
 assert.doesNotMatch(sidebarOutput, /Inset\.make = Inset;/);

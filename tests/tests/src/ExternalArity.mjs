@@ -37,13 +37,13 @@ let ReactTest = {
   FormattedMessage: FormattedMessage
 };
 
-let ExternalArity$ReactTest$FormattedMessage = ReactIntl.FormattedMessage;
+let ExternalArity$ReactTest$FormattedMessage$make = ReactIntl.FormattedMessage;
 
 export {
   f1,
   f2,
   FromTypeConstructor,
   ReactTest,
-  ExternalArity$ReactTest$FormattedMessage,
+  ExternalArity$ReactTest$FormattedMessage$make,
 }
 /* test1 Not a pure module */

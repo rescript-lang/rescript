@@ -6,10 +6,11 @@ module C0 = {
     type props = {}
 
     let make = (_: props): React.element => React.null
+    @res.hoistedValue
     let make = React.component({
-      let \"DefaultPatternProp$C0$M" = props => make(props)
+      let \"DefaultPatternProp$C0$M$make" = props => make(props)
 
-      \"DefaultPatternProp$C0$M"
+      \"DefaultPatternProp$C0$M$make"
     })
   }
 
@@ -27,11 +28,12 @@ module C0 = {
     let module(C: S) = __component_value
     (React.jsx(@res.jsxComponentPath C.make, {}): React.element)
   }
+  @res.hoistedValue
   let make = React.component({
-    let \"DefaultPatternProp$C0" = (props: props<_>) => make(props)
+    let \"DefaultPatternProp$C0$make" = (props: props<_>) => make(props)
 
-    \"DefaultPatternProp$C0"
+    \"DefaultPatternProp$C0$make"
   })
 }
-@warning("-32") let \"DefaultPatternProp$C0$M" = C0.M.make
-@warning("-32") let \"DefaultPatternProp$C0" = C0.make
+@warning("-32") let \"DefaultPatternProp$C0$M$make" = C0.M.make
+@warning("-32") let \"DefaultPatternProp$C0$make" = C0.make

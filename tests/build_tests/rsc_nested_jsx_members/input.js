@@ -54,11 +54,11 @@ assert.match(
 );
 assert.match(
   output,
-  /JsxRuntime\.jsx\(Sidebar\$RscNestedJsxMembers\.Sidebar\$Provider,/,
+  /JsxRuntime\.jsx\(Sidebar\$RscNestedJsxMembers\.Sidebar\$Provider\$make,/,
 );
 assert.match(
   externalOutput,
-  /JsxRuntime\.jsx\(SidebarExternal\$RscNestedJsxMembers\.SidebarExternal\$Provider,/,
+  /JsxRuntime\.jsx\(SidebarExternal\$RscNestedJsxMembers\.SidebarExternal\$Provider\$make,/,
 );
 assert.doesNotMatch(
   output,
@@ -71,11 +71,11 @@ assert.doesNotMatch(
 assert.doesNotMatch(output, /\.Provider\.make,/);
 assert.match(
   sidebarOutput,
-  /let Provider = \{[\s\S]*make: Sidebar\$Provider[\s\S]*\};/s,
+  /let Provider = \{[\s\S]*make: Sidebar\$Provider\$make[\s\S]*\};/s,
 );
 assert.match(
   sidebarOutput,
-  /let Inset = \{[\s\S]*make: Sidebar\$Inset[\s\S]*\};/s,
+  /let Inset = \{[\s\S]*make: Sidebar\$Inset\$make[\s\S]*\};/s,
 );
 assert.doesNotMatch(sidebarOutput, /Provider\.make = Provider;/);
 assert.doesNotMatch(sidebarOutput, /Inset\.make = Inset;/);
@@ -83,7 +83,7 @@ assert.doesNotMatch(sidebarOutput, /Sidebar\$Provider\$jsx/);
 assert.doesNotMatch(sidebarOutput, /Sidebar\$Inset\$jsx/);
 assert.match(
   sidebarOutput,
-  /export \{[\s\S]*Sidebar\$Provider,[\s\S]*Sidebar\$Inset[\s\S]*\}/s,
+  /export \{[\s\S]*Sidebar\$Provider\$make,[\s\S]*Sidebar\$Inset\$make[\s\S]*\}/s,
 );
 assert.match(
   externalSidebarOutput,
@@ -93,7 +93,7 @@ assert.doesNotMatch(externalSidebarOutput, /Provider\.make = Provider;/);
 assert.doesNotMatch(externalSidebarOutput, /SidebarExternal\$Provider\$jsx/);
 assert.match(
   externalSidebarOutput,
-  /export \{[\s\S]*SidebarExternal\$Provider[\s\S]*\}/s,
+  /export \{[\s\S]*SidebarExternal\$Provider\$make[\s\S]*\}/s,
 );
 assert.match(
   plainAccessOutput,
@@ -105,13 +105,13 @@ assert.doesNotMatch(
 );
 assert.match(
   buttonLayoutOutput,
-  /JsxRuntime\.jsx\(Button\$RscNestedJsxMembers\.Button\$Button,/,
+  /JsxRuntime\.jsx\(Button\$RscNestedJsxMembers\.Button\$Button\$make,/,
 );
 assert.doesNotMatch(buttonLayoutOutput, /\.Button\.make,/);
 assert.match(
   buttonOutput,
-  /let Button = \{[\s\S]*make: Button\$Button[\s\S]*\};/s,
+  /let Button = \{[\s\S]*make: Button\$Button\$make[\s\S]*\};/s,
 );
-assert.match(buttonOutput, /export \{[\s\S]*Button\$Button[\s\S]*\}/s);
+assert.match(buttonOutput, /export \{[\s\S]*Button\$Button\$make[\s\S]*\}/s);
 
 await execClean();

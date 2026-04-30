@@ -87,9 +87,38 @@ let props_longident_for_nested_module nested_modules =
     in
     Ldot (mod_path, "props")
 
-(* Hoisted File$Nested aliases exist for JS/RSC exports; they are not always
-   referenced from ReScript when a nested module is absent from the [.resi], so
-   suppress unused-value (32) on these bindings only. *)
+let res_hoisted_value_attr =
+  ({txt = "res.hoistedValue"; loc = Location.none}, PStr [])
+
+let should_hoist_nested_make ~(config : Jsx_common.jsx_config) fn_name =
+  match (fn_name, config.nested_modules, config.functor_depth) with
+  | "make", _ :: _, 0 -> true
+  | _ -> false
+
+let with_hoisted_value_attr attrs = res_hoisted_value_attr :: attrs
+
+let maybe_mark_hoisted_binding ~(config : Jsx_common.jsx_config) fn_name binding
+    =
+  if should_hoist_nested_make ~config fn_name then
+    {
+      binding with
+      pvb_attributes = with_hoisted_value_attr binding.pvb_attributes;
+    }
+  else binding
+
+let maybe_mark_hoisted_value_description ~(config : Jsx_common.jsx_config)
+    fn_name value_description =
+  if should_hoist_nested_make ~config fn_name then
+    {
+      value_description with
+      pval_attributes =
+        with_hoisted_value_attr value_description.pval_attributes;
+    }
+  else value_description
+
+(* Hoisted File$Nested$make aliases exist for JS/RSC exports; they are not
+   always referenced from ReScript when a nested module is absent from the
+   [.resi], so suppress unused-value (32) on these bindings only. *)
 let jsx_hoisted_binding_warning_attrs =
   [
     ( Location.mknoloc "warning",
@@ -194,9 +223,12 @@ let make_module_name file_name nested_modules fn_name =
   let full_module_name =
     match (file_name, nested_modules, fn_name) with
     (* TODO: is this even reachable? It seems like the fileName always exists *)
-    | "", nested_modules, "make" -> nested_modules
+    | "", [], "make" -> []
+    | "", nested_modules, "make" -> List.rev ("make" :: nested_modules)
     | "", nested_modules, fn_name -> List.rev (fn_name :: nested_modules)
-    | file_name, nested_modules, "make" -> file_name :: List.rev nested_modules
+    | file_name, [], "make" -> [file_name]
+    | file_name, nested_modules, "make" ->
+      file_name :: List.rev ("make" :: nested_modules)
     | file_name, nested_modules, fn_name ->
       file_name :: List.rev (fn_name :: nested_modules)
   in
@@ -898,7 +930,11 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name binding =
         pvb_pat = Pat.var {txt = fn_name; loc = Location.none};
       }
     in
-    let new_binding = Some (binding_wrapper full_expression) in
+    let new_binding =
+      Some
+        (binding_wrapper full_expression
+        |> maybe_mark_hoisted_binding ~config fn_name)
+    in
     let () =
       maybe_hoist_nested_make_component ~config ~empty_loc ~full_module_name
         fn_name
@@ -981,7 +1017,11 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name binding =
         jsx_component_expr config ~loc internal_expression
       in
 
-      Vb.mk ~attrs:modified_binding.pvb_attributes
+      Vb.mk
+        ~attrs:
+          (if should_hoist_nested_make ~config fn_name then
+             with_hoisted_value_attr modified_binding.pvb_attributes
+           else modified_binding.pvb_attributes)
         (Pat.var {txt = fn_name; loc})
         internal_expression
     in
@@ -1081,11 +1121,12 @@ let transform_structure_item ~config item =
           pstr with
           pstr_desc =
             Pstr_primitive
-              {
-                value_description with
-                pval_type = {pval_type with ptyp_desc = new_external_type};
-                pval_attributes = List.filter other_attrs_pure pval_attributes;
-              };
+              ({
+                 value_description with
+                 pval_type = {pval_type with ptyp_desc = new_external_type};
+                 pval_attributes = List.filter other_attrs_pure pval_attributes;
+               }
+              |> maybe_mark_hoisted_value_description ~config pval_name.txt);
         }
       in
       let file_name = filename_from_loc pstr_loc in
@@ -1170,11 +1211,12 @@ let transform_signature_item ~(config : Jsx_common.jsx_config) item =
           psig with
           psig_desc =
             Psig_value
-              {
-                psig_desc with
-                pval_type = {pval_type with ptyp_desc = new_external_type};
-                pval_attributes = List.filter other_attrs_pure pval_attributes;
-              };
+              ({
+                 psig_desc with
+                 pval_type = {pval_type with ptyp_desc = new_external_type};
+                 pval_attributes = List.filter other_attrs_pure pval_attributes;
+               }
+              |> maybe_mark_hoisted_value_description ~config pval_name.txt);
         }
       in
       let file_name = filename_from_loc psig_loc in
@@ -1239,11 +1281,12 @@ let transform_signature_item ~(config : Jsx_common.jsx_config) item =
           psig with
           psig_desc =
             Psig_value
-              {
-                psig_desc with
-                pval_type = {pval_type with ptyp_desc = new_external_type};
-                pval_attributes = List.filter other_attrs_pure pval_attributes;
-              };
+              ({
+                 psig_desc with
+                 pval_type = {pval_type with ptyp_desc = new_external_type};
+                 pval_attributes = List.filter other_attrs_pure pval_attributes;
+               }
+              |> maybe_mark_hoisted_value_description ~config pval_name.txt);
         }
       in
       let file_name = filename_from_loc psig_loc in

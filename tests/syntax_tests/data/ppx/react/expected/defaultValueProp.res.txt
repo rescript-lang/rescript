@@ -17,9 +17,10 @@ module C0 = {
     let b = __b_value
     (React.int(a + b): React.element)
   }
+  @res.hoistedValue
   let make = React.component({
-    let \"DefaultValueProp$C0" = (props: props<_>) => make(props)
-    \"DefaultValueProp$C0"
+    let \"DefaultValueProp$C0$make" = (props: props<_>) => make(props)
+    \"DefaultValueProp$C0$make"
   })
 }
 
@@ -38,10 +39,11 @@ module C1 = {
     let a = __a_value
     (React.int(a + b): React.element)
   }
+  @res.hoistedValue
   let make = React.component({
-    let \"DefaultValueProp$C1" = (props: props<_>) => make(props)
+    let \"DefaultValueProp$C1$make" = (props: props<_>) => make(props)
 
-    \"DefaultValueProp$C1"
+    \"DefaultValueProp$C1$make"
   })
 }
 
@@ -60,10 +62,11 @@ module C2 = {
     let a = __a_value
     (React.string(a): React.element)
   }
+  @res.hoistedValue
   let make = React.component({
-    let \"DefaultValueProp$C2" = (props: props<_>) => make(props)
+    let \"DefaultValueProp$C2$make" = (props: props<_>) => make(props)
 
-    \"DefaultValueProp$C2"
+    \"DefaultValueProp$C2$make"
   })
 }
 
@@ -85,13 +88,14 @@ module C3 = {
       }: React.element
     )
   }
+  @res.hoistedValue
   let make = React.component({
-    let \"DefaultValueProp$C3" = (props: props<_>) => make(props)
+    let \"DefaultValueProp$C3$make" = (props: props<_>) => make(props)
 
-    \"DefaultValueProp$C3"
+    \"DefaultValueProp$C3$make"
   })
 }
-@warning("-32") let \"DefaultValueProp$C0" = C0.make
-@warning("-32") let \"DefaultValueProp$C1" = C1.make
-@warning("-32") let \"DefaultValueProp$C2" = C2.make
-@warning("-32") let \"DefaultValueProp$C3" = C3.make
+@warning("-32") let \"DefaultValueProp$C0$make" = C0.make
+@warning("-32") let \"DefaultValueProp$C1$make" = C1.make
+@warning("-32") let \"DefaultValueProp$C2$make" = C2.make
+@warning("-32") let \"DefaultValueProp$C3$make" = C3.make

@@ -3,12 +3,12 @@
 import * as React from "react";
 import * as JsxRuntime from "react/jsx-runtime";
 
-function Jsx_preserve_test$Icon(props) {
+function Jsx_preserve_test$Icon$make(props) {
   return <strong />;
 }
 
 let Icon = {
-  make: Jsx_preserve_test$Icon
+  make: Jsx_preserve_test$Icon$make
 };
 
 let _single_element_child = <div>
@@ -113,14 +113,14 @@ function QueryClientProvider(props) { return props.children }
 
 let A = {};
 
-function Jsx_preserve_test$B(props) {
+function Jsx_preserve_test$B$make(props) {
   return <p>
     {"Hello, world!"}
   </p>;
 }
 
 let B = {
-  make: Jsx_preserve_test$B
+  make: Jsx_preserve_test$B$make
 };
 
 let _external_component_with_children = <QueryClientProvider>
@@ -128,7 +128,7 @@ let _external_component_with_children = <QueryClientProvider>
   <B.make />
 </QueryClientProvider>;
 
-function Jsx_preserve_test$MyWeirdComponent(props) {
+function Jsx_preserve_test$MyWeirdComponent$make(props) {
   return <p>
     {"foo"}
     {props.MyWeirdProp}
@@ -136,7 +136,7 @@ function Jsx_preserve_test$MyWeirdComponent(props) {
 }
 
 let MyWeirdComponent = {
-  make: Jsx_preserve_test$MyWeirdComponent
+  make: Jsx_preserve_test$MyWeirdComponent$make
 };
 
 let _escaped_jsx_prop = <MyWeirdComponent.make
@@ -173,12 +173,12 @@ let _large_component = <div
   </p>
 </div>;
 
-function Jsx_preserve_test$ComponentWithOptionalProps(props) {
+function Jsx_preserve_test$ComponentWithOptionalProps$make(props) {
   return null;
 }
 
 let ComponentWithOptionalProps = {
-  make: Jsx_preserve_test$ComponentWithOptionalProps
+  make: Jsx_preserve_test$ComponentWithOptionalProps$make
 };
 
 let _optional_props = <ComponentWithOptionalProps.make
@@ -208,21 +208,21 @@ let _youtube_iframe = <iframe
   referrerPolicy={"strict-origin-when-cross-origin"}
 />;
 
-function Jsx_preserve_test$X(props) {
+function Jsx_preserve_test$X$make(props) {
   return null;
 }
 
 let X = {
-  make: Jsx_preserve_test$X
+  make: Jsx_preserve_test$X$make
 };
 
 <X.make />;
 
-function Jsx_preserve_test$Y(props) {
+function Jsx_preserve_test$Y$make(props) {
   return null;
 }
 
-let make = React.memo(Jsx_preserve_test$Y);
+let make = React.memo(Jsx_preserve_test$Y$make);
 
 let Y = {
   x: 42,
@@ -247,11 +247,11 @@ function Jsx_preserve_test(props) {
   </ContextProvider.make>;
 }
 
-let Jsx_preserve_test$A = QueryClientProvider;
+let Jsx_preserve_test$A$make = QueryClientProvider;
 
 let make$2 = Jsx_preserve_test;
 
-let Jsx_preserve_test$Y$1 = make;
+let Jsx_preserve_test$Y$make$1 = make;
 
 export {
   Icon,
@@ -285,12 +285,12 @@ export {
   context,
   ContextProvider,
   make$2 as make,
-  Jsx_preserve_test$Icon,
-  Jsx_preserve_test$A,
-  Jsx_preserve_test$B,
-  Jsx_preserve_test$MyWeirdComponent,
-  Jsx_preserve_test$ComponentWithOptionalProps,
-  Jsx_preserve_test$X,
-  Jsx_preserve_test$Y$1 as Jsx_preserve_test$Y,
+  Jsx_preserve_test$Icon$make,
+  Jsx_preserve_test$A$make,
+  Jsx_preserve_test$B$make,
+  Jsx_preserve_test$MyWeirdComponent$make,
+  Jsx_preserve_test$ComponentWithOptionalProps$make,
+  Jsx_preserve_test$X$make,
+  Jsx_preserve_test$Y$make$1 as Jsx_preserve_test$Y$make,
 }
 /* _single_element_child Not a pure module */

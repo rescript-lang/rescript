@@ -23,7 +23,7 @@ const consumerOutput = await fs.readFile(
   "utf8",
 );
 
-assert.match(localOnlyOutput, /JsxRuntime\.jsx\(LocalOnly\$Hidden,/);
+assert.match(localOnlyOutput, /JsxRuntime\.jsx\(LocalOnly\$Hidden\$make,/);
 assert.doesNotMatch(localOnlyOutput, /export \{[\s\S]*Hidden[\s\S]*\}/s);
 assert.doesNotMatch(localOnlyOutput, /LocalOnly\$Hidden\$jsx/);
 assert.match(consumerOutput, /JsxRuntime\.jsx\(LocalOnly\.make,/);

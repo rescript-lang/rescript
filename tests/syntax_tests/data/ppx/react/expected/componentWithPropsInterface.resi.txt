@@ -3,6 +3,7 @@
 module Sidebar: {
   type props = {children: React.element}
 
+  @res.hoistedValue
   let make: React.component<props>
 }
-let \"ComponentWithPropsInterface$Sidebar": React.component<Sidebar.props>
+let \"ComponentWithPropsInterface$Sidebar$make": React.component<Sidebar.props>

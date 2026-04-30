@@ -2,12 +2,12 @@
 
 import * as JSXV4Gen from "./JSXV4.gen";
 
-function JSXV4$CompV4(props) {
+function JSXV4$CompV4$make(props) {
   return props.x + props.y;
 }
 
 let CompV4 = {
-  make: JSXV4$CompV4
+  make: JSXV4$CompV4$make
 };
 
 let make = JSXV4Gen.make;
@@ -15,6 +15,6 @@ let make = JSXV4Gen.make;
 export {
   CompV4,
   make,
-  JSXV4$CompV4,
+  JSXV4$CompV4$make,
 }
 /* make Not a pure module */

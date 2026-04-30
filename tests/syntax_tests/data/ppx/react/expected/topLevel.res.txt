@@ -11,10 +11,11 @@ module V4A = {
     Js.log("This function should be named 'TopLevel.react'")
     (ReactDOM.jsx("div", {}): React.element)
   }
+  @res.hoistedValue
   let make = React.component({
-    let \"TopLevel$V4A" = (props: props<_>) => make(props)
+    let \"TopLevel$V4A$make" = (props: props<_>) => make(props)
 
-    \"TopLevel$V4A"
+    \"TopLevel$V4A$make"
   })
 }
-@warning("-32") let \"TopLevel$V4A" = V4A.make
+@warning("-32") let \"TopLevel$V4A$make" = V4A.make

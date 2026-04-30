@@ -21,7 +21,7 @@ const plainAccessOutput = await fs.readFile(
 
 assert.match(
   layoutOutput,
-  /JsxRuntime\.jsx\(Sidebar\$RscNestedJsxAliasChain\.Sidebar\$Provider,/,
+  /JsxRuntime\.jsx\(Sidebar\$RscNestedJsxAliasChain\.Sidebar\$Provider\$make,/,
 );
 assert.doesNotMatch(layoutOutput, /\.Provider\.make,/);
 assert.match(

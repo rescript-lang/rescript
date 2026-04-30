@@ -9,10 +9,11 @@ module V4A = {
   let make = ({msg, _}: props<_>): React.element => {
     ReactDOM.jsx("div", {children: ?ReactDOM.someElement({msg->React.string})})
   }
+  @res.hoistedValue
   let make = React.component({
-    let \"FileLevelConfig$V4A" = (props: props<_>) => make(props)
+    let \"FileLevelConfig$V4A$make" = (props: props<_>) => make(props)
 
-    \"FileLevelConfig$V4A"
+    \"FileLevelConfig$V4A$make"
   })
 }
-@warning("-32") let \"FileLevelConfig$V4A" = V4A.make
+@warning("-32") let \"FileLevelConfig$V4A$make" = V4A.make

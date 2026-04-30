@@ -672,6 +672,9 @@ let has_jsx_component_path_attr (exp : Typedtree.expression) =
     (fun ({txt; _}, _) -> String.equal txt "res.jsxComponentPath")
     exp.exp_attributes
 
+let has_hoisted_value_attr (attrs : Parsetree.attributes) =
+  List.exists (fun ({txt; _}, _) -> String.equal txt "res.hoistedValue") attrs
+
 let nested_component_root_name module_name =
   match Ext_namespace.try_split_module_name module_name with
   | Some (_namespace, module_name) -> module_name
@@ -686,22 +689,17 @@ let nested_component_root_name module_name =
 let nested_jsx_component_export_path ~loc env path =
   match Env.normalize_path_prefix (Some loc) env path |> Path.flatten with
   | `Ok (root, segments) -> (
-    match List.rev segments with
-    | "make" :: nested_modules_rev -> (
-      match List.rev nested_modules_rev with
-      | [] -> None
-      | nested_modules -> (
-        let hidden_name =
-          Ext_modulename.concat_nested_component_name
-            (nested_component_root_name (Ident.name root) :: nested_modules)
-        in
-        let hidden_path =
-          Path.Pdot (Path.Pident root, hidden_name, Path.nopos)
-        in
-        match Env.find_value hidden_path env with
-        | _ -> Some hidden_path
-        | exception Not_found -> None))
-    | _ -> None)
+    match segments with
+    | [] -> None
+    | _ :: _ -> (
+      let hidden_name =
+        Ext_modulename.concat_nested_component_name
+          (nested_component_root_name (Ident.name root) :: segments)
+      in
+      let hidden_path = Path.Pdot (Path.Pident root, hidden_name, Path.nopos) in
+      match Env.find_value hidden_path env with
+      | _ -> Some hidden_path
+      | exception Not_found -> None))
   | `Contains_apply -> None
 
 let rec transl_exp e =
@@ -713,10 +711,12 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
   match e.exp_desc with
   | Texp_ident (_, _, {val_kind = Val_prim p}) ->
     transl_primitive e.exp_loc p e.exp_env e.exp_type
-  | Texp_ident (path, _, {val_kind = Val_reg}) -> (
+  | Texp_ident (path, _, ({val_kind = Val_reg} as desc)) -> (
     match
-      if has_jsx_component_path_attr e then
-        nested_jsx_component_export_path ~loc:e.exp_loc e.exp_env path
+      if
+        has_jsx_component_path_attr e
+        && has_hoisted_value_attr desc.val_attributes
+      then nested_jsx_component_export_path ~loc:e.exp_loc e.exp_env path
       else None
     with
     | Some path -> transl_value_path ~loc:e.exp_loc e.exp_env path

@@ -24,7 +24,7 @@ assert.match(
 assert.match(output, /let dynamicProvider = DynamicSidebar\.Provider\.make;/);
 assert.match(
   output,
-  /JsxRuntime\.jsx\(Sidebar\$RscDynamicImportNestedJsx\.Sidebar\$Provider,/,
+  /JsxRuntime\.jsx\(Sidebar\$RscDynamicImportNestedJsx\.Sidebar\$Provider\$make,/,
 );
 assert.doesNotMatch(
   output,
