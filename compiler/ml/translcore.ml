@@ -453,52 +453,87 @@ let warn_polymorphic_comparison loc prim args =
     Location.prerr_warning loc Warnings.Bs_polymorphic_comparison
   | _ -> ()
 
+let assert_failed_at loc =
+  let fname, line, char = Location.get_pos_info loc.Location.loc_start in
+  let fname = Filename.basename fname in
+  Lprim
+    ( Praise Raise_regular,
+      [
+        Lprim
+          ( Pmakeblock Blk_extension,
+            [
+              transl_normal_path Predef.path_assert_failure;
+              Lconst
+                (Const_block
+                   ( Blk_tuple,
+                     [
+                       Const_base (Const_string (fname, None));
+                       Const_base (Const_int line);
+                       Const_base (Const_int char);
+                     ] ));
+            ],
+            loc );
+      ],
+      loc )
+
 (* Eta-expand a primitive *)
 
 let transl_primitive loc p env ty =
   (* Printf.eprintf "----transl_primitive %s----\n" p.prim_name; *)
-  let prim =
-    try specialize_primitive p env ty (* ~has_constant_constructor:false *)
-    with Not_found -> Pccall p
-  in
-  warn_polymorphic_comparison loc prim [];
-  match prim with
-  | Ploc kind -> (
-    let lam = lam_of_loc kind loc in
-    match p.prim_arity with
-    | 0 -> lam
-    | 1 ->
-      (* TODO: we should issue a warning ? *)
-      let param = Ident.create "prim" in
-      Lfunction
-        {
-          params = [param];
-          attr = default_function_attribute;
-          loc;
-          body = Lprim (Pmakeblock Blk_tuple, [lam; Lvar param], loc);
-        }
-    | _ -> assert false)
-  | _ ->
-    let rec make_params n total =
-      if n <= 0 then []
-      else
-        Ident.create ("prim" ^ string_of_int (total - n))
-        :: make_params (n - 1) total
+  if p.Primitive.prim_name = "%assert" then
+    let param = Ident.create "assert_cond" in
+    Lfunction
+      {
+        params = [param];
+        attr = default_function_attribute;
+        loc;
+        body =
+          (if !Clflags.noassert then lambda_unit
+           else Lifthenelse (Lvar param, lambda_unit, assert_failed_at loc));
+      }
+  else
+    let prim =
+      try specialize_primitive p env ty (* ~has_constant_constructor:false *)
+      with Not_found -> Pccall p
     in
-    let prim_arity = p.prim_arity in
-    if p.prim_from_constructor || prim_arity = 0 then Lprim (prim, [], loc)
-    else
-      let params =
-        if prim_arity = 1 then [Ident.create "prim"]
-        else make_params prim_arity prim_arity
+    warn_polymorphic_comparison loc prim [];
+    match prim with
+    | Ploc kind -> (
+      let lam = lam_of_loc kind loc in
+      match p.prim_arity with
+      | 0 -> lam
+      | 1 ->
+        (* TODO: we should issue a warning ? *)
+        let param = Ident.create "prim" in
+        Lfunction
+          {
+            params = [param];
+            attr = default_function_attribute;
+            loc;
+            body = Lprim (Pmakeblock Blk_tuple, [lam; Lvar param], loc);
+          }
+      | _ -> assert false)
+    | _ ->
+      let rec make_params n total =
+        if n <= 0 then []
+        else
+          Ident.create ("prim" ^ string_of_int (total - n))
+          :: make_params (n - 1) total
       in
-      Lfunction
-        {
-          params;
-          attr = default_function_attribute;
-          loc;
-          body = Lprim (prim, List.map (fun id -> Lvar id) params, loc);
-        }
+      let prim_arity = p.prim_arity in
+      if p.prim_from_constructor || prim_arity = 0 then Lprim (prim, [], loc)
+      else
+        let params =
+          if prim_arity = 1 then [Ident.create "prim"]
+          else make_params prim_arity prim_arity
+        in
+        Lfunction
+          {
+            params;
+            attr = default_function_attribute;
+            loc;
+            body = Lprim (prim, List.map (fun id -> Lvar id) params, loc);
+          }
 
 let transl_primitive_application loc prim env ty args =
   let prim_name = prim.prim_name in
@@ -718,6 +753,23 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
           [lambda],
           loc )
     | None -> lambda)
+  | Texp_apply
+      {
+        funct =
+          {
+            exp_desc =
+              Texp_ident (_, _, {val_kind = Val_prim {prim_name = "%assert"}});
+          };
+        args = [(_, Some cond)];
+      } -> (
+    (* assert(cond) — same semantics as the old assert keyword *)
+    match cond.exp_desc with
+    | Texp_construct (_, {cstr_name = "false"}, _) ->
+      if !Clflags.no_assert_false then Lambda.lambda_assert_false
+      else assert_failed e
+    | _ ->
+      if !Clflags.noassert then lambda_unit
+      else Lifthenelse (transl_exp cond, lambda_unit, assert_failed e))
   | Texp_apply
       {
         funct =

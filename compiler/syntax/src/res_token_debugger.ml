@@ -74,7 +74,6 @@ let dump_tokens filename =
       | Res_token.LessThan -> "LessThan"
       | Res_token.Hash -> "Hash"
       | Res_token.HashEqual -> "HashEqual"
-      | Res_token.Assert -> "Assert"
       | Res_token.Tilde -> "Tilde"
       | Res_token.Question -> "Question"
       | Res_token.If -> "If"
