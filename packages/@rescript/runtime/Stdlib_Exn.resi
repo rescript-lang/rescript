@@ -7,6 +7,7 @@
 /***
 Provide utilities for dealing with JS exceptions.
 */
+@@deprecated("Use `JsExn` module")
 
 /** Represents a JS exception */
 @deprecated({
