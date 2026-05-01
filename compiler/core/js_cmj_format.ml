@@ -167,7 +167,8 @@ let query_by_name (cmj_table : t) name : keyed_cmj_value =
   binary_search values name
 
 let has_hoisted_value (cmj_table : t) name =
-  Array.exists (fun hoisted_name -> Ext_string.equal hoisted_name name)
+  Array.exists
+    (fun hoisted_name -> Ext_string.equal hoisted_name name)
     cmj_table.hoisted_values
 
 type path = string
