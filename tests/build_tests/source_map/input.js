@@ -90,12 +90,22 @@ const sourcePath = path.join(import.meta.dirname, "src", "Demo.res");
 const source = await fs.readFile(sourcePath, "utf8");
 const originalDebuggerPositions = findTokenPositions(source, "%debugger");
 assert.equal(originalDebuggerPositions.length, 2);
+const originalRaiseErrorPositions = findTokenPositions(
+  source,
+  "Js.Exn.raiseError",
+);
+assert.equal(originalRaiseErrorPositions.length, 1);
 
 for (const filename of ["Demo.cjs", "Demo.mjs"]) {
   const jsPath = path.join(import.meta.dirname, "lib", "bs", "src", filename);
   const mapPath = `${jsPath}.map`;
 
   const js = await fs.readFile(jsPath, "utf8");
+  assert.match(
+    js,
+    /\/\* @__PURE__ \*\/Primitive_exceptions\.create/,
+    `${filename} should preserve real JS comments while source maps are enabled`,
+  );
   assert.match(
     js,
     new RegExp(`//# sourceMappingURL=${filename.replace(".", "\\.")}\\.map`),
@@ -118,6 +128,28 @@ for (const filename of ["Demo.cjs", "Demo.mjs"]) {
   assert.equal(generatedDebuggerPositions.length, 2);
 
   const decodedMappings = decodeMappings(map.mappings);
+  const generatedRaiseErrorPositions = findTokenPositions(
+    js,
+    "Stdlib_Exn.raiseError",
+  );
+  assert.equal(generatedRaiseErrorPositions.length, 1);
+  const raiseErrorMapping = decodedMappings.find(
+    decoded =>
+      decoded.generatedLine === generatedRaiseErrorPositions[0].line &&
+      decoded.generatedColumn === generatedRaiseErrorPositions[0].column,
+  );
+  assert.ok(
+    raiseErrorMapping,
+    `${filename}.map should include an exact mapping for raiseError`,
+  );
+  assert.deepEqual(
+    {
+      line: raiseErrorMapping.originalLine,
+      column: raiseErrorMapping.originalColumn,
+    },
+    originalRaiseErrorPositions[0],
+  );
+
   const debuggerMappings = generatedDebuggerPositions.map(position => {
     const mapping = decodedMappings.find(
       decoded =>

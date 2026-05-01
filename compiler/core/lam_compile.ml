@@ -25,11 +25,11 @@
 module E = Js_exp_make
 module S = Js_stmt_make
 
-let source_map_comment = Js_source_map.comment_of_loc
+let source_map_loc = Js_source_map.source_loc_of_loc
 
 let with_source_loc loc (exp : J.expression) =
-  match (source_map_comment loc, exp.comment) with
-  | Some comment, None -> {exp with comment = Some comment}
+  match (source_map_loc loc, exp.source_loc) with
+  | Some source_loc, None -> {exp with source_loc = Some source_loc}
   | _ -> exp
 
 let rec source_loc_of_lam (lam : Lam.t) =
@@ -67,21 +67,21 @@ let rec source_loc_of_lam (lam : Lam.t) =
   | Lassign (_, body) -> source_loc_of_lam body
   | Lvar _ | Lglobal_module _ | Lconst _ | Lbreak | Lcontinue -> None
 
-let source_map_comment_of_lam lam =
+let source_map_loc_of_lam lam =
   match source_loc_of_lam lam with
-  | Some loc -> source_map_comment loc
+  | Some loc -> source_map_loc loc
   | None -> None
 
-let with_statement_comment comment (stmt : J.statement) =
-  match (comment, stmt.comment) with
-  | Some comment, None -> {stmt with comment = Some comment}
+let with_statement_source_loc source_loc (stmt : J.statement) =
+  match (source_loc, stmt.source_loc) with
+  | Some source_loc, None -> {stmt with source_loc = Some source_loc}
   | _ -> stmt
 
 let with_block_source_loc lam block =
   match block with
   | [] -> []
   | stmt :: rest ->
-    with_statement_comment (source_map_comment_of_lam lam) stmt :: rest
+    with_statement_source_loc (source_map_loc_of_lam lam) stmt :: rest
 
 let args_either_function_or_const (args : Lam.t list) =
   Ext_list.for_all args (fun x ->
@@ -425,13 +425,11 @@ let compile output_prefix =
           }
           body
       in
-      let comment = source_map_comment loc in
       let result =
         if ret.triggered then
           let body_block = Js_output.output_as_block output in
           E.ocaml_fun
-            ?comment
-              (* TODO:  save computation of length several times
+          (* TODO:  save computation of length several times
              Here we always create [ocaml_fun],
              it will be renamed into [method]
              when it is detected by a primitive
@@ -448,10 +446,11 @@ let compile output_prefix =
             ]
         else
           (* TODO:  save computation of length several times *)
-          E.ocaml_fun ?comment params
+          E.ocaml_fun params
             (Js_output.output_as_block output)
             ~return_unit ~async ~one_unit_arg ?directive
       in
+      let result = with_source_loc loc result in
       ( Js_output.output_of_expression
           (Declare (Alias, id))
           result
@@ -695,14 +694,16 @@ let compile output_prefix =
                       {
                         switch_body;
                         should_break;
-                        comment = source_map_comment_of_lam lam;
+                        comment = None;
+                        source_loc = source_map_loc_of_lam lam;
                       } )
                 else
                   ( switch_case,
                     {
                       switch_body = [];
                       should_break = false;
-                      comment = source_map_comment_of_lam lam;
+                      comment = None;
+                      source_loc = source_map_loc_of_lam lam;
                     } ))
             (* TODO: we should also group default *)
             (* The last clause does not need [break]
@@ -1733,9 +1734,11 @@ let compile output_prefix =
         compile_lambda {lambda_cxt with continuation = NeedValue Not_tail} e
       with
       | {block; value = Some v} ->
-        let comment = source_map_comment loc in
+        let stmt =
+          with_statement_source_loc (source_map_loc loc) (S.throw_stmt v)
+        in
         Js_output.make
-          (Ext_list.append_one block (S.throw_stmt ?comment v))
+          (Ext_list.append_one block stmt)
           ~value:E.undefined ~output_finished:True
       (* FIXME -- breaks invariant when NeedValue, reason is that js [throw] is statement
          while ocaml it's an expression, we should remove such things in lambda optimizations
@@ -1746,9 +1749,10 @@ let compile output_prefix =
     | {primitive = Pdebugger; loc; _} ->
       (* [%debugger] guarantees that the expression does not matter
          TODO: make it even safer *)
-      let comment = source_map_comment loc in
-      Js_output.output_of_block_and_expression lambda_cxt.continuation
-        [S.debugger_stmt ?comment ()]
+      let stmt =
+        with_statement_source_loc (source_map_loc loc) (S.debugger_stmt ())
+      in
+      Js_output.output_of_block_and_expression lambda_cxt.continuation [stmt]
         E.unit
       (* TODO:
          check the arity of fn before wrapping it
@@ -1805,24 +1809,24 @@ let compile output_prefix =
     | {primitive = Pjs_fn_method; args = args_lambda} -> (
       match args_lambda with
       | [Lfunction {params; body; attr = {return_unit; async}; loc}] ->
-        let comment = source_map_comment loc in
         Js_output.output_of_block_and_expression lambda_cxt.continuation []
-          (E.method_ ?comment ~async ~return_unit params
-             (* Invariant:  jmp_table can not across function boundary,
-                here we share env
-             *)
-             (Js_output.output_as_block
-                (compile_lambda
-                   {
-                     lambda_cxt with
-                     continuation =
-                       EffectCall
-                         (Maybe_tail_is_return
-                            (Tail_with_name
-                               {label = None; in_staticcatch = false}));
-                     jmp_table = Lam_compile_context.empty_handler_map;
-                   }
-                   body)))
+          (with_source_loc loc
+             (E.method_ ~async ~return_unit params
+                (* Invariant:  jmp_table can not across function boundary,
+                   here we share env
+                *)
+                (Js_output.output_as_block
+                   (compile_lambda
+                      {
+                        lambda_cxt with
+                        continuation =
+                          EffectCall
+                            (Maybe_tail_is_return
+                               (Tail_with_name
+                                  {label = None; in_staticcatch = false}));
+                        jmp_table = Lam_compile_context.empty_handler_map;
+                      }
+                      body))))
       | _ -> assert false)
     | {primitive = Pjs_fn_make arity; args = [fn]; loc} ->
       compile_lambda lambda_cxt
@@ -1928,27 +1932,27 @@ let compile output_prefix =
           attr = {return_unit; async; one_unit_arg; directive};
           loc;
         } ->
-      let comment = source_map_comment loc in
       Js_output.output_of_expression lambda_cxt.continuation
         ~no_effects:no_effects_const
-        (E.ocaml_fun ?comment params ~return_unit ~async ~one_unit_arg
-           ?directive
-           (* Invariant:  jmp_table can not across function boundary,
-              here we share env
-           *)
-           (Js_output.output_as_block
-              (compile_lambda
-                 {
-                   lambda_cxt with
-                   continuation =
-                     EffectCall
-                       (Maybe_tail_is_return
-                          (Tail_with_name {label = None; in_staticcatch = false}));
-                   jmp_table = Lam_compile_context.empty_handler_map;
-                   switch_depth = 0;
-                   loop_stack = [];
-                 }
-                 body)))
+        (with_source_loc loc
+           (E.ocaml_fun params ~return_unit ~async ~one_unit_arg ?directive
+              (* Invariant:  jmp_table can not across function boundary,
+                 here we share env
+              *)
+              (Js_output.output_as_block
+                 (compile_lambda
+                    {
+                      lambda_cxt with
+                      continuation =
+                        EffectCall
+                          (Maybe_tail_is_return
+                             (Tail_with_name
+                                {label = None; in_staticcatch = false}));
+                      jmp_table = Lam_compile_context.empty_handler_map;
+                      switch_depth = 0;
+                      loop_stack = [];
+                    }
+                    body))))
     | Lapply appinfo -> compile_apply appinfo lambda_cxt
     | Llet (let_kind, id, arg, body) ->
       (* Order matters..  see comment below in [Lletrec] *)

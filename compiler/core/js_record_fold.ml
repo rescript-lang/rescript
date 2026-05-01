@@ -204,7 +204,8 @@ let finish_ident_expression : 'a. ('a, finish_ident_expression) fn =
  fun _self arg -> _self.expression _self arg
 
 let case_clause : 'a. ('a, case_clause) fn =
- fun _self st {switch_body = _x0; should_break = _x1; comment = _x2} ->
+ fun _self st
+     {switch_body = _x0; should_break = _x1; comment = _x2; source_loc = _x3} ->
   let st = _self.block _self st _x0 in
   st
 
@@ -288,12 +289,12 @@ let statement_desc : 'a. ('a, statement_desc) fn =
   | Debugger -> st
 
 let expression : 'a. ('a, expression) fn =
- fun _self st {expression_desc = _x0; comment = _x1} ->
+ fun _self st {expression_desc = _x0; comment = _x1; source_loc = _x2} ->
   let st = expression_desc _self st _x0 in
   st
 
 let statement : 'a. ('a, statement) fn =
- fun _self st {statement_desc = _x0; comment = _x1} ->
+ fun _self st {statement_desc = _x0; comment = _x1; source_loc = _x2} ->
   let st = statement_desc _self st _x0 in
   st
 

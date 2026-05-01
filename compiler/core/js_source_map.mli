@@ -3,13 +3,11 @@ type t
 val make :
   generated_file:string -> source_root:string -> sources_content:bool -> t
 
-val with_marker_scope : (unit -> 'a) -> 'a
-
 val with_builder : t option -> (unit -> 'a) -> 'a
 
-val comment_of_loc : Location.t -> string option
+val source_loc_of_loc : Location.t -> Location.t option
 
-val mark_comment : Ext_pp.t -> string -> bool
+val mark_source_loc : Ext_pp.t -> Location.t option -> unit
 
 val json : t -> string
 

@@ -4,15 +4,14 @@
 
    Source map generation is tied to the JS printer:
 
-   1. Lambda-to-JS conversion attaches internal marker comments to JS nodes,
-      because it does not know the final generated line/column yet.
+   1. Lambda-to-JS conversion attaches source locations to JS IR nodes, because
+      it does not know the final generated line/column yet.
    2. A source map builder is installed while one generated JS file is printed.
       It tracks sources, optional source contents, and mapping entries for that
       output file.
-   3. The JS printer updates its generated line/column as it writes text. When
-      it sees one of the internal marker comments, it suppresses the comment from
-      output and records the current generated position against the original
-      ReScript location.
+   3. The JS printer updates its generated line/column as it writes text. Right
+      before it prints a node with a source location, it records the current
+      generated position against the original ReScript location.
    4. After printing, the collected mappings are sorted and encoded into the
       compact Source Map v3 "mappings" field using base64 VLQ. The JSON map is
       emitted next to the generated JavaScript and the JS file receives a
@@ -24,8 +23,8 @@
    map.
 
    A compiled JS program can be printed more than once for multiple package
-   targets, such as CommonJS and ESM. Marker locations therefore remain available
-   for every print pass and are cleaned up when the compilation unit finishes. *)
+   targets, such as CommonJS and ESM. Source locations live on the JS IR itself,
+   so every print pass can emit an independent map without a side table. *)
 
 type source = {relative_path: string; content: string option}
 
@@ -50,39 +49,11 @@ type t = {
 
 let current : t option ref = ref None
 
-let marker_prefix = "\000RESCRIPT_SOURCE_MAP:"
-let next_marker = ref 0
-let marker_locs : (int, Location.t) Hashtbl.t = Hashtbl.create 128
-
-let is_prefix ~prefix s =
-  let prefix_len = String.length prefix in
-  String.length s >= prefix_len
-  &&
-  let rec loop i =
-    i = prefix_len
-    || (String.unsafe_get s i = String.unsafe_get prefix i && loop (i + 1))
-  in
-  loop 0
-
-let comment_of_loc (loc : Location.t) =
+let source_loc_of_loc (loc : Location.t) =
   match !Js_config.source_map with
   | No_source_map -> None
   | Linked ->
-    if loc.loc_ghost || loc.loc_start.pos_cnum < 0 then None
-    else
-      let id = !next_marker in
-      incr next_marker;
-      Hashtbl.replace marker_locs id loc;
-      Some (marker_prefix ^ string_of_int id)
-
-let with_marker_scope f =
-  let first_marker = !next_marker in
-  Ext_pervasives.finally ()
-    ~clean:(fun () ->
-      for id = first_marker to !next_marker - 1 do
-        Hashtbl.remove marker_locs id
-      done)
-    f
+    if loc.loc_ghost || loc.loc_start.pos_cnum < 0 then None else Some loc
 
 let with_builder builder f =
   let old = !current in
@@ -220,20 +191,12 @@ let add_mapping builder ~generated_line ~generated_column (loc : Location.t) =
         :: builder.mappings;
       builder.last_generated <- Some (generated_line, generated_column)
 
-let mark_comment fmt comment =
-  if is_prefix ~prefix:marker_prefix comment then (
-    let prefix_len = String.length marker_prefix in
-    let id =
-      int_of_string
-        (String.sub comment prefix_len (String.length comment - prefix_len))
-    in
-    (match (!current, Hashtbl.find_opt marker_locs id) with
-    | Some builder, Some loc ->
-      let generated_line, generated_column = Ext_pp.position fmt in
-      add_mapping builder ~generated_line ~generated_column loc
-    | _ -> ());
-    true)
-  else false
+let mark_source_loc fmt source_loc =
+  match (!current, source_loc) with
+  | Some builder, Some loc ->
+    let generated_line, generated_column = Ext_pp.position fmt in
+    add_mapping builder ~generated_line ~generated_column loc
+  | _ -> ()
 
 let base64_vlq_chars =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"

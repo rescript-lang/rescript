@@ -8,6 +8,7 @@ let for_of_statement =
     J.statement_desc =
       ForOf (None, Ident.create "_for_of", pure_iterable, empty_body);
     comment = None;
+    source_loc = None;
   }
 
 let for_await_of_statement =
@@ -15,6 +16,7 @@ let for_await_of_statement =
     J.statement_desc =
       ForAwaitOf (None, Ident.create "_for_await_of", pure_iterable, empty_body);
     comment = None;
+    source_loc = None;
   }
 
 let suites =

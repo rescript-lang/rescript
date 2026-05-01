@@ -429,7 +429,8 @@ and pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
 and pp_one_case_clause :
     'a. _ -> P.t -> (P.t -> 'a -> unit) -> 'a * J.case_clause -> _ =
  fun cxt f pp_cond
-     (switch_case, ({switch_body; should_break; comment} : J.case_clause)) ->
+     ( switch_case,
+       ({switch_body; should_break; comment; source_loc} : J.case_clause) ) ->
   P.newline f;
   let cxt =
     P.group f 1 (fun _ ->
@@ -437,6 +438,7 @@ and pp_one_case_clause :
             P.string f L.case;
             P.space f;
             pp_comment_option f comment;
+            Js_source_map.mark_source_loc f source_loc;
             pp_cond f switch_case;
             (* could be integer or string *)
             P.space f;
@@ -483,6 +485,7 @@ and vident cxt f (v : J.vident) =
 (* The higher the level, the more likely that inner has to add parens *)
 and expression ~level:l cxt f (exp : J.expression) : cxt =
   pp_comment_option f exp.comment;
+  Js_source_map.mark_source_loc f exp.source_loc;
   expression_desc cxt ~level:l f exp.expression_desc
 
 and expression_desc cxt ~(level : int) f x : cxt =
@@ -1292,6 +1295,7 @@ and variable_declaration top cxt f (variable : J.variable_declaration) : cxt =
       match e.expression_desc with
       | Fun {is_method; params; body; env; return_unit; async; directive} ->
         pp_comment_option f e.comment;
+        Js_source_map.mark_source_loc f e.source_loc;
         pp_function ?directive ~is_method ~return_unit ~async
           ~fn_state:(if top then Name_top name else Name_non_top name)
           cxt f params body env
@@ -1312,8 +1316,7 @@ and ipp_comment : 'a. P.t -> 'a -> unit = fun _f _comment -> ()
 *)
 
 and pp_comment f comment =
-  if Js_source_map.mark_comment f comment then ()
-  else if String.length comment > 0 then (
+  if String.length comment > 0 then (
     P.string f "/* ";
     P.string f comment;
     P.string f " */")
@@ -1323,8 +1326,10 @@ and pp_comment_option f comment =
   | None -> ()
   | Some x -> pp_comment f x
 
-and statement top cxt f ({statement_desc = s; comment; _} : J.statement) : cxt =
+and statement top cxt f
+    ({statement_desc = s; comment; source_loc} : J.statement) : cxt =
   pp_comment_option f comment;
+  Js_source_map.mark_source_loc f source_loc;
   statement_desc top cxt f s
 
 and statement_desc top cxt f (s : J.statement_desc) : cxt =
