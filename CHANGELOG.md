@@ -15,6 +15,7 @@
 #### :boom: Breaking Change
 
 - Make Jsx.component abstract. https://github.com/rescript-lang/rescript/pull/8390
+- Remove `assert` as a reserved keyword. Since v12 `assert` is parsed as regular function. If you ran the formatter on your codebase using v12, this change is not a breaking change. https://github.com/rescript-lang/rescript/pull/8399
 
 #### :eyeglasses: Spec Compliance
 
