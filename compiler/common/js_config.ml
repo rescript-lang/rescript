@@ -26,7 +26,7 @@
 
 type jsx_version = Jsx_v4
 type jsx_module = React | Generic of {module_name: string}
-type source_map = No_source_map | Linked
+type source_map = No_source_map | Linked | Inline | Hidden
 
 let no_version_header = ref false
 

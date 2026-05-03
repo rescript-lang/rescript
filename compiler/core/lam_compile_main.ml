@@ -300,10 +300,10 @@ let (//) = Filename.concat
 let source_map_enabled () =
   match !Js_config.source_map with
   | No_source_map -> false
-  | Linked -> true
+  | Linked | Inline | Hidden -> true
 
-let dump_deps_program_with_source_map ~target_file ~output_prefix module_system
-    lambda_output chan =
+let dump_deps_program_with_source_map ?(remove_stale_map = true) ~target_file
+    ~output_prefix module_system lambda_output chan =
   let builder =
     if source_map_enabled () then
       Some
@@ -315,11 +315,23 @@ let dump_deps_program_with_source_map ~target_file ~output_prefix module_system
   Js_source_map.with_builder builder (fun () ->
       Js_dump_program.pp_deps_program ~output_prefix module_system lambda_output
         (Ext_pp.from_channel chan));
+  let map_file = target_file ^ ".map" in
+  let remove_map_file () =
+    if remove_stale_map && not !Clflags.dont_write_files then
+      Misc.remove_file map_file
+  in
   match (builder, !Js_config.source_map) with
   | Some builder, Linked ->
-    let map_file = target_file ^ ".map" in
+    let json = Js_source_map.json builder in
     output_string chan (Js_source_map.linked_comment ~map_file);
+    Ext_io.write_file map_file json
+  | Some builder, Hidden ->
     Ext_io.write_file map_file (Js_source_map.json builder)
+  | Some builder, Inline ->
+    output_string chan
+      (Js_source_map.inline_comment ~json:(Js_source_map.json builder));
+    remove_map_file ()
+  | _, No_source_map -> remove_map_file ()
   | _ -> ()
 
 let lambda_as_module 
@@ -328,7 +340,18 @@ let lambda_as_module
   : unit = 
   let package_info = Js_packages_state.get_packages_info () in 
   if Js_packages_info.is_empty package_info && !Js_config.js_stdout then begin    
-    Js_dump_program.dump_deps_program ~output_prefix Commonjs (lambda_output) stdout
+    match !Js_config.source_map with
+    | Inline ->
+      let target_file =
+        Ext_namespace.change_ext_ns_suffix
+          (Filename.basename output_prefix)
+          Literals.suffix_js
+      in
+      dump_deps_program_with_source_map ~remove_stale_map:false ~target_file
+        ~output_prefix Commonjs lambda_output stdout
+    | _ ->
+      Js_dump_program.dump_deps_program ~output_prefix Commonjs lambda_output
+        stdout
   end else
     Js_packages_info.iter package_info (fun {module_system; path; suffix} -> 
         let basename =  

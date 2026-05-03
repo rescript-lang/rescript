@@ -24,7 +24,7 @@
 
 type jsx_version = Jsx_v4
 type jsx_module = React | Generic of {module_name: string}
-type source_map = No_source_map | Linked
+type source_map = No_source_map | Linked | Inline | Hidden
 
 (* val get_packages_info :
    unit -> Js_packages_info.t *)

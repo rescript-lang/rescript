@@ -212,9 +212,14 @@ let[@inline] string_list_add s : Bsc_args.spec = String (String_list_add s)
 let parse_source_map value =
   Js_config.source_map :=
     match String.lowercase_ascii value with
-    | "true" | "linked" -> Linked
+    | "linked" -> Linked
+    | "inline" -> Inline
+    | "hidden" -> Hidden
     | "false" | "none" -> No_source_map
-    | value -> Bsc_args.bad_arg ("Unsupported sourceMap value: " ^ value)
+    | value ->
+      Bsc_args.bad_arg
+        ("Unsupported sourceMap value: " ^ value
+       ^ ". Expected linked, inline, hidden, false, or none")
 
 let parse_bool_ref target value =
   target :=

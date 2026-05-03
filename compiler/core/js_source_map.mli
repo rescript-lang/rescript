@@ -12,3 +12,5 @@ val mark_source_loc : Ext_pp.t -> Location.t option -> unit
 val json : t -> string
 
 val linked_comment : map_file:string -> string
+
+val inline_comment : json:string -> string

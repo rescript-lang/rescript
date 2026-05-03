@@ -14,8 +14,8 @@
       generated position against the original ReScript location.
    4. After printing, the collected mappings are sorted and encoded into the
       compact Source Map v3 "mappings" field using base64 VLQ. The JSON map is
-      emitted next to the generated JavaScript and the JS file receives a
-      sourceMappingURL comment.
+      either emitted next to the generated JavaScript or embedded into it,
+      depending on the configured source map mode.
 
    Original locations come from OCaml Location.t values, whose columns are byte
    offsets. When source contents are available, original columns are converted
@@ -52,7 +52,7 @@ let current : t option ref = ref None
 let source_loc_of_loc (loc : Location.t) =
   match !Js_config.source_map with
   | No_source_map -> None
-  | Linked ->
+  | Linked | Inline | Hidden ->
     if loc.loc_ghost || loc.loc_start.pos_cnum < 0 then None else Some loc
 
 let with_builder builder f =
@@ -283,3 +283,35 @@ let json builder =
 
 let linked_comment ~map_file =
   "//# sourceMappingURL=" ^ Filename.basename map_file ^ "\n"
+
+let base64_chars =
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+
+(* OCaml Stdlib does not provide Base64, and inline source maps only need a
+   small RFC 4648 encoder with padding for the data URI payload. Keep this
+   local instead of adding a package dependency just for this narrow use. *)
+let base64_encode input =
+  let len = String.length input in
+  let output = Buffer.create ((len + 2) / 3 * 4) in
+  let rec loop index =
+    if index < len then (
+      let b0 = Char.code input.[index] in
+      let has_b1 = index + 1 < len in
+      let has_b2 = index + 2 < len in
+      let b1 = if has_b1 then Char.code input.[index + 1] else 0 in
+      let b2 = if has_b2 then Char.code input.[index + 2] else 0 in
+      let chunk = (b0 lsl 16) lor (b1 lsl 8) lor b2 in
+      Buffer.add_char output base64_chars.[(chunk lsr 18) land 0x3f];
+      Buffer.add_char output base64_chars.[(chunk lsr 12) land 0x3f];
+      Buffer.add_char output
+        (if has_b1 then base64_chars.[(chunk lsr 6) land 0x3f] else '=');
+      Buffer.add_char output
+        (if has_b2 then base64_chars.[chunk land 0x3f] else '=');
+      loop (index + 3))
+  in
+  loop 0;
+  Buffer.contents output
+
+let inline_comment ~json =
+  "//# sourceMappingURL=data:application/json;base64," ^ base64_encode json
+  ^ "\n"

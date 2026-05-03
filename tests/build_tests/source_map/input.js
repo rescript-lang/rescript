@@ -1,13 +1,12 @@
 // @ts-check
 
 import * as assert from "node:assert";
+import { Buffer } from "node:buffer";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { setup } from "#dev/process";
 
-const { execBuildOrThrow, execClean } = setup(import.meta.dirname);
-
-await execBuildOrThrow();
+const { bsc, execBuildOrThrow, execClean } = setup(import.meta.dirname);
 
 const base64VlqChars =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -86,8 +85,27 @@ function findTokenPositions(content, token) {
   });
 }
 
+async function fileExists(filename) {
+  try {
+    await fs.access(filename);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function mapFromInlineComment(js, filename) {
+  const match = js.match(
+    /\/\/# sourceMappingURL=data:application\/json;base64,([A-Za-z0-9+/=]+)\s*$/,
+  );
+  assert.ok(match, `${filename} should include an inline source map`);
+  return JSON.parse(Buffer.from(match[1], "base64").toString("utf8"));
+}
+
 const sourcePath = path.join(import.meta.dirname, "src", "Demo.res");
 const source = await fs.readFile(sourcePath, "utf8");
+const configPath = path.join(import.meta.dirname, "rescript.json");
+const originalConfig = await fs.readFile(configPath, "utf8");
 const originalDebuggerPositions = findTokenPositions(source, "%debugger");
 assert.equal(originalDebuggerPositions.length, 2);
 const originalRaiseErrorPositions = findTokenPositions(
@@ -96,33 +114,64 @@ const originalRaiseErrorPositions = findTokenPositions(
 );
 assert.equal(originalRaiseErrorPositions.length, 1);
 
-for (const filename of ["Demo.cjs", "Demo.mjs"]) {
-  const jsPath = path.join(import.meta.dirname, "lib", "bs", "src", filename);
-  const mapPath = `${jsPath}.map`;
+function configWithSourceMap(sourceMap) {
+  const config = JSON.parse(originalConfig);
+  config.sourceMap =
+    typeof sourceMap === "object" && sourceMap !== null
+      ? {
+          ...config.sourceMap,
+          ...sourceMap,
+        }
+      : sourceMap;
+  return `${JSON.stringify(config, null, 2)}\n`;
+}
 
-  const js = await fs.readFile(jsPath, "utf8");
-  assert.match(
-    js,
-    /\/\* @__PURE__ \*\/Primitive_exceptions\.create/,
-    `${filename} should preserve real JS comments while source maps are enabled`,
-  );
-  assert.match(
-    js,
-    new RegExp(`//# sourceMappingURL=${filename.replace(".", "\\.")}\\.map`),
-  );
+function configWithMode(mode) {
+  return configWithSourceMap({ mode });
+}
 
-  const map = JSON.parse(await fs.readFile(mapPath, "utf8"));
+async function removeGeneratedMapFiles() {
+  for (const filename of ["Demo.cjs", "Demo.mjs"]) {
+    await fs.rm(path.join(import.meta.dirname, "src", `${filename}.map`), {
+      force: true,
+    });
+    await fs.rm(
+      path.join(import.meta.dirname, "lib", "bs", "src", `${filename}.map`),
+      { force: true },
+    );
+  }
+}
+
+function assertSourceMap(filename, js, map, options = {}) {
+  const { expectSourcesContent = true, sourceRoot = undefined } = options;
   assert.equal(map.version, 3);
   assert.equal(map.file, filename);
   assert.ok(map.mappings.length > 0, `${filename}.map should include mappings`);
+  if (sourceRoot === undefined) {
+    assert.equal(
+      map.sourceRoot,
+      undefined,
+      `${filename}.map should not include sourceRoot`,
+    );
+  } else {
+    assert.equal(map.sourceRoot, sourceRoot);
+  }
   assert.ok(
     map.sources.some(source => source.endsWith("Demo.res")),
     `${filename}.map should include Demo.res, got ${map.sources.join(", ")}`,
   );
-  assert.ok(
-    map.sourcesContent.some(content => content.includes("let add = (a, b)")),
-    `${filename}.map should include source contents`,
-  );
+  if (expectSourcesContent) {
+    assert.ok(
+      map.sourcesContent.some(content => content.includes("let add = (a, b)")),
+      `${filename}.map should include source contents`,
+    );
+  } else {
+    assert.equal(
+      map.sourcesContent,
+      undefined,
+      `${filename}.map should not include source contents`,
+    );
+  }
 
   const generatedDebuggerPositions = findTokenPositions(js, "debugger");
   assert.equal(generatedDebuggerPositions.length, 2);
@@ -178,4 +227,140 @@ for (const filename of ["Demo.cjs", "Demo.mjs"]) {
   );
 }
 
+async function assertLinkedOutput() {
+  await fs.writeFile(configPath, configWithMode("linked"));
+  await execBuildOrThrow();
+
+  for (const filename of ["Demo.cjs", "Demo.mjs"]) {
+    const jsPath = path.join(import.meta.dirname, "lib", "bs", "src", filename);
+    const mapPath = `${jsPath}.map`;
+
+    const js = await fs.readFile(jsPath, "utf8");
+    assert.match(
+      js,
+      /\/\* @__PURE__ \*\/Primitive_exceptions\.create/,
+      `${filename} should preserve real JS comments while source maps are enabled`,
+    );
+    assert.match(
+      js,
+      new RegExp(`//# sourceMappingURL=${filename.replace(".", "\\.")}\\.map`),
+    );
+
+    assertSourceMap(
+      filename,
+      js,
+      JSON.parse(await fs.readFile(mapPath, "utf8")),
+    );
+  }
+}
+
+async function assertInlineStdoutOutput() {
+  const { stdout } = await bsc(
+    [
+      "-bs-source-map",
+      "inline",
+      "-bs-source-map-sources-content",
+      "true",
+      sourcePath,
+    ],
+    { throwOnFail: true },
+  );
+
+  assert.match(
+    stdout,
+    /\/\/# sourceMappingURL=data:application\/json;base64,/,
+    "stdout output should include an inline source map",
+  );
+  assertSourceMap("Demo.js", stdout, mapFromInlineComment(stdout, "stdout"));
+}
+
+async function assertHiddenOutput() {
+  const sourceRoot = "rescript://source-map-test/";
+  await removeGeneratedMapFiles();
+  await fs.writeFile(
+    configPath,
+    configWithSourceMap({ mode: "hidden", sourceRoot }),
+  );
+  await execBuildOrThrow();
+
+  for (const filename of ["Demo.cjs", "Demo.mjs"]) {
+    const jsPath = path.join(import.meta.dirname, "lib", "bs", "src", filename);
+    const mapPath = `${jsPath}.map`;
+
+    const js = await fs.readFile(jsPath, "utf8");
+    assert.doesNotMatch(
+      js,
+      /\/\/# sourceMappingURL=/,
+      `${filename} should not include a sourceMappingURL comment in hidden mode`,
+    );
+    assert.ok(await fileExists(mapPath), `${filename}.map should exist`);
+    assertSourceMap(
+      filename,
+      js,
+      JSON.parse(await fs.readFile(mapPath, "utf8")),
+      { sourceRoot },
+    );
+  }
+}
+
+async function assertDisabledOutput() {
+  await fs.writeFile(configPath, configWithSourceMap(false));
+  await execBuildOrThrow();
+
+  for (const filename of ["Demo.cjs", "Demo.mjs"]) {
+    const jsPath = path.join(import.meta.dirname, "lib", "bs", "src", filename);
+    const mapPath = `${jsPath}.map`;
+
+    const js = await fs.readFile(jsPath, "utf8");
+    assert.doesNotMatch(
+      js,
+      /\/\/# sourceMappingURL=/,
+      `${filename} should not include a sourceMappingURL comment when source maps are disabled`,
+    );
+    assert.equal(
+      await fileExists(mapPath),
+      false,
+      `${filename}.map should be removed when source maps are disabled`,
+    );
+  }
+}
+
+async function assertInlineOutput() {
+  await fs.writeFile(
+    configPath,
+    configWithSourceMap({ mode: "inline", sourcesContent: false }),
+  );
+  await execBuildOrThrow();
+
+  for (const filename of ["Demo.cjs", "Demo.mjs"]) {
+    const jsPath = path.join(import.meta.dirname, "lib", "bs", "src", filename);
+    const mapPath = `${jsPath}.map`;
+
+    const js = await fs.readFile(jsPath, "utf8");
+    assert.match(
+      js,
+      /\/\/# sourceMappingURL=data:application\/json;base64,/,
+      `${filename} should include an inline source map`,
+    );
+    assert.equal(
+      await fileExists(mapPath),
+      false,
+      `${filename}.map should not exist in inline mode`,
+    );
+    assertSourceMap(filename, js, mapFromInlineComment(js, filename), {
+      expectSourcesContent: false,
+    });
+  }
+}
+
 await execClean();
+try {
+  await assertInlineStdoutOutput();
+  await assertLinkedOutput();
+  await assertDisabledOutput();
+  await assertHiddenOutput();
+  await assertInlineOutput();
+} finally {
+  await fs.writeFile(configPath, originalConfig);
+  await execClean();
+}

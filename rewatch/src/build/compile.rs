@@ -1067,6 +1067,8 @@ fn compile_file(
                     if source_map.exists() {
                         let _ = std::fs::copy(&source_map, &destination_map)
                             .expect("copying source map file failed");
+                    } else {
+                        let _ = std::fs::remove_file(&destination_map);
                     }
                 }
             });

@@ -61,8 +61,8 @@
               "description": "`dev` generates source maps only during watch mode. `always` generates source maps during both build and watch."
             },
             "mode": {
-              "enum": ["linked"],
-              "description": "Generate a separate .js.map file next to each generated JavaScript file and append a sourceMappingURL comment. Only linked source maps are supported for now."
+              "enum": ["linked", "inline", "hidden"],
+              "description": "`linked` generates a separate .js.map file and appends a sourceMappingURL comment. `inline` appends the source map as a data URI and does not generate a .js.map file. `hidden` generates a separate .js.map file without appending a sourceMappingURL comment. When `inline` is combined with `sourcesContent: true`, original .res source text is embedded directly into the generated JS."
             },
             "sourcesContent": {
               "type": "boolean",
