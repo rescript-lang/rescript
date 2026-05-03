@@ -284,7 +284,7 @@ pub struct JsxSpecs {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum SourceMapConfig {
-    Bool(bool),
+    Disabled,
     Options(SourceMapOptions),
 }
 
@@ -295,7 +295,10 @@ impl<'de> Deserialize<'de> for SourceMapConfig {
     {
         let value = serde_json::Value::deserialize(deserializer)?;
         match value {
-            serde_json::Value::Bool(value) => Ok(SourceMapConfig::Bool(value)),
+            serde_json::Value::Bool(false) => Ok(SourceMapConfig::Disabled),
+            serde_json::Value::Bool(true) => Err(DeError::custom(
+                "sourceMap true is unsupported; use an object such as { \"enabled\": \"dev\", \"mode\": \"linked\" } or false",
+            )),
             serde_json::Value::Object(_) => SourceMapOptions::deserialize(value)
                 .map(SourceMapConfig::Options)
                 .map_err(DeError::custom),
@@ -877,11 +880,8 @@ impl Config {
 
         if let Some(source_map) = &self.source_map {
             match source_map {
-                SourceMapConfig::Bool(false) => {
+                SourceMapConfig::Disabled => {
                     args.extend(["-bs-source-map".to_string(), "false".to_string()]);
-                }
-                SourceMapConfig::Bool(true) => {
-                    panic!("sourceMap true is unsupported; use {{ \"mode\": \"linked\" }}")
                 }
                 SourceMapConfig::Options(options) => {
                     let Some(mode) = self.effective_source_map_mode(command) else {
@@ -915,9 +915,6 @@ impl Config {
                     SourceMapEnabled::Always => true,
                 };
                 source_map_enabled.then_some(options.mode)
-            }
-            Some(SourceMapConfig::Bool(true)) => {
-                panic!("sourceMap true is unsupported; use {{ \"mode\": \"linked\" }}")
             }
             _ => None,
         }
@@ -1807,7 +1804,6 @@ pub mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "sourceMap true is unsupported")]
     fn test_source_map_rejects_true_for_nested_config() {
         let json = r#"
         {
@@ -1817,8 +1813,11 @@ pub mod tests {
         }
         "#;
 
-        let config = serde_json::from_str::<Config>(json).unwrap();
-        let _ = config.get_source_map_args(SourceMapCommand::Build);
+        let error = serde_json::from_str::<Config>(json).unwrap_err();
+        assert!(
+            error.to_string().contains("sourceMap true is unsupported"),
+            "unexpected error: {error}"
+        );
     }
 
     #[test]
