@@ -1191,13 +1191,6 @@ and walk_expression expr t comments =
       attach t.leading expr2.pexp_loc leading;
       walk_expression expr2 t inside;
       attach t.trailing expr2.pexp_loc trailing
-  | Pexp_assert expr ->
-    if is_block_expr expr then walk_expression expr t comments
-    else
-      let leading, inside, trailing = partition_by_loc comments expr.pexp_loc in
-      attach t.leading expr.pexp_loc leading;
-      walk_expression expr t inside;
-      attach t.trailing expr.pexp_loc trailing
   | Pexp_coerce (expr, (), typexpr) ->
     let leading, inside, trailing = partition_by_loc comments expr.pexp_loc in
     attach t.leading expr.pexp_loc leading;

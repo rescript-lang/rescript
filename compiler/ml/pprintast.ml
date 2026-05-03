@@ -718,7 +718,6 @@ and expression ctxt f x =
       pp f "@[<hov2>let@ exception@ %a@ in@ %a@]"
         (extension_constructor ctxt)
         cd (expression ctxt) e
-    | Pexp_assert e -> pp f "@[<hov2>assert@ %a@]" (simple_expr ctxt) e
     | Pexp_open (ovf, lid, e) ->
       pp f "@[<2>let open%s %a in@;%a@]" (override ovf) longident_loc lid
         (expression ctxt) e

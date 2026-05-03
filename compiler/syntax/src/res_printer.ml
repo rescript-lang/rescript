@@ -3753,9 +3753,6 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
       print_expression_block ~state ~braces:true e cmt_tbl
     | Pexp_letexception (_extensionConstructor, _expr) ->
       print_expression_block ~state ~braces:true e cmt_tbl
-    | Pexp_assert expr ->
-      let expr = print_expression_with_comments ~state expr cmt_tbl in
-      Doc.concat [Doc.text "assert("; expr; Doc.text ")"]
     | Pexp_open (_overrideFlag, _longidentLoc, _expr) ->
       print_expression_block ~state ~braces:true e cmt_tbl
     | Pexp_pack mod_expr ->

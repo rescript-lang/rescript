@@ -186,7 +186,6 @@ let iter_expression f e =
       List.iter (fun {x = e} -> expr e) iel
     | Pexp_open (_, _, e)
     | Pexp_newtype (_, e)
-    | Pexp_assert e
     | Pexp_send (e, _)
     | Pexp_constraint (e, _)
     | Pexp_coerce (e, _, _)
@@ -3357,24 +3356,6 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
         exp_loc = loc;
         exp_extra = [];
         exp_type = body.exp_type;
-        exp_attributes = sexp.pexp_attributes;
-        exp_env = env;
-      }
-  | Pexp_assert e ->
-    let cond =
-      type_expect ~context:(Some AssertCondition) env e Predef.type_bool
-    in
-    let exp_type =
-      match cond.exp_desc with
-      | Texp_construct (_, {cstr_name = "false"}, _) -> instance env ty_expected
-      | _ -> instance_def Predef.type_unit
-    in
-    rue
-      {
-        exp_desc = Texp_assert cond;
-        exp_loc = loc;
-        exp_extra = [];
-        exp_type;
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
       }

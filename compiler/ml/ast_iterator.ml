@@ -360,7 +360,6 @@ module E = struct
     | Pexp_letexception (cd, e) ->
       sub.extension_constructor sub cd;
       sub.expr sub e
-    | Pexp_assert e -> sub.expr sub e
     | Pexp_newtype (_s, e) -> sub.expr sub e
     | Pexp_pack me -> sub.module_expr sub me
     | Pexp_open (_ovf, lid, e) ->
