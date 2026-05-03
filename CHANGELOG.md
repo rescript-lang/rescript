@@ -12,10 +12,6 @@
 
 # 12.3.0-beta.1
 
-#### :boom: Breaking Change
-
-#### :eyeglasses: Spec Compliance
-
 #### :rocket: New Feature
 
 - Reanalyze: add glob pattern support for suppress/unsuppress configurations (e.g., `"src/generated/**"`). https://github.com/rescript-lang/rescript/pull/8277
@@ -35,16 +31,12 @@
 - Fix type lowering for `dict{}` and `async`, so you don't need to annotate one extra time when the type is known. https://github.com/rescript-lang/rescript/pull/8359
 - Fix issue where warning 56 would blow up with `dict{}` patterns. https://github.com/rescript-lang/rescript/pull/8403
 
-#### :memo: Documentation
-
 #### :nail_care: Polish
 
 - Reanalyze server: redesign incremental fixpoint with delete-then-rederive strategy and predecessor tracking, improving speed on deletions. https://github.com/rescript-lang/rescript/pull/8276
 - Improve error message for dependency without `rescript.json`. https://github.com/rescript-lang/rescript/pull/8292
 - Resolve workspace dependencies in editor analysis. https://github.com/rescript-lang/rescript/pull/8392
 - Improve deprecated attribute extraction and support record form. https://github.com/rescript-lang/rescript/pull/8396
-
-#### :house: Internal
 
 # 12.2.0
 
