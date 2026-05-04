@@ -296,6 +296,12 @@ async fn async_watch(
                 EventKind::Modify(_) | EventKind::Create(_) | EventKind::Remove(_)
             ) {
                 log::debug!("config file changed -> full compile");
+                tracing::debug!(
+                    reason = "config file changed",
+                    event_kind = ?event.kind,
+                    paths = ?event.paths,
+                    "watcher.full_compile_triggered"
+                );
                 needs_compile_type = CompileType::Full;
                 continue;
             }

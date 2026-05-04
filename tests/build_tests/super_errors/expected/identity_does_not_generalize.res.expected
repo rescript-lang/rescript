@@ -1,0 +1,13 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/identity_does_not_generalize.res[0m:[2m6:21-25[0m
+
+  4 [2m│[0m 
+  5 [2m│[0m let intValue = f(1)
+  [1;31m6[0m [2m│[0m let stringValue = f([1;31m"one"[0m)
+  7 [2m│[0m 
+
+  This has type: [1;31mstring[0m
+  But this function argument is expecting: [1;33mint[0m
+  
+  You can convert [1;33mstring[0m to [1;33mint[0m with [1;33mInt.fromString[0m.

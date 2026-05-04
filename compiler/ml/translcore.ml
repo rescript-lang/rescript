@@ -236,6 +236,7 @@ let primitives_table =
   create_hashtable
     [|
       ("%identity", Pidentity);
+      ("%component_identity", Pidentity);
       ("%ignore", Pignore);
       ("%revapply", Prevapply);
       ("%apply", Pdirapply);

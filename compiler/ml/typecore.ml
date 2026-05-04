@@ -1808,6 +1808,24 @@ let rec final_subexpression sexp =
 
 (* Generalization criterion for expressions *)
 
+let is_component_identity = function
+  | Texp_ident
+      (_, _, {val_kind = Val_prim {Primitive.prim_name = "%component_identity"}})
+    ->
+    true
+  | _ -> false
+
+let is_identity_coercion = function
+  | Texp_ident
+      ( _,
+        _,
+        {
+          val_kind =
+            Val_prim {Primitive.prim_name = "%identity" | "%component_identity"};
+        } ) ->
+    true
+  | _ -> false
+
 let rec is_nonexpansive exp =
   List.exists
     (function
@@ -1822,6 +1840,26 @@ let rec is_nonexpansive exp =
     List.for_all (fun vb -> is_nonexpansive vb.vb_expr) pat_exp_list
     && is_nonexpansive body
   | Texp_function _ -> true
+  (* `%component_identity` is a typed no-op coercion that lets generated
+     component wrappers keep the same generalization behavior as their
+     underlying function values. This preserves polymorphic props for
+     components such as:
+
+       @react.component
+       let make = (~x) =>
+         switch x {
+         | #a => React.string("A")
+         | #b => React.string("B")
+         | _ => React.string("other")
+         }
+
+     The JSX transform emits a function value and then coerces it through
+     `React.component`, whose implementation is `%component_identity`. Since no
+     runtime computation happens beyond evaluating the argument, the application
+     is non-expansive exactly when all supplied arguments are non-expansive. *)
+  | Texp_apply {funct = {exp_desc}; args; _} when is_component_identity exp_desc
+    ->
+    List.for_all is_nonexpansive_opt (List.map snd args)
   | Texp_apply {partial = true; _} ->
     (* ReScript partial applications (`foo(args, ...)`) lower to wrapper
        functions in codegen, so creating the partial itself is nonexpansive
@@ -2238,12 +2276,6 @@ let is_ignore ~env ~arity funct =
     with Unify _ -> false)
   | _ -> false
 
-let not_identity = function
-  | Texp_ident (_, _, {val_kind = Val_prim {Primitive.prim_name = "%identity"}})
-    ->
-    false
-  | _ -> true
-
 let rec lower_args env seen ty_fun =
   let ty = expand_head env ty_fun in
   if List.memq ty seen then ()
@@ -2494,7 +2526,10 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
     wrap_trace_gadt_instances env (lower_args env []) ty;
     begin_def ();
     let total_app = not partial in
-    let context = type_clash_context_from_function sexp sfunct in
+    let context =
+      if transformed_jsx then Some JsxComponent
+      else type_clash_context_from_function sexp sfunct
+    in
     let args, ty_res, fully_applied =
       match translate_unified_ops env funct sargs with
       | Some (targs, result_type) -> (targs, result_type, true)
@@ -3828,8 +3863,10 @@ and type_application ~context total_app env funct (sargs : sargs) :
           (* This is a total application when the toplevel type is a polymorphic variable,
           so the function type including arity can be inferred. *)
           let t1 = newvar () and t2 = newvar () in
-          if ty_fun.level >= t1.level && not_identity funct.exp_desc then
-            Location.prerr_warning sarg1.pexp_loc Warnings.Unused_argument;
+          if
+            ty_fun.level >= t1.level
+            && not (is_identity_coercion funct.exp_desc)
+          then Location.prerr_warning sarg1.pexp_loc Warnings.Unused_argument;
           unify env ty_fun
             (newty
                (Tarrow
@@ -3892,15 +3929,19 @@ and type_application ~context total_app env funct (sargs : sargs) :
           if (not optional) && is_optional l' then
             Location.prerr_warning sarg0.pexp_loc
               (Warnings.Nonoptional_label (Printtyp.string_of_label l));
+          let argument_context =
+            match (context, args) with
+            | Some JsxComponent, [] -> Some JsxComponent
+            | Some JsxComponent, _ ->
+              type_clash_context_for_function_argument ~label:l' None sarg0
+            | _ ->
+              type_clash_context_for_function_argument ~label:l' context sarg0
+          in
           ( sargs,
             omitted,
             Some
               (if (not optional) || is_optional l' then fun () ->
-                 type_argument
-                   ~context:
-                     (type_clash_context_for_function_argument ~label:l' context
-                        sarg0)
-                   env sarg0 ty ty0
+                 type_argument ~context:argument_context env sarg0 ty ty0
                else fun () ->
                  option_some
                    (type_argument

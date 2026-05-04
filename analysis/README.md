@@ -8,7 +8,7 @@ For installation & build instructions, see the main CONTRIBUTING.md.
 
 ## Overview
 
-See main CONTRIBUTING.md's repo structure. Additionally, `examples/` is a convenience debugging repo. Check out `test.sh` (invoked through `make test`) to see the snapshots testing workflow stored in `tests/`.
+See main CONTRIBUTING.md's repo structure. Check out `test.sh` (invoked through `make test`) to see the snapshots testing workflow stored in `tests/`.
 
 ## Usage
 

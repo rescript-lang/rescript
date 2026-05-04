@@ -1825,9 +1825,28 @@ and walk_expression expr t comments =
   | Pexp_await expr -> walk_expression expr t comments
   | Pexp_for_of (pattern, expr1, expr2)
   | Pexp_for_await_of (pattern, expr1, expr2) ->
-    walk_pattern pattern t comments;
-    walk_expression expr1 t comments;
-    walk_expression expr2 t comments
+    let leading, inside, trailing =
+      partition_by_loc comments pattern.ppat_loc
+    in
+    attach t.leading pattern.ppat_loc leading;
+    walk_pattern pattern t inside;
+    let after_pattern, rest =
+      partition_adjacent_trailing pattern.ppat_loc trailing
+    in
+    attach t.trailing pattern.ppat_loc after_pattern;
+    let leading, inside, trailing = partition_by_loc rest expr1.pexp_loc in
+    attach t.leading expr1.pexp_loc leading;
+    walk_expression expr1 t inside;
+    let after_expr, rest =
+      partition_adjacent_trailing expr1.pexp_loc trailing
+    in
+    attach t.trailing expr1.pexp_loc after_expr;
+    if is_block_expr expr2 then walk_expression expr2 t rest
+    else
+      let leading, inside, trailing = partition_by_loc rest expr2.pexp_loc in
+      attach t.leading expr2.pexp_loc leading;
+      walk_expression expr2 t inside;
+      attach t.trailing expr2.pexp_loc trailing
   | Pexp_send _ -> ()
 
 and walk_expr_parameter (_attrs, _argLbl, expr_opt, pattern) t comments =

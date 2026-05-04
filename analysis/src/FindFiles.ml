@@ -135,6 +135,32 @@ let collectFiles directory =
          | None -> None
          | Some res -> Some (modName, SharedTypes.Impl {cmt; res}))
 
+(* Dependency resolution uses the package graph recorded by the build system in
+   .sourcedirs.json when available. If a package is not listed there, analysis
+   falls back to walking up node_modules from the project root. *)
+let readSourcedirsPackageRoots base =
+  let sourceDirsFile = base /+ "lib" /+ "bs" /+ ".sourcedirs.json" in
+  let readPackageEntry = function
+    | Json.Array [Json.String name; Json.String path] ->
+      let path = if Filename.is_relative path then base /+ path else path in
+      Some (name, path)
+    | _ -> None
+  in
+  match Files.readFile sourceDirsFile with
+  | None -> []
+  | Some text -> (
+    match Json.parse text with
+    | None -> []
+    | Some json -> (
+      match json |> Json.get "pkgs" |> bind Json.array with
+      | None -> []
+      | Some packages -> packages |> List.filter_map readPackageEntry))
+
+let findPackageRoot ~base ~sourcedirsPackageRoots name =
+  match List.assoc_opt name sourcedirsPackageRoots with
+  | Some path when Files.exists path -> Some path
+  | _ -> ModuleResolution.resolveNodeModulePath ~startPath:base name
+
 (* returns a list of (absolute path to cmt(i), relative path from base to source file) *)
 let findProjectFiles ~public ~namespace ~path ~sourceDirectories ~libBs =
   let dirs =
@@ -233,12 +259,12 @@ let findDependencyFiles base config =
   in
   let deps = deps @ devDeps in
   Log.log ("Dependencies: " ^ String.concat " " deps);
+  let sourcedirsPackageRoots = readSourcedirsPackageRoots base in
   let depFiles =
     deps
     |> List.map (fun name ->
            let result =
-             Json.bind
-               (ModuleResolution.resolveNodeModulePath ~startPath:base name)
+             Json.bind (findPackageRoot ~base ~sourcedirsPackageRoots name)
                (fun path ->
                  let rescriptJsonPath = path /+ "rescript.json" in
 

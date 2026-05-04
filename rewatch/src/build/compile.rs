@@ -23,12 +23,20 @@ use std::process::Command;
 use std::sync::OnceLock;
 use std::sync::mpsc;
 use std::time::SystemTime;
+use tracing::{info_span, instrument};
 
 /// Execute js-post-build command for a compiled JavaScript file.
 /// The command runs in the directory containing the rescript.json that defines it.
 /// The absolute path to the JS file is passed as an argument.
 fn execute_post_build_command(cmd: &str, js_file_path: &Path, working_dir: &Path) -> Result<()> {
     let full_command = format!("{} {}", cmd, js_file_path.display());
+
+    let _span = info_span!(
+        "build.js_post_build",
+        command = %cmd,
+        js_file = %js_file_path.display(),
+    )
+    .entered();
 
     debug!(
         "Executing js-post-build: {} (in {})",
@@ -200,6 +208,31 @@ fn compile_one(
             }
         }
         SourceType::SourceFile(source_file) => {
+            // Construct span + attributes only when a subscriber is listening.
+            // Otherwise root_config.get_package_specs() (which clones) and the
+            // attribute formatting run per-module on the build hot path.
+            let _file_span = if tracing::enabled!(tracing::Level::INFO) {
+                let root_config = build_state.get_root_config();
+                let specs = root_config.get_package_specs();
+                // A package can be built under multiple specs (e.g. ESM + CJS).
+                // Report all of them joined by "," instead of silently picking
+                // the first — the compile_file span covers work for every spec.
+                let suffix = specs
+                    .iter()
+                    .map(|s| root_config.get_suffix(s))
+                    .collect::<Vec<_>>()
+                    .join(",");
+                let module_system = specs
+                    .iter()
+                    .map(|s| s.module.as_str())
+                    .collect::<Vec<_>>()
+                    .join(",");
+                let namespace = package.namespace.to_suffix().unwrap_or_default();
+                info_span!("build.compile_file", module = %module_name, package = %package.name, suffix, module_system, namespace).entered()
+            } else {
+                tracing::Span::none().entered()
+            };
+
             let cmi_path = helpers::get_compiler_asset(
                 package,
                 &package.namespace,
@@ -248,6 +281,7 @@ fn compile_one(
     }
 }
 
+#[instrument(name = "build.compile", skip_all)]
 pub fn compile(
     build_state: &mut BuildCommandState,
     show_progress: bool,
@@ -321,6 +355,7 @@ pub fn compile(
 
     let warn_error_override = build_state.get_warn_error_override();
     let build_state_ref: &BuildState = &build_state.build_state;
+    let compile_span = tracing::Span::current();
 
     let (tx, rx) = mpsc::channel::<CompletionMsg>();
     // Bound concurrency to rayon's pool size so the priority heap actually
@@ -340,10 +375,12 @@ pub fn compile(
                 let module_name = work.module_name.clone();
                 let is_dirty = dirty_set.contains(&module_name);
                 let warn_override = warn_error_override.clone();
+                let parent_span = compile_span.clone();
                 let tx = tx.clone();
                 let inc_ref = &inc;
                 in_flight += 1;
                 scope.spawn(move |_| {
+                    let _guard = parent_span.enter();
                     let msg = compile_one(build_state_ref, &module_name, is_dirty, warn_override);
                     if show_progress {
                         inc_ref();

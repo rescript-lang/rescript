@@ -1,11 +1,11 @@
 
   [1;31mWe've found a bug for you![0m
-  [36m/.../fixtures/jsx_custom_component_type_mismatch.res[0m:[2m31:34-40[0m
+  [36m/.../fixtures/jsx_custom_component_type_mismatch.res[0m:[2m32:34-40[0m
 
-  29 [2m│[0m }
-  30 [2m│[0m 
-  [1;31m31[0m [2m│[0m let x = <CustomComponent someOpt=[1;31m"hello"[0m />
-  32 [2m│[0m 
+  30 [2m│[0m }
+  31 [2m│[0m 
+  [1;31m32[0m [2m│[0m let x = <CustomComponent someOpt=[1;31m"hello"[0m />
+  33 [2m│[0m 
 
   This has type: [1;31mstring[0m
   But the component prop [1;33msomeOpt[0m is expected to have type: [1;33mfloat[0m

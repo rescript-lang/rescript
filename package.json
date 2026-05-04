@@ -103,6 +103,7 @@
     "tests/analysis_tests/**",
     "tests/docstring_tests",
     "tests/gentype_tests/**",
+    "tests/tests",
     "tests/tools_tests",
     "tests/commonjs_tests",
     "scripts/res"
