@@ -407,18 +407,18 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
         (Ext_list.map args convert_aux)
         {ap_loc = loc; ap_inlined; ap_status = App_uncurry}
         ~ap_transformed_jsx
-    | Lfunction {params; body; attr} ->
+    | Lfunction {params; body; attr; loc} ->
       let new_map, body =
         rename_optional_parameters Map_ident.empty params body
       in
       if Map_ident.is_empty new_map then
-        Lam.function_ ~attr ~arity:(List.length params) ~params
+        Lam.function_ ~loc ~attr ~arity:(List.length params) ~params
           ~body:(convert_aux body)
       else
         let params =
           Ext_list.map params (fun x -> Map_ident.find_default new_map x x)
         in
-        Lam.function_ ~attr ~arity:(List.length params) ~params
+        Lam.function_ ~loc ~attr ~arity:(List.length params) ~params
           ~body:(convert_aux body)
     | Llet (_, _, _, Lprim (Pgetglobal id, args, _), _body) when dynamic_import
       ->
@@ -565,13 +565,29 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
           }
       | _ -> Lam.let_ kind id new_e new_body)
   and convert_pipe (f : Lambda.lambda) (x : Lambda.lambda) outer_loc =
+    let pipe_loc =
+      let candidate =
+        match f with
+        | Lapply {ap_loc} -> Some ap_loc
+        | Lfunction {loc} -> Some loc
+        | Lprim (_, _, loc)
+        | Lswitch (_, _, loc)
+        | Lstringswitch (_, _, _, loc)
+        | Lsend (_, _, loc) ->
+          Some loc
+        | _ -> None
+      in
+      match candidate with
+      | Some loc when (not loc.loc_ghost) && loc.loc_start.pos_cnum >= 0 -> loc
+      | _ -> outer_loc
+    in
     let x = convert_aux x in
     let f = convert_aux f in
     match f with
     | Lfunction
         {params = [param]; body = Lprim {primitive; args = [Lvar inner_arg]}}
       when Ident.same param inner_arg ->
-      Lam.prim ~primitive ~args:[x] outer_loc
+      Lam.prim ~primitive ~args:[x] pipe_loc
     | Lapply
         {
           ap_func =
@@ -580,18 +596,14 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
         }
       when Ext_list.for_all2_no_exn inner_args params lam_is_var
            && Ext_list.length_larger_than_n inner_args args 1 ->
-      Lam.prim ~primitive ~args:(Ext_list.append_one args x) outer_loc
+      Lam.prim ~primitive ~args:(Ext_list.append_one args x) pipe_loc
     | Lapply {ap_func; ap_args; ap_info; ap_transformed_jsx} ->
       Lam.apply ~ap_transformed_jsx ap_func
         (Ext_list.append_one ap_args x)
-        {
-          ap_loc = outer_loc;
-          ap_inlined = ap_info.ap_inlined;
-          ap_status = App_na;
-        }
+        {ap_loc = pipe_loc; ap_inlined = ap_info.ap_inlined; ap_status = App_na}
     | _ ->
       Lam.apply f [x]
-        {ap_loc = outer_loc; ap_inlined = Default_inline; ap_status = App_na}
+        {ap_loc = pipe_loc; ap_inlined = Default_inline; ap_status = App_na}
   and convert_switch (e : Lambda.lambda) (s : Lambda.lambda_switch) =
     let e = convert_aux e in
     match s with

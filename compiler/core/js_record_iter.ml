@@ -153,7 +153,8 @@ let finish_ident_expression : finish_ident_expression fn =
  fun _self arg -> _self.expression _self arg
 
 let case_clause : case_clause fn =
- fun _self {switch_body = _x0; should_break = _x1; comment = _x2} ->
+ fun _self
+     {switch_body = _x0; should_break = _x1; comment = _x2; source_loc = _x3} ->
   _self.block _self _x0
 
 let string_clause : string_clause fn =
@@ -210,10 +211,12 @@ let statement_desc : statement_desc fn =
   | Debugger -> ()
 
 let expression : expression fn =
- fun _self {expression_desc = _x0; comment = _x1} -> expression_desc _self _x0
+ fun _self {expression_desc = _x0; comment = _x1; source_loc = _x2} ->
+  expression_desc _self _x0
 
 let statement : statement fn =
- fun _self {statement_desc = _x0; comment = _x1} -> statement_desc _self _x0
+ fun _self {statement_desc = _x0; comment = _x1; source_loc = _x2} ->
+  statement_desc _self _x0
 
 let variable_declaration : variable_declaration fn =
  fun _self {ident = _x0; value = _x1; property = _x2; ident_info = _x3} ->

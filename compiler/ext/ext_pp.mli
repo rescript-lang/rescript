@@ -77,3 +77,5 @@ val from_channel : out_channel -> t
 val from_buffer : Buffer.t -> t
 
 val flush : t -> unit -> unit
+
+val position : t -> int * int

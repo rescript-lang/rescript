@@ -47,6 +47,7 @@ let eval (arg : J.expression) (dispatches : (string * string) list) : E.t =
                        should_break = false;
                        (* FIXME: if true, still print break*)
                        comment = None;
+                       source_loc = None;
                      } )));
         ]
 
@@ -87,6 +88,7 @@ let eval_as_event (arg : J.expression)
                            should_break = false;
                            (* FIXME: if true, still print break*)
                            comment = None;
+                           source_loc = None;
                          } )));
             ]
         | None -> E.poly_var_tag_access arg),
@@ -115,6 +117,7 @@ let eval_as_int (arg : J.expression) (dispatches : (string * int) list) : E.t =
                        should_break = false;
                        (* FIXME: if true, still print break*)
                        comment = None;
+                       source_loc = None;
                      } )));
         ]
 
