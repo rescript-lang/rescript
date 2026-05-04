@@ -2,6 +2,11 @@ let add = (a, b) => a + b
 
 exception PureMarker
 
+type item =
+  | Empty
+  | Single(int)
+  | Pair(int, int)
+
 let crash = () => Js.Exn.raiseError("source map test")
 
 let debugStatement = () => {
@@ -15,4 +20,19 @@ let debugValue = () => {
   add(3, 4)
 }
 
-let value = add(20, 22)
+let applyPipe = (input, fn) => input->fn(10)
+
+let pipedValue = applyPipe(5, add)
+
+let describeItem = item =>
+  switch item {
+  | Empty => "empty"
+  | Single(value) => Int.toString(value)
+  | Pair(left, right) => Int.toString(left + right)
+  }
+
+let unicodeMessage = "한글 🌏"
+
+let unicodeCrash = () => Js.Exn.raiseError(unicodeMessage)
+
+let value = add(pipedValue, 22)

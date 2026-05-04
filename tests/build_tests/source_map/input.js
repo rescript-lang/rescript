@@ -85,6 +85,12 @@ function findTokenPositions(content, token) {
   });
 }
 
+function findSingleTokenPosition(content, token) {
+  const positions = findTokenPositions(content, token);
+  assert.equal(positions.length, 1, `${token} should appear exactly once`);
+  return positions[0];
+}
+
 async function fileExists(filename) {
   try {
     await fs.access(filename);
@@ -112,7 +118,13 @@ const originalRaiseErrorPositions = findTokenPositions(
   source,
   "Js.Exn.raiseError",
 );
-assert.equal(originalRaiseErrorPositions.length, 1);
+assert.equal(originalRaiseErrorPositions.length, 2);
+const originalPipeCallPositions = findTokenPositions(source, "input->fn");
+assert.equal(originalPipeCallPositions.length, 1);
+const originalPatternBranchPositions = [
+  findSingleTokenPosition(source, "Int.toString(value)"),
+  findSingleTokenPosition(source, "Int.toString(left + right)"),
+];
 
 function configWithSourceMap(sourceMap) {
   const config = JSON.parse(originalConfig);
@@ -181,23 +193,45 @@ function assertSourceMap(filename, js, map, options = {}) {
     js,
     "Stdlib_Exn.raiseError",
   );
-  assert.equal(generatedRaiseErrorPositions.length, 1);
-  const raiseErrorMapping = decodedMappings.find(
-    decoded =>
-      decoded.generatedLine === generatedRaiseErrorPositions[0].line &&
-      decoded.generatedColumn === generatedRaiseErrorPositions[0].column,
-  );
-  assert.ok(
-    raiseErrorMapping,
-    `${filename}.map should include an exact mapping for raiseError`,
-  );
   assert.deepEqual(
-    {
-      line: raiseErrorMapping.originalLine,
-      column: raiseErrorMapping.originalColumn,
-    },
-    originalRaiseErrorPositions[0],
+    generatedRaiseErrorPositions.map(position => {
+      const mapping = decodedMappings.find(
+        decoded =>
+          decoded.generatedLine === position.line &&
+          decoded.generatedColumn === position.column,
+      );
+      assert.ok(
+        mapping,
+        `${filename}.map should include an exact mapping for raiseError at ${position.line}:${position.column}`,
+      );
+      assert.ok(
+        map.sources[mapping.sourceIndex].endsWith("Demo.res"),
+        `${filename}.map raiseError mapping should point to Demo.res`,
+      );
+      return {
+        line: mapping.originalLine,
+        column: mapping.originalColumn,
+      };
+    }),
+    originalRaiseErrorPositions,
   );
+
+  for (const [label, positions] of [
+    ["pipe call", originalPipeCallPositions],
+    ["pattern branch", originalPatternBranchPositions],
+  ]) {
+    for (const position of positions) {
+      const mapping = decodedMappings.find(
+        decoded =>
+          decoded.originalLine === position.line &&
+          map.sources[decoded.sourceIndex].endsWith("Demo.res"),
+      );
+      assert.ok(
+        mapping,
+        `${filename}.map should include a ${label} mapping for Demo.res:${position.line}`,
+      );
+    }
+  }
 
   const debuggerMappings = generatedDebuggerPositions.map(position => {
     const mapping = decodedMappings.find(
