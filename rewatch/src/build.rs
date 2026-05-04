@@ -281,6 +281,14 @@ impl fmt::Display for IncrementalBuildError {
     }
 }
 
+fn with_build_lock<T>(path: &Path, f: impl FnOnce() -> T) -> T {
+    let build_folder = path.to_string_lossy().to_string();
+    let _lock = get_lock_or_exit(LockKind::Build, &build_folder);
+    let result = f();
+    let _lock = drop_lock(LockKind::Build, &build_folder);
+    result
+}
+
 #[instrument(name = "build.incremental", skip_all, fields(module_count = build_state.modules.len()))]
 pub fn incremental_build(
     build_state: &mut BuildCommandState,
@@ -291,10 +299,32 @@ pub fn incremental_build(
     create_sourcedirs: bool,
     plain_output: bool,
 ) -> Result<CompilationOutcome, IncrementalBuildError> {
-    let build_folder = build_state.root_folder.to_string_lossy().to_string();
+    let build_folder = build_state.root_folder.clone();
+    with_build_lock(&build_folder, || {
+        incremental_build_without_lock(
+            build_state,
+            default_timing,
+            initial_build,
+            show_progress,
+            only_incremental,
+            create_sourcedirs,
+            plain_output,
+        )
+    })
+}
 
-    let _lock = get_lock_or_exit(LockKind::Build, &build_folder);
-
+// `build` needs to lock before initialization because initialization mutates previous
+// build artifacts. Keep the compile body separate so it can run under that wider lock.
+#[instrument(name = "build.incremental.unlocked", skip_all, fields(module_count = build_state.modules.len()))]
+fn incremental_build_without_lock(
+    build_state: &mut BuildCommandState,
+    default_timing: Option<Duration>,
+    initial_build: bool,
+    show_progress: bool,
+    only_incremental: bool,
+    create_sourcedirs: bool,
+    plain_output: bool,
+) -> Result<CompilationOutcome, IncrementalBuildError> {
     logs::initialize(&build_state.packages);
     let num_dirty_modules = build_state.modules.values().filter(|m| is_dirty(m)).count() as u64;
     let pb = if !plain_output && show_progress {
@@ -339,7 +369,6 @@ pub fn incremental_build(
             }
 
             eprintln!("{}", &err);
-            let _lock = drop_lock(LockKind::Build, &build_folder);
 
             return Err(IncrementalBuildError {
                 kind: IncrementalBuildErrorKind::SourceFileParseError,
@@ -404,13 +433,9 @@ pub fn incremental_build(
         || pb.inc(1),
         |size| pb.set_length(size),
     )
-    .map_err(|e| {
-        let _lock = drop_lock(LockKind::Build, &build_folder);
-
-        IncrementalBuildError {
-            kind: IncrementalBuildErrorKind::CompileError(Some(e.to_string())),
-            plain_output,
-        }
+    .map_err(|e| IncrementalBuildError {
+        kind: IncrementalBuildErrorKind::CompileError(Some(e.to_string())),
+        plain_output,
     })?;
 
     let compile_duration = start_compiling.elapsed();
@@ -446,8 +471,6 @@ pub fn incremental_build(
         if has_output(&compile_errors) {
             eprintln!("{}", &compile_errors);
         }
-
-        let _lock = drop_lock(LockKind::Build, &build_folder);
 
         Err(IncrementalBuildError {
             kind: IncrementalBuildErrorKind::CompileError(None),
@@ -487,7 +510,6 @@ pub fn incremental_build(
         // Write per-package compiler metadata to `lib/bs/compiler-info.json` (idempotent)
         write_compiler_info(build_state);
 
-        let _lock = drop_lock(LockKind::Build, &build_folder);
         Ok(outcome)
     }
 }
@@ -608,54 +630,139 @@ pub fn build(
         None
     };
     let timing_total = Instant::now();
-    let mut build_state = initialize_build(
-        default_timing,
-        filter,
-        show_progress,
-        path,
-        plain_output,
-        warn_error,
-        prod,
-        features,
-    )
-    .with_context(|| "Could not initialize build")?;
+    with_build_lock(path, || {
+        let mut build_state = initialize_build(
+            default_timing,
+            filter,
+            show_progress,
+            path,
+            plain_output,
+            warn_error,
+            prod,
+            features,
+        )
+        .with_context(|| "Could not initialize build")?;
 
-    match incremental_build(
-        &mut build_state,
-        default_timing,
-        true,
-        show_progress,
-        false,
-        create_sourcedirs,
-        plain_output,
-    ) {
-        Ok(result) => {
-            if !plain_output && show_progress {
-                let timing_total_elapsed = timing_total.elapsed();
-                println!(
-                    "\n{}",
-                    format_finished_compilation_message(
-                        None,
-                        result,
-                        default_timing.unwrap_or(timing_total_elapsed),
-                    )
-                );
+        match incremental_build_without_lock(
+            &mut build_state,
+            default_timing,
+            true,
+            show_progress,
+            false,
+            create_sourcedirs,
+            plain_output,
+        ) {
+            Ok(result) => {
+                if !plain_output && show_progress {
+                    let timing_total_elapsed = timing_total.elapsed();
+                    println!(
+                        "\n{}",
+                        format_finished_compilation_message(
+                            None,
+                            result,
+                            default_timing.unwrap_or(timing_total_elapsed),
+                        )
+                    );
+                }
+                clean::cleanup_after_build(&build_state);
+                write_build_ninja(&build_state);
+                Ok(build_state)
             }
-            clean::cleanup_after_build(&build_state);
-            write_build_ninja(&build_state);
-            Ok(build_state)
+            Err(e) => {
+                clean::cleanup_after_build(&build_state);
+                write_build_ninja(&build_state);
+                Err(anyhow!("Incremental build failed. Error: {e}"))
+            }
         }
-        Err(e) => {
-            clean::cleanup_after_build(&build_state);
-            write_build_ninja(&build_state);
-            Err(anyhow!("Incremental build failed. Error: {e}"))
-        }
-    }
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
+    use std::process;
+    use std::sync::mpsc;
+    use std::thread;
+    use tempfile::TempDir;
+
+    #[test]
+    fn with_build_lock_holds_lock_while_running_work() {
+        let temp_dir = TempDir::new().expect("temp dir should be created");
+        let project_folder = temp_dir.path();
+        let build_lock_path = project_folder.join("lib").join(LockKind::Build.file_name());
+
+        let result = with_build_lock(project_folder, || {
+            assert!(
+                build_lock_path.exists(),
+                "build lock should be held while guarded work runs"
+            );
+            42
+        });
+
+        assert_eq!(result, 42);
+        assert!(
+            !build_lock_path.exists(),
+            "build lock should be removed after guarded work finishes"
+        );
+    }
+
+    #[test]
+    fn with_build_lock_drops_lock_after_error_result() {
+        let temp_dir = TempDir::new().expect("temp dir should be created");
+        let project_folder = temp_dir.path();
+        let build_lock_path = project_folder.join("lib").join(LockKind::Build.file_name());
+
+        let result: Result<(), &str> = with_build_lock(project_folder, || Err("failed"));
+
+        assert_eq!(result, Err("failed"));
+        assert!(
+            !build_lock_path.exists(),
+            "build lock should be removed after guarded work returns an error"
+        );
+    }
+
+    #[test]
+    fn build_waits_for_lock_before_initializing() {
+        let temp_dir = TempDir::new().expect("temp dir should be created");
+        let project_folder = temp_dir.path().to_path_buf();
+        let lib_dir = project_folder.join("lib");
+        let build_lock_path = lib_dir.join(LockKind::Build.file_name());
+        fs::create_dir_all(&lib_dir).expect("lib directory should be created");
+        fs::write(&build_lock_path, process::id().to_string()).expect("lockfile should be written");
+
+        let (sender, receiver) = mpsc::channel();
+        let build_project_folder = project_folder.clone();
+        let build_thread = thread::spawn(move || {
+            // This temp project has no config, so initialization would fail immediately
+            // if `build` did not wait for the lock first.
+            let result = build(
+                &None,
+                &build_project_folder,
+                false,
+                true,
+                false,
+                true,
+                None,
+                false,
+                None,
+            );
+            sender.send(result.is_err()).expect("result should be sent");
+        });
+
+        assert!(
+            receiver.recv_timeout(Duration::from_millis(250)).is_err(),
+            "build should wait for build.lock before running initialization"
+        );
+
+        fs::remove_file(&build_lock_path).expect("lockfile should be removed");
+        assert!(
+            receiver
+                .recv_timeout(Duration::from_secs(5))
+                .expect("build should finish after lock is removed")
+        );
+        build_thread.join().expect("build thread should complete");
+    }
 
     #[test]
     fn formats_successful_completion_message() {
