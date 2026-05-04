@@ -281,6 +281,38 @@ fn compile_one(
     }
 }
 
+fn append_stored_warnings_for_modules_not_recompiled(
+    build_state: &BuildCommandState,
+    recompiled_modules: &AHashSet<String>,
+    compile_warnings: &mut String,
+) {
+    // Collect warnings from modules that were not recompiled in this build but still have stored
+    // warnings from a previous compilation. This includes ready modules that were in the compile
+    // universe but never scheduled because an earlier module failed.
+    for (module_name, module) in build_state.modules.iter() {
+        if recompiled_modules.contains(module_name) {
+            continue;
+        }
+        if let SourceType::SourceFile(ref source_file) = module.source_type {
+            let package = build_state.get_package(&module.package_name);
+            if let Some(ref warning) = source_file.implementation.compile_warnings {
+                if let Some(package) = package {
+                    logs::append(package, warning);
+                }
+                compile_warnings.push_str(warning);
+            }
+            if let Some(ref interface) = source_file.interface
+                && let Some(ref warning) = interface.compile_warnings
+            {
+                if let Some(package) = package {
+                    logs::append(package, warning);
+                }
+                compile_warnings.push_str(warning);
+            }
+        }
+    }
+}
+
 #[instrument(name = "build.compile", skip_all)]
 pub fn compile(
     build_state: &mut BuildCommandState,
@@ -623,31 +655,11 @@ pub fn compile(
         compile_errors.push_str(&message);
     }
 
-    // Collect warnings from modules that were not recompiled in this build but still have stored
-    // warnings from a previous compilation. This includes ready modules that were in the compile
-    // universe but never scheduled because an earlier module failed.
-    for (module_name, module) in build_state.modules.iter() {
-        if recompiled_modules.contains(module_name) {
-            continue;
-        }
-        if let SourceType::SourceFile(ref source_file) = module.source_type {
-            let package = build_state.get_package(&module.package_name);
-            if let Some(ref warning) = source_file.implementation.compile_warnings {
-                if let Some(package) = package {
-                    logs::append(package, warning);
-                }
-                compile_warnings.push_str(warning);
-            }
-            if let Some(ref interface) = source_file.interface
-                && let Some(ref warning) = interface.compile_warnings
-            {
-                if let Some(package) = package {
-                    logs::append(package, warning);
-                }
-                compile_warnings.push_str(warning);
-            }
-        }
-    }
+    append_stored_warnings_for_modules_not_recompiled(
+        build_state,
+        &recompiled_modules,
+        &mut compile_warnings,
+    );
 
     Ok((compile_errors, compile_warnings, num_compiled_modules))
 }
@@ -1286,6 +1298,108 @@ pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildCommandState)
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::build::packages::{Namespace, Package};
+    use crate::config;
+    use crate::project_context::ProjectContext;
+    use ahash::AHashMap;
+    use std::fs;
+    use std::path::{Path, PathBuf};
+    use std::sync::RwLock;
+    use std::time::SystemTime;
+    use tempfile::TempDir;
+
+    fn test_project_context(root: &Path) -> ProjectContext {
+        let config = config::tests::create_config(config::tests::CreateConfigArgs {
+            name: "test-root".to_string(),
+            bs_deps: vec![],
+            build_dev_deps: vec![],
+            allowed_dependents: None,
+            path: root.to_path_buf(),
+        });
+
+        ProjectContext {
+            current_config: config,
+            monorepo_context: None,
+            node_modules_exist_cache: RwLock::new(AHashMap::new()),
+            packages_cache: RwLock::new(AHashMap::new()),
+        }
+    }
+
+    fn test_package(name: &str, path: PathBuf) -> Package {
+        Package {
+            name: name.to_string(),
+            config: config::tests::create_config(config::tests::CreateConfigArgs {
+                name: name.to_string(),
+                bs_deps: vec![],
+                build_dev_deps: vec![],
+                allowed_dependents: None,
+                path: path.clone(),
+            }),
+            source_folders: Default::default(),
+            source_files: None,
+            namespace: Namespace::NoNamespace,
+            modules: None,
+            path,
+            dirs: None,
+            gentype_dirs: None,
+            is_local_dep: true,
+            is_root: true,
+        }
+    }
+
+    fn test_module(package_name: &str, implementation_warning: Option<&str>) -> Module {
+        Module {
+            source_type: SourceType::SourceFile(SourceFile {
+                implementation: Implementation {
+                    path: PathBuf::from("src/ModuleA.res"),
+                    parse_state: ParseState::Success,
+                    compile_state: if implementation_warning.is_some() {
+                        CompileState::Warning
+                    } else {
+                        CompileState::Success
+                    },
+                    last_modified: SystemTime::UNIX_EPOCH,
+                    parse_dirty: false,
+                    compile_warnings: implementation_warning.map(str::to_string),
+                },
+                interface: None,
+            }),
+            deps: Default::default(),
+            dependents: Default::default(),
+            package_name: package_name.to_string(),
+            compile_dirty: false,
+            last_compiled_cmi: None,
+            last_compiled_cmt: None,
+            deps_dirty: false,
+            is_type_dev: false,
+        }
+    }
+
+    fn test_build_state(temp_dir: &TempDir, module_name: &str, module: Module) -> BuildCommandState {
+        let package = test_package("test-package", temp_dir.path().to_path_buf());
+        fs::create_dir_all(package.get_build_path()).expect("build log directory should be created");
+
+        let mut packages = AHashMap::new();
+        packages.insert(package.name.clone(), package);
+
+        let compiler = CompilerInfo {
+            bsc_path: temp_dir.path().join("bsc"),
+            bsc_hash: blake3::hash(b"test-bsc"),
+            runtime_path: temp_dir.path().join("runtime"),
+        };
+
+        let mut build_state = BuildCommandState::new(
+            temp_dir.path().to_path_buf(),
+            test_project_context(temp_dir.path()),
+            packages,
+            compiler,
+            None,
+            None,
+        );
+        build_state.insert_module(module_name, module);
+        logs::initialize(&build_state.packages);
+        build_state
+    }
 
     #[test]
     fn retain_critical_external_warnings_returns_none_without_marker() {
@@ -1319,5 +1433,46 @@ mod tests {
             .expect("uncurried-dot warning should survive on Windows too");
         assert!(kept.contains("`(. ...)` uncurried syntax"));
         assert!(!kept.contains("unused variable"));
+    }
+
+    #[test]
+    fn replays_stored_warning_for_module_that_did_not_recompile() {
+        let temp_dir = TempDir::new().expect("temp dir should be created");
+        let build_state = test_build_state(
+            &temp_dir,
+            "ModuleA",
+            test_module("test-package", Some("warning: carried forward\n")),
+        );
+        let mut compile_warnings = String::new();
+        let recompiled_modules = Default::default();
+
+        append_stored_warnings_for_modules_not_recompiled(
+            &build_state,
+            &recompiled_modules,
+            &mut compile_warnings,
+        );
+
+        assert_eq!(compile_warnings, "warning: carried forward\n");
+    }
+
+    #[test]
+    fn does_not_replay_stored_warning_for_module_that_recompiled() {
+        let temp_dir = TempDir::new().expect("temp dir should be created");
+        let build_state = test_build_state(
+            &temp_dir,
+            "ModuleA",
+            test_module("test-package", Some("warning: already emitted\n")),
+        );
+        let mut compile_warnings = String::new();
+        let mut recompiled_modules = ahash::AHashSet::new();
+        recompiled_modules.insert("ModuleA".to_string());
+
+        append_stored_warnings_for_modules_not_recompiled(
+            &build_state,
+            &recompiled_modules,
+            &mut compile_warnings,
+        );
+
+        assert!(compile_warnings.is_empty());
     }
 }
