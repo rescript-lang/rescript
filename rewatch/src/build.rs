@@ -756,11 +756,10 @@ mod tests {
         );
 
         fs::remove_file(&build_lock_path).expect("lockfile should be removed");
-        assert_eq!(
+        assert!(
             receiver
                 .recv_timeout(Duration::from_secs(5))
-                .expect("build should finish after lock is removed"),
-            true
+                .expect("build should finish after lock is removed")
         );
         build_thread.join().expect("build thread should complete");
     }
