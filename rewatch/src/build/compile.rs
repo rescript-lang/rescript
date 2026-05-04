@@ -473,6 +473,8 @@ pub fn compile(
     // times. All modules successfully compiled in one pass are mutually
     // up-to-date for that pass, so they must receive the same timestamp.
     let compile_timestamp = SystemTime::now();
+    
+    let mut recompiled_modules = AHashSet::<String>::new();
 
     for msg in results_buffer {
         let CompletionMsg {
@@ -485,6 +487,7 @@ pub fn compile(
 
         if is_compiled {
             num_compiled_modules += 1;
+            recompiled_modules.insert(module_name.clone());
         }
 
         let package_name = {
@@ -515,6 +518,7 @@ pub fn compile(
                     (None, None)
                 }
                 SourceType::SourceFile(ref mut source_file) => match &result {
+                    Ok(None) if !is_compiled => (None, None),
                     Ok(Some(err)) => {
                         let warning_text = err.to_string();
                         source_file.implementation.compile_state = CompileState::Warning;
@@ -538,6 +542,7 @@ pub fn compile(
                 module.source_type
             {
                 match &interface_result {
+                    Some(Ok(None)) if !is_compiled => (None, None),
                     Some(Ok(Some(err))) => {
                         let warning_text = err.to_string();
                         source_file.interface.as_mut().unwrap().compile_state = CompileState::Warning;
@@ -618,11 +623,11 @@ pub fn compile(
         compile_errors.push_str(&message);
     }
 
-    // Collect warnings from modules that were not recompiled in this build
-    // but still have stored warnings from a previous compilation.
-    // This ensures warnings are not lost during incremental builds in watch mode.
+    // Collect warnings from modules that were not recompiled in this build but still have stored
+    // warnings from a previous compilation. This includes ready modules that were in the compile
+    // universe but never scheduled because an earlier module failed.
     for (module_name, module) in build_state.modules.iter() {
-        if compile_universe.contains(module_name) {
+        if recompiled_modules.contains(module_name) {
             continue;
         }
         if let SourceType::SourceFile(ref source_file) = module.source_type {
