@@ -256,7 +256,7 @@ async fn async_watch(
             if show_progress {
                 println!("\nExiting...");
             }
-            clean::cleanup_after_build(&build_state);
+            build::with_build_lock(path, || clean::cleanup_after_build(&build_state));
             break Ok(());
         }
         let mut events: Vec<Event> = vec![];
@@ -281,7 +281,7 @@ async fn async_watch(
                 if show_progress {
                     println!("\nExiting... (lockfile removed)");
                 }
-                clean::cleanup_after_build(&build_state);
+                build::with_build_lock(path, || clean::cleanup_after_build(&build_state));
                 return Ok(());
             }
 
@@ -468,38 +468,44 @@ async fn async_watch(
                 }
 
                 let timing_total = Instant::now();
-                let mut next_build_state = build::initialize_build(
-                    None,
-                    filter,
-                    show_progress,
-                    path,
-                    plain_output,
-                    build_state.get_warn_error_override(),
-                    prod,
-                    features.clone(),
-                )
-                .expect("Could not initialize build");
+                // Reinitialization runs cleanup for previous build artifacts, so full rebuilds need
+                // the same build lock boundary as regular `rescript build`.
+                let result = build::with_build_lock(path, || {
+                    let mut next_build_state = build::initialize_build(
+                        None,
+                        filter,
+                        show_progress,
+                        path,
+                        plain_output,
+                        build_state.get_warn_error_override(),
+                        prod,
+                        features.clone(),
+                    )
+                    .expect("Could not initialize build");
 
-                // Full rebuilds can be triggered by editor atomic saves that surface as rename events.
-                // Preserve warning state for unchanged modules so their warnings are re-emitted after the
-                // fresh build state replaces the previous one.
-                carry_forward_compile_warnings(&build_state, &mut next_build_state);
-                build_state = next_build_state;
+                    // Full rebuilds can be triggered by editor atomic saves that surface as rename events.
+                    // Preserve warning state for unchanged modules so their warnings are re-emitted after the
+                    // fresh build state replaces the previous one.
+                    carry_forward_compile_warnings(&build_state, &mut next_build_state);
+                    build_state = next_build_state;
 
-                // Re-register watches based on the new build state
-                unregister_watches(watcher, &current_watch_paths);
-                current_watch_paths = compute_watch_paths(&build_state, path);
-                register_watches(watcher, &current_watch_paths);
+                    // Re-register watches based on the new build state
+                    unregister_watches(watcher, &current_watch_paths);
+                    current_watch_paths = compute_watch_paths(&build_state, path);
+                    register_watches(watcher, &current_watch_paths);
 
-                let result = build::incremental_build(
-                    &mut build_state,
-                    None,
-                    initial_build,
-                    show_progress,
-                    false,
-                    create_sourcedirs,
-                    plain_output,
-                );
+                    let result = build::incremental_build_without_lock(
+                        &mut build_state,
+                        None,
+                        initial_build,
+                        show_progress,
+                        false,
+                        create_sourcedirs,
+                        plain_output,
+                    );
+                    build::write_build_ninja(&build_state);
+                    result
+                });
                 match result {
                     Ok(result) => {
                         if let Some(a) = after_build.clone() {
@@ -528,8 +534,6 @@ async fn async_watch(
                         }
                     }
                 }
-
-                build::write_build_ninja(&build_state);
                 needs_compile_type = CompileType::None;
                 initial_build = false;
             }
@@ -565,18 +569,21 @@ pub fn start(
 
         let path = Path::new(folder);
 
-        // Do an initial build to discover packages and source folders
-        let build_state: BuildCommandState = build::initialize_build(
-            None,
-            filter,
-            show_progress,
-            path,
-            plain_output,
-            warn_error.clone(),
-            prod,
-            features.clone(),
-        )
-        .with_context(|| "Could not initialize build")?;
+        // Do an initial build to discover packages and source folders. Initialization can clean
+        // previous build artifacts, so it has to be serialized with other build operations.
+        let build_state: BuildCommandState = build::with_build_lock(path, || {
+            build::initialize_build(
+                None,
+                filter,
+                show_progress,
+                path,
+                plain_output,
+                warn_error.clone(),
+                prod,
+                features.clone(),
+            )
+            .with_context(|| "Could not initialize build")
+        })?;
 
         // Compute and register targeted watches based on source folders
         let current_watch_paths = compute_watch_paths(&build_state, path);

@@ -281,7 +281,7 @@ impl fmt::Display for IncrementalBuildError {
     }
 }
 
-fn with_build_lock<T>(path: &Path, f: impl FnOnce() -> T) -> T {
+pub fn with_build_lock<T>(path: &Path, f: impl FnOnce() -> T) -> T {
     let build_folder = path.to_string_lossy().to_string();
     let _lock = get_lock_or_exit(LockKind::Build, &build_folder);
     let result = f();
@@ -316,7 +316,7 @@ pub fn incremental_build(
 // `build` needs to lock before initialization because initialization mutates previous
 // build artifacts. Keep the compile body separate so it can run under that wider lock.
 #[instrument(name = "build.incremental.unlocked", skip_all, fields(module_count = build_state.modules.len()))]
-fn incremental_build_without_lock(
+pub fn incremental_build_without_lock(
     build_state: &mut BuildCommandState,
     default_timing: Option<Duration>,
     initial_build: bool,
