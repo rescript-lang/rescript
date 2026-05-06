@@ -25,6 +25,13 @@ enum CompileType {
     None,
 }
 
+type WatchPaths = Vec<(PathBuf, RecursiveMode)>;
+type StartupBuildResult = (
+    BuildCommandState,
+    WatchPaths,
+    Option<(Instant, build::CompilationOutcome)>,
+);
+
 fn is_rescript_file(path_buf: &Path) -> bool {
     let extension = path_buf.extension().and_then(|ext| ext.to_str());
 
@@ -257,7 +264,7 @@ async fn async_watch(
     }: AsyncWatchArgs<'_>,
 ) -> Result<()> {
     let mut build_state = initial_build_state;
-    let mut needs_compile_type = CompileType::Incremental;
+    let mut needs_compile_type = CompileType::None;
     // create a mutex to capture if ctrl-c was pressed
     let ctrlc_pressed = Arc::new(Mutex::new(false));
     let ctrlc_pressed_clone = Arc::clone(&ctrlc_pressed);
@@ -567,7 +574,7 @@ pub fn start(
 
         // Initialization can clean previous build artifacts, so it has to be serialized
         // with the initial compile too.
-        let (build_state, current_watch_paths): (BuildCommandState, Vec<(PathBuf, RecursiveMode)>) =
+        let (build_state, current_watch_paths, initial_compile_result): StartupBuildResult =
             build::with_build_lock(path, || {
                 let mut build_state = build::initialize_build(
                     None,
@@ -586,7 +593,7 @@ pub fn start(
                 register_watches(&mut watcher, &current_watch_paths);
 
                 let timing_total = Instant::now();
-                if let Ok(result) = build::incremental_build_without_lock(
+                let initial_compile_result = build::incremental_build_without_lock(
                     &mut build_state,
                     None,
                     true,
@@ -594,23 +601,29 @@ pub fn start(
                     false,
                     create_sourcedirs,
                     plain_output,
-                ) {
-                    finish_successful_watch_compile(
-                        after_build.clone(),
-                        timing_total,
-                        show_progress,
-                        plain_output,
-                        "Finished initial compilation",
-                        Some("initial"),
-                        result,
-                    );
-                }
+                )
+                .ok()
+                .map(|result| (timing_total, result));
 
-                Ok::<(BuildCommandState, Vec<(PathBuf, RecursiveMode)>), anyhow::Error>((
+                Ok::<StartupBuildResult, anyhow::Error>((
                     build_state,
                     current_watch_paths,
+                    initial_compile_result,
                 ))
             })?;
+
+        // Run after-build outside build.lock. Hooks may invoke ReScript commands that need the same lock.
+        if let Some((timing_total, result)) = initial_compile_result {
+            finish_successful_watch_compile(
+                after_build.clone(),
+                timing_total,
+                show_progress,
+                plain_output,
+                "Finished initial compilation",
+                Some("initial"),
+                result,
+            );
+        }
 
         async_watch(AsyncWatchArgs {
             watcher: &mut watcher,
