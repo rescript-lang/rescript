@@ -58,6 +58,32 @@ fn matches_filter(path_buf: &Path, filter: &Option<regex::Regex>) -> bool {
     filter.as_ref().map(|re| !re.is_match(&name)).unwrap_or(true)
 }
 
+fn finish_successful_watch_compile(
+    after_build: Option<String>,
+    timing_total: Instant,
+    show_progress: bool,
+    plain_output: bool,
+    finished_message: &str,
+) {
+    if let Some(a) = after_build {
+        cmd::run(a)
+    }
+    let timing_total_elapsed = timing_total.elapsed();
+    if show_progress {
+        if plain_output {
+            println!("{finished_message}")
+        } else {
+            println!(
+                "\n{}{}{} in {:.2}s\n",
+                LINE_CLEAR,
+                SPARKLES,
+                finished_message,
+                timing_total_elapsed.as_secs_f64()
+            );
+        }
+    }
+}
+
 /// Computes the list of paths to watch based on the build state.
 /// Returns tuples of (path, recursive_mode) for each watch target.
 fn compute_watch_paths(build_state: &BuildCommandState, root: &Path) -> Vec<(PathBuf, RecursiveMode)> {
@@ -206,7 +232,7 @@ async fn async_watch(
     }: AsyncWatchArgs<'_>,
 ) -> Result<()> {
     let mut build_state = initial_build_state;
-    let mut needs_compile_type = CompileType::Incremental;
+    let mut needs_compile_type = CompileType::None;
     // create a mutex to capture if ctrl-c was pressed
     let ctrlc_pressed = Arc::new(Mutex::new(false));
     let ctrlc_pressed_clone = Arc::clone(&ctrlc_pressed);
@@ -217,8 +243,6 @@ async fn async_watch(
         *pressed = true;
     })
     .expect("Error setting Ctrl-C handler");
-
-    let mut initial_build = true;
 
     loop {
         if *ctrlc_pressed_clone.lock().unwrap() {
@@ -380,35 +404,23 @@ async fn async_watch(
                 if build::incremental_build(
                     &mut build_state,
                     None,
-                    initial_build,
+                    false,
                     show_progress,
-                    !initial_build,
+                    true,
                     create_sourcedirs,
                     plain_output,
                 )
                 .is_ok()
                 {
-                    if let Some(a) = after_build.clone() {
-                        cmd::run(a)
-                    }
-                    let timing_total_elapsed = timing_total.elapsed();
-                    if show_progress {
-                        let compilation_type = if initial_build { "initial" } else { "incremental" };
-                        if plain_output {
-                            println!("Finished {compilation_type} compilation")
-                        } else {
-                            println!(
-                                "\n{}{}Finished {} compilation in {:.2}s\n",
-                                LINE_CLEAR,
-                                SPARKLES,
-                                compilation_type,
-                                timing_total_elapsed.as_secs_f64()
-                            );
-                        }
-                    }
+                    finish_successful_watch_compile(
+                        after_build.clone(),
+                        timing_total,
+                        show_progress,
+                        plain_output,
+                        "Finished incremental compilation",
+                    );
                 }
                 needs_compile_type = CompileType::None;
-                initial_build = false;
             }
             CompileType::Full => {
                 let timing_total = Instant::now();
@@ -439,7 +451,7 @@ async fn async_watch(
                     let result = build::incremental_build_without_lock(
                         &mut build_state,
                         None,
-                        initial_build,
+                        false,
                         show_progress,
                         false,
                         create_sourcedirs,
@@ -449,26 +461,15 @@ async fn async_watch(
                     result
                 });
                 if result.is_ok() {
-                    if let Some(a) = after_build.clone() {
-                        cmd::run(a)
-                    }
-
-                    let timing_total_elapsed = timing_total.elapsed();
-                    if show_progress {
-                        if plain_output {
-                            println!("Finished compilation")
-                        } else {
-                            println!(
-                                "\n{}{}Finished compilation in {:.2}s\n",
-                                LINE_CLEAR,
-                                SPARKLES,
-                                timing_total_elapsed.as_secs_f64()
-                            );
-                        }
-                    }
+                    finish_successful_watch_compile(
+                        after_build.clone(),
+                        timing_total,
+                        show_progress,
+                        plain_output,
+                        "Finished compilation",
+                    );
                 }
                 needs_compile_type = CompileType::None;
-                initial_build = false;
             }
             CompileType::None => {
                 // We want to sleep for a little while so the CPU can schedule other work. That way we end
@@ -499,23 +500,50 @@ pub fn start(
 
         let path = Path::new(folder);
 
-        // Do an initial build to discover packages and source folders. Initialization can clean
-        // previous build artifacts, so it has to be serialized with other build operations.
-        let build_state: BuildCommandState = build::with_build_lock(path, || {
-            build::initialize_build(
-                None,
-                filter,
-                show_progress,
-                path,
-                plain_output,
-                warn_error.clone(),
-            )
-            .with_context(|| "Could not initialize build")
-        })?;
+        // Initialization can clean previous build artifacts, so it has to be serialized
+        // with the initial compile too.
+        let (build_state, current_watch_paths): (BuildCommandState, Vec<(PathBuf, RecursiveMode)>) =
+            build::with_build_lock(path, || {
+                let mut build_state = build::initialize_build(
+                    None,
+                    filter,
+                    show_progress,
+                    path,
+                    plain_output,
+                    warn_error.clone(),
+                )
+                .with_context(|| "Could not initialize build")?;
 
-        // Compute and register targeted watches based on source folders
-        let current_watch_paths = compute_watch_paths(&build_state, path);
-        register_watches(&mut watcher, &current_watch_paths);
+                // Compute and register targeted watches based on source folders.
+                let current_watch_paths = compute_watch_paths(&build_state, path);
+                register_watches(&mut watcher, &current_watch_paths);
+
+                let timing_total = Instant::now();
+                if build::incremental_build_without_lock(
+                    &mut build_state,
+                    None,
+                    true,
+                    show_progress,
+                    false,
+                    create_sourcedirs,
+                    plain_output,
+                )
+                .is_ok()
+                {
+                    finish_successful_watch_compile(
+                        after_build.clone(),
+                        timing_total,
+                        show_progress,
+                        plain_output,
+                        "Finished initial compilation",
+                    );
+                }
+
+                Ok::<(BuildCommandState, Vec<(PathBuf, RecursiveMode)>), anyhow::Error>((
+                    build_state,
+                    current_watch_paths,
+                ))
+            })?;
 
         async_watch(AsyncWatchArgs {
             watcher: &mut watcher,
