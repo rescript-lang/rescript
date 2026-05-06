@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/typeof_non_ident.res[0m:[2m1:10-16[0m
+
+  [1;31m1[0m [2m│[0m type t = [1;31m%typeof[0m(1 + 2)
+  2 [2m│[0m 
+
+  %%typeof expects an identifier. Example: type t = %typeof(x)
