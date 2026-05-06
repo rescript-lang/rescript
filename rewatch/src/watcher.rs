@@ -58,6 +58,31 @@ fn matches_filter(path_buf: &Path, filter: &Option<regex::Regex>) -> bool {
     filter.as_ref().map(|re| !re.is_match(&name)).unwrap_or(true)
 }
 
+fn finish_successful_watch_compile(
+    after_build: Option<String>,
+    timing_total: Instant,
+    show_progress: bool,
+    plain_output: bool,
+    finished_message: &str,
+    compilation_kind: Option<&str>,
+    outcome: build::CompilationOutcome,
+) {
+    if let Some(a) = after_build {
+        cmd::run(a)
+    }
+    let timing_total_elapsed = timing_total.elapsed();
+    if show_progress {
+        if plain_output {
+            println!("{finished_message}")
+        } else {
+            println!(
+                "\n{}\n",
+                build::format_finished_compilation_message(compilation_kind, outcome, timing_total_elapsed)
+            );
+        }
+    }
+}
+
 /// Computes the list of paths to watch based on the build state.
 /// Returns tuples of (path, recursive_mode) for each watch target.
 fn compute_watch_paths(build_state: &BuildCommandState, root: &Path) -> Vec<(PathBuf, RecursiveMode)> {
@@ -178,13 +203,8 @@ fn carry_forward_compile_warnings(previous: &BuildCommandState, next: &mut Build
     }
 }
 
-fn should_clear_screen(
-    clear_screen: bool,
-    show_progress: bool,
-    plain_output: bool,
-    initial_build: bool,
-) -> bool {
-    clear_screen && show_progress && !plain_output && !initial_build
+fn should_clear_screen(clear_screen: bool, show_progress: bool, plain_output: bool) -> bool {
+    clear_screen && show_progress && !plain_output
 }
 
 fn clear_terminal_screen() {
@@ -248,8 +268,6 @@ async fn async_watch(
         *pressed = true;
     })
     .expect("Error setting Ctrl-C handler");
-
-    let mut initial_build = true;
 
     loop {
         if *ctrlc_pressed_clone.lock().unwrap() {
@@ -413,7 +431,7 @@ async fn async_watch(
 
         match needs_compile_type {
             CompileType::Incremental => {
-                if should_clear_screen(clear_screen, show_progress, plain_output, initial_build) {
+                if should_clear_screen(clear_screen, show_progress, plain_output) {
                     clear_terminal_screen();
                     print_rebuild_header(CompileType::Incremental);
                 }
@@ -422,47 +440,36 @@ async fn async_watch(
                 let result = build::incremental_build(
                     &mut build_state,
                     None,
-                    initial_build,
+                    false,
                     show_progress,
-                    !initial_build,
+                    true,
                     create_sourcedirs,
                     plain_output,
                 );
 
                 match result {
                     Ok(result) => {
-                        if let Some(a) = after_build.clone() {
-                            cmd::run(a)
-                        }
-                        let timing_total_elapsed = timing_total.elapsed();
-                        if show_progress {
-                            let compilation_type = if initial_build { "initial" } else { "incremental" };
-                            if plain_output {
-                                println!("Finished {compilation_type} compilation")
-                            } else {
-                                println!(
-                                    "\n{}\n",
-                                    build::format_finished_compilation_message(
-                                        Some(compilation_type),
-                                        result,
-                                        timing_total_elapsed,
-                                    )
-                                );
-                            }
-                        }
+                        finish_successful_watch_compile(
+                            after_build.clone(),
+                            timing_total,
+                            show_progress,
+                            plain_output,
+                            "Finished incremental compilation",
+                            Some("incremental"),
+                            result,
+                        );
                     }
                     Err(_) => {
-                        if should_clear_screen(clear_screen, show_progress, plain_output, initial_build) {
+                        if should_clear_screen(clear_screen, show_progress, plain_output) {
                             print_build_failed_footer();
                         }
                     }
                 }
 
                 needs_compile_type = CompileType::None;
-                initial_build = false;
             }
             CompileType::Full => {
-                if should_clear_screen(clear_screen, show_progress, plain_output, initial_build) {
+                if should_clear_screen(clear_screen, show_progress, plain_output) {
                     clear_terminal_screen();
                     print_rebuild_header(CompileType::Full);
                 }
@@ -497,7 +504,7 @@ async fn async_watch(
                     let result = build::incremental_build_without_lock(
                         &mut build_state,
                         None,
-                        initial_build,
+                        false,
                         show_progress,
                         false,
                         create_sourcedirs,
@@ -508,34 +515,23 @@ async fn async_watch(
                 });
                 match result {
                     Ok(result) => {
-                        if let Some(a) = after_build.clone() {
-                            cmd::run(a)
-                        }
-
-                        let timing_total_elapsed = timing_total.elapsed();
-                        if show_progress {
-                            if plain_output {
-                                println!("Finished compilation")
-                            } else {
-                                println!(
-                                    "\n{}\n",
-                                    build::format_finished_compilation_message(
-                                        None,
-                                        result,
-                                        timing_total_elapsed,
-                                    )
-                                );
-                            }
-                        }
+                        finish_successful_watch_compile(
+                            after_build.clone(),
+                            timing_total,
+                            show_progress,
+                            plain_output,
+                            "Finished compilation",
+                            None,
+                            result,
+                        );
                     }
                     Err(_) => {
-                        if should_clear_screen(clear_screen, show_progress, plain_output, initial_build) {
+                        if should_clear_screen(clear_screen, show_progress, plain_output) {
                             print_build_failed_footer();
                         }
                     }
                 }
                 needs_compile_type = CompileType::None;
-                initial_build = false;
             }
             CompileType::None => {
                 // We want to sleep for a little while so the CPU can schedule other work. That way we end
@@ -569,25 +565,52 @@ pub fn start(
 
         let path = Path::new(folder);
 
-        // Do an initial build to discover packages and source folders. Initialization can clean
-        // previous build artifacts, so it has to be serialized with other build operations.
-        let build_state: BuildCommandState = build::with_build_lock(path, || {
-            build::initialize_build(
-                None,
-                filter,
-                show_progress,
-                path,
-                plain_output,
-                warn_error.clone(),
-                prod,
-                features.clone(),
-            )
-            .with_context(|| "Could not initialize build")
-        })?;
+        // Initialization can clean previous build artifacts, so it has to be serialized
+        // with the initial compile too.
+        let (build_state, current_watch_paths): (BuildCommandState, Vec<(PathBuf, RecursiveMode)>) =
+            build::with_build_lock(path, || {
+                let mut build_state = build::initialize_build(
+                    None,
+                    filter,
+                    show_progress,
+                    path,
+                    plain_output,
+                    warn_error.clone(),
+                    prod,
+                    features.clone(),
+                )
+                .with_context(|| "Could not initialize build")?;
 
-        // Compute and register targeted watches based on source folders
-        let current_watch_paths = compute_watch_paths(&build_state, path);
-        register_watches(&mut watcher, &current_watch_paths);
+                // Compute and register targeted watches based on source folders.
+                let current_watch_paths = compute_watch_paths(&build_state, path);
+                register_watches(&mut watcher, &current_watch_paths);
+
+                let timing_total = Instant::now();
+                if let Ok(result) = build::incremental_build_without_lock(
+                    &mut build_state,
+                    None,
+                    true,
+                    show_progress,
+                    false,
+                    create_sourcedirs,
+                    plain_output,
+                ) {
+                    finish_successful_watch_compile(
+                        after_build.clone(),
+                        timing_total,
+                        show_progress,
+                        plain_output,
+                        "Finished initial compilation",
+                        Some("initial"),
+                        result,
+                    );
+                }
+
+                Ok::<(BuildCommandState, Vec<(PathBuf, RecursiveMode)>), anyhow::Error>((
+                    build_state,
+                    current_watch_paths,
+                ))
+            })?;
 
         async_watch(AsyncWatchArgs {
             watcher: &mut watcher,
@@ -735,12 +758,11 @@ mod tests {
     }
 
     #[test]
-    fn clears_screen_only_for_non_initial_interactive_rebuilds() {
-        assert!(should_clear_screen(true, true, false, false));
-        assert!(!should_clear_screen(true, true, false, true));
-        assert!(!should_clear_screen(true, true, true, false));
-        assert!(!should_clear_screen(true, false, false, false));
-        assert!(!should_clear_screen(false, true, false, false));
+    fn clears_screen_only_for_interactive_rebuilds() {
+        assert!(should_clear_screen(true, true, false));
+        assert!(!should_clear_screen(true, true, true));
+        assert!(!should_clear_screen(true, false, false));
+        assert!(!should_clear_screen(false, true, false));
     }
 
     #[test]
