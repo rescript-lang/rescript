@@ -19,7 +19,14 @@
  (target js_reserved_map.ml)
  (deps js_reserved_map.cppo.ml)
  (action
-  (run %{bin:cppo} -V OCAML:%{ocaml_version} %{env:CPPO_FLAGS=} %{deps} -o %{target})))
+  (run
+   %{bin:cppo}
+   -V
+   OCAML:%{ocaml_version}
+   %{env:CPPO_FLAGS=}
+   %{deps}
+   -o
+   %{target})))
 
 (rule
  (target ext_sys.ml)
