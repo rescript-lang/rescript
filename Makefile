@@ -225,20 +225,29 @@ checkformat: | $(YARN_INSTALL_STAMP)
 #   opam install . --deps-only --with-dev-setup
 #
 # Quick start:
-#   make coverage-super-errors   # focused report for super-errors fixtures
-#   make coverage                # full report across all test suites
-#   make clean-coverage          # remove all coverage artifacts
+#   make coverage         # run full test suite, generate report
+#   make clean-coverage   # remove coverage artifacts
+#
+# Outputs (under _coverage/):
+#   html/index.html  — human-browsable line-level report
+#   coverage.json    — Coveralls-format JSON, queryable with jq:
+#                      { source_files: [{ name, coverage: [null|N, ...] }] }
+#                      null = not instrumented, 0 = uncovered, N > 0 = hit count
+#                      e.g. uncovered line numbers in one file:
+#                      jq -r --arg f compiler/ml/typecore.ml \
+#                        '.source_files[] | select(.name==$f) | .coverage
+#                         | to_entries[] | select(.value==0) | (.key+1)' \
+#                        _coverage/coverage.json
 
 COVERAGE_DIR := _coverage
 COVERAGE_FILES_DIR := $(COVERAGE_DIR)/files
 COVERAGE_HTML_DIR := $(COVERAGE_DIR)/html
+COVERAGE_JSON := $(COVERAGE_DIR)/coverage.json
 COVERAGE_BISECT_PREFIX := $(abspath $(COVERAGE_FILES_DIR))/bisect
-
-COVERAGE_IGNORE := --ignore-missing-files
 
 # Re-builds the toolchain with bisect_ppx instrumentation and swaps the
 # instrumented binaries into BIN_DIR so any test runner that shells out to
-# `bsc` produces .coverage files. Skips `strip` to keep debug info intact.
+# `bsc` produces .coverage files.
 .PHONY: coverage-build
 coverage-build: | $(YARN_INSTALL_STAMP)
 	dune build --instrument-with bisect_ppx
@@ -265,43 +274,24 @@ coverage-run: coverage-lib
 	BISECT_FILE=$(COVERAGE_BISECT_PREFIX) BISECT_SILENT=YES \
 		node scripts/test.js -all
 
-.PHONY: coverage-run-super-errors
-coverage-run-super-errors: coverage-prepare
-	BISECT_FILE=$(COVERAGE_BISECT_PREFIX) BISECT_SILENT=YES \
-		node tests/build_tests/super_errors/input.js
-
 .PHONY: coverage-report
 coverage-report:
 	bisect-ppx-report html \
 		--coverage-path $(COVERAGE_FILES_DIR) \
-		$(COVERAGE_IGNORE) \
+		--ignore-missing-files \
 		-o $(COVERAGE_HTML_DIR)
+	bisect-ppx-report coveralls \
+		--coverage-path $(COVERAGE_FILES_DIR) \
+		--ignore-missing-files \
+		$(COVERAGE_JSON)
 	bisect-ppx-report summary \
 		--coverage-path $(COVERAGE_FILES_DIR)
 	@echo ""
 	@echo "HTML report: $(COVERAGE_HTML_DIR)/index.html"
-
-.PHONY: coverage-report-cobertura
-coverage-report-cobertura:
-	bisect-ppx-report cobertura \
-		--coverage-path $(COVERAGE_FILES_DIR) \
-		$(COVERAGE_IGNORE) \
-		$(COVERAGE_DIR)/cobertura.xml
+	@echo "JSON data:   $(COVERAGE_JSON)"
 
 .PHONY: coverage
 coverage: coverage-run coverage-report
-
-# Focused report for the super-errors fixtures. Prints per-file coverage for
-# the type-checker / error-reporting modules so it's easy to spot which error
-# paths are unexercised.
-.PHONY: coverage-super-errors
-coverage-super-errors: coverage-run-super-errors coverage-report
-	@echo ""
-	@echo "Per-file coverage for error-reporting modules:"
-	@bisect-ppx-report summary --per-file \
-		--coverage-path $(COVERAGE_FILES_DIR) \
-		| grep -E "(error_message|typecore|typetexp|typedecl|typemod|matching|location|includemod|parmatch|ast_untagged_variants)" \
-		|| true
 
 .PHONY: clean-coverage
 clean-coverage:
