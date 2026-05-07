@@ -3,9 +3,12 @@
  (wrapped false)
  (instrumentation
   (backend bisect_ppx))
- (preprocess
-  (action
-   (run %{bin:cppo} %{env:CPPO_FLAGS=} %{input-file})))
  (flags
   (:standard -w +a-4-42-40-41-44-45-9-48-67-70))
  (libraries ext flow_parser))
+
+(rule
+ (target cmt_format.ml)
+ (deps cmt_format.cppo.ml)
+ (action
+  (run %{bin:cppo} %{env:CPPO_FLAGS=} %{deps} -o %{target})))
