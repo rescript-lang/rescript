@@ -1,6 +1,8 @@
 (library
  (name ext)
  (wrapped false)
+ (instrumentation
+  (backend bisect_ppx))
  (preprocess
   (action
    (run

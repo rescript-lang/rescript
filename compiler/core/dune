@@ -1,6 +1,8 @@
 (library
  (name core)
  (wrapped false)
+ (instrumentation
+  (backend bisect_ppx))
  (preprocess
   (action
    (run %{bin:cppo} %{env:CPPO_FLAGS=} %{input-file})))

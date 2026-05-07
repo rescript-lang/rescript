@@ -217,6 +217,104 @@ format: | $(YARN_INSTALL_STAMP)
 checkformat: | $(YARN_INSTALL_STAMP)
 	./scripts/format_check.sh
 
+# Coverage (bisect_ppx)
+#
+# Requires the `bisect_ppx` opam package (>= 2.8.0) in your switch:
+#   opam install bisect_ppx
+# or pull it in via the rescript dev-setup deps:
+#   opam install . --deps-only --with-dev-setup
+#
+# Quick start:
+#   make coverage-super-errors   # focused report for super-errors fixtures
+#   make coverage                # full report across all test suites
+#   make clean-coverage          # remove all coverage artifacts
+
+COVERAGE_DIR := _coverage
+COVERAGE_FILES_DIR := $(COVERAGE_DIR)/files
+COVERAGE_HTML_DIR := $(COVERAGE_DIR)/html
+COVERAGE_BISECT_PREFIX := $(abspath $(COVERAGE_FILES_DIR))/bisect
+
+# Patterns omitted from reports (frozen / vendored / cppo-generated)
+COVERAGE_IGNORE := \
+	--ignore-missing-files \
+	--ignore-files 'compiler/ml/parsetree0\.ml' \
+	--ignore-files 'compiler/ext/.*_(string|int|ident|poly|local_ident)\.ml$$' \
+	--ignore-files 'compiler/ext/(hash|hash_set|map|set|vec|ordered_hash_map)\.ml$$'
+
+# Re-builds the toolchain with bisect_ppx instrumentation and swaps the
+# instrumented binaries into BIN_DIR so any test runner that shells out to
+# `bsc` produces .coverage files. Skips `strip` to keep debug info intact.
+.PHONY: coverage-build
+coverage-build: | $(YARN_INSTALL_STAMP)
+	dune build --instrument-with bisect_ppx
+	@$(foreach bin,$(COMPILER_DUNE_BINS),touch $(bin);)
+	@$(foreach bin,$(COMPILER_BIN_NAMES), \
+		cp $(DUNE_BIN_DIR)/$(bin)$(PLATFORM_EXE_EXT) $(BIN_DIR)/$(bin).exe && \
+		chmod 755 $(BIN_DIR)/$(bin).exe;)
+
+.PHONY: coverage-prepare
+coverage-prepare: clean-coverage coverage-build
+	mkdir -p $(COVERAGE_FILES_DIR)
+
+# Build the runtime with the instrumented bsc so subsequent test runs have
+# a fresh stdlib. Coverage from the runtime build is discarded so reports
+# only reflect what the tests exercised.
+.PHONY: coverage-lib
+coverage-lib: coverage-prepare
+	BISECT_FILE=$(COVERAGE_BISECT_PREFIX)-discard BISECT_SILENT=YES \
+		yarn workspace @rescript/runtime build
+	rm -f $(COVERAGE_BISECT_PREFIX)-discard*.coverage
+
+.PHONY: coverage-run
+coverage-run: coverage-lib
+	BISECT_FILE=$(COVERAGE_BISECT_PREFIX) BISECT_SILENT=YES \
+		node scripts/test.js -all
+
+.PHONY: coverage-run-super-errors
+coverage-run-super-errors: coverage-prepare
+	BISECT_FILE=$(COVERAGE_BISECT_PREFIX) BISECT_SILENT=YES \
+		node tests/build_tests/super_errors/input.js
+
+.PHONY: coverage-report
+coverage-report:
+	bisect-ppx-report html \
+		--coverage-path $(COVERAGE_FILES_DIR) \
+		$(COVERAGE_IGNORE) \
+		-o $(COVERAGE_HTML_DIR)
+	bisect-ppx-report summary \
+		--coverage-path $(COVERAGE_FILES_DIR) \
+		$(COVERAGE_IGNORE)
+	@echo ""
+	@echo "HTML report: $(COVERAGE_HTML_DIR)/index.html"
+
+.PHONY: coverage-report-cobertura
+coverage-report-cobertura:
+	bisect-ppx-report cobertura \
+		--coverage-path $(COVERAGE_FILES_DIR) \
+		$(COVERAGE_IGNORE) \
+		-o $(COVERAGE_DIR)/cobertura.xml
+
+.PHONY: coverage
+coverage: coverage-run coverage-report
+
+# Focused report for the super-errors fixtures. Prints per-file coverage for
+# the type-checker / error-reporting modules so it's easy to spot which error
+# paths are unexercised.
+.PHONY: coverage-super-errors
+coverage-super-errors: coverage-run-super-errors coverage-report
+	@echo ""
+	@echo "Per-file coverage for error-reporting modules:"
+	@bisect-ppx-report summary --per-file \
+		--coverage-path $(COVERAGE_FILES_DIR) \
+		$(COVERAGE_IGNORE) \
+		| grep -E "(error_message|typecore|typetexp|typedecl|typemod|matching|location|includemod|parmatch|ast_untagged_variants)" \
+		|| true
+
+.PHONY: clean-coverage
+clean-coverage:
+	rm -rf $(COVERAGE_DIR)
+	find . -name 'bisect*.coverage' -not -path './_build/*' -delete
+
 # Clean
 
 clean-gentype:
@@ -225,7 +323,7 @@ clean-gentype:
 
 clean-tests: clean-gentype
 
-clean: clean-lib clean-compiler clean-rewatch
+clean: clean-lib clean-compiler clean-rewatch clean-coverage
 
 dev-container:
 	docker build -t rescript-dev-container docker

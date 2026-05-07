@@ -34,6 +34,8 @@
   (odoc :with-doc)
   (ocaml-lsp-server
    (and :with-dev-setup (= 1.22.0)))
+  (bisect_ppx
+   (and :with-dev-setup (>= 2.8.0)))
   (js_of_ocaml
    (and
     (<> :os "win32")
