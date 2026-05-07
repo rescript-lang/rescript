@@ -234,12 +234,7 @@ COVERAGE_FILES_DIR := $(COVERAGE_DIR)/files
 COVERAGE_HTML_DIR := $(COVERAGE_DIR)/html
 COVERAGE_BISECT_PREFIX := $(abspath $(COVERAGE_FILES_DIR))/bisect
 
-# Patterns omitted from reports (frozen / vendored / cppo-generated)
-COVERAGE_IGNORE := \
-	--ignore-missing-files \
-	--ignore-files 'compiler/ml/parsetree0\.ml' \
-	--ignore-files 'compiler/ext/.*_(string|int|ident|poly|local_ident)\.ml$$' \
-	--ignore-files 'compiler/ext/(hash|hash_set|map|set|vec|ordered_hash_map)\.ml$$'
+COVERAGE_IGNORE := --ignore-missing-files
 
 # Re-builds the toolchain with bisect_ppx instrumentation and swaps the
 # instrumented binaries into BIN_DIR so any test runner that shells out to
@@ -282,8 +277,7 @@ coverage-report:
 		$(COVERAGE_IGNORE) \
 		-o $(COVERAGE_HTML_DIR)
 	bisect-ppx-report summary \
-		--coverage-path $(COVERAGE_FILES_DIR) \
-		$(COVERAGE_IGNORE)
+		--coverage-path $(COVERAGE_FILES_DIR)
 	@echo ""
 	@echo "HTML report: $(COVERAGE_HTML_DIR)/index.html"
 
@@ -292,7 +286,7 @@ coverage-report-cobertura:
 	bisect-ppx-report cobertura \
 		--coverage-path $(COVERAGE_FILES_DIR) \
 		$(COVERAGE_IGNORE) \
-		-o $(COVERAGE_DIR)/cobertura.xml
+		$(COVERAGE_DIR)/cobertura.xml
 
 .PHONY: coverage
 coverage: coverage-run coverage-report
@@ -306,7 +300,6 @@ coverage-super-errors: coverage-run-super-errors coverage-report
 	@echo "Per-file coverage for error-reporting modules:"
 	@bisect-ppx-report summary --per-file \
 		--coverage-path $(COVERAGE_FILES_DIR) \
-		$(COVERAGE_IGNORE) \
 		| grep -E "(error_message|typecore|typetexp|typedecl|typemod|matching|location|includemod|parmatch|ast_untagged_variants)" \
 		|| true
 
