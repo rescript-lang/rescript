@@ -1,0 +1,43 @@
+{
+  "$schema": "https://context7.com/schema/context7.json",
+  "projectTitle": "ReScript",
+  "description": "The ReScript compiler, build toolchain, and standard library for typed JavaScript.",
+  "folders": [
+    "docs",
+    "packages/@rescript/runtime"
+  ],
+  "excludeFolders": [
+    "analysis",
+    "cli",
+    "compiler",
+    "lib_dev",
+    "node_modules",
+    "rewatch",
+    "scripts",
+    "tests",
+    "tools",
+    "docs/changelog",
+    "docs/docson",
+    "packages/@rescript/*/bin"
+  ],
+  "excludeFiles": [
+    "AGENTS.md",
+    "CLAUDE.md",
+    "CHANGELOG.md",
+    "CHANGELOG_BS.md",
+    "CONTRIBUTING.md",
+    "COPYING",
+    "COPYING.LESSER",
+    "CREDITS.md",
+    "DCO.md",
+    "LICENSE",
+    "LICENSE.MIT",
+    "build-schema.json",
+    "package.json",
+    "reactive_reanalyze_design.md"
+  ],
+  "rules": [
+    "This repository context is focused on the ReScript standard library and repository-local documentation, not compiler internals, parser implementation, build-system internals, or contributor workflow docs.",
+    "For ReScript language manual pages, syntax guidance, React documentation, ecosystem documentation, and other website-hosted docs outside this repository, also consult https://rescript-lang.org/llms.txt."
+  ]
+}
