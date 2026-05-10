@@ -15,31 +15,12 @@ let nodeVersion =
 
 let ignoreRuntimeTests = [
   (
-    // Ignore tests that require Node.js v20+
-    20,
-    ["Stdlib_Array.toReversed", "Stdlib_Array.toSorted"],
-  ),
-  (
-    // Ignore tests that require Node.js v22+
-    22,
-    [
-      "Stdlib_Promise.withResolvers",
-      "Stdlib_Set.union",
-      "Stdlib_Set.isSupersetOf",
-      "Stdlib_Set.isSubsetOf",
-      "Stdlib_Set.isDisjointFrom",
-      "Stdlib_Set.intersection",
-      "Stdlib_Set.symmetricDifference",
-      "Stdlib_Set.difference",
-    ],
-  ),
-  (
     // Ignore tests that require Node.js v24+
     24,
     ["Stdlib_RegExp.escape"],
   ),
   (
-    // Not available in Node.js yet
+    // Require Node.js 24 (https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/setFloat16#browser_compatibility)
     1000,
     ["Stdlib_DataView.getFloat16", "Stdlib_DataView.setFloat16"],
   ),
