@@ -15,13 +15,13 @@ let nodeVersion =
 
 let ignoreRuntimeTests = [
   (
-    // Ignore tests that require Node.js v24+
+    // Ignore tests that require Node.js v24+ (https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/escape#browser_compatibility)
     24,
     ["Stdlib_RegExp.escape"],
   ),
   (
-    // Require Node.js 24 (https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/setFloat16#browser_compatibility)
-    1000,
+    // Require Node.js v24+ (https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/setFloat16#browser_compatibility)
+    24,
     ["Stdlib_DataView.getFloat16", "Stdlib_DataView.setFloat16"],
   ),
 ]
