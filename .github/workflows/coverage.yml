@@ -45,6 +45,7 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ steps.rust-version.outputs.version }}
+          components: clippy, rustfmt
 
       - name: Build rewatch
         run: cargo build --manifest-path rewatch/Cargo.toml --release
