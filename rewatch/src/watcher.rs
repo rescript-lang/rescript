@@ -15,7 +15,7 @@ use notify::event::ModifyKind;
 use notify::{Config, Error, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
@@ -24,6 +24,9 @@ enum CompileType {
     Full,
     None,
 }
+
+type WatchPaths = Vec<(PathBuf, RecursiveMode)>;
+type StartupBuildResult = (BuildCommandState, WatchPaths, Option<Instant>);
 
 fn is_rescript_file(path_buf: &Path) -> bool {
     let extension = path_buf.extension().and_then(|ext| ext.to_str());
@@ -204,11 +207,24 @@ fn carry_forward_compile_warnings(previous: &BuildCommandState, next: &mut Build
     }
 }
 
+fn cleanup_before_watch_exit(
+    path: &Path,
+    build_state: &BuildCommandState,
+    show_progress: bool,
+    message: &str,
+) {
+    if show_progress {
+        println!("{message}");
+    }
+    build::with_build_lock(path, || clean::cleanup_after_build(build_state));
+}
+
 struct AsyncWatchArgs<'a> {
     watcher: &'a mut RecommendedWatcher,
     current_watch_paths: Vec<(PathBuf, RecursiveMode)>,
     initial_build_state: BuildCommandState,
     q: Arc<FifoQueue<Result<Event, Error>>>,
+    ctrlc_pressed: Arc<AtomicBool>,
     path: &'a Path,
     show_progress: bool,
     filter: &'a Option<regex::Regex>,
@@ -223,6 +239,7 @@ async fn async_watch(
         mut current_watch_paths,
         initial_build_state,
         q,
+        ctrlc_pressed,
         path,
         show_progress,
         filter,
@@ -233,23 +250,10 @@ async fn async_watch(
 ) -> Result<()> {
     let mut build_state = initial_build_state;
     let mut needs_compile_type = CompileType::None;
-    // create a mutex to capture if ctrl-c was pressed
-    let ctrlc_pressed = Arc::new(Mutex::new(false));
-    let ctrlc_pressed_clone = Arc::clone(&ctrlc_pressed);
-
-    ctrlc::set_handler(move || {
-        let pressed = Arc::clone(&ctrlc_pressed);
-        let mut pressed = pressed.lock().unwrap();
-        *pressed = true;
-    })
-    .expect("Error setting Ctrl-C handler");
 
     loop {
-        if *ctrlc_pressed_clone.lock().unwrap() {
-            if show_progress {
-                println!("\nExiting...");
-            }
-            build::with_build_lock(path, || clean::cleanup_after_build(&build_state));
+        if ctrlc_pressed.load(Ordering::SeqCst) {
+            cleanup_before_watch_exit(path, &build_state, show_progress, "\nExiting...");
             break Ok(());
         }
         let mut events: Vec<Event> = vec![];
@@ -271,10 +275,12 @@ async fn async_watch(
                 .any(|path| path.ends_with(LockKind::Watch.file_name()))
                 && let EventKind::Remove(_) = event.kind
             {
-                if show_progress {
-                    println!("\nExiting... (lockfile removed)");
-                }
-                build::with_build_lock(path, || clean::cleanup_after_build(&build_state));
+                cleanup_before_watch_exit(
+                    path,
+                    &build_state,
+                    show_progress,
+                    "\nExiting... (lockfile removed)",
+                );
                 return Ok(());
             }
 
@@ -500,9 +506,16 @@ pub fn start(
 
         let path = Path::new(folder);
 
+        let ctrlc_pressed = Arc::new(AtomicBool::new(false));
+        let ctrlc_pressed_for_handler = Arc::clone(&ctrlc_pressed);
+        ctrlc::set_handler(move || {
+            ctrlc_pressed_for_handler.store(true, Ordering::SeqCst);
+        })
+        .expect("Error setting Ctrl-C handler");
+
         // Initialization can clean previous build artifacts, so it has to be serialized
         // with the initial compile too.
-        let (build_state, current_watch_paths): (BuildCommandState, Vec<(PathBuf, RecursiveMode)>) =
+        let (build_state, current_watch_paths, initial_compile_timing): StartupBuildResult =
             build::with_build_lock(path, || {
                 let mut build_state = build::initialize_build(
                     None,
@@ -519,7 +532,7 @@ pub fn start(
                 register_watches(&mut watcher, &current_watch_paths);
 
                 let timing_total = Instant::now();
-                if build::incremental_build_without_lock(
+                let initial_compile_timing = if build::incremental_build_without_lock(
                     &mut build_state,
                     None,
                     true,
@@ -530,26 +543,40 @@ pub fn start(
                 )
                 .is_ok()
                 {
-                    finish_successful_watch_compile(
-                        after_build.clone(),
-                        timing_total,
-                        show_progress,
-                        plain_output,
-                        "Finished initial compilation",
-                    );
-                }
+                    Some(timing_total)
+                } else {
+                    None
+                };
 
-                Ok::<(BuildCommandState, Vec<(PathBuf, RecursiveMode)>), anyhow::Error>((
+                Ok::<StartupBuildResult, anyhow::Error>((
                     build_state,
                     current_watch_paths,
+                    initial_compile_timing,
                 ))
             })?;
+
+        if ctrlc_pressed.load(Ordering::SeqCst) {
+            cleanup_before_watch_exit(path, &build_state, show_progress, "\nExiting...");
+            return Ok(());
+        }
+
+        // Run after-build outside build.lock. Hooks may invoke ReScript commands that need the same lock.
+        if let Some(timing_total) = initial_compile_timing {
+            finish_successful_watch_compile(
+                after_build.clone(),
+                timing_total,
+                show_progress,
+                plain_output,
+                "Finished initial compilation",
+            );
+        }
 
         async_watch(AsyncWatchArgs {
             watcher: &mut watcher,
             current_watch_paths,
             initial_build_state: build_state,
             q: consumer,
+            ctrlc_pressed,
             path,
             show_progress,
             filter,
