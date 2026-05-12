@@ -14,6 +14,10 @@ type 'diagnostics parsing_engine = {
     for_printer:bool ->
     filename:string ->
     (Parsetree.structure, 'diagnostics) parse_result;
+  parse_implementation_from_source:
+    for_printer:bool ->
+    source:string ->
+    (Parsetree.structure, 'diagnostics) parse_result;
   parse_interface:
     for_printer:bool ->
     filename:string ->
@@ -26,6 +30,12 @@ type print_engine = {
   print_implementation:
     width:int ->
     filename:string ->
+    comments:Res_comment.t list ->
+    Parsetree.structure ->
+    unit;
+  parse_implementation_from_source:
+    width:int ->
+    source:string ->
     comments:Res_comment.t list ->
     Parsetree.structure ->
     unit;
@@ -51,6 +61,25 @@ let parsing_engine =
     parse_implementation =
       (fun ~for_printer ~filename ->
         let engine = setup ~filename ~for_printer () in
+        let structure = Res_core.parse_implementation engine in
+        let invalid, diagnostics =
+          match engine.diagnostics with
+          | [] as diagnostics -> (false, diagnostics)
+          | _ as diagnostics -> (true, diagnostics)
+        in
+        {
+          filename = engine.scanner.filename;
+          source = engine.scanner.src;
+          parsetree = structure;
+          diagnostics;
+          invalid;
+          comments = List.rev engine.comments;
+        });
+    parse_implementation_from_source =
+      (fun ~for_printer ~source ->
+        let engine =
+          setup_from_source ~source ~for_printer ~display_filename:"source" ()
+        in
         let structure = Res_core.parse_implementation engine in
         let invalid, diagnostics =
           match engine.diagnostics with
@@ -125,6 +154,10 @@ let print_engine =
   {
     print_implementation =
       (fun ~width ~filename:_ ~comments structure ->
+        print_string
+          (Res_printer.print_implementation ~width structure ~comments));
+    parse_implementation_from_source =
+      (fun ~width ~source:_ ~comments structure ->
         print_string
           (Res_printer.print_implementation ~width structure ~comments));
     print_interface =

@@ -97,47 +97,58 @@ let notification_of_jsonrpc notification =
   | Ok notification -> notification
   | Error error -> raise (Lsp.Io.Error error)
 
-let respond channel response =
-  Io.await @@ Lsp_Io.write channel @@ Response response
+type 'a t = {channel: Chan.output; state: 'a}
+
+let create ~channel ~state = {channel; state}
+
+let state t = t.state
+
+let respond server response =
+  Io.await @@ Lsp_Io.write server.channel @@ Response response
+
+let notification server notification =
+  let notification = Lsp.Server_notification.to_jsonrpc notification in
+  Io.await @@ Lsp_Io.write server.channel @@ Notification notification
 
 let rec input_loop ~input ~state with_ =
   match Io.await @@ Lsp_Io.read input with
   | Some packet ->
     let state = with_ state packet in
     input_loop ~input ~state with_
-  | exception exn -> raise exn
+  | exception exn -> raise (Failure "Server.input_loop")
   | None -> ()
 
 let listen ~input ~output ~on_request ~on_notification ~state =
-  let handle_request state channel request =
-    let response =
+  let handle_request server request =
+    let response, state =
       match Lsp.Client_request.of_jsonrpc request with
       | Error message ->
         let code = Jsonrpc.Response.Error.Code.InvalidParams in
         let err = Jsonrpc.Response.Error.make ~code ~message () in
-        Jsonrpc.Response.{id = request.id; result = Error err}
+        (Jsonrpc.Response.{id = request.id; result = Error err}, state)
       | Ok packed ->
-        Jsonrpc.Response.{id = request.id; result = on_request packed}
+        let result, state = on_request packed server in
+        (Jsonrpc.Response.{id = request.id; result}, state)
     in
-    respond channel response;
+    respond server response;
     state
   in
-  let handle_notification state channel notification =
-    on_notification state channel (notification_of_jsonrpc notification)
+  let handle_notification server notification =
+    on_notification (notification_of_jsonrpc notification) server
   in
   let input = Chan.of_source input in
   Chan.with_sink output @@ fun channel ->
+  let server = create ~channel ~state in
   input_loop ~input ~state @@ fun state packet ->
   match packet with
-  | Notification notification -> handle_notification state channel notification
-  | Request request -> handle_request state channel request
+  | Notification notification -> handle_notification server notification
+  | Request request -> handle_request server request
   | Batch_call calls ->
     List.fold_left
       (fun state call ->
         match call with
-        | `Request request -> handle_request state channel request
-        | `Notification notification ->
-          handle_notification state channel notification)
+        | `Request request -> handle_request server request
+        | `Notification notification -> handle_notification server notification)
       state calls
   | Response _ -> raise (Lsp.Io.Error "unexpected response")
   | Batch_response _ -> raise (Lsp.Io.Error "unexpected batch response")

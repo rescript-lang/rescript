@@ -8,8 +8,10 @@ homepage: "https://github.com/rescript-lang/rescript-compiler"
 bug-reports: "https://github.com/rescript-lang/rescript-compiler/issues"
 depends: [
   "ocaml" {>= "4.10"}
+  "lsp" {>= "1.22.0"}
+  "eio" {>= "1.3"}
+  "eio_main" {>= "1.3"}
   "analysis"
-  "lsp"
   "dune" {>= "3.17"}
   "odoc" {with-doc}
 ]

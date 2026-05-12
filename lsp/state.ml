@@ -1,22 +1,13 @@
-module UriMap = Map.Make (Lsp.Uri)
+open Lsp.Types
 
-type document = {
-  text : string;
-  version : int;
-}
+type status =
+  | Uninitialized
+  | Initialized of {params: InitializeParams.t; diagnostics: Diagnostics.t}
 
-type t = {
-  documents : document UriMap.t;
-  diagnostics : Lsp.Types.Diagnostic.t list UriMap.t;
-}
+(* TODO: add trace, configuration *)
+type t = {status: status; store: Document_store.t}
 
-let empty = {documents = UriMap.empty; diagnostics = UriMap.empty}
+let create ~store = {status = Uninitialized; store}
 
-let open_document t ~uri ~text ~version =
-  {t with documents = UriMap.add uri {text; version} t.documents}
-
-let update_document t ~uri ~text ~version =
-  {t with documents = UriMap.add uri {text; version} t.documents}
-
-let close_document t ~uri =
-  {t with documents = UriMap.remove uri t.documents}
+let initialize t ~params ~diagnostics =
+  {t with status = Initialized {params; diagnostics}}

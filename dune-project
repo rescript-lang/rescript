@@ -19,7 +19,8 @@
  (synopsis "ReScript compiler")
  (depends
   (ocaml
-   (>= 5.0.0))))
+   (>= 5.0.0))
+  (ocaml-lsp-server (and (>= 1.26.0) :with-test-setup))))
 
 (package
  (name analysis)
@@ -45,11 +46,16 @@
   dune))
 
 (package
- (name rescript-lsp)
+ (name rescript-language-server)
  (synopsis "ReScript LSP")
  (depends
   (ocaml
    (>= 4.10))
+  (lsp
+    (>= 1.22.0))
+  (eio
+    (>= 1.3))
+  (eio_main
+    (>= 1.3))
   analysis
-  lsp
   dune))
