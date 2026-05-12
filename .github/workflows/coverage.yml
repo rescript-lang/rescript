@@ -1,0 +1,74 @@
+name: Coverage
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+concurrency:
+  group: coverage-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  OCAMLRUNPARAM: b
+
+jobs:
+  coverage:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          cache: yarn
+          node-version-file: .nvmrc
+
+      - name: Install npm packages
+        run: yarn install
+
+      - name: Install system dependencies
+        uses: awalsh128/cache-apt-pkgs-action@v1.4.3
+        with:
+          packages: bubblewrap darcs g++-multilib gcc-multilib mercurial musl-tools rsync cmake
+          version: v4
+
+      - name: Determine Rust toolchain version
+        id: rust-version
+        run: |
+          version="$(awk -F '"' '/^rust-version[[:space:]]*=/ { print $2; exit }' rewatch/Cargo.toml)"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ steps.rust-version.outputs.version }}
+
+      - name: Build rewatch
+        run: cargo build --manifest-path rewatch/Cargo.toml --release
+
+      - name: Copy rewatch binary
+        run: |
+          cp rewatch/target/release/rescript rescript
+          ./scripts/copyExes.js --rewatch
+
+      - name: Use OCaml
+        uses: ocaml/setup-ocaml@v3.6.0
+        with:
+          ocaml-compiler: 5.3.0
+          opam-pin: false
+
+      - name: Install OPAM dependencies (incl. bisect_ppx)
+        run: opam install . --deps-only --with-test --with-dev-setup
+
+      - name: Run coverage
+        run: opam exec -- make coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: _coverage/coverage.json
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
