@@ -30,8 +30,7 @@
 - Rewatch: preserve warnings after atomic-save full rebuilds. https://github.com/rescript-lang/rescript/pull/8358
 - Fix type lowering for `dict{}` and `async`, so you don't need to annotate one extra time when the type is known. https://github.com/rescript-lang/rescript/pull/8359
 - Fix issue where warning 56 would blow up with `dict{}` patterns. https://github.com/rescript-lang/rescript/pull/8403
-- Acquire rewatch build lock before initialization. https://github.com/rescript-lang/rescript/pull/8409
-- Close remaining rewatch build.lock gaps. https://github.com/rescript-lang/rescript/pull/8410
+- Rewatch build lock fixes. https://github.com/rescript-lang/rescript/pull/8409 https://github.com/rescript-lang/rescript/pull/8410 https://github.com/rescript-lang/rescript/pull/8413
 - Rewatch: treat transitive workspace dependencies as local packages in monorepo roots. https://github.com/rescript-lang/rescript/pull/8411
 
 #### :nail_care: Polish
