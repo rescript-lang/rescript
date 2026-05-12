@@ -12,6 +12,10 @@ type 'diagnostics parsing_engine = {
     for_printer:bool ->
     filename:string ->
     (Parsetree.structure, 'diagnostics) parse_result;
+  parse_implementation_from_source:
+    for_printer:bool ->
+    source:string ->
+    (Parsetree.structure, 'diagnostics) parse_result;
   parse_interface:
     for_printer:bool ->
     filename:string ->
@@ -38,6 +42,12 @@ type print_engine = {
   print_implementation:
     width:int ->
     filename:string ->
+    comments:Res_comment.t list ->
+    Parsetree.structure ->
+    unit;
+  parse_implementation_from_source:
+    width:int ->
+    source:string ->
     comments:Res_comment.t list ->
     Parsetree.structure ->
     unit;

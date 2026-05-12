@@ -1785,9 +1785,10 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
 
   if Filename.check_suffix path ".res" then (
     let parser =
-      Res_driver.parsing_engine.parse_implementation ~for_printer:false
+      Res_driver.parsing_engine.parse_implementation_from_source
+        ~for_printer:false
     in
-    let {Res_driver.parsetree = str} = parser ~filename:currentFile in
+    let {Res_driver.parsetree = str} = parser ~source:currentFile in
     iterator.structure iterator str |> ignore;
     if blankAfterCursor = Some ' ' || blankAfterCursor = Some '\n' then (
       scope := !lastScopeBeforeCursor;
