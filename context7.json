@@ -1,0 +1,50 @@
+{
+  "$schema": "https://context7.com/schema/context7.json",
+  "projectTitle": "ReScript",
+  "description": "ReScript is a statically typed language for web development that compiles to clean, readable JavaScript, with sound types, fast builds, and seamless JS interop.",
+  "folders": ["docs", "packages/@rescript/runtime", "tools"],
+  "url": "https://context7.com/rescript-lang/rescript",
+  "public_key": "pk_dEopRkFptH4ndnTyOuXEb",
+  "excludeFolders": [
+    "analysis",
+    "cli",
+    "compiler",
+    "lib_dev",
+    "node_modules",
+    "rewatch",
+    "scripts",
+    "tests",
+    "docs/changelog",
+    "docs/docson",
+    "tools/bin",
+    "packages/@rescript/*/bin"
+  ],
+  "excludeFiles": [
+    "AGENTS.md",
+    "CLAUDE.md",
+    "CHANGELOG.md",
+    "CHANGELOG_BS.md",
+    "CONTRIBUTING.md",
+    "COPYING",
+    "COPYING.LESSER",
+    "CREDITS.md",
+    "DCO.md",
+    "LICENSE",
+    "LICENSE.MIT",
+    "build-schema.json",
+    "dune",
+    "main.ml",
+    "migrate.ml",
+    "migrate.mli",
+    "package.json",
+    "reactive_reanalyze_design.md",
+    "rescript.json",
+    "tools.ml",
+    "transforms.ml",
+    "version.ml"
+  ],
+  "rules": [
+    "Use this context for ReScript language APIs, the standard library, and the rescript-tools CLI.",
+    "For the full language manual, syntax guide, React docs, ecosystem docs, and website-hosted material outside this repository, also consult https://rescript-lang.org/llms.txt."
+  ]
+}

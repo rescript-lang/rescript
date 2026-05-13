@@ -2017,6 +2017,25 @@ let contains_extension pat =
   loop pat;
   !r
 
+let contains_dict_pattern pat =
+  let r = ref false in
+  let rec loop p =
+    if Dict_type_helpers.has_dict_pattern_attribute p.pat_attributes then
+      r := true
+    else Typedtree.iter_pattern_desc loop p.pat_desc
+  in
+  loop pat;
+  !r
+
+let rec opaque_dict_patterns pat =
+  if Dict_type_helpers.has_dict_pattern_attribute pat.pat_attributes then
+    {pat with pat_desc = Tpat_any; pat_extra = []; pat_attributes = []}
+  else
+    {
+      pat with
+      pat_desc = Typedtree.map_pattern_desc opaque_dict_patterns pat.pat_desc;
+    }
+
 (* Build an untyped or-pattern from its expected type *)
 let ppat_of_type env ty =
   match pats_of_type env ty with
@@ -2192,6 +2211,19 @@ let check_unused pred casel =
              if skip then r
              else
                (* Then look for empty patterns *)
+               let pss, qs =
+                 if
+                   contains_dict_pattern q
+                   || List.exists
+                        (fun ps -> List.exists contains_dict_pattern ps)
+                        pss
+                 then
+                   ( List.filter
+                       (fun ps -> not (List.exists contains_dict_pattern ps))
+                       pss,
+                     List.map opaque_dict_patterns qs )
+                 else (pss, qs)
+               in
                let sfs = satisfiables pss qs in
                if sfs = [] then Unused
                else

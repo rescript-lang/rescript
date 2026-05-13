@@ -78,7 +78,129 @@ function decode(data) {
   }
 }
 
+function decodePayload(data) {
+  let match = JSON.parse(data);
+  if (typeof match !== "object" || match === null || Array.isArray(match)) {
+    return 0;
+  }
+  let exit = 0;
+  let tmp = match.operationName;
+  if (typeof tmp === "string") {
+    let tmp$1 = match.query;
+    if (typeof tmp$1 === "string") {
+      let tmp$2 = match.documentId;
+      if (typeof tmp$2 === "string") {
+        let tmp$3 = match.variables;
+        if (typeof tmp$3 === "object" && tmp$3 !== null && !Array.isArray(tmp$3)) {
+          return 4;
+        }
+        exit = 1;
+      } else {
+        exit = 1;
+      }
+    } else {
+      exit = 1;
+    }
+  } else {
+    exit = 1;
+  }
+  if (exit === 1) {
+    let exit$1 = 0;
+    let tmp$4 = match.operationName;
+    if (typeof tmp$4 === "string") {
+      let tmp$5 = match.query;
+      if (typeof tmp$5 === "string") {
+        let tmp$6 = match.documentId;
+        if (typeof tmp$6 === "string") {
+          return 3;
+        }
+        exit$1 = 2;
+      } else {
+        exit$1 = 2;
+      }
+    } else {
+      exit$1 = 2;
+    }
+    if (exit$1 === 2) {
+      let exit$2 = 0;
+      let tmp$7 = match.operationName;
+      if (typeof tmp$7 === "string") {
+        let tmp$8 = match.query;
+        if (typeof tmp$8 === "string") {
+          let tmp$9 = match.variables;
+          if (typeof tmp$9 === "object" && tmp$9 !== null && !Array.isArray(tmp$9)) {
+            return 3;
+          }
+          exit$2 = 3;
+        } else {
+          exit$2 = 3;
+        }
+      } else {
+        exit$2 = 3;
+      }
+      if (exit$2 === 3) {
+        let exit$3 = 0;
+        let tmp$10 = match.operationName;
+        if (typeof tmp$10 === "string") {
+          let tmp$11 = match.documentId;
+          if (typeof tmp$11 === "string") {
+            let tmp$12 = match.variables;
+            if (typeof tmp$12 === "object" && tmp$12 !== null && !Array.isArray(tmp$12)) {
+              return 3;
+            }
+            exit$3 = 4;
+          } else {
+            exit$3 = 4;
+          }
+        } else {
+          exit$3 = 4;
+        }
+        if (exit$3 === 4) {
+          let exit$4 = 0;
+          let tmp$13 = match.query;
+          if (typeof tmp$13 === "string") {
+            let tmp$14 = match.documentId;
+            if (typeof tmp$14 === "string") {
+              let tmp$15 = match.variables;
+              if (typeof tmp$15 === "object" && tmp$15 !== null && !Array.isArray(tmp$15)) {
+                return 3;
+              }
+              exit$4 = 5;
+            } else {
+              exit$4 = 5;
+            }
+          } else {
+            exit$4 = 5;
+          }
+          if (exit$4 === 5) {
+            let exit$5 = 0;
+            let tmp$16 = match.operationName;
+            if (typeof tmp$16 === "string") {
+              let tmp$17 = match.query;
+              if (typeof tmp$17 === "string") {
+                return 2;
+              }
+              exit$5 = 6;
+            } else {
+              exit$5 = 6;
+            }
+            if (exit$5 === 6) {
+              let tmp$18 = match.operationName;
+              if (typeof tmp$18 === "string") {
+                return 1;
+              } else {
+                return 0;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 export {
   decode,
+  decodePayload,
 }
 /* No side effect */

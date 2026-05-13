@@ -13,3 +13,36 @@ let decode = (~data: string): array<inbound> =>
   | JSON.Object(dict{"type": JSON.String("f")}) => [F]
   | _ => []
   }
+
+let decodePayload = data =>
+  switch JSON.parseOrThrow(data) {
+  | JSON.Object(dict{
+      "operationName": JSON.String(_),
+      "query": JSON.String(_),
+      "documentId": JSON.String(_),
+      "variables": JSON.Object(_),
+    }) => 4
+  | JSON.Object(dict{
+      "operationName": JSON.String(_),
+      "query": JSON.String(_),
+      "documentId": JSON.String(_),
+    }) => 3
+  | JSON.Object(dict{
+      "operationName": JSON.String(_),
+      "query": JSON.String(_),
+      "variables": JSON.Object(_),
+    }) => 3
+  | JSON.Object(dict{
+      "operationName": JSON.String(_),
+      "documentId": JSON.String(_),
+      "variables": JSON.Object(_),
+    }) => 3
+  | JSON.Object(dict{
+      "query": JSON.String(_),
+      "documentId": JSON.String(_),
+      "variables": JSON.Object(_),
+    }) => 3
+  | JSON.Object(dict{"operationName": JSON.String(_), "query": JSON.String(_)}) => 2
+  | JSON.Object(dict{"operationName": JSON.String(_)}) => 1
+  | _ => 0
+  }

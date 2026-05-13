@@ -22,31 +22,11 @@ let nodeVersion = Stdlib_Option.getOrThrow(Stdlib_Int.fromString(Stdlib_Option.g
 
 let ignoreRuntimeTests = [
   [
-    20,
-    [
-      "Stdlib_Array.toReversed",
-      "Stdlib_Array.toSorted"
-    ]
-  ],
-  [
-    22,
-    [
-      "Stdlib_Promise.withResolvers",
-      "Stdlib_Set.union",
-      "Stdlib_Set.isSupersetOf",
-      "Stdlib_Set.isSubsetOf",
-      "Stdlib_Set.isDisjointFrom",
-      "Stdlib_Set.intersection",
-      "Stdlib_Set.symmetricDifference",
-      "Stdlib_Set.difference"
-    ]
-  ],
-  [
     24,
     ["Stdlib_RegExp.escape"]
   ],
   [
-    1000,
+    24,
     [
       "Stdlib_DataView.getFloat16",
       "Stdlib_DataView.setFloat16"
