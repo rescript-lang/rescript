@@ -1,7 +1,7 @@
 use anyhow::Result;
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use std::fs;
-use std::fs::File;
+use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::Path;
 use std::process;
@@ -173,9 +173,24 @@ pub fn get(kind: LockKind, folder: &str) -> Lock {
     let location = lib_dir.join(kind.file_name());
     let pid = process::id();
 
-    // When a lockfile already exists we parse its PID: if the process is still alive we refuse to
-    // proceed, otherwise we will overwrite the stale lock with our own PID.
     loop {
+        if let Err(e) = fs::create_dir_all(&lib_dir) {
+            return Lock::Error(Error::WritingLockfile(e));
+        }
+
+        match OpenOptions::new().write(true).create_new(true).open(&location) {
+            Ok(mut file) => {
+                return match file.write(pid.to_string().as_bytes()) {
+                    Ok(_) => Lock::Aquired(pid),
+                    Err(e) => Lock::Error(Error::WritingLockfile(e)),
+                };
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => (),
+            Err(e) => return Lock::Error(Error::WritingLockfile(e)),
+        }
+
+        // When a lockfile already exists we parse its PID: if the process is still alive we refuse to
+        // proceed, otherwise we remove the stale lock and try the atomic create again.
         match fs::read_to_string(&location) {
             Ok(contents) => match contents.parse::<u32>() {
                 Ok(parsed_pid) if pid_matches_current_process(parsed_pid) => match kind {
@@ -188,25 +203,16 @@ pub fn get(kind: LockKind, folder: &str) -> Lock {
                     }
                     LockKind::Watch => return Lock::Error(Error::Locked(parsed_pid)),
                 },
-                Ok(_) => break,
+                Ok(_) => match fs::remove_file(&location) {
+                    Ok(_) => continue,
+                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
+                    Err(e) => return Lock::Error(Error::ReadingLockfile(kind, e)),
+                },
                 Err(e) => return Lock::Error(Error::ParsingLockfile(e)),
             },
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => break,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
             Err(e) => return Lock::Error(Error::ReadingLockfile(kind, e)),
         }
-    }
-
-    if let Err(e) = fs::create_dir_all(&lib_dir) {
-        return Lock::Error(Error::WritingLockfile(e));
-    }
-
-    // Rewrite the lockfile with our own PID.
-    match File::create(&location) {
-        Ok(mut file) => match file.write(pid.to_string().as_bytes()) {
-            Ok(_) => Lock::Aquired(pid),
-            Err(e) => Lock::Error(Error::WritingLockfile(e)),
-        },
-        Err(e) => Lock::Error(Error::WritingLockfile(e)),
     }
 }
 
@@ -239,6 +245,7 @@ pub fn drop_lock(kind: LockKind, folder: &str) -> Result<()> {
 mod tests {
     use super::*;
     use std::fs;
+    use std::sync::{Arc, Barrier};
     use std::thread;
     use std::time::Duration;
     use tempfile::TempDir;
@@ -289,6 +296,37 @@ mod tests {
                 .exists(),
             "lockfile should be created"
         );
+    }
+
+    #[test]
+    fn only_one_concurrent_caller_acquires_lock() {
+        let temp_dir = TempDir::new().expect("temp dir should be created");
+        let project_folder = temp_dir.path().join("project");
+        fs::create_dir(&project_folder).expect("project folder should be created");
+
+        let caller_count = 12;
+        let start = Arc::new(Barrier::new(caller_count));
+        let handles = (0..caller_count)
+            .map(|_| {
+                let start = Arc::clone(&start);
+                let project_folder = project_folder.clone();
+                thread::spawn(move || {
+                    start.wait();
+                    get(
+                        LockKind::Watch,
+                        project_folder.to_str().expect("path should be valid"),
+                    )
+                })
+            })
+            .collect::<Vec<_>>();
+
+        let acquired_count = handles
+            .into_iter()
+            .map(|handle| handle.join().expect("lock thread should complete"))
+            .filter(|lock| matches!(lock, Lock::Aquired(_)))
+            .count();
+
+        assert_eq!(acquired_count, 1);
     }
 
     #[test]
