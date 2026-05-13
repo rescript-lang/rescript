@@ -14,7 +14,8 @@
 
 #### :boom: Breaking Change
 
-- Make Jsx.component abstract. https://github.com/rescript-lang/rescript/pull/8390
+- Make `Jsx.component` abstract. https://github.com/rescript-lang/rescript/pull/8390
+- Drop Node.js version 20.x support, as it is reaching EOL. https://github.com/rescript-lang/rescript/pull/8401
 
 #### :eyeglasses: Spec Compliance
 
@@ -24,6 +25,9 @@
 
 - Fix directive `@warning("-102")` not working. https://github.com/rescript-lang/rescript/pull/8322
 - Fix duplicated comments in `for`..`of` formatter. https://github.com/rescript-lang/rescript/pull/8395
+- Fix issue where warning 56 would blow up with `dict{}` patterns. https://github.com/rescript-lang/rescript/pull/8403
+- Rewatch build lock fixes. https://github.com/rescript-lang/rescript/pull/8409 https://github.com/rescript-lang/rescript/pull/8410 https://github.com/rescript-lang/rescript/pull/8413
+- Rewatch: treat transitive workspace dependencies as local packages in monorepo roots. https://github.com/rescript-lang/rescript/pull/8411
 
 #### :memo: Documentation
 
