@@ -74,12 +74,15 @@ type error =
   | Unqualified_gadt_pattern of Path.t * string
   | Invalid_interval
   | Invalid_for_loop_index
+  | Invalid_for_of_pattern
   | No_value_clauses
   | Exception_pattern_below_toplevel
   | Inlined_record_escape
   | Inlined_record_expected
   | Invalid_extension_constructor_payload
   | Not_an_extension_constructor
+  | Break_outside_loop
+  | Continue_outside_loop
   | Literal_overflow of string
   | Unknown_literal of string * char
   | Illegal_letrec_pat
@@ -141,6 +144,18 @@ let rp node =
 
 type recarg = Allowed | Required | Rejected
 
+let loop_depth = ref 0
+
+let with_depth depth_ref f =
+  let saved = !depth_ref in
+  depth_ref := saved + 1;
+  Misc.try_finally f (fun () -> depth_ref := saved)
+
+let with_reset_control_flow f =
+  let saved_loop_depth = !loop_depth in
+  loop_depth := 0;
+  Misc.try_finally f (fun () -> loop_depth := saved_loop_depth)
+
 let case lhs rhs = {c_lhs = lhs; c_guard = None; c_rhs = rhs}
 
 (* Upper approximation of free identifiers on the parse tree *)
@@ -190,6 +205,10 @@ let iter_expression f e =
       expr e1;
       expr e2;
       expr e3
+    | Pexp_for_of (_, e1, e2) | Pexp_for_await_of (_, e1, e2) ->
+      expr e1;
+      expr e2
+    | Pexp_break | Pexp_continue -> ()
     | Pexp_letmodule (_, me, e) ->
       expr e;
       module_expr me
@@ -1789,6 +1808,24 @@ let rec final_subexpression sexp =
 
 (* Generalization criterion for expressions *)
 
+let is_component_identity = function
+  | Texp_ident
+      (_, _, {val_kind = Val_prim {Primitive.prim_name = "%component_identity"}})
+    ->
+    true
+  | _ -> false
+
+let is_identity_coercion = function
+  | Texp_ident
+      ( _,
+        _,
+        {
+          val_kind =
+            Val_prim {Primitive.prim_name = "%identity" | "%component_identity"};
+        } ) ->
+    true
+  | _ -> false
+
 let rec is_nonexpansive exp =
   List.exists
     (function
@@ -1803,6 +1840,31 @@ let rec is_nonexpansive exp =
     List.for_all (fun vb -> is_nonexpansive vb.vb_expr) pat_exp_list
     && is_nonexpansive body
   | Texp_function _ -> true
+  (* `%component_identity` is a typed no-op coercion that lets generated
+     component wrappers keep the same generalization behavior as their
+     underlying function values. This preserves polymorphic props for
+     components such as:
+
+       @react.component
+       let make = (~x) =>
+         switch x {
+         | #a => React.string("A")
+         | #b => React.string("B")
+         | _ => React.string("other")
+         }
+
+     The JSX transform emits a function value and then coerces it through
+     `React.component`, whose implementation is `%component_identity`. Since no
+     runtime computation happens beyond evaluating the argument, the application
+     is non-expansive exactly when all supplied arguments are non-expansive. *)
+  | Texp_apply {funct = {exp_desc}; args; _} when is_component_identity exp_desc
+    ->
+    List.for_all is_nonexpansive_opt (List.map snd args)
+  | Texp_apply {partial = true; _} ->
+    (* ReScript partial applications (`foo(args, ...)`) lower to wrapper
+       functions in codegen, so creating the partial itself is nonexpansive
+       like an explicit lambda. *)
+    true
   | Texp_apply {funct = e; args = (_, None) :: el} ->
     is_nonexpansive e && List.for_all is_nonexpansive_opt (List.map snd el)
   | Texp_match (e, cases, [], _) ->
@@ -2214,12 +2276,6 @@ let is_ignore ~env ~arity funct =
     with Unify _ -> false)
   | _ -> false
 
-let not_identity = function
-  | Texp_ident (_, _, {val_kind = Val_prim {Primitive.prim_name = "%identity"}})
-    ->
-    false
-  | _ -> true
-
 let rec lower_args env seen ty_fun =
   let ty = expand_head env ty_fun in
   if List.memq ty seen then ()
@@ -2238,6 +2294,19 @@ let extract_function_name funct =
   match funct.exp_desc with
   | Texp_ident (path, _, _) -> Some (Longident.parse (Path.name path))
   | _ -> None
+
+let should_unify_expected_result_before_typing_lowered_apply funct sargs =
+  match (extract_function_name funct, sargs) with
+  | ( Some (Longident.Ldot (Longident.Lident "Primitive_dict", "make")),
+      [(Asttypes.Nolabel, {Parsetree.pexp_desc = Parsetree.Pexp_array _})] ) ->
+    (* Dict literals *)
+    true
+  | ( Some
+        (Longident.Ldot (Longident.Lident "Primitive_promise", "unsafe_async")),
+      [(Asttypes.Nolabel, _)] ) ->
+    (* Async wrapper *)
+    true
+  | _ -> false
 
 type lazy_args =
   (Asttypes.arg_label * (unit -> Typedtree.expression) option) list
@@ -2415,6 +2484,7 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
     in
     let smatch =
       Exp.match_ ~loc:sloc
+        ~attrs:[(mknoloc "#optional_arg_default", PStr [])]
         (Exp.ident ~loc (mknoloc (Longident.Lident "*opt*")))
         scases
     in
@@ -2440,12 +2510,26 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
     let funct =
       type_exp ~deprecated_context:FunctionCall ~context:None env sfunct
     in
+    (if should_unify_expected_result_before_typing_lowered_apply funct sargs
+     then
+       (* Lowered syntax like dict literals and async wrappers becomes a regular
+          application, so thread the expected result type into the application
+          before typing its arguments. *)
+       let _, ty_res =
+         filter_arrow ~env
+           ~arity:(Some (List.length sargs))
+           funct.exp_type Nolabel
+       in
+       unify_exp_types ~context:None loc env ty_res (instance env ty_expected));
     let ty = instance env funct.exp_type in
     end_def ();
     wrap_trace_gadt_instances env (lower_args env []) ty;
     begin_def ();
     let total_app = not partial in
-    let context = type_clash_context_from_function sexp sfunct in
+    let context =
+      if transformed_jsx then Some JsxComponent
+      else type_clash_context_from_function sexp sfunct
+    in
     let args, ty_res, fully_applied =
       match translate_unified_ops env funct sargs with
       | Some (targs, result_type) -> (targs, result_type, true)
@@ -2492,13 +2576,15 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
     (* Note: val_caselist = [] and exn_caselist = [], i.e. a fully
        empty pattern matching can be generated by Camlp4 with its
        revised syntax.  Let's accept it for backward compatibility. *)
+    let has_attr name =
+      Ext_list.exists sexp.pexp_attributes (fun ({txt}, _) -> txt = name)
+    in
     let call_context =
-      if
-        Ext_list.exists sexp.pexp_attributes (fun ({txt}, _) ->
-            match txt with
-            | "let.unwrap" -> true
-            | _ -> false)
-      then `LetUnwrap
+      (* Optional-default lowering synthesizes a match expression, but from the
+         user's point of view this is still part of a function definition. Use
+         function-style diagnostics instead of reporting a phantom switch. *)
+      if has_attr "let.unwrap" then `LetUnwrap
+      else if has_attr "#optional_arg_default" then `Function
       else `Switch
     in
     let val_cases, partial =
@@ -2898,6 +2984,13 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
         })
   | Pexp_sequence (sexp1, sexp2) ->
     let exp1 = type_statement ~context:None env sexp1 in
+    (match exp1.exp_desc with
+    | Texp_break | Texp_continue ->
+      (* Loop control should only reuse the nonreturning-statement warning when
+         there is a following statement in the same block/sequence. *)
+      Location.prerr_warning (final_subexpression sexp1).pexp_loc
+        Warnings.Nonreturning_statement
+    | _ -> ());
     let exp2 = type_expect ~context:None env sexp2 ty_expected in
     re
       {
@@ -2908,11 +3001,37 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
       }
+  | Pexp_break ->
+    if !loop_depth = 0 then raise (Error (loc, env, Break_outside_loop))
+    else
+      rue
+        {
+          exp_desc = Texp_break;
+          exp_loc = loc;
+          exp_extra = [];
+          exp_type = instance_def Predef.type_unit;
+          exp_attributes = sexp.pexp_attributes;
+          exp_env = env;
+        }
+  | Pexp_continue ->
+    if !loop_depth = 0 then raise (Error (loc, env, Continue_outside_loop))
+    else
+      rue
+        {
+          exp_desc = Texp_continue;
+          exp_loc = loc;
+          exp_extra = [];
+          exp_type = instance_def Predef.type_unit;
+          exp_attributes = sexp.pexp_attributes;
+          exp_env = env;
+        }
   | Pexp_while (scond, sbody) ->
     let cond =
       type_expect ~context:(Some WhileCondition) env scond Predef.type_bool
     in
-    let body = type_statement ~context:None env sbody in
+    let body =
+      with_depth loop_depth (fun () -> type_statement ~context:None env sbody)
+    in
     rue
       {
         exp_desc = Texp_while (cond, body);
@@ -2944,10 +3063,101 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
           ~check:(fun s -> Warnings.Unused_for_index s)
       | _ -> raise (Error (param.ppat_loc, env, Invalid_for_loop_index))
     in
-    let body = type_statement ~context:None new_env sbody in
+    let body =
+      with_depth loop_depth (fun () ->
+          type_statement ~context:None new_env sbody)
+    in
     rue
       {
         exp_desc = Texp_for (id, param, low, high, dir, body);
+        exp_loc = loc;
+        exp_extra = [];
+        exp_type = instance_def Predef.type_unit;
+        exp_attributes = sexp.pexp_attributes;
+        exp_env = env;
+      }
+  | Pexp_for_of (param, scollection, sbody) ->
+    let ty_elem = newvar () in
+    let collection =
+      let collection = type_exp ~context:None env scollection in
+      let iterable_state = (Btype.snapshot (), Ctype.save_levels ()) in
+      try
+        unify_exp_types ~context:None scollection.pexp_loc env
+          collection.exp_type
+          (Predef.type_iterable ty_elem);
+        collection
+      with Error (_, _, Expr_type_clash _) as iterable_error -> (
+        let snapshot, levels = iterable_state in
+        Btype.backtrack snapshot;
+        Ctype.set_levels levels;
+        (* ReScript accepts raw arrays in `for...of` as a convenience, but
+           keeps `iterable<'a>` as the primary typing rule. If the array
+           fallback also fails, re-raise the original iterable error so other
+           non-iterable inputs still report the usual expectation. *)
+        let array_state = (Btype.snapshot (), Ctype.save_levels ()) in
+        try
+          unify_exp_types ~context:None scollection.pexp_loc env
+            collection.exp_type
+            (Predef.type_array ty_elem);
+          collection
+        with Error (_, _, Expr_type_clash _) ->
+          let snapshot, levels = array_state in
+          Btype.backtrack snapshot;
+          Ctype.set_levels levels;
+          raise iterable_error)
+    in
+    let id, new_env =
+      match param.ppat_desc with
+      | Ppat_any -> (Ident.create "_for_of", env)
+      | Ppat_var {txt} ->
+        Env.enter_value txt
+          {
+            val_type = ty_elem;
+            val_attributes = [];
+            val_kind = Val_reg;
+            Types.val_loc = loc;
+          } env ~check:(fun s -> Warnings.Unused_for_index s)
+      | _ -> raise (Error (param.ppat_loc, env, Invalid_for_of_pattern))
+    in
+    let body =
+      with_depth loop_depth (fun () ->
+          type_statement ~context:None new_env sbody)
+    in
+    rue
+      {
+        exp_desc = Texp_for_of (id, param, collection, body);
+        exp_loc = loc;
+        exp_extra = [];
+        exp_type = instance_def Predef.type_unit;
+        exp_attributes = sexp.pexp_attributes;
+        exp_env = env;
+      }
+  | Pexp_for_await_of (param, scollection, sbody) ->
+    let ty_elem = newvar () in
+    let collection =
+      type_expect ~context:None env scollection
+        (Predef.type_async_iterable ty_elem)
+    in
+    let id, new_env =
+      match param.ppat_desc with
+      | Ppat_any -> (Ident.create "_for_await_of", env)
+      | Ppat_var {txt} ->
+        Env.enter_value txt
+          {
+            val_type = ty_elem;
+            val_attributes = [];
+            val_kind = Val_reg;
+            Types.val_loc = loc;
+          } env ~check:(fun s -> Warnings.Unused_for_index s)
+      | _ -> raise (Error (param.ppat_loc, env, Invalid_for_of_pattern))
+    in
+    let body =
+      with_depth loop_depth (fun () ->
+          type_statement ~context:None new_env sbody)
+    in
+    rue
+      {
+        exp_desc = Texp_for_await_of (id, param, collection, body);
         exp_loc = loc;
         exp_extra = [];
         exp_type = instance_def Predef.type_unit;
@@ -3306,8 +3516,9 @@ and type_function ?in_function ~arity ~async loc attrs env ty_expected_ l
     generalize_structure ty_arg;
     generalize_structure ty_res);
   let cases, partial =
-    type_cases ~call_context:`Function ~in_function:(loc_fun, ty_fun) env ty_arg
-      ty_res true loc caselist
+    with_reset_control_flow (fun () ->
+        type_cases ~call_context:`Function ~in_function:(loc_fun, ty_fun) env
+          ty_arg ty_res true loc caselist)
   in
   let case = List.hd cases in
   if is_optional l && not_function env ty_res then
@@ -3652,8 +3863,10 @@ and type_application ~context total_app env funct (sargs : sargs) :
           (* This is a total application when the toplevel type is a polymorphic variable,
           so the function type including arity can be inferred. *)
           let t1 = newvar () and t2 = newvar () in
-          if ty_fun.level >= t1.level && not_identity funct.exp_desc then
-            Location.prerr_warning sarg1.pexp_loc Warnings.Unused_argument;
+          if
+            ty_fun.level >= t1.level
+            && not (is_identity_coercion funct.exp_desc)
+          then Location.prerr_warning sarg1.pexp_loc Warnings.Unused_argument;
           unify env ty_fun
             (newty
                (Tarrow
@@ -3716,15 +3929,19 @@ and type_application ~context total_app env funct (sargs : sargs) :
           if (not optional) && is_optional l' then
             Location.prerr_warning sarg0.pexp_loc
               (Warnings.Nonoptional_label (Printtyp.string_of_label l));
+          let argument_context =
+            match (context, args) with
+            | Some JsxComponent, [] -> Some JsxComponent
+            | Some JsxComponent, _ ->
+              type_clash_context_for_function_argument ~label:l' None sarg0
+            | _ ->
+              type_clash_context_for_function_argument ~label:l' context sarg0
+          in
           ( sargs,
             omitted,
             Some
               (if (not optional) || is_optional l' then fun () ->
-                 type_argument
-                   ~context:
-                     (type_clash_context_for_function_argument ~label:l' context
-                        sarg0)
-                   env sarg0 ty ty0
+                 type_argument ~context:argument_context env sarg0 ty ty0
                else fun () ->
                  option_some
                    (type_argument
@@ -4598,6 +4815,9 @@ let report_error env loc ppf error =
     fprintf ppf "@[Only character intervals are supported in patterns.@]"
   | Invalid_for_loop_index ->
     fprintf ppf "@[Invalid for-loop index: only variables and _ are allowed.@]"
+  | Invalid_for_of_pattern ->
+    fprintf ppf
+      "@[Invalid for...of binding: only variables and _ are allowed.@]"
   | No_value_clauses ->
     fprintf ppf "None of the patterns in this 'match' expression match values."
   | Exception_pattern_below_toplevel ->
@@ -4620,6 +4840,10 @@ let report_error env loc ppf error =
       "Invalid [%%extension_constructor] payload, a constructor is expected."
   | Not_an_extension_constructor ->
     fprintf ppf "This constructor is not an extension constructor."
+  | Break_outside_loop ->
+    fprintf ppf "`break` can only be used directly inside a loop body."
+  | Continue_outside_loop ->
+    fprintf ppf "`continue` can only be used inside a loop body."
   | Literal_overflow ty ->
     fprintf ppf
       "Integer literal exceeds the range of representable integers of type %s"

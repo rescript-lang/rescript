@@ -122,12 +122,6 @@ function minKey(n) {
   }
 }
 
-function minKeyUndefined(n) {
-  if (n !== undefined) {
-    return minKey0Aux(n);
-  }
-}
-
 function maxKey0Aux(_n) {
   while (true) {
     let n = _n;
@@ -143,12 +137,6 @@ function maxKey0Aux(_n) {
 function maxKey(n) {
   if (n !== undefined) {
     return Primitive_option.some(maxKey0Aux(n));
-  }
-}
-
-function maxKeyUndefined(n) {
-  if (n !== undefined) {
-    return maxKey0Aux(n);
   }
 }
 
@@ -173,12 +161,6 @@ function minimum(n) {
   }
 }
 
-function minUndefined(n) {
-  if (n !== undefined) {
-    return minKV0Aux(n);
-  }
-}
-
 function maxKV0Aux(_n) {
   while (true) {
     let n = _n;
@@ -195,12 +177,6 @@ function maxKV0Aux(_n) {
 }
 
 function maximum(n) {
-  if (n !== undefined) {
-    return maxKV0Aux(n);
-  }
-}
-
-function maxUndefined(n) {
   if (n !== undefined) {
     return maxKV0Aux(n);
   }
@@ -542,7 +518,7 @@ function checkInvariantInternal(_v) {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "Belt_internalAVLtree.res",
-          432,
+          408,
           4
         ],
         Error: new Error()
@@ -812,22 +788,6 @@ function get(_n, x, cmp) {
   };
 }
 
-function getUndefined(_n, x, cmp) {
-  while (true) {
-    let n = _n;
-    if (n === undefined) {
-      return;
-    }
-    let v = n.k;
-    let c = cmp(x, v);
-    if (c === 0) {
-      return n.v;
-    }
-    _n = c < 0 ? n.l : n.r;
-    continue;
-  };
-}
-
 function getOrThrow(_n, x, cmp) {
   while (true) {
     let n = _n;
@@ -1014,13 +974,9 @@ export {
   singleton,
   updateValue,
   minKey,
-  minKeyUndefined,
   maxKey,
-  maxKeyUndefined,
   minimum,
-  minUndefined,
   maximum,
-  maxUndefined,
   removeMinAuxWithRef,
   isEmpty,
   stackAllLeft,
@@ -1051,7 +1007,6 @@ export {
   cmp,
   eq,
   get,
-  getUndefined,
   getWithDefault,
   getOrThrow,
   has,

@@ -143,7 +143,7 @@ let () = {
       sibling.right->castNotOption.color = Black
       rotateLeft(rbt, sibling)
     }
-    break.contents = true
+    break_.contents = true
   } else {
     let sibling = siblingOf(successor)
     let sibling = sibling->castNotOption

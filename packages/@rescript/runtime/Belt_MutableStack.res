@@ -19,12 +19,6 @@ let copy = (s: t<_>): t<_> => {root: s.root}
 
 let push = (s, x) => s.root = Some({head: x, tail: s.root})
 
-let topUndefined = (s: t<'a>) =>
-  switch s.root {
-  | None => Js.undefined
-  | Some(x) => Js.Undefined.return(x.head)
-  }
-
 let top = s =>
   switch s.root {
   | None => None
@@ -33,20 +27,20 @@ let top = s =>
 
 let isEmpty = s => s.root == None
 
-let popUndefined = s =>
-  switch s.root {
-  | None => Js.undefined
-  | Some(x) =>
-    s.root = x.tail
-    Js.Undefined.return(x.head)
-  }
-
 let pop = s =>
   switch s.root {
   | None => None
   | Some(x) =>
     s.root = x.tail
     Some(x.head)
+  }
+
+let popOrThrow = s =>
+  switch s.root {
+  | None => throw(Not_found)
+  | Some(x) =>
+    s.root = x.tail
+    x.head
   }
 
 let rec lengthAux = (x: cell<_>, acc) =>

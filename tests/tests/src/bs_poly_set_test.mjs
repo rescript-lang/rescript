@@ -73,8 +73,8 @@ Mocha.describe("Bs_poly_set_test", () => {
     Test_utils.ok("File \"bs_poly_set_test.res\", line 45, characters 7-14", u0 !== u1);
     Test_utils.ok("File \"bs_poly_set_test.res\", line 46, characters 7-14", u2 === u1);
     Test_utils.eq("File \"bs_poly_set_test.res\", line 47, characters 7-14", Belt_Set.size(u4), 28);
-    Test_utils.ok("File \"bs_poly_set_test.res\", line 48, characters 7-14", 29 === Belt_Set.maxUndefined(u4));
-    Test_utils.ok("File \"bs_poly_set_test.res\", line 49, characters 7-14", 1 === Belt_Set.minUndefined(u4));
+    Test_utils.eq("File \"bs_poly_set_test.res\", line 48, characters 7-14", Belt_Set.maximum(u4), 29);
+    Test_utils.eq("File \"bs_poly_set_test.res\", line 49, characters 7-14", Belt_Set.minimum(u4), 1);
     Test_utils.ok("File \"bs_poly_set_test.res\", line 50, characters 7-14", u4 === u5);
     Test_utils.ok("File \"bs_poly_set_test.res\", line 51, characters 7-14", Belt_Set.isEmpty(u6));
     Test_utils.eq("File \"bs_poly_set_test.res\", line 52, characters 7-14", Belt_Set.size(u7), 3);
@@ -118,35 +118,31 @@ Mocha.describe("Bs_poly_set_test", () => {
     Test_utils.ok("File \"bs_poly_set_test.res\", line 90, characters 7-14", !Belt_Set.subset(u18, u23));
     Test_utils.ok("File \"bs_poly_set_test.res\", line 91, characters 7-14", Belt_Set.subset(u22, u17));
     Test_utils.ok("File \"bs_poly_set_test.res\", line 92, characters 7-14", Belt_Set.subset(u21, u17) && Belt_Set.subset(u21, u18));
-    Test_utils.ok("File \"bs_poly_set_test.res\", line 93, characters 7-14", 47 === Belt_Set.getUndefined(u22, 47));
-    Test_utils.ok("File \"bs_poly_set_test.res\", line 94, characters 7-14", Primitive_object.equal(47, Belt_Set.get(u22, 47)));
-    Test_utils.ok("File \"bs_poly_set_test.res\", line 95, characters 7-14", Belt_Set.getUndefined(u22, 59) === undefined);
-    Test_utils.ok("File \"bs_poly_set_test.res\", line 96, characters 7-14", undefined === Belt_Set.get(u22, 59));
-    Test_utils.eq("File \"bs_poly_set_test.res\", line 98, characters 7-14", Belt_Set.size(u25), 60);
-    Test_utils.ok("File \"bs_poly_set_test.res\", line 99, characters 7-14", Belt_Set.minimum(Belt_Set.make(IntCmp)) === undefined);
-    Test_utils.ok("File \"bs_poly_set_test.res\", line 100, characters 7-14", Belt_Set.maximum(Belt_Set.make(IntCmp)) === undefined);
-    Test_utils.ok("File \"bs_poly_set_test.res\", line 101, characters 7-14", Belt_Set.minUndefined(Belt_Set.make(IntCmp)) === undefined);
-    Test_utils.ok("File \"bs_poly_set_test.res\", line 102, characters 7-14", Belt_Set.maxUndefined(Belt_Set.make(IntCmp)) === undefined);
+    Test_utils.ok("File \"bs_poly_set_test.res\", line 93, characters 7-14", Primitive_object.equal(47, Belt_Set.get(u22, 47)));
+    Test_utils.ok("File \"bs_poly_set_test.res\", line 94, characters 7-14", undefined === Belt_Set.get(u22, 59));
+    Test_utils.eq("File \"bs_poly_set_test.res\", line 96, characters 7-14", Belt_Set.size(u25), 60);
+    Test_utils.ok("File \"bs_poly_set_test.res\", line 97, characters 7-14", Belt_Set.minimum(Belt_Set.make(IntCmp)) === undefined);
+    Test_utils.ok("File \"bs_poly_set_test.res\", line 98, characters 7-14", Belt_Set.maximum(Belt_Set.make(IntCmp)) === undefined);
   });
   Mocha.test("set iteration and comparison operations", () => {
     let u0 = Belt_Set.fromArray(Array_data_util.randomRange(0, 20), IntCmp);
     let u1 = Belt_Set.remove(u0, 17);
     let u2 = Belt_Set.add(u1, 33);
-    Test_utils.ok("File \"bs_poly_set_test.res\", line 109, characters 7-14", Belt_List.every2(testIterToList(u0), Belt_List.makeBy(21, i => i), (x, y) => x === y));
-    Test_utils.ok("File \"bs_poly_set_test.res\", line 110, characters 7-14", Belt_List.every2(testIterToList2(u0), Belt_List.makeBy(21, i => i), (x, y) => x === y));
-    Test_utils.ok("File \"bs_poly_set_test.res\", line 111, characters 7-14", Belt_List.every2(testIterToList(u0), Belt_Set.toList(u0), (x, y) => x === y));
-    Test_utils.ok("File \"bs_poly_set_test.res\", line 112, characters 7-14", Belt_Set.some(u0, x => x === 17));
-    Test_utils.ok("File \"bs_poly_set_test.res\", line 113, characters 7-14", !Belt_Set.some(u1, x => x === 17));
-    Test_utils.ok("File \"bs_poly_set_test.res\", line 114, characters 7-14", Belt_Set.every(u0, x => x < 24));
-    Test_utils.ok("File \"bs_poly_set_test.res\", line 115, characters 7-14", Belt_SetDict.every(Belt_Set.getData(u0), x => x < 24));
-    Test_utils.ok("File \"bs_poly_set_test.res\", line 116, characters 7-14", !Belt_Set.every(u2, x => x < 24));
-    Test_utils.ok("File \"bs_poly_set_test.res\", line 117, characters 7-14", !Belt_Set.every(Belt_Set.fromArray([
+    Test_utils.ok("File \"bs_poly_set_test.res\", line 105, characters 7-14", Belt_List.every2(testIterToList(u0), Belt_List.makeBy(21, i => i), (x, y) => x === y));
+    Test_utils.ok("File \"bs_poly_set_test.res\", line 106, characters 7-14", Belt_List.every2(testIterToList2(u0), Belt_List.makeBy(21, i => i), (x, y) => x === y));
+    Test_utils.ok("File \"bs_poly_set_test.res\", line 107, characters 7-14", Belt_List.every2(testIterToList(u0), Belt_Set.toList(u0), (x, y) => x === y));
+    Test_utils.ok("File \"bs_poly_set_test.res\", line 108, characters 7-14", Belt_Set.some(u0, x => x === 17));
+    Test_utils.ok("File \"bs_poly_set_test.res\", line 109, characters 7-14", !Belt_Set.some(u1, x => x === 17));
+    Test_utils.ok("File \"bs_poly_set_test.res\", line 110, characters 7-14", Belt_Set.every(u0, x => x < 24));
+    Test_utils.ok("File \"bs_poly_set_test.res\", line 111, characters 7-14", Belt_SetDict.every(Belt_Set.getData(u0), x => x < 24));
+    Test_utils.ok("File \"bs_poly_set_test.res\", line 112, characters 7-14", !Belt_Set.every(u2, x => x < 24));
+    Test_utils.ok("File \"bs_poly_set_test.res\", line 113, characters 7-14", !Belt_Set.every(Belt_Set.fromArray([
       1,
       2,
       3
     ], IntCmp), x => x === 2));
-    Test_utils.ok("File \"bs_poly_set_test.res\", line 118, characters 7-14", Belt_Set.cmp(u1, u0) < 0);
-    Test_utils.ok("File \"bs_poly_set_test.res\", line 119, characters 7-14", Belt_Set.cmp(u0, u1) > 0);
+    Test_utils.ok("File \"bs_poly_set_test.res\", line 114, characters 7-14", Belt_Set.cmp(u1, u0) < 0);
+    Test_utils.ok("File \"bs_poly_set_test.res\", line 115, characters 7-14", Belt_Set.cmp(u0, u1) > 0);
   });
   Mocha.test("set keep and partition operations", () => {
     let a0 = Belt_Set.fromArray(Array_data_util.randomRange(0, 1000), IntCmp);
@@ -155,33 +151,33 @@ Mocha.describe("Bs_poly_set_test", () => {
     let match = Belt_Set.partition(a0, x => x % 2 === 0);
     let a4 = match[1];
     let a3 = match[0];
-    Test_utils.ok("File \"bs_poly_set_test.res\", line 126, characters 7-14", Belt_Set.eq(a1, a3));
-    Test_utils.ok("File \"bs_poly_set_test.res\", line 127, characters 7-14", Belt_Set.eq(a2, a4));
-    Test_utils.eq("File \"bs_poly_set_test.res\", line 128, characters 7-14", Belt_Set.getExn(a0, 3), 3);
-    Test_utils.eq("File \"bs_poly_set_test.res\", line 129, characters 7-14", Belt_Set.getExn(a0, 4), 4);
-    Test_utils.throws("File \"bs_poly_set_test.res\", line 130, characters 11-18", () => {
+    Test_utils.ok("File \"bs_poly_set_test.res\", line 122, characters 7-14", Belt_Set.eq(a1, a3));
+    Test_utils.ok("File \"bs_poly_set_test.res\", line 123, characters 7-14", Belt_Set.eq(a2, a4));
+    Test_utils.eq("File \"bs_poly_set_test.res\", line 124, characters 7-14", Belt_Set.getExn(a0, 3), 3);
+    Test_utils.eq("File \"bs_poly_set_test.res\", line 125, characters 7-14", Belt_Set.getExn(a0, 4), 4);
+    Test_utils.throws("File \"bs_poly_set_test.res\", line 126, characters 11-18", () => {
       Belt_Set.getExn(a0, 1002);
     });
-    Test_utils.throws("File \"bs_poly_set_test.res\", line 131, characters 11-18", () => {
+    Test_utils.throws("File \"bs_poly_set_test.res\", line 127, characters 11-18", () => {
       Belt_Set.getExn(a0, -1);
     });
-    Test_utils.eq("File \"bs_poly_set_test.res\", line 132, characters 7-14", Belt_Set.size(a0), 1001);
-    Test_utils.ok("File \"bs_poly_set_test.res\", line 133, characters 7-14", !Belt_Set.isEmpty(a0));
+    Test_utils.eq("File \"bs_poly_set_test.res\", line 128, characters 7-14", Belt_Set.size(a0), 1001);
+    Test_utils.ok("File \"bs_poly_set_test.res\", line 129, characters 7-14", !Belt_Set.isEmpty(a0));
     let match$1 = Belt_Set.split(a0, 200);
     let match$2 = match$1[0];
-    Test_utils.ok("File \"bs_poly_set_test.res\", line 135, characters 7-14", match$1[1]);
-    Test_utils.eq("File \"bs_poly_set_test.res\", line 136, characters 7-14", Belt_Set.toArray(match$2[0]), Belt_Array.makeBy(200, i => i));
-    Test_utils.eq("File \"bs_poly_set_test.res\", line 137, characters 7-14", Belt_Set.toList(match$2[1]), Belt_List.makeBy(800, i => i + 201 | 0));
+    Test_utils.ok("File \"bs_poly_set_test.res\", line 131, characters 7-14", match$1[1]);
+    Test_utils.eq("File \"bs_poly_set_test.res\", line 132, characters 7-14", Belt_Set.toArray(match$2[0]), Belt_Array.makeBy(200, i => i));
+    Test_utils.eq("File \"bs_poly_set_test.res\", line 133, characters 7-14", Belt_Set.toList(match$2[1]), Belt_List.makeBy(800, i => i + 201 | 0));
     let a7 = Belt_Set.remove(a0, 200);
     let match$3 = Belt_Set.split(a7, 200);
     let match$4 = match$3[0];
     let a9 = match$4[1];
     let a8 = match$4[0];
-    Test_utils.ok("File \"bs_poly_set_test.res\", line 140, characters 7-14", !match$3[1]);
-    Test_utils.eq("File \"bs_poly_set_test.res\", line 141, characters 7-14", Belt_Set.toArray(a8), Belt_Array.makeBy(200, i => i));
-    Test_utils.eq("File \"bs_poly_set_test.res\", line 142, characters 7-14", Belt_Set.toList(a9), Belt_List.makeBy(800, i => i + 201 | 0));
-    Test_utils.eq("File \"bs_poly_set_test.res\", line 143, characters 7-14", Belt_Set.minimum(a8), 0);
-    Test_utils.eq("File \"bs_poly_set_test.res\", line 144, characters 7-14", Belt_Set.minimum(a9), 201);
+    Test_utils.ok("File \"bs_poly_set_test.res\", line 136, characters 7-14", !match$3[1]);
+    Test_utils.eq("File \"bs_poly_set_test.res\", line 137, characters 7-14", Belt_Set.toArray(a8), Belt_Array.makeBy(200, i => i));
+    Test_utils.eq("File \"bs_poly_set_test.res\", line 138, characters 7-14", Belt_Set.toList(a9), Belt_List.makeBy(800, i => i + 201 | 0));
+    Test_utils.eq("File \"bs_poly_set_test.res\", line 139, characters 7-14", Belt_Set.minimum(a8), 0);
+    Test_utils.eq("File \"bs_poly_set_test.res\", line 140, characters 7-14", Belt_Set.minimum(a9), 201);
     Belt_List.forEach({
       hd: a0,
       tl: {
@@ -201,14 +197,14 @@ Mocha.describe("Bs_poly_set_test", () => {
   });
   Mocha.test("empty set operations", () => {
     let a = Belt_Set.fromArray([], IntCmp);
-    Test_utils.ok("File \"bs_poly_set_test.res\", line 150, characters 7-14", Belt_Set.isEmpty(Belt_Set.keep(a, x => x % 2 === 0)));
+    Test_utils.ok("File \"bs_poly_set_test.res\", line 146, characters 7-14", Belt_Set.isEmpty(Belt_Set.keep(a, x => x % 2 === 0)));
   });
   Mocha.test("split empty set operations", () => {
     let match = Belt_Set.split(Belt_Set.make(IntCmp), 0);
     let match$1 = match[0];
-    Test_utils.ok("File \"bs_poly_set_test.res\", line 155, characters 7-14", Belt_Set.isEmpty(match$1[0]));
-    Test_utils.ok("File \"bs_poly_set_test.res\", line 156, characters 7-14", Belt_Set.isEmpty(match$1[1]));
-    Test_utils.ok("File \"bs_poly_set_test.res\", line 157, characters 7-14", !match[1]);
+    Test_utils.ok("File \"bs_poly_set_test.res\", line 151, characters 7-14", Belt_Set.isEmpty(match$1[0]));
+    Test_utils.ok("File \"bs_poly_set_test.res\", line 152, characters 7-14", Belt_Set.isEmpty(match$1[1]));
+    Test_utils.ok("File \"bs_poly_set_test.res\", line 153, characters 7-14", !match[1]);
   });
 });
 

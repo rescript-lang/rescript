@@ -77,6 +77,8 @@ let B = /* @__PURE__ */Primitive_exceptions.create("Record_extension_test.B");
 
 let C = /* @__PURE__ */Primitive_exceptions.create("Record_extension_test.C");
 
+let D = /* @__PURE__ */Primitive_exceptions.create("Record_extension_test.D");
+
 function u(f) {
   try {
     return f();
@@ -84,19 +86,29 @@ function u(f) {
     let x = Primitive_exceptions.internalToException(raw_x);
     if (x.RE_EXN_ID === A) {
       return x.name + x.x | 0;
-    } else if (x.RE_EXN_ID === B) {
+    }
+    if (x.RE_EXN_ID === B) {
       return x._1 + x._2 | 0;
-    } else if (x.RE_EXN_ID === C) {
+    }
+    if (x.RE_EXN_ID === C) {
       return x.name;
-    } else {
+    }
+    if (x.RE_EXN_ID !== D) {
       return -1;
+    }
+    let message = x.message;
+    let code = x.code;
+    if (message !== undefined) {
+      return code + message.length | 0;
+    } else {
+      return code;
     }
   }
 }
 
-Mocha.describe("File \"record_extension_test.res\", line 68, characters 9-16", () => {
+Mocha.describe("File \"record_extension_test.res\", line 71, characters 9-16", () => {
   Mocha.test("record extension with exceptions", () => {
-    Test_utils.eq("File \"record_extension_test.res\", line 70, characters 7-14", u(() => {
+    Test_utils.eq("File \"record_extension_test.res\", line 73, characters 7-14", u(() => {
       throw {
         RE_EXN_ID: A,
         name: 1,
@@ -104,7 +116,7 @@ Mocha.describe("File \"record_extension_test.res\", line 68, characters 9-16", (
         Error: new Error()
       };
     }), 2);
-    Test_utils.eq("File \"record_extension_test.res\", line 71, characters 7-14", u(() => {
+    Test_utils.eq("File \"record_extension_test.res\", line 74, characters 7-14", u(() => {
       throw {
         RE_EXN_ID: B,
         _1: 1,
@@ -112,13 +124,29 @@ Mocha.describe("File \"record_extension_test.res\", line 68, characters 9-16", (
         Error: new Error()
       };
     }), 3);
-    Test_utils.eq("File \"record_extension_test.res\", line 72, characters 7-14", u(() => {
+    Test_utils.eq("File \"record_extension_test.res\", line 75, characters 7-14", u(() => {
       throw {
         RE_EXN_ID: C,
         name: 4,
         Error: new Error()
       };
     }), 4);
+    Test_utils.eq("File \"record_extension_test.res\", line 76, characters 7-14", u(() => {
+      throw {
+        RE_EXN_ID: D,
+        code: 1,
+        message: "A",
+        Error: new Error()
+      };
+    }), 2);
+    Test_utils.eq("File \"record_extension_test.res\", line 77, characters 7-14", u(() => {
+      throw {
+        RE_EXN_ID: D,
+        code: 3,
+        message: undefined,
+        Error: new Error()
+      };
+    }), 3);
   });
 });
 
@@ -132,6 +160,7 @@ export {
   A,
   B,
   C,
+  D,
   u,
 }
 /*  Not a pure module */

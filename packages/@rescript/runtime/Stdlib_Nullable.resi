@@ -102,6 +102,7 @@ external toOption: t<'a> => option<'a> = "#nullable_to_opt"
 
 /**
 Turns an `option` into a `Nullable.t`.
+`None` compiles to `undefined` and after running `Nullable.fromOption` on it, it will continue to be `undefined`.
 
 ## Examples
 ```rescript

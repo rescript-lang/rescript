@@ -122,27 +122,19 @@ let dict = Dict.fromArray([("key1", "value1"), ("key2", "value2")])
 external fromArray: array<(string, 'a)> => dict<'a> = "Object.fromEntries"
 
 /**
-`fromIterator(entries)` creates a new dictionary from the provided iterator of key/value pairs.
+`fromIterable(entries)` creates a new dictionary from the provided iterable of key/value pairs.
 
 ## Examples
 
 ```rescript
-let iterator: Iterator.t<(string, int)> = %raw(`
-  (() => {
-    var map1 = new Map();
-    map1.set('first', 1);
-    map1.set('second', 2);
-    var iterator1 = map1[Symbol.iterator]();
-    return iterator1;
-  })()
-`)
-iterator
-->Dict.fromIterator
+let iterable: Iterable.t<(string, int)> = [("first", 1), ("second", 2)]->Array.asIterable
+iterable
+->Dict.fromIterable
 ->Dict.valuesToArray == [1, 2]
 ```
 */
 @val
-external fromIterator: Stdlib_Iterator.t<(string, 'a)> => dict<'a> = "Object.fromEntries"
+external fromIterable: Stdlib_Iterable.t<(string, 'a)> => dict<'a> = "Object.fromEntries"
 
 /**
 `toArray(dictionary)` returns an array of all the key/value pairs of the dictionary.
@@ -230,7 +222,7 @@ external valuesToArray: dict<'a> => array<'a> = "Object.values"
 /**
 `assign(dictionary1, dictionary2)` [shallowly](https://developer.mozilla.org/en-US/docs/Glossary/Shallow_copy) merges dictionary2 into dictionary1, and returns dictionary1.
 
-Beware this will *mutate* dictionary1. If you're looking for a way to copy a dictionary, check out `Dict.copy`.
+Beware this will *mutate* dictionary1. If you're looking for a fresh merged dictionary instead, check out `Dict.concat`.
 
 ## Examples
 ```rescript
@@ -249,6 +241,88 @@ Console.log(dict1->Dict.keysToArray) // Logs `["firstKey", "someKey", "someKey2"
 */
 @val
 external assign: (dict<'a>, dict<'a>) => dict<'a> = "Object.assign"
+
+/**
+`assignMany(target, sources)` [shallowly](https://developer.mozilla.org/en-US/docs/Glossary/Shallow_copy) merges each dictionary in `sources` into `target`, and returns `target`.
+
+Beware this will *mutate* `target`. Later dictionaries overwrite earlier ones. If you're looking for a fresh merged dictionary instead, check out `Dict.concatMany`.
+
+## Examples
+```rescript
+let target = dict{"firstKey": 1}
+let result = target->Dict.assignMany([
+  dict{"someKey": 2},
+  dict{"someKey": 3, "someKey2": 4},
+])
+
+result == dict{"firstKey": 1, "someKey": 3, "someKey2": 4}
+(result === target) == true
+```
+*/
+@variadic @val
+external assignMany: (dict<'a>, array<dict<'a>>) => dict<'a> = "Object.assign"
+
+/**
+`concat(dictionary1, dictionary2)` [shallowly](https://developer.mozilla.org/en-US/docs/Glossary/Shallow_copy) merges `dictionary1` and `dictionary2` into a fresh dictionary, and returns the new dictionary.
+
+Neither input dictionary is mutated. If both dictionaries contain the same key, the value from `dictionary2` overwrites the one from `dictionary1`.
+
+## Examples
+```rescript
+let dict1 = dict{"firstKey": 1}
+let dict2 = dict{"firstKey": 2, "someKey": 3}
+
+let merged = dict1->Dict.concat(dict2)
+
+dict1 == dict{"firstKey": 1}
+merged == dict{"firstKey": 2, "someKey": 3}
+(merged === dict1) == false
+```
+*/
+@val
+external concat: (@as(json`{}`) _, dict<'a>, dict<'a>) => dict<'a> = "Object.assign"
+
+/**
+`concatMany(target, sources)` [shallowly](https://developer.mozilla.org/en-US/docs/Glossary/Shallow_copy) merges `target` and each dictionary in `sources` into a fresh dictionary, and returns the new dictionary.
+
+Neither `target` nor any dictionary in `sources` is mutated. Later dictionaries overwrite earlier ones when they contain the same key.
+
+## Examples
+```rescript
+let target = dict{"firstKey": 1}
+let merged = target->Dict.concatMany([
+  dict{"someKey": 2},
+  dict{"someKey": 3, "someKey2": 4},
+])
+
+target == dict{"firstKey": 1}
+merged == dict{"firstKey": 1, "someKey": 3, "someKey2": 4}
+(merged === target) == false
+```
+*/
+@variadic @val
+external concatMany: (@as(json`{}`) _, dict<'a>, array<dict<'a>>) => dict<'a> = "Object.assign"
+
+/**
+`concatAll(dictionaries)` [shallowly](https://developer.mozilla.org/en-US/docs/Glossary/Shallow_copy) merges all dictionaries in `dictionaries` into a fresh dictionary, and returns the new dictionary.
+
+None of the input dictionaries are mutated. Later dictionaries overwrite earlier ones when they contain the same key. If `dictionaries` is empty, an empty dictionary is returned.
+
+## Examples
+```rescript
+let dict1 = dict{"firstKey": 1}
+let dict2 = dict{"someKey": 2}
+let dict3 = dict{"someKey": 3, "someKey2": 4}
+
+let merged = Dict.concatAll([dict1, dict2, dict3])
+
+dict1 == dict{"firstKey": 1}
+merged == dict{"firstKey": 1, "someKey": 3, "someKey2": 4}
+(merged === dict1) == false
+```
+*/
+@variadic @val
+external concatAll: (@as(json`{}`) _, array<dict<'a>>) => dict<'a> = "Object.assign"
 
 /**
 `copy(dictionary)` [shallowly copies](https://developer.mozilla.org/en-US/docs/Glossary/Shallow_copy) the provided dictionary to a new dictionary.

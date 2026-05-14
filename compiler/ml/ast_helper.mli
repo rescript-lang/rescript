@@ -173,6 +173,8 @@ module Exp : sig
     expression
   val sequence :
     ?loc:loc -> ?attrs:attrs -> expression -> expression -> expression
+  val break : ?loc:loc -> ?attrs:attrs -> unit -> expression
+  val continue : ?loc:loc -> ?attrs:attrs -> unit -> expression
   val while_ :
     ?loc:loc -> ?attrs:attrs -> expression -> expression -> expression
   val for_ :
@@ -182,6 +184,20 @@ module Exp : sig
     expression ->
     expression ->
     direction_flag ->
+    expression ->
+    expression
+  val for_of :
+    ?loc:loc ->
+    ?attrs:attrs ->
+    pattern ->
+    expression ->
+    expression ->
+    expression
+  val for_await_of :
+    ?loc:loc ->
+    ?attrs:attrs ->
+    pattern ->
+    expression ->
     expression ->
     expression
   val coerce : ?loc:loc -> ?attrs:attrs -> expression -> core_type -> expression

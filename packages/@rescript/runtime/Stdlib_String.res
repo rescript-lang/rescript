@@ -182,7 +182,13 @@ external substringToEnd: (string, ~start: int) => string = "substring"
 @send external padStart: (string, int, string) => string = "padStart"
 @send external padEnd: (string, int, string) => string = "padEnd"
 
-@send external localeCompare: (string, string) => float = "localeCompare"
+@send
+external localeCompare: (
+  string,
+  string,
+  ~locales: array<string>=?,
+  ~options: Stdlib_Intl_Collator.options=?,
+) => float = "localeCompare"
 
 let isEmpty = s => length(s) == 0
 
@@ -194,5 +200,7 @@ let capitalize = s =>
   }
 
 external ignore: string => unit = "%ignore"
+
+external asIterable: string => Stdlib_Iterable.t<string> = "%identity"
 
 @get_index external getSymbolUnsafe: (string, Stdlib_Symbol.t) => 'a = ""

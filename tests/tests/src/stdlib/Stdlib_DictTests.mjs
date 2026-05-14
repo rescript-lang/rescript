@@ -73,6 +73,326 @@ Test.run([
     "Stdlib_DictTests.res",
     44,
     13,
+    27
+  ],
+  "fromIterable"
+], Object.fromEntries([
+  [
+    "foo",
+    "bar"
+  ],
+  [
+    "baz",
+    "qux"
+  ]
+]), eq, {foo: "bar", baz: "qux"});
+
+let target = {
+  a: 1,
+  b: 2
+};
+
+let result = Object.assign(target, {
+  b: 3
+}, {
+  b: 4,
+  c: 0
+});
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    58,
+    15,
+    57
+  ],
+  "assignMany copies from sources to target"
+], result, eq, {
+  a: 1,
+  b: 4,
+  c: 0
+});
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    67,
+    22,
+    49
+  ],
+  "assignMany mutates target"
+], result === target, eq, true);
+
+let target$1 = {
+  a: 1,
+  b: 2
+};
+
+let result$1 = Object.assign({}, target$1, {
+  b: 3,
+  c: 0
+});
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    78,
+    15,
+    54
+  ],
+  "concat copies into a fresh dictionary"
+], result$1, eq, {
+  a: 1,
+  b: 3,
+  c: 0
+});
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    88,
+    15,
+    47
+  ],
+  "concat leaves target unchanged"
+], target$1, eq, {
+  a: 1,
+  b: 2
+});
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    96,
+    22,
+    57
+  ],
+  "concat returns a fresh dictionary"
+], result$1 === target$1, eq, false);
+
+let target$2 = {
+  a: 1,
+  b: 2
+};
+
+let result$2 = Object.assign({}, target$2, {
+  b: 3
+}, {
+  b: 4,
+  c: 0
+});
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    107,
+    15,
+    58
+  ],
+  "concatMany copies into a fresh dictionary"
+], result$2, eq, {
+  a: 1,
+  b: 4,
+  c: 0
+});
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    117,
+    15,
+    51
+  ],
+  "concatMany leaves target unchanged"
+], target$2, eq, {
+  a: 1,
+  b: 2
+});
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    125,
+    22,
+    61
+  ],
+  "concatMany returns a fresh dictionary"
+], result$2 === target$2, eq, false);
+
+let first = {
+  a: 1,
+  b: 2
+};
+
+let last = {
+  b: 4,
+  c: 0
+};
+
+let result$3 = Object.assign({}, first, {
+  b: 3
+}, last);
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    140,
+    15,
+    57
+  ],
+  "concatAll copies into a fresh dictionary"
+], result$3, eq, {
+  a: 1,
+  b: 4,
+  c: 0
+});
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    150,
+    15,
+    56
+  ],
+  "concatAll leaves first source unchanged"
+], first, eq, {
+  a: 1,
+  b: 2
+});
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    159,
+    15,
+    56
+  ],
+  "concatAll leaves later source unchanged"
+], last, eq, {
+  b: 4,
+  c: 0
+});
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    167,
+    22,
+    60
+  ],
+  "concatAll returns a fresh dictionary"
+], result$3 === first, eq, false);
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    171,
+    13,
+    66
+  ],
+  "concatAll with empty array returns empty dictionary"
+], Object.assign({}), eq, {});
+
+let foo = {
+  a: 1,
+  b: 2
+};
+
+let baz = {
+  b: 4,
+  c: 5
+};
+
+let result$4 = Object.assign({}, foo, {
+  b: 3
+}, baz, {
+  d: 6
+});
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    189,
+    15,
+    63
+  ],
+  "dict spread applies sources from left to right"
+], result$4, eq, {
+  a: 1,
+  b: 4,
+  c: 5,
+  d: 6
+});
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    200,
+    15,
+    58
+  ],
+  "dict spread leaves first source unchanged"
+], foo, eq, {
+  a: 1,
+  b: 2
+});
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    209,
+    15,
+    58
+  ],
+  "dict spread leaves later source unchanged"
+], baz, eq, {
+  b: 4,
+  c: 5
+});
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    217,
+    22,
+    62
+  ],
+  "dict spread returns a fresh dictionary"
+], result$4 === foo, eq, false);
+
+let foo$1 = {
+  a: 1
+};
+
+let result$5 = Object.assign({}, foo$1);
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    224,
+    22,
+    58
+  ],
+  "dict spread copies a single source"
+], result$5, eq, {
+  a: 1
+});
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    226,
+    15,
+    75
+  ],
+  "dict spread copies a single source into a fresh dictionary"
+], result$5 === foo$1, eq, false);
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    234,
+    13,
     35
   ],
   "getUnsafe - existing"
@@ -84,7 +404,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    50,
+    240,
     13,
     34
   ],
@@ -99,7 +419,7 @@ let dict = {
 Test.run([
   [
     "Stdlib_DictTests.res",
-    62,
+    252,
     22,
     38
   ],
@@ -109,7 +429,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    63,
+    253,
     22,
     43
   ],
@@ -119,7 +439,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    64,
+    254,
     22,
     37
   ],
@@ -129,7 +449,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    65,
+    255,
     22,
     39
   ],
@@ -139,7 +459,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    67,
+    257,
     15,
     51
   ],

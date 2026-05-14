@@ -1,0 +1,2 @@
+external defaults : < x: int   >  = "defaults"[@@val ]
+external maybeDefaults : < x: int   >  option = "defaults"[@@val ]

@@ -500,26 +500,6 @@ s1->Belt.Set.Dict.minimum == Some(1)
 let minimum: t<'value, 'id> => option<'value>
 
 /**
-Returns minimum value of the collection. `undefined` if collection is empty.
-
-## Examples
-
-```rescript
-module IntCmp = Belt.Id.MakeComparable({
-  type t = int
-  let cmp = Pervasives.compare
-})
-
-let s0 = Belt.Set.Dict.empty
-let s1 = Belt.Set.Dict.fromArray([3, 2, 1, 5], ~cmp=IntCmp.cmp)
-
-s0->Belt.Set.Dict.minUndefined == Js.undefined
-s1->Belt.Set.Dict.minUndefined == Js.Undefined.return(1)
-```
-*/
-let minUndefined: t<'value, 'id> => Js.undefined<'value>
-
-/**
 Returns maximum value of the collection. `None` if collection is empty.
 
 ## Examples
@@ -540,26 +520,6 @@ s1->Belt.Set.Dict.maximum == Some(5)
 let maximum: t<'value, 'id> => option<'value>
 
 /**
-Returns maximum value of the collection. `undefined` if collection is empty.
-
-## Examples
-
-```rescript
-module IntCmp = Belt.Id.MakeComparable({
-  type t = int
-  let cmp = Pervasives.compare
-})
-
-let s0 = Belt.Set.Dict.empty
-let s1 = Belt.Set.Dict.fromArray([3, 2, 1, 5], ~cmp=IntCmp.cmp)
-
-s0->Belt.Set.Dict.maxUndefined == Js.undefined
-s1->Belt.Set.Dict.maxUndefined == Js.Undefined.return(5)
-```
-*/
-let maxUndefined: t<'value, 'id> => Js.undefined<'value>
-
-/**
 Returns the reference of the value which is equivalent to value using the comparator
 specifiecd by this collection. Returns `None` if element does not exist.
 
@@ -578,11 +538,6 @@ s0->Belt.Set.Dict.get(20, ~cmp=IntCmp.cmp) == None
 ```
 */
 let get: (t<'value, 'id>, 'value, ~cmp: cmp<'value, 'id>) => option<'value>
-
-/**
-Same as [get](#get) but returns `undefined` when element does not exist.
-*/
-let getUndefined: (t<'value, 'id>, 'value, ~cmp: cmp<'value, 'id>) => Js.undefined<'value>
 
 /**
 Same as [get](#get) but throw when element does not exist.

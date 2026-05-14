@@ -5,17 +5,18 @@ type props<'a> = {
 }
 
 let make = ({a: ?__a, _}: props<unit => unit>) => {
-  let a = switch __a {
+  let __a_value = switch __a {
   | Some(a) => a
   | None => () => ()
   }
+  let a: unit => unit = __a_value
   (React.null: React.element)
 }
-let make = {
+let make = React.component({
   let \"UncurriedProps" = (props: props<_>) => make(props)
 
   \"UncurriedProps"
-}
+})
 
 let func = (~callback: (string, bool, bool) => unit=(_, _, _) => (), ()) => {
   let _ = callback
@@ -34,21 +35,22 @@ module Foo = {
   }
 
   let make = ({callback: ?__callback, _}: props<(string, bool, bool) => unit>) => {
-    let callback = switch __callback {
+    let __callback_value = switch __callback {
     | Some(callback) => callback
     | None => (_, _, _) => ()
     }
+    let callback: (string, bool, bool) => unit = __callback_value
     (
       {
         React.null
       }: React.element
     )
   }
-  let make = {
+  let make = React.component({
     let \"UncurriedProps$Foo" = (props: props<_>) => make(props)
 
     \"UncurriedProps$Foo"
-  }
+  })
 }
 
 module Bar = {
@@ -56,9 +58,9 @@ module Bar = {
   type props = {}
 
   let make = (_: props): React.element => React.jsx(Foo.make, {callback: {(_, _, _) => ()}})
-  let make = {
+  let make = React.component({
     let \"UncurriedProps$Bar" = props => make(props)
 
     \"UncurriedProps$Bar"
-  }
+  })
 }

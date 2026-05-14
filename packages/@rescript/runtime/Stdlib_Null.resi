@@ -104,11 +104,12 @@ external toOption: t<'a> => option<'a> = "#null_to_opt"
 
 /**
 Turns an `option` into a `Null.t`. `None` will be converted to `null`.
+`None` compiles to `undefined`, but after calling `Null.fromOption`, the result will be `null` instead of `undefined`.
 
 ## Examples
 ```rescript
 let optString: option<string> = None
-let asNull = optString->Null.fromOption // Null.t<string>
+let asNull = optString->Null.fromOption // Null.t<string>, will compile to 'null'
 Console.log(asNull == Null.null) // Logs `true` to the console.
 ```
 */

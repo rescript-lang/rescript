@@ -36,14 +36,14 @@ module FormData = {
 
   @new external make: unit => t = "FormData"
 
-  @send external append: (t, string, ~filename: string=?) => unit = "append"
+  @send external append: (t, string, string, ~filename: string=?) => unit = "append"
   @send external delete: (t, string) => unit = "delete"
   @return(nullable) @send external getUnsafe: (t, string) => option<'a> = "get"
   @send external getAllUnsafe: (t, string) => array<'a> = "getAll"
 
   let getString = (formData, name) => {
     switch formData->getUnsafe(name) {
-    | Some(value) => Js.typeof(value) === "string" ? Some(value) : None
+    | Some(value) => typeof(value) === #string ? Some(value) : None
     | _ => None
     }
   }
@@ -52,7 +52,7 @@ module FormData = {
 
   let getFile = (formData, name) => {
     switch formData->getUnsafe(name) {
-    | Some(value) => Js.typeof(value) === "string" ? None : Some(value->_asFile)
+    | Some(value) => typeof(value) === #string ? None : Some(value->_asFile)
     | _ => None
     }
   }
@@ -60,13 +60,13 @@ module FormData = {
   let getAll = (t, string) => {
     t
     ->getAllUnsafe(string)
-    ->Js.Array2.map(value => {
-      Js.typeof(value) === "string" ? String(value) : File(value->_asFile)
+    ->Array.map(value => {
+      typeof(value) === #string ? String(value) : File(value->_asFile)
     })
   }
 
-  @send external set: (string, string) => unit = "set"
-  @send external has: string => bool = "has"
+  @send external set: (t, string, string, ~filename: string=?) => unit = "set"
+  @send external has: (t, string) => bool = "has"
   // @send external keys: t => Iterator.t<string> = "keys";
   // @send external values: t => Iterator.t<value> = "values";
 }
@@ -82,8 +82,8 @@ type domRef = JsxDOM.domRef
 
 module Ref = {
   type t = domRef
-  type currentDomRef = React.ref<Js.nullable<Dom.element>>
-  type callbackDomRef = Js.nullable<Dom.element> => option<unit => unit>
+  type currentDomRef = React.ref<nullable<Dom.element>>
+  type callbackDomRef = nullable<Dom.element> => option<unit => unit>
 
   external domRef: currentDomRef => domRef = "%identity"
   external callbackDomRef: callbackDomRef => domRef = "%identity"
@@ -218,6 +218,8 @@ external preinit: (string, preinitOptions) => unit = "preinit"
 external preinitModule: (string, preloadModuleOptions) => unit = "preinitModule"
 
 // Runtime
+
+type domProps = JsxDOM.domProps
 
 @variadic @module("react")
 external createElement: (string, ~props: ReactDOMProps.t=?, array<React.element>) => React.element =

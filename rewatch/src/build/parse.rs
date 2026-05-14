@@ -1,4 +1,5 @@
 use super::build_types::*;
+use super::compile::retain_critical_external_warnings;
 use super::logs;
 use super::namespaces;
 use crate::build::packages::Package;
@@ -12,6 +13,7 @@ use log::debug;
 use rayon::prelude::*;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use tracing::info_span;
 
 pub fn generate_asts(
     build_state: &mut BuildCommandState,
@@ -19,6 +21,26 @@ pub fn generate_asts(
 ) -> anyhow::Result<String> {
     let mut has_failure = false;
     let mut stderr = "".to_string();
+
+    // Count dirty modules for the span attribute only when a subscriber is
+    // listening. Otherwise iterating every module every parse phase is pure
+    // waste on the hot path.
+    let parse_span = if tracing::enabled!(tracing::Level::INFO) {
+        let dirty_modules = build_state
+            .modules
+            .values()
+            .filter(|m| match &m.source_type {
+                SourceType::SourceFile(sf) => {
+                    sf.implementation.parse_dirty || sf.interface.as_ref().is_some_and(|i| i.parse_dirty)
+                }
+                SourceType::MlMap(mlmap) => mlmap.parse_dirty,
+            })
+            .count();
+        info_span!("build.parse", dirty_modules = dirty_modules)
+    } else {
+        tracing::Span::none()
+    };
+    let _span = parse_span.enter();
 
     build_state
         .modules
@@ -53,6 +75,7 @@ pub fn generate_asts(
                             &source_file.implementation.path.to_owned(),
                             build_state,
                             build_state.get_warn_error_override(),
+                            &parse_span,
                         )
                         .map_err(|e| e.to_string());
 
@@ -63,6 +86,7 @@ pub fn generate_asts(
                                     &interface_file_path.to_owned(),
                                     build_state,
                                     build_state.get_warn_error_override(),
+                                    &parse_span,
                                 ) {
                                     Ok(v) => Ok(Some(v)),
                                     Err(e) => Err(e.to_string()),
@@ -139,7 +163,18 @@ pub fn generate_asts(
                             logs::append(package, &stderr_warnings);
                             stderr.push_str(&stderr_warnings);
                         }
-                        Ok((_path, Some(_))) | Ok((_path, None)) => {
+                        Ok((_path, Some(stderr_warnings))) => {
+                            source_file.implementation.parse_state = ParseState::Success;
+                            source_file.implementation.parse_dirty = false;
+                            // External dep: surface only the critical warnings
+                            // (e.g. legacy `(. ...)` uncurried syntax) so
+                            // downstream users can report breakage upstream.
+                            if let Some(kept) = retain_critical_external_warnings(&stderr_warnings) {
+                                logs::append(package, &kept);
+                                stderr.push_str(&kept);
+                            }
+                        }
+                        Ok((_path, None)) => {
                             source_file.implementation.parse_state = ParseState::Success;
                             source_file.implementation.parse_dirty = false;
                         }
@@ -167,7 +202,17 @@ pub fn generate_asts(
                             logs::append(package, &stderr_warnings);
                             stderr.push_str(&stderr_warnings);
                         }
-                        Ok(Some((_, None))) | Ok(Some((_, Some(_)))) => {
+                        Ok(Some((_, Some(stderr_warnings)))) => {
+                            if let Some(interface) = source_file.interface.as_mut() {
+                                interface.parse_state = ParseState::Success;
+                                interface.parse_dirty = false;
+                            }
+                            if let Some(kept) = retain_critical_external_warnings(&stderr_warnings) {
+                                logs::append(package, &kept);
+                                stderr.push_str(&kept);
+                            }
+                        }
+                        Ok(Some((_, None))) => {
                             if let Some(interface) = source_file.interface.as_mut() {
                                 interface.parse_state = ParseState::Success;
                                 interface.parse_dirty = false;
@@ -322,11 +367,52 @@ pub fn parser_args(
     ))
 }
 
+fn make_parse_file_span(
+    filename: &Path,
+    package: &Package,
+    parser_args: &[String],
+    build_state: &BuildState,
+    parent: &tracing::Span,
+) -> tracing::Span {
+    let module_name = helpers::file_path_to_module_name(filename, &package.namespace);
+    let mut ppx_names: Vec<String> = Vec::new();
+    let mut experimental: Vec<String> = Vec::new();
+    for pair in parser_args.windows(2) {
+        if pair[0] == "-ppx" {
+            // Use the PPX executable's file name so paths like
+            // `node_modules/foo/ppx.exe` reduce to `ppx.exe` cross-platform.
+            let name = Path::new(&pair[1])
+                .file_name()
+                .map(|s| s.to_string_lossy().into_owned())
+                .unwrap_or_else(|| pair[1].clone());
+            ppx_names.push(name);
+        } else if pair[0] == "-enable-experimental" {
+            experimental.push(pair[1].clone());
+        }
+    }
+    let ppx = ppx_names.join(",");
+    let experimental = experimental.join(",");
+    let root_config = build_state.get_root_config();
+    let jsx = root_config.get_jsx_args().get(1).cloned().unwrap_or_default();
+    let bsc_flags = config::flatten_flags(&package.config.compiler_flags).join(" ");
+    info_span!(
+        parent: parent,
+        "build.parse_file",
+        module = %module_name,
+        package = %package.name,
+        ppx = %ppx,
+        experimental = %experimental,
+        jsx = %jsx,
+        bsc_flags = %bsc_flags,
+    )
+}
+
 fn generate_ast(
     package: Package,
     filename: &Path,
     build_state: &BuildState,
     warn_error_override: Option<String>,
+    parent_span: &tracing::Span,
 ) -> anyhow::Result<(PathBuf, Option<helpers::StdErr>)> {
     let file_path = PathBuf::from(&package.path).join(filename);
     let contents = helpers::read_file(&file_path).expect("Error reading file");
@@ -340,6 +426,12 @@ fn generate_ast(
         package.is_local_dep,
         warn_error_override,
     )?;
+
+    let _parse_span = if tracing::enabled!(tracing::Level::INFO) {
+        make_parse_file_span(filename, &package, &parser_args, build_state, parent_span).entered()
+    } else {
+        tracing::Span::none().entered()
+    };
 
     // generate the dir of the ast_path (it mirrors the source file dir)
     let ast_parent_path = package.get_build_path().join(ast_path.parent().unwrap());

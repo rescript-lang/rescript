@@ -12,7 +12,7 @@ function assertEqual(a, b) {
     RE_EXN_ID: "Assert_failure",
     _1: [
       "Stdlib.res",
-      153,
+      160,
       4
     ],
     Error: new Error()
@@ -83,9 +83,23 @@ let $$Symbol;
 
 let Type;
 
+let Iterable;
+
 let $$Iterator;
 
+let IteratorObject;
+
+let IterableIterator;
+
+let $$Generator;
+
+let AsyncIterable;
+
 let $$AsyncIterator;
+
+let AsyncIterableIterator;
+
+let $$AsyncGenerator;
 
 let $$Map;
 
@@ -155,8 +169,15 @@ exports.Result = Result;
 exports.$$String = $$String;
 exports.$$Symbol = $$Symbol;
 exports.Type = Type;
+exports.Iterable = Iterable;
 exports.$$Iterator = $$Iterator;
+exports.IteratorObject = IteratorObject;
+exports.IterableIterator = IterableIterator;
+exports.$$Generator = $$Generator;
+exports.AsyncIterable = AsyncIterable;
 exports.$$AsyncIterator = $$AsyncIterator;
+exports.AsyncIterableIterator = AsyncIterableIterator;
+exports.$$AsyncGenerator = $$AsyncGenerator;
 exports.$$Map = $$Map;
 exports.$$WeakMap = $$WeakMap;
 exports.$$Set = $$Set;

@@ -21,7 +21,7 @@ let inOrder = (v: t): array<int> => {
     current := leftGet(v)
   }
   while !S.isEmpty(s) {
-    current := S.popUndefined(s)
+    current := Js.Undefined.return(S.popOrThrow(s))
     let v = Js.Undefined.getUnsafe(current.contents)
     Q.add(q, valueGet(v))
     current := rightGet(v)
@@ -66,7 +66,7 @@ let inOrder2 = (v: t) => {
       S.push(s, v)
       cursor := leftGet(v)
     } else if !S.isEmpty(s) {
-      cursor := S.popUndefined(s)
+      cursor := Js.Undefined.return(S.popOrThrow(s))
       let current = Js.Undefined.getUnsafe(cursor.contents)
       Q.add(q, valueGet(current))
       cursor := rightGet(current)

@@ -1,11 +1,12 @@
 
   Syntax error!
-  syntax_tests/data/parsing/errors/other/dict_spread.res:1:14-16
+  syntax_tests/data/parsing/errors/other/dict_spread.res:1:17
 
-  1 │ let x = dict{...foo, "bar": 3}
+  1 │ let x = dict{...}
   2 │ 
-  3 │ 
 
-  Dict literals do not support spread (`...`) yet.
+  Missing expression
 
-let x = Primitive_dict.make [|("bar", 3)|]
+let x =
+  ((Primitive_dict.spread)[@res.dictSpread ]) (Primitive_dict.make [||])
+    [|([%rescript.exprhole ])|]

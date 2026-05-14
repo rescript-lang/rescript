@@ -1,11 +1,11 @@
 
   [1;31mWe've found a bug for you![0m
-  [36m/.../fixtures/jsx_custom_component_children.res[0m:[2m24:28-29[0m
+  [36m/.../fixtures/jsx_custom_component_children.res[0m:[2m25:28-29[0m
 
-  22 [2m│[0m }
-  23 [2m│[0m 
-  [1;31m24[0m [2m│[0m let x = <CustomComponent> {[1;31m1.[0m} </CustomComponent>
-  25 [2m│[0m 
+  23 [2m│[0m }
+  24 [2m│[0m 
+  [1;31m25[0m [2m│[0m let x = <CustomComponent> {[1;31m1.[0m} </CustomComponent>
+  26 [2m│[0m 
 
   This has type: [1;31mfloat[0m
   But children passed to this component must be of type:

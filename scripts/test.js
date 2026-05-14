@@ -166,6 +166,10 @@ if (runtimeDocstrings) {
       "generated_mocha_test.res",
     );
 
+    // This generated source file is checked during the initial build below, so
+    // a stale copy from an earlier run can fail before we regenerate it.
+    await fs.promises.rm(generated_mocha_test_res, { force: true });
+
     await execClean([], {
       cwd: docstringTestDir,
       stdio: "inherit",

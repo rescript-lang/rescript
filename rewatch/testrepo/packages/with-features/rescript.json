@@ -1,0 +1,16 @@
+{
+    "name": "@testrepo/with-features",
+    "sources": [
+        { "dir": "src" },
+        { "dir": "src-native", "feature": "native" },
+        { "dir": "src-experimental", "feature": "experimental" }
+    ],
+    "package-specs": {
+        "module": "esmodule",
+        "in-source": true
+    },
+    "suffix": ".mjs",
+    "features": {
+        "full": ["native", "experimental"]
+    }
+}

@@ -56,13 +56,14 @@ fn package_to_dirs(package: &Package, root_package_path: &Path) -> AHashSet<Dir>
 
 fn deps_to_pkgs<'a>(
     packages: &'a AHashMap<String, Package>,
-    dependencies: &'a Option<Vec<String>>,
+    dependencies: &'a Option<Vec<crate::config::Dependency>>,
 ) -> AHashSet<Pkg> {
     dependencies
         .as_ref()
         .unwrap_or(&vec![])
         .iter()
-        .filter_map(|name| {
+        .filter_map(|dep| {
+            let name = dep.name();
             packages
                 .get(name)
                 .map(|package| (name.to_owned(), package.path.to_owned()))

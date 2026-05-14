@@ -89,6 +89,7 @@ let exception_id_destructed (l : Lam.t) (fv : Ident.t) : bool =
     | Llet (_str, _id, arg, body) -> hit arg || hit body
     | Lletrec (decl, body) -> hit body || hit_list_snd decl
     | Lfor (_v, e1, e2, _dir, e3) -> hit e1 || hit e2 || hit e3
+    | Lfor_of (_v, e1, e2) | Lfor_await_of (_v, e1, e2) -> hit e1 || hit e2
     | Lconst _ -> false
     | Lapply {ap_func; ap_args; _} -> hit ap_func || hit_list ap_args
     | Lglobal_module _ (* global persistent module, play safe *) -> false
@@ -100,6 +101,7 @@ let exception_id_destructed (l : Lam.t) (fv : Ident.t) : bool =
     | Lstaticraise (_, args) -> hit_list args
     | Lifthenelse (e1, e2, e3) -> hit e1 || hit e2 || hit e3
     | Lsequence (e1, e2) -> hit e1 || hit e2
+    | Lbreak | Lcontinue -> false
     | Lwhile (e1, e2) -> hit e1 || hit e2
   in
   hit l
@@ -504,9 +506,15 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
     | Lifthenelse (b, then_, else_) ->
       Lam.if_ (convert_aux b) (convert_aux then_) (convert_aux else_)
     | Lsequence (a, b) -> Lam.seq (convert_aux a) (convert_aux b)
+    | Lbreak -> Lam.break
+    | Lcontinue -> Lam.continue
     | Lwhile (b, body) -> Lam.while_ (convert_aux b) (convert_aux body)
     | Lfor (id, from_, to_, dir, loop) ->
       Lam.for_ id (convert_aux from_) (convert_aux to_) dir (convert_aux loop)
+    | Lfor_of (id, iterable, body) ->
+      Lam.for_of id (convert_aux iterable) (convert_aux body)
+    | Lfor_await_of (id, iterable, body) ->
+      Lam.for_await_of id (convert_aux iterable) (convert_aux body)
     | Lassign (id, body) -> Lam.assign id (convert_aux body)
   and convert_let (kind : Lam_compat.let_kind) id (e : Lambda.lambda) body :
       Lam.t =

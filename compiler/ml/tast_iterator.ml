@@ -184,6 +184,7 @@ let expr sub {exp_extra; exp_desc; exp_env; _} =
   | Texp_sequence (exp1, exp2) ->
     sub.expr sub exp1;
     sub.expr sub exp2
+  | Texp_break | Texp_continue -> ()
   | Texp_while (exp1, exp2) ->
     sub.expr sub exp1;
     sub.expr sub exp2
@@ -191,6 +192,12 @@ let expr sub {exp_extra; exp_desc; exp_env; _} =
     sub.expr sub exp1;
     sub.expr sub exp2;
     sub.expr sub exp3
+  | Texp_for_of (_, _, exp1, exp2) ->
+    sub.expr sub exp1;
+    sub.expr sub exp2
+  | Texp_for_await_of (_, _, exp1, exp2) ->
+    sub.expr sub exp1;
+    sub.expr sub exp2
   | Texp_send (exp, _, expo) ->
     sub.expr sub exp;
     Option.iter (sub.expr sub) expo

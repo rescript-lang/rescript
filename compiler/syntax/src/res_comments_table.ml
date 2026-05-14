@@ -1220,6 +1220,7 @@ and walk_expression expr t comments =
     attach t.trailing typexpr.ptyp_loc trailing
   | Pexp_tuple []
   | Pexp_array []
+  | Pexp_break | Pexp_continue
   | Pexp_construct ({txt = Longident.Lident "[]"}, _) ->
     attach t.inside expr.pexp_loc comments
   | Pexp_construct ({txt = Longident.Lident "::"}, _) ->
@@ -1487,6 +1488,22 @@ and walk_expression expr t comments =
     attach t.trailing expr.pexp_loc after_expr;
     walk_list (cases |> List.map (fun case -> Case case)) t rest
     (* unary expression: todo use parsetreeviewer *)
+  | Pexp_apply _
+    when Option.is_some
+           (Res_parsetree_viewer.collect_spread_dict_expr_parts expr) -> (
+    match Res_parsetree_viewer.collect_spread_dict_expr_parts expr with
+    | Some parts ->
+      let part_exprs =
+        List.map
+          (function
+            | Res_parsetree_viewer.DictExprRows rows_expr ->
+              Expression rows_expr
+            | Res_parsetree_viewer.DictExprSpread spread_expr ->
+              Expression spread_expr)
+          parts
+      in
+      walk_list part_exprs t comments
+    | None -> assert false)
   | Pexp_apply
       {
         funct =
@@ -1806,6 +1823,30 @@ and walk_expression expr t comments =
        Comments after the closing tag will already be taking into account by the parent node. *)
     )
   | Pexp_await expr -> walk_expression expr t comments
+  | Pexp_for_of (pattern, expr1, expr2)
+  | Pexp_for_await_of (pattern, expr1, expr2) ->
+    let leading, inside, trailing =
+      partition_by_loc comments pattern.ppat_loc
+    in
+    attach t.leading pattern.ppat_loc leading;
+    walk_pattern pattern t inside;
+    let after_pattern, rest =
+      partition_adjacent_trailing pattern.ppat_loc trailing
+    in
+    attach t.trailing pattern.ppat_loc after_pattern;
+    let leading, inside, trailing = partition_by_loc rest expr1.pexp_loc in
+    attach t.leading expr1.pexp_loc leading;
+    walk_expression expr1 t inside;
+    let after_expr, rest =
+      partition_adjacent_trailing expr1.pexp_loc trailing
+    in
+    attach t.trailing expr1.pexp_loc after_expr;
+    if is_block_expr expr2 then walk_expression expr2 t rest
+    else
+      let leading, inside, trailing = partition_by_loc rest expr2.pexp_loc in
+      attach t.leading expr2.pexp_loc leading;
+      walk_expression expr2 t inside;
+      attach t.trailing expr2.pexp_loc trailing
   | Pexp_send _ -> ()
 
 and walk_expr_parameter (_attrs, _argLbl, expr_opt, pattern) t comments =

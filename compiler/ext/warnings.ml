@@ -373,7 +373,7 @@ let message = function
       ]
   | Unused_argument -> "this argument will not be used by the function."
   | Nonreturning_statement ->
-    "this statement never returns (or has an unsound type.)"
+    "This statement does not continue execution; following code is unreachable."
   | Preprocessor s -> s
   | Useless_record_with ->
     "All the fields are already explicitly listed in this record. You can \

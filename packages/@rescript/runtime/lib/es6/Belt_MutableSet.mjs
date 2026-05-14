@@ -199,16 +199,8 @@ function minimum(d) {
   return Belt_internalAVLset.minimum(d.data);
 }
 
-function minUndefined(d) {
-  return Belt_internalAVLset.minUndefined(d.data);
-}
-
 function maximum(d) {
   return Belt_internalAVLset.maximum(d.data);
-}
-
-function maxUndefined(d) {
-  return Belt_internalAVLset.maxUndefined(d.data);
 }
 
 function forEach(d, f) {
@@ -268,10 +260,6 @@ function eq(d0, d1) {
 
 function get(d, x) {
   return Belt_internalAVLset.get(d.data, x, d.cmp);
-}
-
-function getUndefined(d, x) {
-  return Belt_internalAVLset.getUndefined(d.data, x, d.cmp);
 }
 
 function getOrThrow(d, x) {
@@ -514,11 +502,8 @@ export {
   toList,
   toArray,
   minimum,
-  minUndefined,
   maximum,
-  maxUndefined,
   get,
-  getUndefined,
   getExn,
   getOrThrow,
   split,

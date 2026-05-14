@@ -62,15 +62,15 @@ let removeNode = (rbt, node) => {
         rbt->rootSet(Some(successor))
       }
     } else {
-      let break = ref(false)
+      let break_ = ref(false)
       let successorRef = ref(successor)
-      while !break.contents {
+      while !break_.contents {
         let successor = successorRef.contents
         // Case 1: node is root. Done.
         switch successor.parent {
         | None =>
           rbt->rootSet(Some(successor))
-          break.contents = true
+          break_.contents = true
         | Some(successorParent) =>
           // Case 2: sibling red. Flip color of P and S. Left rotate P.
           let sibling = siblingOf(successor)
@@ -117,7 +117,7 @@ let removeNode = (rbt, node) => {
               siblingNN.color = Red
             }
             successorParent.color = Black
-            break.contents = true
+            break_.contents = true
           } else if
             // Case 5: sibling black, sibling left child red, right child black,
             // node is left child. Rotate right sibling. Swap color of sibling and
@@ -143,7 +143,7 @@ let removeNode = (rbt, node) => {
               (sibling.right->castNotOption).color = Black
               rotateLeft(rbt, sibling)
             }
-            break.contents = true
+            break_.contents = true
           } else {
             // Case 6: sibling black, sibling right child red, node is left child.
             // Rotate left node parent. Swap color of parent and sibling. Paint

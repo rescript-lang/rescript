@@ -1,0 +1,57 @@
+
+  [1;33mWarning number 4[0m
+  [36m/.../fixtures/dict_pattern_unreachable_case.res[0m:[2m6:3-11:3[0m
+
+   4 [2m│[0m 
+   5 [2m│[0m let f = (type a, x: kind<a>, y: kind<a>, payload: JSON.t) =>
+   [1;33m6[0m [2m│[0m   [1;33mswitch (x, y, payload) {[0m
+   [1;33m7[0m [2m│[0m [1;33m  | (Int, Int, _) => 0[0m
+   [2m.[0m [2m│[0m [2m...[0m
+  [1;33m10[0m [2m│[0m [1;33m  | _ => 3[0m
+  [1;33m11[0m [2m│[0m [1;33m  }[0m
+  12 [2m│[0m 
+
+  this pattern-matching is fragile.
+It will remain exhaustive when constructors are added to type kind.
+
+
+  [1;33mWarning number 4[0m
+  [36m/.../fixtures/dict_pattern_unreachable_case.res[0m:[2m6:3-11:3[0m
+
+   4 [2m│[0m 
+   5 [2m│[0m let f = (type a, x: kind<a>, y: kind<a>, payload: JSON.t) =>
+   [1;33m6[0m [2m│[0m   [1;33mswitch (x, y, payload) {[0m
+   [1;33m7[0m [2m│[0m [1;33m  | (Int, Int, _) => 0[0m
+   [2m.[0m [2m│[0m [2m...[0m
+  [1;33m10[0m [2m│[0m [1;33m  | _ => 3[0m
+  [1;33m11[0m [2m│[0m [1;33m  }[0m
+  12 [2m│[0m 
+
+  this pattern-matching is fragile.
+It will remain exhaustive when constructors are added to type Stdlib_JSON.t.
+
+
+  [1;33mWarning number 56[0m
+  [36m/.../fixtures/dict_pattern_unreachable_case.res[0m:[2m9:5-62[0m
+
+   7 [2m┆[0m | (Int, Int, _) => 0
+   8 [2m┆[0m | (String, String, _) => 1
+   [1;33m9[0m [2m┆[0m | [1;33m(_, _, JSON.Object(dict{"operationName": JSON.String(_)}))[0m => 2
+  10 [2m┆[0m | _ => 3
+  11 [2m┆[0m }
+
+  this match case is unreachable.
+Consider replacing it with a refutation case '<pat> -> .'
+
+
+  [1;33mWarning number 56[0m
+  [36m/.../fixtures/dict_pattern_unreachable_case.res[0m:[2m10:5[0m
+
+   8 [2m┆[0m | (String, String, _) => 1
+   9 [2m┆[0m | (_, _, JSON.Object(dict{"operationName": JSON.String(_)})) => 2
+  [1;33m10[0m [2m┆[0m | [1;33m_[0m => 3
+  11 [2m┆[0m }
+  12 [2m┆[0m 
+
+  this match case is unreachable.
+Consider replacing it with a refutation case '<pat> -> .'

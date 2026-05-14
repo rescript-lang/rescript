@@ -184,9 +184,7 @@ let make = (type value identity, ~id: id<value, identity>) => {
 let isEmpty = d => N.isEmpty(d.data)
 
 let minimum = d => N.minimum(d.data)
-let minUndefined = d => N.minUndefined(d.data)
 let maximum = d => N.maximum(d.data)
-let maxUndefined = d => N.maxUndefined(d.data)
 
 let forEach = (d, f) => N.forEach(d.data, f)
 let reduce = (d, acc, cb) => N.reduce(d.data, acc, cb)
@@ -214,8 +212,6 @@ let cmp = (d0, d1) => N.cmp(~cmp=d0.cmp, d0.data, d1.data)
 let eq = (d0, d1) => N.eq(~cmp=d0.cmp, d0.data, d1.data)
 
 let get = (d, x) => N.get(~cmp=d.cmp, d.data, x)
-
-let getUndefined = (d, x) => N.getUndefined(~cmp=d.cmp, d.data, x)
 
 let getOrThrow = (d, x) => N.getOrThrow(~cmp=d.cmp, d.data, x)
 

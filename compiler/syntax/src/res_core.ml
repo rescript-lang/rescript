@@ -17,16 +17,69 @@ let rec skip_doc_comments p =
     skip_doc_comments p
   | _ -> ()
 
-type inline_types_context = {
-  mutable found_inline_types:
-    (string * Warnings.loc * Parsetree.type_kind) list;
+type inline_type_definition = {
+  name: string;
+  loc: Warnings.loc;
+  kind: Parsetree.type_kind;
   params: (Parsetree.core_type * Asttypes.variance) list;
+}
+
+type inline_types_context = {
+  mutable found_inline_types: inline_type_definition list;
+  mutable params: (Parsetree.core_type * Asttypes.variance) list;
+  collect_free_type_vars: bool;
 }
 
 let extend_current_type_name_path current_type_name_path field_name =
   match current_type_name_path with
   | None -> None
   | Some path -> Some (path @ [field_name])
+
+let inline_type_name_exists inline_types_context inline_type_name =
+  inline_types_context.found_inline_types
+  |> List.exists (fun inline_type -> inline_type.name = inline_type_name)
+
+let inline_type_param_exists params param_name =
+  params
+  |> List.exists (fun (param, _) ->
+         match param.Parsetree.ptyp_desc with
+         | Ptyp_var existing_name -> existing_name = param_name
+         | _ -> false)
+
+let maybe_track_inline_type_param inline_types_context name loc =
+  match inline_types_context with
+  | Some inline_types_context
+    when inline_types_context.collect_free_type_vars
+         && not (inline_type_param_exists inline_types_context.params name) ->
+    inline_types_context.params <-
+      inline_types_context.params
+      @ [(Ast_helper.Typ.var ~loc name, Asttypes.Invariant)]
+  | _ -> ()
+
+let make_inline_record_type_name current_type_name_path inline_types_context
+    ~base =
+  let extend name = extend_current_type_name_path current_type_name_path name in
+  let rec loop suffix =
+    let candidate = base ^ suffix in
+    match (current_type_name_path, inline_types_context) with
+    | Some prefix, Some inline_types_context ->
+      let full_name = String.concat "." (prefix @ [candidate]) in
+      if inline_type_name_exists inline_types_context full_name then
+        loop (suffix ^ "$")
+      else extend candidate
+    | _ -> extend candidate
+  in
+  loop ""
+
+let make_inline_record_return_type_name current_type_name_path
+    inline_types_context =
+  make_inline_record_type_name current_type_name_path inline_types_context
+    ~base:"return.type"
+
+let make_inline_record_argument_type_name current_type_name_path
+    inline_types_context index =
+  make_inline_record_type_name current_type_name_path inline_types_context
+    ~base:("arg" ^ string_of_int index)
 
 module Recover = struct
   let default_expr () =
@@ -96,8 +149,6 @@ module ErrorMessages = struct
      Explanation: since records have a known, fixed shape, a spread like `{a, \
      ...b}` wouldn't make sense, as `b` would override every field of `a` \
      anyway."
-
-  let dict_expr_spread = "Dict literals do not support spread (`...`) yet."
 
   let record_field_missing_colon =
     "Records use `:` when assigning fields. Example: `{field: value}`"
@@ -232,6 +283,20 @@ let tagged_template_literal_attr =
   (Location.mknoloc "res.taggedTemplate", Parsetree.PStr [])
 
 let spread_attr = (Location.mknoloc "res.spread", Parsetree.PStr [])
+let dict_spread_attr = (Location.mknoloc "res.dictSpread", Parsetree.PStr [])
+
+(* Emit a deprecation warning when the legacy [(. ...)] uncurried syntax is
+   encountered. Uncurried is the default since ReScript v11, so the leading
+   dot is no longer meaningful; we still accept it so dependencies on older
+   libraries keep parsing. *)
+let warn_uncurried_dot_syntax ~loc =
+  Location.prerr_warning loc
+    (Warnings.Deprecated
+       ( "The `(. ...)` uncurried syntax is deprecated. Uncurried is now the \
+          default in ReScript — remove the leading dot.",
+         loc,
+         loc,
+         false ))
 
 type argument = {label: Asttypes.arg_label; expr: Parsetree.expression}
 
@@ -1805,6 +1870,9 @@ and parse_es6_arrow_expression ?(arrow_attrs = []) ?(arrow_start_pos = None)
   {arrow_expr with pexp_loc = {arrow_expr.pexp_loc with loc_start = start_pos}}
 
 (*
+ * dotted_parameter ::=
+ *   | . parameter                 (* deprecated uncurried syntax *)
+ *
  * parameter ::=
  *   | pattern
  *   | pattern : type
@@ -1822,10 +1890,14 @@ and parse_es6_arrow_expression ?(arrow_attrs = []) ?(arrow_start_pos = None)
  *)
 and parse_parameter p =
   if
-    p.Parser.token = Token.Typ || p.token = Tilde
+    p.Parser.token = Token.Typ || p.token = Tilde || p.token = Dot
     || Grammar.is_pattern_start p.token
-  then
+  then (
     let start_pos = p.Parser.start_pos in
+    if p.Parser.token = Token.Dot then (
+      let dot_loc = mk_loc start_pos p.end_pos in
+      Parser.next p;
+      warn_uncurried_dot_syntax ~loc:dot_loc);
     let attrs = parse_attributes p in
     if p.Parser.token = Typ then (
       Parser.next p;
@@ -1910,7 +1982,7 @@ and parse_parameter p =
       | _ ->
         Some
           (TermParameter
-             {attrs; p_label = lbl; expr = None; pat; p_pos = start_pos})
+             {attrs; p_label = lbl; expr = None; pat; p_pos = start_pos}))
   else None
 
 and parse_parameter_list p =
@@ -1925,6 +1997,7 @@ and parse_parameter_list p =
  *   | _
  *   | lident
  *   | ()
+ *   | (.)                                   (* deprecated uncurried syntax *)
  *   | ( parameter {, parameter} [,] )
  *)
 and parse_parameters p : fundef_type_param option * fundef_term_param list =
@@ -1973,6 +2046,10 @@ and parse_parameters p : fundef_type_param option * fundef_term_param list =
       ] )
   | Lparen ->
     Parser.next p;
+    if p.Parser.token = Token.Dot then (
+      let dot_loc = mk_loc p.start_pos p.end_pos in
+      Parser.next p;
+      warn_uncurried_dot_syntax ~loc:dot_loc);
     let type_params, term_params = parse_parameter_list p in
     let term_params =
       if term_params <> [] then term_params else [unit_term_parameter ()]
@@ -3036,6 +3113,18 @@ and parse_braced_or_record_expr p =
   let start_pos = p.Parser.start_pos in
   Parser.expect Lbrace p;
   match p.Parser.token with
+  | Break ->
+    let expr = parse_expr_block p in
+    Parser.expect Rbrace p;
+    let loc = mk_loc start_pos p.prev_end_pos in
+    let braces = make_braces_attr loc in
+    {expr with pexp_attributes = braces :: expr.pexp_attributes}
+  | Continue ->
+    let expr = parse_expr_block p in
+    Parser.expect Rbrace p;
+    let loc = mk_loc start_pos p.prev_end_pos in
+    let braces = make_braces_attr loc in
+    {expr with pexp_attributes = braces :: expr.pexp_attributes}
   | token when Token.is_keyword token -> (
     match
       recover_keyword_field_name_if_probably_field p
@@ -3440,14 +3529,12 @@ and parse_record_expr_row p :
         None)
     else None
 
-and parse_dict_expr_row p =
+and parse_dict_expr_part p =
   match p.Parser.token with
   | DotDotDot ->
-    Parser.err p (Diagnostics.message ErrorMessages.dict_expr_spread);
     Parser.next p;
-    (* Parse the expr so it's consumed *)
-    let _spread_expr = parse_constrained_or_coerced_expr p in
-    None
+    let spread_expr = parse_constrained_or_coerced_expr p in
+    Some (`Spread spread_expr)
   | String s -> (
     let loc = mk_loc p.start_pos p.end_pos in
     Parser.next p;
@@ -3455,15 +3542,15 @@ and parse_dict_expr_row p =
     match p.Parser.token with
     | Colon ->
       Parser.next p;
-      let fieldExpr = parse_expr p in
-      Some (field, fieldExpr)
+      let field_expr = parse_expr p in
+      Some (`Row (field, field_expr))
     | Equal ->
       Parser.err ~start_pos:p.start_pos ~end_pos:p.end_pos p
         (Diagnostics.message ErrorMessages.dict_field_missing_colon);
       Parser.next p;
-      let fieldExpr = parse_expr p in
-      Some (field, fieldExpr)
-    | _ -> Some (field, Ast_helper.Exp.ident ~loc:field.loc field))
+      let field_expr = parse_expr p in
+      Some (`Row (field, field_expr))
+    | _ -> Some (`Row (field, Ast_helper.Exp.ident ~loc:field.loc field)))
   | _ -> None
 
 and parse_record_expr_with_string_keys ~start_pos first_row p =
@@ -3511,6 +3598,14 @@ and parse_expr_block_item p =
   let start_pos = p.Parser.start_pos in
   let attrs = parse_attributes p in
   match p.Parser.token with
+  | Break ->
+    Parser.next p;
+    let loc = mk_loc start_pos p.prev_end_pos in
+    Ast_helper.Exp.break ~loc ~attrs ()
+  | Continue ->
+    Parser.next p;
+    let loc = mk_loc start_pos p.prev_end_pos in
+    Ast_helper.Exp.continue ~loc ~attrs ()
   | Module -> (
     Parser.next p;
     match p.token with
@@ -3743,28 +3838,65 @@ and parse_if_or_if_let_expression p =
   Parser.eat_breadcrumb p;
   expr
 
-and parse_for_rest has_opening_paren pattern start_pos p =
-  Parser.expect In p;
-  let e1 = parse_expr p in
-  let direction =
-    match p.Parser.token with
-    | Lident "to" -> Asttypes.Upto
-    | Lident "downto" -> Asttypes.Downto
-    | token ->
-      Parser.err p (Diagnostics.unexpected token p.breadcrumbs);
-      Asttypes.Upto
+and normalize_for_of_pattern p pattern =
+  match pattern.Parsetree.ppat_desc with
+  | Ppat_any | Ppat_var _ -> pattern
+  | _ ->
+    Parser.err ~start_pos:pattern.ppat_loc.loc_start
+      ~end_pos:pattern.ppat_loc.loc_end p
+      (Diagnostics.message
+         "A `for...of` or `for await...of` loop only supports a variable or \
+          `_` on the left side. Destructuring patterns are not supported here.");
+    Ast_helper.Pat.any ~loc:pattern.ppat_loc ()
+
+and parse_for_rest has_opening_paren ~await pattern start_pos p =
+  let parse_loop_body () =
+    if has_opening_paren then Parser.expect Rparen p;
+    Parser.expect Lbrace p;
+    let body_expr = parse_expr_block p in
+    Parser.expect Rbrace p;
+    body_expr
   in
-  if p.Parser.token = Eof then
-    Parser.err ~start_pos:p.start_pos p
-      (Diagnostics.unexpected p.Parser.token p.breadcrumbs)
-  else Parser.next p;
-  let e2 = parse_expr ~context:WhenExpr p in
-  if has_opening_paren then Parser.expect Rparen p;
-  Parser.expect Lbrace p;
-  let body_expr = parse_expr_block p in
-  Parser.expect Rbrace p;
-  let loc = mk_loc start_pos p.prev_end_pos in
-  Ast_helper.Exp.for_ ~loc pattern e1 e2 direction body_expr
+  match p.Parser.token with
+  | Of ->
+    (* for...of loop *)
+    Parser.next p;
+    let pattern = normalize_for_of_pattern p pattern in
+    let array_expr = parse_expr ~context:WhenExpr p in
+    let body_expr = parse_loop_body () in
+    let loc = mk_loc start_pos p.prev_end_pos in
+    if await then Ast_helper.Exp.for_await_of ~loc pattern array_expr body_expr
+    else Ast_helper.Exp.for_of ~loc pattern array_expr body_expr
+  | In ->
+    if await then
+      Parser.err ~start_pos p
+        (Diagnostics.message
+           "A `for await` loop must use `of`, like `for await item of items`.");
+    (* regular for loop *)
+    Parser.next p;
+    let e1 = parse_expr p in
+    let direction =
+      match p.Parser.token with
+      | Lident "to" -> Asttypes.Upto
+      | Lident "downto" -> Asttypes.Downto
+      | token ->
+        Parser.err p (Diagnostics.unexpected token p.breadcrumbs);
+        Asttypes.Upto
+    in
+    if p.Parser.token = Eof then
+      Parser.err ~start_pos:p.start_pos p
+        (Diagnostics.unexpected p.Parser.token p.breadcrumbs)
+    else Parser.next p;
+    let e2 = parse_expr ~context:WhenExpr p in
+    let body_expr = parse_loop_body () in
+    let loc = mk_loc start_pos p.prev_end_pos in
+    Ast_helper.Exp.for_ ~loc pattern e1 e2 direction body_expr
+  | _ ->
+    Parser.err p
+      (Diagnostics.message
+         "A for-loop has the following form: `for i in 0 to 10` or `for item \
+          of items`. Did you forget an `in` or `of` here?");
+    Recover.default_expr ()
 
 and parse_for_expression p =
   let start_pos = p.Parser.start_pos in
@@ -3784,7 +3916,7 @@ and parse_for_expression p =
           let lid = Location.mkloc (Longident.Lident "()") loc in
           Ast_helper.Pat.construct lid None
         in
-        parse_for_rest false
+        parse_for_rest false ~await:false
           (parse_alias_pattern ~attrs:[] unit_pattern p)
           start_pos p
       | _ -> (
@@ -3798,13 +3930,48 @@ and parse_for_expression p =
             parse_tuple_pattern ~attrs:[] ~start_pos:lparen ~first:pat p
           in
           let pattern = parse_alias_pattern ~attrs:[] tuple_pattern p in
-          parse_for_rest false pattern start_pos p
-        | _ -> parse_for_rest true pat start_pos p))
+          parse_for_rest false ~await:false pattern start_pos p
+        | _ -> parse_for_rest true ~await:false pat start_pos p))
+    | Await -> (
+      Parser.next p;
+      match p.token with
+      | Lparen -> (
+        let lparen = p.start_pos in
+        Parser.next p;
+        match p.token with
+        | Rparen ->
+          Parser.next p;
+          let unit_pattern =
+            let loc = mk_loc lparen p.prev_end_pos in
+            let lid = Location.mkloc (Longident.Lident "()") loc in
+            Ast_helper.Pat.construct lid None
+          in
+          parse_for_rest false ~await:true
+            (parse_alias_pattern ~attrs:[] unit_pattern p)
+            start_pos p
+        | _ -> (
+          Parser.leave_breadcrumb p Grammar.Pattern;
+          let pat = parse_pattern p in
+          Parser.eat_breadcrumb p;
+          match p.token with
+          | Comma ->
+            Parser.next p;
+            let tuple_pattern =
+              parse_tuple_pattern ~attrs:[] ~start_pos:lparen ~first:pat p
+            in
+            let pattern = parse_alias_pattern ~attrs:[] tuple_pattern p in
+            parse_for_rest false ~await:true pattern start_pos p
+          | _ -> parse_for_rest true ~await:true pat start_pos p))
+      | _ ->
+        Parser.leave_breadcrumb p Grammar.Pattern;
+        let pat = parse_pattern p in
+        Parser.eat_breadcrumb p;
+        parse_for_rest false ~await:true pat start_pos p)
     | _ ->
       Parser.leave_breadcrumb p Grammar.Pattern;
       let pat = parse_pattern p in
       Parser.eat_breadcrumb p;
-      parse_for_rest false pat start_pos p
+      parse_for_rest false ~await:false pat start_pos p
   in
   Parser.eat_breadcrumb p;
   Parser.end_region p;
@@ -3891,13 +4058,31 @@ and parse_switch_expression p =
  *   | ~ label-name = ? _           (* syntax sugar *)
  *   | ~ label-name = ? expr : type
  *
+ *  dotted_argument ::=
+ *   | . argument                   (* deprecated uncurried syntax *)
  *)
 and parse_argument p : argument option =
   if
     p.Parser.token = Token.Tilde
-    || p.token = Underscore
+    || p.token = Dot || p.token = Underscore
     || Grammar.is_expr_start p.token
-  then parse_argument2 p
+  then
+    match p.Parser.token with
+    | Dot -> (
+      let dot_loc = mk_loc p.start_pos p.end_pos in
+      Parser.next p;
+      warn_uncurried_dot_syntax ~loc:dot_loc;
+      match p.token with
+      (* apply(.) — legacy uncurried unit call *)
+      | Rparen ->
+        let unit_expr =
+          Ast_helper.Exp.construct
+            (Location.mknoloc (Longident.Lident "()"))
+            None
+        in
+        Some {label = Asttypes.Nolabel; expr = unit_expr}
+      | _ -> parse_argument2 p)
+    | _ -> parse_argument2 p
   else None
 
 and parse_argument2 p : argument option =
@@ -4229,9 +4414,9 @@ and parse_list_expr ~start_pos p =
       [(Asttypes.Nolabel, Ast_helper.Exp.array ~loc list_exprs)]
 
 and parse_dict_expr ~start_pos p =
-  let rows =
+  let parts =
     parse_comma_delimited_region ~grammar:Grammar.DictRows ~closing:Rbrace
-      ~f:parse_dict_expr_row p
+      ~f:parse_dict_expr_part p
   in
   let loc = mk_loc start_pos p.end_pos in
   let to_key_value_pair
@@ -4248,14 +4433,73 @@ and parse_dict_expr ~start_pos p =
            ])
     | _ -> None
   in
-  let key_value_pairs = List.filter_map to_key_value_pair rows in
+  let dict_rows_loc
+      (rows : (Longident.t Location.loc * Parsetree.expression) list) =
+    match (rows, List.rev rows) with
+    | (first_key, _) :: _, (_, last_expr) :: _ ->
+      mk_loc first_key.loc.loc_start last_expr.pexp_loc.loc_end
+    | _ -> loc
+  in
+  let make_dict_chunk ?loc_override rows =
+    let chunk_loc =
+      match loc_override with
+      | Some loc -> loc
+      | None -> dict_rows_loc rows
+    in
+    let key_value_pairs = List.filter_map to_key_value_pair rows in
+    Ast_helper.Exp.apply ~loc:chunk_loc
+      (Ast_helper.Exp.ident ~loc:chunk_loc
+         (Location.mkloc
+            (Longident.Ldot (Longident.Lident Primitive_modules.dict, "make"))
+            chunk_loc))
+      [(Asttypes.Nolabel, Ast_helper.Exp.array ~loc:chunk_loc key_value_pairs)]
+  in
+  let make_dict_spread target_expr source_parts =
+    let spread_ident =
+      Ast_helper.Exp.ident ~loc ~attrs:[dict_spread_attr]
+        (Location.mkloc
+           (Longident.Ldot (Longident.Lident Primitive_modules.dict, "spread"))
+           loc)
+    in
+    Ast_helper.Exp.apply ~loc spread_ident
+      [
+        (Asttypes.Nolabel, target_expr);
+        ( Asttypes.Nolabel,
+          Ast_helper.Exp.array ~loc
+            (List.map
+               (function
+                 | `Rows rows -> make_dict_chunk rows
+                 | `Spread spread_expr -> spread_expr)
+               source_parts) );
+      ]
+  in
+  let grouped_parts =
+    let rec loop current_rows acc = function
+      | [] ->
+        let acc =
+          match current_rows with
+          | [] -> acc
+          | rows -> `Rows (List.rev rows) :: acc
+        in
+        List.rev acc
+      | `Row row :: rest -> loop (row :: current_rows) acc rest
+      | `Spread spread_expr :: rest ->
+        let acc =
+          match current_rows with
+          | [] -> `Spread spread_expr :: acc
+          | rows -> `Spread spread_expr :: `Rows (List.rev rows) :: acc
+        in
+        loop [] acc rest
+    in
+    loop [] [] parts
+  in
   Parser.expect Rbrace p;
-  Ast_helper.Exp.apply ~loc
-    (Ast_helper.Exp.ident ~loc
-       (Location.mkloc
-          (Longident.Ldot (Longident.Lident Primitive_modules.dict, "make"))
-          loc))
-    [(Asttypes.Nolabel, Ast_helper.Exp.array ~loc key_value_pairs)]
+  match grouped_parts with
+  | [] -> make_dict_chunk ~loc_override:loc []
+  | [`Rows rows] -> make_dict_chunk ~loc_override:loc rows
+  | `Rows target_rows :: source_parts ->
+    make_dict_spread (make_dict_chunk target_rows) source_parts
+  | source_parts -> make_dict_spread (make_dict_chunk []) source_parts
 
 and parse_array_exp p =
   let start_pos = p.Parser.start_pos in
@@ -4385,6 +4629,7 @@ and parse_atomic_typ_expr ?current_type_name_path ?inline_types_context ~attrs p
           ("", mk_loc p.start_pos p.prev_end_pos))
         else parse_ident ~msg:ErrorMessages.type_var ~start_pos:p.start_pos p
       in
+      maybe_track_inline_type_param inline_types_context ident loc;
       Ast_helper.Typ.var ~loc ~attrs ident
     | Underscore ->
       let end_pos = p.end_pos in
@@ -4428,7 +4673,8 @@ and parse_atomic_typ_expr ?current_type_name_path ?inline_types_context ~attrs p
                  match c.ptyp_desc with
                  | Ptyp_constr ({txt = Lident typename}, _) ->
                    inline_types
-                   |> List.exists (fun (name, _, _) -> name = typename)
+                   |> List.exists (fun inline_type ->
+                          inline_type.name = typename)
                  | _ -> false)
           |> List.length
       in
@@ -4530,7 +4776,7 @@ and parse_record_or_object_type ?current_type_name_path ?inline_types_context
   in
   match (inline_types_context, current_type_name_path) with
   | Some inline_types_context, Some current_type_name_path
-    when Grammar.is_record_decl_start p.token ->
+    when Grammar.is_field_decl_start p.token ->
     let labels =
       parse_comma_delimited_region ~grammar:Grammar.RecordDecl ~closing:Rbrace
         ~f:
@@ -4541,13 +4787,19 @@ and parse_record_or_object_type ?current_type_name_path ?inline_types_context
     Parser.expect Rbrace p;
     let loc = mk_loc start_pos p.prev_end_pos in
     let inline_type_name = current_type_name_path |> String.concat "." in
+    let params = inline_types_context.params in
 
     inline_types_context.found_inline_types <-
-      (inline_type_name, loc, Parsetree.Ptype_record labels)
+      {
+        name = inline_type_name;
+        loc;
+        kind = Parsetree.Ptype_record labels;
+        params;
+      }
       :: inline_types_context.found_inline_types;
 
     let lid = Location.mkloc (Longident.Lident inline_type_name) loc in
-    Ast_helper.Typ.constr ~loc lid (inline_types_context.params |> List.map fst)
+    Ast_helper.Typ.constr ~loc lid (params |> List.map fst)
   | _ ->
     let () =
       match p.token with
@@ -4587,8 +4839,12 @@ and parse_type_alias p typ =
  * note:
  *  | attrs ~ident: type_expr    -> attrs are on the arrow
  *  | attrs type_expr            -> attrs are here part of the type_expr
+ *
+ * dotted_type_parameter ::=
+ *  | . type_parameter           (* deprecated uncurried syntax *)
  *)
-and parse_type_parameter p =
+and parse_type_parameter ?current_type_name_path ?inline_types_context
+    ?positional_type_name_path p =
   let doc_attr : Parsetree.attributes =
     match p.Parser.token with
     | DocComment (loc, s) ->
@@ -4596,15 +4852,28 @@ and parse_type_parameter p =
       [doc_comment_to_attribute loc s]
     | _ -> []
   in
-  if p.Parser.token = Token.Tilde || Grammar.is_typ_expr_start p.token then
+  if
+    p.Parser.token = Token.Tilde
+    || p.token = Dot
+    || Grammar.is_typ_expr_start p.token
+  then (
     let start_pos = p.Parser.start_pos in
+    if p.Parser.token = Token.Dot then (
+      let dot_loc = mk_loc start_pos p.end_pos in
+      Parser.next p;
+      warn_uncurried_dot_syntax ~loc:dot_loc);
     let attrs = doc_attr @ parse_attributes p in
     match p.Parser.token with
     | Tilde -> (
       Parser.next p;
       let name, loc = parse_lident p in
       Parser.expect ~grammar:Grammar.TypeExpression Colon p;
-      let typ = parse_typ_expr p in
+      let arg_path =
+        extend_current_type_name_path current_type_name_path name
+      in
+      let typ =
+        parse_typ_expr ?current_type_name_path:arg_path ?inline_types_context p
+      in
       match p.Parser.token with
       | Equal ->
         Parser.next p;
@@ -4623,7 +4892,13 @@ and parse_type_parameter p =
           Parser.err ~start_pos:loc.loc_start ~end_pos:loc.loc_end p error
         in
         Parser.next p;
-        let typ = parse_typ_expr p in
+        let arg_path =
+          extend_current_type_name_path current_type_name_path name
+        in
+        let typ =
+          parse_typ_expr ?current_type_name_path:arg_path ?inline_types_context
+            p
+        in
         match p.Parser.token with
         | Equal ->
           Parser.next p;
@@ -4632,26 +4907,37 @@ and parse_type_parameter p =
         | _ -> Some {attrs; label = Labelled {txt = name; loc}; typ; start_pos})
       | _ ->
         let constr = Location.mkloc (Longident.Lident name) loc in
-        let args = parse_type_constructor_args ~constr_name:constr p in
+        let args =
+          parse_type_constructor_args ?inline_types_context
+            ?current_type_name_path:positional_type_name_path
+            ~constr_name:constr p
+        in
         let typ =
           Ast_helper.Typ.constr
             ~loc:(mk_loc start_pos p.prev_end_pos)
             ~attrs constr args
         in
 
-        let typ = parse_arrow_type_rest ~es6_arrow:true ~start_pos typ p in
+        let typ =
+          parse_arrow_type_rest
+            ?current_type_name_path:positional_type_name_path
+            ?inline_types_context ~es6_arrow:true ~start_pos typ p
+        in
         let typ = parse_type_alias p typ in
         Some {attrs = []; label = Nolabel; typ; start_pos})
     | _ ->
-      let typ = parse_typ_expr p in
+      let typ =
+        parse_typ_expr ?current_type_name_path:positional_type_name_path
+          ?inline_types_context p
+      in
       let typ_with_attributes =
         {typ with ptyp_attributes = List.concat [attrs; typ.ptyp_attributes]}
       in
-      Some {attrs = []; label = Nolabel; typ = typ_with_attributes; start_pos}
+      Some {attrs = []; label = Nolabel; typ = typ_with_attributes; start_pos})
   else None
 
 (* (int, ~x:string, float) *)
-and parse_type_parameters p =
+and parse_type_parameters ?current_type_name_path ?inline_types_context p =
   let start_pos = p.Parser.start_pos in
   Parser.expect Lparen p;
   match p.Parser.token with
@@ -4662,21 +4948,41 @@ and parse_type_parameters p =
     let typ = Ast_helper.Typ.constr unit_constr [] in
     [{attrs = []; label = Nolabel; typ; start_pos}]
   | _ ->
+    let positional_index = ref 0 in
     let params =
       parse_comma_delimited_region ~grammar:Grammar.TypeParameters
-        ~closing:Rparen ~f:parse_type_parameter p
+        ~closing:Rparen
+        ~f:(fun p ->
+          let positional_type_name_path =
+            make_inline_record_argument_type_name current_type_name_path
+              inline_types_context !positional_index
+          in
+          let parameter =
+            parse_type_parameter ?current_type_name_path ?inline_types_context
+              ?positional_type_name_path p
+          in
+          (match parameter with
+          | Some _ -> incr positional_index
+          | None -> ());
+          parameter)
+        p
     in
     Parser.expect Rparen p;
     params
 
-and parse_es6_arrow_type ~attrs p =
+and parse_es6_arrow_type ?current_type_name_path ?inline_types_context ~attrs p
+    =
   let start_pos = p.Parser.start_pos in
   match p.Parser.token with
   | Tilde ->
     Parser.next p;
     let name, label_loc = parse_lident p in
     Parser.expect ~grammar:Grammar.TypeExpression Colon p;
-    let typ = parse_typ_expr ~alias:false ~es6_arrow:false p in
+    let arg_path = extend_current_type_name_path current_type_name_path name in
+    let typ =
+      parse_typ_expr ~alias:false ~es6_arrow:false
+        ?current_type_name_path:arg_path ?inline_types_context p
+    in
     let lbl =
       match p.Parser.token with
       | Equal ->
@@ -4686,14 +4992,30 @@ and parse_es6_arrow_type ~attrs p =
       | _ -> Asttypes.Labelled {txt = name; loc = label_loc}
     in
     Parser.expect EqualGreater p;
-    let return_type = parse_typ_expr ~alias:false p in
+    let return_path =
+      make_inline_record_return_type_name current_type_name_path
+        inline_types_context
+    in
+    let return_type =
+      parse_typ_expr ~alias:false ?current_type_name_path:return_path
+        ?inline_types_context p
+    in
     let loc = mk_loc start_pos p.prev_end_pos in
     Ast_helper.Typ.arrow ~loc ~arity:None {attrs; lbl; typ} return_type
   | DocComment _ -> assert false
   | _ ->
-    let parameters = parse_type_parameters p in
+    let parameters =
+      parse_type_parameters ?current_type_name_path ?inline_types_context p
+    in
     Parser.expect EqualGreater p;
-    let return_type = parse_typ_expr ~alias:false p in
+    let return_path =
+      make_inline_record_return_type_name current_type_name_path
+        inline_types_context
+    in
+    let return_type =
+      parse_typ_expr ~alias:false ?current_type_name_path:return_path
+        ?inline_types_context p
+    in
     let end_pos = p.prev_end_pos in
     let return_type_arity = 0 in
     let _paramNum, typ, _arity =
@@ -4761,25 +5083,36 @@ and parse_typ_expr ?current_type_name_path ?inline_types_context ?attrs
     | None -> parse_attributes p
   in
   let typ =
-    if es6_arrow && is_es6_arrow_type p then parse_es6_arrow_type ~attrs p
+    if es6_arrow && is_es6_arrow_type p then
+      parse_es6_arrow_type ~attrs ?current_type_name_path ?inline_types_context
+        p
     else
       let typ =
         parse_atomic_typ_expr ?current_type_name_path ?inline_types_context
           ~attrs p
       in
-      parse_arrow_type_rest ~es6_arrow ~start_pos typ p
+      parse_arrow_type_rest ?current_type_name_path ?inline_types_context
+        ~es6_arrow ~start_pos typ p
   in
   let typ = if alias then parse_type_alias p typ else typ in
   (* Parser.eatBreadcrumb p; *)
   typ
 
-and parse_arrow_type_rest ~es6_arrow ~start_pos typ p =
+and parse_arrow_type_rest ?current_type_name_path ?inline_types_context
+    ~es6_arrow ~start_pos typ p =
   match p.Parser.token with
   | (EqualGreater | MinusGreater) as token when es6_arrow == true ->
     (* error recovery *)
     if token = MinusGreater then Parser.expect EqualGreater p;
     Parser.next p;
-    let return_type = parse_typ_expr ~alias:false p in
+    let return_path =
+      make_inline_record_return_type_name current_type_name_path
+        inline_types_context
+    in
+    let return_type =
+      parse_typ_expr ~alias:false ?current_type_name_path:return_path
+        ?inline_types_context p
+    in
     let loc = mk_loc start_pos p.prev_end_pos in
     Ast_helper.Typ.arrow ~loc ~arity:(Some 1)
       {attrs = []; lbl = Nolabel; typ}
@@ -4789,6 +5122,38 @@ and parse_arrow_type_rest ~es6_arrow ~start_pos typ p =
 and parse_typ_expr_region p =
   if Grammar.is_typ_expr_start p.Parser.token then Some (parse_typ_expr p)
   else None
+
+and is_external_bare_arrow_type p =
+  Parser.lookahead p (fun state ->
+      let attrs = parse_attributes state in
+      match state.Parser.token with
+      | Lparen | Tilde | DocComment _ -> false
+      | _ -> (
+        ignore (parse_atomic_typ_expr ~attrs state);
+        match state.Parser.token with
+        | EqualGreater | MinusGreater -> true
+        | _ -> false))
+
+and parse_external_type_expr ~current_type_name_path ~inline_types_context p =
+  if is_external_bare_arrow_type p then
+    let start_pos = p.Parser.start_pos in
+    let attrs = parse_attributes p in
+    let arg_path =
+      make_inline_record_argument_type_name current_type_name_path
+        (Some inline_types_context) 0
+    in
+    let typ =
+      parse_atomic_typ_expr ~attrs ?current_type_name_path:arg_path
+        ~inline_types_context p
+    in
+    let typ =
+      parse_arrow_type_rest ?current_type_name_path ~inline_types_context
+        ~es6_arrow:true ~start_pos typ p
+    in
+    parse_type_alias p typ
+  else if is_es6_arrow_type p then
+    parse_typ_expr ?current_type_name_path ~inline_types_context p
+  else parse_typ_expr p
 
 and parse_tuple_type ~attrs ~first ~start_pos p =
   let typexprs =
@@ -6193,7 +6558,9 @@ and parse_type_definition_or_extension ~attrs p =
          |> Diagnostics.message)
     in
     let current_type_name_path = Longident.flatten name.txt in
-    let inline_types_context = {found_inline_types = []; params} in
+    let inline_types_context =
+      {found_inline_types = []; params; collect_free_type_vars = false}
+    in
     let type_defs =
       parse_type_definitions ~inline_types_context ~current_type_name_path
         ~attrs ~name ~params ~start_pos p
@@ -6205,11 +6572,11 @@ and parse_type_definition_or_extension ~attrs p =
     in
     let inline_types =
       inline_types_context.found_inline_types
-      |> List.map (fun (inline_type_name, loc, kind) ->
-             Ast_helper.Type.mk ~params
+      |> List.map (fun inline_type ->
+             Ast_helper.Type.mk ~params:inline_type.params
                ~attrs:[(Location.mknoloc "res.inlineRecordDefinition", PStr [])]
-               ~loc ~kind
-               {name with txt = inline_type_name})
+               ~loc:inline_type.loc ~kind:inline_type.kind
+               {name with txt = inline_type.name})
     in
     TypeDef {rec_flag; types = inline_types @ type_defs}
 
@@ -6218,31 +6585,50 @@ and parse_external_def ~attrs ~start_pos p =
   let in_external = !InExternal.status in
   InExternal.status := true;
   Parser.leave_breadcrumb p Grammar.External;
-  Parser.expect Token.External p;
-  let name, loc = parse_lident p in
-  let name = Location.mkloc name loc in
-  Parser.expect ~grammar:Grammar.TypeExpression Colon p;
-  let typ_expr = parse_typ_expr p in
-  let equal_start = p.start_pos in
-  let equal_end = p.end_pos in
-  Parser.expect Equal p;
-  let prim =
-    match p.token with
-    | String s ->
-      Parser.next p;
-      [s]
-    | _ ->
-      Parser.err ~start_pos:equal_start ~end_pos:equal_end p
-        (Diagnostics.message
-           ("An external requires the name of the JS value you're referring \
-             to, like \"" ^ name.txt ^ "\"."));
-      []
-  in
-  let loc = mk_loc start_pos p.prev_end_pos in
-  let vb = Ast_helper.Val.mk ~loc ~attrs ~prim name typ_expr in
-  Parser.eat_breadcrumb p;
-  InExternal.status := in_external;
-  vb
+  Fun.protect
+    ~finally:(fun () ->
+      Parser.eat_breadcrumb p;
+      InExternal.status := in_external)
+    (fun () ->
+      Parser.expect Token.External p;
+      let name, loc = parse_lident p in
+      let name = Location.mkloc name loc in
+      Parser.expect ~grammar:Grammar.TypeExpression Colon p;
+      let current_type_name_path = Some [name.txt] in
+      let inline_types_context =
+        {found_inline_types = []; params = []; collect_free_type_vars = true}
+      in
+      let typ_expr =
+        parse_external_type_expr ~current_type_name_path ~inline_types_context p
+      in
+      let equal_start = p.start_pos in
+      let equal_end = p.end_pos in
+      Parser.expect Equal p;
+      let prim =
+        match p.token with
+        | String s ->
+          Parser.next p;
+          [s]
+        | _ ->
+          Parser.err ~start_pos:equal_start ~end_pos:equal_end p
+            (Diagnostics.message
+               ("An external requires the name of the JS value you're \
+                 referring to, like \"" ^ name.txt ^ "\"."));
+          []
+      in
+      let loc = mk_loc start_pos p.prev_end_pos in
+      let vb = Ast_helper.Val.mk ~loc ~attrs ~prim name typ_expr in
+      let inline_types =
+        inline_types_context.found_inline_types
+        |> List.rev_map (fun inline_type ->
+               Ast_helper.Type.mk ~params:inline_type.params
+                 ~attrs:
+                   [(Location.mknoloc "res.inlineRecordDefinition", PStr [])]
+                 ~loc:inline_type.loc ~kind:inline_type.kind
+                 {name with txt = inline_type.name})
+        |> List.rev
+      in
+      (vb, inline_types))
 
 (* constr-def ::=
  *  | constr-decl
@@ -6306,98 +6692,111 @@ and parse_newline_or_semicolon_structure p =
             newline")
   | _ -> ()
 
-and parse_structure_item_region p =
+and parse_structure_item_region pending_structure_items p =
   let start_pos = p.Parser.start_pos in
-  let attrs = parse_attributes p in
-  match p.Parser.token with
-  | Open ->
-    let open_description = parse_open_description ~attrs p in
-    parse_newline_or_semicolon_structure p;
-    let loc = mk_loc start_pos p.prev_end_pos in
-    Some (Ast_helper.Str.open_ ~loc open_description)
-  | Let {unwrap} ->
-    let rec_flag, let_bindings =
-      parse_let_bindings ~unwrap ~attrs ~start_pos p
-    in
-    parse_newline_or_semicolon_structure p;
-    let loc = mk_loc start_pos p.prev_end_pos in
-    Some (Ast_helper.Str.value ~loc rec_flag let_bindings)
-  | Typ -> (
-    Parser.begin_region p;
-    match parse_type_definition_or_extension ~attrs p with
-    | TypeDef {rec_flag; types} ->
+  match !pending_structure_items with
+  | item :: rest ->
+    pending_structure_items := rest;
+    Some item
+  | [] -> (
+    let attrs = parse_attributes p in
+    match p.Parser.token with
+    | Open ->
+      let open_description = parse_open_description ~attrs p in
+      parse_newline_or_semicolon_structure p;
+      let loc = mk_loc start_pos p.prev_end_pos in
+      Some (Ast_helper.Str.open_ ~loc open_description)
+    | Let {unwrap} ->
+      let rec_flag, let_bindings =
+        parse_let_bindings ~unwrap ~attrs ~start_pos p
+      in
+      parse_newline_or_semicolon_structure p;
+      let loc = mk_loc start_pos p.prev_end_pos in
+      Some (Ast_helper.Str.value ~loc rec_flag let_bindings)
+    | Typ -> (
+      Parser.begin_region p;
+      match parse_type_definition_or_extension ~attrs p with
+      | TypeDef {rec_flag; types} ->
+        parse_newline_or_semicolon_structure p;
+        let loc = mk_loc start_pos p.prev_end_pos in
+        Parser.end_region p;
+        Some (Ast_helper.Str.type_ ~loc rec_flag types)
+      | TypeExt ext ->
+        parse_newline_or_semicolon_structure p;
+        let loc = mk_loc start_pos p.prev_end_pos in
+        Parser.end_region p;
+        Some (Ast_helper.Str.type_extension ~loc ext))
+    | External -> (
+      let external_def, inline_types = parse_external_def ~attrs ~start_pos p in
+      parse_newline_or_semicolon_structure p;
+      let loc = mk_loc start_pos p.prev_end_pos in
+      match inline_types with
+      | [] -> Some (Ast_helper.Str.primitive ~loc external_def)
+      | _ ->
+        let type_item =
+          Ast_helper.Str.type_ ~loc Asttypes.Recursive inline_types
+        in
+        let primitive_item = Ast_helper.Str.primitive ~loc external_def in
+        pending_structure_items := primitive_item :: !pending_structure_items;
+        Some type_item)
+    | Exception ->
+      let exception_def = parse_exception_def ~attrs p in
+      parse_newline_or_semicolon_structure p;
+      let loc = mk_loc start_pos p.prev_end_pos in
+      Some (Ast_helper.Str.exception_ ~loc exception_def)
+    | Include ->
+      let include_statement = parse_include_statement ~attrs p in
+      parse_newline_or_semicolon_structure p;
+      let loc = mk_loc start_pos p.prev_end_pos in
+      Some (Ast_helper.Str.include_ ~loc include_statement)
+    | Module ->
+      Parser.begin_region p;
+      let structure_item =
+        parse_module_or_module_type_impl_or_pack_expr ~attrs p
+      in
       parse_newline_or_semicolon_structure p;
       let loc = mk_loc start_pos p.prev_end_pos in
       Parser.end_region p;
-      Some (Ast_helper.Str.type_ ~loc rec_flag types)
-    | TypeExt ext ->
-      parse_newline_or_semicolon_structure p;
-      let loc = mk_loc start_pos p.prev_end_pos in
-      Parser.end_region p;
-      Some (Ast_helper.Str.type_extension ~loc ext))
-  | External ->
-    let external_def = parse_external_def ~attrs ~start_pos p in
-    parse_newline_or_semicolon_structure p;
-    let loc = mk_loc start_pos p.prev_end_pos in
-    Some (Ast_helper.Str.primitive ~loc external_def)
-  | Exception ->
-    let exception_def = parse_exception_def ~attrs p in
-    parse_newline_or_semicolon_structure p;
-    let loc = mk_loc start_pos p.prev_end_pos in
-    Some (Ast_helper.Str.exception_ ~loc exception_def)
-  | Include ->
-    let include_statement = parse_include_statement ~attrs p in
-    parse_newline_or_semicolon_structure p;
-    let loc = mk_loc start_pos p.prev_end_pos in
-    Some (Ast_helper.Str.include_ ~loc include_statement)
-  | Module ->
-    Parser.begin_region p;
-    let structure_item =
-      parse_module_or_module_type_impl_or_pack_expr ~attrs p
-    in
-    parse_newline_or_semicolon_structure p;
-    let loc = mk_loc start_pos p.prev_end_pos in
-    Parser.end_region p;
-    Some {structure_item with pstr_loc = loc}
-  | ModuleComment (loc, s) ->
-    Parser.next p;
-    Some
-      (Ast_helper.Str.attribute ~loc
-         ( {txt = "res.doc"; loc},
-           PStr
-             [
-               Ast_helper.Str.eval ~loc
-                 (Ast_helper.Exp.constant ~loc (Pconst_string (s, None)));
-             ] ))
-  | AtAt ->
-    let attr = parse_standalone_attribute p in
-    parse_newline_or_semicolon_structure p;
-    let loc = mk_loc start_pos p.prev_end_pos in
-    Some (Ast_helper.Str.attribute ~loc attr)
-  | PercentPercent ->
-    let extension = parse_extension ~module_language:true p in
-    parse_newline_or_semicolon_structure p;
-    let loc = mk_loc start_pos p.prev_end_pos in
-    Some (Ast_helper.Str.extension ~attrs ~loc extension)
-  | token when Grammar.is_expr_start token ->
-    let prev_end_pos = p.Parser.end_pos in
-    let exp = parse_expr p in
-    parse_newline_or_semicolon_structure p;
-    let loc = mk_loc start_pos p.prev_end_pos in
-    Parser.check_progress ~prev_end_pos
-      ~result:(Ast_helper.Str.eval ~loc ~attrs exp)
-      p
-  | _ -> (
-    match attrs with
-    | (({Asttypes.loc = attr_loc}, _) as attr) :: _ ->
-      Parser.err ~start_pos:attr_loc.loc_start ~end_pos:attr_loc.loc_end p
-        (Diagnostics.message (ErrorMessages.attribute_without_node attr));
-      let expr = parse_expr p in
+      Some {structure_item with pstr_loc = loc}
+    | ModuleComment (loc, s) ->
+      Parser.next p;
       Some
-        (Ast_helper.Str.eval
-           ~loc:(mk_loc p.start_pos p.prev_end_pos)
-           ~attrs expr)
-    | _ -> None)
+        (Ast_helper.Str.attribute ~loc
+           ( {txt = "res.doc"; loc},
+             PStr
+               [
+                 Ast_helper.Str.eval ~loc
+                   (Ast_helper.Exp.constant ~loc (Pconst_string (s, None)));
+               ] ))
+    | AtAt ->
+      let attr = parse_standalone_attribute p in
+      parse_newline_or_semicolon_structure p;
+      let loc = mk_loc start_pos p.prev_end_pos in
+      Some (Ast_helper.Str.attribute ~loc attr)
+    | PercentPercent ->
+      let extension = parse_extension ~module_language:true p in
+      parse_newline_or_semicolon_structure p;
+      let loc = mk_loc start_pos p.prev_end_pos in
+      Some (Ast_helper.Str.extension ~attrs ~loc extension)
+    | token when Grammar.is_expr_start token ->
+      let prev_end_pos = p.Parser.end_pos in
+      let exp = parse_expr p in
+      parse_newline_or_semicolon_structure p;
+      let loc = mk_loc start_pos p.prev_end_pos in
+      Parser.check_progress ~prev_end_pos
+        ~result:(Ast_helper.Str.eval ~loc ~attrs exp)
+        p
+    | _ -> (
+      match attrs with
+      | (({Asttypes.loc = attr_loc}, _) as attr) :: _ ->
+        Parser.err ~start_pos:attr_loc.loc_start ~end_pos:attr_loc.loc_end p
+          (Diagnostics.message (ErrorMessages.attribute_without_node attr));
+        let expr = parse_expr p in
+        Some
+          (Ast_helper.Str.eval
+             ~loc:(mk_loc p.start_pos p.prev_end_pos)
+             ~attrs expr)
+      | _ -> None))
 [@@progress Parser.next, Parser.expect]
 
 (* include-statement ::= include module-expr *)
@@ -6416,10 +6815,12 @@ and parse_atomic_module_expr p =
     Ast_helper.Mod.ident ~loc:longident.loc longident
   | Lbrace ->
     Parser.next p;
+    let pending_structure_items = ref [] in
     let structure =
       Ast_helper.Mod.structure
         (parse_delimited_region ~grammar:Grammar.Structure ~closing:Rbrace
-           ~f:parse_structure_item_region p)
+           ~f:(parse_structure_item_region pending_structure_items)
+           p)
     in
     Parser.expect Rbrace p;
     let end_pos = p.prev_end_pos in
@@ -6767,9 +7168,11 @@ and parse_atomic_module_type p =
       {mty with pmty_loc = mk_loc start_pos p.prev_end_pos}
     | Lbrace ->
       Parser.next p;
+      let pending_signature_items = ref [] in
       let spec =
         parse_delimited_region ~grammar:Grammar.Signature ~closing:Rbrace
-          ~f:parse_signature_item_region p
+          ~f:(parse_signature_item_region pending_signature_items)
+          p
       in
       Parser.expect Rbrace p;
       let loc = mk_loc start_pos p.prev_end_pos in
@@ -6943,113 +7346,126 @@ and parse_newline_or_semicolon_signature p =
             newline")
   | _ -> ()
 
-and parse_signature_item_region p =
+and parse_signature_item_region pending_signature_items p =
   let start_pos = p.Parser.start_pos in
-  let attrs = parse_attributes p in
-  match p.Parser.token with
-  | Let {unwrap} ->
-    if unwrap then (
-      Parser.err ~start_pos ~end_pos:p.Parser.end_pos p
-        (Diagnostics.message ErrorMessages.experimental_let_unwrap_sig);
-      Parser.next p);
-    Parser.begin_region p;
-    let value_desc = parse_sign_let_desc ~attrs p in
-    parse_newline_or_semicolon_signature p;
-    let loc = mk_loc start_pos p.prev_end_pos in
-    Parser.end_region p;
-    Some (Ast_helper.Sig.value ~loc value_desc)
-  | Typ -> (
-    Parser.begin_region p;
-    match parse_type_definition_or_extension ~attrs p with
-    | TypeDef {rec_flag; types} ->
-      parse_newline_or_semicolon_signature p;
-      let loc = mk_loc start_pos p.prev_end_pos in
-      Parser.end_region p;
-      Some (Ast_helper.Sig.type_ ~loc rec_flag types)
-    | TypeExt ext ->
-      parse_newline_or_semicolon_signature p;
-      let loc = mk_loc start_pos p.prev_end_pos in
-      Parser.end_region p;
-      Some (Ast_helper.Sig.type_extension ~loc ext))
-  | External ->
-    let external_def = parse_external_def ~attrs ~start_pos p in
-    parse_newline_or_semicolon_signature p;
-    let loc = mk_loc start_pos p.prev_end_pos in
-    Some (Ast_helper.Sig.value ~loc external_def)
-  | Exception ->
-    let exception_def = parse_exception_def ~attrs p in
-    parse_newline_or_semicolon_signature p;
-    let loc = mk_loc start_pos p.prev_end_pos in
-    Some (Ast_helper.Sig.exception_ ~loc exception_def)
-  | Open ->
-    let open_description = parse_open_description ~attrs p in
-    parse_newline_or_semicolon_signature p;
-    let loc = mk_loc start_pos p.prev_end_pos in
-    Some (Ast_helper.Sig.open_ ~loc open_description)
-  | Include ->
-    Parser.next p;
-    let module_type = parse_module_type p in
-    let include_description =
-      Ast_helper.Incl.mk
-        ~loc:(mk_loc start_pos p.prev_end_pos)
-        ~attrs module_type
-    in
-    parse_newline_or_semicolon_signature p;
-    let loc = mk_loc start_pos p.prev_end_pos in
-    Some (Ast_helper.Sig.include_ ~loc include_description)
-  | Module -> (
-    Parser.begin_region p;
-    Parser.next p;
+  match !pending_signature_items with
+  | item :: rest ->
+    pending_signature_items := rest;
+    Some item
+  | [] -> (
+    let attrs = parse_attributes p in
     match p.Parser.token with
-    | Uident _ ->
-      let mod_decl = parse_module_declaration_or_alias ~attrs p in
+    | Let {unwrap} ->
+      if unwrap then (
+        Parser.err ~start_pos ~end_pos:p.Parser.end_pos p
+          (Diagnostics.message ErrorMessages.experimental_let_unwrap_sig);
+        Parser.next p);
+      Parser.begin_region p;
+      let value_desc = parse_sign_let_desc ~attrs p in
       parse_newline_or_semicolon_signature p;
       let loc = mk_loc start_pos p.prev_end_pos in
       Parser.end_region p;
-      Some (Ast_helper.Sig.module_ ~loc mod_decl)
-    | Rec ->
-      let rec_module = parse_rec_module_spec ~attrs ~start_pos p in
+      Some (Ast_helper.Sig.value ~loc value_desc)
+    | Typ -> (
+      Parser.begin_region p;
+      match parse_type_definition_or_extension ~attrs p with
+      | TypeDef {rec_flag; types} ->
+        parse_newline_or_semicolon_signature p;
+        let loc = mk_loc start_pos p.prev_end_pos in
+        Parser.end_region p;
+        Some (Ast_helper.Sig.type_ ~loc rec_flag types)
+      | TypeExt ext ->
+        parse_newline_or_semicolon_signature p;
+        let loc = mk_loc start_pos p.prev_end_pos in
+        Parser.end_region p;
+        Some (Ast_helper.Sig.type_extension ~loc ext))
+    | External -> (
+      let external_def, inline_types = parse_external_def ~attrs ~start_pos p in
       parse_newline_or_semicolon_signature p;
       let loc = mk_loc start_pos p.prev_end_pos in
-      Parser.end_region p;
-      Some (Ast_helper.Sig.rec_module ~loc rec_module)
-    | Typ ->
-      let mod_type_decl = parse_module_type_declaration ~attrs ~start_pos p in
-      Parser.end_region p;
-      Some mod_type_decl
-    | _t ->
-      let mod_decl = parse_module_declaration_or_alias ~attrs p in
+      match inline_types with
+      | [] -> Some (Ast_helper.Sig.value ~loc external_def)
+      | _ ->
+        let type_item =
+          Ast_helper.Sig.type_ ~loc Asttypes.Recursive inline_types
+        in
+        let value_item = Ast_helper.Sig.value ~loc external_def in
+        pending_signature_items := value_item :: !pending_signature_items;
+        Some type_item)
+    | Exception ->
+      let exception_def = parse_exception_def ~attrs p in
       parse_newline_or_semicolon_signature p;
       let loc = mk_loc start_pos p.prev_end_pos in
-      Parser.end_region p;
-      Some (Ast_helper.Sig.module_ ~loc mod_decl))
-  | AtAt ->
-    let attr = parse_standalone_attribute p in
-    parse_newline_or_semicolon_signature p;
-    let loc = mk_loc start_pos p.prev_end_pos in
-    Some (Ast_helper.Sig.attribute ~loc attr)
-  | ModuleComment (loc, s) ->
-    Parser.next p;
-    Some
-      (Ast_helper.Sig.attribute ~loc
-         ( {txt = "res.doc"; loc},
-           PStr
-             [
-               Ast_helper.Str.eval ~loc
-                 (Ast_helper.Exp.constant ~loc (Pconst_string (s, None)));
-             ] ))
-  | PercentPercent ->
-    let extension = parse_extension ~module_language:true p in
-    parse_newline_or_semicolon_signature p;
-    let loc = mk_loc start_pos p.prev_end_pos in
-    Some (Ast_helper.Sig.extension ~attrs ~loc extension)
-  | _ -> (
-    match attrs with
-    | (({Asttypes.loc = attr_loc}, _) as attr) :: _ ->
-      Parser.err ~start_pos:attr_loc.loc_start ~end_pos:attr_loc.loc_end p
-        (Diagnostics.message (ErrorMessages.attribute_without_node attr));
-      Some Recover.default_signature_item
-    | _ -> None)
+      Some (Ast_helper.Sig.exception_ ~loc exception_def)
+    | Open ->
+      let open_description = parse_open_description ~attrs p in
+      parse_newline_or_semicolon_signature p;
+      let loc = mk_loc start_pos p.prev_end_pos in
+      Some (Ast_helper.Sig.open_ ~loc open_description)
+    | Include ->
+      Parser.next p;
+      let module_type = parse_module_type p in
+      let include_description =
+        Ast_helper.Incl.mk
+          ~loc:(mk_loc start_pos p.prev_end_pos)
+          ~attrs module_type
+      in
+      parse_newline_or_semicolon_signature p;
+      let loc = mk_loc start_pos p.prev_end_pos in
+      Some (Ast_helper.Sig.include_ ~loc include_description)
+    | Module -> (
+      Parser.begin_region p;
+      Parser.next p;
+      match p.Parser.token with
+      | Uident _ ->
+        let mod_decl = parse_module_declaration_or_alias ~attrs p in
+        parse_newline_or_semicolon_signature p;
+        let loc = mk_loc start_pos p.prev_end_pos in
+        Parser.end_region p;
+        Some (Ast_helper.Sig.module_ ~loc mod_decl)
+      | Rec ->
+        let rec_module = parse_rec_module_spec ~attrs ~start_pos p in
+        parse_newline_or_semicolon_signature p;
+        let loc = mk_loc start_pos p.prev_end_pos in
+        Parser.end_region p;
+        Some (Ast_helper.Sig.rec_module ~loc rec_module)
+      | Typ ->
+        let mod_type_decl = parse_module_type_declaration ~attrs ~start_pos p in
+        Parser.end_region p;
+        Some mod_type_decl
+      | _t ->
+        let mod_decl = parse_module_declaration_or_alias ~attrs p in
+        parse_newline_or_semicolon_signature p;
+        let loc = mk_loc start_pos p.prev_end_pos in
+        Parser.end_region p;
+        Some (Ast_helper.Sig.module_ ~loc mod_decl))
+    | AtAt ->
+      let attr = parse_standalone_attribute p in
+      parse_newline_or_semicolon_signature p;
+      let loc = mk_loc start_pos p.prev_end_pos in
+      Some (Ast_helper.Sig.attribute ~loc attr)
+    | ModuleComment (loc, s) ->
+      Parser.next p;
+      Some
+        (Ast_helper.Sig.attribute ~loc
+           ( {txt = "res.doc"; loc},
+             PStr
+               [
+                 Ast_helper.Str.eval ~loc
+                   (Ast_helper.Exp.constant ~loc (Pconst_string (s, None)));
+               ] ))
+    | PercentPercent ->
+      let extension = parse_extension ~module_language:true p in
+      parse_newline_or_semicolon_signature p;
+      let loc = mk_loc start_pos p.prev_end_pos in
+      Some (Ast_helper.Sig.extension ~attrs ~loc extension)
+    | _ -> (
+      match attrs with
+      | (({Asttypes.loc = attr_loc}, _) as attr) :: _ ->
+        Parser.err ~start_pos:attr_loc.loc_start ~end_pos:attr_loc.loc_end p
+          (Diagnostics.message (ErrorMessages.attribute_without_node attr));
+        Some Recover.default_signature_item
+      | _ -> None))
 [@@progress Parser.next, Parser.expect]
 
 (* module rec module-name :  module-type  { and module-name:  module-type } *)
@@ -7209,9 +7625,11 @@ and parse_payload p =
       Parser.next p;
       let payload =
         if Grammar.is_signature_item_start p.token then
+          let pending_signature_items = ref [] in
           Parsetree.PSig
             (parse_delimited_region ~grammar:Grammar.Signature ~closing:Rparen
-               ~f:parse_signature_item_region p)
+               ~f:(parse_signature_item_region pending_signature_items)
+               p)
         else Parsetree.PTyp (parse_typ_expr p)
       in
       Parser.expect Rparen p;
@@ -7231,9 +7649,11 @@ and parse_payload p =
       Parser.eat_breadcrumb p;
       Parsetree.PPat (pattern, expr)
     | _ ->
+      let pending_structure_items = ref [] in
       let items =
         parse_delimited_region ~grammar:Grammar.Structure ~closing:Rparen
-          ~f:parse_structure_item_region p
+          ~f:(parse_structure_item_region pending_structure_items)
+          p
       in
       Parser.expect Rparen p;
       Parser.eat_breadcrumb p;
@@ -7320,8 +7740,12 @@ and parse_extension ?(module_language = false) p =
 
 (* module signature on the file level *)
 let parse_specification p : Parsetree.signature =
-  parse_region p ~grammar:Grammar.Specification ~f:parse_signature_item_region
+  let pending_signature_items = ref [] in
+  parse_region p ~grammar:Grammar.Specification
+    ~f:(parse_signature_item_region pending_signature_items)
 
 (* module structure on the file level *)
 let parse_implementation p : Parsetree.structure =
-  parse_region p ~grammar:Grammar.Implementation ~f:parse_structure_item_region
+  let pending_structure_items = ref [] in
+  parse_region p ~grammar:Grammar.Implementation
+    ~f:(parse_structure_item_region pending_structure_items)

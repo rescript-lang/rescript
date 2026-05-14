@@ -13,7 +13,7 @@ type componentLike<'props, 'return> = Jsx.componentLike<'props, 'return>
 
 type component<'props> = Jsx.component<'props>
 
-external component: componentLike<'props, element> => component<'props> = "%identity"
+external component: componentLike<'props, element> => component<'props> = "%component_identity"
 
 @module("react")
 external createElement: (component<'props>, 'props) => element = "createElement"
@@ -47,7 +47,7 @@ type fragmentProps = {children?: element}
 type ref<'value> = {mutable current: 'value}
 
 @module("react")
-external createRef: unit => ref<Js.nullable<'a>> = "createRef"
+external createRef: unit => ref<nullable<'a>> = "createRef"
 
 module Children = {
   @module("react") @scope("Children")
@@ -82,8 +82,7 @@ module Context = {
 external createContext: 'a => Context.t<'a> = "createContext"
 
 @module("react")
-external forwardRef: (('props, Js.Nullable.t<ref<'a>>) => element) => component<'props> =
-  "forwardRef"
+external forwardRef: (('props, nullable<ref<'a>>) => element) => component<'props> = "forwardRef"
 
 @module("react")
 external memo: component<'props> => component<'props> = "memo"
@@ -257,56 +256,50 @@ external usePromise: promise<'a> => 'a = "use"
 @module("react") external useRef: 'value => ref<'value> = "useRef"
 
 @module("react")
-external useImperativeHandleOnEveryRender: (Js.Nullable.t<ref<'value>>, unit => 'value) => unit =
+external useImperativeHandleOnEveryRender: (nullable<ref<'value>>, unit => 'value) => unit =
   "useImperativeHandle"
 
 @module("react")
-external useImperativeHandle: (Js.Nullable.t<ref<'value>>, unit => 'value, 'deps) => unit =
+external useImperativeHandle: (nullable<ref<'value>>, unit => 'value, 'deps) => unit =
   "useImperativeHandle"
 
 @module("react")
-external useImperativeHandle0: (
-  Js.Nullable.t<ref<'value>>,
-  unit => 'value,
-  @as(json`[]`) _,
-) => unit = "useImperativeHandle"
-
-@module("react")
-external useImperativeHandle1: (Js.Nullable.t<ref<'value>>, unit => 'value, array<'a>) => unit =
+external useImperativeHandle0: (nullable<ref<'value>>, unit => 'value, @as(json`[]`) _) => unit =
   "useImperativeHandle"
 
 @module("react")
-external useImperativeHandle2: (Js.Nullable.t<ref<'value>>, unit => 'value, ('a, 'b)) => unit =
+external useImperativeHandle1: (nullable<ref<'value>>, unit => 'value, array<'a>) => unit =
   "useImperativeHandle"
 
 @module("react")
-external useImperativeHandle3: (Js.Nullable.t<ref<'value>>, unit => 'value, ('a, 'b, 'c)) => unit =
+external useImperativeHandle2: (nullable<ref<'value>>, unit => 'value, ('a, 'b)) => unit =
   "useImperativeHandle"
 
 @module("react")
-external useImperativeHandle4: (
-  Js.Nullable.t<ref<'value>>,
-  unit => 'value,
-  ('a, 'b, 'c, 'd),
-) => unit = "useImperativeHandle"
+external useImperativeHandle3: (nullable<ref<'value>>, unit => 'value, ('a, 'b, 'c)) => unit =
+  "useImperativeHandle"
+
+@module("react")
+external useImperativeHandle4: (nullable<ref<'value>>, unit => 'value, ('a, 'b, 'c, 'd)) => unit =
+  "useImperativeHandle"
 
 @module("react")
 external useImperativeHandle5: (
-  Js.Nullable.t<ref<'value>>,
+  nullable<ref<'value>>,
   unit => 'value,
   ('a, 'b, 'c, 'd, 'e),
 ) => unit = "useImperativeHandle"
 
 @module("react")
 external useImperativeHandle6: (
-  Js.Nullable.t<ref<'value>>,
+  nullable<ref<'value>>,
   unit => 'value,
   ('a, 'b, 'c, 'd, 'e, 'f),
 ) => unit = "useImperativeHandle"
 
 @module("react")
 external useImperativeHandle7: (
-  Js.Nullable.t<ref<'value>>,
+  nullable<ref<'value>>,
   unit => 'value,
   ('a, 'b, 'c, 'd, 'e, 'f, 'g),
 ) => unit = "useImperativeHandle"
@@ -456,8 +449,7 @@ external act: (unit => promise<unit>) => promise<unit> = "act"
 captureOwnerStack reads the current Owner Stack in development and returns it as a string if available.
 [Read more on the React Documentation](https://react.dev/reference/react/captureOwnerStack)
 */
-@module("react")
-@return(null_to_opt)
+@module("react") @return(null_to_opt)
 external captureOwnerStack: unit => option<string> = "captureOwnerStack"
 
 /**

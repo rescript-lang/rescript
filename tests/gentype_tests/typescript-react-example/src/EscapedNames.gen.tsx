@@ -20,4 +20,10 @@ export type record = {
   readonly UPPERCASE: number
 };
 
+export type props = {};
+
 export const myRecord: record = EscapedNamesJS.myRecord as any;
+
+export const Icon_Add: React.ComponentType<{}> = EscapedNamesJS.Icon_Add as any;
+
+export const SomeValue: string = EscapedNamesJS.SomeValue as any;

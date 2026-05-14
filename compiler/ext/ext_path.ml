@@ -110,21 +110,16 @@ let absolute_cwd_path s = absolute_path cwd s
    | File x -> File (absolute_path cwd x )
    | Dir x -> Dir (absolute_path cwd x) *)
 
-(* Input must be absolute directory *)
-let rec find_root_filename ~cwd filenames =
-  let file_exists =
-    Ext_list.exists filenames (fun filename ->
-        Sys.file_exists (Filename.concat cwd filename))
-  in
-  if file_exists then cwd
-  else
-    let cwd' = Filename.dirname cwd in
-    if String.length cwd' < String.length cwd then
-      find_root_filename ~cwd:cwd' filenames
-    else
-      Ext_fmt.failwithf ~loc:__LOC__ "%s not found from %s" (List.hd filenames)
-        cwd
+(** Populated by [-bs-project-root]. The build system (rewatch) or
+    [cli/bsc.js] is responsible for supplying it; the compiler no longer
+    reads [rescript.json] itself. *)
+let project_root : string option ref = ref None
 
-let find_config_dir cwd = find_root_filename ~cwd [Literals.rescript_json]
-
-let package_dir = lazy (find_config_dir (Lazy.force cwd))
+let package_dir () =
+  match !project_root with
+  | Some dir -> dir
+  | None ->
+    Ext_fmt.failwithf ~loc:__LOC__
+      "bsc was invoked without -bs-project-root; cannot determine the package \
+       root. Pass -bs-project-root <dir> or invoke bsc via rewatch / \
+       cli/bsc.js."

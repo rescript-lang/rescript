@@ -8,7 +8,10 @@ external setUnsafe: (array<'a>, int, 'a) => unit = "%array_unsafe_set"
 
 external unsafe_get: (array<'a>, int) => 'a = "%array_unsafe_get"
 
-@val external fromIterator: Stdlib_Iterator.t<'a> => array<'a> = "Array.from"
+external asIterable: array<'a> => Stdlib_Iterable.t<'a> = "%identity"
+
+@val
+external fromIterable: Stdlib_Iterable.t<'a> => array<'a> = "Array.from"
 @val external fromArrayLike: arrayLike<'a> => array<'a> = "Array.from"
 @val
 external fromArrayLikeWithMap: (arrayLike<'a>, 'a => 'b) => array<'b> = "Array.from"
@@ -142,6 +145,7 @@ external removeInPlace: (array<'a>, int, @as(1) _) => unit = "splice"
 
 @send external concat: (array<'a>, array<'a>) => array<'a> = "concat"
 @variadic @send external concatMany: (array<'a>, array<array<'a>>) => array<'a> = "concat"
+let concatAll = arrays => concatMany([], arrays)
 
 @send external flat: array<array<'a>> => array<'a> = "flat"
 
@@ -406,7 +410,7 @@ let last = a => a->get(a->length - 1)
 external ignore: array<'a> => unit = "%ignore"
 
 @send
-external entries: array<'a> => Stdlib_Iterator.t<(int, 'a)> = "entries"
+external entries: array<'a> => Stdlib_IteratorObject.t<(int, 'a), unit, unknown> = "entries"
 
 @send
-external values: array<'a> => Stdlib_Iterator.t<'a> = "values"
+external values: array<'a> => Stdlib_IteratorObject.t<'a, unit, unknown> = "values"

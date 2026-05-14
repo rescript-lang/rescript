@@ -115,21 +115,6 @@ function get(_n, x) {
   };
 }
 
-function getUndefined(_n, x) {
-  while (true) {
-    let n = _n;
-    if (n === undefined) {
-      return;
-    }
-    let v = n.v;
-    if (x === v) {
-      return v;
-    }
-    _n = x < v ? n.l : n.r;
-    continue;
-  };
-}
-
 function getOrThrow(_n, x) {
   while (true) {
     let n = _n;
@@ -200,7 +185,6 @@ exports.cmp = cmp;
 exports.eq = eq;
 exports.subset = subset;
 exports.get = get;
-exports.getUndefined = getUndefined;
 exports.getOrThrow = getOrThrow;
 exports.addMutate = addMutate;
 exports.fromArray = fromArray;

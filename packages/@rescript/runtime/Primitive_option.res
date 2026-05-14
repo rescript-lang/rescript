@@ -48,8 +48,8 @@ let fromNull = (type t, x: Js.null<t>): option<t> =>
 /* external valFromOption : 'a option -> 'a =
  "#val_from_option" */
 
-/** The input is already of [Some] form, [x] is not None, 
-    make sure [x[0]] will not throw */
+/** Preserves `None`/`undefined` and unwraps one outer option layer.
+    Nested `Some` values stay encoded one level deeper. */
 let valFromOption = (x: Obj.t): Obj.t =>
   if x !== Obj.repr(Js.null) && isNested(x) {
     let {depth}: nested = Obj.magic(x)
@@ -60,13 +60,6 @@ let valFromOption = (x: Obj.t): Obj.t =>
     }
   } else {
     Obj.magic(x)
-  }
-
-let toUndefined = (x: option<'a>) =>
-  if x == None {
-    Js.undefined
-  } else {
-    Obj.magic(valFromOption(Obj.repr(x)))
   }
 
 type poly = {@as("VAL") value: Obj.t}

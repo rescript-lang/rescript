@@ -176,24 +176,12 @@ function minimum(m) {
   return Belt_SetDict.minimum(m.data);
 }
 
-function minUndefined(m) {
-  return Belt_SetDict.minUndefined(m.data);
-}
-
 function maximum(m) {
   return Belt_SetDict.maximum(m.data);
 }
 
-function maxUndefined(m) {
-  return Belt_SetDict.maxUndefined(m.data);
-}
-
 function get(m, e) {
   return Belt_SetDict.get(m.data, e, m.cmp);
-}
-
-function getUndefined(m, e) {
-  return Belt_SetDict.getUndefined(m.data, e, m.cmp);
 }
 
 function getOrThrow(m, e) {
@@ -287,11 +275,8 @@ exports.size = size;
 exports.toArray = toArray;
 exports.toList = toList;
 exports.minimum = minimum;
-exports.minUndefined = minUndefined;
 exports.maximum = maximum;
-exports.maxUndefined = maxUndefined;
 exports.get = get;
-exports.getUndefined = getUndefined;
 exports.getExn = getExn;
 exports.getOrThrow = getOrThrow;
 exports.split = split;

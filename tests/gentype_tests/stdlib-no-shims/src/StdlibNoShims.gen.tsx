@@ -89,9 +89,27 @@ export const idBigUint64Array: (x:BigUint64Array) => BigUint64Array = StdlibNoSh
 
 export const idSymbol: (x:symbol) => symbol = StdlibNoShimsJS.idSymbol as any;
 
-export const idIterator: (x:Iterator<number>) => Iterator<number> = StdlibNoShimsJS.idIterator as any;
+export const idIterable: (x:Iterable<number>) => Iterable<number> = StdlibNoShimsJS.idIterable as any;
 
-export const idAsyncIterator: (x:AsyncIterator<number>) => AsyncIterator<number> = StdlibNoShimsJS.idAsyncIterator as any;
+export const idBuiltinIterable: (x:Iterable<number>) => Iterable<number> = StdlibNoShimsJS.idBuiltinIterable as any;
+
+export const idIterator: (x:Iterator<number,void,void>) => Iterator<number,void,void> = StdlibNoShimsJS.idIterator as any;
+
+export const idIteratorObject: (x:IteratorObject<number,void,void>) => IteratorObject<number,void,void> = StdlibNoShimsJS.idIteratorObject as any;
+
+export const idIterableIterator: (x:IterableIterator<number,void,void>) => IterableIterator<number,void,void> = StdlibNoShimsJS.idIterableIterator as any;
+
+export const idGenerator: (x:Generator<number,void,void>) => Generator<number,void,void> = StdlibNoShimsJS.idGenerator as any;
+
+export const idAsyncIterable: (x:AsyncIterable<number>) => AsyncIterable<number> = StdlibNoShimsJS.idAsyncIterable as any;
+
+export const idBuiltinAsyncIterable: (x:AsyncIterable<number>) => AsyncIterable<number> = StdlibNoShimsJS.idBuiltinAsyncIterable as any;
+
+export const idAsyncIterator: (x:AsyncIterator<number,void,void>) => AsyncIterator<number,void,void> = StdlibNoShimsJS.idAsyncIterator as any;
+
+export const idAsyncIterableIterator: (x:AsyncIterableIterator<number,void,void>) => AsyncIterableIterator<number,void,void> = StdlibNoShimsJS.idAsyncIterableIterator as any;
+
+export const idAsyncGenerator: (x:AsyncGenerator<number,void,void>) => AsyncGenerator<number,void,void> = StdlibNoShimsJS.idAsyncGenerator as any;
 
 export const idOrdering: (x:number) => number = StdlibNoShimsJS.idOrdering as any;
 

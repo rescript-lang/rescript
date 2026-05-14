@@ -1,0 +1,19 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/jsx_component_prop_plain_function.res[0m:[2m19:46-58[0m
+
+  17 [2m│[0m }
+  18 [2m│[0m 
+  [1;31m19[0m [2m│[0m let _ = <List itemSeparatorComponent={_props [1;31m=> React.null[0m} />
+  20 [2m│[0m 
+
+  This has type: [1;31m'a => 'b[0m
+  But it's expected to have type:
+    [1;33mReact.component<List.separatorProps>[0m [2m(defined as[0m
+      [1;33mJsx.component<List.separatorProps>[0m[2m)[0m
+
+  A React component is expected here, but this expression is a plain function.
+
+  Possible solutions:
+  - Extract it to a component annotated with [1;33m@react.component[0m or [1;33m@react.componentWithProps[0m
+  - If this is already a valid component-like value, wrap it with [1;33mReact.component(...)[0m

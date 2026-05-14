@@ -7,7 +7,7 @@
     "dev": "rescript --watch"
   },
   "dependencies": {
-    "@rescript/react": "link:../dependencies/rescript-react",
+    "@rescript/react": "workspace:^",
     "rescript": "workspace:^"
   }
 }

@@ -142,6 +142,7 @@ let _youtube_iframe =
 
 module X = {
   type props = {}
+  @react.componentWithProps
   let make = (_props: props) => React.null
 }
 

@@ -162,13 +162,13 @@ include
               if (parentGet successor) === None
               then rootSet rbt (Some successor))
            else
-             (let break = ref false in
+             (let break_ = ref false in
               let successorRef = ref successor in
-              while not break.contents do
+              while not break_.contents do
                 let successor = successorRef.contents in
                 match parentGet successor with
                 | None ->
-                    (rootSet rbt (Some successor); break.contents <- true)
+                    (rootSet rbt (Some successor); break_.contents <- true)
                 | Some successorParent ->
                     let sibling = siblingOf successor in
                     (if
@@ -215,7 +215,7 @@ include
                         then
                           (if (!==) sibling None then colorSet siblingNN Red;
                            colorSet successorParent Black;
-                           break.contents <- true)
+                           break_.contents <- true)
                         else
                           if
                             ((!==) sibling None) &&
@@ -254,7 +254,7 @@ include
                                   colorSet (castNotOption (rightGet sibling))
                                     Black;
                                   rotateLeft rbt sibling);
-                             break.contents <- true)
+                             break_.contents <- true)
                           else
                             (let sibling = siblingOf successor in
                              let sibling = castNotOption sibling in

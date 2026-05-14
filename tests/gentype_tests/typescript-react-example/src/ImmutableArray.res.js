@@ -26,10 +26,6 @@ function getUnsafe(a, x) {
   return a[x];
 }
 
-function getUndefined(a, x) {
-  return a[x];
-}
-
 let shuffle = Belt_Array.shuffle;
 
 let reverse = Belt_Array.reverse;
@@ -153,7 +149,6 @@ export {
   get,
   getExn,
   getUnsafe,
-  getUndefined,
   shuffle,
   reverse,
   makeUninitialized,

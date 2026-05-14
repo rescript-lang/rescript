@@ -36,21 +36,6 @@ function get(_n, x) {
   };
 }
 
-function getUndefined(_n, x) {
-  while (true) {
-    let n = _n;
-    if (n === undefined) {
-      return;
-    }
-    let v = n.k;
-    if (x === v) {
-      return n.v;
-    }
-    _n = x < v ? n.l : n.r;
-    continue;
-  };
-}
-
 function getOrThrow(_n, x) {
   while (true) {
     let n = _n;
@@ -333,7 +318,6 @@ exports.A = A;
 exports.S = S;
 exports.add = add;
 exports.get = get;
-exports.getUndefined = getUndefined;
 exports.getOrThrow = getOrThrow;
 exports.getWithDefault = getWithDefault;
 exports.has = has;

@@ -312,6 +312,24 @@ let transl_constructor_arguments env closed = function
             let cty = transl_simple_type env closed obj_ty in
             (Types.Cstr_tuple [cty.ctyp_type], Cstr_tuple [cty])))))
 
+let rewrite_optional_inline_record_fields = function
+  | Pcstr_tuple _ as args -> args
+  | Pcstr_record lds ->
+    Pcstr_record
+      (Ext_list.map lds (fun ld ->
+           if ld.pld_optional then
+             let typ = ld.pld_type in
+             let typ =
+               {
+                 typ with
+                 ptyp_desc =
+                   Ptyp_constr
+                     ({txt = Lident "option"; loc = typ.ptyp_loc}, [typ]);
+               }
+             in
+             {ld with pld_type = typ}
+           else ld))
+
 let make_constructor env type_path type_params sargs sret_type =
   match sret_type with
   | None ->
@@ -440,28 +458,10 @@ let transl_declaration ~type_record_as_object ~untagged_wfc env sdecl id =
            Location.prerr_warning loc Warnings.Constraint_on_gadt);
       let scstrs =
         Ext_list.map scstrs (fun ({pcd_args} as cstr) ->
-            match pcd_args with
-            | Pcstr_tuple _ -> cstr
-            | Pcstr_record lds ->
-              {
-                cstr with
-                pcd_args =
-                  Pcstr_record
-                    (Ext_list.map lds (fun ld ->
-                         if ld.pld_optional then
-                           let typ = ld.pld_type in
-                           let typ =
-                             {
-                               typ with
-                               ptyp_desc =
-                                 Ptyp_constr
-                                   ( {txt = Lident "option"; loc = typ.ptyp_loc},
-                                     [typ] );
-                             }
-                           in
-                           {ld with pld_type = typ}
-                         else ld));
-              })
+            {
+              cstr with
+              pcd_args = rewrite_optional_inline_record_fields pcd_args;
+            })
       in
       let all_constrs = ref StringSet.empty in
       List.iter
@@ -1627,6 +1627,7 @@ let transl_extension_constructor env type_path type_params typext_params priv
   let args, ret_type, kind =
     match sext.pext_kind with
     | Pext_decl (sargs, sret_type) ->
+      let sargs = rewrite_optional_inline_record_fields sargs in
       let targs, tret_type, args, ret_type, _ =
         make_constructor env type_path typext_params sargs sret_type
       in

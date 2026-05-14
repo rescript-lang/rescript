@@ -124,10 +124,11 @@ let emit_external_warnings : iterator =
         | ({pval_loc; pval_prim = [byte_name]; pval_type} :
             Parsetree.value_description) -> (
           match byte_name with
-          | "%identity" when not (Ast_core_type.is_arity_one pval_type) ->
+          | ("%identity" | "%component_identity")
+            when not (Ast_core_type.is_arity_one pval_type) ->
             Location.raise_errorf ~loc:pval_loc
-              "%%identity expects a function type of the form 'a => 'b (arity \
-               1)"
+              "%s expects a function type of the form 'a => 'b (arity 1)"
+              byte_name
           | _ ->
             if byte_name <> "" then
               let c = String.unsafe_get byte_name 0 in

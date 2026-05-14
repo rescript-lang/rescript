@@ -204,11 +204,11 @@ module Doc = {
     | list{} => true
     | list{(_ind, _mode, Text(txt)), ...rest} => fits(w - String.length(txt), rest)
     | list{(ind, mode, Indent(doc)), ...rest} => fits(w, list{(ind + 2, mode, doc), ...rest})
-    | list{(_ind, Flat, LineBreak(break)), ...rest} =>
-      if break == Hard {
+    | list{(_ind, Flat, LineBreak(break_)), ...rest} =>
+      if break_ == Hard {
         true
       } else {
-        let w = if break == Classic {
+        let w = if break_ == Classic {
           w - 1
         } else {
           w
@@ -381,8 +381,8 @@ module Doc = {
             text(")"),
           }),
         )
-      | LineBreak(break) =>
-        let breakTxt = switch break {
+      | LineBreak(break_) =>
+        let breakTxt = switch break_ {
         | Classic => "Classic"
         | Soft => "Soft"
         | Hard => "Hard"
@@ -2408,18 +2408,18 @@ module Grammar = {
 
 module Reporting = {
   module TerminalDoc = {
-    type break =
+    type break_ =
       | Never
       | Always
 
     type rec document =
       | Nil
-      | Group({break: break, doc: document})
+      | Group({break_: break_, doc: document})
       | Text(string)
       | Indent({amount: int, doc: document})
       | Append({doc1: document, doc2: document})
 
-    let group = (~break, doc) => Group({break, doc})
+    let group = (~break_, doc) => Group({break_, doc})
     let text = txt => Text(txt)
     let indent = (i, d) => Indent({amount: i, doc: d})
     let append = (d1, d2) => Append({doc1: d1, doc2: d2})
@@ -2456,9 +2456,9 @@ module Reporting = {
 
             let rest = push(rest, doc1)
             loop(rest, mode, offset)
-          | Group({break, doc}) =>
+          | Group({break_, doc}) =>
             let rest = push(rest, doc)
-            switch break {
+            switch break_ {
             | Always => loop(rest, Break, offset)
             | Never => loop(rest, Flat, offset)
             }
@@ -2504,7 +2504,7 @@ module Reporting = {
     let indent = (@doesNotRaise String.make)(from, ' ')
     let underline = (@doesNotRaise String.make)(len, '^')
     let line = highlight(~from=0, ~len, underline)
-    group(~break=Always, append(text(txt), text(indent ++ line)))
+    group(~break_=Always, append(text(txt), text(indent ++ line)))
   }
 
   let rec drop = (n, l) =>
@@ -2597,7 +2597,7 @@ module Reporting = {
         text(x)
       }
 
-      group(~break=Never, append(append(text(rowNr), text(" │")), indent(2, line)))
+      group(~break_=Never, append(append(text(rowNr), text(" │")), indent(2, line)))
     }
 
     let reportDoc = ref(TerminalDoc.nil)
@@ -2610,7 +2610,7 @@ module Reporting = {
       reportDoc := {
           open TerminalDoc
           let ix = startLine + i
-          group(~break=Always, append(reportDoc.contents, renderLine(line, ix)))
+          group(~break_=Always, append(reportDoc.contents, renderLine(line, ix)))
         }
     }
 

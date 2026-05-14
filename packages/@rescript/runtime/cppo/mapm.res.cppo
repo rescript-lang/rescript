@@ -18,14 +18,10 @@ let isEmpty = m => N.isEmpty(m.data)
 let clear = m => m.data = None
 /* let singleton k v = t ~data:(N.singleton k v) */
 
-let minKeyUndefined = m => N.minKeyUndefined(m.data)
 let minKey = m => N.minKey(m.data)
-let maxKeyUndefined = m => N.maxKeyUndefined(m.data)
 let maxKey = m => N.maxKey(m.data)
 let minimum = m => N.minimum(m.data)
-let minUndefined = m => N.minUndefined(m.data)
 let maximum = m => N.maximum(m.data)
-let maxUndefined = m => N.maxUndefined(m.data)
 
 let set = (m: t<_>, k, v) => {
   let old_data = m.data
@@ -170,9 +166,9 @@ let cmp = (d0, d1, f) => I.cmp(d0.data, d1.data, f)
 let eq = (d0, d1, f) => I.eq(d0.data, d1.data, f)
 
 let get = (d, x) => I.get(d.data, x)
-let getUndefined = (d, x) => I.getUndefined(d.data, x)
 let getWithDefault = (d, x, def) => I.getWithDefault(d.data, x, def)
-let getExn = (d, x) => I.getExn(d.data, x)
+let getOrThrow = (d, x) => I.getOrThrow(d.data, x)
+let getExn = getOrThrow
 
 let cmpU = cmp
 let eqU = eq

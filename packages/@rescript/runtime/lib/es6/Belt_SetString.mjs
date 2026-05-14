@@ -301,15 +301,9 @@ let toArray = Belt_internalAVLset.toArray;
 
 let minimum = Belt_internalAVLset.minimum;
 
-let minUndefined = Belt_internalAVLset.minUndefined;
-
 let maximum = Belt_internalAVLset.maximum;
 
-let maxUndefined = Belt_internalAVLset.maxUndefined;
-
 let get = Belt_internalSetString.get;
-
-let getUndefined = Belt_internalSetString.getUndefined;
 
 let getExn = Belt_internalSetString.getOrThrow;
 
@@ -349,11 +343,8 @@ export {
   toList,
   toArray,
   minimum,
-  minUndefined,
   maximum,
-  maxUndefined,
   get,
-  getUndefined,
   getExn,
   getOrThrow,
   split,

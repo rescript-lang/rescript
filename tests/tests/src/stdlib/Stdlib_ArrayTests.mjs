@@ -432,7 +432,159 @@ Test.run([
 Test.run([
   [
     "Stdlib_ArrayTests.res",
-    110,
+    111,
+    13,
+    27
+  ],
+  "fromIterable"
+], Array.from("abc"), eq, [
+  "a",
+  "b",
+  "c"
+]);
+
+let arrays = [
+  [
+    1,
+    2
+  ],
+  [3],
+  [
+    4,
+    5
+  ]
+];
+
+let result = Stdlib_Array.concatAll(arrays);
+
+Test.run([
+  [
+    "Stdlib_ArrayTests.res",
+    121,
+    22,
+    53
+  ],
+  "concatAll concatenates arrays"
+], result, eq, [
+  1,
+  2,
+  3,
+  4,
+  5
+]);
+
+Test.run([
+  [
+    "Stdlib_ArrayTests.res",
+    123,
+    15,
+    57
+  ],
+  "concatAll leaves source arrays unchanged"
+], arrays, eq, [
+  [
+    1,
+    2
+  ],
+  [3],
+  [
+    4,
+    5
+  ]
+]);
+
+Test.run([
+  [
+    "Stdlib_ArrayTests.res",
+    130,
+    20,
+    39
+  ],
+  "concatAll - empty"
+], Stdlib_Array.concatAll([]), eq, []);
+
+Test.run([
+  [
+    "Stdlib_ArrayTests.res",
+    133,
+    13,
+    31
+  ],
+  "Map.fromIterable"
+], new Map([
+  [
+    "one",
+    1
+  ],
+  [
+    "two",
+    2
+  ]
+]).size, eq, 2);
+
+Test.run([
+  [
+    "Stdlib_ArrayTests.res",
+    140,
+    13,
+    31
+  ],
+  "Set.fromIterable"
+], new Set([
+  1,
+  2,
+  2
+]).size, eq, 2);
+
+Test.run([
+  [
+    "Stdlib_ArrayTests.res",
+    147,
+    13,
+    29
+  ],
+  "Map.asIterable"
+], Array.from(new Map([
+  [
+    "one",
+    1
+  ],
+  [
+    "two",
+    2
+  ]
+])), eq, [
+  [
+    "one",
+    1
+  ],
+  [
+    "two",
+    2
+  ]
+]);
+
+Test.run([
+  [
+    "Stdlib_ArrayTests.res",
+    154,
+    13,
+    29
+  ],
+  "Set.asIterable"
+], Array.from(new Set([
+  1,
+  2,
+  2
+])), eq, [
+  1,
+  2
+]);
+
+Test.run([
+  [
+    "Stdlib_ArrayTests.res",
+    160,
     20,
     39
   ],
@@ -446,7 +598,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_ArrayTests.res",
-    111,
+    161,
     20,
     34
   ],
@@ -460,7 +612,7 @@ array.splice(1, 0, "foo");
 Test.run([
   [
     "Stdlib_ArrayTests.res",
-    116,
+    166,
     22,
     49
   ],
@@ -475,7 +627,7 @@ let array$1 = [
 Test.run([
   [
     "Stdlib_ArrayTests.res",
-    122,
+    172,
     15,
     43
   ],

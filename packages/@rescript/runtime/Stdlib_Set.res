@@ -1,9 +1,11 @@
 @notUndefined
 type t<'a>
 
+external asIterable: t<'a> => Stdlib_Iterable.t<'a> = "%identity"
+
 @new external make: unit => t<'a> = "Set"
 @new external fromArray: array<'a> => t<'a> = "Set"
-@new external fromIterator: Stdlib_Iterator.t<'a> => t<'a> = "Set"
+@new external fromIterable: Stdlib_Iterable.t<'a> => t<'a> = "Set"
 
 @get external size: t<'a> => int = "size"
 
@@ -17,7 +19,7 @@ let isEmpty = set => set->size === 0
 
 @send external forEach: (t<'a>, 'a => unit) => unit = "forEach"
 
-@send external values: t<'a> => Stdlib_Iterator.t<'a> = "values"
+@send external values: t<'a> => Stdlib_IteratorObject.t<'a, unit, unknown> = "values"
 
 @send external difference: (t<'a>, t<'a>) => t<'a> = "difference"
 @send external intersection: (t<'a>, t<'a>) => t<'a> = "intersection"

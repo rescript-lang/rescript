@@ -77,10 +77,10 @@ Intl.Collator.resolvedOptions(collator).locale == "en-US"
 
 ```rescript
 let collator = Intl.Collator.make(~locales=["en-US"])
-collator->Intl.Collator.compare("apple", "banana") < 0
+Ordering.isLess(collator->Intl.Collator.compare("apple", "banana"))
 ```
 */
-@send external compare: (t, string, string) => int = "compare"
+@send external compare: (t, string, string) => Stdlib_Ordering.t = "compare"
 
 /**
   `ignore(collator)` ignores the provided collator and returns unit.

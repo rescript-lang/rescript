@@ -22,8 +22,6 @@ let getExn: (t<'a>, int) => 'a
 
 let getUnsafe: (t<'a>, int) => 'a
 
-let getUndefined: (t<'a>, int) => Js.undefined<'a>
-
 let shuffle: t<'a> => t<'a>
 
 let reverse: t<'a> => t<'a>
@@ -108,4 +106,3 @@ let cmp: (t<'a>, t<'a>, ('a, 'a) => int) => int
 
 let eqU: (t<'a>, t<'a>, ('a, 'a) => bool) => bool
 let eq: (t<'a>, t<'a>, ('a, 'a) => bool) => bool
-

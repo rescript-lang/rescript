@@ -283,11 +283,17 @@ and expression_desc =
   | Pexp_ifthenelse of expression * expression * expression option
     (* if E1 then E2 else E3 *)
   | Pexp_sequence of expression * expression (* E1; E2 *)
+  | Pexp_break (* break *)
+  | Pexp_continue (* continue *)
   | Pexp_while of expression * expression (* while E1 do E2 done *)
   | Pexp_for of pattern * expression * expression * direction_flag * expression
     (* for i = E1 to E2 do E3 done      (flag = Upto)
        for i = E1 downto E2 do E3 done  (flag = Downto)
     *)
+  | Pexp_for_of of pattern * expression * expression
+    (* for pattern of array_expr do body_expr *)
+  | Pexp_for_await_of of pattern * expression * expression
+    (* for await pattern of iterable_expr do body_expr *)
   | Pexp_constraint of expression * core_type (* (E : T) *)
   | Pexp_coerce of expression * unit * core_type
     (* (E :> T)        (None, T)

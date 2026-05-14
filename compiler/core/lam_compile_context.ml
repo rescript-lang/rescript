@@ -55,6 +55,7 @@ type tail_type = Not_tail | Maybe_tail_is_return of maybe_tail
 (* anonoymous function does not have identifier *)
 
 type let_kind = Lam_compat.let_kind
+type loop_frame = {mutable label: J.label option}
 
 type continuation =
   | EffectCall of tail_type
@@ -71,9 +72,33 @@ let continuation_is_return (x : continuation) =
     true
   | EffectCall Not_tail | NeedValue Not_tail | Declare _ | Assign _ -> false
 
-type t = {continuation: continuation; jmp_table: jmp_table; meta: Lam_stats.t}
+type t = {
+  continuation: continuation;
+  jmp_table: jmp_table;
+  meta: Lam_stats.t;
+  switch_depth: int;
+  loop_stack: loop_frame list;
+  loop_label_counter: int ref;
+}
 
 let empty_handler_map = HandlerMap.empty
+
+let enter_switch cxt = {cxt with switch_depth = cxt.switch_depth + 1}
+
+let push_loop cxt =
+  let frame = {label = None} in
+  ({cxt with loop_stack = frame :: cxt.loop_stack}, frame)
+
+let ensure_loop_label cxt frame =
+  match frame.label with
+  | Some label -> label
+  | None ->
+    (* Only allocate a JS loop label when a nested switch actually needs one. *)
+    let next_id = !(cxt.loop_label_counter) in
+    cxt.loop_label_counter := next_id + 1;
+    let label = Printf.sprintf "loop_%d" next_id in
+    frame.label <- Some label;
+    label
 
 type handler = {label: jbl_label; handler: Lam.t; bindings: Ident.t list}
 

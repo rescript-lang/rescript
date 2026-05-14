@@ -88,12 +88,12 @@ describe(__MODULE__, () => {
     ok(__LOC__, a5 === a6)
     ok(__LOC__, M.has(a0, 3))
     ok(__LOC__, !M.has(a5, 3))
-    ok(__LOC__, Js.eqUndefined(3, M.getUndefined(a0, 3)))
-    ok(__LOC__, Js.eqUndefined(33, M.getUndefined(a1, 3)))
-    ok(__LOC__, M.getUndefined(a2, 3) == Js.undefined)
+    ok(__LOC__, M.get(a0, 3) == Some(3))
+    ok(__LOC__, M.get(a1, 3) == Some(33))
+    ok(__LOC__, M.get(a2, 3) == None)
 
-    ok(__LOC__, Js.eqUndefined(11, M.getUndefined(a3, 3)))
-    ok(__LOC__, M.getUndefined(a4, 3) == Js.undefined)
+    ok(__LOC__, M.get(a3, 3) == Some(11))
+    ok(__LOC__, M.get(a4, 3) == None)
 
     let a7 = M.removeMany(a0, [7, 8, 0, 1, 3, 2, 4, 922, 4, 5, 6])
     eq(__LOC__, M.keysToArray(a7), [9, 10])

@@ -24,3 +24,12 @@ let myRecord = {
   \"Illegal-field name": 7,
   \"UPPERCASE": 100,
 }
+
+/* https://github.com/rescript-lang/rescript/issues/8312 */
+type props = {}
+let make = (_: props) => React.null
+@genType
+let \"Icon_Add": props => React.element = make
+
+@genType
+let \"SomeValue" = "hello"

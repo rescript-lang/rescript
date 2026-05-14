@@ -8,6 +8,7 @@ import * as Belt_Array from "@rescript/runtime/lib/es6/Belt_Array.mjs";
 import * as Test_utils from "./test_utils.mjs";
 import * as Primitive_int from "@rescript/runtime/lib/es6/Primitive_int.mjs";
 import * as Array_data_util from "./array_data_util.mjs";
+import * as Primitive_object from "@rescript/runtime/lib/es6/Primitive_object.mjs";
 import * as Primitive_option from "@rescript/runtime/lib/es6/Primitive_option.mjs";
 
 let Icmp = Belt_Id.comparable(Primitive_int.compare);
@@ -85,11 +86,11 @@ Mocha.describe("Bs_poly_map_test", () => {
     Test_utils.ok("File \"bs_poly_map_test.res\", line 88, characters 7-14", a5 === a6);
     Test_utils.ok("File \"bs_poly_map_test.res\", line 89, characters 7-14", Belt_Map.has(a0, 3));
     Test_utils.ok("File \"bs_poly_map_test.res\", line 90, characters 7-14", !Belt_Map.has(a5, 3));
-    Test_utils.ok("File \"bs_poly_map_test.res\", line 91, characters 7-14", 3 === Belt_Map.getUndefined(a0, 3));
-    Test_utils.ok("File \"bs_poly_map_test.res\", line 92, characters 7-14", 33 === Belt_Map.getUndefined(a1, 3));
-    Test_utils.ok("File \"bs_poly_map_test.res\", line 93, characters 7-14", Belt_Map.getUndefined(a2, 3) === undefined);
-    Test_utils.ok("File \"bs_poly_map_test.res\", line 95, characters 7-14", 11 === Belt_Map.getUndefined(a3, 3));
-    Test_utils.ok("File \"bs_poly_map_test.res\", line 96, characters 7-14", Belt_Map.getUndefined(a4, 3) === undefined);
+    Test_utils.ok("File \"bs_poly_map_test.res\", line 91, characters 7-14", Primitive_object.equal(Belt_Map.get(a0, 3), 3));
+    Test_utils.ok("File \"bs_poly_map_test.res\", line 92, characters 7-14", Primitive_object.equal(Belt_Map.get(a1, 3), 33));
+    Test_utils.ok("File \"bs_poly_map_test.res\", line 93, characters 7-14", Belt_Map.get(a2, 3) === undefined);
+    Test_utils.ok("File \"bs_poly_map_test.res\", line 95, characters 7-14", Primitive_object.equal(Belt_Map.get(a3, 3), 11));
+    Test_utils.ok("File \"bs_poly_map_test.res\", line 96, characters 7-14", Belt_Map.get(a4, 3) === undefined);
     let a7 = Belt_Map.removeMany(a0, [
       7,
       8,

@@ -238,11 +238,17 @@ let expr sub x =
         (sub.expr sub exp1, sub.expr sub exp2, opt (sub.expr sub) expo)
     | Texp_sequence (exp1, exp2) ->
       Texp_sequence (sub.expr sub exp1, sub.expr sub exp2)
+    | Texp_break -> Texp_break
+    | Texp_continue -> Texp_continue
     | Texp_while (exp1, exp2) ->
       Texp_while (sub.expr sub exp1, sub.expr sub exp2)
     | Texp_for (id, p, exp1, exp2, dir, exp3) ->
       Texp_for
         (id, p, sub.expr sub exp1, sub.expr sub exp2, dir, sub.expr sub exp3)
+    | Texp_for_of (id, p, exp1, exp2) ->
+      Texp_for_of (id, p, sub.expr sub exp1, sub.expr sub exp2)
+    | Texp_for_await_of (id, p, exp1, exp2) ->
+      Texp_for_await_of (id, p, sub.expr sub exp1, sub.expr sub exp2)
     | Texp_send (exp, meth, expo) ->
       Texp_send (sub.expr sub exp, meth, opt (sub.expr sub) expo)
     | Texp_letmodule (id, s, mexpr, exp) ->

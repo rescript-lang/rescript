@@ -115,23 +115,13 @@ let valuesToArray: t<'k, 'a, 'id> => array<'a>
 
 let minKey: t<'k, _, _> => option<'k>
 
-let minKeyUndefined: t<'k, _, _> => Js.undefined<'k>
-
 let maxKey: t<'k, _, _> => option<'k>
-
-let maxKeyUndefined: t<'k, _, _> => Js.undefined<'k>
 
 let minimum: t<'k, 'a, _> => option<('k, 'a)>
 
-let minUndefined: t<'k, 'a, _> => Js.undefined<('k, 'a)>
-
 let maximum: t<'k, 'a, _> => option<('k, 'a)>
 
-let maxUndefined: t<'k, 'a, _> => Js.undefined<('k, 'a)>
-
 let get: (t<'k, 'a, 'id>, 'k, ~cmp: cmp<'k, 'id>) => option<'a>
-
-let getUndefined: (t<'k, 'a, 'id>, 'k, ~cmp: cmp<'k, 'id>) => Js.undefined<'a>
 
 let getWithDefault: (t<'k, 'a, 'id>, 'k, 'a, ~cmp: cmp<'k, 'id>) => 'a
 

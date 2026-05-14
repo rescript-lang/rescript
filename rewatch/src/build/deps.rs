@@ -37,12 +37,9 @@ fn get_dep_modules(
     // Get the list of allowed dependency packages for this package
     let allowed_dependencies: AHashSet<String> = package
         .config
-        .dependencies
-        .as_ref()
-        .unwrap_or(&vec![])
-        .iter()
-        .chain(package.config.dev_dependencies.as_ref().unwrap_or(&vec![]).iter())
-        .cloned()
+        .get_dependency_names()
+        .into_iter()
+        .chain(package.config.get_dev_dependency_names())
         .collect();
 
     deps.iter()

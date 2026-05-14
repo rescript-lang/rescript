@@ -29,5 +29,9 @@ val node_rebase_file : from:string -> to_:string -> string -> string
 
 val absolute_cwd_path : string -> string
 
-(* It is lazy so that it will not hit errors when in script mode *)
-val package_dir : string Lazy.t
+val project_root : string option ref
+(** Populated by [-bs-project-root]. Must be set before [package_dir ()]
+    is called; the compiler does not locate [rescript.json] on its own. *)
+
+val package_dir : unit -> string
+(** Returns the package root directory. Fails if [project_root] is unset. *)

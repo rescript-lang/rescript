@@ -11,6 +11,11 @@ Type representing an instance of `Set`.
 type t<'a>
 
 /**
+`asIterable(set)` views `set` as an `Iterable.t`.
+*/
+external asIterable: t<'a> => Stdlib_Iterable.t<'a> = "%identity"
+
+/**
 Creates a new, mutable JavaScript `Set`. A `Set` is a collection of unique values.
 
 See [`Set`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set) on MDN.
@@ -53,27 +58,20 @@ switch set->Set.has(ReScript) {
 external fromArray: array<'a> => t<'a> = "Set"
 
 /**
-Turns an iterator into a `Set`.
+Turns an iterable into a `Set`.
 
 ## Examples
 
 ```rescript
-// Let's pretend we have an interator
-let iterator: Iterator.t<string> = %raw(`
-  (() => {
-    var array1 = ['a', 'b', 'c'];
-    var iterator1 = array1[Symbol.iterator]();
-    return iterator1
-  })()
-`)
+let iterable: Iterable.t<string> = ["a", "b", "c"]->Array.asIterable
 
-iterator
-->Set.fromIterator
+iterable
+->Set.fromIterable
 ->Set.size == 3
 ```
 */
 @new
-external fromIterator: Stdlib_Iterator.t<'a> => t<'a> = "Set"
+external fromIterable: Stdlib_Iterable.t<'a> => t<'a> = "Set"
 
 /**
 Returns the size, the number of unique values, of the set.
@@ -217,15 +215,17 @@ set->Set.add("anotherValue")
 let values = set->Set.values
 
 // Logs the first value
-Console.log(Iterator.next(values).value)
+switch values->IteratorObject.next {
+| Yield({value}) => Console.log(value)
+| Return(_) => ()
+}
 
-// You can also turn the iterator into an array.
-// Remember that an iterator consumes values. We'll need a fresh values iterator to get an array of all values, since we consumed a value via `next` above already.
-Console.log(set->Set.values->Iterator.toArray)
+// You can also turn the iterator into an array. Remember that iterators are consumed, so use a fresh one.
+Console.log(set->Set.values->IteratorObject.toArray)
 ```
 */
 @send
-external values: t<'a> => Stdlib_Iterator.t<'a> = "values"
+external values: t<'a> => Stdlib_IteratorObject.t<'a, unit, unknown> = "values"
 
 /** 
 Returns a new set with the values of the set that are not in the other set.

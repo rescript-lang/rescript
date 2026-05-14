@@ -1,0 +1,4 @@
+let _ = {
+  continue
+  ()
+}

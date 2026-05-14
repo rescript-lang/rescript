@@ -21,22 +21,17 @@ let set_all () =
   type_env := true;
   type_resolution := true
 
-let set_item debug_item debug_value =
-  let is_on =
-    match debug_value with
-    | Ext_json_types.True _ -> true
-    | _ -> false
-  in
+let set_item debug_item =
   match debug_item with
-  | "all" when is_on -> set_all ()
-  | "basic" -> basic := is_on
-  | "codeItems" -> code_items := is_on
-  | "config" -> config := is_on
-  | "converter" -> converter := is_on
-  | "dependencies" -> dependencies := is_on
-  | "moduleResolution" -> module_resolution := is_on
-  | "notImplemented" -> not_implemented := is_on
-  | "translation" -> translation := is_on
-  | "typeEnv" -> type_env := is_on
-  | "typeResolution" -> type_resolution := is_on
+  | "all" -> set_all ()
+  | "basic" -> basic := true
+  | "codeItems" -> code_items := true
+  | "config" -> config := true
+  | "converter" -> converter := true
+  | "dependencies" -> dependencies := true
+  | "moduleResolution" -> module_resolution := true
+  | "notImplemented" -> not_implemented := true
+  | "translation" -> translation := true
+  | "typeEnv" -> type_env := true
+  | "typeResolution" -> type_resolution := true
   | _ -> ()

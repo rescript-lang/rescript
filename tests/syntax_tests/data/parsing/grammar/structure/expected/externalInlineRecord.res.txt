@@ -1,0 +1,11 @@
+type f1.a = {
+  x: int }[@@res.inlineRecordDefinition ]
+external f1 : a:f1.a -> unit (a:1) = "f1"
+type f2.return.type = {
+  id: string }[@@res.inlineRecordDefinition ]
+external f2 : int -> f2.return.type (a:1) = "f2"
+type f3.return.type = {
+  b: int }[@@res.inlineRecordDefinition ]
+and f3.returnType = {
+  a: int }[@@res.inlineRecordDefinition ]
+external f3 : returnType:f3.returnType -> f3.return.type (a:1) = "f3"

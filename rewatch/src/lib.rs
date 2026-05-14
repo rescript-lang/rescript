@@ -8,4 +8,5 @@ pub mod lock;
 pub mod project_context;
 pub mod queue;
 pub mod sourcedirs;
+pub mod telemetry;
 pub mod watcher;

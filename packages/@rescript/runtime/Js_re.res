@@ -136,15 +136,15 @@ set.
 let re = /ab*TODO/g
 let str = "abbcdefabh"
 
-let break = ref(false)
-while !break.contents {
+let break_ = ref(false)
+while !break_.contents {
   switch Js.Re.exec_(re, str) {
   | Some(result) =>
     Js.Nullable.iter(Js.Re.captures(result)[0], match_ => {
       let next = Belt.Int.toString(Js.Re.lastIndex(re))
       Js.log("Found " ++ (match_ ++ (". Next match starts at " ++ next)))
     })
-  | None => break := true
+  | None => break_ := true
   }
 }
 ```

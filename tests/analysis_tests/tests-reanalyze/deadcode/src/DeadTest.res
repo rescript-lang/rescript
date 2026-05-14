@@ -122,6 +122,12 @@ let theSideEffectIsLogging = Js.log(123)
 
 let stringLengthNoSideEffects = String.length("sdkdl")
 
+let breakChangesControlFlow = {
+  while true {
+    break
+  }
+}
+
 // Trace.infok("", "", ({pf}) => pf("%s", ""))
 
 module GloobLive = {

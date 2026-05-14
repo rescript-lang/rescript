@@ -49,6 +49,11 @@ let ref_type loc =
 let jsx_element_type config ~loc =
   Typ.constr ~loc {loc; txt = module_access_name config "element"} []
 
+let jsx_component_expr config ~loc expr =
+  Exp.apply ~loc
+    (Exp.ident ~loc {loc; txt = module_access_name config "component"})
+    [(Nolabel, expr)]
+
 (* Helper method to filter out any attribute that isn't [@react.component] *)
 let other_attrs_pure (loc, _) =
   match loc.txt with
@@ -64,20 +69,6 @@ let rec get_fn_name binding =
   | {ppat_desc = Ppat_constraint (pat, _)} -> get_fn_name pat
   | {ppat_loc} ->
     Jsx_common.raise_error ~loc:ppat_loc
-      "JSX component calls cannot be destructured."
-
-let make_new_binding binding expression new_name =
-  match binding with
-  | {pvb_pat = {ppat_desc = Ppat_var ppat_var} as pvb_pat} ->
-    {
-      binding with
-      pvb_pat =
-        {pvb_pat with ppat_desc = Ppat_var {ppat_var with txt = new_name}};
-      pvb_expr = expression;
-      pvb_attributes = [];
-    }
-  | {pvb_loc} ->
-    Jsx_common.raise_error ~loc:pvb_loc
       "JSX component calls cannot be destructured."
 
 (* Lookup the filename from the location information on the AST node and turn it into a valid module identifier *)
@@ -498,15 +489,23 @@ let modified_binding ~binding_loc ~binding_pat_loc ~fn_name binding =
   in
   (wrap_expression_with_binding wrap_expression, has_forward_ref, expression)
 
-let vb_match ~expr (name, default, _, alias, loc, _) =
+let rec strip_constraint_unpack pattern =
+  match pattern with
+  | {ppat_desc = Ppat_constraint (_, {ptyp_desc = Ptyp_package _})} -> pattern
+  | {ppat_desc = Ppat_constraint (pattern, _)} ->
+    strip_constraint_unpack pattern
+  | _ -> pattern
+
+let vb_match ~expr (name, default, pattern, _alias, loc, _) =
   let label = get_label name in
   match default with
   | Some default ->
+    let resolved_name = "__" ^ label ^ "_value" in
     let value_binding =
       Vb.mk
-        (Pat.var (Location.mkloc alias loc))
+        (Pat.var (Location.mkloc resolved_name loc))
         (Exp.match_
-           (Exp.ident {txt = Lident ("__" ^ alias); loc = Location.none})
+           (Exp.ident {txt = Lident ("__" ^ label); loc = Location.none})
            [
              Exp.case
                (Pat.construct
@@ -518,7 +517,10 @@ let vb_match ~expr (name, default, _, alias, loc, _) =
                default;
            ])
     in
-    Exp.let_ Nonrecursive [value_binding] expr
+    Exp.let_ Nonrecursive [value_binding]
+      (Exp.let_ Nonrecursive
+         [Vb.mk pattern (Exp.ident (Location.mknoloc @@ Lident resolved_name))]
+         expr)
   | None -> expr
 
 let vb_match_expr named_arg_list expr =
@@ -529,7 +531,7 @@ let vb_match_expr named_arg_list expr =
   in
   aux (List.rev named_arg_list)
 
-let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
+let map_binding ~config ~empty_loc ~pstr_loc ~file_name binding =
   (* Traverse the component body and force every reachable return expression to
    be annotated as `Jsx.element`. This walks through the wrapper constructs the
    PPX introduces (fun/newtype/let/sequence) so that the constraint ends up on
@@ -579,7 +581,6 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
       }
     in
     let fn_name = get_fn_name binding.pvb_pat in
-    let internal_fn_name = fn_name ^ "$Internal" in
     let full_module_name =
       make_module_name file_name config.nested_modules fn_name
     in
@@ -600,12 +601,7 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
     in
     let inner_expression =
       Exp.apply
-        (Exp.ident
-           (Location.mknoloc
-           @@ Lident
-                (match rec_flag with
-                | Recursive -> internal_fn_name
-                | Nonrecursive -> fn_name)))
+        (Exp.ident (Location.mknoloc @@ Lident fn_name))
         ([(Nolabel, Exp.ident (Location.mknoloc @@ Lident "props"))]
         @
         match has_forward_ref with
@@ -652,21 +648,22 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
           ]
           (Exp.ident ~loc:pstr_loc {loc = empty_loc; txt = Lident txt})
     in
-    let rec strip_constraint_unpack ~label pattern =
-      match pattern with
-      | {ppat_desc = Ppat_constraint (_, {ptyp_desc = Ptyp_package _})} ->
-        pattern
-      | {ppat_desc = Ppat_constraint (pattern, _)} ->
-        strip_constraint_unpack ~label pattern
-      | _ -> pattern
-    in
-    let safe_pattern_label pattern =
-      match pattern with
-      | {ppat_desc = Ppat_var {txt; loc}} ->
-        {pattern with ppat_desc = Ppat_var {txt = "__" ^ txt; loc}}
-      | {ppat_desc = Ppat_alias (p, {txt; loc})} ->
-        {pattern with ppat_desc = Ppat_alias (p, {txt = "__" ^ txt; loc})}
-      | _ -> pattern
+    (* Build a plain function first, then coerce that function to the abstract
+       component type:
+
+         let make = React.component({
+           let "File$Component" = props => make(props)
+           "File$Component"
+         })
+
+       Putting the coercion directly around the function argument, as in
+       `React.component(props => make(props))`, hides the function under an
+       application during typing and breaks inference for polymorphic props.
+       The typechecker treats this `%component_identity` coercion as non-expansive, so
+       the inferred prop type can still be generalized. *)
+    let full_expression =
+      if has_forward_ref then full_expression
+      else jsx_component_expr config ~loc:empty_loc full_expression
     in
     let rec returned_expression patterns_with_label patterns_with_nolabel
         ({pexp_desc} as expr) =
@@ -688,17 +685,20 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
             lhs = {ppat_loc; ppat_desc} as pattern;
             rhs = expr;
           } -> (
-        let pattern_without_constraint =
-          strip_constraint_unpack ~label:(get_label arg_label) pattern
-        in
+        let pattern_without_constraint = strip_constraint_unpack pattern in
         (*
            If prop has the default value as Ident, it will get a build error
            when the referenced Ident value and the prop have the same name.
-           So we add a "__" to label to resolve the build error.
+           So we bind a temp "__<label>" in the props pattern and destructure
+           the original pattern later after resolving the default.
         *)
         let pattern_with_safe_label =
           match default with
-          | Some _ -> safe_pattern_label pattern_without_constraint
+          | Some _ ->
+            Pat.var
+              (Location.mkloc
+                 ("__" ^ get_label arg_label)
+                 pattern_without_constraint.ppat_loc)
           | _ -> pattern_without_constraint
         in
         if is_labelled arg_label || is_optional arg_label then
@@ -783,28 +783,14 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
       |> List.fold_left (fun e newtype -> Exp.newtype newtype e) expression
     in
     (* let make = ({id, name, ...}: props<'id, 'name, ...>) => { ... } *)
-    let binding, new_binding =
-      match rec_flag with
-      | Recursive ->
-        ( binding_wrapper
-            (Exp.let_ ~loc:empty_loc Nonrecursive
-               [make_new_binding binding expression internal_fn_name]
-               (Exp.let_ ~loc:empty_loc Nonrecursive
-                  [
-                    Vb.mk
-                      (Pat.var {loc = empty_loc; txt = fn_name})
-                      full_expression;
-                  ]
-                  (Exp.ident {loc = empty_loc; txt = Lident fn_name}))),
-          None )
-      | Nonrecursive ->
-        ( {
-            binding with
-            pvb_expr = expression;
-            pvb_pat = Pat.var {txt = fn_name; loc = Location.none};
-          },
-          Some (binding_wrapper full_expression) )
+    let binding =
+      {
+        binding with
+        pvb_expr = expression;
+        pvb_pat = Pat.var {txt = fn_name; loc = Location.none};
+      }
     in
+    let new_binding = Some (binding_wrapper full_expression) in
     (Some props_record_type, binding, new_binding))
   else if Jsx_common.has_attr_on_binding Jsx_common.has_attr_with_props binding
   then
@@ -815,7 +801,6 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
       }
     in
     let fn_name = get_fn_name modified_binding.pvb_pat in
-    let internal_fn_name = fn_name ^ "$Internal" in
     let full_module_name =
       make_module_name file_name config.nested_modules fn_name
     in
@@ -862,18 +847,9 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
           | _ -> Pat.var {txt = "props"; loc})
         | _ -> Pat.var {txt = "props"; loc}
       in
-
       let applied_expression =
         Exp.apply
-          (Exp.ident
-             {
-               txt =
-                 Lident
-                   (match rec_flag with
-                   | Recursive -> internal_fn_name
-                   | Nonrecursive -> fn_name);
-               loc;
-             })
+          (Exp.ident {txt = Lident fn_name; loc})
           [(Nolabel, Exp.ident {txt = Lident "props"; loc})]
       in
       let applied_expression =
@@ -889,6 +865,9 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
           [Vb.mk (Pat.var {txt = full_module_name; loc}) wrapper_expr]
           (Exp.ident {txt = Lident full_module_name; loc})
       in
+      let internal_expression =
+        jsx_component_expr config ~loc internal_expression
+      in
 
       Vb.mk ~attrs:modified_binding.pvb_attributes
         (Pat.var {txt = fn_name; loc})
@@ -896,11 +875,7 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
     in
 
     let new_binding =
-      match rec_flag with
-      | Recursive -> None
-      | Nonrecursive ->
-        Some
-          (make_new_binding ~loc:empty_loc ~full_module_name modified_binding)
+      Some (make_new_binding ~loc:empty_loc ~full_module_name modified_binding)
     in
     let binding_expr =
       {
@@ -1006,7 +981,7 @@ let transform_structure_item ~config item =
     let empty_loc = Location.in_file file_name in
     let process_binding binding (new_items, bindings, new_bindings) =
       let new_item, binding, new_binding =
-        map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding
+        map_binding ~config ~empty_loc ~pstr_loc ~file_name binding
       in
       let new_items =
         match new_item with
@@ -1029,7 +1004,12 @@ let transform_structure_item ~config item =
     match new_bindings with
     | [] -> []
     | new_bindings ->
-      [{pstr_loc = empty_loc; pstr_desc = Pstr_value (rec_flag, new_bindings)}])
+      [
+        {
+          pstr_loc = empty_loc;
+          pstr_desc = Pstr_value (Nonrecursive, new_bindings);
+        };
+      ])
   | _ -> [item]
 
 let transform_signature_item ~config item =

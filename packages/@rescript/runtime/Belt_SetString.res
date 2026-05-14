@@ -9,9 +9,7 @@ type t = I.t
 let empty = None
 let isEmpty = N.isEmpty
 let minimum = N.minimum
-let minUndefined = N.minUndefined
 let maximum = N.maximum
-let maxUndefined = N.maxUndefined
 
 let forEach = N.forEach
 let reduce = N.reduce
@@ -108,7 +106,6 @@ let fromArray = I.fromArray
 let cmp = I.cmp
 let eq = I.eq
 let get = I.get
-let getUndefined = I.getUndefined
 let getOrThrow = I.getOrThrow
 let getExn = getOrThrow
 let subset = I.subset

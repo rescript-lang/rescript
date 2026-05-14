@@ -7,7 +7,7 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "@rescript/webapi": "0.1.0-experimental-73e6a0d"
+    "@rescript/webapi": "patch:@rescript/webapi@npm%3A0.1.0-experimental-73e6a0d#~/.yarn/patches/@rescript-webapi-npm-0.1.0-experimental-73e6a0d-288a2072f7.patch"
   },
   "dependencies": {
     "rescript-nodejs": "patch:rescript-nodejs@npm%3A16.1.0#~/.yarn/patches/rescript-nodejs-npm-16.1.0-1841fa6174.patch"

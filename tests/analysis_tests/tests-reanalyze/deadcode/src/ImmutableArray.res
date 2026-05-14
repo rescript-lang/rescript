@@ -27,8 +27,6 @@ module Array = {
 
   let getUnsafe = (a, x) => Array.getUnsafe(a->fromT, x)
 
-  let getUndefined = (a, x) => Array.getUndefined(a->fromT, x)
-
   let shuffle = x => Array.shuffle(x->fromT)->toT
 
   let reverse = x => Array.reverse(x->fromT)->toT
@@ -116,4 +114,3 @@ module Array = {
 }
 
 include Array
-

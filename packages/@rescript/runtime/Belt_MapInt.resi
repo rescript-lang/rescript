@@ -92,23 +92,13 @@ let valuesToArray: t<'v> => array<'v>
 
 let minKey: t<_> => option<key>
 
-let minKeyUndefined: t<_> => Js.undefined<key>
-
 let maxKey: t<_> => option<key>
-
-let maxKeyUndefined: t<_> => Js.undefined<key>
 
 let minimum: t<'v> => option<(key, 'v)>
 
-let minUndefined: t<'v> => Js.undefined<(key, 'v)>
-
 let maximum: t<'v> => option<(key, 'v)>
 
-let maxUndefined: t<'v> => Js.undefined<(key, 'v)>
-
 let get: (t<'v>, key) => option<'v>
-
-let getUndefined: (t<'v>, key) => Js.undefined<'v>
 
 let getWithDefault: (t<'v>, key, 'v) => 'v
 

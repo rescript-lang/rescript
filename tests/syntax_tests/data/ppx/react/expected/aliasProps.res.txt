@@ -8,17 +8,18 @@ module C0 = {
   }
 
   let make = ({priority: _, text: ?__text, _}: props<_, _>) => {
-    let text = switch __text {
+    let __text_value = switch __text {
     | Some(text) => text
     | None => "Test"
     }
+    let text = __text_value
     (React.string(text): React.element)
   }
-  let make = {
+  let make = React.component({
     let \"AliasProps$C0" = (props: props<_>) => make(props)
 
     \"AliasProps$C0"
-  }
+  })
 }
 
 module C1 = {
@@ -29,17 +30,18 @@ module C1 = {
   }
 
   let make = ({priority: p, text: ?__text, _}: props<_, _>) => {
-    let text = switch __text {
+    let __text_value = switch __text {
     | Some(text) => text
     | None => "Test"
     }
+    let text = __text_value
     (React.string(p ++ text): React.element)
   }
-  let make = {
+  let make = React.component({
     let \"AliasProps$C1" = (props: props<_>) => make(props)
 
     \"AliasProps$C1"
-  }
+  })
 }
 
 module C2 = {
@@ -48,18 +50,19 @@ module C2 = {
     foo?: 'foo,
   }
 
-  let make = ({foo: ?__bar, _}: props<_>) => {
-    let bar = switch __bar {
+  let make = ({foo: ?__foo, _}: props<_>) => {
+    let __foo_value = switch __foo {
     | Some(foo) => foo
     | None => ""
     }
+    let bar = __foo_value
     (React.string(bar): React.element)
   }
-  let make = {
+  let make = React.component({
     let \"AliasProps$C2" = (props: props<_>) => make(props)
 
     \"AliasProps$C2"
-  }
+  })
 }
 
 module C3 = {
@@ -70,26 +73,28 @@ module C3 = {
     b: 'b,
   }
 
-  let make = ({foo: ?__bar, a: ?__a, b, _}: props<_, _, _>) => {
-    let bar = switch __bar {
+  let make = ({foo: ?__foo, a: ?__a, b, _}: props<_, _, _>) => {
+    let __foo_value = switch __foo {
     | Some(foo) => foo
     | None => ""
     }
-    let a = switch __a {
+    let bar = __foo_value
+    let __a_value = switch __a {
     | Some(a) => a
     | None => bar
     }
+    let a = __a_value
     (
       {
         React.string(bar ++ a ++ b)
       }: React.element
     )
   }
-  let make = {
+  let make = React.component({
     let \"AliasProps$C3" = (props: props<_>) => make(props)
 
     \"AliasProps$C3"
-  }
+  })
 }
 
 module C4 = {
@@ -100,17 +105,18 @@ module C4 = {
   }
 
   let make = ({a: b, x: ?__x, _}: props<_, _>) => {
-    let x = switch __x {
+    let __x_value = switch __x {
     | Some(x) => x
     | None => true
     }
+    let x = __x_value
     (ReactDOM.jsx("div", {children: ?ReactDOM.someElement(b)}): React.element)
   }
-  let make = {
+  let make = React.component({
     let \"AliasProps$C4" = (props: props<_>) => make(props)
 
     \"AliasProps$C4"
-  }
+  })
 }
 
 module C5 = {
@@ -121,17 +127,18 @@ module C5 = {
   }
 
   let make = ({a: (x, y), z: ?__z, _}: props<_, _>) => {
-    let z = switch __z {
+    let __z_value = switch __z {
     | Some(z) => z
     | None => 3
     }
+    let z = __z_value
     (x + y + z: React.element)
   }
-  let make = {
+  let make = React.component({
     let \"AliasProps$C5" = (props: props<_>) => make(props)
 
     \"AliasProps$C5"
-  }
+  })
 }
 
 module C6 = {
@@ -149,9 +156,9 @@ module C6 = {
 
   let make = ({comp: module(Comp: Comp), x: (a, b), _}: props<_, _>): React.element =>
     React.jsx(Comp.make, {})
-  let make = {
+  let make = React.component({
     let \"AliasProps$C6" = (props: props<_>) => make(props)
 
     \"AliasProps$C6"
-  }
+  })
 }
