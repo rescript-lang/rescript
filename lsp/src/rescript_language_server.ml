@@ -17,13 +17,15 @@ let initialization (client_capabilities : Lsp.Types.ClientCapabilities.t) =
   in
   InitializeResult.create ~capabilities ~serverInfo ()
 
-let show_message server message =
-  Server.notification server
-    (Lsp.Server_notification.ShowMessage
-       (Lsp.Types.ShowMessageParams.create ~type_:Info ~message))
-
-let on_initialize (params : Lsp.Types.InitializeParams.t) state =
-  (* TODO: collect compiler diagnostics and notify client? *)
+let on_initialize (params : Lsp.Types.InitializeParams.t) (state : State.t) =
+  (* TODO:
+    * Find root project (rescript.json, package.json) using InitializeParams.workspaceFolders and save in State.t
+      * See https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#initializeParams
+      * If not found rescript.json kill the server?
+    * Save initializationOptions in State.t
+      * This options are: askToStartBuild, codeLens.enable, inlayHints.enable, etc..
+    * Collect compiler diagnostics (syntax and type)?
+  *)
   let diagnostics = Diagnostics.create () in
   let initialization_info = initialization params.capabilities in
   let state = State.initialize state ~params ~diagnostics in
@@ -38,10 +40,7 @@ let on_request (Lsp.Client_request.E request) (server : State.t Server.t) =
     (ok initialization_info, state)
   | Shutdown -> (ok (), state)
   | TextDocumentHover {position; textDocument = {uri}} ->
-    let current_file = (Document_store.get_document ~uri state.store).text in
-    show_message server (Lsp.Types.DocumentUri.to_path uri);
-    let _res = Hover.create ~position ~uri ~current_file in
-    (ok _res, state)
+    (ok (Hover.create ~position ~uri server), state)
   | _ ->
     let err =
       Jsonrpc.Response.Error.make
@@ -58,27 +57,23 @@ let on_notification notification (server : State.t Server.t) =
       {textDocument = {uri; text; version; _}} ->
     let store = Document_store.open_document ~uri ~text ~version state.store in
     {state with store}
-  | TextDocumentDidChange {textDocument = {uri; version; _}; contentChanges}
+  (* | TextDocumentDidChange {textDocument = {uri; version; _}; contentChanges}
     -> (
     match List.rev contentChanges with
     | {text; _} :: _ -> state
-    | [] -> state)
+    | [] -> state) *)
   | TextDocumentDidClose {textDocument = {uri; _}} ->
-    let store = Document_store.remove_document ~uri state.store in
-    (* TODO: 
+    (* TODO:
      * remove state diagnostics
      * send updated diagnostics?
      *)
-
+    let store = Document_store.remove_document ~uri state.store in
     {state with store}
-  | Exit -> exit 0
+  | Exit -> state
   | _ -> state
 
 let main () =
-  Eio_main.run @@ fun env ->
-  let stdin = Eio.Stdenv.stdin env in
-  let stdout = Eio.Stdenv.stdout env in
-  Server.listen ~input:stdin ~output:stdout ~on_request ~on_notification
-    ~state:(State.create ~store:(Document_store.create ()))
-
-let () = main ()
+  Eio_main.run (fun env ->
+      let state = State.create ~store:(Document_store.create ()) in
+      Server.listen ~input:env#stdin ~output:env#stdout ~on_request
+        ~on_notification ~state ~env)
