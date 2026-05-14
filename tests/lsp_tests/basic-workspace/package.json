@@ -1,0 +1,14 @@
+{
+  "name": "@tests/lsp-tests-basic-workspace",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "rescript build",
+    "clean": "rescript clean",
+    "dev": "rescript -w"
+  },
+  "dependencies": {
+    "@rescript/react": "workspace:^",
+    "rescript": "workspace:^"
+  }
+}

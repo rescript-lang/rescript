@@ -1,0 +1,331 @@
+Request textDocument/hover Line: 1 Character: 4
+Response
+{ "contents": { "kind": "markdown", "value": "```rescript\nint\n```" } }
+
+Request textDocument/hover Line: 4 Character: 5
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\ntype t = (int, float)\n```"
+  }
+}
+
+Request textDocument/hover Line: 7 Character: 7
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nmodule Id: {\n  type x = int\n}\n```"
+  }
+}
+
+Request textDocument/hover Line: 20 Character: 11
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "\nThis module is commented\n---\n\n```\n \n```\n```rescript\nmodule Dep: {\n  let customDouble: int => int\n}\n```"
+  }
+}
+
+Request textDocument/hover Line: 23 Character: 11
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nint => int\n```\n---\nSome doc comment"
+  }
+}
+
+Request textDocument/hover Line: 27 Character: 6
+Response
+{ "contents": { "kind": "markdown", "value": "```rescript\nint\n```" } }
+
+Request textDocument/hover Line: 34 Character: 4
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nunit => int\n```\n---\nDoc comment for functionWithTypeAnnotation"
+  }
+}
+
+Request textDocument/hover Line: 38 Character: 13
+Response
+{ "contents": { "kind": "markdown", "value": "```rescript\nstring\n```" } }
+
+Request textDocument/hover Line: 43 Character: 15
+Response
+{ "contents": { "kind": "markdown", "value": "```rescript\nstring\n```" } }
+
+Request textDocument/hover Line: 47 Character: 10
+Response
+{ "contents": { "kind": "markdown", "value": "```rescript\nint\n```" } }
+
+Request textDocument/hover Line: 50 Character: 13
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nmodule type Logger = {\n  let log: string => unit\n}\n```"
+  }
+}
+
+Request textDocument/hover Line: 55 Character: 7
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nmodule type Logger = {\n  let log: string => unit\n}\n```"
+  }
+}
+
+Command `def` not implemented!Request textDocument/hover Line: 64 Character: 9
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nmodule IdDefinedTwice: {\n  let y: int\n  let _x: int\n}\n```"
+  }
+}
+
+Request textDocument/hover Line: 75 Character: 7
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nmodule A: {\n  let x: int\n}\n```"
+  }
+}
+
+Request textDocument/hover Line: 78 Character: 7
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nmodule A: {\n  let x: int\n}\n```"
+  }
+}
+
+Request textDocument/hover Line: 92 Character: 10
+Response
+null
+
+Request textDocument/hover Line: 99 Character: 10
+Response
+null
+
+Request textDocument/hover Line: 104 Character: 25
+Response
+{ "contents": { "kind": "markdown", "value": "```rescript\nfloat\n```" } }
+
+Request textDocument/hover Line: 107 Character: 21
+Response
+{ "contents": { "kind": "markdown", "value": "```rescript\nint\n```" } }
+
+Request textDocument/hover Line: 117 Character: 16
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nAA.cond<([< #str(string)] as 'a)> => AA.cond<'a>\n```\n\n---\n\n```\n \n```\n```rescript\ntype AA.cond<'a> = 'a\n  constraint 'a = [< #str(string)]\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C110%2C2%5D)\n"
+  }
+}
+
+Request textDocument/hover Line: 120 Character: 25
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nAA.cond<([< #str(string)] as 'a)> => AA.cond<'a>\n```\n\n---\n\n```\n \n```\n```rescript\ntype AA.cond<'a> = 'a\n  constraint 'a = [< #str(string)]\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C110%2C2%5D)\n"
+  }
+}
+
+Request textDocument/hover Line: 123 Character: 3
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "The `@live` decorator is for reanalyze, a static analysis tool for ReScript that can do dead code analysis.\n\n`@live` tells the dead code analysis that the value should be considered live, even though it might appear to be dead. This is typically used in case of FFI where there are indirect ways to access values. It can be added to everything that could otherwise be considered unused by the dead code analysis - values, functions, arguments, records, individual record fields, and so on.\n\n[Read more and see examples in the documentation](https://rescript-lang.org/syntax-lookup#live-decorator).\n\nHint: Did you know you can run an interactive code analysis in your project by running the command `> ReScript: Start Code Analyzer`? Try it!"
+  }
+}
+
+Request textDocument/hover Line: 132 Character: 4
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\n(unit, unit) => int\n```"
+  }
+}
+
+Request textDocument/hover Line: 135 Character: 4
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\n(unit, unit) => int\n```"
+  }
+}
+
+Request textDocument/hover Line: 138 Character: 5
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nunit => unit => int\n```"
+  }
+}
+
+Request textDocument/hover Line: 145 Character: 9
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nint\n```\n---\ndoc comment 1"
+  }
+}
+
+Request textDocument/hover Line: 149 Character: 6
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nint\n```\n---\n doc comment 2 "
+  }
+}
+
+Request textDocument/hover Line: 166 Character: 23
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nfoo<bar>\n```\n\n---\n\n```\n \n```\n```rescript\ntype foo<'a> = {content: 'a, zzz: string}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C161%2C2%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype bar = {age: int}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C162%2C2%5D)\n"
+  }
+}
+
+Request textDocument/hover Line: 168 Character: 22
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nfoobar\n```\n\n---\n\n```\n \n```\n```rescript\ntype foobar = foo<bar>\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C163%2C2%5D)\n"
+  }
+}
+
+Command `com` not implemented!Command `com` not implemented!Command `com` not implemented!Command `com` not implemented!Request textDocument/hover Line: 198 Character: 4
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nCompV4.props<int, string> => React.element\n```\n\n---\n\n```\n \n```\n```rescript\ntype CompV4.props<'n, 's> = {n?: 'n, s: 's}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C190%2C2%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype React.element = Jsx.element\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Fdependencies%2Frescript-react%2Fsrc%2FReact.res%22%2C0%2C0%5D)\n"
+  }
+}
+
+Request textDocument/hover Line: 203 Character: 16
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nuseR\n```\n\n---\n\n```\n \n```\n```rescript\ntype useR = {x: int, y: list<option<r<float>>>}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C200%2C0%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype r<'a> = {i: 'a, f: float}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C101%2C0%5D)\n"
+  }
+}
+
+Request textDocument/hover Line: 211 Character: 13
+Response
+null
+
+Request textDocument/hover Line: 230 Character: 20
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nint\n```\n---\n More Stuff "
+  }
+}
+
+Request textDocument/hover Line: 233 Character: 17
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nint\n```\n---\n More Stuff "
+  }
+}
+
+Request textDocument/hover Line: 245 Character: 6
+Response
+null
+
+Request textDocument/hover Line: 248 Character: 19
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nbool\n```\n---\n Mighty fine field here. "
+  }
+}
+
+Request textDocument/hover Line: 257 Character: 20
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nvariant\nCoolVariant\n```\n---\n Cool variant! \n\n---\n\n```\n \n```\n```rescript\ntype variant = CoolVariant | OtherCoolVariant\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C250%2C0%5D)\n"
+  }
+}
+
+Request textDocument/hover Line: 262 Character: 22
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\npayloadVariants\nInlineRecord({field1: int, field2: bool})\n```\n\n---\n\n```\n \n```\n```rescript\ntype payloadVariants =\n  | InlineRecord({field1: int, field2: bool})\n  | Args(int, bool)\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C259%2C0%5D)\n"
+  }
+}
+
+Request textDocument/hover Line: 265 Character: 23
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\npayloadVariants\nArgs(int, bool)\n```\n\n---\n\n```\n \n```\n```rescript\ntype payloadVariants =\n  | InlineRecord({field1: int, field2: bool})\n  | Args(int, bool)\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C259%2C0%5D)\n"
+  }
+}
+
+Request textDocument/hover Line: 272 Character: 42
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nRecursiveVariants.t\nAction1(int)\n```\n\n---\n\n```\n \n```\n```rescript\ntype RecursiveVariants.t =\n  | Action1(int)\n  | Action2(float)\n  | Batch(array<t>)\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C268%2C2%5D)\n"
+  }
+}
+
+Request textDocument/hover Line: 276 Character: 23
+Response
+null
+
+Request textDocument/hover Line: 279 Character: 33
+Response
+null
+
+Request textDocument/hover Line: 282 Character: 8
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "\n [`Belt.Array`]()\n\n  **mutable array**: Utilities functions\n\n---\n\n```\n \n```\n```rescript\nmodule Array: {\n  module Id\n  module Array\n  module SortArray\n  module MutableQueue\n  module MutableStack\n  module List\n  module Range\n  module Set\n  module Map\n  module MutableSet\n  module MutableMap\n  module HashSet\n  module HashMap\n  module Option\n  module Result\n  module Int\n  module Float\n}\n```"
+  }
+}
+
+Request textDocument/hover Line: 285 Character: 6
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\ntype aliased = variant\n```\n\n---\n\n```\n \n```\n```rescript\ntype variant = CoolVariant | OtherCoolVariant\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C250%2C0%5D)\n"
+  }
+}
+

@@ -1,7 +1,5 @@
-(executable
+(library
  (name rescript_language_server)
- (package rescript-language-server)
- (public_name rescript-language-server)
  (libraries lsp eio eio_main analysis)
  (flags
   (-w "-9")))

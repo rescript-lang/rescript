@@ -97,9 +97,7 @@ let notification_of_jsonrpc notification =
   | Ok notification -> notification
   | Error error -> raise (Lsp.Io.Error error)
 
-type 'a t = {channel: Chan.output; state: 'a}
-
-let create ~channel ~state = {channel; state}
+type 'a t = {channel: Chan.output; env: Eio_unix.Stdenv.base; state: 'a}
 
 let state t = t.state
 
@@ -110,6 +108,12 @@ let notification server notification =
   let notification = Lsp.Server_notification.to_jsonrpc notification in
   Io.await @@ Lsp_Io.write server.channel @@ Notification notification
 
+let log_message_notification ?(kind = Lsp.Types.MessageType.Debug) server
+    message =
+  notification server
+    (Lsp.Server_notification.LogMessage
+       (Lsp.Types.LogMessageParams.create ~type_:kind ~message))
+
 let rec input_loop ~input ~state with_ =
   match Io.await @@ Lsp_Io.read input with
   | Some packet ->
@@ -118,7 +122,7 @@ let rec input_loop ~input ~state with_ =
   | exception exn -> raise (Failure "Server.input_loop")
   | None -> ()
 
-let listen ~input ~output ~on_request ~on_notification ~state =
+let listen ~input ~output ~on_request ~on_notification ~state ~env =
   let handle_request server request =
     let response, state =
       match Lsp.Client_request.of_jsonrpc request with
@@ -137,18 +141,19 @@ let listen ~input ~output ~on_request ~on_notification ~state =
     on_notification (notification_of_jsonrpc notification) server
   in
   let input = Chan.of_source input in
-  Chan.with_sink output @@ fun channel ->
-  let server = create ~channel ~state in
-  input_loop ~input ~state @@ fun state packet ->
-  match packet with
-  | Notification notification -> handle_notification server notification
-  | Request request -> handle_request server request
-  | Batch_call calls ->
-    List.fold_left
-      (fun state call ->
-        match call with
-        | `Request request -> handle_request server request
-        | `Notification notification -> handle_notification server notification)
-      state calls
-  | Response _ -> raise (Lsp.Io.Error "unexpected response")
-  | Batch_response _ -> raise (Lsp.Io.Error "unexpected batch response")
+  Chan.with_sink output (fun channel ->
+      let server = {channel; state; env} in
+      input_loop ~input ~state (fun state packet ->
+          match packet with
+          | Notification notification -> handle_notification server notification
+          | Request request -> handle_request server request
+          | Batch_call calls ->
+            List.fold_left
+              (fun state call ->
+                match call with
+                | `Request request -> handle_request server request
+                | `Notification notification ->
+                  handle_notification server notification)
+              state calls
+          | Response _ -> raise (Lsp.Io.Error "unexpected response")
+          | Batch_response _ -> raise (Lsp.Io.Error "unexpected batch response")))
