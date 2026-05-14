@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-type style = JsxDOMStyle.t
+type style = ReactDOMStyle.t
 type domRef
 
 /**

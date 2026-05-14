@@ -78,7 +78,7 @@ external domElementToObj: Dom.element => {..} = "%identity"
 
 type style = ReactDOMStyle.t
 
-type domRef = JsxDOM.domRef
+type domRef
 
 module Ref = {
   type t = domRef
@@ -218,8 +218,6 @@ external preinit: (string, preinitOptions) => unit = "preinit"
 external preinitModule: (string, preloadModuleOptions) => unit = "preinitModule"
 
 // Runtime
-
-type domProps = JsxDOM.domProps
 
 @variadic @module("react")
 external createElement: (string, ~props: ReactDOMProps.t=?, array<React.element>) => React.element =
