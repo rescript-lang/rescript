@@ -89,7 +89,7 @@ type base = {
   kind?: string /* has a fixed set of possible values */,
   label?: string,
   list?: string,
-  loading?: [#\"lazy" | #eager],
+  loading?: [#lazy | #eager],
   loop?: bool,
   low?: int,
   manifest?: string /* uri */,
