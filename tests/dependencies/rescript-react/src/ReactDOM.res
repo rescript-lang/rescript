@@ -78,7 +78,7 @@ external domElementToObj: Dom.element => {..} = "%identity"
 
 type style = ReactDOMStyle.t
 
-type domRef = JsxDOM.domRef
+type domRef
 
 module Ref = {
   type t = domRef
@@ -219,31 +219,29 @@ external preinitModule: (string, preloadModuleOptions) => unit = "preinitModule"
 
 // Runtime
 
-type domProps = JsxDOM.domProps
-
 @variadic @module("react")
-external createElement: (string, ~props: domProps=?, array<React.element>) => React.element =
+external createElement: (string, ~props: ReactDOMProps.t=?, array<React.element>) => React.element =
   "createElement"
 
 @variadic @module("react")
 external createDOMElementVariadic: (
   string,
-  ~props: domProps=?,
+  ~props: ReactDOMProps.t=?,
   array<React.element>,
 ) => React.element = "createElement"
 
 external someElement: React.element => option<React.element> = "%identity"
 
 @module("react/jsx-runtime")
-external jsx: (string, JsxDOM.domProps) => Jsx.element = "jsx"
+external jsx: (string, ReactDOMProps.t) => Jsx.element = "jsx"
 
 @module("react/jsx-runtime")
-external jsxKeyed: (string, JsxDOM.domProps, ~key: string=?, @ignore unit) => Jsx.element = "jsx"
+external jsxKeyed: (string, ReactDOMProps.t, ~key: string=?, @ignore unit) => Jsx.element = "jsx"
 
 @module("react/jsx-runtime")
-external jsxs: (string, JsxDOM.domProps) => Jsx.element = "jsxs"
+external jsxs: (string, ReactDOMProps.t) => Jsx.element = "jsxs"
 
 @module("react/jsx-runtime")
-external jsxsKeyed: (string, JsxDOM.domProps, ~key: string=?, @ignore unit) => Jsx.element = "jsxs"
+external jsxsKeyed: (string, ReactDOMProps.t, ~key: string=?, @ignore unit) => Jsx.element = "jsxs"
 
 module Style = ReactDOMStyle
