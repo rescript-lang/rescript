@@ -37,6 +37,8 @@ type effect_ = string option
 
 let single_na = Single Lam_arity.na
 
+let module_field_path_key segments = String.concat "$" segments
+
 type keyed_cmj_value = {
   name: string;
   arity: arity;
@@ -47,12 +49,17 @@ type keyed_cmj_values = keyed_cmj_value array
 
 type t = {
   values: keyed_cmj_values;
+  (* Full source paths that can be read through flat JS exports.  The key uses
+     [module_field_path_key], so source path [A.B.make] is stored as
+     [A$B$make].  The same string is also the emitted export name. *)
+  hoisted_values: string array;
   pure: bool;
   package_spec: Js_packages_info.t;
   case: Ext_js_file_kind.case;
 }
 
-let make ~(values : cmj_value Map_string.t) ~effect_ ~package_spec ~case : t =
+let make ~(values : cmj_value Map_string.t) ~hoisted_values ~effect_
+    ~package_spec ~case : t =
   {
     values =
       Map_string.to_sorted_array_with_f values (fun k v ->
@@ -61,6 +68,7 @@ let make ~(values : cmj_value Map_string.t) ~effect_ ~package_spec ~case : t =
             arity = v.arity;
             persistent_closed_lambda = v.persistent_closed_lambda;
           });
+    hoisted_values = Array.of_list (Set_string.elements hoisted_values);
     pure = effect_ = None;
     package_spec;
     case;
@@ -157,6 +165,11 @@ let binary_search (sorted : keyed_cmj_values) (key : string) : keyed_cmj_value =
 let query_by_name (cmj_table : t) name : keyed_cmj_value =
   let values = cmj_table.values in
   binary_search values name
+
+let has_hoisted_value (cmj_table : t) name =
+  Array.exists
+    (fun hoisted_name -> Ext_string.equal hoisted_name name)
+    cmj_table.hoisted_values
 
 type path = string
 

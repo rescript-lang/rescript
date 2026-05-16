@@ -105,6 +105,13 @@ let values_of_export (meta : Lam_stats.t) (export_map : Lam.t Map_ident.t) :
         in
         Map_string.add acc x.name cmj_value)
 
+let hoisted_values_of_export (meta : Lam_stats.t) : Set_string.t =
+  (* Hoisted aliases are exported as real flat JS values, and also recorded in a
+     separate .cmj set so consumers know that the flat name is allowed to stand
+     in for the original nested source path. *)
+  Ext_list.fold_left meta.exports Set_string.empty (fun acc x ->
+      if Ident.js_hoisted x then Set_string.add acc x.name else acc)
+
 (* ATTENTION: all runtime modules, if it is not hard required,
    it should be okay to not reference it
 *)
@@ -131,8 +138,9 @@ let get_dependent_module_effect (maybe_pure : string option)
 let export_to_cmj (meta : Lam_stats.t) effect_ export_map case : Js_cmj_format.t
     =
   let values = values_of_export meta export_map in
+  let hoisted_values = hoisted_values_of_export meta in
 
-  Js_cmj_format.make ~values ~effect_
+  Js_cmj_format.make ~values ~hoisted_values ~effect_
     ~package_spec:(Js_packages_state.get_packages_info ())
     ~case
 (* FIXME: make sure [-o] would not change its case

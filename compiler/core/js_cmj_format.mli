@@ -62,6 +62,10 @@ type keyed_cmj_value = {
 
 type t = {
   values: keyed_cmj_value array;
+  (* Full source paths that can be read through flat JS exports.  The key uses
+     [module_field_path_key], so source path [A.B.make] is stored as
+     [A$B$make].  The same string is also the emitted export name. *)
+  hoisted_values: string array;
   pure: bool;
   package_spec: Js_packages_info.t;
   case: Ext_js_file_kind.case;
@@ -69,6 +73,7 @@ type t = {
 
 val make :
   values:cmj_value Map_string.t ->
+  hoisted_values:Set_string.t ->
   effect_:effect_ ->
   package_spec:Js_packages_info.t ->
   case:Ext_js_file_kind.case ->
@@ -76,7 +81,15 @@ val make :
 
 val query_by_name : t -> string -> keyed_cmj_value
 
+val has_hoisted_value : t -> string -> bool
+
 val single_na : arity
+
+(* Encode a full module field path as the string key used in .cmj tables.
+   This is only needed when the whole path is itself a recorded value, such as
+   a hoisted [A.B.make] export.  Ordinary nested module metadata is still read
+   from the parent field, such as [A], and then interpreted by field index. *)
+val module_field_path_key : string list -> string
 
 val from_file : string -> t
 

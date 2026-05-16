@@ -115,6 +115,78 @@ let no_side_effects (rest : Lam_group.t list) : string option =
           Some ""
         else None (* TODO :*))
 
+(* Materialize JS-hoisted values as root-level aliases and exports.  The source
+   value still lives at its normal module path, but downstream tools can import
+   the flat name directly when the .cmj metadata marks it as hoisted. *)
+let js_hoisted_aliases (export_idents : Set_ident.t) (groups : Lam_group.t list)
+    =
+  let group_map =
+    Ext_list.fold_left groups Map_ident.empty (fun acc group ->
+        match group with
+        | Single (_, id, lam) -> Map_ident.add acc id lam
+        | Recursive bindings ->
+          Ext_list.fold_left bindings acc (fun acc (id, lam) ->
+              Map_ident.add acc id lam)
+        | Nop _ -> acc)
+  in
+  let rec access loc base fields =
+    match fields with
+    | [] -> base
+    | (pos, name) :: fields ->
+      access loc
+        (Lam.prim
+           ~primitive:(Lam_primitive.Pfield (pos, Lam_compat.Fld_module {name}))
+           ~args:[base] loc)
+        fields
+  in
+  let resolve = function
+    | Lam.Lvar id as lam -> (
+      match Map_ident.find_opt group_map id with
+      | Some resolved -> resolved
+      | None -> lam)
+    | lam -> lam
+  in
+  let rec fold_module_fields fields args index acc f =
+    match (fields, args) with
+    | [], [] -> acc
+    | field :: fields, arg :: args ->
+      fold_module_fields fields args (index + 1) (f index field arg acc) f
+    | _, _ -> invalid_arg "fold_module_fields"
+  in
+  let rec scan top_id path acc lam =
+    match resolve lam with
+    | Lam.Lprim
+        {
+          primitive =
+            Lam_primitive.Pmakeblock (_, Blk_module fields, _);
+          args;
+          loc;
+        } ->
+      fold_module_fields fields args 0 acc (fun pos field arg acc ->
+          let path = path @ [(pos, field)] in
+          let acc = scan top_id path acc arg in
+          match arg with
+          | Lam.Lvar id when Ident.js_hoisted id ->
+            let name =
+              Js_cmj_format.module_field_path_key
+                (top_id.Ident.name
+                :: Ext_list.map path (fun (_pos, name) -> name))
+            in
+            let alias_id = Ident.create name in
+            Ident.make_js_hoisted alias_id;
+            let alias =
+              access loc (Lam.var top_id) path
+            in
+            (Lam_group.Single (Alias, alias_id, alias), alias_id, alias) :: acc
+          | _ -> acc)
+    | _ -> acc
+  in
+  Ext_list.fold_left groups [] (fun acc group ->
+      match group with
+      | Single (_, id, lam) when Set_ident.mem export_idents id ->
+        scan id [] acc lam
+      | Single _ | Recursive _ | Nop _ -> acc)
+
 
 let _d  = fun  s lam -> 
 #ifndef RELEASE
@@ -227,6 +299,28 @@ let () =
 in
 #endif  
 let maybe_pure = no_side_effects groups in
+(* Add the generated alias groups before JS lowering so regular export
+   printing, tree shaking, and .cmj metadata all see the flat runtime value. *)
+let hoisted_aliases = js_hoisted_aliases meta.export_idents groups in
+let hoisted_groups, hoisted_exports, hoisted_export_map =
+  Ext_list.fold_left hoisted_aliases ([], [], Map_ident.empty)
+    (fun (groups, exports, export_map) (group, id, lam) ->
+      (group :: groups, id :: exports, Map_ident.add export_map id lam))
+in
+let groups = groups @ List.rev hoisted_groups in
+let meta =
+  {
+    meta with
+    exports = meta.exports @ List.rev hoisted_exports;
+    export_idents =
+      Ext_list.fold_left hoisted_exports meta.export_idents (fun acc id ->
+          Set_ident.add acc id);
+  }
+in
+let export_map =
+  Map_ident.fold hoisted_export_map coerced_input.export_map (fun id lam acc ->
+      Map_ident.add acc id lam)
+in
 #ifndef RELEASE
 let () = Ext_log.dwarn ~__POS__ "\n@[[TIME:]Pre-compile: %f@]@."  (Sys.time () *. 1000.) in      
 #endif  
@@ -277,18 +371,18 @@ js
           ) 
     in
     Warnings.check_fatal();
-    let effect_ = 
+    let effect_ =
       Lam_stats_export.get_dependent_module_effect
-        maybe_pure external_module_ids in 
-    let v : Js_cmj_format.t = 
-      Lam_stats_export.export_to_cmj 
-        meta  
-        effect_ 
-        coerced_input.export_map          
+        maybe_pure external_module_ids in
+    let v : Js_cmj_format.t =
+      Lam_stats_export.export_to_cmj
+        meta
+        effect_
+        export_map
         (if Ext_char.is_lower_case (Filename.basename output_prefix).[0] then Little else Upper)
     in
     (if not !Clflags.dont_write_files then
-       Js_cmj_format.to_file 
+       Js_cmj_format.to_file
          ~check_exists:(not !Js_config.force_cmj)
          (output_prefix ^ Literals.suffix_cmj) v);
     {J.program = program ; side_effect = effect_ ; modules = external_module_ids }      

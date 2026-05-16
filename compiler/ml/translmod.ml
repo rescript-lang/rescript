@@ -446,8 +446,15 @@ and transl_structure loc fields cc rootpath final_env = function
             transl_module Tcoerce_none None modl,
             body ),
         size )
-    | Tstr_primitive _ | Tstr_type _ | Tstr_modtype _ | Tstr_open _
-    | Tstr_attribute _ ->
+    | Tstr_primitive {val_attributes} ->
+      (* Externals do not introduce a Lambda function binding that can be
+         hoisted, so surface the attribute as misplaced here. *)
+      Ext_list.iter val_attributes (fun ({txt; loc}, payload) ->
+          if txt = "res.hoistedFunction" && payload = Parsetree.PStr [] then
+            Location.prerr_warning loc
+              (Warnings.Misplaced_attribute "res.hoistedFunction"));
+      transl_structure loc fields cc rootpath final_env rem
+    | Tstr_type _ | Tstr_modtype _ | Tstr_open _ | Tstr_attribute _ ->
       transl_structure loc fields cc rootpath final_env rem)
 
 (* Update forward declaration in Translcore *)
