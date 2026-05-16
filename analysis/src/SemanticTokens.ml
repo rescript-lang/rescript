@@ -49,7 +49,7 @@ module Token = struct
     | Property -> "Property"
     | JsxLowercase -> "JsxLowercase"
 
-  let tokenModifiersString = "0" (* None at the moment *)
+  let tokenModifiers = 0 (* None at the moment *)
 
   type token = int * int * int * tokenType
 
@@ -70,7 +70,8 @@ module Token = struct
     e.lastLine <- line;
     e.lastChar <- char;
     if deltaLine >= 0 && deltaChar >= 0 && length >= 0 then
-      Some [|deltaLine; deltaChar; length; tokenTypeToInt type_; 0|]
+      Some
+        [|deltaLine; deltaChar; length; tokenTypeToInt type_; tokenModifiers|]
     else None
 
   let emit e =
