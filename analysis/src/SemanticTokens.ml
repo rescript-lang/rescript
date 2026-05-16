@@ -29,15 +29,15 @@ module Token = struct
     | Property  (** {x:...} *)
     | JsxLowercase  (** div in <div> *)
 
-  let tokenTypeToString = function
-    | Operator -> "0"
-    | Variable -> "1"
-    | Type -> "2"
-    | JsxTag -> "3"
-    | Namespace -> "4"
-    | EnumMember -> "5"
-    | Property -> "6"
-    | JsxLowercase -> "7"
+  let tokenTypeToInt = function
+    | Operator -> 0
+    | Variable -> 1
+    | Type -> 2
+    | JsxTag -> 3
+    | Namespace -> 4
+    | EnumMember -> 5
+    | Property -> 6
+    | JsxLowercase -> 7
 
   let tokenTypeDebug = function
     | Operator -> "Operator"
@@ -64,25 +64,14 @@ module Token = struct
   let add ~line ~char ~length ~type_ e =
     e.tokens <- (line, char, length, type_) :: e.tokens
 
-  let emitToken buf (line, char, length, type_) e =
+  let emitToken (line, char, length, type_) e =
     let deltaLine = line - e.lastLine in
     let deltaChar = if deltaLine = 0 then char - e.lastChar else char in
     e.lastLine <- line;
     e.lastChar <- char;
-    if Buffer.length buf > 0 then Buffer.add_char buf ',';
-    if
-      deltaLine >= 0 && deltaChar >= 0 && length >= 0
-      (* Defensive programming *)
-    then
-      Buffer.add_string buf
-        (string_of_int deltaLine ^ "," ^ string_of_int deltaChar ^ ","
-       ^ string_of_int length ^ "," ^ tokenTypeToString type_ ^ ","
-       ^ tokenModifiersString)
-
-  let remove_trailing_comma buffer =
-    let len = Buffer.length buffer in
-    if len > 0 && Buffer.nth buffer (len - 1) = ',' then
-      Buffer.truncate buffer (len - 1)
+    if deltaLine >= 0 && deltaChar >= 0 && length >= 0 then
+      Some [|deltaLine; deltaChar; length; tokenTypeToInt type_; 0|]
+    else None
 
   let emit e =
     let sortedTokens =
@@ -90,13 +79,12 @@ module Token = struct
       |> List.sort (fun (l1, c1, _, _) (l2, c2, _, _) ->
              if l1 = l2 then compare c1 c2 else compare l1 l2)
     in
-    let buf = Buffer.create 1 in
-    sortedTokens |> List.iter (fun t -> e |> emitToken buf t);
+    let arrays = sortedTokens |> List.filter_map (fun t -> e |> emitToken t) in
+    Array.concat arrays
 
-    (* Valid JSON arrays cannot have trailing commas *)
-    remove_trailing_comma buf;
-
-    Buffer.contents buf
+  let arrayToJsonString arr =
+    let items = Array.map string_of_int arr |> Array.to_list in
+    "[" ^ String.concat "," items ^ "]"
 end
 
 let isLowercaseId id =
@@ -203,7 +191,7 @@ let emitVariant ~(name : Longident.t Location.loc) ~debug emitter =
     |> emitLongident ~lastToken:(Some Token.EnumMember)
          ~pos:(Loc.start name.loc) ~lid:name.txt ~debug
 
-let command ~debug ~emitter ~path =
+let command ~debug ~emitter ~source ~kindFile =
   let processTypeArg (coreType : Parsetree.core_type) =
     if debug then Printf.printf "TypeArg: %s\n" (Loc.toString coreType.ptyp_loc)
   in
@@ -480,28 +468,27 @@ let command ~debug ~emitter ~path =
     }
   in
 
-  if Files.classifySourceFile path = Res then (
+  if kindFile = Files.Res then (
     let parser =
-      Res_driver.parsing_engine.parse_implementation ~for_printer:false
+      Res_driver.parsing_engine.parse_implementation_from_source
+        ~for_printer:false
     in
-    let {Res_driver.parsetree = structure; diagnostics} =
-      parser ~filename:path
-    in
+    let {Res_driver.parsetree = structure; diagnostics} = parser ~source in
     if debug then
       Printf.printf "structure items:%d diagnostics:%d \n"
         (List.length structure) (List.length diagnostics);
     iterator.structure iterator structure |> ignore)
   else
-    let parser = Res_driver.parsing_engine.parse_interface ~for_printer:false in
-    let {Res_driver.parsetree = signature; diagnostics} =
-      parser ~filename:path
+    let parser =
+      Res_driver.parsing_engine.parse_interface_from_source ~for_printer:false
     in
+    let {Res_driver.parsetree = signature; diagnostics} = parser ~source in
     if debug then
       Printf.printf "signature items:%d diagnostics:%d \n"
         (List.length signature) (List.length diagnostics);
     iterator.signature iterator signature |> ignore
 
-let semanticTokens ~currentFile =
+let semanticTokens ~source ~kindFile =
   let emitter = Token.createEmitter () in
-  command ~emitter ~debug:false ~path:currentFile;
-  Printf.printf "{\"data\":[%s]}" (Token.emit emitter)
+  command ~emitter ~debug:false ~source ~kindFile;
+  Protocol.{data = Token.emit emitter}

@@ -63,6 +63,10 @@ type documentSymbolItem = {
   range: range;
   children: documentSymbolItem list;
 }
+type prepareRenameWithPlaceholder = {range: range; placeholder: string}
+type prepareRename =
+  | Range of range
+  | Placeholder of prepareRenameWithPlaceholder
 type renameFile = {oldUri: string; newUri: string}
 type diagnostic = {range: range; message: string; severity: int}
 
@@ -92,6 +96,8 @@ type codeAction = {
   edit: codeActionEdit;
 }
 
+type semanticTokens = {data: int array}
+
 let wrapInQuotes s = "\"" ^ Json.escape s ^ "\""
 
 let null = "null"
@@ -104,6 +110,15 @@ let stringifyRange r =
   Printf.sprintf {|{"start": %s, "end": %s}|}
     (stringifyPosition r.start)
     (stringifyPosition r.end_)
+
+let stringifyRangeWithPlaceholder (r : prepareRenameWithPlaceholder) =
+  Printf.sprintf
+    {|{
+    "range": %s,
+    "placeholder": %s
+  }|}
+    (stringifyRange r.range)
+    (wrapInQuotes r.placeholder)
 
 let stringifyTextEdit (te : textEdit) =
   Printf.sprintf

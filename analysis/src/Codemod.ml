@@ -5,8 +5,8 @@ let rec collectPatterns p =
   | Ppat_or (p1, p2) -> collectPatterns p1 @ [p2]
   | _ -> [p]
 
-let transform ~path ~pos ~debug ~typ ~hint =
-  let structure, printExpr, _, _ = Xform.parseImplementation ~filename:path in
+let transform ~source ~pos ~debug ~typ ~hint =
+  let structure, printExpr, _, _ = Xform.parseImplementation ~source in
   match typ with
   | AddMissingCases -> (
     let source = "let " ^ hint ^ " = ()" in

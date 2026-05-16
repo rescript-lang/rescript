@@ -134,22 +134,18 @@ let main () =
     | _ -> print_endline "\"ERR: Did not find root \"")
   | [_; "completion"; path; line; col; currentFile] ->
     printHeaderInfo path line col;
-    Commands.completion ~debug ~path
+    Cli.completion ~debug ~path
       ~pos:(int_of_string line, int_of_string col)
       ~currentFile
   | [_; "completionResolve"; path; modulePath] ->
-    Commands.completionResolve ~path ~modulePath
+    Cli.completionResolve ~path ~modulePath
   | [_; "definition"; path; line; col] ->
-    Commands.definition ~path
-      ~pos:(int_of_string line, int_of_string col)
-      ~debug
+    Cli.definition ~path ~pos:(int_of_string line, int_of_string col) ~debug
   | [_; "typeDefinition"; path; line; col] ->
-    Commands.typeDefinition ~path
-      ~pos:(int_of_string line, int_of_string col)
-      ~debug
+    Cli.typeDefinition ~path ~pos:(int_of_string line, int_of_string col) ~debug
   | [_; "documentSymbol"; path] -> DocumentSymbol.command ~path
   | [_; "hover"; path; line; col; currentFile; supportsMarkdownLinks] ->
-    Commands.hover ~path
+    Cli.hover ~path
       ~pos:(int_of_string line, int_of_string col)
       ~currentFile ~debug
       ~supportsMarkdownLinks:
@@ -159,7 +155,7 @@ let main () =
   | [
    _; "signatureHelp"; path; line; col; currentFile; allowForConstructorPayloads;
   ] ->
-    Commands.signatureHelp ~path
+    Cli.signatureHelp ~path
       ~pos:(int_of_string line, int_of_string col)
       ~currentFile ~debug
       ~allowForConstructorPayloads:
@@ -167,13 +163,13 @@ let main () =
         | "true" -> true
         | _ -> false)
   | [_; "inlayHint"; path; line_start; line_end; maxLength] ->
-    Commands.inlayhint ~path
+    Cli.inlayhint ~path
       ~pos:(int_of_string line_start, int_of_string line_end)
       ~maxLength ~debug
-  | [_; "codeLens"; path] -> Commands.codeLens ~path ~debug
+  | [_; "codeLens"; path] -> Cli.codeLens ~path ~debug
   | [_; "codeAction"; path; startLine; startCol; endLine; endCol; currentFile]
     ->
-    Commands.codeAction ~path
+    Cli.codeAction ~path
       ~startPos:(int_of_string startLine, int_of_string startCol)
       ~endPos:(int_of_string endLine, int_of_string endCol)
       ~currentFile ~debug
@@ -183,34 +179,29 @@ let main () =
       | "add-missing-cases" -> Codemod.AddMissingCases
       | _ -> raise (Failure "unsupported type")
     in
+    let source = Files.readFile path |> Option.value ~default:"" in
     let res =
-      Codemod.transform ~path
+      Codemod.transform ~source
         ~pos:(int_of_string line, int_of_string col)
         ~debug ~typ ~hint
       |> Json.escape
     in
     Printf.printf "\"%s\"" res
-  | [_; "diagnosticSyntax"; path] -> Commands.diagnosticSyntax ~path
+  | [_; "diagnosticSyntax"; path] -> Cli.diagnosticSyntax ~path
   | [_; "references"; path; line; col] ->
-    Commands.references ~path
-      ~pos:(int_of_string line, int_of_string col)
-      ~debug
+    Cli.references ~path ~pos:(int_of_string line, int_of_string col) ~debug
   | [_; "prepareRename"; path; line; col] ->
-    Commands.prepareRename ~path
-      ~pos:(int_of_string line, int_of_string col)
-      ~debug
+    Cli.prepareRename ~path ~pos:(int_of_string line, int_of_string col) ~debug
   | [_; "rename"; path; line; col; newName] ->
-    Commands.rename ~path
+    Cli.rename ~path
       ~pos:(int_of_string line, int_of_string col)
       ~newName ~debug
-  | [_; "semanticTokens"; currentFile] ->
-    SemanticTokens.semanticTokens ~currentFile
+  | [_; "semanticTokens"; currentFile] -> Cli.semanticTokens ~path:currentFile
   | [_; "createInterface"; path; cmiFile] ->
     Printf.printf "\"%s\""
       (Json.escape (CreateInterface.command ~path ~cmiFile))
-  | [_; "format"; path] ->
-    Printf.printf "\"%s\"" (Json.escape (Commands.format ~path))
-  | [_; "test"; path] -> Commands.test ~path
+  | [_; "format"; path] -> Cli.format ~path
+  | [_; "test"; path] -> Cli.test ~path
   | [_; "cmt"; rescript_json; cmt_path] -> CmtViewer.dump rescript_json cmt_path
   | args when List.mem "-h" args || List.mem "--help" args -> prerr_endline help
   | _ ->

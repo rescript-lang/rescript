@@ -33,9 +33,9 @@ let docsForLabel typeExpr ~file ~package ~supportsMarkdownLinks =
   in
   typeDefinitions |> String.concat "\n"
 
-let findFunctionType ~currentFile ~debug ~path ~pos =
+let findFunctionType ~debug ~source ~kindFile ~pos ~full =
   (* Start by looking at the typed info at the loc of the fn *)
-  match Cmt.loadFullCmtFromPath ~path with
+  match full with
   | None -> None
   | Some full -> (
     let {file; package} = full in
@@ -72,16 +72,15 @@ let findFunctionType ~currentFile ~debug ~path ~pos =
     | None -> (
       (* If nothing was found there, try using the unsaved completion engine *)
       let completables =
-        let textOpt = Files.readFile currentFile in
-        match textOpt with
-        | None | Some "" -> None
-        | Some text -> (
+        match source with
+        | "" -> None
+        | source -> (
           (* Leverage the completion functionality to pull out the type of the identifier doing the function application.
              This lets us leverage all of the smart work done in completions to find the correct type in many cases even
              for files not saved yet. *)
           match
-            CompletionFrontEnd.completionWithParser ~debug ~path ~posCursor:pos
-              ~currentFile ~text
+            CompletionFrontEnd.completionWithParser ~debug ~source ~kindFile
+              ~posCursor:pos
           with
           | None -> None
           | Some (completable, scope) ->
@@ -238,11 +237,11 @@ let findConstructorArgs ~full ~env ~constructorName loc =
     | _ -> None)
   | _ -> None
 
-let signatureHelp ~path ~pos ~currentFile ~debug ~allowForConstructorPayloads =
-  let textOpt = Files.readFile currentFile in
-  match textOpt with
-  | None | Some "" -> None
-  | Some text -> (
+let signatureHelp ~debug ~source ~kindFile ~pos ~allowForConstructorPayloads
+    ~full =
+  match source with
+  | "" -> None
+  | text -> (
     match Pos.positionToOffset text pos with
     | None -> None
     | Some offset -> (
@@ -416,16 +415,17 @@ let signatureHelp ~path ~pos ~currentFile ~debug ~allowForConstructorPayloads =
       in
       let iterator = {Ast_iterator.default_iterator with expr; pat} in
       let parser =
-        Res_driver.parsing_engine.parse_implementation ~for_printer:false
+        Res_driver.parsing_engine.parse_implementation_from_source
+          ~for_printer:false
       in
-      let {Res_driver.parsetree = structure} = parser ~filename:currentFile in
+      let {Res_driver.parsetree = structure} = parser ~source in
       iterator.structure iterator structure |> ignore;
       (* Handle function application, if found *)
       match !result with
       | Some (_, `FunctionCall (argAtCursor, exp, _extractedArgs)) -> (
         (* Not looking for the cursor position after this, but rather the target function expression's loc. *)
         let pos = exp.pexp_loc |> Loc.end_ in
-        match findFunctionType ~currentFile ~debug ~path ~pos with
+        match findFunctionType ~source ~kindFile ~debug ~pos ~full with
         | Some (args, docstring, type_expr, package, _env, file) ->
           if debug then
             Printf.printf "argAtCursor: %s\n"
@@ -525,7 +525,7 @@ let signatureHelp ~path ~pos ~currentFile ~debug ~allowForConstructorPayloads =
         -> (
         if Debug.verbose () then
           Printf.printf "[signature_help] Found constructor!\n";
-        match Cmt.loadFullCmtFromPath ~path with
+        match full with
         | None ->
           if Debug.verbose () then
             Printf.printf "[signature_help] Could not load cmt\n";

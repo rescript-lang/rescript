@@ -31,7 +31,7 @@ let locItemToTypeHint ~full:{file; package} locItem =
         | `Field -> fromType t))
   | _ -> None
 
-let inlay ~path ~pos ~maxLength ~debug =
+let inlay ~source ~kindFile ~pos ~maxLength ~full ~debug =
   let maxlen = try Some (int_of_string maxLength) with Failure _ -> None in
   let hints = ref [] in
   let start_line, end_line = pos in
@@ -71,13 +71,14 @@ let inlay ~path ~pos ~maxLength ~debug =
     Ast_iterator.default_iterator.value_binding iterator vb
   in
   let iterator = {Ast_iterator.default_iterator with value_binding} in
-  (if Files.classifySourceFile path = Res then
+  (if kindFile = Files.Res then
      let parser =
-       Res_driver.parsing_engine.parse_implementation ~for_printer:false
+       Res_driver.parsing_engine.parse_implementation_from_source
+         ~for_printer:false
      in
-     let {Res_driver.parsetree = structure} = parser ~filename:path in
+     let {Res_driver.parsetree = structure} = parser ~source in
      iterator.structure iterator structure |> ignore);
-  match Cmt.loadFullCmtFromPath ~path with
+  match full with
   | None -> None
   | Some full ->
     let result =
@@ -96,7 +97,7 @@ let inlay ~path ~pos ~maxLength ~debug =
                match locItemToTypeHint locItem ~full with
                | Some label -> (
                  let result =
-                   Protocol.stringifyHint
+                   Protocol.
                      {
                        kind = inlayKindToNumber hintKind;
                        position;
@@ -113,7 +114,7 @@ let inlay ~path ~pos ~maxLength ~debug =
     in
     Some result
 
-let codeLens ~path ~debug =
+let codeLens ~source ~kindFile ~full ~debug =
   let lenses = ref [] in
   let push loc =
     let range = Utils.cmtLocToRange loc in
@@ -135,13 +136,14 @@ let codeLens ~path ~debug =
   let iterator = {Ast_iterator.default_iterator with value_binding} in
   (* We only print code lenses in implementation files. This is because they'd be redundant in interface files,
      where the definition itself will be the same thing as what would've been printed in the code lens. *)
-  (if Files.classifySourceFile path = Res then
+  (if kindFile = Files.Res then
      let parser =
-       Res_driver.parsing_engine.parse_implementation ~for_printer:false
+       Res_driver.parsing_engine.parse_implementation_from_source
+         ~for_printer:false
      in
-     let {Res_driver.parsetree = structure} = parser ~filename:path in
+     let {Res_driver.parsetree = structure} = parser ~source in
      iterator.structure iterator structure |> ignore);
-  match Cmt.loadFullCmtFromPath ~path with
+  match full with
   | None -> None
   | Some full ->
     let result =
@@ -154,21 +156,21 @@ let codeLens ~path ~debug =
              with
              | Some {locType = Typed (_, typeExpr, _)} ->
                Some
-                 (Protocol.stringifyCodeLens
-                    {
-                      range;
-                      command =
-                        Some
-                          {
-                            (* Code lenses can run commands. An empty command string means we just want the editor
+                 Protocol.
+                   {
+                     range;
+                     command =
+                       Some
+                         {
+                           (* Code lenses can run commands. An empty command string means we just want the editor
                                to print the text, not link to running a command. *)
-                            command = "";
-                            (* Print the type with a huge line width, because the code lens always prints on a
+                           command = "";
+                           (* Print the type with a huge line width, because the code lens always prints on a
                                single line in the editor. *)
-                            title =
-                              typeExpr |> Shared.typeToString ~lineWidth:400;
-                          };
-                    })
+                           title =
+                             typeExpr |> Shared.typeToString ~lineWidth:400;
+                         };
+                   }
              | _ -> None)
     in
     Some result

@@ -180,9 +180,11 @@ let hoverWithExpandedTypes ~file ~package ~supportsMarkdownLinks ?docstring
 
 (* Leverages autocomplete functionality to produce a hover for a position. This
    makes it (most often) work with unsaved content. *)
-let getHoverViaCompletions ~debug ~path ~pos ~currentFile ~forHover
-    ~supportsMarkdownLinks =
-  match Completions.getCompletions ~debug ~path ~pos ~currentFile ~forHover with
+let getHoverViaCompletions ~debug ~source ~kindFile ~pos ~forHover
+    ~supportsMarkdownLinks ~full =
+  match
+    Completions.getCompletions ~debug ~source ~kindFile ~pos ~forHover ~full
+  with
   | None -> None
   | Some (completions, ({file; package} as full), scope) -> (
     let rawOpens = Scope.getRawOpens scope in
@@ -193,7 +195,7 @@ let getHoverViaCompletions ~debug ~path ~pos ~currentFile ~forHover
         @ if typString = "" then [] else [Markdown.codeBlock typString]
       in
 
-      Some (Protocol.stringifyHover (String.concat "\n\n" parts))
+      Some (String.concat "\n\n" parts)
     | {kind = Field _; env; docstring} :: _ -> (
       let opens = CompletionBackEnd.getOpens ~debug ~rawOpens ~package ~env in
       match
@@ -205,7 +207,7 @@ let getHoverViaCompletions ~debug ~path ~pos ~currentFile ~forHover
           hoverWithExpandedTypes ~file ~package ~docstring
             ~supportsMarkdownLinks typ
         in
-        Some (Protocol.stringifyHover typeString)
+        Some typeString
       | None -> None)
     | {env} :: _ -> (
       let opens = CompletionBackEnd.getOpens ~debug ~rawOpens ~package ~env in
@@ -217,7 +219,7 @@ let getHoverViaCompletions ~debug ~path ~pos ~currentFile ~forHover
         let typeString =
           hoverWithExpandedTypes ~file ~package ~supportsMarkdownLinks typ
         in
-        Some (Protocol.stringifyHover typeString)
+        Some typeString
       | None -> None)
     | _ -> None)
 

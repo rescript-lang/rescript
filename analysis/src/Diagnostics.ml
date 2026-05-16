@@ -1,4 +1,4 @@
-let document_syntax ~path =
+let document_syntax ~source ~kindFile =
   let get_diagnostics diagnostics =
     diagnostics
     |> List.map (fun diagnostic ->
@@ -8,7 +8,7 @@ let document_syntax ~path =
            let _, endline, endcol =
              Location.get_pos_info (Res_diagnostics.get_end_pos diagnostic)
            in
-           Protocol.stringifyDiagnostic
+           Protocol.
              {
                range =
                  {
@@ -19,16 +19,16 @@ let document_syntax ~path =
                severity = 1;
              })
   in
-  if FindFiles.isImplementation path then
+  if kindFile = Files.Res then
     let parseImplementation =
-      Res_driver.parsing_engine.parse_implementation ~for_printer:false
-        ~filename:path
+      Res_driver.parsing_engine.parse_implementation_from_source
+        ~for_printer:false ~source
     in
     get_diagnostics parseImplementation.diagnostics
-  else if FindFiles.isInterface path then
+  else if kindFile = Files.Resi then
     let parseInterface =
-      Res_driver.parsing_engine.parse_interface ~for_printer:false
-        ~filename:path
+      Res_driver.parsing_engine.parse_interface_from_source ~for_printer:false
+        ~source
     in
     get_diagnostics parseInterface.diagnostics
   else []
