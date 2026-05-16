@@ -20,6 +20,10 @@ type 'diagnostics parsing_engine = {
     for_printer:bool ->
     filename:string ->
     (Parsetree.signature, 'diagnostics) parse_result;
+  parse_interface_from_source:
+    for_printer:bool ->
+    source:string ->
+    (Parsetree.signature, 'diagnostics) parse_result;
   string_of_diagnostics:
     source:string -> filename:string -> 'diagnostics -> unit;
 }
@@ -45,7 +49,7 @@ type print_engine = {
     comments:Res_comment.t list ->
     Parsetree.structure ->
     unit;
-  parse_implementation_from_source:
+  print_implementation_from_source:
     width:int ->
     source:string ->
     comments:Res_comment.t list ->
@@ -54,6 +58,12 @@ type print_engine = {
   print_interface:
     width:int ->
     filename:string ->
+    comments:Res_comment.t list ->
+    Parsetree.signature ->
+    unit;
+  print_interface_from_source:
+    width:int ->
+    source:string ->
     comments:Res_comment.t list ->
     Parsetree.signature ->
     unit;
