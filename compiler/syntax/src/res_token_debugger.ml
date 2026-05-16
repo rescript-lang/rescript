@@ -142,6 +142,10 @@ let token_print_engine =
   {
     Res_driver.print_implementation =
       (fun ~width:_ ~filename ~comments:_ _ -> dump_tokens filename);
-    print_interface =
+    Res_driver.print_implementation_from_source =
+      (fun ~width:_ ~source ~comments:_ _ -> dump_tokens source);
+    Res_driver.print_interface =
       (fun ~width:_ ~filename ~comments:_ _ -> dump_tokens filename);
+    Res_driver.print_interface_from_source =
+      (fun ~width:_ ~source ~comments:_ _ -> dump_tokens source);
   }

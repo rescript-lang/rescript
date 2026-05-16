@@ -2,10 +2,10 @@
 
 let isBracedExpr = Res_parsetree_viewer.is_braced_expr
 
-let extractTypeFromExpr expr ~debug ~path ~currentFile ~full ~pos =
+let extractTypeFromExpr expr ~debug ~source ~kindFile ~full ~pos =
   match
     expr.Parsetree.pexp_loc
-    |> CompletionFrontEnd.findTypeOfExpressionAtLoc ~debug ~path ~currentFile
+    |> CompletionFrontEnd.findTypeOfExpressionAtLoc ~debug ~source ~kindFile
          ~posCursor:(Pos.ofLexing expr.Parsetree.pexp_loc.loc_start)
   with
   | Some (completable, scope) -> (
@@ -377,7 +377,7 @@ module ExpandCatchAllForVariants = struct
     in
     {Ast_iterator.default_iterator with expr}
 
-  let xform ~path ~pos ~full ~structure ~currentFile ~codeActions ~debug =
+  let xform ~source ~kindFile ~path ~pos ~full ~structure ~codeActions ~debug =
     let result = ref None in
     let iterator = mkIterator ~pos ~result in
     iterator.structure iterator structure;
@@ -411,7 +411,7 @@ module ExpandCatchAllForVariants = struct
       let currentConstructorNames = getCurrentConstructorNames cases in
       match
         switchExpr
-        |> extractTypeFromExpr ~debug ~path ~currentFile ~full
+        |> extractTypeFromExpr ~debug ~source ~kindFile ~full
              ~pos:(Pos.ofLexing switchExpr.pexp_loc.loc_end)
       with
       | Some (Tvariant {constructors}) ->
@@ -580,8 +580,8 @@ module ExhaustiveSwitch = struct
     in
     {Ast_iterator.default_iterator with expr}
 
-  let xform ~printExpr ~path ~currentFile ~pos ~full ~structure ~codeActions
-      ~debug =
+  let xform ~printExpr ~path ~source ~kindFile ~pos ~full ~structure
+      ~codeActions ~debug =
     (* TODO: Adapt to '(' as leading/trailing character (skip one col, it's not included in the AST) *)
     let result = ref None in
     let foundSelection = ref (None, None) in
@@ -605,7 +605,7 @@ module ExhaustiveSwitch = struct
     | Some (Selection {expr}) -> (
       match
         expr
-        |> extractTypeFromExpr ~debug ~path ~currentFile ~full
+        |> extractTypeFromExpr ~debug ~source ~kindFile ~full
              ~pos:(Pos.ofLexing expr.pexp_loc.loc_start)
       with
       | None -> ()
@@ -631,7 +631,7 @@ module ExhaustiveSwitch = struct
     | Some (Switch {switchExpr; completionExpr; pos}) -> (
       match
         completionExpr
-        |> extractTypeFromExpr ~debug ~path ~currentFile ~full ~pos
+        |> extractTypeFromExpr ~debug ~source ~kindFile ~full ~pos
       with
       | None -> ()
       | Some extractedType -> (
@@ -840,9 +840,10 @@ module AddDocTemplate = struct
   end
 end
 
-let parseImplementation ~filename =
+let parseImplementation ~source =
   let {Res_driver.parsetree = structure; comments} =
-    Res_driver.parsing_engine.parse_implementation ~for_printer:false ~filename
+    Res_driver.parsing_engine.parse_implementation_from_source
+      ~for_printer:false ~source
   in
   let filterComments ~loc comments =
     (* Relevant comments in the range of the expression *)
@@ -873,9 +874,10 @@ let parseImplementation ~filename =
   in
   (structure, printExpr, printStructureItem, printStandaloneStructure)
 
-let parseInterface ~filename =
+let parseInterface ~source =
   let {Res_driver.parsetree = structure; comments} =
-    Res_driver.parsing_engine.parse_interface ~for_printer:false ~filename
+    Res_driver.parsing_engine.parse_interface_from_source ~for_printer:false
+      ~source
   in
   let filterComments ~loc comments =
     (* Relevant comments in the range of the expression *)
@@ -894,13 +896,13 @@ let parseInterface ~filename =
   in
   (structure, printSignatureItem)
 
-let extractCodeActions ~path ~startPos ~endPos ~currentFile ~debug =
+let extractCodeActions ~path ~startPos ~endPos ~source ~kindFile ~debug =
   let pos = startPos in
   let codeActions = ref [] in
-  match Files.classifySourceFile currentFile with
-  | Res ->
+  match kindFile with
+  | Files.Res ->
     let structure, printExpr, printStructureItem, printStandaloneStructure =
-      parseImplementation ~filename:currentFile
+      parseImplementation ~source
     in
     IfThenElse.xform ~pos ~codeActions ~printExpr ~path structure;
     ModuleToFile.xform ~pos ~codeActions ~path ~printStandaloneStructure
@@ -914,19 +916,19 @@ let extractCodeActions ~path ~startPos ~endPos ~currentFile ~debug =
       match Cmt.loadFullCmtFromPath ~path with
       | Some full ->
         AddTypeAnnotation.xform ~path ~pos ~full ~structure ~codeActions ~debug;
-        ExpandCatchAllForVariants.xform ~path ~pos ~full ~structure ~codeActions
-          ~currentFile ~debug;
-        ExhaustiveSwitch.xform ~printExpr ~path
+        ExpandCatchAllForVariants.xform ~path ~source ~kindFile ~pos ~full
+          ~structure ~codeActions ~debug;
+        ExhaustiveSwitch.xform ~printExpr ~path ~source ~kindFile
           ~pos:
             (if startPos = endPos then Single startPos
              else Range (startPos, endPos))
-          ~full ~structure ~codeActions ~debug ~currentFile
+          ~full ~structure ~codeActions ~debug
       | None -> ()
     in
 
     !codeActions
   | Resi ->
-    let signature, printSignatureItem = parseInterface ~filename:currentFile in
+    let signature, printSignatureItem = parseInterface ~source in
     AddDocTemplate.Interface.xform ~pos ~codeActions ~path ~signature
       ~printSignatureItem;
     !codeActions

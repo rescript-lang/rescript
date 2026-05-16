@@ -352,8 +352,8 @@ let completePipeChain ~(inJsxContext : bool) (exp : Parsetree.expression) =
     |> Option.map (fun ctxPath -> (ctxPath, pexp_loc))
   | _ -> None
 
-let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
-    ?findThisExprLoc text =
+let completionWithParser1 ~debug ~offset ~posCursor ~kindFile ?findThisExprLoc
+    text =
   let offsetNoWhite = Utils.skipWhite text (offset - 1) in
   let posNoWhite =
     let line, col = posCursor in
@@ -1783,11 +1783,12 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
     }
   in
 
-  if Filename.check_suffix path ".res" then (
+  if kindFile = Files.Res then (
     let parser =
-      Res_driver.parsing_engine.parse_implementation ~for_printer:false
+      Res_driver.parsing_engine.parse_implementation_from_source
+        ~for_printer:false
     in
-    let {Res_driver.parsetree = str} = parser ~filename:currentFile in
+    let {Res_driver.parsetree = str} = parser ~source:text in
     iterator.structure iterator str |> ignore;
     if blankAfterCursor = Some ' ' || blankAfterCursor = Some '\n' then (
       scope := !lastScopeBeforeCursor;
@@ -1796,9 +1797,11 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
            (CPId {loc = Location.none; path = [""]; completionContext = Value})));
     if !found = false then if debug then Printf.printf "XXX Not found!\n";
     !result)
-  else if Filename.check_suffix path ".resi" then (
-    let parser = Res_driver.parsing_engine.parse_interface ~for_printer:false in
-    let {Res_driver.parsetree = signature} = parser ~filename:currentFile in
+  else if kindFile = Resi then (
+    let parser =
+      Res_driver.parsing_engine.parse_interface_from_source ~for_printer:false
+    in
+    let {Res_driver.parsetree = signature} = parser ~source:text in
     iterator.signature iterator signature |> ignore;
     if blankAfterCursor = Some ' ' || blankAfterCursor = Some '\n' then (
       scope := !lastScopeBeforeCursor;
@@ -1809,19 +1812,18 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
     !result)
   else None
 
-let completionWithParser ~debug ~path ~posCursor ~currentFile ~text =
-  match Pos.positionToOffset text posCursor with
+let completionWithParser ~debug ~source ~kindFile ~posCursor =
+  match Pos.positionToOffset source posCursor with
   | Some offset ->
-    completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor text
+    completionWithParser1 ~debug ~offset ~posCursor ~kindFile source
   | None -> None
 
-let findTypeOfExpressionAtLoc ~debug ~path ~posCursor ~currentFile loc =
-  let textOpt = Files.readFile currentFile in
-  match textOpt with
-  | None | Some "" -> None
-  | Some text -> (
-    match Pos.positionToOffset text posCursor with
+let findTypeOfExpressionAtLoc ~debug ~posCursor ~source ~kindFile loc =
+  match source with
+  | "" -> None
+  | source -> (
+    match Pos.positionToOffset source posCursor with
     | Some offset ->
-      completionWithParser1 ~findThisExprLoc:loc ~currentFile ~debug ~offset
-        ~path ~posCursor text
+      completionWithParser1 ~findThisExprLoc:loc ~debug ~offset ~posCursor
+        ~kindFile source
     | None -> None)
