@@ -1214,7 +1214,7 @@ pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildCommandState)
                 let dependent_module = build_state.modules.get(dependent).unwrap();
                 match dependent_module.source_type {
                     SourceType::SourceFile(_) => {
-                        match (module.last_compiled_cmt, module.last_compiled_cmt) {
+                        match (module.last_compiled_cmt, module.last_compiled_cmi) {
                             (None, None) | (Some(_), None) | (None, Some(_)) => {
                                 // println!(
                                 //     "🛑 {} is a dependent of {} but has no cmt/cmi",
