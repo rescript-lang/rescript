@@ -19,7 +19,31 @@
  (synopsis "ReScript compiler")
  (depends
   (ocaml
-   (>= 5.0.0))))
+   (>= 5.0.0))
+  dune
+  (cppo
+   (= 1.8.0))
+  (flow_parser
+   (= 0.267.0))
+  (ocamlformat
+   (and :with-test (= 0.27.0)))
+  (yojson
+   (and :with-test (= 2.2.2)))
+  (ounit2
+   (and :with-test (= 2.2.7)))
+  (odoc :with-doc)
+  (ocaml-lsp-server
+   (and :with-dev-setup (= 1.22.0)))
+  (js_of_ocaml
+   (and
+    (<> :os "win32")
+    :with-test
+    (= 6.0.1)))
+  (wasm_of_ocaml-compiler
+   (and
+    (<> :os "win32")
+    :with-test
+    (= 6.0.1)))))
 
 (package
  (name analysis)
@@ -29,7 +53,7 @@
    (>= 5.0.0))
   (cppo
    (= 1.8.0))
-  dune))
+  (odoc :with-doc)))
 
 (package
  (name tools)
@@ -42,4 +66,4 @@
   (cppo
    (= 1.8.0))
   analysis
-  dune))
+  (odoc :with-doc)))
