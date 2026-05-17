@@ -468,6 +468,12 @@ pub fn compile(
     // though modules complete in arbitrary order.
     results_buffer.sort_by(|a, b| a.module_name.cmp(&b.module_name));
 
+    // Use one timestamp for the whole pass. `mark_modules_with_expired_deps_dirty`
+    // compares dependency/dependent timestamps before the next build; assigning
+    // per-result timestamps here would make the sorted result-processing order
+    // look like real staleness and can force unnecessary downstream recompiles.
+    let compile_timestamp = SystemTime::now();
+
     for msg in results_buffer {
         let CompletionMsg {
             module_name,
@@ -558,8 +564,8 @@ pub fn compile(
 
             if result.is_ok() && interface_result.as_ref().is_none_or(|r| r.is_ok()) {
                 module.compile_dirty = false;
-                module.last_compiled_cmi = Some(SystemTime::now());
-                module.last_compiled_cmt = Some(SystemTime::now());
+                module.last_compiled_cmi = Some(compile_timestamp);
+                module.last_compiled_cmt = Some(compile_timestamp);
             }
 
             (compile_warning, compile_error, interface_warning, interface_error)
