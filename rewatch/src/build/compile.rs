@@ -468,6 +468,12 @@ pub fn compile(
     // though modules complete in arbitrary order.
     results_buffer.sort_by(|a, b| a.module_name.cmp(&b.module_name));
 
+    // These timestamps are used as a compile-generation marker by
+    // mark_modules_with_expired_deps_dirty, not as precise wall-clock compile
+    // times. All modules successfully compiled in one pass are mutually
+    // up-to-date for that pass, so they must receive the same timestamp.
+    let compile_timestamp = SystemTime::now();
+
     for msg in results_buffer {
         let CompletionMsg {
             module_name,
@@ -558,8 +564,8 @@ pub fn compile(
 
             if result.is_ok() && interface_result.as_ref().is_none_or(|r| r.is_ok()) {
                 module.compile_dirty = false;
-                module.last_compiled_cmi = Some(SystemTime::now());
-                module.last_compiled_cmt = Some(SystemTime::now());
+                module.last_compiled_cmi = Some(compile_timestamp);
+                module.last_compiled_cmt = Some(compile_timestamp);
             }
 
             (compile_warning, compile_error, interface_warning, interface_error)
@@ -1208,7 +1214,7 @@ pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildCommandState)
                 let dependent_module = build_state.modules.get(dependent).unwrap();
                 match dependent_module.source_type {
                     SourceType::SourceFile(_) => {
-                        match (module.last_compiled_cmt, module.last_compiled_cmt) {
+                        match (module.last_compiled_cmt, module.last_compiled_cmi) {
                             (None, None) | (Some(_), None) | (None, Some(_)) => {
                                 // println!(
                                 //     "🛑 {} is a dependent of {} but has no cmt/cmi",
