@@ -468,10 +468,10 @@ pub fn compile(
     // though modules complete in arbitrary order.
     results_buffer.sort_by(|a, b| a.module_name.cmp(&b.module_name));
 
-    // Use one timestamp for the whole pass. `mark_modules_with_expired_deps_dirty`
-    // compares dependency/dependent timestamps before the next build; assigning
-    // per-result timestamps here would make the sorted result-processing order
-    // look like real staleness and can force unnecessary downstream recompiles.
+    // These timestamps are used as a compile-generation marker by
+    // mark_modules_with_expired_deps_dirty, not as precise wall-clock compile
+    // times. All modules successfully compiled in one pass are mutually
+    // up-to-date for that pass, so they must receive the same timestamp.
     let compile_timestamp = SystemTime::now();
 
     for msg in results_buffer {
