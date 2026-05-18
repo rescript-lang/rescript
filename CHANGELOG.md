@@ -42,6 +42,7 @@
 #### :house: Internal
 
 - Remove `Primitive_option.toUndefined`; use `valFromOption` for optional ffi args. https://github.com/rescript-lang/rescript/pull/8380
+- Expand `super_errors` fixture coverage for warnings and errors. https://github.com/rescript-lang/rescript/pull/8429
 
 # 13.0.0-alpha.4
 
