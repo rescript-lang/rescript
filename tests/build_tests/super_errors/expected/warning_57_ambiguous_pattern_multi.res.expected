@@ -1,0 +1,13 @@
+
+  [1;33mWarning number 57[0m
+  [36m/.../fixtures/warning_57_ambiguous_pattern_multi.res[0m:[2m3:5-49[0m
+
+  1 [2m│[0m let f = pair =>
+  2 [2m│[0m   switch pair {
+  [1;33m3[0m [2m│[0m   | [1;33m(Some(a), Some(b), _) | (_, Some(a), Some(b))[0m when a + b > 0 => a + 
+    [2m│[0m [1;33mb[0m
+  4 [2m│[0m   | _ => 0
+  5 [2m│[0m   }
+
+  Ambiguous or-pattern variables under guard;
+variables a,b may match different arguments. (See manual section 8.5)
