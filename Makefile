@@ -290,8 +290,13 @@ coverage-report:
 	@echo "HTML report: $(COVERAGE_HTML_DIR)/index.html"
 	@echo "JSON data:   $(COVERAGE_JSON)"
 
+# Drop instrumented binaries and the compiler build stamp so the next
+# `make` / `make test` rebuilds uninstrumented toolchain artifacts
+# instead of silently reusing the bisect_ppx-instrumented ones left in
+# BIN_DIR by `coverage-build`.
 .PHONY: coverage
 coverage: coverage-run coverage-report
+	rm -f $(COMPILER_EXES) $(COMPILER_BUILD_STAMP)
 
 .PHONY: clean-coverage
 clean-coverage:
