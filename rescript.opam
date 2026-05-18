@@ -16,6 +16,7 @@ depends: [
   "ounit2" {with-test & = "2.2.7"}
   "odoc" {with-doc}
   "ocaml-lsp-server" {with-dev-setup & = "1.22.0"}
+  "bisect_ppx" {with-dev-setup & >= "2.8.0"}
   "js_of_ocaml" {os != "win32" & with-test & = "6.0.1"}
   "wasm_of_ocaml-compiler" {os != "win32" & with-test & = "6.0.1"}
 ]

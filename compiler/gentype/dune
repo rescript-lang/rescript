@@ -1,6 +1,8 @@
 (library
  (name gentype)
  (wrapped false)
+ (instrumentation
+  (backend bisect_ppx))
  (flags
   (:standard -w +a-4-9-40-41-42-48-70))
  (libraries ml))
