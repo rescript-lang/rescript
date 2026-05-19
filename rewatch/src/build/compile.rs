@@ -119,6 +119,12 @@ struct CompletionMsg {
     is_compiled: bool,
 }
 
+struct CompileWarning {
+    module_name: String,
+    package_name: String,
+    warning: String,
+}
+
 /// Compute the critical-path priority of every module in the universe:
 /// `priority(m) = 1 + max(priority(d) for d in in-universe dependents of m)`.
 /// Runs a reverse-topological sweep from leaves to roots. Modules stuck in a
@@ -281,35 +287,58 @@ fn compile_one(
     }
 }
 
-fn append_stored_warnings_for_modules_not_recompiled(
-    build_state: &BuildCommandState,
+fn collect_stored_warnings_for_modules_not_recompiled(
+    build_state: &BuildState,
     recompiled_modules: &AHashSet<String>,
-    compile_warnings: &mut String,
-) {
+) -> Vec<CompileWarning> {
     // Collect warnings from modules that were not recompiled in this build but still have stored
     // warnings from a previous compilation. This includes ready modules that were in the compile
     // universe but never scheduled because an earlier module failed.
+    let mut warnings = Vec::new();
     for (module_name, module) in build_state.modules.iter() {
         if recompiled_modules.contains(module_name) {
             continue;
         }
         if let SourceType::SourceFile(ref source_file) = module.source_type {
-            let package = build_state.get_package(&module.package_name);
             if let Some(ref warning) = source_file.implementation.compile_warnings {
-                if let Some(package) = package {
-                    logs::append(package, warning);
-                }
-                compile_warnings.push_str(warning);
+                warnings.push(CompileWarning {
+                    module_name: module_name.clone(),
+                    package_name: module.package_name.clone(),
+                    warning: warning.clone(),
+                });
             }
             if let Some(ref interface) = source_file.interface
                 && let Some(ref warning) = interface.compile_warnings
             {
-                if let Some(package) = package {
-                    logs::append(package, warning);
-                }
-                compile_warnings.push_str(warning);
+                warnings.push(CompileWarning {
+                    module_name: module_name.clone(),
+                    package_name: module.package_name.clone(),
+                    warning: warning.clone(),
+                });
             }
         }
+    }
+    warnings
+}
+
+// Warning output should use the same deterministic module-name order whether a
+// warning was emitted by this compile pass or replayed from a previous one.
+fn append_compile_warnings(
+    build_state: &BuildState,
+    mut warning_entries: Vec<CompileWarning>,
+    compile_warnings: &mut String,
+) {
+    warning_entries.sort_by(|a, b| a.module_name.cmp(&b.module_name));
+    for CompileWarning {
+        package_name,
+        warning,
+        ..
+    } in warning_entries
+    {
+        if let Some(package) = build_state.get_package(&package_name) {
+            logs::append(package, &warning);
+        }
+        compile_warnings.push_str(&warning);
     }
 }
 
@@ -481,6 +510,7 @@ pub fn compile(
 
     let mut compile_errors = String::new();
     let mut compile_warnings = String::new();
+    let mut warning_entries = Vec::new();
     let mut num_compiled_modules = 0;
 
     // Persist propagated dirtiness back onto build_state. Modules that were
@@ -505,7 +535,7 @@ pub fn compile(
     // times. All modules successfully compiled in one pass are mutually
     // up-to-date for that pass, so they must receive the same timestamp.
     let compile_timestamp = SystemTime::now();
-    
+
     let mut recompiled_modules = AHashSet::<String>::new();
 
     for msg in results_buffer {
@@ -609,16 +639,22 @@ pub fn compile(
         };
 
         if let Some(warning) = compile_warning {
-            logs::append(package, &warning);
-            compile_warnings.push_str(&warning);
+            warning_entries.push(CompileWarning {
+                module_name: module_name.clone(),
+                package_name: package_name.clone(),
+                warning,
+            });
         }
         if let Some(error) = compile_error {
             logs::append(package, &error);
             compile_errors.push_str(&error);
         }
         if let Some(warning) = interface_warning {
-            logs::append(package, &warning);
-            compile_warnings.push_str(&warning);
+            warning_entries.push(CompileWarning {
+                module_name: module_name.clone(),
+                package_name: package_name.clone(),
+                warning,
+            });
         }
         if let Some(error) = interface_error {
             logs::append(package, &error);
@@ -655,11 +691,13 @@ pub fn compile(
         compile_errors.push_str(&message);
     }
 
-    append_stored_warnings_for_modules_not_recompiled(
-        build_state,
+    // Collect replayed warnings into the same list as fresh warnings so mixed
+    // output matches the sorted order used when every module compiles normally.
+    warning_entries.extend(collect_stored_warnings_for_modules_not_recompiled(
+        &build_state.build_state,
         &recompiled_modules,
-        &mut compile_warnings,
-    );
+    ));
+    append_compile_warnings(&build_state.build_state, warning_entries, &mut compile_warnings);
 
     Ok((compile_errors, compile_warnings, num_compiled_modules))
 }
@@ -1375,7 +1413,7 @@ mod tests {
         }
     }
 
-    fn test_build_state(temp_dir: &TempDir, module_name: &str, module: Module) -> BuildCommandState {
+    fn test_build_state(temp_dir: &TempDir, module_name: &str, module: Module) -> BuildState {
         let package = test_package("test-package", temp_dir.path().to_path_buf());
         fs::create_dir_all(package.get_build_path()).expect("build log directory should be created");
 
@@ -1388,14 +1426,7 @@ mod tests {
             runtime_path: temp_dir.path().join("runtime"),
         };
 
-        let mut build_state = BuildCommandState::new(
-            temp_dir.path().to_path_buf(),
-            test_project_context(temp_dir.path()),
-            packages,
-            compiler,
-            None,
-            None,
-        );
+        let mut build_state = BuildState::new(test_project_context(temp_dir.path()), packages, compiler);
         build_state.insert_module(module_name, module);
         logs::initialize(&build_state.packages);
         build_state
@@ -1443,16 +1474,66 @@ mod tests {
             "ModuleA",
             test_module("test-package", Some("warning: carried forward\n")),
         );
+        let recompiled_modules = Default::default();
+
+        let compile_warnings =
+            collect_stored_warnings_for_modules_not_recompiled(&build_state, &recompiled_modules)
+                .into_iter()
+                .map(|entry| entry.warning)
+                .collect::<String>();
+
+        assert_eq!(compile_warnings, "warning: carried forward\n");
+    }
+
+    #[test]
+    fn replays_stored_warnings_in_module_name_order() {
+        let temp_dir = TempDir::new().expect("temp dir should be created");
+        let mut build_state = test_build_state(
+            &temp_dir,
+            "Zed",
+            test_module("test-package", Some("warning: zed\n")),
+        );
+        build_state.insert_module("Alpha", test_module("test-package", Some("warning: alpha\n")));
         let mut compile_warnings = String::new();
         let recompiled_modules = Default::default();
 
-        append_stored_warnings_for_modules_not_recompiled(
+        append_compile_warnings(
             &build_state,
-            &recompiled_modules,
+            collect_stored_warnings_for_modules_not_recompiled(&build_state, &recompiled_modules),
             &mut compile_warnings,
         );
 
-        assert_eq!(compile_warnings, "warning: carried forward\n");
+        assert_eq!(compile_warnings, "warning: alpha\nwarning: zed\n");
+    }
+
+    #[test]
+    fn appends_fresh_and_stored_warnings_in_shared_module_name_order() {
+        let temp_dir = TempDir::new().expect("temp dir should be created");
+        let build_state = test_build_state(
+            &temp_dir,
+            "ModuleA",
+            test_module("test-package", Some("warning: stored\n")),
+        );
+        let mut compile_warnings = String::new();
+
+        append_compile_warnings(
+            &build_state,
+            vec![
+                CompileWarning {
+                    module_name: "Zed".to_string(),
+                    package_name: "test-package".to_string(),
+                    warning: "warning: fresh\n".to_string(),
+                },
+                CompileWarning {
+                    module_name: "Alpha".to_string(),
+                    package_name: "test-package".to_string(),
+                    warning: "warning: stored\n".to_string(),
+                },
+            ],
+            &mut compile_warnings,
+        );
+
+        assert_eq!(compile_warnings, "warning: stored\nwarning: fresh\n");
     }
 
     #[test]
@@ -1463,15 +1544,14 @@ mod tests {
             "ModuleA",
             test_module("test-package", Some("warning: already emitted\n")),
         );
-        let mut compile_warnings = String::new();
         let mut recompiled_modules = ahash::AHashSet::new();
         recompiled_modules.insert("ModuleA".to_string());
 
-        append_stored_warnings_for_modules_not_recompiled(
-            &build_state,
-            &recompiled_modules,
-            &mut compile_warnings,
-        );
+        let compile_warnings =
+            collect_stored_warnings_for_modules_not_recompiled(&build_state, &recompiled_modules)
+                .into_iter()
+                .map(|entry| entry.warning)
+                .collect::<String>();
 
         assert!(compile_warnings.is_empty());
     }
