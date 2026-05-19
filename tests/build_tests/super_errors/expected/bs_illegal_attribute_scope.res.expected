@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/bs_illegal_attribute_scope.res[0m:[2m1:1-6[0m
+
+  [1;31m1[0m [2m│[0m [1;31m@scope[0m @val
+  2 [2m│[0m external x: int = "x"
+  3 [2m│[0m 
+
+  Illegal attributes
