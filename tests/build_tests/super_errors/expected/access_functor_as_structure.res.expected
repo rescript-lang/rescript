@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/access_functor_as_structure.res[0m:[2m9:8-10[0m
+
+   7 [2m│[0m }
+   8 [2m│[0m 
+   [1;31m9[0m [2m│[0m let _: [1;31mF.v[0m = 1
+  10 [2m│[0m 
+
+  The module F is a functor, not a structure
