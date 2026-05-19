@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/bs_invalid_bs_unwrap_type.res[0m:[2m1:21-23[0m
+
+  [1;31m1[0m [2m│[0m external f: @unwrap [1;31mint[0m => unit = "f"
+  2 [2m│[0m 
+  3 [2m│[0m let _ = f(1)
+
+  Not a valid type for %@unwrap. Type must be an inline variant (closed), and
+each constructor must have an argument.
