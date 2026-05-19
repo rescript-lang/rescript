@@ -1,0 +1,40 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/include_modtype_permutation.res[0m:[2m6:5-11:1[0m
+
+   4 [2m│[0m     let b: int
+   5 [2m│[0m   }
+   [1;31m6[0m [2m│[0m } = [1;31m{[0m
+   [1;31m7[0m [2m│[0m [1;31m  module type T = {[0m
+   [2m.[0m [2m│[0m [2m...[0m
+  [1;31m10[0m [2m│[0m [1;31m  }[0m
+  [1;31m11[0m [2m│[0m [1;31m}[0m
+  12 [2m│[0m 
+
+  Signature mismatch:
+  Modules do not match:
+    {
+  module type T = {
+    let b: int
+    let a: int
+  }
+}
+  is not included in
+    {
+  module type T = {
+    let a: int
+    let b: int
+  }
+}
+  Module type declarations do not match:
+    module type T = {
+  let b: int
+  let a: int
+}
+  does not match
+    module type T = {
+  let a: int
+  let b: int
+}
+  At position module type T = <here>
+  Illegal permutation of structure fields
