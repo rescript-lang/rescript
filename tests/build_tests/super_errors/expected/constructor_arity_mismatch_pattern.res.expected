@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/constructor_arity_mismatch_pattern.res[0m:[2m5:5-11[0m
+
+  3 [2m│[0m let f = x =>
+  4 [2m│[0m   switch x {
+  [1;31m5[0m [2m│[0m   | [1;31mPair(a)[0m => a
+  6 [2m│[0m   }
+  7 [2m│[0m 
+
+  This variant constructor [1;33mPair[0m expects 2 arguments, but it's only being passed 1.
