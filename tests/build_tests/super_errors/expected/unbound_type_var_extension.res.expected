@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/unbound_type_var_extension.res[0m:[2m3:14[0m
+
+  1 [2m│[0m type t = ..
+  2 [2m│[0m 
+  [1;31m3[0m [2m│[0m type t += E('[1;31ma[0m)
+  4 [2m│[0m 
+
+  Unbound type parameter 'a
