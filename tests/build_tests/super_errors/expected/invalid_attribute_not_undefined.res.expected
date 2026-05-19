@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/invalid_attribute_not_undefined.res[0m:[2m2:1-12[0m
+
+  1 [2m│[0m @notUndefined
+  [1;31m2[0m [2m│[0m [1;31mtype t = int[0m
+  3 [2m│[0m 
+
+  @notUndefined can only be used on abstract types
