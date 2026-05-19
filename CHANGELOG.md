@@ -10,6 +10,10 @@
 > - :nail_care: [Polish]
 > - :house: [Internal]
 
+# 12.3.0
+
+No changes compared to 12.3.0-beta.1.
+
 # 12.3.0-beta.1
 
 #### :rocket: New Feature
