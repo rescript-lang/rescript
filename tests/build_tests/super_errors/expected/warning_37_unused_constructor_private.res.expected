@@ -1,0 +1,25 @@
+
+  [1;33mWarning number 37[0m
+  [36m/.../fixtures/warning_37_unused_constructor_private.res[0m:[2m5:3-20[0m
+
+  3 [2m│[0m   let v: int
+  4 [2m│[0m } = {
+  [1;33m5[0m [2m│[0m   [1;33mtype t = Foo | Bar[0m
+  6 [2m│[0m   let v = 1
+  7 [2m│[0m }
+
+  constructor Foo is never used to build values.
+Its type is exported as a private type.
+
+
+  [1;33mWarning number 37[0m
+  [36m/.../fixtures/warning_37_unused_constructor_private.res[0m:[2m5:3-20[0m
+
+  3 [2m│[0m   let v: int
+  4 [2m│[0m } = {
+  [1;33m5[0m [2m│[0m   [1;33mtype t = Foo | Bar[0m
+  6 [2m│[0m   let v = 1
+  7 [2m│[0m }
+
+  constructor Bar is never used to build values.
+Its type is exported as a private type.

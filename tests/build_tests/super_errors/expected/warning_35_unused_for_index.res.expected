@@ -1,0 +1,12 @@
+
+  [1;33mWarning number 35[0m
+  [36m/.../fixtures/warning_35_unused_for_index.res[0m:[2m2:3-4:3[0m
+
+  1 [2m│[0m let run = () => {
+  [1;33m2[0m [2m│[0m   [1;33mfor i in 0 to 10 {[0m
+  [1;33m3[0m [2m│[0m [1;33m    Console.log("hi")[0m
+  [1;33m4[0m [2m│[0m [1;33m  }[0m
+  5 [2m│[0m }
+  6 [2m│[0m 
+
+  unused for-loop index i.

@@ -1,0 +1,28 @@
+
+  [1;33mWarning number 41[0m
+  [36m/.../fixtures/warning_41_ambiguous_field.res[0m:[2m4:9-20[0m
+
+  2 [2m│[0m type b = {x: int, y: int}
+  3 [2m│[0m 
+  [1;33m4[0m [2m│[0m let r = [1;33m{x: 1, y: 2}[0m
+  5 [2m│[0m let _: a = r
+  6 [2m│[0m 
+
+  these field labels belong to several types: b a
+The first one was selected. Disambiguate if this is wrong.
+
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/warning_41_ambiguous_field.res[0m:[2m5:12[0m
+
+  3 [2m│[0m 
+  4 [2m│[0m let r = {x: 1, y: 2}
+  [1;31m5[0m [2m│[0m let _: a = [1;31mr[0m
+  6 [2m│[0m 
+
+  This has type: [1;31mb[0m
+  But it's expected to have type: [1;33ma[0m
+  
+  Possible solutions: 
+  - These types are compatible at runtime. You can use the coercion operator to convert to the expected type: [1;33m(r :> a)
+[0m
