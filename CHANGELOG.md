@@ -28,6 +28,8 @@
 - Fix issue where warning 56 would blow up with `dict{}` patterns. https://github.com/rescript-lang/rescript/pull/8403
 - Rewatch build lock fixes. https://github.com/rescript-lang/rescript/pull/8409 https://github.com/rescript-lang/rescript/pull/8410 https://github.com/rescript-lang/rescript/pull/8413 https://github.com/rescript-lang/rescript/pull/8424
 - Rewatch: treat transitive workspace dependencies as local packages in monorepo roots. https://github.com/rescript-lang/rescript/pull/8411
+- Rewatch: use a single timestamp per compile pass. https://github.com/rescript-lang/rescript/pull/8428
+- Fix rewatch warning replay after early compile errors. https://github.com/rescript-lang/rescript/pull/8408
 
 #### :memo: Documentation
 
