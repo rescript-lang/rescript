@@ -11,15 +11,8 @@ const sourcePackages = path.join(playgroundDir, "packages");
 const args = process.argv.slice(2);
 const bundleId = args.find(arg => !arg.startsWith("--")) ?? "local";
 const clearOtherBundles = args.includes("--clear-other-bundles");
-const bundlesRoot = path.join(
-  devPlaygroundDir,
-  "public",
-  "playground-bundles",
-);
-const targetRoot = path.join(
-  bundlesRoot,
-  bundleId,
-);
+const bundlesRoot = path.join(devPlaygroundDir, "public", "playground-bundles");
+const targetRoot = path.join(bundlesRoot, bundleId);
 
 async function assertExists(filePath, message) {
   try {
@@ -41,14 +34,17 @@ await assertExists(
 if (clearOtherBundles) {
   for (const entry of await fs.readdir(bundlesRoot)) {
     if (entry !== ".gitignore") {
-      await fs.rm(path.join(bundlesRoot, entry), {recursive: true, force: true});
+      await fs.rm(path.join(bundlesRoot, entry), {
+        recursive: true,
+        force: true,
+      });
     }
   }
 }
 
-await fs.rm(targetRoot, {recursive: true, force: true});
-await fs.mkdir(targetRoot, {recursive: true});
+await fs.rm(targetRoot, { recursive: true, force: true });
+await fs.mkdir(targetRoot, { recursive: true });
 await fs.copyFile(sourceCompiler, path.join(targetRoot, "compiler.js"));
-await fs.cp(sourcePackages, targetRoot, {recursive: true});
+await fs.cp(sourcePackages, targetRoot, { recursive: true });
 
 console.log(`Staged ${bundleId} playground bundle at ${targetRoot}`);

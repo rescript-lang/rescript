@@ -5,7 +5,10 @@ const maxDecodedSourceLength = 200 * 1024;
 let replaceSequence = 0;
 
 function supportsCompression() {
-  return typeof CompressionStream !== "undefined" && typeof DecompressionStream !== "undefined";
+  return (
+    typeof CompressionStream !== "undefined" &&
+    typeof DecompressionStream !== "undefined"
+  );
 }
 
 function normalizeModuleSystem(value, fallback) {
@@ -25,7 +28,10 @@ function bytesToBase64Url(bytes) {
     const chunk = bytes.subarray(index, index + chunkSize);
     binary += String.fromCharCode(...chunk);
   }
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  return btoa(binary)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
 }
 
 function base64UrlToBytes(value) {
@@ -40,12 +46,16 @@ function base64UrlToBytes(value) {
 }
 
 async function gzip(bytes) {
-  const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream("gzip"));
+  const stream = new Blob([bytes])
+    .stream()
+    .pipeThrough(new CompressionStream("gzip"));
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
 async function gunzip(bytes) {
-  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+  const stream = new Blob([bytes])
+    .stream()
+    .pipeThrough(new DecompressionStream("gzip"));
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
@@ -140,7 +150,11 @@ async function copyText(value) {
 
 export async function initialSource(defaultSource) {
   const encoded = currentParams().get("code");
-  if (encoded == null || encoded === "" || encoded.length > maxEncodedCodeLength) {
+  if (
+    encoded == null ||
+    encoded === "" ||
+    encoded.length > maxEncodedCodeLength
+  ) {
     return defaultSource;
   }
 
@@ -157,7 +171,10 @@ export function queryCompilerVersion(defaultVersion) {
 }
 
 export function queryModuleSystem(defaultModuleSystem) {
-  return normalizeModuleSystem(currentParams().get("module"), defaultModuleSystem);
+  return normalizeModuleSystem(
+    currentParams().get("module"),
+    defaultModuleSystem,
+  );
 }
 
 export function queryWarnFlags(defaultWarnFlags) {

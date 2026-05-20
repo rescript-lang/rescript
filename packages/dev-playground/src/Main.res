@@ -446,10 +446,7 @@ module TabButton = {
   @jsx.component
   let make = (~tab, ~activeTab: Signal.t<tab>, ~onSelect: tab => unit) => {
     <button
-      class={() =>
-        Signal.get(activeTab) === tab
-          ? "tab-button tab-button-active"
-          : "tab-button"}
+      class={() => Signal.get(activeTab) === tab ? "tab-button tab-button-active" : "tab-button"}
       onClick={_ => onSelect(tab)}
     >
       {Node.text(tabLabel(tab))}
@@ -493,12 +490,12 @@ module SettingsPanel = {
   ) => {
     <div
       class={() =>
-        Signal.get(activeTab) === Settings
-          ? "settings-panel"
-          : "settings-panel hidden-panel"}
+        Signal.get(activeTab) === Settings ? "settings-panel" : "settings-panel hidden-panel"}
     >
       <section class="settings-section">
-        <label class="setting-label" for_="compiler-version"> {Node.text("Compiler Version")} </label>
+        <label class="setting-label" for_="compiler-version">
+          {Node.text("Compiler Version")}
+        </label>
         <select
           id="compiler-version"
           value={ReactiveProp.reactive(compilerVersion)}
@@ -508,9 +505,11 @@ module SettingsPanel = {
             switchCompiler(nextVersion)
           }}
         >
-          {Node.fragment(CompilerApi.availableCompilerVersions->Array.map(version =>
-            <option value=version.id> {Node.text(version.label)} </option>
-          ))}
+          {Node.fragment(
+            CompilerApi.availableCompilerVersions->Array.map(version =>
+              <option value=version.id> {Node.text(version.label)} </option>
+            ),
+          )}
         </select>
       </section>
       <section class="settings-section">
@@ -628,11 +627,12 @@ module App = {
   @jsx.component
   let make = () => {
     let requestedCompilerVersion = UrlState.queryCompilerVersion(CompilerApi.defaultCompilerVersion)
-    let initialCompilerVersion = CompilerApi.availableCompilerVersions->Array.some(version =>
-      version.id === requestedCompilerVersion
-    )
-      ? requestedCompilerVersion
-      : CompilerApi.defaultCompilerVersion
+    let initialCompilerVersion =
+      CompilerApi.availableCompilerVersions->Array.some(version =>
+        version.id === requestedCompilerVersion
+      )
+        ? requestedCompilerVersion
+        : CompilerApi.defaultCompilerVersion
     let initialModuleSystem = UrlState.queryModuleSystem("esmodule")
     let initialWarnFlags = UrlState.queryWarnFlags(CompilerApi.defaultWarnFlags)
     let initialJsxPreserveMode = UrlState.queryJsxPreserveMode(false)
@@ -662,7 +662,10 @@ module App = {
 
     let syncEditorState = event => {
       let currentSource = Browser.eventValue(event)
-      let cursorPosition = cursorPositionForOffset(currentSource, Browser.eventSelectionStart(event))
+      let cursorPosition = cursorPositionForOffset(
+        currentSource,
+        Browser.eventSelectionStart(event),
+      )
       Signal.set(editorScrollTop, Browser.eventScrollTop(event))
       Signal.set(editorScrollLeft, Browser.eventScrollLeft(event))
       Signal.set(activeLine, cursorPosition.line)
@@ -776,7 +779,10 @@ module App = {
           Signal.set(compilerVersion, info.bundleId)
           Signal.set(moduleSystem, useInitialSettings ? initialModuleSystem : info.moduleSystem)
           Signal.set(warnFlags, useInitialSettings ? initialWarnFlags : info.warnFlags)
-          Signal.set(jsxPreserveMode, useInitialSettings ? initialJsxPreserveMode : info.jsxPreserveMode)
+          Signal.set(
+            jsxPreserveMode,
+            useInitialSettings ? initialJsxPreserveMode : info.jsxPreserveMode,
+          )
           Signal.set(
             experimentalFeatures,
             useInitialSettings ? initialExperimentalFeatures : info.experimentalFeatures,
@@ -889,29 +895,30 @@ module App = {
                   scheduleUrlSync()
                   scheduleCompile()
                 | None => ()
-                }
-              }
+                }}
             />
           </div>
         </div>
         <div class="result-column">
           <div class="tabs">
-            {Node.fragment(tabs->Array.map(tab =>
-              <TabButton tab activeTab onSelect={tab => Signal.set(activeTab, tab)} />
-            ))}
+            {Node.fragment(
+              tabs->Array.map(tab =>
+                <TabButton tab activeTab onSelect={tab => Signal.set(activeTab, tab)} />
+              ),
+            )}
           </div>
           <div
             class={() =>
-              Signal.get(activeTab) === Settings
-                ? "output-panel hidden-panel"
-                : "output-panel"}
+              Signal.get(activeTab) === Settings ? "output-panel hidden-panel" : "output-panel"}
           >
             <div class="result-meta">
               {Node.signalText(() => resultSummary(Signal.get(compileResult)))}
             </div>
             <div class="output-shell">
               <pre class="output">
-                {Node.signalText(() => selectedOutput(Signal.get(compileResult), Signal.get(activeTab)))}
+                {Node.signalText(() =>
+                  selectedOutput(Signal.get(compileResult), Signal.get(activeTab))
+                )}
               </pre>
             </div>
             <Problems compileResult />

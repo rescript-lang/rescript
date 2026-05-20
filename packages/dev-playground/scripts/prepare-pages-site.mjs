@@ -24,9 +24,9 @@ await assertExists(
   "Missing dev playground build. Run `yarn workspace dev-playground build` first",
 );
 
-await fs.rm(siteDir, {recursive: true, force: true});
-await fs.mkdir(targetDir, {recursive: true});
-await fs.cp(distDir, targetDir, {recursive: true});
+await fs.rm(siteDir, { recursive: true, force: true });
+await fs.mkdir(targetDir, { recursive: true });
+await fs.cp(distDir, targetDir, { recursive: true });
 
 const catalog = {
   generatedAt: new Date().toISOString(),

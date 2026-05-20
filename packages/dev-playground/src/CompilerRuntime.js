@@ -16,8 +16,7 @@ function parseCompilerVersions(defaultVersion) {
       Array.isArray(versions) &&
       versions.every(
         version =>
-          typeof version?.id === "string" &&
-          typeof version?.label === "string",
+          typeof version?.id === "string" && typeof version?.label === "string",
       )
     ) {
       return versions;
@@ -129,8 +128,12 @@ function errorToText(item) {
 }
 
 function normalizeFailure(result, elapsedMs) {
-  const errors = Array.isArray(result?.errors) ? result.errors.map(errorToText) : [];
-  const warnings = Array.isArray(result?.warnings) ? result.warnings.map(warningToText) : [];
+  const errors = Array.isArray(result?.errors)
+    ? result.errors.map(errorToText)
+    : [];
+  const warnings = Array.isArray(result?.warnings)
+    ? result.warnings.map(warningToText)
+    : [];
   const message =
     result?.msg ??
     result?.shortMsg ??
@@ -165,7 +168,9 @@ function normalizeSuccess(result, elapsedMs) {
     lambda: result?.lambda ?? fallback,
     lam: result?.lam ?? fallback,
     errors: [],
-    warnings: Array.isArray(result?.warnings) ? result.warnings.map(warningToText) : [],
+    warnings: Array.isArray(result?.warnings)
+      ? result.warnings.map(warningToText)
+      : [],
     message: "Compiled successfully",
     time: elapsedMs,
   };
@@ -205,7 +210,9 @@ async function ensureCompilerApi(version) {
 
   const api = globalThis.rescript_compiler;
   if (api == null || typeof api.make !== "function") {
-    throw new Error("rescript_compiler global was not registered by compiler.js");
+    throw new Error(
+      "rescript_compiler global was not registered by compiler.js",
+    );
   }
 
   compilerApis.set(selectedVersion, api);
@@ -245,7 +252,9 @@ export async function init(version) {
     warnFlags: config.warnFlags,
     jsxPreserveMode: config.jsxPreserveMode,
     experimentalFeatures: config.experimentalFeatures,
-    libraries: loadedLibrariesByVersion.get(selectedVersion) ?? ["compiler-builtins"],
+    libraries: loadedLibrariesByVersion.get(selectedVersion) ?? [
+      "compiler-builtins",
+    ],
   };
 }
 
@@ -257,11 +266,11 @@ export async function compile(source, config) {
   const start = performance.now();
   const result = hasFunction(instance.rescript, "compileWithDebug")
     ? instance.rescript.compileWithDebug(source, [
-      "parsetree",
-      "typedtree",
-      "lambda",
-      "lam",
-    ])
+        "parsetree",
+        "typedtree",
+        "lambda",
+        "lam",
+      ])
     : instance.rescript.compile(source);
   const elapsedMs = performance.now() - start;
 

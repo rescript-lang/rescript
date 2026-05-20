@@ -1,9 +1,10 @@
 :root {
   color-scheme: dark;
   --font-sans:
-    Inter, "SF Pro Text", Roboto, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial,
-    sans-serif;
-  --font-mono: "Roboto Mono", "SFMono-Regular", Menlo, "Segoe UI Mono", Consolas, monospace;
+    Inter, "SF Pro Text", Roboto, -apple-system, BlinkMacSystemFont,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono:
+    "Roboto Mono", "SFMono-Regular", Menlo, "Segoe UI Mono", Consolas, monospace;
   --gray-20: #edf0f2;
   --gray-30: #cdcdd6;
   --gray-40: #979aad;
@@ -270,7 +271,10 @@ button {
   line-height: var(--editor-line-height);
   tab-size: 2;
   pointer-events: none;
-  transform: translate(var(--editor-scroll-x, 0px), var(--editor-scroll-y, 0px));
+  transform: translate(
+    var(--editor-scroll-x, 0px),
+    var(--editor-scroll-y, 0px)
+  );
 }
 
 .syntax-token {
@@ -335,7 +339,8 @@ button {
   white-space: pre;
   overflow-wrap: normal;
   scrollbar-width: thin;
-  scrollbar-color: var(--playground-scrollbar-thumb) var(--playground-scrollbar-track);
+  scrollbar-color: var(--playground-scrollbar-thumb)
+    var(--playground-scrollbar-track);
 }
 
 .editor::selection,
@@ -353,7 +358,8 @@ button {
   border-bottom: 1px solid var(--playground-border-soft);
   background: var(--playground-panel);
   scrollbar-width: thin;
-  scrollbar-color: var(--playground-scrollbar-thumb) var(--playground-scrollbar-track);
+  scrollbar-color: var(--playground-scrollbar-thumb)
+    var(--playground-scrollbar-track);
 }
 
 .tab-button {
@@ -407,7 +413,8 @@ button {
   overflow: auto;
   background: var(--playground-panel);
   scrollbar-width: thin;
-  scrollbar-color: var(--playground-scrollbar-thumb) var(--playground-scrollbar-track);
+  scrollbar-color: var(--playground-scrollbar-thumb)
+    var(--playground-scrollbar-track);
 }
 
 .output {
@@ -439,7 +446,8 @@ button {
   color: var(--playground-text-secondary);
   overflow: auto;
   scrollbar-width: thin;
-  scrollbar-color: var(--playground-scrollbar-thumb) var(--playground-scrollbar-track);
+  scrollbar-color: var(--playground-scrollbar-thumb)
+    var(--playground-scrollbar-track);
 }
 
 .settings-panel {
@@ -448,7 +456,8 @@ button {
   padding: 28px 44px;
   background: var(--playground-panel);
   scrollbar-width: thin;
-  scrollbar-color: var(--playground-scrollbar-thumb) var(--playground-scrollbar-track);
+  scrollbar-color: var(--playground-scrollbar-thumb)
+    var(--playground-scrollbar-track);
 }
 
 .settings-section {
