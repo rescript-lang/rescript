@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/bs_not_supported_directive_in_bs_return.res[0m:[2m1:1-7[0m
+
+  [1;31m1[0m [2m│[0m [1;31m@return[0m(bogus)
+  2 [2m│[0m external f: string => int = "f"
+  3 [2m│[0m 
+
+  Not supported return directive

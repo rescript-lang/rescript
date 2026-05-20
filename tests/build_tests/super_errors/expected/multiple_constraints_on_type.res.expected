@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/multiple_constraints_on_type.res[0m:[2m5:13-59[0m
+
+  3 [2m│[0m }
+  4 [2m│[0m 
+  [1;31m5[0m [2m│[0m let f = (m: [1;31mmodule(S with type t = int and type t = string)[0m) => m
+  6 [2m│[0m 
+
+  Multiple constraints for type t

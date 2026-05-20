@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/invalid_for_loop_index.res[0m:[2m1:14-19[0m
+
+  [1;31m1[0m [2m│[0m let () = for [1;31m(a, b)[0m in 0 to 10 {
+  2 [2m│[0m   ignore((a, b))
+  3 [2m│[0m }
+
+  Invalid for-loop index: only variables and _ are allowed.

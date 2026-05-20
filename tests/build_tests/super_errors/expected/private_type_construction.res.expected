@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/private_type_construction.res[0m:[2m9:9-17[0m
+
+   7 [2m│[0m }
+   8 [2m│[0m 
+   [1;31m9[0m [2m│[0m let v = [1;31mM.Wrap(1)[0m
+  10 [2m│[0m 
+
+  Cannot create values of the private type M.t
