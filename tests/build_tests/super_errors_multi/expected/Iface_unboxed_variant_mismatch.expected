@@ -1,0 +1,21 @@
+===== Foo.res =====
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/Iface_unboxed_variant_mismatch/Foo.res[0m:[2m1:1-2:13[0m
+
+  [1;31m1[0m [2m│[0m [1;31mtype t =[0m
+  [1;31m2[0m [2m│[0m [1;31m  | Wrap(int)[0m
+  3 [2m│[0m 
+
+  The implementation /.../fixtures/Iface_unboxed_variant_mismatch/Foo.res
+  does not match the interface /.../fixtures/Iface_unboxed_variant_mismatch/foo.cmi:
+  Type declarations do not match:
+    type t = Wrap(int)
+  is not included in
+    @unboxed type t = Wrap(int)
+  [36m/.../fixtures/Iface_unboxed_variant_mismatch/Foo.resi[0m:[2m2:1-3:13[0m:
+    Expected declaration
+  [36m/.../fixtures/Iface_unboxed_variant_mismatch/Foo.res[0m:[2m1:1-2:13[0m:
+    Actual declaration
+  Their internal representations differ:
+  the second declaration uses unboxed representation.
