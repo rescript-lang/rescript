@@ -4,11 +4,8 @@ const maxEncodedCodeLength = 300 * 1024;
 const maxDecodedSourceLength = 200 * 1024;
 let replaceSequence = 0;
 
-function supportsCompression() {
-  return (
-    typeof CompressionStream !== "undefined" &&
-    typeof DecompressionStream !== "undefined"
-  );
+function supportsDecompression() {
+  return typeof DecompressionStream !== "undefined";
 }
 
 function normalizeModuleSystem(value, fallback) {
@@ -45,13 +42,6 @@ function base64UrlToBytes(value) {
   return bytes;
 }
 
-async function gzip(bytes) {
-  const stream = new Blob([bytes])
-    .stream()
-    .pipeThrough(new CompressionStream("gzip"));
-  return new Uint8Array(await new Response(stream).arrayBuffer());
-}
-
 async function gunzip(bytes) {
   const stream = new Blob([bytes])
     .stream()
@@ -61,23 +51,19 @@ async function gunzip(bytes) {
 
 async function encodeCode(source) {
   const sourceBytes = textEncoder.encode(source);
-
-  if (supportsCompression()) {
-    try {
-      const compressedBytes = await gzip(sourceBytes);
-      if (compressedBytes.length < sourceBytes.length) {
-        return `z:${bytesToBase64Url(compressedBytes)}`;
-      }
-    } catch {
-      // Fall through to plain base64-url encoding.
-    }
-  }
-
+  // Keep newly generated share links browser-portable. Older z: links are still
+  // decoded when the browser exposes DecompressionStream.
   return `b:${bytesToBase64Url(sourceBytes)}`;
 }
 
 async function decodeCode(encoded) {
   if (encoded.startsWith("z:")) {
+    if (!supportsDecompression()) {
+      throw new Error(
+        "Compressed shared links require browser DecompressionStream support",
+      );
+    }
+
     const compressedBytes = base64UrlToBytes(encoded.slice(2));
     return textDecoder.decode(await gunzip(compressedBytes));
   }
@@ -161,7 +147,8 @@ export async function initialSource(defaultSource) {
   try {
     const decoded = await decodeCode(encoded);
     return decoded.length <= maxDecodedSourceLength ? decoded : defaultSource;
-  } catch {
+  } catch (error) {
+    console.warn("Could not restore shared playground source", error);
     return defaultSource;
   }
 }

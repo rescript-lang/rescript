@@ -658,6 +658,8 @@ module App = {
     let urlTimerId: ref<option<int>> = ref(None)
     let toastTimerId: ref<option<int>> = ref(None)
     let firstCompilerLoad = ref(true)
+    let compilerLoadSequence = ref(0)
+    let compileSequence = ref(0)
     let shareToast: Signal.t<option<string>> = Signal.make(None)
 
     let syncEditorState = event => {
@@ -685,6 +687,9 @@ module App = {
     }
 
     let compileNow = () => {
+      compileSequence := compileSequence.contents + 1
+      let sequence = compileSequence.contents
+
       let run = async () => {
         switch Signal.peek(status) {
         | Loading => ()
@@ -693,11 +698,19 @@ module App = {
           Signal.set(status, Compiling)
           try {
             let result = await CompilerApi.compile(Signal.peek(source), currentConfig())
-            Signal.set(compileResult, Some(result))
-            Signal.set(status, Ready)
+            if sequence === compileSequence.contents {
+              Signal.set(compileResult, Some(result))
+              Signal.set(status, Ready)
+            }
           } catch {
-          | JsExn(obj) => Signal.set(status, Failed(Browser.jsErrorMessage(obj)))
-          | _ => Signal.set(status, Failed("Compilation failed"))
+          | JsExn(obj) =>
+            if sequence === compileSequence.contents {
+              Signal.set(status, Failed(Browser.jsErrorMessage(obj)))
+            }
+          | _ =>
+            if sequence === compileSequence.contents {
+              Signal.set(status, Failed("Compilation failed"))
+            }
           }
         }
       }
@@ -768,35 +781,47 @@ module App = {
     }
 
     let loadCompiler = (version, compileAfterLoad) => {
+      compilerLoadSequence := compilerLoadSequence.contents + 1
+      compileSequence := compileSequence.contents + 1
+      let sequence = compilerLoadSequence.contents
+
       let load = async () => {
         try {
           Signal.set(status, Loading)
           Signal.set(compileResult, None)
           let info = await CompilerApi.init(version)
-          let useInitialSettings = firstCompilerLoad.contents
-          firstCompilerLoad := false
-          Signal.set(compilerInfo, Some(info))
-          Signal.set(compilerVersion, info.bundleId)
-          Signal.set(moduleSystem, useInitialSettings ? initialModuleSystem : info.moduleSystem)
-          Signal.set(warnFlags, useInitialSettings ? initialWarnFlags : info.warnFlags)
-          Signal.set(
-            jsxPreserveMode,
-            useInitialSettings ? initialJsxPreserveMode : info.jsxPreserveMode,
-          )
-          Signal.set(
-            experimentalFeatures,
-            useInitialSettings ? initialExperimentalFeatures : info.experimentalFeatures,
-          )
-          Signal.set(status, Ready)
-          if !useInitialSettings {
-            scheduleUrlSync()
-          }
-          if compileAfterLoad {
-            compileNow()
+          if sequence === compilerLoadSequence.contents {
+            let useInitialSettings = firstCompilerLoad.contents
+            firstCompilerLoad := false
+            Signal.set(compilerInfo, Some(info))
+            Signal.set(compilerVersion, info.bundleId)
+            Signal.set(moduleSystem, useInitialSettings ? initialModuleSystem : info.moduleSystem)
+            Signal.set(warnFlags, useInitialSettings ? initialWarnFlags : info.warnFlags)
+            Signal.set(
+              jsxPreserveMode,
+              useInitialSettings ? initialJsxPreserveMode : info.jsxPreserveMode,
+            )
+            Signal.set(
+              experimentalFeatures,
+              useInitialSettings ? initialExperimentalFeatures : info.experimentalFeatures,
+            )
+            Signal.set(status, Ready)
+            if !useInitialSettings {
+              scheduleUrlSync()
+            }
+            if compileAfterLoad {
+              compileNow()
+            }
           }
         } catch {
-        | JsExn(obj) => Signal.set(status, Failed(Browser.jsErrorMessage(obj)))
-        | _ => Signal.set(status, Failed("Compiler failed to load"))
+        | JsExn(obj) =>
+          if sequence === compilerLoadSequence.contents {
+            Signal.set(status, Failed(Browser.jsErrorMessage(obj)))
+          }
+        | _ =>
+          if sequence === compilerLoadSequence.contents {
+            Signal.set(status, Failed("Compiler failed to load"))
+          }
         }
       }
 
