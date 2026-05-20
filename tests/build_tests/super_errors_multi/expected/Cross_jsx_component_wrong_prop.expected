@@ -1,0 +1,29 @@
+===== App.res =====
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/Cross_jsx_component_wrong_prop/App.res[0m:[2m2:18-36[0m
+
+  1 [2m│[0m @react.component
+  [1;31m2[0m [2m│[0m let make = () => [1;31m<Button label=42 />[0m
+  3 [2m│[0m 
+
+  [1;33mThe module or file React can't be found.[0m
+  - If it's a third-party dependency:
+    - Did you add it to the "dependencies" or "dev-dependencies" in rescript.json?
+  - Did you include the file's directory to the "sources" in rescript.json?
+  
+
+
+===== Button.res =====
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/Cross_jsx_component_wrong_prop/Button.res[0m:[2m2:32-50[0m
+
+  1 [2m│[0m @react.component
+  [1;31m2[0m [2m│[0m let make = (~label: string) => [1;31mReact.string(label)[0m
+  3 [2m│[0m 
+
+  [1;33mThe module or file React can't be found.[0m
+  - If it's a third-party dependency:
+    - Did you add it to the "dependencies" or "dev-dependencies" in rescript.json?
+  - Did you include the file's directory to the "sources" in rescript.json?
