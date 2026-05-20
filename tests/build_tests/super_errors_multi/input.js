@@ -16,7 +16,18 @@ const fixtures = readdirSync(fixturesDir)
   .filter(name => statSync(path.join(fixturesDir, name)).isDirectory())
   .sort();
 
-const bscFlags = ["-w", "+A", "-bs-jsx", "4", "-color", "always"];
+// `-bs-cmi-only` stops the pipeline after typechecking. Without it, bsc tries
+// to emit .mjs and resolve sibling .js files for cross-module imports, which
+// fails in this harness because we don't run the build system.
+const bscFlags = [
+  "-w",
+  "+A",
+  "-bs-jsx",
+  "4",
+  "-color",
+  "always",
+  "-bs-cmi-only",
+];
 
 const updateTests = process.argv[2] === "update";
 
