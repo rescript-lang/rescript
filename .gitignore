@@ -72,6 +72,11 @@ playground/*.cmj
 playground/*.cmi
 playground/.netrc
 playground/compiler.*js
+packages/dev-playground/dist/
+packages/dev-playground/lib/
+packages/dev-playground/src/*.res.mjs
+packages/dev-playground/public/playground-bundles/*
+!packages/dev-playground/public/playground-bundles/.gitignore
 
 rewatch/target/
 rewatch/rewatch

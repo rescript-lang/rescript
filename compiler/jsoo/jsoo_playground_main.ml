@@ -51,8 +51,9 @@
  * modules in the playground.
  * v5: Removed .ml support.
  * v6: Added `config.experimental_features` and `config.jsx_preserve_mode` to the BundleConfig.
+ * v7: Added opt-in debug dump output APIs for developer playground tooling.
  * *)
-let api_version = "6"
+let api_version = "7"
 
 module Js = Js_of_ocaml.Js
 
@@ -298,6 +299,8 @@ let rescript_parse ~filename src =
   structure
 
 module Printer = struct
+  let to_string printer value = Format.asprintf "%a@." printer value
+
   let print_expr typ =
     Printtyp.reset_names ();
     Printtyp.reset_and_mark_loops typ;
@@ -310,6 +313,23 @@ module Printer = struct
     Res_doc.to_string ~width:60
       (Res_outcome_printer.print_out_sig_item_doc
          (Printtyp.tree_of_type_declaration (Ident.create name) decl rec_status))
+end
+
+module DebugOutput = struct
+  type t = ParseTree | TypedTree | Lambda | Lam
+
+  let from_string = function
+    | "parsetree" -> Some ParseTree
+    | "typedtree" -> Some TypedTree
+    | "lambda" -> Some Lambda
+    | "lam" -> Some Lam
+    | _ -> None
+
+  let from_js_array value =
+    value |> Js.to_array |> Array.to_list
+    |> List.filter_map (fun item -> from_string (Js.to_string item))
+
+  let has output outputs = List.exists (fun item -> item = output) outputs
 end
 
 module Compile = struct
@@ -472,7 +492,12 @@ module Compile = struct
     List.iter Iter.iter_structure_item structure.str_items;
     Js.array (!acc |> Array.of_list)
 
-  let implementation ~(config : BundleConfig.t) ~lang str =
+  let optional_string_attr name = function
+    | Some value -> Js.Unsafe.[|(name, inject @@ Js.string value)|]
+    | None -> [||]
+
+  let implementation ?(debug_outputs = []) ~(config : BundleConfig.t) ~lang str
+      =
     let {
       BundleConfig.module_system;
       warn_flags;
@@ -505,6 +530,11 @@ module Compile = struct
       (* default *)
       let ast = impl str in
       let ast = Ppx_entry.rewrite_implementation ast in
+      let debug_parsetree =
+        if DebugOutput.has DebugOutput.ParseTree debug_outputs then
+          Some (Printer.to_string Printast.implementation ast)
+        else None
+      in
       let typed_tree =
         let a, b, _, signature =
           Typemod.type_implementation_more modulename modulename modulename env
@@ -514,19 +544,38 @@ module Compile = struct
         types_signature := signature;
         (a, b)
       in
+      let debug_typedtree =
+        if DebugOutput.has DebugOutput.TypedTree debug_outputs then
+          Some
+            (Printer.to_string Printtyped.implementation_with_coercion
+               typed_tree)
+        else None
+      in
       typed_tree |> Translmod.transl_implementation modulename
-      |> (* Printlambda.lambda ppf *) fun (lam, exports) ->
+      |> fun (lambda, exports) ->
+      let debug_lambda =
+        if DebugOutput.has DebugOutput.Lambda debug_outputs then
+          Some (Printer.to_string Printlambda.lambda lambda)
+        else None
+      in
+      let debug_lam =
+        if DebugOutput.has DebugOutput.Lam debug_outputs then
+          let export_ident_sets = Set_ident.of_list exports in
+          let lam, _ = Lam_convert.convert export_ident_sets lambda in
+          Some (Lam_print.lambda_to_string lam)
+        else None
+      in
       let buffer = Buffer.create 1000 in
       let () =
         Js_dump_program.pp_deps_program ~output_prefix:""
           (* does not matter here *) module_system
-          (Lam_compile_main.compile "" exports lam)
+          (Lam_compile_main.compile "" exports lambda)
           (Ext_pp.from_buffer buffer)
       in
       let v = Buffer.contents buffer in
       let type_hints = collect_type_hints typed_tree in
-      Js.Unsafe.(
-        obj
+      let attrs =
+        Js.Unsafe.
           [|
             ("js_code", inject @@ Js.string v);
             ( "warnings",
@@ -536,7 +585,18 @@ module Compile = struct
                  |> Js.array |> inject) );
             ("type_hints", inject @@ type_hints);
             ("type", inject @@ Js.string "success");
-          |])
+          |]
+      in
+      Js.Unsafe.(
+        obj
+          (Array.concat
+             [
+               attrs;
+               optional_string_attr "parsetree" debug_parsetree;
+               optional_string_attr "typedtree" debug_typedtree;
+               optional_string_attr "lambda" debug_lambda;
+               optional_string_attr "lam" debug_lam;
+             ]))
     with e -> (
       match e with
       | Arg.Bad msg -> ErrorRet.make_warning_flag_error ~warn_flags msg
@@ -582,6 +642,12 @@ module Export = struct
           inject
           @@ Js.wrap_meth_callback (fun _ code ->
                  Compile.implementation ~config ~lang (Js.to_string code)) );
+        ( "compileWithDebug",
+          inject
+          @@ Js.wrap_meth_callback (fun _ code debug_outputs ->
+                 Compile.implementation
+                   ~debug_outputs:(DebugOutput.from_js_array debug_outputs)
+                   ~config ~lang (Js.to_string code)) );
         ("version", inject @@ Js.string Bs_version.version);
       |]
     in

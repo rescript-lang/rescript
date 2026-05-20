@@ -97,6 +97,7 @@
     "typescript": "6.0.3"
   },
   "workspaces": [
+    "packages/dev-playground",
     "packages/playground",
     "packages/@rescript/*",
     "tests/dependencies/**",
