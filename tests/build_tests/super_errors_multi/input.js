@@ -47,6 +47,15 @@ function postProcessErrorOutput(fixtureName, output) {
     (_match, file) =>
       `/.../fixtures/${fixtureName}/${file.replace(/\\/g, "/")}`,
   );
+  // `find_in_path_uncap` resolves `.cmi` lookups case-insensitively, so the
+  // path printed in error messages picks up whichever case the host
+  // filesystem returns (lowercase on macOS APFS/HFS+, capitalised on Linux
+  // ext4). Normalise every `.cmi` basename to lowercase so snapshots are
+  // platform-independent.
+  result = result.replace(
+    /([^/\s]+)\.cmi\b/g,
+    (_, stem) => `${stem.toLowerCase()}.cmi`,
+  );
   return normalizeNewlines(result);
 }
 
