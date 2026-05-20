@@ -28,8 +28,8 @@ Implemented:
 
 This follow-up adds the master-only GitHub Pages deployment:
 
-- `.github/workflows/dev-playground.yml` builds and deploys on pushes to `master`.
-- The same workflow has a manual `workflow_dispatch` path for maintainers to redeploy a selected ref once the workflow exists on `master`.
+- `.github/workflows/ci.yml` reuses the existing playground compiler build and deploys on pushes to `master`.
+- The browser compiler bundle is uploaded from the existing Ubuntu ARM playground CI entry and consumed by a follow-up Pages deploy job.
 - The deployed site is staged under `/dev-playground/`.
 - The deployed compiler selector contains only the `master` bundle.
 
@@ -430,7 +430,7 @@ Recommended setup:
 The master-only deployment is implemented in:
 
 ```txt
-.github/workflows/dev-playground.yml
+.github/workflows/ci.yml
 ```
 
 Suggested future PR workflow split:
@@ -441,17 +441,18 @@ Suggested future PR workflow split:
 .github/workflows/dev-playground-pr-cleanup.yml
 ```
 
-`dev-playground.yml`:
+`ci.yml`:
 
-1. Runs on push to `master`, plus manual `workflow_dispatch` after the workflow exists on `master`.
-2. Builds and tests the browser compiler bundle from the selected ref.
-3. Builds the UI shell with `rescript@12.3.0`.
-4. Stages a static Pages artifact containing:
+1. Runs on push to `master`.
+2. Reuses the existing Ubuntu ARM playground CI entry to build and test the browser compiler bundle.
+3. Uploads `dev-playground-master-bundle` as a normal Actions artifact.
+4. Builds the UI shell with `rescript@12.3.0` in a follow-up deploy job.
+5. Stages a static Pages artifact containing:
    - `dev-playground/index.html`
    - `dev-playground/assets/`
    - `dev-playground/playground-bundles/master/`
    - `dev-playground/catalog.json`
-5. Deploys the artifact through GitHub Pages Actions.
+6. Deploys the artifact through GitHub Pages Actions.
 
 `dev-playground-pr-build.yml`:
 
@@ -497,7 +498,7 @@ Keep the developer playground workflows separate from the existing release uploa
 
 Do not add a separate CI-only job for the local playground. The master-only deployment workflow builds and validates the artifacts it publishes, which is enough for this stage.
 
-Master-only deployment requirements are covered by `.github/workflows/dev-playground.yml`:
+Master-only deployment requirements are covered by `.github/workflows/ci.yml`:
 
 - Build the UI shell with `rescript@12.3.0`.
 - Build the `master` browser compiler bundle.
