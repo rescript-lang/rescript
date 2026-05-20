@@ -1,4 +1,35 @@
-const compilerRoot = "/playground-bundles";
+function pathFromBase(relativePath) {
+  const origin = globalThis.location?.origin ?? "http://localhost";
+  const base = new URL(import.meta.env.BASE_URL || "/", origin);
+  return new URL(relativePath, base).pathname.replace(/\/$/, "");
+}
+
+function parseCompilerVersions(defaultVersion) {
+  const raw = import.meta.env.VITE_COMPILER_VERSIONS;
+  if (raw == null || raw === "") {
+    return [{ id: defaultVersion, label: defaultVersion }];
+  }
+
+  try {
+    const versions = JSON.parse(raw);
+    if (
+      Array.isArray(versions) &&
+      versions.every(
+        version =>
+          typeof version?.id === "string" &&
+          typeof version?.label === "string",
+      )
+    ) {
+      return versions;
+    }
+  } catch {
+    // Fall through to the default list below.
+  }
+
+  return [{ id: defaultVersion, label: defaultVersion }];
+}
+
+const compilerRoot = pathFromBase("playground-bundles");
 const loadedScripts = new Map();
 const compilerApis = new Map();
 const compilers = new Map();
@@ -6,8 +37,11 @@ const loadedLibrariesByVersion = new Map();
 let activeLibraryVersion = null;
 
 export const defaultWarnFlags = "+a-4-9-20-40-41-42-50-61-102-109";
-export const defaultCompilerVersion = "local";
-export const availableCompilerVersions = [{ id: "local", label: "local" }];
+export const defaultCompilerVersion =
+  import.meta.env.VITE_DEFAULT_COMPILER_VERSION ?? "local";
+export const availableCompilerVersions = parseCompilerVersions(
+  defaultCompilerVersion,
+);
 
 function loadScript(src, { cache = true } = {}) {
   if (cache && loadedScripts.has(src)) {

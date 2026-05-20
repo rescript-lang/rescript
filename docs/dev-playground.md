@@ -11,6 +11,37 @@ The playground should serve two workflows:
 
 This is separate from the end-user playground on `rescript-lang.org/try`. The developer playground can expose compiler internals, experimental settings, unstable tabs, and per-PR builds.
 
+## Current Status
+
+The first implementation step has landed in `e4e63c78b Developer playground`.
+
+Implemented:
+
+- `packages/dev-playground/` exists as a Xote/Vite/ReScript frontend shell.
+- The UI shell is pinned to `rescript@12.3.0`.
+- `make dev-playground` builds the browser compiler bundle, stages it under the dev playground, and starts the local Vite server.
+- `make dev-playground-build` verifies the local staged bundle and frontend production build.
+- `compiler/jsoo/jsoo_playground_main.ml` exposes additive API version `7`.
+- `rescript.compile(source)` stays compatible with the existing end-user playground.
+- `rescript.compileWithDebug(source, outputs)` exposes requested internal artifacts for the developer playground.
+- The local playground supports source editing, line numbers, lightweight ReScript highlighting, output tabs, settings, URL state, and loading the current checkout's compiler bundle through `playground-bundles/local`.
+
+This follow-up adds the master-only GitHub Pages deployment:
+
+- `.github/workflows/dev-playground.yml` builds and deploys on pushes to `master`.
+- The same workflow has a manual `workflow_dispatch` path for maintainers to redeploy a selected ref once the workflow exists on `master`.
+- The deployed site is staged under `/dev-playground/`.
+- The deployed compiler selector contains only the `master` bundle.
+
+The remaining work is intentionally left for subsequent PRs:
+
+- PR bundle build/publish workflows.
+- PR bundle cleanup when a PR is closed or merged.
+- A longer-term storage decision for many PR bundles.
+- A shared highlighting source of truth for TextMate, tree-sitter, and the playground.
+
+The current highlighter is intentionally lightweight and should not become a separate source of truth for ReScript syntax.
+
 ## Starting Point
 
 The repo already builds a browser compiler bundle:
@@ -33,7 +64,7 @@ The current compiler bundle API is narrower than that prototype assumes. Upstrea
 
 ## Proposed Repository Shape
 
-Add a new workspace package:
+The first step added a new workspace package:
 
 ```txt
 packages/dev-playground/
@@ -53,7 +84,7 @@ packages/dev-playground/
     validate-dist.mjs
 ```
 
-Keep `packages/playground/` as the compiler-bundle package. It should remain responsible for producing `compiler.js` and cmij package files. The new `packages/dev-playground/` package should be a frontend shell that consumes those assets.
+`build-catalog.mjs` and `validate-dist.mjs` are still deployment follow-ups. Keep `packages/playground/` as the compiler-bundle package. It should remain responsible for producing `compiler.js` and cmij package files. The new `packages/dev-playground/` package should remain a frontend shell that consumes those assets.
 
 This split keeps the end-user bundle pipeline reusable and prevents UI work from being coupled to compiler bundle generation.
 
@@ -87,7 +118,7 @@ The `packages/dev-playground/package.json` dependencies should therefore pin:
 
 ## Local Developer Workflow
 
-Add Makefile targets:
+The local workflow is implemented through Makefile targets equivalent to:
 
 ```make
 dev-playground: playground
@@ -190,6 +221,41 @@ Planned artifact keys:
 - `analysis`
 
 Avoid adding one top-level field per future output. A map of named artifacts lets compiler developers add tabs without forcing frontend rewrites.
+
+## Highlighting Source of Truth
+
+The local playground currently uses a small in-app tokenizer so the editor remains lightweight. That is acceptable for the first local workflow, but it should not become an independent grammar.
+
+Longer term, ReScript should have one shared highlighting specification that can drive:
+
+- the VS Code TextMate grammar,
+- tree-sitter highlight queries,
+- the playground's lightweight tokenizer tables.
+
+Do not try to derive TextMate directly from tree-sitter, or tree-sitter directly from TextMate. They have different constraints: TextMate is regex/scope based and works well on incomplete text, while tree-sitter is parse-node and query based. Instead, derive both from shared language facts and a shared highlight taxonomy.
+
+Recommended follow-up shape:
+
+```txt
+tools/highlighting/
+  spec.json
+  generate_tm_language.mjs
+  generate_tree_sitter_queries.mjs
+  generate_playground_tables.mjs
+```
+
+The shared spec should cover at least:
+
+- keywords and constants, preferably generated or checked against `compiler/syntax/src/res_token.ml`,
+- operators and punctuation classes,
+- attributes and extension points,
+- comments, doc comments, strings, template literals, regex literals, chars, and numbers,
+- constructors, polymorphic variants, modules, labels, JSX tags, and raw JS blocks,
+- the final taxonomy used by themes and semantic tokens.
+
+Semantic highlighting remains a separate layer. `analysis/src/SemanticTokens.ml` already documents that grammar highlighting and semantic tokens need to stay in sync, so the shared highlighting spec should include the semantic-token legend or validate against it.
+
+For the developer playground, the next practical step is to make its tokenizer consume generated lightweight tables once such a spec exists. Until then, only fix obvious visual gaps; avoid growing the tokenizer into a parallel grammar.
 
 ## Supporting `rescript.json`
 
@@ -361,27 +427,31 @@ Recommended setup:
 - Use a serialized deployment concurrency group, for example `dev-playground-pages`, so two PR publish jobs cannot update `catalog.json` at the same time.
 - Use real copied files for deployment artifacts. Local symlinks are fine for development, but Pages artifacts must not contain symbolic or hard links.
 
-Suggested workflow split:
+The master-only deployment is implemented in:
 
 ```txt
-.github/workflows/dev-playground-master.yml
+.github/workflows/dev-playground.yml
+```
+
+Suggested future PR workflow split:
+
+```txt
 .github/workflows/dev-playground-pr-build.yml
 .github/workflows/dev-playground-pr-publish.yml
 .github/workflows/dev-playground-pr-cleanup.yml
 ```
 
-`dev-playground-master.yml`:
+`dev-playground.yml`:
 
-1. Runs on push to `master`.
-2. Builds the UI shell with `rescript@12.3.0`.
-3. Builds and tests the browser compiler bundle from `master`.
-4. Checks out or creates `gh-pages`.
-5. Replaces:
+1. Runs on push to `master`, plus manual `workflow_dispatch` after the workflow exists on `master`.
+2. Builds and tests the browser compiler bundle from the selected ref.
+3. Builds the UI shell with `rescript@12.3.0`.
+4. Stages a static Pages artifact containing:
    - `dev-playground/index.html`
    - `dev-playground/assets/`
    - `dev-playground/playground-bundles/master/`
-6. Updates the `master` entry in `dev-playground/catalog.json`.
-7. Deploys the full staged `gh-pages` directory to Pages.
+   - `dev-playground/catalog.json`
+5. Deploys the artifact through GitHub Pages Actions.
 
 `dev-playground-pr-build.yml`:
 
@@ -425,13 +495,16 @@ Run cleanup for both merged and unmerged closes. A merged PR is represented by `
 
 Keep the developer playground workflows separate from the existing release upload path.
 
-Initial first PR requirements:
+Do not add a separate CI-only job for the local playground. The master-only deployment workflow builds and validates the artifacts it publishes, which is enough for this stage.
 
-- Add local build verification for `make dev-playground-build`.
-- Add master-only deployment if Pages is configured.
-- Keep PR bundle publishing out of the first PR.
+Master-only deployment requirements are covered by `.github/workflows/dev-playground.yml`:
 
-Second PR requirements:
+- Build the UI shell with `rescript@12.3.0`.
+- Build the `master` browser compiler bundle.
+- Publish only `dev-playground/`, `catalog.json`, and `playground-bundles/master/`.
+- Do not publish PR artifacts yet.
+
+PR publishing requirements:
 
 - Add the PR bundle artifact workflow.
 - Add the trusted PR publish workflow.
@@ -483,33 +556,30 @@ CI deployment tests:
 
 ## Rollout
 
-Recommended implementation order:
+Remaining implementation order:
 
-1. Land the local playground path first.
-   - Seed `packages/dev-playground/` from the shared Xote implementation.
-   - Pin the UI shell to `rescript@12.3.0`.
-   - Add `stage-local-bundle`, `make dev-playground`, and `make dev-playground-build`.
-   - Make `make dev-playground` depend on `make playground` so the current checkout's compiler bundle is built before the UI starts.
-   - Add the additive v7 `compileWithDebug` browser compiler API.
-   - Verify the UI against the current `master` compiler bundle through `playground-bundles/local`.
-2. In the same first PR, add a master-only deployment if the GitHub Pages target is already available.
-   - Build the UI shell with `rescript@12.3.0`.
-   - Build the `master` compiler bundle.
-   - Publish only `dev-playground/`, `catalog.json`, and `playground-bundles/master/`.
-   - Do not publish PR artifacts yet.
-   - This gives reviewers a deployed playground immediately after the first PR merges, with only the latest `master` compiler available.
-3. Add PR build publishing in a second PR.
+1. Add PR build publishing.
    - Add the untrusted PR artifact build.
    - Add the trusted publish job.
    - Add PR comments with the deployed URL.
    - Add cleanup/retention policy for old PR builds.
-4. Generalize the compiler/frontend result adapter if future outputs need richer artifact metadata.
-5. Add `rescript.json` editor support for the safe one-file settings.
-6. Add source-map output.
-7. Add GenType generated-file output.
-8. Prototype lazy-loaded analysis/completion and decide whether it ships to Pages or stays local-only.
+2. Add PR cleanup.
+   - Remove PR bundle folders or R2 prefixes when a PR is closed, whether merged or not.
+   - Remove the PR entry from `catalog.json`.
+   - Keep only the latest bundle per open PR unless there is a deliberate retention policy.
+3. Decide the long-term storage backend for PR bundles.
+   - Pages is acceptable only if retention stays small and enforced.
+   - Prefer R2/CDN for unbounded or longer-lived PR bundle storage.
+4. Add the shared highlighting source-of-truth follow-up.
+   - Generate or validate TextMate grammar, tree-sitter highlight queries, and playground tokenizer tables from shared data.
+   - Keep semantic-token compatibility checks in scope.
+5. Generalize the compiler/frontend result adapter if future outputs need richer artifact metadata.
+6. Add `rescript.json` editor support for the safe one-file settings.
+7. Add source-map output.
+8. Add GenType generated-file output.
+9. Prototype lazy-loaded analysis/completion and decide whether it ships to Pages or stays local-only.
 
-If Pages setup or repository permissions are uncertain, keep the first PR to local-only plus CI build verification, then make master deployment the second PR and PR build publishing the third. If Pages is straightforward, local support plus master-only deployment is a reasonable first PR because it avoids the untrusted-code complexity of PR artifact publishing.
+If Pages setup or repository permissions fail on first deployment, fix that before starting PR build publishing. The master-only deployment still avoids the untrusted-code complexity of PR artifacts.
 
 ## Open Questions
 

@@ -1,6 +1,7 @@
 import * as path from "node:path";
 
 export default {
+  base: process.env.VITE_BASE ?? "/",
   resolve: {
     alias: {
       "@rescript/runtime": path.join(

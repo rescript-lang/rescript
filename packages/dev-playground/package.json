@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "stage-local-bundle": "node scripts/stage-local-bundle.mjs",
+    "stage-master-bundle": "node scripts/stage-local-bundle.mjs master --clear-other-bundles",
+    "prepare-pages-site": "node scripts/prepare-pages-site.mjs",
     "res:build": "rescript",
     "res:watch": "rescript -w",
     "dev": "vite --host 127.0.0.1",

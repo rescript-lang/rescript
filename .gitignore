@@ -73,6 +73,7 @@ playground/*.cmi
 playground/.netrc
 playground/compiler.*js
 packages/dev-playground/dist/
+packages/dev-playground/pages-site/
 packages/dev-playground/lib/
 packages/dev-playground/src/*.res.mjs
 packages/dev-playground/public/playground-bundles/*
