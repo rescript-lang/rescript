@@ -47,6 +47,7 @@
 - Expand `super_errors` fixture coverage for warnings and errors. https://github.com/rescript-lang/rescript/pull/8429
 - Run `super_errors` fixtures in parallel (~2.4× faster locally). https://github.com/rescript-lang/rescript/pull/8430
 - Expand `super_errors` fixture coverage for the remaining reachable single-file error variants. https://github.com/rescript-lang/rescript/pull/8432
+- Cache OPAM env, rewatch build, and instrumented dune state in the coverage workflow. https://github.com/rescript-lang/rescript/pull/8434
 
 
 # 13.0.0-alpha.4
