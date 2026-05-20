@@ -118,8 +118,12 @@ jobs:
         if: steps.cache-opam-env.outputs.cache-hit != 'true'
         run: opam install . --deps-only --with-test --with-dev-setup
 
+      # Only save on master pushes. PR-scoped caches are tied to
+      # refs/pull/<n>/merge and can't be restored by master or other PRs,
+      # so they'd just consume storage and evict the shared entry. PRs
+      # still get full restore from the latest master-saved cache.
       - name: Save OPAM environment
-        if: steps.cache-opam-env.outputs.cache-hit != 'true'
+        if: steps.cache-opam-env.outputs.cache-hit != 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master'
         uses: actions/cache/save@v5
         with:
           path: |
