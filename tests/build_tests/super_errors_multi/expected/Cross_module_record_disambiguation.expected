@@ -1,0 +1,11 @@
+===== User.res =====
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/Cross_module_record_disambiguation/User.res[0m:[2m1:19-23[0m
+
+  [1;31m1[0m [2m│[0m let r: Point.t = {[1;31mwidth[0m: 1, height: 2}
+  2 [2m│[0m 
+
+  The field [1;31mwidth[0m does not belong to type [1;33mPoint.t[0m
+  
+  This record expression is expected to have type [1;33mPoint.t[0m

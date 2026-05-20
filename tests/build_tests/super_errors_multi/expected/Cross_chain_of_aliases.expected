@@ -1,0 +1,12 @@
+===== C.res =====
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/Cross_chain_of_aliases/C.res[0m:[2m1:23-29[0m
+
+  [1;31m1[0m [2m│[0m let v: B.Reexport.t = [1;31m"wrong"[0m
+  2 [2m│[0m 
+
+  This has type: [1;31mstring[0m
+  But it's expected to have type: [1;33mB.Reexport.t[0m [2m(defined as[0m [1;33mint[0m[2m)[0m
+  
+  You can convert [1;33mstring[0m to [1;33mint[0m with [1;33mInt.fromString[0m.
