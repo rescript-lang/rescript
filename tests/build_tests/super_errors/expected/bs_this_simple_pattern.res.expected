@@ -1,8 +1,8 @@
 
   [1;31mWe've found a bug for you![0m
-  [36m/.../fixtures/bs_this_simple_pattern.res[0m:[2m1:17-22[0m
+  [36m/.../fixtures/bs_this_simple_pattern.res[0m:[2m1:16-21[0m
 
-  [1;31m1[0m [2m│[0m let f = @this (([1;31m(a, b)[0m, x) => a + b + x)
+  [1;31m1[0m [2m│[0m let f = @this ([1;31m(a, b)[0m, x) => a + b + x
   2 [2m│[0m 
 
   %@this expect its pattern variable to be simple form

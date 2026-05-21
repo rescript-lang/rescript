@@ -1,9 +1,11 @@
 
   [1;31mWe've found a bug for you![0m
-  [36m/.../fixtures/if_return_type_mismatch.res[0m:[2m1:27[0m
+  [36m/.../fixtures/if_return_type_mismatch.res[0m:[2m2:3[0m
 
-  [1;31m1[0m [2m│[0m let x: string = if true { [1;31m1[0m } else { 2 }
-  2 [2m│[0m 
+  1 [2m│[0m let x: string = if true {
+  [1;31m2[0m [2m│[0m   [1;31m1[0m
+  3 [2m│[0m } else {
+  4 [2m│[0m   2
 
   This has type: [1;31mint[0m
   But this [1;33mif[0m statement is expected to return: [1;33mstring[0m

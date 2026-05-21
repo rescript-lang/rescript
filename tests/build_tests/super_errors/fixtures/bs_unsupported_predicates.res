@@ -1,3 +1,1 @@
-type t = {..
-  @get({weird: true}) "x": int
-}
+type t = {..@get({weird: true}) "x": int}

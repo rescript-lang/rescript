@@ -1,8 +1,8 @@
 
   [1;31mWe've found a bug for you![0m
-  [36m/.../fixtures/bs_optional_in_uncurried_bs_attribute.res[0m:[2m1:16-56[0m
+  [36m/.../fixtures/bs_optional_in_uncurried_bs_attribute.res[0m:[2m1:15-55[0m
 
-  [1;31m1[0m [2m│[0m let f = @this ([1;31m(self, ~x=?) => self + x->Option.getOr(0)[0m)
+  [1;31m1[0m [2m│[0m let f = @this [1;31m(self, ~x=?) => self + x->Option.getOr(0)[0m
   2 [2m│[0m 
 
   Uncurried function doesn't support optional arguments yet
