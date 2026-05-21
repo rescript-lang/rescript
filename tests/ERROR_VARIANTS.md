@@ -86,7 +86,7 @@ Source: [typecore.ml:27](../compiler/ml/typecore.ml).
 | `Too_many_arguments` | ✓ | `too_many_arguments.res`, `moreArguments*.res` | |
 | `Abstract_wrong_label` | ? | — | typecore.ml:3502. Fires when a function literal's label doesn't match the expected arrow type. One attempted reproduction landed on `Expr_type_clash` but I didn't retest with care; trigger site is live. |
 | `Scoping_let_module` | ✓ | `scoping_let_module.res` | |
-| `Not_a_variant_type` | ☐ | — | typecore.ml:563/613/641. Triggers in polyvariant `Ppat_type` pattern (`...t` spread in pattern); needs `[%pat_type t]` or similar pattern AST. |
+| `Not_a_variant_type` | ✓ | `variant_spread_pattern_not_a_variant.res` | Pattern-level variant spread of a non-variant type. |
 | `Incoherent_label_order` | ? | — | typecore.ml:3894. Triggers when labeled args reorder against an arrow type that contains the label but not at the current position. Couldn't construct a reproduction that didn't hit `Apply_wrong_label` first. |
 | `Less_general` | ✓ | `less_general_universal.res` | |
 | `Modules_not_allowed` | ✓ | `super_errors_multi/Modules_not_allowed_toplevel` | Toplevel `let module(M) = …` pattern with `allow_modules=false`. |
@@ -98,7 +98,7 @@ Source: [typecore.ml:27](../compiler/ml/typecore.ml).
 | `Invalid_interval` | ⚠ | — | typecore.ml:1349. Triggered by `Ppat_interval` pattern. **Verified: `Ppat_interval` has no construction site in `compiler/syntax/src/res_core.ml`** — only printer and ast_debugger handle it. |
 | `Invalid_for_loop_index` | ✓ | `invalid_for_loop_index.res` | |
 | `Invalid_for_of_pattern` | ⚠ | — | typecore.ml:3120/3152. Verified: parser `normalize_for_of_pattern` (`res_core.ml:3841`) replaces non-var / non-`_` patterns with `Ppat_any` before the typer sees them. |
-| `No_value_clauses` | ☐ | — | typecore.ml:2575. Triggers when a `switch` has only exception clauses; needs `try` / `catch` with no value branch. |
+| `No_value_clauses` | ✓ | `no_value_clauses.res` | |
 | `Exception_pattern_below_toplevel` | ✓ | `exception_pattern_below_toplevel.res` | |
 | `Inlined_record_escape` | ✓ | `inline_record_escape.res` | |
 | `Inlined_record_expected` | ✓ | `inlined_record_expected.res`, `super_errors_multi/Cross_inline_record_constructor` | |
@@ -107,12 +107,12 @@ Source: [typecore.ml:27](../compiler/ml/typecore.ml).
 | `Break_outside_loop` | ✓ | `break_outside_loop.res`, `break_in_nested_function.res` | |
 | `Continue_outside_loop` | ✓ | `continue_outside_loop.res`, `continue_in_nested_function.res` | |
 | `Literal_overflow` | ✓ | `intoverflow.res` | |
-| `Unknown_literal` | ☐ | — | typecore.ml:279/283. **Confirmed reachable**: `let x = 0z` produces `Unknown modifier 'z' for literal 0z`. The lexer (`res_scanner.ml:302`) accepts any `g..z` / `G..Z` suffix; unknown ones fire here. |
+| `Unknown_literal` | ✓ | `unknown_literal.res` | |
 | `Illegal_letrec_pat` | ✓ | `illegal_letrec_pat.res` | |
-| `Empty_record_literal` | ☐ | — | typecore.ml:2747. **Confirmed reachable**: `let bad = {}` (no type annotation) produces `Empty record literal {} should be type annotated or used in a record context.`. With an annotation, `Labels_missing` fires first. |
+| `Empty_record_literal` | ✓ | `empty_record_literal.res` | |
 | `Uncurried_arity_mismatch` | ✓ | `arity_mismatch3.res` etc. | |
 | `Field_not_optional` | ✓ | `fieldNotOptional.res` | |
-| `Type_params_not_supported` | ☐ | — | typecore.ml:635. Variant spread pattern (`| ...a`) where `a` has type params. Existing `variant_spread_type_parameters.res` covers the typedecl path; this is a separate pattern-level path. |
+| `Type_params_not_supported` | ✓ | `variant_spread_pattern_type_params.res` | Pattern-level variant spread (`| ...a as v`) where `a` has type params; typedecl path covered by `variant_spread_type_parameters.res`. |
 | `Field_access_on_dict_type` | ✓ | `field_access_on_dict_type.res` | |
 | `Jsx_not_enabled` | ☐ | — | typecore.ml:218/3470. Fires when JSX expressions are used without `-bs-jsx N`. Reachable but the existing `super_errors` runner always passes `-bs-jsx 4`. |
 
@@ -140,9 +140,9 @@ Type-declaration errors. Source: [typedecl.ml:27](../compiler/ml/typedecl.ml).
 | `Cannot_extend_private_type` | ✓ | `cannot_extend_private_type.res` | |
 | `Not_extensible_type` | ✓ | `not_extensible_type.res` | |
 | `Extension_mismatch` | ☐ | — | Cross-module extension declaration mismatch via `.resi`/`.res`. |
-| `Rebind_wrong_type` | ☐ | — | typedecl.ml:1653. `exception X(int) = OtherWithStringArg`. ReScript **does** support exception rebinding (parser at `res_core.ml:6660` emits `Pext_rebind`). My prior claim that the syntax wasn't exposed was wrong. |
-| `Rebind_mismatch` | ☐ | — | typedecl.ml:1681. Rebinding from a different extensible type. Same parser support as above. |
-| `Rebind_private` | ☐ | — | typedecl.ml:1684. Rebinding a private constructor as public. Same parser support. |
+| `Rebind_wrong_type` | ? | — | typedecl.ml:1653. Fires when source constructor's result type doesn't unify with target's. For exceptions both are `exn`; for extension types both share the extensible parent. I couldn't construct a triggering shape — the rebind succeeds for shapes the parser will accept. |
+| `Rebind_mismatch` | ✓ | `extension_rebind_mismatch.res` | Rebinding constructor into a different extensible type. |
+| `Rebind_private` | ✓ | `extension_rebind_private.res` | Rebinding a private extension constructor as public. |
 | `Bad_variance` | ✓ | `bad_variance.res`, `bad_variance_contra.res` | |
 | `Unavailable_type_constructor` | ☐ | — | typedecl.ml:778. Requires a type path findable at parse time but missing during constraint enforcement; only cross-unit scenarios. |
 | `Bad_fixed_type` | ? | — | typedecl.ml:190/193. `set_fixed_row` runs when `is_fixed_type` returns true — requires an open object `{..f: t}` or open polyvariant `[> #A]` as `ptype_manifest`. Then if the expanded head isn't `Tvariant` / `Tobject` (line 190) or the row variable isn't `Tvar` (line 193), error. Reachable in principle via an alias chain that collapses the open row, but I haven't constructed one. |
@@ -278,13 +278,13 @@ FFI / attribute / experimental-feature errors. Source: [bs_syntaxerr.ml:27](../c
 
 | Variant | Status | Fixture | Notes |
 |---|---|---|---|
-| `Unsupported_predicates` | ☐ | — | ast_attributes.ml:55, 69. **Reachable** via object type field with unknown `@get` / `@set` predicate keys (e.g. `{@get({weird: true}) "x": int}` on object type field). Called from `process_method_attributes_rev` → `process_getter_setter` for `Ptyp_object` fields. |
-| `Conflict_bs_bs_this_bs_meth` | ☐ | — | bs_syntaxerr.ml:68. `@this` and `@meth` co-applied. `@this` **is** accepted (`let f = @this (self => self)` parses and goes through `to_method_callback`); needs constructing a case where the conflict check fires. |
+| `Unsupported_predicates` | ✓ | `bs_unsupported_predicates.res` | `@get({weird: true})` on object type field. |
+| `Conflict_bs_bs_this_bs_meth` | ? | — | bs_syntaxerr.ml:68. `@this` and `@meth` co-applied. `@this` **is** accepted (`let f = @this (self => self)` parses and goes through `to_method_callback`); I haven't constructed a case where the conflict check actually fires. |
 | `Duplicated_bs_deriving` | ✓ | `duplicated_bs_deriving.res` | |
 | `Conflict_attributes` | ✓ | `bs_conflict_attributes.res` | |
 | `Expect_int_literal` | ✓ | `bs_expect_int_literal.res` | |
 | `Expect_string_literal` | ✓ | `bs_expect_string_literal.res` | |
-| `Expect_int_or_string_or_json_literal` | ☐ | — | ast_attributes.ml:268. **Reachable** via `_ [@as <payload>]` in an external where the payload is neither int nor a delimited string (e.g. `@as(true)` or `@as(())`). Called from `refine_arg_type` in `ast_external_process.ml:78` for wildcard external arguments. |
+| `Expect_int_or_string_or_json_literal` | ✓ | `bs_expect_int_or_string_or_json_literal.res` | `@as(true)` on a wildcard external argument. |
 | `Unhandled_poly_type` | ? | — | ast_core_type.ml:141. Triggers in `list_of_arrow` when an arrow chain contains a `Ptyp_poly`. The parser doesn't normally produce inline poly types inside arrows, but record fields can have polytypes that flow through these utilities. |
 | `Invalid_underscore_type_in_external` | ? | — | ast_external_process.ml:107/132. Needs `_` in optional-label external position with no `@as`. Probably reachable in `@@obj` externals; not yet verified. |
 | `Invalid_bs_string_type` | ✓ | `bs_invalid_bs_string_type.res` | |
@@ -295,8 +295,8 @@ FFI / attribute / experimental-feature errors. Source: [bs_syntaxerr.ml:27](../c
 | `Not_supported_directive_in_bs_return` | ✓ | `bs_not_supported_directive_in_bs_return.res` | |
 | `Expect_opt_in_bs_return_to_opt` | ✓ | `bs_expect_opt_in_bs_return_to_opt.res` | |
 | `Misplaced_label_syntax` | ⚠ | — | bs_syntaxerr.ml:116. Only fires from `check_and_discard` in `ast_exp_apply.ml:49`, applied to the args of `->`, `#=`, `##` operators. The parser always emits those args as `Nolabel`. |
-| `Optional_in_uncurried_bs_attribute` | ☐ | — | bs_syntaxerr.ml:112. Called from `ast_uncurry_gen.ml:34/40` for `@this` body args. `@this` **is** accepted on regular function literals (`let f = @this (self => self)` works); needs an `@this` function with an optional arg to trigger. |
-| `Bs_this_simple_pattern` | ☐ | — | ast_uncurry_gen.ml:32. Same `@this` family — fires when the self pattern isn't a single variable. Reachable via `@this`-annotated function literal with a destructured self pattern. |
+| `Optional_in_uncurried_bs_attribute` | ✓ | `bs_optional_in_uncurried_bs_attribute.res` | `@this` function with optional argument. |
+| `Bs_this_simple_pattern` | ✓ | `bs_this_simple_pattern.res` | `@this` with destructured self pattern. |
 | `Experimental_feature_not_enabled` | ✓ | `let_unwrap_on_top_level_not_enabled.res` (and other let-unwrap variants) | Currently only `LetUnwrap` is checked. |
 | `LetUnwrap_not_supported_in_position` | ✓ | `let_unwrap_on_top_level.res`, `let_unwrap_on_not_supported_variant.res` | |
 
@@ -515,6 +515,9 @@ anywhere in `compiler/`. They are candidates for removal.
 | 50 | `Bad_docstring` | Declared but never raised; also default-disabled. |
 | 105 | `Bs_fragile_external` | Declared but never raised. |
 | 106 | `Bs_unimplemented_primitive` | Declared but never raised. |
+| 10 | `Statement_type` | Raised at typecore.ml:2052 inside `check_application_result`, but `statement` is always `false` at the only call site (typecore.ml:3983); sequence statements hit `Expr_type_clash` via `type_statement` unifying to `unit`. |
+| 16 | `Unerasable_optional_argument` | Raised at typecore.ml:3526, but `type_function` (typecore.ml:3479) explicitly disables this warning before the check runs (`Warnings.parse_options false "-16"`). |
+| 108 | `Bs_uninterpreted_delimiters` | Raised at bs_warnings.ml:29 for `Pconst_string` with delimiter `"js"`; the modern scanner has no `{js\|...\|js}` form and template strings don't tag with `"js"`. |
 
 ### Live but no fixture yet
 
@@ -524,7 +527,4 @@ currently exercises them.
 
 | Number | Variant | Trigger |
 |---|---|---|
-| 5 | `Partial_application` | `typecore.ml:2049`, `:3980` — function call in statement position returning another function. |
-| 10 | `Statement_type` | `typecore.ml:2052` — expression in statement position with non-unit non-arrow type. |
-| 16 | `Unerasable_optional_argument` | `typecore.ml:3525` — optional argument at the trailing position. |
-| 108 | `Bs_uninterpreted_delimiters` | `compiler/common/bs_warnings.ml:29` — string literal with an unrecognized delimiter. |
+| 5 | `Partial_application` | `typecore.ml:2049`, `:3980` — fires from `check_application_result` and a guarded branch in the `ignore` special case. The 3980 branch needs `not total_app`, which would require `ignore(arg, ...)` partial application — syntactically non-sensical. The 2049 site fires via a delayed check whose only path is hard to trigger from plain source. Status: live raise sites but I couldn't construct a reproduction; may be effectively dead. |
