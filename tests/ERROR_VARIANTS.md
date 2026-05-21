@@ -139,7 +139,7 @@ Type-declaration errors. Source: [typedecl.ml:27](../compiler/ml/typedecl.ml).
 | `Unbound_type_var` | ✓ | `unbound_type_var.res` | |
 | `Cannot_extend_private_type` | ✓ | `cannot_extend_private_type.res` | |
 | `Not_extensible_type` | ✓ | `not_extensible_type.res` | |
-| `Extension_mismatch` | ☐ | — | Cross-module extension declaration mismatch via `.resi`/`.res`. |
+| `Extension_mismatch` | ✓ | `extension_arity_mismatch.res` | `type t<'a> = ..` extended with `type t += A(int)` — arity differs from the extensible type. |
 | `Rebind_wrong_type` | ? | — | typedecl.ml:1653. Fires when source constructor's result type doesn't unify with target's. For exceptions both are `exn`; for extension types both share the extensible parent. I couldn't construct a triggering shape — the rebind succeeds for shapes the parser will accept. |
 | `Rebind_mismatch` | ✓ | `extension_rebind_mismatch.res` | Rebinding constructor into a different extensible type. |
 | `Rebind_private` | ✓ | `extension_rebind_private.res` | Rebinding a private extension constructor as public. |
