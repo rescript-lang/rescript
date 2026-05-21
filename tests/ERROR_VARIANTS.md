@@ -66,7 +66,7 @@ Source: [typecore.ml:27](../compiler/ml/typecore.ml).
 |---|---|---|---|
 | `Polymorphic_label` | ? | — | typecore.ml:1555. Triggers in record-pattern matching when a polymorphic field gets instantiated. Several `'a. 'a => 'a` record-field reproductions compiled cleanly; the trigger site is live but I couldn't find an AST that reaches it. |
 | `Constructor_arity_mismatch` | ✓ | `constructor_arity_mismatch.res`, `constructor_arity_mismatch_pattern.res`, `arity_mismatch*.res` | Triggers in both expression (4028) and pattern (1426) paths. |
-| `Label_mismatch` | ☐ | — | typecore.ml:3589. Record label type clash with explicit unify failure; often subsumed by `Pattern_type_clash` / `Expr_type_clash`. |
+| `Label_mismatch` | ? | — | typecore.ml:1543/3589. Fires when `unify ty_res ty_expected` fails after a label has been disambiguated. In practice the disambiguator (`type_label_a_list` / `type_label_pat`) locks the record type before this unify runs, so the error is subsumed by `Wrong_name` / `Pattern_type_clash` / `Expr_type_clash`. I couldn't construct a fixture that reaches it. |
 | `Pattern_type_clash` | ✓ | many `*_pattern_type_clash.res` etc. | Most-fired pattern error; covered through many fixtures but report-side sub-cases (option-vs-non-option trace, polyvariant context, etc.) remain partly untested. |
 | `Or_pattern_type_clash` | ✓ | `or_pattern_type_clash.res` | |
 | `Multiply_bound_variable` | ✓ | `multiply_bound_variable.res` | |
@@ -114,7 +114,7 @@ Source: [typecore.ml:27](../compiler/ml/typecore.ml).
 | `Field_not_optional` | ✓ | `fieldNotOptional.res` | |
 | `Type_params_not_supported` | ✓ | `variant_spread_pattern_type_params.res` | Pattern-level variant spread (`| ...a as v`) where `a` has type params; typedecl path covered by `variant_spread_type_parameters.res`. |
 | `Field_access_on_dict_type` | ✓ | `field_access_on_dict_type.res` | |
-| `Jsx_not_enabled` | ☐ | — | typecore.ml:218/3470. Fires when JSX expressions are used without `-bs-jsx N`. Reachable but the existing `super_errors` runner always passes `-bs-jsx 4`. |
+| `Jsx_not_enabled` | ☐ (needs harness flag) | — | typecore.ml:218/3470. Fires when JSX is used without `-bs-jsx N`. The `super_errors` runner hard-codes `-bs-jsx 4` in `bscFlags`; adding a per-fixture opt-out (e.g. a `.opts` sidecar) would expose this. Until then, it's reachable in real code but blocked at the harness level. |
 
 ---
 
@@ -133,7 +133,7 @@ Type-declaration errors. Source: [typedecl.ml:27](../compiler/ml/typedecl.ml).
 | `Definition_mismatch` | ✓ | `definition_mismatch.res` | |
 | `Constraint_failed` | ✓ | `constraint_failed.res` | |
 | `Inconsistent_constraint` | ✓ | `inconsistent_constraint.res` | |
-| `Type_clash` | ☐ | — | typedecl.ml:125. Manifest type doesn't unify with kind. |
+| `Type_clash` | ? | — | typedecl.ml:125. Fires in `update_type` during recursive type elaboration when the manifest of a recursive `type` doesn't unify with the placeholder `newconstr path params`. Every attempted reproduction hits `Cycle_in_def` or `Recursive_abbrev` first. |
 | `Parameters_differ` | ? | — | typedecl.ml:988. Non-uniform recursive type abbreviation; ReScript variant recursion is accepted, and abbreviations cycle to `Cycle_in_def` first. Hard to construct a reproduction that lands here exactly. |
 | `Null_arity_external` | ⚠ | — | typedecl.ml:1900. The guard requires `prim_arity = 0` and `prim_native_name` not having the magic 20-byte encoding (`\132\149...`) and `prim_name` not starting with `%` or `#`. The encoding gets applied to every concrete external by `Primitive.parse_declaration`, and empty `prim_name` is rejected earlier by `external_ffi_types.ml` with "Not a valid global name". No path through the parser reaches it. |
 | `Unbound_type_var` | ✓ | `unbound_type_var.res` | |
@@ -144,7 +144,7 @@ Type-declaration errors. Source: [typedecl.ml:27](../compiler/ml/typedecl.ml).
 | `Rebind_mismatch` | ✓ | `extension_rebind_mismatch.res` | Rebinding constructor into a different extensible type. |
 | `Rebind_private` | ✓ | `extension_rebind_private.res` | Rebinding a private extension constructor as public. |
 | `Bad_variance` | ✓ | `bad_variance.res`, `bad_variance_contra.res` | |
-| `Unavailable_type_constructor` | ☐ | — | typedecl.ml:778. Requires a type path findable at parse time but missing during constraint enforcement; only cross-unit scenarios. |
+| `Unavailable_type_constructor` | ☐ (needs build harness) | — | typedecl.ml:778. Requires a type path findable at parse time but missing during constraint enforcement; only cross-unit scenarios where a `.cmi` was found but later removed. |
 | `Bad_fixed_type` | ? | — | typedecl.ml:190/193. `set_fixed_row` runs when `is_fixed_type` returns true — requires an open object `{..f: t}` or open polyvariant `[> #A]` as `ptype_manifest`. Then if the expanded head isn't `Tvariant` / `Tobject` (line 190) or the row variable isn't `Tvar` (line 193), error. Reachable in principle via an alias chain that collapses the open row, but I haven't constructed one. |
 | `Unbound_type_var_ext` | ✓ | `unbound_type_var_extension.res` | |
 | `Varying_anonymous` | ? | — | typedecl.ml:1263. Requires anonymous constrained type params under specific variance; very obscure but trigger site is live. |
@@ -167,17 +167,17 @@ Module-level errors. Source: [typemod.ml:24](../compiler/ml/typemod.ml).
 |---|---|---|---|
 | `Cannot_apply` | ✓ | `cannot_apply_non_functor.res` | |
 | `Not_included` | ✓ | All `super_errors_multi/Iface_*` fixtures wrap to this via `compunit`. | |
-| `Cannot_eliminate_dependency` | ☐ | — | typemod.ml:1335. Requires anonymous functor application whose result still mentions the bound module; couldn't engineer despite multiple attempts. May be effectively dead — every fixture's `nondep_supertype` succeeded with existential substitution. |
+| `Cannot_eliminate_dependency` | ? | — | typemod.ml:1335. Requires anonymous functor application whose result still mentions the bound module; couldn't engineer despite multiple attempts. May be effectively dead — every reproduction's `nondep_supertype` succeeded with existential substitution. |
 | `Signature_expected` | ✓ | `typemod_signature_expected.res` | `with type M.t = …` where `M` is functor-typed inside the outer signature. |
 | `Structure_expected` | ✓ | `super_errors_multi/Smoke_unbound_module_reference` (indirect); also `open_functor.res` | |
 | `With_no_component` | ✓ | `with_no_component.res` | |
 | `With_mismatch` | ✓ | `with_mismatch.res` | |
-| `With_makes_applicative_functor_ill_typed` | ☐ | — | typemod.ml:258. Requires applicative-functor constructions ReScript syntax doesn't expose. |
-| `With_changes_module_alias` | ☐ | — | typemod.ml:240. Requires `with module = ...` substitution invalidating an aliased path. ReScript may not parse `with module`. |
-| `With_cannot_remove_constrained_type` | ? | — | typemod.ml:443. Triggers when destructive substitution `with type X<'a> := T` is applied where the substituted type has constrained type params (non-`Tvar`). One attempted reproduction succeeded; haven't found a triggering shape. |
+| `With_makes_applicative_functor_ill_typed` | ⚠ | — | typemod.ml:258. Reached only through the applicative-functor path of `Btype.it_path` (`Papply`); ReScript's parser doesn't emit `Papply` (no parsed construction site in `res_core.ml`), so the iterator never visits this branch. |
+| `With_changes_module_alias` | ☐ (needs build harness) | — | typemod.ml:240. Fires during `with module := M2` substitution when an aliased sub-module inside the constrained signature is affected. ReScript parses `with module N := M2` (destructive substitution), but constructing a sub-module alias chain that gets invalidated requires multiple `.resi` files and a specific shape I couldn't reproduce single-file. |
+| `With_cannot_remove_constrained_type` | ? | — | typemod.ml:443. Triggers when destructive substitution `with type X<'a> := T` is applied where the substituted type has constrained type params (non-`Tvar`). Reproductions either succeeded outright or hit a different `with`-clause error first. |
 | `Repeated_name` | ✓ | `repeated_def_*.res` (multiple) | |
 | `Non_generalizable` | ✓ | `non_generalizable.res` | |
-| `Non_generalizable_module` | ☐ | — | typemod.ml:1023. Module value with non-closed type at sealing time; cross-file. |
+| `Non_generalizable_module` | ? | — | typemod.ml:1023. Fires when sealing a module whose `md_type` still contains free non-generalisable type variables. Single-file fixtures hit `Non_generalizable` on the value first; the module-level path is in principle reachable via a functor argument with an open row, but I couldn't construct one. |
 | `Interface_not_compiled` | ✓ | `super_errors_multi/Iface_not_compiled` | |
 | `Not_allowed_in_functor_body` | ✓ | `super_errors_multi/not_allowed_in_functor_body` (TODO: confirm path) | |
 | `Not_a_packed_module` | ✓ | `not_a_packed_module.res` | |
@@ -185,7 +185,7 @@ Module-level errors. Source: [typemod.ml:24](../compiler/ml/typemod.ml).
 | `Scoping_pack` | ⚠ | — | typemod.ml:1717. Requires first-class module pack where a constraint type has a level mismatch; very contrived. |
 | `Recursive_module_require_explicit_type` | ✓ | `recursive_module_require_explicit_type.res` | |
 | `Apply_generative` | ✓ | `apply_generative.res` | |
-| `Cannot_scrape_alias` | ☐ | — | typemod.ml:77, 83, 1347. Requires `Env.scrape_alias` returning `Mty_alias` (alias target's `.cmi` not loaded). Only multi-unit scenarios. |
+| `Cannot_scrape_alias` | ☐ (needs build harness) | — | typemod.ml:77, 83, 1347. Requires `Env.scrape_alias` to return `Mty_alias` for an alias whose target `.cmi` couldn't be loaded. The `super_errors_multi` runner pre-compiles every file in the fixture, so the alias target is always present. |
 
 ---
 
@@ -216,10 +216,10 @@ Type-expression errors. Source: [typetexp.ml:28](../compiler/ml/typetexp.ml).
 | `Unbound_module` | ✓ | `suggest_module_for_missing_identifier.res`, `super_errors_multi/Smoke_unbound_module_reference` | |
 | `Unbound_modtype` | ✓ | `typetexp_unbound_modtype.res` | |
 | `Ill_typed_functor_application` | ⚠ | — | typetexp.ml:102. In the `Longident.Lapply` branch. **Verified: parser has no construction site for `Longident.Lapply`** (no result in `res_core.ml`). Confirmed dead. |
-| `Illegal_reference_to_recursive_module` | ☐ | — | typetexp.ml:75/114. Catches `Env.Recmodule` exception, raised when looking up a module currently being recursively defined (`#recmod#` placeholder, env.ml:1048). Reachable in principle via a recmodule whose signature references another recmodule member's type before sealing; couldn't construct a triggering fixture but trigger sites are live. |
+| `Illegal_reference_to_recursive_module` | ? | — | typetexp.ml:75/114. Catches `Env.Recmodule` (env.ml:1048), raised when looking up a module whose `md_type` is the `#recmod#` placeholder. The placeholder is only ever installed during the first pass over `module rec` blocks. Plain self-references through the declared signature don't reach the lookup with the placeholder type — they go through the sealed signature instead. I couldn't find a recmodule shape that reaches the placeholder; the trigger site is live but might be effectively dead. |
 | `Access_functor_as_structure` | ✓ | `access_functor_as_structure.res` | |
 | `Apply_structure_as_functor` | ⚠ | — | typetexp.ml:93. In the `Longident.Lapply` branch. Same dead reason as `Ill_typed_functor_application`. |
-| `Cannot_scrape_alias` | ☐ | — | typetexp.ml:86 (Ldot path, live), 95/101 (Lapply path, dead since `Lapply` isn't parsed). The Ldot trigger needs `Env.scrape_alias` to return `Mty_alias` — i.e. an alias whose target `.cmi` can't be loaded. Multi-unit only. |
+| `Cannot_scrape_alias` | ☐ (needs build harness) | — | typetexp.ml:86 (Ldot path, live), 95/101 (Lapply path, dead since `Lapply` isn't parsed). The live Ldot trigger needs `Env.scrape_alias` to return `Mty_alias` — an alias whose target `.cmi` couldn't be loaded. The `super_errors_multi` harness pre-compiles every alias target. |
 | `Opened_object` | ✓ | `object_inherit_opened.res` | |
 | `Not_an_object` | ✓ | `object_inherit_not_an_object.res` | |
 
@@ -239,9 +239,9 @@ Wrapper symptoms attached to inclusion failures. Source: [includemod.ml:23](../c
 | `Modtype_infos` | ✓ | `super_errors_multi/Iface_modtype_infos` | |
 | `Modtype_permutation` | ✓ | `super_errors_multi/include_modtype_permutation` | |
 | `Interface_mismatch` | ✓ | wrapper added to all `Iface_*` failures (line 476). | |
-| `Unbound_modtype_path` | ☐ | — | includemod.ml:94. Requires module-type path comparison to fail; only triggers via destructive substitution paths ReScript doesn't expose. |
-| `Unbound_module_path` | ☐ | — | includemod.ml:226/233. Alias comparison where `normalize_path` fails. Multi-unit scenarios only. |
-| `Invalid_module_alias` | ☐ | — | includemod.ml:211. Requires both sides `Mty_alias` with one pointing to a functor argument. Functor-with-alias-sig fixtures hit `Module_types` instead. |
+| `Unbound_modtype_path` | ⚠ | — | includemod.ml:94. Fires inside `modtype_path` comparison when `Env.find_modtype` raises `Not_found`. The only callers run after both signatures have been fully typed, so the module-type path is always findable from the local env — `Not_found` would imply a stale `.cmi`, which the multi-file harness can't produce since it always pre-compiles. Treating as dead from the source-only harnesses' point of view. |
+| `Unbound_module_path` | ☐ (needs build harness) | — | includemod.ml:226/233. Alias comparison where `Env.normalize_path` raises `Not_found`. Requires a module alias whose target `.cmi` is absent at inclusion time — multi-unit only. |
+| `Invalid_module_alias` | ☐ (needs build harness) | — | includemod.ml:211. Requires both sides `Mty_alias` with one pointing to a functor argument. Reachable only when the alias chain crosses a functor application that the `super_errors_multi` harness doesn't construct. |
 
 ---
 
