@@ -148,7 +148,7 @@ Type-declaration errors. Source: [typedecl.ml:27](../compiler/ml/typedecl.ml).
 | `Bad_fixed_type` | ? | — | typedecl.ml:190/193. `set_fixed_row` runs when `is_fixed_type` returns true — requires an open object `{..f: t}` or open polyvariant `[> #A]` as `ptype_manifest`. Then if the expanded head isn't `Tvariant` / `Tobject` (line 190) or the row variable isn't `Tvar` (line 193), error. Reachable in principle via an alias chain that collapses the open row, but I haven't constructed one. |
 | `Unbound_type_var_ext` | ✓ | `unbound_type_var_extension.res` | |
 | `Varying_anonymous` | ? | — | typedecl.ml:1263. Requires anonymous constrained type params under specific variance; very obscure but trigger site is live. |
-| `Val_in_structure` | ? | — | typedecl.ml:1887. Requires `pval_prim = []` for an external. Parser emits at least one string for any external; `[]` would only come from PPX or manual AST construction. Probably effectively dead. |
+| `Val_in_structure` | ⚠ | — | typedecl.ml:1887 requires `pval_prim = []` outside a signature. The parser's `external` recovery sets `prim = []` (`res_core.ml:6617`) but only after emitting a `Syntax error`, so the typechecker never reaches the value declaration. From plain source there's no path that produces a non-signature `Val` with empty `pval_prim` — only PPX-rewritten AST could, and the AST shape would have to bypass the parser. |
 | `Invalid_attribute` | ✓ | `invalid_attribute_not_undefined.res` | |
 | `Bad_immediate_attribute` | ✓ | `bad_immediate_attribute.res` | |
 | `Bad_unboxed_attribute` | ✓ | `bad_unboxed_attribute_abstract.res`, `bad_unboxed_attribute_mutable.res`, `bad_unboxed_attribute_many_fields.res`, `bad_unboxed_attribute_extensible.res` | All 4 sub-cases covered. |
@@ -168,7 +168,7 @@ Module-level errors. Source: [typemod.ml:24](../compiler/ml/typemod.ml).
 | `Cannot_apply` | ✓ | `cannot_apply_non_functor.res` | |
 | `Not_included` | ✓ | All `super_errors_multi/Iface_*` fixtures wrap to this via `compunit`. | |
 | `Cannot_eliminate_dependency` | ☐ | — | typemod.ml:1335. Requires anonymous functor application whose result still mentions the bound module; couldn't engineer despite multiple attempts. May be effectively dead — every fixture's `nondep_supertype` succeeded with existential substitution. |
-| `Signature_expected` | ☐ | — | typemod.ml:78, 1184. Extract-sig on non-signature module type. |
+| `Signature_expected` | ✓ | `typemod_signature_expected.res` | `with type M.t = …` where `M` is functor-typed inside the outer signature. |
 | `Structure_expected` | ✓ | `super_errors_multi/Smoke_unbound_module_reference` (indirect); also `open_functor.res` | |
 | `With_no_component` | ✓ | `with_no_component.res` | |
 | `With_mismatch` | ✓ | `with_mismatch.res` | |
@@ -286,7 +286,7 @@ FFI / attribute / experimental-feature errors. Source: [bs_syntaxerr.ml:27](../c
 | `Expect_string_literal` | ✓ | `bs_expect_string_literal.res` | |
 | `Expect_int_or_string_or_json_literal` | ✓ | `bs_expect_int_or_string_or_json_literal.res` | `@as(true)` on a wildcard external argument. |
 | `Unhandled_poly_type` | ? | — | ast_core_type.ml:141. Triggers in `list_of_arrow` when an arrow chain contains a `Ptyp_poly`. The parser doesn't normally produce inline poly types inside arrows, but record fields can have polytypes that flow through these utilities. |
-| `Invalid_underscore_type_in_external` | ? | — | ast_external_process.ml:107/132. Needs `_` in optional-label external position with no `@as`. Probably reachable in `@@obj` externals; not yet verified. |
+| `Invalid_underscore_type_in_external` | ✓ | `bs_invalid_underscore_type_in_external.res` | `@obj external make: (~x: _) => _ = ""` — `_` at an optional-label position without `@as`. |
 | `Invalid_bs_string_type` | ✓ | `bs_invalid_bs_string_type.res` | |
 | `Invalid_bs_int_type` | ✓ | `bs_invalid_bs_int_type.res` | |
 | `Invalid_bs_unwrap_type` | ✓ | `bs_invalid_bs_unwrap_type.res` | |
