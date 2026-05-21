@@ -339,16 +339,16 @@ Build / dependency errors. Mostly need the `rescript build` runtime to fire — 
 
 | Variant | Status | Fixture | Notes |
 |---|---|---|---|
-| `Cmj_not_found` | ☐ | — | Missing `.cmj` from a dependent module. Needs `rescript build` harness. |
+| `Cmj_not_found` | ☐ (needs build harness) | — | Missing `.cmj` from a dependent module. Reachable from `rescript build` but not from raw `bsc`. |
 | `Js_not_found` | ✓ | implicitly — bypassed via `-bs-cmi-only` in `super_errors_multi` runner. Not a fixture, but the harness commit documents the workaround. | |
-| `Bs_cyclic_depends` | ☐ | — | Cycle across compilation units; needs build-system harness. |
-| `Bs_duplicated_module` | ☐ | — | Same module name in two source paths. |
-| `Bs_duplicate_exports` | ☐ | — | Same export emitted twice; depends/build setup needed. |
-| `Bs_package_not_found` | ☐ | — | `rescript.json`-referenced package not resolvable. |
-| `Bs_main_not_exist` | ☐ | — | `rescript.json` `main` entry missing. |
-| `Bs_invalid_path` | ☐ | — | `-I` / source path with invalid form. |
-| `Missing_ml_dependency` | ☐ | — | Compile-time missing dependency. |
-| `Dependency_script_module_dependent_not` | ☐ | — | `js_name_of_module_id.cppo.ml:122`. **Reachable** when a dependent module is in script mode (`Package_script`) but the current module is in package mode (`Package_found _`). Legacy script-vs-package interaction; needs `rescript.json` harness. |
+| `Bs_cyclic_depends` | ☐ (needs build harness) | — | Cycle across compilation units; the dependency graph that detects this is owned by `rewatch` / `bsb`, not raw `bsc`. |
+| `Bs_duplicated_module` | ☐ (needs build harness) | — | Same module name in two source paths under a single package. |
+| `Bs_duplicate_exports` | ☐ (needs build harness) | — | Same export emitted twice across compilation units. |
+| `Bs_package_not_found` | ☐ (needs build harness) | — | `rescript.json`-referenced package not resolvable. |
+| `Bs_main_not_exist` | ☐ (needs build harness) | — | `rescript.json` `main` entry missing. |
+| `Bs_invalid_path` | ☐ (needs build harness) | — | `-I` / source path with invalid form. |
+| `Missing_ml_dependency` | ☐ (needs build harness) | — | Compile-time missing dependency from a `.cmj` lookup table. |
+| `Dependency_script_module_dependent_not` | ☐ (needs build harness) | — | `js_name_of_module_id.cppo.ml:122`. **Reachable** when a dependent module is in script mode (`Package_script`) but the current module is in package mode (`Package_found _`). Legacy script-vs-package interaction; needs `rescript.json` harness. |
 
 ---
 
@@ -358,33 +358,40 @@ Environment / `.cmi`-consistency errors. Source: [env.ml:57](../compiler/ml/env.
 
 | Variant | Status | Fixture | Notes |
 |---|---|---|---|
-| `Illegal_renaming` | ☐ | — | `.cmi` filename doesn't match module name; multi-unit scenario. |
-| `Inconsistent_import` | ☐ | — | Two `.cmi` files disagree on a type's hash; needs synthetic build state. |
-| `Missing_module` | ☐ | — | `.cmi` not findable when referenced; needs multi-file harness. |
-| `Illegal_value_name` | ☐ | — | Reserved identifier name; very specific. |
+| `Illegal_renaming` | ☐ (needs build harness) | — | Triggered when a `.cmi` filename and the module name inside it disagree. Reachable via `rescript.json` setups that rename the produced artefact, but not from a single-process `bsc` invocation that always writes `Module.cmi` to match the source. |
+| `Inconsistent_import` | ☐ (needs build harness) | — | Triggered when two `.cmi` files transitively imported by the same unit declare different CRCs for the same type. Needs an artificially-mutated build state across multiple compile invocations. |
+| `Missing_module` | ☐ (needs build harness) | — | `.cmi` referenced but absent from `-I` paths at compile time. The `super_errors_multi` runner pre-compiles every fixture file via `-bs-read-cmi`, so it never reaches this code path. |
+| `Illegal_value_name` | ⚠ | — | env.ml:1622/1625 raises when an identifier is `"->"` or starts/contains `#`. The ReScript parser never emits such identifiers; only PPX-rewritten AST could reach the check. |
 
 ---
 
 ## `compiler/ml/cmi_format.ml`
 
-`.cmi` file format errors. Need binary-level manipulation to trigger.
+`.cmi` file format errors. Need binary-level manipulation to trigger
+(write a non-`.cmi` file in place of one and reference it; downgrade
+compiler version; truncate the file). Out of scope for the
+`super_errors{,_multi}` harnesses, which only invoke `bsc` on
+hand-written `.res` / `.resi` sources.
 
 | Variant | Status | Fixture | Notes |
 |---|---|---|---|
-| `Not_an_interface` | ☐ | — | Pass an arbitrary file as `.cmi`. |
-| `Wrong_version_interface` | ☐ | — | Mismatched compiler versions writing/reading. |
-| `Corrupted_interface` | ☐ | — | Truncated or corrupted `.cmi`. |
+| `Not_an_interface` | ☐ (needs binary harness) | — | Pass an arbitrary file as `.cmi`. |
+| `Wrong_version_interface` | ☐ (needs binary harness) | — | Mismatched compiler versions writing/reading. |
+| `Corrupted_interface` | ☐ (needs binary harness) | — | Truncated or corrupted `.cmi`. |
 
 ---
 
 ## `compiler/core/cmd_ast_exception.ml`
 
 PPX-runtime errors. Source: [cmd_ast_exception.ml:24](../compiler/core/cmd_ast_exception.ml).
+Both require running `bsc` with `-ppx <executable>` and exercising the
+external process boundary. Not reachable from the single-file or
+multi-file harnesses, which never set `-ppx`.
 
 | Variant | Status | Fixture | Notes |
 |---|---|---|---|
-| `CannotRun` | ☐ | — | PPX binary fails to execute. |
-| `WrongMagic` | ☐ | — | PPX returns wrong AST magic number. |
+| `CannotRun` | ☐ (needs PPX harness) | — | PPX binary fails to execute (missing or non-executable). |
+| `WrongMagic` | ☐ (needs PPX harness) | — | PPX returns wrong AST magic number (e.g. PPX built against a different compiler ABI). |
 
 ---
 
@@ -397,9 +404,9 @@ PPX-runtime errors. Source: [cmd_ast_exception.ml:24](../compiler/core/cmd_ast_e
 | `compiler/ml/transl_recmodule.ml` | `Circular_dependency` | ✓ | `recmodule_circular_dependency.res` | |
 | `compiler/ml/rec_check.ml` | `Illegal_letrec_expr` | ✓ | `illegal_letrec_expr.res` | |
 | `compiler/ml/syntaxerr.ml` | `Variable_in_scope` | ⚠ | — | Reachable via `let f: type t. (t, 't) => t = …` (locally-abstract `t` collides with type variable `'t` during `varify_constructors`), but `Syntaxerr.error` has no registered pretty-printer, so it propagates as an uncaught `Fatal error: exception Syntaxerr.Error(_)`. The variant is live; the printer is dead. Treat as broken until either the printer is wired up or the variant is removed in favor of a proper diagnostic. |
-| `compiler/ml/cmt_format.cppo.ml` | `Not_a_typedtree` | ☐ | — | cmt_format.cppo.ml:147. Fires when reading a `.cmt` file that doesn't contain a typed tree. Needs binary `.cmt` manipulation. |
-| `compiler/ext/bsc_args.ml` | `Unknown` | ☐ | — | bsc_args.ml:45. Unknown CLI flag passed to `bsc`. Reachable via `bsc --bogus`. |
-| `compiler/ext/bsc_args.ml` | `Missing` | ☐ | — | Required CLI flag argument missing (e.g. `bsc -o` with no following filename). |
+| `compiler/ml/cmt_format.cppo.ml` | `Not_a_typedtree` | ☐ (needs binary harness) | — | cmt_format.cppo.ml:147. Fires when a tool reads a `.cmt` file whose first block isn't a typed tree. Reachable in principle by pointing the analyzer at an arbitrary file with a `.cmt` extension; out of scope for the source-only fixture harnesses. |
+| `compiler/ext/bsc_args.ml` | `Unknown` | ☐ (needs CLI harness) | — | bsc_args.ml:45. Reachable trivially via `bsc --bogus`, but the `super_errors{,_multi}` runners only pass `bsc` a fixed flag list plus the source file — they can't exercise CLI-level errors. |
+| `compiler/ext/bsc_args.ml` | `Missing` | ☐ (needs CLI harness) | — | Same as above: `bsc -o` (no following filename). Needs a harness that invokes `bsc` with crafted argv. |
 
 ---
 
@@ -462,6 +469,9 @@ be live and just hard to reproduce.
 - `typecore.Invalid_for_of_pattern` — parser's
   `normalize_for_of_pattern` (`res_core.ml:3841`) replaces every non-var,
   non-`_` pattern with `Ppat_any` before the typer runs.
+- `bs_syntaxerr.Conflict_bs_bs_this_bs_meth` — variant is declared but
+  no `Bs_syntaxerr.err _ Conflict_bs_bs_this_bs_meth` call exists in
+  `compiler/`.
 
 **Verified dead because parser doesn't produce required AST shape:**
 
@@ -482,15 +492,42 @@ be live and just hard to reproduce.
   (`res_scanner.ml:350-417`) already validates escape sequences and
   unicode code points; the transform never sees a string that would
   fail its own re-validation.
+- `ast_utf8_string_interp.*` (the whole module's error variants) —
+  `check_and_transform` is only ever called from `transform_test`, which
+  exists for OUnit tests, not the production pipeline. Modern ReScript
+  backtick templates take the `BackQuotes` branch of `transform_exp`
+  and skip the interpolation parser entirely.
+- `typedecl.Val_in_structure` — typedecl.ml:1887 requires `pval_prim
+  = []` outside a signature; the parser's `external` recovery sets
+  `prim = []` only after emitting a syntax error, so the typechecker
+  never reaches the value declaration.
+- `env.Illegal_value_name` — env.ml:1622/1625 rejects `"->"` and
+  identifiers containing `#`. The parser never produces such names;
+  PPX-rewritten AST is the only path that could trigger it.
+- `bs_warnings.Statement_type` (warning 10) — only caller of
+  `check_application_result` passes `statement = false`, so the
+  `if statement then …` branch never fires.
+- `bs_warnings.Unerasable_optional_argument` (warning 16) —
+  `type_function` (typecore.ml:3479) explicitly disables this warning
+  via `Warnings.parse_options false "-16"` before the check runs.
+- `bs_warnings.Bs_uninterpreted_delimiters` (warning 108) — raised at
+  `bs_warnings.ml:29` for `Pconst_string` with delimiter `"js"`, but
+  the modern scanner has no `{js|…|js}` form and template strings tag
+  with `"bq"` after rewriting.
+
+**`Syntaxerr.Variable_in_scope` is a special case** — reachable from
+`let f: type t. (t, 't) => t = …` but raised without a registered
+printer, so it surfaces as `Fatal error: exception Syntaxerr.Error(_)`.
+The variant is live; the diagnostic path is broken. Fix should either
+wire up a printer or convert the check into a regular typed error.
 
 **Probably dead but not formally verified** (`?` in tables above; needs
-deeper analysis before removal): `Polymorphic_label`,
+deeper analysis before removal): `Polymorphic_label`, `Label_mismatch`,
 `Abstract_wrong_label`, `Incoherent_label_order`, `Parameters_differ`,
-`Bad_fixed_type`, `Varying_anonymous`, `Val_in_structure`,
-`Unbound_type_constructor_2`, `Cannot_quantify`,
-`Present_has_conjunction`, `Present_has_no_type`,
+`Bad_fixed_type`, `Varying_anonymous`, `Unbound_type_constructor_2`,
+`Cannot_quantify`, `Present_has_conjunction`, `Present_has_no_type`,
 `With_cannot_remove_constrained_type`, `Unhandled_poly_type`,
-`Invalid_underscore_type_in_external`.
+`Rebind_wrong_type`, `Type_clash`.
 
 ---
 
