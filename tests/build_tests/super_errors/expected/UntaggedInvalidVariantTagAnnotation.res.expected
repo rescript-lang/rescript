@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/UntaggedInvalidVariantTagAnnotation.res[0m:[2m1:1-4[0m
+
+  [1;31m1[0m [2m│[0m [1;31m@tag[0m(123)
+  2 [2m│[0m type t = | A({foo: int}) | B({bar: string})
+  3 [2m│[0m 
+
+  A variant tag annotation @tag(...) must be a string

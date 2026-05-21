@@ -310,26 +310,26 @@ Untagged-variant validation errors. Source: [ast_untagged_variants.ml:52](../com
 
 | Variant | Status | Fixture | Notes |
 |---|---|---|---|
-| `OnlyOneUnknown` | ☐ | — | More than one constructor with `Unknown` type. |
-| `AtMostOneObject` | ☐ | — | More than one object constructor. |
-| `AtMostOneInstance` | ☐ | — | More than one constructor for a given JS instance. |
-| `AtMostOneFunction` | ☐ | — | More than one function-typed constructor. |
+| `OnlyOneUnknown` | ✓ | `UntaggedOnlyOneUnknown.res` | Abstract payload alongside another payload-carrying case. |
+| `AtMostOneObject` | ✓ | `UntaggedAtMostOneObject.res` | Two record payloads in the same untagged variant. |
+| `AtMostOneInstance` | ✓ | `UntaggedAtMostOneInstance.res` | Two cases with the same JS instance type (`Date.t` in both). |
+| `AtMostOneFunction` | ✓ | `UntaggedAtMostOneFunction.res` | Two function-typed payloads. |
 | `AtMostOneString` | ✓ | `UntaggedNonUnary*.res` (some sub-cases) | |
-| `AtMostOneNumber` | ☐ | — | |
-| `AtMostOneBigint` | ☐ | — | |
-| `AtMostOneBoolean` | ☐ | — | |
-| `DuplicateLiteral` | ☐ | — | Same `@as` literal on multiple constructors. |
-| `ConstructorMoreThanOneArg` | ☐ | — | Multi-arg constructor in untagged variant. |
+| `AtMostOneNumber` | ✓ | `UntaggedAtMostOneNumber.res` | `int` and `float` payloads collide on the number runtime check. |
+| `AtMostOneBigint` | ✓ | `UntaggedAtMostOneBigint.res` | Two bigint payloads. |
+| `AtMostOneBoolean` | ✓ | `UntaggedAtMostOneBoolean.res` | Two boolean payloads. |
+| `DuplicateLiteral` | ✓ | `UntaggedDuplicateLiteral.res` | `@as("x")` on two different constructors. |
+| `ConstructorMoreThanOneArg` | ✓ | `UntaggedConstructorMoreThanOneArg.res` | `A(int, int)` payload in an untagged variant. |
 
 ### `error`
 
 | Variant | Status | Fixture | Notes |
 |---|---|---|---|
-| `InvalidVariantAsAnnotation` | ☐ | — | |
-| `Duplicated_bs_as` | ☐ | — | Two `@as` attributes on same constructor. |
-| `InvalidVariantTagAnnotation` | ☐ | — | |
-| `InvalidUntaggedVariantDefinition` | ✓ | `UntaggedUnknown.res`, `UntaggedNonUnary*.res`, `UntaggedTupleAndArray.res`, `UntaggedImplIntf.res` | |
-| `TagFieldNameConflict` | ☐ | — | |
+| `InvalidVariantAsAnnotation` | ✓ | `UntaggedInvalidVariantAsAnnotation.res` | `@as(foo)` with a non-`null` / non-`undefined` identifier payload. |
+| `Duplicated_bs_as` | ✓ | `UntaggedDuplicatedBsAs.res` | Two `@as("...")` attributes on the same constructor. |
+| `InvalidVariantTagAnnotation` | ✓ | `UntaggedInvalidVariantTagAnnotation.res` | `@tag(123)` (non-string payload). |
+| `InvalidUntaggedVariantDefinition` | ✓ | `UntaggedUnknown.res`, `UntaggedNonUnary*.res`, `UntaggedTupleAndArray.res`, `UntaggedImplIntf.res`, etc. | |
+| `TagFieldNameConflict` | ✓ | `UntaggedTagFieldNameConflict.res` | `@tag("kind")` plus inline record field named `kind` on a constructor. |
 
 ---
 
@@ -396,7 +396,7 @@ PPX-runtime errors. Source: [cmd_ast_exception.ml:24](../compiler/core/cmd_ast_e
 | `compiler/ml/translmod.ml` | `Fragile_pattern_in_toplevel` | ✓ | `fragile_pattern_toplevel.res` | |
 | `compiler/ml/transl_recmodule.ml` | `Circular_dependency` | ✓ | `recmodule_circular_dependency.res` | |
 | `compiler/ml/rec_check.ml` | `Illegal_letrec_expr` | ✓ | `illegal_letrec_expr.res` | |
-| `compiler/ml/syntaxerr.ml` | `Variable_in_scope` | ☐ | — | Raised by `Ast_helper.Typ.varify_constructors` (`ast_helper.ml:84`, `ast_helper0.ml:74`) when a type variable shadows an outer one during alias expansion. Reachable. |
+| `compiler/ml/syntaxerr.ml` | `Variable_in_scope` | ⚠ | — | Reachable via `let f: type t. (t, 't) => t = …` (locally-abstract `t` collides with type variable `'t` during `varify_constructors`), but `Syntaxerr.error` has no registered pretty-printer, so it propagates as an uncaught `Fatal error: exception Syntaxerr.Error(_)`. The variant is live; the printer is dead. Treat as broken until either the printer is wired up or the variant is removed in favor of a proper diagnostic. |
 | `compiler/ml/cmt_format.cppo.ml` | `Not_a_typedtree` | ☐ | — | cmt_format.cppo.ml:147. Fires when reading a `.cmt` file that doesn't contain a typed tree. Needs binary `.cmt` manipulation. |
 | `compiler/ext/bsc_args.ml` | `Unknown` | ☐ | — | bsc_args.ml:45. Unknown CLI flag passed to `bsc`. Reachable via `bsc --bogus`. |
 | `compiler/ext/bsc_args.ml` | `Missing` | ☐ | — | Required CLI flag argument missing (e.g. `bsc -o` with no following filename). |
@@ -415,20 +415,29 @@ Source: [ast_utf8_string.ml:25](../compiler/frontend/ast_utf8_string.ml). All va
 | `Invalid_unicode_escape` | ⚠ Dead |
 | `Invalid_unicode_codepoint_escape` | ⚠ Dead |
 
-## `compiler/frontend/ast_utf8_string_interp.ml`
+## `compiler/frontend/ast_utf8_string_interp.ml` (dead family)
 
 Source: [ast_utf8_string_interp.ml:25](../compiler/frontend/ast_utf8_string_interp.ml).
 
-| Variant | Status | Fixture | Notes |
-|---|---|---|---|
-| `Invalid_code_point` | ☐ | — | |
-| `Unterminated_backslash` | ☐ | — | |
-| `Invalid_escape_code` | ☐ | — | |
-| `Invalid_hex_escape` | ☐ | — | |
-| `Invalid_unicode_escape` | ☐ | — | |
-| `Unterminated_variable` | ☐ | — | |
-| `Unmatched_paren` | ☐ | — | |
-| `Invalid_syntax_of_var` | ☐ | — | |
+`pos_error` is reached only through `check_and_transform`, whose only
+caller in `compiler/` is `transform_test` — used by OUnit tests, not the
+production pipeline. Modern ReScript backtick templates take the
+`BackQuotes` branch of `transform_exp` (line 311) and skip the
+interpolation parser entirely. The legacy `{j|…|j}` delimiter the
+parser would otherwise route here is no longer accepted by the
+scanner. All variants below are unreachable from regular ReScript
+source.
+
+| Variant | Status |
+|---|---|
+| `Invalid_code_point` | ⚠ Dead |
+| `Unterminated_backslash` | ⚠ Dead |
+| `Invalid_escape_code` | ⚠ Dead |
+| `Invalid_hex_escape` | ⚠ Dead |
+| `Invalid_unicode_escape` | ⚠ Dead |
+| `Unterminated_variable` | ⚠ Dead |
+| `Unmatched_paren` | ⚠ Dead |
+| `Invalid_syntax_of_var` | ⚠ Dead |
 
 ---
 

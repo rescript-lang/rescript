@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/UntaggedDuplicateLiteral.res[0m:[2m2:23-34[0m
+
+  1 [2m│[0m @unboxed
+  [1;31m2[0m [2m│[0m type t = | @as("x") A [1;31m| @as("x") B[0m
+  3 [2m│[0m 
+
+  This untagged variant definition is invalid: Duplicate literal x.
