@@ -31,7 +31,13 @@ let locItemToTypeHint ~full:{file; package} locItem =
         | `Field -> fromType t))
   | _ -> None
 
-let inlay ~path ~pos ~maxLength ~debug =
+(* [currentFile] is the file to parse for the AST. The LSP writes the
+   editor's current (possibly unsaved) buffer to a temporary file and passes
+   that path here, so hint positions stay in sync with what the user sees even
+   before the file is saved. When [None], [path] itself is parsed instead.
+   [path] is always the original on-disk path and is used for loading the
+   compiled `.cmt` artefact. *)
+let inlay ~path ~pos ~maxLength ~currentFile ~debug =
   let maxlen = try Some (int_of_string maxLength) with Failure _ -> None in
   let hints = ref [] in
   let start_line, end_line = pos in
@@ -71,11 +77,16 @@ let inlay ~path ~pos ~maxLength ~debug =
     Ast_iterator.default_iterator.value_binding iterator vb
   in
   let iterator = {Ast_iterator.default_iterator with value_binding} in
+  let sourceFile =
+    match currentFile with
+    | Some f -> f
+    | None -> path
+  in
   (if Files.classifySourceFile path = Res then
      let parser =
        Res_driver.parsing_engine.parse_implementation ~for_printer:false
      in
-     let {Res_driver.parsetree = structure} = parser ~filename:path in
+     let {Res_driver.parsetree = structure} = parser ~filename:sourceFile in
      iterator.structure iterator structure |> ignore);
   match Cmt.loadFullCmtFromPath ~path with
   | None -> None
