@@ -199,12 +199,12 @@ Type-expression errors. Source: [typetexp.ml:28](../compiler/ml/typetexp.ml).
 | `Unbound_type_constructor` | ✓ | `typetexp_unbound_type_constructor.res` | |
 | `Unbound_type_constructor_2` | ? | — | typetexp.ml:475/619. Triggers in object / polyvariant inheritance where the inherited type's row variable is `Tvar` with a path. Hard to construct, but not provably dead. |
 | `Type_arity_mismatch` | ✓ | `type_arity_mismatch.res` | |
-| `Type_mismatch` | ☐ | — | typetexp.ml:368/373. Type-constructor application with `unify_param` failure (368) or `enforce_constraints` failure (373); mostly subsumed by `Constraint_failed`. |
+| `Type_mismatch` | ✓ | `typetexp_type_mismatch.res` | Type-constructor application that violates a `constraint 'a = …` on the declaration. |
 | `Alias_type_mismatch` | ✓ | `typetexp_alias_type_mismatch.res` | |
 | `Present_has_conjunction` | ? | — | typetexp.ml:452. Polyvariant tag with conjunction (`&`) typing path. ReScript's parser doesn't have a `&` polyvariant operator that I can find, but the AST `Rtag` constructor supports a conjunction list, so PPX-generated AST could reach it. |
 | `Present_has_no_type` | ? | — | typetexp.ml:501. Same `Rtag`-with-conjunction family. |
 | `Constructor_mismatch` | ✓ | `polyvariant_constructor_mismatch.res` | |
-| `Not_a_variant` | ☐ | — | typetexp.ml:476. Polyvariant inheritance from non-variant. |
+| `Not_a_variant` | ✓ | `typetexp_not_a_variant.res` | Polyvariant `[#X \| a]` where `a` is not a polyvariant. |
 | `Variant_tags` | ⚠ | — | typetexp.ml:39. Raised at typecore.ml:342, 349, 367 via `Tags` exception from `ctype.ml`. **Verified: `exception Tags` is defined (ctype.ml:60) but never raised in `compiler/`.** Confirmed dead. |
 | `Invalid_variable_name` | ✓ | `invalid_type_variable_name.res` | |
 | `Cannot_quantify` | ? | — | typetexp.ml:540. Triggers in `Ptyp_poly` translation when a quantified variable becomes non-generic. Every value-level reproduction lands on `Less_general` first, but type-level constructions with constraints might still reach it. |
@@ -254,19 +254,19 @@ Source: [includecore.ml:159](../compiler/ml/includecore.ml).
 |---|---|---|---|
 | `Arity` | ✓ | `definition_mismatch.res` | |
 | `Privacy` | ✓ | `super_errors_multi/Iface_privacy_mismatch` | |
-| `Kind` | ☐ | — | E.g. record vs variant mismatch between `.resi` and `.res`. |
-| `Constraint` | ☐ | — | Type abbreviation constraint mismatch. |
-| `Manifest` | ☐ | — | Manifest type differs. |
-| `Variance` | ☐ | — | Variance annotations differ. |
+| `Kind` | ✓ | `super_errors_multi/Iface_kind_mismatch` | Record-in-impl vs variant-in-interface. |
+| `Constraint` | ✓ | `super_errors_multi/Iface_constraint_mismatch` | Implementation adds a `constraint 'a = …`; interface has none. |
+| `Manifest` | ✓ | `super_errors_multi/Iface_manifest_mismatch` | Manifest types differ (`int` vs `string`). |
+| `Variance` | ✓ | `super_errors_multi/Iface_variance_mismatch` | Interface annotates `+'a`; implementation's inferred variance differs. |
 | `Field_type` | ✓ | `super_errors_multi/Iface_type_decl_record` | |
 | `Field_mutable` | ✓ | `super_errors_multi/Iface_field_mutable_mismatch` | |
 | `Field_optional` | ✓ | `super_errors_multi/Iface_field_optional_mismatch` | |
-| `Field_arity` | ☐ | — | Constructor with different argument count. |
-| `Field_names` | ☐ | — | Record field names differ at position. |
+| `Field_arity` | ✓ | `super_errors_multi/Iface_field_arity_mismatch` | Constructor with different argument count between `.resi` / `.res`. |
+| `Field_names` | ✓ | `super_errors_multi/Iface_field_names_mismatch` | Record field names differ at the same position. |
 | `Field_missing` | ✓ | `super_errors_multi/Iface_missing_value` (indirect) | |
-| `Record_representation` | ☐ | — | Boxed-vs-unboxed record representation mismatch. |
+| `Record_representation` | ✓ | `super_errors_multi/Iface_record_representation_mismatch` | Interface declares `@unboxed`; implementation is boxed. |
 | `Unboxed_representation` | ✓ | `super_errors_multi/Iface_unboxed_variant_mismatch` | |
-| `Immediate` | ☐ | — | `@immediate` attribute mismatch. |
+| `Immediate` | ✓ | `super_errors_multi/Iface_immediate_mismatch` | Interface adds `@immediate`; implementation manifests a non-immediate (`string`). |
 | `Tag_name` | ✓ | `super_errors_multi/Iface_tag_name_mismatch` | |
 | `Variant_representation` | ✓ | `super_errors_multi/Iface_variant_representation_mismatch` | |
 
@@ -279,7 +279,7 @@ FFI / attribute / experimental-feature errors. Source: [bs_syntaxerr.ml:27](../c
 | Variant | Status | Fixture | Notes |
 |---|---|---|---|
 | `Unsupported_predicates` | ✓ | `bs_unsupported_predicates.res` | `@get({weird: true})` on object type field. |
-| `Conflict_bs_bs_this_bs_meth` | ? | — | bs_syntaxerr.ml:68. `@this` and `@meth` co-applied. `@this` **is** accepted (`let f = @this (self => self)` parses and goes through `to_method_callback`); I haven't constructed a case where the conflict check actually fires. |
+| `Conflict_bs_bs_this_bs_meth` | ⚠ | — | bs_syntaxerr.ml:29 declares the variant but `Bs_syntaxerr.err _ Conflict_bs_bs_this_bs_meth` is **never raised** anywhere in `compiler/`. |
 | `Duplicated_bs_deriving` | ✓ | `duplicated_bs_deriving.res` | |
 | `Conflict_attributes` | ✓ | `bs_conflict_attributes.res` | |
 | `Expect_int_literal` | ✓ | `bs_expect_int_literal.res` | |
