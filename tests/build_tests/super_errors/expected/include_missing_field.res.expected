@@ -1,0 +1,24 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/include_missing_field.res[0m:[2m4:5-6:1[0m
+
+  2 [2m│[0m   let x: int
+  3 [2m│[0m   let y: string
+  [1;31m4[0m [2m│[0m } = [1;31m{[0m
+  [1;31m5[0m [2m│[0m [1;31m  let x = 1[0m
+  [1;31m6[0m [2m│[0m [1;31m}[0m
+  7 [2m│[0m 
+
+  Signature mismatch:
+  Modules do not match:
+    {
+  let x: int
+}
+  is not included in
+    {
+  let x: int
+  let y: string
+}
+  The value `y' is required but not provided
+  [36m/.../fixtures/include_missing_field.res[0m:[2m3:3-15[0m:
+    Expected declaration

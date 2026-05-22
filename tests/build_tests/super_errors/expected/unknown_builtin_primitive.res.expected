@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/unknown_builtin_primitive.res[0m:[2m3:9-16[0m
+
+  1 [2m│[0m external bogus: int => int = "%nonexistent_primitive"
+  2 [2m│[0m 
+  [1;31m3[0m [2m│[0m let _ = [1;31mbogus(1)[0m
+  4 [2m│[0m 
+
+  Unknown builtin primitive "%nonexistent_primitive"

@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/object_inherit_not_an_object.res[0m:[2m3:14[0m
+
+  1 [2m│[0m type a = int
+  2 [2m│[0m 
+  [1;31m3[0m [2m│[0m type b = {...[1;31ma[0m, "x": int}
+  4 [2m│[0m 
+
+  The type int is not an object type

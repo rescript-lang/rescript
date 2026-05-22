@@ -47,6 +47,8 @@ _build_playground
 node_modules
 *.dump
 coverage
+_coverage/
+bisect*.coverage
 
 lib/ocaml
 tests/build_tests/*/lib/

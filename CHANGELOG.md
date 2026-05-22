@@ -14,7 +14,8 @@
 
 #### :boom: Breaking Change
 
-- Make Jsx.component abstract. https://github.com/rescript-lang/rescript/pull/8390
+- Make `Jsx.component` abstract. https://github.com/rescript-lang/rescript/pull/8390
+- Drop Node.js version 20.x support, as it is reaching EOL. https://github.com/rescript-lang/rescript/pull/8401
 
 #### :eyeglasses: Spec Compliance
 
@@ -24,6 +25,11 @@
 
 - Fix directive `@warning("-102")` not working. https://github.com/rescript-lang/rescript/pull/8322
 - Fix duplicated comments in `for`..`of` formatter. https://github.com/rescript-lang/rescript/pull/8395
+- Fix issue where warning 56 would blow up with `dict{}` patterns. https://github.com/rescript-lang/rescript/pull/8403
+- Rewatch build lock fixes. https://github.com/rescript-lang/rescript/pull/8409 https://github.com/rescript-lang/rescript/pull/8410 https://github.com/rescript-lang/rescript/pull/8413 https://github.com/rescript-lang/rescript/pull/8424
+- Rewatch: treat transitive workspace dependencies as local packages in monorepo roots. https://github.com/rescript-lang/rescript/pull/8411
+- Rewatch: use a single timestamp per compile pass. https://github.com/rescript-lang/rescript/pull/8428
+- Fix rewatch warning replay after early compile errors. https://github.com/rescript-lang/rescript/pull/8408
 
 #### :memo: Documentation
 
@@ -34,10 +40,15 @@
 - Build system: Add OpenTelemetry tracing support for cli commands. https://github.com/rescript-lang/rescript/pull/8370
 - Use a single vendored @rescript/react package across the repo. https://github.com/rescript-lang/rescript/pull/7525
 - Improve deprecated attribute extraction and support record form. https://github.com/rescript-lang/rescript/pull/8396
+- Refactor analysis to decouple I/O from core logic. https://github.com/rescript-lang/rescript/pull/8426
 
 #### :house: Internal
 
 - Remove `Primitive_option.toUndefined`; use `valFromOption` for optional ffi args. https://github.com/rescript-lang/rescript/pull/8380
+- Expand `super_errors` fixture coverage for warnings and errors. https://github.com/rescript-lang/rescript/pull/8429
+- Run `super_errors` fixtures in parallel (~2.4× faster locally). https://github.com/rescript-lang/rescript/pull/8430
+- Expand `super_errors` fixture coverage for the remaining reachable single-file error variants. https://github.com/rescript-lang/rescript/pull/8432
+
 
 # 13.0.0-alpha.4
 

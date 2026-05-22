@@ -1,0 +1,19 @@
+
+  [1;33mWarning number 104[0m
+  [36m/.../fixtures/warning_104_bs_derive.res[0m:[2m2:1-12[0m
+
+  1 [2m│[0m @deriving(accessors)
+  [1;33m2[0m [2m│[0m [1;33mtype t = int[0m
+  3 [2m│[0m 
+
+  @deriving warning: accessors not applicable to this type
+
+
+  [1;33mWarning number 104[0m
+  [36m/.../fixtures/warning_104_bs_derive.res[0m:[2m2:1-12[0m
+
+  1 [2m│[0m @deriving(accessors)
+  [1;33m2[0m [2m│[0m [1;33mtype t = int[0m
+  3 [2m│[0m 
+
+  @deriving warning: accessors not applicable to this type

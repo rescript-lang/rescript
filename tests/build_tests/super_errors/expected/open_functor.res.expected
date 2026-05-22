@@ -1,0 +1,17 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/open_functor.res[0m:[2m9:6[0m
+
+   7 [2m│[0m }
+   8 [2m│[0m 
+   [1;31m9[0m [2m│[0m open [1;31mF[0m
+  10 [2m│[0m 
+
+  This module is not a structure; it has type
+  (
+  M: {
+    let v: int
+  },
+) => {
+  let doubled: int
+}

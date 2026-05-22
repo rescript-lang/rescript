@@ -1,0 +1,12 @@
+
+  [1;33mWarning number 38[0m
+  [36m/.../fixtures/warning_38_unused_extension_pattern_only.res[0m:[2m5:13-15[0m
+
+  3 [2m│[0m } = {
+  4 [2m│[0m   type t = ..
+  [1;33m5[0m [2m│[0m   type t += [1;33mFoo[0m
+  6 [2m│[0m   let _describe = (x: t) =>
+  7 [2m│[0m     switch x {
+
+  extension constructor Foo is never used to build values.
+(However, this constructor appears in patterns.)

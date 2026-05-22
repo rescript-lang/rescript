@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/nonrec_gadt.res[0m:[2m1:1-27[0m
+
+  [1;31m1[0m [2m│[0m [1;31mtype t<'a> = A(int): t<int>[0m
+  2 [2m│[0m 
+
+  GADTs require recursive type syntax.
+Define your type using `type rec` instead of `type`.
+Example: type rec t = ...

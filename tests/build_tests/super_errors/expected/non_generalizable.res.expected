@@ -1,0 +1,14 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/non_generalizable.res[0m:[2m2:5-11[0m
+
+  1 [2m│[0m let identity = x => x
+  [1;31m2[0m [2m│[0m let [1;31mapplied[0m = identity(identity)
+  3 [2m│[0m 
+
+  This expression's type contains type variables that cannot be generalized:
+  [1;31m'_weak1 => '_weak1[0m
+  
+  This happens when the type system senses there's a mutation/side-effect,
+  in combination with a polymorphic value.
+  [1;33mUsing or annotating that value usually solves it.[0m

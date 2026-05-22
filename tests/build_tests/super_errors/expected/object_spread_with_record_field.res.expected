@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/object_spread_with_record_field.res[0m:[2m3:19-24[0m
+
+  1 [2m│[0m type obj = {"x": int}
+  2 [2m│[0m 
+  [1;31m3[0m [2m│[0m type t = {...obj, [1;31my: int[0m}
+  4 [2m│[0m 
+
+  You cannot mix a record field with an object type spread.
+  Remove the record field or change it to an object field (e.g. "y": ...).

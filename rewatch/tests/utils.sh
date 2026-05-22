@@ -51,8 +51,29 @@ replace() {
   fi
 }
 
+wait_for_pid_gone() {
+  local pid="$1"; local timeout="${2:-10}"
+  while kill -0 "$pid" 2> /dev/null && [ "$timeout" -gt 0 ]; do
+    sleep 1
+    timeout=$((timeout - 1))
+  done
+  ! kill -0 "$pid" 2> /dev/null
+}
+
 exit_watcher() {
+  local watcher_pid=""
+  if [ -f lib/watch.lock ]; then
+    watcher_pid=$(cat lib/watch.lock)
+  fi
+
   rm -f lib/watch.lock
+
+  if [ -n "$watcher_pid" ]; then
+    if ! wait_for_pid_gone "$watcher_pid" 10; then
+      error "Watcher process $watcher_pid did not exit after watch.lock was removed"
+      return 1
+    fi
+  fi
 }
 
 clear_locks() {

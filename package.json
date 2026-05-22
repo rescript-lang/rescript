@@ -41,7 +41,7 @@
     "provenance": true
   },
   "engines": {
-    "node": ">=20.11.0"
+    "node": ">=22"
   },
   "bin": {
     "bsc": "cli/bsc.js",

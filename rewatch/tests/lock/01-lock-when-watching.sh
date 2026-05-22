@@ -92,3 +92,5 @@ else
   cat rewatch.log
   exit 1
 fi
+
+exit_watcher
