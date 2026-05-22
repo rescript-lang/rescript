@@ -26,7 +26,6 @@ type untagged_variant = OnlyOneUnknown | AtMostOneObject | AtMostOneArray
 
 type error =
   | Unsupported_predicates
-  | Conflict_bs_bs_this_bs_meth
   | Duplicated_bs_deriving
   | Conflict_attributes
   | Expect_int_literal
@@ -65,8 +64,6 @@ let pp_error fmt err =
     | Not_supported_directive_in_bs_return -> "Not supported return directive"
     | Illegal_attribute -> "Illegal attributes"
     | Unsupported_predicates -> "unsupported predicates"
-    | Conflict_bs_bs_this_bs_meth ->
-      "%@this and %@bs can not be applied at the same time"
     | Duplicated_bs_deriving -> "duplicate @deriving attribute"
     | Conflict_attributes -> "conflicting attributes "
     | Expect_string_literal -> "expect string literal "
