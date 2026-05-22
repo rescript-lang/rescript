@@ -1986,19 +1986,6 @@ let rec type_approx env sexp =
     ty2
   | _ -> newvar ()
 
-(* List labels in a function type, and whether return type is a variable *)
-let rec list_labels_aux env visited ls ty_fun =
-  let ty = expand_head env ty_fun in
-  if List.memq ty visited then (List.rev ls, false)
-  else
-    match ty.desc with
-    | Tarrow (arg, ty_res, _, arity) when arity = None || visited = [] ->
-      list_labels_aux env (ty :: visited) (arg.lbl :: ls) ty_res
-    | _ -> (List.rev ls, is_Tvar ty)
-
-let list_labels env ty =
-  wrap_trace_gadt_instances env (list_labels_aux env [] []) ty
-
 (* Check that all univars are safe in a type *)
 let check_univars env expans kind exp ty_expected vars =
   if expans && not (is_nonexpansive exp) then
@@ -2028,13 +2015,12 @@ let check_univars env expans kind exp ty_expected vars =
            Less_general (kind, [(ty, ty); (ty_expected, ty_expected)]) ))
 
 (* Check that a type is not a function *)
-let check_application_result env statement exp =
-  let loc = exp.exp_loc in
+let check_application_result env exp =
   match (expand_head env exp.exp_type).desc with
   | Tarrow _ -> Location.prerr_warning exp.exp_loc Warnings.Partial_application
   | Tvar _ -> ()
   | Tconstr (p, _, _) when Path.same p Predef.path_unit -> ()
-  | _ -> if statement then Location.prerr_warning loc Warnings.Statement_type
+  | _ -> ()
 
 (* Check that a type is generalizable at some level *)
 let generalizable level ty =
@@ -2270,10 +2256,6 @@ let rec lower_args env seen ty_fun =
       (try unify_var env (newvar ()) arg.typ with Unify _ -> assert false);
       lower_args env (ty :: seen) ty_fun
     | _ -> ()
-
-let not_function env ty =
-  let ls, tvar = list_labels env ty in
-  ls = [] && not tvar
 
 let extract_function_name funct =
   match funct.exp_desc with
@@ -3460,12 +3442,6 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
 
 and type_function ?in_function ~arity ~async loc attrs env ty_expected_ l
     caselist =
-  let state = Warnings.backup () in
-  (* Disable Unerasable_optional_argument for uncurried functions *)
-  let unerasable_optional_argument =
-    Warnings.number Unerasable_optional_argument
-  in
-  Warnings.parse_options false ("-" ^ string_of_int unerasable_optional_argument);
   let ty_expected =
     match arity with
     | None -> ty_expected_
@@ -3506,15 +3482,11 @@ and type_function ?in_function ~arity ~async loc attrs env ty_expected_ l
           ty_arg ty_res true loc caselist)
   in
   let case = List.hd cases in
-  if is_optional l && not_function env ty_res then
-    Location.prerr_warning case.c_lhs.pat_loc
-      Warnings.Unerasable_optional_argument;
   let param = name_pattern "param" cases in
   let exp_type =
     instance env
       (newgenty (Tarrow ({lbl = l; typ = ty_arg}, ty_res, Cok, arity)))
   in
-  Warnings.restore state;
   re
     {
       exp_desc =
@@ -3959,7 +3931,7 @@ and type_application ~context total_app env funct (sargs : sargs) :
       Location.prerr_warning exp.exp_loc Warnings.Partial_application
     | Tvar _ ->
       Delayed_checks.add_delayed_check (fun () ->
-          check_application_result env false exp)
+          check_application_result env exp)
     | _ -> ());
     ([(Nolabel, Some exp)], ty_res, false)
   | _ ->
