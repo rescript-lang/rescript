@@ -1,0 +1,23 @@
+
+  [1;33mWarning number 44[0m
+  [36m/.../fixtures/warning_45_open_shadow_label_constructor.res[0m:[2m8:1-6[0m
+
+   6 [2m│[0m 
+   7 [2m│[0m let _: t = Foo
+   [1;33m8[0m [2m│[0m [1;33mopen M[0m
+   9 [2m│[0m let _: t = Foo
+  10 [2m│[0m 
+
+  this open statement shadows the type identifier t (which is later used)
+
+
+  [1;33mWarning number 45[0m
+  [36m/.../fixtures/warning_45_open_shadow_label_constructor.res[0m:[2m8:1-6[0m
+
+   6 [2m│[0m 
+   7 [2m│[0m let _: t = Foo
+   [1;33m8[0m [2m│[0m [1;33mopen M[0m
+   9 [2m│[0m let _: t = Foo
+  10 [2m│[0m 
+
+  this open statement shadows the constructor Foo (which is later used)

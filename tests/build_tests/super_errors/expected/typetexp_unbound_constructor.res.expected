@@ -1,0 +1,16 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/typetexp_unbound_constructor.res[0m:[2m3:9-19[0m
+
+  1 [2m│[0m type t = A | B
+  2 [2m│[0m 
+  [1;31m3[0m [2m│[0m let v = [1;31mMissingCtor[0m
+  4 [2m│[0m 
+
+  [1;33mThe variant constructor MissingCtor can't be found.[0m
+  
+  - If it's defined in another module or file, bring it into scope by:
+    - Prefixing it with said module name: [1;33mTheModule.MissingCtor[0m
+    - Or specifying its type: [1;33mlet theValue: TheModule.theType = MissingCtor[0m
+  - Constructors and modules are both capitalized. Did you want the latter?
+    Then instead of [2mlet foo = Bar[0m, try [1;33mmodule Foo = Bar[0m.

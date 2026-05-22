@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/record_literal_missing_fields.res[0m:[2m3:12-13[0m
+
+  1 [2m│[0m type t = {a: int}
+  2 [2m│[0m 
+  [1;31m3[0m [2m│[0m let r: t = [1;31m{}[0m
+  4 [2m│[0m 
+
+  Some required record fields are missing: a.

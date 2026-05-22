@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/invalid_extension_constructor_payload.res[0m:[2m1:9-37[0m
+
+  [1;31m1[0m [2m│[0m let _ = [1;31m%extension_constructor(1 + 1)[0m
+  2 [2m│[0m 
+
+  Invalid [%extension_constructor] payload, a constructor is expected.

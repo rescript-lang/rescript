@@ -1,0 +1,12 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/typetexp_unbound_label.res[0m:[2m5:11-22[0m
+
+  3 [2m│[0m let r = {x: 1, y: 2}
+  4 [2m│[0m 
+  [1;31m5[0m [2m│[0m let v = r.[1;31mmissingLabel[0m
+  6 [2m│[0m 
+
+  The field [1;31mmissingLabel[0m does not belong to type [1;33mt[0m
+  
+  This expression has type [1;33mt[0m

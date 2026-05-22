@@ -1,0 +1,19 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/with_mismatch.res[0m:[2m5:17-38[0m
+
+  3 [2m│[0m }
+  4 [2m│[0m 
+  [1;31m5[0m [2m│[0m module type T = [1;31mS with type t = string[0m
+  6 [2m│[0m 
+
+  In this `with' constraint, the new definition of t
+  does not match its original definition in the constrained signature:
+  Type declarations do not match:
+    type t = string
+  is not included in
+    type t = int
+  [36m/.../fixtures/with_mismatch.res[0m:[2m2:3-14[0m:
+    Expected declaration
+  [36m/.../fixtures/with_mismatch.res[0m:[2m5:29[0m:
+    Actual declaration

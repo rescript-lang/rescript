@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/bad_unboxed_attribute_extensible.res[0m:[2m2:1-11[0m
+
+  1 [2m│[0m @unboxed
+  [1;31m2[0m [2m│[0m [1;31mtype t = ..[0m
+  3 [2m│[0m 
+
+  This type cannot be unboxed because
+  extensible variant types cannot be unboxed.

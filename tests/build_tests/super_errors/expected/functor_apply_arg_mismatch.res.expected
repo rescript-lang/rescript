@@ -1,0 +1,17 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/functor_apply_arg_mismatch.res[0m:[2m13:22-29[0m
+
+  11 [2m│[0m }
+  12 [2m│[0m 
+  [1;31m13[0m [2m│[0m module Result = Make([1;31mConcrete[0m)
+  14 [2m│[0m let _ = Result.bar
+  15 [2m│[0m 
+
+  Signature mismatch:
+  Modules do not match: {
+  let unrelated: string
+} is not included in HasFoo
+  The value `foo' is required but not provided
+  [36m/.../fixtures/functor_apply_arg_mismatch.res[0m:[2m2:3-14[0m:
+    Expected declaration

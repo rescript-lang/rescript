@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/orpat_vars_unbalanced.res[0m:[2m3:5-18[0m
+
+  1 [2m│[0m let f = x =>
+  2 [2m│[0m   switch x {
+  [1;31m3[0m [2m│[0m   | [1;31mSome(n) | None[0m => n
+  4 [2m│[0m   | _ => 0
+  5 [2m│[0m   }
+
+  Variable n must occur on both sides of this | pattern

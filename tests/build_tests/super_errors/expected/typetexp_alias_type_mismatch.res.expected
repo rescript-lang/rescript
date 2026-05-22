@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/typetexp_alias_type_mismatch.res[0m:[2m1:25-36[0m
+
+  [1;31m1[0m [2m│[0m type pair = (int as 'a, [1;31mstring as 'a[0m)
+  2 [2m│[0m 
+
+  This alias is bound to type string but is used as an instance of type int

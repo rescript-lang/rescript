@@ -1,6 +1,8 @@
 (library
  (name frontend)
  (wrapped false)
+ (instrumentation
+  (backend bisect_ppx))
  (flags
   (:standard -w +a-4-9-40-42-70))
  (libraries common ml))

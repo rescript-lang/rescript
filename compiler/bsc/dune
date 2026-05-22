@@ -7,6 +7,8 @@
  (name rescript_compiler_main)
  (public_name bsc)
  (package rescript)
+ (instrumentation
+  (backend bisect_ppx))
  (flags
   (:standard -w +a-4-9-30-40-41-42-48-70))
  (libraries common core depends flow_parser gentype syntax))

@@ -1,0 +1,14 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/too_many_arguments.res[0m:[2m3:9-11[0m
+
+  1 [2m│[0m let add = (x, y) => x + y
+  2 [2m│[0m 
+  [1;31m3[0m [2m│[0m let _ = [1;31madd[0m(1, 2, 3)
+  4 [2m│[0m 
+
+  This function call is incorrect.
+  The function has type:
+  (int, int) => int
+  
+  - The function takes [1;33mjust 2[0m unlabelled arguments, but is called with [1;31m3[0m

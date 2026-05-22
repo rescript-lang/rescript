@@ -1,0 +1,25 @@
+
+  [1;33mWarning number 32[0m
+  [36m/.../fixtures/warning_60_unused_module.res[0m:[2m5:9[0m
+
+  3 [2m│[0m } = {
+  4 [2m│[0m   module Helper = {
+  [1;33m5[0m [2m│[0m     let [1;33mf[0m = 1
+  6 [2m│[0m   }
+  7 [2m│[0m   let v = 1
+
+  unused value f.
+
+
+  [1;33mWarning number 60[0m
+  [36m/.../fixtures/warning_60_unused_module.res[0m:[2m4:10-6:3[0m
+
+  2 [2m│[0m   let v: int
+  3 [2m│[0m } = {
+  [1;33m4[0m [2m│[0m   module [1;33mHelper = {[0m
+  [1;33m5[0m [2m│[0m [1;33m    let f = 1[0m
+  [1;33m6[0m [2m│[0m [1;33m  }[0m
+  7 [2m│[0m   let v = 1
+  8 [2m│[0m }
+
+  unused module Helper.

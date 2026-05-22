@@ -10,5 +10,7 @@
  ; The main module that will become the binary.
  (name main)
  (libraries tools)
+ (instrumentation
+  (backend bisect_ppx))
  (flags
   (:standard -w "+6+26+27+32+33+39")))

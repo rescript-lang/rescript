@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/label_multiply_defined_literal.res[0m:[2m3:19[0m
+
+  1 [2m│[0m type t = {a: int, b: int}
+  2 [2m│[0m 
+  [1;31m3[0m [2m│[0m let r: t = {a: 1, [1;31ma[0m: 2, b: 3}
+  4 [2m│[0m let _ = r
+  5 [2m│[0m 
+
+  The record field label a is defined several times

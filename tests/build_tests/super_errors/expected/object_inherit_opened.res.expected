@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/object_inherit_opened.res[0m:[2m3:14-18[0m
+
+  1 [2m│[0m type a<'a> = {.."x": int} as 'a
+  2 [2m│[0m 
+  [1;31m3[0m [2m│[0m type b = {...[1;31ma<'b>[0m, "y": int}
+  4 [2m│[0m 
+
+  Illegal open object type
+a

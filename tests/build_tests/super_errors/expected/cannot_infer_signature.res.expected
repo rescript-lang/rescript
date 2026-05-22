@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/cannot_infer_signature.res[0m:[2m2:14-22[0m
+
+  1 [2m│[0m let extract = m => {
+  [1;31m2[0m [2m│[0m   module M = [1;31munpack(m)[0m
+  3 [2m│[0m   M
+  4 [2m│[0m }
+
+  The signature for this packaged module couldn't be inferred.

@@ -1,0 +1,11 @@
+
+  [1;33mWarning number 28[0m
+  [36m/.../fixtures/warning_28_wildcard_arg_to_constant_constr.res[0m:[2m5:9[0m
+
+  3 [2m│[0m let f = x =>
+  4 [2m│[0m   switch x {
+  [1;33m5[0m [2m│[0m   | Foo([1;33m_[0m) => 0
+  6 [2m│[0m   | Bar(_) => 1
+  7 [2m│[0m   }
+
+  wildcard pattern given as argument to a constant constructor

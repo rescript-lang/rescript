@@ -1,0 +1,13 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/recmodule_circular_dependency.res[0m:[2m3:5-5:1[0m
+
+  1 [2m│[0m module rec A: {
+  2 [2m│[0m   let v: int
+  [1;31m3[0m [2m│[0m } = [1;31m{[0m
+  [1;31m4[0m [2m│[0m [1;31m  let v = B.v[0m
+  [1;31m5[0m [2m│[0m [1;31m}[0m
+  6 [2m│[0m and B: {
+  7 [2m│[0m   let v: int
+
+  Cannot safely evaluate the definition of the recursively-defined module A

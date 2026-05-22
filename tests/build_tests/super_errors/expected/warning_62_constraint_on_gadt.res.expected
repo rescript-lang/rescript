@@ -1,0 +1,22 @@
+
+  [1;33mWarning number 62[0m
+  [36m/.../fixtures/warning_62_constraint_on_gadt.res[0m:[2m3:25-43[0m
+
+  1 [2m│[0m type rec t<'a> =
+  2 [2m│[0m   | Int(int): t<int>
+  [1;33m3[0m [2m│[0m   | Bool(bool): t<bool> [1;33mconstraint 'a = int[0m
+  4 [2m│[0m 
+
+  Type constraints do not apply to GADT cases of variant types.
+
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/warning_62_constraint_on_gadt.res[0m:[2m3:17-23[0m
+
+  1 [2m│[0m type rec t<'a> =
+  2 [2m│[0m   | Int(int): t<int>
+  [1;31m3[0m [2m│[0m   | Bool(bool): [1;31mt<bool>[0m constraint 'a = int
+  4 [2m│[0m 
+
+  Constraints are not satisfied in this type.
+  Type t<bool> should be an instance of t<int>

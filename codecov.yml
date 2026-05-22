@@ -1,0 +1,20 @@
+coverage:
+  status:
+    project:
+      default:
+        informational: true
+        threshold: 0.5%
+    patch:
+      default:
+        informational: true
+        threshold: 0.5%
+
+comment:
+  layout: "diff, files"
+  require_changes: true
+  require_base: false
+  require_head: true
+  behavior: default
+
+github_checks:
+  annotations: false

@@ -8,4 +8,6 @@
  (package analysis)
  (modes byte exe)
  (name main)
+ (instrumentation
+  (backend bisect_ppx))
  (libraries analysis))

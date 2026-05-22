@@ -1,0 +1,25 @@
+
+  [1;33mWarning number 37[0m
+  [36m/.../fixtures/warning_37_unused_constructor_pattern_only.res[0m:[2m4:3-20[0m
+
+  2 [2m│[0m   let v: int
+  3 [2m│[0m } = {
+  [1;33m4[0m [2m│[0m   [1;33mtype t = Foo | Bar[0m
+  5 [2m│[0m   let _describe = (x: t) =>
+  6 [2m│[0m     switch x {
+
+  constructor Foo is never used to build values.
+(However, this constructor appears in patterns.)
+
+
+  [1;33mWarning number 37[0m
+  [36m/.../fixtures/warning_37_unused_constructor_pattern_only.res[0m:[2m4:3-20[0m
+
+  2 [2m│[0m   let v: int
+  3 [2m│[0m } = {
+  [1;33m4[0m [2m│[0m   [1;33mtype t = Foo | Bar[0m
+  5 [2m│[0m   let _describe = (x: t) =>
+  6 [2m│[0m     switch x {
+
+  constructor Bar is never used to build values.
+(However, this constructor appears in patterns.)

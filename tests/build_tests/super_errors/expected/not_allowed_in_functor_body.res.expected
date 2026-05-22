@@ -1,0 +1,12 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/not_allowed_in_functor_body.res[0m:[2m17:14-25[0m
+
+  15 [2m│[0m     }
+  16 [2m│[0m   )
+  [1;31m17[0m [2m│[0m   module M = [1;31munpack(pack)[0m
+  18 [2m│[0m   let _ = M.v
+  19 [2m│[0m }
+
+  This expression creates fresh types.
+  It is not allowed inside applicative functors.

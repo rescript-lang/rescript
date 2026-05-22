@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/label_not_mutable.res[0m:[2m4:10-17[0m
+
+  2 [2m│[0m 
+  3 [2m│[0m let p = {x: 1, y: 2}
+  [1;31m4[0m [2m│[0m let () = [1;31mp.x = 10[0m
+  5 [2m│[0m 
+
+  The record field x is not mutable

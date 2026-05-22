@@ -1,6 +1,8 @@
 (library
  (name depends)
  (wrapped false)
+ (instrumentation
+  (backend bisect_ppx))
  (flags
   (:standard -w +a-4-40-42))
  (libraries common))

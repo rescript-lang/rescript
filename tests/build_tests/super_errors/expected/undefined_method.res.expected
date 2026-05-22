@@ -1,0 +1,12 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/undefined_method.res[0m:[2m3:21[0m
+
+  1 [2m│[0m type t = {"existing": int}
+  2 [2m│[0m 
+  [1;31m3[0m [2m│[0m let get = (o: t) => [1;31mo[0m["missing"]
+  4 [2m│[0m 
+
+  This expression has type t
+  It has no field missing
+Hint: Did you mean existing?

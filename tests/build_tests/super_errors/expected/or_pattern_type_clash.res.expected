@@ -1,0 +1,12 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/or_pattern_type_clash.res[0m:[2m3:9-15[0m
+
+  1 [2m│[0m let f = (x: int) =>
+  2 [2m│[0m   switch x {
+  [1;31m3[0m [2m│[0m   | 1 | [1;31m"hello"[0m => "weird"
+  4 [2m│[0m   | _ => "other"
+  5 [2m│[0m   }
+
+  This pattern matches values of type [1;31mstring[0m
+  but a pattern was expected which matches values of type [1;33mint[0m

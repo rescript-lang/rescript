@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/recursive_module_require_explicit_type.res[0m:[2m1:16-3:1[0m
+
+  [1;31m1[0m [2m│[0m module rec M = [1;31m{[0m
+  [1;31m2[0m [2m│[0m [1;31m  let x = 1[0m
+  [1;31m3[0m [2m│[0m [1;31m}[0m
+  4 [2m│[0m 
+
+  Recursive modules require an explicit module type.
