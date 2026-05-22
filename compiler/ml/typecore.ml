@@ -32,7 +32,6 @@ type error =
       expected: int;
       provided: int;
     }
-  | Label_mismatch of Longident.t * (type_expr * type_expr) list
   | Pattern_type_clash of (type_expr * type_expr) list
   | Or_pattern_type_clash of Ident.t * (type_expr * type_expr) list
   | Multiply_bound_variable of string
@@ -61,10 +60,8 @@ type error =
   | Not_subtype of
       Ctype.type_pairs * Ctype.type_pairs * Ctype.subtype_context option
   | Too_many_arguments of bool * type_expr
-  | Abstract_wrong_label of arg_label * type_expr
   | Scoping_let_module of string * type_expr
   | Not_a_variant_type of Longident.t
-  | Incoherent_label_order
   | Less_general of string * (type_expr * type_expr) list
   | Modules_not_allowed
   | Cannot_infer_signature
@@ -1528,10 +1525,7 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
       begin_def ();
       let vars, ty_arg, ty_res = instance_label false label in
       if vars = [] then end_def ();
-      (try unify_pat_types loc !env ty_res record_ty
-       with Unify trace ->
-         raise
-           (Error (label_lid.loc, !env, Label_mismatch (label_lid.txt, trace))));
+      unify_pat_types loc !env ty_res record_ty;
       type_pat sarg ty_arg (fun arg ->
           if vars <> [] then (
             end_def ();
@@ -3488,12 +3482,8 @@ and type_function ?in_function ~arity ~async loc attrs env ty_expected_ l
   let ty_arg, ty_res =
     try filter_arrow ~env ~arity (instance env ty_expected) l
     with Unify _ -> (
-      match expand_head env ty_expected with
-      | {desc = Tarrow _} as ty ->
-        raise (Error (loc, env, Abstract_wrong_label (l, ty)))
-      | _ ->
-        raise
-          (Error (loc_fun, env, Too_many_arguments (in_function <> None, ty_fun))))
+      raise
+        (Error (loc_fun, env, Too_many_arguments (in_function <> None, ty_fun))))
   in
   let ty_arg =
     if is_optional l then (
@@ -3575,9 +3565,8 @@ and type_label_exp ~call_context create env loc ty_expected
     (* Generalize label information *)
     generalize_structure ty_arg;
     generalize_structure ty_res);
-  (try unify env (instance_def ty_res) (instance env ty_expected)
-   with Unify trace ->
-     raise (Error (lid.loc, env, Label_mismatch (lid.txt, trace))));
+  unify_exp_types ~context:None lid.loc env (instance_def ty_res)
+    (instance env ty_expected);
   (* Instantiate so that we can generalize internal nodes *)
   let ty_arg = instance_def ty_arg in
   if separate then (
@@ -3879,10 +3868,9 @@ and type_application ~context total_app env funct (sargs : sargs) :
               raise
                 (Error
                    (sarg1.pexp_loc, env, Apply_wrong_label (l1, funct.exp_type)))
-            else if not (has_label l1 ty_fun) then
+            else
               raise
                 (Error (sarg1.pexp_loc, env, Apply_wrong_label (l1, ty_res)))
-            else raise (Error (funct.exp_loc, env, Incoherent_label_order))
           | _ ->
             raise
               (Error
@@ -4595,13 +4583,6 @@ let report_error env loc ppf error =
         (if expected == 1 then "argument" else "arguments")
         (if provided < expected then " only" else "")
         provided
-  | Label_mismatch (lid, trace) ->
-    (* modified *)
-    super_report_unification_error ppf env trace
-      (function
-        | ppf ->
-          fprintf ppf "The record field %a@ belongs to the type" longident lid)
-      (function ppf -> fprintf ppf "but is mixed here with fields of type")
   | Pattern_type_clash trace ->
     (* modified *)
     super_report_unification_error ppf env trace
@@ -4756,14 +4737,6 @@ let report_error env loc ppf error =
     else (
       fprintf ppf "@[This expression should not be a function,@ ";
       fprintf ppf "the expected type is@ %a@]" type_expr ty)
-  | Abstract_wrong_label (l, ty) ->
-    let label_mark = function
-      | Nolabel -> "but its first argument is not labelled"
-      | l ->
-        sprintf "but its first argument is labelled %s" (prefixed_label_name l)
-    in
-    fprintf ppf "@[<v>@[<2>This function should have type@ %a@]@,%s@]" type_expr
-      ty (label_mark l)
   | Scoping_let_module (id, ty) ->
     fprintf ppf "This `let module' expression has type@ %a@ " type_expr ty;
     fprintf ppf
@@ -4775,10 +4748,6 @@ let report_error env loc ppf error =
       type_expr ty
   | Not_a_variant_type lid ->
     fprintf ppf "The type %a@ is not a variant type" longident lid
-  | Incoherent_label_order ->
-    fprintf ppf "This labeled function is applied to arguments@ ";
-    fprintf ppf "in an order different from other calls.@ ";
-    fprintf ppf "This is only allowed when the real type is known."
   | Less_general (kind, trace) ->
     (* modified *)
     super_report_unification_error ppf env trace
