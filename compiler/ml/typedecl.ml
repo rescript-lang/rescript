@@ -38,6 +38,7 @@ type error =
   | Cannot_extend_private_type of Path.t
   | Not_extensible_type of Path.t
   | Extension_mismatch of Path.t * Includecore.type_mismatch list
+  | Rebind_wrong_type of Longident.t * Env.t * (type_expr * type_expr) list
   | Rebind_mismatch of Longident.t * Path.t * Path.t
   | Rebind_private of Longident.t
   | Bad_variance of int * (bool * bool * bool) * (bool * bool * bool)
@@ -1645,11 +1646,8 @@ let transl_extension_constructor env type_path type_params typext_params priv
         else (Ctype.newconstr type_path typext_params, None)
       in
       (try Ctype.unify env cstr_res res
-       with Ctype.Unify _ ->
-         Location.raise_errorf ~loc:lid.loc
-           "The constructor %a has a type that is incompatible with this \
-            extension"
-           Printtyp.longident lid.txt);
+       with Ctype.Unify trace ->
+         raise (Error (lid.loc, Rebind_wrong_type (lid.txt, env, trace))));
       (* Remove "_" names from parameters used in the constructor *)
       (if not cdescr.cstr_generalized then
          let vars = Ctype.free_variables (Btype.newgenty (Ttuple args)) in
@@ -2196,6 +2194,12 @@ let report_error ppf = function
       "does not match the definition of type" (Path.name path)
       (Includecore.report_type_mismatch "the type" "this extension" "definition")
       errs
+  | Rebind_wrong_type (lid, env, trace) ->
+    Printtyp.report_unification_error ppf env trace
+      (function
+        | ppf ->
+          fprintf ppf "The constructor %a@ has type" Printtyp.longident lid)
+      (function ppf -> fprintf ppf "but was expected to be of type")
   | Rebind_mismatch (lid, p, p') ->
     fprintf ppf "@[%s@ %a@ %s@ %s@ %s@ %s@ %s@]" "The constructor"
       Printtyp.longident lid "extends type" (Path.name p)

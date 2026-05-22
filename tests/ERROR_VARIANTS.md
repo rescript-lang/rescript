@@ -66,8 +66,8 @@ fallbacks instead of catalogued variants.
   `Incoherent_label_order`, `Recursive_local_constraint`,
   `Invalid_interval`, `Invalid_for_of_pattern`
 - `typedecl`: `Type_clash`, `Parameters_differ`,
-  `Null_arity_external`, `Rebind_wrong_type`, `Bad_fixed_type`,
-  `Varying_anonymous`, `Val_in_structure`
+  `Null_arity_external`, `Bad_fixed_type`, `Varying_anonymous`,
+  `Val_in_structure`
 - `typemod`: `Cannot_eliminate_dependency`,
   `With_makes_applicative_functor_ill_typed`,
   `With_cannot_remove_constrained_type`, `Scoping_pack`
@@ -84,11 +84,13 @@ fallbacks instead of catalogued variants.
   `Bs_uninterpreted_delimiters`
 
 Re-validation also found a few previously-flagged items that are not
-completely dead: `includemod.Unbound_modtype_path` can still represent a
-stale compiled-interface failure, `Syntaxerr.Variable_in_scope` is live
-but lacks a registered printer, and the UTF-8 helper error families are
-still raised by test/defensive helper entry points. Those are retained
-below with updated notes.
+completely dead: `typedecl.Rebind_wrong_type` is live via extension
+rebinding across incompatible extension types,
+`includemod.Unbound_modtype_path` can still represent a stale
+compiled-interface failure, `Syntaxerr.Variable_in_scope` is live but
+lacks a registered printer, and the UTF-8 helper error families are still
+raised by test/defensive helper entry points. Those are retained below
+with updated notes.
 
 ---
 
@@ -166,7 +168,8 @@ Type-declaration errors. Source: [typedecl.ml:27](../compiler/ml/typedecl.ml).
 | `Cannot_extend_private_type` | ✓ | `cannot_extend_private_type.res` | |
 | `Not_extensible_type` | ✓ | `not_extensible_type.res` | |
 | `Extension_mismatch` | ✓ | `extension_arity_mismatch.res` | `type t<'a> = ..` extended with `type t += A(int)` — arity differs from the extensible type. |
-| `Rebind_mismatch` | ✓ | `extension_rebind_mismatch.res` | Rebinding constructor into a different extensible type. |
+| `Rebind_wrong_type` | ✓ | `extension_rebind_mismatch.res` | Rebinding constructor into a different extensible type fails while unifying the source constructor result with the extension target. |
+| `Rebind_mismatch` | ? | — | The later declaration-shape check after `Rebind_wrong_type`; no source fixture was confirmed in this pass. |
 | `Rebind_private` | ✓ | `extension_rebind_private.res` | Rebinding a private extension constructor as public. |
 | `Bad_variance` | ✓ | `bad_variance.res`, `bad_variance_contra.res` | |
 | `Unavailable_type_constructor` | ☐ (needs build harness) | — | typedecl.ml:778. Requires a type path findable at parse time but missing during constraint enforcement; only cross-unit scenarios where a `.cmi` was found but later removed. |
