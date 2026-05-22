@@ -1,0 +1,12 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/incomplete_packed_module.res[0m:[2m7:14-22[0m
+
+  5 [2m│[0m 
+  6 [2m│[0m let extract = (p: module(S with type t = 'a)) => {
+  [1;31m7[0m [2m│[0m   module M = [1;31munpack(p)[0m
+  8 [2m│[0m   M.v
+  9 [2m│[0m }
+
+  The type of this packed module contains variables:
+module(S with type t = 'a)

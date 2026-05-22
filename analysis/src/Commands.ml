@@ -251,31 +251,49 @@ let prepareRename ~full ~pos ~debug =
         | Some placeholder -> Protocol.Placeholder {range; placeholder}))
 
 let format ~source ~kindFile =
-  let max = String.length source in
-  let range =
+  let create_range text =
+    let lines = text |> String.split_on_char '\n' in
+    let lines_len = List.length lines in
+    let character =
+      match List.nth_opt lines lines_len with
+      | Some line -> String.length line
+      | None -> 0
+    in
     Protocol.
-      {start = {line = 0; character = 0}; end_ = {line = max; character = max}}
+      {
+        range =
+          {
+            start = {line = 0; character = 0};
+            end_ = {line = lines_len - 1; character};
+          };
+        newText = text;
+      }
   in
 
   let result =
     match kindFile with
-    | Files.Res ->
+    | Files.Res -> (
       let {Res_driver.parsetree = structure; comments; diagnostics} =
         Res_driver.parsing_engine.parse_implementation_from_source
           ~for_printer:true ~source
       in
-      if List.length diagnostics > 0 then Error "Document has syntax errors"
-      else Ok (Res_printer.print_implementation ~comments structure)
-    | Resi ->
+      match List.length diagnostics > 0 with
+      | true -> Error "Document has syntax errors"
+      | false ->
+        Ok (Res_printer.print_implementation ~comments structure |> create_range)
+      )
+    | Resi -> (
       let {Res_driver.parsetree = signature; comments; diagnostics} =
         Res_driver.parsing_engine.parse_interface_from_source ~for_printer:true
           ~source
       in
-      if List.length diagnostics > 0 then Error "Document has syntax errors"
-      else Ok (Res_printer.print_interface ~comments signature)
+      match List.length diagnostics > 0 with
+      | true -> Error "Document has syntax errors"
+      | false ->
+        Ok (Res_printer.print_interface ~comments signature |> create_range))
     | Other -> Error "Failed to format, file not supported"
   in
 
   match result with
-  | Ok newText -> Ok [Protocol.{range; newText}]
+  | Ok textEdit -> Ok [textEdit]
   | Error e -> Error e

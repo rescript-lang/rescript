@@ -20,7 +20,32 @@
  (depends
   (ocaml
    (>= 5.0.0))
-  (ocaml-lsp-server (and (>= 1.26.0) :with-test-setup))))
+  dune
+  (cppo
+   (= 1.8.0))
+  (flow_parser
+   (= 0.267.0))
+  (ocamlformat
+   (and :with-test (= 0.27.0)))
+  (yojson
+   (and :with-test (= 2.2.2)))
+  (ounit2
+   (and :with-test (= 2.2.7)))
+  (odoc :with-doc)
+  (ocaml-lsp-server
+   (and :with-dev-setup (= 1.22.0)))
+  (bisect_ppx
+   (and :with-dev-setup (>= 2.8.0)))
+  (js_of_ocaml
+   (and
+    (<> :os "win32")
+    :with-test
+    (= 6.0.1)))
+  (wasm_of_ocaml-compiler
+   (and
+    (<> :os "win32")
+    :with-test
+    (= 6.0.1)))))
 
 (package
  (name analysis)
@@ -30,7 +55,7 @@
    (>= 5.0.0))
   (cppo
    (= 1.8.0))
-  dune))
+  (odoc :with-doc)))
 
 (package
  (name tools)
@@ -43,19 +68,4 @@
   (cppo
    (= 1.8.0))
   analysis
-  dune))
-
-(package
- (name rescript-language-server)
- (synopsis "ReScript LSP")
- (depends
-  (ocaml
-   (>= 4.10))
-  (lsp
-    (>= 1.22.0))
-  (eio
-    (>= 1.3))
-  (eio_main
-    (>= 1.3))
-  analysis
-  dune))
+  (odoc :with-doc)))

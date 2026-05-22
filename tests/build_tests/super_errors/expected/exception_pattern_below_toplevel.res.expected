@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/exception_pattern_below_toplevel.res[0m:[2m3:10-28[0m
+
+  1 [2m│[0m let run = action =>
+  2 [2m│[0m   switch action() {
+  [1;31m3[0m [2m│[0m   | Some([1;31mexception Not_found[0m) => "nested exception pattern is invalid"
+  4 [2m│[0m   | _ => "ok"
+  5 [2m│[0m   }
+
+  Exception patterns must be at the top level of a match case.

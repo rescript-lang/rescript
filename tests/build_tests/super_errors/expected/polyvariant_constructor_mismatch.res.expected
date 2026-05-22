@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/polyvariant_constructor_mismatch.res[0m:[2m1:10-30[0m
+
+  [1;31m1[0m [2m│[0m type t = [1;31m[#A(int) | #A(string)[0m]
+  2 [2m│[0m 
+
+  This variant type contains a constructor [#A(string)] which should be
+  [#A(int)]

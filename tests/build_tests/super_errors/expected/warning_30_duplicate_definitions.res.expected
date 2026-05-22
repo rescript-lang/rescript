@@ -1,0 +1,9 @@
+
+  [1;33mWarning number 30[0m
+  [36m/.../fixtures/warning_30_duplicate_definitions.res[0m:[2m2:9-11[0m
+
+  1 [2m│[0m type a = Foo
+  [1;33m2[0m [2m│[0m and b = [1;33mFoo[0m
+  3 [2m│[0m 
+
+  the constructor Foo is defined in both types a and b.

@@ -1,0 +1,11 @@
+
+  [1;33mWarning number 23[0m
+  [36m/.../fixtures/warning_23_useless_record_with.res[0m:[2m4:10-27[0m
+
+  2 [2m│[0m 
+  3 [2m│[0m let r = {a: 1, b: 2}
+  [1;33m4[0m [2m│[0m let r2 = [1;33m{...r, a: 3, b: 4}[0m
+  5 [2m│[0m 
+  6 [2m│[0m let _ = r2
+
+  All the fields are already explicitly listed in this record. You can remove the `...` spread.

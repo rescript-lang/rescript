@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/typetexp_unbound_type_constructor.res[0m:[2m1:8-23[0m
+
+  [1;31m1[0m [2m│[0m let x: [1;31mnonexistent_type[0m = 1
+  2 [2m│[0m 
+
+  This type constructor, `nonexistent_type`, can't be found.
+  If you wanted to write a recursive type, don't forget the `rec` in `type rec`

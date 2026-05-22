@@ -1,0 +1,12 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/cannot_apply_non_functor.res[0m:[2m5:12[0m
+
+  3 [2m│[0m }
+  4 [2m│[0m 
+  [1;31m5[0m [2m│[0m module N = [1;31mM[0m()
+  6 [2m│[0m 
+
+  This module is not a functor; it has type {
+  let x: int
+}

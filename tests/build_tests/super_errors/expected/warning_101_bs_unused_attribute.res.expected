@@ -1,0 +1,11 @@
+
+  [1;31mWarning number 101[0m (configured as error) 
+  [36m/.../fixtures/warning_101_bs_unused_attribute.res[0m:[2m1:1-3[0m
+
+  [1;31m1[0m [2m│[0m [1;31m@as[0m("foo")
+  2 [2m│[0m let x = 1
+  3 [2m│[0m 
+
+  Unused attribute: @as
+This attribute has no effect here.
+For example, some attributes are only meaningful in externals.
