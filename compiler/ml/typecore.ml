@@ -68,9 +68,7 @@ type error =
   | Not_a_packed_module of type_expr
   | Unexpected_existential
   | Unqualified_gadt_pattern of Path.t * string
-  | Invalid_interval
   | Invalid_for_loop_index
-  | Invalid_for_of_pattern
   | No_value_clauses
   | Exception_pattern_below_toplevel
   | Inlined_record_escape
@@ -1334,7 +1332,9 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
     let p = {p with ppat_loc = loc} in
     type_pat ~explode:0 p expected_ty k
     (* TODO: record 'extra' to remember about interval *)
-  | Ppat_interval _ -> raise (Error (loc, !env, Invalid_interval))
+  | Ppat_interval _ ->
+    Location.raise_errorf ~loc
+      "Only character intervals are supported in patterns."
   | Ppat_tuple spl ->
     assert (List.length spl >= 2);
     let spl_ann = List.map (fun p -> (p, newvar ())) spl in
@@ -3102,7 +3102,9 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
             val_kind = Val_reg;
             Types.val_loc = loc;
           } env ~check:(fun s -> Warnings.Unused_for_index s)
-      | _ -> raise (Error (param.ppat_loc, env, Invalid_for_of_pattern))
+      | _ ->
+        Location.raise_errorf ~loc:param.ppat_loc
+          "Invalid for...of binding: only variables and _ are allowed."
     in
     let body =
       with_depth loop_depth (fun () ->
@@ -3134,7 +3136,9 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
             val_kind = Val_reg;
             Types.val_loc = loc;
           } env ~check:(fun s -> Warnings.Unused_for_index s)
-      | _ -> raise (Error (param.ppat_loc, env, Invalid_for_of_pattern))
+      | _ ->
+        Location.raise_errorf ~loc:param.ppat_loc
+          "Invalid for...of binding: only variables and _ are allowed."
     in
     let body =
       with_depth loop_depth (fun () ->
@@ -4764,13 +4768,8 @@ let report_error env loc ppf error =
   | Unqualified_gadt_pattern (tpath, name) ->
     fprintf ppf "@[The GADT constructor %s of type %a@ %s.@]" name Printtyp.path
       tpath "must be qualified in this pattern"
-  | Invalid_interval ->
-    fprintf ppf "@[Only character intervals are supported in patterns.@]"
   | Invalid_for_loop_index ->
     fprintf ppf "@[Invalid for-loop index: only variables and _ are allowed.@]"
-  | Invalid_for_of_pattern ->
-    fprintf ppf
-      "@[Invalid for...of binding: only variables and _ are allowed.@]"
   | No_value_clauses ->
     fprintf ppf "None of the patterns in this 'match' expression match values."
   | Exception_pattern_below_toplevel ->
