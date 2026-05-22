@@ -34,22 +34,15 @@ type error =
   | Definition_mismatch of type_expr * Includecore.type_mismatch list
   | Constraint_failed of type_expr * type_expr
   | Inconsistent_constraint of Env.t * (type_expr * type_expr) list
-  | Type_clash of Env.t * (type_expr * type_expr) list
-  | Parameters_differ of Path.t * type_expr * type_expr
-  | Null_arity_external
   | Unbound_type_var of type_expr * type_declaration
   | Cannot_extend_private_type of Path.t
   | Not_extensible_type of Path.t
   | Extension_mismatch of Path.t * Includecore.type_mismatch list
-  | Rebind_wrong_type of Longident.t * Env.t * (type_expr * type_expr) list
   | Rebind_mismatch of Longident.t * Path.t * Path.t
   | Rebind_private of Longident.t
   | Bad_variance of int * (bool * bool * bool) * (bool * bool * bool)
   | Unavailable_type_constructor of Path.t
-  | Bad_fixed_type of string
   | Unbound_type_var_ext of type_expr * extension_constructor
-  | Varying_anonymous
-  | Val_in_structure
   | Invalid_attribute of string
   | Bad_immediate_attribute
   | Bad_unboxed_attribute of string
@@ -122,7 +115,9 @@ let update_type temp_env env id loc =
   | Some ty -> (
     let params = List.map (fun _ -> Ctype.newvar ()) decl.type_params in
     try Ctype.unify env (Ctype.newconstr path params) ty
-    with Ctype.Unify trace -> raise (Error (loc, Type_clash (env, trace))))
+    with Ctype.Unify _ ->
+      Location.raise_errorf ~loc
+        "This type constructor expands to an incompatible type.")
 
 (* We use the Ctype.expand_head_opt version of expand_head to get access
    to the manifest type of private abbreviations. *)
@@ -187,10 +182,12 @@ let set_fixed_row env loc p decl =
       tm.desc <- Tvariant {row with row_fixed = true};
       if Btype.static_row row then Btype.newgenty Tnil else row.row_more
     | Tobject (ty, _) -> snd (Ctype.flatten_fields ty)
-    | _ -> raise (Error (loc, Bad_fixed_type "is not an object or variant"))
+    | _ ->
+      Location.raise_errorf ~loc
+        "This fixed type is not an object or variant"
   in
   if not (Btype.is_Tvar rv) then
-    raise (Error (loc, Bad_fixed_type "has no row variable"));
+    Location.raise_errorf ~loc "This fixed type has no row variable";
   rv.desc <- Tconstr (p, decl.type_params, ref Mnil)
 
 (* Translate one type declaration *)
@@ -982,11 +979,9 @@ let check_recursion env loc path decl to_check =
         | Tconstr (path', args', _) ->
           (if Path.same path path' then (
              if not (Ctype.equal env false args args') then
-               raise
-                 (Error
-                    ( loc,
-                      Parameters_differ (cpath, ty, Ctype.newconstr path args)
-                    )))
+              Location.raise_errorf ~loc
+                "In the definition of %s, recursive type parameters differ."
+                (Path.name cpath))
            else if
              (* Attempt to expand a type abbreviation if:
                  1- [to_check path'] holds
@@ -1260,7 +1255,9 @@ let compute_variance_gadt env check ((required, loc) as rloc) decl
             | fv :: fv2 ->
               (* fv1 @ fv2 = free_variables of other parameters *)
               if (c || n) && constrained (fv1 @ fv2) ty then
-                raise (Error (loc, Varying_anonymous));
+                Location.raise_errorf ~loc
+                  "In this GADT definition, the variance of some parameter \
+                   cannot be checked.";
               (fv :: fv1, fv2))
           ([], fvl) tyl required
       in
@@ -1649,8 +1646,11 @@ let transl_extension_constructor env type_path type_params typext_params priv
         else (Ctype.newconstr type_path typext_params, None)
       in
       (try Ctype.unify env cstr_res res
-       with Ctype.Unify trace ->
-         raise (Error (lid.loc, Rebind_wrong_type (lid.txt, env, trace))));
+       with Ctype.Unify _ ->
+         Location.raise_errorf ~loc:lid.loc
+           "The constructor %a has a type that is incompatible with this \
+            extension"
+           Printtyp.longident lid.txt);
       (* Remove "_" names from parameters used in the constructor *)
       (if not cdescr.cstr_generalized then
          let vars = Ctype.free_variables (Btype.newgenty (Ttuple args)) in
@@ -1884,7 +1884,9 @@ let transl_value_decl env loc valdecl =
         Types.val_loc = loc;
         val_attributes = valdecl.pval_attributes;
       }
-    | [] -> raise (Error (valdecl.pval_loc, Val_in_structure))
+    | [] ->
+      Location.raise_errorf ~loc:valdecl.pval_loc
+        "Value declarations are only allowed in signatures"
     | _ ->
       let arity, from_constructor = parse_arity env valdecl.pval_type ty in
       let prim = Primitive.parse_declaration valdecl ~arity ~from_constructor in
@@ -1897,7 +1899,9 @@ let transl_value_decl env loc valdecl =
               && String.unsafe_get prim_native_name 1 = '\149'))
         && (prim.prim_name = ""
            || (prim.prim_name.[0] <> '%' && prim.prim_name.[0] <> '#'))
-      then raise (Error (valdecl.pval_type.ptyp_loc, Null_arity_external));
+      then
+        Location.raise_errorf ~loc:valdecl.pval_type.ptyp_loc
+          "External identifiers must be functions";
       {
         val_type = ty;
         val_kind = Val_prim prim;
@@ -2153,22 +2157,11 @@ let report_error ppf = function
     fprintf ppf "@[%s@ @[<hv>Type@ %a@ should be an instance of@ %a@]@]"
       "Constraints are not satisfied in this type." Printtyp.type_expr ty
       Printtyp.type_expr ty'
-  | Parameters_differ (path, ty, ty') ->
-    Printtyp.reset_and_mark_loops ty;
-    Printtyp.mark_loops ty';
-    fprintf ppf "@[<hv>In the definition of %s, type@ %a@ should be@ %a@]"
-      (Path.name path) Printtyp.type_expr ty Printtyp.type_expr ty'
   | Inconsistent_constraint (env, trace) ->
     fprintf ppf "The type constraints are not consistent.@.";
     Printtyp.report_unification_error ppf env trace
       (fun ppf -> fprintf ppf "Type")
       (fun ppf -> fprintf ppf "is not compatible with type")
-  | Type_clash (env, trace) ->
-    Printtyp.report_unification_error ppf env trace
-      (function
-        | ppf -> fprintf ppf "This type constructor expands to type")
-      (function ppf -> fprintf ppf "but is used here with type")
-  | Null_arity_external -> fprintf ppf "External identifiers must be functions"
   | Unbound_type_var (ty, decl) -> (
     fprintf ppf "A type variable is unbound in this type declaration";
     let ty = Ctype.repr ty in
@@ -2204,12 +2197,6 @@ let report_error ppf = function
       "does not match the definition of type" (Path.name path)
       (Includecore.report_type_mismatch "the type" "this extension" "definition")
       errs
-  | Rebind_wrong_type (lid, env, trace) ->
-    Printtyp.report_unification_error ppf env trace
-      (function
-        | ppf ->
-          fprintf ppf "The constructor %a@ has type" Printtyp.longident lid)
-      (function ppf -> fprintf ppf "but was expected to be of type")
   | Rebind_mismatch (lid, p, p') ->
     fprintf ppf "@[%s@ %a@ %s@ %s@ %s@ %s@ %s@]" "The constructor"
       Printtyp.longident lid "extends type" (Path.name p)
@@ -2256,12 +2243,6 @@ let report_error ppf = function
         (variance v1)
   | Unavailable_type_constructor p ->
     fprintf ppf "The definition of type %a@ is unavailable" Printtyp.path p
-  | Bad_fixed_type r -> fprintf ppf "This fixed type %s" r
-  | Varying_anonymous ->
-    fprintf ppf "@[%s@ %s@ %s@]" "In this GADT definition,"
-      "the variance of some parameter" "cannot be checked"
-  | Val_in_structure ->
-    fprintf ppf "Value declarations are only allowed in signatures"
   | Bad_immediate_attribute ->
     fprintf ppf "@[%s@ %s@]" "Types marked with the immediate attribute must be"
       "non-pointer types like int or bool"
