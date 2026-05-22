@@ -64,15 +64,11 @@ val save_signature :
 type error =
   | Cannot_apply of module_type
   | Not_included of Includemod.error list
-  | Cannot_eliminate_dependency of module_type
   | Signature_expected
   | Structure_expected of module_type
   | With_no_component of Longident.t
   | With_mismatch of Longident.t * Includemod.error list
-  | With_makes_applicative_functor_ill_typed of
-      Longident.t * Path.t * Includemod.error list
   | With_changes_module_alias of Longident.t * Ident.t * Path.t
-  | With_cannot_remove_constrained_type
   | Repeated_name of string * string * Warnings.loc
   | Non_generalizable of type_expr
   | Non_generalizable_module of module_type
@@ -80,7 +76,6 @@ type error =
   | Not_allowed_in_functor_body
   | Not_a_packed_module of type_expr
   | Incomplete_packed_module of type_expr
-  | Scoping_pack of Longident.t * type_expr
   | Recursive_module_require_explicit_type
   | Apply_generative
   | Cannot_scrape_alias of Path.t
