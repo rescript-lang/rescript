@@ -31,7 +31,6 @@ type error =
   | Expect_int_literal
   | Expect_string_literal
   | Expect_int_or_string_or_json_literal
-  | Unhandled_poly_type
   | Invalid_underscore_type_in_external
   | Invalid_bs_string_type
   | Invalid_bs_int_type
@@ -43,7 +42,6 @@ type error =
   *)
   | Not_supported_directive_in_bs_return
   | Expect_opt_in_bs_return_to_opt
-  | Misplaced_label_syntax
   | Optional_in_uncurried_bs_attribute
   | Bs_this_simple_pattern
   | Experimental_feature_not_enabled of Experimental_features.feature
@@ -52,10 +50,6 @@ type error =
 let pp_error fmt err =
   Format.pp_print_string fmt
     (match err with
-    | Misplaced_label_syntax -> "Label syntax is not support in this position"
-    (*
-    let fn x = ((##) x ~hi)  ~lo:1 ~hi:2 
-    *)
     | Optional_in_uncurried_bs_attribute ->
       "Uncurried function doesn't support optional arguments yet"
     | Expect_opt_in_bs_return_to_opt ->
@@ -70,7 +64,6 @@ let pp_error fmt err =
     | Expect_int_literal -> "expect int literal "
     | Expect_int_or_string_or_json_literal ->
       "expect int, string literal or json literal {json|text here|json} "
-    | Unhandled_poly_type -> "Unhandled poly type"
     | Invalid_underscore_type_in_external ->
       "_ is not allowed in combination with external optional type"
     | Invalid_bs_string_type -> "Not a valid type for %@string"
@@ -110,4 +103,5 @@ let optional_err loc (lbl : Asttypes.arg_label) =
   | _ -> ()
 
 let err_if_label loc (lbl : Asttypes.arg_label) =
-  if lbl <> Nolabel then raise (Error (loc, Misplaced_label_syntax))
+  if lbl <> Nolabel then
+    Location.raise_errorf ~loc "Label syntax is not supported in this position"

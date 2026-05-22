@@ -137,8 +137,7 @@ let list_of_arrow (ty : t) : t * Parsetree.arg list =
     | Ptyp_arrow {arg; ret; arity} when arity = None || acc = [] ->
       aux ret (arg :: acc)
     | Ptyp_poly (_, ty) ->
-      (* should not happen? *)
-      Bs_syntaxerr.err ty.ptyp_loc Unhandled_poly_type
+      Location.raise_errorf ~loc:ty.ptyp_loc "Unhandled poly type"
     | _ -> (ty, List.rev acc)
   in
   aux ty []
