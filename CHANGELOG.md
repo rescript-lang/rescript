@@ -41,6 +41,7 @@
 - Use a single vendored @rescript/react package across the repo. https://github.com/rescript-lang/rescript/pull/7525
 - Improve deprecated attribute extraction and support record form. https://github.com/rescript-lang/rescript/pull/8396
 - Refactor analysis to decouple I/O from core logic. https://github.com/rescript-lang/rescript/pull/8426
+- Deprecate `Stdlib_Error` and `Stdlib_Exn` modules in favor of `JsError/JsExn`. https://github.com/rescript-lang/rescript/pull/8404
 
 #### :house: Internal
 
