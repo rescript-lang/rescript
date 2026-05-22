@@ -2709,8 +2709,8 @@ and unify_row_field env fixed1 fixed2 more l f1 f2 =
 
 let unify env ty1 ty2 =
   let snap = Btype.snapshot () in
-  try unify env ty1 ty2 with
-  | Unify trace ->
+  try unify env ty1 ty2
+  with Unify trace ->
     undo_compress snap;
     raise (Unify (expand_trace !env trace))
 

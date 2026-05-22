@@ -183,8 +183,7 @@ let set_fixed_row env loc p decl =
       if Btype.static_row row then Btype.newgenty Tnil else row.row_more
     | Tobject (ty, _) -> snd (Ctype.flatten_fields ty)
     | _ ->
-      Location.raise_errorf ~loc
-        "This fixed type is not an object or variant"
+      Location.raise_errorf ~loc "This fixed type is not an object or variant"
   in
   if not (Btype.is_Tvar rv) then
     Location.raise_errorf ~loc "This fixed type has no row variable";
@@ -979,9 +978,9 @@ let check_recursion env loc path decl to_check =
         | Tconstr (path', args', _) ->
           (if Path.same path path' then (
              if not (Ctype.equal env false args args') then
-              Location.raise_errorf ~loc
-                "In the definition of %s, recursive type parameters differ."
-                (Path.name cpath))
+               Location.raise_errorf ~loc
+                 "In the definition of %s, recursive type parameters differ."
+                 (Path.name cpath))
            else if
              (* Attempt to expand a type abbreviation if:
                  1- [to_check path'] holds

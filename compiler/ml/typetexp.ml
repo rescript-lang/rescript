@@ -618,7 +618,8 @@ and transl_fields env policy o fields =
         OTinherit cty
       | {desc = Tvar _}, Some p ->
         Location.raise_errorf ~loc:sty.ptyp_loc
-          "The type constructor %a is not yet completely defined" Printtyp.path p
+          "The type constructor %a is not yet completely defined" Printtyp.path
+          p
       | _ -> raise (Error (sty.ptyp_loc, env, Not_an_object t)))
   in
   let object_fields = List.map add_field fields in

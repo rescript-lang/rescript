@@ -247,10 +247,11 @@ let check_usage_of_path_of_substituted_item paths env signature ~loc ~lid =
                 try retype_applicative_functor_type ~loc env funct arg
                 with Includemod.Error explanation ->
                   Location.raise_errorf ~loc
-                    "@[<v>@[This `with' constraint on %a makes the \
-                     applicative functor type %s ill-typed in the constrained \
+                    "@[<v>@[This `with' constraint on %a makes the applicative \
+                     functor type %s ill-typed in the constrained \
                      signature:@]@ %a@]"
-                    Printtyp.longident lid.txt (Path.name referenced_path)
+                    Printtyp.longident lid.txt
+                    (Path.name referenced_path)
                     Includemod.report_error explanation));
     }
   in
@@ -437,7 +438,8 @@ let merge_constraint initial_env loc sg constr =
               Location.raise_errorf ~loc
                 "@[<v>Destructive substitutions are not supported for \
                  constrained types (other than when replacing a type \
-                 constructor with a type constructor with the same arguments).@]";
+                 constructor with a type constructor with the same \
+                 arguments).@]";
             fun s path -> Subst.add_type_function path ~params ~body s
         in
         let sub = List.fold_left how_to_extend_subst Subst.identity !real_ids in
@@ -1331,8 +1333,7 @@ and type_module_aux ~alias sttn funct_body anchor env smod =
                 "@[This functor has type@ %a@ The parameter cannot be \
                  eliminated in the result type.@  Bind the argument to a \
                  module identifier.@]"
-                Printtyp.modtype mty_functor
-          )
+                Printtyp.modtype mty_functor)
       in
       rm
         {

@@ -330,13 +330,14 @@ let check_optional_attr env ld optional loc =
 
 (* unification inside type_pat*)
 let unify_pat_types loc env ty ty' =
-  try unify env ty ty' with
-  | Unify trace -> raise (Error (loc, env, Pattern_type_clash trace))
+  try unify env ty ty'
+  with Unify trace -> raise (Error (loc, env, Pattern_type_clash trace))
 
 (* unification inside type_exp and type_expect *)
 let unify_exp_types ~context loc env ty expected_ty =
-  try unify env ty expected_ty with
-  | Unify trace -> raise (Error (loc, env, Expr_type_clash {trace; context}))
+  try unify env ty expected_ty
+  with Unify trace ->
+    raise (Error (loc, env, Expr_type_clash {trace; context}))
 
 (* level at which to create the local type declarations *)
 let newtype_level = ref None
@@ -351,8 +352,8 @@ let unify_pat_types_gadt loc env ty ty' =
     | None -> assert false
     | Some x -> x
   in
-  try unify_gadt ~newtype_level env ty ty' with
-  | Unify trace -> raise (Error (loc, !env, Pattern_type_clash trace))
+  try unify_gadt ~newtype_level env ty ty'
+  with Unify trace -> raise (Error (loc, !env, Pattern_type_clash trace))
 
 (* Creating new conjunctive types is not allowed when typing patterns *)
 
@@ -3461,9 +3462,9 @@ and type_function ?in_function ~arity ~async loc attrs env ty_expected_ l
   if separate then begin_def ();
   let ty_arg, ty_res =
     try filter_arrow ~env ~arity (instance env ty_expected) l
-    with Unify _ -> (
+    with Unify _ ->
       raise
-        (Error (loc_fun, env, Too_many_arguments (in_function <> None, ty_fun))))
+        (Error (loc_fun, env, Too_many_arguments (in_function <> None, ty_fun)))
   in
   let ty_arg =
     if is_optional l then (
@@ -4458,20 +4459,19 @@ let type_expression ~context env sexp =
   Typetexp.reset_type_variables ();
   begin_def ();
   let exp = type_exp ~context env sexp in
-  (if Warnings.is_active (Bs_toplevel_expression_unit None) then
-     try unify env exp.exp_type (instance_def Predef.type_unit) with
-     | Unify _ ->
-       let buffer = Buffer.create 10 in
-       let formatter = Format.formatter_of_buffer buffer in
-       Printtyp.type_expr formatter exp.exp_type;
-       Format.pp_print_flush formatter ();
-       let return_type = Buffer.contents buffer in
-       Location.prerr_warning sexp.pexp_loc
-         (Bs_toplevel_expression_unit
-            (match sexp.pexp_desc with
-            | Pexp_apply _ -> Some (return_type, FunctionCall)
-            | _ -> Some (return_type, Other)))
-     );
+  if Warnings.is_active (Bs_toplevel_expression_unit None) then (
+    try unify env exp.exp_type (instance_def Predef.type_unit)
+    with Unify _ ->
+      let buffer = Buffer.create 10 in
+      let formatter = Format.formatter_of_buffer buffer in
+      Printtyp.type_expr formatter exp.exp_type;
+      Format.pp_print_flush formatter ();
+      let return_type = Buffer.contents buffer in
+      Location.prerr_warning sexp.pexp_loc
+        (Bs_toplevel_expression_unit
+           (match sexp.pexp_desc with
+           | Pexp_apply _ -> Some (return_type, FunctionCall)
+           | _ -> Some (return_type, Other))));
   end_def ();
   if not (is_nonexpansive exp) then generalize_expansive env exp.exp_type;
   generalize exp.exp_type;
