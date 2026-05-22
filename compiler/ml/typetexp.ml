@@ -28,7 +28,6 @@ exception Already_bound
 type error =
   | Unbound_type_variable of string
   | Unbound_type_constructor of Longident.t
-  | Unbound_type_constructor_2 of Path.t
   | Type_arity_mismatch of Longident.t * int * int
   | Type_mismatch of (type_expr * type_expr) list
   | Alias_type_mismatch of (type_expr * type_expr) list
@@ -45,10 +44,8 @@ type error =
   | Unbound_label of Longident.t * type_expr option
   | Unbound_module of Longident.t
   | Unbound_modtype of Longident.t
-  | Ill_typed_functor_application of Longident.t
   | Illegal_reference_to_recursive_module
   | Access_functor_as_structure of Longident.t
-  | Apply_structure_as_functor of Longident.t
   | Cannot_scrape_alias of Longident.t * Path.t
   | Opened_object of Path.t option
   | Not_an_object of type_expr
@@ -89,7 +86,8 @@ let rec narrow_unbound_lid_error : 'a. _ -> _ -> _ -> _ -> 'a =
     let fmd = Env.find_module (Env.lookup_module ~load:true flid env) env in
     (match Env.scrape_alias env fmd.md_type with
     | Mty_signature _ ->
-      raise (Error (loc, env, Apply_structure_as_functor flid))
+      Location.raise_errorf ~loc "The module %a is a structure, not a functor"
+        Printtyp.longident flid
     | Mty_alias (_, p) ->
       raise (Error (loc, env, Cannot_scrape_alias (flid, p)))
     | _ -> ());
@@ -98,7 +96,9 @@ let rec narrow_unbound_lid_error : 'a. _ -> _ -> _ -> _ -> 'a =
     match Env.scrape_alias env mmd.md_type with
     | Mty_alias (_, p) ->
       raise (Error (loc, env, Cannot_scrape_alias (mlid, p)))
-    | _ -> raise (Error (loc, env, Ill_typed_functor_application lid))));
+    | _ ->
+      Location.raise_errorf ~loc "Ill-typed functor application %a"
+        Printtyp.longident lid));
   raise (Error (loc, env, make_error lid))
 
 let find_component (lookup : ?loc:_ -> _) make_error env loc lid =
@@ -471,7 +471,9 @@ and transl_type_aux env policy styp =
             let row = Btype.row_repr row in
             row.row_fields
           | {desc = Tvar _}, Some (p, _) ->
-            raise (Error (sty.ptyp_loc, env, Unbound_type_constructor_2 p))
+            Location.raise_errorf ~loc:sty.ptyp_loc
+              "The type constructor %a is not yet completely defined"
+              Printtyp.path p
           | _ -> raise (Error (sty.ptyp_loc, env, Not_a_variant ty))
         in
         List.iter
@@ -615,7 +617,8 @@ and transl_fields env policy o fields =
         iter_add tf;
         OTinherit cty
       | {desc = Tvar _}, Some p ->
-        raise (Error (sty.ptyp_loc, env, Unbound_type_constructor_2 p))
+        Location.raise_errorf ~loc:sty.ptyp_loc
+          "The type constructor %a is not yet completely defined" Printtyp.path p
       | _ -> raise (Error (sty.ptyp_loc, env, Not_an_object t)))
   in
   let object_fields = List.map add_field fields in
@@ -779,8 +782,6 @@ let report_error env ppf = function
       Format.fprintf ppf
         "If you wanted to write a recursive type, don't forget the `rec` in \
          `type rec`@]"
-  | Unbound_type_constructor_2 p ->
-    fprintf ppf "The type constructor@ %a@ is not yet completely defined" path p
   | Type_arity_mismatch (lid, expected, provided) ->
     if expected == 0 then
       fprintf ppf
@@ -954,14 +955,10 @@ let report_error env ppf = function
   | Unbound_modtype lid ->
     fprintf ppf "Unbound module type %a" longident lid;
     spellcheck ppf fold_modtypes env lid
-  | Ill_typed_functor_application lid ->
-    fprintf ppf "Ill-typed functor application %a" longident lid
   | Illegal_reference_to_recursive_module ->
     fprintf ppf "Illegal recursive module reference"
   | Access_functor_as_structure lid ->
     fprintf ppf "The module %a is a functor, not a structure" longident lid
-  | Apply_structure_as_functor lid ->
-    fprintf ppf "The module %a is a structure, not a functor" longident lid
   | Cannot_scrape_alias (lid, p) ->
     fprintf ppf "The module %a is an alias for module %a, which is missing"
       longident lid path p

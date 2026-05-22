@@ -37,7 +37,6 @@ exception Already_bound
 type error =
   | Unbound_type_variable of string
   | Unbound_type_constructor of Longident.t
-  | Unbound_type_constructor_2 of Path.t
   | Type_arity_mismatch of Longident.t * int * int
   | Type_mismatch of (type_expr * type_expr) list
   | Alias_type_mismatch of (type_expr * type_expr) list
@@ -54,10 +53,8 @@ type error =
   | Unbound_label of Longident.t * type_expr option
   | Unbound_module of Longident.t
   | Unbound_modtype of Longident.t
-  | Ill_typed_functor_application of Longident.t
   | Illegal_reference_to_recursive_module
   | Access_functor_as_structure of Longident.t
-  | Apply_structure_as_functor of Longident.t
   | Cannot_scrape_alias of Longident.t * Path.t
   | Opened_object of Path.t option
   | Not_an_object of type_expr
