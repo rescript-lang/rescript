@@ -45,7 +45,6 @@ type error =
   | Present_has_no_type of string
   | Constructor_mismatch of type_expr * type_expr
   | Not_a_variant of type_expr
-  | Variant_tags of string * string
   | Invalid_variable_name of string
   | Cannot_quantify of string * type_expr
   | Multiple_constraints_on_type of Longident.t

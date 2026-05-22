@@ -69,7 +69,6 @@ type error =
   | Modules_not_allowed
   | Cannot_infer_signature
   | Not_a_packed_module of type_expr
-  | Recursive_local_constraint of (type_expr * type_expr) list
   | Unexpected_existential
   | Unqualified_gadt_pattern of Path.t * string
   | Invalid_interval
@@ -338,15 +337,11 @@ let check_optional_attr env ld optional loc =
 let unify_pat_types loc env ty ty' =
   try unify env ty ty' with
   | Unify trace -> raise (Error (loc, env, Pattern_type_clash trace))
-  | Tags (l1, l2) ->
-    raise (Typetexp.Error (loc, env, Typetexp.Variant_tags (l1, l2)))
 
 (* unification inside type_exp and type_expect *)
 let unify_exp_types ~context loc env ty expected_ty =
   try unify env ty expected_ty with
   | Unify trace -> raise (Error (loc, env, Expr_type_clash {trace; context}))
-  | Tags (l1, l2) ->
-    raise (Typetexp.Error (loc, env, Typetexp.Variant_tags (l1, l2)))
 
 (* level at which to create the local type declarations *)
 let newtype_level = ref None
@@ -363,10 +358,6 @@ let unify_pat_types_gadt loc env ty ty' =
   in
   try unify_gadt ~newtype_level env ty ty' with
   | Unify trace -> raise (Error (loc, !env, Pattern_type_clash trace))
-  | Tags (l1, l2) ->
-    raise (Typetexp.Error (loc, !env, Typetexp.Variant_tags (l1, l2)))
-  | Unification_recursive_abbrev trace ->
-    raise (Error (loc, !env, Recursive_local_constraint trace))
 
 (* Creating new conjunctive types is not allowed when typing patterns *)
 
@@ -4520,8 +4511,7 @@ let type_expression ~context env sexp =
             (match sexp.pexp_desc with
             | Pexp_apply _ -> Some (return_type, FunctionCall)
             | _ -> Some (return_type, Other)))
-     | Tags _ ->
-       Location.prerr_warning sexp.pexp_loc (Bs_toplevel_expression_unit None));
+     );
   end_def ();
   if not (is_nonexpansive exp) then generalize_expansive env exp.exp_type;
   generalize exp.exp_type;
@@ -4801,12 +4791,6 @@ let report_error env loc ppf error =
   | Not_a_packed_module ty ->
     fprintf ppf "This expression is packed module, but the expected type is@ %a"
       type_expr ty
-  | Recursive_local_constraint trace ->
-    (* modified *)
-    super_report_unification_error ppf env trace
-      (function
-        | ppf -> fprintf ppf "Recursive local constraint when unifying")
-      (function ppf -> fprintf ppf "with")
   | Unexpected_existential -> fprintf ppf "Unexpected existential"
   | Unqualified_gadt_pattern (tpath, name) ->
     fprintf ppf "@[The GADT constructor %s of type %a@ %s.@]" name Printtyp.path

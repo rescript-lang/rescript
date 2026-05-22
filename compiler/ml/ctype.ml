@@ -57,19 +57,6 @@ type type_pairs = (type_expr * type_expr) list
 
 exception Unify of type_pairs
 
-exception Tags of label * label
-
-let () =
-  Location.register_error_of_exn (function
-    | Tags (l, l') ->
-      Some
-        Location.(
-          errorf ~loc:(in_file !input_name)
-            "In this program,@ variant constructors@ #%s and #%s@ have the \
-             same hash value.@ Change one of them."
-            l l')
-    | _ -> None)
-
 type subtype_context =
   | Generic of {errorCode: string}
   | Coercion_target_variant_not_unboxed of {
@@ -106,11 +93,6 @@ exception Subtype of type_pairs * type_pairs * subtype_context option
 exception Cannot_expand
 
 exception Cannot_apply
-
-exception Recursive_abbrev
-
-(* GADT: recursive abbrevs can appear as a result of local constraints *)
-exception Unification_recursive_abbrev of type_pairs
 
 (**** Type level management ****)
 
@@ -2731,9 +2713,6 @@ let unify env ty1 ty2 =
   | Unify trace ->
     undo_compress snap;
     raise (Unify (expand_trace !env trace))
-  | Recursive_abbrev ->
-    undo_compress snap;
-    raise (Unification_recursive_abbrev (expand_trace !env [(ty1, ty2)]))
 
 let unify_gadt ~newtype_level:lev (env : Env.t ref) ty1 ty2 =
   try

@@ -36,7 +36,6 @@ type error =
   | Present_has_no_type of string
   | Constructor_mismatch of type_expr * type_expr
   | Not_a_variant of type_expr
-  | Variant_tags of string * string
   | Invalid_variable_name of string
   | Cannot_quantify of string * type_expr
   | Multiple_constraints_on_type of Longident.t
@@ -824,11 +823,6 @@ let report_error env ppf = function
       (* PR#7012: help the user that wrote 'Foo instead of `Foo *)
       Misc.did_you_mean ppf (fun () -> ["`" ^ s])
     | _ -> ())
-  | Variant_tags (lab1, lab2) ->
-    fprintf ppf "@[Variant tags %s@ and %s have the same hash value.@ %s@]"
-      (!Printtyp.print_res_poly_identifier lab1)
-      (!Printtyp.print_res_poly_identifier lab2)
-      "Change one of them."
   | Invalid_variable_name name ->
     fprintf ppf "The type variable name %s is not allowed in programs" name
   | Cannot_quantify (name, v) ->
