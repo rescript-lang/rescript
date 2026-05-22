@@ -11,8 +11,7 @@ The catalog has two practical uses:
    AST shape.
 2. **Dead-code removal** — rows tagged `⚠` are variants whose trigger
    site is unreachable in the current parser / compiler, with a named
-   blocker. They can be deleted in a follow-up PR. The "Confirmed dead"
-   summary at the bottom groups them by reason.
+   blocker. They can be deleted in a follow-up PR.
 
 ## Status legend
 
@@ -23,7 +22,8 @@ The catalog has two practical uses:
 | ☐ | Reachable but no fixture yet; would be valuable to add. |
 | ? | Trigger site is live but reachability from regular ReScript source isn't confirmed. Distinct from ⚠: a `?` means "I couldn't find a fixture that reaches it" rather than "the path is provably blocked". |
 
-The "Confirmed dead" summary section at the bottom only includes ⚠.
+The removal audit section below records variants that have already been
+deleted or retained after re-validation.
 
 ## Scope
 
@@ -55,6 +55,41 @@ If a variant turns out to be unreachable, document the named blocker
 here (so it gets ⚠ instead of `?`) and file a follow-up to delete the
 dead code.
 
+## Removed in `jono/remove-dead-errors`
+
+The following named error and warning variants were re-validated as
+unreachable and removed. Guard sites that could still be reached by
+malformed PPX-produced ASTs now use direct `Location.raise_errorf`
+fallbacks instead of catalogued variants.
+
+- `typecore`: `Label_mismatch`, `Abstract_wrong_label`,
+  `Incoherent_label_order`, `Recursive_local_constraint`,
+  `Invalid_interval`, `Invalid_for_of_pattern`
+- `typedecl`: `Type_clash`, `Parameters_differ`,
+  `Null_arity_external`, `Rebind_wrong_type`, `Bad_fixed_type`,
+  `Varying_anonymous`, `Val_in_structure`
+- `typemod`: `Cannot_eliminate_dependency`,
+  `With_makes_applicative_functor_ill_typed`,
+  `With_cannot_remove_constrained_type`, `Scoping_pack`
+- `typetexp`: `Unbound_type_constructor_2`, `Variant_tags`,
+  `Ill_typed_functor_application`, `Apply_structure_as_functor`
+- `bs_syntaxerr`: `Conflict_bs_bs_this_bs_meth`,
+  `Unhandled_poly_type`, `Misplaced_label_syntax`
+- `env`: `Illegal_value_name`
+- `warnings`: `Comment_start`, `Comment_not_end`, `Method_override`,
+  `Statement_type`, `Instance_variable_override`, `Illegal_backslash`,
+  `Implicit_public_methods`, `Unerasable_optional_argument`,
+  `Eol_in_string`, `Eliminated_optional_arguments`, `Bad_docstring`,
+  `Bs_fragile_external`, `Bs_unimplemented_primitive`,
+  `Bs_uninterpreted_delimiters`
+
+Re-validation also found a few previously-flagged items that are not
+completely dead: `includemod.Unbound_modtype_path` can still represent a
+stale compiled-interface failure, `Syntaxerr.Variable_in_scope` is live
+but lacks a registered printer, and the UTF-8 helper error families are
+still raised by test/defensive helper entry points. Those are retained
+below with updated notes.
+
 ---
 
 ## `compiler/ml/typecore.ml`
@@ -66,7 +101,6 @@ Source: [typecore.ml:27](../compiler/ml/typecore.ml).
 |---|---|---|---|
 | `Polymorphic_label` | ✓ | `polymorphic_label.res` | Pattern that instantiates a polymorphic record field: `({f: (f: int => int)}: t) =>` constrains the universal `'a` of `f: 'a. 'a => 'a` to `int => int`. |
 | `Constructor_arity_mismatch` | ✓ | `constructor_arity_mismatch.res`, `constructor_arity_mismatch_pattern.res`, `arity_mismatch*.res` | Triggers in both expression (4028) and pattern (1426) paths. |
-| `Label_mismatch` | ⚠ | — | typecore.ml:1543/3589. Defensive `try unify ty_res ty_expected with Unify -> Label_mismatch`. The only way to reach the unify is after label disambiguation (`type_label_a_list` / `type_label_pat` / `Wrong_name`-style logic), which always locks `ty_res` to a record type already unifiable with the expected. The unify therefore can't fail in practice — every reproduction hits `Wrong_name`, `Pattern_type_clash`, or `Expr_type_clash` instead. The constructor is a defensive leftover from the OCaml inheritance. |
 | `Pattern_type_clash` | ✓ | many `*_pattern_type_clash.res` etc. | Most-fired pattern error. Sub-case fixtures: `pattern_matching_on_option_but_value_not_option.res` and `pattern_matching_on_value_but_is_option.res` (option-vs-non-option trace), `pattern_type_clash_polyvariant.res` (polyvariant tag against concrete type), `pattern_type_clash_tuple_arity.res` (tuple arity mismatch). |
 | `Or_pattern_type_clash` | ✓ | `or_pattern_type_clash.res` | |
 | `Multiply_bound_variable` | ✓ | `multiply_bound_variable.res` | |
@@ -84,20 +118,15 @@ Source: [typecore.ml:27](../compiler/ml/typecore.ml).
 | `Private_label` | ✓ | `private_label.res` | |
 | `Not_subtype` | ✓ | `subtype_*.res`, `dict_show_no_coercion.res`, etc. | |
 | `Too_many_arguments` | ✓ | `too_many_arguments.res`, `moreArguments*.res` | |
-| `Abstract_wrong_label` | ⚠ | — | typecore.ml:3502. Fires in `type_function` when `filter_arrow` with the literal's label fails *and* the expected type is `Tarrow`. In modern ReScript the function literal's type is fully inferred from its own args first, then unified — that path emits `Expr_type_clash`, not `Abstract_wrong_label`. Several attempted reproductions all surfaced as `Expr_type_clash`. Treating as effectively dead. |
 | `Scoping_let_module` | ✓ | `scoping_let_module.res` | |
 | `Not_a_variant_type` | ✓ | `variant_spread_pattern_not_a_variant.res` | Pattern-level variant spread of a non-variant type. |
-| `Incoherent_label_order` | ⚠ | — | typecore.ml:3894. Reached only after `arity_ok` is true *and* the label is present in `ty_fun` but not at the current arrow position. ReScript's labeled-argument reordering happens earlier in `type_args` / `type_unknown_args`, so by the time we hit this branch the label is already at the right position. Every attempted reproduction landed on `Apply_wrong_label` or `Expr_type_clash`. |
 | `Less_general` | ✓ | `less_general_universal.res` | |
 | `Modules_not_allowed` | ✓ | `super_errors_multi/Modules_not_allowed_toplevel` | Toplevel `let module(M) = …` pattern with `allow_modules=false`. |
 | `Cannot_infer_signature` | ✓ | `cannot_infer_signature.res` | |
 | `Not_a_packed_module` | ✓ | `not_a_packed_module.res` | |
-| `Recursive_local_constraint` | ⚠ | — | typecore.ml:369. Routed via `Unification_recursive_abbrev` in `ctype.ml`, which is raised only when `ctype.ml`'s `Recursive_abbrev` exception fires. **`Recursive_abbrev` is defined (ctype.ml:110, ctype.mli:61) but never raised anywhere in `compiler/`.** Confirmed dead. |
 | `Unexpected_existential` | ✓ | `super_errors_multi/Unexpected_existential_in_let` | Destructuring GADT constructor with existential in toplevel `let`. |
 | `Unqualified_gadt_pattern` | ✓ | `super_errors_multi/Cross_gadt_pattern` | Only reachable via cross-module GADT disambiguation; in single-file matching the constructor would resolve before this check. |
-| `Invalid_interval` | ⚠ | — | typecore.ml:1349. Triggered by `Ppat_interval` pattern. **Verified: `Ppat_interval` has no construction site in `compiler/syntax/src/res_core.ml`** — only printer and ast_debugger handle it. |
 | `Invalid_for_loop_index` | ✓ | `invalid_for_loop_index.res` | |
-| `Invalid_for_of_pattern` | ⚠ | — | typecore.ml:3120/3152. Verified: parser `normalize_for_of_pattern` (`res_core.ml:3841`) replaces non-var / non-`_` patterns with `Ppat_any` before the typer sees them. |
 | `No_value_clauses` | ✓ | `no_value_clauses.res` | |
 | `Exception_pattern_below_toplevel` | ✓ | `exception_pattern_below_toplevel.res` | |
 | `Inlined_record_escape` | ✓ | `inline_record_escape.res` | |
@@ -133,22 +162,15 @@ Type-declaration errors. Source: [typedecl.ml:27](../compiler/ml/typedecl.ml).
 | `Definition_mismatch` | ✓ | `definition_mismatch.res` | |
 | `Constraint_failed` | ✓ | `constraint_failed.res` | |
 | `Inconsistent_constraint` | ✓ | `inconsistent_constraint.res` | |
-| `Type_clash` | ⚠ | — | typedecl.ml:125. Fires when `Ctype.unify env (newconstr path params) manifest` fails inside `update_type` for a `type rec` block. For ReScript types this unify either trivially succeeds (aliases unify with their manifest because the cycle/arity machinery has already accepted the shape) or the declaration is rejected earlier by `Cycle_in_def` / `Recursive_abbrev`. I couldn't construct a recursive shape that reaches the failing unify without being caught first. |
-| `Parameters_differ` | ⚠ | — | typedecl.ml:988. Fires for non-uniform recursive type *abbreviations* (`type rec t<'a> = … t<int> …`). ReScript treats variant types as having a manifest of None, so `check_regular` is a no-op for them. For abbreviations, `Cycle_in_def` fires first because the recursive reference is direct. I couldn't construct an abbreviation shape that hits Parameters_differ without being cyclic. |
-| `Null_arity_external` | ⚠ | — | typedecl.ml:1900. The guard requires `prim_arity = 0` and `prim_native_name` not having the magic 20-byte encoding (`\132\149...`) and `prim_name` not starting with `%` or `#`. The encoding gets applied to every concrete external by `Primitive.parse_declaration`, and empty `prim_name` is rejected earlier by `external_ffi_types.ml` with "Not a valid global name". No path through the parser reaches it. |
 | `Unbound_type_var` | ✓ | `unbound_type_var.res` | |
 | `Cannot_extend_private_type` | ✓ | `cannot_extend_private_type.res` | |
 | `Not_extensible_type` | ✓ | `not_extensible_type.res` | |
 | `Extension_mismatch` | ✓ | `extension_arity_mismatch.res` | `type t<'a> = ..` extended with `type t += A(int)` — arity differs from the extensible type. |
-| `Rebind_wrong_type` | ⚠ | — | typedecl.ml:1653. The unify is `cstr_res` (source constructor's result, freshly instantiated) against `res` (extension's target type with fresh param vars). For non-GADT sources both sides are `t<v1, …>` and trivially unify; for GADT-style sources (`type t<'a> += A: t<int>`) `cstr_res = t<int>` against `res = t<v1>` still unifies (`v1 := int`). The parser doesn't allow rebinding with explicit args (`exception B(string) = A` is rejected at `res_core.ml:6660`), so the result-type relationship is always compatible by construction. |
 | `Rebind_mismatch` | ✓ | `extension_rebind_mismatch.res` | Rebinding constructor into a different extensible type. |
 | `Rebind_private` | ✓ | `extension_rebind_private.res` | Rebinding a private extension constructor as public. |
 | `Bad_variance` | ✓ | `bad_variance.res`, `bad_variance_contra.res` | |
 | `Unavailable_type_constructor` | ☐ (needs build harness) | — | typedecl.ml:778. Requires a type path findable at parse time but missing during constraint enforcement; only cross-unit scenarios where a `.cmi` was found but later removed. |
-| `Bad_fixed_type` | ⚠ | — | typedecl.ml:190/193. `set_fixed_row` runs only when `is_fixed_type` returns true, which requires a `private` abstract type with a syntactically open object / polyvariant manifest (typedecl.ml:160-174). For a manifest written that way, `expand_head` returns exactly the same `Tobject` / `Tvariant`, so the check at line 190 passes and the row variable check at line 193 also passes (rows from those syntactic forms have a Tvar `row_more`). No alias chain in ReScript syntax can collapse the open row while still passing `has_row_var` on the syntactic side. |
 | `Unbound_type_var_ext` | ✓ | `unbound_type_var_extension.res` | |
-| `Varying_anonymous` | ⚠ | — | typedecl.ml:1263. Fires in variance computation when an anonymous (`_`) type parameter is constrained against other params under specific variance requirements. ReScript's parser doesn't produce `_` in type parameter position for `type` declarations (`type t<_>` is rejected) — only explicit `'x`-style params, which are never "anonymous" in the sense `Varying_anonymous` checks. |
-| `Val_in_structure` | ⚠ | — | typedecl.ml:1887 requires `pval_prim = []` outside a signature. The parser's `external` recovery sets `prim = []` (`res_core.ml:6617`) but only after emitting a `Syntax error`, so the typechecker never reaches the value declaration. From plain source there's no path that produces a non-signature `Val` with empty `pval_prim` — only PPX-rewritten AST could, and the AST shape would have to bypass the parser. |
 | `Invalid_attribute` | ✓ | `invalid_attribute_not_undefined.res` | |
 | `Bad_immediate_attribute` | ✓ | `bad_immediate_attribute.res` | |
 | `Bad_unboxed_attribute` | ✓ | `bad_unboxed_attribute_abstract.res`, `bad_unboxed_attribute_mutable.res`, `bad_unboxed_attribute_many_fields.res`, `bad_unboxed_attribute_extensible.res` | All 4 sub-cases covered. |
@@ -167,14 +189,11 @@ Module-level errors. Source: [typemod.ml:24](../compiler/ml/typemod.ml).
 |---|---|---|---|
 | `Cannot_apply` | ✓ | `cannot_apply_non_functor.res` | |
 | `Not_included` | ✓ | All `super_errors_multi/Iface_*` fixtures wrap to this via `compunit`. | |
-| `Cannot_eliminate_dependency` | ⚠ | — | typemod.ml:1335. Reached only when `Mtype.nondep_supertype` raises `Not_found` for an anonymous functor application. ReScript's `nondep_supertype` falls back to existential abstraction for any module-typed binding it can't eliminate cleanly, so the `Not_found` branch never fires. Multiple anonymous functor applications (including ones where the result genuinely references the argument's abstract type) all type-check. |
 | `Signature_expected` | ✓ | `typemod_signature_expected.res` | `with type M.t = …` where `M` is functor-typed inside the outer signature. |
 | `Structure_expected` | ✓ | `super_errors_multi/Smoke_unbound_module_reference` (indirect); also `open_functor.res` | |
 | `With_no_component` | ✓ | `with_no_component.res` | |
 | `With_mismatch` | ✓ | `with_mismatch.res` | |
-| `With_makes_applicative_functor_ill_typed` | ⚠ | — | typemod.ml:258. Reached only through the applicative-functor path of `Btype.it_path` (`Papply`); ReScript's parser doesn't emit `Papply` (no parsed construction site in `res_core.ml`), so the iterator never visits this branch. |
 | `With_changes_module_alias` | ☐ (needs build harness) | — | typemod.ml:240. Fires during `with module := M2` substitution when an aliased sub-module inside the constrained signature is affected. ReScript parses `with module N := M2` (destructive substitution), but constructing a sub-module alias chain that gets invalidated requires multiple `.resi` files and a specific shape I couldn't reproduce single-file. |
-| `With_cannot_remove_constrained_type` | ⚠ | — | typemod.ml:443. Fires for `Twith_typesubst` (the `:=` form) when `params_are_constrained` returns true — i.e. the substitution's params are non-`Tvar`. The parser only accepts `'x`-style identifiers in `with type X<…>` param positions (`res_core.ml` rejects `with type x<int> := …` with "Type params start with a singlequote"), so the params are always fresh `Tvar`s and the check never triggers. |
 | `Repeated_name` | ✓ | `repeated_def_*.res` (multiple) | |
 | `Non_generalizable` | ✓ | `non_generalizable.res` | |
 | `Non_generalizable_module` | ✓ | `non_generalizable_module.res` | Nested module containing `let r = ref(None)` — the outer module's `md_type` carries the free `'_weak1` from the inner ref, so `closed_modtype` returns false and the `Sig_module` branch fires. |
@@ -182,7 +201,6 @@ Module-level errors. Source: [typemod.ml:24](../compiler/ml/typemod.ml).
 | `Not_allowed_in_functor_body` | ✓ | `super_errors_multi/not_allowed_in_functor_body` (TODO: confirm path) | |
 | `Not_a_packed_module` | ✓ | `not_a_packed_module.res` | |
 | `Incomplete_packed_module` | ✓ | `incomplete_packed_module.res` | |
-| `Scoping_pack` | ⚠ | — | typemod.ml:1717. Requires first-class module pack where a constraint type has a level mismatch; very contrived. |
 | `Recursive_module_require_explicit_type` | ✓ | `recursive_module_require_explicit_type.res` | |
 | `Apply_generative` | ✓ | `apply_generative.res` | |
 | `Cannot_scrape_alias` | ☐ (needs build harness) | — | typemod.ml:77, 83, 1347. Requires `Env.scrape_alias` to return `Mty_alias` for an alias whose target `.cmi` couldn't be loaded. The `super_errors_multi` runner pre-compiles every file in the fixture, so the alias target is always present. |
@@ -197,7 +215,6 @@ Type-expression errors. Source: [typetexp.ml:28](../compiler/ml/typetexp.ml).
 |---|---|---|---|
 | `Unbound_type_variable` | ✓ | (covered indirectly via many fixtures) | |
 | `Unbound_type_constructor` | ✓ | `typetexp_unbound_type_constructor.res` | |
-| `Unbound_type_constructor_2` | ⚠ | — | typetexp.ml:475/619. Reached in two object/polyvariant-inherit code paths when the inherited type is `Tconstr p` and after `expand_head` is still `Tvar` (the body of `p`'s declaration is a bare type variable). ReScript's parser doesn't accept `type t = 'a` at the top level (only via `with type t<'a> = 'a` which doesn't apply here), so the lookup never returns a Tvar-bodied Tconstr. Every reproduction lands on `Not_an_object` or `Not_a_variant`. |
 | `Type_arity_mismatch` | ✓ | `type_arity_mismatch.res` | |
 | `Type_mismatch` | ✓ | `typetexp_type_mismatch.res` | Type-constructor application that violates a `constraint 'a = …` on the declaration. |
 | `Alias_type_mismatch` | ✓ | `typetexp_alias_type_mismatch.res` | |
@@ -205,7 +222,6 @@ Type-expression errors. Source: [typetexp.ml:28](../compiler/ml/typetexp.ml).
 | `Present_has_no_type` | ✓ | `polyvariant_present_has_no_type.res` | `[< #B > #A]` — `#A` is listed as a "present" tag but isn't defined in the polyvariant body. |
 | `Constructor_mismatch` | ✓ | `polyvariant_constructor_mismatch.res` | |
 | `Not_a_variant` | ✓ | `typetexp_not_a_variant.res` | Polyvariant `[#X \| a]` where `a` is not a polyvariant. |
-| `Variant_tags` | ⚠ | — | typetexp.ml:39. Raised at typecore.ml:342, 349, 367 via `Tags` exception from `ctype.ml`. **Verified: `exception Tags` is defined (ctype.ml:60) but never raised in `compiler/`.** Confirmed dead. |
 | `Invalid_variable_name` | ✓ | `invalid_type_variable_name.res` | |
 | `Cannot_quantify` | ✓ | `cannot_quantify.res` | `type t = {f: 'a. (int as 'a) => int}` — `'a` is universally quantified but the alias `int as 'a` rebinds it to `int`, so the proxy is no longer a fresh `Tvar` when the quantification check runs. |
 | `Multiple_constraints_on_type` | ✓ | `multiple_constraints_on_type.res` | |
@@ -215,10 +231,8 @@ Type-expression errors. Source: [typetexp.ml:28](../compiler/ml/typetexp.ml).
 | `Unbound_label` | ✓ | `typetexp_unbound_label.res` | |
 | `Unbound_module` | ✓ | `suggest_module_for_missing_identifier.res`, `super_errors_multi/Smoke_unbound_module_reference` | |
 | `Unbound_modtype` | ✓ | `typetexp_unbound_modtype.res` | |
-| `Ill_typed_functor_application` | ⚠ | — | typetexp.ml:102. In the `Longident.Lapply` branch. **Verified: parser has no construction site for `Longident.Lapply`** (no result in `res_core.ml`). Confirmed dead. |
 | `Illegal_reference_to_recursive_module` | ✓ | `illegal_recursive_module_reference.res` | `module rec A: B.S = …` references another recmodule's module-type before signatures are sealed. During `approx_modtype` of A, `Env.lookup_module B` returns the `#recmod#` placeholder and raises `Env.Recmodule`. |
 | `Access_functor_as_structure` | ✓ | `access_functor_as_structure.res` | |
-| `Apply_structure_as_functor` | ⚠ | — | typetexp.ml:93. In the `Longident.Lapply` branch. Same dead reason as `Ill_typed_functor_application`. |
 | `Cannot_scrape_alias` | ☐ (needs build harness) | — | typetexp.ml:86 (Ldot path, live), 95/101 (Lapply path, dead since `Lapply` isn't parsed). The live Ldot trigger needs `Env.scrape_alias` to return `Mty_alias` — an alias whose target `.cmi` couldn't be loaded. The `super_errors_multi` harness pre-compiles every alias target. |
 | `Opened_object` | ✓ | `object_inherit_opened.res` | |
 | `Not_an_object` | ✓ | `object_inherit_not_an_object.res` | |
@@ -239,7 +253,7 @@ Wrapper symptoms attached to inclusion failures. Source: [includemod.ml:23](../c
 | `Modtype_infos` | ✓ | `super_errors_multi/Iface_modtype_infos` | |
 | `Modtype_permutation` | ✓ | `super_errors_multi/include_modtype_permutation` | |
 | `Interface_mismatch` | ✓ | wrapper added to all `Iface_*` failures (line 476). | |
-| `Unbound_modtype_path` | ⚠ | — | includemod.ml:94. Fires inside `modtype_path` comparison when `Env.find_modtype` raises `Not_found`. The only callers run after both signatures have been fully typed, so the module-type path is always findable from the local env — `Not_found` would imply a stale `.cmi`, which the multi-file harness can't produce since it always pre-compiles. Treating as dead from the source-only harnesses' point of view. |
+| `Unbound_modtype_path` | ☐ (needs stale-cmi harness) | — | includemod.ml:94. Re-validated during removal: not completely dead. It represents `Env.find_modtype` failing during module-type path comparison, which can happen only with a stale or inconsistent compiled interface. The source-only harness cannot produce that state because it pre-compiles every fixture, so this needs a build/binary-state harness rather than deletion. |
 | `Unbound_module_path` | ☐ (needs build harness) | — | includemod.ml:226/233. Alias comparison where `Env.normalize_path` raises `Not_found`. Requires a module alias whose target `.cmi` is absent at inclusion time — multi-unit only. |
 | `Invalid_module_alias` | ☐ (needs build harness) | — | includemod.ml:211. Requires both sides `Mty_alias` with one pointing to a functor argument. Reachable only when the alias chain crosses a functor application that the `super_errors_multi` harness doesn't construct. |
 
@@ -279,13 +293,11 @@ FFI / attribute / experimental-feature errors. Source: [bs_syntaxerr.ml:27](../c
 | Variant | Status | Fixture | Notes |
 |---|---|---|---|
 | `Unsupported_predicates` | ✓ | `bs_unsupported_predicates.res` | `@get({weird: true})` on object type field. |
-| `Conflict_bs_bs_this_bs_meth` | ⚠ | — | bs_syntaxerr.ml:29 declares the variant but `Bs_syntaxerr.err _ Conflict_bs_bs_this_bs_meth` is **never raised** anywhere in `compiler/`. |
 | `Duplicated_bs_deriving` | ✓ | `duplicated_bs_deriving.res` | |
 | `Conflict_attributes` | ✓ | `bs_conflict_attributes.res` | |
 | `Expect_int_literal` | ✓ | `bs_expect_int_literal.res` | |
 | `Expect_string_literal` | ✓ | `bs_expect_string_literal.res` | |
 | `Expect_int_or_string_or_json_literal` | ✓ | `bs_expect_int_or_string_or_json_literal.res` | `@as(true)` on a wildcard external argument. |
-| `Unhandled_poly_type` | ⚠ | — | ast_core_type.ml:141. Reached only when an external's arrow chain contains `Ptyp_poly` inline. The parser's `parse_poly_type_expr` only emits `Ptyp_poly` for record field types and explicit `let f: type t. …` annotations; inside arrow chains, the `'a.` is misread as the deprecated `(. …)` uncurried syntax (`res_core.ml` lexer). Inline polytypes in an external's arrow can only come from PPX-rewritten AST. |
 | `Invalid_underscore_type_in_external` | ✓ | `bs_invalid_underscore_type_in_external.res` | `@obj external make: (~x: _) => _ = ""` — `_` at an optional-label position without `@as`. |
 | `Invalid_bs_string_type` | ✓ | `bs_invalid_bs_string_type.res` | |
 | `Invalid_bs_int_type` | ✓ | `bs_invalid_bs_int_type.res` | |
@@ -294,7 +306,6 @@ FFI / attribute / experimental-feature errors. Source: [bs_syntaxerr.ml:27](../c
 | `Illegal_attribute` | ✓ | `bs_illegal_attribute_scope.res` | |
 | `Not_supported_directive_in_bs_return` | ✓ | `bs_not_supported_directive_in_bs_return.res` | |
 | `Expect_opt_in_bs_return_to_opt` | ✓ | `bs_expect_opt_in_bs_return_to_opt.res` | |
-| `Misplaced_label_syntax` | ⚠ | — | bs_syntaxerr.ml:116. Only fires from `check_and_discard` in `ast_exp_apply.ml:49`, applied to the args of `->`, `#=`, `##` operators. The parser always emits those args as `Nolabel`. |
 | `Optional_in_uncurried_bs_attribute` | ✓ | `bs_optional_in_uncurried_bs_attribute.res` | `@this` function with optional argument. |
 | `Bs_this_simple_pattern` | ✓ | `bs_this_simple_pattern.res` | `@this` with destructured self pattern. |
 | `Experimental_feature_not_enabled` | ✓ | `let_unwrap_on_top_level_not_enabled.res` (and other let-unwrap variants) | Currently only `LetUnwrap` is checked. |
@@ -361,7 +372,6 @@ Environment / `.cmi`-consistency errors. Source: [env.ml:57](../compiler/ml/env.
 | `Illegal_renaming` | ☐ (needs build harness) | — | Triggered when a `.cmi` filename and the module name inside it disagree. Reachable via `rescript.json` setups that rename the produced artefact, but not from a single-process `bsc` invocation that always writes `Module.cmi` to match the source. |
 | `Inconsistent_import` | ☐ (needs build harness) | — | Triggered when two `.cmi` files transitively imported by the same unit declare different CRCs for the same type. Needs an artificially-mutated build state across multiple compile invocations. |
 | `Missing_module` | ☐ (needs build harness) | — | `.cmi` referenced but absent from `-I` paths at compile time. The `super_errors_multi` runner pre-compiles every fixture file via `-bs-read-cmi`, so it never reaches this code path. |
-| `Illegal_value_name` | ⚠ | — | env.ml:1622/1625 raises when an identifier is `"->"` or starts/contains `#`. The ReScript parser never emits such identifiers; only PPX-rewritten AST could reach the check. |
 
 ---
 
@@ -403,160 +413,55 @@ multi-file harnesses, which never set `-ppx`.
 | `compiler/ml/translmod.ml` | `Fragile_pattern_in_toplevel` | ✓ | `fragile_pattern_toplevel.res` | |
 | `compiler/ml/transl_recmodule.ml` | `Circular_dependency` | ✓ | `recmodule_circular_dependency.res` | |
 | `compiler/ml/rec_check.ml` | `Illegal_letrec_expr` | ✓ | `illegal_letrec_expr.res` | |
-| `compiler/ml/syntaxerr.ml` | `Variable_in_scope` | ⚠ | — | Reachable via `let f: type t. (t, 't) => t = …` (locally-abstract `t` collides with type variable `'t` during `varify_constructors`), but `Syntaxerr.error` has no registered pretty-printer, so it propagates as an uncaught `Fatal error: exception Syntaxerr.Error(_)`. The variant is live; the printer is dead. Treat as broken until either the printer is wired up or the variant is removed in favor of a proper diagnostic. |
+| `compiler/ml/syntaxerr.ml` | `Variable_in_scope` | ? (live, broken printer) | — | Reachable via `let f: type t. (t, 't) => t = …` (locally-abstract `t` collides with type variable `'t` during `varify_constructors`), but `Syntaxerr.error` has no registered pretty-printer, so it propagates as an uncaught `Fatal error: exception Syntaxerr.Error(_)`. Not removed because the variant is live; the fix should wire up a printer or convert the check into a regular typed diagnostic. |
 | `compiler/ml/cmt_format.cppo.ml` | `Not_a_typedtree` | ☐ (needs binary harness) | — | cmt_format.cppo.ml:147. Fires when a tool reads a `.cmt` file whose first block isn't a typed tree. Reachable in principle by pointing the analyzer at an arbitrary file with a `.cmt` extension; out of scope for the source-only fixture harnesses. |
 | `compiler/ext/bsc_args.ml` | `Unknown` | ☐ (needs CLI harness) | — | bsc_args.ml:45. Reachable trivially via `bsc --bogus`, but the `super_errors{,_multi}` runners only pass `bsc` a fixed flag list plus the source file — they can't exercise CLI-level errors. |
 | `compiler/ext/bsc_args.ml` | `Missing` | ☐ (needs CLI harness) | — | Same as above: `bsc -o` (no following filename). Needs a harness that invokes `bsc` with crafted argv. |
 
 ---
 
-## `compiler/frontend/ast_utf8_string.ml` (dead family)
+## `compiler/frontend/ast_utf8_string.ml` (retained defensive family)
 
-Source: [ast_utf8_string.ml:25](../compiler/frontend/ast_utf8_string.ml). All variants here are reached only via the legacy `{j|…|j}` delimiter, which the modern ReScript parser doesn't emit. Backtick template strings skip the transform entirely.
+Source: [ast_utf8_string.ml:25](../compiler/frontend/ast_utf8_string.ml). Re-validation found these are source-unreachable for regular ReScript, but not completely dead: `transform_test` and the defensive string-transform path still raise them, and the OUnit unicode tests assert their offsets. Retained.
 
 | Variant | Status |
 |---|---|
-| `Invalid_code_point` | ⚠ Dead |
-| `Unterminated_backslash` | ⚠ Dead |
-| `Invalid_hex_escape` | ⚠ Dead |
-| `Invalid_unicode_escape` | ⚠ Dead |
-| `Invalid_unicode_codepoint_escape` | ⚠ Dead |
+| `Invalid_code_point` | ? (source-unreachable, retained defensive/test helper) |
+| `Unterminated_backslash` | ? (source-unreachable, retained defensive/test helper) |
+| `Invalid_hex_escape` | ? (source-unreachable, retained defensive/test helper) |
+| `Invalid_unicode_escape` | ? (source-unreachable, retained defensive/test helper) |
+| `Invalid_unicode_codepoint_escape` | ? (source-unreachable, retained defensive/test helper) |
 
-## `compiler/frontend/ast_utf8_string_interp.ml` (dead family)
+## `compiler/frontend/ast_utf8_string_interp.ml` (retained test family)
 
 Source: [ast_utf8_string_interp.ml:25](../compiler/frontend/ast_utf8_string_interp.ml).
 
-`pos_error` is reached only through `check_and_transform`, whose only
-caller in `compiler/` is `transform_test` — used by OUnit tests, not the
-production pipeline. Modern ReScript backtick templates take the
-`BackQuotes` branch of `transform_exp` (line 311) and skip the
-interpolation parser entirely. The legacy `{j|…|j}` delimiter the
-parser would otherwise route here is no longer accepted by the
-scanner. All variants below are unreachable from regular ReScript
-source.
+`pos_error` is reached through `transform_test`, which is intentionally
+used by OUnit tests. Modern ReScript backtick templates take the
+`BackQuotes` branch of `transform_exp` and skip the interpolation parser,
+so these are source-unreachable for regular ReScript, but not completely
+dead. Retained.
 
 | Variant | Status |
 |---|---|
-| `Invalid_code_point` | ⚠ Dead |
-| `Unterminated_backslash` | ⚠ Dead |
-| `Invalid_escape_code` | ⚠ Dead |
-| `Invalid_hex_escape` | ⚠ Dead |
-| `Invalid_unicode_escape` | ⚠ Dead |
-| `Unterminated_variable` | ⚠ Dead |
-| `Unmatched_paren` | ⚠ Dead |
-| `Invalid_syntax_of_var` | ⚠ Dead |
+| `Invalid_code_point` | ? (source-unreachable, retained test helper) |
+| `Unterminated_backslash` | ? (source-unreachable, retained test helper) |
+| `Invalid_escape_code` | ? (source-unreachable, retained test helper) |
+| `Invalid_hex_escape` | ? (source-unreachable, retained test helper) |
+| `Invalid_unicode_escape` | ? (source-unreachable, retained test helper) |
+| `Unterminated_variable` | ? (source-unreachable, retained test helper) |
+| `Unmatched_paren` | ? (source-unreachable, retained test helper) |
+| `Invalid_syntax_of_var` | ? (source-unreachable, retained test helper) |
 
 ---
 
-## Confirmed dead variants — candidates for removal
+## Removal audit notes
 
-Only variants with a concrete, source-level reason are listed. Each row
-has been re-verified against the source as of this audit. Variants marked
-`?` in the tables above are **not** included here — those may turn out to
-be live and just hard to reproduce.
-
-**Verified dead by missing raise / construction site:**
-
-- `typecore.Variant_tags`, `typetexp.Variant_tags` — relayed via the
-  `Tags` exception which is declared in `ctype.ml:60` / `ctype.mli:57`
-  but **never raised** in `compiler/`.
-- `typecore.Recursive_local_constraint` — relayed via
-  `Unification_recursive_abbrev`, raised only from the `Recursive_abbrev`
-  exception which is declared (`ctype.ml:110`, `ctype.mli:61`) but
-  **never raised**.
-- `typecore.Invalid_interval` — needs `Ppat_interval`; **no construction
-  site** for that AST node in `compiler/syntax/src/`.
-- `typecore.Invalid_for_of_pattern` — parser's
-  `normalize_for_of_pattern` (`res_core.ml:3841`) replaces every non-var,
-  non-`_` pattern with `Ppat_any` before the typer runs.
-- `bs_syntaxerr.Conflict_bs_bs_this_bs_meth` — variant is declared but
-  no `Bs_syntaxerr.err _ Conflict_bs_bs_this_bs_meth` call exists in
-  `compiler/`.
-
-**Verified dead because parser doesn't produce required AST shape:**
-
-- `typetexp.Ill_typed_functor_application`,
-  `typetexp.Apply_structure_as_functor` — in the
-  `Longident.Lapply` branch; `Lapply` has no construction site in
-  the parser (`res_core.ml`).
-- `bs_syntaxerr.Misplaced_label_syntax` — fires for labeled args to
-  `->`/`#=`/`##` operators; the parser always emits those with
-  `Nolabel`.
-- `typedecl.Null_arity_external` — primitives parsed by
-  `Primitive.parse_declaration` always get the magic 20-byte
-  `prim_native_name` encoding, which bypasses the trigger; empty
-  `prim_name` is rejected earlier with "Not a valid global name".
-- `ast_utf8_string.*` (Invalid_code_point, Unterminated_backslash,
-  Invalid_hex_escape, Invalid_unicode_escape,
-  Invalid_unicode_codepoint_escape) — the scanner
-  (`res_scanner.ml:350-417`) already validates escape sequences and
-  unicode code points; the transform never sees a string that would
-  fail its own re-validation.
-- `ast_utf8_string_interp.*` (the whole module's error variants) —
-  `check_and_transform` is only ever called from `transform_test`, which
-  exists for OUnit tests, not the production pipeline. Modern ReScript
-  backtick templates take the `BackQuotes` branch of `transform_exp`
-  and skip the interpolation parser entirely.
-- `typedecl.Val_in_structure` — typedecl.ml:1887 requires `pval_prim
-  = []` outside a signature; the parser's `external` recovery sets
-  `prim = []` only after emitting a syntax error, so the typechecker
-  never reaches the value declaration.
-- `env.Illegal_value_name` — env.ml:1622/1625 rejects `"->"` and
-  identifiers containing `#`. The parser never produces such names;
-  PPX-rewritten AST is the only path that could trigger it.
-- `bs_warnings.Statement_type` (warning 10) — only caller of
-  `check_application_result` passes `statement = false`, so the
-  `if statement then …` branch never fires.
-- `bs_warnings.Unerasable_optional_argument` (warning 16) —
-  `type_function` (typecore.ml:3479) explicitly disables this warning
-  via `Warnings.parse_options false "-16"` before the check runs.
-- `bs_warnings.Bs_uninterpreted_delimiters` (warning 108) — raised at
-  `bs_warnings.ml:29` for `Pconst_string` with delimiter `"js"`, but
-  the modern scanner has no `{js|…|js}` form and template strings tag
-  with `"bq"` after rewriting.
-
-**`Syntaxerr.Variable_in_scope` is a special case** — reachable from
-`let f: type t. (t, 't) => t = …` but raised without a registered
-printer, so it surfaces as `Fatal error: exception Syntaxerr.Error(_)`.
-The variant is live; the diagnostic path is broken. Fix should either
-wire up a printer or convert the check into a regular typed error.
-
-**Newly verified dead** (the variants the second-pass audit promoted
-from `?` to ⚠, with the reason in the table):
-
-- `typecore.Label_mismatch`, `Abstract_wrong_label`,
-  `Incoherent_label_order` — defensive `try unify with Unify ->` paths
-  that are subsumed by `Wrong_name` / `Expr_type_clash` /
-  `Apply_wrong_label` in modern ReScript.
-- `typedecl.Type_clash` — every recursive `type` shape that would reach
-  the failing `unify` is rejected earlier by `Cycle_in_def` /
-  `Recursive_abbrev`.
-- `typedecl.Parameters_differ` — `check_regular` runs only on
-  abbreviations, and ReScript's parser produces `Cycle_in_def` for
-  every recursive abbreviation shape before this check.
-- `typedecl.Rebind_wrong_type` — the parser refuses extension rebind
-  syntax that carries args or a result type, so source and target's
-  result types always unify trivially.
-- `typedecl.Bad_fixed_type` — `is_fixed_type` checks the syntactic
-  manifest for an open row, and `expand_head` preserves that row;
-  there's no ReScript syntax that satisfies one check and fails the
-  other.
-- `typedecl.Varying_anonymous` — needs `_` in a `type` parameter
-  position, which the parser doesn't accept.
-- `typetexp.Unbound_type_constructor_2` — needs an inherited type
-  whose `Tconstr` body is a bare `Tvar`; the parser rejects
-  `type t = 'a` at top-level.
-- `typemod.Cannot_eliminate_dependency` — `Mtype.nondep_supertype`
-  falls back to existential abstraction in every reachable case;
-  the `Not_found` branch never fires.
-- `typemod.With_cannot_remove_constrained_type` — the parser only
-  accepts `'x`-style identifiers in `with type` param positions, so
-  the params are always fresh `Tvar`s and `params_are_constrained`
-  returns false.
-- `bs_syntaxerr.Unhandled_poly_type` — the only way an external's
-  arrow chain gets an inline `Ptyp_poly` is via PPX-rewritten AST;
-  the parser misreads `'a.` inline as the deprecated `(. …)`
-  uncurried syntax.
+All variants that were confirmed completely dead in this pass are listed
+in **Removed in `jono/remove-dead-errors`** above and no longer appear in
+the module tables. Previously flagged entries that were only unreachable
+from regular source, but still possible through stale build artifacts,
+PPX/malformed ASTs, or test helper APIs, were retained and reclassified.
 
 ---
 
@@ -572,27 +477,11 @@ warnings still fire.
 Fixtures follow the naming convention `warning_<NN>_<description>.res`
 so coverage gaps stay greppable.
 
-### Confirmed dead (no `prerr_warning` site in the compiler)
+### Removed warnings
 
-These warning constructors exist in `warnings.ml` but are never raised
-anywhere in `compiler/`. They are candidates for removal.
-
-| Number | Variant | Reason |
-|---|---|---|
-| 1 | `Comment_start` | Lexer warning; modern parser doesn't emit. |
-| 2 | `Comment_not_end` | Lexer warning; modern parser doesn't emit. |
-| 7 | `Method_override` | OCaml class system, not exposed by ReScript. |
-| 13 | `Instance_variable_override` | OCaml class system. |
-| 14 | `Illegal_backslash` | Lexer-level escape warning; parser doesn't emit. |
-| 15 | `Implicit_public_methods` | OCaml class system. |
-| 29 | `Eol_in_string` | Lexer-level string warning. |
-| 48 | `Eliminated_optional_arguments` | Declared but never raised. |
-| 50 | `Bad_docstring` | Declared but never raised; also default-disabled. |
-| 105 | `Bs_fragile_external` | Declared but never raised. |
-| 106 | `Bs_unimplemented_primitive` | Declared but never raised. |
-| 10 | `Statement_type` | Raised at typecore.ml:2052 inside `check_application_result`, but `statement` is always `false` at the only call site (typecore.ml:3983); sequence statements hit `Expr_type_clash` via `type_statement` unifying to `unit`. |
-| 16 | `Unerasable_optional_argument` | Raised at typecore.ml:3526, but `type_function` (typecore.ml:3479) explicitly disables this warning before the check runs (`Warnings.parse_options false "-16"`). |
-| 108 | `Bs_uninterpreted_delimiters` | Raised at bs_warnings.ml:29 for `Pconst_string` with delimiter `"js"`; the modern scanner has no `{js\|...\|js}` form and template strings don't tag with `"js"`. |
+The warning constructors listed in **Removed in `jono/remove-dead-errors`**
+were deleted. Their numeric warning slots remain holes; no warning number
+was reused.
 
 ### Live but no fixture yet
 
