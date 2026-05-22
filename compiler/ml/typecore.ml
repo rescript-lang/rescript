@@ -3734,10 +3734,6 @@ and type_application ~context total_app env funct (sargs : sargs) :
         newty2 lv (Tarrow ({lbl = l; typ = ty}, ty_fun, Cok, None)))
       ty_fun omitted
   in
-  let has_label l ty_fun =
-    let ls, tvar = list_labels env ty_fun in
-    tvar || List.mem l ls
-  in
   let ignored = ref [] in
   let force_tvar =
     let t = funct.exp_type in
