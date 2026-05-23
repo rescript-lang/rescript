@@ -15,7 +15,6 @@ import * as Primitive_string from "@rescript/runtime/lib/es6/Primitive_string.mj
 import * as Promises from "node:fs/promises";
 import * as Primitive_exceptions from "@rescript/runtime/lib/es6/Primitive_exceptions.mjs";
 import * as BinsJs from "../../cli/common/bins.js";
-import * as RescriptTools_ExtractCodeBlocks from "@rescript/runtime/lib/es6/RescriptTools_ExtractCodeBlocks.mjs";
 
 let rescript_tools_exe = BinsJs.rescript_tools_exe;
 
@@ -46,7 +45,7 @@ async function extractDocFromFile(file) {
     "--transform-assert-equal"
   ], undefined);
   try {
-    return RescriptTools_ExtractCodeBlocks.decodeFromJson(JSON.parse(getOutput(match.stdout)));
+    return JSON.parse(getOutput(match.stdout));
   } catch (raw_e) {
     let e = Primitive_exceptions.internalToException(raw_e);
     if (e.RE_EXN_ID === "JsExn") {
@@ -78,12 +77,7 @@ async function extractExamples() {
   let examples = [];
   await ArrayUtils.forEachAsyncInBatches(docFiles, batchSize, async f => {
     let doc = await extractDocFromFile(Nodepath.join(runtimePath, f));
-    if (doc.TAG === "Ok") {
-      examples.push(...doc._0.filter(d => d.code.includes("assertEqual(")));
-      return;
-    }
-    console.error(doc._0);
-    return Stdlib_JsError.panic(`Error extracting code blocks for ` + f);
+    examples.push(...doc.filter(d => d.code.includes("assertEqual(")));
   });
   examples.sort((a, b) => Primitive_string.compare(a.id, b.id));
   return examples;
