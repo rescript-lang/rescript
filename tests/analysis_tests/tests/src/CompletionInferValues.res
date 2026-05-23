@@ -7,7 +7,7 @@ let someFnWithCallback = (cb: (~num: int, ~someRecord: someRecord, ~isOn: bool) 
   let _ = cb
 }
 
-let reactEventFn = (cb: ReactEvent.Mouse.t => unit) => {
+let reactEventFn = (cb: ReactDOMEvent.Mouse.t => unit) => {
   let _ = cb
 }
 
@@ -33,7 +33,7 @@ let reactEventFn = (cb: ReactEvent.Mouse.t => unit) => {
 
 module Div = {
   @react.component
-  let make = (~onMouseEnter: option<JsxEvent.Mouse.t => unit>=?) => {
+  let make = (~onMouseEnter: option<ReactDOMEvent.Mouse.t => unit>=?) => {
     let _ = onMouseEnter
     React.null
   }
@@ -45,13 +45,13 @@ module Div = {
 // let _ = <Div onMouseEnter={event => { event->pr }} />
 //                                                ^com
 
-// let _ = <div onMouseEnter={event => { let btn = event->JsxEvent.Mouse.button; btn->t }} />
+// let _ = <div onMouseEnter={event => { let btn = event->ReactDOMEvent.Mouse.button; btn->t }} />
 //                                                                                     ^com
 
-// let _ = <div onMouseEnter={event => { let btn = event->JsxEvent.Mouse.button->Int.toString; btn->spl }} />
+// let _ = <div onMouseEnter={event => { let btn = event->ReactDOMEvent.Mouse.button->Int.toString; btn->spl }} />
 //                                                                                                     ^com
 
-// let _ = <div onMouseEnter={event => { let btn = event->JsxEvent.Mouse.button->Int.toString->String.split("/"); btn->ma }} />
+// let _ = <div onMouseEnter={event => { let btn = event->ReactDOMEvent.Mouse.button->Int.toString->String.split("/"); btn->ma }} />
 //                                                                                                                       ^com
 
 type someVariant = One | Two | Three(int, string)

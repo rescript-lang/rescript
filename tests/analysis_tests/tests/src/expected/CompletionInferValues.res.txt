@@ -250,11 +250,11 @@ ContextPath CArgument CArgument Value[reactEventFn]($0)($0)
 ContextPath CArgument Value[reactEventFn]($0)
 ContextPath Value[reactEventFn]
 Path reactEventFn
-CPPipe pathFromEnv:ReactEvent.Mouse found:false
-Path ReactEvent.Mouse.pr
+CPPipe pathFromEnv:ReactDOMEvent.Mouse found:false
+Path ReactDOMEvent.Mouse.pr
 Path pr
 [{
-    "label": "ReactEvent.Mouse.preventDefault",
+    "label": "ReactDOMEvent.Mouse.preventDefault",
     "kind": 12,
     "tags": [],
     "detail": "t => unit",
@@ -291,11 +291,11 @@ Path event
 ContextPath CArgument CJsxPropValue [Div] onMouseEnter($0)
 ContextPath CJsxPropValue [Div] onMouseEnter
 Path Div.make
-CPPipe pathFromEnv:JsxEvent.Mouse found:false
-Path JsxEvent.Mouse.pr
+CPPipe pathFromEnv:ReactDOMEvent.Mouse found:false
+Path ReactDOMEvent.Mouse.pr
 Path pr
 [{
-    "label": "JsxEvent.Mouse.preventDefault",
+    "label": "ReactDOMEvent.Mouse.preventDefault",
     "kind": 12,
     "tags": [],
     "detail": "t => unit",
@@ -303,131 +303,66 @@ Path pr
   }]
 
 Complete src/CompletionInferValues.res 47:87
-posCursor:[47:87] posNoWhite:[47:86] Found expr:[47:11->47:93]
-JSX <div:[47:12->47:15] onMouseEnter[47:16->47:28]=...[47:36->47:89]> _children:None
-posCursor:[47:87] posNoWhite:[47:86] Found expr:[47:36->47:89]
-posCursor:[47:87] posNoWhite:[47:86] Found expr:[47:41->47:87]
-posCursor:[47:87] posNoWhite:[47:86] Found expr:[47:81->47:87]
-Completable: Cpath Value[btn]->t <<jsx>>
+posCursor:[47:87] posNoWhite:[47:86] Found expr:[47:11->47:98]
+JSX <div:[47:12->47:15] onMouseEnter[47:16->47:28]=...[47:36->47:94]> _children:None
+posCursor:[47:87] posNoWhite:[47:86] Found expr:[47:36->47:94]
+posCursor:[47:87] posNoWhite:[47:86] Found expr:[47:41->47:92]
+posCursor:[47:87] posNoWhite:[47:86] Found expr:[47:86->47:92]
+posCursor:[47:87] posNoWhite:[47:86] Found expr:[47:86->47:89]
+Pexp_ident btn:[47:86->47:89]
+Completable: Cpath Value[btn]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
-ContextPath Value[btn]->t <<jsx>>
 ContextPath Value[btn]
 Path btn
-ContextPath Value[JsxEvent, Mouse, button](Nolabel)
-ContextPath Value[JsxEvent, Mouse, button]
-Path JsxEvent.Mouse.button
-Path Stdlib.Int.t
-Path t
 [{
-    "label": "Int.toStringWithRadix",
-    "kind": 12,
-    "tags": [1],
-    "detail": "(int, ~radix: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toString` instead\n\n\n`toStringWithRadix(n, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toStringWithRadix(6, ~radix=2) // \"110\"\nInt.toStringWithRadix(373592855, ~radix=16) // \"16449317\"\nInt.toStringWithRadix(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
-  }, {
-    "label": "Int.toExponentialWithPrecision",
-    "kind": 12,
-    "tags": [1],
-    "detail": "(int, ~digits: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toExponential` instead\n\n\n`toExponential(n, ~digits)` return a `string` representing the given value in\nexponential notation. `digits` specifies how many digits should appear after\nthe decimal point. See [`Number.toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential)\non MDN.\n\n## Examples\n\n```rescript\nInt.toExponentialWithPrecision(77, ~digits=2) // \"7.70e+1\"\nInt.toExponentialWithPrecision(5678, ~digits=2) // \"5.68e+3\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` less than 0 or greater than 10.\n"}
-  }, {
-    "label": "Int.toFixedWithPrecision",
-    "kind": 12,
-    "tags": [1],
-    "detail": "(int, ~digits: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toFixed` instead\n\n\n`toFixedWithPrecision(n, ~digits)` return a `string` representing the given\nvalue using fixed-point notation. `digits` specifies how many digits should\nappear after the decimal point. See [`Number.toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed)\non MDN.\n\n## Examples\n\n```rescript\nInt.toFixedWithPrecision(300, ~digits=4) // \"300.0000\"\nInt.toFixedWithPrecision(300, ~digits=1) // \"300.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is less than 0 or larger than 100.\n"}
-  }, {
-    "label": "Int.toPrecisionWithPrecision",
-    "kind": 12,
-    "tags": [1],
-    "detail": "(int, ~digits: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toPrecision` instead\n\n\n`toPrecisionWithPrecision(n, ~digits)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits. See [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nInt.toPrecisionWithPrecision(100, ~digits=2) // \"1.0e+2\"\nInt.toPrecisionWithPrecision(1, ~digits=2) // \"1.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\n  Implementations are allowed to support larger and smaller values as well.\n  ECMA-262 only requires a precision of up to 21 significant digits.\n"}
-  }, {
-    "label": "Int.toPrecision",
-    "kind": 12,
+    "label": "btn",
+    "kind": 15,
     "tags": [],
-    "detail": "(int, ~digits: int=?) => string",
-    "documentation": {"kind": "markdown", "value": "\n`toPrecision(n, ~digits=?)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits. See [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nInt.toPrecision(100) // \"100\"\nInt.toPrecision(1) // \"1\"\nInt.toPrecision(100, ~digits=2) // \"1.0e+2\"\nInt.toPrecision(1, ~digits=2) // \"1.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\n  Implementations are allowed to support larger and smaller values as well.\n  ECMA-262 only requires a precision of up to 21 significant digits.\n"}
-  }, {
-    "label": "Int.toString",
-    "kind": 12,
-    "tags": [],
-    "detail": "(int, ~radix: int=?) => string",
-    "documentation": {"kind": "markdown", "value": "\n`toString(n, ~radix=?)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toString(1000) // \"1000\"\nInt.toString(-1000) // \"-1000\"\nInt.toString(6, ~radix=2) // \"110\"\nInt.toString(373592855, ~radix=16) // \"16449317\"\nInt.toString(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
-  }, {
-    "label": "Int.toFloat",
-    "kind": 12,
-    "tags": [],
-    "detail": "int => float",
-    "documentation": {"kind": "markdown", "value": "\n`toFloat(n)` return a `float` representing the given value.\n\n## Examples\n\n```rescript\nInt.toFloat(100) == 100.0\nInt.toFloat(2) == 2.0\n```\n"}
-  }, {
-    "label": "Int.toLocaleString",
-    "kind": 12,
-    "tags": [],
-    "detail": "int => string",
-    "documentation": {"kind": "markdown", "value": "\n`toLocaleString(n)` return a `string` with language-sensitive representing the\ngiven value. See [`Number.toLocaleString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toLocaleString) on MDN.\n\n## Examples\n\n```rescript\n// If the application uses English as the default language\nInt.toLocaleString(1000) // \"1,000\"\n\n// If the application uses Portuguese Brazil as the default language\nInt.toLocaleString(1000) // \"1.000\"\n```\n"}
-  }, {
-    "label": "Int.toExponential",
-    "kind": 12,
-    "tags": [],
-    "detail": "(int, ~digits: int=?) => string",
-    "documentation": {"kind": "markdown", "value": "\n`toExponential(n, ~digits=?)` return a `string` representing the given value in\nexponential notation. `digits` specifies how many digits should appear after\nthe decimal point. See [`Number.toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential)\n\n## Examples\n\n```rescript\nInt.toExponential(1000) // \"1e+3\"\nInt.toExponential(-1000) // \"-1e+3\"\nInt.toExponential(77, ~digits=2) // \"7.70e+1\"\nInt.toExponential(5678, ~digits=2) // \"5.68e+3\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` less than 0 or greater than 10.\n"}
-  }, {
-    "label": "Int.toFixed",
-    "kind": 12,
-    "tags": [],
-    "detail": "(int, ~digits: int=?) => string",
-    "documentation": {"kind": "markdown", "value": "\n`toFixed(n, ~digits=?)` return a `string` representing the given\nvalue using fixed-point notation. `digits` specifies how many digits should\nappear after the decimal point. See [`Number.toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed)\non MDN.\n\n## Examples\n\n```rescript\nInt.toFixed(123456) // \"123456.00\"\nInt.toFixed(10) // \"10.00\"\nInt.toFixed(300, ~digits=4) // \"300.0000\"\nInt.toFixed(300, ~digits=1) // \"300.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is less than 0 or larger than 100.\n"}
+    "detail": "",
+    "documentation": null
   }]
 
 Complete src/CompletionInferValues.res 50:103
-posCursor:[50:103] posNoWhite:[50:102] Found expr:[50:11->50:109]
-JSX <div:[50:12->50:15] onMouseEnter[50:16->50:28]=...[50:36->50:105]> _children:None
-posCursor:[50:103] posNoWhite:[50:102] Found expr:[50:36->50:105]
-posCursor:[50:103] posNoWhite:[50:102] Found expr:[50:41->50:103]
-posCursor:[50:103] posNoWhite:[50:102] Found expr:[50:95->50:103]
-Completable: Cpath Value[btn]->spl <<jsx>>
+posCursor:[50:103] posNoWhite:[50:102] Found expr:[50:11->50:114]
+JSX <div:[50:12->50:15] onMouseEnter[50:16->50:28]=...[50:36->50:110]> _children:None
+posCursor:[50:103] posNoWhite:[50:102] Found expr:[50:36->50:110]
+posCursor:[50:103] posNoWhite:[50:102] Found expr:[50:41->50:108]
+posCursor:[50:103] posNoWhite:[50:102] Found expr:[50:100->50:108]
+posCursor:[50:103] posNoWhite:[50:102] Found expr:[50:100->50:103]
+Pexp_ident btn:[50:100->50:103]
+Completable: Cpath Value[btn]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
-ContextPath Value[btn]->spl <<jsx>>
 ContextPath Value[btn]
 Path btn
-ContextPath Value[Int, toString](Nolabel)
-ContextPath Value[Int, toString]
-Path Int.toString
-[]
+[{
+    "label": "btn",
+    "kind": 15,
+    "tags": [],
+    "detail": "",
+    "documentation": null
+  }]
 
 Complete src/CompletionInferValues.res 53:121
-posCursor:[53:121] posNoWhite:[53:120] Found expr:[53:11->53:127]
-JSX <div:[53:12->53:15] onMouseEnter[53:16->53:28]=...[53:36->53:123]> _children:None
-posCursor:[53:121] posNoWhite:[53:120] Found expr:[53:36->53:123]
-posCursor:[53:121] posNoWhite:[53:120] Found expr:[53:41->53:121]
-posCursor:[53:121] posNoWhite:[53:120] Found expr:[53:114->53:121]
-Completable: Cpath Value[btn]->ma <<jsx>>
+posCursor:[53:121] posNoWhite:[53:120] Found expr:[53:11->53:132]
+JSX <div:[53:12->53:15] onMouseEnter[53:16->53:28]=...[53:36->53:128]> _children:None
+posCursor:[53:121] posNoWhite:[53:120] Found expr:[53:36->53:128]
+posCursor:[53:121] posNoWhite:[53:120] Found expr:[53:41->53:126]
+posCursor:[53:121] posNoWhite:[53:120] Found expr:[53:119->53:126]
+posCursor:[53:121] posNoWhite:[53:120] Found expr:[53:119->53:122]
+Pexp_ident btn:[53:119->53:122]
+Completable: Cpath Value[btn]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
-ContextPath Value[btn]->ma <<jsx>>
 ContextPath Value[btn]
 Path btn
-ContextPath Value[String, split](Nolabel, Nolabel)
-ContextPath Value[String, split]
-Path String.split
-Path Stdlib.Array.ma
-Path ArrayUtils.ma
-Path ma
 [{
-    "label": "Array.map",
-    "kind": 12,
+    "label": "btn",
+    "kind": 15,
     "tags": [],
-    "detail": "(array<'a>, 'a => 'b) => array<'b>",
-    "documentation": {"kind": "markdown", "value": "\n`map(array, fn)` returns a new array with all elements from `array`, each element transformed using the provided `fn`.\n\nSee [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet mappedArray = array->Array.map(greeting => greeting ++ \" to you\")\n\nmappedArray == [\"Hello to you\", \"Hi to you\", \"Good bye to you\"]\n```\n"}
-  }, {
-    "label": "Array.mapWithIndex",
-    "kind": 12,
-    "tags": [],
-    "detail": "(array<'a>, ('a, int) => 'b) => array<'b>",
-    "documentation": {"kind": "markdown", "value": "\n`mapWithIndex(array, fn)` returns a new array with all elements from `array`, each element transformed using the provided `fn`.\n\nSee [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet mappedArray =\n  array->Array.mapWithIndex((greeting, index) => greeting ++ \" at position \" ++ Int.toString(index))\n\nmappedArray == [\"Hello at position 0\", \"Hi at position 1\", \"Good bye at position 2\"]\n```\n"}
+    "detail": "",
+    "documentation": null
   }]
 
 Complete src/CompletionInferValues.res 75:78
