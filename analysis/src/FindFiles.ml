@@ -4,7 +4,7 @@ let bind f x = Option.bind x f
 
 (* Returns a list of paths, relative to the provided `base` *)
 let getSourceDirectories ~includeDev ~baseDir config =
-  let rec handleItem current (item : Yojson.Safe.t) =
+  let rec handleItem current item =
     match item with
     | `List contents -> List.map (handleItem current) contents |> List.concat
     | `String text -> [current /+ text]

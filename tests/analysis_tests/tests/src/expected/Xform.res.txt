@@ -11,7 +11,10 @@ Resolved opens 1 Stdlib
 Hit: Replace with switch
 
 TextDocumentEdit: file:///src/Xform.res
-{"end":{"character":1,"line":11},"start":{"character":0,"line":6}}
+{
+  "end": { "character": 1, "line": 11 },
+  "start": { "character": 0, "line": 6 }
+}
 newText:
 <--here
 switch kind {
@@ -25,7 +28,10 @@ Xform src/Xform.res 13:15
 Hit: Replace with switch
 
 TextDocumentEdit: file:///src/Xform.res
-{"end":{"character":79,"line":13},"start":{"character":0,"line":13}}
+{
+  "end": { "character": 79, "line": 13 },
+  "start": { "character": 0, "line": 13 }
+}
 newText:
 <--here
 switch kind {
@@ -37,14 +43,20 @@ Xform src/Xform.res 16:5
 Hit: Add type annotation
 
 TextDocumentEdit: file:///src/Xform.res
-{"end":{"character":8,"line":16},"start":{"character":8,"line":16}}
+{
+  "end": { "character": 8, "line": 16 },
+  "start": { "character": 8, "line": 16 }
+}
 newText:
         <--here
         : string
 Hit: Add Documentation template
 
 TextDocumentEdit: file:///src/Xform.res
-{"end":{"character":18,"line":16},"start":{"character":0,"line":16}}
+{
+  "end": { "character": 18, "line": 16 },
+  "start": { "character": 0, "line": 16 }
+}
 newText:
 <--here
 /**
@@ -56,7 +68,10 @@ Xform src/Xform.res 19:5
 Hit: Add Documentation template
 
 TextDocumentEdit: file:///src/Xform.res
-{"end":{"character":23,"line":19},"start":{"character":0,"line":19}}
+{
+  "end": { "character": 23, "line": 19 },
+  "start": { "character": 0, "line": 19 }
+}
 newText:
 <--here
 /**
@@ -68,7 +83,10 @@ Xform src/Xform.res 26:10
 Hit: Add type annotation
 
 TextDocumentEdit: file:///src/Xform.res
-{"end":{"character":11,"line":26},"start":{"character":10,"line":26}}
+{
+  "end": { "character": 11, "line": 26 },
+  "start": { "character": 10, "line": 26 }
+}
 newText:
           <--here
           (x: option<T.r>)
@@ -77,7 +95,10 @@ Xform src/Xform.res 30:9
 Hit: Add braces to function
 
 TextDocumentEdit: file:///src/Xform.res
-{"end":{"character":3,"line":32},"start":{"character":0,"line":26}}
+{
+  "end": { "character": 3, "line": 32 },
+  "start": { "character": 0, "line": 26 }
+}
 newText:
 <--here
 let foo = x => {
@@ -93,7 +114,10 @@ Xform src/Xform.res 34:21
 Hit: Add type annotation
 
 TextDocumentEdit: file:///src/Xform.res
-{"end":{"character":24,"line":34},"start":{"character":24,"line":34}}
+{
+  "end": { "character": 24, "line": 34 },
+  "start": { "character": 24, "line": 34 }
+}
 newText:
                         <--here
                         : int
@@ -102,7 +126,10 @@ Xform src/Xform.res 38:5
 Hit: Add Documentation template
 
 TextDocumentEdit: file:///src/Xform.res
-{"end":{"character":40,"line":38},"start":{"character":0,"line":37}}
+{
+  "end": { "character": 40, "line": 38 },
+  "start": { "character": 0, "line": 37 }
+}
 newText:
 <--here
 /**
@@ -115,7 +142,10 @@ Xform src/Xform.res 41:9
 Hit: Add type annotation
 
 TextDocumentEdit: file:///src/Xform.res
-{"end":{"character":11,"line":41},"start":{"character":11,"line":41}}
+{
+  "end": { "character": 11, "line": 41 },
+  "start": { "character": 11, "line": 41 }
+}
 newText:
            <--here
            : int
@@ -132,7 +162,10 @@ Resolved opens 1 Stdlib
 Hit: Add braces to function
 
 TextDocumentEdit: file:///src/Xform.res
-{"end":{"character":25,"line":48},"start":{"character":0,"line":48}}
+{
+  "end": { "character": 25, "line": 48 },
+  "start": { "character": 0, "line": 48 }
+}
 newText:
 <--here
 let noBraces = () => {
@@ -143,7 +176,10 @@ Xform src/Xform.res 52:34
 Hit: Add braces to function
 
 TextDocumentEdit: file:///src/Xform.res
-{"end":{"character":1,"line":54},"start":{"character":0,"line":51}}
+{
+  "end": { "character": 1, "line": 54 },
+  "start": { "character": 0, "line": 51 }
+}
 newText:
 <--here
 let nested = () => {
@@ -157,7 +193,10 @@ Xform src/Xform.res 62:6
 Hit: Add braces to function
 
 TextDocumentEdit: file:///src/Xform.res
-{"end":{"character":7,"line":62},"start":{"character":4,"line":58}}
+{
+  "end": { "character": 7, "line": 62 },
+  "start": { "character": 4, "line": 58 }
+}
 newText:
     <--here
     let foo = (_x, y, _z) => {
@@ -173,7 +212,10 @@ Hit: Extract local module "ExtractableModule" to file "ExtractableModule.res"
 CreateFile: file:///src/ExtractableModule.res
 
 TextDocumentEdit: file:///src/ExtractableModule.res
-{"end":{"character":1,"line":74},"start":{"character":0,"line":68}}
+{
+  "end": { "character": 1, "line": 74 },
+  "start": { "character": 0, "line": 68 }
+}
 newText:
 <--here
 /** Doc comment. */
@@ -184,7 +226,10 @@ let doStuff = a => a + 1
 
 
 TextDocumentEdit: file:///src/Xform.res
-{"end":{"character":1,"line":74},"start":{"character":0,"line":68}}
+{
+  "end": { "character": 1, "line": 74 },
+  "start": { "character": 0, "line": 68 }
+}
 newText:
 <--here
 
@@ -201,7 +246,10 @@ Resolved opens 1 Stdlib
 Hit: Expand catch-all
 
 TextDocumentEdit: file:///src/Xform.res
-{"end":{"character":3,"line":80},"start":{"character":2,"line":80}}
+{
+  "end": { "character": 3, "line": 80 },
+  "start": { "character": 2, "line": 80 }
+}
 newText:
   <--here
   Second | Third | Fourth(_)
@@ -218,7 +266,10 @@ Resolved opens 1 Stdlib
 Hit: Expand catch-all
 
 TextDocumentEdit: file:///src/Xform.res
-{"end":{"character":3,"line":86},"start":{"character":2,"line":86}}
+{
+  "end": { "character": 3, "line": 86 },
+  "start": { "character": 2, "line": 86 }
+}
 newText:
   <--here
   Third | Fourth(_)
@@ -235,7 +286,10 @@ Resolved opens 1 Stdlib
 Hit: Expand catch-all
 
 TextDocumentEdit: file:///src/Xform.res
-{"end":{"character":3,"line":93},"start":{"character":2,"line":93}}
+{
+  "end": { "character": 3, "line": 93 },
+  "start": { "character": 2, "line": 93 }
+}
 newText:
   <--here
   First | Third | Fourth(_)
@@ -252,7 +306,10 @@ Resolved opens 1 Stdlib
 Hit: Expand catch-all
 
 TextDocumentEdit: file:///src/Xform.res
-{"end":{"character":3,"line":101},"start":{"character":2,"line":101}}
+{
+  "end": { "character": 3, "line": 101 },
+  "start": { "character": 2, "line": 101 }
+}
 newText:
   <--here
   #second | #"illegal identifier" | #third(_)
@@ -269,7 +326,10 @@ Resolved opens 1 Stdlib
 Hit: Expand catch-all
 
 TextDocumentEdit: file:///src/Xform.res
-{"end":{"character":3,"line":107},"start":{"character":2,"line":107}}
+{
+  "end": { "character": 3, "line": 107 },
+  "start": { "character": 2, "line": 107 }
+}
 newText:
   <--here
   #"illegal identifier" | #third(_)
@@ -286,7 +346,10 @@ Resolved opens 1 Stdlib
 Hit: Expand catch-all
 
 TextDocumentEdit: file:///src/Xform.res
-{"end":{"character":3,"line":115},"start":{"character":2,"line":115}}
+{
+  "end": { "character": 3, "line": 115 },
+  "start": { "character": 2, "line": 115 }
+}
 newText:
   <--here
   Some(Second | Third | Fourth(_)) | None
@@ -303,7 +366,10 @@ Resolved opens 1 Stdlib
 Hit: Expand catch-all
 
 TextDocumentEdit: file:///src/Xform.res
-{"end":{"character":3,"line":121},"start":{"character":2,"line":121}}
+{
+  "end": { "character": 3, "line": 121 },
+  "start": { "character": 2, "line": 121 }
+}
 newText:
   <--here
   Some(Third | Fourth(_)) | None
@@ -320,7 +386,10 @@ Resolved opens 1 Stdlib
 Hit: Expand catch-all
 
 TextDocumentEdit: file:///src/Xform.res
-{"end":{"character":3,"line":127},"start":{"character":2,"line":127}}
+{
+  "end": { "character": 3, "line": 127 },
+  "start": { "character": 2, "line": 127 }
+}
 newText:
   <--here
   Some(Third | Fourth(_)) | None
@@ -337,7 +406,10 @@ Resolved opens 1 Stdlib
 Hit: Expand catch-all
 
 TextDocumentEdit: file:///src/Xform.res
-{"end":{"character":3,"line":136},"start":{"character":2,"line":136}}
+{
+  "end": { "character": 3, "line": 136 },
+  "start": { "character": 2, "line": 136 }
+}
 newText:
   <--here
   Some(#"illegal identifier" | #second | #third(_))
@@ -354,7 +426,10 @@ Resolved opens 1 Stdlib
 Hit: Expand catch-all
 
 TextDocumentEdit: file:///src/Xform.res
-{"end":{"character":3,"line":142},"start":{"character":2,"line":142}}
+{
+  "end": { "character": 3, "line": 142 },
+  "start": { "character": 2, "line": 142 }
+}
 newText:
   <--here
   Some(#"illegal identifier" | #third(_)) | None

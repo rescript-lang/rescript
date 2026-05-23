@@ -1,9 +1,7 @@
-let print_null =
-  `Null |> Yojson.Safe.pretty_to_string ~std:true |> print_endline
-let print_list l =
-  `List l |> Yojson.Safe.pretty_to_string ~std:true |> print_endline
 let print_string json =
   Yojson.Safe.pretty_to_string ~std:true json |> print_endline
+let print_null = `Null |> print_string
+let print_list l = `List l |> print_string
 
 let completion ~debug ~path ~pos ~currentFile =
   let full = Cmt.loadFullCmtFromPath ~path in
@@ -359,7 +357,7 @@ let test ~path =
                                      Printf.printf
                                        "%s\nnewText:\n%s<--here\n%s%s\n"
                                        (Lsp.Types.Range.yojson_of_t range
-                                       |> Yojson.Safe.to_string)
+                                       |> Yojson.Safe.pretty_to_string)
                                        indent indent newText)
                             | `CreateFile cf ->
                               Printf.printf "\nCreateFile: %s\n"

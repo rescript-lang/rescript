@@ -1,7 +1,7 @@
 open SharedTypes
 
 type inlayHintKind = Type
-let inlayKindToNumber = function
+let inlayKindToLspInlayHint = function
   | Type -> Lsp.Types.InlayHintKind.Type
 
 let locItemToTypeHint ~full:{file; package} locItem =
@@ -97,7 +97,7 @@ let inlay ~source ~kindFile ~pos ~maxLength ~full ~debug =
                in
                match locItemToTypeHint locItem ~full with
                | Some label -> (
-                 let kind = inlayKindToNumber hintKind in
+                 let kind = inlayKindToLspInlayHint hintKind in
                  let label = ": " ^ label in
                  let result =
                    Lsp.Types.InlayHint.create ~position ~kind ~paddingLeft:true

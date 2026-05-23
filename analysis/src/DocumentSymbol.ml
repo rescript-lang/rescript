@@ -1,17 +1,5 @@
 (* https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_documentSymbol *)
 
-type kind =
-  | Module
-  | Property
-  | Constructor
-  | Function
-  | Variable
-  | Constant
-  | String
-  | Number
-  | EnumMember
-  | TypeParameter
-
 let command ~path =
   let symbols = ref [] in
   let addSymbol name loc kind =
@@ -179,10 +167,6 @@ let command ~path =
           in
           newLast :: rest
         | _ -> rest
-        (* let newLast =
-          {last with children = last.children |> addSymbolToChildren ~symbol}
-        in
-        newLast :: rest *)
       else symbol :: children
   in
   let rec addSortedSymbolsToChildren ~sortedSymbols children =
@@ -196,4 +180,5 @@ let command ~path =
   let sortedSymbols = !symbols |> List.sort compareSymbol in
   let symbolsWithChildren = [] |> addSortedSymbolsToChildren ~sortedSymbols in
   `List (symbolsWithChildren |> List.map Lsp.Types.DocumentSymbol.yojson_of_t)
-  |> Yojson.Safe.Util.to_string |> print_endline
+  |> Yojson.Safe.pretty_to_string ~std:true
+  |> print_endline

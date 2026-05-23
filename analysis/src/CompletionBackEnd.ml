@@ -825,7 +825,7 @@ let mkItem ?data ?additionalTextEdits name ~kind ~detail ~deprecated ~docstring
       (`MarkupContent
          (Lsp.Types.MarkupContent.create ~kind:Lsp.Types.MarkupKind.Markdown
             ~value:docContent))
-    ~deprecated:(Option.is_some deprecated)
+    ?deprecated:(Some (Option.is_some deprecated))
     ?data ?additionalTextEdits ?sortText:None ?insertText:None
     ?insertTextFormat:None ?filterText:None ()
 
@@ -846,7 +846,7 @@ let completionToItem
   let item =
     mkItem name ?additionalTextEdits
       ?data:(kindToData (full.file.uri |> Uri.toPath) kind)
-      ~kind:(Completion.kindToInt kind)
+      ~kind:(Completion.kindToLspCompletionItem kind)
       ~deprecated
       ~detail:
         (match detail with

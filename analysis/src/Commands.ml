@@ -259,7 +259,7 @@ let prepareRename ~full ~pos ~debug =
         (match placeholderOpt with
         | None -> range
         | Some _placeholder ->
-          (* NOTE: lsp dont have PrepareRename.create with placeholder *)
+          (* NOTE: ocaml lsp library dont have Lsp.Types.PrepareRename.create *)
           range))
 
 let format ~source ~kindFile =

@@ -155,7 +155,10 @@ Resolved opens 1 Stdlib
 Hit: Exhaustive switch
 
 TextDocumentEdit: file:///src/ExhaustiveSwitch.res
-{"end":{"character":10,"line":33},"start":{"character":3,"line":33}}
+{
+  "end": { "character": 10, "line": 33 },
+  "start": { "character": 3, "line": 33 }
+}
 newText:
    <--here
    switch x->getV {
@@ -176,7 +179,10 @@ Resolved opens 1 Stdlib
 Hit: Exhaustive switch
 
 TextDocumentEdit: file:///src/ExhaustiveSwitch.res
-{"end":{"character":6,"line":36},"start":{"character":3,"line":36}}
+{
+  "end": { "character": 6, "line": 36 },
+  "start": { "character": 3, "line": 36 }
+}
 newText:
    <--here
    switch vvv {

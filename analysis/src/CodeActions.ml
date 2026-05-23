@@ -1,7 +1,6 @@
 (* This is the return that's expected when resolving code actions *)
 
-let make ~title ~kind ~(uri : string) ~newText ~range =
-  (* let uri = uri |> Uri.fromPath |> Uri.toString in *)
+let make ~title ~kind ~uri ~newText ~range =
   let textDocument =
     Lsp.Types.OptionalVersionedTextDocumentIdentifier.create
       ~uri:(Lsp.Uri.of_string uri) ()

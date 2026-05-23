@@ -4,7 +4,10 @@ can't find module DocTemplate
 Hit: Add Documentation template
 
 TextDocumentEdit: file:///not_compiled/DocTemplate.res
-{"end":{"character":9,"line":5},"start":{"character":0,"line":3}}
+{
+  "end": { "character": 9, "line": 5 },
+  "start": { "character": 0, "line": 3 }
+}
 newText:
 <--here
 /**
@@ -19,7 +22,10 @@ can't find module DocTemplate
 Hit: Add Documentation template
 
 TextDocumentEdit: file:///not_compiled/DocTemplate.res
-{"end":{"character":33,"line":6},"start":{"character":0,"line":6}}
+{
+  "end": { "character": 33, "line": 6 },
+  "start": { "character": 0, "line": 6 }
+}
 newText:
 <--here
 /**
@@ -32,7 +38,10 @@ can't find module DocTemplate
 Hit: Add Documentation template
 
 TextDocumentEdit: file:///not_compiled/DocTemplate.res
-{"end":{"character":9,"line":8},"start":{"character":0,"line":8}}
+{
+  "end": { "character": 9, "line": 8 },
+  "start": { "character": 0, "line": 8 }
+}
 newText:
 <--here
 /**
@@ -45,7 +54,10 @@ can't find module DocTemplate
 Hit: Add Documentation template
 
 TextDocumentEdit: file:///not_compiled/DocTemplate.res
-{"end":{"character":20,"line":10},"start":{"character":0,"line":10}}
+{
+  "end": { "character": 20, "line": 10 },
+  "start": { "character": 0, "line": 10 }
+}
 newText:
 <--here
 /**
@@ -58,7 +70,10 @@ can't find module DocTemplate
 Hit: Add Documentation template
 
 TextDocumentEdit: file:///not_compiled/DocTemplate.res
-{"end":{"character":1,"line":16},"start":{"character":0,"line":12}}
+{
+  "end": { "character": 1, "line": 16 },
+  "start": { "character": 0, "line": 12 }
+}
 newText:
 <--here
 /**
@@ -74,7 +89,10 @@ Hit: Extract local module "T" to file "T.res"
 CreateFile: file:///not_compiled/T.res
 
 TextDocumentEdit: file:///not_compiled/T.res
-{"end":{"character":1,"line":16},"start":{"character":0,"line":12}}
+{
+  "end": { "character": 1, "line": 16 },
+  "start": { "character": 0, "line": 12 }
+}
 newText:
 <--here
 //   ^xfm
@@ -83,7 +101,10 @@ let b = 1
 
 
 TextDocumentEdit: file:///not_compiled/DocTemplate.res
-{"end":{"character":1,"line":16},"start":{"character":0,"line":12}}
+{
+  "end": { "character": 1, "line": 16 },
+  "start": { "character": 0, "line": 12 }
+}
 newText:
 <--here
 
@@ -93,7 +114,10 @@ can't find module DocTemplate
 Hit: Add Documentation template
 
 TextDocumentEdit: file:///not_compiled/DocTemplate.res
-{"end":{"character":11,"line":14},"start":{"character":2,"line":14}}
+{
+  "end": { "character": 11, "line": 14 },
+  "start": { "character": 2, "line": 14 }
+}
 newText:
   <--here
   /**
@@ -105,7 +129,10 @@ Hit: Extract local module "T" to file "T.res"
 CreateFile: file:///not_compiled/T.res
 
 TextDocumentEdit: file:///not_compiled/T.res
-{"end":{"character":1,"line":16},"start":{"character":0,"line":12}}
+{
+  "end": { "character": 1, "line": 16 },
+  "start": { "character": 0, "line": 12 }
+}
 newText:
 <--here
 //   ^xfm
@@ -114,7 +141,10 @@ let b = 1
 
 
 TextDocumentEdit: file:///not_compiled/DocTemplate.res
-{"end":{"character":1,"line":16},"start":{"character":0,"line":12}}
+{
+  "end": { "character": 1, "line": 16 },
+  "start": { "character": 0, "line": 12 }
+}
 newText:
 <--here
 
@@ -124,7 +154,10 @@ can't find module DocTemplate
 Hit: Add Documentation template
 
 TextDocumentEdit: file:///not_compiled/DocTemplate.res
-{"end":{"character":46,"line":18},"start":{"character":0,"line":17}}
+{
+  "end": { "character": 46, "line": 18 },
+  "start": { "character": 0, "line": 17 }
+}
 newText:
 <--here
 /**

@@ -1,3 +1,218 @@
 null
 DocumentSymbol src/DocumentSymbol.res
-Fatal error: exception Yojson__Safe.Util.Type_error("Expected string, got array", _)
+[
+  {
+    "children": [],
+    "kind": 16,
+    "name": "zzz",
+    "range": {
+      "end": { "character": 12, "line": 31 },
+      "start": { "character": 0, "line": 31 }
+    },
+    "selectionRange": {
+      "end": { "character": 12, "line": 31 },
+      "start": { "character": 0, "line": 31 }
+    }
+  },
+  {
+    "children": [
+      {
+        "children": [
+          {
+            "children": [],
+            "kind": 12,
+            "name": "make",
+            "range": {
+              "end": { "character": 97, "line": 27 },
+              "start": { "character": 4, "line": 26 }
+            },
+            "selectionRange": {
+              "end": { "character": 97, "line": 27 },
+              "start": { "character": 4, "line": 26 }
+            }
+          }
+        ],
+        "kind": 2,
+        "name": "Comp",
+        "range": {
+          "end": { "character": 3, "line": 28 },
+          "start": { "character": 9, "line": 25 }
+        },
+        "selectionRange": {
+          "end": { "character": 3, "line": 28 },
+          "start": { "character": 9, "line": 25 }
+        }
+      }
+    ],
+    "kind": 2,
+    "name": "O",
+    "range": {
+      "end": { "character": 1, "line": 29 },
+      "start": { "character": 7, "line": 24 }
+    },
+    "selectionRange": {
+      "end": { "character": 1, "line": 29 },
+      "start": { "character": 7, "line": 24 }
+    }
+  },
+  {
+    "children": [],
+    "kind": 16,
+    "name": "fa",
+    "range": {
+      "end": { "character": 22, "line": 22 },
+      "start": { "character": 0, "line": 22 }
+    },
+    "selectionRange": {
+      "end": { "character": 22, "line": 22 },
+      "start": { "character": 0, "line": 22 }
+    }
+  },
+  {
+    "children": [
+      {
+        "children": [],
+        "kind": 12,
+        "name": "abd",
+        "range": {
+          "end": { "character": 32, "line": 19 },
+          "start": { "character": 2, "line": 19 }
+        },
+        "selectionRange": {
+          "end": { "character": 32, "line": 19 },
+          "start": { "character": 2, "line": 19 }
+        }
+      },
+      {
+        "children": [],
+        "kind": 12,
+        "name": "abc",
+        "range": {
+          "end": { "character": 32, "line": 18 },
+          "start": { "character": 2, "line": 18 }
+        },
+        "selectionRange": {
+          "end": { "character": 32, "line": 18 },
+          "start": { "character": 2, "line": 18 }
+        }
+      },
+      {
+        "children": [],
+        "kind": 26,
+        "name": "t",
+        "range": {
+          "end": { "character": 14, "line": 17 },
+          "start": { "character": 2, "line": 17 }
+        },
+        "selectionRange": {
+          "end": { "character": 14, "line": 17 },
+          "start": { "character": 2, "line": 17 }
+        }
+      }
+    ],
+    "kind": 2,
+    "name": "ForAuto",
+    "range": {
+      "end": { "character": 1, "line": 20 },
+      "start": { "character": 7, "line": 16 }
+    },
+    "selectionRange": {
+      "end": { "character": 1, "line": 20 },
+      "start": { "character": 7, "line": 16 }
+    }
+  },
+  {
+    "children": [],
+    "kind": 13,
+    "name": "op",
+    "range": {
+      "end": { "character": 16, "line": 14 },
+      "start": { "character": 0, "line": 14 }
+    },
+    "selectionRange": {
+      "end": { "character": 16, "line": 14 },
+      "start": { "character": 0, "line": 14 }
+    }
+  },
+  {
+    "children": [
+      {
+        "children": [],
+        "kind": 12,
+        "name": "next",
+        "range": {
+          "end": { "character": 48, "line": 11 },
+          "start": { "character": 2, "line": 11 }
+        },
+        "selectionRange": {
+          "end": { "character": 48, "line": 11 },
+          "start": { "character": 2, "line": 11 }
+        }
+      },
+      {
+        "children": [],
+        "kind": 12,
+        "name": "foo",
+        "range": {
+          "end": { "character": 54, "line": 10 },
+          "start": { "character": 2, "line": 10 }
+        },
+        "selectionRange": {
+          "end": { "character": 54, "line": 10 },
+          "start": { "character": 2, "line": 10 }
+        }
+      }
+    ],
+    "kind": 2,
+    "name": "Lib",
+    "range": {
+      "end": { "character": 1, "line": 12 },
+      "start": { "character": 7, "line": 9 }
+    },
+    "selectionRange": {
+      "end": { "character": 1, "line": 12 },
+      "start": { "character": 7, "line": 9 }
+    }
+  },
+  {
+    "children": [
+      {
+        "children": [],
+        "kind": 12,
+        "name": "customDouble",
+        "range": {
+          "end": { "character": 35, "line": 6 },
+          "start": { "character": 2, "line": 6 }
+        },
+        "selectionRange": {
+          "end": { "character": 35, "line": 6 },
+          "start": { "character": 2, "line": 6 }
+        }
+      }
+    ],
+    "kind": 2,
+    "name": "Dep",
+    "range": {
+      "end": { "character": 1, "line": 7 },
+      "start": { "character": 7, "line": 2 }
+    },
+    "selectionRange": {
+      "end": { "character": 1, "line": 7 },
+      "start": { "character": 7, "line": 2 }
+    }
+  },
+  {
+    "children": [],
+    "kind": 2,
+    "name": "MyList",
+    "range": {
+      "end": { "character": 25, "line": 0 },
+      "start": { "character": 7, "line": 0 }
+    },
+    "selectionRange": {
+      "end": { "character": 25, "line": 0 },
+      "start": { "character": 7, "line": 0 }
+    }
+  }
+]
+

@@ -1,6 +1,7 @@
 let rescriptJson = "rescript.json"
 
-let get key (t : Yojson.Safe.t) : Yojson.Safe.t option =
+(** If `t` is an object (`Assoc), get the value associated with the given string key *)
+let get key t =
   match t with
   | `Assoc items -> List.assoc_opt key items
   | _ -> None
@@ -37,7 +38,7 @@ let setProjectRootFromCwd () =
 let setReScriptProjectRoot = lazy (setProjectRootFromCwd ())
 
 module Config = struct
-  let readSuppress (conf : Yojson.Safe.t) =
+  let readSuppress conf =
     match conf |> get "suppress" with
     | Some (`List elements) ->
       let names =
@@ -50,7 +51,7 @@ module Config = struct
       runConfig.suppress <- names @ runConfig.suppress
     | _ -> ()
 
-  let readUnsuppress (conf : Yojson.Safe.t) =
+  let readUnsuppress conf =
     match conf |> get "unsuppress" with
     | Some (`List elements) ->
       let names =
@@ -80,8 +81,7 @@ module Config = struct
 
   let readTransitive conf =
     match conf |> get "transitive" with
-    | Some (`Bool true) -> RunConfig.transitive true
-    | Some (`Bool false) -> RunConfig.transitive false
+    | Some (`Bool bool) -> RunConfig.transitive bool
     | _ -> ()
 
   (* Read the config from rescript.json and apply it to runConfig and suppress and unsuppress *)
@@ -158,13 +158,9 @@ let readCmtScan () =
       json |> get_fn "build_root" Yojson.Safe.Util.to_string_option
     in
     let scan_dirs =
-      match
-        json
-        |> get_fn "scan_dirs" (function
-             | `List f -> Some f
-             | _ -> None)
-      with
-      | [arr] -> arr |> List.filter_map Yojson.Safe.Util.to_string_option
+      match json |> get "scan_dirs" with
+      | Some (`List arr) ->
+        arr |> List.filter_map Yojson.Safe.Util.to_string_option
       | _ -> []
     in
     let also_scan_build_root =

@@ -3,7 +3,10 @@ Xform not_compiled/DocTemplate.resi 3:3
 Hit: Add Documentation template
 
 TextDocumentEdit: file:///not_compiled/DocTemplate.resi
-{"end":{"character":9,"line":5},"start":{"character":0,"line":3}}
+{
+  "end": { "character": 9, "line": 5 },
+  "start": { "character": 0, "line": 3 }
+}
 newText:
 <--here
 /**
@@ -17,7 +20,10 @@ Xform not_compiled/DocTemplate.resi 6:15
 Hit: Add Documentation template
 
 TextDocumentEdit: file:///not_compiled/DocTemplate.resi
-{"end":{"character":33,"line":6},"start":{"character":0,"line":6}}
+{
+  "end": { "character": 33, "line": 6 },
+  "start": { "character": 0, "line": 6 }
+}
 newText:
 <--here
 /**
@@ -29,7 +35,10 @@ Xform not_compiled/DocTemplate.resi 8:4
 Hit: Add Documentation template
 
 TextDocumentEdit: file:///not_compiled/DocTemplate.resi
-{"end":{"character":10,"line":8},"start":{"character":0,"line":8}}
+{
+  "end": { "character": 10, "line": 8 },
+  "start": { "character": 0, "line": 8 }
+}
 newText:
 <--here
 /**
@@ -41,7 +50,10 @@ Xform not_compiled/DocTemplate.resi 10:4
 Hit: Add Documentation template
 
 TextDocumentEdit: file:///not_compiled/DocTemplate.resi
-{"end":{"character":19,"line":10},"start":{"character":0,"line":10}}
+{
+  "end": { "character": 19, "line": 10 },
+  "start": { "character": 0, "line": 10 }
+}
 newText:
 <--here
 /**
@@ -53,7 +65,10 @@ Xform not_compiled/DocTemplate.resi 12:7
 Hit: Add Documentation template
 
 TextDocumentEdit: file:///not_compiled/DocTemplate.resi
-{"end":{"character":1,"line":16},"start":{"character":0,"line":12}}
+{
+  "end": { "character": 1, "line": 16 },
+  "start": { "character": 0, "line": 12 }
+}
 newText:
 <--here
 /**
@@ -69,7 +84,10 @@ Xform not_compiled/DocTemplate.resi 14:6
 Hit: Add Documentation template
 
 TextDocumentEdit: file:///not_compiled/DocTemplate.resi
-{"end":{"character":12,"line":14},"start":{"character":2,"line":14}}
+{
+  "end": { "character": 12, "line": 14 },
+  "start": { "character": 2, "line": 14 }
+}
 newText:
   <--here
   /**
@@ -81,7 +99,10 @@ Xform not_compiled/DocTemplate.resi 18:2
 Hit: Add Documentation template
 
 TextDocumentEdit: file:///not_compiled/DocTemplate.resi
-{"end":{"character":46,"line":18},"start":{"character":0,"line":17}}
+{
+  "end": { "character": 46, "line": 18 },
+  "start": { "character": 0, "line": 17 }
+}
 newText:
 <--here
 /**

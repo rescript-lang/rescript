@@ -897,8 +897,7 @@ let parseInterface ~source =
   in
   (structure, printSignatureItem)
 
-let extractCodeActions ~(path : string) ~startPos ~endPos ~source ~kindFile
-    ~debug =
+let extractCodeActions ~path ~startPos ~endPos ~source ~kindFile ~debug =
   let pos = startPos in
   let codeActions = ref [] in
   match kindFile with
