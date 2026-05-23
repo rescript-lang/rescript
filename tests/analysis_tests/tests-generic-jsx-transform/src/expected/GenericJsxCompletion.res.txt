@@ -6,33 +6,9 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Path GenericJsx.Elements.props
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "testing",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "string",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "test2",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "element",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "children",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "testing", "tags": [] },
+  { "detail": "string", "kind": 4, "label": "test2", "tags": [] },
+  { "detail": "element", "kind": 4, "label": "children", "tags": [] }
 ]
 
 Complete src/GenericJsxCompletion.res 3:17
@@ -44,24 +20,8 @@ Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [div] testing
 Path GenericJsx.Elements.props
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "true",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "false",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
 ]
 
 Complete src/GenericJsxCompletion.res 14:21
@@ -83,8 +43,6 @@ Path Stdlib.String.st
 Path st
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -97,8 +55,6 @@ Path st
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(string, string) => bool",
     "documentation": {
       "kind": "markdown",
@@ -109,8 +65,6 @@ Path st
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(string, string, int) => bool",
     "documentation": {
       "kind": "markdown",
@@ -144,8 +98,6 @@ Path Stdlib.String.st
 Path st
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -158,8 +110,6 @@ Path st
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(string, string) => bool",
     "documentation": {
       "kind": "markdown",
@@ -170,8 +120,6 @@ Path st
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(string, string, int) => bool",
     "documentation": {
       "kind": "markdown",
