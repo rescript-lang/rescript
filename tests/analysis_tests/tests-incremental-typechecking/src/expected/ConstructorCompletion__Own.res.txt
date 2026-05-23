@@ -8,8 +8,6 @@ Resolved opens 1 Stdlib
 ContextPath CTypeAtPos()
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "{miss: bool}",
     "documentation": {
       "kind": "markdown",
