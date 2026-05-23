@@ -2,8 +2,6 @@ type t = Lsp.Uri.t
 
 let stripPath = ref false (* for use in tests *)
 
-let pathToUri path = Lsp.Uri.of_path path
-
 let fromPath path = Lsp.Uri.of_path path
 let isInterface uri = uri |> Lsp.Uri.to_string |> Filename.check_suffix "i"
 let toPath uri =
