@@ -1,3 +1,4 @@
+null
 Complete src/CompletionPipeProperty.res 21:17
 posCursor:[21:17] posNoWhite:[21:16] Found expr:[21:3->21:17]
 Pexp_field [21:3->21:16] _:[23:0->21:17]
@@ -27,41 +28,70 @@ Path anchor
 CPPipe pathFromEnv:ObservablePoint found:true
 Path ObservablePoint.
 Path 
-[{
+[
+  {
+    "data": null,
+    "deprecated": false,
+    "detail": "int",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nx: int\n```\n\n```rescript\ntype op = {mutable x: int, mutable y: int}\n```"
+    },
+    "kind": 5,
     "label": "x",
-    "kind": 5,
-    "tags": [],
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "int",
-    "documentation": {"kind": "markdown", "value": "```rescript\nx: int\n```\n\n```rescript\ntype op = {mutable x: int, mutable y: int}\n```"}
-  }, {
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ny: int\n```\n\n```rescript\ntype op = {mutable x: int, mutable y: int}\n```"
+    },
+    "kind": 5,
     "label": "y",
-    "kind": 5,
-    "tags": [],
-    "detail": "int",
-    "documentation": {"kind": "markdown", "value": "```rescript\ny: int\n```\n\n```rescript\ntype op = {mutable x: int, mutable y: int}\n```"}
-  }, {
-    "label": "->ObservablePoint.setBoth",
-    "kind": 12,
-    "tags": [],
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 17, "line": 21 },
+          "start": { "character": 16, "line": 21 }
+        }
+      }
+    ],
+    "data": null,
+    "deprecated": false,
     "detail": "(op, float) => unit",
-    "documentation": null,
-    "sortText": "setBoth",
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->ObservablePoint.setBoth",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 21, "character": 16}, "end": {"line": 21, "character": 17}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->ObservablePoint.set",
     "kind": 12,
-    "tags": [],
+    "label": "->ObservablePoint.setBoth",
+    "sortText": "setBoth",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 17, "line": 21 },
+          "start": { "character": 16, "line": 21 }
+        }
+      }
+    ],
+    "data": null,
+    "deprecated": false,
     "detail": "(op, float, float) => unit",
-    "documentation": null,
-    "sortText": "set",
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->ObservablePoint.set",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 21, "character": 16}, "end": {"line": 21, "character": 17}},
-      "newText": ""
-      }]
-  }]
+    "kind": 12,
+    "label": "->ObservablePoint.set",
+    "sortText": "set",
+    "tags": []
+  }
+]
 

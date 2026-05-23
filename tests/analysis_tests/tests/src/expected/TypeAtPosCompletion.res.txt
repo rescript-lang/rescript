@@ -1,22 +1,36 @@
+null
 Complete src/TypeAtPosCompletion.res 7:17
 posCursor:[7:17] posNoWhite:[7:15] Found expr:[6:16->9:1]
 Completable: Cexpression CTypeAtPos()->recordBody
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath CTypeAtPos()
-[{
-    "label": "age",
-    "kind": 5,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "int",
-    "documentation": {"kind": "markdown", "value": "```rescript\nage?: int\n```\n\n```rescript\ntype optRecord = {name: string, age: option<int>, online: option<bool>}\n```"}
-  }, {
-    "label": "online",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nage?: int\n```\n\n```rescript\ntype optRecord = {name: string, age: option<int>, online: option<bool>}\n```"
+    },
     "kind": 5,
-    "tags": [],
+    "label": "age",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "bool",
-    "documentation": {"kind": "markdown", "value": "```rescript\nonline?: bool\n```\n\n```rescript\ntype optRecord = {name: string, age: option<int>, online: option<bool>}\n```"}
-  }]
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nonline?: bool\n```\n\n```rescript\ntype optRecord = {name: string, age: option<int>, online: option<bool>}\n```"
+    },
+    "kind": 5,
+    "label": "online",
+    "tags": []
+  }
+]
 
 Complete src/TypeAtPosCompletion.res 16:18
 posCursor:[16:18] posNoWhite:[16:16] Found expr:[13:8->19:1]
@@ -26,19 +40,32 @@ Completable: Cexpression CTypeAtPos()->variantPayload::One($1), recordBody
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath CTypeAtPos()
-[{
-    "label": "age",
-    "kind": 5,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "int",
-    "documentation": {"kind": "markdown", "value": "```rescript\nage?: int\n```\n\n```rescript\ntype optRecord = {name: string, age: option<int>, online: option<bool>}\n```"}
-  }, {
-    "label": "online",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nage?: int\n```\n\n```rescript\ntype optRecord = {name: string, age: option<int>, online: option<bool>}\n```"
+    },
     "kind": 5,
-    "tags": [],
+    "label": "age",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "bool",
-    "documentation": {"kind": "markdown", "value": "```rescript\nonline?: bool\n```\n\n```rescript\ntype optRecord = {name: string, age: option<int>, online: option<bool>}\n```"}
-  }]
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nonline?: bool\n```\n\n```rescript\ntype optRecord = {name: string, age: option<int>, online: option<bool>}\n```"
+    },
+    "kind": 5,
+    "label": "online",
+    "tags": []
+  }
+]
 
 Complete src/TypeAtPosCompletion.res 22:12
 posCursor:[22:12] posNoWhite:[22:11] Found expr:[21:10->24:1]
@@ -46,14 +73,21 @@ Completable: Cexpression CTypeAtPos()->array
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath CTypeAtPos()
-[{
-    "label": "{}",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "optRecord",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype optRecord = {name: string, age: option<int>, online: option<bool>}\n```"},
-    "sortText": "A",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype optRecord = {name: string, age: option<int>, online: option<bool>}\n```"
+    },
     "insertText": "{$0}",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "{}",
+    "sortText": "A",
+    "tags": []
+  }
+]
 

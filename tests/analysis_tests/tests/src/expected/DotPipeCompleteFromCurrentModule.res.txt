@@ -1,3 +1,4 @@
+null
 Complete src/DotPipeCompleteFromCurrentModule.res 10:13
 posCursor:[10:13] posNoWhite:[10:12] Found expr:[9:12->13:5]
 posCursor:[10:13] posNoWhite:[10:12] Found expr:[10:11->12:10]
@@ -16,17 +17,26 @@ Path x
 CPPipe pathFromEnv:X found:true
 Path X.
 Path 
-[{
-    "label": "->z",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 13, "line": 10 },
+          "start": { "character": 12, "line": 10 }
+        }
+      }
+    ],
+    "data": null,
+    "deprecated": false,
     "detail": "X.t => string",
-    "documentation": null,
-    "sortText": "z",
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->z",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 10, "character": 12}, "end": {"line": 10, "character": 13}},
-      "newText": ""
-      }]
-  }]
+    "kind": 12,
+    "label": "->z",
+    "sortText": "z",
+    "tags": []
+  }
+]
 

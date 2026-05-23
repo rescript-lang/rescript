@@ -1,3 +1,4 @@
+null
 Complete src/CompletionFunctionArguments.res 10:24
 posCursor:[10:24] posNoWhite:[10:23] Found expr:[10:11->10:25]
 Pexp_apply ...[10:11->10:17] (~isOn10:19->10:23=...__ghost__[0:-1->0:-1])
@@ -7,19 +8,26 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[someFn](~isOn)
 ContextPath Value[someFn]
 Path someFn
-[{
+[
+  {
+    "data": null,
+    "deprecated": false,
+    "detail": "bool",
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 4,
     "label": "true",
-    "kind": 4,
-    "tags": [],
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "bool",
-    "documentation": null
-  }, {
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 4,
     "label": "false",
-    "kind": 4,
-    "tags": [],
-    "detail": "bool",
-    "documentation": null
-  }]
+    "tags": []
+  }
+]
 
 Complete src/CompletionFunctionArguments.res 13:25
 posCursor:[13:25] posNoWhite:[13:24] Found expr:[13:11->13:26]
@@ -30,26 +38,39 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[someFn](~isOn)
 ContextPath Value[someFn]
 Path someFn
-[{
-    "label": "true",
+[
+  {
+    "data": null,
+    "deprecated": false,
+    "detail": "bool",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 4,
-    "tags": [],
+    "label": "true",
+    "sortText": "A true",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "bool",
-    "documentation": null,
-    "sortText": "A true"
-  }, {
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
     "label": "tLocalVar",
-    "kind": 12,
-    "tags": [],
-    "detail": "bool",
-    "documentation": null
-  }, {
-    "label": "typeof",
-    "kind": 12,
-    "tags": [],
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "'a => Type.t",
-    "documentation": {"kind": "markdown", "value": "\n`typeof(value)` exposes JavaScript's `typeof` operator and returns a `Type.t` enum.\nIt helps you inspect values that come from JavaScript APIs.\n\n## Examples\n\n```rescript\ntypeof(1) == #number\ntypeof(\"a\") == #string\n```\n"}
-  }]
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`typeof(value)` exposes JavaScript's `typeof` operator and returns a `Type.t` enum.\nIt helps you inspect values that come from JavaScript APIs.\n\n## Examples\n\n```rescript\ntypeof(1) == #number\ntypeof(\"a\") == #string\n```\n"
+    },
+    "kind": 12,
+    "label": "typeof",
+    "tags": []
+  }
+]
 
 Complete src/CompletionFunctionArguments.res 16:25
 posCursor:[16:25] posNoWhite:[16:24] Found expr:[16:11->16:26]
@@ -60,19 +81,26 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[someFn](~isOff)
 ContextPath Value[someFn]
 Path someFn
-[{
+[
+  {
+    "data": null,
+    "deprecated": false,
+    "detail": "bool",
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 4,
     "label": "true",
-    "kind": 4,
-    "tags": [],
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "bool",
-    "documentation": null
-  }, {
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 4,
     "label": "false",
-    "kind": 4,
-    "tags": [],
-    "detail": "bool",
-    "documentation": null
-  }]
+    "tags": []
+  }
+]
 
 Complete src/CompletionFunctionArguments.res 21:27
 posCursor:[21:27] posNoWhite:[21:26] Found expr:[19:8->25:1]
@@ -87,19 +115,26 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[someFn](~isOn)
 ContextPath Value[someFn]
 Path someFn
-[{
+[
+  {
+    "data": null,
+    "deprecated": false,
+    "detail": "bool",
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 4,
     "label": "true",
-    "kind": 4,
-    "tags": [],
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "bool",
-    "documentation": null
-  }, {
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 4,
     "label": "false",
-    "kind": 4,
-    "tags": [],
-    "detail": "bool",
-    "documentation": null
-  }]
+    "tags": []
+  }
+]
 
 Complete src/CompletionFunctionArguments.res 34:24
 posCursor:[34:24] posNoWhite:[34:23] Found expr:[34:11->34:25]
@@ -110,13 +145,17 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[someOtherFn]($0)
 ContextPath Value[someOtherFn]
 Path someOtherFn
-[{
-    "label": "false",
-    "kind": 4,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "bool",
-    "documentation": null
-  }]
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 4,
+    "label": "false",
+    "tags": []
+  }
+]
 
 Complete src/CompletionFunctionArguments.res 51:39
 posCursor:[51:39] posNoWhite:[51:38] Found expr:[51:11->51:40]
@@ -127,31 +166,50 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[someFnTakingVariant](~config)
 ContextPath Value[someFnTakingVariant]
 Path someFnTakingVariant
-[{
-    "label": "One",
-    "kind": 4,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "One",
-    "documentation": {"kind": "markdown", "value": "```rescript\nOne\n```\n\n```rescript\ntype someVariant = One | Two | Three(int, string)\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nOne\n```\n\n```rescript\ntype someVariant = One | Two | Three(int, string)\n```"
+    },
     "insertText": "One",
-    "insertTextFormat": 2
-  }, {
-    "label": "Two",
+    "insertTextFormat": 2,
     "kind": 4,
-    "tags": [],
+    "label": "One",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "Two",
-    "documentation": {"kind": "markdown", "value": "```rescript\nTwo\n```\n\n```rescript\ntype someVariant = One | Two | Three(int, string)\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nTwo\n```\n\n```rescript\ntype someVariant = One | Two | Three(int, string)\n```"
+    },
     "insertText": "Two",
-    "insertTextFormat": 2
-  }, {
-    "label": "Three(_, _)",
+    "insertTextFormat": 2,
     "kind": 4,
-    "tags": [],
+    "label": "Two",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "Three(int, string)",
-    "documentation": {"kind": "markdown", "value": "```rescript\nThree(int, string)\n```\n\n```rescript\ntype someVariant = One | Two | Three(int, string)\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nThree(int, string)\n```\n\n```rescript\ntype someVariant = One | Two | Three(int, string)\n```"
+    },
     "insertText": "Three(${1:_}, ${2:_})",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Three(_, _)",
+    "tags": []
+  }
+]
 
 Complete src/CompletionFunctionArguments.res 54:40
 posCursor:[54:40] posNoWhite:[54:39] Found expr:[54:11->54:41]
@@ -162,60 +220,83 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[someFnTakingVariant](~config)
 ContextPath Value[someFnTakingVariant]
 Path someFnTakingVariant
-[{
-    "label": "One",
-    "kind": 4,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "One",
-    "documentation": {"kind": "markdown", "value": "```rescript\nOne\n```\n\n```rescript\ntype someVariant = One | Two | Three(int, string)\n```"},
-    "sortText": "A One",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nOne\n```\n\n```rescript\ntype someVariant = One | Two | Three(int, string)\n```"
+    },
     "insertText": "One",
-    "insertTextFormat": 2
-  }, {
-    "label": "OIncludeMeInCompletions",
-    "kind": 9,
-    "tags": [],
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "One",
+    "sortText": "A One",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "module OIncludeMeInCompletions",
-    "documentation": null
-  }, {
-    "label": "Option",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
-    "tags": [],
+    "label": "OIncludeMeInCompletions",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "module Option",
-    "documentation": null
-  }, {
-    "label": "Ordering",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
-    "tags": [],
+    "label": "Option",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "module Ordering",
-    "documentation": null
-  }, {
-    "label": "Object",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
-    "tags": [],
+    "label": "Ordering",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "module Object",
-    "documentation": null
-  }, {
-    "label": "Obj",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
-    "tags": [],
-    "detail": "module Obj",
-    "documentation": null,
+    "label": "Object",
+    "tags": []
+  },
+  {
     "data": {
       "modulePath": "Obj",
       "filePath": "src/CompletionFunctionArguments.res"
-    }
-  }, {
-    "label": "Objects",
+    },
+    "deprecated": false,
+    "detail": "module Obj",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
-    "tags": [],
-    "detail": "module Objects",
-    "documentation": null,
+    "label": "Obj",
+    "tags": []
+  },
+  {
     "data": {
       "modulePath": "Objects",
       "filePath": "src/CompletionFunctionArguments.res"
-    }
-  }]
+    },
+    "deprecated": false,
+    "detail": "module Objects",
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 9,
+    "label": "Objects",
+    "tags": []
+  }
+]
 
 Complete src/CompletionFunctionArguments.res 57:33
 posCursor:[57:33] posNoWhite:[57:32] Found expr:[57:11->57:34]
@@ -226,15 +307,22 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[someFnTakingVariant]($0)
 ContextPath Value[someFnTakingVariant]
 Path someFnTakingVariant
-[{
-    "label": "Some(_)",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "someVariant",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype someVariant = One | Two | Three(int, string)\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype someVariant = One | Two | Three(int, string)\n```"
+    },
     "insertText": "Some($0)",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "Some(_)",
+    "tags": []
+  }
+]
 
 Complete src/CompletionFunctionArguments.res 60:44
 posCursor:[60:44] posNoWhite:[60:43] Found expr:[60:11->60:45]
@@ -245,60 +333,83 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[someFnTakingVariant](~configOpt2)
 ContextPath Value[someFnTakingVariant]
 Path someFnTakingVariant
-[{
-    "label": "One",
-    "kind": 4,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "One",
-    "documentation": {"kind": "markdown", "value": "```rescript\nOne\n```\n\n```rescript\ntype someVariant = One | Two | Three(int, string)\n```"},
-    "sortText": "A One",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nOne\n```\n\n```rescript\ntype someVariant = One | Two | Three(int, string)\n```"
+    },
     "insertText": "One",
-    "insertTextFormat": 2
-  }, {
-    "label": "OIncludeMeInCompletions",
-    "kind": 9,
-    "tags": [],
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "One",
+    "sortText": "A One",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "module OIncludeMeInCompletions",
-    "documentation": null
-  }, {
-    "label": "Option",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
-    "tags": [],
+    "label": "OIncludeMeInCompletions",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "module Option",
-    "documentation": null
-  }, {
-    "label": "Ordering",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
-    "tags": [],
+    "label": "Option",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "module Ordering",
-    "documentation": null
-  }, {
-    "label": "Object",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
-    "tags": [],
+    "label": "Ordering",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "module Object",
-    "documentation": null
-  }, {
-    "label": "Obj",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
-    "tags": [],
-    "detail": "module Obj",
-    "documentation": null,
+    "label": "Object",
+    "tags": []
+  },
+  {
     "data": {
       "modulePath": "Obj",
       "filePath": "src/CompletionFunctionArguments.res"
-    }
-  }, {
-    "label": "Objects",
+    },
+    "deprecated": false,
+    "detail": "module Obj",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
-    "tags": [],
-    "detail": "module Objects",
-    "documentation": null,
+    "label": "Obj",
+    "tags": []
+  },
+  {
     "data": {
       "modulePath": "Objects",
       "filePath": "src/CompletionFunctionArguments.res"
-    }
-  }]
+    },
+    "deprecated": false,
+    "detail": "module Objects",
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 9,
+    "label": "Objects",
+    "tags": []
+  }
+]
 
 Complete src/CompletionFunctionArguments.res 63:23
 posCursor:[63:23] posNoWhite:[63:22] Found expr:[63:11->63:24]
@@ -309,19 +420,26 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[someOtherFn]($0)
 ContextPath Value[someOtherFn]
 Path someOtherFn
-[{
+[
+  {
+    "data": null,
+    "deprecated": false,
+    "detail": "bool",
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 4,
     "label": "true",
-    "kind": 4,
-    "tags": [],
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "bool",
-    "documentation": null
-  }, {
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 4,
     "label": "false",
-    "kind": 4,
-    "tags": [],
-    "detail": "bool",
-    "documentation": null
-  }]
+    "tags": []
+  }
+]
 
 Complete src/CompletionFunctionArguments.res 66:28
 posCursor:[66:28] posNoWhite:[66:27] Found expr:[66:11->66:30]
@@ -332,19 +450,26 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[someOtherFn]($2)
 ContextPath Value[someOtherFn]
 Path someOtherFn
-[{
+[
+  {
+    "data": null,
+    "deprecated": false,
+    "detail": "bool",
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 4,
     "label": "true",
-    "kind": 4,
-    "tags": [],
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "bool",
-    "documentation": null
-  }, {
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 4,
     "label": "false",
-    "kind": 4,
-    "tags": [],
-    "detail": "bool",
-    "documentation": null
-  }]
+    "tags": []
+  }
+]
 
 Complete src/CompletionFunctionArguments.res 69:30
 posCursor:[69:30] posNoWhite:[69:29] Found expr:[69:11->69:31]
@@ -354,26 +479,39 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[someOtherFn]($2)
 ContextPath Value[someOtherFn]
 Path someOtherFn
-[{
-    "label": "true",
+[
+  {
+    "data": null,
+    "deprecated": false,
+    "detail": "bool",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 4,
-    "tags": [],
+    "label": "true",
+    "sortText": "A true",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "bool",
-    "documentation": null,
-    "sortText": "A true"
-  }, {
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
     "label": "tLocalVar",
-    "kind": 12,
-    "tags": [],
-    "detail": "bool",
-    "documentation": null
-  }, {
-    "label": "typeof",
-    "kind": 12,
-    "tags": [],
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "'a => Type.t",
-    "documentation": {"kind": "markdown", "value": "\n`typeof(value)` exposes JavaScript's `typeof` operator and returns a `Type.t` enum.\nIt helps you inspect values that come from JavaScript APIs.\n\n## Examples\n\n```rescript\ntypeof(1) == #number\ntypeof(\"a\") == #string\n```\n"}
-  }]
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`typeof(value)` exposes JavaScript's `typeof` operator and returns a `Type.t` enum.\nIt helps you inspect values that come from JavaScript APIs.\n\n## Examples\n\n```rescript\ntypeof(1) == #number\ntypeof(\"a\") == #string\n```\n"
+    },
+    "kind": 12,
+    "label": "typeof",
+    "tags": []
+  }
+]
 
 Complete src/CompletionFunctionArguments.res 76:25
 posCursor:[76:25] posNoWhite:[76:24] Found expr:[76:11->76:26]
@@ -384,15 +522,19 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingTuple]($0)
 ContextPath Value[fnTakingTuple]
 Path fnTakingTuple
-[{
-    "label": "(_, _, _)",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(int, int, float)",
-    "documentation": null,
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "(${1:_}, ${2:_}, ${3:_})",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "(_, _, _)",
+    "tags": []
+  }
+]
 
 Complete src/CompletionFunctionArguments.res 89:27
 posCursor:[89:27] posNoWhite:[89:26] Found expr:[89:11->89:29]
@@ -403,25 +545,44 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingRecord]($0)
 ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
-[{
-    "label": "age",
-    "kind": 5,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "int",
-    "documentation": {"kind": "markdown", "value": "```rescript\nage: int\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>}\n```"}
-  }, {
-    "label": "offline",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nage: int\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>}\n```"
+    },
     "kind": 5,
-    "tags": [],
+    "label": "age",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "bool",
-    "documentation": {"kind": "markdown", "value": "```rescript\noffline: bool\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>}\n```"}
-  }, {
-    "label": "online",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\noffline: bool\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>}\n```"
+    },
     "kind": 5,
-    "tags": [],
+    "label": "offline",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "option<bool>",
-    "documentation": {"kind": "markdown", "value": "```rescript\nonline: option<bool>\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>}\n```"}
-  }]
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nonline: option<bool>\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>}\n```"
+    },
+    "kind": 5,
+    "label": "online",
+    "tags": []
+  }
+]
 
 Complete src/CompletionFunctionArguments.res 109:29
 posCursor:[109:29] posNoWhite:[109:28] Found expr:[105:2->114:4]
@@ -439,13 +600,17 @@ Path thisGetsBrokenLoc
 CPPipe pathFromEnv:JsxEvent.Mouse found:false
 Path JsxEvent.Mouse.a
 Path a
-[{
-    "label": "JsxEvent.Mouse.altKey",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "t => bool",
-    "documentation": null
-  }]
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
+    "label": "JsxEvent.Mouse.altKey",
+    "tags": []
+  }
+]
 
 Complete src/CompletionFunctionArguments.res 111:27
 posCursor:[111:27] posNoWhite:[111:26] Found expr:[105:2->114:4]
@@ -463,13 +628,17 @@ Path reassignedWorks
 CPPipe pathFromEnv:JsxEvent.Mouse found:false
 Path JsxEvent.Mouse.a
 Path a
-[{
-    "label": "JsxEvent.Mouse.altKey",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "t => bool",
-    "documentation": null
-  }]
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
+    "label": "JsxEvent.Mouse.altKey",
+    "tags": []
+  }
+]
 
 Complete src/CompletionFunctionArguments.res 121:57
 posCursor:[121:57] posNoWhite:[121:56] Found expr:[121:3->121:73]
@@ -485,11 +654,15 @@ Path fineModuleVal
 CPPipe pathFromEnv:FineModule found:true
 Path FineModule.
 Path 
-[{
-    "label": "FineModule.setToFalse",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "t => t",
-    "documentation": null
-  }]
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
+    "label": "FineModule.setToFalse",
+    "tags": []
+  }
+]
 

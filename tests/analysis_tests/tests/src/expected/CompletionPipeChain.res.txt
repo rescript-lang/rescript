@@ -1,3 +1,4 @@
+null
 Complete src/CompletionPipeChain.res 27:16
 posCursor:[27:16] posNoWhite:[27:15] Found expr:[27:11->0:-1]
 Completable: Cpath Value[int]->
@@ -9,31 +10,44 @@ Path int
 CPPipe pathFromEnv:Integer found:true
 Path Integer.
 Path 
-[{
-    "label": "Integer.toInt",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "t => int",
-    "documentation": null
-  }, {
-    "label": "Integer.increment",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
-    "tags": [],
+    "label": "Integer.toInt",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(t, int) => t",
-    "documentation": null
-  }, {
-    "label": "Integer.decrement",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
-    "tags": [],
+    "label": "Integer.increment",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(t, int => int) => t",
-    "documentation": null
-  }, {
-    "label": "toFlt",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
-    "tags": [],
+    "label": "Integer.decrement",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "Integer.t => SuperFloat.t",
-    "documentation": null
-  }]
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
+    "label": "toFlt",
+    "tags": []
+  }
+]
 
 Complete src/CompletionPipeChain.res 30:23
 posCursor:[30:23] posNoWhite:[30:22] Found expr:[30:11->0:-1]
@@ -47,13 +61,17 @@ Path toFlt
 CPPipe pathFromEnv:SuperFloat found:true
 Path SuperFloat.
 Path 
-[{
-    "label": "SuperFloat.toInteger",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "t => Integer.t",
-    "documentation": null
-  }]
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
+    "label": "SuperFloat.toInteger",
+    "tags": []
+  }
+]
 
 Complete src/CompletionPipeChain.res 33:38
 posCursor:[33:38] posNoWhite:[33:37] Found expr:[33:11->0:-1]
@@ -67,31 +85,44 @@ Path Integer.increment
 CPPipe pathFromEnv:Integer found:true
 Path Integer.
 Path 
-[{
-    "label": "Integer.toInt",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "t => int",
-    "documentation": null
-  }, {
-    "label": "Integer.increment",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
-    "tags": [],
+    "label": "Integer.toInt",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(t, int) => t",
-    "documentation": null
-  }, {
-    "label": "Integer.decrement",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
-    "tags": [],
+    "label": "Integer.increment",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(t, int => int) => t",
-    "documentation": null
-  }, {
-    "label": "toFlt",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
-    "tags": [],
+    "label": "Integer.decrement",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "Integer.t => SuperFloat.t",
-    "documentation": null
-  }]
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
+    "label": "toFlt",
+    "tags": []
+  }
+]
 
 Complete src/CompletionPipeChain.res 36:38
 posCursor:[36:38] posNoWhite:[36:37] Found expr:[36:11->0:-1]
@@ -105,31 +136,44 @@ Path Integer.increment
 CPPipe pathFromEnv:Integer found:true
 Path Integer.
 Path 
-[{
-    "label": "Integer.toInt",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "t => int",
-    "documentation": null
-  }, {
-    "label": "Integer.increment",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
-    "tags": [],
+    "label": "Integer.toInt",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(t, int) => t",
-    "documentation": null
-  }, {
-    "label": "Integer.decrement",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
-    "tags": [],
+    "label": "Integer.increment",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(t, int => int) => t",
-    "documentation": null
-  }, {
-    "label": "toFlt",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
-    "tags": [],
+    "label": "Integer.decrement",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "Integer.t => SuperFloat.t",
-    "documentation": null
-  }]
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
+    "label": "toFlt",
+    "tags": []
+  }
+]
 
 Complete src/CompletionPipeChain.res 39:47
 posCursor:[39:47] posNoWhite:[39:46] Found expr:[39:11->0:-1]
@@ -143,31 +187,44 @@ Path Integer.decrement
 CPPipe pathFromEnv:Integer found:true
 Path Integer.
 Path 
-[{
-    "label": "Integer.toInt",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "t => int",
-    "documentation": null
-  }, {
-    "label": "Integer.increment",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
-    "tags": [],
+    "label": "Integer.toInt",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(t, int) => t",
-    "documentation": null
-  }, {
-    "label": "Integer.decrement",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
-    "tags": [],
+    "label": "Integer.increment",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(t, int => int) => t",
-    "documentation": null
-  }, {
-    "label": "toFlt",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
-    "tags": [],
+    "label": "Integer.decrement",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "Integer.t => SuperFloat.t",
-    "documentation": null
-  }]
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
+    "label": "toFlt",
+    "tags": []
+  }
+]
 
 Complete src/CompletionPipeChain.res 42:69
 posCursor:[42:69] posNoWhite:[42:68] Found expr:[42:11->0:-1]
@@ -181,31 +238,44 @@ Path Integer.decrement
 CPPipe pathFromEnv:Integer found:true
 Path Integer.
 Path 
-[{
-    "label": "Integer.toInt",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "t => int",
-    "documentation": null
-  }, {
-    "label": "Integer.increment",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
-    "tags": [],
+    "label": "Integer.toInt",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(t, int) => t",
-    "documentation": null
-  }, {
-    "label": "Integer.decrement",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
-    "tags": [],
+    "label": "Integer.increment",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(t, int => int) => t",
-    "documentation": null
-  }, {
-    "label": "toFlt",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
-    "tags": [],
+    "label": "Integer.decrement",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "Integer.t => SuperFloat.t",
-    "documentation": null
-  }]
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
+    "label": "toFlt",
+    "tags": []
+  }
+]
 
 Complete src/CompletionPipeChain.res 45:62
 posCursor:[45:62] posNoWhite:[45:61] Found expr:[45:11->0:-1]
@@ -219,13 +289,17 @@ Path SuperFloat.fromInteger
 CPPipe pathFromEnv:SuperFloat found:true
 Path SuperFloat.
 Path 
-[{
-    "label": "SuperFloat.toInteger",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "t => Integer.t",
-    "documentation": null
-  }]
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
+    "label": "SuperFloat.toInteger",
+    "tags": []
+  }
+]
 
 Complete src/CompletionPipeChain.res 48:63
 posCursor:[48:63] posNoWhite:[48:62] Found expr:[48:11->48:63]
@@ -239,13 +313,17 @@ Path SuperFloat.fromInteger
 CPPipe pathFromEnv:SuperFloat found:true
 Path SuperFloat.t
 Path t
-[{
-    "label": "SuperFloat.toInteger",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "t => Integer.t",
-    "documentation": null
-  }]
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
+    "label": "SuperFloat.toInteger",
+    "tags": []
+  }
+]
 
 Complete src/CompletionPipeChain.res 51:82
 posCursor:[51:82] posNoWhite:[51:81] Found expr:[51:11->0:-1]
@@ -259,19 +337,26 @@ Path CompletionSupport.Test.make
 CPPipe pathFromEnv:Test found:true
 Path CompletionSupport.Test.
 Path 
-[{
-    "label": "CompletionSupport.Test.add",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "t => int",
-    "documentation": null
-  }, {
-    "label": "CompletionSupport.Test.addSelf",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
-    "tags": [],
+    "label": "CompletionSupport.Test.add",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "t => t",
-    "documentation": null
-  }]
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
+    "label": "CompletionSupport.Test.addSelf",
+    "tags": []
+  }
+]
 
 Complete src/CompletionPipeChain.res 54:78
 posCursor:[54:78] posNoWhite:[54:77] Found expr:[54:11->0:-1]
@@ -285,19 +370,26 @@ Path CompletionSupport.Test.addSelf
 CPPipe pathFromEnv:Test found:true
 Path CompletionSupport.Test.
 Path 
-[{
-    "label": "CompletionSupport.Test.add",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "t => int",
-    "documentation": null
-  }, {
-    "label": "CompletionSupport.Test.addSelf",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
-    "tags": [],
+    "label": "CompletionSupport.Test.add",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "t => t",
-    "documentation": null
-  }]
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
+    "label": "CompletionSupport.Test.addSelf",
+    "tags": []
+  }
+]
 
 Complete src/CompletionPipeChain.res 58:5
 posCursor:[58:5] posNoWhite:[58:4] Found expr:[57:8->0:-1]
@@ -324,67 +416,128 @@ ContextPath Value[Belt, Array, reduce]
 Path Belt.Array.reduce
 Path Stdlib.Int.t
 Path t
-[{
-    "label": "Int.toStringWithRadix",
-    "kind": 12,
-    "tags": [1],
+[
+  {
+    "data": null,
+    "deprecated": true,
     "detail": "(int, ~radix: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toString` instead\n\n\n`toStringWithRadix(n, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toStringWithRadix(6, ~radix=2) // \"110\"\nInt.toStringWithRadix(373592855, ~radix=16) // \"16449317\"\nInt.toStringWithRadix(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
-  }, {
+    "documentation": {
+      "kind": "markdown",
+      "value": "Deprecated: Use `toString` instead\n\n\n`toStringWithRadix(n, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toStringWithRadix(6, ~radix=2) // \"110\"\nInt.toStringWithRadix(373592855, ~radix=16) // \"16449317\"\nInt.toStringWithRadix(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"
+    },
+    "kind": 12,
+    "label": "Int.toStringWithRadix",
+    "tags": [ 1 ]
+  },
+  {
+    "data": null,
+    "deprecated": true,
+    "detail": "(int, ~digits: int) => string",
+    "documentation": {
+      "kind": "markdown",
+      "value": "Deprecated: Use `toExponential` instead\n\n\n`toExponential(n, ~digits)` return a `string` representing the given value in\nexponential notation. `digits` specifies how many digits should appear after\nthe decimal point. See [`Number.toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential)\non MDN.\n\n## Examples\n\n```rescript\nInt.toExponentialWithPrecision(77, ~digits=2) // \"7.70e+1\"\nInt.toExponentialWithPrecision(5678, ~digits=2) // \"5.68e+3\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` less than 0 or greater than 10.\n"
+    },
+    "kind": 12,
     "label": "Int.toExponentialWithPrecision",
-    "kind": 12,
-    "tags": [1],
+    "tags": [ 1 ]
+  },
+  {
+    "data": null,
+    "deprecated": true,
     "detail": "(int, ~digits: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toExponential` instead\n\n\n`toExponential(n, ~digits)` return a `string` representing the given value in\nexponential notation. `digits` specifies how many digits should appear after\nthe decimal point. See [`Number.toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential)\non MDN.\n\n## Examples\n\n```rescript\nInt.toExponentialWithPrecision(77, ~digits=2) // \"7.70e+1\"\nInt.toExponentialWithPrecision(5678, ~digits=2) // \"5.68e+3\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` less than 0 or greater than 10.\n"}
-  }, {
+    "documentation": {
+      "kind": "markdown",
+      "value": "Deprecated: Use `toFixed` instead\n\n\n`toFixedWithPrecision(n, ~digits)` return a `string` representing the given\nvalue using fixed-point notation. `digits` specifies how many digits should\nappear after the decimal point. See [`Number.toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed)\non MDN.\n\n## Examples\n\n```rescript\nInt.toFixedWithPrecision(300, ~digits=4) // \"300.0000\"\nInt.toFixedWithPrecision(300, ~digits=1) // \"300.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is less than 0 or larger than 100.\n"
+    },
+    "kind": 12,
     "label": "Int.toFixedWithPrecision",
-    "kind": 12,
-    "tags": [1],
+    "tags": [ 1 ]
+  },
+  {
+    "data": null,
+    "deprecated": true,
     "detail": "(int, ~digits: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toFixed` instead\n\n\n`toFixedWithPrecision(n, ~digits)` return a `string` representing the given\nvalue using fixed-point notation. `digits` specifies how many digits should\nappear after the decimal point. See [`Number.toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed)\non MDN.\n\n## Examples\n\n```rescript\nInt.toFixedWithPrecision(300, ~digits=4) // \"300.0000\"\nInt.toFixedWithPrecision(300, ~digits=1) // \"300.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is less than 0 or larger than 100.\n"}
-  }, {
+    "documentation": {
+      "kind": "markdown",
+      "value": "Deprecated: Use `toPrecision` instead\n\n\n`toPrecisionWithPrecision(n, ~digits)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits. See [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nInt.toPrecisionWithPrecision(100, ~digits=2) // \"1.0e+2\"\nInt.toPrecisionWithPrecision(1, ~digits=2) // \"1.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\n  Implementations are allowed to support larger and smaller values as well.\n  ECMA-262 only requires a precision of up to 21 significant digits.\n"
+    },
+    "kind": 12,
     "label": "Int.toPrecisionWithPrecision",
+    "tags": [ 1 ]
+  },
+  {
+    "data": null,
+    "deprecated": false,
+    "detail": "(int, ~digits: int=?) => string",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`toPrecision(n, ~digits=?)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits. See [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nInt.toPrecision(100) // \"100\"\nInt.toPrecision(1) // \"1\"\nInt.toPrecision(100, ~digits=2) // \"1.0e+2\"\nInt.toPrecision(1, ~digits=2) // \"1.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\n  Implementations are allowed to support larger and smaller values as well.\n  ECMA-262 only requires a precision of up to 21 significant digits.\n"
+    },
     "kind": 12,
-    "tags": [1],
-    "detail": "(int, ~digits: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toPrecision` instead\n\n\n`toPrecisionWithPrecision(n, ~digits)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits. See [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nInt.toPrecisionWithPrecision(100, ~digits=2) // \"1.0e+2\"\nInt.toPrecisionWithPrecision(1, ~digits=2) // \"1.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\n  Implementations are allowed to support larger and smaller values as well.\n  ECMA-262 only requires a precision of up to 21 significant digits.\n"}
-  }, {
     "label": "Int.toPrecision",
-    "kind": 12,
-    "tags": [],
-    "detail": "(int, ~digits: int=?) => string",
-    "documentation": {"kind": "markdown", "value": "\n`toPrecision(n, ~digits=?)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits. See [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nInt.toPrecision(100) // \"100\"\nInt.toPrecision(1) // \"1\"\nInt.toPrecision(100, ~digits=2) // \"1.0e+2\"\nInt.toPrecision(1, ~digits=2) // \"1.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\n  Implementations are allowed to support larger and smaller values as well.\n  ECMA-262 only requires a precision of up to 21 significant digits.\n"}
-  }, {
-    "label": "Int.toString",
-    "kind": 12,
-    "tags": [],
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(int, ~radix: int=?) => string",
-    "documentation": {"kind": "markdown", "value": "\n`toString(n, ~radix=?)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toString(1000) // \"1000\"\nInt.toString(-1000) // \"-1000\"\nInt.toString(6, ~radix=2) // \"110\"\nInt.toString(373592855, ~radix=16) // \"16449317\"\nInt.toString(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
-  }, {
-    "label": "Int.toFloat",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`toString(n, ~radix=?)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toString(1000) // \"1000\"\nInt.toString(-1000) // \"-1000\"\nInt.toString(6, ~radix=2) // \"110\"\nInt.toString(373592855, ~radix=16) // \"16449317\"\nInt.toString(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"
+    },
     "kind": 12,
-    "tags": [],
+    "label": "Int.toString",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "int => float",
-    "documentation": {"kind": "markdown", "value": "\n`toFloat(n)` return a `float` representing the given value.\n\n## Examples\n\n```rescript\nInt.toFloat(100) == 100.0\nInt.toFloat(2) == 2.0\n```\n"}
-  }, {
-    "label": "Int.toLocaleString",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`toFloat(n)` return a `float` representing the given value.\n\n## Examples\n\n```rescript\nInt.toFloat(100) == 100.0\nInt.toFloat(2) == 2.0\n```\n"
+    },
     "kind": 12,
-    "tags": [],
+    "label": "Int.toFloat",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "int => string",
-    "documentation": {"kind": "markdown", "value": "\n`toLocaleString(n)` return a `string` with language-sensitive representing the\ngiven value. See [`Number.toLocaleString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toLocaleString) on MDN.\n\n## Examples\n\n```rescript\n// If the application uses English as the default language\nInt.toLocaleString(1000) // \"1,000\"\n\n// If the application uses Portuguese Brazil as the default language\nInt.toLocaleString(1000) // \"1.000\"\n```\n"}
-  }, {
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`toLocaleString(n)` return a `string` with language-sensitive representing the\ngiven value. See [`Number.toLocaleString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toLocaleString) on MDN.\n\n## Examples\n\n```rescript\n// If the application uses English as the default language\nInt.toLocaleString(1000) // \"1,000\"\n\n// If the application uses Portuguese Brazil as the default language\nInt.toLocaleString(1000) // \"1.000\"\n```\n"
+    },
+    "kind": 12,
+    "label": "Int.toLocaleString",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
+    "detail": "(int, ~digits: int=?) => string",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`toExponential(n, ~digits=?)` return a `string` representing the given value in\nexponential notation. `digits` specifies how many digits should appear after\nthe decimal point. See [`Number.toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential)\n\n## Examples\n\n```rescript\nInt.toExponential(1000) // \"1e+3\"\nInt.toExponential(-1000) // \"-1e+3\"\nInt.toExponential(77, ~digits=2) // \"7.70e+1\"\nInt.toExponential(5678, ~digits=2) // \"5.68e+3\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` less than 0 or greater than 10.\n"
+    },
+    "kind": 12,
     "label": "Int.toExponential",
-    "kind": 12,
-    "tags": [],
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(int, ~digits: int=?) => string",
-    "documentation": {"kind": "markdown", "value": "\n`toExponential(n, ~digits=?)` return a `string` representing the given value in\nexponential notation. `digits` specifies how many digits should appear after\nthe decimal point. See [`Number.toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential)\n\n## Examples\n\n```rescript\nInt.toExponential(1000) // \"1e+3\"\nInt.toExponential(-1000) // \"-1e+3\"\nInt.toExponential(77, ~digits=2) // \"7.70e+1\"\nInt.toExponential(5678, ~digits=2) // \"5.68e+3\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` less than 0 or greater than 10.\n"}
-  }, {
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`toFixed(n, ~digits=?)` return a `string` representing the given\nvalue using fixed-point notation. `digits` specifies how many digits should\nappear after the decimal point. See [`Number.toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed)\non MDN.\n\n## Examples\n\n```rescript\nInt.toFixed(123456) // \"123456.00\"\nInt.toFixed(10) // \"10.00\"\nInt.toFixed(300, ~digits=4) // \"300.0000\"\nInt.toFixed(300, ~digits=1) // \"300.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is less than 0 or larger than 100.\n"
+    },
+    "kind": 12,
     "label": "Int.toFixed",
-    "kind": 12,
-    "tags": [],
-    "detail": "(int, ~digits: int=?) => string",
-    "documentation": {"kind": "markdown", "value": "\n`toFixed(n, ~digits=?)` return a `string` representing the given\nvalue using fixed-point notation. `digits` specifies how many digits should\nappear after the decimal point. See [`Number.toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed)\non MDN.\n\n## Examples\n\n```rescript\nInt.toFixed(123456) // \"123456.00\"\nInt.toFixed(10) // \"10.00\"\nInt.toFixed(300, ~digits=4) // \"300.0000\"\nInt.toFixed(300, ~digits=1) // \"300.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is less than 0 or larger than 100.\n"}
-  }]
+    "tags": []
+  }
+]
 
 Complete src/CompletionPipeChain.res 70:12
 posCursor:[70:12] posNoWhite:[70:11] Found expr:[70:3->0:-1]
@@ -397,19 +550,26 @@ Path aliased
 CPPipe pathFromEnv:CompletionSupport.Test found:false
 Path CompletionSupport.Test.
 Path 
-[{
-    "label": "CompletionSupport.Test.add",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "t => int",
-    "documentation": null
-  }, {
-    "label": "CompletionSupport.Test.addSelf",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
-    "tags": [],
+    "label": "CompletionSupport.Test.add",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "t => t",
-    "documentation": null
-  }]
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
+    "label": "CompletionSupport.Test.addSelf",
+    "tags": []
+  }
+]
 
 Complete src/CompletionPipeChain.res 73:15
 posCursor:[73:15] posNoWhite:[73:14] Found expr:[73:3->0:-1]
@@ -422,19 +582,26 @@ Path notAliased
 CPPipe pathFromEnv:CompletionSupport.Test found:false
 Path CompletionSupport.Test.
 Path 
-[{
-    "label": "CompletionSupport.Test.add",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "t => int",
-    "documentation": null
-  }, {
-    "label": "CompletionSupport.Test.addSelf",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
-    "tags": [],
+    "label": "CompletionSupport.Test.add",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "t => t",
-    "documentation": null
-  }]
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
+    "label": "CompletionSupport.Test.addSelf",
+    "tags": []
+  }
+]
 
 Complete src/CompletionPipeChain.res 82:30
 posCursor:[82:30] posNoWhite:[82:29] Found expr:[76:15->93:1]
@@ -473,13 +640,17 @@ Path root
 CPPipe pathFromEnv:ReactDOM.Client.Root found:false
 Path ReactDOM.Client.Root.ren
 Path ren
-[{
-    "label": "ReactDOM.Client.Root.render",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(t, React.element) => unit",
-    "documentation": null
-  }]
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
+    "label": "ReactDOM.Client.Root.render",
+    "tags": []
+  }
+]
 
 Complete src/CompletionPipeChain.res 88:16
 posCursor:[88:16] posNoWhite:[88:15] Found expr:[76:15->93:1]
@@ -499,13 +670,17 @@ Path root
 CPPipe pathFromEnv:ReactDOM.Client.Root found:false
 Path ReactDOM.Client.Root.ren
 Path ren
-[{
-    "label": "ReactDOM.Client.Root.render",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(t, React.element) => unit",
-    "documentation": null
-  }]
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
+    "label": "ReactDOM.Client.Root.render",
+    "tags": []
+  }
+]
 
 Complete src/CompletionPipeChain.res 95:20
 posCursor:[95:20] posNoWhite:[95:19] Found expr:[95:3->95:21]
@@ -521,31 +696,44 @@ Path int
 CPPipe pathFromEnv:Integer found:true
 Path Integer.
 Path 
-[{
-    "label": "Integer.toInt",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "t => int",
-    "documentation": null
-  }, {
-    "label": "Integer.increment",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
-    "tags": [],
+    "label": "Integer.toInt",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(t, int) => t",
-    "documentation": null
-  }, {
-    "label": "Integer.decrement",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
-    "tags": [],
+    "label": "Integer.increment",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(t, int => int) => t",
-    "documentation": null
-  }, {
-    "label": "toFlt",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
-    "tags": [],
+    "label": "Integer.decrement",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "Integer.t => SuperFloat.t",
-    "documentation": null
-  }]
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
+    "label": "toFlt",
+    "tags": []
+  }
+]
 
 Complete src/CompletionPipeChain.res 98:21
 posCursor:[98:21] posNoWhite:[98:20] Found expr:[98:3->98:22]
@@ -560,19 +748,26 @@ Path int
 CPPipe pathFromEnv:Integer found:true
 Path Integer.t
 Path t
-[{
-    "label": "Integer.toInt",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "t => int",
-    "documentation": null
-  }, {
-    "label": "toFlt",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
-    "tags": [],
+    "label": "Integer.toInt",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "Integer.t => SuperFloat.t",
-    "documentation": null
-  }]
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
+    "label": "toFlt",
+    "tags": []
+  }
+]
 
 Complete src/CompletionPipeChain.res 103:8
 posCursor:[103:8] posNoWhite:[103:7] Found expr:[103:3->103:8]
@@ -584,13 +779,20 @@ ContextPath Value[r]
 Path r
 Path Stdlib.RegExp.la
 Path la
-[{
-    "label": "RegExp.lastIndex",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "t => int",
-    "documentation": {"kind": "markdown", "value": "\n`lastIndex(regexp)` returns the index the next match will start from.\n\nSee [`RegExp.lastIndex`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/lastIndex) on MDN.\n\n## Examples\n```rescript\n// Match the first word in a sentence\nlet regexp = RegExp.fromString(\"\\\\w+\")\nlet someStr = \"Many words here.\"\n\nConsole.log(regexp->RegExp.lastIndex) // Logs `0` to the console\n\nregexp->RegExp.exec(someStr)->ignore\n\nConsole.log(regexp->RegExp.lastIndex) // Logs `4` to the console\n```\n"}
-  }]
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`lastIndex(regexp)` returns the index the next match will start from.\n\nSee [`RegExp.lastIndex`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/lastIndex) on MDN.\n\n## Examples\n```rescript\n// Match the first word in a sentence\nlet regexp = RegExp.fromString(\"\\\\w+\")\nlet someStr = \"Many words here.\"\n\nConsole.log(regexp->RegExp.lastIndex) // Logs `0` to the console\n\nregexp->RegExp.exec(someStr)->ignore\n\nConsole.log(regexp->RegExp.lastIndex) // Logs `4` to the console\n```\n"
+    },
+    "kind": 12,
+    "label": "RegExp.lastIndex",
+    "tags": []
+  }
+]
 
 Complete src/CompletionPipeChain.res 112:7
 posCursor:[112:7] posNoWhite:[112:6] Found expr:[112:3->0:-1]
@@ -603,11 +805,15 @@ Path xx
 CPPipe pathFromEnv:Xyz found:true
 Path Xyz.
 Path 
-[{
-    "label": "Xyz.do",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "xx => string",
-    "documentation": null
-  }]
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
+    "label": "Xyz.do",
+    "tags": []
+  }
+]
 

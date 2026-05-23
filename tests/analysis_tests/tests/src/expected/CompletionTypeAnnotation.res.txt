@@ -1,3 +1,4 @@
+null
 Complete src/CompletionTypeAnnotation.res 9:22
 XXX Not found!
 Completable: Cexpression Type[someRecord]
@@ -5,16 +6,23 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Type[someRecord]
 Path someRecord
-[{
-    "label": "{}",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "someRecord",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype someRecord = {age: int, name: string}\n```"},
-    "sortText": "A",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype someRecord = {age: int, name: string}\n```"
+    },
     "insertText": "{$0}",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "{}",
+    "sortText": "A",
+    "tags": []
+  }
+]
 
 Complete src/CompletionTypeAnnotation.res 12:24
 XXX Not found!
@@ -23,19 +31,32 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Type[someRecord]
 Path someRecord
-[{
-    "label": "age",
-    "kind": 5,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "int",
-    "documentation": {"kind": "markdown", "value": "```rescript\nage: int\n```\n\n```rescript\ntype someRecord = {age: int, name: string}\n```"}
-  }, {
-    "label": "name",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nage: int\n```\n\n```rescript\ntype someRecord = {age: int, name: string}\n```"
+    },
     "kind": 5,
-    "tags": [],
+    "label": "age",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "string",
-    "documentation": {"kind": "markdown", "value": "```rescript\nname: string\n```\n\n```rescript\ntype someRecord = {age: int, name: string}\n```"}
-  }]
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nname: string\n```\n\n```rescript\ntype someRecord = {age: int, name: string}\n```"
+    },
+    "kind": 5,
+    "label": "name",
+    "tags": []
+  }
+]
 
 Complete src/CompletionTypeAnnotation.res 15:23
 XXX Not found!
@@ -44,23 +65,36 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Type[someVariant]
 Path someVariant
-[{
-    "label": "One",
-    "kind": 4,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "One",
-    "documentation": {"kind": "markdown", "value": "```rescript\nOne\n```\n\n```rescript\ntype someVariant = One | Two(bool)\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nOne\n```\n\n```rescript\ntype someVariant = One | Two(bool)\n```"
+    },
     "insertText": "One",
-    "insertTextFormat": 2
-  }, {
-    "label": "Two(_)",
+    "insertTextFormat": 2,
     "kind": 4,
-    "tags": [],
+    "label": "One",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "Two(bool)",
-    "documentation": {"kind": "markdown", "value": "```rescript\nTwo(bool)\n```\n\n```rescript\ntype someVariant = One | Two(bool)\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nTwo(bool)\n```\n\n```rescript\ntype someVariant = One | Two(bool)\n```"
+    },
     "insertText": "Two($0)",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Two(_)",
+    "tags": []
+  }
+]
 
 Complete src/CompletionTypeAnnotation.res 18:25
 XXX Not found!
@@ -69,54 +103,74 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Type[someVariant]
 Path someVariant
-[{
-    "label": "One",
-    "kind": 4,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "One",
-    "documentation": {"kind": "markdown", "value": "```rescript\nOne\n```\n\n```rescript\ntype someVariant = One | Two(bool)\n```"},
-    "sortText": "A One",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nOne\n```\n\n```rescript\ntype someVariant = One | Two(bool)\n```"
+    },
     "insertText": "One",
-    "insertTextFormat": 2
-  }, {
-    "label": "Option",
-    "kind": 9,
-    "tags": [],
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "One",
+    "sortText": "A One",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "module Option",
-    "documentation": null
-  }, {
-    "label": "Ordering",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
-    "tags": [],
+    "label": "Option",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "module Ordering",
-    "documentation": null
-  }, {
-    "label": "Object",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
-    "tags": [],
+    "label": "Ordering",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "module Object",
-    "documentation": null
-  }, {
-    "label": "Obj",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
-    "tags": [],
-    "detail": "module Obj",
-    "documentation": null,
+    "label": "Object",
+    "tags": []
+  },
+  {
     "data": {
       "modulePath": "Obj",
       "filePath": "src/CompletionTypeAnnotation.res"
-    }
-  }, {
-    "label": "Objects",
+    },
+    "deprecated": false,
+    "detail": "module Obj",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
-    "tags": [],
-    "detail": "module Objects",
-    "documentation": null,
+    "label": "Obj",
+    "tags": []
+  },
+  {
     "data": {
       "modulePath": "Objects",
       "filePath": "src/CompletionTypeAnnotation.res"
-    }
-  }]
+    },
+    "deprecated": false,
+    "detail": "module Objects",
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 9,
+    "label": "Objects",
+    "tags": []
+  }
+]
 
 Complete src/CompletionTypeAnnotation.res 21:27
 XXX Not found!
@@ -125,23 +179,36 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Type[somePolyVariant]
 Path somePolyVariant
-[{
-    "label": "#one",
-    "kind": 4,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "#one",
-    "documentation": {"kind": "markdown", "value": "```rescript\n#one\n```\n\n```rescript\n[#one | #two(bool)]\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\n#one\n```\n\n```rescript\n[#one | #two(bool)]\n```"
+    },
     "insertText": "#one",
-    "insertTextFormat": 2
-  }, {
-    "label": "#two(_)",
+    "insertTextFormat": 2,
     "kind": 4,
-    "tags": [],
+    "label": "#one",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "#two(bool)",
-    "documentation": {"kind": "markdown", "value": "```rescript\n#two(bool)\n```\n\n```rescript\n[#one | #two(bool)]\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\n#two(bool)\n```\n\n```rescript\n[#one | #two(bool)]\n```"
+    },
     "insertText": "#two($0)",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "#two(_)",
+    "tags": []
+  }
+]
 
 Complete src/CompletionTypeAnnotation.res 24:30
 XXX Not found!
@@ -150,15 +217,22 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Type[somePolyVariant]
 Path somePolyVariant
-[{
-    "label": "#one",
-    "kind": 4,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "#one",
-    "documentation": {"kind": "markdown", "value": "```rescript\n#one\n```\n\n```rescript\n[#one | #two(bool)]\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\n#one\n```\n\n```rescript\n[#one | #two(bool)]\n```"
+    },
     "insertText": "one",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "#one",
+    "tags": []
+  }
+]
 
 Complete src/CompletionTypeAnnotation.res 29:20
 XXX Not found!
@@ -167,16 +241,20 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Type[someFunc]
 Path someFunc
-[{
-    "label": "(v1, v2) => {}",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(int, string) => bool",
-    "documentation": null,
-    "sortText": "A",
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "(${1:v1}, ${2:v2}) => {${0:()}}",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "(v1, v2) => {}",
+    "sortText": "A",
+    "tags": []
+  }
+]
 
 Complete src/CompletionTypeAnnotation.res 34:21
 XXX Not found!
@@ -185,15 +263,19 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Type[someTuple]
 Path someTuple
-[{
-    "label": "(_, _)",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(bool, option<bool>)",
-    "documentation": null,
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "(${1:_}, ${2:_})",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "(_, _)",
+    "tags": []
+  }
+]
 
 Complete src/CompletionTypeAnnotation.res 37:28
 XXX Not found!
@@ -202,33 +284,46 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Type[someTuple]
 Path someTuple
-[{
+[
+  {
+    "data": null,
+    "deprecated": false,
+    "detail": "bool",
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
     "label": "None",
-    "kind": 12,
-    "tags": [],
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "bool",
-    "documentation": null
-  }, {
-    "label": "Some(_)",
-    "kind": 12,
-    "tags": [],
-    "detail": "bool",
-    "documentation": null,
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Some($0)",
-    "insertTextFormat": 2
-  }, {
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "Some(_)",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
+    "detail": "bool",
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 4,
     "label": "Some(true)",
-    "kind": 4,
-    "tags": [],
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "bool",
-    "documentation": null
-  }, {
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 4,
     "label": "Some(false)",
-    "kind": 4,
-    "tags": [],
-    "detail": "bool",
-    "documentation": null
-  }]
+    "tags": []
+  }
+]
 
 Complete src/CompletionTypeAnnotation.res 40:31
 XXX Not found!
@@ -238,37 +333,62 @@ Resolved opens 1 Stdlib
 ContextPath option<Type[someVariant]>
 ContextPath Type[someVariant]
 Path someVariant
-[{
+[
+  {
+    "data": null,
+    "deprecated": false,
+    "detail": "someVariant",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype someVariant = One | Two(bool)\n```"
+    },
+    "kind": 12,
     "label": "None",
-    "kind": 12,
-    "tags": [],
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "someVariant",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype someVariant = One | Two(bool)\n```"}
-  }, {
-    "label": "Some(_)",
-    "kind": 12,
-    "tags": [],
-    "detail": "someVariant",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype someVariant = One | Two(bool)\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype someVariant = One | Two(bool)\n```"
+    },
     "insertText": "Some($0)",
-    "insertTextFormat": 2
-  }, {
-    "label": "Some(One)",
-    "kind": 4,
-    "tags": [],
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "Some(_)",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "One",
-    "documentation": {"kind": "markdown", "value": "```rescript\nOne\n```\n\n```rescript\ntype someVariant = One | Two(bool)\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nOne\n```\n\n```rescript\ntype someVariant = One | Two(bool)\n```"
+    },
     "insertText": "Some(One)",
-    "insertTextFormat": 2
-  }, {
-    "label": "Some(Two(_))",
+    "insertTextFormat": 2,
     "kind": 4,
-    "tags": [],
+    "label": "Some(One)",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "Two(bool)",
-    "documentation": {"kind": "markdown", "value": "```rescript\nTwo(bool)\n```\n\n```rescript\ntype someVariant = One | Two(bool)\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nTwo(bool)\n```\n\n```rescript\ntype someVariant = One | Two(bool)\n```"
+    },
     "insertText": "Some(Two($0))",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Some(Two(_))",
+    "tags": []
+  }
+]
 
 Complete src/CompletionTypeAnnotation.res 43:37
 XXX Not found!
@@ -278,23 +398,36 @@ Resolved opens 1 Stdlib
 ContextPath option<Type[someVariant]>
 ContextPath Type[someVariant]
 Path someVariant
-[{
-    "label": "One",
-    "kind": 4,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "One",
-    "documentation": {"kind": "markdown", "value": "```rescript\nOne\n```\n\n```rescript\ntype someVariant = One | Two(bool)\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nOne\n```\n\n```rescript\ntype someVariant = One | Two(bool)\n```"
+    },
     "insertText": "One",
-    "insertTextFormat": 2
-  }, {
-    "label": "Two(_)",
+    "insertTextFormat": 2,
     "kind": 4,
-    "tags": [],
+    "label": "One",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "Two(bool)",
-    "documentation": {"kind": "markdown", "value": "```rescript\nTwo(bool)\n```\n\n```rescript\ntype someVariant = One | Two(bool)\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nTwo(bool)\n```\n\n```rescript\ntype someVariant = One | Two(bool)\n```"
+    },
     "insertText": "Two($0)",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Two(_)",
+    "tags": []
+  }
+]
 
 Complete src/CompletionTypeAnnotation.res 46:30
 XXX Not found!
@@ -304,16 +437,23 @@ Resolved opens 1 Stdlib
 ContextPath array<Type[someVariant]>
 ContextPath Type[someVariant]
 Path someVariant
-[{
-    "label": "[]",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "someVariant",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype someVariant = One | Two(bool)\n```"},
-    "sortText": "A",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype someVariant = One | Two(bool)\n```"
+    },
     "insertText": "[$0]",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "[]",
+    "sortText": "A",
+    "tags": []
+  }
+]
 
 Complete src/CompletionTypeAnnotation.res 49:32
 XXX Not found!
@@ -323,23 +463,36 @@ Resolved opens 1 Stdlib
 ContextPath array<Type[someVariant]>
 ContextPath Type[someVariant]
 Path someVariant
-[{
-    "label": "One",
-    "kind": 4,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "One",
-    "documentation": {"kind": "markdown", "value": "```rescript\nOne\n```\n\n```rescript\ntype someVariant = One | Two(bool)\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nOne\n```\n\n```rescript\ntype someVariant = One | Two(bool)\n```"
+    },
     "insertText": "One",
-    "insertTextFormat": 2
-  }, {
-    "label": "Two(_)",
+    "insertTextFormat": 2,
     "kind": 4,
-    "tags": [],
+    "label": "One",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "Two(bool)",
-    "documentation": {"kind": "markdown", "value": "```rescript\nTwo(bool)\n```\n\n```rescript\ntype someVariant = One | Two(bool)\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nTwo(bool)\n```\n\n```rescript\ntype someVariant = One | Two(bool)\n```"
+    },
     "insertText": "Two($0)",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Two(_)",
+    "tags": []
+  }
+]
 
 Complete src/CompletionTypeAnnotation.res 52:38
 XXX Not found!
@@ -350,16 +503,23 @@ ContextPath array<option<Type[someVariant]>>
 ContextPath option<Type[someVariant]>
 ContextPath Type[someVariant]
 Path someVariant
-[{
-    "label": "[]",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "option<someVariant>",
-    "documentation": {"kind": "markdown", "value": "```rescript\noption<someVariant>\n```"},
-    "sortText": "A",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\noption<someVariant>\n```"
+    },
     "insertText": "[$0]",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "[]",
+    "sortText": "A",
+    "tags": []
+  }
+]
 
 Complete src/CompletionTypeAnnotation.res 55:45
 XXX Not found!
@@ -370,21 +530,34 @@ ContextPath option<array<Type[someVariant]>>
 ContextPath array<Type[someVariant]>
 ContextPath Type[someVariant]
 Path someVariant
-[{
-    "label": "One",
-    "kind": 4,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "One",
-    "documentation": {"kind": "markdown", "value": "```rescript\nOne\n```\n\n```rescript\ntype someVariant = One | Two(bool)\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nOne\n```\n\n```rescript\ntype someVariant = One | Two(bool)\n```"
+    },
     "insertText": "One",
-    "insertTextFormat": 2
-  }, {
-    "label": "Two(_)",
+    "insertTextFormat": 2,
     "kind": 4,
-    "tags": [],
+    "label": "One",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "Two(bool)",
-    "documentation": {"kind": "markdown", "value": "```rescript\nTwo(bool)\n```\n\n```rescript\ntype someVariant = One | Two(bool)\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nTwo(bool)\n```\n\n```rescript\ntype someVariant = One | Two(bool)\n```"
+    },
     "insertText": "Two($0)",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Two(_)",
+    "tags": []
+  }
+]
 

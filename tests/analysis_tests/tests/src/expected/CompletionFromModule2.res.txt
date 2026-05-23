@@ -1,3 +1,4 @@
+null
 Complete src/CompletionFromModule2.res 2:26
 posCursor:[2:26] posNoWhite:[2:25] Found expr:[2:3->2:26]
 Pexp_field [2:3->2:25] _:[11:0->2:26]
@@ -13,25 +14,40 @@ Path CompletionFromModule.n
 CPPipe pathFromEnv:SomeModule found:true
 Path CompletionFromModule.SomeModule.
 Path 
-[{
-    "label": "name",
-    "kind": 5,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "string",
-    "documentation": {"kind": "markdown", "value": "```rescript\nname: string\n```\n\n```rescript\ntype t = {name: string}\n```"}
-  }, {
-    "label": "->CompletionFromModule.SomeModule.getName",
-    "kind": 12,
-    "tags": [],
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nname: string\n```\n\n```rescript\ntype t = {name: string}\n```"
+    },
+    "kind": 5,
+    "label": "name",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 26, "line": 2 },
+          "start": { "character": 25, "line": 2 }
+        }
+      }
+    ],
+    "data": null,
+    "deprecated": false,
     "detail": "t => string",
-    "documentation": null,
-    "sortText": "getName",
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->CompletionFromModule.SomeModule.getName",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 2, "character": 25}, "end": {"line": 2, "character": 26}},
-      "newText": ""
-      }]
-  }]
+    "kind": 12,
+    "label": "->CompletionFromModule.SomeModule.getName",
+    "sortText": "getName",
+    "tags": []
+  }
+]
 
 Complete src/CompletionFromModule2.res 5:27
 posCursor:[5:27] posNoWhite:[5:26] Found expr:[5:3->5:27]
@@ -49,61 +65,100 @@ CPPipe pathFromEnv:SomeOtherModule found:true
 Path CompletionFromModule.SomeOtherModule.
 Path CompletionFromModule.SomeOtherModule.
 Path 
-[{
-    "label": "nname",
-    "kind": 5,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "string",
-    "documentation": {"kind": "markdown", "value": "```rescript\nnname: string\n```\n\n```rescript\ntype typeOutsideModule = {nname: string}\n```"}
-  }, {
-    "label": "->CompletionFromModule.SomeOtherModule.getNName",
-    "kind": 12,
-    "tags": [],
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nnname: string\n```\n\n```rescript\ntype typeOutsideModule = {nname: string}\n```"
+    },
+    "kind": 5,
+    "label": "nname",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 27, "line": 5 },
+          "start": { "character": 26, "line": 5 }
+        }
+      }
+    ],
+    "data": null,
+    "deprecated": false,
     "detail": "t => string",
-    "documentation": null,
-    "sortText": "getNName",
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->CompletionFromModule.SomeOtherModule.getNName",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 5, "character": 26}, "end": {"line": 5, "character": 27}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->CompletionFromModule.SomeOtherModule.getNName2",
     "kind": 12,
-    "tags": [],
-    "detail": "typeOutsideModule => string",
-    "documentation": null,
-    "sortText": "getNName2",
-    "insertText": "->CompletionFromModule.SomeOtherModule.getNName2",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 5, "character": 26}, "end": {"line": 5, "character": 27}},
-      "newText": ""
-      }]
-  }, {
     "label": "->CompletionFromModule.SomeOtherModule.getNName",
-    "kind": 12,
-    "tags": [],
-    "detail": "t => string",
-    "documentation": null,
     "sortText": "getNName",
-    "insertText": "->CompletionFromModule.SomeOtherModule.getNName",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 5, "character": 26}, "end": {"line": 5, "character": 27}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->CompletionFromModule.SomeOtherModule.getNName2",
-    "kind": 12,
-    "tags": [],
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 27, "line": 5 },
+          "start": { "character": 26, "line": 5 }
+        }
+      }
+    ],
+    "data": null,
+    "deprecated": false,
     "detail": "typeOutsideModule => string",
-    "documentation": null,
-    "sortText": "getNName2",
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->CompletionFromModule.SomeOtherModule.getNName2",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 5, "character": 26}, "end": {"line": 5, "character": 27}},
-      "newText": ""
-      }]
-  }]
+    "kind": 12,
+    "label": "->CompletionFromModule.SomeOtherModule.getNName2",
+    "sortText": "getNName2",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 27, "line": 5 },
+          "start": { "character": 26, "line": 5 }
+        }
+      }
+    ],
+    "data": null,
+    "deprecated": false,
+    "detail": "t => string",
+    "documentation": { "kind": "markdown", "value": "" },
+    "insertText": "->CompletionFromModule.SomeOtherModule.getNName",
+    "kind": 12,
+    "label": "->CompletionFromModule.SomeOtherModule.getNName",
+    "sortText": "getNName",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 27, "line": 5 },
+          "start": { "character": 26, "line": 5 }
+        }
+      }
+    ],
+    "data": null,
+    "deprecated": false,
+    "detail": "typeOutsideModule => string",
+    "documentation": { "kind": "markdown", "value": "" },
+    "insertText": "->CompletionFromModule.SomeOtherModule.getNName2",
+    "kind": 12,
+    "label": "->CompletionFromModule.SomeOtherModule.getNName2",
+    "sortText": "getNName2",
+    "tags": []
+  }
+]
 
 Complete src/CompletionFromModule2.res 8:29
 posCursor:[8:29] posNoWhite:[8:28] Found expr:[8:3->0:-1]
@@ -117,19 +172,26 @@ CPPipe pathFromEnv: found:true
 Path CompletionFromModule.
 Path CompletionFromModule.SomeOtherModule.
 Path 
-[{
-    "label": "CompletionFromModule.SomeOtherModule.getNName",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "t => string",
-    "documentation": null
-  }, {
-    "label": "CompletionFromModule.SomeOtherModule.getNName2",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
-    "tags": [],
+    "label": "CompletionFromModule.SomeOtherModule.getNName",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "typeOutsideModule => string",
-    "documentation": null
-  }]
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
+    "label": "CompletionFromModule.SomeOtherModule.getNName2",
+    "tags": []
+  }
+]
 
 Complete src/CompletionFromModule2.res 12:29
 posCursor:[12:29] posNoWhite:[12:28] Found expr:[12:3->0:-1]
@@ -144,17 +206,24 @@ CPPipe pathFromEnv: found:true
 Path CompletionFromModule.
 Path CompletionFromModule.SomeOtherModule.
 Path 
-[{
-    "label": "getNName",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "t => string",
-    "documentation": null
-  }, {
-    "label": "getNName2",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
-    "tags": [],
+    "label": "getNName",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "typeOutsideModule => string",
-    "documentation": null
-  }]
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
+    "label": "getNName2",
+    "tags": []
+  }
+]
 

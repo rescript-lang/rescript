@@ -1,3 +1,4 @@
+null
 Complete src/CompletionExpressions.res 3:20
 XXX Not found!
 Completable: Cpattern CTuple(Value[s], Value[f])
@@ -8,15 +9,19 @@ ContextPath Value[s]
 Path s
 ContextPath Value[f]
 Path f
-[{
-    "label": "(_, _)",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(bool, option<array<bool>>)",
-    "documentation": null,
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "(${1:_}, ${2:_})",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "(_, _)",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 26:27
 posCursor:[26:27] posNoWhite:[26:26] Found expr:[26:11->26:29]
@@ -27,43 +32,80 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingRecord]($0)
 ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
-[{
-    "label": "age",
-    "kind": 5,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "int",
-    "documentation": {"kind": "markdown", "value": "```rescript\nage: int\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>, variant: someVariant, polyvariant: somePolyVariant, nested: option<otherRecord>}\n```"}
-  }, {
-    "label": "offline",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nage: int\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>, variant: someVariant, polyvariant: somePolyVariant, nested: option<otherRecord>}\n```"
+    },
     "kind": 5,
-    "tags": [],
+    "label": "age",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "bool",
-    "documentation": {"kind": "markdown", "value": "```rescript\noffline: bool\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>, variant: someVariant, polyvariant: somePolyVariant, nested: option<otherRecord>}\n```"}
-  }, {
-    "label": "online",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\noffline: bool\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>, variant: someVariant, polyvariant: somePolyVariant, nested: option<otherRecord>}\n```"
+    },
     "kind": 5,
-    "tags": [],
+    "label": "offline",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "option<bool>",
-    "documentation": {"kind": "markdown", "value": "```rescript\nonline: option<bool>\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>, variant: someVariant, polyvariant: somePolyVariant, nested: option<otherRecord>}\n```"}
-  }, {
-    "label": "variant",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nonline: option<bool>\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>, variant: someVariant, polyvariant: somePolyVariant, nested: option<otherRecord>}\n```"
+    },
     "kind": 5,
-    "tags": [],
+    "label": "online",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "someVariant",
-    "documentation": {"kind": "markdown", "value": "```rescript\nvariant: someVariant\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>, variant: someVariant, polyvariant: somePolyVariant, nested: option<otherRecord>}\n```"}
-  }, {
-    "label": "polyvariant",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nvariant: someVariant\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>, variant: someVariant, polyvariant: somePolyVariant, nested: option<otherRecord>}\n```"
+    },
     "kind": 5,
-    "tags": [],
+    "label": "variant",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "somePolyVariant",
-    "documentation": {"kind": "markdown", "value": "```rescript\npolyvariant: somePolyVariant\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>, variant: someVariant, polyvariant: somePolyVariant, nested: option<otherRecord>}\n```"}
-  }, {
-    "label": "nested",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\npolyvariant: somePolyVariant\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>, variant: someVariant, polyvariant: somePolyVariant, nested: option<otherRecord>}\n```"
+    },
     "kind": 5,
-    "tags": [],
+    "label": "polyvariant",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "option<otherRecord>",
-    "documentation": {"kind": "markdown", "value": "```rescript\nnested: option<otherRecord>\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>, variant: someVariant, polyvariant: somePolyVariant, nested: option<otherRecord>}\n```"}
-  }]
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nnested: option<otherRecord>\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>, variant: someVariant, polyvariant: somePolyVariant, nested: option<otherRecord>}\n```"
+    },
+    "kind": 5,
+    "label": "nested",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 29:28
 posCursor:[29:28] posNoWhite:[29:27] Found expr:[29:11->29:30]
@@ -74,13 +116,20 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingRecord]($0)
 ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
-[{
-    "label": "nested",
-    "kind": 5,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "option<otherRecord>",
-    "documentation": {"kind": "markdown", "value": "```rescript\nnested: option<otherRecord>\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>, variant: someVariant, polyvariant: somePolyVariant, nested: option<otherRecord>}\n```"}
-  }]
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nnested: option<otherRecord>\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>, variant: someVariant, polyvariant: somePolyVariant, nested: option<otherRecord>}\n```"
+    },
+    "kind": 5,
+    "label": "nested",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 32:35
 posCursor:[32:35] posNoWhite:[32:34] Found expr:[32:11->32:38]
@@ -91,19 +140,26 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingRecord]($0)
 ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
-[{
+[
+  {
+    "data": null,
+    "deprecated": false,
+    "detail": "bool",
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 4,
     "label": "true",
-    "kind": 4,
-    "tags": [],
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "bool",
-    "documentation": null
-  }, {
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 4,
     "label": "false",
-    "kind": 4,
-    "tags": [],
-    "detail": "bool",
-    "documentation": null
-  }]
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 35:36
 posCursor:[35:36] posNoWhite:[35:35] Found expr:[35:11->35:39]
@@ -114,37 +170,68 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingRecord]($0)
 ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
-[{
-    "label": "offline",
-    "kind": 5,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "bool",
-    "documentation": {"kind": "markdown", "value": "```rescript\noffline: bool\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>, variant: someVariant, polyvariant: somePolyVariant, nested: option<otherRecord>}\n```"}
-  }, {
-    "label": "online",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\noffline: bool\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>, variant: someVariant, polyvariant: somePolyVariant, nested: option<otherRecord>}\n```"
+    },
     "kind": 5,
-    "tags": [],
+    "label": "offline",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "option<bool>",
-    "documentation": {"kind": "markdown", "value": "```rescript\nonline: option<bool>\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>, variant: someVariant, polyvariant: somePolyVariant, nested: option<otherRecord>}\n```"}
-  }, {
-    "label": "variant",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nonline: option<bool>\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>, variant: someVariant, polyvariant: somePolyVariant, nested: option<otherRecord>}\n```"
+    },
     "kind": 5,
-    "tags": [],
+    "label": "online",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "someVariant",
-    "documentation": {"kind": "markdown", "value": "```rescript\nvariant: someVariant\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>, variant: someVariant, polyvariant: somePolyVariant, nested: option<otherRecord>}\n```"}
-  }, {
-    "label": "polyvariant",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nvariant: someVariant\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>, variant: someVariant, polyvariant: somePolyVariant, nested: option<otherRecord>}\n```"
+    },
     "kind": 5,
-    "tags": [],
+    "label": "variant",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "somePolyVariant",
-    "documentation": {"kind": "markdown", "value": "```rescript\npolyvariant: somePolyVariant\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>, variant: someVariant, polyvariant: somePolyVariant, nested: option<otherRecord>}\n```"}
-  }, {
-    "label": "nested",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\npolyvariant: somePolyVariant\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>, variant: someVariant, polyvariant: somePolyVariant, nested: option<otherRecord>}\n```"
+    },
     "kind": 5,
-    "tags": [],
+    "label": "polyvariant",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "option<otherRecord>",
-    "documentation": {"kind": "markdown", "value": "```rescript\nnested: option<otherRecord>\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>, variant: someVariant, polyvariant: somePolyVariant, nested: option<otherRecord>}\n```"}
-  }]
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nnested: option<otherRecord>\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>, variant: someVariant, polyvariant: somePolyVariant, nested: option<otherRecord>}\n```"
+    },
+    "kind": 5,
+    "label": "nested",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 38:37
 posCursor:[38:37] posNoWhite:[38:35] Found expr:[38:11->38:53]
@@ -155,31 +242,56 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingRecord]($0)
 ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
-[{
-    "label": "online",
-    "kind": 5,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "option<bool>",
-    "documentation": {"kind": "markdown", "value": "```rescript\nonline: option<bool>\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>, variant: someVariant, polyvariant: somePolyVariant, nested: option<otherRecord>}\n```"}
-  }, {
-    "label": "variant",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nonline: option<bool>\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>, variant: someVariant, polyvariant: somePolyVariant, nested: option<otherRecord>}\n```"
+    },
     "kind": 5,
-    "tags": [],
+    "label": "online",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "someVariant",
-    "documentation": {"kind": "markdown", "value": "```rescript\nvariant: someVariant\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>, variant: someVariant, polyvariant: somePolyVariant, nested: option<otherRecord>}\n```"}
-  }, {
-    "label": "polyvariant",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nvariant: someVariant\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>, variant: someVariant, polyvariant: somePolyVariant, nested: option<otherRecord>}\n```"
+    },
     "kind": 5,
-    "tags": [],
+    "label": "variant",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "somePolyVariant",
-    "documentation": {"kind": "markdown", "value": "```rescript\npolyvariant: somePolyVariant\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>, variant: someVariant, polyvariant: somePolyVariant, nested: option<otherRecord>}\n```"}
-  }, {
-    "label": "nested",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\npolyvariant: somePolyVariant\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>, variant: someVariant, polyvariant: somePolyVariant, nested: option<otherRecord>}\n```"
+    },
     "kind": 5,
-    "tags": [],
+    "label": "polyvariant",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "option<otherRecord>",
-    "documentation": {"kind": "markdown", "value": "```rescript\nnested: option<otherRecord>\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>, variant: someVariant, polyvariant: somePolyVariant, nested: option<otherRecord>}\n```"}
-  }]
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nnested: option<otherRecord>\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>, variant: someVariant, polyvariant: somePolyVariant, nested: option<otherRecord>}\n```"
+    },
+    "kind": 5,
+    "label": "nested",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 41:44
 posCursor:[41:44] posNoWhite:[41:43] Found expr:[41:11->41:47]
@@ -190,37 +302,62 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingRecord]($0)
 ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
-[{
-    "label": "Some(nested)",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "otherRecord",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype otherRecord = {someField: int, otherField: string}\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype otherRecord = {someField: int, otherField: string}\n```"
+    },
     "insertText": "Some(nested)$0",
-    "insertTextFormat": 2
-  }, {
-    "label": "Some(_)",
+    "insertTextFormat": 2,
     "kind": 12,
-    "tags": [],
+    "label": "Some(nested)",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "otherRecord",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype otherRecord = {someField: int, otherField: string}\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype otherRecord = {someField: int, otherField: string}\n```"
+    },
     "insertText": "Some($0)",
-    "insertTextFormat": 2
-  }, {
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "Some(_)",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
+    "detail": "otherRecord",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype otherRecord = {someField: int, otherField: string}\n```"
+    },
+    "kind": 12,
     "label": "None",
-    "kind": 12,
-    "tags": [],
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "otherRecord",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype otherRecord = {someField: int, otherField: string}\n```"}
-  }, {
-    "label": "Some({})",
-    "kind": 12,
-    "tags": [],
-    "detail": "otherRecord",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype otherRecord = {someField: int, otherField: string}\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype otherRecord = {someField: int, otherField: string}\n```"
+    },
     "insertText": "Some({$0})",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "Some({})",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 44:46
 posCursor:[44:46] posNoWhite:[44:45] Found expr:[44:11->44:49]
@@ -242,19 +379,32 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingRecord]($0)
 ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
-[{
-    "label": "someField",
-    "kind": 5,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "int",
-    "documentation": {"kind": "markdown", "value": "```rescript\nsomeField: int\n```\n\n```rescript\ntype otherRecord = {someField: int, otherField: string}\n```"}
-  }, {
-    "label": "otherField",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nsomeField: int\n```\n\n```rescript\ntype otherRecord = {someField: int, otherField: string}\n```"
+    },
     "kind": 5,
-    "tags": [],
+    "label": "someField",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "string",
-    "documentation": {"kind": "markdown", "value": "```rescript\notherField: string\n```\n\n```rescript\ntype otherRecord = {someField: int, otherField: string}\n```"}
-  }]
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\notherField: string\n```\n\n```rescript\ntype otherRecord = {someField: int, otherField: string}\n```"
+    },
+    "kind": 5,
+    "label": "otherField",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 50:45
 posCursor:[50:45] posNoWhite:[50:44] Found expr:[50:11->50:48]
@@ -265,31 +415,50 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingRecord]($0)
 ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
-[{
-    "label": "One",
-    "kind": 4,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "One",
-    "documentation": {"kind": "markdown", "value": "```rescript\nOne\n```\n\n```rescript\ntype someVariant = One | Two | Three(int, string)\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nOne\n```\n\n```rescript\ntype someVariant = One | Two | Three(int, string)\n```"
+    },
     "insertText": "One",
-    "insertTextFormat": 2
-  }, {
-    "label": "Two",
+    "insertTextFormat": 2,
     "kind": 4,
-    "tags": [],
+    "label": "One",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "Two",
-    "documentation": {"kind": "markdown", "value": "```rescript\nTwo\n```\n\n```rescript\ntype someVariant = One | Two | Three(int, string)\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nTwo\n```\n\n```rescript\ntype someVariant = One | Two | Three(int, string)\n```"
+    },
     "insertText": "Two",
-    "insertTextFormat": 2
-  }, {
-    "label": "Three(_, _)",
+    "insertTextFormat": 2,
     "kind": 4,
-    "tags": [],
+    "label": "Two",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "Three(int, string)",
-    "documentation": {"kind": "markdown", "value": "```rescript\nThree(int, string)\n```\n\n```rescript\ntype someVariant = One | Two | Three(int, string)\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nThree(int, string)\n```\n\n```rescript\ntype someVariant = One | Two | Three(int, string)\n```"
+    },
     "insertText": "Three(${1:_}, ${2:_})",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Three(_, _)",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 53:47
 posCursor:[53:47] posNoWhite:[53:46] Found expr:[53:11->53:50]
@@ -300,15 +469,22 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingRecord]($0)
 ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
-[{
-    "label": "One",
-    "kind": 4,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "One",
-    "documentation": {"kind": "markdown", "value": "```rescript\nOne\n```\n\n```rescript\ntype someVariant = One | Two | Three(int, string)\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nOne\n```\n\n```rescript\ntype someVariant = One | Two | Three(int, string)\n```"
+    },
     "insertText": "One",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "One",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 56:57
 posCursor:[56:57] posNoWhite:[56:56] Found expr:[56:11->56:61]
@@ -319,16 +495,23 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingRecord]($0)
 ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
-[{
-    "label": "{}",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "someRecord",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>, variant: someVariant, polyvariant: somePolyVariant, nested: option<otherRecord>}\n```"},
-    "sortText": "A",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>, variant: someVariant, polyvariant: somePolyVariant, nested: option<otherRecord>}\n```"
+    },
     "insertText": "{$0}",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "{}",
+    "sortText": "A",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 59:60
 posCursor:[59:60] posNoWhite:[59:59] Found expr:[59:11->59:65]
@@ -339,19 +522,26 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingRecord]($0)
 ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
-[{
+[
+  {
+    "data": null,
+    "deprecated": false,
+    "detail": "bool",
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 4,
     "label": "true",
-    "kind": 4,
-    "tags": [],
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "bool",
-    "documentation": null
-  }, {
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 4,
     "label": "false",
-    "kind": 4,
-    "tags": [],
-    "detail": "bool",
-    "documentation": null
-  }]
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 62:62
 posCursor:[62:62] posNoWhite:[62:61] Found expr:[62:11->62:66]
@@ -362,20 +552,30 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingRecord]($0)
 ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
-[{
-    "label": "true",
-    "kind": 4,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "bool",
-    "documentation": null,
-    "sortText": "A true"
-  }, {
-    "label": "typeof",
-    "kind": 12,
-    "tags": [],
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 4,
+    "label": "true",
+    "sortText": "A true",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "'a => Type.t",
-    "documentation": {"kind": "markdown", "value": "\n`typeof(value)` exposes JavaScript's `typeof` operator and returns a `Type.t` enum.\nIt helps you inspect values that come from JavaScript APIs.\n\n## Examples\n\n```rescript\ntypeof(1) == #number\ntypeof(\"a\") == #string\n```\n"}
-  }]
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`typeof(value)` exposes JavaScript's `typeof` operator and returns a `Type.t` enum.\nIt helps you inspect values that come from JavaScript APIs.\n\n## Examples\n\n```rescript\ntypeof(1) == #number\ntypeof(\"a\") == #string\n```\n"
+    },
+    "kind": 12,
+    "label": "typeof",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 69:25
 posCursor:[69:25] posNoWhite:[69:24] Found expr:[69:11->69:26]
@@ -386,16 +586,20 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingArray]($0)
 ContextPath Value[fnTakingArray]
 Path fnTakingArray
-[{
-    "label": "[]",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "option<bool>",
-    "documentation": null,
-    "sortText": "A",
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "[$0]",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "[]",
+    "sortText": "A",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 72:26
 posCursor:[72:26] posNoWhite:[72:25] Found expr:[72:11->72:28]
@@ -406,33 +610,46 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingArray]($0)
 ContextPath Value[fnTakingArray]
 Path fnTakingArray
-[{
+[
+  {
+    "data": null,
+    "deprecated": false,
+    "detail": "bool",
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
     "label": "None",
-    "kind": 12,
-    "tags": [],
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "bool",
-    "documentation": null
-  }, {
-    "label": "Some(_)",
-    "kind": 12,
-    "tags": [],
-    "detail": "bool",
-    "documentation": null,
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Some($0)",
-    "insertTextFormat": 2
-  }, {
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "Some(_)",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
+    "detail": "bool",
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 4,
     "label": "Some(true)",
-    "kind": 4,
-    "tags": [],
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "bool",
-    "documentation": null
-  }, {
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 4,
     "label": "Some(false)",
-    "kind": 4,
-    "tags": [],
-    "detail": "bool",
-    "documentation": null
-  }]
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 75:26
 posCursor:[75:26] posNoWhite:[75:25] Found expr:[75:11->75:27]
@@ -443,37 +660,65 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingArray]($0)
 ContextPath Value[fnTakingArray]
 Path fnTakingArray
-[{
-    "label": "s",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "bool",
-    "documentation": null
-  }, {
-    "label": "setTimeoutFloat",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
-    "tags": [],
+    "label": "s",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(unit => unit, float) => timeoutId",
-    "documentation": {"kind": "markdown", "value": "\n`setTimeoutFloat(callback, durationInMilliseconds)` starts a timer that will execute `callback` after `durationInMilliseconds`.\n\nThe same as `setTimeout`, but allows you to pass a `float` instead of an `int` for the duration.\n\nSee [`setTimeout`](https://developer.mozilla.org/en-US/docs/Web/API/setTimeout) on MDN.\n\n## Examples\n\n```rescript\n// Log to the console after 200 milliseconds.\nlet timeoutId = setTimeoutFloat(() => {\n  Console.log(\"This prints in 200 ms.\")\n}, 200.)\n```\n"}
-  }, {
-    "label": "setIntervalFloat",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`setTimeoutFloat(callback, durationInMilliseconds)` starts a timer that will execute `callback` after `durationInMilliseconds`.\n\nThe same as `setTimeout`, but allows you to pass a `float` instead of an `int` for the duration.\n\nSee [`setTimeout`](https://developer.mozilla.org/en-US/docs/Web/API/setTimeout) on MDN.\n\n## Examples\n\n```rescript\n// Log to the console after 200 milliseconds.\nlet timeoutId = setTimeoutFloat(() => {\n  Console.log(\"This prints in 200 ms.\")\n}, 200.)\n```\n"
+    },
     "kind": 12,
-    "tags": [],
+    "label": "setTimeoutFloat",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(unit => unit, float) => intervalId",
-    "documentation": {"kind": "markdown", "value": "\n`setIntervalFloat(callback, intervalInMilliseconds)` starts an interval that will execute `callback` every `durationInMilliseconds` milliseconds.\n\nThe same as `setInterval`, but allows you to pass a `float` instead of an `int` for the duration.\n\nSee [`setInterval`](https://developer.mozilla.org/en-US/docs/Web/API/setInterval) on MDN.\n\n## Examples\n\n```rescript\n// Log to the console ever 2 seconds (200 milliseconds).\nlet intervalId = setIntervalFloat(() => {\n  Console.log(\"This prints every 200 ms\")\n}, 200.)\n\n// Stop the interval after 500 ms\nlet timeoutId = setTimeoutFloat(() => {\n  clearInterval(intervalId)\n}, 500.0)\n```\n"}
-  }, {
-    "label": "setInterval",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`setIntervalFloat(callback, intervalInMilliseconds)` starts an interval that will execute `callback` every `durationInMilliseconds` milliseconds.\n\nThe same as `setInterval`, but allows you to pass a `float` instead of an `int` for the duration.\n\nSee [`setInterval`](https://developer.mozilla.org/en-US/docs/Web/API/setInterval) on MDN.\n\n## Examples\n\n```rescript\n// Log to the console ever 2 seconds (200 milliseconds).\nlet intervalId = setIntervalFloat(() => {\n  Console.log(\"This prints every 200 ms\")\n}, 200.)\n\n// Stop the interval after 500 ms\nlet timeoutId = setTimeoutFloat(() => {\n  clearInterval(intervalId)\n}, 500.0)\n```\n"
+    },
     "kind": 12,
-    "tags": [],
+    "label": "setIntervalFloat",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(unit => unit, int) => intervalId",
-    "documentation": {"kind": "markdown", "value": "\n`setInterval(callback, intervalInMilliseconds)` starts an interval that will execute `callback` every `durationInMilliseconds` milliseconds.\n\nSee [`setInterval`](https://developer.mozilla.org/en-US/docs/Web/API/setInterval) on MDN.\n\n## Examples\n\n```rescript\n// Log to the console ever 200 ms (200 milliseconds).\nlet intervalId = setInterval(() => {\n  Console.log(\"This prints every 200 ms.\")\n}, 200)\n\nlet timeoutId = setTimeout(() => {\n  clearInterval(intervalId)\n}, 500)\n```\n"}
-  }, {
-    "label": "setTimeout",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`setInterval(callback, intervalInMilliseconds)` starts an interval that will execute `callback` every `durationInMilliseconds` milliseconds.\n\nSee [`setInterval`](https://developer.mozilla.org/en-US/docs/Web/API/setInterval) on MDN.\n\n## Examples\n\n```rescript\n// Log to the console ever 200 ms (200 milliseconds).\nlet intervalId = setInterval(() => {\n  Console.log(\"This prints every 200 ms.\")\n}, 200)\n\nlet timeoutId = setTimeout(() => {\n  clearInterval(intervalId)\n}, 500)\n```\n"
+    },
     "kind": 12,
-    "tags": [],
+    "label": "setInterval",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(unit => unit, int) => timeoutId",
-    "documentation": {"kind": "markdown", "value": "\n`setTimeout(callback, durationInMilliseconds)` starts a timer that will execute `callback` after `durationInMilliseconds`.\n\nSee [`setTimeout`](https://developer.mozilla.org/en-US/docs/Web/API/setTimeout) on MDN.\n\n## Examples\n\n```rescript\n// Log to the console after 200 milliseconds.\nlet timeoutId = setTimeout(() => {\n  Console.log(\"This prints in 200 ms.\")\n}, 200)\n```\n"}
-  }]
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`setTimeout(callback, durationInMilliseconds)` starts a timer that will execute `callback` after `durationInMilliseconds`.\n\nSee [`setTimeout`](https://developer.mozilla.org/en-US/docs/Web/API/setTimeout) on MDN.\n\n## Examples\n\n```rescript\n// Log to the console after 200 milliseconds.\nlet timeoutId = setTimeout(() => {\n  Console.log(\"This prints in 200 ms.\")\n}, 200)\n```\n"
+    },
+    "kind": 12,
+    "label": "setTimeout",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 78:31
 posCursor:[78:31] posNoWhite:[78:30] Found expr:[78:11->78:34]
@@ -484,19 +729,26 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingArray]($0)
 ContextPath Value[fnTakingArray]
 Path fnTakingArray
-[{
+[
+  {
+    "data": null,
+    "deprecated": false,
+    "detail": "bool",
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 4,
     "label": "true",
-    "kind": 4,
-    "tags": [],
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "bool",
-    "documentation": null
-  }, {
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 4,
     "label": "false",
-    "kind": 4,
-    "tags": [],
-    "detail": "bool",
-    "documentation": null
-  }]
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 81:31
 posCursor:[81:31] posNoWhite:[81:30] Found expr:[81:11->81:34]
@@ -507,33 +759,46 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingArray]($0)
 ContextPath Value[fnTakingArray]
 Path fnTakingArray
-[{
+[
+  {
+    "data": null,
+    "deprecated": false,
+    "detail": "bool",
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
     "label": "None",
-    "kind": 12,
-    "tags": [],
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "bool",
-    "documentation": null
-  }, {
-    "label": "Some(_)",
-    "kind": 12,
-    "tags": [],
-    "detail": "bool",
-    "documentation": null,
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Some($0)",
-    "insertTextFormat": 2
-  }, {
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "Some(_)",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
+    "detail": "bool",
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 4,
     "label": "Some(true)",
-    "kind": 4,
-    "tags": [],
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "bool",
-    "documentation": null
-  }, {
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 4,
     "label": "Some(false)",
-    "kind": 4,
-    "tags": [],
-    "detail": "bool",
-    "documentation": null
-  }]
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 84:31
 posCursor:[84:31] posNoWhite:[84:30] Found expr:[84:11->84:40]
@@ -544,33 +809,46 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingArray]($0)
 ContextPath Value[fnTakingArray]
 Path fnTakingArray
-[{
+[
+  {
+    "data": null,
+    "deprecated": false,
+    "detail": "bool",
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
     "label": "None",
-    "kind": 12,
-    "tags": [],
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "bool",
-    "documentation": null
-  }, {
-    "label": "Some(_)",
-    "kind": 12,
-    "tags": [],
-    "detail": "bool",
-    "documentation": null,
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Some($0)",
-    "insertTextFormat": 2
-  }, {
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "Some(_)",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
+    "detail": "bool",
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 4,
     "label": "Some(true)",
-    "kind": 4,
-    "tags": [],
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "bool",
-    "documentation": null
-  }, {
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 4,
     "label": "Some(false)",
-    "kind": 4,
-    "tags": [],
-    "detail": "bool",
-    "documentation": null
-  }]
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 89:38
 posCursor:[89:38] posNoWhite:[89:37] Found expr:[89:11->89:41]
@@ -581,13 +859,17 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingRecord]($0)
 ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
-[{
-    "label": "someBoolVar",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "bool",
-    "documentation": null
-  }]
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
+    "label": "someBoolVar",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 96:43
 posCursor:[96:43] posNoWhite:[96:42] Found expr:[96:11->96:46]
@@ -598,16 +880,20 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingOtherRecord]($0)
 ContextPath Value[fnTakingOtherRecord]
 Path fnTakingOtherRecord
-[{
-    "label": "\"\"",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "string",
-    "documentation": null,
-    "sortText": "A",
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "\"$0\"",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "\"\"",
+    "sortText": "A",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 108:57
 posCursor:[108:57] posNoWhite:[108:56] Found expr:[108:11->108:60]
@@ -618,19 +904,26 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingRecordWithOptionalField]($0)
 ContextPath Value[fnTakingRecordWithOptionalField]
 Path fnTakingRecordWithOptionalField
-[{
+[
+  {
+    "data": null,
+    "deprecated": false,
+    "detail": "bool",
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 4,
     "label": "true",
-    "kind": 4,
-    "tags": [],
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "bool",
-    "documentation": null
-  }, {
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 4,
     "label": "false",
-    "kind": 4,
-    "tags": [],
-    "detail": "bool",
-    "documentation": null
-  }]
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 116:53
 posCursor:[116:53] posNoWhite:[116:52] Found expr:[116:11->116:56]
@@ -641,53 +934,90 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingRecordWithOptVariant]($0)
 ContextPath Value[fnTakingRecordWithOptVariant]
 Path fnTakingRecordWithOptVariant
-[{
-    "label": "Some(someVariant)",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "someVariant",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype someVariant = One | Two | Three(int, string)\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype someVariant = One | Two | Three(int, string)\n```"
+    },
     "insertText": "Some(someVariant)$0",
-    "insertTextFormat": 2
-  }, {
-    "label": "Some(_)",
+    "insertTextFormat": 2,
     "kind": 12,
-    "tags": [],
+    "label": "Some(someVariant)",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "someVariant",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype someVariant = One | Two | Three(int, string)\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype someVariant = One | Two | Three(int, string)\n```"
+    },
     "insertText": "Some($0)",
-    "insertTextFormat": 2
-  }, {
-    "label": "None",
+    "insertTextFormat": 2,
     "kind": 12,
-    "tags": [],
+    "label": "Some(_)",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "someVariant",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype someVariant = One | Two | Three(int, string)\n```"}
-  }, {
-    "label": "Some(One)",
-    "kind": 4,
-    "tags": [],
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype someVariant = One | Two | Three(int, string)\n```"
+    },
+    "kind": 12,
+    "label": "None",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "One",
-    "documentation": {"kind": "markdown", "value": "```rescript\nOne\n```\n\n```rescript\ntype someVariant = One | Two | Three(int, string)\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nOne\n```\n\n```rescript\ntype someVariant = One | Two | Three(int, string)\n```"
+    },
     "insertText": "Some(One)",
-    "insertTextFormat": 2
-  }, {
-    "label": "Some(Two)",
+    "insertTextFormat": 2,
     "kind": 4,
-    "tags": [],
+    "label": "Some(One)",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "Two",
-    "documentation": {"kind": "markdown", "value": "```rescript\nTwo\n```\n\n```rescript\ntype someVariant = One | Two | Three(int, string)\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nTwo\n```\n\n```rescript\ntype someVariant = One | Two | Three(int, string)\n```"
+    },
     "insertText": "Some(Two)",
-    "insertTextFormat": 2
-  }, {
-    "label": "Some(Three(_, _))",
+    "insertTextFormat": 2,
     "kind": 4,
-    "tags": [],
+    "label": "Some(Two)",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "Three(int, string)",
-    "documentation": {"kind": "markdown", "value": "```rescript\nThree(int, string)\n```\n\n```rescript\ntype someVariant = One | Two | Three(int, string)\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nThree(int, string)\n```\n\n```rescript\ntype someVariant = One | Two | Three(int, string)\n```"
+    },
     "insertText": "Some(Three(${1:_}, ${2:_}))",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Some(Three(_, _))",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 126:49
 posCursor:[126:49] posNoWhite:[126:48] Found expr:[126:11->126:51]
@@ -698,16 +1028,23 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingInlineRecord]($0)
 ContextPath Value[fnTakingInlineRecord]
 Path fnTakingInlineRecord
-[{
-    "label": "{}",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "{someBoolField: bool, otherField: option<bool>, nestedRecord: otherRecord}",
-    "documentation": {"kind": "markdown", "value": "```rescript\n{someBoolField: bool, otherField: option<bool>, nestedRecord: otherRecord}\n```"},
-    "sortText": "A",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\n{someBoolField: bool, otherField: option<bool>, nestedRecord: otherRecord}\n```"
+    },
     "insertText": "{$0}",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "{}",
+    "sortText": "A",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 129:50
 posCursor:[129:50] posNoWhite:[129:49] Found expr:[129:11->129:53]
@@ -718,25 +1055,44 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingInlineRecord]($0)
 ContextPath Value[fnTakingInlineRecord]
 Path fnTakingInlineRecord
-[{
-    "label": "someBoolField",
-    "kind": 5,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "bool",
-    "documentation": {"kind": "markdown", "value": "```rescript\nsomeBoolField: bool\n```\n\n```rescript\n{someBoolField: bool, otherField: option<bool>, nestedRecord: otherRecord}\n```"}
-  }, {
-    "label": "otherField",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nsomeBoolField: bool\n```\n\n```rescript\n{someBoolField: bool, otherField: option<bool>, nestedRecord: otherRecord}\n```"
+    },
     "kind": 5,
-    "tags": [],
+    "label": "someBoolField",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "option<bool>",
-    "documentation": {"kind": "markdown", "value": "```rescript\notherField: option<bool>\n```\n\n```rescript\n{someBoolField: bool, otherField: option<bool>, nestedRecord: otherRecord}\n```"}
-  }, {
-    "label": "nestedRecord",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\notherField: option<bool>\n```\n\n```rescript\n{someBoolField: bool, otherField: option<bool>, nestedRecord: otherRecord}\n```"
+    },
     "kind": 5,
-    "tags": [],
+    "label": "otherField",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "otherRecord",
-    "documentation": {"kind": "markdown", "value": "```rescript\nnestedRecord: otherRecord\n```\n\n```rescript\n{someBoolField: bool, otherField: option<bool>, nestedRecord: otherRecord}\n```"}
-  }]
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nnestedRecord: otherRecord\n```\n\n```rescript\n{someBoolField: bool, otherField: option<bool>, nestedRecord: otherRecord}\n```"
+    },
+    "kind": 5,
+    "label": "nestedRecord",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 132:51
 posCursor:[132:51] posNoWhite:[132:50] Found expr:[132:11->132:54]
@@ -747,13 +1103,20 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingInlineRecord]($0)
 ContextPath Value[fnTakingInlineRecord]
 Path fnTakingInlineRecord
-[{
-    "label": "someBoolField",
-    "kind": 5,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "bool",
-    "documentation": {"kind": "markdown", "value": "```rescript\nsomeBoolField: bool\n```\n\n```rescript\n{someBoolField: bool, otherField: option<bool>, nestedRecord: otherRecord}\n```"}
-  }]
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nsomeBoolField: bool\n```\n\n```rescript\n{someBoolField: bool, otherField: option<bool>, nestedRecord: otherRecord}\n```"
+    },
+    "kind": 5,
+    "label": "someBoolField",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 135:63
 posCursor:[135:63] posNoWhite:[135:62] Found expr:[135:11->135:67]
@@ -764,16 +1127,23 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingInlineRecord]($0)
 ContextPath Value[fnTakingInlineRecord]
 Path fnTakingInlineRecord
-[{
-    "label": "{}",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "otherRecord",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype otherRecord = {someField: int, otherField: string}\n```"},
-    "sortText": "A",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype otherRecord = {someField: int, otherField: string}\n```"
+    },
     "insertText": "{$0}",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "{}",
+    "sortText": "A",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 138:65
 posCursor:[138:65] posNoWhite:[138:64] Found expr:[138:11->138:70]
@@ -784,19 +1154,32 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingInlineRecord]($0)
 ContextPath Value[fnTakingInlineRecord]
 Path fnTakingInlineRecord
-[{
-    "label": "someField",
-    "kind": 5,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "int",
-    "documentation": {"kind": "markdown", "value": "```rescript\nsomeField: int\n```\n\n```rescript\ntype otherRecord = {someField: int, otherField: string}\n```"}
-  }, {
-    "label": "otherField",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nsomeField: int\n```\n\n```rescript\ntype otherRecord = {someField: int, otherField: string}\n```"
+    },
     "kind": 5,
-    "tags": [],
+    "label": "someField",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "string",
-    "documentation": {"kind": "markdown", "value": "```rescript\notherField: string\n```\n\n```rescript\ntype otherRecord = {someField: int, otherField: string}\n```"}
-  }]
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\notherField: string\n```\n\n```rescript\ntype otherRecord = {someField: int, otherField: string}\n```"
+    },
+    "kind": 5,
+    "label": "otherField",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 159:20
 posCursor:[159:20] posNoWhite:[159:19] Found expr:[159:3->159:21]
@@ -807,16 +1190,20 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingCallback]($0)
 ContextPath Value[fnTakingCallback]
 Path fnTakingCallback
-[{
-    "label": "() => {}",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "unit => unit",
-    "documentation": null,
-    "sortText": "A",
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "() => ${0:()}",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "() => {}",
+    "sortText": "A",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 162:21
 posCursor:[162:21] posNoWhite:[162:20] Found expr:[162:3->162:22]
@@ -827,13 +1214,20 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingCallback]($0)
 ContextPath Value[fnTakingCallback]
 Path fnTakingCallback
-[{
-    "label": "assertEqual",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "('a, 'a) => unit",
-    "documentation": {"kind": "markdown", "value": "\n`assertEqual(a, b)` check if `a` is equal `b`. If not throw a panic exception\n\n## Examples\n\n```rescript\nlist{1, 2}->List.tailExn == list{2}\n```\n"}
-  }]
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`assertEqual(a, b)` check if `a` is equal `b`. If not throw a panic exception\n\n## Examples\n\n```rescript\nlist{1, 2}->List.tailExn == list{2}\n```\n"
+    },
+    "kind": 12,
+    "label": "assertEqual",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 165:22
 posCursor:[165:22] posNoWhite:[165:21] Found expr:[165:3->165:24]
@@ -844,16 +1238,20 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingCallback]($1)
 ContextPath Value[fnTakingCallback]
 Path fnTakingCallback
-[{
-    "label": "v => v",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "bool => unit",
-    "documentation": null,
-    "sortText": "A",
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "${1:v} => ${0:v}",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "v => v",
+    "sortText": "A",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 168:25
 posCursor:[168:25] posNoWhite:[168:24] Found expr:[168:3->168:27]
@@ -864,16 +1262,20 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingCallback]($2)
 ContextPath Value[fnTakingCallback]
 Path fnTakingCallback
-[{
-    "label": "event => event",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "ReactEvent.Mouse.t => unit",
-    "documentation": null,
-    "sortText": "A",
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "${1:event} => ${0:event}",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "event => event",
+    "sortText": "A",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 171:29
 posCursor:[171:29] posNoWhite:[171:27] Found expr:[171:3->171:30]
@@ -884,16 +1286,20 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingCallback]($3)
 ContextPath Value[fnTakingCallback]
 Path fnTakingCallback
-[{
-    "label": "(~on, ~off=?, variant) => {}",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(~on: bool, ~off: bool=?, variant) => int",
-    "documentation": null,
-    "sortText": "A",
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "(~on, ~off=?, ${1:variant}) => {${0:()}}",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "(~on, ~off=?, variant) => {}",
+    "sortText": "A",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 174:32
 posCursor:[174:32] posNoWhite:[174:30] Found expr:[174:3->174:33]
@@ -904,16 +1310,20 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingCallback]($4)
 ContextPath Value[fnTakingCallback]
 Path fnTakingCallback
-[{
-    "label": "(v1, v2, v3) => {}",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(bool, option<bool>, bool) => unit",
-    "documentation": null,
-    "sortText": "A",
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "(${1:v1}, ${2:v2}, ${3:v3}) => {${0:()}}",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "(v1, v2, v3) => {}",
+    "sortText": "A",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 177:34
 posCursor:[177:34] posNoWhite:[177:33] Found expr:[177:3->177:36]
@@ -924,16 +1334,20 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingCallback]($5)
 ContextPath Value[fnTakingCallback]
 Path fnTakingCallback
-[{
-    "label": "(~on=?, ~off=?, ()) => {}",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(~on: bool=?, ~off: bool=?, unit) => int",
-    "documentation": null,
-    "sortText": "A",
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "(~on=?, ~off=?, ()) => {${0:()}}",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "(~on=?, ~off=?, ()) => {}",
+    "sortText": "A",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 185:15
 posCursor:[185:15] posNoWhite:[185:14] Found expr:[181:2->185:16]
@@ -948,55 +1362,92 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[Console, log]($0)
 ContextPath Value[Console, log]
 Path Console.log
-[{
-    "label": "second2",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "int",
-    "documentation": null
-  }, {
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
+    "label": "second2",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
+    "detail": "bool",
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
     "label": "second",
-    "kind": 12,
-    "tags": [],
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "bool",
-    "documentation": null
-  }, {
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
     "label": "someBoolVar",
-    "kind": 12,
-    "tags": [],
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "bool",
-    "documentation": null
-  }, {
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
     "label": "s",
-    "kind": 12,
-    "tags": [],
-    "detail": "bool",
-    "documentation": null
-  }, {
-    "label": "setTimeoutFloat",
-    "kind": 12,
-    "tags": [],
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(unit => unit, float) => timeoutId",
-    "documentation": {"kind": "markdown", "value": "\n`setTimeoutFloat(callback, durationInMilliseconds)` starts a timer that will execute `callback` after `durationInMilliseconds`.\n\nThe same as `setTimeout`, but allows you to pass a `float` instead of an `int` for the duration.\n\nSee [`setTimeout`](https://developer.mozilla.org/en-US/docs/Web/API/setTimeout) on MDN.\n\n## Examples\n\n```rescript\n// Log to the console after 200 milliseconds.\nlet timeoutId = setTimeoutFloat(() => {\n  Console.log(\"This prints in 200 ms.\")\n}, 200.)\n```\n"}
-  }, {
-    "label": "setIntervalFloat",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`setTimeoutFloat(callback, durationInMilliseconds)` starts a timer that will execute `callback` after `durationInMilliseconds`.\n\nThe same as `setTimeout`, but allows you to pass a `float` instead of an `int` for the duration.\n\nSee [`setTimeout`](https://developer.mozilla.org/en-US/docs/Web/API/setTimeout) on MDN.\n\n## Examples\n\n```rescript\n// Log to the console after 200 milliseconds.\nlet timeoutId = setTimeoutFloat(() => {\n  Console.log(\"This prints in 200 ms.\")\n}, 200.)\n```\n"
+    },
     "kind": 12,
-    "tags": [],
+    "label": "setTimeoutFloat",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(unit => unit, float) => intervalId",
-    "documentation": {"kind": "markdown", "value": "\n`setIntervalFloat(callback, intervalInMilliseconds)` starts an interval that will execute `callback` every `durationInMilliseconds` milliseconds.\n\nThe same as `setInterval`, but allows you to pass a `float` instead of an `int` for the duration.\n\nSee [`setInterval`](https://developer.mozilla.org/en-US/docs/Web/API/setInterval) on MDN.\n\n## Examples\n\n```rescript\n// Log to the console ever 2 seconds (200 milliseconds).\nlet intervalId = setIntervalFloat(() => {\n  Console.log(\"This prints every 200 ms\")\n}, 200.)\n\n// Stop the interval after 500 ms\nlet timeoutId = setTimeoutFloat(() => {\n  clearInterval(intervalId)\n}, 500.0)\n```\n"}
-  }, {
-    "label": "setInterval",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`setIntervalFloat(callback, intervalInMilliseconds)` starts an interval that will execute `callback` every `durationInMilliseconds` milliseconds.\n\nThe same as `setInterval`, but allows you to pass a `float` instead of an `int` for the duration.\n\nSee [`setInterval`](https://developer.mozilla.org/en-US/docs/Web/API/setInterval) on MDN.\n\n## Examples\n\n```rescript\n// Log to the console ever 2 seconds (200 milliseconds).\nlet intervalId = setIntervalFloat(() => {\n  Console.log(\"This prints every 200 ms\")\n}, 200.)\n\n// Stop the interval after 500 ms\nlet timeoutId = setTimeoutFloat(() => {\n  clearInterval(intervalId)\n}, 500.0)\n```\n"
+    },
     "kind": 12,
-    "tags": [],
+    "label": "setIntervalFloat",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(unit => unit, int) => intervalId",
-    "documentation": {"kind": "markdown", "value": "\n`setInterval(callback, intervalInMilliseconds)` starts an interval that will execute `callback` every `durationInMilliseconds` milliseconds.\n\nSee [`setInterval`](https://developer.mozilla.org/en-US/docs/Web/API/setInterval) on MDN.\n\n## Examples\n\n```rescript\n// Log to the console ever 200 ms (200 milliseconds).\nlet intervalId = setInterval(() => {\n  Console.log(\"This prints every 200 ms.\")\n}, 200)\n\nlet timeoutId = setTimeout(() => {\n  clearInterval(intervalId)\n}, 500)\n```\n"}
-  }, {
-    "label": "setTimeout",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`setInterval(callback, intervalInMilliseconds)` starts an interval that will execute `callback` every `durationInMilliseconds` milliseconds.\n\nSee [`setInterval`](https://developer.mozilla.org/en-US/docs/Web/API/setInterval) on MDN.\n\n## Examples\n\n```rescript\n// Log to the console ever 200 ms (200 milliseconds).\nlet intervalId = setInterval(() => {\n  Console.log(\"This prints every 200 ms.\")\n}, 200)\n\nlet timeoutId = setTimeout(() => {\n  clearInterval(intervalId)\n}, 500)\n```\n"
+    },
     "kind": 12,
-    "tags": [],
+    "label": "setInterval",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(unit => unit, int) => timeoutId",
-    "documentation": {"kind": "markdown", "value": "\n`setTimeout(callback, durationInMilliseconds)` starts a timer that will execute `callback` after `durationInMilliseconds`.\n\nSee [`setTimeout`](https://developer.mozilla.org/en-US/docs/Web/API/setTimeout) on MDN.\n\n## Examples\n\n```rescript\n// Log to the console after 200 milliseconds.\nlet timeoutId = setTimeout(() => {\n  Console.log(\"This prints in 200 ms.\")\n}, 200)\n```\n"}
-  }]
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`setTimeout(callback, durationInMilliseconds)` starts a timer that will execute `callback` after `durationInMilliseconds`.\n\nSee [`setTimeout`](https://developer.mozilla.org/en-US/docs/Web/API/setTimeout) on MDN.\n\n## Examples\n\n```rescript\n// Log to the console after 200 milliseconds.\nlet timeoutId = setTimeout(() => {\n  Console.log(\"This prints in 200 ms.\")\n}, 200)\n```\n"
+    },
+    "kind": 12,
+    "label": "setTimeout",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 196:14
 posCursor:[196:14] posNoWhite:[196:13] Found expr:[196:3->196:14]
@@ -1013,13 +1464,20 @@ Path fff
 CPPipe pathFromEnv: found:true
 Path CompletionExpressions.someOpt
 Path someOpt
-[{
-    "label": "someOptField",
-    "kind": 5,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "bool",
-    "documentation": {"kind": "markdown", "value": "```rescript\nsomeOptField?: bool\n```\n\n```rescript\ntype recordWithOptionalField = {\n  someField: int,\n  someOptField?: bool,\n}\n```"}
-  }]
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nsomeOptField?: bool\n```\n\n```rescript\ntype recordWithOptionalField = {\n  someField: int,\n  someOptField?: bool,\n}\n```"
+    },
+    "kind": 5,
+    "label": "someOptField",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 205:11
 posCursor:[205:11] posNoWhite:[205:10] Found expr:[205:3->205:12]
@@ -1030,16 +1488,20 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[takesCb]($0)
 ContextPath Value[takesCb]
 Path takesCb
-[{
-    "label": "someTyp => someTyp",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "someTyp => 'a",
-    "documentation": null,
-    "sortText": "A",
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "${1:someTyp} => ${0:someTyp}",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "someTyp => someTyp",
+    "sortText": "A",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 216:12
 posCursor:[216:12] posNoWhite:[216:11] Found expr:[216:3->216:13]
@@ -1050,16 +1512,20 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[takesCb2]($0)
 ContextPath Value[takesCb2]
 Path takesCb2
-[{
-    "label": "environment => environment",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "Environment.t => 'a",
-    "documentation": null,
-    "sortText": "A",
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "${1:environment} => ${0:environment}",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "environment => environment",
+    "sortText": "A",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 225:12
 posCursor:[225:12] posNoWhite:[225:11] Found expr:[225:3->225:13]
@@ -1070,16 +1536,20 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[takesCb3]($0)
 ContextPath Value[takesCb3]
 Path takesCb3
-[{
-    "label": "apiCallResult => apiCallResult",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "apiCallResult => 'a",
-    "documentation": null,
-    "sortText": "A",
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "${1:apiCallResult} => ${0:apiCallResult}",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "apiCallResult => apiCallResult",
+    "sortText": "A",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 232:12
 posCursor:[232:12] posNoWhite:[232:11] Found expr:[232:3->232:13]
@@ -1090,16 +1560,20 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[takesCb4]($0)
 ContextPath Value[takesCb4]
 Path takesCb4
-[{
-    "label": "apiCallResult => apiCallResult",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "option<apiCallResult> => 'a",
-    "documentation": null,
-    "sortText": "A",
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "${1:apiCallResult} => ${0:apiCallResult}",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "apiCallResult => apiCallResult",
+    "sortText": "A",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 239:12
 posCursor:[239:12] posNoWhite:[239:11] Found expr:[239:3->239:13]
@@ -1110,16 +1584,20 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[takesCb5]($0)
 ContextPath Value[takesCb5]
 Path takesCb5
-[{
-    "label": "apiCallResults => apiCallResults",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "array<option<apiCallResult>> => 'a",
-    "documentation": null,
-    "sortText": "A",
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "${1:apiCallResults} => ${0:apiCallResults}",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "apiCallResults => apiCallResults",
+    "sortText": "A",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 250:30
 posCursor:[250:30] posNoWhite:[250:29] Found expr:[250:3->250:31]
@@ -1130,16 +1608,20 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[commitLocalUpdate](~updater)
 ContextPath Value[commitLocalUpdate]
 Path commitLocalUpdate
-[{
-    "label": "recordSourceSelectorProxy => recordSourceSelectorProxy",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "RecordSourceSelectorProxy.t => unit",
-    "documentation": null,
-    "sortText": "A",
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "${1:recordSourceSelectorProxy} => ${0:recordSourceSelectorProxy}",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "recordSourceSelectorProxy => recordSourceSelectorProxy",
+    "sortText": "A",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 257:25
 posCursor:[257:25] posNoWhite:[257:24] Found expr:[257:3->257:26]
@@ -1150,16 +1632,20 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingAsyncCallback]($0)
 ContextPath Value[fnTakingAsyncCallback]
 Path fnTakingAsyncCallback
-[{
-    "label": "async () => {}",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "unit => promise<unit>",
-    "documentation": null,
-    "sortText": "A",
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "async () => ${0:()}",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "async () => {}",
+    "sortText": "A",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 262:23
 posCursor:[262:23] posNoWhite:[262:22] Found expr:[262:3->262:24]
@@ -1169,16 +1655,20 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[Belt, Array, map]($1)
 ContextPath Value[Belt, Array, map]
 Path Belt.Array.map
-[{
-    "label": "v => v",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "'a => 'b",
-    "documentation": null,
-    "sortText": "A",
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "${1:v} => ${0:v}",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "v => v",
+    "sortText": "A",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 271:15
 posCursor:[271:15] posNoWhite:[271:14] Found expr:[271:3->271:16]
@@ -1189,15 +1679,22 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[takesExotic]($0)
 ContextPath Value[takesExotic]
 Path takesExotic
-[{
-    "label": "#\"some exotic\"",
-    "kind": 4,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "#\"some exotic\"",
-    "documentation": {"kind": "markdown", "value": "```rescript\n#\"some exotic\"\n```\n\n```rescript\n[#\"some exotic\"]\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\n#\"some exotic\"\n```\n\n```rescript\n[#\"some exotic\"]\n```"
+    },
     "insertText": "#\"some exotic\"",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "#\"some exotic\"",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 278:23
 posCursor:[278:23] posNoWhite:[278:22] Found expr:[278:3->278:24]
@@ -1208,31 +1705,50 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingPolyVariant]($0)
 ContextPath Value[fnTakingPolyVariant]
 Path fnTakingPolyVariant
-[{
-    "label": "#one",
-    "kind": 4,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "#one",
-    "documentation": {"kind": "markdown", "value": "```rescript\n#one\n```\n\n```rescript\n[#one | #three(someRecord, bool) | #two(bool)]\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\n#one\n```\n\n```rescript\n[#one | #three(someRecord, bool) | #two(bool)]\n```"
+    },
     "insertText": "#one",
-    "insertTextFormat": 2
-  }, {
-    "label": "#three(_, _)",
+    "insertTextFormat": 2,
     "kind": 4,
-    "tags": [],
+    "label": "#one",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "#three(someRecord, bool)",
-    "documentation": {"kind": "markdown", "value": "```rescript\n#three(someRecord, bool)\n```\n\n```rescript\n[#one | #three(someRecord, bool) | #two(bool)]\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\n#three(someRecord, bool)\n```\n\n```rescript\n[#one | #three(someRecord, bool) | #two(bool)]\n```"
+    },
     "insertText": "#three(${1:_}, ${2:_})",
-    "insertTextFormat": 2
-  }, {
-    "label": "#two(_)",
+    "insertTextFormat": 2,
     "kind": 4,
-    "tags": [],
+    "label": "#three(_, _)",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "#two(bool)",
-    "documentation": {"kind": "markdown", "value": "```rescript\n#two(bool)\n```\n\n```rescript\n[#one | #three(someRecord, bool) | #two(bool)]\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\n#two(bool)\n```\n\n```rescript\n[#one | #three(someRecord, bool) | #two(bool)]\n```"
+    },
     "insertText": "#two($0)",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "#two(_)",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 281:24
 posCursor:[281:24] posNoWhite:[281:23] Found expr:[281:3->302:1]
@@ -1243,31 +1759,50 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingPolyVariant]($0)
 ContextPath Value[fnTakingPolyVariant]
 Path fnTakingPolyVariant
-[{
-    "label": "#one",
-    "kind": 4,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "#one",
-    "documentation": {"kind": "markdown", "value": "```rescript\n#one\n```\n\n```rescript\n[#one | #three(someRecord, bool) | #two(bool)]\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\n#one\n```\n\n```rescript\n[#one | #three(someRecord, bool) | #two(bool)]\n```"
+    },
     "insertText": "one",
-    "insertTextFormat": 2
-  }, {
-    "label": "#three(_, _)",
+    "insertTextFormat": 2,
     "kind": 4,
-    "tags": [],
+    "label": "#one",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "#three(someRecord, bool)",
-    "documentation": {"kind": "markdown", "value": "```rescript\n#three(someRecord, bool)\n```\n\n```rescript\n[#one | #three(someRecord, bool) | #two(bool)]\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\n#three(someRecord, bool)\n```\n\n```rescript\n[#one | #three(someRecord, bool) | #two(bool)]\n```"
+    },
     "insertText": "three(${1:_}, ${2:_})",
-    "insertTextFormat": 2
-  }, {
-    "label": "#two(_)",
+    "insertTextFormat": 2,
     "kind": 4,
-    "tags": [],
+    "label": "#three(_, _)",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "#two(bool)",
-    "documentation": {"kind": "markdown", "value": "```rescript\n#two(bool)\n```\n\n```rescript\n[#one | #three(someRecord, bool) | #two(bool)]\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\n#two(bool)\n```\n\n```rescript\n[#one | #three(someRecord, bool) | #two(bool)]\n```"
+    },
     "insertText": "two($0)",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "#two(_)",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 284:25
 posCursor:[284:25] posNoWhite:[284:24] Found expr:[284:3->284:26]
@@ -1278,15 +1813,22 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingPolyVariant]($0)
 ContextPath Value[fnTakingPolyVariant]
 Path fnTakingPolyVariant
-[{
-    "label": "#one",
-    "kind": 4,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "#one",
-    "documentation": {"kind": "markdown", "value": "```rescript\n#one\n```\n\n```rescript\n[#one | #three(someRecord, bool) | #two(bool)]\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\n#one\n```\n\n```rescript\n[#one | #three(someRecord, bool) | #two(bool)]\n```"
+    },
     "insertText": "one",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "#one",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 287:24
 posCursor:[287:24] posNoWhite:[287:23] Found expr:[287:3->287:25]
@@ -1297,15 +1839,22 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingPolyVariant]($0)
 ContextPath Value[fnTakingPolyVariant]
 Path fnTakingPolyVariant
-[{
-    "label": "#one",
-    "kind": 4,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "#one",
-    "documentation": {"kind": "markdown", "value": "```rescript\n#one\n```\n\n```rescript\n[#one | #three(someRecord, bool) | #two(bool)]\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\n#one\n```\n\n```rescript\n[#one | #three(someRecord, bool) | #two(bool)]\n```"
+    },
     "insertText": "#one",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "#one",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 306:41
 XXX Not found!
@@ -1314,15 +1863,19 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Type[withIntLocal]
 Path withIntLocal
-[{
-    "label": "SuperInt.make()",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "int => t",
-    "documentation": null,
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "SuperInt.make($0)",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "SuperInt.make()",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 309:36
 posCursor:[309:36] posNoWhite:[309:35] Found expr:[309:3->309:37]
@@ -1333,15 +1886,19 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[CompletionSupport, makeTestHidden]($0)
 ContextPath Value[CompletionSupport, makeTestHidden]
 Path CompletionSupport.makeTestHidden
-[{
-    "label": "CompletionSupport.TestHidden.make()",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "int => t",
-    "documentation": null,
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "CompletionSupport.TestHidden.make($0)",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "CompletionSupport.TestHidden.make()",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 313:36
 posCursor:[313:36] posNoWhite:[313:35] Found expr:[313:3->313:37]
@@ -1353,15 +1910,19 @@ Resolved opens 2 Stdlib CompletionSupport
 ContextPath CArgument Value[CompletionSupport, makeTestHidden]($0)
 ContextPath Value[CompletionSupport, makeTestHidden]
 Path CompletionSupport.makeTestHidden
-[{
-    "label": "TestHidden.make()",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "int => t",
-    "documentation": null,
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "TestHidden.make($0)",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "TestHidden.make()",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 321:11
 posCursor:[321:11] posNoWhite:[321:10] Found expr:[321:3->321:12]
@@ -1373,31 +1934,41 @@ Resolved opens 2 Stdlib CompletionSupport
 ContextPath CArgument Value[mkStuff]($0)
 ContextPath Value[mkStuff]
 Path mkStuff
-[{
-    "label": "/<regexp>/g",
-    "kind": 4,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "Regular expression",
-    "documentation": null,
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "/$0/g",
-    "insertTextFormat": 2
-  }, {
-    "label": "RegExp.fromString()",
-    "kind": 12,
-    "tags": [],
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "/<regexp>/g",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(string, ~flags: string=?) => t",
-    "documentation": null,
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "RegExp.fromString($0)",
-    "insertTextFormat": 2
-  }, {
-    "label": "RegExp.fromStringWithFlags()",
+    "insertTextFormat": 2,
     "kind": 12,
-    "tags": [],
+    "label": "RegExp.fromString()",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(string, ~flags: string) => t",
-    "documentation": null,
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "RegExp.fromStringWithFlags($0)",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "RegExp.fromStringWithFlags()",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 352:24
 posCursor:[352:24] posNoWhite:[352:23] Found expr:[352:3->352:25]
@@ -1409,31 +1980,41 @@ Resolved opens 2 Stdlib CompletionSupport
 ContextPath CArgument Value[tArgCompletionTestFn]($0)
 ContextPath Value[tArgCompletionTestFn]
 Path tArgCompletionTestFn
-[{
-    "label": "Money.fromInt()",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "int => t",
-    "documentation": null,
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Money.fromInt($0)",
-    "insertTextFormat": 2
-  }, {
-    "label": "Money.make()",
+    "insertTextFormat": 2,
     "kind": 12,
-    "tags": [],
+    "label": "Money.fromInt()",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "unit => t",
-    "documentation": null,
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Money.make($0)",
-    "insertTextFormat": 2
-  }, {
-    "label": "Money.zero",
+    "insertTextFormat": 2,
     "kind": 12,
-    "tags": [],
+    "label": "Money.make()",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "t",
-    "documentation": null,
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Money.zero",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "Money.zero",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 357:37
 posCursor:[357:37] posNoWhite:[357:36] Found expr:[357:3->357:38]
@@ -1445,31 +2026,41 @@ Resolved opens 2 Stdlib CompletionSupport
 ContextPath CArgument Value[labeledTArgCompletionTestFn](~tVal)
 ContextPath Value[labeledTArgCompletionTestFn]
 Path labeledTArgCompletionTestFn
-[{
-    "label": "Money.fromInt()",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "int => t",
-    "documentation": null,
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Money.fromInt($0)",
-    "insertTextFormat": 2
-  }, {
-    "label": "Money.make()",
+    "insertTextFormat": 2,
     "kind": 12,
-    "tags": [],
+    "label": "Money.fromInt()",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "unit => t",
-    "documentation": null,
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Money.make($0)",
-    "insertTextFormat": 2
-  }, {
-    "label": "Money.zero",
+    "insertTextFormat": 2,
     "kind": 12,
-    "tags": [],
+    "label": "Money.make()",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "t",
-    "documentation": null,
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Money.zero",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "Money.zero",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 362:18
 posCursor:[362:18] posNoWhite:[362:17] Found expr:[362:3->362:32]
@@ -1488,13 +2079,20 @@ Path someTyp
 CPPipe pathFromEnv: found:true
 Path CompletionExpressions.
 Path 
-[{
-    "label": "test",
-    "kind": 5,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "bool",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntest: bool\n```\n\n```rescript\ntype someTyp = {test: bool}\n```"}
-  }]
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntest: bool\n```\n\n```rescript\ntype someTyp = {test: bool}\n```"
+    },
+    "kind": 5,
+    "label": "test",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 380:22
 posCursor:[380:22] posNoWhite:[380:18] Found expr:[380:13->386:2]
@@ -1506,13 +2104,20 @@ Resolved opens 2 Stdlib CompletionSupport
 ContextPath CArgument Value[hook]($0)
 ContextPath Value[hook]
 Path hook
-[{
-    "label": "operator",
-    "kind": 5,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "[#\"and\" | #or]",
-    "documentation": {"kind": "markdown", "value": "```rescript\noperator?: [#\"and\" | #or]\n```\n\n```rescript\ntype config = {includeName: bool, operator: option<[#\"and\" | #or]>, showMore: bool}\n```"}
-  }]
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\noperator?: [#\"and\" | #or]\n```\n\n```rescript\ntype config = {includeName: bool, operator: option<[#\"and\" | #or]>, showMore: bool}\n```"
+    },
+    "kind": 5,
+    "label": "operator",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 382:8
 posCursor:[382:8] posNoWhite:[382:7] Found expr:[380:13->386:2]
@@ -1524,13 +2129,20 @@ Resolved opens 2 Stdlib CompletionSupport
 ContextPath CArgument Value[hook]($0)
 ContextPath Value[hook]
 Path hook
-[{
-    "label": "operator",
-    "kind": 5,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "[#\"and\" | #or]",
-    "documentation": {"kind": "markdown", "value": "```rescript\noperator?: [#\"and\" | #or]\n```\n\n```rescript\ntype config = {includeName: bool, operator: option<[#\"and\" | #or]>, showMore: bool}\n```"}
-  }]
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\noperator?: [#\"and\" | #or]\n```\n\n```rescript\ntype config = {includeName: bool, operator: option<[#\"and\" | #or]>, showMore: bool}\n```"
+    },
+    "kind": 5,
+    "label": "operator",
+    "tags": []
+  }
+]
 
 Complete src/CompletionExpressions.res 388:18
 posCursor:[388:18] posNoWhite:[388:17] Found expr:[388:3->388:24]
@@ -1549,11 +2161,18 @@ Path someTyp
 CPPipe pathFromEnv: found:true
 Path CompletionExpressions.
 Path 
-[{
-    "label": "test",
-    "kind": 5,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "bool",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntest: bool\n```\n\n```rescript\ntype someTyp = {test: bool}\n```"}
-  }]
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntest: bool\n```\n\n```rescript\ntype someTyp = {test: bool}\n```"
+    },
+    "kind": 5,
+    "label": "test",
+    "tags": []
+  }
+]
 

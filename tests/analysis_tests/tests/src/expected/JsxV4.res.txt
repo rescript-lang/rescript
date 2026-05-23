@@ -1,5 +1,12 @@
+null
 Definition src/JsxV4.res 8:9
-{"uri": "JsxV4.res", "range": {"start": {"line": 5, "character": 6}, "end": {"line": 5, "character": 10}}}
+{
+  "range": {
+    "end": { "character": 10, "line": 5 },
+    "start": { "character": 6, "line": 5 }
+  },
+  "uri": "file:///JsxV4.res"
+}
 
 Complete src/JsxV4.res 11:20
 posCursor:[11:20] posNoWhite:[11:19] Found expr:[11:3->11:20]
@@ -8,16 +15,25 @@ Completable: Cjsx([M4], f, [first, f])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Path M4.make
-[{
-    "label": "fun",
-    "kind": 4,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "option<string>",
-    "documentation": null
-  }]
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 4,
+    "label": "fun",
+    "tags": []
+  }
+]
 
 Hover src/JsxV4.res 14:9
-{"contents": {"kind": "markdown", "value": "```rescript\nReact.component<M4.props<string, string, string>>\n```\n---\n Doc Comment For M4 \n\n---\n\n```\n \n```\n```rescript\ntype React.component<'props> = Jsx.component<'props>\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22React.res%22%2C13%2C0%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype M4.props<'first, 'fun, 'second> = {\n  first: 'first,\n  fun?: 'fun,\n  second?: 'second,\n}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22JsxV4.res%22%2C3%2C2%5D)\n"}}
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nReact.component<M4.props<string, string, string>>\n```\n---\n Doc Comment For M4 \n\n---\n\n```\n \n```\n```rescript\ntype React.component<'props> = Jsx.component<'props>\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22React.res%22%2C13%2C0%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype M4.props<'first, 'fun, 'second> = {\n  first: 'first,\n  fun?: 'fun,\n  second?: 'second,\n}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22JsxV4.res%22%2C3%2C2%5D)\n"
+  }
+}
 
 Create Interface src/JsxV4.res
 module M4: {

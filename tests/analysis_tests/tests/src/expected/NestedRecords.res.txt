@@ -1,3 +1,4 @@
+null
 Hover src/NestedRecords.res 17:5
 Nothing at that position. Now trying to use completion.
 posCursor:[17:5] posNoWhite:[17:4] Found expr:[17:3->17:10]
@@ -9,7 +10,12 @@ ContextPath Value[options]
 Path options
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
-{"contents": {"kind": "markdown", "value": "```rescript\noptions\n```\n\n---\n\n```\n \n```\n```rescript\ntype options = {\n  extra: {name: string, superExtra: {age: int}},\n}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22NestedRecords.res%22%2C1%2C0%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype options.extra = {name: string, superExtra: {age: int}}\n```\n"}}
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\noptions\n```\n\n---\n\n```\n \n```\n```rescript\ntype options = {\n  extra: {name: string, superExtra: {age: int}},\n}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22NestedRecords.res%22%2C1%2C0%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype options.extra = {name: string, superExtra: {age: int}}\n```\n"
+  }
+}
 
 Hover src/NestedRecords.res 20:13
 Nothing at that position. Now trying to use completion.
@@ -29,7 +35,12 @@ Path NestedRecords.extra
 Path extra
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
-{"contents": {"kind": "markdown", "value": "```rescript\ntype options.extra = {name: string, superExtra: {age: int}}\n```"}}
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\ntype options.extra = {name: string, superExtra: {age: int}}\n```"
+  }
+}
 
 Hover src/NestedRecords.res 23:26
 Nothing at that position. Now trying to use completion.
@@ -63,7 +74,12 @@ Path NestedRecords.superExtra
 Path superExtra
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
-{"contents": {"kind": "markdown", "value": "```rescript\ntype options.extra.superExtra = {age: int}\n```"}}
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\ntype options.extra.superExtra = {age: int}\n```"
+  }
+}
 
 Hover src/NestedRecords.res 26:29
 Nothing at that position. Now trying to use completion.
@@ -125,5 +141,5 @@ Path NestedRecords.age
 Path age
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
-{"contents": {"kind": "markdown", "value": "```rescript\nint\n```"}}
+{ "contents": { "kind": "markdown", "value": "```rescript\nint\n```" } }
 

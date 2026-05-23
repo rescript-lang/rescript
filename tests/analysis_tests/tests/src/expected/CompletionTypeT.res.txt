@@ -1,3 +1,4 @@
+null
 Complete src/CompletionTypeT.res 4:26
 XXX Not found!
 Completable: Cpattern Value[date]
@@ -5,29 +6,45 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[date]
 Path date
-[{
+[
+  {
+    "data": null,
+    "deprecated": false,
+    "detail": "Date.t",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\nA type representing a JavaScript date.\n"
+    },
+    "kind": 12,
     "label": "None",
-    "kind": 12,
-    "tags": [],
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "Date.t",
-    "documentation": {"kind": "markdown", "value": "\nA type representing a JavaScript date.\n"}
-  }, {
-    "label": "Some(_)",
-    "kind": 12,
-    "tags": [],
-    "detail": "Date.t",
-    "documentation": {"kind": "markdown", "value": "\nA type representing a JavaScript date.\n"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "\nA type representing a JavaScript date.\n"
+    },
     "insertText": "Some(${1:_})",
-    "insertTextFormat": 2
-  }, {
-    "label": "Some(date)",
-    "kind": 4,
-    "tags": [],
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "Some(_)",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "date",
-    "documentation": null,
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Some(${0:date})",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Some(date)",
+    "tags": []
+  }
+]
 
 Complete src/CompletionTypeT.res 7:27
 XXX Not found!
@@ -36,77 +53,105 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Type[withDate]
 Path withDate
-[{
-    "label": "Date.makeWithYMD()",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(~year: int, ~month: int, ~day: int) => t",
-    "documentation": null,
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Date.makeWithYMD($0)",
-    "insertTextFormat": 2
-  }, {
-    "label": "Date.makeWithYMDHM()",
+    "insertTextFormat": 2,
     "kind": 12,
-    "tags": [],
+    "label": "Date.makeWithYMD()",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(\n  ~year: int,\n  ~month: int,\n  ~day: int,\n  ~hours: int,\n  ~minutes: int,\n) => t",
-    "documentation": null,
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Date.makeWithYMDHM($0)",
-    "insertTextFormat": 2
-  }, {
-    "label": "Date.make()",
+    "insertTextFormat": 2,
     "kind": 12,
-    "tags": [],
+    "label": "Date.makeWithYMDHM()",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "unit => t",
-    "documentation": null,
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Date.make($0)",
-    "insertTextFormat": 2
-  }, {
-    "label": "Date.fromTime()",
+    "insertTextFormat": 2,
     "kind": 12,
-    "tags": [],
+    "label": "Date.make()",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "msSinceEpoch => t",
-    "documentation": null,
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Date.fromTime($0)",
-    "insertTextFormat": 2
-  }, {
-    "label": "Date.fromString()",
+    "insertTextFormat": 2,
     "kind": 12,
-    "tags": [],
+    "label": "Date.fromTime()",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "string => t",
-    "documentation": null,
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Date.fromString($0)",
-    "insertTextFormat": 2
-  }, {
-    "label": "Date.makeWithYMDHMSM()",
+    "insertTextFormat": 2,
     "kind": 12,
-    "tags": [],
+    "label": "Date.fromString()",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(\n  ~year: int,\n  ~month: int,\n  ~day: int,\n  ~hours: int,\n  ~minutes: int,\n  ~seconds: int,\n  ~milliseconds: int,\n) => t",
-    "documentation": null,
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Date.makeWithYMDHMSM($0)",
-    "insertTextFormat": 2
-  }, {
-    "label": "Date.makeWithYM()",
+    "insertTextFormat": 2,
     "kind": 12,
-    "tags": [],
+    "label": "Date.makeWithYMDHMSM()",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(~year: int, ~month: int) => t",
-    "documentation": null,
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Date.makeWithYM($0)",
-    "insertTextFormat": 2
-  }, {
-    "label": "Date.makeWithYMDHMS()",
+    "insertTextFormat": 2,
     "kind": 12,
-    "tags": [],
+    "label": "Date.makeWithYM()",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(\n  ~year: int,\n  ~month: int,\n  ~day: int,\n  ~hours: int,\n  ~minutes: int,\n  ~seconds: int,\n) => t",
-    "documentation": null,
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Date.makeWithYMDHMS($0)",
-    "insertTextFormat": 2
-  }, {
-    "label": "Date.makeWithYMDH()",
+    "insertTextFormat": 2,
     "kind": 12,
-    "tags": [],
+    "label": "Date.makeWithYMDHMS()",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "(~year: int, ~month: int, ~day: int, ~hours: int) => t",
-    "documentation": null,
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Date.makeWithYMDH($0)",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "Date.makeWithYMDH()",
+    "tags": []
+  }
+]
 

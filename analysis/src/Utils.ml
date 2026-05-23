@@ -19,10 +19,13 @@ let isFirstCharUppercase s =
   String.length s > 0 && Char.equal s.[0] (Char.uppercase_ascii s.[0])
 
 let cmtPosToPosition {Lexing.pos_lnum; pos_cnum; pos_bol} =
-  Protocol.{line = pos_lnum - 1; character = pos_cnum - pos_bol}
+  (* Protocol.{line = pos_lnum - 1; character = pos_cnum - pos_bol} *)
+  Lsp.Types.Position.create ~line:(pos_lnum - 1) ~character:(pos_cnum - pos_bol)
 
 let cmtLocToRange {Location.loc_start; loc_end} =
-  Protocol.{start = cmtPosToPosition loc_start; end_ = cmtPosToPosition loc_end}
+  let start = cmtPosToPosition loc_start in
+  let end_ = cmtPosToPosition loc_end in
+  Lsp.Types.Range.create ~start ~end_
 
 let endOfLocation loc length =
   let open Location in
@@ -185,12 +188,12 @@ let indent n text =
 
 let mkPosition (pos : Pos.t) =
   let line, character = pos in
-  {Protocol.line; character}
+  Lsp.Types.Position.create ~line ~character
 
 let rangeOfLoc (loc : Location.t) =
   let start = loc |> Loc.start |> mkPosition in
   let end_ = loc |> Loc.end_ |> mkPosition in
-  {Protocol.start; end_}
+  Lsp.Types.Range.create ~start ~end_
 
 let rec expandPath (path : Path.t) =
   match path with

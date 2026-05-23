@@ -4,35 +4,36 @@ let bind f x = Option.bind x f
 
 (* Returns a list of paths, relative to the provided `base` *)
 let getSourceDirectories ~includeDev ~baseDir config =
-  let rec handleItem current item =
+  let rec handleItem current (item : Yojson.Safe.t) =
     match item with
-    | Json.Array contents ->
-      List.map (handleItem current) contents |> List.concat
-    | Json.String text -> [current /+ text]
-    | Json.Object _ -> (
+    | `List contents -> List.map (handleItem current) contents |> List.concat
+    | `String text -> [current /+ text]
+    | `Assoc _ -> (
       let dir =
-        item |> Json.get "dir" |> bind Json.string
+        item |> YojsonHelpers.get "dir"
+        |> bind Yojson.Safe.Util.to_string_option
         |> Option.value ~default:"Must specify directory"
       in
       let typ =
         if includeDev then "lib"
         else
-          item |> Json.get "type" |> bind Json.string
+          item |> YojsonHelpers.get "type"
+          |> bind Yojson.Safe.Util.to_string_option
           |> Option.value ~default:"lib"
       in
 
       if typ = "dev" then []
       else
-        match item |> Json.get "subdirs" with
-        | None | Some Json.False -> [current /+ dir]
-        | Some Json.True ->
+        match item |> YojsonHelpers.get "subdirs" with
+        | None | Some (`Bool false) -> [current /+ dir]
+        | Some (`Bool true) ->
           Files.collectDirs (baseDir /+ current /+ dir)
           |> List.filter (fun name -> name <> Filename.current_dir_name)
           |> List.map (Files.relpath baseDir)
         | Some item -> (current /+ dir) :: handleItem (current /+ dir) item)
     | _ -> failwith "Invalid subdirs entry"
   in
-  match config |> Json.get "sources" with
+  match config |> YojsonHelpers.get "sources" with
   | None -> []
   | Some item -> handleItem "" item
 
@@ -94,28 +95,36 @@ let nameSpaceToName n =
   |> String.concat ""
 
 let getNamespace config =
-  let ns = config |> Json.get "namespace" in
-  let fromString = ns |> bind Json.string in
+  let ns = config |> YojsonHelpers.get "namespace" in
+  let fromString = ns |> bind Yojson.Safe.Util.to_string_option in
   let isNamespaced =
-    ns |> bind Json.bool |> Option.value ~default:(fromString |> Option.is_some)
+    ns
+    |> bind Yojson.Safe.Util.to_bool_option
+    |> Option.value ~default:(fromString |> Option.is_some)
   in
   let either x y = if x = None then y else x in
   if isNamespaced then
-    let fromName = config |> Json.get "name" |> bind Json.string in
+    let fromName =
+      config |> YojsonHelpers.get "name"
+      |> bind Yojson.Safe.Util.to_string_option
+    in
     either fromString fromName |> Option.map nameSpaceToName
   else None
 
 module StringSet = Set.Make (String)
 
 let getPublic config =
-  let public = config |> Json.get "public" in
+  let public = config |> YojsonHelpers.get "public" in
   match public with
   | None -> None
   | Some public -> (
-    match public |> Json.array with
+    match public |> YojsonHelpers.to_list_opt with
     | None -> None
     | Some public ->
-      Some (public |> List.filter_map Json.string |> StringSet.of_list))
+      Some
+        (public
+        |> List.filter_map Yojson.Safe.Util.to_string_option
+        |> StringSet.of_list))
 
 let collectFiles directory =
   let allFiles = Files.readDirectory directory in
@@ -141,7 +150,7 @@ let collectFiles directory =
 let readSourcedirsPackageRoots base =
   let sourceDirsFile = base /+ "lib" /+ "bs" /+ ".sourcedirs.json" in
   let readPackageEntry = function
-    | Json.Array [Json.String name; Json.String path] ->
+    | `List [`String name; `String path] ->
       let path = if Filename.is_relative path then base /+ path else path in
       Some (name, path)
     | _ -> None
@@ -149,10 +158,12 @@ let readSourcedirsPackageRoots base =
   match Files.readFile sourceDirsFile with
   | None -> []
   | Some text -> (
-    match Json.parse text with
+    match YojsonHelpers.from_string_opt text with
     | None -> []
     | Some json -> (
-      match json |> Json.get "pkgs" |> bind Json.array with
+      match
+        json |> YojsonHelpers.get "pkgs" |> bind YojsonHelpers.to_list_opt
+      with
       | None -> []
       | Some packages -> packages |> List.filter_map readPackageEntry))
 
@@ -242,20 +253,29 @@ let findProjectFiles ~public ~namespace ~path ~sourceDirectories ~libBs =
 let findDependencyFiles base config =
   let deps =
     match
-      ( config |> Json.get "dependencies" |> bind Json.array,
-        config |> Json.get "bs-dependencies" |> bind Json.array )
+      ( config
+        |> YojsonHelpers.get "dependencies"
+        |> bind YojsonHelpers.to_list_opt,
+        config
+        |> YojsonHelpers.get "bs-dependencies"
+        |> bind YojsonHelpers.to_list_opt )
     with
     | None, None -> []
-    | Some deps, None | _, Some deps -> deps |> List.filter_map Json.string
+    | Some deps, None | _, Some deps ->
+      deps |> List.filter_map Yojson.Safe.Util.to_string_option
   in
   let devDeps =
     match
-      ( config |> Json.get "dev-dependencies" |> bind Json.array,
-        config |> Json.get "bs-dev-dependencies" |> bind Json.array )
+      ( config
+        |> YojsonHelpers.get "dev-dependencies"
+        |> bind YojsonHelpers.to_list_opt,
+        config
+        |> YojsonHelpers.get "bs-dev-dependencies"
+        |> bind YojsonHelpers.to_list_opt )
     with
     | None, None -> []
     | Some devDeps, None | _, Some devDeps ->
-      devDeps |> List.filter_map Json.string
+      devDeps |> List.filter_map (fun x -> Some (Yojson.Safe.Util.to_string x))
   in
   let deps = deps @ devDeps in
   Log.log ("Dependencies: " ^ String.concat " " deps);
@@ -264,12 +284,12 @@ let findDependencyFiles base config =
     deps
     |> List.map (fun name ->
            let result =
-             Json.bind (findPackageRoot ~base ~sourcedirsPackageRoots name)
+             bind
                (fun path ->
                  let rescriptJsonPath = path /+ "rescript.json" in
 
                  let parseText text =
-                   match Json.parse text with
+                   match YojsonHelpers.from_string_opt text with
                    | Some inner -> (
                      let namespace = getNamespace inner in
                      let sourceDirectories =
@@ -298,6 +318,7 @@ let findDependencyFiles base config =
                  match Files.readFile rescriptJsonPath with
                  | Some text -> parseText text
                  | None -> None)
+               (findPackageRoot ~base ~sourcedirsPackageRoots name)
            in
 
            match result with

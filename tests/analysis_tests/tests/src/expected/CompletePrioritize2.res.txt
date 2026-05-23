@@ -1,3 +1,4 @@
+null
 Complete src/CompletePrioritize2.res 9:7
 posCursor:[9:7] posNoWhite:[9:6] Found expr:[9:3->0:-1]
 Completable: Cpath Value[ax]->
@@ -9,13 +10,17 @@ Path ax
 CPPipe pathFromEnv:Test found:true
 Path Test.
 Path 
-[{
-    "label": "Test.add",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "t => int",
-    "documentation": null
-  }]
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
+    "label": "Test.add",
+    "tags": []
+  }
+]
 
 Complete src/CompletePrioritize2.res 12:5
 posCursor:[12:5] posNoWhite:[12:4] Found expr:[12:3->12:5]
@@ -25,11 +30,18 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[ax]
 Path ax
-[{
-    "label": "ax",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "Test.t",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype t = {name: int}\n```"}
-  }]
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype t = {name: int}\n```"
+    },
+    "kind": 12,
+    "label": "ax",
+    "tags": []
+  }
+]
 

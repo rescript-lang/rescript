@@ -1,3 +1,4 @@
+null
 Complete src/Firebase.res 30:9
 posCursor:[30:9] posNoWhite:[30:8] Found expr:[30:5->30:9]
 Pexp_field [30:5->30:8] _:[32:0->30:9]
@@ -14,29 +15,50 @@ Path ref
 CPPipe pathFromEnv:Firebase.Firestore found:true
 Path Firebase.Firestore.
 Path 
-[{
+[
+  {
+    "data": null,
+    "deprecated": false,
+    "detail": "string",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nid: string\n```\n\n```rescript\ntype documentReference<'documentdata> = {\n  id: string,\n  path: string,\n}\n```"
+    },
+    "kind": 5,
     "label": "id",
-    "kind": 5,
-    "tags": [],
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "string",
-    "documentation": {"kind": "markdown", "value": "```rescript\nid: string\n```\n\n```rescript\ntype documentReference<'documentdata> = {\n  id: string,\n  path: string,\n}\n```"}
-  }, {
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\npath: string\n```\n\n```rescript\ntype documentReference<'documentdata> = {\n  id: string,\n  path: string,\n}\n```"
+    },
+    "kind": 5,
     "label": "path",
-    "kind": 5,
-    "tags": [],
-    "detail": "string",
-    "documentation": {"kind": "markdown", "value": "```rescript\npath: string\n```\n\n```rescript\ntype documentReference<'documentdata> = {\n  id: string,\n  path: string,\n}\n```"}
-  }, {
-    "label": "->Firestore.getDoc",
-    "kind": 12,
-    "tags": [],
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 9, "line": 30 },
+          "start": { "character": 8, "line": 30 }
+        }
+      }
+    ],
+    "data": null,
+    "deprecated": false,
     "detail": "documentReference<\n  'documentdata,\n> => Promise.t<documentSnapshot<'documentdata>>",
-    "documentation": null,
-    "sortText": "getDoc",
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->Firestore.getDoc",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 30, "character": 8}, "end": {"line": 30, "character": 9}},
-      "newText": ""
-      }]
-  }]
+    "kind": 12,
+    "label": "->Firestore.getDoc",
+    "sortText": "getDoc",
+    "tags": []
+  }
+]
 

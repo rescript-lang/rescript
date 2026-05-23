@@ -1,5 +1,6 @@
+null
 Hover src/Div.res 0:10
-{"contents": {"kind": "markdown", "value": "```rescript\nstring\n```"}}
+{ "contents": { "kind": "markdown", "value": "```rescript\nstring\n```" } }
 
 Complete src/Div.res 3:17
 posCursor:[3:17] posNoWhite:[3:16] Found expr:[3:3->3:17]
@@ -9,11 +10,15 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Path ReactDOM.domProps
 Path JsxDOM.domProps
-[{
-    "label": "dangerouslySetInnerHTML",
-    "kind": 4,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "{\"__html\": string}",
-    "documentation": null
-  }]
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 4,
+    "label": "dangerouslySetInnerHTML",
+    "tags": []
+  }
+]
 

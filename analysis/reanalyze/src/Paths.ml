@@ -1,5 +1,10 @@
 let rescriptJson = "rescript.json"
 
+let get key (t : Yojson.Safe.t) : Yojson.Safe.t option =
+  match t with
+  | `Assoc items -> List.assoc_opt key items
+  | _ -> None
+
 let readFile filename =
   try
     (* windows can't use open_in *)
@@ -32,51 +37,51 @@ let setProjectRootFromCwd () =
 let setReScriptProjectRoot = lazy (setProjectRootFromCwd ())
 
 module Config = struct
-  let readSuppress conf =
-    match Json.get "suppress" conf with
-    | Some (Array elements) ->
+  let readSuppress (conf : Yojson.Safe.t) =
+    match conf |> get "suppress" with
+    | Some (`List elements) ->
       let names =
         elements
-        |> List.filter_map (fun (x : Json.t) ->
+        |> List.filter_map (fun (x : Yojson.Safe.t) ->
                match x with
-               | String s -> Some s
+               | `String s -> Some s
                | _ -> None)
       in
       runConfig.suppress <- names @ runConfig.suppress
     | _ -> ()
 
-  let readUnsuppress conf =
-    match Json.get "unsuppress" conf with
-    | Some (Array elements) ->
+  let readUnsuppress (conf : Yojson.Safe.t) =
+    match conf |> get "unsuppress" with
+    | Some (`List elements) ->
       let names =
         elements
-        |> List.filter_map (fun (x : Json.t) ->
+        |> List.filter_map (fun (x : Yojson.Safe.t) ->
                match x with
-               | String s -> Some s
+               | `String s -> Some s
                | _ -> None)
       in
       runConfig.unsuppress <- names @ runConfig.unsuppress
     | _ -> ()
 
   let readAnalysis conf =
-    match Json.get "analysis" conf with
-    | Some (Array elements) ->
+    match conf |> get "analysis" with
+    | Some (`List elements) ->
       elements
-      |> List.iter (fun (x : Json.t) ->
+      |> List.iter (fun (x : Yojson.Safe.t) ->
              match x with
-             | String "all" -> RunConfig.all ()
-             | String "dce" -> RunConfig.dce ()
-             | String "exception" -> RunConfig.exception_ ()
-             | String "termination" -> RunConfig.termination ()
+             | `String "all" -> RunConfig.all ()
+             | `String "dce" -> RunConfig.dce ()
+             | `String "exception" -> RunConfig.exception_ ()
+             | `String "termination" -> RunConfig.termination ()
              | _ -> ())
     | _ ->
       (* if no "analysis" specified, default to dce *)
       RunConfig.dce ()
 
   let readTransitive conf =
-    match Json.get "transitive" conf with
-    | Some True -> RunConfig.transitive true
-    | Some False -> RunConfig.transitive false
+    match conf |> get "transitive" with
+    | Some (`Bool true) -> RunConfig.transitive true
+    | Some (`Bool false) -> RunConfig.transitive false
     | _ -> ()
 
   (* Read the config from rescript.json and apply it to runConfig and suppress and unsuppress *)
@@ -85,10 +90,9 @@ module Config = struct
     let rescriptFile = Filename.concat runConfig.projectRoot rescriptJson in
 
     let processText text =
-      match Json.parse text with
-      | None -> ()
+      match try Some (Yojson.Safe.from_string text) with _ -> None with
       | Some json -> (
-        match Json.get "reanalyze" json with
+        match get "reanalyze" json with
         | Some conf ->
           readSuppress conf;
           readUnsuppress conf;
@@ -97,6 +101,7 @@ module Config = struct
         | None ->
           (* if no "analysis" specified, default to dce *)
           RunConfig.dce ())
+      | _ -> ()
     in
 
     match readFile rescriptFile with
@@ -145,18 +150,27 @@ let readCmtScan () =
     ["lib"; "bs"; ".sourcedirs.json"]
     |> List.fold_left Filename.concat runConfig.bsbProjectRoot
   in
-  let get key fn json =
-    Json.get key json |> Option.to_list |> List.filter_map fn
+  let get_fn key fn json =
+    get key json |> Option.to_list |> List.filter_map fn
   in
-  let read_entry (json : Json.t) =
-    let build_root = json |> get "build_root" Json.string in
+  let read_entry (json : Yojson.Safe.t) =
+    let build_root =
+      json |> get_fn "build_root" Yojson.Safe.Util.to_string_option
+    in
     let scan_dirs =
-      match json |> get "scan_dirs" Json.array with
-      | [arr] -> arr |> List.filter_map Json.string
+      match
+        json
+        |> get_fn "scan_dirs" (function
+             | `List f -> Some f
+             | _ -> None)
+      with
+      | [arr] -> arr |> List.filter_map Yojson.Safe.Util.to_string_option
       | _ -> []
     in
     let also_scan_build_root =
-      match json |> get "also_scan_build_root" Json.bool with
+      match
+        json |> get_fn "also_scan_build_root" Yojson.Safe.Util.to_bool_option
+      with
       | [b] -> b
       | _ -> false
     in
@@ -167,9 +181,9 @@ let readCmtScan () =
   match readFile sourceDirsFile with
   | None -> []
   | Some text -> (
-    match Json.parse text with
+    match try Some (Yojson.Safe.from_string text) with _ -> None with
     | None -> []
     | Some json -> (
-      match json |> get "cmt_scan" Json.array with
-      | [arr] -> arr |> List.filter_map read_entry
+      match get "cmt_scan" json with
+      | Some (`List arr) -> arr |> List.filter_map read_entry
       | _ -> []))

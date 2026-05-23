@@ -1,3 +1,4 @@
+null
 Complete src/ExhaustiveSwitch.res 8:24
 XXX Not found!
 Completable: CexhaustiveSwitch Value[withSomeVarian]
@@ -5,22 +6,32 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[withSomeVarian]
 Path withSomeVarian
-[{
-    "label": "withSomeVariant",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "someVariant",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype someVariant = One | Two | Three(option<bool>)\n```"}
-  }, {
-    "label": "withSomeVariant (exhaustive switch)",
-    "kind": 15,
-    "tags": [],
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype someVariant = One | Two | Three(option<bool>)\n```"
+    },
+    "kind": 12,
+    "label": "withSomeVariant",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "insert exhaustive switch for value",
-    "documentation": null,
+    "documentation": { "kind": "markdown", "value": "" },
     "filterText": "withSomeVariant",
     "insertText": "withSomeVariant {\n   | One => ${1:%todo}\n   | Two => ${2:%todo}\n   | Three(_) => ${3:%todo}\n   }",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 15,
+    "label": "withSomeVariant (exhaustive switch)",
+    "tags": []
+  }
+]
 
 Complete src/ExhaustiveSwitch.res 11:21
 XXX Not found!
@@ -29,22 +40,29 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[withSomePol]
 Path withSomePol
-[{
-    "label": "withSomePoly",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "somePolyVariant",
-    "documentation": null
-  }, {
-    "label": "withSomePoly (exhaustive switch)",
-    "kind": 15,
-    "tags": [],
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
+    "label": "withSomePoly",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "insert exhaustive switch for value",
-    "documentation": null,
+    "documentation": { "kind": "markdown", "value": "" },
     "filterText": "withSomePoly",
     "insertText": "withSomePoly {\n   | #\"switch\" => ${1:%todo}\n   | #one => ${2:%todo}\n   | #three(_) => ${3:%todo}\n   | #two => ${4:%todo}\n   | #\"exotic ident\" => ${5:%todo}\n   }",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 15,
+    "label": "withSomePoly (exhaustive switch)",
+    "tags": []
+  }
+]
 
 Complete src/ExhaustiveSwitch.res 14:17
 XXX Not found!
@@ -53,22 +71,29 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[someBoo]
 Path someBoo
-[{
-    "label": "someBool",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "bool",
-    "documentation": null
-  }, {
-    "label": "someBool (exhaustive switch)",
-    "kind": 15,
-    "tags": [],
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
+    "label": "someBool",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "insert exhaustive switch for value",
-    "documentation": null,
+    "documentation": { "kind": "markdown", "value": "" },
     "filterText": "someBool",
     "insertText": "someBool {\n   | true => ${1:%todo}\n   | false => ${2:%todo}\n   }",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 15,
+    "label": "someBool (exhaustive switch)",
+    "tags": []
+  }
+]
 
 Complete src/ExhaustiveSwitch.res 17:16
 XXX Not found!
@@ -77,22 +102,29 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[someOp]
 Path someOp
-[{
-    "label": "someOpt",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "option<bool>",
-    "documentation": null
-  }, {
-    "label": "someOpt (exhaustive switch)",
-    "kind": 15,
-    "tags": [],
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
+    "label": "someOpt",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "insert exhaustive switch for value",
-    "documentation": null,
+    "documentation": { "kind": "markdown", "value": "" },
     "filterText": "someOpt",
     "insertText": "someOpt {\n   | Some($1) => ${2:%todo}\n   | None => ${3:%todo}\n   }",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 15,
+    "label": "someOpt (exhaustive switch)",
+    "tags": []
+  }
+]
 
 Xform src/ExhaustiveSwitch.res 30:13
 posCursor:[30:13] posNoWhite:[30:12] Found expr:[30:3->30:17]
@@ -122,8 +154,8 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Hit: Exhaustive switch
 
-TextDocumentEdit: ExhaustiveSwitch.res
-{"start": {"line": 33, "character": 3}, "end": {"line": 33, "character": 10}}
+TextDocumentEdit: file:///src/ExhaustiveSwitch.res
+{"end":{"character":10,"line":33},"start":{"character":3,"line":33}}
 newText:
    <--here
    switch x->getV {
@@ -143,8 +175,8 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Hit: Exhaustive switch
 
-TextDocumentEdit: ExhaustiveSwitch.res
-{"start": {"line": 36, "character": 3}, "end": {"line": 36, "character": 6}}
+TextDocumentEdit: file:///src/ExhaustiveSwitch.res
+{"end":{"character":6,"line":36},"start":{"character":3,"line":36}}
 newText:
    <--here
    switch vvv {
@@ -163,21 +195,31 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[withSomeVarian]
 Path withSomeVarian
-[{
-    "label": "withSomeVariant",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "someVariant",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype someVariant = One | Two | Three(option<bool>)\n```"}
-  }, {
-    "label": "withSomeVariant (exhaustive switch)",
-    "kind": 15,
-    "tags": [],
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype someVariant = One | Two | Three(option<bool>)\n```"
+    },
+    "kind": 12,
+    "label": "withSomeVariant",
+    "tags": []
+  },
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "insert exhaustive switch for value",
-    "documentation": null,
+    "documentation": { "kind": "markdown", "value": "" },
     "filterText": "withSomeVariant",
     "insertText": "withSomeVariant {\n   | One => ${1:%todo}\n   | Two => ${2:%todo}\n   | Three(_) => ${3:%todo}\n   }",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 15,
+    "label": "withSomeVariant (exhaustive switch)",
+    "tags": []
+  }
+]
 
 

@@ -163,8 +163,40 @@ module ModuleToFile = struct
         in
         let moduleName = pmb_name.txt in
         let newFilePath =
-          Uri.fromPath
-            (Filename.concat (Filename.dirname path) moduleName ^ ".res")
+          Filename.concat (Filename.dirname path) moduleName ^ ".res"
+        in
+        let uri = Lsp.Uri.of_string newFilePath in
+        let documentChanges =
+          [
+            `CreateFile
+              (Lsp.Types.CreateFile.create ~uri
+                 ~options:
+                   (Lsp.Types.CreateFileOptions.create ~overwrite:false
+                      ~ignoreIfExists:true ())
+                 ());
+            `TextDocumentEdit
+              (Lsp.Types.TextDocumentEdit.create
+                 ~edits:
+                   [
+                     `TextEdit
+                       (Lsp.Types.TextEdit.create ~range
+                          ~newText:textForExtractedFile);
+                   ]
+                 ~textDocument:
+                   (Lsp.Types.OptionalVersionedTextDocumentIdentifier.create
+                      ~uri ()));
+            `TextDocumentEdit
+              (Lsp.Types.TextDocumentEdit.create
+                 ~edits:
+                   [
+                     `TextEdit
+                       (Lsp.Types.TextEdit.create ~range
+                          ~newText:newTextInCurrentFile);
+                   ]
+                 ~textDocument:
+                   (Lsp.Types.OptionalVersionedTextDocumentIdentifier.create
+                      ~uri:(Lsp.Uri.of_string path) ()));
+          ]
         in
         changed :=
           Some
@@ -172,38 +204,7 @@ module ModuleToFile = struct
                ~title:
                  (Printf.sprintf "Extract local module \"%s\" to file \"%s\""
                     moduleName (moduleName ^ ".res"))
-               ~kind:RefactorRewrite
-               ~documentChanges:
-                 [
-                   Protocol.CreateFile
-                     {
-                       uri = newFilePath |> Uri.toString;
-                       options =
-                         Some
-                           {overwrite = Some false; ignoreIfExists = Some true};
-                     };
-                   TextDocumentEdit
-                     {
-                       textDocument =
-                         {uri = newFilePath |> Uri.toString; version = None};
-                       edits =
-                         [
-                           {
-                             newText = textForExtractedFile;
-                             range =
-                               {
-                                 start = {line = 0; character = 0};
-                                 end_ = {line = 0; character = 0};
-                               };
-                           };
-                         ];
-                     };
-                   TextDocumentEdit
-                     {
-                       textDocument = {uri = path; version = None};
-                       edits = [{newText = newTextInCurrentFile; range}];
-                     };
-                 ]);
+               ~kind:RefactorRewrite ~documentChanges);
         ()
       | _ -> ());
       Ast_iterator.default_iterator.structure_item iterator structure_item
@@ -852,14 +853,14 @@ let parseImplementation ~source =
     in
     comments |> List.filter filter
   in
-  let printExpr ~(range : Protocol.range) (expr : Parsetree.expression) =
+  let printExpr ~(range : Lsp.Types.Range.t) (expr : Parsetree.expression) =
     let structure = [Ast_helper.Str.eval ~loc:expr.pexp_loc expr] in
     structure
     |> Res_printer.print_implementation
          ~comments:(comments |> filterComments ~loc:expr.pexp_loc)
     |> Utils.indent range.start.character
   in
-  let printStructureItem ~(range : Protocol.range)
+  let printStructureItem ~(range : Lsp.Types.Range.t)
       (item : Parsetree.structure_item) =
     let structure = [item] in
     structure
@@ -886,7 +887,7 @@ let parseInterface ~source =
     in
     comments |> List.filter filter
   in
-  let printSignatureItem ~(range : Protocol.range)
+  let printSignatureItem ~(range : Lsp.Types.Range.t)
       (item : Parsetree.signature_item) =
     let signature_item = [item] in
     signature_item
@@ -896,7 +897,8 @@ let parseInterface ~source =
   in
   (structure, printSignatureItem)
 
-let extractCodeActions ~path ~startPos ~endPos ~source ~kindFile ~debug =
+let extractCodeActions ~(path : string) ~startPos ~endPos ~source ~kindFile
+    ~debug =
   let pos = startPos in
   let codeActions = ref [] in
   match kindFile with

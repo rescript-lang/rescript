@@ -1,9 +1,10 @@
+null
 Xform not_compiled/DocTemplate.res 3:3
 can't find module DocTemplate
 Hit: Add Documentation template
 
-TextDocumentEdit: DocTemplate.res
-{"start": {"line": 3, "character": 0}, "end": {"line": 5, "character": 9}}
+TextDocumentEdit: file:///not_compiled/DocTemplate.res
+{"end":{"character":9,"line":5},"start":{"character":0,"line":3}}
 newText:
 <--here
 /**
@@ -17,8 +18,8 @@ Xform not_compiled/DocTemplate.res 6:15
 can't find module DocTemplate
 Hit: Add Documentation template
 
-TextDocumentEdit: DocTemplate.res
-{"start": {"line": 6, "character": 0}, "end": {"line": 6, "character": 33}}
+TextDocumentEdit: file:///not_compiled/DocTemplate.res
+{"end":{"character":33,"line":6},"start":{"character":0,"line":6}}
 newText:
 <--here
 /**
@@ -30,8 +31,8 @@ Xform not_compiled/DocTemplate.res 8:4
 can't find module DocTemplate
 Hit: Add Documentation template
 
-TextDocumentEdit: DocTemplate.res
-{"start": {"line": 8, "character": 0}, "end": {"line": 8, "character": 9}}
+TextDocumentEdit: file:///not_compiled/DocTemplate.res
+{"end":{"character":9,"line":8},"start":{"character":0,"line":8}}
 newText:
 <--here
 /**
@@ -43,8 +44,8 @@ Xform not_compiled/DocTemplate.res 10:4
 can't find module DocTemplate
 Hit: Add Documentation template
 
-TextDocumentEdit: DocTemplate.res
-{"start": {"line": 10, "character": 0}, "end": {"line": 10, "character": 20}}
+TextDocumentEdit: file:///not_compiled/DocTemplate.res
+{"end":{"character":20,"line":10},"start":{"character":0,"line":10}}
 newText:
 <--here
 /**
@@ -56,8 +57,8 @@ Xform not_compiled/DocTemplate.res 12:7
 can't find module DocTemplate
 Hit: Add Documentation template
 
-TextDocumentEdit: DocTemplate.res
-{"start": {"line": 12, "character": 0}, "end": {"line": 16, "character": 1}}
+TextDocumentEdit: file:///not_compiled/DocTemplate.res
+{"end":{"character":1,"line":16},"start":{"character":0,"line":12}}
 newText:
 <--here
 /**
@@ -70,10 +71,10 @@ module T = {
 }
 Hit: Extract local module "T" to file "T.res"
 
-CreateFile: T.res
+CreateFile: file:///not_compiled/T.res
 
-TextDocumentEdit: T.res
-{"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 0}}
+TextDocumentEdit: file:///not_compiled/T.res
+{"end":{"character":1,"line":16},"start":{"character":0,"line":12}}
 newText:
 <--here
 //   ^xfm
@@ -81,8 +82,8 @@ let b = 1
 //  ^xfm
 
 
-TextDocumentEdit: not_compiled/DocTemplate.res
-{"start": {"line": 12, "character": 0}, "end": {"line": 16, "character": 1}}
+TextDocumentEdit: file:///not_compiled/DocTemplate.res
+{"end":{"character":1,"line":16},"start":{"character":0,"line":12}}
 newText:
 <--here
 
@@ -91,8 +92,8 @@ Xform not_compiled/DocTemplate.res 14:6
 can't find module DocTemplate
 Hit: Add Documentation template
 
-TextDocumentEdit: DocTemplate.res
-{"start": {"line": 14, "character": 2}, "end": {"line": 14, "character": 11}}
+TextDocumentEdit: file:///not_compiled/DocTemplate.res
+{"end":{"character":11,"line":14},"start":{"character":2,"line":14}}
 newText:
   <--here
   /**
@@ -101,10 +102,10 @@ newText:
   let b = 1
 Hit: Extract local module "T" to file "T.res"
 
-CreateFile: T.res
+CreateFile: file:///not_compiled/T.res
 
-TextDocumentEdit: T.res
-{"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 0}}
+TextDocumentEdit: file:///not_compiled/T.res
+{"end":{"character":1,"line":16},"start":{"character":0,"line":12}}
 newText:
 <--here
 //   ^xfm
@@ -112,8 +113,8 @@ let b = 1
 //  ^xfm
 
 
-TextDocumentEdit: not_compiled/DocTemplate.res
-{"start": {"line": 12, "character": 0}, "end": {"line": 16, "character": 1}}
+TextDocumentEdit: file:///not_compiled/DocTemplate.res
+{"end":{"character":1,"line":16},"start":{"character":0,"line":12}}
 newText:
 <--here
 
@@ -122,8 +123,8 @@ Xform not_compiled/DocTemplate.res 18:2
 can't find module DocTemplate
 Hit: Add Documentation template
 
-TextDocumentEdit: DocTemplate.res
-{"start": {"line": 17, "character": 0}, "end": {"line": 18, "character": 46}}
+TextDocumentEdit: file:///not_compiled/DocTemplate.res
+{"end":{"character":46,"line":18},"start":{"character":0,"line":17}}
 newText:
 <--here
 /**

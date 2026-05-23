@@ -33,7 +33,13 @@ let completionResolve ~(full : SharedTypes.full option) ~modulePath =
         None
       | Some file -> Some (file.structure.docstring |> String.concat "\n\n"))
   in
-  docstring
+  match docstring with
+  | None -> None
+  | Some value ->
+    Some
+      (`MarkupContent
+         (Lsp.Types.MarkupContent.create ~kind:Lsp.Types.MarkupKind.Markdown
+            ~value))
 
 let hover ~source ~kindFile ~pos ~supportsMarkdownLinks ~full ~debug =
   let result =
@@ -72,17 +78,21 @@ let hover ~source ~kindFile ~pos ~supportsMarkdownLinks ~full ~debug =
         if skipZero then None
         else Hover.newHover ~supportsMarkdownLinks ~full locItem)
   in
-  result
+  match result with
+  | None -> None
+  | Some value ->
+    Some
+      (Lsp.Types.Hover.create
+         ~contents:
+           (`MarkupContent
+              (Lsp.Types.MarkupContent.create
+                 ~kind:Lsp.Types.MarkupKind.Markdown ~value))
+         ())
 
 let signatureHelp ~source ~kindFile ~pos ~allowForConstructorPayloads ~full
     ~debug =
-  match
-    SignatureHelp.signatureHelp ~debug ~source ~kindFile ~pos
-      ~allowForConstructorPayloads ~full
-  with
-  | None ->
-    {Protocol.signatures = []; activeSignature = None; activeParameter = None}
-  | Some res -> res
+  SignatureHelp.signatureHelp ~debug ~source ~kindFile ~pos
+    ~allowForConstructorPayloads ~full
 
 let definition ~full ~pos ~debug =
   let locationOpt =
@@ -112,10 +122,8 @@ let definition ~full ~pos ~debug =
           if skipLoc then None
           else
             Some
-              {
-                Protocol.uri = Files.canonicalizeUri uri;
-                range = Utils.cmtLocToRange loc;
-              }
+              (Lsp.Types.Location.create ~range:(Utils.cmtLocToRange loc)
+                 ~uri:(Files.canonicalizeUri uri |> Lsp.Uri.of_string))
         | Some _ -> None))
   in
   locationOpt
@@ -132,10 +140,8 @@ let typeDefinition ~full ~pos ~debug =
         | None -> None
         | Some (uri, loc) ->
           Some
-            {
-              Protocol.uri = Files.canonicalizeUri uri;
-              range = Utils.cmtLocToRange loc;
-            }))
+            (Lsp.Types.Location.create ~range:(Utils.cmtLocToRange loc)
+               ~uri:(Files.canonicalizeUri uri |> Lsp.Uri.of_string))))
   in
   maybeLocation
 
@@ -157,10 +163,8 @@ let references ~full ~pos ~debug =
                  | None -> Uri.toTopLevelLoc uri2
                in
 
-               {
-                 Protocol.uri = Uri.toString uri2;
-                 range = Utils.cmtLocToRange loc;
-               }
+               Lsp.Types.Location.create ~range:(Utils.cmtLocToRange loc)
+                 ~uri:(Uri.toString uri2 |> Lsp.Uri.of_string)
                :: acc)
              [])
   in
@@ -194,12 +198,11 @@ let rename ~full ~pos ~newName ~debug =
                  let newPath =
                    Filename.concat dir (newName ^ Filename.extension path)
                  in
-                 let newUri = Uri.fromPath newPath in
-                 Protocol.
-                   {
-                     oldUri = uri |> Uri.toString;
-                     newUri = newUri |> Uri.toString;
-                   })
+                 `RenameFile
+                   (Lsp.Types.RenameFile.create
+                      ~newUri:(newPath |> Lsp.Uri.of_string)
+                      ~oldUri:(uri |> Uri.toString |> Lsp.Uri.of_string)
+                      ()))
         in
         let textDocumentEdits =
           let module StringMap = Misc.StringMap in
@@ -209,8 +212,9 @@ let rename ~full ~pos ~newName ~debug =
             |> List.fold_left
                  (fun acc (uri, loc) ->
                    let textEdit =
-                     Protocol.
-                       {range = Utils.cmtLocToRange loc; newText = newName}
+                     `TextEdit
+                       (Lsp.Types.TextEdit.create ~newText:newName
+                          ~range:(Utils.cmtLocToRange loc))
                    in
                    match StringMap.find_opt uri acc with
                    | None -> StringMap.add uri [textEdit] acc
@@ -220,13 +224,19 @@ let rename ~full ~pos ~newName ~debug =
           in
           StringMap.fold
             (fun uri edits acc ->
+              let textDocument =
+                Lsp.Types.OptionalVersionedTextDocumentIdentifier.create
+                  ~uri:(Lsp.Uri.of_string uri) ()
+              in
               let textDocumentEdit =
-                Protocol.{textDocument = {uri; version = None}; edits}
+                `TextDocumentEdit
+                  (Lsp.Types.TextDocumentEdit.create ~edits ~textDocument)
               in
               textDocumentEdit :: acc)
             textEditsByUri []
         in
-        Some (fileRenames, textDocumentEdits))
+        let documentChanges = fileRenames @ textDocumentEdits in
+        Some (Lsp.Types.WorkspaceEdit.create ~documentChanges ()))
   in
   result
 
@@ -247,8 +257,10 @@ let prepareRename ~full ~pos ~debug =
       in
       Some
         (match placeholderOpt with
-        | None -> Protocol.Range range
-        | Some placeholder -> Protocol.Placeholder {range; placeholder}))
+        | None -> range
+        | Some _placeholder ->
+          (* NOTE: lsp dont have PrepareRename.create with placeholder *)
+          range))
 
 let format ~source ~kindFile =
   let create_range text =
@@ -259,15 +271,12 @@ let format ~source ~kindFile =
       | Some line -> String.length line
       | None -> 0
     in
-    Protocol.
-      {
-        range =
-          {
-            start = {line = 0; character = 0};
-            end_ = {line = lines_len - 1; character};
-          };
-        newText = text;
-      }
+    let range =
+      Lsp.Types.Range.create
+        ~start:(Lsp.Types.Position.create ~line:0 ~character:0)
+        ~end_:(Lsp.Types.Position.create ~line:(lines_len - 1) ~character)
+    in
+    Lsp.Types.TextEdit.create ~newText:text ~range
   in
 
   let result =

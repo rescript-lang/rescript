@@ -155,21 +155,14 @@ let main () =
   | "extract-codeblocks" :: rest -> (
     match rest with
     | ["-h"] | ["--help"] -> logAndExit (Ok extractCodeblocksHelp)
-    | path :: args -> (
+    | path :: args ->
       let transformAssertEqual = List.mem "--transform-assert-equal" args in
       Clflags.color := Some Misc.Color.Never;
 
       (* TODO: Add result/JSON mode *)
-      match
-        Tools.ExtractCodeblocks.extractCodeblocksFromFile ~transformAssertEqual
-          ~entryPointFile:path
-      with
-      | Ok _ as r ->
-        print_endline (Analysis.Protocol.stringifyResult r);
-        exit 0
-      | Error _ as r ->
-        print_endline (Analysis.Protocol.stringifyResult r);
-        exit 1)
+      Tools.ExtractCodeblocks.extractCodeblocksFromFile ~transformAssertEqual
+        ~entryPointFile:path
+      |> logAndExit
     | _ -> logAndExit (Error extractCodeblocksHelp))
   | "reanalyze" :: _ ->
     if Sys.getenv_opt "RESCRIPT_REANALYZE_NO_SERVER" = Some "1" then (

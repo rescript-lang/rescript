@@ -1,3 +1,4 @@
+null
 Complete src/RecoveryOnProp.res 6:26
 posCursor:[6:26] posNoWhite:[6:25] Found expr:[3:2->11:8]
 JSX <div:[3:3->3:6] onClick[4:4->4:11]=...[4:13->0:-1]> _children:None
@@ -15,61 +16,75 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Type[Res]
 Path Res
-[{
-    "label": "Result",
-    "kind": 9,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "module Result",
-    "documentation": null
-  }, {
-    "label": "RescriptReactErrorBoundary",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
-    "tags": [],
-    "detail": "module RescriptReactErrorBoundary",
-    "documentation": null,
+    "label": "Result",
+    "tags": []
+  },
+  {
     "data": {
       "modulePath": "RescriptReactErrorBoundary",
       "filePath": "src/RecoveryOnProp.res"
-    }
-  }, {
-    "label": "RescriptReactRouter",
+    },
+    "deprecated": false,
+    "detail": "module RescriptReactErrorBoundary",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
-    "tags": [],
-    "detail": "module RescriptReactRouter",
-    "documentation": null,
+    "label": "RescriptReactErrorBoundary",
+    "tags": []
+  },
+  {
     "data": {
       "modulePath": "RescriptReactRouter",
       "filePath": "src/RecoveryOnProp.res"
-    }
-  }, {
-    "label": "RescriptTools",
+    },
+    "deprecated": false,
+    "detail": "module RescriptReactRouter",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
-    "tags": [],
-    "detail": "module RescriptTools",
-    "documentation": null,
+    "label": "RescriptReactRouter",
+    "tags": []
+  },
+  {
     "data": {
       "modulePath": "RescriptTools",
       "filePath": "src/RecoveryOnProp.res"
-    }
-  }, {
-    "label": "RescriptTools_Docgen",
+    },
+    "deprecated": false,
+    "detail": "module RescriptTools",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
-    "tags": [],
-    "detail": "module RescriptTools_Docgen",
-    "documentation": null,
+    "label": "RescriptTools",
+    "tags": []
+  },
+  {
     "data": {
       "modulePath": "RescriptTools_Docgen",
       "filePath": "src/RecoveryOnProp.res"
-    }
-  }, {
-    "label": "RescriptTools_ExtractCodeBlocks",
+    },
+    "deprecated": false,
+    "detail": "module RescriptTools_Docgen",
+    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
-    "tags": [],
-    "detail": "module RescriptTools_ExtractCodeBlocks",
-    "documentation": null,
+    "label": "RescriptTools_Docgen",
+    "tags": []
+  },
+  {
     "data": {
       "modulePath": "RescriptTools_ExtractCodeBlocks",
       "filePath": "src/RecoveryOnProp.res"
-    }
-  }]
+    },
+    "deprecated": false,
+    "detail": "module RescriptTools_ExtractCodeBlocks",
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 9,
+    "label": "RescriptTools_ExtractCodeBlocks",
+    "tags": []
+  }
+]
 

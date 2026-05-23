@@ -180,13 +180,12 @@ let main () =
       | _ -> raise (Failure "unsupported type")
     in
     let source = Files.readFile path |> Option.value ~default:"" in
-    let res =
-      Codemod.transform ~source
-        ~pos:(int_of_string line, int_of_string col)
-        ~debug ~typ ~hint
-      |> Json.escape
-    in
-    Printf.printf "\"%s\"" res
+    `String
+      (Codemod.transform ~source
+         ~pos:(int_of_string line, int_of_string col)
+         ~debug ~typ ~hint)
+    |> Yojson.Safe.pretty_to_string ~std:true
+    |> print_endline
   | [_; "diagnosticSyntax"; path] -> Cli.diagnosticSyntax ~path
   | [_; "references"; path; line; col] ->
     Cli.references ~path ~pos:(int_of_string line, int_of_string col) ~debug
@@ -198,8 +197,9 @@ let main () =
       ~newName ~debug
   | [_; "semanticTokens"; currentFile] -> Cli.semanticTokens ~path:currentFile
   | [_; "createInterface"; path; cmiFile] ->
-    Printf.printf "\"%s\""
-      (Json.escape (CreateInterface.command ~path ~cmiFile))
+    `String (CreateInterface.command ~path ~cmiFile)
+    |> Yojson.Safe.pretty_to_string ~std:true
+    |> print_endline
   | [_; "format"; path] -> Cli.format ~path
   | [_; "test"; path] -> Cli.test ~path
   | [_; "cmt"; rescript_json; cmt_path] -> CmtViewer.dump rescript_json cmt_path

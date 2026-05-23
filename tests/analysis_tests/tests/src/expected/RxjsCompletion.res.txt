@@ -1,3 +1,4 @@
+null
 Complete src/RxjsCompletion.res 26:29
 posCursor:[26:29] posNoWhite:[26:28] Found expr:[10:17->38:1]
 posCursor:[26:29] posNoWhite:[26:28] Found expr:[11:2->32:78]
@@ -22,67 +23,108 @@ CPPipe pathFromEnv:Observable found:true
 Path Rxjs.Observable.
 Path Rxjs.
 Path 
-[{
-    "label": "->Observable.subscribe",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 29, "line": 26 },
+          "start": { "character": 28, "line": 26 }
+        }
+      }
+    ],
+    "data": null,
+    "deprecated": false,
     "detail": "(t<'t>, 't => unit) => subscription",
-    "documentation": null,
-    "sortText": "subscribe",
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->Observable.subscribe",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 26, "character": 28}, "end": {"line": 26, "character": 29}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->pipe",
     "kind": 12,
-    "tags": [],
+    "label": "->Observable.subscribe",
+    "sortText": "subscribe",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 29, "line": 26 },
+          "start": { "character": 28, "line": 26 }
+        }
+      }
+    ],
+    "data": null,
+    "deprecated": false,
     "detail": "(Observable.t<'t>, operation<'t, 'u>) => Observable.t<'u>",
-    "documentation": null,
-    "sortText": "pipe",
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->pipe",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 26, "character": 28}, "end": {"line": 26, "character": 29}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->combineLatest",
     "kind": 12,
-    "tags": [],
+    "label": "->pipe",
+    "sortText": "pipe",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 29, "line": 26 },
+          "start": { "character": 28, "line": 26 }
+        }
+      }
+    ],
+    "data": null,
+    "deprecated": false,
     "detail": "(\n  Observable.t<'a>,\n  Observable.t<'b>,\n) => Observable.t<('a, 'b)>",
-    "documentation": null,
-    "sortText": "combineLatest",
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->combineLatest",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 26, "character": 28}, "end": {"line": 26, "character": 29}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->merge",
     "kind": 12,
-    "tags": [],
+    "label": "->combineLatest",
+    "sortText": "combineLatest",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 29, "line": 26 },
+          "start": { "character": 28, "line": 26 }
+        }
+      }
+    ],
+    "data": null,
+    "deprecated": false,
     "detail": "(Observable.t<'t>, Observable.t<'t>) => Observable.t<'t>",
-    "documentation": null,
-    "sortText": "merge",
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->merge",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 26, "character": 28}, "end": {"line": 26, "character": 29}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->pipe2",
     "kind": 12,
-    "tags": [],
+    "label": "->merge",
+    "sortText": "merge",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 29, "line": 26 },
+          "start": { "character": 28, "line": 26 }
+        }
+      }
+    ],
+    "data": null,
+    "deprecated": false,
     "detail": "(\n  Observable.t<'t>,\n  operation<'t, 'u>,\n  operation<'u, 'i>,\n) => Observable.t<'i>",
-    "documentation": null,
-    "sortText": "pipe2",
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->pipe2",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 26, "character": 28}, "end": {"line": 26, "character": 29}},
-      "newText": ""
-      }]
-  }]
+    "kind": 12,
+    "label": "->pipe2",
+    "sortText": "pipe2",
+    "tags": []
+  }
+]
 
 Complete src/RxjsCompletion.res 34:30
 posCursor:[34:30] posNoWhite:[34:29] Found expr:[10:17->38:1]
@@ -105,65 +147,106 @@ CPPipe pathFromEnv:Observable found:true
 Path Rxjs.Observable.
 Path Rxjs.
 Path 
-[{
-    "label": "->Rxjs.Observable.subscribe",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 30, "line": 34 },
+          "start": { "character": 29, "line": 34 }
+        }
+      }
+    ],
+    "data": null,
+    "deprecated": false,
     "detail": "(t<'t>, 't => unit) => subscription",
-    "documentation": null,
-    "sortText": "subscribe",
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->Rxjs.Observable.subscribe",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 34, "character": 29}, "end": {"line": 34, "character": 30}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Rxjs.pipe",
     "kind": 12,
-    "tags": [],
+    "label": "->Rxjs.Observable.subscribe",
+    "sortText": "subscribe",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 30, "line": 34 },
+          "start": { "character": 29, "line": 34 }
+        }
+      }
+    ],
+    "data": null,
+    "deprecated": false,
     "detail": "(Observable.t<'t>, operation<'t, 'u>) => Observable.t<'u>",
-    "documentation": null,
-    "sortText": "pipe",
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->Rxjs.pipe",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 34, "character": 29}, "end": {"line": 34, "character": 30}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Rxjs.combineLatest",
     "kind": 12,
-    "tags": [],
+    "label": "->Rxjs.pipe",
+    "sortText": "pipe",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 30, "line": 34 },
+          "start": { "character": 29, "line": 34 }
+        }
+      }
+    ],
+    "data": null,
+    "deprecated": false,
     "detail": "(\n  Observable.t<'a>,\n  Observable.t<'b>,\n) => Observable.t<('a, 'b)>",
-    "documentation": null,
-    "sortText": "combineLatest",
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->Rxjs.combineLatest",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 34, "character": 29}, "end": {"line": 34, "character": 30}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Rxjs.merge",
     "kind": 12,
-    "tags": [],
+    "label": "->Rxjs.combineLatest",
+    "sortText": "combineLatest",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 30, "line": 34 },
+          "start": { "character": 29, "line": 34 }
+        }
+      }
+    ],
+    "data": null,
+    "deprecated": false,
     "detail": "(Observable.t<'t>, Observable.t<'t>) => Observable.t<'t>",
-    "documentation": null,
-    "sortText": "merge",
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->Rxjs.merge",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 34, "character": 29}, "end": {"line": 34, "character": 30}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Rxjs.pipe2",
     "kind": 12,
-    "tags": [],
+    "label": "->Rxjs.merge",
+    "sortText": "merge",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 30, "line": 34 },
+          "start": { "character": 29, "line": 34 }
+        }
+      }
+    ],
+    "data": null,
+    "deprecated": false,
     "detail": "(\n  Observable.t<'t>,\n  operation<'t, 'u>,\n  operation<'u, 'i>,\n) => Observable.t<'i>",
-    "documentation": null,
-    "sortText": "pipe2",
+    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->Rxjs.pipe2",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 34, "character": 29}, "end": {"line": 34, "character": 30}},
-      "newText": ""
-      }]
-  }]
+    "kind": 12,
+    "label": "->Rxjs.pipe2",
+    "sortText": "pipe2",
+    "tags": []
+  }
+]
 

@@ -55,7 +55,9 @@
    (>= 5.0.0))
   (cppo
    (= 1.8.0))
-  (odoc :with-doc)))
+  (odoc :with-doc)
+  (lsp
+   (= 1.22.0))))
 
 (package
  (name tools)

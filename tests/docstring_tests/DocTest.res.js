@@ -15,6 +15,7 @@ import * as Primitive_string from "@rescript/runtime/lib/es6/Primitive_string.mj
 import * as Promises from "node:fs/promises";
 import * as Primitive_exceptions from "@rescript/runtime/lib/es6/Primitive_exceptions.mjs";
 import * as BinsJs from "../../cli/common/bins.js";
+import * as RescriptTools_ExtractCodeBlocks from "@rescript/runtime/lib/es6/RescriptTools_ExtractCodeBlocks.mjs";
 
 let rescript_tools_exe = BinsJs.rescript_tools_exe;
 
@@ -45,7 +46,7 @@ async function extractDocFromFile(file) {
     "--transform-assert-equal"
   ], undefined);
   try {
-    return JSON.parse(getOutput(match.stdout));
+    return RescriptTools_ExtractCodeBlocks.decodeFromJson(JSON.parse(getOutput(match.stdout)));
   } catch (raw_e) {
     let e = Primitive_exceptions.internalToException(raw_e);
     if (e.RE_EXN_ID === "JsExn") {

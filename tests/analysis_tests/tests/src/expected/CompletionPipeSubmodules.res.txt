@@ -1,3 +1,4 @@
+null
 Complete src/CompletionPipeSubmodules.res 13:20
 posCursor:[13:20] posNoWhite:[13:19] Found expr:[13:11->23:23]
 Pexp_apply ...[21:9->21:10] (...[13:11->21:8], ...[23:2->23:23])
@@ -11,13 +12,17 @@ Path A.B1.xx
 CPPipe pathFromEnv:A.B1 found:true
 Path A.B1.
 Path 
-[{
-    "label": "A.B1.d",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "b1 => string",
-    "documentation": null
-  }]
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
+    "label": "A.B1.d",
+    "tags": []
+  }
+]
 
 Complete src/CompletionPipeSubmodules.res 17:18
 posCursor:[17:18] posNoWhite:[17:17] Found expr:[17:11->23:23]
@@ -39,13 +44,17 @@ Path v
 CPPipe pathFromEnv:A.B1 found:true
 Path A.B1.
 Path 
-[{
-    "label": "A.B1.d",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "b1 => string",
-    "documentation": null
-  }]
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
+    "label": "A.B1.d",
+    "tags": []
+  }
+]
 
 Complete src/CompletionPipeSubmodules.res 41:20
 posCursor:[41:20] posNoWhite:[41:19] Found expr:[41:11->0:-1]
@@ -79,13 +88,17 @@ Path v
 CPPipe pathFromEnv:C found:false
 Path C.
 Path 
-[{
-    "label": "C.do",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "t => string",
-    "documentation": null
-  }]
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
+    "label": "C.do",
+    "tags": []
+  }
+]
 
 Complete src/CompletionPipeSubmodules.res 45:21
 posCursor:[45:21] posNoWhite:[45:20] Found expr:[45:11->0:-1]
@@ -119,11 +132,15 @@ Path v2
 CPPipe pathFromEnv:D.C2 found:true
 Path D.C2.
 Path 
-[{
-    "label": "D.C2.do",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "t2 => string",
-    "documentation": null
-  }]
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
+    "label": "D.C2.do",
+    "tags": []
+  }
+]
 

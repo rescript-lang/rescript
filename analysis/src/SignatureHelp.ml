@@ -463,63 +463,71 @@ let signatureHelp ~debug ~source ~kindFile ~pos ~allowForConstructorPayloads
           let activeParameter = findActiveParameter ~argAtCursor ~args in
 
           let paramUnlabelledArgCount = ref 0 in
-          Some
-            {
-              Protocol.signatures =
-                [
-                  {
-                    label = fnTypeStr;
-                    parameters =
-                      parameters
-                      |> List.map (fun (argLabel, start, end_) ->
-                             let paramArgCount = !paramUnlabelledArgCount in
-                             paramUnlabelledArgCount := paramArgCount + 1;
-                             let unlabelledArgCount = ref 0 in
-                             {
-                               Protocol.label = (start, end_);
-                               documentation =
-                                 (match
-                                    args
-                                    |> List.find_opt (fun (lbl, _) ->
-                                           let argCount = !unlabelledArgCount in
-                                           unlabelledArgCount := argCount + 1;
-                                           match (lbl, argLabel) with
-                                           | ( Asttypes.Optional {txt = l1},
-                                               Asttypes.Optional {txt = l2} )
-                                             when l1 = l2 ->
-                                             true
-                                           | ( Labelled {txt = l1},
-                                               Labelled {txt = l2} )
-                                             when l1 = l2 ->
-                                             true
-                                           | Nolabel, Nolabel
-                                             when paramArgCount = argCount ->
-                                             true
-                                           | _ -> false)
-                                  with
-                                 | None ->
-                                   {Protocol.kind = "markdown"; value = ""}
-                                 | Some (_, labelTypExpr) ->
-                                   {
-                                     Protocol.kind = "markdown";
-                                     value =
-                                       docsForLabel ~supportsMarkdownLinks ~file
-                                         ~package labelTypExpr;
-                                   });
-                             });
-                    documentation =
-                      (match List.nth_opt docstring 0 with
-                      | None -> None
-                      | Some docs ->
-                        Some {Protocol.kind = "markdown"; value = docs});
-                  };
-                ];
-              activeSignature = Some 0;
-              activeParameter =
+          let parametersInformation =
+            parameters
+            |> List.map (fun (argLabel, start, end_) ->
+                   let paramArgCount = !paramUnlabelledArgCount in
+                   paramUnlabelledArgCount := paramArgCount + 1;
+                   let unlabelledArgCount = ref 0 in
+                   let documentation =
+                     match
+                       args
+                       |> List.find_opt (fun (lbl, _) ->
+                              let argCount = !unlabelledArgCount in
+                              unlabelledArgCount := argCount + 1;
+                              match (lbl, argLabel) with
+                              | ( Asttypes.Optional {txt = l1},
+                                  Asttypes.Optional {txt = l2} )
+                                when l1 = l2 ->
+                                true
+                              | Labelled {txt = l1}, Labelled {txt = l2}
+                                when l1 = l2 ->
+                                true
+                              | Nolabel, Nolabel when paramArgCount = argCount
+                                ->
+                                true
+                              | _ -> false)
+                     with
+                     | None ->
+                       Lsp.Types.MarkupContent.create
+                         ~kind:Lsp.Types.MarkupKind.Markdown ~value:""
+                     | Some (_, labelTypExpr) ->
+                       Lsp.Types.MarkupContent.create
+                         ~kind:Lsp.Types.MarkupKind.Markdown
+                         ~value:
+                           (docsForLabel ~supportsMarkdownLinks ~file ~package
+                              labelTypExpr)
+                   in
+                   Lsp.Types.ParameterInformation.create
+                     ~label:(`Offset (start, end_))
+                     ~documentation:(`MarkupContent documentation) ())
+          in
+          let signatures =
+            Lsp.Types.SignatureInformation.create ~label:fnTypeStr
+              ~parameters:parametersInformation
+              ?documentation:
+                (match List.nth_opt docstring 0 with
+                | None -> None
+                | Some docs ->
+                  Some
+                    (`MarkupContent
+                       (Lsp.Types.MarkupContent.create
+                          ~kind:Lsp.Types.MarkupKind.Markdown ~value:docs)))
+              ~activeParameter:
                 (match activeParameter with
                 | None -> Some (-1)
-                | activeParameter -> activeParameter);
-            }
+                | activeParameter -> activeParameter)
+              ()
+          in
+          let signature =
+            Lsp.Types.SignatureHelp.create ~signatures:[signatures]
+              ~activeParameter:
+                (match activeParameter with
+                | None -> Some (-1)
+                | activeParameter -> activeParameter)
+              ~activeSignature:0 ()
+          in
+          Some signature
         | _ -> None)
       | Some (_, ((`ConstructorExpr (lid, _) | `ConstructorPat (lid, _)) as cs))
         -> (
@@ -702,44 +710,71 @@ let signatureHelp ~debug ~source ~kindFile ~pos ~allowForConstructorPayloads
               | None -> []
               | Some (`SingleArg (_, docstring)) ->
                 [
-                  {
-                    Protocol.label =
-                      (constructorNameLength + 1, String.length label - 1);
-                    documentation =
-                      {Protocol.kind = "markdown"; value = docstring};
-                  };
+                  Lsp.Types.ParameterInformation.create
+                    ~label:
+                      (`Offset
+                         (constructorNameLength + 1, String.length label - 1))
+                    ~documentation:
+                      (`MarkupContent
+                         (Lsp.Types.MarkupContent.create
+                            ~kind:Lsp.Types.MarkupKind.Markdown ~value:docstring))
+                    ();
                 ]
               | Some (`InlineRecord fields) ->
-                (* Account for leading '({' *)
                 let baseOffset = constructorNameLength + 2 in
-                {
-                  Protocol.label = (0, 0);
-                  documentation = {Protocol.kind = "markdown"; value = ""};
-                }
+                (* Account for leading '({' *)
+                Lsp.Types.ParameterInformation.create
+                  ~label:(`Offset (0, 0))
+                  ~documentation:
+                    (`MarkupContent
+                       (Lsp.Types.MarkupContent.create
+                          ~kind:Lsp.Types.MarkupKind.Markdown ~value:""))
+                  ()
                 :: (fields
                    |> List.map (fun (_, (field : field), (start, end_)) ->
-                          {
-                            Protocol.label =
-                              (baseOffset + start, baseOffset + end_);
-                            documentation =
-                              {
-                                Protocol.kind = "markdown";
-                                value = field.docstring |> String.concat "\n";
-                              };
-                          }))
+                          Lsp.Types.ParameterInformation.create
+                            ~label:
+                              (`Offset (baseOffset + start, baseOffset + end_))
+                            ~documentation:
+                              (`MarkupContent
+                                 (Lsp.Types.MarkupContent.create
+                                    ~kind:Lsp.Types.MarkupKind.Markdown
+                                    ~value:
+                                      (field.docstring |> String.concat "\n")))
+                            ()))
               | Some (`TupleArg items) ->
                 (* Account for leading '(' *)
                 let baseOffset = constructorNameLength + 1 in
                 items
                 |> List.map (fun (_, docstring, (start, end_)) ->
-                       {
-                         Protocol.label = (baseOffset + start, baseOffset + end_);
-                         documentation =
-                           {Protocol.kind = "markdown"; value = docstring};
-                       })
+                       Lsp.Types.ParameterInformation.create
+                         ~label:
+                           (`Offset (baseOffset + start, baseOffset + end_))
+                         ~documentation:
+                           (`MarkupContent
+                              (Lsp.Types.MarkupContent.create
+                                 ~kind:Lsp.Types.MarkupKind.Markdown
+                                 ~value:docstring))
+                         ())
             in
-            Some
-              {
+            let signatures =
+              Lsp.Types.SignatureInformation.create ~label ~parameters:params
+                ?documentation:
+                  (match List.nth_opt constructor.docstring 0 with
+                  | None -> None
+                  | Some docs ->
+                    Some
+                      (`MarkupContent
+                         (Lsp.Types.MarkupContent.create
+                            ~kind:Lsp.Types.MarkupKind.Markdown ~value:docs)))
+                ~activeParameter:(Some activeParameter) ()
+            in
+            let signature =
+              Lsp.Types.SignatureHelp.create ~signatures:[signatures]
+                ~activeParameter:(Some activeParameter) ~activeSignature:0 ()
+            in
+            Some signature
+          (* {
                 Protocol.signatures =
                   [
                     {
@@ -754,5 +789,6 @@ let signatureHelp ~debug ~source ~kindFile ~pos ~allowForConstructorPayloads
                   ];
                 activeSignature = Some 0;
                 activeParameter = Some activeParameter;
-              }))
+              } *)
+          ))
       | _ -> None))

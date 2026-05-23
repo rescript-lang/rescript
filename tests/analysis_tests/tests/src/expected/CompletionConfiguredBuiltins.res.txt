@@ -1,3 +1,4 @@
+null
 Complete src/CompletionConfiguredBuiltins.res 2:8
 posCursor:[2:8] posNoWhite:[2:7] Found expr:[2:3->2:8]
 Completable: Cpath Value[x]->em
@@ -9,13 +10,17 @@ Path x
 Path Stdlib.Array.em
 Path ArrayUtils.em
 Path em
-[{
-    "label": "ArrayUtils.empty",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "array<'a> => bool",
-    "documentation": null
-  }]
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
+    "label": "ArrayUtils.empty",
+    "tags": []
+  }
+]
 
 Complete src/CompletionConfiguredBuiltins.res 7:16
 posCursor:[7:16] posNoWhite:[7:15] Found expr:[7:3->7:16]
@@ -29,11 +34,15 @@ CPPipe pathFromEnv:Fastify found:false
 Path Fastify.doSt
 Path FastifyExt.doSt
 Path doSt
-[{
-    "label": "FastifyExt.doStuff",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "Fastify.t => unit",
-    "documentation": null
-  }]
+    "documentation": { "kind": "markdown", "value": "" },
+    "kind": 12,
+    "label": "FastifyExt.doStuff",
+    "tags": []
+  }
+]
 

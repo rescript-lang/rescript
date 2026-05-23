@@ -1,3 +1,4 @@
+null
 Complete src/TypeArgCtx.res 7:36
 posCursor:[7:36] posNoWhite:[7:35] Found pattern:[7:26->7:39]
 Ppat_construct Ok:[7:26->7:28]
@@ -7,14 +8,21 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[catchResult]
 Path catchResult
-[{
-    "label": "{}",
-    "kind": 22,
-    "tags": [],
+[
+  {
+    "data": null,
+    "deprecated": false,
     "detail": "someTyp",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype someTyp = {test: bool}\n```"},
-    "sortText": "A",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype someTyp = {test: bool}\n```"
+    },
     "insertText": "{$0}",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 22,
+    "label": "{}",
+    "sortText": "A",
+    "tags": []
+  }
+]
 

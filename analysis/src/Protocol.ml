@@ -1,4 +1,4 @@
-type position = {line: int; character: int}
+(* type position = {line: int; character: int}
 type range = {start: position; end_: position}
 type markupContent = {kind: string; value: string}
 
@@ -98,7 +98,7 @@ type codeAction = {
 
 type semanticTokens = {data: int array}
 
-let wrapInQuotes s = "\"" ^ Json.escape s ^ "\""
+(* let wrapInQuotes s = "\"" ^ Json.escape s ^ "\"" *)
 
 let null = "null"
 let array l = "[" ^ String.concat ", " l ^ "]"
@@ -385,4 +385,4 @@ let stringifyDiagnostic d =
   "severity": %d,
   "source": "ReScript"
 }|}
-    (stringifyRange d.range) (wrapInQuotes d.message) d.severity
+    (stringifyRange d.range) (wrapInQuotes d.message) d.severity *)
