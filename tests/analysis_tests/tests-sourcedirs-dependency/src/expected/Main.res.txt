@@ -7,14 +7,6 @@ Resolved opens 1 Stdlib
 ContextPath Value[WorkspaceDep, value]
 Path WorkspaceDep.value
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "valueFromDependency",
-    "tags": []
-  }
+  { "detail": "int", "kind": 12, "label": "valueFromDependency", "tags": [] }
 ]
 
