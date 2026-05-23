@@ -1,4 +1,3 @@
-null
 Complete src/CompletionTypeT.res 4:26
 XXX Not found!
 Completable: Cpattern Value[date]

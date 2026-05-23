@@ -1,4 +1,3 @@
-null
 PrepareRename src/PrepareRename.res 0:4
 {
   "end": { "character": 5, "line": 0 },

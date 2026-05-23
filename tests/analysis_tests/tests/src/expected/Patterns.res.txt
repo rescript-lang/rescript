@@ -1,4 +1,3 @@
-null
 Definition src/Patterns.res 19:10
 {
   "range": {

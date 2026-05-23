@@ -1,4 +1,3 @@
-null
 Code Lens src/CodeLens.res
 [
   {

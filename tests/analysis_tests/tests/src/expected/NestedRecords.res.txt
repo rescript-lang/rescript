@@ -1,4 +1,3 @@
-null
 Hover src/NestedRecords.res 17:5
 Nothing at that position. Now trying to use completion.
 posCursor:[17:5] posNoWhite:[17:4] Found expr:[17:3->17:10]

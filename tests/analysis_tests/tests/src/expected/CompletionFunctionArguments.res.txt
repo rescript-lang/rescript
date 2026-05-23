@@ -1,4 +1,3 @@
-null
 Complete src/CompletionFunctionArguments.res 10:24
 posCursor:[10:24] posNoWhite:[10:23] Found expr:[10:11->10:25]
 Pexp_apply ...[10:11->10:17] (~isOn10:19->10:23=...__ghost__[0:-1->0:-1])

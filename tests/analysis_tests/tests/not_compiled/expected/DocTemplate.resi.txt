@@ -1,4 +1,3 @@
-null
 Xform not_compiled/DocTemplate.resi 3:3
 Hit: Add Documentation template
 

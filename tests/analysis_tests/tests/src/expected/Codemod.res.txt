@@ -1,4 +1,3 @@
-null
 Codemod AddMissingCasessrc/Codemod.res 3:10
 switch (v1, v2) {
           //      ^c-a (#valid, #valid) | (#invalid, _)

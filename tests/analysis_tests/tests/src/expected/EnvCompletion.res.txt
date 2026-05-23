@@ -1,4 +1,3 @@
-null
 Complete src/EnvCompletion.res 10:17
 XXX Not found!
 Completable: Cpattern Value[res]

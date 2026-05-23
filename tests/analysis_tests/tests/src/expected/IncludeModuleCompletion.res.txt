@@ -1,4 +1,3 @@
-null
 Complete src/IncludeModuleCompletion.res 47:11
 posCursor:[47:11] posNoWhite:[47:10] Found expr:[45:13->52:3]
 posCursor:[47:11] posNoWhite:[47:10] Found expr:[46:4->51:5]

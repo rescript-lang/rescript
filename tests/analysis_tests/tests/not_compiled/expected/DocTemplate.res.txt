@@ -1,4 +1,3 @@
-null
 Xform not_compiled/DocTemplate.res 3:3
 can't find module DocTemplate
 Hit: Add Documentation template

@@ -1,4 +1,3 @@
-null
 Complete src/TypeArgCtx.res 7:36
 posCursor:[7:36] posNoWhite:[7:35] Found pattern:[7:26->7:39]
 Ppat_construct Ok:[7:26->7:28]

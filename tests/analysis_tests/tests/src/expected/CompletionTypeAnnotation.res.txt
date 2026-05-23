@@ -1,4 +1,3 @@
-null
 Complete src/CompletionTypeAnnotation.res 9:22
 XXX Not found!
 Completable: Cexpression Type[someRecord]

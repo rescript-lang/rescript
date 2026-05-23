@@ -1,4 +1,3 @@
-null
 Complete src/TypeAtPosCompletion.res 7:17
 posCursor:[7:17] posNoWhite:[7:15] Found expr:[6:16->9:1]
 Completable: Cexpression CTypeAtPos()->recordBody

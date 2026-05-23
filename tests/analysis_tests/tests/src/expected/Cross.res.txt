@@ -1,4 +1,3 @@
-null
 References src/Cross.res 0:17
 [
   {

@@ -1,4 +1,3 @@
-null
 Complete src/CompletionPipeProperty.res 21:17
 posCursor:[21:17] posNoWhite:[21:16] Found expr:[21:3->21:17]
 Pexp_field [21:3->21:16] _:[23:0->21:17]

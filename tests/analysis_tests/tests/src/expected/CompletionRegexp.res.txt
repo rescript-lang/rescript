@@ -1,4 +1,3 @@
-null
 Complete src/CompletionRegexp.res 1:17
 posCursor:[1:17] posNoWhite:[1:16] Found expr:[1:3->0:-1]
 Completable: Cpath Value[emailPattern]->

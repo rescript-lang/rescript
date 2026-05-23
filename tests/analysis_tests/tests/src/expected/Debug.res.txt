@@ -1,4 +1,3 @@
-null
 Definition src/Debug.res 2:27
 {
   "range": {

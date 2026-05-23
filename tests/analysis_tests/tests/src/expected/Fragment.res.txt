@@ -1,4 +1,3 @@
-null
 Hover src/Fragment.res 6:19
 {
   "contents": {

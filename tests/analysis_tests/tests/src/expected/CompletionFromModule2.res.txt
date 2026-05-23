@@ -1,4 +1,3 @@
-null
 Complete src/CompletionFromModule2.res 2:26
 posCursor:[2:26] posNoWhite:[2:25] Found expr:[2:3->2:26]
 Pexp_field [2:3->2:25] _:[11:0->2:26]

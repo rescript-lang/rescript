@@ -1,4 +1,3 @@
-null
 References src/ReferencesWithInterface.res 0:4
 [
   {

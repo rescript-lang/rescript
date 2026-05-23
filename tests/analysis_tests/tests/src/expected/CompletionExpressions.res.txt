@@ -1,4 +1,3 @@
-null
 Complete src/CompletionExpressions.res 3:20
 XXX Not found!
 Completable: Cpattern CTuple(Value[s], Value[f])

@@ -1,4 +1,3 @@
-null
 Hover src/Jsx2.resi 1:4
 {
   "contents": {

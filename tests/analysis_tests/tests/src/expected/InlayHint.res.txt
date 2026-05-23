@@ -1,4 +1,3 @@
-null
 Inlay Hint src/InlayHint.res 1:34
 [
   {

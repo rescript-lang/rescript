@@ -1,4 +1,3 @@
-null
 Complete src/ExhaustiveSwitch.res 8:24
 XXX Not found!
 Completable: CexhaustiveSwitch Value[withSomeVarian]

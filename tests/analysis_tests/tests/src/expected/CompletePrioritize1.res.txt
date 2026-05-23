@@ -1,4 +1,3 @@
-null
 Complete src/CompletePrioritize1.res 6:6
 posCursor:[6:6] posNoWhite:[6:5] Found expr:[6:3->0:-1]
 Completable: Cpath Value[a]->

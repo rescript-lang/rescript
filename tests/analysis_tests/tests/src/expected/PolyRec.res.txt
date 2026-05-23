@@ -1,4 +1,3 @@
-null
 Hover src/PolyRec.res 12:10
 {
   "contents": {

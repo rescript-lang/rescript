@@ -1,4 +1,3 @@
-null
 Hover src/DocComments.res 9:9
 {
   "contents": {

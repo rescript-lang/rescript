@@ -1,4 +1,3 @@
-null
 Create Interface src/CreateInterface.res
 type r = {name: string, age: int}
 let add: (~x: int, ~y: int) => int

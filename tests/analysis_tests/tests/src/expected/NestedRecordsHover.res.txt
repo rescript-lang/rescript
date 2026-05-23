@@ -1,4 +1,3 @@
-null
 Hover src/NestedRecordsHover.res 8:7
 {
   "contents": {

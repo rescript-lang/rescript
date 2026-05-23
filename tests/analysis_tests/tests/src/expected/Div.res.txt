@@ -1,4 +1,3 @@
-null
 Hover src/Div.res 0:10
 { "contents": { "kind": "markdown", "value": "```rescript\nstring\n```" } }
 

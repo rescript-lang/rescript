@@ -1,4 +1,3 @@
-null
 Complete src/CompletionDicts.res 0:30
 posCursor:[0:30] posNoWhite:[0:29] Found expr:[0:14->0:32]
 Pexp_apply ...[0:14->0:28] (...[0:29->0:31])

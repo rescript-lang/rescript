@@ -1,4 +1,3 @@
-null
 TypeDefinition src/TypeDefinition.res 2:9
 {
   "range": {

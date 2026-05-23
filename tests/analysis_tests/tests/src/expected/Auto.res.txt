@@ -1,4 +1,3 @@
-null
 Hover src/Auto.res 2:13
 {
   "contents": {

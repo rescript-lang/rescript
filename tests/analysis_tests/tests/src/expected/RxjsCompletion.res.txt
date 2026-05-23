@@ -1,4 +1,3 @@
-null
 Complete src/RxjsCompletion.res 26:29
 posCursor:[26:29] posNoWhite:[26:28] Found expr:[10:17->38:1]
 posCursor:[26:29] posNoWhite:[26:28] Found expr:[11:2->32:78]

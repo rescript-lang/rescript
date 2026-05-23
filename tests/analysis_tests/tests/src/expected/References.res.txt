@@ -1,4 +1,3 @@
-null
 References src/References.res 0:4
 [
   {

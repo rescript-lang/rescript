@@ -1,4 +1,3 @@
-null
 Completion resolve: Belt_Array
 "\nUtilities for `Array` functions.\n"
 

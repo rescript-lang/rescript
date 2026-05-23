@@ -1,4 +1,3 @@
-null
 Complete src/CompletionConfiguredBuiltins.res 2:8
 posCursor:[2:8] posNoWhite:[2:7] Found expr:[2:3->2:8]
 Completable: Cpath Value[x]->em

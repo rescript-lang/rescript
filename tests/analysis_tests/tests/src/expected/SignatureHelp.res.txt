@@ -1,4 +1,3 @@
-null
 Signature help src/SignatureHelp.res 16:20
 posCursor:[16:19] posNoWhite:[16:18] Found expr:[16:11->16:20]
 Pexp_apply ...[16:11->16:19] (...[46:0->16:20])

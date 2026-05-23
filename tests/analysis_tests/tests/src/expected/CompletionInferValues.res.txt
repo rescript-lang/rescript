@@ -1,4 +1,3 @@
-null
 Complete src/CompletionInferValues.res 15:43
 posCursor:[15:43] posNoWhite:[15:42] Found expr:[15:33->15:43]
 Completable: Cpath Value[aliased]->t

@@ -1,4 +1,3 @@
-null
 Hover src/RecModules.res 18:12
 {
   "contents": {

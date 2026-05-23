@@ -1,4 +1,3 @@
-null
 Rename src/RenameWithInterface.resi 0:4 y
 [
   {

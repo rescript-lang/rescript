@@ -1,4 +1,3 @@
-null
 Definition src/Definition.res 2:8
 {
   "range": {

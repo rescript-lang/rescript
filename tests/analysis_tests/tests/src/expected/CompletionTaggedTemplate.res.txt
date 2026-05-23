@@ -1,4 +1,3 @@
-null
 Complete src/CompletionTaggedTemplate.res 13:13
 posCursor:[13:13] posNoWhite:[13:12] Found expr:[13:11->13:13]
 Pexp_field [13:11->13:12] _:[19:0->13:13]

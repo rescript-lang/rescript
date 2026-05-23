@@ -1,4 +1,3 @@
-null
 Complete src/RecordCompletion.res 8:9
 posCursor:[8:9] posNoWhite:[8:8] Found expr:[8:3->8:9]
 Completable: Cpath Value[t].n->m
