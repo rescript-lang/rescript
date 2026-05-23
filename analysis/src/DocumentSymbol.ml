@@ -12,18 +12,6 @@ type kind =
   | EnumMember
   | TypeParameter
 
-(* let kindNumber = function
-  | Module -> 2
-  | Property -> 7
-  | Constructor -> 9
-  | Function -> 12
-  | Variable -> 13
-  | Constant -> 14
-  | String -> 15
-  | Number -> 16
-  | EnumMember -> 22
-  | TypeParameter -> 26 *)
-
 let command ~path =
   let symbols = ref [] in
   let addSymbol name loc kind =
@@ -37,9 +25,6 @@ let command ~path =
         Lsp.Types.DocumentSymbol.create ~name ~range ~selectionRange:range
           ~children:[] ~kind ()
       in
-      (* let symbol : Protocol.documentSymbolItem =
-        {name; range; kind = kindNumber kind; children = []}
-      in *)
       symbols := symbol :: !symbols
   in
   let rec exprKind (exp : Parsetree.expression) =

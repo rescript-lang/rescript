@@ -773,22 +773,5 @@ let signatureHelp ~debug ~source ~kindFile ~pos ~allowForConstructorPayloads
               Lsp.Types.SignatureHelp.create ~signatures:[signatures]
                 ~activeParameter:(Some activeParameter) ~activeSignature:0 ()
             in
-            Some signature
-          (* {
-                Protocol.signatures =
-                  [
-                    {
-                      label;
-                      parameters = params;
-                      documentation =
-                        (match List.nth_opt constructor.docstring 0 with
-                        | None -> None
-                        | Some docs ->
-                          Some {Protocol.kind = "markdown"; value = docs});
-                    };
-                  ];
-                activeSignature = Some 0;
-                activeParameter = Some activeParameter;
-              } *)
-          ))
+            Some signature))
       | _ -> None))

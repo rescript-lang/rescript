@@ -103,16 +103,6 @@ let inlay ~source ~kindFile ~pos ~maxLength ~full ~debug =
                    Lsp.Types.InlayHint.create ~position ~kind ~paddingLeft:true
                      ~paddingRight:false ~label:(`String label) ()
                  in
-                 (* let result =
-                   Protocol.
-                     {
-                       kind = inlayKindToNumber hintKind;
-                       position;
-                       paddingLeft = true;
-                       paddingRight = false;
-                       label = ": " ^ label;
-                     }
-                 in *)
                  match maxlen with
                  | Some value ->
                    if String.length label > value then None else Some result

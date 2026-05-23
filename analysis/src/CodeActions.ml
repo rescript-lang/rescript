@@ -18,21 +18,6 @@ let make ~title ~kind ~(uri : string) ~newText ~range =
       ()
   in
   Lsp.Types.CodeAction.create ~title ~kind ~edit ()
-(* {
-    Protocol.title;
-    codeActionKind = kind;
-    edit =
-      {
-        documentChanges =
-          [
-            TextDocumentEdit
-              {
-                Protocol.textDocument = {version = None; uri};
-                edits = [{newText; range}];
-              };
-          ];
-      };
-  } *)
 
 let makeWithDocumentChanges ~title ~kind ~documentChanges =
   let edit = Lsp.Types.WorkspaceEdit.create ~documentChanges () in
