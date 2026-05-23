@@ -11,10 +11,7 @@ Path ArrayUtils.em
 Path em
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "array<'a> => bool",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "ArrayUtils.empty",
     "tags": []
@@ -35,10 +32,7 @@ Path FastifyExt.doSt
 Path doSt
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Fastify.t => unit",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "FastifyExt.doStuff",
     "tags": []

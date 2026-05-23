@@ -8,8 +8,6 @@ ContextPath Value[MyList, m]
 Path MyList.m
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(list<'a>, 'a => 'b) => list<'b>",
     "documentation": {
       "kind": "markdown",
@@ -20,8 +18,6 @@ Path MyList.m
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(list<'a>, list<'b>, ('a, 'b) => 'c) => list<'c>",
     "documentation": {
       "kind": "markdown",
@@ -32,8 +28,6 @@ Path MyList.m
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(~length: int, 'a) => list<'a>",
     "documentation": {
       "kind": "markdown",
@@ -44,8 +38,6 @@ Path MyList.m
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(list<'a>, ('a, int) => 'b) => list<'b>",
     "documentation": {
       "kind": "markdown",
@@ -56,8 +48,6 @@ Path MyList.m
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(list<'a>, 'a => 'b) => list<'b>",
     "documentation": {
       "kind": "markdown",
@@ -79,8 +69,6 @@ ContextPath Value[Array, ""]
 Path Array.
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(\n  array<'a>,\n  ~start: int,\n  ~remove: int,\n  ~insert: array<'a>,\n) => unit",
     "documentation": {
       "kind": "markdown",
@@ -91,8 +79,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, array<'a>) => array<'a>",
     "documentation": {
       "kind": "markdown",
@@ -103,8 +89,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, 'a => option<'b>) => array<'b>",
     "documentation": {
       "kind": "markdown",
@@ -115,8 +99,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, ('a, int) => bool) => option<'a>",
     "documentation": {
       "kind": "markdown",
@@ -127,8 +109,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, 'a => bool) => option<'a>",
     "documentation": {
       "kind": "markdown",
@@ -139,8 +119,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "array<'a> => option<'a>",
     "documentation": {
       "kind": "markdown",
@@ -151,8 +129,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, 'a => option<'b>) => option<'b>",
     "documentation": {
       "kind": "markdown",
@@ -163,8 +139,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, array<array<'a>>) => array<'a>",
     "documentation": {
       "kind": "markdown",
@@ -175,7 +149,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(array<string>, string) => string",
     "documentation": {
@@ -187,7 +160,6 @@ Path Array.
     "tags": [ 1 ]
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(array<'a>, string) => string",
     "documentation": {
@@ -199,8 +171,6 @@ Path Array.
     "tags": [ 1 ]
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, 'b, ('b, 'a) => 'b) => 'b",
     "documentation": {
       "kind": "markdown",
@@ -211,8 +181,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, 'b, ('b, 'a, int) => 'b) => 'b",
     "documentation": {
       "kind": "markdown",
@@ -223,8 +191,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "array<'a> => array<'a>",
     "documentation": {
       "kind": "markdown",
@@ -235,8 +201,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, Symbol.t) => option<'b>",
     "documentation": {
       "kind": "markdown",
@@ -247,8 +211,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, Symbol.t) => 'b",
     "documentation": {
       "kind": "markdown",
@@ -259,8 +221,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, 'a => bool) => option<int>",
     "documentation": {
       "kind": "markdown",
@@ -271,8 +231,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "array<'a> => unit",
     "documentation": {
       "kind": "markdown",
@@ -283,8 +241,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "array<'a> => array<'a>",
     "documentation": {
       "kind": "markdown",
@@ -295,8 +251,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, int, 'a) => unit",
     "documentation": {
       "kind": "markdown",
@@ -307,8 +261,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, ('a, int) => bool) => int",
     "documentation": {
       "kind": "markdown",
@@ -319,8 +271,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, ('a, int) => bool) => bool",
     "documentation": {
       "kind": "markdown",
@@ -331,8 +281,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, ~start: int=?, ~end: int=?) => array<'a>",
     "documentation": {
       "kind": "markdown",
@@ -343,8 +291,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(t<'a>, array<'b>) => array<('a, 'b)>",
     "documentation": {
       "kind": "markdown",
@@ -355,7 +301,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(array<'a>, 'a, ~start: int) => unit",
     "documentation": {
@@ -367,8 +312,6 @@ Path Array.
     "tags": [ 1 ]
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, 'a) => bool",
     "documentation": {
       "kind": "markdown",
@@ -379,8 +322,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, 'a => bool) => int",
     "documentation": {
       "kind": "markdown",
@@ -391,8 +332,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(~length: int, int => 'a) => array<'a>",
     "documentation": {
       "kind": "markdown",
@@ -403,8 +342,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, 'a => bool) => option<'a>",
     "documentation": {
       "kind": "markdown",
@@ -415,8 +352,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(~length: int, 'a) => array<'a>",
     "documentation": {
       "kind": "markdown",
@@ -427,7 +362,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(array<'a>, 'a, int) => int",
     "documentation": {
@@ -439,8 +373,6 @@ Path Array.
     "tags": [ 1 ]
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "array<'a> => string",
     "documentation": {
       "kind": "markdown",
@@ -451,8 +383,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(\n  array<'a>,\n  ~start: int,\n  ~remove: int,\n  ~insert: array<'a>,\n) => array<'a>",
     "documentation": {
       "kind": "markdown",
@@ -463,8 +393,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, ('a, 'a) => Ordering.t) => unit",
     "documentation": {
       "kind": "markdown",
@@ -475,8 +403,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, ('a, int) => option<'b>) => array<'b>",
     "documentation": {
       "kind": "markdown",
@@ -487,8 +413,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "array<'a> => int",
     "documentation": {
       "kind": "markdown",
@@ -499,8 +423,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, 'a => bool) => bool",
     "documentation": {
       "kind": "markdown",
@@ -511,8 +433,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "array<array<'a>> => array<'a>",
     "documentation": {
       "kind": "markdown",
@@ -523,8 +443,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, 'a => 'b) => array<'b>",
     "documentation": {
       "kind": "markdown",
@@ -535,8 +453,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(t<'a>, array<'b>, ('a, 'b) => 'c) => array<'c>",
     "documentation": {
       "kind": "markdown",
@@ -547,8 +463,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, int, 'a) => array<'a>",
     "documentation": {
       "kind": "markdown",
@@ -559,17 +473,12 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, 'a) => option<int>",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "lastIndexOfOpt",
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "array<'a> => array<'a>",
     "documentation": {
       "kind": "markdown",
@@ -580,8 +489,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(\n  array<'a>,\n  ~target: int,\n  ~start: int,\n  ~end: int=?,\n) => array<'a>",
     "documentation": {
       "kind": "markdown",
@@ -592,8 +499,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "array<'a> => string",
     "documentation": {
       "kind": "markdown",
@@ -604,8 +509,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, ('a, int) => bool) => bool",
     "documentation": {
       "kind": "markdown",
@@ -616,8 +519,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, 'a, ~start: int=?, ~end: int=?) => unit",
     "documentation": {
       "kind": "markdown",
@@ -628,8 +529,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, ('a, int) => bool) => option<'a>",
     "documentation": {
       "kind": "markdown",
@@ -640,8 +539,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "array<'a> => unit",
     "documentation": {
       "kind": "markdown",
@@ -652,8 +549,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string => array<string>",
     "documentation": {
       "kind": "markdown",
@@ -664,8 +559,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, ('a, int) => bool) => int",
     "documentation": {
       "kind": "markdown",
@@ -676,8 +569,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, int) => 'a",
     "documentation": {
       "kind": "markdown",
@@ -688,8 +579,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "array<'a> => IteratorObject.t<(int, 'a), unit, unknown>",
     "documentation": {
       "kind": "markdown",
@@ -700,8 +589,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, array<'a>) => unit",
     "documentation": {
       "kind": "markdown",
@@ -712,8 +599,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, 'a, ~from: int=?) => int",
     "documentation": {
       "kind": "markdown",
@@ -724,8 +609,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Iterable.t<'a> => array<'a>",
     "documentation": {
       "kind": "markdown",
@@ -736,8 +619,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, 'a => bool) => array<'a>",
     "documentation": {
       "kind": "markdown",
@@ -748,8 +629,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, array<'a>, ('a, 'a) => Ordering.t) => Ordering.t",
     "documentation": {
       "kind": "markdown",
@@ -760,8 +639,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<string>, string) => string",
     "documentation": {
       "kind": "markdown",
@@ -772,8 +649,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "array<'a> => option<'a>",
     "documentation": {
       "kind": "markdown",
@@ -784,8 +659,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "array<'a> => unit",
     "documentation": {
       "kind": "markdown",
@@ -796,8 +669,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "'a => bool",
     "documentation": {
       "kind": "markdown",
@@ -808,8 +679,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "array<'a> => IteratorObject.t<'a, unit, unknown>",
     "documentation": {
       "kind": "markdown",
@@ -820,8 +689,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, 'a) => option<int>",
     "documentation": {
       "kind": "markdown",
@@ -832,8 +699,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, ('a, int) => unit) => unit",
     "documentation": {
       "kind": "markdown",
@@ -844,8 +709,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, 'b, ('b, 'a) => 'b) => 'b",
     "documentation": {
       "kind": "markdown",
@@ -856,7 +719,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(array<'a>, ~start: int) => array<'a>",
     "documentation": {
@@ -868,8 +730,6 @@ Path Array.
     "tags": [ 1 ]
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(arrayLike<'a>, 'a => 'b) => array<'b>",
     "documentation": {
       "kind": "markdown",
@@ -880,7 +740,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(array<'a>, 'a) => unit",
     "documentation": {
@@ -892,8 +751,6 @@ Path Array.
     "tags": [ 1 ]
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, int, 'a) => unit",
     "documentation": {
       "kind": "markdown",
@@ -904,8 +761,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "array<'a> => bool",
     "documentation": {
       "kind": "markdown",
@@ -916,8 +771,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, ('a, int) => bool) => array<'a>",
     "documentation": {
       "kind": "markdown",
@@ -928,8 +781,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, 'a => bool) => int",
     "documentation": {
       "kind": "markdown",
@@ -940,8 +791,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, Symbol.t, 'b) => unit",
     "documentation": {
       "kind": "markdown",
@@ -952,8 +801,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, array<'a>, ('a, 'a) => bool) => bool",
     "documentation": {
       "kind": "markdown",
@@ -964,8 +811,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "array<array<'a>> => array<'a>",
     "documentation": {
       "kind": "markdown",
@@ -976,8 +821,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, string) => string",
     "documentation": {
       "kind": "markdown",
@@ -988,8 +831,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, ('a, int) => 'b) => array<'b>",
     "documentation": {
       "kind": "markdown",
@@ -1000,8 +841,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, ('a, int) => array<'b>) => array<'b>",
     "documentation": {
       "kind": "markdown",
@@ -1012,7 +851,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(array<'a>, ~target: int, ~start: int) => array<'a>",
     "documentation": {
@@ -1024,8 +862,6 @@ Path Array.
     "tags": [ 1 ]
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, 'a) => unit",
     "documentation": {
       "kind": "markdown",
@@ -1036,8 +872,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, 'a, ~from: int=?) => int",
     "documentation": {
       "kind": "markdown",
@@ -1048,8 +882,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, 'a) => unit",
     "documentation": {
       "kind": "markdown",
@@ -1060,8 +892,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, ('a, 'a) => Ordering.t) => array<'a>",
     "documentation": {
       "kind": "markdown",
@@ -1072,8 +902,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, 'b, ('b, 'a, int) => 'b) => 'b",
     "documentation": {
       "kind": "markdown",
@@ -1084,8 +912,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, 'a => bool) => bool",
     "documentation": {
       "kind": "markdown",
@@ -1096,7 +922,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(array<'a>, int) => 'a",
     "documentation": {
@@ -1108,8 +933,6 @@ Path Array.
     "tags": [ 1 ]
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(t<'a>, 'a => bool) => (t<'a>, t<'a>)",
     "documentation": {
       "kind": "markdown",
@@ -1120,7 +943,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(array<'a>, ~target: int) => array<'a>",
     "documentation": {
@@ -1132,8 +954,6 @@ Path Array.
     "tags": [ 1 ]
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "array<option<'a>> => array<'a>",
     "documentation": {
       "kind": "markdown",
@@ -1144,8 +964,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, int) => option<'a>",
     "documentation": {
       "kind": "markdown",
@@ -1156,8 +974,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "array<'a> => option<'a>",
     "documentation": {
       "kind": "markdown",
@@ -1168,8 +984,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, int) => option<'a>",
     "documentation": {
       "kind": "markdown",
@@ -1180,8 +994,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "array<'a> => Iterable.t<'a>",
     "documentation": {
       "kind": "markdown",
@@ -1192,8 +1004,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, int) => unit",
     "documentation": {
       "kind": "markdown",
@@ -1204,8 +1014,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, 'a => bool) => option<int>",
     "documentation": {
       "kind": "markdown",
@@ -1216,8 +1024,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, array<'a>) => unit",
     "documentation": {
       "kind": "markdown",
@@ -1228,8 +1034,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "array<('a, 'b)> => (t<'a>, array<'b>)",
     "documentation": {
       "kind": "markdown",
@@ -1240,8 +1044,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, 'a => unit) => unit",
     "documentation": {
       "kind": "markdown",
@@ -1252,8 +1054,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, 'a => array<'b>) => array<'b>",
     "documentation": {
       "kind": "markdown",
@@ -1264,8 +1064,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "arrayLike<'a> => array<'a>",
     "documentation": {
       "kind": "markdown",
@@ -1276,7 +1074,6 @@ Path Array.
     "tags": []
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(array<'a>, 'a, int) => int",
     "documentation": {
@@ -1299,8 +1096,6 @@ ContextPath Value[Array, m]
 Path Array.m
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(~length: int, 'a) => array<'a>",
     "documentation": {
       "kind": "markdown",
@@ -1311,8 +1106,6 @@ Path Array.m
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, 'a => 'b) => array<'b>",
     "documentation": {
       "kind": "markdown",
@@ -1323,8 +1116,6 @@ Path Array.m
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, ('a, int) => 'b) => array<'b>",
     "documentation": {
       "kind": "markdown",
@@ -1346,7 +1137,6 @@ ContextPath Value[Dep, c]
 Path Dep.c
 [
   {
-    "data": null,
     "deprecated": true,
     "detail": "int => int",
     "documentation": {
@@ -1369,24 +1159,8 @@ ContextPath Value[Lib, foo]
 Path Lib.foo
 Found type for function (~age: int, ~name: string) => string
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "age",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "string",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "name",
-    "tags": []
-  }
+  { "detail": "int", "kind": 4, "label": "age", "tags": [] },
+  { "detail": "string", "kind": 4, "label": "name", "tags": [] }
 ]
 
 Complete src/Completion.res 26:13
@@ -1401,8 +1175,6 @@ Path ArrayUtils.m
 Path m
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, 'a => 'b) => array<'b>",
     "documentation": {
       "kind": "markdown",
@@ -1413,8 +1185,6 @@ Path m
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, ('a, int) => 'b) => array<'b>",
     "documentation": {
       "kind": "markdown",
@@ -1437,8 +1207,6 @@ Path Stdlib.String.toU
 Path toU
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string => string",
     "documentation": {
       "kind": "markdown",
@@ -1462,8 +1230,6 @@ Path Stdlib.Option.e
 Path e
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(option<'a>, option<'b>, ('a, 'b) => bool) => bool",
     "documentation": {
       "kind": "markdown",
@@ -1490,19 +1256,13 @@ Path ForAuto.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(t, int) => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "ForAuto.abc",
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(t, int) => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "ForAuto.abd",
     "tags": []
@@ -1521,17 +1281,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [O, Comp] second
 Path O.Comp.make
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "zzz",
-    "tags": []
-  }
-]
+[ { "detail": "int", "kind": 12, "label": "zzz", "tags": [] } ]
 
 Complete src/Completion.res 62:23
 posCursor:[62:23] posNoWhite:[62:22] Found expr:[62:14->62:23]
@@ -1540,17 +1290,7 @@ Completable: Cjsx([O, Comp], z, [z])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Path O.Comp.make
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "option<int>",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "zoo",
-    "tags": []
-  }
-]
+[ { "detail": "option<int>", "kind": 4, "label": "zoo", "tags": [] } ]
 
 Complete src/Completion.res 65:8
 Attribute id:reac:[65:3->65:8] label:reac
@@ -1559,8 +1299,6 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "",
     "documentation": {
       "kind": "markdown",
@@ -1572,8 +1310,6 @@ Resolved opens 1 Stdlib
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "",
     "documentation": {
       "kind": "markdown",
@@ -1595,8 +1331,6 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "",
     "documentation": {
       "kind": "markdown",
@@ -1608,8 +1342,6 @@ Resolved opens 1 Stdlib
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "",
     "documentation": {
       "kind": "markdown",
@@ -1631,17 +1363,7 @@ Resolved opens 1 Stdlib
 ContextPath Value[Lib, foo]
 Path Lib.foo
 Found type for function (~age: int, ~name: string) => string
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "age",
-    "tags": []
-  }
-]
+[ { "detail": "int", "kind": 4, "label": "age", "tags": [] } ]
 
 Complete src/Completion.res 74:26
 posCursor:[74:26] posNoWhite:[74:25] Found expr:[74:11->74:26]
@@ -1652,17 +1374,7 @@ Resolved opens 1 Stdlib
 ContextPath Value[Lib, foo]
 Path Lib.foo
 Found type for function (~age: int, ~name: string) => string
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "string",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "name",
-    "tags": []
-  }
-]
+[ { "detail": "string", "kind": 4, "label": "name", "tags": [] } ]
 
 Complete src/Completion.res 77:32
 posCursor:[77:32] posNoWhite:[77:31] Found expr:[77:11->77:32]
@@ -1673,17 +1385,7 @@ Resolved opens 1 Stdlib
 ContextPath Value[Lib, foo]
 Path Lib.foo
 Found type for function (~age: int, ~name: string) => string
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "string",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "name",
-    "tags": []
-  }
-]
+[ { "detail": "string", "kind": 4, "label": "name", "tags": [] } ]
 
 Complete src/Completion.res 82:5
 posCursor:[82:5] posNoWhite:[82:4] Found expr:[80:8->86:1]
@@ -1705,17 +1407,7 @@ Resolved opens 1 Stdlib
 ContextPath Value[someObj]["a"]
 ContextPath Value[someObj]
 Path someObj
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "age",
-    "tags": []
-  }
-]
+[ { "detail": "int", "kind": 4, "label": "age", "tags": [] } ]
 
 Complete src/Completion.res 95:24
 posCursor:[95:24] posNoWhite:[95:23] Found expr:[95:3->99:6]
@@ -1729,24 +1421,8 @@ ContextPath Value[nestedObj]["x"]
 ContextPath Value[nestedObj]
 Path nestedObj
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "age",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "string",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "name",
-    "tags": []
-  }
+  { "detail": "int", "kind": 4, "label": "age", "tags": [] },
+  { "detail": "string", "kind": 4, "label": "name", "tags": [] }
 ]
 
 Complete src/Completion.res 99:7
@@ -1758,17 +1434,7 @@ Resolved opens 1 Stdlib
 ContextPath Value[o]["a"]
 ContextPath Value[o]
 Path o
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "age",
-    "tags": []
-  }
-]
+[ { "detail": "int", "kind": 4, "label": "age", "tags": [] } ]
 
 Complete src/Completion.res 104:17
 posCursor:[104:17] posNoWhite:[104:16] Found expr:[104:3->125:19]
@@ -1782,24 +1448,8 @@ ContextPath Value[no]["x"]
 ContextPath Value[no]
 Path no
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "string",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "name",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "age",
-    "tags": []
-  }
+  { "detail": "string", "kind": 4, "label": "name", "tags": [] },
+  { "detail": "int", "kind": 4, "label": "age", "tags": [] }
 ]
 
 Complete src/Completion.res 110:5
@@ -1819,8 +1469,6 @@ Path Completion.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -1831,8 +1479,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -1861,8 +1507,6 @@ Path Objects.Rec.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -1873,8 +1517,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -1898,10 +1540,7 @@ ContextPath Value[my]
 Path my
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, int) => int",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "myAmazingFunction",
     "tags": []
@@ -1918,24 +1557,8 @@ ContextPath Value[Objects, object][""]
 ContextPath Value[Objects, object]
 Path Objects.object
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "string",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "name",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "age",
-    "tags": []
-  }
+  { "detail": "string", "kind": 4, "label": "name", "tags": [] },
+  { "detail": "int", "kind": 4, "label": "age", "tags": [] }
 ]
 
 Complete src/Completion.res 151:6
@@ -1974,8 +1597,6 @@ Path Completion.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -1986,8 +1607,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -2030,8 +1649,6 @@ Path Completion.n
 Path n
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -2051,17 +1668,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[Lis]
 Path Lis
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "module List",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 9,
-    "label": "List",
-    "tags": []
-  }
-]
+[ { "detail": "module List", "kind": 9, "label": "List", "tags": [] } ]
 
 Complete src/Completion.res 169:16
 posCursor:[169:16] posNoWhite:[169:15] Found expr:[169:3->169:16]
@@ -2073,10 +1680,7 @@ ContextPath Module[WithChildren]
 Path WithChildren
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "module WithChildren",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "WithChildren",
     "tags": []
@@ -2093,8 +1697,6 @@ ContextPath Type[Null, ""]
 Path Null.
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "type t",
     "documentation": {
       "kind": "markdown",
@@ -2116,8 +1718,6 @@ ContextPath Type[ForAuto, ""]
 Path ForAuto.
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "type t",
     "documentation": {
       "kind": "markdown",
@@ -2139,8 +1739,6 @@ ContextPath Value[As]
 Path As
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Asterix",
     "documentation": {
       "kind": "markdown",
@@ -2151,37 +1749,25 @@ Path As
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "module AsyncIterable",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "AsyncIterable",
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "module AsyncIterator",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "AsyncIterator",
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "module AsyncGenerator",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "AsyncGenerator",
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "module AsyncIterableIterator",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "AsyncIterableIterator",
     "tags": []
@@ -2195,17 +1781,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Module[For]
 Path For
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "module ForAuto",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 9,
-    "label": "ForAuto",
-    "tags": []
-  }
-]
+[ { "detail": "module ForAuto", "kind": 9, "label": "ForAuto", "tags": [] } ]
 
 Complete src/Completion.res 190:11
 posCursor:[190:11] posNoWhite:[190:10] Found expr:[190:3->190:11]
@@ -2215,17 +1791,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[Private, ""]
 Path Private.
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "b",
-    "tags": []
-  }
-]
+[ { "detail": "int", "kind": 12, "label": "b", "tags": [] } ]
 
 Complete src/Completion.res 202:6
 posCursor:[202:6] posNoWhite:[202:5] Found expr:[202:3->202:6]
@@ -2246,17 +1812,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 2 Stdlib Completion
 ContextPath Value[sha]
 Path sha
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "shadowed",
-    "tags": []
-  }
-]
+[ { "detail": "int", "kind": 12, "label": "shadowed", "tags": [] } ]
 
 Complete src/Completion.res 208:6
 posCursor:[208:6] posNoWhite:[208:5] Found expr:[208:3->208:6]
@@ -2267,17 +1823,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 3 Stdlib Completion Completion
 ContextPath Value[sha]
 Path sha
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "string",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "shadowed",
-    "tags": []
-  }
-]
+[ { "detail": "string", "kind": 12, "label": "shadowed", "tags": [] } ]
 
 Complete src/Completion.res 221:22
 posCursor:[221:22] posNoWhite:[221:21] Found expr:[221:3->224:22]
@@ -2290,20 +1836,9 @@ ContextPath Value[FAO, forAutoObject][""]
 ContextPath Value[FAO, forAutoObject]
 Path FAO.forAutoObject
 [
+  { "detail": "int", "kind": 4, "label": "age", "tags": [] },
   {
-    "data": null,
-    "deprecated": false,
-    "detail": "int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "age",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
     "detail": "FAR.forAutoRecord",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 4,
     "label": "forAutoLabel",
     "tags": []
@@ -2330,8 +1865,6 @@ Path FAR.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "ForAuto.t",
     "documentation": {
       "kind": "markdown",
@@ -2342,8 +1875,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "option<int>",
     "documentation": {
       "kind": "markdown",
@@ -2378,28 +1909,19 @@ Path ForAuto.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(t, int) => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "ForAuto.abc",
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(t, int) => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "ForAuto.abd",
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, int) => int",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "myAmazingFunction",
     "tags": []
@@ -2417,24 +1939,8 @@ Resolved opens 3 Stdlib Completion Completion
 ContextPath Value[ForAuto, a]
 Path ForAuto.a
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "(t, int) => t",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "abc",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "(t, int) => t",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "abd",
-    "tags": []
-  }
+  { "detail": "(t, int) => t", "kind": 12, "label": "abc", "tags": [] },
+  { "detail": "(t, int) => t", "kind": 12, "label": "abd", "tags": [] }
 ]
 
 Complete src/Completion.res 234:34
@@ -2450,17 +1956,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 3 Stdlib Completion Completion
 ContextPath Value[na]
 Path na
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "string",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "name",
-    "tags": []
-  }
-]
+[ { "detail": "string", "kind": 12, "label": "name", "tags": [] } ]
 
 Complete src/Completion.res 237:17
 posCursor:[237:17] posNoWhite:[237:14] Found expr:[237:14->237:22]
@@ -2490,8 +1986,6 @@ Path Completion.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -2502,8 +1996,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -2526,10 +2018,7 @@ ContextPath Value[SomeLo]
 Path SomeLo
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "module SomeLocalModule",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "SomeLocalModule",
     "tags": []
@@ -2547,8 +2036,6 @@ ContextPath Type[SomeLocalModule, ""]
 Path SomeLocalModule.
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "type zz",
     "documentation": {
       "kind": "markdown",
@@ -2571,8 +2058,6 @@ ContextPath Type[SomeLocalModule, ""]
 Path SomeLocalModule.
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "type zz",
     "documentation": {
       "kind": "markdown",
@@ -2594,8 +2079,6 @@ ContextPath Value[SomeLocal]
 Path SomeLocal
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "SomeLocalVariantItem",
     "documentation": {
       "kind": "markdown",
@@ -2606,10 +2089,7 @@ Path SomeLocal
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "module SomeLocalModule",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "SomeLocalModule",
     "tags": []
@@ -2628,10 +2108,7 @@ ContextPath Type[SomeLocal]
 Path SomeLocal
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "module SomeLocalModule",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "SomeLocalModule",
     "tags": []
@@ -2649,17 +2126,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 3 Stdlib Completion Completion
 ContextPath Value[_w]
 Path _w
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "'a",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "_world",
-    "tags": []
-  }
-]
+[ { "detail": "'a", "kind": 12, "label": "_world", "tags": [] } ]
 
 Complete src/Completion.res 281:22
 posCursor:[281:22] posNoWhite:[281:21] Found type:[281:21->281:22]
@@ -2672,8 +2139,6 @@ ContextPath Type[s]
 Path s
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "type someType",
     "documentation": {
       "kind": "markdown",
@@ -2684,8 +2149,6 @@ Path s
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "type someLocalVariant",
     "documentation": {
       "kind": "markdown",
@@ -2714,17 +2177,7 @@ CPPipe pathFromEnv: found:true
 Path Completion.someFun
 Path someFun
 Found type for function (~name: string) => unit
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "string",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "name",
-    "tags": []
-  }
-]
+[ { "detail": "string", "kind": 4, "label": "name", "tags": [] } ]
 
 Complete src/Completion.res 296:11
 posCursor:[296:11] posNoWhite:[296:10] Found expr:[296:3->296:11]
@@ -2746,8 +2199,6 @@ Path Completion.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -2758,8 +2209,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -2790,42 +2239,10 @@ Found type for function (
   unit,
 ) => int
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "option<int>",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "opt1",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "a",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "b",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "option<int>",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "opt2",
-    "tags": []
-  }
+  { "detail": "option<int>", "kind": 4, "label": "opt1", "tags": [] },
+  { "detail": "int", "kind": 4, "label": "a", "tags": [] },
+  { "detail": "int", "kind": 4, "label": "b", "tags": [] },
+  { "detail": "option<int>", "kind": 4, "label": "opt2", "tags": [] }
 ]
 
 Complete src/Completion.res 304:15
@@ -2841,33 +2258,9 @@ ContextPath Value[ff]
 Path ff
 Found type for function (~a: int, ~b: int, ~opt2: int=?, unit) => int
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "a",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "b",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "option<int>",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "opt2",
-    "tags": []
-  }
+  { "detail": "int", "kind": 4, "label": "a", "tags": [] },
+  { "detail": "int", "kind": 4, "label": "b", "tags": [] },
+  { "detail": "option<int>", "kind": 4, "label": "opt2", "tags": [] }
 ]
 
 Complete src/Completion.res 307:17
@@ -2882,33 +2275,9 @@ ContextPath Value[ff]
 Path ff
 Found type for function (~a: int, ~b: int, ~opt2: int=?, unit) => int
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "a",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "b",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "option<int>",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "opt2",
-    "tags": []
-  }
+  { "detail": "int", "kind": 4, "label": "a", "tags": [] },
+  { "detail": "int", "kind": 4, "label": "b", "tags": [] },
+  { "detail": "option<int>", "kind": 4, "label": "opt2", "tags": [] }
 ]
 
 Complete src/Completion.res 310:21
@@ -2923,24 +2292,8 @@ ContextPath Value[ff]
 Path ff
 Found type for function (~a: int, ~b: int) => int
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "a",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "b",
-    "tags": []
-  }
+  { "detail": "int", "kind": 4, "label": "a", "tags": [] },
+  { "detail": "int", "kind": 4, "label": "b", "tags": [] }
 ]
 
 Complete src/Completion.res 313:23
@@ -2955,24 +2308,8 @@ ContextPath Value[ff]
 Path ff
 Found type for function (~a: int, ~opt2: int=?, unit) => int
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "a",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "option<int>",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "opt2",
-    "tags": []
-  }
+  { "detail": "int", "kind": 4, "label": "a", "tags": [] },
+  { "detail": "option<int>", "kind": 4, "label": "opt2", "tags": [] }
 ]
 
 Complete src/Completion.res 316:16
@@ -2987,42 +2324,10 @@ ContextPath Value[ff]
 Path ff
 Found type for function (~opt1: int=?, ~a: int, ~b: int, unit, unit, ~c: int) => int
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "option<int>",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "opt1",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "a",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "b",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "c",
-    "tags": []
-  }
+  { "detail": "option<int>", "kind": 4, "label": "opt1", "tags": [] },
+  { "detail": "int", "kind": 4, "label": "a", "tags": [] },
+  { "detail": "int", "kind": 4, "label": "b", "tags": [] },
+  { "detail": "int", "kind": 4, "label": "c", "tags": [] }
 ]
 
 Complete src/Completion.res 326:17
@@ -3036,24 +2341,8 @@ ContextPath Value[withCallback]
 Path withCallback
 Found type for function (~b: int) => callback
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "b",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "a",
-    "tags": []
-  }
+  { "detail": "int", "kind": 4, "label": "b", "tags": [] },
+  { "detail": "int", "kind": 4, "label": "a", "tags": [] }
 ]
 
 Complete src/Completion.res 329:21
@@ -3068,24 +2357,8 @@ ContextPath Value[withCallback]
 Path withCallback
 Found type for function (~b: int) => callback
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "b",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "a",
-    "tags": []
-  }
+  { "detail": "int", "kind": 4, "label": "b", "tags": [] },
+  { "detail": "int", "kind": 4, "label": "a", "tags": [] }
 ]
 
 Complete src/Completion.res 332:21
@@ -3099,17 +2372,7 @@ ContextPath Value[withCallback](~b)
 ContextPath Value[withCallback]
 Path withCallback
 Found type for function callback
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "a",
-    "tags": []
-  }
-]
+[ { "detail": "int", "kind": 4, "label": "a", "tags": [] } ]
 
 Complete src/Completion.res 339:26
 posCursor:[339:26] posNoWhite:[339:25] Found expr:[336:2->349:23]
@@ -3131,23 +2394,13 @@ Resolved opens 3 Stdlib Completion Completion
 ContextPath Type[Res]
 Path Res
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "module Result",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 9,
-    "label": "Result",
-    "tags": []
-  },
+  { "detail": "module Result", "kind": 9, "label": "Result", "tags": [] },
   {
     "data": {
       "modulePath": "RescriptReactErrorBoundary",
       "filePath": "src/Completion.res"
     },
-    "deprecated": false,
     "detail": "module RescriptReactErrorBoundary",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "RescriptReactErrorBoundary",
     "tags": []
@@ -3157,9 +2410,7 @@ Path Res
       "modulePath": "RescriptReactRouter",
       "filePath": "src/Completion.res"
     },
-    "deprecated": false,
     "detail": "module RescriptReactRouter",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "RescriptReactRouter",
     "tags": []
@@ -3169,9 +2420,7 @@ Path Res
       "modulePath": "RescriptTools",
       "filePath": "src/Completion.res"
     },
-    "deprecated": false,
     "detail": "module RescriptTools",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "RescriptTools",
     "tags": []
@@ -3181,9 +2430,7 @@ Path Res
       "modulePath": "RescriptTools_Docgen",
       "filePath": "src/Completion.res"
     },
-    "deprecated": false,
     "detail": "module RescriptTools_Docgen",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "RescriptTools_Docgen",
     "tags": []
@@ -3193,9 +2440,7 @@ Path Res
       "modulePath": "RescriptTools_ExtractCodeBlocks",
       "filePath": "src/Completion.res"
     },
-    "deprecated": false,
     "detail": "module RescriptTools_ExtractCodeBlocks",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "RescriptTools_ExtractCodeBlocks",
     "tags": []
@@ -3214,10 +2459,7 @@ ContextPath Value[this]
 Path this
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "\\\"Type Not Known\"",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "thisIsNotSaved",
     "tags": []
@@ -3304,8 +2546,6 @@ ContextPath Value[T]
 Path T
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "That",
     "documentation": {
       "kind": "markdown",
@@ -3316,8 +2556,6 @@ Path T
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "This",
     "documentation": {
       "kind": "markdown",
@@ -3328,49 +2566,31 @@ Path T
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "module TypedArray",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "TypedArray",
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "module TimeoutId",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "TimeoutId",
     "tags": []
   },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "module Type",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 9,
-    "label": "Type",
-    "tags": []
-  },
+  { "detail": "module Type", "kind": 9, "label": "Type", "tags": [] },
   {
     "data": {
       "modulePath": "TableclothMap",
       "filePath": "src/Completion.res"
     },
-    "deprecated": false,
     "detail": "module TableclothMap",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "TableclothMap",
     "tags": []
   },
   {
     "data": { "modulePath": "TypeArgCtx", "filePath": "src/Completion.res" },
-    "deprecated": false,
     "detail": "module TypeArgCtx",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "TypeArgCtx",
     "tags": []
@@ -3380,9 +2600,7 @@ Path T
       "modulePath": "TypeAtPosCompletion",
       "filePath": "src/Completion.res"
     },
-    "deprecated": false,
     "detail": "module TypeAtPosCompletion",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "TypeAtPosCompletion",
     "tags": []
@@ -3392,9 +2610,7 @@ Path T
       "modulePath": "TypeConstraint",
       "filePath": "src/Completion.res"
     },
-    "deprecated": false,
     "detail": "module TypeConstraint",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "TypeConstraint",
     "tags": []
@@ -3404,9 +2620,7 @@ Path T
       "modulePath": "TypeDefinition",
       "filePath": "src/Completion.res"
     },
-    "deprecated": false,
     "detail": "module TypeDefinition",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "TypeDefinition",
     "tags": []
@@ -3426,8 +2640,6 @@ ContextPath Value[AndThatOther, T]
 Path AndThatOther.T
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "ThatOther",
     "documentation": {
       "kind": "markdown",
@@ -3453,24 +2665,8 @@ Resolved opens 3 Stdlib Completion Completion
 ContextPath Value[ForAuto, ""]
 Path ForAuto.
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "(t, int) => t",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "abc",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "(t, int) => t",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "abd",
-    "tags": []
-  }
+  { "detail": "(t, int) => t", "kind": 12, "label": "abc", "tags": [] },
+  { "detail": "(t, int) => t", "kind": 12, "label": "abd", "tags": [] }
 ]
 
 Complete src/Completion.res 384:38
@@ -3488,20 +2684,9 @@ ContextPath Value[FAO, forAutoObject][""]
 ContextPath Value[FAO, forAutoObject]
 Path FAO.forAutoObject
 [
+  { "detail": "int", "kind": 4, "label": "age", "tags": [] },
   {
-    "data": null,
-    "deprecated": false,
-    "detail": "int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "age",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
     "detail": "FAR.forAutoRecord",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 4,
     "label": "forAutoLabel",
     "tags": []
@@ -3530,8 +2715,6 @@ Path Completion.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(~name: string) => unit",
     "documentation": {
       "kind": "markdown",
@@ -3542,8 +2725,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -3570,8 +2751,6 @@ Path ArrayUtils.ma
 Path ma
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, 'a => 'b) => array<'b>",
     "documentation": {
       "kind": "markdown",
@@ -3582,8 +2761,6 @@ Path ma
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, ('a, int) => 'b) => array<'b>",
     "documentation": {
       "kind": "markdown",
@@ -3608,17 +2785,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 3 Stdlib Completion Completion
 ContextPath Value[red]
 Path red
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "string",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "red",
-    "tags": []
-  }
-]
+[ { "detail": "string", "kind": 12, "label": "red", "tags": [] } ]
 
 Complete src/Completion.res 404:25
 posCursor:[404:25] posNoWhite:[404:24] Found expr:[402:14->404:31]
@@ -3633,17 +2800,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 3 Stdlib Completion Completion
 ContextPath Value[red]
 Path red
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "string",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "red",
-    "tags": []
-  }
-]
+[ { "detail": "string", "kind": 12, "label": "red", "tags": [] } ]
 
 Complete src/Completion.res 407:22
 posCursor:[407:22] posNoWhite:[407:21] Found expr:[407:11->485:0]
@@ -3660,27 +2817,9 @@ Resolved opens 3 Stdlib Completion Completion
 ContextPath Value[r]
 Path r
 [
+  { "detail": "string", "kind": 12, "label": "red", "tags": [] },
+  { "detail": "unit => aa", "kind": 12, "label": "retAA", "tags": [] },
   {
-    "data": null,
-    "deprecated": false,
-    "detail": "string",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "red",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "unit => aa",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "retAA",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
     "detail": "rAlias",
     "documentation": {
       "kind": "markdown",
@@ -3705,24 +2844,8 @@ Resolved opens 3 Stdlib Completion Completion
 ContextPath Value[SomeLocalModule, ""]
 Path SomeLocalModule.
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "bb",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "aa",
-    "tags": []
-  }
+  { "detail": "int", "kind": 12, "label": "bb", "tags": [] },
+  { "detail": "int", "kind": 12, "label": "aa", "tags": [] }
 ]
 
 Complete src/Completion.res 414:21
@@ -3739,24 +2862,8 @@ Resolved opens 3 Stdlib Completion Completion
 ContextPath Value[SomeLocalModule, ""]
 Path SomeLocalModule.
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "bb",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "aa",
-    "tags": []
-  }
+  { "detail": "int", "kind": 12, "label": "bb", "tags": [] },
+  { "detail": "int", "kind": 12, "label": "aa", "tags": [] }
 ]
 
 Complete src/Completion.res 419:17
@@ -3771,7 +2878,6 @@ Path Stdlib.Int.t
 Path t
 [
   {
-    "data": null,
     "deprecated": true,
     "detail": "(int, ~radix: int) => string",
     "documentation": {
@@ -3783,7 +2889,6 @@ Path t
     "tags": [ 1 ]
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(int, ~digits: int) => string",
     "documentation": {
@@ -3795,7 +2900,6 @@ Path t
     "tags": [ 1 ]
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(int, ~digits: int) => string",
     "documentation": {
@@ -3807,7 +2911,6 @@ Path t
     "tags": [ 1 ]
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(int, ~digits: int) => string",
     "documentation": {
@@ -3819,8 +2922,6 @@ Path t
     "tags": [ 1 ]
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, ~digits: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -3831,8 +2932,6 @@ Path t
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, ~radix: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -3843,8 +2942,6 @@ Path t
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int => float",
     "documentation": {
       "kind": "markdown",
@@ -3855,8 +2952,6 @@ Path t
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int => string",
     "documentation": {
       "kind": "markdown",
@@ -3867,8 +2962,6 @@ Path t
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, ~digits: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -3879,8 +2972,6 @@ Path t
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, ~digits: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -3904,7 +2995,6 @@ Path Stdlib.Float.t
 Path t
 [
   {
-    "data": null,
     "deprecated": true,
     "detail": "(float, ~radix: int) => string",
     "documentation": {
@@ -3916,7 +3006,6 @@ Path t
     "tags": [ 1 ]
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(float, ~digits: int) => string",
     "documentation": {
@@ -3928,8 +3017,6 @@ Path t
     "tags": [ 1 ]
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "float => int",
     "documentation": {
       "kind": "markdown",
@@ -3940,7 +3027,6 @@ Path t
     "tags": []
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(float, ~digits: int) => string",
     "documentation": {
@@ -3952,7 +3038,6 @@ Path t
     "tags": [ 1 ]
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(float, ~digits: int) => string",
     "documentation": {
@@ -3964,8 +3049,6 @@ Path t
     "tags": [ 1 ]
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(float, ~digits: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -3976,8 +3059,6 @@ Path t
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(float, ~radix: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -3988,8 +3069,6 @@ Path t
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "float => string",
     "documentation": {
       "kind": "markdown",
@@ -4000,8 +3079,6 @@ Path t
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(float, ~digits: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -4012,8 +3089,6 @@ Path t
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(float, ~digits: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -4038,7 +3113,6 @@ Path Stdlib.Result.g
 Path g
 [
   {
-    "data": null,
     "deprecated": true,
     "detail": "(result<'a, 'b>, ~message: string=?) => 'a",
     "documentation": {
@@ -4050,8 +3124,6 @@ Path g
     "tags": [ 1 ]
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(result<'a, 'b>, ~message: string=?) => 'a",
     "documentation": {
       "kind": "markdown",
@@ -4062,8 +3134,6 @@ Path g
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(result<'a, 'b>, 'a) => 'a",
     "documentation": {
       "kind": "markdown",
@@ -4074,7 +3144,6 @@ Path g
     "tags": []
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(result<'a, 'b>, 'a) => 'a",
     "documentation": {
@@ -4105,7 +3174,6 @@ Path Completion.so
 Path so
 [
   {
-    "data": null,
     "deprecated": true,
     "detail": "int",
     "documentation": {
@@ -4117,7 +3185,6 @@ Path so
     "tags": [ 1 ]
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "float",
     "documentation": {
@@ -4140,7 +3207,6 @@ ContextPath Type[someVariantWithDeprecated]
 Path someVariantWithDeprecated
 [
   {
-    "data": null,
     "deprecated": true,
     "detail": "DoNotUseMe",
     "documentation": {
@@ -4154,8 +3220,6 @@ Path someVariantWithDeprecated
     "tags": [ 1 ]
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "UseMeInstead",
     "documentation": {
       "kind": "markdown",
@@ -4168,7 +3232,6 @@ Path someVariantWithDeprecated
     "tags": []
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "AndNotMe",
     "documentation": {
@@ -4197,7 +3260,6 @@ Path Stdlib.Int.toS
 Path toS
 [
   {
-    "data": null,
     "deprecated": true,
     "detail": "(int, ~radix: int) => string",
     "documentation": {
@@ -4209,8 +3271,6 @@ Path toS
     "tags": [ 1 ]
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, ~radix: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -4232,10 +3292,7 @@ ContextPath Type[withUncurried]
 Path withUncurried
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int => unit",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "${1:v} => ${0:v}",
     "insertTextFormat": 2,
     "kind": 12,
@@ -4256,8 +3313,6 @@ ContextPath ValueOrField[FAR, ""]
 Path FAR.
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "forAutoRecord",
     "documentation": {
       "kind": "markdown",
@@ -4268,8 +3323,6 @@ Path FAR.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "ForAuto.t",
     "documentation": {
       "kind": "markdown",
@@ -4280,8 +3333,6 @@ Path FAR.
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "option<int>",
     "documentation": {
       "kind": "markdown",
@@ -4303,8 +3354,6 @@ ContextPath Type[someVariantWithRecord]
 Path someVariantWithRecord
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -4315,8 +3364,6 @@ Path someVariantWithRecord
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -4338,8 +3385,6 @@ ContextPath Type[someVariantWithRecord]
 Path someVariantWithRecord
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -4350,8 +3395,6 @@ Path someVariantWithRecord
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -4373,8 +3416,6 @@ ContextPath Type[someVariantWithInlineRecord]
 Path someVariantWithInlineRecord
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -4385,8 +3426,6 @@ Path someVariantWithInlineRecord
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -4408,8 +3447,6 @@ ContextPath Type[someVariantWithInlineRecord]
 Path someVariantWithInlineRecord
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -4420,8 +3457,6 @@ Path someVariantWithInlineRecord
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",

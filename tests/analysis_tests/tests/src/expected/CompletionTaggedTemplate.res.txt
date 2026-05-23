@@ -24,10 +24,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(t, int) => int",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->M.xyz",
     "kind": 12,
     "label": "->M.xyz",
@@ -44,10 +41,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "t => string",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->M.b",
     "kind": 12,
     "label": "->M.b",
@@ -64,10 +58,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "t => int",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->M.a",
     "kind": 12,
     "label": "->M.a",
@@ -103,10 +94,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(t, int) => int",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->M.xyz",
     "kind": 12,
     "label": "->M.xyz",
@@ -123,10 +111,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "t => string",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->M.b",
     "kind": 12,
     "label": "->M.b",
@@ -143,10 +128,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "t => int",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->M.a",
     "kind": 12,
     "label": "->M.a",

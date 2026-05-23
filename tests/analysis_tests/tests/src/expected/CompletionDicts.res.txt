@@ -9,10 +9,7 @@ ContextPath Value[Dict, fromArray]
 Path Dict.fromArray
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(string, 'a)",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "(${1:_}, ${2:_})",
     "insertTextFormat": 2,
     "kind": 12,
@@ -32,10 +29,7 @@ ContextPath Value[Dict, fromArray]
 Path Dict.fromArray
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(string, 'a)",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "(${1:_}, ${2:_})",
     "insertTextFormat": 2,
     "kind": 12,
@@ -66,24 +60,8 @@ ContextPath CArgument Value[Dict, fromArray]($0)
 ContextPath Value[Dict, fromArray]
 Path Dict.fromArray
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "true",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "false",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
 ]
 
 

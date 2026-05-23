@@ -14,17 +14,7 @@ Completable: Cjsx([M4], f, [first, f])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Path M4.make
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "option<string>",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "fun",
-    "tags": []
-  }
-]
+[ { "detail": "option<string>", "kind": 4, "label": "fun", "tags": [] } ]
 
 Hover src/JsxV4.res 14:9
 {

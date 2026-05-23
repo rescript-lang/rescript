@@ -15,8 +15,6 @@ Path CompletionFromModule.SomeModule.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -36,10 +34,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "t => string",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->CompletionFromModule.SomeModule.getName",
     "kind": 12,
     "label": "->CompletionFromModule.SomeModule.getName",
@@ -66,8 +61,6 @@ Path CompletionFromModule.SomeOtherModule.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -87,10 +80,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "t => string",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->CompletionFromModule.SomeOtherModule.getNName",
     "kind": 12,
     "label": "->CompletionFromModule.SomeOtherModule.getNName",
@@ -107,10 +97,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "typeOutsideModule => string",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->CompletionFromModule.SomeOtherModule.getNName2",
     "kind": 12,
     "label": "->CompletionFromModule.SomeOtherModule.getNName2",
@@ -127,10 +114,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "t => string",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->CompletionFromModule.SomeOtherModule.getNName",
     "kind": 12,
     "label": "->CompletionFromModule.SomeOtherModule.getNName",
@@ -147,10 +131,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "typeOutsideModule => string",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->CompletionFromModule.SomeOtherModule.getNName2",
     "kind": 12,
     "label": "->CompletionFromModule.SomeOtherModule.getNName2",
@@ -173,19 +154,13 @@ Path CompletionFromModule.SomeOtherModule.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "t => string",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "CompletionFromModule.SomeOtherModule.getNName",
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "typeOutsideModule => string",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "CompletionFromModule.SomeOtherModule.getNName2",
     "tags": []
@@ -206,20 +181,9 @@ Path CompletionFromModule.
 Path CompletionFromModule.SomeOtherModule.
 Path 
 [
+  { "detail": "t => string", "kind": 12, "label": "getNName", "tags": [] },
   {
-    "data": null,
-    "deprecated": false,
-    "detail": "t => string",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "getNName",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
     "detail": "typeOutsideModule => string",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "getNName2",
     "tags": []

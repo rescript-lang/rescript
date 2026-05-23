@@ -6,8 +6,6 @@ Resolved opens 1 Stdlib
 ContextPath CTypeAtPos()
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -18,8 +16,6 @@ ContextPath CTypeAtPos()
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "bool",
     "documentation": {
       "kind": "markdown",
@@ -41,8 +37,6 @@ Resolved opens 1 Stdlib
 ContextPath CTypeAtPos()
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -53,8 +47,6 @@ ContextPath CTypeAtPos()
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "bool",
     "documentation": {
       "kind": "markdown",
@@ -74,8 +66,6 @@ Resolved opens 1 Stdlib
 ContextPath CTypeAtPos()
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "optRecord",
     "documentation": {
       "kind": "markdown",

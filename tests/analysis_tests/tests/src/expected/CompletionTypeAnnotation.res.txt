@@ -7,8 +7,6 @@ ContextPath Type[someRecord]
 Path someRecord
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "someRecord",
     "documentation": {
       "kind": "markdown",
@@ -32,8 +30,6 @@ ContextPath Type[someRecord]
 Path someRecord
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -44,8 +40,6 @@ Path someRecord
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -66,8 +60,6 @@ ContextPath Type[someVariant]
 Path someVariant
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "One",
     "documentation": {
       "kind": "markdown",
@@ -80,8 +72,6 @@ Path someVariant
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Two(bool)",
     "documentation": {
       "kind": "markdown",
@@ -104,8 +94,6 @@ ContextPath Type[someVariant]
 Path someVariant
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "One",
     "documentation": {
       "kind": "markdown",
@@ -118,41 +106,15 @@ Path someVariant
     "sortText": "A One",
     "tags": []
   },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "module Option",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 9,
-    "label": "Option",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "module Ordering",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 9,
-    "label": "Ordering",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "module Object",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 9,
-    "label": "Object",
-    "tags": []
-  },
+  { "detail": "module Option", "kind": 9, "label": "Option", "tags": [] },
+  { "detail": "module Ordering", "kind": 9, "label": "Ordering", "tags": [] },
+  { "detail": "module Object", "kind": 9, "label": "Object", "tags": [] },
   {
     "data": {
       "modulePath": "Obj",
       "filePath": "src/CompletionTypeAnnotation.res"
     },
-    "deprecated": false,
     "detail": "module Obj",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "Obj",
     "tags": []
@@ -162,9 +124,7 @@ Path someVariant
       "modulePath": "Objects",
       "filePath": "src/CompletionTypeAnnotation.res"
     },
-    "deprecated": false,
     "detail": "module Objects",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "Objects",
     "tags": []
@@ -180,8 +140,6 @@ ContextPath Type[somePolyVariant]
 Path somePolyVariant
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "#one",
     "documentation": {
       "kind": "markdown",
@@ -194,8 +152,6 @@ Path somePolyVariant
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "#two(bool)",
     "documentation": {
       "kind": "markdown",
@@ -218,8 +174,6 @@ ContextPath Type[somePolyVariant]
 Path somePolyVariant
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "#one",
     "documentation": {
       "kind": "markdown",
@@ -242,10 +196,7 @@ ContextPath Type[someFunc]
 Path someFunc
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, string) => bool",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "(${1:v1}, ${2:v2}) => {${0:()}}",
     "insertTextFormat": 2,
     "kind": 12,
@@ -264,10 +215,7 @@ ContextPath Type[someTuple]
 Path someTuple
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(bool, option<bool>)",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "(${1:_}, ${2:_})",
     "insertTextFormat": 2,
     "kind": 12,
@@ -284,44 +232,17 @@ Resolved opens 1 Stdlib
 ContextPath Type[someTuple]
 Path someTuple
 [
+  { "detail": "bool", "kind": 12, "label": "None", "tags": [] },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "None",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Some($0)",
     "insertTextFormat": 2,
     "kind": 12,
     "label": "Some(_)",
     "tags": []
   },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "Some(true)",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "Some(false)",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "Some(true)", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "Some(false)", "tags": [] }
 ]
 
 Complete src/CompletionTypeAnnotation.res 40:31
@@ -334,8 +255,6 @@ ContextPath Type[someVariant]
 Path someVariant
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "someVariant",
     "documentation": {
       "kind": "markdown",
@@ -346,8 +265,6 @@ Path someVariant
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "someVariant",
     "documentation": {
       "kind": "markdown",
@@ -360,8 +277,6 @@ Path someVariant
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "One",
     "documentation": {
       "kind": "markdown",
@@ -374,8 +289,6 @@ Path someVariant
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Two(bool)",
     "documentation": {
       "kind": "markdown",
@@ -399,8 +312,6 @@ ContextPath Type[someVariant]
 Path someVariant
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "One",
     "documentation": {
       "kind": "markdown",
@@ -413,8 +324,6 @@ Path someVariant
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Two(bool)",
     "documentation": {
       "kind": "markdown",
@@ -438,8 +347,6 @@ ContextPath Type[someVariant]
 Path someVariant
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "someVariant",
     "documentation": {
       "kind": "markdown",
@@ -464,8 +371,6 @@ ContextPath Type[someVariant]
 Path someVariant
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "One",
     "documentation": {
       "kind": "markdown",
@@ -478,8 +383,6 @@ Path someVariant
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Two(bool)",
     "documentation": {
       "kind": "markdown",
@@ -504,8 +407,6 @@ ContextPath Type[someVariant]
 Path someVariant
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "option<someVariant>",
     "documentation": {
       "kind": "markdown",
@@ -531,8 +432,6 @@ ContextPath Type[someVariant]
 Path someVariant
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "One",
     "documentation": {
       "kind": "markdown",
@@ -545,8 +444,6 @@ Path someVariant
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Two(bool)",
     "documentation": {
       "kind": "markdown",

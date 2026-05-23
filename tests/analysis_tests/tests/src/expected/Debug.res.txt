@@ -18,7 +18,6 @@ ContextPath Value[eqN]
 Path eqN
 [
   {
-    "data": null,
     "deprecated": true,
     "detail": "('a, nullable<'a>) => bool",
     "documentation": {
@@ -30,7 +29,6 @@ Path eqN
     "tags": [ 1 ]
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "('a, null<'a>) => bool",
     "documentation": {

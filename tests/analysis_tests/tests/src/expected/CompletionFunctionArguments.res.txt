@@ -8,24 +8,8 @@ ContextPath CArgument Value[someFn](~isOn)
 ContextPath Value[someFn]
 Path someFn
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "true",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "false",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
 ]
 
 Complete src/CompletionFunctionArguments.res 13:25
@@ -39,27 +23,14 @@ ContextPath Value[someFn]
 Path someFn
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 4,
     "label": "true",
     "sortText": "A true",
     "tags": []
   },
+  { "detail": "bool", "kind": 12, "label": "tLocalVar", "tags": [] },
   {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "tLocalVar",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
     "detail": "'a => Type.t",
     "documentation": {
       "kind": "markdown",
@@ -81,24 +52,8 @@ ContextPath CArgument Value[someFn](~isOff)
 ContextPath Value[someFn]
 Path someFn
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "true",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "false",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
 ]
 
 Complete src/CompletionFunctionArguments.res 21:27
@@ -115,24 +70,8 @@ ContextPath CArgument Value[someFn](~isOn)
 ContextPath Value[someFn]
 Path someFn
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "true",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "false",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
 ]
 
 Complete src/CompletionFunctionArguments.res 34:24
@@ -144,17 +83,7 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[someOtherFn]($0)
 ContextPath Value[someOtherFn]
 Path someOtherFn
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "false",
-    "tags": []
-  }
-]
+[ { "detail": "bool", "kind": 4, "label": "false", "tags": [] } ]
 
 Complete src/CompletionFunctionArguments.res 51:39
 posCursor:[51:39] posNoWhite:[51:38] Found expr:[51:11->51:40]
@@ -167,8 +96,6 @@ ContextPath Value[someFnTakingVariant]
 Path someFnTakingVariant
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "One",
     "documentation": {
       "kind": "markdown",
@@ -181,8 +108,6 @@ Path someFnTakingVariant
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Two",
     "documentation": {
       "kind": "markdown",
@@ -195,8 +120,6 @@ Path someFnTakingVariant
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Three(int, string)",
     "documentation": {
       "kind": "markdown",
@@ -221,8 +144,6 @@ ContextPath Value[someFnTakingVariant]
 Path someFnTakingVariant
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "One",
     "documentation": {
       "kind": "markdown",
@@ -236,49 +157,20 @@ Path someFnTakingVariant
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "module OIncludeMeInCompletions",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "OIncludeMeInCompletions",
     "tags": []
   },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "module Option",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 9,
-    "label": "Option",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "module Ordering",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 9,
-    "label": "Ordering",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "module Object",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 9,
-    "label": "Object",
-    "tags": []
-  },
+  { "detail": "module Option", "kind": 9, "label": "Option", "tags": [] },
+  { "detail": "module Ordering", "kind": 9, "label": "Ordering", "tags": [] },
+  { "detail": "module Object", "kind": 9, "label": "Object", "tags": [] },
   {
     "data": {
       "modulePath": "Obj",
       "filePath": "src/CompletionFunctionArguments.res"
     },
-    "deprecated": false,
     "detail": "module Obj",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "Obj",
     "tags": []
@@ -288,9 +180,7 @@ Path someFnTakingVariant
       "modulePath": "Objects",
       "filePath": "src/CompletionFunctionArguments.res"
     },
-    "deprecated": false,
     "detail": "module Objects",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "Objects",
     "tags": []
@@ -308,8 +198,6 @@ ContextPath Value[someFnTakingVariant]
 Path someFnTakingVariant
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "someVariant",
     "documentation": {
       "kind": "markdown",
@@ -334,8 +222,6 @@ ContextPath Value[someFnTakingVariant]
 Path someFnTakingVariant
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "One",
     "documentation": {
       "kind": "markdown",
@@ -349,49 +235,20 @@ Path someFnTakingVariant
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "module OIncludeMeInCompletions",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "OIncludeMeInCompletions",
     "tags": []
   },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "module Option",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 9,
-    "label": "Option",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "module Ordering",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 9,
-    "label": "Ordering",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "module Object",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 9,
-    "label": "Object",
-    "tags": []
-  },
+  { "detail": "module Option", "kind": 9, "label": "Option", "tags": [] },
+  { "detail": "module Ordering", "kind": 9, "label": "Ordering", "tags": [] },
+  { "detail": "module Object", "kind": 9, "label": "Object", "tags": [] },
   {
     "data": {
       "modulePath": "Obj",
       "filePath": "src/CompletionFunctionArguments.res"
     },
-    "deprecated": false,
     "detail": "module Obj",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "Obj",
     "tags": []
@@ -401,9 +258,7 @@ Path someFnTakingVariant
       "modulePath": "Objects",
       "filePath": "src/CompletionFunctionArguments.res"
     },
-    "deprecated": false,
     "detail": "module Objects",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "Objects",
     "tags": []
@@ -420,24 +275,8 @@ ContextPath CArgument Value[someOtherFn]($0)
 ContextPath Value[someOtherFn]
 Path someOtherFn
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "true",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "false",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
 ]
 
 Complete src/CompletionFunctionArguments.res 66:28
@@ -450,24 +289,8 @@ ContextPath CArgument Value[someOtherFn]($2)
 ContextPath Value[someOtherFn]
 Path someOtherFn
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "true",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "false",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
 ]
 
 Complete src/CompletionFunctionArguments.res 69:30
@@ -480,27 +303,14 @@ ContextPath Value[someOtherFn]
 Path someOtherFn
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 4,
     "label": "true",
     "sortText": "A true",
     "tags": []
   },
+  { "detail": "bool", "kind": 12, "label": "tLocalVar", "tags": [] },
   {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "tLocalVar",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
     "detail": "'a => Type.t",
     "documentation": {
       "kind": "markdown",
@@ -523,10 +333,7 @@ ContextPath Value[fnTakingTuple]
 Path fnTakingTuple
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, int, float)",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "(${1:_}, ${2:_}, ${3:_})",
     "insertTextFormat": 2,
     "kind": 12,
@@ -546,8 +353,6 @@ ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -558,8 +363,6 @@ Path fnTakingRecord
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "bool",
     "documentation": {
       "kind": "markdown",
@@ -570,8 +373,6 @@ Path fnTakingRecord
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "option<bool>",
     "documentation": {
       "kind": "markdown",
@@ -601,10 +402,7 @@ Path JsxEvent.Mouse.a
 Path a
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "t => bool",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "JsxEvent.Mouse.altKey",
     "tags": []
@@ -629,10 +427,7 @@ Path JsxEvent.Mouse.a
 Path a
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "t => bool",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "JsxEvent.Mouse.altKey",
     "tags": []
@@ -655,10 +450,7 @@ Path FineModule.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "t => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "FineModule.setToFalse",
     "tags": []

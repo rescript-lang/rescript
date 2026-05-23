@@ -7,8 +7,6 @@ ContextPath Value[x]
 Path x
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -29,8 +27,6 @@ ContextPath Value[x]
 Path x
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -41,8 +37,6 @@ Path x
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -65,8 +59,6 @@ ContextPath Value[x]
 Path x
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -89,8 +81,6 @@ ContextPath Value[x]
 Path x
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -101,8 +91,6 @@ Path x
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -123,8 +111,6 @@ ContextPath Value[x]
 Path x
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -135,8 +121,6 @@ Path x
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "option<bool>",
     "documentation": {
       "kind": "markdown",

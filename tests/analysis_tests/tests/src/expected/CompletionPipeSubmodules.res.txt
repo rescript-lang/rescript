@@ -11,17 +11,7 @@ Path A.B1.xx
 CPPipe pathFromEnv:A.B1 found:true
 Path A.B1.
 Path 
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "b1 => string",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "A.B1.d",
-    "tags": []
-  }
-]
+[ { "detail": "b1 => string", "kind": 12, "label": "A.B1.d", "tags": [] } ]
 
 Complete src/CompletionPipeSubmodules.res 17:18
 posCursor:[17:18] posNoWhite:[17:17] Found expr:[17:11->23:23]
@@ -43,17 +33,7 @@ Path v
 CPPipe pathFromEnv:A.B1 found:true
 Path A.B1.
 Path 
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "b1 => string",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "A.B1.d",
-    "tags": []
-  }
-]
+[ { "detail": "b1 => string", "kind": 12, "label": "A.B1.d", "tags": [] } ]
 
 Complete src/CompletionPipeSubmodules.res 41:20
 posCursor:[41:20] posNoWhite:[41:19] Found expr:[41:11->0:-1]
@@ -87,17 +67,7 @@ Path v
 CPPipe pathFromEnv:C found:false
 Path C.
 Path 
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "t => string",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "C.do",
-    "tags": []
-  }
-]
+[ { "detail": "t => string", "kind": 12, "label": "C.do", "tags": [] } ]
 
 Complete src/CompletionPipeSubmodules.res 45:21
 posCursor:[45:21] posNoWhite:[45:20] Found expr:[45:11->0:-1]
@@ -131,15 +101,5 @@ Path v2
 CPPipe pathFromEnv:D.C2 found:true
 Path D.C2.
 Path 
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "t2 => string",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "D.C2.do",
-    "tags": []
-  }
-]
+[ { "detail": "t2 => string", "kind": 12, "label": "D.C2.do", "tags": [] } ]
 

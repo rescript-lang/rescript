@@ -11,10 +11,7 @@ Path ReactDOM.domProps
 Path JsxDOM.domProps
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "{\"__html\": string}",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 4,
     "label": "dangerouslySetInnerHTML",
     "tags": []

@@ -820,13 +820,25 @@ let mkItem ?data ?additionalTextEdits name ~kind ~detail ~deprecated ~docstring
     | Some _ -> [Lsp.Types.CompletionItemTag.Deprecated (* deprecated *)]
   in
 
-  Lsp.Types.CompletionItem.create ~label:name ~kind ~tags ~detail
-    ~documentation:
-      (`MarkupContent
-         (Lsp.Types.MarkupContent.create ~kind:Lsp.Types.MarkupKind.Markdown
-            ~value:docContent))
-    ?deprecated:(Some (Option.is_some deprecated))
-    ?data ?additionalTextEdits ?sortText:None ?insertText:None
+  let documentation =
+    match String.length docContent > 0 with
+    | true ->
+      Some
+        (`MarkupContent
+           (Lsp.Types.MarkupContent.create ~kind:Lsp.Types.MarkupKind.Markdown
+              ~value:docContent))
+    | false -> None
+  in
+
+  let deprecated = if Option.is_some deprecated then Some true else None in
+  let data =
+    match data with
+    | Some `Null | None -> None
+    | Some other -> Some other
+  in
+
+  Lsp.Types.CompletionItem.create ~label:name ~kind ~tags ~detail ?documentation
+    ?deprecated ?data ?additionalTextEdits ?sortText:None ?insertText:None
     ?insertTextFormat:None ?filterText:None ()
 
 let completionToItem

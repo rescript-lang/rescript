@@ -23,8 +23,6 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(t<'a>, t<'b>, ('a, 'b) => bool) => bool",
     "documentation": {
       "kind": "markdown",
@@ -46,8 +44,6 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "t<'a> => 'a",
     "documentation": {
       "kind": "markdown",
@@ -69,8 +65,6 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(t<'a>, 'a => 'b) => t<'b>",
     "documentation": {
       "kind": "markdown",
@@ -92,7 +86,6 @@ Path
         }
       }
     ],
-    "data": null,
     "deprecated": true,
     "detail": "t<'a> => 'a",
     "documentation": {
@@ -115,8 +108,6 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(t<'a>, t<'b>, ('a, 'b) => Ordering.t) => Ordering.t",
     "documentation": {
       "kind": "markdown",
@@ -138,8 +129,6 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "t<'a> => unit",
     "documentation": {
       "kind": "markdown",
@@ -161,8 +150,6 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "t<'a> => 'a",
     "documentation": {
       "kind": "markdown",
@@ -184,8 +171,6 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "t<'a> => option<'a>",
     "documentation": {
       "kind": "markdown",
@@ -207,8 +192,6 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(t<'a>, 'a) => 'a",
     "documentation": {
       "kind": "markdown",
@@ -230,8 +213,6 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(t<'a>, 'b, 'a => 'b) => 'b",
     "documentation": {
       "kind": "markdown",
@@ -253,7 +234,6 @@ Path
         }
       }
     ],
-    "data": null,
     "deprecated": true,
     "detail": "(t<'a>, 'b, 'a => 'b) => 'b",
     "documentation": {
@@ -276,7 +256,6 @@ Path
         }
       }
     ],
-    "data": null,
     "deprecated": true,
     "detail": "(t<'a>, 'a) => 'a",
     "documentation": {
@@ -299,8 +278,6 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "t<'a> => Nullable.t<'a>",
     "documentation": {
       "kind": "markdown",
@@ -322,8 +299,6 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(t<'a>, 'a => unit) => unit",
     "documentation": {
       "kind": "markdown",
@@ -345,8 +320,6 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(t<'a>, 'a => t<'b>) => t<'b>",
     "documentation": {
       "kind": "markdown",
@@ -385,10 +358,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(t<'a>, t<'b>, ('a, 'b) => bool) => bool",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->Nullable.equal",
     "kind": 12,
     "label": "->Nullable.equal",
@@ -405,8 +375,6 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "t<'a> => 'a",
     "documentation": {
       "kind": "markdown",
@@ -428,8 +396,6 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(t<'a>, 'a => 'b) => t<'b>",
     "documentation": {
       "kind": "markdown",
@@ -451,7 +417,6 @@ Path
         }
       }
     ],
-    "data": null,
     "deprecated": true,
     "detail": "t<'a> => 'a",
     "documentation": {
@@ -474,10 +439,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(t<'a>, t<'b>, ('a, 'b) => Ordering.t) => Ordering.t",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->Nullable.compare",
     "kind": 12,
     "label": "->Nullable.compare",
@@ -494,8 +456,6 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "t<'a> => unit",
     "documentation": {
       "kind": "markdown",
@@ -517,8 +477,6 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "t<'a> => 'a",
     "documentation": {
       "kind": "markdown",
@@ -540,8 +498,6 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "t<'a> => option<'a>",
     "documentation": {
       "kind": "markdown",
@@ -563,8 +519,6 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(t<'a>, 'a) => 'a",
     "documentation": {
       "kind": "markdown",
@@ -586,8 +540,6 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(t<'a>, 'b, 'a => 'b) => 'b",
     "documentation": {
       "kind": "markdown",
@@ -609,7 +561,6 @@ Path
         }
       }
     ],
-    "data": null,
     "deprecated": true,
     "detail": "(t<'a>, 'b, 'a => 'b) => 'b",
     "documentation": {
@@ -632,7 +583,6 @@ Path
         }
       }
     ],
-    "data": null,
     "deprecated": true,
     "detail": "(t<'a>, 'a) => 'a",
     "documentation": {
@@ -655,8 +605,6 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "t<'a> => bool",
     "documentation": {
       "kind": "markdown",
@@ -678,8 +626,6 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(t<'a>, 'a => unit) => unit",
     "documentation": {
       "kind": "markdown",
@@ -701,8 +647,6 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(t<'a>, 'a => t<'b>) => t<'b>",
     "documentation": {
       "kind": "markdown",

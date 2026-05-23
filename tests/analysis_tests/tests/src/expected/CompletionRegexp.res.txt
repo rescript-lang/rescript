@@ -10,8 +10,6 @@ Path Stdlib.RegExp.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "t => int",
     "documentation": {
       "kind": "markdown",
@@ -22,8 +20,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(t, int) => unit",
     "documentation": {
       "kind": "markdown",
@@ -34,8 +30,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "t => bool",
     "documentation": {
       "kind": "markdown",
@@ -46,8 +40,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "t => unit",
     "documentation": {
       "kind": "markdown",
@@ -58,8 +50,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(t, string) => option<Result.t>",
     "documentation": {
       "kind": "markdown",
@@ -70,8 +60,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "t => bool",
     "documentation": {
       "kind": "markdown",
@@ -82,8 +70,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "t => bool",
     "documentation": {
       "kind": "markdown",
@@ -94,8 +80,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "t => bool",
     "documentation": {
       "kind": "markdown",
@@ -106,8 +90,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(t, string) => bool",
     "documentation": {
       "kind": "markdown",
@@ -118,8 +100,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "t => bool",
     "documentation": {
       "kind": "markdown",
@@ -130,8 +110,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "t => string",
     "documentation": {
       "kind": "markdown",
@@ -142,8 +120,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "t => string",
     "documentation": {
       "kind": "markdown",

@@ -10,8 +10,6 @@ Path Stdlib.String.st
 Path st
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(string, string) => bool",
     "documentation": {
       "kind": "markdown",
@@ -22,8 +20,6 @@ Path st
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(string, string, int) => bool",
     "documentation": {
       "kind": "markdown",
@@ -53,8 +49,6 @@ Path Stdlib.String.st
 Path st
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -67,8 +61,6 @@ Path st
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(string, string) => bool",
     "documentation": {
       "kind": "markdown",
@@ -79,8 +71,6 @@ Path st
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(string, string, int) => bool",
     "documentation": {
       "kind": "markdown",
@@ -111,8 +101,6 @@ Path Stdlib.String.st
 Path st
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -125,8 +113,6 @@ Path st
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(string, string) => bool",
     "documentation": {
       "kind": "markdown",
@@ -137,8 +123,6 @@ Path st
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(string, string, int) => bool",
     "documentation": {
       "kind": "markdown",
@@ -168,8 +152,6 @@ Path Stdlib.String.st
 Path st
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -182,8 +164,6 @@ Path st
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(string, string) => bool",
     "documentation": {
       "kind": "markdown",
@@ -194,8 +174,6 @@ Path st
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(string, string, int) => bool",
     "documentation": {
       "kind": "markdown",
@@ -227,8 +205,6 @@ Path Stdlib.String.st
 Path st
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -241,8 +217,6 @@ Path st
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(string, string) => bool",
     "documentation": {
       "kind": "markdown",
@@ -253,8 +227,6 @@ Path st
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(string, string, int) => bool",
     "documentation": {
       "kind": "markdown",
@@ -285,8 +257,6 @@ Path Stdlib.Int.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -299,16 +269,12 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, int) => bool",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "Int.equal",
     "tags": []
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(int, ~radix: int) => string",
     "documentation": {
@@ -320,7 +286,6 @@ Path
     "tags": [ 1 ]
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(int, ~digits: int) => string",
     "documentation": {
@@ -332,8 +297,6 @@ Path
     "tags": [ 1 ]
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, int) => int",
     "documentation": {
       "kind": "markdown",
@@ -344,8 +307,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(~min: int=?, ~max: int=?, int) => int",
     "documentation": {
       "kind": "markdown",
@@ -356,7 +317,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(int, ~digits: int) => string",
     "documentation": {
@@ -368,7 +328,6 @@ Path
     "tags": [ 1 ]
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(int, ~digits: int) => string",
     "documentation": {
@@ -380,8 +339,6 @@ Path
     "tags": [ 1 ]
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, int) => int",
     "documentation": {
       "kind": "markdown",
@@ -392,8 +349,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, int) => int",
     "documentation": {
       "kind": "markdown",
@@ -404,17 +359,12 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, int) => Ordering.t",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "Int.compare",
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int => unit",
     "documentation": {
       "kind": "markdown",
@@ -425,8 +375,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, int) => int",
     "documentation": {
       "kind": "markdown",
@@ -437,8 +385,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, ~digits: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -449,8 +395,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, int, ~options: rangeOptions=?) => array<int>",
     "documentation": {
       "kind": "markdown",
@@ -461,8 +405,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, ~radix: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -473,8 +415,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, int) => int",
     "documentation": {
       "kind": "markdown",
@@ -485,8 +425,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int => float",
     "documentation": {
       "kind": "markdown",
@@ -497,8 +435,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, int) => int",
     "documentation": {
       "kind": "markdown",
@@ -509,7 +445,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(int, int, rangeOptions) => array<int>",
     "documentation": {
@@ -521,8 +456,6 @@ Path
     "tags": [ 1 ]
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, int) => int",
     "documentation": {
       "kind": "markdown",
@@ -533,8 +466,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int => string",
     "documentation": {
       "kind": "markdown",
@@ -545,8 +476,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int => int",
     "documentation": {
       "kind": "markdown",
@@ -557,8 +486,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, ~digits: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -569,8 +496,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, ~digits: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -600,8 +525,6 @@ Path Stdlib.Int.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -614,16 +537,12 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, int) => bool",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "Int.equal",
     "tags": []
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(int, ~radix: int) => string",
     "documentation": {
@@ -635,7 +554,6 @@ Path
     "tags": [ 1 ]
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(int, ~digits: int) => string",
     "documentation": {
@@ -647,8 +565,6 @@ Path
     "tags": [ 1 ]
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, int) => int",
     "documentation": {
       "kind": "markdown",
@@ -659,8 +575,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(~min: int=?, ~max: int=?, int) => int",
     "documentation": {
       "kind": "markdown",
@@ -671,7 +585,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(int, ~digits: int) => string",
     "documentation": {
@@ -683,7 +596,6 @@ Path
     "tags": [ 1 ]
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(int, ~digits: int) => string",
     "documentation": {
@@ -695,8 +607,6 @@ Path
     "tags": [ 1 ]
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, int) => int",
     "documentation": {
       "kind": "markdown",
@@ -707,8 +617,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, int) => int",
     "documentation": {
       "kind": "markdown",
@@ -719,17 +627,12 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, int) => Ordering.t",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "Int.compare",
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int => unit",
     "documentation": {
       "kind": "markdown",
@@ -740,8 +643,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, int) => int",
     "documentation": {
       "kind": "markdown",
@@ -752,8 +653,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, ~digits: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -764,8 +663,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, int, ~options: rangeOptions=?) => array<int>",
     "documentation": {
       "kind": "markdown",
@@ -776,8 +673,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, ~radix: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -788,8 +683,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, int) => int",
     "documentation": {
       "kind": "markdown",
@@ -800,8 +693,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int => float",
     "documentation": {
       "kind": "markdown",
@@ -812,8 +703,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, int) => int",
     "documentation": {
       "kind": "markdown",
@@ -824,7 +713,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(int, int, rangeOptions) => array<int>",
     "documentation": {
@@ -836,8 +724,6 @@ Path
     "tags": [ 1 ]
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, int) => int",
     "documentation": {
       "kind": "markdown",
@@ -848,8 +734,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int => string",
     "documentation": {
       "kind": "markdown",
@@ -860,8 +744,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int => int",
     "documentation": {
       "kind": "markdown",
@@ -872,8 +754,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, ~digits: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -884,8 +764,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, ~digits: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -917,8 +795,6 @@ Path ArrayUtils.a
 Path a
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "array<React.element>",
     "documentation": {
       "kind": "markdown",
@@ -931,8 +807,6 @@ Path a
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, int) => option<'a>",
     "documentation": {
       "kind": "markdown",
@@ -943,8 +817,6 @@ Path a
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "array<'a> => Iterable.t<'a>",
     "documentation": {
       "kind": "markdown",
@@ -971,8 +843,6 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Defines a dialog box or subwindow.",
     "documentation": {
       "kind": "markdown",
@@ -984,7 +854,6 @@ Resolved opens 1 Stdlib
     "tags": []
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "Defines a directory list. Use <ul> instead.",
     "documentation": {
@@ -997,8 +866,6 @@ Resolved opens 1 Stdlib
     "tags": [ 1 ]
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Specifies a division or a section in a document.",
     "documentation": {
       "kind": "markdown",
@@ -1018,17 +885,7 @@ Completable: Cjsx([CompWithoutJsxPpx], n, [n])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Path CompWithoutJsxPpx.make
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "string",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "name",
-    "tags": []
-  }
-]
+[ { "detail": "string", "kind": 4, "label": "name", "tags": [] } ]
 
 Complete src/CompletionJsx.res 48:27
 posCursor:[48:27] posNoWhite:[48:26] Found expr:[48:3->48:28]
@@ -1040,10 +897,7 @@ ContextPath CJsxPropValue [SomeComponent] someProp
 Path SomeComponent.make
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "{\"$0\"}",
     "insertTextFormat": 2,
     "kind": 12,
@@ -1061,17 +915,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Path ReactDOM.domProps
 Path JsxDOM.domProps
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "hidden",
-    "tags": []
-  }
-]
+[ { "detail": "bool", "kind": 4, "label": "hidden", "tags": [] } ]
 
 Complete src/CompletionJsx.res 61:30
 posCursor:[61:30] posNoWhite:[61:28] Found expr:[61:3->61:29]
@@ -1081,33 +925,9 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Path IntrinsicElementLowercase.make
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "option<string>",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "name",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "option<int>",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "age",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "string",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "key",
-    "tags": []
-  }
+  { "detail": "option<string>", "kind": 4, "label": "name", "tags": [] },
+  { "detail": "option<int>", "kind": 4, "label": "age", "tags": [] },
+  { "detail": "string", "kind": 4, "label": "key", "tags": [] }
 ]
 
 Complete src/CompletionJsx.res 73:36
@@ -1120,8 +940,6 @@ ContextPath CJsxPropValue [MultiPropComp] time
 Path MultiPropComp.make
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Now",
     "documentation": {
       "kind": "markdown",
@@ -1134,8 +952,6 @@ Path MultiPropComp.make
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Later",
     "documentation": {
       "kind": "markdown",
@@ -1159,8 +975,6 @@ ContextPath CJsxPropValue [MultiPropComp] time
 Path MultiPropComp.make
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Now",
     "documentation": {
       "kind": "markdown",
@@ -1173,8 +987,6 @@ Path MultiPropComp.make
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Later",
     "documentation": {
       "kind": "markdown",
@@ -1198,8 +1010,6 @@ ContextPath CJsxPropValue [MultiPropComp] time
 Path MultiPropComp.make
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Now",
     "documentation": {
       "kind": "markdown",
@@ -1212,8 +1022,6 @@ Path MultiPropComp.make
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Later",
     "documentation": {
       "kind": "markdown",
@@ -1234,17 +1042,7 @@ Completable: Cjsx([Info], "", [_type])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Path Info.make
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "string",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "key",
-    "tags": []
-  }
-]
+[ { "detail": "string", "kind": 4, "label": "key", "tags": [] } ]
 
 Complete src/CompletionJsx.res 93:19
 posCursor:[93:19] posNoWhite:[93:18] Found expr:[93:11->93:24]
@@ -1271,8 +1069,6 @@ Path s
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -1295,8 +1091,6 @@ Path s
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(string, RegExp.t) => option<int>",
     "documentation": {
       "kind": "markdown",
@@ -1318,8 +1112,6 @@ Path s
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(string, RegExp.t, ~limit: int) => array<option<string>>",
     "documentation": {
       "kind": "markdown",
@@ -1341,8 +1133,6 @@ Path s
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(string, ~start: int, ~end: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -1364,7 +1154,6 @@ Path s
         }
       }
     ],
-    "data": null,
     "deprecated": true,
     "detail": "(string, ~start: int) => string",
     "documentation": {
@@ -1387,8 +1176,6 @@ Path s
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(string, string) => bool",
     "documentation": {
       "kind": "markdown",
@@ -1410,8 +1197,6 @@ Path s
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(string, string, ~limit: int) => array<string>",
     "documentation": {
       "kind": "markdown",
@@ -1433,7 +1218,6 @@ Path s
         }
       }
     ],
-    "data": null,
     "deprecated": true,
     "detail": "(string, ~start: int) => string",
     "documentation": {
@@ -1456,8 +1240,6 @@ Path s
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(string, RegExp.t) => array<option<string>>",
     "documentation": {
       "kind": "markdown",
@@ -1479,8 +1261,6 @@ Path s
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(string, string, int) => bool",
     "documentation": {
       "kind": "markdown",
@@ -1502,8 +1282,6 @@ Path s
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(string, string) => array<string>",
     "documentation": {
       "kind": "markdown",
@@ -1525,8 +1303,6 @@ Path s
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(string, ~start: int, ~end: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -1548,8 +1324,6 @@ Path s
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(string, RegExp.t) => int",
     "documentation": {
       "kind": "markdown",

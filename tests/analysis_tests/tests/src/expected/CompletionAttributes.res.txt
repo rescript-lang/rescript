@@ -5,8 +5,6 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "",
     "documentation": {
       "kind": "markdown",
@@ -26,33 +24,9 @@ Completable: CdecoratorPayload(module=)
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "Package",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "@rescript/react",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "Local file",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "./test.json",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "Local file",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "./tst.js",
-    "tags": []
-  }
+  { "detail": "Package", "kind": 4, "label": "@rescript/react", "tags": [] },
+  { "detail": "Local file", "kind": 4, "label": "./test.json", "tags": [] },
+  { "detail": "Local file", "kind": 4, "label": "./tst.js", "tags": [] }
 ]
 
 Complete src/CompletionAttributes.res 6:7
@@ -62,8 +36,6 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "",
     "documentation": {
       "kind": "markdown",
@@ -84,8 +56,6 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -96,8 +66,6 @@ Resolved opens 1 Stdlib
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -108,8 +76,6 @@ Resolved opens 1 Stdlib
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -128,8 +94,6 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -140,8 +104,6 @@ Resolved opens 1 Stdlib
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -160,10 +122,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "\"$0\"",
     "insertTextFormat": 2,
     "kind": 12,
@@ -180,8 +139,6 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -192,8 +149,6 @@ Resolved opens 1 Stdlib
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -212,8 +167,6 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -224,8 +177,6 @@ Resolved opens 1 Stdlib
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -244,8 +195,6 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "importAttributesConfig",
     "documentation": {
       "kind": "markdown",
@@ -267,8 +216,6 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -286,33 +233,9 @@ Completable: CdecoratorPayload(module=)
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "Package",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "@rescript/react",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "Local file",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "./test.json",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "Local file",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "./tst.js",
-    "tags": []
-  }
+  { "detail": "Package", "kind": 4, "label": "@rescript/react", "tags": [] },
+  { "detail": "Local file", "kind": 4, "label": "./test.json", "tags": [] },
+  { "detail": "Local file", "kind": 4, "label": "./tst.js", "tags": [] }
 ]
 
 Complete src/CompletionAttributes.res 33:17
@@ -321,33 +244,9 @@ Completable: CdecoratorPayload(module=)
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "Package",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "@rescript/react",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "Local file",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "./test.json",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "Local file",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "./tst.js",
-    "tags": []
-  }
+  { "detail": "Package", "kind": 4, "label": "@rescript/react", "tags": [] },
+  { "detail": "Local file", "kind": 4, "label": "./test.json", "tags": [] },
+  { "detail": "Local file", "kind": 4, "label": "./tst.js", "tags": [] }
 ]
 
 Complete src/CompletionAttributes.res 36:14
@@ -357,20 +256,14 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "`%todo` is used to tell the compiler that some code still needs to be implemented.",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "todo",
     "kind": 4,
     "label": "todo",
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "`%todo` is used to tell the compiler that some code still needs to be implemented. With a payload.",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "todo(\"${0:TODO}\")",
     "insertTextFormat": 2,
     "kind": 4,

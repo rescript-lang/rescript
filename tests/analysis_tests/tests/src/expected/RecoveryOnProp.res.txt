@@ -16,23 +16,13 @@ Resolved opens 1 Stdlib
 ContextPath Type[Res]
 Path Res
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "module Result",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 9,
-    "label": "Result",
-    "tags": []
-  },
+  { "detail": "module Result", "kind": 9, "label": "Result", "tags": [] },
   {
     "data": {
       "modulePath": "RescriptReactErrorBoundary",
       "filePath": "src/RecoveryOnProp.res"
     },
-    "deprecated": false,
     "detail": "module RescriptReactErrorBoundary",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "RescriptReactErrorBoundary",
     "tags": []
@@ -42,9 +32,7 @@ Path Res
       "modulePath": "RescriptReactRouter",
       "filePath": "src/RecoveryOnProp.res"
     },
-    "deprecated": false,
     "detail": "module RescriptReactRouter",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "RescriptReactRouter",
     "tags": []
@@ -54,9 +42,7 @@ Path Res
       "modulePath": "RescriptTools",
       "filePath": "src/RecoveryOnProp.res"
     },
-    "deprecated": false,
     "detail": "module RescriptTools",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "RescriptTools",
     "tags": []
@@ -66,9 +52,7 @@ Path Res
       "modulePath": "RescriptTools_Docgen",
       "filePath": "src/RecoveryOnProp.res"
     },
-    "deprecated": false,
     "detail": "module RescriptTools_Docgen",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "RescriptTools_Docgen",
     "tags": []
@@ -78,9 +62,7 @@ Path Res
       "modulePath": "RescriptTools_ExtractCodeBlocks",
       "filePath": "src/RecoveryOnProp.res"
     },
-    "deprecated": false,
     "detail": "module RescriptTools_ExtractCodeBlocks",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "RescriptTools_ExtractCodeBlocks",
     "tags": []

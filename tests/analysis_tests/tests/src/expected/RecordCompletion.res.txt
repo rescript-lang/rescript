@@ -18,8 +18,6 @@ Path ArrayUtils.m
 Path m
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, 'a => 'b) => array<'b>",
     "documentation": {
       "kind": "markdown",
@@ -30,8 +28,6 @@ Path m
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, ('a, int) => 'b) => array<'b>",
     "documentation": {
       "kind": "markdown",
@@ -77,8 +73,6 @@ Path ArrayUtils.m
 Path m
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, 'a => 'b) => array<'b>",
     "documentation": {
       "kind": "markdown",
@@ -89,8 +83,6 @@ Path m
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, ('a, int) => 'b) => array<'b>",
     "documentation": {
       "kind": "markdown",
@@ -112,8 +104,6 @@ ContextPath Module[R].""
 Path R.
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -135,8 +125,6 @@ ContextPath Module[R].""
 Path R.
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",

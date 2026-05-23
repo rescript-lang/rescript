@@ -15,8 +15,6 @@ Path SomeModule.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -36,10 +34,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(~name: string=?, t) => unit",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->SomeModule.withUnlabelledArgumentNotFirst",
     "kind": 12,
     "label": "->SomeModule.withUnlabelledArgumentNotFirst",
@@ -56,10 +51,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "t => string",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->SomeModule.getName",
     "kind": 12,
     "label": "->SomeModule.getName",
@@ -87,8 +79,6 @@ Path DotPipeCompletionSpec.SomeOtherModule.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -108,10 +98,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "t => string",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->SomeOtherModule.getNName",
     "kind": 12,
     "label": "->SomeOtherModule.getNName",
@@ -128,10 +115,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "typeOutsideModule => string",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->SomeOtherModule.getNName2",
     "kind": 12,
     "label": "->SomeOtherModule.getNName2",
@@ -148,10 +132,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "typeOutsideModule => string",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->CompleteFromThisToo.a",
     "kind": 12,
     "label": "->CompleteFromThisToo.a",
@@ -168,10 +149,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "t => string",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->SomeOtherModule.getNName",
     "kind": 12,
     "label": "->SomeOtherModule.getNName",
@@ -188,10 +166,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "typeOutsideModule => string",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->SomeOtherModule.getNName2",
     "kind": 12,
     "label": "->SomeOtherModule.getNName2",
@@ -208,10 +183,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "typeOutsideModule => string",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->doWithTypeOutsideModule",
     "kind": 12,
     "label": "->doWithTypeOutsideModule",
@@ -247,10 +219,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "a => unit",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->A.withA",
     "kind": 12,
     "label": "->A.withA",
@@ -267,10 +236,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "A.a => int",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->B.b",
     "kind": 12,
     "label": "->B.b",
@@ -296,8 +262,6 @@ Path CompletionFromModule.SomeModule.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -317,10 +281,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "t => string",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->CompletionFromModule.SomeModule.getName",
     "kind": 12,
     "label": "->CompletionFromModule.SomeModule.getName",
@@ -355,8 +316,6 @@ Path u
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, array<'a>) => unit",
     "documentation": {
       "kind": "markdown",
@@ -378,8 +337,6 @@ Path u
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, 'a) => unit",
     "documentation": {
       "kind": "markdown",
@@ -401,7 +358,6 @@ Path u
         }
       }
     ],
-    "data": null,
     "deprecated": true,
     "detail": "(array<'a>, int) => 'a",
     "documentation": {
@@ -424,8 +380,6 @@ Path u
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "array<('a, 'b)> => (t<'a>, array<'b>)",
     "documentation": {
       "kind": "markdown",
@@ -457,8 +411,6 @@ Path DotPipeCompletionSpec.SomeOtherModule.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -478,10 +430,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "typeOutsideModule => string",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->doWithTypeOutsideModule",
     "kind": 12,
     "label": "->doWithTypeOutsideModule",
@@ -498,10 +447,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "t => string",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->SomeOtherModule.getNName",
     "kind": 12,
     "label": "->SomeOtherModule.getNName",
@@ -518,10 +464,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "typeOutsideModule => string",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->SomeOtherModule.getNName2",
     "kind": 12,
     "label": "->SomeOtherModule.getNName2",
@@ -538,10 +481,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "typeOutsideModule => string",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->doWithTypeOutsideModule",
     "kind": 12,
     "label": "->doWithTypeOutsideModule",
@@ -579,8 +519,6 @@ Path filt
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, 'a => option<'b>) => array<'b>",
     "documentation": {
       "kind": "markdown",
@@ -602,8 +540,6 @@ Path filt
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, ('a, int) => option<'b>) => array<'b>",
     "documentation": {
       "kind": "markdown",
@@ -625,8 +561,6 @@ Path filt
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, 'a => bool) => array<'a>",
     "documentation": {
       "kind": "markdown",
@@ -648,8 +582,6 @@ Path filt
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, ('a, int) => bool) => array<'a>",
     "documentation": {
       "kind": "markdown",
@@ -691,8 +623,6 @@ Path includ
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(string, string) => bool",
     "documentation": {
       "kind": "markdown",
@@ -714,8 +644,6 @@ Path includ
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(string, string, int) => bool",
     "documentation": {
       "kind": "markdown",
@@ -756,8 +684,6 @@ Path toUpperCa
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "string => string",
     "documentation": {
       "kind": "markdown",
@@ -798,8 +724,6 @@ Path toLowerC
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "string => string",
     "documentation": {
       "kind": "markdown",
@@ -832,8 +756,6 @@ Path DotPipeCompletionSpec.SomeOtherModule.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -853,10 +775,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "typeOutsideModule => string",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->doWithTypeOutsideModule",
     "kind": 12,
     "label": "->doWithTypeOutsideModule",
@@ -873,10 +792,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "t => string",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->SomeOtherModule.getNName",
     "kind": 12,
     "label": "->SomeOtherModule.getNName",
@@ -893,10 +809,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "typeOutsideModule => string",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->SomeOtherModule.getNName2",
     "kind": 12,
     "label": "->SomeOtherModule.getNName2",
@@ -913,10 +826,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "typeOutsideModule => string",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->doWithTypeOutsideModule",
     "kind": 12,
     "label": "->doWithTypeOutsideModule",
@@ -938,9 +848,7 @@ Path Dot
       "modulePath": "DotPipeCompleteFromCurrentModule",
       "filePath": "src/DotPipeCompletionSpec.res"
     },
-    "deprecated": false,
     "detail": "module DotPipeCompleteFromCurrentModule",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "DotPipeCompleteFromCurrentModule",
     "tags": []
@@ -950,9 +858,7 @@ Path Dot
       "modulePath": "DotPipeCompletionSpec",
       "filePath": "src/DotPipeCompletionSpec.res"
     },
-    "deprecated": false,
     "detail": "module DotPipeCompletionSpec",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "DotPipeCompletionSpec",
     "tags": []
@@ -974,9 +880,7 @@ Path CompletionPipe
       "modulePath": "CompletionPipeChain",
       "filePath": "src/DotPipeCompletionSpec.res"
     },
-    "deprecated": false,
     "detail": "module CompletionPipeChain",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "CompletionPipeChain",
     "tags": []
@@ -986,9 +890,7 @@ Path CompletionPipe
       "modulePath": "CompletionPipeProperty",
       "filePath": "src/DotPipeCompletionSpec.res"
     },
-    "deprecated": false,
     "detail": "module CompletionPipeProperty",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "CompletionPipeProperty",
     "tags": []
@@ -998,9 +900,7 @@ Path CompletionPipe
       "modulePath": "CompletionPipeSubmodules",
       "filePath": "src/DotPipeCompletionSpec.res"
     },
-    "deprecated": false,
     "detail": "module CompletionPipeSubmodules",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "CompletionPipeSubmodules",
     "tags": []
@@ -1022,9 +922,7 @@ Path Dot
       "modulePath": "DotPipeCompleteFromCurrentModule",
       "filePath": "src/DotPipeCompletionSpec.res"
     },
-    "deprecated": false,
     "detail": "module DotPipeCompleteFromCurrentModule",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "DotPipeCompleteFromCurrentModule",
     "tags": []
@@ -1034,9 +932,7 @@ Path Dot
       "modulePath": "DotPipeCompletionSpec",
       "filePath": "src/DotPipeCompletionSpec.res"
     },
-    "deprecated": false,
     "detail": "module DotPipeCompletionSpec",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "DotPipeCompletionSpec",
     "tags": []
@@ -1066,10 +962,7 @@ Path someObj
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "{\"age\": int, \"name\": string}",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "[\"age\"]",
     "kind": 4,
     "label": "[\"age\"]",
@@ -1085,10 +978,7 @@ Path someObj
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "{\"age\": int, \"name\": string}",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "[\"name\"]",
     "kind": 4,
     "label": "[\"name\"]",
@@ -1119,10 +1009,7 @@ Path someObj
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "{\"age\": int, \"name\": string}",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "[\"name\"]",
     "kind": 4,
     "label": "[\"name\"]",
@@ -1148,8 +1035,6 @@ Path DotPipeCompletionSpec.HTMLButtonElement.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "bool",
     "documentation": {
       "kind": "markdown",
@@ -1169,10 +1054,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "DOMAPI.htmlButtonElement => bool",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->HTMLButtonElement.checkValidity",
     "kind": 12,
     "label": "->HTMLButtonElement.checkValidity",

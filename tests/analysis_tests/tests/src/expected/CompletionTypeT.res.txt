@@ -7,8 +7,6 @@ ContextPath Value[date]
 Path date
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Date.t",
     "documentation": {
       "kind": "markdown",
@@ -19,8 +17,6 @@ Path date
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Date.t",
     "documentation": {
       "kind": "markdown",
@@ -33,10 +29,7 @@ Path date
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "date",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Some(${0:date})",
     "insertTextFormat": 2,
     "kind": 4,
@@ -54,10 +47,7 @@ ContextPath Type[withDate]
 Path withDate
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(~year: int, ~month: int, ~day: int) => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Date.makeWithYMD($0)",
     "insertTextFormat": 2,
     "kind": 12,
@@ -65,10 +55,7 @@ Path withDate
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(\n  ~year: int,\n  ~month: int,\n  ~day: int,\n  ~hours: int,\n  ~minutes: int,\n) => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Date.makeWithYMDHM($0)",
     "insertTextFormat": 2,
     "kind": 12,
@@ -76,10 +63,7 @@ Path withDate
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "unit => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Date.make($0)",
     "insertTextFormat": 2,
     "kind": 12,
@@ -87,10 +71,7 @@ Path withDate
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "msSinceEpoch => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Date.fromTime($0)",
     "insertTextFormat": 2,
     "kind": 12,
@@ -98,10 +79,7 @@ Path withDate
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Date.fromString($0)",
     "insertTextFormat": 2,
     "kind": 12,
@@ -109,10 +87,7 @@ Path withDate
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(\n  ~year: int,\n  ~month: int,\n  ~day: int,\n  ~hours: int,\n  ~minutes: int,\n  ~seconds: int,\n  ~milliseconds: int,\n) => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Date.makeWithYMDHMSM($0)",
     "insertTextFormat": 2,
     "kind": 12,
@@ -120,10 +95,7 @@ Path withDate
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(~year: int, ~month: int) => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Date.makeWithYM($0)",
     "insertTextFormat": 2,
     "kind": 12,
@@ -131,10 +103,7 @@ Path withDate
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(\n  ~year: int,\n  ~month: int,\n  ~day: int,\n  ~hours: int,\n  ~minutes: int,\n  ~seconds: int,\n) => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Date.makeWithYMDHMS($0)",
     "insertTextFormat": 2,
     "kind": 12,
@@ -142,10 +111,7 @@ Path withDate
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(~year: int, ~month: int, ~day: int, ~hours: int) => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Date.makeWithYMDH($0)",
     "insertTextFormat": 2,
     "kind": 12,

@@ -18,18 +18,8 @@ Resolved opens 1 Stdlib
 ContextPath Value[SomeModule, ""]
 Path SomeModule.
 [
+  { "detail": "module Inner", "kind": 9, "label": "Inner", "tags": [] },
   {
-    "data": null,
-    "deprecated": false,
-    "detail": "module Inner",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 9,
-    "label": "Inner",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
     "detail": "type t",
     "documentation": {
       "kind": "markdown",
@@ -39,29 +29,10 @@ Path SomeModule.
     "label": "t",
     "tags": []
   },
+  { "detail": "t => int", "kind": 12, "label": "foo", "tags": [] },
+  { "detail": "string => unit", "kind": 12, "label": "doStuff", "tags": [] },
   {
-    "data": null,
-    "deprecated": false,
-    "detail": "t => int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "foo",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
     "detail": "string => unit",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "doStuff",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "string => unit",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "doOtherStuff",
     "tags": []
@@ -91,8 +62,6 @@ ContextPath Value[M, ""]
 Path M.
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "type t",
     "documentation": {
       "kind": "markdown",
@@ -102,20 +71,9 @@ Path M.
     "label": "t",
     "tags": []
   },
+  { "detail": "t => string", "kind": 12, "label": "getName", "tags": [] },
   {
-    "data": null,
-    "deprecated": false,
-    "detail": "t => string",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "getName",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
     "detail": "unit => string",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "thisShouldNotBeCompletedFor",
     "tags": []
@@ -135,17 +93,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[M, g]
 Path M.g
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "t => string",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "getName",
-    "tags": []
-  }
-]
+[ { "detail": "t => string", "kind": 12, "label": "getName", "tags": [] } ]
 
 Complete src/FirstClassModules.res 32:8
 posCursor:[32:8] posNoWhite:[32:7] Found expr:[30:22->35:1]
@@ -159,18 +107,8 @@ Resolved opens 1 Stdlib
 ContextPath Value[S2, ""]
 Path S2.
 [
+  { "detail": "module Inner", "kind": 9, "label": "Inner", "tags": [] },
   {
-    "data": null,
-    "deprecated": false,
-    "detail": "module Inner",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 9,
-    "label": "Inner",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
     "detail": "type t",
     "documentation": {
       "kind": "markdown",
@@ -180,29 +118,10 @@ Path S2.
     "label": "t",
     "tags": []
   },
+  { "detail": "t => int", "kind": 12, "label": "foo", "tags": [] },
+  { "detail": "string => unit", "kind": 12, "label": "doStuff", "tags": [] },
   {
-    "data": null,
-    "deprecated": false,
-    "detail": "t => int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "foo",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
     "detail": "string => unit",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "doStuff",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "string => unit",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "doOtherStuff",
     "tags": []
@@ -218,18 +137,8 @@ Resolved opens 1 Stdlib
 ContextPath Value[X, ""]
 Path X.
 [
+  { "detail": "module Inner", "kind": 9, "label": "Inner", "tags": [] },
   {
-    "data": null,
-    "deprecated": false,
-    "detail": "module Inner",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 9,
-    "label": "Inner",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
     "detail": "type t",
     "documentation": {
       "kind": "markdown",
@@ -239,29 +148,10 @@ Path X.
     "label": "t",
     "tags": []
   },
+  { "detail": "t => int", "kind": 12, "label": "foo", "tags": [] },
+  { "detail": "string => unit", "kind": 12, "label": "doStuff", "tags": [] },
   {
-    "data": null,
-    "deprecated": false,
-    "detail": "t => int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "foo",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
     "detail": "string => unit",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "doStuff",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "string => unit",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "doOtherStuff",
     "tags": []
@@ -288,18 +178,8 @@ Resolved opens 1 Stdlib
 ContextPath Value[SomeModule, ""]
 Path SomeModule.
 [
+  { "detail": "module Inner", "kind": 9, "label": "Inner", "tags": [] },
   {
-    "data": null,
-    "deprecated": false,
-    "detail": "module Inner",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 9,
-    "label": "Inner",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
     "detail": "type t",
     "documentation": {
       "kind": "markdown",
@@ -309,29 +189,10 @@ Path SomeModule.
     "label": "t",
     "tags": []
   },
+  { "detail": "t => int", "kind": 12, "label": "foo", "tags": [] },
+  { "detail": "string => unit", "kind": 12, "label": "doStuff", "tags": [] },
   {
-    "data": null,
-    "deprecated": false,
-    "detail": "t => int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "foo",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
     "detail": "string => unit",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "doStuff",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "string => unit",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "doOtherStuff",
     "tags": []
@@ -352,18 +213,8 @@ Resolved opens 1 Stdlib
 ContextPath Value[SomeModule, ""]
 Path SomeModule.
 [
+  { "detail": "module Inner", "kind": 9, "label": "Inner", "tags": [] },
   {
-    "data": null,
-    "deprecated": false,
-    "detail": "module Inner",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 9,
-    "label": "Inner",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
     "detail": "type t",
     "documentation": {
       "kind": "markdown",
@@ -373,29 +224,10 @@ Path SomeModule.
     "label": "t",
     "tags": []
   },
+  { "detail": "t => int", "kind": 12, "label": "foo", "tags": [] },
+  { "detail": "string => unit", "kind": 12, "label": "doStuff", "tags": [] },
   {
-    "data": null,
-    "deprecated": false,
-    "detail": "t => int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "foo",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
     "detail": "string => unit",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "doStuff",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "string => unit",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "doOtherStuff",
     "tags": []

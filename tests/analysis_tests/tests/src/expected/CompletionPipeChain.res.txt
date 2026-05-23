@@ -10,38 +10,21 @@ CPPipe pathFromEnv:Integer found:true
 Path Integer.
 Path 
 [
+  { "detail": "t => int", "kind": 12, "label": "Integer.toInt", "tags": [] },
   {
-    "data": null,
-    "deprecated": false,
-    "detail": "t => int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "Integer.toInt",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
     "detail": "(t, int) => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "Integer.increment",
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(t, int => int) => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "Integer.decrement",
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Integer.t => SuperFloat.t",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "toFlt",
     "tags": []
@@ -62,10 +45,7 @@ Path SuperFloat.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "t => Integer.t",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "SuperFloat.toInteger",
     "tags": []
@@ -85,38 +65,21 @@ CPPipe pathFromEnv:Integer found:true
 Path Integer.
 Path 
 [
+  { "detail": "t => int", "kind": 12, "label": "Integer.toInt", "tags": [] },
   {
-    "data": null,
-    "deprecated": false,
-    "detail": "t => int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "Integer.toInt",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
     "detail": "(t, int) => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "Integer.increment",
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(t, int => int) => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "Integer.decrement",
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Integer.t => SuperFloat.t",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "toFlt",
     "tags": []
@@ -136,38 +99,21 @@ CPPipe pathFromEnv:Integer found:true
 Path Integer.
 Path 
 [
+  { "detail": "t => int", "kind": 12, "label": "Integer.toInt", "tags": [] },
   {
-    "data": null,
-    "deprecated": false,
-    "detail": "t => int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "Integer.toInt",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
     "detail": "(t, int) => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "Integer.increment",
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(t, int => int) => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "Integer.decrement",
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Integer.t => SuperFloat.t",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "toFlt",
     "tags": []
@@ -187,38 +133,21 @@ CPPipe pathFromEnv:Integer found:true
 Path Integer.
 Path 
 [
+  { "detail": "t => int", "kind": 12, "label": "Integer.toInt", "tags": [] },
   {
-    "data": null,
-    "deprecated": false,
-    "detail": "t => int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "Integer.toInt",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
     "detail": "(t, int) => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "Integer.increment",
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(t, int => int) => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "Integer.decrement",
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Integer.t => SuperFloat.t",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "toFlt",
     "tags": []
@@ -238,38 +167,21 @@ CPPipe pathFromEnv:Integer found:true
 Path Integer.
 Path 
 [
+  { "detail": "t => int", "kind": 12, "label": "Integer.toInt", "tags": [] },
   {
-    "data": null,
-    "deprecated": false,
-    "detail": "t => int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "Integer.toInt",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
     "detail": "(t, int) => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "Integer.increment",
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(t, int => int) => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "Integer.decrement",
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Integer.t => SuperFloat.t",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "toFlt",
     "tags": []
@@ -290,10 +202,7 @@ Path SuperFloat.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "t => Integer.t",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "SuperFloat.toInteger",
     "tags": []
@@ -314,10 +223,7 @@ Path SuperFloat.t
 Path t
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "t => Integer.t",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "SuperFloat.toInteger",
     "tags": []
@@ -338,19 +244,13 @@ Path CompletionSupport.Test.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "t => int",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "CompletionSupport.Test.add",
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "t => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "CompletionSupport.Test.addSelf",
     "tags": []
@@ -371,19 +271,13 @@ Path CompletionSupport.Test.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "t => int",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "CompletionSupport.Test.add",
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "t => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "CompletionSupport.Test.addSelf",
     "tags": []
@@ -417,7 +311,6 @@ Path Stdlib.Int.t
 Path t
 [
   {
-    "data": null,
     "deprecated": true,
     "detail": "(int, ~radix: int) => string",
     "documentation": {
@@ -429,7 +322,6 @@ Path t
     "tags": [ 1 ]
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(int, ~digits: int) => string",
     "documentation": {
@@ -441,7 +333,6 @@ Path t
     "tags": [ 1 ]
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(int, ~digits: int) => string",
     "documentation": {
@@ -453,7 +344,6 @@ Path t
     "tags": [ 1 ]
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(int, ~digits: int) => string",
     "documentation": {
@@ -465,8 +355,6 @@ Path t
     "tags": [ 1 ]
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, ~digits: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -477,8 +365,6 @@ Path t
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, ~radix: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -489,8 +375,6 @@ Path t
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int => float",
     "documentation": {
       "kind": "markdown",
@@ -501,8 +385,6 @@ Path t
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int => string",
     "documentation": {
       "kind": "markdown",
@@ -513,8 +395,6 @@ Path t
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, ~digits: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -525,8 +405,6 @@ Path t
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, ~digits: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -551,19 +429,13 @@ Path CompletionSupport.Test.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "t => int",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "CompletionSupport.Test.add",
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "t => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "CompletionSupport.Test.addSelf",
     "tags": []
@@ -583,19 +455,13 @@ Path CompletionSupport.Test.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "t => int",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "CompletionSupport.Test.add",
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "t => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "CompletionSupport.Test.addSelf",
     "tags": []
@@ -641,10 +507,7 @@ Path ReactDOM.Client.Root.ren
 Path ren
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(t, React.element) => unit",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "ReactDOM.Client.Root.render",
     "tags": []
@@ -671,10 +534,7 @@ Path ReactDOM.Client.Root.ren
 Path ren
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(t, React.element) => unit",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "ReactDOM.Client.Root.render",
     "tags": []
@@ -696,38 +556,21 @@ CPPipe pathFromEnv:Integer found:true
 Path Integer.
 Path 
 [
+  { "detail": "t => int", "kind": 12, "label": "Integer.toInt", "tags": [] },
   {
-    "data": null,
-    "deprecated": false,
-    "detail": "t => int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "Integer.toInt",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
     "detail": "(t, int) => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "Integer.increment",
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(t, int => int) => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "Integer.decrement",
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Integer.t => SuperFloat.t",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "toFlt",
     "tags": []
@@ -748,20 +591,9 @@ CPPipe pathFromEnv:Integer found:true
 Path Integer.t
 Path t
 [
+  { "detail": "t => int", "kind": 12, "label": "Integer.toInt", "tags": [] },
   {
-    "data": null,
-    "deprecated": false,
-    "detail": "t => int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "Integer.toInt",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
     "detail": "Integer.t => SuperFloat.t",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "toFlt",
     "tags": []
@@ -780,8 +612,6 @@ Path Stdlib.RegExp.la
 Path la
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "t => int",
     "documentation": {
       "kind": "markdown",
@@ -804,15 +634,5 @@ Path xx
 CPPipe pathFromEnv:Xyz found:true
 Path Xyz.
 Path 
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "xx => string",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "Xyz.do",
-    "tags": []
-  }
-]
+[ { "detail": "xx => string", "kind": 12, "label": "Xyz.do", "tags": [] } ]
 

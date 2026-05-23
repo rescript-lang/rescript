@@ -7,24 +7,8 @@ Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [CompletionSupport, TestComponent] on
 Path CompletionSupport.TestComponent.make
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "true",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "false",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
 ]
 
 Complete src/CompletionJsxProps.res 3:48
@@ -37,18 +21,13 @@ ContextPath CJsxPropValue [CompletionSupport, TestComponent] on
 Path CompletionSupport.TestComponent.make
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 4,
     "label": "true",
     "sortText": "A true",
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "'a => Type.t",
     "documentation": {
       "kind": "markdown",
@@ -70,8 +49,6 @@ ContextPath CJsxPropValue [CompletionSupport, TestComponent] test
 Path CompletionSupport.TestComponent.make
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Two",
     "documentation": {
       "kind": "markdown",
@@ -85,8 +62,6 @@ Path CompletionSupport.TestComponent.make
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Three(int)",
     "documentation": {
       "kind": "markdown",
@@ -100,40 +75,24 @@ Path CompletionSupport.TestComponent.make
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "module TypedArray",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "TypedArray",
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "module TimeoutId",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "TimeoutId",
     "tags": []
   },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "module Type",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 9,
-    "label": "Type",
-    "tags": []
-  },
+  { "detail": "module Type", "kind": 9, "label": "Type", "tags": [] },
   {
     "data": {
       "modulePath": "TableclothMap",
       "filePath": "src/CompletionJsxProps.res"
     },
-    "deprecated": false,
     "detail": "module TableclothMap",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "TableclothMap",
     "tags": []
@@ -143,9 +102,7 @@ Path CompletionSupport.TestComponent.make
       "modulePath": "TypeArgCtx",
       "filePath": "src/CompletionJsxProps.res"
     },
-    "deprecated": false,
     "detail": "module TypeArgCtx",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "TypeArgCtx",
     "tags": []
@@ -155,9 +112,7 @@ Path CompletionSupport.TestComponent.make
       "modulePath": "TypeAtPosCompletion",
       "filePath": "src/CompletionJsxProps.res"
     },
-    "deprecated": false,
     "detail": "module TypeAtPosCompletion",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "TypeAtPosCompletion",
     "tags": []
@@ -167,9 +122,7 @@ Path CompletionSupport.TestComponent.make
       "modulePath": "TypeConstraint",
       "filePath": "src/CompletionJsxProps.res"
     },
-    "deprecated": false,
     "detail": "module TypeConstraint",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "TypeConstraint",
     "tags": []
@@ -179,9 +132,7 @@ Path CompletionSupport.TestComponent.make
       "modulePath": "TypeDefinition",
       "filePath": "src/CompletionJsxProps.res"
     },
-    "deprecated": false,
     "detail": "module TypeDefinition",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 9,
     "label": "TypeDefinition",
     "tags": []
@@ -198,8 +149,6 @@ ContextPath CJsxPropValue [CompletionSupport, TestComponent] polyArg
 Path CompletionSupport.TestComponent.make
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "#one",
     "documentation": {
       "kind": "markdown",
@@ -212,8 +161,6 @@ Path CompletionSupport.TestComponent.make
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "#three(int, bool)",
     "documentation": {
       "kind": "markdown",
@@ -226,8 +173,6 @@ Path CompletionSupport.TestComponent.make
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "#two",
     "documentation": {
       "kind": "markdown",
@@ -240,8 +185,6 @@ Path CompletionSupport.TestComponent.make
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "#two2",
     "documentation": {
       "kind": "markdown",
@@ -265,8 +208,6 @@ ContextPath CJsxPropValue [CompletionSupport, TestComponent] polyArg
 Path CompletionSupport.TestComponent.make
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "#three(int, bool)",
     "documentation": {
       "kind": "markdown",
@@ -279,8 +220,6 @@ Path CompletionSupport.TestComponent.make
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "#two",
     "documentation": {
       "kind": "markdown",
@@ -293,8 +232,6 @@ Path CompletionSupport.TestComponent.make
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "#two2",
     "documentation": {
       "kind": "markdown",
@@ -318,24 +255,8 @@ ContextPath CJsxPropValue [div] muted
 Path ReactDOM.domProps
 Path JsxDOM.domProps
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "true",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "false",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
 ]
 
 Complete src/CompletionJsxProps.res 18:29
@@ -349,10 +270,7 @@ Path ReactDOM.domProps
 Path JsxDOM.domProps
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "JsxEvent.Mouse.t => unit",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "{${1:event} => ${0:event}}",
     "insertTextFormat": 2,
     "kind": 12,
@@ -372,8 +290,6 @@ ContextPath CJsxPropValue [CompletionSupport, TestComponent] testArr
 Path CompletionSupport.TestComponent.make
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "testVariant",
     "documentation": {
       "kind": "markdown",
@@ -398,8 +314,6 @@ ContextPath CJsxPropValue [CompletionSupport, TestComponent] testArr
 Path CompletionSupport.TestComponent.make
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "One",
     "documentation": {
       "kind": "markdown",
@@ -412,8 +326,6 @@ Path CompletionSupport.TestComponent.make
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Two",
     "documentation": {
       "kind": "markdown",
@@ -426,8 +338,6 @@ Path CompletionSupport.TestComponent.make
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Three(int)",
     "documentation": {
       "kind": "markdown",
@@ -451,8 +361,6 @@ ContextPath CJsxPropValue [CompletionSupport, TestComponent] polyArg
 Path CompletionSupport.TestComponent.make
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "#one",
     "documentation": {
       "kind": "markdown",
@@ -465,8 +373,6 @@ Path CompletionSupport.TestComponent.make
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "#three(int, bool)",
     "documentation": {
       "kind": "markdown",
@@ -479,8 +385,6 @@ Path CompletionSupport.TestComponent.make
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "#two",
     "documentation": {
       "kind": "markdown",
@@ -493,8 +397,6 @@ Path CompletionSupport.TestComponent.make
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "#two2",
     "documentation": {
       "kind": "markdown",
@@ -517,27 +419,9 @@ Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [CompletionSupport, TestComponent] on
 Path CompletionSupport.TestComponent.make
 [
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "[> #two]", "kind": 12, "label": "tsomeVar", "tags": [] },
   {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "true",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "[> #two]",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "tsomeVar",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
     "detail": "'a => Type.t",
     "documentation": {
       "kind": "markdown",
@@ -559,8 +443,6 @@ ContextPath CJsxPropValue [CompletableComponentLazy] status
 Path CompletableComponentLazy.make
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "On",
     "documentation": {
       "kind": "markdown",
@@ -573,8 +455,6 @@ Path CompletableComponentLazy.make
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Off",
     "documentation": {
       "kind": "markdown",

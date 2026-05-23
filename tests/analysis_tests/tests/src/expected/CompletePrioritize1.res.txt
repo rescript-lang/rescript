@@ -9,15 +9,5 @@ Path a
 CPPipe pathFromEnv:Test found:true
 Path Test.
 Path 
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "t => int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "Test.name",
-    "tags": []
-  }
-]
+[ { "detail": "t => int", "kind": 12, "label": "Test.name", "tags": [] } ]
 

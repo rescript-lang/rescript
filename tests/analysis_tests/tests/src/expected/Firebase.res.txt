@@ -16,8 +16,6 @@ Path Firebase.Firestore.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -28,8 +26,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -49,10 +45,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "documentReference<\n  'documentdata,\n> => Promise.t<documentSnapshot<'documentdata>>",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->Firestore.getDoc",
     "kind": 12,
     "label": "->Firestore.getDoc",

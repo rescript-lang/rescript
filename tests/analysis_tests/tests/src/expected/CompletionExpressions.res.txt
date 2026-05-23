@@ -10,10 +10,7 @@ ContextPath Value[f]
 Path f
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(bool, option<array<bool>>)",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "(${1:_}, ${2:_})",
     "insertTextFormat": 2,
     "kind": 12,
@@ -33,8 +30,6 @@ ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -45,8 +40,6 @@ Path fnTakingRecord
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "bool",
     "documentation": {
       "kind": "markdown",
@@ -57,8 +50,6 @@ Path fnTakingRecord
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "option<bool>",
     "documentation": {
       "kind": "markdown",
@@ -69,8 +60,6 @@ Path fnTakingRecord
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "someVariant",
     "documentation": {
       "kind": "markdown",
@@ -81,8 +70,6 @@ Path fnTakingRecord
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "somePolyVariant",
     "documentation": {
       "kind": "markdown",
@@ -93,8 +80,6 @@ Path fnTakingRecord
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "option<otherRecord>",
     "documentation": {
       "kind": "markdown",
@@ -117,8 +102,6 @@ ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "option<otherRecord>",
     "documentation": {
       "kind": "markdown",
@@ -140,24 +123,8 @@ ContextPath CArgument Value[fnTakingRecord]($0)
 ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "true",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "false",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
 ]
 
 Complete src/CompletionExpressions.res 35:36
@@ -171,8 +138,6 @@ ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "bool",
     "documentation": {
       "kind": "markdown",
@@ -183,8 +148,6 @@ Path fnTakingRecord
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "option<bool>",
     "documentation": {
       "kind": "markdown",
@@ -195,8 +158,6 @@ Path fnTakingRecord
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "someVariant",
     "documentation": {
       "kind": "markdown",
@@ -207,8 +168,6 @@ Path fnTakingRecord
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "somePolyVariant",
     "documentation": {
       "kind": "markdown",
@@ -219,8 +178,6 @@ Path fnTakingRecord
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "option<otherRecord>",
     "documentation": {
       "kind": "markdown",
@@ -243,8 +200,6 @@ ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "option<bool>",
     "documentation": {
       "kind": "markdown",
@@ -255,8 +210,6 @@ Path fnTakingRecord
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "someVariant",
     "documentation": {
       "kind": "markdown",
@@ -267,8 +220,6 @@ Path fnTakingRecord
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "somePolyVariant",
     "documentation": {
       "kind": "markdown",
@@ -279,8 +230,6 @@ Path fnTakingRecord
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "option<otherRecord>",
     "documentation": {
       "kind": "markdown",
@@ -303,8 +252,6 @@ ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "otherRecord",
     "documentation": {
       "kind": "markdown",
@@ -317,8 +264,6 @@ Path fnTakingRecord
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "otherRecord",
     "documentation": {
       "kind": "markdown",
@@ -331,8 +276,6 @@ Path fnTakingRecord
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "otherRecord",
     "documentation": {
       "kind": "markdown",
@@ -343,8 +286,6 @@ Path fnTakingRecord
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "otherRecord",
     "documentation": {
       "kind": "markdown",
@@ -380,8 +321,6 @@ ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -392,8 +331,6 @@ Path fnTakingRecord
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -416,8 +353,6 @@ ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "One",
     "documentation": {
       "kind": "markdown",
@@ -430,8 +365,6 @@ Path fnTakingRecord
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Two",
     "documentation": {
       "kind": "markdown",
@@ -444,8 +377,6 @@ Path fnTakingRecord
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Three(int, string)",
     "documentation": {
       "kind": "markdown",
@@ -470,8 +401,6 @@ ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "One",
     "documentation": {
       "kind": "markdown",
@@ -496,8 +425,6 @@ ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "someRecord",
     "documentation": {
       "kind": "markdown",
@@ -522,24 +449,8 @@ ContextPath CArgument Value[fnTakingRecord]($0)
 ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "true",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "false",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
 ]
 
 Complete src/CompletionExpressions.res 62:62
@@ -553,18 +464,13 @@ ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 4,
     "label": "true",
     "sortText": "A true",
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "'a => Type.t",
     "documentation": {
       "kind": "markdown",
@@ -587,10 +493,7 @@ ContextPath Value[fnTakingArray]
 Path fnTakingArray
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "option<bool>",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "[$0]",
     "insertTextFormat": 2,
     "kind": 12,
@@ -610,44 +513,17 @@ ContextPath CArgument Value[fnTakingArray]($0)
 ContextPath Value[fnTakingArray]
 Path fnTakingArray
 [
+  { "detail": "bool", "kind": 12, "label": "None", "tags": [] },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "None",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Some($0)",
     "insertTextFormat": 2,
     "kind": 12,
     "label": "Some(_)",
     "tags": []
   },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "Some(true)",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "Some(false)",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "Some(true)", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "Some(false)", "tags": [] }
 ]
 
 Complete src/CompletionExpressions.res 75:26
@@ -660,18 +536,8 @@ ContextPath CArgument Value[fnTakingArray]($0)
 ContextPath Value[fnTakingArray]
 Path fnTakingArray
 [
+  { "detail": "bool", "kind": 12, "label": "s", "tags": [] },
   {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "s",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
     "detail": "(unit => unit, float) => timeoutId",
     "documentation": {
       "kind": "markdown",
@@ -682,8 +548,6 @@ Path fnTakingArray
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(unit => unit, float) => intervalId",
     "documentation": {
       "kind": "markdown",
@@ -694,8 +558,6 @@ Path fnTakingArray
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(unit => unit, int) => intervalId",
     "documentation": {
       "kind": "markdown",
@@ -706,8 +568,6 @@ Path fnTakingArray
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(unit => unit, int) => timeoutId",
     "documentation": {
       "kind": "markdown",
@@ -729,24 +589,8 @@ ContextPath CArgument Value[fnTakingArray]($0)
 ContextPath Value[fnTakingArray]
 Path fnTakingArray
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "true",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "false",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
 ]
 
 Complete src/CompletionExpressions.res 81:31
@@ -759,44 +603,17 @@ ContextPath CArgument Value[fnTakingArray]($0)
 ContextPath Value[fnTakingArray]
 Path fnTakingArray
 [
+  { "detail": "bool", "kind": 12, "label": "None", "tags": [] },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "None",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Some($0)",
     "insertTextFormat": 2,
     "kind": 12,
     "label": "Some(_)",
     "tags": []
   },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "Some(true)",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "Some(false)",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "Some(true)", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "Some(false)", "tags": [] }
 ]
 
 Complete src/CompletionExpressions.res 84:31
@@ -809,44 +626,17 @@ ContextPath CArgument Value[fnTakingArray]($0)
 ContextPath Value[fnTakingArray]
 Path fnTakingArray
 [
+  { "detail": "bool", "kind": 12, "label": "None", "tags": [] },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "None",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Some($0)",
     "insertTextFormat": 2,
     "kind": 12,
     "label": "Some(_)",
     "tags": []
   },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "Some(true)",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "Some(false)",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "Some(true)", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "Some(false)", "tags": [] }
 ]
 
 Complete src/CompletionExpressions.res 89:38
@@ -858,17 +648,7 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingRecord]($0)
 ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "someBoolVar",
-    "tags": []
-  }
-]
+[ { "detail": "bool", "kind": 12, "label": "someBoolVar", "tags": [] } ]
 
 Complete src/CompletionExpressions.res 96:43
 posCursor:[96:43] posNoWhite:[96:42] Found expr:[96:11->96:46]
@@ -881,10 +661,7 @@ ContextPath Value[fnTakingOtherRecord]
 Path fnTakingOtherRecord
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "\"$0\"",
     "insertTextFormat": 2,
     "kind": 12,
@@ -904,24 +681,8 @@ ContextPath CArgument Value[fnTakingRecordWithOptionalField]($0)
 ContextPath Value[fnTakingRecordWithOptionalField]
 Path fnTakingRecordWithOptionalField
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "true",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "false",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
 ]
 
 Complete src/CompletionExpressions.res 116:53
@@ -935,8 +696,6 @@ ContextPath Value[fnTakingRecordWithOptVariant]
 Path fnTakingRecordWithOptVariant
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "someVariant",
     "documentation": {
       "kind": "markdown",
@@ -949,8 +708,6 @@ Path fnTakingRecordWithOptVariant
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "someVariant",
     "documentation": {
       "kind": "markdown",
@@ -963,8 +720,6 @@ Path fnTakingRecordWithOptVariant
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "someVariant",
     "documentation": {
       "kind": "markdown",
@@ -975,8 +730,6 @@ Path fnTakingRecordWithOptVariant
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "One",
     "documentation": {
       "kind": "markdown",
@@ -989,8 +742,6 @@ Path fnTakingRecordWithOptVariant
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Two",
     "documentation": {
       "kind": "markdown",
@@ -1003,8 +754,6 @@ Path fnTakingRecordWithOptVariant
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Three(int, string)",
     "documentation": {
       "kind": "markdown",
@@ -1029,8 +778,6 @@ ContextPath Value[fnTakingInlineRecord]
 Path fnTakingInlineRecord
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "{someBoolField: bool, otherField: option<bool>, nestedRecord: otherRecord}",
     "documentation": {
       "kind": "markdown",
@@ -1056,8 +803,6 @@ ContextPath Value[fnTakingInlineRecord]
 Path fnTakingInlineRecord
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "bool",
     "documentation": {
       "kind": "markdown",
@@ -1068,8 +813,6 @@ Path fnTakingInlineRecord
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "option<bool>",
     "documentation": {
       "kind": "markdown",
@@ -1080,8 +823,6 @@ Path fnTakingInlineRecord
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "otherRecord",
     "documentation": {
       "kind": "markdown",
@@ -1104,8 +845,6 @@ ContextPath Value[fnTakingInlineRecord]
 Path fnTakingInlineRecord
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "bool",
     "documentation": {
       "kind": "markdown",
@@ -1128,8 +867,6 @@ ContextPath Value[fnTakingInlineRecord]
 Path fnTakingInlineRecord
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "otherRecord",
     "documentation": {
       "kind": "markdown",
@@ -1155,8 +892,6 @@ ContextPath Value[fnTakingInlineRecord]
 Path fnTakingInlineRecord
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -1167,8 +902,6 @@ Path fnTakingInlineRecord
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -1191,10 +924,7 @@ ContextPath Value[fnTakingCallback]
 Path fnTakingCallback
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "unit => unit",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "() => ${0:()}",
     "insertTextFormat": 2,
     "kind": 12,
@@ -1215,8 +945,6 @@ ContextPath Value[fnTakingCallback]
 Path fnTakingCallback
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "('a, 'a) => unit",
     "documentation": {
       "kind": "markdown",
@@ -1239,10 +967,7 @@ ContextPath Value[fnTakingCallback]
 Path fnTakingCallback
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "bool => unit",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "${1:v} => ${0:v}",
     "insertTextFormat": 2,
     "kind": 12,
@@ -1263,10 +988,7 @@ ContextPath Value[fnTakingCallback]
 Path fnTakingCallback
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "ReactEvent.Mouse.t => unit",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "${1:event} => ${0:event}",
     "insertTextFormat": 2,
     "kind": 12,
@@ -1287,10 +1009,7 @@ ContextPath Value[fnTakingCallback]
 Path fnTakingCallback
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(~on: bool, ~off: bool=?, variant) => int",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "(~on, ~off=?, ${1:variant}) => {${0:()}}",
     "insertTextFormat": 2,
     "kind": 12,
@@ -1311,10 +1030,7 @@ ContextPath Value[fnTakingCallback]
 Path fnTakingCallback
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(bool, option<bool>, bool) => unit",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "(${1:v1}, ${2:v2}, ${3:v3}) => {${0:()}}",
     "insertTextFormat": 2,
     "kind": 12,
@@ -1335,10 +1051,7 @@ ContextPath Value[fnTakingCallback]
 Path fnTakingCallback
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(~on: bool=?, ~off: bool=?, unit) => int",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "(~on=?, ~off=?, ()) => {${0:()}}",
     "insertTextFormat": 2,
     "kind": 12,
@@ -1362,45 +1075,11 @@ ContextPath CArgument Value[Console, log]($0)
 ContextPath Value[Console, log]
 Path Console.log
 [
+  { "detail": "int", "kind": 12, "label": "second2", "tags": [] },
+  { "detail": "bool", "kind": 12, "label": "second", "tags": [] },
+  { "detail": "bool", "kind": 12, "label": "someBoolVar", "tags": [] },
+  { "detail": "bool", "kind": 12, "label": "s", "tags": [] },
   {
-    "data": null,
-    "deprecated": false,
-    "detail": "int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "second2",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "second",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "someBoolVar",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "s",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
     "detail": "(unit => unit, float) => timeoutId",
     "documentation": {
       "kind": "markdown",
@@ -1411,8 +1090,6 @@ Path Console.log
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(unit => unit, float) => intervalId",
     "documentation": {
       "kind": "markdown",
@@ -1423,8 +1100,6 @@ Path Console.log
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(unit => unit, int) => intervalId",
     "documentation": {
       "kind": "markdown",
@@ -1435,8 +1110,6 @@ Path Console.log
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(unit => unit, int) => timeoutId",
     "documentation": {
       "kind": "markdown",
@@ -1465,8 +1138,6 @@ Path CompletionExpressions.someOpt
 Path someOpt
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "bool",
     "documentation": {
       "kind": "markdown",
@@ -1489,10 +1160,7 @@ ContextPath Value[takesCb]
 Path takesCb
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "someTyp => 'a",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "${1:someTyp} => ${0:someTyp}",
     "insertTextFormat": 2,
     "kind": 12,
@@ -1513,10 +1181,7 @@ ContextPath Value[takesCb2]
 Path takesCb2
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Environment.t => 'a",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "${1:environment} => ${0:environment}",
     "insertTextFormat": 2,
     "kind": 12,
@@ -1537,10 +1202,7 @@ ContextPath Value[takesCb3]
 Path takesCb3
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "apiCallResult => 'a",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "${1:apiCallResult} => ${0:apiCallResult}",
     "insertTextFormat": 2,
     "kind": 12,
@@ -1561,10 +1223,7 @@ ContextPath Value[takesCb4]
 Path takesCb4
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "option<apiCallResult> => 'a",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "${1:apiCallResult} => ${0:apiCallResult}",
     "insertTextFormat": 2,
     "kind": 12,
@@ -1585,10 +1244,7 @@ ContextPath Value[takesCb5]
 Path takesCb5
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "array<option<apiCallResult>> => 'a",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "${1:apiCallResults} => ${0:apiCallResults}",
     "insertTextFormat": 2,
     "kind": 12,
@@ -1609,10 +1265,7 @@ ContextPath Value[commitLocalUpdate]
 Path commitLocalUpdate
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "RecordSourceSelectorProxy.t => unit",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "${1:recordSourceSelectorProxy} => ${0:recordSourceSelectorProxy}",
     "insertTextFormat": 2,
     "kind": 12,
@@ -1633,10 +1286,7 @@ ContextPath Value[fnTakingAsyncCallback]
 Path fnTakingAsyncCallback
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "unit => promise<unit>",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "async () => ${0:()}",
     "insertTextFormat": 2,
     "kind": 12,
@@ -1656,10 +1306,7 @@ ContextPath Value[Belt, Array, map]
 Path Belt.Array.map
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "'a => 'b",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "${1:v} => ${0:v}",
     "insertTextFormat": 2,
     "kind": 12,
@@ -1680,8 +1327,6 @@ ContextPath Value[takesExotic]
 Path takesExotic
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "#\"some exotic\"",
     "documentation": {
       "kind": "markdown",
@@ -1706,8 +1351,6 @@ ContextPath Value[fnTakingPolyVariant]
 Path fnTakingPolyVariant
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "#one",
     "documentation": {
       "kind": "markdown",
@@ -1720,8 +1363,6 @@ Path fnTakingPolyVariant
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "#three(someRecord, bool)",
     "documentation": {
       "kind": "markdown",
@@ -1734,8 +1375,6 @@ Path fnTakingPolyVariant
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "#two(bool)",
     "documentation": {
       "kind": "markdown",
@@ -1760,8 +1399,6 @@ ContextPath Value[fnTakingPolyVariant]
 Path fnTakingPolyVariant
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "#one",
     "documentation": {
       "kind": "markdown",
@@ -1774,8 +1411,6 @@ Path fnTakingPolyVariant
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "#three(someRecord, bool)",
     "documentation": {
       "kind": "markdown",
@@ -1788,8 +1423,6 @@ Path fnTakingPolyVariant
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "#two(bool)",
     "documentation": {
       "kind": "markdown",
@@ -1814,8 +1447,6 @@ ContextPath Value[fnTakingPolyVariant]
 Path fnTakingPolyVariant
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "#one",
     "documentation": {
       "kind": "markdown",
@@ -1840,8 +1471,6 @@ ContextPath Value[fnTakingPolyVariant]
 Path fnTakingPolyVariant
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "#one",
     "documentation": {
       "kind": "markdown",
@@ -1864,10 +1493,7 @@ ContextPath Type[withIntLocal]
 Path withIntLocal
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "SuperInt.make($0)",
     "insertTextFormat": 2,
     "kind": 12,
@@ -1887,10 +1513,7 @@ ContextPath Value[CompletionSupport, makeTestHidden]
 Path CompletionSupport.makeTestHidden
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "CompletionSupport.TestHidden.make($0)",
     "insertTextFormat": 2,
     "kind": 12,
@@ -1911,10 +1534,7 @@ ContextPath Value[CompletionSupport, makeTestHidden]
 Path CompletionSupport.makeTestHidden
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "TestHidden.make($0)",
     "insertTextFormat": 2,
     "kind": 12,
@@ -1935,10 +1555,7 @@ ContextPath Value[mkStuff]
 Path mkStuff
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Regular expression",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "/$0/g",
     "insertTextFormat": 2,
     "kind": 4,
@@ -1946,10 +1563,7 @@ Path mkStuff
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(string, ~flags: string=?) => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "RegExp.fromString($0)",
     "insertTextFormat": 2,
     "kind": 12,
@@ -1957,10 +1571,7 @@ Path mkStuff
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(string, ~flags: string) => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "RegExp.fromStringWithFlags($0)",
     "insertTextFormat": 2,
     "kind": 12,
@@ -1981,10 +1592,7 @@ ContextPath Value[tArgCompletionTestFn]
 Path tArgCompletionTestFn
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Money.fromInt($0)",
     "insertTextFormat": 2,
     "kind": 12,
@@ -1992,10 +1600,7 @@ Path tArgCompletionTestFn
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "unit => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Money.make($0)",
     "insertTextFormat": 2,
     "kind": 12,
@@ -2003,10 +1608,7 @@ Path tArgCompletionTestFn
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "t",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Money.zero",
     "insertTextFormat": 2,
     "kind": 12,
@@ -2027,10 +1629,7 @@ ContextPath Value[labeledTArgCompletionTestFn]
 Path labeledTArgCompletionTestFn
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Money.fromInt($0)",
     "insertTextFormat": 2,
     "kind": 12,
@@ -2038,10 +1637,7 @@ Path labeledTArgCompletionTestFn
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "unit => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Money.make($0)",
     "insertTextFormat": 2,
     "kind": 12,
@@ -2049,10 +1645,7 @@ Path labeledTArgCompletionTestFn
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "t",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Money.zero",
     "insertTextFormat": 2,
     "kind": 12,
@@ -2080,8 +1673,6 @@ Path CompletionExpressions.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "bool",
     "documentation": {
       "kind": "markdown",
@@ -2105,8 +1696,6 @@ ContextPath Value[hook]
 Path hook
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "[#\"and\" | #or]",
     "documentation": {
       "kind": "markdown",
@@ -2130,8 +1719,6 @@ ContextPath Value[hook]
 Path hook
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "[#\"and\" | #or]",
     "documentation": {
       "kind": "markdown",
@@ -2162,8 +1749,6 @@ Path CompletionExpressions.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "bool",
     "documentation": {
       "kind": "markdown",

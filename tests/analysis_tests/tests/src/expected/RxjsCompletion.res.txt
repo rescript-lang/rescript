@@ -33,10 +33,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(t<'t>, 't => unit) => subscription",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->Observable.subscribe",
     "kind": 12,
     "label": "->Observable.subscribe",
@@ -53,10 +50,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(Observable.t<'t>, operation<'t, 'u>) => Observable.t<'u>",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->pipe",
     "kind": 12,
     "label": "->pipe",
@@ -73,10 +67,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(\n  Observable.t<'a>,\n  Observable.t<'b>,\n) => Observable.t<('a, 'b)>",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->combineLatest",
     "kind": 12,
     "label": "->combineLatest",
@@ -93,10 +84,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(Observable.t<'t>, Observable.t<'t>) => Observable.t<'t>",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->merge",
     "kind": 12,
     "label": "->merge",
@@ -113,10 +101,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(\n  Observable.t<'t>,\n  operation<'t, 'u>,\n  operation<'u, 'i>,\n) => Observable.t<'i>",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->pipe2",
     "kind": 12,
     "label": "->pipe2",
@@ -157,10 +142,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(t<'t>, 't => unit) => subscription",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->Rxjs.Observable.subscribe",
     "kind": 12,
     "label": "->Rxjs.Observable.subscribe",
@@ -177,10 +159,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(Observable.t<'t>, operation<'t, 'u>) => Observable.t<'u>",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->Rxjs.pipe",
     "kind": 12,
     "label": "->Rxjs.pipe",
@@ -197,10 +176,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(\n  Observable.t<'a>,\n  Observable.t<'b>,\n) => Observable.t<('a, 'b)>",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->Rxjs.combineLatest",
     "kind": 12,
     "label": "->Rxjs.combineLatest",
@@ -217,10 +193,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(Observable.t<'t>, Observable.t<'t>) => Observable.t<'t>",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->Rxjs.merge",
     "kind": 12,
     "label": "->Rxjs.merge",
@@ -237,10 +210,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(\n  Observable.t<'t>,\n  operation<'t, 'u>,\n  operation<'u, 'i>,\n) => Observable.t<'i>",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->Rxjs.pipe2",
     "kind": 12,
     "label": "->Rxjs.pipe2",

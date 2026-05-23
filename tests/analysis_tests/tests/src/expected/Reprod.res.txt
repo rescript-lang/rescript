@@ -9,8 +9,6 @@ ContextPath Value[Query, use]
 Path Query.use
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "input_ByAddress",
     "documentation": {
       "kind": "markdown",
@@ -34,8 +32,6 @@ ContextPath Value[record]
 Path record
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "One",
     "documentation": {
       "kind": "markdown",
@@ -48,8 +44,6 @@ Path record
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Two(bool)",
     "documentation": {
       "kind": "markdown",
@@ -62,8 +56,6 @@ Path record
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Three(someRecord, bool)",
     "documentation": {
       "kind": "markdown",
@@ -86,8 +78,6 @@ ContextPath Value[record]
 Path record
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "SchemaAssets.input_ByAddress",
     "documentation": {
       "kind": "markdown",
@@ -114,8 +104,6 @@ ContextPath Value[res]
 Path res
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "One",
     "documentation": {
       "kind": "markdown",
@@ -128,8 +116,6 @@ Path res
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Two(bool)",
     "documentation": {
       "kind": "markdown",
@@ -142,8 +128,6 @@ Path res
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Three(someRecord, bool)",
     "documentation": {
       "kind": "markdown",
@@ -169,8 +153,6 @@ ContextPath Value[res]
 Path res
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "#one",
     "documentation": {
       "kind": "markdown",
@@ -183,8 +165,6 @@ Path res
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "#three(someRecord, bool)",
     "documentation": {
       "kind": "markdown",
@@ -197,8 +177,6 @@ Path res
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "#two(bool)",
     "documentation": {
       "kind": "markdown",
@@ -224,8 +202,6 @@ ContextPath Value[resOpt]
 Path resOpt
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "someVariant",
     "documentation": {
       "kind": "markdown",
@@ -236,8 +212,6 @@ Path resOpt
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "someVariant",
     "documentation": {
       "kind": "markdown",
@@ -250,8 +224,6 @@ Path resOpt
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "One",
     "documentation": {
       "kind": "markdown",
@@ -264,8 +236,6 @@ Path resOpt
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Two(bool)",
     "documentation": {
       "kind": "markdown",
@@ -278,8 +248,6 @@ Path resOpt
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Three(someRecord, bool)",
     "documentation": {
       "kind": "markdown",
@@ -307,8 +275,6 @@ ContextPath Value[resOpt]
 Path resOpt
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "One",
     "documentation": {
       "kind": "markdown",
@@ -321,8 +287,6 @@ Path resOpt
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Two(bool)",
     "documentation": {
       "kind": "markdown",
@@ -335,8 +299,6 @@ Path resOpt
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Three(someRecord, bool)",
     "documentation": {
       "kind": "markdown",

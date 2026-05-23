@@ -19,8 +19,6 @@ ContextPath Type[React, e]
 Path React.e
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "type element",
     "documentation": {
       "kind": "markdown",
@@ -42,8 +40,6 @@ ContextPath Type[React, e]
 Path React.e
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "type element",
     "documentation": {
       "kind": "markdown",

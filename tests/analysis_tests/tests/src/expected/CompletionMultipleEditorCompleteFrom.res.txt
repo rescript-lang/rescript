@@ -26,10 +26,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "A.a => int",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->B.b",
     "kind": 12,
     "label": "->B.b",
@@ -46,10 +43,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "A.a => char",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->C.c",
     "kind": 12,
     "label": "->C.c",

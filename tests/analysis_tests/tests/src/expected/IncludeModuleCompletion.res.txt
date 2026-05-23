@@ -26,10 +26,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "Types.context => string",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->blah",
     "kind": 12,
     "label": "->blah",
@@ -46,10 +43,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(Types.context, array<Types.comp>) => 't",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->add",
     "kind": 12,
     "label": "->add",
@@ -66,10 +60,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(Types.context, Types.vec2) => Types.comp",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->addPosFromVec2",
     "kind": 12,
     "label": "->addPosFromVec2",
@@ -86,10 +77,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(Types.context, float, float) => Types.comp",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->addPos",
     "kind": 12,
     "label": "->addPos",
@@ -110,28 +98,19 @@ ContextPath Value[add]
 Path add
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(Types.context, array<Types.comp>) => 't",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "add",
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(Types.context, Types.vec2) => Types.comp",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "addPosFromVec2",
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(Types.context, float, float) => Types.comp",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "addPos",
     "tags": []
@@ -149,19 +128,13 @@ ContextPath Value[add]
 Path add
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(Types.context, Types.vec2) => Types.comp",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "addPosFromVec2",
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(Types.context, float, float) => Types.comp",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "addPos",
     "tags": []
@@ -196,10 +169,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "Types.context => string",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->blah",
     "kind": 12,
     "label": "->blah",
@@ -216,10 +186,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(Types.context, array<Types.comp>) => 't",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->add",
     "kind": 12,
     "label": "->add",
@@ -236,10 +203,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(Types.context, string) => Types.comp",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->addSprite",
     "kind": 12,
     "label": "->addSprite",
@@ -256,10 +220,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(Types.context, Types.vec2) => Types.comp",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->addPosFromVec2",
     "kind": 12,
     "label": "->addPosFromVec2",
@@ -276,10 +237,7 @@ Path
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "(Types.context, float, float) => Types.comp",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->addPos",
     "kind": 12,
     "label": "->addPos",
@@ -313,10 +271,7 @@ Path l
         }
       }
     ],
-    "data": null,
-    "deprecated": false,
     "detail": "int => string",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "->lex",
     "kind": 12,
     "label": "->lex",
@@ -333,15 +288,5 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[l]
 Path l
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "int => string",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "lex",
-    "tags": []
-  }
-]
+[ { "detail": "int => string", "kind": 12, "label": "lex", "tags": [] } ]
 

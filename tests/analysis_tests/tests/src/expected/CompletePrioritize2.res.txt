@@ -9,17 +9,7 @@ Path ax
 CPPipe pathFromEnv:Test found:true
 Path Test.
 Path 
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "t => int",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "Test.add",
-    "tags": []
-  }
-]
+[ { "detail": "t => int", "kind": 12, "label": "Test.add", "tags": [] } ]
 
 Complete src/CompletePrioritize2.res 12:5
 posCursor:[12:5] posNoWhite:[12:4] Found expr:[12:3->12:5]
@@ -31,8 +21,6 @@ ContextPath Value[ax]
 Path ax
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Test.t",
     "documentation": {
       "kind": "markdown",

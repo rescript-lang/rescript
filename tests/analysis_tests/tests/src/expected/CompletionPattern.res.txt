@@ -11,10 +11,7 @@ ContextPath Value[v]
 Path v
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(bool, option<bool>, (bool, bool))",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "(${1:_}, ${2:_}, ${3:_})",
     "insertTextFormat": 2,
     "kind": 12,
@@ -31,17 +28,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[v]
 Path v
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "true",
-    "tags": []
-  }
-]
+[ { "detail": "bool", "kind": 4, "label": "true", "tags": [] } ]
 
 Complete src/CompletionPattern.res 16:25
 posCursor:[16:25] posNoWhite:[16:24] Found pattern:[16:16->16:30]
@@ -52,17 +39,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[v]
 Path v
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "false",
-    "tags": []
-  }
-]
+[ { "detail": "bool", "kind": 4, "label": "false", "tags": [] } ]
 
 Complete src/CompletionPattern.res 21:15
 XXX Not found!
@@ -72,24 +49,8 @@ Resolved opens 1 Stdlib
 ContextPath Value[x]
 Path x
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "true",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "false",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
 ]
 
 Complete src/CompletionPattern.res 24:17
@@ -99,17 +60,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[x]
 Path x
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "true",
-    "tags": []
-  }
-]
+[ { "detail": "bool", "kind": 4, "label": "true", "tags": [] } ]
 
 Complete src/CompletionPattern.res 46:15
 XXX Not found!
@@ -120,8 +71,6 @@ ContextPath Value[f]
 Path f
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "someRecord",
     "documentation": {
       "kind": "markdown",
@@ -145,8 +94,6 @@ ContextPath Value[f]
 Path f
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -157,8 +104,6 @@ Path f
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(bool, option<someRecord>)",
     "documentation": {
       "kind": "markdown",
@@ -169,8 +114,6 @@ Path f
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "option<[#first | #second(someRecord)]>",
     "documentation": {
       "kind": "markdown",
@@ -181,8 +124,6 @@ Path f
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "nestedRecord",
     "documentation": {
       "kind": "markdown",
@@ -203,8 +144,6 @@ ContextPath Value[f]
 Path f
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "option<[#first | #second(someRecord)]>",
     "documentation": {
       "kind": "markdown",
@@ -215,8 +154,6 @@ Path f
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "nestedRecord",
     "documentation": {
       "kind": "markdown",
@@ -238,8 +175,6 @@ ContextPath Value[f]
 Path f
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -262,8 +197,6 @@ ContextPath Value[z]
 Path z
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "option<[#first | #second(someRecord)]>",
     "documentation": {
       "kind": "markdown",
@@ -284,8 +217,6 @@ ContextPath Value[f]
 Path f
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "nestedRecord",
     "documentation": {
       "kind": "markdown",
@@ -310,8 +241,6 @@ ContextPath Value[f]
 Path f
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "bool",
     "documentation": {
       "kind": "markdown",
@@ -334,8 +263,6 @@ ContextPath Value[nest]
 Path nest
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "bool",
     "documentation": {
       "kind": "markdown",
@@ -356,8 +283,6 @@ ContextPath Value[f]
 Path f
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -368,8 +293,6 @@ Path f
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(bool, option<someRecord>)",
     "documentation": {
       "kind": "markdown",
@@ -380,8 +303,6 @@ Path f
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "option<[#first | #second(someRecord)]>",
     "documentation": {
       "kind": "markdown",
@@ -392,8 +313,6 @@ Path f
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "nestedRecord",
     "documentation": {
       "kind": "markdown",
@@ -416,8 +335,6 @@ ContextPath Value[f]
 Path f
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "bool",
     "documentation": {
       "kind": "markdown",
@@ -440,24 +357,8 @@ Resolved opens 1 Stdlib
 ContextPath Value[z]
 Path z
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "true",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "false",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
 ]
 
 Complete src/CompletionPattern.res 90:21
@@ -469,17 +370,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[z]
 Path z
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "true",
-    "tags": []
-  }
-]
+[ { "detail": "bool", "kind": 4, "label": "true", "tags": [] } ]
 
 Complete src/CompletionPattern.res 93:23
 posCursor:[93:23] posNoWhite:[93:22] Found pattern:[93:16->93:25]
@@ -492,8 +383,6 @@ ContextPath Value[z]
 Path z
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -504,8 +393,6 @@ Path z
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(bool, option<someRecord>)",
     "documentation": {
       "kind": "markdown",
@@ -516,8 +403,6 @@ Path z
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "option<[#first | #second(someRecord)]>",
     "documentation": {
       "kind": "markdown",
@@ -528,8 +413,6 @@ Path z
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "nestedRecord",
     "documentation": {
       "kind": "markdown",
@@ -551,17 +434,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[z]
 Path z
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "true",
-    "tags": []
-  }
-]
+[ { "detail": "bool", "kind": 4, "label": "true", "tags": [] } ]
 
 Complete src/CompletionPattern.res 103:21
 posCursor:[103:21] posNoWhite:[103:20] Found pattern:[103:16->103:22]
@@ -573,24 +446,8 @@ Resolved opens 1 Stdlib
 ContextPath Value[b]
 Path b
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "true",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "false",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
 ]
 
 Complete src/CompletionPattern.res 106:22
@@ -601,17 +458,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[b]
 Path b
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "true",
-    "tags": []
-  }
-]
+[ { "detail": "bool", "kind": 4, "label": "true", "tags": [] } ]
 
 Complete src/CompletionPattern.res 109:24
 posCursor:[109:24] posNoWhite:[109:23] Found pattern:[109:16->109:26]
@@ -623,8 +470,6 @@ ContextPath Value[b]
 Path b
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -635,8 +480,6 @@ Path b
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(bool, option<someRecord>)",
     "documentation": {
       "kind": "markdown",
@@ -647,8 +490,6 @@ Path b
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "option<[#first | #second(someRecord)]>",
     "documentation": {
       "kind": "markdown",
@@ -659,8 +500,6 @@ Path b
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "nestedRecord",
     "documentation": {
       "kind": "markdown",
@@ -681,17 +520,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[b]
 Path b
-[
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "true",
-    "tags": []
-  }
-]
+[ { "detail": "bool", "kind": 4, "label": "true", "tags": [] } ]
 
 Complete src/CompletionPattern.res 118:15
 XXX Not found!
@@ -702,10 +531,7 @@ ContextPath Value[c]
 Path c
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "[$0]",
     "insertTextFormat": 2,
     "kind": 12,
@@ -723,24 +549,8 @@ Resolved opens 1 Stdlib
 ContextPath Value[c]
 Path c
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "true",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "false",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
 ]
 
 Complete src/CompletionPattern.res 127:21
@@ -754,24 +564,8 @@ Resolved opens 1 Stdlib
 ContextPath Value[o]
 Path o
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "true",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "false",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
 ]
 
 Complete src/CompletionPattern.res 134:23
@@ -783,24 +577,8 @@ Resolved opens 1 Stdlib
 ContextPath Value[p]
 Path p
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "true",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "false",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
 ]
 
 Complete src/CompletionPattern.res 137:29
@@ -813,44 +591,17 @@ Resolved opens 1 Stdlib
 ContextPath Value[p]
 Path p
 [
+  { "detail": "bool", "kind": 12, "label": "None", "tags": [] },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "None",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Some(${1:_})",
     "insertTextFormat": 2,
     "kind": 12,
     "label": "Some(_)",
     "tags": []
   },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "Some(true)",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "Some(false)",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "Some(true)", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "Some(false)", "tags": [] }
 ]
 
 Complete src/CompletionPattern.res 140:23
@@ -863,24 +614,8 @@ Resolved opens 1 Stdlib
 ContextPath Value[p]
 Path p
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "true",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "false",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
 ]
 
 Complete src/CompletionPattern.res 143:35
@@ -894,10 +629,7 @@ ContextPath Value[p]
 Path p
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "[$0]",
     "insertTextFormat": 2,
     "kind": 12,
@@ -915,24 +647,8 @@ Resolved opens 1 Stdlib
 ContextPath Value[v]
 Path v
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "true",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "false",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
 ]
 
 Complete src/CompletionPattern.res 153:30
@@ -944,44 +660,17 @@ Resolved opens 1 Stdlib
 ContextPath Value[v]
 Path v
 [
+  { "detail": "bool", "kind": 12, "label": "None", "tags": [] },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "None",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Some(${1:_})",
     "insertTextFormat": 2,
     "kind": 12,
     "label": "Some(_)",
     "tags": []
   },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "Some(true)",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "Some(false)",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "Some(true)", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "Some(false)", "tags": [] }
 ]
 
 Complete src/CompletionPattern.res 156:24
@@ -993,24 +682,8 @@ Resolved opens 1 Stdlib
 ContextPath Value[v]
 Path v
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "true",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "false",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
 ]
 
 Complete src/CompletionPattern.res 159:36
@@ -1023,10 +696,7 @@ ContextPath Value[v]
 Path v
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "[$0]",
     "insertTextFormat": 2,
     "kind": 12,
@@ -1045,24 +715,8 @@ Resolved opens 1 Stdlib
 ContextPath Value[s]
 Path s
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "true",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "false",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
 ]
 
 Complete src/CompletionPattern.res 167:23
@@ -1073,44 +727,17 @@ Resolved opens 1 Stdlib
 ContextPath Value[s]
 Path s
 [
+  { "detail": "bool", "kind": 12, "label": "None", "tags": [] },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "None",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Some(${1:_})",
     "insertTextFormat": 2,
     "kind": 12,
     "label": "Some(_)",
     "tags": []
   },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "Some(true)",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "Some(false)",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "Some(true)", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "Some(false)", "tags": [] }
 ]
 
 Complete src/CompletionPattern.res 170:22
@@ -1121,44 +748,17 @@ Resolved opens 1 Stdlib
 ContextPath Value[s]
 Path s
 [
+  { "detail": "bool", "kind": 12, "label": "None", "tags": [] },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "None",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Some(${1:_})",
     "insertTextFormat": 2,
     "kind": 12,
     "label": "Some(_)",
     "tags": []
   },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "Some(true)",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "Some(false)",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "Some(true)", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "Some(false)", "tags": [] }
 ]
 
 Complete src/CompletionPattern.res 173:35
@@ -1170,10 +770,7 @@ ContextPath Value[s]
 Path s
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(bool, option<bool>, array<bool>)",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "(${1:_}, ${2:_}, ${3:_})",
     "insertTextFormat": 2,
     "kind": 12,
@@ -1190,44 +787,17 @@ Resolved opens 1 Stdlib
 ContextPath Value[s]
 Path s
 [
+  { "detail": "bool", "kind": 12, "label": "None", "tags": [] },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "None",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Some(${1:_})",
     "insertTextFormat": 2,
     "kind": 12,
     "label": "Some(_)",
     "tags": []
   },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "Some(true)",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "Some(false)",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "Some(true)", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "Some(false)", "tags": [] }
 ]
 
 Complete src/CompletionPattern.res 179:21
@@ -1239,8 +809,6 @@ ContextPath Value[z]
 Path z
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "One",
     "documentation": {
       "kind": "markdown",
@@ -1253,8 +821,6 @@ Path z
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Two(bool)",
     "documentation": {
       "kind": "markdown",
@@ -1267,8 +833,6 @@ Path z
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Three(someRecord, bool)",
     "documentation": {
       "kind": "markdown",
@@ -1292,24 +856,8 @@ Resolved opens 1 Stdlib
 ContextPath Value[z]
 Path z
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "true",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "false",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
 ]
 
 Complete src/CompletionPattern.res 185:48
@@ -1323,24 +871,8 @@ Resolved opens 1 Stdlib
 ContextPath Value[z]
 Path z
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "true",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "false",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
 ]
 
 Complete src/CompletionPattern.res 188:34
@@ -1352,24 +884,8 @@ Resolved opens 1 Stdlib
 ContextPath Value[b]
 Path b
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "true",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "false",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
 ]
 
 Complete src/CompletionPattern.res 191:50
@@ -1382,24 +898,8 @@ Resolved opens 1 Stdlib
 ContextPath Value[b]
 Path b
 [
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "true",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "false",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
 ]
 
 Complete src/CompletionPattern.res 194:24
@@ -1411,44 +911,17 @@ Resolved opens 1 Stdlib
 ContextPath Value[s]
 Path s
 [
+  { "detail": "bool", "kind": 12, "label": "None", "tags": [] },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 12,
-    "label": "None",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "Some(${1:_})",
     "insertTextFormat": 2,
     "kind": 12,
     "label": "Some(_)",
     "tags": []
   },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "Some(true)",
-    "tags": []
-  },
-  {
-    "data": null,
-    "deprecated": false,
-    "detail": "bool",
-    "documentation": { "kind": "markdown", "value": "" },
-    "kind": 4,
-    "label": "Some(false)",
-    "tags": []
-  }
+  { "detail": "bool", "kind": 4, "label": "Some(true)", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "Some(false)", "tags": [] }
 ]
 
 Complete src/CompletionPattern.res 201:25
@@ -1469,8 +942,6 @@ ContextPath Value[xn]
 Path xn
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Catches errors from JavaScript errors.",
     "documentation": {
       "kind": "markdown",
@@ -1493,8 +964,6 @@ ContextPath Value[getThing]
 Path getThing
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "One",
     "documentation": {
       "kind": "markdown",
@@ -1507,8 +976,6 @@ Path getThing
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Two(bool)",
     "documentation": {
       "kind": "markdown",
@@ -1521,8 +988,6 @@ Path getThing
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Three(someRecord, bool)",
     "documentation": {
       "kind": "markdown",
@@ -1548,8 +1013,6 @@ ContextPath Value[res]
 Path res
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "One",
     "documentation": {
       "kind": "markdown",
@@ -1562,8 +1025,6 @@ Path res
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Two(bool)",
     "documentation": {
       "kind": "markdown",
@@ -1576,8 +1037,6 @@ Path res
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Three(someRecord, bool)",
     "documentation": {
       "kind": "markdown",
@@ -1603,8 +1062,6 @@ ContextPath Value[res]
 Path res
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "#one",
     "documentation": {
       "kind": "markdown",
@@ -1617,8 +1074,6 @@ Path res
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "#three(someRecord, bool)",
     "documentation": {
       "kind": "markdown",
@@ -1631,8 +1086,6 @@ Path res
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "#two(bool)",
     "documentation": {
       "kind": "markdown",
@@ -1658,8 +1111,6 @@ ContextPath Value[r]
 Path r
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(bool, option<someRecord>)",
     "documentation": {
       "kind": "markdown",
@@ -1670,8 +1121,6 @@ Path r
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "option<[#first | #second(someRecord)]>",
     "documentation": {
       "kind": "markdown",
@@ -1682,8 +1131,6 @@ Path r
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "nestedRecord",
     "documentation": {
       "kind": "markdown",
@@ -1705,8 +1152,6 @@ ContextPath Value[hitsUse]
 Path hitsUse
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "array<string>",
     "documentation": {
       "kind": "markdown",

@@ -7,8 +7,6 @@ ContextPath Value[res]
 Path res
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Okay('a)",
     "documentation": {
       "kind": "markdown",
@@ -21,8 +19,6 @@ Path res
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Failure('b)",
     "documentation": {
       "kind": "markdown",
@@ -48,8 +44,6 @@ ContextPath Value[res]
 Path res
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "One",
     "documentation": {
       "kind": "markdown",
@@ -62,8 +56,6 @@ Path res
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Two",
     "documentation": {
       "kind": "markdown",
@@ -89,10 +81,7 @@ ContextPath Value[res]
 Path res
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "\"$0\"",
     "insertTextFormat": 2,
     "kind": 12,
@@ -112,8 +101,6 @@ ContextPath Value[use]
 Path use
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "EnvCompletionOtherFile.response",
     "documentation": {
       "kind": "markdown",
@@ -138,8 +125,6 @@ ContextPath Value[use]
 Path use
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "theVariant",
     "documentation": {
       "kind": "markdown",
@@ -150,8 +135,6 @@ Path use
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "someResult<theVariant, string>",
     "documentation": {
       "kind": "markdown",
@@ -173,8 +156,6 @@ ContextPath Value[use]
 Path use
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "First",
     "documentation": {
       "kind": "markdown",
@@ -187,8 +168,6 @@ Path use
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Second(r1)",
     "documentation": {
       "kind": "markdown",
@@ -216,8 +195,6 @@ ContextPath Value[use]
 Path use
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "r1",
     "documentation": {
       "kind": "markdown",
@@ -245,8 +222,6 @@ ContextPath Value[use]
 Path use
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -268,8 +243,6 @@ ContextPath Value[use]
 Path use
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Okay('a)",
     "documentation": {
       "kind": "markdown",
@@ -282,8 +255,6 @@ Path use
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Failure('b)",
     "documentation": {
       "kind": "markdown",
@@ -311,8 +282,6 @@ ContextPath Value[use]
 Path use
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "First",
     "documentation": {
       "kind": "markdown",
@@ -325,8 +294,6 @@ Path use
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Second(r1)",
     "documentation": {
       "kind": "markdown",
@@ -356,8 +323,6 @@ ContextPath Value[use]
 Path use
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "r1",
     "documentation": {
       "kind": "markdown",
@@ -387,8 +352,6 @@ ContextPath Value[use]
 Path use
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -409,8 +372,6 @@ ContextPath Value[res2]
 Path res2
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "EnvCompletionOtherFile.someRecord",
     "documentation": {
       "kind": "markdown",
@@ -434,8 +395,6 @@ ContextPath Value[res2]
 Path res2
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -446,8 +405,6 @@ Path res2
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "'thing",
     "documentation": {
       "kind": "markdown",
@@ -458,8 +415,6 @@ Path res2
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "theVariant",
     "documentation": {
       "kind": "markdown",
@@ -480,8 +435,6 @@ ContextPath Value[res2]
 Path res2
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Four",
     "documentation": {
       "kind": "markdown",
@@ -494,8 +447,6 @@ Path res2
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Five",
     "documentation": {
       "kind": "markdown",
@@ -518,8 +469,6 @@ ContextPath Value[res2]
 Path res2
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "First",
     "documentation": {
       "kind": "markdown",
@@ -532,8 +481,6 @@ Path res2
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "Second(r1)",
     "documentation": {
       "kind": "markdown",

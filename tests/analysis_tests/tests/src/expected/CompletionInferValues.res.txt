@@ -13,7 +13,6 @@ Path Stdlib.Int.t
 Path t
 [
   {
-    "data": null,
     "deprecated": true,
     "detail": "(int, ~radix: int) => string",
     "documentation": {
@@ -25,7 +24,6 @@ Path t
     "tags": [ 1 ]
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(int, ~digits: int) => string",
     "documentation": {
@@ -37,7 +35,6 @@ Path t
     "tags": [ 1 ]
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(int, ~digits: int) => string",
     "documentation": {
@@ -49,7 +46,6 @@ Path t
     "tags": [ 1 ]
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(int, ~digits: int) => string",
     "documentation": {
@@ -61,8 +57,6 @@ Path t
     "tags": [ 1 ]
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, ~digits: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -73,8 +67,6 @@ Path t
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, ~radix: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -85,8 +77,6 @@ Path t
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int => float",
     "documentation": {
       "kind": "markdown",
@@ -97,8 +87,6 @@ Path t
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int => string",
     "documentation": {
       "kind": "markdown",
@@ -109,8 +97,6 @@ Path t
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, ~digits: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -121,8 +107,6 @@ Path t
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, ~digits: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -157,8 +141,6 @@ Path CompletionInferValues.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -169,8 +151,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -209,8 +189,6 @@ Path CompletionInferValues.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -221,8 +199,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -264,8 +240,6 @@ Path CompletionInferValues.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -276,8 +250,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -323,8 +295,6 @@ Path CompletionInferValues.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -335,8 +305,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -368,10 +336,7 @@ Path ReactEvent.Mouse.pr
 Path pr
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "t => unit",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "ReactEvent.Mouse.preventDefault",
     "tags": []
@@ -398,10 +363,7 @@ Path JsxEvent.Mouse.pr
 Path pr
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "t => unit",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "JsxEvent.Mouse.preventDefault",
     "tags": []
@@ -427,10 +389,7 @@ Path JsxEvent.Mouse.pr
 Path pr
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "t => unit",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "JsxEvent.Mouse.preventDefault",
     "tags": []
@@ -456,7 +415,6 @@ Path Stdlib.Int.t
 Path t
 [
   {
-    "data": null,
     "deprecated": true,
     "detail": "(int, ~radix: int) => string",
     "documentation": {
@@ -468,7 +426,6 @@ Path t
     "tags": [ 1 ]
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(int, ~digits: int) => string",
     "documentation": {
@@ -480,7 +437,6 @@ Path t
     "tags": [ 1 ]
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(int, ~digits: int) => string",
     "documentation": {
@@ -492,7 +448,6 @@ Path t
     "tags": [ 1 ]
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(int, ~digits: int) => string",
     "documentation": {
@@ -504,8 +459,6 @@ Path t
     "tags": [ 1 ]
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, ~digits: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -516,8 +469,6 @@ Path t
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, ~radix: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -528,8 +479,6 @@ Path t
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int => float",
     "documentation": {
       "kind": "markdown",
@@ -540,8 +489,6 @@ Path t
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int => string",
     "documentation": {
       "kind": "markdown",
@@ -552,8 +499,6 @@ Path t
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, ~digits: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -564,8 +509,6 @@ Path t
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, ~digits: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -614,8 +557,6 @@ Path ArrayUtils.ma
 Path ma
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, 'a => 'b) => array<'b>",
     "documentation": {
       "kind": "markdown",
@@ -626,8 +567,6 @@ Path ma
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(array<'a>, ('a, int) => 'b) => array<'b>",
     "documentation": {
       "kind": "markdown",
@@ -666,8 +605,6 @@ Path CompletionInferValues.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -678,8 +615,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -718,8 +653,6 @@ Path CompletionInferValues.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "someRecord",
     "documentation": {
       "kind": "markdown",
@@ -758,8 +691,6 @@ Path CompletionInferValues.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -770,8 +701,6 @@ Path
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -800,8 +729,6 @@ Path Stdlib.String.slic
 Path slic
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(string, ~start: int, ~end: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -812,7 +739,6 @@ Path slic
     "tags": []
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(string, ~start: int) => string",
     "documentation": {
@@ -842,7 +768,6 @@ Path Stdlib.Int.toS
 Path toS
 [
   {
-    "data": null,
     "deprecated": true,
     "detail": "(int, ~radix: int) => string",
     "documentation": {
@@ -854,8 +779,6 @@ Path toS
     "tags": [ 1 ]
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, ~radix: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -887,7 +810,6 @@ Path Stdlib.Int.toS
 Path toS
 [
   {
-    "data": null,
     "deprecated": true,
     "detail": "(int, ~radix: int) => string",
     "documentation": {
@@ -899,8 +821,6 @@ Path toS
     "tags": [ 1 ]
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, ~radix: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -933,7 +853,6 @@ Path Stdlib.Int.toS
 Path toS
 [
   {
-    "data": null,
     "deprecated": true,
     "detail": "(int, ~radix: int) => string",
     "documentation": {
@@ -945,8 +864,6 @@ Path toS
     "tags": [ 1 ]
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, ~radix: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -975,8 +892,6 @@ Path Stdlib.String.slic
 Path slic
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(string, ~start: int, ~end: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -987,7 +902,6 @@ Path slic
     "tags": []
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(string, ~start: int) => string",
     "documentation": {
@@ -1017,8 +931,6 @@ Path Stdlib.String.slic
 Path slic
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(string, ~start: int, ~end: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -1029,7 +941,6 @@ Path slic
     "tags": []
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(string, ~start: int) => string",
     "documentation": {
@@ -1059,8 +970,6 @@ Path Stdlib.String.slic
 Path slic
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(string, ~start: int, ~end: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -1071,7 +980,6 @@ Path slic
     "tags": []
   },
   {
-    "data": null,
     "deprecated": true,
     "detail": "(string, ~start: int) => string",
     "documentation": {
@@ -1099,7 +1007,6 @@ Path Stdlib.Int.toSt
 Path toSt
 [
   {
-    "data": null,
     "deprecated": true,
     "detail": "(int, ~radix: int) => string",
     "documentation": {
@@ -1111,8 +1018,6 @@ Path toSt
     "tags": [ 1 ]
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(int, ~radix: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -1139,8 +1044,6 @@ ContextPath Value[fnWithRecordCallback]
 Path fnWithRecordCallback
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
     "documentation": {
       "kind": "markdown",
@@ -1151,8 +1054,6 @@ Path fnWithRecordCallback
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "int",
     "documentation": {
       "kind": "markdown",
@@ -1186,19 +1087,13 @@ Path ReactDOM.Client.Root.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(t, unit) => unit",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "ReactDOM.Client.Root.unmount",
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(t, React.element) => unit",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "ReactDOM.Client.Root.render",
     "tags": []
@@ -1227,19 +1122,13 @@ Path CompletionSupport.Test.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "t => int",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "CompletionSupport.Test.add",
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "t => t",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "CompletionSupport.Test.addSelf",
     "tags": []
@@ -1256,10 +1145,7 @@ ContextPath Value[Belt, Int, toString]
 Path Belt.Int.toString
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "\"$0\"",
     "insertTextFormat": 2,
     "kind": 12,
@@ -1279,10 +1165,7 @@ ContextPath Value[String, split]
 Path String.split
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "string",
-    "documentation": { "kind": "markdown", "value": "" },
     "insertText": "[$0]",
     "insertTextFormat": 2,
     "kind": 12,
@@ -1322,8 +1205,6 @@ Path CompletionSupport.Nested.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "ReactDOM.Client.Root.t",
     "documentation": {
       "kind": "markdown",
@@ -1357,19 +1238,13 @@ Path ReactDOM.Client.Root.
 Path 
 [
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(t, unit) => unit",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "ReactDOM.Client.Root.unmount",
     "tags": []
   },
   {
-    "data": null,
-    "deprecated": false,
     "detail": "(t, React.element) => unit",
-    "documentation": { "kind": "markdown", "value": "" },
     "kind": 12,
     "label": "ReactDOM.Client.Root.render",
     "tags": []
