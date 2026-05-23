@@ -127,12 +127,7 @@ Rename src/Cross.res 21:28 xPrime
           "end": { "character": 5, "line": 0 },
           "start": { "character": 4, "line": 0 }
         }
-      }
-    ],
-    "textDocument": { "uri": "file:///RenameWithInterface.resi" }
-  },
-  {
-    "edits": [
+      },
       {
         "newText": "xPrime",
         "range": {
@@ -141,7 +136,7 @@ Rename src/Cross.res 21:28 xPrime
         }
       }
     ],
-    "textDocument": { "uri": "file:///RenameWithInterface.res" }
+    "textDocument": { "uri": "file:///RenameWithInterface.resi" }
   },
   {
     "edits": [
@@ -179,7 +174,7 @@ Definition src/Cross.res 27:32
     "end": { "character": 5, "line": 0 },
     "start": { "character": 4, "line": 0 }
   },
-  "uri": "file:///DefinitionWithInterface.res"
+  "uri": "file:///DefinitionWithInterface.resi"
 }
 
 Definition src/Cross.res 30:36
@@ -188,7 +183,7 @@ Definition src/Cross.res 30:36
     "end": { "character": 6, "line": 3 },
     "start": { "character": 5, "line": 3 }
   },
-  "uri": "file:///DefinitionWithInterface.res"
+  "uri": "file:///DefinitionWithInterface.resi"
 }
 
 TypeDefinition src/Cross.res 33:37
@@ -213,9 +208,9 @@ Path DefinitionWithInterface.a
 Definition src/Cross.res 39:39
 {
   "range": {
-    "end": { "character": 7, "line": 9 },
-    "start": { "character": 6, "line": 9 }
+    "end": { "character": 12, "line": 6 },
+    "start": { "character": 2, "line": 6 }
   },
-  "uri": "file:///DefinitionWithInterface.res"
+  "uri": "file:///DefinitionWithInterface.resi"
 }
 

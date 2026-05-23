@@ -5,15 +5,15 @@ Definition src/DefinitionWithInterface.resi 0:4
     "end": { "character": 5, "line": 0 },
     "start": { "character": 4, "line": 0 }
   },
-  "uri": "file:///DefinitionWithInterface.res"
+  "uri": "file:///DefinitionWithInterface.resi"
 }
 
 Definition src/DefinitionWithInterface.resi 6:6
 {
   "range": {
-    "end": { "character": 7, "line": 9 },
-    "start": { "character": 6, "line": 9 }
+    "end": { "character": 12, "line": 6 },
+    "start": { "character": 2, "line": 6 }
   },
-  "uri": "file:///DefinitionWithInterface.res"
+  "uri": "file:///DefinitionWithInterface.resi"
 }
 

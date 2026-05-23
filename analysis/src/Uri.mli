@@ -1,4 +1,4 @@
-type t
+type t = Lsp.Uri.t
 
 val fromPath : string -> t
 val isInterface : t -> bool

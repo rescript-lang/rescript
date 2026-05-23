@@ -109,7 +109,7 @@ References src/References.res 23:15
       "end": { "character": 8, "line": 1 },
       "start": { "character": 4, "line": 1 }
     },
-    "uri": "file:///ComponentInner.res"
+    "uri": "file:///ComponentInner.resi"
   },
   {
     "range": {

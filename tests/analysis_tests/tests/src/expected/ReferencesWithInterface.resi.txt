@@ -27,7 +27,7 @@ References src/ReferencesWithInterface.resi 0:4
       "end": { "character": 5, "line": 0 },
       "start": { "character": 4, "line": 0 }
     },
-    "uri": "file:///ReferencesWithInterface.res"
+    "uri": "file:///ReferencesWithInterface.resi"
   },
   {
     "range": {
