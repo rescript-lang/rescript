@@ -209,8 +209,8 @@ let x =
 
 let x =
   <div>
-    ident
-    "constant"
+    {ident}
+    {"constant"}
     {
       let a = 1
       let b = 2
@@ -240,13 +240,13 @@ let x =
     | Error => ()
     }}
     {(a, b, c)}
-    Rgb(red, blue, green)
-    list{}
-    list{a, b}
-    list{a, b, ...x}
-    [a, b, c]
-    {x: 1, y: 2}
-    foo.bar
+    {Rgb(red, blue, green)}
+    {list{}}
+    {list{a, b}}
+    {list{a, b, ...x}}
+    {[a, b, c]}
+    {{x: 1, y: 2}}
+    {foo.bar}
     {user.name = "Steve"}
     {if true {
       ()
@@ -264,29 +264,29 @@ let x =
       do(i)
     }}
     {(20: int)}
-    {
+    {{
       module L = Log
       L.log()
-    }
-    {
+    }}
+    {{
       exception Exit
       throw(Exit)
-    }
+    }}
     {assert(true)}
     {module(Foo)}
-    module(Foo)
+    {module(Foo)}
     {module(Foo: Bar)}
-    module(Foo: Bar)
-    {
+    {module(Foo: Bar)}
+    {{
       open React
       React.render()
-    }
-    %raw("eval()")
-    {"x": 1, "y": 2}
+    }}
+    {%raw("eval()")}
+    {{"x": 1, "y": 2}}
     {@attr ident}
   </div>
 
-let x = <MyComponent sidebar={<div> test </div>} nav={<Navbar />} />
+let x = <MyComponent sidebar={<div> {test} </div>} nav={<Navbar />} />
 
 <div>
   {possibleGradeValues
@@ -314,7 +314,7 @@ let x = <MyComponent sidebar={<div> test </div>} nav={<Navbar />} />
 module App = {
   @react.component
   let make = () => {
-    <> 1 </>
+    <> {1} </>
   }
 }
 
@@ -492,14 +492,14 @@ let fragmented_moo =
 
 let arrow_with_fragment = el => <>
   {t(nbsp ++ "(")}
-  el
+  {el}
   {t(")")}
 </>
 
 let arrow_with_container_tag = el =>
   <div>
     {t(nbsp ++ "(")}
-    el
+    {el}
     {t(")")}
   </div>
 
