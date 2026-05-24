@@ -165,7 +165,7 @@ module ModuleToFile = struct
         let newFilePath =
           Filename.concat (Filename.dirname path) moduleName ^ ".res"
         in
-        let uri = Lsp.Uri.of_string newFilePath in
+        let uri = Uri.fromString newFilePath in
         let documentChanges =
           [
             `CreateFile
@@ -195,7 +195,7 @@ module ModuleToFile = struct
                    ]
                  ~textDocument:
                    (Lsp.Types.OptionalVersionedTextDocumentIdentifier.create
-                      ~uri:(Lsp.Uri.of_string path) ()));
+                      ~uri:(Uri.fromString path) ()));
           ]
         in
         changed :=

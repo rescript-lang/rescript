@@ -332,7 +332,7 @@ let test ~path =
                             match dc with
                             | `TextDocumentEdit tde ->
                               let filename =
-                                tde.textDocument.uri |> Lsp.Uri.to_path
+                                tde.textDocument.uri |> Uri.toPath
                                 |> Filename.basename
                               in
                               Printf.printf "\nTextDocumentEdit: %s\n" filename;
@@ -364,7 +364,7 @@ let test ~path =
                                        indent indent newText)
                             | `CreateFile cf ->
                               let filename =
-                                cf.uri |> Lsp.Uri.to_path |> Filename.basename
+                                cf.uri |> Uri.toPath |> Filename.basename
                               in
                               Printf.printf "\nCreateFile: %s\n" filename
                             | _ ->

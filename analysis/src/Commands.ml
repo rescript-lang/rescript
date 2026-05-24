@@ -123,7 +123,7 @@ let definition ~full ~pos ~debug =
           else
             Some
               (Lsp.Types.Location.create ~range:(Utils.cmtLocToRange loc)
-                 ~uri:(Files.canonicalizeUri uri |> Lsp.Uri.of_string))
+                 ~uri:(Files.canonicalizeUri uri |> Uri.fromString))
         | Some _ -> None))
   in
   locationOpt
@@ -141,7 +141,7 @@ let typeDefinition ~full ~pos ~debug =
         | Some (uri, loc) ->
           Some
             (Lsp.Types.Location.create ~range:(Utils.cmtLocToRange loc)
-               ~uri:(Files.canonicalizeUri uri |> Lsp.Uri.of_string))))
+               ~uri:(Files.canonicalizeUri uri |> Uri.fromString))))
   in
   maybeLocation
 
@@ -164,7 +164,7 @@ let references ~full ~pos ~debug =
                in
 
                Lsp.Types.Location.create ~range:(Utils.cmtLocToRange loc)
-                 ~uri:(Uri.toString uri2 |> Lsp.Uri.of_string)
+                 ~uri:(Uri.toString uri2 |> Uri.fromString)
                :: acc)
              [])
   in
@@ -229,7 +229,7 @@ let rename ~full ~pos ~newName ~debug =
             (fun uri edits acc ->
               let textDocument =
                 Lsp.Types.OptionalVersionedTextDocumentIdentifier.create
-                  ~uri:(Lsp.Uri.of_string uri) ()
+                  ~uri:(Uri.fromString uri) ()
               in
               let textDocumentEdit =
                 `TextDocumentEdit
