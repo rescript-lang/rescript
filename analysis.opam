@@ -12,6 +12,7 @@ depends: [
   "cppo" {= "1.8.0"}
   "odoc" {with-doc}
   "lsp" {= "1.22.0"}
+  "yojson" {= "2.2.2"}
 ]
 build: [
   ["dune" "subst"] {dev}
