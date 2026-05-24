@@ -1,12 +1,18 @@
 PrepareRename src/PrepareRename.res 0:4
 {
-  "end": { "character": 5, "line": 0 },
-  "start": { "character": 4, "line": 0 }
+  "range": {
+    "end": { "character": 5, "line": 0 },
+    "start": { "character": 4, "line": 0 }
+  },
+  "placeholder": "x"
 }
 
 PrepareRename src/PrepareRename.res 3:19
 {
-  "end": { "character": 21, "line": 3 },
-  "start": { "character": 19, "line": 3 }
+  "range": {
+    "end": { "character": 21, "line": 3 },
+    "start": { "character": 19, "line": 3 }
+  },
+  "placeholder": "xx"
 }
 

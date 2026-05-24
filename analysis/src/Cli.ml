@@ -117,7 +117,15 @@ let prepareRename ~path ~pos ~debug =
   let full = Cmt.loadFullCmtFromPath ~path in
   match Commands.prepareRename ~full ~pos ~debug with
   | None -> print_null ()
-  | Some range -> Lsp.Types.Range.yojson_of_t range |> print_string
+  | Some {range; placeholder = None} ->
+    Lsp.Types.Range.yojson_of_t range |> print_string
+  | Some {range; placeholder = Some placeholder} ->
+    `Assoc
+      [
+        ("range", Lsp.Types.Range.yojson_of_t range);
+        ("placeholder", `String placeholder);
+      ]
+    |> print_string
 
 let format ~path =
   match Files.readFile path with

@@ -85,7 +85,7 @@ let stringifyFieldDoc (fieldDoc : fieldDoc) =
   `Assoc
     ([
        ("name", `String fieldDoc.fieldName);
-       ("optional", `String (string_of_bool fieldDoc.optional));
+       ("optional", `Bool fieldDoc.optional);
        ("docstrings", stringifyDocstrings fieldDoc.docstrings);
        ("signature", `String fieldDoc.signature);
      ]

@@ -19,13 +19,13 @@
         "items": [
           {
             "name": "name",
-            "optional": "false",
+            "optional": false,
             "docstrings": [ "The name of the stuff." ],
             "signature": "string"
           },
           {
             "name": "online",
-            "optional": "false",
+            "optional": false,
             "docstrings": [ "Whether stuff is online." ],
             "signature": "bool"
           }
@@ -244,13 +244,13 @@
                   "fields": [
                     {
                       "name": "offline",
-                      "optional": "false",
+                      "optional": false,
                       "docstrings": [],
                       "signature": "bool"
                     },
                     {
                       "name": "online",
-                      "optional": "true",
+                      "optional": true,
                       "docstrings": [ "Is the user online?" ],
                       "signature": "option<bool>"
                     }

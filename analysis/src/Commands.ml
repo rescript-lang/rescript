@@ -243,6 +243,11 @@ let rename ~full ~pos ~newName ~debug =
   in
   result
 
+type prepareRenameResult = {
+  range: Lsp.Types.Range.t;
+  placeholder: string option;
+}
+
 let prepareRename ~full ~pos ~debug =
   match full with
   | None -> None
@@ -258,12 +263,7 @@ let prepareRename ~full ~pos ~debug =
           Some name
         | _ -> None
       in
-      Some
-        (match placeholderOpt with
-        | None -> range
-        | Some _placeholder ->
-          (* NOTE: ocaml lsp library dont have Lsp.Types.PrepareRename.create *)
-          range))
+      Some {range; placeholder = placeholderOpt})
 
 let format ~source ~kindFile =
   let create_range text =
