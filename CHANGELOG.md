@@ -41,6 +41,7 @@
 - Use a single vendored @rescript/react package across the repo. https://github.com/rescript-lang/rescript/pull/7525
 - Improve deprecated attribute extraction and support record form. https://github.com/rescript-lang/rescript/pull/8396
 - Refactor analysis to decouple I/O from core logic. https://github.com/rescript-lang/rescript/pull/8426
+- Remove vendored `Json` library and use `yojson` and `lsp` library for analysis. https://github.com/rescript-lang/rescript/pull/8436
 
 #### :house: Internal
 
