@@ -87,12 +87,12 @@ Rename src/Cross.res 18:13 RenameWithInterfacePrime
 [
   {
     "kind": "rename",
-    "newUri": "file:///./src/RenameWithInterfacePrime.resi",
+    "newUri": "file:///RenameWithInterfacePrime.resi",
     "oldUri": "file:///RenameWithInterface.resi"
   },
   {
     "kind": "rename",
-    "newUri": "file:///./src/RenameWithInterfacePrime.res",
+    "newUri": "file:///RenameWithInterfacePrime.res",
     "oldUri": "file:///RenameWithInterface.res"
   },
   {

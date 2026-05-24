@@ -1,6 +1,7 @@
 type t = Lsp.Uri.t
 
 val fromPath : string -> t
+val fromString : string -> t
 val isInterface : t -> bool
 val stripPath : bool ref
 val toPath : t -> string

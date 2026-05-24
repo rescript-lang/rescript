@@ -3,6 +3,7 @@ type t = Lsp.Uri.t
 let stripPath = ref false (* for use in tests *)
 
 let fromPath path = Lsp.Uri.of_path path
+let fromString str = Lsp.Uri.of_string str
 let isInterface uri = uri |> Lsp.Uri.to_string |> Filename.check_suffix "i"
 let toPath uri =
   (* Lsp.Uri.to_path remove the schema file:// but keep the `/` on start of path. *)
