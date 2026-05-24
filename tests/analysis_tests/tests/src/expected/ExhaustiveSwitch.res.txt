@@ -120,7 +120,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Hit: Exhaustive switch
 
-TextDocumentEdit: file:///src/ExhaustiveSwitch.res
+TextDocumentEdit: ExhaustiveSwitch.res
 {
   "end": { "character": 10, "line": 33 },
   "start": { "character": 3, "line": 33 }
@@ -144,7 +144,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Hit: Exhaustive switch
 
-TextDocumentEdit: file:///src/ExhaustiveSwitch.res
+TextDocumentEdit: ExhaustiveSwitch.res
 {
   "end": { "character": 6, "line": 36 },
   "start": { "character": 3, "line": 36 }

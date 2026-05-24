@@ -331,8 +331,11 @@ let test ~path =
                           ->
                             match dc with
                             | `TextDocumentEdit tde ->
-                              Printf.printf "\nTextDocumentEdit: %s\n"
-                                (tde.textDocument.uri |> Lsp.Uri.to_string);
+                              let filename =
+                                tde.textDocument.uri |> Lsp.Uri.to_path
+                                |> Filename.basename
+                              in
+                              Printf.printf "\nTextDocumentEdit: %s\n" filename;
 
                               tde.edits
                               |> List.iter
@@ -360,9 +363,12 @@ let test ~path =
                                        |> Yojson.Safe.pretty_to_string)
                                        indent indent newText)
                             | `CreateFile cf ->
-                              Printf.printf "\nCreateFile: %s\n"
-                                (cf.uri |> Lsp.Uri.to_string)
-                            | _ -> assert false)
+                              let filename =
+                                cf.uri |> Lsp.Uri.to_path |> Filename.basename
+                              in
+                              Printf.printf "\nCreateFile: %s\n" filename
+                            | _ ->
+                              failwith "not implemented text document edit test")
                    | None -> ())
           | "c-a" ->
             let hint = String.sub rest 3 (String.length rest - 3) in

@@ -1,7 +1,7 @@
 Xform not_compiled/DocTemplate.resi 3:3
 Hit: Add Documentation template
 
-TextDocumentEdit: file:///not_compiled/DocTemplate.resi
+TextDocumentEdit: DocTemplate.resi
 {
   "end": { "character": 9, "line": 5 },
   "start": { "character": 0, "line": 3 }
@@ -18,7 +18,7 @@ and e = C
 Xform not_compiled/DocTemplate.resi 6:15
 Hit: Add Documentation template
 
-TextDocumentEdit: file:///not_compiled/DocTemplate.resi
+TextDocumentEdit: DocTemplate.resi
 {
   "end": { "character": 33, "line": 6 },
   "start": { "character": 0, "line": 6 }
@@ -33,7 +33,7 @@ newText:
 Xform not_compiled/DocTemplate.resi 8:4
 Hit: Add Documentation template
 
-TextDocumentEdit: file:///not_compiled/DocTemplate.resi
+TextDocumentEdit: DocTemplate.resi
 {
   "end": { "character": 10, "line": 8 },
   "start": { "character": 0, "line": 8 }
@@ -48,7 +48,7 @@ let a: int
 Xform not_compiled/DocTemplate.resi 10:4
 Hit: Add Documentation template
 
-TextDocumentEdit: file:///not_compiled/DocTemplate.resi
+TextDocumentEdit: DocTemplate.resi
 {
   "end": { "character": 19, "line": 10 },
   "start": { "character": 0, "line": 10 }
@@ -63,7 +63,7 @@ let inc: int => int
 Xform not_compiled/DocTemplate.resi 12:7
 Hit: Add Documentation template
 
-TextDocumentEdit: file:///not_compiled/DocTemplate.resi
+TextDocumentEdit: DocTemplate.resi
 {
   "end": { "character": 1, "line": 16 },
   "start": { "character": 0, "line": 12 }
@@ -82,7 +82,7 @@ module T: {
 Xform not_compiled/DocTemplate.resi 14:6
 Hit: Add Documentation template
 
-TextDocumentEdit: file:///not_compiled/DocTemplate.resi
+TextDocumentEdit: DocTemplate.resi
 {
   "end": { "character": 12, "line": 14 },
   "start": { "character": 2, "line": 14 }
@@ -97,7 +97,7 @@ newText:
 Xform not_compiled/DocTemplate.resi 18:2
 Hit: Add Documentation template
 
-TextDocumentEdit: file:///not_compiled/DocTemplate.resi
+TextDocumentEdit: DocTemplate.resi
 {
   "end": { "character": 46, "line": 18 },
   "start": { "character": 0, "line": 17 }

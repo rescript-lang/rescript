@@ -9,7 +9,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Hit: Replace with switch
 
-TextDocumentEdit: file:///src/Xform.res
+TextDocumentEdit: Xform.res
 {
   "end": { "character": 1, "line": 11 },
   "start": { "character": 0, "line": 6 }
@@ -26,7 +26,7 @@ switch kind {
 Xform src/Xform.res 13:15
 Hit: Replace with switch
 
-TextDocumentEdit: file:///src/Xform.res
+TextDocumentEdit: Xform.res
 {
   "end": { "character": 79, "line": 13 },
   "start": { "character": 0, "line": 13 }
@@ -41,7 +41,7 @@ switch kind {
 Xform src/Xform.res 16:5
 Hit: Add type annotation
 
-TextDocumentEdit: file:///src/Xform.res
+TextDocumentEdit: Xform.res
 {
   "end": { "character": 8, "line": 16 },
   "start": { "character": 8, "line": 16 }
@@ -51,7 +51,7 @@ newText:
         : string
 Hit: Add Documentation template
 
-TextDocumentEdit: file:///src/Xform.res
+TextDocumentEdit: Xform.res
 {
   "end": { "character": 18, "line": 16 },
   "start": { "character": 0, "line": 16 }
@@ -66,7 +66,7 @@ let name = "hello"
 Xform src/Xform.res 19:5
 Hit: Add Documentation template
 
-TextDocumentEdit: file:///src/Xform.res
+TextDocumentEdit: Xform.res
 {
   "end": { "character": 23, "line": 19 },
   "start": { "character": 0, "line": 19 }
@@ -81,7 +81,7 @@ let annotated: int = 34
 Xform src/Xform.res 26:10
 Hit: Add type annotation
 
-TextDocumentEdit: file:///src/Xform.res
+TextDocumentEdit: Xform.res
 {
   "end": { "character": 11, "line": 26 },
   "start": { "character": 10, "line": 26 }
@@ -93,7 +93,7 @@ newText:
 Xform src/Xform.res 30:9
 Hit: Add braces to function
 
-TextDocumentEdit: file:///src/Xform.res
+TextDocumentEdit: Xform.res
 {
   "end": { "character": 3, "line": 32 },
   "start": { "character": 0, "line": 26 }
@@ -112,7 +112,7 @@ let foo = x => {
 Xform src/Xform.res 34:21
 Hit: Add type annotation
 
-TextDocumentEdit: file:///src/Xform.res
+TextDocumentEdit: Xform.res
 {
   "end": { "character": 24, "line": 34 },
   "start": { "character": 24, "line": 34 }
@@ -124,7 +124,7 @@ newText:
 Xform src/Xform.res 38:5
 Hit: Add Documentation template
 
-TextDocumentEdit: file:///src/Xform.res
+TextDocumentEdit: Xform.res
 {
   "end": { "character": 40, "line": 38 },
   "start": { "character": 0, "line": 37 }
@@ -140,7 +140,7 @@ let make = (~name) => React.string(name)
 Xform src/Xform.res 41:9
 Hit: Add type annotation
 
-TextDocumentEdit: file:///src/Xform.res
+TextDocumentEdit: Xform.res
 {
   "end": { "character": 11, "line": 41 },
   "start": { "character": 11, "line": 41 }
@@ -160,7 +160,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Hit: Add braces to function
 
-TextDocumentEdit: file:///src/Xform.res
+TextDocumentEdit: Xform.res
 {
   "end": { "character": 25, "line": 48 },
   "start": { "character": 0, "line": 48 }
@@ -174,7 +174,7 @@ let noBraces = () => {
 Xform src/Xform.res 52:34
 Hit: Add braces to function
 
-TextDocumentEdit: file:///src/Xform.res
+TextDocumentEdit: Xform.res
 {
   "end": { "character": 1, "line": 54 },
   "start": { "character": 0, "line": 51 }
@@ -191,7 +191,7 @@ let nested = () => {
 Xform src/Xform.res 62:6
 Hit: Add braces to function
 
-TextDocumentEdit: file:///src/Xform.res
+TextDocumentEdit: Xform.res
 {
   "end": { "character": 7, "line": 62 },
   "start": { "character": 4, "line": 58 }
@@ -208,9 +208,9 @@ newText:
 Xform src/Xform.res 72:5
 Hit: Extract local module "ExtractableModule" to file "ExtractableModule.res"
 
-CreateFile: file:///src/ExtractableModule.res
+CreateFile: ExtractableModule.res
 
-TextDocumentEdit: file:///src/ExtractableModule.res
+TextDocumentEdit: ExtractableModule.res
 {
   "end": { "character": 1, "line": 74 },
   "start": { "character": 0, "line": 68 }
@@ -224,7 +224,7 @@ let doStuff = a => a + 1
 // ^xfm
 
 
-TextDocumentEdit: file:///src/Xform.res
+TextDocumentEdit: Xform.res
 {
   "end": { "character": 1, "line": 74 },
   "start": { "character": 0, "line": 68 }
@@ -244,7 +244,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Hit: Expand catch-all
 
-TextDocumentEdit: file:///src/Xform.res
+TextDocumentEdit: Xform.res
 {
   "end": { "character": 3, "line": 80 },
   "start": { "character": 2, "line": 80 }
@@ -264,7 +264,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Hit: Expand catch-all
 
-TextDocumentEdit: file:///src/Xform.res
+TextDocumentEdit: Xform.res
 {
   "end": { "character": 3, "line": 86 },
   "start": { "character": 2, "line": 86 }
@@ -284,7 +284,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Hit: Expand catch-all
 
-TextDocumentEdit: file:///src/Xform.res
+TextDocumentEdit: Xform.res
 {
   "end": { "character": 3, "line": 93 },
   "start": { "character": 2, "line": 93 }
@@ -304,7 +304,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Hit: Expand catch-all
 
-TextDocumentEdit: file:///src/Xform.res
+TextDocumentEdit: Xform.res
 {
   "end": { "character": 3, "line": 101 },
   "start": { "character": 2, "line": 101 }
@@ -324,7 +324,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Hit: Expand catch-all
 
-TextDocumentEdit: file:///src/Xform.res
+TextDocumentEdit: Xform.res
 {
   "end": { "character": 3, "line": 107 },
   "start": { "character": 2, "line": 107 }
@@ -344,7 +344,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Hit: Expand catch-all
 
-TextDocumentEdit: file:///src/Xform.res
+TextDocumentEdit: Xform.res
 {
   "end": { "character": 3, "line": 115 },
   "start": { "character": 2, "line": 115 }
@@ -364,7 +364,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Hit: Expand catch-all
 
-TextDocumentEdit: file:///src/Xform.res
+TextDocumentEdit: Xform.res
 {
   "end": { "character": 3, "line": 121 },
   "start": { "character": 2, "line": 121 }
@@ -384,7 +384,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Hit: Expand catch-all
 
-TextDocumentEdit: file:///src/Xform.res
+TextDocumentEdit: Xform.res
 {
   "end": { "character": 3, "line": 127 },
   "start": { "character": 2, "line": 127 }
@@ -404,7 +404,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Hit: Expand catch-all
 
-TextDocumentEdit: file:///src/Xform.res
+TextDocumentEdit: Xform.res
 {
   "end": { "character": 3, "line": 136 },
   "start": { "character": 2, "line": 136 }
@@ -424,7 +424,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Hit: Expand catch-all
 
-TextDocumentEdit: file:///src/Xform.res
+TextDocumentEdit: Xform.res
 {
   "end": { "character": 3, "line": 142 },
   "start": { "character": 2, "line": 142 }

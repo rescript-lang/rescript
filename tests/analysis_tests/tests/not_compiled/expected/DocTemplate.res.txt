@@ -2,7 +2,7 @@ Xform not_compiled/DocTemplate.res 3:3
 can't find module DocTemplate
 Hit: Add Documentation template
 
-TextDocumentEdit: file:///not_compiled/DocTemplate.res
+TextDocumentEdit: DocTemplate.res
 {
   "end": { "character": 9, "line": 5 },
   "start": { "character": 0, "line": 3 }
@@ -20,7 +20,7 @@ Xform not_compiled/DocTemplate.res 6:15
 can't find module DocTemplate
 Hit: Add Documentation template
 
-TextDocumentEdit: file:///not_compiled/DocTemplate.res
+TextDocumentEdit: DocTemplate.res
 {
   "end": { "character": 33, "line": 6 },
   "start": { "character": 0, "line": 6 }
@@ -36,7 +36,7 @@ Xform not_compiled/DocTemplate.res 8:4
 can't find module DocTemplate
 Hit: Add Documentation template
 
-TextDocumentEdit: file:///not_compiled/DocTemplate.res
+TextDocumentEdit: DocTemplate.res
 {
   "end": { "character": 9, "line": 8 },
   "start": { "character": 0, "line": 8 }
@@ -52,7 +52,7 @@ Xform not_compiled/DocTemplate.res 10:4
 can't find module DocTemplate
 Hit: Add Documentation template
 
-TextDocumentEdit: file:///not_compiled/DocTemplate.res
+TextDocumentEdit: DocTemplate.res
 {
   "end": { "character": 20, "line": 10 },
   "start": { "character": 0, "line": 10 }
@@ -68,7 +68,7 @@ Xform not_compiled/DocTemplate.res 12:7
 can't find module DocTemplate
 Hit: Add Documentation template
 
-TextDocumentEdit: file:///not_compiled/DocTemplate.res
+TextDocumentEdit: DocTemplate.res
 {
   "end": { "character": 1, "line": 16 },
   "start": { "character": 0, "line": 12 }
@@ -85,9 +85,9 @@ module T = {
 }
 Hit: Extract local module "T" to file "T.res"
 
-CreateFile: file:///not_compiled/T.res
+CreateFile: T.res
 
-TextDocumentEdit: file:///not_compiled/T.res
+TextDocumentEdit: T.res
 {
   "end": { "character": 1, "line": 16 },
   "start": { "character": 0, "line": 12 }
@@ -99,7 +99,7 @@ let b = 1
 //  ^xfm
 
 
-TextDocumentEdit: file:///not_compiled/DocTemplate.res
+TextDocumentEdit: DocTemplate.res
 {
   "end": { "character": 1, "line": 16 },
   "start": { "character": 0, "line": 12 }
@@ -112,7 +112,7 @@ Xform not_compiled/DocTemplate.res 14:6
 can't find module DocTemplate
 Hit: Add Documentation template
 
-TextDocumentEdit: file:///not_compiled/DocTemplate.res
+TextDocumentEdit: DocTemplate.res
 {
   "end": { "character": 11, "line": 14 },
   "start": { "character": 2, "line": 14 }
@@ -125,9 +125,9 @@ newText:
   let b = 1
 Hit: Extract local module "T" to file "T.res"
 
-CreateFile: file:///not_compiled/T.res
+CreateFile: T.res
 
-TextDocumentEdit: file:///not_compiled/T.res
+TextDocumentEdit: T.res
 {
   "end": { "character": 1, "line": 16 },
   "start": { "character": 0, "line": 12 }
@@ -139,7 +139,7 @@ let b = 1
 //  ^xfm
 
 
-TextDocumentEdit: file:///not_compiled/DocTemplate.res
+TextDocumentEdit: DocTemplate.res
 {
   "end": { "character": 1, "line": 16 },
   "start": { "character": 0, "line": 12 }
@@ -152,7 +152,7 @@ Xform not_compiled/DocTemplate.res 18:2
 can't find module DocTemplate
 Hit: Add Documentation template
 
-TextDocumentEdit: file:///not_compiled/DocTemplate.res
+TextDocumentEdit: DocTemplate.res
 {
   "end": { "character": 46, "line": 18 },
   "start": { "character": 0, "line": 17 }
