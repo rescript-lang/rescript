@@ -1,6 +1,5 @@
 {
   "name": "ModC",
-  "deprecated": null,
   "docstrings": [],
   "source": { "filepath": "src/ModC.resi", "line": 1, "col": 1 },
   "items": [
@@ -8,8 +7,6 @@
       "id": "ModC.User",
       "name": "User",
       "kind": "module",
-      "deprecated": null,
-      "moduletypeid": null,
       "docstrings": [ "User Module from interface file" ],
       "source": { "filepath": "src/ModC.resi", "line": 4, "col": 8 },
       "items": [
@@ -17,7 +14,6 @@
           "id": "ModC.User.name",
           "kind": "value",
           "name": "name",
-          "deprecated": null,
           "signature": "let name: string",
           "docstrings": [],
           "source": { "filepath": "src/ModC.resi", "line": 5, "col": 3 },

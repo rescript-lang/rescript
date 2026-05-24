@@ -83,16 +83,16 @@ let stringifyDocstrings docstrings =
 
 let stringifyFieldDoc (fieldDoc : fieldDoc) =
   `Assoc
-    [
-      ("name", `String fieldDoc.fieldName);
-      ( "deprecated",
-        match fieldDoc.deprecated with
-        | Some d -> `String d
-        | None -> `Null );
-      ("optional", `String (string_of_bool fieldDoc.optional));
-      ("docstrings", stringifyDocstrings fieldDoc.docstrings);
-      ("signature", `String fieldDoc.signature);
-    ]
+    ([
+       ("name", `String fieldDoc.fieldName);
+       ("optional", `String (string_of_bool fieldDoc.optional));
+       ("docstrings", stringifyDocstrings fieldDoc.docstrings);
+       ("signature", `String fieldDoc.signature);
+     ]
+    @
+    match fieldDoc.deprecated with
+    | Some d -> [("deprecated", `String d)]
+    | None -> [])
 
 let stringifyConstructorPayload (constructorPayload : constructorPayload) =
   match constructorPayload with
@@ -128,21 +128,23 @@ let stringifyDetail (detail : docItemDetail) =
             (constructorDocs
             |> List.map (fun constructorDoc ->
                    `Assoc
-                     [
-                       ("name", `String constructorDoc.constructorName);
-                       ( "deprecated",
-                         match constructorDoc.deprecated with
-                         | Some d -> `String d
-                         | None -> `Null );
-                       ( "docstrings",
-                         stringifyDocstrings constructorDoc.docstrings );
-                       ("signature", `String constructorDoc.signature);
-                       ( "payload",
-                         match constructorDoc.items with
-                         | None -> `Null
-                         | Some constructorPayload ->
+                     ([
+                        ("name", `String constructorDoc.constructorName);
+                        ( "docstrings",
+                          stringifyDocstrings constructorDoc.docstrings );
+                        ("signature", `String constructorDoc.signature);
+                      ]
+                     @ (match constructorDoc.deprecated with
+                       | Some d -> [("deprecated", `String d)]
+                       | None -> [])
+                     @
+                     match constructorDoc.items with
+                     | Some constructorPayload ->
+                       [
+                         ( "payload",
                            stringifyConstructorPayload constructorPayload );
-                     ])) );
+                       ]
+                     | None -> []))) );
       ]
   | Signature {parameters; returnType} ->
     let ps =
@@ -170,78 +172,75 @@ let rec stringifyDocItem ~originalEnv (item : docItem) =
   match item with
   | Value {id; docstring; signature; name; deprecated; source; detail} ->
     `Assoc
-      [
-        ("id", `String id);
-        ("kind", `String "value");
-        ("name", `String name);
-        ( "deprecated",
-          match deprecated with
-          | Some d -> `String d
-          | None -> `Null );
-        ("signature", `String (signature |> String.trim));
-        ("docstrings", stringifyDocstrings docstring);
-        ("source", stringifySource source);
-        ( "detail",
-          match detail with
-          | None -> `Null
-          | Some detail -> stringifyDetail detail );
-      ]
+      ([
+         ("id", `String id);
+         ("kind", `String "value");
+         ("name", `String name);
+         ("signature", `String (signature |> String.trim));
+         ("docstrings", stringifyDocstrings docstring);
+         ("source", stringifySource source);
+       ]
+      @ (match deprecated with
+        | Some d -> [("deprecated", `String d)]
+        | None -> [])
+      @
+      match detail with
+      | Some detail -> [("detail", stringifyDetail detail)]
+      | None -> [])
   | Type {id; docstring; signature; name; deprecated; detail; source} ->
     `Assoc
-      [
-        ("id", `String id);
-        ("kind", `String "type");
-        ("name", `String name);
-        ( "deprecated",
-          match deprecated with
-          | Some d -> `String d
-          | None -> `Null );
-        ("signature", `String signature);
-        ("docstrings", stringifyDocstrings docstring);
-        ("source", stringifySource source);
-        ( "detail",
-          match detail with
-          | None -> `Null
-          | Some detail -> stringifyDetail detail );
-      ]
+      ([
+         ("id", `String id);
+         ("kind", `String "type");
+         ("name", `String name);
+         ("signature", `String signature);
+         ("docstrings", stringifyDocstrings docstring);
+         ("source", stringifySource source);
+       ]
+      @ (match deprecated with
+        | Some d -> [("deprecated", `String d)]
+        | None -> [])
+      @
+      match detail with
+      | Some detail -> [("detail", stringifyDetail detail)]
+      | None -> [])
   | Module m ->
     `Assoc
-      [
-        ("id", `String m.id);
-        ("name", `String m.name);
-        ("kind", `String "module");
-        ( "deprecated",
-          match m.deprecated with
-          | Some d -> `String d
-          | None -> `Null );
-        ( "moduletypeid",
-          match m.moduletypeid with
-          | Some path -> `String path
-          | None -> `Null );
-        ("docstrings", stringifyDocstrings m.docstring);
-        ("source", stringifySource m.source);
-        ( "items",
-          `List
-            (m.items
-            |> List.map (fun item -> stringifyDocItem ~originalEnv item)) );
-      ]
+      ([
+         ("id", `String m.id);
+         ("name", `String m.name);
+         ("kind", `String "module");
+         ("docstrings", stringifyDocstrings m.docstring);
+         ("source", stringifySource m.source);
+         ( "items",
+           `List
+             (m.items
+             |> List.map (fun item -> stringifyDocItem ~originalEnv item)) );
+       ]
+      @ (match m.deprecated with
+        | Some d -> [("deprecated", `String d)]
+        | None -> [])
+      @
+      match m.moduletypeid with
+      | Some path -> [("moduletypeid", `String path)]
+      | None -> [])
   | ModuleType m ->
     `Assoc
-      [
-        ("id", `String m.id);
-        ("name", `String m.name);
-        ("kind", `String "moduleType");
-        ( "deprecated",
-          match m.deprecated with
-          | Some d -> `String d
-          | None -> `Null );
-        ("docstrings", stringifyDocstrings m.docstring);
-        ("source", stringifySource m.source);
-        ( "items",
-          `List
-            (m.items
-            |> List.map (fun item -> stringifyDocItem ~originalEnv item)) );
-      ]
+      ([
+         ("id", `String m.id);
+         ("name", `String m.name);
+         ("kind", `String "moduleType");
+         ("docstrings", stringifyDocstrings m.docstring);
+         ("source", stringifySource m.source);
+         ( "items",
+           `List
+             (m.items
+             |> List.map (fun item -> stringifyDocItem ~originalEnv item)) );
+       ]
+      @
+      match m.deprecated with
+      | Some d -> [("deprecated", `String d)]
+      | None -> [])
   | ModuleAlias m ->
     `Assoc
       [
@@ -255,19 +254,19 @@ let rec stringifyDocItem ~originalEnv (item : docItem) =
 
 and stringifyDocsForModule ~originalEnv (d : docsForModule) =
   `Assoc
-    [
-      ("name", `String d.name);
-      ( "deprecated",
-        match d.deprecated with
-        | Some d -> `String d
-        | None -> `Null );
-      ("docstrings", stringifyDocstrings d.docstring);
-      ("source", stringifySource d.source);
-      ( "items",
-        `List
-          (d.items |> List.map (fun item -> stringifyDocItem ~originalEnv item))
-      );
-    ]
+    ([
+       ("name", `String d.name);
+       ("docstrings", stringifyDocstrings d.docstring);
+       ("source", stringifySource d.source);
+       ( "items",
+         `List
+           (d.items |> List.map (fun item -> stringifyDocItem ~originalEnv item))
+       );
+     ]
+    @
+    match d.deprecated with
+    | Some d -> [("deprecated", `String d)]
+    | None -> [])
 
 let fieldToFieldDoc (field : SharedTypes.field) : fieldDoc =
   {

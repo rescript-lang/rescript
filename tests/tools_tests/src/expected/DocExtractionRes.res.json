@@ -1,6 +1,5 @@
 {
   "name": "DocExtractionRes",
-  "deprecated": null,
   "docstrings": [ "Module level documentation goes here." ],
   "source": { "filepath": "src/DocExtractionRes.res", "line": 1, "col": 1 },
   "items": [
@@ -8,7 +7,6 @@
       "id": "DocExtractionRes.t",
       "kind": "type",
       "name": "t",
-      "deprecated": null,
       "signature": "type t = {name: string, online: bool}",
       "docstrings": [ "This type represents stuff." ],
       "source": {
@@ -21,14 +19,12 @@
         "items": [
           {
             "name": "name",
-            "deprecated": null,
             "optional": "false",
             "docstrings": [ "The name of the stuff." ],
             "signature": "string"
           },
           {
             "name": "online",
-            "deprecated": null,
             "optional": "false",
             "docstrings": [ "Whether stuff is online." ],
             "signature": "bool"
@@ -40,7 +36,6 @@
       "id": "DocExtractionRes.make",
       "kind": "value",
       "name": "make",
-      "deprecated": null,
       "signature": "let make: string => t",
       "docstrings": [
         "Create stuff.\n\n```rescript example\nlet stuff = make(\"My name\")\n```"
@@ -62,7 +57,6 @@
       "id": "DocExtractionRes.asOffline",
       "kind": "value",
       "name": "asOffline",
-      "deprecated": null,
       "signature": "let asOffline: t => t",
       "docstrings": [ "Stuff goes offline." ],
       "source": {
@@ -82,7 +76,6 @@
       "id": "DocExtractionRes.SomeConstant",
       "kind": "value",
       "name": "SomeConstant",
-      "deprecated": null,
       "signature": "let SomeConstant: int",
       "docstrings": [ "exotic identifier" ],
       "source": {
@@ -102,8 +95,6 @@
       "id": "DocExtractionRes.SomeInnerModule",
       "name": "SomeInnerModule",
       "kind": "module",
-      "deprecated": null,
-      "moduletypeid": null,
       "docstrings": [ "Another module level docstring here." ],
       "source": {
         "filepath": "src/DocExtractionRes.res",
@@ -115,7 +106,6 @@
           "id": "DocExtractionRes.SomeInnerModule.status",
           "kind": "type",
           "name": "status",
-          "deprecated": null,
           "signature": "type status = Started(t) | Stopped | Idle",
           "docstrings": [],
           "source": {
@@ -128,24 +118,18 @@
             "items": [
               {
                 "name": "Started",
-                "deprecated": null,
                 "docstrings": [ "If this is started or not" ],
-                "signature": "Started(t)",
-                "payload": null
+                "signature": "Started(t)"
               },
               {
                 "name": "Stopped",
-                "deprecated": null,
                 "docstrings": [ "Stopped?" ],
-                "signature": "Stopped",
-                "payload": null
+                "signature": "Stopped"
               },
               {
                 "name": "Idle",
-                "deprecated": null,
                 "docstrings": [ "Now idle." ],
-                "signature": "Idle",
-                "payload": null
+                "signature": "Idle"
               }
             ]
           }
@@ -154,29 +138,25 @@
           "id": "DocExtractionRes.SomeInnerModule.validInputs",
           "kind": "type",
           "name": "validInputs",
-          "deprecated": null,
           "signature": "type validInputs = [\n  | #\"needs-escaping\"\n  | #something\n  | #status(status)\n  | #withPayload(int)\n]",
           "docstrings": [ "These are all the valid inputs." ],
           "source": {
             "filepath": "src/DocExtractionRes.res",
             "line": 39,
             "col": 3
-          },
-          "detail": null
+          }
         },
         {
           "id": "DocExtractionRes.SomeInnerModule.callback",
           "kind": "type",
           "name": "callback",
-          "deprecated": null,
           "signature": "type callback = (t, ~status: status) => unit",
           "docstrings": [],
           "source": {
             "filepath": "src/DocExtractionRes.res",
             "line": 41,
             "col": 3
-          },
-          "detail": null
+          }
         }
       ]
     },
@@ -184,8 +164,6 @@
       "id": "DocExtractionRes.AnotherModule",
       "name": "AnotherModule",
       "kind": "module",
-      "deprecated": null,
-      "moduletypeid": null,
       "docstrings": [ "Mighty fine module here too!" ],
       "source": {
         "filepath": "src/DocExtractionRes.res",
@@ -209,21 +187,18 @@
           "id": "DocExtractionRes.AnotherModule.callback",
           "kind": "type",
           "name": "callback",
-          "deprecated": null,
           "signature": "type callback = SomeInnerModule.status => unit",
           "docstrings": [ "Testing what this looks like." ],
           "source": {
             "filepath": "src/DocExtractionRes.res",
             "line": 52,
             "col": 3
-          },
-          "detail": null
+          }
         },
         {
           "id": "DocExtractionRes.AnotherModule.isGoodStatus",
           "kind": "value",
           "name": "isGoodStatus",
-          "deprecated": null,
           "signature": "let isGoodStatus: SomeInnerModule.status => bool",
           "docstrings": [],
           "source": {
@@ -248,7 +223,6 @@
           "id": "DocExtractionRes.AnotherModule.someVariantWithInlineRecords",
           "kind": "type",
           "name": "someVariantWithInlineRecords",
-          "deprecated": null,
           "signature": "type someVariantWithInlineRecords =\n  | SomeStuff({offline: bool, online?: bool})",
           "docstrings": [
             "Trying how it looks with an inline record in a variant."
@@ -263,7 +237,6 @@
             "items": [
               {
                 "name": "SomeStuff",
-                "deprecated": null,
                 "docstrings": [ "This has inline records..." ],
                 "signature": "SomeStuff({offline: bool, online?: bool})",
                 "payload": {
@@ -271,14 +244,12 @@
                   "fields": [
                     {
                       "name": "offline",
-                      "deprecated": null,
                       "optional": "false",
                       "docstrings": [],
                       "signature": "bool"
                     },
                     {
                       "name": "online",
-                      "deprecated": null,
                       "optional": "true",
                       "docstrings": [ "Is the user online?" ],
                       "signature": "option<bool>"
@@ -293,15 +264,13 @@
           "id": "DocExtractionRes.AnotherModule.domRoot",
           "kind": "type",
           "name": "domRoot",
-          "deprecated": null,
           "signature": "type domRoot = unit => ReactDOM.Client.Root.t",
           "docstrings": [ "Callback to get the DOM root..." ],
           "source": {
             "filepath": "src/DocExtractionRes.res",
             "line": 68,
             "col": 3
-          },
-          "detail": null
+          }
         }
       ]
     },
@@ -309,8 +278,6 @@
       "id": "DocExtractionRes.ModuleWithThingsThatShouldNotBeExported",
       "name": "ModuleWithThingsThatShouldNotBeExported",
       "kind": "module",
-      "deprecated": null,
-      "moduletypeid": null,
       "docstrings": [],
       "source": {
         "filepath": "src/DocExtractionRes.res",
@@ -322,21 +289,18 @@
           "id": "DocExtractionRes.ModuleWithThingsThatShouldNotBeExported.t",
           "kind": "type",
           "name": "t",
-          "deprecated": null,
           "signature": "type t",
           "docstrings": [ "The type t is stuff." ],
           "source": {
             "filepath": "src/DocExtractionRes.res",
             "line": 75,
             "col": 3
-          },
-          "detail": null
+          }
         },
         {
           "id": "DocExtractionRes.ModuleWithThingsThatShouldNotBeExported.make",
           "kind": "value",
           "name": "make",
-          "deprecated": null,
           "signature": "let make: unit => t",
           "docstrings": [ "The maker of stuff!" ],
           "source": {
@@ -360,7 +324,6 @@
       "id": "DocExtractionRes.Example",
       "name": "Example",
       "kind": "moduleType",
-      "deprecated": null,
       "docstrings": [],
       "source": {
         "filepath": "src/DocExtractionRes.res",
@@ -372,21 +335,18 @@
           "id": "DocExtractionRes.Example.t",
           "kind": "type",
           "name": "t",
-          "deprecated": null,
           "signature": "type t",
           "docstrings": [ "main type of this module" ],
           "source": {
             "filepath": "src/DocExtractionRes.res",
             "line": 113,
             "col": 3
-          },
-          "detail": null
+          }
         },
         {
           "id": "DocExtractionRes.Example.f",
           "kind": "value",
           "name": "f",
-          "deprecated": null,
           "signature": "let f: t => t",
           "docstrings": [ "function from t to t" ],
           "source": {
@@ -408,8 +368,6 @@
       "id": "DocExtractionRes.M",
       "name": "M",
       "kind": "module",
-      "deprecated": null,
-      "moduletypeid": "DocExtractionRes.Example",
       "docstrings": [ "implementation of Example module type" ],
       "source": {
         "filepath": "src/DocExtractionRes.res",
@@ -421,21 +379,18 @@
           "id": "DocExtractionRes.M.t",
           "kind": "type",
           "name": "t",
-          "deprecated": null,
           "signature": "type t = int",
           "docstrings": [ "main type" ],
           "source": {
             "filepath": "src/DocExtractionRes.res",
             "line": 129,
             "col": 3
-          },
-          "detail": null
+          }
         },
         {
           "id": "DocExtractionRes.M.f",
           "kind": "value",
           "name": "f",
-          "deprecated": null,
           "signature": "let f: int => int",
           "docstrings": [ "identity function" ],
           "source": {
@@ -453,13 +408,13 @@
             }
           }
         }
-      ]
+      ],
+      "moduletypeid": "DocExtractionRes.Example"
     },
     {
       "id": "DocExtractionRes.MT",
       "name": "MT",
       "kind": "moduleType",
-      "deprecated": null,
       "docstrings": [],
       "source": {
         "filepath": "src/DocExtractionRes.res",
@@ -471,7 +426,6 @@
           "id": "DocExtractionRes.MT.x",
           "kind": "value",
           "name": "x",
-          "deprecated": null,
           "signature": "let x: int",
           "docstrings": [],
           "source": {
@@ -493,8 +447,6 @@
       "id": "DocExtractionRes.A",
       "name": "A",
       "kind": "module",
-      "deprecated": null,
-      "moduletypeid": "DocExtractionRes.MT",
       "docstrings": [],
       "source": {
         "filepath": "src/DocExtractionRes.res",
@@ -506,7 +458,6 @@
           "id": "DocExtractionRes.A.x",
           "kind": "value",
           "name": "x",
-          "deprecated": null,
           "signature": "let x: int",
           "docstrings": [],
           "source": {
@@ -522,14 +473,13 @@
             }
           }
         }
-      ]
+      ],
+      "moduletypeid": "DocExtractionRes.MT"
     },
     {
       "id": "DocExtractionRes.C",
       "name": "C",
       "kind": "module",
-      "deprecated": null,
-      "moduletypeid": null,
       "docstrings": [],
       "source": {
         "filepath": "src/DocExtractionRes.res",
@@ -541,8 +491,6 @@
           "id": "DocExtractionRes.C.D",
           "name": "D",
           "kind": "module",
-          "deprecated": null,
-          "moduletypeid": "DocExtractionRes.MT",
           "docstrings": [],
           "source": {
             "filepath": "src/DocExtractionRes.res",
@@ -554,7 +502,6 @@
               "id": "DocExtractionRes.C.D.x",
               "kind": "value",
               "name": "x",
-              "deprecated": null,
               "signature": "let x: int",
               "docstrings": [],
               "source": {
@@ -573,7 +520,8 @@
                 }
               }
             }
-          ]
+          ],
+          "moduletypeid": "DocExtractionRes.MT"
         }
       ]
     }
