@@ -24,7 +24,7 @@ Rename src/Rename.res 0:4 y
         }
       }
     ],
-    "textDocument": { "uri": "file:///Rename.res" }
+    "textDocument": { "uri": "file:///Rename.res", "version": 0 }
   }
 ]
 
@@ -47,7 +47,7 @@ Rename src/Rename.res 9:19 yy
         }
       }
     ],
-    "textDocument": { "uri": "file:///Rename.res" }
+    "textDocument": { "uri": "file:///Rename.res", "version": 0 }
   }
 ]
 

@@ -10,7 +10,10 @@ Rename src/RenameWithInterface.res 0:4 y
         }
       }
     ],
-    "textDocument": { "uri": "file:///RenameWithInterface.resi" }
+    "textDocument": {
+      "uri": "file:///RenameWithInterface.resi",
+      "version": 0
+    }
   },
   {
     "edits": [
@@ -22,7 +25,10 @@ Rename src/RenameWithInterface.res 0:4 y
         }
       }
     ],
-    "textDocument": { "uri": "file:///RenameWithInterface.res" }
+    "textDocument": {
+      "uri": "file:///RenameWithInterface.res",
+      "version": 0
+    }
   },
   {
     "edits": [
@@ -41,7 +47,7 @@ Rename src/RenameWithInterface.res 0:4 y
         }
       }
     ],
-    "textDocument": { "uri": "file:///Cross.res" }
+    "textDocument": { "uri": "file:///Cross.res", "version": 0 }
   }
 ]
 

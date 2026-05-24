@@ -112,7 +112,7 @@ Rename src/Cross.res 18:13 RenameWithInterfacePrime
         }
       }
     ],
-    "textDocument": { "uri": "file:///Cross.res" }
+    "textDocument": { "uri": "file:///Cross.res", "version": 0 }
   }
 ]
 
@@ -135,7 +135,10 @@ Rename src/Cross.res 21:28 xPrime
         }
       }
     ],
-    "textDocument": { "uri": "file:///RenameWithInterface.resi" }
+    "textDocument": {
+      "uri": "file:///RenameWithInterface.resi",
+      "version": 0
+    }
   },
   {
     "edits": [
@@ -154,7 +157,7 @@ Rename src/Cross.res 21:28 xPrime
         }
       }
     ],
-    "textDocument": { "uri": "file:///Cross.res" }
+    "textDocument": { "uri": "file:///Cross.res", "version": 0 }
   }
 ]
 

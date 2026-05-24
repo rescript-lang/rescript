@@ -229,7 +229,7 @@ let rename ~full ~pos ~newName ~debug =
             (fun uri edits acc ->
               let textDocument =
                 Lsp.Types.OptionalVersionedTextDocumentIdentifier.create
-                  ~uri:(Uri.fromString uri) ()
+                  ~version:0 ~uri:(Uri.fromString uri) ()
               in
               let textDocumentEdit =
                 `TextDocumentEdit
