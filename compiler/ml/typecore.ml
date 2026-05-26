@@ -98,6 +98,7 @@ type error =
   | Type_params_not_supported of Longident.t
   | Field_access_on_dict_type
   | Jsx_not_enabled
+  | Assert_must_be_direct_call
 
 exception Error of Location.t * Env.t * error
 exception Error_forward of Location.error
@@ -150,6 +151,11 @@ let with_depth depth_ref f =
   let saved = !depth_ref in
   depth_ref := saved + 1;
   Misc.try_finally f (fun () -> depth_ref := saved)
+
+let is_assert_primitive (desc : Types.value_description) =
+  match desc.val_kind with
+  | Val_prim {Primitive.prim_name = "%assert"} -> true
+  | _ -> false
 
 let with_reset_control_flow f =
   let saved_loop_depth = !loop_depth in
@@ -2370,6 +2376,8 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
           | v -> v)
         env lid.loc lid.txt
     in
+    if is_assert_primitive desc then
+      raise (Error (loc, env, Assert_must_be_direct_call));
     (if !Clflags.annotations then
        let dloc = desc.Types.val_loc in
        let annot =
@@ -2504,8 +2512,7 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
       [Ast_helper.Exp.case spat sbody]
   | Pexp_apply {funct = {pexp_desc = Pexp_ident lid}; args = [(Nolabel, scond)]}
     when match Env.lookup_value lid.txt env with
-         | _, {val_kind = Val_prim {Primitive.prim_name = "%assert"}} -> true
-         | _ -> false
+         | _, desc -> is_assert_primitive desc
          | exception Not_found -> false ->
     (* assert(cond) via the %assert primitive — same semantics as the keyword form *)
     let cond =
@@ -5016,6 +5023,10 @@ let report_error env loc ppf error =
     fprintf ppf
       "Cannot compile JSX expression because JSX support is not enabled. Add \
        \"jsx\" settings to rescript.json to enable JSX support."
+  | Assert_must_be_direct_call ->
+    fprintf ppf
+      "`assert` can only be used as a direct call like `assert(condition)`. It \
+       cannot be aliased or passed as a function."
 
 let report_error env loc ppf err =
   Printtyp.wrap_printing_env env (fun () -> report_error env loc ppf err)

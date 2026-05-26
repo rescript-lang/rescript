@@ -453,44 +453,12 @@ let warn_polymorphic_comparison loc prim args =
     Location.prerr_warning loc Warnings.Bs_polymorphic_comparison
   | _ -> ()
 
-let assert_failed_at loc =
-  let fname, line, char = Location.get_pos_info loc.Location.loc_start in
-  let fname = Filename.basename fname in
-  Lprim
-    ( Praise Raise_regular,
-      [
-        Lprim
-          ( Pmakeblock Blk_extension,
-            [
-              transl_normal_path Predef.path_assert_failure;
-              Lconst
-                (Const_block
-                   ( Blk_tuple,
-                     [
-                       Const_base (Const_string (fname, None));
-                       Const_base (Const_int line);
-                       Const_base (Const_int char);
-                     ] ));
-            ],
-            loc );
-      ],
-      loc )
-
 (* Eta-expand a primitive *)
 
 let transl_primitive loc p env ty =
   (* Printf.eprintf "----transl_primitive %s----\n" p.prim_name; *)
   if p.Primitive.prim_name = "%assert" then
-    let param = Ident.create "assert_cond" in
-    Lfunction
-      {
-        params = [param];
-        attr = default_function_attribute;
-        loc;
-        body =
-          (if !Clflags.noassert then lambda_unit
-           else Lifthenelse (Lvar param, lambda_unit, assert_failed_at loc));
-      }
+    fatal_error "Translcore.transl_primitive: first-class %assert"
   else
     let prim =
       try specialize_primitive p env ty (* ~has_constant_constructor:false *)
