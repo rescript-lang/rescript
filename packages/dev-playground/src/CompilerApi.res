@@ -46,6 +46,10 @@ type result =
   | Success(successResult)
   | Failure(failureResult)
 
+type formatResult =
+  | Formatted(string)
+  | FormatFailed(failureResult)
+
 type normalizedConfig = {
   moduleSystem: PlaygroundConfig.moduleSystem,
   warnFlags: string,
@@ -117,6 +121,7 @@ module Rescript = {
   @get external version: rescriptCompiler => option<string> = "version"
   @send external compile: (rescriptCompiler, string) => compileResult = "compile"
   @send external compileWithDebug: (rescriptCompiler, string) => compileResult = "compileWithDebug"
+  @send external format: (rescriptCompiler, string) => compileResult = "format"
 }
 
 module Config = {
@@ -138,6 +143,7 @@ module Diagnostic = {
 
 module CompileResult = {
   @get external type_: compileResult => option<string> = "type"
+  @get external code: compileResult => option<string> = "code"
   @get external jsCode: compileResult => option<string> = "js_code"
   @get external parsetree: compileResult => option<string> = "parsetree"
   @get external typedtree: compileResult => option<string> = "typedtree"
@@ -358,7 +364,7 @@ let errorToText = item => {
   `${formatLocation(item)}: ${message}`
 }
 
-let normalizeFailure = (compileOutput, elapsedMs): result => {
+let failureFromCompileOutput = (compileOutput, elapsedMs): failureResult => {
   let errors = switch compileOutput->CompileResult.errors {
   | Some(errors) => errors->Array.map(errorToText)
   | None => []
@@ -384,13 +390,16 @@ let normalizeFailure = (compileOutput, elapsedMs): result => {
     }
   }
 
-  Failure({
+  {
     errors,
     warnings,
     message,
     time: elapsedMs,
-  })
+  }
 }
+
+let normalizeFailure = (compileOutput, elapsedMs): result =>
+  Failure(failureFromCompileOutput(compileOutput, elapsedMs))
 
 let normalizeSuccess = (compileOutput, elapsedMs): result => {
   let warnings = switch compileOutput->CompileResult.warnings {
@@ -551,5 +560,41 @@ let compile = async (source, config) => {
     normalizeSuccess(compileOutput, elapsedMs)
   } else {
     normalizeFailure(compileOutput, elapsedMs)
+  }
+}
+
+let format = async (source, config) => {
+  let selectedVersion = versionOrDefault(config.compilerVersion)
+  let instance = await ensureCompiler(selectedVersion)
+  applyConfig(
+    instance,
+    ~moduleSystem=config.moduleSystem,
+    ~warnFlags=config.warnFlags,
+    ~jsxPreserveMode=config.jsxPreserveMode,
+    ~experimentalFeatures=config.experimentalFeatures,
+  )
+
+  let start = Performance.now()
+  let rescript = instance->Instance.rescript
+  let formatOutput = if hasFunction(rescript, "format") {
+    rescript->Rescript.format(source)
+  } else {
+    JsError.throwWithMessage("This compiler bundle does not expose formatting")
+  }
+  let elapsedMs = Performance.now() -. start
+
+  if formatOutput->resultIsSuccess {
+    switch formatOutput->CompileResult.code {
+    | Some(code) => Formatted(code)
+    | None =>
+      FormatFailed({
+        errors: [],
+        warnings: [],
+        message: "Formatting did not return code",
+        time: elapsedMs,
+      })
+    }
+  } else {
+    FormatFailed(failureFromCompileOutput(formatOutput, elapsedMs))
   }
 }

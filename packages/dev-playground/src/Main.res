@@ -772,6 +772,55 @@ module App = {
       urlTimerId := Some(Browser.setTimeout(syncUrlNow, 360))
     }
 
+    let formatSource = () => {
+      compileSequence := compileSequence.contents + 1
+      let sequence = compileSequence.contents
+      let sourceBeforeFormat = Signal.peek(source)
+
+      let run = async () => {
+        switch Signal.peek(status) {
+        | Loading => ()
+        | Failed(_) => ()
+        | Ready | Compiling =>
+          Signal.set(status, Compiling)
+          try {
+            switch await CompilerApi.format(sourceBeforeFormat, currentConfig()) {
+            | Formatted(formattedSource) =>
+              if sequence === compileSequence.contents {
+                if Signal.peek(source) === sourceBeforeFormat {
+                  Signal.set(source, formattedSource)
+                  Signal.set(activeLine, 1)
+                  Signal.set(editorScrollTop, 0)
+                  Signal.set(editorScrollLeft, 0)
+                  scheduleUrlSync()
+                  Signal.set(status, Ready)
+                  compileNow()
+                } else {
+                  Signal.set(status, Ready)
+                }
+              }
+            | FormatFailed(failure) =>
+              if sequence === compileSequence.contents {
+                Signal.set(compileResult, Some(CompilerApi.Failure(failure)))
+                Signal.set(status, Ready)
+              }
+            }
+          } catch {
+          | JsExn(obj) =>
+            if sequence === compileSequence.contents {
+              Signal.set(status, Failed(Browser.jsErrorMessage(obj)))
+            }
+          | _ =>
+            if sequence === compileSequence.contents {
+              Signal.set(status, Failed("Formatting failed"))
+            }
+          }
+        }
+      }
+
+      run()->ignore
+    }
+
     let showToast = message => {
       switch toastTimerId.contents {
       | Some(id) => Browser.clearTimeout(id)
@@ -888,6 +937,9 @@ module App = {
           <div class="column-header">
             <h2> {Node.text("Source")} </h2>
             <div class="actions">
+              <button class="secondary-action" onClick={_ => formatSource()}>
+                {Node.text("Format")}
+              </button>
               <button
                 class="secondary-action"
                 onClick={_ => {
