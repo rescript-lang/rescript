@@ -475,9 +475,8 @@ module Compile = struct
     List.iter Iter.iter_structure_item structure.str_items;
     Js.array (!acc |> Array.of_list)
 
-  let implementation ?(include_debug_outputs = false)
-      ~(config : BundleConfig.t) ~lang str
-      =
+  let implementation ?(include_debug_outputs = false) ~(config : BundleConfig.t)
+      ~lang str =
     let {
       BundleConfig.module_system;
       warn_flags;

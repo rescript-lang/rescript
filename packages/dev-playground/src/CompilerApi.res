@@ -398,8 +398,9 @@ let failureFromCompileOutput = (compileOutput, elapsedMs): failureResult => {
   }
 }
 
-let normalizeFailure = (compileOutput, elapsedMs): result =>
-  Failure(failureFromCompileOutput(compileOutput, elapsedMs))
+let normalizeFailure = (compileOutput, elapsedMs): result => Failure(
+  failureFromCompileOutput(compileOutput, elapsedMs),
+)
 
 let normalizeSuccess = (compileOutput, elapsedMs): result => {
   let warnings = switch compileOutput->CompileResult.warnings {

@@ -9,7 +9,7 @@ let parseModuleSystem = value =>
   | _ => None
   }
 
-type experimentalFeature = @as("LetUnwrap") LetUnwrap
+type experimentalFeature = | @as("LetUnwrap") LetUnwrap
 
 let parseExperimentalFeature = value =>
   switch value {

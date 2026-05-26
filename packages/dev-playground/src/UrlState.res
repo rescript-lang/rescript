@@ -160,8 +160,8 @@ let copyText = value => {
 let initialSource = async defaultSource => {
   switch getParam("code") {
   | None => defaultSource
-  | Some(encoded) if encoded === "" || encoded->String.length > maxEncodedCodeLength =>
-    defaultSource
+  | Some(encoded)
+    if encoded === "" || encoded->String.length > maxEncodedCodeLength => defaultSource
   | Some(encoded) =>
     try {
       let decoded = await decodeCode(encoded)
@@ -204,7 +204,8 @@ let queryJsxPreserveMode = defaultValue =>
 
 let queryExperimentalFeatures = () =>
   switch getParam("experimental") {
-  | Some(value) if value !== "" => value->String.split(",")->Array.filterMap(parseExperimentalFeature)
+  | Some(value) if value !== "" =>
+    value->String.split(",")->Array.filterMap(parseExperimentalFeature)
   | _ => []
   }
 

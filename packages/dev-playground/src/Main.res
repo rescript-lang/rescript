@@ -411,15 +411,10 @@ let highlightNodes = source =>
     <span class={tokenClass(token.kind)}> {Node.text(token.text)} </span>
   )
 
-let hasFeature = (
-  features: array<experimentalFeature>,
-  feature: experimentalFeature,
-) => features->Array.includes(feature)
+let hasFeature = (features: array<experimentalFeature>, feature: experimentalFeature) =>
+  features->Array.includes(feature)
 
-let toggleFeature = (
-  features: array<experimentalFeature>,
-  feature: experimentalFeature,
-) =>
+let toggleFeature = (features: array<experimentalFeature>, feature: experimentalFeature) =>
   hasFeature(features, feature)
     ? features->Array.filter(item => item !== feature)
     : Array.concat(features, [feature])
