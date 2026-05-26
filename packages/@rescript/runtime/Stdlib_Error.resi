@@ -3,6 +3,7 @@ Functions for working with JavaScript exceptions.
 
 See [`Error`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error) on MDN.
 */
+@@deprecated("Use `JsError` module")
 
 /** Represents a JavaScript exception. */
 @deprecated({
