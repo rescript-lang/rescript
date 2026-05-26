@@ -30,6 +30,7 @@
 - Rewatch: treat transitive workspace dependencies as local packages in monorepo roots. https://github.com/rescript-lang/rescript/pull/8411
 - Rewatch: use a single timestamp per compile pass. https://github.com/rescript-lang/rescript/pull/8428
 - Fix rewatch warning replay after early compile errors. https://github.com/rescript-lang/rescript/pull/8408
+- Fix formatting of trailing comments before `=` in let bindings. https://github.com/rescript-lang/rescript/pull/8444
 
 #### :memo: Documentation
 
