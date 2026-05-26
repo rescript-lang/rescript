@@ -15,6 +15,7 @@
 #### :bug: Bug fix
 
 - Fix rewatch warning replay after early compile errors. https://github.com/rescript-lang/rescript/pull/8408
+- Fix formatting of trailing comments before `=` in let bindings. https://github.com/rescript-lang/rescript/pull/8444
 
 # 12.3.0
 
