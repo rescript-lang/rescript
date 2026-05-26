@@ -54,97 +54,50 @@ let statusLabel = status =>
   | Failed(_) => "compiler error"
   }
 
-module Browser = {
-  @val external setTimeout: (unit => unit, int) => int = "setTimeout"
-  @val external clearTimeout: int => unit = "clearTimeout"
-
-  let eventValue = (event: Dom.event): string => {
-    ignore(event)
-    let value: string = %raw(`event.target.value`)
-    value
+let jsErrorMessage = obj =>
+  switch JsExn.message(obj) {
+  | Some(message) => message
+  | None => "Unknown JavaScript error"
   }
 
-  let eventChecked = (event: Dom.event): bool => {
-    ignore(event)
-    let checked: bool = %raw(`event.target.checked`)
-    checked
-  }
+let insertTabIndent = (event: Dom.event): option<string> => {
+  if event->Event.key !== "Tab" {
+    None
+  } else {
+    let target = event->Event.target
+    let value = target->EventTarget.value
+    let start = target->EventTarget.selectionStart
+    let end_ = target->EventTarget.selectionEnd
+    let nextValue =
+      value->String.slice(~start=0, ~end=start) ++ "  " ++ value->String.slice(~start=end_)
+    let cursor = start + 2
 
-  let eventSelectionStart = (event: Dom.event): int => {
-    ignore(event)
-    let selectionStart: int = %raw(`event.target.selectionStart || 0`)
-    selectionStart
-  }
+    event->Event.preventDefault
+    target->EventTarget.setValue(nextValue)
+    target->EventTarget.setSelectionRange(cursor, cursor)
 
-  let eventScrollTop = (event: Dom.event): int => {
-    ignore(event)
-    let scrollTop: int = %raw(`Math.round(event.target.scrollTop || 0)`)
-    scrollTop
+    Some(nextValue)
   }
+}
 
-  let eventScrollLeft = (event: Dom.event): int => {
-    ignore(event)
-    let scrollLeft: int = %raw(`Math.round(event.target.scrollLeft || 0)`)
-    scrollLeft
-  }
-
-  let insertTabIndent = (event: Dom.event): option<string> => {
-    ignore(event)
-    let value: option<string> = %raw(`
-      (() => {
-        if (event.key !== "Tab") {
-          return undefined;
+let configureSourceEditor = (scrollHandler: Dom.event => unit): unit => {
+  Window.requestAnimationFrame(() =>
+    switch Document.current->Document.getElementById("source-editor") {
+    | None => ()
+    | Some(editor) =>
+      editor->Element.setAttribute("wrap", "off")
+      switch editor->Element.getScrollHandler {
+      | Some(existingHandler) if existingHandler === scrollHandler => ()
+      | existingHandler =>
+        switch existingHandler {
+        | Some(existingHandler) => editor->Element.removeEventListener("scroll", existingHandler)
+        | None => ()
         }
-
-        const target = event.target;
-        if (target == null || typeof target.value !== "string") {
-          return undefined;
-        }
-
-        event.preventDefault();
-
-        const start = target.selectionStart || 0;
-        const end = target.selectionEnd || start;
-        const nextValue = target.value.slice(0, start) + "  " + target.value.slice(end);
-        const cursor = start + 2;
-
-        target.value = nextValue;
-        target.setSelectionRange(cursor, cursor);
-
-        return nextValue;
-      })()
-    `)
-    value
-  }
-
-  let configureSourceEditor = (scrollHandler: Dom.event => unit): unit => {
-    ignore(scrollHandler)
-    %raw(`
-      window.requestAnimationFrame(() => {
-        const editor = document.getElementById("source-editor");
-        if (editor == null) {
-          return;
-        }
-
-        editor.setAttribute("wrap", "off");
-
-        if (editor.__devPlaygroundScrollHandler === scrollHandler) {
-          return;
-        }
-        if (editor.__devPlaygroundScrollHandler != null) {
-          editor.removeEventListener("scroll", editor.__devPlaygroundScrollHandler);
-        }
-        editor.__devPlaygroundScrollHandler = scrollHandler;
-        editor.addEventListener("scroll", scrollHandler);
-      })
-    `)
-  }
-
-  let jsErrorMessage = obj =>
-    switch JsExn.message(obj) {
-    | Some(message) => message
-    | None => "Unknown JavaScript error"
+        editor->Element.setScrollHandler(scrollHandler)
+        editor->Element.addEventListener("scroll", scrollHandler)
+      }
     }
+  )
 }
 
 let lineNumbersText = source => {
@@ -253,23 +206,26 @@ let isIdentStart = char => isAlpha(char) || char === "_"
 let isIdentPart = char => isIdentStart(char) || isDigit(char) || char === "'"
 
 let isOperatorChar = char =>
-  char === "=" ||
-  char === ">" ||
-  char === "<" ||
-  char === "+" ||
-  char === "-" ||
-  char === "*" ||
-  char === "/" ||
-  char === "|" ||
-  char === "&" ||
-  char === "!" ||
-  char === "?" ||
-  char === ":" ||
-  char === "." ||
-  char === "~" ||
-  char === "^" ||
-  char === "%" ||
-  char === "#"
+  switch char {
+  | "="
+  | ">"
+  | "<"
+  | "+"
+  | "-"
+  | "*"
+  | "/"
+  | "|"
+  | "&"
+  | "!"
+  | "?"
+  | ":"
+  | "."
+  | "~"
+  | "^"
+  | "%"
+  | "#" => true
+  | _ => false
+  }
 
 let startsWithAt = (source, index, prefix) =>
   source->String.slice(~start=index, ~end=index + String.length(prefix)) === prefix
@@ -433,7 +389,7 @@ let selectedOutput = (result: option<CompilerApi.result>, activeTab: tab) =>
     switch activeTab {
     | Parsetree => result.parsetree->debugOutput
     | Typedtree => result.typedtree->debugOutput
-    | Lambda => result.lambda_->debugOutput
+    | Lambda => result.lambda->debugOutput
     | Lam => result.lam->debugOutput
     | JavaScript => result.jsCode
     | Settings => ""
@@ -512,7 +468,7 @@ module SettingsPanel = {
           id="compiler-version"
           value={ReactiveProp.reactive(compilerVersion)}
           onChange={event => {
-            let nextVersion = Browser.eventValue(event)
+            let nextVersion = Event.value(event)
             Signal.set(compilerVersion, nextVersion)
             switchCompiler(nextVersion)
           }}
@@ -541,7 +497,7 @@ module SettingsPanel = {
           id="module-system"
           value={() => (Signal.get(moduleSystem) :> string)}
           onChange={event => {
-            switch event->Browser.eventValue->parseModuleSystem {
+            switch event->Event.value->parseModuleSystem {
             | Some(nextModuleSystem) =>
               Signal.set(moduleSystem, nextModuleSystem)
               scheduleUrlSync()
@@ -565,7 +521,7 @@ module SettingsPanel = {
           value={ReactiveProp.reactive(warnFlags)}
           spellcheck=false
           onInput={event => {
-            Signal.set(warnFlags, Browser.eventValue(event))
+            Signal.set(warnFlags, Event.value(event))
             scheduleUrlSync()
             scheduleCompile()
           }}
@@ -587,7 +543,7 @@ module SettingsPanel = {
           type_="checkbox"
           checked={ReactiveProp.reactive(jsxPreserveMode)}
           onChange={event => {
-            Signal.set(jsxPreserveMode, Browser.eventChecked(event))
+            Signal.set(jsxPreserveMode, Event.checked(event))
             scheduleUrlSync()
             compileNow()
           }}
@@ -685,19 +641,16 @@ module App = {
     let shareToast: Signal.t<option<string>> = Signal.make(None)
 
     let syncEditorState = event => {
-      let currentSource = Browser.eventValue(event)
-      let cursorPosition = cursorPositionForOffset(
-        currentSource,
-        Browser.eventSelectionStart(event),
-      )
-      Signal.set(editorScrollTop, Browser.eventScrollTop(event))
-      Signal.set(editorScrollLeft, Browser.eventScrollLeft(event))
+      let currentSource = Event.value(event)
+      let cursorPosition = cursorPositionForOffset(currentSource, Event.selectionStart(event))
+      Signal.set(editorScrollTop, Event.scrollTop(event))
+      Signal.set(editorScrollLeft, Event.scrollLeft(event))
       Signal.set(activeLine, cursorPosition.line)
     }
 
     let syncEditorScroll = event => {
-      Signal.set(editorScrollTop, Browser.eventScrollTop(event))
-      Signal.set(editorScrollLeft, Browser.eventScrollLeft(event))
+      Signal.set(editorScrollTop, Event.scrollTop(event))
+      Signal.set(editorScrollLeft, Event.scrollLeft(event))
     }
 
     let currentConfig = (): CompilerApi.config => {
@@ -727,7 +680,7 @@ module App = {
           } catch {
           | JsExn(obj) =>
             if sequence === compileSequence.contents {
-              Signal.set(status, Failed(Browser.jsErrorMessage(obj)))
+              Signal.set(status, Failed(jsErrorMessage(obj)))
             }
           | _ =>
             if sequence === compileSequence.contents {
@@ -742,10 +695,10 @@ module App = {
 
     let scheduleCompile = () => {
       switch timerId.contents {
-      | Some(id) => Browser.clearTimeout(id)
+      | Some(id) => Window.clearTimeout(id)
       | None => ()
       }
-      timerId := Some(Browser.setTimeout(compileNow, 280))
+      timerId := Some(Window.setTimeout(compileNow, 280))
     }
 
     let syncUrlNow = () => {
@@ -761,10 +714,10 @@ module App = {
 
     let scheduleUrlSync = () => {
       switch urlTimerId.contents {
-      | Some(id) => Browser.clearTimeout(id)
+      | Some(id) => Window.clearTimeout(id)
       | None => ()
       }
-      urlTimerId := Some(Browser.setTimeout(syncUrlNow, 360))
+      urlTimerId := Some(Window.setTimeout(syncUrlNow, 360))
     }
 
     let formatSource = () => {
@@ -803,7 +756,7 @@ module App = {
           } catch {
           | JsExn(obj) =>
             if sequence === compileSequence.contents {
-              Signal.set(status, Failed(Browser.jsErrorMessage(obj)))
+              Signal.set(status, Failed(jsErrorMessage(obj)))
             }
           | _ =>
             if sequence === compileSequence.contents {
@@ -818,16 +771,16 @@ module App = {
 
     let showToast = message => {
       switch toastTimerId.contents {
-      | Some(id) => Browser.clearTimeout(id)
+      | Some(id) => Window.clearTimeout(id)
       | None => ()
       }
       Signal.set(shareToast, Some(message))
-      toastTimerId := Some(Browser.setTimeout(() => Signal.set(shareToast, None), 1800))
+      toastTimerId := Some(Window.setTimeout(() => Signal.set(shareToast, None), 1800))
     }
 
     let shareCurrentUrl = () => {
       switch urlTimerId.contents {
-      | Some(id) => Browser.clearTimeout(id)
+      | Some(id) => Window.clearTimeout(id)
       | None => ()
       }
 
@@ -884,7 +837,7 @@ module App = {
         } catch {
         | JsExn(obj) =>
           if sequence === compilerLoadSequence.contents {
-            Signal.set(status, Failed(Browser.jsErrorMessage(obj)))
+            Signal.set(status, Failed(jsErrorMessage(obj)))
           }
         | _ =>
           if sequence === compilerLoadSequence.contents {
@@ -913,7 +866,7 @@ module App = {
     })
 
     Effect.run(() => {
-      Browser.configureSourceEditor(syncEditorScroll)
+      configureSourceEditor(syncEditorScroll)
       None
     })
 
@@ -974,7 +927,7 @@ module App = {
               value={ReactiveProp.reactive(source)}
               spellcheck=false
               onInput={event => {
-                Signal.set(source, Browser.eventValue(event))
+                Signal.set(source, Event.value(event))
                 syncEditorState(event)
                 scheduleUrlSync()
                 scheduleCompile()
@@ -984,7 +937,7 @@ module App = {
               onKeyUp={syncEditorState}
               onFocus={syncEditorState}
               onKeyDown={event =>
-                switch Browser.insertTabIndent(event) {
+                switch insertTabIndent(event) {
                 | Some(nextSource) =>
                   Signal.set(source, nextSource)
                   syncEditorState(event)

@@ -29,7 +29,7 @@ type successResult = {
   parsetree: option<string>,
   typedtree: option<string>,
   @as("lambda")
-  lambda_: option<string>,
+  lambda: option<string>,
   lam: option<string>,
   warnings: array<string>,
   time: float,
@@ -57,109 +57,6 @@ type normalizedConfig = {
   experimentalFeatures: array<PlaygroundConfig.experimentalFeature>,
 }
 
-type jsUrl
-type jsDocument
-type jsElement
-type jsScriptElement
-type compilerApi
-type compilerInstance
-type rescriptCompiler
-type compilerConfig
-type compileResult
-type diagnostic
-
-module Env = {
-  @val
-  external viteDefaultCompilerVersion: option<string> =
-    "import.meta.env.VITE_DEFAULT_COMPILER_VERSION"
-  @val external viteCompilerVersions: option<string> = "import.meta.env.VITE_COMPILER_VERSIONS"
-  @val external viteBaseUrl: option<string> = "import.meta.env.BASE_URL"
-  @val external locationOrigin: string = "globalThis.location.origin"
-}
-
-module Url = {
-  @new external make: (string, string) => jsUrl = "URL"
-  @get external href: jsUrl => string = "href"
-  @get external pathname: jsUrl => string = "pathname"
-}
-
-module DynamicProperty = {
-  @get_index external get: ('value, string) => option<unknown> = ""
-}
-
-module Dom = {
-  @val external document: jsDocument = "document"
-  @get external head: jsDocument => jsElement = "head"
-  @send external createElement: (jsDocument, string) => jsScriptElement = "createElement"
-  @set external setSrc: (jsScriptElement, string) => unit = "src"
-  @set external setAsync: (jsScriptElement, bool) => unit = "async"
-  @set external setOnLoad: (jsScriptElement, unknown => unit) => unit = "onload"
-  @set external setOnError: (jsScriptElement, unknown => unit) => unit = "onerror"
-  @send external appendChild: (jsElement, jsScriptElement) => unit = "appendChild"
-}
-
-module Api = {
-  @val external global: option<compilerApi> = "globalThis.rescript_compiler"
-  @send external makeCompiler: compilerApi => compilerInstance = "make"
-  @get external apiVersion: compilerApi => option<string> = "api_version"
-}
-
-module Instance = {
-  @send external setModuleSystem: (compilerInstance, string) => unit = "setModuleSystem"
-  @send external setWarnFlags: (compilerInstance, string) => unit = "setWarnFlags"
-  @send external setFilename: (compilerInstance, string) => unit = "setFilename"
-  @send external setJsxPreserveMode: (compilerInstance, bool) => unit = "setJsxPreserveMode"
-  @send
-  external setExperimentalFeatures: (compilerInstance, array<string>) => unit =
-    "setExperimentalFeatures"
-  @get external rescript: compilerInstance => rescriptCompiler = "rescript"
-  @send external getConfig: compilerInstance => compilerConfig = "getConfig"
-  @get external version: compilerInstance => option<string> = "version"
-}
-
-module Rescript = {
-  @get external version: rescriptCompiler => option<string> = "version"
-  @send external compile: (rescriptCompiler, string) => compileResult = "compile"
-  @send external compileWithDebug: (rescriptCompiler, string) => compileResult = "compileWithDebug"
-  @send external format: (rescriptCompiler, string) => compileResult = "format"
-}
-
-module Config = {
-  @get external moduleSystem: compilerConfig => option<string> = "module_system"
-  @get external warnFlags: compilerConfig => option<string> = "warn_flags"
-  @get external jsxPreserveMode: compilerConfig => option<bool> = "jsx_preserve_mode"
-  @get
-  external experimentalFeatures: compilerConfig => option<array<string>> = "experimental_features"
-}
-
-module Diagnostic = {
-  @get external row: diagnostic => option<int> = "row"
-  @get external column: diagnostic => option<int> = "column"
-  @get external warnNumber: diagnostic => option<int> = "warnNumber"
-  @get external isError: diagnostic => option<bool> = "isError"
-  @get external shortMsg: diagnostic => option<string> = "shortMsg"
-  @get external fullMsg: diagnostic => option<string> = "fullMsg"
-}
-
-module CompileResult = {
-  @get external type_: compileResult => option<string> = "type"
-  @get external code: compileResult => option<string> = "code"
-  @get external jsCode: compileResult => option<string> = "js_code"
-  @get external parsetree: compileResult => option<string> = "parsetree"
-  @get external typedtree: compileResult => option<string> = "typedtree"
-  @get external lambda_: compileResult => option<string> = "lambda"
-  @get external lam: compileResult => option<string> = "lam"
-  @get external errors: compileResult => option<array<diagnostic>> = "errors"
-  @get external warnings: compileResult => option<array<diagnostic>> = "warnings"
-  @get external msg: compileResult => option<string> = "msg"
-  @get external shortMsg: compileResult => option<string> = "shortMsg"
-  @get external fullMsg: compileResult => option<string> = "fullMsg"
-}
-
-module Performance = {
-  @val @scope("performance") external now: unit => float = "now"
-}
-
 let defaultWarnFlags = "+a-4-9-20-40-41-42-50-61-102-109"
 
 let defaultCompilerVersion = Env.viteDefaultCompilerVersion->Option.getOr("local")
@@ -169,8 +66,9 @@ let pathFromBase = relativePath => {
   | Some("") | None => "/"
   | Some(baseUrl) => baseUrl
   }
-  let pathname =
-    Url.make(relativePath, Url.make(baseUrl, Env.locationOrigin)->Url.href)->Url.pathname
+
+  let pathname = Url.make(relativePath, Url.make(baseUrl, Location.origin)->Url.href)->Url.pathname
+
   if pathname->String.endsWith("/") {
     pathname->String.slice(~start=0, ~end=pathname->String.length - 1)
   } else {
@@ -229,12 +127,13 @@ let versionOrDefault = version => version === "" ? defaultCompilerVersion : vers
 
 let createScriptLoadPromise = src =>
   Promise.make((resolve, reject) => {
-    let script = Dom.document->Dom.createElement("script")
-    script->Dom.setSrc(src)
-    script->Dom.setAsync(true)
-    script->Dom.setOnLoad(_ => resolve())
-    script->Dom.setOnError(_ => reject(JsError.make(`Could not load ${src}`)))
-    Dom.document->Dom.head->Dom.appendChild(script)
+    let document = Document.current
+    let script = document->Document.createScriptElement
+    script->ScriptElement.setSrc(src)
+    script->ScriptElement.setAsync(true)
+    script->ScriptElement.setOnLoad(_ => resolve())
+    script->ScriptElement.setOnError(_ => reject(JsError.make(`Could not load ${src}`)))
+    document->Document.head->Element.appendChild(script)
   })
 
 let loadScript = (src, ~cache=true) =>
@@ -415,7 +314,7 @@ let normalizeSuccess = (compileOutput, elapsedMs): result => {
     },
     parsetree: compileOutput->CompileResult.parsetree,
     typedtree: compileOutput->CompileResult.typedtree,
-    lambda_: compileOutput->CompileResult.lambda_,
+    lambda: compileOutput->CompileResult.lambda,
     lam: compileOutput->CompileResult.lam,
     warnings,
     time: elapsedMs,

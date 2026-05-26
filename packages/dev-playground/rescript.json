@@ -19,7 +19,7 @@
   "experimental-features": {
     "LetUnwrap": true
   },
-  "compiler-flags": ["-open Xote"],
+  "compiler-flags": ["-open Xote", "-open Bindings"],
   "warnings": {
     "error": "+8"
   }

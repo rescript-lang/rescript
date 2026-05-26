@@ -4,81 +4,12 @@ let maxEncodedCodeLength = 300 * 1024
 let maxDecodedSourceLength = 200 * 1024
 let replaceSequence = ref(0)
 
-type urlSearchParams
-
-module UrlSearchParams = {
-  @new external make: string => urlSearchParams = "URLSearchParams"
-  @send @return(nullable) external get: (urlSearchParams, string) => option<string> = "get"
-}
-
-module Location = {
-  @val external search: string = "window.location.search"
-}
-
 let getParam = name => {
   UrlSearchParams.make(Location.search)->UrlSearchParams.get(name)
 }
 
-let encodeCode = async source => {
-  ignore(source)
-  let encoded: string = %raw(`
-    (() => {
-      const bytes = new TextEncoder().encode(source);
-      let binary = "";
-      const chunkSize = 0x8000;
-      for (let index = 0; index < bytes.length; index += chunkSize) {
-        const chunk = bytes.subarray(index, index + chunkSize);
-        binary += String.fromCharCode(...chunk);
-      }
-      return "b:" + btoa(binary)
-        .replace(/\+/g, "-")
-        .replace(/\//g, "_")
-        .replace(/=+$/g, "");
-    })()
-  `)
-  encoded
-}
-
-let decodeCode = encoded => {
-  ignore(encoded)
-  let decoded: promise<string> = %raw(`
-    (async () => {
-      const base64UrlToBytes = value => {
-        const base64 = value.replace(/-/g, "+").replace(/_/g, "/");
-        const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
-        const binary = atob(padded);
-        const bytes = new Uint8Array(binary.length);
-        for (let index = 0; index < binary.length; index += 1) {
-          bytes[index] = binary.charCodeAt(index);
-        }
-        return bytes;
-      };
-
-      if (encoded.startsWith("z:")) {
-        if (typeof DecompressionStream === "undefined") {
-          throw new Error(
-            "Compressed shared links require browser DecompressionStream support",
-          );
-        }
-
-        const compressedBytes = base64UrlToBytes(encoded.slice(2));
-        const stream = new Blob([compressedBytes])
-          .stream()
-          .pipeThrough(new DecompressionStream("gzip"));
-        return new TextDecoder().decode(
-          new Uint8Array(await new Response(stream).arrayBuffer()),
-        );
-      }
-
-      if (encoded.startsWith("b:")) {
-        return new TextDecoder().decode(base64UrlToBytes(encoded.slice(2)));
-      }
-
-      return encoded;
-    })()
-  `)
-  decoded
-}
+let encodeCode = SharedCode.encode
+let decodeCode = SharedCode.decode
 
 let applyUrlState = (
   encoded,
@@ -90,71 +21,27 @@ let applyUrlState = (
 ) => {
   let moduleSystem = (moduleSystem :> string)
   let experimentalFeatures = experimentalFeatures->Array.map(feature => (feature :> string))
-  ignore(encoded)
-  ignore(compilerVersion)
-  ignore(moduleSystem)
-  ignore(warnFlags)
-  ignore(jsxPreserveMode)
-  ignore(experimentalFeatures)
-  let _applied: unit = %raw(`
-    (() => {
-      const params = new URLSearchParams(window.location.search);
-      params.set("code", encoded);
-      params.set("version", compilerVersion);
-      params.set("module", moduleSystem);
-      params.set("warn", warnFlags);
+  let params = UrlSearchParams.make(Location.search)
+  params->UrlSearchParams.set("code", encoded)
+  params->UrlSearchParams.set("version", compilerVersion)
+  params->UrlSearchParams.set("module", moduleSystem)
+  params->UrlSearchParams.set("warn", warnFlags)
 
-      if (jsxPreserveMode) {
-        params.set("jsxPreserve", "true");
-      } else {
-        params.delete("jsxPreserve");
-      }
+  if jsxPreserveMode {
+    params->UrlSearchParams.set("jsxPreserve", "true")
+  } else {
+    params->UrlSearchParams.delete("jsxPreserve")
+  }
 
-      if (experimentalFeatures.length > 0) {
-        params.set("experimental", experimentalFeatures.join(","));
-      } else {
-        params.delete("experimental");
-      }
+  if experimentalFeatures->Array.length > 0 {
+    params->UrlSearchParams.set("experimental", experimentalFeatures->Array.join(","))
+  } else {
+    params->UrlSearchParams.delete("experimental")
+  }
 
-      const query = params.toString();
-      const nextUrl =
-        window.location.pathname +
-        (query === "" ? "" : "?" + query) +
-        window.location.hash;
-      window.history.replaceState(null, "", nextUrl);
-    })()
-  `)
-  ignore(_applied)
-}
-
-let copyText = value => {
-  ignore(value)
-  let promise: promise<unit> = %raw(`
-    (async () => {
-      if (navigator.clipboard?.writeText != null && window.isSecureContext) {
-        await navigator.clipboard.writeText(value);
-        return;
-      }
-
-      const textarea = document.createElement("textarea");
-      textarea.value = value;
-      textarea.setAttribute("readonly", "");
-      textarea.style.position = "fixed";
-      textarea.style.top = "-9999px";
-      textarea.style.left = "-9999px";
-      document.body.appendChild(textarea);
-      textarea.select();
-
-      try {
-        if (!document.execCommand("copy")) {
-          throw new Error("Copy command failed");
-        }
-      } finally {
-        document.body.removeChild(textarea);
-      }
-    })()
-  `)
-  promise
+  let query = params->UrlSearchParams.toString
+  let nextUrl = Location.pathname ++ (query === "" ? "" : "?" ++ query) ++ Location.hash
+  History.replaceState(nextUrl)
 }
 
 let initialSource = async defaultSource => {
@@ -163,11 +50,9 @@ let initialSource = async defaultSource => {
   | Some(encoded)
     if encoded === "" || encoded->String.length > maxEncodedCodeLength => defaultSource
   | Some(encoded) =>
-    try {
-      let decoded = await decodeCode(encoded)
-      decoded->String.length <= maxDecodedSourceLength ? decoded : defaultSource
-    } catch {
-    | error =>
+    switch await decodeCode(encoded) {
+    | decoded => decoded->String.length <= maxDecodedSourceLength ? decoded : defaultSource
+    | exception error =>
       Console.warn2("Could not restore shared playground source", error)
       defaultSource
     }
@@ -232,7 +117,7 @@ let replaceUrlState = async (
   }
 }
 
-let windowHref = (): string => %raw(`window.location.href`)
+let windowHref = () => Location.href
 
 let copyUrlState = async (
   source,
@@ -242,10 +127,11 @@ let copyUrlState = async (
   jsxPreserveMode,
   experimentalFeatures,
 ): result<unit, string> => {
-  try {
-    replaceSequence := replaceSequence.contents + 1
-    let sequence = replaceSequence.contents
-    let encoded = await encodeCode(source)
+  replaceSequence := replaceSequence.contents + 1
+  let sequence = replaceSequence.contents
+
+  switch await encodeCode(source) {
+  | encoded =>
     if sequence === replaceSequence.contents {
       applyUrlState(
         encoded,
@@ -257,12 +143,13 @@ let copyUrlState = async (
       )
 
       let href = windowHref()
-      let _ = await copyText(href)
-      Ok()
+      switch await Clipboard.writeText(href) {
+      | () => Ok()
+      | exception _ => Error("Could not copy link")
+      }
     } else {
       Error("Link changed before it could be copied")
     }
-  } catch {
-  | _ => Error("Could not copy link")
+  | exception _ => Error("Could not copy link")
   }
 }
