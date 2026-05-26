@@ -1,0 +1,1 @@
+let compute: int => int

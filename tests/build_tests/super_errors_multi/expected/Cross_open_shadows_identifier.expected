@@ -1,0 +1,11 @@
+===== User.res =====
+
+  [1;33mWarning number 44[0m
+  [36m/.../fixtures/Cross_open_shadows_identifier/User.res[0m:[2m2:1-6[0m
+
+  1 [2m│[0m let answer = "outer"
+  [1;33m2[0m [2m│[0m [1;33mopen A[0m
+  3 [2m│[0m let _ = answer
+  4 [2m│[0m 
+
+  this open statement shadows the value identifier answer (which is later used)
