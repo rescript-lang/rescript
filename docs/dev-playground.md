@@ -75,8 +75,7 @@ packages/dev-playground/
   src/
     Main.res
     CompilerApi.res
-    CompilerRuntime.js
-    UrlState.js
+    UrlState.res
     styles.css
   scripts/
     stage-local-bundle.mjs
