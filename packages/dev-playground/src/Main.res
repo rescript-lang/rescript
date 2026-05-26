@@ -832,23 +832,20 @@ module App = {
       }
 
       let share = async () => {
-        try {
-          let _ = await UrlState.copyUrlState(
-            Signal.peek(source),
-            Signal.peek(compilerVersion),
-            Signal.peek(moduleSystem),
-            Signal.peek(warnFlags),
-            Signal.peek(jsxPreserveMode),
-            Signal.peek(experimentalFeatures),
-          )
-          showToast("Link copied")
-        } catch {
-        | JsExn(_) => showToast("Could not copy link")
-        | _ => showToast("Could not copy link")
+        switch await UrlState.copyUrlState(
+          Signal.peek(source),
+          Signal.peek(compilerVersion),
+          Signal.peek(moduleSystem),
+          Signal.peek(warnFlags),
+          Signal.peek(jsxPreserveMode),
+          Signal.peek(experimentalFeatures),
+        ) {
+        | Ok() => showToast("Link copied")
+        | Error(message) => showToast(message)
         }
       }
 
-      share()->ignore
+      share()->Promise.ignore
     }
 
     let loadCompiler = (version, compileAfterLoad) => {

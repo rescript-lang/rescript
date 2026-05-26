@@ -241,19 +241,28 @@ let copyUrlState = async (
   warnFlags,
   jsxPreserveMode,
   experimentalFeatures,
-) => {
-  replaceSequence := replaceSequence.contents + 1
-  let encoded = await encodeCode(source)
-  applyUrlState(
-    encoded,
-    compilerVersion,
-    moduleSystem,
-    warnFlags,
-    jsxPreserveMode,
-    experimentalFeatures,
-  )
+): result<unit, string> => {
+  try {
+    replaceSequence := replaceSequence.contents + 1
+    let sequence = replaceSequence.contents
+    let encoded = await encodeCode(source)
+    if sequence === replaceSequence.contents {
+      applyUrlState(
+        encoded,
+        compilerVersion,
+        moduleSystem,
+        warnFlags,
+        jsxPreserveMode,
+        experimentalFeatures,
+      )
 
-  let href = windowHref()
-  let _ = await copyText(href)
-  href
+      let href = windowHref()
+      let _ = await copyText(href)
+      Ok()
+    } else {
+      Error("Link changed before it could be copied")
+    }
+  } catch {
+  | _ => Error("Could not copy link")
+  }
 }
