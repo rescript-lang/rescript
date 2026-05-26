@@ -79,6 +79,7 @@ module Window = {
   @val external setTimeout: (unit => unit, int) => int = "setTimeout"
   @val external clearTimeout: int => unit = "clearTimeout"
   @val external requestAnimationFrame: (unit => unit) => unit = "window.requestAnimationFrame"
+  @val external isSecureContext: bool = "window.isSecureContext"
 }
 
 module Url = {
@@ -122,6 +123,14 @@ module EventTarget = {
   }
 }
 
+module CssStyle = {
+  type t
+
+  @set external setPosition: (t, string) => unit = "position"
+  @set external setTop: (t, string) => unit = "top"
+  @set external setLeft: (t, string) => unit = "left"
+}
+
 module Element = {
   @send external setAttribute: (Dom.element, string, string) => unit = "setAttribute"
   @send
@@ -130,6 +139,8 @@ module Element = {
   external removeEventListener: (Dom.element, string, Dom.event => unit) => unit =
     "removeEventListener"
   @send external appendChild: (Dom.element, Dom.element) => unit = "appendChild"
+  @send external removeChild: (Dom.element, Dom.element) => unit = "removeChild"
+  @get external style: Dom.element => CssStyle.t = "style"
   @get @return(nullable)
   external getScrollHandler: Dom.element => option<Dom.event => unit> =
     "__devPlaygroundScrollHandler"
@@ -145,12 +156,20 @@ module ScriptElement = {
   @set external setOnError: (Dom.element, unknown => unit) => unit = "onerror"
 }
 
+module TextAreaElement = {
+  @set external setValue: (Dom.element, string) => unit = "value"
+  @send external select: Dom.element => unit = "select"
+}
+
 module Document = {
   @val external current: {..} = "document"
   @get external head: {..} => Dom.element = "head"
+  @get external body: {..} => Dom.element = "body"
   @send external createScriptElement: ({..}, @as("script") _) => Dom.element = "createElement"
+  @send external createTextAreaElement: ({..}, @as("textarea") _) => Dom.element = "createElement"
   @send @return(nullable)
   external getElementById: ({..}, string) => option<Dom.element> = "getElementById"
+  @send external execCommand: ({..}, string) => bool = "execCommand"
 }
 
 module UrlSearchParams = {
@@ -180,97 +199,174 @@ module Performance = {
   @val @scope("performance") external now: unit => float = "now"
 }
 
+module Base64 = {
+  @val external encode: string => string = "btoa"
+  @val external decode: string => string = "atob"
+}
+
+module WebTextEncoder = {
+  type t
+
+  @new external make: unit => t = "TextEncoder"
+  @send external encode: (t, string) => Uint8Array.t = "encode"
+}
+
+module WebTextDecoder = {
+  type t
+
+  @new external make: unit => t = "TextDecoder"
+  @send external decode: (t, Uint8Array.t) => string = "decode"
+}
+
+module WebDecompressionStream = {
+  type t
+
+  @val external supported: option<unknown> = "globalThis.DecompressionStream"
+  @new external make: string => t = "DecompressionStream"
+}
+
+module ReadableStream = {
+  type t
+
+  @send external pipeThrough: (t, WebDecompressionStream.t) => t = "pipeThrough"
+}
+
+module WebBlob = {
+  type t
+
+  @new external make: array<Uint8Array.t> => t = "Blob"
+  @send external stream: t => ReadableStream.t = "stream"
+}
+
+module WebResponse = {
+  type t
+
+  @new external make: ReadableStream.t => t = "Response"
+  @send external arrayBuffer: t => promise<ArrayBuffer.t> = "arrayBuffer"
+}
+
 module SharedCode = {
+  let bytesToBinary = bytes => {
+    let chunkSize = 0x8000
+    let length = bytes->TypedArray.length
+    let chunks: array<string> = []
+
+    let rec collect = start =>
+      if start < length {
+        let end_ = Math.Int.min(start + chunkSize, length)
+        let chunk = bytes->TypedArray.subarray(~start, ~end=end_)
+        let chars = Array.fromInitializer(~length=end_ - start, index =>
+          chunk->TypedArray.get(index)->Option.getOr(0)
+        )
+        chunks->Array.push(chars->String.fromCharCodeMany)
+        collect(end_)
+      }
+
+    collect(0)
+    chunks->Array.join("")
+  }
+
+  let base64UrlToBytes = value => {
+    let base64 = value->String.replaceAll("-", "+")->String.replaceAll("_", "/")
+    let remainder = mod(base64->String.length, 4)
+    let padded = switch remainder {
+    | 0 => base64
+    | remainder => base64->String.padEnd(base64->String.length + 4 - remainder, "=")
+    }
+    let binary = padded->Base64.decode
+    let length = binary->String.length
+    let bytes = Uint8Array.fromLength(length)
+
+    for index in 0 to length - 1 {
+      bytes->TypedArray.set(index, binary->String.charCodeAtUnsafe(index))
+    }
+
+    bytes
+  }
+
   let encode = async source => {
-    ignore(source)
-    let encoded: string = %raw(`
-      (() => {
-        const bytes = new TextEncoder().encode(source);
-        let binary = "";
-        const chunkSize = 0x8000;
-        for (let index = 0; index < bytes.length; index += chunkSize) {
-          const chunk = bytes.subarray(index, index + chunkSize);
-          binary += String.fromCharCode(...chunk);
-        }
-        return "b:" + btoa(binary)
-          .replace(/\+/g, "-")
-          .replace(/\//g, "_")
-          .replace(/=+$/g, "");
-      })()
-    `)
-    encoded
+    let bytes = WebTextEncoder.make()->WebTextEncoder.encode(source)
+    "b:" ++
+    bytes
+    ->bytesToBinary
+    ->Base64.encode
+    ->String.replaceAllRegExp(/\+/g, "-")
+    ->String.replaceAllRegExp(/\//g, "_")
+    ->String.replaceAllRegExp(/=+$/g, "")
   }
 
-  let decode = encoded => {
-    ignore(encoded)
-    let decoded: promise<string> = %raw(`
-      (async () => {
-        const base64UrlToBytes = value => {
-          const base64 = value.replace(/-/g, "+").replace(/_/g, "/");
-          const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
-          const binary = atob(padded);
-          const bytes = new Uint8Array(binary.length);
-          for (let index = 0; index < binary.length; index += 1) {
-            bytes[index] = binary.charCodeAt(index);
-          }
-          return bytes;
-        };
+  let decode = async encoded =>
+    if encoded->String.startsWith("z:") {
+      switch WebDecompressionStream.supported {
+      | None =>
+        JsError.throwWithMessage(
+          "Compressed shared links require browser DecompressionStream support",
+        )
+      | Some(_) =>
+        let compressedBytes = encoded->String.slice(~start=2)->base64UrlToBytes
+        let stream =
+          WebBlob.make([compressedBytes])
+          ->WebBlob.stream
+          ->ReadableStream.pipeThrough(WebDecompressionStream.make("gzip"))
+        let buffer = await WebResponse.make(stream)->WebResponse.arrayBuffer
+        WebTextDecoder.make()->WebTextDecoder.decode(Uint8Array.fromBuffer(buffer))
+      }
+    } else if encoded->String.startsWith("b:") {
+      WebTextDecoder.make()->WebTextDecoder.decode(
+        encoded->String.slice(~start=2)->base64UrlToBytes,
+      )
+    } else {
+      encoded
+    }
+}
 
-        if (encoded.startsWith("z:")) {
-          if (typeof DecompressionStream === "undefined") {
-            throw new Error(
-              "Compressed shared links require browser DecompressionStream support",
-            );
-          }
+module NavigatorClipboard = {
+  type t
 
-          const compressedBytes = base64UrlToBytes(encoded.slice(2));
-          const stream = new Blob([compressedBytes])
-            .stream()
-            .pipeThrough(new DecompressionStream("gzip"));
-          return new TextDecoder().decode(
-            new Uint8Array(await new Response(stream).arrayBuffer()),
-          );
-        }
+  @val external current: option<t> = "navigator.clipboard"
+  @get @return(nullable) external writeTextMethod: t => option<unknown> = "writeText"
+  @send external writeText: (t, string) => promise<unit> = "writeText"
 
-        if (encoded.startsWith("b:")) {
-          return new TextDecoder().decode(base64UrlToBytes(encoded.slice(2)));
-        }
-
-        return encoded;
-      })()
-    `)
-    decoded
-  }
+  let canWriteText = clipboard =>
+    switch clipboard->writeTextMethod {
+    | Some(writeText) => writeText->Type.typeof === #function
+    | None => false
+    }
 }
 
 module Clipboard = {
-  let writeText = value => {
-    ignore(value)
-    let promise: promise<unit> = %raw(`
-      (async () => {
-        if (navigator.clipboard?.writeText != null && window.isSecureContext) {
-          await navigator.clipboard.writeText(value);
-          return;
-        }
+  let writeWithFallback = value => {
+    let document = Document.current
+    let textarea = document->Document.createTextAreaElement
+    textarea->TextAreaElement.setValue(value)
+    textarea->Element.setAttribute("readonly", "")
 
-        const textarea = document.createElement("textarea");
-        textarea.value = value;
-        textarea.setAttribute("readonly", "");
-        textarea.style.position = "fixed";
-        textarea.style.top = "-9999px";
-        textarea.style.left = "-9999px";
-        document.body.appendChild(textarea);
-        textarea.select();
+    let style = textarea->Element.style
+    style->CssStyle.setPosition("fixed")
+    style->CssStyle.setTop("-9999px")
+    style->CssStyle.setLeft("-9999px")
 
-        try {
-          if (!document.execCommand("copy")) {
-            throw new Error("Copy command failed");
-          }
-        } finally {
-          document.body.removeChild(textarea);
-        }
-      })()
-    `)
-    promise
+    let body = document->Document.body
+    body->Element.appendChild(textarea)
+    textarea->TextAreaElement.select
+
+    let copied = switch document->Document.execCommand("copy") {
+    | copied => Ok(copied)
+    | exception _ => Error()
+    }
+
+    body->Element.removeChild(textarea)
+
+    switch copied {
+    | Ok(true) => ()
+    | Ok(false) | Error() => JsError.throwWithMessage("Copy command failed")
+    }
   }
+
+  let writeText = async value =>
+    switch NavigatorClipboard.current {
+    | Some(clipboard) if Window.isSecureContext && clipboard->NavigatorClipboard.canWriteText =>
+      await clipboard->NavigatorClipboard.writeText(value)
+    | _ => writeWithFallback(value)
+    }
 }
