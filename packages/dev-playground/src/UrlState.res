@@ -143,12 +143,9 @@ let copyUrlState = async (
       ~experimentalFeatures,
     )
 
-    let href = windowHref()
-    let? Ok() = switch await Clipboard.writeText(href) {
+    switch await windowHref()->Clipboard.writeText {
     | () => Ok()
     | exception _ => Error("Could not copy link")
     }
-
-    Ok()
   }
 }
