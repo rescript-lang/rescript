@@ -51,7 +51,7 @@
  * modules in the playground.
  * v5: Removed .ml support.
  * v6: Added `config.experimental_features` and `config.jsx_preserve_mode` to the BundleConfig.
- * v7: Added opt-in debug dump output APIs for developer playground tooling.
+ * v7: Added debug dump output APIs for developer playground tooling.
  * *)
 let api_version = "7"
 
@@ -315,23 +315,6 @@ module Printer = struct
          (Printtyp.tree_of_type_declaration (Ident.create name) decl rec_status))
 end
 
-module DebugOutput = struct
-  type t = ParseTree | TypedTree | Lambda | Lam
-
-  let from_string = function
-    | "parsetree" -> Some ParseTree
-    | "typedtree" -> Some TypedTree
-    | "lambda" -> Some Lambda
-    | "lam" -> Some Lam
-    | _ -> None
-
-  let from_js_array value =
-    value |> Js.to_array |> Array.to_list
-    |> List.filter_map (fun item -> from_string (Js.to_string item))
-
-  let has output outputs = List.exists (fun item -> item = output) outputs
-end
-
 module Compile = struct
   (* Apparently it's not possible to retrieve the loc info from
    * Location.error_of_exn properly, so we need to do some extra
@@ -496,7 +479,8 @@ module Compile = struct
     | Some value -> Js.Unsafe.[|(name, inject @@ Js.string value)|]
     | None -> [||]
 
-  let implementation ?(debug_outputs = []) ~(config : BundleConfig.t) ~lang str
+  let implementation ?(include_debug_outputs = false)
+      ~(config : BundleConfig.t) ~lang str
       =
     let {
       BundleConfig.module_system;
@@ -531,7 +515,7 @@ module Compile = struct
       let ast = impl str in
       let ast = Ppx_entry.rewrite_implementation ast in
       let debug_parsetree =
-        if DebugOutput.has DebugOutput.ParseTree debug_outputs then
+        if include_debug_outputs then
           Some (Printer.to_string Printast.implementation ast)
         else None
       in
@@ -545,7 +529,7 @@ module Compile = struct
         (a, b)
       in
       let debug_typedtree =
-        if DebugOutput.has DebugOutput.TypedTree debug_outputs then
+        if include_debug_outputs then
           Some
             (Printer.to_string Printtyped.implementation_with_coercion
                typed_tree)
@@ -554,12 +538,12 @@ module Compile = struct
       typed_tree |> Translmod.transl_implementation modulename
       |> fun (lambda, exports) ->
       let debug_lambda =
-        if DebugOutput.has DebugOutput.Lambda debug_outputs then
+        if include_debug_outputs then
           Some (Printer.to_string Printlambda.lambda lambda)
         else None
       in
       let debug_lam =
-        if DebugOutput.has DebugOutput.Lam debug_outputs then
+        if include_debug_outputs then
           let export_ident_sets = Set_ident.of_list exports in
           let lam, _ = Lam_convert.convert export_ident_sets lambda in
           Some (Lam_print.lambda_to_string lam)
@@ -644,10 +628,9 @@ module Export = struct
                  Compile.implementation ~config ~lang (Js.to_string code)) );
         ( "compileWithDebug",
           inject
-          @@ Js.wrap_meth_callback (fun _ code debug_outputs ->
-                 Compile.implementation
-                   ~debug_outputs:(DebugOutput.from_js_array debug_outputs)
-                   ~config ~lang (Js.to_string code)) );
+          @@ Js.wrap_meth_callback (fun _ code ->
+                 Compile.implementation ~include_debug_outputs:true ~config
+                   ~lang (Js.to_string code)) );
         ("version", inject @@ Js.string Bs_version.version);
       |]
     in

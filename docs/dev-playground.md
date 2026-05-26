@@ -23,7 +23,7 @@ Implemented:
 - `make dev-playground-build` verifies the local staged bundle and frontend production build.
 - `compiler/jsoo/jsoo_playground_main.ml` exposes additive API version `7`.
 - `rescript.compile(source)` stays compatible with the existing end-user playground.
-- `rescript.compileWithDebug(source, outputs)` exposes requested internal artifacts for the developer playground.
+- `rescript.compileWithDebug(source)` exposes internal artifacts for the developer playground.
 - The local playground supports source editing, line numbers, lightweight ReScript highlighting, output tabs, settings, URL state, and loading the current checkout's compiler bundle through `playground-bundles/local`.
 
 This follow-up adds the master-only GitHub Pages deployment:
@@ -155,8 +155,8 @@ Introduce an API version bump in `compiler/jsoo/jsoo_playground_main.ml`.
 The initial v7 API should stay additive:
 
 - Keep `rescript.compile(source)` unchanged for the end-user playground and existing CDN bundles.
-- Add `rescript.compileWithDebug(source, outputs)` for developer tooling.
-- Return the same success/error shape as `compile`, plus only the requested debug output string fields.
+- Add `rescript.compileWithDebug(source)` for developer tooling.
+- Return the same success/error shape as `compile`, plus all debug output string fields.
 
 This keeps `rescript-lang.org/try` compatible while allowing the developer playground to feature-detect `api_version >= 7`.
 

@@ -265,12 +265,7 @@ export async function compile(source, config) {
 
   const start = performance.now();
   const result = hasFunction(instance.rescript, "compileWithDebug")
-    ? instance.rescript.compileWithDebug(source, [
-        "parsetree",
-        "typedtree",
-        "lambda",
-        "lam",
-      ])
+    ? instance.rescript.compileWithDebug(source)
     : instance.rescript.compile(source);
   const elapsedMs = performance.now() - start;
 
