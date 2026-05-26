@@ -509,11 +509,6 @@ module Compile = struct
       (* default *)
       let ast = impl str in
       let ast = Ppx_entry.rewrite_implementation ast in
-      let debug_parsetree =
-        if include_debug_outputs then
-          Some (Printer.to_string Printast.implementation ast)
-        else None
-      in
       let typed_tree =
         let a, b, _, signature =
           Typemod.type_implementation_more modulename modulename modulename env
@@ -523,25 +518,18 @@ module Compile = struct
         types_signature := signature;
         (a, b)
       in
-      let debug_typedtree =
-        if include_debug_outputs then
-          Some
-            (Printer.to_string Printtyped.implementation_with_coercion
-               typed_tree)
-        else None
-      in
       typed_tree |> Translmod.transl_implementation modulename
       |> fun (lambda, exports) ->
-      let debug_lambda =
-        if include_debug_outputs then
-          Some (Printer.to_string Printlambda.lambda lambda)
-        else None
-      in
-      let debug_lam =
+      let debug_outputs =
         if include_debug_outputs then
           let export_ident_sets = Set_ident.of_list exports in
           let lam, _ = Lam_convert.convert export_ident_sets lambda in
-          Some (Lam_print.lambda_to_string lam)
+          Some
+            ( Printer.to_string Printast.implementation ast,
+              Printer.to_string Printtyped.implementation_with_coercion
+                typed_tree,
+              Printer.to_string Printlambda.lambda lambda,
+              Lam_print.lambda_to_string lam )
         else None
       in
       let buffer = Buffer.create 1000 in
@@ -567,8 +555,8 @@ module Compile = struct
           |]
       in
       let debug_attrs =
-        match (debug_parsetree, debug_typedtree, debug_lambda, debug_lam) with
-        | Some parsetree, Some typedtree, Some lambda, Some lam ->
+        match debug_outputs with
+        | Some (parsetree, typedtree, lambda, lam) ->
           Js.Unsafe.
             [|
               ("parsetree", inject @@ Js.string parsetree);
@@ -576,7 +564,7 @@ module Compile = struct
               ("lambda", inject @@ Js.string lambda);
               ("lam", inject @@ Js.string lam);
             |]
-        | _ -> [||]
+        | None -> [||]
       in
       Js.Unsafe.(obj (Array.append attrs debug_attrs))
     with e -> (
