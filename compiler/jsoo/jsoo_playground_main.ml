@@ -475,10 +475,6 @@ module Compile = struct
     List.iter Iter.iter_structure_item structure.str_items;
     Js.array (!acc |> Array.of_list)
 
-  let optional_string_attr name = function
-    | Some value -> Js.Unsafe.[|(name, inject @@ Js.string value)|]
-    | None -> [||]
-
   let implementation ?(include_debug_outputs = false)
       ~(config : BundleConfig.t) ~lang str
       =
@@ -571,16 +567,19 @@ module Compile = struct
             ("type", inject @@ Js.string "success");
           |]
       in
-      Js.Unsafe.(
-        obj
-          (Array.concat
-             [
-               attrs;
-               optional_string_attr "parsetree" debug_parsetree;
-               optional_string_attr "typedtree" debug_typedtree;
-               optional_string_attr "lambda" debug_lambda;
-               optional_string_attr "lam" debug_lam;
-             ]))
+      let debug_attrs =
+        match (debug_parsetree, debug_typedtree, debug_lambda, debug_lam) with
+        | Some parsetree, Some typedtree, Some lambda, Some lam ->
+          Js.Unsafe.
+            [|
+              ("parsetree", inject @@ Js.string parsetree);
+              ("typedtree", inject @@ Js.string typedtree);
+              ("lambda", inject @@ Js.string lambda);
+              ("lam", inject @@ Js.string lam);
+            |]
+        | _ -> [||]
+      in
+      Js.Unsafe.(obj (Array.append attrs debug_attrs))
     with e -> (
       match e with
       | Arg.Bad msg -> ErrorRet.make_warning_flag_error ~warn_flags msg
