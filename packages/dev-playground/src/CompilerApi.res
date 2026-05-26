@@ -48,9 +48,8 @@ type failure = {
   time: float,
 }
 
-type formatResult =
-  | Formatted(string)
-  | FormatFailed(failure)
+type compileResult = result<success, failure>
+type formatResult = result<string, failure>
 
 type normalizedConfig = {
   moduleSystem: PlaygroundConfig.moduleSystem,
@@ -266,8 +265,6 @@ let failureFromCompileOutput = (compileOutput, elapsedMs): failure => {
   {errors, warnings, message, time: elapsedMs}
 }
 
-type compileResult = result<success, failure>
-
 let normalize = (compileOutput, elapsedMs): compileResult => {
   switch (
     compileOutput->CompileResult.parsetree,
@@ -454,9 +451,9 @@ let format = async (source, config: PlaygroundConfig.t) => {
 
   if formatOutput->resultIsSuccess {
     switch formatOutput->CompileResult.code {
-    | Some(code) => Formatted(code)
+    | Some(code) => Ok(code)
     | None =>
-      FormatFailed({
+      Error({
         errors: [],
         warnings: [],
         message: "Formatting did not return code",
@@ -464,6 +461,6 @@ let format = async (source, config: PlaygroundConfig.t) => {
       })
     }
   } else {
-    FormatFailed(failureFromCompileOutput(formatOutput, elapsedMs))
+    Error(failureFromCompileOutput(formatOutput, elapsedMs))
   }
 }

@@ -60,7 +60,7 @@ let jsErrorMessage = obj =>
   | None => "Unknown JavaScript error"
   }
 
-let insertTabIndent = (event: Dom.event): option<string> => {
+let insertTabIndent = (event: Dom.event): option<string> =>
   if event->Event.key !== "Tab" {
     None
   } else {
@@ -78,9 +78,8 @@ let insertTabIndent = (event: Dom.event): option<string> => {
 
     Some(nextValue)
   }
-}
 
-let configureSourceEditor = (scrollHandler: Dom.event => unit): unit => {
+let configureSourceEditor = (scrollHandler: Dom.event => unit): unit =>
   Window.requestAnimationFrame(() =>
     switch Document.current->Document.getElementById("source-editor") {
     | None => ()
@@ -98,7 +97,6 @@ let configureSourceEditor = (scrollHandler: Dom.event => unit): unit => {
       }
     }
   )
-}
 
 let lineNumbersText = source => {
   let lineCount = source->String.split("\n")->Array.length
@@ -596,12 +594,14 @@ module App = {
   @jsx.component
   let make = () => {
     let requestedCompilerVersion = UrlState.queryCompilerVersion(CompilerApi.defaultCompilerVersion)
+
     let initialCompilerVersion =
       CompilerApi.availableCompilerVersions->Array.some(version =>
         version.id === requestedCompilerVersion
       )
         ? requestedCompilerVersion
         : CompilerApi.defaultCompilerVersion
+
     let initialModuleSystem = UrlState.queryModuleSystem(Esmodule)
     let initialWarnFlags = UrlState.queryWarnFlags(CompilerApi.defaultWarnFlags)
     let initialJsxPreserveMode = UrlState.queryJsxPreserveMode(false)
@@ -636,6 +636,7 @@ module App = {
     let syncEditorState = event => {
       let currentSource = Event.value(event)
       let cursorPosition = cursorPositionForOffset(currentSource, Event.selectionStart(event))
+
       Signal.set(editorScrollTop, Event.scrollTop(event))
       Signal.set(editorScrollLeft, Event.scrollLeft(event))
       Signal.set(activeLine, cursorPosition.line)
@@ -694,16 +695,15 @@ module App = {
       timerId := Some(Window.setTimeout(compileNow, 280))
     }
 
-    let syncUrlNow = () => {
+    let syncUrlNow = () =>
       UrlState.replaceUrlState(
-        Signal.peek(source),
-        Signal.peek(compilerVersion),
-        Signal.peek(moduleSystem),
-        Signal.peek(warnFlags),
-        Signal.peek(jsxPreserveMode),
-        Signal.peek(experimentalFeatures),
-      )->ignore
-    }
+        ~source=Signal.peek(source),
+        ~compilerVersion=Signal.peek(compilerVersion),
+        ~moduleSystem=Signal.peek(moduleSystem),
+        ~warnFlags=Signal.peek(warnFlags),
+        ~jsxPreserveMode=Signal.peek(jsxPreserveMode),
+        ~experimentalFeatures=Signal.peek(experimentalFeatures),
+      )->Promise.ignore
 
     let scheduleUrlSync = () => {
       switch urlTimerId.contents {
@@ -726,7 +726,7 @@ module App = {
           Signal.set(status, Compiling)
           try {
             switch await CompilerApi.format(sourceBeforeFormat, currentConfig()) {
-            | Formatted(formattedSource) =>
+            | Ok(formattedSource) =>
               if sequence === compileSequence.contents {
                 if Signal.peek(source) === sourceBeforeFormat {
                   Signal.set(source, formattedSource)
@@ -740,7 +740,7 @@ module App = {
                   Signal.set(status, Ready)
                 }
               }
-            | FormatFailed(failure) =>
+            | Error(failure) =>
               if sequence === compileSequence.contents {
                 Signal.set(compileResult, Some(Error(failure)))
                 Signal.set(status, Ready)
@@ -779,12 +779,12 @@ module App = {
 
       let share = async () => {
         switch await UrlState.copyUrlState(
-          Signal.peek(source),
-          Signal.peek(compilerVersion),
-          Signal.peek(moduleSystem),
-          Signal.peek(warnFlags),
-          Signal.peek(jsxPreserveMode),
-          Signal.peek(experimentalFeatures),
+          ~source=Signal.peek(source),
+          ~compilerVersion=Signal.peek(compilerVersion),
+          ~moduleSystem=Signal.peek(moduleSystem),
+          ~warnFlags=Signal.peek(warnFlags),
+          ~jsxPreserveMode=Signal.peek(jsxPreserveMode),
+          ~experimentalFeatures=Signal.peek(experimentalFeatures),
         ) {
         | Ok() => showToast("Link copied")
         | Error(message) => showToast(message)

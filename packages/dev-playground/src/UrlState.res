@@ -1,5 +1,3 @@
-open PlaygroundConfig
-
 let maxEncodedCodeLength = 300 * 1024
 let maxDecodedSourceLength = 200 * 1024
 let replaceSequence = ref(0)
@@ -8,16 +6,13 @@ let getParam = name => {
   UrlSearchParams.make(Location.search)->UrlSearchParams.get(name)
 }
 
-let encodeCode = SharedCode.encode
-let decodeCode = SharedCode.decode
-
 let applyUrlState = (
-  encoded,
-  compilerVersion,
-  moduleSystem: moduleSystem,
-  warnFlags,
-  jsxPreserveMode,
-  experimentalFeatures: array<experimentalFeature>,
+  ~encoded,
+  ~compilerVersion,
+  ~moduleSystem: PlaygroundConfig.moduleSystem,
+  ~warnFlags,
+  ~jsxPreserveMode,
+  ~experimentalFeatures: array<PlaygroundConfig.experimentalFeature>,
 ) => {
   let moduleSystem = (moduleSystem :> string)
   let experimentalFeatures = experimentalFeatures->Array.map(feature => (feature :> string))
@@ -50,7 +45,7 @@ let initialSource = async defaultSource => {
   | Some(encoded)
     if encoded === "" || encoded->String.length > maxEncodedCodeLength => defaultSource
   | Some(encoded) =>
-    switch await decodeCode(encoded) {
+    switch await SharedCode.decode(encoded) {
     | decoded => decoded->String.length <= maxDecodedSourceLength ? decoded : defaultSource
     | exception error =>
       Console.warn2("Could not restore shared playground source", error)
@@ -68,7 +63,7 @@ let queryCompilerVersion = defaultVersion =>
 let queryModuleSystem = defaultModuleSystem =>
   switch getParam("module") {
   | Some(value) =>
-    switch value->parseModuleSystem {
+    switch value->PlaygroundConfig.parseModuleSystem {
     | Some(moduleSystem) => moduleSystem
     | None => defaultModuleSystem
     }
@@ -90,29 +85,30 @@ let queryJsxPreserveMode = defaultValue =>
 let queryExperimentalFeatures = () =>
   switch getParam("experimental") {
   | Some(value) if value !== "" =>
-    value->String.split(",")->Array.filterMap(parseExperimentalFeature)
+    value->String.split(",")->Array.filterMap(PlaygroundConfig.parseExperimentalFeature)
   | _ => []
   }
 
 let replaceUrlState = async (
-  source,
-  compilerVersion,
-  moduleSystem,
-  warnFlags,
-  jsxPreserveMode,
-  experimentalFeatures,
+  ~source,
+  ~compilerVersion,
+  ~moduleSystem,
+  ~warnFlags,
+  ~jsxPreserveMode,
+  ~experimentalFeatures,
 ) => {
   replaceSequence := replaceSequence.contents + 1
   let sequence = replaceSequence.contents
-  let encoded = await encodeCode(source)
+  let encoded = await SharedCode.encode(source)
+
   if sequence === replaceSequence.contents {
     applyUrlState(
-      encoded,
-      compilerVersion,
-      moduleSystem,
-      warnFlags,
-      jsxPreserveMode,
-      experimentalFeatures,
+      ~encoded,
+      ~compilerVersion,
+      ~moduleSystem,
+      ~warnFlags,
+      ~jsxPreserveMode,
+      ~experimentalFeatures,
     )
   }
 }
@@ -120,17 +116,17 @@ let replaceUrlState = async (
 let windowHref = () => Location.href
 
 let copyUrlState = async (
-  source,
-  compilerVersion,
-  moduleSystem,
-  warnFlags,
-  jsxPreserveMode,
-  experimentalFeatures,
+  ~source,
+  ~compilerVersion,
+  ~moduleSystem,
+  ~warnFlags,
+  ~jsxPreserveMode,
+  ~experimentalFeatures,
 ): result<unit, string> => {
   replaceSequence := replaceSequence.contents + 1
   let sequence = replaceSequence.contents
 
-  let? Ok(encoded) = switch await encodeCode(source) {
+  let? Ok(encoded) = switch await SharedCode.encode(source) {
   | encoded => Ok(encoded)
   | exception _ => Error("Could not copy link")
   }
@@ -139,12 +135,12 @@ let copyUrlState = async (
     Error("Link changed before it could be copied")
   } else {
     applyUrlState(
-      encoded,
-      compilerVersion,
-      moduleSystem,
-      warnFlags,
-      jsxPreserveMode,
-      experimentalFeatures,
+      ~encoded,
+      ~compilerVersion,
+      ~moduleSystem,
+      ~warnFlags,
+      ~jsxPreserveMode,
+      ~experimentalFeatures,
     )
 
     let href = windowHref()
