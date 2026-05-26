@@ -375,35 +375,31 @@ let toggleFeature = (features: array<experimentalFeature>, feature: experimental
     ? features->Array.filter(item => item !== feature)
     : Array.concat(features, [feature])
 
-let debugOutputUnavailable = "This local compiler bundle does not expose this debug dump yet."
-
-let debugOutput = output => output->Option.getOr(debugOutputUnavailable)
-
-let selectedOutput = (result: option<CompilerApi.result>, activeTab: tab) =>
+let selectedOutput = (result: option<CompilerApi.compileResult>, activeTab: tab) =>
   switch result {
   | None => "The compiler is loading. Results will appear here after the first compile."
-  | Some(CompilerApi.Failure(result)) =>
+  | Some(Error(result)) =>
     let errors = result.errors->Array.join("\n")
     errors === "" ? result.message : errors
-  | Some(CompilerApi.Success(result)) =>
+  | Some(Ok(result)) =>
     switch activeTab {
-    | Parsetree => result.parsetree->debugOutput
-    | Typedtree => result.typedtree->debugOutput
-    | Lambda => result.lambda->debugOutput
-    | Lam => result.lam->debugOutput
+    | Parsetree => result.parsetree
+    | Typedtree => result.typedtree
+    | Lambda => result.lambda
+    | Lam => result.lam
     | JavaScript => result.jsCode
     | Settings => ""
     }
   }
 
-let resultSummary = (result: option<CompilerApi.result>) =>
+let resultSummary = (result: option<CompilerApi.compileResult>) =>
   switch result {
   | None => "No compile result yet"
-  | Some(CompilerApi.Success(result)) =>
+  | Some(Ok(result)) =>
     let warningCount = result.warnings->Array.length
     let warningText = warningCount === 0 ? "no warnings" : `${warningCount->Int.toString} warnings`
     `Compiled in ${result.time->Float.toFixed(~digits=1)}ms with ${warningText}`
-  | Some(CompilerApi.Failure(result)) => result.message
+  | Some(Error(result)) => result.message
   }
 
 module TabButton = {
@@ -420,19 +416,16 @@ module TabButton = {
 
 module Problems = {
   @jsx.component
-  let make = (~compileResult: Signal.t<option<CompilerApi.result>>) => {
+  let make = (~compileResult: Signal.t<option<CompilerApi.compileResult>>) => {
     <div class="problems">
       <div class="problems-title"> {Node.text("Problems")} </div>
       <pre class="problems-output">
         {Node.signalText(() =>
           switch Signal.get(compileResult) {
-          | Some(CompilerApi.Success({warnings})) if warnings->Array.length > 0 =>
-            warnings->Array.join("\n")
-          | Some(CompilerApi.Failure({warnings})) if warnings->Array.length > 0 =>
-            warnings->Array.join("\n")
-          | Some(CompilerApi.Failure({errors})) if errors->Array.length > 0 =>
-            errors->Array.join("\n")
-          | Some(CompilerApi.Failure({message})) => message
+          | Some(Ok({warnings})) if warnings->Array.length > 0 => warnings->Array.join("\n")
+          | Some(Error({warnings})) if warnings->Array.length > 0 => warnings->Array.join("\n")
+          | Some(Error({errors})) if errors->Array.length > 0 => errors->Array.join("\n")
+          | Some(Error({message})) => message
           | _ => "No problems reported."
           }
         )}
@@ -618,7 +611,7 @@ module App = {
     let activeTab = Signal.make(JavaScript)
     let status = Signal.make(Loading)
     let compilerInfo: Signal.t<option<CompilerApi.info>> = Signal.make(None)
-    let compileResult: Signal.t<option<CompilerApi.result>> = Signal.make(None)
+    let compileResult: Signal.t<option<CompilerApi.compileResult>> = Signal.make(None)
     let compilerVersion = Signal.make(initialCompilerVersion)
     let moduleSystem = Signal.make(initialModuleSystem)
     let warnFlags = Signal.make(initialWarnFlags)
@@ -653,8 +646,8 @@ module App = {
       Signal.set(editorScrollLeft, Event.scrollLeft(event))
     }
 
-    let currentConfig = (): CompilerApi.config => {
-      compilerVersion: Signal.peek(compilerVersion),
+    let currentConfig = () => {
+      PlaygroundConfig.compilerVersion: Signal.peek(compilerVersion),
       moduleSystem: Signal.peek(moduleSystem),
       warnFlags: Signal.peek(warnFlags),
       jsxPreserveMode: Signal.peek(jsxPreserveMode),
@@ -749,7 +742,7 @@ module App = {
               }
             | FormatFailed(failure) =>
               if sequence === compileSequence.contents {
-                Signal.set(compileResult, Some(CompilerApi.Failure(failure)))
+                Signal.set(compileResult, Some(Error(failure)))
                 Signal.set(status, Ready)
               }
             }

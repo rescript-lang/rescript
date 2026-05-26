@@ -1,4 +1,24 @@
-open PlaygroundConfig
+module Version = {
+  type t = {
+    id: string,
+    label: string,
+  }
+
+  let jsonStringField = (item, name) =>
+    switch item->Dict.get(name) {
+    | Some(JSON.String(value)) => Some(value)
+    | _ => None
+    }
+
+  let fromJson = json =>
+    switch json {
+    | JSON.Object(item) =>
+      let? Some(id) = item->jsonStringField("id")
+      let? Some(label) = item->jsonStringField("label")
+      Some({id, label})
+    | _ => None
+    }
+}
 
 type info = {
   bundleId: string,
@@ -11,44 +31,26 @@ type info = {
   libraries: array<string>,
 }
 
-type config = {
-  compilerVersion: string,
-  moduleSystem: PlaygroundConfig.moduleSystem,
-  warnFlags: string,
-  jsxPreserveMode: bool,
-  experimentalFeatures: array<PlaygroundConfig.experimentalFeature>,
-}
-
-type compilerVersion = {
-  id: string,
-  label: string,
-}
-
-type successResult = {
+type success = {
   jsCode: string,
-  parsetree: option<string>,
-  typedtree: option<string>,
-  @as("lambda")
-  lambda: option<string>,
-  lam: option<string>,
+  parsetree: string,
+  typedtree: string,
+  lambda: string,
+  lam: string,
   warnings: array<string>,
   time: float,
 }
 
-type failureResult = {
+type failure = {
   errors: array<string>,
   warnings: array<string>,
   message: string,
   time: float,
 }
 
-type result =
-  | Success(successResult)
-  | Failure(failureResult)
-
 type formatResult =
   | Formatted(string)
-  | FormatFailed(failureResult)
+  | FormatFailed(failure)
 
 type normalizedConfig = {
   moduleSystem: PlaygroundConfig.moduleSystem,
@@ -76,35 +78,17 @@ let pathFromBase = relativePath => {
   }
 }
 
-let jsonStringField = (item, name) =>
-  switch item->Dict.get(name) {
-  | Some(JSON.String(value)) => Some(value)
-  | _ => None
-  }
-
-let compilerVersionFromJson = json =>
-  switch json {
-  | JSON.Object(item) =>
-    let? Some(id) = item->jsonStringField("id")
-    let? Some(label) = item->jsonStringField("label")
-    Some({id, label})
-  | _ => None
-  }
-
 let parseCompilerVersions = defaultVersion => {
-  let fallback = [{id: defaultVersion, label: defaultVersion}]
+  let fallback = [{Version.id: defaultVersion, label: defaultVersion}]
   switch Env.viteCompilerVersions {
   | None | Some("") => fallback
   | Some(versionJson) =>
-    try {
-      switch JSON.parseOrThrow(versionJson) {
-      | JSON.Array(items) =>
-        let versions = items->Array.filterMap(compilerVersionFromJson)
-        versions->Array.length === items->Array.length ? versions : fallback
-      | _ => fallback
-      }
-    } catch {
+    switch JSON.parseOrThrow(versionJson) {
+    | JSON.Array(items) =>
+      let versions = items->Array.filterMap(Version.fromJson)
+      versions->Array.length === items->Array.length ? versions : fallback
     | _ => fallback
+    | exception _ => fallback
     }
   }
 }
@@ -153,10 +137,10 @@ let versionRoot = version => `${compilerRoot}/${versionOrDefault(version)}`
 
 let applyConfig = (
   instance,
-  ~moduleSystem: moduleSystem,
+  ~moduleSystem: PlaygroundConfig.moduleSystem,
   ~warnFlags,
   ~jsxPreserveMode,
-  ~experimentalFeatures: array<experimentalFeature>,
+  ~experimentalFeatures: array<PlaygroundConfig.experimentalFeature>,
 ) => {
   if hasFunction(instance, "setModuleSystem") {
     instance->Instance.setModuleSystem((moduleSystem :> string))
@@ -224,24 +208,19 @@ let getConfigIfAvailable = (instance: compilerInstance): option<compilerConfig> 
   }
 
 let diagnosticMessage = (item, fallback) =>
-  switch item->Diagnostic.shortMsg {
-  | Some(message) => message
-  | None =>
-    switch item->Diagnostic.fullMsg {
-    | Some(message) => message
-    | None => fallback
-    }
-  }
+  item->Diagnostic.shortMsg->Option.orElse(item->Diagnostic.fullMsg)->Option.getOr(fallback)
 
 let formatLocation = item => {
   let row = switch item->Diagnostic.row {
   | Some(row) => row
   | None => 0
   }
+
   let column = switch item->Diagnostic.column {
   | Some(column) => column
   | None => 0
   }
+
   row > 0 ? `Line ${row->Int.toString}, ${column->Int.toString}` : "Compiler"
 }
 
@@ -250,10 +229,12 @@ let warningToText = item => {
   | Some(true) => "error"
   | Some(false) | None => "warning"
   }
+
   let warnNumber = switch item->Diagnostic.warnNumber {
   | Some(warnNumber) => ` ${warnNumber->Int.toString}`
   | None => ""
   }
+
   let message = diagnosticMessage(item, "Unknown warning")
   `${formatLocation(item)}: ${prefix}${warnNumber}: ${message}`
 }
@@ -263,62 +244,52 @@ let errorToText = item => {
   `${formatLocation(item)}: ${message}`
 }
 
-let failureFromCompileOutput = (compileOutput, elapsedMs): failureResult => {
+let failureFromCompileOutput = (compileOutput, elapsedMs): failure => {
   let errors = switch compileOutput->CompileResult.errors {
   | Some(errors) => errors->Array.map(errorToText)
   | None => []
   }
+
   let warnings = switch compileOutput->CompileResult.warnings {
   | Some(warnings) => warnings->Array.map(warningToText)
   | None => []
   }
-  let message = switch compileOutput->CompileResult.msg {
-  | Some(message) => message
-  | None =>
-    switch compileOutput->CompileResult.shortMsg {
-    | Some(message) => message
-    | None =>
-      switch compileOutput->CompileResult.fullMsg {
-      | Some(message) => message
-      | None =>
-        switch errors->Array.get(0) {
-        | Some(error) => error
-        | None => "Compilation failed"
-        }
-      }
-    }
-  }
 
-  {
-    errors,
-    warnings,
-    message,
-    time: elapsedMs,
-  }
+  let message =
+    compileOutput
+    ->CompileResult.msg
+    ->Option.orElse(compileOutput->CompileResult.shortMsg)
+    ->Option.orElse(compileOutput->CompileResult.fullMsg)
+    ->Option.orElse(errors->Array.get(0))
+    ->Option.getOr("Compilation failed")
+
+  {errors, warnings, message, time: elapsedMs}
 }
 
-let normalizeFailure = (compileOutput, elapsedMs): result => Failure(
-  failureFromCompileOutput(compileOutput, elapsedMs),
-)
+type compileResult = result<success, failure>
 
-let normalizeSuccess = (compileOutput, elapsedMs): result => {
-  let warnings = switch compileOutput->CompileResult.warnings {
-  | Some(warnings) => warnings->Array.map(warningToText)
-  | None => []
-  }
+let normalize = (compileOutput, elapsedMs): compileResult => {
+  switch (
+    compileOutput->CompileResult.parsetree,
+    compileOutput->CompileResult.typedtree,
+    compileOutput->CompileResult.lambda,
+    compileOutput->CompileResult.lam,
+  ) {
+  | (Some(parsetree), Some(typedtree), Some(lambda), Some(lam)) =>
+    let warnings = switch compileOutput->CompileResult.warnings {
+    | Some(warnings) => warnings->Array.map(warningToText)
+    | None => []
+    }
 
-  Success({
-    jsCode: switch compileOutput->CompileResult.jsCode {
+    let jsCode = switch compileOutput->CompileResult.jsCode {
     | Some(jsCode) => jsCode
     | None => ""
-    },
-    parsetree: compileOutput->CompileResult.parsetree,
-    typedtree: compileOutput->CompileResult.typedtree,
-    lambda: compileOutput->CompileResult.lambda,
-    lam: compileOutput->CompileResult.lam,
-    warnings,
-    time: elapsedMs,
-  })
+    }
+
+    Ok({jsCode, parsetree, typedtree, lambda, lam, warnings, time: elapsedMs})
+
+  | _ => Error(failureFromCompileOutput(compileOutput, elapsedMs))
+  }
 }
 
 let loadRuntimeLibraries = async version => {
@@ -436,9 +407,10 @@ let init = async version => {
   }
 }
 
-let compile = async (source, config) => {
+let compile = async (source, config: PlaygroundConfig.t) => {
   let selectedVersion = versionOrDefault(config.compilerVersion)
   let instance = await ensureCompiler(selectedVersion)
+
   applyConfig(
     instance,
     ~moduleSystem=config.moduleSystem,
@@ -449,21 +421,18 @@ let compile = async (source, config) => {
 
   let start = Performance.now()
   let rescript = instance->Instance.rescript
+
   let compileOutput = if hasFunction(rescript, "compileWithDebug") {
     rescript->Rescript.compileWithDebug(source)
   } else {
     rescript->Rescript.compile(source)
   }
-  let elapsedMs = Performance.now() -. start
+  let elapsedMs = Performance.now() - start
 
-  if compileOutput->resultIsSuccess {
-    normalizeSuccess(compileOutput, elapsedMs)
-  } else {
-    normalizeFailure(compileOutput, elapsedMs)
-  }
+  normalize(compileOutput, elapsedMs)
 }
 
-let format = async (source, config) => {
+let format = async (source, config: PlaygroundConfig.t) => {
   let selectedVersion = versionOrDefault(config.compilerVersion)
   let instance = await ensureCompiler(selectedVersion)
   applyConfig(
@@ -481,7 +450,7 @@ let format = async (source, config) => {
   } else {
     JsError.throwWithMessage("This compiler bundle does not expose formatting")
   }
-  let elapsedMs = Performance.now() -. start
+  let elapsedMs = Performance.now() - start
 
   if formatOutput->resultIsSuccess {
     switch formatOutput->CompileResult.code {

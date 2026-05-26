@@ -130,26 +130,29 @@ let copyUrlState = async (
   replaceSequence := replaceSequence.contents + 1
   let sequence = replaceSequence.contents
 
-  switch await encodeCode(source) {
-  | encoded =>
-    if sequence === replaceSequence.contents {
-      applyUrlState(
-        encoded,
-        compilerVersion,
-        moduleSystem,
-        warnFlags,
-        jsxPreserveMode,
-        experimentalFeatures,
-      )
-
-      let href = windowHref()
-      switch await Clipboard.writeText(href) {
-      | () => Ok()
-      | exception _ => Error("Could not copy link")
-      }
-    } else {
-      Error("Link changed before it could be copied")
-    }
+  let? Ok(encoded) = switch await encodeCode(source) {
+  | encoded => Ok(encoded)
   | exception _ => Error("Could not copy link")
+  }
+
+  if sequence !== replaceSequence.contents {
+    Error("Link changed before it could be copied")
+  } else {
+    applyUrlState(
+      encoded,
+      compilerVersion,
+      moduleSystem,
+      warnFlags,
+      jsxPreserveMode,
+      experimentalFeatures,
+    )
+
+    let href = windowHref()
+    let? Ok() = switch await Clipboard.writeText(href) {
+    | () => Ok()
+    | exception _ => Error("Could not copy link")
+    }
+
+    Ok()
   }
 }

@@ -16,3 +16,11 @@ let parseExperimentalFeature = value =>
   | "LetUnwrap" => Some(LetUnwrap)
   | _ => None
   }
+
+type t = {
+  compilerVersion: string,
+  moduleSystem: moduleSystem,
+  warnFlags: string,
+  jsxPreserveMode: bool,
+  experimentalFeatures: array<experimentalFeature>,
+}
