@@ -1,3 +1,5 @@
+open PlaygroundTypes
+
 let maxEncodedCodeLength = 300 * 1024
 let maxDecodedSourceLength = 200 * 1024
 let replaceSequence = ref(0)
@@ -7,13 +9,6 @@ let getParam = name => {
   let value: Nullable.t<string> = %raw(`new URLSearchParams(window.location.search).get(name)`)
   value->Nullable.toOption
 }
-
-let normalizeModuleSystem = (value, fallback) =>
-  switch value {
-  | "esmodule" | "es6" => "esmodule"
-  | "commonjs" | "nodejs" => "commonjs"
-  | _ => fallback
-  }
 
 let encodeCode = async source => {
   ignore(source)
@@ -79,11 +74,13 @@ let decodeCode = encoded => {
 let applyUrlState = (
   encoded,
   compilerVersion,
-  moduleSystem,
+  moduleSystem: moduleSystem,
   warnFlags,
   jsxPreserveMode,
-  experimentalFeatures,
+  experimentalFeatures: array<experimentalFeature>,
 ) => {
+  let moduleSystem = (moduleSystem :> string)
+  let experimentalFeatures = experimentalFeatures->Array.map(feature => (feature :> string))
   ignore(encoded)
   ignore(compilerVersion)
   ignore(moduleSystem)
@@ -176,7 +173,11 @@ let queryCompilerVersion = defaultVersion =>
 
 let queryModuleSystem = defaultModuleSystem =>
   switch getParam("module") {
-  | Some(value) => normalizeModuleSystem(value, defaultModuleSystem)
+  | Some(value) =>
+    switch value->parseModuleSystem {
+    | Some(moduleSystem) => moduleSystem
+    | None => defaultModuleSystem
+    }
   | None => defaultModuleSystem
   }
 
@@ -194,7 +195,7 @@ let queryJsxPreserveMode = defaultValue =>
 
 let queryExperimentalFeatures = () =>
   switch getParam("experimental") {
-  | Some(value) if value !== "" => value->String.split(",")->Array.filter(item => item !== "")
+  | Some(value) if value !== "" => value->String.split(",")->Array.filterMap(parseExperimentalFeature)
   | _ => []
   }
 

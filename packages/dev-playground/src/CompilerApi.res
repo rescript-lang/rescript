@@ -1,20 +1,22 @@
+open PlaygroundTypes
+
 type info = {
   bundleId: string,
   version: string,
   apiVersion: string,
-  moduleSystem: string,
+  moduleSystem: PlaygroundTypes.moduleSystem,
   warnFlags: string,
   jsxPreserveMode: bool,
-  experimentalFeatures: array<string>,
+  experimentalFeatures: array<PlaygroundTypes.experimentalFeature>,
   libraries: array<string>,
 }
 
 type config = {
   compilerVersion: string,
-  moduleSystem: string,
+  moduleSystem: PlaygroundTypes.moduleSystem,
   warnFlags: string,
   jsxPreserveMode: bool,
-  experimentalFeatures: array<string>,
+  experimentalFeatures: array<PlaygroundTypes.experimentalFeature>,
 }
 
 type compilerVersion = {
@@ -22,26 +24,33 @@ type compilerVersion = {
   label: string,
 }
 
-type result = {
-  ok: bool,
-  kind: string,
+type successResult = {
   jsCode: string,
-  parsetree: string,
-  typedtree: string,
+  parsetree: option<string>,
+  typedtree: option<string>,
   @as("lambda")
-  lambda_: string,
-  lam: string,
+  lambda_: option<string>,
+  lam: option<string>,
+  warnings: array<string>,
+  time: float,
+}
+
+type failureResult = {
   errors: array<string>,
   warnings: array<string>,
   message: string,
   time: float,
 }
 
+type result =
+  | Success(successResult)
+  | Failure(failureResult)
+
 type normalizedConfig = {
-  moduleSystem: string,
+  moduleSystem: PlaygroundTypes.moduleSystem,
   warnFlags: string,
   jsxPreserveMode: bool,
-  experimentalFeatures: array<string>,
+  experimentalFeatures: array<PlaygroundTypes.experimentalFeature>,
 }
 
 type jsUrl
@@ -235,13 +244,13 @@ let versionRoot = version => `${compilerRoot}/${versionOrDefault(version)}`
 
 let applyConfig = (
   instance,
-  ~moduleSystem,
+  ~moduleSystem: moduleSystem,
   ~warnFlags,
   ~jsxPreserveMode,
-  ~experimentalFeatures,
+  ~experimentalFeatures: array<experimentalFeature>,
 ) => {
   if hasFunction(instance, "setModuleSystem") {
-    instance->Instance.setModuleSystem(moduleSystem === "" ? "esmodule" : moduleSystem)
+    instance->Instance.setModuleSystem((moduleSystem :> string))
   }
   if hasFunction(instance, "setWarnFlags") {
     instance->Instance.setWarnFlags(warnFlags === "" ? defaultWarnFlags : warnFlags)
@@ -253,33 +262,41 @@ let applyConfig = (
     instance->Instance.setJsxPreserveMode(jsxPreserveMode)
   }
   if hasFunction(instance, "setExperimentalFeatures") {
-    instance->Instance.setExperimentalFeatures(experimentalFeatures)
+    instance->Instance.setExperimentalFeatures(
+      experimentalFeatures->Array.map(feature => (feature :> string)),
+    )
   }
 }
 
-let normalizeModuleSystem = moduleSystem =>
-  switch moduleSystem {
-  | "es6" => "esmodule"
-  | "nodejs" => "commonjs"
-  | moduleSystem => moduleSystem
+let moduleSystemFromConfig = configValue =>
+  switch configValue->Config.moduleSystem->Nullable.toOption {
+  | Some(moduleSystem) =>
+    switch moduleSystem->PlaygroundTypes.parseModuleSystem {
+    | Some(moduleSystem) => moduleSystem
+    | None => Esmodule
+    }
+  | None => Esmodule
   }
+
+let experimentalFeaturesFromConfig = configValue =>
+  configValue
+  ->Config.experimentalFeatures
+  ->Nullable.getOr([])
+  ->Array.filterMap(PlaygroundTypes.parseExperimentalFeature)
 
 let normalizeConfig = (configValue: Nullable.t<compilerConfig>): normalizedConfig =>
   switch configValue->Nullable.toOption {
   | None => {
-      moduleSystem: "esmodule",
+      moduleSystem: Esmodule,
       warnFlags: defaultWarnFlags,
       jsxPreserveMode: false,
       experimentalFeatures: [],
     }
   | Some(configValue) => {
-      moduleSystem: configValue
-      ->Config.moduleSystem
-      ->Nullable.getOr("esmodule")
-      ->normalizeModuleSystem,
+      moduleSystem: configValue->moduleSystemFromConfig,
       warnFlags: configValue->Config.warnFlags->Nullable.getOr(defaultWarnFlags),
       jsxPreserveMode: configValue->Config.jsxPreserveMode->Nullable.getOr(false),
-      experimentalFeatures: configValue->Config.experimentalFeatures->Nullable.getOr([]),
+      experimentalFeatures: configValue->experimentalFeaturesFromConfig,
     }
   }
 
@@ -343,41 +360,29 @@ let normalizeFailure = (compileOutput, elapsedMs): result => {
     }
   }
 
-  {
-    ok: false,
-    kind: compileOutput->CompileResult.type_->Nullable.getOr("error"),
-    jsCode: "",
-    parsetree: "",
-    typedtree: "",
-    lambda_: "",
-    lam: "",
+  Failure({
     errors,
     warnings,
     message,
     time: elapsedMs,
-  }
+  })
 }
 
 let normalizeSuccess = (compileOutput, elapsedMs): result => {
-  let fallback = "This local compiler bundle does not expose this debug dump yet."
   let warnings = switch compileOutput->CompileResult.warnings->Nullable.toOption {
   | Some(warnings) => warnings->Array.map(warningToText)
   | None => []
   }
 
-  {
-    ok: true,
-    kind: "success",
+  Success({
     jsCode: compileOutput->CompileResult.jsCode->Nullable.getOr(""),
-    parsetree: compileOutput->CompileResult.parsetree->Nullable.getOr(fallback),
-    typedtree: compileOutput->CompileResult.typedtree->Nullable.getOr(fallback),
-    lambda_: compileOutput->CompileResult.lambda_->Nullable.getOr(fallback),
-    lam: compileOutput->CompileResult.lam->Nullable.getOr(fallback),
-    errors: [],
+    parsetree: compileOutput->CompileResult.parsetree->Nullable.toOption,
+    typedtree: compileOutput->CompileResult.typedtree->Nullable.toOption,
+    lambda_: compileOutput->CompileResult.lambda_->Nullable.toOption,
+    lam: compileOutput->CompileResult.lam->Nullable.toOption,
     warnings,
-    message: "Compiled successfully",
     time: elapsedMs,
-  }
+  })
 }
 
 let loadRuntimeLibraries = async version => {
@@ -436,7 +441,7 @@ let ensureCompiler = async version => {
     let instance = api->Api.makeCompiler
     applyConfig(
       instance,
-      ~moduleSystem="esmodule",
+      ~moduleSystem=Esmodule,
       ~warnFlags=defaultWarnFlags,
       ~jsxPreserveMode=false,
       ~experimentalFeatures=[],
@@ -460,7 +465,10 @@ let apiVersion = api =>
   }
 
 let resultIsSuccess = compileOutput =>
-  compileOutput->CompileResult.type_->Nullable.getOr("") === "success"
+  switch compileOutput->CompileResult.type_->Nullable.toOption {
+  | Some("success") => true
+  | _ => false
+  }
 
 let init = async version => {
   let selectedVersion = versionOrDefault(version)

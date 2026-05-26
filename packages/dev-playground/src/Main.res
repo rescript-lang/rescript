@@ -1,3 +1,5 @@
+open PlaygroundTypes
+
 type tab =
   | Parsetree
   | Typedtree
@@ -18,6 +20,7 @@ type sourcePosition = {
 }
 
 let tabs: array<tab> = [Parsetree, Typedtree, Lambda, Lam, JavaScript, Settings]
+let moduleSystems: array<moduleSystem> = [Esmodule, Commonjs]
 
 let defaultSource = `type person = {
   name: string,
@@ -408,25 +411,35 @@ let highlightNodes = source =>
     <span class={tokenClass(token.kind)}> {Node.text(token.text)} </span>
   )
 
-let hasFeature = (features: array<string>, feature: string) => features->Array.includes(feature)
+let hasFeature = (
+  features: array<experimentalFeature>,
+  feature: experimentalFeature,
+) => features->Array.includes(feature)
 
-let toggleFeature = (features: array<string>, feature: string) =>
+let toggleFeature = (
+  features: array<experimentalFeature>,
+  feature: experimentalFeature,
+) =>
   hasFeature(features, feature)
     ? features->Array.filter(item => item !== feature)
     : Array.concat(features, [feature])
 
+let debugOutputUnavailable = "This local compiler bundle does not expose this debug dump yet."
+
+let debugOutput = output => output->Option.getOr(debugOutputUnavailable)
+
 let selectedOutput = (result: option<CompilerApi.result>, activeTab: tab) =>
   switch result {
   | None => "The compiler is loading. Results will appear here after the first compile."
-  | Some(result) if !result.ok =>
+  | Some(CompilerApi.Failure(result)) =>
     let errors = result.errors->Array.join("\n")
     errors === "" ? result.message : errors
-  | Some(result) =>
+  | Some(CompilerApi.Success(result)) =>
     switch activeTab {
-    | Parsetree => result.parsetree
-    | Typedtree => result.typedtree
-    | Lambda => result.lambda_
-    | Lam => result.lam
+    | Parsetree => result.parsetree->debugOutput
+    | Typedtree => result.typedtree->debugOutput
+    | Lambda => result.lambda_->debugOutput
+    | Lam => result.lam->debugOutput
     | JavaScript => result.jsCode
     | Settings => ""
     }
@@ -435,11 +448,11 @@ let selectedOutput = (result: option<CompilerApi.result>, activeTab: tab) =>
 let resultSummary = (result: option<CompilerApi.result>) =>
   switch result {
   | None => "No compile result yet"
-  | Some(result) if result.ok =>
+  | Some(CompilerApi.Success(result)) =>
     let warningCount = result.warnings->Array.length
     let warningText = warningCount === 0 ? "no warnings" : `${warningCount->Int.toString} warnings`
     `Compiled in ${result.time->Float.toFixed(~digits=1)}ms with ${warningText}`
-  | Some(result) => result.message
+  | Some(CompilerApi.Failure(result)) => result.message
   }
 
 module TabButton = {
@@ -462,9 +475,13 @@ module Problems = {
       <pre class="problems-output">
         {Node.signalText(() =>
           switch Signal.get(compileResult) {
-          | Some({warnings}) if warnings->Array.length > 0 => warnings->Array.join("\n")
-          | Some({ok: false, errors}) if errors->Array.length > 0 => errors->Array.join("\n")
-          | Some({ok: false, message}) => message
+          | Some(CompilerApi.Success({warnings})) if warnings->Array.length > 0 =>
+            warnings->Array.join("\n")
+          | Some(CompilerApi.Failure({warnings})) if warnings->Array.length > 0 =>
+            warnings->Array.join("\n")
+          | Some(CompilerApi.Failure({errors})) if errors->Array.length > 0 =>
+            errors->Array.join("\n")
+          | Some(CompilerApi.Failure({message})) => message
           | _ => "No problems reported."
           }
         )}
@@ -479,10 +496,10 @@ module SettingsPanel = {
     ~activeTab: Signal.t<tab>,
     ~compilerInfo: Signal.t<option<CompilerApi.info>>,
     ~compilerVersion: Signal.t<string>,
-    ~moduleSystem: Signal.t<string>,
+    ~moduleSystem: Signal.t<moduleSystem>,
     ~warnFlags: Signal.t<string>,
     ~jsxPreserveMode: Signal.t<bool>,
-    ~experimentalFeatures: Signal.t<array<string>>,
+    ~experimentalFeatures: Signal.t<array<experimentalFeature>>,
     ~switchCompiler: string => unit,
     ~compileNow: unit => unit,
     ~scheduleCompile: unit => unit,
@@ -527,15 +544,23 @@ module SettingsPanel = {
         <label class="setting-label" for_="module-system"> {Node.text("Module System")} </label>
         <select
           id="module-system"
-          value={ReactiveProp.reactive(moduleSystem)}
+          value={() => (Signal.get(moduleSystem) :> string)}
           onChange={event => {
-            Signal.set(moduleSystem, Browser.eventValue(event))
-            scheduleUrlSync()
-            compileNow()
+            switch event->Browser.eventValue->parseModuleSystem {
+            | Some(nextModuleSystem) =>
+              Signal.set(moduleSystem, nextModuleSystem)
+              scheduleUrlSync()
+              compileNow()
+            | None => ()
+            }
           }}
         >
-          <option value="esmodule"> {Node.text("esmodule")} </option>
-          <option value="commonjs"> {Node.text("commonjs")} </option>
+          {Node.fragment(
+            moduleSystems->Array.map(moduleSystem => {
+              let value = (moduleSystem :> string)
+              <option value> {Node.text(value)} </option>
+            }),
+          )}
         </select>
       </section>
       <section class="settings-section">
@@ -578,9 +603,9 @@ module SettingsPanel = {
         <input
           id="feature-let-unwrap"
           type_="checkbox"
-          checked={() => Signal.get(experimentalFeatures)->hasFeature("LetUnwrap")}
+          checked={() => Signal.get(experimentalFeatures)->hasFeature(LetUnwrap)}
           onChange={_ => {
-            Signal.update(experimentalFeatures, features => toggleFeature(features, "LetUnwrap"))
+            Signal.update(experimentalFeatures, features => toggleFeature(features, LetUnwrap))
             scheduleUrlSync()
             compileNow()
           }}
@@ -633,7 +658,7 @@ module App = {
       )
         ? requestedCompilerVersion
         : CompilerApi.defaultCompilerVersion
-    let initialModuleSystem = UrlState.queryModuleSystem("esmodule")
+    let initialModuleSystem = UrlState.queryModuleSystem(Esmodule)
     let initialWarnFlags = UrlState.queryWarnFlags(CompilerApi.defaultWarnFlags)
     let initialJsxPreserveMode = UrlState.queryJsxPreserveMode(false)
     let initialExperimentalFeatures = UrlState.queryExperimentalFeatures()
@@ -647,7 +672,9 @@ module App = {
     let moduleSystem = Signal.make(initialModuleSystem)
     let warnFlags = Signal.make(initialWarnFlags)
     let jsxPreserveMode = Signal.make(initialJsxPreserveMode)
-    let experimentalFeatures: Signal.t<array<string>> = Signal.make(initialExperimentalFeatures)
+    let experimentalFeatures: Signal.t<array<experimentalFeature>> = Signal.make(
+      initialExperimentalFeatures,
+    )
     let activeLine = Signal.make(1)
     let editorScrollTop = Signal.make(0)
     let editorScrollLeft = Signal.make(0)
