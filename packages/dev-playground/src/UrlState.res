@@ -1,13 +1,22 @@
-open PlaygroundTypes
+open PlaygroundConfig
 
 let maxEncodedCodeLength = 300 * 1024
 let maxDecodedSourceLength = 200 * 1024
 let replaceSequence = ref(0)
 
+type urlSearchParams
+
+module UrlSearchParams = {
+  @new external make: string => urlSearchParams = "URLSearchParams"
+  @send @return(nullable) external get: (urlSearchParams, string) => option<string> = "get"
+}
+
+module Location = {
+  @val external search: string = "window.location.search"
+}
+
 let getParam = name => {
-  ignore(name)
-  let value: Nullable.t<string> = %raw(`new URLSearchParams(window.location.search).get(name)`)
-  value->Nullable.toOption
+  UrlSearchParams.make(Location.search)->UrlSearchParams.get(name)
 }
 
 let encodeCode = async source => {
@@ -151,8 +160,8 @@ let copyText = value => {
 let initialSource = async defaultSource => {
   switch getParam("code") {
   | None => defaultSource
-  | Some(encoded)
-    if encoded === "" || encoded->String.length > maxEncodedCodeLength => defaultSource
+  | Some(encoded) if encoded === "" || encoded->String.length > maxEncodedCodeLength =>
+    defaultSource
   | Some(encoded) =>
     try {
       let decoded = await decodeCode(encoded)

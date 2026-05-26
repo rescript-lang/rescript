@@ -16,6 +16,9 @@
     "version": 4,
     "module": "XoteJSX"
   },
+  "experimental-features": {
+    "LetUnwrap": true
+  },
   "compiler-flags": ["-open Xote"],
   "warnings": {
     "error": "+8"

@@ -1,4 +1,4 @@
-open PlaygroundTypes
+open PlaygroundConfig
 
 type tab =
   | Parsetree
@@ -90,15 +90,15 @@ module Browser = {
 
   let insertTabIndent = (event: Dom.event): option<string> => {
     ignore(event)
-    let value: Nullable.t<string> = %raw(`
+    let value: option<string> = %raw(`
       (() => {
         if (event.key !== "Tab") {
-          return null;
+          return undefined;
         }
 
         const target = event.target;
         if (target == null || typeof target.value !== "string") {
-          return null;
+          return undefined;
         }
 
         event.preventDefault();
@@ -114,7 +114,7 @@ module Browser = {
         return nextValue;
       })()
     `)
-    value->Nullable.toOption
+    value
   }
 
   let configureSourceEditor = (scrollHandler: Dom.event => unit): unit => {

@@ -1,22 +1,22 @@
-open PlaygroundTypes
+open PlaygroundConfig
 
 type info = {
   bundleId: string,
   version: string,
   apiVersion: string,
-  moduleSystem: PlaygroundTypes.moduleSystem,
+  moduleSystem: PlaygroundConfig.moduleSystem,
   warnFlags: string,
   jsxPreserveMode: bool,
-  experimentalFeatures: array<PlaygroundTypes.experimentalFeature>,
+  experimentalFeatures: array<PlaygroundConfig.experimentalFeature>,
   libraries: array<string>,
 }
 
 type config = {
   compilerVersion: string,
-  moduleSystem: PlaygroundTypes.moduleSystem,
+  moduleSystem: PlaygroundConfig.moduleSystem,
   warnFlags: string,
   jsxPreserveMode: bool,
-  experimentalFeatures: array<PlaygroundTypes.experimentalFeature>,
+  experimentalFeatures: array<PlaygroundConfig.experimentalFeature>,
 }
 
 type compilerVersion = {
@@ -47,10 +47,10 @@ type result =
   | Failure(failureResult)
 
 type normalizedConfig = {
-  moduleSystem: PlaygroundTypes.moduleSystem,
+  moduleSystem: PlaygroundConfig.moduleSystem,
   warnFlags: string,
   jsxPreserveMode: bool,
-  experimentalFeatures: array<PlaygroundTypes.experimentalFeature>,
+  experimentalFeatures: array<PlaygroundConfig.experimentalFeature>,
 }
 
 type jsUrl
@@ -66,10 +66,10 @@ type diagnostic
 
 module Env = {
   @val
-  external viteDefaultCompilerVersion: Nullable.t<string> =
+  external viteDefaultCompilerVersion: option<string> =
     "import.meta.env.VITE_DEFAULT_COMPILER_VERSION"
-  @val external viteCompilerVersions: Nullable.t<string> = "import.meta.env.VITE_COMPILER_VERSIONS"
-  @val external viteBaseUrl: Nullable.t<string> = "import.meta.env.BASE_URL"
+  @val external viteCompilerVersions: option<string> = "import.meta.env.VITE_COMPILER_VERSIONS"
+  @val external viteBaseUrl: option<string> = "import.meta.env.BASE_URL"
   @val external locationOrigin: string = "globalThis.location.origin"
 }
 
@@ -80,7 +80,7 @@ module Url = {
 }
 
 module DynamicProperty = {
-  @get_index external get: ('value, string) => Nullable.t<unknown> = ""
+  @get_index external get: ('value, string) => option<unknown> = ""
 }
 
 module Dom = {
@@ -95,9 +95,9 @@ module Dom = {
 }
 
 module Api = {
-  @val external global: Nullable.t<compilerApi> = "globalThis.rescript_compiler"
+  @val external global: option<compilerApi> = "globalThis.rescript_compiler"
   @send external makeCompiler: compilerApi => compilerInstance = "make"
-  @get external apiVersion: compilerApi => Nullable.t<string> = "api_version"
+  @get external apiVersion: compilerApi => option<string> = "api_version"
 }
 
 module Instance = {
@@ -110,45 +110,44 @@ module Instance = {
     "setExperimentalFeatures"
   @get external rescript: compilerInstance => rescriptCompiler = "rescript"
   @send external getConfig: compilerInstance => compilerConfig = "getConfig"
-  @get external version: compilerInstance => Nullable.t<string> = "version"
+  @get external version: compilerInstance => option<string> = "version"
 }
 
 module Rescript = {
-  @get external version: rescriptCompiler => Nullable.t<string> = "version"
+  @get external version: rescriptCompiler => option<string> = "version"
   @send external compile: (rescriptCompiler, string) => compileResult = "compile"
   @send external compileWithDebug: (rescriptCompiler, string) => compileResult = "compileWithDebug"
 }
 
 module Config = {
-  @get external moduleSystem: compilerConfig => Nullable.t<string> = "module_system"
-  @get external warnFlags: compilerConfig => Nullable.t<string> = "warn_flags"
-  @get external jsxPreserveMode: compilerConfig => Nullable.t<bool> = "jsx_preserve_mode"
+  @get external moduleSystem: compilerConfig => option<string> = "module_system"
+  @get external warnFlags: compilerConfig => option<string> = "warn_flags"
+  @get external jsxPreserveMode: compilerConfig => option<bool> = "jsx_preserve_mode"
   @get
-  external experimentalFeatures: compilerConfig => Nullable.t<array<string>> =
-    "experimental_features"
+  external experimentalFeatures: compilerConfig => option<array<string>> = "experimental_features"
 }
 
 module Diagnostic = {
-  @get external row: diagnostic => Nullable.t<int> = "row"
-  @get external column: diagnostic => Nullable.t<int> = "column"
-  @get external warnNumber: diagnostic => Nullable.t<int> = "warnNumber"
-  @get external isError: diagnostic => Nullable.t<bool> = "isError"
-  @get external shortMsg: diagnostic => Nullable.t<string> = "shortMsg"
-  @get external fullMsg: diagnostic => Nullable.t<string> = "fullMsg"
+  @get external row: diagnostic => option<int> = "row"
+  @get external column: diagnostic => option<int> = "column"
+  @get external warnNumber: diagnostic => option<int> = "warnNumber"
+  @get external isError: diagnostic => option<bool> = "isError"
+  @get external shortMsg: diagnostic => option<string> = "shortMsg"
+  @get external fullMsg: diagnostic => option<string> = "fullMsg"
 }
 
 module CompileResult = {
-  @get external type_: compileResult => Nullable.t<string> = "type"
-  @get external jsCode: compileResult => Nullable.t<string> = "js_code"
-  @get external parsetree: compileResult => Nullable.t<string> = "parsetree"
-  @get external typedtree: compileResult => Nullable.t<string> = "typedtree"
-  @get external lambda_: compileResult => Nullable.t<string> = "lambda"
-  @get external lam: compileResult => Nullable.t<string> = "lam"
-  @get external errors: compileResult => Nullable.t<array<diagnostic>> = "errors"
-  @get external warnings: compileResult => Nullable.t<array<diagnostic>> = "warnings"
-  @get external msg: compileResult => Nullable.t<string> = "msg"
-  @get external shortMsg: compileResult => Nullable.t<string> = "shortMsg"
-  @get external fullMsg: compileResult => Nullable.t<string> = "fullMsg"
+  @get external type_: compileResult => option<string> = "type"
+  @get external jsCode: compileResult => option<string> = "js_code"
+  @get external parsetree: compileResult => option<string> = "parsetree"
+  @get external typedtree: compileResult => option<string> = "typedtree"
+  @get external lambda_: compileResult => option<string> = "lambda"
+  @get external lam: compileResult => option<string> = "lam"
+  @get external errors: compileResult => option<array<diagnostic>> = "errors"
+  @get external warnings: compileResult => option<array<diagnostic>> = "warnings"
+  @get external msg: compileResult => option<string> = "msg"
+  @get external shortMsg: compileResult => option<string> = "shortMsg"
+  @get external fullMsg: compileResult => option<string> = "fullMsg"
 }
 
 module Performance = {
@@ -157,10 +156,10 @@ module Performance = {
 
 let defaultWarnFlags = "+a-4-9-20-40-41-42-50-61-102-109"
 
-let defaultCompilerVersion = Env.viteDefaultCompilerVersion->Nullable.getOr("local")
+let defaultCompilerVersion = Env.viteDefaultCompilerVersion->Option.getOr("local")
 
 let pathFromBase = relativePath => {
-  let baseUrl = switch Env.viteBaseUrl->Nullable.toOption {
+  let baseUrl = switch Env.viteBaseUrl {
   | Some("") | None => "/"
   | Some(baseUrl) => baseUrl
   }
@@ -173,19 +172,24 @@ let pathFromBase = relativePath => {
   }
 }
 
+let jsonStringField = (item, name) =>
+  switch item->Dict.get(name) {
+  | Some(JSON.String(value)) => Some(value)
+  | _ => None
+  }
+
 let compilerVersionFromJson = json =>
   switch json {
   | JSON.Object(item) =>
-    switch (item->Dict.get("id"), item->Dict.get("label")) {
-    | (Some(JSON.String(id)), Some(JSON.String(label))) => Some({id, label})
-    | _ => None
-    }
+    let? Some(id) = item->jsonStringField("id")
+    let? Some(label) = item->jsonStringField("label")
+    Some({id, label})
   | _ => None
   }
 
 let parseCompilerVersions = defaultVersion => {
   let fallback = [{id: defaultVersion, label: defaultVersion}]
-  switch Env.viteCompilerVersions->Nullable.toOption {
+  switch Env.viteCompilerVersions {
   | None | Some("") => fallback
   | Some(versionJson) =>
     try {
@@ -210,7 +214,7 @@ let loadedLibrariesByVersion: Map.t<string, array<string>> = Map.make()
 let activeLibraryVersion = ref(None)
 
 let hasFunction = (value, name) =>
-  switch value->DynamicProperty.get(name)->Nullable.toOption {
+  switch value->DynamicProperty.get(name) {
   | Some(value) => value->Type.typeof === #function
   | None => false
   }
@@ -269,9 +273,9 @@ let applyConfig = (
 }
 
 let moduleSystemFromConfig = configValue =>
-  switch configValue->Config.moduleSystem->Nullable.toOption {
+  switch configValue->Config.moduleSystem {
   | Some(moduleSystem) =>
-    switch moduleSystem->PlaygroundTypes.parseModuleSystem {
+    switch moduleSystem->PlaygroundConfig.parseModuleSystem {
     | Some(moduleSystem) => moduleSystem
     | None => Esmodule
     }
@@ -279,13 +283,14 @@ let moduleSystemFromConfig = configValue =>
   }
 
 let experimentalFeaturesFromConfig = configValue =>
-  configValue
-  ->Config.experimentalFeatures
-  ->Nullable.getOr([])
-  ->Array.filterMap(PlaygroundTypes.parseExperimentalFeature)
+  switch configValue->Config.experimentalFeatures {
+  | Some(experimentalFeatures) =>
+    experimentalFeatures->Array.filterMap(PlaygroundConfig.parseExperimentalFeature)
+  | None => []
+  }
 
-let normalizeConfig = (configValue: Nullable.t<compilerConfig>): normalizedConfig =>
-  switch configValue->Nullable.toOption {
+let normalizeConfig = (configValue: option<compilerConfig>): normalizedConfig =>
+  switch configValue {
   | None => {
       moduleSystem: Esmodule,
       warnFlags: defaultWarnFlags,
@@ -294,34 +299,53 @@ let normalizeConfig = (configValue: Nullable.t<compilerConfig>): normalizedConfi
     }
   | Some(configValue) => {
       moduleSystem: configValue->moduleSystemFromConfig,
-      warnFlags: configValue->Config.warnFlags->Nullable.getOr(defaultWarnFlags),
-      jsxPreserveMode: configValue->Config.jsxPreserveMode->Nullable.getOr(false),
+      warnFlags: switch configValue->Config.warnFlags {
+      | Some(warnFlags) => warnFlags
+      | None => defaultWarnFlags
+      },
+      jsxPreserveMode: switch configValue->Config.jsxPreserveMode {
+      | Some(jsxPreserveMode) => jsxPreserveMode
+      | None => false
+      },
       experimentalFeatures: configValue->experimentalFeaturesFromConfig,
     }
   }
 
-let getConfigIfAvailable = (instance: compilerInstance): Nullable.t<compilerConfig> =>
+let getConfigIfAvailable = (instance: compilerInstance): option<compilerConfig> =>
   if hasFunction(instance, "getConfig") {
-    instance->Instance.getConfig->Nullable.make
+    Some(instance->Instance.getConfig)
   } else {
-    Nullable.undefined
+    None
   }
 
 let diagnosticMessage = (item, fallback) =>
-  switch item->Diagnostic.shortMsg->Nullable.toOption {
+  switch item->Diagnostic.shortMsg {
   | Some(message) => message
-  | None => item->Diagnostic.fullMsg->Nullable.getOr(fallback)
+  | None =>
+    switch item->Diagnostic.fullMsg {
+    | Some(message) => message
+    | None => fallback
+    }
   }
 
 let formatLocation = item => {
-  let row = item->Diagnostic.row->Nullable.getOr(0)
-  let column = item->Diagnostic.column->Nullable.getOr(0)
+  let row = switch item->Diagnostic.row {
+  | Some(row) => row
+  | None => 0
+  }
+  let column = switch item->Diagnostic.column {
+  | Some(column) => column
+  | None => 0
+  }
   row > 0 ? `Line ${row->Int.toString}, ${column->Int.toString}` : "Compiler"
 }
 
 let warningToText = item => {
-  let prefix = item->Diagnostic.isError->Nullable.getOr(false) ? "error" : "warning"
-  let warnNumber = switch item->Diagnostic.warnNumber->Nullable.toOption {
+  let prefix = switch item->Diagnostic.isError {
+  | Some(true) => "error"
+  | Some(false) | None => "warning"
+  }
+  let warnNumber = switch item->Diagnostic.warnNumber {
   | Some(warnNumber) => ` ${warnNumber->Int.toString}`
   | None => ""
   }
@@ -335,21 +359,21 @@ let errorToText = item => {
 }
 
 let normalizeFailure = (compileOutput, elapsedMs): result => {
-  let errors = switch compileOutput->CompileResult.errors->Nullable.toOption {
+  let errors = switch compileOutput->CompileResult.errors {
   | Some(errors) => errors->Array.map(errorToText)
   | None => []
   }
-  let warnings = switch compileOutput->CompileResult.warnings->Nullable.toOption {
+  let warnings = switch compileOutput->CompileResult.warnings {
   | Some(warnings) => warnings->Array.map(warningToText)
   | None => []
   }
-  let message = switch compileOutput->CompileResult.msg->Nullable.toOption {
+  let message = switch compileOutput->CompileResult.msg {
   | Some(message) => message
   | None =>
-    switch compileOutput->CompileResult.shortMsg->Nullable.toOption {
+    switch compileOutput->CompileResult.shortMsg {
     | Some(message) => message
     | None =>
-      switch compileOutput->CompileResult.fullMsg->Nullable.toOption {
+      switch compileOutput->CompileResult.fullMsg {
       | Some(message) => message
       | None =>
         switch errors->Array.get(0) {
@@ -369,17 +393,20 @@ let normalizeFailure = (compileOutput, elapsedMs): result => {
 }
 
 let normalizeSuccess = (compileOutput, elapsedMs): result => {
-  let warnings = switch compileOutput->CompileResult.warnings->Nullable.toOption {
+  let warnings = switch compileOutput->CompileResult.warnings {
   | Some(warnings) => warnings->Array.map(warningToText)
   | None => []
   }
 
   Success({
-    jsCode: compileOutput->CompileResult.jsCode->Nullable.getOr(""),
-    parsetree: compileOutput->CompileResult.parsetree->Nullable.toOption,
-    typedtree: compileOutput->CompileResult.typedtree->Nullable.toOption,
-    lambda_: compileOutput->CompileResult.lambda_->Nullable.toOption,
-    lam: compileOutput->CompileResult.lam->Nullable.toOption,
+    jsCode: switch compileOutput->CompileResult.jsCode {
+    | Some(jsCode) => jsCode
+    | None => ""
+    },
+    parsetree: compileOutput->CompileResult.parsetree,
+    typedtree: compileOutput->CompileResult.typedtree,
+    lambda_: compileOutput->CompileResult.lambda_,
+    lam: compileOutput->CompileResult.lam,
     warnings,
     time: elapsedMs,
   })
@@ -421,7 +448,7 @@ let ensureCompilerApi = async version => {
     let _ = await loadScript(`${root}/compiler.js`)
     let _ = await loadRuntimeLibraries(selectedVersion)
 
-    let api = switch Api.global->Nullable.toOption {
+    let api = switch Api.global {
     | Some(api) if hasFunction(api, "make") => api
     | _ => JsError.throwWithMessage("rescript_compiler global was not registered by compiler.js")
     }
@@ -453,19 +480,27 @@ let ensureCompiler = async version => {
 }
 
 let instanceVersion = instance =>
-  switch instance->Instance.version->Nullable.toOption {
+  switch instance->Instance.version {
   | Some(version) => version
-  | None => instance->Instance.rescript->Rescript.version->Nullable.getOr("unknown")
+  | None =>
+    switch instance->Instance.rescript->Rescript.version {
+    | Some(version) => version
+    | None => "unknown"
+    }
   }
 
 let apiVersion = api =>
   switch api {
-  | Some(api) => api->Api.apiVersion->Nullable.getOr("unknown")
+  | Some(api) =>
+    switch api->Api.apiVersion {
+    | Some(apiVersion) => apiVersion
+    | None => "unknown"
+    }
   | None => "unknown"
   }
 
 let resultIsSuccess = compileOutput =>
-  switch compileOutput->CompileResult.type_->Nullable.toOption {
+  switch compileOutput->CompileResult.type_ {
   | Some("success") => true
   | _ => false
   }
