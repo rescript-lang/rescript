@@ -519,24 +519,12 @@ module Compile = struct
         (a, b)
       in
       typed_tree |> Translmod.transl_implementation modulename
-      |> fun (lambda, exports) ->
-      let debug_outputs =
-        if include_debug_outputs then
-          let export_ident_sets = Set_ident.of_list exports in
-          let lam, _ = Lam_convert.convert export_ident_sets lambda in
-          Some
-            ( Printer.to_string Printast.implementation ast,
-              Printer.to_string Printtyped.implementation_with_coercion
-                typed_tree,
-              Printer.to_string Printlambda.lambda lambda,
-              Lam_print.lambda_to_string lam )
-        else None
-      in
+      |> (* Printlambda.lambda ppf *) fun (lam, exports) ->
       let buffer = Buffer.create 1000 in
       let () =
         Js_dump_program.pp_deps_program ~output_prefix:""
           (* does not matter here *) module_system
-          (Lam_compile_main.compile "" exports lambda)
+          (Lam_compile_main.compile "" exports lam)
           (Ext_pp.from_buffer buffer)
       in
       let v = Buffer.contents buffer in
@@ -554,9 +542,16 @@ module Compile = struct
             ("type", inject @@ Js.string "success");
           |]
       in
-      let debug_attrs =
-        match debug_outputs with
-        | Some (parsetree, typedtree, lambda, lam) ->
+      if include_debug_outputs then
+        let export_ident_sets = Set_ident.of_list exports in
+        let lam, _ = Lam_convert.convert export_ident_sets lambda in
+        let parsetree = Printer.to_string Printast.implementation ast in
+        let typedtree =
+          Printer.to_string Printtyped.implementation_with_coercion typed_tree
+        in
+        let lambda = Printer.to_string Printlambda.lambda lambda in
+        let lam = Lam_print.lambda_to_string lam in
+        let debug_attrs =
           Js.Unsafe.
             [|
               ("parsetree", inject @@ Js.string parsetree);
@@ -564,9 +559,9 @@ module Compile = struct
               ("lambda", inject @@ Js.string lambda);
               ("lam", inject @@ Js.string lam);
             |]
-        | None -> [||]
-      in
-      Js.Unsafe.(obj (Array.append attrs debug_attrs))
+        in
+        Js.Unsafe.obj (Array.append attrs debug_attrs)
+      else Js.Unsafe.obj attrs
     with e -> (
       match e with
       | Arg.Bad msg -> ErrorRet.make_warning_flag_error ~warn_flags msg
