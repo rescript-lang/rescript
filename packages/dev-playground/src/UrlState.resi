@@ -3,11 +3,7 @@ type state = {
   config: PlaygroundConfig.t,
 }
 
-let init: (
-  ~defaultSource: string,
-  ~defaultConfig: PlaygroundConfig.t,
-  ~availableCompilerVersions: array<CompilerApi.Version.t>,
-) => promise<state>
+let init: (~defaultSource: string) => promise<state>
 
 let replace: (~source: string, ~config: PlaygroundConfig.t) => promise<unit>
 

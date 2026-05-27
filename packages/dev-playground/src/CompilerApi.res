@@ -62,6 +62,14 @@ let defaultWarnFlags = "+a-4-9-20-40-41-42-50-61-102-109"
 
 let defaultCompilerVersion = Env.viteDefaultCompilerVersion->Option.getOr("local")
 
+let defaultConfig: PlaygroundConfig.t = {
+  compilerVersion: defaultCompilerVersion,
+  moduleSystem: Esmodule,
+  warnFlags: defaultWarnFlags,
+  jsxPreserveMode: false,
+  experimentalFeatures: [],
+}
+
 let pathFromBase = relativePath => {
   let baseUrl = switch Env.viteBaseUrl {
   | Some("") | None => "/"
@@ -92,7 +100,7 @@ let parseCompilerVersions = defaultVersion => {
   }
 }
 
-let availableCompilerVersions = parseCompilerVersions(defaultCompilerVersion)
+let availableCompilerVersions = parseCompilerVersions(defaultConfig.compilerVersion)
 let compilerRoot = pathFromBase("playground-bundles")
 let loadedScripts: Map.t<string, promise<unit>> = Map.make()
 let compilerApis: Map.t<string, compilerApi> = Map.make()
@@ -106,7 +114,7 @@ let hasFunction = (value, name) =>
   | None => false
   }
 
-let versionOrDefault = version => version === "" ? defaultCompilerVersion : version
+let versionOrDefault = version => version === "" ? defaultConfig.compilerVersion : version
 
 let createScriptLoadPromise = src =>
   Promise.make((resolve, reject) => {
@@ -145,7 +153,7 @@ let applyConfig = (
     instance->Instance.setModuleSystem((moduleSystem :> string))
   }
   if hasFunction(instance, "setWarnFlags") {
-    instance->Instance.setWarnFlags(warnFlags === "" ? defaultWarnFlags : warnFlags)
+    instance->Instance.setWarnFlags(warnFlags === "" ? defaultConfig.warnFlags : warnFlags)
   }
   if hasFunction(instance, "setFilename") {
     instance->Instance.setFilename("Playground.res")
@@ -181,7 +189,7 @@ let normalizeConfig = (configValue: option<compilerConfig>): normalizedConfig =>
   switch configValue {
   | None => {
       moduleSystem: Esmodule,
-      warnFlags: defaultWarnFlags,
+      warnFlags: defaultConfig.warnFlags,
       jsxPreserveMode: false,
       experimentalFeatures: [],
     }
@@ -189,7 +197,7 @@ let normalizeConfig = (configValue: option<compilerConfig>): normalizedConfig =>
       moduleSystem: configValue->moduleSystemFromConfig,
       warnFlags: switch configValue->Config.warnFlags {
       | Some(warnFlags) => warnFlags
-      | None => defaultWarnFlags
+      | None => defaultConfig.warnFlags
       },
       jsxPreserveMode: switch configValue->Config.jsxPreserveMode {
       | Some(jsxPreserveMode) => jsxPreserveMode
@@ -346,7 +354,7 @@ let ensureCompiler = async version => {
     applyConfig(
       instance,
       ~moduleSystem=Esmodule,
-      ~warnFlags=defaultWarnFlags,
+      ~warnFlags=defaultConfig.warnFlags,
       ~jsxPreserveMode=false,
       ~experimentalFeatures=[],
     )

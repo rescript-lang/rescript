@@ -437,16 +437,14 @@ module SettingsPanel = {
   let make = (
     ~activeTab: Signal.t<tab>,
     ~compilerInfo: Signal.t<option<CompilerApi.info>>,
-    ~compilerVersion: Signal.t<string>,
-    ~moduleSystem: Signal.t<moduleSystem>,
-    ~warnFlags: Signal.t<string>,
-    ~jsxPreserveMode: Signal.t<bool>,
-    ~experimentalFeatures: Signal.t<array<experimentalFeature>>,
+    ~config: Signal.t<PlaygroundConfig.t>,
     ~switchCompiler: string => unit,
     ~compileNow: unit => unit,
     ~scheduleCompile: unit => unit,
     ~scheduleUrlSync: unit => unit,
   ) => {
+    let updateConfig = f => Signal.update(config, f)
+
     <div
       class={() =>
         Signal.get(activeTab) === Settings ? "settings-panel" : "settings-panel hidden-panel"}
@@ -457,10 +455,10 @@ module SettingsPanel = {
         </label>
         <select
           id="compiler-version"
-          value={ReactiveProp.reactive(compilerVersion)}
+          value={() => Signal.get(config).compilerVersion}
           onChange={event => {
             let nextVersion = Event.value(event)
-            Signal.set(compilerVersion, nextVersion)
+            updateConfig(config => {...config, compilerVersion: nextVersion})
             switchCompiler(nextVersion)
           }}
         >
@@ -486,11 +484,11 @@ module SettingsPanel = {
         <label class="setting-label" for_="module-system"> {Node.text("Module System")} </label>
         <select
           id="module-system"
-          value={() => (Signal.get(moduleSystem) :> string)}
+          value={() => (Signal.get(config).moduleSystem :> string)}
           onChange={event => {
             switch event->Event.value->parseModuleSystem {
             | Some(nextModuleSystem) =>
-              Signal.set(moduleSystem, nextModuleSystem)
+              updateConfig(config => {...config, moduleSystem: nextModuleSystem})
               scheduleUrlSync()
               compileNow()
             | None => ()
@@ -509,10 +507,10 @@ module SettingsPanel = {
         <label class="setting-label" for_="warning-flags"> {Node.text("Warning Flags")} </label>
         <input
           id="warning-flags"
-          value={ReactiveProp.reactive(warnFlags)}
+          value={() => Signal.get(config).warnFlags}
           spellcheck=false
           onInput={event => {
-            Signal.set(warnFlags, Event.value(event))
+            updateConfig(config => {...config, warnFlags: Event.value(event)})
             scheduleUrlSync()
             scheduleCompile()
           }}
@@ -520,7 +518,7 @@ module SettingsPanel = {
         <button
           class="secondary-action"
           onClick={_ => {
-            Signal.set(warnFlags, CompilerApi.defaultWarnFlags)
+            updateConfig(config => {...config, warnFlags: CompilerApi.defaultConfig.warnFlags})
             scheduleUrlSync()
             compileNow()
           }}
@@ -532,9 +530,9 @@ module SettingsPanel = {
         <input
           id="jsx-preserve"
           type_="checkbox"
-          checked={ReactiveProp.reactive(jsxPreserveMode)}
+          checked={() => Signal.get(config).jsxPreserveMode}
           onChange={event => {
-            Signal.set(jsxPreserveMode, Event.checked(event))
+            updateConfig(config => {...config, jsxPreserveMode: Event.checked(event)})
             scheduleUrlSync()
             compileNow()
           }}
@@ -545,9 +543,12 @@ module SettingsPanel = {
         <input
           id="feature-let-unwrap"
           type_="checkbox"
-          checked={() => Signal.get(experimentalFeatures)->hasFeature(LetUnwrap)}
+          checked={() => Signal.get(config).experimentalFeatures->hasFeature(LetUnwrap)}
           onChange={_ => {
-            Signal.update(experimentalFeatures, features => toggleFeature(features, LetUnwrap))
+            updateConfig(config => {
+              ...config,
+              experimentalFeatures: toggleFeature(config.experimentalFeatures, LetUnwrap),
+            })
             scheduleUrlSync()
             compileNow()
           }}
@@ -593,26 +594,12 @@ module StatusBadge = {
 module App = {
   @jsx.component
   let make = () => {
-    let defaultConfig = {
-      PlaygroundConfig.compilerVersion: CompilerApi.defaultCompilerVersion,
-      moduleSystem: Esmodule,
-      warnFlags: CompilerApi.defaultWarnFlags,
-      jsxPreserveMode: false,
-      experimentalFeatures: [],
-    }
-
     let source = Signal.make(defaultSource)
     let activeTab = Signal.make(JavaScript)
     let status = Signal.make(Loading)
     let compilerInfo: Signal.t<option<CompilerApi.info>> = Signal.make(None)
     let compileResult: Signal.t<option<CompilerApi.compileResult>> = Signal.make(None)
-    let compilerVersion = Signal.make(defaultConfig.compilerVersion)
-    let moduleSystem = Signal.make(defaultConfig.moduleSystem)
-    let warnFlags = Signal.make(defaultConfig.warnFlags)
-    let jsxPreserveMode = Signal.make(defaultConfig.jsxPreserveMode)
-    let experimentalFeatures: Signal.t<array<experimentalFeature>> = Signal.make(
-      defaultConfig.experimentalFeatures,
-    )
+    let config = Signal.make(CompilerApi.defaultConfig)
     let activeLine = Signal.make(1)
     let editorScrollTop = Signal.make(0)
     let editorScrollLeft = Signal.make(0)
@@ -641,14 +628,6 @@ module App = {
       Signal.set(editorScrollLeft, Event.scrollLeft(event))
     }
 
-    let currentConfig = () => {
-      PlaygroundConfig.compilerVersion: Signal.peek(compilerVersion),
-      moduleSystem: Signal.peek(moduleSystem),
-      warnFlags: Signal.peek(warnFlags),
-      jsxPreserveMode: Signal.peek(jsxPreserveMode),
-      experimentalFeatures: Signal.peek(experimentalFeatures),
-    }
-
     let compileNow = () => {
       compileSequence := compileSequence.contents + 1
       let sequence = compileSequence.contents
@@ -660,7 +639,7 @@ module App = {
         | Ready | Compiling =>
           Signal.set(status, Compiling)
           try {
-            let result = await CompilerApi.compile(Signal.peek(source), currentConfig())
+            let result = await CompilerApi.compile(Signal.peek(source), Signal.peek(config))
             if sequence === compileSequence.contents {
               Signal.set(compileResult, Some(result))
               Signal.set(status, Ready)
@@ -690,7 +669,7 @@ module App = {
     }
 
     let syncUrlNow = () =>
-      UrlState.replace(~source=Signal.peek(source), ~config=currentConfig())->Promise.ignore
+      UrlState.replace(~source=Signal.peek(source), ~config=Signal.peek(config))->Promise.ignore
 
     let scheduleUrlSync = () => {
       switch urlTimerId.contents {
@@ -712,7 +691,7 @@ module App = {
         | Ready | Compiling =>
           Signal.set(status, Compiling)
           try {
-            switch await CompilerApi.format(sourceBeforeFormat, currentConfig()) {
+            switch await CompilerApi.format(sourceBeforeFormat, Signal.peek(config)) {
             | Ok(formattedSource) =>
               if sequence === compileSequence.contents {
                 if Signal.peek(source) === sourceBeforeFormat {
@@ -765,7 +744,7 @@ module App = {
       }
 
       let share = async () => {
-        switch await UrlState.copy(~source=Signal.peek(source), ~config=currentConfig()) {
+        switch await UrlState.copy(~source=Signal.peek(source), ~config=Signal.peek(config)) {
         | Ok() => showToast("Link copied")
         | Error(message) => showToast(message)
         }
@@ -787,8 +766,8 @@ module App = {
           if sequence === compilerLoadSequence.contents {
             let firstLoadConfigValue = firstLoadConfig.contents
             firstLoadConfig := None
-            let config = switch firstLoadConfigValue {
-            | Some(config) => config
+            let nextConfig = switch firstLoadConfigValue {
+            | Some(config) => {...config, compilerVersion: info.bundleId}
             | None => {
                 PlaygroundConfig.compilerVersion: info.bundleId,
                 moduleSystem: info.moduleSystem,
@@ -798,11 +777,7 @@ module App = {
               }
             }
             Signal.set(compilerInfo, Some(info))
-            Signal.set(compilerVersion, info.bundleId)
-            Signal.set(moduleSystem, config.moduleSystem)
-            Signal.set(warnFlags, config.warnFlags)
-            Signal.set(jsxPreserveMode, config.jsxPreserveMode)
-            Signal.set(experimentalFeatures, config.experimentalFeatures)
+            Signal.set(config, nextConfig)
             Signal.set(status, Ready)
             switch firstLoadConfigValue {
             | Some(_) => ()
@@ -831,17 +806,9 @@ module App = {
 
     Effect.run(() => {
       let start = async () => {
-        let urlState = await UrlState.init(
-          ~defaultSource,
-          ~defaultConfig,
-          ~availableCompilerVersions=CompilerApi.availableCompilerVersions,
-        )
+        let urlState = await UrlState.init(~defaultSource)
         Signal.set(source, urlState.source)
-        Signal.set(compilerVersion, urlState.config.compilerVersion)
-        Signal.set(moduleSystem, urlState.config.moduleSystem)
-        Signal.set(warnFlags, urlState.config.warnFlags)
-        Signal.set(jsxPreserveMode, urlState.config.jsxPreserveMode)
-        Signal.set(experimentalFeatures, urlState.config.experimentalFeatures)
+        Signal.set(config, urlState.config)
         Signal.set(activeLine, 1)
         Signal.set(editorScrollTop, 0)
         Signal.set(editorScrollLeft, 0)
@@ -961,17 +928,7 @@ module App = {
             <Problems compileResult />
           </div>
           <SettingsPanel
-            activeTab
-            compilerInfo
-            compilerVersion
-            moduleSystem
-            warnFlags
-            jsxPreserveMode
-            experimentalFeatures
-            switchCompiler
-            compileNow
-            scheduleCompile
-            scheduleUrlSync
+            activeTab compilerInfo config switchCompiler compileNow scheduleCompile scheduleUrlSync
           />
         </div>
       </section>

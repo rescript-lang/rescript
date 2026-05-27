@@ -33,12 +33,12 @@ type failure = {
   time: float,
 }
 
-let defaultWarnFlags: string
-let defaultCompilerVersion: string
-let availableCompilerVersions: array<Version.t>
-
 type compileResult = result<success, failure>
 type formatResult = result<string, failure>
+
+let defaultConfig: PlaygroundConfig.t
+
+let availableCompilerVersions: array<Version.t>
 
 let init: string => promise<info>
 

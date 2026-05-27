@@ -104,9 +104,12 @@ let queryConfig = (
   }
 }
 
-let init = async (~defaultSource, ~defaultConfig, ~availableCompilerVersions): state => {
+let init = async (~defaultSource): state => {
   let source = await initialSource(defaultSource)
-  let config = queryConfig(~defaultConfig, ~availableCompilerVersions)
+  let config = queryConfig(
+    ~defaultConfig=CompilerApi.defaultConfig,
+    ~availableCompilerVersions=CompilerApi.availableCompilerVersions,
+  )
   {source, config}
 }
 
