@@ -54,6 +54,7 @@ let jsx_module = ref React
 let jsx_preserve = ref false
 let js_stdout = ref true
 let all_module_aliases = ref false
+let multi_entry = ref false
 let no_stdlib = ref false
 let no_export = ref false
 let int_of_jsx_version = function

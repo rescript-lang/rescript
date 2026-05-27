@@ -7,6 +7,7 @@ This document contains a list of all config parameters with remarks, and whether
 | name                  | string                  |                                                             |     [x]      |
 | namespace             | boolean                 |                                                             |     [x]      |
 | namespace             | string                  |                                                             |     [x]      |
+| multi-entry           | boolean                 | Lowercase file modules stay private and duplicate lowercase file stems are allowed |     [x]      |
 | sources               | string                  |                                                             |     [x]      |
 | sources               | array of string         |                                                             |     [x]      |
 | sources               | Source                  |                                                             |     [x]      |

@@ -82,6 +82,7 @@ let suites =
             end; *)
          ( __LOC__ >:: fun _ ->
            Ext_filename.module_name "a/hello.ml" =~ "Hello";
+           Ext_filename.module_name ~preserve_case:true "a/hello.ml" =~ "hello";
            Ext_filename.as_module ~basename:"a.ml"
            =~ Some {module_name = "A"; case = false};
            Ext_filename.as_module ~basename:"Aa.ml"
@@ -410,6 +411,9 @@ let suites =
            string_eq (Ext_filename.module_name "a/b/xc.cppo.mli") "Xc.cppo";
            string_eq (Ext_filename.module_name "a/b/xc.cppo.") "Xc.cppo";
            string_eq (Ext_filename.module_name "a/b/xc..") "Xc.";
+           string_eq
+             (Ext_filename.module_name ~preserve_case:true "a/b/xc.res")
+             "xc";
            string_eq (Ext_filename.module_name "a/b/Xc..") "Xc.";
            string_eq (Ext_filename.module_name "a/b/.") "" );
          ( __LOC__ >:: fun _ ->
