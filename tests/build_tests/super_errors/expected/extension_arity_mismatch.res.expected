@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/extension_arity_mismatch.res[0m:[2m3:1-16[0m
+
+  1 [2m│[0m type t<'a> = ..
+  2 [2m│[0m 
+  [1;31m3[0m [2m│[0m [1;31mtype t += A(int)[0m
+  4 [2m│[0m 
+
+  This extension does not match the definition of type t
+  They have different arities.

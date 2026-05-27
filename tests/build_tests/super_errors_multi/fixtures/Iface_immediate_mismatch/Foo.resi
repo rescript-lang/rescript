@@ -1,0 +1,2 @@
+@immediate
+type t
