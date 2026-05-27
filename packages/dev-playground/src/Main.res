@@ -593,31 +593,25 @@ module StatusBadge = {
 module App = {
   @jsx.component
   let make = () => {
-    let requestedCompilerVersion = UrlState.queryCompilerVersion(CompilerApi.defaultCompilerVersion)
-
-    let initialCompilerVersion =
-      CompilerApi.availableCompilerVersions->Array.some(version =>
-        version.id === requestedCompilerVersion
-      )
-        ? requestedCompilerVersion
-        : CompilerApi.defaultCompilerVersion
-
-    let initialModuleSystem = UrlState.queryModuleSystem(Esmodule)
-    let initialWarnFlags = UrlState.queryWarnFlags(CompilerApi.defaultWarnFlags)
-    let initialJsxPreserveMode = UrlState.queryJsxPreserveMode(false)
-    let initialExperimentalFeatures = UrlState.queryExperimentalFeatures()
+    let defaultConfig = {
+      PlaygroundConfig.compilerVersion: CompilerApi.defaultCompilerVersion,
+      moduleSystem: Esmodule,
+      warnFlags: CompilerApi.defaultWarnFlags,
+      jsxPreserveMode: false,
+      experimentalFeatures: [],
+    }
 
     let source = Signal.make(defaultSource)
     let activeTab = Signal.make(JavaScript)
     let status = Signal.make(Loading)
     let compilerInfo: Signal.t<option<CompilerApi.info>> = Signal.make(None)
     let compileResult: Signal.t<option<CompilerApi.compileResult>> = Signal.make(None)
-    let compilerVersion = Signal.make(initialCompilerVersion)
-    let moduleSystem = Signal.make(initialModuleSystem)
-    let warnFlags = Signal.make(initialWarnFlags)
-    let jsxPreserveMode = Signal.make(initialJsxPreserveMode)
+    let compilerVersion = Signal.make(defaultConfig.compilerVersion)
+    let moduleSystem = Signal.make(defaultConfig.moduleSystem)
+    let warnFlags = Signal.make(defaultConfig.warnFlags)
+    let jsxPreserveMode = Signal.make(defaultConfig.jsxPreserveMode)
     let experimentalFeatures: Signal.t<array<experimentalFeature>> = Signal.make(
-      initialExperimentalFeatures,
+      defaultConfig.experimentalFeatures,
     )
     let activeLine = Signal.make(1)
     let editorScrollTop = Signal.make(0)
@@ -628,7 +622,7 @@ module App = {
     let timerId: ref<option<int>> = ref(None)
     let urlTimerId: ref<option<int>> = ref(None)
     let toastTimerId: ref<option<int>> = ref(None)
-    let firstCompilerLoad = ref(true)
+    let firstLoadConfig: ref<option<PlaygroundConfig.t>> = ref(None)
     let compilerLoadSequence = ref(0)
     let compileSequence = ref(0)
     let shareToast: Signal.t<option<string>> = Signal.make(None)
@@ -696,14 +690,7 @@ module App = {
     }
 
     let syncUrlNow = () =>
-      UrlState.replaceUrlState(
-        ~source=Signal.peek(source),
-        ~compilerVersion=Signal.peek(compilerVersion),
-        ~moduleSystem=Signal.peek(moduleSystem),
-        ~warnFlags=Signal.peek(warnFlags),
-        ~jsxPreserveMode=Signal.peek(jsxPreserveMode),
-        ~experimentalFeatures=Signal.peek(experimentalFeatures),
-      )->Promise.ignore
+      UrlState.replace(~source=Signal.peek(source), ~config=currentConfig())->Promise.ignore
 
     let scheduleUrlSync = () => {
       switch urlTimerId.contents {
@@ -778,14 +765,7 @@ module App = {
       }
 
       let share = async () => {
-        switch await UrlState.copyUrlState(
-          ~source=Signal.peek(source),
-          ~compilerVersion=Signal.peek(compilerVersion),
-          ~moduleSystem=Signal.peek(moduleSystem),
-          ~warnFlags=Signal.peek(warnFlags),
-          ~jsxPreserveMode=Signal.peek(jsxPreserveMode),
-          ~experimentalFeatures=Signal.peek(experimentalFeatures),
-        ) {
+        switch await UrlState.copy(~source=Signal.peek(source), ~config=currentConfig()) {
         | Ok() => showToast("Link copied")
         | Error(message) => showToast(message)
         }
@@ -805,23 +785,28 @@ module App = {
           Signal.set(compileResult, None)
           let info = await CompilerApi.init(version)
           if sequence === compilerLoadSequence.contents {
-            let useInitialSettings = firstCompilerLoad.contents
-            firstCompilerLoad := false
+            let firstLoadConfigValue = firstLoadConfig.contents
+            firstLoadConfig := None
+            let config = switch firstLoadConfigValue {
+            | Some(config) => config
+            | None => {
+                PlaygroundConfig.compilerVersion: info.bundleId,
+                moduleSystem: info.moduleSystem,
+                warnFlags: info.warnFlags,
+                jsxPreserveMode: info.jsxPreserveMode,
+                experimentalFeatures: info.experimentalFeatures,
+              }
+            }
             Signal.set(compilerInfo, Some(info))
             Signal.set(compilerVersion, info.bundleId)
-            Signal.set(moduleSystem, useInitialSettings ? initialModuleSystem : info.moduleSystem)
-            Signal.set(warnFlags, useInitialSettings ? initialWarnFlags : info.warnFlags)
-            Signal.set(
-              jsxPreserveMode,
-              useInitialSettings ? initialJsxPreserveMode : info.jsxPreserveMode,
-            )
-            Signal.set(
-              experimentalFeatures,
-              useInitialSettings ? initialExperimentalFeatures : info.experimentalFeatures,
-            )
+            Signal.set(moduleSystem, config.moduleSystem)
+            Signal.set(warnFlags, config.warnFlags)
+            Signal.set(jsxPreserveMode, config.jsxPreserveMode)
+            Signal.set(experimentalFeatures, config.experimentalFeatures)
             Signal.set(status, Ready)
-            if !useInitialSettings {
-              scheduleUrlSync()
+            switch firstLoadConfigValue {
+            | Some(_) => ()
+            | None => scheduleUrlSync()
             }
             if compileAfterLoad {
               compileNow()
@@ -846,12 +831,22 @@ module App = {
 
     Effect.run(() => {
       let start = async () => {
-        let initialSource = await UrlState.initialSource(defaultSource)
-        Signal.set(source, initialSource)
+        let urlState = await UrlState.init(
+          ~defaultSource,
+          ~defaultConfig,
+          ~availableCompilerVersions=CompilerApi.availableCompilerVersions,
+        )
+        Signal.set(source, urlState.source)
+        Signal.set(compilerVersion, urlState.config.compilerVersion)
+        Signal.set(moduleSystem, urlState.config.moduleSystem)
+        Signal.set(warnFlags, urlState.config.warnFlags)
+        Signal.set(jsxPreserveMode, urlState.config.jsxPreserveMode)
+        Signal.set(experimentalFeatures, urlState.config.experimentalFeatures)
         Signal.set(activeLine, 1)
         Signal.set(editorScrollTop, 0)
         Signal.set(editorScrollLeft, 0)
-        loadCompiler(Signal.peek(compilerVersion), true)
+        firstLoadConfig := Some(urlState.config)
+        loadCompiler(urlState.config.compilerVersion, true)
       }
 
       start()->ignore

@@ -2,25 +2,23 @@ let maxEncodedCodeLength = 300 * 1024
 let maxDecodedSourceLength = 200 * 1024
 let replaceSequence = ref(0)
 
+type state = {
+  source: string,
+  config: PlaygroundConfig.t,
+}
+
 let getParam = name => UrlSearchParams.make(Location.search)->UrlSearchParams.get(name)
 
-let applyUrlState = (
-  ~encoded,
-  ~compilerVersion,
-  ~moduleSystem: PlaygroundConfig.moduleSystem,
-  ~warnFlags,
-  ~jsxPreserveMode,
-  ~experimentalFeatures: array<PlaygroundConfig.experimentalFeature>,
-) => {
-  let moduleSystem = (moduleSystem :> string)
-  let experimentalFeatures = experimentalFeatures->Array.map(feature => (feature :> string))
+let applyUrlState = (~encoded, ~config: PlaygroundConfig.t) => {
+  let moduleSystem = (config.moduleSystem :> string)
+  let experimentalFeatures = config.experimentalFeatures->Array.map(feature => (feature :> string))
   let params = UrlSearchParams.make(Location.search)
   params->UrlSearchParams.set("code", encoded)
-  params->UrlSearchParams.set("version", compilerVersion)
+  params->UrlSearchParams.set("version", config.compilerVersion)
   params->UrlSearchParams.set("module", moduleSystem)
-  params->UrlSearchParams.set("warn", warnFlags)
+  params->UrlSearchParams.set("warn", config.warnFlags)
 
-  if jsxPreserveMode {
+  if config.jsxPreserveMode {
     params->UrlSearchParams.set("jsxPreserve", "true")
   } else {
     params->UrlSearchParams.delete("jsxPreserve")
@@ -80,47 +78,51 @@ let queryJsxPreserveMode = defaultValue =>
   | Some(value) => value === "true" || value === "1"
   }
 
-let queryExperimentalFeatures = () =>
+let queryExperimentalFeatures = defaultExperimentalFeatures =>
   switch getParam("experimental") {
   | Some(value) if value !== "" =>
     value->String.split(",")->Array.filterMap(PlaygroundConfig.parseExperimentalFeature)
-  | _ => []
+  | _ => defaultExperimentalFeatures
   }
 
-let replaceUrlState = async (
-  ~source,
-  ~compilerVersion,
-  ~moduleSystem,
-  ~warnFlags,
-  ~jsxPreserveMode,
-  ~experimentalFeatures,
+let queryConfig = (
+  ~defaultConfig: PlaygroundConfig.t,
+  ~availableCompilerVersions: array<CompilerApi.Version.t>,
 ) => {
+  let requestedCompilerVersion = queryCompilerVersion(defaultConfig.compilerVersion)
+  let compilerVersion =
+    availableCompilerVersions->Array.some(version => version.id === requestedCompilerVersion)
+      ? requestedCompilerVersion
+      : defaultConfig.compilerVersion
+
+  {
+    PlaygroundConfig.compilerVersion,
+    moduleSystem: queryModuleSystem(defaultConfig.moduleSystem),
+    warnFlags: queryWarnFlags(defaultConfig.warnFlags),
+    jsxPreserveMode: queryJsxPreserveMode(defaultConfig.jsxPreserveMode),
+    experimentalFeatures: queryExperimentalFeatures(defaultConfig.experimentalFeatures),
+  }
+}
+
+let init = async (~defaultSource, ~defaultConfig, ~availableCompilerVersions): state => {
+  let source = await initialSource(defaultSource)
+  let config = queryConfig(~defaultConfig, ~availableCompilerVersions)
+  {source, config}
+}
+
+let replace = async (~source, ~config) => {
   replaceSequence := replaceSequence.contents + 1
   let sequence = replaceSequence.contents
   let encoded = await SharedCode.encode(source)
 
   if sequence === replaceSequence.contents {
-    applyUrlState(
-      ~encoded,
-      ~compilerVersion,
-      ~moduleSystem,
-      ~warnFlags,
-      ~jsxPreserveMode,
-      ~experimentalFeatures,
-    )
+    applyUrlState(~encoded, ~config)
   }
 }
 
 let windowHref = () => Location.href
 
-let copyUrlState = async (
-  ~source,
-  ~compilerVersion,
-  ~moduleSystem,
-  ~warnFlags,
-  ~jsxPreserveMode,
-  ~experimentalFeatures,
-): result<unit, string> => {
+let copy = async (~source, ~config): result<unit, string> => {
   replaceSequence := replaceSequence.contents + 1
   let sequence = replaceSequence.contents
 
@@ -132,14 +134,7 @@ let copyUrlState = async (
   if sequence !== replaceSequence.contents {
     Error("Link changed before it could be copied")
   } else {
-    applyUrlState(
-      ~encoded,
-      ~compilerVersion,
-      ~moduleSystem,
-      ~warnFlags,
-      ~jsxPreserveMode,
-      ~experimentalFeatures,
-    )
+    applyUrlState(~encoded, ~config)
 
     switch await windowHref()->Clipboard.writeText {
     | () => Ok()

@@ -1,29 +1,14 @@
-let initialSource: string => promise<string>
+type state = {
+  source: string,
+  config: PlaygroundConfig.t,
+}
 
-let queryCompilerVersion: string => string
+let init: (
+  ~defaultSource: string,
+  ~defaultConfig: PlaygroundConfig.t,
+  ~availableCompilerVersions: array<CompilerApi.Version.t>,
+) => promise<state>
 
-let queryModuleSystem: PlaygroundConfig.moduleSystem => PlaygroundConfig.moduleSystem
+let replace: (~source: string, ~config: PlaygroundConfig.t) => promise<unit>
 
-let queryWarnFlags: string => string
-
-let queryJsxPreserveMode: bool => bool
-
-let queryExperimentalFeatures: unit => array<PlaygroundConfig.experimentalFeature>
-
-let replaceUrlState: (
-  ~source: string,
-  ~compilerVersion: string,
-  ~moduleSystem: PlaygroundConfig.moduleSystem,
-  ~warnFlags: string,
-  ~jsxPreserveMode: bool,
-  ~experimentalFeatures: array<PlaygroundConfig.experimentalFeature>,
-) => promise<unit>
-
-let copyUrlState: (
-  ~source: string,
-  ~compilerVersion: string,
-  ~moduleSystem: PlaygroundConfig.moduleSystem,
-  ~warnFlags: string,
-  ~jsxPreserveMode: bool,
-  ~experimentalFeatures: array<PlaygroundConfig.experimentalFeature>,
-) => promise<result<unit, string>>
+let copy: (~source: string, ~config: PlaygroundConfig.t) => promise<result<unit, string>>
