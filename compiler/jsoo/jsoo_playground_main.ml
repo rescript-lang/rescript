@@ -544,12 +544,12 @@ module Compile = struct
       in
       if include_debug_outputs then
         let export_ident_sets = Set_ident.of_list exports in
-        let lam, _ = Lam_convert.convert export_ident_sets lambda in
         let parsetree = Printer.to_string Printast.implementation ast in
         let typedtree =
           Printer.to_string Printtyped.implementation_with_coercion typed_tree
         in
-        let lambda = Printer.to_string Printlambda.lambda lambda in
+        let lambda = Printer.to_string Printlambda.lambda lam in
+        let lam, _ = Lam_convert.convert export_ident_sets lam in
         let lam = Lam_print.lambda_to_string lam in
         let debug_attrs =
           Js.Unsafe.

@@ -2,9 +2,7 @@ let maxEncodedCodeLength = 300 * 1024
 let maxDecodedSourceLength = 200 * 1024
 let replaceSequence = ref(0)
 
-let getParam = name => {
-  UrlSearchParams.make(Location.search)->UrlSearchParams.get(name)
-}
+let getParam = name => UrlSearchParams.make(Location.search)->UrlSearchParams.get(name)
 
 let applyUrlState = (
   ~encoded,
