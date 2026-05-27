@@ -47,6 +47,7 @@
 #### :house: Internal
 
 - Remove `Primitive_option.toUndefined`; use `valFromOption` for optional ffi args. https://github.com/rescript-lang/rescript/pull/8380
+- Add a developer playground for testing the current compiler bundle locally and deploy the latest `master` build to GitHub Pages. https://github.com/rescript-lang/rescript/pull/8435
 - Expand `super_errors` fixture coverage for warnings and errors. https://github.com/rescript-lang/rescript/pull/8429
 - Run `super_errors` fixtures in parallel (~2.4× faster locally). https://github.com/rescript-lang/rescript/pull/8430
 - Expand `super_errors` fixture coverage for the remaining reachable single-file error variants. https://github.com/rescript-lang/rescript/pull/8432

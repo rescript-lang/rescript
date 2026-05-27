@@ -204,6 +204,15 @@ $(PLAYGROUND_CMI_BUILD_STAMP): $(RUNTIME_BUILD_STAMP)
 playground-test: playground
 	yarn workspace playground test
 
+dev-playground-stage: playground
+	yarn workspace dev-playground stage-local-bundle
+
+dev-playground: dev-playground-stage
+	yarn workspace dev-playground dev
+
+dev-playground-build: dev-playground-stage
+	yarn workspace dev-playground build
+
 # Builds the playground, runs some e2e tests and releases the playground to the
 # Cloudflare R2 (requires Rclone `rescript:` remote)
 playground-release: playground-test
