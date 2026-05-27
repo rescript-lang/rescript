@@ -193,7 +193,7 @@ let rename ~full ~pos ~newName ~debug =
         let fileRenames =
           referencesToToplevelModules
           |> List.map (fun uri ->
-                 let path = Uri.toString uri in
+                 let path = Uri.toPath uri in
                  let dir =
                    match Filename.dirname path with
                    | "." -> ""
@@ -203,7 +203,9 @@ let rename ~full ~pos ~newName ~debug =
                    Filename.concat dir (newName ^ Filename.extension path)
                  in
                  `RenameFile
-                   (Lsp.Types.RenameFile.create ~newUri:(newPath |> Uri.fromPath)
+                   (Lsp.Types.RenameFile.create
+                      ~newUri:
+                        (newPath |> Uri.fromPath |> Uri.toString |> Uri.fromPath)
                       ~oldUri:(uri |> Uri.toString |> Uri.fromString)
                       ()))
         in
