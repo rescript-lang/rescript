@@ -136,8 +136,12 @@ let list_of_arrow (ty : t) : t * Parsetree.arg list =
     match ty.ptyp_desc with
     | Ptyp_arrow {arg; ret; arity} when arity = None || acc = [] ->
       aux ret (arg :: acc)
-    | Ptyp_poly (_, ty) ->
-      Location.raise_errorf ~loc:ty.ptyp_loc "Unhandled poly type"
+    | Ptyp_poly _ ->
+      (* unreachable: this would require an inline Ptyp_poly inside an
+         external's arrow chain. The ReScript parser misreads inline `'a.`
+         prefix syntax as the deprecated uncurried `(. …)` form and rejects
+         it, so the typer never sees the required AST shape. *)
+      assert false
     | _ -> (ty, List.rev acc)
   in
   aux ty []

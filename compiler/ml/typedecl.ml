@@ -108,7 +108,7 @@ let enter_type rec_flag env sdecl id =
     in
     Env.add_type ~check:true id decl env
 
-let update_type temp_env env id loc =
+let update_type temp_env env id _loc =
   let path = Path.Pident id in
   let decl = Env.find_type path temp_env in
   match decl.type_manifest with
@@ -117,8 +117,10 @@ let update_type temp_env env id loc =
     let params = List.map (fun _ -> Ctype.newvar ()) decl.type_params in
     try Ctype.unify env (Ctype.newconstr path params) ty
     with Ctype.Unify _ ->
-      Location.raise_errorf ~loc
-        "This type constructor expands to an incompatible type.")
+      (* unreachable: every recursive abbreviation shape that would reach
+         this unify failure hits Cycle_in_def in check_recursive_type
+         (see line ~902 below) before check_coherence runs *)
+      assert false)
 
 (* We use the Ctype.expand_head_opt version of expand_head to get access
    to the manifest type of private abbreviations. *)
@@ -170,7 +172,7 @@ let is_fixed_type sd =
     && sd.ptype_private = Private && has_row_var sty
 
 (* Set the row variable in a fixed type *)
-let set_fixed_row env loc p decl =
+let set_fixed_row env _loc p decl =
   let tm =
     match decl.type_manifest with
     | None -> assert false
@@ -184,10 +186,16 @@ let set_fixed_row env loc p decl =
       if Btype.static_row row then Btype.newgenty Tnil else row.row_more
     | Tobject (ty, _) -> snd (Ctype.flatten_fields ty)
     | _ ->
-      Location.raise_errorf ~loc "This fixed type is not an object or variant"
+      (* unreachable: gated by `is_fixed_type decl`, which only returns true
+         when the syntactic manifest carries an open polymorphic-variant or
+         object row. `expand_head` preserves that row, so the manifest's
+         desc is always Tvariant or Tobject here. *)
+      assert false
   in
   if not (Btype.is_Tvar rv) then
-    Location.raise_errorf ~loc "This fixed type has no row variable";
+    (* unreachable: same is_fixed_type invariant — the row is always a Tvar
+       (or extended-Tvar) when is_fixed_type passes *)
+    assert false;
   rv.desc <- Tconstr (p, decl.type_params, ref Mnil)
 
 (* Translate one type declaration *)
@@ -978,10 +986,14 @@ let check_recursion env loc path decl to_check =
         match ty.desc with
         | Tconstr (path', args', _) ->
           (if Path.same path path' then (
-             if not (Ctype.equal env false args args') then
-               Location.raise_errorf ~loc
-                 "In the definition of %s, recursive type parameters differ."
-                 (Path.name cpath))
+             if not (Ctype.equal env false args args') then (
+               (* unreachable: check_regular runs only on abbreviations,
+                  and every recursive-abbreviation shape hits Cycle_in_def
+                  in the earlier check_recursive_type pass before reaching
+                  here. Variant constructors with non-uniform recursion
+                  (`type rec t<'a> = T(t<int>)`) don't trigger check_regular. *)
+               ignore cpath;
+               assert false))
            else if
              (* Attempt to expand a type abbreviation if:
                  1- [to_check path'] holds
@@ -1234,7 +1246,7 @@ let for_constr = function
       (fun {Types.ld_mutable; ld_type} -> (ld_mutable = Mutable, ld_type))
       l
 
-let compute_variance_gadt env check ((required, loc) as rloc) decl
+let compute_variance_gadt env check ((required, _loc) as rloc) decl
     (tl, ret_type_opt) =
   match ret_type_opt with
   | None ->
@@ -1255,9 +1267,11 @@ let compute_variance_gadt env check ((required, loc) as rloc) decl
             | fv :: fv2 ->
               (* fv1 @ fv2 = free_variables of other parameters *)
               if (c || n) && constrained (fv1 @ fv2) ty then
-                Location.raise_errorf ~loc
-                  "In this GADT definition, the variance of some parameter \
-                   cannot be checked.";
+                (* unreachable: this would fire on a GADT parameter that's
+                   `_` (anonymous). ReScript's parser rejects `_` in
+                   `type t<...>` parameter positions, so the typer never
+                   sees the required AST shape. *)
+                assert false;
               (fv :: fv1, fv2))
           ([], fvl) tyl required
       in
@@ -1882,8 +1896,12 @@ let transl_value_decl env loc valdecl =
         val_attributes = valdecl.pval_attributes;
       }
     | [] ->
-      Location.raise_errorf ~loc:valdecl.pval_loc
-        "Value declarations are only allowed in signatures"
+      (* unreachable: `pval_prim = []` outside a signature can only arise
+         from the parser's `external` recovery, which sets `prim = []`
+         *after* emitting a syntax error, so the typer never sees the
+         declaration. A bare `val x: int` in a .res is also rejected at
+         parse time. *)
+      assert false
     | _ ->
       let arity, from_constructor = parse_arity env valdecl.pval_type ty in
       let prim = Primitive.parse_declaration valdecl ~arity ~from_constructor in
@@ -1897,8 +1915,12 @@ let transl_value_decl env loc valdecl =
         && (prim.prim_name = ""
            || (prim.prim_name.[0] <> '%' && prim.prim_name.[0] <> '#'))
       then
-        Location.raise_errorf ~loc:valdecl.pval_type.ptyp_loc
-          "External identifiers must be functions";
+        (* unreachable: Primitive.parse_declaration always assigns the
+           magic 20-byte prim_native_name encoding to externals; the
+           `prim_native_name = ""` precondition can't be satisfied alongside
+           `prim_arity = 0` from any externals that survive parsing. Empty
+           prim names are rejected earlier with `Not a valid global name`. *)
+        assert false;
       {
         val_type = ty;
         val_kind = Val_prim prim;

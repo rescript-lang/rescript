@@ -1336,8 +1336,10 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
     type_pat ~explode:0 p expected_ty k
     (* TODO: record 'extra' to remember about interval *)
   | Ppat_interval _ ->
-    Location.raise_errorf ~loc
-      "Only character intervals are supported in patterns."
+    (* unreachable: the ReScript parser (compiler/syntax/src/res_core.ml) has
+       no construction site for Ppat_interval — interval patterns are OCaml
+       syntax not part of the ReScript grammar *)
+    assert false
   | Ppat_tuple spl ->
     assert (List.length spl >= 2);
     let spl_ann = List.map (fun p -> (p, newvar ())) spl in
@@ -3088,8 +3090,11 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
             Types.val_loc = loc;
           } env ~check:(fun s -> Warnings.Unused_for_index s)
       | _ ->
-        Location.raise_errorf ~loc:param.ppat_loc
-          "Invalid for...of binding: only variables and _ are allowed."
+        (* unreachable: the parser's normalize_for_of_pattern
+           (compiler/syntax/src/res_core.ml:3841) catches every non-var,
+           non-`_` pattern, emits a syntax error, and replaces the pattern
+           with Ppat_any before the typer runs *)
+        assert false
     in
     let body =
       with_depth loop_depth (fun () ->
@@ -3122,8 +3127,11 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
             Types.val_loc = loc;
           } env ~check:(fun s -> Warnings.Unused_for_index s)
       | _ ->
-        Location.raise_errorf ~loc:param.ppat_loc
-          "Invalid for...of binding: only variables and _ are allowed."
+        (* unreachable: the parser's normalize_for_of_pattern
+           (compiler/syntax/src/res_core.ml:3841) catches every non-var,
+           non-`_` pattern, emits a syntax error, and replaces the pattern
+           with Ppat_any before the typer runs *)
+        assert false
     in
     let body =
       with_depth loop_depth (fun () ->
@@ -3849,6 +3857,12 @@ and type_application ~context total_app env funct (sargs : sargs) :
                 (Error
                    (sarg1.pexp_loc, env, Apply_wrong_label (l1, funct.exp_type)))
             else
+              (* Originally split between Apply_wrong_label (label not in
+                 ty_fun) and Incoherent_label_order (label in ty_fun but at
+                 a different position). The latter is unreachable: modern
+                 arity-aware unify in type_function eagerly compares against
+                 ty_expected, raising Expr_type_clash before this branch
+                 fires. Both label problems now surface as Apply_wrong_label. *)
               raise
                 (Error (sarg1.pexp_loc, env, Apply_wrong_label (l1, ty_res)))
           | _ ->

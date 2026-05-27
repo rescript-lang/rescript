@@ -24,11 +24,15 @@ open Format
 type error =
   | Cannot_apply of module_type
   | Not_included of Includemod.error list
+  | Cannot_eliminate_dependency of module_type
   | Signature_expected
   | Structure_expected of module_type
   | With_no_component of Longident.t
   | With_mismatch of Longident.t * Includemod.error list
+  | With_makes_applicative_functor_ill_typed of
+      Longident.t * Path.t * Includemod.error list
   | With_changes_module_alias of Longident.t * Ident.t * Path.t
+  | With_cannot_remove_constrained_type
   | Repeated_name of string * string * Warnings.loc
   | Non_generalizable of type_expr
   | Non_generalizable_module of module_type
@@ -36,6 +40,7 @@ type error =
   | Not_allowed_in_functor_body
   | Not_a_packed_module of type_expr
   | Incomplete_packed_module of type_expr
+  | Scoping_pack of Longident.t * type_expr
   | Recursive_module_require_explicit_type
   | Apply_generative
   | Cannot_scrape_alias of Path.t
@@ -246,13 +251,12 @@ let check_usage_of_path_of_substituted_item paths env signature ~loc ~lid =
                 let env = !env in
                 try retype_applicative_functor_type ~loc env funct arg
                 with Includemod.Error explanation ->
-                  Location.raise_errorf ~loc
-                    "@[<v>@[This `with' constraint on %a makes the applicative \
-                     functor type %s ill-typed in the constrained \
-                     signature:@]@ %a@]"
-                    Printtyp.longident lid.txt
-                    (Path.name referenced_path)
-                    Includemod.report_error explanation));
+                  raise
+                    (Error
+                       ( loc,
+                         env,
+                         With_makes_applicative_functor_ill_typed
+                           (lid.txt, referenced_path, explanation) ))));
     }
   in
   iterator.Btype.it_signature iterator signature;
@@ -435,11 +439,8 @@ let merge_constraint initial_env loc sg constr =
             in
             let params = tdecl.typ_type.type_params in
             if params_are_constrained params then
-              Location.raise_errorf ~loc
-                "@[<v>Destructive substitutions are not supported for \
-                 constrained types (other than when replacing a type \
-                 constructor with a type constructor with the same \
-                 arguments).@]";
+              raise
+                (Error (loc, initial_env, With_cannot_remove_constrained_type));
             fun s path -> Subst.add_type_function path ~params ~body s
         in
         let sub = List.fold_left how_to_extend_subst Subst.identity !real_ids in
@@ -1329,11 +1330,10 @@ and type_module_aux ~alias sttn funct_body anchor env smod =
                 (Env.add_module ~arg:true param arg.mod_type env)
                 param mty_res
             with Not_found ->
-              Location.raise_errorf ~loc:smod.pmod_loc
-                "@[This functor has type@ %a@ The parameter cannot be \
-                 eliminated in the result type.@  Bind the argument to a \
-                 module identifier.@]"
-                Printtyp.modtype mty_functor)
+              raise
+                (Error
+                   (smod.pmod_loc, env, Cannot_eliminate_dependency mty_functor))
+          )
       in
       rm
         {
@@ -1714,10 +1714,7 @@ let type_package env m p nl =
       (fun n ty ->
         try Ctype.unify env ty (Ctype.newvar ())
         with Ctype.Unify _ ->
-          Location.raise_errorf ~loc:m.pmod_loc
-            "@[The type %a in this module cannot be exported.@ Its type \
-             contains local dependencies:@ %a@]"
-            Printtyp.longident n Printtyp.type_expr ty)
+          raise (Error (m.pmod_loc, env, Scoping_pack (n, ty))))
       nl tl';
     (wrap_constraint env modl mty Tmodtype_implicit, tl')
 
@@ -1833,6 +1830,16 @@ let report_error ppf = function
       "@[<v>@[In this `with' constraint, the new definition of %a@ does not \
        match its original definition@ in the constrained signature:@]@ %a@]"
       longident lid Includemod.report_error explanation
+  | With_makes_applicative_functor_ill_typed (lid, path, explanation) ->
+    fprintf ppf
+      "@[<v>@[This `with' constraint on %a makes the applicative functor @ \
+       type %s ill-typed in the constrained signature:@]@ %a@]"
+      longident lid (Path.name path) Includemod.report_error explanation
+  | With_cannot_remove_constrained_type ->
+    fprintf ppf
+      "@[<v>Destructive substitutions are not supported for constrained @ \
+       types (other than when replacing a type constructor with @ a type \
+       constructor with the same arguments).@]"
   | With_changes_module_alias (lid, id, path) ->
     fprintf ppf
       "@[<v>@[This `with' constraint on %a changes %s, which is aliased @ in \
@@ -1866,6 +1873,11 @@ let report_error ppf = function
   | Interface_not_compiled intf_name ->
     fprintf ppf "@[Could not find the .cmi file for interface@ %a.@]"
       Location.print_filename intf_name
+  | Cannot_eliminate_dependency mty ->
+    fprintf ppf
+      "@[This functor has type@ %a@ The parameter cannot be eliminated in the \
+       result type.@  Bind the argument to a module identifier.@]"
+      modtype mty
   | Not_allowed_in_functor_body ->
     fprintf ppf "@[This expression creates fresh types.@ %s@]"
       "It is not allowed inside applicative functors."
@@ -1875,6 +1887,9 @@ let report_error ppf = function
   | Incomplete_packed_module ty ->
     fprintf ppf "The type of this packed module contains variables:@ %a"
       type_expr ty
+  | Scoping_pack (lid, ty) ->
+    fprintf ppf "The type %a in this module cannot be exported.@ " longident lid;
+    fprintf ppf "Its type contains local dependencies:@ %a" type_expr ty
   | Recursive_module_require_explicit_type ->
     fprintf ppf "Recursive modules require an explicit module type."
   | Apply_generative ->

@@ -1616,13 +1616,16 @@ and check_usage loc id warn tbl =
 and check_value_name name loc =
   (* Note: we could also check here general validity of the
      identifier, to protect against bad identifiers forged by -pp or
-     -ppx preprocessors. *)
-  if name = "->" then
-    Location.raise_errorf ~loc "'%s' is not a valid value identifier." name
+     -ppx preprocessors.
+
+     Both guarded paths below are unreachable: the ReScript parser never
+     emits value identifiers named "->" or containing "#" — both shapes
+     are rejected as syntax errors. *)
+  ignore loc;
+  if name = "->" then assert false
   else if String.length name > 0 && name.[0] = '#' then
     for i = 1 to String.length name - 1 do
-      if name.[i] = '#' then
-        Location.raise_errorf ~loc "'%s' is not a valid value identifier." name
+      if name.[i] = '#' then assert false
     done
 
 and store_value ?check id decl env =

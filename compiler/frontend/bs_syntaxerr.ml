@@ -46,6 +46,7 @@ type error =
   | Bs_this_simple_pattern
   | Experimental_feature_not_enabled of Experimental_features.feature
   | LetUnwrap_not_supported_in_position of [`Toplevel | `Unsupported_type]
+  | Misplaced_label_syntax
 
 let pp_error fmt err =
   Format.pp_print_string fmt
@@ -86,7 +87,8 @@ let pp_error fmt err =
       | `Toplevel -> "`let?` is not allowed for top-level bindings."
       | `Unsupported_type ->
         "`let?` is only supported in let bindings targeting the `result` or \
-         `option` type."))
+         `option` type.")
+    | Misplaced_label_syntax -> "Label syntax is not supported in this position")
 
 type exn += Error of Location.t * error
 
@@ -103,5 +105,4 @@ let optional_err loc (lbl : Asttypes.arg_label) =
   | _ -> ()
 
 let err_if_label loc (lbl : Asttypes.arg_label) =
-  if lbl <> Nolabel then
-    Location.raise_errorf ~loc "Label syntax is not supported in this position"
+  if lbl <> Nolabel then raise (Error (loc, Misplaced_label_syntax))

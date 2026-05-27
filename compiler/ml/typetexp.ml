@@ -86,8 +86,11 @@ let rec narrow_unbound_lid_error : 'a. _ -> _ -> _ -> _ -> 'a =
     let fmd = Env.find_module (Env.lookup_module ~load:true flid env) env in
     (match Env.scrape_alias env fmd.md_type with
     | Mty_signature _ ->
-      Location.raise_errorf ~loc "The module %a is a structure, not a functor"
-        Printtyp.longident flid
+      (* unreachable: this branch handles Longident.Lapply paths, but
+         Lapply has no construction site in compiler/syntax/src/ — ReScript's
+         type-level applicative-functor syntax (OCaml's M(X).t) isn't part
+         of the grammar *)
+      assert false
     | Mty_alias (_, p) ->
       raise (Error (loc, env, Cannot_scrape_alias (flid, p)))
     | _ -> ());
@@ -97,8 +100,8 @@ let rec narrow_unbound_lid_error : 'a. _ -> _ -> _ -> _ -> 'a =
     | Mty_alias (_, p) ->
       raise (Error (loc, env, Cannot_scrape_alias (mlid, p)))
     | _ ->
-      Location.raise_errorf ~loc "Ill-typed functor application %a"
-        Printtyp.longident lid));
+      (* unreachable: same Lapply path as above *)
+      assert false));
   raise (Error (loc, env, make_error lid))
 
 let find_component (lookup : ?loc:_ -> _) make_error env loc lid =
@@ -471,9 +474,13 @@ and transl_type_aux env policy styp =
             let row = Btype.row_repr row in
             row.row_fields
           | {desc = Tvar _}, Some (p, _) ->
-            Location.raise_errorf ~loc:sty.ptyp_loc
-              "The type constructor %a is not yet completely defined"
-              Printtyp.path p
+            (* unreachable: this requires the inherited type's body to be a
+               bare Tvar Tconstr, which only arises from `type 'a t = 'a`-
+               style declarations. ReScript syntax requires type parameters
+               in angle brackets (`type t<'a> = 'a`); the leading-`'a` form
+               is rejected at parse time *)
+            ignore p;
+            assert false
           | _ -> raise (Error (sty.ptyp_loc, env, Not_a_variant ty))
         in
         List.iter
@@ -617,9 +624,10 @@ and transl_fields env policy o fields =
         iter_add tf;
         OTinherit cty
       | {desc = Tvar _}, Some p ->
-        Location.raise_errorf ~loc:sty.ptyp_loc
-          "The type constructor %a is not yet completely defined" Printtyp.path
-          p
+        (* unreachable: same `type 'a t = 'a` shape as above; the bare-Tvar
+           Tconstr body can't be constructed from ReScript syntax *)
+        ignore p;
+        assert false
       | _ -> raise (Error (sty.ptyp_loc, env, Not_an_object t)))
   in
   let object_fields = List.map add_field fields in

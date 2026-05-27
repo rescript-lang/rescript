@@ -57,44 +57,81 @@ dead code.
 
 ## Removed in `jono/remove-dead-errors`
 
-The following named error and warning variants were re-validated as
-unreachable and removed. Guard sites that could still be reached by
-malformed PPX-produced ASTs now use direct `Location.raise_errorf`
-fallbacks instead of catalogued variants.
+Two classes of removal. **Truly dead** variants — no raise site under
+`compiler/`, or a guard whose predicate is always false — are deleted
+entirely (declaration, raise, reporter, supporting helpers). **Defensive
+unreachable** variants whose raise sites exist but are unreachable from
+the ReScript parser keep their named-variant form removed and the raise
+site is replaced with `assert false (* reason *)`, matching the
+established convention in the typer modules (57 existing uses).
 
-- `typecore`: `Incoherent_label_order`, `Recursive_local_constraint`,
-  `Invalid_interval`, `Invalid_for_of_pattern`
-- `typedecl`: `Type_clash`, `Parameters_differ`,
-  `Null_arity_external`, `Bad_fixed_type`, `Varying_anonymous`,
-  `Val_in_structure`
-- `typemod`: `Cannot_eliminate_dependency`,
-  `With_makes_applicative_functor_ill_typed`,
-  `With_cannot_remove_constrained_type`, `Scoping_pack`
-- `typetexp`: `Unbound_type_constructor_2`, `Variant_tags`,
-  `Ill_typed_functor_application`, `Apply_structure_as_functor`
-- `bs_syntaxerr`: `Conflict_bs_bs_this_bs_meth`,
-  `Unhandled_poly_type`, `Misplaced_label_syntax`
-- `env`: `Illegal_value_name`
+**Truly dead — declaration + raise + reporter all removed:**
+
+- `ctype`: `Tags`, `Recursive_abbrev`,
+  `Unification_recursive_abbrev` exceptions (declared, never raised)
+- `typecore`: `Recursive_local_constraint` (relay wrapper for the dead
+  `Unification_recursive_abbrev`)
+- `typetexp`: `Variant_tags` (relay wrapper for the dead `Tags`)
+- `bs_syntaxerr`: `Conflict_bs_bs_this_bs_meth` (no construction site)
 - `warnings`: `Comment_start`, `Comment_not_end`, `Method_override`,
-  `Statement_type`, `Instance_variable_override`, `Illegal_backslash`,
-  `Implicit_public_methods`, `Unerasable_optional_argument`,
-  `Eol_in_string`, `Eliminated_optional_arguments`, `Bad_docstring`,
-  `Bs_fragile_external`, `Bs_unimplemented_primitive`,
-  `Bs_uninterpreted_delimiters`
+  `Instance_variable_override`, `Illegal_backslash`,
+  `Implicit_public_methods`, `Eol_in_string`,
+  `Eliminated_optional_arguments`, `Bad_docstring`,
+  `Bs_fragile_external`, `Bs_unimplemented_primitive` (declared,
+  never raised); `Statement_type` (caller hard-codes `statement=false`),
+  `Unerasable_optional_argument` (disabled around its only check),
+  `Bs_uninterpreted_delimiters` (trigger AST rewritten by builtin PPX
+  before the warning iterator runs)
 
-Re-validation also found a few previously-flagged items that are not
-completely dead: `typedecl.Rebind_wrong_type` is live via extension
-rebinding across incompatible extension types,
-`typecore.Label_mismatch` is live when a record literal without an
-expected type mixes fields from two different record types (see
-`label_mismatch_record_literal.res`), `typecore.Abstract_wrong_label`
-is live when a multi-arg function literal has a mislabelled inner
-argument (see `abstract_wrong_label.res`),
-`includemod.Unbound_modtype_path` can still represent a stale
-compiled-interface failure, `Syntaxerr.Variable_in_scope` is live but
-lacks a registered printer, and the UTF-8 helper error families are still
-raised by test/defensive helper entry points. Those are retained below
-with updated notes.
+**Defensive unreachable — raise site becomes `assert false (* reason *)`,
+variant + reporter removed:**
+
+- `typecore`: `Incoherent_label_order` (modern arity-aware unify fires
+  `Expr_type_clash` before this branch), `Invalid_interval` (parser
+  doesn't construct `Ppat_interval`), `Invalid_for_of_pattern` (parser's
+  `normalize_for_of_pattern` replaces non-var patterns with `Ppat_any`)
+- `typetexp`: `Unbound_type_constructor_2` (needs bare-`Tvar` Tconstr
+  body via `type 'a t = 'a`, parser-rejected),
+  `Ill_typed_functor_application`, `Apply_structure_as_functor` (both
+  need `Longident.Lapply`, never constructed by the parser)
+- `typedecl`: `Type_clash`, `Parameters_differ` (every recursive
+  abbreviation hits `Cycle_in_def` first), `Null_arity_external`
+  (`Primitive.parse_declaration` always assigns the magic
+  `prim_native_name` encoding), `Bad_fixed_type` (`is_fixed_type` and
+  `expand_head` agree on every parser-produced shape),
+  `Varying_anonymous` (parser rejects `_` in type parameter positions),
+  `Val_in_structure` (`pval_prim = []` outside a signature is only
+  produced by external-recovery after a syntax error)
+- `bs_syntaxerr`: `Unhandled_poly_type` (parser misreads inline `'a.`
+  as deprecated uncurried syntax)
+- `env`: `Illegal_value_name` (parser doesn't emit `"->"` or
+  `#`-containing identifiers)
+
+Re-validation found a number of previously-flagged items that are not
+completely dead and have been retained as named variants:
+
+- `typedecl.Rebind_wrong_type` — live via extension rebinding across
+  incompatible extension types.
+- `typecore.Label_mismatch` — live when a record literal without an
+  expected type mixes fields from two different record types
+  (`label_mismatch_record_literal.res`).
+- `typecore.Abstract_wrong_label` — live when a multi-arg function
+  literal has a mislabelled inner argument (`abstract_wrong_label.res`).
+- `typemod.With_cannot_remove_constrained_type` — live when destructive
+  substitution is applied to a constrained type
+  (`with_cannot_remove_constrained_type.res`).
+- `bs_syntaxerr.Misplaced_label_syntax` — live when labelled args are
+  passed via operator-identifier syntax like `\"->"(x, ~b=...)`
+  (`misplaced_label_syntax.res`).
+- `typemod.Cannot_eliminate_dependency`, `typemod.Scoping_pack`,
+  `typemod.With_makes_applicative_functor_ill_typed` — reproduction
+  attempts couldn't reach them but couldn't conclusively prove
+  unreachability either; retained on the conservative side.
+- `includemod.Unbound_modtype_path` can still represent a stale
+  compiled-interface failure.
+- `Syntaxerr.Variable_in_scope` is live but lacks a registered printer.
+- The UTF-8 helper error families are still raised by test/defensive
+  helper entry points.
 
 ---
 
@@ -202,7 +239,11 @@ Module-level errors. Source: [typemod.ml:24](../compiler/ml/typemod.ml).
 | `Structure_expected` | ✓ | `super_errors_multi/Smoke_unbound_module_reference` (indirect); also `open_functor.res` | |
 | `With_no_component` | ✓ | `with_no_component.res` | |
 | `With_mismatch` | ✓ | `with_mismatch.res` | |
+| `With_makes_applicative_functor_ill_typed` | ? | — | typemod.ml:249. Fires when a `with` constraint on a signature containing a `Path.Papply` makes that application ill-typed. Reachable via destructive substitution on applicative functors; reproduction attempts surfaced `not a signature` first. Retained on the conservative side. |
+| `With_cannot_remove_constrained_type` | ✓ | `with_cannot_remove_constrained_type.res` | Destructive substitution on a constrained type, e.g. `S with type t<'a> := 'a` where `S` has `type t<'a> constraint 'a = int`. |
 | `With_changes_module_alias` | ☐ (needs build harness) | — | typemod.ml:240. Fires during `with module := M2` substitution when an aliased sub-module inside the constrained signature is affected. ReScript parses `with module N := M2` (destructive substitution), but constructing a sub-module alias chain that gets invalidated requires multiple `.resi` files and a specific shape I couldn't reproduce single-file. |
+| `Cannot_eliminate_dependency` | ? | — | typemod.ml:1332. Fires when `Mtype.nondep_supertype` raises `Not_found` during functor-application result-type computation. Reproduction attempts routed through `Incomplete_packed_module` or `escapes its scope`. Retained on the conservative side. |
+| `Scoping_pack` | ? | — | typemod.ml:1717. Fires during first-class module packing with `with type` constraints whose constrained type isn't a free `Tvar`. Reproduction attempts routed through `Incomplete_packed_module`. Retained on the conservative side. |
 | `Repeated_name` | ✓ | `repeated_def_*.res` (multiple) | |
 | `Non_generalizable` | ✓ | `non_generalizable.res` | |
 | `Non_generalizable_module` | ✓ | `non_generalizable_module.res` | Nested module containing `let r = ref(None)` — the outer module's `md_type` carries the free `'_weak1` from the inner ref, so `closed_modtype` returns false and the `Sig_module` branch fires. |
@@ -319,6 +360,7 @@ FFI / attribute / experimental-feature errors. Source: [bs_syntaxerr.ml:27](../c
 | `Bs_this_simple_pattern` | ✓ | `bs_this_simple_pattern.res` | `@this` with destructured self pattern. |
 | `Experimental_feature_not_enabled` | ✓ | `let_unwrap_on_top_level_not_enabled.res` (and other let-unwrap variants) | Currently only `LetUnwrap` is checked. |
 | `LetUnwrap_not_supported_in_position` | ✓ | `let_unwrap_on_top_level.res`, `let_unwrap_on_not_supported_variant.res` | |
+| `Misplaced_label_syntax` | ✓ | `misplaced_label_syntax.res` | Labelled args passed via the operator-identifier syntax `(->)`, `(#=)`, `(##)`, e.g. `\"->"(x, ~b=...)`. |
 
 ---
 
