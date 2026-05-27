@@ -65,6 +65,7 @@ type error =
       expected: int;
       provided: int;
     }
+  | Label_mismatch of Longident.t * (type_expr * type_expr) list
   | Pattern_type_clash of (type_expr * type_expr) list
   | Or_pattern_type_clash of Ident.t * (type_expr * type_expr) list
   | Multiply_bound_variable of string
@@ -75,6 +76,7 @@ type error =
     }
   | Apply_non_function of type_expr
   | Apply_wrong_label of arg_label * type_expr
+  | Abstract_wrong_label of arg_label * type_expr
   | Label_multiply_defined of {
       label: string;
       jsx_component_info: Error_message_utils.jsx_prop_error_info option;

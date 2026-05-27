@@ -32,6 +32,7 @@ type error =
       expected: int;
       provided: int;
     }
+  | Label_mismatch of Longident.t * (type_expr * type_expr) list
   | Pattern_type_clash of (type_expr * type_expr) list
   | Or_pattern_type_clash of Ident.t * (type_expr * type_expr) list
   | Multiply_bound_variable of string
@@ -42,6 +43,7 @@ type error =
     }
   | Apply_non_function of type_expr
   | Apply_wrong_label of arg_label * type_expr
+  | Abstract_wrong_label of arg_label * type_expr
   | Label_multiply_defined of {
       label: string;
       jsx_component_info: jsx_prop_error_info option;
@@ -3462,9 +3464,13 @@ and type_function ?in_function ~arity ~async loc attrs env ty_expected_ l
   if separate then begin_def ();
   let ty_arg, ty_res =
     try filter_arrow ~env ~arity (instance env ty_expected) l
-    with Unify _ ->
-      raise
-        (Error (loc_fun, env, Too_many_arguments (in_function <> None, ty_fun)))
+    with Unify _ -> (
+      match expand_head env ty_expected with
+      | {desc = Tarrow _} as ty ->
+        raise (Error (loc, env, Abstract_wrong_label (l, ty)))
+      | _ ->
+        raise
+          (Error (loc_fun, env, Too_many_arguments (in_function <> None, ty_fun))))
   in
   let ty_arg =
     if is_optional l then (
@@ -3542,8 +3548,9 @@ and type_label_exp ~call_context create env loc ty_expected
     (* Generalize label information *)
     generalize_structure ty_arg;
     generalize_structure ty_res);
-  unify_exp_types ~context:None lid.loc env (instance_def ty_res)
-    (instance env ty_expected);
+  (try unify env (instance_def ty_res) (instance env ty_expected)
+   with Unify trace ->
+     raise (Error (lid.loc, env, Label_mismatch (lid.txt, trace))));
   (* Instantiate so that we can generalize internal nodes *)
   let ty_arg = instance_def ty_arg in
   if separate then (
@@ -4555,6 +4562,13 @@ let report_error env loc ppf error =
         (if expected == 1 then "argument" else "arguments")
         (if provided < expected then " only" else "")
         provided
+  | Label_mismatch (lid, trace) ->
+    (* modified *)
+    super_report_unification_error ppf env trace
+      (function
+        | ppf ->
+          fprintf ppf "The record field %a@ belongs to the type" longident lid)
+      (function ppf -> fprintf ppf "but is mixed here with fields of type")
   | Pattern_type_clash trace ->
     (* modified *)
     super_report_unification_error ppf env trace
@@ -4637,6 +4651,14 @@ let report_error env loc ppf error =
     in
     fprintf ppf "@[<v>@[<2>%a@]@,This function has type: %a@]" print_message l
       type_expr ty
+  | Abstract_wrong_label (l, ty) ->
+    let label_mark = function
+      | Nolabel -> "but its first argument is not labelled"
+      | l ->
+        sprintf "but its first argument is labelled %s" (prefixed_label_name l)
+    in
+    fprintf ppf "@[<v>@[<2>This function should have type@ %a@]@,%s@]" type_expr
+      ty (label_mark l)
   | Label_multiply_defined {label; jsx_component_info = Some jsx_component_info}
     ->
     fprintf ppf

@@ -62,8 +62,7 @@ unreachable and removed. Guard sites that could still be reached by
 malformed PPX-produced ASTs now use direct `Location.raise_errorf`
 fallbacks instead of catalogued variants.
 
-- `typecore`: `Label_mismatch`, `Abstract_wrong_label`,
-  `Incoherent_label_order`, `Recursive_local_constraint`,
+- `typecore`: `Incoherent_label_order`, `Recursive_local_constraint`,
   `Invalid_interval`, `Invalid_for_of_pattern`
 - `typedecl`: `Type_clash`, `Parameters_differ`,
   `Null_arity_external`, `Bad_fixed_type`, `Varying_anonymous`,
@@ -86,6 +85,11 @@ fallbacks instead of catalogued variants.
 Re-validation also found a few previously-flagged items that are not
 completely dead: `typedecl.Rebind_wrong_type` is live via extension
 rebinding across incompatible extension types,
+`typecore.Label_mismatch` is live when a record literal without an
+expected type mixes fields from two different record types (see
+`label_mismatch_record_literal.res`), `typecore.Abstract_wrong_label`
+is live when a multi-arg function literal has a mislabelled inner
+argument (see `abstract_wrong_label.res`),
 `includemod.Unbound_modtype_path` can still represent a stale
 compiled-interface failure, `Syntaxerr.Variable_in_scope` is live but
 lacks a registered printer, and the UTF-8 helper error families are still
@@ -110,6 +114,8 @@ Source: [typecore.ml:27](../compiler/ml/typecore.ml).
 | `Expr_type_clash` | ✓ | many `*.res` | Most-fired expression error. Trace-shape sub-cases covered: `if_return_type_mismatch.res` (IfReturn), `maybe_unwrap_option.res` (MaybeUnwrapOption), `string_concat_non_string.res` (StringConcat), `labeled_fn_argument_type_clash.res` (FunctionArgument with explicit label), `math_operator_*.res` (MathOperator family), `ternary_branch_mismatch.res`, `switch_different_types.res`, `try_catch_same_type.res`, `comparison_operator.res`, `array_item_type_mismatch.res`, `array_literal_passed_to_tuple.res`, `if_condition_mismatch.res`, `while_condition.res`, `for_loop_condition.res`, `assert_condition.res`, `function_call_mismatch.res`, `awaiting_non_promise.res`, multiple `jsx_*` fixtures. |
 | `Apply_non_function` | ✓ | `apply_non_function.res` | |
 | `Apply_wrong_label` | ✓ | `apply_wrong_label.res` | |
+| `Abstract_wrong_label` | ✓ | `abstract_wrong_label.res` | Multi-arg function literal where an inner argument label doesn't match the expected arrow's label (e.g. `let f: (~a, ~b) => int = (~a, ~c) => …`). |
+| `Label_mismatch` | ✓ | `label_mismatch_record_literal.res` | Record literal without expected type mixing fields from two different record types — disambiguation picks one type per label, and the cross-type unify fails inside `type_label_exp`. |
 | `Label_multiply_defined` | ✓ | `label_multiply_defined_literal.res` | |
 | `Labels_missing` | ✓ | `missing_label.res`, `missing_labels.res` | |
 | `Label_not_mutable` | ✓ | `label_not_mutable.res` | |
