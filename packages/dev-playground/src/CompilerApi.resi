@@ -38,7 +38,9 @@ type formatResult = result<string, failure>
 
 let defaultConfig: PlaygroundConfig.t
 
-let availableCompilerVersions: array<Version.t>
+let selectableCompilerVersions: string => array<Version.t>
+
+let isLoadableVersion: string => bool
 
 let init: string => promise<info>
 

@@ -1,3 +1,9 @@
+type compilerVersion = {
+  versionId: string,
+  versionLabel: string,
+  versionRoot: option<string>,
+}
+
 module Version = {
   type t = {
     id: string,
@@ -10,12 +16,28 @@ module Version = {
     | _ => None
     }
 
+  let normalizeRoot = root =>
+    if root->String.endsWith("/") {
+      root->String.slice(~start=0, ~end=root->String.length - 1)
+    } else {
+      root
+    }
+
+  let toPublic = (version: compilerVersion): t => {
+    id: version.versionId,
+    label: version.versionLabel,
+  }
+
   let fromJson = json =>
     switch json {
     | JSON.Object(item) =>
       let? Some(id) = item->jsonStringField("id")
       let? Some(label) = item->jsonStringField("label")
-      Some({id, label})
+      Some({
+        versionId: id,
+        versionLabel: label,
+        versionRoot: item->jsonStringField("root")->Option.map(normalizeRoot),
+      })
     | _ => None
     }
 }
@@ -86,7 +108,7 @@ let pathFromBase = relativePath => {
 }
 
 let parseCompilerVersions = defaultVersion => {
-  let fallback = [{Version.id: defaultVersion, label: defaultVersion}]
+  let fallback = [{versionId: defaultVersion, versionLabel: defaultVersion, versionRoot: None}]
   switch Env.viteCompilerVersions {
   | None | Some("") => fallback
   | Some(versionJson) =>
@@ -100,8 +122,13 @@ let parseCompilerVersions = defaultVersion => {
   }
 }
 
-let availableCompilerVersions = parseCompilerVersions(defaultConfig.compilerVersion)
+let compilerVersions = parseCompilerVersions(defaultConfig.compilerVersion)
+let availableCompilerVersions = compilerVersions->Array.map(Version.toPublic)
 let compilerRoot = pathFromBase("playground-bundles")
+let compilerPreviewRoot = switch Env.viteCompilerPreviewRoot {
+| Some(root) => root === "" ? None : Some(root->Version.normalizeRoot)
+| None => None
+}
 let loadedScripts: Map.t<string, promise<unit>> = Map.make()
 let compilerApis: Map.t<string, compilerApi> = Map.make()
 let compilers: Map.t<string, compilerInstance> = Map.make()
@@ -115,6 +142,41 @@ let hasFunction = (value, name) =>
   }
 
 let versionOrDefault = version => version === "" ? defaultConfig.compilerVersion : version
+
+let isPreviewVersion = version => version->String.search(/^pr-[0-9]+$/) === 0
+
+let previewVersionRoot = version =>
+  switch compilerPreviewRoot {
+  | Some(root) if version->isPreviewVersion => Some(`${root}/${version}/bundle`)
+  | _ => None
+  }
+
+let versionRoot = version => {
+  let selectedVersion = versionOrDefault(version)
+  switch compilerVersions->Array.findMap(version =>
+    version.versionId === selectedVersion ? version.versionRoot : None
+  ) {
+  | Some(root) => root
+  | None =>
+    switch selectedVersion->previewVersionRoot {
+    | Some(root) => root
+    | None => `${compilerRoot}/${selectedVersion}`
+    }
+  }
+}
+
+let isConfiguredVersion = version =>
+  compilerVersions->Array.some(compilerVersion => compilerVersion.versionId === version)
+
+let isLoadableVersion = version =>
+  version->isConfiguredVersion || version->previewVersionRoot->Option.isSome
+
+let selectableCompilerVersions = activeVersion =>
+  if activeVersion->isConfiguredVersion || !(activeVersion->previewVersionRoot->Option.isSome) {
+    availableCompilerVersions
+  } else {
+    Array.concat(availableCompilerVersions, [{Version.id: activeVersion, label: activeVersion}])
+  }
 
 let createScriptLoadPromise = src =>
   Promise.make((resolve, reject) => {
@@ -139,8 +201,6 @@ let loadScript = (src, ~cache=true) =>
   } else {
     createScriptLoadPromise(src)
   }
-
-let versionRoot = version => `${compilerRoot}/${versionOrDefault(version)}`
 
 let applyConfig = (
   instance,

@@ -85,13 +85,10 @@ let queryExperimentalFeatures = defaultExperimentalFeatures =>
   | _ => defaultExperimentalFeatures
   }
 
-let queryConfig = (
-  ~defaultConfig: PlaygroundConfig.t,
-  ~availableCompilerVersions: array<CompilerApi.Version.t>,
-) => {
+let queryConfig = (~defaultConfig: PlaygroundConfig.t) => {
   let requestedCompilerVersion = queryCompilerVersion(defaultConfig.compilerVersion)
   let compilerVersion =
-    availableCompilerVersions->Array.some(version => version.id === requestedCompilerVersion)
+    requestedCompilerVersion->CompilerApi.isLoadableVersion
       ? requestedCompilerVersion
       : defaultConfig.compilerVersion
 
@@ -106,10 +103,7 @@ let queryConfig = (
 
 let init = async (~defaultSource): state => {
   let source = await initialSource(defaultSource)
-  let config = queryConfig(
-    ~defaultConfig=CompilerApi.defaultConfig,
-    ~availableCompilerVersions=CompilerApi.availableCompilerVersions,
-  )
+  let config = queryConfig(~defaultConfig=CompilerApi.defaultConfig)
   {source, config}
 }
 
