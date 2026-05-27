@@ -326,17 +326,19 @@ let getMapValueOrThrow = (map: Map.t<string, 'value>, key, message): 'value =>
 let ensureCompilerApi = async version => {
   let selectedVersion = versionOrDefault(version)
   if compilerApis->Map.has(selectedVersion) {
-    let _ = await loadRuntimeLibraries(selectedVersion)
+    await loadRuntimeLibraries(selectedVersion)
     compilerApis->getMapValueOrThrow(selectedVersion, "Compiler API was not cached")
   } else {
     let root = versionRoot(selectedVersion)
-    let _ = await loadScript(`${root}/compiler.js`)
-    let _ = await loadRuntimeLibraries(selectedVersion)
-
+    await loadScript(`${root}/compiler.js`)
     let api = switch Api.global {
     | Some(api) if hasFunction(api, "make") => api
     | _ => JsError.throwWithMessage("rescript_compiler global was not registered by compiler.js")
     }
+
+    // Load runtime .cmijs only after the global is captured to prevent loading
+    // the wrong version after selecting a different compiler.
+    await loadRuntimeLibraries(selectedVersion)
 
     compilerApis->Map.set(selectedVersion, api)
     api
