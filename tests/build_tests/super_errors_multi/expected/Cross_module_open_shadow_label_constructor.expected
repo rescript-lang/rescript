@@ -1,0 +1,24 @@
+===== User.res =====
+
+  [1;33mWarning number 45[0m
+  [36m/.../fixtures/Cross_module_open_shadow_label_constructor/User.res[0m:[2m5:1-6[0m
+
+  3 [2m│[0m   | Bar
+  4 [2m│[0m 
+  [1;33m5[0m [2m│[0m [1;33mopen A[0m
+  6 [2m│[0m 
+  7 [2m│[0m let v = Foo
+
+  this open statement shadows the constructor Foo (which is later used)
+
+
+  [1;33mWarning number 41[0m
+  [36m/.../fixtures/Cross_module_open_shadow_label_constructor/User.res[0m:[2m7:9-11[0m
+
+  5 [2m│[0m open A
+  6 [2m│[0m 
+  [1;33m7[0m [2m│[0m let v = [1;33mFoo[0m
+  8 [2m│[0m 
+
+  Foo belongs to several types: A.t t
+The first one was selected. Disambiguate if this is wrong.

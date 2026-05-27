@@ -1,0 +1,19 @@
+===== Foo.res =====
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/Iface_privacy_mismatch/Foo.res[0m:[2m1:1-20[0m
+
+  [1;31m1[0m [2m│[0m [1;31mtype t = private int[0m
+  2 [2m│[0m 
+
+  The implementation /.../fixtures/Iface_privacy_mismatch/Foo.res
+  does not match the interface /.../fixtures/Iface_privacy_mismatch/foo.cmi:
+  Type declarations do not match:
+    type t = int
+  is not included in
+    type t = int
+  [36m/.../fixtures/Iface_privacy_mismatch/Foo.resi[0m:[2m1:1-12[0m:
+    Expected declaration
+  [36m/.../fixtures/Iface_privacy_mismatch/Foo.res[0m:[2m1:1-20[0m:
+    Actual declaration
+  A private type would be revealed.
