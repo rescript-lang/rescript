@@ -51,10 +51,10 @@
  * modules in the playground.
  * v5: Removed .ml support.
  * v6: Added `config.experimental_features` and `config.jsx_preserve_mode` to the BundleConfig.
- * v7: Added debug dump output APIs for developer playground tooling.
- * v8: Added gentype debug output for developer playground tooling.
+ * v7: Added debug dump output APIs for developer playground tooling,
+ * including gentype output.
  * *)
-let api_version = "8"
+let api_version = "7"
 
 module Js = Js_of_ocaml.Js
 
