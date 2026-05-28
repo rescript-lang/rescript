@@ -10,6 +10,8 @@ module Env = {
   external viteDefaultCompilerVersion: option<string> =
     "import.meta.env.VITE_DEFAULT_COMPILER_VERSION"
   @val external viteCompilerVersions: option<string> = "import.meta.env.VITE_COMPILER_VERSIONS"
+  @val
+  external viteCompilerPreviewRoot: option<string> = "import.meta.env.VITE_COMPILER_PREVIEW_ROOT"
   @val external viteBaseUrl: option<string> = "import.meta.env.BASE_URL"
 }
 

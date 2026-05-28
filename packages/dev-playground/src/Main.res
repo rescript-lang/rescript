@@ -231,9 +231,9 @@ module SettingsPanel = {
           }}
         >
           {Node.fragment(
-            CompilerApi.availableCompilerVersions->Array.map(version =>
-              <option value=version.id> {Node.text(version.label)} </option>
-            ),
+            CompilerApi.selectableCompilerVersions(
+              Signal.get(config).compilerVersion,
+            )->Array.map(version => <option value=version.id> {Node.text(version.label)} </option>),
           )}
         </select>
       </section>
