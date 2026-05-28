@@ -30,6 +30,12 @@ module Instance = {
   @send external setWarnFlags: (compilerInstance, string) => unit = "setWarnFlags"
   @send external setFilename: (compilerInstance, string) => unit = "setFilename"
   @send external setJsxPreserveMode: (compilerInstance, bool) => unit = "setJsxPreserveMode"
+  @send external setGentypeEnabled: (compilerInstance, bool) => unit = "setGentypeEnabled"
+  @send external setSourceMapMode: (compilerInstance, string) => unit = "setSourceMapMode"
+  @send
+  external setSourceMapSourcesContent: (compilerInstance, bool) => unit =
+    "setSourceMapSourcesContent"
+  @send external setSourceMapRoot: (compilerInstance, string) => unit = "setSourceMapRoot"
   @send
   external setExperimentalFeatures: (compilerInstance, array<string>) => unit =
     "setExperimentalFeatures"
@@ -51,6 +57,11 @@ module Config = {
   @get external jsxPreserveMode: compilerConfig => option<bool> = "jsx_preserve_mode"
   @get
   external experimentalFeatures: compilerConfig => option<array<string>> = "experimental_features"
+  @get external gentypeEnabled: compilerConfig => option<bool> = "gentype_enabled"
+  @get external sourceMapMode: compilerConfig => option<string> = "source_map_mode"
+  @get
+  external sourceMapSourcesContent: compilerConfig => option<bool> = "source_map_sources_content"
+  @get external sourceMapRoot: compilerConfig => option<string> = "source_map_root"
 }
 
 module Diagnostic = {
@@ -70,6 +81,8 @@ module CompileResult = {
   @get external typedtree: compileResult => option<string> = "typedtree"
   @get external lambda: compileResult => option<string> = "lambda"
   @get external lam: compileResult => option<string> = "lam"
+  @get external gentype: compileResult => option<string> = "gentype"
+  @get external sourceMap: compileResult => option<string> = "source_map"
   @get external errors: compileResult => option<array<diagnostic>> = "errors"
   @get external warnings: compileResult => option<array<diagnostic>> = "warnings"
   @get external msg: compileResult => option<string> = "msg"
