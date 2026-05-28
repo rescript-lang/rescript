@@ -12,6 +12,7 @@ jobs:
     permissions:
       actions: read
       contents: read
+      pull-requests: write
     env:
       PLAYGROUND_PREVIEW_ID: pr-${{ github.event.workflow_run.pull_requests[0].number }}
     steps:
@@ -49,3 +50,11 @@ jobs:
             --fast-list \
             "dev-playground-preview-bundle" \
             "rescript:cdn-assets/dev-playground-bundles/${PLAYGROUND_PREVIEW_ID}/bundle"
+
+      - name: Comment playground preview URL
+        uses: thollander/actions-comment-pull-request@v3
+        with:
+          pr-number: ${{ github.event.workflow_run.pull_requests[0].number }}
+          comment-tag: dev-playground-preview
+          message: |
+            Developer playground preview: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/dev-playground/?version=pr-${{ github.event.workflow_run.pull_requests[0].number }}
