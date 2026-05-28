@@ -250,6 +250,13 @@ module SettingsPanel = {
         Signal.set(activeTab, JavaScript)
       }
     }
+    let compilerVersionOptions: Signal.t<array<View.node>> = Obj.magic(
+      Computed.make(() =>
+        CompilerApi.selectableCompilerVersions(
+          Signal.get(config).compilerVersion,
+        )->Array.map(version => <option value=version.id> {View.text(version.label)} </option>)
+      ),
+    )
 
     <div
       class={() =>
@@ -268,11 +275,7 @@ module SettingsPanel = {
             switchCompiler(nextVersion)
           }}
         >
-          {View.fragment(
-            CompilerApi.selectableCompilerVersions(
-              Signal.get(config).compilerVersion,
-            )->Array.map(version => <option value=version.id> {View.text(version.label)} </option>),
-          )}
+          {View.signalFragment(compilerVersionOptions)}
         </select>
       </section>
       <section class="settings-section">
