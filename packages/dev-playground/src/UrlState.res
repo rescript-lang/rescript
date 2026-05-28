@@ -30,6 +30,30 @@ let applyUrlState = (~encoded, ~config: PlaygroundConfig.t) => {
     params->UrlSearchParams.delete("experimental")
   }
 
+  if config.gentypeEnabled {
+    params->UrlSearchParams.set("gentype", "true")
+  } else {
+    params->UrlSearchParams.delete("gentype")
+  }
+
+  switch config.sourceMapMode {
+  | Disabled =>
+    params->UrlSearchParams.delete("sourceMap")
+    params->UrlSearchParams.delete("sourceMapSourcesContent")
+    params->UrlSearchParams.delete("sourceMapRoot")
+  | sourceMapMode =>
+    params->UrlSearchParams.set("sourceMap", (sourceMapMode :> string))
+    params->UrlSearchParams.set(
+      "sourceMapSourcesContent",
+      config.sourceMapSourcesContent ? "true" : "false",
+    )
+    if config.sourceMapRoot === "" {
+      params->UrlSearchParams.delete("sourceMapRoot")
+    } else {
+      params->UrlSearchParams.set("sourceMapRoot", config.sourceMapRoot)
+    }
+  }
+
   let query = params->UrlSearchParams.toString
   let nextUrl = Location.pathname ++ (query === "" ? "" : "?" ++ query) ++ Location.hash
   History.replaceState(nextUrl)
@@ -85,6 +109,29 @@ let queryExperimentalFeatures = defaultExperimentalFeatures =>
   | _ => defaultExperimentalFeatures
   }
 
+let querySourceMapMode = defaultValue =>
+  switch getParam("sourceMap") {
+  | Some(value) =>
+    switch value->PlaygroundConfig.parseSourceMapMode {
+    | Some(sourceMapMode) => sourceMapMode
+    | None => defaultValue
+    }
+  | None => defaultValue
+  }
+
+let queryBool = (~name, ~defaultValue) =>
+  switch getParam(name) {
+  | Some(value) if value === "true" || value === "1" => true
+  | Some(value) if value === "false" || value === "0" => false
+  | _ => defaultValue
+  }
+
+let querySourceMapRoot = defaultValue =>
+  switch getParam("sourceMapRoot") {
+  | Some(value) => value
+  | None => defaultValue
+  }
+
 let queryConfig = (~defaultConfig: PlaygroundConfig.t) => {
   let requestedCompilerVersion = queryCompilerVersion(defaultConfig.compilerVersion)
   let compilerVersion =
@@ -98,6 +145,13 @@ let queryConfig = (~defaultConfig: PlaygroundConfig.t) => {
     warnFlags: queryWarnFlags(defaultConfig.warnFlags),
     jsxPreserveMode: queryJsxPreserveMode(defaultConfig.jsxPreserveMode),
     experimentalFeatures: queryExperimentalFeatures(defaultConfig.experimentalFeatures),
+    gentypeEnabled: queryBool(~name="gentype", ~defaultValue=defaultConfig.gentypeEnabled),
+    sourceMapMode: querySourceMapMode(defaultConfig.sourceMapMode),
+    sourceMapSourcesContent: queryBool(
+      ~name="sourceMapSourcesContent",
+      ~defaultValue=defaultConfig.sourceMapSourcesContent,
+    ),
+    sourceMapRoot: querySourceMapRoot(defaultConfig.sourceMapRoot),
   }
 }
 
