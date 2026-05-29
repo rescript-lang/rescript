@@ -28,7 +28,8 @@
 *)
 let is_bs_attribute txt =
   match txt with
-  | "as" | "config" | "ignore" | "int" | "optional" | "string" | "unwrap" ->
+  | "as" | "catch" | "config" | "ignore" | "int" | "optional" | "string"
+  | "unwrap" ->
     true
   | _ -> false
 
@@ -110,8 +111,8 @@ let emit_external_warnings : iterator =
     constructor_declaration =
       (fun self ({pcd_name = {txt; loc}} as ctr) ->
         let _ =
-          Ast_untagged_variants.process_tag_type
-            ctr.pcd_attributes (* mark @as used in variant cases *)
+          Ast_untagged_variants.process_constructor_annotation
+            ctr.pcd_attributes (* mark @as/@catch used in variant cases *)
         in
         (match txt with
         | "false" | "true" | "()" ->

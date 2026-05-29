@@ -254,18 +254,13 @@ and compare_variants ~loc env params1 params2 n
       in
       let r =
         if r <> [] then r
-        else
-          match Ast_untagged_variants.is_nullary_variant cd1.cd_args with
-          | true ->
-            let tag_type1 =
-              Ast_untagged_variants.process_tag_type cd1.cd_attributes
-            in
-            let tag_type2 =
-              Ast_untagged_variants.process_tag_type cd2.cd_attributes
-            in
-            if tag_type1 <> tag_type2 then [Variant_representation cd1.cd_id]
-            else []
-          | false -> r
+        else if
+          Ast_untagged_variants.constructor_runtime_representation
+            cd1.cd_attributes
+          = Ast_untagged_variants.constructor_runtime_representation
+              cd2.cd_attributes
+        then []
+        else [Variant_representation cd1.cd_id]
       in
       if r <> [] then r
       else compare_variants ~loc env params1 params2 (n + 1) rem1 rem2)

@@ -1,0 +1,28 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/variant_payload_runtime_representation_mismatch.res[0m:[2m6:15-9:1[0m
+
+   4 [2m│[0m }
+   5 [2m│[0m 
+   [1;31m6[0m [2m│[0m module M: S = [1;31m{[0m
+   [1;31m7[0m [2m│[0m [1;31m  @tag("kind")[0m
+   [1;31m8[0m [2m│[0m [1;31m  type t = | @as("right") Other({value: int})[0m
+   [1;31m9[0m [2m│[0m [1;31m}[0m
+  10 [2m│[0m 
+
+  Signature mismatch:
+  Modules do not match:
+    {
+  type t = Other({value: int})
+}
+  is not included in
+    S
+  Type declarations do not match:
+    type t = Other({value: int})
+  is not included in
+    type t = Other({value: int})
+  [36m/.../fixtures/variant_payload_runtime_representation_mismatch.res[0m:[2m3:3-44[0m:
+    Expected declaration
+  [36m/.../fixtures/variant_payload_runtime_representation_mismatch.res[0m:[2m8:3-45[0m:
+    Actual declaration
+  The internal representations for case Other are not equal.
