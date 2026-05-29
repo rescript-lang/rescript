@@ -67,6 +67,14 @@ let printCoreType typ ~pos =
   | Ptyp_variant _ -> "Ptyp_variant(<unimplemented>)"
   | _ -> "<unimplemented_ptyp_desc>"
 
+let printRecordPatternRest rest ~pos =
+  (rest.Parsetree.rest_name |> printLocDenominatorLoc ~pos)
+  ^ rest.rest_name.txt
+  ^
+  (match rest.rest_type with
+  | Some coreType -> " as " ^ printCoreType coreType ~pos
+  | None -> "")
+
 let rec printPattern pattern ~pos ~indentation =
   printAttributes pattern.Parsetree.ppat_attributes
   ^ (pattern.ppat_loc |> printLocDenominator ~pos)
@@ -99,7 +107,7 @@ let rec printPattern pattern ~pos ~indentation =
       | None -> ""
       | Some pat -> "," ^ printPattern pat ~pos ~indentation)
     ^ ")"
-  | Ppat_record (fields, _) ->
+  | Ppat_record (fields, _, rest) ->
     "Ppat_record(\n"
     ^ addIndentation (indentation + 1)
     ^ "fields:\n"
@@ -110,6 +118,15 @@ let rec printPattern pattern ~pos ~indentation =
            ^ ": "
            ^ printPattern pat ~pos ~indentation:(indentation + 2))
       |> String.concat "\n")
+    ^
+    (match rest with
+    | None -> ""
+    | Some rest ->
+      "\n"
+      ^ addIndentation (indentation + 1)
+      ^ "rest:\n"
+      ^ addIndentation (indentation + 2)
+      ^ printRecordPatternRest rest ~pos)
     ^ "\n" ^ addIndentation indentation ^ ")"
   | Ppat_tuple patterns ->
     "Ppat_tuple(\n"

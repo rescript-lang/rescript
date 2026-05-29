@@ -81,6 +81,7 @@ type t =
   | Bs_toplevel_expression_unit of
       (string * top_level_unit_help) option (* 109 *)
   | Bs_todo of string option (* 110 *)
+  | Bs_record_rest_empty (* 111 *)
 
 val parse_options : bool -> string -> unit
 

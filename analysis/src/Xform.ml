@@ -76,7 +76,7 @@ module IfThenElse = struct
       in
       match listToPat ~itemToPat items with
       | None -> None
-      | Some patItems -> Some (mkPat (Ppat_record (patItems, Closed))))
+      | Some patItems -> Some (mkPat (Ppat_record (patItems, Closed, None))))
     | Pexp_record (_, Some _) -> None
     | _ -> None
 

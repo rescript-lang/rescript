@@ -126,11 +126,14 @@ module ErrorMessages = struct
      matching currently guarantees to never create new intermediate data."
 
   let record_pattern_spread =
-    "Record spread (`...`) is not supported in pattern matches.\n\
-     Explanation: you can't collect a subset of a record's field into its own \
-     record, since a record needs an explicit declaration and that subset \
-     wouldn't have one.\n\
-     Solution: you need to pull out each field you want explicitly."
+    "Record rest patterns require a type annotation and a binding name.\n\
+     Correct syntax: `...typeName as bindingName`\n\
+     Example: `let {name, ...Config.t as rest} = myRecord`"
+
+  let record_pattern_multiple_rest =
+    "Record patterns can only have one `...` rest clause.\n\
+     Use a single `...typeName as bindingName` clause to capture the remaining \
+     fields."
   (* let recordPatternUnderscore = "Record patterns only support one `_`, at the end." *)
   [@@live]
 
@@ -336,6 +339,7 @@ type fundef_parameter =
 type record_pattern_item =
   | PatUnderscore
   | PatField of Parsetree.pattern Parsetree.record_element
+  | PatRest of Parsetree.record_pat_rest
 
 type context = OrdinaryExpr | TernaryTrueBranchExpr | WhenExpr
 
@@ -1517,9 +1521,51 @@ and parse_record_pattern_row_field ~attrs p =
 and parse_record_pattern_row p =
   let attrs = parse_attributes p in
   match p.Parser.token with
-  | DotDotDot ->
+  | DotDotDot -> (
     Parser.next p;
-    Some (true, PatField (parse_record_pattern_row_field ~attrs p))
+    let start_pos = p.Parser.start_pos in
+    let has_type_annotation =
+      Parser.lookahead p (fun p ->
+          ignore (parse_atomic_typ_expr ~attrs:[] p);
+          p.token = As)
+    in
+    if has_type_annotation then (
+      (* ...TypeAnnotation<'a> as name *)
+      let core_type = parse_atomic_typ_expr ~attrs:[] p in
+      Parser.expect As p;
+      let name_start = p.start_pos in
+      let name =
+        match p.token with
+        | Lident ident ->
+          Parser.next p;
+          Location.mkloc ident (mk_loc name_start p.prev_end_pos)
+        | _ ->
+          Parser.err p (Diagnostics.unexpected p.token p.breadcrumbs);
+          Location.mkloc "_" (mk_loc name_start p.prev_end_pos)
+      in
+      let rest_loc = mk_loc start_pos p.prev_end_pos in
+      Some
+        ( false,
+          PatRest
+            {Parsetree.rest_loc; rest_name = name; rest_type = Some core_type}
+        ))
+    else
+      match p.Parser.token with
+      | Lident ident ->
+        (* ...name (no type annotation) *)
+        Parser.next p;
+        let loc = mk_loc start_pos p.prev_end_pos in
+        Some
+          ( false,
+            PatRest
+              {
+                Parsetree.rest_loc = loc;
+                rest_name = Location.mkloc ident loc;
+                rest_type = None;
+              } )
+      | _ ->
+        (* Fallback: treat as old-style spread (error) *)
+        Some (true, PatField (parse_record_pattern_row_field ~attrs p)))
   | Uident _ | Lident _ ->
     Some (false, PatField (parse_record_pattern_row_field ~attrs p))
   | Question -> (
@@ -1560,14 +1606,14 @@ and parse_record_pattern ~attrs p =
       ~f:parse_record_pattern_row
   in
   Parser.expect Rbrace p;
-  let fields, closed_flag =
+  let fields, closed_flag, rest =
     let raw_fields, flag =
       match raw_fields with
       | (_hasSpread, PatUnderscore) :: rest -> (rest, Asttypes.Open)
       | raw_fields -> (raw_fields, Asttypes.Closed)
     in
     List.fold_left
-      (fun (fields, flag) curr ->
+      (fun (fields, flag, rest) curr ->
         let has_spread, field = curr in
         match field with
         | PatField field ->
@@ -1575,12 +1621,19 @@ and parse_record_pattern ~attrs p =
              let pattern = field.x in
              Parser.err ~start_pos:pattern.Parsetree.ppat_loc.loc_start p
                (Diagnostics.message ErrorMessages.record_pattern_spread));
-          (field :: fields, flag)
-        | PatUnderscore -> (fields, flag))
-      ([], flag) raw_fields
+          (field :: fields, flag, rest)
+        | PatRest rest_pat -> (
+          match rest with
+          | None -> (fields, flag, Some rest_pat)
+          | Some _ ->
+            Parser.err ~start_pos:rest_pat.Parsetree.rest_loc.loc_start p
+              (Diagnostics.message ErrorMessages.record_pattern_multiple_rest);
+            (fields, flag, rest))
+        | PatUnderscore -> (fields, flag, rest))
+      ([], flag, None) raw_fields
   in
   let loc = mk_loc start_pos p.prev_end_pos in
-  Ast_helper.Pat.record ~loc ~attrs fields closed_flag
+  Ast_helper.Pat.record ~loc ~attrs ?rest fields closed_flag
 
 and parse_tuple_pattern ~attrs ~first ~start_pos p =
   let patterns =
