@@ -317,7 +317,6 @@ let extract_concrete_record env ty =
   match extract_concrete_typedecl env ty with
   | p0, p, {type_kind = Type_record (fields, repr)} -> (p0, p, fields, repr)
   | _ -> raise Not_found
-
 let extract_concrete_variant env ty =
   match extract_concrete_typedecl env ty with
   | p0, p, {type_kind = Type_variant cstrs} -> (p0, p, cstrs)
@@ -3593,9 +3592,24 @@ and type_label_exp ~call_context create env loc ty_expected
     end_def ();
     (* Generalize information merged from ty_expected *)
     generalize_structure ty_arg);
-  if label.lbl_private = Private then
-    if create then raise (Error (loc, env, Private_type ty_expected))
-    else raise (Error (lid.loc, env, Private_label (lid.txt, ty_expected)));
+  (if label.lbl_private = Private then
+     if create then raise (Error (loc, env, Private_type ty_expected))
+     else
+       let allow_private_assignment =
+         match extract_concrete_typedecl env label.lbl_res with
+         | ( _,
+             _,
+             {
+               type_kind = Type_record _;
+               type_private = Private;
+               type_attributes;
+             } ) ->
+           Builtin_attributes.has_allow_mutation type_attributes
+         | _ -> false
+         | exception Not_found -> false
+       in
+       if not allow_private_assignment then
+         raise (Error (lid.loc, env, Private_label (lid.txt, ty_expected))));
   let arg =
     let snap = if vars = [] then None else Some (Btype.snapshot ()) in
     let field_name = Longident.last lid.txt in

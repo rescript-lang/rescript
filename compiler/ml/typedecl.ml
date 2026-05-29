@@ -381,6 +381,15 @@ let transl_declaration ~type_record_as_object ~untagged_wfc env sdecl id =
             ( sdecl.ptype_loc,
               Invalid_attribute
                 "@notUndefined can only be used on abstract types" )));
+  (if Builtin_attributes.has_allow_mutation sdecl.ptype_attributes then
+     match (sdecl.ptype_private, sdecl.ptype_kind) with
+     | Private, Ptype_record _ -> ()
+     | _ ->
+       raise
+         (Error
+            ( sdecl.ptype_loc,
+              Invalid_attribute
+                "@allowMutation can only be used on private record types" )));
 
   (* Bind type parameters *)
   reset_type_variables ();

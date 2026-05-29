@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/allowMutation_private_variant_attribute.res[0m:[2m2:1-22[0m
+
+  1 [2m│[0m @allowMutation
+  [1;31m2[0m [2m│[0m [1;31mtype t = private A | B[0m
+  3 [2m│[0m 
+
+  @allowMutation can only be used on private record types

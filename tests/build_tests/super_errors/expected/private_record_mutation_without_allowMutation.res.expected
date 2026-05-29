@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/private_record_mutation_without_allowMutation.res[0m:[2m10:6-10[0m
+
+   8 [2m│[0m 
+   9 [2m│[0m let item = PrivateRecord.make(1)
+  [1;31m10[0m [2m│[0m item.[1;31mvalue[0m = 2
+  11 [2m│[0m 
+
+  Cannot assign field value of the private type PrivateRecord.t

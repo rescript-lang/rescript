@@ -240,6 +240,13 @@ let immediate =
     | {txt = "ocaml.immediate" | "immediate"; _}, _ -> true
     | _ -> false)
 
+let has_allow_mutation attr =
+  List.exists
+    (function
+      | {txt = "allowMutation"; _}, _ -> true
+      | _ -> false)
+    attr
+
 (* The "ocaml.boxed (default)" and "ocaml.unboxed (default)"
    attributes cannot be input by the user, they are added by the
    compiler when applying the default setting. This is done to record
