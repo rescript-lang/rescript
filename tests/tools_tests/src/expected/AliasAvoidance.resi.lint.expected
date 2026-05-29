@@ -1,0 +1,24 @@
+severity: warning
+rule: alias-avoidance
+path: src/lint/AliasAvoidance.resi
+range: 1:8-1:21
+message: Use the fully qualified reference directly instead of creating a local alias
+symbol: ShowFixture.Nested
+snippet:
+```text
+> 1 | module AliasGreeting = ShowFixture.Nested
+    |        ^^^^^^^^^^^^^
+```
+
+severity: warning
+rule: alias-avoidance
+path: src/lint/AliasAvoidance.resi
+range: 3:6-3:15
+message: Use the fully qualified reference directly instead of creating a local alias
+symbol: ShowFixture.item
+snippet:
+```text
+  1 | module AliasGreeting = ShowFixture.Nested
+> 3 | type itemAlias = ShowFixture.item
+    |      ^^^^^^^^^
+```

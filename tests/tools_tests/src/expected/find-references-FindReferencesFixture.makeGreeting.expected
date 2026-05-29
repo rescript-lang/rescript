@@ -1,0 +1,33 @@
+mode: symbol
+symbol: FindReferencesFixture.makeGreeting
+kind: value
+count: 3
+
+path: src/find_references/FindReferencesFixture.res
+range: 9:5-9:17
+snippet:
+```text
+   7 | }
+>  9 | let makeGreeting = Nested.makeGreeting
+     |     ^^^^^^^^^^^^
+  10 | let itemToString = (item: item) => item.label
+```
+
+path: src/find_references/FindReferencesUse.res
+range: 1:33-1:45
+snippet:
+```text
+> 1 | let one = FindReferencesFixture.makeGreeting("one")
+    |                                 ^^^^^^^^^^^^
+  2 | let two = FindReferencesFixture.Nested.makeGreeting("two")
+```
+
+path: src/find_references/FindReferencesUse.res
+range: 4:35-4:47
+snippet:
+```text
+  2 | let two = FindReferencesFixture.Nested.makeGreeting("two")
+  3 | type alias = FindReferencesFixture.item
+> 4 | let three = FindReferencesFixture.makeGreeting("three")
+    |                                   ^^^^^^^^^^^^
+```

@@ -1,0 +1,12 @@
+let flag = true
+let useValue = (~value=?, ()) => value
+
+let direct = useValue(~value=1, ())
+let nested = useValue(
+  ~value=switch flag {
+  | true => 1
+  | false => 2
+  },
+  (),
+)
+let fromComputation = useValue(~value=String.length("abc"), ())

@@ -1,0 +1,1 @@
+[{"path":".tmp-rewrite-tests/RewriteOptionalSome.res","mode":"write","changed":true,"applied":[{"rule":"prefer-switch","count":1,"note":"rewrote `if` / ternary branches into `switch`"}, {"rule":"no-optional-some","count":3,"note":"rewrote `~label=?Some(expr)` into `~label=expr`"}]}]

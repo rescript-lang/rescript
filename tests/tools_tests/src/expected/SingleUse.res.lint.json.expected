@@ -1,0 +1,1 @@
+[{"rule":"single-use-function","path":"src/lint/SingleUse.res","range":[1,6,1,12],"severity":"warning","message":"Inline this helper unless it is a meaningful reusable abstraction.","symbol":"helper"}]

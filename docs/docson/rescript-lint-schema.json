@@ -1,0 +1,285 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "ReScript AI Tools Config",
+  "description": "Configuration for `rescript-tools` AI-oriented lint and rewrite commands. This schema covers both the recommended namespaced shape (`lint.rules` and `rewrite.rules`) and the older top-level `rules` shortcut for lint-only configs.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Optional schema URI or path for editor support."
+    },
+    "lint": {
+      "$ref": "#/definitions/lint-config"
+    },
+    "rewrite": {
+      "$ref": "#/definitions/rewrite-config"
+    },
+    "rules": {
+      "$ref": "#/definitions/lint-rules",
+      "description": "Deprecated lint-only shortcut. Prefer `lint.rules` for new configs."
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "severity": {
+      "type": "string",
+      "enum": ["error", "warning"],
+      "description": "Finding severity. Defaults depend on the rule."
+    },
+    "enabled": {
+      "type": "boolean",
+      "description": "Whether the rule is enabled. Default: true."
+    },
+    "message": {
+      "type": "string",
+      "description": "Optional custom message. When omitted, the built-in default message for that rule is used."
+    },
+    "forbidden-reference-kind": {
+      "type": "string",
+      "enum": ["module", "value", "type"],
+      "description": "Which kind of symbol path is being forbidden."
+    },
+    "forbidden-reference-item": {
+      "type": "object",
+      "description": "A single forbidden symbol target. Item-level `message` overrides the enclosing rule message when this item matches.",
+      "properties": {
+        "kind": {
+          "$ref": "#/definitions/forbidden-reference-kind"
+        },
+        "path": {
+          "type": "string",
+          "description": "Dot-separated symbol path such as `Belt.Array.map` or `Js.Json.t`."
+        },
+        "message": {
+          "$ref": "#/definitions/message"
+        }
+      },
+      "required": ["kind", "path"],
+      "additionalProperties": false
+    },
+    "forbidden-reference-rule": {
+      "type": "object",
+      "description": "Report references to configured modules, values, or types. Module items also match nested references beneath that module path.",
+      "properties": {
+        "enabled": {
+          "$ref": "#/definitions/enabled"
+        },
+        "severity": {
+          "$ref": "#/definitions/severity"
+        },
+        "message": {
+          "$ref": "#/definitions/message"
+        },
+        "items": {
+          "type": "array",
+          "description": "Targets to forbid. Multiple items can share one severity and default message.",
+          "items": {
+            "$ref": "#/definitions/forbidden-reference-item"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "forbidden-reference-config": {
+      "description": "Either one forbidden-reference rule object or an array of rule objects. Arrays let you group distinct severities or default messages.",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/forbidden-reference-rule"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/forbidden-reference-rule"
+          }
+        }
+      ]
+    },
+    "single-use-function-rule": {
+      "type": "object",
+      "description": "Report same-file local functions that are defined once and used once. Default severity: warning.",
+      "properties": {
+        "enabled": {
+          "$ref": "#/definitions/enabled"
+        },
+        "severity": {
+          "$ref": "#/definitions/severity"
+        },
+        "message": {
+          "$ref": "#/definitions/message"
+        }
+      },
+      "additionalProperties": false
+    },
+    "alias-avoidance-rule": {
+      "type": "object",
+      "description": "Report pass-through aliases such as `let alias = Module.value`, `type alias = Module.t`, or `module Alias = Long.Module.Path`. Default severity: warning.",
+      "properties": {
+        "enabled": {
+          "$ref": "#/definitions/enabled"
+        },
+        "severity": {
+          "$ref": "#/definitions/severity"
+        },
+        "message": {
+          "$ref": "#/definitions/message"
+        }
+      },
+      "additionalProperties": false
+    },
+    "forbidden-source-root-reference-kind": {
+      "type": "string",
+      "enum": ["value", "type"],
+      "description": "Kinds that can be checked by declaration source root. Modules are not supported by this rule yet."
+    },
+    "forbidden-source-root-reference-rule": {
+      "type": "object",
+      "description": "Report references whose declarations come from configured source roots. Root paths are resolved relative to the config file. The rule does not report when the current file is also inside the matching forbidden root.",
+      "properties": {
+        "enabled": {
+          "$ref": "#/definitions/enabled"
+        },
+        "severity": {
+          "$ref": "#/definitions/severity"
+        },
+        "message": {
+          "$ref": "#/definitions/message"
+        },
+        "roots": {
+          "type": "array",
+          "description": "Source folder roots to block, such as `src/generated` or `src/__generated__`.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "kinds": {
+          "type": "array",
+          "description": "Declaration kinds to block from those roots. Default: `[\"value\", \"type\"]`.",
+          "items": {
+            "$ref": "#/definitions/forbidden-source-root-reference-kind"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "preferred-type-syntax-lint-rule": {
+      "type": "object",
+      "description": "Prefer canonical builtin type syntax where available. Today this supports the `dict<_>` preference over `Dict.t<_>` and `Stdlib.Dict.t<_>`. Default severity: warning.",
+      "properties": {
+        "enabled": {
+          "$ref": "#/definitions/enabled"
+        },
+        "severity": {
+          "$ref": "#/definitions/severity"
+        },
+        "message": {
+          "$ref": "#/definitions/message"
+        },
+        "dict": {
+          "type": "boolean",
+          "description": "When true, report `Dict.t<_>` and `Stdlib.Dict.t<_>` in favor of `dict<_>`. Default: false."
+        }
+      },
+      "additionalProperties": false
+    },
+    "lint-rules": {
+      "type": "object",
+      "description": "Configured lint rules. Omitted rules keep their built-in defaults.",
+      "properties": {
+        "forbidden-reference": {
+          "$ref": "#/definitions/forbidden-reference-config"
+        },
+        "single-use-function": {
+          "$ref": "#/definitions/single-use-function-rule"
+        },
+        "alias-avoidance": {
+          "$ref": "#/definitions/alias-avoidance-rule"
+        },
+        "forbidden-source-root-reference": {
+          "$ref": "#/definitions/forbidden-source-root-reference-rule"
+        },
+        "preferred-type-syntax": {
+          "$ref": "#/definitions/preferred-type-syntax-lint-rule"
+        }
+      },
+      "additionalProperties": false
+    },
+    "lint-config": {
+      "type": "object",
+      "description": "Namespace for lint rules.",
+      "properties": {
+        "rules": {
+          "$ref": "#/definitions/lint-rules"
+        }
+      },
+      "additionalProperties": false
+    },
+    "prefer-switch-rewrite-rule": {
+      "type": "object",
+      "description": "Rewrite `if` and ternary control flow into canonical `switch` forms.",
+      "properties": {
+        "enabled": {
+          "$ref": "#/definitions/enabled"
+        },
+        "if": {
+          "type": "boolean",
+          "description": "When true, rewrite eligible `if` / `else if` branches. Default: true."
+        },
+        "ternary": {
+          "type": "boolean",
+          "description": "When true, rewrite eligible ternary expressions. Default: true."
+        }
+      },
+      "additionalProperties": false
+    },
+    "no-optional-some-rewrite-rule": {
+      "type": "object",
+      "description": "Rewrite redundant optional-argument wrapping from `~label=?Some(expr)` to the direct labeled form.",
+      "properties": {
+        "enabled": {
+          "$ref": "#/definitions/enabled"
+        }
+      },
+      "additionalProperties": false
+    },
+    "preferred-type-syntax-rewrite-rule": {
+      "type": "object",
+      "description": "Rewrite supported type spellings into canonical builtin syntax. Today this supports rewriting `Dict.t<_>` and `Stdlib.Dict.t<_>` to `dict<_>`.",
+      "properties": {
+        "enabled": {
+          "$ref": "#/definitions/enabled"
+        },
+        "dict": {
+          "type": "boolean",
+          "description": "When true, rewrite `Dict.t<_>` and `Stdlib.Dict.t<_>` to `dict<_>`. Default: false."
+        }
+      },
+      "additionalProperties": false
+    },
+    "rewrite-rules": {
+      "type": "object",
+      "description": "Configured rewrite rules. Omitted rules keep their built-in defaults.",
+      "properties": {
+        "prefer-switch": {
+          "$ref": "#/definitions/prefer-switch-rewrite-rule"
+        },
+        "no-optional-some": {
+          "$ref": "#/definitions/no-optional-some-rewrite-rule"
+        },
+        "preferred-type-syntax": {
+          "$ref": "#/definitions/preferred-type-syntax-rewrite-rule"
+        }
+      },
+      "additionalProperties": false
+    },
+    "rewrite-config": {
+      "type": "object",
+      "description": "Namespace for rewrite rules.",
+      "properties": {
+        "rules": {
+          "$ref": "#/definitions/rewrite-rules"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

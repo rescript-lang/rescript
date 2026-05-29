@@ -1,0 +1,127 @@
+path: src/rewrite/RewriteClean.res
+status: unchanged
+
+path: src/rewrite/RewriteIfs.res
+status: preview
+rules:
+- prefer-switch(4): rewrote `if` / ternary branches into `switch`
+diff:
+```diff
+--- a/src/rewrite/RewriteIfs.res
++++ b/src/rewrite/RewriteIfs.res
+@@ -1,21 +1,22 @@
+ let flag = true
+ let other = false
+
+-let direct = if flag {
+-  1
+-} else {
+-  2
++let direct = switch flag {
++| true => 1
++| false => 2
+ }
+-let ternary = flag ? "yes" : "no"
++let ternary = switch flag {
++| true => "yes"
++| false => "no"
++}
+
+-let chained = if flag {
+-  1
+-} else if other {
+-  2
+-} else {
+-  3
++let chained = switch () {
++| _ if flag => 1
++| _ if other => 2
++| _ => 3
+ }
+
+-let onlyWhen = if flag {
+-  Console.log("hit")
++let onlyWhen = switch flag {
++| true => Console.log("hit")
++| false => ()
+ }
+```
+
+path: src/rewrite/RewriteOptionalSome.res
+status: preview
+rules:
+- prefer-switch(1): rewrote `if` / ternary branches into `switch`
+- no-optional-some(3): rewrote `~label=?Some(expr)` into `~label=expr`
+diff:
+```diff
+--- a/src/rewrite/RewriteOptionalSome.res
++++ b/src/rewrite/RewriteOptionalSome.res
+@@ -1,15 +1,12 @@
+ let flag = true
+ let useValue = (~value=?, ()) => value
+
+-let direct = useValue(~value=?Some(1), ())
++let direct = useValue(~value=1, ())
+ let nested = useValue(
+-  ~value=?Some(
+-    if flag {
+-      1
+-    } else {
+-      2
+-    },
+-  ),
++  ~value=switch flag {
++  | true => 1
++  | false => 2
++  },
+   (),
+ )
+-let fromComputation = useValue(~value=?Some(String.length("abc")), ())
++let fromComputation = useValue(~value=String.length("abc"), ())
+```
+
+path: src/rewrite/RewritePreferredTypeSyntax.res
+status: preview
+rules:
+- preferred-type-syntax(4): rewrote `Dict.t<_>` into `dict<_>`
+diff:
+```diff
+--- a/src/rewrite/RewritePreferredTypeSyntax.res
++++ b/src/rewrite/RewritePreferredTypeSyntax.res
+@@ -1,7 +1,7 @@
+ type wrapped = {
+-  items: Dict.t<int>,
+-  names: Stdlib.Dict.t<string>,
++  items: dict<int>,
++  names: dict<string>,
+ }
+
+-let dictValue: Dict.t<int> = dict{}
+-let stdlibDictValue: Stdlib.Dict.t<string> = dict{}
++let dictValue: dict<int> = dict{}
++let stdlibDictValue: dict<string> = dict{}
+```
+
+path: src/rewrite/RewritePreferredTypeSyntax.resi
+status: preview
+rules:
+- preferred-type-syntax(4): rewrote `Dict.t<_>` into `dict<_>`
+diff:
+```diff
+--- a/src/rewrite/RewritePreferredTypeSyntax.resi
++++ b/src/rewrite/RewritePreferredTypeSyntax.resi
+@@ -1,7 +1,7 @@
+ type wrapped = {
+-  items: Dict.t<int>,
+-  names: Stdlib.Dict.t<string>,
++  items: dict<int>,
++  names: dict<string>,
+ }
+
+-let dictValue: Dict.t<int>
+-let stdlibDictValue: Stdlib.Dict.t<string>
++let dictValue: dict<int>
++let stdlibDictValue: dict<string>
+```
+
+summary: previewed 4 files, unchanged 1, rules: prefer-switch(5), no-optional-some(3), preferred-type-syntax(8)
