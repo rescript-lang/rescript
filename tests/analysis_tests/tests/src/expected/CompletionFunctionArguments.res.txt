@@ -436,11 +436,11 @@ Resolved opens 1 Stdlib
 ContextPath Value[thisGetsBrokenLoc]->a <<jsx>>
 ContextPath Value[thisGetsBrokenLoc]
 Path thisGetsBrokenLoc
-CPPipe pathFromEnv:JsxEvent.Mouse found:false
-Path JsxEvent.Mouse.a
+CPPipe pathFromEnv:ReactDOMEvent.Mouse found:false
+Path ReactDOMEvent.Mouse.a
 Path a
 [{
-    "label": "JsxEvent.Mouse.altKey",
+    "label": "ReactDOMEvent.Mouse.altKey",
     "kind": 12,
     "tags": [],
     "detail": "t => bool",
@@ -460,11 +460,11 @@ Resolved opens 1 Stdlib
 ContextPath Value[reassignedWorks]->a <<jsx>>
 ContextPath Value[reassignedWorks]
 Path reassignedWorks
-CPPipe pathFromEnv:JsxEvent.Mouse found:false
-Path JsxEvent.Mouse.a
+CPPipe pathFromEnv:ReactDOMEvent.Mouse found:false
+Path ReactDOMEvent.Mouse.a
 Path a
 [{
-    "label": "JsxEvent.Mouse.altKey",
+    "label": "ReactDOMEvent.Mouse.altKey",
     "kind": 12,
     "tags": [],
     "detail": "t => bool",

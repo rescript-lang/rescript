@@ -386,9 +386,9 @@
   addValueReference Hooks.res:10:75 --> Hooks.res:5:7
   addValueReference Hooks.res:9:7 --> React.res:7:0
   addValueReference Hooks.res:13:54 --> React.res:7:0
-  addValueReference Hooks.res:13:54 --> React.res:7:0
   addValueReference Hooks.res:13:40 --> Hooks.res:5:7
   addValueReference Hooks.res:13:26 --> Hooks.res:5:14
+  addValueReference Hooks.res:13:54 --> React.res:7:0
   addValueReference Hooks.res:14:5 --> ImportHooks.res:13:0
   addValueReference Hooks.res:17:7 --> React.res:7:0
   addValueReference Hooks.res:17:32 --> React.res:7:0

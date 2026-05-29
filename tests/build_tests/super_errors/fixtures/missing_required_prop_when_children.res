@@ -14,7 +14,7 @@ module React = {
 module ReactDOM = {
   external someElement: React.element => option<React.element> = "%identity"
   @module("react/jsx-runtime")
-  external jsx: (string, JsxDOM.domProps) => Jsx.element = "jsx"
+  external jsx: (string, ReactDOMProps.t) => Jsx.element = "jsx"
 }
 
 module Wrapper = {

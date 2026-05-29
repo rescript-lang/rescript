@@ -868,7 +868,7 @@ Path fnTakingCallback
     "label": "event => event",
     "kind": 12,
     "tags": [],
-    "detail": "ReactEvent.Mouse.t => unit",
+    "detail": "ReactDOMEvent.Mouse.t => unit",
     "documentation": null,
     "sortText": "A",
     "insertText": "${1:event} => ${0:event}",

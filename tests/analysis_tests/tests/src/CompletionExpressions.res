@@ -144,7 +144,7 @@ type variant = First | Second(bool)
 let fnTakingCallback = (
   cb: unit => unit,
   cb2: bool => unit,
-  cb3: ReactEvent.Mouse.t => unit,
+  cb3: ReactDOMEvent.Mouse.t => unit,
   cb4: (~on: bool, ~off: bool=?, variant) => int,
   cb5: (bool, option<bool>, bool) => unit,
   cb6: (~on: bool=?, ~off: bool=?, unit) => int,

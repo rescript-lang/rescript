@@ -411,7 +411,7 @@ let header2 = `
 let onClick = evt => {
   // SomeLocalModule.
   //                 ^com
-  evt->ReactEvent.Synthetic.preventDefault
+  evt->ReactDOMEvent.Synthetic.preventDefault
   // SomeLocalModule.
   //                 ^com
   Console.log("Hello")

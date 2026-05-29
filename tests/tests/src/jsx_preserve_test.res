@@ -36,7 +36,7 @@ let _unary_element_with_props = <input type_="text" className="foo" />
 let _container_element_with_props_and_children =
   <div title="foo" className="foo"> {React.string("Hello, world!")} </div>
 
-let baseProps: JsxDOM.domProps = {
+let baseProps: ReactDOMProps.t = {
   title: "foo",
   className: "foo",
 }

@@ -472,17 +472,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [div] x
 Path ReactDOM.domProps
-Path JsxDOM.domProps
-[{
-    "label": "\"\"",
-    "kind": 12,
-    "tags": [],
-    "detail": "string",
-    "documentation": null,
-    "sortText": "A",
-    "insertText": "{\"$0\"}",
-    "insertTextFormat": 2
-  }]
+[]
 
 Complete src/Jsx2.res 150:21
 posCursor:[150:21] posNoWhite:[150:20] Found expr:[150:11->150:32]
