@@ -56,7 +56,7 @@ let Another = {
   anotherComponent: Hooks$Another$anotherComponent
 };
 
-function Hooks$Inner(props) {
+function Hooks$Inner$make(props) {
   return JsxRuntime.jsx("div", {
     children: "Another Hook " + props.vehicle.name
   });
@@ -72,7 +72,7 @@ let Another$1 = {
   anotherComponent: Hooks$Inner$Another$anotherComponent
 };
 
-function Hooks$Inner$Inner2(props) {
+function Hooks$Inner$Inner2$make(props) {
   return JsxRuntime.jsx("div", {
     children: "Another Hook " + props.vehicle.name
   });
@@ -89,24 +89,24 @@ let Another$2 = {
 };
 
 let Inner2 = {
-  make: Hooks$Inner$Inner2,
+  make: Hooks$Inner$Inner2$make,
   Another: Another$2
 };
 
 let Inner = {
-  make: Hooks$Inner,
+  make: Hooks$Inner$make,
   Another: Another$1,
   Inner2: Inner2
 };
 
-function Hooks$NoProps(props) {
+function Hooks$NoProps$make(props) {
   return JsxRuntime.jsx("div", {
     children: null
   });
 }
 
 let NoProps = {
-  make: Hooks$NoProps
+  make: Hooks$NoProps$make
 };
 
 function functionWithRenamedArgs(_to, _Type, cb) {
@@ -164,7 +164,7 @@ let Fun = {
   functionReturningReactElement: Hooks$Fun$functionReturningReactElement
 };
 
-function Hooks$RenderPropRequiresConversion(props) {
+function Hooks$RenderPropRequiresConversion$make(props) {
   return props.renderVehicle({
     vehicle: {
       name: "Car"
@@ -174,7 +174,7 @@ function Hooks$RenderPropRequiresConversion(props) {
 }
 
 let RenderPropRequiresConversion = {
-  make: Hooks$RenderPropRequiresConversion
+  make: Hooks$RenderPropRequiresConversion$make
 };
 
 function Hooks$WithChildren$aComponentWithChildren(props) {
@@ -192,17 +192,19 @@ let WithChildren = {
   aComponentWithChildren: Hooks$WithChildren$aComponentWithChildren
 };
 
-function Hooks$DD(props) {
+function Hooks$DD$make(props) {
   return props.name;
 }
 
 let DD = {
-  make: Hooks$DD
+  make: Hooks$DD$make
 };
 
 let make$1 = Hooks;
 
 let $$default = Hooks;
+
+let Hooks$WithRef$make = make;
 
 export {
   make$1 as make,
@@ -219,5 +221,11 @@ export {
   RenderPropRequiresConversion,
   WithChildren,
   DD,
+  Hooks$Inner$make,
+  Hooks$Inner$Inner2$make,
+  Hooks$NoProps$make,
+  Hooks$WithRef$make,
+  Hooks$RenderPropRequiresConversion$make,
+  Hooks$DD$make,
 }
 /* make Not a pure module */

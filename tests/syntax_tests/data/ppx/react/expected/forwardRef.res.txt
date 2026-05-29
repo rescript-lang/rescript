@@ -29,10 +29,11 @@ module V4A = {
           ]),
         },
       )
+    @res.hoistedValue
     let make = React.forwardRef({
-      let \"ForwardRef$V4A$FancyInput" = (props: props<_>, ref) => make(props, ref)
+      let \"ForwardRef$V4A$FancyInput$make" = (props: props<_>, ref) => make(props, ref)
 
-      \"ForwardRef$V4A$FancyInput"
+      \"ForwardRef$V4A$FancyInput$make"
     })
   }
   @res.jsxComponentProps
@@ -45,16 +46,20 @@ module V4A = {
         "div",
         {
           children: ?ReactDOM.someElement(
-            React.jsx(FancyInput.make, {ref: input, children: {React.string("Click to focus")}}),
+            React.jsx(
+              @res.jsxComponentPath FancyInput.make,
+              {ref: input, children: {React.string("Click to focus")}},
+            ),
           ),
         },
       ): React.element
     )
   }
+  @res.hoistedValue
   let make = React.component({
-    let \"ForwardRef$V4A" = props => make(props)
+    let \"ForwardRef$V4A$make" = props => make(props)
 
-    \"ForwardRef$V4A"
+    \"ForwardRef$V4A$make"
   })
 }
 
@@ -87,10 +92,11 @@ module V4AUncurried = {
           ]),
         },
       )
+    @res.hoistedValue
     let make = React.forwardRef({
-      let \"ForwardRef$V4AUncurried$FancyInput" = (props: props<_>, ref) => make(props, ref)
+      let \"ForwardRef$V4AUncurried$FancyInput$make" = (props: props<_>, ref) => make(props, ref)
 
-      \"ForwardRef$V4AUncurried$FancyInput"
+      \"ForwardRef$V4AUncurried$FancyInput$make"
     })
   }
   @res.jsxComponentProps
@@ -103,15 +109,23 @@ module V4AUncurried = {
         "div",
         {
           children: ?ReactDOM.someElement(
-            React.jsx(FancyInput.make, {ref: input, children: {React.string("Click to focus")}}),
+            React.jsx(
+              @res.jsxComponentPath FancyInput.make,
+              {ref: input, children: {React.string("Click to focus")}},
+            ),
           ),
         },
       ): React.element
     )
   }
+  @res.hoistedValue
   let make = React.component({
-    let \"ForwardRef$V4AUncurried" = props => make(props)
+    let \"ForwardRef$V4AUncurried$make" = props => make(props)
 
-    \"ForwardRef$V4AUncurried"
+    \"ForwardRef$V4AUncurried$make"
   })
 }
+@warning("-32") let \"ForwardRef$V4A$FancyInput$make" = V4A.FancyInput.make
+@warning("-32") let \"ForwardRef$V4A$make" = V4A.make
+@warning("-32") let \"ForwardRef$V4AUncurried$FancyInput$make" = V4AUncurried.FancyInput.make
+@warning("-32") let \"ForwardRef$V4AUncurried$make" = V4AUncurried.make

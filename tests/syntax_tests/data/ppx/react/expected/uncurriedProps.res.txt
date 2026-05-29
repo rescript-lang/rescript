@@ -46,10 +46,11 @@ module Foo = {
       }: React.element
     )
   }
+  @res.hoistedValue
   let make = React.component({
-    let \"UncurriedProps$Foo" = (props: props<_>) => make(props)
+    let \"UncurriedProps$Foo$make" = (props: props<_>) => make(props)
 
-    \"UncurriedProps$Foo"
+    \"UncurriedProps$Foo$make"
   })
 }
 
@@ -57,10 +58,14 @@ module Bar = {
   @res.jsxComponentProps
   type props = {}
 
-  let make = (_: props): React.element => React.jsx(Foo.make, {callback: {(_, _, _) => ()}})
+  let make = (_: props): React.element =>
+    React.jsx(@res.jsxComponentPath Foo.make, {callback: {(_, _, _) => ()}})
+  @res.hoistedValue
   let make = React.component({
-    let \"UncurriedProps$Bar" = props => make(props)
+    let \"UncurriedProps$Bar$make" = props => make(props)
 
-    \"UncurriedProps$Bar"
+    \"UncurriedProps$Bar$make"
   })
 }
+@warning("-32") let \"UncurriedProps$Foo$make" = Foo.make
+@warning("-32") let \"UncurriedProps$Bar$make" = Bar.make

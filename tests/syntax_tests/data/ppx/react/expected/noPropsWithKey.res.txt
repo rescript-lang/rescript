@@ -5,10 +5,11 @@ module V4CA = {
   type props = {}
 
   let make = (_: props): React.element => ReactDOM.jsx("div", {})
+  @res.hoistedValue
   let make = React.component({
-    let \"NoPropsWithKey$V4CA" = props => make(props)
+    let \"NoPropsWithKey$V4CA$make" = props => make(props)
 
-    \"NoPropsWithKey$V4CA"
+    \"NoPropsWithKey$V4CA$make"
   })
 }
 
@@ -16,7 +17,7 @@ module V4CB = {
   @res.jsxComponentProps @live
   type props = {}
 
-  @module("c")
+  @res.hoistedValue @module("c")
   external make: React.component<props> = "component"
 }
 
@@ -29,14 +30,18 @@ module V4C = {
       React.jsxFragment,
       {
         children: React.array([
-          React.jsxKeyed(V4CA.make, {}, ~key="k", ()),
-          React.jsxKeyed(V4CB.make, {}, ~key="k", ()),
+          React.jsxKeyed(@res.jsxComponentPath V4CA.make, {}, ~key="k", ()),
+          React.jsxKeyed(@res.jsxComponentPath V4CB.make, {}, ~key="k", ()),
         ]),
       },
     )
+  @res.hoistedValue
   let make = React.component({
-    let \"NoPropsWithKey$V4C" = props => make(props)
+    let \"NoPropsWithKey$V4C$make" = props => make(props)
 
-    \"NoPropsWithKey$V4C"
+    \"NoPropsWithKey$V4C$make"
   })
 }
+@warning("-32") let \"NoPropsWithKey$V4CA$make" = V4CA.make
+@warning("-32") let \"NoPropsWithKey$V4CB$make" = V4CB.make
+@warning("-32") let \"NoPropsWithKey$V4C$make" = V4C.make

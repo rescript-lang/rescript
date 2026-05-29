@@ -5,36 +5,40 @@ let f = a => Js.Promise.resolve(a + a)
 module V4A1 = {
   type props = sharedProps
   let make = (props): React.element => React.string(props.x ++ props.y)
+  @res.hoistedValue
   let make = React.component({
-    let \"SharedPropsWithProps$V4A1" = (props): React.element => make(props)
-    \"SharedPropsWithProps$V4A1"
+    let \"SharedPropsWithProps$V4A1$make" = (props): React.element => make(props)
+    \"SharedPropsWithProps$V4A1$make"
   })
 }
 
 module V4A2 = {
   type props = sharedProps
   let make = (props: props): React.element => React.string(props.x ++ props.y)
+  @res.hoistedValue
   let make = React.component({
-    let \"SharedPropsWithProps$V4A2" = (props: props): React.element => make(props)
-    \"SharedPropsWithProps$V4A2"
+    let \"SharedPropsWithProps$V4A2$make" = (props: props): React.element => make(props)
+    \"SharedPropsWithProps$V4A2$make"
   })
 }
 
 module V4A3 = {
   type props<'a> = sharedProps<'a>
   let make = ({x, y}: props<_>): React.element => React.string(x ++ y)
+  @res.hoistedValue
   let make = React.component({
-    let \"SharedPropsWithProps$V4A3" = (props: props<_>): React.element => make(props)
-    \"SharedPropsWithProps$V4A3"
+    let \"SharedPropsWithProps$V4A3$make" = (props: props<_>): React.element => make(props)
+    \"SharedPropsWithProps$V4A3$make"
   })
 }
 
 module V4A4 = {
   type props<'a> = sharedProps<string, 'a>
   let make = ({x, y}: props<_>): React.element => React.string(x ++ y)
+  @res.hoistedValue
   let make = React.component({
-    let \"SharedPropsWithProps$V4A4" = (props: props<_>): React.element => make(props)
-    \"SharedPropsWithProps$V4A4"
+    let \"SharedPropsWithProps$V4A4$make" = (props: props<_>): React.element => make(props)
+    \"SharedPropsWithProps$V4A4$make"
   })
 }
 
@@ -44,9 +48,11 @@ module V4A5 = {
     let a = await f(a)
     (ReactDOM.jsx("div", {children: ?ReactDOM.someElement({React.int(a)})}): React.element)
   }
+  @res.hoistedValue
   let make = React.component({
-    let \"SharedPropsWithProps$V4A5" = (props: props<_>): React.element => Jsx.promise(make(props))
-    \"SharedPropsWithProps$V4A5"
+    let \"SharedPropsWithProps$V4A5$make" = (props: props<_>): React.element =>
+      Jsx.promise(make(props))
+    \"SharedPropsWithProps$V4A5$make"
   })
 }
 
@@ -58,9 +64,11 @@ module V4A6 = {
     | #off => React.string("off")
     }
   }
+  @res.hoistedValue
   let make = React.component({
-    let \"SharedPropsWithProps$V4A6" = (props: props<_>): React.element => Jsx.promise(make(props))
-    \"SharedPropsWithProps$V4A6"
+    let \"SharedPropsWithProps$V4A6$make" = (props: props<_>): React.element =>
+      Jsx.promise(make(props))
+    \"SharedPropsWithProps$V4A6$make"
   })
 }
 
@@ -70,9 +78,17 @@ module V4A7 = {
   let make = (props): React.element => {
     React.int(props.count)
   }
+  @res.hoistedValue
   let make = React.component({
-    let \"SharedPropsWithProps$V4A7" =
+    let \"SharedPropsWithProps$V4A7$make" =
       @directive("'use memo'") (props): React.element => make(props)
-    \"SharedPropsWithProps$V4A7"
+    \"SharedPropsWithProps$V4A7$make"
   })
 }
+@warning("-32") let \"SharedPropsWithProps$V4A1$make" = V4A1.make
+@warning("-32") let \"SharedPropsWithProps$V4A2$make" = V4A2.make
+@warning("-32") let \"SharedPropsWithProps$V4A3$make" = V4A3.make
+@warning("-32") let \"SharedPropsWithProps$V4A4$make" = V4A4.make
+@warning("-32") let \"SharedPropsWithProps$V4A5$make" = V4A5.make
+@warning("-32") let \"SharedPropsWithProps$V4A6$make" = V4A6.make
+@warning("-32") let \"SharedPropsWithProps$V4A7$make" = V4A7.make

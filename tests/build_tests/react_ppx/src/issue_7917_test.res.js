@@ -2,12 +2,12 @@
 
 import * as JsxRuntime from "react/jsx-runtime";
 
-function Issue_7917_test$M(props) {
+function Issue_7917_test$M$make(props) {
   return null;
 }
 
 let M = {
-  make: Issue_7917_test$M
+  make: Issue_7917_test$M$make
 };
 
 function Issue_7917_test(props) {
@@ -21,5 +21,6 @@ let make = Issue_7917_test;
 export {
   M,
   make,
+  Issue_7917_test$M$make,
 }
 /* react/jsx-runtime Not a pure module */

@@ -10,42 +10,42 @@ function make(param) {
 
 let Recursive_react_component = make;
 
-function Recursive_react_component$ShadowedSelfReference(props) {
+function Recursive_react_component$ShadowedSelfReference$make(props) {
   return React.createElement(props.make, {
     foo: props.foo
   });
 }
 
 let ShadowedSelfReference = {
-  make: Recursive_react_component$ShadowedSelfReference
+  make: Recursive_react_component$ShadowedSelfReference$make
 };
 
-function Recursive_react_component$Leaf(props) {
+function Recursive_react_component$Leaf$make(props) {
   return props.foo;
 }
 
 let Leaf = {
-  make: Recursive_react_component$Leaf
+  make: Recursive_react_component$Leaf$make
 };
 
-function Recursive_react_component$ShadowedByLocalLet(props) {
-  return React.createElement(Recursive_react_component$Leaf, {
+function Recursive_react_component$ShadowedByLocalLet$make(props) {
+  return React.createElement(Recursive_react_component$Leaf$make, {
     foo: props.foo
   });
 }
 
 let ShadowedByLocalLet = {
-  make: Recursive_react_component$ShadowedByLocalLet
+  make: Recursive_react_component$ShadowedByLocalLet$make
 };
 
-function Recursive_react_component$ShadowedByNestedParameter(props) {
-  return React.createElement(Recursive_react_component$Leaf, {
+function Recursive_react_component$ShadowedByNestedParameter$make(props) {
+  return React.createElement(Recursive_react_component$Leaf$make, {
     foo: props.foo
   });
 }
 
 let ShadowedByNestedParameter = {
-  make: Recursive_react_component$ShadowedByNestedParameter
+  make: Recursive_react_component$ShadowedByNestedParameter$make
 };
 
 let make$1 = Recursive_react_component;
@@ -56,5 +56,9 @@ export {
   Leaf,
   ShadowedByLocalLet,
   ShadowedByNestedParameter,
+  Recursive_react_component$ShadowedSelfReference$make,
+  Recursive_react_component$Leaf$make,
+  Recursive_react_component$ShadowedByLocalLet$make,
+  Recursive_react_component$ShadowedByNestedParameter$make,
 }
 /* react Not a pure module */

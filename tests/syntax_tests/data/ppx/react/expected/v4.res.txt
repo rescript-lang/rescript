@@ -31,10 +31,11 @@ module Uncurried = {
   }
 
   let make = ({x, _}: props<_>): React.element => React.string(x)
+  @res.hoistedValue
   let make = React.component({
-    let \"V4$Uncurried" = (props: props<_>) => make(props)
+    let \"V4$Uncurried$make" = (props: props<_>) => make(props)
 
-    \"V4$Uncurried"
+    \"V4$Uncurried$make"
   })
 }
 
@@ -53,6 +54,7 @@ module E = {
     x: 'x,
   }
 
+  @res.hoistedValue
   external make: React.component<props<string>> = "default"
 }
 
@@ -62,6 +64,7 @@ module EUncurried = {
     x: 'x,
   }
 
+  @res.hoistedValue
   external make: React.component<props<string>> = "default"
 }
 
@@ -72,10 +75,11 @@ module Rec = {
   let rec make = (_: props): React.element => {
     make(({}: props))
   }
+  @res.hoistedValue
   let make = React.component({
-    let \"V4$Rec" = props => make(props)
+    let \"V4$Rec$make" = props => make(props)
 
-    \"V4$Rec"
+    \"V4$Rec$make"
   })
 }
 
@@ -86,10 +90,11 @@ module Rec1 = {
   let rec make = (_: props): React.element => {
     React.null
   }
+  @res.hoistedValue
   let make = React.component({
-    let \"V4$Rec1" = props => make(props)
+    let \"V4$Rec1$make" = props => make(props)
 
-    \"V4$Rec1"
+    \"V4$Rec1$make"
   })
 }
 
@@ -102,9 +107,16 @@ module Rec2 = {
   }
 
   and mm = x => make(x)
+  @res.hoistedValue
   let make = React.component({
-    let \"V4$Rec2" = props => make(props)
+    let \"V4$Rec2$make" = props => make(props)
 
-    \"V4$Rec2"
+    \"V4$Rec2$make"
   })
 }
+@warning("-32") let \"V4$Uncurried$make" = Uncurried.make
+@warning("-32") let \"V4$E$make" = E.make
+@warning("-32") let \"V4$EUncurried$make" = EUncurried.make
+@warning("-32") let \"V4$Rec$make" = Rec.make
+@warning("-32") let \"V4$Rec1$make" = Rec1.make
+@warning("-32") let \"V4$Rec2$make" = Rec2.make

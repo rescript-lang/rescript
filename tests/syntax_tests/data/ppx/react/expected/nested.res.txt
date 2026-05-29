@@ -7,17 +7,21 @@ module Outer = {
       type props = {}
 
       let make = (_: props): React.element => ReactDOM.jsx("div", {})
+      @res.hoistedValue
       let make = React.component({
-        let \"Nested$Outer" = props => make(props)
+        let \"Nested$Outer$Inner$make" = props => make(props)
 
-        \"Nested$Outer"
+        \"Nested$Outer$Inner$make"
       })
     }
 
-    React.jsx(Inner.make, {})
+    React.jsx(@res.jsxComponentPath Inner.make, {})
   }
+  @res.hoistedValue
   let make = React.component({
-    let \"Nested$Outer" = props => make(props)
-    \"Nested$Outer"
+    let \"Nested$Outer$make" = props => make(props)
+    \"Nested$Outer$make"
   })
 }
+@warning("-32") let \"Nested$Outer$Inner$make" = Outer.Inner.make
+@warning("-32") let \"Nested$Outer$make" = Outer.make

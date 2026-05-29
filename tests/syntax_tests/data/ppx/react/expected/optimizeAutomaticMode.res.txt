@@ -12,9 +12,11 @@ module User = {
   let make = ({doctor, _}: props<_>): React.element => {
     ReactDOM.jsx("h1", {id: "h1", children: ?ReactDOM.someElement({React.string(format(doctor))})})
   }
+  @res.hoistedValue
   let make = React.component({
-    let \"OptimizeAutomaticMode$User" = (props: props<_>) => make(props)
+    let \"OptimizeAutomaticMode$User$make" = (props: props<_>) => make(props)
 
-    \"OptimizeAutomaticMode$User"
+    \"OptimizeAutomaticMode$User$make"
   })
 }
+@warning("-32") let \"OptimizeAutomaticMode$User$make" = User.make

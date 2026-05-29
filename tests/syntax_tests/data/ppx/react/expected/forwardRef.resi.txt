@@ -9,6 +9,7 @@ module V4C: {
       ref?: 'ref,
     }
 
+    @res.hoistedValue
     let make: React.component<props<string, React.element, ReactDOM.Ref.currentDomRef>>
   }
 
@@ -18,6 +19,7 @@ module V4C: {
       ref?: 'ref,
     }
 
+    @res.hoistedValue
     let make: React.component<props<React.ref<Js.Nullable.t<inputRef>>>>
   }
 }
@@ -31,6 +33,7 @@ module V4CUncurried: {
       ref?: 'ref,
     }
 
+    @res.hoistedValue
     let make: React.component<props<string, React.element, ReactDOM.Ref.currentDomRef>>
   }
 
@@ -40,6 +43,7 @@ module V4CUncurried: {
       ref?: 'ref,
     }
 
+    @res.hoistedValue
     let make: React.component<props<React.ref<Js.Nullable.t<inputRef>>>>
   }
 }
@@ -55,6 +59,7 @@ module V4A: {
       ref?: 'ref,
     }
 
+    @res.hoistedValue
     let make: React.component<props<string, React.element, ReactDOM.Ref.currentDomRef>>
   }
 
@@ -64,6 +69,7 @@ module V4A: {
       ref?: 'ref,
     }
 
+    @res.hoistedValue
     let make: React.component<props<React.ref<Js.Nullable.t<inputRef>>>>
   }
 }
@@ -77,6 +83,7 @@ module V4AUncurried: {
       ref?: 'ref,
     }
 
+    @res.hoistedValue
     let make: React.component<props<string, React.element, ReactDOM.Ref.currentDomRef>>
   }
 
@@ -86,6 +93,31 @@ module V4AUncurried: {
       ref?: 'ref,
     }
 
+    @res.hoistedValue
     let make: React.component<props<React.ref<Js.Nullable.t<inputRef>>>>
   }
 }
+let \"ForwardRef$V4C$FancyInput$make": React.component<
+  V4C.FancyInput.props<string, React.element, ReactDOM.Ref.currentDomRef>,
+>
+let \"ForwardRef$V4C$ForwardRef$make": React.component<
+  V4C.ForwardRef.props<React.ref<Js.Nullable.t<inputRef>>>,
+>
+let \"ForwardRef$V4CUncurried$FancyInput$make": React.component<
+  V4CUncurried.FancyInput.props<string, React.element, ReactDOM.Ref.currentDomRef>,
+>
+let \"ForwardRef$V4CUncurried$ForwardRef$make": React.component<
+  V4CUncurried.ForwardRef.props<React.ref<Js.Nullable.t<inputRef>>>,
+>
+let \"ForwardRef$V4A$FancyInput$make": React.component<
+  V4A.FancyInput.props<string, React.element, ReactDOM.Ref.currentDomRef>,
+>
+let \"ForwardRef$V4A$ForwardRef$make": React.component<
+  V4A.ForwardRef.props<React.ref<Js.Nullable.t<inputRef>>>,
+>
+let \"ForwardRef$V4AUncurried$FancyInput$make": React.component<
+  V4AUncurried.FancyInput.props<string, React.element, ReactDOM.Ref.currentDomRef>,
+>
+let \"ForwardRef$V4AUncurried$ForwardRef$make": React.component<
+  V4AUncurried.ForwardRef.props<React.ref<Js.Nullable.t<inputRef>>>,
+>

@@ -17,25 +17,27 @@ async function make(param) {
   </div>;
 }
 
-let Async_jsx$Foo = make;
+let Async_jsx$Foo$make = make;
 
 let Foo = {
-  make: Async_jsx$Foo
+  make: Async_jsx$Foo$make
 };
 
-function Async_jsx$Bar(props) {
+function Async_jsx$Bar$make(props) {
   return <div>
     <Foo.make />
   </div>;
 }
 
 let Bar = {
-  make: Async_jsx$Bar
+  make: Async_jsx$Bar$make
 };
 
 export {
   getNow,
   Foo,
   Bar,
+  Async_jsx$Foo$make,
+  Async_jsx$Bar$make,
 }
 /* react/jsx-runtime Not a pure module */
