@@ -16,7 +16,7 @@
   "dependencies": {
     "@rescript/runtime": "12.3.0",
     "rescript": "12.3.0",
-    "vite": "^7.3.2",
+    "vite": "^8.0.14",
     "xote": "6.1.1"
   }
 }
