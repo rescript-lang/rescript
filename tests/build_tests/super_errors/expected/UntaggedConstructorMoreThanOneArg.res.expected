@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/UntaggedConstructorMoreThanOneArg.res[0m:[2m2:1-32[0m
+
+  1 [2m│[0m @unboxed
+  [1;31m2[0m [2m│[0m [1;31mtype t = A(int, int) | B(string)[0m
+  3 [2m│[0m 
+
+  This untagged variant definition is invalid: Constructor A has more than one argument.

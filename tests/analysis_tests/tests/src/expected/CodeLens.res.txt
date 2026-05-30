@@ -1,12 +1,31 @@
 Code Lens src/CodeLens.res
-[{
-        "range": {"start": {"line": 4, "character": 4}, "end": {"line": 4, "character": 6}},
-        "command": {"title": "(~opt1: int=?, ~a: int, ~b: int, unit, ~opt2: int=?, unit, ~c: int) => int", "command": ""}
-    }, {
-        "range": {"start": {"line": 2, "character": 4}, "end": {"line": 2, "character": 7}},
-        "command": {"title": "(~age: int, ~name: string) => string", "command": ""}
-    }, {
-        "range": {"start": {"line": 0, "character": 4}, "end": {"line": 0, "character": 7}},
-        "command": {"title": "(int, int) => int", "command": ""}
-    }]
+[
+  {
+    "command": {
+      "command": "",
+      "title": "(~opt1: int=?, ~a: int, ~b: int, unit, ~opt2: int=?, unit, ~c: int) => int"
+    },
+    "range": {
+      "end": { "character": 6, "line": 4 },
+      "start": { "character": 4, "line": 4 }
+    }
+  },
+  {
+    "command": {
+      "command": "",
+      "title": "(~age: int, ~name: string) => string"
+    },
+    "range": {
+      "end": { "character": 7, "line": 2 },
+      "start": { "character": 4, "line": 2 }
+    }
+  },
+  {
+    "command": { "command": "", "title": "(int, int) => int" },
+    "range": {
+      "end": { "character": 7, "line": 0 },
+      "start": { "character": 4, "line": 0 }
+    }
+  }
+]
 

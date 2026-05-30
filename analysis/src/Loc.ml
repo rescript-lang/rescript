@@ -9,18 +9,18 @@ let toString (loc : t) =
 
 let hasPos ~pos loc = start loc <= pos && pos < end_ loc
 
-(** Allows the character after the end to be included. Ie when the cursor is at the 
+(** Allows the character after the end to be included. Ie when the cursor is at the
     end of the word, like `someIdentifier<cursor>`. Useful in some scenarios. *)
 let hasPosInclusiveEnd ~pos loc = start loc <= pos && pos <= end_ loc
 
 let mkPosition (pos : Pos.t) =
   let line, character = pos in
-  {Protocol.line; character}
+  Lsp.Types.Position.create ~line ~character
 
 let rangeOfLoc (loc : t) =
   let start = loc |> start |> mkPosition in
   let end_ = loc |> end_ |> mkPosition in
-  {Protocol.start; end_}
+  Lsp.Types.Range.create ~start ~end_
 
 let isInside (x : t) (y : t) =
   x.loc_start.pos_cnum >= y.loc_start.pos_cnum

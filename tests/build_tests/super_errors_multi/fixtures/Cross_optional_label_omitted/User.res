@@ -1,0 +1,1 @@
+let s = Lib.greet()

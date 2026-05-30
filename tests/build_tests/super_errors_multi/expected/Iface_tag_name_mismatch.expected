@@ -1,0 +1,22 @@
+===== Foo.res =====
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/Iface_tag_name_mismatch/Foo.res[0m:[2m2:1-4:5[0m
+
+  1 [2m│[0m @tag("type")
+  [1;31m2[0m [2m│[0m [1;31mtype t =[0m
+  [1;31m3[0m [2m│[0m [1;31m  | @as("a") A[0m
+  [1;31m4[0m [2m│[0m [1;31m  | B[0m
+  5 [2m│[0m 
+
+  The implementation /.../fixtures/Iface_tag_name_mismatch/Foo.res
+  does not match the interface /.../fixtures/Iface_tag_name_mismatch/foo.cmi:
+  Type declarations do not match:
+    type t = @as("a") A | B
+  is not included in
+    type t = @as("a") A | B
+  [36m/.../fixtures/Iface_tag_name_mismatch/Foo.resi[0m:[2m2:1-4:5[0m:
+    Expected declaration
+  [36m/.../fixtures/Iface_tag_name_mismatch/Foo.res[0m:[2m2:1-4:5[0m:
+    Actual declaration
+  Their @tag annotations differ.

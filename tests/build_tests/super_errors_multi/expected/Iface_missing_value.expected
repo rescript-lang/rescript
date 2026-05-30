@@ -1,0 +1,14 @@
+===== Foo.res =====
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/Iface_missing_value/Foo.resi[0m:[2m2:1-13[0m
+
+  1 [2m│[0m let a: int
+  [1;31m2[0m [2m│[0m [1;31mlet b: string[0m
+  3 [2m│[0m 
+
+  The implementation /.../fixtures/Iface_missing_value/Foo.res
+  does not match the interface /.../fixtures/Iface_missing_value/foo.cmi:
+  The value `b' is required but not provided
+  [36m/.../fixtures/Iface_missing_value/Foo.resi[0m:[2m2:1-13[0m:
+    Expected declaration

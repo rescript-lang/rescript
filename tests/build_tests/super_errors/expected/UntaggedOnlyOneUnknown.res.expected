@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/UntaggedOnlyOneUnknown.res[0m:[2m4:10-18[0m
+
+  2 [2m│[0m 
+  3 [2m│[0m @unboxed
+  [1;31m4[0m [2m│[0m type t = [1;31mA(opaque)[0m | B(int)
+  5 [2m│[0m 
+
+  This untagged variant definition is invalid: Case A has a payload that is not of one of the recognized shapes (object, array, etc). Then it must be the only case with payloads.

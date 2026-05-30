@@ -70,6 +70,11 @@ let has_trailing_single_line_comment tbl loc =
   | Some (comment :: _) -> Comment.is_single_line_comment comment
   | _ -> false
 
+let has_any_trailing_line_comment tbl loc =
+  match Hashtbl.find_opt tbl.CommentTable.trailing loc with
+  | Some comments -> List.exists Comment.is_single_line_comment comments
+  | None -> false
+
 let has_comment_below tbl loc =
   match Hashtbl.find tbl.CommentTable.trailing loc with
   | comment :: _ ->
@@ -2441,7 +2446,15 @@ and print_value_binding ~state ~rec_flag (vb : Parsetree.value_binding) cmt_tbl
       | Braced braces -> print_braces doc expr braces
       | Nothing -> doc
     in
+    let pattern_has_trailing_line_comment =
+      has_any_trailing_line_comment cmt_tbl vb.pvb_pat.ppat_loc
+    in
     let pattern_doc = print_pattern ~state vb.pvb_pat cmt_tbl in
+    let equal_doc =
+      if pattern_has_trailing_line_comment then
+        Doc.indent (Doc.concat [Doc.hard_line; Doc.equal])
+      else Doc.text " ="
+    in
     (*
      * we want to optimize the layout of one pipe:
      *   let tbl = data->Js.Array2.reduce((map, curr) => {
@@ -2459,21 +2472,14 @@ and print_value_binding ~state ~rec_flag (vb : Parsetree.value_binding) cmt_tbl
         [
           Doc.group
             (Doc.concat
-               [
-                 attrs;
-                 header;
-                 pattern_doc;
-                 Doc.text " =";
-                 Doc.space;
-                 printed_expr;
-               ]);
+               [attrs; header; pattern_doc; equal_doc; Doc.space; printed_expr]);
           Doc.group
             (Doc.concat
                [
                  attrs;
                  header;
                  pattern_doc;
-                 Doc.text " =";
+                 equal_doc;
                  Doc.indent (Doc.concat [Doc.line; printed_expr]);
                ]);
         ]
@@ -2505,7 +2511,7 @@ and print_value_binding ~state ~rec_flag (vb : Parsetree.value_binding) cmt_tbl
              attrs;
              header;
              pattern_doc;
-             Doc.text " =";
+             equal_doc;
              (if should_indent then
                 Doc.indent (Doc.concat [Doc.line; printed_expr])
               else Doc.concat [Doc.space; printed_expr]);

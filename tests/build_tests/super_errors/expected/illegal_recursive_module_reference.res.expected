@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/illegal_recursive_module_reference.res[0m:[2m1:15-17[0m
+
+  [1;31m1[0m [2m│[0m module rec A: [1;31mB.S[0m = {
+  2 [2m│[0m   let x = 1
+  3 [2m│[0m }
+
+  Illegal recursive module reference

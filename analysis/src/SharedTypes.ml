@@ -833,7 +833,7 @@ module Completion = struct
     sortText: string option;
     insertText: string option;
     filterText: string option;
-    insertTextFormat: Protocol.insertTextFormat option;
+    insertTextFormat: Lsp.Types.InsertTextFormat.t option;
     env: QueryEnv.t;
     deprecated: string option;
     docstring: string list;
@@ -841,7 +841,7 @@ module Completion = struct
     detail: string option;
     typeArgContext: typeArgContext option;
     data: (string * string) list option;
-    additionalTextEdits: Protocol.textEdit list option;
+    additionalTextEdits: Lsp.Types.TextEdit.t list option;
     synthetic: bool;
         (** Whether this item is an made up, synthetic item or not. *)
   }
@@ -858,7 +858,8 @@ module Completion = struct
       sortText;
       insertText;
       insertTextFormat =
-        (if includesSnippets then Some Protocol.Snippet else None);
+        (if includesSnippets then Some Lsp.Types.InsertTextFormat.Snippet
+         else None);
       filterText;
       detail;
       typeArgContext;
@@ -869,17 +870,18 @@ module Completion = struct
 
   (* https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_completion *)
   (* https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#completionItemKind *)
-  let kindToInt kind =
+  let kindToLspCompletionItem kind =
     match kind with
-    | Module _ -> 9
-    | FileModule _ -> 9
-    | Constructor (_, _) | PolyvariantConstructor (_, _) -> 4
-    | ObjLabel _ -> 4
-    | Label _ -> 4
-    | Field (_, _) -> 5
-    | Type _ | ExtractedType (_, `Type) -> 22
-    | Value _ | ExtractedType (_, `Value) -> 12
-    | Snippet _ | FollowContextPath _ -> 15
+    | Module _ -> Lsp.Types.CompletionItemKind.Module
+    | FileModule _ -> Lsp.Types.CompletionItemKind.Module
+    | Constructor (_, _) | PolyvariantConstructor (_, _) ->
+      Lsp.Types.CompletionItemKind.Constructor
+    | ObjLabel _ -> Lsp.Types.CompletionItemKind.Constructor
+    | Label _ -> Lsp.Types.CompletionItemKind.Constructor
+    | Field (_, _) -> Lsp.Types.CompletionItemKind.Field
+    | Type _ | ExtractedType (_, `Type) -> Lsp.Types.CompletionItemKind.Struct
+    | Value _ | ExtractedType (_, `Value) -> Lsp.Types.CompletionItemKind.Value
+    | Snippet _ | FollowContextPath _ -> Lsp.Types.CompletionItemKind.Snippet
 end
 
 let kindFromInnerType (t : innerType) =

@@ -14,29 +14,43 @@ Path ref
 CPPipe pathFromEnv:Firebase.Firestore found:true
 Path Firebase.Firestore.
 Path 
-[{
+[
+  {
+    "detail": "string",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nid: string\n```\n\n```rescript\ntype documentReference<'documentdata> = {\n  id: string,\n  path: string,\n}\n```"
+    },
+    "kind": 5,
     "label": "id",
-    "kind": 5,
-    "tags": [],
+    "tags": []
+  },
+  {
     "detail": "string",
-    "documentation": {"kind": "markdown", "value": "```rescript\nid: string\n```\n\n```rescript\ntype documentReference<'documentdata> = {\n  id: string,\n  path: string,\n}\n```"}
-  }, {
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\npath: string\n```\n\n```rescript\ntype documentReference<'documentdata> = {\n  id: string,\n  path: string,\n}\n```"
+    },
+    "kind": 5,
     "label": "path",
-    "kind": 5,
-    "tags": [],
-    "detail": "string",
-    "documentation": {"kind": "markdown", "value": "```rescript\npath: string\n```\n\n```rescript\ntype documentReference<'documentdata> = {\n  id: string,\n  path: string,\n}\n```"}
-  }, {
-    "label": "->Firestore.getDoc",
-    "kind": 12,
-    "tags": [],
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 9, "line": 30 },
+          "start": { "character": 8, "line": 30 }
+        }
+      }
+    ],
     "detail": "documentReference<\n  'documentdata,\n> => Promise.t<documentSnapshot<'documentdata>>",
-    "documentation": null,
-    "sortText": "getDoc",
     "insertText": "->Firestore.getDoc",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 30, "character": 8}, "end": {"line": 30, "character": 9}},
-      "newText": ""
-      }]
-  }]
+    "kind": 12,
+    "label": "->Firestore.getDoc",
+    "sortText": "getDoc",
+    "tags": []
+  }
+]
 

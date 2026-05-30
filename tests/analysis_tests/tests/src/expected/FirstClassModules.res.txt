@@ -1,5 +1,10 @@
 Hover src/FirstClassModules.res 11:16
-{"contents": {"kind": "markdown", "value": "```rescript\nmodule type SomeModule = {\n  module Inner\n  type t = {x: int}\n  let foo: t => int\n  let doStuff: string => unit\n  let doOtherStuff: string => unit\n}\n```"}}
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nmodule type SomeModule = {\n  module Inner\n  type t = {x: int}\n  let foo: t => int\n  let doStuff: string => unit\n  let doOtherStuff: string => unit\n}\n```"
+  }
+}
 
 Complete src/FirstClassModules.res 13:15
 posCursor:[13:15] posNoWhite:[13:14] Found expr:[10:13->26:1]
@@ -12,40 +17,35 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[SomeModule, ""]
 Path SomeModule.
-[{
-    "label": "Inner",
-    "kind": 9,
-    "tags": [],
-    "detail": "module Inner",
-    "documentation": null
-  }, {
-    "label": "t",
-    "kind": 22,
-    "tags": [],
+[
+  { "detail": "module Inner", "kind": 9, "label": "Inner", "tags": [] },
+  {
     "detail": "type t",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype t = {x: int}\n```"}
-  }, {
-    "label": "foo",
-    "kind": 12,
-    "tags": [],
-    "detail": "t => int",
-    "documentation": null
-  }, {
-    "label": "doStuff",
-    "kind": 12,
-    "tags": [],
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype t = {x: int}\n```"
+    },
+    "kind": 22,
+    "label": "t",
+    "tags": []
+  },
+  { "detail": "t => int", "kind": 12, "label": "foo", "tags": [] },
+  { "detail": "string => unit", "kind": 12, "label": "doStuff", "tags": [] },
+  {
     "detail": "string => unit",
-    "documentation": null
-  }, {
+    "kind": 12,
     "label": "doOtherStuff",
-    "kind": 12,
-    "tags": [],
-    "detail": "string => unit",
-    "documentation": null
-  }]
+    "tags": []
+  }
+]
 
 Hover src/FirstClassModules.res 16:8
-{"contents": {"kind": "markdown", "value": "```rescript\nstring => unit\n```"}}
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nstring => unit\n```"
+  }
+}
 
 Complete src/FirstClassModules.res 20:7
 posCursor:[20:7] posNoWhite:[20:6] Found expr:[10:13->26:1]
@@ -60,25 +60,25 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[M, ""]
 Path M.
-[{
-    "label": "t",
-    "kind": 22,
-    "tags": [],
+[
+  {
     "detail": "type t",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype t = {name: string}\n```"}
-  }, {
-    "label": "getName",
-    "kind": 12,
-    "tags": [],
-    "detail": "t => string",
-    "documentation": null
-  }, {
-    "label": "thisShouldNotBeCompletedFor",
-    "kind": 12,
-    "tags": [],
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype t = {name: string}\n```"
+    },
+    "kind": 22,
+    "label": "t",
+    "tags": []
+  },
+  { "detail": "t => string", "kind": 12, "label": "getName", "tags": [] },
+  {
     "detail": "unit => string",
-    "documentation": null
-  }]
+    "kind": 12,
+    "label": "thisShouldNotBeCompletedFor",
+    "tags": []
+  }
+]
 
 Complete src/FirstClassModules.res 23:8
 posCursor:[23:8] posNoWhite:[23:7] Found expr:[10:13->26:1]
@@ -93,13 +93,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[M, g]
 Path M.g
-[{
-    "label": "getName",
-    "kind": 12,
-    "tags": [],
-    "detail": "t => string",
-    "documentation": null
-  }]
+[ { "detail": "t => string", "kind": 12, "label": "getName", "tags": [] } ]
 
 Complete src/FirstClassModules.res 32:8
 posCursor:[32:8] posNoWhite:[32:7] Found expr:[30:22->35:1]
@@ -112,37 +106,27 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[S2, ""]
 Path S2.
-[{
-    "label": "Inner",
-    "kind": 9,
-    "tags": [],
-    "detail": "module Inner",
-    "documentation": null
-  }, {
-    "label": "t",
-    "kind": 22,
-    "tags": [],
+[
+  { "detail": "module Inner", "kind": 9, "label": "Inner", "tags": [] },
+  {
     "detail": "type t",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype t = {x: int}\n```"}
-  }, {
-    "label": "foo",
-    "kind": 12,
-    "tags": [],
-    "detail": "t => int",
-    "documentation": null
-  }, {
-    "label": "doStuff",
-    "kind": 12,
-    "tags": [],
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype t = {x: int}\n```"
+    },
+    "kind": 22,
+    "label": "t",
+    "tags": []
+  },
+  { "detail": "t => int", "kind": 12, "label": "foo", "tags": [] },
+  { "detail": "string => unit", "kind": 12, "label": "doStuff", "tags": [] },
+  {
     "detail": "string => unit",
-    "documentation": null
-  }, {
+    "kind": 12,
     "label": "doOtherStuff",
-    "kind": 12,
-    "tags": [],
-    "detail": "string => unit",
-    "documentation": null
-  }]
+    "tags": []
+  }
+]
 
 Complete src/FirstClassModules.res 38:7
 posCursor:[38:7] posNoWhite:[38:6] Found expr:[38:5->38:7]
@@ -152,40 +136,35 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[X, ""]
 Path X.
-[{
-    "label": "Inner",
-    "kind": 9,
-    "tags": [],
-    "detail": "module Inner",
-    "documentation": null
-  }, {
-    "label": "t",
-    "kind": 22,
-    "tags": [],
+[
+  { "detail": "module Inner", "kind": 9, "label": "Inner", "tags": [] },
+  {
     "detail": "type t",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype t = {x: int}\n```"}
-  }, {
-    "label": "foo",
-    "kind": 12,
-    "tags": [],
-    "detail": "t => int",
-    "documentation": null
-  }, {
-    "label": "doStuff",
-    "kind": 12,
-    "tags": [],
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype t = {x: int}\n```"
+    },
+    "kind": 22,
+    "label": "t",
+    "tags": []
+  },
+  { "detail": "t => int", "kind": 12, "label": "foo", "tags": [] },
+  { "detail": "string => unit", "kind": 12, "label": "doStuff", "tags": [] },
+  {
     "detail": "string => unit",
-    "documentation": null
-  }, {
+    "kind": 12,
     "label": "doOtherStuff",
-    "kind": 12,
-    "tags": [],
-    "detail": "string => unit",
-    "documentation": null
-  }]
+    "tags": []
+  }
+]
 
 Hover src/FirstClassModules.res 44:7
-{"contents": {"kind": "markdown", "value": "```rescript\nmodule type SomeModule = {\n  module Inner\n  type t = {x: int}\n  let foo: t => int\n  let doStuff: string => unit\n  let doOtherStuff: string => unit\n}\n```"}}
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nmodule type SomeModule = {\n  module Inner\n  type t = {x: int}\n  let foo: t => int\n  let doStuff: string => unit\n  let doOtherStuff: string => unit\n}\n```"
+  }
+}
 
 Complete src/FirstClassModules.res 52:17
 posCursor:[52:17] posNoWhite:[52:16] Found expr:[50:15->55:3]
@@ -198,37 +177,27 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[SomeModule, ""]
 Path SomeModule.
-[{
-    "label": "Inner",
-    "kind": 9,
-    "tags": [],
-    "detail": "module Inner",
-    "documentation": null
-  }, {
-    "label": "t",
-    "kind": 22,
-    "tags": [],
+[
+  { "detail": "module Inner", "kind": 9, "label": "Inner", "tags": [] },
+  {
     "detail": "type t",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype t = {x: int}\n```"}
-  }, {
-    "label": "foo",
-    "kind": 12,
-    "tags": [],
-    "detail": "t => int",
-    "documentation": null
-  }, {
-    "label": "doStuff",
-    "kind": 12,
-    "tags": [],
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype t = {x: int}\n```"
+    },
+    "kind": 22,
+    "label": "t",
+    "tags": []
+  },
+  { "detail": "t => int", "kind": 12, "label": "foo", "tags": [] },
+  { "detail": "string => unit", "kind": 12, "label": "doStuff", "tags": [] },
+  {
     "detail": "string => unit",
-    "documentation": null
-  }, {
+    "kind": 12,
     "label": "doOtherStuff",
-    "kind": 12,
-    "tags": [],
-    "detail": "string => unit",
-    "documentation": null
-  }]
+    "tags": []
+  }
+]
 
 Complete src/FirstClassModules.res 65:17
 posCursor:[65:17] posNoWhite:[65:16] Found expr:[58:16->69:1]
@@ -243,35 +212,25 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[SomeModule, ""]
 Path SomeModule.
-[{
-    "label": "Inner",
-    "kind": 9,
-    "tags": [],
-    "detail": "module Inner",
-    "documentation": null
-  }, {
-    "label": "t",
-    "kind": 22,
-    "tags": [],
+[
+  { "detail": "module Inner", "kind": 9, "label": "Inner", "tags": [] },
+  {
     "detail": "type t",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype t = {x: int}\n```"}
-  }, {
-    "label": "foo",
-    "kind": 12,
-    "tags": [],
-    "detail": "t => int",
-    "documentation": null
-  }, {
-    "label": "doStuff",
-    "kind": 12,
-    "tags": [],
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype t = {x: int}\n```"
+    },
+    "kind": 22,
+    "label": "t",
+    "tags": []
+  },
+  { "detail": "t => int", "kind": 12, "label": "foo", "tags": [] },
+  { "detail": "string => unit", "kind": 12, "label": "doStuff", "tags": [] },
+  {
     "detail": "string => unit",
-    "documentation": null
-  }, {
+    "kind": 12,
     "label": "doOtherStuff",
-    "kind": 12,
-    "tags": [],
-    "detail": "string => unit",
-    "documentation": null
-  }]
+    "tags": []
+  }
+]
 

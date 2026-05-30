@@ -77,245 +77,196 @@ and docsForModule = {
 }
 
 let stringifyDocstrings docstrings =
-  let open Protocol in
-  docstrings
-  |> List.map (fun docstring -> docstring |> String.trim |> wrapInQuotes)
-  |> array
+  `List
+    (docstrings
+    |> List.map (fun docstring -> `String (docstring |> String.trim)))
 
-let stringifyFieldDoc ~indentation (fieldDoc : fieldDoc) =
-  let open Protocol in
-  stringifyObject ~indentation:(indentation + 1)
-    [
-      ("name", Some (wrapInQuotes fieldDoc.fieldName));
-      ( "deprecated",
-        match fieldDoc.deprecated with
-        | Some d -> Some (wrapInQuotes d)
-        | None -> None );
-      ("optional", Some (string_of_bool fieldDoc.optional));
-      ("docstrings", Some (stringifyDocstrings fieldDoc.docstrings));
-      ("signature", Some (wrapInQuotes fieldDoc.signature));
-    ]
+let stringifyFieldDoc (fieldDoc : fieldDoc) =
+  `Assoc
+    ([
+       ("name", `String fieldDoc.fieldName);
+       ("optional", `Bool fieldDoc.optional);
+       ("docstrings", stringifyDocstrings fieldDoc.docstrings);
+       ("signature", `String fieldDoc.signature);
+     ]
+    @
+    match fieldDoc.deprecated with
+    | Some d -> [("deprecated", `String d)]
+    | None -> [])
 
-let stringifyConstructorPayload ~indentation
-    (constructorPayload : constructorPayload) =
-  let open Protocol in
+let stringifyConstructorPayload (constructorPayload : constructorPayload) =
   match constructorPayload with
   | InlineRecord {fieldDocs} ->
-    stringifyObject ~indentation:(indentation + 1)
+    `Assoc
       [
-        ("kind", Some (wrapInQuotes "inlineRecord"));
-        ( "fields",
-          Some
-            (fieldDocs
-            |> List.map (stringifyFieldDoc ~indentation:(indentation + 1))
-            |> array) );
+        ("kind", `String "inlineRecord");
+        ("fields", `List (fieldDocs |> List.map stringifyFieldDoc));
       ]
 
-let rec stringifyTypeDoc ~indentation (td : typeDoc) : string =
-  let open Protocol in
+let rec stringifyTypeDoc (td : typeDoc) =
   let ps =
     match td.genericParameters with
-    | [] -> None
-    | ts ->
-      ts |> List.map (stringifyTypeDoc ~indentation:(indentation + 1))
-      |> fun ts -> Some (array ts)
+    | [] -> `List []
+    | ts -> ts |> List.map stringifyTypeDoc |> fun ts -> `List ts
   in
+  `Assoc [("path", `String td.path); ("genericTypeParameters", ps)]
 
-  stringifyObject ~indentation:(indentation + 1)
-    [("path", Some (wrapInQuotes td.path)); ("genericTypeParameters", ps)]
-
-let stringifyDetail ?(indentation = 0) (detail : docItemDetail) =
-  let open Protocol in
+let stringifyDetail (detail : docItemDetail) =
   match detail with
   | Record {fieldDocs} ->
-    stringifyObject ~startOnNewline:true ~indentation
+    `Assoc
       [
-        ("kind", Some (wrapInQuotes "record"));
-        ( "items",
-          Some (fieldDocs |> List.map (stringifyFieldDoc ~indentation) |> array)
-        );
+        ("kind", `String "record");
+        ("items", `List (fieldDocs |> List.map stringifyFieldDoc));
       ]
   | Variant {constructorDocs} ->
-    stringifyObject ~startOnNewline:true ~indentation
+    `Assoc
       [
-        ("kind", Some (wrapInQuotes "variant"));
+        ("kind", `String "variant");
         ( "items",
-          Some
+          `List
             (constructorDocs
             |> List.map (fun constructorDoc ->
-                   stringifyObject ~startOnNewline:true
-                     ~indentation:(indentation + 1)
-                     [
-                       ( "name",
-                         Some (wrapInQuotes constructorDoc.constructorName) );
-                       ( "deprecated",
-                         match constructorDoc.deprecated with
-                         | Some d -> Some (wrapInQuotes d)
-                         | None -> None );
-                       ( "docstrings",
-                         Some (stringifyDocstrings constructorDoc.docstrings) );
-                       ( "signature",
-                         Some (wrapInQuotes constructorDoc.signature) );
-                       ( "payload",
-                         match constructorDoc.items with
-                         | None -> None
-                         | Some constructorPayload ->
-                           Some
-                             (stringifyConstructorPayload
-                                ~indentation:(indentation + 1)
-                                constructorPayload) );
-                     ])
-            |> array) );
+                   `Assoc
+                     ([
+                        ("name", `String constructorDoc.constructorName);
+                        ( "docstrings",
+                          stringifyDocstrings constructorDoc.docstrings );
+                        ("signature", `String constructorDoc.signature);
+                      ]
+                     @ (match constructorDoc.deprecated with
+                       | Some d -> [("deprecated", `String d)]
+                       | None -> [])
+                     @
+                     match constructorDoc.items with
+                     | Some constructorPayload ->
+                       [
+                         ( "payload",
+                           stringifyConstructorPayload constructorPayload );
+                       ]
+                     | None -> []))) );
       ]
   | Signature {parameters; returnType} ->
     let ps =
       match parameters with
-      | [] -> None
-      | ps ->
-        ps |> List.map (stringifyTypeDoc ~indentation:(indentation + 1))
-        |> fun ps -> Some (array ps)
+      | [] -> `List []
+      | ps -> ps |> List.map stringifyTypeDoc |> fun ps -> `List ps
     in
-    stringifyObject ~startOnNewline:true ~indentation
+    `Assoc
       [
-        ("kind", Some (wrapInQuotes "signature"));
+        ("kind", `String "signature");
         ( "details",
-          Some
-            (stringifyObject ~startOnNewline:false ~indentation
-               [
-                 ("parameters", ps);
-                 ("returnType", Some (stringifyTypeDoc ~indentation returnType));
-               ]) );
+          `Assoc
+            [("parameters", ps); ("returnType", stringifyTypeDoc returnType)] );
       ]
 
-let stringifySource ~indentation source =
-  let open Protocol in
-  stringifyObject ~startOnNewline:false ~indentation
+let stringifySource source =
+  `Assoc
     [
-      ("filepath", Some (source.filepath |> wrapInQuotes));
-      ("line", Some (source.line |> string_of_int));
-      ("col", Some (source.col |> string_of_int));
+      ("filepath", `String source.filepath);
+      ("line", `Int source.line);
+      ("col", `Int source.col);
     ]
 
-let rec stringifyDocItem ?(indentation = 0) ~originalEnv (item : docItem) =
-  let open Protocol in
+let rec stringifyDocItem ~originalEnv (item : docItem) =
   match item with
   | Value {id; docstring; signature; name; deprecated; source; detail} ->
-    stringifyObject ~startOnNewline:true ~indentation
-      [
-        ("id", Some (wrapInQuotes id));
-        ("kind", Some (wrapInQuotes "value"));
-        ("name", Some (name |> wrapInQuotes));
-        ( "deprecated",
-          match deprecated with
-          | Some d -> Some (wrapInQuotes d)
-          | None -> None );
-        ("signature", Some (signature |> String.trim |> wrapInQuotes));
-        ("docstrings", Some (stringifyDocstrings docstring));
-        ("source", Some (stringifySource ~indentation:(indentation + 1) source));
-        ( "detail",
-          match detail with
-          | None -> None
-          | Some detail ->
-            Some (stringifyDetail ~indentation:(indentation + 1) detail) );
-      ]
+    `Assoc
+      ([
+         ("id", `String id);
+         ("kind", `String "value");
+         ("name", `String name);
+         ("signature", `String (signature |> String.trim));
+         ("docstrings", stringifyDocstrings docstring);
+         ("source", stringifySource source);
+       ]
+      @ (match deprecated with
+        | Some d -> [("deprecated", `String d)]
+        | None -> [])
+      @
+      match detail with
+      | Some detail -> [("detail", stringifyDetail detail)]
+      | None -> [])
   | Type {id; docstring; signature; name; deprecated; detail; source} ->
-    stringifyObject ~startOnNewline:true ~indentation
-      [
-        ("id", Some (wrapInQuotes id));
-        ("kind", Some (wrapInQuotes "type"));
-        ("name", Some (name |> wrapInQuotes));
-        ( "deprecated",
-          match deprecated with
-          | Some d -> Some (wrapInQuotes d)
-          | None -> None );
-        ("signature", Some (signature |> wrapInQuotes));
-        ("docstrings", Some (stringifyDocstrings docstring));
-        ("source", Some (stringifySource ~indentation:(indentation + 1) source));
-        ( "detail",
-          match detail with
-          | None -> None
-          | Some detail ->
-            Some (stringifyDetail ~indentation:(indentation + 1) detail) );
-      ]
+    `Assoc
+      ([
+         ("id", `String id);
+         ("kind", `String "type");
+         ("name", `String name);
+         ("signature", `String signature);
+         ("docstrings", stringifyDocstrings docstring);
+         ("source", stringifySource source);
+       ]
+      @ (match deprecated with
+        | Some d -> [("deprecated", `String d)]
+        | None -> [])
+      @
+      match detail with
+      | Some detail -> [("detail", stringifyDetail detail)]
+      | None -> [])
   | Module m ->
-    stringifyObject ~startOnNewline:true ~indentation
-      [
-        ("id", Some (wrapInQuotes m.id));
-        ("name", Some (wrapInQuotes m.name));
-        ("kind", Some (wrapInQuotes "module"));
-        ( "deprecated",
-          match m.deprecated with
-          | Some d -> Some (wrapInQuotes d)
-          | None -> None );
-        ( "moduletypeid",
-          match m.moduletypeid with
-          | Some path -> Some (wrapInQuotes path)
-          | None -> None );
-        ("docstrings", Some (stringifyDocstrings m.docstring));
-        ( "source",
-          Some (stringifySource ~indentation:(indentation + 1) m.source) );
-        ( "items",
-          Some
-            (m.items
-            |> List.map
-                 (stringifyDocItem ~originalEnv ~indentation:(indentation + 1))
-            |> array) );
-      ]
+    `Assoc
+      ([
+         ("id", `String m.id);
+         ("name", `String m.name);
+         ("kind", `String "module");
+         ("docstrings", stringifyDocstrings m.docstring);
+         ("source", stringifySource m.source);
+         ( "items",
+           `List
+             (m.items
+             |> List.map (fun item -> stringifyDocItem ~originalEnv item)) );
+       ]
+      @ (match m.deprecated with
+        | Some d -> [("deprecated", `String d)]
+        | None -> [])
+      @
+      match m.moduletypeid with
+      | Some path -> [("moduletypeid", `String path)]
+      | None -> [])
   | ModuleType m ->
-    stringifyObject ~startOnNewline:true ~indentation
-      [
-        ("id", Some (wrapInQuotes m.id));
-        ("name", Some (wrapInQuotes m.name));
-        ("kind", Some (wrapInQuotes "moduleType"));
-        ( "deprecated",
-          match m.deprecated with
-          | Some d -> Some (wrapInQuotes d)
-          | None -> None );
-        ("docstrings", Some (stringifyDocstrings m.docstring));
-        ( "source",
-          Some (stringifySource ~indentation:(indentation + 1) m.source) );
-        ( "items",
-          Some
-            (m.items
-            |> List.map
-                 (stringifyDocItem ~originalEnv ~indentation:(indentation + 1))
-            |> array) );
-      ]
+    `Assoc
+      ([
+         ("id", `String m.id);
+         ("name", `String m.name);
+         ("kind", `String "moduleType");
+         ("docstrings", stringifyDocstrings m.docstring);
+         ("source", stringifySource m.source);
+         ( "items",
+           `List
+             (m.items
+             |> List.map (fun item -> stringifyDocItem ~originalEnv item)) );
+       ]
+      @
+      match m.deprecated with
+      | Some d -> [("deprecated", `String d)]
+      | None -> [])
   | ModuleAlias m ->
-    stringifyObject ~startOnNewline:true ~indentation
+    `Assoc
       [
-        ("id", Some (wrapInQuotes m.id));
-        ("kind", Some (wrapInQuotes "moduleAlias"));
-        ("name", Some (wrapInQuotes m.name));
-        ("docstrings", Some (stringifyDocstrings m.docstring));
-        ( "source",
-          Some (stringifySource ~indentation:(indentation + 1) m.source) );
-        ( "items",
-          Some
-            (m.items
-            |> List.map
-                 (stringifyDocItem ~originalEnv ~indentation:(indentation + 1))
-            |> array) );
+        ("id", `String m.id);
+        ("kind", `String "moduleAlias");
+        ("name", `String m.name);
+        ("docstrings", stringifyDocstrings m.docstring);
+        ("source", stringifySource m.source);
+        ("items", `List (m.items |> List.map (stringifyDocItem ~originalEnv)));
       ]
 
-and stringifyDocsForModule ?(indentation = 0) ~originalEnv (d : docsForModule) =
-  let open Protocol in
-  stringifyObject ~startOnNewline:true ~indentation
-    [
-      ("name", Some (wrapInQuotes d.name));
-      ( "deprecated",
-        match d.deprecated with
-        | Some d -> Some (wrapInQuotes d)
-        | None -> None );
-      ("docstrings", Some (stringifyDocstrings d.docstring));
-      ("source", Some (stringifySource ~indentation:(indentation + 1) d.source));
-      ( "items",
-        Some
-          (d.items
-          |> List.map
-               (stringifyDocItem ~originalEnv ~indentation:(indentation + 1))
-          |> array) );
-    ]
+and stringifyDocsForModule ~originalEnv (d : docsForModule) =
+  `Assoc
+    ([
+       ("name", `String d.name);
+       ("docstrings", stringifyDocstrings d.docstring);
+       ("source", stringifySource d.source);
+       ( "items",
+         `List
+           (d.items |> List.map (fun item -> stringifyDocItem ~originalEnv item))
+       );
+     ]
+    @
+    match d.deprecated with
+    | Some d -> [("deprecated", `String d)]
+    | None -> [])
 
 let fieldToFieldDoc (field : SharedTypes.field) : fieldDoc =
   {
@@ -629,7 +580,9 @@ let extractDocs ~entryPointFile ~debug =
           }
         in
         let docs = extractDocsForModule structure in
-        Ok (stringifyDocsForModule ~originalEnv:env docs))
+        Ok
+          (stringifyDocsForModule ~originalEnv:env docs
+          |> Yojson.Safe.pretty_to_string))
     | true ->
       Error
         (Printf.sprintf
@@ -666,16 +619,20 @@ let extractEmbedded ~extensionPoints ~filename =
   in
   let iterator = {Ast_iterator.default_iterator with extension} in
   iterator.structure iterator structure;
-  let open Analysis.Protocol in
-  !content
-  |> List.map (fun (loc, extensionName, contents) ->
-         stringifyObject
-           [
-             ("extensionName", Some (wrapInQuotes extensionName));
-             ("contents", Some (wrapInQuotes contents));
-             ("loc", Some (Analysis.Utils.cmtLocToRange loc |> stringifyRange));
-           ])
-  |> List.rev |> array
+  let result =
+    !content
+    |> List.map (fun (loc, extensionName, contents) ->
+           `Assoc
+             [
+               ("extensionName", `String extensionName);
+               ("contents", `String contents);
+               ( "loc",
+                 Analysis.Utils.cmtLocToRange loc |> Lsp.Types.Range.yojson_of_t
+               );
+             ])
+    |> List.rev
+  in
+  Yojson.Safe.pretty_to_string (`List result)
 
 let readFile path =
   let ic = open_in path in
@@ -1276,21 +1233,20 @@ module ExtractCodeblocks = struct
     | Ok codeBlocks ->
       let errors = !errors in
       if List.length errors > 0 then
-        let errors =
-          errors |> List.rev |> String.concat "\n" |> Protocol.wrapInQuotes
-        in
+        let errors = errors |> List.rev |> String.concat "\n" in
         Error errors
       else
         Ok
-          (codeBlocks
-          |> List.map (fun codeBlock ->
-                 Protocol.stringifyObject
-                   [
-                     ("id", Some (Protocol.wrapInQuotes codeBlock.id));
-                     ("name", Some (Protocol.wrapInQuotes codeBlock.name));
-                     ("code", Some (Protocol.wrapInQuotes codeBlock.code));
-                   ])
-          |> Protocol.array)
+          (Yojson.Safe.pretty_to_string ~std:true
+             (`List
+                (codeBlocks
+                |> List.map (fun codeBlock ->
+                       `Assoc
+                         [
+                           ("id", `String codeBlock.id);
+                           ("name", `String codeBlock.name);
+                           ("code", `String codeBlock.code);
+                         ]))))
 end
 
 module Migrate = Migrate

@@ -1,0 +1,11 @@
+===== User.res =====
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/Unexpected_existential_in_let/User.res[0m:[2m3:5-17[0m
+
+  1 [2m│[0m let value: Gadt.wrap<unit> = Gadt.Pack(1)
+  2 [2m│[0m 
+  [1;31m3[0m [2m│[0m let [1;31mGadt.Pack(_x)[0m = value
+  4 [2m│[0m 
+
+  Unexpected existential

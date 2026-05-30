@@ -1,0 +1,15 @@
+===== Foo.res =====
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/Iface_extension_constructors/Foo.res[0m
+
+  The implementation /.../fixtures/Iface_extension_constructors/Foo.res
+  does not match the interface /.../fixtures/Iface_extension_constructors/foo.cmi:
+  Extension declarations do not match:
+    type t +=  Boom(string)
+  is not included in
+    type t +=  Boom(int)
+  [36m/.../fixtures/Iface_extension_constructors/Foo.res[0m:
+    Expected declaration
+  [36m/.../fixtures/Iface_extension_constructors/Foo.res[0m:[2m4:3-16[0m:
+    Actual declaration

@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/extension_rebind_private.res[0m:[2m5:15[0m
+
+  3 [2m│[0m type t += private A(int)
+  4 [2m│[0m 
+  [1;31m5[0m [2m│[0m type t += B = [1;31mA[0m
+  6 [2m│[0m 
+
+  The constructor A is private

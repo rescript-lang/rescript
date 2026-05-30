@@ -1,12 +1,36 @@
 Definition src/Patterns.res 19:10
-{"uri": "Patterns.res", "range": {"start": {"line": 3, "character": 7}, "end": {"line": 3, "character": 10}}}
+{
+  "range": {
+    "end": { "character": 10, "line": 3 },
+    "start": { "character": 7, "line": 3 }
+  },
+  "uri": "file:///Patterns.res"
+}
 
 Definition src/Patterns.res 24:11
-{"uri": "Patterns.res", "range": {"start": {"line": 9, "character": 7}, "end": {"line": 9, "character": 11}}}
+{
+  "range": {
+    "end": { "character": 11, "line": 9 },
+    "start": { "character": 7, "line": 9 }
+  },
+  "uri": "file:///Patterns.res"
+}
 
 Definition src/Patterns.res 27:11
-{"uri": "Patterns.res", "range": {"start": {"line": 11, "character": 7}, "end": {"line": 11, "character": 8}}}
+{
+  "range": {
+    "end": { "character": 8, "line": 11 },
+    "start": { "character": 7, "line": 11 }
+  },
+  "uri": "file:///Patterns.res"
+}
 
 Definition src/Patterns.res 30:11
-{"uri": "Patterns.res", "range": {"start": {"line": 15, "character": 9}, "end": {"line": 15, "character": 11}}}
+{
+  "range": {
+    "end": { "character": 11, "line": 15 },
+    "start": { "character": 9, "line": 15 }
+  },
+  "uri": "file:///Patterns.res"
+}
 

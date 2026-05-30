@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/UntaggedDuplicatedBsAs.res[0m:[2m2:21-23[0m
+
+  1 [2m│[0m @unboxed
+  [1;31m2[0m [2m│[0m type t = | @as("x") [1;31m@as[0m("y") A | B
+  3 [2m│[0m 
+
+  duplicate @as

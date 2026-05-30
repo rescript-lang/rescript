@@ -30,6 +30,7 @@
 - Rewatch: treat transitive workspace dependencies as local packages in monorepo roots. https://github.com/rescript-lang/rescript/pull/8411
 - Rewatch: use a single timestamp per compile pass. https://github.com/rescript-lang/rescript/pull/8428
 - Fix rewatch warning replay after early compile errors. https://github.com/rescript-lang/rescript/pull/8408
+- Fix formatting of trailing comments before `=` in let bindings. https://github.com/rescript-lang/rescript/pull/8444
 
 #### :memo: Documentation
 
@@ -41,13 +42,19 @@
 - Use a single vendored @rescript/react package across the repo. https://github.com/rescript-lang/rescript/pull/7525
 - Improve deprecated attribute extraction and support record form. https://github.com/rescript-lang/rescript/pull/8396
 - Refactor analysis to decouple I/O from core logic. https://github.com/rescript-lang/rescript/pull/8426
+- Deprecate `Stdlib_Error` and `Stdlib_Exn` modules in favor of `JsError/JsExn`. https://github.com/rescript-lang/rescript/pull/8404
+- Remove vendored `Json` library and use `yojson` and `lsp` library for analysis. https://github.com/rescript-lang/rescript/pull/8436
 
 #### :house: Internal
 
 - Remove `Primitive_option.toUndefined`; use `valFromOption` for optional ffi args. https://github.com/rescript-lang/rescript/pull/8380
+- Add a developer playground for testing the current compiler bundle locally and deploy the latest `master` build to GitHub Pages. https://github.com/rescript-lang/rescript/pull/8435
 - Expand `super_errors` fixture coverage for warnings and errors. https://github.com/rescript-lang/rescript/pull/8429
 - Run `super_errors` fixtures in parallel (~2.4× faster locally). https://github.com/rescript-lang/rescript/pull/8430
 - Expand `super_errors` fixture coverage for the remaining reachable single-file error variants. https://github.com/rescript-lang/rescript/pull/8432
+- Cache OPAM env, rewatch build, and instrumented dune state in the coverage workflow. https://github.com/rescript-lang/rescript/pull/8434
+- Add a multi-file fixture harness (`super_errors_multi`) for cross-module errors and warnings. https://github.com/rescript-lang/rescript/pull/8433
+- Catalog every named compiler error variant in `tests/ERROR_VARIANTS.md` and add fixtures for the remaining reachable ones. https://github.com/rescript-lang/rescript/pull/8446
 
 
 # 13.0.0-alpha.4
