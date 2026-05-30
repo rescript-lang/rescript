@@ -1,81 +1,95 @@
 Inlay Hint src/InlayHint.res 1:34
-[{
-    "position": {"line": 33, "character": 14},
+[
+  {
+    "kind": 1,
     "label": ": int",
-    "kind": 1,
     "paddingLeft": true,
-    "paddingRight": false
-}, {
-    "position": {"line": 33, "character": 9},
+    "paddingRight": false,
+    "position": { "character": 14, "line": 33 }
+  },
+  {
+    "kind": 1,
     "label": ": string",
-    "kind": 1,
     "paddingLeft": true,
-    "paddingRight": false
-}, {
-    "position": {"line": 28, "character": 9},
+    "paddingRight": false,
+    "position": { "character": 9, "line": 33 }
+  },
+  {
+    "kind": 1,
     "label": ": foo",
-    "kind": 1,
     "paddingLeft": true,
-    "paddingRight": false
-}, {
-    "position": {"line": 26, "character": 23},
+    "paddingRight": false,
+    "position": { "character": 9, "line": 28 }
+  },
+  {
+    "kind": 1,
     "label": ": (string, string)",
-    "kind": 1,
     "paddingLeft": true,
-    "paddingRight": false
-}, {
-    "position": {"line": 18, "character": 9},
+    "paddingRight": false,
+    "position": { "character": 23, "line": 26 }
+  },
+  {
+    "kind": 1,
     "label": ": string",
-    "kind": 1,
     "paddingLeft": true,
-    "paddingRight": false
-}, {
-    "position": {"line": 16, "character": 9},
+    "paddingRight": false,
+    "position": { "character": 9, "line": 18 }
+  },
+  {
+    "kind": 1,
     "label": ": (string, string)",
-    "kind": 1,
     "paddingLeft": true,
-    "paddingRight": false
-}, {
-    "position": {"line": 10, "character": 10},
+    "paddingRight": false,
+    "position": { "character": 9, "line": 16 }
+  },
+  {
+    "kind": 1,
     "label": ": (~xx: int) => int",
-    "kind": 1,
     "paddingLeft": true,
-    "paddingRight": false
-}, {
-    "position": {"line": 8, "character": 10},
+    "paddingRight": false,
+    "position": { "character": 10, "line": 10 }
+  },
+  {
+    "kind": 1,
     "label": ": int",
-    "kind": 1,
     "paddingLeft": true,
-    "paddingRight": false
-}, {
-    "position": {"line": 6, "character": 7},
+    "paddingRight": false,
+    "position": { "character": 10, "line": 8 }
+  },
+  {
+    "kind": 1,
     "label": ": (int, int) => int",
-    "kind": 1,
     "paddingLeft": true,
-    "paddingRight": false
-}, {
-    "position": {"line": 4, "character": 8},
+    "paddingRight": false,
+    "position": { "character": 7, "line": 6 }
+  },
+  {
+    "kind": 1,
     "label": ": char",
-    "kind": 1,
     "paddingLeft": true,
-    "paddingRight": false
-}, {
-    "position": {"line": 3, "character": 9},
+    "paddingRight": false,
+    "position": { "character": 8, "line": 4 }
+  },
+  {
+    "kind": 1,
     "label": ": float",
-    "kind": 1,
     "paddingLeft": true,
-    "paddingRight": false
-}, {
-    "position": {"line": 2, "character": 10},
+    "paddingRight": false,
+    "position": { "character": 9, "line": 3 }
+  },
+  {
+    "kind": 1,
     "label": ": int",
-    "kind": 1,
     "paddingLeft": true,
-    "paddingRight": false
-}, {
-    "position": {"line": 1, "character": 10},
+    "paddingRight": false,
+    "position": { "character": 10, "line": 2 }
+  },
+  {
+    "kind": 1,
     "label": ": string",
-    "kind": 1,
     "paddingLeft": true,
-    "paddingRight": false
-}]
+    "paddingRight": false,
+    "position": { "character": 10, "line": 1 }
+  }
+]
 

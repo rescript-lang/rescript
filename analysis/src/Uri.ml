@@ -1,27 +1,29 @@
-type t = {path: string; uri: string}
+type t = Lsp.Uri.t
 
 let stripPath = ref false (* for use in tests *)
 
-let pathToUri path =
-  if Sys.os_type = "Unix" then "file://" ^ path
-  else
-    "file://"
-    ^ (Str.global_replace (Str.regexp_string "\\") "/" path
-      |> Str.substitute_first (Str.regexp "^\\([a-zA-Z]\\):") (fun text ->
-             let name = Str.matched_group 1 text in
-             "/" ^ String.lowercase_ascii name ^ "%3A"))
+let fromPath path = Lsp.Uri.of_path path
+let fromString str = Lsp.Uri.of_string str
+let isInterface uri = uri |> Lsp.Uri.to_string |> Filename.check_suffix "i"
+let toPath uri =
+  (* Lsp.Uri.to_path remove the schema file:// but keep the `/` on start of path. *)
+  let p = Lsp.Uri.to_path uri in
+  if !stripPath then String.sub p 1 (String.length p - 1) else p
 
-let fromPath path = {path; uri = pathToUri path}
-let isInterface {path} = Filename.check_suffix path "i"
-let toPath {path} = path
-
-let toTopLevelLoc {path} =
+let toTopLevelLoc (uri : Lsp.Uri.t) =
   let topPos =
-    {Lexing.pos_fname = path; pos_lnum = 1; pos_bol = 0; pos_cnum = 0}
+    {
+      Lexing.pos_fname = uri |> Lsp.Uri.to_path;
+      pos_lnum = 1;
+      pos_bol = 0;
+      pos_cnum = 0;
+    }
   in
   {Location.loc_start = topPos; Location.loc_end = topPos; loc_ghost = false}
 
-let toString {uri} = if !stripPath then Filename.basename uri else uri
+let toString t =
+  if !stripPath then Filename.basename (Lsp.Uri.to_path t)
+  else Lsp.Uri.to_string t
 
 (* Light weight, hopefully-enough-for-the-purpose fn to encode URI components.
    Built to handle the reserved characters listed in

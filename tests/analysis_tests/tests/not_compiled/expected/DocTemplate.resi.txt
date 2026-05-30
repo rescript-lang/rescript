@@ -2,7 +2,10 @@ Xform not_compiled/DocTemplate.resi 3:3
 Hit: Add Documentation template
 
 TextDocumentEdit: DocTemplate.resi
-{"start": {"line": 3, "character": 0}, "end": {"line": 5, "character": 9}}
+{
+  "end": { "character": 9, "line": 5 },
+  "start": { "character": 0, "line": 3 }
+}
 newText:
 <--here
 /**
@@ -16,7 +19,10 @@ Xform not_compiled/DocTemplate.resi 6:15
 Hit: Add Documentation template
 
 TextDocumentEdit: DocTemplate.resi
-{"start": {"line": 6, "character": 0}, "end": {"line": 6, "character": 33}}
+{
+  "end": { "character": 33, "line": 6 },
+  "start": { "character": 0, "line": 6 }
+}
 newText:
 <--here
 /**
@@ -28,7 +34,10 @@ Xform not_compiled/DocTemplate.resi 8:4
 Hit: Add Documentation template
 
 TextDocumentEdit: DocTemplate.resi
-{"start": {"line": 8, "character": 0}, "end": {"line": 8, "character": 10}}
+{
+  "end": { "character": 10, "line": 8 },
+  "start": { "character": 0, "line": 8 }
+}
 newText:
 <--here
 /**
@@ -40,7 +49,10 @@ Xform not_compiled/DocTemplate.resi 10:4
 Hit: Add Documentation template
 
 TextDocumentEdit: DocTemplate.resi
-{"start": {"line": 10, "character": 0}, "end": {"line": 10, "character": 19}}
+{
+  "end": { "character": 19, "line": 10 },
+  "start": { "character": 0, "line": 10 }
+}
 newText:
 <--here
 /**
@@ -52,7 +64,10 @@ Xform not_compiled/DocTemplate.resi 12:7
 Hit: Add Documentation template
 
 TextDocumentEdit: DocTemplate.resi
-{"start": {"line": 12, "character": 0}, "end": {"line": 16, "character": 1}}
+{
+  "end": { "character": 1, "line": 16 },
+  "start": { "character": 0, "line": 12 }
+}
 newText:
 <--here
 /**
@@ -68,7 +83,10 @@ Xform not_compiled/DocTemplate.resi 14:6
 Hit: Add Documentation template
 
 TextDocumentEdit: DocTemplate.resi
-{"start": {"line": 14, "character": 2}, "end": {"line": 14, "character": 12}}
+{
+  "end": { "character": 12, "line": 14 },
+  "start": { "character": 2, "line": 14 }
+}
 newText:
   <--here
   /**
@@ -80,7 +98,10 @@ Xform not_compiled/DocTemplate.resi 18:2
 Hit: Add Documentation template
 
 TextDocumentEdit: DocTemplate.resi
-{"start": {"line": 17, "character": 0}, "end": {"line": 18, "character": 46}}
+{
+  "end": { "character": 46, "line": 18 },
+  "start": { "character": 0, "line": 17 }
+}
 newText:
 <--here
 /**

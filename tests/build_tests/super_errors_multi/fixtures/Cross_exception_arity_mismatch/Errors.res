@@ -1,0 +1,1 @@
+exception ParseError(string, int)

@@ -164,12 +164,12 @@ let logIssue ~config ~(issue : Issue.t) =
   let open Format in
   let loc = issue.loc in
   if config.DceConfig.cli.json then
-    let file = Json.escape loc.loc_start.pos_fname in
+    let file = loc.loc_start.pos_fname in
     let startLine = loc.loc_start.pos_lnum - 1 in
     let startCharacter = loc.loc_start.pos_cnum - loc.loc_start.pos_bol in
     let endLine = loc.loc_end.pos_lnum - 1 in
     let endCharacter = loc.loc_end.pos_cnum - loc.loc_start.pos_bol in
-    let message = Json.escape (descriptionToMessage issue.description) in
+    let message = descriptionToMessage issue.description in
     Format.asprintf "%a%s%s"
       (fun ppf () ->
         EmitJson.emitItem ~ppf ~name:issue.name

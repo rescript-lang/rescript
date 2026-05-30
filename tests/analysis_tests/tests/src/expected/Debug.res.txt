@@ -1,5 +1,11 @@
 Definition src/Debug.res 2:27
-{"uri": "ShadowedBelt.res", "range": {"start": {"line": 1, "character": 6}, "end": {"line": 1, "character": 9}}}
+{
+  "range": {
+    "end": { "character": 9, "line": 1 },
+    "start": { "character": 6, "line": 1 }
+  },
+  "uri": "file:///ShadowedBelt.res"
+}
 
 Complete src/Debug.res 11:8
 posCursor:[11:8] posNoWhite:[11:7] Found expr:[11:5->11:8]
@@ -10,18 +16,29 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 2 Stdlib Js
 ContextPath Value[eqN]
 Path eqN
-[{
-    "label": "eqNullable",
-    "kind": 12,
-    "tags": [1],
+[
+  {
+    "deprecated": true,
     "detail": "('a, nullable<'a>) => bool",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `eqNullable` directly instead.\n\n"}
-  }, {
-    "label": "eqNull",
+    "documentation": {
+      "kind": "markdown",
+      "value": "Deprecated: Use `eqNullable` directly instead.\n\n"
+    },
     "kind": 12,
-    "tags": [1],
+    "label": "eqNullable",
+    "tags": [ 1 ]
+  },
+  {
+    "deprecated": true,
     "detail": "('a, null<'a>) => bool",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `eqNull` directly instead.\n\n"}
-  }]
+    "documentation": {
+      "kind": "markdown",
+      "value": "Deprecated: Use `eqNull` directly instead.\n\n"
+    },
+    "kind": 12,
+    "label": "eqNull",
+    "tags": [ 1 ]
+  }
+]
 
 

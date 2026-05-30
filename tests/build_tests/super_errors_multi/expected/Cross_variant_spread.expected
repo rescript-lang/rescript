@@ -1,0 +1,13 @@
+===== Ext.res =====
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/Cross_variant_spread/Ext.res[0m:[2m3:8-13[0m
+
+  1 [2m│[0m type t =
+  2 [2m│[0m   | A
+  [1;31m3[0m [2m│[0m   | ...[1;31mBase.t[0m
+  4 [2m│[0m   | C
+  5 [2m│[0m 
+
+  Variant Base.t has a constructor named A, but a constructor named A already exists in the variant it's spread into.
+  You cannot spread variants with overlapping constructors.

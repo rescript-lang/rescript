@@ -3,7 +3,7 @@ open SharedTypes
 let modulePathFromEnv env =
   let moduleName = env.QueryEnv.file.moduleName in
   let transformedModuleName =
-    (* Transform namespaced module names from internal format (Context-Kaplay) 
+    (* Transform namespaced module names from internal format (Context-Kaplay)
        to user-facing format (Kaplay.Context) *)
     match String.rindex_opt moduleName '-' with
     | None -> moduleName
@@ -1151,15 +1151,15 @@ let getFirstFnUnlabelledArgType ~env ~full t =
   | _ -> None
 
 let makeAdditionalTextEditsForRemovingDot posOfDot =
+  let start =
+    Lsp.Types.Position.create ~line:(fst posOfDot) ~character:(snd posOfDot - 1)
+  in
+  let end_ =
+    Lsp.Types.Position.create ~line:(fst posOfDot) ~character:(snd posOfDot)
+  in
   [
-    {
-      Protocol.range =
-        {
-          start = {line = fst posOfDot; character = snd posOfDot - 1};
-          end_ = {line = fst posOfDot; character = snd posOfDot};
-        };
-      newText = "";
-    };
+    Lsp.Types.TextEdit.create ~newText:""
+      ~range:(Lsp.Types.Range.create ~start ~end_);
   ]
 
 (** Turns a completion into a pipe completion. *)
@@ -1184,9 +1184,9 @@ let transformCompletionToPipeCompletion ?(synthetic = false) ~env ?posOfDot
         | Some posOfDot -> Some (makeAdditionalTextEditsForRemovingDot posOfDot));
     }
 
-(** This takes a type expr and the env that type expr was found in, and produces a globally unique 
+(** This takes a type expr and the env that type expr was found in, and produces a globally unique
     id for that specific type. The globally unique id is the full path to the type as seen from the root
-    of the project. Example: type x in module SomeModule in file SomeFile would get the globally 
+    of the project. Example: type x in module SomeModule in file SomeFile would get the globally
     unique id `SomeFile.SomeModule.x`.*)
 let rec findRootTypeId ~full ~env (t : Types.type_expr) =
   let debug = false in

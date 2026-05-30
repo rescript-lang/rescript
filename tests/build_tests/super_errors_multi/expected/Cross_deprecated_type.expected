@@ -1,0 +1,10 @@
+===== User.res =====
+
+  [1;33mWarning number 3[0m
+  [36m/.../fixtures/Cross_deprecated_type/User.res[0m:[2m1:8-15[0m
+
+  [1;33m1[0m [2m│[0m let v: [1;33mLegacy.t[0m = 1
+  2 [2m│[0m 
+
+  deprecated: Legacy.t
+  Use newType instead

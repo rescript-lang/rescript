@@ -382,6 +382,32 @@ jobs:
         if: matrix.build_playground
         run: yarn workspace playground test
 
+      - name: Stage PR dev playground compiler bundle
+        if: ${{ matrix.build_playground && github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'master' && github.event.pull_request.head.repo.full_name == github.repository }}
+        env:
+          PLAYGROUND_PREVIEW_ID: pr-${{ github.event.pull_request.number }}
+        run: yarn workspace dev-playground stage-local-bundle "$PLAYGROUND_PREVIEW_ID"
+
+      - name: "Upload artifacts: PR dev playground compiler bundle"
+        if: ${{ matrix.build_playground && github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'master' && github.event.pull_request.head.repo.full_name == github.repository }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: dev-playground-pr-${{ github.event.pull_request.number }}-bundle
+          path: packages/dev-playground/public/playground-bundles/pr-${{ github.event.pull_request.number }}
+          if-no-files-found: error
+
+      - name: Stage dev playground compiler bundle
+        if: ${{ matrix.build_playground && github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+        run: yarn workspace dev-playground stage-master-bundle
+
+      - name: "Upload artifacts: dev playground compiler bundle"
+        if: ${{ matrix.build_playground && github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: dev-playground-master-bundle
+          path: packages/dev-playground/public/playground-bundles/master
+          if-no-files-found: error
+
       - name: Setup Rclone
         if: ${{ matrix.build_playground && startsWith(github.ref, 'refs/tags/v') }}
         uses: cometkim/rclone-actions/setup-rclone@main
@@ -429,6 +455,63 @@ jobs:
         with:
           name: api
           path: scripts/res/apiDocs/
+
+  dev-playground:
+    needs:
+      - build-compiler
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}dev-playground/
+    env:
+      VITE_DEFAULT_COMPILER_VERSION: master
+      VITE_COMPILER_VERSIONS: '[{"id":"master","label":"master"}]'
+      VITE_COMPILER_PREVIEW_ROOT: https://cdn.rescript-lang.org/dev-playground-bundles
+      GITHUB_PAGES_PATH: dev-playground
+      PLAYGROUND_BUNDLE_ID: master
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          cache: yarn
+          node-version-file: .nvmrc
+
+      - name: Install npm packages
+        run: yarn install
+
+      - name: Download dev playground compiler bundle
+        uses: actions/download-artifact@v8
+        with:
+          name: dev-playground-master-bundle
+          path: packages/dev-playground/public/playground-bundles/master
+
+      - name: Configure GitHub Pages
+        id: pages
+        uses: actions/configure-pages@v6
+
+      - name: Build dev playground Pages site
+        env:
+          VITE_BASE: ${{ steps.pages.outputs.base_path }}/dev-playground/
+        run: |
+          yarn workspace dev-playground build
+          yarn workspace dev-playground prepare-pages-site
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: packages/dev-playground/pages-site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
 
   pkg-pr-new:
     needs:

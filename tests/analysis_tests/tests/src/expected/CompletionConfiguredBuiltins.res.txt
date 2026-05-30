@@ -9,13 +9,14 @@ Path x
 Path Stdlib.Array.em
 Path ArrayUtils.em
 Path em
-[{
-    "label": "ArrayUtils.empty",
-    "kind": 12,
-    "tags": [],
+[
+  {
     "detail": "array<'a> => bool",
-    "documentation": null
-  }]
+    "kind": 12,
+    "label": "ArrayUtils.empty",
+    "tags": []
+  }
+]
 
 Complete src/CompletionConfiguredBuiltins.res 7:16
 posCursor:[7:16] posNoWhite:[7:15] Found expr:[7:3->7:16]
@@ -29,11 +30,12 @@ CPPipe pathFromEnv:Fastify found:false
 Path Fastify.doSt
 Path FastifyExt.doSt
 Path doSt
-[{
-    "label": "FastifyExt.doStuff",
-    "kind": 12,
-    "tags": [],
+[
+  {
     "detail": "Fastify.t => unit",
-    "documentation": null
-  }]
+    "kind": 12,
+    "label": "FastifyExt.doStuff",
+    "tags": []
+  }
+]
 

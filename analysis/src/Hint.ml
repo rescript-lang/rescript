@@ -1,8 +1,8 @@
 open SharedTypes
 
 type inlayHintKind = Type
-let inlayKindToNumber = function
-  | Type -> 1
+let inlayKindToLspInlayHint = function
+  | Type -> Lsp.Types.InlayHintKind.Type
 
 let locItemToTypeHint ~full:{file; package} locItem =
   match locItem.locType with
@@ -83,7 +83,7 @@ let inlay ~source ~kindFile ~pos ~maxLength ~full ~debug =
   | Some full ->
     let result =
       !hints
-      |> List.filter_map (fun ((range : Protocol.range), hintKind) ->
+      |> List.filter_map (fun ((range : Lsp.Types.Range.t), hintKind) ->
              match
                References.getLocItem ~full
                  ~pos:(range.start.line, range.start.character + 1)
@@ -91,20 +91,17 @@ let inlay ~source ~kindFile ~pos ~maxLength ~full ~debug =
              with
              | None -> None
              | Some locItem -> (
-               let position : Protocol.position =
-                 {line = range.start.line; character = range.end_.character}
+               let position =
+                 Lsp.Types.Position.create ~line:range.start.line
+                   ~character:range.end_.character
                in
                match locItemToTypeHint locItem ~full with
                | Some label -> (
+                 let kind = inlayKindToLspInlayHint hintKind in
+                 let label = ": " ^ label in
                  let result =
-                   Protocol.
-                     {
-                       kind = inlayKindToNumber hintKind;
-                       position;
-                       paddingLeft = true;
-                       paddingRight = false;
-                       label = ": " ^ label;
-                     }
+                   Lsp.Types.InlayHint.create ~position ~kind ~paddingLeft:true
+                     ~paddingRight:false ~label:(`String label) ()
                  in
                  match maxlen with
                  | Some value ->
@@ -148,29 +145,24 @@ let codeLens ~source ~kindFile ~full ~debug =
   | Some full ->
     let result =
       !lenses
-      |> List.filter_map (fun (range : Protocol.range) ->
+      |> List.filter_map (fun (range : Lsp.Types.Range.t) ->
              match
                References.getLocItem ~full
                  ~pos:(range.start.line, range.start.character + 1)
                  ~debug
              with
              | Some {locType = Typed (_, typeExpr, _)} ->
-               Some
-                 Protocol.
-                   {
-                     range;
-                     command =
-                       Some
-                         {
-                           (* Code lenses can run commands. An empty command string means we just want the editor
-                               to print the text, not link to running a command. *)
-                           command = "";
-                           (* Print the type with a huge line width, because the code lens always prints on a
-                               single line in the editor. *)
-                           title =
-                             typeExpr |> Shared.typeToString ~lineWidth:400;
-                         };
-                   }
+               (* Code lenses can run commands. An empty command string means we just want the editor
+                   to print the text, not link to running a command. *)
+               let command =
+                 Lsp.Types.Command.create
+                   ~command:""
+                     (* Print the type with a huge line width, because the code lens always prints on a
+                       single line in the editor. *)
+                   ~title:(typeExpr |> Shared.typeToString ~lineWidth:400)
+                   ()
+               in
+               Some (Lsp.Types.CodeLens.create ~range ~command ())
              | _ -> None)
     in
     Some result

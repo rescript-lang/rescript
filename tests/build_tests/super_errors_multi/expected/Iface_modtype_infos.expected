@@ -1,0 +1,30 @@
+===== Foo.res =====
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/Iface_modtype_infos/Foo.res[0m
+
+  The implementation /.../fixtures/Iface_modtype_infos/Foo.res
+  does not match the interface /.../fixtures/Iface_modtype_infos/foo.cmi:
+  Module type declarations do not match:
+    module type T = {
+  let v: string
+}
+  does not match
+    module type T = {
+  let v: int
+}
+  At position module type T = <here>
+  Modules do not match:
+    {
+  let v: string
+}
+  is not included in
+    {
+  let v: int
+}
+  At position module type T = <here>
+  Values do not match: let v: string is not included in let v: int
+  [36m/.../fixtures/Iface_modtype_infos/Foo.resi[0m:[2m2:3-12[0m:
+    Expected declaration
+  [36m/.../fixtures/Iface_modtype_infos/Foo.res[0m:[2m2:3-15[0m:
+    Actual declaration

@@ -1,18 +1,54 @@
 TypeDefinition src/TypeDefinition.res 2:9
-{"uri": "TypeDefinition.res", "range": {"start": {"line": 2, "character": 5}, "end": {"line": 2, "character": 11}}}
+{
+  "range": {
+    "end": { "character": 11, "line": 2 },
+    "start": { "character": 5, "line": 2 }
+  },
+  "uri": "file:///TypeDefinition.res"
+}
 
 TypeDefinition src/TypeDefinition.res 5:4
-{"uri": "TypeDefinition.res", "range": {"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 24}}}
+{
+  "range": {
+    "end": { "character": 24, "line": 0 },
+    "start": { "character": 0, "line": 0 }
+  },
+  "uri": "file:///TypeDefinition.res"
+}
 
 TypeDefinition src/TypeDefinition.res 8:4
-{"uri": "TypeDefinition.res", "range": {"start": {"line": 2, "character": 0}, "end": {"line": 2, "character": 28}}}
+{
+  "range": {
+    "end": { "character": 28, "line": 2 },
+    "start": { "character": 0, "line": 2 }
+  },
+  "uri": "file:///TypeDefinition.res"
+}
 
 TypeDefinition src/TypeDefinition.res 13:4
-{"uri": "TypeDefinition.res", "range": {"start": {"line": 11, "character": 0}, "end": {"line": 11, "character": 26}}}
+{
+  "range": {
+    "end": { "character": 26, "line": 11 },
+    "start": { "character": 0, "line": 11 }
+  },
+  "uri": "file:///TypeDefinition.res"
+}
 
 TypeDefinition src/TypeDefinition.res 16:13
-{"uri": "TypeDefinition.res", "range": {"start": {"line": 2, "character": 0}, "end": {"line": 2, "character": 28}}}
+{
+  "range": {
+    "end": { "character": 28, "line": 2 },
+    "start": { "character": 0, "line": 2 }
+  },
+  "uri": "file:///TypeDefinition.res"
+}
 
 TypeDefinition src/TypeDefinition.res 20:9
-{"uri": "TypeDefinition.res", "range": {"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 24}}}
+{
+  "range": {
+    "end": { "character": 24, "line": 0 },
+    "start": { "character": 0, "line": 0 }
+  },
+  "uri": "file:///TypeDefinition.res"
+}
 

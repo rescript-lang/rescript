@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/typetexp_type_mismatch.res[0m:[2m2:12-17[0m
+
+  1 [2m│[0m type t<'a> = 'a constraint 'a = int
+  [1;31m2[0m [2m│[0m type x = t<[1;31mstring[0m>
+  3 [2m│[0m 
+
+  This type string should be an instance of type int

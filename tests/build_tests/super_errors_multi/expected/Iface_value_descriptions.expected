@@ -1,0 +1,18 @@
+===== Foo.res =====
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/Iface_value_descriptions/Foo.res[0m:[2m1:5-11[0m
+
+  [1;31m1[0m [2m│[0m let [1;31mcompute[0m = (s: string) => String.length(s)
+  2 [2m│[0m 
+
+  The implementation /.../fixtures/Iface_value_descriptions/Foo.res
+  does not match the interface /.../fixtures/Iface_value_descriptions/foo.cmi:
+  Values do not match:
+    let compute: string => int
+  is not included in
+    let compute: int => int
+  [36m/.../fixtures/Iface_value_descriptions/Foo.resi[0m:[2m1:1-23[0m:
+    Expected declaration
+  [36m/.../fixtures/Iface_value_descriptions/Foo.res[0m:[2m1:5-11[0m:
+    Actual declaration

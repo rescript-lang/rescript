@@ -379,8 +379,9 @@ let kindToDetail name (kind : Completion.kind) =
 
 let kindToData filePath (kind : Completion.kind) =
   match kind with
-  | FileModule f -> Some [("modulePath", f); ("filePath", filePath)]
-  | _ -> None
+  | FileModule f ->
+    Some (`Assoc [("modulePath", `String f); ("filePath", `String filePath)])
+  | _ -> Some `Null
 
 let findAllCompletions ~(env : QueryEnv.t) ~prefix ~exact ~namesUsed
     ~(completionContext : Completable.completionContext) =
@@ -816,24 +817,29 @@ let mkItem ?data ?additionalTextEdits name ~kind ~detail ~deprecated ~docstring
   let tags =
     match deprecated with
     | None -> []
-    | Some _ -> [1 (* deprecated *)]
+    | Some _ -> [Lsp.Types.CompletionItemTag.Deprecated (* deprecated *)]
   in
-  Protocol.
-    {
-      label = name;
-      kind;
-      tags;
-      detail;
-      documentation =
-        (if docContent = "" then None
-         else Some {kind = "markdown"; value = docContent});
-      sortText = None;
-      insertText = None;
-      insertTextFormat = None;
-      filterText = None;
-      data;
-      additionalTextEdits;
-    }
+
+  let documentation =
+    match String.length docContent > 0 with
+    | true ->
+      Some
+        (`MarkupContent
+           (Lsp.Types.MarkupContent.create ~kind:Lsp.Types.MarkupKind.Markdown
+              ~value:docContent))
+    | false -> None
+  in
+
+  let deprecated = if Option.is_some deprecated then Some true else None in
+  let data =
+    match data with
+    | Some `Null | None -> None
+    | Some other -> Some other
+  in
+
+  Lsp.Types.CompletionItem.create ~label:name ~kind ~tags ~detail ?documentation
+    ?deprecated ?data ?additionalTextEdits ?sortText:None ?insertText:None
+    ?insertTextFormat:None ?filterText:None ()
 
 let completionToItem
     {
@@ -852,7 +858,7 @@ let completionToItem
   let item =
     mkItem name ?additionalTextEdits
       ?data:(kindToData (full.file.uri |> Uri.toPath) kind)
-      ~kind:(Completion.kindToInt kind)
+      ~kind:(Completion.kindToLspCompletionItem kind)
       ~deprecated
       ~detail:
         (match detail with
@@ -2129,12 +2135,12 @@ let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
           if debug then print_endline "Could not read package.json";
           []
         | Some s -> (
-          match Json.parse s with
-          | Some (Object items) ->
+          match YojsonHelpers.from_string_opt s with
+          | Some (`Assoc items) ->
             items
             |> List.filter_map (fun (key, t) ->
                    match (key, t) with
-                   | ("dependencies" | "devDependencies"), Json.Object o ->
+                   | ("dependencies" | "devDependencies"), `Assoc o ->
                      Some
                        (o
                        |> List.filter_map (fun (pkgName, _) ->

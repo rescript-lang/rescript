@@ -13,25 +13,35 @@ Path n
 CPPipe pathFromEnv:SomeModule found:true
 Path SomeModule.
 Path 
-[{
-    "label": "name",
-    "kind": 5,
-    "tags": [],
+[
+  {
     "detail": "string",
-    "documentation": {"kind": "markdown", "value": "```rescript\nname: string\n```\n\n```rescript\ntype t = {name: string}\n```"}
-  }, {
-    "label": "->SomeModule.getName",
-    "kind": 12,
-    "tags": [],
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nname: string\n```\n\n```rescript\ntype t = {name: string}\n```"
+    },
+    "kind": 5,
+    "label": "name",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 5, "line": 10 },
+          "start": { "character": 4, "line": 10 }
+        }
+      }
+    ],
     "detail": "t => string",
-    "documentation": null,
-    "sortText": "getName",
     "insertText": "->SomeModule.getName",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 10, "character": 4}, "end": {"line": 10, "character": 5}},
-      "newText": ""
-      }]
-  }]
+    "kind": 12,
+    "label": "->SomeModule.getName",
+    "sortText": "getName",
+    "tags": []
+  }
+]
 
 Complete src/CompletionFromModule.res 30:6
 posCursor:[30:6] posNoWhite:[30:5] Found expr:[30:3->30:6]
@@ -49,61 +59,86 @@ CPPipe pathFromEnv:SomeOtherModule found:true
 Path SomeOtherModule.
 Path CompletionFromModule.SomeOtherModule.
 Path 
-[{
-    "label": "nname",
-    "kind": 5,
-    "tags": [],
+[
+  {
     "detail": "string",
-    "documentation": {"kind": "markdown", "value": "```rescript\nnname: string\n```\n\n```rescript\ntype typeOutsideModule = {nname: string}\n```"}
-  }, {
-    "label": "->SomeOtherModule.getNName",
-    "kind": 12,
-    "tags": [],
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nnname: string\n```\n\n```rescript\ntype typeOutsideModule = {nname: string}\n```"
+    },
+    "kind": 5,
+    "label": "nname",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 6, "line": 30 },
+          "start": { "character": 5, "line": 30 }
+        }
+      }
+    ],
     "detail": "t => string",
-    "documentation": null,
-    "sortText": "getNName",
     "insertText": "->SomeOtherModule.getNName",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 30, "character": 5}, "end": {"line": 30, "character": 6}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->SomeOtherModule.getNName2",
     "kind": 12,
-    "tags": [],
-    "detail": "typeOutsideModule => string",
-    "documentation": null,
-    "sortText": "getNName2",
-    "insertText": "->SomeOtherModule.getNName2",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 30, "character": 5}, "end": {"line": 30, "character": 6}},
-      "newText": ""
-      }]
-  }, {
     "label": "->SomeOtherModule.getNName",
-    "kind": 12,
-    "tags": [],
-    "detail": "t => string",
-    "documentation": null,
     "sortText": "getNName",
-    "insertText": "->SomeOtherModule.getNName",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 30, "character": 5}, "end": {"line": 30, "character": 6}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->SomeOtherModule.getNName2",
-    "kind": 12,
-    "tags": [],
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 6, "line": 30 },
+          "start": { "character": 5, "line": 30 }
+        }
+      }
+    ],
     "detail": "typeOutsideModule => string",
-    "documentation": null,
-    "sortText": "getNName2",
     "insertText": "->SomeOtherModule.getNName2",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 30, "character": 5}, "end": {"line": 30, "character": 6}},
-      "newText": ""
-      }]
-  }]
+    "kind": 12,
+    "label": "->SomeOtherModule.getNName2",
+    "sortText": "getNName2",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 6, "line": 30 },
+          "start": { "character": 5, "line": 30 }
+        }
+      }
+    ],
+    "detail": "t => string",
+    "insertText": "->SomeOtherModule.getNName",
+    "kind": 12,
+    "label": "->SomeOtherModule.getNName",
+    "sortText": "getNName",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 6, "line": 30 },
+          "start": { "character": 5, "line": 30 }
+        }
+      }
+    ],
+    "detail": "typeOutsideModule => string",
+    "insertText": "->SomeOtherModule.getNName2",
+    "kind": 12,
+    "label": "->SomeOtherModule.getNName2",
+    "sortText": "getNName2",
+    "tags": []
+  }
+]
 
 Complete src/CompletionFromModule.res 33:32
 XXX Not found!
@@ -112,13 +147,14 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Module[SomeOthe]
 Path SomeOthe
-[{
-    "label": "SomeOtherModule",
-    "kind": 9,
-    "tags": [],
+[
+  {
     "detail": "module SomeOtherModule",
-    "documentation": null
-  }]
+    "kind": 9,
+    "label": "SomeOtherModule",
+    "tags": []
+  }
+]
 
 Complete src/CompletionFromModule.res 38:8
 posCursor:[38:8] posNoWhite:[38:7] Found expr:[38:3->0:-1]
@@ -132,19 +168,20 @@ CPPipe pathFromEnv: found:true
 Path CompletionFromModule.
 Path CompletionFromModule.SomeOtherModule.
 Path 
-[{
-    "label": "SomeOtherModule.getNName",
-    "kind": 12,
-    "tags": [],
+[
+  {
     "detail": "t => string",
-    "documentation": null
-  }, {
-    "label": "SomeOtherModule.getNName2",
     "kind": 12,
-    "tags": [],
+    "label": "SomeOtherModule.getNName",
+    "tags": []
+  },
+  {
     "detail": "typeOutsideModule => string",
-    "documentation": null
-  }]
+    "kind": 12,
+    "label": "SomeOtherModule.getNName2",
+    "tags": []
+  }
+]
 
 Complete src/CompletionFromModule.res 42:8
 posCursor:[42:8] posNoWhite:[42:7] Found expr:[42:3->0:-1]
@@ -159,17 +196,13 @@ CPPipe pathFromEnv: found:true
 Path CompletionFromModule.
 Path CompletionFromModule.SomeOtherModule.
 Path 
-[{
-    "label": "getNName",
-    "kind": 12,
-    "tags": [],
-    "detail": "t => string",
-    "documentation": null
-  }, {
-    "label": "getNName2",
-    "kind": 12,
-    "tags": [],
+[
+  { "detail": "t => string", "kind": 12, "label": "getNName", "tags": [] },
+  {
     "detail": "typeOutsideModule => string",
-    "documentation": null
-  }]
+    "kind": 12,
+    "label": "getNName2",
+    "tags": []
+  }
+]
 

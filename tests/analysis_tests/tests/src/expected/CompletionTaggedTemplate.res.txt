@@ -13,43 +13,59 @@ Path w
 CPPipe pathFromEnv:M found:true
 Path M.
 Path 
-[{
-    "label": "->M.xyz",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 13, "line": 13 },
+          "start": { "character": 12, "line": 13 }
+        }
+      }
+    ],
     "detail": "(t, int) => int",
-    "documentation": null,
-    "sortText": "xyz",
     "insertText": "->M.xyz",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 13, "character": 12}, "end": {"line": 13, "character": 13}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->M.b",
     "kind": 12,
-    "tags": [],
+    "label": "->M.xyz",
+    "sortText": "xyz",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 13, "line": 13 },
+          "start": { "character": 12, "line": 13 }
+        }
+      }
+    ],
     "detail": "t => string",
-    "documentation": null,
-    "sortText": "b",
     "insertText": "->M.b",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 13, "character": 12}, "end": {"line": 13, "character": 13}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->M.a",
     "kind": 12,
-    "tags": [],
+    "label": "->M.b",
+    "sortText": "b",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 13, "line": 13 },
+          "start": { "character": 12, "line": 13 }
+        }
+      }
+    ],
     "detail": "t => int",
-    "documentation": null,
-    "sortText": "a",
     "insertText": "->M.a",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 13, "character": 12}, "end": {"line": 13, "character": 13}},
-      "newText": ""
-      }]
-  }]
+    "kind": 12,
+    "label": "->M.a",
+    "sortText": "a",
+    "tags": []
+  }
+]
 
 Complete src/CompletionTaggedTemplate.res 16:20
 posCursor:[16:20] posNoWhite:[16:19] Found expr:[16:11->0:-1]
@@ -67,41 +83,57 @@ Path meh
 CPPipe pathFromEnv:M found:true
 Path M.
 Path 
-[{
-    "label": "->M.xyz",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 20, "line": 16 },
+          "start": { "character": 19, "line": 16 }
+        }
+      }
+    ],
     "detail": "(t, int) => int",
-    "documentation": null,
-    "sortText": "xyz",
     "insertText": "->M.xyz",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 16, "character": 19}, "end": {"line": 16, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->M.b",
     "kind": 12,
-    "tags": [],
+    "label": "->M.xyz",
+    "sortText": "xyz",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 20, "line": 16 },
+          "start": { "character": 19, "line": 16 }
+        }
+      }
+    ],
     "detail": "t => string",
-    "documentation": null,
-    "sortText": "b",
     "insertText": "->M.b",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 16, "character": 19}, "end": {"line": 16, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->M.a",
     "kind": 12,
-    "tags": [],
+    "label": "->M.b",
+    "sortText": "b",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 20, "line": 16 },
+          "start": { "character": 19, "line": 16 }
+        }
+      }
+    ],
     "detail": "t => int",
-    "documentation": null,
-    "sortText": "a",
     "insertText": "->M.a",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 16, "character": 19}, "end": {"line": 16, "character": 20}},
-      "newText": ""
-      }]
-  }]
+    "kind": 12,
+    "label": "->M.a",
+    "sortText": "a",
+    "tags": []
+  }
+]
 

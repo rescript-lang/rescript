@@ -51,8 +51,9 @@
  * modules in the playground.
  * v5: Removed .ml support.
  * v6: Added `config.experimental_features` and `config.jsx_preserve_mode` to the BundleConfig.
+ * v7: Added debug dump output APIs for developer playground tooling.
  * *)
-let api_version = "6"
+let api_version = "7"
 
 module Js = Js_of_ocaml.Js
 
@@ -298,6 +299,8 @@ let rescript_parse ~filename src =
   structure
 
 module Printer = struct
+  let to_string printer value = Format.asprintf "%a@." printer value
+
   let print_expr typ =
     Printtyp.reset_names ();
     Printtyp.reset_and_mark_loops typ;
@@ -472,7 +475,8 @@ module Compile = struct
     List.iter Iter.iter_structure_item structure.str_items;
     Js.array (!acc |> Array.of_list)
 
-  let implementation ~(config : BundleConfig.t) ~lang str =
+  let implementation ?(include_debug_outputs = false) ~(config : BundleConfig.t)
+      ~lang str =
     let {
       BundleConfig.module_system;
       warn_flags;
@@ -525,8 +529,8 @@ module Compile = struct
       in
       let v = Buffer.contents buffer in
       let type_hints = collect_type_hints typed_tree in
-      Js.Unsafe.(
-        obj
+      let attrs =
+        Js.Unsafe.
           [|
             ("js_code", inject @@ Js.string v);
             ( "warnings",
@@ -536,7 +540,28 @@ module Compile = struct
                  |> Js.array |> inject) );
             ("type_hints", inject @@ type_hints);
             ("type", inject @@ Js.string "success");
-          |])
+          |]
+      in
+      if include_debug_outputs then
+        let export_ident_sets = Set_ident.of_list exports in
+        let parsetree = Printer.to_string Printast.implementation ast in
+        let typedtree =
+          Printer.to_string Printtyped.implementation_with_coercion typed_tree
+        in
+        let lambda = Printer.to_string Printlambda.lambda lam in
+        let lam, _ = Lam_convert.convert export_ident_sets lam in
+        let lam = Lam_print.lambda_to_string lam in
+        let debug_attrs =
+          Js.Unsafe.
+            [|
+              ("parsetree", inject @@ Js.string parsetree);
+              ("typedtree", inject @@ Js.string typedtree);
+              ("lambda", inject @@ Js.string lambda);
+              ("lam", inject @@ Js.string lam);
+            |]
+        in
+        Js.Unsafe.obj (Array.append attrs debug_attrs)
+      else Js.Unsafe.obj attrs
     with e -> (
       match e with
       | Arg.Bad msg -> ErrorRet.make_warning_flag_error ~warn_flags msg
@@ -582,6 +607,11 @@ module Export = struct
           inject
           @@ Js.wrap_meth_callback (fun _ code ->
                  Compile.implementation ~config ~lang (Js.to_string code)) );
+        ( "compileWithDebug",
+          inject
+          @@ Js.wrap_meth_callback (fun _ code ->
+                 Compile.implementation ~include_debug_outputs:true ~config
+                   ~lang (Js.to_string code)) );
         ("version", inject @@ Js.string Bs_version.version);
       |]
     in

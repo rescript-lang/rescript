@@ -1,0 +1,12 @@
+===== User.res =====
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/Cross_external_argument_clash/User.res[0m:[2m1:22-23[0m
+
+  [1;31m1[0m [2m│[0m let x = Ffi.parseInt([1;31m42[0m)
+  2 [2m│[0m 
+
+  This has type: [1;31mint[0m
+  But this function argument is expecting: [1;33mstring[0m
+  
+  You can convert [1;33mint[0m to [1;33mstring[0m with [1;33mInt.toString[0m.

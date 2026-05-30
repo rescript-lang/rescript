@@ -1,0 +1,9 @@
+===== User.res =====
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/Cross_inline_record_constructor/User.res[0m:[2m1:9-23[0m
+
+  [1;31m1[0m [2m│[0m let v = [1;31mDefs.Pair(1, 2)[0m
+  2 [2m│[0m 
+
+  This constructor expects an inlined record argument.

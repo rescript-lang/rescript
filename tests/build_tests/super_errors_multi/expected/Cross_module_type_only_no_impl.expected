@@ -1,0 +1,12 @@
+===== User.res =====
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/Cross_module_type_only_no_impl/User.res[0m:[2m1:17-23[0m
+
+  [1;31m1[0m [2m│[0m let x: string = [1;31mIface.v[0m
+  2 [2m│[0m 
+
+  This has type: [1;31mint[0m
+  But it's expected to have type: [1;33mstring[0m
+  
+  You can convert [1;33mint[0m to [1;33mstring[0m with [1;33mInt.toString[0m.

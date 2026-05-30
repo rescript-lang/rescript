@@ -168,7 +168,25 @@ tests/
 2. **Integration tests** (`tests/tests/`) - End-to-end behavior
 3. **Unit tests** (`tests/ounit_tests/`) - Compiler functions
 4. **Build tests** (`tests/build_tests/`) - Error cases and edge cases
-5. **Type tests** (`tests/build_tests/super_errors/`) - Type checking behavior
+5. **Type tests** (`tests/build_tests/super_errors/`) - Single-file type checking errors
+6. **Multi-file error tests** (`tests/build_tests/super_errors_multi/`) - Cross-module errors that need separate `.res` / `.resi` files
+
+#### Error variant catalog
+
+[`tests/ERROR_VARIANTS.md`](tests/ERROR_VARIANTS.md) is a per-module
+catalog of every error and warning variant the compiler can emit, with
+each entry mapped to a fixture (or a documented reason it's unreachable).
+
+**When adding or removing an error variant**, also update the catalog:
+
+1. Add (or remove) the row in the relevant module section.
+2. Set the status (`✓` covered / `⚠` unreachable / `☐` TODO).
+3. If covered, link the fixture path; if unreachable, note the reason.
+
+**When adding or removing a fixture**, update the corresponding row's
+`Fixture` and status columns so the catalog stays in sync with the test
+suite. The catalog is the primary tool for finding coverage gaps and
+dead-code removal candidates; stale entries make both jobs harder.
 
 ## Build Commands & Development
 

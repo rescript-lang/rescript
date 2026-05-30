@@ -1,0 +1,21 @@
+===== Foo.res =====
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/Iface_type_decl_variant/Foo.res[0m:[2m1:1-3:13[0m
+
+  [1;31m1[0m [2m│[0m [1;31mtype t =[0m
+  [1;31m2[0m [2m│[0m [1;31m  | A[0m
+  [1;31m3[0m [2m│[0m [1;31m  | B(string)[0m
+  4 [2m│[0m 
+
+  The implementation /.../fixtures/Iface_type_decl_variant/Foo.res
+  does not match the interface /.../fixtures/Iface_type_decl_variant/foo.cmi:
+  Type declarations do not match:
+    type t = A | B(string)
+  is not included in
+    type t = A | B(int)
+  [36m/.../fixtures/Iface_type_decl_variant/Foo.resi[0m:[2m1:1-3:10[0m:
+    Expected declaration
+  [36m/.../fixtures/Iface_type_decl_variant/Foo.res[0m:[2m1:1-3:13[0m:
+    Actual declaration
+  The types for field B are not equal.

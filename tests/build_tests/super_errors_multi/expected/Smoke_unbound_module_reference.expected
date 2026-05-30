@@ -1,0 +1,12 @@
+===== Consumer.res =====
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/Smoke_unbound_module_reference/Consumer.res[0m:[2m1:9-31[0m
+
+  [1;31m1[0m [2m│[0m let x = [1;31mNonexistentModule.value[0m
+  2 [2m│[0m 
+
+  [1;33mThe module or file NonexistentModule can't be found.[0m
+  - If it's a third-party dependency:
+    - Did you add it to the "dependencies" or "dev-dependencies" in rescript.json?
+  - Did you include the file's directory to the "sources" in rescript.json?

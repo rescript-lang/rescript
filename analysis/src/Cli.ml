@@ -1,164 +1,160 @@
+let print_string json =
+  Yojson.Safe.pretty_to_string ~std:true json |> print_endline
+let print_null () = `Null |> print_string
+let print_list l = `List l |> print_string
+
 let completion ~debug ~path ~pos ~currentFile =
   let full = Cmt.loadFullCmtFromPath ~path in
   let kindFile = Files.classifySourceFile currentFile in
   match Files.readFile currentFile with
-  | None | Some "" -> Protocol.null |> print_endline
+  | None | Some "" -> print_null ()
   | Some source ->
     Commands.completion ~debug ~source ~kindFile ~pos ~full
-    |> List.map Protocol.stringifyCompletionItem
-    |> Protocol.array |> print_endline
+    |> List.map (fun c -> Lsp.Types.CompletionItem.yojson_of_t c)
+    |> print_list
 
 let completionResolve ~path ~modulePath =
   let full = Cmt.loadFullCmtFromPath ~path in
-  let result =
-    match Commands.completionResolve ~full ~modulePath with
-    | None -> Protocol.null
-    | Some content -> Protocol.wrapInQuotes content
-  in
-  print_endline result
+  match Commands.completionResolve ~full ~modulePath with
+  | None -> print_null ()
+  | Some (`MarkupContent {value}) -> `String value |> print_string
 
 let inlayhint ~path ~pos ~maxLength ~debug =
   let full = Cmt.loadFullCmtFromPath ~path in
   let kindFile = Files.classifySourceFile path in
   match Files.readFile path with
-  | None -> Protocol.null |> print_endline
+  | None -> print_null ()
   | Some source -> (
     match Hint.inlay ~source ~kindFile ~pos ~maxLength ~full ~debug with
     | Some hints ->
       hints
-      |> List.map Protocol.stringifyHint
-      |> Protocol.array |> print_endline
-    | None -> Protocol.null |> print_endline)
+      |> List.map (fun h -> Lsp.Types.InlayHint.yojson_of_t h)
+      |> print_list
+    | None -> print_null ())
 
 let codeLens ~path ~debug =
   let full = Cmt.loadFullCmtFromPath ~path in
   let kindFile = Files.classifySourceFile path in
   match Files.readFile path with
-  | None -> Protocol.null |> print_endline
+  | None -> print_null ()
   | Some source -> (
     match Hint.codeLens ~source ~kindFile ~full ~debug with
     | Some lens ->
-      lens
-      |> List.map Protocol.stringifyCodeLens
-      |> Protocol.array |> print_endline
-    | None -> Protocol.null |> print_endline)
+      lens |> List.map (fun l -> Lsp.Types.CodeLens.yojson_of_t l) |> print_list
+    | None -> print_null ())
 
 let hover ~path ~pos ~currentFile ~debug ~supportsMarkdownLinks =
   let full = Cmt.loadFullCmtFromPath ~path in
   let kindFile = Files.classifySourceFile currentFile in
   match Files.readFile currentFile with
-  | None -> Protocol.null |> print_endline
-  | Some source ->
-    let result =
-      match
-        Commands.hover ~source ~kindFile ~pos ~debug ~supportsMarkdownLinks
-          ~full
-      with
-      | Some value -> Protocol.stringifyHover value
-      | None -> Protocol.null
-    in
-    print_endline result
+  | None -> print_null ()
+  | Some source -> (
+    match
+      Commands.hover ~source ~kindFile ~pos ~debug ~supportsMarkdownLinks ~full
+    with
+    | Some value -> Lsp.Types.Hover.yojson_of_t value |> print_string
+    | None -> print_null ())
 
 let signatureHelp ~path ~pos ~currentFile ~debug ~allowForConstructorPayloads =
   let full = Cmt.loadFullCmtFromPath ~path in
   let kindFile = Files.classifySourceFile currentFile in
   match Files.readFile currentFile with
-  | None -> Protocol.null |> print_endline
-  | Some source ->
-    Commands.signatureHelp ~source ~kindFile ~pos ~allowForConstructorPayloads
-      ~full ~debug
-    |> Protocol.stringifySignatureHelp |> print_endline
+  | None -> print_null ()
+  | Some source -> (
+    match
+      SignatureHelp.signatureHelp ~source ~kindFile ~pos
+        ~allowForConstructorPayloads ~full ~debug
+    with
+    | None -> print_null ()
+    | Some s -> Lsp.Types.SignatureHelp.yojson_of_t s |> print_string)
 
 let codeAction ~path ~startPos ~endPos ~currentFile ~debug =
   let kindFile = Files.classifySourceFile currentFile in
   match Files.readFile currentFile with
-  | None -> Protocol.null |> print_endline
+  | None -> print_null ()
   | Some source ->
     Xform.extractCodeActions ~path ~startPos ~endPos ~source ~kindFile ~debug
-    |> CodeActions.stringifyCodeActions |> print_endline
+    |> List.map (fun c -> Lsp.Types.CodeAction.yojson_of_t c)
+    |> print_list
 
 let definition ~path ~pos ~debug =
   let full = Cmt.loadFullCmtFromPath ~path in
-  print_endline
-    (match Commands.definition ~full ~pos ~debug with
-    | None -> Protocol.null
-    | Some location -> location |> Protocol.stringifyLocation)
+
+  match Commands.definition ~full ~pos ~debug with
+  | None -> print_null ()
+  | Some location -> location |> Lsp.Types.Location.yojson_of_t |> print_string
 
 let typeDefinition ~path ~pos ~debug =
   let full = Cmt.loadFullCmtFromPath ~path in
-  print_endline
-    (match Commands.typeDefinition ~full ~pos ~debug with
-    | None -> Protocol.null
-    | Some location -> location |> Protocol.stringifyLocation)
+  match Commands.typeDefinition ~full ~pos ~debug with
+  | None -> print_null ()
+  | Some location -> location |> Lsp.Types.Location.yojson_of_t |> print_string
 
 let references ~path ~pos ~debug =
   let full = Cmt.loadFullCmtFromPath ~path in
   let allLocs = Commands.references ~full ~pos ~debug in
-  print_endline
-    (if allLocs = [] then Protocol.null
-     else
-       "[\n"
-       ^ (allLocs |> List.map Protocol.stringifyLocation |> String.concat ",\n")
-       ^ "\n]")
+  if allLocs = [] then print_null ()
+  else
+    allLocs
+    |> List.map (fun l -> Lsp.Types.Location.yojson_of_t l)
+    |> print_list
 
 let rename ~path ~pos ~newName ~debug =
   let full = Cmt.loadFullCmtFromPath ~path in
-  let result =
-    match Commands.rename ~full ~pos ~newName ~debug with
-    | None -> Protocol.null
-    | Some (fileRenames, textDocumentEdits) ->
-      let fileRenamesString =
-        fileRenames |> List.map Protocol.stringifyRenameFile
-      in
-      let textDocumentEditsString =
-        textDocumentEdits |> List.map Protocol.stringifyTextDocumentEdit
-      in
-      "[\n"
-      ^ (fileRenamesString @ textDocumentEditsString |> String.concat ",\n")
-      ^ "\n]"
-  in
-  print_endline result
+  match Commands.rename ~full ~pos ~newName ~debug with
+  | Some {documentChanges = Some documentChanges} ->
+    documentChanges
+    |> List.map (fun c ->
+           match c with
+           | `RenameFile r -> Lsp.Types.RenameFile.yojson_of_t r
+           | `TextDocumentEdit te -> Lsp.Types.TextDocumentEdit.yojson_of_t te
+           | `DeleteFile df -> Lsp.Types.DeleteFile.yojson_of_t df
+           | `CreateFile cf -> Lsp.Types.CreateFile.yojson_of_t cf)
+    |> print_list
+  | _ -> print_null ()
 
 let prepareRename ~path ~pos ~debug =
   let full = Cmt.loadFullCmtFromPath ~path in
-  let result =
-    match Commands.prepareRename ~full ~pos ~debug with
-    | None -> Protocol.null
-    | Some (Range range) -> Protocol.stringifyRange range
-    | Some (Placeholder rangeph) ->
-      Protocol.stringifyRangeWithPlaceholder rangeph
-  in
-  print_endline result
+  match Commands.prepareRename ~full ~pos ~debug with
+  | None -> print_null ()
+  | Some {range; placeholder = None} ->
+    Lsp.Types.Range.yojson_of_t range |> print_string
+  | Some {range; placeholder = Some placeholder} ->
+    `Assoc
+      [
+        ("range", Lsp.Types.Range.yojson_of_t range);
+        ("placeholder", `String placeholder);
+      ]
+    |> print_string
 
 let format ~path =
   match Files.readFile path with
-  | None -> Protocol.null |> print_endline
+  | None -> print_null ()
   | Some source -> (
     let kindFile = Files.classifySourceFile path in
     match Commands.format ~source ~kindFile with
     | Ok textEdits -> (
       match textEdits with
-      | {newText} :: _ -> Printf.printf "\"%s\"" (Json.escape newText)
-      | _ -> Protocol.null |> print_endline)
-    | Error _ -> Protocol.null |> print_endline)
+      | {newText} :: _ -> print_string (`String newText)
+      | _ -> print_null ())
+    | Error _ -> print_null ())
 
 let diagnosticSyntax ~path =
   match Files.readFile path with
-  | None -> Protocol.array [""] |> print_endline
+  | None -> print_list []
   | Some source ->
     let kindFile = Files.classifySourceFile path in
     Diagnostics.document_syntax ~source ~kindFile
-    |> List.map Protocol.stringifyDiagnostic
-    |> Protocol.array |> print_endline
+    |> List.map Lsp.Types.Diagnostic.yojson_of_t
+    |> print_list
 
 let semanticTokens ~path =
   match Files.readFile path with
-  | None -> Protocol.null |> print_endline
+  | None -> print_null ()
   | Some source ->
     let kindFile = Files.classifySourceFile path in
     let tokens = SemanticTokens.semanticTokens ~source ~kindFile in
-    let data = SemanticTokens.Token.arrayToJsonString tokens.data in
-    Printf.printf "{\"data\":%s}" data
+    Lsp.Types.SemanticTokens.yojson_of_t tokens |> print_string
 
 let test ~path =
   Uri.stripPath := true;
@@ -327,26 +323,61 @@ let test ~path =
             in
             Sys.remove currentFile;
             codeActions
-            |> List.iter (fun {Protocol.title; edit = {documentChanges}} ->
+            |> List.iter (fun {Lsp.Types.CodeAction.title; edit} ->
                    Printf.printf "Hit: %s\n" title;
-                   documentChanges
-                   |> List.iter (fun dc ->
-                          match dc with
-                          | Protocol.TextDocumentEdit tde ->
-                            Printf.printf "\nTextDocumentEdit: %s\n"
-                              tde.textDocument.uri;
+                   match edit with
+                   | Some {documentChanges} ->
+                     documentChanges |> Option.get
+                     |> List.iter
+                          (fun
+                            (dc :
+                              [ `CreateFile of Lsp.Types.CreateFile.t
+                              | `DeleteFile of Lsp.Types.DeleteFile.t
+                              | `RenameFile of Lsp.Types.RenameFile.t
+                              | `TextDocumentEdit of
+                                Lsp.Types.TextDocumentEdit.t ])
+                          ->
+                            match dc with
+                            | `TextDocumentEdit tde ->
+                              let filename =
+                                tde.textDocument.uri |> Uri.toPath
+                                |> Filename.basename
+                              in
+                              Printf.printf "\nTextDocumentEdit: %s\n" filename;
 
-                            tde.edits
-                            |> List.iter (fun {Protocol.range; newText} ->
-                                   let indent =
-                                     String.make range.start.character ' '
-                                   in
-                                   Printf.printf
-                                     "%s\nnewText:\n%s<--here\n%s%s\n"
-                                     (Protocol.stringifyRange range)
-                                     indent indent newText)
-                          | CreateFile cf ->
-                            Printf.printf "\nCreateFile: %s\n" cf.uri))
+                              tde.edits
+                              |> List.iter
+                                   (fun
+                                     (edit :
+                                       [ `AnnotatedTextEdit of
+                                         Lsp.Types.AnnotatedTextEdit.t
+                                       | `TextEdit of Lsp.Types.TextEdit.t ])
+                                   ->
+                                     let start_char, newText, range =
+                                       match edit with
+                                       | `TextEdit te ->
+                                         ( te.range.start.character,
+                                           te.newText,
+                                           te.range )
+                                       | `AnnotatedTextEdit te ->
+                                         ( te.range.start.character,
+                                           te.newText,
+                                           te.range )
+                                     in
+                                     let indent = String.make start_char ' ' in
+                                     Printf.printf
+                                       "%s\nnewText:\n%s<--here\n%s%s\n"
+                                       (Lsp.Types.Range.yojson_of_t range
+                                       |> Yojson.Safe.pretty_to_string)
+                                       indent indent newText)
+                            | `CreateFile cf ->
+                              let filename =
+                                cf.uri |> Uri.toPath |> Filename.basename
+                              in
+                              Printf.printf "\nCreateFile: %s\n" filename
+                            | _ ->
+                              failwith "not implemented text document edit test")
+                   | None -> ())
           | "c-a" ->
             let hint = String.sub rest 3 (String.length rest - 3) in
             print_endline

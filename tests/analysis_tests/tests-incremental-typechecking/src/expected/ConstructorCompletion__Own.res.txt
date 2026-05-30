@@ -6,14 +6,19 @@ Completable: Cexpression CTypeAtPos()->variantPayload::One($0)
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath CTypeAtPos()
-[{
-    "label": "{}",
-    "kind": 12,
-    "tags": [],
+[
+  {
     "detail": "{miss: bool}",
-    "documentation": {"kind": "markdown", "value": "```rescript\n{miss: bool}\n```"},
-    "sortText": "A",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\n{miss: bool}\n```"
+    },
     "insertText": "{$0}",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "{}",
+    "sortText": "A",
+    "tags": []
+  }
+]
 

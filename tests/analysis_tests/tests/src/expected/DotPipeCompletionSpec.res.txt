@@ -13,37 +13,52 @@ Path n
 CPPipe pathFromEnv:SomeModule found:true
 Path SomeModule.
 Path 
-[{
-    "label": "name",
-    "kind": 5,
-    "tags": [],
+[
+  {
     "detail": "string",
-    "documentation": {"kind": "markdown", "value": "```rescript\nname: string\n```\n\n```rescript\ntype t = {name: string}\n```"}
-  }, {
-    "label": "->SomeModule.withUnlabelledArgumentNotFirst",
-    "kind": 12,
-    "tags": [],
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nname: string\n```\n\n```rescript\ntype t = {name: string}\n```"
+    },
+    "kind": 5,
+    "label": "name",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 5, "line": 15 },
+          "start": { "character": 4, "line": 15 }
+        }
+      }
+    ],
     "detail": "(~name: string=?, t) => unit",
-    "documentation": null,
-    "sortText": "withUnlabelledArgumentNotFirst",
     "insertText": "->SomeModule.withUnlabelledArgumentNotFirst",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 15, "character": 4}, "end": {"line": 15, "character": 5}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->SomeModule.getName",
     "kind": 12,
-    "tags": [],
+    "label": "->SomeModule.withUnlabelledArgumentNotFirst",
+    "sortText": "withUnlabelledArgumentNotFirst",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 5, "line": 15 },
+          "start": { "character": 4, "line": 15 }
+        }
+      }
+    ],
     "detail": "t => string",
-    "documentation": null,
-    "sortText": "getName",
     "insertText": "->SomeModule.getName",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 15, "character": 4}, "end": {"line": 15, "character": 5}},
-      "newText": ""
-      }]
-  }]
+    "kind": 12,
+    "label": "->SomeModule.getName",
+    "sortText": "getName",
+    "tags": []
+  }
+]
 
 Complete src/DotPipeCompletionSpec.res 44:6
 posCursor:[44:6] posNoWhite:[44:5] Found expr:[44:3->44:6]
@@ -62,85 +77,120 @@ Path SomeOtherModule.
 Path DotPipeCompletionSpec.CompleteFromThisToo.
 Path DotPipeCompletionSpec.SomeOtherModule.
 Path 
-[{
-    "label": "nname",
-    "kind": 5,
-    "tags": [],
+[
+  {
     "detail": "string",
-    "documentation": {"kind": "markdown", "value": "```rescript\nnname: string\n```\n\n```rescript\ntype typeOutsideModule = {nname: string}\n```"}
-  }, {
-    "label": "->SomeOtherModule.getNName",
-    "kind": 12,
-    "tags": [],
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nnname: string\n```\n\n```rescript\ntype typeOutsideModule = {nname: string}\n```"
+    },
+    "kind": 5,
+    "label": "nname",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 6, "line": 44 },
+          "start": { "character": 5, "line": 44 }
+        }
+      }
+    ],
     "detail": "t => string",
-    "documentation": null,
-    "sortText": "getNName",
     "insertText": "->SomeOtherModule.getNName",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 44, "character": 5}, "end": {"line": 44, "character": 6}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->SomeOtherModule.getNName2",
     "kind": 12,
-    "tags": [],
+    "label": "->SomeOtherModule.getNName",
+    "sortText": "getNName",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 6, "line": 44 },
+          "start": { "character": 5, "line": 44 }
+        }
+      }
+    ],
     "detail": "typeOutsideModule => string",
-    "documentation": null,
-    "sortText": "getNName2",
     "insertText": "->SomeOtherModule.getNName2",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 44, "character": 5}, "end": {"line": 44, "character": 6}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->CompleteFromThisToo.a",
     "kind": 12,
-    "tags": [],
+    "label": "->SomeOtherModule.getNName2",
+    "sortText": "getNName2",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 6, "line": 44 },
+          "start": { "character": 5, "line": 44 }
+        }
+      }
+    ],
     "detail": "typeOutsideModule => string",
-    "documentation": null,
-    "sortText": "a",
     "insertText": "->CompleteFromThisToo.a",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 44, "character": 5}, "end": {"line": 44, "character": 6}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->SomeOtherModule.getNName",
     "kind": 12,
-    "tags": [],
+    "label": "->CompleteFromThisToo.a",
+    "sortText": "a",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 6, "line": 44 },
+          "start": { "character": 5, "line": 44 }
+        }
+      }
+    ],
     "detail": "t => string",
-    "documentation": null,
-    "sortText": "getNName",
     "insertText": "->SomeOtherModule.getNName",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 44, "character": 5}, "end": {"line": 44, "character": 6}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->SomeOtherModule.getNName2",
     "kind": 12,
-    "tags": [],
+    "label": "->SomeOtherModule.getNName",
+    "sortText": "getNName",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 6, "line": 44 },
+          "start": { "character": 5, "line": 44 }
+        }
+      }
+    ],
     "detail": "typeOutsideModule => string",
-    "documentation": null,
-    "sortText": "getNName2",
     "insertText": "->SomeOtherModule.getNName2",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 44, "character": 5}, "end": {"line": 44, "character": 6}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->doWithTypeOutsideModule",
     "kind": 12,
-    "tags": [],
+    "label": "->SomeOtherModule.getNName2",
+    "sortText": "getNName2",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 6, "line": 44 },
+          "start": { "character": 5, "line": 44 }
+        }
+      }
+    ],
     "detail": "typeOutsideModule => string",
-    "documentation": null,
-    "sortText": "doWithTypeOutsideModule",
     "insertText": "->doWithTypeOutsideModule",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 44, "character": 5}, "end": {"line": 44, "character": 6}},
-      "newText": ""
-      }]
-  }]
+    "kind": 12,
+    "label": "->doWithTypeOutsideModule",
+    "sortText": "doWithTypeOutsideModule",
+    "tags": []
+  }
+]
 
 Complete src/DotPipeCompletionSpec.res 62:5
 posCursor:[62:5] posNoWhite:[62:4] Found expr:[62:3->62:5]
@@ -158,31 +208,42 @@ CPPipe pathFromEnv:A found:true
 Path A.
 Path B.
 Path 
-[{
-    "label": "->A.withA",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 5, "line": 62 },
+          "start": { "character": 4, "line": 62 }
+        }
+      }
+    ],
     "detail": "a => unit",
-    "documentation": null,
-    "sortText": "withA",
     "insertText": "->A.withA",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 62, "character": 4}, "end": {"line": 62, "character": 5}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->B.b",
     "kind": 12,
-    "tags": [],
+    "label": "->A.withA",
+    "sortText": "withA",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 5, "line": 62 },
+          "start": { "character": 4, "line": 62 }
+        }
+      }
+    ],
     "detail": "A.a => int",
-    "documentation": null,
-    "sortText": "b",
     "insertText": "->B.b",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 62, "character": 4}, "end": {"line": 62, "character": 5}},
-      "newText": ""
-      }]
-  }]
+    "kind": 12,
+    "label": "->B.b",
+    "sortText": "b",
+    "tags": []
+  }
+]
 
 Complete src/DotPipeCompletionSpec.res 67:6
 posCursor:[67:6] posNoWhite:[67:5] Found expr:[67:3->67:6]
@@ -199,25 +260,35 @@ Path xx
 CPPipe pathFromEnv:CompletionFromModule.SomeModule found:false
 Path CompletionFromModule.SomeModule.
 Path 
-[{
-    "label": "name",
-    "kind": 5,
-    "tags": [],
+[
+  {
     "detail": "string",
-    "documentation": {"kind": "markdown", "value": "```rescript\nname: string\n```\n\n```rescript\ntype t = {name: string}\n```"}
-  }, {
-    "label": "->CompletionFromModule.SomeModule.getName",
-    "kind": 12,
-    "tags": [],
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nname: string\n```\n\n```rescript\ntype t = {name: string}\n```"
+    },
+    "kind": 5,
+    "label": "name",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 6, "line": 67 },
+          "start": { "character": 5, "line": 67 }
+        }
+      }
+    ],
     "detail": "t => string",
-    "documentation": null,
-    "sortText": "getName",
     "insertText": "->CompletionFromModule.SomeModule.getName",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 67, "character": 5}, "end": {"line": 67, "character": 6}},
-      "newText": ""
-      }]
-  }]
+    "kind": 12,
+    "label": "->CompletionFromModule.SomeModule.getName",
+    "sortText": "getName",
+    "tags": []
+  }
+]
 
 Complete src/DotPipeCompletionSpec.res 75:9
 posCursor:[75:9] posNoWhite:[75:8] Found expr:[75:3->75:9]
@@ -234,55 +305,93 @@ Path ffff
 Path Stdlib.Array.u
 Path ArrayUtils.u
 Path u
-[{
-    "label": "->Array.unshiftMany",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 8, "line": 75 },
+          "start": { "character": 7, "line": 75 }
+        }
+      }
+    ],
     "detail": "(array<'a>, array<'a>) => unit",
-    "documentation": {"kind": "markdown", "value": "\n`unshiftMany(array, itemsArray)` inserts many new items to the start of the array.\n\nBeware this will *mutate* the array.\n\nSee [`Array.push`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/unshift) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\nsomeArray->Array.unshiftMany([\"yay\", \"wehoo\"])\nsomeArray == [\"yay\", \"wehoo\", \"hi\", \"hello\"]\n```\n"},
-    "sortText": "unshiftMany",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`unshiftMany(array, itemsArray)` inserts many new items to the start of the array.\n\nBeware this will *mutate* the array.\n\nSee [`Array.push`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/unshift) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\nsomeArray->Array.unshiftMany([\"yay\", \"wehoo\"])\nsomeArray == [\"yay\", \"wehoo\", \"hi\", \"hello\"]\n```\n"
+    },
     "insertText": "->Array.unshiftMany",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 75, "character": 7}, "end": {"line": 75, "character": 8}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Array.unshift",
     "kind": 12,
-    "tags": [],
+    "label": "->Array.unshiftMany",
+    "sortText": "unshiftMany",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 8, "line": 75 },
+          "start": { "character": 7, "line": 75 }
+        }
+      }
+    ],
     "detail": "(array<'a>, 'a) => unit",
-    "documentation": {"kind": "markdown", "value": "\n`unshift(array, item)` inserts a new item at the start of the array.\n\nBeware this will *mutate* the array.\n\nSee [`Array.unshift`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/unshift) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\nsomeArray->Array.unshift(\"yay\")\nsomeArray == [\"yay\", \"hi\", \"hello\"]\n```\n"},
-    "sortText": "unshift",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`unshift(array, item)` inserts a new item at the start of the array.\n\nBeware this will *mutate* the array.\n\nSee [`Array.unshift`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/unshift) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\nsomeArray->Array.unshift(\"yay\")\nsomeArray == [\"yay\", \"hi\", \"hello\"]\n```\n"
+    },
     "insertText": "->Array.unshift",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 75, "character": 7}, "end": {"line": 75, "character": 8}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Array.unsafe_get",
     "kind": 12,
-    "tags": [1],
+    "label": "->Array.unshift",
+    "sortText": "unshift",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 8, "line": 75 },
+          "start": { "character": 7, "line": 75 }
+        }
+      }
+    ],
+    "deprecated": true,
     "detail": "(array<'a>, int) => 'a",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use getUnsafe instead. This will be removed in v13\n\n\n`unsafe_get(array, index)` returns the element at `index` of `array`.\n\nThis is _unsafe_, meaning it will return `undefined` value if `index` does not exist in `array`.\n\nUse `Array.unsafe_get` only when you are sure the `index` exists (i.e. when using for-loop).\n\n## Examples\n\n```rescript\nlet array = [1, 2, 3]\nfor index in 0 to array->Array.length - 1 {\n  let value = array->Array.unsafe_get(index)\n  Console.log(value)\n}\n```\n"},
-    "sortText": "unsafe_get",
+    "documentation": {
+      "kind": "markdown",
+      "value": "Deprecated: Use getUnsafe instead. This will be removed in v13\n\n\n`unsafe_get(array, index)` returns the element at `index` of `array`.\n\nThis is _unsafe_, meaning it will return `undefined` value if `index` does not exist in `array`.\n\nUse `Array.unsafe_get` only when you are sure the `index` exists (i.e. when using for-loop).\n\n## Examples\n\n```rescript\nlet array = [1, 2, 3]\nfor index in 0 to array->Array.length - 1 {\n  let value = array->Array.unsafe_get(index)\n  Console.log(value)\n}\n```\n"
+    },
     "insertText": "->Array.unsafe_get",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 75, "character": 7}, "end": {"line": 75, "character": 8}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Array.unzip",
     "kind": 12,
-    "tags": [],
+    "label": "->Array.unsafe_get",
+    "sortText": "unsafe_get",
+    "tags": [ 1 ]
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 8, "line": 75 },
+          "start": { "character": 7, "line": 75 }
+        }
+      }
+    ],
     "detail": "array<('a, 'b)> => (t<'a>, array<'b>)",
-    "documentation": {"kind": "markdown", "value": "\n`unzip(a)` takes an array of pairs and creates a pair of arrays. The first array\ncontains all the first items of the pairs; the second array contains all the\nsecond items.\n\n## Examples\n\n```rescript\nArray.unzip([(1, 2), (3, 4)]) == ([1, 3], [2, 4])\n\nArray.unzip([(1, 2), (3, 4), (5, 6), (7, 8)]) == ([1, 3, 5, 7], [2, 4, 6, 8])\n```\n"},
-    "sortText": "unzip",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`unzip(a)` takes an array of pairs and creates a pair of arrays. The first array\ncontains all the first items of the pairs; the second array contains all the\nsecond items.\n\n## Examples\n\n```rescript\nArray.unzip([(1, 2), (3, 4)]) == ([1, 3], [2, 4])\n\nArray.unzip([(1, 2), (3, 4), (5, 6), (7, 8)]) == ([1, 3, 5, 7], [2, 4, 6, 8])\n```\n"
+    },
     "insertText": "->Array.unzip",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 75, "character": 7}, "end": {"line": 75, "character": 8}},
-      "newText": ""
-      }]
-  }]
+    "kind": 12,
+    "label": "->Array.unzip",
+    "sortText": "unzip",
+    "tags": []
+  }
+]
 
 Complete src/DotPipeCompletionSpec.res 80:7
 posCursor:[80:7] posNoWhite:[80:6] Found expr:[80:3->80:7]
@@ -300,61 +409,86 @@ CPPipe pathFromEnv: found:true
 Path DotPipeCompletionSpec.
 Path DotPipeCompletionSpec.SomeOtherModule.
 Path 
-[{
-    "label": "nname",
-    "kind": 5,
-    "tags": [],
+[
+  {
     "detail": "string",
-    "documentation": {"kind": "markdown", "value": "```rescript\nnname: string\n```\n\n```rescript\ntype typeOutsideModule = {nname: string}\n```"}
-  }, {
-    "label": "->doWithTypeOutsideModule",
-    "kind": 12,
-    "tags": [],
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nnname: string\n```\n\n```rescript\ntype typeOutsideModule = {nname: string}\n```"
+    },
+    "kind": 5,
+    "label": "nname",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 7, "line": 80 },
+          "start": { "character": 6, "line": 80 }
+        }
+      }
+    ],
     "detail": "typeOutsideModule => string",
-    "documentation": null,
-    "sortText": "doWithTypeOutsideModule",
     "insertText": "->doWithTypeOutsideModule",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 80, "character": 6}, "end": {"line": 80, "character": 7}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->SomeOtherModule.getNName",
     "kind": 12,
-    "tags": [],
+    "label": "->doWithTypeOutsideModule",
+    "sortText": "doWithTypeOutsideModule",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 7, "line": 80 },
+          "start": { "character": 6, "line": 80 }
+        }
+      }
+    ],
     "detail": "t => string",
-    "documentation": null,
-    "sortText": "getNName",
     "insertText": "->SomeOtherModule.getNName",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 80, "character": 6}, "end": {"line": 80, "character": 7}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->SomeOtherModule.getNName2",
     "kind": 12,
-    "tags": [],
+    "label": "->SomeOtherModule.getNName",
+    "sortText": "getNName",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 7, "line": 80 },
+          "start": { "character": 6, "line": 80 }
+        }
+      }
+    ],
     "detail": "typeOutsideModule => string",
-    "documentation": null,
-    "sortText": "getNName2",
     "insertText": "->SomeOtherModule.getNName2",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 80, "character": 6}, "end": {"line": 80, "character": 7}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->doWithTypeOutsideModule",
     "kind": 12,
-    "tags": [],
+    "label": "->SomeOtherModule.getNName2",
+    "sortText": "getNName2",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 7, "line": 80 },
+          "start": { "character": 6, "line": 80 }
+        }
+      }
+    ],
     "detail": "typeOutsideModule => string",
-    "documentation": null,
-    "sortText": "doWithTypeOutsideModule",
     "insertText": "->doWithTypeOutsideModule",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 80, "character": 6}, "end": {"line": 80, "character": 7}},
-      "newText": ""
-      }]
-  }]
+    "kind": 12,
+    "label": "->doWithTypeOutsideModule",
+    "sortText": "doWithTypeOutsideModule",
+    "tags": []
+  }
+]
 
 Complete src/DotPipeCompletionSpec.res 86:39
 posCursor:[86:39] posNoWhite:[86:38] Found expr:[86:3->86:39]
@@ -374,55 +508,92 @@ Path Array.filter
 Path Stdlib.Array.filt
 Path ArrayUtils.filt
 Path filt
-[{
-    "label": "->Array.filterMap",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 35, "line": 86 },
+          "start": { "character": 34, "line": 86 }
+        }
+      }
+    ],
     "detail": "(array<'a>, 'a => option<'b>) => array<'b>",
-    "documentation": {"kind": "markdown", "value": "\n`filterMap(array, fn)`\n\nCalls `fn` for each element and returns a new array containing results of the `fn` calls which are not `None`.\n\n## Examples\n\n```rescript\n[\"Hello\", \"Hi\", \"Good bye\"]->Array.filterMap(item =>\n  switch item {\n  | \"Hello\" => Some(item->String.length)\n  | _ => None\n  }\n) == [5]\n\n[1, 2, 3, 4, 5, 6]->Array.filterMap(n => mod(n, 2) == 0 ? Some(n * n) : None) == [4, 16, 36]\n\nArray.filterMap([1, 2, 3, 4, 5, 6], _ => None) == []\n\nArray.filterMap([], n => mod(n, 2) == 0 ? Some(n * n) : None) == []\n```\n"},
-    "sortText": "filterMap",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`filterMap(array, fn)`\n\nCalls `fn` for each element and returns a new array containing results of the `fn` calls which are not `None`.\n\n## Examples\n\n```rescript\n[\"Hello\", \"Hi\", \"Good bye\"]->Array.filterMap(item =>\n  switch item {\n  | \"Hello\" => Some(item->String.length)\n  | _ => None\n  }\n) == [5]\n\n[1, 2, 3, 4, 5, 6]->Array.filterMap(n => mod(n, 2) == 0 ? Some(n * n) : None) == [4, 16, 36]\n\nArray.filterMap([1, 2, 3, 4, 5, 6], _ => None) == []\n\nArray.filterMap([], n => mod(n, 2) == 0 ? Some(n * n) : None) == []\n```\n"
+    },
     "insertText": "->Array.filterMap",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 86, "character": 34}, "end": {"line": 86, "character": 35}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Array.filterMapWithIndex",
     "kind": 12,
-    "tags": [],
+    "label": "->Array.filterMap",
+    "sortText": "filterMap",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 35, "line": 86 },
+          "start": { "character": 34, "line": 86 }
+        }
+      }
+    ],
     "detail": "(array<'a>, ('a, int) => option<'b>) => array<'b>",
-    "documentation": {"kind": "markdown", "value": "\n`filterMapWithIndex(array, fn)`\n\nCalls `fn` for each element and returns a new array containing results of the `fn` calls which are not `None`.\n\n## Examples\n\n```rescript\n[\"Hello\", \"Hi\", \"Good bye\"]->Array.filterMapWithIndex((item, index) =>\n  switch item {\n  | \"Hello\" => Some(index)\n  | _ => None\n  }\n) == [0]\n```\n"},
-    "sortText": "filterMapWithIndex",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`filterMapWithIndex(array, fn)`\n\nCalls `fn` for each element and returns a new array containing results of the `fn` calls which are not `None`.\n\n## Examples\n\n```rescript\n[\"Hello\", \"Hi\", \"Good bye\"]->Array.filterMapWithIndex((item, index) =>\n  switch item {\n  | \"Hello\" => Some(index)\n  | _ => None\n  }\n) == [0]\n```\n"
+    },
     "insertText": "->Array.filterMapWithIndex",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 86, "character": 34}, "end": {"line": 86, "character": 35}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Array.filter",
     "kind": 12,
-    "tags": [],
+    "label": "->Array.filterMapWithIndex",
+    "sortText": "filterMapWithIndex",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 35, "line": 86 },
+          "start": { "character": 34, "line": 86 }
+        }
+      }
+    ],
     "detail": "(array<'a>, 'a => bool) => array<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`filter(array, checker)` returns a new array containing all elements from `array` for which the provided `checker` function returns true.\n\nSee [`Array.filter`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter) on MDN.\n\n## Examples\n\n```rescript\n[1, 2, 3, 4]->Array.filter(num => num > 2) == [3, 4]\n```\n"},
-    "sortText": "filter",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`filter(array, checker)` returns a new array containing all elements from `array` for which the provided `checker` function returns true.\n\nSee [`Array.filter`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter) on MDN.\n\n## Examples\n\n```rescript\n[1, 2, 3, 4]->Array.filter(num => num > 2) == [3, 4]\n```\n"
+    },
     "insertText": "->Array.filter",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 86, "character": 34}, "end": {"line": 86, "character": 35}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Array.filterWithIndex",
     "kind": 12,
-    "tags": [],
+    "label": "->Array.filter",
+    "sortText": "filter",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 35, "line": 86 },
+          "start": { "character": 34, "line": 86 }
+        }
+      }
+    ],
     "detail": "(array<'a>, ('a, int) => bool) => array<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`filterWithIndex(array, checker)` returns a new array containing all elements from `array` for which the provided `checker` function returns true.\n\nSee [`Array.filter`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter) on MDN.\n\n## Examples\n\n```rescript\n[1, 2, 3, 4]->Array.filterWithIndex((num, index) => index === 0 || num === 2) == [1, 2]\n```\n"},
-    "sortText": "filterWithIndex",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`filterWithIndex(array, checker)` returns a new array containing all elements from `array` for which the provided `checker` function returns true.\n\nSee [`Array.filter`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter) on MDN.\n\n## Examples\n\n```rescript\n[1, 2, 3, 4]->Array.filterWithIndex((num, index) => index === 0 || num === 2) == [1, 2]\n```\n"
+    },
     "insertText": "->Array.filterWithIndex",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 86, "character": 34}, "end": {"line": 86, "character": 35}},
-      "newText": ""
-      }]
-  }]
+    "kind": 12,
+    "label": "->Array.filterWithIndex",
+    "sortText": "filterWithIndex",
+    "tags": []
+  }
+]
 
 Complete src/DotPipeCompletionSpec.res 89:62
 posCursor:[89:62] posNoWhite:[89:61] Found expr:[89:3->89:62]
@@ -441,31 +612,50 @@ ContextPath Value[Array, joinWith]
 Path Array.joinWith
 Path Stdlib.String.includ
 Path includ
-[{
-    "label": "->String.includes",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 56, "line": 89 },
+          "start": { "character": 55, "line": 89 }
+        }
+      }
+    ],
     "detail": "(string, string) => bool",
-    "documentation": {"kind": "markdown", "value": "\n`includes(str, searchValue)` returns `true` if `searchValue` is found anywhere\nwithin `str`, `false` otherwise.\nSee [`String.includes`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/includes) on MDN.\n\n## Examples\n\n```rescript\nString.includes(\"programmer\", \"gram\") == true\nString.includes(\"programmer\", \"er\") == true\nString.includes(\"programmer\", \"pro\") == true\nString.includes(\"programmer.dat\", \"xyz\") == false\n```\n"},
-    "sortText": "includes",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`includes(str, searchValue)` returns `true` if `searchValue` is found anywhere\nwithin `str`, `false` otherwise.\nSee [`String.includes`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/includes) on MDN.\n\n## Examples\n\n```rescript\nString.includes(\"programmer\", \"gram\") == true\nString.includes(\"programmer\", \"er\") == true\nString.includes(\"programmer\", \"pro\") == true\nString.includes(\"programmer.dat\", \"xyz\") == false\n```\n"
+    },
     "insertText": "->String.includes",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 89, "character": 55}, "end": {"line": 89, "character": 56}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->String.includesFrom",
     "kind": 12,
-    "tags": [],
+    "label": "->String.includes",
+    "sortText": "includes",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 56, "line": 89 },
+          "start": { "character": 55, "line": 89 }
+        }
+      }
+    ],
     "detail": "(string, string, int) => bool",
-    "documentation": {"kind": "markdown", "value": "\n`includesFrom(str, searchValue, start)` returns `true` if `searchValue` is found\nanywhere within `str` starting at character number `start` (where 0 is the\nfirst character), `false` otherwise.\nSee [`String.includes`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/includes) on MDN.\n\n## Examples\n\n```rescript\nString.includesFrom(\"programmer\", \"gram\", 1) == true\nString.includesFrom(\"programmer\", \"gram\", 4) == false\nString.includesFrom(`대한민국`, `한`, 1) == true\n```\n"},
-    "sortText": "includesFrom",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`includesFrom(str, searchValue, start)` returns `true` if `searchValue` is found\nanywhere within `str` starting at character number `start` (where 0 is the\nfirst character), `false` otherwise.\nSee [`String.includes`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/includes) on MDN.\n\n## Examples\n\n```rescript\nString.includesFrom(\"programmer\", \"gram\", 1) == true\nString.includesFrom(\"programmer\", \"gram\", 4) == false\nString.includesFrom(`대한민국`, `한`, 1) == true\n```\n"
+    },
     "insertText": "->String.includesFrom",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 89, "character": 55}, "end": {"line": 89, "character": 56}},
-      "newText": ""
-      }]
-  }]
+    "kind": 12,
+    "label": "->String.includesFrom",
+    "sortText": "includesFrom",
+    "tags": []
+  }
+]
 
 Complete src/DotPipeCompletionSpec.res 94:36
 posCursor:[94:36] posNoWhite:[94:35] Found expr:[94:3->94:36]
@@ -483,19 +673,29 @@ ContextPath Value[String, toLowerCase]
 Path String.toLowerCase
 Path Stdlib.String.toUpperCa
 Path toUpperCa
-[{
-    "label": "->String.toUpperCase",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 27, "line": 94 },
+          "start": { "character": 26, "line": 94 }
+        }
+      }
+    ],
     "detail": "string => string",
-    "documentation": {"kind": "markdown", "value": "\n`toUpperCase(str)` converts `str` to upper case using the locale-insensitive\ncase mappings in the Unicode Character Database. Notice that the conversion can\nexpand the number of letters in the result, for example the German ß\ncapitalizes to two Ses in a row.\nSee [`String.toUpperCase`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toUpperCase) on MDN.\n\n## Examples\n\n```rescript\nString.toUpperCase(\"abc\") == \"ABC\"\nString.toUpperCase(`Straße`) == `STRASSE`\nString.toUpperCase(`πς`) == `ΠΣ`\n```\n"},
-    "sortText": "toUpperCase",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`toUpperCase(str)` converts `str` to upper case using the locale-insensitive\ncase mappings in the Unicode Character Database. Notice that the conversion can\nexpand the number of letters in the result, for example the German ß\ncapitalizes to two Ses in a row.\nSee [`String.toUpperCase`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toUpperCase) on MDN.\n\n## Examples\n\n```rescript\nString.toUpperCase(\"abc\") == \"ABC\"\nString.toUpperCase(`Straße`) == `STRASSE`\nString.toUpperCase(`πς`) == `ΠΣ`\n```\n"
+    },
     "insertText": "->String.toUpperCase",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 94, "character": 26}, "end": {"line": 94, "character": 27}},
-      "newText": ""
-      }]
-  }]
+    "kind": 12,
+    "label": "->String.toUpperCase",
+    "sortText": "toUpperCase",
+    "tags": []
+  }
+]
 
 Complete src/DotPipeCompletionSpec.res 97:55
 posCursor:[97:55] posNoWhite:[97:54] Found expr:[97:3->97:55]
@@ -513,19 +713,29 @@ ContextPath Value[String, toUpperCase]
 Path String.toUpperCase
 Path Stdlib.String.toLowerC
 Path toLowerC
-[{
-    "label": "->String.toLowerCase",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 47, "line": 97 },
+          "start": { "character": 46, "line": 97 }
+        }
+      }
+    ],
     "detail": "string => string",
-    "documentation": {"kind": "markdown", "value": "\n`toLowerCase(str)` converts `str` to lower case using the locale-insensitive\ncase mappings in the Unicode Character Database. Notice that the conversion can\ngive different results depending upon context, for example with the Greek\nletter sigma, which has two different lower case forms, one when it is the last\ncharacter in a string and another when it is not.\nSee [`String.toLowerCase`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toLowerCase) on MDN.\n\n## Examples\n\n```rescript\nString.toLowerCase(\"ABC\") == \"abc\"\nString.toLowerCase(`ΣΠ`) == `σπ`\nString.toLowerCase(`ΠΣ`) == `πς`\n```\n"},
-    "sortText": "toLowerCase",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`toLowerCase(str)` converts `str` to lower case using the locale-insensitive\ncase mappings in the Unicode Character Database. Notice that the conversion can\ngive different results depending upon context, for example with the Greek\nletter sigma, which has two different lower case forms, one when it is the last\ncharacter in a string and another when it is not.\nSee [`String.toLowerCase`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toLowerCase) on MDN.\n\n## Examples\n\n```rescript\nString.toLowerCase(\"ABC\") == \"abc\"\nString.toLowerCase(`ΣΠ`) == `σπ`\nString.toLowerCase(`ΠΣ`) == `πς`\n```\n"
+    },
     "insertText": "->String.toLowerCase",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 97, "character": 46}, "end": {"line": 97, "character": 47}},
-      "newText": ""
-      }]
-  }]
+    "kind": 12,
+    "label": "->String.toLowerCase",
+    "sortText": "toLowerCase",
+    "tags": []
+  }
+]
 
 Complete src/DotPipeCompletionSpec.res 101:7
 posCursor:[101:7] posNoWhite:[101:6] Found expr:[100:9->104:1]
@@ -544,61 +754,86 @@ CPPipe pathFromEnv: found:true
 Path DotPipeCompletionSpec.
 Path DotPipeCompletionSpec.SomeOtherModule.
 Path 
-[{
-    "label": "nname",
-    "kind": 5,
-    "tags": [],
+[
+  {
     "detail": "string",
-    "documentation": {"kind": "markdown", "value": "```rescript\nnname: string\n```\n\n```rescript\ntype typeOutsideModule = {nname: string}\n```"}
-  }, {
-    "label": "->doWithTypeOutsideModule",
-    "kind": 12,
-    "tags": [],
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nnname: string\n```\n\n```rescript\ntype typeOutsideModule = {nname: string}\n```"
+    },
+    "kind": 5,
+    "label": "nname",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 7, "line": 101 },
+          "start": { "character": 6, "line": 101 }
+        }
+      }
+    ],
     "detail": "typeOutsideModule => string",
-    "documentation": null,
-    "sortText": "doWithTypeOutsideModule",
     "insertText": "->doWithTypeOutsideModule",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 101, "character": 6}, "end": {"line": 101, "character": 7}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->SomeOtherModule.getNName",
     "kind": 12,
-    "tags": [],
+    "label": "->doWithTypeOutsideModule",
+    "sortText": "doWithTypeOutsideModule",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 7, "line": 101 },
+          "start": { "character": 6, "line": 101 }
+        }
+      }
+    ],
     "detail": "t => string",
-    "documentation": null,
-    "sortText": "getNName",
     "insertText": "->SomeOtherModule.getNName",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 101, "character": 6}, "end": {"line": 101, "character": 7}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->SomeOtherModule.getNName2",
     "kind": 12,
-    "tags": [],
+    "label": "->SomeOtherModule.getNName",
+    "sortText": "getNName",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 7, "line": 101 },
+          "start": { "character": 6, "line": 101 }
+        }
+      }
+    ],
     "detail": "typeOutsideModule => string",
-    "documentation": null,
-    "sortText": "getNName2",
     "insertText": "->SomeOtherModule.getNName2",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 101, "character": 6}, "end": {"line": 101, "character": 7}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->doWithTypeOutsideModule",
     "kind": 12,
-    "tags": [],
+    "label": "->SomeOtherModule.getNName2",
+    "sortText": "getNName2",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 7, "line": 101 },
+          "start": { "character": 6, "line": 101 }
+        }
+      }
+    ],
     "detail": "typeOutsideModule => string",
-    "documentation": null,
-    "sortText": "doWithTypeOutsideModule",
     "insertText": "->doWithTypeOutsideModule",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 101, "character": 6}, "end": {"line": 101, "character": 7}},
-      "newText": ""
-      }]
-  }]
+    "kind": 12,
+    "label": "->doWithTypeOutsideModule",
+    "sortText": "doWithTypeOutsideModule",
+    "tags": []
+  }
+]
 
 Complete src/DotPipeCompletionSpec.res 108:27
 XXX Not found!
@@ -607,27 +842,28 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Module[Dot]
 Path Dot
-[{
-    "label": "DotPipeCompleteFromCurrentModule",
-    "kind": 9,
-    "tags": [],
-    "detail": "module DotPipeCompleteFromCurrentModule",
-    "documentation": null,
+[
+  {
     "data": {
       "modulePath": "DotPipeCompleteFromCurrentModule",
       "filePath": "src/DotPipeCompletionSpec.res"
-    }
-  }, {
-    "label": "DotPipeCompletionSpec",
+    },
+    "detail": "module DotPipeCompleteFromCurrentModule",
     "kind": 9,
-    "tags": [],
-    "detail": "module DotPipeCompletionSpec",
-    "documentation": null,
+    "label": "DotPipeCompleteFromCurrentModule",
+    "tags": []
+  },
+  {
     "data": {
       "modulePath": "DotPipeCompletionSpec",
       "filePath": "src/DotPipeCompletionSpec.res"
-    }
-  }]
+    },
+    "detail": "module DotPipeCompletionSpec",
+    "kind": 9,
+    "label": "DotPipeCompletionSpec",
+    "tags": []
+  }
+]
 
 Complete src/DotPipeCompletionSpec.res 111:39
 posCursor:[111:39] posNoWhite:[111:38] Found expr:[111:24->111:40]
@@ -638,37 +874,38 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[CompletionPipe]
 Path CompletionPipe
-[{
-    "label": "CompletionPipeChain",
-    "kind": 9,
-    "tags": [],
-    "detail": "module CompletionPipeChain",
-    "documentation": null,
+[
+  {
     "data": {
       "modulePath": "CompletionPipeChain",
       "filePath": "src/DotPipeCompletionSpec.res"
-    }
-  }, {
-    "label": "CompletionPipeProperty",
+    },
+    "detail": "module CompletionPipeChain",
     "kind": 9,
-    "tags": [],
-    "detail": "module CompletionPipeProperty",
-    "documentation": null,
+    "label": "CompletionPipeChain",
+    "tags": []
+  },
+  {
     "data": {
       "modulePath": "CompletionPipeProperty",
       "filePath": "src/DotPipeCompletionSpec.res"
-    }
-  }, {
-    "label": "CompletionPipeSubmodules",
+    },
+    "detail": "module CompletionPipeProperty",
     "kind": 9,
-    "tags": [],
-    "detail": "module CompletionPipeSubmodules",
-    "documentation": null,
+    "label": "CompletionPipeProperty",
+    "tags": []
+  },
+  {
     "data": {
       "modulePath": "CompletionPipeSubmodules",
       "filePath": "src/DotPipeCompletionSpec.res"
-    }
-  }]
+    },
+    "detail": "module CompletionPipeSubmodules",
+    "kind": 9,
+    "label": "CompletionPipeSubmodules",
+    "tags": []
+  }
+]
 
 Complete src/DotPipeCompletionSpec.res 114:44
 posCursor:[114:44] posNoWhite:[114:43] Found expr:[114:24->114:45]
@@ -679,27 +916,28 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[Dot]
 Path Dot
-[{
-    "label": "DotPipeCompleteFromCurrentModule",
-    "kind": 9,
-    "tags": [],
-    "detail": "module DotPipeCompleteFromCurrentModule",
-    "documentation": null,
+[
+  {
     "data": {
       "modulePath": "DotPipeCompleteFromCurrentModule",
       "filePath": "src/DotPipeCompletionSpec.res"
-    }
-  }, {
-    "label": "DotPipeCompletionSpec",
+    },
+    "detail": "module DotPipeCompleteFromCurrentModule",
     "kind": 9,
-    "tags": [],
-    "detail": "module DotPipeCompletionSpec",
-    "documentation": null,
+    "label": "DotPipeCompleteFromCurrentModule",
+    "tags": []
+  },
+  {
     "data": {
       "modulePath": "DotPipeCompletionSpec",
       "filePath": "src/DotPipeCompletionSpec.res"
-    }
-  }]
+    },
+    "detail": "module DotPipeCompletionSpec",
+    "kind": 9,
+    "label": "DotPipeCompletionSpec",
+    "tags": []
+  }
+]
 
 Complete src/DotPipeCompletionSpec.res 122:11
 posCursor:[122:11] posNoWhite:[122:10] Found expr:[122:3->122:11]
@@ -713,29 +951,40 @@ Path someObj
 ContextPath Value[someObj]->
 ContextPath Value[someObj]
 Path someObj
-[{
-    "label": "[\"age\"]",
-    "kind": 4,
-    "tags": [],
+[
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 11, "line": 122 },
+          "start": { "character": 10, "line": 122 }
+        }
+      }
+    ],
     "detail": "{\"age\": int, \"name\": string}",
-    "documentation": null,
     "insertText": "[\"age\"]",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 122, "character": 10}, "end": {"line": 122, "character": 11}},
-      "newText": ""
-      }]
-  }, {
-    "label": "[\"name\"]",
     "kind": 4,
-    "tags": [],
+    "label": "[\"age\"]",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 11, "line": 122 },
+          "start": { "character": 10, "line": 122 }
+        }
+      }
+    ],
     "detail": "{\"age\": int, \"name\": string}",
-    "documentation": null,
     "insertText": "[\"name\"]",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 122, "character": 10}, "end": {"line": 122, "character": 11}},
-      "newText": ""
-      }]
-  }]
+    "kind": 4,
+    "label": "[\"name\"]",
+    "tags": []
+  }
+]
 
 Complete src/DotPipeCompletionSpec.res 125:13
 posCursor:[125:13] posNoWhite:[125:12] Found expr:[125:3->125:13]
@@ -749,18 +998,24 @@ Path someObj
 ContextPath Value[someObj]->na
 ContextPath Value[someObj]
 Path someObj
-[{
-    "label": "[\"name\"]",
-    "kind": 4,
-    "tags": [],
+[
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 11, "line": 125 },
+          "start": { "character": 10, "line": 125 }
+        }
+      }
+    ],
     "detail": "{\"age\": int, \"name\": string}",
-    "documentation": null,
     "insertText": "[\"name\"]",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 125, "character": 10}, "end": {"line": 125, "character": 11}},
-      "newText": ""
-      }]
-  }]
+    "kind": 4,
+    "label": "[\"name\"]",
+    "tags": []
+  }
+]
 
 Complete src/DotPipeCompletionSpec.res 144:10
 posCursor:[144:10] posNoWhite:[144:9] Found expr:[144:3->144:10]
@@ -778,23 +1033,33 @@ CPPipe pathFromEnv:DOMAPI found:true
 Path DOMAPI.
 Path DotPipeCompletionSpec.HTMLButtonElement.
 Path 
-[{
-    "label": "disabled",
-    "kind": 5,
-    "tags": [],
+[
+  {
     "detail": "bool",
-    "documentation": {"kind": "markdown", "value": "```rescript\ndisabled: bool\n```\n\n```rescript\ntype htmlButtonElement = {mutable disabled: bool}\n```"}
-  }, {
-    "label": "->HTMLButtonElement.checkValidity",
-    "kind": 12,
-    "tags": [],
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ndisabled: bool\n```\n\n```rescript\ntype htmlButtonElement = {mutable disabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "disabled",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 10, "line": 144 },
+          "start": { "character": 9, "line": 144 }
+        }
+      }
+    ],
     "detail": "DOMAPI.htmlButtonElement => bool",
-    "documentation": null,
-    "sortText": "checkValidity",
     "insertText": "->HTMLButtonElement.checkValidity",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 144, "character": 9}, "end": {"line": 144, "character": 10}},
-      "newText": ""
-      }]
-  }]
+    "kind": 12,
+    "label": "->HTMLButtonElement.checkValidity",
+    "sortText": "checkValidity",
+    "tags": []
+  }
+]
 

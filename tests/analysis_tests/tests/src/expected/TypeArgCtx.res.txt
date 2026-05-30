@@ -7,14 +7,19 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[catchResult]
 Path catchResult
-[{
-    "label": "{}",
-    "kind": 22,
-    "tags": [],
+[
+  {
     "detail": "someTyp",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype someTyp = {test: bool}\n```"},
-    "sortText": "A",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype someTyp = {test: bool}\n```"
+    },
     "insertText": "{$0}",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 22,
+    "label": "{}",
+    "sortText": "A",
+    "tags": []
+  }
+]
 

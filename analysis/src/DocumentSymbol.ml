@@ -1,29 +1,5 @@
 (* https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_documentSymbol *)
 
-type kind =
-  | Module
-  | Property
-  | Constructor
-  | Function
-  | Variable
-  | Constant
-  | String
-  | Number
-  | EnumMember
-  | TypeParameter
-
-let kindNumber = function
-  | Module -> 2
-  | Property -> 7
-  | Constructor -> 9
-  | Function -> 12
-  | Variable -> 13
-  | Constant -> 14
-  | String -> 15
-  | Number -> 16
-  | EnumMember -> 22
-  | TypeParameter -> 26
-
 let command ~path =
   let symbols = ref [] in
   let addSymbol name loc kind =
@@ -33,19 +9,21 @@ let command ~path =
       && loc.loc_end.pos_cnum >= 0
     then
       let range = Utils.cmtLocToRange loc in
-      let symbol : Protocol.documentSymbolItem =
-        {name; range; kind = kindNumber kind; children = []}
+      let symbol =
+        Lsp.Types.DocumentSymbol.create ~name ~range ~selectionRange:range
+          ~children:[] ~kind ()
       in
       symbols := symbol :: !symbols
   in
   let rec exprKind (exp : Parsetree.expression) =
     match exp.pexp_desc with
-    | Pexp_fun _ -> Function
+    | Pexp_fun _ -> Lsp.Types.SymbolKind.Function
     | Pexp_constraint (e, _) -> exprKind e
-    | Pexp_constant (Pconst_string _) -> String
-    | Pexp_constant (Pconst_float _ | Pconst_integer _) -> Number
-    | Pexp_constant _ -> Constant
-    | _ -> Variable
+    | Pexp_constant (Pconst_string _) -> Lsp.Types.SymbolKind.String
+    | Pexp_constant (Pconst_float _ | Pconst_integer _) ->
+      Lsp.Types.SymbolKind.Number
+    | Pexp_constant _ -> Lsp.Types.SymbolKind.Constant
+    | _ -> Lsp.Types.SymbolKind.Variable
   in
   let processTypeKind (tk : Parsetree.type_kind) =
     match tk with
@@ -153,7 +131,7 @@ let command ~path =
              end_ = {line = el1; character = ec1};
            };
        } :
-        Protocol.documentSymbolItem)
+        Lsp.Types.DocumentSymbol.t)
       ({
          range =
            {
@@ -161,12 +139,12 @@ let command ~path =
              end_ = {line = el2; character = ec2};
            };
        } :
-        Protocol.documentSymbolItem) =
+        Lsp.Types.DocumentSymbol.t) =
     (sl1 > sl2 || (sl1 = sl2 && sc1 >= sc2))
     && (el1 < el2 || (el1 = el2 && ec1 <= ec2))
   in
-  let compareSymbol (s1 : Protocol.documentSymbolItem)
-      (s2 : Protocol.documentSymbolItem) =
+  let compareSymbol (s1 : Lsp.Types.DocumentSymbol.t)
+      (s2 : Lsp.Types.DocumentSymbol.t) =
     let n = compare s1.range.start.line s2.range.start.line in
     if n <> 0 then n
     else
@@ -182,10 +160,13 @@ let command ~path =
     | [] -> [symbol]
     | last :: rest ->
       if isInside symbol last then
-        let newLast =
-          {last with children = last.children |> addSymbolToChildren ~symbol}
-        in
-        newLast :: rest
+        match last.children with
+        | Some c ->
+          let newLast =
+            {last with children = Some (c |> addSymbolToChildren ~symbol)}
+          in
+          newLast :: rest
+        | _ -> rest
       else symbol :: children
   in
   let rec addSortedSymbolsToChildren ~sortedSymbols children =
@@ -198,4 +179,6 @@ let command ~path =
   in
   let sortedSymbols = !symbols |> List.sort compareSymbol in
   let symbolsWithChildren = [] |> addSortedSymbolsToChildren ~sortedSymbols in
-  print_endline (Protocol.stringifyDocumentSymbolItems symbolsWithChildren)
+  `List (symbolsWithChildren |> List.map Lsp.Types.DocumentSymbol.yojson_of_t)
+  |> Yojson.Safe.pretty_to_string ~std:true
+  |> print_endline

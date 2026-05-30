@@ -8,31 +8,17 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[x]
 Path x
-[{
-    "label": "None",
-    "kind": 12,
-    "tags": [],
+[
+  { "detail": "bool", "kind": 12, "label": "None", "tags": [] },
+  {
     "detail": "bool",
-    "documentation": null
-  }, {
-    "label": "Some(_)",
-    "kind": 12,
-    "tags": [],
-    "detail": "bool",
-    "documentation": null,
     "insertText": "Some(${1:_})",
-    "insertTextFormat": 2
-  }, {
-    "label": "Some(true)",
-    "kind": 4,
-    "tags": [],
-    "detail": "bool",
-    "documentation": null
-  }, {
-    "label": "Some(false)",
-    "kind": 4,
-    "tags": [],
-    "detail": "bool",
-    "documentation": null
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "Some(_)",
+    "tags": []
+  },
+  { "detail": "bool", "kind": 4, "label": "Some(true)", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "Some(false)", "tags": [] }
+]
 

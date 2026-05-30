@@ -492,4 +492,4 @@ let command ~debug ~emitter ~source ~kindFile =
 let semanticTokens ~source ~kindFile =
   let emitter = Token.createEmitter () in
   command ~emitter ~debug:false ~source ~kindFile;
-  Protocol.{data = Token.emit emitter}
+  Lsp.Types.SemanticTokens.create ~data:(Token.emit emitter) ()

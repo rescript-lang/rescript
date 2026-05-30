@@ -41,38 +41,38 @@ let newBsPackage ~rootPath =
       | true -> BuildSystem.getStdlib rootPath
       | false -> BuildSystem.getLibBs rootPath
     in
-    match Json.parse raw with
+    match YojsonHelpers.from_string_opt raw with
     | Some config -> (
       let namespace = FindFiles.getNamespace config in
       let rescriptVersion = getReScriptVersion () in
       let suffix =
-        match config |> Json.get "suffix" with
-        | Some (String suffix) -> suffix
+        match config |> YojsonHelpers.get "suffix" with
+        | Some (`String suffix) -> suffix
         | _ -> ".js"
       in
       let genericJsxModule =
-        let jsxConfig = config |> Json.get "jsx" in
+        let jsxConfig = config |> YojsonHelpers.get "jsx" in
         match jsxConfig with
         | Some jsxConfig -> (
-          match jsxConfig |> Json.get "module" with
-          | Some (String m) when String.lowercase_ascii m <> "react" -> Some m
+          match jsxConfig |> YojsonHelpers.get "module" with
+          | Some (`String m) when String.lowercase_ascii m <> "react" -> Some m
           | _ -> None)
         | None -> None
       in
       let autocomplete =
-        match config |> Json.get "editor" with
+        match config |> YojsonHelpers.get "editor" with
         | Some editorConfig -> (
-          match editorConfig |> Json.get "autocomplete" with
-          | Some (Object map) ->
+          match editorConfig |> YojsonHelpers.get "autocomplete" with
+          | Some (`Assoc map) ->
             map
             |> List.fold_left
                  (fun acc (key, value) ->
                    match value with
-                   | Json.Array items ->
+                   | `List items ->
                      let values =
                        items
                        |> List.filter_map (function
-                            | Json.String s -> Some s
+                            | `String s -> Some s
                             | _ -> None)
                      in
                      Misc.StringMap.add key values acc
@@ -132,8 +132,10 @@ let newBsPackage ~rootPath =
            let bind f x = Option.bind x f in
            let compiler_flags =
              match
-               ( Json.get "compiler-flags" config |> bind Json.array,
-                 Json.get "bsc-flags" config |> bind Json.array )
+               ( YojsonHelpers.get "compiler-flags" config
+                 |> bind YojsonHelpers.to_list_opt,
+                 YojsonHelpers.get "bsc-flags" config
+                 |> bind YojsonHelpers.to_list_opt )
              with
              | Some compiler_flags, None | _, Some compiler_flags ->
                compiler_flags
@@ -141,12 +143,15 @@ let newBsPackage ~rootPath =
            in
            let no_pervasives =
              compiler_flags
-             |> List.exists (fun s -> Json.string s = Some "-nopervasives")
+             |> List.exists (fun s ->
+                    match s with
+                    | `String s -> s = "-nopervasives"
+                    | _ -> false)
            in
            let opens_from_compiler_flags =
              List.fold_left
                (fun opens item ->
-                 match item |> Json.string with
+                 match item |> Yojson.Safe.Util.to_string_option with
                  | None -> opens
                  | Some s -> (
                    let parts = String.split_on_char ' ' s in

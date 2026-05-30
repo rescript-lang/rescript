@@ -1,0 +1,12 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/variant_spread_pattern_type_params.res[0m:[2m6:8[0m
+
+  4 [2m│[0m let f = (b: b) =>
+  5 [2m│[0m   switch b {
+  [1;31m6[0m [2m│[0m   | ...[1;31ma[0m as x => x
+  7 [2m│[0m   | Three => One
+  8 [2m│[0m   }
+
+  The type a
+has type parameters, but type parameters is not supported here.

@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/UntaggedAtMostOneObject.res[0m:[2m4:15-20[0m
+
+  2 [2m│[0m type b = {y: int}
+  3 [2m│[0m @unboxed
+  [1;31m4[0m [2m│[0m type t = A(a) [1;31m| B(b)[0m
+  5 [2m│[0m 
+
+  This untagged variant definition is invalid: At most one case can be an object type.

@@ -1,3 +1,8 @@
 Hover src/Auto.res 2:13
-{"contents": {"kind": "markdown", "value": "```rescript\n('a => 'b, list<'a>) => list<'b>\n```"}}
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\n('a => 'b, list<'a>) => list<'b>\n```"
+  }
+}
 

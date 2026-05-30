@@ -5,29 +5,38 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[date]
 Path date
-[{
+[
+  {
+    "detail": "Date.t",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\nA type representing a JavaScript date.\n"
+    },
+    "kind": 12,
     "label": "None",
-    "kind": 12,
-    "tags": [],
+    "tags": []
+  },
+  {
     "detail": "Date.t",
-    "documentation": {"kind": "markdown", "value": "\nA type representing a JavaScript date.\n"}
-  }, {
-    "label": "Some(_)",
-    "kind": 12,
-    "tags": [],
-    "detail": "Date.t",
-    "documentation": {"kind": "markdown", "value": "\nA type representing a JavaScript date.\n"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "\nA type representing a JavaScript date.\n"
+    },
     "insertText": "Some(${1:_})",
-    "insertTextFormat": 2
-  }, {
-    "label": "Some(date)",
-    "kind": 4,
-    "tags": [],
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "Some(_)",
+    "tags": []
+  },
+  {
     "detail": "date",
-    "documentation": null,
     "insertText": "Some(${0:date})",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Some(date)",
+    "tags": []
+  }
+]
 
 Complete src/CompletionTypeT.res 7:27
 XXX Not found!
@@ -36,77 +45,78 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Type[withDate]
 Path withDate
-[{
-    "label": "Date.makeWithYMD()",
-    "kind": 12,
-    "tags": [],
+[
+  {
     "detail": "(~year: int, ~month: int, ~day: int) => t",
-    "documentation": null,
     "insertText": "Date.makeWithYMD($0)",
-    "insertTextFormat": 2
-  }, {
-    "label": "Date.makeWithYMDHM()",
+    "insertTextFormat": 2,
     "kind": 12,
-    "tags": [],
+    "label": "Date.makeWithYMD()",
+    "tags": []
+  },
+  {
     "detail": "(\n  ~year: int,\n  ~month: int,\n  ~day: int,\n  ~hours: int,\n  ~minutes: int,\n) => t",
-    "documentation": null,
     "insertText": "Date.makeWithYMDHM($0)",
-    "insertTextFormat": 2
-  }, {
-    "label": "Date.make()",
+    "insertTextFormat": 2,
     "kind": 12,
-    "tags": [],
+    "label": "Date.makeWithYMDHM()",
+    "tags": []
+  },
+  {
     "detail": "unit => t",
-    "documentation": null,
     "insertText": "Date.make($0)",
-    "insertTextFormat": 2
-  }, {
-    "label": "Date.fromTime()",
+    "insertTextFormat": 2,
     "kind": 12,
-    "tags": [],
+    "label": "Date.make()",
+    "tags": []
+  },
+  {
     "detail": "msSinceEpoch => t",
-    "documentation": null,
     "insertText": "Date.fromTime($0)",
-    "insertTextFormat": 2
-  }, {
-    "label": "Date.fromString()",
+    "insertTextFormat": 2,
     "kind": 12,
-    "tags": [],
+    "label": "Date.fromTime()",
+    "tags": []
+  },
+  {
     "detail": "string => t",
-    "documentation": null,
     "insertText": "Date.fromString($0)",
-    "insertTextFormat": 2
-  }, {
-    "label": "Date.makeWithYMDHMSM()",
+    "insertTextFormat": 2,
     "kind": 12,
-    "tags": [],
+    "label": "Date.fromString()",
+    "tags": []
+  },
+  {
     "detail": "(\n  ~year: int,\n  ~month: int,\n  ~day: int,\n  ~hours: int,\n  ~minutes: int,\n  ~seconds: int,\n  ~milliseconds: int,\n) => t",
-    "documentation": null,
     "insertText": "Date.makeWithYMDHMSM($0)",
-    "insertTextFormat": 2
-  }, {
-    "label": "Date.makeWithYM()",
+    "insertTextFormat": 2,
     "kind": 12,
-    "tags": [],
+    "label": "Date.makeWithYMDHMSM()",
+    "tags": []
+  },
+  {
     "detail": "(~year: int, ~month: int) => t",
-    "documentation": null,
     "insertText": "Date.makeWithYM($0)",
-    "insertTextFormat": 2
-  }, {
-    "label": "Date.makeWithYMDHMS()",
+    "insertTextFormat": 2,
     "kind": 12,
-    "tags": [],
+    "label": "Date.makeWithYM()",
+    "tags": []
+  },
+  {
     "detail": "(\n  ~year: int,\n  ~month: int,\n  ~day: int,\n  ~hours: int,\n  ~minutes: int,\n  ~seconds: int,\n) => t",
-    "documentation": null,
     "insertText": "Date.makeWithYMDHMS($0)",
-    "insertTextFormat": 2
-  }, {
-    "label": "Date.makeWithYMDH()",
+    "insertTextFormat": 2,
     "kind": 12,
-    "tags": [],
+    "label": "Date.makeWithYMDHMS()",
+    "tags": []
+  },
+  {
     "detail": "(~year: int, ~month: int, ~day: int, ~hours: int) => t",
-    "documentation": null,
     "insertText": "Date.makeWithYMDH($0)",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "Date.makeWithYMDH()",
+    "tags": []
+  }
+]
 

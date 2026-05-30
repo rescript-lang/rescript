@@ -8,16 +8,18 @@ let document_syntax ~source ~kindFile =
            let _, endline, endcol =
              Location.get_pos_info (Res_diagnostics.get_end_pos diagnostic)
            in
-           Protocol.
-             {
-               range =
-                 {
-                   start = {line = startline - 1; character = startcol};
-                   end_ = {line = endline - 1; character = endcol};
-                 };
-               message = Res_diagnostics.explain diagnostic;
-               severity = 1;
-             })
+           let range =
+             Lsp.Types.Range.create
+               ~start:
+                 (Lsp.Types.Position.create ~line:(startline - 1)
+                    ~character:startcol)
+               ~end_:
+                 (Lsp.Types.Position.create ~line:(endline - 1)
+                    ~character:endcol)
+           in
+           Lsp.Types.Diagnostic.create ~range
+             ~message:(`String (Res_diagnostics.explain diagnostic))
+             ~severity:Lsp.Types.DiagnosticSeverity.Error ())
   in
   if kindFile = Files.Res then
     let parseImplementation =

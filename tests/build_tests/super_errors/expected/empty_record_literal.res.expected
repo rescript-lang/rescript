@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/empty_record_literal.res[0m:[2m1:11-12[0m
+
+  [1;31m1[0m [2m│[0m let bad = [1;31m{}[0m
+  2 [2m│[0m 
+
+  Empty record literal {} should be type annotated or used in a record context.

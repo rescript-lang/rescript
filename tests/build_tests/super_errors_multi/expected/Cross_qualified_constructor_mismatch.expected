@@ -1,0 +1,10 @@
+===== User.res =====
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/Cross_qualified_constructor_mismatch/User.res[0m:[2m1:18-26[0m
+
+  [1;31m1[0m [2m│[0m let v: Shape.t = [1;31mColor.Red[0m
+  2 [2m│[0m 
+
+  The constructor Color.Red belongs to the variant type Color.t
+  but a constructor was expected belonging to the variant type Shape.t

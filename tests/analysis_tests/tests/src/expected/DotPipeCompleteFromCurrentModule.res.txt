@@ -16,17 +16,23 @@ Path x
 CPPipe pathFromEnv:X found:true
 Path X.
 Path 
-[{
-    "label": "->z",
-    "kind": 12,
-    "tags": [],
+[
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 13, "line": 10 },
+          "start": { "character": 12, "line": 10 }
+        }
+      }
+    ],
     "detail": "X.t => string",
-    "documentation": null,
-    "sortText": "z",
     "insertText": "->z",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 10, "character": 12}, "end": {"line": 10, "character": 13}},
-      "newText": ""
-      }]
-  }]
+    "kind": 12,
+    "label": "->z",
+    "sortText": "z",
+    "tags": []
+  }
+]
 

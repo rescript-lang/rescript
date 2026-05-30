@@ -1,0 +1,15 @@
+===== Foo.res =====
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/Smoke_interface_mismatch/Foo.res[0m:[2m1:5[0m
+
+  [1;31m1[0m [2m│[0m let [1;31mv[0m = "not an int"
+  2 [2m│[0m 
+
+  The implementation /.../fixtures/Smoke_interface_mismatch/Foo.res
+  does not match the interface /.../fixtures/Smoke_interface_mismatch/foo.cmi:
+  Values do not match: let v: string is not included in let v: int
+  [36m/.../fixtures/Smoke_interface_mismatch/Foo.resi[0m:[2m1:1-10[0m:
+    Expected declaration
+  [36m/.../fixtures/Smoke_interface_mismatch/Foo.res[0m:[2m1:5[0m:
+    Actual declaration

@@ -12,6 +12,7 @@ depends: [
   "cmarkit" {>= "0.3.0"}
   "cppo" {= "1.8.0"}
   "analysis"
+  "yojson" {= "2.2.2"}
   "odoc" {with-doc}
 ]
 build: [

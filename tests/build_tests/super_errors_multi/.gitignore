@@ -1,0 +1,6 @@
+fixtures/**/*.cmi
+fixtures/**/*.cmj
+fixtures/**/*.cmt
+fixtures/**/*.cmti
+fixtures/**/*.mjs
+fixtures/**/*.js

@@ -1,0 +1,16 @@
+===== User.res =====
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/Cross_polyvariant_constraint/User.res[0m:[2m1:19-25[0m
+
+  [1;31m1[0m [2m│[0m let v = Spec.pick([1;31m#Purple[0m)
+  2 [2m│[0m 
+
+  This has type: [1;31m[> #Purple][0m
+  But this function argument is expecting: [1;33mSpec.allowed[0m
+  
+  The second polymorphic variant is [1;33mclosed[0m and doesn't include the constructor: [1;31m#Purple[0m.
+  
+  Possible solutions:
+  - Either make the second variant [1;33mopen[0m so it can accept additional constructors. To do this, make sure the type starts with [1;33m[>[0m instead of [1;33m[[0m
+  - Or add the missing constructor to it.

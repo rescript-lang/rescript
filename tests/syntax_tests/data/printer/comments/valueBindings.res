@@ -10,6 +10,14 @@ let walkList: 'node. unit = comments => {
   let x /* comment */ = 0
 }
 
+let x // comment before equals
+= 1
+
+let multilineString // comment before equals
+= "
+multiline
+"
+
 let walkList: 'node. (
   ~prevLoc: Location.t=?,
   ~getLoc: 'node => Location.t,

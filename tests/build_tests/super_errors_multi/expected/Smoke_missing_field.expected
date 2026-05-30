@@ -1,0 +1,9 @@
+===== Use.res =====
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/Smoke_missing_field/Use.res[0m:[2m1:23-28[0m
+
+  [1;31m1[0m [2m│[0m let bad: Defs.point = [1;31m{x: 1}[0m
+  2 [2m│[0m 
+
+  Some required record fields are missing: y.
