@@ -44,7 +44,7 @@
   (wasm_of_ocaml-compiler
    (and
     (<> :os "win32")
-    :with-test`
+    :with-test
     (= 6.0.1)))))
 
 (package
