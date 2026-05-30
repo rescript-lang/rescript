@@ -55,7 +55,11 @@
    (>= 5.0.0))
   (cppo
    (= 1.8.0))
-  (odoc :with-doc)))
+  (odoc :with-doc)
+  (lsp
+   (= 1.22.0))
+  (yojson
+    (= 2.2.2))))
 
 (package
  (name tools)
@@ -68,4 +72,6 @@
   (cppo
    (= 1.8.0))
   analysis
+  (yojson
+    (= 2.2.2))
   (odoc :with-doc)))

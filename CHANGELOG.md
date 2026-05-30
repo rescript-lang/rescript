@@ -43,6 +43,7 @@
 - Improve deprecated attribute extraction and support record form. https://github.com/rescript-lang/rescript/pull/8396
 - Refactor analysis to decouple I/O from core logic. https://github.com/rescript-lang/rescript/pull/8426
 - Deprecate `Stdlib_Error` and `Stdlib_Exn` modules in favor of `JsError/JsExn`. https://github.com/rescript-lang/rescript/pull/8404
+- Remove vendored `Json` library and use `yojson` and `lsp` library for analysis. https://github.com/rescript-lang/rescript/pull/8436
 
 #### :house: Internal
 

@@ -2,7 +2,7 @@ let spacing = "\n```\n \n```\n"
 let codeBlock code = Printf.sprintf "```rescript\n%s\n```" code
 let divider = "\n---\n"
 
-type link = {startPos: Protocol.position; file: string; label: string}
+type link = {startPos: Lsp.Types.Position.t; file: string; label: string}
 
 let linkToCommandArgs link =
   Printf.sprintf "[\"%s\",%i,%i]" link.file link.startPos.line

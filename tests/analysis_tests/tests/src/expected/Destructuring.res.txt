@@ -5,13 +5,18 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[x]
 Path x
-[{
-    "label": "age",
-    "kind": 5,
-    "tags": [],
+[
+  {
     "detail": "int",
-    "documentation": {"kind": "markdown", "value": "```rescript\nage: int\n```\n\n```rescript\ntype x = {name: string, age: int}\n```"}
-  }]
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nage: int\n```\n\n```rescript\ntype x = {name: string, age: int}\n```"
+    },
+    "kind": 5,
+    "label": "age",
+    "tags": []
+  }
+]
 
 Complete src/Destructuring.res 7:8
 posCursor:[7:8] posNoWhite:[7:7] Found pattern:[7:7->7:9]
@@ -20,19 +25,28 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[x]
 Path x
-[{
-    "label": "name",
-    "kind": 5,
-    "tags": [],
+[
+  {
     "detail": "string",
-    "documentation": {"kind": "markdown", "value": "```rescript\nname: string\n```\n\n```rescript\ntype x = {name: string, age: int}\n```"}
-  }, {
-    "label": "age",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nname: string\n```\n\n```rescript\ntype x = {name: string, age: int}\n```"
+    },
     "kind": 5,
-    "tags": [],
+    "label": "name",
+    "tags": []
+  },
+  {
     "detail": "int",
-    "documentation": {"kind": "markdown", "value": "```rescript\nage: int\n```\n\n```rescript\ntype x = {name: string, age: int}\n```"}
-  }]
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nage: int\n```\n\n```rescript\ntype x = {name: string, age: int}\n```"
+    },
+    "kind": 5,
+    "label": "age",
+    "tags": []
+  }
+]
 
 Complete src/Destructuring.res 11:13
 posCursor:[11:13] posNoWhite:[11:11] Found expr:[10:8->14:1]
@@ -43,13 +57,18 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[x]
 Path x
-[{
-    "label": "age",
-    "kind": 5,
-    "tags": [],
+[
+  {
     "detail": "int",
-    "documentation": {"kind": "markdown", "value": "```rescript\nage: int\n```\n\n```rescript\ntype x = {name: string, age: int}\n```"}
-  }]
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nage: int\n```\n\n```rescript\ntype x = {name: string, age: int}\n```"
+    },
+    "kind": 5,
+    "label": "age",
+    "tags": []
+  }
+]
 
 Complete src/Destructuring.res 17:10
 posCursor:[17:10] posNoWhite:[17:9] Found expr:[16:9->20:1]
@@ -60,19 +79,28 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[x]
 Path x
-[{
-    "label": "name",
-    "kind": 5,
-    "tags": [],
+[
+  {
     "detail": "string",
-    "documentation": {"kind": "markdown", "value": "```rescript\nname: string\n```\n\n```rescript\ntype x = {name: string, age: int}\n```"}
-  }, {
-    "label": "age",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nname: string\n```\n\n```rescript\ntype x = {name: string, age: int}\n```"
+    },
     "kind": 5,
-    "tags": [],
+    "label": "name",
+    "tags": []
+  },
+  {
     "detail": "int",
-    "documentation": {"kind": "markdown", "value": "```rescript\nage: int\n```\n\n```rescript\ntype x = {name: string, age: int}\n```"}
-  }]
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nage: int\n```\n\n```rescript\ntype x = {name: string, age: int}\n```"
+    },
+    "kind": 5,
+    "label": "age",
+    "tags": []
+  }
+]
 
 Complete src/Destructuring.res 31:8
 posCursor:[31:8] posNoWhite:[31:7] Found pattern:[31:7->31:9]
@@ -81,17 +109,26 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[x]
 Path x
-[{
-    "label": "someField",
-    "kind": 5,
-    "tags": [],
+[
+  {
     "detail": "int",
-    "documentation": {"kind": "markdown", "value": "```rescript\nsomeField: int\n```\n\n```rescript\ntype recordWithOptField = {someField: int, someOptField: option<bool>}\n```"}
-  }, {
-    "label": "?someOptField",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nsomeField: int\n```\n\n```rescript\ntype recordWithOptField = {someField: int, someOptField: option<bool>}\n```"
+    },
     "kind": 5,
-    "tags": [],
+    "label": "someField",
+    "tags": []
+  },
+  {
     "detail": "option<bool>",
-    "documentation": {"kind": "markdown", "value": "someOptField is an optional field, and needs to be destructured using '?'.\n\n```rescript\n?someOptField: option<bool>\n```\n\n```rescript\ntype recordWithOptField = {someField: int, someOptField: option<bool>}\n```"}
-  }]
+    "documentation": {
+      "kind": "markdown",
+      "value": "someOptField is an optional field, and needs to be destructured using '?'.\n\n```rescript\n?someOptField: option<bool>\n```\n\n```rescript\ntype recordWithOptField = {someField: int, someOptField: option<bool>}\n```"
+    },
+    "kind": 5,
+    "label": "?someOptField",
+    "tags": []
+  }
+]
 
