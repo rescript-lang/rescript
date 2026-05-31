@@ -106,7 +106,7 @@ jobs:
         with:
           # https://github.com/ocaml/setup-ocaml/blob/2f57267f071bc8547dfcb9433ff21d44fffef190/packages/setup-ocaml/src/unix.ts#L48
           # plus OPAM wants cmake
-          packages: bubblewrap darcs g++-multilib gcc-multilib mercurial musl-tools rsync cmake linux-libc-dev
+          packages: bubblewrap darcs g++-multilib gcc-multilib mercurial musl-tools rsync cmake build-essential
           version: v4
 
       - name: Restore rewatch build cache
