@@ -206,8 +206,8 @@ map((arr, i): coordinate<globalCoordinates> => {
   x +. (Environment.width /. 2. -. centering.x)
 })
 
-let _ = assert(true)
-let _ = {assert(true)}
+let _ = assert({true})
+let _ = {assert({true})}
 
 let _ = {%extension}
 let _ = {module(ME)}

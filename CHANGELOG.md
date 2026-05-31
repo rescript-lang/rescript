@@ -16,6 +16,7 @@
 
 - Make `Jsx.component` abstract. https://github.com/rescript-lang/rescript/pull/8390
 - Drop Node.js version 20.x support, as it is reaching EOL. https://github.com/rescript-lang/rescript/pull/8401
+- Remove `assert` as a reserved keyword. Since v12 `assert` is parsed as regular function. If you ran the formatter on your codebase using v12, this change is not a breaking change. https://github.com/rescript-lang/rescript/pull/8399
 
 #### :eyeglasses: Spec Compliance
 

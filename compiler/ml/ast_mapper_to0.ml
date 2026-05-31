@@ -504,7 +504,6 @@ module E = struct
       letexception ~loc ~attrs
         (sub.extension_constructor sub cd)
         (sub.expr sub e)
-    | Pexp_assert e -> assert_ ~loc ~attrs (sub.expr sub e)
     | Pexp_newtype (s, e) ->
       newtype ~loc ~attrs (map_loc sub s) (sub.expr sub e)
     | Pexp_pack me -> pack ~loc ~attrs (sub.module_expr sub me)

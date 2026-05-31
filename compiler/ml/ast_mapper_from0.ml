@@ -624,7 +624,11 @@ module E = struct
       letexception ~loc ~attrs
         (sub.extension_constructor sub cd)
         (sub.expr sub e)
-    | Pexp_assert e -> assert_ ~loc ~attrs (sub.expr sub e)
+    | Pexp_assert e ->
+      apply ~loc ~attrs
+        (ident ~loc
+           {txt = Longident.Ldot (Longident.Lident "Pervasives", "assert"); loc})
+        [(Asttypes.Nolabel, sub.expr sub e)]
     | Pexp_lazy _ -> failwith "Pexp_lazy is no longer present in ReScript"
     | Pexp_poly _ -> failwith "Pexp_poly is no longer present in ReScript"
     | Pexp_object () -> assert false

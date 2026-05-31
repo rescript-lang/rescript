@@ -84,7 +84,7 @@ let _ = await (
     sideEffect()
   }
 )
-let _ = await (assert(x))
+let _ = await assert(x)
 let _ = await promises[0]
 let _ = await promises["resolved"]
 let _ = await promises["resolved"] = sideEffect()

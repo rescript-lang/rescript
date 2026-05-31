@@ -131,6 +131,7 @@ type error =
   | Type_params_not_supported of Longident.t
   | Field_access_on_dict_type
   | Jsx_not_enabled
+  | Assert_must_be_direct_call
 
 exception Error of Location.t * Env.t * error
 exception Error_forward of Location.error

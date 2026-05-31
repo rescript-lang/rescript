@@ -189,7 +189,6 @@ module Exp = struct
   let send ?loc ?attrs a b = mk ?loc ?attrs (Pexp_send (a, b))
   let letmodule ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_letmodule (a, b, c))
   let letexception ?loc ?attrs a b = mk ?loc ?attrs (Pexp_letexception (a, b))
-  let assert_ ?loc ?attrs a = mk ?loc ?attrs (Pexp_assert a)
   let newtype ?loc ?attrs a b = mk ?loc ?attrs (Pexp_newtype (a, b))
   let pack ?loc ?attrs a = mk ?loc ?attrs (Pexp_pack a)
   let open_ ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_open (a, b, c))

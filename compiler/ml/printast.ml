@@ -347,9 +347,6 @@ and expression i ppf x =
     line i ppf "Pexp_letexception\n";
     extension_constructor i ppf cd;
     expression i ppf e
-  | Pexp_assert e ->
-    line i ppf "Pexp_assert\n";
-    expression i ppf e
   | Pexp_newtype (s, e) ->
     line i ppf "Pexp_newtype \"%s\"\n" s.txt;
     expression i ppf e
