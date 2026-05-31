@@ -8,18 +8,18 @@ val add :
   file:FileContext.t ->
   path:DcePath.t ->
   loc:Location.t ->
-  strLoc:Location.t ->
-  moduleLoc:Location.t ->
+  str_loc:Location.t ->
+  module_loc:Location.t ->
   Name.t ->
   Name.t
 
-val markAsUsed :
+val mark_as_used :
   config:DceConfig.t ->
   refs:References.builder ->
   file_deps:FileDeps.builder ->
   cross_file:CrossFileItems.builder ->
   binding:Location.t ->
-  locFrom:Location.t ->
-  locTo:Location.t ->
+  loc_from:Location.t ->
+  loc_to:Location.t ->
   Path.t ->
   unit

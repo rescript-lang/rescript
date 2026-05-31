@@ -10,7 +10,7 @@
 let default_socket_filename = ".rescript-reanalyze.sock"
 
 let project_root_from_dir (dir : string) : string option =
-  try Some (Paths.findProjectRoot ~dir) with _ -> None
+  try Some (Paths.find_project_root ~dir) with _ -> None
 
 let with_cwd_dir (cwd : string) (f : unit -> 'a) : 'a =
   let old = Sys.getcwd () in
@@ -27,7 +27,7 @@ let default_socket_for_dir_exn (dir : string) : string * string =
   | None ->
     (* Match reanalyze behavior: it cannot run outside a project root. *)
     Printf.eprintf "Error: cannot find project root containing %s.\n%!"
-      Paths.rescriptJson;
+      Paths.rescript_json;
     exit 2
 
 let default_socket_for_current_project_exn () : string * string =
@@ -108,7 +108,7 @@ module Server = struct
     parse_argv: string array -> string option;
     run_analysis:
       dce_config:DceConfig.t ->
-      cmtRoot:string option ->
+      cmt_root:string option ->
       reactive_collection:ReactiveAnalysis.t option ->
       reactive_merge:ReactiveMerge.t option ->
       reactive_liveness:ReactiveLiveness.t option ->
@@ -118,7 +118,7 @@ module Server = struct
       unit ->
       unit;
     config: server_config;
-    cmtRoot: string option;
+    cmt_root: string option;
     mutable pipeline: reactive_pipeline;
     stats: server_stats;
     mutable config_snapshot: RunConfig.snapshot;
@@ -295,7 +295,7 @@ Examples:
   let init_state ~(parse_argv : string array -> string option)
       ~(run_analysis :
          dce_config:DceConfig.t ->
-         cmtRoot:string option ->
+         cmt_root:string option ->
          reactive_collection:ReactiveAnalysis.t option ->
          reactive_merge:ReactiveMerge.t option ->
          reactive_liveness:ReactiveLiveness.t option ->
@@ -307,7 +307,7 @@ Examples:
     Printexc.record_backtrace true;
     with_cwd config.cwd (fun () ->
         (* Editor mode only: the server always behaves like `reanalyze -json`. *)
-        let cmtRoot = parse_argv [|"reanalyze"; "-json"|] in
+        let cmt_root = parse_argv [|"reanalyze"; "-json"|] in
         (* Force reactive mode in server. *)
         Cli.reactive := true;
         (* Keep server requests single-run and deterministic. *)
@@ -328,7 +328,7 @@ Examples:
               parse_argv;
               run_analysis;
               config;
-              cmtRoot;
+              cmt_root;
               pipeline;
               stats = {request_count = 0};
               config_snapshot = RunConfig.snapshot ();
@@ -358,7 +358,7 @@ Examples:
               (* Re-read config from rescript.json to detect changes.
                  If changed, recreate the entire reactive pipeline from scratch. *)
               RunConfig.reset ();
-              Paths.Config.processConfig ();
+              Paths.Config.process_config ();
               let new_snapshot = RunConfig.snapshot () in
               if
                 not
@@ -377,7 +377,7 @@ Examples:
               Printf.printf "\n";
               EmitJson.start ();
               let p = state.pipeline in
-              state.run_analysis ~dce_config:p.dce_config ~cmtRoot:state.cmtRoot
+              state.run_analysis ~dce_config:p.dce_config ~cmt_root:state.cmt_root
                 ~reactive_collection:(Some p.reactive_collection)
                 ~reactive_merge:(Some p.reactive_merge)
                 ~reactive_liveness:(Some p.reactive_liveness)
@@ -453,7 +453,7 @@ Examples:
   let cli ~(parse_argv : string array -> string option)
       ~(run_analysis :
          dce_config:DceConfig.t ->
-         cmtRoot:string option ->
+         cmt_root:string option ->
          reactive_collection:ReactiveAnalysis.t option ->
          reactive_merge:ReactiveMerge.t option ->
          reactive_liveness:ReactiveLiveness.t option ->
@@ -479,7 +479,7 @@ end
 let server_cli ~(parse_argv : string array -> string option)
     ~(run_analysis :
        dce_config:DceConfig.t ->
-       cmtRoot:string option ->
+       cmt_root:string option ->
        reactive_collection:ReactiveAnalysis.t option ->
        reactive_merge:ReactiveMerge.t option ->
        reactive_liveness:ReactiveLiveness.t option ->

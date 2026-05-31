@@ -1,26 +1,26 @@
 open SharedTypes
 
-let isModuleType (declared : Module.t Declared.t) =
-  match declared.modulePath with
-  | ExportedModule {isType} -> isType
+let is_module_type (declared : Module.t Declared.t) =
+  match declared.module_path with
+  | ExportedModule {is_type} -> is_type
   | _ -> false
 
-let addDeclared ~(name : string Location.loc) ~extent ~stamp ~(env : Env.t)
-    ~item attributes addExported addStamp =
-  let isExported = addExported name.txt stamp in
+let add_declared ~(name : string Location.loc) ~extent ~stamp ~(env : Env.t)
+    ~item attributes add_exported add_stamp =
+  let is_exported = add_exported name.txt stamp in
   let declared =
-    ProcessAttributes.newDeclared ~item ~extent ~name ~stamp
-      ~modulePath:env.modulePath isExported attributes
+    ProcessAttributes.new_declared ~item ~extent ~name ~stamp
+      ~module_path:env.module_path is_exported attributes
   in
-  addStamp env.stamps stamp declared;
+  add_stamp env.stamps stamp declared;
   declared
 
-let attrsToDocstring attrs =
-  match ProcessAttributes.findDocAttribute attrs with
+let attrs_to_docstring attrs =
+  match ProcessAttributes.find_doc_attribute attrs with
   | None -> []
   | Some docstring -> [docstring]
 
-let mapRecordField {Types.ld_id; ld_type; ld_attributes; ld_optional} =
+let map_record_field {Types.ld_id; ld_type; ld_attributes; ld_optional} =
   let astamp = Ident.binding_time ld_id in
   let name = Ident.name ld_id in
   {
@@ -29,34 +29,34 @@ let mapRecordField {Types.ld_id; ld_type; ld_attributes; ld_optional} =
     typ = ld_type;
     optional = ld_optional;
     docstring =
-      (match ProcessAttributes.findDocAttribute ld_attributes with
+      (match ProcessAttributes.find_doc_attribute ld_attributes with
       | None -> []
       | Some docstring -> [docstring]);
-    deprecated = ProcessAttributes.findDeprecatedAttribute ld_attributes;
+    deprecated = ProcessAttributes.find_deprecated_attribute ld_attributes;
   }
 
-let rec forTypeSignatureItem ~(env : SharedTypes.Env.t) ~(exported : Exported.t)
+let rec for_type_signature_item ~(env : SharedTypes.Env.t) ~(exported : Exported.t)
     (item : Types.signature_item) =
   match item with
   | Sig_value (ident, {val_type; val_attributes; val_loc = loc}) ->
     let item = val_type in
     let stamp = Ident.binding_time ident in
-    let oldDeclared = Stamps.findValue env.stamps stamp in
+    let old_declared = Stamps.find_value env.stamps stamp in
     let declared =
-      addDeclared
+      add_declared
         ~name:(Location.mkloc (Ident.name ident) loc)
         ~extent:loc ~stamp ~env ~item val_attributes
         (Exported.add exported Exported.Value)
-        Stamps.addValue
+        Stamps.add_value
     in
     let declared =
       (* When an id is shadowed, a module constraint without the doc comment is created.
          Here the existing doc comment is restored. See https://github.com/rescript-lang/rescript-vscode/issues/621 *)
-      match oldDeclared with
-      | Some oldDeclared when declared.docstring = [] ->
-        let newDeclared = {declared with docstring = oldDeclared.docstring} in
-        Stamps.addValue env.stamps stamp newDeclared;
-        newDeclared
+      match old_declared with
+      | Some old_declared when declared.docstring = [] ->
+        let new_declared = {declared with docstring = old_declared.docstring} in
+        Stamps.add_value env.stamps stamp new_declared;
+        new_declared
       | _ -> declared
     in
     [
@@ -65,16 +65,16 @@ let rec forTypeSignatureItem ~(env : SharedTypes.Env.t) ~(exported : Exported.t)
         name = declared.name.txt;
         docstring = declared.docstring;
         deprecated = declared.deprecated;
-        loc = declared.extentLoc;
+        loc = declared.extent_loc;
       };
     ]
   | Sig_type
       ( ident,
         ({type_loc; type_kind; type_manifest; type_attributes} as decl),
-        recStatus ) ->
+        rec_status ) ->
     let declared =
       let name = Location.mknoloc (Ident.name ident) in
-      addDeclared ~extent:type_loc
+      add_declared ~extent:type_loc
         ~item:
           {
             Type.decl;
@@ -110,84 +110,84 @@ let rec forTypeSignatureItem ~(env : SharedTypes.Env.t) ~(exported : Exported.t)
                                    (args
                                    |> List.map (fun t -> (t, Location.none)))
                                | Cstr_record fields ->
-                                 InlineRecord (fields |> List.map mapRecordField));
+                                 InlineRecord (fields |> List.map map_record_field));
                              res = cd_res;
-                             typeDecl = (name, decl);
-                             docstring = attrsToDocstring cd_attributes;
+                             type_decl = (name, decl);
+                             docstring = attrs_to_docstring cd_attributes;
                              deprecated =
-                               ProcessAttributes.findDeprecatedAttribute
+                               ProcessAttributes.find_deprecated_attribute
                                  cd_attributes;
                            }
                          in
                          let declared =
-                           ProcessAttributes.newDeclared ~item ~extent:cd_loc
+                           ProcessAttributes.new_declared ~item ~extent:cd_loc
                              ~name:(Location.mknoloc name)
                              ~stamp (* TODO maybe this needs another child *)
-                             ~modulePath:env.modulePath true cd_attributes
+                             ~module_path:env.module_path true cd_attributes
                          in
-                         Stamps.addConstructor env.stamps stamp declared;
+                         Stamps.add_constructor env.stamps stamp declared;
                          item))
               | Type_record (fields, _) ->
-                Record (fields |> List.map mapRecordField));
+                Record (fields |> List.map map_record_field));
           }
         ~name ~stamp:(Ident.binding_time ident) ~env type_attributes
         (Exported.add exported Exported.Type)
-        Stamps.addType
+        Stamps.add_type
     in
     [
       {
-        Module.kind = Type (declared.item, recStatus);
+        Module.kind = Type (declared.item, rec_status);
         name = declared.name.txt;
         docstring = declared.docstring;
         deprecated = declared.deprecated;
-        loc = declared.extentLoc;
+        loc = declared.extent_loc;
       };
     ]
   | Sig_module (ident, {md_type; md_attributes; md_loc}, _) ->
     let name = Ident.name ident in
     let declared =
-      addDeclared ~extent:md_loc
-        ~item:(forTypeModule ~name ~env md_type)
+      add_declared ~extent:md_loc
+        ~item:(for_type_module ~name ~env md_type)
         ~name:(Location.mkloc name md_loc)
         ~stamp:(Ident.binding_time ident) ~env md_attributes
         (Exported.add exported Exported.Module)
-        Stamps.addModule
+        Stamps.add_module
     in
     [
       {
         Module.kind =
-          Module {type_ = declared.item; isModuleType = isModuleType declared};
+          Module {type_ = declared.item; is_module_type = is_module_type declared};
         name = declared.name.txt;
         docstring = declared.docstring;
         deprecated = declared.deprecated;
-        loc = declared.extentLoc;
+        loc = declared.extent_loc;
       };
     ]
   | _ -> []
 
-and forTypeSignature ~name ~env signature =
+and for_type_signature ~name ~env signature =
   let exported = Exported.init () in
   let items =
     List.fold_right
-      (fun item items -> forTypeSignatureItem ~env ~exported item @ items)
+      (fun item items -> for_type_signature_item ~env ~exported item @ items)
       signature []
   in
   {Module.name; docstring = []; exported; items; deprecated = None}
 
-and forTypeModule ~name ~env moduleType =
-  match moduleType with
+and for_type_module ~name ~env module_type =
+  match module_type with
   | Types.Mty_ident path -> Ident path
   | Mty_alias (_ (* 402 *), path) -> Ident path
-  | Mty_signature signature -> Structure (forTypeSignature ~name ~env signature)
-  | Mty_functor (_argIdent, _argType, resultType) ->
-    forTypeModule ~name ~env resultType
+  | Mty_signature signature -> Structure (for_type_signature ~name ~env signature)
+  | Mty_functor (_argIdent, _argType, result_type) ->
+    for_type_module ~name ~env result_type
 
-let getModuleTypePath mod_desc =
+let get_module_type_path mod_desc =
   match mod_desc with
   | Typedtree.Tmty_ident (path, _) | Tmty_alias (path, _) -> Some path
   | Tmty_signature _ | Tmty_functor _ | Tmty_with _ | Tmty_typeof _ -> None
 
-let forTypeDeclaration ~env ~(exported : Exported.t)
+let for_type_declaration ~env ~(exported : Exported.t)
     {
       Typedtree.typ_id;
       typ_loc;
@@ -196,10 +196,10 @@ let forTypeDeclaration ~env ~(exported : Exported.t)
       typ_type;
       typ_kind;
       typ_manifest;
-    } ~recStatus =
+    } ~rec_status =
   let stamp = Ident.binding_time typ_id in
   let declared =
-    addDeclared ~extent:typ_loc
+    add_declared ~extent:typ_loc
       ~item:
         {
           Type.decl = typ_type;
@@ -237,7 +237,7 @@ let forTypeDeclaration ~env ~(exported : Exported.t)
                            Constructor.stamp;
                            cname;
                            deprecated =
-                             ProcessAttributes.findDeprecatedAttribute
+                             ProcessAttributes.find_deprecated_attribute
                                cd_attributes;
                            args =
                              (match cd_args with
@@ -263,29 +263,29 @@ let forTypeDeclaration ~env ~(exported : Exported.t)
                                           docstring =
                                             (match
                                                ProcessAttributes
-                                               .findDocAttribute f.ld_attributes
+                                               .find_doc_attribute f.ld_attributes
                                              with
                                             | None -> []
                                             | Some docstring -> [docstring]);
                                           deprecated =
                                             ProcessAttributes
-                                            .findDeprecatedAttribute
+                                            .find_deprecated_attribute
                                               f.ld_attributes;
                                         })));
                            res =
                              (match cd_res with
                              | None -> None
                              | Some t -> Some t.ctyp_type);
-                           typeDecl = (name.txt, typ_type);
-                           docstring = attrsToDocstring cd_attributes;
+                           type_decl = (name.txt, typ_type);
+                           docstring = attrs_to_docstring cd_attributes;
                          }
                        in
                        let declared =
-                         ProcessAttributes.newDeclared ~item ~extent:cd_loc
-                           ~name:cname ~stamp ~modulePath:env.modulePath true
+                         ProcessAttributes.new_declared ~item ~extent:cd_loc
+                           ~name:cname ~stamp ~module_path:env.module_path true
                            cd_attributes
                        in
-                       Stamps.addConstructor env.stamps stamp declared;
+                       Stamps.add_constructor env.stamps stamp declared;
                        item))
             | Ttype_record fields ->
               Record
@@ -306,34 +306,34 @@ let forTypeDeclaration ~env ~(exported : Exported.t)
                          fname;
                          typ = ctyp_type;
                          optional = ld_optional;
-                         docstring = attrsToDocstring ld_attributes;
+                         docstring = attrs_to_docstring ld_attributes;
                          deprecated =
-                           ProcessAttributes.findDeprecatedAttribute
+                           ProcessAttributes.find_deprecated_attribute
                              ld_attributes;
                        })));
         }
       ~name ~stamp ~env typ_attributes
       (Exported.add exported Exported.Type)
-      Stamps.addType
+      Stamps.add_type
   in
   {
-    Module.kind = Module.Type (declared.item, recStatus);
+    Module.kind = Module.Type (declared.item, rec_status);
     name = declared.name.txt;
     docstring = declared.docstring;
     deprecated = declared.deprecated;
-    loc = declared.extentLoc;
+    loc = declared.extent_loc;
   }
 
-let rec forSignatureItem ~env ~(exported : Exported.t)
+let rec for_signature_item ~env ~(exported : Exported.t)
     (item : Typedtree.signature_item) =
   match item.sig_desc with
   | Tsig_value {val_id; val_loc; val_name = name; val_desc; val_attributes} ->
     let declared =
-      addDeclared ~name
+      add_declared ~name
         ~stamp:(Ident.binding_time val_id)
         ~extent:val_loc ~item:val_desc.ctyp_type ~env val_attributes
         (Exported.add exported Exported.Value)
-        Stamps.addValue
+        Stamps.add_value
     in
     [
       {
@@ -341,102 +341,102 @@ let rec forSignatureItem ~env ~(exported : Exported.t)
         name = declared.name.txt;
         docstring = declared.docstring;
         deprecated = declared.deprecated;
-        loc = declared.extentLoc;
+        loc = declared.extent_loc;
       };
     ]
-  | Tsig_type (recFlag, decls) ->
+  | Tsig_type (rec_flag, decls) ->
     decls
     |> List.mapi (fun i decl ->
-           let recStatus =
-             match recFlag with
+           let rec_status =
+             match rec_flag with
              | Recursive when i = 0 -> Types.Trec_first
              | Nonrecursive when i = 0 -> Types.Trec_not
              | _ -> Types.Trec_next
            in
-           decl |> forTypeDeclaration ~env ~exported ~recStatus)
+           decl |> for_type_declaration ~env ~exported ~rec_status)
   | Tsig_module
       {md_id; md_attributes; md_loc; md_name = name; md_type = {mty_type}} ->
     let item =
-      forTypeModule ~name:name.txt
-        ~env:(env |> Env.addModule ~name:name.txt)
+      for_type_module ~name:name.txt
+        ~env:(env |> Env.add_module ~name:name.txt)
         mty_type
     in
     let declared =
-      addDeclared ~item ~name ~extent:md_loc ~stamp:(Ident.binding_time md_id)
+      add_declared ~item ~name ~extent:md_loc ~stamp:(Ident.binding_time md_id)
         ~env md_attributes
         (Exported.add exported Exported.Module)
-        Stamps.addModule
+        Stamps.add_module
     in
     [
       {
         Module.kind =
-          Module {type_ = declared.item; isModuleType = isModuleType declared};
+          Module {type_ = declared.item; is_module_type = is_module_type declared};
         name = declared.name.txt;
         docstring = declared.docstring;
         deprecated = declared.deprecated;
-        loc = declared.extentLoc;
+        loc = declared.extent_loc;
       };
     ]
-  | Tsig_recmodule modDecls ->
-    modDecls
-    |> List.map (fun modDecl ->
-           forSignatureItem ~env ~exported
-             {item with sig_desc = Tsig_module modDecl})
+  | Tsig_recmodule mod_decls ->
+    mod_decls
+    |> List.map (fun mod_decl ->
+           for_signature_item ~env ~exported
+             {item with sig_desc = Tsig_module mod_decl})
     |> List.flatten
   | Tsig_include {incl_mod; incl_type} ->
     let env =
-      match getModuleTypePath incl_mod.mty_desc with
+      match get_module_type_path incl_mod.mty_desc with
       | None -> env
       | Some path ->
-        {env with modulePath = IncludedModule (path, env.modulePath)}
+        {env with module_path = IncludedModule (path, env.module_path)}
     in
-    let topLevel =
+    let top_level =
       List.fold_right
-        (fun item items -> forTypeSignatureItem ~env ~exported item @ items)
+        (fun item items -> for_type_signature_item ~env ~exported item @ items)
         incl_type []
     in
-    topLevel
+    top_level
   (* TODO: process other things here *)
   | _ -> []
 
-let forSignature ~name ~env sigItems =
+let for_signature ~name ~env sig_items =
   let exported = Exported.init () in
   let items =
-    sigItems |> List.map (forSignatureItem ~env ~exported) |> List.flatten
+    sig_items |> List.map (for_signature_item ~env ~exported) |> List.flatten
   in
   let attributes =
-    match sigItems with
+    match sig_items with
     | {sig_desc = Tsig_attribute attribute} :: _ -> [attribute]
     | _ -> []
   in
-  let docstring = attrsToDocstring attributes in
-  let deprecated = ProcessAttributes.findDeprecatedAttribute attributes in
+  let docstring = attrs_to_docstring attributes in
+  let deprecated = ProcessAttributes.find_deprecated_attribute attributes in
   {Module.name; docstring; exported; items; deprecated}
 
-let forTreeModuleType ~name ~env {Typedtree.mty_desc} =
+let for_tree_module_type ~name ~env {Typedtree.mty_desc} =
   match mty_desc with
   | Tmty_ident _ -> None
   | Tmty_signature {sig_items} ->
-    let contents = forSignature ~name ~env sig_items in
+    let contents = for_signature ~name ~env sig_items in
     Some (Module.Structure contents)
   | _ -> None
 
-let rec getModulePath mod_desc =
+let rec get_module_path mod_desc =
   match mod_desc with
   | Typedtree.Tmod_ident (path, _lident) -> Some path
   | Tmod_structure _ -> None
   | Tmod_functor (_ident, _argName, _maybeType, _resultExpr) -> None
-  | Tmod_apply (functor_, _arg, _coercion) -> getModulePath functor_.mod_desc
+  | Tmod_apply (functor_, _arg, _coercion) -> get_module_path functor_.mod_desc
   | Tmod_unpack (_expr, _moduleType) -> None
   | Tmod_constraint (expr, _typ, _constraint, _coercion) ->
-    getModulePath expr.mod_desc
+    get_module_path expr.mod_desc
 
-let rec forStructureItem ~(env : SharedTypes.Env.t) ~(exported : Exported.t)
+let rec for_structure_item ~(env : SharedTypes.Env.t) ~(exported : Exported.t)
     item =
   match item.Typedtree.str_desc with
   | Tstr_value (_isRec, bindings) ->
     let items = ref [] in
-    let rec handlePattern attributes pat =
+    let rec handle_pattern attributes pat =
       match pat.Typedtree.pat_desc with
       | Tpat_var (ident, name)
       | Tpat_alias (_, ident, name) (* let x : t = ... *) ->
@@ -444,7 +444,7 @@ let rec forStructureItem ~(env : SharedTypes.Env.t) ~(exported : Exported.t)
         let unpack_loc_opt =
           match
             pat.pat_extra
-            |> Utils.filterMap (function
+            |> Utils.filter_map (function
                  | Typedtree.Tpat_unpack, loc, _ -> Some loc
                  | _ -> None)
           with
@@ -455,33 +455,33 @@ let rec forStructureItem ~(env : SharedTypes.Env.t) ~(exported : Exported.t)
           match (Shared.dig pat.pat_type).desc with
           | Tpackage (path, _, _) ->
             let declared =
-              ProcessAttributes.newDeclared ~item:(Module.Ident path)
+              ProcessAttributes.new_declared ~item:(Module.Ident path)
                 ~extent:(Option.get unpack_loc_opt)
-                ~name ~stamp:(Ident.binding_time ident) ~modulePath:NotVisible
+                ~name ~stamp:(Ident.binding_time ident) ~module_path:NotVisible
                 false attributes
             in
-            Stamps.addModule env.stamps (Ident.binding_time ident) declared;
+            Stamps.add_module env.stamps (Ident.binding_time ident) declared;
             items :=
               {
                 Module.kind =
                   Module
                     {
                       type_ = declared.item;
-                      isModuleType = isModuleType declared;
+                      is_module_type = is_module_type declared;
                     };
                 name = declared.name.txt;
                 docstring = declared.docstring;
                 deprecated = declared.deprecated;
-                loc = declared.extentLoc;
+                loc = declared.extent_loc;
               }
               :: !items
           | _ ->
             let item = pat.pat_type in
             let declared =
-              addDeclared ~name ~stamp:(Ident.binding_time ident) ~env
+              add_declared ~name ~stamp:(Ident.binding_time ident) ~env
                 ~extent:pat.pat_loc ~item attributes
                 (Exported.add exported Exported.Value)
-                Stamps.addValue
+                Stamps.add_value
             in
             items :=
               {
@@ -489,16 +489,16 @@ let rec forStructureItem ~(env : SharedTypes.Env.t) ~(exported : Exported.t)
                 name = declared.name.txt;
                 docstring = declared.docstring;
                 deprecated = declared.deprecated;
-                loc = declared.extentLoc;
+                loc = declared.extent_loc;
               }
               :: !items
         else
           let item = pat.pat_type in
           let declared =
-            addDeclared ~name ~stamp:(Ident.binding_time ident) ~env
+            add_declared ~name ~stamp:(Ident.binding_time ident) ~env
               ~extent:pat.pat_loc ~item attributes
               (Exported.add exported Exported.Value)
-              Stamps.addValue
+              Stamps.add_value
           in
           items :=
             {
@@ -506,23 +506,23 @@ let rec forStructureItem ~(env : SharedTypes.Env.t) ~(exported : Exported.t)
               name = declared.name.txt;
               docstring = declared.docstring;
               deprecated = declared.deprecated;
-              loc = declared.extentLoc;
+              loc = declared.extent_loc;
             }
             :: !items
       | Tpat_tuple pats | Tpat_array pats | Tpat_construct (_, _, pats) ->
-        pats |> List.iter (fun p -> handlePattern [] p)
-      | Tpat_or (p, _, _) -> handlePattern [] p
+        pats |> List.iter (fun p -> handle_pattern [] p)
+      | Tpat_or (p, _, _) -> handle_pattern [] p
       | Tpat_record (items, _) ->
-        items |> List.iter (fun (_, _, p, _) -> handlePattern [] p)
-      | Tpat_variant (_, Some p, _) -> handlePattern [] p
+        items |> List.iter (fun (_, _, p, _) -> handle_pattern [] p)
+      | Tpat_variant (_, Some p, _) -> handle_pattern [] p
       | Tpat_variant (_, None, _) | Tpat_any | Tpat_constant _ -> ()
     in
     List.iter
       (fun {Typedtree.vb_pat; vb_attributes} ->
-        handlePattern vb_attributes vb_pat)
+        handle_pattern vb_attributes vb_pat)
       bindings;
     bindings
-    |> List.iter (fun {Typedtree.vb_expr} -> scanLetModules ~env vb_expr);
+    |> List.iter (fun {Typedtree.vb_expr} -> scan_let_modules ~env vb_expr);
     !items
   | Tstr_module
       {mb_id; mb_attributes; mb_loc; mb_name = name; mb_expr = {mod_desc}}
@@ -530,76 +530,76 @@ let rec forStructureItem ~(env : SharedTypes.Env.t) ~(exported : Exported.t)
            (String.length name.txt >= 6
            && (String.sub name.txt 0 6 = "local_") [@doesNotRaise])
          (* %%private generates a dummy module called local_... *) ->
-    let item = forModule ~env mod_desc name.txt in
+    let item = for_module ~env mod_desc name.txt in
     let declared =
-      addDeclared ~item ~name ~extent:mb_loc ~stamp:(Ident.binding_time mb_id)
+      add_declared ~item ~name ~extent:mb_loc ~stamp:(Ident.binding_time mb_id)
         ~env mb_attributes
         (Exported.add exported Exported.Module)
-        Stamps.addModule
+        Stamps.add_module
     in
     [
       {
         Module.kind =
-          Module {type_ = declared.item; isModuleType = isModuleType declared};
+          Module {type_ = declared.item; is_module_type = is_module_type declared};
         name = declared.name.txt;
         docstring = declared.docstring;
         deprecated = declared.deprecated;
-        loc = declared.extentLoc;
+        loc = declared.extent_loc;
       };
     ]
-  | Tstr_recmodule modDecls ->
-    modDecls
-    |> List.map (fun modDecl ->
-           forStructureItem ~env ~exported
-             {item with str_desc = Tstr_module modDecl})
+  | Tstr_recmodule mod_decls ->
+    mod_decls
+    |> List.map (fun mod_decl ->
+           for_structure_item ~env ~exported
+             {item with str_desc = Tstr_module mod_decl})
     |> List.flatten
   | Tstr_modtype
       {
         mtd_name = name;
         mtd_id;
         mtd_attributes;
-        mtd_type = Some {mty_type = modType};
+        mtd_type = Some {mty_type = mod_type};
         mtd_loc;
       } ->
-    let env = env |> Env.addModuleType ~name:name.txt in
-    let modTypeItem = forTypeModule ~name:name.txt ~env modType in
+    let env = env |> Env.add_module_type ~name:name.txt in
+    let mod_type_item = for_type_module ~name:name.txt ~env mod_type in
     let declared =
-      addDeclared ~item:modTypeItem ~name ~extent:mtd_loc
+      add_declared ~item:mod_type_item ~name ~extent:mtd_loc
         ~stamp:(Ident.binding_time mtd_id)
         ~env mtd_attributes
         (Exported.add exported Exported.Module)
-        Stamps.addModule
+        Stamps.add_module
     in
     [
       {
         Module.kind =
-          Module {type_ = declared.item; isModuleType = isModuleType declared};
+          Module {type_ = declared.item; is_module_type = is_module_type declared};
         name = declared.name.txt;
         docstring = declared.docstring;
         deprecated = declared.deprecated;
-        loc = declared.extentLoc;
+        loc = declared.extent_loc;
       };
     ]
   | Tstr_include {incl_mod; incl_type} ->
     let env =
-      match getModulePath incl_mod.mod_desc with
+      match get_module_path incl_mod.mod_desc with
       | None -> env
       | Some path ->
-        {env with modulePath = IncludedModule (path, env.modulePath)}
+        {env with module_path = IncludedModule (path, env.module_path)}
     in
-    let topLevel =
+    let top_level =
       List.fold_right
-        (fun item items -> forTypeSignatureItem ~env ~exported item @ items)
+        (fun item items -> for_type_signature_item ~env ~exported item @ items)
         incl_type []
     in
-    topLevel
-  | Tstr_primitive vd when JsxHacks.primitiveIsFragment vd = false ->
+    top_level
+  | Tstr_primitive vd when JsxHacks.primitive_is_fragment vd = false ->
     let declared =
-      addDeclared ~extent:vd.val_loc ~item:vd.val_val.val_type ~name:vd.val_name
+      add_declared ~extent:vd.val_loc ~item:vd.val_val.val_type ~name:vd.val_name
         ~stamp:(Ident.binding_time vd.val_id)
         ~env vd.val_attributes
         (Exported.add exported Exported.Value)
-        Stamps.addValue
+        Stamps.add_value
     in
     [
       {
@@ -607,51 +607,51 @@ let rec forStructureItem ~(env : SharedTypes.Env.t) ~(exported : Exported.t)
         name = declared.name.txt;
         docstring = declared.docstring;
         deprecated = declared.deprecated;
-        loc = declared.extentLoc;
+        loc = declared.extent_loc;
       };
     ]
-  | Tstr_type (recFlag, decls) ->
+  | Tstr_type (rec_flag, decls) ->
     decls
     |> List.mapi (fun i decl ->
-           let recStatus =
-             match recFlag with
+           let rec_status =
+             match rec_flag with
              | Recursive when i = 0 -> Types.Trec_first
              | Nonrecursive when i = 0 -> Types.Trec_not
              | _ -> Types.Trec_next
            in
-           decl |> forTypeDeclaration ~env ~exported ~recStatus)
+           decl |> for_type_declaration ~env ~exported ~rec_status)
   | _ -> []
 
-and forModule ~env mod_desc moduleName =
+and for_module ~env mod_desc module_name =
   match mod_desc with
   | Tmod_ident (path, _lident) -> Ident path
   | Tmod_structure structure ->
-    let env = env |> Env.addModule ~name:moduleName in
-    let contents = forStructure ~name:moduleName ~env structure.str_items in
+    let env = env |> Env.add_module ~name:module_name in
+    let contents = for_structure ~name:module_name ~env structure.str_items in
     Structure contents
-  | Tmod_functor (ident, argName, maybeType, resultExpr) ->
-    (match maybeType with
+  | Tmod_functor (ident, arg_name, maybe_type, result_expr) ->
+    (match maybe_type with
     | None -> ()
     | Some t ->
-      let kind = forTypeModule ~name:argName.txt ~env t.mty_type in
+      let kind = for_type_module ~name:arg_name.txt ~env t.mty_type in
       let stamp = Ident.binding_time ident in
       let declared =
-        ProcessAttributes.newDeclared ~item:kind ~name:argName
-          ~extent:argName.loc ~stamp ~modulePath:NotVisible false []
+        ProcessAttributes.new_declared ~item:kind ~name:arg_name
+          ~extent:arg_name.loc ~stamp ~module_path:NotVisible false []
       in
-      Stamps.addModule env.stamps stamp declared);
-    forModule ~env resultExpr.mod_desc moduleName
+      Stamps.add_module env.stamps stamp declared);
+    for_module ~env result_expr.mod_desc module_name
   | Tmod_apply (functor_, _arg, _coercion) ->
-    forModule ~env functor_.mod_desc moduleName
-  | Tmod_unpack (_expr, moduleType) ->
-    let env = env |> Env.addModule ~name:moduleName in
-    forTypeModule ~name:moduleName ~env moduleType
+    for_module ~env functor_.mod_desc module_name
+  | Tmod_unpack (_expr, module_type) ->
+    let env = env |> Env.add_module ~name:module_name in
+    for_type_module ~name:module_name ~env module_type
   | Tmod_constraint (expr, typ, _constraint, _coercion) ->
     (* TODO do this better I think *)
-    let modKind = forModule ~env expr.mod_desc moduleName in
-    let env = env |> Env.addModule ~name:moduleName in
-    let modTypeKind = forTypeModule ~name:moduleName ~env typ in
-    Constraint (modKind, modTypeKind)
+    let mod_kind = for_module ~env expr.mod_desc module_name in
+    let env = env |> Env.add_module ~name:module_name in
+    let mod_type_kind = for_type_module ~name:module_name ~env typ in
+    Constraint (mod_kind, mod_type_kind)
 
 (*
   Walk a typed expression and register any `let module M = ...` bindings as local
@@ -660,136 +660,136 @@ and forModule ~env mod_desc moduleName =
   NotVisible (non-exported) and the extent is the alias identifier location so
   scope lookups match precisely.
 *)
-and scanLetModules ~env (e : Typedtree.expression) =
+and scan_let_modules ~env (e : Typedtree.expression) =
   match e.exp_desc with
   | Texp_letmodule (id, name, mexpr, body) ->
     let stamp = Ident.binding_time id in
-    let item = forModule ~env mexpr.mod_desc name.txt in
+    let item = for_module ~env mexpr.mod_desc name.txt in
     let declared =
-      ProcessAttributes.newDeclared ~item ~extent:name.loc ~name ~stamp
-        ~modulePath:NotVisible false []
+      ProcessAttributes.new_declared ~item ~extent:name.loc ~name ~stamp
+        ~module_path:NotVisible false []
     in
-    Stamps.addModule env.stamps stamp declared;
-    scanLetModules ~env body
+    Stamps.add_module env.stamps stamp declared;
+    scan_let_modules ~env body
   | Texp_let (_rf, bindings, body) ->
-    List.iter (fun {Typedtree.vb_expr} -> scanLetModules ~env vb_expr) bindings;
-    scanLetModules ~env body
+    List.iter (fun {Typedtree.vb_expr} -> scan_let_modules ~env vb_expr) bindings;
+    scan_let_modules ~env body
   | Texp_apply {funct; args; _} ->
-    scanLetModules ~env funct;
+    scan_let_modules ~env funct;
     args
     |> List.iter (function
-         | _, Some e -> scanLetModules ~env e
+         | _, Some e -> scan_let_modules ~env e
          | _, None -> ())
-  | Texp_tuple exprs -> List.iter (scanLetModules ~env) exprs
+  | Texp_tuple exprs -> List.iter (scan_let_modules ~env) exprs
   | Texp_sequence (e1, e2) ->
-    scanLetModules ~env e1;
-    scanLetModules ~env e2
+    scan_let_modules ~env e1;
+    scan_let_modules ~env e2
   | Texp_match (e, cases, exn_cases, _) ->
-    scanLetModules ~env e;
+    scan_let_modules ~env e;
     let scan_case {Typedtree.c_lhs = _; c_guard; c_rhs} =
       (match c_guard with
-      | Some g -> scanLetModules ~env g
+      | Some g -> scan_let_modules ~env g
       | None -> ());
-      scanLetModules ~env c_rhs
+      scan_let_modules ~env c_rhs
     in
     List.iter scan_case cases;
     List.iter scan_case exn_cases
   | Texp_function {case; _} ->
     let {Typedtree.c_lhs = _; c_guard; c_rhs} = case in
     (match c_guard with
-    | Some g -> scanLetModules ~env g
+    | Some g -> scan_let_modules ~env g
     | None -> ());
-    scanLetModules ~env c_rhs
+    scan_let_modules ~env c_rhs
   | Texp_try (e, cases) ->
-    scanLetModules ~env e;
+    scan_let_modules ~env e;
     cases
     |> List.iter (fun {Typedtree.c_lhs = _; c_guard; c_rhs} ->
            (match c_guard with
-           | Some g -> scanLetModules ~env g
+           | Some g -> scan_let_modules ~env g
            | None -> ());
-           scanLetModules ~env c_rhs)
-  | Texp_ifthenelse (e1, e2, e3Opt) -> (
-    scanLetModules ~env e1;
-    scanLetModules ~env e2;
-    match e3Opt with
-    | Some e3 -> scanLetModules ~env e3
+           scan_let_modules ~env c_rhs)
+  | Texp_ifthenelse (e1, e2, e3_opt) -> (
+    scan_let_modules ~env e1;
+    scan_let_modules ~env e2;
+    match e3_opt with
+    | Some e3 -> scan_let_modules ~env e3
     | None -> ())
   | _ -> ()
 
-and forStructure ~name ~env strItems =
+and for_structure ~name ~env str_items =
   let exported = Exported.init () in
   let items =
     List.fold_right
-      (fun item results -> forStructureItem ~env ~exported item @ results)
-      strItems []
+      (fun item results -> for_structure_item ~env ~exported item @ results)
+      str_items []
   in
   let attributes =
-    strItems
+    str_items
     |> List.filter_map (fun (struc : Typedtree.structure_item) ->
            match struc with
            | {str_desc = Tstr_attribute attr} -> Some attr
            | _ -> None)
   in
-  let docstring = attrsToDocstring attributes in
-  let deprecated = ProcessAttributes.findDeprecatedAttribute attributes in
+  let docstring = attrs_to_docstring attributes in
+  let deprecated = ProcessAttributes.find_deprecated_attribute attributes in
   {Module.name; docstring; exported; items; deprecated}
 
-let fileForCmtInfos ~moduleName ~uri
+let file_for_cmt_infos ~module_name ~uri
     ({cmt_modname; cmt_annots} : Cmt_format.cmt_infos) =
   let env =
-    {Env.stamps = Stamps.init (); modulePath = File (uri, moduleName)}
+    {Env.stamps = Stamps.init (); module_path = File (uri, module_name)}
   in
   match cmt_annots with
   | Partial_implementation parts ->
     let items =
       parts |> Array.to_list
-      |> Utils.filterMap (fun p ->
+      |> Utils.filter_map (fun p ->
              match (p : Cmt_format.binary_part) with
              | Partial_structure str -> Some str.str_items
              | Partial_structure_item str -> Some [str]
              | _ -> None)
       |> List.concat
     in
-    let structure = forStructure ~name:moduleName ~env items in
-    {File.uri; moduleName = cmt_modname; stamps = env.stamps; structure}
+    let structure = for_structure ~name:module_name ~env items in
+    {File.uri; module_name = cmt_modname; stamps = env.stamps; structure}
   | Partial_interface parts ->
     let items =
       parts |> Array.to_list
-      |> Utils.filterMap (fun (p : Cmt_format.binary_part) ->
+      |> Utils.filter_map (fun (p : Cmt_format.binary_part) ->
              match p with
              | Partial_signature str -> Some str.sig_items
              | Partial_signature_item str -> Some [str]
              | _ -> None)
       |> List.concat
     in
-    let structure = forSignature ~name:moduleName ~env items in
-    {uri; moduleName = cmt_modname; stamps = env.stamps; structure}
+    let structure = for_signature ~name:module_name ~env items in
+    {uri; module_name = cmt_modname; stamps = env.stamps; structure}
   | Implementation structure ->
-    let structure = forStructure ~name:moduleName ~env structure.str_items in
-    {uri; moduleName = cmt_modname; stamps = env.stamps; structure}
+    let structure = for_structure ~name:module_name ~env structure.str_items in
+    {uri; module_name = cmt_modname; stamps = env.stamps; structure}
   | Interface signature ->
-    let structure = forSignature ~name:moduleName ~env signature.sig_items in
-    {uri; moduleName = cmt_modname; stamps = env.stamps; structure}
-  | _ -> File.create moduleName uri
+    let structure = for_signature ~name:module_name ~env signature.sig_items in
+    {uri; module_name = cmt_modname; stamps = env.stamps; structure}
+  | _ -> File.create module_name uri
 
-let fileForCmt ~moduleName ~cmt ~uri =
-  match Hashtbl.find_opt state.cmtCache cmt with
+let file_for_cmt ~module_name ~cmt ~uri =
+  match Hashtbl.find_opt state.cmt_cache cmt with
   | Some file -> Some file
   | None -> (
-    match Shared.tryReadCmt cmt with
+    match Shared.try_read_cmt cmt with
     | None -> None
     | Some infos ->
-      let file = fileForCmtInfos ~moduleName ~uri infos in
-      Hashtbl.replace state.cmtCache cmt file;
+      let file = file_for_cmt_infos ~module_name ~uri infos in
+      Hashtbl.replace state.cmt_cache cmt file;
       Some file)
 
-let fileForModule moduleName ~package =
-  match Hashtbl.find_opt package.pathsForModule moduleName with
+let file_for_module module_name ~package =
+  match Hashtbl.find_opt package.paths_for_module module_name with
   | Some paths ->
-    let uri = getUri paths in
-    let cmt = getCmtPath ~uri paths in
-    Log.log ("fileForModule " ^ showPaths paths);
-    fileForCmt ~cmt ~moduleName ~uri
+    let uri = get_uri paths in
+    let cmt = get_cmt_path ~uri paths in
+    Log.log ("fileForModule " ^ show_paths paths);
+    file_for_cmt ~cmt ~module_name ~uri
   | None ->
-    Log.log ("No path for module " ^ moduleName);
+    Log.log ("No path for module " ^ module_name);
     None

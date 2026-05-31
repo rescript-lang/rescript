@@ -94,60 +94,60 @@ let deps_count (t : t) = FileHash.length t.deps
 
 (** {2 Topological ordering} *)
 
-let iter_files_from_roots_to_leaves (t : t) iterFun =
+let iter_files_from_roots_to_leaves (t : t) iter_fun =
   (* For each file, the number of incoming references *)
-  let inverseReferences = (Hashtbl.create 256 : (string, int) Hashtbl.t) in
+  let inverse_references = (Hashtbl.create 256 : (string, int) Hashtbl.t) in
   (* For each number of incoming references, the files *)
-  let referencesByNumber = (Hashtbl.create 256 : (int, FileSet.t) Hashtbl.t) in
-  let getNum fileName =
-    try Hashtbl.find inverseReferences fileName with Not_found -> 0
+  let references_by_number = (Hashtbl.create 256 : (int, FileSet.t) Hashtbl.t) in
+  let get_num file_name =
+    try Hashtbl.find inverse_references file_name with Not_found -> 0
   in
-  let getSet num =
-    try Hashtbl.find referencesByNumber num with Not_found -> FileSet.empty
+  let get_set num =
+    try Hashtbl.find references_by_number num with Not_found -> FileSet.empty
   in
-  let addIncomingEdge fileName =
-    let oldNum = getNum fileName in
-    let newNum = oldNum + 1 in
-    let oldSetAtNum = getSet oldNum in
-    let newSetAtNum = FileSet.remove fileName oldSetAtNum in
-    let oldSetAtNewNum = getSet newNum in
-    let newSetAtNewNum = FileSet.add fileName oldSetAtNewNum in
-    Hashtbl.replace inverseReferences fileName newNum;
-    Hashtbl.replace referencesByNumber oldNum newSetAtNum;
-    Hashtbl.replace referencesByNumber newNum newSetAtNewNum
+  let add_incoming_edge file_name =
+    let old_num = get_num file_name in
+    let new_num = old_num + 1 in
+    let old_set_at_num = get_set old_num in
+    let new_set_at_num = FileSet.remove file_name old_set_at_num in
+    let old_set_at_new_num = get_set new_num in
+    let new_set_at_new_num = FileSet.add file_name old_set_at_new_num in
+    Hashtbl.replace inverse_references file_name new_num;
+    Hashtbl.replace references_by_number old_num new_set_at_num;
+    Hashtbl.replace references_by_number new_num new_set_at_new_num
   in
-  let removeIncomingEdge fileName =
-    let oldNum = getNum fileName in
-    let newNum = oldNum - 1 in
-    let oldSetAtNum = getSet oldNum in
-    let newSetAtNum = FileSet.remove fileName oldSetAtNum in
-    let oldSetAtNewNum = getSet newNum in
-    let newSetAtNewNum = FileSet.add fileName oldSetAtNewNum in
-    Hashtbl.replace inverseReferences fileName newNum;
-    Hashtbl.replace referencesByNumber oldNum newSetAtNum;
-    Hashtbl.replace referencesByNumber newNum newSetAtNewNum
+  let remove_incoming_edge file_name =
+    let old_num = get_num file_name in
+    let new_num = old_num - 1 in
+    let old_set_at_num = get_set old_num in
+    let new_set_at_num = FileSet.remove file_name old_set_at_num in
+    let old_set_at_new_num = get_set new_num in
+    let new_set_at_new_num = FileSet.add file_name old_set_at_new_num in
+    Hashtbl.replace inverse_references file_name new_num;
+    Hashtbl.replace references_by_number old_num new_set_at_num;
+    Hashtbl.replace references_by_number new_num new_set_at_new_num
   in
-  let addEdge fromFile toFile =
-    if file_exists t fromFile then addIncomingEdge toFile
+  let add_edge from_file to_file =
+    if file_exists t from_file then add_incoming_edge to_file
   in
-  let removeEdge fromFile toFile =
-    if file_exists t fromFile then removeIncomingEdge toFile
+  let remove_edge from_file to_file =
+    if file_exists t from_file then remove_incoming_edge to_file
   in
-  iter_deps t (fun fromFile set ->
-      if getNum fromFile = 0 then
-        Hashtbl.replace referencesByNumber 0 (FileSet.add fromFile (getSet 0));
-      set |> FileSet.iter (fun toFile -> addEdge fromFile toFile));
-  while getSet 0 <> FileSet.empty do
-    let filesWithNoIncomingReferences = getSet 0 in
-    Hashtbl.remove referencesByNumber 0;
-    filesWithNoIncomingReferences
-    |> FileSet.iter (fun fileName ->
-           iterFun fileName;
-           let references = get_deps t fileName in
-           references |> FileSet.iter (fun toFile -> removeEdge fileName toFile))
+  iter_deps t (fun from_file set ->
+      if get_num from_file = 0 then
+        Hashtbl.replace references_by_number 0 (FileSet.add from_file (get_set 0));
+      set |> FileSet.iter (fun to_file -> add_edge from_file to_file));
+  while get_set 0 <> FileSet.empty do
+    let files_with_no_incoming_references = get_set 0 in
+    Hashtbl.remove references_by_number 0;
+    files_with_no_incoming_references
+    |> FileSet.iter (fun file_name ->
+           iter_fun file_name;
+           let references = get_deps t file_name in
+           references |> FileSet.iter (fun to_file -> remove_edge file_name to_file))
   done;
   (* Process any remaining items in case of circular references *)
-  referencesByNumber
+  references_by_number
   |> Hashtbl.iter (fun _num set ->
          if FileSet.is_empty set then ()
-         else set |> FileSet.iter (fun fileName -> iterFun fileName))
+         else set |> FileSet.iter (fun file_name -> iter_fun file_name))

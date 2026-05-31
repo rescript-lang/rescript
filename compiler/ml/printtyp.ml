@@ -1751,7 +1751,7 @@ let report_subtyping_error ppf env tr1 txt1 tr2 ctx =
       | Some ctx -> (
         fprintf ppf "@,@,@[<v 2>";
         match ctx with
-        | Generic {errorCode} -> fprintf ppf "Error: %s" errorCode
+        | Generic {error_code} -> fprintf ppf "Error: %s" error_code
         | Coercion_target_variant_not_unboxed {variant_name; primitive} ->
           fprintf ppf
             "@ The variant @{<info>%s@} is not unboxed, so it cannot be \

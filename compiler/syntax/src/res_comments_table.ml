@@ -1622,8 +1622,8 @@ and walk_expression expr t comments =
     let comments =
       visit_list_but_continue_with_remaining_comments ~newline_delimited:false
         ~walk_node:walk_expr_parameter
-        ~get_loc:(fun (_attrs, argLbl, expr_opt, pattern) ->
-          let label_loc = Asttypes.get_lbl_loc argLbl in
+        ~get_loc:(fun (_attrs, arg_lbl, expr_opt, pattern) ->
+          let label_loc = Asttypes.get_lbl_loc arg_lbl in
           let open Parsetree in
           let start_pos =
             if label_loc <> Location.none then label_loc.loc_start

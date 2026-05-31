@@ -18,15 +18,15 @@ type decl_info = {
 (** Simplified decl info for type-label processing *)
 
 let decl_to_info (decl : Decl.t) : decl_info option =
-  match decl.declKind with
+  match decl.decl_kind with
   | RecordLabel | VariantCase ->
     let is_interface =
       match List.rev decl.path with
       | [] -> true
-      | moduleNameTag :: _ -> (
-        try (moduleNameTag |> Name.toString).[0] <> '+' with _ -> true)
+      | module_name_tag :: _ -> (
+        try (module_name_tag |> Name.to_string).[0] <> '+' with _ -> true)
     in
-    Some {pos = decl.pos; pos_end = decl.posEnd; path = decl.path; is_interface}
+    Some {pos = decl.pos; pos_end = decl.pos_end; path = decl.path; is_interface}
   | _ -> None
 
 (** {1 Reactive Collections} *)
@@ -49,7 +49,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
     ~(report_types_dead_only_in_interface : bool) : t =
   (* Step 1: Index decls by path *)
   let decl_by_path =
-    Reactive.flatMap ~name:"type_deps.decl_by_path" decls
+    Reactive.flat_map ~name:"type_deps.decl_by_path" decls
       ~f:(fun _pos decl ->
         match decl_to_info decl with
         | Some info -> [(info.path, [info])]
@@ -59,7 +59,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
 
   (* Step 2: Same-path refs - connect all decls at the same path *)
   let same_path_refs =
-    Reactive.flatMap ~name:"type_deps.same_path_refs" decl_by_path
+    Reactive.flat_map ~name:"type_deps.same_path_refs" decl_by_path
       ~f:(fun _path decls ->
         match decls with
         | [] | [_] -> []
@@ -81,18 +81,18 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   (* Step 3: Cross-file refs - connect impl decls to intf decls *)
   (* First, extract impl decls that need to look up intf *)
   let impl_decls =
-    Reactive.flatMap ~name:"type_deps.impl_decls" decls
+    Reactive.flat_map ~name:"type_deps.impl_decls" decls
       ~f:(fun _pos decl ->
         match decl_to_info decl with
         | Some info when not info.is_interface -> (
           match info.path with
           | [] -> []
-          | typeLabelName :: pathToType ->
+          | type_label_name :: path_to_type ->
             (* Try two intf paths *)
-            let path_1 = pathToType |> DcePath.moduleToInterface in
-            let path_2 = path_1 |> DcePath.typeToInterface in
-            let intf_path1 = typeLabelName :: path_1 in
-            let intf_path2 = typeLabelName :: path_2 in
+            let path_1 = path_to_type |> DcePath.module_to_interface in
+            let path_2 = path_1 |> DcePath.type_to_interface in
+            let intf_path1 = type_label_name :: path_1 in
+            let intf_path2 = type_label_name :: path_2 in
             [(info.pos, (info, intf_path1, intf_path2))])
         | _ -> [])
       ()
@@ -149,15 +149,15 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
      The intf->impl code in original only runs when isInterface=true,
      and the lookup is for finding the impl. *)
   let intf_decls =
-    Reactive.flatMap ~name:"type_deps.intf_decls" decls
+    Reactive.flat_map ~name:"type_deps.intf_decls" decls
       ~f:(fun _pos decl ->
         match decl_to_info decl with
         | Some info when info.is_interface -> (
           match info.path with
           | [] -> []
-          | typeLabelName :: pathToType ->
+          | type_label_name :: path_to_type ->
             let impl_path =
-              typeLabelName :: DcePath.moduleToImplementation pathToType
+              type_label_name :: DcePath.module_to_implementation path_to_type
             in
             [(info.pos, (info, impl_path))])
         | _ -> [])
@@ -218,10 +218,10 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
         ~merge:PosSet.union ()
     in
     (* Invert the combined refs_to to refs_from *)
-    Reactive.flatMap ~name:"type_deps.all_type_refs_from" combined_refs_to
-      ~f:(fun posTo posFromSet ->
-        PosSet.elements posFromSet
-        |> List.map (fun posFrom -> (posFrom, PosSet.singleton posTo)))
+    Reactive.flat_map ~name:"type_deps.all_type_refs_from" combined_refs_to
+      ~f:(fun pos_to pos_from_set ->
+        PosSet.elements pos_from_set
+        |> List.map (fun pos_from -> (pos_from, PosSet.singleton pos_to)))
       ~merge:PosSet.union ()
   in
 
@@ -240,8 +240,8 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
 (** Add all type refs to a References.builder *)
 let add_to_refs_builder (t : t) ~(refs : References.builder) : unit =
   Reactive.iter
-    (fun posTo posFromSet ->
+    (fun pos_to pos_from_set ->
       PosSet.iter
-        (fun posFrom -> References.add_type_ref refs ~posTo ~posFrom)
-        posFromSet)
+        (fun pos_from -> References.add_type_ref refs ~pos_to ~pos_from)
+        pos_from_set)
     t.all_type_refs

@@ -549,7 +549,7 @@ let apply_single_step_or_piped ~mapper
         ~lhs ~pipe_args ~funct exp
     | None -> exp
 
-let makeMapper (deprecated_used : Cmt_utils.deprecated_used list) =
+let make_mapper (deprecated_used : Cmt_utils.deprecated_used list) =
   let deprecated_function_calls =
     deprecated_used
     |> List.filter (fun (d : Cmt_utils.deprecated_used) ->
@@ -736,11 +736,11 @@ let makeMapper (deprecated_used : Cmt_utils.deprecated_used list) =
   in
   mapper
 
-let migrate ~entryPointFile ~outputMode =
+let migrate ~entry_point_file ~output_mode =
   let path =
-    match Filename.is_relative entryPointFile with
-    | true -> Unix.realpath entryPointFile
-    | false -> entryPointFile
+    match Filename.is_relative entry_point_file with
+    | true -> Unix.realpath entry_point_file
+    | false -> entry_point_file
   in
   let result =
     if Filename.check_suffix path ".res" then
@@ -748,7 +748,7 @@ let migrate ~entryPointFile ~outputMode =
         Res_driver.parsing_engine.parse_implementation ~for_printer:true
       in
       let {Res_driver.parsetree; comments; source} = parser ~filename:path in
-      match Cmt.loadCmtInfosFromPath ~path with
+      match Cmt.load_cmt_infos_from_path ~path with
       | None ->
         Error
           (Printf.sprintf
@@ -756,8 +756,8 @@ let migrate ~entryPointFile ~outputMode =
               could not be found. try to build the project"
              path)
       | Some {cmt_extra_info = {deprecated_used}} ->
-        let mapper = makeMapper deprecated_used in
-        let astMapped = mapper.structure mapper parsetree in
+        let mapper = make_mapper deprecated_used in
+        let ast_mapped = mapper.structure mapper parsetree in
         (* Second pass: apply any post-migration transforms signaled via @apply.transforms *)
         let apply_transforms =
           let expr mapper (e : Parsetree.expression) =
@@ -766,12 +766,12 @@ let migrate ~entryPointFile ~outputMode =
           in
           {Ast_mapper.default_mapper with expr}
         in
-        let astTransformed =
-          apply_transforms.structure apply_transforms astMapped
+        let ast_transformed =
+          apply_transforms.structure apply_transforms ast_mapped
         in
         Ok
           ( Res_printer.print_implementation
-              ~width:Res_printer.default_print_width astTransformed ~comments,
+              ~width:Res_printer.default_print_width ast_transformed ~comments,
             source )
     else if Filename.check_suffix path ".resi" then
       let parser =
@@ -781,7 +781,7 @@ let migrate ~entryPointFile ~outputMode =
         parser ~filename:path
       in
 
-      match Cmt.loadCmtInfosFromPath ~path with
+      match Cmt.load_cmt_infos_from_path ~path with
       | None ->
         Error
           (Printf.sprintf
@@ -789,9 +789,9 @@ let migrate ~entryPointFile ~outputMode =
               could not be found. try to build the project"
              path)
       | Some {cmt_extra_info = {deprecated_used}} ->
-        let mapper = makeMapper deprecated_used in
-        let astMapped = mapper.signature mapper signature in
-        Ok (Res_printer.print_interface astMapped ~comments, source)
+        let mapper = make_mapper deprecated_used in
+        let ast_mapped = mapper.signature mapper signature in
+        Ok (Res_printer.print_interface ast_mapped ~comments, source)
     else
       Error
         (Printf.sprintf
@@ -801,7 +801,7 @@ let migrate ~entryPointFile ~outputMode =
   match result with
   | Error e -> Error e
   | Ok (contents, source) when contents <> source -> (
-    match outputMode with
+    match output_mode with
     | `Stdout -> Ok contents
     | `File ->
       let oc = open_out path in
@@ -809,6 +809,6 @@ let migrate ~entryPointFile ~outputMode =
       close_out oc;
       Ok (Filename.basename path ^ ": File migrated successfully"))
   | Ok (contents, _) -> (
-    match outputMode with
+    match output_mode with
     | `Stdout -> Ok contents
     | `File -> Ok (Filename.basename path ^ ": File did not need migration"))

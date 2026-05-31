@@ -11,13 +11,13 @@ let find_exception_from_decls (decls : Declarations.t) :
   let index =
     Declarations.fold
       (fun _pos (decl : Decl.t) acc ->
-        match decl.Decl.declKind with
+        match decl.Decl.decl_kind with
         | Exception ->
           (* Use raw decl positions: reference graph keys are raw positions. *)
           let loc : Location.t =
             {
               Location.loc_start = decl.pos;
-              loc_end = decl.posEnd;
+              loc_end = decl.pos_end;
               loc_ghost = false;
             }
           in
@@ -27,21 +27,21 @@ let find_exception_from_decls (decls : Declarations.t) :
   in
   fun path -> PathMap.find_opt path index
 
-let add ~config ~decls ~file ~path ~loc ~(strLoc : Location.t)
-    ~(moduleLoc : Location.t) name =
-  addDeclaration_ ~config ~decls ~file ~posEnd:strLoc.loc_end
-    ~posStart:strLoc.loc_start ~declKind:Exception ~moduleLoc ~path ~loc name;
+let add ~config ~decls ~file ~path ~loc ~(str_loc : Location.t)
+    ~(module_loc : Location.t) name =
+  addDeclaration_ ~config ~decls ~file ~pos_end:str_loc.loc_end
+    ~pos_start:str_loc.loc_start ~decl_kind:Exception ~module_loc ~path ~loc name;
   name
 
-let markAsUsed ~config ~refs ~file_deps ~cross_file ~(binding : Location.t)
-    ~(locFrom : Location.t) ~(locTo : Location.t) path_ =
-  if locTo.loc_ghost then
+let mark_as_used ~config ~refs ~file_deps ~cross_file ~(binding : Location.t)
+    ~(loc_from : Location.t) ~(loc_to : Location.t) path_ =
+  if loc_to.loc_ghost then
     (* Probably defined in another file, delay processing and check at the end *)
-    let exceptionPath =
-      path_ |> DcePath.fromPathT |> DcePath.moduleToImplementation
+    let exception_path =
+      path_ |> DcePath.from_path_t |> DcePath.module_to_implementation
     in
-    CrossFileItems.add_exception_ref cross_file ~exception_path:exceptionPath
-      ~loc_from:locFrom
+    CrossFileItems.add_exception_ref cross_file ~exception_path:exception_path
+      ~loc_from:loc_from
   else
-    addValueReference ~config ~refs ~file_deps ~binding ~addFileReference:true
-      ~locFrom ~locTo
+    add_value_reference ~config ~refs ~file_deps ~binding ~add_file_reference:true
+      ~loc_from ~loc_to

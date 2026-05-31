@@ -1,21 +1,21 @@
-let completion ~debug ~source ~kindFile ~pos ~full =
+let completion ~debug ~source ~kind_file ~pos ~full =
   match
-    Completions.getCompletions ~debug ~source ~kindFile ~pos ~full
-      ~forHover:false
+    Completions.get_completions ~debug ~source ~kind_file ~pos ~full
+      ~for_hover:false
   with
   | None -> []
   | Some (completions, full, _) ->
-    completions |> List.map (CompletionBackEnd.completionToItem ~full)
+    completions |> List.map (CompletionBackEnd.completion_to_item ~full)
 
-let completionResolve ~(full : SharedTypes.full option) ~modulePath =
+let completion_resolve ~(full : SharedTypes.full option) ~module_path =
   (* We ignore the internal module path as of now because there's currently
      no use case for it. But, if we wanted to move resolving documentation
      for regular modules and not just file modules to the completionResolve
      hook as well, it'd be easy to implement here. *)
-  let moduleName, _innerModulePath =
-    match modulePath |> String.split_on_char '.' with
-    | [moduleName] -> (moduleName, [])
-    | moduleName :: rest -> (moduleName, rest)
+  let module_name, _innerModulePath =
+    match module_path |> String.split_on_char '.' with
+    | [module_name] -> (module_name, [])
+    | module_name :: rest -> (module_name, rest)
     | [] -> raise (Failure "Invalid module path.")
   in
   let docstring =
@@ -25,11 +25,11 @@ let completionResolve ~(full : SharedTypes.full option) ~modulePath =
         Printf.printf "[completion_resolve] Could not load cmt\n";
       None
     | Some full -> (
-      match ProcessCmt.fileForModule ~package:full.package moduleName with
+      match ProcessCmt.file_for_module ~package:full.package module_name with
       | None ->
         if Debug.verbose () then
           Printf.printf "[completion_resolve] Did not find file for module %s\n"
-            moduleName;
+            module_name;
         None
       | Some file -> Some (file.structure.docstring |> String.concat "\n\n"))
   in
@@ -41,42 +41,42 @@ let completionResolve ~(full : SharedTypes.full option) ~modulePath =
          (Lsp.Types.MarkupContent.create ~kind:Lsp.Types.MarkupKind.Markdown
             ~value))
 
-let hover ~source ~kindFile ~pos ~supportsMarkdownLinks ~full ~debug =
+let hover ~source ~kind_file ~pos ~supports_markdown_links ~full ~debug =
   let result =
     match full with
     | None -> None
     | Some full -> (
-      match References.getLocItem ~full ~pos ~debug with
+      match References.get_loc_item ~full ~pos ~debug with
       | None -> (
         if debug then
           Printf.printf
             "Nothing at that position. Now trying to use completion.\n";
         match
-          Hover.getHoverViaCompletions ~debug ~source ~kindFile ~pos
-            ~forHover:true ~supportsMarkdownLinks ~full:(Some full)
+          Hover.get_hover_via_completions ~debug ~source ~kind_file ~pos
+            ~for_hover:true ~supports_markdown_links ~full:(Some full)
         with
         | None -> None
         | Some hover -> Some hover)
-      | Some locItem ->
-        let isModule =
-          match locItem.locType with
+      | Some loc_item ->
+        let is_module =
+          match loc_item.loc_type with
           | LModule _ | TopLevelModule _ -> true
           | TypeDefinition _ | Typed _ | Constant _ -> false
         in
-        let uriLocOpt = References.definitionForLocItem ~full locItem in
-        let skipZero =
-          match uriLocOpt with
+        let uri_loc_opt = References.definition_for_loc_item ~full loc_item in
+        let skip_zero =
+          match uri_loc_opt with
           | None -> false
           | Some (_, loc) ->
-            let isInterface = full.file.uri |> Uri.isInterface in
-            let posIsZero {Lexing.pos_lnum; pos_bol; pos_cnum} =
-              (not isInterface) && pos_lnum = 1 && pos_cnum - pos_bol = 0
+            let is_interface = full.file.uri |> Uri.is_interface in
+            let pos_is_zero {Lexing.pos_lnum; pos_bol; pos_cnum} =
+              (not is_interface) && pos_lnum = 1 && pos_cnum - pos_bol = 0
             in
             (* Skip if range is all zero, unless it's a module *)
-            (not isModule) && posIsZero loc.loc_start && posIsZero loc.loc_end
+            (not is_module) && pos_is_zero loc.loc_start && pos_is_zero loc.loc_end
         in
-        if skipZero then None
-        else Hover.newHover ~supportsMarkdownLinks ~full locItem)
+        if skip_zero then None
+        else Hover.new_hover ~supports_markdown_links ~full loc_item)
   in
   match result with
   | None -> None
@@ -89,185 +89,185 @@ let hover ~source ~kindFile ~pos ~supportsMarkdownLinks ~full ~debug =
                  ~kind:Lsp.Types.MarkupKind.Markdown ~value))
          ())
 
-let signatureHelp ~source ~kindFile ~pos ~allowForConstructorPayloads ~full
+let signature_help ~source ~kind_file ~pos ~allow_for_constructor_payloads ~full
     ~debug =
-  SignatureHelp.signatureHelp ~debug ~source ~kindFile ~pos
-    ~allowForConstructorPayloads ~full
+  SignatureHelp.signature_help ~debug ~source ~kind_file ~pos
+    ~allow_for_constructor_payloads ~full
 
 let definition ~full ~pos ~debug =
-  let locationOpt =
+  let location_opt =
     match full with
     | None -> None
     | Some full -> (
-      match References.getLocItem ~full ~pos ~debug with
+      match References.get_loc_item ~full ~pos ~debug with
       | None -> None
-      | Some locItem -> (
-        match References.definitionForLocItem ~full locItem with
+      | Some loc_item -> (
+        match References.definition_for_loc_item ~full loc_item with
         | None -> None
         | Some (uri, loc) when not loc.loc_ghost ->
-          let isInterface = full.file.uri |> Uri.isInterface in
-          let posIsZero {Lexing.pos_lnum; pos_bol; pos_cnum} =
+          let is_interface = full.file.uri |> Uri.is_interface in
+          let pos_is_zero {Lexing.pos_lnum; pos_bol; pos_cnum} =
             (* range is zero *)
             pos_lnum = 1 && pos_cnum - pos_bol = 0
           in
-          let isModule =
-            match locItem.locType with
+          let is_module =
+            match loc_item.loc_type with
             | LModule _ | TopLevelModule _ -> true
             | TypeDefinition _ | Typed _ | Constant _ -> false
           in
-          let skipLoc =
-            (not isModule) && (not isInterface) && posIsZero loc.loc_start
-            && posIsZero loc.loc_end
+          let skip_loc =
+            (not is_module) && (not is_interface) && pos_is_zero loc.loc_start
+            && pos_is_zero loc.loc_end
           in
-          if skipLoc then None
+          if skip_loc then None
           else
             Some
-              (Lsp.Types.Location.create ~range:(Utils.cmtLocToRange loc)
-                 ~uri:(Files.canonicalizeUri uri |> Uri.fromString))
+              (Lsp.Types.Location.create ~range:(Utils.cmt_loc_to_range loc)
+                 ~uri:(Files.canonicalize_uri uri |> Uri.from_string))
         | Some _ -> None))
   in
-  locationOpt
+  location_opt
 
-let typeDefinition ~full ~pos ~debug =
-  let maybeLocation =
+let type_definition ~full ~pos ~debug =
+  let maybe_location =
     match full with
     | None -> None
     | Some full -> (
-      match References.getLocItem ~full ~pos ~debug with
+      match References.get_loc_item ~full ~pos ~debug with
       | None -> None
-      | Some locItem -> (
-        match References.typeDefinitionForLocItem ~full locItem with
+      | Some loc_item -> (
+        match References.type_definition_for_loc_item ~full loc_item with
         | None -> None
         | Some (uri, loc) ->
           Some
-            (Lsp.Types.Location.create ~range:(Utils.cmtLocToRange loc)
-               ~uri:(Files.canonicalizeUri uri |> Uri.fromString))))
+            (Lsp.Types.Location.create ~range:(Utils.cmt_loc_to_range loc)
+               ~uri:(Files.canonicalize_uri uri |> Uri.from_string))))
   in
-  maybeLocation
+  maybe_location
 
 let references ~full ~pos ~debug =
-  let allLocs =
+  let all_locs =
     match full with
     | None -> []
     | Some full -> (
-      match References.getLocItem ~full ~pos ~debug with
+      match References.get_loc_item ~full ~pos ~debug with
       | None -> []
-      | Some locItem ->
-        let allReferences = References.allReferencesForLocItem ~full locItem in
-        allReferences
+      | Some loc_item ->
+        let all_references = References.all_references_for_loc_item ~full loc_item in
+        all_references
         |> List.fold_left
-             (fun acc {References.uri = uri2; locOpt} ->
+             (fun acc {References.uri = uri2; loc_opt} ->
                let loc =
-                 match locOpt with
+                 match loc_opt with
                  | Some loc -> loc
-                 | None -> Uri.toTopLevelLoc uri2
+                 | None -> Uri.to_top_level_loc uri2
                in
 
-               Lsp.Types.Location.create ~range:(Utils.cmtLocToRange loc)
-                 ~uri:(Uri.toString uri2 |> Uri.fromString)
+               Lsp.Types.Location.create ~range:(Utils.cmt_loc_to_range loc)
+                 ~uri:(Uri.to_string uri2 |> Uri.from_string)
                :: acc)
              [])
   in
-  allLocs
+  all_locs
 
-let rename ~full ~pos ~newName ~debug =
+let rename ~full ~pos ~new_name ~debug =
   let result =
     match full with
     | None -> None
     | Some full -> (
-      match References.getLocItem ~full ~pos ~debug with
+      match References.get_loc_item ~full ~pos ~debug with
       | None -> None
-      | Some locItem ->
-        let allReferences = References.allReferencesForLocItem ~full locItem in
-        let referencesToToplevelModules =
-          allReferences
-          |> Utils.filterMap (fun {References.uri = uri2; locOpt} ->
-                 if locOpt = None then Some uri2 else None)
+      | Some loc_item ->
+        let all_references = References.all_references_for_loc_item ~full loc_item in
+        let references_to_toplevel_modules =
+          all_references
+          |> Utils.filter_map (fun {References.uri = uri2; loc_opt} ->
+                 if loc_opt = None then Some uri2 else None)
         in
-        let referencesToItems =
-          allReferences
-          |> Utils.filterMap (function
-               | {References.uri = uri2; locOpt = Some loc} -> Some (uri2, loc)
-               | {locOpt = None} -> None)
+        let references_to_items =
+          all_references
+          |> Utils.filter_map (function
+               | {References.uri = uri2; loc_opt = Some loc} -> Some (uri2, loc)
+               | {loc_opt = None} -> None)
         in
-        let fileRenames =
-          referencesToToplevelModules
+        let file_renames =
+          references_to_toplevel_modules
           |> List.map (fun uri ->
-                 let path = Uri.toPath uri in
+                 let path = Uri.to_path uri in
                  let dir =
                    match Filename.dirname path with
                    | "." -> ""
                    | other -> other
                  in
-                 let newPath =
-                   Filename.concat dir (newName ^ Filename.extension path)
+                 let new_path =
+                   Filename.concat dir (new_name ^ Filename.extension path)
                  in
                  `RenameFile
                    (Lsp.Types.RenameFile.create
-                      ~newUri:
-                        (newPath |> Uri.fromPath |> Uri.toString |> Uri.fromPath)
-                      ~oldUri:(uri |> Uri.toString |> Uri.fromString)
+                      ~new_uri:
+                        (new_path |> Uri.from_path |> Uri.to_string |> Uri.from_path)
+                      ~old_uri:(uri |> Uri.to_string |> Uri.from_string)
                       ()))
         in
-        let textDocumentEdits =
+        let text_document_edits =
           let module StringMap = Misc.StringMap in
-          let textEditsByUri =
-            referencesToItems
-            |> List.map (fun (uri, loc) -> (Uri.toString uri, loc))
+          let text_edits_by_uri =
+            references_to_items
+            |> List.map (fun (uri, loc) -> (Uri.to_string uri, loc))
             |> List.fold_left
                  (fun acc (uri, loc) ->
-                   let textEdit =
+                   let text_edit =
                      `TextEdit
-                       (Lsp.Types.TextEdit.create ~newText:newName
-                          ~range:(Utils.cmtLocToRange loc))
+                       (Lsp.Types.TextEdit.create ~new_text:new_name
+                          ~range:(Utils.cmt_loc_to_range loc))
                    in
                    match StringMap.find_opt uri acc with
-                   | None -> StringMap.add uri [textEdit] acc
-                   | Some prevEdits ->
-                     StringMap.add uri (textEdit :: prevEdits) acc)
+                   | None -> StringMap.add uri [text_edit] acc
+                   | Some prev_edits ->
+                     StringMap.add uri (text_edit :: prev_edits) acc)
                  StringMap.empty
           in
           StringMap.fold
             (fun uri edits acc ->
-              let textDocument =
+              let text_document =
                 Lsp.Types.OptionalVersionedTextDocumentIdentifier.create
-                  ~version:0 ~uri:(Uri.fromString uri) ()
+                  ~version:0 ~uri:(Uri.from_string uri) ()
               in
-              let textDocumentEdit =
+              let text_document_edit =
                 `TextDocumentEdit
-                  (Lsp.Types.TextDocumentEdit.create ~edits ~textDocument)
+                  (Lsp.Types.TextDocumentEdit.create ~edits ~text_document)
               in
-              textDocumentEdit :: acc)
-            textEditsByUri []
+              text_document_edit :: acc)
+            text_edits_by_uri []
         in
-        let documentChanges = fileRenames @ textDocumentEdits in
-        Some (Lsp.Types.WorkspaceEdit.create ~documentChanges ()))
+        let document_changes = file_renames @ text_document_edits in
+        Some (Lsp.Types.WorkspaceEdit.create ~document_changes ()))
   in
   result
 
-type prepareRenameResult = {
+type prepare_rename_result = {
   range: Lsp.Types.Range.t;
   placeholder: string option;
 }
 
-let prepareRename ~full ~pos ~debug =
+let prepare_rename ~full ~pos ~debug =
   match full with
   | None -> None
   | Some full -> (
-    match References.getLocItem ~full ~pos ~debug with
+    match References.get_loc_item ~full ~pos ~debug with
     | None -> None
-    | Some locItem ->
-      let range = Utils.cmtLocToRange locItem.loc in
-      let placeholderOpt =
-        match locItem.locType with
+    | Some loc_item ->
+      let range = Utils.cmt_loc_to_range loc_item.loc in
+      let placeholder_opt =
+        match loc_item.loc_type with
         | Typed (name, _, _) | TopLevelModule name | TypeDefinition (name, _, _)
           ->
           Some name
         | _ -> None
       in
-      Some {range; placeholder = placeholderOpt})
+      Some {range; placeholder = placeholder_opt})
 
-let format ~source ~kindFile =
+let format ~source ~kind_file =
   let create_range text =
     let lines = text |> String.split_on_char '\n' in
     let lines_len = List.length lines in
@@ -281,11 +281,11 @@ let format ~source ~kindFile =
         ~start:(Lsp.Types.Position.create ~line:0 ~character:0)
         ~end_:(Lsp.Types.Position.create ~line:(lines_len - 1) ~character)
     in
-    Lsp.Types.TextEdit.create ~newText:text ~range
+    Lsp.Types.TextEdit.create ~new_text:text ~range
   in
 
   let result =
-    match kindFile with
+    match kind_file with
     | Files.Res -> (
       let {Res_driver.parsetree = structure; comments; diagnostics} =
         Res_driver.parsing_engine.parse_implementation_from_source
@@ -309,5 +309,5 @@ let format ~source ~kindFile =
   in
 
   match result with
-  | Ok textEdit -> Ok [textEdit]
+  | Ok text_edit -> Ok [text_edit]
   | Error e -> Error e

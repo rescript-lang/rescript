@@ -1,24 +1,24 @@
-let addJsxCompletionItems ~mainTypeId ~env ~prefix ~(full : SharedTypes.full)
-    ~rawOpens typ =
-  match mainTypeId with
-  | ("array" | "float" | "string" | "int") as builtinNameToComplete ->
-    if Utils.checkName builtinNameToComplete ~prefix ~exact:false then
+let add_jsx_completion_items ~main_type_id ~env ~prefix ~(full : SharedTypes.full)
+    ~raw_opens typ =
+  match main_type_id with
+  | ("array" | "float" | "string" | "int") as builtin_name_to_complete ->
+    if Utils.check_name builtin_name_to_complete ~prefix ~exact:false then
       let name =
-        match full.package.genericJsxModule with
-        | None -> "React." ^ builtinNameToComplete
+        match full.package.generic_jsx_module with
+        | None -> "React." ^ builtin_name_to_complete
         | Some g ->
-          g ^ "." ^ builtinNameToComplete
+          g ^ "." ^ builtin_name_to_complete
           |> String.split_on_char '.'
-          |> TypeUtils.removeOpensFromCompletionPath ~rawOpens
+          |> TypeUtils.remove_opens_from_completion_path ~raw_opens
                ~package:full.package
           |> String.concat "."
       in
       [
         SharedTypes.Completion.create name ~synthetic:true
-          ~includesSnippets:true ~kind:(Value typ) ~env ~sortText:"A"
+          ~includes_snippets:true ~kind:(Value typ) ~env ~sort_text:"A"
           ~docstring:
             [
-              "Turns `" ^ builtinNameToComplete
+              "Turns `" ^ builtin_name_to_complete
               ^ "` into a JSX element so it can be used inside of JSX.";
             ];
       ]

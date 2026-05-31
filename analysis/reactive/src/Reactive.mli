@@ -109,7 +109,7 @@ val source : name:string -> unit -> ('k, 'v) t * (('k, 'v) delta -> unit)
 
 (** {1 Combinators} *)
 
-val flatMap :
+val flat_map :
   name:string ->
   ('k1, 'v1) t ->
   f:('k1 -> 'v1 -> ('k2 * 'v2) list) ->

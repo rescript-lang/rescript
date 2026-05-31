@@ -1,7 +1,7 @@
 open SharedTypes
 
 (* TODO should I hang on to location? *)
-let rec findDocAttribute attributes =
+let rec find_doc_attribute attributes =
   let open Parsetree in
   match attributes with
   | [] -> None
@@ -15,9 +15,9 @@ let rec findDocAttribute attributes =
         ] )
     :: _ ->
     Some doc
-  | _ :: rest -> findDocAttribute rest
+  | _ :: rest -> find_doc_attribute rest
 
-let rec findDeprecatedAttribute attributes =
+let rec find_deprecated_attribute attributes =
   let open Parsetree in
   match attributes with
   | [] -> None
@@ -42,44 +42,44 @@ let rec findDeprecatedAttribute attributes =
       Some !reason
     | _ -> None)
   | ({Asttypes.txt = "deprecated"}, _) :: _ -> Some ""
-  | _ :: rest -> findDeprecatedAttribute rest
+  | _ :: rest -> find_deprecated_attribute rest
 
-let newDeclared ~item ~extent ~name ~stamp ~modulePath isExported attributes =
+let new_declared ~item ~extent ~name ~stamp ~module_path is_exported attributes =
   {
     Declared.name;
     stamp;
-    extentLoc = extent;
-    isExported;
-    modulePath;
-    deprecated = findDeprecatedAttribute (List.rev attributes);
+    extent_loc = extent;
+    is_exported;
+    module_path;
+    deprecated = find_deprecated_attribute (List.rev attributes);
     docstring =
-      (match findDocAttribute attributes with
+      (match find_doc_attribute attributes with
       | None -> []
       | Some d -> [d]);
     item;
   }
 
-let rec findEditorCompleteFromAttribute ?(modulePaths = []) attributes =
+let rec find_editor_complete_from_attribute ?(module_paths = []) attributes =
   let open Parsetree in
   match attributes with
-  | [] -> modulePaths
+  | [] -> module_paths
   | ( {Asttypes.txt = "editor.completeFrom"},
-      PStr [{pstr_desc = Pstr_eval (payloadExpr, _)}] )
+      PStr [{pstr_desc = Pstr_eval (payload_expr, _)}] )
     :: rest ->
     let items =
-      match payloadExpr with
+      match payload_expr with
       | {pexp_desc = Pexp_array items} -> items
       | p -> [p]
     in
-    let modulePathsFromArray =
+    let module_paths_from_array =
       items
       |> List.filter_map (fun item ->
              match item.Parsetree.pexp_desc with
              | Pexp_construct ({txt = path}, None) ->
-               Some (Utils.flattenLongIdent path)
+               Some (Utils.flatten_long_ident path)
              | _ -> None)
     in
-    findEditorCompleteFromAttribute
-      ~modulePaths:(modulePathsFromArray @ modulePaths)
+    find_editor_complete_from_attribute
+      ~module_paths:(module_paths_from_array @ module_paths)
       rest
-  | _ :: rest -> findEditorCompleteFromAttribute ~modulePaths rest
+  | _ :: rest -> find_editor_complete_from_attribute ~module_paths rest

@@ -1,4 +1,4 @@
-let runConfig = RunConfig.runConfig
+let run_config = RunConfig.run_config
 
 type cmt_file_result = {
   dce_data: DceFileProcessing.file_data option;
@@ -8,63 +8,63 @@ type cmt_file_result = {
 
 (** Process a cmt file and return its results.
     Conceptually: map over files, then merge results. *)
-let loadCmtFile ~config cmtFilePath : cmt_file_result option =
-  let cmt_infos = Cmt_format.read_cmt cmtFilePath in
-  let excludePath sourceFile =
+let load_cmt_file ~config cmt_file_path : cmt_file_result option =
+  let cmt_infos = Cmt_format.read_cmt cmt_file_path in
+  let exclude_path source_file =
     config.DceConfig.cli.exclude_paths
     |> List.exists (fun prefix_ ->
            let prefix =
-             match Filename.is_relative sourceFile with
+             match Filename.is_relative source_file with
              | true -> prefix_
              | false -> Filename.concat (Sys.getcwd ()) prefix_
            in
-           String.length prefix <= String.length sourceFile
+           String.length prefix <= String.length source_file
            &&
-           try String.sub sourceFile 0 (String.length prefix) = prefix
+           try String.sub source_file 0 (String.length prefix) = prefix
            with Invalid_argument _ -> false)
   in
   match cmt_infos.cmt_annots |> FindSourceFile.cmt with
-  | Some sourceFile when not (excludePath sourceFile) ->
+  | Some source_file when not (exclude_path source_file) ->
     let is_interface =
       match cmt_infos.cmt_annots with
       | Interface _ -> true
-      | _ -> Filename.check_suffix sourceFile "i"
+      | _ -> Filename.check_suffix source_file "i"
     in
-    let module_name = sourceFile |> Paths.getModuleName in
+    let module_name = source_file |> Paths.get_module_name in
     (* File context for DceFileProcessing (breaks cycle with DeadCommon) *)
     let dce_file_context : DceFileProcessing.file_context =
-      {source_path = sourceFile; module_name; is_interface}
+      {source_path = source_file; module_name; is_interface}
     in
     (* File context for Exception/Arnold (uses DeadCommon.FileContext) *)
     let file_context =
       DeadCommon.FileContext.
-        {source_path = sourceFile; module_name; is_interface}
+        {source_path = source_file; module_name; is_interface}
     in
     if config.cli.debug then
       Log_.item "Scanning %s Source:%s@."
-        (match config.cli.ci && not (Filename.is_relative cmtFilePath) with
-        | true -> Filename.basename cmtFilePath
-        | false -> cmtFilePath)
-        (match config.cli.ci && not (Filename.is_relative sourceFile) with
-        | true -> sourceFile |> Filename.basename
-        | false -> sourceFile);
+        (match config.cli.ci && not (Filename.is_relative cmt_file_path) with
+        | true -> Filename.basename cmt_file_path
+        | false -> cmt_file_path)
+        (match config.cli.ci && not (Filename.is_relative source_file) with
+        | true -> source_file |> Filename.basename
+        | false -> source_file);
     (* Process file for DCE - return file_data *)
     let dce_data =
       if config.DceConfig.run.dce then
         Some
           (cmt_infos
           |> DceFileProcessing.process_cmt_file ~config ~file:dce_file_context
-               ~cmtFilePath)
+               ~cmt_file_path)
       else None
     in
     (* Process file for Exception analysis *)
     let exception_data =
       if config.DceConfig.run.exception_ then
-        cmt_infos |> Exception.processCmt ~file:file_context
+        cmt_infos |> Exception.process_cmt ~file:file_context
       else None
     in
     if config.DceConfig.run.termination then
-      cmt_infos |> Arnold.processCmt ~config ~file:file_context;
+      cmt_infos |> Arnold.process_cmt ~config ~file:file_context;
     Some {dce_data; exception_data}
   | _ -> None
 
@@ -75,40 +75,40 @@ type all_files_result = {
 (** Result of processing all cmt files *)
 
 (** Collect all cmt file paths to process *)
-let collectCmtFilePaths ~cmtRoot : string list =
+let collect_cmt_file_paths ~cmt_root : string list =
   let ( +++ ) = Filename.concat in
   let paths = ref [] in
-  (match cmtRoot with
+  (match cmt_root with
   | Some root ->
-    Cli.cmtCommand := true;
-    let rec walkSubDirs dir =
-      let absDir =
+    Cli.cmt_command := true;
+    let rec walk_sub_dirs dir =
+      let abs_dir =
         match dir = "" with
         | true -> root
         | false -> root +++ dir
       in
-      let skipDir =
+      let skip_dir =
         let base = Filename.basename dir in
         base = "node_modules" || base = "_esy"
       in
-      if (not skipDir) && Sys.file_exists absDir then
-        if Sys.is_directory absDir then
-          absDir |> Sys.readdir |> Array.iter (fun d -> walkSubDirs (dir +++ d))
+      if (not skip_dir) && Sys.file_exists abs_dir then
+        if Sys.is_directory abs_dir then
+          abs_dir |> Sys.readdir |> Array.iter (fun d -> walk_sub_dirs (dir +++ d))
         else if
-          Filename.check_suffix absDir ".cmt"
-          || Filename.check_suffix absDir ".cmti"
-        then paths := absDir :: !paths
+          Filename.check_suffix abs_dir ".cmt"
+          || Filename.check_suffix abs_dir ".cmti"
+        then paths := abs_dir :: !paths
     in
-    walkSubDirs ""
+    walk_sub_dirs ""
   | None ->
-    Lazy.force Paths.setReScriptProjectRoot;
+    Lazy.force Paths.set_re_script_project_root;
     (* Prefer explicit scan plan emitted by rewatch (v2 `.sourcedirs.json`).
        This supports monorepos without reanalyze-side package resolution. *)
-    let scan_plan = Paths.readCmtScan () in
+    let scan_plan = Paths.read_cmt_scan () in
     let seen = Hashtbl.create 256 in
-    let add_dir (absDir : string) =
+    let add_dir (abs_dir : string) =
       let files =
-        match Sys.readdir absDir |> Array.to_list with
+        match Sys.readdir abs_dir |> Array.to_list with
         | files -> files
         | exception Sys_error _ -> []
       in
@@ -117,7 +117,7 @@ let collectCmtFilePaths ~cmtRoot : string list =
              Filename.check_suffix x ".cmt" || Filename.check_suffix x ".cmti")
       |> List.sort String.compare
       |> List.iter (fun f ->
-             let p = Filename.concat absDir f in
+             let p = Filename.concat abs_dir f in
              if not (Hashtbl.mem seen p) then (
                Hashtbl.add seen p ();
                paths := p :: !paths))
@@ -125,7 +125,7 @@ let collectCmtFilePaths ~cmtRoot : string list =
     scan_plan
     |> List.iter (fun (entry : Paths.cmt_scan_entry) ->
            let build_root_abs =
-             Filename.concat runConfig.projectRoot entry.build_root
+             Filename.concat run_config.project_root entry.build_root
            in
            (* Scan configured subdirs. *)
            entry.scan_dirs
@@ -135,14 +135,14 @@ let collectCmtFilePaths ~cmtRoot : string list =
   !paths |> List.rev
 
 (** Process files sequentially *)
-let processFilesSequential ~config (cmtFilePaths : string list) :
+let process_files_sequential ~config (cmt_file_paths : string list) :
     all_files_result =
   Timing.time_phase `FileLoading (fun () ->
       let dce_data_list = ref [] in
       let exception_results = ref [] in
-      cmtFilePaths
-      |> List.iter (fun cmtFilePath ->
-             match loadCmtFile ~config cmtFilePath with
+      cmt_file_paths
+      |> List.iter (fun cmt_file_path ->
+             match load_cmt_file ~config cmt_file_path with
              | Some {dce_data; exception_data} -> (
                (match dce_data with
                | Some data -> dce_data_list := data :: !dce_data_list
@@ -156,11 +156,11 @@ let processFilesSequential ~config (cmtFilePaths : string list) :
 (** Process all cmt files and return results for DCE and Exception analysis.
     Conceptually: map process_cmt_file over all files.
     If file_stats is provided, it will be updated with processing statistics. *)
-let processCmtFiles ~config ~cmtRoot ~reactive_collection ~skip_file
+let process_cmt_files ~config ~cmt_root ~reactive_collection ~skip_file
     ?(file_stats : ReactiveAnalysis.processing_stats option) () :
     all_files_result =
-  let cmtFilePaths =
-    let all = collectCmtFilePaths ~cmtRoot in
+  let cmt_file_paths =
+    let all = collect_cmt_file_paths ~cmt_root in
     match skip_file with
     | Some should_skip -> List.filter (fun p -> not (should_skip p)) all
     | None -> all
@@ -169,7 +169,7 @@ let processCmtFiles ~config ~cmtRoot ~reactive_collection ~skip_file
   match reactive_collection with
   | Some collection ->
     let result, stats =
-      ReactiveAnalysis.process_files ~collection ~config cmtFilePaths
+      ReactiveAnalysis.process_files ~collection ~config cmt_file_paths
     in
     (match file_stats with
     | Some fs ->
@@ -181,7 +181,7 @@ let processCmtFiles ~config ~cmtRoot ~reactive_collection ~skip_file
       dce_data_list = result.dce_data_list;
       exception_results = result.exception_results;
     }
-  | None -> processFilesSequential ~config cmtFilePaths
+  | None -> process_files_sequential ~config cmt_file_paths
 
 (* Shuffle a list using Fisher-Yates algorithm *)
 let shuffle_list lst =
@@ -195,11 +195,11 @@ let shuffle_list lst =
   done;
   Array.to_list arr
 
-let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge
+let run_analysis ~dce_config ~cmt_root ~reactive_collection ~reactive_merge
     ~reactive_liveness ~reactive_solver ~skip_file ?file_stats () =
   (* Map: process each file -> list of file_data *)
   let {dce_data_list; exception_results} =
-    processCmtFiles ~config:dce_config ~cmtRoot ~reactive_collection ~skip_file
+    process_cmt_files ~config:dce_config ~cmt_root ~reactive_collection ~skip_file
       ?file_stats ()
   in
   (* Get exception results from reactive collection if available *)
@@ -210,7 +210,7 @@ let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge
   in
   (* Optionally shuffle for order-independence testing *)
   let dce_data_list =
-    if !Cli.testShuffle then (
+    if !Cli.test_shuffle then (
       Random.self_init ();
       if dce_config.DceConfig.cli.debug then
         Log_.item "Shuffling file order for order-independence test@.";
@@ -380,16 +380,16 @@ let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge
             (* Non-reactive path: use old solver with optional args *)
             let empty_optional_args_state = OptionalArgsState.create () in
             let analysis_result_core =
-              DeadCommon.solveDead ~ann_store ~decl_store ~ref_store
+              DeadCommon.solve_dead ~ann_store ~decl_store ~ref_store
                 ~optional_args_state:empty_optional_args_state
                 ~config:dce_config
-                ~checkOptionalArg:(fun
+                ~check_optional_arg:(fun
                     ~optional_args_state:_ ~ann_store:_ ~config:_ _ -> [])
             in
             (* Compute liveness-aware optional args state *)
             let is_live pos =
               match DeclarationStore.find_opt decl_store pos with
-              | Some decl -> Decl.isLive decl
+              | Some decl -> Decl.is_live decl
               | None -> true
             in
             let optional_args_state =
@@ -401,7 +401,7 @@ let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge
             let optional_args_issues =
               DeclarationStore.fold
                 (fun _pos decl acc ->
-                  if Decl.isLive decl then
+                  if Decl.is_live decl then
                     let issues =
                       DeadOptionalArgs.check ~optional_args_state ~ann_store
                         ~config:dce_config decl
@@ -425,11 +425,11 @@ let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge
                Log_.warning ~loc:issue.loc issue.description)
       | None -> ());
       if dce_config.DceConfig.run.exception_ then
-        Exception.runChecks ~config:dce_config exception_results;
+        Exception.run_checks ~config:dce_config exception_results;
       if dce_config.DceConfig.run.termination && dce_config.DceConfig.cli.debug
-      then Arnold.reportStats ~config:dce_config)
+      then Arnold.report_stats ~config:dce_config)
 
-let runAnalysisAndReport ~cmtRoot =
+let run_analysis_and_report ~cmt_root =
   Log_.Color.setup ();
   Timing.enabled := !Cli.timing;
   (* Reactive scheduler debug output: keep surface area minimal by reusing -timing.
@@ -437,7 +437,7 @@ let runAnalysisAndReport ~cmtRoot =
   Reactive.set_debug !Cli.timing;
   if !Cli.json then EmitJson.start ();
   let dce_config = DceConfig.current () in
-  let numRuns = max 1 !Cli.runs in
+  let num_runs = max 1 !Cli.runs in
   (* Create reactive collection once, reuse across runs *)
   let reactive_collection =
     if !Cli.reactive then Some (ReactiveAnalysis.create ~config:dce_config)
@@ -480,8 +480,8 @@ let runAnalysisAndReport ~cmtRoot =
     | _ -> None
   in
   (* Collect CMT file paths once for churning *)
-  let cmtFilePaths =
-    if !Cli.churn > 0 then Some (collectCmtFilePaths ~cmtRoot) else None
+  let cmt_file_paths =
+    if !Cli.churn > 0 then Some (collect_cmt_file_paths ~cmt_root) else None
   in
   (* Track previous issue count for diff reporting *)
   let prev_issue_count = ref 0 in
@@ -493,16 +493,16 @@ let runAnalysisAndReport ~cmtRoot =
   let churn_times = ref [] in
   let issues_added_list = ref [] in
   let issues_removed_list = ref [] in
-  for run = 1 to numRuns do
+  for run = 1 to num_runs do
     Timing.reset ();
     (* Clear stats at start of each run to avoid accumulation *)
     if run > 1 then Log_.Stats.clear ();
     (* Print run header first *)
-    if numRuns > 1 && !Cli.timing then
-      Printf.eprintf "\n=== Run %d/%d ===\n%!" run numRuns;
+    if num_runs > 1 && !Cli.timing then
+      Printf.eprintf "\n=== Run %d/%d ===\n%!" run num_runs;
     (* Churn: alternate between remove and add phases *)
     (if !Cli.churn > 0 then
-       match (reactive_collection, cmtFilePaths) with
+       match (reactive_collection, cmt_file_paths) with
        | Some collection, Some paths ->
          Reactive.reset_stats ();
          if run > 1 && !removed_files <> [] then (
@@ -533,9 +533,9 @@ let runAnalysisAndReport ~cmtRoot =
              | None -> ()))
          else if run > 1 then (
            (* Remove new random files *)
-           let numChurn = min !Cli.churn (List.length paths) in
+           let num_churn = min !Cli.churn (List.length paths) in
            let shuffled = shuffle_list paths in
-           let to_remove = List.filteri (fun i _ -> i < numChurn) shuffled in
+           let to_remove = List.filteri (fun i _ -> i < num_churn) shuffled in
            removed_files := to_remove;
            (* Mark as removed so processCmtFiles skips them *)
            List.iter (fun p -> Hashtbl.replace removed_set p ()) to_remove;
@@ -565,7 +565,7 @@ let runAnalysisAndReport ~cmtRoot =
         Some (fun path -> Hashtbl.mem removed_set path)
       else None
     in
-    runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge
+    run_analysis ~dce_config ~cmt_root ~reactive_collection ~reactive_merge
       ~reactive_liveness ~reactive_solver ~skip_file ();
     (* Report issue count with diff *)
     let current_count = Log_.Stats.get_issue_count () in
@@ -586,7 +586,7 @@ let runAnalysisAndReport ~cmtRoot =
       if !Cli.timing then
         Printf.eprintf "  Total issues: %d%s\n%!" current_count diff_str;
       prev_issue_count := current_count)
-    else if run = numRuns then
+    else if run = num_runs then
       (* Only report on last run for non-churn mode *)
       Log_.Stats.report ~config:dce_config;
     Log_.Stats.clear ();
@@ -617,44 +617,44 @@ let runAnalysisAndReport ~cmtRoot =
   if !Cli.json then EmitJson.finish ()
 
 let parse_argv (argv : string array) : string option =
-  let analysisKindSet = ref false in
-  let cmtRootRef = ref None in
+  let analysis_kind_set = ref false in
+  let cmt_root_ref = ref None in
   (* CLI override for transitive mode (overrides rescript.json if provided). *)
   let transitive_override : bool option ref = ref None in
   let usage = "reanalyze version " ^ Version.version in
-  let versionAndExit () =
+  let version_and_exit () =
     print_endline usage;
     exit 0
       [@@raises exit]
   in
-  let rec setAll cmtRoot =
+  let rec set_all cmt_root =
     RunConfig.all ();
-    cmtRootRef := cmtRoot;
-    analysisKindSet := true
-  and setConfig () =
-    Paths.Config.processConfig ();
-    analysisKindSet := true
-  and setDCE cmtRoot =
+    cmt_root_ref := cmt_root;
+    analysis_kind_set := true
+  and set_config () =
+    Paths.Config.process_config ();
+    analysis_kind_set := true
+  and set_d_c_e cmt_root =
     RunConfig.dce ();
-    cmtRootRef := cmtRoot;
-    analysisKindSet := true
-  and setException cmtRoot =
+    cmt_root_ref := cmt_root;
+    analysis_kind_set := true
+  and set_exception cmt_root =
     RunConfig.exception_ ();
-    cmtRootRef := cmtRoot;
-    analysisKindSet := true
-  and setTermination cmtRoot =
+    cmt_root_ref := cmt_root;
+    analysis_kind_set := true
+  and set_termination cmt_root =
     RunConfig.termination ();
-    cmtRootRef := cmtRoot;
-    analysisKindSet := true
+    cmt_root_ref := cmt_root;
+    analysis_kind_set := true
   and speclist =
     [
-      ("-all", Arg.Unit (fun () -> setAll None), "Run all the analyses.");
+      ("-all", Arg.Unit (fun () -> set_all None), "Run all the analyses.");
       ( "-all-cmt",
-        String (fun s -> setAll (Some s)),
+        String (fun s -> set_all (Some s)),
         "root_path Run all the analyses for all the .cmt files under the root \
          path" );
       ("-ci", Unit (fun () -> Cli.ci := true), "Internal flag for use in CI");
-      ("-config", Unit setConfig, "Read the analysis mode from rescript.json");
+      ("-config", Unit set_config, "Read the analysis mode from rescript.json");
       ( "-transitive",
         Unit (fun () -> transitive_override := Some true),
         "Force transitive reporting (overrides rescript.json \
@@ -663,71 +663,71 @@ let parse_argv (argv : string array) : string option =
         Unit (fun () -> transitive_override := Some false),
         "Disable transitive reporting (overrides rescript.json \
          reanalyze.transitive)" );
-      ("-dce", Unit (fun () -> setDCE None), "Eperimental DCE");
+      ("-dce", Unit (fun () -> set_d_c_e None), "Eperimental DCE");
       ("-debug", Unit (fun () -> Cli.debug := true), "Print debug information");
       ( "-dce-cmt",
-        String (fun s -> setDCE (Some s)),
+        String (fun s -> set_d_c_e (Some s)),
         "root_path Experimental DCE for all the .cmt files under the root path"
       );
       ( "-exception",
-        Unit (fun () -> setException None),
+        Unit (fun () -> set_exception None),
         "Experimental exception analysis" );
       ( "-exception-cmt",
-        String (fun s -> setException (Some s)),
+        String (fun s -> set_exception (Some s)),
         "root_path Experimental exception analysis for all the .cmt files \
          under the root path" );
       ( "-exclude-paths",
         String
           (fun s ->
             let paths = s |> String.split_on_char ',' in
-            Cli.excludePaths := paths @ Cli.excludePaths.contents),
+            Cli.exclude_paths := paths @ Cli.exclude_paths.contents),
         "comma-separated-path-prefixes Exclude from analysis files whose path \
          has a prefix in the list" );
       ( "-experimental",
         Set Cli.experimental,
         "Turn on experimental analyses (this option is currently unused)" );
       ( "-externals",
-        Set DeadCommon.Config.analyzeExternals,
+        Set DeadCommon.Config.analyze_externals,
         "Report on externals in dead code analysis" );
       ("-json", Set Cli.json, "Print reports in json format");
       ( "-live-names",
         String
           (fun s ->
             let names = s |> String.split_on_char ',' in
-            Cli.liveNames := names @ Cli.liveNames.contents),
+            Cli.live_names := names @ Cli.live_names.contents),
         "comma-separated-names Consider all values with the given names as live"
       );
       ( "-live-paths",
         String
           (fun s ->
             let paths = s |> String.split_on_char ',' in
-            Cli.livePaths := paths @ Cli.livePaths.contents),
+            Cli.live_paths := paths @ Cli.live_paths.contents),
         "comma-separated-path-prefixes Consider all values whose path has a \
          prefix in the list as live" );
       ( "-suppress",
         String
           (fun s ->
             let names = s |> String.split_on_char ',' in
-            runConfig.suppress <- names @ runConfig.suppress),
+            run_config.suppress <- names @ run_config.suppress),
         "comma-separated-path-prefixes Don't report on files whose path has a \
          prefix in the list" );
       ( "-termination",
-        Unit (fun () -> setTermination None),
+        Unit (fun () -> set_termination None),
         "Experimental termination analysis" );
       ( "-termination-cmt",
-        String (fun s -> setTermination (Some s)),
+        String (fun s -> set_termination (Some s)),
         "root_path Experimental termination analysis for all the .cmt files \
          under the root path" );
       ( "-unsuppress",
         String
           (fun s ->
             let names = s |> String.split_on_char ',' in
-            runConfig.unsuppress <- names @ runConfig.unsuppress),
+            run_config.unsuppress <- names @ run_config.unsuppress),
         "comma-separated-path-prefixes Report on files whose path has a prefix \
          in the list, overriding -suppress (no-op if -suppress is not \
          specified)" );
       ( "-test-shuffle",
-        Set Cli.testShuffle,
+        Set Cli.test_shuffle,
         "Test flag: shuffle file processing order to verify order-independence"
       );
       ("-timing", Set Cli.timing, "Report internal timing of analysis phases");
@@ -745,17 +745,17 @@ let parse_argv (argv : string array) : string option =
         Int (fun n -> Cli.churn := n),
         "n Remove and re-add n random files between runs (tests incremental \
          correctness)" );
-      ("-version", Unit versionAndExit, "Show version information and exit");
-      ("--version", Unit versionAndExit, "Show version information and exit");
+      ("-version", Unit version_and_exit, "Show version information and exit");
+      ("--version", Unit version_and_exit, "Show version information and exit");
     ]
   in
   let current = ref 0 in
   Arg.parse_argv ~current argv speclist print_endline usage;
-  if !analysisKindSet = false then setConfig ();
+  if !analysis_kind_set = false then set_config ();
   (match !transitive_override with
   | None -> ()
   | Some b -> RunConfig.transitive b);
-  !cmtRootRef
+  !cmt_root_ref
 
 (** Default socket location invariant:
     - the socket lives in the project root
@@ -764,8 +764,8 @@ let parse_argv (argv : string array) : string option =
     Project root detection reuses the same logic as reanalyze config discovery:
     walk up from a directory until we find rescript.json. *)
 let cli () =
-  let cmtRoot = parse_argv Sys.argv in
-  runAnalysisAndReport ~cmtRoot
+  let cmt_root = parse_argv Sys.argv in
+  run_analysis_and_report ~cmt_root
 [@@raises exit]
 
 (* Re-export server module for external callers (e.g. tools/bin/main.ml).

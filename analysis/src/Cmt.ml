@@ -1,67 +1,67 @@
 open SharedTypes
 
-let fullForCmt ~moduleName ~package ~uri cmt =
-  match Shared.tryReadCmt cmt with
+let full_for_cmt ~module_name ~package ~uri cmt =
+  match Shared.try_read_cmt cmt with
   | None -> None
   | Some infos ->
-    let file = ProcessCmt.fileForCmtInfos ~moduleName ~uri infos in
-    let extra = ProcessExtra.getExtra ~file ~infos in
+    let file = ProcessCmt.file_for_cmt_infos ~module_name ~uri infos in
+    let extra = ProcessExtra.get_extra ~file ~infos in
     Some {file; extra; package}
 
-let fullFromUri ~uri =
-  let path = Uri.toPath uri in
-  match Packages.getPackage ~uri with
+let full_from_uri ~uri =
+  let path = Uri.to_path uri in
+  match Packages.get_package ~uri with
   | None -> None
   | Some package -> (
-    let moduleName =
-      BuildSystem.namespacedName package.namespace (FindFiles.getName path)
+    let module_name =
+      BuildSystem.namespaced_name package.namespace (FindFiles.get_name path)
     in
     let incremental =
-      if !Cfg.inIncrementalTypecheckingMode then
-        let incrementalCmtPath =
-          package.rootPath ^ "/lib/bs/___incremental" ^ "/" ^ moduleName
+      if !Cfg.in_incremental_typechecking_mode then
+        let incremental_cmt_path =
+          package.root_path ^ "/lib/bs/___incremental" ^ "/" ^ module_name
           ^
-          match Files.classifySourceFile path with
+          match Files.classify_source_file path with
           | Resi -> ".cmti"
           | _ -> ".cmt"
         in
-        fullForCmt ~moduleName ~package ~uri incrementalCmtPath
+        full_for_cmt ~module_name ~package ~uri incremental_cmt_path
       else None
     in
     match incremental with
-    | Some cmtInfo ->
+    | Some cmt_info ->
       if Debug.verbose () then Printf.printf "[cmt] Found incremental cmt\n";
-      Some cmtInfo
+      Some cmt_info
     | None -> (
-      match Hashtbl.find_opt package.pathsForModule moduleName with
+      match Hashtbl.find_opt package.paths_for_module module_name with
       | Some paths ->
-        let cmt = getCmtPath ~uri paths in
-        fullForCmt ~moduleName ~package ~uri cmt
+        let cmt = get_cmt_path ~uri paths in
+        full_for_cmt ~module_name ~package ~uri cmt
       | None ->
-        prerr_endline ("can't find module " ^ moduleName);
+        prerr_endline ("can't find module " ^ module_name);
         None))
 
-let fullsFromModule ~package ~moduleName =
-  if Hashtbl.mem package.pathsForModule moduleName then
-    let paths = Hashtbl.find package.pathsForModule moduleName in
-    let uris = getUris paths in
-    uris |> List.filter_map (fun uri -> fullFromUri ~uri)
+let fulls_from_module ~package ~module_name =
+  if Hashtbl.mem package.paths_for_module module_name then
+    let paths = Hashtbl.find package.paths_for_module module_name in
+    let uris = get_uris paths in
+    uris |> List.filter_map (fun uri -> full_from_uri ~uri)
   else []
 
-let loadFullCmtFromPath ~path =
-  let uri = Uri.fromPath path in
-  fullFromUri ~uri
+let load_full_cmt_from_path ~path =
+  let uri = Uri.from_path path in
+  full_from_uri ~uri
 
-let loadCmtInfosFromPath ~path =
-  let uri = Uri.fromPath path in
-  match Packages.getPackage ~uri with
+let load_cmt_infos_from_path ~path =
+  let uri = Uri.from_path path in
+  match Packages.get_package ~uri with
   | None -> None
   | Some package -> (
-    let moduleName =
-      BuildSystem.namespacedName package.namespace (FindFiles.getName path)
+    let module_name =
+      BuildSystem.namespaced_name package.namespace (FindFiles.get_name path)
     in
-    match Hashtbl.find_opt package.pathsForModule moduleName with
+    match Hashtbl.find_opt package.paths_for_module module_name with
     | Some paths ->
-      let cmt = getCmtPath ~uri paths in
-      Shared.tryReadCmt cmt
+      let cmt = get_cmt_path ~uri paths in
+      Shared.try_read_cmt cmt
     | None -> None)

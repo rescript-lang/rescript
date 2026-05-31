@@ -26,14 +26,14 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
     ~(exception_refs : (DcePath.t, Location.t) Reactive.t) : t =
   (* Step 1: Index exception declarations by path *)
   let exception_decls =
-    Reactive.flatMap ~name:"exc_refs.exception_decls" decls
+    Reactive.flat_map ~name:"exc_refs.exception_decls" decls
       ~f:(fun _pos (decl : Decl.t) ->
-        match decl.Decl.declKind with
+        match decl.Decl.decl_kind with
         | Exception ->
           let loc : Location.t =
             {
               Location.loc_start = decl.pos;
-              loc_end = decl.posEnd;
+              loc_end = decl.pos_end;
               loc_ghost = false;
             }
           in
@@ -60,10 +60,10 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
 
   (* Step 3: Create refs_from direction by inverting *)
   let resolved_refs_from =
-    Reactive.flatMap ~name:"exc_refs.resolved_refs_from" resolved_refs
-      ~f:(fun posTo posFromSet ->
-        PosSet.elements posFromSet
-        |> List.map (fun posFrom -> (posFrom, PosSet.singleton posTo)))
+    Reactive.flat_map ~name:"exc_refs.resolved_refs_from" resolved_refs
+      ~f:(fun pos_to pos_from_set ->
+        PosSet.elements pos_from_set
+        |> List.map (fun pos_from -> (pos_from, PosSet.singleton pos_to)))
       ~merge:PosSet.union ()
   in
 
@@ -74,21 +74,21 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
 (** Add all resolved exception refs to a References.builder *)
 let add_to_refs_builder (t : t) ~(refs : References.builder) : unit =
   Reactive.iter
-    (fun posTo posFromSet ->
+    (fun pos_to pos_from_set ->
       PosSet.iter
-        (fun posFrom -> References.add_value_ref refs ~posTo ~posFrom)
-        posFromSet)
+        (fun pos_from -> References.add_value_ref refs ~pos_to ~pos_from)
+        pos_from_set)
     t.resolved_refs
 
 (** Add file dependencies for resolved refs *)
 let add_to_file_deps_builder (t : t) ~(file_deps : FileDeps.builder) : unit =
   Reactive.iter
-    (fun posTo posFromSet ->
+    (fun pos_to pos_from_set ->
       PosSet.iter
-        (fun posFrom ->
-          let from_file = posFrom.Lexing.pos_fname in
-          let to_file = posTo.Lexing.pos_fname in
+        (fun pos_from ->
+          let from_file = pos_from.Lexing.pos_fname in
+          let to_file = pos_to.Lexing.pos_fname in
           if from_file <> to_file then
             FileDeps.add_dep file_deps ~from_file ~to_file)
-        posFromSet)
+        pos_from_set)
     t.resolved_refs

@@ -6,17 +6,17 @@ module Kind = struct
     | RecordLabel
     | VariantCase
     | Value of {
-        isToplevel: bool;
-        mutable optionalArgs: OptionalArgs.t;
-        sideEffects: bool;
+        is_toplevel: bool;
+        mutable optional_args: OptionalArgs.t;
+        side_effects: bool;
       }
 
-  let isType dk =
+  let is_type dk =
     match dk with
     | RecordLabel | VariantCase -> true
     | Exception | Value _ -> false
 
-  let toString dk =
+  let to_string dk =
     match dk with
     | Exception -> "Exception"
     | RecordLabel -> "RecordLabel"
@@ -24,68 +24,68 @@ module Kind = struct
     | Value _ -> "Value"
 end
 
-type posAdjustment = FirstVariant | OtherVariant | Nothing
+type pos_adjustment = FirstVariant | OtherVariant | Nothing
 
 type t = {
-  declKind: Kind.t;
-  moduleLoc: Location.t;
-  posAdjustment: posAdjustment;
+  decl_kind: Kind.t;
+  module_loc: Location.t;
+  pos_adjustment: pos_adjustment;
   path: DcePath.t;
       (** For type re-exports (e.g. [type y = x = {...}]), record/variant label
       declarations belonging to the re-exporting type can carry the manifest
       type path so [DeadType.process_type_label_dependencies] can link fields
       without needing the typed tree. *)
-  manifestTypePath: DcePath.t option;
+  manifest_type_path: DcePath.t option;
   pos: Lexing.position;
-  posEnd: Lexing.position;
-  posStart: Lexing.position;
-  mutable resolvedDead: bool option;
+  pos_end: Lexing.position;
+  pos_start: Lexing.position;
+  mutable resolved_dead: bool option;
   mutable report: bool;
 }
 
-let isValue decl =
-  match decl.declKind with
+let is_value decl =
+  match decl.decl_kind with
   | Value _ (* | Exception *) -> true
   | _ -> false
 
 (** Check if a declaration is live (or unknown). Returns false only if resolved as dead. *)
-let isLive decl =
-  match decl.resolvedDead with
+let is_live decl =
+  match decl.resolved_dead with
   | Some true -> false
   | Some false | None -> true
 
-let compareUsingDependencies ~orderedFiles
+let compare_using_dependencies ~ordered_files
     {
-      declKind = kind1;
+      decl_kind = kind1;
       path = _path1;
       pos =
         {pos_fname = fname1; pos_lnum = lnum1; pos_bol = bol1; pos_cnum = cnum1};
     }
     {
-      declKind = kind2;
+      decl_kind = kind2;
       path = _path2;
       pos =
         {pos_fname = fname2; pos_lnum = lnum2; pos_bol = bol2; pos_cnum = cnum2};
     } =
-  let findPosition fn = Hashtbl.find orderedFiles fn [@@raises Not_found] in
+  let find_position fn = Hashtbl.find ordered_files fn [@@raises Not_found] in
   (* From the root of the file dependency DAG to the leaves.
        From the bottom of the file to the top. *)
   let position1, position2 =
-    try (fname1 |> findPosition, fname2 |> findPosition)
+    try (fname1 |> find_position, fname2 |> find_position)
     with Not_found -> (0, 0)
   in
   compare
     (position1, lnum2, bol2, cnum2, kind1)
     (position2, lnum1, bol1, cnum1, kind2)
 
-let compareForReporting
+let compare_for_reporting
     {
-      declKind = kind1;
+      decl_kind = kind1;
       pos =
         {pos_fname = fname1; pos_lnum = lnum1; pos_bol = bol1; pos_cnum = cnum1};
     }
     {
-      declKind = kind2;
+      decl_kind = kind2;
       pos =
         {pos_fname = fname2; pos_lnum = lnum2; pos_bol = bol2; pos_cnum = cnum2};
     } =

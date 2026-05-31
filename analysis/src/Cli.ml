@@ -3,107 +3,107 @@ let print_string json =
 let print_null () = `Null |> print_string
 let print_list l = `List l |> print_string
 
-let completion ~debug ~path ~pos ~currentFile =
-  let full = Cmt.loadFullCmtFromPath ~path in
-  let kindFile = Files.classifySourceFile currentFile in
-  match Files.readFile currentFile with
+let completion ~debug ~path ~pos ~current_file =
+  let full = Cmt.load_full_cmt_from_path ~path in
+  let kind_file = Files.classify_source_file current_file in
+  match Files.read_file current_file with
   | None | Some "" -> print_null ()
   | Some source ->
-    Commands.completion ~debug ~source ~kindFile ~pos ~full
+    Commands.completion ~debug ~source ~kind_file ~pos ~full
     |> List.map (fun c -> Lsp.Types.CompletionItem.yojson_of_t c)
     |> print_list
 
-let completionResolve ~path ~modulePath =
-  let full = Cmt.loadFullCmtFromPath ~path in
-  match Commands.completionResolve ~full ~modulePath with
+let completion_resolve ~path ~module_path =
+  let full = Cmt.load_full_cmt_from_path ~path in
+  match Commands.completion_resolve ~full ~module_path with
   | None -> print_null ()
   | Some (`MarkupContent {value}) -> `String value |> print_string
 
-let inlayhint ~path ~pos ~maxLength ~debug =
-  let full = Cmt.loadFullCmtFromPath ~path in
-  let kindFile = Files.classifySourceFile path in
-  match Files.readFile path with
+let inlayhint ~path ~pos ~max_length ~debug =
+  let full = Cmt.load_full_cmt_from_path ~path in
+  let kind_file = Files.classify_source_file path in
+  match Files.read_file path with
   | None -> print_null ()
   | Some source -> (
-    match Hint.inlay ~source ~kindFile ~pos ~maxLength ~full ~debug with
+    match Hint.inlay ~source ~kind_file ~pos ~max_length ~full ~debug with
     | Some hints ->
       hints
       |> List.map (fun h -> Lsp.Types.InlayHint.yojson_of_t h)
       |> print_list
     | None -> print_null ())
 
-let codeLens ~path ~debug =
-  let full = Cmt.loadFullCmtFromPath ~path in
-  let kindFile = Files.classifySourceFile path in
-  match Files.readFile path with
+let code_lens ~path ~debug =
+  let full = Cmt.load_full_cmt_from_path ~path in
+  let kind_file = Files.classify_source_file path in
+  match Files.read_file path with
   | None -> print_null ()
   | Some source -> (
-    match Hint.codeLens ~source ~kindFile ~full ~debug with
+    match Hint.code_lens ~source ~kind_file ~full ~debug with
     | Some lens ->
       lens |> List.map (fun l -> Lsp.Types.CodeLens.yojson_of_t l) |> print_list
     | None -> print_null ())
 
-let hover ~path ~pos ~currentFile ~debug ~supportsMarkdownLinks =
-  let full = Cmt.loadFullCmtFromPath ~path in
-  let kindFile = Files.classifySourceFile currentFile in
-  match Files.readFile currentFile with
+let hover ~path ~pos ~current_file ~debug ~supports_markdown_links =
+  let full = Cmt.load_full_cmt_from_path ~path in
+  let kind_file = Files.classify_source_file current_file in
+  match Files.read_file current_file with
   | None -> print_null ()
   | Some source -> (
     match
-      Commands.hover ~source ~kindFile ~pos ~debug ~supportsMarkdownLinks ~full
+      Commands.hover ~source ~kind_file ~pos ~debug ~supports_markdown_links ~full
     with
     | Some value -> Lsp.Types.Hover.yojson_of_t value |> print_string
     | None -> print_null ())
 
-let signatureHelp ~path ~pos ~currentFile ~debug ~allowForConstructorPayloads =
-  let full = Cmt.loadFullCmtFromPath ~path in
-  let kindFile = Files.classifySourceFile currentFile in
-  match Files.readFile currentFile with
+let signature_help ~path ~pos ~current_file ~debug ~allow_for_constructor_payloads =
+  let full = Cmt.load_full_cmt_from_path ~path in
+  let kind_file = Files.classify_source_file current_file in
+  match Files.read_file current_file with
   | None -> print_null ()
   | Some source -> (
     match
-      SignatureHelp.signatureHelp ~source ~kindFile ~pos
-        ~allowForConstructorPayloads ~full ~debug
+      SignatureHelp.signature_help ~source ~kind_file ~pos
+        ~allow_for_constructor_payloads ~full ~debug
     with
     | None -> print_null ()
     | Some s -> Lsp.Types.SignatureHelp.yojson_of_t s |> print_string)
 
-let codeAction ~path ~startPos ~endPos ~currentFile ~debug =
-  let kindFile = Files.classifySourceFile currentFile in
-  match Files.readFile currentFile with
+let code_action ~path ~start_pos ~end_pos ~current_file ~debug =
+  let kind_file = Files.classify_source_file current_file in
+  match Files.read_file current_file with
   | None -> print_null ()
   | Some source ->
-    Xform.extractCodeActions ~path ~startPos ~endPos ~source ~kindFile ~debug
+    Xform.extract_code_actions ~path ~start_pos ~end_pos ~source ~kind_file ~debug
     |> List.map (fun c -> Lsp.Types.CodeAction.yojson_of_t c)
     |> print_list
 
 let definition ~path ~pos ~debug =
-  let full = Cmt.loadFullCmtFromPath ~path in
+  let full = Cmt.load_full_cmt_from_path ~path in
 
   match Commands.definition ~full ~pos ~debug with
   | None -> print_null ()
   | Some location -> location |> Lsp.Types.Location.yojson_of_t |> print_string
 
-let typeDefinition ~path ~pos ~debug =
-  let full = Cmt.loadFullCmtFromPath ~path in
-  match Commands.typeDefinition ~full ~pos ~debug with
+let type_definition ~path ~pos ~debug =
+  let full = Cmt.load_full_cmt_from_path ~path in
+  match Commands.type_definition ~full ~pos ~debug with
   | None -> print_null ()
   | Some location -> location |> Lsp.Types.Location.yojson_of_t |> print_string
 
 let references ~path ~pos ~debug =
-  let full = Cmt.loadFullCmtFromPath ~path in
-  let allLocs = Commands.references ~full ~pos ~debug in
-  if allLocs = [] then print_null ()
+  let full = Cmt.load_full_cmt_from_path ~path in
+  let all_locs = Commands.references ~full ~pos ~debug in
+  if all_locs = [] then print_null ()
   else
-    allLocs
+    all_locs
     |> List.map (fun l -> Lsp.Types.Location.yojson_of_t l)
     |> print_list
 
-let rename ~path ~pos ~newName ~debug =
-  let full = Cmt.loadFullCmtFromPath ~path in
-  match Commands.rename ~full ~pos ~newName ~debug with
-  | Some {documentChanges = Some documentChanges} ->
-    documentChanges
+let rename ~path ~pos ~new_name ~debug =
+  let full = Cmt.load_full_cmt_from_path ~path in
+  match Commands.rename ~full ~pos ~new_name ~debug with
+  | Some {document_changes = Some document_changes} ->
+    document_changes
     |> List.map (fun c ->
            match c with
            | `RenameFile r -> Lsp.Types.RenameFile.yojson_of_t r
@@ -113,9 +113,9 @@ let rename ~path ~pos ~newName ~debug =
     |> print_list
   | _ -> print_null ()
 
-let prepareRename ~path ~pos ~debug =
-  let full = Cmt.loadFullCmtFromPath ~path in
-  match Commands.prepareRename ~full ~pos ~debug with
+let prepare_rename ~path ~pos ~debug =
+  let full = Cmt.load_full_cmt_from_path ~path in
+  match Commands.prepare_rename ~full ~pos ~debug with
   | None -> print_null ()
   | Some {range; placeholder = None} ->
     Lsp.Types.Range.yojson_of_t range |> print_string
@@ -128,46 +128,46 @@ let prepareRename ~path ~pos ~debug =
     |> print_string
 
 let format ~path =
-  match Files.readFile path with
+  match Files.read_file path with
   | None -> print_null ()
   | Some source -> (
-    let kindFile = Files.classifySourceFile path in
-    match Commands.format ~source ~kindFile with
-    | Ok textEdits -> (
-      match textEdits with
-      | {newText} :: _ -> print_string (`String newText)
+    let kind_file = Files.classify_source_file path in
+    match Commands.format ~source ~kind_file with
+    | Ok text_edits -> (
+      match text_edits with
+      | {new_text} :: _ -> print_string (`String new_text)
       | _ -> print_null ())
     | Error _ -> print_null ())
 
-let diagnosticSyntax ~path =
-  match Files.readFile path with
+let diagnostic_syntax ~path =
+  match Files.read_file path with
   | None -> print_list []
   | Some source ->
-    let kindFile = Files.classifySourceFile path in
-    Diagnostics.document_syntax ~source ~kindFile
+    let kind_file = Files.classify_source_file path in
+    Diagnostics.document_syntax ~source ~kind_file
     |> List.map Lsp.Types.Diagnostic.yojson_of_t
     |> print_list
 
-let semanticTokens ~path =
-  match Files.readFile path with
+let semantic_tokens ~path =
+  match Files.read_file path with
   | None -> print_null ()
   | Some source ->
-    let kindFile = Files.classifySourceFile path in
-    let tokens = SemanticTokens.semanticTokens ~source ~kindFile in
+    let kind_file = Files.classify_source_file path in
+    let tokens = SemanticTokens.semantic_tokens ~source ~kind_file in
     Lsp.Types.SemanticTokens.yojson_of_t tokens |> print_string
 
 let test ~path =
-  Uri.stripPath := true;
-  match Files.readFile path with
+  Uri.strip_path := true;
+  match Files.read_file path with
   | None -> assert false
   | Some text ->
     let lines = text |> String.split_on_char '\n' in
-    let processLine i line =
-      let createCurrentFile () =
-        let currentFile, cout =
+    let process_line i line =
+      let create_current_file () =
+        let current_file, cout =
           Filename.open_temp_file "def" ("txt." ^ Filename.extension path)
         in
-        let removeLineComment l =
+        let remove_line_comment l =
           let len = String.length l in
           let rec loop i =
             if i + 2 <= len && l.[i] = '/' && l.[i + 1] = '/' then Some (i + 2)
@@ -176,18 +176,18 @@ let test ~path =
           in
           match loop 0 with
           | None -> l
-          | Some indexAfterComment ->
-            String.make indexAfterComment ' '
-            ^ String.sub l indexAfterComment (len - indexAfterComment)
+          | Some index_after_comment ->
+            String.make index_after_comment ' '
+            ^ String.sub l index_after_comment (len - index_after_comment)
         in
         lines
         |> List.iteri (fun j l ->
-               let lineToOutput =
-                 if j == i - 1 then removeLineComment l else l
+               let line_to_output =
+                 if j == i - 1 then remove_line_comment l else l
                in
-               Printf.fprintf cout "%s\n" lineToOutput);
+               Printf.fprintf cout "%s\n" line_to_output);
         close_out cout;
-        currentFile
+        current_file
       in
       if Str.string_match (Str.regexp "^ *//[ ]*\\^") line 0 then
         let matched = Str.matched_string line in
@@ -200,21 +200,21 @@ let test ~path =
           (match String.sub rest 0 3 with
           | "db+" -> Log.verbose := true
           | "db-" -> Log.verbose := false
-          | "dv+" -> Debug.debugLevel := Verbose
-          | "dv-" -> Debug.debugLevel := Off
-          | "in+" -> Cfg.inIncrementalTypecheckingMode := true
-          | "in-" -> Cfg.inIncrementalTypecheckingMode := false
+          | "dv+" -> Debug.debug_level := Verbose
+          | "dv-" -> Debug.debug_level := Off
+          | "in+" -> Cfg.in_incremental_typechecking_mode := true
+          | "in-" -> Cfg.in_incremental_typechecking_mode := false
           | "ve+" -> (
             let version = String.sub rest 3 (String.length rest - 3) in
             let version = String.trim version in
             if Debug.verbose () then
               Printf.printf "Setting version: %s\n" version;
             match String.split_on_char '.' version with
-            | [majorRaw; minorRaw] ->
-              let version = (int_of_string majorRaw, int_of_string minorRaw) in
-              Packages.overrideRescriptVersion := Some version
+            | [major_raw; minor_raw] ->
+              let version = (int_of_string major_raw, int_of_string minor_raw) in
+              Packages.override_rescript_version := Some version
             | _ -> ())
-          | "ve-" -> Packages.overrideRescriptVersion := None
+          | "ve-" -> Packages.override_rescript_version := None
           | "def" ->
             print_endline
               ("Definition " ^ path ^ " " ^ string_of_int line ^ ":"
@@ -224,18 +224,18 @@ let test ~path =
             print_endline
               ("Complete " ^ path ^ " " ^ string_of_int line ^ ":"
              ^ string_of_int col);
-            let currentFile = createCurrentFile () in
-            completion ~debug:true ~path ~pos:(line, col) ~currentFile;
-            Sys.remove currentFile
+            let current_file = create_current_file () in
+            completion ~debug:true ~path ~pos:(line, col) ~current_file;
+            Sys.remove current_file
           | "cre" ->
-            let modulePath = String.sub rest 3 (String.length rest - 3) in
-            let modulePath = String.trim modulePath in
-            print_endline ("Completion resolve: " ^ modulePath);
-            completionResolve ~path ~modulePath
+            let module_path = String.sub rest 3 (String.length rest - 3) in
+            let module_path = String.trim module_path in
+            print_endline ("Completion resolve: " ^ module_path);
+            completion_resolve ~path ~module_path
           | "dce" ->
             print_endline ("DCE " ^ path);
-            Reanalyze.RunConfig.runConfig.suppress <- ["src"];
-            Reanalyze.RunConfig.runConfig.unsuppress <-
+            Reanalyze.RunConfig.run_config.suppress <- ["src"];
+            Reanalyze.RunConfig.run_config.unsuppress <-
               [Filename.concat "src" "dce"];
             DceCommand.command ()
           | "doc" ->
@@ -243,38 +243,38 @@ let test ~path =
             DocumentSymbol.command ~path
           | "hig" ->
             print_endline ("Highlight " ^ path);
-            let source = Files.readFile path |> Option.get in
-            let kindFile = Files.classifySourceFile path in
+            let source = Files.read_file path |> Option.get in
+            let kind_file = Files.classify_source_file path in
 
             SemanticTokens.command ~debug:true
-              ~emitter:(SemanticTokens.Token.createEmitter ())
-              ~source ~kindFile
+              ~emitter:(SemanticTokens.Token.create_emitter ())
+              ~source ~kind_file
           | "hov" ->
             print_endline
               ("Hover " ^ path ^ " " ^ string_of_int line ^ ":"
              ^ string_of_int col);
-            let currentFile = createCurrentFile () in
-            hover ~supportsMarkdownLinks:true ~path ~pos:(line, col)
-              ~currentFile ~debug:true;
-            Sys.remove currentFile
+            let current_file = create_current_file () in
+            hover ~supports_markdown_links:true ~path ~pos:(line, col)
+              ~current_file ~debug:true;
+            Sys.remove current_file
           | "she" ->
             print_endline
               ("Signature help " ^ path ^ " " ^ string_of_int line ^ ":"
              ^ string_of_int col);
-            let currentFile = createCurrentFile () in
-            signatureHelp ~path ~pos:(line, col) ~currentFile ~debug:true
-              ~allowForConstructorPayloads:true;
-            Sys.remove currentFile
+            let current_file = create_current_file () in
+            signature_help ~path ~pos:(line, col) ~current_file ~debug:true
+              ~allow_for_constructor_payloads:true;
+            Sys.remove current_file
           | "int" ->
             print_endline ("Create Interface " ^ path);
-            let cmiFile =
+            let cmi_file =
               let open Filename in
               let ( ++ ) = concat in
               let name = chop_extension (basename path) ^ ".cmi" in
               let dir = dirname path in
               dir ++ parent_dir_name ++ "lib" ++ "bs" ++ "src" ++ name
             in
-            Printf.printf "%s" (CreateInterface.command ~path ~cmiFile)
+            Printf.printf "%s" (CreateInterface.command ~path ~cmi_file)
           | "ref" ->
             print_endline
               ("References " ^ path ^ " " ^ string_of_int line ^ ":"
@@ -284,50 +284,50 @@ let test ~path =
             print_endline
               ("PrepareRename " ^ path ^ " " ^ string_of_int line ^ ":"
              ^ string_of_int col);
-            prepareRename ~path ~pos:(line, col) ~debug:true
+            prepare_rename ~path ~pos:(line, col) ~debug:true
           | "ren" ->
-            let newName = String.sub rest 4 (len - mlen - 4) in
+            let new_name = String.sub rest 4 (len - mlen - 4) in
             let () =
               print_endline
                 ("Rename " ^ path ^ " " ^ string_of_int line ^ ":"
-               ^ string_of_int col ^ " " ^ newName)
+               ^ string_of_int col ^ " " ^ new_name)
             in
-            rename ~path ~pos:(line, col) ~newName ~debug:true
+            rename ~path ~pos:(line, col) ~new_name ~debug:true
           | "typ" ->
             print_endline
               ("TypeDefinition " ^ path ^ " " ^ string_of_int line ^ ":"
              ^ string_of_int col);
-            typeDefinition ~path ~pos:(line, col) ~debug:true
+            type_definition ~path ~pos:(line, col) ~debug:true
           | "xfm" ->
-            let currentFile = createCurrentFile () in
+            let current_file = create_current_file () in
             (* +2 is to ensure that the character ^ points to is what's considered the end of the selection. *)
-            let endCol = col + try String.index rest '^' + 2 with _ -> 0 in
-            let endPos = (line, endCol) in
-            let startPos = (line, col) in
-            if startPos = endPos then
+            let end_col = col + try String.index rest '^' + 2 with _ -> 0 in
+            let end_pos = (line, end_col) in
+            let start_pos = (line, col) in
+            if start_pos = end_pos then
               print_endline
                 ("Xform " ^ path ^ " " ^ string_of_int line ^ ":"
                ^ string_of_int col)
             else
               print_endline
-                ("Xform " ^ path ^ " start: " ^ Pos.toString startPos
-               ^ ", end: " ^ Pos.toString endPos);
+                ("Xform " ^ path ^ " start: " ^ Pos.to_string start_pos
+               ^ ", end: " ^ Pos.to_string end_pos);
 
             let source =
-              Files.readFile currentFile |> Option.value ~default:""
+              Files.read_file current_file |> Option.value ~default:""
             in
-            let kindFile = Files.classifySourceFile currentFile in
-            let codeActions =
-              Xform.extractCodeActions ~path ~startPos ~endPos ~source ~kindFile
+            let kind_file = Files.classify_source_file current_file in
+            let code_actions =
+              Xform.extract_code_actions ~path ~start_pos ~end_pos ~source ~kind_file
                 ~debug:true
             in
-            Sys.remove currentFile;
-            codeActions
+            Sys.remove current_file;
+            code_actions
             |> List.iter (fun {Lsp.Types.CodeAction.title; edit} ->
                    Printf.printf "Hit: %s\n" title;
                    match edit with
-                   | Some {documentChanges} ->
-                     documentChanges |> Option.get
+                   | Some {document_changes} ->
+                     document_changes |> Option.get
                      |> List.iter
                           (fun
                             (dc :
@@ -340,7 +340,7 @@ let test ~path =
                             match dc with
                             | `TextDocumentEdit tde ->
                               let filename =
-                                tde.textDocument.uri |> Uri.toPath
+                                tde.text_document.uri |> Uri.to_path
                                 |> Filename.basename
                               in
                               Printf.printf "\nTextDocumentEdit: %s\n" filename;
@@ -353,15 +353,15 @@ let test ~path =
                                          Lsp.Types.AnnotatedTextEdit.t
                                        | `TextEdit of Lsp.Types.TextEdit.t ])
                                    ->
-                                     let start_char, newText, range =
+                                     let start_char, new_text, range =
                                        match edit with
                                        | `TextEdit te ->
                                          ( te.range.start.character,
-                                           te.newText,
+                                           te.new_text,
                                            te.range )
                                        | `AnnotatedTextEdit te ->
                                          ( te.range.start.character,
-                                           te.newText,
+                                           te.new_text,
                                            te.range )
                                      in
                                      let indent = String.make start_char ' ' in
@@ -369,10 +369,10 @@ let test ~path =
                                        "%s\nnewText:\n%s<--here\n%s%s\n"
                                        (Lsp.Types.Range.yojson_of_t range
                                        |> Yojson.Safe.pretty_to_string)
-                                       indent indent newText)
+                                       indent indent new_text)
                             | `CreateFile cf ->
                               let filename =
-                                cf.uri |> Uri.toPath |> Filename.basename
+                                cf.uri |> Uri.to_path |> Filename.basename
                               in
                               Printf.printf "\nCreateFile: %s\n" filename
                             | _ ->
@@ -383,11 +383,11 @@ let test ~path =
             print_endline
               ("Codemod AddMissingCases" ^ path ^ " " ^ string_of_int line ^ ":"
              ^ string_of_int col);
-            let source = Files.readFile path |> Option.value ~default:"" in
+            let source = Files.read_file path |> Option.value ~default:"" in
             Codemod.transform ~source ~pos:(line, col) ~debug:true
               ~typ:AddMissingCases ~hint
             |> print_endline
-          | "dia" -> diagnosticSyntax ~path
+          | "dia" -> diagnostic_syntax ~path
           | "hin" ->
             (* Get all inlay Hint between line 1 and n.
                Don't get the first line = 0.
@@ -397,20 +397,20 @@ let test ~path =
             print_endline
               ("Inlay Hint " ^ path ^ " " ^ string_of_int line_start ^ ":"
              ^ string_of_int line_end);
-            inlayhint ~path ~pos:(line_start, line_end) ~maxLength:"25"
+            inlayhint ~path ~pos:(line_start, line_end) ~max_length:"25"
               ~debug:false
           | "cle" ->
             print_endline ("Code Lens " ^ path);
-            codeLens ~path ~debug:false
+            code_lens ~path ~debug:false
           | "ast" ->
             print_endline
               ("Dump AST " ^ path ^ " " ^ string_of_int line ^ ":"
              ^ string_of_int col);
-            let currentFile = createCurrentFile () in
-            DumpAst.dump ~pos:(line, col) ~currentFile;
-            Sys.remove currentFile
-          | "sem" -> semanticTokens ~path
+            let current_file = create_current_file () in
+            DumpAst.dump ~pos:(line, col) ~current_file;
+            Sys.remove current_file
+          | "sem" -> semantic_tokens ~path
           | _ -> ());
           print_newline ())
     in
-    lines |> List.iteri processLine
+    lines |> List.iteri process_line

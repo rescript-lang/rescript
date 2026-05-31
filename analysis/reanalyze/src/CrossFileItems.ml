@@ -75,6 +75,6 @@ let process_exception_refs (t : t) ~refs ~file_deps ~find_exception ~config =
          match find_exception exception_path with
          | None -> ()
          | Some loc_to ->
-           DeadCommon.addValueReference ~config ~refs ~file_deps
-             ~binding:Location.none ~addFileReference:true ~locFrom:loc_from
-             ~locTo:loc_to)
+           DeadCommon.add_value_reference ~config ~refs ~file_deps
+             ~binding:Location.none ~add_file_reference:true ~loc_from:loc_from
+             ~loc_to:loc_to)

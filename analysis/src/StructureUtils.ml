@@ -1,10 +1,10 @@
 open SharedTypes
 
 let unique_items (structure : Module.structure) : Module.item list =
-  let namesUsed = Hashtbl.create 10 in
+  let names_used = Hashtbl.create 10 in
   structure.items
   |> List.filter (fun (it : Module.item) ->
-         if Hashtbl.mem namesUsed it.name then false
+         if Hashtbl.mem names_used it.name then false
          else (
-           Hashtbl.add namesUsed it.name ();
+           Hashtbl.add names_used it.name ();
            true))

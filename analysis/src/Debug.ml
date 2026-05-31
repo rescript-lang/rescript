@@ -1,13 +1,13 @@
-type debugLevel = Off | Regular | Verbose
+type debug_level = Off | Regular | Verbose
 
-let debugLevel = ref Off
+let debug_level = ref Off
 
 let log s =
-  match !debugLevel with
+  match !debug_level with
   | Regular | Verbose -> print_endline s
   | Off -> ()
 
-let debugPrintEnv (env : SharedTypes.QueryEnv.t) =
-  env.pathRev @ [env.file.moduleName] |> List.rev |> String.concat "."
+let debug_print_env (env : SharedTypes.QueryEnv.t) =
+  env.path_rev @ [env.file.module_name] |> List.rev |> String.concat "."
 
-let verbose () = !debugLevel = Verbose
+let verbose () = !debug_level = Verbose

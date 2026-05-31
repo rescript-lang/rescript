@@ -1,9 +1,9 @@
 open SharedTypes
 
-let debugReferences = ref true
-let maybeLog m = if !debugReferences then Log.log ("[ref] " ^ m)
+let debug_references = ref true
+let maybe_log m = if !debug_references then Log.log ("[ref] " ^ m)
 
-let checkPos (line, char)
+let check_pos (line, char)
     {Location.loc_start = {pos_lnum; pos_bol; pos_cnum}; loc_end} =
   if line < pos_lnum || (line = pos_lnum && char < pos_cnum - pos_bol) then
     false
@@ -13,39 +13,39 @@ let checkPos (line, char)
   then false
   else true
 
-let locItemsForPos ~extra pos =
-  extra.locItems |> List.filter (fun {loc; locType = _} -> checkPos pos loc)
+let loc_items_for_pos ~extra pos =
+  extra.loc_items |> List.filter (fun {loc; loc_type = _} -> check_pos pos loc)
 
-let lineColToCmtLoc ~pos:(line, col) = (line + 1, col)
+let line_col_to_cmt_loc ~pos:(line, col) = (line + 1, col)
 
-let getLocItem ~full ~pos ~debug =
+let get_loc_item ~full ~pos ~debug =
   let log n msg = if debug then Printf.printf "getLocItem #%d: %s\n" n msg in
-  let pos = lineColToCmtLoc ~pos in
-  let locItems = locItemsForPos ~extra:full.extra pos in
+  let pos = line_col_to_cmt_loc ~pos in
+  let loc_items = loc_items_for_pos ~extra:full.extra pos in
   if !Log.verbose then
     print_endline
       ("locItems:\n  "
-      ^ (locItems |> List.map locItemToString |> String.concat "\n  "));
-  let nameOf li =
-    match li.locType with
+      ^ (loc_items |> List.map loc_item_to_string |> String.concat "\n  "));
+  let name_of li =
+    match li.loc_type with
     | Typed (n, _, _) -> n
     | _ -> "NotFound"
   in
-  match locItems with
-  | li1 :: li2 :: li3 :: ({locType = Typed ("makeProps", _, _)} as li4) :: _
-    when full.file.uri |> Uri.isInterface ->
+  match loc_items with
+  | li1 :: li2 :: li3 :: ({loc_type = Typed ("makeProps", _, _)} as li4) :: _
+    when full.file.uri |> Uri.is_interface ->
     log 1 "heuristic for makeProps in interface files";
     if debug then
-      Printf.printf "n1:%s n2:%s n3:%s\n" (nameOf li1) (nameOf li2) (nameOf li3);
+      Printf.printf "n1:%s n2:%s n3:%s\n" (name_of li1) (name_of li2) (name_of li3);
     Some li4
   | [
-   {locType = Constant _};
-   ({locType = Typed ("createDOMElementVariadic", _, _)} as li2);
+   {loc_type = Constant _};
+   ({loc_type = Typed ("createDOMElementVariadic", _, _)} as li2);
   ] ->
     log 3 "heuristic for <div>";
     Some li2
-  | {locType = Typed ("makeProps", _, _)}
-    :: ({locType = Typed ("make", _, _)} as li2)
+  | {loc_type = Typed ("makeProps", _, _)}
+    :: ({loc_type = Typed ("make", _, _)} as li2)
     :: _ ->
     log 4
       "heuristic for </Comp> within fragments: take make as makeProps does not \
@@ -53,19 +53,19 @@ let getLocItem ~full ~pos ~debug =
        the type is not great but jump to definition works";
     Some li2
   | [
-   ({locType = Typed (_, _, LocalReference _)} as li1);
-   ({locType = Typed (_, _, _)} as li2);
+   ({loc_type = Typed (_, _, LocalReference _)} as li1);
+   ({loc_type = Typed (_, _, _)} as li2);
   ]
     when li1.loc = li2.loc ->
     log 5
       "heuristic for JSX and compiler combined:\n\
        ~x becomes Props#x\n\
        heuristic for: [Props, x], give loc of `x`";
-    if debug then Printf.printf "n1:%s n2:%s\n" (nameOf li1) (nameOf li2);
+    if debug then Printf.printf "n1:%s n2:%s\n" (name_of li1) (name_of li2);
     Some li2
   | [
-   ({locType = Typed (_, _, LocalReference _)} as li1);
-   ({locType = Typed (_, _, GlobalReference ("Js_OO", ["unsafe_downgrade"], _))}
+   ({loc_type = Typed (_, _, LocalReference _)} as li1);
+   ({loc_type = Typed (_, _, GlobalReference ("Js_OO", ["unsafe_downgrade"], _))}
     as li2);
    li3;
   ]
@@ -78,8 +78,8 @@ let getLocItem ~full ~pos ~debug =
        heuristic for: [Props, unsafe_downgrade, x], give loc of `x`";
     Some li3
   | [
-   ({locType = Typed (_, _, LocalReference (_, Value))} as li1);
-   ({locType = Typed (_, _, Definition (_, Value))} as li2);
+   ({loc_type = Typed (_, _, LocalReference (_, Value))} as li1);
+   ({loc_type = Typed (_, _, Definition (_, Value))} as li2);
   ] ->
     log 7
       "heuristic for JSX on type-annotated labeled (~arg:t):\n\
@@ -87,7 +87,7 @@ let getLocItem ~full ~pos ~debug =
        Props has the location range of arg:t\n\
        arg has the location range of arg\n\
        heuristic for: [Props, arg], give loc of `arg`";
-    if debug then Printf.printf "n1:%s n2:%s\n" (nameOf li1) (nameOf li2);
+    if debug then Printf.printf "n1:%s n2:%s\n" (name_of li1) (name_of li2);
     Some li2
   | [li1; li2; li3] when li1.loc = li2.loc && li2.loc = li3.loc ->
     (* Not currently testable on 9.1.4 *)
@@ -102,37 +102,37 @@ let getLocItem ~full ~pos ~debug =
        heuristic for: [React.null, makeProps, make, createElementVariadic], \
        give the loc of `make`";
     if debug then
-      Printf.printf "n1:%s n2:%s n3:%s n4:%s\n" (nameOf li1) (nameOf li2)
-        (nameOf li3) (nameOf li4);
+      Printf.printf "n1:%s n2:%s n3:%s n4:%s\n" (name_of li1) (name_of li2)
+        (name_of li3) (name_of li4);
     Some li3
-  | {locType = Typed (_, {desc = Tconstr (path, _, _)}, _)} :: li :: _
-    when Utils.isUncurriedInternal path ->
+  | {loc_type = Typed (_, {desc = Tconstr (path, _, _)}, _)} :: li :: _
+    when Utils.is_uncurried_internal path ->
     Some li
   | li :: _ -> Some li
   | _ -> None
 
-let declaredForTip ~(stamps : Stamps.t) stamp (tip : Tip.t) =
+let declared_for_tip ~(stamps : Stamps.t) stamp (tip : Tip.t) =
   match tip with
   | Value ->
-    Stamps.findValue stamps stamp
+    Stamps.find_value stamps stamp
     |> Option.map (fun x -> {x with Declared.item = ()})
   | Field _ | Constructor _ | Type ->
-    Stamps.findType stamps stamp
+    Stamps.find_type stamps stamp
     |> Option.map (fun x -> {x with Declared.item = ()})
   | Module ->
-    Stamps.findModule stamps stamp
+    Stamps.find_module stamps stamp
     |> Option.map (fun x -> {x with Declared.item = ()})
 
-let getField (file : File.t) stamp name =
-  match Stamps.findType file.stamps stamp with
+let get_field (file : File.t) stamp name =
+  match Stamps.find_type file.stamps stamp with
   | None -> None
   | Some {item = {kind}} -> (
     match kind with
     | Record fields -> fields |> List.find_opt (fun f -> f.fname.txt = name)
     | _ -> None)
 
-let getConstructor (file : File.t) stamp name =
-  match Stamps.findType file.stamps stamp with
+let get_constructor (file : File.t) stamp name =
+  match Stamps.find_type file.stamps stamp with
   | None -> None
   | Some {item = {kind}} -> (
     match kind with
@@ -145,10 +145,10 @@ let getConstructor (file : File.t) stamp name =
       | Some const -> Some const)
     | _ -> None)
 
-let exportedForTip ~env ~path ~package ~(tip : Tip.t) =
-  match ResolvePath.resolvePath ~env ~path ~package with
+let exported_for_tip ~env ~path ~package ~(tip : Tip.t) =
+  match ResolvePath.resolve_path ~env ~path ~package with
   | None ->
-    Log.log ("Cannot resolve path " ^ pathToString path);
+    Log.log ("Cannot resolve path " ^ path_to_string path);
     None
   | Some (env, name) -> (
     let kind =
@@ -159,131 +159,131 @@ let exportedForTip ~env ~path ~package ~(tip : Tip.t) =
     in
     match Exported.find env.exported kind name with
     | None ->
-      Log.log ("Exported not found for tip " ^ name ^ " > " ^ Tip.toString tip);
+      Log.log ("Exported not found for tip " ^ name ^ " > " ^ Tip.to_string tip);
       None
     | Some stamp -> Some (env, name, stamp))
 
-let definedForLoc ~file ~package locKind =
+let defined_for_loc ~file ~package loc_kind =
   let inner ~file stamp (tip : Tip.t) =
     match tip with
     | Constructor name -> (
-      match getConstructor file stamp name with
+      match get_constructor file stamp name with
       | None -> None
       | Some constructor ->
         Some (constructor.docstring, `Constructor constructor))
     | Field name ->
       Some
-        ( (match getField file stamp name with
+        ( (match get_field file stamp name with
           | None -> []
           | Some field -> field.docstring),
           `Field )
     | _ -> (
-      maybeLog
-        ("Trying for declared " ^ Tip.toString tip ^ " " ^ string_of_int stamp
-       ^ " in file " ^ Uri.toString file.uri);
-      match declaredForTip ~stamps:file.stamps stamp tip with
+      maybe_log
+        ("Trying for declared " ^ Tip.to_string tip ^ " " ^ string_of_int stamp
+       ^ " in file " ^ Uri.to_string file.uri);
+      match declared_for_tip ~stamps:file.stamps stamp tip with
       | None -> None
       | Some declared -> Some (declared.docstring, `Declared))
   in
-  match locKind with
+  match loc_kind with
   | NotFound -> None
   | LocalReference (stamp, tip) | Definition (stamp, tip) ->
     inner ~file stamp tip
-  | GlobalReference (moduleName, path, tip) -> (
-    maybeLog ("Getting global " ^ moduleName);
-    match ProcessCmt.fileForModule ~package moduleName with
+  | GlobalReference (module_name, path, tip) -> (
+    maybe_log ("Getting global " ^ module_name);
+    match ProcessCmt.file_for_module ~package module_name with
     | None ->
-      Log.log ("Cannot get module " ^ moduleName);
+      Log.log ("Cannot get module " ^ module_name);
       None
     | Some file -> (
-      let env = QueryEnv.fromFile file in
-      match exportedForTip ~env ~path ~package ~tip with
+      let env = QueryEnv.from_file file in
+      match exported_for_tip ~env ~path ~package ~tip with
       | None -> None
       | Some (env, name, stamp) -> (
-        maybeLog ("Getting for " ^ string_of_int stamp ^ " in " ^ name);
+        maybe_log ("Getting for " ^ string_of_int stamp ^ " in " ^ name);
         match inner ~file:env.file stamp tip with
         | None ->
           Log.log "could not get defined";
           None
         | Some res ->
-          maybeLog "Yes!! got it";
+          maybe_log "Yes!! got it";
           Some res)))
 
 (** Find alternative declaration: from res in case of interface, or from resi in case of implementation  *)
-let alternateDeclared ~(file : File.t) ~package (declared : _ Declared.t) tip =
-  match Hashtbl.find_opt package.pathsForModule file.moduleName with
+let alternate_declared ~(file : File.t) ~package (declared : _ Declared.t) tip =
+  match Hashtbl.find_opt package.paths_for_module file.module_name with
   | None -> None
   | Some paths -> (
     match paths with
     | IntfAndImpl {resi; res} -> (
-      maybeLog
-        ("alternateDeclared for " ^ file.moduleName ^ " has both resi and res");
-      let alternateUri = if Uri.isInterface file.uri then res else resi in
-      match Cmt.fullFromUri ~uri:(Uri.fromPath alternateUri) with
+      maybe_log
+        ("alternateDeclared for " ^ file.module_name ^ " has both resi and res");
+      let alternate_uri = if Uri.is_interface file.uri then res else resi in
+      match Cmt.full_from_uri ~uri:(Uri.from_path alternate_uri) with
       | None -> None
       | Some {file; extra} -> (
-        let env = QueryEnv.fromFile file in
-        let path = ModulePath.toPath declared.modulePath declared.name.txt in
-        maybeLog ("find declared for path " ^ pathToString path);
-        let declaredOpt =
-          match exportedForTip ~env ~path ~package ~tip with
+        let env = QueryEnv.from_file file in
+        let path = ModulePath.to_path declared.module_path declared.name.txt in
+        maybe_log ("find declared for path " ^ path_to_string path);
+        let declared_opt =
+          match exported_for_tip ~env ~path ~package ~tip with
           | None -> None
           | Some (_env, _name, stamp) ->
-            declaredForTip ~stamps:file.stamps stamp tip
+            declared_for_tip ~stamps:file.stamps stamp tip
         in
-        match declaredOpt with
+        match declared_opt with
         | None -> None
         | Some declared -> Some (file, extra, declared)))
     | _ ->
-      maybeLog ("alternateDeclared for " ^ file.moduleName ^ " not found");
+      maybe_log ("alternateDeclared for " ^ file.module_name ^ " not found");
 
       None)
 
-let rec resolveModuleReference ?(pathsSeen = []) ~file ~package
+let rec resolve_module_reference ?(paths_seen = []) ~file ~package
     (declared : Module.t Declared.t) =
   match declared.item with
   | Structure _ -> Some (file, Some declared)
-  | Constraint (_moduleItem, moduleTypeItem) ->
-    resolveModuleReference ~pathsSeen ~file ~package
-      {declared with item = moduleTypeItem}
+  | Constraint (_moduleItem, module_type_item) ->
+    resolve_module_reference ~paths_seen ~file ~package
+      {declared with item = module_type_item}
   | Ident path -> (
-    let env = QueryEnv.fromFile file in
-    match ResolvePath.fromCompilerPath ~env path with
+    let env = QueryEnv.from_file file in
+    match ResolvePath.from_compiler_path ~env path with
     | NotFound -> None
     | Exported (env, name) -> (
       match Exported.find env.exported Exported.Module name with
       | None -> None
       | Some stamp -> (
-        match Stamps.findModule env.file.stamps stamp with
+        match Stamps.find_module env.file.stamps stamp with
         | None -> None
         | Some md -> Some (env.file, Some md)))
-    | Global (moduleName, path) -> (
-      match ProcessCmt.fileForModule ~package moduleName with
+    | Global (module_name, path) -> (
+      match ProcessCmt.file_for_module ~package module_name with
       | None -> None
       | Some file -> (
-        let env = QueryEnv.fromFile file in
-        match ResolvePath.resolvePath ~env ~package ~path with
+        let env = QueryEnv.from_file file in
+        match ResolvePath.resolve_path ~env ~package ~path with
         | None -> None
         | Some (env, name) -> (
           match Exported.find env.exported Exported.Module name with
           | None -> None
           | Some stamp -> (
-            match Stamps.findModule env.file.stamps stamp with
+            match Stamps.find_module env.file.stamps stamp with
             | None -> None
             | Some md -> Some (env.file, Some md)))))
     | Stamp stamp -> (
-      match Stamps.findModule file.stamps stamp with
+      match Stamps.find_module file.stamps stamp with
       | None -> None
-      | Some ({item = Ident path} as md) when not (List.mem path pathsSeen) ->
+      | Some ({item = Ident path} as md) when not (List.mem path paths_seen) ->
         (* avoid possible infinite loops *)
-        resolveModuleReference ~file ~package ~pathsSeen:(path :: pathsSeen) md
+        resolve_module_reference ~file ~package ~paths_seen:(path :: paths_seen) md
       | Some md -> Some (file, Some md))
     | GlobalMod name -> (
-      match ProcessCmt.fileForModule ~package name with
+      match ProcessCmt.file_for_module ~package name with
       | None -> None
       | Some file -> Some (file, None)))
 
-let validateLoc (loc : Location.t) (backup : Location.t) =
+let validate_loc (loc : Location.t) (backup : Location.t) =
   if loc.loc_start.pos_cnum = -1 then
     if backup.loc_start.pos_cnum = -1 then
       {
@@ -294,65 +294,65 @@ let validateLoc (loc : Location.t) (backup : Location.t) =
     else backup
   else loc
 
-let resolveModuleDefinition ~(file : File.t) ~package stamp =
-  match Stamps.findModule file.stamps stamp with
+let resolve_module_definition ~(file : File.t) ~package stamp =
+  match Stamps.find_module file.stamps stamp with
   | None -> None
   | Some md -> (
-    match resolveModuleReference ~file ~package md with
+    match resolve_module_reference ~file ~package md with
     | None -> None
     | Some (file, declared) ->
       let loc =
         match declared with
-        | None -> Uri.toTopLevelLoc file.uri
-        | Some declared -> validateLoc declared.name.loc declared.extentLoc
+        | None -> Uri.to_top_level_loc file.uri
+        | Some declared -> validate_loc declared.name.loc declared.extent_loc
       in
       Some (file.uri, loc))
 
 let definition ~file ~package stamp (tip : Tip.t) =
   match tip with
   | Constructor name -> (
-    match getConstructor file stamp name with
+    match get_constructor file stamp name with
     | None -> None
     | Some constructor -> Some (file.uri, constructor.cname.loc))
   | Field name -> (
-    match getField file stamp name with
+    match get_field file stamp name with
     | None -> None
     | Some field -> Some (file.uri, field.fname.loc))
-  | Module -> resolveModuleDefinition ~file ~package stamp
+  | Module -> resolve_module_definition ~file ~package stamp
   | _ -> (
-    match declaredForTip ~stamps:file.stamps stamp tip with
+    match declared_for_tip ~stamps:file.stamps stamp tip with
     | None -> None
     | Some declared ->
-      let fileImpl, declaredImpl =
-        match alternateDeclared ~package ~file declared tip with
-        | Some (fileImpl, _extra, declaredImpl) when Uri.isInterface file.uri ->
-          (fileImpl, declaredImpl)
+      let file_impl, declared_impl =
+        match alternate_declared ~package ~file declared tip with
+        | Some (file_impl, _extra, declared_impl) when Uri.is_interface file.uri ->
+          (file_impl, declared_impl)
         | _ -> (file, declared)
       in
-      let loc = validateLoc declaredImpl.name.loc declaredImpl.extentLoc in
-      let env = QueryEnv.fromFile fileImpl in
+      let loc = validate_loc declared_impl.name.loc declared_impl.extent_loc in
+      let env = QueryEnv.from_file file_impl in
       let uri =
-        ResolvePath.getSourceUri ~env ~package declaredImpl.modulePath
+        ResolvePath.get_source_uri ~env ~package declared_impl.module_path
       in
-      maybeLog ("Inner uri " ^ Uri.toString uri);
+      maybe_log ("Inner uri " ^ Uri.to_string uri);
       Some (uri, loc))
 
-let definitionForLocItem ~full:{file; package} locItem =
-  match locItem.locType with
+let definition_for_loc_item ~full:{file; package} loc_item =
+  match loc_item.loc_type with
   | Typed (_, _, Definition (stamp, tip)) -> (
-    maybeLog
+    maybe_log
       ("Typed Definition stamp:" ^ string_of_int stamp ^ " tip:"
-     ^ Tip.toString tip);
-    match declaredForTip ~stamps:file.stamps stamp tip with
+     ^ Tip.to_string tip);
+    match declared_for_tip ~stamps:file.stamps stamp tip with
     | None -> None
     | Some declared ->
-      maybeLog ("Declared " ^ declared.name.txt);
-      if declared.isExported then (
-        maybeLog ("exported, looking for alternate " ^ file.moduleName);
-        match alternateDeclared ~package ~file declared tip with
+      maybe_log ("Declared " ^ declared.name.txt);
+      if declared.is_exported then (
+        maybe_log ("exported, looking for alternate " ^ file.module_name);
+        match alternate_declared ~package ~file declared tip with
         | None -> None
         | Some (file, _extra, declared) ->
-          let loc = validateLoc declared.name.loc declared.extentLoc in
+          let loc = validate_loc declared.name.loc declared.extent_loc in
           Some (file.uri, loc))
       else None)
   | Typed (_, _, NotFound)
@@ -361,213 +361,213 @@ let definitionForLocItem ~full:{file; package} locItem =
   | Constant _ ->
     None
   | TopLevelModule name -> (
-    maybeLog ("Toplevel " ^ name);
-    match Hashtbl.find_opt package.pathsForModule name with
+    maybe_log ("Toplevel " ^ name);
+    match Hashtbl.find_opt package.paths_for_module name with
     | None -> None
     | Some paths ->
-      let uri = getUri paths in
-      Some (uri, Uri.toTopLevelLoc uri))
+      let uri = get_uri paths in
+      Some (uri, Uri.to_top_level_loc uri))
   | LModule (LocalReference (stamp, tip))
   | Typed (_, _, LocalReference (stamp, tip)) ->
-    maybeLog ("Local defn " ^ Tip.toString tip);
+    maybe_log ("Local defn " ^ Tip.to_string tip);
     definition ~file ~package stamp tip
-  | LModule (GlobalReference (moduleName, path, tip))
-  | Typed (_, _, GlobalReference (moduleName, path, tip)) -> (
-    maybeLog
-      ("Typed GlobalReference moduleName:" ^ moduleName ^ " path:"
-     ^ pathToString path ^ " tip:" ^ Tip.toString tip);
-    match ProcessCmt.fileForModule ~package moduleName with
+  | LModule (GlobalReference (module_name, path, tip))
+  | Typed (_, _, GlobalReference (module_name, path, tip)) -> (
+    maybe_log
+      ("Typed GlobalReference moduleName:" ^ module_name ^ " path:"
+     ^ path_to_string path ^ " tip:" ^ Tip.to_string tip);
+    match ProcessCmt.file_for_module ~package module_name with
     | None -> None
     | Some file -> (
-      let env = QueryEnv.fromFile file in
-      match exportedForTip ~env ~path ~package ~tip with
+      let env = QueryEnv.from_file file in
+      match exported_for_tip ~env ~path ~package ~tip with
       | None -> None
       | Some (env, _name, stamp) ->
         (* oooh wht do I do if the stamp is inside a pseudo-file? *)
-        maybeLog ("Got stamp " ^ string_of_int stamp);
+        maybe_log ("Got stamp " ^ string_of_int stamp);
         definition ~file:env.file ~package stamp tip))
 
-let digConstructor ~env ~package path =
-  match ResolvePath.resolveFromCompilerPath ~env ~package path with
+let dig_constructor ~env ~package path =
+  match ResolvePath.resolve_from_compiler_path ~env ~package path with
   | NotFound -> None
   | Stamp stamp -> (
-    match Stamps.findType env.file.stamps stamp with
+    match Stamps.find_type env.file.stamps stamp with
     | None -> None
     | Some t -> Some (env, t))
   | Exported (env, name) -> (
     match Exported.find env.exported Exported.Type name with
     | None -> None
     | Some stamp -> (
-      match Stamps.findType env.file.stamps stamp with
+      match Stamps.find_type env.file.stamps stamp with
       | None -> None
       | Some t -> Some (env, t)))
   | _ -> None
 
-let typeDefinitionForLocItem ~full:{file; package} locItem =
-  match locItem.locType with
+let type_definition_for_loc_item ~full:{file; package} loc_item =
+  match loc_item.loc_type with
   | Constant _ | TopLevelModule _ | LModule _ -> None
-  | TypeDefinition _ -> Some (file.uri, locItem.loc)
+  | TypeDefinition _ -> Some (file.uri, loc_item.loc)
   | Typed (_, typ, _) -> (
-    let env = QueryEnv.fromFile file in
-    match Shared.digConstructor typ with
+    let env = QueryEnv.from_file file in
+    match Shared.dig_constructor typ with
     | None -> None
     | Some path -> (
-      match digConstructor ~env ~package path with
+      match dig_constructor ~env ~package path with
       | Some (env, declared) -> Some (env.file.uri, declared.item.decl.type_loc)
       | None -> None))
 
-let isVisible (declared : _ Declared.t) =
-  declared.isExported
+let is_visible (declared : _ Declared.t) =
+  declared.is_exported
   &&
   let rec loop (v : ModulePath.t) =
     match v with
     | File _ -> true
     | NotVisible -> false
     | IncludedModule (_, inner) -> loop inner
-    | ExportedModule {modulePath = inner} -> loop inner
+    | ExportedModule {module_path = inner} -> loop inner
   in
-  loop declared.modulePath
+  loop declared.module_path
 
 type references = {
   uri: Uri.t;
-  locOpt: Location.t option; (* None: reference to a toplevel module *)
+  loc_opt: Location.t option; (* None: reference to a toplevel module *)
 }
 
-let forLocalStamp ~full:{file; extra; package} stamp (tip : Tip.t) =
-  let env = QueryEnv.fromFile file in
+let for_local_stamp ~full:{file; extra; package} stamp (tip : Tip.t) =
+  let env = QueryEnv.from_file file in
   match
     match tip with
     | Constructor name ->
-      getConstructor file stamp name
+      get_constructor file stamp name
       |> Option.map (fun x -> x.Constructor.stamp)
-    | Field name -> getField file stamp name |> Option.map (fun x -> x.stamp)
+    | Field name -> get_field file stamp name |> Option.map (fun x -> x.stamp)
     | _ -> Some stamp
   with
   | None -> []
-  | Some localStamp -> (
-    match Hashtbl.find_opt extra.internalReferences localStamp with
+  | Some local_stamp -> (
+    match Hashtbl.find_opt extra.internal_references local_stamp with
     | None -> []
     | Some locs ->
-      maybeLog ("Checking externals: " ^ string_of_int stamp);
+      maybe_log ("Checking externals: " ^ string_of_int stamp);
       let externals =
-        match declaredForTip ~stamps:env.file.stamps stamp tip with
+        match declared_for_tip ~stamps:env.file.stamps stamp tip with
         | None -> []
         | Some declared ->
-          if isVisible declared then (
-            let alternativeReferences =
-              match alternateDeclared ~package ~file declared tip with
+          if is_visible declared then (
+            let alternative_references =
+              match alternate_declared ~package ~file declared tip with
               | None -> []
               | Some (file, extra, {stamp}) -> (
                 match
                   match tip with
                   | Constructor name ->
-                    getConstructor file stamp name
+                    get_constructor file stamp name
                     |> Option.map (fun x -> x.Constructor.stamp)
                   | Field name ->
-                    getField file stamp name |> Option.map (fun x -> x.stamp)
+                    get_field file stamp name |> Option.map (fun x -> x.stamp)
                   | _ -> Some stamp
                 with
                 | None -> []
-                | Some localStamp -> (
+                | Some local_stamp -> (
                   match
-                    Hashtbl.find_opt extra.internalReferences localStamp
+                    Hashtbl.find_opt extra.internal_references local_stamp
                   with
                   | None -> []
                   | Some locs ->
                     locs
-                    |> List.map (fun loc -> {uri = file.uri; locOpt = Some loc})
+                    |> List.map (fun loc -> {uri = file.uri; loc_opt = Some loc})
                   ))
               (* if this file has a corresponding interface or implementation file
                  also find the references in that file *)
             in
             let path =
-              ModulePath.toPath declared.modulePath declared.name.txt
+              ModulePath.to_path declared.module_path declared.name.txt
             in
-            maybeLog ("Now checking path " ^ pathToString path);
-            let thisModuleName = file.moduleName in
+            maybe_log ("Now checking path " ^ path_to_string path);
+            let this_module_name = file.module_name in
             let externals =
-              package.projectFiles |> FileSet.elements
-              |> List.filter (fun name -> name <> file.moduleName)
-              |> List.map (fun moduleName ->
-                     Cmt.fullsFromModule ~package ~moduleName
+              package.project_files |> FileSet.elements
+              |> List.filter (fun name -> name <> file.module_name)
+              |> List.map (fun module_name ->
+                     Cmt.fulls_from_module ~package ~module_name
                      |> List.map (fun {file; extra} ->
                             match
-                              Hashtbl.find_opt extra.externalReferences
-                                thisModuleName
+                              Hashtbl.find_opt extra.external_references
+                                this_module_name
                             with
                             | None -> []
                             | Some refs ->
                               let locs =
                                 refs
-                                |> Utils.filterMap (fun (p, t, locs) ->
+                                |> Utils.filter_map (fun (p, t, locs) ->
                                        if p = path && t = tip then Some locs
                                        else None)
                               in
                               locs
                               |> List.map (fun loc ->
-                                     {uri = file.uri; locOpt = Some loc})))
+                                     {uri = file.uri; loc_opt = Some loc})))
               |> List.concat |> List.concat
             in
-            alternativeReferences @ externals)
+            alternative_references @ externals)
           else (
-            maybeLog "Not visible";
+            maybe_log "Not visible";
             [])
       in
       List.append
-        (locs |> List.map (fun loc -> {uri = file.uri; locOpt = Some loc}))
+        (locs |> List.map (fun loc -> {uri = file.uri; loc_opt = Some loc}))
         externals)
 
-let allReferencesForLocItem ~full:({file; package} as full) locItem =
-  match locItem.locType with
-  | TopLevelModule moduleName ->
-    let otherModulesReferences =
-      package.projectFiles |> FileSet.elements
-      |> Utils.filterMap (fun name ->
-             match ProcessCmt.fileForModule ~package name with
+let all_references_for_loc_item ~full:({file; package} as full) loc_item =
+  match loc_item.loc_type with
+  | TopLevelModule module_name ->
+    let other_modules_references =
+      package.project_files |> FileSet.elements
+      |> Utils.filter_map (fun name ->
+             match ProcessCmt.file_for_module ~package name with
              | None -> None
-             | Some file -> Cmt.fullFromUri ~uri:file.uri)
+             | Some file -> Cmt.full_from_uri ~uri:file.uri)
       |> List.map (fun full ->
-             match Hashtbl.find_opt full.extra.fileReferences moduleName with
+             match Hashtbl.find_opt full.extra.file_references module_name with
              | None -> []
              | Some locs ->
                locs |> LocationSet.elements
                |> List.map (fun loc ->
                       {
-                        uri = Uri.fromPath loc.Location.loc_start.pos_fname;
-                        locOpt = Some loc;
+                        uri = Uri.from_path loc.Location.loc_start.pos_fname;
+                        loc_opt = Some loc;
                       }))
       |> List.flatten
     in
-    let targetModuleReferences =
-      match Hashtbl.find_opt package.pathsForModule moduleName with
+    let target_module_references =
+      match Hashtbl.find_opt package.paths_for_module module_name with
       | None -> []
       | Some paths ->
-        let moduleSrcToRef src = {uri = Uri.fromPath src; locOpt = None} in
-        getSrc paths |> List.map moduleSrcToRef
+        let module_src_to_ref src = {uri = Uri.from_path src; loc_opt = None} in
+        get_src paths |> List.map module_src_to_ref
     in
-    List.append targetModuleReferences otherModulesReferences
+    List.append target_module_references other_modules_references
   | Typed (_, _, NotFound) | LModule NotFound | Constant _ -> []
-  | TypeDefinition (_, _, stamp) -> forLocalStamp ~full stamp Type
+  | TypeDefinition (_, _, stamp) -> for_local_stamp ~full stamp Type
   | Typed (_, _, (LocalReference (stamp, tip) | Definition (stamp, tip)))
   | LModule (LocalReference (stamp, tip) | Definition (stamp, tip)) ->
-    maybeLog
-      ("Finding references for " ^ Uri.toString file.uri ^ " and stamp "
-     ^ string_of_int stamp ^ " and tip " ^ Tip.toString tip);
-    forLocalStamp ~full stamp tip
-  | LModule (GlobalReference (moduleName, path, tip))
-  | Typed (_, _, GlobalReference (moduleName, path, tip)) -> (
-    match ProcessCmt.fileForModule ~package moduleName with
+    maybe_log
+      ("Finding references for " ^ Uri.to_string file.uri ^ " and stamp "
+     ^ string_of_int stamp ^ " and tip " ^ Tip.to_string tip);
+    for_local_stamp ~full stamp tip
+  | LModule (GlobalReference (module_name, path, tip))
+  | Typed (_, _, GlobalReference (module_name, path, tip)) -> (
+    match ProcessCmt.file_for_module ~package module_name with
     | None -> []
     | Some file -> (
-      let env = QueryEnv.fromFile file in
-      match exportedForTip ~env ~path ~package ~tip with
+      let env = QueryEnv.from_file file in
+      match exported_for_tip ~env ~path ~package ~tip with
       | None -> []
       | Some (env, _name, stamp) -> (
-        match Cmt.fullFromUri ~uri:env.file.uri with
+        match Cmt.full_from_uri ~uri:env.file.uri with
         | None -> []
         | Some full ->
-          maybeLog
-            ("Finding references for (global) " ^ Uri.toString env.file.uri
+          maybe_log
+            ("Finding references for (global) " ^ Uri.to_string env.file.uri
            ^ " and stamp " ^ string_of_int stamp ^ " and tip "
-           ^ Tip.toString tip);
-          forLocalStamp ~full stamp tip)))
+           ^ Tip.to_string tip);
+          for_local_stamp ~full stamp tip)))

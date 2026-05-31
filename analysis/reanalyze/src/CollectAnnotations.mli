@@ -5,7 +5,7 @@
 val structure :
   state:FileAnnotations.builder ->
   config:DceConfig.t ->
-  doGenType:bool ->
+  do_gen_type:bool ->
   Typedtree.structure ->
   unit
 (** Traverse a structure and collect annotations. *)

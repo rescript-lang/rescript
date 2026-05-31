@@ -5,32 +5,32 @@ type t = ExnSet.t
 let add = ExnSet.add
 let diff = ExnSet.diff
 let empty = ExnSet.empty
-let fromList = ExnSet.of_list
-let toList = ExnSet.elements
-let isEmpty = ExnSet.is_empty
+let from_list = ExnSet.of_list
+let to_list = ExnSet.elements
+let is_empty = ExnSet.is_empty
 let iter = ExnSet.iter
 let union = ExnSet.union
 
-let pp ~exnTable ppf exceptions =
-  let isFirst = ref true in
-  let ppExn exn =
-    let separator = if !isFirst then "" else ", " in
-    isFirst := false;
-    let name = Exn.toString exn in
-    match exnTable with
-    | Some exnTable -> (
-      match Hashtbl.find_opt exnTable exn with
-      | Some locSet ->
+let pp ~exn_table ppf exceptions =
+  let is_first = ref true in
+  let pp_exn exn =
+    let separator = if !is_first then "" else ", " in
+    is_first := false;
+    let name = Exn.to_string exn in
+    match exn_table with
+    | Some exn_table -> (
+      match Hashtbl.find_opt exn_table exn with
+      | Some loc_set ->
         let positions =
-          locSet |> LocSet.elements
+          loc_set |> LocSet.elements
           |> List.map (fun loc -> loc.Location.loc_start)
         in
         Format.fprintf ppf "%s@{<info>%s@} (@{<filename>%s@})" separator name
-          (positions |> List.map Pos.toString |> String.concat " ")
+          (positions |> List.map Pos.to_string |> String.concat " ")
       | None -> Format.fprintf ppf "%s@{<info>%s@}" separator name)
     | None -> Format.fprintf ppf "%s@{<info>%s@}" separator name
   in
-  let isList = exceptions |> ExnSet.cardinal > 1 in
-  if isList then Format.fprintf ppf "[";
-  exceptions |> ExnSet.iter ppExn;
-  if isList then Format.fprintf ppf "]"
+  let is_list = exceptions |> ExnSet.cardinal > 1 in
+  if is_list then Format.fprintf ppf "[";
+  exceptions |> ExnSet.iter pp_exn;
+  if is_list then Format.fprintf ppf "]"

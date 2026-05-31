@@ -46,7 +46,7 @@ type t = {
 
 (** Extract module name from a declaration *)
 let decl_module_name (decl : Decl.t) : Name.t =
-  decl.path |> DcePath.toModuleName ~isType:(decl.declKind |> Decl.Kind.isType)
+  decl.path |> DcePath.to_module_name ~is_type:(decl.decl_kind |> Decl.Kind.is_type)
 
 let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
     ~(live : (Lexing.position, unit) Reactive.t)
@@ -79,41 +79,41 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   let dead_modules =
     if not config.DceConfig.run.transitive then
       (* Dead modules only reported in transitive mode *)
-      Reactive.flatMap ~name:"solver.dead_modules_empty" dead_decls
+      Reactive.flat_map ~name:"solver.dead_modules_empty" dead_decls
         ~f:(fun _ _ -> [])
         ()
     else
       (* modules_with_dead: (moduleName, (loc, fileName)) for each module with dead decls *)
       let modules_with_dead =
-        Reactive.flatMap ~name:"solver.modules_with_dead" dead_decls
+        Reactive.flat_map ~name:"solver.modules_with_dead" dead_decls
           ~f:(fun _pos decl ->
             [
               ( decl_module_name decl,
-                (decl.moduleLoc, decl.pos.Lexing.pos_fname) );
+                (decl.module_loc, decl.pos.Lexing.pos_fname) );
             ])
           ~merge:(fun v1 _v2 -> v1) (* keep first *)
           ()
       in
       (* modules_with_live: (moduleName, ()) for each module with live decls *)
       let modules_with_live =
-        Reactive.flatMap ~name:"solver.modules_with_live" live_decls
+        Reactive.flat_map ~name:"solver.modules_with_live" live_decls
           ~f:(fun _pos decl -> [(decl_module_name decl, ())])
           ()
       in
       (* Anti-join: modules in dead but not in live *)
       Reactive.join ~name:"solver.dead_modules" modules_with_dead
         modules_with_live
-        ~key_of:(fun modName (_loc, _fileName) -> modName)
-        ~f:(fun modName (loc, fileName) live_opt ->
+        ~key_of:(fun mod_name (_loc, _fileName) -> mod_name)
+        ~f:(fun mod_name (loc, file_name) live_opt ->
           match live_opt with
-          | None -> [(modName, (loc, fileName))] (* dead: no live decls *)
+          | None -> [(mod_name, (loc, file_name))] (* dead: no live decls *)
           | Some () -> []) (* live: has at least one live decl *)
         ()
   in
 
   (* Reactive per-file grouping of dead declarations *)
   let dead_decls_by_file =
-    Reactive.flatMap ~name:"solver.dead_decls_by_file" dead_decls
+    Reactive.flat_map ~name:"solver.dead_decls_by_file" dead_decls
       ~f:(fun _pos decl -> [(decl.pos.Lexing.pos_fname, [decl])])
       ~merge:(fun decls1 decls2 -> decls1 @ decls2)
       ()
@@ -129,7 +129,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
     (* Track modules that have reported values *)
     let modules_with_values : (Name.t, unit) Hashtbl.t = Hashtbl.create 8 in
     (* shouldReport checks annotations reactively *)
-    let shouldReport (decl : Decl.t) =
+    let should_report (decl : Decl.t) =
       match Reactive.get annotations decl.pos with
       | Some FileAnnotations.Live -> false
       | Some FileAnnotations.GenType -> false
@@ -137,12 +137,12 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
       | None -> true
     in
     (* Don't emit module issues here - track modules for later *)
-    let checkModuleDead ~fileName:_ moduleName =
-      Hashtbl.replace modules_with_values moduleName ();
+    let check_module_dead ~file_name:_ module_name =
+      Hashtbl.replace modules_with_values module_name ();
       None (* Module issues generated separately *)
     in
     (* hasRefBelow: check if decl has any ref from "below" (including cross-file refs) *)
-    let hasRefBelow =
+    let has_ref_below =
       if transitive then fun _ -> false
       else
         match value_refs_from with
@@ -153,13 +153,13 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
             ~iter_value_refs_from:(fun f -> Reactive.iter f refs_from)
     in
     (* Sort within file and generate issues *)
-    let sorted = decls |> List.fast_sort Decl.compareForReporting in
+    let sorted = decls |> List.fast_sort Decl.compare_for_reporting in
     let reporting_ctx = DeadCommon.ReportingContext.create () in
     let file_issues =
       sorted
       |> List.concat_map (fun decl ->
-             DeadCommon.reportDeclaration ~config ~hasRefBelow ~checkModuleDead
-               ~shouldReport reporting_ctx decl)
+             DeadCommon.report_declaration ~config ~has_ref_below ~check_module_dead
+               ~should_report reporting_ctx decl)
     in
     let modules_list =
       Hashtbl.fold (fun m () acc -> m :: acc) modules_with_values []
@@ -169,14 +169,14 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   let issues_by_file =
     match (transitive, value_refs_from) with
     | true, _ | false, None ->
-      Reactive.flatMap ~name:"solver.issues_by_file" dead_decls_by_file
+      Reactive.flat_map ~name:"solver.issues_by_file" dead_decls_by_file
         ~f:(fun file decls -> [(file, issues_for_file file decls)])
         ()
     | false, Some refs_from ->
       (* Create a singleton "refs token" that changes whenever refs_from changes,
          and join every file against it so per-file issues recompute. *)
       let refs_token =
-        Reactive.flatMap ~name:"solver.refs_token" refs_from
+        Reactive.flat_map ~name:"solver.refs_token" refs_from
           ~f:(fun _posFrom _targets -> [((), ())])
           ~merge:(fun _ _ -> ())
           ()
@@ -200,7 +200,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
 
   (* Reactive modules_with_reported: modules that have at least one reported dead value *)
   let modules_with_reported =
-    Reactive.flatMap ~name:"solver.modules_with_reported" issues_by_file
+    Reactive.flat_map ~name:"solver.modules_with_reported" issues_by_file
       ~f:(fun _file (_issues, modules_list) ->
         List.map (fun m -> (m, ())) modules_list)
       ()
@@ -210,15 +210,15 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   let dead_module_issues =
     Reactive.join ~name:"solver.dead_module_issues" dead_modules
       modules_with_reported
-      ~key_of:(fun moduleName (_loc, _fileName) -> moduleName)
-      ~f:(fun moduleName (loc, fileName) has_reported_opt ->
+      ~key_of:(fun module_name (_loc, _fileName) -> module_name)
+      ~f:(fun module_name (loc, file_name) has_reported_opt ->
         match has_reported_opt with
         | Some () ->
           let loc =
             if loc.Location.loc_ghost then
               let pos =
                 {
-                  Lexing.pos_fname = fileName;
+                  Lexing.pos_fname = file_name;
                   pos_lnum = 0;
                   pos_bol = 0;
                   pos_cnum = 0;
@@ -227,7 +227,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
               {Location.loc_start = pos; loc_end = pos; loc_ghost = false}
             else loc
           in
-          [(moduleName, AnalysisResult.make_dead_module_issue ~loc ~moduleName)]
+          [(module_name, AnalysisResult.make_dead_module_issue ~loc ~module_name)]
         | None -> [])
       ()
   in
@@ -250,24 +250,24 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
 (** Check if a module is dead using reactive collection. Returns issue if dead.
     Uses reported_modules set to avoid duplicate reports. *)
 let check_module_dead ~(dead_modules : (Name.t, Location.t * string) Reactive.t)
-    ~(reported_modules : (Name.t, unit) Hashtbl.t) ~fileName:pos_fname
-    moduleName : Issue.t option =
-  if Hashtbl.mem reported_modules moduleName then None
+    ~(reported_modules : (Name.t, unit) Hashtbl.t) ~file_name:pos_fname
+    module_name : Issue.t option =
+  if Hashtbl.mem reported_modules module_name then None
   else
-    match Reactive.get dead_modules moduleName with
-    | Some (loc, fileName) ->
-      Hashtbl.replace reported_modules moduleName ();
+    match Reactive.get dead_modules module_name with
+    | Some (loc, file_name) ->
+      Hashtbl.replace reported_modules module_name ();
       let loc =
         if loc.Location.loc_ghost then
           (* Use fileName from dead_modules, fallback to pos_fname *)
-          let fname = if fileName <> "" then fileName else pos_fname in
+          let fname = if file_name <> "" then file_name else pos_fname in
           let pos =
             {Lexing.pos_fname = fname; pos_lnum = 0; pos_bol = 0; pos_cnum = 0}
           in
           {Location.loc_start = pos; loc_end = pos; loc_ghost = false}
         else loc
       in
-      Some (AnalysisResult.make_dead_module_issue ~loc ~moduleName)
+      Some (AnalysisResult.make_dead_module_issue ~loc ~module_name)
     | None -> None
 
 (** Collect issues from reactive issues_by_file.
@@ -286,13 +286,13 @@ let collect_issues ~(t : t) ~(config : DceConfig.t)
   Reactive.iter
     (fun _pos (decl : Decl.t) ->
       let issue =
-        DeadCommon.makeDeadIssue ~decl
+        DeadCommon.make_dead_issue ~decl
           ~message:" is annotated @dead but is live"
           Issue.IncorrectDeadAnnotation
       in
       (* Check if module is dead using reactive collection *)
       check_module_dead ~dead_modules:t.dead_modules ~reported_modules
-        ~fileName:decl.pos.pos_fname (decl_module_name decl)
+        ~file_name:decl.pos.pos_fname (decl_module_name decl)
       |> Option.iter (fun mod_issue ->
              incorrect_dead_issues := mod_issue :: !incorrect_dead_issues);
       incorrect_dead_issues := issue :: !incorrect_dead_issues)

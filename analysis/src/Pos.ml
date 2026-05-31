@@ -1,11 +1,11 @@
 type t = int * int
 
-let ofLexing {Lexing.pos_lnum; pos_cnum; pos_bol} =
+let of_lexing {Lexing.pos_lnum; pos_cnum; pos_bol} =
   (pos_lnum - 1, pos_cnum - pos_bol)
 
-let toString (loc, col) = Printf.sprintf "%d:%d" loc col
+let to_string (loc, col) = Printf.sprintf "%d:%d" loc col
 
-let offsetOfLine text line =
+let offset_of_line text line =
   let ln = String.length text in
   let rec loop i lno =
     if i >= ln then None
@@ -18,16 +18,16 @@ let offsetOfLine text line =
   | 0 -> Some 0
   | _ -> loop 0 0
 
-let positionToOffset text (line, character) =
-  match offsetOfLine text line with
+let position_to_offset text (line, character) =
+  match offset_of_line text line with
   | None -> None
   | Some bol ->
     let offset = bol + character in
     if offset >= 0 && offset <= String.length text then Some offset else None
 
-let posBeforeCursor pos = (fst pos, max 0 (snd pos - 1))
+let pos_before_cursor pos = (fst pos, max 0 (snd pos - 1))
 
-let posOfDot text ~(pos : int * int) ~offset =
+let pos_of_dot text ~(pos : int * int) ~offset =
   let rec loop i =
     if i < 0 then None
     else
@@ -38,7 +38,7 @@ let posOfDot text ~(pos : int * int) ~offset =
   in
   match loop (offset - 1) with
   | None -> None
-  | Some offsetBeforeDot ->
+  | Some offset_before_dot ->
     let line, col = pos in
-    let newCol = max 0 (col - (offset - offsetBeforeDot)) in
-    Some (line, newCol)
+    let new_col = max 0 (col - (offset - offset_before_dot)) in
+    Some (line, new_col)

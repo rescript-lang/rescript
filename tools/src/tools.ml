@@ -2,42 +2,42 @@ open Analysis
 
 module StringSet = Set.Make (String)
 
-type fieldDoc = {
-  fieldName: string;
+type field_doc = {
+  field_name: string;
   docstrings: string list;
   signature: string;
   optional: bool;
   deprecated: string option;
 }
 
-type constructorPayload = InlineRecord of {fieldDocs: fieldDoc list}
+type constructor_payload = InlineRecord of {field_docs: field_doc list}
 
-type constructorDoc = {
-  constructorName: string;
+type constructor_doc = {
+  constructor_name: string;
   docstrings: string list;
   signature: string;
   deprecated: string option;
-  items: constructorPayload option;
+  items: constructor_payload option;
 }
 
-type typeDoc = {path: string; genericParameters: typeDoc list}
-type valueSignature = {parameters: typeDoc list; returnType: typeDoc}
+type type_doc = {path: string; generic_parameters: type_doc list}
+type value_signature = {parameters: type_doc list; return_type: type_doc}
 
 type source = {filepath: string; line: int; col: int}
 
-type docItemDetail =
-  | Record of {fieldDocs: fieldDoc list}
-  | Variant of {constructorDocs: constructorDoc list}
-  | Signature of valueSignature
+type doc_item_detail =
+  | Record of {field_docs: field_doc list}
+  | Variant of {constructor_docs: constructor_doc list}
+  | Signature of value_signature
 
-type docItem =
+type doc_item =
   | Value of {
       id: string;
       docstring: string list;
       signature: string;
       name: string;
       deprecated: string option;
-      detail: docItemDetail option;
+      detail: doc_item_detail option;
       source: source;
     }
   | Type of {
@@ -46,121 +46,121 @@ type docItem =
       signature: string;
       name: string;
       deprecated: string option;
-      detail: docItemDetail option;
+      detail: doc_item_detail option;
       source: source;
           (** Additional documentation for constructors and record fields, if available. *)
     }
-  | Module of docsForModule
+  | Module of docs_for_module
   | ModuleType of {
       id: string;
       docstring: string list;
       deprecated: string option;
       name: string;
       source: source;
-      items: docItem list;
+      items: doc_item list;
     }
   | ModuleAlias of {
       id: string;
       docstring: string list;
       name: string;
       source: source;
-      items: docItem list;
+      items: doc_item list;
     }
-and docsForModule = {
+and docs_for_module = {
   id: string;
   docstring: string list;
   deprecated: string option;
   name: string;
   moduletypeid: string option;
   source: source;
-  items: docItem list;
+  items: doc_item list;
 }
 
-let stringifyDocstrings docstrings =
+let stringify_docstrings docstrings =
   `List
     (docstrings
     |> List.map (fun docstring -> `String (docstring |> String.trim)))
 
-let stringifyFieldDoc (fieldDoc : fieldDoc) =
+let stringify_field_doc (field_doc : field_doc) =
   `Assoc
     ([
-       ("name", `String fieldDoc.fieldName);
-       ("optional", `Bool fieldDoc.optional);
-       ("docstrings", stringifyDocstrings fieldDoc.docstrings);
-       ("signature", `String fieldDoc.signature);
+       ("name", `String field_doc.field_name);
+       ("optional", `Bool field_doc.optional);
+       ("docstrings", stringify_docstrings field_doc.docstrings);
+       ("signature", `String field_doc.signature);
      ]
     @
-    match fieldDoc.deprecated with
+    match field_doc.deprecated with
     | Some d -> [("deprecated", `String d)]
     | None -> [])
 
-let stringifyConstructorPayload (constructorPayload : constructorPayload) =
-  match constructorPayload with
-  | InlineRecord {fieldDocs} ->
+let stringify_constructor_payload (constructor_payload : constructor_payload) =
+  match constructor_payload with
+  | InlineRecord {field_docs} ->
     `Assoc
       [
         ("kind", `String "inlineRecord");
-        ("fields", `List (fieldDocs |> List.map stringifyFieldDoc));
+        ("fields", `List (field_docs |> List.map stringify_field_doc));
       ]
 
-let rec stringifyTypeDoc (td : typeDoc) =
+let rec stringify_type_doc (td : type_doc) =
   let ps =
-    match td.genericParameters with
+    match td.generic_parameters with
     | [] -> `List []
-    | ts -> ts |> List.map stringifyTypeDoc |> fun ts -> `List ts
+    | ts -> ts |> List.map stringify_type_doc |> fun ts -> `List ts
   in
   `Assoc [("path", `String td.path); ("genericTypeParameters", ps)]
 
-let stringifyDetail (detail : docItemDetail) =
+let stringify_detail (detail : doc_item_detail) =
   match detail with
-  | Record {fieldDocs} ->
+  | Record {field_docs} ->
     `Assoc
       [
         ("kind", `String "record");
-        ("items", `List (fieldDocs |> List.map stringifyFieldDoc));
+        ("items", `List (field_docs |> List.map stringify_field_doc));
       ]
-  | Variant {constructorDocs} ->
+  | Variant {constructor_docs} ->
     `Assoc
       [
         ("kind", `String "variant");
         ( "items",
           `List
-            (constructorDocs
-            |> List.map (fun constructorDoc ->
+            (constructor_docs
+            |> List.map (fun constructor_doc ->
                    `Assoc
                      ([
-                        ("name", `String constructorDoc.constructorName);
+                        ("name", `String constructor_doc.constructor_name);
                         ( "docstrings",
-                          stringifyDocstrings constructorDoc.docstrings );
-                        ("signature", `String constructorDoc.signature);
+                          stringify_docstrings constructor_doc.docstrings );
+                        ("signature", `String constructor_doc.signature);
                       ]
-                     @ (match constructorDoc.deprecated with
+                     @ (match constructor_doc.deprecated with
                        | Some d -> [("deprecated", `String d)]
                        | None -> [])
                      @
-                     match constructorDoc.items with
-                     | Some constructorPayload ->
+                     match constructor_doc.items with
+                     | Some constructor_payload ->
                        [
                          ( "payload",
-                           stringifyConstructorPayload constructorPayload );
+                           stringify_constructor_payload constructor_payload );
                        ]
                      | None -> []))) );
       ]
-  | Signature {parameters; returnType} ->
+  | Signature {parameters; return_type} ->
     let ps =
       match parameters with
       | [] -> `List []
-      | ps -> ps |> List.map stringifyTypeDoc |> fun ps -> `List ps
+      | ps -> ps |> List.map stringify_type_doc |> fun ps -> `List ps
     in
     `Assoc
       [
         ("kind", `String "signature");
         ( "details",
           `Assoc
-            [("parameters", ps); ("returnType", stringifyTypeDoc returnType)] );
+            [("parameters", ps); ("returnType", stringify_type_doc return_type)] );
       ]
 
-let stringifySource source =
+let stringify_source source =
   `Assoc
     [
       ("filepath", `String source.filepath);
@@ -168,7 +168,7 @@ let stringifySource source =
       ("col", `Int source.col);
     ]
 
-let rec stringifyDocItem ~originalEnv (item : docItem) =
+let rec stringify_doc_item ~original_env (item : doc_item) =
   match item with
   | Value {id; docstring; signature; name; deprecated; source; detail} ->
     `Assoc
@@ -177,15 +177,15 @@ let rec stringifyDocItem ~originalEnv (item : docItem) =
          ("kind", `String "value");
          ("name", `String name);
          ("signature", `String (signature |> String.trim));
-         ("docstrings", stringifyDocstrings docstring);
-         ("source", stringifySource source);
+         ("docstrings", stringify_docstrings docstring);
+         ("source", stringify_source source);
        ]
       @ (match deprecated with
         | Some d -> [("deprecated", `String d)]
         | None -> [])
       @
       match detail with
-      | Some detail -> [("detail", stringifyDetail detail)]
+      | Some detail -> [("detail", stringify_detail detail)]
       | None -> [])
   | Type {id; docstring; signature; name; deprecated; detail; source} ->
     `Assoc
@@ -194,15 +194,15 @@ let rec stringifyDocItem ~originalEnv (item : docItem) =
          ("kind", `String "type");
          ("name", `String name);
          ("signature", `String signature);
-         ("docstrings", stringifyDocstrings docstring);
-         ("source", stringifySource source);
+         ("docstrings", stringify_docstrings docstring);
+         ("source", stringify_source source);
        ]
       @ (match deprecated with
         | Some d -> [("deprecated", `String d)]
         | None -> [])
       @
       match detail with
-      | Some detail -> [("detail", stringifyDetail detail)]
+      | Some detail -> [("detail", stringify_detail detail)]
       | None -> [])
   | Module m ->
     `Assoc
@@ -210,12 +210,12 @@ let rec stringifyDocItem ~originalEnv (item : docItem) =
          ("id", `String m.id);
          ("name", `String m.name);
          ("kind", `String "module");
-         ("docstrings", stringifyDocstrings m.docstring);
-         ("source", stringifySource m.source);
+         ("docstrings", stringify_docstrings m.docstring);
+         ("source", stringify_source m.source);
          ( "items",
            `List
              (m.items
-             |> List.map (fun item -> stringifyDocItem ~originalEnv item)) );
+             |> List.map (fun item -> stringify_doc_item ~original_env item)) );
        ]
       @ (match m.deprecated with
         | Some d -> [("deprecated", `String d)]
@@ -230,12 +230,12 @@ let rec stringifyDocItem ~originalEnv (item : docItem) =
          ("id", `String m.id);
          ("name", `String m.name);
          ("kind", `String "moduleType");
-         ("docstrings", stringifyDocstrings m.docstring);
-         ("source", stringifySource m.source);
+         ("docstrings", stringify_docstrings m.docstring);
+         ("source", stringify_source m.source);
          ( "items",
            `List
              (m.items
-             |> List.map (fun item -> stringifyDocItem ~originalEnv item)) );
+             |> List.map (fun item -> stringify_doc_item ~original_env item)) );
        ]
       @
       match m.deprecated with
@@ -247,20 +247,20 @@ let rec stringifyDocItem ~originalEnv (item : docItem) =
         ("id", `String m.id);
         ("kind", `String "moduleAlias");
         ("name", `String m.name);
-        ("docstrings", stringifyDocstrings m.docstring);
-        ("source", stringifySource m.source);
-        ("items", `List (m.items |> List.map (stringifyDocItem ~originalEnv)));
+        ("docstrings", stringify_docstrings m.docstring);
+        ("source", stringify_source m.source);
+        ("items", `List (m.items |> List.map (stringify_doc_item ~original_env)));
       ]
 
-and stringifyDocsForModule ~originalEnv (d : docsForModule) =
+and stringify_docs_for_module ~original_env (d : docs_for_module) =
   `Assoc
     ([
        ("name", `String d.name);
-       ("docstrings", stringifyDocstrings d.docstring);
-       ("source", stringifySource d.source);
+       ("docstrings", stringify_docstrings d.docstring);
+       ("source", stringify_source d.source);
        ( "items",
          `List
-           (d.items |> List.map (fun item -> stringifyDocItem ~originalEnv item))
+           (d.items |> List.map (fun item -> stringify_doc_item ~original_env item))
        );
      ]
     @
@@ -268,45 +268,45 @@ and stringifyDocsForModule ~originalEnv (d : docsForModule) =
     | Some d -> [("deprecated", `String d)]
     | None -> [])
 
-let fieldToFieldDoc (field : SharedTypes.field) : fieldDoc =
+let field_to_field_doc (field : SharedTypes.field) : field_doc =
   {
-    fieldName = field.fname.txt;
+    field_name = field.fname.txt;
     docstrings = field.docstring;
     optional = field.optional;
-    signature = Shared.typeToString field.typ;
+    signature = Shared.type_to_string field.typ;
     deprecated = field.deprecated;
   }
 
-let typeDetail typ ~env ~full =
+let type_detail typ ~env ~full =
   let open SharedTypes in
-  match TypeUtils.extractTypeFromResolvedType ~env ~full typ with
+  match TypeUtils.extract_type_from_resolved_type ~env ~full typ with
   | Some (Trecord {fields}) ->
-    Some (Record {fieldDocs = fields |> List.map fieldToFieldDoc})
+    Some (Record {field_docs = fields |> List.map field_to_field_doc})
   | Some (Tvariant {constructors}) ->
     Some
       (Variant
          {
-           constructorDocs =
+           constructor_docs =
              constructors
              |> List.map (fun (c : Constructor.t) ->
                     {
-                      constructorName = c.cname.txt;
+                      constructor_name = c.cname.txt;
                       docstrings = c.docstring;
-                      signature = CompletionBackEnd.showConstructor c;
+                      signature = CompletionBackEnd.show_constructor c;
                       deprecated = c.deprecated;
                       items =
                         (match c.args with
                         | InlineRecord fields ->
                           Some
                             (InlineRecord
-                               {fieldDocs = fields |> List.map fieldToFieldDoc})
+                               {field_docs = fields |> List.map field_to_field_doc})
                         | _ -> None);
                     });
          })
   | _ -> None
 
 (* split a list into two parts all the items except the last one and the last item *)
-let splitLast l =
+let split_last l =
   let rec splitLast' acc = function
     | [] -> failwith "splitLast: empty list"
     | [x] -> (List.rev acc, x)
@@ -331,73 +331,73 @@ let path_to_string path =
   aux path;
   Buffer.contents buf
 
-let valueDetail (typ : Types.type_expr) =
-  let rec collectSignatureTypes (typ : Types.type_expr) =
+let value_detail (typ : Types.type_expr) =
+  let rec collect_signature_types (typ : Types.type_expr) =
     match typ.desc with
-    | Tlink t | Tsubst t | Tpoly (t, []) -> collectSignatureTypes t
+    | Tlink t | Tsubst t | Tpoly (t, []) -> collect_signature_types t
     | Tconstr (path, ts, _) -> (
       let p = path_to_string path in
       match ts with
-      | [] -> [{path = p; genericParameters = []}]
+      | [] -> [{path = p; generic_parameters = []}]
       | ts ->
         let ts =
           ts
           |> List.concat_map (fun (t : Types.type_expr) ->
-                 collectSignatureTypes t)
+                 collect_signature_types t)
         in
-        [{path = p; genericParameters = ts}])
+        [{path = p; generic_parameters = ts}])
     | Tarrow (arg, ret, _, _) ->
-      collectSignatureTypes arg.typ @ collectSignatureTypes ret
-    | Tvar None -> [{path = "_"; genericParameters = []}]
+      collect_signature_types arg.typ @ collect_signature_types ret
+    | Tvar None -> [{path = "_"; generic_parameters = []}]
     | _ -> []
   in
-  match collectSignatureTypes typ with
+  match collect_signature_types typ with
   | [] -> None
   | ts ->
-    let parameters, returnType = splitLast ts in
-    Some (Signature {parameters; returnType})
+    let parameters, return_type = split_last ts in
+    Some (Signature {parameters; return_type})
 
-let makeId modulePath ~identifier =
-  identifier :: modulePath |> List.rev |> SharedTypes.ident
+let make_id module_path ~identifier =
+  identifier :: module_path |> List.rev |> SharedTypes.ident
 
-let getSource ~rootPath ({loc_start} : Location.t) =
-  let line, col = Pos.ofLexing loc_start in
+let get_source ~root_path ({loc_start} : Location.t) =
+  let line, col = Pos.of_lexing loc_start in
   let filepath =
-    Files.relpath rootPath loc_start.pos_fname
+    Files.relpath root_path loc_start.pos_fname
     |> Files.split Filename.dir_sep
     |> String.concat "/"
   in
   {filepath; line = line + 1; col = col + 1}
 
-let extractDocs ~entryPointFile ~debug =
+let extract_docs ~entry_point_file ~debug =
   let path =
-    match Filename.is_relative entryPointFile with
-    | true -> Unix.realpath entryPointFile
-    | false -> entryPointFile
+    match Filename.is_relative entry_point_file with
+    | true -> Unix.realpath entry_point_file
+    | false -> entry_point_file
   in
   if debug then Printf.printf "extracting docs for %s\n" path;
   let result =
     match
-      FindFiles.isImplementation path = false
-      && FindFiles.isInterface path = false
+      FindFiles.is_implementation path = false
+      && FindFiles.is_interface path = false
     with
     | false -> (
       let path =
-        if FindFiles.isImplementation path then
-          let pathAsResi =
+        if FindFiles.is_implementation path then
+          let path_as_resi =
             (path |> Filename.dirname) ^ "/"
             ^ (path |> Filename.basename |> Filename.chop_extension)
             ^ ".resi"
           in
-          if Sys.file_exists pathAsResi then (
+          if Sys.file_exists path_as_resi then (
             if debug then
               Printf.printf "preferring found resi file for impl: %s\n"
-                pathAsResi;
-            pathAsResi)
+                path_as_resi;
+            path_as_resi)
           else path
         else path
       in
-      match Cmt.loadFullCmtFromPath ~path with
+      match Cmt.load_full_cmt_from_path ~path with
       | None ->
         Error
           (Printf.sprintf
@@ -406,14 +406,14 @@ let extractDocs ~entryPointFile ~debug =
       | Some full ->
         let file = full.file in
         let structure = file.structure in
-        let rootPath = full.package.rootPath in
+        let root_path = full.package.root_path in
         let open SharedTypes in
-        let env = QueryEnv.fromFile file in
-        let rec extractDocsForModule ?(modulePath = [env.file.moduleName])
+        let env = QueryEnv.from_file file in
+        let rec extract_docs_for_module ?(module_path = [env.file.module_name])
             (structure : Module.structure) =
-          let valuesSeen = ref StringSet.empty in
+          let values_seen = ref StringSet.empty in
           {
-            id = modulePath |> List.rev |> ident;
+            id = module_path |> List.rev |> ident;
             docstring = structure.docstring |> List.map String.trim;
             name = structure.name;
             moduletypeid = None;
@@ -421,10 +421,10 @@ let extractDocs ~entryPointFile ~debug =
             source =
               {
                 filepath =
-                  (match rootPath = "." with
-                  | true -> file.uri |> Uri.toPath
+                  (match root_path = "." with
+                  | true -> file.uri |> Uri.to_path
                   | false ->
-                    Files.relpath rootPath (file.uri |> Uri.toPath)
+                    Files.relpath root_path (file.uri |> Uri.to_path)
                     |> Files.split Filename.dir_sep
                     |> String.concat "/");
                 line = 1;
@@ -439,50 +439,50 @@ let extractDocs ~entryPointFile ~debug =
                          name = Ext_ident.unwrap_uppercase_exotic item.name;
                        }
                      in
-                     let source = getSource ~rootPath item.loc in
+                     let source = get_source ~root_path item.loc in
                      match item.kind with
                      | Value typ ->
                        Some
                          (Value
                             {
-                              id = modulePath |> makeId ~identifier:item.name;
+                              id = module_path |> make_id ~identifier:item.name;
                               docstring = item.docstring |> List.map String.trim;
                               signature =
                                 "let " ^ item.name ^ ": "
-                                ^ Shared.typeToString typ;
+                                ^ Shared.type_to_string typ;
                               name = item.name;
                               deprecated = item.deprecated;
-                              detail = valueDetail typ;
+                              detail = value_detail typ;
                               source;
                             })
                      | Type (typ, _) ->
                        Some
                          (Type
                             {
-                              id = modulePath |> makeId ~identifier:item.name;
+                              id = module_path |> make_id ~identifier:item.name;
                               docstring = item.docstring |> List.map String.trim;
                               signature =
-                                typ.decl |> Shared.declToString item.name;
+                                typ.decl |> Shared.decl_to_string item.name;
                               name = item.name;
                               deprecated = item.deprecated;
-                              detail = typeDetail typ ~full ~env;
+                              detail = type_detail typ ~full ~env;
                               source;
                             })
-                     | Module {type_ = Ident p; isModuleType = false} ->
+                     | Module {type_ = Ident p; is_module_type = false} ->
                        (* module Whatever = OtherModule *)
-                       let aliasToModule = p |> pathIdentToString in
+                       let alias_to_module = p |> path_ident_to_string in
                        let id =
-                         (modulePath |> List.rev |> List.hd) ^ "." ^ item.name
+                         (module_path |> List.rev |> List.hd) ^ "." ^ item.name
                        in
-                       let items, internalDocstrings =
+                       let items, internal_docstrings =
                          match
-                           ProcessCmt.fileForModule ~package:full.package
-                             aliasToModule
+                           ProcessCmt.file_for_module ~package:full.package
+                             alias_to_module
                          with
                          | None -> ([], [])
                          | Some file ->
                            let docs =
-                             extractDocsForModule ~modulePath:[id]
+                             extract_docs_for_module ~module_path:[id]
                                file.structure
                            in
                            (docs.items, docs.docstring)
@@ -495,17 +495,17 @@ let extractDocs ~entryPointFile ~debug =
                               source;
                               items;
                               docstring =
-                                item.docstring @ internalDocstrings
+                                item.docstring @ internal_docstrings
                                 |> List.map String.trim;
                             })
-                     | Module {type_ = Structure m; isModuleType = false} ->
+                     | Module {type_ = Structure m; is_module_type = false} ->
                        (* module Whatever = {} in res or module Whatever: {} in resi. *)
-                       let modulePath = m.name :: modulePath in
-                       let docs = extractDocsForModule ~modulePath m in
+                       let module_path = m.name :: module_path in
+                       let docs = extract_docs_for_module ~module_path m in
                        Some
                          (Module
                             {
-                              id = modulePath |> List.rev |> ident;
+                              id = module_path |> List.rev |> ident;
                               name = m.name;
                               moduletypeid = None;
                               docstring = item.docstring @ m.docstring;
@@ -513,14 +513,14 @@ let extractDocs ~entryPointFile ~debug =
                               source;
                               items = docs.items;
                             })
-                     | Module {type_ = Structure m; isModuleType = true} ->
+                     | Module {type_ = Structure m; is_module_type = true} ->
                        (* module type Whatever = {} *)
-                       let modulePath = m.name :: modulePath in
-                       let docs = extractDocsForModule ~modulePath m in
+                       let module_path = m.name :: module_path in
+                       let docs = extract_docs_for_module ~module_path m in
                        Some
                          (ModuleType
                             {
-                              id = modulePath |> List.rev |> ident;
+                              id = module_path |> List.rev |> ident;
                               name = m.name;
                               docstring = item.docstring @ m.docstring;
                               deprecated = item.deprecated;
@@ -535,25 +535,25 @@ let extractDocs ~entryPointFile ~debug =
                        (* module Whatever: { <interface> } = { <impl> }. Prefer the interface. *)
                        Some
                          (Module
-                            (extractDocsForModule
-                               ~modulePath:(interface.name :: modulePath)
+                            (extract_docs_for_module
+                               ~module_path:(interface.name :: module_path)
                                interface))
                      | Module {type_ = Constraint (Structure m, Ident p)} ->
                        (* module M: T = { <impl> }. Print M *)
                        let docs =
-                         extractDocsForModule ~modulePath:(m.name :: modulePath)
+                         extract_docs_for_module ~module_path:(m.name :: module_path)
                            m
                        in
-                       let identModulePath = p |> Path.head |> Ident.name in
+                       let ident_module_path = p |> Path.head |> Ident.name in
 
-                       let moduleTypeIdPath =
+                       let module_type_id_path =
                          match
-                           ProcessCmt.fileForModule ~package:full.package
-                             identModulePath
+                           ProcessCmt.file_for_module ~package:full.package
+                             ident_module_path
                            |> Option.is_none
                          with
                          | false -> []
-                         | true -> [modulePath |> List.rev |> List.hd]
+                         | true -> [module_path |> List.rev |> List.hd]
                        in
 
                        Some
@@ -562,26 +562,26 @@ let extractDocs ~entryPointFile ~debug =
                               docs with
                               moduletypeid =
                                 Some
-                                  (makeId ~identifier:(Path.name p)
-                                     moduleTypeIdPath);
+                                  (make_id ~identifier:(Path.name p)
+                                     module_type_id_path);
                             })
                      | _ -> None)
               (* Filter out shadowed bindings by keeping only the last value associated with an id *)
               |> List.rev
-              |> List.filter_map (fun (docItem : docItem) ->
-                     match docItem with
+              |> List.filter_map (fun (doc_item : doc_item) ->
+                     match doc_item with
                      | Value {id} ->
-                       if StringSet.mem id !valuesSeen then None
+                       if StringSet.mem id !values_seen then None
                        else (
-                         valuesSeen := StringSet.add id !valuesSeen;
-                         Some docItem)
-                     | _ -> Some docItem)
+                         values_seen := StringSet.add id !values_seen;
+                         Some doc_item)
+                     | _ -> Some doc_item)
               |> List.rev;
           }
         in
-        let docs = extractDocsForModule structure in
+        let docs = extract_docs_for_module structure in
         Ok
-          (stringifyDocsForModule ~originalEnv:env docs
+          (stringify_docs_for_module ~original_env:env docs
           |> Yojson.Safe.pretty_to_string))
     | true ->
       Error
@@ -591,7 +591,7 @@ let extractDocs ~entryPointFile ~debug =
 
   result
 
-let extractEmbedded ~extensionPoints ~filename =
+let extract_embedded ~extension_points ~filename =
   let {Res_driver.parsetree = structure} =
     Res_driver.parsing_engine.parse_implementation ~for_printer:false ~filename
   in
@@ -612,7 +612,7 @@ let extractEmbedded ~extensionPoints ~filename =
                     _ );
             };
           ] )
-      when extensionPoints |> List.exists (fun v -> v = txt) ->
+      when extension_points |> List.exists (fun v -> v = txt) ->
       append (pexp_loc, txt, contents)
     | _ -> ());
     Ast_iterator.default_iterator.extension iterator ext
@@ -621,20 +621,20 @@ let extractEmbedded ~extensionPoints ~filename =
   iterator.structure iterator structure;
   let result =
     !content
-    |> List.map (fun (loc, extensionName, contents) ->
+    |> List.map (fun (loc, extension_name, contents) ->
            `Assoc
              [
-               ("extensionName", `String extensionName);
+               ("extensionName", `String extension_name);
                ("contents", `String contents);
                ( "loc",
-                 Analysis.Utils.cmtLocToRange loc |> Lsp.Types.Range.yojson_of_t
+                 Analysis.Utils.cmt_loc_to_range loc |> Lsp.Types.Range.yojson_of_t
                );
              ])
     |> List.rev
   in
   Yojson.Safe.pretty_to_string (`List result)
 
-let readFile path =
+let read_file path =
   let ic = open_in path in
   let n = in_channel_length ic in
   let s = Bytes.create n in
@@ -642,7 +642,7 @@ let readFile path =
   close_in ic;
   Bytes.to_string s
 
-let isResLang lang =
+let is_res_lang lang =
   match String.lowercase_ascii lang with
   | "res" | "rescript" | "resi" -> true
   | lang ->
@@ -660,7 +660,7 @@ module FormatCodeblocks = struct
       match transforms with
       | [] -> ast
       | transforms ->
-        let hasTransform transform = transforms |> List.mem transform in
+        let has_transform transform = transforms |> List.mem transform in
         let mapper =
           {
             Ast_mapper.default_mapper with
@@ -673,12 +673,12 @@ module FormatCodeblocks = struct
                         {
                           pexp_desc =
                             Pexp_ident
-                              ({txt = Lident "assertEqual"} as identTxt);
+                              ({txt = Lident "assertEqual"} as ident_txt);
                         } as ident;
                       partial = false;
                       args = [(Nolabel, _); (Nolabel, _)] as args;
                     }
-                  when hasTransform AssertEqualFnToEquals ->
+                  when has_transform AssertEqualFnToEquals ->
                   {
                     exp with
                     pexp_desc =
@@ -688,7 +688,7 @@ module FormatCodeblocks = struct
                             {
                               ident with
                               pexp_desc =
-                                Pexp_ident {identTxt with txt = Lident "=="};
+                                Pexp_ident {ident_txt with txt = Lident "=="};
                             };
                           args;
                           partial = false;
@@ -713,7 +713,7 @@ module FormatCodeblocks = struct
                                         pexp_desc =
                                           Pexp_ident
                                             ({txt = Lident "assertEqual"} as
-                                             identTxt);
+                                             ident_txt);
                                       } as ident;
                                     partial = false;
                                     args = [rhs];
@@ -721,7 +721,7 @@ module FormatCodeblocks = struct
                             } );
                         ];
                     }
-                  when hasTransform AssertEqualFnToEquals ->
+                  when has_transform AssertEqualFnToEquals ->
                   {
                     exp with
                     pexp_desc =
@@ -731,7 +731,7 @@ module FormatCodeblocks = struct
                             {
                               ident with
                               pexp_desc =
-                                Pexp_ident {identTxt with txt = Lident "=="};
+                                Pexp_ident {ident_txt with txt = Lident "=="};
                             };
                           args = [(Nolabel, lhs); rhs];
                           partial = false;
@@ -744,48 +744,48 @@ module FormatCodeblocks = struct
         mapper.structure mapper ast
   end
 
-  let formatRescriptCodeBlocks content ~transformAssertEqual ~displayFilename
-      ~addError ~markdownBlockStartLine =
+  let format_rescript_code_blocks content ~transform_assert_equal ~display_filename
+      ~add_error ~markdown_block_start_line =
     (* Detect ReScript code blocks. *)
-    let hadCodeBlocks = ref false in
+    let had_code_blocks = ref false in
     let block _m = function
-      | Cmarkit.Block.Code_block (codeBlock, meta) -> (
-        match Cmarkit.Block.Code_block.info_string codeBlock with
-        | Some ((lang, _) as info_string) when isResLang lang ->
-          hadCodeBlocks := true;
+      | Cmarkit.Block.Code_block (code_block, meta) -> (
+        match Cmarkit.Block.Code_block.info_string code_block with
+        | Some ((lang, _) as info_string) when is_res_lang lang ->
+          had_code_blocks := true;
 
-          let currentLine =
+          let current_line =
             meta |> Cmarkit.Meta.textloc |> Cmarkit.Textloc.first_line |> fst
           in
           (* Account for 0-based line numbers *)
-          let currentLine = currentLine + 1 in
-          let layout = Cmarkit.Block.Code_block.layout codeBlock in
-          let code = Cmarkit.Block.Code_block.code codeBlock in
-          let codeText =
+          let current_line = current_line + 1 in
+          let layout = Cmarkit.Block.Code_block.layout code_block in
+          let code = Cmarkit.Block.Code_block.code code_block in
+          let code_text =
             code |> List.map Cmarkit.Block_line.to_string |> String.concat "\n"
           in
 
           let n = List.length code in
-          let newlinesNeeded =
-            max 0 (markdownBlockStartLine + currentLine - n)
+          let newlines_needed =
+            max 0 (markdown_block_start_line + current_line - n)
           in
-          let codeWithOffset = String.make newlinesNeeded '\n' ^ codeText in
-          let reportParseError diagnostics =
+          let code_with_offset = String.make newlines_needed '\n' ^ code_text in
+          let report_parse_error diagnostics =
             let buf = Buffer.create 1000 in
             let formatter = Format.formatter_of_buffer buf in
             Res_diagnostics.print_report ~formatter
               ~custom_intro:(Some "Syntax error in code block in docstring")
-              diagnostics codeWithOffset;
-            addError (Buffer.contents buf)
+              diagnostics code_with_offset;
+            add_error (Buffer.contents buf)
           in
-          let formattedCode =
+          let formatted_code =
             if lang |> String.split_on_char ' ' |> List.hd = "resi" then
               let {Res_driver.parsetree; comments; invalid; diagnostics} =
                 Res_driver.parse_interface_from_source ~for_printer:true
-                  ~display_filename:displayFilename ~source:codeWithOffset
+                  ~display_filename:display_filename ~source:code_with_offset
               in
               if invalid then (
-                reportParseError diagnostics;
+                report_parse_error diagnostics;
                 code)
               else
                 Res_printer.print_interface parsetree ~comments
@@ -793,14 +793,14 @@ module FormatCodeblocks = struct
             else
               let {Res_driver.parsetree; comments; invalid; diagnostics} =
                 Res_driver.parse_implementation_from_source ~for_printer:true
-                  ~display_filename:displayFilename ~source:codeWithOffset
+                  ~display_filename:display_filename ~source:code_with_offset
               in
               if invalid then (
-                reportParseError diagnostics;
+                report_parse_error diagnostics;
                 code)
               else
                 let parsetree =
-                  if transformAssertEqual then
+                  if transform_assert_equal then
                     Transform.transform ~transforms:[AssertEqualFnToEquals]
                       parsetree
                   else parsetree
@@ -809,32 +809,32 @@ module FormatCodeblocks = struct
                 |> String.trim |> Cmarkit.Block_line.list_of_string
           in
 
-          let mappedCodeBlock =
-            Cmarkit.Block.Code_block.make ~layout ~info_string formattedCode
+          let mapped_code_block =
+            Cmarkit.Block.Code_block.make ~layout ~info_string formatted_code
           in
-          Cmarkit.Mapper.ret (Cmarkit.Block.Code_block (mappedCodeBlock, meta))
+          Cmarkit.Mapper.ret (Cmarkit.Block.Code_block (mapped_code_block, meta))
         | _ -> Cmarkit.Mapper.default)
       | _ -> Cmarkit.Mapper.default
     in
     let mapper = Cmarkit.Mapper.make ~block () in
-    let newContent =
+    let new_content =
       content
       |> Cmarkit.Doc.of_string ~locs:true
       |> Cmarkit.Mapper.map_doc mapper
       |> Cmarkit_commonmark.of_doc
     in
-    (newContent, !hadCodeBlocks)
+    (new_content, !had_code_blocks)
 
-  let formatCodeBlocksInFile ~outputMode ~transformAssertEqual ~entryPointFile =
+  let format_code_blocks_in_file ~output_mode ~transform_assert_equal ~entry_point_file =
     let path =
-      match Filename.is_relative entryPointFile with
-      | true -> Unix.realpath entryPointFile
-      | false -> entryPointFile
+      match Filename.is_relative entry_point_file with
+      | true -> Unix.realpath entry_point_file
+      | false -> entry_point_file
     in
     let errors = ref [] in
-    let addError error = errors := error :: !errors in
+    let add_error error = errors := error :: !errors in
 
-    let makeMapper ~transformAssertEqual ~displayFilename =
+    let make_mapper ~transform_assert_equal ~display_filename =
       {
         Ast_mapper.default_mapper with
         attribute =
@@ -843,18 +843,18 @@ module FormatCodeblocks = struct
             | ( {txt = "res.doc"},
                 Some (contents, None),
                 PStr [{pstr_desc = Pstr_eval ({pexp_loc}, _)}] ) ->
-              let formattedContents, hadCodeBlocks =
-                formatRescriptCodeBlocks ~transformAssertEqual ~addError
-                  ~displayFilename
-                  ~markdownBlockStartLine:pexp_loc.loc_start.pos_lnum contents
+              let formatted_contents, had_code_blocks =
+                format_rescript_code_blocks ~transform_assert_equal ~add_error
+                  ~display_filename
+                  ~markdown_block_start_line:pexp_loc.loc_start.pos_lnum contents
               in
-              if hadCodeBlocks && formattedContents <> contents then
+              if had_code_blocks && formatted_contents <> contents then
                 ( name,
                   PStr
                     [
                       Ast_helper.Str.eval
                         (Ast_helper.Exp.constant
-                           (Pconst_string (formattedContents, None)));
+                           (Pconst_string (formatted_contents, None)));
                     ] )
               else attr
             | _ -> Ast_mapper.default_mapper.attribute mapper attr);
@@ -862,14 +862,14 @@ module FormatCodeblocks = struct
     in
     let content =
       if Filename.check_suffix path ".md" then
-        let content = readFile path in
-        let displayFilename = Filename.basename path in
-        let formattedContents, hadCodeBlocks =
-          formatRescriptCodeBlocks ~transformAssertEqual ~addError
-            ~displayFilename ~markdownBlockStartLine:1 content
+        let content = read_file path in
+        let display_filename = Filename.basename path in
+        let formatted_contents, had_code_blocks =
+          format_rescript_code_blocks ~transform_assert_equal ~add_error
+            ~display_filename ~markdown_block_start_line:1 content
         in
-        if hadCodeBlocks && formattedContents <> content then
-          Ok (formattedContents, content)
+        if had_code_blocks && formatted_contents <> content then
+          Ok (formatted_contents, content)
         else Ok (content, content)
       else if Filename.check_suffix path ".res" then
         let parser =
@@ -880,10 +880,10 @@ module FormatCodeblocks = struct
         in
         let filename = Filename.basename filename in
         let mapper =
-          makeMapper ~transformAssertEqual ~displayFilename:filename
+          make_mapper ~transform_assert_equal ~display_filename:filename
         in
-        let astMapped = mapper.structure mapper structure in
-        Ok (Res_printer.print_implementation astMapped ~comments, source)
+        let ast_mapped = mapper.structure mapper structure in
+        Ok (Res_printer.print_implementation ast_mapped ~comments, source)
       else if Filename.check_suffix path ".resi" then
         let parser =
           Res_driver.parsing_engine.parse_interface ~for_printer:true
@@ -892,10 +892,10 @@ module FormatCodeblocks = struct
           parser ~filename:path
         in
         let mapper =
-          makeMapper ~transformAssertEqual ~displayFilename:filename
+          make_mapper ~transform_assert_equal ~display_filename:filename
         in
-        let astMapped = mapper.signature mapper signature in
-        Ok (Res_printer.print_interface astMapped ~comments, source)
+        let ast_mapped = mapper.signature mapper signature in
+        Ok (Res_printer.print_interface ast_mapped ~comments, source)
       else
         Error
           (Printf.sprintf
@@ -912,7 +912,7 @@ module FormatCodeblocks = struct
           (Printf.sprintf "%s: Error formatting docstrings."
              (Filename.basename path)))
       else if formatted_content <> source then (
-        match outputMode with
+        match output_mode with
         | `Stdout -> Ok formatted_content
         | `File ->
           let oc = open_out path in
@@ -932,7 +932,7 @@ module ExtractCodeblocks = struct
       match transforms with
       | [] -> ast
       | transforms ->
-        let hasTransform transform = transforms |> List.mem transform in
+        let has_transform transform = transforms |> List.mem transform in
         let mapper =
           {
             Ast_mapper.default_mapper with
@@ -948,14 +948,14 @@ module ExtractCodeblocks = struct
                                  {
                                    pexp_desc =
                                      Pexp_ident
-                                       ({txt = Lident "=="} as identTxt);
+                                       ({txt = Lident "=="} as ident_txt);
                                  } as ident;
                                partial = false;
                                args = [(Nolabel, _); (Nolabel, _)] as args;
                              };
                        } as exp),
                       x1 )
-                  when hasTransform EqualsToAssertEqualFn ->
+                  when has_transform EqualsToAssertEqualFn ->
                   {
                     str_item with
                     pstr_desc =
@@ -971,7 +971,7 @@ module ExtractCodeblocks = struct
                                       pexp_desc =
                                         Pexp_ident
                                           {
-                                            identTxt with
+                                            ident_txt with
                                             txt = Lident "assertEqual";
                                           };
                                     };
@@ -988,36 +988,36 @@ module ExtractCodeblocks = struct
         mapper.structure mapper ast
   end
 
-  type codeBlock = {id: string; code: string; name: string}
+  type code_block = {id: string; code: string; name: string}
 
-  let getDocstring = function
+  let get_docstring = function
     | d :: _ -> d
     | _ -> ""
 
-  let extractCodeBlocks ~entryPointFile
-      ~(processDocstrings : id:string -> name:string -> string -> unit) =
+  let extract_code_blocks ~entry_point_file
+      ~(process_docstrings : id:string -> name:string -> string -> unit) =
     let path =
-      match Filename.is_relative entryPointFile with
-      | true -> Unix.realpath entryPointFile
-      | false -> entryPointFile
+      match Filename.is_relative entry_point_file with
+      | true -> Unix.realpath entry_point_file
+      | false -> entry_point_file
     in
     let result =
       match
-        FindFiles.isImplementation path = false
-        && FindFiles.isInterface path = false
+        FindFiles.is_implementation path = false
+        && FindFiles.is_interface path = false
       with
       | false -> (
         let path =
-          if FindFiles.isImplementation path then
-            let pathAsResi =
+          if FindFiles.is_implementation path then
+            let path_as_resi =
               (path |> Filename.dirname) ^ "/"
               ^ (path |> Filename.basename |> Filename.chop_extension)
               ^ ".resi"
             in
-            if Sys.file_exists pathAsResi then pathAsResi else path
+            if Sys.file_exists path_as_resi then path_as_resi else path
           else path
         in
-        match Cmt.loadFullCmtFromPath ~path with
+        match Cmt.load_full_cmt_from_path ~path with
         | None ->
           Error
             (Printf.sprintf
@@ -1027,68 +1027,68 @@ module ExtractCodeblocks = struct
           let file = full.file in
           let structure = file.structure in
           let open SharedTypes in
-          let env = QueryEnv.fromFile file in
-          let rec extractCodeBlocksForModule
-              ?(modulePath = [env.file.moduleName])
+          let env = QueryEnv.from_file file in
+          let rec extract_code_blocks_for_module
+              ?(module_path = [env.file.module_name])
               (structure : Module.structure) =
-            let id = modulePath |> List.rev |> ident in
+            let id = module_path |> List.rev |> ident in
             let name = structure.name in
-            processDocstrings ~id ~name (getDocstring structure.docstring);
+            process_docstrings ~id ~name (get_docstring structure.docstring);
 
             structure.items
             |> List.iter (fun (item : Module.item) ->
                    match item.kind with
                    | Value _typ ->
-                     let id = modulePath |> makeId ~identifier:item.name in
+                     let id = module_path |> make_id ~identifier:item.name in
                      let name = item.name in
-                     processDocstrings ~id ~name (getDocstring item.docstring)
+                     process_docstrings ~id ~name (get_docstring item.docstring)
                    | Type (_typ, _) ->
-                     let id = modulePath |> makeId ~identifier:item.name in
+                     let id = module_path |> make_id ~identifier:item.name in
                      let name = item.name in
-                     processDocstrings ~id ~name (getDocstring item.docstring)
-                   | Module {type_ = Ident _p; isModuleType = false} ->
+                     process_docstrings ~id ~name (get_docstring item.docstring)
+                   | Module {type_ = Ident _p; is_module_type = false} ->
                      (* module Whatever = OtherModule *)
                      let id =
-                       (modulePath |> List.rev |> List.hd) ^ "." ^ item.name
+                       (module_path |> List.rev |> List.hd) ^ "." ^ item.name
                      in
                      let name = item.name in
-                     processDocstrings ~id ~name (getDocstring item.docstring)
-                   | Module {type_ = Structure m; isModuleType = false} ->
+                     process_docstrings ~id ~name (get_docstring item.docstring)
+                   | Module {type_ = Structure m; is_module_type = false} ->
                      (* module Whatever = {} in res or module Whatever: {} in resi. *)
-                     let modulePath = m.name :: modulePath in
-                     let id = modulePath |> List.rev |> ident in
+                     let module_path = m.name :: module_path in
+                     let id = module_path |> List.rev |> ident in
                      let name = m.name in
-                     processDocstrings ~id ~name (getDocstring m.docstring);
-                     extractCodeBlocksForModule ~modulePath m
-                   | Module {type_ = Structure m; isModuleType = true} ->
+                     process_docstrings ~id ~name (get_docstring m.docstring);
+                     extract_code_blocks_for_module ~module_path m
+                   | Module {type_ = Structure m; is_module_type = true} ->
                      (* module type Whatever = {} *)
-                     let modulePath = m.name :: modulePath in
-                     let id = modulePath |> List.rev |> ident in
+                     let module_path = m.name :: module_path in
+                     let id = module_path |> List.rev |> ident in
                      let name = m.name in
-                     processDocstrings ~id ~name (getDocstring m.docstring);
-                     extractCodeBlocksForModule ~modulePath m
+                     process_docstrings ~id ~name (get_docstring m.docstring);
+                     extract_code_blocks_for_module ~module_path m
                    | Module
                        {
                          type_ =
                            Constraint (Structure _impl, Structure interface);
                        } ->
                      (* module Whatever: { <interface> } = { <impl> }. Prefer the interface. *)
-                     let modulePath = interface.name :: modulePath in
-                     let id = modulePath |> List.rev |> ident in
+                     let module_path = interface.name :: module_path in
+                     let id = module_path |> List.rev |> ident in
                      let name = interface.name in
-                     processDocstrings ~id ~name
-                       (getDocstring interface.docstring);
-                     extractCodeBlocksForModule ~modulePath interface
+                     process_docstrings ~id ~name
+                       (get_docstring interface.docstring);
+                     extract_code_blocks_for_module ~module_path interface
                    | Module {type_ = Constraint (Structure m, Ident _p)} ->
                      (* module M: T = { <impl> }. Print M *)
-                     let modulePath = m.name :: modulePath in
-                     let id = modulePath |> List.rev |> ident in
+                     let module_path = m.name :: module_path in
+                     let id = module_path |> List.rev |> ident in
                      let name = m.name in
-                     processDocstrings ~id ~name (getDocstring m.docstring);
-                     extractCodeBlocksForModule ~modulePath m
+                     process_docstrings ~id ~name (get_docstring m.docstring);
+                     extract_code_blocks_for_module ~module_path m
                    | Module.Module _ -> ())
           in
-          extractCodeBlocksForModule structure;
+          extract_code_blocks_for_module structure;
           Ok ())
       | true ->
         Error
@@ -1098,59 +1098,59 @@ module ExtractCodeblocks = struct
 
     result
 
-  let extractRescriptCodeBlocks content ~transformAssertEqual ~displayFilename
-      ~addError ~markdownBlockStartLine =
+  let extract_rescript_code_blocks content ~transform_assert_equal ~display_filename
+      ~add_error ~markdown_block_start_line =
     (* Detect ReScript code blocks. *)
-    let codeBlocks = ref [] in
-    let addCodeBlock codeBlock = codeBlocks := codeBlock :: !codeBlocks in
+    let code_blocks = ref [] in
+    let add_code_block code_block = code_blocks := code_block :: !code_blocks in
     let block _m = function
-      | Cmarkit.Block.Code_block (codeBlock, meta) -> (
-        match Cmarkit.Block.Code_block.info_string codeBlock with
-        | Some (lang, _) when isResLang lang ->
-          let currentLine =
+      | Cmarkit.Block.Code_block (code_block, meta) -> (
+        match Cmarkit.Block.Code_block.info_string code_block with
+        | Some (lang, _) when is_res_lang lang ->
+          let current_line =
             meta |> Cmarkit.Meta.textloc |> Cmarkit.Textloc.first_line |> fst
           in
           (* Account for 0-based line numbers *)
-          let currentLine = currentLine + 1 in
-          let code = Cmarkit.Block.Code_block.code codeBlock in
-          let codeText =
+          let current_line = current_line + 1 in
+          let code = Cmarkit.Block.Code_block.code code_block in
+          let code_text =
             code |> List.map Cmarkit.Block_line.to_string |> String.concat "\n"
           in
           let n = List.length code in
-          let newlinesNeeded =
-            max 0 (markdownBlockStartLine + currentLine - n)
+          let newlines_needed =
+            max 0 (markdown_block_start_line + current_line - n)
           in
-          let codeWithOffset = String.make newlinesNeeded '\n' ^ codeText in
-          let reportParseError diagnostics =
+          let code_with_offset = String.make newlines_needed '\n' ^ code_text in
+          let report_parse_error diagnostics =
             let buf = Buffer.create 1000 in
             let formatter = Format.formatter_of_buffer buf in
             Res_diagnostics.print_report ~formatter
               ~custom_intro:(Some "Syntax error in code block in docstring")
-              diagnostics codeWithOffset;
-            addError (Buffer.contents buf)
+              diagnostics code_with_offset;
+            add_error (Buffer.contents buf)
           in
-          let mappedCode =
+          let mapped_code =
             if lang |> String.split_on_char ' ' |> List.hd = "resi" then
               let {Res_driver.parsetree; comments; invalid; diagnostics} =
                 Res_driver.parse_interface_from_source ~for_printer:true
-                  ~display_filename:displayFilename ~source:codeWithOffset
+                  ~display_filename:display_filename ~source:code_with_offset
               in
               if invalid then (
-                reportParseError diagnostics;
-                codeText)
+                report_parse_error diagnostics;
+                code_text)
               else
                 Res_printer.print_interface parsetree ~comments |> String.trim
             else
               let {Res_driver.parsetree; comments; invalid; diagnostics} =
                 Res_driver.parse_implementation_from_source ~for_printer:true
-                  ~display_filename:displayFilename ~source:codeWithOffset
+                  ~display_filename:display_filename ~source:code_with_offset
               in
               if invalid then (
-                reportParseError diagnostics;
-                codeText)
+                report_parse_error diagnostics;
+                code_text)
               else
                 let parsetree =
-                  if transformAssertEqual then
+                  if transform_assert_equal then
                     Transform.transform ~transforms:[EqualsToAssertEqualFn]
                       parsetree
                   else parsetree
@@ -1158,7 +1158,7 @@ module ExtractCodeblocks = struct
                 Res_printer.print_implementation parsetree ~comments
                 |> String.trim
           in
-          addCodeBlock mappedCode;
+          add_code_block mapped_code;
           Cmarkit.Mapper.default
         | _ -> Cmarkit.Mapper.default)
       | _ -> Cmarkit.Mapper.default
@@ -1169,68 +1169,68 @@ module ExtractCodeblocks = struct
       |> Cmarkit.Doc.of_string ~locs:true
       |> Cmarkit.Mapper.map_doc mapper
     in
-    !codeBlocks
+    !code_blocks
 
-  let extractCodeblocksFromFile ~transformAssertEqual ~entryPointFile =
+  let extract_codeblocks_from_file ~transform_assert_equal ~entry_point_file =
     let path =
-      match Filename.is_relative entryPointFile with
-      | true -> Unix.realpath entryPointFile
-      | false -> entryPointFile
+      match Filename.is_relative entry_point_file with
+      | true -> Unix.realpath entry_point_file
+      | false -> entry_point_file
     in
-    let displayFilename = Filename.basename path in
+    let display_filename = Filename.basename path in
     let errors = ref [] in
-    let addError error = errors := error :: !errors in
+    let add_error error = errors := error :: !errors in
 
-    let codeBlocks = ref [] in
-    let addCodeBlock codeBlock = codeBlocks := codeBlock :: !codeBlocks in
+    let code_blocks = ref [] in
+    let add_code_block code_block = code_blocks := code_block :: !code_blocks in
 
     let content =
       if Filename.check_suffix path ".md" then
-        let content = readFile path in
-        let displayFilename = Filename.basename path in
-        let codeBlocks =
-          extractRescriptCodeBlocks ~transformAssertEqual ~addError
-            ~displayFilename ~markdownBlockStartLine:1 content
+        let content = read_file path in
+        let display_filename = Filename.basename path in
+        let code_blocks =
+          extract_rescript_code_blocks ~transform_assert_equal ~add_error
+            ~display_filename ~markdown_block_start_line:1 content
         in
         Ok
-          (codeBlocks
-          |> List.mapi (fun index codeBlock ->
+          (code_blocks
+          |> List.mapi (fun index code_block ->
                  {
                    id = "codeblock-" ^ string_of_int (index + 1);
                    name = "codeblock-" ^ string_of_int (index + 1);
-                   code = codeBlock;
+                   code = code_block;
                  }))
       else
         let extracted =
-          extractCodeBlocks ~entryPointFile
-            ~processDocstrings:(fun ~id ~name code ->
-              let codeBlocks =
+          extract_code_blocks ~entry_point_file
+            ~process_docstrings:(fun ~id ~name code ->
+              let code_blocks =
                 code
-                |> extractRescriptCodeBlocks ~transformAssertEqual ~addError
-                     ~displayFilename ~markdownBlockStartLine:1
+                |> extract_rescript_code_blocks ~transform_assert_equal ~add_error
+                     ~display_filename ~markdown_block_start_line:1
               in
-              if List.length codeBlocks > 1 then
-                codeBlocks |> List.rev
-                |> List.iteri (fun index codeBlock ->
-                       addCodeBlock
+              if List.length code_blocks > 1 then
+                code_blocks |> List.rev
+                |> List.iteri (fun index code_block ->
+                       add_code_block
                          {
                            id = id ^ "-" ^ string_of_int (index + 1);
                            name;
-                           code = codeBlock;
+                           code = code_block;
                          })
               else
-                codeBlocks
-                |> List.iter (fun codeBlock ->
-                       addCodeBlock {id; name; code = codeBlock}))
+                code_blocks
+                |> List.iter (fun code_block ->
+                       add_code_block {id; name; code = code_block}))
         in
 
         match extracted with
-        | Ok () -> Ok !codeBlocks
+        | Ok () -> Ok !code_blocks
         | Error e -> Error e
     in
     match content with
     | Error e -> Error e
-    | Ok codeBlocks ->
+    | Ok code_blocks ->
       let errors = !errors in
       if List.length errors > 0 then
         let errors = errors |> List.rev |> String.concat "\n" in
@@ -1239,13 +1239,13 @@ module ExtractCodeblocks = struct
         Ok
           (Yojson.Safe.pretty_to_string ~std:true
              (`List
-                (codeBlocks
-                |> List.map (fun codeBlock ->
+                (code_blocks
+                |> List.map (fun code_block ->
                        `Assoc
                          [
-                           ("id", `String codeBlock.id);
-                           ("name", `String codeBlock.name);
-                           ("code", `String codeBlock.code);
+                           ("id", `String code_block.id);
+                           ("name", `String code_block.name);
+                           ("code", `String code_block.code);
                          ]))))
 end
 

@@ -27,50 +27,50 @@ type processing_stats = {
 (** Stats from a process_files call *)
 
 (** Process cmt_infos into a file result *)
-let process_cmt_infos ~config ~cmtFilePath cmt_infos : cmt_file_result option =
-  let excludePath sourceFile =
+let process_cmt_infos ~config ~cmt_file_path cmt_infos : cmt_file_result option =
+  let exclude_path source_file =
     config.DceConfig.cli.exclude_paths
     |> List.exists (fun prefix_ ->
            let prefix =
-             match Filename.is_relative sourceFile with
+             match Filename.is_relative source_file with
              | true -> prefix_
              | false -> Filename.concat (Sys.getcwd ()) prefix_
            in
-           String.length prefix <= String.length sourceFile
+           String.length prefix <= String.length source_file
            &&
-           try String.sub sourceFile 0 (String.length prefix) = prefix
+           try String.sub source_file 0 (String.length prefix) = prefix
            with Invalid_argument _ -> false)
   in
   match cmt_infos.Cmt_format.cmt_annots |> FindSourceFile.cmt with
-  | Some sourceFile when not (excludePath sourceFile) ->
+  | Some source_file when not (exclude_path source_file) ->
     let is_interface =
       match cmt_infos.cmt_annots with
       | Interface _ -> true
-      | _ -> Filename.check_suffix sourceFile "i"
+      | _ -> Filename.check_suffix source_file "i"
     in
-    let module_name = sourceFile |> Paths.getModuleName in
+    let module_name = source_file |> Paths.get_module_name in
     let dce_file_context : DceFileProcessing.file_context =
-      {source_path = sourceFile; module_name; is_interface}
+      {source_path = source_file; module_name; is_interface}
     in
     let file_context =
       DeadCommon.FileContext.
-        {source_path = sourceFile; module_name; is_interface}
+        {source_path = source_file; module_name; is_interface}
     in
     let dce_data =
       if config.DceConfig.run.dce then
         Some
           (cmt_infos
           |> DceFileProcessing.process_cmt_file ~config ~file:dce_file_context
-               ~cmtFilePath)
+               ~cmt_file_path)
       else None
     in
     let exception_data =
       if config.DceConfig.run.exception_ then
-        cmt_infos |> Exception.processCmt ~file:file_context
+        cmt_infos |> Exception.process_cmt ~file:file_context
       else None
     in
     if config.DceConfig.run.termination then
-      cmt_infos |> Arnold.processCmt ~config ~file:file_context;
+      cmt_infos |> Arnold.process_cmt ~config ~file:file_context;
     Some {dce_data; exception_data}
   | _ -> None
 
@@ -78,25 +78,25 @@ let process_cmt_infos ~config ~cmtFilePath cmt_infos : cmt_file_result option =
 let create ~config : t =
   ReactiveFileCollection.create ~read_file:Cmt_format.read_cmt
     ~process:(fun path cmt_infos ->
-      process_cmt_infos ~config ~cmtFilePath:path cmt_infos)
+      process_cmt_infos ~config ~cmt_file_path:path cmt_infos)
 
 (** Process all files incrementally using ReactiveFileCollection.
     First run processes all files. Subsequent runs only process changed files.
     Uses batch processing to emit all changes as a single Batch delta.
     Returns (result, stats) where stats contains processing information. *)
-let process_files ~(collection : t) ~config:_ cmtFilePaths :
+let process_files ~(collection : t) ~config:_ cmt_file_paths :
     all_files_result * processing_stats =
   Timing.time_phase `FileLoading (fun () ->
-      let total_files = List.length cmtFilePaths in
+      let total_files = List.length cmt_file_paths in
       let cached_before =
-        cmtFilePaths
+        cmt_file_paths
         |> List.filter (fun p -> ReactiveFileCollection.mem collection p)
         |> List.length
       in
 
       (* Process all files as a batch - emits single Batch delta *)
       let processed =
-        ReactiveFileCollection.process_files_batch collection cmtFilePaths
+        ReactiveFileCollection.process_files_batch collection cmt_file_paths
       in
       let from_cache = total_files - processed in
       let stats = {total_files; processed; from_cache} in
@@ -136,7 +136,7 @@ let length (collection : t) = ReactiveFileCollection.length collection
     Returns (path, file_data option) suitable for ReactiveMerge. *)
 let to_file_data_collection (collection : t) :
     (string, DceFileProcessing.file_data option) Reactive.t =
-  Reactive.flatMap ~name:"file_data_collection"
+  Reactive.flat_map ~name:"file_data_collection"
     (ReactiveFileCollection.to_collection collection)
     ~f:(fun path result_opt ->
       match result_opt with

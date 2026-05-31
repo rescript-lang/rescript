@@ -71,7 +71,7 @@ let () =
     | _ -> None)
 
 type subtype_context =
-  | Generic of {errorCode: string}
+  | Generic of {error_code: string}
   | Coercion_target_variant_not_unboxed of {
       variant_name: Path.t;
       primitive: Path.t;
@@ -3684,7 +3684,7 @@ let rec subtype_rec env trace t1 t2 cstrs =
             :: cstrs
         | None ->
           (* Unclear when this case actually happens. *)
-          (trace, t1, t2, !univar_pairs, Some (Generic {errorCode = "VCPMMVD"}))
+          (trace, t1, t2, !univar_pairs, Some (Generic {error_code = "VCPMMVD"}))
           :: cstrs)
       | Tconstr (_, [], _), Tconstr (path, [], _)
         when Variant_coercion.can_coerce_primitive path

@@ -9,7 +9,7 @@ let test_batch_flatmap () =
 
   let source, emit = source ~name:"source" () in
   let derived =
-    flatMap ~name:"derived" source ~f:(fun k v -> [(k ^ "_derived", v * 2)]) ()
+    flat_map ~name:"derived" source ~f:(fun k v -> [(k ^ "_derived", v * 2)]) ()
   in
 
   (* Subscribe to track what comes out *)

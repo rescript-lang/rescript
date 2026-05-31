@@ -18,10 +18,10 @@ let get_issues result = result.issues |> List.rev
 let issue_count result = List.length result.issues
 
 (** Create a dead code issue *)
-let make_dead_issue ~loc ~deadWarning ~path ~message : Issue.t =
+let make_dead_issue ~loc ~dead_warning ~path ~message : Issue.t =
   {
     Issue.name =
-      (match deadWarning with
+      (match dead_warning with
       | Issue.WarningDeadException -> "Warning Dead Exception"
       | WarningDeadType -> "Warning Dead Type"
       | WarningDeadValue -> "Warning Dead Value"
@@ -30,11 +30,11 @@ let make_dead_issue ~loc ~deadWarning ~path ~message : Issue.t =
       | IncorrectDeadAnnotation -> "Incorrect Dead Annotation");
     severity = Warning;
     loc;
-    description = DeadWarning {deadWarning; path; message};
+    description = DeadWarning {dead_warning; path; message};
   }
 
 (** Create a dead module issue *)
-let make_dead_module_issue ~loc ~moduleName : Issue.t =
+let make_dead_module_issue ~loc ~module_name : Issue.t =
   {
     Issue.name = "Warning Dead Module";
     severity = Warning;
@@ -44,7 +44,7 @@ let make_dead_module_issue ~loc ~moduleName : Issue.t =
         {
           message =
             Format.asprintf "@{<info>%s@} %s"
-              (moduleName |> Name.toInterface |> Name.toString)
+              (module_name |> Name.to_interface |> Name.to_string)
               "is a dead module as all its items are dead.";
         };
   }

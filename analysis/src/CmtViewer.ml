@@ -17,36 +17,36 @@ let filter_by_cursor cursor (loc : Warnings.loc) : bool =
 type filter = Cursor of (int * int) | Loc of Loc.t
 
 let dump ?filter rescript_json cmt_path =
-  let uri = Uri.fromPath (Filename.remove_extension cmt_path ^ ".res") in
+  let uri = Uri.from_path (Filename.remove_extension cmt_path ^ ".res") in
   let package =
-    let uri = Uri.fromPath rescript_json in
-    Packages.getPackage ~uri |> Option.get
+    let uri = Uri.from_path rescript_json in
+    Packages.get_package ~uri |> Option.get
   in
-  let moduleName =
-    BuildSystem.namespacedName package.namespace (FindFiles.getName cmt_path)
+  let module_name =
+    BuildSystem.namespaced_name package.namespace (FindFiles.get_name cmt_path)
   in
-  match Cmt.fullForCmt ~moduleName ~package ~uri cmt_path with
+  match Cmt.full_for_cmt ~module_name ~package ~uri cmt_path with
   | None -> failwith (Format.sprintf "Could not load cmt for %s" cmt_path)
   | Some full ->
     let open SharedTypes in
     let open SharedTypes.Stamps in
-    let applyFilter =
+    let apply_filter =
       match filter with
       | None -> fun _ -> true
-      | Some (Cursor cursor) -> Loc.hasPos ~pos:cursor
-      | Some (Loc loc) -> Loc.isInside loc
+      | Some (Cursor cursor) -> Loc.has_pos ~pos:cursor
+      | Some (Loc loc) -> Loc.is_inside loc
     in
     (match filter with
     | None -> ()
     | Some (Cursor (line, col)) ->
       Printf.printf "Filtering by cursor %d,%d\n" line col
-    | Some (Loc loc) -> Printf.printf "Filtering by loc %s\n" (Loc.toString loc));
+    | Some (Loc loc) -> Printf.printf "Filtering by loc %s\n" (Loc.to_string loc));
 
-    Printf.printf "file moduleName: %s\n\n" full.file.moduleName;
+    Printf.printf "file moduleName: %s\n\n" full.file.module_name;
 
     let stamps =
-      full.file.stamps |> getEntries
-      |> List.filter (fun (_, stamp) -> applyFilter (locOfKind stamp))
+      full.file.stamps |> get_entries
+      |> List.filter (fun (_, stamp) -> apply_filter (loc_of_kind stamp))
     in
 
     let total_stamps = List.length stamps in
@@ -55,25 +55,25 @@ let dump ?filter rescript_json cmt_path =
 
     stamps
     |> List.sort (fun (_, a) (_, b) ->
-           let aLoc = locOfKind a in
-           let bLoc = locOfKind b in
-           match compare aLoc.loc_start.pos_lnum bLoc.loc_start.pos_lnum with
-           | 0 -> compare aLoc.loc_start.pos_cnum bLoc.loc_start.pos_cnum
+           let a_loc = loc_of_kind a in
+           let b_loc = loc_of_kind b in
+           match compare a_loc.loc_start.pos_lnum b_loc.loc_start.pos_lnum with
+           | 0 -> compare a_loc.loc_start.pos_cnum b_loc.loc_start.pos_cnum
            | c -> c)
     |> List.iter (fun (stamp, kind) ->
            match kind with
            | KType t ->
              Printf.printf "%d ktype        %s\n" stamp
-               (Warnings.loc_to_string t.extentLoc)
+               (Warnings.loc_to_string t.extent_loc)
            | KValue t ->
              Printf.printf "%d kvalue       %s\n" stamp
-               (Warnings.loc_to_string t.extentLoc)
+               (Warnings.loc_to_string t.extent_loc)
            | KModule t ->
              Printf.printf "%d kmodule      %s\n" stamp
-               (Warnings.loc_to_string t.extentLoc)
+               (Warnings.loc_to_string t.extent_loc)
            | KConstructor t ->
              Printf.printf "%d kconstructor %s\n" stamp
-               (Warnings.loc_to_string t.extentLoc));
+               (Warnings.loc_to_string t.extent_loc));
 
     (* dump the structure *)
     let rec dump_structure indent (structure : Module.structure) =
@@ -106,23 +106,23 @@ let dump ?filter rescript_json cmt_path =
     dump_structure 0 full.file.structure;
 
     (* Dump all locItems (typed nodes) *)
-    let locItems =
+    let loc_items =
       match full.extra with
-      | {locItems} ->
-        locItems |> List.filter (fun locItem -> applyFilter locItem.loc)
+      | {loc_items} ->
+        loc_items |> List.filter (fun loc_item -> apply_filter loc_item.loc)
     in
 
     Printf.printf "\nFound %d locItems (typed nodes):\n\n"
-      (List.length locItems);
+      (List.length loc_items);
 
-    locItems
+    loc_items
     |> List.sort (fun a b ->
-           let aLoc = a.loc.Location.loc_start in
-           let bLoc = b.loc.Location.loc_start in
-           match compare aLoc.pos_lnum bLoc.pos_lnum with
-           | 0 -> compare aLoc.pos_cnum bLoc.pos_cnum
+           let a_loc = a.loc.Location.loc_start in
+           let b_loc = b.loc.Location.loc_start in
+           match compare a_loc.pos_lnum b_loc.pos_lnum with
+           | 0 -> compare a_loc.pos_cnum b_loc.pos_cnum
            | c -> c)
-    |> List.iter (fun {loc; locType} ->
-           let locStr = Warnings.loc_to_string loc in
-           let kindStr = SharedTypes.locTypeToString locType in
-           Printf.printf "%s %s\n" locStr kindStr)
+    |> List.iter (fun {loc; loc_type} ->
+           let loc_str = Warnings.loc_to_string loc in
+           let kind_str = SharedTypes.loc_type_to_string loc_type in
+           Printf.printf "%s %s\n" loc_str kind_str)

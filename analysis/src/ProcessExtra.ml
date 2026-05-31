@@ -1,45 +1,45 @@
 open SharedTypes
 
-let addLocItem extra loc locType =
+let add_loc_item extra loc loc_type =
   if not loc.Warnings.loc_ghost then
-    extra.locItems <- {loc; locType} :: extra.locItems
+    extra.loc_items <- {loc; loc_type} :: extra.loc_items
 
-let addReference ~extra stamp loc =
-  Hashtbl.replace extra.internalReferences stamp
+let add_reference ~extra stamp loc =
+  Hashtbl.replace extra.internal_references stamp
     (loc
     ::
-    (if Hashtbl.mem extra.internalReferences stamp then
-       Hashtbl.find extra.internalReferences stamp
+    (if Hashtbl.mem extra.internal_references stamp then
+       Hashtbl.find extra.internal_references stamp
      else []))
 
-let extraForFile ~(file : File.t) =
-  let extra = initExtra () in
+let extra_for_file ~(file : File.t) =
+  let extra = init_extra () in
   file.stamps
-  |> Stamps.iterModules (fun stamp (d : Module.t Declared.t) ->
-         addLocItem extra d.name.loc (LModule (Definition (stamp, Module)));
-         addReference ~extra stamp d.name.loc);
+  |> Stamps.iter_modules (fun stamp (d : Module.t Declared.t) ->
+         add_loc_item extra d.name.loc (LModule (Definition (stamp, Module)));
+         add_reference ~extra stamp d.name.loc);
   file.stamps
-  |> Stamps.iterValues (fun stamp (d : Types.type_expr Declared.t) ->
-         addLocItem extra d.name.loc
+  |> Stamps.iter_values (fun stamp (d : Types.type_expr Declared.t) ->
+         add_loc_item extra d.name.loc
            (Typed (d.name.txt, d.item, Definition (stamp, Value)));
-         addReference ~extra stamp d.name.loc);
+         add_reference ~extra stamp d.name.loc);
   file.stamps
-  |> Stamps.iterTypes (fun stamp (d : Type.t Declared.t) ->
-         addLocItem extra d.name.loc
+  |> Stamps.iter_types (fun stamp (d : Type.t Declared.t) ->
+         add_loc_item extra d.name.loc
            (TypeDefinition (d.name.txt, d.item.Type.decl, stamp));
-         addReference ~extra stamp d.name.loc;
+         add_reference ~extra stamp d.name.loc;
          match d.item.Type.kind with
          | Record labels ->
            labels
            |> List.iter (fun {stamp; fname; typ} ->
-                  addReference ~extra stamp fname.loc;
-                  addLocItem extra fname.loc
+                  add_reference ~extra stamp fname.loc;
+                  add_loc_item extra fname.loc
                     (Typed
                        (d.name.txt, typ, Definition (d.stamp, Field fname.txt))))
          | Variant constructors ->
            constructors
            |> List.iter (fun {Constructor.stamp; cname} ->
-                  addReference ~extra stamp cname.loc;
+                  add_reference ~extra stamp cname.loc;
                   let t =
                     {
                       Types.id = 0;
@@ -52,7 +52,7 @@ let extraForFile ~(file : File.t) =
                             ref Types.Mnil );
                     }
                   in
-                  addLocItem extra cname.loc
+                  add_loc_item extra cname.loc
                     (Typed
                        ( d.name.txt,
                          t,
@@ -60,46 +60,46 @@ let extraForFile ~(file : File.t) =
          | _ -> ());
   extra
 
-let addExternalReference ~extra moduleName path tip loc =
+let add_external_reference ~extra module_name path tip loc =
   (* TODO need to follow the path, and be able to load the files to follow module references... *)
-  Hashtbl.replace extra.externalReferences moduleName
+  Hashtbl.replace extra.external_references module_name
     ((path, tip, loc)
     ::
-    (if Hashtbl.mem extra.externalReferences moduleName then
-       Hashtbl.find extra.externalReferences moduleName
+    (if Hashtbl.mem extra.external_references module_name then
+       Hashtbl.find extra.external_references module_name
      else []))
 
-let addFileReference ~extra moduleName loc =
-  let newLocs =
-    match Hashtbl.find_opt extra.fileReferences moduleName with
-    | Some oldLocs -> LocationSet.add loc oldLocs
+let add_file_reference ~extra module_name loc =
+  let new_locs =
+    match Hashtbl.find_opt extra.file_references module_name with
+    | Some old_locs -> LocationSet.add loc old_locs
     | None -> LocationSet.singleton loc
   in
-  Hashtbl.replace extra.fileReferences moduleName newLocs
+  Hashtbl.replace extra.file_references module_name new_locs
 
-let handleConstructor txt =
+let handle_constructor txt =
   match txt with
   | Longident.Lident name -> name
   | Ldot (_left, name) -> name
   | Lapply (_, _) -> assert false
 
-let rec lidIsComplex (lid : Longident.t) =
+let rec lid_is_complex (lid : Longident.t) =
   match lid with
   | Lapply _ -> true
-  | Ldot (lid, _) -> lidIsComplex lid
+  | Ldot (lid, _) -> lid_is_complex lid
   | _ -> false
 
-let extraForStructureItems ~(iterator : Tast_iterator.iterator)
+let extra_for_structure_items ~(iterator : Tast_iterator.iterator)
     (items : Typedtree.structure_item list) =
   items |> List.iter (iterator.structure_item iterator)
 
-let extraForSignatureItems ~(iterator : Tast_iterator.iterator)
+let extra_for_signature_items ~(iterator : Tast_iterator.iterator)
     (items : Typedtree.signature_item list) =
   items |> List.iter (iterator.signature_item iterator)
 
-let extraForCmt ~(iterator : Tast_iterator.iterator)
+let extra_for_cmt ~(iterator : Tast_iterator.iterator)
     ({cmt_annots} : Cmt_format.cmt_infos) =
-  let extraForParts parts =
+  let extra_for_parts parts =
     parts
     |> Array.iter (fun part ->
            match part with
@@ -114,11 +114,11 @@ let extraForCmt ~(iterator : Tast_iterator.iterator)
   in
   match cmt_annots with
   | Implementation structure ->
-    extraForStructureItems ~iterator structure.str_items
+    extra_for_structure_items ~iterator structure.str_items
   | Partial_implementation parts ->
     let items =
       parts |> Array.to_list
-      |> Utils.filterMap (fun (p : Cmt_format.binary_part) ->
+      |> Utils.filter_map (fun (p : Cmt_format.binary_part) ->
              match p with
              | Partial_structure str -> Some str.str_items
              | Partial_structure_item str -> Some [str]
@@ -126,35 +126,35 @@ let extraForCmt ~(iterator : Tast_iterator.iterator)
              | _ -> None)
       |> List.concat
     in
-    extraForStructureItems ~iterator items;
-    extraForParts parts
-  | Interface signature -> extraForSignatureItems ~iterator signature.sig_items
+    extra_for_structure_items ~iterator items;
+    extra_for_parts parts
+  | Interface signature -> extra_for_signature_items ~iterator signature.sig_items
   | Partial_interface parts ->
     let items =
       parts |> Array.to_list
-      |> Utils.filterMap (fun (p : Cmt_format.binary_part) ->
+      |> Utils.filter_map (fun (p : Cmt_format.binary_part) ->
              match p with
              | Partial_signature s -> Some s.sig_items
              | Partial_signature_item str -> Some [str]
              | _ -> None)
       |> List.concat
     in
-    extraForSignatureItems ~iterator items;
-    extraForParts parts
-  | _ -> extraForStructureItems ~iterator []
+    extra_for_signature_items ~iterator items;
+    extra_for_parts parts
+  | _ -> extra_for_structure_items ~iterator []
 
-let addForPath ~env ~extra path lident loc typ tip =
-  let identName = Longident.last lident in
-  let identLoc = Utils.endOfLocation loc (String.length identName) in
-  let locType =
-    match ResolvePath.fromCompilerPath ~env path with
+let add_for_path ~env ~extra path lident loc typ tip =
+  let ident_name = Longident.last lident in
+  let ident_loc = Utils.end_of_location loc (String.length ident_name) in
+  let loc_type =
+    match ResolvePath.from_compiler_path ~env path with
     | Stamp stamp ->
-      addReference ~extra stamp identLoc;
+      add_reference ~extra stamp ident_loc;
       LocalReference (stamp, tip)
     | NotFound -> NotFound
-    | Global (moduleName, path) ->
-      addExternalReference ~extra moduleName path tip identLoc;
-      GlobalReference (moduleName, path, tip)
+    | Global (module_name, path) ->
+      add_external_reference ~extra module_name path tip ident_loc;
+      GlobalReference (module_name, path, tip)
     | Exported (env, name) -> (
       match
         match tip with
@@ -162,109 +162,109 @@ let addForPath ~env ~extra path lident loc typ tip =
         | _ -> Exported.find env.exported Exported.Value name
       with
       | Some stamp ->
-        addReference ~extra stamp identLoc;
+        add_reference ~extra stamp ident_loc;
         LocalReference (stamp, tip)
       | None -> NotFound)
     | GlobalMod _ -> NotFound
   in
-  addLocItem extra loc (Typed (identName, typ, locType))
+  add_loc_item extra loc (Typed (ident_name, typ, loc_type))
 
-let addForPathParent ~env ~extra path loc =
-  let locType =
-    match ResolvePath.fromCompilerPath ~env path with
-    | GlobalMod moduleName ->
-      addFileReference ~extra moduleName loc;
-      TopLevelModule moduleName
+let add_for_path_parent ~env ~extra path loc =
+  let loc_type =
+    match ResolvePath.from_compiler_path ~env path with
+    | GlobalMod module_name ->
+      add_file_reference ~extra module_name loc;
+      TopLevelModule module_name
     | Stamp stamp ->
-      addReference ~extra stamp loc;
+      add_reference ~extra stamp loc;
       LModule (LocalReference (stamp, Module))
     | NotFound -> LModule NotFound
-    | Global (moduleName, path) ->
-      addExternalReference ~extra moduleName path Module loc;
-      LModule (GlobalReference (moduleName, path, Module))
+    | Global (module_name, path) ->
+      add_external_reference ~extra module_name path Module loc;
+      LModule (GlobalReference (module_name, path, Module))
     | Exported (env, name) -> (
       match Exported.find env.exported Exported.Module name with
       | Some stamp ->
-        addReference ~extra stamp loc;
+        add_reference ~extra stamp loc;
         LModule (LocalReference (stamp, Module))
       | None -> LModule NotFound)
   in
-  addLocItem extra loc locType
+  add_loc_item extra loc loc_type
 
-let getTypeAtPath ~env path =
-  match ResolvePath.fromCompilerPath ~env path with
+let get_type_at_path ~env path =
+  match ResolvePath.from_compiler_path ~env path with
   | GlobalMod _ -> `Not_found
-  | Global (moduleName, path) -> `Global (moduleName, path)
+  | Global (module_name, path) -> `Global (module_name, path)
   | NotFound -> `Not_found
   | Exported (env, name) -> (
     match Exported.find env.exported Exported.Type name with
     | None -> `Not_found
     | Some stamp -> (
-      let declaredType = Stamps.findType env.file.stamps stamp in
-      match declaredType with
-      | Some declaredType -> `Local declaredType
+      let declared_type = Stamps.find_type env.file.stamps stamp in
+      match declared_type with
+      | Some declared_type -> `Local declared_type
       | None -> `Not_found))
   | Stamp stamp -> (
-    let declaredType = Stamps.findType env.file.stamps stamp in
-    match declaredType with
-    | Some declaredType -> `Local declaredType
+    let declared_type = Stamps.find_type env.file.stamps stamp in
+    match declared_type with
+    | Some declared_type -> `Local declared_type
     | None -> `Not_found)
 
-let addForField ~env ~extra ~recordType ~fieldType {Asttypes.txt; loc} =
-  match (Shared.dig recordType).desc with
+let add_for_field ~env ~extra ~record_type ~field_type {Asttypes.txt; loc} =
+  match (Shared.dig record_type).desc with
   | Tconstr (path, _args, _memo) ->
-    let t = getTypeAtPath ~env path in
-    let name = handleConstructor txt in
-    let nameLoc = Utils.endOfLocation loc (String.length name) in
-    let locType =
+    let t = get_type_at_path ~env path in
+    let name = handle_constructor txt in
+    let name_loc = Utils.end_of_location loc (String.length name) in
+    let loc_type =
       match t with
       | `Local {stamp; item = {kind = Record fields}} -> (
         match fields |> List.find_opt (fun f -> f.fname.txt = name) with
         | Some {stamp = astamp} ->
-          addReference ~extra astamp nameLoc;
+          add_reference ~extra astamp name_loc;
           LocalReference (stamp, Field name)
         | None -> NotFound)
-      | `Global (moduleName, path) ->
-        addExternalReference ~extra moduleName path (Field name) nameLoc;
-        GlobalReference (moduleName, path, Field name)
+      | `Global (module_name, path) ->
+        add_external_reference ~extra module_name path (Field name) name_loc;
+        GlobalReference (module_name, path, Field name)
       | _ -> NotFound
     in
-    addLocItem extra nameLoc (Typed (name, fieldType, locType))
+    add_loc_item extra name_loc (Typed (name, field_type, loc_type))
   | _ -> ()
 
-let addForRecord ~env ~extra ~recordType items =
-  match (Shared.dig recordType).desc with
+let add_for_record ~env ~extra ~record_type items =
+  match (Shared.dig record_type).desc with
   | Tconstr (path, _args, _memo) ->
-    let t = getTypeAtPath ~env path in
+    let t = get_type_at_path ~env path in
     items
     |> List.iter (fun ({Asttypes.txt; loc}, _, _, _) ->
            (* let name = Longident.last(txt); *)
-           let name = handleConstructor txt in
-           let nameLoc = Utils.endOfLocation loc (String.length name) in
-           let locType =
+           let name = handle_constructor txt in
+           let name_loc = Utils.end_of_location loc (String.length name) in
+           let loc_type =
              match t with
              | `Local {stamp; item = {kind = Record fields}} -> (
                match fields |> List.find_opt (fun f -> f.fname.txt = name) with
                | Some {stamp = astamp} ->
-                 addReference ~extra astamp nameLoc;
+                 add_reference ~extra astamp name_loc;
                  LocalReference (stamp, Field name)
                | None -> NotFound)
-             | `Global (moduleName, path) ->
-               addExternalReference ~extra moduleName path (Field name) nameLoc;
-               GlobalReference (moduleName, path, Field name)
+             | `Global (module_name, path) ->
+               add_external_reference ~extra module_name path (Field name) name_loc;
+               GlobalReference (module_name, path, Field name)
              | _ -> NotFound
            in
-           addLocItem extra nameLoc (Typed (name, recordType, locType)))
+           add_loc_item extra name_loc (Typed (name, record_type, loc_type)))
   | _ -> ()
 
-let addForConstructor ~env ~extra constructorType {Asttypes.txt; loc}
+let add_for_constructor ~env ~extra constructor_type {Asttypes.txt; loc}
     {Types.cstr_name} =
-  match (Shared.dig constructorType).desc with
+  match (Shared.dig constructor_type).desc with
   | Tconstr (path, _args, _memo) ->
-    let name = handleConstructor txt in
-    let nameLoc = Utils.endOfLocation loc (String.length name) in
-    let t = getTypeAtPath ~env path in
-    let locType =
+    let name = handle_constructor txt in
+    let name_loc = Utils.end_of_location loc (String.length name) in
+    let t = get_type_at_path ~env path in
+    let loc_type =
       match t with
       | `Local {stamp; item = {kind = Variant constructors}} -> (
         match
@@ -272,36 +272,36 @@ let addForConstructor ~env ~extra constructorType {Asttypes.txt; loc}
           |> List.find_opt (fun c -> c.Constructor.cname.txt = cstr_name)
         with
         | Some {stamp = cstamp} ->
-          addReference ~extra cstamp nameLoc;
+          add_reference ~extra cstamp name_loc;
           LocalReference (stamp, Constructor name)
         | None -> NotFound)
-      | `Global (moduleName, path) ->
-        addExternalReference ~extra moduleName path (Constructor name) nameLoc;
-        GlobalReference (moduleName, path, Constructor name)
+      | `Global (module_name, path) ->
+        add_external_reference ~extra module_name path (Constructor name) name_loc;
+        GlobalReference (module_name, path, Constructor name)
       | _ -> NotFound
     in
-    addLocItem extra nameLoc (Typed (name, constructorType, locType))
+    add_loc_item extra name_loc (Typed (name, constructor_type, loc_type))
   | _ -> ()
 
-let rec addForLongident ~env ~extra top (path : Path.t) (txt : Longident.t) loc
+let rec add_for_longident ~env ~extra top (path : Path.t) (txt : Longident.t) loc
     =
-  if (not loc.Location.loc_ghost) && not (lidIsComplex txt) then (
-    let idLength = String.length (String.concat "." (Longident.flatten txt)) in
-    let reportedLength = loc.loc_end.pos_cnum - loc.loc_start.pos_cnum in
-    let isPpx = idLength <> reportedLength in
-    if isPpx then
+  if (not loc.Location.loc_ghost) && not (lid_is_complex txt) then (
+    let id_length = String.length (String.concat "." (Longident.flatten txt)) in
+    let reported_length = loc.loc_end.pos_cnum - loc.loc_start.pos_cnum in
+    let is_ppx = id_length <> reported_length in
+    if is_ppx then
       match top with
-      | Some (t, tip) -> addForPath ~env ~extra path txt loc t tip
-      | None -> addForPathParent ~env ~extra path loc
+      | Some (t, tip) -> add_for_path ~env ~extra path txt loc t tip
+      | None -> add_for_path_parent ~env ~extra path loc
     else
-      let l = Utils.endOfLocation loc (String.length (Longident.last txt)) in
+      let l = Utils.end_of_location loc (String.length (Longident.last txt)) in
       (match top with
-      | Some (t, tip) -> addForPath ~env ~extra path txt l t tip
-      | None -> addForPathParent ~env ~extra path l);
+      | Some (t, tip) -> add_for_path ~env ~extra path txt l t tip
+      | None -> add_for_path_parent ~env ~extra path l);
       match (path, txt) with
       | Pdot (pinner, _pname, _), Ldot (inner, name) ->
-        addForLongident ~env ~extra None pinner inner
-          (Utils.chopLocationEnd loc (String.length name + 1))
+        add_for_longident ~env ~extra None pinner inner
+          (Utils.chop_location_end loc (String.length name + 1))
       | Pident _, Lident _ -> ()
       | _ -> ())
 
@@ -310,11 +310,11 @@ let rec handle_module_expr ~env ~extra expr =
   | Typedtree.Tmod_constraint (expr, _, _, _) ->
     handle_module_expr ~env ~extra expr.mod_desc
   | Tmod_ident (path, {txt; loc}) ->
-    if not (lidIsComplex txt) then
+    if not (lid_is_complex txt) then
       Log.log ("Ident!! " ^ String.concat "." (Longident.flatten txt));
-    addForLongident ~env ~extra None path txt loc
-  | Tmod_functor (_ident, _argName, _maybeType, resultExpr) ->
-    handle_module_expr ~env ~extra resultExpr.mod_desc
+    add_for_longident ~env ~extra None path txt loc
+  | Tmod_functor (_ident, _argName, _maybeType, result_expr) ->
+    handle_module_expr ~env ~extra result_expr.mod_desc
   | Tmod_apply (obj, arg, _) ->
     handle_module_expr ~env ~extra obj.mod_desc;
     handle_module_expr ~env ~extra arg.mod_desc
@@ -327,7 +327,7 @@ let structure_item ~env ~extra (iter : Tast_iterator.iterator) item =
   | Tstr_module {mb_expr} -> handle_module_expr ~env ~extra mb_expr.mod_desc
   | Tstr_open {open_path; open_txt = {txt; loc}} ->
     (* Log.log("Have an open here"); *)
-    addForLongident ~env ~extra None open_path txt loc
+    add_for_longident ~env ~extra None open_path txt loc
   | _ -> ());
   Tast_iterator.default_iterator.structure_item iter item
 
@@ -336,14 +336,14 @@ let signature_item ~(file : File.t) ~extra (iter : Tast_iterator.iterator) item
   (match item.Typedtree.sig_desc with
   | Tsig_value {val_id; val_loc; val_name = name; val_desc; val_attributes} ->
     let stamp = Ident.binding_time val_id in
-    if Stamps.findValue file.stamps stamp = None then (
+    if Stamps.find_value file.stamps stamp = None then (
       let declared =
-        ProcessAttributes.newDeclared ~name ~stamp ~extent:val_loc
-          ~modulePath:NotVisible ~item:val_desc.ctyp_type false val_attributes
+        ProcessAttributes.new_declared ~name ~stamp ~extent:val_loc
+          ~module_path:NotVisible ~item:val_desc.ctyp_type false val_attributes
       in
-      Stamps.addValue file.stamps stamp declared;
-      addReference ~extra stamp name.loc;
-      addLocItem extra name.loc
+      Stamps.add_value file.stamps stamp declared;
+      add_reference ~extra stamp name.loc;
+      add_loc_item extra name.loc
         (Typed (name.txt, val_desc.ctyp_type, Definition (stamp, Value))))
   | _ -> ());
   Tast_iterator.default_iterator.signature_item iter item
@@ -352,7 +352,7 @@ let typ ~env ~extra (iter : Tast_iterator.iterator) (item : Typedtree.core_type)
     =
   (match item.ctyp_desc with
   | Ttyp_constr (path, {txt; loc}, _args) ->
-    addForLongident ~env ~extra (Some (item.ctyp_type, Type)) path txt loc
+    add_for_longident ~env ~extra (Some (item.ctyp_type, Type)) path txt loc
   | _ -> ());
   Tast_iterator.default_iterator.typ iter item
 
@@ -377,77 +377,77 @@ let pat ~(file : File.t) ~env ~extra (iter : Tast_iterator.iterator)
       | Tpackage (path, _, _) -> Some path
       | _ -> None
   in
-  let addForPattern stamp name =
-    if Stamps.findValue file.stamps stamp = None then (
+  let add_for_pattern stamp name =
+    if Stamps.find_value file.stamps stamp = None then (
       let declared =
-        ProcessAttributes.newDeclared ~name ~stamp ~modulePath:NotVisible
+        ProcessAttributes.new_declared ~name ~stamp ~module_path:NotVisible
           ~extent:pattern.pat_loc ~item:pattern.pat_type false
           pattern.pat_attributes
       in
-      Stamps.addValue file.stamps stamp declared;
-      addReference ~extra stamp name.loc;
-      addLocItem extra name.loc
+      Stamps.add_value file.stamps stamp declared;
+      add_reference ~extra stamp name.loc;
+      add_loc_item extra name.loc
         (Typed (name.txt, pattern.pat_type, Definition (stamp, Value))))
   in
   (* Log.log("Entering pattern " ++ Utils.showLocation(pat_loc)); *)
   (match pattern.pat_desc with
   | Tpat_record (items, _) ->
-    addForRecord ~env ~extra ~recordType:pattern.pat_type items
+    add_for_record ~env ~extra ~record_type:pattern.pat_type items
   | Tpat_construct (lident, constructor, _) ->
-    addForConstructor ~env ~extra pattern.pat_type lident constructor
+    add_for_constructor ~env ~extra pattern.pat_type lident constructor
   | Tpat_alias (_inner, ident, name) -> (
     let stamp = Ident.binding_time ident in
     match unpacked_module_path_opt () with
     | Some path ->
       let declared =
-        ProcessAttributes.newDeclared ~item:(Module.Ident path) ~extent:name.loc
-          ~name ~stamp ~modulePath:NotVisible false pattern.pat_attributes
+        ProcessAttributes.new_declared ~item:(Module.Ident path) ~extent:name.loc
+          ~name ~stamp ~module_path:NotVisible false pattern.pat_attributes
       in
-      Stamps.addModule file.stamps stamp declared
-    | None -> addForPattern stamp name)
+      Stamps.add_module file.stamps stamp declared
+    | None -> add_for_pattern stamp name)
   | Tpat_var (ident, name) -> (
     (* Log.log("Pattern " ++ name.txt); *)
     let stamp = Ident.binding_time ident in
     match unpacked_module_path_opt () with
     | Some path ->
       let declared =
-        ProcessAttributes.newDeclared ~item:(Module.Ident path) ~extent:name.loc
-          ~name ~stamp ~modulePath:NotVisible false pattern.pat_attributes
+        ProcessAttributes.new_declared ~item:(Module.Ident path) ~extent:name.loc
+          ~name ~stamp ~module_path:NotVisible false pattern.pat_attributes
       in
-      Stamps.addModule file.stamps stamp declared
-    | None -> addForPattern stamp name)
+      Stamps.add_module file.stamps stamp declared
+    | None -> add_for_pattern stamp name)
   | _ -> ());
   Tast_iterator.default_iterator.pat iter pattern
 
 let expr ~env ~(extra : extra) (iter : Tast_iterator.iterator)
     (expression : Typedtree.expression) =
   (match expression.exp_desc with
-  | Texp_ident (path, {txt; loc}, _) when not (JsxHacks.pathIsFragment path) ->
-    addForLongident ~env ~extra (Some (expression.exp_type, Value)) path txt loc
+  | Texp_ident (path, {txt; loc}, _) when not (JsxHacks.path_is_fragment path) ->
+    add_for_longident ~env ~extra (Some (expression.exp_type, Value)) path txt loc
   | Texp_record {fields} ->
-    addForRecord ~env ~extra ~recordType:expression.exp_type
+    add_for_record ~env ~extra ~record_type:expression.exp_type
       (fields |> Array.to_list
-      |> Utils.filterMap (fun (desc, item, opt) ->
+      |> Utils.filter_map (fun (desc, item, opt) ->
              match item with
              | Typedtree.Overridden (loc, _) -> Some (loc, desc, (), opt)
              | _ -> None))
   | Texp_constant constant ->
-    addLocItem extra expression.exp_loc (Constant constant)
+    add_loc_item extra expression.exp_loc (Constant constant)
   (* Skip unit and list literals *)
   | Texp_construct ({txt = Lident ("()" | "::"); loc}, _, _args)
     when loc.loc_end.pos_cnum - loc.loc_start.pos_cnum <> 2 ->
     ()
   | Texp_construct (lident, constructor, _args) ->
-    addForConstructor ~env ~extra expression.exp_type lident constructor
+    add_for_constructor ~env ~extra expression.exp_type lident constructor
   | Texp_field (inner, lident, _label_description) ->
-    addForField ~env ~extra ~recordType:inner.exp_type
-      ~fieldType:expression.exp_type lident
+    add_for_field ~env ~extra ~record_type:inner.exp_type
+      ~field_type:expression.exp_type lident
   | _ -> ());
   Tast_iterator.default_iterator.expr iter expression
 
-let getExtra ~file ~infos =
-  let extra = extraForFile ~file in
-  let env = QueryEnv.fromFile file in
+let get_extra ~file ~infos =
+  let extra = extra_for_file ~file in
+  let env = QueryEnv.from_file file in
   let iterator =
     {
       Tast_iterator.default_iterator with
@@ -458,5 +458,5 @@ let getExtra ~file ~infos =
       typ = typ ~env ~extra;
     }
   in
-  extraForCmt ~iterator infos;
+  extra_for_cmt ~iterator infos;
   extra

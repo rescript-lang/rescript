@@ -1668,11 +1668,11 @@ and parse_dict_pattern_row p =
   | String s ->
     let loc = mk_loc p.start_pos p.end_pos in
     Parser.next p;
-    let fieldName = Location.mkloc (Longident.Lident s) loc in
+    let field_name = Location.mkloc (Longident.Lident s) loc in
     Parser.expect Colon p;
     let optional = parse_optional_label p in
     let pat = parse_pattern p in
-    Some {Parsetree.lid = fieldName; x = pat; opt = optional}
+    Some {Parsetree.lid = field_name; x = pat; opt = optional}
   | _ -> None
 
 and parse_dict_pattern ~start_pos ~attrs (p : Parser.t) =
@@ -2874,7 +2874,7 @@ and parse_jsx_opening_or_self_closing_element (* start of the opening < *)
     let children = parse_jsx_children p in
     let closing_tag_start =
       match p.token with
-      | LessThan when Scanner.peekSlash p.scanner ->
+      | LessThan when Scanner.peek_slash p.scanner ->
         let pos = p.start_pos in
         (* Move to slash *)
         Parser.next p;
@@ -3083,7 +3083,7 @@ and parse_jsx_children p : Parsetree.jsx_children =
   let rec loop p children =
     match p.Parser.token with
     | Token.Eof -> children
-    | LessThan when Scanner.peekSlash p.scanner -> children
+    | LessThan when Scanner.peek_slash p.scanner -> children
     | LessThan ->
       (* Imagine: <div> <Navbar /> <
        * is `<` the start of a jsx-child? <div …
@@ -4422,13 +4422,13 @@ and parse_dict_expr ~start_pos p =
   let to_key_value_pair
       (record_item : Longident.t Location.loc * Parsetree.expression) =
     match record_item with
-    | ( {Location.txt = Longident.Lident key; loc = keyLoc},
+    | ( {Location.txt = Longident.Lident key; loc = key_loc},
         ({pexp_loc = value_loc} as value_expr) ) ->
       Some
         (Ast_helper.Exp.tuple
-           ~loc:(mk_loc keyLoc.loc_start value_loc.loc_end)
+           ~loc:(mk_loc key_loc.loc_start value_loc.loc_end)
            [
-             Ast_helper.Exp.constant ~loc:keyLoc (Pconst_string (key, None));
+             Ast_helper.Exp.constant ~loc:key_loc (Pconst_string (key, None));
              value_expr;
            ])
     | _ -> None

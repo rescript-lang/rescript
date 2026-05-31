@@ -12,7 +12,7 @@ let test_flatmap_basic () =
 
   (* Create derived collection via flatMap *)
   let derived =
-    flatMap ~name:"derived" source
+    flat_map ~name:"derived" source
       ~f:(fun key value ->
         [(key * 10, value); ((key * 10) + 1, value); ((key * 10) + 2, value)])
       ()
@@ -56,7 +56,7 @@ let test_flatmap_with_merge () =
 
   (* Create derived with merge *)
   let derived =
-    flatMap ~name:"derived" source
+    flat_map ~name:"derived" source
       ~f:(fun _key values -> [(0, values)]) (* all contribute to key 0 *)
       ~merge:IntSet.union ()
   in
@@ -93,7 +93,7 @@ let test_composition () =
 
   (* First flatMap: file -> items *)
   let items =
-    flatMap ~name:"items" source
+    flat_map ~name:"items" source
       ~f:(fun path items ->
         List.mapi (fun i item -> (Printf.sprintf "%s:%d" path i, item)) items)
       ()
@@ -101,7 +101,7 @@ let test_composition () =
 
   (* Second flatMap: item -> chars *)
   let chars =
-    flatMap ~name:"chars" items
+    flat_map ~name:"chars" items
       ~f:(fun key value ->
         String.to_seq value
         |> Seq.mapi (fun i c -> (Printf.sprintf "%s:%d" key i, c))
@@ -147,7 +147,7 @@ let test_flatmap_on_existing_data () =
 
   (* Create flatMap AFTER source has data *)
   let derived =
-    flatMap ~name:"derived" source ~f:(fun k v -> [(k * 10, v)]) ()
+    flat_map ~name:"derived" source ~f:(fun k v -> [(k * 10, v)]) ()
   in
 
   (* Check derived has existing data *)

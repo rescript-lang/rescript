@@ -1,4 +1,4 @@
-let printPos ppf (pos : Lexing.position) =
+let print_pos ppf (pos : Lexing.position) =
   let file = pos.Lexing.pos_fname in
   let line = pos.Lexing.pos_lnum in
   Format.fprintf ppf "@{<filename>%s@} @{<dim>%i@}"
@@ -13,26 +13,26 @@ module FunctionName = struct
 end
 
 module FunctionArgs = struct
-  type arg = {label: string; functionName: FunctionName.t}
+  type arg = {label: string; function_name: FunctionName.t}
   type t = arg list
 
   let empty = []
-  let argToString {label; functionName} = label ^ ":" ^ functionName
+  let arg_to_string {label; function_name} = label ^ ":" ^ function_name
 
-  let toString functionArgs =
-    match functionArgs = [] with
+  let to_string function_args =
+    match function_args = [] with
     | true -> ""
     | false ->
-      "<" ^ (functionArgs |> List.map argToString |> String.concat ",") ^ ">"
+      "<" ^ (function_args |> List.map arg_to_string |> String.concat ",") ^ ">"
 
   let find (t : t) ~label =
     match t |> List.find_opt (fun arg -> arg.label = label) with
-    | Some {functionName} -> Some functionName
+    | Some {function_name} -> Some function_name
     | None -> None
 
-  let compareArg a1 a2 =
+  let compare_arg a1 a2 =
     let n = compare a1.label a2.label in
-    if n <> 0 then n else compare a1.functionName a2.functionName
+    if n <> 0 then n else compare a1.function_name a2.function_name
 
   let rec compare l1 l2 =
     match (l1, l2) with
@@ -40,78 +40,78 @@ module FunctionArgs = struct
     | [], _ :: _ -> -1
     | _ :: _, [] -> 1
     | x1 :: l1, x2 :: l2 ->
-      let n = compareArg x1 x2 in
+      let n = compare_arg x1 x2 in
       if n <> 0 then n else compare l1 l2
 end
 
 module FunctionCall = struct
-  type t = {functionName: FunctionName.t; functionArgs: FunctionArgs.t}
+  type t = {function_name: FunctionName.t; function_args: FunctionArgs.t}
 
-  let substituteName ~sub name =
+  let substitute_name ~sub name =
     match sub |> FunctionArgs.find ~label:name with
-    | Some functionName -> functionName
+    | Some function_name -> function_name
     | None -> name
 
-  let applySubstitution ~(sub : FunctionArgs.t) (t : t) =
+  let apply_substitution ~(sub : FunctionArgs.t) (t : t) =
     if sub = [] then t
     else
       {
-        functionName = t.functionName |> substituteName ~sub;
-        functionArgs =
-          t.functionArgs
+        function_name = t.function_name |> substitute_name ~sub;
+        function_args =
+          t.function_args
           |> List.map (fun (arg : FunctionArgs.arg) ->
                  {
                    arg with
-                   functionName = arg.functionName |> substituteName ~sub;
+                   function_name = arg.function_name |> substitute_name ~sub;
                  });
       }
 
-  let noArgs functionName = {functionName; functionArgs = []}
+  let no_args function_name = {function_name; function_args = []}
 
-  let toString {functionName; functionArgs} =
-    functionName ^ FunctionArgs.toString functionArgs
+  let to_string {function_name; function_args} =
+    function_name ^ FunctionArgs.to_string function_args
 
   let compare (x1 : t) x2 =
-    let n = compare x1.functionName x2.functionName in
-    if n <> 0 then n else FunctionArgs.compare x1.functionArgs x2.functionArgs
+    let n = compare x1.function_name x2.function_name in
+    if n <> 0 then n else FunctionArgs.compare x1.function_args x2.function_args
 end
 
 module FunctionCallSet = Set.Make (FunctionCall)
 
 module Stats = struct
-  let nCacheChecks = ref 0
-  let nCacheHits = ref 0
-  let nFiles = ref 0
-  let nFunctions = ref 0
-  let nHygieneErrors = ref 0
-  let nInfiniteLoops = ref 0
-  let nRecursiveBlocks = ref 0
+  let n_cache_checks = ref 0
+  let n_cache_hits = ref 0
+  let n_files = ref 0
+  let n_functions = ref 0
+  let n_hygiene_errors = ref 0
+  let n_infinite_loops = ref 0
+  let n_recursive_blocks = ref 0
 
   let print ppf () =
     Format.fprintf ppf "@[<v 2>@,@{<warning>Termination Analysis Stats@}@,";
-    Format.fprintf ppf "Files:@{<dim>%d@}@," !nFiles;
-    Format.fprintf ppf "Recursive Blocks:@{<dim>%d@}@," !nRecursiveBlocks;
-    Format.fprintf ppf "Functions:@{<dim>%d@}@," !nFunctions;
-    Format.fprintf ppf "Infinite Loops:@{<dim>%d@}@," !nInfiniteLoops;
-    Format.fprintf ppf "Hygiene Errors:@{<dim>%d@}@," !nHygieneErrors;
-    Format.fprintf ppf "Cache Hits:@{<dim>%d@}/@{<dim>%d@}@," !nCacheHits
-      !nCacheChecks;
+    Format.fprintf ppf "Files:@{<dim>%d@}@," !n_files;
+    Format.fprintf ppf "Recursive Blocks:@{<dim>%d@}@," !n_recursive_blocks;
+    Format.fprintf ppf "Functions:@{<dim>%d@}@," !n_functions;
+    Format.fprintf ppf "Infinite Loops:@{<dim>%d@}@," !n_infinite_loops;
+    Format.fprintf ppf "Hygiene Errors:@{<dim>%d@}@," !n_hygiene_errors;
+    Format.fprintf ppf "Cache Hits:@{<dim>%d@}/@{<dim>%d@}@," !n_cache_hits
+      !n_cache_checks;
     Format.fprintf ppf "@]"
 
   let dump ~ppf = Format.fprintf ppf "%a@." print ()
-  let newFile () = incr nFiles
+  let new_file () = incr n_files
 
-  let newRecursiveFunctions ~numFunctions =
-    incr nRecursiveBlocks;
-    nFunctions := !nFunctions + numFunctions
+  let new_recursive_functions ~num_functions =
+    incr n_recursive_blocks;
+    n_functions := !n_functions + num_functions
 
-  let logLoop () = incr nInfiniteLoops
+  let log_loop () = incr n_infinite_loops
 
-  let logCache ~config ~functionCall ~hit ~loc =
-    incr nCacheChecks;
-    if hit then incr nCacheHits;
+  let log_cache ~config ~function_call ~hit ~loc =
+    incr n_cache_checks;
+    if hit then incr n_cache_hits;
     if config.DceConfig.cli.debug then
-      Log_.warning ~forStats:false ~loc
+      Log_.warning ~for_stats:false ~loc
         (Termination
            {
              termination = TerminationAnalysisInternal;
@@ -120,23 +120,23 @@ module Stats = struct
                  (match hit with
                  | true -> "hit"
                  | false -> "miss")
-                 (FunctionCall.toString functionCall);
+                 (FunctionCall.to_string function_call);
            })
 
-  let logResult ~config ~functionCall ~loc ~resString =
+  let log_result ~config ~function_call ~loc ~res_string =
     if config.DceConfig.cli.debug then
-      Log_.warning ~forStats:false ~loc
+      Log_.warning ~for_stats:false ~loc
         (Termination
            {
              termination = TerminationAnalysisInternal;
              message =
                Format.asprintf "@{<info>%s@} returns %s"
-                 (FunctionCall.toString functionCall)
-                 resString;
+                 (FunctionCall.to_string function_call)
+                 res_string;
            })
 
-  let logHygieneParametric ~functionName ~loc =
-    incr nHygieneErrors;
+  let log_hygiene_parametric ~function_name ~loc =
+    incr n_hygiene_errors;
     Log_.error ~loc
       (Termination
          {
@@ -144,11 +144,11 @@ module Stats = struct
            message =
              Format.asprintf
                "@{<error>%s@} cannot be analyzed directly as it is parametric"
-               functionName;
+               function_name;
          })
 
-  let logHygieneOnlyCallDirectly ~path ~loc =
-    incr nHygieneErrors;
+  let log_hygiene_only_call_directly ~path ~loc =
+    incr n_hygiene_errors;
     Log_.error ~loc
       (Termination
          {
@@ -160,8 +160,8 @@ module Stats = struct
                (Path.name path);
          })
 
-  let logHygieneMustHaveNamedArgument ~label ~loc =
-    incr nHygieneErrors;
+  let log_hygiene_must_have_named_argument ~label ~loc =
+    incr n_hygiene_errors;
     Log_.error ~loc
       (Termination
          {
@@ -170,8 +170,8 @@ module Stats = struct
              Format.asprintf "Call must have named argument @{<error>%s@}" label;
          })
 
-  let logHygieneNamedArgValue ~label ~loc =
-    incr nHygieneErrors;
+  let log_hygiene_named_arg_value ~label ~loc =
+    incr n_hygiene_errors;
     Log_.error ~loc
       (Termination
          {
@@ -183,8 +183,8 @@ module Stats = struct
                label;
          })
 
-  let logHygieneNoNestedLetRec ~loc =
-    incr nHygieneErrors;
+  let log_hygiene_no_nested_let_rec ~loc =
+    incr n_hygiene_errors;
     Log_.error ~loc
       (Termination
          {
@@ -196,32 +196,32 @@ end
 module Progress = struct
   type t = Progress | NoProgress
 
-  let toString progress =
+  let to_string progress =
     match progress = Progress with
     | true -> "Progress"
     | false -> "NoProgress"
 end
 
 module Call = struct
-  type progressFunction = Path.t
+  type progress_function = Path.t
 
   type t =
     | FunctionCall of FunctionCall.t
-    | ProgressFunction of progressFunction
+    | ProgressFunction of progress_function
 
-  let toString call =
+  let to_string call =
     match call with
-    | ProgressFunction progressFunction -> "+" ^ Path.name progressFunction
-    | FunctionCall functionCall -> FunctionCall.toString functionCall
+    | ProgressFunction progress_function -> "+" ^ Path.name progress_function
+    | FunctionCall function_call -> FunctionCall.to_string function_call
 end
 
 module Trace = struct
-  type retOption = Rsome | Rnone
+  type ret_option = Rsome | Rnone
 
   type t =
     | Tcall of Call.t * Progress.t
     | Tnondet of t list
-    | Toption of retOption
+    | Toption of ret_option
     | Tseq of t list
 
   let empty = Tseq []
@@ -243,51 +243,51 @@ module Trace = struct
   let some = Toption Rsome
   let none = Toption Rnone
 
-  let retOptionToString r =
+  let ret_option_to_string r =
     match r = Rsome with
     | true -> "Some"
     | false -> "None"
 
-  let rec toString trace =
+  let rec to_string trace =
     match trace with
-    | Tcall (ProgressFunction progressFunction, progress) ->
-      Path.name progressFunction ^ ":" ^ Progress.toString progress
-    | Tcall (FunctionCall functionCall, progress) ->
-      FunctionCall.toString functionCall ^ ":" ^ Progress.toString progress
+    | Tcall (ProgressFunction progress_function, progress) ->
+      Path.name progress_function ^ ":" ^ Progress.to_string progress
+    | Tcall (FunctionCall function_call, progress) ->
+      FunctionCall.to_string function_call ^ ":" ^ Progress.to_string progress
     | Tnondet traces ->
-      "[" ^ (traces |> List.map toString |> String.concat " || ") ^ "]"
-    | Toption retOption -> retOption |> retOptionToString
+      "[" ^ (traces |> List.map to_string |> String.concat " || ") ^ "]"
+    | Toption ret_option -> ret_option |> ret_option_to_string
     | Tseq traces -> (
-      let tracesNotEmpty = traces |> List.filter (( <> ) empty) in
-      match tracesNotEmpty with
+      let traces_not_empty = traces |> List.filter (( <> ) empty) in
+      match traces_not_empty with
       | [] -> "_"
-      | [t] -> t |> toString
-      | _ :: _ -> tracesNotEmpty |> List.map toString |> String.concat "; ")
+      | [t] -> t |> to_string
+      | _ :: _ -> traces_not_empty |> List.map to_string |> String.concat "; ")
 end
 
 module Values : sig
   type t
 
-  val getNone : t -> Progress.t option
-  val getSome : t -> Progress.t option
+  val get_none : t -> Progress.t option
+  val get_some : t -> Progress.t option
   val nd : t -> t -> t
   val none : progress:Progress.t -> t
   val some : progress:Progress.t -> t
-  val toString : t -> string
+  val to_string : t -> string
 end = struct
   type t = {none: Progress.t option; some: Progress.t option}
 
-  let getNone {none} = none
-  let getSome {some} = some
+  let get_none {none} = none
+  let get_some {some} = some
 
-  let toString x =
+  let to_string x =
     ((match x.some with
      | None -> []
-     | Some p -> ["some: " ^ Progress.toString p])
+     | Some p -> ["some: " ^ Progress.to_string p])
     @
     match x.none with
     | None -> []
-    | Some p -> ["none: " ^ Progress.toString p])
+    | Some p -> ["none: " ^ Progress.to_string p])
     |> String.concat ", "
 
   let none ~progress = {none = Some progress; some = None}
@@ -301,7 +301,7 @@ end = struct
           (match progress1 = Progress.Progress && progress2 = Progress with
           | true -> Progress.Progress
           | false -> NoProgress)
-      | None, progressOpt | progressOpt, None -> progressOpt
+      | None, progress_opt | progress_opt, None -> progress_opt
     in
     let none = combine v1.none v2.none in
     let some = combine v1.some v2.some in
@@ -309,19 +309,19 @@ end = struct
 end
 
 module State = struct
-  type t = {progress: Progress.t; trace: Trace.t; valuesOpt: Values.t option}
+  type t = {progress: Progress.t; trace: Trace.t; values_opt: Values.t option}
 
-  let toString {progress; trace; valuesOpt} =
-    let progressStr =
-      match valuesOpt with
-      | None -> progress |> Progress.toString
-      | Some values -> "{" ^ (values |> Values.toString) ^ "}"
+  let to_string {progress; trace; values_opt} =
+    let progress_str =
+      match values_opt with
+      | None -> progress |> Progress.to_string
+      | Some values -> "{" ^ (values |> Values.to_string) ^ "}"
     in
-    progressStr ^ " with trace " ^ Trace.toString trace
+    progress_str ^ " with trace " ^ Trace.to_string trace
 
   let init ?(progress = Progress.NoProgress) ?(trace = Trace.empty)
-      ?(valuesOpt = None) () =
-    {progress; trace; valuesOpt}
+      ?(values_opt = None) () =
+    {progress; trace; values_opt}
 
   let seq s1 s2 =
     let progress =
@@ -330,13 +330,13 @@ module State = struct
       | false -> NoProgress
     in
     let trace = Trace.seq s1.trace s2.trace in
-    let valuesOpt = s2.valuesOpt in
-    {progress; trace; valuesOpt}
+    let values_opt = s2.values_opt in
+    {progress; trace; values_opt}
 
   let sequence states =
     match states with
     | [] -> assert false
-    | s :: nextStates -> List.fold_left seq s nextStates
+    | s :: next_states -> List.fold_left seq s next_states
 
   let nd s1 s2 =
     let progress =
@@ -345,70 +345,70 @@ module State = struct
       | false -> NoProgress
     in
     let trace = Trace.nd s1.trace s2.trace in
-    let valuesOpt =
-      match (s1.valuesOpt, s2.valuesOpt) with
-      | None, valuesOpt -> (
+    let values_opt =
+      match (s1.values_opt, s2.values_opt) with
+      | None, values_opt -> (
         match s1.progress = Progress with
-        | true -> valuesOpt
+        | true -> values_opt
         | false -> None)
-      | valuesOpt, None -> (
+      | values_opt, None -> (
         match s2.progress = Progress with
-        | true -> valuesOpt
+        | true -> values_opt
         | false -> None)
       | Some values1, Some values2 -> Some (Values.nd values1 values2)
     in
-    {progress; trace; valuesOpt}
+    {progress; trace; values_opt}
 
   let nondet states =
     match states with
     | [] -> assert false
-    | s :: nextStates -> List.fold_left nd s nextStates
+    | s :: next_states -> List.fold_left nd s next_states
 
-  let unorderedSequence states = {(states |> sequence) with valuesOpt = None}
+  let unordered_sequence states = {(states |> sequence) with values_opt = None}
 
   let none ~progress =
     init ~progress ~trace:Trace.none
-      ~valuesOpt:(Some (Values.none ~progress))
+      ~values_opt:(Some (Values.none ~progress))
       ()
 
   let some ~progress =
     init ~progress ~trace:Trace.some
-      ~valuesOpt:(Some (Values.some ~progress))
+      ~values_opt:(Some (Values.some ~progress))
       ()
 end
 
 module Command = struct
   type progress = Progress.t
-  type retOption = Trace.retOption
+  type ret_option = Trace.ret_option
 
   type t =
     | Call of Call.t * Location.t
-    | ConstrOption of retOption
+    | ConstrOption of ret_option
     | Nondet of t list
     | Nothing
     | Sequence of t list
     | SwitchOption of {
-        functionCall: FunctionCall.t;
+        function_call: FunctionCall.t;
         loc: Location.t;
         some: t;
         none: t;
       }
     | UnorderedSequence of t list
 
-  let rec toString command =
+  let rec to_string command =
     match command with
-    | Call (call, _pos) -> call |> Call.toString
-    | ConstrOption r -> r |> Trace.retOptionToString
+    | Call (call, _pos) -> call |> Call.to_string
+    | ConstrOption r -> r |> Trace.ret_option_to_string
     | Nondet commands ->
-      "[" ^ (commands |> List.map toString |> String.concat " || ") ^ "]"
+      "[" ^ (commands |> List.map to_string |> String.concat " || ") ^ "]"
     | Nothing -> "_"
-    | Sequence commands -> commands |> List.map toString |> String.concat "; "
-    | SwitchOption {functionCall; some = cSome; none = cNone} ->
+    | Sequence commands -> commands |> List.map to_string |> String.concat "; "
+    | SwitchOption {function_call; some = c_some; none = c_none} ->
       "switch "
-      ^ FunctionCall.toString functionCall
-      ^ " {some: " ^ toString cSome ^ ", none: " ^ toString cNone ^ "}"
+      ^ FunctionCall.to_string function_call
+      ^ " {some: " ^ to_string c_some ^ ", none: " ^ to_string c_none ^ "}"
     | UnorderedSequence commands ->
-      "{" ^ (commands |> List.map toString |> String.concat ", ") ^ "}"
+      "{" ^ (commands |> List.map to_string |> String.concat ", ") ^ "}"
 
   let nothing = Nothing
 
@@ -436,12 +436,12 @@ module Command = struct
 
   let ( +++ ) c1 c2 = sequence [c1; c2]
 
-  let unorderedSequence commands =
-    let relevantCommands = commands |> List.filter (fun x -> x <> nothing) in
-    match relevantCommands with
+  let unordered_sequence commands =
+    let relevant_commands = commands |> List.filter (fun x -> x <> nothing) in
+    match relevant_commands with
     | [] -> nothing
     | [c] -> c
-    | _ :: _ :: _ -> UnorderedSequence relevantCommands
+    | _ :: _ :: _ -> UnorderedSequence relevant_commands
 end
 
 module Kind = struct
@@ -450,33 +450,33 @@ module Kind = struct
 
   let empty = ([] : t)
 
-  let hasLabel ~label (k : t) =
+  let has_label ~label (k : t) =
     k |> List.exists (fun entry -> entry.label = label)
 
-  let rec entryToString {label; k} =
+  let rec entry_to_string {label; k} =
     match k = [] with
     | true -> label
-    | false -> label ^ ":" ^ (k |> toString)
+    | false -> label ^ ":" ^ (k |> to_string)
 
-  and toString (kind : t) =
+  and to_string (kind : t) =
     match kind = [] with
     | true -> ""
     | false ->
-      "<" ^ (kind |> List.map entryToString |> String.concat ", ") ^ ">"
+      "<" ^ (kind |> List.map entry_to_string |> String.concat ", ") ^ ">"
 
-  let addLabelWithEmptyKind ~label kind =
-    if not (kind |> hasLabel ~label) then
+  let add_label_with_empty_kind ~label kind =
+    if not (kind |> has_label ~label) then
       {label; k = empty} :: kind |> List.sort compare
     else kind
 end
 
 module FunctionTable = struct
-  type functionDefinition = {
+  type function_definition = {
     mutable body: Command.t option;
     mutable kind: Kind.t;
   }
 
-  type t = (FunctionName.t, functionDefinition) Hashtbl.t
+  type t = (FunctionName.t, function_definition) Hashtbl.t
 
   let create () : t = Hashtbl.create 1
 
@@ -484,82 +484,82 @@ module FunctionTable = struct
     Format.fprintf ppf "@[<v 2>@,@{<warning>Function Table@}";
     let definitions =
       Hashtbl.fold
-        (fun functionName {kind; body} definitions ->
-          (functionName, kind, body) :: definitions)
+        (fun function_name {kind; body} definitions ->
+          (function_name, kind, body) :: definitions)
         tbl []
       |> List.sort (fun (fn1, _, _) (fn2, _, _) -> String.compare fn1 fn2)
     in
     definitions
-    |> List.iteri (fun i (functionName, kind, body) ->
+    |> List.iteri (fun i (function_name, kind, body) ->
            Format.fprintf ppf "@,@{<dim>%d@} @{<info>%s%s@}: %s" (i + 1)
-             functionName (Kind.toString kind)
+             function_name (Kind.to_string kind)
              (match body with
-             | Some command -> Command.toString command
+             | Some command -> Command.to_string command
              | None -> "None"));
     Format.fprintf ppf "@]"
 
   let dump tbl = Format.fprintf Format.std_formatter "%a@." print tbl
-  let initialFunctionDefinition () = {kind = Kind.empty; body = None}
+  let initial_function_definition () = {kind = Kind.empty; body = None}
 
-  let getFunctionDefinition ~functionName (tbl : t) =
-    try Hashtbl.find tbl functionName with Not_found -> assert false
+  let get_function_definition ~function_name (tbl : t) =
+    try Hashtbl.find tbl function_name with Not_found -> assert false
 
-  let isInFunctionInTable ~functionTable path =
-    Hashtbl.mem functionTable (Path.name path)
+  let is_in_function_in_table ~function_table path =
+    Hashtbl.mem function_table (Path.name path)
 
-  let addFunction ~functionName (tbl : t) =
-    if Hashtbl.mem tbl functionName then assert false;
-    Hashtbl.replace tbl functionName (initialFunctionDefinition ())
+  let add_function ~function_name (tbl : t) =
+    if Hashtbl.mem tbl function_name then assert false;
+    Hashtbl.replace tbl function_name (initial_function_definition ())
 
-  let addLabelToKind ~functionName ~label (tbl : t) =
-    let functionDefinition = tbl |> getFunctionDefinition ~functionName in
-    functionDefinition.kind <-
-      functionDefinition.kind |> Kind.addLabelWithEmptyKind ~label
+  let add_label_to_kind ~function_name ~label (tbl : t) =
+    let function_definition = tbl |> get_function_definition ~function_name in
+    function_definition.kind <-
+      function_definition.kind |> Kind.add_label_with_empty_kind ~label
 
-  let addBody ~body ~functionName (tbl : t) =
-    let functionDefinition = tbl |> getFunctionDefinition ~functionName in
-    functionDefinition.body <- body
+  let add_body ~body ~function_name (tbl : t) =
+    let function_definition = tbl |> get_function_definition ~function_name in
+    function_definition.body <- body
 
-  let functionGetKindOfLabel ~functionName ~label (tbl : t) =
-    match Hashtbl.find tbl functionName with
+  let function_get_kind_of_label ~function_name ~label (tbl : t) =
+    match Hashtbl.find tbl function_name with
     | {kind} -> (
-      match kind |> Kind.hasLabel ~label with
+      match kind |> Kind.has_label ~label with
       | true -> Some Kind.empty
       | false -> None)
     | exception Not_found -> None
 end
 
 module FindFunctionsCalled = struct
-  let traverseExpr ~callees =
+  let traverse_expr ~callees =
     let super = Tast_mapper.default in
     let expr (self : Tast_mapper.mapper) (e : Typedtree.expression) =
       (match e.exp_desc with
       | Texp_apply {funct = {exp_desc = Texp_ident (callee, _, _)}} ->
-        let functionName = Path.name callee in
-        callees := !callees |> StringSet.add functionName
+        let function_name = Path.name callee in
+        callees := !callees |> StringSet.add function_name
       | _ -> ());
       super.expr self e
     in
     {super with Tast_mapper.expr}
 
-  let findCallees (expression : Typedtree.expression) =
-    let isFunction =
+  let find_callees (expression : Typedtree.expression) =
+    let is_function =
       match expression.exp_desc with
       | Texp_function {arity = None} -> true
       | _ -> false
     in
     let callees = ref StringSet.empty in
-    let traverseExpr = traverseExpr ~callees in
-    if isFunction then expression |> traverseExpr.expr traverseExpr |> ignore;
+    let traverse_expr = traverse_expr ~callees in
+    if is_function then expression |> traverse_expr.expr traverse_expr |> ignore;
     !callees
 end
 
 module ExtendFunctionTable = struct
   (* Add functions passed a recursive function via a labeled argument,
      and functions calling progress functions, to the function table. *)
-  let extractLabelledArgument ?(kindOpt = None)
-      (argOpt : Typedtree.expression option) =
-    match argOpt with
+  let extract_labelled_argument ?(kind_opt = None)
+      (arg_opt : Typedtree.expression option) =
+    match arg_opt with
     | Some {exp_desc = Texp_ident (path, {loc}, _)} -> Some (path, loc)
     | Some
         {
@@ -581,37 +581,37 @@ module ExtendFunctionTable = struct
           exp_desc =
             Texp_apply {funct = {exp_desc = Texp_ident (path, {loc}, _)}; args};
         }
-      when kindOpt <> None ->
-      let checkArg ((argLabel : Asttypes.arg_label), _argOpt) =
-        match (argLabel, kindOpt) with
+      when kind_opt <> None ->
+      let check_arg ((arg_label : Asttypes.arg_label), _argOpt) =
+        match (arg_label, kind_opt) with
         | (Labelled {txt = l} | Optional {txt = l}), Some kind ->
           kind |> List.for_all (fun {Kind.label} -> label <> l)
         | _ -> true
       in
-      if args |> List.for_all checkArg then Some (path, loc) else None
+      if args |> List.for_all check_arg then Some (path, loc) else None
     | _ -> None
 
-  let traverseExpr ~config ~functionTable ~progressFunctions ~valueBindingsTable
+  let traverse_expr ~config ~function_table ~progress_functions ~value_bindings_table
       =
     let super = Tast_mapper.default in
     let expr (self : Tast_mapper.mapper) (e : Typedtree.expression) =
       (match e.exp_desc with
       | Texp_ident (callee, _, _) -> (
         let loc = e.exp_loc in
-        match Hashtbl.find_opt valueBindingsTable (Path.name callee) with
+        match Hashtbl.find_opt value_bindings_table (Path.name callee) with
         | None -> ()
         | Some (id_pos, _, callees) ->
           if
             not
               (StringSet.is_empty
-                 (StringSet.inter (Lazy.force callees) progressFunctions))
+                 (StringSet.inter (Lazy.force callees) progress_functions))
           then
-            let functionName = Path.name callee in
-            if not (callee |> FunctionTable.isInFunctionInTable ~functionTable)
+            let function_name = Path.name callee in
+            if not (callee |> FunctionTable.is_in_function_in_table ~function_table)
             then (
-              functionTable |> FunctionTable.addFunction ~functionName;
+              function_table |> FunctionTable.add_function ~function_name;
               if config.DceConfig.cli.debug then
-                Log_.warning ~forStats:false ~loc
+                Log_.warning ~for_stats:false ~loc
                   (Termination
                      {
                        termination = TerminationAnalysisInternal;
@@ -619,21 +619,21 @@ module ExtendFunctionTable = struct
                          Format.asprintf
                            "Extend Function Table with @{<info>%s@} (%a) as it \
                             calls a progress function"
-                           functionName printPos id_pos;
+                           function_name print_pos id_pos;
                      })))
       | Texp_apply {funct = {exp_desc = Texp_ident (callee, _, _)}; args}
-        when callee |> FunctionTable.isInFunctionInTable ~functionTable ->
-        let functionName = Path.name callee in
+        when callee |> FunctionTable.is_in_function_in_table ~function_table ->
+        let function_name = Path.name callee in
         args
-        |> List.iter (fun ((argLabel : Asttypes.arg_label), argOpt) ->
-               match (argLabel, argOpt |> extractLabelledArgument) with
+        |> List.iter (fun ((arg_label : Asttypes.arg_label), arg_opt) ->
+               match (arg_label, arg_opt |> extract_labelled_argument) with
                | Labelled {txt = label}, Some (path, loc)
-                 when path |> FunctionTable.isInFunctionInTable ~functionTable
+                 when path |> FunctionTable.is_in_function_in_table ~function_table
                  ->
-                 functionTable
-                 |> FunctionTable.addLabelToKind ~functionName ~label;
+                 function_table
+                 |> FunctionTable.add_label_to_kind ~function_name ~label;
                  if config.DceConfig.cli.debug then
-                   Log_.warning ~forStats:false ~loc
+                   Log_.warning ~for_stats:false ~loc
                      (Termination
                         {
                           termination = TerminationAnalysisInternal;
@@ -641,7 +641,7 @@ module ExtendFunctionTable = struct
                             Format.asprintf
                               "@{<info>%s@} is parametric \
                                ~@{<info>%s@}=@{<info>%s@}"
-                              functionName label (Path.name path);
+                              function_name label (Path.name path);
                         })
                | _ -> ())
       | _ -> ());
@@ -649,58 +649,58 @@ module ExtendFunctionTable = struct
     in
     {super with Tast_mapper.expr}
 
-  let run ~config ~functionTable ~progressFunctions ~valueBindingsTable
+  let run ~config ~function_table ~progress_functions ~value_bindings_table
       (expression : Typedtree.expression) =
-    let traverseExpr =
-      traverseExpr ~config ~functionTable ~progressFunctions ~valueBindingsTable
+    let traverse_expr =
+      traverse_expr ~config ~function_table ~progress_functions ~value_bindings_table
     in
-    expression |> traverseExpr.expr traverseExpr |> ignore
+    expression |> traverse_expr.expr traverse_expr |> ignore
 end
 
 module CheckExpressionWellFormed = struct
-  let traverseExpr ~config ~functionTable ~valueBindingsTable =
+  let traverse_expr ~config ~function_table ~value_bindings_table =
     let super = Tast_mapper.default in
-    let checkIdent ~path ~loc =
-      if path |> FunctionTable.isInFunctionInTable ~functionTable then
-        Stats.logHygieneOnlyCallDirectly ~path ~loc
+    let check_ident ~path ~loc =
+      if path |> FunctionTable.is_in_function_in_table ~function_table then
+        Stats.log_hygiene_only_call_directly ~path ~loc
     in
     let expr (self : Tast_mapper.mapper) (e : Typedtree.expression) =
       match e.exp_desc with
       | Texp_ident (path, {loc}, _) ->
-        checkIdent ~path ~loc;
+        check_ident ~path ~loc;
         e
-      | Texp_apply {funct = {exp_desc = Texp_ident (functionPath, _, _)}; args}
+      | Texp_apply {funct = {exp_desc = Texp_ident (function_path, _, _)}; args}
         ->
-        let functionName = Path.name functionPath in
+        let function_name = Path.name function_path in
         args
-        |> List.iter (fun ((argLabel : Asttypes.arg_label), argOpt) ->
-               match argOpt |> ExtendFunctionTable.extractLabelledArgument with
+        |> List.iter (fun ((arg_label : Asttypes.arg_label), arg_opt) ->
+               match arg_opt |> ExtendFunctionTable.extract_labelled_argument with
                | Some (path, loc) -> (
-                 match argLabel with
+                 match arg_label with
                  | Labelled {txt = label} -> (
                    if
-                     functionTable
-                     |> FunctionTable.functionGetKindOfLabel ~functionName
+                     function_table
+                     |> FunctionTable.function_get_kind_of_label ~function_name
                           ~label
                      <> None
                    then ()
                    else
-                     match Hashtbl.find_opt valueBindingsTable functionName with
+                     match Hashtbl.find_opt value_bindings_table function_name with
                      | Some (_pos, (body : Typedtree.expression), _)
                        when path
-                            |> FunctionTable.isInFunctionInTable ~functionTable
+                            |> FunctionTable.is_in_function_in_table ~function_table
                        ->
-                       let inTable =
-                         functionPath
-                         |> FunctionTable.isInFunctionInTable ~functionTable
+                       let in_table =
+                         function_path
+                         |> FunctionTable.is_in_function_in_table ~function_table
                        in
-                       if not inTable then
-                         functionTable
-                         |> FunctionTable.addFunction ~functionName;
-                       functionTable
-                       |> FunctionTable.addLabelToKind ~functionName ~label;
+                       if not in_table then
+                         function_table
+                         |> FunctionTable.add_function ~function_name;
+                       function_table
+                       |> FunctionTable.add_label_to_kind ~function_name ~label;
                        if config.DceConfig.cli.debug then
-                         Log_.warning ~forStats:false ~loc:body.exp_loc
+                         Log_.warning ~for_stats:false ~loc:body.exp_loc
                            (Termination
                               {
                                 termination = TerminationAnalysisInternal;
@@ -708,39 +708,39 @@ module CheckExpressionWellFormed = struct
                                   Format.asprintf
                                     "Extend Function Table with @{<info>%s@} \
                                      as parametric ~@{<info>%s@}=@{<info>%s@}"
-                                    functionName label (Path.name path);
+                                    function_name label (Path.name path);
                               })
-                     | _ -> checkIdent ~path ~loc)
-                 | Optional _ | Nolabel -> checkIdent ~path ~loc)
+                     | _ -> check_ident ~path ~loc)
+                 | Optional _ | Nolabel -> check_ident ~path ~loc)
                | _ -> ());
         e
       | _ -> super.expr self e
     in
     {super with Tast_mapper.expr}
 
-  let run ~config ~functionTable ~valueBindingsTable
+  let run ~config ~function_table ~value_bindings_table
       (expression : Typedtree.expression) =
-    let traverseExpr =
-      traverseExpr ~config ~functionTable ~valueBindingsTable
+    let traverse_expr =
+      traverse_expr ~config ~function_table ~value_bindings_table
     in
-    expression |> traverseExpr.expr traverseExpr |> ignore
+    expression |> traverse_expr.expr traverse_expr |> ignore
 end
 
 module Compile = struct
   type ctx = {
     config: DceConfig.t;
-    currentFunctionName: FunctionName.t;
-    functionTable: FunctionTable.t;
-    innerRecursiveFunctions: (FunctionName.t, FunctionName.t) Hashtbl.t;
-    isProgressFunction: Path.t -> bool;
+    current_function_name: FunctionName.t;
+    function_table: FunctionTable.t;
+    inner_recursive_functions: (FunctionName.t, FunctionName.t) Hashtbl.t;
+    is_progress_function: Path.t -> bool;
   }
 
   let rec expression ~ctx (expr : Typedtree.expression) =
-    let {config; currentFunctionName; functionTable; isProgressFunction} =
+    let {config; current_function_name; function_table; is_progress_function} =
       ctx
     in
     let loc = expr.exp_loc in
-    let notImplemented case =
+    let not_implemented case =
       Log_.error ~loc
         (Termination
            {termination = ErrorNotImplemented; message = Format.asprintf case})
@@ -750,22 +750,22 @@ module Compile = struct
     | Texp_ident _ -> Command.nothing
     | Texp_apply
         {
-          funct = {exp_desc = Texp_ident (calleeToRename, l, vd)} as expr;
-          args = argsToExtend;
+          funct = {exp_desc = Texp_ident (callee_to_rename, l, vd)} as expr;
+          args = args_to_extend;
         } -> (
       let callee, args =
         match
-          Hashtbl.find_opt ctx.innerRecursiveFunctions
-            (Path.name calleeToRename)
+          Hashtbl.find_opt ctx.inner_recursive_functions
+            (Path.name callee_to_rename)
         with
-        | Some innerFunctionName ->
-          let innerFunctionDefinition =
-            functionTable
-            |> FunctionTable.getFunctionDefinition
-                 ~functionName:innerFunctionName
+        | Some inner_function_name ->
+          let inner_function_definition =
+            function_table
+            |> FunctionTable.get_function_definition
+                 ~function_name:inner_function_name
           in
-          let argsFromKind =
-            innerFunctionDefinition.kind
+          let args_from_kind =
+            inner_function_definition.kind
             |> List.map (fun (entry : Kind.entry) ->
                    ( Asttypes.Labelled {txt = entry.label; loc = Location.none},
                      Some
@@ -776,134 +776,134 @@ module Compile = struct
                              (Path.Pident (Ident.create entry.label), l, vd);
                        } ))
           in
-          ( Path.Pident (Ident.create innerFunctionName),
-            argsFromKind @ argsToExtend )
-        | None -> (calleeToRename, argsToExtend)
+          ( Path.Pident (Ident.create inner_function_name),
+            args_from_kind @ args_to_extend )
+        | None -> (callee_to_rename, args_to_extend)
       in
-      if callee |> FunctionTable.isInFunctionInTable ~functionTable then
-        let functionName = Path.name callee in
-        let functionDefinition =
-          functionTable |> FunctionTable.getFunctionDefinition ~functionName
+      if callee |> FunctionTable.is_in_function_in_table ~function_table then
+        let function_name = Path.name callee in
+        let function_definition =
+          function_table |> FunctionTable.get_function_definition ~function_name
         in
         let exception ArgError in
-        let getFunctionArg {Kind.label} =
-          let argOpt =
+        let get_function_arg {Kind.label} =
+          let arg_opt =
             args
             |> List.find_opt (fun arg ->
                    match arg with
                    | Asttypes.Labelled {txt = s}, Some _ -> s = label
                    | _ -> false)
           in
-          let argOpt =
-            match argOpt with
+          let arg_opt =
+            match arg_opt with
             | Some (_, Some e) -> Some e
             | _ -> None
           in
-          let functionArg () =
+          let function_arg () =
             match
-              argOpt
-              |> ExtendFunctionTable.extractLabelledArgument
-                   ~kindOpt:(Some functionDefinition.kind)
+              arg_opt
+              |> ExtendFunctionTable.extract_labelled_argument
+                   ~kind_opt:(Some function_definition.kind)
             with
             | None ->
-              Stats.logHygieneMustHaveNamedArgument ~label ~loc;
+              Stats.log_hygiene_must_have_named_argument ~label ~loc;
               raise ArgError
             | Some (path, _pos)
-              when path |> FunctionTable.isInFunctionInTable ~functionTable ->
-              let functionName = Path.name path in
-              {FunctionArgs.label; functionName}
+              when path |> FunctionTable.is_in_function_in_table ~function_table ->
+              let function_name = Path.name path in
+              {FunctionArgs.label; function_name}
             | Some (path, _pos)
-              when functionTable
-                   |> FunctionTable.functionGetKindOfLabel
-                        ~functionName:currentFunctionName
+              when function_table
+                   |> FunctionTable.function_get_kind_of_label
+                        ~function_name:current_function_name
                         ~label:(Path.name path)
                    = Some []
                    (* TODO: when kinds are inferred, support and check non-empty kinds *)
               ->
-              let functionName = Path.name path in
-              {FunctionArgs.label; functionName}
+              let function_name = Path.name path in
+              {FunctionArgs.label; function_name}
             | _ ->
-              Stats.logHygieneNamedArgValue ~label ~loc;
+              Stats.log_hygiene_named_arg_value ~label ~loc;
               raise ArgError
               [@@raises ArgError]
           in
-          functionArg ()
+          function_arg ()
             [@@raises ArgError]
         in
-        let functionArgsOpt =
-          try Some (functionDefinition.kind |> List.map getFunctionArg)
+        let function_args_opt =
+          try Some (function_definition.kind |> List.map get_function_arg)
           with ArgError -> None
         in
-        match functionArgsOpt with
+        match function_args_opt with
         | None -> Command.nothing
-        | Some functionArgs ->
-          Command.Call (FunctionCall {functionName; functionArgs}, loc)
-          |> evalArgs ~args ~ctx
-      else if callee |> isProgressFunction then
-        Command.Call (ProgressFunction callee, loc) |> evalArgs ~args ~ctx
+        | Some function_args ->
+          Command.Call (FunctionCall {function_name; function_args}, loc)
+          |> eval_args ~args ~ctx
+      else if callee |> is_progress_function then
+        Command.Call (ProgressFunction callee, loc) |> eval_args ~args ~ctx
       else
         match
-          functionTable
-          |> FunctionTable.functionGetKindOfLabel
-               ~functionName:currentFunctionName ~label:(Path.name callee)
+          function_table
+          |> FunctionTable.function_get_kind_of_label
+               ~function_name:current_function_name ~label:(Path.name callee)
         with
         | Some kind when kind = Kind.empty ->
           Command.Call
-            (FunctionCall (Path.name callee |> FunctionCall.noArgs), loc)
-          |> evalArgs ~args ~ctx
+            (FunctionCall (Path.name callee |> FunctionCall.no_args), loc)
+          |> eval_args ~args ~ctx
         | Some _kind ->
           (* TODO when kinds are extended in future: check that args matches with kind
              and create a function call with the appropriate arguments *)
           assert false
-        | None -> expr |> expression ~ctx |> evalArgs ~args ~ctx)
+        | None -> expr |> expression ~ctx |> eval_args ~args ~ctx)
     | Texp_apply {funct = expr; args} ->
-      expr |> expression ~ctx |> evalArgs ~args ~ctx
+      expr |> expression ~ctx |> eval_args ~args ~ctx
     | Texp_let
         ( Recursive,
           [{vb_pat = {pat_desc = Tpat_var (id, _); pat_loc}; vb_expr}],
-          inExpr ) ->
-      let oldFunctionName = Ident.name id in
-      let newFunctionName = currentFunctionName ^ "$" ^ oldFunctionName in
-      functionTable |> FunctionTable.addFunction ~functionName:newFunctionName;
-      let newFunctionDefinition =
-        functionTable
-        |> FunctionTable.getFunctionDefinition ~functionName:newFunctionName
+          in_expr ) ->
+      let old_function_name = Ident.name id in
+      let new_function_name = current_function_name ^ "$" ^ old_function_name in
+      function_table |> FunctionTable.add_function ~function_name:new_function_name;
+      let new_function_definition =
+        function_table
+        |> FunctionTable.get_function_definition ~function_name:new_function_name
       in
-      let currentFunctionDefinition =
-        functionTable
-        |> FunctionTable.getFunctionDefinition ~functionName:currentFunctionName
+      let current_function_definition =
+        function_table
+        |> FunctionTable.get_function_definition ~function_name:current_function_name
       in
-      newFunctionDefinition.kind <- currentFunctionDefinition.kind;
-      let newCtx = {ctx with currentFunctionName = newFunctionName} in
-      Hashtbl.replace ctx.innerRecursiveFunctions oldFunctionName
-        newFunctionName;
-      newFunctionDefinition.body <- Some (vb_expr |> expression ~ctx:newCtx);
+      new_function_definition.kind <- current_function_definition.kind;
+      let new_ctx = {ctx with current_function_name = new_function_name} in
+      Hashtbl.replace ctx.inner_recursive_functions old_function_name
+        new_function_name;
+      new_function_definition.body <- Some (vb_expr |> expression ~ctx:new_ctx);
       if config.DceConfig.cli.debug then
-        Log_.warning ~forStats:false ~loc:pat_loc
+        Log_.warning ~for_stats:false ~loc:pat_loc
           (Termination
              {
                termination = TerminationAnalysisInternal;
                message =
                  Format.asprintf "Adding recursive definition @{<info>%s@}"
-                   newFunctionName;
+                   new_function_name;
              });
-      inExpr |> expression ~ctx
-    | Texp_let (recFlag, valueBindings, inExpr) ->
-      if recFlag = Recursive then Stats.logHygieneNoNestedLetRec ~loc;
+      in_expr |> expression ~ctx
+    | Texp_let (rec_flag, value_bindings, in_expr) ->
+      if rec_flag = Recursive then Stats.log_hygiene_no_nested_let_rec ~loc;
       let commands =
-        (valueBindings
+        (value_bindings
         |> List.map (fun (vb : Typedtree.value_binding) ->
                vb.vb_expr |> expression ~ctx))
-        @ [inExpr |> expression ~ctx]
+        @ [in_expr |> expression ~ctx]
       in
       Command.sequence commands
     | Texp_sequence (e1, e2) ->
       let open Command in
       expression ~ctx e1 +++ expression ~ctx e2
-    | Texp_ifthenelse (e1, e2, eOpt) ->
+    | Texp_ifthenelse (e1, e2, e_opt) ->
       let c1 = e1 |> expression ~ctx in
       let c2 = e2 |> expression ~ctx in
-      let c3 = eOpt |> expressionOpt ~ctx in
+      let c3 = e_opt |> expression_opt ~ctx in
       let open Command in
       c1 +++ nondet [c2; c3]
     | Texp_constant _ -> Command.nothing
@@ -911,7 +911,7 @@ module Compile = struct
       let c =
         expressions
         |> List.map (fun e -> e |> expression ~ctx)
-        |> Command.unorderedSequence
+        |> Command.unordered_sequence
       in
       match cstr_name with
       | "Some" when loc_ghost = false ->
@@ -922,34 +922,34 @@ module Compile = struct
         c +++ ConstrOption Rnone
       | _ -> c)
     | Texp_function {case = case_} -> case ~ctx case_
-    | Texp_match (e, casesOk, casesExn, _partial)
+    | Texp_match (e, cases_ok, cases_exn, _partial)
       when not
-             (casesExn
+             (cases_exn
              |> List.map (fun (case : Typedtree.case) -> case.c_lhs.pat_desc)
              != []) -> (
       (* No exceptions *)
-      let cases = casesOk @ casesExn in
-      let cE = e |> expression ~ctx in
-      let cCases = cases |> List.map (case ~ctx) in
+      let cases = cases_ok @ cases_exn in
+      let c_e = e |> expression ~ctx in
+      let c_cases = cases |> List.map (case ~ctx) in
       let fail () =
         let open Command in
-        cE +++ nondet cCases
+        c_e +++ nondet c_cases
       in
-      match (cE, cases) with
-      | ( Call (FunctionCall functionCall, loc),
+      match (c_e, cases) with
+      | ( Call (FunctionCall function_call, loc),
           [{c_lhs = pattern1}; {c_lhs = pattern2}] ) -> (
         match (pattern1.pat_desc, pattern2.pat_desc) with
         | ( Tpat_construct (_, {cstr_name = ("Some" | "None") as name1}, _),
             Tpat_construct (_, {cstr_name = "Some" | "None"}, _) ) ->
-          let casesArr = Array.of_list cCases in
+          let cases_arr = Array.of_list c_cases in
           let some, none =
             try
               match name1 = "Some" with
-              | true -> (casesArr.(0), casesArr.(1))
-              | false -> (casesArr.(1), casesArr.(0))
+              | true -> (cases_arr.(0), cases_arr.(1))
+              | false -> (cases_arr.(1), cases_arr.(0))
             with Invalid_argument _ -> (Nothing, Nothing)
           in
-          Command.SwitchOption {functionCall; loc; some; none}
+          Command.SwitchOption {function_call; loc; some; none}
         | _ -> fail ())
       | _ -> fail ())
     | Texp_match _ -> assert false (* exceptions *)
@@ -960,27 +960,27 @@ module Compile = struct
          |> List.map
               (fun
                 ( _desc,
-                  (recordLabelDefinition : Typedtree.record_label_definition),
+                  (record_label_definition : Typedtree.record_label_definition),
                   _ )
               ->
-                match recordLabelDefinition with
+                match record_label_definition with
                 | Kept _typeExpr -> None
                 | Overridden (_loc, e) -> Some e))
-      |> List.map (expressionOpt ~ctx)
-      |> Command.unorderedSequence
+      |> List.map (expression_opt ~ctx)
+      |> Command.unordered_sequence
     | Texp_setfield (e1, _loc, _desc, e2) ->
-      [e1; e2] |> List.map (expression ~ctx) |> Command.unorderedSequence
+      [e1; e2] |> List.map (expression ~ctx) |> Command.unordered_sequence
     | Texp_tuple expressions | Texp_array expressions ->
-      expressions |> List.map (expression ~ctx) |> Command.unorderedSequence
+      expressions |> List.map (expression ~ctx) |> Command.unordered_sequence
     | Texp_assert _ -> Command.nothing
     | Texp_try (e, cases) ->
-      let cE = e |> expression ~ctx in
-      let cCases = cases |> List.map (case ~ctx) |> Command.nondet in
+      let c_e = e |> expression ~ctx in
+      let c_cases = cases |> List.map (case ~ctx) |> Command.nondet in
       let open Command in
-      cE +++ cCases
-    | Texp_variant (_label, eOpt) -> eOpt |> expressionOpt ~ctx
+      c_e +++ c_cases
+    | Texp_variant (_label, e_opt) -> e_opt |> expression_opt ~ctx
     | Texp_while _ ->
-      notImplemented "Texp_while";
+      not_implemented "Texp_while";
       assert false
     | Texp_for (_id, _pat, e1, e2, _dir, e3) ->
       let open Command in
@@ -992,37 +992,37 @@ module Compile = struct
       let open Command in
       expression ~ctx e1 +++ expression ~ctx e2
     | Texp_send _ ->
-      notImplemented "Texp_send";
+      not_implemented "Texp_send";
       assert false
     | Texp_letmodule _ ->
-      notImplemented "Texp_letmodule";
+      not_implemented "Texp_letmodule";
       assert false
     | Texp_letexception _ ->
-      notImplemented "Texp_letexception";
+      not_implemented "Texp_letexception";
       assert false
     | Texp_pack _ ->
-      notImplemented "Texp_pack";
+      not_implemented "Texp_pack";
       assert false
     | Texp_extension_constructor _ when true ->
-      notImplemented "Texp_extension_constructor";
+      not_implemented "Texp_extension_constructor";
       assert false
     | _ ->
       (* ocaml 4.08: Texp_letop(_) | Texp_open(_) *)
-      notImplemented "Texp_letop(_) | Texp_open(_)";
+      not_implemented "Texp_letop(_) | Texp_open(_)";
       assert false
 
-  and expressionOpt ~ctx eOpt =
-    match eOpt with
+  and expression_opt ~ctx e_opt =
+    match e_opt with
     | None -> Command.nothing
     | Some e -> e |> expression ~ctx
 
-  and evalArgs ~args ~ctx command =
+  and eval_args ~args ~ctx command =
     (* Don't assume any evaluation order on the arguments *)
     let commands =
-      args |> List.map (fun (_, eOpt) -> eOpt |> expressionOpt ~ctx)
+      args |> List.map (fun (_, e_opt) -> e_opt |> expression_opt ~ctx)
     in
     let open Command in
-    unorderedSequence commands +++ command
+    unordered_sequence commands +++ command
 
   and case : ctx:ctx -> Typedtree.case -> _ =
    fun ~ctx {c_guard; c_rhs} ->
@@ -1034,60 +1034,60 @@ module Compile = struct
 end
 
 module CallStack = struct
-  type frame = {frameNumber: int; pos: Lexing.position}
+  type frame = {frame_number: int; pos: Lexing.position}
   type t = {tbl: (FunctionCall.t, frame) Hashtbl.t; mutable size: int}
 
   let create () = {tbl = Hashtbl.create 1; size = 0}
 
-  let toSet {tbl} =
+  let to_set {tbl} =
     Hashtbl.fold
       (fun frame _i set -> FunctionCallSet.add frame set)
       tbl FunctionCallSet.empty
 
-  let hasFunctionCall ~functionCall (t : t) = Hashtbl.mem t.tbl functionCall
+  let has_function_call ~function_call (t : t) = Hashtbl.mem t.tbl function_call
 
-  let addFunctionCall ~functionCall ~pos (t : t) =
+  let add_function_call ~function_call ~pos (t : t) =
     t.size <- t.size + 1;
-    Hashtbl.replace t.tbl functionCall {frameNumber = t.size; pos}
+    Hashtbl.replace t.tbl function_call {frame_number = t.size; pos}
 
-  let removeFunctionCall ~functionCall (t : t) =
+  let remove_function_call ~function_call (t : t) =
     t.size <- t.size - 1;
-    Hashtbl.remove t.tbl functionCall
+    Hashtbl.remove t.tbl function_call
 
   let print ppf (t : t) =
     Format.fprintf ppf "  CallStack:";
     let frames =
       Hashtbl.fold
-        (fun functionCall {frameNumber; pos} frames ->
-          (functionCall, frameNumber, pos) :: frames)
+        (fun function_call {frame_number; pos} frames ->
+          (function_call, frame_number, pos) :: frames)
         t.tbl []
       |> List.sort (fun (_, i1, _) (_, i2, _) -> i2 - i1)
     in
     frames
-    |> List.iter (fun ((functionCall : FunctionCall.t), i, pos) ->
+    |> List.iter (fun ((function_call : FunctionCall.t), i, pos) ->
            Format.fprintf ppf "\n    @{<dim>%d@} %s (%a)" i
-             (FunctionCall.toString functionCall)
-             printPos pos)
+             (FunctionCall.to_string function_call)
+             print_pos pos)
 end
 
 module Eval = struct
   type progress = Progress.t
   type cache = (FunctionCall.t, State.t) Hashtbl.t
 
-  let createCache () : cache = Hashtbl.create 1
+  let create_cache () : cache = Hashtbl.create 1
 
-  let lookupCache ~functionCall (cache : cache) =
-    Hashtbl.find_opt cache functionCall
+  let lookup_cache ~function_call (cache : cache) =
+    Hashtbl.find_opt cache function_call
 
-  let updateCache ~config ~functionCall ~loc ~state (cache : cache) =
-    Stats.logResult ~config ~functionCall ~resString:(state |> State.toString)
+  let update_cache ~config ~function_call ~loc ~state (cache : cache) =
+    Stats.log_result ~config ~function_call ~res_string:(state |> State.to_string)
       ~loc;
-    if not (Hashtbl.mem cache functionCall) then
-      Hashtbl.replace cache functionCall state
+    if not (Hashtbl.mem cache function_call) then
+      Hashtbl.replace cache function_call state
 
-  let hasInfiniteLoop ~callStack ~functionCallToInstantiate ~functionCall ~loc
+  let has_infinite_loop ~call_stack ~function_call_to_instantiate ~function_call ~loc
       ~state =
-    if callStack |> CallStack.hasFunctionCall ~functionCall then (
+    if call_stack |> CallStack.has_function_call ~function_call then (
       if state.State.progress = NoProgress then (
         Log_.error ~loc
           (Termination
@@ -1097,77 +1097,77 @@ module Eval = struct
                  Format.asprintf "%a"
                    (fun ppf () ->
                      Format.fprintf ppf "Possible infinite loop when calling ";
-                     (match functionCallToInstantiate = functionCall with
+                     (match function_call_to_instantiate = function_call with
                      | true ->
                        Format.fprintf ppf "@{<error>%s@}"
-                         (functionCallToInstantiate |> FunctionCall.toString)
+                         (function_call_to_instantiate |> FunctionCall.to_string)
                      | false ->
                        Format.fprintf ppf "@{<error>%s@} which is @{<error>%s@}"
-                         (functionCallToInstantiate |> FunctionCall.toString)
-                         (functionCall |> FunctionCall.toString));
-                     Format.fprintf ppf "@,%a" CallStack.print callStack)
+                         (function_call_to_instantiate |> FunctionCall.to_string)
+                         (function_call |> FunctionCall.to_string));
+                     Format.fprintf ppf "@,%a" CallStack.print call_stack)
                    ();
              });
-        Stats.logLoop ());
+        Stats.log_loop ());
       true)
     else false
 
-  let rec runFunctionCall ~config ~cache ~callStack ~functionArgs ~functionTable
-      ~madeProgressOn ~loc ~state functionCallToInstantiate : State.t =
+  let rec run_function_call ~config ~cache ~call_stack ~function_args ~function_table
+      ~made_progress_on ~loc ~state function_call_to_instantiate : State.t =
     let pos = loc.Location.loc_start in
-    let functionCall =
-      functionCallToInstantiate
-      |> FunctionCall.applySubstitution ~sub:functionArgs
+    let function_call =
+      function_call_to_instantiate
+      |> FunctionCall.apply_substitution ~sub:function_args
     in
-    let functionName = functionCall.functionName in
-    let call = Call.FunctionCall functionCall in
-    let stateAfterCall =
-      match cache |> lookupCache ~functionCall with
-      | Some stateAfterCall ->
-        Stats.logCache ~config ~functionCall ~hit:true ~loc;
+    let function_name = function_call.function_name in
+    let call = Call.FunctionCall function_call in
+    let state_after_call =
+      match cache |> lookup_cache ~function_call with
+      | Some state_after_call ->
+        Stats.log_cache ~config ~function_call ~hit:true ~loc;
         {
-          stateAfterCall with
-          trace = Trace.Tcall (call, stateAfterCall.progress);
+          state_after_call with
+          trace = Trace.Tcall (call, state_after_call.progress);
         }
       | None ->
-        if FunctionCallSet.mem functionCall madeProgressOn then
+        if FunctionCallSet.mem function_call made_progress_on then
           State.init ~progress:Progress ~trace:(Trace.Tcall (call, Progress)) ()
         else if
-          hasInfiniteLoop ~callStack ~functionCallToInstantiate ~functionCall
+          has_infinite_loop ~call_stack ~function_call_to_instantiate ~function_call
             ~loc ~state
         then {state with trace = Trace.Tcall (call, state.progress)}
         else (
-          Stats.logCache ~config ~functionCall ~hit:false ~loc;
-          let functionDefinition =
-            functionTable |> FunctionTable.getFunctionDefinition ~functionName
+          Stats.log_cache ~config ~function_call ~hit:false ~loc;
+          let function_definition =
+            function_table |> FunctionTable.get_function_definition ~function_name
           in
-          callStack |> CallStack.addFunctionCall ~functionCall ~pos;
+          call_stack |> CallStack.add_function_call ~function_call ~pos;
           let body =
-            match functionDefinition.body with
+            match function_definition.body with
             | Some body -> body
             | None -> assert false
           in
-          let stateAfterCall =
+          let state_after_call =
             body
-            |> run ~config ~cache ~callStack
-                 ~functionArgs:functionCall.functionArgs ~functionTable
-                 ~madeProgressOn ~state:(State.init ())
+            |> run ~config ~cache ~call_stack
+                 ~function_args:function_call.function_args ~function_table
+                 ~made_progress_on ~state:(State.init ())
           in
-          cache |> updateCache ~config ~functionCall ~loc ~state:stateAfterCall;
+          cache |> update_cache ~config ~function_call ~loc ~state:state_after_call;
           (* Invariant: run should restore the callStack *)
-          callStack |> CallStack.removeFunctionCall ~functionCall;
-          let trace = Trace.Tcall (call, stateAfterCall.progress) in
-          {stateAfterCall with trace})
+          call_stack |> CallStack.remove_function_call ~function_call;
+          let trace = Trace.Tcall (call, state_after_call.progress) in
+          {state_after_call with trace})
     in
-    State.seq state stateAfterCall
+    State.seq state state_after_call
 
-  and run ~config ~(cache : cache) ~callStack ~functionArgs ~functionTable
-      ~madeProgressOn ~state (command : Command.t) : State.t =
+  and run ~config ~(cache : cache) ~call_stack ~function_args ~function_table
+      ~made_progress_on ~state (command : Command.t) : State.t =
     match command with
-    | Call (FunctionCall functionCall, loc) ->
-      functionCall
-      |> runFunctionCall ~config ~cache ~callStack ~functionArgs ~functionTable
-           ~madeProgressOn ~loc ~state
+    | Call (FunctionCall function_call, loc) ->
+      function_call
+      |> run_function_call ~config ~cache ~call_stack ~function_args ~function_table
+           ~made_progress_on ~loc ~state
     | Call ((ProgressFunction _ as call), _pos) ->
       let state1 =
         State.init ~progress:Progress ~trace:(Tcall (call, Progress)) ()
@@ -1185,204 +1185,204 @@ module Eval = struct
       State.seq state state1
     | Sequence commands ->
       (* if one command makes progress, then the sequence makes progress *)
-      let rec findFirstProgress ~callStack ~commands ~madeProgressOn ~state =
+      let rec find_first_progress ~call_stack ~commands ~made_progress_on ~state =
         match commands with
         | [] -> state
-        | c :: nextCommands ->
+        | c :: next_commands ->
           let state1 =
             c
-            |> run ~config ~cache ~callStack ~functionArgs ~functionTable
-                 ~madeProgressOn ~state
+            |> run ~config ~cache ~call_stack ~function_args ~function_table
+                 ~made_progress_on ~state
           in
-          let madeProgressOn, callStack =
+          let made_progress_on, call_stack =
             match state1.progress with
             | Progress ->
               (* look for infinite loops in the rest of the sequence, remembering what has made progress *)
-              ( FunctionCallSet.union madeProgressOn
-                  (callStack |> CallStack.toSet),
+              ( FunctionCallSet.union made_progress_on
+                  (call_stack |> CallStack.to_set),
                 CallStack.create () )
-            | NoProgress -> (madeProgressOn, callStack)
+            | NoProgress -> (made_progress_on, call_stack)
           in
-          findFirstProgress ~callStack ~commands:nextCommands ~madeProgressOn
+          find_first_progress ~call_stack ~commands:next_commands ~made_progress_on
             ~state:state1
       in
-      findFirstProgress ~callStack ~commands ~madeProgressOn ~state
+      find_first_progress ~call_stack ~commands ~made_progress_on ~state
     | UnorderedSequence commands ->
-      let stateNoTrace = {state with trace = Trace.empty} in
+      let state_no_trace = {state with trace = Trace.empty} in
       (* the commands could be executed in any order: progess if any one does *)
       let states =
         commands
         |> List.map (fun c ->
                c
-               |> run ~config ~cache ~callStack ~functionArgs ~functionTable
-                    ~madeProgressOn ~state:stateNoTrace)
+               |> run ~config ~cache ~call_stack ~function_args ~function_table
+                    ~made_progress_on ~state:state_no_trace)
       in
-      State.seq state (states |> State.unorderedSequence)
+      State.seq state (states |> State.unordered_sequence)
     | Nondet commands ->
-      let stateNoTrace = {state with trace = Trace.empty} in
+      let state_no_trace = {state with trace = Trace.empty} in
       (* the commands could be executed in any order: progess if any one does *)
       let states =
         commands
         |> List.map (fun c ->
                c
-               |> run ~config ~cache ~callStack ~functionArgs ~functionTable
-                    ~madeProgressOn ~state:stateNoTrace)
+               |> run ~config ~cache ~call_stack ~function_args ~function_table
+                    ~made_progress_on ~state:state_no_trace)
       in
       State.seq state (states |> State.nondet)
-    | SwitchOption {functionCall; loc; some; none} -> (
-      let stateAfterCall =
-        functionCall
-        |> runFunctionCall ~config ~cache ~callStack ~functionArgs
-             ~functionTable ~madeProgressOn ~loc ~state
+    | SwitchOption {function_call; loc; some; none} -> (
+      let state_after_call =
+        function_call
+        |> run_function_call ~config ~cache ~call_stack ~function_args
+             ~function_table ~made_progress_on ~loc ~state
       in
-      match stateAfterCall.valuesOpt with
+      match state_after_call.values_opt with
       | None ->
         Command.nondet [some; none]
-        |> run ~config ~cache ~callStack ~functionArgs ~functionTable
-             ~madeProgressOn ~state:stateAfterCall
+        |> run ~config ~cache ~call_stack ~function_args ~function_table
+             ~made_progress_on ~state:state_after_call
       | Some values ->
-        let runOpt c progressOpt =
-          match progressOpt with
+        let run_opt c progress_opt =
+          match progress_opt with
           | None -> State.init ~progress:Progress ()
           | Some progress ->
             c
-            |> run ~config ~cache ~callStack ~functionArgs ~functionTable
-                 ~madeProgressOn ~state:(State.init ~progress ())
+            |> run ~config ~cache ~call_stack ~function_args ~function_table
+                 ~made_progress_on ~state:(State.init ~progress ())
         in
-        let stateNone = values |> Values.getNone |> runOpt none in
-        let stateSome = values |> Values.getSome |> runOpt some in
-        State.seq stateAfterCall (State.nondet [stateSome; stateNone]))
+        let state_none = values |> Values.get_none |> run_opt none in
+        let state_some = values |> Values.get_some |> run_opt some in
+        State.seq state_after_call (State.nondet [state_some; state_none]))
 
-  let analyzeFunction ~config ~cache ~functionTable ~loc functionName =
+  let analyze_function ~config ~cache ~function_table ~loc function_name =
     if config.DceConfig.cli.debug then
       Log_.log "@[<v 2>@,@{<warning>Termination Analysis@} for @{<info>%s@}@]@."
-        functionName;
+        function_name;
     let pos = loc.Location.loc_start in
-    let callStack = CallStack.create () in
-    let functionArgs = FunctionArgs.empty in
-    let functionCall = FunctionCall.noArgs functionName in
-    callStack |> CallStack.addFunctionCall ~functionCall ~pos;
-    let functionDefinition =
-      functionTable |> FunctionTable.getFunctionDefinition ~functionName
+    let call_stack = CallStack.create () in
+    let function_args = FunctionArgs.empty in
+    let function_call = FunctionCall.no_args function_name in
+    call_stack |> CallStack.add_function_call ~function_call ~pos;
+    let function_definition =
+      function_table |> FunctionTable.get_function_definition ~function_name
     in
-    if functionDefinition.kind <> Kind.empty then
-      Stats.logHygieneParametric ~functionName ~loc
+    if function_definition.kind <> Kind.empty then
+      Stats.log_hygiene_parametric ~function_name ~loc
     else
       let body =
-        match functionDefinition.body with
+        match function_definition.body with
         | Some body -> body
         | None -> assert false
       in
       let state =
         body
-        |> run ~config ~cache ~callStack ~functionArgs ~functionTable
-             ~madeProgressOn:FunctionCallSet.empty ~state:(State.init ())
+        |> run ~config ~cache ~call_stack ~function_args ~function_table
+             ~made_progress_on:FunctionCallSet.empty ~state:(State.init ())
       in
-      cache |> updateCache ~config ~functionCall ~loc ~state
+      cache |> update_cache ~config ~function_call ~loc ~state
 end
 
-let progressFunctionsFromAttributes attributes =
-  let lidToString lid = lid |> Longident.flatten |> String.concat "." in
-  let isProgress = ( = ) "progress" in
-  if attributes |> Annotation.hasAttribute isProgress then
+let progress_functions_from_attributes attributes =
+  let lid_to_string lid = lid |> Longident.flatten |> String.concat "." in
+  let is_progress = ( = ) "progress" in
+  if attributes |> Annotation.has_attribute is_progress then
     Some
-      (match attributes |> Annotation.getAttributePayload isProgress with
+      (match attributes |> Annotation.get_attribute_payload is_progress with
       | None -> []
-      | Some (IdentPayload lid) -> [lidToString lid]
+      | Some (IdentPayload lid) -> [lid_to_string lid]
       | Some (TuplePayload l) ->
         l
         |> List.filter_map (function
-             | Annotation.IdentPayload lid -> Some (lidToString lid)
+             | Annotation.IdentPayload lid -> Some (lid_to_string lid)
              | _ -> None)
       | _ -> [])
   else None
 
-let traverseAst ~config ~valueBindingsTable =
+let traverse_ast ~config ~value_bindings_table =
   let super = Tast_mapper.default in
-  let value_bindings (self : Tast_mapper.mapper) (recFlag, valueBindings) =
+  let value_bindings (self : Tast_mapper.mapper) (rec_flag, value_bindings) =
     (* Update the table of value bindings for variables *)
-    valueBindings
+    value_bindings
     |> List.iter (fun (vb : Typedtree.value_binding) ->
            match vb.vb_pat.pat_desc with
            | Tpat_var (id, {loc = {loc_start = pos}}) ->
-             let callees = lazy (FindFunctionsCalled.findCallees vb.vb_expr) in
-             Hashtbl.replace valueBindingsTable (Ident.name id)
+             let callees = lazy (FindFunctionsCalled.find_callees vb.vb_expr) in
+             Hashtbl.replace value_bindings_table (Ident.name id)
                (pos, vb.vb_expr, callees)
            | _ -> ());
-    let progressFunctions, functionsToAnalyze =
-      if recFlag = Asttypes.Nonrecursive then (StringSet.empty, [])
+    let progress_functions, functions_to_analyze =
+      if rec_flag = Asttypes.Nonrecursive then (StringSet.empty, [])
       else
-        let progressFunctions0, functionsToAnalyze0 =
-          valueBindings
+        let progress_functions0, functions_to_analyze0 =
+          value_bindings
           |> List.fold_left
-               (fun (progressFunctions, functionsToAnalyze)
-                    (valueBinding : Typedtree.value_binding) ->
+               (fun (progress_functions, functions_to_analyze)
+                    (value_binding : Typedtree.value_binding) ->
                  match
-                   progressFunctionsFromAttributes valueBinding.vb_attributes
+                   progress_functions_from_attributes value_binding.vb_attributes
                  with
-                 | None -> (progressFunctions, functionsToAnalyze)
-                 | Some newProgressFunctions ->
+                 | None -> (progress_functions, functions_to_analyze)
+                 | Some new_progress_functions ->
                    ( StringSet.union
-                       (StringSet.of_list newProgressFunctions)
-                       progressFunctions,
-                     match valueBinding.vb_pat.pat_desc with
+                       (StringSet.of_list new_progress_functions)
+                       progress_functions,
+                     match value_binding.vb_pat.pat_desc with
                      | Tpat_var (id, _) ->
-                       (Ident.name id, valueBinding.vb_expr.exp_loc)
-                       :: functionsToAnalyze
-                     | _ -> functionsToAnalyze ))
+                       (Ident.name id, value_binding.vb_expr.exp_loc)
+                       :: functions_to_analyze
+                     | _ -> functions_to_analyze ))
                (StringSet.empty, [])
         in
-        (progressFunctions0, functionsToAnalyze0 |> List.rev)
+        (progress_functions0, functions_to_analyze0 |> List.rev)
     in
-    if functionsToAnalyze <> [] then (
-      let functionTable = FunctionTable.create () in
-      let isProgressFunction path =
-        StringSet.mem (Path.name path) progressFunctions
+    if functions_to_analyze <> [] then (
+      let function_table = FunctionTable.create () in
+      let is_progress_function path =
+        StringSet.mem (Path.name path) progress_functions
       in
-      let recursiveFunctions =
+      let recursive_functions =
         List.fold_left
-          (fun defs (valueBinding : Typedtree.value_binding) ->
-            match valueBinding.vb_pat.pat_desc with
+          (fun defs (value_binding : Typedtree.value_binding) ->
+            match value_binding.vb_pat.pat_desc with
             | Tpat_var (id, _) -> Ident.name id :: defs
             | _ -> defs)
-          [] valueBindings
+          [] value_bindings
         |> List.rev
       in
-      let recursiveDefinitions =
-        recursiveFunctions
+      let recursive_definitions =
+        recursive_functions
         |> List.fold_left
-             (fun acc functionName ->
-               match Hashtbl.find_opt valueBindingsTable functionName with
-               | Some (_pos, e, _set) -> (functionName, e) :: acc
+             (fun acc function_name ->
+               match Hashtbl.find_opt value_bindings_table function_name with
+               | Some (_pos, e, _set) -> (function_name, e) :: acc
                | None -> acc)
              []
         |> List.rev
       in
-      recursiveDefinitions
-      |> List.iter (fun (functionName, _body) ->
-             functionTable |> FunctionTable.addFunction ~functionName);
-      recursiveDefinitions
+      recursive_definitions
+      |> List.iter (fun (function_name, _body) ->
+             function_table |> FunctionTable.add_function ~function_name);
+      recursive_definitions
       |> List.iter (fun (_, body) ->
              body
-             |> ExtendFunctionTable.run ~config ~functionTable
-                  ~progressFunctions ~valueBindingsTable);
-      recursiveDefinitions
+             |> ExtendFunctionTable.run ~config ~function_table
+                  ~progress_functions ~value_bindings_table);
+      recursive_definitions
       |> List.iter (fun (_, body) ->
              body
-             |> CheckExpressionWellFormed.run ~config ~functionTable
-                  ~valueBindingsTable);
-      functionTable
+             |> CheckExpressionWellFormed.run ~config ~function_table
+                  ~value_bindings_table);
+      function_table
       |> Hashtbl.iter
            (fun
-             functionName
-             (functionDefinition : FunctionTable.functionDefinition)
+             function_name
+             (function_definition : FunctionTable.function_definition)
            ->
-             if functionDefinition.body = None then
-               match Hashtbl.find_opt valueBindingsTable functionName with
+             if function_definition.body = None then
+               match Hashtbl.find_opt value_bindings_table function_name with
                | None -> ()
                | Some (_pos, body, _) ->
-                 functionTable
-                 |> FunctionTable.addBody
+                 function_table
+                 |> FunctionTable.add_body
                       ~body:
                         (Some
                            (body
@@ -1390,36 +1390,36 @@ let traverseAst ~config ~valueBindingsTable =
                                 ~ctx:
                                   {
                                     config;
-                                    currentFunctionName = functionName;
-                                    functionTable;
-                                    innerRecursiveFunctions = Hashtbl.create 1;
-                                    isProgressFunction;
+                                    current_function_name = function_name;
+                                    function_table;
+                                    inner_recursive_functions = Hashtbl.create 1;
+                                    is_progress_function;
                                   }))
-                      ~functionName);
-      if config.DceConfig.cli.debug then FunctionTable.dump functionTable;
-      let cache = Eval.createCache () in
-      functionsToAnalyze
-      |> List.iter (fun (functionName, loc) ->
-             functionName
-             |> Eval.analyzeFunction ~config ~cache ~functionTable ~loc);
-      Stats.newRecursiveFunctions ~numFunctions:(Hashtbl.length functionTable));
-    valueBindings
-    |> List.iter (fun valueBinding ->
-           super.value_binding self valueBinding |> ignore);
-    (recFlag, valueBindings)
+                      ~function_name);
+      if config.DceConfig.cli.debug then FunctionTable.dump function_table;
+      let cache = Eval.create_cache () in
+      functions_to_analyze
+      |> List.iter (fun (function_name, loc) ->
+             function_name
+             |> Eval.analyze_function ~config ~cache ~function_table ~loc);
+      Stats.new_recursive_functions ~num_functions:(Hashtbl.length function_table));
+    value_bindings
+    |> List.iter (fun value_binding ->
+           super.value_binding self value_binding |> ignore);
+    (rec_flag, value_bindings)
   in
   {super with Tast_mapper.value_bindings}
 
-let processStructure ~config (structure : Typedtree.structure) =
-  Stats.newFile ();
-  let valueBindingsTable = Hashtbl.create 1 in
-  let traverseAst = traverseAst ~config ~valueBindingsTable in
-  structure |> traverseAst.structure traverseAst |> ignore
+let process_structure ~config (structure : Typedtree.structure) =
+  Stats.new_file ();
+  let value_bindings_table = Hashtbl.create 1 in
+  let traverse_ast = traverse_ast ~config ~value_bindings_table in
+  structure |> traverse_ast.structure traverse_ast |> ignore
 
-let processCmt ~config ~file:_ (cmt_infos : Cmt_format.cmt_infos) =
+let process_cmt ~config ~file:_ (cmt_infos : Cmt_format.cmt_infos) =
   match cmt_infos.cmt_annots with
   | Interface _ -> ()
-  | Implementation structure -> processStructure ~config structure
+  | Implementation structure -> process_structure ~config structure
   | _ -> ()
 
-let reportStats ~config:_ = Stats.dump ~ppf:Format.std_formatter
+let report_stats ~config:_ = Stats.dump ~ppf:Format.std_formatter

@@ -1,6 +1,6 @@
 open SharedTypes
 
-let showConstructor {Constructor.cname = {txt}; args; res} =
+let show_constructor {Constructor.cname = {txt}; args; res} =
   txt
   ^ (match args with
     | Args [] -> ""
@@ -10,24 +10,24 @@ let showConstructor {Constructor.cname = {txt}; args; res} =
         |> List.map (fun (field : field) ->
                Printf.sprintf "%s%s: %s" field.fname.txt
                  (if field.optional then "?" else "")
-                 (Shared.typeToString
-                    (if field.optional then Utils.unwrapIfOption field.typ
+                 (Shared.type_to_string
+                    (if field.optional then Utils.unwrap_if_option field.typ
                      else field.typ)))
         |> String.concat ", ")
       ^ "})"
     | Args args ->
       "("
       ^ (args
-        |> List.map (fun (typ, _) -> typ |> Shared.typeToString)
+        |> List.map (fun (typ, _) -> typ |> Shared.type_to_string)
         |> String.concat ", ")
       ^ ")")
   ^
   match res with
   | None -> ""
-  | Some typ -> "\n" ^ (typ |> Shared.typeToString)
+  | Some typ -> "\n" ^ (typ |> Shared.type_to_string)
 
 (* TODO: local opens *)
-let resolveOpens ~env opens ~package =
+let resolve_opens ~env opens ~package =
   List.fold_left
     (fun previous path ->
       (* Finding an open, first trying to find it in previoulsly resolved opens *)
@@ -37,13 +37,13 @@ let resolveOpens ~env opens ~package =
           match path with
           | [] | [_] -> previous
           | name :: path -> (
-            match ProcessCmt.fileForModule ~package name with
+            match ProcessCmt.file_for_module ~package name with
             | None ->
               Log.log ("Could not get module " ^ name);
               previous (* TODO: warn? *)
             | Some file -> (
               match
-                ResolvePath.resolvePath ~env:(QueryEnv.fromFile file) ~package
+                ResolvePath.resolve_path ~env:(QueryEnv.from_file file) ~package
                   ~path
               with
               | None ->
@@ -51,12 +51,12 @@ let resolveOpens ~env opens ~package =
                 previous
               | Some (env, _placeholder) -> previous @ [env])))
         | env :: rest -> (
-          match ResolvePath.resolvePath ~env ~package ~path with
+          match ResolvePath.resolve_path ~env ~package ~path with
           | None -> loop rest
           | Some (env, _placeholder) -> previous @ [env])
       in
-      Log.log ("resolving open " ^ pathToString path);
-      match ResolvePath.resolvePath ~env ~package ~path with
+      Log.log ("resolving open " ^ path_to_string path);
+      match ResolvePath.resolve_path ~env ~package ~path with
       | None ->
         Log.log "Not local";
         loop previous
@@ -66,20 +66,20 @@ let resolveOpens ~env opens ~package =
     (* loop(previous) *)
     [] opens
 
-let completionForExporteds iterExported getDeclared ~prefix ~exact ~env
-    ~namesUsed transformContents =
+let completion_for_exporteds iter_exported get_declared ~prefix ~exact ~env
+    ~names_used transform_contents =
   let res = ref [] in
-  iterExported (fun name stamp ->
+  iter_exported (fun name stamp ->
       (* Log.log("checking exported: " ++ name); *)
-      if Utils.checkName name ~prefix ~exact then
-        match getDeclared stamp with
+      if Utils.check_name name ~prefix ~exact then
+        match get_declared stamp with
         | Some (declared : _ Declared.t)
-          when not (Hashtbl.mem namesUsed declared.name.txt) ->
-          Hashtbl.add namesUsed declared.name.txt ();
+          when not (Hashtbl.mem names_used declared.name.txt) ->
+          Hashtbl.add names_used declared.name.txt ();
           res :=
             {
               (Completion.create declared.name.txt ~env
-                 ~kind:(transformContents declared))
+                 ~kind:(transform_contents declared))
               with
               deprecated = declared.deprecated;
               docstring = declared.docstring;
@@ -88,112 +88,112 @@ let completionForExporteds iterExported getDeclared ~prefix ~exact ~env
         | _ -> ());
   !res
 
-let completionForExportedModules ~env ~prefix ~exact ~namesUsed =
-  completionForExporteds (Exported.iter env.QueryEnv.exported Exported.Module)
-    (Stamps.findModule env.file.stamps) ~prefix ~exact ~env ~namesUsed
+let completion_for_exported_modules ~env ~prefix ~exact ~names_used =
+  completion_for_exporteds (Exported.iter env.QueryEnv.exported Exported.Module)
+    (Stamps.find_module env.file.stamps) ~prefix ~exact ~env ~names_used
     (fun declared ->
       Completion.Module
         {docstring = declared.docstring; module_ = declared.item})
 
-let completionForExportedValues ~env ~prefix ~exact ~namesUsed =
-  completionForExporteds (Exported.iter env.QueryEnv.exported Exported.Value)
-    (Stamps.findValue env.file.stamps) ~prefix ~exact ~env ~namesUsed
+let completion_for_exported_values ~env ~prefix ~exact ~names_used =
+  completion_for_exporteds (Exported.iter env.QueryEnv.exported Exported.Value)
+    (Stamps.find_value env.file.stamps) ~prefix ~exact ~env ~names_used
     (fun declared -> Completion.Value declared.item)
 
-let completionForExportedTypes ~env ~prefix ~exact ~namesUsed =
-  completionForExporteds (Exported.iter env.QueryEnv.exported Exported.Type)
-    (Stamps.findType env.file.stamps) ~prefix ~exact ~env ~namesUsed
+let completion_for_exported_types ~env ~prefix ~exact ~names_used =
+  completion_for_exporteds (Exported.iter env.QueryEnv.exported Exported.Type)
+    (Stamps.find_type env.file.stamps) ~prefix ~exact ~env ~names_used
     (fun declared -> Completion.Type declared.item)
 
-let completionsForExportedConstructors ~(env : QueryEnv.t) ~prefix ~exact
-    ~namesUsed =
+let completions_for_exported_constructors ~(env : QueryEnv.t) ~prefix ~exact
+    ~names_used =
   let res = ref [] in
   Exported.iter env.exported Exported.Type (fun _name stamp ->
-      match Stamps.findType env.file.stamps stamp with
+      match Stamps.find_type env.file.stamps stamp with
       | Some ({item = {kind = Type.Variant constructors}} as t) ->
         res :=
           (constructors
           |> List.filter (fun c ->
-                 Utils.checkName c.Constructor.cname.txt ~prefix ~exact)
-          |> Utils.filterMap (fun c ->
+                 Utils.check_name c.Constructor.cname.txt ~prefix ~exact)
+          |> Utils.filter_map (fun c ->
                  let name = c.Constructor.cname.txt in
-                 if not (Hashtbl.mem namesUsed name) then
-                   let () = Hashtbl.add namesUsed name () in
+                 if not (Hashtbl.mem names_used name) then
+                   let () = Hashtbl.add names_used name () in
                    Some
                      (Completion.create name ~env ~docstring:c.docstring
                         ?deprecated:c.deprecated
                         ~kind:
                           (Completion.Constructor
-                             (c, t.item.decl |> Shared.declToString t.name.txt)))
+                             (c, t.item.decl |> Shared.decl_to_string t.name.txt)))
                  else None))
           @ !res
       | _ -> ());
   !res
 
-let completionForExportedFields ~(env : QueryEnv.t) ~prefix ~exact ~namesUsed =
+let completion_for_exported_fields ~(env : QueryEnv.t) ~prefix ~exact ~names_used =
   let res = ref [] in
   Exported.iter env.exported Exported.Type (fun _name stamp ->
-      match Stamps.findType env.file.stamps stamp with
+      match Stamps.find_type env.file.stamps stamp with
       | Some ({item = {kind = Record fields}} as t) ->
         res :=
           (fields
-          |> List.filter (fun f -> Utils.checkName f.fname.txt ~prefix ~exact)
-          |> Utils.filterMap (fun f ->
+          |> List.filter (fun f -> Utils.check_name f.fname.txt ~prefix ~exact)
+          |> Utils.filter_map (fun f ->
                  let name = f.fname.txt in
-                 if not (Hashtbl.mem namesUsed name) then
-                   let () = Hashtbl.add namesUsed name () in
+                 if not (Hashtbl.mem names_used name) then
+                   let () = Hashtbl.add names_used name () in
                    Some
                      (Completion.create name ~env ~docstring:f.docstring
                         ?deprecated:f.deprecated
                         ~kind:
                           (Completion.Field
-                             (f, t.item.decl |> Shared.declToString t.name.txt)))
+                             (f, t.item.decl |> Shared.decl_to_string t.name.txt)))
                  else None))
           @ !res
       | _ -> ());
   !res
 
-let findModuleInScope ~env ~moduleName ~scope =
-  let modulesTable = Hashtbl.create 10 in
+let find_module_in_scope ~env ~module_name ~scope =
+  let modules_table = Hashtbl.create 10 in
   env.QueryEnv.file.stamps
-  |> Stamps.iterModules (fun _ declared ->
-         Hashtbl.replace modulesTable
-           (declared.name.txt, declared.extentLoc |> Loc.start)
+  |> Stamps.iter_modules (fun _ declared ->
+         Hashtbl.replace modules_table
+           (declared.name.txt, declared.extent_loc |> Loc.start)
            declared);
   let result = ref None in
-  let processModule name loc =
-    if name = moduleName && !result = None then
-      match Hashtbl.find_opt modulesTable (name, Loc.start loc) with
+  let process_module name loc =
+    if name = module_name && !result = None then
+      match Hashtbl.find_opt modules_table (name, Loc.start loc) with
       | Some declared -> result := Some declared
       | None ->
         Log.log
-          (Printf.sprintf "Module Not Found %s loc:%s\n" name (Loc.toString loc))
+          (Printf.sprintf "Module Not Found %s loc:%s\n" name (Loc.to_string loc))
   in
-  scope |> Scope.iterModulesBeforeFirstOpen processModule;
-  scope |> Scope.iterModulesAfterFirstOpen processModule;
+  scope |> Scope.iter_modules_before_first_open process_module;
+  scope |> Scope.iter_modules_after_first_open process_module;
   !result
 
-let rec moduleItemToStructureEnv ~(env : QueryEnv.t) ~package (item : Module.t)
+let rec module_item_to_structure_env ~(env : QueryEnv.t) ~package (item : Module.t)
     =
   match item with
   | Module.Structure structure -> Some (env, structure)
-  | Module.Constraint (_, moduleType) ->
-    moduleItemToStructureEnv ~env ~package moduleType
+  | Module.Constraint (_, module_type) ->
+    module_item_to_structure_env ~env ~package module_type
   | Module.Ident p -> (
-    match ResolvePath.resolveModuleFromCompilerPath ~env ~package p with
+    match ResolvePath.resolve_module_from_compiler_path ~env ~package p with
     | Some (env2, Some declared2) ->
-      moduleItemToStructureEnv ~env:env2 ~package declared2.item
+      module_item_to_structure_env ~env:env2 ~package declared2.item
     | _ -> None)
 
 (* Given a declared module, return the env entered into its concrete structure
    and the structure itself. Follows constraints and aliases *)
-let enterStructureFromDeclared ~(env : QueryEnv.t) ~package
+let enter_structure_from_declared ~(env : QueryEnv.t) ~package
     (declared : Module.t Declared.t) =
-  match moduleItemToStructureEnv ~env ~package declared.item with
-  | Some (env, s) -> Some (QueryEnv.enterStructure env s, s)
+  match module_item_to_structure_env ~env ~package declared.item with
+  | Some (env, s) -> Some (QueryEnv.enter_structure env s, s)
   | None -> None
 
-let completionsFromStructureItems ~(env : QueryEnv.t)
+let completions_from_structure_items ~(env : QueryEnv.t)
     (structure : Module.structure) =
   StructureUtils.unique_items structure
   |> List.filter_map (fun (it : Module.item) ->
@@ -213,99 +213,99 @@ let completionsFromStructureItems ~(env : QueryEnv.t)
              (Completion.create ~env ~docstring:it.docstring
                 ~kind:(Completion.Type t) it.name))
 
-let resolvePathFromStamps ~(env : QueryEnv.t) ~package ~scope ~moduleName ~path
+let resolve_path_from_stamps ~(env : QueryEnv.t) ~package ~scope ~module_name ~path
     =
   (* Log.log("Finding from stamps " ++ name); *)
-  match findModuleInScope ~env ~moduleName ~scope with
+  match find_module_in_scope ~env ~module_name ~scope with
   | None -> None
   | Some declared -> (
     (* Log.log("found it"); *)
     (* [""] means completion after `ModuleName.` (trailing dot). *)
     match path with
     | [""] -> (
-      match moduleItemToStructureEnv ~env ~package declared.item with
-      | Some (env, structure) -> Some (QueryEnv.enterStructure env structure, "")
+      match module_item_to_structure_env ~env ~package declared.item with
+      | Some (env, structure) -> Some (QueryEnv.enter_structure env structure, "")
       | None -> None)
     | _ -> (
-      match ResolvePath.findInModule ~env declared.item path with
+      match ResolvePath.find_in_module ~env declared.item path with
       | None -> None
       | Some res -> (
         match res with
         | `Local (env, name) -> Some (env, name)
-        | `Global (moduleName, fullPath) -> (
-          match ProcessCmt.fileForModule ~package moduleName with
+        | `Global (module_name, full_path) -> (
+          match ProcessCmt.file_for_module ~package module_name with
           | None -> None
           | Some file ->
-            ResolvePath.resolvePath ~env:(QueryEnv.fromFile file) ~path:fullPath
+            ResolvePath.resolve_path ~env:(QueryEnv.from_file file) ~path:full_path
               ~package))))
 
-let resolveModuleWithOpens ~opens ~package ~moduleName =
+let resolve_module_with_opens ~opens ~package ~module_name =
   let rec loop opens =
     match opens with
     | (env : QueryEnv.t) :: rest -> (
-      Log.log ("Looking for env in " ^ Uri.toString env.file.uri);
-      match ResolvePath.resolvePath ~env ~package ~path:[moduleName; ""] with
+      Log.log ("Looking for env in " ^ Uri.to_string env.file.uri);
+      match ResolvePath.resolve_path ~env ~package ~path:[module_name; ""] with
       | Some (env, _) -> Some env
       | None -> loop rest)
     | [] -> None
   in
   loop opens
 
-let resolveFileModule ~moduleName ~package =
-  Log.log ("Getting module " ^ moduleName);
-  match ProcessCmt.fileForModule ~package moduleName with
+let resolve_file_module ~module_name ~package =
+  Log.log ("Getting module " ^ module_name);
+  match ProcessCmt.file_for_module ~package module_name with
   | None -> None
   | Some file ->
     Log.log "got it";
-    let env = QueryEnv.fromFile file in
+    let env = QueryEnv.from_file file in
     Some env
 
-let getEnvWithOpens ~scope ~(env : QueryEnv.t) ~package
-    ~(opens : QueryEnv.t list) ~moduleName (path : string list) =
+let get_env_with_opens ~scope ~(env : QueryEnv.t) ~package
+    ~(opens : QueryEnv.t list) ~module_name (path : string list) =
   (* TODO: handle interleaving of opens and local modules correctly *)
-  match resolvePathFromStamps ~env ~scope ~moduleName ~path ~package with
+  match resolve_path_from_stamps ~env ~scope ~module_name ~path ~package with
   | Some x -> Some x
   | None -> (
     let env_opt =
-      match resolveModuleWithOpens ~opens ~package ~moduleName with
-      | Some envOpens -> Some envOpens
-      | None -> resolveFileModule ~moduleName ~package
+      match resolve_module_with_opens ~opens ~package ~module_name with
+      | Some env_opens -> Some env_opens
+      | None -> resolve_file_module ~module_name ~package
     in
     match env_opt with
     | None -> None
     | Some env -> (
       match path with
       | [""] -> Some (env, "")
-      | _ -> ResolvePath.resolvePath ~env ~package ~path))
+      | _ -> ResolvePath.resolve_path ~env ~package ~path))
 
-let rec expandTypeExpr ~env ~package typeExpr =
-  match typeExpr |> Shared.digConstructor with
+let rec expand_type_expr ~env ~package type_expr =
+  match type_expr |> Shared.dig_constructor with
   | Some path -> (
-    match References.digConstructor ~env ~package path with
+    match References.dig_constructor ~env ~package path with
     | None -> None
     | Some (env, {item = {decl = {type_manifest = Some t}}}) ->
-      expandTypeExpr ~env ~package t
+      expand_type_expr ~env ~package t
     | Some (_, {docstring; item}) -> Some (docstring, item))
   | None -> None
 
-let kindToDocumentation ~env ~full ~currentDocstring name
+let kind_to_documentation ~env ~full ~current_docstring name
     (kind : Completion.kind) =
-  let docsFromKind =
+  let docs_from_kind =
     match kind with
     | ObjLabel _ | Label _ | FileModule _ | Snippet _ | FollowContextPath _ ->
       []
     | Module {docstring} -> docstring
     | Type {decl; name} ->
-      [decl |> Shared.declToString name |> Markdown.codeBlock]
+      [decl |> Shared.decl_to_string name |> Markdown.code_block]
     | Value typ -> (
-      match expandTypeExpr ~env ~package:full.package typ with
+      match expand_type_expr ~env ~package:full.package typ with
       | None -> []
       | Some (docstrings, {decl; name; kind}) ->
         docstrings
         @ [
             (match kind with
             | Record _ | Tuple _ | Variant _ ->
-              Markdown.codeBlock (Shared.declToString name decl)
+              Markdown.code_block (Shared.decl_to_string name decl)
             | _ -> "");
           ])
     | Field ({typ; optional; docstring}, s) ->
@@ -314,181 +314,181 @@ let kindToDocumentation ~env ~full ~currentDocstring name
          need to _also_ add a "?" after the field name, as that looks weird. *)
       docstring
       @ [
-          Markdown.codeBlock
-            (if optional && Utils.startsWith name "?" = false then
+          Markdown.code_block
+            (if optional && Utils.starts_with name "?" = false then
                name ^ "?: "
-               ^ (typ |> Utils.unwrapIfOption |> Shared.typeToString)
-             else name ^ ": " ^ (typ |> Shared.typeToString));
-          Markdown.codeBlock s;
+               ^ (typ |> Utils.unwrap_if_option |> Shared.type_to_string)
+             else name ^ ": " ^ (typ |> Shared.type_to_string));
+          Markdown.code_block s;
         ]
     | Constructor (c, s) ->
-      [Markdown.codeBlock (showConstructor c); Markdown.codeBlock s]
-    | PolyvariantConstructor ({displayName; args}, s) ->
+      [Markdown.code_block (show_constructor c); Markdown.code_block s]
+    | PolyvariantConstructor ({display_name; args}, s) ->
       [
-        Markdown.codeBlock
-          ("#" ^ displayName
+        Markdown.code_block
+          ("#" ^ display_name
           ^
           match args with
           | [] -> ""
-          | typeExprs ->
+          | type_exprs ->
             "("
-            ^ (typeExprs
-              |> List.map (fun typeExpr -> typeExpr |> Shared.typeToString)
+            ^ (type_exprs
+              |> List.map (fun type_expr -> type_expr |> Shared.type_to_string)
               |> String.concat ", ")
             ^ ")");
-        Markdown.codeBlock s;
+        Markdown.code_block s;
       ]
-    | ExtractedType (extractedType, _) ->
-      [Markdown.codeBlock (TypeUtils.extractedTypeToString extractedType)]
+    | ExtractedType (extracted_type, _) ->
+      [Markdown.code_block (TypeUtils.extracted_type_to_string extracted_type)]
   in
-  currentDocstring @ docsFromKind
+  current_docstring @ docs_from_kind
   |> List.filter (fun s -> s <> "")
   |> String.concat "\n\n"
 
-let kindToDetail name (kind : Completion.kind) =
+let kind_to_detail name (kind : Completion.kind) =
   match kind with
   | Type {name} -> "type " ^ name
-  | Value typ -> typ |> Shared.typeToString
-  | ObjLabel typ -> typ |> Shared.typeToString
-  | Label typString -> typString
+  | Value typ -> typ |> Shared.type_to_string
+  | ObjLabel typ -> typ |> Shared.type_to_string
+  | Label typ_string -> typ_string
   | Module _ -> "module " ^ name
   | FileModule f -> "module " ^ f
   | Field ({typ; optional}, _) ->
     (* Handle optional fields. Checking for "?" is because sometimes optional
        fields are prefixed with "?" when completing, and at that point we don't
        need to _also_ add a "?" after the field name, as that looks weird. *)
-    if optional && Utils.startsWith name "?" = false then
-      typ |> Utils.unwrapIfOption |> Shared.typeToString
-    else typ |> Shared.typeToString
-  | Constructor (c, _) -> showConstructor c
-  | PolyvariantConstructor ({displayName; args}, _) -> (
-    "#" ^ displayName
+    if optional && Utils.starts_with name "?" = false then
+      typ |> Utils.unwrap_if_option |> Shared.type_to_string
+    else typ |> Shared.type_to_string
+  | Constructor (c, _) -> show_constructor c
+  | PolyvariantConstructor ({display_name; args}, _) -> (
+    "#" ^ display_name
     ^
     match args with
     | [] -> ""
-    | typeExprs ->
+    | type_exprs ->
       "("
-      ^ (typeExprs
-        |> List.map (fun typeExpr -> typeExpr |> Shared.typeToString)
+      ^ (type_exprs
+        |> List.map (fun type_expr -> type_expr |> Shared.type_to_string)
         |> String.concat ", ")
       ^ ")")
   | Snippet s -> s
   | FollowContextPath _ -> ""
-  | ExtractedType (extractedType, _) ->
-    TypeUtils.extractedTypeToString ~nameOnly:true extractedType
+  | ExtractedType (extracted_type, _) ->
+    TypeUtils.extracted_type_to_string ~name_only:true extracted_type
 
-let kindToData filePath (kind : Completion.kind) =
+let kind_to_data file_path (kind : Completion.kind) =
   match kind with
   | FileModule f ->
-    Some (`Assoc [("modulePath", `String f); ("filePath", `String filePath)])
+    Some (`Assoc [("modulePath", `String f); ("filePath", `String file_path)])
   | _ -> Some `Null
 
-let findAllCompletions ~(env : QueryEnv.t) ~prefix ~exact ~namesUsed
-    ~(completionContext : Completable.completionContext) =
-  Log.log ("findAllCompletions uri:" ^ Uri.toString env.file.uri);
-  match completionContext with
+let find_all_completions ~(env : QueryEnv.t) ~prefix ~exact ~names_used
+    ~(completion_context : Completable.completion_context) =
+  Log.log ("findAllCompletions uri:" ^ Uri.to_string env.file.uri);
+  match completion_context with
   | Value ->
-    completionForExportedValues ~env ~prefix ~exact ~namesUsed
-    @ completionsForExportedConstructors ~env ~prefix ~exact ~namesUsed
-    @ completionForExportedModules ~env ~prefix ~exact ~namesUsed
+    completion_for_exported_values ~env ~prefix ~exact ~names_used
+    @ completions_for_exported_constructors ~env ~prefix ~exact ~names_used
+    @ completion_for_exported_modules ~env ~prefix ~exact ~names_used
   | Type ->
-    completionForExportedTypes ~env ~prefix ~exact ~namesUsed
-    @ completionForExportedModules ~env ~prefix ~exact ~namesUsed
-  | Module -> completionForExportedModules ~env ~prefix ~exact ~namesUsed
+    completion_for_exported_types ~env ~prefix ~exact ~names_used
+    @ completion_for_exported_modules ~env ~prefix ~exact ~names_used
+  | Module -> completion_for_exported_modules ~env ~prefix ~exact ~names_used
   | Field ->
-    completionForExportedFields ~env ~prefix ~exact ~namesUsed
-    @ completionForExportedModules ~env ~prefix ~exact ~namesUsed
+    completion_for_exported_fields ~env ~prefix ~exact ~names_used
+    @ completion_for_exported_modules ~env ~prefix ~exact ~names_used
   | ValueOrField ->
-    completionForExportedValues ~env ~prefix ~exact ~namesUsed
-    @ completionForExportedFields ~env ~prefix ~exact ~namesUsed
-    @ completionForExportedModules ~env ~prefix ~exact ~namesUsed
+    completion_for_exported_values ~env ~prefix ~exact ~names_used
+    @ completion_for_exported_fields ~env ~prefix ~exact ~names_used
+    @ completion_for_exported_modules ~env ~prefix ~exact ~names_used
 
-let processLocalValue name loc contextPath scope ~prefix ~exact ~env
-    ~(localTables : LocalTables.t) =
-  if Utils.checkName name ~prefix ~exact then
-    match Hashtbl.find_opt localTables.valueTable (name, Loc.start loc) with
+let process_local_value name loc context_path scope ~prefix ~exact ~env
+    ~(local_tables : LocalTables.t) =
+  if Utils.check_name name ~prefix ~exact then
+    match Hashtbl.find_opt local_tables.value_table (name, Loc.start loc) with
     | Some declared ->
-      if not (Hashtbl.mem localTables.namesUsed name) then (
-        Hashtbl.add localTables.namesUsed name ();
-        localTables.resultRev <-
+      if not (Hashtbl.mem local_tables.names_used name) then (
+        Hashtbl.add local_tables.names_used name ();
+        local_tables.result_rev <-
           {
             (Completion.create declared.name.txt ~env ~kind:(Value declared.item))
             with
             deprecated = declared.deprecated;
             docstring = declared.docstring;
           }
-          :: localTables.resultRev)
+          :: local_tables.result_rev)
     | None ->
-      if !Cfg.debugFollowCtxPath then
+      if !Cfg.debug_follow_ctx_path then
         Printf.printf "Completion Value Not Found %s loc:%s\n" name
-          (Loc.toString loc);
-      localTables.resultRev <-
+          (Loc.to_string loc);
+      local_tables.result_rev <-
         Completion.create name ~env
           ~kind:
-            (match contextPath with
-            | Some contextPath -> FollowContextPath (contextPath, scope)
+            (match context_path with
+            | Some context_path -> FollowContextPath (context_path, scope)
             | None ->
               Value
                 (Ctype.newconstr
                    (Path.Pident (Ident.create "Type Not Known"))
                    []))
-        :: localTables.resultRev
+        :: local_tables.result_rev
 
-let processLocalConstructor name loc ~prefix ~exact ~env
-    ~(localTables : LocalTables.t) =
-  if Utils.checkName name ~prefix ~exact then
+let process_local_constructor name loc ~prefix ~exact ~env
+    ~(local_tables : LocalTables.t) =
+  if Utils.check_name name ~prefix ~exact then
     match
-      Hashtbl.find_opt localTables.constructorTable (name, Loc.start loc)
+      Hashtbl.find_opt local_tables.constructor_table (name, Loc.start loc)
     with
     | Some declared ->
-      if not (Hashtbl.mem localTables.namesUsed name) then (
-        Hashtbl.add localTables.namesUsed name ();
-        localTables.resultRev <-
+      if not (Hashtbl.mem local_tables.names_used name) then (
+        Hashtbl.add local_tables.names_used name ();
+        local_tables.result_rev <-
           {
             (Completion.create declared.name.txt ~env
                ~kind:
                  (Constructor
                     ( declared.item,
-                      snd declared.item.typeDecl
-                      |> Shared.declToString (fst declared.item.typeDecl) )))
+                      snd declared.item.type_decl
+                      |> Shared.decl_to_string (fst declared.item.type_decl) )))
             with
             deprecated = declared.deprecated;
             docstring = declared.docstring;
           }
-          :: localTables.resultRev)
+          :: local_tables.result_rev)
     | None ->
       Log.log
         (Printf.sprintf "Completion Constructor Not Found %s loc:%s\n" name
-           (Loc.toString loc))
+           (Loc.to_string loc))
 
-let processLocalType name loc ~prefix ~exact ~env ~(localTables : LocalTables.t)
+let process_local_type name loc ~prefix ~exact ~env ~(local_tables : LocalTables.t)
     =
-  if Utils.checkName name ~prefix ~exact then
-    match Hashtbl.find_opt localTables.typesTable (name, Loc.start loc) with
+  if Utils.check_name name ~prefix ~exact then
+    match Hashtbl.find_opt local_tables.types_table (name, Loc.start loc) with
     | Some declared ->
-      if not (Hashtbl.mem localTables.namesUsed name) then (
-        Hashtbl.add localTables.namesUsed name ();
-        localTables.resultRev <-
+      if not (Hashtbl.mem local_tables.names_used name) then (
+        Hashtbl.add local_tables.names_used name ();
+        local_tables.result_rev <-
           {
             (Completion.create declared.name.txt ~env ~kind:(Type declared.item))
             with
             deprecated = declared.deprecated;
             docstring = declared.docstring;
           }
-          :: localTables.resultRev)
+          :: local_tables.result_rev)
     | None ->
       Log.log
         (Printf.sprintf "Completion Type Not Found %s loc:%s\n" name
-           (Loc.toString loc))
+           (Loc.to_string loc))
 
-let processLocalModule name loc ~prefix ~exact ~env
-    ~(localTables : LocalTables.t) =
-  if Utils.checkName name ~prefix ~exact then
-    match Hashtbl.find_opt localTables.modulesTable (name, Loc.start loc) with
+let process_local_module name loc ~prefix ~exact ~env
+    ~(local_tables : LocalTables.t) =
+  if Utils.check_name name ~prefix ~exact then
+    match Hashtbl.find_opt local_tables.modules_table (name, Loc.start loc) with
     | Some declared ->
-      if not (Hashtbl.mem localTables.namesUsed name) then (
-        Hashtbl.add localTables.namesUsed name ();
-        localTables.resultRev <-
+      if not (Hashtbl.mem local_tables.names_used name) then (
+        Hashtbl.add local_tables.names_used name ();
+        local_tables.result_rev <-
           {
             (Completion.create declared.name.txt ~env
                ~kind:
@@ -498,26 +498,26 @@ let processLocalModule name loc ~prefix ~exact ~env
             deprecated = declared.deprecated;
             docstring = declared.docstring;
           }
-          :: localTables.resultRev)
+          :: local_tables.result_rev)
     | None ->
       Log.log
         (Printf.sprintf "Completion Module Not Found %s loc:%s\n" name
-           (Loc.toString loc))
+           (Loc.to_string loc))
 
-let processLocalInclude includePath _loc ~prefix ~exact ~(env : QueryEnv.t)
-    ~(localTables : LocalTables.t) =
+let process_local_include include_path _loc ~prefix ~exact ~(env : QueryEnv.t)
+    ~(local_tables : LocalTables.t) =
   (* process only values for now *)
-  localTables.includedValueTable
+  local_tables.included_value_table
   |> Hashtbl.iter
        (fun (name, _) (declared : (string * Types.type_expr) Declared.t) ->
          (* We check all the values if their origin is the same as the include path. *)
          let source_module_path = fst declared.item in
-         if String.ends_with ~suffix:includePath source_module_path then
+         if String.ends_with ~suffix:include_path source_module_path then
            (* If this is the case we perform a similar check for the prefix *)
-           if Utils.checkName name ~prefix ~exact then
-             if not (Hashtbl.mem localTables.namesUsed name) then (
-               Hashtbl.add localTables.namesUsed name ();
-               localTables.resultRev <-
+           if Utils.check_name name ~prefix ~exact then
+             if not (Hashtbl.mem local_tables.names_used name) then (
+               Hashtbl.add local_tables.names_used name ();
+               local_tables.result_rev <-
                  {
                    (Completion.create declared.name.txt ~env
                       ~kind:(Value (snd declared.item)))
@@ -526,286 +526,286 @@ let processLocalInclude includePath _loc ~prefix ~exact ~(env : QueryEnv.t)
                    docstring = declared.docstring;
                    synthetic = true;
                  }
-                 :: localTables.resultRev))
+                 :: local_tables.result_rev))
 
-let getItemsFromOpens ~opens ~localTables ~prefix ~exact ~completionContext =
+let get_items_from_opens ~opens ~local_tables ~prefix ~exact ~completion_context =
   opens
   |> List.fold_left
        (fun results env ->
-         let completionsFromThisOpen =
-           findAllCompletions ~env ~prefix ~exact
-             ~namesUsed:localTables.LocalTables.namesUsed ~completionContext
+         let completions_from_this_open =
+           find_all_completions ~env ~prefix ~exact
+             ~names_used:local_tables.LocalTables.names_used ~completion_context
          in
-         completionsFromThisOpen @ results)
+         completions_from_this_open @ results)
        []
 
-let findLocalCompletionsForValuesAndConstructors ~(localTables : LocalTables.t)
+let find_local_completions_for_values_and_constructors ~(local_tables : LocalTables.t)
     ~env ~prefix ~exact ~opens ~scope =
-  localTables |> LocalTables.populateValues ~env;
-  localTables |> LocalTables.populateIncludedValues ~env;
-  localTables |> LocalTables.populateConstructors ~env;
-  localTables |> LocalTables.populateModules ~env;
+  local_tables |> LocalTables.populate_values ~env;
+  local_tables |> LocalTables.populate_included_values ~env;
+  local_tables |> LocalTables.populate_constructors ~env;
+  local_tables |> LocalTables.populate_modules ~env;
 
   scope
-  |> Scope.iterValuesBeforeFirstOpen
-       (processLocalValue ~prefix ~exact ~env ~localTables);
+  |> Scope.iter_values_before_first_open
+       (process_local_value ~prefix ~exact ~env ~local_tables);
   scope
-  |> Scope.iterConstructorsBeforeFirstOpen
-       (processLocalConstructor ~prefix ~exact ~env ~localTables);
+  |> Scope.iter_constructors_before_first_open
+       (process_local_constructor ~prefix ~exact ~env ~local_tables);
   scope
-  |> Scope.iterModulesBeforeFirstOpen
-       (processLocalModule ~prefix ~exact ~env ~localTables);
+  |> Scope.iter_modules_before_first_open
+       (process_local_module ~prefix ~exact ~env ~local_tables);
 
-  let valuesFromOpens =
-    getItemsFromOpens ~opens ~localTables ~prefix ~exact
-      ~completionContext:Value
+  let values_from_opens =
+    get_items_from_opens ~opens ~local_tables ~prefix ~exact
+      ~completion_context:Value
   in
 
   scope
-  |> Scope.iterValuesAfterFirstOpen
-       (processLocalValue ~prefix ~exact ~env ~localTables);
+  |> Scope.iter_values_after_first_open
+       (process_local_value ~prefix ~exact ~env ~local_tables);
   scope
-  |> Scope.iterConstructorsAfterFirstOpen
-       (processLocalConstructor ~prefix ~exact ~env ~localTables);
+  |> Scope.iter_constructors_after_first_open
+       (process_local_constructor ~prefix ~exact ~env ~local_tables);
   scope
-  |> Scope.iterModulesAfterFirstOpen
-       (processLocalModule ~prefix ~exact ~env ~localTables);
+  |> Scope.iter_modules_after_first_open
+       (process_local_module ~prefix ~exact ~env ~local_tables);
 
   scope
-  |> Scope.iterIncludes (processLocalInclude ~prefix ~exact ~env ~localTables);
+  |> Scope.iter_includes (process_local_include ~prefix ~exact ~env ~local_tables);
 
-  List.rev_append localTables.resultRev valuesFromOpens
+  List.rev_append local_tables.result_rev values_from_opens
 
-let findLocalCompletionsForValues ~(localTables : LocalTables.t) ~env ~prefix
+let find_local_completions_for_values ~(local_tables : LocalTables.t) ~env ~prefix
     ~exact ~opens ~scope =
-  localTables |> LocalTables.populateValues ~env;
-  localTables |> LocalTables.populateIncludedValues ~env;
-  localTables |> LocalTables.populateModules ~env;
+  local_tables |> LocalTables.populate_values ~env;
+  local_tables |> LocalTables.populate_included_values ~env;
+  local_tables |> LocalTables.populate_modules ~env;
   scope
-  |> Scope.iterValuesBeforeFirstOpen
-       (processLocalValue ~prefix ~exact ~env ~localTables);
+  |> Scope.iter_values_before_first_open
+       (process_local_value ~prefix ~exact ~env ~local_tables);
   scope
-  |> Scope.iterModulesBeforeFirstOpen
-       (processLocalModule ~prefix ~exact ~env ~localTables);
+  |> Scope.iter_modules_before_first_open
+       (process_local_module ~prefix ~exact ~env ~local_tables);
 
-  let valuesFromOpens =
-    getItemsFromOpens ~opens ~localTables ~prefix ~exact
-      ~completionContext:Value
+  let values_from_opens =
+    get_items_from_opens ~opens ~local_tables ~prefix ~exact
+      ~completion_context:Value
   in
 
   scope
-  |> Scope.iterValuesAfterFirstOpen
-       (processLocalValue ~prefix ~exact ~env ~localTables);
+  |> Scope.iter_values_after_first_open
+       (process_local_value ~prefix ~exact ~env ~local_tables);
   scope
-  |> Scope.iterModulesAfterFirstOpen
-       (processLocalModule ~prefix ~exact ~env ~localTables);
+  |> Scope.iter_modules_after_first_open
+       (process_local_module ~prefix ~exact ~env ~local_tables);
 
   scope
-  |> Scope.iterIncludes (processLocalInclude ~prefix ~exact ~env ~localTables);
+  |> Scope.iter_includes (process_local_include ~prefix ~exact ~env ~local_tables);
 
-  List.rev_append localTables.resultRev valuesFromOpens
+  List.rev_append local_tables.result_rev values_from_opens
 
-let findLocalCompletionsForTypes ~(localTables : LocalTables.t) ~env ~prefix
+let find_local_completions_for_types ~(local_tables : LocalTables.t) ~env ~prefix
     ~exact ~opens ~scope =
-  localTables |> LocalTables.populateTypes ~env;
-  localTables |> LocalTables.populateModules ~env;
+  local_tables |> LocalTables.populate_types ~env;
+  local_tables |> LocalTables.populate_modules ~env;
   scope
-  |> Scope.iterTypesBeforeFirstOpen
-       (processLocalType ~prefix ~exact ~env ~localTables);
+  |> Scope.iter_types_before_first_open
+       (process_local_type ~prefix ~exact ~env ~local_tables);
   scope
-  |> Scope.iterModulesBeforeFirstOpen
-       (processLocalModule ~prefix ~exact ~env ~localTables);
+  |> Scope.iter_modules_before_first_open
+       (process_local_module ~prefix ~exact ~env ~local_tables);
 
-  let valuesFromOpens =
-    getItemsFromOpens ~opens ~localTables ~prefix ~exact ~completionContext:Type
+  let values_from_opens =
+    get_items_from_opens ~opens ~local_tables ~prefix ~exact ~completion_context:Type
   in
 
   scope
-  |> Scope.iterTypesAfterFirstOpen
-       (processLocalType ~prefix ~exact ~env ~localTables);
+  |> Scope.iter_types_after_first_open
+       (process_local_type ~prefix ~exact ~env ~local_tables);
   scope
-  |> Scope.iterModulesAfterFirstOpen
-       (processLocalModule ~prefix ~exact ~env ~localTables);
-  List.rev_append localTables.resultRev valuesFromOpens
+  |> Scope.iter_modules_after_first_open
+       (process_local_module ~prefix ~exact ~env ~local_tables);
+  List.rev_append local_tables.result_rev values_from_opens
 
-let findLocalCompletionsForModules ~(localTables : LocalTables.t) ~env ~prefix
+let find_local_completions_for_modules ~(local_tables : LocalTables.t) ~env ~prefix
     ~exact ~opens ~scope =
-  localTables |> LocalTables.populateModules ~env;
+  local_tables |> LocalTables.populate_modules ~env;
   scope
-  |> Scope.iterModulesBeforeFirstOpen
-       (processLocalModule ~prefix ~exact ~env ~localTables);
+  |> Scope.iter_modules_before_first_open
+       (process_local_module ~prefix ~exact ~env ~local_tables);
 
-  let valuesFromOpens =
-    getItemsFromOpens ~opens ~localTables ~prefix ~exact
-      ~completionContext:Module
+  let values_from_opens =
+    get_items_from_opens ~opens ~local_tables ~prefix ~exact
+      ~completion_context:Module
   in
 
   scope
-  |> Scope.iterModulesAfterFirstOpen
-       (processLocalModule ~prefix ~exact ~env ~localTables);
-  List.rev_append localTables.resultRev valuesFromOpens
+  |> Scope.iter_modules_after_first_open
+       (process_local_module ~prefix ~exact ~env ~local_tables);
+  List.rev_append local_tables.result_rev values_from_opens
 
-let findLocalCompletionsWithOpens ~pos ~(env : QueryEnv.t) ~prefix ~exact ~opens
-    ~scope ~(completionContext : Completable.completionContext) =
+let find_local_completions_with_opens ~pos ~(env : QueryEnv.t) ~prefix ~exact ~opens
+    ~scope ~(completion_context : Completable.completion_context) =
   (* TODO: handle arbitrary interleaving of opens and local bindings correctly *)
   Log.log
-    ("findLocalCompletionsWithOpens uri:" ^ Uri.toString env.file.uri ^ " pos:"
-   ^ Pos.toString pos);
-  let localTables = LocalTables.create () in
-  match completionContext with
+    ("findLocalCompletionsWithOpens uri:" ^ Uri.to_string env.file.uri ^ " pos:"
+   ^ Pos.to_string pos);
+  let local_tables = LocalTables.create () in
+  match completion_context with
   | Value | ValueOrField ->
-    findLocalCompletionsForValuesAndConstructors ~localTables ~env ~prefix
+    find_local_completions_for_values_and_constructors ~local_tables ~env ~prefix
       ~exact ~opens ~scope
   | Type ->
-    findLocalCompletionsForTypes ~localTables ~env ~prefix ~exact ~opens ~scope
+    find_local_completions_for_types ~local_tables ~env ~prefix ~exact ~opens ~scope
   | Module ->
-    findLocalCompletionsForModules ~localTables ~env ~prefix ~exact ~opens
+    find_local_completions_for_modules ~local_tables ~env ~prefix ~exact ~opens
       ~scope
   | Field ->
     (* There's no local completion for fields *)
     []
 
-let getComplementaryCompletionsForTypedValue ~opens ~allFiles ~scope ~env prefix
+let get_complementary_completions_for_typed_value ~opens ~all_files ~scope ~env prefix
     =
   let exact = false in
-  let localCompletionsWithOpens =
-    let localTables = LocalTables.create () in
-    findLocalCompletionsForValues ~localTables ~env ~prefix ~exact ~opens ~scope
+  let local_completions_with_opens =
+    let local_tables = LocalTables.create () in
+    find_local_completions_for_values ~local_tables ~env ~prefix ~exact ~opens ~scope
   in
-  let fileModules =
-    allFiles |> FileSet.elements
-    |> Utils.filterMap (fun name ->
+  let file_modules =
+    all_files |> FileSet.elements
+    |> Utils.filter_map (fun name ->
            if
-             Utils.checkName name ~prefix ~exact
+             Utils.check_name name ~prefix ~exact
              && not
                   (* TODO complete the namespaced name too *)
-                  (Utils.fileNameHasUnallowedChars name)
+                  (Utils.file_name_has_unallowed_chars name)
            then
              Some
                (Completion.create name ~synthetic:true ~env
                   ~kind:(Completion.FileModule name))
            else None)
   in
-  localCompletionsWithOpens @ fileModules
+  local_completions_with_opens @ file_modules
 
-let getCompletionsForPath ~debug ~opens ~full ~pos ~exact ~scope
-    ~completionContext ~env path =
+let get_completions_for_path ~debug ~opens ~full ~pos ~exact ~scope
+    ~completion_context ~env path =
   if debug then Printf.printf "Path %s\n" (path |> String.concat ".");
-  let allFiles = allFilesInPackage full.package in
+  let all_files = all_files_in_package full.package in
   match path with
   | [] -> []
   | [prefix] ->
-    let localCompletionsWithOpens =
-      findLocalCompletionsWithOpens ~pos ~env ~prefix ~exact ~opens ~scope
-        ~completionContext
+    let local_completions_with_opens =
+      find_local_completions_with_opens ~pos ~env ~prefix ~exact ~opens ~scope
+        ~completion_context
     in
-    let fileModules =
-      allFiles |> FileSet.elements
-      |> Utils.filterMap (fun name ->
+    let file_modules =
+      all_files |> FileSet.elements
+      |> Utils.filter_map (fun name ->
              if
-               Utils.checkName name ~prefix ~exact
+               Utils.check_name name ~prefix ~exact
                && not
                     (* TODO complete the namespaced name too *)
-                    (Utils.fileNameHasUnallowedChars name)
+                    (Utils.file_name_has_unallowed_chars name)
              then
                Some
                  (Completion.create name ~env ~kind:(Completion.FileModule name))
              else None)
     in
-    localCompletionsWithOpens @ fileModules
-  | moduleName :: path -> (
-    Log.log ("Path " ^ pathToString path);
+    local_completions_with_opens @ file_modules
+  | module_name :: path -> (
+    Log.log ("Path " ^ path_to_string path);
     (* [""] is trailing dot completion (`ModuleName.<com>`). *)
     match path with
     | [""] -> (
-      let envFile = env in
-      let declaredOpt =
-        match findModuleInScope ~env:envFile ~moduleName ~scope with
+      let env_file = env in
+      let declared_opt =
+        match find_module_in_scope ~env:env_file ~module_name ~scope with
         | Some d -> Some d
         | None -> (
-          match Exported.find envFile.exported Exported.Module moduleName with
-          | Some stamp -> Stamps.findModule envFile.file.stamps stamp
+          match Exported.find env_file.exported Exported.Module module_name with
+          | Some stamp -> Stamps.find_module env_file.file.stamps stamp
           | None -> None)
       in
-      match declaredOpt with
-      | Some (declared : Module.t Declared.t) when declared.isExported = false
+      match declared_opt with
+      | Some (declared : Module.t Declared.t) when declared.is_exported = false
         -> (
         match
-          enterStructureFromDeclared ~env:envFile ~package:full.package declared
+          enter_structure_from_declared ~env:env_file ~package:full.package declared
         with
         | None -> []
-        | Some (envInModule, structure) ->
-          completionsFromStructureItems ~env:envInModule structure)
+        | Some (env_in_module, structure) ->
+          completions_from_structure_items ~env:env_in_module structure)
       | _ -> (
         match
-          getEnvWithOpens ~scope ~env ~package:full.package ~opens ~moduleName
+          get_env_with_opens ~scope ~env ~package:full.package ~opens ~module_name
             path
         with
         | Some (env, prefix) ->
           Log.log "Got the env";
-          let namesUsed = Hashtbl.create 10 in
-          findAllCompletions ~env ~prefix ~exact ~namesUsed ~completionContext
+          let names_used = Hashtbl.create 10 in
+          find_all_completions ~env ~prefix ~exact ~names_used ~completion_context
         | None -> []))
     | _ -> (
       match
-        getEnvWithOpens ~scope ~env ~package:full.package ~opens ~moduleName
+        get_env_with_opens ~scope ~env ~package:full.package ~opens ~module_name
           path
       with
       | Some (env, prefix) ->
         Log.log "Got the env";
-        let namesUsed = Hashtbl.create 10 in
-        findAllCompletions ~env ~prefix ~exact ~namesUsed ~completionContext
+        let names_used = Hashtbl.create 10 in
+        find_all_completions ~env ~prefix ~exact ~names_used ~completion_context
       | None -> []))
 
 (** Completions intended for piping, from a completion path. *)
-let completionsForPipeFromCompletionPath ~envCompletionIsMadeFrom ~opens ~pos
-    ~scope ~debug ~prefix ~env ~rawOpens ~full completionPath =
-  let completionPathWithoutCurrentModule =
-    TypeUtils.removeCurrentModuleIfNeeded ~envCompletionIsMadeFrom
-      completionPath
+let completions_for_pipe_from_completion_path ~env_completion_is_made_from ~opens ~pos
+    ~scope ~debug ~prefix ~env ~raw_opens ~full completion_path =
+  let completion_path_without_current_module =
+    TypeUtils.remove_current_module_if_needed ~env_completion_is_made_from
+      completion_path
   in
-  let completionPathMinusOpens =
-    TypeUtils.removeOpensFromCompletionPath ~rawOpens ~package:full.package
-      completionPathWithoutCurrentModule
+  let completion_path_minus_opens =
+    TypeUtils.remove_opens_from_completion_path ~raw_opens ~package:full.package
+      completion_path_without_current_module
     |> String.concat "."
   in
-  let completionName name =
-    if completionPathMinusOpens = "" then name
-    else completionPathMinusOpens ^ "." ^ name
+  let completion_name name =
+    if completion_path_minus_opens = "" then name
+    else completion_path_minus_opens ^ "." ^ name
   in
   let completions =
-    completionPath @ [prefix]
-    |> getCompletionsForPath ~debug ~completionContext:Value ~exact:false ~opens
+    completion_path @ [prefix]
+    |> get_completions_for_path ~debug ~completion_context:Value ~exact:false ~opens
          ~full ~pos ~env ~scope
   in
   let completions =
     completions
     |> List.map (fun (completion : Completion.t) ->
-           {completion with name = completionName completion.name})
+           {completion with name = completion_name completion.name})
   in
   completions
 
-let rec digToRecordFieldsForCompletion ~debug ~package ~opens ~full ~pos ~env
+let rec dig_to_record_fields_for_completion ~debug ~package ~opens ~full ~pos ~env
     ~scope path =
   match
     path
-    |> getCompletionsForPath ~debug ~completionContext:Type ~exact:true ~opens
+    |> get_completions_for_path ~debug ~completion_context:Type ~exact:true ~opens
          ~full ~pos ~env ~scope
   with
   | {kind = Type {kind = Abstract (Some (p, _))}} :: _ ->
     (* This case happens when what we're looking for is a type alias.
        This is the case in newer rescript-react versions where
        ReactDOM.domProps is an alias for JsxEvent.t. *)
-    let pathRev = p |> Utils.expandPath in
-    pathRev |> List.rev
-    |> digToRecordFieldsForCompletion ~debug ~package ~opens ~full ~pos ~env
+    let path_rev = p |> Utils.expand_path in
+    path_rev |> List.rev
+    |> dig_to_record_fields_for_completion ~debug ~package ~opens ~full ~pos ~env
          ~scope
   | {kind = Type {kind = Record fields}} :: _ -> Some fields
   | _ -> None
 
-let mkItem ?data ?additionalTextEdits name ~kind ~detail ~deprecated ~docstring
+let mk_item ?data ?additional_text_edits name ~kind ~detail ~deprecated ~docstring
     =
-  let docContent =
+  let doc_content =
     (match deprecated with
     | None -> ""
     | Some s -> "Deprecated: " ^ s ^ "\n\n")
@@ -821,12 +821,12 @@ let mkItem ?data ?additionalTextEdits name ~kind ~detail ~deprecated ~docstring
   in
 
   let documentation =
-    match String.length docContent > 0 with
+    match String.length doc_content > 0 with
     | true ->
       Some
         (`MarkupContent
            (Lsp.Types.MarkupContent.create ~kind:Lsp.Types.MarkupKind.Markdown
-              ~value:docContent))
+              ~value:doc_content))
     | false -> None
   in
 
@@ -838,115 +838,115 @@ let mkItem ?data ?additionalTextEdits name ~kind ~detail ~deprecated ~docstring
   in
 
   Lsp.Types.CompletionItem.create ~label:name ~kind ~tags ~detail ?documentation
-    ?deprecated ?data ?additionalTextEdits ?sortText:None ?insertText:None
-    ?insertTextFormat:None ?filterText:None ()
+    ?deprecated ?data ?additional_text_edits ?sort_text:None ?insert_text:None
+    ?insert_text_format:None ?filter_text:None ()
 
-let completionToItem
+let completion_to_item
     {
       Completion.name;
       deprecated;
       docstring;
       kind;
-      sortText;
-      insertText;
-      insertTextFormat;
-      filterText;
+      sort_text;
+      insert_text;
+      insert_text_format;
+      filter_text;
       detail;
       env;
-      additionalTextEdits;
+      additional_text_edits;
     } ~full =
   let item =
-    mkItem name ?additionalTextEdits
-      ?data:(kindToData (full.file.uri |> Uri.toPath) kind)
-      ~kind:(Completion.kindToLspCompletionItem kind)
+    mk_item name ?additional_text_edits
+      ?data:(kind_to_data (full.file.uri |> Uri.to_path) kind)
+      ~kind:(Completion.kind_to_lsp_completion_item kind)
       ~deprecated
       ~detail:
         (match detail with
-        | None -> kindToDetail name kind
+        | None -> kind_to_detail name kind
         | Some detail -> detail)
       ~docstring:
         (match
-           kindToDocumentation ~currentDocstring:docstring ~full ~env name kind
+           kind_to_documentation ~current_docstring:docstring ~full ~env name kind
          with
         | "" -> []
         | docstring -> [docstring])
   in
-  {item with sortText; insertText; insertTextFormat; filterText}
+  {item with sort_text; insert_text; insert_text_format; filter_text}
 
-let completionsGetTypeEnv = function
+let completions_get_type_env = function
   | {Completion.kind = Value typ; env} :: _ -> Some (typ, env)
   | {Completion.kind = ObjLabel typ; env} :: _ -> Some (typ, env)
   | {Completion.kind = Field ({typ}, _); env} :: _ -> Some (typ, env)
   | _ -> None
 
-type getCompletionsForContextPathMode = Regular | Pipe
+type get_completions_for_context_path_mode = Regular | Pipe
 
-let completionsGetCompletionType ~full completions =
-  let firstNonSyntheticCompletion =
+let completions_get_completion_type ~full completions =
+  let first_non_synthetic_completion =
     List.find_opt (fun c -> not c.Completion.synthetic) completions
   in
-  match firstNonSyntheticCompletion with
+  match first_non_synthetic_completion with
   | Some {Completion.kind = Value typ; env}
   | Some {Completion.kind = ObjLabel typ; env}
   | Some {Completion.kind = Field ({typ}, _); env} ->
     typ
-    |> TypeUtils.extractType ~env ~package:full.package
+    |> TypeUtils.extract_type ~env ~package:full.package
     |> Option.map (fun (typ, _) -> (typ, env))
   | Some {Completion.kind = Type typ; env} -> (
-    match TypeUtils.extractTypeFromResolvedType typ ~env ~full with
+    match TypeUtils.extract_type_from_resolved_type typ ~env ~full with
     | None -> None
-    | Some extractedType -> Some (extractedType, env))
+    | Some extracted_type -> Some (extracted_type, env))
   | Some {Completion.kind = ExtractedType (typ, _); env} -> Some (typ, env)
   | _ -> None
 
-let rec completionsGetCompletionType2 ~debug ~full ~opens ~rawOpens ~pos
+let rec completions_get_completion_type2 ~debug ~full ~opens ~raw_opens ~pos
     completions =
-  let firstNonSyntheticCompletion =
+  let first_non_synthetic_completion =
     List.find_opt (fun c -> not c.Completion.synthetic) completions
   in
-  match firstNonSyntheticCompletion with
+  match first_non_synthetic_completion with
   | Some
       ( {Completion.kind = Value typ; env}
       | {Completion.kind = ObjLabel typ; env}
       | {Completion.kind = Field ({typ}, _); env} ) ->
     Some (TypeExpr typ, env)
-  | Some {Completion.kind = FollowContextPath (ctxPath, scope); env} ->
-    ctxPath
-    |> getCompletionsForContextPath ~debug ~full ~env ~exact:true ~opens
-         ~rawOpens ~pos ~scope
-    |> completionsGetCompletionType2 ~debug ~full ~opens ~rawOpens ~pos
+  | Some {Completion.kind = FollowContextPath (ctx_path, scope); env} ->
+    ctx_path
+    |> get_completions_for_context_path ~debug ~full ~env ~exact:true ~opens
+         ~raw_opens ~pos ~scope
+    |> completions_get_completion_type2 ~debug ~full ~opens ~raw_opens ~pos
   | Some {Completion.kind = Type typ; env} -> (
-    match TypeUtils.extractTypeFromResolvedType typ ~env ~full with
+    match TypeUtils.extract_type_from_resolved_type typ ~env ~full with
     | None -> None
-    | Some extractedType -> Some (ExtractedType extractedType, env))
+    | Some extracted_type -> Some (ExtractedType extracted_type, env))
   | Some {Completion.kind = ExtractedType (typ, _); env} ->
     Some (ExtractedType typ, env)
   | _ -> None
 
-and completionsGetTypeEnv2 ~debug (completions : Completion.t list) ~full ~opens
-    ~rawOpens ~pos =
-  let firstNonSyntheticCompletion =
+and completions_get_type_env2 ~debug (completions : Completion.t list) ~full ~opens
+    ~raw_opens ~pos =
+  let first_non_synthetic_completion =
     List.find_opt (fun c -> not c.Completion.synthetic) completions
   in
-  match firstNonSyntheticCompletion with
+  match first_non_synthetic_completion with
   | Some {Completion.kind = Value typ; env} -> Some (typ, env)
   | Some {Completion.kind = ObjLabel typ; env} -> Some (typ, env)
   | Some {Completion.kind = Field ({typ}, _); env} -> Some (typ, env)
-  | Some {Completion.kind = FollowContextPath (ctxPath, scope); env} ->
-    ctxPath
-    |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
+  | Some {Completion.kind = FollowContextPath (ctx_path, scope); env} ->
+    ctx_path
+    |> get_completions_for_context_path ~debug ~full ~opens ~raw_opens ~pos ~env
          ~exact:true ~scope
-    |> completionsGetTypeEnv2 ~debug ~full ~opens ~rawOpens ~pos
+    |> completions_get_type_env2 ~debug ~full ~opens ~raw_opens ~pos
   | _ -> None
 
-and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
-    ~scope ?(mode = Regular) contextPath =
-  let envCompletionIsMadeFrom = env in
+and get_completions_for_context_path ~debug ~full ~opens ~raw_opens ~pos ~env ~exact
+    ~scope ?(mode = Regular) context_path =
+  let env_completion_is_made_from = env in
   if debug then
     Printf.printf "ContextPath %s\n"
-      (Completable.contextPathToString contextPath);
+      (Completable.context_path_to_string context_path);
   let package = full.package in
-  match contextPath with
+  match context_path with
   | CPString ->
     if Debug.verbose () then print_endline "[ctx_path]--> CPString";
     [Completion.create "dummy" ~env ~kind:(Completion.Value Predef.type_string)]
@@ -972,9 +972,9 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
     | Regular -> (
       match
         cp
-        |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
+        |> get_completions_for_context_path ~debug ~full ~opens ~raw_opens ~pos ~env
              ~exact:true ~scope
-        |> completionsGetCompletionType ~full
+        |> completions_get_completion_type ~full
       with
       | None -> []
       | Some (typ, env) ->
@@ -994,9 +994,9 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
     if Debug.verbose () then print_endline "[ctx_path]--> CPOption";
     match
       cp
-      |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
+      |> get_completions_for_context_path ~debug ~full ~opens ~raw_opens ~pos ~env
            ~exact:true ~scope
-      |> completionsGetCompletionType ~full
+      |> completions_get_completion_type ~full
     with
     | None -> []
     | Some (typ, env) ->
@@ -1009,14 +1009,14 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
     if Debug.verbose () then print_endline "[ctx_path]--> CPAwait";
     match
       cp
-      |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
+      |> get_completions_for_context_path ~debug ~full ~opens ~raw_opens ~pos ~env
            ~exact:true ~scope
-      |> completionsGetCompletionType ~full
+      |> completions_get_completion_type ~full
     with
     | Some (Tpromise (env, typ), _env) ->
       [Completion.create "dummy" ~env ~kind:(Completion.Value typ)]
     | _ -> [])
-  | CPId {path; completionContext; loc} ->
+  | CPId {path; completion_context; loc} ->
     if Debug.verbose () then print_endline "[ctx_path]--> CPId";
     (* Looks up the type of an identifier.
 
@@ -1033,157 +1033,157 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
 
        However, we only do it in incremental type checking mode,
        because more type information is always available in that mode. *)
-    let useTvarLookup = !Cfg.inIncrementalTypecheckingMode in
-    let byPath =
+    let use_tvar_lookup = !Cfg.in_incremental_typechecking_mode in
+    let by_path =
       path
-      |> getCompletionsForPath ~debug ~opens ~full ~pos ~exact
-           ~completionContext ~env ~scope
+      |> get_completions_for_path ~debug ~opens ~full ~pos ~exact
+           ~completion_context ~env ~scope
     in
-    let hasTvars =
-      if useTvarLookup then
-        match byPath with
-        | [{kind = Value typ}] when TypeUtils.hasTvar typ -> true
+    let has_tvars =
+      if use_tvar_lookup then
+        match by_path with
+        | [{kind = Value typ}] when TypeUtils.has_tvar typ -> true
         | _ -> false
       else false
     in
     let result =
-      if hasTvars then
-        let byLoc = TypeUtils.findTypeViaLoc loc ~full ~debug in
-        match (byLoc, byPath) with
+      if has_tvars then
+        let by_loc = TypeUtils.find_type_via_loc loc ~full ~debug in
+        match (by_loc, by_path) with
         | Some t, [({kind = Value _} as item)] -> [{item with kind = Value t}]
-        | _ -> byPath
-      else byPath
+        | _ -> by_path
+      else by_path
     in
     result
   | CPApply (cp, labels) -> (
     if Debug.verbose () then print_endline "[ctx_path]--> CPApply";
     match
       cp
-      |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
+      |> get_completions_for_context_path ~debug ~full ~opens ~raw_opens ~pos ~env
            ~exact:true ~scope
-      |> completionsGetCompletionType2 ~debug ~full ~opens ~rawOpens ~pos
+      |> completions_get_completion_type2 ~debug ~full ~opens ~raw_opens ~pos
     with
     | Some ((TypeExpr typ | ExtractedType (Tfunction {typ})), env) -> (
-      let rec reconstructFunctionType args tRet =
+      let rec reconstruct_function_type args t_ret =
         match args with
-        | [] -> tRet
-        | (label, tArg) :: rest ->
-          let restType = reconstructFunctionType rest tRet in
+        | [] -> t_ret
+        | (label, t_arg) :: rest ->
+          let rest_type = reconstruct_function_type rest t_ret in
           {
             typ with
-            desc = Tarrow ({lbl = label; typ = tArg}, restType, Cok, None);
+            desc = Tarrow ({lbl = label; typ = t_arg}, rest_type, Cok, None);
           }
       in
-      let rec processApply args labels =
+      let rec process_apply args labels =
         match (args, labels) with
         | _, [] -> args
-        | _, label :: (_ :: _ as nextLabels) ->
+        | _, label :: (_ :: _ as next_labels) ->
           (* compute the application of the first label, then the next ones *)
-          let args = processApply args [label] in
-          processApply args nextLabels
-        | (Asttypes.Nolabel, _) :: nextArgs, [Asttypes.Nolabel] -> nextArgs
-        | ((Labelled _, _) as arg) :: nextArgs, [Nolabel] ->
-          arg :: processApply nextArgs labels
-        | (Optional _, _) :: nextArgs, [Nolabel] -> processApply nextArgs labels
-        | ( (((Labelled {txt = s1} | Optional {txt = s1}), _) as arg) :: nextArgs,
+          let args = process_apply args [label] in
+          process_apply args next_labels
+        | (Asttypes.Nolabel, _) :: next_args, [Asttypes.Nolabel] -> next_args
+        | ((Labelled _, _) as arg) :: next_args, [Nolabel] ->
+          arg :: process_apply next_args labels
+        | (Optional _, _) :: next_args, [Nolabel] -> process_apply next_args labels
+        | ( (((Labelled {txt = s1} | Optional {txt = s1}), _) as arg) :: next_args,
             [(Labelled {txt = s2} | Optional {txt = s2})] ) ->
-          if s1 = s2 then nextArgs else arg :: processApply nextArgs labels
-        | ((Nolabel, _) as arg) :: nextArgs, [(Labelled _ | Optional _)] ->
-          arg :: processApply nextArgs labels
+          if s1 = s2 then next_args else arg :: process_apply next_args labels
+        | ((Nolabel, _) as arg) :: next_args, [(Labelled _ | Optional _)] ->
+          arg :: process_apply next_args labels
         | [], [(Nolabel | Labelled _ | Optional _)] ->
           (* should not happen, but just ignore extra arguments *) []
       in
 
-      match TypeUtils.extractFunctionType ~env ~package ~digInto:false typ with
-      | args, tRet when args <> [] ->
-        let args = processApply args labels in
-        let retType = reconstructFunctionType args tRet in
-        [Completion.create "dummy" ~env ~kind:(Completion.Value retType)]
+      match TypeUtils.extract_function_type ~env ~package ~dig_into:false typ with
+      | args, t_ret when args <> [] ->
+        let args = process_apply args labels in
+        let ret_type = reconstruct_function_type args t_ret in
+        [Completion.create "dummy" ~env ~kind:(Completion.Value ret_type)]
       | _ -> [])
     | _ -> [])
-  | CPField {contextPath = CPId {path; completionContext = Module}; fieldName}
+  | CPField {context_path = CPId {path; completion_context = Module}; field_name}
     ->
     if Debug.verbose () then print_endline "[ctx_path]--> CPField: M.field";
     (* M.field *)
-    path @ [fieldName]
-    |> getCompletionsForPath ~debug ~opens ~full ~pos ~exact
-         ~completionContext:Field ~env ~scope
-  | CPField {contextPath = cp; fieldName; posOfDot; exprLoc; inJsx} -> (
+    path @ [field_name]
+    |> get_completions_for_path ~debug ~opens ~full ~pos ~exact
+         ~completion_context:Field ~env ~scope
+  | CPField {context_path = cp; field_name; pos_of_dot; expr_loc; in_jsx} -> (
     if Debug.verbose () then print_endline "[dot_completion]--> Triggered";
-    let completionsFromCtxPath =
+    let completions_from_ctx_path =
       cp
-      |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
+      |> get_completions_for_context_path ~debug ~full ~opens ~raw_opens ~pos ~env
            ~exact:true ~scope
     in
-    let mainTypeCompletionEnv =
-      completionsFromCtxPath
-      |> completionsGetTypeEnv2 ~debug ~full ~opens ~rawOpens ~pos
+    let main_type_completion_env =
+      completions_from_ctx_path
+      |> completions_get_type_env2 ~debug ~full ~opens ~raw_opens ~pos
     in
-    match mainTypeCompletionEnv with
+    match main_type_completion_env with
     | None ->
       if Debug.verbose () then
         Printf.printf
           "[dot_completion] Could not extract main type completion env.\n";
       []
     | Some (typ, env) ->
-      let fieldCompletions =
-        DotCompletionUtils.fieldCompletionsForDotCompletion typ ~env ~package
-          ~prefix:fieldName ?posOfDot ~exact
+      let field_completions =
+        DotCompletionUtils.field_completions_for_dot_completion typ ~env ~package
+          ~prefix:field_name ?pos_of_dot ~exact
       in
       (* Get additional completions acting as if this field completion was actually a pipe completion. *)
-      let cpAsPipeCompletion =
+      let cp_as_pipe_completion =
         Completable.CPPipe
           {
             synthetic = true;
-            contextPath =
+            context_path =
               (match cp with
               | CPApply (c, args) -> CPApply (c, args @ [Asttypes.Nolabel])
-              | CPId _ when TypeUtils.isFunctionType ~env ~package typ ->
+              | CPId _ when TypeUtils.is_function_type ~env ~package typ ->
                 CPApply (cp, [Asttypes.Nolabel])
               | _ -> cp);
-            id = fieldName;
-            inJsx;
-            lhsLoc = exprLoc;
+            id = field_name;
+            in_jsx;
+            lhs_loc = expr_loc;
           }
       in
-      let pipeCompletions =
-        cpAsPipeCompletion
-        |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos
-             ~env:envCompletionIsMadeFrom ~exact ~scope
+      let pipe_completions =
+        cp_as_pipe_completion
+        |> get_completions_for_context_path ~debug ~full ~opens ~raw_opens ~pos
+             ~env:env_completion_is_made_from ~exact ~scope
         |> List.filter_map (fun c ->
-               TypeUtils.transformCompletionToPipeCompletion ~synthetic:true
-                 ~env ?posOfDot c)
+               TypeUtils.transform_completion_to_pipe_completion ~synthetic:true
+                 ~env ?pos_of_dot c)
       in
-      fieldCompletions @ pipeCompletions)
+      field_completions @ pipe_completions)
   | CPObj (cp, label) -> (
     (* TODO: Also needs to support ExtractedType *)
     if Debug.verbose () then print_endline "[ctx_path]--> CPObj";
     match
       cp
-      |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
+      |> get_completions_for_context_path ~debug ~full ~opens ~raw_opens ~pos ~env
            ~exact:true ~scope
-      |> completionsGetTypeEnv2 ~debug ~full ~opens ~rawOpens ~pos
+      |> completions_get_type_env2 ~debug ~full ~opens ~raw_opens ~pos
     with
     | Some (typ, env) -> (
-      match typ |> TypeUtils.extractObjectType ~env ~package with
-      | Some (env, tObj) ->
-        tObj |> TypeUtils.getObjFields
-        |> Utils.filterMap (fun (field, typ) ->
-               if Utils.checkName field ~prefix:label ~exact then
+      match typ |> TypeUtils.extract_object_type ~env ~package with
+      | Some (env, t_obj) ->
+        t_obj |> TypeUtils.get_obj_fields
+        |> Utils.filter_map (fun (field, typ) ->
+               if Utils.check_name field ~prefix:label ~exact then
                  Some
                    (Completion.create field ~env ~kind:(Completion.ObjLabel typ))
                else None)
       | None -> [])
     | None -> [])
-  | CPPipe {contextPath = cp; id = prefix; lhsLoc; inJsx; synthetic} -> (
+  | CPPipe {context_path = cp; id = prefix; lhs_loc; in_jsx; synthetic} -> (
     if Debug.verbose () then print_endline "[ctx_path]--> CPPipe";
     (* The environment at the cursor is the environment we're completing from. *)
     let env_at_cursor = env in
     match
       cp
-      |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
+      |> get_completions_for_context_path ~debug ~full ~opens ~raw_opens ~pos ~env
            ~exact:true ~scope ~mode:Pipe
-      |> completionsGetTypeEnv2 ~debug ~full ~opens ~rawOpens ~pos
+      |> completions_get_type_env2 ~debug ~full ~opens ~raw_opens ~pos
     with
     | None ->
       if Debug.verbose () then
@@ -1192,22 +1192,22 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
     | Some (typ, env) -> (
       let env, typ =
         typ
-        |> TypeUtils.resolveTypeForPipeCompletion ~env ~package:full.package
-             ~full ~lhsLoc
+        |> TypeUtils.resolve_type_for_pipe_completion ~env ~package:full.package
+             ~full ~lhs_loc
       in
-      let mainTypeId = TypeUtils.findRootTypeId ~full ~env typ in
-      let typePath = TypeUtils.pathFromTypeExpr typ in
-      match mainTypeId with
+      let main_type_id = TypeUtils.find_root_type_id ~full ~env typ in
+      let type_path = TypeUtils.path_from_type_expr typ in
+      match main_type_id with
       | None ->
         if Debug.verbose () then
           Printf.printf
             "[pipe_completion] Could not find mainTypeId. Aborting pipe \
              completions.\n";
         []
-      | Some mainTypeId ->
+      | Some main_type_id ->
         if Debug.verbose () then
-          Printf.printf "[pipe_completion] mainTypeId: %s\n" mainTypeId;
-        let pipeCompletions =
+          Printf.printf "[pipe_completion] mainTypeId: %s\n" main_type_id;
+        let pipe_completions =
           (* We now need a completion path from where to look up the module for our dot completion type.
               This is from where we pull all of the functions we want to complete for the pipe.
 
@@ -1219,155 +1219,155 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
              for what _module_ to complete from. This is because you should be able to control where completions
              come from even if your type is an alias.
           *)
-          let completeAsBuiltin =
-            match typePath with
-            | Some t -> TypeUtils.completionPathFromMaybeBuiltin t
+          let complete_as_builtin =
+            match type_path with
+            | Some t -> TypeUtils.completion_path_from_maybe_builtin t
             | None -> None
           in
-          let completionPath =
-            match (completeAsBuiltin, typePath) with
-            | Some completionPathForBuiltin, _ ->
-              Some (false, completionPathForBuiltin)
+          let completion_path =
+            match (complete_as_builtin, type_path) with
+            | Some completion_path_for_builtin, _ ->
+              Some (false, completion_path_for_builtin)
             | _, Some p -> (
               (* If this isn't a builtin, but we have a path, we try to resolve the
                  module path relative to the env we're completing from. This ensures that
                  what we get here is a module path we can find completions for regardless of
                  of the current scope for the position we're at.*)
               match
-                TypeUtils.getModulePathRelativeToEnv ~debug
-                  ~env:envCompletionIsMadeFrom ~envFromItem:env
-                  (Utils.expandPath p)
+                TypeUtils.get_module_path_relative_to_env ~debug
+                  ~env:env_completion_is_made_from ~env_from_item:env
+                  (Utils.expand_path p)
               with
-              | None -> Some (true, [env.file.moduleName])
+              | None -> Some (true, [env.file.module_name])
               | Some p -> Some (false, p))
             | _ -> None
           in
-          match completionPath with
+          match completion_path with
           | None -> []
-          | Some (isFromCurrentModule, completionPath) ->
-            completionsForPipeFromCompletionPath ~envCompletionIsMadeFrom ~opens
-              ~pos ~scope ~debug ~prefix ~env ~rawOpens ~full completionPath
-            |> TypeUtils.filterPipeableFunctions ~env ~full ~synthetic
-                 ~targetTypeId:mainTypeId
+          | Some (is_from_current_module, completion_path) ->
+            completions_for_pipe_from_completion_path ~env_completion_is_made_from ~opens
+              ~pos ~scope ~debug ~prefix ~env ~raw_opens ~full completion_path
+            |> TypeUtils.filter_pipeable_functions ~env ~full ~synthetic
+                 ~target_type_id:main_type_id
             |> List.filter (fun (c : Completion.t) ->
                    (* If we're completing from the current module then we need to care about scope.
                       This is automatically taken care of in other cases. *)
-                   if isFromCurrentModule then
+                   if is_from_current_module then
                      match c.kind with
                      | Value _ ->
                        scope
                        |> List.find_opt (fun (item : ScopeTypes.item) ->
                               match item with
-                              | Value (scopeItemName, _, _, _) ->
-                                scopeItemName = c.name
+                              | Value (scope_item_name, _, _, _) ->
+                                scope_item_name = c.name
                               | _ -> false)
                        |> Option.is_some
                      | _ -> false
                    else true)
         in
 
-        let globallyConfiguredCompletionsForType =
-          match package.autocomplete |> Misc.StringMap.find_opt mainTypeId with
+        let globally_configured_completions_for_type =
+          match package.autocomplete |> Misc.StringMap.find_opt main_type_id with
           | None -> []
-          | Some completionPaths ->
-            completionPaths |> List.map (fun p -> String.split_on_char '.' p)
+          | Some completion_paths ->
+            completion_paths |> List.map (fun p -> String.split_on_char '.' p)
         in
 
-        let globallyConfiguredCompletions =
-          globallyConfiguredCompletionsForType
-          |> List.map (fun completionPath ->
-                 completionsForPipeFromCompletionPath ~envCompletionIsMadeFrom
-                   ~opens ~pos ~scope ~debug ~prefix ~env ~rawOpens ~full
-                   completionPath)
+        let globally_configured_completions =
+          globally_configured_completions_for_type
+          |> List.map (fun completion_path ->
+                 completions_for_pipe_from_completion_path ~env_completion_is_made_from
+                   ~opens ~pos ~scope ~debug ~prefix ~env ~raw_opens ~full
+                   completion_path)
           |> List.flatten
-          |> TypeUtils.filterPipeableFunctions ~synthetic:true ~env ~full
-               ~targetTypeId:mainTypeId
+          |> TypeUtils.filter_pipeable_functions ~synthetic:true ~env ~full
+               ~target_type_id:main_type_id
         in
 
         (* Extra completions can be drawn from the @editor.completeFrom attribute. Here we
            find and add those completions as well. *)
-        let extraCompletions =
-          TypeUtils.getExtraModulesToCompleteFromForType ~env ~full typ
-          |> List.map (fun completionPath ->
-                 completionsForPipeFromCompletionPath ~envCompletionIsMadeFrom
-                   ~opens ~pos ~scope ~debug ~prefix ~env ~rawOpens ~full
-                   completionPath)
+        let extra_completions =
+          TypeUtils.get_extra_modules_to_complete_from_for_type ~env ~full typ
+          |> List.map (fun completion_path ->
+                 completions_for_pipe_from_completion_path ~env_completion_is_made_from
+                   ~opens ~pos ~scope ~debug ~prefix ~env ~raw_opens ~full
+                   completion_path)
           |> List.flatten
-          |> TypeUtils.filterPipeableFunctions ~synthetic:true ~env ~full
-               ~targetTypeId:mainTypeId
+          |> TypeUtils.filter_pipeable_functions ~synthetic:true ~env ~full
+               ~target_type_id:main_type_id
         in
         (* Add JSX completion items if we're in a JSX context. *)
-        let jsxCompletions =
-          if inJsx then
-            PipeCompletionUtils.addJsxCompletionItems ~env ~mainTypeId ~prefix
-              ~full ~rawOpens typ
+        let jsx_completions =
+          if in_jsx then
+            PipeCompletionUtils.add_jsx_completion_items ~env ~main_type_id ~prefix
+              ~full ~raw_opens typ
           else []
         in
         (* Add completions from the current module. *)
-        let currentModuleCompletions =
-          getCompletionsForPath ~debug ~completionContext:Value ~exact:false
+        let current_module_completions =
+          get_completions_for_path ~debug ~completion_context:Value ~exact:false
             ~opens:[] ~full ~pos ~env:env_at_cursor ~scope [prefix]
-          |> TypeUtils.filterPipeableFunctions ~synthetic:true ~env ~full
-               ~targetTypeId:mainTypeId
+          |> TypeUtils.filter_pipeable_functions ~synthetic:true ~env ~full
+               ~target_type_id:main_type_id
         in
-        jsxCompletions @ pipeCompletions @ extraCompletions
-        @ currentModuleCompletions @ globallyConfiguredCompletions))
-  | CTuple ctxPaths ->
+        jsx_completions @ pipe_completions @ extra_completions
+        @ current_module_completions @ globally_configured_completions))
+  | CTuple ctx_paths ->
     if Debug.verbose () then print_endline "[ctx_path]--> CTuple";
     (* Turn a list of context paths into a list of type expressions. *)
-    let typeExrps =
-      ctxPaths
-      |> List.map (fun contextPath ->
-             contextPath
-             |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos
+    let type_exrps =
+      ctx_paths
+      |> List.map (fun context_path ->
+             context_path
+             |> get_completions_for_context_path ~debug ~full ~opens ~raw_opens ~pos
                   ~env ~exact:true ~scope)
-      |> List.filter_map (fun completionItems ->
-             match completionItems with
+      |> List.filter_map (fun completion_items ->
+             match completion_items with
              | {Completion.kind = Value typ} :: _ -> Some typ
              | _ -> None)
     in
-    if List.length ctxPaths = List.length typeExrps then
+    if List.length ctx_paths = List.length type_exrps then
       [
         Completion.create "dummy" ~env
-          ~kind:(Completion.Value (Ctype.newty (Ttuple typeExrps)));
+          ~kind:(Completion.Value (Ctype.newty (Ttuple type_exrps)));
       ]
     else []
-  | CJsxPropValue {pathToComponent; propName; emptyJsxPropNameHint} -> (
+  | CJsxPropValue {path_to_component; prop_name; empty_jsx_prop_name_hint} -> (
     if Debug.verbose () then print_endline "[ctx_path]--> CJsxPropValue";
-    let findTypeOfValue path =
+    let find_type_of_value path =
       path
-      |> getCompletionsForPath ~debug ~completionContext:Value ~exact:true
+      |> get_completions_for_path ~debug ~completion_context:Value ~exact:true
            ~opens ~full ~pos ~env ~scope
-      |> completionsGetTypeEnv2 ~debug ~full ~opens ~rawOpens ~pos
+      |> completions_get_type_env2 ~debug ~full ~opens ~raw_opens ~pos
     in
-    let lowercaseComponent =
-      match pathToComponent with
-      | [elName] when Char.lowercase_ascii elName.[0] = elName.[0] -> true
+    let lowercase_component =
+      match path_to_component with
+      | [el_name] when Char.lowercase_ascii el_name.[0] = el_name.[0] -> true
       | _ -> false
     in
     (* TODO(env-stuff) Does this need to potentially be instantiated with type args too? *)
     let labels =
-      if lowercaseComponent then
-        let rec digToTypeForCompletion path =
+      if lowercase_component then
+        let rec dig_to_type_for_completion path =
           match
             path
-            |> getCompletionsForPath ~debug ~completionContext:Type ~exact:true
+            |> get_completions_for_path ~debug ~completion_context:Type ~exact:true
                  ~opens ~full ~pos ~env ~scope
           with
           | {kind = Type {kind = Abstract (Some (p, _))}} :: _ ->
             (* This case happens when what we're looking for is a type alias.
                This is the case in newer rescript-react versions where
                ReactDOM.domProps is an alias for JsxEvent.t. *)
-            let pathRev = p |> Utils.expandPath in
-            pathRev |> List.rev |> digToTypeForCompletion
+            let path_rev = p |> Utils.expand_path in
+            path_rev |> List.rev |> dig_to_type_for_completion
           | {kind = Type {kind = Record fields}} :: _ ->
             fields |> List.map (fun f -> (f.fname.txt, f.typ, env))
           | _ -> []
         in
-        TypeUtils.pathToElementProps package |> digToTypeForCompletion
+        TypeUtils.path_to_element_props package |> dig_to_type_for_completion
       else
-        CompletionJsx.getJsxLabels ~componentPath:pathToComponent
-          ~findTypeOfValue ~package
+        CompletionJsx.get_jsx_labels ~component_path:path_to_component
+          ~find_type_of_value ~package
     in
     (* We have a heuristic that kicks in when completing empty prop expressions in the middle of a JSX element,
        like <SomeComp firstProp=test second=<com> third=123 />.
@@ -1380,68 +1380,68 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
        This works because the ident itself will always be the next prop name (since that's what the
        parser eats). So, we do a simple lookup of that hint here if it exists, to make sure the hint
        is indeed a valid label for this JSX element. *)
-    let emptyJsxPropNameHintIsCorrect =
-      match emptyJsxPropNameHint with
-      | Some identName when identName != propName ->
+    let empty_jsx_prop_name_hint_is_correct =
+      match empty_jsx_prop_name_hint with
+      | Some ident_name when ident_name != prop_name ->
         labels
-        |> List.find_opt (fun (f, _, _) -> f = identName)
+        |> List.find_opt (fun (f, _, _) -> f = ident_name)
         |> Option.is_some
       | Some _ -> false
       | None -> true
     in
-    let targetLabel =
-      if emptyJsxPropNameHintIsCorrect then
-        labels |> List.find_opt (fun (f, _, _) -> f = propName)
+    let target_label =
+      if empty_jsx_prop_name_hint_is_correct then
+        labels |> List.find_opt (fun (f, _, _) -> f = prop_name)
       else None
     in
-    match targetLabel with
+    match target_label with
     | None -> []
     | Some (_, typ, env) ->
       [
         Completion.create "dummy" ~env
-          ~kind:(Completion.Value (Utils.unwrapIfOption typ));
+          ~kind:(Completion.Value (Utils.unwrap_if_option typ));
       ])
-  | CArgument {functionContextPath; argumentLabel} -> (
+  | CArgument {function_context_path; argument_label} -> (
     if Debug.verbose () then print_endline "[ctx_path]--> CArgument";
     if Debug.verbose () then
       Printf.printf "--> function argument: %s\n"
-        (match argumentLabel with
+        (match argument_label with
         | Labelled n | Optional n -> n
-        | Unlabelled {argumentPosition} -> "$" ^ string_of_int argumentPosition);
+        | Unlabelled {argument_position} -> "$" ^ string_of_int argument_position);
 
     let labels, env =
       match
-        functionContextPath
-        |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
+        function_context_path
+        |> get_completions_for_context_path ~debug ~full ~opens ~raw_opens ~pos ~env
              ~exact:true ~scope
-        |> completionsGetCompletionType2 ~debug ~full ~opens ~rawOpens ~pos
+        |> completions_get_completion_type2 ~debug ~full ~opens ~raw_opens ~pos
       with
       | Some ((TypeExpr typ | ExtractedType (Tfunction {typ})), env) ->
         if Debug.verbose () then print_endline "--> found function type";
-        (typ |> TypeUtils.getArgs ~full ~env, env)
+        (typ |> TypeUtils.get_args ~full ~env, env)
       | _ ->
         if Debug.verbose () then
           print_endline "--> could not find function type";
         ([], env)
     in
-    let targetLabel =
+    let target_label =
       labels
       |> List.find_opt (fun (label, _) ->
-             match (argumentLabel, label) with
-             | ( Unlabelled {argumentPosition = pos1},
-                 Completable.Unlabelled {argumentPosition = pos2} ) ->
+             match (argument_label, label) with
+             | ( Unlabelled {argument_position = pos1},
+                 Completable.Unlabelled {argument_position = pos2} ) ->
                pos1 = pos2
              | ( (Labelled name1 | Optional name1),
                  (Labelled name2 | Optional name2) ) ->
                name1 = name2
              | _ -> false)
     in
-    let expandOption =
-      match targetLabel with
+    let expand_option =
+      match target_label with
       | None | Some ((Unlabelled _ | Labelled _), _) -> false
       | Some (Optional _, _) -> true
     in
-    match targetLabel with
+    match target_label with
     | None ->
       if Debug.verbose () then
         print_endline "--> could not look up function argument";
@@ -1452,99 +1452,99 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
         Completion.create "dummy" ~env
           ~kind:
             (Completion.Value
-               (if expandOption then Utils.unwrapIfOption typ else typ));
+               (if expand_option then Utils.unwrap_if_option typ else typ));
       ])
-  | CPatternPath {rootCtxPath; nested} -> (
+  | CPatternPath {root_ctx_path; nested} -> (
     if Debug.verbose () then print_endline "[ctx_path]--> CPatternPath";
     (* TODO(env-stuff) Get rid of innerType etc *)
     match
-      rootCtxPath
-      |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
+      root_ctx_path
+      |> get_completions_for_context_path ~debug ~full ~opens ~raw_opens ~pos ~env
            ~exact:true ~scope
-      |> completionsGetCompletionType2 ~debug ~full ~opens ~rawOpens ~pos
+      |> completions_get_completion_type2 ~debug ~full ~opens ~raw_opens ~pos
     with
     | Some (typ, env) -> (
-      match typ |> TypeUtils.resolveNestedPatternPath ~env ~full ~nested with
+      match typ |> TypeUtils.resolve_nested_pattern_path ~env ~full ~nested with
       | Some (typ, env) ->
-        [Completion.create "dummy" ~env ~kind:(kindFromInnerType typ)]
+        [Completion.create "dummy" ~env ~kind:(kind_from_inner_type typ)]
       | None -> [])
     | None -> [])
   | CTypeAtPos loc -> (
     if Debug.verbose () then print_endline "[ctx_path]--> CTypeAtPos";
-    match TypeUtils.findTypeViaLoc loc ~full ~debug with
+    match TypeUtils.find_type_via_loc loc ~full ~debug with
     | None -> []
-    | Some typExpr -> [Completion.create "dummy" ~env ~kind:(Value typExpr)])
+    | Some typ_expr -> [Completion.create "dummy" ~env ~kind:(Value typ_expr)])
 
-let getOpens ~debug ~rawOpens ~package ~env =
-  if debug && rawOpens <> [] then
+let get_opens ~debug ~raw_opens ~package ~env =
+  if debug && raw_opens <> [] then
     Printf.printf "%s\n"
       ("Raw opens: "
-      ^ string_of_int (List.length rawOpens)
+      ^ string_of_int (List.length raw_opens)
       ^ " "
-      ^ String.concat " ... " (rawOpens |> List.map pathToString));
-  let packageOpens = package.opens in
-  if debug && packageOpens <> [] then
+      ^ String.concat " ... " (raw_opens |> List.map path_to_string));
+  let package_opens = package.opens in
+  if debug && package_opens <> [] then
     Printf.printf "%s\n"
       ("Package opens "
-      ^ String.concat " " (packageOpens |> List.map (fun p -> p |> pathToString))
+      ^ String.concat " " (package_opens |> List.map (fun p -> p |> path_to_string))
       );
-  let resolvedOpens =
-    resolveOpens ~env (List.rev (rawOpens @ packageOpens)) ~package
+  let resolved_opens =
+    resolve_opens ~env (List.rev (raw_opens @ package_opens)) ~package
   in
-  if debug && resolvedOpens <> [] then
+  if debug && resolved_opens <> [] then
     Printf.printf "%s\n"
       ("Resolved opens "
-      ^ string_of_int (List.length resolvedOpens)
+      ^ string_of_int (List.length resolved_opens)
       ^ " "
       ^ String.concat " "
-          (resolvedOpens |> List.map (fun (e : QueryEnv.t) -> e.file.moduleName))
+          (resolved_opens |> List.map (fun (e : QueryEnv.t) -> e.file.module_name))
       );
   (* Last open takes priority *)
-  List.rev resolvedOpens
+  List.rev resolved_opens
 
-let filterItems items ~prefix =
+let filter_items items ~prefix =
   if prefix = "" then items
   else
     items
     |> List.filter (fun (item : Completion.t) ->
-           Utils.startsWith item.name prefix)
+           Utils.starts_with item.name prefix)
 
-type completionMode = Pattern of Completable.patternMode | Expression
+type completion_mode = Pattern of Completable.pattern_mode | Expression
 
-let emptyCase ~mode num =
+let empty_case ~mode num =
   match mode with
   | Expression -> "$" ^ string_of_int (num - 1)
   | Pattern _ -> "${" ^ string_of_int num ^ ":_}"
 
-let printConstructorArgs ~mode ~asSnippet argsLen =
+let print_constructor_args ~mode ~as_snippet args_len =
   let args = ref [] in
-  for argNum = 1 to argsLen do
+  for arg_num = 1 to args_len do
     args :=
       !args
       @ [
-          (match (asSnippet, argsLen) with
-          | true, l when l > 1 -> Printf.sprintf "${%i:_}" argNum
-          | true, l when l > 0 -> emptyCase ~mode argNum
+          (match (as_snippet, args_len) with
+          | true, l when l > 1 -> Printf.sprintf "${%i:_}" arg_num
+          | true, l when l > 0 -> empty_case ~mode arg_num
           | _ -> "_");
         ]
   done;
   if List.length !args > 0 then "(" ^ (!args |> String.concat ", ") ^ ")"
   else ""
 
-let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
-    ~full ~prefix ~completionContext ~mode (t : SharedTypes.completionType) =
-  let emptyCase = emptyCase ~mode in
-  let printConstructorArgs = printConstructorArgs ~mode in
-  let create = Completion.create ?typeArgContext in
-  let getRecordCompletions ~env ~fields ~extractedType =
+let rec complete_typed_value ?(type_arg_context : type_arg_context option) ~raw_opens
+    ~full ~prefix ~completion_context ~mode (t : SharedTypes.completion_type) =
+  let empty_case = empty_case ~mode in
+  let print_constructor_args = print_constructor_args ~mode in
+  let create = Completion.create ?type_arg_context in
+  let get_record_completions ~env ~fields ~extracted_type =
     (* As we're completing for a record, we'll need a hint (completionContext)
        here to figure out whether we should complete for a record field, or
        the record body itself. *)
-    match completionContext with
-    | Some (Completable.RecordField {seenFields}) ->
+    match completion_context with
+    | Some (Completable.RecordField {seen_fields}) ->
       fields
       |> List.filter (fun (field : field) ->
-             List.mem field.fname.txt seenFields = false)
+             List.mem field.fname.txt seen_fields = false)
       |> List.map (fun (field : field) ->
              match (field.optional, mode) with
              | true, Pattern Destructuring ->
@@ -1556,21 +1556,21 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
                         using '?'.";
                    ]
                  ~kind:
-                   (Field (field, TypeUtils.extractedTypeToString extractedType))
+                   (Field (field, TypeUtils.extracted_type_to_string extracted_type))
                  ~env
              | _ ->
                create field.fname.txt ?deprecated:field.deprecated
                  ~kind:
-                   (Field (field, TypeUtils.extractedTypeToString extractedType))
+                   (Field (field, TypeUtils.extracted_type_to_string extracted_type))
                  ~env)
-      |> filterItems ~prefix
+      |> filter_items ~prefix
     | _ ->
       if prefix = "" then
         [
-          create "{}" ~includesSnippets:true ~insertText:"{$0}" ~sortText:"A"
+          create "{}" ~includes_snippets:true ~insert_text:"{$0}" ~sort_text:"A"
             ~kind:
               (ExtractedType
-                 ( extractedType,
+                 ( extracted_type,
                    match mode with
                    | Pattern _ -> `Type
                    | Expression -> `Value ))
@@ -1583,17 +1583,17 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
     if Debug.verbose () then
       print_endline "[complete_typed_value]--> TtypeT (Expression)";
     (* Find all values in the module with type t *)
-    let valueWithTypeT t =
+    let value_with_type_t t =
       match t.Types.desc with
       | Tconstr (Pident {name = "t"}, [], _) -> true
       | _ -> false
     in
     (* Find all functions in the module that returns type t *)
-    let rec fnReturnsTypeT t =
+    let rec fn_returns_type_t t =
       match t.Types.desc with
-      | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> fnReturnsTypeT t1
+      | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> fn_returns_type_t t1
       | Tarrow _ -> (
-        match TypeUtils.extractFunctionType ~env ~package:full.package t with
+        match TypeUtils.extract_function_type ~env ~package:full.package t with
         | ( (Nolabel, {desc = Tconstr (Path.Pident {name = "t"}, _, _)}) :: _,
             {desc = Tconstr (Path.Pident {name = "t"}, _, _)} ) ->
           (* Filter out functions that take type t first. These are often
@@ -1604,259 +1604,259 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
         | _ -> false)
       | _ -> false
     in
-    let getCompletionName exportedValueName =
-      let fnNname =
-        TypeUtils.getModulePathRelativeToEnv ~debug:false
-          ~env:(QueryEnv.fromFile full.file)
-          ~envFromItem:env (Utils.expandPath path)
+    let get_completion_name exported_value_name =
+      let fn_nname =
+        TypeUtils.get_module_path_relative_to_env ~debug:false
+          ~env:(QueryEnv.from_file full.file)
+          ~env_from_item:env (Utils.expand_path path)
       in
-      match fnNname with
+      match fn_nname with
       | None -> None
       | Some base ->
         let base =
-          TypeUtils.removeOpensFromCompletionPath ~rawOpens
+          TypeUtils.remove_opens_from_completion_path ~raw_opens
             ~package:full.package base
         in
-        Some ((base |> String.concat ".") ^ "." ^ exportedValueName)
+        Some ((base |> String.concat ".") ^ "." ^ exported_value_name)
     in
-    let getExportedValueCompletion name (declared : Types.type_expr Declared.t)
+    let get_exported_value_completion name (declared : Types.type_expr Declared.t)
         =
-      let typeExpr = declared.item in
-      if valueWithTypeT typeExpr then
-        getCompletionName name
+      let type_expr = declared.item in
+      if value_with_type_t type_expr then
+        get_completion_name name
         |> Option.map (fun name ->
-               create name ~includesSnippets:true ~insertText:name
-                 ~kind:(Value typeExpr) ~env)
-      else if fnReturnsTypeT typeExpr then
-        getCompletionName name
+               create name ~includes_snippets:true ~insert_text:name
+                 ~kind:(Value type_expr) ~env)
+      else if fn_returns_type_t type_expr then
+        get_completion_name name
         |> Option.map (fun name ->
                create
                  (Printf.sprintf "%s()" name)
-                 ~includesSnippets:true ~insertText:(name ^ "($0)")
-                 ~kind:(Value typeExpr) ~env)
+                 ~includes_snippets:true ~insert_text:(name ^ "($0)")
+                 ~kind:(Value type_expr) ~env)
       else None
     in
-    let completionItems =
+    let completion_items =
       Hashtbl.fold
         (fun name stamp all ->
-          match Stamps.findValue env.file.stamps stamp with
+          match Stamps.find_value env.file.stamps stamp with
           | None -> all
-          | Some declaredTypeExpr -> (
-            match getExportedValueCompletion name declaredTypeExpr with
+          | Some declared_type_expr -> (
+            match get_exported_value_completion name declared_type_expr with
             | None -> all
             | Some completion -> completion :: all))
         env.exported.values_ []
     in
 
     (* Special casing for things where we want extra things in the completions *)
-    let completionItems =
+    let completion_items =
       match path with
       | Pdot (Pdot (Pident {name = "Js"}, "Re", _), "t", _)
       | Pdot (Pdot (Pident {name = "Stdlib"}, "RegExp", _), "t", _)
       | Pdot (Pident {name = "RegExp"}, "t", _) ->
         (* regexps *)
-        create "/<regexp>/g" ~insertText:"/$0/g" ~includesSnippets:true
+        create "/<regexp>/g" ~insert_text:"/$0/g" ~includes_snippets:true
           ~kind:(Label "Regular expression") ~env
-        :: completionItems
-      | _ -> completionItems
+        :: completion_items
+      | _ -> completion_items
     in
-    completionItems
+    completion_items
   | Tbool env ->
     if Debug.verbose () then print_endline "[complete_typed_value]--> Tbool";
     [
       create "true" ~kind:(Label "bool") ~env;
       create "false" ~kind:(Label "bool") ~env;
     ]
-    |> filterItems ~prefix
+    |> filter_items ~prefix
   | TtypeT {env; path} ->
     if Debug.verbose () then
       print_endline "[complete_typed_value]--> TtypeT (Pattern)";
     (* This is in patterns. Emit an alias/binding with the module name as a value name. *)
     if prefix <> "" then []
     else
-      let moduleName =
-        match path |> Utils.expandPath with
-        | _t :: moduleName :: _rest -> String.uncapitalize_ascii moduleName
+      let module_name =
+        match path |> Utils.expand_path with
+        | _t :: module_name :: _rest -> String.uncapitalize_ascii module_name
         | _ -> "value"
       in
       [
-        create moduleName ~kind:(Label moduleName) ~env
-          ~insertText:("${0:" ^ moduleName ^ "}")
-          ~includesSnippets:true;
+        create module_name ~kind:(Label module_name) ~env
+          ~insert_text:("${0:" ^ module_name ^ "}")
+          ~includes_snippets:true;
       ]
-  | Tvariant {env; constructors; variantDecl; variantName} ->
+  | Tvariant {env; constructors; variant_decl; variant_name} ->
     if Debug.verbose () then print_endline "[complete_typed_value]--> Tvariant";
     constructors
     |> List.map (fun (constructor : Constructor.t) ->
-           let numArgs =
+           let num_args =
              match constructor.args with
              | InlineRecord _ -> 1
              | Args args -> List.length args
            in
-           create ?deprecated:constructor.deprecated ~includesSnippets:true
+           create ?deprecated:constructor.deprecated ~includes_snippets:true
              (constructor.cname.txt
-             ^ printConstructorArgs numArgs ~asSnippet:false)
-             ~insertText:
+             ^ print_constructor_args num_args ~as_snippet:false)
+             ~insert_text:
                (constructor.cname.txt
-               ^ printConstructorArgs numArgs ~asSnippet:true)
+               ^ print_constructor_args num_args ~as_snippet:true)
              ~kind:
                (Constructor
-                  (constructor, variantDecl |> Shared.declToString variantName))
+                  (constructor, variant_decl |> Shared.decl_to_string variant_name))
              ~env)
-    |> filterItems ~prefix
-  | Tpolyvariant {env; constructors; typeExpr} ->
+    |> filter_items ~prefix
+  | Tpolyvariant {env; constructors; type_expr} ->
     if Debug.verbose () then
       print_endline "[complete_typed_value]--> Tpolyvariant";
     constructors
-    |> List.map (fun (constructor : polyVariantConstructor) ->
+    |> List.map (fun (constructor : poly_variant_constructor) ->
            create
-             ("#" ^ constructor.displayName
-             ^ printConstructorArgs
+             ("#" ^ constructor.display_name
+             ^ print_constructor_args
                  (List.length constructor.args)
-                 ~asSnippet:false)
-             ~includesSnippets:true
-             ~insertText:
-               ((if Utils.startsWith prefix "#" then "" else "#")
-               ^ constructor.displayName
-               ^ printConstructorArgs
+                 ~as_snippet:false)
+             ~includes_snippets:true
+             ~insert_text:
+               ((if Utils.starts_with prefix "#" then "" else "#")
+               ^ constructor.display_name
+               ^ print_constructor_args
                    (List.length constructor.args)
-                   ~asSnippet:true)
+                   ~as_snippet:true)
              ~kind:
                (PolyvariantConstructor
-                  (constructor, typeExpr |> Shared.typeToString))
+                  (constructor, type_expr |> Shared.type_to_string))
              ~env)
-    |> filterItems
-         ~prefix:(if Utils.startsWith prefix "#" then prefix else "#" ^ prefix)
+    |> filter_items
+         ~prefix:(if Utils.starts_with prefix "#" then prefix else "#" ^ prefix)
   | Toption (env, t) ->
     if Debug.verbose () then print_endline "[complete_typed_value]--> Toption";
-    let innerType =
+    let inner_type =
       match t with
       | ExtractedType t -> Some (t, None)
-      | TypeExpr t -> t |> TypeUtils.extractType ~env ~package:full.package
+      | TypeExpr t -> t |> TypeUtils.extract_type ~env ~package:full.package
     in
-    let expandedCompletions =
-      match innerType with
+    let expanded_completions =
+      match inner_type with
       | None -> []
-      | Some (innerType, _typeArgsContext) ->
-        innerType
-        |> completeTypedValue ~rawOpens ~full ~prefix ~completionContext ~mode
+      | Some (inner_type, _typeArgsContext) ->
+        inner_type
+        |> complete_typed_value ~raw_opens ~full ~prefix ~completion_context ~mode
         |> List.map (fun (c : Completion.t) ->
                {
                  c with
                  name = "Some(" ^ c.name ^ ")";
-                 sortText = None;
-                 insertText =
-                   (match c.insertText with
+                 sort_text = None;
+                 insert_text =
+                   (match c.insert_text with
                    | None -> None
-                   | Some insertText -> Some ("Some(" ^ insertText ^ ")"));
+                   | Some insert_text -> Some ("Some(" ^ insert_text ^ ")"));
                })
     in
-    let noneCase = Completion.create "None" ~kind:(kindFromInnerType t) ~env in
-    let someAnyCase =
-      create "Some(_)" ~includesSnippets:true ~kind:(kindFromInnerType t) ~env
-        ~insertText:(Printf.sprintf "Some(%s)" (emptyCase 1))
+    let none_case = Completion.create "None" ~kind:(kind_from_inner_type t) ~env in
+    let some_any_case =
+      create "Some(_)" ~includes_snippets:true ~kind:(kind_from_inner_type t) ~env
+        ~insert_text:(Printf.sprintf "Some(%s)" (empty_case 1))
     in
     let completions =
-      match completionContext with
-      | Some (Completable.CameFromRecordField fieldName) ->
+      match completion_context with
+      | Some (Completable.CameFromRecordField field_name) ->
         [
           create
-            ("Some(" ^ fieldName ^ ")")
-            ~includesSnippets:true ~kind:(kindFromInnerType t) ~env
-            ~insertText:("Some(" ^ fieldName ^ ")$0");
-          someAnyCase;
-          noneCase;
+            ("Some(" ^ field_name ^ ")")
+            ~includes_snippets:true ~kind:(kind_from_inner_type t) ~env
+            ~insert_text:("Some(" ^ field_name ^ ")$0");
+          some_any_case;
+          none_case;
         ]
-      | _ -> [noneCase; someAnyCase]
+      | _ -> [none_case; some_any_case]
     in
-    completions @ expandedCompletions |> filterItems ~prefix
-  | Tresult {env; okType; errorType} ->
+    completions @ expanded_completions |> filter_items ~prefix
+  | Tresult {env; ok_type; error_type} ->
     if Debug.verbose () then print_endline "[complete_typed_value]--> Tresult";
-    let okInnerType =
-      okType |> TypeUtils.extractType ~env ~package:full.package
+    let ok_inner_type =
+      ok_type |> TypeUtils.extract_type ~env ~package:full.package
     in
-    let errorInnerType =
-      errorType |> TypeUtils.extractType ~env ~package:full.package
+    let error_inner_type =
+      error_type |> TypeUtils.extract_type ~env ~package:full.package
     in
-    let expandedOkCompletions =
-      match okInnerType with
+    let expanded_ok_completions =
+      match ok_inner_type with
       | None -> []
-      | Some (innerType, _) ->
-        innerType
-        |> completeTypedValue ~rawOpens ~full ~prefix ~completionContext ~mode
+      | Some (inner_type, _) ->
+        inner_type
+        |> complete_typed_value ~raw_opens ~full ~prefix ~completion_context ~mode
         |> List.map (fun (c : Completion.t) ->
                {
                  c with
                  name = "Ok(" ^ c.name ^ ")";
-                 sortText = None;
-                 insertText =
-                   (match c.insertText with
+                 sort_text = None;
+                 insert_text =
+                   (match c.insert_text with
                    | None -> None
-                   | Some insertText -> Some ("Ok(" ^ insertText ^ ")"));
+                   | Some insert_text -> Some ("Ok(" ^ insert_text ^ ")"));
                })
     in
-    let expandedErrorCompletions =
-      match errorInnerType with
+    let expanded_error_completions =
+      match error_inner_type with
       | None -> []
-      | Some (innerType, _) ->
-        innerType
-        |> completeTypedValue ~rawOpens ~full ~prefix ~completionContext ~mode
+      | Some (inner_type, _) ->
+        inner_type
+        |> complete_typed_value ~raw_opens ~full ~prefix ~completion_context ~mode
         |> List.map (fun (c : Completion.t) ->
                {
                  c with
                  name = "Error(" ^ c.name ^ ")";
-                 sortText = None;
-                 insertText =
-                   (match c.insertText with
+                 sort_text = None;
+                 insert_text =
+                   (match c.insert_text with
                    | None -> None
-                   | Some insertText -> Some ("Error(" ^ insertText ^ ")"));
+                   | Some insert_text -> Some ("Error(" ^ insert_text ^ ")"));
                })
     in
-    let okAnyCase =
-      create "Ok(_)" ~includesSnippets:true ~kind:(Value okType) ~env
-        ~insertText:(Printf.sprintf "Ok(%s)" (emptyCase 1))
+    let ok_any_case =
+      create "Ok(_)" ~includes_snippets:true ~kind:(Value ok_type) ~env
+        ~insert_text:(Printf.sprintf "Ok(%s)" (empty_case 1))
     in
-    let errorAnyCase =
-      create "Error(_)" ~includesSnippets:true ~kind:(Value errorType) ~env
-        ~insertText:(Printf.sprintf "Error(%s)" (emptyCase 1))
+    let error_any_case =
+      create "Error(_)" ~includes_snippets:true ~kind:(Value error_type) ~env
+        ~insert_text:(Printf.sprintf "Error(%s)" (empty_case 1))
     in
     let completions =
-      match completionContext with
-      | Some (Completable.CameFromRecordField fieldName) ->
+      match completion_context with
+      | Some (Completable.CameFromRecordField field_name) ->
         [
           create
-            ("Ok(" ^ fieldName ^ ")")
-            ~includesSnippets:true ~kind:(Value okType) ~env
-            ~insertText:("Ok(" ^ fieldName ^ ")$0");
-          okAnyCase;
-          errorAnyCase;
+            ("Ok(" ^ field_name ^ ")")
+            ~includes_snippets:true ~kind:(Value ok_type) ~env
+            ~insert_text:("Ok(" ^ field_name ^ ")$0");
+          ok_any_case;
+          error_any_case;
         ]
-      | _ -> [okAnyCase; errorAnyCase]
+      | _ -> [ok_any_case; error_any_case]
     in
-    completions @ expandedOkCompletions @ expandedErrorCompletions
-    |> filterItems ~prefix
+    completions @ expanded_ok_completions @ expanded_error_completions
+    |> filter_items ~prefix
   | Tuple (env, exprs, typ) ->
     if Debug.verbose () then print_endline "[complete_typed_value]--> Tuple";
-    let numExprs = List.length exprs in
+    let num_exprs = List.length exprs in
     [
       create
-        (printConstructorArgs numExprs ~asSnippet:false)
-        ~includesSnippets:true
-        ~insertText:(printConstructorArgs numExprs ~asSnippet:true)
+        (print_constructor_args num_exprs ~as_snippet:false)
+        ~includes_snippets:true
+        ~insert_text:(print_constructor_args num_exprs ~as_snippet:true)
         ~kind:(Value typ) ~env;
     ]
-  | Trecord {env; fields} as extractedType ->
+  | Trecord {env; fields} as extracted_type ->
     if Debug.verbose () then print_endline "[complete_typed_value]--> Trecord";
-    getRecordCompletions ~env ~fields ~extractedType
-  | TinlineRecord {env; fields} as extractedType ->
+    get_record_completions ~env ~fields ~extracted_type
+  | TinlineRecord {env; fields} as extracted_type ->
     if Debug.verbose () then
       print_endline "[complete_typed_value]--> TinlineRecord";
-    getRecordCompletions ~env ~fields ~extractedType
+    get_record_completions ~env ~fields ~extracted_type
   | Tarray (env, typ) ->
     if Debug.verbose () then print_endline "[complete_typed_value]--> Tarray";
     if prefix = "" then
       [
-        create "[]" ~includesSnippets:true ~insertText:"[$0]" ~sortText:"A"
+        create "[]" ~includes_snippets:true ~insert_text:"[$0]" ~sort_text:"A"
           ~kind:
             (match typ with
             | ExtractedType typ ->
@@ -1873,69 +1873,69 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
     if Debug.verbose () then print_endline "[complete_typed_value]--> Tstring";
     if prefix = "" then
       [
-        create "\"\"" ~includesSnippets:true ~insertText:"\"$0\"" ~sortText:"A"
+        create "\"\"" ~includes_snippets:true ~insert_text:"\"$0\"" ~sort_text:"A"
           ~kind:(Value Predef.type_string) ~env;
       ]
     else []
-  | Tfunction {env; typ; args; returnType} when prefix = "" && mode = Expression
+  | Tfunction {env; typ; args; return_type} when prefix = "" && mode = Expression
     ->
     if Debug.verbose () then
       print_endline "[complete_typed_value]--> Tfunction #1";
-    let mkFnArgs ~asSnippet =
+    let mk_fn_args ~as_snippet =
       match args with
-      | [(Nolabel, argTyp)] when TypeUtils.typeIsUnit argTyp -> "()"
-      | [(Nolabel, argTyp)] ->
-        let varName =
-          CompletionExpressions.prettyPrintFnTemplateArgName ~env ~full argTyp
+      | [(Nolabel, arg_typ)] when TypeUtils.type_is_unit arg_typ -> "()"
+      | [(Nolabel, arg_typ)] ->
+        let var_name =
+          CompletionExpressions.pretty_print_fn_template_arg_name ~env ~full arg_typ
         in
-        if asSnippet then "${1:" ^ varName ^ "}" else varName
+        if as_snippet then "${1:" ^ var_name ^ "}" else var_name
       | _ ->
-        let currentUnlabelledIndex = ref 0 in
-        let argsText =
+        let current_unlabelled_index = ref 0 in
+        let args_text =
           args
-          |> List.map (fun ((label, typ) : typedFnArg) ->
+          |> List.map (fun ((label, typ) : typed_fn_arg) ->
                  match label with
                  | Optional {txt = name} -> "~" ^ name ^ "=?"
                  | Labelled {txt = name} -> "~" ^ name
                  | Nolabel ->
-                   if TypeUtils.typeIsUnit typ then "()"
+                   if TypeUtils.type_is_unit typ then "()"
                    else (
-                     currentUnlabelledIndex := !currentUnlabelledIndex + 1;
-                     let num = !currentUnlabelledIndex in
-                     let varName =
-                       CompletionExpressions.prettyPrintFnTemplateArgName
-                         ~currentIndex:num ~env ~full typ
+                     current_unlabelled_index := !current_unlabelled_index + 1;
+                     let num = !current_unlabelled_index in
+                     let var_name =
+                       CompletionExpressions.pretty_print_fn_template_arg_name
+                         ~current_index:num ~env ~full typ
                      in
-                     if asSnippet then
-                       "${" ^ string_of_int num ^ ":" ^ varName ^ "}"
-                     else varName))
+                     if as_snippet then
+                       "${" ^ string_of_int num ^ ":" ^ var_name ^ "}"
+                     else var_name))
           |> String.concat ", "
         in
-        "(" ^ argsText ^ ")"
+        "(" ^ args_text ^ ")"
     in
-    let isAsync =
-      match TypeUtils.extractType ~env ~package:full.package returnType with
+    let is_async =
+      match TypeUtils.extract_type ~env ~package:full.package return_type with
       | Some (Tpromise _, _) -> true
       | _ -> false
     in
-    let asyncPrefix = if isAsync then "async " else "" in
-    let functionBody, functionBodyInsertText =
+    let async_prefix = if is_async then "async " else "" in
+    let function_body, function_body_insert_text =
       match args with
-      | [(Nolabel, argTyp)] ->
-        let varName =
-          CompletionExpressions.prettyPrintFnTemplateArgName ~env ~full argTyp
+      | [(Nolabel, arg_typ)] ->
+        let var_name =
+          CompletionExpressions.pretty_print_fn_template_arg_name ~env ~full arg_typ
         in
-        ( (" => " ^ if varName = "()" then "{}" else varName),
-          " => ${0:" ^ varName ^ "}" )
+        ( (" => " ^ if var_name = "()" then "{}" else var_name),
+          " => ${0:" ^ var_name ^ "}" )
       | _ -> (" => {}", " => {${0:()}}")
     in
     [
       create
-        (asyncPrefix ^ mkFnArgs ~asSnippet:false ^ functionBody)
-        ~includesSnippets:true
-        ~insertText:
-          (asyncPrefix ^ mkFnArgs ~asSnippet:true ^ functionBodyInsertText)
-        ~sortText:"A" ~kind:(Value typ) ~env;
+        (async_prefix ^ mk_fn_args ~as_snippet:false ^ function_body)
+        ~includes_snippets:true
+        ~insert_text:
+          (async_prefix ^ mk_fn_args ~as_snippet:true ^ function_body_insert_text)
+        ~sort_text:"A" ~kind:(Value typ) ~env;
     ]
   | Tfunction _ ->
     if Debug.verbose () then
@@ -1961,42 +1961,42 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
 
 module StringSet = Set.Make (String)
 
-let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
+let rec process_completable ~debug ~full ~scope ~env ~pos ~for_hover completable =
   if debug then
-    Printf.printf "Completable: %s\n" (Completable.toString completable);
+    Printf.printf "Completable: %s\n" (Completable.to_string completable);
   let package = full.package in
-  let rawOpens = Scope.getRawOpens scope in
-  let opens = getOpens ~debug ~rawOpens ~package ~env in
-  let allFiles = allFilesInPackage package in
-  let findTypeOfValue path =
+  let raw_opens = Scope.get_raw_opens scope in
+  let opens = get_opens ~debug ~raw_opens ~package ~env in
+  let all_files = all_files_in_package package in
+  let find_type_of_value path =
     path
-    |> getCompletionsForPath ~debug ~completionContext:Value ~exact:true ~opens
+    |> get_completions_for_path ~debug ~completion_context:Value ~exact:true ~opens
          ~full ~pos ~env ~scope
-    |> completionsGetTypeEnv2 ~debug ~full ~opens ~rawOpens ~pos
+    |> completions_get_type_env2 ~debug ~full ~opens ~raw_opens ~pos
   in
   match completable with
   | Cnone -> []
-  | Cpath contextPath ->
-    contextPath
-    |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
-         ~exact:forHover ~scope
-  | Cjsx ([id], prefix, identsSeen) when String.uncapitalize_ascii id = id -> (
+  | Cpath context_path ->
+    context_path
+    |> get_completions_for_context_path ~debug ~full ~opens ~raw_opens ~pos ~env
+         ~exact:for_hover ~scope
+  | Cjsx ([id], prefix, idents_seen) when String.uncapitalize_ascii id = id -> (
     (* Lowercase JSX tag means builtin *)
-    let mkLabel (name, typString) =
-      Completion.create name ~kind:(Label typString) ~env
+    let mk_label (name, typ_string) =
+      Completion.create name ~kind:(Label typ_string) ~env
     in
-    let keyLabels =
-      if Utils.startsWith "key" prefix then [mkLabel ("key", "string")] else []
+    let key_labels =
+      if Utils.starts_with "key" prefix then [mk_label ("key", "string")] else []
     in
-    let pathToElementProps = TypeUtils.pathToElementProps package in
+    let path_to_element_props = TypeUtils.path_to_element_props package in
     if Debug.verbose () then
       Printf.printf
         "[completing-lowercase-jsx] Attempting to complete from type at %s\n"
-        (pathToElementProps |> String.concat ".");
-    let fromElementProps =
+        (path_to_element_props |> String.concat ".");
+    let from_element_props =
       match
-        pathToElementProps
-        |> digToRecordFieldsForCompletion ~debug ~package ~opens ~full ~pos ~env
+        path_to_element_props
+        |> dig_to_record_fields_for_completion ~debug ~package ~opens ~full ~pos ~env
              ~scope
       with
       | None -> None
@@ -2005,47 +2005,47 @@ let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
           (fields
           |> List.filter_map (fun (f : field) ->
                  if
-                   Utils.startsWith f.fname.txt prefix
-                   && (forHover || not (List.mem f.fname.txt identsSeen))
+                   Utils.starts_with f.fname.txt prefix
+                   && (for_hover || not (List.mem f.fname.txt idents_seen))
                  then
                    Some
                      ( f.fname.txt,
-                       Shared.typeToString (Utils.unwrapIfOption f.typ) )
+                       Shared.type_to_string (Utils.unwrap_if_option f.typ) )
                  else None)
-          |> List.map mkLabel)
+          |> List.map mk_label)
     in
-    match fromElementProps with
-    | Some elementProps -> elementProps
+    match from_element_props with
+    | Some element_props -> element_props
     | None ->
       if debug then
         Printf.printf
           "[completing-lowercase-jsx] could not find element props to complete \
            from.\n";
-      keyLabels)
-  | Cjsx (componentPath, prefix, identsSeen) ->
+      key_labels)
+  | Cjsx (component_path, prefix, idents_seen) ->
     let labels =
-      CompletionJsx.getJsxLabels ~componentPath ~findTypeOfValue ~package
+      CompletionJsx.get_jsx_labels ~component_path ~find_type_of_value ~package
     in
-    let mkLabel_ name typString =
-      Completion.create name ~kind:(Label typString) ~env
+    let mkLabel_ name typ_string =
+      Completion.create name ~kind:(Label typ_string) ~env
     in
-    let mkLabel (name, typ, _env) =
-      mkLabel_ name (typ |> Shared.typeToString)
+    let mk_label (name, typ, _env) =
+      mkLabel_ name (typ |> Shared.type_to_string)
     in
-    let keyLabels =
-      if Utils.startsWith "key" prefix then [mkLabel_ "key" "string"] else []
+    let key_labels =
+      if Utils.starts_with "key" prefix then [mkLabel_ "key" "string"] else []
     in
     if labels = [] then []
     else
       (labels
       |> List.filter (fun (name, _t, _env) ->
-             Utils.startsWith name prefix
+             Utils.starts_with name prefix
              && name <> "key"
-             && (forHover || not (List.mem name identsSeen)))
-      |> List.map mkLabel)
-      @ keyLabels
+             && (for_hover || not (List.mem name idents_seen)))
+      |> List.map mk_label)
+      @ key_labels
   | CdecoratorPayload (JsxConfig {prefix; nested}) -> (
-    let mkField ~name ~primitive =
+    let mk_field ~name ~primitive =
       {
         stamp = -1;
         fname = {loc = Location.none; txt = name};
@@ -2055,27 +2055,27 @@ let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
         deprecated = None;
       }
     in
-    let typ : completionType =
+    let typ : completion_type =
       Trecord
         {
           env;
           definition = `NameOnly "jsxConfig";
           fields =
             [
-              mkField ~name:"version" ~primitive:Predef.path_int;
-              mkField ~name:"module_" ~primitive:Predef.path_string;
-              mkField ~name:"mode" ~primitive:Predef.path_string;
+              mk_field ~name:"version" ~primitive:Predef.path_int;
+              mk_field ~name:"module_" ~primitive:Predef.path_string;
+              mk_field ~name:"mode" ~primitive:Predef.path_string;
             ];
         }
     in
-    match typ |> TypeUtils.resolveNested ~env ~full ~nested with
+    match typ |> TypeUtils.resolve_nested ~env ~full ~nested with
     | None -> []
-    | Some (typ, _env, completionContext, typeArgContext) ->
+    | Some (typ, _env, completion_context, type_arg_context) ->
       typ
-      |> completeTypedValue ?typeArgContext ~rawOpens ~mode:Expression ~full
-           ~prefix ~completionContext)
+      |> complete_typed_value ?type_arg_context ~raw_opens ~mode:Expression ~full
+           ~prefix ~completion_context)
   | CdecoratorPayload (ModuleWithImportAttributes {prefix; nested}) -> (
-    let mkField ~name ~primitive =
+    let mk_field ~name ~primitive =
       {
         stamp = -1;
         fname = {loc = Location.none; txt = name};
@@ -2085,52 +2085,52 @@ let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
         deprecated = None;
       }
     in
-    let importAttributesConfig : completionType =
+    let import_attributes_config : completion_type =
       Trecord
         {
           env;
           definition = `NameOnly "importAttributesConfig";
-          fields = [mkField ~name:"type_" ~primitive:Predef.path_string];
+          fields = [mk_field ~name:"type_" ~primitive:Predef.path_string];
         }
     in
-    let rootConfig : completionType =
+    let root_config : completion_type =
       Trecord
         {
           env;
           definition = `NameOnly "moduleConfig";
           fields =
             [
-              mkField ~name:"from" ~primitive:Predef.path_string;
-              mkField ~name:"with" ~primitive:Predef.path_string;
+              mk_field ~name:"from" ~primitive:Predef.path_string;
+              mk_field ~name:"with" ~primitive:Predef.path_string;
             ];
         }
     in
     let nested, typ =
       match nested with
-      | NFollowRecordField {fieldName = "with"} :: rest ->
-        (rest, importAttributesConfig)
-      | _ -> (nested, rootConfig)
+      | NFollowRecordField {field_name = "with"} :: rest ->
+        (rest, import_attributes_config)
+      | _ -> (nested, root_config)
     in
-    match typ |> TypeUtils.resolveNested ~env ~full ~nested with
+    match typ |> TypeUtils.resolve_nested ~env ~full ~nested with
     | None -> []
-    | Some (typ, _env, completionContext, typeArgContext) ->
+    | Some (typ, _env, completion_context, type_arg_context) ->
       typ
-      |> completeTypedValue ?typeArgContext ~rawOpens ~mode:Expression ~full
-           ~prefix ~completionContext)
+      |> complete_typed_value ?type_arg_context ~raw_opens ~mode:Expression ~full
+           ~prefix ~completion_context)
   | CdecoratorPayload (Module prefix) ->
-    let packageJsonPath =
-      Utils.findPackageJson (full.package.rootPath |> Uri.fromPath)
+    let package_json_path =
+      Utils.find_package_json (full.package.root_path |> Uri.from_path)
     in
-    let itemsFromPackageJson =
-      match packageJsonPath with
+    let items_from_package_json =
+      match package_json_path with
       | None ->
         if debug then
           Printf.printf
             "Did not find package.json, started looking (going upwards) from: %s\n"
-            full.package.rootPath;
+            full.package.root_path;
         []
       | Some path -> (
-        match Files.readFile path with
+        match Files.read_file path with
         | None ->
           if debug then print_endline "Could not read package.json";
           []
@@ -2143,10 +2143,10 @@ let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
                    | ("dependencies" | "devDependencies"), `Assoc o ->
                      Some
                        (o
-                       |> List.filter_map (fun (pkgName, _) ->
-                              match pkgName with
+                       |> List.filter_map (fun (pkg_name, _) ->
+                              match pkg_name with
                               | "rescript" -> None
-                              | pkgName -> Some pkgName))
+                              | pkg_name -> Some pkg_name))
                    | _ -> None)
             |> List.flatten
           | _ ->
@@ -2154,14 +2154,14 @@ let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
             []))
     in
     (* TODO: Resolve relatives? *)
-    let localItems =
+    let local_items =
       try
         let files =
-          Sys.readdir (Filename.dirname (env.file.uri |> Uri.toPath))
+          Sys.readdir (Filename.dirname (env.file.uri |> Uri.to_path))
           |> Array.to_list
         in
         (* Filter out generated build artifacts from in-source builds. *)
-        let resFiles =
+        let res_files =
           StringSet.of_list
             (files
             |> List.filter_map (fun f ->
@@ -2174,53 +2174,53 @@ let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
           | _ -> false
         in
         files
-        |> List.filter_map (fun fileName ->
-               let withoutExtension =
-                 try Filename.chop_extension fileName with _ -> fileName
+        |> List.filter_map (fun file_name ->
+               let without_extension =
+                 try Filename.chop_extension file_name with _ -> file_name
                in
                if
-                 String.ends_with fileName ~suffix:package.suffix
-                 && resFiles |> StringSet.mem withoutExtension
+                 String.ends_with file_name ~suffix:package.suffix
+                 && res_files |> StringSet.mem without_extension
                then None
                else
-                 match Filename.extension fileName with
+                 match Filename.extension file_name with
                  | ".res" | ".resi" | "" -> None
                  | ext when is_internal_artifact_extension ext -> None
-                 | _ -> Some ("./" ^ fileName))
+                 | _ -> Some ("./" ^ file_name))
         |> List.sort String.compare
       with _ ->
         if debug then print_endline "Could not read relative directory";
         []
     in
-    let items = itemsFromPackageJson @ localItems in
+    let items = items_from_package_json @ local_items in
     items
-    |> List.filter (fun name -> Utils.startsWith name prefix)
+    |> List.filter (fun name -> Utils.starts_with name prefix)
     |> List.map (fun name ->
-           let isLocal = Utils.startsWith name "./" in
+           let is_local = Utils.starts_with name "./" in
            Completion.create name
-             ~kind:(Label (if isLocal then "Local file" else "Package"))
+             ~kind:(Label (if is_local then "Local file" else "Package"))
              ~env)
   | Cdecorator prefix ->
-    let mkDecorator (name, docstring, maybeInsertText) =
+    let mk_decorator (name, docstring, maybe_insert_text) =
       {
-        (Completion.create name ~synthetic:true ~includesSnippets:true
-           ~kind:(Label "") ~env ?insertText:maybeInsertText)
+        (Completion.create name ~synthetic:true ~includes_snippets:true
+           ~kind:(Label "") ~env ?insert_text:maybe_insert_text)
         with
         docstring;
       }
     in
-    let isTopLevel = String.starts_with ~prefix:"@" prefix in
+    let is_top_level = String.starts_with ~prefix:"@" prefix in
     let prefix =
-      if isTopLevel then String.sub prefix 1 (String.length prefix - 1)
+      if is_top_level then String.sub prefix 1 (String.length prefix - 1)
       else prefix
     in
     let decorators =
-      if isTopLevel then CompletionDecorators.toplevel
+      if is_top_level then CompletionDecorators.toplevel
       else CompletionDecorators.local
     in
     decorators
-    |> List.filter (fun (decorator, _, _) -> Utils.startsWith decorator prefix)
-    |> List.map (fun (decorator, maybeInsertText, doc) ->
+    |> List.filter (fun (decorator, _, _) -> Utils.starts_with decorator prefix)
+    |> List.map (fun (decorator, maybe_insert_text, doc) ->
            let parts = String.split_on_char '.' prefix in
            let len = String.length prefix in
            let dec2 =
@@ -2228,23 +2228,23 @@ let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
                String.sub decorator len (String.length decorator - len)
              else decorator
            in
-           (dec2, doc, maybeInsertText))
-    |> List.map mkDecorator
-  | CnamedArg (cp, prefix, identsSeen) ->
+           (dec2, doc, maybe_insert_text))
+    |> List.map mk_decorator
+  | CnamedArg (cp, prefix, idents_seen) ->
     let labels =
       match
         cp
-        |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
+        |> get_completions_for_context_path ~debug ~full ~opens ~raw_opens ~pos ~env
              ~exact:true ~scope
-        |> completionsGetTypeEnv2 ~debug ~full ~opens ~rawOpens ~pos
+        |> completions_get_type_env2 ~debug ~full ~opens ~raw_opens ~pos
       with
       | Some (typ, _env) ->
         if debug then
           Printf.printf "Found type for function %s\n"
-            (typ |> Shared.typeToString);
+            (typ |> Shared.type_to_string);
 
         typ
-        |> TypeUtils.getArgs ~full ~env
+        |> TypeUtils.get_args ~full ~env
         |> List.filter_map (fun arg ->
                match arg with
                | SharedTypes.Completable.Labelled name, a -> Some (name, a)
@@ -2252,47 +2252,47 @@ let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
                | _ -> None)
       | None -> []
     in
-    let mkLabel (name, typ) =
-      Completion.create name ~kind:(Label (typ |> Shared.typeToString)) ~env
+    let mk_label (name, typ) =
+      Completion.create name ~kind:(Label (typ |> Shared.type_to_string)) ~env
     in
     labels
     |> List.filter (fun (name, _t) ->
-           Utils.startsWith name prefix
-           && (forHover || not (List.mem name identsSeen)))
-    |> List.map mkLabel
-  | Cpattern {contextPath; prefix; nested; fallback; patternMode} -> (
-    let fallbackOrEmpty ?items () =
+           Utils.starts_with name prefix
+           && (for_hover || not (List.mem name idents_seen)))
+    |> List.map mk_label
+  | Cpattern {context_path; prefix; nested; fallback; pattern_mode} -> (
+    let fallback_or_empty ?items () =
       match (fallback, items) with
       | Some fallback, (None | Some []) ->
-        fallback |> processCompletable ~debug ~full ~scope ~env ~pos ~forHover
+        fallback |> process_completable ~debug ~full ~scope ~env ~pos ~for_hover
       | _, Some items -> items
       | None, None -> []
     in
     match
-      contextPath
-      |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
+      context_path
+      |> get_completions_for_context_path ~debug ~full ~opens ~raw_opens ~pos ~env
            ~exact:true ~scope
-      |> completionsGetTypeEnv2 ~debug ~full ~opens ~rawOpens ~pos
+      |> completions_get_type_env2 ~debug ~full ~opens ~raw_opens ~pos
     with
     | Some (typ, env) -> (
       match
         typ
-        |> TypeUtils.extractType ~env ~package:full.package
-        |> Utils.Option.flatMap (fun (typ, typeArgContext) ->
-               typ |> TypeUtils.resolveNested ?typeArgContext ~env ~full ~nested)
+        |> TypeUtils.extract_type ~env ~package:full.package
+        |> Utils.Option.flat_map (fun (typ, type_arg_context) ->
+               typ |> TypeUtils.resolve_nested ?type_arg_context ~env ~full ~nested)
       with
-      | None -> fallbackOrEmpty ()
-      | Some (typ, _env, completionContext, typeArgContext) ->
+      | None -> fallback_or_empty ()
+      | Some (typ, _env, completion_context, type_arg_context) ->
         let items =
           typ
-          |> completeTypedValue ?typeArgContext ~rawOpens
-               ~mode:(Pattern patternMode) ~full ~prefix ~completionContext
+          |> complete_typed_value ?type_arg_context ~raw_opens
+               ~mode:(Pattern pattern_mode) ~full ~prefix ~completion_context
         in
-        fallbackOrEmpty ~items ())
-    | None -> fallbackOrEmpty ())
-  | Cexpression {contextPath; prefix; nested} -> (
-    let isAmbigiousRecordBodyOrJsxWrap =
-      match (contextPath, nested) with
+        fallback_or_empty ~items ())
+    | None -> fallback_or_empty ())
+  | Cexpression {context_path; prefix; nested} -> (
+    let is_ambigious_record_body_or_jsx_wrap =
+      match (context_path, nested) with
       | CJsxPropValue _, [NRecordBody _] -> true
       | _ -> false
     in
@@ -2302,7 +2302,7 @@ let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
            `someProp`, or if it's a record body where we want to complete
             for the fields in the record. We need to look up what the type is
            first before deciding what completions to show. So we do that here.*)
-      if isAmbigiousRecordBodyOrJsxWrap then
+      if is_ambigious_record_body_or_jsx_wrap then
         print_endline
           "[process_completable]--> Cexpression special case: JSX prop value \
            that might be record body or JSX wrap"
@@ -2311,97 +2311,97 @@ let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
        project, etc. We only add completions when there's a prefix of some sort
        we can filter on, since we know we're in some sort of context, and
        therefore don't want to overwhelm the user with completion items. *)
-    let regularCompletions =
+    let regular_completions =
       if prefix = "" then []
       else
         prefix
-        |> getComplementaryCompletionsForTypedValue ~opens ~allFiles ~env ~scope
+        |> get_complementary_completions_for_typed_value ~opens ~all_files ~env ~scope
     in
     match
-      contextPath
-      |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
+      context_path
+      |> get_completions_for_context_path ~debug ~full ~opens ~raw_opens ~pos ~env
            ~exact:true ~scope
-      |> completionsGetCompletionType ~full
+      |> completions_get_completion_type ~full
     with
     | None ->
       if Debug.verbose () then
         print_endline
           "[process_completable]--> could not get completions for context path";
-      regularCompletions
+      regular_completions
     | Some (typ, env) -> (
-      match typ |> TypeUtils.resolveNested ~env ~full ~nested with
+      match typ |> TypeUtils.resolve_nested ~env ~full ~nested with
       | None ->
         if Debug.verbose () then
           print_endline
             "[process_completable]--> could not resolve nested expression path";
-        if isAmbigiousRecordBodyOrJsxWrap then (
+        if is_ambigious_record_body_or_jsx_wrap then (
           if Debug.verbose () then
             print_endline
               "[process_completable]--> case is ambigious Jsx prop vs record \
                body case, complete also for the JSX prop value directly";
-          let itemsForRawJsxPropValue =
+          let items_for_raw_jsx_prop_value =
             typ
-            |> completeTypedValue ~rawOpens ~mode:Expression ~full ~prefix
-                 ~completionContext:None
+            |> complete_typed_value ~raw_opens ~mode:Expression ~full ~prefix
+                 ~completion_context:None
           in
-          itemsForRawJsxPropValue @ regularCompletions)
-        else regularCompletions
-      | Some (typ, _env, completionContext, typeArgContext) -> (
+          items_for_raw_jsx_prop_value @ regular_completions)
+        else regular_completions
+      | Some (typ, _env, completion_context, type_arg_context) -> (
         if Debug.verbose () then
           print_endline
             "[process_completable]--> found type in nested expression \
              completion";
         (* Wrap the insert text in braces when we're completing the root of a
            JSX prop value. *)
-        let wrapInsertTextInBraces =
+        let wrap_insert_text_in_braces =
           if List.length nested > 0 then false
           else
-            match contextPath with
+            match context_path with
             | CJsxPropValue _ -> true
             | _ -> false
         in
         let items =
           typ
-          |> completeTypedValue ?typeArgContext ~rawOpens ~mode:Expression ~full
-               ~prefix ~completionContext
+          |> complete_typed_value ?type_arg_context ~raw_opens ~mode:Expression ~full
+               ~prefix ~completion_context
           |> List.map (fun (c : Completion.t) ->
-                 if wrapInsertTextInBraces then
+                 if wrap_insert_text_in_braces then
                    {
                      c with
-                     insertText =
-                       (match c.insertText with
+                     insert_text =
+                       (match c.insert_text with
                        | None -> None
                        | Some text -> Some ("{" ^ text ^ "}"));
                    }
                  else c)
         in
-        match (prefix, completionContext) with
+        match (prefix, completion_context) with
         | "", _ -> items
         | _, None ->
           let items =
-            if List.length regularCompletions > 0 then
+            if List.length regular_completions > 0 then
               (* The client will occasionally sort the list of completions alphabetically, disregarding the order
                  in which we send it. This fixes that by providing a sort text making the typed completions
                  guaranteed to end up on top. *)
               items
               |> List.map (fun (c : Completion.t) ->
-                     {c with sortText = Some ("A" ^ " " ^ c.name)})
+                     {c with sort_text = Some ("A" ^ " " ^ c.name)})
             else items
           in
-          items @ regularCompletions
+          items @ regular_completions
         | _ -> items)))
-  | CexhaustiveSwitch {contextPath; exprLoc} ->
-    let range = Utils.rangeOfLoc exprLoc in
-    let printFailwithStr num = "${" ^ string_of_int num ^ ":%todo}" in
-    let withExhaustiveItem ~cases ?(startIndex = 0) (c : Completion.t) =
+  | CexhaustiveSwitch {context_path; expr_loc} ->
+    let range = Utils.range_of_loc expr_loc in
+    let print_failwith_str num = "${" ^ string_of_int num ^ ":%todo}" in
+    let with_exhaustive_item ~cases ?(start_index = 0) (c : Completion.t) =
       (* We don't need to write out `switch` here since we know that's what the
          user has already written. Just complete for the rest. *)
-      let newText =
+      let new_text =
         c.name ^ " {\n"
         ^ (cases
-          |> List.mapi (fun index caseText ->
-                 "| " ^ caseText ^ " => "
-                 ^ printFailwithStr (startIndex + index + 1))
+          |> List.mapi (fun index case_text ->
+                 "| " ^ case_text ^ " => "
+                 ^ print_failwith_str (start_index + index + 1))
           |> String.concat "\n")
         ^ "\n}"
         |> Utils.indent range.start.character
@@ -2411,25 +2411,25 @@ let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
         {
           c with
           name = c.name ^ " (exhaustive switch)";
-          filterText = Some c.name;
-          insertTextFormat = Some Snippet;
-          insertText = Some newText;
+          filter_text = Some c.name;
+          insert_text_format = Some Snippet;
+          insert_text = Some new_text;
           kind = Snippet "insert exhaustive switch for value";
         };
       ]
     in
-    let completionsForContextPath =
-      contextPath
-      |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
-           ~exact:forHover ~scope
+    let completions_for_context_path =
+      context_path
+      |> get_completions_for_context_path ~debug ~full ~opens ~raw_opens ~pos ~env
+           ~exact:for_hover ~scope
     in
-    completionsForContextPath
+    completions_for_context_path
     |> List.map (fun (c : Completion.t) ->
            match c.kind with
-           | Value typExpr -> (
-             match typExpr |> TypeUtils.extractType ~env:c.env ~package with
+           | Value typ_expr -> (
+             match typ_expr |> TypeUtils.extract_type ~env:c.env ~package with
              | Some (Tvariant v, _) ->
-               withExhaustiveItem c
+               with_exhaustive_item c
                  ~cases:
                    (v.constructors
                    |> List.map (fun (constructor : Constructor.t) ->
@@ -2439,50 +2439,50 @@ let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
                           | Args [] -> ""
                           | _ -> "(_)"))
              | Some (Tpolyvariant v, _) ->
-               withExhaustiveItem c
+               with_exhaustive_item c
                  ~cases:
                    (v.constructors
-                   |> List.map (fun (constructor : polyVariantConstructor) ->
-                          "#" ^ constructor.displayName
+                   |> List.map (fun (constructor : poly_variant_constructor) ->
+                          "#" ^ constructor.display_name
                           ^
                           match constructor.args with
                           | [] -> ""
                           | _ -> "(_)"))
              | Some (Toption (_env, _typ), _) ->
-               withExhaustiveItem c ~cases:["Some($1)"; "None"] ~startIndex:1
+               with_exhaustive_item c ~cases:["Some($1)"; "None"] ~start_index:1
              | Some (Tresult _, _) ->
-               withExhaustiveItem c ~cases:["Ok($1)"; "Error($1)"] ~startIndex:1
+               with_exhaustive_item c ~cases:["Ok($1)"; "Error($1)"] ~start_index:1
              | Some (Tbool _, _) ->
-               withExhaustiveItem c ~cases:["true"; "false"]
+               with_exhaustive_item c ~cases:["true"; "false"]
              | _ -> [c])
            | _ -> [c])
     |> List.flatten
   | ChtmlElement {prefix} ->
-    CompletionJsx.htmlElements
-    |> List.filter_map (fun (elementName, description, deprecated) ->
-           if Utils.startsWith elementName prefix then
-             let name = "<" ^ elementName ^ ">" in
+    CompletionJsx.html_elements
+    |> List.filter_map (fun (element_name, description, deprecated) ->
+           if Utils.starts_with element_name prefix then
+             let name = "<" ^ element_name ^ ">" in
              Some
                (Completion.create name ~synthetic:true ~kind:(Label name)
                   ~detail:description ~env ~docstring:[description]
-                  ~insertText:elementName
+                  ~insert_text:element_name
                   ?deprecated:
                     (match deprecated with
                     | true -> Some "true"
                     | false -> None))
            else None)
   | CextensionNode prefix ->
-    if Utils.startsWith "todo" prefix then
+    if Utils.starts_with "todo" prefix then
       let detail =
         "`%todo` is used to tell the compiler that some code still needs to be \
          implemented."
       in
       [
         Completion.create "todo" ~synthetic:true ~kind:(Label "todo") ~detail
-          ~env ~insertText:"todo";
+          ~env ~insert_text:"todo";
         Completion.create "todo (with payload)" ~synthetic:true
-          ~includesSnippets:true ~kind:(Label "todo")
+          ~includes_snippets:true ~kind:(Label "todo")
           ~detail:(detail ^ " With a payload.")
-          ~env ~insertText:"todo(\"${0:TODO}\")";
+          ~env ~insert_text:"todo(\"${0:TODO}\")";
       ]
     else []

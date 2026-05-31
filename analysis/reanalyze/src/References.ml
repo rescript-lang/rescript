@@ -10,7 +10,7 @@
     This is what the forward liveness algorithm needs. *)
 
 (* Helper to add to a set in a hashtable *)
-let addSet h k v =
+let add_set h k v =
   let set = try PosHash.find h k with Not_found -> PosSet.empty in
   PosHash.replace h k (PosSet.add v set)
 
@@ -26,20 +26,20 @@ type t = {value_refs_from: refs_table; type_refs_from: refs_table}
 let create_builder () : builder =
   {value_refs_from = PosHash.create 256; type_refs_from = PosHash.create 256}
 
-let add_value_ref (builder : builder) ~posTo ~posFrom =
-  addSet builder.value_refs_from posFrom posTo
+let add_value_ref (builder : builder) ~pos_to ~pos_from =
+  add_set builder.value_refs_from pos_from pos_to
 
-let add_type_ref (builder : builder) ~posTo ~posFrom =
-  addSet builder.type_refs_from posFrom posTo
+let add_type_ref (builder : builder) ~pos_to ~pos_from =
+  add_set builder.type_refs_from pos_from pos_to
 
 let merge_into_builder ~(from : builder) ~(into : builder) =
   PosHash.iter
     (fun pos refs ->
-      refs |> PosSet.iter (fun toPos -> addSet into.value_refs_from pos toPos))
+      refs |> PosSet.iter (fun to_pos -> add_set into.value_refs_from pos to_pos))
     from.value_refs_from;
   PosHash.iter
     (fun pos refs ->
-      refs |> PosSet.iter (fun toPos -> addSet into.type_refs_from pos toPos))
+      refs |> PosSet.iter (fun to_pos -> add_set into.type_refs_from pos to_pos))
     from.type_refs_from
 
 let merge_all (builders : builder list) : t =

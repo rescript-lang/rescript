@@ -1,22 +1,22 @@
-type attributePayload =
+type attribute_payload =
   | BoolPayload of bool
   | ConstructPayload of string
   | FloatPayload of string
   | IdentPayload of Longident.t
   | IntPayload of string
   | StringPayload of string
-  | TuplePayload of attributePayload list
+  | TuplePayload of attribute_payload list
   | UnrecognizedPayload
 
-let tagIsGenType s = s = "genType" || s = "gentype"
-let tagIsGenTypeImport s = s = "genType.import" || s = "gentype.import"
-let tagIsGenTypeOpaque s = s = "genType.opaque" || s = "gentype.opaque"
+let tag_is_gen_type s = s = "genType" || s = "gentype"
+let tag_is_gen_type_import s = s = "genType.import" || s = "gentype.import"
+let tag_is_gen_type_opaque s = s = "genType.opaque" || s = "gentype.opaque"
 
-let tagIsOneOfTheGenTypeAnnotations s =
-  tagIsGenType s || tagIsGenTypeImport s || tagIsGenTypeOpaque s
+let tag_is_one_of_the_gen_type_annotations s =
+  tag_is_gen_type s || tag_is_gen_type_import s || tag_is_gen_type_opaque s
 
-let rec getAttributePayload checkText (attributes : Typedtree.attributes) =
-  let rec fromExpr (expr : Parsetree.expression) =
+let rec get_attribute_payload check_text (attributes : Typedtree.attributes) =
+  let rec from_expr (expr : Parsetree.expression) =
     match expr with
     | {pexp_desc = Pexp_constant (Pconst_string (s, _))} ->
       Some (StringPayload s)
@@ -29,7 +29,7 @@ let rec getAttributePayload checkText (attributes : Typedtree.attributes) =
       Some (BoolPayload (s = "true"))
     | {pexp_desc = Pexp_construct ({txt = Longident.Lident "[]"}, None)} -> None
     | {pexp_desc = Pexp_construct ({txt = Longident.Lident "::"}, Some e)} ->
-      fromExpr e
+      from_expr e
     | {pexp_desc = Pexp_construct ({txt}, _); _} ->
       Some (ConstructPayload (txt |> Longident.flatten |> String.concat "."))
     | {pexp_desc = Pexp_tuple exprs | Pexp_array exprs} ->
@@ -37,7 +37,7 @@ let rec getAttributePayload checkText (attributes : Typedtree.attributes) =
         exprs |> List.rev
         |> List.fold_left
              (fun payloads expr ->
-               match expr |> fromExpr with
+               match expr |> from_expr with
                | Some payload -> payload :: payloads
                | None -> payloads)
              []
@@ -49,10 +49,10 @@ let rec getAttributePayload checkText (attributes : Typedtree.attributes) =
   match attributes with
   | [] -> None
   | ({Asttypes.txt}, payload) :: tl ->
-    if checkText txt then
+    if check_text txt then
       match payload with
       | PStr [] -> Some UnrecognizedPayload
-      | PStr ({pstr_desc = Pstr_eval (expr, _)} :: _) -> expr |> fromExpr
+      | PStr ({pstr_desc = Pstr_eval (expr, _)} :: _) -> expr |> from_expr
       | PStr ({pstr_desc = Pstr_extension _} :: _) -> Some UnrecognizedPayload
       | PStr ({pstr_desc = Pstr_value _} :: _) -> Some UnrecognizedPayload
       | PStr ({pstr_desc = Pstr_primitive _} :: _) -> Some UnrecognizedPayload
@@ -68,15 +68,15 @@ let rec getAttributePayload checkText (attributes : Typedtree.attributes) =
       | PPat _ -> Some UnrecognizedPayload
       | PSig _ -> Some UnrecognizedPayload
       | PTyp _ -> Some UnrecognizedPayload
-    else getAttributePayload checkText tl
+    else get_attribute_payload check_text tl
 
-let hasAttribute checkText (attributes : Typedtree.attributes) =
-  getAttributePayload checkText attributes <> None
+let has_attribute check_text (attributes : Typedtree.attributes) =
+  get_attribute_payload check_text attributes <> None
 
-let isOcamlSuppressDeadWarning attributes =
+let is_ocaml_suppress_dead_warning attributes =
   match
     attributes
-    |> getAttributePayload (fun x -> x = "ocaml.warning" || x = "warning")
+    |> get_attribute_payload (fun x -> x = "ocaml.warning" || x = "warning")
   with
   | Some (StringPayload s) ->
     let numeric =

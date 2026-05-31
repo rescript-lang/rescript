@@ -40,7 +40,7 @@ let compute_optional_args_state (store : t) ~find_decl ~is_live :
     | Some s -> s
     | None -> (
       match find_decl pos with
-      | Some {Decl.declKind = Value {optionalArgs}} -> optionalArgs
+      | Some {Decl.decl_kind = Value {optional_args}} -> optional_args
       | _ -> OptionalArgs.empty)
   in
   let set_state pos s = OptionalArgsState.set state pos s in
@@ -50,8 +50,8 @@ let compute_optional_args_state (store : t) ~find_decl ~is_live :
       if is_live pos_from then
         let current = get_state pos_to in
         let updated =
-          OptionalArgs.apply_call ~argNames:arg_names
-            ~argNamesMaybe:arg_names_maybe current
+          OptionalArgs.apply_call ~arg_names:arg_names
+            ~arg_names_maybe:arg_names_maybe current
         in
         set_state pos_to updated);
   (* Process function references *)
@@ -59,7 +59,7 @@ let compute_optional_args_state (store : t) ~find_decl ~is_live :
       if is_live pos_from then
         let state_from = get_state pos_from in
         let state_to = get_state pos_to in
-        if not (OptionalArgs.isEmpty state_to) then (
+        if not (OptionalArgs.is_empty state_to) then (
           let updated_from, updated_to =
             OptionalArgs.combine_pair state_from state_to
           in

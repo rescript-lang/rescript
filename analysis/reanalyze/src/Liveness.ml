@@ -26,8 +26,8 @@ let reason_to_string = function
 (** Check if a position is within a declaration's range *)
 let pos_in_decl (pos : Lexing.position) (decl : Decl.t) : bool =
   pos.pos_fname = decl.pos.pos_fname
-  && pos.pos_cnum >= decl.posStart.pos_cnum
-  && pos.pos_cnum <= decl.posEnd.pos_cnum
+  && pos.pos_cnum >= decl.pos_start.pos_cnum
+  && pos.pos_cnum <= decl.pos_end.pos_cnum
 
 (** Build a hashtable mapping posTo -> bool indicating if it has external refs.
     External refs are refs where posFrom is NOT a declaration position.
@@ -37,23 +37,23 @@ let find_externally_referenced ~(decl_store : DeclarationStore.t)
   let externally_referenced = PosHash.create 256 in
 
   (* Helper: check if posFrom is a declaration position *)
-  let is_decl_pos posFrom =
-    DeclarationStore.find_opt decl_store posFrom <> None
+  let is_decl_pos pos_from =
+    DeclarationStore.find_opt decl_store pos_from <> None
   in
 
   (* Check value refs *)
-  References.iter_value_refs_from refs (fun posFrom posToSet ->
-      if not (is_decl_pos posFrom) then
+  References.iter_value_refs_from refs (fun pos_from pos_to_set ->
+      if not (is_decl_pos pos_from) then
         PosSet.iter
-          (fun posTo -> PosHash.replace externally_referenced posTo true)
-          posToSet);
+          (fun pos_to -> PosHash.replace externally_referenced pos_to true)
+          pos_to_set);
 
   (* Check type refs *)
-  References.iter_type_refs_from refs (fun posFrom posToSet ->
-      if not (is_decl_pos posFrom) then
+  References.iter_type_refs_from refs (fun pos_from pos_to_set ->
+      if not (is_decl_pos pos_from) then
         PosSet.iter
-          (fun posTo -> PosHash.replace externally_referenced posTo true)
-          posToSet);
+          (fun pos_to -> PosHash.replace externally_referenced pos_to true)
+          pos_to_set);
 
   externally_referenced
 
@@ -99,22 +99,22 @@ let build_decl_refs_index ~(decl_store : DeclarationStore.t)
   in
 
   (* For each ref, find which declaration (in same file) contains its source *)
-  let process_ref posFrom posToSet ~is_type =
-    let fname = posFrom.Lexing.pos_fname in
+  let process_ref pos_from pos_to_set ~is_type =
+    let fname = pos_from.Lexing.pos_fname in
     match Hashtbl.find_opt decls_by_file fname with
     | None -> () (* No declarations in this file *)
     | Some decls_in_file ->
       List.iter
         (fun (decl_pos, decl) ->
-          if pos_in_decl posFrom decl then
-            add_targets decl_pos posToSet ~is_type)
+          if pos_in_decl pos_from decl then
+            add_targets decl_pos pos_to_set ~is_type)
         decls_in_file
   in
 
-  References.iter_value_refs_from refs (fun posFrom posToSet ->
-      process_ref posFrom posToSet ~is_type:false);
-  References.iter_type_refs_from refs (fun posFrom posToSet ->
-      process_ref posFrom posToSet ~is_type:true);
+  References.iter_value_refs_from refs (fun pos_from pos_to_set ->
+      process_ref pos_from pos_to_set ~is_type:false);
+  References.iter_type_refs_from refs (fun pos_from pos_to_set ->
+      process_ref pos_from pos_to_set ~is_type:true);
 
   index
 
@@ -179,8 +179,8 @@ let compute_forward ~debug ~(decl_store : DeclarationStore.t)
         Queue.push (pos, decl) worklist;
         if debug then
           Log_.item "  Root (%s): %s %s@." (reason_to_string reason)
-            (decl.declKind |> Decl.Kind.toString)
-            (decl.path |> DcePath.toString)))
+            (decl.decl_kind |> Decl.Kind.to_string)
+            (decl.path |> DcePath.to_string)))
     decl_store;
 
   if debug then Log_.item "@.  %d roots found@.@." !root_count;
@@ -202,14 +202,14 @@ let compute_forward ~debug ~(decl_store : DeclarationStore.t)
             if not (PosHash.mem live target) then
               match DeclarationStore.find_opt decl_store target with
               | Some target_decl
-                when not (target_decl.declKind |> Decl.Kind.isType) ->
+                when not (target_decl.decl_kind |> Decl.Kind.is_type) ->
                 incr propagated_count;
                 PosHash.replace live target Propagated;
                 Queue.push (target, target_decl) worklist;
                 if debug then
                   Log_.item "  Propagate: %s -> %s@."
-                    (decl.path |> DcePath.toString)
-                    (target_decl.path |> DcePath.toString)
+                    (decl.path |> DcePath.to_string)
+                    (target_decl.path |> DcePath.to_string)
               | Some _ ->
                 (* Type target from value ref - see below *)
                 ()
@@ -223,15 +223,15 @@ let compute_forward ~debug ~(decl_store : DeclarationStore.t)
           (fun target ->
             if not (PosHash.mem live target) then
               match DeclarationStore.find_opt decl_store target with
-              | Some target_decl when target_decl.declKind |> Decl.Kind.isType
+              | Some target_decl when target_decl.decl_kind |> Decl.Kind.is_type
                 ->
                 incr propagated_count;
                 PosHash.replace live target Propagated;
                 Queue.push (target, target_decl) worklist;
                 if debug then
                   Log_.item "  Propagate: %s -> %s@."
-                    (decl.path |> DcePath.toString)
-                    (target_decl.path |> DcePath.toString)
+                    (decl.path |> DcePath.to_string)
+                    (target_decl.path |> DcePath.to_string)
               | Some _ ->
                 (* Value target from type ref - skip *)
                 ()

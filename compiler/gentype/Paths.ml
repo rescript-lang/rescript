@@ -46,10 +46,10 @@ let append_suffix ~config source_path =
   ^ ModuleExtension.ts_input_file_suffix ~config
 
 let get_output_file_relative ~(config : Config.t) source_path =
-  let relativePath =
+  let relative_path =
     remove_path_prefix ~prefix:config.project_root source_path
   in
-  append_suffix ~config relativePath
+  append_suffix ~config relative_path
 
 let get_output_file ~(config : Config.t) source_path =
   let relative_output_path = get_output_file_relative ~config source_path in

@@ -45,11 +45,11 @@ let test_same_source_anti_join () =
   let src, emit = source ~name:"source" () in
 
   let refs =
-    flatMap ~name:"refs" src ~f:(fun _file (data : file_data) -> data.refs) ()
+    flat_map ~name:"refs" src ~f:(fun _file (data : file_data) -> data.refs) ()
   in
 
   let decls =
-    flatMap ~name:"decls" src
+    flat_map ~name:"decls" src
       ~f:(fun _file (data : file_data) ->
         List.map (fun pos -> (pos, ())) data.decl_positions)
       ()
@@ -57,11 +57,11 @@ let test_same_source_anti_join () =
 
   let external_refs =
     join ~name:"external_refs" refs decls
-      ~key_of:(fun posFrom _posTo -> posFrom)
-      ~f:(fun _posFrom posTo decl_opt ->
+      ~key_of:(fun pos_from _posTo -> pos_from)
+      ~f:(fun _posFrom pos_to decl_opt ->
         match decl_opt with
         | Some () -> []
-        | None -> [(posTo, ())])
+        | None -> [(pos_to, ())])
       ~merge:(fun () () -> ())
       ()
   in
@@ -93,7 +93,7 @@ let test_multi_level_union () =
 
   (* refs1: level 1 *)
   let refs1 =
-    flatMap ~name:"refs1" src
+    flat_map ~name:"refs1" src
       ~f:(fun _file (data : file_data) ->
         List.filter (fun (k, _) -> String.length k > 0 && k.[0] = 'D') data.refs)
       ()
@@ -101,18 +101,18 @@ let test_multi_level_union () =
 
   (* intermediate: level 1 *)
   let intermediate =
-    flatMap ~name:"intermediate" src
+    flat_map ~name:"intermediate" src
       ~f:(fun _file (data : file_data) ->
         List.filter (fun (k, _) -> String.length k > 0 && k.[0] = 'I') data.refs)
       ()
   in
 
   (* refs2: level 2 *)
-  let refs2 = flatMap ~name:"refs2" intermediate ~f:(fun k v -> [(k, v)]) () in
+  let refs2 = flat_map ~name:"refs2" intermediate ~f:(fun k v -> [(k, v)]) () in
 
   (* decls: level 1 *)
   let decls =
-    flatMap ~name:"decls" src
+    flat_map ~name:"decls" src
       ~f:(fun _file (data : file_data) ->
         List.map (fun pos -> (pos, ())) data.decl_positions)
       ()
@@ -124,11 +124,11 @@ let test_multi_level_union () =
   (* external_refs: join at level 4 *)
   let external_refs =
     join ~name:"external_refs" all_refs decls
-      ~key_of:(fun posFrom _posTo -> posFrom)
-      ~f:(fun _posFrom posTo decl_opt ->
+      ~key_of:(fun pos_from _posTo -> pos_from)
+      ~f:(fun _posFrom pos_to decl_opt ->
         match decl_opt with
         | Some () -> []
-        | None -> [(posTo, ())])
+        | None -> [(pos_to, ())])
       ~merge:(fun () () -> ())
       ()
   in
@@ -158,7 +158,7 @@ let test_real_pipeline_simulation () =
 
   (* decls: level 1 *)
   let decls =
-    flatMap ~name:"decls" src
+    flat_map ~name:"decls" src
       ~f:(fun _file (data : full_file_data) ->
         List.map (fun pos -> (pos, ())) data.full_decls)
       ()
@@ -166,21 +166,21 @@ let test_real_pipeline_simulation () =
 
   (* merged_value_refs: level 1 *)
   let merged_value_refs =
-    flatMap ~name:"merged_value_refs" src
+    flat_map ~name:"merged_value_refs" src
       ~f:(fun _file (data : full_file_data) -> data.value_refs)
       ()
   in
 
   (* exception_refs_raw: level 1 *)
   let exception_refs_raw =
-    flatMap ~name:"exception_refs_raw" src
+    flat_map ~name:"exception_refs_raw" src
       ~f:(fun _file (data : full_file_data) -> data.exception_refs)
       ()
   in
 
   (* exception_decls: level 2 *)
   let exception_decls =
-    flatMap ~name:"exception_decls" decls
+    flat_map ~name:"exception_decls" decls
       ~f:(fun pos () ->
         if String.length pos > 0 && pos.[0] = 'E' then [(pos, ())] else [])
       ()
@@ -199,8 +199,8 @@ let test_real_pipeline_simulation () =
 
   (* resolved_refs_from: level 4 *)
   let resolved_refs_from =
-    flatMap ~name:"resolved_refs_from" resolved_exception_refs
-      ~f:(fun posTo posFrom -> [(posFrom, posTo)])
+    flat_map ~name:"resolved_refs_from" resolved_exception_refs
+      ~f:(fun pos_to pos_from -> [(pos_from, pos_to)])
       ()
   in
 
@@ -212,11 +212,11 @@ let test_real_pipeline_simulation () =
   (* external_value_refs: join at level 6 *)
   let external_value_refs =
     join ~name:"external_value_refs" value_refs_from decls
-      ~key_of:(fun posFrom _posTo -> posFrom)
-      ~f:(fun _posFrom posTo decl_opt ->
+      ~key_of:(fun pos_from _posTo -> pos_from)
+      ~f:(fun _posFrom pos_to decl_opt ->
         match decl_opt with
         | Some () -> []
-        | None -> [(posTo, ())])
+        | None -> [(pos_to, ())])
       ~merge:(fun () () -> ())
       ()
   in
@@ -250,11 +250,11 @@ let test_separate_sources () =
 
   let external_refs =
     join ~name:"external_refs" refs_src decls_src
-      ~key_of:(fun posFrom _posTo -> posFrom)
-      ~f:(fun _posFrom posTo decl_opt ->
+      ~key_of:(fun pos_from _posTo -> pos_from)
+      ~f:(fun _posFrom pos_to decl_opt ->
         match decl_opt with
         | Some () -> []
-        | None -> [(posTo, ())])
+        | None -> [(pos_to, ())])
       ~merge:(fun () () -> ())
       ()
   in

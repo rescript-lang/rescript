@@ -23,7 +23,7 @@ type file_data = {
 val process_cmt_file :
   config:DceConfig.t ->
   file:file_context ->
-  cmtFilePath:string ->
+  cmt_file_path:string ->
   Cmt_format.cmt_infos ->
   file_data
 (** Process a cmt file and return mutable builders.

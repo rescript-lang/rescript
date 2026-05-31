@@ -1,4 +1,4 @@
-let runConfig = RunConfig.runConfig
+let run_config = RunConfig.run_config
 
 let normalize_separators s =
   if Sys.win32 then String.map (fun c -> if c = '\\' then '/' else c) s else s
@@ -49,43 +49,43 @@ and glob_segment pattern segment =
   in
   aux 0 0
 
-let checkPattern pattern_ =
+let check_pattern pattern_ =
   let is_glob = has_glob_char pattern_ in
   let pattern =
-    match runConfig.projectRoot = "" with
+    match run_config.project_root = "" with
     | true -> pattern_
-    | false -> Filename.concat runConfig.projectRoot pattern_
+    | false -> Filename.concat run_config.project_root pattern_
   in
   let pattern = normalize_separators pattern in
   if is_glob then
     let pattern_segs = split_on_slash pattern in
-    fun sourceDir ->
-      let path_segs = split_on_slash (normalize_separators sourceDir) in
+    fun source_dir ->
+      let path_segs = split_on_slash (normalize_separators source_dir) in
       glob_match pattern_segs path_segs
   else
-    let prefixLen = pattern |> String.length in
-    fun sourceDir ->
-      let sourceDir = normalize_separators sourceDir in
-      try String.sub sourceDir 0 prefixLen = pattern
+    let prefix_len = pattern |> String.length in
+    fun source_dir ->
+      let source_dir = normalize_separators source_dir in
+      try String.sub source_dir 0 prefix_len = pattern
       with Invalid_argument _ -> false
 
-let suppressSourceDir =
+let suppress_source_dir =
   lazy
-    (fun sourceDir ->
-      runConfig.suppress
-      |> List.exists (fun pattern -> checkPattern pattern sourceDir))
+    (fun source_dir ->
+      run_config.suppress
+      |> List.exists (fun pattern -> check_pattern pattern source_dir))
 
-let unsuppressSourceDir =
+let unsuppress_source_dir =
   lazy
-    (fun sourceDir ->
-      runConfig.unsuppress
-      |> List.exists (fun pattern -> checkPattern pattern sourceDir))
+    (fun source_dir ->
+      run_config.unsuppress
+      |> List.exists (fun pattern -> check_pattern pattern source_dir))
 
-let posInSuppress (pos : Lexing.position) =
-  pos.pos_fname |> Lazy.force suppressSourceDir
+let pos_in_suppress (pos : Lexing.position) =
+  pos.pos_fname |> Lazy.force suppress_source_dir
 
-let posInUnsuppress (pos : Lexing.position) =
-  pos.pos_fname |> Lazy.force unsuppressSourceDir
+let pos_in_unsuppress (pos : Lexing.position) =
+  pos.pos_fname |> Lazy.force unsuppress_source_dir
 
 (** First suppress list, then override with unsuppress list *)
-let filter pos = (not (posInSuppress pos)) || posInUnsuppress pos
+let filter pos = (not (pos_in_suppress pos)) || pos_in_unsuppress pos

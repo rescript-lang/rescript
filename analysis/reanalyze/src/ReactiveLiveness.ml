@@ -36,7 +36,7 @@ let create ~(merged : ReactiveMerge.t) : t =
 
   (* Step 2: Convert to edges format for fixpoint: decl -> successor list *)
   let edges : (Lexing.position, Lexing.position list) Reactive.t =
-    Reactive.flatMap ~name:"liveness.edges" decl_refs_index
+    Reactive.flat_map ~name:"liveness.edges" decl_refs_index
       ~f:(fun pos (value_targets, type_targets) ->
         let all_targets = PosSet.union value_targets type_targets in
         [(pos, PosSet.elements all_targets)])
@@ -56,7 +56,7 @@ let create ~(merged : ReactiveMerge.t) : t =
      position P arrives, any ref with posFrom=P will be reprocessed. *)
   let external_value_refs : (Lexing.position, unit) Reactive.t =
     Reactive.join ~name:"liveness.external_value_refs" value_refs_from decls
-      ~key_of:(fun posFrom _targets -> posFrom)
+      ~key_of:(fun pos_from _targets -> pos_from)
       ~f:(fun _posFrom targets decl_opt ->
         match decl_opt with
         | Some _ ->
@@ -64,14 +64,14 @@ let create ~(merged : ReactiveMerge.t) : t =
           []
         | None ->
           (* posFrom is NOT a decl position, targets are externally referenced *)
-          PosSet.elements targets |> List.map (fun posTo -> (posTo, ())))
+          PosSet.elements targets |> List.map (fun pos_to -> (pos_to, ())))
       ~merge:(fun () () -> ())
       ()
   in
 
   let external_type_refs : (Lexing.position, unit) Reactive.t =
     Reactive.join ~name:"liveness.external_type_refs" type_refs_from decls
-      ~key_of:(fun posFrom _targets -> posFrom)
+      ~key_of:(fun pos_from _targets -> pos_from)
       ~f:(fun _posFrom targets decl_opt ->
         match decl_opt with
         | Some _ ->
@@ -79,7 +79,7 @@ let create ~(merged : ReactiveMerge.t) : t =
           []
         | None ->
           (* posFrom is NOT a decl position, targets are externally referenced *)
-          PosSet.elements targets |> List.map (fun posTo -> (posTo, ())))
+          PosSet.elements targets |> List.map (fun pos_to -> (pos_to, ())))
       ~merge:(fun () () -> ())
       ()
   in

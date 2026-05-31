@@ -15,11 +15,11 @@ type file_context = {
 }
 
 let module_name_tagged (file : file_context) =
-  file.module_name |> Name.create ~isInterface:file.is_interface
+  file.module_name |> Name.create ~is_interface:file.is_interface
 
 (* ===== Signature processing ===== *)
 
-let processSignature ~config ~decls ~(file : file_context) ~doValues ~doTypes
+let process_signature ~config ~decls ~(file : file_context) ~do_values ~do_types
     (signature : Types.signature) =
   let dead_common_file : FileContext.t =
     {
@@ -30,9 +30,9 @@ let processSignature ~config ~decls ~(file : file_context) ~doValues ~doTypes
   in
   signature
   |> List.iter (fun sig_item ->
-         DeadValue.processSignatureItem ~config ~decls ~file:dead_common_file
-           ~doValues ~doTypes ~moduleLoc:Location.none
-           ~modulePath:ModulePath.initial
+         DeadValue.process_signature_item ~config ~decls ~file:dead_common_file
+           ~do_values ~do_types ~module_loc:Location.none
+           ~module_path:ModulePath.initial
            ~path:[module_name_tagged file]
            sig_item)
 
@@ -46,7 +46,7 @@ type file_data = {
   file_deps: FileDeps.builder;
 }
 
-let process_cmt_file ~config ~(file : file_context) ~cmtFilePath
+let process_cmt_file ~config ~(file : file_context) ~cmt_file_path
     (cmt_infos : Cmt_format.cmt_infos) : file_data =
   (* Convert to DeadCommon.FileContext for functions that need it *)
   let dead_common_file : FileContext.t =
@@ -67,19 +67,19 @@ let process_cmt_file ~config ~(file : file_context) ~cmtFilePath
   (match cmt_infos.cmt_annots with
   | Interface signature ->
     CollectAnnotations.signature ~state:annotations ~config signature;
-    processSignature ~config ~decls ~file ~doValues:true ~doTypes:true
+    process_signature ~config ~decls ~file ~do_values:true ~do_types:true
       signature.sig_type
   | Implementation structure ->
-    let cmtiExists =
-      Sys.file_exists ((cmtFilePath |> Filename.remove_extension) ^ ".cmti")
+    let cmti_exists =
+      Sys.file_exists ((cmt_file_path |> Filename.remove_extension) ^ ".cmti")
     in
     CollectAnnotations.structure ~state:annotations ~config
-      ~doGenType:(not cmtiExists) structure;
-    processSignature ~config ~decls ~file ~doValues:true ~doTypes:false
+      ~do_gen_type:(not cmti_exists) structure;
+    process_signature ~config ~decls ~file ~do_values:true ~do_types:false
       structure.str_type;
-    let doExternals = false in
-    DeadValue.processStructure ~config ~decls ~refs ~file_deps ~cross_file
-      ~file:dead_common_file ~doTypes:true ~doExternals
+    let do_externals = false in
+    DeadValue.process_structure ~config ~decls ~refs ~file_deps ~cross_file
+      ~file:dead_common_file ~do_types:true ~do_externals
       ~cmt_value_dependencies:cmt_infos.cmt_value_dependencies structure
   | _ -> ());
   (* Return builders - caller will merge and freeze *)

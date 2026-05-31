@@ -1,17 +1,17 @@
 type t = Lsp.Uri.t
 
-let stripPath = ref false (* for use in tests *)
+let strip_path = ref false (* for use in tests *)
 
-let fromPath path = Lsp.Uri.of_path path
-let fromString str = Lsp.Uri.of_string str
-let isInterface uri = uri |> Lsp.Uri.to_string |> Filename.check_suffix "i"
-let toPath uri =
+let from_path path = Lsp.Uri.of_path path
+let from_string str = Lsp.Uri.of_string str
+let is_interface uri = uri |> Lsp.Uri.to_string |> Filename.check_suffix "i"
+let to_path uri =
   (* Lsp.Uri.to_path remove the schema file:// but keep the `/` on start of path. *)
   let p = Lsp.Uri.to_path uri in
-  if !stripPath then String.sub p 1 (String.length p - 1) else p
+  if !strip_path then String.sub p 1 (String.length p - 1) else p
 
-let toTopLevelLoc (uri : Lsp.Uri.t) =
-  let topPos =
+let to_top_level_loc (uri : Lsp.Uri.t) =
+  let top_pos =
     {
       Lexing.pos_fname = uri |> Lsp.Uri.to_path;
       pos_lnum = 1;
@@ -19,10 +19,10 @@ let toTopLevelLoc (uri : Lsp.Uri.t) =
       pos_cnum = 0;
     }
   in
-  {Location.loc_start = topPos; Location.loc_end = topPos; loc_ghost = false}
+  {Location.loc_start = top_pos; Location.loc_end = top_pos; loc_ghost = false}
 
-let toString t =
-  if !stripPath then Filename.basename (Lsp.Uri.to_path t)
+let to_string t =
+  if !strip_path then Filename.basename (Lsp.Uri.to_path t)
   else Lsp.Uri.to_string t
 
 (* Light weight, hopefully-enough-for-the-purpose fn to encode URI components.
@@ -30,7 +30,7 @@ let toString t =
    https://en.wikipedia.org/wiki/Percent-encoding. Note that this function is not
    general purpose, rather it's currently only for URL encoding the argument list
    passed to command links in markdown. *)
-let encodeURIComponent text =
+let encode_u_r_i_component text =
   let ln = String.length text in
   let buf = Buffer.create ln in
   let rec loop i =

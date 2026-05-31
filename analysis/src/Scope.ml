@@ -4,42 +4,42 @@ type t = item list
 
 open SharedTypes.ScopeTypes
 
-let itemToString item =
+let item_to_string item =
   let str s = if s = "" then "\"\"" else s in
   let list l = "[" ^ (l |> List.map str |> String.concat ", ") ^ "]" in
   match item with
-  | Constructor (s, loc) -> "Constructor " ^ s ^ " " ^ Loc.toString loc
-  | Field (s, loc) -> "Field " ^ s ^ " " ^ Loc.toString loc
+  | Constructor (s, loc) -> "Constructor " ^ s ^ " " ^ Loc.to_string loc
+  | Field (s, loc) -> "Field " ^ s ^ " " ^ Loc.to_string loc
   | Open sl -> "Open " ^ list sl
-  | Module (s, loc) -> "Module " ^ s ^ " " ^ Loc.toString loc
-  | Value (s, loc, _, _) -> "Value " ^ s ^ " " ^ Loc.toString loc
-  | Type (s, loc) -> "Type " ^ s ^ " " ^ Loc.toString loc
-  | Include (s, loc) -> "Include " ^ s ^ " " ^ Loc.toString loc
+  | Module (s, loc) -> "Module " ^ s ^ " " ^ Loc.to_string loc
+  | Value (s, loc, _, _) -> "Value " ^ s ^ " " ^ Loc.to_string loc
+  | Type (s, loc) -> "Type " ^ s ^ " " ^ Loc.to_string loc
+  | Include (s, loc) -> "Include " ^ s ^ " " ^ Loc.to_string loc
 [@@live]
 
 let create () : t = []
-let addConstructor ~name ~loc x = Constructor (name, loc) :: x
-let addField ~name ~loc x = Field (name, loc) :: x
-let addModule ~name ~loc x = Module (name, loc) :: x
-let addOpen ~lid x = Open (Utils.flattenLongIdent lid @ ["place holder"]) :: x
-let addValue ~name ~loc ?contextPath x =
-  let showDebug = !Cfg.debugFollowCtxPath in
-  (if showDebug then
-     match contextPath with
+let add_constructor ~name ~loc x = Constructor (name, loc) :: x
+let add_field ~name ~loc x = Field (name, loc) :: x
+let add_module ~name ~loc x = Module (name, loc) :: x
+let add_open ~lid x = Open (Utils.flatten_long_ident lid @ ["place holder"]) :: x
+let add_value ~name ~loc ?context_path x =
+  let show_debug = !Cfg.debug_follow_ctx_path in
+  (if show_debug then
+     match context_path with
      | None -> Printf.printf "adding value '%s', no ctxPath\n" name
-     | Some contextPath ->
-       if showDebug then
+     | Some context_path ->
+       if show_debug then
          Printf.printf "adding value '%s' with ctxPath: %s\n" name
-           (SharedTypes.Completable.contextPathToString contextPath));
-  Value (name, loc, contextPath, x) :: x
-let addType ~name ~loc x = Type (name, loc) :: x
-let addInclude ~name ~loc x = Include (name, loc) :: x
+           (SharedTypes.Completable.context_path_to_string context_path));
+  Value (name, loc, context_path, x) :: x
+let add_type ~name ~loc x = Type (name, loc) :: x
+let add_include ~name ~loc x = Include (name, loc) :: x
 
-let iterValuesBeforeFirstOpen f x =
+let iter_values_before_first_open f x =
   let rec loop items =
     match items with
-    | Value (s, loc, contextPath, scope) :: rest ->
-      f s loc contextPath scope;
+    | Value (s, loc, context_path, scope) :: rest ->
+      f s loc context_path scope;
       loop rest
     | Open _ :: _ -> ()
     | _ :: rest -> loop rest
@@ -47,19 +47,19 @@ let iterValuesBeforeFirstOpen f x =
   in
   loop x
 
-let iterValuesAfterFirstOpen f x =
-  let rec loop foundOpen items =
+let iter_values_after_first_open f x =
+  let rec loop found_open items =
     match items with
-    | Value (s, loc, contextPath, scope) :: rest ->
-      if foundOpen then f s loc contextPath scope;
-      loop foundOpen rest
+    | Value (s, loc, context_path, scope) :: rest ->
+      if found_open then f s loc context_path scope;
+      loop found_open rest
     | Open _ :: rest -> loop true rest
-    | _ :: rest -> loop foundOpen rest
+    | _ :: rest -> loop found_open rest
     | [] -> ()
   in
   loop false x
 
-let iterConstructorsBeforeFirstOpen f x =
+let iter_constructors_before_first_open f x =
   let rec loop items =
     match items with
     | Constructor (s, loc) :: rest ->
@@ -71,19 +71,19 @@ let iterConstructorsBeforeFirstOpen f x =
   in
   loop x
 
-let iterConstructorsAfterFirstOpen f x =
-  let rec loop foundOpen items =
+let iter_constructors_after_first_open f x =
+  let rec loop found_open items =
     match items with
     | Constructor (s, loc) :: rest ->
-      if foundOpen then f s loc;
-      loop foundOpen rest
+      if found_open then f s loc;
+      loop found_open rest
     | Open _ :: rest -> loop true rest
-    | _ :: rest -> loop foundOpen rest
+    | _ :: rest -> loop found_open rest
     | [] -> ()
   in
   loop false x
 
-let iterTypesBeforeFirstOpen f x =
+let iter_types_before_first_open f x =
   let rec loop items =
     match items with
     | Type (s, loc) :: rest ->
@@ -95,19 +95,19 @@ let iterTypesBeforeFirstOpen f x =
   in
   loop x
 
-let iterTypesAfterFirstOpen f x =
-  let rec loop foundOpen items =
+let iter_types_after_first_open f x =
+  let rec loop found_open items =
     match items with
     | Type (s, loc) :: rest ->
-      if foundOpen then f s loc;
-      loop foundOpen rest
+      if found_open then f s loc;
+      loop found_open rest
     | Open _ :: rest -> loop true rest
-    | _ :: rest -> loop foundOpen rest
+    | _ :: rest -> loop found_open rest
     | [] -> ()
   in
   loop false x
 
-let iterModulesBeforeFirstOpen f x =
+let iter_modules_before_first_open f x =
   let rec loop items =
     match items with
     | Module (s, loc) :: rest ->
@@ -119,19 +119,19 @@ let iterModulesBeforeFirstOpen f x =
   in
   loop x
 
-let iterModulesAfterFirstOpen f x =
-  let rec loop foundOpen items =
+let iter_modules_after_first_open f x =
+  let rec loop found_open items =
     match items with
     | Module (s, loc) :: rest ->
-      if foundOpen then f s loc;
-      loop foundOpen rest
+      if found_open then f s loc;
+      loop found_open rest
     | Open _ :: rest -> loop true rest
-    | _ :: rest -> loop foundOpen rest
+    | _ :: rest -> loop found_open rest
     | [] -> ()
   in
   loop false x
 
-let iterIncludes f x =
+let iter_includes f x =
   let rec loop items =
     match items with
     | [] -> ()
@@ -142,8 +142,8 @@ let iterIncludes f x =
   in
   loop x
 
-let getRawOpens x =
+let get_raw_opens x =
   x
-  |> Utils.filterMap (function
+  |> Utils.filter_map (function
        | Open path -> Some path
        | _ -> None)

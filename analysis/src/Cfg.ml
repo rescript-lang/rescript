@@ -1,8 +1,8 @@
-let debugFollowCtxPath = ref false
+let debug_follow_ctx_path = ref false
 
-let isDocGenFromCompiler = ref false
+let is_doc_gen_from_compiler = ref false
 
-let inIncrementalTypecheckingMode =
+let in_incremental_typechecking_mode =
   ref
     (try
        match Sys.getenv "RESCRIPT_INCREMENTAL_TYPECHECKING" with
@@ -10,7 +10,7 @@ let inIncrementalTypecheckingMode =
        | _ -> false
      with _ -> false)
 
-let readProjectConfigCache =
+let read_project_config_cache =
   ref
     (try
        match Sys.getenv "RESCRIPT_PROJECT_CONFIG_CACHE" with

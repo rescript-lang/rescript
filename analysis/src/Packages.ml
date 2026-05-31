@@ -1,24 +1,24 @@
 open SharedTypes
 
 (* Creates the `pathsForModule` hashtbl, which maps a `moduleName` to it's `paths` (the ml/re, mli/rei, cmt, and cmti files) *)
-let makePathsForModule ~projectFilesAndPaths ~dependenciesFilesAndPaths =
-  let pathsForModule = Hashtbl.create 30 in
-  dependenciesFilesAndPaths
-  |> List.iter (fun (modName, paths) ->
-         Hashtbl.replace pathsForModule modName paths);
-  projectFilesAndPaths
-  |> List.iter (fun (modName, paths) ->
-         Hashtbl.replace pathsForModule modName paths);
-  pathsForModule
+let make_paths_for_module ~project_files_and_paths ~dependencies_files_and_paths =
+  let paths_for_module = Hashtbl.create 30 in
+  dependencies_files_and_paths
+  |> List.iter (fun (mod_name, paths) ->
+         Hashtbl.replace paths_for_module mod_name paths);
+  project_files_and_paths
+  |> List.iter (fun (mod_name, paths) ->
+         Hashtbl.replace paths_for_module mod_name paths);
+  paths_for_module
 
-let overrideRescriptVersion = ref None
+let override_rescript_version = ref None
 
-let getReScriptVersion () =
-  match !overrideRescriptVersion with
-  | Some overrideRescriptVersion -> overrideRescriptVersion
+let get_re_script_version () =
+  match !override_rescript_version with
+  | Some override_rescript_version -> override_rescript_version
   | None -> (
     (* TODO: Include patch stuff when needed *)
-    let defaultVersion = (11, 0) in
+    let default_version = (11, 0) in
     try
       let value = Sys.getenv "RESCRIPT_VERSION" in
       let version =
@@ -26,43 +26,43 @@ let getReScriptVersion () =
         | major :: minor :: _rest -> (
           match (int_of_string_opt major, int_of_string_opt minor) with
           | Some major, Some minor -> (major, minor)
-          | _ -> defaultVersion)
-        | _ -> defaultVersion
+          | _ -> default_version)
+        | _ -> default_version
       in
       version
-    with Not_found -> defaultVersion)
+    with Not_found -> default_version)
 
-let newBsPackage ~rootPath =
-  let rescriptJson = Filename.concat rootPath "rescript.json" in
+let new_bs_package ~root_path =
+  let rescript_json = Filename.concat root_path "rescript.json" in
 
-  let parseRaw raw =
-    let libBs =
-      match !Cfg.isDocGenFromCompiler with
-      | true -> BuildSystem.getStdlib rootPath
-      | false -> BuildSystem.getLibBs rootPath
+  let parse_raw raw =
+    let lib_bs =
+      match !Cfg.is_doc_gen_from_compiler with
+      | true -> BuildSystem.get_stdlib root_path
+      | false -> BuildSystem.get_lib_bs root_path
     in
     match YojsonHelpers.from_string_opt raw with
     | Some config -> (
-      let namespace = FindFiles.getNamespace config in
-      let rescriptVersion = getReScriptVersion () in
+      let namespace = FindFiles.get_namespace config in
+      let rescript_version = get_re_script_version () in
       let suffix =
         match config |> YojsonHelpers.get "suffix" with
         | Some (`String suffix) -> suffix
         | _ -> ".js"
       in
-      let genericJsxModule =
-        let jsxConfig = config |> YojsonHelpers.get "jsx" in
-        match jsxConfig with
-        | Some jsxConfig -> (
-          match jsxConfig |> YojsonHelpers.get "module" with
+      let generic_jsx_module =
+        let jsx_config = config |> YojsonHelpers.get "jsx" in
+        match jsx_config with
+        | Some jsx_config -> (
+          match jsx_config |> YojsonHelpers.get "module" with
           | Some (`String m) when String.lowercase_ascii m <> "react" -> Some m
           | _ -> None)
         | None -> None
       in
       let autocomplete =
         match config |> YojsonHelpers.get "editor" with
-        | Some editorConfig -> (
-          match editorConfig |> YojsonHelpers.get "autocomplete" with
+        | Some editor_config -> (
+          match editor_config |> YojsonHelpers.get "autocomplete" with
           | Some (`Assoc map) ->
             map
             |> List.fold_left
@@ -81,52 +81,52 @@ let newBsPackage ~rootPath =
           | _ -> Misc.StringMap.empty)
         | None -> Misc.StringMap.empty
       in
-      match libBs with
+      match lib_bs with
       | None -> None
-      | Some libBs ->
-        let cached = Cache.readCache (Cache.targetFileFromLibBs libBs) in
-        let projectFiles, dependenciesFiles, pathsForModule =
+      | Some lib_bs ->
+        let cached = Cache.read_cache (Cache.target_file_from_lib_bs lib_bs) in
+        let project_files, dependencies_files, paths_for_module =
           match cached with
           | Some cached ->
-            ( cached.projectFiles,
-              cached.dependenciesFiles,
-              cached.pathsForModule )
+            ( cached.project_files,
+              cached.dependencies_files,
+              cached.paths_for_module )
           | None ->
-            let dependenciesFilesAndPaths =
-              match FindFiles.findDependencyFiles rootPath config with
+            let dependencies_files_and_paths =
+              match FindFiles.find_dependency_files root_path config with
               | None -> []
-              | Some (_dependencyDirectories, dependenciesFilesAndPaths) ->
-                dependenciesFilesAndPaths
+              | Some (_dependencyDirectories, dependencies_files_and_paths) ->
+                dependencies_files_and_paths
             in
-            let sourceDirectories =
-              FindFiles.getSourceDirectories ~includeDev:true ~baseDir:rootPath
+            let source_directories =
+              FindFiles.get_source_directories ~include_dev:true ~base_dir:root_path
                 config
             in
-            let projectFilesAndPaths =
-              FindFiles.findProjectFiles
-                ~public:(FindFiles.getPublic config)
-                ~namespace ~path:rootPath ~sourceDirectories ~libBs
+            let project_files_and_paths =
+              FindFiles.find_project_files
+                ~public:(FindFiles.get_public config)
+                ~namespace ~path:root_path ~source_directories ~lib_bs
             in
-            let pathsForModule =
-              makePathsForModule ~projectFilesAndPaths
-                ~dependenciesFilesAndPaths
+            let paths_for_module =
+              make_paths_for_module ~project_files_and_paths
+                ~dependencies_files_and_paths
             in
-            let projectFiles =
-              projectFilesAndPaths |> List.map fst |> FileSet.of_list
+            let project_files =
+              project_files_and_paths |> List.map fst |> FileSet.of_list
             in
-            let dependenciesFiles =
-              dependenciesFilesAndPaths |> List.map fst |> FileSet.of_list
+            let dependencies_files =
+              dependencies_files_and_paths |> List.map fst |> FileSet.of_list
             in
-            (projectFiles, dependenciesFiles, pathsForModule)
+            (project_files, dependencies_files, paths_for_module)
         in
         Some
           (let opens_from_namespace =
              match namespace with
              | None -> []
              | Some namespace ->
-               let cmt = Filename.concat libBs namespace ^ ".cmt" in
-               Hashtbl.replace pathsForModule namespace (Namespace {cmt});
-               let path = [FindFiles.nameSpaceToName namespace] in
+               let cmt = Filename.concat lib_bs namespace ^ ".cmt" in
+               Hashtbl.replace paths_for_module namespace (Namespace {cmt});
+               let path = [FindFiles.name_space_to_name namespace] in
                [path]
            in
            let bind f x = Option.bind x f in
@@ -172,13 +172,13 @@ let newBsPackage ~rootPath =
              |> List.map (fun path -> path @ ["place holder"])
            in
            {
-             genericJsxModule;
+             generic_jsx_module;
              suffix;
-             rescriptVersion;
-             rootPath;
-             projectFiles;
-             dependenciesFiles;
-             pathsForModule;
+             rescript_version;
+             root_path;
+             project_files;
+             dependencies_files;
+             paths_for_module;
              opens;
              namespace;
              autocomplete;
@@ -186,17 +186,17 @@ let newBsPackage ~rootPath =
     | None -> None
   in
 
-  match Files.readFile rescriptJson with
-  | Some raw -> parseRaw raw
+  match Files.read_file rescript_json with
+  | Some raw -> parse_raw raw
   | None ->
-    Log.log ("Unable to read " ^ rescriptJson);
+    Log.log ("Unable to read " ^ rescript_json);
     None
 
-let findRoot ~uri packagesByRoot =
-  let path = Uri.toPath uri in
+let find_root ~uri packages_by_root =
+  let path = Uri.to_path uri in
   let rec loop path =
     if path = "/" then None
-    else if Hashtbl.mem packagesByRoot path then Some (`Root path)
+    else if Hashtbl.mem packages_by_root path then Some (`Root path)
     else if Files.exists (Filename.concat path "rescript.json") then
       Some (`Bs path)
     else
@@ -205,23 +205,23 @@ let findRoot ~uri packagesByRoot =
   in
   loop (if Sys.is_directory path then path else Filename.dirname path)
 
-let getPackage ~uri =
+let get_package ~uri =
   let open SharedTypes in
-  if Hashtbl.mem state.rootForUri uri then
-    Some (Hashtbl.find state.packagesByRoot (Hashtbl.find state.rootForUri uri))
+  if Hashtbl.mem state.root_for_uri uri then
+    Some (Hashtbl.find state.packages_by_root (Hashtbl.find state.root_for_uri uri))
   else
-    match findRoot ~uri state.packagesByRoot with
+    match find_root ~uri state.packages_by_root with
     | None ->
       Log.log "No root directory found";
       None
-    | Some (`Root rootPath) ->
-      Hashtbl.replace state.rootForUri uri rootPath;
+    | Some (`Root root_path) ->
+      Hashtbl.replace state.root_for_uri uri root_path;
       Some
-        (Hashtbl.find state.packagesByRoot (Hashtbl.find state.rootForUri uri))
-    | Some (`Bs rootPath) -> (
-      match newBsPackage ~rootPath with
+        (Hashtbl.find state.packages_by_root (Hashtbl.find state.root_for_uri uri))
+    | Some (`Bs root_path) -> (
+      match new_bs_package ~root_path with
       | None -> None
       | Some package ->
-        Hashtbl.replace state.rootForUri uri package.rootPath;
-        Hashtbl.replace state.packagesByRoot package.rootPath package;
+        Hashtbl.replace state.root_for_uri uri package.root_path;
+        Hashtbl.replace state.packages_by_root package.root_path package;
         Some package)

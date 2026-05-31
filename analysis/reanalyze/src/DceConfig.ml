@@ -24,9 +24,9 @@ let current () =
       debug = !Cli.debug;
       ci = !Cli.ci;
       json = !Cli.json;
-      live_names = !Cli.liveNames;
-      live_paths = !Cli.livePaths;
-      exclude_paths = !Cli.excludePaths;
+      live_names = !Cli.live_names;
+      live_paths = !Cli.live_paths;
+      exclude_paths = !Cli.exclude_paths;
     }
   in
-  {run = RunConfig.runConfig; cli}
+  {run = RunConfig.run_config; cli}

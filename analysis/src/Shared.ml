@@ -1,4 +1,4 @@
-let tryReadCmt cmt =
+let try_read_cmt cmt =
   if not (Files.exists cmt) then (
     Log.log ("Cmt file does not exist " ^ cmt);
     None)
@@ -16,7 +16,7 @@ let tryReadCmt cmt =
       None
     | x -> Some x
 
-let tryReadCmi cmi =
+let try_read_cmi cmi =
   if not (Files.exists cmi) then None
   else
     match Cmt_format.read_cmi cmi with
@@ -32,21 +32,21 @@ let rec dig (te : Types.type_expr) =
   | Tpoly (inner, _) -> dig inner
   | _ -> te
 
-let digConstructor te =
+let dig_constructor te =
   match (dig te).desc with
   | Tconstr (path, _args, _memo) -> Some path
   | _ -> None
 
-let findTypeConstructors (tel : Types.type_expr list) =
+let find_type_constructors (tel : Types.type_expr list) =
   let paths = ref [] in
-  let addPath path =
+  let add_path path =
     if not (List.exists (Path.same path) !paths) then paths := path :: !paths
   in
   let rec loop (te : Types.type_expr) =
     match te.desc with
     | Tlink te1 | Tsubst te1 | Tpoly (te1, _) -> loop te1
     | Tconstr (path, args, _) ->
-      addPath path;
+      add_path path;
       args |> List.iter loop
     | Tarrow (arg, ret, _, _) ->
       loop arg.typ;
@@ -59,18 +59,18 @@ let findTypeConstructors (tel : Types.type_expr list) =
   tel |> List.iter loop;
   !paths |> List.rev
 
-let declToString ?printNameAsIs ?(recStatus = Types.Trec_not) name t =
-  PrintType.printDecl ?printNameAsIs ~recStatus name t
+let decl_to_string ?print_name_as_is ?(rec_status = Types.Trec_not) name t =
+  PrintType.print_decl ?print_name_as_is ~rec_status name t
 
-let cacheTypeToString = ref false
-let typeTbl = Hashtbl.create 1
+let cache_type_to_string = ref false
+let type_tbl = Hashtbl.create 1
 
-let typeToString ?lineWidth (t : Types.type_expr) =
+let type_to_string ?line_width (t : Types.type_expr) =
   match
-    if !cacheTypeToString then Hashtbl.find_opt typeTbl (t.id, t) else None
+    if !cache_type_to_string then Hashtbl.find_opt type_tbl (t.id, t) else None
   with
   | None ->
-    let s = PrintType.printExpr ?lineWidth t in
-    Hashtbl.replace typeTbl (t.id, t) s;
+    let s = PrintType.print_expr ?line_width t in
+    Hashtbl.replace type_tbl (t.id, t) s;
     s
   | Some s -> s

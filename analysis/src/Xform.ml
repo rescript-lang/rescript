@@ -1,39 +1,39 @@
 (** Code transformations using the parser/printer and ast operations *)
 
-let isBracedExpr = Res_parsetree_viewer.is_braced_expr
+let is_braced_expr = Res_parsetree_viewer.is_braced_expr
 
-let extractTypeFromExpr expr ~debug ~source ~kindFile ~full ~pos =
+let extract_type_from_expr expr ~debug ~source ~kind_file ~full ~pos =
   match
     expr.Parsetree.pexp_loc
-    |> CompletionFrontEnd.findTypeOfExpressionAtLoc ~debug ~source ~kindFile
-         ~posCursor:(Pos.ofLexing expr.Parsetree.pexp_loc.loc_start)
+    |> CompletionFrontEnd.find_type_of_expression_at_loc ~debug ~source ~kind_file
+         ~pos_cursor:(Pos.of_lexing expr.Parsetree.pexp_loc.loc_start)
   with
   | Some (completable, scope) -> (
-    let env = SharedTypes.QueryEnv.fromFile full.SharedTypes.file in
+    let env = SharedTypes.QueryEnv.from_file full.SharedTypes.file in
     let completions =
       completable
-      |> CompletionBackEnd.processCompletable ~debug ~full ~pos ~scope ~env
-           ~forHover:true
+      |> CompletionBackEnd.process_completable ~debug ~full ~pos ~scope ~env
+           ~for_hover:true
     in
-    let rawOpens = Scope.getRawOpens scope in
+    let raw_opens = Scope.get_raw_opens scope in
     match completions with
     | {env} :: _ -> (
       let opens =
-        CompletionBackEnd.getOpens ~debug ~rawOpens ~package:full.package ~env
+        CompletionBackEnd.get_opens ~debug ~raw_opens ~package:full.package ~env
       in
       match
-        CompletionBackEnd.completionsGetCompletionType2 ~debug ~full ~rawOpens
+        CompletionBackEnd.completions_get_completion_type2 ~debug ~full ~raw_opens
           ~opens ~pos completions
       with
       | Some (typ, _env) ->
-        let extractedType =
+        let extracted_type =
           match typ with
           | ExtractedType t -> Some t
           | TypeExpr t ->
-            TypeUtils.extractType t ~env ~package:full.package
-            |> TypeUtils.getExtractedType
+            TypeUtils.extract_type t ~env ~package:full.package
+            |> TypeUtils.get_extracted_type
         in
-        extractedType
+        extracted_type
       | None -> None)
     | _ -> None)
   | _ -> None
@@ -41,48 +41,48 @@ let extractTypeFromExpr expr ~debug ~source ~kindFile ~full ~pos =
 module IfThenElse = struct
   (* Convert if-then-else to switch *)
 
-  let rec listToPat ~itemToPat = function
+  let rec list_to_pat ~item_to_pat = function
     | [] -> Some []
-    | x :: xList -> (
-      match (itemToPat x, listToPat ~itemToPat xList) with
-      | Some p, Some pList -> Some (p :: pList)
+    | x :: x_list -> (
+      match (item_to_pat x, list_to_pat ~item_to_pat x_list) with
+      | Some p, Some p_list -> Some (p :: p_list)
       | _ -> None)
 
-  let rec expToPat (exp : Parsetree.expression) =
-    let mkPat ppat_desc =
+  let rec exp_to_pat (exp : Parsetree.expression) =
+    let mk_pat ppat_desc =
       Ast_helper.Pat.mk ~loc:exp.pexp_loc ~attrs:exp.pexp_attributes ppat_desc
     in
     match exp.pexp_desc with
-    | Pexp_construct (lid, None) -> Some (mkPat (Ppat_construct (lid, None)))
+    | Pexp_construct (lid, None) -> Some (mk_pat (Ppat_construct (lid, None)))
     | Pexp_construct (lid, Some e1) -> (
-      match expToPat e1 with
+      match exp_to_pat e1 with
       | None -> None
-      | Some p1 -> Some (mkPat (Ppat_construct (lid, Some p1))))
-    | Pexp_variant (label, None) -> Some (mkPat (Ppat_variant (label, None)))
+      | Some p1 -> Some (mk_pat (Ppat_construct (lid, Some p1))))
+    | Pexp_variant (label, None) -> Some (mk_pat (Ppat_variant (label, None)))
     | Pexp_variant (label, Some e1) -> (
-      match expToPat e1 with
+      match exp_to_pat e1 with
       | None -> None
-      | Some p1 -> Some (mkPat (Ppat_variant (label, Some p1))))
-    | Pexp_constant c -> Some (mkPat (Ppat_constant c))
-    | Pexp_tuple eList -> (
-      match listToPat ~itemToPat:expToPat eList with
+      | Some p1 -> Some (mk_pat (Ppat_variant (label, Some p1))))
+    | Pexp_constant c -> Some (mk_pat (Ppat_constant c))
+    | Pexp_tuple e_list -> (
+      match list_to_pat ~item_to_pat:exp_to_pat e_list with
       | None -> None
-      | Some patList -> Some (mkPat (Ppat_tuple patList)))
+      | Some pat_list -> Some (mk_pat (Ppat_tuple pat_list)))
     | Pexp_record (items, None) -> (
-      let itemToPat {Parsetree.lid; x = e; opt} =
-        match expToPat e with
+      let item_to_pat {Parsetree.lid; x = e; opt} =
+        match exp_to_pat e with
         | None -> None
         | Some p -> Some {Parsetree.lid; x = p; opt}
       in
-      match listToPat ~itemToPat items with
+      match list_to_pat ~item_to_pat items with
       | None -> None
-      | Some patItems -> Some (mkPat (Ppat_record (patItems, Closed))))
+      | Some pat_items -> Some (mk_pat (Ppat_record (pat_items, Closed))))
     | Pexp_record (_, Some _) -> None
     | _ -> None
 
-  let mkIterator ~pos ~changed =
+  let mk_iterator ~pos ~changed =
     let expr (iterator : Ast_iterator.iterator) (e : Parsetree.expression) =
-      let newExp =
+      let new_exp =
         match e.pexp_desc with
         | Pexp_ifthenelse
             ( {
@@ -100,9 +100,9 @@ module IfThenElse = struct
               },
               e1,
               Some e2 )
-          when Loc.hasPos ~pos e.pexp_loc -> (
+          when Loc.has_pos ~pos e.pexp_loc -> (
           let e1, e2 = if op = "==" then (e1, e2) else (e2, e1) in
-          let mkMatch ~arg ~pat =
+          let mk_match ~arg ~pat =
             let cases =
               [
                 Ast_helper.Exp.case pat e1;
@@ -113,66 +113,66 @@ module IfThenElse = struct
               cases
           in
 
-          match expToPat arg2 with
+          match exp_to_pat arg2 with
           | None -> (
-            match expToPat arg1 with
+            match exp_to_pat arg1 with
             | None -> None
             | Some pat1 ->
-              let newExp = mkMatch ~arg:arg2 ~pat:pat1 in
-              Some newExp)
+              let new_exp = mk_match ~arg:arg2 ~pat:pat1 in
+              Some new_exp)
           | Some pat2 ->
-            let newExp = mkMatch ~arg:arg1 ~pat:pat2 in
-            Some newExp)
+            let new_exp = mk_match ~arg:arg1 ~pat:pat2 in
+            Some new_exp)
         | _ -> None
       in
-      match newExp with
-      | Some newExp -> changed := Some newExp
+      match new_exp with
+      | Some new_exp -> changed := Some new_exp
       | None -> Ast_iterator.default_iterator.expr iterator e
     in
 
     {Ast_iterator.default_iterator with expr}
 
-  let xform ~pos ~codeActions ~printExpr ~path structure =
+  let xform ~pos ~code_actions ~print_expr ~path structure =
     let changed = ref None in
-    let iterator = mkIterator ~pos ~changed in
+    let iterator = mk_iterator ~pos ~changed in
     iterator.structure iterator structure;
     match !changed with
     | None -> ()
-    | Some newExpr ->
-      let range = Loc.rangeOfLoc newExpr.pexp_loc in
-      let newText = printExpr ~range newExpr in
-      let codeAction =
+    | Some new_expr ->
+      let range = Loc.range_of_loc new_expr.pexp_loc in
+      let new_text = print_expr ~range new_expr in
+      let code_action =
         CodeActions.make ~title:"Replace with switch" ~kind:RefactorRewrite
-          ~uri:path ~newText ~range
+          ~uri:path ~new_text ~range
       in
-      codeActions := codeAction :: !codeActions
+      code_actions := code_action :: !code_actions
 end
 
 module ModuleToFile = struct
-  let mkIterator ~pos ~changed ~path ~printStandaloneStructure =
+  let mk_iterator ~pos ~changed ~path ~print_standalone_structure =
     let structure_item (iterator : Ast_iterator.iterator)
         (structure_item : Parsetree.structure_item) =
       (match structure_item.pstr_desc with
       | Pstr_module
           {pmb_loc; pmb_name; pmb_expr = {pmod_desc = Pmod_structure structure}}
-        when structure_item.pstr_loc |> Loc.hasPos ~pos ->
-        let range = Loc.rangeOfLoc structure_item.pstr_loc in
-        let newTextInCurrentFile = "" in
-        let textForExtractedFile =
-          printStandaloneStructure ~loc:pmb_loc structure
+        when structure_item.pstr_loc |> Loc.has_pos ~pos ->
+        let range = Loc.range_of_loc structure_item.pstr_loc in
+        let new_text_in_current_file = "" in
+        let text_for_extracted_file =
+          print_standalone_structure ~loc:pmb_loc structure
         in
-        let moduleName = pmb_name.txt in
-        let newFilePath =
-          Filename.concat (Filename.dirname path) moduleName ^ ".res"
+        let module_name = pmb_name.txt in
+        let new_file_path =
+          Filename.concat (Filename.dirname path) module_name ^ ".res"
         in
-        let uri = Uri.fromString newFilePath in
-        let documentChanges =
+        let uri = Uri.from_string new_file_path in
+        let document_changes =
           [
             `CreateFile
               (Lsp.Types.CreateFile.create ~uri
                  ~options:
                    (Lsp.Types.CreateFileOptions.create ~overwrite:false
-                      ~ignoreIfExists:true ())
+                      ~ignore_if_exists:true ())
                  ());
             `TextDocumentEdit
               (Lsp.Types.TextDocumentEdit.create
@@ -180,9 +180,9 @@ module ModuleToFile = struct
                    [
                      `TextEdit
                        (Lsp.Types.TextEdit.create ~range
-                          ~newText:textForExtractedFile);
+                          ~new_text:text_for_extracted_file);
                    ]
-                 ~textDocument:
+                 ~text_document:
                    (Lsp.Types.OptionalVersionedTextDocumentIdentifier.create
                       ~uri ()));
             `TextDocumentEdit
@@ -191,20 +191,20 @@ module ModuleToFile = struct
                    [
                      `TextEdit
                        (Lsp.Types.TextEdit.create ~range
-                          ~newText:newTextInCurrentFile);
+                          ~new_text:new_text_in_current_file);
                    ]
-                 ~textDocument:
+                 ~text_document:
                    (Lsp.Types.OptionalVersionedTextDocumentIdentifier.create
-                      ~uri:(Uri.fromString path) ()));
+                      ~uri:(Uri.from_string path) ()));
           ]
         in
         changed :=
           Some
-            (CodeActions.makeWithDocumentChanges
+            (CodeActions.make_with_document_changes
                ~title:
                  (Printf.sprintf "Extract local module \"%s\" to file \"%s\""
-                    moduleName (moduleName ^ ".res"))
-               ~kind:RefactorRewrite ~documentChanges);
+                    module_name (module_name ^ ".res"))
+               ~kind:RefactorRewrite ~document_changes);
         ()
       | _ -> ());
       Ast_iterator.default_iterator.structure_item iterator structure_item
@@ -212,33 +212,33 @@ module ModuleToFile = struct
 
     {Ast_iterator.default_iterator with structure_item}
 
-  let xform ~pos ~codeActions ~path ~printStandaloneStructure structure =
+  let xform ~pos ~code_actions ~path ~print_standalone_structure structure =
     let changed = ref None in
-    let iterator = mkIterator ~pos ~path ~changed ~printStandaloneStructure in
+    let iterator = mk_iterator ~pos ~path ~changed ~print_standalone_structure in
     iterator.structure iterator structure;
     match !changed with
     | None -> ()
-    | Some codeAction -> codeActions := codeAction :: !codeActions
+    | Some code_action -> code_actions := code_action :: !code_actions
 end
 
 module AddBracesToFn = struct
   (* Add braces to fn without braces *)
 
-  let mkIterator ~pos ~changed =
+  let mk_iterator ~pos ~changed =
     (* While iterating the AST, keep info on which structure item we are in.
        Printing from the structure item, rather than the body of the function,
        gives better local pretty printing *)
-    let currentStructureItem = ref None in
+    let current_structure_item = ref None in
 
     let structure_item (iterator : Ast_iterator.iterator)
         (item : Parsetree.structure_item) =
-      let saved = !currentStructureItem in
-      currentStructureItem := Some item;
+      let saved = !current_structure_item in
+      current_structure_item := Some item;
       Ast_iterator.default_iterator.structure_item iterator item;
-      currentStructureItem := saved
+      current_structure_item := saved
     in
     let expr (iterator : Ast_iterator.iterator) (e : Parsetree.expression) =
-      let bracesAttribute =
+      let braces_attribute =
         let loc =
           {
             Location.none with
@@ -252,37 +252,37 @@ module AddBracesToFn = struct
         in
         (Location.mkloc "res.braces" loc, Parsetree.PStr [])
       in
-      let isFunction = function
+      let is_function = function
         | {Parsetree.pexp_desc = Pexp_fun _} -> true
         | _ -> false
       in
       (match e.pexp_desc with
-      | Pexp_fun {rhs = bodyExpr}
-        when Loc.hasPos ~pos bodyExpr.pexp_loc
-             && isBracedExpr bodyExpr = false
-             && isFunction bodyExpr = false ->
-        bodyExpr.pexp_attributes <- bracesAttribute :: bodyExpr.pexp_attributes;
-        changed := !currentStructureItem
+      | Pexp_fun {rhs = body_expr}
+        when Loc.has_pos ~pos body_expr.pexp_loc
+             && is_braced_expr body_expr = false
+             && is_function body_expr = false ->
+        body_expr.pexp_attributes <- braces_attribute :: body_expr.pexp_attributes;
+        changed := !current_structure_item
       | _ -> ());
       Ast_iterator.default_iterator.expr iterator e
     in
 
     {Ast_iterator.default_iterator with expr; structure_item}
 
-  let xform ~pos ~codeActions ~path ~printStructureItem structure =
+  let xform ~pos ~code_actions ~path ~print_structure_item structure =
     let changed = ref None in
-    let iterator = mkIterator ~pos ~changed in
+    let iterator = mk_iterator ~pos ~changed in
     iterator.structure iterator structure;
     match !changed with
     | None -> ()
-    | Some newStructureItem ->
-      let range = Loc.rangeOfLoc newStructureItem.pstr_loc in
-      let newText = printStructureItem ~range newStructureItem in
-      let codeAction =
+    | Some new_structure_item ->
+      let range = Loc.range_of_loc new_structure_item.pstr_loc in
+      let new_text = print_structure_item ~range new_structure_item in
+      let code_action =
         CodeActions.make ~title:"Add braces to function" ~kind:RefactorRewrite
-          ~uri:path ~newText ~range
+          ~uri:path ~new_text ~range
       in
-      codeActions := codeAction :: !codeActions
+      code_actions := code_action :: !code_actions
 end
 
 module AddTypeAnnotation = struct
@@ -290,140 +290,140 @@ module AddTypeAnnotation = struct
 
   type annotation = Plain | WithParens
 
-  let mkIterator ~pos ~result =
-    let processPattern ?(isUnlabeledOnlyArg = false) (pat : Parsetree.pattern) =
+  let mk_iterator ~pos ~result =
+    let process_pattern ?(is_unlabeled_only_arg = false) (pat : Parsetree.pattern) =
       match pat.ppat_desc with
-      | Ppat_var {loc} when Loc.hasPos ~pos loc ->
-        result := Some (if isUnlabeledOnlyArg then WithParens else Plain)
+      | Ppat_var {loc} when Loc.has_pos ~pos loc ->
+        result := Some (if is_unlabeled_only_arg then WithParens else Plain)
       | _ -> ()
     in
-    let rec processFunction ~argNum (e : Parsetree.expression) =
+    let rec process_function ~arg_num (e : Parsetree.expression) =
       match e.pexp_desc with
       | Pexp_fun {arg_label; lhs = pat; rhs = e} ->
-        let isUnlabeledOnlyArg =
-          argNum = 1 && arg_label = Nolabel
+        let is_unlabeled_only_arg =
+          arg_num = 1 && arg_label = Nolabel
           &&
           match e.pexp_desc with
           | Pexp_fun _ -> false
           | _ -> true
         in
-        processPattern ~isUnlabeledOnlyArg pat;
-        processFunction ~argNum:(argNum + 1) e
+        process_pattern ~is_unlabeled_only_arg pat;
+        process_function ~arg_num:(arg_num + 1) e
       | _ -> ()
     in
     let structure_item (iterator : Ast_iterator.iterator)
         (si : Parsetree.structure_item) =
       match si.pstr_desc with
       | Pstr_value (_recFlag, bindings) ->
-        let processBinding (vb : Parsetree.value_binding) =
+        let process_binding (vb : Parsetree.value_binding) =
           (* Can't add a type annotation to a jsx component, or the compiler crashes *)
-          let isJsxComponent = Utils.isJsxComponent vb in
-          if not isJsxComponent then processPattern vb.pvb_pat;
-          processFunction vb.pvb_expr
+          let is_jsx_component = Utils.is_jsx_component vb in
+          if not is_jsx_component then process_pattern vb.pvb_pat;
+          process_function vb.pvb_expr
         in
-        bindings |> List.iter (processBinding ~argNum:1);
+        bindings |> List.iter (process_binding ~arg_num:1);
         Ast_iterator.default_iterator.structure_item iterator si
       | _ -> Ast_iterator.default_iterator.structure_item iterator si
     in
     {Ast_iterator.default_iterator with structure_item}
 
-  let xform ~path ~pos ~full ~structure ~codeActions ~debug =
+  let xform ~path ~pos ~full ~structure ~code_actions ~debug =
     let result = ref None in
-    let iterator = mkIterator ~pos ~result in
+    let iterator = mk_iterator ~pos ~result in
     iterator.structure iterator structure;
     match !result with
     | None -> ()
     | Some annotation -> (
-      match References.getLocItem ~full ~pos ~debug with
+      match References.get_loc_item ~full ~pos ~debug with
       | None -> ()
-      | Some locItem -> (
-        match locItem.locType with
+      | Some loc_item -> (
+        match loc_item.loc_type with
         | Typed (name, typ, _) ->
-          let range, newText =
+          let range, new_text =
             match annotation with
             | Plain ->
-              ( Loc.rangeOfLoc {locItem.loc with loc_start = locItem.loc.loc_end},
-                ": " ^ (typ |> Shared.typeToString) )
+              ( Loc.range_of_loc {loc_item.loc with loc_start = loc_item.loc.loc_end},
+                ": " ^ (typ |> Shared.type_to_string) )
             | WithParens ->
-              ( Loc.rangeOfLoc locItem.loc,
-                "(" ^ name ^ ": " ^ (typ |> Shared.typeToString) ^ ")" )
+              ( Loc.range_of_loc loc_item.loc,
+                "(" ^ name ^ ": " ^ (typ |> Shared.type_to_string) ^ ")" )
           in
-          let codeAction =
+          let code_action =
             CodeActions.make ~title:"Add type annotation" ~kind:RefactorRewrite
-              ~uri:path ~newText ~range
+              ~uri:path ~new_text ~range
           in
-          codeActions := codeAction :: !codeActions
+          code_actions := code_action :: !code_actions
         | _ -> ()))
 end
 
 module ExpandCatchAllForVariants = struct
-  let mkIterator ~pos ~result =
+  let mk_iterator ~pos ~result =
     let expr (iterator : Ast_iterator.iterator) (e : Parsetree.expression) =
-      (if e.pexp_loc |> Loc.hasPos ~pos then
+      (if e.pexp_loc |> Loc.has_pos ~pos then
          match e.pexp_desc with
-         | Pexp_match (switchExpr, cases) -> (
-           let catchAllCase =
+         | Pexp_match (switch_expr, cases) -> (
+           let catch_all_case =
              cases
              |> List.find_opt (fun (c : Parsetree.case) ->
                     match c with
                     | {pc_lhs = {ppat_desc = Ppat_any}} -> true
                     | _ -> false)
            in
-           match catchAllCase with
+           match catch_all_case with
            | None -> ()
-           | Some catchAllCase ->
-             result := Some (switchExpr, catchAllCase, cases))
+           | Some catch_all_case ->
+             result := Some (switch_expr, catch_all_case, cases))
          | _ -> ());
       Ast_iterator.default_iterator.expr iterator e
     in
     {Ast_iterator.default_iterator with expr}
 
-  let xform ~source ~kindFile ~path ~pos ~full ~structure ~codeActions ~debug =
+  let xform ~source ~kind_file ~path ~pos ~full ~structure ~code_actions ~debug =
     let result = ref None in
-    let iterator = mkIterator ~pos ~result in
+    let iterator = mk_iterator ~pos ~result in
     iterator.structure iterator structure;
     match !result with
     | None -> ()
-    | Some (switchExpr, catchAllCase, cases) -> (
+    | Some (switch_expr, catch_all_case, cases) -> (
       if Debug.verbose () then
         print_endline
           "[codeAction - ExpandCatchAllForVariants] Found target switch";
-      let rec findAllConstructorNames ?(mode : [`option | `default] = `default)
-          ?(constructorNames = []) (p : Parsetree.pattern) =
+      let rec find_all_constructor_names ?(mode : [`option | `default] = `default)
+          ?(constructor_names = []) (p : Parsetree.pattern) =
         match p.ppat_desc with
         | Ppat_construct ({txt = Lident "Some"}, Some payload)
           when mode = `option ->
-          findAllConstructorNames ~mode ~constructorNames payload
-        | Ppat_construct ({txt}, _) -> Longident.last txt :: constructorNames
-        | Ppat_variant (name, _) -> name :: constructorNames
+          find_all_constructor_names ~mode ~constructor_names payload
+        | Ppat_construct ({txt}, _) -> Longident.last txt :: constructor_names
+        | Ppat_variant (name, _) -> name :: constructor_names
         | Ppat_or (a, b) ->
-          findAllConstructorNames ~mode ~constructorNames a
-          @ findAllConstructorNames ~mode ~constructorNames b
-          @ constructorNames
-        | _ -> constructorNames
+          find_all_constructor_names ~mode ~constructor_names a
+          @ find_all_constructor_names ~mode ~constructor_names b
+          @ constructor_names
+        | _ -> constructor_names
       in
-      let getCurrentConstructorNames ?mode cases =
+      let get_current_constructor_names ?mode cases =
         cases
         |> List.map (fun (c : Parsetree.case) ->
                if Option.is_some c.pc_guard then []
-               else findAllConstructorNames ?mode c.pc_lhs)
+               else find_all_constructor_names ?mode c.pc_lhs)
         |> List.flatten
       in
-      let currentConstructorNames = getCurrentConstructorNames cases in
+      let current_constructor_names = get_current_constructor_names cases in
       match
-        switchExpr
-        |> extractTypeFromExpr ~debug ~source ~kindFile ~full
-             ~pos:(Pos.ofLexing switchExpr.pexp_loc.loc_end)
+        switch_expr
+        |> extract_type_from_expr ~debug ~source ~kind_file ~full
+             ~pos:(Pos.of_lexing switch_expr.pexp_loc.loc_end)
       with
       | Some (Tvariant {constructors}) ->
-        let missingConstructors =
+        let missing_constructors =
           constructors
           |> List.filter (fun (c : SharedTypes.Constructor.t) ->
-                 currentConstructorNames |> List.mem c.cname.txt = false)
+                 current_constructor_names |> List.mem c.cname.txt = false)
         in
-        if List.length missingConstructors > 0 then
-          let newText =
-            missingConstructors
+        if List.length missing_constructors > 0 then
+          let new_text =
+            missing_constructors
             |> List.map (fun (c : SharedTypes.Constructor.t) ->
                    c.cname.txt
                    ^
@@ -432,23 +432,23 @@ module ExpandCatchAllForVariants = struct
                    | Args _ | InlineRecord _ -> "(_)")
             |> String.concat " | "
           in
-          let range = Loc.rangeOfLoc catchAllCase.pc_lhs.ppat_loc in
-          let codeAction =
+          let range = Loc.range_of_loc catch_all_case.pc_lhs.ppat_loc in
+          let code_action =
             CodeActions.make ~title:"Expand catch-all" ~kind:RefactorRewrite
-              ~uri:path ~newText ~range
+              ~uri:path ~new_text ~range
           in
-          codeActions := codeAction :: !codeActions
+          code_actions := code_action :: !code_actions
         else ()
       | Some (Tpolyvariant {constructors}) ->
-        let missingConstructors =
+        let missing_constructors =
           constructors
-          |> List.filter (fun (c : SharedTypes.polyVariantConstructor) ->
-                 currentConstructorNames |> List.mem c.name = false)
+          |> List.filter (fun (c : SharedTypes.poly_variant_constructor) ->
+                 current_constructor_names |> List.mem c.name = false)
         in
-        if List.length missingConstructors > 0 then
-          let newText =
-            missingConstructors
-            |> List.map (fun (c : SharedTypes.polyVariantConstructor) ->
+        if List.length missing_constructors > 0 then
+          let new_text =
+            missing_constructors
+            |> List.map (fun (c : SharedTypes.poly_variant_constructor) ->
                    Res_printer.polyvar_ident_to_string c.name
                    ^
                    match c.args with
@@ -456,43 +456,43 @@ module ExpandCatchAllForVariants = struct
                    | _ -> "(_)")
             |> String.concat " | "
           in
-          let range = Loc.rangeOfLoc catchAllCase.pc_lhs.ppat_loc in
-          let codeAction =
+          let range = Loc.range_of_loc catch_all_case.pc_lhs.ppat_loc in
+          let code_action =
             CodeActions.make ~title:"Expand catch-all" ~kind:RefactorRewrite
-              ~uri:path ~newText ~range
+              ~uri:path ~new_text ~range
           in
-          codeActions := codeAction :: !codeActions
+          code_actions := code_action :: !code_actions
         else ()
-      | Some (Toption (env, innerType)) -> (
+      | Some (Toption (env, inner_type)) -> (
         if Debug.verbose () then
           print_endline
             "[codeAction - ExpandCatchAllForVariants] Found option type";
-        let innerType =
-          match innerType with
+        let inner_type =
+          match inner_type with
           | ExtractedType t -> Some t
           | TypeExpr t -> (
-            match TypeUtils.extractType ~env ~package:full.package t with
+            match TypeUtils.extract_type ~env ~package:full.package t with
             | None -> None
             | Some (t, _) -> Some t)
         in
-        match innerType with
+        match inner_type with
         | Some ((Tvariant _ | Tpolyvariant _) as variant) ->
-          let currentConstructorNames =
-            getCurrentConstructorNames ~mode:`option cases
+          let current_constructor_names =
+            get_current_constructor_names ~mode:`option cases
           in
-          let hasNoneCase =
+          let has_none_case =
             cases
             |> List.exists (fun (c : Parsetree.case) ->
                    match c.pc_lhs.ppat_desc with
                    | Ppat_construct ({txt = Lident "None"}, _) -> true
                    | _ -> false)
           in
-          let missingConstructors =
+          let missing_constructors =
             match variant with
             | Tvariant {constructors} ->
               constructors
               |> List.filter_map (fun (c : SharedTypes.Constructor.t) ->
-                     if currentConstructorNames |> List.mem c.cname.txt = false
+                     if current_constructor_names |> List.mem c.cname.txt = false
                      then
                        Some
                          ( c.cname.txt,
@@ -503,8 +503,8 @@ module ExpandCatchAllForVariants = struct
             | Tpolyvariant {constructors} ->
               constructors
               |> List.filter_map
-                   (fun (c : SharedTypes.polyVariantConstructor) ->
-                     if currentConstructorNames |> List.mem c.name = false then
+                   (fun (c : SharedTypes.poly_variant_constructor) ->
+                     if current_constructor_names |> List.mem c.name = false then
                        Some
                          ( Res_printer.polyvar_ident_to_string c.name,
                            match c.args with
@@ -513,24 +513,24 @@ module ExpandCatchAllForVariants = struct
                      else None)
             | _ -> []
           in
-          if List.length missingConstructors > 0 || not hasNoneCase then
-            let newText =
+          if List.length missing_constructors > 0 || not has_none_case then
+            let new_text =
               "Some("
-              ^ (missingConstructors
-                |> List.map (fun (name, hasArgs) ->
-                       name ^ if hasArgs then "(_)" else "")
+              ^ (missing_constructors
+                |> List.map (fun (name, has_args) ->
+                       name ^ if has_args then "(_)" else "")
                 |> String.concat " | ")
               ^ ")"
             in
-            let newText =
-              if hasNoneCase then newText else newText ^ " | None"
+            let new_text =
+              if has_none_case then new_text else new_text ^ " | None"
             in
-            let range = Loc.rangeOfLoc catchAllCase.pc_lhs.ppat_loc in
-            let codeAction =
+            let range = Loc.range_of_loc catch_all_case.pc_lhs.ppat_loc in
+            let code_action =
               CodeActions.make ~title:"Expand catch-all" ~kind:RefactorRewrite
-                ~uri:path ~newText ~range
+                ~uri:path ~new_text ~range
             in
-            codeActions := codeAction :: !codeActions
+            code_actions := code_action :: !code_actions
           else ()
         | _ -> ())
       | _ -> ())
@@ -538,135 +538,135 @@ end
 
 module ExhaustiveSwitch = struct
   (* Expand expression to be an exhaustive switch of the underlying value *)
-  type posType = Single of Pos.t | Range of Pos.t * Pos.t
+  type pos_type = Single of Pos.t | Range of Pos.t * Pos.t
 
-  type completionType =
+  type completion_type =
     | Switch of {
         pos: Pos.t;
-        switchExpr: Parsetree.expression;
-        completionExpr: Parsetree.expression;
+        switch_expr: Parsetree.expression;
+        completion_expr: Parsetree.expression;
       }
     | Selection of {expr: Parsetree.expression}
 
-  let mkIteratorSingle ~pos ~result =
+  let mk_iterator_single ~pos ~result =
     let expr (iterator : Ast_iterator.iterator) (exp : Parsetree.expression) =
       (match exp.pexp_desc with
-      | Pexp_ident _ when Loc.hasPosInclusiveEnd ~pos exp.pexp_loc ->
+      | Pexp_ident _ when Loc.has_pos_inclusive_end ~pos exp.pexp_loc ->
         (* Exhaustive switch for having the cursor on an identifier. *)
         result := Some (Selection {expr = exp})
-      | Pexp_match (completionExpr, [])
-        when Loc.hasPosInclusiveEnd ~pos exp.pexp_loc ->
+      | Pexp_match (completion_expr, [])
+        when Loc.has_pos_inclusive_end ~pos exp.pexp_loc ->
         (* No cases means there's no `|` yet in the switch, so `switch someExpr` *)
-        result := Some (Switch {pos; switchExpr = exp; completionExpr})
+        result := Some (Switch {pos; switch_expr = exp; completion_expr})
       | _ -> ());
       Ast_iterator.default_iterator.expr iterator exp
     in
     {Ast_iterator.default_iterator with expr}
 
-  let mkIteratorRange ~startPos ~endPos ~foundSelection =
+  let mk_iterator_range ~start_pos ~end_pos ~found_selection =
     let expr (iterator : Ast_iterator.iterator) (exp : Parsetree.expression) =
-      let expStartPos = Pos.ofLexing exp.pexp_loc.loc_start in
-      let expEndPos = Pos.ofLexing exp.pexp_loc.loc_end in
+      let exp_start_pos = Pos.of_lexing exp.pexp_loc.loc_start in
+      let exp_end_pos = Pos.of_lexing exp.pexp_loc.loc_end in
 
-      (if expStartPos = startPos then
-         match !foundSelection with
-         | None, endExpr -> foundSelection := (Some exp, endExpr)
+      (if exp_start_pos = start_pos then
+         match !found_selection with
+         | None, end_expr -> found_selection := (Some exp, end_expr)
          | _ -> ());
 
-      (if expEndPos = endPos then
-         match !foundSelection with
-         | startExp, _ -> foundSelection := (startExp, Some exp));
+      (if exp_end_pos = end_pos then
+         match !found_selection with
+         | start_exp, _ -> found_selection := (start_exp, Some exp));
 
       Ast_iterator.default_iterator.expr iterator exp
     in
     {Ast_iterator.default_iterator with expr}
 
-  let xform ~printExpr ~path ~source ~kindFile ~pos ~full ~structure
-      ~codeActions ~debug =
+  let xform ~print_expr ~path ~source ~kind_file ~pos ~full ~structure
+      ~code_actions ~debug =
     (* TODO: Adapt to '(' as leading/trailing character (skip one col, it's not included in the AST) *)
     let result = ref None in
-    let foundSelection = ref (None, None) in
+    let found_selection = ref (None, None) in
     let iterator =
       match pos with
-      | Single pos -> mkIteratorSingle ~pos ~result
-      | Range (startPos, endPos) ->
-        mkIteratorRange ~startPos ~endPos ~foundSelection
+      | Single pos -> mk_iterator_single ~pos ~result
+      | Range (start_pos, end_pos) ->
+        mk_iterator_range ~start_pos ~end_pos ~found_selection
     in
     iterator.structure iterator structure;
-    (match !foundSelection with
-    | Some startExp, Some endExp ->
+    (match !found_selection with
+    | Some start_exp, Some end_exp ->
       if debug then
         Printf.printf "found selection: %s -> %s\n"
-          (Loc.toString startExp.pexp_loc)
-          (Loc.toString endExp.pexp_loc);
-      result := Some (Selection {expr = startExp})
+          (Loc.to_string start_exp.pexp_loc)
+          (Loc.to_string end_exp.pexp_loc);
+      result := Some (Selection {expr = start_exp})
     | _ -> ());
     match !result with
     | None -> ()
     | Some (Selection {expr}) -> (
       match
         expr
-        |> extractTypeFromExpr ~debug ~source ~kindFile ~full
-             ~pos:(Pos.ofLexing expr.pexp_loc.loc_start)
+        |> extract_type_from_expr ~debug ~source ~kind_file ~full
+             ~pos:(Pos.of_lexing expr.pexp_loc.loc_start)
       with
       | None -> ()
-      | Some extractedType -> (
+      | Some extracted_type -> (
         let open TypeUtils.Codegen in
-        let exhaustiveSwitch =
-          extractedTypeToExhaustiveCases
-            ~env:(SharedTypes.QueryEnv.fromFile full.file)
-            ~full extractedType
+        let exhaustive_switch =
+          extracted_type_to_exhaustive_cases
+            ~env:(SharedTypes.QueryEnv.from_file full.file)
+            ~full extracted_type
         in
-        match exhaustiveSwitch with
+        match exhaustive_switch with
         | None -> ()
         | Some cases ->
-          let range = Loc.rangeOfLoc expr.pexp_loc in
-          let newText =
-            printExpr ~range {expr with pexp_desc = Pexp_match (expr, cases)}
+          let range = Loc.range_of_loc expr.pexp_loc in
+          let new_text =
+            print_expr ~range {expr with pexp_desc = Pexp_match (expr, cases)}
           in
-          let codeAction =
+          let code_action =
             CodeActions.make ~title:"Exhaustive switch" ~kind:RefactorRewrite
-              ~uri:path ~newText ~range
+              ~uri:path ~new_text ~range
           in
-          codeActions := codeAction :: !codeActions))
-    | Some (Switch {switchExpr; completionExpr; pos}) -> (
+          code_actions := code_action :: !code_actions))
+    | Some (Switch {switch_expr; completion_expr; pos}) -> (
       match
-        completionExpr
-        |> extractTypeFromExpr ~debug ~source ~kindFile ~full ~pos
+        completion_expr
+        |> extract_type_from_expr ~debug ~source ~kind_file ~full ~pos
       with
       | None -> ()
-      | Some extractedType -> (
+      | Some extracted_type -> (
         let open TypeUtils.Codegen in
-        let exhaustiveSwitch =
-          extractedTypeToExhaustiveCases
-            ~env:(SharedTypes.QueryEnv.fromFile full.file)
-            ~full extractedType
+        let exhaustive_switch =
+          extracted_type_to_exhaustive_cases
+            ~env:(SharedTypes.QueryEnv.from_file full.file)
+            ~full extracted_type
         in
-        match exhaustiveSwitch with
+        match exhaustive_switch with
         | None -> ()
         | Some cases ->
-          let range = Loc.rangeOfLoc switchExpr.pexp_loc in
-          let newText =
-            printExpr ~range
-              {switchExpr with pexp_desc = Pexp_match (completionExpr, cases)}
+          let range = Loc.range_of_loc switch_expr.pexp_loc in
+          let new_text =
+            print_expr ~range
+              {switch_expr with pexp_desc = Pexp_match (completion_expr, cases)}
           in
-          let codeAction =
+          let code_action =
             CodeActions.make ~title:"Exhaustive switch" ~kind:RefactorRewrite
-              ~uri:path ~newText ~range
+              ~uri:path ~new_text ~range
           in
-          codeActions := codeAction :: !codeActions))
+          code_actions := code_action :: !code_actions))
 end
 
 module AddDocTemplate = struct
-  let createTemplate () =
-    let docContent = ["\n"; "\n"] in
+  let create_template () =
+    let doc_content = ["\n"; "\n"] in
     let expression =
       Ast_helper.Exp.constant
-        (Parsetree.Pconst_string (String.concat "" docContent, None))
+        (Parsetree.Pconst_string (String.concat "" doc_content, None))
     in
-    let structureItemDesc = Parsetree.Pstr_eval (expression, []) in
-    let structureItem = Ast_helper.Str.mk structureItemDesc in
-    let attrLoc =
+    let structure_item_desc = Parsetree.Pstr_eval (expression, []) in
+    let structure_item = Ast_helper.Str.mk structure_item_desc in
+    let attr_loc =
       {
         Location.none with
         loc_start = Lexing.dummy_pos;
@@ -677,22 +677,22 @@ module AddDocTemplate = struct
           };
       }
     in
-    (Location.mkloc "res.doc" attrLoc, Parsetree.PStr [structureItem])
+    (Location.mkloc "res.doc" attr_loc, Parsetree.PStr [structure_item])
 
   module Interface = struct
-    let mkIterator ~pos ~result =
+    let mk_iterator ~pos ~result =
       let signature_item (iterator : Ast_iterator.iterator)
           (item : Parsetree.signature_item) =
         match item.psig_desc with
         | Psig_value value_description as r
-          when Loc.hasPos ~pos value_description.pval_loc
-               && ProcessAttributes.findDocAttribute
+          when Loc.has_pos ~pos value_description.pval_loc
+               && ProcessAttributes.find_doc_attribute
                     value_description.pval_attributes
                   = None ->
           result := Some (r, item.psig_loc)
         | Psig_type (_, hd :: _) as r
-          when Loc.hasPos ~pos hd.ptype_loc
-               && ProcessAttributes.findDocAttribute hd.ptype_attributes = None
+          when Loc.has_pos ~pos hd.ptype_loc
+               && ProcessAttributes.find_doc_attribute hd.ptype_attributes = None
           ->
           result := Some (r, item.psig_loc)
         | Psig_module {pmd_name = {loc}} as r ->
@@ -702,72 +702,72 @@ module AddDocTemplate = struct
       in
       {Ast_iterator.default_iterator with signature_item}
 
-    let processSigValue (valueDesc : Parsetree.value_description) loc =
-      let attr = createTemplate () in
-      let newValueBinding =
-        {valueDesc with pval_attributes = attr :: valueDesc.pval_attributes}
+    let process_sig_value (value_desc : Parsetree.value_description) loc =
+      let attr = create_template () in
+      let new_value_binding =
+        {value_desc with pval_attributes = attr :: value_desc.pval_attributes}
       in
-      let signature_item_desc = Parsetree.Psig_value newValueBinding in
+      let signature_item_desc = Parsetree.Psig_value new_value_binding in
       Ast_helper.Sig.mk ~loc signature_item_desc
 
-    let processTypeDecl (typ : Parsetree.type_declaration) =
-      let attr = createTemplate () in
-      let newTypeDeclaration =
+    let process_type_decl (typ : Parsetree.type_declaration) =
+      let attr = create_template () in
+      let new_type_declaration =
         {typ with ptype_attributes = attr :: typ.ptype_attributes}
       in
-      newTypeDeclaration
+      new_type_declaration
 
-    let processModDecl (modDecl : Parsetree.module_declaration) loc =
-      let attr = createTemplate () in
-      let newModDecl =
-        {modDecl with pmd_attributes = attr :: modDecl.pmd_attributes}
+    let process_mod_decl (mod_decl : Parsetree.module_declaration) loc =
+      let attr = create_template () in
+      let new_mod_decl =
+        {mod_decl with pmd_attributes = attr :: mod_decl.pmd_attributes}
       in
-      Ast_helper.Sig.mk ~loc (Parsetree.Psig_module newModDecl)
+      Ast_helper.Sig.mk ~loc (Parsetree.Psig_module new_mod_decl)
 
-    let xform ~path ~pos ~codeActions ~signature ~printSignatureItem =
+    let xform ~path ~pos ~code_actions ~signature ~print_signature_item =
       let result = ref None in
-      let iterator = mkIterator ~pos ~result in
+      let iterator = mk_iterator ~pos ~result in
       iterator.signature iterator signature;
       match !result with
-      | Some (signatureItem, loc) -> (
-        let newSignatureItem =
-          match signatureItem with
+      | Some (signature_item, loc) -> (
+        let new_signature_item =
+          match signature_item with
           | Psig_value value_desc ->
-            Some (processSigValue value_desc value_desc.pval_loc) (* Some loc *)
+            Some (process_sig_value value_desc value_desc.pval_loc) (* Some loc *)
           | Psig_type (flag, hd :: tl) ->
-            let newFirstTypeDecl = processTypeDecl hd in
+            let new_first_type_decl = process_type_decl hd in
             Some
               (Ast_helper.Sig.mk ~loc
-                 (Parsetree.Psig_type (flag, newFirstTypeDecl :: tl)))
-          | Psig_module modDecl -> Some (processModDecl modDecl loc)
+                 (Parsetree.Psig_type (flag, new_first_type_decl :: tl)))
+          | Psig_module mod_decl -> Some (process_mod_decl mod_decl loc)
           | _ -> None
         in
 
-        match newSignatureItem with
-        | Some signatureItem ->
-          let range = Loc.rangeOfLoc signatureItem.psig_loc in
-          let newText = printSignatureItem ~range signatureItem in
-          let codeAction =
+        match new_signature_item with
+        | Some signature_item ->
+          let range = Loc.range_of_loc signature_item.psig_loc in
+          let new_text = print_signature_item ~range signature_item in
+          let code_action =
             CodeActions.make ~title:"Add Documentation template"
-              ~kind:RefactorRewrite ~uri:path ~newText ~range
+              ~kind:RefactorRewrite ~uri:path ~new_text ~range
           in
-          codeActions := codeAction :: !codeActions
+          code_actions := code_action :: !code_actions
         | None -> ())
       | None -> ()
   end
 
   module Implementation = struct
-    let mkIterator ~pos ~result =
+    let mk_iterator ~pos ~result =
       let structure_item (iterator : Ast_iterator.iterator)
           (si : Parsetree.structure_item) =
         match si.pstr_desc with
         | Pstr_value (_, {pvb_pat = {ppat_loc}; pvb_attributes} :: _) as r
-          when Loc.hasPos ~pos ppat_loc
-               && ProcessAttributes.findDocAttribute pvb_attributes = None ->
+          when Loc.has_pos ~pos ppat_loc
+               && ProcessAttributes.find_doc_attribute pvb_attributes = None ->
           result := Some (r, si.pstr_loc)
         | Pstr_primitive value_description as r
-          when Loc.hasPos ~pos value_description.pval_loc
-               && ProcessAttributes.findDocAttribute
+          when Loc.has_pos ~pos value_description.pval_loc
+               && ProcessAttributes.find_doc_attribute
                     value_description.pval_attributes
                   = None ->
           result := Some (r, si.pstr_loc)
@@ -775,162 +775,162 @@ module AddDocTemplate = struct
           if Loc.start loc = pos then result := Some (r, si.pstr_loc)
           else Ast_iterator.default_iterator.structure_item iterator si
         | Pstr_type (_, hd :: _) as r
-          when Loc.hasPos ~pos hd.ptype_loc
-               && ProcessAttributes.findDocAttribute hd.ptype_attributes = None
+          when Loc.has_pos ~pos hd.ptype_loc
+               && ProcessAttributes.find_doc_attribute hd.ptype_attributes = None
           ->
           result := Some (r, si.pstr_loc)
         | _ -> Ast_iterator.default_iterator.structure_item iterator si
       in
       {Ast_iterator.default_iterator with structure_item}
 
-    let processValueBinding (valueBinding : Parsetree.value_binding) =
-      let attr = createTemplate () in
-      let newValueBinding =
-        {valueBinding with pvb_attributes = attr :: valueBinding.pvb_attributes}
+    let process_value_binding (value_binding : Parsetree.value_binding) =
+      let attr = create_template () in
+      let new_value_binding =
+        {value_binding with pvb_attributes = attr :: value_binding.pvb_attributes}
       in
-      newValueBinding
+      new_value_binding
 
-    let processPrimitive (valueDesc : Parsetree.value_description) loc =
-      let attr = createTemplate () in
-      let newValueDesc =
-        {valueDesc with pval_attributes = attr :: valueDesc.pval_attributes}
+    let process_primitive (value_desc : Parsetree.value_description) loc =
+      let attr = create_template () in
+      let new_value_desc =
+        {value_desc with pval_attributes = attr :: value_desc.pval_attributes}
       in
-      Ast_helper.Str.primitive ~loc newValueDesc
+      Ast_helper.Str.primitive ~loc new_value_desc
 
-    let processModuleBinding (modBind : Parsetree.module_binding) loc =
-      let attr = createTemplate () in
-      let newModBinding =
-        {modBind with pmb_attributes = attr :: modBind.pmb_attributes}
+    let process_module_binding (mod_bind : Parsetree.module_binding) loc =
+      let attr = create_template () in
+      let new_mod_binding =
+        {mod_bind with pmb_attributes = attr :: mod_bind.pmb_attributes}
       in
-      Ast_helper.Str.module_ ~loc newModBinding
+      Ast_helper.Str.module_ ~loc new_mod_binding
 
-    let xform ~pos ~codeActions ~path ~printStructureItem ~structure =
+    let xform ~pos ~code_actions ~path ~print_structure_item ~structure =
       let result = ref None in
-      let iterator = mkIterator ~pos ~result in
+      let iterator = mk_iterator ~pos ~result in
       iterator.structure iterator structure;
       match !result with
       | None -> ()
-      | Some (structureItem, loc) -> (
-        let newStructureItem =
-          match structureItem with
+      | Some (structure_item, loc) -> (
+        let new_structure_item =
+          match structure_item with
           | Pstr_value (flag, hd :: tl) ->
-            let newValueBinding = processValueBinding hd in
+            let new_value_binding = process_value_binding hd in
             Some
               (Ast_helper.Str.mk ~loc
-                 (Parsetree.Pstr_value (flag, newValueBinding :: tl)))
-          | Pstr_primitive valueDesc -> Some (processPrimitive valueDesc loc)
-          | Pstr_module modBind -> Some (processModuleBinding modBind loc)
+                 (Parsetree.Pstr_value (flag, new_value_binding :: tl)))
+          | Pstr_primitive value_desc -> Some (process_primitive value_desc loc)
+          | Pstr_module mod_bind -> Some (process_module_binding mod_bind loc)
           | Pstr_type (flag, hd :: tl) ->
-            let newFirstTypeDecl = Interface.processTypeDecl hd in
+            let new_first_type_decl = Interface.process_type_decl hd in
             Some
               (Ast_helper.Str.mk ~loc
-                 (Parsetree.Pstr_type (flag, newFirstTypeDecl :: tl)))
+                 (Parsetree.Pstr_type (flag, new_first_type_decl :: tl)))
           | _ -> None
         in
 
-        match newStructureItem with
-        | Some structureItem ->
-          let range = Loc.rangeOfLoc structureItem.pstr_loc in
-          let newText = printStructureItem ~range structureItem in
-          let codeAction =
+        match new_structure_item with
+        | Some structure_item ->
+          let range = Loc.range_of_loc structure_item.pstr_loc in
+          let new_text = print_structure_item ~range structure_item in
+          let code_action =
             CodeActions.make ~title:"Add Documentation template"
-              ~kind:RefactorRewrite ~uri:path ~newText ~range
+              ~kind:RefactorRewrite ~uri:path ~new_text ~range
           in
-          codeActions := codeAction :: !codeActions
+          code_actions := code_action :: !code_actions
         | None -> ())
   end
 end
 
-let parseImplementation ~source =
+let parse_implementation ~source =
   let {Res_driver.parsetree = structure; comments} =
     Res_driver.parsing_engine.parse_implementation_from_source
       ~for_printer:false ~source
   in
-  let filterComments ~loc comments =
+  let filter_comments ~loc comments =
     (* Relevant comments in the range of the expression *)
     let filter comment =
-      Loc.hasPos ~pos:(Loc.start (Res_comment.loc comment)) loc
+      Loc.has_pos ~pos:(Loc.start (Res_comment.loc comment)) loc
     in
     comments |> List.filter filter
   in
-  let printExpr ~(range : Lsp.Types.Range.t) (expr : Parsetree.expression) =
+  let print_expr ~(range : Lsp.Types.Range.t) (expr : Parsetree.expression) =
     let structure = [Ast_helper.Str.eval ~loc:expr.pexp_loc expr] in
     structure
     |> Res_printer.print_implementation
-         ~comments:(comments |> filterComments ~loc:expr.pexp_loc)
+         ~comments:(comments |> filter_comments ~loc:expr.pexp_loc)
     |> Utils.indent range.start.character
   in
-  let printStructureItem ~(range : Lsp.Types.Range.t)
+  let print_structure_item ~(range : Lsp.Types.Range.t)
       (item : Parsetree.structure_item) =
     let structure = [item] in
     structure
     |> Res_printer.print_implementation
-         ~comments:(comments |> filterComments ~loc:item.pstr_loc)
+         ~comments:(comments |> filter_comments ~loc:item.pstr_loc)
     |> Utils.indent range.start.character
   in
-  let printStandaloneStructure ~(loc : Location.t) structure =
+  let print_standalone_structure ~(loc : Location.t) structure =
     structure
     |> Res_printer.print_implementation
-         ~comments:(comments |> filterComments ~loc)
+         ~comments:(comments |> filter_comments ~loc)
   in
-  (structure, printExpr, printStructureItem, printStandaloneStructure)
+  (structure, print_expr, print_structure_item, print_standalone_structure)
 
-let parseInterface ~source =
+let parse_interface ~source =
   let {Res_driver.parsetree = structure; comments} =
     Res_driver.parsing_engine.parse_interface_from_source ~for_printer:false
       ~source
   in
-  let filterComments ~loc comments =
+  let filter_comments ~loc comments =
     (* Relevant comments in the range of the expression *)
     let filter comment =
-      Loc.hasPos ~pos:(Loc.start (Res_comment.loc comment)) loc
+      Loc.has_pos ~pos:(Loc.start (Res_comment.loc comment)) loc
     in
     comments |> List.filter filter
   in
-  let printSignatureItem ~(range : Lsp.Types.Range.t)
+  let print_signature_item ~(range : Lsp.Types.Range.t)
       (item : Parsetree.signature_item) =
     let signature_item = [item] in
     signature_item
     |> Res_printer.print_interface
-         ~comments:(comments |> filterComments ~loc:item.psig_loc)
+         ~comments:(comments |> filter_comments ~loc:item.psig_loc)
     |> Utils.indent range.start.character
   in
-  (structure, printSignatureItem)
+  (structure, print_signature_item)
 
-let extractCodeActions ~path ~startPos ~endPos ~source ~kindFile ~debug =
-  let pos = startPos in
-  let codeActions = ref [] in
-  match kindFile with
+let extract_code_actions ~path ~start_pos ~end_pos ~source ~kind_file ~debug =
+  let pos = start_pos in
+  let code_actions = ref [] in
+  match kind_file with
   | Files.Res ->
-    let structure, printExpr, printStructureItem, printStandaloneStructure =
-      parseImplementation ~source
+    let structure, print_expr, print_structure_item, print_standalone_structure =
+      parse_implementation ~source
     in
-    IfThenElse.xform ~pos ~codeActions ~printExpr ~path structure;
-    ModuleToFile.xform ~pos ~codeActions ~path ~printStandaloneStructure
+    IfThenElse.xform ~pos ~code_actions ~print_expr ~path structure;
+    ModuleToFile.xform ~pos ~code_actions ~path ~print_standalone_structure
       structure;
-    AddBracesToFn.xform ~pos ~codeActions ~path ~printStructureItem structure;
-    AddDocTemplate.Implementation.xform ~pos ~codeActions ~path
-      ~printStructureItem ~structure;
+    AddBracesToFn.xform ~pos ~code_actions ~path ~print_structure_item structure;
+    AddDocTemplate.Implementation.xform ~pos ~code_actions ~path
+      ~print_structure_item ~structure;
 
     (* This Code Action needs type info *)
     let () =
-      match Cmt.loadFullCmtFromPath ~path with
+      match Cmt.load_full_cmt_from_path ~path with
       | Some full ->
-        AddTypeAnnotation.xform ~path ~pos ~full ~structure ~codeActions ~debug;
-        ExpandCatchAllForVariants.xform ~path ~source ~kindFile ~pos ~full
-          ~structure ~codeActions ~debug;
-        ExhaustiveSwitch.xform ~printExpr ~path ~source ~kindFile
+        AddTypeAnnotation.xform ~path ~pos ~full ~structure ~code_actions ~debug;
+        ExpandCatchAllForVariants.xform ~path ~source ~kind_file ~pos ~full
+          ~structure ~code_actions ~debug;
+        ExhaustiveSwitch.xform ~print_expr ~path ~source ~kind_file
           ~pos:
-            (if startPos = endPos then Single startPos
-             else Range (startPos, endPos))
-          ~full ~structure ~codeActions ~debug
+            (if start_pos = end_pos then Single start_pos
+             else Range (start_pos, end_pos))
+          ~full ~structure ~code_actions ~debug
       | None -> ()
     in
 
-    !codeActions
+    !code_actions
   | Resi ->
-    let signature, printSignatureItem = parseInterface ~source in
-    AddDocTemplate.Interface.xform ~pos ~codeActions ~path ~signature
-      ~printSignatureItem;
-    !codeActions
+    let signature, print_signature_item = parse_interface ~source in
+    AddDocTemplate.Interface.xform ~pos ~code_actions ~path ~signature
+      ~print_signature_item;
+    !code_actions
   | Other -> []

@@ -1,65 +1,65 @@
 open SharedTypes
 
 type 'a table = (string * (int * int), 'a Declared.t) Hashtbl.t
-type namesUsed = (string, unit) Hashtbl.t
+type names_used = (string, unit) Hashtbl.t
 
 type t = {
-  namesUsed: namesUsed;
-  mutable resultRev: Completion.t list;
-  constructorTable: Constructor.t table;
-  modulesTable: Module.t table;
-  typesTable: Type.t table;
-  valueTable: Types.type_expr table;
-  includedValueTable: (string * Types.type_expr) table;
+  names_used: names_used;
+  mutable result_rev: Completion.t list;
+  constructor_table: Constructor.t table;
+  modules_table: Module.t table;
+  types_table: Type.t table;
+  value_table: Types.type_expr table;
+  included_value_table: (string * Types.type_expr) table;
 }
 
 let create () =
   {
-    namesUsed = Hashtbl.create 1;
-    resultRev = [];
-    constructorTable = Hashtbl.create 1;
-    modulesTable = Hashtbl.create 1;
-    typesTable = Hashtbl.create 1;
-    valueTable = Hashtbl.create 1;
-    includedValueTable = Hashtbl.create 1;
+    names_used = Hashtbl.create 1;
+    result_rev = [];
+    constructor_table = Hashtbl.create 1;
+    modules_table = Hashtbl.create 1;
+    types_table = Hashtbl.create 1;
+    value_table = Hashtbl.create 1;
+    included_value_table = Hashtbl.create 1;
   }
 
-let populateValues ~env localTables =
+let populate_values ~env local_tables =
   env.QueryEnv.file.stamps
-  |> Stamps.iterValues (fun _ declared ->
-         Hashtbl.replace localTables.valueTable
+  |> Stamps.iter_values (fun _ declared ->
+         Hashtbl.replace local_tables.value_table
            (declared.name.txt, declared.name.loc |> Loc.start)
            declared)
 
-let populateIncludedValues ~env localTables =
+let populate_included_values ~env local_tables =
   env.QueryEnv.file.stamps
-  |> Stamps.iterValues (fun _ declared ->
-         match declared.modulePath with
+  |> Stamps.iter_values (fun _ declared ->
+         match declared.module_path with
          | ModulePath.IncludedModule (source, _) ->
            let path = Path.name source in
            let declared = {declared with item = (path, declared.item)} in
-           Hashtbl.replace localTables.includedValueTable
+           Hashtbl.replace local_tables.included_value_table
              (declared.name.txt, declared.name.loc |> Loc.start)
              declared
          | _ -> ())
 
-let populateConstructors ~env localTables =
+let populate_constructors ~env local_tables =
   env.QueryEnv.file.stamps
-  |> Stamps.iterConstructors (fun _ declared ->
-         Hashtbl.replace localTables.constructorTable
-           (declared.name.txt, declared.extentLoc |> Loc.start)
+  |> Stamps.iter_constructors (fun _ declared ->
+         Hashtbl.replace local_tables.constructor_table
+           (declared.name.txt, declared.extent_loc |> Loc.start)
            declared)
 
-let populateTypes ~env localTables =
+let populate_types ~env local_tables =
   env.QueryEnv.file.stamps
-  |> Stamps.iterTypes (fun _ declared ->
-         Hashtbl.replace localTables.typesTable
+  |> Stamps.iter_types (fun _ declared ->
+         Hashtbl.replace local_tables.types_table
            (declared.name.txt, declared.name.loc |> Loc.start)
            declared)
 
-let populateModules ~env localTables =
+let populate_modules ~env local_tables =
   env.QueryEnv.file.stamps
-  |> Stamps.iterModules (fun _ declared ->
-         Hashtbl.replace localTables.modulesTable
-           (declared.name.txt, declared.extentLoc |> Loc.start)
+  |> Stamps.iter_modules (fun _ declared ->
+         Hashtbl.replace local_tables.modules_table
+           (declared.name.txt, declared.extent_loc |> Loc.start)
            declared)

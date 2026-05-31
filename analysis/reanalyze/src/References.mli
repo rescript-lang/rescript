@@ -22,11 +22,11 @@ type builder
 val create_builder : unit -> builder
 
 val add_value_ref :
-  builder -> posTo:Lexing.position -> posFrom:Lexing.position -> unit
+  builder -> pos_to:Lexing.position -> pos_from:Lexing.position -> unit
 (** Add a value reference. *)
 
 val add_type_ref :
-  builder -> posTo:Lexing.position -> posFrom:Lexing.position -> unit
+  builder -> pos_to:Lexing.position -> pos_from:Lexing.position -> unit
 (** Add a type reference. *)
 
 val merge_into_builder : from:builder -> into:builder -> unit

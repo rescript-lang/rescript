@@ -1,11 +1,11 @@
-let getCompletions ~debug ~source ~kindFile ~pos ~forHover
+let get_completions ~debug ~source ~kind_file ~pos ~for_hover
     ~(full : SharedTypes.full option) =
   match source with
   | "" -> None
   | source -> (
     match
-      CompletionFrontEnd.completionWithParser ~debug ~source ~kindFile
-        ~posCursor:pos
+      CompletionFrontEnd.completion_with_parser ~debug ~source ~kind_file
+        ~pos_cursor:pos
     with
     | None -> None
     | Some (completable, scope) -> (
@@ -21,10 +21,10 @@ let getCompletions ~debug ~source ~kindFile ~pos ~forHover
       match full with
       | None -> None
       | Some full ->
-        let env = SharedTypes.QueryEnv.fromFile full.file in
+        let env = SharedTypes.QueryEnv.from_file full.file in
         let completables =
           completable
-          |> CompletionBackEnd.processCompletable ~debug ~full ~pos ~scope ~env
-               ~forHover
+          |> CompletionBackEnd.process_completable ~debug ~full ~pos ~scope ~env
+               ~for_hover
         in
         Some (completables, full, scope)))

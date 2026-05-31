@@ -1,4 +1,4 @@
-let document_syntax ~source ~kindFile =
+let document_syntax ~source ~kind_file =
   let get_diagnostics diagnostics =
     diagnostics
     |> List.map (fun diagnostic ->
@@ -21,16 +21,16 @@ let document_syntax ~source ~kindFile =
              ~message:(`String (Res_diagnostics.explain diagnostic))
              ~severity:Lsp.Types.DiagnosticSeverity.Error ())
   in
-  if kindFile = Files.Res then
-    let parseImplementation =
+  if kind_file = Files.Res then
+    let parse_implementation =
       Res_driver.parsing_engine.parse_implementation_from_source
         ~for_printer:false ~source
     in
-    get_diagnostics parseImplementation.diagnostics
-  else if kindFile = Files.Resi then
-    let parseInterface =
+    get_diagnostics parse_implementation.diagnostics
+  else if kind_file = Files.Resi then
+    let parse_interface =
       Res_driver.parsing_engine.parse_interface_from_source ~for_printer:false
         ~source
     in
-    get_diagnostics parseInterface.diagnostics
+    get_diagnostics parse_interface.diagnostics
   else []

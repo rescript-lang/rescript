@@ -4,28 +4,28 @@ let active ~config =
 
 let table = Hashtbl.create 1
 
-let markDead ~config ~isType ~loc path =
+let mark_dead ~config ~is_type ~loc path =
   if active ~config then
-    let moduleName = path |> DcePath.toModuleName ~isType in
-    match Hashtbl.find_opt table moduleName with
+    let module_name = path |> DcePath.to_module_name ~is_type in
+    match Hashtbl.find_opt table module_name with
     | Some _ -> ()
-    | _ -> Hashtbl.replace table moduleName (false, loc)
+    | _ -> Hashtbl.replace table module_name (false, loc)
 
-let markLive ~config ~isType ~(loc : Location.t) path =
+let mark_live ~config ~is_type ~(loc : Location.t) path =
   if active ~config then
-    let moduleName = path |> DcePath.toModuleName ~isType in
-    match Hashtbl.find_opt table moduleName with
-    | None -> Hashtbl.replace table moduleName (true, loc)
-    | Some (false, loc) -> Hashtbl.replace table moduleName (true, loc)
+    let module_name = path |> DcePath.to_module_name ~is_type in
+    match Hashtbl.find_opt table module_name with
+    | None -> Hashtbl.replace table module_name (true, loc)
+    | Some (false, loc) -> Hashtbl.replace table module_name (true, loc)
     | Some (true, _) -> ()
 
 (** Check if a module is dead and return issue if so. Pure - no logging. *)
-let checkModuleDead ~config ~fileName:pos_fname moduleName : Issue.t option =
+let check_module_dead ~config ~file_name:pos_fname module_name : Issue.t option =
   if not (active ~config) then None
   else
-    match Hashtbl.find_opt table moduleName with
+    match Hashtbl.find_opt table module_name with
     | Some (false, loc) ->
-      Hashtbl.remove table moduleName;
+      Hashtbl.remove table module_name;
       (* only report once *)
       let loc =
         if loc.loc_ghost then
@@ -35,5 +35,5 @@ let checkModuleDead ~config ~fileName:pos_fname moduleName : Issue.t option =
           {Location.loc_start = pos; loc_end = pos; loc_ghost = false}
         else loc
       in
-      Some (AnalysisResult.make_dead_module_issue ~loc ~moduleName)
+      Some (AnalysisResult.make_dead_module_issue ~loc ~module_name)
     | _ -> None

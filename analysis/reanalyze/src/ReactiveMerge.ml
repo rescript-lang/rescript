@@ -25,7 +25,7 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
     t =
   (* Declarations: (pos, Decl.t) with last-write-wins *)
   let decls =
-    Reactive.flatMap ~name:"decls" source
+    Reactive.flat_map ~name:"decls" source
       ~f:(fun _path file_data_opt ->
         match file_data_opt with
         | None -> []
@@ -36,7 +36,7 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
 
   (* Annotations: (pos, annotated_as) with last-write-wins *)
   let annotations =
-    Reactive.flatMap ~name:"annotations" source
+    Reactive.flat_map ~name:"annotations" source
       ~f:(fun _path file_data_opt ->
         match file_data_opt with
         | None -> []
@@ -48,7 +48,7 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
 
   (* Value refs_from: (posFrom, PosSet of targets) with PosSet.union merge *)
   let value_refs_from =
-    Reactive.flatMap ~name:"value_refs_from" source
+    Reactive.flat_map ~name:"value_refs_from" source
       ~f:(fun _path file_data_opt ->
         match file_data_opt with
         | None -> []
@@ -60,7 +60,7 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
 
   (* Type refs_from: (posFrom, PosSet of targets) with PosSet.union merge *)
   let type_refs_from =
-    Reactive.flatMap ~name:"type_refs_from" source
+    Reactive.flat_map ~name:"type_refs_from" source
       ~f:(fun _path file_data_opt ->
         match file_data_opt with
         | None -> []
@@ -72,7 +72,7 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
 
   (* Cross-file items: (path, CrossFileItems.t) with merge by concatenation *)
   let cross_file_items =
-    Reactive.flatMap ~name:"cross_file_items" source
+    Reactive.flat_map ~name:"cross_file_items" source
       ~f:(fun path file_data_opt ->
         match file_data_opt with
         | None -> []
@@ -93,7 +93,7 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
 
   (* File deps map: (from_file, FileSet of to_files) with FileSet.union merge *)
   let file_deps_map =
-    Reactive.flatMap ~name:"file_deps_map" source
+    Reactive.flat_map ~name:"file_deps_map" source
       ~f:(fun _path file_data_opt ->
         match file_data_opt with
         | None -> []
@@ -104,7 +104,7 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
 
   (* Files set: (source_path, ()) - just track which source files exist *)
   let files =
-    Reactive.flatMap ~name:"files" source
+    Reactive.flat_map ~name:"files" source
       ~f:(fun _cmt_path file_data_opt ->
         match file_data_opt with
         | None -> []
@@ -119,7 +119,7 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
 
   (* Extract exception_refs from cross_file_items for ReactiveExceptionRefs *)
   let exception_refs_collection =
-    Reactive.flatMap ~name:"exception_refs_collection" cross_file_items
+    Reactive.flat_map ~name:"exception_refs_collection" cross_file_items
       ~f:(fun _path items ->
         items.CrossFileItems.exception_refs
         |> List.map (fun (r : CrossFileItems.exception_ref) ->
@@ -131,7 +131,7 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
   let type_deps =
     ReactiveTypeDeps.create ~decls
       ~report_types_dead_only_in_interface:
-        DeadCommon.Config.reportTypesDeadOnlyInInterface
+        DeadCommon.Config.report_types_dead_only_in_interface
   in
 
   (* Create reactive exception refs resolution *)
@@ -173,48 +173,48 @@ let freeze_refs (t : t) : References.t =
   let type_refs_from = PosHash.create 256 in
 
   (* Helper to add to refs_from hashtable *)
-  let add_to_from tbl posFrom posTo =
+  let add_to_from tbl pos_from pos_to =
     let existing =
-      match PosHash.find_opt tbl posFrom with
+      match PosHash.find_opt tbl pos_from with
       | Some s -> s
       | None -> PosSet.empty
     in
-    PosHash.replace tbl posFrom (PosSet.add posTo existing)
+    PosHash.replace tbl pos_from (PosSet.add pos_to existing)
   in
 
   (* Merge per-file value refs_from *)
   Reactive.iter
-    (fun posFrom posToSet ->
+    (fun pos_from pos_to_set ->
       PosSet.iter
-        (fun posTo -> add_to_from value_refs_from posFrom posTo)
-        posToSet)
+        (fun pos_to -> add_to_from value_refs_from pos_from pos_to)
+        pos_to_set)
     t.value_refs_from;
 
   (* Merge per-file type refs_from *)
   Reactive.iter
-    (fun posFrom posToSet ->
+    (fun pos_from pos_to_set ->
       PosSet.iter
-        (fun posTo -> add_to_from type_refs_from posFrom posTo)
-        posToSet)
+        (fun pos_to -> add_to_from type_refs_from pos_from pos_to)
+        pos_to_set)
     t.type_refs_from;
 
   (* Add type-label dependency refs from all sources *)
   let add_type_refs_from reactive =
     Reactive.iter
-      (fun posFrom posToSet ->
+      (fun pos_from pos_to_set ->
         PosSet.iter
-          (fun posTo -> add_to_from type_refs_from posFrom posTo)
-          posToSet)
+          (fun pos_to -> add_to_from type_refs_from pos_from pos_to)
+          pos_to_set)
       reactive
   in
   add_type_refs_from t.type_deps.all_type_refs_from;
 
   (* Add exception refs (to value refs_from) *)
   Reactive.iter
-    (fun posFrom posToSet ->
+    (fun pos_from pos_to_set ->
       PosSet.iter
-        (fun posTo -> add_to_from value_refs_from posFrom posTo)
-        posToSet)
+        (fun pos_to -> add_to_from value_refs_from pos_from pos_to)
+        pos_to_set)
     t.exception_refs.resolved_refs_from;
 
   References.create ~value_refs_from ~type_refs_from
@@ -252,11 +252,11 @@ let freeze_file_deps (t : t) : FileDeps.t =
     t.file_deps_map;
   (* Add file deps from exception refs - iterate value_refs_from *)
   Reactive.iter
-    (fun posFrom posToSet ->
+    (fun pos_from pos_to_set ->
       PosSet.iter
-        (fun posTo ->
-          let from_file = posFrom.Lexing.pos_fname in
-          let to_file = posTo.Lexing.pos_fname in
+        (fun pos_to ->
+          let from_file = pos_from.Lexing.pos_fname in
+          let to_file = pos_to.Lexing.pos_fname in
           if from_file <> to_file then
             let existing =
               match FileDeps.FileHash.find_opt deps from_file with
@@ -265,6 +265,6 @@ let freeze_file_deps (t : t) : FileDeps.t =
             in
             FileDeps.FileHash.replace deps from_file
               (FileSet.add to_file existing))
-        posToSet)
+        pos_to_set)
     t.exception_refs.resolved_refs_from;
   FileDeps.create ~files ~deps

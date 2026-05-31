@@ -1,33 +1,33 @@
 let split str string = Str.split (Str.regexp_string str) string
 
-let removeExtraDots path =
+let remove_extra_dots path =
   Str.global_replace (Str.regexp_string "/./") "/" path
   |> Str.global_replace (Str.regexp {|^\./\.\./|}) "../"
 
 (* Win32 & MacOS are case-insensitive *)
-let pathEq =
+let path_eq =
   if Sys.os_type = "Linux" then fun a b -> a = b
   else fun a b -> String.lowercase_ascii a = String.lowercase_ascii b
 
-let pathStartsWith text prefix =
+let path_starts_with text prefix =
   String.length prefix <= String.length text
-  && pathEq (String.sub text 0 (String.length prefix)) prefix
+  && path_eq (String.sub text 0 (String.length prefix)) prefix
 
-let sliceToEnd str pos = String.sub str pos (String.length str - pos)
+let slice_to_end str pos = String.sub str pos (String.length str - pos)
 
 let relpath base path =
-  if pathStartsWith path base then
+  if path_starts_with path base then
     let baselen = String.length base in
     let rest = String.sub path baselen (String.length path - baselen) in
-    (if rest <> "" && rest.[0] = Filename.dir_sep.[0] then sliceToEnd rest 1
+    (if rest <> "" && rest.[0] = Filename.dir_sep.[0] then slice_to_end rest 1
      else rest)
-    |> removeExtraDots
+    |> remove_extra_dots
   else
     let rec loop bp pp =
       match (bp, pp) with
       | "." :: ra, _ -> loop ra pp
       | _, "." :: rb -> loop bp rb
-      | a :: ra, b :: rb when pathEq a b -> loop ra rb
+      | a :: ra, b :: rb when path_eq a b -> loop ra rb
       | _ -> (bp, pp)
     in
     let base, path =
@@ -38,12 +38,12 @@ let relpath base path =
        | [] -> ["."]
        | _ -> List.map (fun _ -> "..") base)
       @ path)
-    |> removeExtraDots
+    |> remove_extra_dots
 
-let maybeStat path =
+let maybe_stat path =
   try Some (Unix.stat path) with Unix.Unix_error (Unix.ENOENT, _, _) -> None
 
-let readFile filename =
+let read_file filename =
   try
     (* windows can't use open_in *)
     let chan = open_in_bin filename in
@@ -53,12 +53,12 @@ let readFile filename =
   with _ -> None
 
 let exists path =
-  match maybeStat path with
+  match maybe_stat path with
   | None -> false
   | Some _ -> true
-let ifExists path = if exists path then Some path else None
+let if_exists path = if exists path then Some path else None
 
-let readDirectory dir =
+let read_directory dir =
   match Unix.opendir dir with
   | exception Unix.Unix_error (Unix.ENOENT, "opendir", _dir) -> []
   | handle ->
@@ -74,45 +74,45 @@ let readDirectory dir =
     in
     loop handle
 
-let rec collectDirs path =
-  match maybeStat path with
+let rec collect_dirs path =
+  match maybe_stat path with
   | None -> []
   | Some {Unix.st_kind = Unix.S_DIR} ->
     path
-    :: (readDirectory path
-       |> List.map (fun name -> collectDirs (Filename.concat path name))
+    :: (read_directory path
+       |> List.map (fun name -> collect_dirs (Filename.concat path name))
        |> List.concat)
   | _ -> []
 
-let rec collect ?(checkDir = fun _ -> true) ?maxDepth path test =
-  match (maxDepth, maybeStat path) with
+let rec collect ?(check_dir = fun _ -> true) ?max_depth path test =
+  match (max_depth, maybe_stat path) with
   | None, None -> []
   | Some 0, _ -> []
   | None, Some {Unix.st_kind = Unix.S_DIR} ->
-    if checkDir path then
-      readDirectory path
+    if check_dir path then
+      read_directory path
       |> List.map (fun name ->
-             collect ~checkDir (Filename.concat path name) test)
+             collect ~check_dir (Filename.concat path name) test)
       |> List.concat
     else []
   | Some n, Some {Unix.st_kind = Unix.S_DIR} ->
-    if checkDir path then
-      readDirectory path
+    if check_dir path then
+      read_directory path
       |> List.map (fun name ->
-             collect ~checkDir ~maxDepth:(n - 1)
+             collect ~check_dir ~max_depth:(n - 1)
                (Filename.concat path name)
                test)
       |> List.concat
     else []
   | _ -> if test path then [path] else []
 
-type classifiedFile = Res | Resi | Other
+type classified_file = Res | Resi | Other
 
-let classifySourceFile path =
+let classify_source_file path =
   if Filename.check_suffix path ".res" && exists path then Res
   else if Filename.check_suffix path ".resi" && exists path then Resi
   else Other
 
-let canonicalizeUri uri =
-  let path = Uri.toPath uri in
-  path |> Unix.realpath |> Uri.fromPath |> Uri.toString
+let canonicalize_uri uri =
+  let path = Uri.to_path uri in
+  path |> Unix.realpath |> Uri.from_path |> Uri.to_string

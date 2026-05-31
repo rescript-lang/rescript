@@ -532,7 +532,7 @@ let source ~name () =
 
 (** {1 FlatMap} *)
 
-let flatMap ~name (src : ('k1, 'v1) t) ~f ?merge () : ('k2, 'v2) t =
+let flat_map ~name (src : ('k1, 'v1) t) ~f ?merge () : ('k2, 'v2) t =
   let my_level = src.level + 1 in
   let merge_fn =
     match merge with

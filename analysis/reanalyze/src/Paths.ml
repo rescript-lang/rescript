@@ -1,4 +1,4 @@
-let rescriptJson = "rescript.json"
+let rescript_json = "rescript.json"
 
 (** If `t` is an object (`Assoc), get the value associated with the given string key *)
 let get key t =
@@ -6,7 +6,7 @@ let get key t =
   | `Assoc items -> List.assoc_opt key items
   | _ -> None
 
-let readFile filename =
+let read_file filename =
   try
     (* windows can't use open_in *)
     let chan = open_in_bin filename in
@@ -15,30 +15,30 @@ let readFile filename =
     Some content
   with _ -> None
 
-let rec findProjectRoot ~dir =
-  let rescriptJsonFile = Filename.concat dir rescriptJson in
-  if Sys.file_exists rescriptJsonFile then dir
+let rec find_project_root ~dir =
+  let rescript_json_file = Filename.concat dir rescript_json in
+  if Sys.file_exists rescript_json_file then dir
   else
     let parent = dir |> Filename.dirname in
     if parent = dir then (
       prerr_endline
-        ("Error: cannot find project root containing " ^ rescriptJson ^ ".");
+        ("Error: cannot find project root containing " ^ rescript_json ^ ".");
       assert false)
-    else findProjectRoot ~dir:parent
+    else find_project_root ~dir:parent
 
-let runConfig = RunConfig.runConfig
+let run_config = RunConfig.run_config
 
-let setProjectRootFromCwd () =
-  runConfig.projectRoot <- findProjectRoot ~dir:(Sys.getcwd ());
-  runConfig.bsbProjectRoot <-
+let set_project_root_from_cwd () =
+  run_config.project_root <- find_project_root ~dir:(Sys.getcwd ());
+  run_config.bsb_project_root <-
     (match Sys.getenv_opt "BSB_PROJECT_ROOT" with
-    | None -> runConfig.projectRoot
+    | None -> run_config.project_root
     | Some s -> s)
 
-let setReScriptProjectRoot = lazy (setProjectRootFromCwd ())
+let set_re_script_project_root = lazy (set_project_root_from_cwd ())
 
 module Config = struct
-  let readSuppress conf =
+  let read_suppress conf =
     match conf |> get "suppress" with
     | Some (`List elements) ->
       let names =
@@ -48,10 +48,10 @@ module Config = struct
                | `String s -> Some s
                | _ -> None)
       in
-      runConfig.suppress <- names @ runConfig.suppress
+      run_config.suppress <- names @ run_config.suppress
     | _ -> ()
 
-  let readUnsuppress conf =
+  let read_unsuppress conf =
     match conf |> get "unsuppress" with
     | Some (`List elements) ->
       let names =
@@ -61,10 +61,10 @@ module Config = struct
                | `String s -> Some s
                | _ -> None)
       in
-      runConfig.unsuppress <- names @ runConfig.unsuppress
+      run_config.unsuppress <- names @ run_config.unsuppress
     | _ -> ()
 
-  let readAnalysis conf =
+  let read_analysis conf =
     match conf |> get "analysis" with
     | Some (`List elements) ->
       elements
@@ -79,33 +79,33 @@ module Config = struct
       (* if no "analysis" specified, default to dce *)
       RunConfig.dce ()
 
-  let readTransitive conf =
+  let read_transitive conf =
     match conf |> get "transitive" with
     | Some (`Bool bool) -> RunConfig.transitive bool
     | _ -> ()
 
   (* Read the config from rescript.json and apply it to runConfig and suppress and unsuppress *)
-  let processConfig () =
-    setProjectRootFromCwd ();
-    let rescriptFile = Filename.concat runConfig.projectRoot rescriptJson in
+  let process_config () =
+    set_project_root_from_cwd ();
+    let rescript_file = Filename.concat run_config.project_root rescript_json in
 
-    let processText text =
+    let process_text text =
       match try Some (Yojson.Safe.from_string text) with _ -> None with
       | Some json -> (
         match get "reanalyze" json with
         | Some conf ->
-          readSuppress conf;
-          readUnsuppress conf;
-          readAnalysis conf;
-          readTransitive conf
+          read_suppress conf;
+          read_unsuppress conf;
+          read_analysis conf;
+          read_transitive conf
         | None ->
           (* if no "analysis" specified, default to dce *)
           RunConfig.dce ())
       | _ -> ()
     in
 
-    match readFile rescriptFile with
-    | Some text -> processText text
+    match read_file rescript_file with
+    | Some text -> process_text text
     | None -> ()
 end
 
@@ -113,22 +113,22 @@ end
   * Handle namespaces in cmt files.
   * E.g. src/Module-Project.cmt becomes src/Module
   *)
-let handleNamespace cmt =
-  let cutAfterDash s =
+let handle_namespace cmt =
+  let cut_after_dash s =
     match String.index s '-' with
     | n -> ( try String.sub s 0 n with Invalid_argument _ -> s)
     | exception Not_found -> s
   in
-  let noDir = Filename.basename cmt = cmt in
-  if noDir then cmt |> Filename.remove_extension |> cutAfterDash
+  let no_dir = Filename.basename cmt = cmt in
+  if no_dir then cmt |> Filename.remove_extension |> cut_after_dash
   else
     let dir = cmt |> Filename.dirname in
     let base =
-      cmt |> Filename.basename |> Filename.remove_extension |> cutAfterDash
+      cmt |> Filename.basename |> Filename.remove_extension |> cut_after_dash
     in
     Filename.concat dir base
 
-let getModuleName cmt = cmt |> handleNamespace |> Filename.basename
+let get_module_name cmt = cmt |> handle_namespace |> Filename.basename
 
 type cmt_scan_entry = {
   build_root: string;
@@ -145,10 +145,10 @@ type cmt_scan_entry = {
 
     If missing, returns the empty list and callers should fall back to legacy behavior. *)
 
-let readCmtScan () =
-  let sourceDirsFile =
+let read_cmt_scan () =
+  let source_dirs_file =
     ["lib"; "bs"; ".sourcedirs.json"]
-    |> List.fold_left Filename.concat runConfig.bsbProjectRoot
+    |> List.fold_left Filename.concat run_config.bsb_project_root
   in
   let get_fn key fn json =
     get key json |> Option.to_list |> List.filter_map fn
@@ -174,7 +174,7 @@ let readCmtScan () =
     | [build_root] -> Some {build_root; scan_dirs; also_scan_build_root}
     | _ -> None
   in
-  match readFile sourceDirsFile with
+  match read_file source_dirs_file with
   | None -> []
   | Some text -> (
     match try Some (Yojson.Safe.from_string text) with _ -> None with

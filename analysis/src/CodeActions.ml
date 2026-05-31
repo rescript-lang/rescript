@@ -1,23 +1,23 @@
 (* This is the return that's expected when resolving code actions *)
 
-let make ~title ~kind ~uri ~newText ~range =
-  let textDocument =
+let make ~title ~kind ~uri ~new_text ~range =
+  let text_document =
     Lsp.Types.OptionalVersionedTextDocumentIdentifier.create
-      ~uri:(Uri.fromString uri) ()
+      ~uri:(Uri.from_string uri) ()
   in
   let edit =
     Lsp.Types.WorkspaceEdit.create
-      ~documentChanges:
+      ~document_changes:
         [
           `TextDocumentEdit
             (Lsp.Types.TextDocumentEdit.create
-               ~edits:[`TextEdit (Lsp.Types.TextEdit.create ~range ~newText)]
-               ~textDocument);
+               ~edits:[`TextEdit (Lsp.Types.TextEdit.create ~range ~new_text)]
+               ~text_document);
         ]
       ()
   in
   Lsp.Types.CodeAction.create ~title ~kind ~edit ()
 
-let makeWithDocumentChanges ~title ~kind ~documentChanges =
-  let edit = Lsp.Types.WorkspaceEdit.create ~documentChanges () in
+let make_with_document_changes ~title ~kind ~document_changes =
+  let edit = Lsp.Types.WorkspaceEdit.create ~document_changes () in
   Lsp.Types.CodeAction.create ~title ~kind ~edit ()

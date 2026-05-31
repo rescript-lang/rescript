@@ -2,7 +2,7 @@ open SharedTypes
 
 (* List and explanations taken from
    https://www.tutorialrepublic.com/html-reference/html5-tags.php. *)
-let htmlElements =
+let html_elements =
   [
     ("a", "Defines a hyperlink.", false);
     ("abbr", "Defines an abbreviated form of a longer word or phrase.", false);
@@ -207,11 +207,11 @@ let htmlElements =
     ("wbr", "Represents a line break opportunity.", false);
   ]
 
-let getJsxLabels ~componentPath ~findTypeOfValue ~package =
-  match componentPath @ ["make"] |> findTypeOfValue with
+let get_jsx_labels ~component_path ~find_type_of_value ~package =
+  match component_path @ ["make"] |> find_type_of_value with
   | Some (typ, make_env) ->
-    let getFields ~path ~typeArgs =
-      match References.digConstructor ~env:make_env ~package path with
+    let get_fields ~path ~type_args =
+      match References.dig_constructor ~env:make_env ~package path with
       | Some
           ( env,
             {
@@ -219,72 +219,72 @@ let getJsxLabels ~componentPath ~findTypeOfValue ~package =
                 {
                   decl =
                     {
-                      type_kind = Type_record (labelDecls, _repr);
-                      type_params = typeParams;
+                      type_kind = Type_record (label_decls, _repr);
+                      type_params = type_params;
                     };
                 };
             } ) ->
-        labelDecls
+        label_decls
         |> List.map (fun (ld : Types.label_declaration) ->
                let name = Ident.name ld.ld_id in
                let t =
-                 ld.ld_type |> TypeUtils.instantiateType ~typeParams ~typeArgs
+                 ld.ld_type |> TypeUtils.instantiate_type ~type_params ~type_args
                in
                (name, t, env))
       | _ -> []
     in
-    let rec getLabels (t : Types.type_expr) =
+    let rec get_labels (t : Types.type_expr) =
       match t.desc with
-      | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> getLabels t1
-      | Tconstr (p, [propsType], _) when Path.name p = "React.component" -> (
-        let rec getPropsType (t : Types.type_expr) =
+      | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> get_labels t1
+      | Tconstr (p, [props_type], _) when Path.name p = "React.component" -> (
+        let rec get_props_type (t : Types.type_expr) =
           match t.desc with
-          | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> getPropsType t1
-          | Tconstr (path, typeArgs, _) when Path.last path = "props" ->
-            Some (path, typeArgs)
+          | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> get_props_type t1
+          | Tconstr (path, type_args, _) when Path.last path = "props" ->
+            Some (path, type_args)
           | _ -> None
         in
-        match propsType |> getPropsType with
-        | Some (path, typeArgs) -> getFields ~path ~typeArgs
+        match props_type |> get_props_type with
+        | Some (path, type_args) -> get_fields ~path ~type_args
         | None -> [])
       | Tarrow
-          ({lbl = Nolabel; typ = {desc = Tconstr (path, typeArgs, _)}}, _, _, _)
+          ({lbl = Nolabel; typ = {desc = Tconstr (path, type_args, _)}}, _, _, _)
         when Path.last path = "props" ->
-        getFields ~path ~typeArgs
-      | Tconstr (clPath, [{desc = Tconstr (path, typeArgs, _)}; _], _)
-        when Path.name clPath = "React.componentLike"
+        get_fields ~path ~type_args
+      | Tconstr (cl_path, [{desc = Tconstr (path, type_args, _)}; _], _)
+        when Path.name cl_path = "React.componentLike"
              && Path.last path = "props" ->
         (* JSX V4 external or interface *)
-        getFields ~path ~typeArgs
+        get_fields ~path ~type_args
       | Tarrow ({lbl = Nolabel; typ}, _, _, _) -> (
         (* Component without the JSX PPX, like a make fn taking a hand-written
            type props. *)
-        let rec digToConstr typ =
+        let rec dig_to_constr typ =
           match typ.Types.desc with
-          | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> digToConstr t1
-          | Tconstr (path, typeArgs, _) when Path.last path = "props" ->
-            Some (path, typeArgs)
+          | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> dig_to_constr t1
+          | Tconstr (path, type_args, _) when Path.last path = "props" ->
+            Some (path, type_args)
           | _ -> None
         in
-        match digToConstr typ with
+        match dig_to_constr typ with
         | None -> []
-        | Some (path, typeArgs) -> getFields ~path ~typeArgs)
+        | Some (path, type_args) -> get_fields ~path ~type_args)
       | _ -> []
     in
-    typ |> getLabels
+    typ |> get_labels
   | None -> []
 
 type prop = {
   name: string;
-  posStart: int * int;
-  posEnd: int * int;
+  pos_start: int * int;
+  pos_end: int * int;
   exp: Parsetree.expression;
 }
 
-type jsxProps = {
-  compName: Longident.t Location.loc;
+type jsx_props = {
+  comp_name: Longident.t Location.loc;
   props: prop list;
-  childrenStart: (int * int) option;
+  children_start: (int * int) option;
 }
 
 (** 
@@ -297,7 +297,7 @@ for the JSX prop value.
 This code is safe because we also check that the location of the expression is broken,
 which only happens when the expression is a parse error/not complete.
 *)
-let isRegexpJsxHeuristicExpr expr =
+let is_regexp_jsx_heuristic_expr expr =
   match expr.Parsetree.pexp_desc with
   | Pexp_extension
       ( {txt = "re"},
@@ -313,39 +313,39 @@ let isRegexpJsxHeuristicExpr expr =
     true
   | _ -> false
 
-let findJsxPropsCompletable ~jsxProps ~endPos ~posBeforeCursor
-    ~firstCharBeforeCursorNoWhite ~charAtCursor ~posAfterCompName =
-  let allLabels =
+let find_jsx_props_completable ~jsx_props ~end_pos ~pos_before_cursor
+    ~first_char_before_cursor_no_white ~char_at_cursor ~pos_after_comp_name =
+  let all_labels =
     List.fold_right
-      (fun prop allLabels -> prop.name :: allLabels)
-      jsxProps.props []
+      (fun prop all_labels -> prop.name :: all_labels)
+      jsx_props.props []
   in
-  let beforeChildrenStart =
-    match jsxProps.childrenStart with
-    | Some childrenPos -> posBeforeCursor < childrenPos
-    | None -> posBeforeCursor <= endPos
+  let before_children_start =
+    match jsx_props.children_start with
+    | Some children_pos -> pos_before_cursor < children_pos
+    | None -> pos_before_cursor <= end_pos
   in
   let rec loop props =
     match props with
     | prop :: rest ->
-      if prop.posStart <= posBeforeCursor && posBeforeCursor < prop.posEnd then (
+      if prop.pos_start <= pos_before_cursor && pos_before_cursor < prop.pos_end then (
         if Debug.verbose () then
           print_endline "[jsx_props_completable]--> Cursor on the prop name";
 
         Some
           (Completable.Cjsx
-             ( Utils.flattenLongIdent ~jsx:true jsxProps.compName.txt,
+             ( Utils.flatten_long_ident ~jsx:true jsx_props.comp_name.txt,
                prop.name,
-               allLabels )))
+               all_labels )))
       else if
-        prop.posEnd <= posBeforeCursor
-        && posBeforeCursor < Loc.start prop.exp.pexp_loc
+        prop.pos_end <= pos_before_cursor
+        && pos_before_cursor < Loc.start prop.exp.pexp_loc
       then (
         if Debug.verbose () then
           print_endline
             "[jsx_props_completable]--> Cursor between the prop name and expr \
              assigned";
-        match (firstCharBeforeCursorNoWhite, prop.exp) with
+        match (first_char_before_cursor_no_white, prop.exp) with
         | Some '=', {pexp_desc = Pexp_ident {txt = Lident txt}} ->
           if Debug.verbose () then
             Printf.printf
@@ -354,36 +354,36 @@ let findJsxPropsCompletable ~jsxProps ~endPos ~posBeforeCursor
           Some
             (Cexpression
                {
-                 contextPath =
+                 context_path =
                    CJsxPropValue
                      {
-                       pathToComponent =
-                         Utils.flattenLongIdent ~jsx:true jsxProps.compName.txt;
-                       propName = prop.name;
-                       emptyJsxPropNameHint = Some txt;
+                       path_to_component =
+                         Utils.flatten_long_ident ~jsx:true jsx_props.comp_name.txt;
+                       prop_name = prop.name;
+                       empty_jsx_prop_name_hint = Some txt;
                      };
                  nested = [];
                  prefix = "";
                })
         | _ -> None)
-      else if prop.exp.pexp_loc |> Loc.hasPos ~pos:posBeforeCursor then (
+      else if prop.exp.pexp_loc |> Loc.has_pos ~pos:pos_before_cursor then (
         if Debug.verbose () then
           print_endline "[jsx_props_completable]--> Cursor on expr assigned";
         match
-          CompletionExpressions.traverseExpr prop.exp ~exprPath:[]
-            ~pos:posBeforeCursor ~firstCharBeforeCursorNoWhite
+          CompletionExpressions.traverse_expr prop.exp ~expr_path:[]
+            ~pos:pos_before_cursor ~first_char_before_cursor_no_white
         with
         | Some (prefix, nested) ->
           Some
             (Cexpression
                {
-                 contextPath =
+                 context_path =
                    CJsxPropValue
                      {
-                       pathToComponent =
-                         Utils.flattenLongIdent ~jsx:true jsxProps.compName.txt;
-                       propName = prop.name;
-                       emptyJsxPropNameHint = None;
+                       path_to_component =
+                         Utils.flatten_long_ident ~jsx:true jsx_props.comp_name.txt;
+                       prop_name = prop.name;
+                       empty_jsx_prop_name_hint = None;
                      };
                  nested = List.rev nested;
                  prefix;
@@ -393,8 +393,8 @@ let findJsxPropsCompletable ~jsxProps ~endPos ~posBeforeCursor
         if Debug.verbose () then
           print_endline "[jsx_props_completable]--> Loc is broken";
         if
-          CompletionExpressions.isExprHole prop.exp
-          || isRegexpJsxHeuristicExpr prop.exp
+          CompletionExpressions.is_expr_hole prop.exp
+          || is_regexp_jsx_heuristic_expr prop.exp
         then (
           if Debug.verbose () then
             print_endline
@@ -403,21 +403,21 @@ let findJsxPropsCompletable ~jsxProps ~endPos ~posBeforeCursor
           Some
             (Cexpression
                {
-                 contextPath =
+                 context_path =
                    CJsxPropValue
                      {
-                       pathToComponent =
-                         Utils.flattenLongIdent ~jsx:true jsxProps.compName.txt;
-                       propName = prop.name;
-                       emptyJsxPropNameHint = None;
+                       path_to_component =
+                         Utils.flatten_long_ident ~jsx:true jsx_props.comp_name.txt;
+                       prop_name = prop.name;
+                       empty_jsx_prop_name_hint = None;
                      };
                  prefix = "";
                  nested = [];
                }))
         else None)
       else if
-        rest = [] && beforeChildrenStart && charAtCursor = '>'
-        && firstCharBeforeCursorNoWhite = Some '='
+        rest = [] && before_children_start && char_at_cursor = '>'
+        && first_char_before_cursor_no_white = Some '='
       then (
         (* This is a special case for: <SomeComponent someProp=> (completing directly after the '=').
            The completion comes at the end of the component, after the equals sign, but before any
@@ -430,35 +430,35 @@ let findJsxPropsCompletable ~jsxProps ~endPos ~posBeforeCursor
         Some
           (Cexpression
              {
-               contextPath =
+               context_path =
                  CJsxPropValue
                    {
-                     pathToComponent =
-                       Utils.flattenLongIdent ~jsx:true jsxProps.compName.txt;
-                     propName = prop.name;
-                     emptyJsxPropNameHint = None;
+                     path_to_component =
+                       Utils.flatten_long_ident ~jsx:true jsx_props.comp_name.txt;
+                     prop_name = prop.name;
+                     empty_jsx_prop_name_hint = None;
                    };
                prefix = "";
                nested = [];
              }))
       else loop rest
     | [] ->
-      let afterCompName = posBeforeCursor >= posAfterCompName in
-      if afterCompName && beforeChildrenStart then (
+      let after_comp_name = pos_before_cursor >= pos_after_comp_name in
+      if after_comp_name && before_children_start then (
         if Debug.verbose () then
           print_endline "[jsx_props_completable]--> Complete for JSX prop name";
         Some
           (Cjsx
-             ( Utils.flattenLongIdent ~jsx:true jsxProps.compName.txt,
+             ( Utils.flatten_long_ident ~jsx:true jsx_props.comp_name.txt,
                "",
-               allLabels )))
+               all_labels )))
       else None
   in
-  loop jsxProps.props
+  loop jsx_props.props
 
-let extractJsxProps ~(compName : Longident.t Location.loc) ~props ~children =
+let extract_jsx_props ~(comp_name : Longident.t Location.loc) ~props ~children =
   let open Parsetree in
-  let childrenStart =
+  let children_start =
     match children with
     | [] -> None
     | child :: _ ->
@@ -470,8 +470,8 @@ let extractJsxProps ~(compName : Longident.t Location.loc) ~props ~children =
          | JSXPropPunning (_, name) ->
            {
              name = name.txt;
-             posStart = Loc.start name.loc;
-             posEnd = Loc.end_ name.loc;
+             pos_start = Loc.start name.loc;
+             pos_end = Loc.end_ name.loc;
              exp =
                Ast_helper.Exp.ident ~loc:name.loc
                  {txt = Longident.Lident name.txt; loc = name.loc};
@@ -479,16 +479,16 @@ let extractJsxProps ~(compName : Longident.t Location.loc) ~props ~children =
          | JSXPropValue (name, _, value) ->
            {
              name = name.txt;
-             posStart = Loc.start name.loc;
-             posEnd = Loc.end_ name.loc;
+             pos_start = Loc.start name.loc;
+             pos_end = Loc.end_ name.loc;
              exp = value;
            }
          | JSXPropSpreading (loc, expr) ->
            {
              name = "_spreadProps";
-             posStart = Loc.start loc;
-             posEnd = Loc.end_ loc;
+             pos_start = Loc.start loc;
+             pos_end = Loc.end_ loc;
              exp = expr;
            })
   in
-  {compName; props; childrenStart}
+  {comp_name; props; children_start}

@@ -1,20 +1,20 @@
 type t = {
-  mutable bsbProjectRoot: string;
+  mutable bsb_project_root: string;
   mutable dce: bool;
   mutable exception_: bool;
-  mutable projectRoot: string;
+  mutable project_root: string;
   mutable suppress: string list;
   mutable termination: bool;
   mutable transitive: bool;
   mutable unsuppress: string list;
 }
 
-let runConfig =
+let run_config =
   {
-    bsbProjectRoot = "";
+    bsb_project_root = "";
     dce = false;
     exception_ = false;
-    projectRoot = "";
+    project_root = "";
     suppress = [];
     termination = false;
     transitive = false;
@@ -22,23 +22,23 @@ let runConfig =
   }
 
 let reset () =
-  runConfig.dce <- false;
-  runConfig.exception_ <- false;
-  runConfig.suppress <- [];
-  runConfig.termination <- false;
-  runConfig.transitive <- false;
-  runConfig.unsuppress <- []
+  run_config.dce <- false;
+  run_config.exception_ <- false;
+  run_config.suppress <- [];
+  run_config.termination <- false;
+  run_config.transitive <- false;
+  run_config.unsuppress <- []
 
 let all () =
-  runConfig.dce <- true;
-  runConfig.exception_ <- true;
-  runConfig.termination <- true
+  run_config.dce <- true;
+  run_config.exception_ <- true;
+  run_config.termination <- true
 
-let dce () = runConfig.dce <- true
-let exception_ () = runConfig.exception_ <- true
-let termination () = runConfig.termination <- true
+let dce () = run_config.dce <- true
+let exception_ () = run_config.exception_ <- true
+let termination () = run_config.termination <- true
 
-let transitive b = runConfig.transitive <- b
+let transitive b = run_config.transitive <- b
 
 type snapshot = {
   dce: bool;
@@ -51,12 +51,12 @@ type snapshot = {
 
 let snapshot () =
   {
-    dce = runConfig.dce;
-    exception_ = runConfig.exception_;
-    suppress = runConfig.suppress;
-    termination = runConfig.termination;
-    transitive = runConfig.transitive;
-    unsuppress = runConfig.unsuppress;
+    dce = run_config.dce;
+    exception_ = run_config.exception_;
+    suppress = run_config.suppress;
+    termination = run_config.termination;
+    transitive = run_config.transitive;
+    unsuppress = run_config.unsuppress;
   }
 
 let equal_snapshot (a : snapshot) (b : snapshot) = a = b

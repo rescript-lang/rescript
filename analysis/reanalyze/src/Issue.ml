@@ -4,16 +4,16 @@
 
 module ExnSet = Set.Make (Exn)
 
-type missingThrowInfo = {
-  exnName: string;
-  exnTable: (Exn.t, LocSet.t) Hashtbl.t;
-  locFull: Location.t;
-  missingAnnotations: ExnSet.t;
-  throwSet: ExnSet.t;
+type missing_throw_info = {
+  exn_name: string;
+  exn_table: (Exn.t, LocSet.t) Hashtbl.t;
+  loc_full: Location.t;
+  missing_annotations: ExnSet.t;
+  throw_set: ExnSet.t;
 }
 
 type severity = Warning | Error
-type deadOptional = WarningUnusedArgument | WarningRedundantOptionalArgument
+type dead_optional = WarningUnusedArgument | WarningRedundantOptionalArgument
 
 type termination =
   | ErrorHygiene
@@ -21,7 +21,7 @@ type termination =
   | ErrorTermination
   | TerminationAnalysisInternal
 
-type deadWarning =
+type dead_warning =
   | WarningDeadException
   | WarningDeadType
   | WarningDeadValue
@@ -31,10 +31,10 @@ type deadWarning =
 type description =
   | Circular of {message: string}
   | ExceptionAnalysis of {message: string}
-  | ExceptionAnalysisMissing of missingThrowInfo
+  | ExceptionAnalysisMissing of missing_throw_info
   | DeadModule of {message: string}
-  | DeadOptional of {deadOptional: deadOptional; message: string}
-  | DeadWarning of {deadWarning: deadWarning; path: string; message: string}
+  | DeadOptional of {dead_optional: dead_optional; message: string}
+  | DeadWarning of {dead_warning: dead_warning; path: string; message: string}
   | Termination of {termination: termination; message: string}
 
 type t = {

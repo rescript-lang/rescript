@@ -2,38 +2,38 @@
  * `startsWith(string, prefix)`
  * true if the string starts with the prefix
  *)
-let startsWith s prefix =
+let starts_with s prefix =
   if prefix = "" then true
   else
     let p = String.length prefix in
     p <= String.length s && String.sub s 0 p = prefix
 
-let endsWith s suffix =
+let ends_with s suffix =
   if suffix = "" then true
   else
     let p = String.length suffix in
     let l = String.length s in
     p <= String.length s && String.sub s (l - p) p = suffix
 
-let isFirstCharUppercase s =
+let is_first_char_uppercase s =
   String.length s > 0 && Char.equal s.[0] (Char.uppercase_ascii s.[0])
 
-let cmtPosToPosition {Lexing.pos_lnum; pos_cnum; pos_bol} =
+let cmt_pos_to_position {Lexing.pos_lnum; pos_cnum; pos_bol} =
   Lsp.Types.Position.create ~line:(pos_lnum - 1) ~character:(pos_cnum - pos_bol)
 
-let cmtLocToRange {Location.loc_start; loc_end} =
-  let start = cmtPosToPosition loc_start in
-  let end_ = cmtPosToPosition loc_end in
+let cmt_loc_to_range {Location.loc_start; loc_end} =
+  let start = cmt_pos_to_position loc_start in
+  let end_ = cmt_pos_to_position loc_end in
   Lsp.Types.Range.create ~start ~end_
 
-let endOfLocation loc length =
+let end_of_location loc length =
   let open Location in
   {
     loc with
     loc_start = {loc.loc_end with pos_cnum = loc.loc_end.pos_cnum - length};
   }
 
-let chopLocationEnd loc length =
+let chop_location_end loc length =
   let open Location in
   {
     loc with
@@ -49,7 +49,7 @@ let rec find fn items =
     | None -> find fn rest
     | Some x -> Some x)
 
-let filterMap f =
+let filter_map f =
   let rec aux accu = function
     | [] -> List.rev accu
     | x :: l -> (
@@ -59,11 +59,11 @@ let filterMap f =
   in
   aux []
 
-let dumpPath path = Str.global_replace (Str.regexp_string "\\") "/" path
-let isUncurriedInternal path = startsWith (Path.name path) "Js.Fn.arity"
+let dump_path path = Str.global_replace (Str.regexp_string "\\") "/" path
+let is_uncurried_internal path = starts_with (Path.name path) "Js.Fn.arity"
 
-let flattenLongIdent ?(jsx = false) ?(cutAtOffset = None) lid =
-  let extendPath s path =
+let flatten_long_ident ?(jsx = false) ?(cut_at_offset = None) lid =
+  let extend_path s path =
     match path with
     | "" :: _ -> path
     | _ -> s :: path
@@ -73,16 +73,16 @@ let flattenLongIdent ?(jsx = false) ?(cutAtOffset = None) lid =
     | Longident.Lident txt -> ([txt], String.length txt)
     | Ldot (lid, txt) ->
       let path, offset = loop lid in
-      if Some offset = cutAtOffset then (extendPath "" path, offset + 1)
+      if Some offset = cut_at_offset then (extend_path "" path, offset + 1)
       else if jsx && txt = "createElement" then (path, offset)
-      else if txt = "_" then (extendPath "" path, offset + 1)
-      else (extendPath txt path, offset + 1 + String.length txt)
+      else if txt = "_" then (extend_path "" path, offset + 1)
+      else (extend_path txt path, offset + 1 + String.length txt)
     | Lapply _ -> ([], 0)
   in
   let path, _ = loop lid in
   List.rev path
 
-let identifyPexp pexp =
+let identify_pexp pexp =
   match pexp with
   | Parsetree.Pexp_ident _ -> "Pexp_ident"
   | Pexp_constant _ -> "Pexp_constant"
@@ -119,7 +119,7 @@ let identifyPexp pexp =
   | Pexp_await _ -> "Pexp_await"
   | Pexp_jsx_element _ -> "Pexp_jsx_element"
 
-let identifyPpat pat =
+let identify_ppat pat =
   match pat with
   | Parsetree.Ppat_any -> "Ppat_any"
   | Ppat_var _ -> "Ppat_var"
@@ -139,35 +139,35 @@ let identifyPpat pat =
   | Ppat_extension _ -> "Ppat_extension"
   | Ppat_open _ -> "Ppat_open"
 
-let rec skipWhite text i =
+let rec skip_white text i =
   if i < 0 then 0
   else
     match text.[i] with
-    | ' ' | '\n' | '\r' | '\t' -> skipWhite text (i - 1)
+    | ' ' | '\n' | '\r' | '\t' -> skip_white text (i - 1)
     | _ -> i
 
-let hasBraces attributes =
+let has_braces attributes =
   attributes |> List.exists (fun (loc, _) -> loc.Location.txt = "res.braces")
 
-let rec unwrapIfOption (t : Types.type_expr) =
+let rec unwrap_if_option (t : Types.type_expr) =
   match t.desc with
-  | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> unwrapIfOption t1
-  | Tconstr (Path.Pident {name = "option"}, [unwrappedType], _) -> unwrappedType
+  | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> unwrap_if_option t1
+  | Tconstr (Path.Pident {name = "option"}, [unwrapped_type], _) -> unwrapped_type
   | _ -> t
 
-let isJsxComponent (vb : Parsetree.value_binding) =
+let is_jsx_component (vb : Parsetree.value_binding) =
   vb.pvb_attributes
   |> List.exists (function
        | {Location.txt = "react.component" | "jsx.component"}, _payload -> true
        | _ -> false)
 
-let checkName name ~prefix ~exact =
-  if exact then name = prefix else startsWith name prefix
+let check_name name ~prefix ~exact =
+  if exact then name = prefix else starts_with name prefix
 
-let rec getUnqualifiedName txt =
+let rec get_unqualified_name txt =
   match txt with
-  | Longident.Lident fieldName -> fieldName
-  | Ldot (t, _) -> getUnqualifiedName t
+  | Longident.Lident field_name -> field_name
+  | Ldot (t, _) -> get_unqualified_name t
   | _ -> ""
 
 let indent n text =
@@ -185,43 +185,43 @@ let indent n text =
     line ^ "\n"
     ^ (lines |> List.map (fun line -> spaces ^ line) |> String.concat "\n")
 
-let mkPosition (pos : Pos.t) =
+let mk_position (pos : Pos.t) =
   let line, character = pos in
   Lsp.Types.Position.create ~line ~character
 
-let rangeOfLoc (loc : Location.t) =
-  let start = loc |> Loc.start |> mkPosition in
-  let end_ = loc |> Loc.end_ |> mkPosition in
+let range_of_loc (loc : Location.t) =
+  let start = loc |> Loc.start |> mk_position in
+  let end_ = loc |> Loc.end_ |> mk_position in
   Lsp.Types.Range.create ~start ~end_
 
-let rec expandPath (path : Path.t) =
+let rec expand_path (path : Path.t) =
   match path with
   | Pident id -> [Ident.name id]
-  | Pdot (p, s, _) -> s :: expandPath p
+  | Pdot (p, s, _) -> s :: expand_path p
   | Papply _ -> []
 
 module Option = struct
-  let flatMap f o =
+  let flat_map f o =
     match o with
     | None -> None
     | Some v -> f v
 end
 
-let rec lastElements list =
+let rec last_elements list =
   match list with
   | ([_; _] | [_] | []) as res -> res
-  | _ :: tl -> lastElements tl
+  | _ :: tl -> last_elements tl
 
-let lowercaseFirstChar s =
+let lowercase_first_char s =
   if String.length s = 0 then s
   else String.mapi (fun i c -> if i = 0 then Char.lowercase_ascii c else c) s
 
-let cutAfterDash s =
+let cut_after_dash s =
   match String.index s '-' with
   | n -> ( try String.sub s 0 n with Invalid_argument _ -> s)
   | exception Not_found -> s
 
-let fileNameHasUnallowedChars s =
+let file_name_has_unallowed_chars s =
   let regexp = Str.regexp "[^A-Za-z0-9_]" in
   try
     ignore (Str.search_forward regexp s 0);
@@ -233,24 +233,24 @@ let fileNameHasUnallowedChars s =
     Globals-RescriptBun.URL.t (which is an illegal path because of the namespace) becomes:
     RescriptBun.Globals.URL.t
 *)
-let rec flattenAnyNamespaceInPath path =
+let rec flatten_any_namespace_in_path path =
   match path with
   | [] -> []
   | head :: tail ->
     if String.contains head '-' then
       let parts = String.split_on_char '-' head in
       (* Namespaces are in reverse order, so "URL-RescriptBun" where RescriptBun is the namespace. *)
-      (parts |> List.rev) @ flattenAnyNamespaceInPath tail
-    else head :: flattenAnyNamespaceInPath tail
+      (parts |> List.rev) @ flatten_any_namespace_in_path tail
+    else head :: flatten_any_namespace_in_path tail
 
-let printMaybeExoticIdent ?(allowUident = false) txt =
+let print_maybe_exotic_ident ?(allow_uident = false) txt =
   let len = String.length txt in
 
   let rec loop i =
     if i == len then txt
     else if i == 0 then
       match String.unsafe_get txt i with
-      | 'A' .. 'Z' when allowUident -> loop (i + 1)
+      | 'A' .. 'Z' when allow_uident -> loop (i + 1)
       | 'a' .. 'z' | '_' -> loop (i + 1)
       | _ -> "\"" ^ txt ^ "\""
     else
@@ -260,8 +260,8 @@ let printMaybeExoticIdent ?(allowUident = false) txt =
   in
   if Res_token.is_keyword_txt txt then "\"" ^ txt ^ "\"" else loop 0
 
-let findPackageJson root =
-  let path = Uri.toPath root in
+let find_package_json root =
+  let path = Uri.to_path root in
 
   let rec loop path =
     if path = "/" then None

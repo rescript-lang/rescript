@@ -25,11 +25,11 @@ val issue_count : t -> int
 
 val make_dead_issue :
   loc:Location.t ->
-  deadWarning:Issue.deadWarning ->
+  dead_warning:Issue.dead_warning ->
   path:string ->
   message:string ->
   Issue.t
 (** Create a dead code warning issue *)
 
-val make_dead_module_issue : loc:Location.t -> moduleName:Name.t -> Issue.t
+val make_dead_module_issue : loc:Location.t -> module_name:Name.t -> Issue.t
 (** Create a dead module warning issue *)

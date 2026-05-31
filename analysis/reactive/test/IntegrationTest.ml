@@ -15,7 +15,7 @@ let test_file_collection () =
 
   (* First flatMap: aggregate word counts across files with merge *)
   let word_counts =
-    flatMap ~name:"word_counts" files
+    flat_map ~name:"word_counts" files
       ~f:(fun _path counts -> StringMap.bindings counts)
         (* Each file contributes its word counts *)
       ~merge:( + ) (* Sum counts from multiple files *)
@@ -24,7 +24,7 @@ let test_file_collection () =
 
   (* Second flatMap: filter to words with count >= 2 *)
   let frequent_words =
-    flatMap ~name:"frequent_words" word_counts
+    flat_map ~name:"frequent_words" word_counts
       ~f:(fun word count -> if count >= 2 then [(word, count)] else [])
       ()
   in
