@@ -1,8 +1,9 @@
-module Helper = struct
+let ( // ) = Filename.concat
+let executable = "_build" // "default" // "lsp" // "bin" // "main.exe"
+
+module Client = struct
   (** Helpers for spawning the ReScript language server in tests, sending
       LSP requests/notifications over stdio, and reading responses back. *)
-
-  let server_binary = "_build/default/lsp/bin/main.exe"
 
   type t = {
     proc: [`Generic | `Unix] Eio.Process.ty Eio.Resource.t;
@@ -48,8 +49,7 @@ module Helper = struct
     let stdin_r, stdin_w = Eio_unix.pipe sw in
     let stdout_r, stdout_w = Eio_unix.pipe sw in
     let proc =
-      Eio.Process.spawn ~sw mgr ~stdin:stdin_r ~stdout:stdout_w
-        ~executable:server_binary []
+      Eio.Process.spawn ~sw mgr ~stdin:stdin_r ~stdout:stdout_w ~executable []
     in
     Eio.Resource.close stdin_r;
     Eio.Resource.close stdout_w;
@@ -118,24 +118,26 @@ open Lsp
 open Types
 
 type caret_comment = {
-  path: string;
+  path: string; (* absolute path *)
   line: int; (* line of the comment *)
   col: int; (* column of the ^ character *)
   command: string; (* e.g. "hov" *)
-  text: string;
+  text: string; (* file content *)
 }
 
-module StringMap = Map.Make (String)
+module String_map = Map.Make (String)
 
-let find_caret_comments ~fs ~dir =
+let find_caret_comments ~fs ~workspace_dir =
   let results = ref [] in
 
   (* Read all .res files in directory *)
   Eio.Path.with_open_dir
-    Eio.Path.(fs / dir)
+    Eio.Path.(fs / workspace_dir)
     (fun dir_handle ->
       Eio.Path.read_dir dir_handle
-      |> List.filter (String.ends_with ~suffix:".res")
+      |> List.filter (fun file ->
+             String.ends_with ~suffix:".res" file
+             || String.ends_with ~suffix:".resi" file)
       |> List.iter (fun filename ->
              let path = Eio.Path.(dir_handle / filename) in
              let content = Eio.Path.load path in
@@ -164,8 +166,7 @@ let find_caret_comments ~fs ~dir =
                      in
                      results :=
                        {
-                         (* TODO: rewrite this *)
-                         path = Sys.getcwd () ^ "/" ^ dir ^ "/" ^ snd path;
+                         path = workspace_dir // snd path;
                          line = line_idx;
                          col;
                          command;
@@ -177,82 +178,98 @@ let find_caret_comments ~fs ~dir =
 
   List.rev !results
 
-let run_test ~fs ~dir server =
-  let comments = find_caret_comments ~fs ~dir in
+let open_document ~uri ~text client =
+  Client.send_notification client
+    (Client_notification.TextDocumentDidOpen
+       (DidOpenTextDocumentParams.create
+          ~textDocument:
+            (TextDocumentItem.create ~uri ~languageId:"rescript" ~version:0
+               ~text)))
 
-  let send_request payload method_ (caret_comment : caret_comment) =
-    let request_str =
-      Printf.sprintf "%s Line: %d Character: %d" method_ caret_comment.line
-        caret_comment.col
-    in
-    let response = Helper.request server payload in
-    let response_str =
-      Client_request.yojson_of_result payload response
-      |> Yojson.Safe.pretty_to_string ~std:false
-    in
-    Printf.sprintf "Request %s\nResponse\n%s\n\n" request_str response_str
+let pretty_source_loc caret_comment =
+  let relative_path =
+    let dir_len = String.length (Sys.getcwd () ^ "/") in
+    String.sub caret_comment.path dir_len
+      (String.length caret_comment.path - dir_len)
   in
 
-  let open_document ~uri ~text =
-    Helper.send_notification server
-      (Client_notification.TextDocumentDidOpen
-         (DidOpenTextDocumentParams.create
-            ~textDocument:
-              (TextDocumentItem.create ~uri ~languageId:"rescript" ~version:0
-                 ~text)))
-  in
+  Printf.sprintf "%s:%d:%d" relative_path caret_comment.line
+    (caret_comment.col + 1)
 
-  let comment_to_lsp (caret_comment : caret_comment) =
-    let uri = DocumentUri.of_path caret_comment.path in
-    let textDocument = TextDocumentIdentifier.create ~uri in
+let send_request payload client =
+  let response = Client.request client payload in
+  Client_request.yojson_of_result payload response
+  |> Yojson.Safe.pretty_to_string ~std:true
 
-    let character = caret_comment.col in
-    let line = caret_comment.line - 1 in
-    let position = Position.create ~line ~character in
-    let text = caret_comment.text in
+let print_response method_ response caret_comment =
+  Printf.sprintf "Request %s %s\nResponse\n%s\n\n" method_
+    (pretty_source_loc caret_comment)
+    response
 
-    match caret_comment.command with
-    | "hov" ->
-      open_document ~uri ~text;
+let run_test_for_comment (caret_comment : caret_comment) client =
+  let uri = DocumentUri.of_path caret_comment.path in
+  let textDocument = TextDocumentIdentifier.create ~uri in
+
+  let character = caret_comment.col in
+  let line = caret_comment.line - 1 in
+  let position = Position.create ~line ~character in
+  let text = caret_comment.text in
+
+  match caret_comment.command with
+  | "hov" ->
+    open_document ~uri ~text client;
+    let resp =
       send_request
         (Client_request.TextDocumentHover
            (HoverParams.create ~textDocument ~position ()))
-        "textDocument/hover" caret_comment
-    (* | "cmp" ->
-      let context =
-        CompletionContext.create ~triggerCharacter:">"
-          ~triggerKind:CompletionTriggerKind.TriggerCharacter ()
-      in
-      send_request
-        (Client_request.TextDocumentCompletion
-           (CompletionParams.create ~textDocument ~position ~context ()))
-        "textDocument/completion" caret_comment *)
-    | other -> Printf.sprintf "Command `%s` not implemented!" other
-  in
+        client
+    in
+    print_response "textDocument/hover" resp caret_comment
+  (* | "cmp" ->
+    let context =
+      CompletionContext.create ~triggerCharacter:">"
+        ~triggerKind:CompletionTriggerKind.TriggerCharacter ()
+    in
+    send_request
+      (Client_request.TextDocumentCompletion
+         (CompletionParams.create ~textDocument ~position ~context ()))
+      "textDocument/completion" caret_comment *)
+  | other ->
+    Printf.sprintf "Command `%s` not implemented! %s\n\n" other
+      (pretty_source_loc caret_comment)
+
+let run_workspace_test ~fs ~workspace_dir client =
+  let comments = find_caret_comments ~fs ~workspace_dir in
 
   let grouped =
     List.fold_left
       (fun acc comment ->
         let others =
-          Option.value ~default:[] (StringMap.find_opt comment.path acc)
+          Option.value ~default:[] (String_map.find_opt comment.path acc)
         in
-        StringMap.add comment.path (comment :: others) acc)
-      StringMap.empty comments
+        String_map.add comment.path (comment :: others) acc)
+      String_map.empty comments
   in
 
-  StringMap.iter
+  String_map.iter
     (fun path comments ->
       let filename = Filename.basename path ^ ".expected" in
-      let save_path = Filename.concat "tests/lsp_tests/expected" filename in
-      let content = List.rev_map comment_to_lsp comments |> String.concat "" in
+      let save_path = workspace_dir // filename in
+      let content =
+        List.rev_map (fun c -> run_test_for_comment c client) comments
+        |> String.concat ""
+      in
       let file = Eio.Path.(fs / save_path) in
       Eio.Path.save ~create:(`Or_truncate 0o644) file content)
     grouped
 
 let main () =
   Eio_main.run @@ fun env ->
-  Helper.with_server ~env @@ fun server ->
-  run_test ~fs:env#fs ~dir:"tests/lsp_tests/basic-workspace" server;
-  Helper.stop server |> ignore
+  Client.with_server ~env @@ fun client ->
+  let workspace_dir =
+    Sys.getcwd () // "tests" // "lsp_tests" // "basic-workspace"
+  in
+  run_workspace_test ~fs:env#fs ~workspace_dir client;
+  Client.stop client |> ignore
 
 let () = main ()
