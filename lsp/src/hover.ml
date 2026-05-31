@@ -7,24 +7,10 @@ let create ~(position : Position.t) ~(uri : DocumentUri.t)
 
   (* NOTE: Should be a config *)
   let supportsMarkdownLinks = true in
+  let debug = false in
+  let open Analysis in
+  let source = (Document_store.get_document ~uri server.state.store).text in
+  let kindFile = Files.classifySourceFile path in
+  let full = Cmt.loadFullCmtFromPath ~path in
 
-  let result =
-    let open Analysis in
-    let source = (Document_store.get_document ~uri server.state.store).text in
-    let debug = false in
-
-    let kindFile = Files.classifySourceFile path in
-    let full = Cmt.loadFullCmtFromPath ~path in
-
-    Commands.hover ~source ~kindFile ~pos ~debug ~supportsMarkdownLinks ~full
-  in
-
-  match result with
-  | None -> None
-  | Some value ->
-    Some
-      (Hover.create
-         ~contents:
-           (`MarkupContent
-              (MarkupContent.create ~kind:MarkupKind.Markdown ~value))
-         ())
+  Commands.hover ~source ~kindFile ~pos ~debug ~supportsMarkdownLinks ~full
