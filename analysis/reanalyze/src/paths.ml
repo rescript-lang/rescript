@@ -154,19 +154,14 @@ let read_cmt_scan () =
     get key json |> Option.to_list |> List.filter_map fn
   in
   let read_entry (json : Yojson.Safe.t) =
-    let build_root =
-      json |> get_fn "build_root" Yojson.Safe.Util.to_string_option
-    in
+    let build_root = json |> get_fn "build_root" YojsonHelpers.string_opt in
     let scan_dirs =
       match json |> get "scan_dirs" with
-      | Some (`List arr) ->
-        arr |> List.filter_map Yojson.Safe.Util.to_string_option
+      | Some (`List arr) -> arr |> List.filter_map YojsonHelpers.string_opt
       | _ -> []
     in
     let also_scan_build_root =
-      match
-        json |> get_fn "also_scan_build_root" Yojson.Safe.Util.to_bool_option
-      with
+      match json |> get_fn "also_scan_build_root" YojsonHelpers.bool_opt with
       | [b] -> b
       | _ -> false
     in
