@@ -45,6 +45,7 @@
 - Refactor analysis to decouple I/O from core logic. https://github.com/rescript-lang/rescript/pull/8426
 - Deprecate `Stdlib_Error` and `Stdlib_Exn` modules in favor of `JsError/JsExn`. https://github.com/rescript-lang/rescript/pull/8404
 - Remove vendored `Json` library and use `yojson` and `lsp` library for analysis. https://github.com/rescript-lang/rescript/pull/8436
+- Convert OCaml codebase to snake case format. https://github.com/rescript-lang/rescript/pull/8456
 
 #### :house: Internal
 
