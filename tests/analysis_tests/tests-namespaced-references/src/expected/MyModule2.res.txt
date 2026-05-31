@@ -1,6 +1,18 @@
 References src/MyModule2.res 0:4
 [
-{"uri": "MyModule1.res", "range": {"start": {"line": 0, "character": 30}, "end": {"line": 0, "character": 37}}},
-{"uri": "MyModule2.res", "range": {"start": {"line": 0, "character": 4}, "end": {"line": 0, "character": 11}}}
+  {
+    "range": {
+      "end": { "character": 37, "line": 0 },
+      "start": { "character": 30, "line": 0 }
+    },
+    "uri": "file:///MyModule1.res"
+  },
+  {
+    "range": {
+      "end": { "character": 11, "line": 0 },
+      "start": { "character": 4, "line": 0 }
+    },
+    "uri": "file:///MyModule2.res"
+  }
 ]
 
