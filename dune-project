@@ -75,3 +75,18 @@
   (yojson
     (= 3.0.0))
   (odoc :with-doc)))
+
+(package
+ (name rescript-language-server)
+ (synopsis "ReScript LSP")
+ (depends
+ (ocaml
+  (>= 4.10))
+ (lsp
+  (>= 1.22.0))
+ (eio
+  (>= 1.3))
+ (eio_main
+  (>= 1.3))
+ analysis
+ dune))

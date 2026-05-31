@@ -1,0 +1,10 @@
+(executable
+ (name test)
+ (package rescript-language-server)
+ (public_name lsp-tests)
+ (libraries lsp jsonrpc yojson eio eio_main eio.unix)
+ (flags
+  (-w "-9-32-33")))
+
+(dirs
+ (:standard \ ignored_dir basic-workspace))

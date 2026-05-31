@@ -107,6 +107,7 @@
     "tests/tests",
     "tests/tools_tests",
     "tests/commonjs_tests",
+    "tests/lsp_tests/**",
     "scripts/res"
   ],
   "packageManager": "yarn@4.12.0",

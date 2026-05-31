@@ -1,0 +1,5 @@
+(library
+ (name rescript_language_server)
+ (libraries lsp eio eio_main analysis)
+ (flags
+  (-w "-9")))

@@ -1133,6 +1133,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@tests/lsp-tests-basic-workspace@workspace:tests/lsp_tests/basic-workspace":
+  version: 0.0.0-use.local
+  resolution: "@tests/lsp-tests-basic-workspace@workspace:tests/lsp_tests/basic-workspace"
+  dependencies:
+    "@rescript/react": "workspace:^"
+    rescript: "workspace:^"
+  languageName: unknown
+  linkType: soft
+
 "@tests/reanalyze-benchmark@workspace:tests/analysis_tests/tests-reanalyze/deadcode-benchmark":
   version: 0.0.0-use.local
   resolution: "@tests/reanalyze-benchmark@workspace:tests/analysis_tests/tests-reanalyze/deadcode-benchmark"

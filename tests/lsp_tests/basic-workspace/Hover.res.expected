@@ -1,0 +1,341 @@
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:1:5
+Response
+{ "contents": { "kind": "markdown", "value": "```rescript\nint\n```" } }
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:4:6
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\ntype t = (int, float)\n```"
+  }
+}
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:7:8
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nmodule Id: {\n  type x = int\n}\n```"
+  }
+}
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:20:12
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "\nThis module is commented\n---\n\n```\n \n```\n```rescript\nmodule Dep: {\n  let customDouble: int => int\n}\n```"
+  }
+}
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:23:12
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nint => int\n```\n---\nSome doc comment"
+  }
+}
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:27:7
+Response
+{ "contents": { "kind": "markdown", "value": "```rescript\nint\n```" } }
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:34:5
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nunit => int\n```\n---\nDoc comment for functionWithTypeAnnotation"
+  }
+}
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:38:14
+Response
+{ "contents": { "kind": "markdown", "value": "```rescript\nstring\n```" } }
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:43:16
+Response
+{ "contents": { "kind": "markdown", "value": "```rescript\nstring\n```" } }
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:47:11
+Response
+{ "contents": { "kind": "markdown", "value": "```rescript\nint\n```" } }
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:50:14
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nmodule type Logger = {\n  let log: string => unit\n}\n```"
+  }
+}
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:55:8
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nmodule type Logger = {\n  let log: string => unit\n}\n```"
+  }
+}
+
+Command `def` not implemented! tests/lsp_tests/basic-workspace/Hover.res:61:15
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:64:10
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nmodule IdDefinedTwice: {\n  let y: int\n  let _x: int\n}\n```"
+  }
+}
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:75:8
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nmodule A: {\n  let x: int\n}\n```"
+  }
+}
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:78:8
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nmodule A: {\n  let x: int\n}\n```"
+  }
+}
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:92:11
+Response
+null
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:99:11
+Response
+null
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:104:26
+Response
+{ "contents": { "kind": "markdown", "value": "```rescript\nfloat\n```" } }
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:107:22
+Response
+{ "contents": { "kind": "markdown", "value": "```rescript\nint\n```" } }
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:117:17
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nAA.cond<([< #str(string)] as 'a)> => AA.cond<'a>\n```\n\n---\n\n```\n \n```\n```rescript\ntype AA.cond<'a> = 'a\n  constraint 'a = [< #str(string)]\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C110%2C2%5D)\n"
+  }
+}
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:120:26
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nAA.cond<([< #str(string)] as 'a)> => AA.cond<'a>\n```\n\n---\n\n```\n \n```\n```rescript\ntype AA.cond<'a> = 'a\n  constraint 'a = [< #str(string)]\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C110%2C2%5D)\n"
+  }
+}
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:123:4
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "The `@live` decorator is for reanalyze, a static analysis tool for ReScript that can do dead code analysis.\n\n`@live` tells the dead code analysis that the value should be considered live, even though it might appear to be dead. This is typically used in case of FFI where there are indirect ways to access values. It can be added to everything that could otherwise be considered unused by the dead code analysis - values, functions, arguments, records, individual record fields, and so on.\n\n[Read more and see examples in the documentation](https://rescript-lang.org/syntax-lookup#live-decorator).\n\nHint: Did you know you can run an interactive code analysis in your project by running the command `> ReScript: Start Code Analyzer`? Try it!"
+  }
+}
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:132:5
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\n(unit, unit) => int\n```"
+  }
+}
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:135:5
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\n(unit, unit) => int\n```"
+  }
+}
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:138:6
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nunit => unit => int\n```"
+  }
+}
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:145:10
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nint\n```\n---\ndoc comment 1"
+  }
+}
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:149:7
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nint\n```\n---\n doc comment 2 "
+  }
+}
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:166:24
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nfoo<bar>\n```\n\n---\n\n```\n \n```\n```rescript\ntype foo<'a> = {content: 'a, zzz: string}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C161%2C2%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype bar = {age: int}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C162%2C2%5D)\n"
+  }
+}
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:168:23
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nfoobar\n```\n\n---\n\n```\n \n```\n```rescript\ntype foobar = foo<bar>\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C163%2C2%5D)\n"
+  }
+}
+
+Command `com` not implemented! tests/lsp_tests/basic-workspace/Hover.res:171:17
+
+Command `com` not implemented! tests/lsp_tests/basic-workspace/Hover.res:174:17
+
+Command `com` not implemented! tests/lsp_tests/basic-workspace/Hover.res:183:17
+
+Command `com` not implemented! tests/lsp_tests/basic-workspace/Hover.res:186:17
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:198:5
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nCompV4.props<int, string> => React.element\n```\n\n---\n\n```\n \n```\n```rescript\ntype CompV4.props<'n, 's> = {n?: 'n, s: 's}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C190%2C2%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype React.element = Jsx.element\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Fdependencies%2Frescript-react%2Fsrc%2FReact.res%22%2C0%2C0%5D)\n"
+  }
+}
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:203:17
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nuseR\n```\n\n---\n\n```\n \n```\n```rescript\ntype useR = {x: int, y: list<option<r<float>>>}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C200%2C0%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype r<'a> = {i: 'a, f: float}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C101%2C0%5D)\n"
+  }
+}
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:211:14
+Response
+null
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:230:21
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nint\n```\n---\n More Stuff "
+  }
+}
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:233:18
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nint\n```\n---\n More Stuff "
+  }
+}
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:245:7
+Response
+null
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:248:20
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nbool\n```\n---\n Mighty fine field here. "
+  }
+}
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:257:21
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nvariant\nCoolVariant\n```\n---\n Cool variant! \n\n---\n\n```\n \n```\n```rescript\ntype variant = CoolVariant | OtherCoolVariant\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C250%2C0%5D)\n"
+  }
+}
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:262:23
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\npayloadVariants\nInlineRecord({field1: int, field2: bool})\n```\n\n---\n\n```\n \n```\n```rescript\ntype payloadVariants =\n  | InlineRecord({field1: int, field2: bool})\n  | Args(int, bool)\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C259%2C0%5D)\n"
+  }
+}
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:265:24
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\npayloadVariants\nArgs(int, bool)\n```\n\n---\n\n```\n \n```\n```rescript\ntype payloadVariants =\n  | InlineRecord({field1: int, field2: bool})\n  | Args(int, bool)\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C259%2C0%5D)\n"
+  }
+}
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:272:43
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nRecursiveVariants.t\nAction1(int)\n```\n\n---\n\n```\n \n```\n```rescript\ntype RecursiveVariants.t =\n  | Action1(int)\n  | Action2(float)\n  | Batch(array<t>)\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C268%2C2%5D)\n"
+  }
+}
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:276:24
+Response
+null
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:279:34
+Response
+null
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:282:9
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "\n [`Belt.Array`]()\n\n  **mutable array**: Utilities functions\n\n---\n\n```\n \n```\n```rescript\nmodule Array: {\n  module Id\n  module Array\n  module SortArray\n  module MutableQueue\n  module MutableStack\n  module List\n  module Range\n  module Set\n  module Map\n  module MutableSet\n  module MutableMap\n  module HashSet\n  module HashMap\n  module Option\n  module Result\n  module Int\n  module Float\n}\n```"
+  }
+}
+
+Request textDocument/hover tests/lsp_tests/basic-workspace/Hover.res:285:7
+Response
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\ntype aliased = variant\n```\n\n---\n\n```\n \n```\n```rescript\ntype variant = CoolVariant | OtherCoolVariant\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C250%2C0%5D)\n"
+  }
+}
+
