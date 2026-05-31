@@ -1,0 +1,17 @@
+{
+  "name": "@tests/namespaced-references",
+  "namespace": "my-namespace",
+  "sources": [
+    {
+      "dir": "src",
+      "subdirs": true
+    }
+  ],
+  "package-specs": [
+    {
+      "module": "commonjs",
+      "in-source": false
+    }
+  ],
+  "suffix": ".res.js"
+}
