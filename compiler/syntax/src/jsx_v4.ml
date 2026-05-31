@@ -1072,7 +1072,7 @@ let transform_signature_item ~config item =
   | _ -> [item]
 
 (* There appear to be slightly different rules of transformation whether the component is upper-, lowercase or a fragment *)
-type componentDescription =
+type component_description =
   | LowercasedComponent
   | UppercasedComponent
   | FragmentComponent
@@ -1163,7 +1163,7 @@ let try_find_key_prop (props : jsx_props) : (arg_label * expression) option =
        | _ -> None)
 
 let append_children_prop (config : Jsx_common.jsx_config) mapper
-    (component_description : componentDescription) (props : jsx_props)
+    (component_description : component_description) (props : jsx_props)
     (children : jsx_children) : jsx_props =
   match children with
   | [] -> props
@@ -1197,8 +1197,8 @@ let append_children_prop (config : Jsx_common.jsx_config) mapper
     let loc =
       match List.rev xs with
       | [] -> head.pexp_loc
-      | lastChild :: _ ->
-        {head.pexp_loc with loc_end = lastChild.pexp_loc.loc_end}
+      | last_child :: _ ->
+        {head.pexp_loc with loc_end = last_child.pexp_loc.loc_end}
     in
     (* this is a hack to support react components that introspect into their children *)
     props
@@ -1212,7 +1212,7 @@ let append_children_prop (config : Jsx_common.jsx_config) mapper
       ]
 
 let mk_react_jsx (config : Jsx_common.jsx_config) mapper loc attrs
-    (component_description : componentDescription) (elementTag : expression)
+    (component_description : component_description) (element_tag : expression)
     (props : jsx_props) (children : jsx_children) : expression =
   let more_than_one_children = List.length children > 1 in
   let props_with_children =
@@ -1251,7 +1251,7 @@ let mk_react_jsx (config : Jsx_common.jsx_config) mapper loc attrs
           },
         [key_prop; (nolabel, unit_expr ~loc:Location.none)] )
   in
-  let args = [(nolabel, elementTag); (nolabel, props_record)] @ key_and_unit in
+  let args = [(nolabel, element_tag); (nolabel, props_record)] @ key_and_unit in
   Exp.apply ~loc ~attrs ~transformed_jsx:true jsx_expr args
 
 (* In most situations, the component name is the make function from a module. 

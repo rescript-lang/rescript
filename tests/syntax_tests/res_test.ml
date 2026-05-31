@@ -28,7 +28,7 @@ let x: int
 
 let () = print_endline "✅ multi printer api tests"
 
-module OutcomePrinterTests = struct
+module Outcome_printer_tests = struct
   let signature_to_outcome structure =
     Lazy.force Res_outcome_printer.setup;
 
@@ -87,7 +87,7 @@ module OutcomePrinterTests = struct
       ~contents:(signature_to_outcome signature)
 end
 
-module ParserApiTest = struct
+module Parser_api_test = struct
   let make_default () =
     let src = "   let x = 1\nlet y = 2\nlet z = 3" in
     let parser = Res_parser.make src "test.res" in
@@ -125,6 +125,6 @@ module ParserApiTest = struct
     windows_crlf ()
 end
 
-let () = OutcomePrinterTests.run ()
-let () = ParserApiTest.run ()
+let () = Outcome_printer_tests.run ()
+let () = Parser_api_test.run ()
 let () = Res_utf8_test.run ()
