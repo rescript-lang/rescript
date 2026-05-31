@@ -51,7 +51,8 @@
  * modules in the playground.
  * v5: Removed .ml support.
  * v6: Added `config.experimental_features` and `config.jsx_preserve_mode` to the BundleConfig.
- * v7: Added debug dump output APIs for developer playground tooling.
+ * v7: Added debug dump output APIs for developer playground tooling,
+ * including gentype output.
  * *)
 let api_version = "7"
 
@@ -78,6 +79,7 @@ module BundleConfig = struct
     mutable open_modules: string list;
     mutable experimental_features: string list;
     mutable jsx_preserve_mode: bool;
+    mutable gentype_enabled: bool;
   }
 
   let make () =
@@ -88,6 +90,7 @@ module BundleConfig = struct
       open_modules = [];
       experimental_features = [];
       jsx_preserve_mode = false;
+      gentype_enabled = false;
     }
 
   let default_filename (lang : Lang.t) = "playground." ^ Lang.to_string lang
@@ -475,6 +478,72 @@ module Compile = struct
     List.iter Iter.iter_structure_item structure.str_items;
     Js.array (!acc |> Array.of_list)
 
+  let gentype_output ~module_system ~modulename ~sourcefile structure env =
+    let cmt_annots = Cmt_format.Implementation structure in
+    let input_cmt =
+      {
+        Cmt_format.cmt_modname = modulename;
+        cmt_annots;
+        cmt_value_dependencies = [];
+        cmt_comments = [];
+        cmt_args = [||];
+        cmt_sourcefile = Some sourcefile;
+        cmt_builddir = Sys.getcwd ();
+        cmt_loadpath = !Config.load_path;
+        cmt_source_digest = None;
+        cmt_initial_env = env;
+        cmt_imports = [];
+        cmt_interface_digest = None;
+        cmt_use_summaries = false;
+        cmt_extra_info = {Cmt_utils.deprecated_used = []};
+      }
+    in
+    let has_gentype_annotations =
+      GenTypeMain.cmt_check_annotations input_cmt
+        ~check_annotation:(fun ~loc:_ attributes ->
+          attributes
+          |> Annotation.get_attribute_payload
+               Annotation.tag_is_one_of_the_gentype_annotations
+          <> None)
+    in
+    if has_gentype_annotations then
+      let module_ =
+        match module_system with
+        | Ext_module_system.Commonjs -> GenTypeConfig.CommonJS
+        | Esmodule -> ESModule
+      in
+      let project_root = Sys.getcwd () in
+      let config =
+        {
+          GenTypeConfig.default with
+          module_;
+          platform_lib = "rescript";
+          project_root;
+          bsb_project_root = project_root;
+        }
+      in
+      let source_file = sourcefile in
+      let output_file_relative =
+        source_file |> Paths.get_output_file_relative ~config
+      in
+      let file_name = modulename |> ModuleName.from_string_unsafe in
+      let resolver =
+        ModuleResolver.create_lazy_resolver ~config
+          ~extensions:[".res"; ".shim.ts"] ~exclude_file:(fun fname ->
+            fname = "React.res" || fname = "ReasonReact.res")
+      in
+      let code_text =
+        input_cmt
+        |> GenTypeMain.translate_c_m_t ~config ~output_file_relative ~resolver
+        |> EmitJs.emit_translation_as_string ~config ~file_name
+             ~output_file_relative ~resolver
+             ~input_cmt_translate_type_declarations:
+               GenTypeMain.input_cmt_translate_type_declarations
+      in
+      EmitType.file_header ~source_file:(Filename.basename source_file)
+      ^ "\n" ^ code_text ^ "\n"
+    else "No @gentype annotations found."
+
   let implementation ?(include_debug_outputs = false) ~(config : BundleConfig.t)
       ~lang str =
     let {
@@ -483,6 +552,7 @@ module Compile = struct
       open_modules;
       experimental_features;
       jsx_preserve_mode;
+      gentype_enabled;
     } =
       config
     in
@@ -551,6 +621,26 @@ module Compile = struct
         let lambda = Printer.to_string Printlambda.lambda lam in
         let lam, _ = Lam_convert.convert export_ident_sets lam in
         let lam = Lam_print.lambda_to_string lam in
+        let gentype_attrs =
+          if gentype_enabled then
+            let structure, _ = typed_tree in
+            Js.Unsafe.
+              [|
+                ( "gentype",
+                  inject
+                  @@ Js.string
+                       (gentype_output ~module_system ~modulename
+                          ~sourcefile:filename structure env) );
+              |]
+          else [||]
+        in
+        (* TODO(sourcemap PR): The developer playground already knows how to
+           show an optional "source_map" debug tab. Add optional instance
+           setters named "setSourceMapMode", "setSourceMapSourcesContent",
+           and "setSourceMapRoot", matching getConfig fields named
+           "source_map_mode", "source_map_sources_content", and
+           "source_map_root", plus a compileWithDebug output field named
+           "source_map". *)
         let debug_attrs =
           Js.Unsafe.
             [|
@@ -560,7 +650,7 @@ module Compile = struct
               ("lam", inject @@ Js.string lam);
             |]
         in
-        Js.Unsafe.obj (Array.append attrs debug_attrs)
+        Js.Unsafe.obj (Array.concat [attrs; debug_attrs; gentype_attrs])
       else Js.Unsafe.obj attrs
     with e -> (
       match e with
@@ -661,6 +751,10 @@ module Export = struct
       config.jsx_preserve_mode <- value;
       true
     in
+    let set_gentype_enabled value =
+      config.gentype_enabled <- value;
+      true
+    in
     let convert_syntax ~(from_lang : string) ~(to_lang : string) (src : string)
         =
       let open Lang in
@@ -719,6 +813,10 @@ module Export = struct
             inject
             @@ Js.wrap_meth_callback (fun _ value ->
                    Js.bool (set_jsx_preserve_mode (Js.to_bool value))) );
+          ( "setGentypeEnabled",
+            inject
+            @@ Js.wrap_meth_callback (fun _ value ->
+                   Js.bool (set_gentype_enabled (Js.to_bool value))) );
           ( "getConfig",
             inject
             @@ Js.wrap_meth_callback (fun _ ->
@@ -733,6 +831,8 @@ module Export = struct
                          ("warn_flags", inject @@ Js.string config.warn_flags);
                          ( "jsx_preserve_mode",
                            inject @@ (config.jsx_preserve_mode |> Js.bool) );
+                         ( "gentype_enabled",
+                           inject @@ (config.gentype_enabled |> Js.bool) );
                          ( "experimental_features",
                            inject
                            @@ (config.experimental_features |> Array.of_list

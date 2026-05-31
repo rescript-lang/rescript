@@ -6,6 +6,8 @@ type tab =
   | Lambda
   | Lam
   | JavaScript
+  | GenType
+  | SourceMap
   | Settings
 
 type compilerStatus =
@@ -19,8 +21,23 @@ type sourcePosition = {
   col: int,
 }
 
-let tabs: array<tab> = [Parsetree, Typedtree, Lambda, Lam, JavaScript, Settings]
+let baseTabs: array<tab> = [Parsetree, Typedtree, Lambda, Lam, JavaScript]
 let moduleSystems: array<moduleSystem> = [Esmodule, Commonjs]
+let sourceMapModes: array<sourceMapMode> = [Disabled, Linked, Inline, Hidden]
+
+let tabIsVisible = (config: PlaygroundConfig.t, tab) =>
+  switch tab {
+  | GenType => config.gentypeEnabled
+  | SourceMap => config.sourceMapMode !== Disabled
+  | Parsetree | Typedtree | Lambda | Lam | JavaScript | Settings => true
+  }
+
+let tabsForConfig = (config: PlaygroundConfig.t) => {
+  let withGentype = config.gentypeEnabled ? Array.concat(baseTabs, [GenType]) : baseTabs
+  let withSourceMap =
+    config.sourceMapMode !== Disabled ? Array.concat(withGentype, [SourceMap]) : withGentype
+  Array.concat(withSourceMap, [Settings])
+}
 
 let defaultSource = `type person = {
   name: string,
@@ -43,6 +60,8 @@ let tabLabel = tab =>
   | Lambda => "lambda"
   | Lam => "lam"
   | JavaScript => "js"
+  | GenType => "gentype"
+  | SourceMap => "source map"
   | Settings => "settings"
   }
 
@@ -141,6 +160,12 @@ let toggleFeature = (features: array<experimentalFeature>, feature: experimental
     ? features->Array.filter(item => item !== feature)
     : Array.concat(features, [feature])
 
+let optionalOutput = (output, fallback) =>
+  switch output {
+  | Some(output) => output
+  | None => fallback
+  }
+
 let selectedOutput = (result: option<CompilerApi.compileResult>, activeTab: tab) =>
   switch result {
   | None => "The compiler is loading. Results will appear here after the first compile."
@@ -154,6 +179,13 @@ let selectedOutput = (result: option<CompilerApi.compileResult>, activeTab: tab)
     | Lambda => result.lambda
     | Lam => result.lam
     | JavaScript => result.jsCode
+    | GenType =>
+      optionalOutput(result.gentype, "This compiler bundle does not expose gentype output yet.")
+    | SourceMap =>
+      optionalOutput(
+        result.sourceMap,
+        "This compiler bundle does not expose source map output yet.",
+      )
     | Settings => ""
     }
   }
@@ -211,7 +243,20 @@ module SettingsPanel = {
     ~scheduleCompile: unit => unit,
     ~scheduleUrlSync: unit => unit,
   ) => {
-    let updateConfig = f => Signal.update(config, f)
+    let updateConfig = f => {
+      let nextConfig = f(Signal.peek(config))
+      Signal.set(config, nextConfig)
+      if !tabIsVisible(nextConfig, Signal.peek(activeTab)) {
+        Signal.set(activeTab, JavaScript)
+      }
+    }
+    let compilerVersionOptions: Signal.t<array<Node.node>> = Obj.magic(
+      Computed.make(() =>
+        CompilerApi.selectableCompilerVersions(
+          Signal.get(config).compilerVersion,
+        )->Array.map(version => <option value=version.id> {Node.text(version.label)} </option>)
+      ),
+    )
 
     <div
       class={() =>
@@ -230,11 +275,7 @@ module SettingsPanel = {
             switchCompiler(nextVersion)
           }}
         >
-          {Node.fragment(
-            CompilerApi.selectableCompilerVersions(
-              Signal.get(config).compilerVersion,
-            )->Array.map(version => <option value=version.id> {Node.text(version.label)} </option>),
-          )}
+          {Node.signalFragment(compilerVersionOptions)}
         </select>
       </section>
       <section class="settings-section">
@@ -309,6 +350,71 @@ module SettingsPanel = {
       </section>
       <section class="settings-section setting-row">
         <input
+          id="gentype-enabled"
+          type_="checkbox"
+          checked={() => Signal.get(config).gentypeEnabled}
+          onChange={event => {
+            updateConfig(config => {...config, gentypeEnabled: Event.checked(event)})
+            scheduleUrlSync()
+            compileNow()
+          }}
+        />
+        <label for_="gentype-enabled"> {Node.text("gentype")} </label>
+      </section>
+      <section class="settings-section">
+        <label class="setting-label" for_="source-map-mode"> {Node.text("Source Map")} </label>
+        <select
+          id="source-map-mode"
+          value={() => (Signal.get(config).sourceMapMode :> string)}
+          onChange={event => {
+            switch event->Event.value->parseSourceMapMode {
+            | Some(nextSourceMapMode) =>
+              updateConfig(config => {...config, sourceMapMode: nextSourceMapMode})
+              scheduleUrlSync()
+              compileNow()
+            | None => ()
+            }
+          }}
+        >
+          {Node.fragment(
+            sourceMapModes->Array.map(sourceMapMode => {
+              let value = (sourceMapMode :> string)
+              <option value> {Node.text(value)} </option>
+            }),
+          )}
+        </select>
+      </section>
+      <section class="settings-section setting-row">
+        <input
+          id="source-map-sources-content"
+          type_="checkbox"
+          checked={() => Signal.get(config).sourceMapSourcesContent}
+          onChange={event => {
+            updateConfig(config => {
+              ...config,
+              sourceMapSourcesContent: Event.checked(event),
+            })
+            scheduleUrlSync()
+            compileNow()
+          }}
+        />
+        <label for_="source-map-sources-content"> {Node.text("Include sources content")} </label>
+      </section>
+      <section class="settings-section">
+        <label class="setting-label" for_="source-map-root"> {Node.text("Source Root")} </label>
+        <input
+          id="source-map-root"
+          value={() => Signal.get(config).sourceMapRoot}
+          spellcheck=false
+          onInput={event => {
+            updateConfig(config => {...config, sourceMapRoot: Event.value(event)})
+            scheduleUrlSync()
+            scheduleCompile()
+          }}
+        />
+      </section>
+      <section class="settings-section setting-row">
+        <input
           id="feature-let-unwrap"
           type_="checkbox"
           checked={() => Signal.get(config).experimentalFeatures->hasFeature(LetUnwrap)}
@@ -368,6 +474,13 @@ module App = {
     let compilerInfo: Signal.t<option<CompilerApi.info>> = Signal.make(None)
     let compileResult: Signal.t<option<CompilerApi.compileResult>> = Signal.make(None)
     let config = Signal.make(CompilerApi.defaultConfig)
+    let visibleTabNodes: Signal.t<array<Node.node>> = Obj.magic(
+      Computed.make(() =>
+        tabsForConfig(Signal.get(config))->Array.map(tab =>
+          <TabButton tab activeTab onSelect={tab => Signal.set(activeTab, tab)} />
+        )
+      ),
+    )
     let activeLine = Signal.make(1)
     let editorScrollTop = Signal.make(0)
     let editorScrollLeft = Signal.make(0)
@@ -542,10 +655,17 @@ module App = {
                 warnFlags: info.warnFlags,
                 jsxPreserveMode: info.jsxPreserveMode,
                 experimentalFeatures: info.experimentalFeatures,
+                gentypeEnabled: info.gentypeEnabled,
+                sourceMapMode: info.sourceMapMode,
+                sourceMapSourcesContent: info.sourceMapSourcesContent,
+                sourceMapRoot: info.sourceMapRoot,
               }
             }
             Signal.set(compilerInfo, Some(info))
             Signal.set(config, nextConfig)
+            if !tabIsVisible(nextConfig, Signal.peek(activeTab)) {
+              Signal.set(activeTab, JavaScript)
+            }
             Signal.set(status, Ready)
             switch firstLoadConfigValue {
             | Some(_) => ()
@@ -672,13 +792,7 @@ module App = {
           </div>
         </div>
         <div class="result-column">
-          <div class="tabs">
-            {Node.fragment(
-              tabs->Array.map(tab =>
-                <TabButton tab activeTab onSelect={tab => Signal.set(activeTab, tab)} />
-              ),
-            )}
-          </div>
+          <div class="tabs"> {Node.signalFragment(visibleTabNodes)} </div>
           <div
             class={() =>
               Signal.get(activeTab) === Settings ? "output-panel hidden-panel" : "output-panel"}
