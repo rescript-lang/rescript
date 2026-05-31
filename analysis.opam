@@ -11,8 +11,8 @@ depends: [
   "ocaml" {>= "5.0.0"}
   "cppo" {= "1.8.0"}
   "odoc" {with-doc}
-  "lsp" {= "1.22.0"}
-  "yojson" {= "2.2.2"}
+  "lsp" {>= "1.23.0"}
+  "yojson" {= "3.0.0"}
 ]
 build: [
   ["dune" "subst"] {dev}
