@@ -206,8 +206,8 @@ let find_arg_completables ~(args : arg list) ~end_pos ~pos_before_cursor
          })
   | _ -> loop args
 
-let rec expr_to_context_path_inner ~(in_jsx_context : bool) (e : Parsetree.expression)
-    =
+let rec expr_to_context_path_inner ~(in_jsx_context : bool)
+    (e : Parsetree.expression) =
   match e.pexp_desc with
   | Pexp_constant (Pconst_string _) -> Some Completable.CPString
   | Pexp_constant (Pconst_integer _) -> Some CPInt
@@ -222,7 +222,8 @@ let rec expr_to_context_path_inner ~(in_jsx_context : bool) (e : Parsetree.expre
   | Pexp_ident {txt = Lident "->"} -> None
   | Pexp_ident {txt; loc} ->
     Some
-      (CPId {path = Utils.flatten_long_ident txt; completion_context = Value; loc})
+      (CPId
+         {path = Utils.flatten_long_ident txt; completion_context = Value; loc})
   | Pexp_field (e1, {txt = Lident name}) -> (
     match expr_to_context_path ~in_jsx_context e1 with
     | Some context_path ->
@@ -352,8 +353,8 @@ let complete_pipe_chain ~(in_jsx_context : bool) (exp : Parsetree.expression) =
     |> Option.map (fun ctx_path -> (ctx_path, pexp_loc))
   | _ -> None
 
-let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file ?find_this_expr_loc
-    text =
+let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
+    ?find_this_expr_loc text =
   let offset_no_white = Utils.skip_white text (offset - 1) in
   let pos_no_white =
     let line, col = pos_cursor in
@@ -458,7 +459,8 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file ?find_this_exp
     | Ppat_any -> ()
     | Ppat_var {txt; loc} ->
       scope :=
-        !scope |> Scope.add_value ~name:txt ~loc ?context_path:context_path_to_save
+        !scope
+        |> Scope.add_value ~name:txt ~loc ?context_path:context_path_to_save
     | Ppat_alias (p, as_a) ->
       scope_pattern p ~pattern_path ?context_path;
       let ctx_path =
@@ -471,7 +473,8 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file ?find_this_exp
         else None
       in
       scope :=
-        !scope |> Scope.add_value ~name:as_a.txt ~loc:as_a.loc ?context_path:ctx_path
+        !scope
+        |> Scope.add_value ~name:as_a.txt ~loc:as_a.loc ?context_path:ctx_path
     | Ppat_constant _ | Ppat_interval _ -> ()
     | Ppat_tuple pl ->
       pl
@@ -622,7 +625,8 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file ?find_this_exp
           match expr_to_context_path ~in_jsx_context:!in_jsx_context expr with
           | None -> ()
           | Some context_path ->
-            set_result (CexhaustiveSwitch {context_path; expr_loc = exp.pexp_loc}))
+            set_result
+              (CexhaustiveSwitch {context_path; expr_loc = exp.pexp_loc}))
       | Pexp_match (_expr, []) ->
         (* switch x { } *)
         if Debug.verbose () && debug_typed_completion_expr then
@@ -779,8 +783,8 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file ?find_this_exp
          E.g: let x = {name: "name", <com>}, when `x` has compiled. *)
       match
         pvb_expr
-        |> CompletionExpressions.traverse_expr ~expr_path:[] ~pos:pos_before_cursor
-             ~first_char_before_cursor_no_white
+        |> CompletionExpressions.traverse_expr ~expr_path:[]
+             ~pos:pos_before_cursor ~first_char_before_cursor_no_white
       with
       | Some (prefix, nested) ->
         (* This completion should be low prio, so let any deeper completion
@@ -812,8 +816,9 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file ?find_this_exp
          E.g: let {<com>} = someVar *)
       match
         ( pvb_pat
-          |> CompletionPatterns.traverse_pattern ~pattern_path:[] ~loc_has_cursor
-               ~first_char_before_cursor_no_white ~pos_before_cursor,
+          |> CompletionPatterns.traverse_pattern ~pattern_path:[]
+               ~loc_has_cursor ~first_char_before_cursor_no_white
+               ~pos_before_cursor,
           expr_to_context_path ~in_jsx_context:!in_jsx_context pvb_expr )
       with
       | Some (prefix, nested), Some ctx_path ->
@@ -869,7 +874,8 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file ?find_this_exp
      else if id.loc |> Loc.has_pos ~pos:pos_before_cursor then
        let pos_start, pos_end = Loc.range id.loc in
        match
-         (Pos.position_to_offset text pos_start, Pos.position_to_offset text pos_end)
+         ( Pos.position_to_offset text pos_start,
+           Pos.position_to_offset text pos_end )
        with
        | Some offset_start, Some offset_end
          when offset_start >= 0 && offset_end >= offset_start ->
@@ -1067,7 +1073,8 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file ?find_this_exp
       found := true;
       if debug then
         Printf.printf "posCursor:[%s] posNoWhite:[%s] Found expr:%s\n"
-          (Pos.to_string pos_cursor) (Pos.to_string pos_no_white)
+          (Pos.to_string pos_cursor)
+          (Pos.to_string pos_no_white)
           (Loc.to_string expr.pexp_loc)
     in
     (match find_this_expr_loc with
@@ -1114,7 +1121,9 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file ?find_this_exp
            && Option.is_none find_this_expr_loc ->
       if Debug.verbose () then
         print_endline "[completionFrontend] Checking each case";
-      let ctx_path = expr_to_context_path ~in_jsx_context:!in_jsx_context expr in
+      let ctx_path =
+        expr_to_context_path ~in_jsx_context:!in_jsx_context expr
+      in
       let old_ctx_path = !current_ctx_path in
       cases
       |> List.iter (fun (case : Parsetree.case) ->
@@ -1377,7 +1386,8 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file ?find_this_exp
                  (jsx_props.props
                  |> List.map
                       (fun
-                        ({name; pos_start; pos_end; exp} : CompletionJsx.prop) ->
+                        ({name; pos_start; pos_end; exp} : CompletionJsx.prop)
+                      ->
                         Printf.sprintf "%s[%s->%s]=...%s" name
                           (Pos.to_string pos_start) (Pos.to_string pos_end)
                           (Loc.to_string exp.pexp_loc))
@@ -1497,7 +1507,8 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file ?find_this_exp
             | Some fun_ctx_path ->
               let old_ctx_path = !current_ctx_path in
               set_current_ctx_path fun_ctx_path;
-              arg_completable |> iterate_fn_arguments ~is_pipe:true ~args ~iterator;
+              arg_completable
+              |> iterate_fn_arguments ~is_pipe:true ~args ~iterator;
               reset_current_ctx_path old_ctx_path)
           | Some arg_completable -> set_result arg_completable)
         | Pexp_apply
@@ -1550,7 +1561,8 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file ?find_this_exp
             | Some fun_ctx_path ->
               let old_ctx_path = !current_ctx_path in
               set_current_ctx_path fun_ctx_path;
-              arg_completable |> iterate_fn_arguments ~is_pipe:false ~args ~iterator;
+              arg_completable
+              |> iterate_fn_arguments ~is_pipe:false ~args ~iterator;
               reset_current_ctx_path old_ctx_path)
           | Some arg_completable -> set_result arg_completable)
         | Pexp_send (lhs, {txt; loc}) -> (
@@ -1577,7 +1589,8 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file ?find_this_exp
             || (label = "" && pos_cursor = fst label_range)
           then
             match expr_to_context_path ~in_jsx_context:!in_jsx_context lhs with
-            | Some context_path -> set_result (Cpath (CPObj (context_path, label)))
+            | Some context_path ->
+              set_result (Cpath (CPObj (context_path, label)))
             | None -> ())
         | Pexp_fun
             {arg_label = lbl; default = default_exp_opt; lhs = pat; rhs = e} ->
@@ -1602,7 +1615,8 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file ?find_this_exp
                      argument_label =
                        (match lbl with
                        | Nolabel ->
-                         Unlabelled {argument_position = current_unlabelled_count}
+                         Unlabelled
+                           {argument_position = current_unlabelled_count}
                        | Optional {txt = name} -> Optional name
                        | Labelled {txt = name} -> Labelled name);
                    })
@@ -1621,7 +1635,8 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file ?find_this_exp
           let old_scope = !scope in
           if rec_flag = Recursive then bindings |> List.iter scope_value_binding;
           bindings |> List.iter (fun vb -> iterator.value_binding iterator vb);
-          if rec_flag = Nonrecursive then bindings |> List.iter scope_value_binding;
+          if rec_flag = Nonrecursive then
+            bindings |> List.iter scope_value_binding;
           iterator.expr iterator e;
           scope := old_scope;
           processed := true
@@ -1652,7 +1667,8 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file ?find_this_exp
       found := true;
       if debug then
         Printf.printf "posCursor:[%s] posNoWhite:[%s] Found type:%s\n"
-          (Pos.to_string pos_cursor) (Pos.to_string pos_no_white)
+          (Pos.to_string pos_cursor)
+          (Pos.to_string pos_no_white)
           (Loc.to_string core_type.ptyp_loc);
       match core_type.ptyp_desc with
       | Ptyp_constr (lid, _args) ->
@@ -1673,7 +1689,8 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file ?find_this_exp
       found := true;
       if debug then
         Printf.printf "posCursor:[%s] posNoWhite:[%s] Found pattern:%s\n"
-          (Pos.to_string pos_cursor) (Pos.to_string pos_no_white)
+          (Pos.to_string pos_cursor)
+          (Pos.to_string pos_no_white)
           (Loc.to_string pat.ppat_loc);
       (match pat.ppat_desc with
       | Ppat_construct (lid, _) -> (

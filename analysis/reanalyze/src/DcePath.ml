@@ -33,7 +33,8 @@ let module_to_implementation path =
 
 let module_to_interface path =
   match path |> List.rev with
-  | module_name :: rest -> (module_name |> Name.to_interface) :: rest |> List.rev
+  | module_name :: rest ->
+    (module_name |> Name.to_interface) :: rest |> List.rev
   | [] -> path
 
 let to_module_name ~is_type path =

@@ -8,7 +8,8 @@ type values_table = (string, (Name.t, Exceptions.t) Hashtbl.t) Hashtbl.t
 
 let create_values_builder () : values_builder = Hashtbl.create 15
 
-let values_builder_add (builder : values_builder) ~module_path ~name exceptions =
+let values_builder_add (builder : values_builder) ~module_path ~name exceptions
+    =
   let path = (name |> Name.create) :: module_path.ModulePath.path in
   Hashtbl.replace builder (path |> DcePath.to_name) exceptions
 
@@ -58,7 +59,8 @@ module Values = struct
         | None, external_module_name2 :: path_rev2
           when !Cli.cmt_command && path_rev2 <> [] ->
           (* Simplistic namespace resolution for dune namespace: skip the root of the path *)
-          find_external ~external_module_name:external_module_name2 ~path_rev:path_rev2
+          find_external ~external_module_name:external_module_name2
+            ~path_rev:path_rev2
         | None, _ -> None)
       | [] -> None)
     | Some exceptions -> Some exceptions
@@ -115,7 +117,8 @@ module Event = struct
     in
     let shrink_exn_table exn loc =
       match Hashtbl.find_opt exn_table exn with
-      | Some loc_set -> Hashtbl.replace exn_table exn (LocSet.remove loc loc_set)
+      | Some loc_set ->
+        Hashtbl.replace exn_table exn (LocSet.remove loc loc_set)
       | None -> ()
     in
     let rec loop exn_set events =
@@ -190,7 +193,8 @@ let create_checks_builder () : checks_builder = ref []
 
 let checks_builder_add (builder : checks_builder) ~events ~exceptions ~loc
     ?(loc_full = loc) ~module_name exn_name =
-  builder := {events; exceptions; loc; loc_full; module_name; exn_name} :: !builder
+  builder :=
+    {events; exceptions; loc; loc_full; module_name; exn_name} :: !builder
 
 let checks_builder_to_list (builder : checks_builder) : check list =
   !builder |> List.rev
@@ -248,7 +252,8 @@ let traverse_ast ~file ~values_builder ~checks_builder () =
     | None -> (
       match module_path with
       | [] -> None
-      | _ :: rest_module_path -> path |> find_local_path ~module_path:rest_module_path)
+      | _ :: rest_module_path ->
+        path |> find_local_path ~module_path:rest_module_path)
   in
   let exceptions_of_patterns patterns =
     patterns
@@ -328,10 +333,11 @@ let traverse_ast ~file ~values_builder ~checks_builder () =
           args = [(_lbl1, Some {exp_desc = Texp_ident (callee, _, _)}); arg];
         }
       when (* raise @@ Exn(...) *)
-           atat |> Path.name = "Pervasives.@@" && callee |> Path.name |> is_throw
-      ->
+           atat |> Path.name = "Pervasives.@@"
+           && callee |> Path.name |> is_throw ->
       let exceptions = [arg] |> throw_args in
-      current_events := {Event.exceptions; loc; kind = Throws} :: !current_events;
+      current_events :=
+        {Event.exceptions; loc; kind = Throws} :: !current_events;
       arg |> snd |> iter_expr_opt self
     | Texp_apply {funct = {exp_desc = Texp_ident (callee, _, _)} as e; args} ->
       let callee_name = Path.name callee in
@@ -396,7 +402,8 @@ let traverse_ast ~file ~values_builder ~checks_builder () =
     in
     let rec get_exceptions payload =
       match payload with
-      | Annotation.StringPayload s -> [Exn.from_string s] |> Exceptions.from_list
+      | Annotation.StringPayload s ->
+        [Exn.from_string s] |> Exceptions.from_list
       | Annotation.ConstructPayload s when s <> "::" ->
         [Exn.from_string s] |> Exceptions.from_list
       | Annotation.IdentPayload s ->
@@ -461,14 +468,15 @@ let traverse_ast ~file ~values_builder ~checks_builder () =
       res
     in
     match vb.vb_pat.pat_desc with
-    | Tpat_any when is_toplevel && not vb.vb_loc.loc_ghost -> process_binding "_"
+    | Tpat_any when is_toplevel && not vb.vb_loc.loc_ghost ->
+      process_binding "_"
     | Tpat_construct ({txt}, _, _)
       when is_toplevel && (not vb.vb_loc.loc_ghost)
            && txt = Longident.Lident "()" ->
       process_binding "()"
     | Tpat_var (id, {loc = {loc_ghost}})
-      when (is_function || is_toplevel) && (not loc_ghost)
-           && not vb.vb_loc.loc_ghost ->
+      when (is_function || is_toplevel)
+           && (not loc_ghost) && not vb.vb_loc.loc_ghost ->
       process_binding (id |> Ident.name)
     | _ -> super.value_binding self vb
   in

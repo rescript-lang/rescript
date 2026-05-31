@@ -2,7 +2,8 @@ open SharedTypes
 
 module StringSet = Set.Make (String)
 
-let show_module_top_level ~docstring ~is_type ~name (top_level : Module.item list) =
+let show_module_top_level ~docstring ~is_type ~name
+    (top_level : Module.item list) =
   let contents =
     top_level
     |> List.map (fun item ->
@@ -52,7 +53,8 @@ let rec show_module ~docstring ~(file : File.t) ~package ~name
   | Some ({item = Ident path} as declared) -> (
     match References.resolve_module_reference ~file ~package declared with
     | None -> Some ("Unable to resolve module reference " ^ Path.name path)
-    | Some (_, declared) -> show_module ~docstring ~file ~name ~package declared)
+    | Some (_, declared) -> show_module ~docstring ~file ~name ~package declared
+    )
 
 type extracted_type = {
   name: string;
@@ -76,7 +78,8 @@ let find_relevant_types_from_type ~file ~package typ =
       | None -> (env, [typ])
       | Some (env1, {item = {decl}}) -> (
         match decl.type_kind with
-        | Type_record (lds, _) -> (env1, typ :: (lds |> label_declarations_types))
+        | Type_record (lds, _) ->
+          (env1, typ :: (lds |> label_declarations_types))
         | Type_variant cds ->
           ( env1,
             cds
@@ -122,7 +125,8 @@ let expand_types ~file ~package ~supports_markdown_links typ =
   | all ->
     let types_seen = ref StringSet.empty in
     let type_id ~(env : QueryEnv.t) ~name =
-      env.file.module_name :: List.rev (name :: env.path_rev) |> String.concat "."
+      env.file.module_name :: List.rev (name :: env.path_rev)
+      |> String.concat "."
     in
     ( all
       (* Don't produce duplicate type definitions for recursive types *)
@@ -140,7 +144,8 @@ let expand_types ~file ~package ~supports_markdown_links typ =
                       (Res_parsetree_viewer
                        .has_inline_record_definition_attribute
                          decl.type_attributes)
-               then Markdown.go_to_definition_text ~env ~pos:loc.Warnings.loc_start
+               then
+                 Markdown.go_to_definition_text ~env ~pos:loc.Warnings.loc_start
                else ""
              in
              Markdown.divider
@@ -199,8 +204,8 @@ let get_hover_via_completions ~debug ~source ~kind_file ~pos ~for_hover
     | {kind = Field _; env; docstring} :: _ -> (
       let opens = CompletionBackEnd.get_opens ~debug ~raw_opens ~package ~env in
       match
-        CompletionBackEnd.completions_get_type_env2 ~debug ~full ~raw_opens ~opens
-          ~pos completions
+        CompletionBackEnd.completions_get_type_env2 ~debug ~full ~raw_opens
+          ~opens ~pos completions
       with
       | Some (typ, _env) ->
         let type_string =
@@ -212,8 +217,8 @@ let get_hover_via_completions ~debug ~source ~kind_file ~pos ~for_hover
     | {env} :: _ -> (
       let opens = CompletionBackEnd.get_opens ~debug ~raw_opens ~package ~env in
       match
-        CompletionBackEnd.completions_get_type_env2 ~debug ~full ~raw_opens ~opens
-          ~pos completions
+        CompletionBackEnd.completions_get_type_env2 ~debug ~full ~raw_opens
+          ~opens ~pos completions
       with
       | Some (typ, _env) ->
         let type_string =
@@ -275,8 +280,8 @@ let new_hover ~full:{file; package} ~supports_markdown_links loc_item =
     match ProcessCmt.file_for_module ~package name with
     | None -> None
     | Some file ->
-      show_module ~docstring:file.structure.docstring ~name:file.module_name ~file
-        ~package None)
+      show_module ~docstring:file.structure.docstring ~name:file.module_name
+        ~file ~package None)
   | Typed (_, _, Definition (_, (Field _ | Constructor _))) -> None
   | Constant t ->
     Some
@@ -291,20 +296,22 @@ let new_hover ~full:{file; package} ~supports_markdown_links loc_item =
          | Const_bigint _ -> "bigint"))
   | Typed (_, t, loc_kind) -> (
     let from_type ?docstring ?constructor typ =
-      hover_with_expanded_types ~file ~package ~supports_markdown_links ?docstring
-        ?constructor typ
+      hover_with_expanded_types ~file ~package ~supports_markdown_links
+        ?docstring ?constructor typ
     in
     (* Expand first-class modules to the underlying module type signature. *)
     let t = Shared.dig t in
     match t.desc with
     | Tpackage (path, _lids, _tys) -> (
       let env = QueryEnv.from_file file in
-      match ResolvePath.resolve_module_from_compiler_path ~env ~package path with
+      match
+        ResolvePath.resolve_module_from_compiler_path ~env ~package path
+      with
       | None -> Some (from_type t)
       | Some (env_for_module, Some declared) ->
         let name = Path.name path in
-        show_module ~docstring:declared.docstring ~name ~file:env_for_module.file
-          ~package (Some declared)
+        show_module ~docstring:declared.docstring ~name
+          ~file:env_for_module.file ~package (Some declared)
       | Some (_, None) -> Some (from_type t))
     | _ ->
       Some

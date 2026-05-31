@@ -5,7 +5,8 @@ let is_braced_expr = Res_parsetree_viewer.is_braced_expr
 let extract_type_from_expr expr ~debug ~source ~kind_file ~full ~pos =
   match
     expr.Parsetree.pexp_loc
-    |> CompletionFrontEnd.find_type_of_expression_at_loc ~debug ~source ~kind_file
+    |> CompletionFrontEnd.find_type_of_expression_at_loc ~debug ~source
+         ~kind_file
          ~pos_cursor:(Pos.of_lexing expr.Parsetree.pexp_loc.loc_start)
   with
   | Some (completable, scope) -> (
@@ -22,8 +23,8 @@ let extract_type_from_expr expr ~debug ~source ~kind_file ~full ~pos =
         CompletionBackEnd.get_opens ~debug ~raw_opens ~package:full.package ~env
       in
       match
-        CompletionBackEnd.completions_get_completion_type2 ~debug ~full ~raw_opens
-          ~opens ~pos completions
+        CompletionBackEnd.completions_get_completion_type2 ~debug ~full
+          ~raw_opens ~opens ~pos completions
       with
       | Some (typ, _env) ->
         let extracted_type =
@@ -172,7 +173,7 @@ module ModuleToFile = struct
               (Lsp.Types.CreateFile.create ~uri
                  ~options:
                    (Lsp.Types.CreateFileOptions.create ~overwrite:false
-                      ~ignore_if_exists:true ())
+                      ~ignoreIfExists:true ())
                  ());
             `TextDocumentEdit
               (Lsp.Types.TextDocumentEdit.create
@@ -180,9 +181,9 @@ module ModuleToFile = struct
                    [
                      `TextEdit
                        (Lsp.Types.TextEdit.create ~range
-                          ~new_text:text_for_extracted_file);
+                          ~newText:text_for_extracted_file);
                    ]
-                 ~text_document:
+                 ~textDocument:
                    (Lsp.Types.OptionalVersionedTextDocumentIdentifier.create
                       ~uri ()));
             `TextDocumentEdit
@@ -191,9 +192,9 @@ module ModuleToFile = struct
                    [
                      `TextEdit
                        (Lsp.Types.TextEdit.create ~range
-                          ~new_text:new_text_in_current_file);
+                          ~newText:new_text_in_current_file);
                    ]
-                 ~text_document:
+                 ~textDocument:
                    (Lsp.Types.OptionalVersionedTextDocumentIdentifier.create
                       ~uri:(Uri.from_string path) ()));
           ]
@@ -214,7 +215,9 @@ module ModuleToFile = struct
 
   let xform ~pos ~code_actions ~path ~print_standalone_structure structure =
     let changed = ref None in
-    let iterator = mk_iterator ~pos ~path ~changed ~print_standalone_structure in
+    let iterator =
+      mk_iterator ~pos ~path ~changed ~print_standalone_structure
+    in
     iterator.structure iterator structure;
     match !changed with
     | None -> ()
@@ -261,7 +264,8 @@ module AddBracesToFn = struct
         when Loc.has_pos ~pos body_expr.pexp_loc
              && is_braced_expr body_expr = false
              && is_function body_expr = false ->
-        body_expr.pexp_attributes <- braces_attribute :: body_expr.pexp_attributes;
+        body_expr.pexp_attributes <-
+          braces_attribute :: body_expr.pexp_attributes;
         changed := !current_structure_item
       | _ -> ());
       Ast_iterator.default_iterator.expr iterator e
@@ -291,7 +295,8 @@ module AddTypeAnnotation = struct
   type annotation = Plain | WithParens
 
   let mk_iterator ~pos ~result =
-    let process_pattern ?(is_unlabeled_only_arg = false) (pat : Parsetree.pattern) =
+    let process_pattern ?(is_unlabeled_only_arg = false)
+        (pat : Parsetree.pattern) =
       match pat.ppat_desc with
       | Ppat_var {loc} when Loc.has_pos ~pos loc ->
         result := Some (if is_unlabeled_only_arg then WithParens else Plain)
@@ -342,7 +347,8 @@ module AddTypeAnnotation = struct
           let range, new_text =
             match annotation with
             | Plain ->
-              ( Loc.range_of_loc {loc_item.loc with loc_start = loc_item.loc.loc_end},
+              ( Loc.range_of_loc
+                  {loc_item.loc with loc_start = loc_item.loc.loc_end},
                 ": " ^ (typ |> Shared.type_to_string) )
             | WithParens ->
               ( Loc.range_of_loc loc_item.loc,
@@ -378,7 +384,8 @@ module ExpandCatchAllForVariants = struct
     in
     {Ast_iterator.default_iterator with expr}
 
-  let xform ~source ~kind_file ~path ~pos ~full ~structure ~code_actions ~debug =
+  let xform ~source ~kind_file ~path ~pos ~full ~structure ~code_actions ~debug
+      =
     let result = ref None in
     let iterator = mk_iterator ~pos ~result in
     iterator.structure iterator structure;
@@ -388,8 +395,9 @@ module ExpandCatchAllForVariants = struct
       if Debug.verbose () then
         print_endline
           "[codeAction - ExpandCatchAllForVariants] Found target switch";
-      let rec find_all_constructor_names ?(mode : [`option | `default] = `default)
-          ?(constructor_names = []) (p : Parsetree.pattern) =
+      let rec find_all_constructor_names
+          ?(mode : [`option | `default] = `default) ?(constructor_names = [])
+          (p : Parsetree.pattern) =
         match p.ppat_desc with
         | Ppat_construct ({txt = Lident "Some"}, Some payload)
           when mode = `option ->
@@ -492,7 +500,8 @@ module ExpandCatchAllForVariants = struct
             | Tvariant {constructors} ->
               constructors
               |> List.filter_map (fun (c : SharedTypes.Constructor.t) ->
-                     if current_constructor_names |> List.mem c.cname.txt = false
+                     if
+                       current_constructor_names |> List.mem c.cname.txt = false
                      then
                        Some
                          ( c.cname.txt,
@@ -504,7 +513,8 @@ module ExpandCatchAllForVariants = struct
               constructors
               |> List.filter_map
                    (fun (c : SharedTypes.poly_variant_constructor) ->
-                     if current_constructor_names |> List.mem c.name = false then
+                     if current_constructor_names |> List.mem c.name = false
+                     then
                        Some
                          ( Res_printer.polyvar_ident_to_string c.name,
                            match c.args with
@@ -692,8 +702,8 @@ module AddDocTemplate = struct
           result := Some (r, item.psig_loc)
         | Psig_type (_, hd :: _) as r
           when Loc.has_pos ~pos hd.ptype_loc
-               && ProcessAttributes.find_doc_attribute hd.ptype_attributes = None
-          ->
+               && ProcessAttributes.find_doc_attribute hd.ptype_attributes
+                  = None ->
           result := Some (r, item.psig_loc)
         | Psig_module {pmd_name = {loc}} as r ->
           if Loc.start loc = pos then result := Some (r, item.psig_loc)
@@ -733,7 +743,8 @@ module AddDocTemplate = struct
         let new_signature_item =
           match signature_item with
           | Psig_value value_desc ->
-            Some (process_sig_value value_desc value_desc.pval_loc) (* Some loc *)
+            Some (process_sig_value value_desc value_desc.pval_loc)
+            (* Some loc *)
           | Psig_type (flag, hd :: tl) ->
             let new_first_type_decl = process_type_decl hd in
             Some
@@ -776,8 +787,8 @@ module AddDocTemplate = struct
           else Ast_iterator.default_iterator.structure_item iterator si
         | Pstr_type (_, hd :: _) as r
           when Loc.has_pos ~pos hd.ptype_loc
-               && ProcessAttributes.find_doc_attribute hd.ptype_attributes = None
-          ->
+               && ProcessAttributes.find_doc_attribute hd.ptype_attributes
+                  = None ->
           result := Some (r, si.pstr_loc)
         | _ -> Ast_iterator.default_iterator.structure_item iterator si
       in
@@ -786,7 +797,10 @@ module AddDocTemplate = struct
     let process_value_binding (value_binding : Parsetree.value_binding) =
       let attr = create_template () in
       let new_value_binding =
-        {value_binding with pvb_attributes = attr :: value_binding.pvb_attributes}
+        {
+          value_binding with
+          pvb_attributes = attr :: value_binding.pvb_attributes;
+        }
       in
       new_value_binding
 
@@ -902,7 +916,8 @@ let extract_code_actions ~path ~start_pos ~end_pos ~source ~kind_file ~debug =
   let code_actions = ref [] in
   match kind_file with
   | Files.Res ->
-    let structure, print_expr, print_structure_item, print_standalone_structure =
+    let structure, print_expr, print_structure_item, print_standalone_structure
+        =
       parse_implementation ~source
     in
     IfThenElse.xform ~pos ~code_actions ~print_expr ~path structure;

@@ -79,7 +79,9 @@ let rec print_pattern pattern ~pos ~indentation =
     ^ ",\n"
     ^ add_indentation (indentation + 1)
     ^ print_pattern pat2 ~pos ~indentation:(indentation + 2)
-    ^ "\n" ^ add_indentation indentation ^ ")"
+    ^ "\n"
+    ^ add_indentation indentation
+    ^ ")"
   | Ppat_extension (({txt} as loc), _) ->
     "Ppat_extension(%" ^ (loc |> print_loc_denominator_loc ~pos) ^ txt ^ ")"
   | Ppat_var ({txt} as loc) ->
@@ -110,7 +112,9 @@ let rec print_pattern pattern ~pos ~indentation =
            ^ ": "
            ^ print_pattern pat ~pos ~indentation:(indentation + 2))
       |> String.concat "\n")
-    ^ "\n" ^ add_indentation indentation ^ ")"
+    ^ "\n"
+    ^ add_indentation indentation
+    ^ ")"
   | Ppat_tuple patterns ->
     "Ppat_tuple(\n"
     ^ (patterns
@@ -118,7 +122,9 @@ let rec print_pattern pattern ~pos ~indentation =
              add_indentation (indentation + 2)
              ^ (pattern |> print_pattern ~pos ~indentation:(indentation + 2)))
       |> String.concat ",\n")
-    ^ "\n" ^ add_indentation indentation ^ ")"
+    ^ "\n"
+    ^ add_indentation indentation
+    ^ ")"
   | Ppat_any -> "Ppat_any"
   | Ppat_constraint (pattern, typ) ->
     "Ppat_constraint(\n"
@@ -126,7 +132,9 @@ let rec print_pattern pattern ~pos ~indentation =
     ^ print_core_type typ ~pos ^ ",\n"
     ^ add_indentation (indentation + 1)
     ^ (pattern |> print_pattern ~pos ~indentation:(indentation + 1))
-    ^ "\n" ^ add_indentation indentation ^ ")"
+    ^ "\n"
+    ^ add_indentation indentation
+    ^ ")"
   | v -> Printf.sprintf "<unimplemented_ppat_desc: %s>" (Utils.identify_ppat v)
 
 and print_case case ~pos ~indentation ~case_num =
@@ -158,7 +166,9 @@ and print_expr_item expr ~pos ~indentation =
       |> List.map (fun expr ->
              expr |> print_expr_item ~pos ~indentation:(indentation + 1))
       |> String.concat ("\n" ^ add_indentation (indentation + 1)))
-    ^ "\n" ^ add_indentation indentation ^ ")"
+    ^ "\n"
+    ^ add_indentation indentation
+    ^ ")"
   | Pexp_match (match_expr, cases) ->
     "Pexp_match("
     ^ print_expr_item match_expr ~pos ~indentation:0
@@ -198,7 +208,9 @@ and print_expr_item expr ~pos ~indentation =
              ^ add_indentation (indentation + 3)
              ^ print_expr_item arg.exp ~pos ~indentation:(indentation + 3))
       |> String.concat ",\n")
-    ^ "\n" ^ add_indentation indentation ^ ")"
+    ^ "\n"
+    ^ add_indentation indentation
+    ^ ")"
   | Pexp_constant constant -> "Pexp_constant(" ^ print_constant constant ^ ")"
   | Pexp_construct (({txt} as loc), maybe_expr) ->
     "Pexp_construct("
@@ -231,7 +243,9 @@ and print_expr_item expr ~pos ~indentation =
     ^ "next expr:\n"
     ^ add_indentation (indentation + 2)
     ^ print_expr_item next_expr ~pos ~indentation:(indentation + 2)
-    ^ "\n" ^ add_indentation indentation ^ ")"
+    ^ "\n"
+    ^ add_indentation indentation
+    ^ ")"
   | Pexp_extension (({txt} as loc), _) ->
     "Pexp_extension(%" ^ (loc |> print_loc_denominator_loc ~pos) ^ txt ^ ")"
   | Pexp_assert expr ->
@@ -252,7 +266,9 @@ and print_expr_item expr ~pos ~indentation =
            ^ ": "
            ^ print_expr_item expr ~pos ~indentation:(indentation + 2))
       |> String.concat "\n")
-    ^ "\n" ^ add_indentation indentation ^ ")"
+    ^ "\n"
+    ^ add_indentation indentation
+    ^ ")"
   | Pexp_tuple exprs ->
     "Pexp_tuple(\n"
     ^ (exprs
@@ -260,7 +276,9 @@ and print_expr_item expr ~pos ~indentation =
              add_indentation (indentation + 2)
              ^ (expr |> print_expr_item ~pos ~indentation:(indentation + 2)))
       |> String.concat ",\n")
-    ^ "\n" ^ add_indentation indentation ^ ")"
+    ^ "\n"
+    ^ add_indentation indentation
+    ^ ")"
   | v -> Printf.sprintf "<unimplemented_pexp_desc: %s>" (Utils.identify_pexp v)
 
 let print_value_binding value ~pos ~indentation =
@@ -268,7 +286,9 @@ let print_value_binding value ~pos ~indentation =
   ^ "value" ^ ":\n"
   ^ add_indentation (indentation + 1)
   ^ (value.pvb_pat |> print_pattern ~pos ~indentation:(indentation + 1))
-  ^ "\n" ^ add_indentation indentation ^ "expr:\n"
+  ^ "\n"
+  ^ add_indentation indentation
+  ^ "expr:\n"
   ^ add_indentation (indentation + 1)
   ^ print_expr_item value.pvb_expr ~pos ~indentation:(indentation + 1)
 
@@ -276,7 +296,9 @@ let print_struct_item struct_item ~pos ~source =
   match struct_item.Parsetree.pstr_loc |> CursorPosition.classify_loc ~pos with
   | HasCursor -> (
     let start_offset =
-      match Pos.position_to_offset source (struct_item.pstr_loc |> Loc.start) with
+      match
+        Pos.position_to_offset source (struct_item.pstr_loc |> Loc.start)
+      with
       | None -> 0
       | Some offset -> offset
     in

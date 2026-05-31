@@ -21,7 +21,8 @@ let create () : t = []
 let add_constructor ~name ~loc x = Constructor (name, loc) :: x
 let add_field ~name ~loc x = Field (name, loc) :: x
 let add_module ~name ~loc x = Module (name, loc) :: x
-let add_open ~lid x = Open (Utils.flatten_long_ident lid @ ["place holder"]) :: x
+let add_open ~lid x =
+  Open (Utils.flatten_long_ident lid @ ["place holder"]) :: x
 let add_value ~name ~loc ?context_path x =
   let show_debug = !Cfg.debug_follow_ctx_path in
   (if show_debug then

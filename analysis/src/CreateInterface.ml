@@ -22,7 +22,8 @@ module SourceFileExtractor = struct
         else if n = line_start then (
           if col_start >= 0 && col_start < len then
             let indent = String.make col_start ' ' in
-            res := (indent ^ String.sub line col_start (len - col_start)) :: !res)
+            res :=
+              (indent ^ String.sub line col_start (len - col_start)) :: !res)
         else if n = line_end then (
           if col_end > 0 && col_end <= len then
             res := String.sub line 0 col_end :: !res)
@@ -49,7 +50,8 @@ end = struct
       {
         line = line_idx;
         offset = attr_offset_start;
-        name = String.sub line attr_offset_start (attr_offset_end - attr_offset_start);
+        name =
+          String.sub line attr_offset_start (attr_offset_end - attr_offset_start);
       }
     in
     let res = ref [] in
@@ -168,7 +170,7 @@ let print_signature ~extractor ~signature =
           | [] -> ret_type
           | label_decl :: rest ->
             let prop_type =
-              TypeUtils.instantiate_type ~type_params:type_params ~type_args
+              TypeUtils.instantiate_type ~type_params ~type_args
                 label_decl.ld_type
             in
             let lbl_name = label_decl.ld_id |> Ident.name in
@@ -238,7 +240,8 @@ let print_signature ~extractor ~signature =
 
       if AttributesUtils.contains "@inline" attributes then
         (* Generate type signature for @inline declaration *)
-        Buffer.add_string buf (gen_sig_str_for_inline_attr lines attributes id vd)
+        Buffer.add_string buf
+          (gen_sig_str_for_inline_attr lines attributes id vd)
       else
         (* Copy the external declaration verbatim from the implementation file *)
         Buffer.add_string buf ((lines |> String.concat "\n") ^ "\n");

@@ -46,7 +46,8 @@ type t = {
 
 (** Extract module name from a declaration *)
 let decl_module_name (decl : Decl.t) : Name.t =
-  decl.path |> DcePath.to_module_name ~is_type:(decl.decl_kind |> Decl.Kind.is_type)
+  decl.path
+  |> DcePath.to_module_name ~is_type:(decl.decl_kind |> Decl.Kind.is_type)
 
 let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
     ~(live : (Lexing.position, unit) Reactive.t)
@@ -158,8 +159,8 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
     let file_issues =
       sorted
       |> List.concat_map (fun decl ->
-             DeadCommon.report_declaration ~config ~has_ref_below ~check_module_dead
-               ~should_report reporting_ctx decl)
+             DeadCommon.report_declaration ~config ~has_ref_below
+               ~check_module_dead ~should_report reporting_ctx decl)
     in
     let modules_list =
       Hashtbl.fold (fun m () acc -> m :: acc) modules_with_values []
@@ -227,7 +228,10 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
               {Location.loc_start = pos; loc_end = pos; loc_ghost = false}
             else loc
           in
-          [(module_name, AnalysisResult.make_dead_module_issue ~loc ~module_name)]
+          [
+            ( module_name,
+              AnalysisResult.make_dead_module_issue ~loc ~module_name );
+          ]
         | None -> [])
       ()
   in

@@ -105,7 +105,8 @@ let addDeclaration_ ~config ~decls ~(file : FileContext.t) ?pos_end ?pos_start
     if config.DceConfig.cli.debug then
       Log_.item "add%sDeclaration %s %s path:%s@."
         (decl_kind |> Decl.Kind.to_string)
-        (name |> Name.to_string) (pos |> Pos.to_string) (path |> DcePath.to_string);
+        (name |> Name.to_string) (pos |> Pos.to_string)
+        (path |> DcePath.to_string);
     let decl =
       {
         Decl.decl_kind;
@@ -404,7 +405,8 @@ let solve_dead_forward ~ann_store ~config ~decl_store ~refs ~optional_args_state
                match DeclarationStore.find_opt decl_store target with
                | None -> false
                | Some target_decl ->
-                 Log_.item "      -> %s@." (target_decl.path |> DcePath.to_string);
+                 Log_.item "      -> %s@."
+                   (target_decl.path |> DcePath.to_string);
                  true
              in
              let shown = ref 0 in
@@ -445,8 +447,10 @@ let solve_dead_forward ~ann_store ~config ~decl_store ~refs ~optional_args_state
                  IncorrectDeadAnnotation
              in
              decl.path
-             |> DcePath.to_module_name ~is_type:(decl.decl_kind |> Decl.Kind.is_type)
-             |> DeadModules.check_module_dead ~config ~file_name:decl.pos.pos_fname
+             |> DcePath.to_module_name
+                  ~is_type:(decl.decl_kind |> Decl.Kind.is_type)
+             |> DeadModules.check_module_dead ~config
+                  ~file_name:decl.pos.pos_fname
              |> Option.iter (fun mod_issue ->
                     inline_issues := mod_issue :: !inline_issues);
              inline_issues := issue :: !inline_issues)));
@@ -564,8 +568,10 @@ let solve_dead_reactive ~ann_store ~config ~decl_store ~value_refs_from
                  IncorrectDeadAnnotation
              in
              decl.path
-             |> DcePath.to_module_name ~is_type:(decl.decl_kind |> Decl.Kind.is_type)
-             |> DeadModules.check_module_dead ~config ~file_name:decl.pos.pos_fname
+             |> DcePath.to_module_name
+                  ~is_type:(decl.decl_kind |> Decl.Kind.is_type)
+             |> DeadModules.check_module_dead ~config
+                  ~file_name:decl.pos.pos_fname
              |> Option.iter (fun mod_issue ->
                     inline_issues := mod_issue :: !inline_issues);
              inline_issues := issue :: !inline_issues)));

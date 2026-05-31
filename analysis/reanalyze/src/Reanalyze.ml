@@ -25,7 +25,7 @@ let load_cmt_file ~config cmt_file_path : cmt_file_result option =
   in
   match cmt_infos.cmt_annots |> FindSourceFile.cmt with
   | Some source_file when not (exclude_path source_file) ->
-    let is_interface =
+    let is_interface_ =
       match cmt_infos.cmt_annots with
       | Interface _ -> true
       | _ -> Filename.check_suffix source_file "i"
@@ -33,12 +33,12 @@ let load_cmt_file ~config cmt_file_path : cmt_file_result option =
     let module_name = source_file |> Paths.get_module_name in
     (* File context for DceFileProcessing (breaks cycle with DeadCommon) *)
     let dce_file_context : DceFileProcessing.file_context =
-      {source_path = source_file; module_name; is_interface}
+      {source_path = source_file; module_name; is_interface = is_interface_}
     in
     (* File context for Exception/Arnold (uses DeadCommon.FileContext) *)
     let file_context =
       DeadCommon.FileContext.
-        {source_path = source_file; module_name; is_interface}
+        {source_path = source_file; module_name; is_interface = is_interface_}
     in
     if config.cli.debug then
       Log_.item "Scanning %s Source:%s@."
@@ -93,7 +93,8 @@ let collect_cmt_file_paths ~cmt_root : string list =
       in
       if (not skip_dir) && Sys.file_exists abs_dir then
         if Sys.is_directory abs_dir then
-          abs_dir |> Sys.readdir |> Array.iter (fun d -> walk_sub_dirs (dir +++ d))
+          abs_dir |> Sys.readdir
+          |> Array.iter (fun d -> walk_sub_dirs (dir +++ d))
         else if
           Filename.check_suffix abs_dir ".cmt"
           || Filename.check_suffix abs_dir ".cmti"
@@ -199,8 +200,8 @@ let run_analysis ~dce_config ~cmt_root ~reactive_collection ~reactive_merge
     ~reactive_liveness ~reactive_solver ~skip_file ?file_stats () =
   (* Map: process each file -> list of file_data *)
   let {dce_data_list; exception_results} =
-    process_cmt_files ~config:dce_config ~cmt_root ~reactive_collection ~skip_file
-      ?file_stats ()
+    process_cmt_files ~config:dce_config ~cmt_root ~reactive_collection
+      ~skip_file ?file_stats ()
   in
   (* Get exception results from reactive collection if available *)
   let exception_results =

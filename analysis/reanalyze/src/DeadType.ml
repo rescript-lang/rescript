@@ -4,12 +4,13 @@ open DeadCommon
 
 let add_type_reference ~config ~refs ~pos_from ~pos_to =
   if config.DceConfig.cli.debug then
-    Log_.item "addTypeReference %s --> %s@." (pos_from |> Pos.to_string)
+    Log_.item "addTypeReference %s --> %s@."
+      (pos_from |> Pos.to_string)
       (pos_to |> Pos.to_string);
   References.add_type_ref refs ~pos_to ~pos_from
 
-let extend_type_dependencies ~config ~refs (loc1 : Location.t) (loc2 : Location.t)
-    =
+let extend_type_dependencies ~config ~refs (loc1 : Location.t)
+    (loc2 : Location.t) =
   let {Location.loc_start = pos_to; loc_ghost = ghost1} = loc1 in
   let {Location.loc_start = pos_from; loc_ghost = ghost2} = loc2 in
   if (not ghost1) && (not ghost2) && pos_to <> pos_from then (
@@ -21,12 +22,15 @@ let extend_type_dependencies ~config ~refs (loc1 : Location.t) (loc2 : Location.
 let add_declaration ~config ~decls ~file ~(module_path : ModulePath.t)
     ~(type_id : Ident.t) ~(type_kind : Types.type_kind)
     ~(manifest_type_path : DcePath.t option) =
-  let module_context = module_path.path @ [FileContext.module_name_tagged file] in
+  let module_context =
+    module_path.path @ [FileContext.module_name_tagged file]
+  in
   let path_to_type = (type_id |> Ident.name |> Name.create) :: module_context in
-  let process_type_label ?(pos_adjustment = Decl.Nothing) type_label_name ~decl_kind
-      ~(loc : Location.t) =
+  let process_type_label ?(pos_adjustment = Decl.Nothing) type_label_name
+      ~decl_kind ~(loc : Location.t) =
     addDeclaration_ ~config ~decls ~file ~decl_kind ~path:path_to_type ~loc
-      ?manifest_type_path ~module_loc:module_path.loc ~pos_adjustment type_label_name
+      ?manifest_type_path ~module_loc:module_path.loc ~pos_adjustment
+      type_label_name
   in
   match type_kind with
   | Type_record (l, _) ->
@@ -198,7 +202,8 @@ let process_type_label_dependencies ~config ~decls ~refs =
           let rep_pos =
             if compare_pos decl.pos rep_pos < 0 then decl.pos else rep_pos
           in
-          Hashtbl.replace groups current_type_path (rep_pos, mtp0, item :: items))
+          Hashtbl.replace groups current_type_path (rep_pos, mtp0, item :: items)
+        )
       | _ -> ())
     decls;
 
@@ -215,5 +220,7 @@ let process_type_label_dependencies ~config ~decls ~refs =
                 match find_one manifest_field_path with
                 | None -> ()
                 | Some manifest_loc ->
-                  extend_type_dependencies ~config ~refs current_loc manifest_loc;
-                  extend_type_dependencies ~config ~refs manifest_loc current_loc))
+                  extend_type_dependencies ~config ~refs current_loc
+                    manifest_loc;
+                  extend_type_dependencies ~config ~refs manifest_loc
+                    current_loc))

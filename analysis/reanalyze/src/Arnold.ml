@@ -591,8 +591,8 @@ module ExtendFunctionTable = struct
       if args |> List.for_all check_arg then Some (path, loc) else None
     | _ -> None
 
-  let traverse_expr ~config ~function_table ~progress_functions ~value_bindings_table
-      =
+  let traverse_expr ~config ~function_table ~progress_functions
+      ~value_bindings_table =
     let super = Tast_mapper.default in
     let expr (self : Tast_mapper.mapper) (e : Typedtree.expression) =
       (match e.exp_desc with
@@ -607,7 +607,9 @@ module ExtendFunctionTable = struct
                  (StringSet.inter (Lazy.force callees) progress_functions))
           then
             let function_name = Path.name callee in
-            if not (callee |> FunctionTable.is_in_function_in_table ~function_table)
+            if
+              not
+                (callee |> FunctionTable.is_in_function_in_table ~function_table)
             then (
               function_table |> FunctionTable.add_function ~function_name;
               if config.DceConfig.cli.debug then
@@ -628,7 +630,8 @@ module ExtendFunctionTable = struct
         |> List.iter (fun ((arg_label : Asttypes.arg_label), arg_opt) ->
                match (arg_label, arg_opt |> extract_labelled_argument) with
                | Labelled {txt = label}, Some (path, loc)
-                 when path |> FunctionTable.is_in_function_in_table ~function_table
+                 when path
+                      |> FunctionTable.is_in_function_in_table ~function_table
                  ->
                  function_table
                  |> FunctionTable.add_label_to_kind ~function_name ~label;
@@ -652,7 +655,8 @@ module ExtendFunctionTable = struct
   let run ~config ~function_table ~progress_functions ~value_bindings_table
       (expression : Typedtree.expression) =
     let traverse_expr =
-      traverse_expr ~config ~function_table ~progress_functions ~value_bindings_table
+      traverse_expr ~config ~function_table ~progress_functions
+        ~value_bindings_table
     in
     expression |> traverse_expr.expr traverse_expr |> ignore
 end
@@ -674,7 +678,9 @@ module CheckExpressionWellFormed = struct
         let function_name = Path.name function_path in
         args
         |> List.iter (fun ((arg_label : Asttypes.arg_label), arg_opt) ->
-               match arg_opt |> ExtendFunctionTable.extract_labelled_argument with
+               match
+                 arg_opt |> ExtendFunctionTable.extract_labelled_argument
+               with
                | Some (path, loc) -> (
                  match arg_label with
                  | Labelled {txt = label} -> (
@@ -685,14 +691,17 @@ module CheckExpressionWellFormed = struct
                      <> None
                    then ()
                    else
-                     match Hashtbl.find_opt value_bindings_table function_name with
+                     match
+                       Hashtbl.find_opt value_bindings_table function_name
+                     with
                      | Some (_pos, (body : Typedtree.expression), _)
                        when path
-                            |> FunctionTable.is_in_function_in_table ~function_table
-                       ->
+                            |> FunctionTable.is_in_function_in_table
+                                 ~function_table ->
                        let in_table =
                          function_path
-                         |> FunctionTable.is_in_function_in_table ~function_table
+                         |> FunctionTable.is_in_function_in_table
+                              ~function_table
                        in
                        if not in_table then
                          function_table
@@ -809,7 +818,8 @@ module Compile = struct
               Stats.log_hygiene_must_have_named_argument ~label ~loc;
               raise ArgError
             | Some (path, _pos)
-              when path |> FunctionTable.is_in_function_in_table ~function_table ->
+              when path |> FunctionTable.is_in_function_in_table ~function_table
+              ->
               let function_name = Path.name path in
               {FunctionArgs.label; function_name}
             | Some (path, _pos)
@@ -864,14 +874,17 @@ module Compile = struct
           in_expr ) ->
       let old_function_name = Ident.name id in
       let new_function_name = current_function_name ^ "$" ^ old_function_name in
-      function_table |> FunctionTable.add_function ~function_name:new_function_name;
+      function_table
+      |> FunctionTable.add_function ~function_name:new_function_name;
       let new_function_definition =
         function_table
-        |> FunctionTable.get_function_definition ~function_name:new_function_name
+        |> FunctionTable.get_function_definition
+             ~function_name:new_function_name
       in
       let current_function_definition =
         function_table
-        |> FunctionTable.get_function_definition ~function_name:current_function_name
+        |> FunctionTable.get_function_definition
+             ~function_name:current_function_name
       in
       new_function_definition.kind <- current_function_definition.kind;
       let new_ctx = {ctx with current_function_name = new_function_name} in
@@ -1080,13 +1093,13 @@ module Eval = struct
     Hashtbl.find_opt cache function_call
 
   let update_cache ~config ~function_call ~loc ~state (cache : cache) =
-    Stats.log_result ~config ~function_call ~res_string:(state |> State.to_string)
-      ~loc;
+    Stats.log_result ~config ~function_call
+      ~res_string:(state |> State.to_string) ~loc;
     if not (Hashtbl.mem cache function_call) then
       Hashtbl.replace cache function_call state
 
-  let has_infinite_loop ~call_stack ~function_call_to_instantiate ~function_call ~loc
-      ~state =
+  let has_infinite_loop ~call_stack ~function_call_to_instantiate ~function_call
+      ~loc ~state =
     if call_stack |> CallStack.has_function_call ~function_call then (
       if state.State.progress = NoProgress then (
         Log_.error ~loc
@@ -1112,8 +1125,9 @@ module Eval = struct
       true)
     else false
 
-  let rec run_function_call ~config ~cache ~call_stack ~function_args ~function_table
-      ~made_progress_on ~loc ~state function_call_to_instantiate : State.t =
+  let rec run_function_call ~config ~cache ~call_stack ~function_args
+      ~function_table ~made_progress_on ~loc ~state function_call_to_instantiate
+      : State.t =
     let pos = loc.Location.loc_start in
     let function_call =
       function_call_to_instantiate
@@ -1133,13 +1147,14 @@ module Eval = struct
         if FunctionCallSet.mem function_call made_progress_on then
           State.init ~progress:Progress ~trace:(Trace.Tcall (call, Progress)) ()
         else if
-          has_infinite_loop ~call_stack ~function_call_to_instantiate ~function_call
-            ~loc ~state
+          has_infinite_loop ~call_stack ~function_call_to_instantiate
+            ~function_call ~loc ~state
         then {state with trace = Trace.Tcall (call, state.progress)}
         else (
           Stats.log_cache ~config ~function_call ~hit:false ~loc;
           let function_definition =
-            function_table |> FunctionTable.get_function_definition ~function_name
+            function_table
+            |> FunctionTable.get_function_definition ~function_name
           in
           call_stack |> CallStack.add_function_call ~function_call ~pos;
           let body =
@@ -1153,7 +1168,8 @@ module Eval = struct
                  ~function_args:function_call.function_args ~function_table
                  ~made_progress_on ~state:(State.init ())
           in
-          cache |> update_cache ~config ~function_call ~loc ~state:state_after_call;
+          cache
+          |> update_cache ~config ~function_call ~loc ~state:state_after_call;
           (* Invariant: run should restore the callStack *)
           call_stack |> CallStack.remove_function_call ~function_call;
           let trace = Trace.Tcall (call, state_after_call.progress) in
@@ -1166,8 +1182,8 @@ module Eval = struct
     match command with
     | Call (FunctionCall function_call, loc) ->
       function_call
-      |> run_function_call ~config ~cache ~call_stack ~function_args ~function_table
-           ~made_progress_on ~loc ~state
+      |> run_function_call ~config ~cache ~call_stack ~function_args
+           ~function_table ~made_progress_on ~loc ~state
     | Call ((ProgressFunction _ as call), _pos) ->
       let state1 =
         State.init ~progress:Progress ~trace:(Tcall (call, Progress)) ()
@@ -1185,7 +1201,8 @@ module Eval = struct
       State.seq state state1
     | Sequence commands ->
       (* if one command makes progress, then the sequence makes progress *)
-      let rec find_first_progress ~call_stack ~commands ~made_progress_on ~state =
+      let rec find_first_progress ~call_stack ~commands ~made_progress_on ~state
+          =
         match commands with
         | [] -> state
         | c :: next_commands ->
@@ -1203,8 +1220,8 @@ module Eval = struct
                 CallStack.create () )
             | NoProgress -> (made_progress_on, call_stack)
           in
-          find_first_progress ~call_stack ~commands:next_commands ~made_progress_on
-            ~state:state1
+          find_first_progress ~call_stack ~commands:next_commands
+            ~made_progress_on ~state:state1
       in
       find_first_progress ~call_stack ~commands ~made_progress_on ~state
     | UnorderedSequence commands ->
@@ -1318,7 +1335,8 @@ let traverse_ast ~config ~value_bindings_table =
                (fun (progress_functions, functions_to_analyze)
                     (value_binding : Typedtree.value_binding) ->
                  match
-                   progress_functions_from_attributes value_binding.vb_attributes
+                   progress_functions_from_attributes
+                     value_binding.vb_attributes
                  with
                  | None -> (progress_functions, functions_to_analyze)
                  | Some new_progress_functions ->
@@ -1402,7 +1420,8 @@ let traverse_ast ~config ~value_bindings_table =
       |> List.iter (fun (function_name, loc) ->
              function_name
              |> Eval.analyze_function ~config ~cache ~function_table ~loc);
-      Stats.new_recursive_functions ~num_functions:(Hashtbl.length function_table));
+      Stats.new_recursive_functions
+        ~num_functions:(Hashtbl.length function_table));
     value_bindings
     |> List.iter (fun value_binding ->
            super.value_binding self value_binding |> ignore);

@@ -40,7 +40,8 @@ let dump ?filter rescript_json cmt_path =
     | None -> ()
     | Some (Cursor (line, col)) ->
       Printf.printf "Filtering by cursor %d,%d\n" line col
-    | Some (Loc loc) -> Printf.printf "Filtering by loc %s\n" (Loc.to_string loc));
+    | Some (Loc loc) ->
+      Printf.printf "Filtering by loc %s\n" (Loc.to_string loc));
 
     Printf.printf "file moduleName: %s\n\n" full.file.module_name;
 

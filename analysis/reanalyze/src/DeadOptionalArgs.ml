@@ -17,9 +17,9 @@ let add_function_reference ~config ~decls ~cross_file ~(loc_from : Location.t)
     if should_add then (
       if config.DceConfig.cli.debug then
         Log_.item "OptionalArgs.addFunctionReference %s %s@."
-          (pos_from |> Pos.to_string) (pos_to |> Pos.to_string);
-      CrossFileItems.add_function_reference cross_file ~pos_from:pos_from
-        ~pos_to:pos_to)
+          (pos_from |> Pos.to_string)
+          (pos_to |> Pos.to_string);
+      CrossFileItems.add_function_reference cross_file ~pos_from ~pos_to)
 
 let rec has_optional_args (texpr : Types.type_expr) =
   match texpr.desc with
@@ -40,13 +40,13 @@ let rec from_type_expr (texpr : Types.type_expr) =
   | _ -> []
 
 let add_references ~config ~cross_file ~(loc_from : Location.t)
-    ~(loc_to : Location.t) ~(binding : Location.t) ~path (arg_names, arg_names_maybe)
-    =
+    ~(loc_to : Location.t) ~(binding : Location.t) ~path
+    (arg_names, arg_names_maybe) =
   if active () then (
     let pos_to = loc_to.loc_start in
     let pos_from = binding.loc_start in
-    CrossFileItems.add_optional_arg_call cross_file ~pos_from:pos_from
-      ~pos_to:pos_to ~arg_names:arg_names ~arg_names_maybe:arg_names_maybe;
+    CrossFileItems.add_optional_arg_call cross_file ~pos_from ~pos_to ~arg_names
+      ~arg_names_maybe;
     if config.DceConfig.cli.debug then
       let call_pos = loc_from.loc_start in
       Log_.item

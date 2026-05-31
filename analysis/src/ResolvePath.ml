@@ -30,7 +30,8 @@ let rec make_path ~(env : QueryEnv.t) module_path =
       match res with
       | None -> NotFound
       | Some (`Local (env, name)) -> Exported (env, name)
-      | Some (`Global (module_name, full_path)) -> Global (module_name, full_path)))
+      | Some (`Global (module_name, full_path)) ->
+        Global (module_name, full_path)))
 
 and resolve_path_inner ~(env : QueryEnv.t) ~path =
   match path with

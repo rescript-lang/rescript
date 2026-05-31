@@ -18,7 +18,8 @@ let check_any_value_binding_with_no_side_effects ~config ~decls ~file
 let collect_value_binding ~config ~decls ~file ~(current_binding : Location.t)
     ~(module_path : ModulePath.t) (vb : Typedtree.value_binding) =
   let old_last_binding = current_binding in
-  check_any_value_binding_with_no_side_effects ~config ~decls ~file ~module_path vb;
+  check_any_value_binding_with_no_side_effects ~config ~decls ~file ~module_path
+    vb;
   let loc =
     match vb.vb_pat.pat_desc with
     | Tpat_var (id, {loc = {loc_start; loc_ghost} as loc})
@@ -101,7 +102,8 @@ let process_optional_args ~config ~cross_file ~exp_type ~(loc_from : Location.t)
            match lbl with
            | Asttypes.Optional {txt = s} when not loc_from.loc_ghost ->
              if arg_is_supplied <> Some false then supplied := s :: !supplied;
-             if arg_is_supplied = None then supplied_maybe := s :: !supplied_maybe
+             if arg_is_supplied = None then
+               supplied_maybe := s :: !supplied_maybe
            | _ -> ());
     (!supplied, !supplied_maybe)
     |> DeadOptionalArgs.add_references ~config ~cross_file ~loc_from ~loc_to
@@ -124,8 +126,8 @@ let rec collect_expr ~config ~refs ~file_deps ~cross_file
       References.add_value_ref refs ~pos_to:loc_to.loc_start
         ~pos_from:Location.none.loc_start)
     else
-      add_value_reference ~config ~refs ~file_deps ~binding ~add_file_reference:true
-        ~loc_from ~loc_to
+      add_value_reference ~config ~refs ~file_deps ~binding
+        ~add_file_reference:true ~loc_from ~loc_to
   | Texp_apply
       {
         funct =
@@ -138,7 +140,7 @@ let rec collect_expr ~config ~refs ~file_deps ~cross_file
         args;
       } ->
     args
-    |> process_optional_args ~config ~cross_file ~exp_type:exp_type
+    |> process_optional_args ~config ~cross_file ~exp_type
          ~loc_from:(loc_from : Location.t)
          ~binding:last_binding ~loc_to ~path
   | Texp_let
@@ -179,25 +181,30 @@ let rec collect_expr ~config ~refs ~file_deps ~cross_file
          && Ident.name eta_arg = "eta"
          && Path.name id_arg2 = "arg" ->
     args
-    |> process_optional_args ~config ~cross_file ~exp_type:exp_type
+    |> process_optional_args ~config ~cross_file ~exp_type
          ~loc_from:(loc_from : Location.t)
          ~binding:last_binding ~loc_to ~path
   | Texp_field
       (_, _, {lbl_loc = {Location.loc_start = pos_to; loc_ghost = false}; _}) ->
     if !Config.analyze_types then
-      DeadType.add_type_reference ~config ~refs ~pos_to ~pos_from:loc_from.loc_start
+      DeadType.add_type_reference ~config ~refs ~pos_to
+        ~pos_from:loc_from.loc_start
   | Texp_construct
       ( _,
-        {cstr_loc = {Location.loc_start = pos_to; loc_ghost} as loc_to; cstr_tag},
+        {
+          cstr_loc = {Location.loc_start = pos_to; loc_ghost} as loc_to;
+          cstr_tag;
+        },
         _ ) ->
     (match cstr_tag with
     | Cstr_extension path ->
       path
-      |> DeadException.mark_as_used ~config ~refs ~file_deps ~cross_file ~binding
-           ~loc_from ~loc_to
+      |> DeadException.mark_as_used ~config ~refs ~file_deps ~cross_file
+           ~binding ~loc_from ~loc_to
     | _ -> ());
     if !Config.analyze_types && not loc_ghost then
-      DeadType.add_type_reference ~config ~refs ~pos_to ~pos_from:loc_from.loc_start
+      DeadType.add_type_reference ~config ~refs ~pos_to
+        ~pos_from:loc_from.loc_start
   | Texp_record {fields} ->
     fields
     |> Array.iter (fun (_, record_label_definition, _) ->
@@ -242,8 +249,9 @@ let rec get_signature (module_type : Types.module_type) =
   | Mty_functor (_, _mtParam, mt) -> get_signature mt
   | _ -> []
 
-let rec process_signature_item ~config ~decls ~file ~do_types ~do_values ~module_loc
-    ~(module_path : ModulePath.t) ~path (si : Types.signature_item) =
+let rec process_signature_item ~config ~decls ~file ~do_types ~do_values
+    ~module_loc ~(module_path : ModulePath.t) ~path (si : Types.signature_item)
+    =
   match si with
   | Sig_type (id, t, _) when do_types ->
     if !Config.analyze_types then
@@ -261,7 +269,8 @@ let rec process_signature_item ~config ~decls ~file ~do_types ~do_values ~module
             Some (type_name :: module_context)
           | _ ->
             Some
-              (if FileContext.is_interface file then DcePath.module_to_interface p
+              (if FileContext.is_interface file then
+                 DcePath.module_to_interface p
                else DcePath.module_to_implementation p))
         | _ -> None
       in
@@ -287,7 +296,8 @@ let rec process_signature_item ~config ~decls ~file ~do_types ~do_values ~module
         |> add_value_declaration ~config ~decls ~file ~loc ~module_loc
              ~optional_args ~path ~side_effects:false
   | Sig_module (id, {Types.md_type = module_type; md_loc = module_loc}, _)
-  | Sig_modtype (id, {Types.mtd_type = Some module_type; mtd_loc = module_loc}) ->
+  | Sig_modtype (id, {Types.mtd_type = Some module_type; mtd_loc = module_loc})
+    ->
     let modulePath' =
       ModulePath.enter_module module_path
         ~name:(id |> Ident.name |> Name.create)
@@ -307,8 +317,8 @@ let rec process_signature_item ~config ~decls ~file ~do_types ~do_values ~module
   | _ -> ()
 
 (* Traverse the AST *)
-let traverse_structure ~config ~decls ~refs ~file_deps ~cross_file ~file ~do_types
-    ~do_externals (structure : Typedtree.structure) : unit =
+let traverse_structure ~config ~decls ~refs ~file_deps ~cross_file ~file
+    ~do_types ~do_externals (structure : Typedtree.structure) : unit =
   let rec create_mapper (last_binding : Location.t) (module_path : ModulePath.t)
       =
     let super = Tast_mapper.default in
@@ -462,8 +472,8 @@ let process_value_dependency ~config ~decls ~refs ~file_deps ~cross_file
         Types.value_description),
       ({
          val_loc =
-           {loc_start = {pos_fname = fn_from} as pos_from; loc_ghost = ghost2} as
-           loc_from;
+           {loc_start = {pos_fname = fn_from} as pos_from; loc_ghost = ghost2}
+           as loc_from;
        } :
         Types.value_description) ) =
   if (not ghost1) && (not ghost2) && pos_to <> pos_from then (

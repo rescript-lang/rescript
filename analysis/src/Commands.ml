@@ -73,7 +73,8 @@ let hover ~source ~kind_file ~pos ~supports_markdown_links ~full ~debug =
               (not is_interface) && pos_lnum = 1 && pos_cnum - pos_bol = 0
             in
             (* Skip if range is all zero, unless it's a module *)
-            (not is_module) && pos_is_zero loc.loc_start && pos_is_zero loc.loc_end
+            (not is_module) && pos_is_zero loc.loc_start
+            && pos_is_zero loc.loc_end
         in
         if skip_zero then None
         else Hover.new_hover ~supports_markdown_links ~full loc_item)
@@ -122,7 +123,8 @@ let definition ~full ~pos ~debug =
           if skip_loc then None
           else
             Some
-              (Lsp.Types.Location.create ~range:(Utils.cmt_loc_to_range loc)
+              (Lsp.Types.Location.create
+                 ~range:(Utils.cmt_loc_to_range loc)
                  ~uri:(Files.canonicalize_uri uri |> Uri.from_string))
         | Some _ -> None))
   in
@@ -140,7 +142,8 @@ let type_definition ~full ~pos ~debug =
         | None -> None
         | Some (uri, loc) ->
           Some
-            (Lsp.Types.Location.create ~range:(Utils.cmt_loc_to_range loc)
+            (Lsp.Types.Location.create
+               ~range:(Utils.cmt_loc_to_range loc)
                ~uri:(Files.canonicalize_uri uri |> Uri.from_string))))
   in
   maybe_location
@@ -153,7 +156,9 @@ let references ~full ~pos ~debug =
       match References.get_loc_item ~full ~pos ~debug with
       | None -> []
       | Some loc_item ->
-        let all_references = References.all_references_for_loc_item ~full loc_item in
+        let all_references =
+          References.all_references_for_loc_item ~full loc_item
+        in
         all_references
         |> List.fold_left
              (fun acc {References.uri = uri2; loc_opt} ->
@@ -163,7 +168,8 @@ let references ~full ~pos ~debug =
                  | None -> Uri.to_top_level_loc uri2
                in
 
-               Lsp.Types.Location.create ~range:(Utils.cmt_loc_to_range loc)
+               Lsp.Types.Location.create
+                 ~range:(Utils.cmt_loc_to_range loc)
                  ~uri:(Uri.to_string uri2 |> Uri.from_string)
                :: acc)
              [])
@@ -178,7 +184,9 @@ let rename ~full ~pos ~new_name ~debug =
       match References.get_loc_item ~full ~pos ~debug with
       | None -> None
       | Some loc_item ->
-        let all_references = References.all_references_for_loc_item ~full loc_item in
+        let all_references =
+          References.all_references_for_loc_item ~full loc_item
+        in
         let references_to_toplevel_modules =
           all_references
           |> Utils.filter_map (fun {References.uri = uri2; loc_opt} ->
@@ -204,9 +212,10 @@ let rename ~full ~pos ~new_name ~debug =
                  in
                  `RenameFile
                    (Lsp.Types.RenameFile.create
-                      ~new_uri:
-                        (new_path |> Uri.from_path |> Uri.to_string |> Uri.from_path)
-                      ~old_uri:(uri |> Uri.to_string |> Uri.from_string)
+                      ~newUri:
+                        (new_path |> Uri.from_path |> Uri.to_string
+                       |> Uri.from_path)
+                      ~oldUri:(uri |> Uri.to_string |> Uri.from_string)
                       ()))
         in
         let text_document_edits =
@@ -218,7 +227,7 @@ let rename ~full ~pos ~new_name ~debug =
                  (fun acc (uri, loc) ->
                    let text_edit =
                      `TextEdit
-                       (Lsp.Types.TextEdit.create ~new_text:new_name
+                       (Lsp.Types.TextEdit.create ~newText:new_name
                           ~range:(Utils.cmt_loc_to_range loc))
                    in
                    match StringMap.find_opt uri acc with
@@ -235,13 +244,15 @@ let rename ~full ~pos ~new_name ~debug =
               in
               let text_document_edit =
                 `TextDocumentEdit
-                  (Lsp.Types.TextDocumentEdit.create ~edits ~text_document)
+                  (Lsp.Types.TextDocumentEdit.create ~edits
+                     ~textDocument:text_document)
               in
               text_document_edit :: acc)
             text_edits_by_uri []
         in
         let document_changes = file_renames @ text_document_edits in
-        Some (Lsp.Types.WorkspaceEdit.create ~document_changes ()))
+        Some
+          (Lsp.Types.WorkspaceEdit.create ~documentChanges:document_changes ()))
   in
   result
 
@@ -281,7 +292,7 @@ let format ~source ~kind_file =
         ~start:(Lsp.Types.Position.create ~line:0 ~character:0)
         ~end_:(Lsp.Types.Position.create ~line:(lines_len - 1) ~character)
     in
-    Lsp.Types.TextEdit.create ~new_text:text ~range
+    Lsp.Types.TextEdit.create ~newText:text ~range
   in
 
   let result =

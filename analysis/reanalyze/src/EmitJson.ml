@@ -14,8 +14,8 @@ let emit_item ~ppf ~name ~kind ~file ~range ~message =
   fprintf ppf "  \"name\": %s,\n" (json_string name);
   fprintf ppf "  \"kind\": %s,\n" (json_string kind);
   fprintf ppf "  \"file\": %s,\n" (json_string file);
-  fprintf ppf "  \"range\": [%d,%d,%d,%d],\n" start_line start_character end_line
-    end_character;
+  fprintf ppf "  \"range\": [%d,%d,%d,%d],\n" start_line start_character
+    end_line end_character;
   fprintf ppf "  \"message\": %s" (json_string message)
 
 let loc_to_pos (loc : Location.t) =

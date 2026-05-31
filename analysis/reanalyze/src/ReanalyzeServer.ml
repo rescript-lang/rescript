@@ -377,7 +377,8 @@ Examples:
               Printf.printf "\n";
               EmitJson.start ();
               let p = state.pipeline in
-              state.run_analysis ~dce_config:p.dce_config ~cmt_root:state.cmt_root
+              state.run_analysis ~dce_config:p.dce_config
+                ~cmt_root:state.cmt_root
                 ~reactive_collection:(Some p.reactive_collection)
                 ~reactive_merge:(Some p.reactive_merge)
                 ~reactive_liveness:(Some p.reactive_liveness)

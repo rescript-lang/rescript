@@ -152,7 +152,8 @@ let has_braces attributes =
 let rec unwrap_if_option (t : Types.type_expr) =
   match t.desc with
   | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> unwrap_if_option t1
-  | Tconstr (Path.Pident {name = "option"}, [unwrapped_type], _) -> unwrapped_type
+  | Tconstr (Path.Pident {name = "option"}, [unwrapped_type], _) ->
+    unwrapped_type
   | _ -> t
 
 let is_jsx_component (vb : Parsetree.value_binding) =

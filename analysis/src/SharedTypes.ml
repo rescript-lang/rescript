@@ -20,7 +20,8 @@ module ModulePath = struct
       match module_path with
       | File _ -> current
       | IncludedModule (_, inner) -> loop inner current
-      | ExportedModule {name; module_path = inner} -> loop inner (name :: current)
+      | ExportedModule {name; module_path = inner} ->
+        loop inner (name :: current)
       | NotVisible -> current
     in
     loop module_path [tip_name]
@@ -30,7 +31,8 @@ module ModulePath = struct
       match module_path with
       | File _ -> current
       | IncludedModule (_, inner) -> loop inner current
-      | ExportedModule {name; module_path = inner} -> loop inner (name :: current)
+      | ExportedModule {name; module_path = inner} ->
+        loop inner (name :: current)
       | NotVisible -> current
     in
     prefix :: loop module_path []
@@ -310,7 +312,12 @@ module QueryEnv : sig
 
   val to_string : t -> string
 end = struct
-  type t = {file: File.t; exported: Exported.t; path_rev: path; parent: t option}
+  type t = {
+    file: File.t;
+    exported: Exported.t;
+    path_rev: path;
+    parent: t option;
+  }
 
   let to_string {file; path_rev} =
     file.module_name :: List.rev path_rev |> String.concat "."
@@ -352,7 +359,9 @@ type poly_variant_constructor = {
 }
 
 (* TODO(env-stuff) All envs for bool string etc can be removed. *)
-type inner_type = TypeExpr of Types.type_expr | ExtractedType of completion_type
+type inner_type =
+  | TypeExpr of Types.type_expr
+  | ExtractedType of completion_type
 and completion_type =
   | Tuple of QueryEnv.t * Types.type_expr list * Types.type_expr
   | Texn of QueryEnv.t
@@ -400,7 +409,8 @@ module Env = struct
   let add_exported_module ~name ~is_type env =
     {
       env with
-      module_path = ExportedModule {name; module_path = env.module_path; is_type};
+      module_path =
+        ExportedModule {name; module_path = env.module_path; is_type};
     }
   let add_module ~name env = env |> add_exported_module ~name ~is_type:false
   let add_module_type ~name env = env |> add_exported_module ~name ~is_type:true
@@ -568,7 +578,8 @@ let loc_item_to_string {loc = {Location.loc_start; loc_end}; loc_type} =
   let pos1 = Utils.cmt_pos_to_position loc_start in
   let pos2 = Utils.cmt_pos_to_position loc_end in
   Printf.sprintf "%d:%d-%d:%d %s" pos1.line pos1.character pos2.line
-    pos2.character (loc_type_to_string loc_type)
+    pos2.character
+    (loc_type_to_string loc_type)
 
 (* needed for debugging *)
 let _ = loc_item_to_string
@@ -604,7 +615,8 @@ module Completable = struct
     | NFollowRecordField {field_name} -> "recordField(" ^ field_name ^ ")"
     | NRecordBody _ -> "recordBody"
     | NVariantPayload {constructor_name; item_num} ->
-      "variantPayload::" ^ constructor_name ^ "($" ^ string_of_int item_num ^ ")"
+      "variantPayload::" ^ constructor_name ^ "($" ^ string_of_int item_num
+      ^ ")"
     | NPolyvariantPayload {constructor_name; item_num} ->
       "polyvariantPayload::" ^ constructor_name ^ "($" ^ string_of_int item_num
       ^ ")"
@@ -711,7 +723,8 @@ module Completable = struct
              | Optional {txt} -> "?" ^ txt)
         |> String.concat ", ")
       ^ ")"
-    | CPArray (Some ctx_path) -> "array<" ^ context_path_to_string ctx_path ^ ">"
+    | CPArray (Some ctx_path) ->
+      "array<" ^ context_path_to_string ctx_path ^ ">"
     | CPArray None -> "array"
     | CPId {path; completion_context} ->
       completion_context_to_string completion_context ^ list path
@@ -731,7 +744,8 @@ module Completable = struct
       ^ context_path_to_string function_context_path
       ^ "("
       ^ (match argument_label with
-        | Unlabelled {argument_position} -> "$" ^ string_of_int argument_position
+        | Unlabelled {argument_position} ->
+          "$" ^ string_of_int argument_position
         | Labelled name -> "~" ^ name
         | Optional name -> "~" ^ name ^ "=?")
       ^ ")"
@@ -847,8 +861,8 @@ module Completion = struct
   }
 
   let create ?(synthetic = false) ?additional_text_edits ?data ?type_arg_context
-      ?(includes_snippets = false) ?insert_text ~kind ~env ?sort_text ?deprecated
-      ?filter_text ?detail ?(docstring = []) name =
+      ?(includes_snippets = false) ?insert_text ~kind ~env ?sort_text
+      ?deprecated ?filter_text ?detail ?(docstring = []) name =
     {
       name;
       env;

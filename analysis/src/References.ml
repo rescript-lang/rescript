@@ -36,7 +36,8 @@ let get_loc_item ~full ~pos ~debug =
     when full.file.uri |> Uri.is_interface ->
     log 1 "heuristic for makeProps in interface files";
     if debug then
-      Printf.printf "n1:%s n2:%s n3:%s\n" (name_of li1) (name_of li2) (name_of li3);
+      Printf.printf "n1:%s n2:%s n3:%s\n" (name_of li1) (name_of li2)
+        (name_of li3);
     Some li4
   | [
    {loc_type = Constant _};
@@ -65,8 +66,9 @@ let get_loc_item ~full ~pos ~debug =
     Some li2
   | [
    ({loc_type = Typed (_, _, LocalReference _)} as li1);
-   ({loc_type = Typed (_, _, GlobalReference ("Js_OO", ["unsafe_downgrade"], _))}
-    as li2);
+   ({
+      loc_type = Typed (_, _, GlobalReference ("Js_OO", ["unsafe_downgrade"], _));
+    } as li2);
    li3;
   ]
   (* For older compiler 9.0 or earlier *)
@@ -276,7 +278,8 @@ let rec resolve_module_reference ?(paths_seen = []) ~file ~package
       | None -> None
       | Some ({item = Ident path} as md) when not (List.mem path paths_seen) ->
         (* avoid possible infinite loops *)
-        resolve_module_reference ~file ~package ~paths_seen:(path :: paths_seen) md
+        resolve_module_reference ~file ~package ~paths_seen:(path :: paths_seen)
+          md
       | Some md -> Some (file, Some md))
     | GlobalMod name -> (
       match ProcessCmt.file_for_module ~package name with
@@ -325,7 +328,8 @@ let definition ~file ~package stamp (tip : Tip.t) =
     | Some declared ->
       let file_impl, declared_impl =
         match alternate_declared ~package ~file declared tip with
-        | Some (file_impl, _extra, declared_impl) when Uri.is_interface file.uri ->
+        | Some (file_impl, _extra, declared_impl) when Uri.is_interface file.uri
+          ->
           (file_impl, declared_impl)
         | _ -> (file, declared)
       in
@@ -475,8 +479,8 @@ let for_local_stamp ~full:{file; extra; package} stamp (tip : Tip.t) =
                   | None -> []
                   | Some locs ->
                     locs
-                    |> List.map (fun loc -> {uri = file.uri; loc_opt = Some loc})
-                  ))
+                    |> List.map (fun loc ->
+                           {uri = file.uri; loc_opt = Some loc})))
               (* if this file has a corresponding interface or implementation file
                  also find the references in that file *)
             in

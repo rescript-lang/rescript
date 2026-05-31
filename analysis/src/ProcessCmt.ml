@@ -35,8 +35,8 @@ let map_record_field {Types.ld_id; ld_type; ld_attributes; ld_optional} =
     deprecated = ProcessAttributes.find_deprecated_attribute ld_attributes;
   }
 
-let rec for_type_signature_item ~(env : SharedTypes.Env.t) ~(exported : Exported.t)
-    (item : Types.signature_item) =
+let rec for_type_signature_item ~(env : SharedTypes.Env.t)
+    ~(exported : Exported.t) (item : Types.signature_item) =
   match item with
   | Sig_value (ident, {val_type; val_attributes; val_loc = loc}) ->
     let item = val_type in
@@ -110,7 +110,8 @@ let rec for_type_signature_item ~(env : SharedTypes.Env.t) ~(exported : Exported
                                    (args
                                    |> List.map (fun t -> (t, Location.none)))
                                | Cstr_record fields ->
-                                 InlineRecord (fields |> List.map map_record_field));
+                                 InlineRecord
+                                   (fields |> List.map map_record_field));
                              res = cd_res;
                              type_decl = (name, decl);
                              docstring = attrs_to_docstring cd_attributes;
@@ -156,7 +157,8 @@ let rec for_type_signature_item ~(env : SharedTypes.Env.t) ~(exported : Exported
     [
       {
         Module.kind =
-          Module {type_ = declared.item; is_module_type = is_module_type declared};
+          Module
+            {type_ = declared.item; is_module_type = is_module_type declared};
         name = declared.name.txt;
         docstring = declared.docstring;
         deprecated = declared.deprecated;
@@ -178,7 +180,8 @@ and for_type_module ~name ~env module_type =
   match module_type with
   | Types.Mty_ident path -> Ident path
   | Mty_alias (_ (* 402 *), path) -> Ident path
-  | Mty_signature signature -> Structure (for_type_signature ~name ~env signature)
+  | Mty_signature signature ->
+    Structure (for_type_signature ~name ~env signature)
   | Mty_functor (_argIdent, _argType, result_type) ->
     for_type_module ~name ~env result_type
 
@@ -263,7 +266,8 @@ let for_type_declaration ~env ~(exported : Exported.t)
                                           docstring =
                                             (match
                                                ProcessAttributes
-                                               .find_doc_attribute f.ld_attributes
+                                               .find_doc_attribute
+                                                 f.ld_attributes
                                              with
                                             | None -> []
                                             | Some docstring -> [docstring]);
@@ -370,7 +374,8 @@ let rec for_signature_item ~env ~(exported : Exported.t)
     [
       {
         Module.kind =
-          Module {type_ = declared.item; is_module_type = is_module_type declared};
+          Module
+            {type_ = declared.item; is_module_type = is_module_type declared};
         name = declared.name.txt;
         docstring = declared.docstring;
         deprecated = declared.deprecated;
@@ -540,7 +545,8 @@ let rec for_structure_item ~(env : SharedTypes.Env.t) ~(exported : Exported.t)
     [
       {
         Module.kind =
-          Module {type_ = declared.item; is_module_type = is_module_type declared};
+          Module
+            {type_ = declared.item; is_module_type = is_module_type declared};
         name = declared.name.txt;
         docstring = declared.docstring;
         deprecated = declared.deprecated;
@@ -573,7 +579,8 @@ let rec for_structure_item ~(env : SharedTypes.Env.t) ~(exported : Exported.t)
     [
       {
         Module.kind =
-          Module {type_ = declared.item; is_module_type = is_module_type declared};
+          Module
+            {type_ = declared.item; is_module_type = is_module_type declared};
         name = declared.name.txt;
         docstring = declared.docstring;
         deprecated = declared.deprecated;
@@ -595,7 +602,8 @@ let rec for_structure_item ~(env : SharedTypes.Env.t) ~(exported : Exported.t)
     top_level
   | Tstr_primitive vd when JsxHacks.primitive_is_fragment vd = false ->
     let declared =
-      add_declared ~extent:vd.val_loc ~item:vd.val_val.val_type ~name:vd.val_name
+      add_declared ~extent:vd.val_loc ~item:vd.val_val.val_type
+        ~name:vd.val_name
         ~stamp:(Ident.binding_time vd.val_id)
         ~env vd.val_attributes
         (Exported.add exported Exported.Value)
@@ -672,7 +680,9 @@ and scan_let_modules ~env (e : Typedtree.expression) =
     Stamps.add_module env.stamps stamp declared;
     scan_let_modules ~env body
   | Texp_let (_rf, bindings, body) ->
-    List.iter (fun {Typedtree.vb_expr} -> scan_let_modules ~env vb_expr) bindings;
+    List.iter
+      (fun {Typedtree.vb_expr} -> scan_let_modules ~env vb_expr)
+      bindings;
     scan_let_modules ~env body
   | Texp_apply {funct; args; _} ->
     scan_let_modules ~env funct;

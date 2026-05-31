@@ -30,7 +30,8 @@ let find_exception_from_decls (decls : Declarations.t) :
 let add ~config ~decls ~file ~path ~loc ~(str_loc : Location.t)
     ~(module_loc : Location.t) name =
   addDeclaration_ ~config ~decls ~file ~pos_end:str_loc.loc_end
-    ~pos_start:str_loc.loc_start ~decl_kind:Exception ~module_loc ~path ~loc name;
+    ~pos_start:str_loc.loc_start ~decl_kind:Exception ~module_loc ~path ~loc
+    name;
   name
 
 let mark_as_used ~config ~refs ~file_deps ~cross_file ~(binding : Location.t)
@@ -40,8 +41,7 @@ let mark_as_used ~config ~refs ~file_deps ~cross_file ~(binding : Location.t)
     let exception_path =
       path_ |> DcePath.from_path_t |> DcePath.module_to_implementation
     in
-    CrossFileItems.add_exception_ref cross_file ~exception_path:exception_path
-      ~loc_from:loc_from
+    CrossFileItems.add_exception_ref cross_file ~exception_path ~loc_from
   else
-    add_value_reference ~config ~refs ~file_deps ~binding ~add_file_reference:true
-      ~loc_from ~loc_to
+    add_value_reference ~config ~refs ~file_deps ~binding
+      ~add_file_reference:true ~loc_from ~loc_to

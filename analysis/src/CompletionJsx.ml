@@ -218,17 +218,15 @@ let get_jsx_labels ~component_path ~find_type_of_value ~package =
               item =
                 {
                   decl =
-                    {
-                      type_kind = Type_record (label_decls, _repr);
-                      type_params = type_params;
-                    };
+                    {type_kind = Type_record (label_decls, _repr); type_params};
                 };
             } ) ->
         label_decls
         |> List.map (fun (ld : Types.label_declaration) ->
                let name = Ident.name ld.ld_id in
                let t =
-                 ld.ld_type |> TypeUtils.instantiate_type ~type_params ~type_args
+                 ld.ld_type
+                 |> TypeUtils.instantiate_type ~type_params ~type_args
                in
                (name, t, env))
       | _ -> []
@@ -328,7 +326,8 @@ let find_jsx_props_completable ~jsx_props ~end_pos ~pos_before_cursor
   let rec loop props =
     match props with
     | prop :: rest ->
-      if prop.pos_start <= pos_before_cursor && pos_before_cursor < prop.pos_end then (
+      if prop.pos_start <= pos_before_cursor && pos_before_cursor < prop.pos_end
+      then (
         if Debug.verbose () then
           print_endline "[jsx_props_completable]--> Cursor on the prop name";
 
@@ -358,7 +357,8 @@ let find_jsx_props_completable ~jsx_props ~end_pos ~pos_before_cursor
                    CJsxPropValue
                      {
                        path_to_component =
-                         Utils.flatten_long_ident ~jsx:true jsx_props.comp_name.txt;
+                         Utils.flatten_long_ident ~jsx:true
+                           jsx_props.comp_name.txt;
                        prop_name = prop.name;
                        empty_jsx_prop_name_hint = Some txt;
                      };
@@ -381,7 +381,8 @@ let find_jsx_props_completable ~jsx_props ~end_pos ~pos_before_cursor
                    CJsxPropValue
                      {
                        path_to_component =
-                         Utils.flatten_long_ident ~jsx:true jsx_props.comp_name.txt;
+                         Utils.flatten_long_ident ~jsx:true
+                           jsx_props.comp_name.txt;
                        prop_name = prop.name;
                        empty_jsx_prop_name_hint = None;
                      };
@@ -407,7 +408,8 @@ let find_jsx_props_completable ~jsx_props ~end_pos ~pos_before_cursor
                    CJsxPropValue
                      {
                        path_to_component =
-                         Utils.flatten_long_ident ~jsx:true jsx_props.comp_name.txt;
+                         Utils.flatten_long_ident ~jsx:true
+                           jsx_props.comp_name.txt;
                        prop_name = prop.name;
                        empty_jsx_prop_name_hint = None;
                      };
@@ -434,7 +436,8 @@ let find_jsx_props_completable ~jsx_props ~end_pos ~pos_before_cursor
                  CJsxPropValue
                    {
                      path_to_component =
-                       Utils.flatten_long_ident ~jsx:true jsx_props.comp_name.txt;
+                       Utils.flatten_long_ident ~jsx:true
+                         jsx_props.comp_name.txt;
                      prop_name = prop.name;
                      empty_jsx_prop_name_hint = None;
                    };

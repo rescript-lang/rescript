@@ -98,7 +98,9 @@ let iter_files_from_roots_to_leaves (t : t) iter_fun =
   (* For each file, the number of incoming references *)
   let inverse_references = (Hashtbl.create 256 : (string, int) Hashtbl.t) in
   (* For each number of incoming references, the files *)
-  let references_by_number = (Hashtbl.create 256 : (int, FileSet.t) Hashtbl.t) in
+  let references_by_number =
+    (Hashtbl.create 256 : (int, FileSet.t) Hashtbl.t)
+  in
   let get_num file_name =
     try Hashtbl.find inverse_references file_name with Not_found -> 0
   in
@@ -135,7 +137,8 @@ let iter_files_from_roots_to_leaves (t : t) iter_fun =
   in
   iter_deps t (fun from_file set ->
       if get_num from_file = 0 then
-        Hashtbl.replace references_by_number 0 (FileSet.add from_file (get_set 0));
+        Hashtbl.replace references_by_number 0
+          (FileSet.add from_file (get_set 0));
       set |> FileSet.iter (fun to_file -> add_edge from_file to_file));
   while get_set 0 <> FileSet.empty do
     let files_with_no_incoming_references = get_set 0 in
@@ -144,7 +147,8 @@ let iter_files_from_roots_to_leaves (t : t) iter_fun =
     |> FileSet.iter (fun file_name ->
            iter_fun file_name;
            let references = get_deps t file_name in
-           references |> FileSet.iter (fun to_file -> remove_edge file_name to_file))
+           references
+           |> FileSet.iter (fun to_file -> remove_edge file_name to_file))
   done;
   (* Process any remaining items in case of circular references *)
   references_by_number

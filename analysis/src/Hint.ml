@@ -100,8 +100,8 @@ let inlay ~source ~kind_file ~pos ~max_length ~full ~debug =
                  let kind = inlay_kind_to_lsp_inlay_hint hint_kind in
                  let label = ": " ^ label in
                  let result =
-                   Lsp.Types.InlayHint.create ~position ~kind ~padding_left:true
-                     ~padding_right:false ~label:(`String label) ()
+                   Lsp.Types.InlayHint.create ~position ~kind ~paddingLeft:true
+                     ~paddingRight:false ~label:(`String label) ()
                  in
                  match maxlen with
                  | Some value ->

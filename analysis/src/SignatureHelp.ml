@@ -86,8 +86,8 @@ let find_function_type ~debug ~source ~kind_file ~pos ~full =
           | Some (completable, scope) ->
             Some
               ( completable
-                |> CompletionBackEnd.process_completable ~debug ~full ~pos ~scope
-                     ~env ~for_hover:true,
+                |> CompletionBackEnd.process_completable ~debug ~full ~pos
+                     ~scope ~env ~for_hover:true,
                 env,
                 package,
                 file ))
@@ -237,8 +237,8 @@ let find_constructor_args ~full ~env ~constructor_name loc =
     | _ -> None)
   | _ -> None
 
-let signature_help ~debug ~source ~kind_file ~pos ~allow_for_constructor_payloads
-    ~full =
+let signature_help ~debug ~source ~kind_file ~pos
+    ~allow_for_constructor_payloads ~full =
   match source with
   | "" -> None
   | text -> (
@@ -281,13 +281,15 @@ let signature_help ~debug ~source ~kind_file ~pos ~allow_for_constructor_payload
               Printf.printf
                 "[sig_help_result] Setting because loc of %s > then existing \
                  of %s\n"
-                (print_thing thing) (print_thing current_thing)
+                (print_thing thing)
+                (print_thing current_thing)
           | Some (_, current_thing) ->
             if Debug.verbose () then
               Printf.printf
                 "[sig_help_result] Doing nothing because loc of %s < then \
                  existing of %s\n"
-                (print_thing thing) (print_thing current_thing))
+                (print_thing thing)
+                (print_thing current_thing))
       in
       let search_for_arg_with_cursor ~is_pipe_expr ~args =
         let extracted_args = extract_exp_apply_args ~args in
@@ -317,7 +319,8 @@ let signature_help ~debug ~source ~kind_file ~pos ~allow_for_constructor_payload
                    | Some {name; pos_start; pos_end} -> (
                      (* Check for the label identifier itself having the cursor *)
                      match
-                       pos |> CursorPosition.classify_positions ~pos_start ~pos_end
+                       pos
+                       |> CursorPosition.classify_positions ~pos_start ~pos_end
                      with
                      | HasCursor -> Some (Labelled name)
                      | NoCursor | EmptyLoc -> (
@@ -328,7 +331,8 @@ let signature_help ~debug ~source ~kind_file ~pos ~allow_for_constructor_payload
                        match
                          ( arg.exp.pexp_desc,
                            arg.exp.pexp_loc
-                           |> CursorPosition.classify_loc ~pos:pos_before_cursor )
+                           |> CursorPosition.classify_loc ~pos:pos_before_cursor
+                         )
                        with
                        | Pexp_extension ({txt = "rescript.exprhole"}, _), _
                        | _, HasCursor ->
@@ -483,8 +487,8 @@ let signature_help ~debug ~source ~kind_file ~pos ~allow_for_constructor_payload
                               | Labelled {txt = l1}, Labelled {txt = l2}
                                 when l1 = l2 ->
                                 true
-                              | Nolabel, Nolabel when param_arg_count = arg_count
-                                ->
+                              | Nolabel, Nolabel
+                                when param_arg_count = arg_count ->
                                 true
                               | _ -> false)
                      with
@@ -495,8 +499,8 @@ let signature_help ~debug ~source ~kind_file ~pos ~allow_for_constructor_payload
                        Lsp.Types.MarkupContent.create
                          ~kind:Lsp.Types.MarkupKind.Markdown
                          ~value:
-                           (docs_for_label ~supports_markdown_links ~file ~package
-                              label_typ_expr)
+                           (docs_for_label ~supports_markdown_links ~file
+                              ~package label_typ_expr)
                    in
                    Lsp.Types.ParameterInformation.create
                      ~label:(`Offset (start, end_))
@@ -513,7 +517,7 @@ let signature_help ~debug ~source ~kind_file ~pos ~allow_for_constructor_payload
                     (`MarkupContent
                        (Lsp.Types.MarkupContent.create
                           ~kind:Lsp.Types.MarkupKind.Markdown ~value:docs)))
-              ~active_parameter:
+              ~activeParameter:
                 (match active_parameter with
                 | None -> Some (-1)
                 | active_parameter -> active_parameter)
@@ -521,11 +525,11 @@ let signature_help ~debug ~source ~kind_file ~pos ~allow_for_constructor_payload
           in
           let signature =
             Lsp.Types.SignatureHelp.create ~signatures:[signatures]
-              ~active_parameter:
+              ~activeParameter:
                 (match active_parameter with
                 | None -> Some (-1)
                 | active_parameter -> active_parameter)
-              ~active_signature:0 ()
+              ~activeSignature:0 ()
           in
           Some signature
         | _ -> None)
@@ -594,8 +598,9 @@ let signature_help ~debug ~source ~kind_file ~pos ~allow_for_constructor_payload
                             in
                             offset := end_offset + String.length ", ";
                             ( arg_text,
-                              docs_for_label ~file:full.file ~package:full.package
-                                ~supports_markdown_links typ,
+                              docs_for_label ~file:full.file
+                                ~package:full.package ~supports_markdown_links
+                                typ,
                               (start_offset, end_offset) ))))
             in
             let label =
@@ -658,7 +663,8 @@ let signature_help ~debug ~source ~kind_file ~pos ~allow_for_constructor_payload
                          else ());
                   !field_index
                 | _ -> -1)
-              | `ConstructorExpr (_, expr) when loc_has_cursor expr.pexp_loc -> 0
+              | `ConstructorExpr (_, expr) when loc_has_cursor expr.pexp_loc ->
+                0
               | `ConstructorPat (_, {ppat_desc = Ppat_tuple items}) -> (
                 let idx = ref 0 in
                 let tuple_item_with_cursor =
@@ -767,11 +773,11 @@ let signature_help ~debug ~source ~kind_file ~pos ~allow_for_constructor_payload
                       (`MarkupContent
                          (Lsp.Types.MarkupContent.create
                             ~kind:Lsp.Types.MarkupKind.Markdown ~value:docs)))
-                ~active_parameter:(Some active_parameter) ()
+                ~activeParameter:(Some active_parameter) ()
             in
             let signature =
               Lsp.Types.SignatureHelp.create ~signatures:[signatures]
-                ~active_parameter:(Some active_parameter) ~active_signature:0 ()
+                ~activeParameter:(Some active_parameter) ~activeSignature:0 ()
             in
             Some signature))
       | _ -> None))

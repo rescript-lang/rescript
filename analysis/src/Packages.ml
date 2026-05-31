@@ -1,7 +1,8 @@
 open SharedTypes
 
 (* Creates the `pathsForModule` hashtbl, which maps a `moduleName` to it's `paths` (the ml/re, mli/rei, cmt, and cmti files) *)
-let make_paths_for_module ~project_files_and_paths ~dependencies_files_and_paths =
+let make_paths_for_module ~project_files_and_paths ~dependencies_files_and_paths
+    =
   let paths_for_module = Hashtbl.create 30 in
   dependencies_files_and_paths
   |> List.iter (fun (mod_name, paths) ->
@@ -99,8 +100,8 @@ let new_bs_package ~root_path =
                 dependencies_files_and_paths
             in
             let source_directories =
-              FindFiles.get_source_directories ~include_dev:true ~base_dir:root_path
-                config
+              FindFiles.get_source_directories ~include_dev:true
+                ~base_dir:root_path config
             in
             let project_files_and_paths =
               FindFiles.find_project_files
@@ -208,7 +209,9 @@ let find_root ~uri packages_by_root =
 let get_package ~uri =
   let open SharedTypes in
   if Hashtbl.mem state.root_for_uri uri then
-    Some (Hashtbl.find state.packages_by_root (Hashtbl.find state.root_for_uri uri))
+    Some
+      (Hashtbl.find state.packages_by_root
+         (Hashtbl.find state.root_for_uri uri))
   else
     match find_root ~uri state.packages_by_root with
     | None ->
@@ -217,7 +220,8 @@ let get_package ~uri =
     | Some (`Root root_path) ->
       Hashtbl.replace state.root_for_uri uri root_path;
       Some
-        (Hashtbl.find state.packages_by_root (Hashtbl.find state.root_for_uri uri))
+        (Hashtbl.find state.packages_by_root
+           (Hashtbl.find state.root_for_uri uri))
     | Some (`Bs root_path) -> (
       match new_bs_package ~root_path with
       | None -> None

@@ -27,7 +27,8 @@ type processing_stats = {
 (** Stats from a process_files call *)
 
 (** Process cmt_infos into a file result *)
-let process_cmt_infos ~config ~cmt_file_path cmt_infos : cmt_file_result option =
+let process_cmt_infos ~config ~cmt_file_path cmt_infos : cmt_file_result option
+    =
   let exclude_path source_file =
     config.DceConfig.cli.exclude_paths
     |> List.exists (fun prefix_ ->
@@ -43,18 +44,18 @@ let process_cmt_infos ~config ~cmt_file_path cmt_infos : cmt_file_result option 
   in
   match cmt_infos.Cmt_format.cmt_annots |> FindSourceFile.cmt with
   | Some source_file when not (exclude_path source_file) ->
-    let is_interface =
+    let is_interface_ =
       match cmt_infos.cmt_annots with
       | Interface _ -> true
       | _ -> Filename.check_suffix source_file "i"
     in
     let module_name = source_file |> Paths.get_module_name in
     let dce_file_context : DceFileProcessing.file_context =
-      {source_path = source_file; module_name; is_interface}
+      {source_path = source_file; module_name; is_interface = is_interface_}
     in
     let file_context =
       DeadCommon.FileContext.
-        {source_path = source_file; module_name; is_interface}
+        {source_path = source_file; module_name; is_interface = is_interface_}
     in
     let dce_data =
       if config.DceConfig.run.dce then

@@ -7,8 +7,8 @@ open DeadCommon
 
 type scope_default = FileAnnotations.annotated_as option
 
-let process_attributes ~(scope_default : scope_default) ~state ~config ~do_gen_type
-    ~name ~pos attributes =
+let process_attributes ~(scope_default : scope_default) ~state ~config
+    ~do_gen_type ~name ~pos attributes =
   (match scope_default with
   | Some FileAnnotations.Live -> FileAnnotations.annotate_live state pos
   | Some FileAnnotations.Dead -> FileAnnotations.annotate_dead state pos
@@ -39,8 +39,8 @@ let process_attributes ~(scope_default : scope_default) ~state ~config ~do_gen_t
            try String.sub fname 0 (String.length prefix) = prefix
            with Invalid_argument _ -> false)
   in
-  if get_payload live_annotation <> None || name_is_in_live_names_or_paths () then
-    FileAnnotations.annotate_live state pos;
+  if get_payload live_annotation <> None || name_is_in_live_names_or_paths ()
+  then FileAnnotations.annotate_live state pos;
   if attributes |> Annotation.is_ocaml_suppress_dead_warning then
     FileAnnotations.annotate_live state pos
 
@@ -66,7 +66,8 @@ let collect_export_locations ~state ~config ~do_gen_type =
     (match vb_pat.pat_desc with
     | Tpat_var (id, {loc = {loc_start = pos}})
     | Tpat_alias ({pat_desc = Tpat_any}, id, {loc = {loc_start = pos}}) ->
-      if !currently_disable_warnings then FileAnnotations.annotate_live state pos;
+      if !currently_disable_warnings then
+        FileAnnotations.annotate_live state pos;
       vb_attributes
       |> process_attributes ~scope_default:!current_scope_default ~state ~config
            ~do_gen_type ~name:(id |> Ident.name) ~pos

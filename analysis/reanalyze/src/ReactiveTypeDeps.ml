@@ -26,7 +26,8 @@ let decl_to_info (decl : Decl.t) : decl_info option =
       | module_name_tag :: _ -> (
         try (module_name_tag |> Name.to_string).[0] <> '+' with _ -> true)
     in
-    Some {pos = decl.pos; pos_end = decl.pos_end; path = decl.path; is_interface}
+    Some
+      {pos = decl.pos; pos_end = decl.pos_end; path = decl.path; is_interface}
   | _ -> None
 
 (** {1 Reactive Collections} *)

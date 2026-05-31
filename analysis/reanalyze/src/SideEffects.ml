@@ -33,7 +33,8 @@ let rec expr_no_side_effects (expr : Typedtree.expression) =
     when path |> path_is_whitelisted_for_side_effects ->
     args |> List.for_all (fun (_, eo) -> eo |> expr_opt_no_side_effects)
   | Texp_apply _ -> false
-  | Texp_sequence (e1, e2) -> e1 |> expr_no_side_effects && e2 |> expr_no_side_effects
+  | Texp_sequence (e1, e2) ->
+    e1 |> expr_no_side_effects && e2 |> expr_no_side_effects
   | Texp_let (_, vbs, e) ->
     vbs
     |> List.for_all (fun (vb : Typedtree.value_binding) ->
@@ -58,7 +59,8 @@ let rec expr_no_side_effects (expr : Typedtree.expression) =
   | Texp_ifthenelse (e1, e2, eo) ->
     e1 |> expr_no_side_effects && e2 |> expr_no_side_effects
     && eo |> expr_opt_no_side_effects
-  | Texp_while (e1, e2) -> e1 |> expr_no_side_effects && e2 |> expr_no_side_effects
+  | Texp_while (e1, e2) ->
+    e1 |> expr_no_side_effects && e2 |> expr_no_side_effects
   | Texp_for (_id, _pat, e1, e2, _dir, e3) ->
     e1 |> expr_no_side_effects && e2 |> expr_no_side_effects
     && e3 |> expr_no_side_effects

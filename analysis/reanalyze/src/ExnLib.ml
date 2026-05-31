@@ -125,7 +125,9 @@ let raises_lib_table : (Name.t, Exceptions.t) Hashtbl.t =
     ]
   in
   let stdlib_list =
-    [("headExn", [not_found]); ("tailExn", [not_found]); ("getExn", [not_found])]
+    [
+      ("headExn", [not_found]); ("tailExn", [not_found]); ("getExn", [not_found]);
+    ]
   in
   let stdlib_null = [("getExn", [invalid_argument])] in
   let stdlib_nullable = [("getExn", [invalid_argument])] in

@@ -35,7 +35,8 @@ let add_type_ref (builder : builder) ~pos_to ~pos_from =
 let merge_into_builder ~(from : builder) ~(into : builder) =
   PosHash.iter
     (fun pos refs ->
-      refs |> PosSet.iter (fun to_pos -> add_set into.value_refs_from pos to_pos))
+      refs
+      |> PosSet.iter (fun to_pos -> add_set into.value_refs_from pos to_pos))
     from.value_refs_from;
   PosHash.iter
     (fun pos refs ->

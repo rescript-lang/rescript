@@ -71,7 +71,13 @@ module Token = struct
     e.last_char <- char;
     if delta_line >= 0 && delta_char >= 0 && length >= 0 then
       Some
-        [|delta_line; delta_char; length; token_type_to_int type_; token_modifiers|]
+        [|
+          delta_line;
+          delta_char;
+          length;
+          token_type_to_int type_;
+          token_modifiers;
+        |]
     else None
 
   let emit e =
@@ -80,7 +86,9 @@ module Token = struct
       |> List.sort (fun (l1, c1, _, _) (l2, c2, _, _) ->
              if l1 = l2 then compare c1 c2 else compare l1 l2)
     in
-    let arrays = sorted_tokens |> List.filter_map (fun t -> e |> emit_token t) in
+    let arrays =
+      sorted_tokens |> List.filter_map (fun t -> e |> emit_token t)
+    in
     Array.concat arrays
 
   let array_to_json_string arr =
@@ -127,7 +135,8 @@ let emit_longident ?(backwards = false) ?(jsx = false)
       let type_ =
         match last_token with
         | Some type_ -> type_
-        | None -> if is_uppercase_id id then upper_case_token else lower_case_token
+        | None ->
+          if is_uppercase_id id then upper_case_token else lower_case_token
       in
       let pos_after = (fst pos, snd pos + String.length id) in
       let pos_end, len_mismatch =
@@ -143,7 +152,9 @@ let emit_longident ?(backwards = false) ?(jsx = false)
           (Token.token_type_debug type_);
       emitter |> emit_from_range (pos, pos_end) ~type_
     | id :: segments when is_uppercase_id id || is_lowercase_id id ->
-      let type_ = if is_uppercase_id id then upper_case_token else lower_case_token in
+      let type_ =
+        if is_uppercase_id id then upper_case_token else lower_case_token
+      in
       if debug then
         Printf.printf "Ldot: %s %s %s\n" id (Pos.to_string pos)
           (Token.token_type_debug type_);
@@ -177,12 +188,14 @@ let emit_jsx_tag ~debug ~name ~pos emitter =
 let emit_type ~lid ~debug ~(loc : Location.t) emitter =
   if not loc.loc_ghost then
     emitter
-    |> emit_longident ~lower_case_token:Token.Type ~pos:(Loc.start loc) ~lid ~debug
+    |> emit_longident ~lower_case_token:Token.Type ~pos:(Loc.start loc) ~lid
+         ~debug
 
 let emit_record_label ~(label : Longident.t Location.loc) ~debug emitter =
   if not label.loc.loc_ghost then
     emitter
-    |> emit_longident ~lower_case_token:Token.Property ~pos:(Loc.start label.loc)
+    |> emit_longident ~lower_case_token:Token.Property
+         ~pos:(Loc.start label.loc)
          ~pos_end:(Some (Loc.end_ label.loc))
          ~lid:label.txt ~debug
 
@@ -194,7 +207,8 @@ let emit_variant ~(name : Longident.t Location.loc) ~debug emitter =
 
 let command ~debug ~emitter ~source ~kind_file =
   let process_type_arg (core_type : Parsetree.core_type) =
-    if debug then Printf.printf "TypeArg: %s\n" (Loc.to_string core_type.ptyp_loc)
+    if debug then
+      Printf.printf "TypeArg: %s\n" (Loc.to_string core_type.ptyp_loc)
   in
   let typ (iterator : Ast_iterator.iterator) (core_type : Parsetree.core_type) =
     match core_type.ptyp_desc with
@@ -285,7 +299,8 @@ let command ~debug ~emitter ~source ~kind_file =
         (Jsx_container_element
            {
              jsx_container_element_tag_name_start = lident;
-             jsx_container_element_opening_tag_end = pos_of_greatherthan_after_props;
+             jsx_container_element_opening_tag_end =
+               pos_of_greatherthan_after_props;
              jsx_container_element_children = children;
              jsx_container_element_closing_tag = closing_tag_opt;
            }) ->

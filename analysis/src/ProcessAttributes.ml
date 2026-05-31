@@ -44,7 +44,8 @@ let rec find_deprecated_attribute attributes =
   | ({Asttypes.txt = "deprecated"}, _) :: _ -> Some ""
   | _ :: rest -> find_deprecated_attribute rest
 
-let new_declared ~item ~extent ~name ~stamp ~module_path is_exported attributes =
+let new_declared ~item ~extent ~name ~stamp ~module_path is_exported attributes
+    =
   {
     Declared.name;
     stamp;

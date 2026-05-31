@@ -20,7 +20,8 @@ let mark_live ~config ~is_type ~(loc : Location.t) path =
     | Some (true, _) -> ()
 
 (** Check if a module is dead and return issue if so. Pure - no logging. *)
-let check_module_dead ~config ~file_name:pos_fname module_name : Issue.t option =
+let check_module_dead ~config ~file_name:pos_fname module_name : Issue.t option
+    =
   if not (active ~config) then None
   else
     match Hashtbl.find_opt table module_name with

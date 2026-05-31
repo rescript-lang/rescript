@@ -7,17 +7,22 @@ let make ~title ~kind ~uri ~new_text ~range =
   in
   let edit =
     Lsp.Types.WorkspaceEdit.create
-      ~document_changes:
+      ~documentChanges:
         [
           `TextDocumentEdit
             (Lsp.Types.TextDocumentEdit.create
-               ~edits:[`TextEdit (Lsp.Types.TextEdit.create ~range ~new_text)]
-               ~text_document);
+               ~edits:
+                 [
+                   `TextEdit (Lsp.Types.TextEdit.create ~range ~newText:new_text);
+                 ]
+               ~textDocument:text_document);
         ]
       ()
   in
   Lsp.Types.CodeAction.create ~title ~kind ~edit ()
 
 let make_with_document_changes ~title ~kind ~document_changes =
-  let edit = Lsp.Types.WorkspaceEdit.create ~document_changes () in
+  let edit =
+    Lsp.Types.WorkspaceEdit.create ~documentChanges:document_changes ()
+  in
   Lsp.Types.CodeAction.create ~title ~kind ~edit ()

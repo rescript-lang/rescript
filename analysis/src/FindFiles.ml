@@ -128,7 +128,9 @@ let get_public config =
 
 let collect_files directory =
   let all_files = Files.read_directory directory in
-  let compileds = all_files |> List.filter is_compiled_file |> filter_duplicates in
+  let compileds =
+    all_files |> List.filter is_compiled_file |> filter_duplicates
+  in
   let sources = all_files |> List.filter is_source_file |> filter_duplicates in
   compileds
   |> Utils.filter_map (fun path ->
@@ -137,7 +139,8 @@ let collect_files directory =
          let res_opt =
            Utils.find
              (fun name ->
-               if get_name name = mod_name then Some (directory /+ name) else None)
+               if get_name name = mod_name then Some (directory /+ name)
+               else None)
              sources
          in
          match res_opt with
@@ -186,15 +189,18 @@ let find_project_files ~public ~namespace ~path ~source_directories ~lib_bs =
   in
   dirs
   |> if_debug true "Source directories" (fun s ->
-         s |> StringSet.elements |> List.map Utils.dump_path |> String.concat " ");
+         s |> StringSet.elements |> List.map Utils.dump_path
+         |> String.concat " ");
   files
   |> if_debug true "Source files" (fun s ->
-         s |> StringSet.elements |> List.map Utils.dump_path |> String.concat " ");
+         s |> StringSet.elements |> List.map Utils.dump_path
+         |> String.concat " ");
 
   let interfaces = Hashtbl.create 100 in
   files
   |> StringSet.iter (fun path ->
-         if is_interface path then Hashtbl.replace interfaces (get_name path) path);
+         if is_interface path then
+           Hashtbl.replace interfaces (get_name path) path);
 
   let normals =
     files |> StringSet.elements
@@ -203,7 +209,9 @@ let find_project_files ~public ~namespace ~path ~source_directories ~lib_bs =
              let module_name = get_name file in
              let resi = Hashtbl.find_opt interfaces module_name in
              Hashtbl.remove interfaces module_name;
-             let base = compiled_base_name ~namespace (Files.relpath path file) in
+             let base =
+               compiled_base_name ~namespace (Files.relpath path file)
+             in
              match resi with
              | Some resi ->
                let cmti = (lib_bs /+ base) ^ ".cmti" in
@@ -217,11 +225,13 @@ let find_project_files ~public ~namespace ~path ~source_directories ~lib_bs =
                  else None
                else (
                  (* Log.log("Just intf " ++ cmti) *)
-                 Log.log ("Bad source file (no cmt/cmti/cmi) " ^ (lib_bs /+ base));
+                 Log.log
+                   ("Bad source file (no cmt/cmti/cmi) " ^ (lib_bs /+ base));
                  None)
              | None ->
                let cmt = (lib_bs /+ base) ^ ".cmt" in
-               if Files.exists cmt then Some (module_name, Impl {cmt; res = file})
+               if Files.exists cmt then
+                 Some (module_name, Impl {cmt; res = file})
                else (
                  Log.log ("Bad source file (no cmt/cmi) " ^ (lib_bs /+ base));
                  None))
@@ -308,8 +318,8 @@ let find_dependency_files base config =
                          | Some _ -> lib_bs :: compiled_directories
                        in
                        let project_files =
-                         find_project_files ~public:(get_public inner) ~namespace
-                           ~path ~source_directories ~lib_bs
+                         find_project_files ~public:(get_public inner)
+                           ~namespace ~path ~source_directories ~lib_bs
                        in
                        Some (compiled_directories, project_files))
                    | None -> None

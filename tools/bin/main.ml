@@ -160,8 +160,8 @@ let main () =
       Clflags.color := Some Misc.Color.Never;
 
       (* TODO: Add result/JSON mode *)
-      Tools.ExtractCodeblocks.extract_codeblocks_from_file ~transform_assert_equal
-        ~entry_point_file:path
+      Tools.ExtractCodeblocks.extract_codeblocks_from_file
+        ~transform_assert_equal ~entry_point_file:path
       |> log_and_exit
     | _ -> log_and_exit (Error extract_codeblocks_help))
   | "reanalyze" :: _ ->

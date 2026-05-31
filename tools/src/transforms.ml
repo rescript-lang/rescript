@@ -1,5 +1,5 @@
-let labelled_to_unlabelled_arguments_in_fn_definition (e : Parsetree.expression) :
-    Parsetree.expression =
+let labelled_to_unlabelled_arguments_in_fn_definition (e : Parsetree.expression)
+    : Parsetree.expression =
   (* `(~a, ~b, ~c) => ...` to `(a, b, c) => ...` *)
   let rec drop_labels (e : Parsetree.expression) : Parsetree.expression =
     match e.pexp_desc with
@@ -23,7 +23,8 @@ let labelled_to_unlabelled_arguments_in_fn_definition (e : Parsetree.expression)
       {
         e with
         pexp_desc =
-          Pexp_fun {arg_label; default; lhs; rhs = drop_labels rhs; arity; async};
+          Pexp_fun
+            {arg_label; default; lhs; rhs = drop_labels rhs; arity; async};
       }
     | _ -> e
   in
@@ -44,7 +45,8 @@ let converted_literal_to_pure_literal (e : Parsetree.expression) :
   (* `Float.fromInt(1)` to `1.`,  *)
   e
 
-let drop_unit_arguments_in_apply (e : Parsetree.expression) : Parsetree.expression =
+let drop_unit_arguments_in_apply (e : Parsetree.expression) :
+    Parsetree.expression =
   (* Drop only unlabelled unit arguments from an application expression. *)
   let is_unit_expr (e : Parsetree.expression) =
     match e.pexp_desc with

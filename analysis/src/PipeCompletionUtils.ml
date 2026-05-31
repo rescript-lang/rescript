@@ -1,5 +1,5 @@
-let add_jsx_completion_items ~main_type_id ~env ~prefix ~(full : SharedTypes.full)
-    ~raw_opens typ =
+let add_jsx_completion_items ~main_type_id ~env ~prefix
+    ~(full : SharedTypes.full) ~raw_opens typ =
   match main_type_id with
   | ("array" | "float" | "string" | "int") as builtin_name_to_complete ->
     if Utils.check_name builtin_name_to_complete ~prefix ~exact:false then

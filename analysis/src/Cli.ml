@@ -50,12 +50,14 @@ let hover ~path ~pos ~current_file ~debug ~supports_markdown_links =
   | None -> print_null ()
   | Some source -> (
     match
-      Commands.hover ~source ~kind_file ~pos ~debug ~supports_markdown_links ~full
+      Commands.hover ~source ~kind_file ~pos ~debug ~supports_markdown_links
+        ~full
     with
     | Some value -> Lsp.Types.Hover.yojson_of_t value |> print_string
     | None -> print_null ())
 
-let signature_help ~path ~pos ~current_file ~debug ~allow_for_constructor_payloads =
+let signature_help ~path ~pos ~current_file ~debug
+    ~allow_for_constructor_payloads =
   let full = Cmt.load_full_cmt_from_path ~path in
   let kind_file = Files.classify_source_file current_file in
   match Files.read_file current_file with
@@ -73,7 +75,8 @@ let code_action ~path ~start_pos ~end_pos ~current_file ~debug =
   match Files.read_file current_file with
   | None -> print_null ()
   | Some source ->
-    Xform.extract_code_actions ~path ~start_pos ~end_pos ~source ~kind_file ~debug
+    Xform.extract_code_actions ~path ~start_pos ~end_pos ~source ~kind_file
+      ~debug
     |> List.map (fun c -> Lsp.Types.CodeAction.yojson_of_t c)
     |> print_list
 
@@ -102,7 +105,7 @@ let references ~path ~pos ~debug =
 let rename ~path ~pos ~new_name ~debug =
   let full = Cmt.load_full_cmt_from_path ~path in
   match Commands.rename ~full ~pos ~new_name ~debug with
-  | Some {document_changes = Some document_changes} ->
+  | Some {documentChanges = Some document_changes} ->
     document_changes
     |> List.map (fun c ->
            match c with
@@ -135,7 +138,7 @@ let format ~path =
     match Commands.format ~source ~kind_file with
     | Ok text_edits -> (
       match text_edits with
-      | {new_text} :: _ -> print_string (`String new_text)
+      | {newText} :: _ -> print_string (`String newText)
       | _ -> print_null ())
     | Error _ -> print_null ())
 
@@ -211,7 +214,9 @@ let test ~path =
               Printf.printf "Setting version: %s\n" version;
             match String.split_on_char '.' version with
             | [major_raw; minor_raw] ->
-              let version = (int_of_string major_raw, int_of_string minor_raw) in
+              let version =
+                (int_of_string major_raw, int_of_string minor_raw)
+              in
               Packages.override_rescript_version := Some version
             | _ -> ())
           | "ve-" -> Packages.override_rescript_version := None
@@ -318,16 +323,16 @@ let test ~path =
             in
             let kind_file = Files.classify_source_file current_file in
             let code_actions =
-              Xform.extract_code_actions ~path ~start_pos ~end_pos ~source ~kind_file
-                ~debug:true
+              Xform.extract_code_actions ~path ~start_pos ~end_pos ~source
+                ~kind_file ~debug:true
             in
             Sys.remove current_file;
             code_actions
             |> List.iter (fun {Lsp.Types.CodeAction.title; edit} ->
                    Printf.printf "Hit: %s\n" title;
                    match edit with
-                   | Some {document_changes} ->
-                     document_changes |> Option.get
+                   | Some {documentChanges} ->
+                     documentChanges |> Option.get
                      |> List.iter
                           (fun
                             (dc :
@@ -340,7 +345,7 @@ let test ~path =
                             match dc with
                             | `TextDocumentEdit tde ->
                               let filename =
-                                tde.text_document.uri |> Uri.to_path
+                                tde.textDocument.uri |> Uri.to_path
                                 |> Filename.basename
                               in
                               Printf.printf "\nTextDocumentEdit: %s\n" filename;
@@ -357,11 +362,11 @@ let test ~path =
                                        match edit with
                                        | `TextEdit te ->
                                          ( te.range.start.character,
-                                           te.new_text,
+                                           te.newText,
                                            te.range )
                                        | `AnnotatedTextEdit te ->
                                          ( te.range.start.character,
-                                           te.new_text,
+                                           te.newText,
                                            te.range )
                                      in
                                      let indent = String.make start_char ' ' in

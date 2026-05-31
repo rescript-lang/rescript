@@ -157,7 +157,8 @@ let stringify_detail (detail : doc_item_detail) =
         ("kind", `String "signature");
         ( "details",
           `Assoc
-            [("parameters", ps); ("returnType", stringify_type_doc return_type)] );
+            [("parameters", ps); ("returnType", stringify_type_doc return_type)]
+        );
       ]
 
 let stringify_source source =
@@ -260,8 +261,8 @@ and stringify_docs_for_module ~original_env (d : docs_for_module) =
        ("source", stringify_source d.source);
        ( "items",
          `List
-           (d.items |> List.map (fun item -> stringify_doc_item ~original_env item))
-       );
+           (d.items
+           |> List.map (fun item -> stringify_doc_item ~original_env item)) );
      ]
     @
     match d.deprecated with
@@ -299,7 +300,10 @@ let type_detail typ ~env ~full =
                         | InlineRecord fields ->
                           Some
                             (InlineRecord
-                               {field_docs = fields |> List.map field_to_field_doc})
+                               {
+                                 field_docs =
+                                   fields |> List.map field_to_field_doc;
+                               })
                         | _ -> None);
                     });
          })
@@ -541,8 +545,8 @@ let extract_docs ~entry_point_file ~debug =
                      | Module {type_ = Constraint (Structure m, Ident p)} ->
                        (* module M: T = { <impl> }. Print M *)
                        let docs =
-                         extract_docs_for_module ~module_path:(m.name :: module_path)
-                           m
+                         extract_docs_for_module
+                           ~module_path:(m.name :: module_path) m
                        in
                        let ident_module_path = p |> Path.head |> Ident.name in
 
@@ -627,8 +631,8 @@ let extract_embedded ~extension_points ~filename =
                ("extensionName", `String extension_name);
                ("contents", `String contents);
                ( "loc",
-                 Analysis.Utils.cmt_loc_to_range loc |> Lsp.Types.Range.yojson_of_t
-               );
+                 Analysis.Utils.cmt_loc_to_range loc
+                 |> Lsp.Types.Range.yojson_of_t );
              ])
     |> List.rev
   in
@@ -744,8 +748,8 @@ module FormatCodeblocks = struct
         mapper.structure mapper ast
   end
 
-  let format_rescript_code_blocks content ~transform_assert_equal ~display_filename
-      ~add_error ~markdown_block_start_line =
+  let format_rescript_code_blocks content ~transform_assert_equal
+      ~display_filename ~add_error ~markdown_block_start_line =
     (* Detect ReScript code blocks. *)
     let had_code_blocks = ref false in
     let block _m = function
@@ -782,7 +786,7 @@ module FormatCodeblocks = struct
             if lang |> String.split_on_char ' ' |> List.hd = "resi" then
               let {Res_driver.parsetree; comments; invalid; diagnostics} =
                 Res_driver.parse_interface_from_source ~for_printer:true
-                  ~display_filename:display_filename ~source:code_with_offset
+                  ~display_filename ~source:code_with_offset
               in
               if invalid then (
                 report_parse_error diagnostics;
@@ -793,7 +797,7 @@ module FormatCodeblocks = struct
             else
               let {Res_driver.parsetree; comments; invalid; diagnostics} =
                 Res_driver.parse_implementation_from_source ~for_printer:true
-                  ~display_filename:display_filename ~source:code_with_offset
+                  ~display_filename ~source:code_with_offset
               in
               if invalid then (
                 report_parse_error diagnostics;
@@ -812,7 +816,8 @@ module FormatCodeblocks = struct
           let mapped_code_block =
             Cmarkit.Block.Code_block.make ~layout ~info_string formatted_code
           in
-          Cmarkit.Mapper.ret (Cmarkit.Block.Code_block (mapped_code_block, meta))
+          Cmarkit.Mapper.ret
+            (Cmarkit.Block.Code_block (mapped_code_block, meta))
         | _ -> Cmarkit.Mapper.default)
       | _ -> Cmarkit.Mapper.default
     in
@@ -825,7 +830,8 @@ module FormatCodeblocks = struct
     in
     (new_content, !had_code_blocks)
 
-  let format_code_blocks_in_file ~output_mode ~transform_assert_equal ~entry_point_file =
+  let format_code_blocks_in_file ~output_mode ~transform_assert_equal
+      ~entry_point_file =
     let path =
       match Filename.is_relative entry_point_file with
       | true -> Unix.realpath entry_point_file
@@ -846,7 +852,8 @@ module FormatCodeblocks = struct
               let formatted_contents, had_code_blocks =
                 format_rescript_code_blocks ~transform_assert_equal ~add_error
                   ~display_filename
-                  ~markdown_block_start_line:pexp_loc.loc_start.pos_lnum contents
+                  ~markdown_block_start_line:pexp_loc.loc_start.pos_lnum
+                  contents
               in
               if had_code_blocks && formatted_contents <> contents then
                 ( name,
@@ -1098,8 +1105,8 @@ module ExtractCodeblocks = struct
 
     result
 
-  let extract_rescript_code_blocks content ~transform_assert_equal ~display_filename
-      ~add_error ~markdown_block_start_line =
+  let extract_rescript_code_blocks content ~transform_assert_equal
+      ~display_filename ~add_error ~markdown_block_start_line =
     (* Detect ReScript code blocks. *)
     let code_blocks = ref [] in
     let add_code_block code_block = code_blocks := code_block :: !code_blocks in
@@ -1133,7 +1140,7 @@ module ExtractCodeblocks = struct
             if lang |> String.split_on_char ' ' |> List.hd = "resi" then
               let {Res_driver.parsetree; comments; invalid; diagnostics} =
                 Res_driver.parse_interface_from_source ~for_printer:true
-                  ~display_filename:display_filename ~source:code_with_offset
+                  ~display_filename ~source:code_with_offset
               in
               if invalid then (
                 report_parse_error diagnostics;
@@ -1143,7 +1150,7 @@ module ExtractCodeblocks = struct
             else
               let {Res_driver.parsetree; comments; invalid; diagnostics} =
                 Res_driver.parse_implementation_from_source ~for_printer:true
-                  ~display_filename:display_filename ~source:code_with_offset
+                  ~display_filename ~source:code_with_offset
               in
               if invalid then (
                 report_parse_error diagnostics;
@@ -1206,8 +1213,8 @@ module ExtractCodeblocks = struct
             ~process_docstrings:(fun ~id ~name code ->
               let code_blocks =
                 code
-                |> extract_rescript_code_blocks ~transform_assert_equal ~add_error
-                     ~display_filename ~markdown_block_start_line:1
+                |> extract_rescript_code_blocks ~transform_assert_equal
+                     ~add_error ~display_filename ~markdown_block_start_line:1
               in
               if List.length code_blocks > 1 then
                 code_blocks |> List.rev

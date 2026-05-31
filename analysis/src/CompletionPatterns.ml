@@ -10,16 +10,19 @@ let is_pattern_tuple pat =
   | Ppat_tuple _ -> true
   | _ -> false
 
-let rec traverse_tuple_items tuple_items ~next_pattern_path ~result_from_found_item_num
-    ~loc_has_cursor ~first_char_before_cursor_no_white ~pos_before_cursor =
+let rec traverse_tuple_items tuple_items ~next_pattern_path
+    ~result_from_found_item_num ~loc_has_cursor
+    ~first_char_before_cursor_no_white ~pos_before_cursor =
   let item_num = ref (-1) in
   let item_with_cursor =
     tuple_items
     |> List.find_map (fun pat ->
            item_num := !item_num + 1;
            pat
-           |> traverse_pattern ~pattern_path:(next_pattern_path !item_num)
-                ~loc_has_cursor ~first_char_before_cursor_no_white ~pos_before_cursor)
+           |> traverse_pattern
+                ~pattern_path:(next_pattern_path !item_num)
+                ~loc_has_cursor ~first_char_before_cursor_no_white
+                ~pos_before_cursor)
   in
   match (item_with_cursor, first_char_before_cursor_no_white) with
   | None, Some ',' ->
@@ -30,7 +33,8 @@ let rec traverse_tuple_items tuple_items ~next_pattern_path ~result_from_found_i
     |> List.iteri (fun index pat ->
            if pos_before_cursor >= Loc.start pat.Parsetree.ppat_loc then
              pos_num := index);
-    if !pos_num > -1 then Some ("", result_from_found_item_num !pos_num) else None
+    if !pos_num > -1 then Some ("", result_from_found_item_num !pos_num)
+    else None
   | v, _ -> v
 
 and traverse_pattern (pat : Parsetree.pattern) ~pattern_path ~loc_has_cursor
@@ -51,8 +55,8 @@ and traverse_pattern (pat : Parsetree.pattern) ~pattern_path ~loc_has_cursor
   | Ppat_exception p
   | Ppat_open (_, p) ->
     p
-    |> traverse_pattern ~pattern_path ~loc_has_cursor ~first_char_before_cursor_no_white
-         ~pos_before_cursor
+    |> traverse_pattern ~pattern_path ~loc_has_cursor
+         ~first_char_before_cursor_no_white ~pos_before_cursor
   | Ppat_or (p1, p2) -> (
     let or_pat_with_item =
       [p1; p2]
@@ -96,8 +100,8 @@ and traverse_pattern (pat : Parsetree.pattern) ~pattern_path ~loc_has_cursor
                   ~first_char_before_cursor_no_white ~pos_before_cursor)
   | Ppat_tuple tuple_items when loc_has_cursor pat.ppat_loc ->
     tuple_items
-    |> traverse_tuple_items ~first_char_before_cursor_no_white ~pos_before_cursor
-         ~loc_has_cursor
+    |> traverse_tuple_items ~first_char_before_cursor_no_white
+         ~pos_before_cursor ~loc_has_cursor
          ~next_pattern_path:(fun item_num ->
            [Completable.NTupleItem {item_num}] @ pattern_path)
          ~result_from_found_item_num:(fun item_num ->
@@ -116,7 +120,8 @@ and traverse_pattern (pat : Parsetree.pattern) ~pattern_path ~loc_has_cursor
             f.Parsetree.ppat_loc
             |> CursorPosition.classify_loc ~pos:pos_before_cursor )
         with
-        | Longident.Lident fname, HasCursor -> field_with_cursor := Some (fname, f)
+        | Longident.Lident fname, HasCursor ->
+          field_with_cursor := Some (fname, f)
         | Lident fname, _ when is_pattern_hole f ->
           field_with_pat_hole := Some (fname, f)
         | _ -> ());
@@ -147,7 +152,8 @@ and traverse_pattern (pat : Parsetree.pattern) ~pattern_path ~loc_has_cursor
              ~pattern_path:
                ([Completable.NFollowRecordField {field_name = fname}]
                @ pattern_path)
-             ~loc_has_cursor ~first_char_before_cursor_no_white ~pos_before_cursor)
+             ~loc_has_cursor ~first_char_before_cursor_no_white
+             ~pos_before_cursor)
     | None, None -> (
       (* Figure out if we're completing for a new field.
          If the cursor is inside of the record body, but no field has the cursor,
@@ -210,7 +216,10 @@ and traverse_pattern (pat : Parsetree.pattern) ~pattern_path ~loc_has_cursor
          ~pattern_path:
            ([
               Completable.NVariantPayload
-                {constructor_name = Utils.get_unqualified_name txt; item_num = 0};
+                {
+                  constructor_name = Utils.get_unqualified_name txt;
+                  item_num = 0;
+                };
             ]
            @ pattern_path)
   | Ppat_variant

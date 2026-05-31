@@ -13,7 +13,8 @@ let normalize_path ~aliases path =
     | Some path1 ->
       let new_path = List.rev (path1 @ rest_rev) in
       if !Cli.debug then
-        Log_.item "Resolve Alias: %s to %s@." (path |> DcePath.to_string)
+        Log_.item "Resolve Alias: %s to %s@."
+          (path |> DcePath.to_string)
           (new_path |> DcePath.to_string);
       new_path)
   | _ -> path

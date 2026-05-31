@@ -9,6 +9,7 @@ let warning_dead_exception = "Warning Dead Exception"
 let warning_dead_module = "Warning Dead Module"
 let warning_dead_type = "Warning Dead Type"
 let warning_dead_value = "Warning Dead Value"
-let warning_dead_value_with_side_effects = "Warning Dead Value With Side Effects"
+let warning_dead_value_with_side_effects =
+  "Warning Dead Value With Side Effects"
 let warning_redundant_optional_argument = "Warning Redundant Optional Argument"
 let warning_unused_argument = "Warning Unused Argument"

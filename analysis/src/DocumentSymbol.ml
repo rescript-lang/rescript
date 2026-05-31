@@ -10,7 +10,7 @@ let command ~path =
     then
       let range = Utils.cmt_loc_to_range loc in
       let symbol =
-        Lsp.Types.DocumentSymbol.create ~name ~range ~selection_range:range
+        Lsp.Types.DocumentSymbol.create ~name ~range ~selectionRange:range
           ~children:[] ~kind ()
       in
       symbols := symbol :: !symbols
@@ -64,7 +64,9 @@ let command ~path =
   let expr (iterator : Ast_iterator.iterator) (e : Parsetree.expression) =
     (match e.pexp_desc with
     | Pexp_letmodule ({txt}, mod_expr, _) ->
-      add_symbol txt {e.pexp_loc with loc_end = mod_expr.pmod_loc.loc_end} Module
+      add_symbol txt
+        {e.pexp_loc with loc_end = mod_expr.pmod_loc.loc_end}
+        Module
     | Pexp_letexception (ec, _) -> process_extension_constructor ec
     | _ -> ());
     Ast_iterator.default_iterator.expr iterator e
@@ -74,7 +76,8 @@ let command ~path =
     (match item.pstr_desc with
     | Pstr_value _ -> ()
     | Pstr_primitive vd -> process_value_description vd
-    | Pstr_type (_, typ_decls) -> typ_decls |> List.iter process_type_declaration
+    | Pstr_type (_, typ_decls) ->
+      typ_decls |> List.iter process_type_declaration
     | Pstr_module mb -> process_module_binding mb
     | Pstr_recmodule mbs -> mbs |> List.iter process_module_binding
     | Pstr_exception ec -> process_extension_constructor ec
@@ -85,7 +88,8 @@ let command ~path =
       (item : Parsetree.signature_item) =
     (match item.psig_desc with
     | Psig_value vd -> process_value_description vd
-    | Psig_type (_, typ_decls) -> typ_decls |> List.iter process_type_declaration
+    | Psig_type (_, typ_decls) ->
+      typ_decls |> List.iter process_type_declaration
     | Psig_module md -> process_module_declaration md
     | Psig_recmodule mds -> mds |> List.iter process_module_declaration
     | Psig_exception ec -> process_extension_constructor ec
@@ -178,7 +182,9 @@ let command ~path =
       |> add_sorted_symbols_to_children ~sorted_symbols:rest
   in
   let sorted_symbols = !symbols |> List.sort compare_symbol in
-  let symbols_with_children = [] |> add_sorted_symbols_to_children ~sorted_symbols in
+  let symbols_with_children =
+    [] |> add_sorted_symbols_to_children ~sorted_symbols
+  in
   `List (symbols_with_children |> List.map Lsp.Types.DocumentSymbol.yojson_of_t)
   |> Yojson.Safe.pretty_to_string ~std:true
   |> print_endline

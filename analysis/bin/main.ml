@@ -142,7 +142,9 @@ let main () =
   | [_; "definition"; path; line; col] ->
     Cli.definition ~path ~pos:(int_of_string line, int_of_string col) ~debug
   | [_; "typeDefinition"; path; line; col] ->
-    Cli.type_definition ~path ~pos:(int_of_string line, int_of_string col) ~debug
+    Cli.type_definition ~path
+      ~pos:(int_of_string line, int_of_string col)
+      ~debug
   | [_; "documentSymbol"; path] -> DocumentSymbol.command ~path
   | [_; "hover"; path; line; col; current_file; supports_markdown_links] ->
     Cli.hover ~path
@@ -153,7 +155,13 @@ let main () =
         | "true" -> true
         | _ -> false)
   | [
-   _; "signatureHelp"; path; line; col; current_file; allow_for_constructor_payloads;
+   _;
+   "signatureHelp";
+   path;
+   line;
+   col;
+   current_file;
+   allow_for_constructor_payloads;
   ] ->
     Cli.signature_help ~path
       ~pos:(int_of_string line, int_of_string col)
@@ -167,8 +175,9 @@ let main () =
       ~pos:(int_of_string line_start, int_of_string line_end)
       ~max_length ~debug
   | [_; "codeLens"; path] -> Cli.code_lens ~path ~debug
-  | [_; "codeAction"; path; start_line; start_col; end_line; end_col; current_file]
-    ->
+  | [
+   _; "codeAction"; path; start_line; start_col; end_line; end_col; current_file;
+  ] ->
     Cli.code_action ~path
       ~start_pos:(int_of_string start_line, int_of_string start_col)
       ~end_pos:(int_of_string end_line, int_of_string end_col)
@@ -195,7 +204,8 @@ let main () =
     Cli.rename ~path
       ~pos:(int_of_string line, int_of_string col)
       ~new_name ~debug
-  | [_; "semanticTokens"; current_file] -> Cli.semantic_tokens ~path:current_file
+  | [_; "semanticTokens"; current_file] ->
+    Cli.semantic_tokens ~path:current_file
   | [_; "createInterface"; path; cmi_file] ->
     `String (CreateInterface.command ~path ~cmi_file)
     |> Yojson.Safe.pretty_to_string ~std:true

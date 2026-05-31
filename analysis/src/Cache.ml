@@ -23,7 +23,8 @@ let read_cache filename =
 
 let delete_cache filename = try Sys.remove filename with _ -> ()
 
-let target_file_from_lib_bs lib_bs = Filename.concat lib_bs ".project-files-cache"
+let target_file_from_lib_bs lib_bs =
+  Filename.concat lib_bs ".project-files-cache"
 
 let cache_project (package : package) =
   let cached =

@@ -50,7 +50,9 @@ let rec has_tvar (ty : Types.type_expr) : bool =
   | Tpackage (_, _, tyl) -> List.exists has_tvar tyl
 
 let find_type_via_loc ~full ~debug (loc : Location.t) =
-  match References.get_loc_item ~full ~pos:(Pos.of_lexing loc.loc_end) ~debug with
+  match
+    References.get_loc_item ~full ~pos:(Pos.of_lexing loc.loc_end) ~debug
+  with
   | Some {loc_type = Typed (_, typ_expr, _)} -> Some typ_expr
   | _ -> None
 
@@ -73,10 +75,13 @@ let print_record_from_fields ?name (fields : field list) =
     |> String.concat ", ")
   ^ "}"
 
-let rec extracted_type_to_string ?(name_only = false) ?(inner = false) = function
+let rec extracted_type_to_string ?(name_only = false) ?(inner = false) =
+  function
   | Tuple (_, _, typ) | Tpolyvariant {type_expr = typ} | Tfunction {typ} ->
     if inner then
-      try typ |> path_from_type_expr |> Option.get |> SharedTypes.path_ident_to_string
+      try
+        typ |> path_from_type_expr |> Option.get
+        |> SharedTypes.path_ident_to_string
       with _ -> ""
     else Shared.type_to_string typ
   | Trecord {definition; fields} ->
@@ -84,7 +89,8 @@ let rec extracted_type_to_string ?(name_only = false) ?(inner = false) = functio
       match definition with
       | `TypeExpr typ -> (
         try
-          typ |> path_from_type_expr |> Option.get |> SharedTypes.path_ident_to_string
+          typ |> path_from_type_expr |> Option.get
+          |> SharedTypes.path_ident_to_string
         with _ -> "")
       | `NameOnly name -> name
     in
@@ -99,12 +105,15 @@ let rec extracted_type_to_string ?(name_only = false) ?(inner = false) = functio
   | Toption (_, TypeExpr inner_typ) ->
     "option<" ^ Shared.type_to_string inner_typ ^ ">"
   | Tresult {ok_type; error_type} ->
-    "result<" ^ Shared.type_to_string ok_type ^ ", "
+    "result<"
+    ^ Shared.type_to_string ok_type
+    ^ ", "
     ^ Shared.type_to_string error_type
     ^ ">"
   | Toption (_, ExtractedType inner_typ) ->
     "option<" ^ extracted_type_to_string ~inner:true inner_typ ^ ">"
-  | Tpromise (_, inner_typ) -> "promise<" ^ Shared.type_to_string inner_typ ^ ">"
+  | Tpromise (_, inner_typ) ->
+    "promise<" ^ Shared.type_to_string inner_typ ^ ">"
   | Tvariant {variant_decl; variant_name} ->
     if inner || name_only then variant_name
     else Shared.decl_to_string variant_name variant_decl
@@ -225,7 +234,8 @@ let instantiate_type2 ?(type_arg_context : type_arg_context option)
 
 let rec extract_record_type ~env ~package (t : Types.type_expr) =
   match t.desc with
-  | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> extract_record_type ~env ~package t1
+  | Tlink t1 | Tsubst t1 | Tpoly (t1, []) ->
+    extract_record_type ~env ~package t1
   | Tconstr (path, type_args, _) -> (
     match References.dig_constructor ~env ~package path with
     | Some (env, ({item = {kind = Record fields}} as typ)) ->
@@ -239,10 +249,7 @@ let rec extract_record_type ~env ~package (t : Types.type_expr) =
                {field with typ = field_typ})
       in
       Some (env, fields, typ)
-    | Some
-        ( env,
-          {item = {decl = {type_manifest = Some t1; type_params = type_params}}}
-        ) ->
+    | Some (env, {item = {decl = {type_manifest = Some t1; type_params}}}) ->
       let t1 = t1 |> instantiate_type ~type_params ~type_args in
       extract_record_type ~env ~package t1
     | _ -> None)
@@ -250,14 +257,12 @@ let rec extract_record_type ~env ~package (t : Types.type_expr) =
 
 let rec extract_object_type ~env ~package (t : Types.type_expr) =
   match t.desc with
-  | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> extract_object_type ~env ~package t1
+  | Tlink t1 | Tsubst t1 | Tpoly (t1, []) ->
+    extract_object_type ~env ~package t1
   | Tobject (t_obj, _) -> Some (env, t_obj)
   | Tconstr (path, type_args, _) -> (
     match References.dig_constructor ~env ~package path with
-    | Some
-        ( env,
-          {item = {decl = {type_manifest = Some t1; type_params = type_params}}}
-        ) ->
+    | Some (env, {item = {decl = {type_manifest = Some t1; type_params}}}) ->
       let t1 = t1 |> instantiate_type ~type_params ~type_args in
       extract_object_type ~env ~package t1
     | _ -> None)
@@ -270,11 +275,7 @@ let extract_function_type ~env ~package ?(dig_into = true) typ =
     | Tarrow (arg, t_ret, _, _) -> loop ~env ((arg.lbl, arg.typ) :: acc) t_ret
     | Tconstr (path, type_args, _) when dig_into -> (
       match References.dig_constructor ~env ~package path with
-      | Some
-          ( env,
-            {
-              item = {decl = {type_manifest = Some t1; type_params = type_params}};
-            } ) ->
+      | Some (env, {item = {decl = {type_manifest = Some t1; type_params}}}) ->
         let t1 = t1 |> instantiate_type ~type_params ~type_args in
         loop ~env acc t1
       | _ -> (List.rev acc, t))
@@ -289,11 +290,7 @@ let extract_function_type_with_env ~env ~package typ =
     | Tarrow (arg, t_ret, _, _) -> loop ~env ((arg.lbl, arg.typ) :: acc) t_ret
     | Tconstr (path, type_args, _) -> (
       match References.dig_constructor ~env ~package path with
-      | Some
-          ( _env,
-            {
-              item = {decl = {type_manifest = Some t1; type_params = type_params}};
-            } ) ->
+      | Some (_env, {item = {decl = {type_manifest = Some t1; type_params}}}) ->
         let t1 = t1 |> instantiate_type ~type_params ~type_args in
         loop ~env acc t1
       | Some _ -> (List.rev acc, t, env)
@@ -302,10 +299,11 @@ let extract_function_type_with_env ~env ~package typ =
   in
   loop ~env [] typ
 
-let maybe_set_type_arg_ctx ?type_arg_context_from_type_manifest ~type_params ~type_args env
-    =
+let maybe_set_type_arg_ctx ?type_arg_context_from_type_manifest ~type_params
+    ~type_args env =
   match type_arg_context_from_type_manifest with
-  | Some type_arg_context_from_type_manifest -> Some type_arg_context_from_type_manifest
+  | Some type_arg_context_from_type_manifest ->
+    Some type_arg_context_from_type_manifest
   | None ->
     let type_arg_context =
       if List.length type_params > 0 then Some {env; type_params; type_args}
@@ -323,17 +321,16 @@ let maybe_set_type_arg_ctx ?type_arg_context_from_type_manifest ~type_params ~ty
 let extract_function_type2 ?type_arg_context ~env ~package typ =
   let rec loop ?type_arg_context ~env acc (t : Types.type_expr) =
     match t.desc with
-    | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> loop ?type_arg_context ~env acc t1
+    | Tlink t1 | Tsubst t1 | Tpoly (t1, []) ->
+      loop ?type_arg_context ~env acc t1
     | Tarrow (arg, t_ret, _, _) ->
       loop ?type_arg_context ~env ((arg.lbl, arg.typ) :: acc) t_ret
     | Tconstr (path, type_args, _) -> (
       match References.dig_constructor ~env ~package path with
-      | Some
-          ( env,
-            {
-              item = {decl = {type_manifest = Some t1; type_params = type_params}};
-            } ) ->
-        let type_arg_context = maybe_set_type_arg_ctx ~type_params ~type_args env in
+      | Some (env, {item = {decl = {type_manifest = Some t1; type_params}}}) ->
+        let type_arg_context =
+          maybe_set_type_arg_ctx ~type_params ~type_args env
+        in
         loop ?type_arg_context ~env acc t1
       | _ -> (List.rev acc, t, type_arg_context))
     | _ -> (List.rev acc, t, type_arg_context)
@@ -342,14 +339,17 @@ let extract_function_type2 ?type_arg_context ~env ~package typ =
 
 let rec extract_type ?(print_opening_debug = true)
     ?(type_arg_context : type_arg_context option)
-    ?(type_arg_context_from_type_manifest : type_arg_context option) ~env ~package
-    (t : Types.type_expr) =
-  let maybe_set_type_arg_ctx = maybe_set_type_arg_ctx ?type_arg_context_from_type_manifest in
+    ?(type_arg_context_from_type_manifest : type_arg_context option) ~env
+    ~package (t : Types.type_expr) =
+  let maybe_set_type_arg_ctx =
+    maybe_set_type_arg_ctx ?type_arg_context_from_type_manifest
+  in
   if Debug.verbose () && print_opening_debug then
     Printf.printf
       "[extract_type]--> starting extraction of type: %s, in env: %s. Has type \
        arg ctx: %b\n"
-      (Shared.type_to_string t) (Debug.debug_print_env env)
+      (Shared.type_to_string t)
+      (Debug.debug_print_env env)
       (Option.is_some type_arg_context);
   (match type_arg_context with
   | None -> ()
@@ -378,12 +378,14 @@ let rec extract_type ?(print_opening_debug = true)
   | Tarrow _ -> (
     match extract_function_type2 ?type_arg_context t ~env ~package with
     | args, t_ret, type_arg_context when args <> [] ->
-      Some (Tfunction {env; args; typ = t; return_type = t_ret}, type_arg_context)
+      Some
+        (Tfunction {env; args; typ = t; return_type = t_ret}, type_arg_context)
     | _args, _tRet, _typeArgContext -> None)
   | Tconstr (path, type_args, _) -> (
     if Debug.verbose () then
       Printf.printf "[extract_type]--> digging for type %s in %s\n"
-        (Path.name path) (Debug.debug_print_env env);
+        (Path.name path)
+        (Debug.debug_print_env env);
     match References.dig_constructor ~env ~package path with
     | Some
         ( env_from_declaration,
@@ -395,12 +397,13 @@ let rec extract_type ?(print_opening_debug = true)
          This is because the manifest itself doesn't have type args and an env that can
          be used to instantiate. *)
       let type_arg_context =
-        maybe_set_type_arg_ctx ~type_params:type_params ~type_args env
+        maybe_set_type_arg_ctx ~type_params ~type_args env
       in
       t1
       |> extract_type ?type_arg_context_from_type_manifest:type_arg_context
            ~env:env_from_declaration ~package
-    | Some (env_from_item, {name; item = {decl; kind = Type.Variant constructors}})
+    | Some
+        (env_from_item, {name; item = {decl; kind = Type.Variant constructors}})
       ->
       if Debug.verbose () then print_endline "[extract_type]--> found variant";
       let type_arg_context =
@@ -424,9 +427,10 @@ let rec extract_type ?(print_opening_debug = true)
       Some
         ( Trecord {env = env_from_declaration; fields; definition = `TypeExpr t},
           type_arg_context )
-    | Some (env_from_declaration, {item = {name = "t"; decl = {type_params}}}) ->
+    | Some (env_from_declaration, {item = {name = "t"; decl = {type_params}}})
+      ->
       let type_arg_context =
-        maybe_set_type_arg_ctx ~type_params:type_params ~type_args env
+        maybe_set_type_arg_ctx ~type_params ~type_args env
       in
       Some (TtypeT {env = env_from_declaration; path}, type_arg_context)
     | None ->
@@ -444,7 +448,8 @@ let rec extract_type ?(print_opening_debug = true)
       |> List.map (fun (label, field) ->
              {
                name = label;
-               display_name = Utils.print_maybe_exotic_ident ~allow_uident:true label;
+               display_name =
+                 Utils.print_maybe_exotic_ident ~allow_uident:true label;
                args =
                  (* Multiple arguments are represented as a Ttuple, while a single argument is just the type expression itself. *)
                  (match field with
@@ -539,7 +544,8 @@ let rec resolve_type_for_pipe_completion ~env ~package ~lhs_loc ~full
   match typ_from_loc with
   | Some ({desc = Tvar _} as t) -> (env, t)
   | Some typ_from_loc ->
-    typ_from_loc |> resolve_type_for_pipe_completion ~lhs_loc ~env ~package ~full
+    typ_from_loc
+    |> resolve_type_for_pipe_completion ~lhs_loc ~env ~package ~full
   | None ->
     let rec dig_to_relevant_type ~env ~package (t : Types.type_expr) =
       match t.desc with
@@ -568,7 +574,8 @@ let extract_type_from_resolved_type (typ : Type.t) ~env ~full =
   | Abstract _ | Open -> (
     match typ.decl.type_manifest with
     | None -> None
-    | Some t -> t |> extract_type ~env ~package:full.package |> get_extracted_type)
+    | Some t ->
+      t |> extract_type ~env ~package:full.package |> get_extracted_type)
 
 (** The context we just came from as we resolve the nested structure. *)
 type ctx = Rfield of string  (** A record field of name *)
@@ -585,7 +592,8 @@ let rec resolve_nested ?type_arg_context ~env ~full ~nested ?ctx
   | None -> ()
   | Some type_arg_context ->
     if Debug.verbose () then
-      Printf.printf "[nested]--> %s" (debug_log_type_arg_context type_arg_context));
+      Printf.printf "[nested]--> %s"
+        (debug_log_type_arg_context type_arg_context));
   match nested with
   | [] ->
     if Debug.verbose () then
@@ -632,7 +640,8 @@ let rec resolve_nested ?type_arg_context ~env ~full ~nested ?ctx
 
         if Debug.verbose () then
           Printf.printf "[nested]--> extracting from type %s in env %s\n"
-            (Shared.type_to_string typ) (Debug.debug_print_env env);
+            (Shared.type_to_string typ)
+            (Debug.debug_print_env env);
         typ
         |> extract_type ~env ~package:full.package
         |> Utils.Option.flat_map (fun (typ, type_arg_context) ->
@@ -674,7 +683,8 @@ let rec resolve_nested ?type_arg_context ~env ~full ~nested ?ctx
       |> extract_type ~env ~package:full.package
       |> Utils.Option.flat_map (fun (t, type_arg_context) ->
              t |> resolve_nested ?type_arg_context ~env ~full ~nested)
-    | NVariantPayload {constructor_name = "Ok"; item_num = 0}, Tresult {ok_type} ->
+    | NVariantPayload {constructor_name = "Ok"; item_num = 0}, Tresult {ok_type}
+      ->
       if Debug.verbose () then print_endline "[nested]--> moving into result Ok";
       ok_type
       |> extract_type ~env ~package:full.package
@@ -755,14 +765,16 @@ let rec resolve_nested ?type_arg_context ~env ~full ~nested ?ctx
 
 let find_type_of_record_field fields ~field_name =
   match
-    fields |> List.find_opt (fun (field : field) -> field.fname.txt = field_name)
+    fields
+    |> List.find_opt (fun (field : field) -> field.fname.txt = field_name)
   with
   | None -> None
   | Some {typ; optional} ->
     let typ = if optional then Utils.unwrap_if_option typ else typ in
     Some typ
 
-let find_type_of_constructor_arg constructors ~constructor_name ~payload_num ~env =
+let find_type_of_constructor_arg constructors ~constructor_name ~payload_num
+    ~env =
   match
     constructors
     |> List.find_opt (fun (c : Constructor.t) -> c.cname.txt = constructor_name)
@@ -811,11 +823,12 @@ let rec resolve_nested_pattern_path (typ : inner_type) ~env ~full ~nested =
         match List.nth_opt tuple_items item_num with
         | None -> None
         | Some typ -> Some (TypeExpr typ, env))
-      | NVariantPayload {constructor_name; item_num}, Tvariant {env; constructors}
-        -> (
+      | ( NVariantPayload {constructor_name; item_num},
+          Tvariant {env; constructors} ) -> (
         match
           constructors
-          |> find_type_of_constructor_arg ~constructor_name ~payload_num:item_num ~env
+          |> find_type_of_constructor_arg ~constructor_name
+               ~payload_num:item_num ~env
         with
         | Some typ -> Some (typ, env)
         | None -> None)
@@ -823,7 +836,8 @@ let rec resolve_nested_pattern_path (typ : inner_type) ~env ~full ~nested =
           Tpolyvariant {env; constructors} ) -> (
         match
           constructors
-          |> find_type_of_polyvariant_arg ~constructor_name ~payload_num:item_num
+          |> find_type_of_polyvariant_arg ~constructor_name
+               ~payload_num:item_num
         with
         | Some typ -> Some (TypeExpr typ, env)
         | None -> None)
@@ -864,11 +878,12 @@ let rec resolve_nested_pattern_path (typ : inner_type) ~env ~full ~nested =
           |> Utils.Option.flat_map (fun typ ->
                  ExtractedType typ
                  |> resolve_nested_pattern_path ~env ~full ~nested))
-      | NVariantPayload {constructor_name; item_num}, Tvariant {env; constructors}
-        -> (
+      | ( NVariantPayload {constructor_name; item_num},
+          Tvariant {env; constructors} ) -> (
         match
           constructors
-          |> find_type_of_constructor_arg ~constructor_name ~payload_num:item_num ~env
+          |> find_type_of_constructor_arg ~constructor_name
+               ~payload_num:item_num ~env
         with
         | Some typ -> typ |> resolve_nested_pattern_path ~env ~full ~nested
         | None -> None)
@@ -876,7 +891,8 @@ let rec resolve_nested_pattern_path (typ : inner_type) ~env ~full ~nested =
           Tpolyvariant {env; constructors} ) -> (
         match
           constructors
-          |> find_type_of_polyvariant_arg ~constructor_name ~payload_num:item_num
+          |> find_type_of_polyvariant_arg ~constructor_name
+               ~payload_num:item_num
         with
         | Some typ ->
           TypeExpr typ |> resolve_nested_pattern_path ~env ~full ~nested
@@ -895,8 +911,8 @@ let rec resolve_nested_pattern_path (typ : inner_type) ~env ~full ~nested =
       | _ -> None))
 
 let get_args ~env (t : Types.type_expr) ~full =
-  let rec get_args_loop ~env (t : Types.type_expr) ~full ~current_argument_position
-      =
+  let rec get_args_loop ~env (t : Types.type_expr) ~full
+      ~current_argument_position =
     match t.desc with
     | Tlink t1 | Tsubst t1 | Tpoly (t1, []) ->
       get_args_loop ~full ~env ~current_argument_position t1
@@ -904,7 +920,8 @@ let get_args ~env (t : Types.type_expr) ~full =
       (SharedTypes.Completable.Labelled l, t_arg)
       :: get_args_loop ~full ~env ~current_argument_position t_ret
     | Tarrow ({lbl = Optional {txt = l}; typ = t_arg}, t_ret, _, _) ->
-      (Optional l, t_arg) :: get_args_loop ~full ~env ~current_argument_position t_ret
+      (Optional l, t_arg)
+      :: get_args_loop ~full ~env ~current_argument_position t_ret
     | Tarrow ({lbl = Nolabel; typ = t_arg}, t_ret, _, _) ->
       (Unlabelled {argument_position = current_argument_position}, t_arg)
       :: get_args_loop ~full ~env
@@ -912,11 +929,7 @@ let get_args ~env (t : Types.type_expr) ~full =
            t_ret
     | Tconstr (path, type_args, _) -> (
       match References.dig_constructor ~env ~package:full.package path with
-      | Some
-          ( env,
-            {
-              item = {decl = {type_manifest = Some t1; type_params = type_params}};
-            } ) ->
+      | Some (env, {item = {decl = {type_manifest = Some t1; type_params}}}) ->
         let t1 = t1 |> instantiate_type ~type_params ~type_args in
         get_args_loop ~full ~env ~current_argument_position t1
       | _ -> [])
@@ -1004,7 +1017,9 @@ module Codegen = struct
         match extracted_type with
         | None -> []
         | Some extracted_type -> (
-          match extracted_type_to_exhaustive_patterns ~env ~full extracted_type with
+          match
+            extracted_type_to_exhaustive_patterns ~env ~full extracted_type
+          with
           | None -> []
           | Some patterns -> patterns)
       in
@@ -1021,13 +1036,17 @@ module Codegen = struct
         ok_type |> extract_type ~env ~package:full.package |> get_extracted_type
       in
       let extracted_error_type =
-        error_type |> extract_type ~env ~package:full.package |> get_extracted_type
+        error_type
+        |> extract_type ~env ~package:full.package
+        |> get_extracted_type
       in
       let expanded_ok_branches =
         match extracted_ok_type with
         | None -> []
         | Some extracted_type -> (
-          match extracted_type_to_exhaustive_patterns ~env ~full extracted_type with
+          match
+            extracted_type_to_exhaustive_patterns ~env ~full extracted_type
+          with
           | None -> []
           | Some patterns -> patterns)
       in
@@ -1035,7 +1054,9 @@ module Codegen = struct
         match extracted_error_type with
         | None -> []
         | Some extracted_type -> (
-          match extracted_type_to_exhaustive_patterns ~env ~full extracted_type with
+          match
+            extracted_type_to_exhaustive_patterns ~env ~full extracted_type
+          with
           | None -> []
           | Some patterns -> patterns)
       in
@@ -1050,7 +1071,9 @@ module Codegen = struct
     | _ -> None
 
   let extracted_type_to_exhaustive_cases ~env ~full extracted_type =
-    let patterns = extracted_type_to_exhaustive_patterns ~env ~full extracted_type in
+    let patterns =
+      extracted_type_to_exhaustive_patterns ~env ~full extracted_type
+    in
 
     match patterns with
     | None -> None
@@ -1061,7 +1084,8 @@ module Codegen = struct
                Ast_helper.Exp.case pat (mk_fail_with_exp ())))
 end
 
-let get_module_path_relative_to_env ~debug ~(env : QueryEnv.t) ~env_from_item path =
+let get_module_path_relative_to_env ~debug ~(env : QueryEnv.t) ~env_from_item
+    path =
   match path with
   | _ :: path_rev ->
     (* type path is relative to the completion environment
@@ -1113,7 +1137,8 @@ let path_to_element_props package =
 
 module StringSet = Set.Make (String)
 
-let get_extra_modules_to_complete_from_for_type ~env ~full (t : Types.type_expr) =
+let get_extra_modules_to_complete_from_for_type ~env ~full (t : Types.type_expr)
+    =
   let found_module_paths = ref StringSet.empty in
   let add_to_module_paths attributes =
     ProcessAttributes.find_editor_complete_from_attribute attributes
@@ -1152,19 +1177,20 @@ let get_first_fn_unlabelled_arg_type ~env ~full t =
 
 let make_additional_text_edits_for_removing_dot pos_of_dot =
   let start =
-    Lsp.Types.Position.create ~line:(fst pos_of_dot) ~character:(snd pos_of_dot - 1)
+    Lsp.Types.Position.create ~line:(fst pos_of_dot)
+      ~character:(snd pos_of_dot - 1)
   in
   let end_ =
     Lsp.Types.Position.create ~line:(fst pos_of_dot) ~character:(snd pos_of_dot)
   in
   [
-    Lsp.Types.TextEdit.create ~new_text:""
+    Lsp.Types.TextEdit.create ~newText:""
       ~range:(Lsp.Types.Range.create ~start ~end_);
   ]
 
 (** Turns a completion into a pipe completion. *)
-let transform_completion_to_pipe_completion ?(synthetic = false) ~env ?pos_of_dot
-    (completion : Completion.t) =
+let transform_completion_to_pipe_completion ?(synthetic = false) ~env
+    ?pos_of_dot (completion : Completion.t) =
   let name = completion.name in
   let name_with_pipe = "->" ^ name in
   Some
@@ -1181,7 +1207,8 @@ let transform_completion_to_pipe_completion ?(synthetic = false) ~env ?pos_of_do
       additional_text_edits =
         (match pos_of_dot with
         | None -> None
-        | Some pos_of_dot -> Some (make_additional_text_edits_for_removing_dot pos_of_dot));
+        | Some pos_of_dot ->
+          Some (make_additional_text_edits_for_removing_dot pos_of_dot));
     }
 
 (** This takes a type expr and the env that type expr was found in, and produces a globally unique
@@ -1248,14 +1275,16 @@ let filter_pipeable_functions ~env ~full ?synthetic ?target_type_id ?pos_of_dot
              match pos_of_dot with
              | None -> Some completion
              | Some pos_of_dot ->
-               transform_completion_to_pipe_completion ?synthetic ~env ~pos_of_dot
-                 completion)
+               transform_completion_to_pipe_completion ?synthetic ~env
+                 ~pos_of_dot completion)
            | _ -> None)
 
-let remove_current_module_if_needed ~env_completion_is_made_from completion_path =
+let remove_current_module_if_needed ~env_completion_is_made_from completion_path
+    =
   if
     List.length completion_path > 0
-    && List.hd completion_path = env_completion_is_made_from.QueryEnv.file.module_name
+    && List.hd completion_path
+       = env_completion_is_made_from.QueryEnv.file.module_name
   then List.tl completion_path
   else completion_path
 
@@ -1286,7 +1315,8 @@ let completion_path_from_maybe_builtin path =
   | Some ("char", _) -> Some ["Stdlib"; "Char"]
   | _ -> (
     match path |> Utils.expand_path |> List.rev with
-    | [main_module; "t"] when String.starts_with ~prefix:"Stdlib_" main_module ->
+    | [main_module; "t"] when String.starts_with ~prefix:"Stdlib_" main_module
+      ->
       (* Route Stdlib_X to Stdlib.X for proper completions without the Stdlib_ prefix *)
       Some (String.split_on_char '_' main_module)
     | ["Primitive_js_extern"; "null"] -> Some ["Stdlib"; "Null"]
