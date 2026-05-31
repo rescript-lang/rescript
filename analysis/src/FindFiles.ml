@@ -11,14 +11,14 @@ let getSourceDirectories ~includeDev ~baseDir config =
     | `Assoc _ -> (
       let dir =
         item |> YojsonHelpers.get "dir"
-        |> bind Yojson.Safe.Util.to_string_option
+        |> bind YojsonHelpers.string_opt
         |> Option.value ~default:"Must specify directory"
       in
       let typ =
         if includeDev then "lib"
         else
           item |> YojsonHelpers.get "type"
-          |> bind Yojson.Safe.Util.to_string_option
+          |> bind YojsonHelpers.string_opt
           |> Option.value ~default:"lib"
       in
 
@@ -94,22 +94,27 @@ let nameSpaceToName n =
   |> List.map String.capitalize_ascii
   |> String.concat ""
 
+type namespace_config =
+  | NamespaceDisabled
+  | NamespaceFromPackageName
+  | NamespaceExplicit of string
+
+let getNamespaceConfig config =
+  match config |> YojsonHelpers.get "namespace" with
+  | None | Some (`Bool false) -> NamespaceDisabled
+  | Some (`Bool true) -> NamespaceFromPackageName
+  | Some (`String namespace) -> NamespaceExplicit namespace
+  | Some _ -> NamespaceDisabled
+
 let getNamespace config =
-  let ns = config |> YojsonHelpers.get "namespace" in
-  let fromString = ns |> bind Yojson.Safe.Util.to_string_option in
-  let isNamespaced =
-    ns
-    |> bind Yojson.Safe.Util.to_bool_option
-    |> Option.value ~default:(fromString |> Option.is_some)
-  in
-  let either x y = if x = None then y else x in
-  if isNamespaced then
+  match getNamespaceConfig config with
+  | NamespaceDisabled -> None
+  | NamespaceExplicit namespace -> Some (nameSpaceToName namespace)
+  | NamespaceFromPackageName ->
     let fromName =
-      config |> YojsonHelpers.get "name"
-      |> bind Yojson.Safe.Util.to_string_option
+      config |> YojsonHelpers.get "name" |> bind YojsonHelpers.string_opt
     in
-    either fromString fromName |> Option.map nameSpaceToName
-  else None
+    fromName |> Option.map nameSpaceToName
 
 module StringSet = Set.Make (String)
 
@@ -122,9 +127,8 @@ let getPublic config =
     | None -> None
     | Some public ->
       Some
-        (public
-        |> List.filter_map Yojson.Safe.Util.to_string_option
-        |> StringSet.of_list))
+        (public |> List.filter_map YojsonHelpers.string_opt |> StringSet.of_list)
+    )
 
 let collectFiles directory =
   let allFiles = Files.readDirectory directory in
@@ -262,7 +266,7 @@ let findDependencyFiles base config =
     with
     | None, None -> []
     | Some deps, None | _, Some deps ->
-      deps |> List.filter_map Yojson.Safe.Util.to_string_option
+      deps |> List.filter_map YojsonHelpers.string_opt
   in
   let devDeps =
     match
@@ -275,7 +279,7 @@ let findDependencyFiles base config =
     with
     | None, None -> []
     | Some devDeps, None | _, Some devDeps ->
-      devDeps |> List.filter_map (fun x -> Some (Yojson.Safe.Util.to_string x))
+      devDeps |> List.filter_map YojsonHelpers.string_opt
   in
   let deps = deps @ devDeps in
   Log.log ("Dependencies: " ^ String.concat " " deps);

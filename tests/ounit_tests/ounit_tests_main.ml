@@ -19,6 +19,7 @@ let suites =
       Ounit_util_tests.suites;
       Ounit_js_analyzer_tests.suites;
       Ounit_jsx_loc_tests.suites;
+      Ounit_analysis_config_tests.suites;
     ]
 
 let _ = OUnit.run_test_tt_main suites
