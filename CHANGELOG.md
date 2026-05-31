@@ -31,6 +31,7 @@
 - Rewatch: use a single timestamp per compile pass. https://github.com/rescript-lang/rescript/pull/8428
 - Fix rewatch warning replay after early compile errors. https://github.com/rescript-lang/rescript/pull/8408
 - Fix formatting of trailing comments before `=` in let bindings. https://github.com/rescript-lang/rescript/pull/8444
+- Fix analysis namespace parsing after the Yojson migration. https://github.com/rescript-lang/rescript/pull/8454
 
 #### :memo: Documentation
 
