@@ -779,4 +779,4 @@ module Reanalyze_server = Reanalyze_server
 module Run_config = Run_config
 module Dce_config = Dce_config
 module Log_ = Log_
-module YojsonHelpers = YojsonHelpers
+module Yojson_helpers = Yojson_helpers

@@ -152,7 +152,7 @@ let new_bs_package ~root_path =
            let opens_from_compiler_flags =
              List.fold_left
                (fun opens item ->
-                 match item |> Yojson.Safe.Util.to_string_option with
+                 match item |> Yojson_helpers.string_opt with
                  | None -> opens
                  | Some s -> (
                    let parts = String.split_on_char ' ' s in
