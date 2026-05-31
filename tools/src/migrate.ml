@@ -1,8 +1,8 @@
 open Analysis
 
-module StringMap = Map.Make (String)
-module StringSet = Set.Make (String)
-module IntSet = Set.Make (Int)
+module String_map = Map.Make (String)
+module String_set = Set.Make (String)
+module Int_set = Set.Make (Int)
 
 (* Public API: migrate ~entryPointFile ~outputMode *)
 
@@ -11,7 +11,7 @@ let is_unit_expr (e : Parsetree.expression) =
   | Pexp_construct ({txt = Lident "()"}, None) -> true
   | _ -> false
 
-module InsertExt = struct
+module Insert_ext = struct
   type placeholder = Labelled of string | Unlabelled of int
 
   let ext_labelled = "insert.labelledArgument"
@@ -46,13 +46,13 @@ module InsertExt = struct
     | _ -> None
 end
 
-module ArgUtils = struct
+module Arg_utils = struct
   let map_expr_args mapper args =
     args
     |> List.map (fun (label, arg) -> (label, mapper.Ast_mapper.expr mapper arg))
 end
 
-module ExprUtils = struct
+module Expr_utils = struct
   let rec is_pipe_apply (e : Parsetree.expression) =
     match e.pexp_desc with
     | Pexp_apply {funct = {pexp_desc = Pexp_ident {txt = Lident "->"}}; _} ->
@@ -70,8 +70,8 @@ end
 
 type args = (Asttypes.arg_label * Parsetree.expression) list
 
-module MapperUtils = struct
-  module ApplyTransforms = struct
+module Mapper_utils = struct
+  module Apply_transforms = struct
     let attr_name = "apply.transforms"
 
     let split_attrs (attrs : Parsetree.attributes) =
@@ -124,19 +124,19 @@ module MapperUtils = struct
 
   (* Collect placeholder usages anywhere inside an expression. *)
   let collect_placeholders (expr : Parsetree.expression) =
-    let labelled = ref StringSet.empty in
-    let unlabelled = ref IntSet.empty in
+    let labelled = ref String_set.empty in
+    let unlabelled = ref Int_set.empty in
     let open Ast_iterator in
     let iter =
       {
         default_iterator with
         expr =
           (fun self e ->
-            (match InsertExt.placeholder_of_expr e with
-            | Some (InsertExt.Labelled name) ->
-              labelled := StringSet.add name !labelled
-            | Some (InsertExt.Unlabelled i) when i >= 0 ->
-              unlabelled := IntSet.add i !unlabelled
+            (match Insert_ext.placeholder_of_expr e with
+            | Some (Insert_ext.Labelled name) ->
+              labelled := String_set.add name !labelled
+            | Some (Insert_ext.Unlabelled i) when i >= 0 ->
+              unlabelled := Int_set.add i !unlabelled
             | _ -> ());
             default_iterator.expr self e);
       }
@@ -169,18 +169,18 @@ module MapperUtils = struct
         Ast_mapper.default_mapper with
         expr =
           (fun mapper exp ->
-            match InsertExt.placeholder_of_expr exp with
-            | Some (InsertExt.Labelled name) -> (
+            match Insert_ext.placeholder_of_expr exp with
+            | Some (Insert_ext.Labelled name) -> (
               match Hashtbl.find_opt labelled name with
               | Some arg ->
-                ApplyTransforms.attach_to_replacement ~attrs:exp.pexp_attributes
-                  arg
+                Apply_transforms.attach_to_replacement
+                  ~attrs:exp.pexp_attributes arg
               | None -> exp)
-            | Some (InsertExt.Unlabelled i) -> (
+            | Some (Insert_ext.Unlabelled i) -> (
               match Hashtbl.find_opt unlabelled i with
               | Some arg ->
-                ApplyTransforms.attach_to_replacement ~attrs:exp.pexp_attributes
-                  arg
+                Apply_transforms.attach_to_replacement
+                  ~attrs:exp.pexp_attributes arg
               | None -> exp)
             | None -> Ast_mapper.default_mapper.expr mapper exp);
       }
@@ -190,12 +190,14 @@ module MapperUtils = struct
   let build_labelled_args_map (template_args : args) =
     template_args
     |> List.filter_map (fun (label, arg) ->
-           match (label, InsertExt.placeholder_of_expr arg) with
+           match (label, Insert_ext.placeholder_of_expr arg) with
            | ( (Asttypes.Labelled {txt = label} | Optional {txt = label}),
-               Some (InsertExt.Labelled arg_name) ) ->
+               Some (Insert_ext.Labelled arg_name) ) ->
              Some (arg_name, label)
            | _ -> None)
-    |> List.fold_left (fun map (k, v) -> StringMap.add k v map) StringMap.empty
+    |> List.fold_left
+         (fun map (k, v) -> String_map.add k v map)
+         String_map.empty
 
   (*
      Pure computation of which template args to insert and which source args
@@ -213,8 +215,8 @@ module MapperUtils = struct
   *)
   type template_resolution = {
     args_to_insert: args;
-    labelled_to_drop: StringSet.t;
-    unlabelled_to_drop: IntSet.t;
+    labelled_to_drop: String_set.t;
+    unlabelled_to_drop: Int_set.t;
   }
 
   let get_template_args_to_insert mapper (template_args : args)
@@ -234,12 +236,12 @@ module MapperUtils = struct
       let labelled_used_here, unlabelled_used_here = collect_placeholders arg in
       let arg_replaced = replace_placeholders_in_expr arg source_args in
       ( (label, mapper.Ast_mapper.expr mapper arg_replaced) :: rev_args,
-        StringSet.union used_labelled labelled_used_here,
-        IntSet.union used_unlabelled unlabelled_used_here )
+        String_set.union used_labelled labelled_used_here,
+        Int_set.union used_unlabelled unlabelled_used_here )
     in
     let rev_args, labelled_set, unlabelled_set =
       List.fold_left accumulate_template_arg
-        ([], StringSet.empty, IntSet.empty)
+        ([], String_set.empty, Int_set.empty)
         template_args
     in
     {
@@ -258,11 +260,11 @@ module MapperUtils = struct
         (fun (idx, acc) (label, arg) ->
           match label with
           | Asttypes.Nolabel ->
-            let drop = IntSet.mem idx unlabelled_positions_to_drop in
+            let drop = Int_set.mem idx unlabelled_positions_to_drop in
             let idx' = idx + 1 in
             if drop then (idx', acc) else (idx', (label, arg) :: acc)
           | Asttypes.Labelled {txt} | Optional {txt} ->
-            if StringSet.mem txt labelled_names_to_drop then (idx, acc)
+            if String_set.mem txt labelled_names_to_drop then (idx, acc)
             else (idx, (label, arg) :: acc))
         (0, []) source_args
     in
@@ -273,11 +275,11 @@ module MapperUtils = struct
     |> List.map (fun (label, arg) ->
            match label with
            | Asttypes.Labelled ({loc; txt} as l) -> (
-             match StringMap.find_opt txt labelled_args_map with
+             match String_map.find_opt txt labelled_args_map with
              | Some mapped -> (Asttypes.Labelled {loc; txt = mapped}, arg)
              | None -> (Asttypes.Labelled l, arg))
            | Optional ({loc; txt} as l) -> (
-             match StringMap.find_opt txt labelled_args_map with
+             match String_map.find_opt txt labelled_args_map with
              | Some mapped -> (Optional {loc; txt = mapped}, arg)
              | None -> (Optional l, arg))
            | _ -> (label, arg))
@@ -300,9 +302,9 @@ module MapperUtils = struct
      position 0 in placeholder resolution, but is not part of the inner call's
      argument list. *)
   let shift_unlabelled_drop_for_piped set =
-    IntSet.fold
-      (fun i acc -> if i > 0 then IntSet.add (i - 1) acc else acc)
-      set IntSet.empty
+    Int_set.fold
+      (fun i acc -> if i > 0 then Int_set.add (i - 1) acc else acc)
+      set Int_set.empty
 
   let migrate_piped_args mapper ~template_args ~lhs ~pipe_args =
     let full_source_args = lhs :: pipe_args in
@@ -322,7 +324,7 @@ module MapperUtils = struct
     renamed @ resolution.args_to_insert
 end
 
-module TypeReplace = struct
+module Type_replace = struct
   let ext_replace_type = "replace.type"
 
   (* Extract a core_type payload from an expression extension of the form
@@ -336,7 +338,7 @@ module TypeReplace = struct
     | _ -> None
 end
 
-module ConstructorReplace = struct
+module Constructor_replace = struct
   type target = {lid: Longident.t Location.loc; attrs: Parsetree.attributes}
 
   let of_template (expr : Parsetree.expression) : target option =
@@ -377,8 +379,8 @@ let migrate_reference_from_info (deprecated_info : Cmt_utils.deprecated_used)
     | Pexp_apply
         {funct; args = [(_lbl, unit_arg)]; partial = _; transformed_jsx = _}
       when is_unit_expr unit_arg ->
-      MapperUtils.ApplyTransforms.attach_to_replacement ~attrs:e.pexp_attributes
-        funct
+      Mapper_utils.Apply_transforms.attach_to_replacement
+        ~attrs:e.pexp_attributes funct
     | _ -> e)
 
 module Template = struct
@@ -391,7 +393,7 @@ module Template = struct
       }
 
   let attach attrs e =
-    MapperUtils.ApplyTransforms.attach_to_replacement ~attrs e
+    Mapper_utils.Apply_transforms.attach_to_replacement ~attrs e
 
   let of_expr = function
     | {Parsetree.pexp_desc = Pexp_apply {funct; args; partial; transformed_jsx}}
@@ -424,7 +426,7 @@ module Template = struct
         {funct = template_funct; args = template_args; partial; transformed_jsx}
       ->
       let migrated_args =
-        MapperUtils.apply_migration_template mapper template_args call_args
+        Mapper_utils.apply_migration_template mapper template_args call_args
       in
       let res =
         mk_apply exp ~funct:template_funct ~args:migrated_args ~partial
@@ -438,9 +440,9 @@ module Template = struct
     | Apply
         {funct = template_funct; args = template_args; partial; transformed_jsx}
       ->
-      let pipe_args_mapped = ArgUtils.map_expr_args mapper pipe_args in
+      let pipe_args_mapped = Arg_utils.map_expr_args mapper pipe_args in
       let migrated_args =
-        MapperUtils.migrate_piped_args mapper ~template_args ~lhs
+        Mapper_utils.migrate_piped_args mapper ~template_args ~lhs
           ~pipe_args:pipe_args_mapped
       in
       let inner = Ast_helper.Exp.apply template_funct migrated_args in
@@ -457,7 +459,7 @@ module Template = struct
       ->
       if Ext_list.is_empty pipe_args then
         let resolution =
-          MapperUtils.get_template_args_to_insert mapper template_args []
+          Mapper_utils.get_template_args_to_insert mapper template_args []
         in
         if Ext_list.is_empty resolution.args_to_insert then
           let res =
@@ -488,9 +490,9 @@ module Template = struct
           partial = tpartial;
           transformed_jsx = tjsx;
         } ->
-      let pipe_args_mapped = ArgUtils.map_expr_args mapper pipe_args in
+      let pipe_args_mapped = Arg_utils.map_expr_args mapper pipe_args in
       let migrated_args =
-        MapperUtils.apply_migration_template mapper templ_args
+        Mapper_utils.apply_migration_template mapper templ_args
           ((Asttypes.Nolabel, lhs_exp) :: pipe_args_mapped)
       in
       let res =
@@ -515,7 +517,7 @@ let apply_template_direct mapper template_expr call_args exp =
 let apply_single_step_or_piped ~mapper
     ~(deprecated_info : Cmt_utils.deprecated_used) ~lhs ~lhs_exp ~pipe_args
     ~funct exp =
-  let is_single_pipe_step = not (ExprUtils.is_pipe_apply lhs_exp) in
+  let is_single_pipe_step = not (Expr_utils.is_pipe_apply lhs_exp) in
   let in_pipe_template =
     match deprecated_info.migration_in_pipe_chain_template with
     | Some e -> Template.of_expr_with_attrs e
@@ -583,7 +585,7 @@ let make_mapper (deprecated_used : Cmt_utils.deprecated_used list) =
     |> List.filter_map (fun (d : Cmt_utils.deprecated_used) ->
            match d.migration_template with
            | Some template -> (
-             match ConstructorReplace.of_template template with
+             match Constructor_replace.of_template template with
              | Some target -> Some (d.source_loc, target)
              | None -> None)
            | None -> None)
@@ -616,7 +618,7 @@ let make_mapper (deprecated_used : Cmt_utils.deprecated_used list) =
     |> List.filter_map (fun (d : Cmt_utils.deprecated_used) ->
            match d.migration_template with
            | Some e -> (
-             match TypeReplace.core_type_of_expr_extension e with
+             match Type_replace.core_type_of_expr_extension e with
              | Some ct -> Some (d, ct)
              | None -> None)
            | None -> None)
@@ -675,16 +677,17 @@ let make_mapper (deprecated_used : Cmt_utils.deprecated_used list) =
             let deprecated_info =
               Hashtbl.find loc_to_deprecated_fn_call fn_loc
             in
-            let call_args = ArgUtils.map_expr_args mapper call_args in
+            let call_args = Arg_utils.map_expr_args mapper call_args in
             match deprecated_info.migration_template with
             | Some e -> apply_template_direct mapper e call_args exp
             | None -> exp)
           | {pexp_desc = Pexp_construct (lid, arg); pexp_loc} -> (
             match find_constructor_target ~loc:pexp_loc ~lid_loc:lid.loc with
-            | Some {ConstructorReplace.lid; attrs} ->
+            | Some {Constructor_replace.lid; attrs} ->
               let arg = Option.map (mapper.expr mapper) arg in
               let replaced = {exp with pexp_desc = Pexp_construct (lid, arg)} in
-              MapperUtils.ApplyTransforms.attach_to_replacement ~attrs replaced
+              Mapper_utils.Apply_transforms.attach_to_replacement ~attrs
+                replaced
             | None -> Ast_mapper.default_mapper.expr mapper exp)
           | {
            pexp_desc =
@@ -726,10 +729,10 @@ let make_mapper (deprecated_used : Cmt_utils.deprecated_used list) =
           match pat with
           | {ppat_desc = Ppat_construct (lid, arg); ppat_loc} -> (
             match find_constructor_target ~loc:ppat_loc ~lid_loc:lid.loc with
-            | Some {ConstructorReplace.lid; attrs} ->
+            | Some {Constructor_replace.lid; attrs} ->
               let arg = Option.map (mapper.pat mapper) arg in
               let replaced = {pat with ppat_desc = Ppat_construct (lid, arg)} in
-              MapperUtils.ApplyTransforms.attach_attrs_to_pat ~attrs replaced
+              Mapper_utils.Apply_transforms.attach_attrs_to_pat ~attrs replaced
             | None -> Ast_mapper.default_mapper.pat mapper pat)
           | _ -> Ast_mapper.default_mapper.pat mapper pat);
     }
@@ -762,7 +765,7 @@ let migrate ~entry_point_file ~output_mode =
         let apply_transforms =
           let expr mapper (e : Parsetree.expression) =
             let e = Ast_mapper.default_mapper.expr mapper e in
-            MapperUtils.ApplyTransforms.apply_on_self e
+            Mapper_utils.Apply_transforms.apply_on_self e
           in
           {Ast_mapper.default_mapper with expr}
         in

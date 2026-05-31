@@ -92,13 +92,13 @@ let main () =
               root_path))
     | Some package ->
       let module_names =
-        Analysis.SharedTypes.FileSet.elements package.project_files
+        Analysis.Shared_types.File_set.elements package.project_files
       in
       let files =
         module_names
         |> List.filter_map (fun mod_name ->
                Hashtbl.find_opt package.paths_for_module mod_name
-               |> Option.map Analysis.SharedTypes.get_src)
+               |> Option.map Analysis.Shared_types.get_src)
         |> List.concat
         |> List.filter (fun path ->
                Filename.check_suffix path ".res"
@@ -144,7 +144,7 @@ let main () =
       let output_mode = if is_stdout then `Stdout else `File in
       Clflags.color := Some Misc.Color.Never;
       match
-        ( Tools.FormatCodeblocks.format_code_blocks_in_file ~output_mode
+        ( Tools.Format_codeblocks.format_code_blocks_in_file ~output_mode
             ~transform_assert_equal ~entry_point_file:path,
           output_mode )
       with
@@ -160,7 +160,7 @@ let main () =
       Clflags.color := Some Misc.Color.Never;
 
       (* TODO: Add result/JSON mode *)
-      Tools.ExtractCodeblocks.extract_codeblocks_from_file
+      Tools.Extract_codeblocks.extract_codeblocks_from_file
         ~transform_assert_equal ~entry_point_file:path
       |> log_and_exit
     | _ -> log_and_exit (Error extract_codeblocks_help))
@@ -186,7 +186,7 @@ let main () =
         rest |> List.filter (fun s -> s <> "") |> Array.of_list
       in
       if argv_for_server = [|"-json"|] then (
-        match Reanalyze.ReanalyzeServer.try_request_default () with
+        match Reanalyze.Reanalyze_server.try_request_default () with
         | Some resp ->
           output_string stdout resp.stdout;
           output_string stderr resp.stderr;
@@ -213,7 +213,7 @@ let main () =
       Sys.argv.(i) <- Sys.argv.(i + 1)
     done;
     Sys.argv.(len - 1) <- "";
-    Reanalyze.ReanalyzeServer.server_cli ~parse_argv:Reanalyze.parse_argv
+    Reanalyze.Reanalyze_server.server_cli ~parse_argv:Reanalyze.parse_argv
       ~run_analysis:Reanalyze.run_analysis ()
   | "extract-embedded" :: ext_point_names :: filename :: _ ->
     log_and_exit

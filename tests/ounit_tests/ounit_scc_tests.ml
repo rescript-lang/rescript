@@ -141,7 +141,7 @@ let medium_test_cases =
 33  2
 33  8
 33 19
-34  2 
+34  2
 34 19
 34 40
 35  9
@@ -222,7 +222,7 @@ let read_file file =
 (* 25 *)
 
 let test (input : (string * string list) list) =
-  (* string -> int mapping 
+  (* string -> int mapping
   *)
   let tbl = Hash_string.create 32 in
   let idx = ref 0 in
@@ -243,7 +243,7 @@ let test (input : (string * string list) list) =
   Ext_scc.graph_check node_array
 
 let test2 (input : (string * string list) list) =
-  (* string -> int mapping 
+  (* string -> int mapping
   *)
   let tbl = Hash_string.create 32 in
   let idx = ref 0 in

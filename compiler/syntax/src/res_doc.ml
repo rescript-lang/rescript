@@ -1,4 +1,4 @@
-module MiniBuffer = Res_minibuffer
+module Mini_buffer = Res_minibuffer
 
 type mode = Break | Flat
 
@@ -188,7 +188,7 @@ let fits w stack =
 
 let to_string ~width doc =
   propagate_forced_breaks doc;
-  let buffer = MiniBuffer.create 1000 in
+  let buffer = Mini_buffer.create 1000 in
 
   let rec process ~pos line_suffices stack =
     match stack with
@@ -196,7 +196,7 @@ let to_string ~width doc =
       match doc with
       | Nil | BreakParent -> process ~pos line_suffices rest
       | Text txt ->
-        MiniBuffer.add_string buffer txt;
+        Mini_buffer.add_string buffer txt;
         process ~pos:(String.length txt + pos) line_suffices rest
       | LineSuffix doc -> process ~pos ((ind, mode, doc) :: line_suffices) rest
       | Concat docs ->
@@ -214,11 +214,12 @@ let to_string ~width doc =
           match line_suffices with
           | [] ->
             if line_style = Literal then (
-              MiniBuffer.add_char buffer '\n';
+              Mini_buffer.add_char buffer '\n';
               process ~pos:0 [] rest)
             else (
-              MiniBuffer.flush_newline buffer;
-              MiniBuffer.add_string buffer (String.make ind ' ' [@doesNotRaise]);
+              Mini_buffer.flush_newline buffer;
+              Mini_buffer.add_string buffer
+                (String.make ind ' ' [@doesNotRaise]);
               process ~pos:ind [] rest)
           | _docs ->
             process ~pos:ind []
@@ -228,13 +229,13 @@ let to_string ~width doc =
           let pos =
             match line_style with
             | Classic ->
-              MiniBuffer.add_string buffer " ";
+              Mini_buffer.add_string buffer " ";
               pos + 1
             | Hard ->
-              MiniBuffer.flush_newline buffer;
+              Mini_buffer.flush_newline buffer;
               0
             | Literal ->
-              MiniBuffer.add_char buffer '\n';
+              Mini_buffer.add_char buffer '\n';
               0
             | Soft -> pos
           in
@@ -260,7 +261,7 @@ let to_string ~width doc =
       | suffices -> process ~pos:0 [] (List.rev suffices))
   in
   process ~pos:0 [] [(0, Flat, doc)];
-  MiniBuffer.contents buffer
+  Mini_buffer.contents buffer
 
 let debug t =
   let rec to_doc = function

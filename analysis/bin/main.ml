@@ -126,7 +126,7 @@ let main () =
     let uri = Uri.from_path root_path in
     match Packages.find_root ~uri (Hashtbl.create 0) with
     | Some (`Bs root_path) -> (
-      match BuildSystem.get_lib_bs root_path with
+      match Build_system.get_lib_bs root_path with
       | None -> print_endline "\"ERR\""
       | Some lib_bs ->
         Cache.delete_cache (Cache.target_file_from_lib_bs lib_bs);
@@ -145,7 +145,7 @@ let main () =
     Cli.type_definition ~path
       ~pos:(int_of_string line, int_of_string col)
       ~debug
-  | [_; "documentSymbol"; path] -> DocumentSymbol.command ~path
+  | [_; "documentSymbol"; path] -> Document_symbol.command ~path
   | [_; "hover"; path; line; col; current_file; supports_markdown_links] ->
     Cli.hover ~path
       ~pos:(int_of_string line, int_of_string col)
@@ -207,12 +207,13 @@ let main () =
   | [_; "semanticTokens"; current_file] ->
     Cli.semantic_tokens ~path:current_file
   | [_; "createInterface"; path; cmi_file] ->
-    `String (CreateInterface.command ~path ~cmi_file)
+    `String (Create_interface.command ~path ~cmi_file)
     |> Yojson.Safe.pretty_to_string ~std:true
     |> print_endline
   | [_; "format"; path] -> Cli.format ~path
   | [_; "test"; path] -> Cli.test ~path
-  | [_; "cmt"; rescript_json; cmt_path] -> CmtViewer.dump rescript_json cmt_path
+  | [_; "cmt"; rescript_json; cmt_path] ->
+    Cmt_viewer.dump rescript_json cmt_path
   | args when List.mem "-h" args || List.mem "--help" args -> prerr_endline help
   | _ ->
     prerr_endline help;

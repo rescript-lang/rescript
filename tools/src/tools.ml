@@ -1,6 +1,6 @@
 open Analysis
 
-module StringSet = Set.Make (String)
+module String_set = Set.Make (String)
 
 type field_doc = {
   field_name: string;
@@ -269,7 +269,7 @@ and stringify_docs_for_module ~original_env (d : docs_for_module) =
     | Some d -> [("deprecated", `String d)]
     | None -> [])
 
-let field_to_field_doc (field : SharedTypes.field) : field_doc =
+let field_to_field_doc (field : Shared_types.field) : field_doc =
   {
     field_name = field.fname.txt;
     docstrings = field.docstring;
@@ -279,8 +279,8 @@ let field_to_field_doc (field : SharedTypes.field) : field_doc =
   }
 
 let type_detail typ ~env ~full =
-  let open SharedTypes in
-  match TypeUtils.extract_type_from_resolved_type ~env ~full typ with
+  let open Shared_types in
+  match Type_utils.extract_type_from_resolved_type ~env ~full typ with
   | Some (Trecord {fields}) ->
     Some (Record {field_docs = fields |> List.map field_to_field_doc})
   | Some (Tvariant {constructors}) ->
@@ -293,7 +293,7 @@ let type_detail typ ~env ~full =
                     {
                       constructor_name = c.cname.txt;
                       docstrings = c.docstring;
-                      signature = CompletionBackEnd.show_constructor c;
+                      signature = Completion_back_end.show_constructor c;
                       deprecated = c.deprecated;
                       items =
                         (match c.args with
@@ -362,7 +362,7 @@ let value_detail (typ : Types.type_expr) =
     Some (Signature {parameters; return_type})
 
 let make_id module_path ~identifier =
-  identifier :: module_path |> List.rev |> SharedTypes.ident
+  identifier :: module_path |> List.rev |> Shared_types.ident
 
 let get_source ~root_path ({loc_start} : Location.t) =
   let line, col = Pos.of_lexing loc_start in
@@ -382,12 +382,12 @@ let extract_docs ~entry_point_file ~debug =
   if debug then Printf.printf "extracting docs for %s\n" path;
   let result =
     match
-      FindFiles.is_implementation path = false
-      && FindFiles.is_interface path = false
+      Find_files.is_implementation path = false
+      && Find_files.is_interface path = false
     with
     | false -> (
       let path =
-        if FindFiles.is_implementation path then
+        if Find_files.is_implementation path then
           let path_as_resi =
             (path |> Filename.dirname) ^ "/"
             ^ (path |> Filename.basename |> Filename.chop_extension)
@@ -411,11 +411,11 @@ let extract_docs ~entry_point_file ~debug =
         let file = full.file in
         let structure = file.structure in
         let root_path = full.package.root_path in
-        let open SharedTypes in
-        let env = QueryEnv.from_file file in
+        let open Shared_types in
+        let env = Query_env.from_file file in
         let rec extract_docs_for_module ?(module_path = [env.file.module_name])
             (structure : Module.structure) =
-          let values_seen = ref StringSet.empty in
+          let values_seen = ref String_set.empty in
           {
             id = module_path |> List.rev |> ident;
             docstring = structure.docstring |> List.map String.trim;
@@ -480,7 +480,7 @@ let extract_docs ~entry_point_file ~debug =
                        in
                        let items, internal_docstrings =
                          match
-                           ProcessCmt.file_for_module ~package:full.package
+                           Process_cmt.file_for_module ~package:full.package
                              alias_to_module
                          with
                          | None -> ([], [])
@@ -552,7 +552,7 @@ let extract_docs ~entry_point_file ~debug =
 
                        let module_type_id_path =
                          match
-                           ProcessCmt.file_for_module ~package:full.package
+                           Process_cmt.file_for_module ~package:full.package
                              ident_module_path
                            |> Option.is_none
                          with
@@ -575,9 +575,9 @@ let extract_docs ~entry_point_file ~debug =
               |> List.filter_map (fun (doc_item : doc_item) ->
                      match doc_item with
                      | Value {id} ->
-                       if StringSet.mem id !values_seen then None
+                       if String_set.mem id !values_seen then None
                        else (
-                         values_seen := StringSet.add id !values_seen;
+                         values_seen := String_set.add id !values_seen;
                          Some doc_item)
                      | _ -> Some doc_item)
               |> List.rev;
@@ -655,7 +655,7 @@ let is_res_lang lang =
     || String.starts_with ~prefix:"rescript " lang
     || String.starts_with ~prefix:"resi " lang
 
-module FormatCodeblocks = struct
+module Format_codeblocks = struct
   module Transform = struct
     type transform = AssertEqualFnToEquals  (** assertEqual(a, b) -> a == b *)
 
@@ -929,7 +929,7 @@ module FormatCodeblocks = struct
       else Ok (Filename.basename path ^ ": needed no formatting")
 end
 
-module ExtractCodeblocks = struct
+module Extract_codeblocks = struct
   module Transform = struct
     type transform =
       | EqualsToAssertEqualFn
@@ -1010,12 +1010,12 @@ module ExtractCodeblocks = struct
     in
     let result =
       match
-        FindFiles.is_implementation path = false
-        && FindFiles.is_interface path = false
+        Find_files.is_implementation path = false
+        && Find_files.is_interface path = false
       with
       | false -> (
         let path =
-          if FindFiles.is_implementation path then
+          if Find_files.is_implementation path then
             let path_as_resi =
               (path |> Filename.dirname) ^ "/"
               ^ (path |> Filename.basename |> Filename.chop_extension)
@@ -1033,8 +1033,8 @@ module ExtractCodeblocks = struct
         | Some full ->
           let file = full.file in
           let structure = file.structure in
-          let open SharedTypes in
-          let env = QueryEnv.from_file file in
+          let open Shared_types in
+          let env = Query_env.from_file file in
           let rec extract_code_blocks_for_module
               ?(module_path = [env.file.module_name])
               (structure : Module.structure) =

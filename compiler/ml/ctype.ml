@@ -227,7 +227,7 @@ let repr = repr
 
 (**** Type maps ****)
 
-module TypePairs = Hashtbl.Make (struct
+module Type_pairs = Hashtbl.Make (struct
   type t = type_expr * type_expr
   let equal (t1, t1') (t2, t2') = t1 == t2 && t1' == t2'
   let hash (t, t') = t.id + (93 * t'.id)
@@ -801,33 +801,35 @@ type inv_type_expr = {
 let rec inv_type hash pty ty =
   let ty = repr ty in
   try
-    let inv = TypeHash.find hash ty in
+    let inv = Type_hash.find hash ty in
     inv.inv_parents <- pty @ inv.inv_parents
   with Not_found ->
     let inv = {inv_type = ty; inv_parents = pty} in
-    TypeHash.add hash ty inv;
+    Type_hash.add hash ty inv;
     iter_type_expr (inv_type hash [inv]) ty
 
 let compute_univars ty =
-  let inverted = TypeHash.create 17 in
+  let inverted = Type_hash.create 17 in
   inv_type inverted [] ty;
-  let node_univars = TypeHash.create 17 in
+  let node_univars = Type_hash.create 17 in
   let rec add_univar univ inv =
     match inv.inv_type.desc with
     | Tpoly (_ty, tl) when List.memq univ (List.map repr tl) -> ()
     | _ -> (
       try
-        let univs = TypeHash.find node_univars inv.inv_type in
-        if not (TypeSet.mem univ !univs) then (
-          univs := TypeSet.add univ !univs;
+        let univs = Type_hash.find node_univars inv.inv_type in
+        if not (Type_set.mem univ !univs) then (
+          univs := Type_set.add univ !univs;
           List.iter (add_univar univ) inv.inv_parents)
       with Not_found ->
-        TypeHash.add node_univars inv.inv_type (ref (TypeSet.singleton univ));
+        Type_hash.add node_univars inv.inv_type (ref (Type_set.singleton univ));
         List.iter (add_univar univ) inv.inv_parents)
   in
-  TypeHash.iter (fun ty inv -> if is_Tunivar ty then add_univar ty inv) inverted;
+  Type_hash.iter
+    (fun ty inv -> if is_Tunivar ty then add_univar ty inv)
+    inverted;
   fun ty ->
-    try !(TypeHash.find node_univars ty) with Not_found -> TypeSet.empty
+    try !(Type_hash.find node_univars ty) with Not_found -> Type_set.empty
 
 (*******************)
 (*  Instantiation  *)
@@ -870,7 +872,7 @@ let rec copy ?env ?partial ?keep_names ty =
           match partial with
           | None -> assert false
           | Some (free_univars, keep) ->
-            if TypeSet.is_empty (free_univars ty) then
+            if Type_set.is_empty (free_univars ty) then
               if keep then ty.level else !current_level
             else generic_level
       in
@@ -959,7 +961,7 @@ let rec copy ?env ?partial ?keep_names ty =
                   in
                   if
                     row.row_closed && (not row.row_fixed)
-                    && TypeSet.is_empty (free_univars ty)
+                    && Type_set.is_empty (free_univars ty)
                     && not (List.for_all not_reither row.row_fields)
                   then
                     ( more',
@@ -1128,7 +1130,7 @@ let rec diff_list l1 l2 =
 
 let conflicts free bound =
   let bound = List.map repr bound in
-  TypeSet.exists (fun t -> List.memq (repr t) bound) free
+  Type_set.exists (fun t -> List.memq (repr t) bound) free
 
 let delayed_copy = ref []
 (* copying to do later *)
@@ -1138,7 +1140,7 @@ let delayed_copy = ref []
 let rec copy_sep fixed free bound visited ty =
   let ty = repr ty in
   let univars = free ty in
-  if TypeSet.is_empty univars then (
+  if Type_set.is_empty univars then (
     if ty.level <> generic_level then ty
     else
       let t = newvar () in
@@ -1498,8 +1500,8 @@ let rec occur_rec env allow_recursive visited ty0 = function
       if allow_recursive && is_contractive env p then ()
       else
         try
-          if TypeSet.mem ty visited then raise Occur;
-          let visited = TypeSet.add ty visited in
+          if Type_set.mem ty visited then raise Occur;
+          let visited = Type_set.add ty visited in
           iter_type_expr (occur_rec env allow_recursive visited ty0) ty
         with Occur -> (
           try
@@ -1510,9 +1512,9 @@ let rec occur_rec env allow_recursive visited ty0 = function
           with Cannot_expand -> raise Occur))
     | Tobject _ | Tvariant _ -> ()
     | _ ->
-      if allow_recursive || TypeSet.mem ty visited then ()
+      if allow_recursive || Type_set.mem ty visited then ()
       else
-        let visited = TypeSet.add ty visited in
+        let visited = Type_set.add ty visited in
         iter_type_expr (occur_rec env allow_recursive visited ty0) ty)
 
 let type_changed = ref false (* trace possible changes to the studied type *)
@@ -1525,7 +1527,7 @@ let occur env ty0 ty =
   try
     while
       type_changed := false;
-      occur_rec env allow_recursive TypeSet.empty ty0 ty;
+      occur_rec env allow_recursive Type_set.empty ty0 ty;
       !type_changed
     do
       () (* prerr_endline "changed" *)
@@ -1611,31 +1613,31 @@ let rec unify_univar t1 t2 = function
 (* Test the occurrence of free univars in a type *)
 (* that's way too expensive. Must do some kind of caching *)
 let occur_univar env ty =
-  let visited = ref TypeMap.empty in
+  let visited = ref Type_map.empty in
   let rec occur_rec bound ty =
     let ty = repr ty in
     if
       ty.level >= lowest_level
       &&
-      if TypeSet.is_empty bound then (
+      if Type_set.is_empty bound then (
         ty.level <- pivot_level - ty.level;
         true)
       else
         try
-          let bound' = TypeMap.find ty !visited in
-          if TypeSet.exists (fun x -> not (TypeSet.mem x bound)) bound' then (
-            visited := TypeMap.add ty (TypeSet.inter bound bound') !visited;
+          let bound' = Type_map.find ty !visited in
+          if Type_set.exists (fun x -> not (Type_set.mem x bound)) bound' then (
+            visited := Type_map.add ty (Type_set.inter bound bound') !visited;
             true)
           else false
         with Not_found ->
-          visited := TypeMap.add ty bound !visited;
+          visited := Type_map.add ty bound !visited;
           true
     then
       match ty.desc with
       | Tunivar _ ->
-        if not (TypeSet.mem ty bound) then raise (Unify [(ty, newgenvar ())])
+        if not (Type_set.mem ty bound) then raise (Unify [(ty, newgenvar ())])
       | Tpoly (ty, tyl) ->
-        let bound = List.fold_right TypeSet.add (List.map repr tyl) bound in
+        let bound = List.fold_right Type_set.add (List.map repr tyl) bound in
         occur_rec bound ty
       | Tconstr (_, [], _) -> ()
       | Tconstr (p, tl, _) -> (
@@ -1650,42 +1652,42 @@ let occur_univar env ty =
       | _ -> iter_type_expr (occur_rec bound) ty
   in
   try
-    occur_rec TypeSet.empty ty;
+    occur_rec Type_set.empty ty;
     unmark_type ty
   with exn ->
     unmark_type ty;
     raise exn
 
 (* Grouping univars by families according to their binders *)
-let add_univars = List.fold_left (fun s (t, _) -> TypeSet.add (repr t) s)
+let add_univars = List.fold_left (fun s (t, _) -> Type_set.add (repr t) s)
 
 let get_univar_family univar_pairs univars =
-  if univars = [] then TypeSet.empty
+  if univars = [] then Type_set.empty
   else
     let insert s = function
       | cl1, (_ :: _ as cl2) ->
-        if List.exists (fun (t1, _) -> TypeSet.mem (repr t1) s) cl1 then
+        if List.exists (fun (t1, _) -> Type_set.mem (repr t1) s) cl1 then
           add_univars s cl2
         else s
       | _ -> s
     in
-    let s = List.fold_right TypeSet.add univars TypeSet.empty in
+    let s = List.fold_right Type_set.add univars Type_set.empty in
     List.fold_left insert s univar_pairs
 
 (* Whether a family of univars escapes from a type *)
 let univars_escape env univar_pairs vl ty =
   let family = get_univar_family univar_pairs vl in
-  let visited = ref TypeSet.empty in
+  let visited = ref Type_set.empty in
   let rec occur t =
     let t = repr t in
-    if TypeSet.mem t !visited then ()
+    if Type_set.mem t !visited then ()
     else (
-      visited := TypeSet.add t !visited;
+      visited := Type_set.add t !visited;
       match t.desc with
       | Tpoly (t, tl) ->
-        if List.exists (fun t -> TypeSet.mem (repr t) family) tl then ()
+        if List.exists (fun t -> Type_set.mem (repr t) family) tl then ()
         else occur t
-      | Tunivar _ -> if TypeSet.mem t family then raise Occur
+      | Tunivar _ -> if Type_set.mem t family then raise Occur
       | Tconstr (_, [], _) -> ()
       | Tconstr (p, tl, _) -> (
         try
@@ -1706,13 +1708,15 @@ let univars_escape env univar_pairs vl ty =
 let enter_poly env univar_pairs t1 tl1 t2 tl2 f =
   let old_univars = !univar_pairs in
   let known_univars =
-    List.fold_left (fun s (cl, _) -> add_univars s cl) TypeSet.empty old_univars
+    List.fold_left
+      (fun s (cl, _) -> add_univars s cl)
+      Type_set.empty old_univars
   in
   let tl1 = List.map repr tl1 and tl2 = List.map repr tl2 in
   if
-    List.exists (fun t -> TypeSet.mem t known_univars) tl1
+    List.exists (fun t -> Type_set.mem t known_univars) tl1
     && univars_escape env old_univars tl1 (newty (Tpoly (t2, tl2)))
-    || List.exists (fun t -> TypeSet.mem t known_univars) tl2
+    || List.exists (fun t -> Type_set.mem t known_univars) tl2
        && univars_escape env old_univars tl2 (newty (Tpoly (t1, tl1)))
   then raise (Unify []);
   let cl1 = List.map (fun t -> (t, ref None)) tl1
@@ -1827,12 +1831,12 @@ let reify env t =
     env := new_env;
     t
   in
-  let visited = ref TypeSet.empty in
+  let visited = ref Type_set.empty in
   let rec iterator ty =
     let ty = repr ty in
-    if TypeSet.mem ty !visited then ()
+    if Type_set.mem ty !visited then ()
     else (
-      visited := TypeSet.add ty !visited;
+      visited := Type_set.add ty !visited;
       match ty.desc with
       | Tvar o ->
         let t = create_fresh_constr ty.level o in
@@ -1921,9 +1925,9 @@ let rec mcomp type_pairs env t1 t2 =
         let t1' = repr t1' and t2' = repr t2' in
         if t1' == t2' then ()
         else
-          try TypePairs.find type_pairs (t1', t2')
+          try Type_pairs.find type_pairs (t1', t2')
           with Not_found -> (
-            TypePairs.add type_pairs (t1', t2') ();
+            Type_pairs.add type_pairs (t1', t2') ();
             match (t1'.desc, t2'.desc) with
             | Tvar _, Tvar _ -> assert false
             | Tarrow (arg1, ret1, _, _), Tarrow (arg2, ret2, _, _)
@@ -2086,7 +2090,7 @@ and mcomp_record_description type_pairs env =
   in
   iter
 
-let mcomp env t1 t2 = mcomp (TypePairs.create 4) env t1 t2
+let mcomp env t1 t2 = mcomp (Type_pairs.create 4) env t1 t2
 
 (* Real unification *)
 
@@ -2108,12 +2112,12 @@ let add_gadt_equation env source destination =
     env := Env.add_local_constraint source decl newtype_level !env;
     cleanup_abbrev ())
 
-let unify_eq_set = TypePairs.create 11
+let unify_eq_set = Type_pairs.create 11
 
 let order_type_pair t1 t2 = if t1.id <= t2.id then (t1, t2) else (t2, t1)
 
 let add_type_equality t1 t2 =
-  TypePairs.add unify_eq_set (order_type_pair t1 t2) ()
+  Type_pairs.add unify_eq_set (order_type_pair t1 t2) ()
 
 let eq_package_path env p1 p2 =
   Path.same p1 p2
@@ -2216,7 +2220,7 @@ let unify_eq t1 t2 =
   | Expression -> false
   | Pattern -> (
     try
-      TypePairs.find unify_eq_set (order_type_pair t1 t2);
+      Type_pairs.find unify_eq_set (order_type_pair t1 t2);
       true
     with Not_found -> false)
 
@@ -2742,10 +2746,10 @@ let unify_gadt ~newtype_level:lev (env : Env.t ref) ty1 ty2 =
     set_mode_pattern ~generate:true ~injective:true (fun () ->
         unify env ty1 ty2);
     newtype_level := None;
-    TypePairs.clear unify_eq_set
+    Type_pairs.clear unify_eq_set
   with e ->
     newtype_level := None;
-    TypePairs.clear unify_eq_set;
+    Type_pairs.clear unify_eq_set;
     raise e
 
 let unify_var env t1 t2 =
@@ -2907,9 +2911,9 @@ let rec moregen inst_nongen type_pairs env t1 t2 =
           let t1' = repr t1' and t2' = repr t2' in
           if t1' == t2' then ()
           else
-            try TypePairs.find type_pairs (t1', t2')
+            try Type_pairs.find type_pairs (t1', t2')
             with Not_found -> (
-              TypePairs.add type_pairs (t1', t2') ();
+              Type_pairs.add type_pairs (t1', t2') ();
               match (t1'.desc, t2'.desc) with
               | Tvar _, _ when may_instantiate inst_nongen t1' ->
                 moregen_occur env t1'.level t2;
@@ -3067,7 +3071,7 @@ let moregeneral env inst_nongen pat_sch subj_sch =
   let patt = instance env pat_sch in
   let res =
     try
-      moregen inst_nongen (TypePairs.create 13) env patt subj;
+      moregen inst_nongen (Type_pairs.create 13) env patt subj;
       true
     with Unify _ -> false
   in
@@ -3172,9 +3176,9 @@ let rec eqtype rename type_pairs subst env t1 t2 =
           let t1' = repr t1' and t2' = repr t2' in
           if t1' == t2' then ()
           else
-            try TypePairs.find type_pairs (t1', t2')
+            try Type_pairs.find type_pairs (t1', t2')
             with Not_found -> (
-              TypePairs.add type_pairs (t1', t2') ();
+              Type_pairs.add type_pairs (t1', t2') ();
               match (t1'.desc, t2'.desc) with
               | Tvar _, Tvar _ when rename -> (
                 try
@@ -3226,7 +3230,7 @@ and eqtype_fields rename type_pairs subst env ty1 ty2 : unit =
   (* First check if same row => already equal *)
   let same_row =
     rest1 == rest2
-    || TypePairs.mem type_pairs (rest1, rest2)
+    || Type_pairs.mem type_pairs (rest1, rest2)
     || (rename && List.mem (rest1, rest2) !subst)
   in
   if same_row then ()
@@ -3308,7 +3312,7 @@ let eqtype_list rename type_pairs subst env tl1 tl2 =
 (* Two modes: with or without renaming of variables *)
 let equal env rename tyl1 tyl2 =
   try
-    eqtype_list rename (TypePairs.create 11) (ref []) env tyl1 tyl2;
+    eqtype_list rename (Type_pairs.create 11) (ref []) env tyl1 tyl2;
     true
   with Unify _ -> false
 
@@ -3575,7 +3579,7 @@ let enlarge_type env ty =
     [generic_abbrev ...]).
 *)
 
-let subtypes = TypePairs.create 17
+let subtypes = Type_pairs.create 17
 
 let subtype_error ?ctx env trace =
   raise (Subtype (expand_trace env (List.rev trace), [], ctx))
@@ -3591,10 +3595,10 @@ let rec subtype_rec env trace t1 t2 cstrs =
   if t1 == t2 then cstrs
   else
     try
-      TypePairs.find subtypes (t1, t2);
+      Type_pairs.find subtypes (t1, t2);
       cstrs
     with Not_found -> (
-      TypePairs.add subtypes (t1, t2) ();
+      Type_pairs.add subtypes (t1, t2) ();
       match (t1.desc, t2.desc) with
       | Tvar _, _ | _, Tvar _ -> (trace, t1, t2, !univar_pairs, None) :: cstrs
       | Tarrow (arg1, ret1, _, _), Tarrow (arg2, ret2, _, _)
@@ -4030,11 +4034,11 @@ and subtype_row env trace row1 row2 cstrs =
   | _ -> raise Exit
 
 let subtype env ty1 ty2 =
-  TypePairs.clear subtypes;
+  Type_pairs.clear subtypes;
   univar_pairs := [];
   (* Build constraint set. *)
   let cstrs = subtype_rec env [(ty1, ty2)] ty1 ty2 [] in
-  TypePairs.clear subtypes;
+  Type_pairs.clear subtypes;
   (* Enforce constraints. *)
   function
   | () ->
@@ -4102,13 +4106,13 @@ let cyclic_abbrev env id ty =
 
 (* Check for non-generalizable type variables *)
 exception Non_closed0
-let visited = ref TypeSet.empty
+let visited = ref Type_set.empty
 
 let rec closed_schema_rec env ty =
   let ty = repr ty in
-  if TypeSet.mem ty !visited then ()
+  if Type_set.mem ty !visited then ()
   else (
-    visited := TypeSet.add ty !visited;
+    visited := Type_set.add ty !visited;
     match ty.desc with
     | Tvar _ when ty.level <> generic_level -> raise Non_closed0
     | Tconstr _ -> (
@@ -4130,21 +4134,21 @@ let rec closed_schema_rec env ty =
 
 (* Return whether all variables of type [ty] are generic. *)
 let closed_schema env ty =
-  visited := TypeSet.empty;
+  visited := Type_set.empty;
   try
     closed_schema_rec env ty;
-    visited := TypeSet.empty;
+    visited := Type_set.empty;
     true
   with Non_closed0 ->
-    visited := TypeSet.empty;
+    visited := Type_set.empty;
     false
 
 (* Normalize a type before printing, saving... *)
 (* Cannot use mark_type because deep_occur uses it too *)
 let rec normalize_type_rec env visited ty =
   let ty = repr ty in
-  if not (TypeSet.mem ty !visited) then (
-    visited := TypeSet.add ty !visited;
+  if not (Type_set.mem ty !visited) then (
+    visited := Type_set.add ty !visited;
     let tm = row_of_type ty in
     (if (not (is_Tconstr ty)) && is_constr_row ~allow_ident:false tm then
        match tm.desc with
@@ -4216,7 +4220,7 @@ let rec normalize_type_rec env visited ty =
        | _ -> ());
     iter_type_expr (normalize_type_rec env visited) ty)
 
-let normalize_type env ty = normalize_type_rec env (ref TypeSet.empty) ty
+let normalize_type env ty = normalize_type_rec env (ref Type_set.empty) ty
 
 (*************************)
 (*  Remove dependencies  *)
@@ -4229,22 +4233,22 @@ let normalize_type env ty = normalize_type_rec env (ref TypeSet.empty) ty
    expand_abbrev.
 *)
 
-let nondep_hash = TypeHash.create 47
-let nondep_variants = TypeHash.create 17
+let nondep_hash = Type_hash.create 47
+let nondep_variants = Type_hash.create 17
 let clear_hash () =
-  TypeHash.clear nondep_hash;
-  TypeHash.clear nondep_variants
+  Type_hash.clear nondep_hash;
+  Type_hash.clear nondep_variants
 
 let rec nondep_type_rec env id ty =
   match ty.desc with
   | Tvar _ | Tunivar _ -> ty
   | Tlink ty -> nondep_type_rec env id ty
   | _ -> (
-    try TypeHash.find nondep_hash ty
+    try Type_hash.find nondep_hash ty
     with Not_found ->
       let ty' = newgenvar () in
       (* Stub *)
-      TypeHash.add nondep_hash ty ty';
+      Type_hash.add nondep_hash ty ty';
       ty'.desc <-
         (match ty.desc with
         | Tconstr (p, tl, _abbrev) ->
@@ -4279,13 +4283,13 @@ let rec nondep_type_rec env id ty =
           let more = repr row.row_more in
           (* We must keep sharing according to the row variable *)
           try
-            let ty2 = TypeHash.find nondep_variants more in
+            let ty2 = Type_hash.find nondep_variants more in
             (* This variant type has been already copied *)
-            TypeHash.add nondep_hash ty ty2;
+            Type_hash.add nondep_hash ty ty2;
             Tlink ty2
           with Not_found -> (
             (* Register new type first for recursion *)
-            TypeHash.add nondep_variants more ty';
+            Type_hash.add nondep_variants more ty';
             let static = static_row row in
             let more' = if static then newgenty Tnil else more in
             (* Return a new copy *)
