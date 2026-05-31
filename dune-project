@@ -28,12 +28,12 @@
   (ocamlformat
    (and :with-test (= 0.27.0)))
   (yojson
-   (and :with-test (= 2.2.2)))
+   (and :with-test (= 3.0.0)))
   (ounit2
    (and :with-test (= 2.2.7)))
   (odoc :with-doc)
   (ocaml-lsp-server
-   (and :with-dev-setup (= 1.22.0)))
+   (and :with-dev-setup (>= 1.23.0)))
   (bisect_ppx
    (and :with-dev-setup (>= 2.8.0)))
   (js_of_ocaml
@@ -57,9 +57,9 @@
    (= 1.8.0))
   (odoc :with-doc)
   (lsp
-   (= 1.22.0))
+   (>= 1.23.0))
   (yojson
-    (= 2.2.2))))
+    (= 3.0.0))))
 
 (package
  (name tools)
@@ -73,5 +73,5 @@
    (= 1.8.0))
   analysis
   (yojson
-    (= 2.2.2))
+    (= 3.0.0))
   (odoc :with-doc)))

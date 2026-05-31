@@ -12,10 +12,10 @@ depends: [
   "cppo" {= "1.8.0"}
   "flow_parser" {= "0.267.0"}
   "ocamlformat" {with-test & = "0.27.0"}
-  "yojson" {with-test & = "2.2.2"}
+  "yojson" {with-test & = "3.0.0"}
   "ounit2" {with-test & = "2.2.7"}
   "odoc" {with-doc}
-  "ocaml-lsp-server" {with-dev-setup & = "1.22.0"}
+  "ocaml-lsp-server" {with-dev-setup & >= "1.23.0"}
   "bisect_ppx" {with-dev-setup & >= "2.8.0"}
   "js_of_ocaml" {os != "win32" & with-test & = "6.0.1"}
   "wasm_of_ocaml-compiler" {os != "win32" & with-test & = "6.0.1"}
