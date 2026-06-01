@@ -64,10 +64,6 @@ type error =
   | Too_many_arguments of bool * type_expr
   | Scoping_let_module of string * type_expr
   | Not_a_variant_type of Longident.t
-  (* Appears to be dead: no reproduction found that reaches the raise site
-     (modern arity-aware application reconciles reordered labels via
-     unification before the positional fallback). Retained pending further
-     investigation rather than replaced with [assert false]. *)
   | Incoherent_label_order
   | Less_general of string * (type_expr * type_expr) list
   | Modules_not_allowed
@@ -3878,11 +3874,12 @@ and type_application ~context total_app env funct (sargs : sargs) :
               raise
                 (Error (sarg1.pexp_loc, env, Apply_wrong_label (l1, ty_res)))
             else
-              (* Appears to be dead: no reproduction found that reaches this
-                 branch (modern arity-aware unify in type_function eagerly
-                 compares against ty_expected, so reordered labels reconcile
-                 before reaching here). Retained pending further investigation
-                 rather than replaced with [assert false]. *)
+              (* Reached when a not-yet-generalized function value is applied
+                 more than once with labelled arguments in conflicting orders
+                 (e.g. `g => (g(~a, ~b), g(~b, ~a))`): the first call fixes the
+                 arrow order, and the second reordered call lands here via the
+                 leftover/tvar path. See
+                 fixtures/labeled_args_incoherent_order.res. *)
               raise (Error (funct.exp_loc, env, Incoherent_label_order))
           | _ ->
             raise

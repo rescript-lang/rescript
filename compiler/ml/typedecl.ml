@@ -34,10 +34,14 @@ type error =
   | Definition_mismatch of type_expr * Includecore.type_mismatch list
   | Constraint_failed of type_expr * type_expr
   | Inconsistent_constraint of Env.t * (type_expr * type_expr) list
-  (* Appears to be dead: no reproduction found that reaches the raise site
-     (non-uniform recursion surfaces as Parameters_differ and direct cycles
-     as Cycle_in_def before the coherence check clashes). Retained pending
-     further investigation rather than replaced with [assert false]. *)
+  (* Appears to be dead. Its only raise site (update_type) unifies
+     [t<fresh params>] against [t]'s own manifest — i.e. a type against an
+     alpha-renamed copy of itself — which cannot produce a head clash; and
+     every genuine inconsistency is caught by a dedicated check instead
+     (Cycle_in_def, Recursive_abbrev, Parameters_differ, Constraint_failed,
+     Type_arity_mismatch). ~37 recursive/mutual/constraint/row/object/alias
+     shapes were tried without reaching it. Retained as a named variant
+     pending an airtight proof rather than replaced with [assert false]. *)
   | Type_clash of Env.t * (type_expr * type_expr) list
   | Parameters_differ of Path.t * type_expr * type_expr
   | Null_arity_external
@@ -124,11 +128,12 @@ let update_type temp_env env id loc =
   | None -> ()
   | Some ty -> (
     let params = List.map (fun _ -> Ctype.newvar ()) decl.type_params in
-    (* The [Type_clash] handler appears to be dead: no reproduction found
-       that reaches this unify failure (non-uniform recursion surfaces as
-       Parameters_differ and direct cycles as Cycle_in_def first). Retained
-       pending further investigation rather than replaced with
-       [assert false]. *)
+    (* The [Type_clash] handler appears to be dead: this unifies
+       [t<fresh params>] against [t]'s own manifest [ty], i.e. a type against
+       an alpha-renamed copy of itself, which cannot head-clash. Genuine
+       inconsistencies are caught elsewhere (Cycle_in_def, Recursive_abbrev,
+       Parameters_differ, ...). Retained pending an airtight proof rather than
+       replaced with [assert false]. *)
     try Ctype.unify env (Ctype.newconstr path params) ty
     with Ctype.Unify trace -> raise (Error (loc, Type_clash (env, trace))))
 

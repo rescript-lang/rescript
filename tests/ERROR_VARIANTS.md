@@ -106,8 +106,12 @@ variant + reporter removed:**
 > follow-up audit (empirical: each `assert false` was driven to a real
 > crash with a minimal `.res`) found **8** that are actually reachable or
 > unproven, and they were restored as named variants (see the retained
-> list below). The remaining entries above are backed by either a parser
-> grammar fact or a structural proof, not just a guess.
+> list below). **7 of the 8 now have a reproducing fixture** confirming
+> they are live; the last (`typedecl.Type_clash`) resisted ~37 attempts
+> and has a structural argument for unreachability but no airtight proof,
+> so it is retained rather than removed. The remaining entries above are
+> backed by either a parser grammar fact or a structural proof, not just a
+> guess.
 
 Re-validation found a number of previously-flagged items that are not
 completely dead and have been retained as named variants:
@@ -155,12 +159,20 @@ completely dead and have been retained as named variants:
   `check_value_name` during definition; `let \"->" = 1` is rejected with
   a clean diagnostic (`illegal_value_name.res`). The parser does **not**
   reject `\"->"`.
-- `typecore.Incoherent_label_order` and `typedecl.Type_clash` — retained
-  but **appear dead**: no reproduction was found that reaches either
-  raise site, yet neither has a structural unreachability proof (both are
-  live OCaml branches guarded by runtime conditions). Kept as named
-  variants with an explanatory comment at the definition and raise site,
-  pending further investigation, rather than `assert false`.
+- `typecore.Incoherent_label_order` — live: a not-yet-generalized
+  function value applied more than once with labelled arguments in
+  conflicting orders (`let f = g => (g(~a=1, ~b=2), g(~b=3, ~a=4))`) hits
+  the leftover/tvar path in `type_unknown_args` after the first call fixes
+  the arrow order (`labeled_args_incoherent_order.res`).
+- `typedecl.Type_clash` — retained but **appears dead**: its only raise
+  site (`update_type`) unifies `t<fresh params>` against `t`'s own
+  manifest — a type against an alpha-renamed copy of itself — which cannot
+  head-clash, and every genuine inconsistency is caught by a dedicated
+  check (`Cycle_in_def`, `Recursive_abbrev`, `Parameters_differ`,
+  `Constraint_failed`, `Type_arity_mismatch`). ~37 recursive / mutual /
+  constraint / row / object / alias shapes were tried without reaching it.
+  Kept as a named variant with an explanatory comment at the definition
+  and raise site, pending an airtight proof, rather than `assert false`.
 - `bs_syntaxerr.Misplaced_label_syntax` — live when labelled args are
   passed via operator-identifier syntax like `\"->"(x, ~b=...)`
   (`misplaced_label_syntax.res`).
