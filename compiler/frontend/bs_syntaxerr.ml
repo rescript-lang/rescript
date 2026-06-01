@@ -64,7 +64,9 @@ let pp_error fmt err =
     | Illegal_attribute -> "Illegal attributes"
     | Unsupported_predicates -> "unsupported predicates"
     | Duplicated_bs_deriving -> "duplicate @deriving attribute"
-    | Conflict_attributes -> "conflicting attributes "
+    | Conflict_attributes ->
+      "Conflicting attributes: only one of @string, @int, @ignore, or @unwrap \
+       can be used here."
     | Expect_string_literal -> "expect string literal "
     | Expect_int_literal ->
       "The @as payload on an @int variant must be an integer literal, e.g. \

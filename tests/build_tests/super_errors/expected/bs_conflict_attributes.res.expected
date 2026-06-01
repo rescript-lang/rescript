@@ -6,4 +6,4 @@
   2 [2m│[0m 
   3 [2m│[0m let _ = f(#A)
 
-  conflicting attributes
+  Conflicting attributes: only one of @string, @int, @ignore, or @unwrap can be used here.
