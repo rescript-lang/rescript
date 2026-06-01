@@ -26,13 +26,11 @@ type untagged_variant = OnlyOneUnknown | AtMostOneObject | AtMostOneArray
 
 type error =
   | Unsupported_predicates
-  | Conflict_bs_bs_this_bs_meth
   | Duplicated_bs_deriving
   | Conflict_attributes
   | Expect_int_literal
   | Expect_string_literal
   | Expect_int_or_string_or_json_literal
-  | Unhandled_poly_type
   | Invalid_underscore_type_in_external
   | Invalid_bs_string_type
   | Invalid_bs_int_type
@@ -65,15 +63,12 @@ let pp_error fmt err =
     | Not_supported_directive_in_bs_return -> "Not supported return directive"
     | Illegal_attribute -> "Illegal attributes"
     | Unsupported_predicates -> "unsupported predicates"
-    | Conflict_bs_bs_this_bs_meth ->
-      "%@this and %@bs can not be applied at the same time"
     | Duplicated_bs_deriving -> "duplicate @deriving attribute"
     | Conflict_attributes -> "conflicting attributes "
     | Expect_string_literal -> "expect string literal "
     | Expect_int_literal -> "expect int literal "
     | Expect_int_or_string_or_json_literal ->
       "expect int, string literal or json literal {json|text here|json} "
-    | Unhandled_poly_type -> "Unhandled poly type"
     | Invalid_underscore_type_in_external ->
       "_ is not allowed in combination with external optional type"
     | Invalid_bs_string_type -> "Not a valid type for %@string"
