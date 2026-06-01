@@ -66,7 +66,9 @@ let pp_error fmt err =
     | Duplicated_bs_deriving -> "duplicate @deriving attribute"
     | Conflict_attributes -> "conflicting attributes "
     | Expect_string_literal -> "expect string literal "
-    | Expect_int_literal -> "expect int literal "
+    | Expect_int_literal ->
+      "The @as payload on an @int variant must be an integer literal, e.g. \
+       @as(42)."
     | Expect_int_or_string_or_json_literal ->
       "expect int, string literal or json literal {json|text here|json} "
     | Invalid_underscore_type_in_external ->
