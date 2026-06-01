@@ -8,6 +8,32 @@ let fullForCmt ~moduleName ~package ~uri cmt =
     let extra = ProcessExtra.getExtra ~file ~infos in
     Some {file; extra; package}
 
+let fullForIncrementalCmt ~package ~moduleName ~uri =
+  if !Cfg.inIncrementalTypecheckingMode then
+    let path = Uri.toPath uri in
+    let incrementalCmtPath =
+      package.rootPath ^ "/lib/bs/___incremental" ^ "/" ^ moduleName
+      ^
+      match Files.classifySourceFile path with
+      | Resi -> ".cmti"
+      | _ -> ".cmt"
+    in
+    match fullForCmt ~moduleName ~package ~uri incrementalCmtPath with
+    | Some cmtInfo ->
+      if Debug.verbose () then
+        Printf.printf "[cmt] Found incremental cmt: %s\n"
+          (Filename.basename incrementalCmtPath);
+      Some cmtInfo
+    | None -> None
+  else None
+
+let fullFromModuleUri ~package ~moduleName ~uri ~paths =
+  match fullForIncrementalCmt ~package ~moduleName ~uri with
+  | Some cmtInfo -> Some cmtInfo
+  | None ->
+    let cmt = getCmtPath ~uri paths in
+    fullForCmt ~moduleName ~package ~uri cmt
+
 let fullFromUri ~uri =
   let path = Uri.toPath uri in
   match Packages.getPackage ~uri with
@@ -16,22 +42,8 @@ let fullFromUri ~uri =
     let moduleName =
       BuildSystem.namespacedName package.namespace (FindFiles.getName path)
     in
-    let incremental =
-      if !Cfg.inIncrementalTypecheckingMode then
-        let incrementalCmtPath =
-          package.rootPath ^ "/lib/bs/___incremental" ^ "/" ^ moduleName
-          ^
-          match Files.classifySourceFile path with
-          | Resi -> ".cmti"
-          | _ -> ".cmt"
-        in
-        fullForCmt ~moduleName ~package ~uri incrementalCmtPath
-      else None
-    in
-    match incremental with
-    | Some cmtInfo ->
-      if Debug.verbose () then Printf.printf "[cmt] Found incremental cmt\n";
-      Some cmtInfo
+    match fullForIncrementalCmt ~package ~moduleName ~uri with
+    | Some cmtInfo -> Some cmtInfo
     | None -> (
       match Hashtbl.find_opt package.pathsForModule moduleName with
       | Some paths ->
@@ -41,12 +53,20 @@ let fullFromUri ~uri =
         prerr_endline ("can't find module " ^ moduleName);
         None))
 
+let fullFromModule ~package ~moduleName =
+  Option.bind (Hashtbl.find_opt package.pathsForModule moduleName)
+  @@ fun paths ->
+  let uri = getUri paths in
+  fullFromModuleUri ~package ~moduleName ~uri ~paths
+
 let fullsFromModule ~package ~moduleName =
-  if Hashtbl.mem package.pathsForModule moduleName then
-    let paths = Hashtbl.find package.pathsForModule moduleName in
+  match Hashtbl.find_opt package.pathsForModule moduleName with
+  | None -> []
+  | Some paths ->
     let uris = getUris paths in
-    uris |> List.filter_map (fun uri -> fullFromUri ~uri)
-  else []
+    uris
+    |> List.filter_map (fun uri ->
+           fullFromModuleUri ~package ~moduleName ~uri ~paths)
 
 let loadFullCmtFromPath ~path =
   let uri = Uri.fromPath path in
