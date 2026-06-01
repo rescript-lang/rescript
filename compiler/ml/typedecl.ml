@@ -34,14 +34,7 @@ type error =
   | Definition_mismatch of type_expr * Includecore.type_mismatch list
   | Constraint_failed of type_expr * type_expr
   | Inconsistent_constraint of Env.t * (type_expr * type_expr) list
-  (* Appears to be dead. Its only raise site (update_type) unifies
-     [t<fresh params>] against [t]'s own manifest — i.e. a type against an
-     alpha-renamed copy of itself — which cannot produce a head clash; and
-     every genuine inconsistency is caught by a dedicated check instead
-     (Cycle_in_def, Recursive_abbrev, Parameters_differ, Constraint_failed,
-     Type_arity_mismatch). ~37 recursive/mutual/constraint/row/object/alias
-     shapes were tried without reaching it. Retained as a named variant
-     pending an airtight proof rather than replaced with [assert false]. *)
+  (* Appears dead; retained pending proof. See update_type for details. *)
   | Type_clash of Env.t * (type_expr * type_expr) list
   | Parameters_differ of Path.t * type_expr * type_expr
   | Null_arity_external
