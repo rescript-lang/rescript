@@ -1,0 +1,9 @@
+References src/MyModule1.res 2:30
+[cmt] Found incremental cmt: MyModule1-MyNamespace.cmt
+[cmt] Found incremental cmt: MyModule2-MyNamespace.cmt
+[cmt] Found incremental cmt: MyModule1-MyNamespace.cmt
+[cmt] Found incremental cmt: MyNamespace.cmt
+[
+{"uri": "MyModule1.res", "range": {"start": {"line": 2, "character": 30}, "end": {"line": 2, "character": 37}}},
+{"uri": "MyModule2.res", "range": {"start": {"line": 0, "character": 4}, "end": {"line": 0, "character": 11}}}
+]
