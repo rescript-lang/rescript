@@ -76,7 +76,6 @@ type error =
     }
   | Apply_non_function of type_expr
   | Apply_wrong_label of arg_label * type_expr
-  | Abstract_wrong_label of arg_label * type_expr
   | Label_multiply_defined of {
       label: string;
       jsx_component_info: Error_message_utils.jsx_prop_error_info option;
@@ -95,6 +94,7 @@ type error =
   | Not_subtype of
       Ctype.type_pairs * Ctype.type_pairs * Ctype.subtype_context option
   | Too_many_arguments of bool * type_expr
+  | Abstract_wrong_label of arg_label * type_expr
   | Scoping_let_module of string * type_expr
   | Not_a_variant_type of Longident.t
   | Incoherent_label_order

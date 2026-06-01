@@ -43,7 +43,6 @@ type error =
     }
   | Apply_non_function of type_expr
   | Apply_wrong_label of arg_label * type_expr
-  | Abstract_wrong_label of arg_label * type_expr
   | Label_multiply_defined of {
       label: string;
       jsx_component_info: jsx_prop_error_info option;
@@ -62,6 +61,7 @@ type error =
   | Not_subtype of
       Ctype.type_pairs * Ctype.type_pairs * Ctype.subtype_context option
   | Too_many_arguments of bool * type_expr
+  | Abstract_wrong_label of arg_label * type_expr
   | Scoping_let_module of string * type_expr
   | Not_a_variant_type of Longident.t
   | Incoherent_label_order
@@ -4681,14 +4681,6 @@ let report_error env loc ppf error =
     in
     fprintf ppf "@[<v>@[<2>%a@]@,This function has type: %a@]" print_message l
       type_expr ty
-  | Abstract_wrong_label (l, ty) ->
-    let label_mark = function
-      | Nolabel -> "but its first argument is not labelled"
-      | l ->
-        sprintf "but its first argument is labelled %s" (prefixed_label_name l)
-    in
-    fprintf ppf "@[<v>@[<2>This function should have type@ %a@]@,%s@]" type_expr
-      ty (label_mark l)
   | Label_multiply_defined {label; jsx_component_info = Some jsx_component_info}
     ->
     fprintf ppf
@@ -4761,6 +4753,14 @@ let report_error env loc ppf error =
     else (
       fprintf ppf "@[This expression should not be a function,@ ";
       fprintf ppf "the expected type is@ %a@]" type_expr ty)
+  | Abstract_wrong_label (l, ty) ->
+    let label_mark = function
+      | Nolabel -> "but its first argument is not labelled"
+      | l ->
+        sprintf "but its first argument is labelled %s" (prefixed_label_name l)
+    in
+    fprintf ppf "@[<v>@[<2>This function should have type@ %a@]@,%s@]" type_expr
+      ty (label_mark l)
   | Scoping_let_module (id, ty) ->
     fprintf ppf "This `let module' expression has type@ %a@ " type_expr ty;
     fprintf ppf
