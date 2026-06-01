@@ -58,8 +58,8 @@ let pp_error fmt err =
     | Optional_in_uncurried_bs_attribute ->
       "Uncurried function doesn't support optional arguments yet"
     | Expect_opt_in_bs_return_to_opt ->
-      "A @return directive with a `*_to_opt` variant requires the return \
-       type to be written as an option, e.g. `option<int>`."
+      "A @return directive with a `*_to_opt` variant requires the return type \
+       to be written as an option, e.g. `option<int>`."
     | Not_supported_directive_in_bs_return -> "Not supported return directive"
     | Illegal_attribute -> "Illegal attributes"
     | Unsupported_predicates -> "unsupported predicates"
@@ -75,10 +75,10 @@ let pp_error fmt err =
       "expect int, string literal or json literal {json|text here|json} "
     | Invalid_underscore_type_in_external ->
       "_ is not allowed in combination with external optional type"
-    | Invalid_bs_string_type -> "Not a valid type for %@string"
-    | Invalid_bs_int_type -> "Not a valid type for %@int"
+    | Invalid_bs_string_type -> "Not a valid type for @string"
+    | Invalid_bs_int_type -> "Not a valid type for @int"
     | Invalid_bs_unwrap_type ->
-      "Not a valid type for %@unwrap. Type must be an inline variant (closed), \
+      "Not a valid type for @unwrap. Type must be an inline variant (closed), \
        and\n\
        each constructor must have an argument."
     | Conflict_ffi_attribute str -> "Conflicting attributes: " ^ str

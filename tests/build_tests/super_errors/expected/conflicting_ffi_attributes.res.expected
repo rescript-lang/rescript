@@ -7,4 +7,4 @@
   3 [2m│[0m 
   4 [2m│[0m let _ = doThing("x", 1)
 
-  Conflicting attributes: Attribute found that conflicts with %@val
+  Conflicting attributes: Attribute found that conflicts with @val
