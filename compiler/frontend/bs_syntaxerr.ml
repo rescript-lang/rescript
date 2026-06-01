@@ -83,7 +83,8 @@ let pp_error fmt err =
        each constructor must have an argument."
     | Conflict_ffi_attribute str -> "Conflicting attributes: " ^ str
     | Bs_this_simple_pattern ->
-      "%@this expect its pattern variable to be simple form"
+      "@this expects its first parameter to be a simple identifier, not a \
+       destructured pattern."
     | Experimental_feature_not_enabled feature ->
       Printf.sprintf
         "Experimental feature not enabled: %s. Enable it by setting \"%s\" to \
