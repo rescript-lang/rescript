@@ -72,7 +72,7 @@ let pp_error fmt err =
       "The @as payload on an @int variant must be an integer literal, e.g. \
        @as(42)."
     | Expect_int_or_string_or_json_literal ->
-      "expect int, string literal or json literal {json|text here|json} "
+      "The @as payload must be an integer, string, or JSON literal."
     | Invalid_underscore_type_in_external ->
       "_ is not allowed in combination with external optional type"
     | Invalid_bs_string_type -> "Not a valid type for @string"
