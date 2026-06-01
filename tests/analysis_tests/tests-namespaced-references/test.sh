@@ -5,6 +5,15 @@ for file in src/*.res; do
   if [ "$RUNNER_OS" == "Windows" ]; then
     perl -pi -e 's/\r\n/\n/g' -- $output
   fi
+
+  # Remove unwanted output (machine-specific path)
+  perl -ni -e 'print unless /^\[getRuntimeDir\]/' -- $output
+
+  # Strip leading newlines caused by ^in+ and ^dv+ marker usage.
+  perl -0pi -e 's/\A\n+//' -- $output
+
+  # Strip trailing newlines caused by ^dv- and ^in- marker usage.
+  perl -0pi -e 's/\n+\z/\n/' -- $output
 done
 
 warningYellow='\033[0;33m'

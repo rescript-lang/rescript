@@ -20,7 +20,9 @@ let fullForIncrementalCmt ~package ~moduleName ~uri =
     in
     match fullForCmt ~moduleName ~package ~uri incrementalCmtPath with
     | Some cmtInfo ->
-      if Debug.verbose () then Printf.printf "[cmt] Found incremental cmt\n";
+      if Debug.verbose () then
+        Printf.printf "[cmt] Found incremental cmt: %s\n"
+          (Filename.basename incrementalCmtPath);
       Some cmtInfo
     | None -> None
   else None
