@@ -97,12 +97,14 @@ type error =
   | Too_many_arguments of bool * type_expr
   | Scoping_let_module of string * type_expr
   | Not_a_variant_type of Longident.t
+  | Incoherent_label_order
   | Less_general of string * (type_expr * type_expr) list
   | Modules_not_allowed
   | Cannot_infer_signature
   | Not_a_packed_module of type_expr
   | Unexpected_existential
   | Unqualified_gadt_pattern of Path.t * string
+  | Invalid_interval
   | Invalid_for_loop_index
   | No_value_clauses
   | Exception_pattern_below_toplevel

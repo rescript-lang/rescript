@@ -28,6 +28,7 @@ exception Already_bound
 type error =
   | Unbound_type_variable of string
   | Unbound_type_constructor of Longident.t
+  | Unbound_type_constructor_2 of Path.t
   | Type_arity_mismatch of Longident.t * int * int
   | Type_mismatch of (type_expr * type_expr) list
   | Alias_type_mismatch of (type_expr * type_expr) list
@@ -474,13 +475,7 @@ and transl_type_aux env policy styp =
             let row = Btype.row_repr row in
             row.row_fields
           | {desc = Tvar _}, Some (p, _) ->
-            (* unreachable: this requires the inherited type's body to be a
-               bare Tvar Tconstr, which only arises from `type 'a t = 'a`-
-               style declarations. ReScript syntax requires type parameters
-               in angle brackets (`type t<'a> = 'a`); the leading-`'a` form
-               is rejected at parse time *)
-            ignore p;
-            assert false
+            raise (Error (sty.ptyp_loc, env, Unbound_type_constructor_2 p))
           | _ -> raise (Error (sty.ptyp_loc, env, Not_a_variant ty))
         in
         List.iter
@@ -624,10 +619,7 @@ and transl_fields env policy o fields =
         iter_add tf;
         OTinherit cty
       | {desc = Tvar _}, Some p ->
-        (* unreachable: same `type 'a t = 'a` shape as above; the bare-Tvar
-           Tconstr body can't be constructed from ReScript syntax *)
-        ignore p;
-        assert false
+        raise (Error (sty.ptyp_loc, env, Unbound_type_constructor_2 p))
       | _ -> raise (Error (sty.ptyp_loc, env, Not_an_object t)))
   in
   let object_fields = List.map add_field fields in
@@ -791,6 +783,8 @@ let report_error env ppf = function
       Format.fprintf ppf
         "If you wanted to write a recursive type, don't forget the `rec` in \
          `type rec`@]"
+  | Unbound_type_constructor_2 p ->
+    fprintf ppf "The type constructor@ %a@ is not yet completely defined" path p
   | Type_arity_mismatch (lid, expected, provided) ->
     if expected == 0 then
       fprintf ppf

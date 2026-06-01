@@ -64,12 +64,18 @@ type error =
   | Too_many_arguments of bool * type_expr
   | Scoping_let_module of string * type_expr
   | Not_a_variant_type of Longident.t
+  (* Appears to be dead: no reproduction found that reaches the raise site
+     (modern arity-aware application reconciles reordered labels via
+     unification before the positional fallback). Retained pending further
+     investigation rather than replaced with [assert false]. *)
+  | Incoherent_label_order
   | Less_general of string * (type_expr * type_expr) list
   | Modules_not_allowed
   | Cannot_infer_signature
   | Not_a_packed_module of type_expr
   | Unexpected_existential
   | Unqualified_gadt_pattern of Path.t * string
+  | Invalid_interval
   | Invalid_for_loop_index
   | No_value_clauses
   | Exception_pattern_below_toplevel
@@ -1335,11 +1341,7 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
     let p = {p with ppat_loc = loc} in
     type_pat ~explode:0 p expected_ty k
     (* TODO: record 'extra' to remember about interval *)
-  | Ppat_interval _ ->
-    (* unreachable: the ReScript parser (compiler/syntax/src/res_core.ml) has
-       no construction site for Ppat_interval — interval patterns are OCaml
-       syntax not part of the ReScript grammar *)
-    assert false
+  | Ppat_interval _ -> raise (Error (loc, !env, Invalid_interval))
   | Ppat_tuple spl ->
     assert (List.length spl >= 2);
     let spl_ann = List.map (fun p -> (p, newvar ())) spl in
@@ -2251,6 +2253,18 @@ let is_ignore ~env ~arity funct =
       true
     with Unify _ -> false)
   | _ -> false
+
+let rec list_labels_aux env visited ls ty_fun =
+  let ty = expand_head env ty_fun in
+  if List.memq ty visited then (List.rev ls, false)
+  else
+    match ty.desc with
+    | Tarrow (arg, ty_res, _, arity) when arity = None || visited = [] ->
+      list_labels_aux env (ty :: visited) (arg.lbl :: ls) ty_res
+    | _ -> (List.rev ls, is_Tvar ty)
+
+let list_labels env ty =
+  wrap_trace_gadt_instances env (list_labels_aux env [] []) ty
 
 let rec lower_args env seen ty_fun =
   let ty = expand_head env ty_fun in
@@ -3722,6 +3736,10 @@ and type_application ~context total_app env funct (sargs : sargs) :
         newty2 lv (Tarrow ({lbl = l; typ = ty}, ty_fun, Cok, None)))
       ty_fun omitted
   in
+  let has_label l ty_fun =
+    let ls, tvar = list_labels env ty_fun in
+    tvar || List.mem l ls
+  in
   let ignored = ref [] in
   let force_tvar =
     let t = funct.exp_type in
@@ -3856,15 +3874,16 @@ and type_application ~context total_app env funct (sargs : sargs) :
               raise
                 (Error
                    (sarg1.pexp_loc, env, Apply_wrong_label (l1, funct.exp_type)))
-            else
-              (* Originally split between Apply_wrong_label (label not in
-                 ty_fun) and Incoherent_label_order (label in ty_fun but at
-                 a different position). The latter is unreachable: modern
-                 arity-aware unify in type_function eagerly compares against
-                 ty_expected, raising Expr_type_clash before this branch
-                 fires. Both label problems now surface as Apply_wrong_label. *)
+            else if not (has_label l1 ty_fun) then
               raise
                 (Error (sarg1.pexp_loc, env, Apply_wrong_label (l1, ty_res)))
+            else
+              (* Appears to be dead: no reproduction found that reaches this
+                 branch (modern arity-aware unify in type_function eagerly
+                 compares against ty_expected, so reordered labels reconcile
+                 before reaching here). Retained pending further investigation
+                 rather than replaced with [assert false]. *)
+              raise (Error (funct.exp_loc, env, Incoherent_label_order))
           | _ ->
             raise
               (Error
@@ -4756,6 +4775,10 @@ let report_error env loc ppf error =
       type_expr ty
   | Not_a_variant_type lid ->
     fprintf ppf "The type %a@ is not a variant type" longident lid
+  | Incoherent_label_order ->
+    fprintf ppf "This labeled function is applied to arguments@ ";
+    fprintf ppf "in an order different from other calls.@ ";
+    fprintf ppf "This is only allowed when the real type is known."
   | Less_general (kind, trace) ->
     (* modified *)
     super_report_unification_error ppf env trace
@@ -4772,6 +4795,8 @@ let report_error env loc ppf error =
   | Unqualified_gadt_pattern (tpath, name) ->
     fprintf ppf "@[The GADT constructor %s of type %a@ %s.@]" name Printtyp.path
       tpath "must be qualified in this pattern"
+  | Invalid_interval ->
+    fprintf ppf "@[Only character intervals are supported in patterns.@]"
   | Invalid_for_loop_index ->
     fprintf ppf "@[Invalid for-loop index: only variables and _ are allowed.@]"
   | No_value_clauses ->

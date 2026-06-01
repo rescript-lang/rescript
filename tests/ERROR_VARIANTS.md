@@ -86,26 +86,28 @@ established convention in the typer modules (57 existing uses).
 **Defensive unreachable — raise site becomes `assert false (* reason *)`,
 variant + reporter removed:**
 
-- `typecore`: `Incoherent_label_order` (modern arity-aware unify fires
-  `Expr_type_clash` before this branch), `Invalid_interval` (parser
-  doesn't construct `Ppat_interval`), `Invalid_for_of_pattern` (parser's
-  `normalize_for_of_pattern` replaces non-var patterns with `Ppat_any`)
-- `typetexp`: `Unbound_type_constructor_2` (needs bare-`Tvar` Tconstr
-  body via `type 'a t = 'a`, parser-rejected),
-  `Ill_typed_functor_application`, `Apply_structure_as_functor` (both
-  need `Longident.Lapply`, never constructed by the parser)
-- `typedecl`: `Type_clash`, `Parameters_differ` (every recursive
-  abbreviation hits `Cycle_in_def` first), `Null_arity_external`
-  (`Primitive.parse_declaration` always assigns the magic
-  `prim_native_name` encoding), `Bad_fixed_type` (`is_fixed_type` and
-  `expand_head` agree on every parser-produced shape),
-  `Varying_anonymous` (parser rejects `_` in type parameter positions),
-  `Val_in_structure` (`pval_prim = []` outside a signature is only
-  produced by external-recovery after a syntax error)
-- `bs_syntaxerr`: `Unhandled_poly_type` (parser misreads inline `'a.`
-  as deprecated uncurried syntax)
-- `env`: `Illegal_value_name` (parser doesn't emit `"->"` or
-  `#`-containing identifiers)
+- `typecore`: `Invalid_for_of_pattern` (parser's
+  `normalize_for_of_pattern` replaces non-var patterns with `Ppat_any`,
+  so the typer only ever sees `Ppat_var`/`Ppat_any` in for-of bindings)
+- `typetexp`: `Ill_typed_functor_application`, `Apply_structure_as_functor`
+  (both need `Longident.Lapply`, never constructed by the parser —
+  `compiler/syntax/src/` only builds `Lident`/`Ldot`)
+- `typedecl`: `Val_in_structure` (`pval_prim = []` / a bare `val` outside
+  a signature is only produced by the parser's external-recovery, which
+  emits a syntax error and aborts before the typer runs)
+- `bs_syntaxerr`: `Unhandled_poly_type` (its only raise site is in
+  `ast_core_type.list_of_arrow`; `Ptyp_poly` cannot appear in an
+  external's arrow chain — external types never route through
+  `parse_poly_type_expr`, and any `Ptyp_poly` in a record/object field is
+  an opaque arg leaf, never the recursed return type)
+
+> ⚠️ **Reachability re-audit correction.** An earlier pass mislabelled
+> several of these as unreachable on plausible-but-untested reasoning. A
+> follow-up audit (empirical: each `assert false` was driven to a real
+> crash with a minimal `.res`) found **8** that are actually reachable or
+> unproven, and they were restored as named variants (see the retained
+> list below). The remaining entries above are backed by either a parser
+> grammar fact or a structural proof, not just a guess.
 
 Re-validation found a number of previously-flagged items that are not
 completely dead and have been retained as named variants:
@@ -120,6 +122,45 @@ completely dead and have been retained as named variants:
 - `typemod.With_cannot_remove_constrained_type` — live when destructive
   substitution is applied to a constrained type
   (`with_cannot_remove_constrained_type.res`).
+- `typetexp.Unbound_type_constructor_2` — live when an identity type
+  alias `type t<'a> = 'a` is used in an inherit position with a
+  type-variable argument: `expand_head` collapses `t<'b>` to a bare
+  `Tvar` while the unexpanded repr is still `Tconstr`. Reachable from
+  both poly-variant inherit
+  (`incomplete_type_constructor_polyvariant.res`) and object spread
+  (`incomplete_type_constructor_object.res`). The earlier
+  "parser-rejected leading-`'a`" reasoning was wrong; both raise sites
+  reproduce as a compiler crash if removed.
+- `typecore.Invalid_interval` — live: the parser **does** construct
+  `Ppat_interval` (`res_core.ml`, `<const> .. <const>`). Only the
+  `Pconst_char` interval is rewritten; any other constant interval (e.g.
+  `1 .. 5`) reaches this branch (`pattern_interval_non_char.res`).
+- `typedecl.Null_arity_external` — live: an external whose name starts
+  with `?` (e.g. `external x: int = "?nodeFs"`) skips the magic
+  `prim_native_name` encoding and reaches the typer with arity 0
+  (`external_null_arity.res`).
+- `typedecl.Varying_anonymous` — live: a **variance annotation** on a
+  GADT parameter whose return type constrains it (e.g.
+  `type rec t<+'a> = K(int): t<int>`) triggers it — not `_` params
+  (`gadt_varying_anonymous.res`).
+- `typedecl.Parameters_differ` — live: non-uniform recursion through an
+  object/record manifest (e.g. `type rec t<'a> = {"f": t<int>}`) is
+  caught by `check_regular`, not `Cycle_in_def`
+  (`recursive_type_parameters_differ.res`).
+- `typedecl.Bad_fixed_type` — live: a fully-bounded closed private
+  polymorphic variant (e.g. `type t = private [< #A | #B > #A #B]`)
+  satisfies `is_fixed_type` but has a static (non-`Tvar`) row
+  (`fixed_type_no_row_variable.res`).
+- `env.Illegal_value_name` — live: escaped-identifier syntax reaches
+  `check_value_name` during definition; `let \"->" = 1` is rejected with
+  a clean diagnostic (`illegal_value_name.res`). The parser does **not**
+  reject `\"->"`.
+- `typecore.Incoherent_label_order` and `typedecl.Type_clash` — retained
+  but **appear dead**: no reproduction was found that reaches either
+  raise site, yet neither has a structural unreachability proof (both are
+  live OCaml branches guarded by runtime conditions). Kept as named
+  variants with an explanatory comment at the definition and raise site,
+  pending further investigation, rather than `assert false`.
 - `bs_syntaxerr.Misplaced_label_syntax` — live when labelled args are
   passed via operator-identifier syntax like `\"->"(x, ~b=...)`
   (`misplaced_label_syntax.res`).

@@ -58,6 +58,7 @@ type error =
   | Illegal_renaming of string * string * string
   | Inconsistent_import of string * string * string
   | Missing_module of Location.t * Path.t * Path.t
+  | Illegal_value_name of Location.t * string
 
 exception Error of error
 
@@ -729,6 +730,7 @@ let check_pers_struct name =
           Location.print_filename filename ps_name name
       | Inconsistent_import _ -> assert false
       | Missing_module _ -> assert false
+      | Illegal_value_name _ -> assert false
     in
     let warn = Warnings.No_cmi_file (name, Some msg) in
     Location.prerr_warning Location.none warn
@@ -1616,16 +1618,11 @@ and check_usage loc id warn tbl =
 and check_value_name name loc =
   (* Note: we could also check here general validity of the
      identifier, to protect against bad identifiers forged by -pp or
-     -ppx preprocessors.
-
-     Both guarded paths below are unreachable: the ReScript parser never
-     emits value identifiers named "->" or containing "#" — both shapes
-     are rejected as syntax errors. *)
-  ignore loc;
-  if name = "->" then assert false
+     -ppx preprocessors. *)
+  if name = "->" then raise (Error (Illegal_value_name (loc, name)))
   else if String.length name > 0 && name.[0] = '#' then
     for i = 1 to String.length name - 1 do
-      if name.[i] = '#' then assert false
+      if name.[i] = '#' then raise (Error (Illegal_value_name (loc, name)))
     done
 
 and store_value ?check id decl env =
@@ -2132,9 +2129,13 @@ let report_error ppf = function
     fprintf ppf "@]@ @[%s@ %s@ %s.@]@]" "The compiled interface for module"
       (Ident.name (Path.head path2))
       "was not found"
+  | Illegal_value_name (_loc, name) ->
+    fprintf ppf "'%s' is not a valid value identifier." name
+
 let () =
   Location.register_error_of_exn (function
-    | Error (Missing_module (loc, _, _) as err) when loc <> Location.none ->
+    | Error ((Missing_module (loc, _, _) | Illegal_value_name (loc, _)) as err)
+      when loc <> Location.none ->
       Some (Location.error_of_printer loc report_error err)
     | Error err -> Some (Location.error_of_printer_file report_error err)
     | _ -> None)

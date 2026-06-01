@@ -37,6 +37,7 @@ exception Already_bound
 type error =
   | Unbound_type_variable of string
   | Unbound_type_constructor of Longident.t
+  | Unbound_type_constructor_2 of Path.t
   | Type_arity_mismatch of Longident.t * int * int
   | Type_mismatch of (type_expr * type_expr) list
   | Alias_type_mismatch of (type_expr * type_expr) list
