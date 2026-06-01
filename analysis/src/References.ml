@@ -18,6 +18,20 @@ let locItemsForPos ~extra pos =
 
 let lineColToCmtLoc ~pos:(line, col) = (line + 1, col)
 
+(** External references in namespaced projects are indexed by the public
+  * namespace path, e.g. MyNamespace.MyModule1.myFunc1, while definitions live
+  * in hidden compiled modules like MyModule1-MyNamespace.
+  * We return the lookup key pair used by the external reference index.
+  *)
+let normalizeExternalReferenceKey ~namespace ~moduleName ~path =
+  match namespace with
+  | Some namespace when Utils.endsWith moduleName ("-" ^ namespace) ->
+    let suffixLen = String.length namespace + 1 in
+    let sourceModuleLen = String.length moduleName - suffixLen in
+    let sourceModule = String.sub moduleName 0 sourceModuleLen in
+    (namespace, sourceModule :: path)
+  | _ -> (moduleName, path)
+
 let getLocItem ~full ~pos ~debug =
   let log n msg = if debug then Printf.printf "getLocItem #%d: %s\n" n msg in
   let pos = lineColToCmtLoc ~pos in
@@ -485,6 +499,10 @@ let forLocalStamp ~full:{file; extra; package} stamp (tip : Tip.t) =
             in
             maybeLog ("Now checking path " ^ pathToString path);
             let thisModuleName = file.moduleName in
+            let normalizedModuleName, normalizedPath =
+              normalizeExternalReferenceKey ~namespace:package.namespace
+                ~moduleName:thisModuleName ~path
+            in
             let externals =
               package.projectFiles |> FileSet.elements
               |> List.filter (fun name -> name <> file.moduleName)
@@ -493,14 +511,15 @@ let forLocalStamp ~full:{file; extra; package} stamp (tip : Tip.t) =
                      |> List.map (fun {file; extra} ->
                             match
                               Hashtbl.find_opt extra.externalReferences
-                                thisModuleName
+                                normalizedModuleName
                             with
                             | None -> []
                             | Some refs ->
                               let locs =
                                 refs
                                 |> Utils.filterMap (fun (p, t, locs) ->
-                                       if p = path && t = tip then Some locs
+                                       if p = normalizedPath && t = tip then
+                                         Some locs
                                        else None)
                               in
                               locs
@@ -522,10 +541,8 @@ let allReferencesForLocItem ~full:({file; package} as full) locItem =
   | TopLevelModule moduleName ->
     let otherModulesReferences =
       package.projectFiles |> FileSet.elements
-      |> Utils.filterMap (fun name ->
-             match ProcessCmt.fileForModule ~package name with
-             | None -> None
-             | Some file -> Cmt.fullFromUri ~uri:file.uri)
+      |> Utils.filterMap (fun moduleName ->
+             Cmt.fullFromModule ~package ~moduleName)
       |> List.map (fun full ->
              match Hashtbl.find_opt full.extra.fileReferences moduleName with
              | None -> []
@@ -563,7 +580,7 @@ let allReferencesForLocItem ~full:({file; package} as full) locItem =
       match exportedForTip ~env ~path ~package ~tip with
       | None -> []
       | Some (env, _name, stamp) -> (
-        match Cmt.fullFromUri ~uri:env.file.uri with
+        match Cmt.fullFromModule ~package ~moduleName:env.file.moduleName with
         | None -> []
         | Some full ->
           maybeLog

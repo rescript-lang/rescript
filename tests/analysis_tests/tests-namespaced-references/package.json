@@ -1,0 +1,11 @@
+{
+  "name": "@tests/namespaced-references",
+  "private": true,
+  "scripts": {
+    "build": "rescript build",
+    "clean": "rescript clean"
+  },
+  "dependencies": {
+    "rescript": "workspace:^"
+  }
+}
