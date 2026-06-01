@@ -3874,14 +3874,7 @@ and type_application ~context total_app env funct (sargs : sargs) :
             else if not (has_label l1 ty_fun) then
               raise
                 (Error (sarg1.pexp_loc, env, Apply_wrong_label (l1, ty_res)))
-            else
-              (* Reached when a not-yet-generalized function value is applied
-                 more than once with labelled arguments in conflicting orders
-                 (e.g. `g => (g(~a, ~b), g(~b, ~a))`): the first call fixes the
-                 arrow order, and the second reordered call lands here via the
-                 leftover/tvar path. See
-                 fixtures/labeled_args_incoherent_order.res. *)
-              raise (Error (funct.exp_loc, env, Incoherent_label_order))
+            else raise (Error (funct.exp_loc, env, Incoherent_label_order))
           | _ ->
             raise
               (Error
