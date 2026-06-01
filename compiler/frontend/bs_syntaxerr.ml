@@ -26,11 +26,13 @@ type untagged_variant = OnlyOneUnknown | AtMostOneObject | AtMostOneArray
 
 type error =
   | Unsupported_predicates
+  | Conflict_bs_bs_this_bs_meth
   | Duplicated_bs_deriving
   | Conflict_attributes
   | Expect_int_literal
   | Expect_string_literal
   | Expect_int_or_string_or_json_literal
+  | Unhandled_poly_type
   | Invalid_underscore_type_in_external
   | Invalid_bs_string_type
   | Invalid_bs_int_type
@@ -42,15 +44,19 @@ type error =
   *)
   | Not_supported_directive_in_bs_return
   | Expect_opt_in_bs_return_to_opt
+  | Misplaced_label_syntax
   | Optional_in_uncurried_bs_attribute
   | Bs_this_simple_pattern
   | Experimental_feature_not_enabled of Experimental_features.feature
   | LetUnwrap_not_supported_in_position of [`Toplevel | `Unsupported_type]
-  | Misplaced_label_syntax
 
 let pp_error fmt err =
   Format.pp_print_string fmt
     (match err with
+    | Misplaced_label_syntax -> "Label syntax is not supported in this position"
+    (*
+    let fn x = ((##) x ~hi)  ~lo:1 ~hi:2 
+    *)
     | Optional_in_uncurried_bs_attribute ->
       "Uncurried function doesn't support optional arguments yet"
     | Expect_opt_in_bs_return_to_opt ->
@@ -59,12 +65,15 @@ let pp_error fmt err =
     | Not_supported_directive_in_bs_return -> "Not supported return directive"
     | Illegal_attribute -> "Illegal attributes"
     | Unsupported_predicates -> "unsupported predicates"
+    | Conflict_bs_bs_this_bs_meth ->
+      "%@this and %@bs can not be applied at the same time"
     | Duplicated_bs_deriving -> "duplicate @deriving attribute"
     | Conflict_attributes -> "conflicting attributes "
     | Expect_string_literal -> "expect string literal "
     | Expect_int_literal -> "expect int literal "
     | Expect_int_or_string_or_json_literal ->
       "expect int, string literal or json literal {json|text here|json} "
+    | Unhandled_poly_type -> "Unhandled poly type"
     | Invalid_underscore_type_in_external ->
       "_ is not allowed in combination with external optional type"
     | Invalid_bs_string_type -> "Not a valid type for %@string"
@@ -87,8 +96,7 @@ let pp_error fmt err =
       | `Toplevel -> "`let?` is not allowed for top-level bindings."
       | `Unsupported_type ->
         "`let?` is only supported in let bindings targeting the `result` or \
-         `option` type.")
-    | Misplaced_label_syntax -> "Label syntax is not supported in this position")
+         `option` type."))
 
 type exn += Error of Location.t * error
 

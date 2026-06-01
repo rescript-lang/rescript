@@ -26,11 +26,13 @@ type untagged_variant = OnlyOneUnknown | AtMostOneObject | AtMostOneArray
 
 type error =
   | Unsupported_predicates
+  | Conflict_bs_bs_this_bs_meth
   | Duplicated_bs_deriving
   | Conflict_attributes
   | Expect_int_literal
   | Expect_string_literal
   | Expect_int_or_string_or_json_literal
+  | Unhandled_poly_type
   | Invalid_underscore_type_in_external
   | Invalid_bs_string_type
   | Invalid_bs_int_type
@@ -42,11 +44,11 @@ type error =
   *)
   | Not_supported_directive_in_bs_return
   | Expect_opt_in_bs_return_to_opt
+  | Misplaced_label_syntax
   | Optional_in_uncurried_bs_attribute
   | Bs_this_simple_pattern
   | Experimental_feature_not_enabled of Experimental_features.feature
   | LetUnwrap_not_supported_in_position of [`Toplevel | `Unsupported_type]
-  | Misplaced_label_syntax
 
 val err : Location.t -> error -> 'a
 

@@ -1818,6 +1818,11 @@ let report_error ppf = function
     fprintf ppf "@[This module is not a functor; it has type@ %a@]" modtype mty
   | Not_included errs ->
     fprintf ppf "@[<v>Signature mismatch:@ %a@]" Includemod.report_error errs
+  | Cannot_eliminate_dependency mty ->
+    fprintf ppf
+      "@[This functor has type@ %a@ The parameter cannot be eliminated in the \
+       result type.@  Bind the argument to a module identifier.@]"
+      modtype mty
   | Signature_expected -> fprintf ppf "This module type is not a signature"
   | Structure_expected mty ->
     fprintf ppf "@[This module is not a structure; it has type@ %a" modtype mty
@@ -1835,16 +1840,16 @@ let report_error ppf = function
       "@[<v>@[This `with' constraint on %a makes the applicative functor @ \
        type %s ill-typed in the constrained signature:@]@ %a@]"
       longident lid (Path.name path) Includemod.report_error explanation
-  | With_cannot_remove_constrained_type ->
-    fprintf ppf
-      "@[<v>Destructive substitutions are not supported for constrained @ \
-       types (other than when replacing a type constructor with @ a type \
-       constructor with the same arguments).@]"
   | With_changes_module_alias (lid, id, path) ->
     fprintf ppf
       "@[<v>@[This `with' constraint on %a changes %s, which is aliased @ in \
        the constrained signature (as %s)@].@]"
       longident lid (Path.name path) (Ident.name id)
+  | With_cannot_remove_constrained_type ->
+    fprintf ppf
+      "@[<v>Destructive substitutions are not supported for constrained @ \
+       types (other than when replacing a type constructor with @ a type \
+       constructor with the same arguments).@]"
   | Repeated_name (kind, name, repeated_loc) ->
     fprintf ppf
       "@[Multiple definition of the %s name %s @ at @{<loc>%a@}@ @ Names must \
@@ -1873,11 +1878,6 @@ let report_error ppf = function
   | Interface_not_compiled intf_name ->
     fprintf ppf "@[Could not find the .cmi file for interface@ %a.@]"
       Location.print_filename intf_name
-  | Cannot_eliminate_dependency mty ->
-    fprintf ppf
-      "@[This functor has type@ %a@ The parameter cannot be eliminated in the \
-       result type.@  Bind the argument to a module identifier.@]"
-      modtype mty
   | Not_allowed_in_functor_body ->
     fprintf ppf "@[This expression creates fresh types.@ %s@]"
       "It is not allowed inside applicative functors."

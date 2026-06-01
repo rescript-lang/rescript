@@ -1989,6 +1989,19 @@ let rec type_approx env sexp =
     ty2
   | _ -> newvar ()
 
+(* List labels in a function type, and whether return type is a variable *)
+let rec list_labels_aux env visited ls ty_fun =
+  let ty = expand_head env ty_fun in
+  if List.memq ty visited then (List.rev ls, false)
+  else
+    match ty.desc with
+    | Tarrow (arg, ty_res, _, arity) when arity = None || visited = [] ->
+      list_labels_aux env (ty :: visited) (arg.lbl :: ls) ty_res
+    | _ -> (List.rev ls, is_Tvar ty)
+
+let list_labels env ty =
+  wrap_trace_gadt_instances env (list_labels_aux env [] []) ty
+
 (* Check that all univars are safe in a type *)
 let check_univars env expans kind exp ty_expected vars =
   if expans && not (is_nonexpansive exp) then
@@ -2249,18 +2262,6 @@ let is_ignore ~env ~arity funct =
       true
     with Unify _ -> false)
   | _ -> false
-
-let rec list_labels_aux env visited ls ty_fun =
-  let ty = expand_head env ty_fun in
-  if List.memq ty visited then (List.rev ls, false)
-  else
-    match ty.desc with
-    | Tarrow (arg, ty_res, _, arity) when arity = None || visited = [] ->
-      list_labels_aux env (ty :: visited) (arg.lbl :: ls) ty_res
-    | _ -> (List.rev ls, is_Tvar ty)
-
-let list_labels env ty =
-  wrap_trace_gadt_instances env (list_labels_aux env [] []) ty
 
 let rec lower_args env seen ty_fun =
   let ty = expand_head env ty_fun in
