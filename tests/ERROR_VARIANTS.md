@@ -197,6 +197,7 @@ Source: [typecore.ml:27](../compiler/ml/typecore.ml).
 |---|---|---|---|
 | `Polymorphic_label` | ✓ | `polymorphic_label.res` | Pattern that instantiates a polymorphic record field: `({f: (f: int => int)}: t) =>` constrains the universal `'a` of `f: 'a. 'a => 'a` to `int => int`. |
 | `Constructor_arity_mismatch` | ✓ | `constructor_arity_mismatch.res`, `constructor_arity_mismatch_pattern.res`, `arity_mismatch*.res` | Triggers in both expression (4028) and pattern (1426) paths. |
+| `Label_mismatch` | ✓ | `label_mismatch_record_literal.res` | Record literal without expected type mixing fields from two different record types — disambiguation picks one type per label, and the cross-type unify fails inside `type_label_exp`. |
 | `Pattern_type_clash` | ✓ | many `*_pattern_type_clash.res` etc. | Most-fired pattern error. Sub-case fixtures: `pattern_matching_on_option_but_value_not_option.res` and `pattern_matching_on_value_but_is_option.res` (option-vs-non-option trace), `pattern_type_clash_polyvariant.res` (polyvariant tag against concrete type), `pattern_type_clash_tuple_arity.res` (tuple arity mismatch). |
 | `Or_pattern_type_clash` | ✓ | `or_pattern_type_clash.res` | |
 | `Multiply_bound_variable` | ✓ | `multiply_bound_variable.res` | |
@@ -204,8 +205,6 @@ Source: [typecore.ml:27](../compiler/ml/typecore.ml).
 | `Expr_type_clash` | ✓ | many `*.res` | Most-fired expression error. Trace-shape sub-cases covered: `if_return_type_mismatch.res` (IfReturn), `maybe_unwrap_option.res` (MaybeUnwrapOption), `string_concat_non_string.res` (StringConcat), `labeled_fn_argument_type_clash.res` (FunctionArgument with explicit label), `math_operator_*.res` (MathOperator family), `ternary_branch_mismatch.res`, `switch_different_types.res`, `try_catch_same_type.res`, `comparison_operator.res`, `array_item_type_mismatch.res`, `array_literal_passed_to_tuple.res`, `if_condition_mismatch.res`, `while_condition.res`, `for_loop_condition.res`, `assert_condition.res`, `function_call_mismatch.res`, `awaiting_non_promise.res`, multiple `jsx_*` fixtures. |
 | `Apply_non_function` | ✓ | `apply_non_function.res` | |
 | `Apply_wrong_label` | ✓ | `apply_wrong_label.res` | |
-| `Abstract_wrong_label` | ✓ | `abstract_wrong_label.res` | Multi-arg function literal where an inner argument label doesn't match the expected arrow's label (e.g. `let f: (~a, ~b) => int = (~a, ~c) => …`). |
-| `Label_mismatch` | ✓ | `label_mismatch_record_literal.res` | Record literal without expected type mixing fields from two different record types — disambiguation picks one type per label, and the cross-type unify fails inside `type_label_exp`. |
 | `Label_multiply_defined` | ✓ | `label_multiply_defined_literal.res` | |
 | `Labels_missing` | ✓ | `missing_label.res`, `missing_labels.res` | |
 | `Label_not_mutable` | ✓ | `label_not_mutable.res` | |
@@ -216,14 +215,17 @@ Source: [typecore.ml:27](../compiler/ml/typecore.ml).
 | `Private_label` | ✓ | `private_label.res` | |
 | `Not_subtype` | ✓ | `subtype_*.res`, `dict_show_no_coercion.res`, etc. | |
 | `Too_many_arguments` | ✓ | `too_many_arguments.res`, `moreArguments*.res` | |
+| `Abstract_wrong_label` | ✓ | `abstract_wrong_label.res` | Multi-arg function literal where an inner argument label doesn't match the expected arrow's label (e.g. `let f: (~a, ~b) => int = (~a, ~c) => …`). |
 | `Scoping_let_module` | ✓ | `scoping_let_module.res` | |
 | `Not_a_variant_type` | ✓ | `variant_spread_pattern_not_a_variant.res` | Pattern-level variant spread of a non-variant type. |
+| `Incoherent_label_order` | ✓ | `labeled_args_incoherent_order.res` | A not-yet-generalized function value applied more than once with labelled args in conflicting orders (`g => (g(~a, ~b), g(~b, ~a))`); the reordered second call hits the leftover/tvar path in `type_unknown_args`. |
 | `Less_general` | ✓ | `less_general_universal.res` | |
 | `Modules_not_allowed` | ✓ | `super_errors_multi/Modules_not_allowed_toplevel` | Toplevel `let module(M) = …` pattern with `allow_modules=false`. |
 | `Cannot_infer_signature` | ✓ | `cannot_infer_signature.res` | |
 | `Not_a_packed_module` | ✓ | `not_a_packed_module.res` | |
 | `Unexpected_existential` | ✓ | `super_errors_multi/Unexpected_existential_in_let` | Destructuring GADT constructor with existential in toplevel `let`. |
 | `Unqualified_gadt_pattern` | ✓ | `super_errors_multi/Cross_gadt_pattern` | Only reachable via cross-module GADT disambiguation; in single-file matching the constructor would resolve before this check. |
+| `Invalid_interval` | ✓ | `pattern_interval_non_char.res` | Non-char constant interval pattern (e.g. `1 .. 5`); the parser builds `Ppat_interval` and only the `Pconst_char` interval is rewritten. |
 | `Invalid_for_loop_index` | ✓ | `invalid_for_loop_index.res` | |
 | `No_value_clauses` | ✓ | `no_value_clauses.res` | |
 | `Exception_pattern_below_toplevel` | ✓ | `exception_pattern_below_toplevel.res` | |
@@ -260,6 +262,9 @@ Type-declaration errors. Source: [typedecl.ml:27](../compiler/ml/typedecl.ml).
 | `Definition_mismatch` | ✓ | `definition_mismatch.res` | |
 | `Constraint_failed` | ✓ | `constraint_failed.res` | |
 | `Inconsistent_constraint` | ✓ | `inconsistent_constraint.res` | |
+| `Type_clash` | ⚠ | — | Appears dead; retained pending proof. `update_type` unifies `t<fresh>` against `t`'s own manifest (an alpha-renamed copy of itself), which can't head-clash; real inconsistencies hit `Cycle_in_def`/`Recursive_abbrev`/`Parameters_differ` first. ~37 shapes tried without reaching it. |
+| `Parameters_differ` | ✓ | `recursive_type_parameters_differ.res` | Non-uniform recursion through an object/record manifest (`type rec t<'a> = {"f": t<int>}`), caught by `check_regular` rather than `Cycle_in_def`. |
+| `Null_arity_external` | ✓ | `external_null_arity.res` | External whose name starts with `?` (e.g. `external x: int = "?nodeFs"`) skips the magic `prim_native_name` encoding and reaches the typer with arity 0. |
 | `Unbound_type_var` | ✓ | `unbound_type_var.res` | |
 | `Cannot_extend_private_type` | ✓ | `cannot_extend_private_type.res` | |
 | `Not_extensible_type` | ✓ | `not_extensible_type.res` | |
@@ -269,7 +274,9 @@ Type-declaration errors. Source: [typedecl.ml:27](../compiler/ml/typedecl.ml).
 | `Rebind_private` | ✓ | `extension_rebind_private.res` | Rebinding a private extension constructor as public. |
 | `Bad_variance` | ✓ | `bad_variance.res`, `bad_variance_contra.res` | |
 | `Unavailable_type_constructor` | ☐ (needs build harness) | — | typedecl.ml:778. Requires a type path findable at parse time but missing during constraint enforcement; only cross-unit scenarios where a `.cmi` was found but later removed. |
+| `Bad_fixed_type` | ✓ | `fixed_type_no_row_variable.res` | Fully-bounded closed private polymorphic variant (`type t = private [< #A | #B > #A #B]`) satisfies `is_fixed_type` but has a static (non-`Tvar`) row. |
 | `Unbound_type_var_ext` | ✓ | `unbound_type_var_extension.res` | |
+| `Varying_anonymous` | ✓ | `gadt_varying_anonymous.res` | Variance annotation on a GADT parameter whose return type constrains it (`type rec t<+'a> = K(int): t<int>`). |
 | `Invalid_attribute` | ✓ | `invalid_attribute_not_undefined.res` | |
 | `Bad_immediate_attribute` | ✓ | `bad_immediate_attribute.res` | |
 | `Bad_unboxed_attribute` | ✓ | `bad_unboxed_attribute_abstract.res`, `bad_unboxed_attribute_mutable.res`, `bad_unboxed_attribute_many_fields.res`, `bad_unboxed_attribute_extensible.res` | All 4 sub-cases covered. |
@@ -318,6 +325,7 @@ Type-expression errors. Source: [typetexp.ml:28](../compiler/ml/typetexp.ml).
 |---|---|---|---|
 | `Unbound_type_variable` | ✓ | (covered indirectly via many fixtures) | |
 | `Unbound_type_constructor` | ✓ | `typetexp_unbound_type_constructor.res` | |
+| `Unbound_type_constructor_2` | ✓ | `incomplete_type_constructor_polyvariant.res`, `incomplete_type_constructor_object.res` | Identity alias `type t<'a> = 'a` used in an inherit position with a type-variable arg; `expand_head` collapses `t<'b>` to a bare `Tvar` while the repr stays `Tconstr`. Reachable from poly-variant inherit and object spread. |
 | `Type_arity_mismatch` | ✓ | `type_arity_mismatch.res` | |
 | `Type_mismatch` | ✓ | `typetexp_type_mismatch.res` | Type-constructor application that violates a `constraint 'a = …` on the declaration. |
 | `Alias_type_mismatch` | ✓ | `typetexp_alias_type_mismatch.res` | |
@@ -476,6 +484,7 @@ Environment / `.cmi`-consistency errors. Source: [env.ml:57](../compiler/ml/env.
 | `Illegal_renaming` | ☐ (needs build harness) | — | Triggered when a `.cmi` filename and the module name inside it disagree. Reachable via `rescript.json` setups that rename the produced artefact, but not from a single-process `bsc` invocation that always writes `Module.cmi` to match the source. |
 | `Inconsistent_import` | ☐ (needs build harness) | — | Triggered when two `.cmi` files transitively imported by the same unit declare different CRCs for the same type. Needs an artificially-mutated build state across multiple compile invocations. |
 | `Missing_module` | ☐ (needs build harness) | — | `.cmi` referenced but absent from `-I` paths at compile time. The `super_errors_multi` runner pre-compiles every fixture file via `-bs-read-cmi`, so it never reaches this code path. |
+| `Illegal_value_name` | ✓ | `illegal_value_name.res` | Escaped identifier reaching `check_value_name` during definition (`let \"->" = 1`); the parser does not reject `\"->"`. |
 
 ---
 
