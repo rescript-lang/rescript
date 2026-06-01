@@ -4663,7 +4663,7 @@ let report_error env loc ppf error =
     | _ ->
       fprintf ppf
         "@[<v>@[<2>This can't be called, it's not a function.@]@,\
-         The function has type: %a@]"
+         It has type: %a@]"
         type_expr typ)
   | Apply_wrong_label (l, ty) ->
     let print_message ppf = function
