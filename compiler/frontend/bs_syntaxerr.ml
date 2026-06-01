@@ -67,7 +67,7 @@ let pp_error fmt err =
     | Conflict_attributes ->
       "Conflicting attributes: only one of @string, @int, @ignore, or @unwrap \
        can be used here."
-    | Expect_string_literal -> "expect string literal "
+    | Expect_string_literal -> "Expected a string literal."
     | Expect_int_literal ->
       "The @as payload on an @int variant must be an integer literal, e.g. \
        @as(42)."
