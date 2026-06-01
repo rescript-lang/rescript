@@ -66,12 +66,13 @@ jobs:
             exe-suffix: ".exe"
             dune-profile: release
 
+          # Disable for now. eio and eio_main require ocaml >= 5.2.0
           # Verify that the compiler still builds with the oldest OCaml version we support.
-          - os: ubuntu-24.04
-            ocaml_compiler: ocaml-variants.5.0.0+options,ocaml-option-static
-            node-target: linux-x64
-            rust-target: x86_64-unknown-linux-musl
-            dune-profile: static
+          # - os: ubuntu-24.04
+          #   ocaml_compiler: ocaml-variants.5.0.0+options,ocaml-option-static
+          #   node-target: linux-x64
+          #   rust-target: x86_64-unknown-linux-musl
+          #   dune-profile: static
 
     runs-on: ${{matrix.os}}
 
@@ -183,15 +184,48 @@ jobs:
       - name: Make Linux headers visible to musl-gcc
         if: runner.os == 'Linux'
         run: |
-          sudo mkdir -p /usr/include/x86_64-linux-musl
+          set -eux
 
-          sudo rm -rf /usr/include/x86_64-linux-musl/linux
-          sudo rm -rf /usr/include/x86_64-linux-musl/asm
-          sudo rm -rf /usr/include/x86_64-linux-musl/asm-generic
+          # Get the GNU multiarch triplet for the current machine.
+          # Examples:
+          #   x86_64-linux-gnu
+          #   aarch64-linux-gnu
+          GNU_MULTIARCH="$(gcc -print-multiarch)"
 
-          sudo ln -s /usr/include/linux /usr/include/x86_64-linux-musl/linux
-          sudo ln -s /usr/include/x86_64-linux-gnu/asm /usr/include/x86_64-linux-musl/asm
-          sudo ln -s /usr/include/asm-generic /usr/include/x86_64-linux-musl/asm-generic
+          # Convert the GNU triplet into the musl include directory name.
+          # Examples:
+          #   x86_64-linux-gnu  -> x86_64-linux-musl
+          #   aarch64-linux-gnu -> aarch64-linux-musl
+          MUSL_MULTIARCH="${GNU_MULTIARCH%-gnu}-musl"
+
+          # musl-gcc searches this include directory.
+          MUSL_INCLUDE="/usr/include/${MUSL_MULTIARCH}"
+
+          # Linux arch-specific asm headers are installed here by linux-libc-dev.
+          GNU_ASM="/usr/include/${GNU_MULTIARCH}/asm"
+
+          # Ensure the musl include directory exists.
+          sudo mkdir -p "$MUSL_INCLUDE"
+
+          # Remove old paths first.
+          # This avoids silently keeping broken/stale symlinks from previous runs.
+          sudo rm -rf "$MUSL_INCLUDE/linux"
+          sudo rm -rf "$MUSL_INCLUDE/asm"
+          sudo rm -rf "$MUSL_INCLUDE/asm-generic"
+
+          # Expose Linux UAPI headers to musl-gcc.
+          # This fixes packages that include headers like <linux/swab.h>.
+          sudo ln -s /usr/include/linux "$MUSL_INCLUDE/linux"
+
+          # Expose architecture-specific asm headers to musl-gcc.
+          sudo ln -s "$GNU_ASM" "$MUSL_INCLUDE/asm"
+
+          # Expose generic asm headers used by many Linux headers.
+          sudo ln -s /usr/include/asm-generic "$MUSL_INCLUDE/asm-generic"
+
+          # Smoke test: fail early if musl-gcc still cannot find Linux headers.
+          echo '#include <linux/swab.h>' > /tmp/test.c
+          musl-gcc -c /tmp/test.c -o /tmp/test.o
 
       - name: Use OCaml ${{matrix.ocaml_compiler}}
         uses: ocaml/setup-ocaml@v3.6.0
