@@ -106,7 +106,7 @@ jobs:
         with:
           # https://github.com/ocaml/setup-ocaml/blob/2f57267f071bc8547dfcb9433ff21d44fffef190/packages/setup-ocaml/src/unix.ts#L48
           # plus OPAM wants cmake
-          packages: bubblewrap darcs g++-multilib gcc-multilib mercurial musl-tools rsync cmake build-essential linux-libc-dev
+          packages: bubblewrap darcs g++-multilib gcc-multilib mercurial musl-tools rsync cmake
           version: v5
 
       - name: Restore rewatch build cache
@@ -175,6 +175,23 @@ jobs:
             C:\cygwin
             C:\.opam
           key: ${{ env.opam_cache_key }}
+
+      # The static OCaml switch uses musl-gcc. linux-libc-dev installs Linux
+      # headers under /usr/include, but musl-gcc searches the musl include dir.
+      # Link the Linux headers into musl's include path so packages with C stubs
+      # such as uring can include <linux/...> headers.
+      - name: Make Linux headers visible to musl-gcc
+        if: runner.os == 'Linux'
+        run: |
+          sudo mkdir -p /usr/include/x86_64-linux-musl
+
+          sudo rm -rf /usr/include/x86_64-linux-musl/linux
+          sudo rm -rf /usr/include/x86_64-linux-musl/asm
+          sudo rm -rf /usr/include/x86_64-linux-musl/asm-generic
+
+          sudo ln -s /usr/include/linux /usr/include/x86_64-linux-musl/linux
+          sudo ln -s /usr/include/x86_64-linux-gnu/asm /usr/include/x86_64-linux-musl/asm
+          sudo ln -s /usr/include/asm-generic /usr/include/x86_64-linux-musl/asm-generic
 
       - name: Use OCaml ${{matrix.ocaml_compiler}}
         uses: ocaml/setup-ocaml@v3.6.0
