@@ -923,7 +923,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
       else
         ( Js_op.Lit tag_name,
           (* TAG:xx for inline records *)
-          match Ast_untagged_variants.process_tag_type p.attrs with
+          match Ast_untagged_variants.process_constructor_tag_type p.attrs with
           | None -> E.str p.name
           | Some t -> E.tag_type t )
         :: tails
@@ -931,7 +931,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
     expression_desc cxt ~level f (Object (None, objs))
   | Caml_block (el, _, tag, Blk_constructor p) ->
     let not_is_cons = p.name <> Literals.cons in
-    let tag_type = Ast_untagged_variants.process_tag_type p.attrs in
+    let tag_type = Ast_untagged_variants.process_constructor_tag_type p.attrs in
     let untagged = Ast_untagged_variants.process_untagged p.attrs in
     let tag_name =
       match Ast_untagged_variants.process_tag_name p.attrs with

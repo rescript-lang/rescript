@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/primitive_catchall_duplicate_number.res[0m:[2m4:3-34[0m
+
+  2 [2m│[0m type t =
+  3 [2m│[0m   | @catch(int) A({kind: int})
+  [1;31m4[0m [2m│[0m   [1;31m| @catch(float) B({kind: float})[0m
+  5 [2m│[0m 
+
+  At most one number catch-all (@catch(int|float)) is allowed per variant
