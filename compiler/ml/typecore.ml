@@ -4782,10 +4782,15 @@ let report_error env loc ppf error =
   | Not_a_packed_module ty ->
     fprintf ppf "This expression is packed module, but the expected type is@ %a"
       type_expr ty
-  | Unexpected_existential -> fprintf ppf "Unexpected existential"
+  | Unexpected_existential ->
+    fprintf ppf
+      "This pattern introduces an existential type from a GADT constructor, \
+       which is not allowed here. Match on it inside a switch instead."
   | Unqualified_gadt_pattern (tpath, name) ->
-    fprintf ppf "@[The GADT constructor %s of type %a@ %s.@]" name Printtyp.path
-      tpath "must be qualified in this pattern"
+    fprintf ppf
+      "@[The GADT constructor %s of type %a@ must be written with its module \
+       prefix in this pattern.@]"
+      name Printtyp.path tpath
   | Invalid_interval ->
     fprintf ppf "@[Only character intervals are supported in patterns.@]"
   | Invalid_for_loop_index ->

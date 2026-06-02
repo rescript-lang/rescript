@@ -8,5 +8,5 @@
   8 [2m│[0m   M.v
   9 [2m│[0m }
 
-  The type of this packed module contains variables:
+  The type of this first-class module still contains type variables:
 module(S with type t = 'a)

@@ -9,4 +9,5 @@
   4 [2m│[0m   | Pair(_, _) => "pair"
   5 [2m│[0m   }
 
-  The GADT constructor Int of type Gadt.t must be qualified in this pattern.
+  The GADT constructor Int of type Gadt.t
+  must be written with its module prefix in this pattern.
