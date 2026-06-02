@@ -60,7 +60,9 @@ let pp_error fmt err =
     | Expect_opt_in_bs_return_to_opt ->
       "This @return directive requires the external's return type to be an \
        option, e.g. `option<int>`."
-    | Not_supported_directive_in_bs_return -> "Not supported return directive"
+    | Not_supported_directive_in_bs_return ->
+      "Unsupported @return directive. Supported directives are `null_to_opt`, \
+       `null_undefined_to_opt` (or `nullable`), and `identity`."
     | Illegal_attribute -> "Illegal attributes"
     | Unsupported_predicates -> "unsupported predicates"
     | Duplicated_bs_deriving ->
