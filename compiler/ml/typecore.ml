@@ -4823,7 +4823,7 @@ let report_error env loc ppf error =
   | Unknown_literal (n, m) ->
     fprintf ppf "Unknown modifier '%c' for literal %s%c" m n m
   | Illegal_letrec_pat ->
-    fprintf ppf "Only variables are allowed as left-hand side of `let rec'"
+    fprintf ppf "Only variables are allowed as left-hand side of `let rec`"
   | Empty_record_literal ->
     fprintf ppf
       "Empty record literal {} should be type annotated or used in a record \
