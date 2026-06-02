@@ -17,4 +17,4 @@
   2 [2m│[0m 
   3 [2m│[0m let _ = x
 
-  Such fragile pattern not allowed in the toplevel
+  This pattern can fail to match, so it is not allowed in a top-level `let` binding.
