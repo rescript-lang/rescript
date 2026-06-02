@@ -58,8 +58,8 @@ let pp_error fmt err =
     | Optional_in_uncurried_bs_attribute ->
       "Uncurried function doesn't support optional arguments yet"
     | Expect_opt_in_bs_return_to_opt ->
-      "A @return directive with a `*_to_opt` variant requires the return type \
-       to be written as an option, e.g. `option<int>`."
+      "This @return directive requires the external's return type to be an \
+       option, e.g. `option<int>`."
     | Not_supported_directive_in_bs_return -> "Not supported return directive"
     | Illegal_attribute -> "Illegal attributes"
     | Unsupported_predicates -> "unsupported predicates"
@@ -83,8 +83,7 @@ let pp_error fmt err =
        each constructor must have an argument."
     | Conflict_ffi_attribute str -> "Conflicting attributes: " ^ str
     | Bs_this_simple_pattern ->
-      "@this expects its first parameter to be a simple identifier, not a \
-       destructured pattern."
+      "@this expects its first parameter to be a simple variable (or `_`)."
     | Experimental_feature_not_enabled feature ->
       Printf.sprintf
         "Experimental feature not enabled: %s. Enable it by setting \"%s\" to \

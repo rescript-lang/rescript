@@ -5,4 +5,4 @@
   [1;31m1[0m [2m│[0m let f = @this ([1;31m(a, b)[0m, x) => a + b + x
   2 [2m│[0m 
 
-  @this expects its first parameter to be a simple identifier, not a destructured pattern.
+  @this expects its first parameter to be a simple variable (or `_`).
