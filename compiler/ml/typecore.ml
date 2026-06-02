@@ -4974,7 +4974,7 @@ let report_error env loc ppf error =
       name type_expr typ
   | Type_params_not_supported lid ->
     fprintf ppf
-      "The type %a@ has type parameters, but type parameters is not supported \
+      "The type %a@ has type parameters, but type parameters are not supported \
        here."
       longident lid
   | Field_access_on_dict_type ->
