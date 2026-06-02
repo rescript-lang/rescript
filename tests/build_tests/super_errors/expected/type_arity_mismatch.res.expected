@@ -5,4 +5,4 @@
   [1;31m1[0m [2m│[0m let xs: [1;31marray<int, string>[0m = []
   2 [2m│[0m 
 
-  The type constructor array expects 1 type argument, but is given 2
+  The type constructor `array` expects 1 type argument, but is given 2
