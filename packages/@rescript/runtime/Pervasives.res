@@ -22,6 +22,32 @@ result == "Caught exception: Out of milk"
 */
 external throw: exn => 'a = "%raise"
 
+/**
+Asserts that the given condition is `true`. If the condition is `false`, raises
+an `Assert_failure` exception, terminating execution unless caught by a
+surrounding try/catch block.
+
+## Examples
+
+```rescript
+// Passes silently when the condition is true
+assert(1 + 1 == 2)
+
+// Raises Assert_failure when the condition is false
+let result = try {
+  assert(1 + 1 == 3)
+  "no failure"
+} catch {
+| Assert_failure(loc) =>
+  Console.log(loc)
+  "assertion failed"
+}
+
+result == "assertion failed"
+```
+*/
+external assert: bool => unit = "%assert"
+
 @deprecated({
   reason: "`raise` has been renamed to `throw` to align with JavaScript vocabulary. Please use `throw` instead",
   migrate: throw(),

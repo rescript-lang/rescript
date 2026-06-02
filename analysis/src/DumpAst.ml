@@ -234,8 +234,6 @@ and printExprItem expr ~pos ~indentation =
     ^ "\n" ^ addIndentation indentation ^ ")"
   | Pexp_extension (({txt} as loc), _) ->
     "Pexp_extension(%" ^ (loc |> printLocDenominatorLoc ~pos) ^ txt ^ ")"
-  | Pexp_assert expr ->
-    "Pexp_assert(" ^ printExprItem expr ~pos ~indentation ^ ")"
   | Pexp_field (exp, loc) ->
     "Pexp_field("
     ^ (loc |> printLocDenominatorLoc ~pos)

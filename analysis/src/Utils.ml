@@ -111,7 +111,6 @@ let identifyPexp pexp =
   | Pexp_send _ -> "Pexp_send"
   | Pexp_letmodule _ -> "Pexp_letmodule"
   | Pexp_letexception _ -> "Pexp_letexception"
-  | Pexp_assert _ -> "Pexp_assert"
   | Pexp_newtype _ -> "Pexp_newtype"
   | Pexp_pack _ -> "Pexp_pack"
   | Pexp_extension _ -> "Pexp_extension"

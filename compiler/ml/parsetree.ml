@@ -303,10 +303,6 @@ and expression_desc =
     (* let module M = ME in E *)
   | Pexp_letexception of extension_constructor * expression
     (* let exception C in E *)
-  | Pexp_assert of expression
-    (* assert E
-       Note: "assert false" is treated in a special way by the
-       type-checker. *)
   | Pexp_newtype of string loc * expression (* fun (type t) -> E *)
   | Pexp_pack of module_expr
     (* (module ME)

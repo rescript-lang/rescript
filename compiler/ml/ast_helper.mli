@@ -212,7 +212,6 @@ module Exp : sig
     extension_constructor ->
     expression ->
     expression
-  val assert_ : ?loc:loc -> ?attrs:attrs -> expression -> expression
   val newtype : ?loc:loc -> ?attrs:attrs -> str -> expression -> expression
   val pack : ?loc:loc -> ?attrs:attrs -> module_expr -> expression
   val open_ :

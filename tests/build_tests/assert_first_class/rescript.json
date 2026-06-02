@@ -1,0 +1,13 @@
+{
+  "name": "assert_first_class",
+  "sources": [
+    {
+      "dir": "src"
+    }
+  ],
+  "package-specs": {
+    "module": "esmodule",
+    "in-source": true,
+    "suffix": ".res.js"
+  }
+}
