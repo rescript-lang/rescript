@@ -166,11 +166,10 @@ let iter_process_bs_string_int_unwrap_uncurry (attrs : t) =
     | `Int -> "int"
     | `Ignore -> "ignore"
     | `Unwrap -> "unwrap"
-    | `Nothing -> ""
   in
   (* Collect all of @string/@int/@ignore/@unwrap so the conflict error can
      report every attribute involved, not just the first pair. *)
-  let found =
+  let found : ([`String | `Int | `Ignore | `Unwrap] * _) list =
     Ext_list.filter_map attrs (fun (({txt; _}, _) as attr) ->
         match txt with
         | "string" -> Some (`String, attr)
@@ -183,7 +182,7 @@ let iter_process_bs_string_int_unwrap_uncurry (attrs : t) =
   | [] -> `Nothing
   | [(v, attr)] ->
     Used_attributes.mark_used_attribute attr;
-    v
+    (v :> [`Nothing | `String | `Int | `Ignore | `Unwrap])
   | (_, ({loc; _}, _)) :: _ as conflicting ->
     Bs_syntaxerr.err loc
       (Conflict_attributes (List.map (fun (v, _) -> attr_name v) conflicting))
