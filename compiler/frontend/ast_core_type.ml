@@ -136,9 +136,17 @@ let list_of_arrow (ty : t) : t * Parsetree.arg list =
     match ty.ptyp_desc with
     | Ptyp_arrow {arg; ret; arity} when arity = None || acc = [] ->
       aux ret (arg :: acc)
-    | Ptyp_poly (_, ty) ->
-      (* should not happen? *)
-      Bs_syntaxerr.err ty.ptyp_loc Unhandled_poly_type
+    | Ptyp_poly _ ->
+      (* unreachable: [list_of_arrow] only recurses into an arrow's return
+         (and is only ever called on an external's type annotation), so to get
+         here a [Ptyp_poly] would have to sit in an external's arg/return
+         position. The external type — and every arrow arg/return — is parsed
+         by [parse_typ_expr], which never routes to [parse_poly_type_expr]; an
+         inline `'a. …` there is a plain syntax error ("Did you forget a `=`").
+         [Ptyp_poly] is produced only for record/object field types and
+         signature `val` descriptions, and a field-nested poly is a non-arrow
+         leaf that [list_of_arrow] stops at, never the recursed return. *)
+      assert false
     | _ -> (ty, List.rev acc)
   in
   aux ty []

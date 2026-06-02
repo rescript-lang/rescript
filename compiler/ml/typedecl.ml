@@ -34,6 +34,7 @@ type error =
   | Definition_mismatch of type_expr * Includecore.type_mismatch list
   | Constraint_failed of type_expr * type_expr
   | Inconsistent_constraint of Env.t * (type_expr * type_expr) list
+  (* Appears dead; retained pending proof. See update_type for details. *)
   | Type_clash of Env.t * (type_expr * type_expr) list
   | Parameters_differ of Path.t * type_expr * type_expr
   | Null_arity_external
@@ -49,7 +50,6 @@ type error =
   | Bad_fixed_type of string
   | Unbound_type_var_ext of type_expr * extension_constructor
   | Varying_anonymous
-  | Val_in_structure
   | Invalid_attribute of string
   | Bad_immediate_attribute
   | Bad_unboxed_attribute of string
@@ -121,6 +121,12 @@ let update_type temp_env env id loc =
   | None -> ()
   | Some ty -> (
     let params = List.map (fun _ -> Ctype.newvar ()) decl.type_params in
+    (* The [Type_clash] handler appears to be dead: this unifies
+       [t<fresh params>] against [t]'s own manifest [ty], i.e. a type against
+       an alpha-renamed copy of itself, which cannot head-clash. Genuine
+       inconsistencies are caught elsewhere (Cycle_in_def, Recursive_abbrev,
+       Parameters_differ, ...). Retained pending an airtight proof rather than
+       replaced with [assert false]. *)
     try Ctype.unify env (Ctype.newconstr path params) ty
     with Ctype.Unify trace -> raise (Error (loc, Type_clash (env, trace))))
 
@@ -1884,7 +1890,13 @@ let transl_value_decl env loc valdecl =
         Types.val_loc = loc;
         val_attributes = valdecl.pval_attributes;
       }
-    | [] -> raise (Error (valdecl.pval_loc, Val_in_structure))
+    | [] ->
+      (* unreachable: `pval_prim = []` outside a signature can only arise
+         from the parser's `external` recovery, which sets `prim = []`
+         *after* emitting a syntax error, so the typer never sees the
+         declaration. A bare `val x: int` in a .res is also rejected at
+         parse time. *)
+      assert false
     | _ ->
       let arity, from_constructor = parse_arity env valdecl.pval_type ty in
       let prim = Primitive.parse_declaration valdecl ~arity ~from_constructor in
@@ -2260,8 +2272,6 @@ let report_error ppf = function
   | Varying_anonymous ->
     fprintf ppf "@[%s@ %s@ %s@]" "In this GADT definition,"
       "the variance of some parameter" "cannot be checked"
-  | Val_in_structure ->
-    fprintf ppf "Value declarations are only allowed in signatures"
   | Bad_immediate_attribute ->
     fprintf ppf "@[%s@ %s@]" "Types marked with the immediate attribute must be"
       "non-pointer types like int or bool"

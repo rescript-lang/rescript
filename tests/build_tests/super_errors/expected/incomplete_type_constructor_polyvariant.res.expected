@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/incomplete_type_constructor_polyvariant.res[0m:[2m2:20-24[0m
+
+  1 [2m│[0m type t<'a> = 'a
+  [1;31m2[0m [2m│[0m type x<'b> = [#a | [1;31mt<'b>[0m]
+  3 [2m│[0m 
+
+  The type constructor t
+is not yet completely defined
