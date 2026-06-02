@@ -196,7 +196,7 @@ end = struct
       match pato with
       | None -> ()
       | Some pat -> iter_pattern pat)
-    | Tpat_record (list, _closed) ->
+    | Tpat_record (list, _closed, _rest) ->
       List.iter (fun (_, _, pat, _) -> iter_pattern pat) list
     | Tpat_array list -> List.iter iter_pattern list
     | Tpat_or (p1, p2, _) ->

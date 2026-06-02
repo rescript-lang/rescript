@@ -1,0 +1,13 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/record_rest_field_not_optional.res[0m:[2m3:12-22[0m
+
+  1 [2m│[0m type source = {a?: int, b?: string, c: bool}
+  2 [2m│[0m type sub = {a?: int, b?: string}
+  [1;31m3[0m [2m│[0m let {a, ...[1;31msub as rest[0m}: source = {c: true}
+  4 [2m│[0m 
+
+  The following field appears in both the explicit pattern and the rest type `sub`:
+- a
+
+Mark it as optional (`?a`) in the explicit pattern.

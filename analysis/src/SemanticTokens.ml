@@ -220,9 +220,13 @@ let command ~debug ~emitter ~source ~kindFile =
     | Ppat_construct ({txt = Lident ("true" | "false")}, _) ->
       (* Don't emit true or false *)
       Ast_iterator.default_iterator.pat iterator p
-    | Ppat_record (cases, _) ->
+    | Ppat_record (cases, _, rest) ->
       Ext_list.iter cases (fun {lid = label} ->
           emitter |> emitRecordLabel ~label ~debug);
+      (match rest with
+      | Some {rest_name = {txt = id; loc}; _} when isLowercaseId id ->
+        emitter |> emitVariable ~id ~debug ~loc
+      | _ -> ());
       Ast_iterator.default_iterator.pat iterator p
     | Ppat_construct (name, _) ->
       emitter |> emitVariant ~name ~debug;
@@ -476,7 +480,7 @@ let command ~debug ~emitter ~source ~kindFile =
     in
     let {Res_driver.parsetree = structure; diagnostics} = parser ~source in
     if debug then
-      Printf.printf "structure items:%d diagnostics:%d \n"
+      Printf.printf "structure items:%d diagnostics:%d\n"
         (List.length structure) (List.length diagnostics);
     iterator.structure iterator structure |> ignore)
   else
@@ -485,7 +489,7 @@ let command ~debug ~emitter ~source ~kindFile =
     in
     let {Res_driver.parsetree = signature; diagnostics} = parser ~source in
     if debug then
-      Printf.printf "signature items:%d diagnostics:%d \n"
+      Printf.printf "signature items:%d diagnostics:%d\n"
         (List.length signature) (List.length diagnostics);
     iterator.signature iterator signature |> ignore
 

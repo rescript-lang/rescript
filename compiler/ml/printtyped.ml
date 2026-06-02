@@ -233,7 +233,7 @@ and pattern i ppf x =
     | Tpat_variant (l, po, _) ->
       line i ppf "Tpat_variant \"%s\"\n" l;
       option i pattern ppf po
-    | Tpat_record (l, _c) ->
+    | Tpat_record (l, _c, _rest) ->
       line i ppf "Tpat_record\n";
       list i longident_x_pattern ppf l
     | Tpat_array l ->

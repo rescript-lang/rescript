@@ -43,6 +43,13 @@ type pattern = {
   pat_attributes: attributes;
 }
 
+and record_pat_rest = {
+  rest_ident: Ident.t;
+  rest_name: string loc;
+  rest_type: type_expr;
+  excluded_runtime_labels: string list;
+}
+
 and pat_extra =
   | Tpat_constraint of core_type
       (** P : T          { pat_desc = P
@@ -85,10 +92,11 @@ and pattern_desc =
   | Tpat_record of
       (Longident.t loc * label_description * pattern * bool (* optional *)) list
       * closed_flag
+      * record_pat_rest option
       (** { l1=P1; ...; ln=Pn }     (flag = Closed)
             { l1=P1; ...; ln=Pn; _}   (flag = Open)
 
-            Invariant: n > 0
+            Invariant: n > 0 unless this is a rest-only record pattern
          *)
   | Tpat_array of pattern list  (** [| P1; ...; Pn |] *)
   | Tpat_or of pattern * pattern * row_desc option

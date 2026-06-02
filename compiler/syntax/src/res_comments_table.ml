@@ -2135,7 +2135,7 @@ and walk_pattern pat t comments =
   | Ppat_variant (_label, None) -> ()
   | Ppat_variant (_label, Some pat) -> walk_pattern pat t comments
   | Ppat_type _ -> ()
-  | Ppat_record (record_rows, _) ->
+  | Ppat_record (record_rows, _, _rest) ->
     walk_list
       (Ext_list.map record_rows (fun {lid; x = p} -> PatternRecordRow (lid, p)))
       t comments
