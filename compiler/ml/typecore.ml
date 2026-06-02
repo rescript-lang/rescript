@@ -96,6 +96,7 @@ type error =
   | Type_params_not_supported of Longident.t
   | Field_access_on_dict_type
   | Jsx_not_enabled
+  | Tagged_template_non_tag of type_expr
 
 exception Error of Location.t * Env.t * error
 exception Error_forward of Location.error
@@ -2513,10 +2514,45 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
       if transformed_jsx then Some JsxComponent
       else type_clash_context_from_function sexp sfunct
     in
+    let is_tagged_template =
+      Ext_list.exists sexp.pexp_attributes (fun ({txt}, _) ->
+          txt = "res.taggedTemplate")
+    in
     let args, ty_res, fully_applied =
-      match translate_unified_ops env funct sargs with
-      | Some (targs, result_type) -> (targs, result_type, true)
-      | None -> type_application ~context total_app env funct sargs
+      if is_tagged_template then (
+        (* Backtick tagged-template syntax: the tag must be a value of the
+           builtin [taggedTemplate<'param, 'output>] type. The parser desugars
+           [tag`a ${x} b`] into [tag([|"a"; " b"|], [|x|])], so the two
+           arguments are the string parts and the interpolated values. *)
+        let param_ty = newvar () in
+        let output_ty = newvar () in
+        (try
+           unify env
+             (instance env funct.exp_type)
+             (newconstr Predef.path_tagged_template [param_ty; output_ty])
+         with Unify _ ->
+           raise
+             (Error (funct.exp_loc, env, Tagged_template_non_tag funct.exp_type)));
+        match sargs with
+        | [(Nolabel, strings); (Nolabel, values)] ->
+          let typed_strings =
+            type_expect ~context:None env strings
+              (Predef.type_array Predef.type_string)
+          in
+          let typed_values =
+            type_expect ~context:None env values (Predef.type_array param_ty)
+          in
+          ( [
+              (Asttypes.Nolabel, Some typed_strings);
+              (Asttypes.Nolabel, Some typed_values);
+            ],
+            output_ty,
+            true )
+        | _ -> assert false)
+      else
+        match translate_unified_ops env funct sargs with
+        | Some (targs, result_type) -> (targs, result_type, true)
+        | None -> type_application ~context total_app env funct sargs
     in
     end_def ();
     unify_var env (newvar ()) funct.exp_type;
@@ -4989,6 +5025,20 @@ let report_error env loc ppf error =
     fprintf ppf
       "Cannot compile JSX expression because JSX support is not enabled. Add \
        \"jsx\" settings to rescript.json to enable JSX support."
+  | Tagged_template_non_tag typ ->
+    fprintf ppf
+      "@[<v>This value is used with tagged template (backtick) syntax, but it \
+       has type@ @{<info>%a@}@ which is not a @{<info>taggedTemplate@}.@,\
+       @,\
+       Tagged template syntax now requires a value of type \
+       @{<info>taggedTemplate<'param, 'output>@}:@,\
+       @,\
+      \  - To bind a JavaScript tag function, annotate the @{<info>external@} \
+       with @{<info>taggedTemplate<...>@} instead of using the removed \
+       @{<info>@@taggedTemplate@} decorator.@,\
+      \  - To use a ReScript function as a tag, lift it with \
+       @{<info>TaggedTemplate.make@}.@]"
+      type_expr typ
 
 let report_error env loc ppf err =
   Printtyp.wrap_printing_env env (fun () -> report_error env loc ppf err)
