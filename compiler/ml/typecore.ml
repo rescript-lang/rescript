@@ -4791,7 +4791,7 @@ let report_error env loc ppf error =
   | Invalid_for_loop_index ->
     fprintf ppf "@[Invalid for-loop index: only variables and _ are allowed.@]"
   | No_value_clauses ->
-    fprintf ppf "None of the patterns in this 'match' expression match values."
+    fprintf ppf "None of the patterns in this switch match values."
   | Exception_pattern_below_toplevel ->
     fprintf ppf
       "@[Exception patterns must be at the top level of a match case.@]"
