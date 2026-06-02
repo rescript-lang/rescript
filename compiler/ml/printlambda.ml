@@ -263,6 +263,7 @@ let primitive ppf = function
   | Pjs_fn_make arity -> fprintf ppf "#fn_mk(%d)" arity
   | Pjs_fn_make_unit -> fprintf ppf "#fn_mk_unit"
   | Pjs_fn_method -> fprintf ppf "#fn_method"
+  | Ptagged_template -> fprintf ppf "#tagged_template"
 
 let function_attribute ppf {inline; is_a_functor; return_unit} =
   if is_a_functor then fprintf ppf "is_a_functor@ ";

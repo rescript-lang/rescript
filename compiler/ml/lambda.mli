@@ -275,6 +275,7 @@ type primitive =
   | Pjs_fn_make of int
   | Pjs_fn_make_unit
   | Pjs_fn_method
+  | Ptagged_template
 
 and comparison = Ceq | Cneq | Clt | Cgt | Cle | Cge
 
