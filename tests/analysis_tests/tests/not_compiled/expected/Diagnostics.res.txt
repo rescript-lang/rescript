@@ -1,6 +1,6 @@
 [
   {
-    "message": "consecutive statements on a line must be separated by ';' or a newline",
+    "message": "Consecutive statements on a line must be separated by ';' or a newline",
     "range": {
       "end": { "character": 6, "line": 2 },
       "start": { "character": 4, "line": 2 }

@@ -18,5 +18,5 @@
   3 │   export x: int
   4 │ } = {
 
-  consecutive statements on a line must be separated by ';' or a newline
+  Consecutive statements on a line must be separated by ';' or a newline
 

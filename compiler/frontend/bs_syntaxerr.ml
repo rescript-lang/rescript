@@ -64,7 +64,7 @@ let pp_error fmt err =
       "Unsupported @return directive. Supported directives are `null_to_opt`, \
        `null_undefined_to_opt` (or `nullable`), and `identity`."
     | Illegal_attribute -> "Illegal attributes"
-    | Unsupported_predicates -> "unsupported predicates"
+    | Unsupported_predicates -> "Unsupported predicates"
     | Duplicated_bs_deriving ->
       "Duplicate @deriving attribute; a type can only have one."
     | Conflict_attributes names ->

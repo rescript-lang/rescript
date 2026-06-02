@@ -6689,7 +6689,7 @@ and parse_newline_or_semicolon_structure p =
     else
       Parser.err ~start_pos:p.prev_end_pos ~end_pos:p.end_pos p
         (Diagnostics.message
-           "consecutive statements on a line must be separated by ';' or a \
+           "Consecutive statements on a line must be separated by ';' or a \
             newline")
   | _ -> ()
 
