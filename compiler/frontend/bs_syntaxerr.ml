@@ -63,7 +63,8 @@ let pp_error fmt err =
     | Not_supported_directive_in_bs_return -> "Not supported return directive"
     | Illegal_attribute -> "Illegal attributes"
     | Unsupported_predicates -> "unsupported predicates"
-    | Duplicated_bs_deriving -> "duplicate @deriving attribute"
+    | Duplicated_bs_deriving ->
+      "Duplicate @deriving attribute; a type can only have one."
     | Conflict_attributes ->
       "Conflicting attributes: only one of @string, @int, @ignore, or @unwrap \
        can be used here."
