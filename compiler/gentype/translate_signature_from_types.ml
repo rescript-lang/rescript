@@ -1,4 +1,4 @@
-open Gen_type_common
+open Gentype_common
 
 (** Like translateTypeDeclaration but from Types not Typedtree  *)
 let translate_type_declaration_from_types ~config ~output_file_relative

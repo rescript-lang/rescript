@@ -1,4 +1,4 @@
-open Gen_type_common
+open Gentype_common
 
 type module_equation = {internal: bool; dep: dep}
 

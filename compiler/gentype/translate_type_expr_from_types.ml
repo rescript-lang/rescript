@@ -1,4 +1,4 @@
-open Gen_type_common
+open Gentype_common
 
 type translation = {dependencies: dep list; type_: type_}
 

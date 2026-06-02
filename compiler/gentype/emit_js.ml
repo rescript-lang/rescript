@@ -1,4 +1,4 @@
-open Gen_type_common
+open Gentype_common
 
 type env = {
   requires_early: Import_path.t Config.Module_name_map.t;

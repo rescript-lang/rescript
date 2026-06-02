@@ -1,4 +1,4 @@
-open Gen_type_common
+open Gentype_common
 
 let rec addAnnotationsToTypes_ ~config ~(expr : Typedtree.expression)
     (arg_types : arg_type list) =
@@ -158,7 +158,7 @@ let rec remove_duplicate_value_bindings
     (bound_in_rest, structure_item :: filtered_rest)
   | [] -> (String_set.empty, [])
 
-let rec translate_module_binding ~(config : Gen_type_config.t)
+let rec translate_module_binding ~(config : Gentype_config.t)
     ~output_file_relative ~resolver ~type_env
     ({mb_id; mb_expr; mb_attributes} : Typedtree.module_binding) : Translation.t
     =

@@ -1,4 +1,4 @@
-open Gen_type_common
+open Gentype_common
 
 let file_header ~source_file =
   let make_header ~lines =

@@ -1,4 +1,4 @@
-open Gen_type_common
+open Gentype_common
 
 type export_module_item = (string, export_module_value) Hashtbl.t
 

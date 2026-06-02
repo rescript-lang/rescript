@@ -1,4 +1,4 @@
-open Gen_type_common
+open Gentype_common
 
 let group labeled_types =
   let types =

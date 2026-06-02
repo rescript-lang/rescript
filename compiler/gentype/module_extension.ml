@@ -1,4 +1,4 @@
-open Gen_type_common
+open Gentype_common
 
 let shim_ts_output_file_extension ~(config : Config.t) =
   match config.module_resolution with

@@ -1,5 +1,5 @@
 (** AST traversal to collect source annotations (@dead, @live, @genType).
-    
+
     This module traverses the typed AST to find attribute annotations
     and records them in a FileAnnotations.builder. *)
 
@@ -8,7 +8,7 @@ open Dead_common
 type scope_default = File_annotations.annotated_as option
 
 let process_attributes ~(scope_default : scope_default) ~state ~config
-    ~do_gen_type ~name ~pos attributes =
+    ~do_gentype ~name ~pos attributes =
   (match scope_default with
   | Some File_annotations.Live -> File_annotations.annotate_live state pos
   | Some File_annotations.Dead -> File_annotations.annotate_dead state pos
@@ -19,8 +19,8 @@ let process_attributes ~(scope_default : scope_default) ~state ~config
     attributes |> Annotation.get_attribute_payload (( = ) x)
   in
   if
-    do_gen_type
-    && get_payload_fun Annotation.tag_is_one_of_the_gen_type_annotations <> None
+    do_gentype
+    && get_payload_fun Annotation.tag_is_one_of_the_gentype_annotations <> None
   then File_annotations.annotate_gentype state pos;
   if get_payload "dead" <> None then File_annotations.annotate_dead state pos;
   let name_is_in_live_names_or_paths () =
@@ -44,7 +44,7 @@ let process_attributes ~(scope_default : scope_default) ~state ~config
   if attributes |> Annotation.is_ocaml_suppress_dead_warning then
     File_annotations.annotate_live state pos
 
-let collect_export_locations ~state ~config ~do_gen_type =
+let collect_export_locations ~state ~config ~do_gentype =
   let super = Tast_mapper.default in
   let currently_disable_warnings = ref false in
   let current_scope_default : scope_default ref = ref None in
@@ -70,7 +70,7 @@ let collect_export_locations ~state ~config ~do_gen_type =
         File_annotations.annotate_live state pos;
       vb_attributes
       |> process_attributes ~scope_default:!current_scope_default ~state ~config
-           ~do_gen_type ~name:(id |> Ident.name) ~pos
+           ~do_gentype ~name:(id |> Ident.name) ~pos
     | _ -> ());
     super.value_binding self value_binding
   in
@@ -82,7 +82,7 @@ let collect_export_locations ~state ~config ~do_gen_type =
            (fun ({ld_attributes; ld_loc} : Typedtree.label_declaration) ->
              toplevel_attrs @ ld_attributes
              |> process_attributes ~scope_default:!current_scope_default ~state
-                  ~config ~do_gen_type:false ~name:"" ~pos:ld_loc.loc_start)
+                  ~config ~do_gentype:false ~name:"" ~pos:ld_loc.loc_start)
     | Ttype_variant constructor_declarations ->
       constructor_declarations
       |> List.iter
@@ -98,14 +98,14 @@ let collect_export_locations ~state ~config ~do_gen_type =
                       ->
                      toplevel_attrs @ cd_attributes @ ld_attributes
                      |> process_attributes ~scope_default:!current_scope_default
-                          ~state ~config ~do_gen_type:false ~name:""
+                          ~state ~config ~do_gentype:false ~name:""
                           ~pos:ld_loc.loc_start)
                    flds
                | Cstr_tuple _ -> ()
              in
              toplevel_attrs @ cd_attributes
              |> process_attributes ~scope_default:!current_scope_default ~state
-                  ~config ~do_gen_type:false ~name:"" ~pos:cd_loc.loc_start)
+                  ~config ~do_gentype:false ~name:"" ~pos:cd_loc.loc_start)
     | _ -> ());
     super.type_kind self type_kind
   in
@@ -121,7 +121,7 @@ let collect_export_locations ~state ~config ~do_gen_type =
     if !currently_disable_warnings then File_annotations.annotate_live state pos;
     val_attributes
     |> process_attributes ~scope_default:!current_scope_default ~state ~config
-         ~do_gen_type ~name:(val_id |> Ident.name) ~pos;
+         ~do_gentype ~name:(val_id |> Ident.name) ~pos;
     super.value_description self value_description
   in
   let structure_item self (item : Typedtree.structure_item) =
@@ -173,10 +173,10 @@ let collect_export_locations ~state ~config ~do_gen_type =
     value_description;
   }
 
-let structure ~state ~config ~do_gen_type structure =
-  let mapper = collect_export_locations ~state ~config ~do_gen_type in
+let structure ~state ~config ~do_gentype structure =
+  let mapper = collect_export_locations ~state ~config ~do_gentype in
   structure |> mapper.structure mapper |> ignore
 
 let signature ~state ~config signature =
-  let mapper = collect_export_locations ~state ~config ~do_gen_type:true in
+  let mapper = collect_export_locations ~state ~config ~do_gentype:true in
   signature |> mapper.signature mapper |> ignore

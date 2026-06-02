@@ -1,4 +1,4 @@
-open Gen_type_common
+open Gentype_common
 module Module_name_map = Map.Make (Module_name)
 
 let ( +++ ) = Filename.concat

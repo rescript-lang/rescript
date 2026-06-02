@@ -163,7 +163,7 @@ let doc_string_from_attrs attributes = attributes |> get_doc_payload
 let has_attribute check_text (attributes : Typedtree.attributes) =
   get_attribute_payload check_text attributes <> None
 
-let from_attributes ~(config : Gen_type_config.t) ~loc
+let from_attributes ~(config : Gentype_config.t) ~loc
     (attributes : Typedtree.attributes) =
   let default = if config.everything then GenType else NoGenType in
   if has_attribute tag_is_gentype_opaque attributes then GenTypeOpaque
@@ -289,7 +289,7 @@ let import_from_string import_string : import =
   let import_path = Import_path.from_string_unsafe import_string in
   {import_path}
 
-let update_config_for_module ~(config : Gen_type_config.t) attributes =
+let update_config_for_module ~(config : Gentype_config.t) attributes =
   if attributes |> has_attribute tag_is_gentype then
     {config with everything = true}
   else config

@@ -8,12 +8,12 @@ type attribute_payload =
   | TuplePayload of attribute_payload list
   | UnrecognizedPayload
 
-let tag_is_gen_type s = s = "genType" || s = "gentype"
-let tag_is_gen_type_import s = s = "genType.import" || s = "gentype.import"
-let tag_is_gen_type_opaque s = s = "genType.opaque" || s = "gentype.opaque"
+let tag_is_gentype s = s = "genType" || s = "gentype"
+let tag_is_gentype_import s = s = "genType.import" || s = "gentype.import"
+let tag_is_gentype_opaque s = s = "genType.opaque" || s = "gentype.opaque"
 
-let tag_is_one_of_the_gen_type_annotations s =
-  tag_is_gen_type s || tag_is_gen_type_import s || tag_is_gen_type_opaque s
+let tag_is_one_of_the_gentype_annotations s =
+  tag_is_gentype s || tag_is_gentype_import s || tag_is_gentype_opaque s
 
 let rec get_attribute_payload check_text (attributes : Typedtree.attributes) =
   let rec from_expr (expr : Parsetree.expression) =

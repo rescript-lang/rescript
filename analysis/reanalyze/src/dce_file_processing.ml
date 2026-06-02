@@ -1,5 +1,5 @@
 (** Per-file AST processing for dead code analysis.
-    
+
     This module coordinates per-file processing using local mutable builders
     and returns them for merging. The caller freezes them before
     passing to the solver. *)
@@ -74,7 +74,7 @@ let process_cmt_file ~config ~(file : file_context) ~cmt_file_path
       Sys.file_exists ((cmt_file_path |> Filename.remove_extension) ^ ".cmti")
     in
     Collect_annotations.structure ~state:annotations ~config
-      ~do_gen_type:(not cmti_exists) structure;
+      ~do_gentype:(not cmti_exists) structure;
     process_signature ~config ~decls ~file ~do_values:true ~do_types:false
       structure.str_type;
     let do_externals = false in

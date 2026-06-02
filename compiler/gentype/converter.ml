@@ -1,4 +1,4 @@
-open Gen_type_common
+open Gentype_common
 
 let type_get_inlined ~config ~lookup_id ~type_name_is_interface type0 =
   let circular = ref "" in

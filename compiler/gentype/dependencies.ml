@@ -1,4 +1,4 @@
-open Gen_type_common
+open Gentype_common
 
 let rec handle_namespace ~name dep =
   match dep with

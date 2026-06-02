@@ -1,6 +1,6 @@
 module String_map = Map.Make (String)
 module String_set = Set.Make (String)
-module Config = Gen_type_config
+module Config = Gentype_config
 
 module Doc_string = struct
   type t = string option

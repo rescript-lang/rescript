@@ -1,4 +1,4 @@
-open Gen_type_common
+open Gentype_common
 open! Translate_type_expr_from_types
 
 let remove_option ~(label : Asttypes.arg_label)

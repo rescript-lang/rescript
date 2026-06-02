@@ -1,4 +1,4 @@
-open Gen_type_common
+open Gentype_common
 
 let extract_from_type_expr type_params =
   type_params

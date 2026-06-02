@@ -1,4 +1,4 @@
-open Gen_type_common
+open Gentype_common
 
 let translate_signature_value ~config ~output_file_relative ~resolver ~type_env
     (value_description : Typedtree.value_description) : Translation.t =
