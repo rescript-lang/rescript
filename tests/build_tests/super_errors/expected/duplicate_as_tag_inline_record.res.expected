@@ -5,4 +5,4 @@
   [1;31m1[0m [2m│[0m type animal = Cat({@as("catName") [1;31m@as[0m("catName2") name: string})
   2 [2m│[0m 
 
-  duplicate @as
+  Duplicate @as annotation; a variant case can only have one.

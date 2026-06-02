@@ -75,7 +75,8 @@ let report_error ppf =
     fprintf ppf
       "A variant case annotation @as(...) must be a string, integer, boolean, \
        null, or undefined."
-  | Duplicated_bs_as -> fprintf ppf "duplicate @as "
+  | Duplicated_bs_as ->
+    fprintf ppf "Duplicate @as annotation; a variant case can only have one."
   | InvalidVariantTagAnnotation ->
     fprintf ppf "A variant tag annotation @tag(...) must be a string"
   | InvalidUntaggedVariantDefinition untagged_variant ->
