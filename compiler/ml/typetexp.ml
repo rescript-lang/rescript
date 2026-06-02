@@ -828,7 +828,10 @@ let report_error env ppf = function
       Misc.did_you_mean ppf (fun () -> ["`" ^ s])
     | _ -> ())
   | Invalid_variable_name name ->
-    fprintf ppf "The type variable name %s is not allowed in programs" name
+    fprintf ppf
+      "The type variable name %s is not allowed; type variable names cannot \
+       start with an underscore."
+      name
   | Cannot_quantify (name, v) ->
     fprintf ppf
       "@[<hov>The universal type variable '%s cannot be generalized:@ %s.@]"
