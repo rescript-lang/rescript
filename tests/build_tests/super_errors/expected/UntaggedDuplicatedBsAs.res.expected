@@ -6,4 +6,4 @@
   [1;31m2[0m [2m│[0m type t = | @as("x") [1;31m@as[0m("y") A | B
   3 [2m│[0m 
 
-  Duplicate @as annotation; a variant case can only have one.
+  Duplicate @as annotation; only one @as is allowed here.
