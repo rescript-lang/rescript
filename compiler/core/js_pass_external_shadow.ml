@@ -24,7 +24,7 @@
 
 module E = Js_exp_make
 
-module StringSet = Set.Make (String)
+module String_set = Set.Make (String)
 
 let global_this = E.js_global "globalThis"
 
@@ -58,12 +58,12 @@ let rewrite_shadowed_global_in_expr ~(name : string) (expr : J.expression) :
 
 let program (js : J.program) : J.program =
   let shadowed_globals =
-    Ext_list.fold_left js.block StringSet.empty (fun acc (st : J.statement) ->
+    Ext_list.fold_left js.block String_set.empty (fun acc (st : J.statement) ->
         match st.statement_desc with
         | Variable {ident; property}
           when is_lexical_binding_kind property && should_rewrite_binding ident
           ->
-          StringSet.add ident.name acc
+          String_set.add ident.name acc
         | _ -> acc)
   in
   let super = Js_record_map.super in
@@ -79,7 +79,7 @@ let program (js : J.program) : J.program =
               match obj.expression_desc with
               | Var (Id id)
                 when Ext_ident.is_js id
-                     && StringSet.mem id.name shadowed_globals ->
+                     && String_set.mem id.name shadowed_globals ->
                 E.dot global_this id.name
               | _ -> obj
             in

@@ -524,10 +524,10 @@ and expression_desc cxt ~(level : int) f x : cxt =
       ( ({
            expression_desc =
              J.Var
-               ( Id {name = fnName}
+               ( Id {name = fn_name}
                | J.Qualified
                    ( _,
-                     Some fnName
+                     Some fn_name
                      (* We care about the function name when it is jsxs,
                        If this is the case, we need to unpack an array later on *)
                    ) );
@@ -552,7 +552,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
             | Undefined _ when opt -> None
             | _ -> Some (f, x))
       in
-      print_jsx cxt ~level f fnName tag fields
+      print_jsx cxt ~level f fn_name tag fields
     | [
      tag;
      {
@@ -568,7 +568,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
             | Undefined _ when opt -> None
             | _ -> Some (f, x))
       in
-      print_jsx cxt ~level ~key f fnName tag fields
+      print_jsx cxt ~level ~key f fn_name tag fields
     | [tag; ({expression_desc = J.Seq _} as props)] ->
       (* In the case of prop spreading, the expression will look like:
            (props.a = "Hello, world!", props)
@@ -594,7 +594,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
         in
         visit [] props
       in
-      print_jsx cxt ~level ~spread_props f fnName tag fields
+      print_jsx cxt ~level ~spread_props f fn_name tag fields
     | [tag; ({expression_desc = J.Seq _} as props); key] ->
       (* In the case of props + prop spreading and key argument *)
       let fields, spread_props =
@@ -614,10 +614,10 @@ and expression_desc cxt ~(level : int) f x : cxt =
         in
         visit [] props
       in
-      print_jsx cxt ~level ~spread_props ~key f fnName tag fields
+      print_jsx cxt ~level ~spread_props ~key f fn_name tag fields
     | [tag; ({expression_desc = J.Var _} as spread_props)] ->
       (* All the props are spread *)
-      print_jsx cxt ~level ~spread_props f fnName tag []
+      print_jsx cxt ~level ~spread_props f fn_name tag []
     | _ ->
       (* This should not happen, we fallback to the general case *)
       expression_desc cxt ~level f
@@ -1094,7 +1094,7 @@ and print_indented_list (f : P.t) (parent_expr_level : int) (cxt : cxt)
         process_items cxt items)
 
 and print_jsx cxt ?(spread_props : J.expression option)
-    ?(key : J.expression option) ~(level : int) f (fnName : string)
+    ?(key : J.expression option) ~(level : int) f (fn_name : string)
     (tag : J.expression) (fields : (string * J.expression) list) : cxt =
   (* TODO: make fragment detection respect custom JSX runtime modules instead of
      assuming "JsxRuntime". *)
@@ -1119,7 +1119,7 @@ and print_jsx cxt ?(spread_props : J.expression option)
     List.find_map
       (fun (n, e) ->
         if n = "children" then
-          if fnName = "jsxs" then
+          if fn_name = "jsxs" then
             match e.J.expression_desc with
             | J.Array (xs, _)
             | J.Optional_block ({expression_desc = J.Array (xs, _)}, _) ->

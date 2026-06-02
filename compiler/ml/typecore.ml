@@ -823,7 +823,7 @@ let report_arity_mismatch ~arity_a ~arity_b ppf =
 (* Records *)
 let label_of_kind kind = if kind = "record" then "field" else "constructor"
 
-module NameChoice (Name : sig
+module Name_choice (Name : sig
   type t
   val type_kind : string
   val get_name : t -> string
@@ -945,7 +945,7 @@ let wrap_disambiguate kind ty f x =
   with Error (loc, env, Wrong_name ("", _, tk, tp, name, valid_names)) ->
     raise (Error (loc, env, Wrong_name (kind, ty, tk, tp, name, valid_names)))
 
-module Label = NameChoice (struct
+module Label = Name_choice (struct
   type t = label_description
   let type_kind = "record"
   let get_name lbl = lbl.lbl_name
@@ -1138,7 +1138,7 @@ let check_recordpat_labels ~get_jsx_component_error_info loc lbl_pat_list closed
 
 (* Constructors *)
 
-module Constructor = NameChoice (struct
+module Constructor = Name_choice (struct
   type t = constructor_description
   let type_kind = "variant"
   let get_name cstr = cstr.cstr_name

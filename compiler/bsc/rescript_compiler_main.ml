@@ -266,7 +266,7 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
     ( "-bs-project-root",
       string_call (fun s ->
           Ext_path.project_root := Some s;
-          GenTypeConfig.project_root := s),
+          Gen_type_config.project_root := s),
       "*internal* Set the project root directory" );
     ( "-bs-ast",
       unit_call (fun _ ->
@@ -300,26 +300,26 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
     ("-bs-gentype", set Clflags.bs_gentype, "*internal* Pass gentype command");
     ( "-bs-gentype-module",
       string_call (fun s ->
-          GenTypeConfig.module_flag := GenTypeConfig.module_of_string s),
+          Gen_type_config.module_flag := Gen_type_config.module_of_string s),
       "*internal* Set gentype module system: commonjs|esmodule" );
     ( "-bs-gentype-module-resolution",
       string_call (fun s ->
-          GenTypeConfig.module_resolution_flag :=
-            GenTypeConfig.module_resolution_of_string s),
+          Gen_type_config.module_resolution_flag :=
+            Gen_type_config.module_resolution_of_string s),
       "*internal* Set gentype module resolution strategy: node|node16|bundler"
     );
     ( "-bs-gentype-export-interfaces",
-      set GenTypeConfig.export_interfaces_flag,
+      set Gen_type_config.export_interfaces_flag,
       "*internal* Emit gentype interface files" );
     ( "-bs-gentype-generated-extension",
       string_call (fun s ->
-          GenTypeConfig.generated_file_extension_flag := Some s),
+          Gen_type_config.generated_file_extension_flag := Some s),
       "*internal* Set gentype generated-file extension (e.g. .gen.tsx)" );
     ( "-bs-gentype-suffix",
-      string_call (fun s -> GenTypeConfig.suffix_flag := Some s),
+      string_call (fun s -> Gen_type_config.suffix_flag := Some s),
       "*internal* Set gentype import-path suffix (e.g. .bs.js, .mjs)" );
     ( "-bs-gentype-shim",
-      string_call GenTypeConfig.add_shim,
+      string_call Gen_type_config.add_shim,
       "*internal* Register a gentype shim mapping: From=To (repeatable)" );
     ( "-bs-gentype-debug",
       string_call Debug.set_item,
@@ -327,18 +327,18 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
        all|basic|codeItems|config|converter|dependencies|moduleResolution|notImplemented|translation|typeEnv|typeResolution"
     );
     ( "-bs-gentype-dep",
-      string_call GenTypeConfig.add_bs_dependency,
+      string_call Gen_type_config.add_bs_dependency,
       "*internal* Register a gentype bsb dependency (repeatable)" );
     ( "-bs-gentype-source-dir",
-      string_call GenTypeConfig.add_source_dir,
+      string_call Gen_type_config.add_source_dir,
       "*internal* Register a gentype source directory relative to the project \
        root (repeatable)" );
     ( "-bs-gentype-dep-path",
-      string_call GenTypeConfig.add_dep_path,
+      string_call Gen_type_config.add_dep_path,
       "*internal* Register a gentype dependency install path: \
        <name>=<absolute-path> (repeatable)" );
     ( "-bs-gentype-bsb-project-root",
-      string_call (fun s -> GenTypeConfig.bsb_project_root := s),
+      string_call (fun s -> Gen_type_config.bsb_project_root := s),
       "*internal* Set gentype bsb project root (workspace root containing \
        .sourcedirs.json)" );
     (******************************************************************************)

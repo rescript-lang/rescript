@@ -1,6 +1,6 @@
 module Comment = Res_comment
 module Doc = Res_doc
-module ParsetreeViewer = Res_parsetree_viewer
+module Parsetree_viewer = Res_parsetree_viewer
 
 type t = {
   leading: (Location.t, Comment.t list) Hashtbl.t;
@@ -513,7 +513,7 @@ let get_loc node =
     {
       case.pc_lhs.ppat_loc with
       loc_end =
-        (match ParsetreeViewer.process_braces_attr case.pc_rhs with
+        (match Parsetree_viewer.process_braces_attr case.pc_rhs with
         | None, _ -> case.pc_rhs.pexp_loc.loc_end
         | Some ({loc}, _), _ -> loc.Location.loc_end);
     }
@@ -545,7 +545,7 @@ let get_loc node =
   | StructureItem si -> si.pstr_loc
   | TypeDeclaration td -> td.ptype_loc
   | ValueBinding vb -> vb.pvb_loc
-  | JsxProp prop -> ParsetreeViewer.get_jsx_prop_loc prop
+  | JsxProp prop -> Parsetree_viewer.get_jsx_prop_loc prop
 
 let rec walk_structure s t comments =
   match s with
@@ -1622,8 +1622,8 @@ and walk_expression expr t comments =
     let comments =
       visit_list_but_continue_with_remaining_comments ~newline_delimited:false
         ~walk_node:walk_expr_parameter
-        ~get_loc:(fun (_attrs, argLbl, expr_opt, pattern) ->
-          let label_loc = Asttypes.get_lbl_loc argLbl in
+        ~get_loc:(fun (_attrs, arg_lbl, expr_opt, pattern) ->
+          let label_loc = Asttypes.get_lbl_loc arg_lbl in
           let open Parsetree in
           let start_pos =
             if label_loc <> Location.none then label_loc.loc_start
@@ -1685,7 +1685,7 @@ and walk_expression expr t comments =
            jsx_unary_element_props = props;
          }) -> (
     let closing_token_loc =
-      ParsetreeViewer.unary_element_closing_token expr.pexp_loc
+      Parsetree_viewer.unary_element_closing_token expr.pexp_loc
     in
 
     let after_opening_tag_name, rest =
@@ -1693,7 +1693,7 @@ and walk_expression expr t comments =
       let next_token =
         match props with
         | [] -> closing_token_loc
-        | head :: _ -> ParsetreeViewer.get_jsx_prop_loc head
+        | head :: _ -> Parsetree_viewer.get_jsx_prop_loc head
       in
       let name_loc = tag_name.loc in
       partition_adjacent_trailing_before_next_token_on_same_line name_loc
@@ -1739,7 +1739,7 @@ and walk_expression expr t comments =
       let next_token =
         match props with
         | [] -> opening_greater_than_loc
-        | head :: _ -> ParsetreeViewer.get_jsx_prop_loc head
+        | head :: _ -> Parsetree_viewer.get_jsx_prop_loc head
       in
       let name_loc = tag_name_start.loc in
       partition_adjacent_trailing_before_next_token_on_same_line name_loc
@@ -1777,7 +1777,7 @@ and walk_expression expr t comments =
       | None -> (rest, [])
       | Some closing_tag ->
         let closing_tag_loc =
-          ParsetreeViewer.container_element_closing_tag_loc closing_tag
+          Parsetree_viewer.container_element_closing_tag_loc closing_tag
         in
         partition_leading_trailing rest closing_tag_loc
     in
@@ -1790,7 +1790,7 @@ and walk_expression expr t comments =
         ()
       | Some closing_tag ->
         let closing_tag_loc =
-          ParsetreeViewer.container_element_closing_tag_loc closing_tag
+          Parsetree_viewer.container_element_closing_tag_loc closing_tag
         in
         if
           opening_greater_than_loc.loc_end.pos_lnum
