@@ -31,6 +31,7 @@ val type_list : type_expr -> type_expr
 val type_option : type_expr -> type_expr
 val type_result : type_expr -> type_expr -> type_expr
 val type_dict : type_expr -> type_expr
+val type_tagged_template : type_expr -> type_expr -> type_expr
 
 val type_bigint : type_expr
 val type_extension_constructor : type_expr
@@ -53,6 +54,7 @@ val path_dict : Path.t
 val path_bigint : Path.t
 val path_extension_constructor : Path.t
 val path_promise : Path.t
+val path_tagged_template : Path.t
 
 val path_match_failure : Path.t
 val path_assert_failure : Path.t
