@@ -4612,7 +4612,7 @@ let report_error env loc ppf error =
             (Ident.name id))
       (function ppf -> fprintf ppf "but on the right-hand side it has type")
   | Multiply_bound_variable name ->
-    fprintf ppf "Variable %s is bound several times in this matching" name
+    fprintf ppf "Variable %s is bound several times in this pattern" name
   | Orpat_vars (id, valid_idents) ->
     fprintf ppf "Variable %s must occur on both sides of this | pattern"
       (Ident.name id);

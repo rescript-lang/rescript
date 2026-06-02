@@ -6,4 +6,4 @@
   2 [2m│[0m let _ = x
   3 [2m│[0m 
 
-  Variable x is bound several times in this matching
+  Variable x is bound several times in this pattern
