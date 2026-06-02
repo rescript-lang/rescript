@@ -10,10 +10,11 @@ module V4A = {
 
   let make = (type a, {a, b, c, _}: props<a, array<option<[#Foo(a)]>>, 'a>): React.element =>
     ReactDOM.jsx("div", {})
+  @res.hoistedValue
   let make = React.component({
-    let \"Newtype$V4A" = (props: props<_>) => make(props)
+    let \"Newtype$V4A$make" = (props: props<_>) => make(props)
 
-    \"Newtype$V4A"
+    \"Newtype$V4A$make"
   })
 }
 
@@ -27,10 +28,11 @@ module V4A1 = {
 
   let make = (type x y, {a, b, c, _}: props<x, array<y>, 'a>): React.element =>
     ReactDOM.jsx("div", {})
+  @res.hoistedValue
   let make = React.component({
-    let \"Newtype$V4A1" = (props: props<_>) => make(props)
+    let \"Newtype$V4A1$make" = (props: props<_>) => make(props)
 
-    \"Newtype$V4A1"
+    \"Newtype$V4A1$make"
   })
 }
 
@@ -48,10 +50,11 @@ module V4A2 = {
     module T = unpack(foo)
     ReactDOM.jsx("div", {})
   }
+  @res.hoistedValue
   let make = React.component({
-    let \"Newtype$V4A2" = (props: props<_>) => make(props)
+    let \"Newtype$V4A2$make" = (props: props<_>) => make(props)
 
-    \"Newtype$V4A2"
+    \"Newtype$V4A2$make"
   })
 }
 
@@ -65,10 +68,11 @@ module V4A3 = {
     module T = unpack(foo: T with type t = a)
     foo
   }
+  @res.hoistedValue
   let make = React.component({
-    let \"Newtype$V4A3" = (props: props<_>) => make(props)
+    let \"Newtype$V4A3$make" = (props: props<_>) => make(props)
 
-    \"Newtype$V4A3"
+    \"Newtype$V4A3$make"
   })
 }
 @res.jsxComponentProps
@@ -93,9 +97,15 @@ module Uncurried = {
   }
 
   let make = (type a, {?foo, _}: props<_>): React.element => React.null
+  @res.hoistedValue
   let make = React.component({
-    let \"Newtype$Uncurried" = (props: props<_>) => make(props)
+    let \"Newtype$Uncurried$make" = (props: props<_>) => make(props)
 
-    \"Newtype$Uncurried"
+    \"Newtype$Uncurried$make"
   })
 }
+@warning("-32") let \"Newtype$V4A$make" = V4A.make
+@warning("-32") let \"Newtype$V4A1$make" = V4A1.make
+@warning("-32") let \"Newtype$V4A2$make" = V4A2.make
+@warning("-32") let \"Newtype$V4A3$make" = V4A3.make
+@warning("-32") let \"Newtype$Uncurried$make" = Uncurried.make

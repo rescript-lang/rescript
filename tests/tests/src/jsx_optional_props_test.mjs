@@ -2,15 +2,15 @@
 
 import * as JsxRuntime from "react/jsx-runtime";
 
-function Jsx_optional_props_test$ComponentWithOptionalProps(props) {
+function Jsx_optional_props_test$ComponentWithOptionalProps$make(props) {
   return null;
 }
 
 let ComponentWithOptionalProps = {
-  make: Jsx_optional_props_test$ComponentWithOptionalProps
+  make: Jsx_optional_props_test$ComponentWithOptionalProps$make
 };
 
-let _element = JsxRuntime.jsx(Jsx_optional_props_test$ComponentWithOptionalProps, {
+let _element = JsxRuntime.jsx(Jsx_optional_props_test$ComponentWithOptionalProps$make, {
   i: 1,
   s: "test",
   element: JsxRuntime.jsx("div", {})
@@ -19,5 +19,6 @@ let _element = JsxRuntime.jsx(Jsx_optional_props_test$ComponentWithOptionalProps
 export {
   ComponentWithOptionalProps,
   _element,
+  Jsx_optional_props_test$ComponentWithOptionalProps$make,
 }
 /* _element Not a pure module */

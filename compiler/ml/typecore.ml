@@ -1746,17 +1746,29 @@ let check_unused ?(lev = get_current_level ()) env expected_ty cases =
         spat)
     cases
 
-let add_pattern_variables ?check ?check_as env =
+let res_internal_value_attributes attrs =
+  List.filter (fun ({txt; _}, _) -> String.equal txt "res.hoistedValue") attrs
+
+let add_pattern_variables ?(attrs_by_id = []) ?check ?check_as env =
   let pv = get_ref pattern_variables in
   ( List.fold_right
       (fun (id, ty, _name, loc, as_var) env ->
         let check = if as_var then check_as else check in
+        let val_attributes =
+          match
+            List.find_opt
+              (fun (attr_id, _) -> Ident.same attr_id id)
+              attrs_by_id
+          with
+          | Some (_, attrs) -> attrs
+          | None -> []
+        in
         Env.add_value ?check id
           {
             val_type = ty;
             val_kind = Val_reg;
             Types.val_loc = loc;
-            val_attributes = [];
+            val_attributes;
           }
           env)
       pv env,
@@ -1781,7 +1793,19 @@ let type_pattern_list env spatl scope expected_tys allow =
         type_pat new_env pat ty)
   in
   let patl = List.map2 type_pat spatl expected_tys in
-  let new_env, unpacks = add_pattern_variables !new_env in
+  let attrs_by_id =
+    List.fold_left2
+      (fun attrs_by_id (attrs, _) pat ->
+        match res_internal_value_attributes attrs with
+        | [] -> attrs_by_id
+        | attrs ->
+          List.fold_left
+            (fun attrs_by_id id -> (id, attrs) :: attrs_by_id)
+            attrs_by_id
+            (Typedtree.pat_bound_idents pat))
+      [] spatl patl
+  in
+  let new_env, unpacks = add_pattern_variables ~attrs_by_id !new_env in
   (patl, new_env, get_ref pattern_force, unpacks)
 
 let rec final_subexpression sexp =

@@ -85,6 +85,50 @@ let get_mapper ~config =
     | 4 -> module_binding4 mapper mb
     | _ -> default_mapper.module_binding mapper mb
   in
+  let module_expr mapper me =
+    match (config.version, me.pmod_desc) with
+    | 4, Pmod_functor _ -> (
+      config.functor_depth <- config.functor_depth + 1;
+      try
+        let m = default_mapper.module_expr mapper me in
+        config.functor_depth <- config.functor_depth - 1;
+        m
+      with e ->
+        config.functor_depth <- config.functor_depth - 1;
+        raise e)
+    | _ -> default_mapper.module_expr mapper me
+  in
+  let module_type mapper mt =
+    match (config.version, mt.pmty_desc) with
+    | 4, Pmty_functor _ -> (
+      config.functor_depth <- config.functor_depth + 1;
+      try
+        let m = default_mapper.module_type mapper mt in
+        config.functor_depth <- config.functor_depth - 1;
+        m
+      with e ->
+        config.functor_depth <- config.functor_depth - 1;
+        raise e)
+    | _ -> default_mapper.module_type mapper mt
+  in
+  let module_declaration mapper md =
+    match config.version with
+    | 4 ->
+      config.nested_modules <- md.pmd_name.txt :: config.nested_modules;
+      let mapped =
+        try default_mapper.module_declaration mapper md
+        with e ->
+          (match config.nested_modules with
+          | _ :: rest -> config.nested_modules <- rest
+          | [] -> ());
+          raise e
+      in
+      (match config.nested_modules with
+      | _ :: rest -> config.nested_modules <- rest
+      | [] -> ());
+      mapped
+    | _ -> default_mapper.module_declaration mapper md
+  in
   let save_config () =
     {
       config with
@@ -100,7 +144,10 @@ let get_mapper ~config =
   in
   let signature mapper items =
     let old_config = save_config () in
+    let is_top_level = config.structure_depth = 0 in
+    config.structure_depth <- config.structure_depth + 1;
     config.has_component <- false;
+    if is_top_level then config.hoisted_signature_items <- [];
     let result =
       List.map
         (fun item ->
@@ -112,12 +159,21 @@ let get_mapper ~config =
         items
       |> List.flatten
     in
+    let result =
+      if config.version = 4 && is_top_level then
+        result @ List.rev config.hoisted_signature_items
+      else result
+    in
+    config.structure_depth <- config.structure_depth - 1;
     restore_config old_config;
     result
   in
   let structure mapper items =
     let old_config = save_config () in
+    let is_top_level = config.structure_depth = 0 in
+    config.structure_depth <- config.structure_depth + 1;
     config.has_component <- false;
+    if is_top_level then config.hoisted_structure_items <- [];
     let result =
       List.map
         (fun item ->
@@ -129,11 +185,26 @@ let get_mapper ~config =
         items
       |> List.flatten
     in
+    let result =
+      if config.version = 4 && is_top_level then
+        result @ List.rev config.hoisted_structure_items
+      else result
+    in
+    config.structure_depth <- config.structure_depth - 1;
     restore_config old_config;
     result
   in
 
-  {default_mapper with expr; module_binding; signature; structure}
+  {
+    default_mapper with
+    expr;
+    module_binding;
+    module_expr;
+    module_type;
+    module_declaration;
+    signature;
+    structure;
+  }
 
 let rewrite_implementation ~jsx_version ~jsx_module (code : Parsetree.structure)
     : Parsetree.structure =
@@ -143,6 +214,10 @@ let rewrite_implementation ~jsx_version ~jsx_module (code : Parsetree.structure)
       module_ = jsx_module;
       nested_modules = [];
       has_component = false;
+      hoisted_structure_items = [];
+      hoisted_signature_items = [];
+      structure_depth = 0;
+      functor_depth = 0;
     }
   in
   let mapper = get_mapper ~config in
@@ -156,6 +231,10 @@ let rewrite_signature ~jsx_version ~jsx_module (code : Parsetree.signature) :
       module_ = jsx_module;
       nested_modules = [];
       has_component = false;
+      hoisted_structure_items = [];
+      hoisted_signature_items = [];
+      structure_depth = 0;
+      functor_depth = 0;
     }
   in
   let mapper = get_mapper ~config in
