@@ -1123,7 +1123,19 @@ and get_completions_for_context_path ~debug ~full ~opens ~raw_opens ~pos ~env
         let args = process_apply args labels in
         let ret_type = reconstruct_function_type args t_ret in
         [Completion.create "dummy" ~env ~kind:(Completion.Value ret_type)]
-      | _ -> [])
+      | _ -> (
+        (* A tagged template tag has type taggedTemplate<'param, 'output>;
+           applying it (via backtick syntax) yields the 'output type. *)
+        let rec unwrap (t : Types.type_expr) =
+          match t.desc with
+          | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> unwrap t1
+          | _ -> t
+        in
+        match (unwrap typ).desc with
+        | Tconstr (path, [_param; output_type], _)
+          when Path.name path = "taggedTemplate" ->
+          [Completion.create "dummy" ~env ~kind:(Completion.Value output_type)]
+        | _ -> []))
     | _ -> [])
   | CPField
       {context_path = CPId {path; completion_context = Module}; field_name} ->

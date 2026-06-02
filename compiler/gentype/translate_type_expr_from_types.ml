@@ -436,6 +436,10 @@ let translate_constr ~config ~params_translation ~(path : Path.t) ~type_env =
       [param_translation] ) ->
     {param_translation with type_ = Dict param_translation.type_}
   | ["Stdlib"; "JSON"; "t"], [] -> {dependencies = []; type_ = unknown}
+  | (["taggedTemplate"] | ["Stdlib"; "TaggedTemplate"; "t"]), [_param; _output]
+    ->
+    (* A tagged-template tag is a variadic JS function; represent it opaquely. *)
+    {dependencies = []; type_ = unknown}
   | _ -> default_case ()
 
 type process_variant = {
