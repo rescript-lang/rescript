@@ -786,18 +786,19 @@ let report_error env ppf = function
   | Unbound_type_constructor_2 p ->
     fprintf ppf "The type constructor@ %a@ is not yet completely defined" path p
   | Type_arity_mismatch (lid, expected, provided) ->
+    let plural n = if n = 1 then "" else "s" in
     if expected == 0 then
       fprintf ppf
         "@[The type %a is not generic so expects no arguments,@ but is here \
-         applied to %i argument(s).@ Have you tried removing the angular \
-         brackets `<` and `>` and the@ arguments within them and just writing \
-         `%a` instead? @]"
-        longident lid provided longident lid
+         given %i argument%s.@ Have you tried removing the angular brackets \
+         `<` and `>` and the@ arguments within them and just writing `%a` \
+         instead? @]"
+        longident lid provided (plural provided) longident lid
     else
       fprintf ppf
-        "@[The type constructor %a@ expects %i argument(s),@ but is here \
-         applied to %i argument(s)@]"
-        longident lid expected provided
+        "@[The type constructor %a@ expects %i type argument%s,@ but is given \
+         %i@]"
+        longident lid expected (plural expected) provided
   | Type_mismatch trace ->
     Printtyp.report_unification_error ppf Env.empty trace
       (function
