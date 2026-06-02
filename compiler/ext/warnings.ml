@@ -383,7 +383,7 @@ let message = function
     Printf.sprintf
       "Code should not depend on the actual values of\n\
        this constructor's arguments. They are only for information\n\
-       and may change in future versions. (See manual section 8.5)"
+       and may change in future versions."
   | Unreachable_case ->
     "this match case is unreachable.\n\
      Consider replacing it with a refutation case '<pat> -> .'"
@@ -398,11 +398,11 @@ let message = function
       match vars with
       | [] -> assert false
       | [x] -> "variable " ^ x
-      | _ :: _ -> "variables " ^ String.concat "," vars
+      | _ :: _ -> "variables " ^ String.concat ", " vars
     in
     Printf.sprintf
       "Ambiguous or-pattern variables under guard;\n\
-       %s may match different arguments. (See manual section 8.5)"
+       %s may match different arguments."
       msg
   | Unused_module s -> "unused module " ^ s ^ "."
   | Constraint_on_gadt ->
