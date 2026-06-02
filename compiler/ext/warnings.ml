@@ -373,7 +373,7 @@ let message = function
     Printf.sprintf "this open statement shadows the %s %s (which is later used)"
       kind s
   | Attribute_payload (a, s) ->
-    Printf.sprintf "illegal payload for attribute '%s'.\n%s" a s
+    Printf.sprintf "illegal payload for attribute @%s.\n%s" a s
   | No_cmi_file (name, None) ->
     "no cmi file was found in path for module " ^ name
   | No_cmi_file (name, Some msg) ->
@@ -388,9 +388,9 @@ let message = function
     "this match case is unreachable.\n\
      Consider replacing it with a refutation case '<pat> -> .'"
   | Misplaced_attribute attr_name ->
-    Printf.sprintf "the %S attribute cannot appear in this context" attr_name
+    Printf.sprintf "the @%s attribute cannot appear in this context" attr_name
   | Duplicated_attribute attr_name ->
-    Printf.sprintf "the %S attribute is used more than once on this expression"
+    Printf.sprintf "the @%s attribute is used more than once on this expression"
       attr_name
   | Ambiguous_pattern vars ->
     let msg =

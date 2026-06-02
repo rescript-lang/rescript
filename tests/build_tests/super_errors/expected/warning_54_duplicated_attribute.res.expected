@@ -6,4 +6,4 @@
   2 [2m│[0m let f = x => x + 1
   3 [2m│[0m 
 
-  the "inline" attribute is used more than once on this expression
+  the @inline attribute is used more than once on this expression
