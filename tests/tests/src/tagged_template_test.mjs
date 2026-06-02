@@ -2,11 +2,11 @@
 
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
+import * as Stdlib_Array from "@rescript/runtime/lib/es6/Stdlib_Array.mjs";
+import * as Stdlib_TaggedTemplate from "@rescript/runtime/lib/es6/Stdlib_TaggedTemplate.mjs";
 import * as Tagged_template_libJs from "./tagged_template_lib.js";
 
-function sql(prim0, prim1) {
-  return Tagged_template_libJs.sql(prim0, ...prim1);
-}
+let sql = Tagged_template_libJs.sql;
 
 let Pg = {
   sql: sql
@@ -16,35 +16,54 @@ let table = "users";
 
 let id = "5";
 
-let queryWithModule = Tagged_template_libJs.sql`SELECT * FROM ${table} WHERE id = ${id}`;
+let queryWithModule = sql`SELECT * FROM ${table} WHERE id = ${id}`;
 
-let query = Tagged_template_libJs.sql`
+let query = sql`
 " SELECT * FROM ${table} WHERE id = ${id}`;
 
-let length = Tagged_template_libJs.length`hello ${10} what's the total length? Is it ${3}?`;
+let length = Tagged_template_libJs.length;
 
-function foo(strings, values) {
-  let res = "";
-  let valueCount = values.length;
-  for (let i = 0; i < valueCount; ++i) {
-    res = res + strings[i] + (values[i] * 10 | 0).toString();
-  }
-  return res + strings[valueCount];
+let length$1 = length`hello ${10} what's the total length? Is it ${3}?`;
+
+function makeSql(prim) {
+  return Tagged_template_libJs.makeSql(prim);
 }
 
-let res = foo([
-  `| 5 × 10 = `,
-  ` |`
-], [5]);
+let prefixedSql = Tagged_template_libJs.makeSql("PREFIX ");
+
+let factoryQuery = prefixedSql`SELECT * FROM ${table}`;
+
+function runQuery(tag) {
+  return tag`SELECT id = ${id}`;
+}
+
+let paramQuery = runQuery(sql);
+
+let s = Stdlib_TaggedTemplate.make((strings, parameters) => Stdlib_Array.reduceWithIndex(parameters, strings[0], (acc, param, i) => {
+  let suffix = strings[i + 1 | 0];
+  let p;
+  p = param.TAG === "I" ? param._0.toString() : param._0;
+  return acc + p + suffix;
+}));
+
+let greeting = s`hello ${{
+  TAG: "S",
+  _0: "Ada"
+}} you're ${{
+  TAG: "I",
+  _0: 36
+}} years old!`;
 
 Mocha.describe("tagged templates", () => {
-  Mocha.test("with externals, it should return a string with the correct interpolations", () => Test_utils.eq("File \"tagged_template_test.res\", line 41, characters 6-13", query, `
+  Mocha.test("with externals, it should return a string with the correct interpolations", () => Test_utils.eq("File \"tagged_template_test.res\", line 60, characters 6-13", query, `
 " SELECT * FROM 'users' WHERE id = '5'`));
-  Mocha.test("with module scoped externals, it should also return a string with the correct interpolations", () => Test_utils.eq("File \"tagged_template_test.res\", line 50, characters 13-20", queryWithModule, "SELECT * FROM 'users' WHERE id = '5'"));
-  Mocha.test("with externals, it should return the result of the function", () => Test_utils.eq("File \"tagged_template_test.res\", line 53, characters 79-86", length, 52));
-  Mocha.test("with rescript function, it should return a string with the correct encoding and interpolations", () => Test_utils.eq("File \"tagged_template_test.res\", line 57, characters 13-20", res, "| 5 × 10 = 50 |"));
-  Mocha.test("a template literal tagged with json should generate a regular string interpolation for now", () => Test_utils.eq("File \"tagged_template_test.res\", line 62, characters 13-20", "some random " + "string", "some random string"));
-  Mocha.test("a regular string interpolation should continue working", () => Test_utils.eq("File \"tagged_template_test.res\", line 66, characters 7-14", `some random ` + "string" + ` interpolation`, "some random string interpolation"));
+  Mocha.test("with module scoped externals, it should also return a string with the correct interpolations", () => Test_utils.eq("File \"tagged_template_test.res\", line 69, characters 13-20", queryWithModule, "SELECT * FROM 'users' WHERE id = '5'"));
+  Mocha.test("with externals, it should return the result of the function", () => Test_utils.eq("File \"tagged_template_test.res\", line 72, characters 79-86", length$1, 52));
+  Mocha.test("with a runtime-constructed tag (factory), it should emit tagged-template syntax", () => Test_utils.eq("File \"tagged_template_test.res\", line 75, characters 7-14", factoryQuery, "PREFIX SELECT * FROM 'users'"));
+  Mocha.test("with a tag passed as a function argument, it should emit tagged-template syntax", () => Test_utils.eq("File \"tagged_template_test.res\", line 79, characters 7-14", paramQuery, "SELECT id = '5'"));
+  Mocha.test("with a ReScript tag lifted via TaggedTemplate.make, it should return the correct interpolation", () => Test_utils.eq("File \"tagged_template_test.res\", line 84, characters 13-20", greeting, "hello Ada you're 36 years old!"));
+  Mocha.test("a template literal tagged with json should generate a regular string interpolation for now", () => Test_utils.eq("File \"tagged_template_test.res\", line 89, characters 13-20", "some random " + "string", "some random string"));
+  Mocha.test("a regular string interpolation should continue working", () => Test_utils.eq("File \"tagged_template_test.res\", line 93, characters 7-14", `some random ` + "string" + ` interpolation`, "some random string interpolation"));
 });
 
 let extraLength = 10;
@@ -56,8 +75,13 @@ export {
   queryWithModule,
   query,
   extraLength,
-  length,
-  foo,
-  res,
+  length$1 as length,
+  makeSql,
+  prefixedSql,
+  factoryQuery,
+  runQuery,
+  paramQuery,
+  s,
+  greeting,
 }
-/* queryWithModule Not a pure module */
+/* sql Not a pure module */
