@@ -161,21 +161,32 @@ let process_derive_type (attrs : t) : derive_attr * t =
 
 (* duplicated attributes not allowed *)
 let iter_process_bs_string_int_unwrap_uncurry (attrs : t) =
-  let st = ref `Nothing in
-  let assign v (({loc; _}, _) as attr : attr) =
-    if !st = `Nothing then (
-      Used_attributes.mark_used_attribute attr;
-      st := v)
-    else Bs_syntaxerr.err loc Conflict_attributes
+  let attr_name = function
+    | `String -> "string"
+    | `Int -> "int"
+    | `Ignore -> "ignore"
+    | `Unwrap -> "unwrap"
+    | `Nothing -> ""
   in
-  Ext_list.iter attrs (fun (({txt; loc = _}, _) as attr) ->
-      match txt with
-      | "string" -> assign `String attr
-      | "int" -> assign `Int attr
-      | "ignore" -> assign `Ignore attr
-      | "unwrap" -> assign `Unwrap attr
-      | _ -> ());
-  !st
+  (* Collect all of @string/@int/@ignore/@unwrap so the conflict error can
+     report every attribute involved, not just the first pair. *)
+  let found =
+    Ext_list.filter_map attrs (fun (({txt; _}, _) as attr) ->
+        match txt with
+        | "string" -> Some (`String, attr)
+        | "int" -> Some (`Int, attr)
+        | "ignore" -> Some (`Ignore, attr)
+        | "unwrap" -> Some (`Unwrap, attr)
+        | _ -> None)
+  in
+  match found with
+  | [] -> `Nothing
+  | [(v, attr)] ->
+    Used_attributes.mark_used_attribute attr;
+    v
+  | (_, ({loc; _}, _)) :: _ as conflicting ->
+    Bs_syntaxerr.err loc
+      (Conflict_attributes (List.map (fun (v, _) -> attr_name v) conflicting))
 
 let iter_process_bs_string_as (attrs : t) : string option =
   let st = ref None in

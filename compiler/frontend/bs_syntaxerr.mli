@@ -27,7 +27,7 @@ type untagged_variant = OnlyOneUnknown | AtMostOneObject | AtMostOneArray
 type error =
   | Unsupported_predicates
   | Duplicated_bs_deriving
-  | Conflict_attributes
+  | Conflict_attributes of string list
   | Expect_int_literal
   | Expect_string_literal
   | Expect_int_or_string_or_json_literal

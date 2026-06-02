@@ -27,7 +27,7 @@ type untagged_variant = OnlyOneUnknown | AtMostOneObject | AtMostOneArray
 type error =
   | Unsupported_predicates
   | Duplicated_bs_deriving
-  | Conflict_attributes
+  | Conflict_attributes of string list
   | Expect_int_literal
   | Expect_string_literal
   | Expect_int_or_string_or_json_literal
@@ -67,9 +67,10 @@ let pp_error fmt err =
     | Unsupported_predicates -> "unsupported predicates"
     | Duplicated_bs_deriving ->
       "Duplicate @deriving attribute; a type can only have one."
-    | Conflict_attributes ->
-      "Conflicting attributes: only one of @string, @int, @ignore, or @unwrap \
-       can be used here."
+    | Conflict_attributes names ->
+      Printf.sprintf
+        "Conflicting attributes: %s cannot be combined; use only one."
+        (String.concat ", " (List.map (fun n -> "@" ^ n) names))
     | Expect_string_literal -> "Expected a string literal."
     | Expect_int_literal ->
       "The @as payload on an @int variant must be an integer literal, e.g. \
