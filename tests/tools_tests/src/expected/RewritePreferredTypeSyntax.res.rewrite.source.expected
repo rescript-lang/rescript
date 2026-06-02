@@ -1,0 +1,7 @@
+type wrapped = {
+  items: dict<int>,
+  names: dict<string>,
+}
+
+let dictValue: dict<int> = dict{}
+let stdlibDictValue: dict<string> = dict{}

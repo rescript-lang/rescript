@@ -1,0 +1,23 @@
+path: src/rewrite/RewritePreferredTypeSyntax.resi
+status: preview
+rules:
+- preferred-type-syntax(4): rewrote `Dict.t<_>` into `dict<_>`
+diff:
+```diff
+--- a/src/rewrite/RewritePreferredTypeSyntax.resi
++++ b/src/rewrite/RewritePreferredTypeSyntax.resi
+@@ -1,7 +1,7 @@
+ type wrapped = {
+-  items: Dict.t<int>,
+-  names: Stdlib.Dict.t<string>,
++  items: dict<int>,
++  names: dict<string>,
+ }
+
+-let dictValue: Dict.t<int>
+-let stdlibDictValue: Stdlib.Dict.t<string>
++let dictValue: dict<int>
++let stdlibDictValue: dict<string>
+```
+
+summary: previewed 1 files, unchanged 0, rules: preferred-type-syntax(4)

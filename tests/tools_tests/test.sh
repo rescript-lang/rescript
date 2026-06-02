@@ -33,6 +33,179 @@ for file in src/docstrings-format/*.{res,resi,md}; do
   fi
 done
 
+node -e "JSON.parse(require('node:fs').readFileSync('../../docs/docson/rescript-lint-schema.json', 'utf8'))" || exit 1
+
+# Test lint command
+for file in src/lint/*.{res,resi}; do
+  output="src/expected/$(basename $file).lint.expected"
+  ../../_build/install/default/bin/rescript-assist lint check "$file" > "$output" || true
+  if [ "$RUNNER_OS" == "Windows" ]; then
+    perl -pi -e 's/\r\n/\n/g' -- "$output"
+  fi
+
+  json_output="src/expected/$(basename $file).lint.json.expected"
+  ../../_build/install/default/bin/rescript-assist lint check "$file" --json > "$json_output" || true
+  if [ "$RUNNER_OS" == "Windows" ]; then
+    perl -pi -e 's/\r\n/\n/g' -- "$json_output"
+  fi
+done
+
+generated_file="src/generated/GeneratedConsumer.res"
+generated_output="src/expected/$(basename $generated_file).lint.expected"
+../../_build/install/default/bin/rescript-assist lint check "$generated_file" > "$generated_output" || true
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- "$generated_output"
+fi
+
+generated_json_output="src/expected/$(basename $generated_file).lint.json.expected"
+../../_build/install/default/bin/rescript-assist lint check "$generated_file" --json > "$generated_json_output" || true
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- "$generated_json_output"
+fi
+
+unbuilt_file="unbuilt/ForbiddenExplicitNoCmt.res"
+unbuilt_output="src/expected/$(basename $unbuilt_file).lint.expected"
+../../_build/install/default/bin/rescript-assist lint check "$unbuilt_file" > "$unbuilt_output" || true
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- "$unbuilt_output"
+fi
+
+unbuilt_json_output="src/expected/$(basename $unbuilt_file).lint.json.expected"
+../../_build/install/default/bin/rescript-assist lint check "$unbuilt_file" --json > "$unbuilt_json_output" || true
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- "$unbuilt_json_output"
+fi
+
+../../_build/install/default/bin/rescript-assist lint check src/lint > src/expected/lint-root.expected || true
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- src/expected/lint-root.expected
+fi
+
+../../_build/install/default/bin/rescript-assist lint check src/lint --json > src/expected/lint-root.json.expected || true
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- src/expected/lint-root.json.expected
+fi
+
+# Test active-rules command
+../../_build/install/default/bin/rescript-assist support active-rules src/lint > src/expected/active-rules.expected || exit 1
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- src/expected/active-rules.expected
+fi
+
+../../_build/install/default/bin/rescript-assist support active-rules src/lint --json > src/expected/active-rules.json.expected || exit 1
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- src/expected/active-rules.json.expected
+fi
+
+# Test show command
+../../_build/install/default/bin/rescript-assist support show ShowFixture --kind module > src/expected/show-ShowFixture.expected || exit 1
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- src/expected/show-ShowFixture.expected
+fi
+
+../../_build/install/default/bin/rescript-assist support show ShowFixture.Nested.makeGreeting --kind value > src/expected/show-ShowFixture.Nested.makeGreeting.expected || exit 1
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- src/expected/show-ShowFixture.Nested.makeGreeting.expected
+fi
+
+../../_build/install/default/bin/rescript-assist support show ShowFixture.Nested.makeGreeting --kind value --comments omit > src/expected/show-ShowFixture.Nested.makeGreeting.no-comments.expected || exit 1
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- src/expected/show-ShowFixture.Nested.makeGreeting.no-comments.expected
+fi
+
+../../_build/install/default/bin/rescript-assist support show ShowFixture.item --kind type > src/expected/show-ShowFixture.item.expected || exit 1
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- src/expected/show-ShowFixture.item.expected
+fi
+
+../../_build/install/default/bin/rescript-assist support show String.localeCompare > src/expected/show-String.localeCompare.expected || exit 1
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- src/expected/show-String.localeCompare.expected
+fi
+
+../../_build/install/default/bin/rescript-assist support show String --kind module > /dev/null || exit 1
+
+# Test find-references command
+../../_build/install/default/bin/rescript-assist support find-references FindReferencesFixture.makeGreeting --kind value > src/expected/find-references-FindReferencesFixture.makeGreeting.expected || exit 1
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- src/expected/find-references-FindReferencesFixture.makeGreeting.expected
+fi
+
+../../_build/install/default/bin/rescript-assist support find-references --file src/find_references/FindReferencesUse.res --line 4 --col 35 > src/expected/find-references-location.expected || exit 1
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- src/expected/find-references-location.expected
+fi
+
+../../_build/install/default/bin/rescript-assist support find-references FindReferencesFixture --kind module > /dev/null || exit 1
+
+# Test rewrite command
+rm -rf .tmp-rewrite-tests
+mkdir -p .tmp-rewrite-tests
+
+for file in src/rewrite/*.{res,resi}; do
+  tmp_file=".tmp-rewrite-tests/$(basename $file)"
+  cp "$file" "$tmp_file"
+
+  output="src/expected/$(basename $file).rewrite.expected"
+  ../../_build/install/default/bin/rescript-assist rewrite run "$tmp_file" > "$output"
+  if [ "$RUNNER_OS" == "Windows" ]; then
+    perl -pi -e 's/\r\n/\n/g' -- "$output"
+  fi
+
+  rewritten_output="src/expected/$(basename $file).rewrite.source.expected"
+  cat "$tmp_file" > "$rewritten_output"
+  if [ "$RUNNER_OS" == "Windows" ]; then
+    perl -pi -e 's/\r\n/\n/g' -- "$rewritten_output"
+  fi
+
+  cp "$file" "$tmp_file"
+  json_output="src/expected/$(basename $file).rewrite.json.expected"
+  ../../_build/install/default/bin/rescript-assist rewrite run "$tmp_file" --json > "$json_output"
+  if [ "$RUNNER_OS" == "Windows" ]; then
+    perl -pi -e 's/\r\n/\n/g' -- "$json_output"
+  fi
+
+  diff_output="src/expected/$(basename $file).rewrite.diff.expected"
+  ../../_build/install/default/bin/rescript-assist rewrite run "$file" --diff > "$diff_output"
+  if [ "$RUNNER_OS" == "Windows" ]; then
+    perl -pi -e 's/\r\n/\n/g' -- "$diff_output"
+  fi
+
+  diff_json_output="src/expected/$(basename $file).rewrite.diff.json.expected"
+  ../../_build/install/default/bin/rescript-assist rewrite run "$file" --diff --json > "$diff_json_output"
+  if [ "$RUNNER_OS" == "Windows" ]; then
+    perl -pi -e 's/\r\n/\n/g' -- "$diff_json_output"
+  fi
+done
+
+rm -rf .tmp-rewrite-tests/root
+mkdir -p .tmp-rewrite-tests/root
+cp src/rewrite/*.{res,resi} .tmp-rewrite-tests/root/
+../../_build/install/default/bin/rescript-assist rewrite run .tmp-rewrite-tests/root > src/expected/rewrite-root.expected
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- src/expected/rewrite-root.expected
+fi
+
+rm -rf .tmp-rewrite-tests/root
+mkdir -p .tmp-rewrite-tests/root
+cp src/rewrite/*.{res,resi} .tmp-rewrite-tests/root/
+../../_build/install/default/bin/rescript-assist rewrite run .tmp-rewrite-tests/root --json > src/expected/rewrite-root.json.expected
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- src/expected/rewrite-root.json.expected
+fi
+
+../../_build/install/default/bin/rescript-assist rewrite run src/rewrite --diff > src/expected/rewrite-root.diff.expected
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- src/expected/rewrite-root.diff.expected
+fi
+
+../../_build/install/default/bin/rescript-assist rewrite run src/rewrite --diff --json > src/expected/rewrite-root.diff.json.expected
+if [ "$RUNNER_OS" == "Windows" ]; then
+  perl -pi -e 's/\r\n/\n/g' -- src/expected/rewrite-root.diff.json.expected
+fi
+
+rm -rf .tmp-rewrite-tests
+
 # Test migrate command
 for file in src/migrate/*.{res,resi}; do
   output="src/expected/$(basename $file).expected"

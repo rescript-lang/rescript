@@ -1,0 +1,55 @@
+severity: warning
+rule: preferred-type-syntax
+path: src/lint/PreferredTypeSyntax.resi
+range: 2:10-2:16
+message: Prefer `dict<_>` over `Dict.t<_>`
+symbol: Dict.t
+snippet:
+```text
+  1 | type wrapped = {
+> 2 |   items: Dict.t<int>,
+    |          ^^^^^^
+  3 |   names: Stdlib.Dict.t<string>,
+```
+
+severity: warning
+rule: preferred-type-syntax
+path: src/lint/PreferredTypeSyntax.resi
+range: 6:16-6:22
+message: Prefer `dict<_>` over `Dict.t<_>`
+symbol: Dict.t
+snippet:
+```text
+  4 | }
+> 6 | let dictValue: Dict.t<int>
+    |                ^^^^^^
+  7 | let stdlibDictValue: Stdlib.Dict.t<string>
+```
+
+severity: warning
+rule: preferred-type-syntax
+path: src/lint/PreferredTypeSyntax.resi
+range: 3:10-3:23
+message: Prefer `dict<_>` over `Dict.t<_>`
+symbol: Stdlib.Dict.t
+snippet:
+```text
+  1 | type wrapped = {
+  2 |   items: Dict.t<int>,
+> 3 |   names: Stdlib.Dict.t<string>,
+    |          ^^^^^^^^^^^^^
+  4 | }
+```
+
+severity: warning
+rule: preferred-type-syntax
+path: src/lint/PreferredTypeSyntax.resi
+range: 7:22-7:35
+message: Prefer `dict<_>` over `Dict.t<_>`
+symbol: Stdlib.Dict.t
+snippet:
+```text
+  6 | let dictValue: Dict.t<int>
+> 7 | let stdlibDictValue: Stdlib.Dict.t<string>
+    |                      ^^^^^^^^^^^^^
+```

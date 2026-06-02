@@ -164,6 +164,9 @@ let main () =
         ~entryPointFile:path
       |> logAndExit
     | _ -> logAndExit (Error extractCodeblocksHelp))
+  | command :: _ when Ai_cli.is_ai_command command ->
+    logAndExit
+      (Error (Ai_cli.moved_command_message ~prog_name:"rescript-assist" command))
   | "reanalyze" :: _ ->
     if Sys.getenv_opt "RESCRIPT_REANALYZE_NO_SERVER" = Some "1" then (
       let len = Array.length Sys.argv in

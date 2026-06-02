@@ -100,7 +100,7 @@ clean-rewatch:
 
 COMPILER_SOURCE_DIRS := compiler tests analysis tools
 COMPILER_SOURCES = $(shell find $(COMPILER_SOURCE_DIRS) -type f \( -name '*.ml' -o -name '*.mli' -o -name '*.dune' -o -name dune -o -name dune-project \))
-COMPILER_BIN_NAMES := bsc rescript-editor-analysis rescript-tools
+COMPILER_BIN_NAMES := bsc rescript-assist rescript-editor-analysis rescript-tools
 COMPILER_EXES := $(addsuffix .exe,$(addprefix $(BIN_DIR)/,$(COMPILER_BIN_NAMES)))
 COMPILER_DUNE_BINS := $(addsuffix $(PLATFORM_EXE_EXT),$(addprefix $(DUNE_BIN_DIR)/,$(COMPILER_BIN_NAMES)))
 

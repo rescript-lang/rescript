@@ -1,0 +1,1 @@
+[{"path":".tmp-rewrite-tests/RewriteIfs.res","mode":"write","changed":true,"applied":[{"rule":"prefer-switch","count":4,"note":"rewrote `if` / ternary branches into `switch`"}]}]

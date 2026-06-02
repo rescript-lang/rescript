@@ -1,0 +1,331 @@
+severity: warning
+rule: alias-avoidance
+path: src/lint/AliasAvoidance.res
+range: 1:8-1:21
+message: Use the fully qualified reference directly instead of creating a local alias
+symbol: ShowFixture.Nested
+snippet:
+```text
+> 1 | module AliasGreeting = ShowFixture.Nested
+    |        ^^^^^^^^^^^^^
+```
+
+severity: warning
+rule: alias-avoidance
+path: src/lint/AliasAvoidance.res
+range: 3:6-3:15
+message: Use the fully qualified reference directly instead of creating a local alias
+symbol: ShowFixture.item
+snippet:
+```text
+  1 | module AliasGreeting = ShowFixture.Nested
+> 3 | type itemAlias = ShowFixture.item
+    |      ^^^^^^^^^
+```
+
+severity: warning
+rule: alias-avoidance
+path: src/lint/AliasAvoidance.res
+range: 5:5-5:8
+message: Use the fully qualified reference directly instead of creating a local alias
+symbol: String.length
+snippet:
+```text
+  3 | type itemAlias = ShowFixture.item
+> 5 | let len = String.length
+    |     ^^^
+```
+
+severity: warning
+rule: alias-avoidance
+path: src/lint/AliasAvoidance.resi
+range: 1:8-1:21
+message: Use the fully qualified reference directly instead of creating a local alias
+symbol: ShowFixture.Nested
+snippet:
+```text
+> 1 | module AliasGreeting = ShowFixture.Nested
+    |        ^^^^^^^^^^^^^
+```
+
+severity: warning
+rule: alias-avoidance
+path: src/lint/AliasAvoidance.resi
+range: 3:6-3:15
+message: Use the fully qualified reference directly instead of creating a local alias
+symbol: ShowFixture.item
+snippet:
+```text
+  1 | module AliasGreeting = ShowFixture.Nested
+> 3 | type itemAlias = ShowFixture.item
+    |      ^^^^^^^^^
+```
+
+severity: error
+rule: forbidden-reference
+path: src/lint/ForbiddenExplicit.res
+range: 1:28-1:35
+message: Do not use Belt.Array helpers here. Prefer Stdlib/Array directly.
+symbol: Belt_Array.forEach
+snippet:
+```text
+> 1 | let run = () => Belt.Array.forEach([1, 2], x => ignore(x))
+    |                            ^^^^^^^
+```
+
+severity: error
+rule: forbidden-source-root-reference
+path: src/lint/ForbiddenGeneratedReference.res
+range: 2:24-2:37
+message: Do not reference declarations from `src/generated` directly
+symbol: GeneratedModel.generatedType
+snippet:
+```text
+  1 | type wrapper = {
+> 2 |   item: GeneratedModel.generatedType,
+    |                        ^^^^^^^^^^^^^
+  3 | }
+```
+
+severity: error
+rule: forbidden-source-root-reference
+path: src/lint/ForbiddenGeneratedReference.res
+range: 7:46-7:59
+message: Do not reference declarations from `src/generated` directly
+symbol: GeneratedModel.generatedType
+snippet:
+```text
+  5 | let next = GeneratedModel.generatedValue + 1
+> 7 | let acceptGenerated = (value: GeneratedModel.generatedType) => {
+    |                                              ^^^^^^^^^^^^^
+  8 |   next + GeneratedModel.generatedValue + value.id
+```
+
+severity: error
+rule: forbidden-source-root-reference
+path: src/lint/ForbiddenGeneratedReference.res
+range: 5:27-5:41
+message: Do not reference declarations from `src/generated` directly
+symbol: GeneratedModel.generatedValue
+snippet:
+```text
+  3 | }
+> 5 | let next = GeneratedModel.generatedValue + 1
+    |                           ^^^^^^^^^^^^^^
+```
+
+severity: error
+rule: forbidden-source-root-reference
+path: src/lint/ForbiddenGeneratedReference.res
+range: 8:25-8:39
+message: Do not reference declarations from `src/generated` directly
+symbol: GeneratedModel.generatedValue
+snippet:
+```text
+  7 | let acceptGenerated = (value: GeneratedModel.generatedType) => {
+> 8 |   next + GeneratedModel.generatedValue + value.id
+    |                         ^^^^^^^^^^^^^^
+  9 | }
+```
+
+severity: error
+rule: forbidden-source-root-reference
+path: src/lint/ForbiddenGeneratedReference.resi
+range: 2:24-2:37
+message: Do not reference declarations from `src/generated` directly
+symbol: GeneratedModel.generatedType
+snippet:
+```text
+  1 | type wrapper = {
+> 2 |   item: GeneratedModel.generatedType,
+    |                        ^^^^^^^^^^^^^
+  3 | }
+```
+
+severity: error
+rule: forbidden-source-root-reference
+path: src/lint/ForbiddenGeneratedReference.resi
+range: 5:37-5:50
+message: Do not reference declarations from `src/generated` directly
+symbol: GeneratedModel.generatedType
+snippet:
+```text
+  3 | }
+> 5 | let acceptGenerated: GeneratedModel.generatedType => int
+    |                                     ^^^^^^^^^^^^^
+```
+
+severity: error
+rule: forbidden-reference
+path: src/lint/ForbiddenModule.res
+range: 1:23-1:29
+message: Avoid Belt.Array module references here.
+symbol: Belt_Array.length
+snippet:
+```text
+> 1 | let size = Belt.Array.length([1, 2])
+    |                       ^^^^^^
+```
+
+severity: error
+rule: forbidden-reference
+path: src/lint/ForbiddenOpen.res
+range: 3:17-3:20
+message: Prefer Array.map directly.
+symbol: Belt_Array.map
+snippet:
+```text
+  1 | open Belt.Array
+> 3 | let run = () => map([1, 2], x => x + 1)
+    |                 ^^^
+```
+
+severity: warning
+rule: alias-avoidance
+path: src/lint/ForbiddenType.res
+range: 1:6-1:10
+message: Use the fully qualified reference directly instead of creating a local alias
+symbol: Js.Json.t
+snippet:
+```text
+> 1 | type json = Js.Json.t
+    |      ^^^^
+```
+
+severity: warning
+rule: forbidden-reference
+path: src/lint/ForbiddenType.res
+range: 1:21-1:22
+message: Avoid Js.Json.t here.
+symbol: Js_json.t
+snippet:
+```text
+> 1 | type json = Js.Json.t
+    |                     ^
+```
+
+severity: warning
+rule: preferred-type-syntax
+path: src/lint/PreferredTypeSyntax.res
+range: 2:10-2:16
+message: Prefer `dict<_>` over `Dict.t<_>`
+symbol: Dict.t
+snippet:
+```text
+  1 | type wrapped = {
+> 2 |   items: Dict.t<int>,
+    |          ^^^^^^
+  3 |   names: Stdlib.Dict.t<string>,
+```
+
+severity: warning
+rule: preferred-type-syntax
+path: src/lint/PreferredTypeSyntax.res
+range: 6:16-6:22
+message: Prefer `dict<_>` over `Dict.t<_>`
+symbol: Dict.t
+snippet:
+```text
+  4 | }
+> 6 | let dictValue: Dict.t<int> = dict{}
+    |                ^^^^^^
+  7 | let stdlibDictValue: Stdlib.Dict.t<string> = dict{}
+```
+
+severity: warning
+rule: preferred-type-syntax
+path: src/lint/PreferredTypeSyntax.res
+range: 3:10-3:23
+message: Prefer `dict<_>` over `Dict.t<_>`
+symbol: Stdlib.Dict.t
+snippet:
+```text
+  1 | type wrapped = {
+  2 |   items: Dict.t<int>,
+> 3 |   names: Stdlib.Dict.t<string>,
+    |          ^^^^^^^^^^^^^
+  4 | }
+```
+
+severity: warning
+rule: preferred-type-syntax
+path: src/lint/PreferredTypeSyntax.res
+range: 7:22-7:35
+message: Prefer `dict<_>` over `Dict.t<_>`
+symbol: Stdlib.Dict.t
+snippet:
+```text
+  6 | let dictValue: Dict.t<int> = dict{}
+> 7 | let stdlibDictValue: Stdlib.Dict.t<string> = dict{}
+    |                      ^^^^^^^^^^^^^
+```
+
+severity: warning
+rule: preferred-type-syntax
+path: src/lint/PreferredTypeSyntax.resi
+range: 2:10-2:16
+message: Prefer `dict<_>` over `Dict.t<_>`
+symbol: Dict.t
+snippet:
+```text
+  1 | type wrapped = {
+> 2 |   items: Dict.t<int>,
+    |          ^^^^^^
+  3 |   names: Stdlib.Dict.t<string>,
+```
+
+severity: warning
+rule: preferred-type-syntax
+path: src/lint/PreferredTypeSyntax.resi
+range: 6:16-6:22
+message: Prefer `dict<_>` over `Dict.t<_>`
+symbol: Dict.t
+snippet:
+```text
+  4 | }
+> 6 | let dictValue: Dict.t<int>
+    |                ^^^^^^
+  7 | let stdlibDictValue: Stdlib.Dict.t<string>
+```
+
+severity: warning
+rule: preferred-type-syntax
+path: src/lint/PreferredTypeSyntax.resi
+range: 3:10-3:23
+message: Prefer `dict<_>` over `Dict.t<_>`
+symbol: Stdlib.Dict.t
+snippet:
+```text
+  1 | type wrapped = {
+  2 |   items: Dict.t<int>,
+> 3 |   names: Stdlib.Dict.t<string>,
+    |          ^^^^^^^^^^^^^
+  4 | }
+```
+
+severity: warning
+rule: preferred-type-syntax
+path: src/lint/PreferredTypeSyntax.resi
+range: 7:22-7:35
+message: Prefer `dict<_>` over `Dict.t<_>`
+symbol: Stdlib.Dict.t
+snippet:
+```text
+  6 | let dictValue: Dict.t<int>
+> 7 | let stdlibDictValue: Stdlib.Dict.t<string>
+    |                      ^^^^^^^^^^^^^
+```
+
+severity: warning
+rule: single-use-function
+path: src/lint/SingleUse.res
+range: 2:7-2:13
+message: Inline this helper unless it is a meaningful reusable abstraction.
+symbol: helper
+snippet:
+```text
+  1 | let run = () => {
+> 2 |   let helper = x => x + 1
+    |       ^^^^^^
+  3 |   helper(1)
+```

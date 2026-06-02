@@ -34,6 +34,7 @@
     "provenance": true,
     "executableFiles": [
       "./bin/bsc.exe",
+      "./bin/rescript-assist.exe",
       "./bin/rescript-editor-analysis.exe",
       "./bin/rescript-tools.exe",
       "./bin/rescript.exe"

@@ -1,0 +1,34 @@
+path: src/rewrite/RewriteOptionalSome.res
+status: preview
+rules:
+- prefer-switch(1): rewrote `if` / ternary branches into `switch`
+- no-optional-some(3): rewrote `~label=?Some(expr)` into `~label=expr`
+diff:
+```diff
+--- a/src/rewrite/RewriteOptionalSome.res
++++ b/src/rewrite/RewriteOptionalSome.res
+@@ -1,15 +1,12 @@
+ let flag = true
+ let useValue = (~value=?, ()) => value
+
+-let direct = useValue(~value=?Some(1), ())
++let direct = useValue(~value=1, ())
+ let nested = useValue(
+-  ~value=?Some(
+-    if flag {
+-      1
+-    } else {
+-      2
+-    },
+-  ),
++  ~value=switch flag {
++  | true => 1
++  | false => 2
++  },
+   (),
+ )
+-let fromComputation = useValue(~value=?Some(String.length("abc")), ())
++let fromComputation = useValue(~value=String.length("abc"), ())
+```
+
+summary: previewed 1 files, unchanged 0, rules: prefer-switch(1), no-optional-some(3)

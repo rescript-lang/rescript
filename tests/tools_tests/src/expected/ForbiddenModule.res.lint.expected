@@ -1,0 +1,11 @@
+severity: error
+rule: forbidden-reference
+path: src/lint/ForbiddenModule.res
+range: 1:23-1:29
+message: Avoid Belt.Array module references here.
+symbol: Belt_Array.length
+snippet:
+```text
+> 1 | let size = Belt.Array.length([1, 2])
+    |                       ^^^^^^
+```
