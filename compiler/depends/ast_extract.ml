@@ -24,12 +24,12 @@
 
 (* type module_name = private string *)
 
-module Set_string = Depend.StringSet
+module Set_string = Depend.String_set
 
 (* FIXME: [Clflags.open_modules] seems not to be properly used *)
-module SMap = Depend.StringMap
+module S_map = Depend.String_map
 
-let bound_vars = SMap.empty
+let bound_vars = S_map.empty
 
 type 'a kind = 'a Ml_binary.kind
 

@@ -137,7 +137,7 @@ let peek3 scanner =
     String.unsafe_get scanner.src (scanner.offset + 3)
   else hacky_eof_char
 
-let peekChar scanner target_char =
+let peek_char scanner target_char =
   let rec skip_whitespace_and_check offset =
     if offset < String.length scanner.src then
       let ch = String.unsafe_get scanner.src offset in
@@ -148,8 +148,8 @@ let peekChar scanner target_char =
   in
   skip_whitespace_and_check scanner.offset
 
-let peekMinus scanner = peekChar scanner '-'
-let peekSlash scanner = peekChar scanner '/'
+let peek_minus scanner = peek_char scanner '-'
+let peek_slash scanner = peek_char scanner '/'
 
 let make ~filename src =
   {

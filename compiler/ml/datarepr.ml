@@ -22,19 +22,19 @@ open Btype
 
 (* Simplified version of Ctype.free_vars *)
 let free_vars ?(param = false) ty =
-  let ret = ref TypeSet.empty in
+  let ret = ref Type_set.empty in
   let rec loop ty =
     let ty = repr ty in
     if ty.level >= lowest_level then (
       ty.level <- pivot_level - ty.level;
       match ty.desc with
-      | Tvar _ -> ret := TypeSet.add ty !ret
+      | Tvar _ -> ret := Type_set.add ty !ret
       | Tvariant row -> (
         let row = row_repr row in
         iter_row loop row;
         if not (static_row row) then
           match row.row_more.desc with
-          | Tvar _ when param -> ret := TypeSet.add ty !ret
+          | Tvar _ when param -> ret := Type_set.add ty !ret
           | _ -> loop row.row_more)
       (* XXX: What about Tobject ? *)
       | _ -> iter_type_expr loop ty)
@@ -57,7 +57,7 @@ let constructor_existentials cd_args cd_res =
     | Some type_ret ->
       let arg_vars_set = free_vars (newgenty (Ttuple tyl)) in
       let res_vars = free_vars type_ret in
-      TypeSet.elements (TypeSet.diff arg_vars_set res_vars)
+      Type_set.elements (Type_set.diff arg_vars_set res_vars)
   in
   (tyl, existentials)
 
@@ -67,7 +67,7 @@ let constructor_args priv cd_args cd_res path rep =
   | Cstr_tuple l -> (existentials, l, None)
   | Cstr_record lbls ->
     let arg_vars_set = free_vars ~param:true (newgenty (Ttuple tyl)) in
-    let type_params = TypeSet.elements arg_vars_set in
+    let type_params = Type_set.elements arg_vars_set in
     let type_unboxed =
       match rep with
       | Record_unboxed _ -> unboxed_true_default_false

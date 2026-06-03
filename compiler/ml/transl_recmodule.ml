@@ -108,7 +108,7 @@ let reorder_rec_bindings bindings =
       if init.(i) = None then (
         status.(i) <- Inprogress;
         for j = 0 to num_bindings - 1 do
-          if IdentSet.mem id.(j) fv.(i) then emit_binding j
+          if Ident_set.mem id.(j) fv.(i) then emit_binding j
         done);
       res := (id.(i), init.(i), rhs.(i)) :: !res;
       status.(i) <- Defined

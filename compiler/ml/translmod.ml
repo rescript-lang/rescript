@@ -112,7 +112,7 @@ and wrap_id_pos_list loc id_pos_list get_field lam =
   let lam, s =
     List.fold_left
       (fun (lam, s) (id', pos, c) ->
-        if Lambda.IdentSet.mem id' fv then
+        if Lambda.Ident_set.mem id' fv then
           let id'' = Ident.create (Ident.name id') in
           ( Lambda.Llet
               ( Alias,
@@ -318,7 +318,7 @@ and transl_structure loc fields cc rootpath final_env = function
       let v = Ext_array.reverse_of_list fields in
       let get_field pos = Lambda.Lvar v.(pos)
       and ids =
-        List.fold_right Lambda.IdentSet.add fields Lambda.IdentSet.empty
+        List.fold_right Lambda.Ident_set.add fields Lambda.Ident_set.empty
       in
       let get_field_name _name = get_field in
       let result =
@@ -345,7 +345,7 @@ and transl_structure loc fields cc rootpath final_env = function
             loc )
       and id_pos_list =
         Ext_list.filter id_pos_list (fun (id, _, _) ->
-            not (Lambda.IdentSet.mem id ids))
+            not (Lambda.Ident_set.mem id ids))
       in
       ( wrap_id_pos_list loc id_pos_list get_field_name lam,
         List.length pos_cc_list )

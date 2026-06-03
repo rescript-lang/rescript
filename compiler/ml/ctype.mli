@@ -19,7 +19,7 @@ open Asttypes
 open Types
 
 type subtype_context =
-  | Generic of {errorCode: string}
+  | Generic of {error_code: string}
       (** A generic subtype error, intended to be extended to be handled later. *)
   | Coercion_target_variant_not_unboxed of {
       variant_name: Path.t;

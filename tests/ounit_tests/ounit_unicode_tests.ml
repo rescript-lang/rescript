@@ -29,7 +29,7 @@ let ( ==* ) a b =
   in
   OUnit.assert_equal segments b
 
-let varParen : Ast_utf8_string_interp.kind = Var (2, -1)
+let var_paren : Ast_utf8_string_interp.kind = Var (2, -1)
 let var : Ast_utf8_string_interp.kind = Var (1, 0)
 let suites =
   __FILE__
@@ -97,7 +97,7 @@ let suites =
          ( __LOC__ >:: fun _ ->
            "你好$this" ==~ [(0, 2, String, "你好"); (2, 7, var, "this")] );
          ( __LOC__ >:: fun _ ->
-           "你好$(this)" ==~ [(0, 2, String, "你好"); (2, 9, varParen, "this")];
+           "你好$(this)" ==~ [(0, 2, String, "你好"); (2, 9, var_paren, "this")];
 
            "你好$this)"
            ==~ [(0, 2, String, "你好"); (2, 7, var, "this"); (7, 8, String, ")")];
@@ -122,7 +122,7 @@ let suites =
            "你好 $(this_is_a_var)  x"
            ==~ [
                  (0, 3, String, "你好 ");
-                 (3, 19, varParen, "this_is_a_var");
+                 (3, 19, var_paren, "this_is_a_var");
                  (19, 22, String, "  x");
                ] );
          ( __LOC__ >:: fun _ ->
@@ -144,7 +144,7 @@ let suites =
            "\n$(x_this_is_cool) "
            ==* [
                  (0, 0, 1, 0, String, "\\n");
-                 (1, 0, 1, 17, varParen, "x_this_is_cool");
+                 (1, 0, 1, 17, var_paren, "x_this_is_cool");
                  (1, 17, 1, 18, String, " ");
                ] );
          ( __LOC__ >:: fun _ ->
