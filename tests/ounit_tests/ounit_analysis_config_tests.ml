@@ -11,7 +11,7 @@ let assert_namespace ~expected raw =
       | Some s -> "Some " ^ s
       | None -> "None")
     expected
-    (Analysis.FindFiles.getNamespace (json raw))
+    (Analysis.Find_files.get_namespace (json raw))
 
 let assert_string_opt ~expected actual =
   OUnit.assert_equal
@@ -32,24 +32,25 @@ let suites =
   >::: [
          ( "yojson helpers do not raise on type mismatch" >:: fun _ ->
            assert_string_opt ~expected:(Some "value")
-             (Analysis.YojsonHelpers.string_opt (`String "value"));
+             (Analysis.Yojson_helpers.string_opt (`String "value"));
            assert_string_opt ~expected:None
-             (Analysis.YojsonHelpers.string_opt (`Bool true));
+             (Analysis.Yojson_helpers.string_opt (`Bool true));
            assert_bool_opt ~expected:(Some true)
-             (Analysis.YojsonHelpers.bool_opt (`Bool true));
+             (Analysis.Yojson_helpers.bool_opt (`Bool true));
            assert_bool_opt ~expected:None
-             (Analysis.YojsonHelpers.bool_opt (`String "true"));
+             (Analysis.Yojson_helpers.bool_opt (`String "true"));
            OUnit.assert_equal ~printer:string_of_int 1
-             (Analysis.YojsonHelpers.to_list_opt (`List [`Null])
+             (Analysis.Yojson_helpers.to_list_opt (`List [`Null])
              |> Option.fold ~none:0 ~some:List.length);
            OUnit.assert_equal ~printer:string_of_int 0
-             (Analysis.YojsonHelpers.to_list_opt (`String "not a list")
+             (Analysis.Yojson_helpers.to_list_opt (`String "not a list")
              |> Option.fold ~none:0 ~some:List.length);
            OUnit.assert_bool "valid JSON parses"
-             (Analysis.YojsonHelpers.from_string_opt {|{"ok": true}|}
+             (Analysis.Yojson_helpers.from_string_opt {|{"ok": true}|}
              |> Option.is_some);
            OUnit.assert_bool "invalid JSON is ignored"
-             (Analysis.YojsonHelpers.from_string_opt {|{|} |> Option.is_none) );
+             (Analysis.Yojson_helpers.from_string_opt {|{|} |> Option.is_none)
+         );
          ( "absent namespace is disabled" >:: fun _ ->
            assert_namespace ~expected:None {|{"name": "@tests/pkg"}|} );
          ( "false namespace is disabled" >:: fun _ ->

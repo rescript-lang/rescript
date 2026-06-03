@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/label_mismatch_record_literal.res[0m:[2m3:16[0m
+
+  1 [2m│[0m type a = {x: int}
+  2 [2m│[0m type b = {y: int}
+  [1;31m3[0m [2m│[0m let _ = {x: 1, [1;31my[0m: 2}
+  4 [2m│[0m 
+
+  The record field y belongs to the type [1;31mb[0m
+  but is mixed here with fields of type [1;33ma[0m

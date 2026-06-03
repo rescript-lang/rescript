@@ -17,7 +17,7 @@
 
 open Types
 
-module PathMap :
+module Path_map :
   Map.S with type key = Path.t and type 'a t = 'a Map.Make(Path).t
 
 type summary =
@@ -29,7 +29,7 @@ type summary =
   | Env_modtype of summary * Ident.t * modtype_declaration
   | Env_open of summary * Path.t
   | Env_functor_arg of summary * Ident.t
-  | Env_constraints of summary * type_declaration PathMap.t
+  | Env_constraints of summary * type_declaration Path_map.t
   | Env_copy_types of summary * string list
 
 type t

@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/external_null_arity.res[0m:[2m1:13-15[0m
+
+  [1;31m1[0m [2m│[0m external x: [1;31mint[0m = "?nodeFs"
+  2 [2m│[0m 
+
+  External identifiers must be functions

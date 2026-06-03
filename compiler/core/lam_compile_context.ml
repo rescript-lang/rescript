@@ -24,7 +24,7 @@
 
 type jbl_label = int
 
-module HandlerMap = Map_int
+module Handler_map = Map_int
 
 type value = {exit_id: Ident.t; bindings: Ident.t list; order_id: int}
 
@@ -64,7 +64,7 @@ type continuation =
   | Assign of J.ident
 (* when use [Assign], var is not needed, since it's already declared  *)
 
-type jmp_table = value HandlerMap.t
+type jmp_table = value Handler_map.t
 
 let continuation_is_return (x : continuation) =
   match x with
@@ -81,7 +81,7 @@ type t = {
   loop_label_counter: int ref;
 }
 
-let empty_handler_map = HandlerMap.empty
+let empty_handler_map = Handler_map.empty
 
 let enter_switch cxt = {cxt with switch_depth = cxt.switch_depth + 1}
 
@@ -115,9 +115,9 @@ let add_jmps (m : jmp_table) (exit_id : Ident.t) (code_table : handler list) :
     jmp_table * (int * Lam.t) list =
   let map, handlers =
     Ext_list.fold_left_with_offset code_table (m, [])
-      (HandlerMap.cardinal m + 1)
+      (Handler_map.cardinal m + 1)
       (fun {label; handler; bindings} (acc, handlers) order_id ->
-        ( HandlerMap.add acc label {exit_id; bindings; order_id},
+        ( Handler_map.add acc label {exit_id; bindings; order_id},
           (order_id, handler) :: handlers ))
   in
   (map, List.rev handlers)
@@ -125,7 +125,7 @@ let add_jmps (m : jmp_table) (exit_id : Ident.t) (code_table : handler list) :
 let add_pseudo_jmp (m : jmp_table)
     (exit_id : Ident.t) (* TODO not needed, remove it later *)
     (code_table : handler) : jmp_table * Lam.t =
-  ( HandlerMap.add m code_table.label
+  ( Handler_map.add m code_table.label
       {exit_id; bindings = code_table.bindings; order_id = -1},
     code_table.handler )
 

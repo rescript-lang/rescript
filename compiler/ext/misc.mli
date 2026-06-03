@@ -206,8 +206,8 @@ val cut_at : string -> char -> string * string
    @since 4.01
 *)
 
-module StringSet : Set.S with type elt = string
-module StringMap : Map.S with type key = string
+module String_set : Set.S with type elt = string
+module String_map : Map.S with type key = string
 (* TODO: replace all custom instantiations of StringSet/StringMap in various
    compiler modules with this one. *)
 

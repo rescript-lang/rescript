@@ -31,19 +31,19 @@ module type Stored = sig
 end
 
 module Store (A : Stored) = struct
-  module AMap = Map.Make (struct
+  module A_map = Map.Make (struct
     type t = A.key
     let compare = A.compare_key
   end)
 
   type intern = {
-    mutable map: (bool * int) AMap.t;
+    mutable map: (bool * int) A_map.t;
     mutable next: int;
     mutable acts: (bool * A.t) list;
   }
 
   let mk_store () =
-    let st = {map = AMap.empty; next = 0; acts = []} in
+    let st = {map = A_map.empty; next = 0; acts = []} in
 
     let add mustshare act =
       let i = st.next in
@@ -56,12 +56,12 @@ module Store (A : Stored) = struct
       match A.make_key act with
       | Some key -> (
         try
-          let shared, i = AMap.find key st.map in
-          if not shared then st.map <- AMap.add key (true, i) st.map;
+          let shared, i = A_map.find key st.map in
+          if not shared then st.map <- A_map.add key (true, i) st.map;
           i
         with Not_found ->
           let i = add mustshare act in
-          st.map <- AMap.add key (mustshare, i) st.map;
+          st.map <- A_map.add key (mustshare, i) st.map;
           i)
       | None -> add mustshare act
     and get_shared () =
@@ -71,7 +71,7 @@ module Store (A : Stored) = struct
              (fun (shared, act) -> if shared then Shared act else Single act)
              st.acts)
       in
-      AMap.iter
+      A_map.iter
         (fun _ (shared, i) ->
           if shared then
             match acts.(i) with

@@ -1,14 +1,14 @@
 (executable
- (name ReactiveTest)
+ (name reactive_test)
  (modules
-  ReactiveTest
-  TestHelpers
-  FlatMapTest
-  JoinTest
-  UnionTest
-  FixpointBasicTest
-  FixpointIncrementalTest
-  BatchTest
-  IntegrationTest
-  GlitchFreeTest)
+  reactive_test
+  test_helpers
+  flat_map_test
+  join_test
+  union_test
+  fixpoint_basic_test
+  fixpoint_incremental_test
+  batch_test
+  integration_test
+  glitch_free_test)
  (libraries reactive))

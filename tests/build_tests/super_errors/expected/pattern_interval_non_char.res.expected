@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/pattern_interval_non_char.res[0m:[2m3:5-10[0m
+
+  1 [2m│[0m let f = x =>
+  2 [2m│[0m   switch x {
+  [1;31m3[0m [2m│[0m   | [1;31m1 .. 5[0m => "low"
+  4 [2m│[0m   | _ => "other"
+  5 [2m│[0m   }
+
+  Only character intervals are supported in patterns.

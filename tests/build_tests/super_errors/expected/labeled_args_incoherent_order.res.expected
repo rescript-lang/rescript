@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/labeled_args_incoherent_order.res[0m:[2m1:30[0m
+
+  [1;31m1[0m [2m│[0m let f = g => (g(~a=1, ~b=2), [1;31mg[0m(~b=3, ~a=4))
+  2 [2m│[0m 
+
+  This labeled function is applied to arguments
+in an order different from other calls.
+This is only allowed when the real type is known.

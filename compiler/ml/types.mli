@@ -204,7 +204,7 @@ and field_kind = Fvar of field_kind option ref | Fpresent | Fabsent
 *)
 and commutable = Cok | Cunknown | Clink of commutable ref
 
-module TypeOps : sig
+module Type_ops : sig
   type t = type_expr
   val compare : t -> t -> int
   val equal : t -> t -> bool

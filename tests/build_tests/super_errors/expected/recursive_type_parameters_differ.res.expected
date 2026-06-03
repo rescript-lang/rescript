@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/recursive_type_parameters_differ.res[0m:[2m1:1-30[0m
+
+  [1;31m1[0m [2m│[0m [1;31mtype rec t<'a> = {"f": t<int>}[0m
+  2 [2m│[0m 
+
+  In the definition of t, type t<int> should be t<'a>

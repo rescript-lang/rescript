@@ -59,5 +59,4 @@ val transform_exp :
   Parsetree.expression -> string -> string -> Parsetree.expression
 val transform_pat : Parsetree.pattern -> string -> string -> Parsetree.pattern
 val is_unicode_string : string -> bool
-val is_unescaped : string -> bool
 val parse_processed_delim : string option -> External_arg_spec.delim option

@@ -24,6 +24,3 @@
 
 let warn_literal_overflow loc =
   Location.prerr_warning loc Bs_integer_literal_overflow
-
-let error_unescaped_delimiter loc txt =
-  Location.prerr_warning loc (Bs_uninterpreted_delimiters txt)

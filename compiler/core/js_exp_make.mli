@@ -202,7 +202,7 @@ val assign : ?comment:string -> t -> t -> t
 
 val tag_type : Ast_untagged_variants.tag_type -> t
 
-val emit_check : t Ast_untagged_variants.DynamicChecks.t -> t
+val emit_check : t Ast_untagged_variants.Dynamic_checks.t -> t
 
 val triple_equal : ?comment:string -> t -> t -> t
 (* TODO: reduce [triple_equal] use *)

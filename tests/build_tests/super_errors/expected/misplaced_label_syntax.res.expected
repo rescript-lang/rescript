@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/misplaced_label_syntax.res[0m:[2m2:21-27[0m
+
+  1 [2m│[0m let f = (~a, x) => x + a
+  [1;31m2[0m [2m│[0m let _ = \"->"(1, ~b=[1;31mf(~a=2)[0m)
+  3 [2m│[0m 
+
+  Label syntax is not supported in this position

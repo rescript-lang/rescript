@@ -9,17 +9,17 @@ let from_string (s : string) : feature option =
   | "LetUnwrap" -> Some LetUnwrap
   | _ -> None
 
-module FeatureSet = Set.Make (struct
+module Feature_set = Set.Make (struct
   type t = feature
   let compare = compare
 end)
 
-let enabled_features : FeatureSet.t ref = ref FeatureSet.empty
+let enabled_features : Feature_set.t ref = ref Feature_set.empty
 let enable_from_string (s : string) =
   match from_string s with
-  | Some f -> enabled_features := FeatureSet.add f !enabled_features
+  | Some f -> enabled_features := Feature_set.add f !enabled_features
   | None -> ()
 
-let reset () = enabled_features := FeatureSet.empty
+let reset () = enabled_features := Feature_set.empty
 
-let is_enabled (f : feature) = FeatureSet.mem f !enabled_features
+let is_enabled (f : feature) = Feature_set.mem f !enabled_features

@@ -6,10 +6,9 @@ build:
 
 # Run all tests
 test:
-	dune build test/ReactiveTest.exe
-	dune exec test/ReactiveTest.exe
+	dune build test/reactive_test.exe
+	dune exec test/reactive_test.exe
 
 # Clean build artifacts
 clean:
 	dune clean
-

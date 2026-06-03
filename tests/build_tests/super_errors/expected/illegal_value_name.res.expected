@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/illegal_value_name.res[0m:[2m1:5-9[0m
+
+  [1;31m1[0m [2m│[0m let [1;31m\"->"[0m = 1
+  2 [2m│[0m 
+
+  '->' is not a valid value identifier.

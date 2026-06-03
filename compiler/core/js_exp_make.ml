@@ -1275,7 +1275,7 @@ let tag_type = function
     (* TODO: this should not happen *)
     assert false
 
-let rec emit_check (check : t Ast_untagged_variants.DynamicChecks.t) =
+let rec emit_check (check : t Ast_untagged_variants.Dynamic_checks.t) =
   match check with
   | TagType t -> tag_type t
   | BinOp (op, x, y) ->
@@ -1297,14 +1297,14 @@ let rec emit_check (check : t Ast_untagged_variants.DynamicChecks.t) =
 
 let is_a_literal_case ~literal_cases ~block_cases (e : t) =
   let check =
-    Ast_untagged_variants.DynamicChecks.is_a_literal_case ~literal_cases
+    Ast_untagged_variants.Dynamic_checks.is_a_literal_case ~literal_cases
       ~block_cases (Expr e)
   in
   emit_check check
 
 let is_int_tag ?has_null_undefined_other e =
   let check =
-    Ast_untagged_variants.DynamicChecks.is_int_tag ?has_null_undefined_other
+    Ast_untagged_variants.Dynamic_checks.is_int_tag ?has_null_undefined_other
       (Expr e)
   in
   emit_check check

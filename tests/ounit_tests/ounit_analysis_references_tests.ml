@@ -12,14 +12,14 @@ let suites =
          ( "without namespace, external reference is unchanged" >:: fun _ ->
            assert_ref_key_eq ~expected:("MyModule2", ["myFunc2"])
              ~actual:
-               (Analysis.References.normalizeExternalReferenceKey
-                  ~namespace:None ~moduleName:"MyModule2" ~path:["myFunc2"]) );
+               (Analysis.References.normalize_external_reference_key
+                  ~namespace:None ~module_name:"MyModule2" ~path:["myFunc2"]) );
          ( "with namespace, hidden module resolves to public namespace path"
          >:: fun _ ->
            assert_ref_key_eq
              ~expected:("MyNamespace", ["MyModule2"; "myFunc2"])
              ~actual:
-               (Analysis.References.normalizeExternalReferenceKey
+               (Analysis.References.normalize_external_reference_key
                   ~namespace:(Some "MyNamespace")
-                  ~moduleName:"MyModule2-MyNamespace" ~path:["myFunc2"]) );
+                  ~module_name:"MyModule2-MyNamespace" ~path:["myFunc2"]) );
        ]

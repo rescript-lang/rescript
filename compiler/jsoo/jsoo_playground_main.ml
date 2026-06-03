@@ -70,7 +70,7 @@ module Lang = struct
     | Res -> "res"
 end
 
-module BundleConfig = struct
+module Bundle_config = struct
   type t = {
     mutable module_system: Ext_module_system.t;
     mutable filename: string option;
@@ -104,7 +104,7 @@ type loc_err_info = {
   loc: Location.t;
 }
 
-module LocWarnInfo = struct
+module Loc_warn_info = struct
   type t = {
     full_msg: string; (* Full super_error related warn string *)
     short_msg: string; (* Plain warn message without any context *)
@@ -116,7 +116,7 @@ end
 
 exception RescriptParsingErrors of loc_err_info list
 
-module ErrorRet = struct
+module Error_ret = struct
   let loc_error_attributes ~(type_ : string) ~(full_msg : string)
       ~(short_msg : string) (loc : Location.t) =
     let _file, line, startchar = Location.get_pos_info loc.Location.loc_start in
@@ -132,7 +132,7 @@ module ErrorRet = struct
         ("type", inject @@ Js.string type_);
       |]
 
-  let make_warning (e : LocWarnInfo.t) =
+  let make_warning (e : Loc_warn_info.t) =
     let loc_attrs =
       loc_error_attributes ~type_:"warning" ~full_msg:e.full_msg
         ~short_msg:e.short_msg e.loc
@@ -148,8 +148,8 @@ module ErrorRet = struct
     let attrs = Array.append loc_attrs warn_attrs in
     Js.Unsafe.obj attrs
 
-  let from_loc_errors ?(warnings : LocWarnInfo.t array option) ~(type_ : string)
-      (errors : loc_err_info array) =
+  let from_loc_errors ?(warnings : Loc_warn_info.t array option)
+      ~(type_ : string) (errors : loc_err_info array) =
     let js_errors =
       Array.map
         (fun (e : loc_err_info) ->
@@ -189,7 +189,7 @@ module ErrorRet = struct
           ("type", inject @@ Js.string "warning_flag_error");
         |])
 
-  let make_warning_error (errors : LocWarnInfo.t array) =
+  let make_warning_error (errors : Loc_warn_info.t array) =
     let type_ = "warning_error" in
     let js_errors = Array.map make_warning errors in
     Js.Unsafe.(
@@ -224,9 +224,9 @@ let error_of_exn e =
 let get_filename ~(lang : Lang.t) opt =
   match opt with
   | Some fname -> fname
-  | None -> BundleConfig.default_filename lang
+  | None -> Bundle_config.default_filename lang
 
-module ResDriver = struct
+module Res_driver = struct
   (* For now we are basically overriding functionality from Res_driver *)
   open Res_driver
 
@@ -294,7 +294,7 @@ end
 
 let rescript_parse ~filename src =
   let structure, _ =
-    ResDriver.parse_implementation ~for_printer:false ~sourcefile:filename ~src
+    Res_driver.parse_implementation ~for_printer:false ~sourcefile:filename ~src
   in
   structure
 
@@ -320,7 +320,7 @@ module Compile = struct
    * Location.error_of_exn properly, so we need to do some extra
    * overloading action
    *)
-  let warning_infos : LocWarnInfo.t array ref = ref [||]
+  let warning_infos : Loc_warn_info.t array ref = ref [||]
   let warning_buffer = Buffer.create 512
   let warning_ppf = Format.formatter_of_buffer warning_buffer
 
@@ -337,7 +337,7 @@ module Compile = struct
     | `Inactive -> ()
     | `Active {Warnings.number; is_error} ->
       Location.default_warning_printer loc ppf w;
-      let open LocWarnInfo in
+      let open Loc_warn_info in
       let full_msg = flush_warning_buffer () in
       let short_msg = Warnings.message w in
       let info = {full_msg; short_msg; warn_number = number; is_error; loc} in
@@ -366,16 +366,16 @@ module Compile = struct
         Format.flush_str_formatter ()
       in
       let err = {full_msg; short_msg = error.msg; loc = error.loc} in
-      ErrorRet.from_loc_errors ~type_ [|err|]
+      Error_ret.from_loc_errors ~type_ [|err|]
     | None -> (
       match e with
       | RescriptParsingErrors errors ->
-        ErrorRet.from_syntax_errors (Array.of_list errors)
+        Error_ret.from_syntax_errors (Array.of_list errors)
       | _ -> (
         let msg = Printexc.to_string e in
         match e with
-        | Warnings.Errors -> ErrorRet.make_warning_error !warning_infos
-        | _ -> ErrorRet.make_unexpected_error msg))
+        | Warnings.Errors -> Error_ret.make_warning_error !warning_infos
+        | _ -> Error_ret.make_unexpected_error msg))
 
   (* Responsible for resetting all compiler state as if it were a new instance *)
   let reset_compiler () =
@@ -427,8 +427,8 @@ module Compile = struct
     in
     let structure, _ = typed_tree in
     let acc = ref [] in
-    let module Iter = TypedtreeIter.MakeIterator (struct
-      include TypedtreeIter.DefaultIteratorArgument
+    let module Iter = Typedtree_iter.Make_iterator (struct
+      include Typedtree_iter.Default_iterator_argument
 
       let cur_rec_status = ref None
 
@@ -475,10 +475,10 @@ module Compile = struct
     List.iter Iter.iter_structure_item structure.str_items;
     Js.array (!acc |> Array.of_list)
 
-  let implementation ?(include_debug_outputs = false) ~(config : BundleConfig.t)
-      ~lang str =
+  let implementation ?(include_debug_outputs = false)
+      ~(config : Bundle_config.t) ~lang str =
     let {
-      BundleConfig.module_system;
+      Bundle_config.module_system;
       warn_flags;
       open_modules;
       experimental_features;
@@ -536,7 +536,7 @@ module Compile = struct
             ( "warnings",
               inject
               @@ (!warning_infos
-                 |> Array.map ErrorRet.make_warning
+                 |> Array.map Error_ret.make_warning
                  |> Js.array |> inject) );
             ("type_hints", inject @@ type_hints);
             ("type", inject @@ Js.string "success");
@@ -564,7 +564,7 @@ module Compile = struct
       else Js.Unsafe.obj attrs
     with e -> (
       match e with
-      | Arg.Bad msg -> ErrorRet.make_warning_flag_error ~warn_flags msg
+      | Arg.Bad msg -> Error_ret.make_warning_flag_error ~warn_flags msg
       | _ -> handle_err e)
 
   let syntax_format ?(filename : string option) ~(from : Lang.t) ~(to_ : Lang.t)
@@ -578,7 +578,7 @@ module Compile = struct
            * IMPORTANT: we need forPrinter:true when parsing code here,
            * otherwise we will loose some information for the ReScript printer *)
           let structure, comments =
-            ResDriver.parse_implementation ~for_printer:true
+            Res_driver.parse_implementation ~for_printer:true
               ~sourcefile:filename ~src
           in
           Res_printer.print_implementation ~width:80 structure ~comments
@@ -630,7 +630,7 @@ module Export = struct
   (* Creates a "compiler instance" binding the configuration context to the specific compile / formatter functions *)
   let make () =
     let open Lang in
-    let config = BundleConfig.make () in
+    let config = Bundle_config.make () in
     let set_module_system value =
       match value with
       | "esmodule" ->
@@ -677,7 +677,7 @@ module Export = struct
           | Some _, Some _ ->
             "Can't convert from " ^ from_lang ^ " to " ^ to_lang
         in
-        ErrorRet.make_unexpected_error msg
+        Error_ret.make_unexpected_error msg
     in
     Js.Unsafe.(
       obj
@@ -728,7 +728,7 @@ module Export = struct
                          ( "module_system",
                            inject
                            @@ (config.module_system
-                             |> BundleConfig.string_of_module_system
+                             |> Bundle_config.string_of_module_system
                              |> Js.string) );
                          ("warn_flags", inject @@ Js.string config.warn_flags);
                          ( "jsx_preserve_mode",

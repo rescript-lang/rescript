@@ -439,7 +439,7 @@ let pretty_precompiled_res first nexts =
    in case action sharing is present.
 *)
 
-module StoreExp = Switch.Store (struct
+module Store_exp = Switch.Store (struct
   type t = lambda
   type key = lambda
   let compare_key = compare
@@ -612,8 +612,8 @@ let default_compat p def =
 (* Or-pattern expansion, variables are a complication w.r.t. the article *)
 let rec extract_vars r p =
   match p.pat_desc with
-  | Tpat_var (id, _) -> IdentSet.add id r
-  | Tpat_alias (p, id, _) -> extract_vars (IdentSet.add id r) p
+  | Tpat_var (id, _) -> Ident_set.add id r
+  | Tpat_alias (p, id, _) -> extract_vars (Ident_set.add id r) p
   | Tpat_tuple pats -> List.fold_left extract_vars r pats
   | Tpat_record (lpats, _) ->
     List.fold_left (fun r (_, _, p, _) -> extract_vars r p) r lpats
@@ -652,8 +652,8 @@ let rec explode_or_pat arg patl mk_action rem vars aliases = function
 
 let pm_free_variables {cases} =
   List.fold_right
-    (fun (_, act) r -> IdentSet.union (free_variables act) r)
-    cases IdentSet.empty
+    (fun (_, act) r -> Ident_set.union (free_variables act) r)
+    cases Ident_set.empty
 
 (* Basic grouping predicates *)
 let pat_as_constr = function
@@ -735,8 +735,8 @@ let insert_or_append p ps act ors no =
       if is_or q then
         if may_compat p q then
           if
-            IdentSet.is_empty (extract_vars IdentSet.empty p)
-            && IdentSet.is_empty (extract_vars IdentSet.empty q)
+            Ident_set.is_empty (extract_vars Ident_set.empty p)
+            && Ident_set.is_empty (extract_vars Ident_set.empty q)
             && equiv_pat p q
           then
             (* attempt insert, for equivalent orpats with no variables *)
@@ -1046,9 +1046,9 @@ and precompile_or argo cls ors args def k =
           }
         in
         let vars =
-          IdentSet.elements
-            (IdentSet.inter
-               (extract_vars IdentSet.empty orp)
+          Ident_set.elements
+            (Ident_set.inter
+               (extract_vars Ident_set.empty orp)
                (pm_free_variables orpm))
         in
         let or_num = next_raise_count () in
@@ -1620,7 +1620,7 @@ let handle_shared () =
   (hs, handle_shared)
 
 let share_actions_tree sw d =
-  let store = StoreExp.mk_store () in
+  let store = Store_exp.mk_store () in
   (* Default action is always shared *)
   let d =
     match d with
@@ -1706,7 +1706,7 @@ let make_test_sequence loc fail tst lt_tst arg const_lambda_list =
   in
   hs (make_test_sequence const_lambda_list)
 
-module SArg = struct
+module S_arg = struct
   type primitive = Lambda.primitive
 
   let eqint = Pintcomp Ceq
@@ -1760,7 +1760,7 @@ end
 (* Action sharing for Lswitch argument *)
 let share_actions_sw sw =
   (* Attempt sharing on all actions *)
-  let store = StoreExp.mk_store () in
+  let store = Store_exp.mk_store () in
   let fail =
     match sw.sw_failaction with
     | None -> None
@@ -1832,7 +1832,7 @@ let reintroduce_fail sw =
     else sw
   | Some _ -> sw
 
-module Switcher = Switch.Make (SArg)
+module Switcher = Switch.Make (S_arg)
 open Switch
 
 let rec last def = function
@@ -1846,7 +1846,7 @@ let get_edges low high l =
   | (x, _) :: _ -> (x, last high l)
 
 let as_interval_canfail fail low high l =
-  let store = StoreExp.mk_store () in
+  let store = Store_exp.mk_store () in
 
   let do_store _tag act =
     let i = store.act_store act in
@@ -1896,7 +1896,7 @@ let as_interval_canfail fail low high l =
   (Array.of_list r, store)
 
 let as_interval_nofail l =
-  let store = StoreExp.mk_store () in
+  let store = Store_exp.mk_store () in
   let rec some_hole = function
     | [] | [_] -> false
     | (i, _) :: ((j, _) :: _ as rem) -> j > i + 1 || some_hole rem

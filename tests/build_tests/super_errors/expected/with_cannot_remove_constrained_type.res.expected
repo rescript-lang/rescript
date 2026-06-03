@@ -1,0 +1,12 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/with_cannot_remove_constrained_type.res[0m:[2m5:17-39[0m
+
+  3 [2m│[0m }
+  4 [2m│[0m 
+  [1;31m5[0m [2m│[0m module type T = [1;31mS with type t<'a> := 'a[0m
+  6 [2m│[0m 
+
+  Destructive substitutions are not supported for constrained 
+  types (other than when replacing a type constructor with 
+  a type constructor with the same arguments).

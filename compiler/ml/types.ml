@@ -63,7 +63,7 @@ and field_kind = Fvar of field_kind option ref | Fpresent | Fabsent
 
 and commutable = Cok | Cunknown | Clink of commutable ref
 
-module TypeOps = struct
+module Type_ops = struct
   type t = type_expr
   let compare t1 t2 = t1.id - t2.id
   let hash t = t.id
@@ -72,11 +72,11 @@ end
 
 (* Maps of methods and instance variables *)
 
-module OrderedString = struct
+module Ordered_string = struct
   type t = string
   let compare (x : t) y = compare x y
 end
-module Meths = Map.Make (OrderedString)
+module Meths = Map.Make (Ordered_string)
 module Vars = Meths
 
 (* Value descriptions *)
@@ -206,7 +206,7 @@ type extension_constructor = {
 
 (* Type expressions for the class language *)
 
-module Concr = Set.Make (OrderedString)
+module Concr = Set.Make (Ordered_string)
 
 (* Type expressions for the module language *)
 
