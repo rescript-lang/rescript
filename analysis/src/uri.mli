@@ -7,4 +7,4 @@ val strip_path : bool ref
 val to_path : t -> string
 val to_string : t -> string
 val to_top_level_loc : t -> Location.t
-val encode_u_r_i_component : string -> string
+val encode_uri_component : string -> string

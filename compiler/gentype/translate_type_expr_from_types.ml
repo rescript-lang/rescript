@@ -387,11 +387,11 @@ let translate_constr ~config ~params_translation ~(path : Path.t) ~type_env =
       type_ = Emit_type.type_react_ref ~type_:param_translation.type_;
     }
   | (["ReactDOM"; "domRef"] | ["ReactDOM"; "Ref"; "t"]), [] ->
-    {dependencies = []; type_ = Emit_type.type_react_d_o_m_re_dom_ref}
+    {dependencies = []; type_ = Emit_type.type_react_dom_re_dom_ref}
   | ["ReactDOM"; "Ref"; "currentDomRef"], [] ->
     {dependencies = []; type_ = Emit_type.type_any}
   | ["ReactDOMRe"; "domRef"], [] ->
-    {dependencies = []; type_ = Emit_type.type_react_d_o_m_re_dom_ref}
+    {dependencies = []; type_ = Emit_type.type_react_dom_re_dom_ref}
   | ["ReactDOMRe"; "Ref"; "currentDomRef"], [] ->
     {dependencies = []; type_ = Emit_type.type_any}
   | ["ReactEvent"; "Mouse"; "t"], [] ->

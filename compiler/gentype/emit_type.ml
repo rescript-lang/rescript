@@ -32,7 +32,7 @@ let type_react_element = type_react_element_type_script
 let type_react_child = type_react_child_type_script
 let is_type_react_element type_ = type_ == type_react_element
 
-let type_react_d_o_m_re_dom_ref =
+let type_react_dom_re_dom_ref =
   "React.Ref" |> ident ~builtin:true ~type_args:[unknown]
 
 let type_react_event_mouse_t = "MouseEvent" |> ident ~builtin:true

@@ -10,7 +10,7 @@ let link_to_command_args link =
 
 let make_goto_command link =
   Printf.sprintf "[%s](command:rescript-vscode.go_to_location?%s)" link.label
-    (Uri.encode_u_r_i_component (link_to_command_args link))
+    (Uri.encode_uri_component (link_to_command_args link))
 
 let go_to_definition_text ~env ~pos =
   let start_line, start_col = Pos.of_lexing pos in

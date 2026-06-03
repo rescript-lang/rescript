@@ -50,7 +50,7 @@ let input_cmt_translate_type_declarations ~config ~output_file_relative
   translations |> Translation.combine
   |> Translation.add_type_declarations_from_module_equations ~type_env
 
-let translate_c_m_t ~config ~output_file_relative ~resolver input_cmt :
+let translate_cmt ~config ~output_file_relative ~resolver input_cmt :
     Translation.t =
   let {Cmt_format.cmt_annots} = input_cmt in
   let type_env = Type_env.root () in
@@ -164,7 +164,7 @@ let process_cmt_file cmt =
     in
     if has_gentype_annotations then
       input_cmt
-      |> translate_c_m_t ~config ~output_file_relative ~resolver
+      |> translate_cmt ~config ~output_file_relative ~resolver
       |> emit_translation ~config ~file_name ~output_file ~output_file_relative
            ~resolver ~source_file
     else if input_cmt |> cmt_has_type_errors then

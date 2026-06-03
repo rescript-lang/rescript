@@ -637,7 +637,7 @@ let parse_argv (argv : string array) : string option =
   and set_config () =
     Paths.Config.process_config ();
     analysis_kind_set := true
-  and set_d_c_e cmt_root =
+  and set_dce cmt_root =
     Run_config.dce ();
     cmt_root_ref := cmt_root;
     analysis_kind_set := true
@@ -666,10 +666,10 @@ let parse_argv (argv : string array) : string option =
         Unit (fun () -> transitive_override := Some false),
         "Disable transitive reporting (overrides rescript.json \
          reanalyze.transitive)" );
-      ("-dce", Unit (fun () -> set_d_c_e None), "Eperimental DCE");
+      ("-dce", Unit (fun () -> set_dce None), "Eperimental DCE");
       ("-debug", Unit (fun () -> Cli.debug := true), "Print debug information");
       ( "-dce-cmt",
-        String (fun s -> set_d_c_e (Some s)),
+        String (fun s -> set_dce (Some s)),
         "root_path Experimental DCE for all the .cmt files under the root path"
       );
       ( "-exception",

@@ -30,7 +30,7 @@ let to_string t =
    https://en.wikipedia.org/wiki/Percent-encoding. Note that this function is not
    general purpose, rather it's currently only for URL encoding the argument list
    passed to command links in markdown. *)
-let encode_u_r_i_component text =
+let encode_uri_component text =
   let ln = String.length text in
   let buf = Buffer.create ln in
   let rec loop i =
