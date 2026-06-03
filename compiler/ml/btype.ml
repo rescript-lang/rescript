@@ -21,9 +21,9 @@ open Types
 
 (**** Sets, maps and hashtables of types ****)
 
-module TypeSet = Set.Make (TypeOps)
-module TypeMap = Map.Make (TypeOps)
-module TypeHash = Hashtbl.Make (TypeOps)
+module Type_set = Set.Make (Type_ops)
+module Type_map = Map.Make (Type_ops)
+module Type_hash = Hashtbl.Make (Type_ops)
 
 (**** Forward declarations ****)
 
@@ -85,7 +85,7 @@ type change =
   | Ckind of field_kind option ref * field_kind option
   | Ccommu of commutable ref * commutable
   | Cuniv of type_expr option ref * type_expr option
-  | Ctypeset of TypeSet.t ref * TypeSet.t
+  | Ctypeset of Type_set.t ref * Type_set.t
 
 type changes = Change of change * changes ref | Unchanged | Invalid
 

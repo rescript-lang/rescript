@@ -1,4 +1,4 @@
 val migrate :
-  entryPointFile:string ->
-  outputMode:[`File | `Stdout] ->
+  entry_point_file:string ->
+  output_mode:[`File | `Stdout] ->
   (string, string) result

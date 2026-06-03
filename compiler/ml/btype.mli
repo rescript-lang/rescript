@@ -20,9 +20,9 @@ open Types
 
 (**** Sets, maps and hashtables of types ****)
 
-module TypeSet : Set.S with type elt = type_expr
-module TypeMap : Map.S with type key = type_expr
-module TypeHash : Hashtbl.S with type key = type_expr
+module Type_set : Set.S with type elt = type_expr
+module Type_map : Map.S with type key = type_expr
+module Type_hash : Hashtbl.S with type key = type_expr
 
 (**** Levels ****)
 
@@ -225,7 +225,7 @@ val set_row_field : row_field option ref -> row_field -> unit
 val set_univar : type_expr option ref -> type_expr -> unit
 val set_kind : field_kind option ref -> field_kind -> unit
 val set_commu : commutable ref -> commutable -> unit
-val set_typeset : TypeSet.t ref -> TypeSet.t -> unit
+val set_typeset : Type_set.t ref -> Type_set.t -> unit
 (* Set references, logging the old value *)
 
 val log_type : type_expr -> unit

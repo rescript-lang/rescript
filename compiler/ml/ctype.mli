@@ -19,7 +19,7 @@ open Asttypes
 open Types
 
 type subtype_context =
-  | Generic of {errorCode: string}
+  | Generic of {error_code: string}
       (** A generic subtype error, intended to be extended to be handled later. *)
   | Coercion_target_variant_not_unboxed of {
       variant_name: Path.t;
@@ -54,12 +54,9 @@ type subtype_context =
 
 type type_pairs = (type_expr * type_expr) list
 exception Unify of type_pairs
-exception Tags of label * label
 exception Subtype of type_pairs * type_pairs * subtype_context option
 exception Cannot_expand
 exception Cannot_apply
-exception Recursive_abbrev
-exception Unification_recursive_abbrev of type_pairs
 
 val init_def : int -> unit
 (* Set the initial variable level *)

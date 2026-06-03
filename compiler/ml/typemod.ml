@@ -603,7 +603,7 @@ let check_recmod_typedecls env sdecls decls =
 
 (* Auxiliaries for checking uniqueness of names in signatures and structures *)
 
-module StringSet = Set.Make (struct
+module String_set = Set.Make (struct
   type t = string
   let compare (x : t) y = String.compare x y
 end)
@@ -649,12 +649,12 @@ let check_sig_item names loc = function
 
 let simplify_signature sg =
   let rec aux = function
-    | [] -> ([], StringSet.empty)
+    | [] -> ([], String_set.empty)
     | (Sig_value (id, _descr) as component) :: sg ->
       let ((sg, val_names) as k) = aux sg in
       let name = Ident.name id in
-      if StringSet.mem name val_names then k
-      else (component :: sg, StringSet.add name val_names)
+      if String_set.mem name val_names then k
+      else (component :: sg, String_set.add name val_names)
     | component :: sg ->
       let sg, val_names = aux sg in
       (component :: sg, val_names)

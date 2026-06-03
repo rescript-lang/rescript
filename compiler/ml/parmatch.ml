@@ -899,7 +899,7 @@ let should_extend ext env =
         false
       | Tpat_any | Tpat_var _ | Tpat_alias _ | Tpat_or _ -> assert false))
 
-module ConstructorTagHashtbl = Hashtbl.Make (struct
+module Constructor_tag_hashtbl = Hashtbl.Make (struct
   type t = Types.constructor_tag
   let hash = Hashtbl.hash
   let equal = Types.equal_tag
@@ -915,12 +915,13 @@ let complete_tags nconsts nconstrs tags =
       | Cstr_block i -> seen_constr.(i) <- true
       | _ -> assert false)
     tags;
-  let r = ConstructorTagHashtbl.create (nconsts + nconstrs) in
+  let r = Constructor_tag_hashtbl.create (nconsts + nconstrs) in
   for i = 0 to nconsts - 1 do
-    if not seen_const.(i) then ConstructorTagHashtbl.add r (Cstr_constant i) ()
+    if not seen_const.(i) then
+      Constructor_tag_hashtbl.add r (Cstr_constant i) ()
   done;
   for i = 0 to nconstrs - 1 do
-    if not seen_constr.(i) then ConstructorTagHashtbl.add r (Cstr_block i) ()
+    if not seen_constr.(i) then Constructor_tag_hashtbl.add r (Cstr_block i) ()
   done;
   r
 
@@ -996,7 +997,7 @@ let complete_constrs p all_tags =
   let constrs = get_variant_constructors p.pat_env c.cstr_res in
   let others =
     Ext_list.filter constrs (fun cnstr ->
-        ConstructorTagHashtbl.mem not_tags cnstr.cstr_tag)
+        Constructor_tag_hashtbl.mem not_tags cnstr.cstr_tag)
   in
   let const, nonconst =
     List.partition (fun cnstr -> cnstr.cstr_arity = 0) others
@@ -2364,22 +2365,23 @@ let check_partial_gadt ?partial_match_warning_hint pred loc casel =
    to a specific guard.
 *)
 
-module IdSet = Set.Make (Ident)
+module Id_set = Set.Make (Ident)
 
-let pattern_vars p = IdSet.of_list (Typedtree.pat_bound_idents p)
+let pattern_vars p = Id_set.of_list (Typedtree.pat_bound_idents p)
 
 (* Row for ambiguous variable search,
    unseen is the traditional pattern row,
    seen   is a list of position bindings *)
 
-type amb_row = {unseen: pattern list; seen: IdSet.t list}
+type amb_row = {unseen: pattern list; seen: Id_set.t list}
 
 (* Push binding variables now *)
 
 let rec do_push r p ps seen k =
   match p.pat_desc with
-  | Tpat_alias (p, x, _) -> do_push (IdSet.add x r) p ps seen k
-  | Tpat_var (x, _) -> (omega, {unseen = ps; seen = IdSet.add x r :: seen}) :: k
+  | Tpat_alias (p, x, _) -> do_push (Id_set.add x r) p ps seen k
+  | Tpat_var (x, _) ->
+    (omega, {unseen = ps; seen = Id_set.add x r :: seen}) :: k
   | Tpat_or (p1, p2, _) -> do_push r p1 ps seen (do_push r p2 ps seen k)
   | _ -> (p, {unseen = ps; seen = r :: seen}) :: k
 
@@ -2387,7 +2389,7 @@ let rec push_vars = function
   | [] -> []
   | {unseen = []} :: _ -> assert false
   | {unseen = p :: ps; seen} :: rem ->
-    do_push IdSet.empty p ps seen (push_vars rem)
+    do_push Id_set.empty p ps seen (push_vars rem)
 
 let collect_stable = function
   | [] -> assert false
@@ -2395,11 +2397,11 @@ let collect_stable = function
     let rec c_rec xss = function
       | [] -> xss
       | {seen = yss; _} :: rem ->
-        let xss = List.map2 IdSet.inter xss yss in
+        let xss = List.map2 Id_set.inter xss yss in
         c_rec xss rem
     in
     let inters = c_rec xss rem in
-    List.fold_left IdSet.union IdSet.empty inters
+    List.fold_left Id_set.union Id_set.empty inters
 
 (*********************************************)
 (* Filtering utilities for our specific rows *)
@@ -2498,8 +2500,8 @@ let rec do_stable rs =
       (* If the first column is incoherent, then all the variables of this
          matrix are stable. *)
       List.fold_left
-        (fun acc (_, {seen; _}) -> List.fold_left IdSet.union acc seen)
-        IdSet.empty rs
+        (fun acc (_, {seen; _}) -> List.fold_left Id_set.union acc seen)
+        Id_set.empty rs
     else
       (* If the column is ill-typed but deemed coherent, we might spuriously
          warn about some variables being unstable.
@@ -2509,7 +2511,7 @@ let rec do_stable rs =
       | [] -> do_stable (List.map snd rs)
       | (_, rs) :: env ->
         List.fold_left
-          (fun xs (_, rs) -> IdSet.inter xs (do_stable rs))
+          (fun xs (_, rs) -> Id_set.inter xs (do_stable rs))
           (do_stable rs) env)
 
 let stable p = do_stable [{unseen = [p]; seen = []}]
@@ -2533,13 +2535,13 @@ let stable p = do_stable [{unseen = [p]; seen = []}]
 *)
 
 let all_rhs_idents exp =
-  let ids = ref IdSet.empty in
-  let module Iterator = TypedtreeIter.MakeIterator (struct
-    include TypedtreeIter.DefaultIteratorArgument
+  let ids = ref Id_set.empty in
+  let module Iterator = Typedtree_iter.Make_iterator (struct
+    include Typedtree_iter.Default_iterator_argument
     let enter_expression exp =
       match exp.exp_desc with
       | Texp_ident (path, _lid, _descr) ->
-        List.iter (fun id -> ids := IdSet.add id !ids) (Path.heads path)
+        List.iter (fun id -> ids := Id_set.add id !ids) (Path.heads path)
       | _ -> ()
 
     (* Very hackish, detect unpack pattern  compilation
@@ -2559,8 +2561,8 @@ let all_rhs_idents exp =
                     ({exp_desc = Texp_ident (Path.Pident id_exp, _, _)}, _);
               },
               _ ) ->
-          assert (IdSet.mem id_exp !ids);
-          if not (IdSet.mem id_mod !ids) then ids := IdSet.remove id_exp !ids
+          assert (Id_set.mem id_exp !ids);
+          if not (Id_set.mem id_mod !ids) then ids := Id_set.remove id_exp !ids
         | _ -> assert false
   end) in
   Iterator.iter_expression exp;
@@ -2576,12 +2578,12 @@ let check_ambiguous_bindings =
           match case with
           | {c_guard = None; _} -> ()
           | {c_lhs = p; c_guard = Some g; _} ->
-            let all = IdSet.inter (pattern_vars p) (all_rhs_idents g) in
-            if not (IdSet.is_empty all) then
+            let all = Id_set.inter (pattern_vars p) (all_rhs_idents g) in
+            if not (Id_set.is_empty all) then
               let st = stable p in
-              let ambiguous = IdSet.diff all st in
-              if not (IdSet.is_empty ambiguous) then
-                let pps = IdSet.elements ambiguous |> List.map Ident.name in
+              let ambiguous = Id_set.diff all st in
+              if not (Id_set.is_empty ambiguous) then
+                let pps = Id_set.elements ambiguous |> List.map Ident.name in
                 let warn = Ambiguous_pattern pps in
                 Location.prerr_warning p.pat_loc warn)
         cases

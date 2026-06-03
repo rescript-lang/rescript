@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/abstract_wrong_label.res[0m:[2m1:41-52[0m
+
+  [1;31m1[0m [2m│[0m let f: (~a: int, ~b: int) => int = (~a, [1;31m~c) => a + c[0m
+  2 [2m│[0m 
+
+  This function should have type (~b: int) => int
+  but its first argument is labelled ~c

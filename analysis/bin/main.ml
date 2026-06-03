@@ -93,116 +93,127 @@ Options:
 
 let main () =
   let args = Array.to_list Sys.argv in
-  let debugLevel, args =
+  let debug_level, args =
     match args with
-    | _ :: "debug-dump" :: logLevel :: rest ->
-      ( (match logLevel with
+    | _ :: "debug-dump" :: log_level :: rest ->
+      ( (match log_level with
         | "verbose" -> Debug.Verbose
         | "regular" -> Regular
         | _ -> Off),
         "dummy" :: rest )
     | args -> (Off, args)
   in
-  Debug.debugLevel := debugLevel;
-  let debug = debugLevel <> Debug.Off in
-  let printHeaderInfo path line col =
+  Debug.debug_level := debug_level;
+  let debug = debug_level <> Debug.Off in
+  let print_header_info path line col =
     if debug then
       Printf.printf "Debug level: %s\n%s:%s-%s\n\n"
-        (match debugLevel with
+        (match debug_level with
         | Debug.Verbose -> "verbose"
         | Regular -> "regular"
         | Off -> "off")
         path line col
   in
   match args with
-  | [_; "cache-project"; rootPath] -> (
-    Cfg.readProjectConfigCache := false;
-    let uri = Uri.fromPath rootPath in
-    match Packages.getPackage ~uri with
-    | Some package -> Cache.cacheProject package
+  | [_; "cache-project"; root_path] -> (
+    Cfg.read_project_config_cache := false;
+    let uri = Uri.from_path root_path in
+    match Packages.get_package ~uri with
+    | Some package -> Cache.cache_project package
     | None -> print_endline "\"ERR\"")
-  | [_; "cache-delete"; rootPath] -> (
-    Cfg.readProjectConfigCache := false;
-    let uri = Uri.fromPath rootPath in
-    match Packages.findRoot ~uri (Hashtbl.create 0) with
-    | Some (`Bs rootPath) -> (
-      match BuildSystem.getLibBs rootPath with
+  | [_; "cache-delete"; root_path] -> (
+    Cfg.read_project_config_cache := false;
+    let uri = Uri.from_path root_path in
+    match Packages.find_root ~uri (Hashtbl.create 0) with
+    | Some (`Bs root_path) -> (
+      match Build_system.get_lib_bs root_path with
       | None -> print_endline "\"ERR\""
-      | Some libBs ->
-        Cache.deleteCache (Cache.targetFileFromLibBs libBs);
+      | Some lib_bs ->
+        Cache.delete_cache (Cache.target_file_from_lib_bs lib_bs);
         print_endline "\"OK\"")
     | _ -> print_endline "\"ERR: Did not find root \"")
-  | [_; "completion"; path; line; col; currentFile] ->
-    printHeaderInfo path line col;
+  | [_; "completion"; path; line; col; current_file] ->
+    print_header_info path line col;
     Cli.completion ~debug ~path
       ~pos:(int_of_string line, int_of_string col)
-      ~currentFile
-  | [_; "completionResolve"; path; modulePath] ->
-    Cli.completionResolve ~path ~modulePath
+      ~current_file
+  | [_; "completionResolve"; path; module_path] ->
+    Cli.completion_resolve ~path ~module_path
   | [_; "definition"; path; line; col] ->
     Cli.definition ~path ~pos:(int_of_string line, int_of_string col) ~debug
   | [_; "typeDefinition"; path; line; col] ->
-    Cli.typeDefinition ~path ~pos:(int_of_string line, int_of_string col) ~debug
-  | [_; "documentSymbol"; path] -> DocumentSymbol.command ~path
-  | [_; "hover"; path; line; col; currentFile; supportsMarkdownLinks] ->
+    Cli.type_definition ~path
+      ~pos:(int_of_string line, int_of_string col)
+      ~debug
+  | [_; "documentSymbol"; path] -> Document_symbol.command ~path
+  | [_; "hover"; path; line; col; current_file; supports_markdown_links] ->
     Cli.hover ~path
       ~pos:(int_of_string line, int_of_string col)
-      ~currentFile ~debug
-      ~supportsMarkdownLinks:
-        (match supportsMarkdownLinks with
+      ~current_file ~debug
+      ~supports_markdown_links:
+        (match supports_markdown_links with
         | "true" -> true
         | _ -> false)
   | [
-   _; "signatureHelp"; path; line; col; currentFile; allowForConstructorPayloads;
+   _;
+   "signatureHelp";
+   path;
+   line;
+   col;
+   current_file;
+   allow_for_constructor_payloads;
   ] ->
-    Cli.signatureHelp ~path
+    Cli.signature_help ~path
       ~pos:(int_of_string line, int_of_string col)
-      ~currentFile ~debug
-      ~allowForConstructorPayloads:
-        (match allowForConstructorPayloads with
+      ~current_file ~debug
+      ~allow_for_constructor_payloads:
+        (match allow_for_constructor_payloads with
         | "true" -> true
         | _ -> false)
-  | [_; "inlayHint"; path; line_start; line_end; maxLength] ->
+  | [_; "inlayHint"; path; line_start; line_end; max_length] ->
     Cli.inlayhint ~path
       ~pos:(int_of_string line_start, int_of_string line_end)
-      ~maxLength ~debug
-  | [_; "codeLens"; path] -> Cli.codeLens ~path ~debug
-  | [_; "codeAction"; path; startLine; startCol; endLine; endCol; currentFile]
-    ->
-    Cli.codeAction ~path
-      ~startPos:(int_of_string startLine, int_of_string startCol)
-      ~endPos:(int_of_string endLine, int_of_string endCol)
-      ~currentFile ~debug
+      ~max_length ~debug
+  | [_; "codeLens"; path] -> Cli.code_lens ~path ~debug
+  | [
+   _; "codeAction"; path; start_line; start_col; end_line; end_col; current_file;
+  ] ->
+    Cli.code_action ~path
+      ~start_pos:(int_of_string start_line, int_of_string start_col)
+      ~end_pos:(int_of_string end_line, int_of_string end_col)
+      ~current_file ~debug
   | [_; "codemod"; path; line; col; typ; hint] ->
     let typ =
       match typ with
       | "add-missing-cases" -> Codemod.AddMissingCases
       | _ -> raise (Failure "unsupported type")
     in
-    let source = Files.readFile path |> Option.value ~default:"" in
+    let source = Files.read_file path |> Option.value ~default:"" in
     `String
       (Codemod.transform ~source
          ~pos:(int_of_string line, int_of_string col)
          ~debug ~typ ~hint)
     |> Yojson.Safe.pretty_to_string ~std:true
     |> print_endline
-  | [_; "diagnosticSyntax"; path] -> Cli.diagnosticSyntax ~path
+  | [_; "diagnosticSyntax"; path] -> Cli.diagnostic_syntax ~path
   | [_; "references"; path; line; col] ->
     Cli.references ~path ~pos:(int_of_string line, int_of_string col) ~debug
   | [_; "prepareRename"; path; line; col] ->
-    Cli.prepareRename ~path ~pos:(int_of_string line, int_of_string col) ~debug
-  | [_; "rename"; path; line; col; newName] ->
+    Cli.prepare_rename ~path ~pos:(int_of_string line, int_of_string col) ~debug
+  | [_; "rename"; path; line; col; new_name] ->
     Cli.rename ~path
       ~pos:(int_of_string line, int_of_string col)
-      ~newName ~debug
-  | [_; "semanticTokens"; currentFile] -> Cli.semanticTokens ~path:currentFile
-  | [_; "createInterface"; path; cmiFile] ->
-    `String (CreateInterface.command ~path ~cmiFile)
+      ~new_name ~debug
+  | [_; "semanticTokens"; current_file] ->
+    Cli.semantic_tokens ~path:current_file
+  | [_; "createInterface"; path; cmi_file] ->
+    `String (Create_interface.command ~path ~cmi_file)
     |> Yojson.Safe.pretty_to_string ~std:true
     |> print_endline
   | [_; "format"; path] -> Cli.format ~path
   | [_; "test"; path] -> Cli.test ~path
-  | [_; "cmt"; rescript_json; cmt_path] -> CmtViewer.dump rescript_json cmt_path
+  | [_; "cmt"; rescript_json; cmt_path] ->
+    Cmt_viewer.dump rescript_json cmt_path
   | args when List.mem "-h" args || List.mem "--help" args -> prerr_endline help
   | _ ->
     prerr_endline help;
