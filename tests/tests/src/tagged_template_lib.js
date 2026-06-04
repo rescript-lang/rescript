@@ -21,3 +21,14 @@ export const makeSql = (prefix) => (strings, ...values) => {
     result += strings[values.length];
     return result;
 };
+
+// Reports whether it was invoked as a *real* tagged template. A genuine
+// tagged-template call receives a frozen `TemplateStringsArray` with a `.raw`
+// property; a plain function call does not. Used to prove the compiler emits
+// real tagged-template syntax rather than a variadic function call.
+export const rawTag = (strings, ...values) => ({
+    hasRaw: strings.raw !== undefined,
+    raw: strings.raw ? Array.from(strings.raw) : [],
+    cooked: Array.from(strings),
+    values,
+});

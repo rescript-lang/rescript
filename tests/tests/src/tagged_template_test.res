@@ -54,6 +54,26 @@ let s = TaggedTemplate.make((strings, parameters) => {
 
 let greeting = s`hello ${S("Ada")} you're ${I(36)} years old!`
 
+// Problem 2b: a `taggedTemplate` value defined in another module, consumed here
+// with backtick syntax. `Tagged_template_binding` only exposes `sql`'s type, yet
+// the call site still emits a real tagged template.
+let crossModuleQuery = Tagged_template_binding.sql`SELECT * FROM ${table}`
+
+// Proof that the compiler emits a *real* JS tagged template (a frozen
+// `TemplateStringsArray` with `.raw`) rather than a plain/variadic function
+// call. `rawTag` inspects the argument it receives.
+type rawCall = {
+  hasRaw: bool,
+  raw: array<string>,
+  cooked: array<string>,
+  values: array<int>,
+}
+
+@module("./tagged_template_lib.js")
+external rawTag: taggedTemplate<int, rawCall> = "rawTag"
+
+let rawResult = rawTag`a ${1} b ${2} c`
+
 describe("tagged templates", () => {
   test("with externals, it should return a string with the correct interpolations", () =>
     eq(
@@ -78,6 +98,17 @@ describe("tagged templates", () => {
   test("with a tag passed as a function argument, it should emit tagged-template syntax", () =>
     eq(__LOC__, paramQuery, "SELECT id = '5'")
   )
+
+  test("with a tag imported from another module, it should emit tagged-template syntax", () =>
+    eq(__LOC__, crossModuleQuery, "X: SELECT * FROM 'users'")
+  )
+
+  test("it should call the tag as a real tagged template (TemplateStringsArray with .raw)", () => {
+    eq(__LOC__, rawResult.hasRaw, true)
+    eq(__LOC__, rawResult.cooked, ["a ", " b ", " c"])
+    eq(__LOC__, rawResult.raw, ["a ", " b ", " c"])
+    eq(__LOC__, rawResult.values, [1, 2])
+  })
 
   test(
     "with a ReScript tag lifted via TaggedTemplate.make, it should return the correct interpolation",
