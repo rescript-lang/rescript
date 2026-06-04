@@ -25,20 +25,21 @@ external length: taggedTemplate<int, int> = "length"
 let extraLength = 10
 let length = length`hello ${extraLength} what's the total length? Is it ${3}?`
 
-// Problem 1: a tag constructed at runtime by a factory (postgres-style).
+// A tag constructed at runtime by a factory (postgres-style), where the factory
+// returns the tag value.
 @module("./tagged_template_lib.js")
 external makeSql: string => taggedTemplate<string, string> = "makeSql"
 
 let prefixedSql = makeSql("PREFIX ")
 let factoryQuery = prefixedSql`SELECT * FROM ${table}`
 
-// Problem 2c: the tag flows through a function parameter and is still emitted
-// as a real tagged template at the call site inside the function.
+// The tag flows through a function parameter and is still emitted as a real
+// tagged template at the call site inside the function.
 let runQuery = (tag: taggedTemplate<string, string>) => tag`SELECT id = ${id}`
 let paramQuery = runQuery(Pg.sql)
 
-// Problem 3: a ReScript-authored tag, lifted into the type with
-// `TaggedTemplate.make`, is usable as a tag too.
+// A ReScript-authored tag, lifted into the type with `TaggedTemplate.make`, is
+// usable as a tag too.
 type params = I(int) | S(string)
 
 let s = TaggedTemplate.make((strings, parameters) => {
@@ -54,9 +55,9 @@ let s = TaggedTemplate.make((strings, parameters) => {
 
 let greeting = s`hello ${S("Ada")} you're ${I(36)} years old!`
 
-// Problem 2b: a `taggedTemplate` value defined in another module, consumed here
-// with backtick syntax. `Tagged_template_binding` only exposes `sql`'s type, yet
-// the call site still emits a real tagged template.
+// A `taggedTemplate` value defined in another module, consumed here with
+// backtick syntax. `Tagged_template_binding` only exposes `sql`'s type, yet the
+// call site still emits a real tagged template.
 let crossModuleQuery = Tagged_template_binding.sql`SELECT * FROM ${table}`
 
 // Proof that the compiler emits a *real* JS tagged template (a frozen
