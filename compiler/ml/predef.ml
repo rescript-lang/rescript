@@ -152,9 +152,6 @@ and type_unknown = newgenty (Tconstr (path_unkonwn, [], ref Mnil))
 and type_extension_constructor =
   newgenty (Tconstr (path_extension_constructor, [], ref Mnil))
 
-and type_tagged_template t1 t2 =
-  newgenty (Tconstr (path_tagged_template, [t1; t2], ref Mnil))
-
 let ident_match_failure = ident_create_predef_exn "Match_failure"
 
 and ident_invalid_argument = ident_create_predef_exn "Invalid_argument"

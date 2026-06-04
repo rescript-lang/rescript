@@ -31,7 +31,6 @@ val type_list : type_expr -> type_expr
 val type_option : type_expr -> type_expr
 val type_result : type_expr -> type_expr -> type_expr
 val type_dict : type_expr -> type_expr
-val type_tagged_template : type_expr -> type_expr -> type_expr
 
 val type_bigint : type_expr
 val type_extension_constructor : type_expr
