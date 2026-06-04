@@ -5,4 +5,4 @@
   [1;31m1[0m [2m│[0m type t = | [1;31m@as[0m(foo) A | B
   2 [2m│[0m 
 
-  A variant case annotation @as(...) must be a string or integer, boolean, null, undefined
+  A variant case annotation @as(...) must be a string, integer, boolean, null, or undefined.

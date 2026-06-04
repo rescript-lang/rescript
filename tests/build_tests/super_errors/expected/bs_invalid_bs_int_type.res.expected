@@ -6,4 +6,4 @@
   2 [2m│[0m 
   3 [2m│[0m let _ = f(#A(1))
 
-  Not a valid type for %@int
+  Not a valid type for @int

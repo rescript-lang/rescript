@@ -5,4 +5,4 @@
   [1;31m1[0m [2m│[0m let rec x = [1;31mx + 1[0m
   2 [2m│[0m 
 
-  This kind of expression is not allowed as right-hand side of `let rec'
+  This kind of expression is not allowed as right-hand side of `let rec`

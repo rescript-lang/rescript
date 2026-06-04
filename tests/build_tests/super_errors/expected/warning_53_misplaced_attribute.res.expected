@@ -10,4 +10,4 @@
   6 [2m│[0m 
   7 [2m│[0m let _ = x
 
-  the "inline1" attribute cannot appear in this context
+  the @inline attribute cannot appear in this context

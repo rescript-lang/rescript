@@ -6,4 +6,4 @@
   2 [2m│[0m 
   3 [2m│[0m let _ = f(#A)
 
-  expect int literal
+  The @as payload on an @int variant must be an integer literal, e.g. @as(42).

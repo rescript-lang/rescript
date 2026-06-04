@@ -4612,7 +4612,7 @@ let report_error env loc ppf error =
             (Ident.name id))
       (function ppf -> fprintf ppf "but on the right-hand side it has type")
   | Multiply_bound_variable name ->
-    fprintf ppf "Variable %s is bound several times in this matching" name
+    fprintf ppf "Variable %s is bound several times in this pattern" name
   | Orpat_vars (id, valid_idents) ->
     fprintf ppf "Variable %s must occur on both sides of this | pattern"
       (Ident.name id);
@@ -4663,7 +4663,7 @@ let report_error env loc ppf error =
     | _ ->
       fprintf ppf
         "@[<v>@[<2>This can't be called, it's not a function.@]@,\
-         The function has type: %a@]"
+         It has type: %a@]"
         type_expr typ)
   | Apply_wrong_label (l, ty) ->
     let print_message ppf = function
@@ -4782,16 +4782,21 @@ let report_error env loc ppf error =
   | Not_a_packed_module ty ->
     fprintf ppf "This expression is packed module, but the expected type is@ %a"
       type_expr ty
-  | Unexpected_existential -> fprintf ppf "Unexpected existential"
+  | Unexpected_existential ->
+    fprintf ppf
+      "This pattern introduces an existential type from a GADT constructor, \
+       which is not allowed here. Match on it inside a switch instead."
   | Unqualified_gadt_pattern (tpath, name) ->
-    fprintf ppf "@[The GADT constructor %s of type %a@ %s.@]" name Printtyp.path
-      tpath "must be qualified in this pattern"
+    fprintf ppf
+      "@[The GADT constructor %s of type %a@ must be written with its module \
+       prefix in this pattern.@]"
+      name Printtyp.path tpath
   | Invalid_interval ->
     fprintf ppf "@[Only character intervals are supported in patterns.@]"
   | Invalid_for_loop_index ->
     fprintf ppf "@[Invalid for-loop index: only variables and _ are allowed.@]"
   | No_value_clauses ->
-    fprintf ppf "None of the patterns in this 'match' expression match values."
+    fprintf ppf "None of the patterns in this switch match values."
   | Exception_pattern_below_toplevel ->
     fprintf ppf
       "@[Exception patterns must be at the top level of a match case.@]"
@@ -4823,7 +4828,7 @@ let report_error env loc ppf error =
   | Unknown_literal (n, m) ->
     fprintf ppf "Unknown modifier '%c' for literal %s%c" m n m
   | Illegal_letrec_pat ->
-    fprintf ppf "Only variables are allowed as left-hand side of `let rec'"
+    fprintf ppf "Only variables are allowed as left-hand side of `let rec`"
   | Empty_record_literal ->
     fprintf ppf
       "Empty record literal {} should be type annotated or used in a record \
@@ -4974,7 +4979,7 @@ let report_error env loc ppf error =
       name type_expr typ
   | Type_params_not_supported lid ->
     fprintf ppf
-      "The type %a@ has type parameters, but type parameters is not supported \
+      "The type %a@ has type parameters, but type parameters are not supported \
        here."
       longident lid
   | Field_access_on_dict_type ->
