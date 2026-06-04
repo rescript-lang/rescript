@@ -90,6 +90,7 @@ type type_clash_context =
       optional: bool;
     }
   | ArrayValue
+  | TaggedTemplateValue
   | MaybeUnwrapOption
   | IfCondition
   | AssertCondition
@@ -121,6 +122,7 @@ let context_to_string = function
   | Some (Statement _) -> "Statement"
   | Some (MathOperator _) -> "MathOperator"
   | Some ArrayValue -> "ArrayValue"
+  | Some TaggedTemplateValue -> "TaggedTemplateValue"
   | Some (SetRecordField _) -> "SetRecordField"
   | Some (RecordField _) -> "RecordField"
   | Some MaybeUnwrapOption -> "MaybeUnwrapOption"
@@ -145,6 +147,7 @@ let error_type_text ppf type_clash_context =
     | Some (Statement FunctionCall) -> "This function call returns:"
     | Some (MathOperator {is_constant = Some _}) -> "This value has type:"
     | Some ArrayValue -> "This array item has type:"
+    | Some TaggedTemplateValue -> "This interpolated value has type:"
     | Some (SetRecordField _) ->
       "You're assigning something to this field that has type:"
     | Some JsxComponent -> "This JSX tag has type:"
@@ -184,6 +187,8 @@ let error_expected_type_text ppf type_clash_context =
   | Some TernaryReturn -> fprintf ppf "But this ternary is expected to return:"
   | Some ArrayValue ->
     fprintf ppf "But this array is expected to have items of type:"
+  | Some TaggedTemplateValue ->
+    fprintf ppf "But this tag expects interpolations of type:"
   | Some (SetRecordField _) -> fprintf ppf "But the record field is of type:"
   | Some
       (RecordField {field_name = "children"; jsx = Some {jsx_type = `Fragment}})

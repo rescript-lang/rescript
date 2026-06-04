@@ -7,5 +7,5 @@
   [1;31m7[0m [2m│[0m let result = [1;31msql[0m(["SELECT * FROM users WHERE id = ", ""], ["5"])
   8 [2m│[0m 
 
-  This can't be called, it's not a function.
-  The function has type: taggedTemplate<string, string>
+  This is a tagged-template tag of type [1;33mtaggedTemplate<string, string>[0m
+  It can't be called like a function. Use it with backtick syntax instead, e.g. [1;33mtag`SELECT ${id}`[0m.

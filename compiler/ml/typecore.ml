@@ -2539,8 +2539,32 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
             type_expect ~context:None env strings
               (Predef.type_array Predef.type_string)
           in
+          (* Type each interpolated value directly against [param_ty] with a
+             tagged-template-specific clash context, rather than routing the
+             desugared values array through the generic array typing (which
+             would report a confusing "array item" type error for what the user
+             wrote as a [${...}] interpolation). *)
           let typed_values =
-            type_expect ~context:None env values (Predef.type_array param_ty)
+            match values.pexp_desc with
+            | Pexp_array interpolations ->
+              let typed_interpolations =
+                List.map
+                  (fun interp ->
+                    type_expect ~context:(Some TaggedTemplateValue) env interp
+                      param_ty)
+                  interpolations
+              in
+              re
+                {
+                  exp_desc = Texp_array typed_interpolations;
+                  exp_loc = values.pexp_loc;
+                  exp_extra = [];
+                  exp_type = newconstr Predef.path_array [param_ty];
+                  exp_attributes = values.pexp_attributes;
+                  exp_env = env;
+                }
+            | _ ->
+              type_expect ~context:None env values (Predef.type_array param_ty)
           in
           ( [
               (Asttypes.Nolabel, Some typed_strings);
@@ -4696,6 +4720,12 @@ let report_error env loc ppf error =
       fprintf ppf "@ @[It only accepts %i %s; here, it's called with more.@]@]"
         accepts_count
         (if accepts_count == 1 then "argument" else "arguments")
+    | Tconstr (path, _, _) when Path.same path Predef.path_tagged_template ->
+      fprintf ppf
+        "@[<v>@[<2>This is a tagged-template tag of type@ @{<info>%a@}@]@,\
+         It can't be called like a function. Use it with backtick syntax \
+         instead, e.g. @{<info>tag`SELECT ${id}`@}.@]"
+        type_expr typ
     | _ ->
       fprintf ppf
         "@[<v>@[<2>This can't be called, it's not a function.@]@,\
