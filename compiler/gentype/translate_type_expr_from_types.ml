@@ -436,10 +436,30 @@ let translate_constr ~config ~params_translation ~(path : Path.t) ~type_env =
       [param_translation] ) ->
     {param_translation with type_ = Dict param_translation.type_}
   | ["Stdlib"; "JSON"; "t"], [] -> {dependencies = []; type_ = unknown}
-  | (["taggedTemplate"] | ["Stdlib"; "TaggedTemplate"; "t"]), [_param; _output]
-    ->
-    (* A tagged-template tag is a variadic JS function; represent it opaquely. *)
-    {dependencies = []; type_ = unknown}
+  | ( (["taggedTemplate"] | ["Stdlib"; "TaggedTemplate"; "t"]),
+      [param_translation; output_translation] ) ->
+    (* A tagged-template tag is a variadic function usable with backtick syntax:
+       (strings: TemplateStringsArray, ...values: 'param[]) => 'output.
+       gentype has no rest-argument field, so the spread is encoded in the
+       parameter name, which is emitted verbatim before the type. *)
+    {
+      dependencies =
+        param_translation.dependencies @ output_translation.dependencies;
+      type_ =
+        Function
+          {
+            arg_types =
+              [
+                {a_name = "strings"; a_type = ident "TemplateStringsArray"};
+                {
+                  a_name = "...values";
+                  a_type = Array (param_translation.type_, Mutable);
+                };
+              ];
+            ret_type = output_translation.type_;
+            type_vars = [];
+          };
+    }
   | _ -> default_case ()
 
 type process_variant = {

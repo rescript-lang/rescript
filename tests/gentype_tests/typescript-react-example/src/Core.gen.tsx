@@ -47,9 +47,9 @@ export const promise0: (x:Promise<string>) => Promise<string> = CoreJS.promise0 
 
 export const promise1: (x:Promise<string>) => Promise<string> = CoreJS.promise1 as any;
 
-export const taggedTemplate0: (x:unknown) => unknown = CoreJS.taggedTemplate0 as any;
+export const taggedTemplate0: (x:((strings:TemplateStringsArray, ...values:string[]) => string)) => (strings:TemplateStringsArray, ...values:string[]) => string = CoreJS.taggedTemplate0 as any;
 
-export const taggedTemplate1: (x:unknown) => unknown = CoreJS.taggedTemplate1 as any;
+export const taggedTemplate1: (x:((strings:TemplateStringsArray, ...values:string[]) => string)) => (strings:TemplateStringsArray, ...values:string[]) => string = CoreJS.taggedTemplate1 as any;
 
 export const date0: (x:Date) => Date = CoreJS.date0 as any;
 
