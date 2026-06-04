@@ -2563,8 +2563,9 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
                   exp_attributes = values.pexp_attributes;
                   exp_env = env;
                 }
-            | _ ->
-              type_expect ~context:None env values (Predef.type_array param_ty)
+            (* The parser always desugars the interpolated values into an array
+               literal, so any other shape is a compiler invariant violation. *)
+            | _ -> assert false
           in
           ( [
               (Asttypes.Nolabel, Some typed_strings);
