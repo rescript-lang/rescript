@@ -33,6 +33,17 @@ external makeSql: string => taggedTemplate<string, string> = "makeSql"
 let prefixedSql = makeSql("PREFIX ")
 let factoryQuery = prefixedSql`SELECT * FROM ${table}`
 
+// A tag bound to a *bare* (non-relative) import specifier, rather than a
+// `./relative.js` path. `#tagged-template-pg` resolves via the Node `imports`
+// map in this package's package.json to a mock that throws unless it receives a
+// real `TemplateStringsArray`, so a passing result proves the call site emitted
+// real tagged-template syntax against the bare import.
+@module("#tagged-template-pg")
+external pg: string => taggedTemplate<string, string> = "default"
+
+let pgSql = pg("PG: ")
+let bareImportQuery = pgSql`SELECT * FROM ${table}`
+
 // The tag flows through a function parameter and is still emitted as a real
 // tagged template at the call site inside the function.
 let runQuery = (tag: taggedTemplate<string, string>) => tag`SELECT id = ${id}`
@@ -94,6 +105,12 @@ describe("tagged templates", () => {
 
   test("with a runtime-constructed tag (factory), it should emit tagged-template syntax", () =>
     eq(__LOC__, factoryQuery, "PREFIX SELECT * FROM 'users'")
+  )
+
+  test("with a tag from a bare package import, it should emit tagged-template syntax", () =>
+    // The mock throws if not called as a real tagged template, so reaching this
+    // assertion at all already proves backtick syntax was emitted.
+    eq(__LOC__, bareImportQuery, "PG: SELECT * FROM 'users'")
   )
 
   test("with a tag passed as a function argument, it should emit tagged-template syntax", () =>

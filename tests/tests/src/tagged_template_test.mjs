@@ -3,6 +3,7 @@
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
 import * as Stdlib_Array from "@rescript/runtime/lib/es6/Stdlib_Array.mjs";
+import TaggedTemplatePg from "#tagged-template-pg";
 import * as Stdlib_TaggedTemplate from "@rescript/runtime/lib/es6/Stdlib_TaggedTemplate.mjs";
 import * as Tagged_template_binding from "./tagged_template_binding.mjs";
 import * as Tagged_template_libJs from "./tagged_template_lib.js";
@@ -34,6 +35,10 @@ let prefixedSql = Tagged_template_libJs.makeSql("PREFIX ");
 
 let factoryQuery = prefixedSql`SELECT * FROM ${table}`;
 
+let pgSql = TaggedTemplatePg("PG: ");
+
+let bareImportQuery = pgSql`SELECT * FROM ${table}`;
+
 function runQuery(tag) {
   return tag`SELECT id = ${id}`;
 }
@@ -62,33 +67,34 @@ let rawTag = Tagged_template_libJs.rawTag;
 let rawResult = rawTag`a ${1} b ${2} c`;
 
 Mocha.describe("tagged templates", () => {
-  Mocha.test("with externals, it should return a string with the correct interpolations", () => Test_utils.eq("File \"tagged_template_test.res\", line 81, characters 6-13", query, `
+  Mocha.test("with externals, it should return a string with the correct interpolations", () => Test_utils.eq("File \"tagged_template_test.res\", line 92, characters 6-13", query, `
 " SELECT * FROM 'users' WHERE id = '5'`));
-  Mocha.test("with module scoped externals, it should also return a string with the correct interpolations", () => Test_utils.eq("File \"tagged_template_test.res\", line 90, characters 13-20", queryWithModule, "SELECT * FROM 'users' WHERE id = '5'"));
-  Mocha.test("with externals, it should return the result of the function", () => Test_utils.eq("File \"tagged_template_test.res\", line 93, characters 79-86", length$1, 52));
-  Mocha.test("with a runtime-constructed tag (factory), it should emit tagged-template syntax", () => Test_utils.eq("File \"tagged_template_test.res\", line 96, characters 7-14", factoryQuery, "PREFIX SELECT * FROM 'users'"));
-  Mocha.test("with a tag passed as a function argument, it should emit tagged-template syntax", () => Test_utils.eq("File \"tagged_template_test.res\", line 100, characters 7-14", paramQuery, "SELECT id = '5'"));
-  Mocha.test("with a tag imported from another module, it should emit tagged-template syntax", () => Test_utils.eq("File \"tagged_template_test.res\", line 104, characters 7-14", crossModuleQuery, "X: SELECT * FROM 'users'"));
+  Mocha.test("with module scoped externals, it should also return a string with the correct interpolations", () => Test_utils.eq("File \"tagged_template_test.res\", line 101, characters 13-20", queryWithModule, "SELECT * FROM 'users' WHERE id = '5'"));
+  Mocha.test("with externals, it should return the result of the function", () => Test_utils.eq("File \"tagged_template_test.res\", line 104, characters 79-86", length$1, 52));
+  Mocha.test("with a runtime-constructed tag (factory), it should emit tagged-template syntax", () => Test_utils.eq("File \"tagged_template_test.res\", line 107, characters 7-14", factoryQuery, "PREFIX SELECT * FROM 'users'"));
+  Mocha.test("with a tag from a bare package import, it should emit tagged-template syntax", () => Test_utils.eq("File \"tagged_template_test.res\", line 113, characters 7-14", bareImportQuery, "PG: SELECT * FROM 'users'"));
+  Mocha.test("with a tag passed as a function argument, it should emit tagged-template syntax", () => Test_utils.eq("File \"tagged_template_test.res\", line 117, characters 7-14", paramQuery, "SELECT id = '5'"));
+  Mocha.test("with a tag imported from another module, it should emit tagged-template syntax", () => Test_utils.eq("File \"tagged_template_test.res\", line 121, characters 7-14", crossModuleQuery, "X: SELECT * FROM 'users'"));
   Mocha.test("it should call the tag as a real tagged template (TemplateStringsArray with .raw)", () => {
-    Test_utils.eq("File \"tagged_template_test.res\", line 108, characters 7-14", rawResult.hasRaw, true);
-    Test_utils.eq("File \"tagged_template_test.res\", line 109, characters 7-14", rawResult.cooked, [
+    Test_utils.eq("File \"tagged_template_test.res\", line 125, characters 7-14", rawResult.hasRaw, true);
+    Test_utils.eq("File \"tagged_template_test.res\", line 126, characters 7-14", rawResult.cooked, [
       "a ",
       " b ",
       " c"
     ]);
-    Test_utils.eq("File \"tagged_template_test.res\", line 110, characters 7-14", rawResult.raw, [
+    Test_utils.eq("File \"tagged_template_test.res\", line 127, characters 7-14", rawResult.raw, [
       "a ",
       " b ",
       " c"
     ]);
-    Test_utils.eq("File \"tagged_template_test.res\", line 111, characters 7-14", rawResult.values, [
+    Test_utils.eq("File \"tagged_template_test.res\", line 128, characters 7-14", rawResult.values, [
       1,
       2
     ]);
   });
-  Mocha.test("with a ReScript tag lifted via TaggedTemplate.make, it should return the correct interpolation", () => Test_utils.eq("File \"tagged_template_test.res\", line 116, characters 13-20", greeting, "hello Ada you're 36 years old!"));
-  Mocha.test("a template literal tagged with json should generate a regular string interpolation for now", () => Test_utils.eq("File \"tagged_template_test.res\", line 121, characters 13-20", "some random " + "string", "some random string"));
-  Mocha.test("a regular string interpolation should continue working", () => Test_utils.eq("File \"tagged_template_test.res\", line 125, characters 7-14", `some random ` + "string" + ` interpolation`, "some random string interpolation"));
+  Mocha.test("with a ReScript tag lifted via TaggedTemplate.make, it should return the correct interpolation", () => Test_utils.eq("File \"tagged_template_test.res\", line 133, characters 13-20", greeting, "hello Ada you're 36 years old!"));
+  Mocha.test("a template literal tagged with json should generate a regular string interpolation for now", () => Test_utils.eq("File \"tagged_template_test.res\", line 138, characters 13-20", "some random " + "string", "some random string"));
+  Mocha.test("a regular string interpolation should continue working", () => Test_utils.eq("File \"tagged_template_test.res\", line 142, characters 7-14", `some random ` + "string" + ` interpolation`, "some random string interpolation"));
 });
 
 let extraLength = 10;
@@ -104,6 +110,8 @@ export {
   makeSql,
   prefixedSql,
   factoryQuery,
+  pgSql,
+  bareImportQuery,
   runQuery,
   paramQuery,
   s,
