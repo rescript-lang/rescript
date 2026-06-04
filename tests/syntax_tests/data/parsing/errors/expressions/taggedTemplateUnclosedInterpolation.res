@@ -1,0 +1,1 @@
+let q = sql`SELECT * FROM ${table
