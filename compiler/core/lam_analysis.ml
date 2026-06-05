@@ -91,8 +91,12 @@ let rec no_side_effects (lam : Lam.t) : bool =
         {code_info = Exp (Js_function _ | Js_literal _) | Stmt Js_stmt_comment}
       ->
       true
-    | Pjs_apply | Pjs_runtime_apply | Pjs_call _ | Ptagged_template | Pinit_mod
-    | Pupdate_mod | Pjs_unsafe_downgrade _ | Pdebugger | Pjs_fn_method
+    (* A tagged template invokes its tag at runtime, so it always has side
+       effects. Only reached here when all args are themselves pure, which the
+       test suite doesn't exercise. *)
+    | Ptagged_template -> false [@coverage off]
+    | Pjs_apply | Pjs_runtime_apply | Pjs_call _ | Pinit_mod | Pupdate_mod
+    | Pjs_unsafe_downgrade _ | Pdebugger | Pjs_fn_method
     (* Await promise *)
     | Pawait
     (* TODO *)

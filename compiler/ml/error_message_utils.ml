@@ -114,31 +114,6 @@ type type_clash_context =
   | ForLoopCondition
   | Await
 
-let context_to_string = function
-  | Some WhileCondition -> "WhileCondition"
-  | Some ForLoopCondition -> "ForLoopCondition"
-  | Some AssertCondition -> "AssertCondition"
-  | Some IfCondition -> "IfCondition"
-  | Some (Statement _) -> "Statement"
-  | Some (MathOperator _) -> "MathOperator"
-  | Some ArrayValue -> "ArrayValue"
-  | Some TaggedTemplateValue -> "TaggedTemplateValue"
-  | Some (SetRecordField _) -> "SetRecordField"
-  | Some (RecordField _) -> "RecordField"
-  | Some MaybeUnwrapOption -> "MaybeUnwrapOption"
-  | Some SwitchReturn -> "SwitchReturn"
-  | Some TryReturn -> "TryReturn"
-  | Some StringConcat -> "StringConcat"
-  | Some (FunctionArgument _) -> "FunctionArgument"
-  | Some JsxComponent -> "JsxComponent"
-  | Some ComparisonOperator -> "ComparisonOperator"
-  | Some IfReturn -> "IfReturn"
-  | Some TernaryReturn -> "TernaryReturn"
-  | Some Await -> "Await"
-  | Some BracedIdent -> "BracedIdent"
-  | Some LetUnwrapReturn -> "LetUnwrapReturn"
-  | None -> "None"
-
 let fprintf = Format.fprintf
 
 let error_type_text ppf type_clash_context =
