@@ -2,15 +2,14 @@ open Lsp.Types
 
 let create ~(position : Position.t) ~(uri : DocumentUri.t)
     (server : State.t Server.t) =
-  let path = DocumentUri.to_path uri in
-  let pos = (position.line, position.character) in
+  (* TODO: should be a config *)
+  let supports_markdown_links = true in
 
-  (* NOTE: Should be a config *)
-  let supportsMarkdownLinks = true in
-  let debug = false in
-  let open Analysis in
   let source = (Document_store.get_document ~uri server.state.store).text in
-  let kindFile = Files.classifySourceFile path in
-  let full = Cmt.loadFullCmtFromPath ~path in
+  let full =
+    Analysis.Cmt.load_full_cmt_from_path ~path:(DocumentUri.to_path uri)
+  in
 
-  Commands.hover ~source ~kindFile ~pos ~debug ~supportsMarkdownLinks ~full
+  Analysis.Commands.hover ~source ~kind_file:(Document.kind uri)
+    ~pos:(position.line, position.character)
+    ~debug:false ~supports_markdown_links ~full

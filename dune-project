@@ -89,4 +89,6 @@
  (eio_main
   (>= 1.3))
  analysis
- dune))
+ dune
+ (ppx_expect
+  (and :with-test (= 0.17.2)))))

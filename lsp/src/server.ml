@@ -97,29 +97,79 @@ let notification_of_jsonrpc notification =
   | Ok notification -> notification
   | Error error -> raise (Lsp.Io.Error error)
 
-type 'a t = {channel: Chan.output; env: Eio_unix.Stdenv.base; state: 'a}
+module Request_id = struct
+  type t = Jsonrpc.Id.t
+
+  let equal = Jsonrpc.Id.equal
+  let hash = Jsonrpc.Id.hash
+end
+
+module Request_id_table = Hashtbl.Make (Request_id)
+
+type pending_request = Pending : 'a Lsp.Server_request.t -> pending_request
+
+type request_context = {
+  mutable next_id: int;
+  pending: pending_request Request_id_table.t;
+}
+
+type 'a t = {
+  channel: Chan.output;
+  env: Eio_unix.Stdenv.base;
+  state: 'a;
+  request_context: request_context;
+}
 
 let state t = t.state
 
 let respond server response =
   Io.await @@ Lsp_Io.write server.channel @@ Response response
 
-let notification server notification =
+let notification notification server =
   let notification = Lsp.Server_notification.to_jsonrpc notification in
   Io.await @@ Lsp_Io.write server.channel @@ Notification notification
 
-let log_message_notification ?(kind = Lsp.Types.MessageType.Debug) server
-    message =
-  notification server
+let request request server =
+  let id = `Int server.request_context.next_id in
+  server.request_context.next_id <- server.request_context.next_id + 1;
+  Request_id_table.add server.request_context.pending id (Pending request);
+  let request = Lsp.Server_request.to_jsonrpc_request request ~id in
+  Io.await @@ Lsp_Io.write server.channel @@ Request request
+
+let handle_response (response : Jsonrpc.Response.t) server =
+  match
+    Request_id_table.find_opt server.request_context.pending response.id
+  with
+  | None -> ()
+  | Some (Pending request) -> (
+    Request_id_table.remove server.request_context.pending response.id;
+    match response.result with
+    | Ok json -> (
+      match Lsp.Server_request.response_of_json request json with
+      | _ -> ()
+      | exception _ -> ())
+    | Error _ -> ())
+
+let log_message_notification ?(kind = Lsp.Types.MessageType.Debug) message
+    server =
+  notification
     (Lsp.Server_notification.LogMessage
        (Lsp.Types.LogMessageParams.create ~type_:kind ~message))
+    server
+
+let show_message_notification ?(kind = Lsp.Types.MessageType.Info) message
+    server =
+  notification
+    (Lsp.Server_notification.ShowMessage
+       (Lsp.Types.ShowMessageParams.create ~type_:kind ~message))
+    server
 
 let rec input_loop ~input ~state with_ =
   match Io.await @@ Lsp_Io.read input with
   | Some packet ->
     let state = with_ state packet in
     input_loop ~input ~state with_
-  | exception exn -> raise (Failure "Server.input_loop")
+  | exception _ -> raise (Failure "Server.input_loop")
   | None -> ()
 
 let listen ~input ~output ~on_request ~on_notification ~state ~env =
@@ -142,18 +192,28 @@ let listen ~input ~output ~on_request ~on_notification ~state ~env =
   in
   let input = Chan.of_source input in
   Chan.with_sink output (fun channel ->
-      let server = {channel; state; env} in
+      let request_context =
+        {next_id = 1; pending = Request_id_table.create 16}
+      in
       input_loop ~input ~state (fun state packet ->
+          let server = {channel; state; env; request_context} in
           match packet with
           | Notification notification -> handle_notification server notification
           | Request request -> handle_request server request
           | Batch_call calls ->
             List.fold_left
               (fun state call ->
+                let server = {channel; state; env; request_context} in
                 match call with
                 | `Request request -> handle_request server request
                 | `Notification notification ->
                   handle_notification server notification)
               state calls
-          | Response _ -> raise (Lsp.Io.Error "unexpected response")
-          | Batch_response _ -> raise (Lsp.Io.Error "unexpected batch response")))
+          | Response response ->
+            handle_response response server;
+            state
+          | Batch_response responses ->
+            List.iter
+              (fun response -> handle_response response server)
+              responses;
+            state))

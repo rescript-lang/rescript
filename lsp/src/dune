@@ -1,5 +1,6 @@
 (library
  (name rescript_language_server)
  (libraries lsp eio eio_main analysis)
- (flags
-  (-w "-9")))
+ (inline_tests)
+ (preprocess
+  (pps ppx_expect)))
