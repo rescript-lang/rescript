@@ -213,11 +213,9 @@ let run_test_for_comment (caret_comment : caret_comment) client =
   let character = caret_comment.col in
   let line = caret_comment.line - 1 in
   let position = Position.create ~line ~character in
-  let text = caret_comment.text in
 
   match caret_comment.command with
   | "hov" ->
-    open_document ~uri ~text client;
     let resp =
       send_request
         (Client_request.TextDocumentHover
@@ -253,6 +251,12 @@ let run_workspace_test ~fs ~workspace_dir client =
 
   String_map.iter
     (fun path comments ->
+      let hd = comments |> List.hd in
+      let uri = DocumentUri.of_path hd.path in
+      let text = hd.text in
+
+      open_document ~uri ~text client;
+
       let filename = Filename.basename path ^ ".expected" in
       let save_path = workspace_dir // filename in
       let content =
@@ -263,12 +267,25 @@ let run_workspace_test ~fs ~workspace_dir client =
       Eio.Path.save ~create:(`Or_truncate 0o644) file content)
     grouped
 
+let client_capabilities = ClientCapabilities.create ()
+
 let main () =
-  Eio_main.run @@ fun env ->
-  Client.with_server ~env @@ fun client ->
   let workspace_dir =
     Sys.getcwd () // "tests" // "lsp_tests" // "basic-workspace"
   in
+  Eio_main.run @@ fun env ->
+  Client.with_server ~env @@ fun client ->
+  let id =
+    Client.send_request client
+      (Client_request.Initialize
+         (InitializeParams.create ~capabilities:client_capabilities
+            ~rootUri:(DocumentUri.of_path workspace_dir)
+            ()))
+  in
+  (* Assert than server capabilities return is ok *)
+  assert ((Client.read_response client id).result |> Result.is_ok);
+  let () = Client.send_notification client Client_notification.Initialized in
+
   run_workspace_test ~fs:env#fs ~workspace_dir client;
   Client.stop client |> ignore
 
