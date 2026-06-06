@@ -3,7 +3,7 @@ open Lsp.Types
 let create ~(position : Position.t) ~(uri : DocumentUri.t)
     (server : State.t Server.t) =
   (* TODO: should be a config *)
-  let supports_markdown_links = true in
+  let supports_markdown_links = false in
 
   let source = (Document_store.get_document ~uri server.state.store).text in
   let full =
