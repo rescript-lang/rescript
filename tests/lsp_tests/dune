@@ -2,7 +2,7 @@
  (name test)
  (package rescript-language-server)
  (public_name lsp-tests)
- (libraries lsp jsonrpc yojson eio eio_main eio.unix)
+ (libraries lsp jsonrpc yojson eio eio_main)
  (flags
   (-w "-9-32-33")))
 

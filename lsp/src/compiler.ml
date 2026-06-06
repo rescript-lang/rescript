@@ -13,7 +13,7 @@ let collect_diagnostics_from_log_using_source_dirs workspace_root
     // Constants.sources_dirs
   in
   let build_roots =
-    Source_dirs.get_build_roots_from_file Eio.Path.(state.env#fs / path)
+    Source_dirs.get_build_roots_from_file Eio.Path.(state.fs / path)
   in
   let diagnostics =
     match build_roots with
@@ -24,7 +24,7 @@ let collect_diagnostics_from_log_using_source_dirs workspace_root
                workspace_root_path // build_root // Constants.compiler_log
              in
              collect_diagnostics_from_log_file
-               Eio.Path.(state.env#fs / compiler_log_path))
+               Eio.Path.(state.fs / compiler_log_path))
       |> List.flatten
     | None -> []
   in
