@@ -113,12 +113,7 @@ type request_context = {
   pending: pending_request Request_id_table.t;
 }
 
-type 'a t = {
-  channel: Chan.output;
-  env: Eio_unix.Stdenv.base;
-  state: 'a;
-  request_context: request_context;
-}
+type 'a t = {channel: Chan.output; state: 'a; request_context: request_context}
 
 let state t = t.state
 
@@ -172,7 +167,7 @@ let rec input_loop ~input ~state with_ =
   | exception _ -> raise (Failure "Server.input_loop")
   | None -> ()
 
-let listen ~input ~output ~on_request ~on_notification ~state ~env =
+let listen ~input ~output ~on_request ~on_notification ~state =
   let handle_request server request =
     let response, state =
       match Lsp.Client_request.of_jsonrpc request with
@@ -196,14 +191,14 @@ let listen ~input ~output ~on_request ~on_notification ~state ~env =
         {next_id = 1; pending = Request_id_table.create 16}
       in
       input_loop ~input ~state (fun state packet ->
-          let server = {channel; state; env; request_context} in
+          let server = {channel; state; request_context} in
           match packet with
           | Notification notification -> handle_notification server notification
           | Request request -> handle_request server request
           | Batch_call calls ->
             List.fold_left
               (fun state call ->
-                let server = {channel; state; env; request_context} in
+                let server = {channel; state; request_context} in
                 match call with
                 | `Request request -> handle_request server request
                 | `Notification notification ->

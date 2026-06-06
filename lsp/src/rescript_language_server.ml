@@ -120,8 +120,6 @@ let on_notification notification (server : State.t Server.t) =
   | Exit -> state
   | _ -> state
 
-let main () =
-  Eio_main.run (fun env ->
-      let state = State.create ~store:(Document_store.create ()) ~env in
-      Server.listen ~input:env#stdin ~output:env#stdout ~on_request
-        ~on_notification ~state ~env)
+let listen ~input ~output ~fs =
+  let state = State.create ~store:(Document_store.create ()) ~fs in
+  Server.listen ~input ~output ~on_request ~on_notification ~state

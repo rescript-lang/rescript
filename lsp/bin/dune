@@ -2,4 +2,4 @@
  (name main)
  (package rescript-language-server)
  (public_name rescript-language-server)
- (libraries rescript_language_server))
+ (libraries rescript_language_server eio_main))
