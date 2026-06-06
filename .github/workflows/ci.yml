@@ -378,7 +378,7 @@ jobs:
         run: make -C tests/gentype_tests/typescript-react-example clean test
 
       - name: Run LSP tests
-        run: make test-lsp
+        run: opam exec -- make test-lsp
 
       # On Windows, after running setup-ocaml (if it wasn't cached yet or the cache couldn't be restored),
       # Cygwin bash is used instead of Git Bash for Windows, breaking the rewatch tests.
