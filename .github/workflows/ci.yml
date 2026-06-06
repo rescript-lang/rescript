@@ -377,6 +377,9 @@ jobs:
         if: runner.os != 'Windows'
         run: make -C tests/gentype_tests/typescript-react-example clean test
 
+      - name: Run LSP tests
+        run: make test-lsp
+
       # On Windows, after running setup-ocaml (if it wasn't cached yet or the cache couldn't be restored),
       # Cygwin bash is used instead of Git Bash for Windows, breaking the rewatch tests.
       # So we need to adjust the path to bring back Git Bash for Windows.
@@ -655,7 +658,7 @@ jobs:
         uses: actions/checkout@v6
       - name: Run make in dev container
         uses: devcontainers/ci@v0.3
-        with:    
+        with:
           push: never
           runCmd: make
 
