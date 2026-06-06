@@ -91,4 +91,4 @@
  analysis
  dune
  (ppx_expect
-  (and :with-test (= 0.17.2)))))
+  (and :with-test (= v0.17.2)))))
