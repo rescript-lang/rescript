@@ -131,7 +131,7 @@ Response
 {
   "contents": {
     "kind": "markdown",
-    "value": "```rescript\nAA.cond<([< #str(string)] as 'a)> => AA.cond<'a>\n```\n\n---\n\n```\n \n```\n```rescript\ntype AA.cond<'a> = 'a\n  constraint 'a = [< #str(string)]\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C110%2C2%5D)\n"
+    "value": "```rescript\nAA.cond<([< #str(string)] as 'a)> => AA.cond<'a>\n```\n\n---\n```rescript\ntype AA.cond<'a> = 'a\n  constraint 'a = [< #str(string)]\n```\n"
   }
 }
 
@@ -140,7 +140,7 @@ Response
 {
   "contents": {
     "kind": "markdown",
-    "value": "```rescript\nAA.cond<([< #str(string)] as 'a)> => AA.cond<'a>\n```\n\n---\n\n```\n \n```\n```rescript\ntype AA.cond<'a> = 'a\n  constraint 'a = [< #str(string)]\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C110%2C2%5D)\n"
+    "value": "```rescript\nAA.cond<([< #str(string)] as 'a)> => AA.cond<'a>\n```\n\n---\n```rescript\ntype AA.cond<'a> = 'a\n  constraint 'a = [< #str(string)]\n```\n"
   }
 }
 
@@ -203,7 +203,7 @@ Response
 {
   "contents": {
     "kind": "markdown",
-    "value": "```rescript\nfoo<bar>\n```\n\n---\n\n```\n \n```\n```rescript\ntype foo<'a> = {content: 'a, zzz: string}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C161%2C2%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype bar = {age: int}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C162%2C2%5D)\n"
+    "value": "```rescript\nfoo<bar>\n```\n\n---\n```rescript\ntype foo<'a> = {content: 'a, zzz: string}\n```\n\n\n---\n```rescript\ntype bar = {age: int}\n```\n"
   }
 }
 
@@ -212,7 +212,7 @@ Response
 {
   "contents": {
     "kind": "markdown",
-    "value": "```rescript\nfoobar\n```\n\n---\n\n```\n \n```\n```rescript\ntype foobar = foo<bar>\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C163%2C2%5D)\n"
+    "value": "```rescript\nfoobar\n```\n\n---\n```rescript\ntype foobar = foo<bar>\n```\n"
   }
 }
 
@@ -229,7 +229,7 @@ Response
 {
   "contents": {
     "kind": "markdown",
-    "value": "```rescript\nCompV4.props<int, string> => React.element\n```\n\n---\n\n```\n \n```\n```rescript\ntype CompV4.props<'n, 's> = {n?: 'n, s: 's}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C190%2C2%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype React.element = Jsx.element\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Fdependencies%2Frescript-react%2Fsrc%2FReact.res%22%2C0%2C0%5D)\n"
+    "value": "```rescript\nCompV4.props<int, string> => React.element\n```\n\n---\n```rescript\ntype CompV4.props<'n, 's> = {n?: 'n, s: 's}\n```\n\n\n---\n```rescript\ntype React.element = Jsx.element\n```\n"
   }
 }
 
@@ -238,7 +238,7 @@ Response
 {
   "contents": {
     "kind": "markdown",
-    "value": "```rescript\nuseR\n```\n\n---\n\n```\n \n```\n```rescript\ntype useR = {x: int, y: list<option<r<float>>>}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C200%2C0%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype r<'a> = {i: 'a, f: float}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C101%2C0%5D)\n"
+    "value": "```rescript\nuseR\n```\n\n---\n```rescript\ntype useR = {x: int, y: list<option<r<float>>>}\n```\n\n\n---\n```rescript\ntype r<'a> = {i: 'a, f: float}\n```\n"
   }
 }
 
@@ -282,7 +282,7 @@ Response
 {
   "contents": {
     "kind": "markdown",
-    "value": "```rescript\nvariant\nCoolVariant\n```\n---\n Cool variant! \n\n---\n\n```\n \n```\n```rescript\ntype variant = CoolVariant | OtherCoolVariant\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C250%2C0%5D)\n"
+    "value": "```rescript\nvariant\nCoolVariant\n```\n---\n Cool variant! \n\n---\n```rescript\ntype variant = CoolVariant | OtherCoolVariant\n```\n"
   }
 }
 
@@ -291,7 +291,7 @@ Response
 {
   "contents": {
     "kind": "markdown",
-    "value": "```rescript\npayloadVariants\nInlineRecord({field1: int, field2: bool})\n```\n\n---\n\n```\n \n```\n```rescript\ntype payloadVariants =\n  | InlineRecord({field1: int, field2: bool})\n  | Args(int, bool)\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C259%2C0%5D)\n"
+    "value": "```rescript\npayloadVariants\nInlineRecord({field1: int, field2: bool})\n```\n\n---\n```rescript\ntype payloadVariants =\n  | InlineRecord({field1: int, field2: bool})\n  | Args(int, bool)\n```\n"
   }
 }
 
@@ -300,7 +300,7 @@ Response
 {
   "contents": {
     "kind": "markdown",
-    "value": "```rescript\npayloadVariants\nArgs(int, bool)\n```\n\n---\n\n```\n \n```\n```rescript\ntype payloadVariants =\n  | InlineRecord({field1: int, field2: bool})\n  | Args(int, bool)\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C259%2C0%5D)\n"
+    "value": "```rescript\npayloadVariants\nArgs(int, bool)\n```\n\n---\n```rescript\ntype payloadVariants =\n  | InlineRecord({field1: int, field2: bool})\n  | Args(int, bool)\n```\n"
   }
 }
 
@@ -309,7 +309,7 @@ Response
 {
   "contents": {
     "kind": "markdown",
-    "value": "```rescript\nRecursiveVariants.t\nAction1(int)\n```\n\n---\n\n```\n \n```\n```rescript\ntype RecursiveVariants.t =\n  | Action1(int)\n  | Action2(float)\n  | Batch(array<t>)\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C268%2C2%5D)\n"
+    "value": "```rescript\nRecursiveVariants.t\nAction1(int)\n```\n\n---\n```rescript\ntype RecursiveVariants.t =\n  | Action1(int)\n  | Action2(float)\n  | Batch(array<t>)\n```\n"
   }
 }
 
@@ -335,7 +335,7 @@ Response
 {
   "contents": {
     "kind": "markdown",
-    "value": "```rescript\ntype aliased = variant\n```\n\n---\n\n```\n \n```\n```rescript\ntype variant = CoolVariant | OtherCoolVariant\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22file%3A%2F%2F%2Fhome%2Fpedro%2FDesktop%2Fprojects%2Frescript-compiler%2Ftests%2Flsp_tests%2Fbasic-workspace%2FHover.res%22%2C250%2C0%5D)\n"
+    "value": "```rescript\ntype aliased = variant\n```\n\n---\n```rescript\ntype variant = CoolVariant | OtherCoolVariant\n```\n"
   }
 }
 
