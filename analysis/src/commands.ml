@@ -95,10 +95,10 @@ let hover ~state ~source ~kind_file ~pos ~supports_markdown_links ~full ~debug =
                  ~kind:Lsp.Types.MarkupKind.Markdown ~value))
          ())
 
-let signature_help ~state:_ ~source ~kind_file ~pos
+let signature_help ~state ~source ~kind_file ~pos
     ~allow_for_constructor_payloads ~full ~debug =
   Signature_help.signature_help ~debug ~source ~kind_file ~pos
-    ~allow_for_constructor_payloads ~full
+    ~allow_for_constructor_payloads ~full ~state
 
 let definition ~state ~full ~pos ~debug =
   let location_opt =
@@ -266,7 +266,7 @@ type prepare_rename_result = {
   placeholder: string option;
 }
 
-let prepare_rename ~state:_ ~full ~pos ~debug =
+let prepare_rename ~full ~pos ~debug =
   match full with
   | None -> None
   | Some full -> (
@@ -283,7 +283,7 @@ let prepare_rename ~state:_ ~full ~pos ~debug =
       in
       Some {range; placeholder = placeholder_opt})
 
-let format ~state:_ ~source ~kind_file =
+let format ~source ~kind_file =
   let create_range text =
     let lines = text |> String.split_on_char '\n' in
     let lines_len = List.length lines in

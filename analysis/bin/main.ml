@@ -217,7 +217,7 @@ let main () =
     `String (Create_interface.command ~state ~path ~cmi_file)
     |> Yojson.Safe.pretty_to_string ~std:true
     |> print_endline
-  | [_; "format"; path] -> Cli.format ~state ~path
+  | [_; "format"; path] -> Cli.format ~path
   | [_; "test"; path] -> Cli.test ~state ~path
   | [_; "cmt"; rescript_json; cmt_path] ->
     Cmt_viewer.dump ~state rescript_json cmt_path

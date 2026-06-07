@@ -66,7 +66,7 @@ let signature_help ~state ~path ~pos ~current_file ~debug
   | None -> print_null ()
   | Some source -> (
     match
-      Commands.signature_help ~state ~source ~kind_file ~pos
+      Commands.signature_help ~source ~kind_file ~pos
         ~allow_for_constructor_payloads ~full ~state ~debug
     with
     | None -> print_null ()
@@ -120,7 +120,7 @@ let rename ~state ~path ~pos ~new_name ~debug =
 
 let prepare_rename ~state ~path ~pos ~debug =
   let full = Cmt.load_full_cmt_from_path ~state ~path in
-  match Commands.prepare_rename ~state ~full ~pos ~debug with
+  match Commands.prepare_rename ~full ~pos ~debug with
   | None -> print_null ()
   | Some {range; placeholder = None} ->
     Lsp.Types.Range.yojson_of_t range |> print_string
@@ -132,12 +132,12 @@ let prepare_rename ~state ~path ~pos ~debug =
       ]
     |> print_string
 
-let format ~state ~path =
+let format ~path =
   match Files.read_file path with
   | None -> print_null ()
   | Some source -> (
     let kind_file = Files.classify_source_file path in
-    match Commands.format ~state ~source ~kind_file with
+    match Commands.format ~source ~kind_file with
     | Ok text_edits -> (
       match text_edits with
       | {newText} :: _ -> print_string (`String newText)
