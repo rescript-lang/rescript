@@ -4,10 +4,20 @@ type status =
   | Uninitialized
   | Initialized of {params: InitializeParams.t; diagnostics: Diagnostics.t}
 
-(* TODO: add trace, configuration *)
-type t = {status: status; store: Document_store.t; fs: Eio.Fs.dir_ty Eio.Path.t}
+type t = {
+  status: status;
+  store: Document_store.t;
+  fs: Eio.Fs.dir_ty Eio.Path.t;
+  analysis_state: Analysis.Shared_types.state;
+}
 
-let create ~store ~fs = {status = Uninitialized; store; fs}
+let create ~store ~fs =
+  {
+    status = Uninitialized;
+    store;
+    fs;
+    analysis_state = Analysis.Shared_types.create_state ();
+  }
 
 let initialize t ~params ~diagnostics =
   {t with status = Initialized {params; diagnostics}}

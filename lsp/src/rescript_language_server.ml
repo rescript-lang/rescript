@@ -95,6 +95,11 @@ let on_initialize (params : InitializeParams.t) (server : State.t Server.t) =
 
 let on_request (Client_request.E request) (server : State.t Server.t) =
   let state = Server.state server in
+  let analysis_state = state.analysis_state in
+  let load_full uri =
+    Analysis.Cmt.load_full_cmt_from_path ~state:analysis_state
+      ~path:(DocumentUri.to_path uri)
+  in
   let ok value = Ok (Client_request.yojson_of_result request value) in
 
   match request with
@@ -103,11 +108,10 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     (ok initialization_info, state)
   | TextDocumentHover {position; textDocument = {uri}} ->
     let source = (Document_store.get ~uri state.store).text in
-    let full =
-      Analysis.Cmt.load_full_cmt_from_path ~path:(DocumentUri.to_path uri)
-    in
+    let full = load_full uri in
     let hover =
-      Analysis.Commands.hover ~source ~kind_file:(Document.kind uri)
+      Analysis.Commands.hover ~state:analysis_state ~source
+        ~kind_file:(Document.kind uri)
         ~pos:(position.line, position.character)
         ~debug:false
           (* TODO: supports_markdown_links should be get from client capabilities *)
@@ -116,11 +120,9 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     (ok hover, state)
   | TextDocumentCompletion {textDocument = {uri}; position} ->
     let source = (Document_store.get ~uri state.store).text in
-    let full =
-      Analysis.Cmt.load_full_cmt_from_path ~path:(DocumentUri.to_path uri)
-    in
+    let full = load_full uri in
     let comp =
-      Analysis.Commands.completion ~debug:false ~source
+      Analysis.Commands.completion ~state:analysis_state ~debug:false ~source
         ~kind_file:(Document.kind uri)
         ~pos:(position.line, position.character)
         ~full
@@ -138,9 +140,13 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
           let module_path = List.assoc_opt "modulePath" fields in
           match (file_path, module_path) with
           | Some (`String file_path), Some (`String module_path) ->
-            let full = Analysis.Cmt.load_full_cmt_from_path ~path:file_path in
+            let full =
+              Analysis.Cmt.load_full_cmt_from_path ~state:analysis_state
+                ~path:file_path
+            in
             let documentation =
-              Analysis.Commands.completion_resolve ~full ~module_path
+              Analysis.Commands.completion_resolve ~state:analysis_state ~full
+                ~module_path
             in
             Some {item with documentation}
           | _ -> None)
@@ -150,12 +156,11 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     (ok (resp |> Option.value ~default:item), state)
   | SignatureHelp {textDocument = {uri}; position} ->
     let source = (Document_store.get ~uri state.store).text in
-    let full =
-      Analysis.Cmt.load_full_cmt_from_path ~path:(DocumentUri.to_path uri)
-    in
+    let full = load_full uri in
     let resp =
       match
-        Analysis.Commands.signature_help ~source ~kind_file:(Document.kind uri)
+        Analysis.Commands.signature_help ~state:analysis_state ~source
+          ~kind_file:(Document.kind uri)
           ~pos:(position.line, position.character)
           ~full ~allow_for_constructor_payloads:true ~debug:false
       with
@@ -164,12 +169,10 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     in
     (ok resp, state)
   | TextDocumentDefinition {textDocument = {uri}; position} ->
-    let full =
-      Analysis.Cmt.load_full_cmt_from_path ~path:(DocumentUri.to_path uri)
-    in
+    let full = load_full uri in
     let resp =
       match
-        Analysis.Commands.definition ~full
+        Analysis.Commands.definition ~state:analysis_state ~full
           ~pos:(position.line, position.character)
           ~debug:false
       with
@@ -178,12 +181,10 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     in
     (ok resp, state)
   | TextDocumentTypeDefinition {textDocument = {uri}; position} ->
-    let full =
-      Analysis.Cmt.load_full_cmt_from_path ~path:(DocumentUri.to_path uri)
-    in
+    let full = load_full uri in
     let resp =
       match
-        Analysis.Commands.type_definition ~full
+        Analysis.Commands.type_definition ~state:analysis_state ~full
           ~pos:(position.line, position.character)
           ~debug:false
       with
@@ -192,11 +193,9 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     in
     (ok resp, state)
   | TextDocumentReferences {textDocument = {uri}; position} ->
-    let full =
-      Analysis.Cmt.load_full_cmt_from_path ~path:(DocumentUri.to_path uri)
-    in
+    let full = load_full uri in
     let resp =
-      Analysis.Commands.references ~full
+      Analysis.Commands.references ~state:analysis_state ~full
         ~pos:(position.line, position.character)
         ~debug:false
     in
@@ -214,7 +213,8 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
   | CodeAction {textDocument = {uri}; range = {start; end_}} ->
     let source = (Document_store.get ~uri state.store).text in
     let resp =
-      Analysis.Xform.extract_code_actions ~path:(Uri.to_path uri)
+      Analysis.Xform.extract_code_actions ~state:analysis_state
+        ~path:(Uri.to_path uri)
         ~start_pos:(start.line, start.character)
         ~end_pos:(end_.line, end_.character)
         ~source ~kind_file:(Document.kind uri) ~debug:false
@@ -223,9 +223,7 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     (ok (Some resp), state)
   | TextDocumentCodeLens {textDocument = {uri}} ->
     let source = (Document_store.get ~uri state.store).text in
-    let full =
-      Analysis.Cmt.load_full_cmt_from_path ~path:(DocumentUri.to_path uri)
-    in
+    let full = load_full uri in
     let resp =
       Analysis.Hint.code_lens ~source ~kind_file:(Document.kind uri) ~full
         ~debug:false
@@ -233,9 +231,7 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     (ok (resp |> Option.value ~default:[]), state)
   | InlayHint {textDocument = {uri}; range = {start; end_}} ->
     let source = (Document_store.get ~uri state.store).text in
-    let full =
-      Analysis.Cmt.load_full_cmt_from_path ~path:(DocumentUri.to_path uri)
-    in
+    let full = load_full uri in
     let resp =
       Analysis.Hint.inlay ~source ~kind_file:(Document.kind uri) ~full
         ~pos:(start.line, end_.line) (* TODO: max_length should be a config *)
@@ -250,12 +246,10 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     in
     (ok (Some resp), state)
   | TextDocumentRename {textDocument = {uri}; position; newName} ->
-    let full =
-      Analysis.Cmt.load_full_cmt_from_path ~path:(DocumentUri.to_path uri)
-    in
+    let full = load_full uri in
     let resp =
       match
-        Analysis.Commands.rename ~full
+        Analysis.Commands.rename ~state:analysis_state ~full
           ~pos:(position.line, position.character)
           ~new_name:newName ~debug:false
       with
@@ -264,12 +258,10 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     in
     (ok resp, state)
   | TextDocumentPrepareRename {textDocument = {uri}; position} ->
-    let full =
-      Analysis.Cmt.load_full_cmt_from_path ~path:(DocumentUri.to_path uri)
-    in
+    let full = load_full uri in
     let resp =
       match
-        Analysis.Commands.prepare_rename ~full
+        Analysis.Commands.prepare_rename ~state:analysis_state ~full
           ~pos:(position.line, position.character)
           ~debug:false
       with
@@ -281,7 +273,10 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     let source = (Document_store.get ~uri state.store).text in
 
     let resp =
-      match Analysis.Commands.format ~source ~kind_file:(Document.kind uri) with
+      match
+        Analysis.Commands.format ~state:analysis_state ~source
+          ~kind_file:(Document.kind uri)
+      with
       | Ok text_edit -> Some text_edit
       | Error _ -> None
     in
