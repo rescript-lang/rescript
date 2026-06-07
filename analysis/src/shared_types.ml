@@ -519,7 +519,14 @@ type file = string
 
 module File_set = Set.Make (String)
 
-type package = {
+type state = {
+  packages_by_root: (string, package) Hashtbl.t;
+  root_for_uri: (Uri.t, string) Hashtbl.t;
+  cmt_cache: (file_path, File.t) Hashtbl.t;
+}
+
+and package = {
+  state: state;
   generic_jsx_module: string option;
   suffix: string;
   root_path: file_path;
@@ -545,14 +552,7 @@ let init_extra () =
     loc_items = [];
   }
 
-type state = {
-  packages_by_root: (string, package) Hashtbl.t;
-  root_for_uri: (Uri.t, string) Hashtbl.t;
-  cmt_cache: (file_path, File.t) Hashtbl.t;
-}
-
-(* There's only one state, so it can as well be global *)
-let state =
+let create_state () =
   {
     packages_by_root = Hashtbl.create 1;
     root_for_uri = Hashtbl.create 30;

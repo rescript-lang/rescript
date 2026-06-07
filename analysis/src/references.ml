@@ -161,8 +161,8 @@ let get_constructor (file : File.t) stamp name =
       | Some const -> Some const)
     | _ -> None)
 
-let exported_for_tip ~env ~path ~package ~(tip : Tip.t) =
-  match Resolve_path.resolve_path ~env ~path ~package with
+let exported_for_tip ~state ~env ~path ~package ~(tip : Tip.t) =
+  match Resolve_path.resolve_path ~state ~env ~path ~package with
   | None ->
     Log.log ("Cannot resolve path " ^ path_to_string path);
     None
@@ -179,7 +179,8 @@ let exported_for_tip ~env ~path ~package ~(tip : Tip.t) =
       None
     | Some stamp -> Some (env, name, stamp))
 
-let defined_for_loc ~file ~package loc_kind =
+let defined_for_loc ?state ~file ~package loc_kind =
+  let state = Option.value state ~default:package.state in
   let inner ~file stamp (tip : Tip.t) =
     match tip with
     | Constructor name -> (
@@ -207,13 +208,13 @@ let defined_for_loc ~file ~package loc_kind =
     inner ~file stamp tip
   | GlobalReference (module_name, path, tip) -> (
     maybe_log ("Getting global " ^ module_name);
-    match Process_cmt.file_for_module ~package module_name with
+    match Process_cmt.file_for_module ~state ~package module_name with
     | None ->
       Log.log ("Cannot get module " ^ module_name);
       None
     | Some file -> (
       let env = Query_env.from_file file in
-      match exported_for_tip ~env ~path ~package ~tip with
+      match exported_for_tip ~state ~env ~path ~package ~tip with
       | None -> None
       | Some (env, name, stamp) -> (
         maybe_log ("Getting for " ^ string_of_int stamp ^ " in " ^ name);
@@ -226,7 +227,9 @@ let defined_for_loc ~file ~package loc_kind =
           Some res)))
 
 (** Find alternative declaration: from res in case of interface, or from resi in case of implementation  *)
-let alternate_declared ~(file : File.t) ~package (declared : _ Declared.t) tip =
+let alternate_declared ?state ~(file : File.t) ~package
+    (declared : _ Declared.t) tip =
+  let state = Option.value state ~default:package.state in
   match Hashtbl.find_opt package.paths_for_module file.module_name with
   | None -> None
   | Some paths -> (
@@ -235,14 +238,14 @@ let alternate_declared ~(file : File.t) ~package (declared : _ Declared.t) tip =
       maybe_log
         ("alternateDeclared for " ^ file.module_name ^ " has both resi and res");
       let alternate_uri = if Uri.is_interface file.uri then res else resi in
-      match Cmt.full_from_uri ~uri:(Uri.from_path alternate_uri) with
+      match Cmt.full_from_uri ~state ~uri:(Uri.from_path alternate_uri) with
       | None -> None
       | Some {file; extra} -> (
         let env = Query_env.from_file file in
         let path = Module_path.to_path declared.module_path declared.name.txt in
         maybe_log ("find declared for path " ^ path_to_string path);
         let declared_opt =
-          match exported_for_tip ~env ~path ~package ~tip with
+          match exported_for_tip ~state ~env ~path ~package ~tip with
           | None -> None
           | Some (_env, _name, stamp) ->
             declared_for_tip ~stamps:file.stamps stamp tip
@@ -255,12 +258,13 @@ let alternate_declared ~(file : File.t) ~package (declared : _ Declared.t) tip =
 
       None)
 
-let rec resolve_module_reference ?(paths_seen = []) ~file ~package
+let rec resolve_module_reference ?(paths_seen = []) ?state ~file ~package
     (declared : Module.t Declared.t) =
+  let state = Option.value state ~default:package.state in
   match declared.item with
   | Structure _ -> Some (file, Some declared)
   | Constraint (_moduleItem, module_type_item) ->
-    resolve_module_reference ~paths_seen ~file ~package
+    resolve_module_reference ~paths_seen ~state ~file ~package
       {declared with item = module_type_item}
   | Ident path -> (
     let env = Query_env.from_file file in
@@ -274,11 +278,11 @@ let rec resolve_module_reference ?(paths_seen = []) ~file ~package
         | None -> None
         | Some md -> Some (env.file, Some md)))
     | Global (module_name, path) -> (
-      match Process_cmt.file_for_module ~package module_name with
+      match Process_cmt.file_for_module ~state ~package module_name with
       | None -> None
       | Some file -> (
         let env = Query_env.from_file file in
-        match Resolve_path.resolve_path ~env ~package ~path with
+        match Resolve_path.resolve_path ~state ~env ~package ~path with
         | None -> None
         | Some (env, name) -> (
           match Exported.find env.exported Exported.Module name with
@@ -292,11 +296,11 @@ let rec resolve_module_reference ?(paths_seen = []) ~file ~package
       | None -> None
       | Some ({item = Ident path} as md) when not (List.mem path paths_seen) ->
         (* avoid possible infinite loops *)
-        resolve_module_reference ~file ~package ~paths_seen:(path :: paths_seen)
-          md
+        resolve_module_reference ~state ~file ~package
+          ~paths_seen:(path :: paths_seen) md
       | Some md -> Some (file, Some md))
     | GlobalMod name -> (
-      match Process_cmt.file_for_module ~package name with
+      match Process_cmt.file_for_module ~state ~package name with
       | None -> None
       | Some file -> Some (file, None)))
 
@@ -311,11 +315,12 @@ let validate_loc (loc : Location.t) (backup : Location.t) =
     else backup
   else loc
 
-let resolve_module_definition ~(file : File.t) ~package stamp =
+let resolve_module_definition ?state ~(file : File.t) ~package stamp =
+  let state = Option.value state ~default:package.state in
   match Stamps.find_module file.stamps stamp with
   | None -> None
   | Some md -> (
-    match resolve_module_reference ~file ~package md with
+    match resolve_module_reference ~state ~file ~package md with
     | None -> None
     | Some (file, declared) ->
       let loc =
@@ -325,7 +330,8 @@ let resolve_module_definition ~(file : File.t) ~package stamp =
       in
       Some (file.uri, loc))
 
-let definition ~file ~package stamp (tip : Tip.t) =
+let definition ?state ~file ~package stamp (tip : Tip.t) =
+  let state = Option.value state ~default:package.state in
   match tip with
   | Constructor name -> (
     match get_constructor file stamp name with
@@ -335,13 +341,13 @@ let definition ~file ~package stamp (tip : Tip.t) =
     match get_field file stamp name with
     | None -> None
     | Some field -> Some (file.uri, field.fname.loc))
-  | Module -> resolve_module_definition ~file ~package stamp
+  | Module -> resolve_module_definition ~state ~file ~package stamp
   | _ -> (
     match declared_for_tip ~stamps:file.stamps stamp tip with
     | None -> None
     | Some declared ->
       let file_impl, declared_impl =
-        match alternate_declared ~package ~file declared tip with
+        match alternate_declared ~state ~package ~file declared tip with
         | Some (file_impl, _extra, declared_impl) when Uri.is_interface file.uri
           ->
           (file_impl, declared_impl)
@@ -350,12 +356,14 @@ let definition ~file ~package stamp (tip : Tip.t) =
       let loc = validate_loc declared_impl.name.loc declared_impl.extent_loc in
       let env = Query_env.from_file file_impl in
       let uri =
-        Resolve_path.get_source_uri ~env ~package declared_impl.module_path
+        Resolve_path.get_source_uri ~state ~env ~package
+          declared_impl.module_path
       in
       maybe_log ("Inner uri " ^ Uri.to_string uri);
       Some (uri, loc))
 
-let definition_for_loc_item ~full:{file; package} loc_item =
+let definition_for_loc_item ?state ~full:{file; package} loc_item =
+  let state = Option.value state ~default:package.state in
   match loc_item.loc_type with
   | Typed (_, _, Definition (stamp, tip)) -> (
     maybe_log
@@ -367,7 +375,7 @@ let definition_for_loc_item ~full:{file; package} loc_item =
       maybe_log ("Declared " ^ declared.name.txt);
       if declared.is_exported then (
         maybe_log ("exported, looking for alternate " ^ file.module_name);
-        match alternate_declared ~package ~file declared tip with
+        match alternate_declared ~state ~package ~file declared tip with
         | None -> None
         | Some (file, _extra, declared) ->
           let loc = validate_loc declared.name.loc declared.extent_loc in
@@ -388,25 +396,26 @@ let definition_for_loc_item ~full:{file; package} loc_item =
   | LModule (LocalReference (stamp, tip))
   | Typed (_, _, LocalReference (stamp, tip)) ->
     maybe_log ("Local defn " ^ Tip.to_string tip);
-    definition ~file ~package stamp tip
+    definition ~state ~file ~package stamp tip
   | LModule (GlobalReference (module_name, path, tip))
   | Typed (_, _, GlobalReference (module_name, path, tip)) -> (
     maybe_log
       ("Typed GlobalReference moduleName:" ^ module_name ^ " path:"
      ^ path_to_string path ^ " tip:" ^ Tip.to_string tip);
-    match Process_cmt.file_for_module ~package module_name with
+    match Process_cmt.file_for_module ~state ~package module_name with
     | None -> None
     | Some file -> (
       let env = Query_env.from_file file in
-      match exported_for_tip ~env ~path ~package ~tip with
+      match exported_for_tip ~state ~env ~path ~package ~tip with
       | None -> None
       | Some (env, _name, stamp) ->
         (* oooh wht do I do if the stamp is inside a pseudo-file? *)
         maybe_log ("Got stamp " ^ string_of_int stamp);
-        definition ~file:env.file ~package stamp tip))
+        definition ~state ~file:env.file ~package stamp tip))
 
-let dig_constructor ~env ~package path =
-  match Resolve_path.resolve_from_compiler_path ~env ~package path with
+let dig_constructor ?state ~env ~package path =
+  let state = Option.value state ~default:package.state in
+  match Resolve_path.resolve_from_compiler_path ~state ~env ~package path with
   | NotFound -> None
   | Stamp stamp -> (
     match Stamps.find_type env.file.stamps stamp with
@@ -421,7 +430,8 @@ let dig_constructor ~env ~package path =
       | Some t -> Some (env, t)))
   | _ -> None
 
-let type_definition_for_loc_item ~full:{file; package} loc_item =
+let type_definition_for_loc_item ?state ~full:{file; package} loc_item =
+  let state = Option.value state ~default:package.state in
   match loc_item.loc_type with
   | Constant _ | TopLevelModule _ | LModule _ -> None
   | TypeDefinition _ -> Some (file.uri, loc_item.loc)
@@ -430,7 +440,7 @@ let type_definition_for_loc_item ~full:{file; package} loc_item =
     match Shared.dig_constructor typ with
     | None -> None
     | Some path -> (
-      match dig_constructor ~env ~package path with
+      match dig_constructor ~state ~env ~package path with
       | Some (env, declared) -> Some (env.file.uri, declared.item.decl.type_loc)
       | None -> None))
 
@@ -451,7 +461,8 @@ type references = {
   loc_opt: Location.t option; (* None: reference to a toplevel module *)
 }
 
-let for_local_stamp ~full:{file; extra; package} stamp (tip : Tip.t) =
+let for_local_stamp ?state ~full:{file; extra; package} stamp (tip : Tip.t) =
+  let state = Option.value state ~default:package.state in
   let env = Query_env.from_file file in
   match
     match tip with
@@ -473,7 +484,7 @@ let for_local_stamp ~full:{file; extra; package} stamp (tip : Tip.t) =
         | Some declared ->
           if is_visible declared then (
             let alternative_references =
-              match alternate_declared ~package ~file declared tip with
+              match alternate_declared ~state ~package ~file declared tip with
               | None -> []
               | Some (file, extra, {stamp}) -> (
                 match
@@ -540,7 +551,9 @@ let for_local_stamp ~full:{file; extra; package} stamp (tip : Tip.t) =
         (locs |> List.map (fun loc -> {uri = file.uri; loc_opt = Some loc}))
         externals)
 
-let all_references_for_loc_item ~full:({file; package} as full) loc_item =
+let all_references_for_loc_item ?state ~full:({file; package} as full) loc_item
+    =
+  let state = Option.value state ~default:package.state in
   match loc_item.loc_type with
   | TopLevelModule module_name ->
     let other_modules_references =
@@ -568,20 +581,20 @@ let all_references_for_loc_item ~full:({file; package} as full) loc_item =
     in
     List.append target_module_references other_modules_references
   | Typed (_, _, NotFound) | LModule NotFound | Constant _ -> []
-  | TypeDefinition (_, _, stamp) -> for_local_stamp ~full stamp Type
+  | TypeDefinition (_, _, stamp) -> for_local_stamp ~state ~full stamp Type
   | Typed (_, _, (LocalReference (stamp, tip) | Definition (stamp, tip)))
   | LModule (LocalReference (stamp, tip) | Definition (stamp, tip)) ->
     maybe_log
       ("Finding references for " ^ Uri.to_string file.uri ^ " and stamp "
      ^ string_of_int stamp ^ " and tip " ^ Tip.to_string tip);
-    for_local_stamp ~full stamp tip
+    for_local_stamp ~state ~full stamp tip
   | LModule (GlobalReference (module_name, path, tip))
   | Typed (_, _, GlobalReference (module_name, path, tip)) -> (
-    match Process_cmt.file_for_module ~package module_name with
+    match Process_cmt.file_for_module ~state ~package module_name with
     | None -> []
     | Some file -> (
       let env = Query_env.from_file file in
-      match exported_for_tip ~env ~path ~package ~tip with
+      match exported_for_tip ~state ~env ~path ~package ~tip with
       | None -> []
       | Some (env, _name, stamp) -> (
         match
@@ -593,4 +606,4 @@ let all_references_for_loc_item ~full:({file; package} as full) loc_item =
             ("Finding references for (global) " ^ Uri.to_string env.file.uri
            ^ " and stamp " ^ string_of_int stamp ^ " and tip "
            ^ Tip.to_string tip);
-          for_local_stamp ~full stamp tip)))
+          for_local_stamp ~state ~full stamp tip)))
