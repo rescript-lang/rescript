@@ -379,6 +379,7 @@ let extract_docs ~entry_point_file ~debug =
     | true -> Unix.realpath entry_point_file
     | false -> entry_point_file
   in
+  let state = Shared_types.create_state () in
   if debug then Printf.printf "extracting docs for %s\n" path;
   let result =
     match
@@ -401,7 +402,7 @@ let extract_docs ~entry_point_file ~debug =
           else path
         else path
       in
-      match Cmt.load_full_cmt_from_path ~path with
+      match Cmt.load_full_cmt_from_path ~state ~path with
       | None ->
         Error
           (Printf.sprintf
@@ -1003,6 +1004,7 @@ module Extract_codeblocks = struct
 
   let extract_code_blocks ~entry_point_file
       ~(process_docstrings : id:string -> name:string -> string -> unit) =
+    let state = Shared_types.create_state () in
     let path =
       match Filename.is_relative entry_point_file with
       | true -> Unix.realpath entry_point_file
@@ -1024,7 +1026,7 @@ module Extract_codeblocks = struct
             if Sys.file_exists path_as_resi then path_as_resi else path
           else path
         in
-        match Cmt.load_full_cmt_from_path ~path with
+        match Cmt.load_full_cmt_from_path ~state ~path with
         | None ->
           Error
             (Printf.sprintf

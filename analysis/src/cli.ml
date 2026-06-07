@@ -3,24 +3,24 @@ let print_string json =
 let print_null () = `Null |> print_string
 let print_list l = `List l |> print_string
 
-let completion ~debug ~path ~pos ~current_file =
-  let full = Cmt.load_full_cmt_from_path ~path in
+let completion ~state ~debug ~path ~pos ~current_file =
+  let full = Cmt.load_full_cmt_from_path ~state ~path in
   let kind_file = Files.classify_source_file current_file in
   match Files.read_file current_file with
   | None | Some "" -> print_null ()
   | Some source ->
-    Commands.completion ~debug ~source ~kind_file ~pos ~full
+    Commands.completion ~state ~debug ~source ~kind_file ~pos ~full
     |> List.map (fun c -> Lsp.Types.CompletionItem.yojson_of_t c)
     |> print_list
 
-let completion_resolve ~path ~module_path =
-  let full = Cmt.load_full_cmt_from_path ~path in
-  match Commands.completion_resolve ~full ~module_path with
+let completion_resolve ~state ~path ~module_path =
+  let full = Cmt.load_full_cmt_from_path ~state ~path in
+  match Commands.completion_resolve ~state ~full ~module_path with
   | None -> print_null ()
   | Some (`MarkupContent {value}) -> `String value |> print_string
 
-let inlayhint ~path ~pos ~max_length ~debug =
-  let full = Cmt.load_full_cmt_from_path ~path in
+let inlayhint ~state ~path ~pos ~max_length ~debug =
+  let full = Cmt.load_full_cmt_from_path ~state ~path in
   let kind_file = Files.classify_source_file path in
   match Files.read_file path with
   | None -> print_null ()
@@ -32,8 +32,8 @@ let inlayhint ~path ~pos ~max_length ~debug =
       |> print_list
     | None -> print_null ())
 
-let code_lens ~path ~debug =
-  let full = Cmt.load_full_cmt_from_path ~path in
+let code_lens ~state ~path ~debug =
+  let full = Cmt.load_full_cmt_from_path ~state ~path in
   let kind_file = Files.classify_source_file path in
   match Files.read_file path with
   | None -> print_null ()
@@ -43,68 +43,68 @@ let code_lens ~path ~debug =
       lens |> List.map (fun l -> Lsp.Types.CodeLens.yojson_of_t l) |> print_list
     | None -> print_null ())
 
-let hover ~path ~pos ~current_file ~debug ~supports_markdown_links =
-  let full = Cmt.load_full_cmt_from_path ~path in
+let hover ~state ~path ~pos ~current_file ~debug ~supports_markdown_links =
+  let full = Cmt.load_full_cmt_from_path ~state ~path in
   let kind_file = Files.classify_source_file current_file in
   match Files.read_file current_file with
   | None -> print_null ()
   | Some source -> (
     match
       Commands.hover ~source ~kind_file ~pos ~debug ~supports_markdown_links
-        ~full
+        ~state ~full
     with
     | Some value -> Lsp.Types.Hover.yojson_of_t value |> print_string
     | None -> print_null ())
 
-let signature_help ~path ~pos ~current_file ~debug
+let signature_help ~state ~path ~pos ~current_file ~debug
     ~allow_for_constructor_payloads =
-  let full = Cmt.load_full_cmt_from_path ~path in
+  let full = Cmt.load_full_cmt_from_path ~state ~path in
   let kind_file = Files.classify_source_file current_file in
   match Files.read_file current_file with
   | None -> print_null ()
   | Some source -> (
     match
-      Signature_help.signature_help ~source ~kind_file ~pos
+      Commands.signature_help ~state ~source ~kind_file ~pos
         ~allow_for_constructor_payloads ~full ~debug
     with
     | None -> print_null ()
     | Some s -> Lsp.Types.SignatureHelp.yojson_of_t s |> print_string)
 
-let code_action ~path ~start_pos ~end_pos ~current_file ~debug =
+let code_action ~state ~path ~start_pos ~end_pos ~current_file ~debug =
   let kind_file = Files.classify_source_file current_file in
   match Files.read_file current_file with
   | None -> print_null ()
   | Some source ->
-    Xform.extract_code_actions ~path ~start_pos ~end_pos ~source ~kind_file
-      ~debug
+    Xform.extract_code_actions ~state ~path ~start_pos ~end_pos ~source
+      ~kind_file ~debug
     |> List.map (fun c -> Lsp.Types.CodeAction.yojson_of_t c)
     |> print_list
 
-let definition ~path ~pos ~debug =
-  let full = Cmt.load_full_cmt_from_path ~path in
+let definition ~state ~path ~pos ~debug =
+  let full = Cmt.load_full_cmt_from_path ~state ~path in
 
-  match Commands.definition ~full ~pos ~debug with
+  match Commands.definition ~state ~full ~pos ~debug with
   | None -> print_null ()
   | Some location -> location |> Lsp.Types.Location.yojson_of_t |> print_string
 
-let type_definition ~path ~pos ~debug =
-  let full = Cmt.load_full_cmt_from_path ~path in
-  match Commands.type_definition ~full ~pos ~debug with
+let type_definition ~state ~path ~pos ~debug =
+  let full = Cmt.load_full_cmt_from_path ~state ~path in
+  match Commands.type_definition ~state ~full ~pos ~debug with
   | None -> print_null ()
   | Some location -> location |> Lsp.Types.Location.yojson_of_t |> print_string
 
-let references ~path ~pos ~debug =
-  let full = Cmt.load_full_cmt_from_path ~path in
-  let all_locs = Commands.references ~full ~pos ~debug in
+let references ~state ~path ~pos ~debug =
+  let full = Cmt.load_full_cmt_from_path ~state ~path in
+  let all_locs = Commands.references ~state ~full ~pos ~debug in
   if all_locs = [] then print_null ()
   else
     all_locs
     |> List.map (fun l -> Lsp.Types.Location.yojson_of_t l)
     |> print_list
 
-let rename ~path ~pos ~new_name ~debug =
-  let full = Cmt.load_full_cmt_from_path ~path in
-  match Commands.rename ~full ~pos ~new_name ~debug with
+let rename ~state ~path ~pos ~new_name ~debug =
+  let full = Cmt.load_full_cmt_from_path ~state ~path in
+  match Commands.rename ~state ~full ~pos ~new_name ~debug with
   | Some {documentChanges = Some document_changes} ->
     document_changes
     |> List.map (fun c ->
@@ -116,9 +116,9 @@ let rename ~path ~pos ~new_name ~debug =
     |> print_list
   | _ -> print_null ()
 
-let prepare_rename ~path ~pos ~debug =
-  let full = Cmt.load_full_cmt_from_path ~path in
-  match Commands.prepare_rename ~full ~pos ~debug with
+let prepare_rename ~state ~path ~pos ~debug =
+  let full = Cmt.load_full_cmt_from_path ~state ~path in
+  match Commands.prepare_rename ~state ~full ~pos ~debug with
   | None -> print_null ()
   | Some {range; placeholder = None} ->
     Lsp.Types.Range.yojson_of_t range |> print_string
@@ -130,12 +130,12 @@ let prepare_rename ~path ~pos ~debug =
       ]
     |> print_string
 
-let format ~path =
+let format ~state ~path =
   match Files.read_file path with
   | None -> print_null ()
   | Some source -> (
     let kind_file = Files.classify_source_file path in
-    match Commands.format ~source ~kind_file with
+    match Commands.format ~state ~source ~kind_file with
     | Ok text_edits -> (
       match text_edits with
       | {newText} :: _ -> print_string (`String newText)
@@ -168,7 +168,7 @@ let document_symbol ~path =
     |> List.map Lsp.Types.DocumentSymbol.yojson_of_t
     |> print_list
 
-let test ~path =
+let test ~state ~path =
   Uri.strip_path := true;
   match Files.read_file path with
   | None -> assert false
@@ -233,19 +233,19 @@ let test ~path =
             print_endline
               ("Definition " ^ path ^ " " ^ string_of_int line ^ ":"
              ^ string_of_int col);
-            definition ~path ~pos:(line, col) ~debug:true
+            definition ~state ~path ~pos:(line, col) ~debug:true
           | "com" ->
             print_endline
               ("Complete " ^ path ^ " " ^ string_of_int line ^ ":"
              ^ string_of_int col);
             let current_file = create_current_file () in
-            completion ~debug:true ~path ~pos:(line, col) ~current_file;
+            completion ~state ~debug:true ~path ~pos:(line, col) ~current_file;
             Sys.remove current_file
           | "cre" ->
             let module_path = String.sub rest 3 (String.length rest - 3) in
             let module_path = String.trim module_path in
             print_endline ("Completion resolve: " ^ module_path);
-            completion_resolve ~path ~module_path
+            completion_resolve ~state ~path ~module_path
           | "dce" ->
             print_endline ("DCE " ^ path);
             Reanalyze.Run_config.run_config.suppress <- ["src"];
@@ -268,7 +268,7 @@ let test ~path =
               ("Hover " ^ path ^ " " ^ string_of_int line ^ ":"
              ^ string_of_int col);
             let current_file = create_current_file () in
-            hover ~supports_markdown_links:true ~path ~pos:(line, col)
+            hover ~state ~supports_markdown_links:true ~path ~pos:(line, col)
               ~current_file ~debug:true;
             Sys.remove current_file
           | "she" ->
@@ -276,8 +276,8 @@ let test ~path =
               ("Signature help " ^ path ^ " " ^ string_of_int line ^ ":"
              ^ string_of_int col);
             let current_file = create_current_file () in
-            signature_help ~path ~pos:(line, col) ~current_file ~debug:true
-              ~allow_for_constructor_payloads:true;
+            signature_help ~state ~path ~pos:(line, col) ~current_file
+              ~debug:true ~allow_for_constructor_payloads:true;
             Sys.remove current_file
           | "int" ->
             print_endline ("Create Interface " ^ path);
@@ -288,17 +288,17 @@ let test ~path =
               let dir = dirname path in
               dir ++ parent_dir_name ++ "lib" ++ "bs" ++ "src" ++ name
             in
-            Printf.printf "%s" (Create_interface.command ~path ~cmi_file)
+            Printf.printf "%s" (Create_interface.command ~state ~path ~cmi_file)
           | "ref" ->
             print_endline
               ("References " ^ path ^ " " ^ string_of_int line ^ ":"
              ^ string_of_int col);
-            references ~path ~pos:(line, col) ~debug:true
+            references ~state ~path ~pos:(line, col) ~debug:true
           | "pre" ->
             print_endline
               ("PrepareRename " ^ path ^ " " ^ string_of_int line ^ ":"
              ^ string_of_int col);
-            prepare_rename ~path ~pos:(line, col) ~debug:true
+            prepare_rename ~state ~path ~pos:(line, col) ~debug:true
           | "ren" ->
             let new_name = String.sub rest 4 (len - mlen - 4) in
             let () =
@@ -306,12 +306,12 @@ let test ~path =
                 ("Rename " ^ path ^ " " ^ string_of_int line ^ ":"
                ^ string_of_int col ^ " " ^ new_name)
             in
-            rename ~path ~pos:(line, col) ~new_name ~debug:true
+            rename ~state ~path ~pos:(line, col) ~new_name ~debug:true
           | "typ" ->
             print_endline
               ("TypeDefinition " ^ path ^ " " ^ string_of_int line ^ ":"
              ^ string_of_int col);
-            type_definition ~path ~pos:(line, col) ~debug:true
+            type_definition ~state ~path ~pos:(line, col) ~debug:true
           | "xfm" ->
             let current_file = create_current_file () in
             (* +2 is to ensure that the character ^ points to is what's considered the end of the selection. *)
@@ -332,8 +332,8 @@ let test ~path =
             in
             let kind_file = Files.classify_source_file current_file in
             let code_actions =
-              Xform.extract_code_actions ~path ~start_pos ~end_pos ~source
-                ~kind_file ~debug:true
+              Xform.extract_code_actions ~state ~path ~start_pos ~end_pos
+                ~source ~kind_file ~debug:true
             in
             Sys.remove current_file;
             code_actions
@@ -411,11 +411,11 @@ let test ~path =
             print_endline
               ("Inlay Hint " ^ path ^ " " ^ string_of_int line_start ^ ":"
              ^ string_of_int line_end);
-            inlayhint ~path ~pos:(line_start, line_end) ~max_length:"25"
+            inlayhint ~state ~path ~pos:(line_start, line_end) ~max_length:"25"
               ~debug:false
           | "cle" ->
             print_endline ("Code Lens " ^ path);
-            code_lens ~path ~debug:false
+            code_lens ~state ~path ~debug:false
           | "ast" ->
             print_endline
               ("Dump AST " ^ path ^ " " ^ string_of_int line ^ ":"
