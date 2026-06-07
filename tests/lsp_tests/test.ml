@@ -1,4 +1,5 @@
 let ( // ) = Filename.concat
+let ( / ) = Eio.Path.( / )
 let executable = "_build" // "default" // "lsp" // "bin" // "main.exe"
 
 module Client = struct

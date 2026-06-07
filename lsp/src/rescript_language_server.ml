@@ -1,5 +1,7 @@
-let initialization (_client_capabilities : Lsp.Types.ClientCapabilities.t) =
-  let open Lsp.Types in
+open Lsp
+open Types
+
+let initialization (_client_capabilities : ClientCapabilities.t) =
   let textDocumentSync =
     `TextDocumentSyncOptions
       (TextDocumentSyncOptions.create ~openClose:true
@@ -7,8 +9,60 @@ let initialization (_client_capabilities : Lsp.Types.ClientCapabilities.t) =
          ~save:(`SaveOptions (SaveOptions.create ~includeText:false ()))
          ~willSaveWaitUntil:false ())
   in
+  let completionProvider =
+    CompletionOptions.create
+      ~triggerCharacters:["."; ">"; "@"; "~"; "\""; "="; "("]
+      ~resolveProvider:true ()
+  in
+  let codeLensProvider = CodeLensOptions.create ~resolveProvider:false () in
+  let signatureHelpProvider =
+    SignatureHelpOptions.create ~triggerCharacters:["("]
+      ~retriggerCharacters:["="; ","] ()
+  in
+  let inlayHintProvider =
+    `InlayHintOptions (InlayHintOptions.create ~resolveProvider:false ())
+  in
+  let renameProvider =
+    `RenameOptions (RenameOptions.create ~prepareProvider:true ())
+  in
+  let workspace =
+    let workspaceFolders =
+      WorkspaceFoldersServerCapabilities.create ~supported:true
+        ~changeNotifications:(`Bool true) ()
+    in
+    ServerCapabilities.create_workspace ~workspaceFolders ()
+  in
+  let semanticTokensProvider =
+    let legend =
+      SemanticTokensLegend.create ~tokenModifiers:[]
+        ~tokenTypes:
+          [
+            "operator";
+            "variable";
+            "type";
+            (* emit jsx-tag < and > in <div> as modifier *)
+            "modifier";
+            "namespace";
+            "enumMember";
+            "property";
+            (* emit jsxlowercase, div in <div> as interface *)
+            "interface";
+          ]
+    in
+    let full = `Full (SemanticTokensOptions.create_full ~delta:false ()) in
+    `SemanticTokensOptions (SemanticTokensOptions.create ~legend ~full ())
+  in
+  let codeActionProvider =
+    `CodeActionOptions (CodeActionOptions.create ~resolveProvider:false ())
+  in
   let capabilities =
-    ServerCapabilities.create ~textDocumentSync ~hoverProvider:(`Bool true) ()
+    ServerCapabilities.create ~textDocumentSync ~completionProvider
+      ~codeLensProvider ~hoverProvider:(`Bool true) ~signatureHelpProvider
+      ~renameProvider ~workspace ~semanticTokensProvider ~inlayHintProvider
+      ~definitionProvider:(`Bool true) ~typeDefinitionProvider:(`Bool true)
+      ~codeActionProvider ~documentSymbolProvider:(`Bool true)
+      ~referencesProvider:(`Bool true) ~documentFormattingProvider:(`Bool true)
+      ()
   in
   let serverInfo =
     let version = "2.0.0-aplha.1" in
@@ -17,41 +71,222 @@ let initialization (_client_capabilities : Lsp.Types.ClientCapabilities.t) =
   in
   InitializeResult.create ~capabilities ~serverInfo ()
 
-let get_updated_diagnostics (state : State.t) =
+let get_updated_diagnostics_from_log (state : State.t) =
   let workspace_root = State.workspace_root state in
   let diagnostics =
     Compiler.collect_diagnostics_from_log_using_source_dirs workspace_root state
-    |> Diagnostics.convert_to_lsp workspace_root
+    |> Diagnostics.to_lsp_format workspace_root state.store
   in
-  Diagnostics.set ~diagnostics (State.diagnostics state)
+  Diagnostics.overwrite ~new_diagnostics:diagnostics (State.diagnostics state)
 
-let on_initialize (params : Lsp.Types.InitializeParams.t)
-    (server : State.t Server.t) =
+let on_initialize (params : InitializeParams.t) (server : State.t Server.t) =
   let state = Server.state server in
 
   let diagnostics =
     Diagnostics.create ~diagnostics:Diagnostics.Uri_map.empty
-      ~send:(fun publish_diagnostics ->
-        publish_diagnostics
-        |> List.iter (fun publish_diagnostic_params ->
-               Server.notification
-                 (Lsp.Server_notification.PublishDiagnostics
-                    publish_diagnostic_params) server))
+      ~send:(fun publish_diagnostics_params ->
+        Server.notification
+          (Server_notification.PublishDiagnostics publish_diagnostics_params)
+          server)
   in
   let state = State.initialize state ~params ~diagnostics in
   let initialization_info = initialization params.capabilities in
   (initialization_info, state)
 
-let on_request (Lsp.Client_request.E request) (server : State.t Server.t) =
+let on_request (Client_request.E request) (server : State.t Server.t) =
   let state = Server.state server in
-  let ok value = Ok (Lsp.Client_request.yojson_of_result request value) in
+  let ok value = Ok (Client_request.yojson_of_result request value) in
+
   match request with
-  | Lsp.Client_request.Initialize params ->
+  | Client_request.Initialize params ->
     let initialization_info, state = on_initialize params server in
     (ok initialization_info, state)
   | Shutdown -> (ok (), state)
-  | TextDocumentHover {position; textDocument = {uri}; _} ->
-    (ok (Hover.create ~position ~uri server), state)
+  | TextDocumentHover {position; textDocument = {uri}} ->
+    let source = (Document_store.get ~uri state.store).text in
+    let full =
+      Analysis.Cmt.load_full_cmt_from_path ~path:(DocumentUri.to_path uri)
+    in
+    let hover =
+      Analysis.Commands.hover ~source ~kind_file:(Document.kind uri)
+        ~pos:(position.line, position.character)
+        ~debug:false
+          (* TODO: supports_markdown_links should be get from client capabilities *)
+        ~supports_markdown_links:false ~full
+    in
+    (ok hover, state)
+  | TextDocumentCompletion {textDocument = {uri}; position} ->
+    let source = (Document_store.get ~uri state.store).text in
+    let full =
+      Analysis.Cmt.load_full_cmt_from_path ~path:(DocumentUri.to_path uri)
+    in
+    let comp =
+      Analysis.Commands.completion ~debug:false ~source
+        ~kind_file:(Document.kind uri)
+        ~pos:(position.line, position.character)
+        ~full
+    in
+    (ok (Some (`List comp)), state)
+  | CompletionItemResolve item ->
+    let resp =
+      match (item.documentation, item.data) with
+      (* documentation === null && item.data != null (https://github.com/rescript-lang/rescript-vscode/blob/2bc69d29ed92e19b14054952bafe9d4af7bd4c4b/server/src/server.ts#L958-L970)
+      *)
+      | None, Some (`Assoc _) -> (
+        match item.data with
+        | Some (`Assoc fields) -> (
+          let file_path = List.assoc_opt "filePath" fields in
+          let module_path = List.assoc_opt "modulePath" fields in
+          match (file_path, module_path) with
+          | Some (`String file_path), Some (`String module_path) ->
+            let full = Analysis.Cmt.load_full_cmt_from_path ~path:file_path in
+            let documentation =
+              Analysis.Commands.completion_resolve ~full ~module_path
+            in
+            Some {item with documentation}
+          | _ -> None)
+        | _ -> None)
+      | _ -> None
+    in
+    (ok (resp |> Option.value ~default:item), state)
+  | SignatureHelp {textDocument = {uri}; position} ->
+    let source = (Document_store.get ~uri state.store).text in
+    let full =
+      Analysis.Cmt.load_full_cmt_from_path ~path:(DocumentUri.to_path uri)
+    in
+    let resp =
+      match
+        Analysis.Commands.signature_help ~source ~kind_file:(Document.kind uri)
+          ~pos:(position.line, position.character)
+          ~full ~allow_for_constructor_payloads:true ~debug:false
+      with
+      | Some s -> s
+      | None -> SignatureHelp.create ~signatures:[] ()
+    in
+    (ok resp, state)
+  | TextDocumentDefinition {textDocument = {uri}; position} ->
+    let full =
+      Analysis.Cmt.load_full_cmt_from_path ~path:(DocumentUri.to_path uri)
+    in
+    let resp =
+      match
+        Analysis.Commands.definition ~full
+          ~pos:(position.line, position.character)
+          ~debug:false
+      with
+      | Some loc -> Some (`Location [loc])
+      | None -> None
+    in
+    (ok resp, state)
+  | TextDocumentTypeDefinition {textDocument = {uri}; position} ->
+    let full =
+      Analysis.Cmt.load_full_cmt_from_path ~path:(DocumentUri.to_path uri)
+    in
+    let resp =
+      match
+        Analysis.Commands.type_definition ~full
+          ~pos:(position.line, position.character)
+          ~debug:false
+      with
+      | Some loc -> Some (`Location [loc])
+      | None -> None
+    in
+    (ok resp, state)
+  | TextDocumentReferences {textDocument = {uri}; position} ->
+    let full =
+      Analysis.Cmt.load_full_cmt_from_path ~path:(DocumentUri.to_path uri)
+    in
+    let resp =
+      Analysis.Commands.references ~full
+        ~pos:(position.line, position.character)
+        ~debug:false
+    in
+    (ok (Some resp), state)
+  | DocumentSymbol {textDocument = {uri}} -> (
+    (* NOTE: Client side bug. For some reason, Neovim requests the document symbol before sending the TextDocumentDidOpen notification. *)
+    match Document_store.get_opt ~uri state.store with
+    | None -> (ok None, state)
+    | Some {text} ->
+      let resp =
+        Analysis.Document_symbol.get_symbols ~source:text
+          ~kind_file:(Document.kind uri)
+      in
+      (ok (Some (`DocumentSymbol resp)), state))
+  | CodeAction {textDocument = {uri}; range = {start; end_}} ->
+    let source = (Document_store.get ~uri state.store).text in
+    let resp =
+      Analysis.Xform.extract_code_actions ~path:(Uri.to_path uri)
+        ~start_pos:(start.line, start.character)
+        ~end_pos:(end_.line, end_.character)
+        ~source ~kind_file:(Document.kind uri) ~debug:false
+      |> List.map (fun ca -> `CodeAction ca)
+    in
+    (ok (Some resp), state)
+  | TextDocumentCodeLens {textDocument = {uri}} ->
+    let source = (Document_store.get ~uri state.store).text in
+    let full =
+      Analysis.Cmt.load_full_cmt_from_path ~path:(DocumentUri.to_path uri)
+    in
+    let resp =
+      Analysis.Hint.code_lens ~source ~kind_file:(Document.kind uri) ~full
+        ~debug:false
+    in
+    (ok (resp |> Option.value ~default:[]), state)
+  | InlayHint {textDocument = {uri}; range = {start; end_}} ->
+    let source = (Document_store.get ~uri state.store).text in
+    let full =
+      Analysis.Cmt.load_full_cmt_from_path ~path:(DocumentUri.to_path uri)
+    in
+    let resp =
+      Analysis.Hint.inlay ~source ~kind_file:(Document.kind uri) ~full
+        ~pos:(start.line, end_.line) (* TODO: max_length should be a config *)
+        ~max_length:(string_of_int 25) ~debug:false
+    in
+    (ok resp, state)
+  | SemanticTokensFull {textDocument = {uri}} ->
+    let source = (Document_store.get ~uri state.store).text in
+    let resp =
+      Analysis.Semantic_tokens.semantic_tokens ~source
+        ~kind_file:(Document.kind uri)
+    in
+    (ok (Some resp), state)
+  | TextDocumentRename {textDocument = {uri}; position; newName} ->
+    let full =
+      Analysis.Cmt.load_full_cmt_from_path ~path:(DocumentUri.to_path uri)
+    in
+    let resp =
+      match
+        Analysis.Commands.rename ~full
+          ~pos:(position.line, position.character)
+          ~new_name:newName ~debug:false
+      with
+      | Some we -> we
+      | None -> WorkspaceEdit.create ()
+    in
+    (ok resp, state)
+  | TextDocumentPrepareRename {textDocument = {uri}; position} ->
+    let full =
+      Analysis.Cmt.load_full_cmt_from_path ~path:(DocumentUri.to_path uri)
+    in
+    let resp =
+      match
+        Analysis.Commands.prepare_rename ~full
+          ~pos:(position.line, position.character)
+          ~debug:false
+      with
+      | Some {range} -> Some range
+      | None -> None
+    in
+    (ok resp, state)
+  | TextDocumentFormatting {textDocument = {uri}} ->
+    let source = (Document_store.get ~uri state.store).text in
+
+    let resp =
+      match Analysis.Commands.format ~source ~kind_file:(Document.kind uri) with
+      | Ok text_edit -> Some text_edit
+      | Error _ -> None
+    in
+    (ok resp, state)
   | _ ->
     let err =
       Jsonrpc.Response.Error.make
@@ -64,20 +299,36 @@ let on_notification notification (server : State.t Server.t) =
   let state = Server.state server in
 
   match notification with
-  | Lsp.Client_notification.TextDocumentDidOpen
+  | Client_notification.TextDocumentDidOpen
       {textDocument = {uri; text; version; _}} ->
-    let store = Document_store.open_document ~uri ~text ~version state.store in
-    let diagnostics = get_updated_diagnostics state in
+    let store = Document_store.add ~uri ~text ~version state.store in
+    let diagnostics = get_updated_diagnostics_from_log state in
     diagnostics |> Diagnostics.send;
     {state with store} |> State.update_diagnostics diagnostics
-  | TextDocumentDidChange _ -> state
+  | TextDocumentDidChange {contentChanges; textDocument = {uri; version}} ->
+    let store =
+      match List.rev contentChanges with
+      | {text} :: _ -> Document_store.update ~uri ~text ~version state.store
+      | [] -> state.store
+    in
+    let diagnostics = get_updated_diagnostics_from_log state in
+    let syntax_erros_diagnostics =
+      Diagnostics.from_uri ~uri
+        (Analysis.Diagnostics.document_syntax
+           ~source:(Document_store.get ~uri store).text
+           ~kind_file:(Document.kind uri))
+    in
+
+    Diagnostics.append ~new_diagnostics:syntax_erros_diagnostics diagnostics
+    |> Diagnostics.send;
+
+    {state with store} |> State.update_diagnostics diagnostics
   | TextDocumentDidClose {textDocument = {uri; _}} ->
-    let store = Document_store.remove_document ~uri state.store in
-    let diagnostics = get_updated_diagnostics state in
+    let store = Document_store.remove ~uri state.store in
+    let diagnostics = get_updated_diagnostics_from_log state in
     diagnostics |> Diagnostics.send;
     {state with store} |> State.update_diagnostics diagnostics
   | Initialized ->
-    let open Lsp.Types in
     (* Register dynamic file watchers for compiler log files.
        ReScript writes one .compiler.log per build root. In monorepos,
        .sourcedirs.json contains the build_root entries for each subpackage,
@@ -105,7 +356,7 @@ let on_notification notification (server : State.t Server.t) =
         ~method_:"workspace/didChangeWatchedFiles" ~registerOptions ()
     in
     let params = RegistrationParams.create ~registrations:[registration] in
-    Server.request (Lsp.Server_request.ClientRegisterCapability params) server;
+    Server.request (Server_request.ClientRegisterCapability params) server;
 
     state
   | DidChangeWatchedFiles _ ->
@@ -114,7 +365,7 @@ let on_notification notification (server : State.t Server.t) =
        can change diagnostics that should be shown for files in another
        subpackage. Re-read every compiler log listed in .sourcedirs.json so
        stale errors are cleared and cross-package diagnostics stay in sync. *)
-    let diagnostics = get_updated_diagnostics state in
+    let diagnostics = get_updated_diagnostics_from_log state in
     diagnostics |> Diagnostics.send;
     state |> State.update_diagnostics diagnostics
   | Exit -> state

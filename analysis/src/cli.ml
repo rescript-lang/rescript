@@ -159,6 +159,15 @@ let semantic_tokens ~path =
     let tokens = Semantic_tokens.semantic_tokens ~source ~kind_file in
     Lsp.Types.SemanticTokens.yojson_of_t tokens |> print_string
 
+let document_symbol ~path =
+  match Files.read_file path with
+  | None -> print_null ()
+  | Some source ->
+    let kind_file = Files.classify_source_file path in
+    Document_symbol.get_symbols ~source ~kind_file
+    |> List.map Lsp.Types.DocumentSymbol.yojson_of_t
+    |> print_list
+
 let test ~path =
   Uri.strip_path := true;
   match Files.read_file path with
@@ -245,7 +254,7 @@ let test ~path =
             Dce_command.command ()
           | "doc" ->
             print_endline ("DocumentSymbol " ^ path);
-            Document_symbol.command ~path
+            document_symbol ~path
           | "hig" ->
             print_endline ("Highlight " ^ path);
             let source = Files.read_file path |> Option.get in

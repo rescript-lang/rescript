@@ -1,31 +1,31 @@
 module Parse : sig
-  type filepath = Relative_path of string | Full_path of string
+  type path = Relative_path of string | Full_path of string
 
-  type error =
+  type entry =
     | Syntax_error
     | Warning
     | Common_error (* type error, value can't be found *)
     | Circular_dependency
     | Unknow
 
-  type diagnostic_entry = {error: error; diagnostic: Lsp.Types.Diagnostic.t}
+  type diagnostic_entry = {entry: entry; diagnostic: Lsp.Types.Diagnostic.t}
 
-  val parse_log_content : string -> (filepath * diagnostic_entry) list
+  val parse_log_content : string -> (path * diagnostic_entry) list
 end = struct
   type position = {line: int; col: int}
 
   type range = {start_pos: position; end_pos: position}
 
-  type filepath = Relative_path of string | Full_path of string
+  type path = Relative_path of string | Full_path of string
 
-  type error =
+  type entry =
     | Syntax_error
     | Warning
     | Common_error
     | Circular_dependency
     | Unknow
 
-  type diagnostic_entry = {error: error; diagnostic: Lsp.Types.Diagnostic.t}
+  type diagnostic_entry = {entry: entry; diagnostic: Lsp.Types.Diagnostic.t}
 
   type location_format = Path_location | File_location
 
@@ -453,7 +453,7 @@ end = struct
             | None -> None)
         in
 
-        let error =
+        let entry =
           match location_format with
           | File_location -> kind_from_message raw_message_lines
           | Path_location -> (
@@ -465,14 +465,14 @@ end = struct
         let message = message_from_lines raw_message_lines in
 
         let diagnostic = make_diagnostic ?severity ~range ~message () in
-        (filepath, {error; diagnostic}) :: build rest
+        (filepath, {entry; diagnostic}) :: build rest
     in
 
     let dependency_cycle_diagnostics =
       parse_dependency_cycle_entries lines len
-      |> List.map (fun (filepath, error, range, severity, message) ->
+      |> List.map (fun (filepath, entry, range, severity, message) ->
              let diagnostic = make_diagnostic ~severity ~range ~message () in
-             (filepath, {error; diagnostic}))
+             (filepath, {entry; diagnostic}))
     in
 
     build diagnostics @ dependency_cycle_diagnostics
@@ -482,21 +482,20 @@ end
 let%expect_test "parse log" =
   let print_logs logs =
     logs
-    |> List.iter
-         (fun ((filepath : Parse.filepath), (entry : Parse.diagnostic_entry)) ->
-           let filepath =
-             match filepath with
+    |> List.iter (fun ((path : Parse.path), (entry : Parse.diagnostic_entry)) ->
+           let path =
+             match path with
              | Parse.Relative_path p -> Printf.sprintf "Relative_path(%s)" p
              | Full_path p -> Printf.sprintf "Full_path(%s)" p
            in
            print_endline
-             ((match entry.error with
+             ((match entry.entry with
               | Syntax_error -> "Syntax_error"
               | Warning -> "Warning"
               | Unknow -> "Unknow"
               | Circular_dependency -> "Circular_dependency"
               | Common_error -> "Common_error")
-             ^ " - " ^ filepath);
+             ^ " - " ^ path);
            Lsp.Types.Diagnostic.yojson_of_t entry.diagnostic
            |> Yojson.Safe.pretty_to_string |> print_endline;
            print_newline ())
