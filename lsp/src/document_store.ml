@@ -8,7 +8,7 @@ let raise ~message =
   Jsonrpc.Response.Error.raise
     (Jsonrpc.Response.Error.make ~code:InternalError ~message ())
 
-let open_document t ~uri ~text ~version =
+let add t ~uri ~text ~version =
   (match Hashtbl.mem t.documents uri with
   | false -> Hashtbl.add t.documents uri {text; version}
   | true ->
@@ -18,7 +18,7 @@ let open_document t ~uri ~text ~version =
            (Lsp.Uri.to_string uri)));
   t
 
-let update_document t ~uri ~text ~version =
+let update t ~uri ~text ~version =
   (match Hashtbl.find_opt t.documents uri with
   | None ->
     raise
@@ -28,7 +28,7 @@ let update_document t ~uri ~text ~version =
   | Some _ -> Hashtbl.replace t.documents uri {text; version});
   t
 
-let remove_document t ~uri =
+let remove t ~uri =
   (match Hashtbl.mem t.documents uri with
   | true -> Hashtbl.remove t.documents uri
   | false ->
@@ -38,8 +38,10 @@ let remove_document t ~uri =
            (Lsp.Uri.to_string uri)));
   t
 
-let get_document t ~uri =
-  match Hashtbl.find_opt t.documents uri with
+let get_opt t ~uri = Hashtbl.find_opt t.documents uri
+
+let get t ~uri =
+  match get_opt t ~uri with
   | Some doc -> doc
   | None ->
     raise

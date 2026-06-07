@@ -164,7 +164,7 @@ let rec input_loop ~input ~state with_ =
   | Some packet ->
     let state = with_ state packet in
     input_loop ~input ~state with_
-  | exception _ -> raise (Failure "Server.input_loop")
+  | exception _ -> failwith "Server.input_loop"
   | None -> ()
 
 let listen ~input ~output ~on_request ~on_notification ~state =

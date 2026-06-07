@@ -3,4 +3,6 @@
  (libraries lsp eio analysis)
  (inline_tests)
  (preprocess
-  (pps ppx_expect)))
+  (pps ppx_expect))
+ (flags
+  (:standard -w +a-4-9-30-40-41-42-48-70)))

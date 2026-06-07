@@ -145,7 +145,7 @@ let main () =
     Cli.type_definition ~path
       ~pos:(int_of_string line, int_of_string col)
       ~debug
-  | [_; "documentSymbol"; path] -> Document_symbol.command ~path
+  | [_; "documentSymbol"; path] -> Cli.document_symbol ~path
   | [_; "hover"; path; line; col; current_file; supports_markdown_links] ->
     Cli.hover ~path
       ~pos:(int_of_string line, int_of_string col)
