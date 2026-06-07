@@ -101,7 +101,6 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
   | Client_request.Initialize params ->
     let initialization_info, state = on_initialize params server in
     (ok initialization_info, state)
-  | Shutdown -> (ok (), state)
   | TextDocumentHover {position; textDocument = {uri}} ->
     let source = (Document_store.get ~uri state.store).text in
     let full =
@@ -287,11 +286,35 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
       | Error _ -> None
     in
     (ok resp, state)
-  | _ ->
+  | Shutdown -> (ok (), state)
+  | DebugTextDocumentGet _ | DebugEcho _ | WorkspaceSymbol _
+  | CodeActionResolve _ | ExecuteCommand _ | TextDocumentColor _
+  | TextDocumentColorPresentation _ | TextDocumentCodeLensResolve _
+  | TextDocumentHighlight _ | TextDocumentFoldingRange _
+  | TextDocumentLinkResolve _ | TextDocumentLink _
+  | WillSaveWaitUntilTextDocument _ | TextDocumentRangeFormatting _
+  | TextDocumentOnTypeFormatting _ | SelectionRange _
+  | TextDocumentImplementation _ | SemanticTokensDelta _ | TextDocumentMoniker _
+  | TextDocumentPrepareCallHierarchy _ | CallHierarchyIncomingCalls _
+  | CallHierarchyOutgoingCalls _ | SemanticTokensRange _ | LinkedEditingRange _
+  | WillCreateFiles _ | WillRenameFiles _ | WillDeleteFiles _
+  | InlayHintResolve _ | TextDocumentDiagnostic _
+  | TextDocumentInlineCompletion _ | TextDocumentInlineValue _
+  | WorkspaceSymbolResolve _ | WorkspaceDiagnostic _
+  | TextDocumentRangesFormatting _ | TextDocumentPrepareTypeHierarchy _
+  | TypeHierarchySupertypes _ | TypeHierarchySubtypes _
+  | TextDocumentDeclaration _ ->
+    let err =
+      Jsonrpc.Response.Error.make ~message:"Request not supported yet!"
+        ~code:InternalError ()
+    in
+    (Error err, state)
+  | UnknownRequest {meth} ->
     let err =
       Jsonrpc.Response.Error.make
-        ~code:Jsonrpc.Response.Error.Code.MethodNotFound
-        ~message:"Request method not supported" ()
+        ~code:Jsonrpc.Response.Error.Code.InvalidRequest
+        ~message:(Printf.sprintf "Unknown request %s" meth)
+        ()
     in
     (Error err, state)
 
@@ -359,6 +382,7 @@ let on_notification notification (server : State.t Server.t) =
     Server.request (Server_request.ClientRegisterCapability params) server;
 
     state
+  | Exit -> state
   | DidChangeWatchedFiles _ ->
     (* Do not limit diagnostics to the path reported by
        DidChangeWatchedFilesParams. In monorepos, a build in one subpackage
@@ -368,8 +392,17 @@ let on_notification notification (server : State.t Server.t) =
     let diagnostics = get_updated_diagnostics_from_log state in
     diagnostics |> Diagnostics.send;
     state |> State.update_diagnostics diagnostics
-  | Exit -> state
-  | _ -> state
+  | ChangeConfiguration _ | ChangeWorkspaceFolders _ | CancelRequest _
+  | DidSaveTextDocument _ | DidCreateFiles _ | DidDeleteFiles _
+  | DidRenameFiles _ | WillSaveTextDocument _ | WorkDoneProgressCancel _
+  | WorkDoneProgress _ | NotebookDocumentDidOpen _ | NotebookDocumentDidChange _
+  | NotebookDocumentDidSave _ | NotebookDocumentDidClose _ | SetTrace _ ->
+    state
+  | UnknownNotification {method_} ->
+    Server.log_message_notification ~kind:MessageType.Error
+      ("Unknown notication " ^ method_)
+      server;
+    state
 
 let listen ~input ~output ~fs =
   let state = State.create ~store:(Document_store.create ()) ~fs in

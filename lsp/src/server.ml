@@ -159,6 +159,29 @@ let show_message_notification ?(kind = Lsp.Types.MessageType.Info) message
        (Lsp.Types.ShowMessageParams.create ~type_:kind ~message))
     server
 
+type lifecycle = Awaiting_initialize | Running | Shutdown_requested
+
+let error_response ~id ~code ~message =
+  let err = Jsonrpc.Response.Error.make ~code ~message () in
+  Jsonrpc.Response.{id; result = Error err}
+
+let is_initialize_request (request : Jsonrpc.Request.t) =
+  request.method_ = "initialize"
+
+let is_shutdown_request (request : Jsonrpc.Request.t) =
+  request.method_ = "shutdown"
+
+let is_exit_notification (notification : Jsonrpc.Notification.t) =
+  notification.method_ = "exit"
+
+let exit_from_lifecycle lifecycle =
+  let exit_code =
+    match lifecycle with
+    | Shutdown_requested -> 0
+    | _ -> 1
+  in
+  exit exit_code
+
 let rec input_loop ~input ~state with_ =
   match Io.await @@ Lsp_Io.read input with
   | Some packet ->
@@ -168,22 +191,51 @@ let rec input_loop ~input ~state with_ =
   | None -> ()
 
 let listen ~input ~output ~on_request ~on_notification ~state =
+  let lifecycle = ref Awaiting_initialize in
   let handle_request server request =
-    let response, state =
-      match Lsp.Client_request.of_jsonrpc request with
-      | Error message ->
-        let code = Jsonrpc.Response.Error.Code.InvalidParams in
-        let err = Jsonrpc.Response.Error.make ~code ~message () in
-        (Jsonrpc.Response.{id = request.id; result = Error err}, state)
-      | Ok packed ->
-        let result, state = on_request packed server in
-        (Jsonrpc.Response.{id = request.id; result}, state)
-    in
-    respond server response;
-    state
+    match !lifecycle with
+    | Awaiting_initialize when not (is_initialize_request request) ->
+      respond server
+        (error_response ~id:request.id
+           ~code:Jsonrpc.Response.Error.Code.ServerNotInitialized
+           ~message:"Server has not received an initialize request");
+      server.state
+    | Running when is_initialize_request request ->
+      respond server
+        (error_response ~id:request.id
+           ~code:Jsonrpc.Response.Error.Code.InvalidRequest
+           ~message:"Server has already been initialized");
+      server.state
+    | Shutdown_requested ->
+      respond server
+        (error_response ~id:request.id
+           ~code:Jsonrpc.Response.Error.Code.InvalidRequest
+           ~message:"Server has already received a shutdown request");
+      server.state
+    | Awaiting_initialize | Running ->
+      let response, state =
+        match Lsp.Client_request.of_jsonrpc request with
+        | Error message ->
+          let code = Jsonrpc.Response.Error.Code.InvalidParams in
+          let err = Jsonrpc.Response.Error.make ~code ~message () in
+          (Jsonrpc.Response.{id = request.id; result = Error err}, state)
+        | Ok packed ->
+          let result, state = on_request packed server in
+          (Jsonrpc.Response.{id = request.id; result}, state)
+      in
+      respond server response;
+      (match response.result with
+      | Ok _ when is_initialize_request request -> lifecycle := Running
+      | Ok _ when is_shutdown_request request -> lifecycle := Shutdown_requested
+      | Ok _ | Error _ -> ());
+      state
   in
   let handle_notification server notification =
-    on_notification (notification_of_jsonrpc notification) server
+    if is_exit_notification notification then exit_from_lifecycle !lifecycle
+    else
+      match !lifecycle with
+      | Awaiting_initialize | Shutdown_requested -> server.state
+      | Running -> on_notification (notification_of_jsonrpc notification) server
   in
   let input = Chan.of_source input in
   Chan.with_sink output (fun channel ->
