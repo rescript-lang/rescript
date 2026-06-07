@@ -179,8 +179,7 @@ let exported_for_tip ~state ~env ~path ~package ~(tip : Tip.t) =
       None
     | Some stamp -> Some (env, name, stamp))
 
-let defined_for_loc ?state ~file ~package loc_kind =
-  let state = Option.value state ~default:package.state in
+let defined_for_loc ~state ~file ~package loc_kind =
   let inner ~file stamp (tip : Tip.t) =
     match tip with
     | Constructor name -> (
@@ -227,9 +226,8 @@ let defined_for_loc ?state ~file ~package loc_kind =
           Some res)))
 
 (** Find alternative declaration: from res in case of interface, or from resi in case of implementation  *)
-let alternate_declared ?state ~(file : File.t) ~package
+let alternate_declared ~state ~(file : File.t) ~package
     (declared : _ Declared.t) tip =
-  let state = Option.value state ~default:package.state in
   match Hashtbl.find_opt package.paths_for_module file.module_name with
   | None -> None
   | Some paths -> (
@@ -258,9 +256,8 @@ let alternate_declared ?state ~(file : File.t) ~package
 
       None)
 
-let rec resolve_module_reference ?(paths_seen = []) ?state ~file ~package
+let rec resolve_module_reference ?(paths_seen = []) ~state ~file ~package
     (declared : Module.t Declared.t) =
-  let state = Option.value state ~default:package.state in
   match declared.item with
   | Structure _ -> Some (file, Some declared)
   | Constraint (_moduleItem, module_type_item) ->
@@ -315,8 +312,7 @@ let validate_loc (loc : Location.t) (backup : Location.t) =
     else backup
   else loc
 
-let resolve_module_definition ?state ~(file : File.t) ~package stamp =
-  let state = Option.value state ~default:package.state in
+let resolve_module_definition ~state ~(file : File.t) ~package stamp =
   match Stamps.find_module file.stamps stamp with
   | None -> None
   | Some md -> (
@@ -330,8 +326,7 @@ let resolve_module_definition ?state ~(file : File.t) ~package stamp =
       in
       Some (file.uri, loc))
 
-let definition ?state ~file ~package stamp (tip : Tip.t) =
-  let state = Option.value state ~default:package.state in
+let definition ~state ~file ~package stamp (tip : Tip.t) =
   match tip with
   | Constructor name -> (
     match get_constructor file stamp name with
@@ -362,8 +357,7 @@ let definition ?state ~file ~package stamp (tip : Tip.t) =
       maybe_log ("Inner uri " ^ Uri.to_string uri);
       Some (uri, loc))
 
-let definition_for_loc_item ?state ~full:{file; package} loc_item =
-  let state = Option.value state ~default:package.state in
+let definition_for_loc_item ~state ~full:{file; package} loc_item =
   match loc_item.loc_type with
   | Typed (_, _, Definition (stamp, tip)) -> (
     maybe_log
@@ -413,8 +407,7 @@ let definition_for_loc_item ?state ~full:{file; package} loc_item =
         maybe_log ("Got stamp " ^ string_of_int stamp);
         definition ~state ~file:env.file ~package stamp tip))
 
-let dig_constructor ?state ~env ~package path =
-  let state = Option.value state ~default:package.state in
+let dig_constructor ~state ~env ~package path =
   match Resolve_path.resolve_from_compiler_path ~state ~env ~package path with
   | NotFound -> None
   | Stamp stamp -> (
@@ -430,8 +423,7 @@ let dig_constructor ?state ~env ~package path =
       | Some t -> Some (env, t)))
   | _ -> None
 
-let type_definition_for_loc_item ?state ~full:{file; package} loc_item =
-  let state = Option.value state ~default:package.state in
+let type_definition_for_loc_item ~state ~full:{file; package} loc_item =
   match loc_item.loc_type with
   | Constant _ | TopLevelModule _ | LModule _ -> None
   | TypeDefinition _ -> Some (file.uri, loc_item.loc)
@@ -461,8 +453,7 @@ type references = {
   loc_opt: Location.t option; (* None: reference to a toplevel module *)
 }
 
-let for_local_stamp ?state ~full:{file; extra; package} stamp (tip : Tip.t) =
-  let state = Option.value state ~default:package.state in
+let for_local_stamp ~state ~full:{file; extra; package} stamp (tip : Tip.t) =
   let env = Query_env.from_file file in
   match
     match tip with
@@ -551,9 +542,8 @@ let for_local_stamp ?state ~full:{file; extra; package} stamp (tip : Tip.t) =
         (locs |> List.map (fun loc -> {uri = file.uri; loc_opt = Some loc}))
         externals)
 
-let all_references_for_loc_item ?state ~full:({file; package} as full) loc_item
+let all_references_for_loc_item ~state ~full:({file; package} as full) loc_item
     =
-  let state = Option.value state ~default:package.state in
   match loc_item.loc_type with
   | TopLevelModule module_name ->
     let other_modules_references =

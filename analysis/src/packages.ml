@@ -33,7 +33,7 @@ let get_re_script_version () =
       version
     with Not_found -> default_version)
 
-let new_bs_package ~state ~root_path =
+let new_bs_package ~root_path =
   let rescript_json = Filename.concat root_path "rescript.json" in
 
   let parse_raw raw =
@@ -173,7 +173,6 @@ let new_bs_package ~state ~root_path =
              |> List.map (fun path -> path @ ["place holder"])
            in
            {
-             state;
              generic_jsx_module;
              suffix;
              rescript_version;
@@ -224,7 +223,7 @@ let get_package ~state ~uri =
         (Hashtbl.find state.packages_by_root
            (Hashtbl.find state.root_for_uri uri))
     | Some (`Bs root_path) -> (
-      match new_bs_package ~state ~root_path with
+      match new_bs_package ~root_path with
       | None -> None
       | Some package ->
         Hashtbl.replace state.root_for_uri uri package.root_path;

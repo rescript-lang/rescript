@@ -25,7 +25,9 @@ let inlayhint ~state ~path ~pos ~max_length ~debug =
   match Files.read_file path with
   | None -> print_null ()
   | Some source -> (
-    match Hint.inlay ~source ~kind_file ~pos ~max_length ~full ~debug with
+    match
+      Hint.inlay ~source ~kind_file ~pos ~max_length ~full ~state ~debug
+    with
     | Some hints ->
       hints
       |> List.map (fun h -> Lsp.Types.InlayHint.yojson_of_t h)
@@ -65,7 +67,7 @@ let signature_help ~state ~path ~pos ~current_file ~debug
   | Some source -> (
     match
       Commands.signature_help ~state ~source ~kind_file ~pos
-        ~allow_for_constructor_payloads ~full ~debug
+        ~allow_for_constructor_payloads ~full ~state ~debug
     with
     | None -> print_null ()
     | Some s -> Lsp.Types.SignatureHelp.yojson_of_t s |> print_string)

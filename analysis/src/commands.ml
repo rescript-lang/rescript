@@ -1,6 +1,6 @@
 let completion ~state ~debug ~source ~kind_file ~pos ~full =
   match
-    Completions.get_completions ~debug ~source ~kind_file ~pos ~full
+    Completions.get_completions ~debug ~source ~kind_file ~pos ~full ~state
       ~for_hover:false
   with
   | None -> []

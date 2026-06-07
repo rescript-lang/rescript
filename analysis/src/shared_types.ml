@@ -526,7 +526,6 @@ type state = {
 }
 
 and package = {
-  state: state;
   generic_jsx_module: string option;
   suffix: string;
   root_path: file_path;

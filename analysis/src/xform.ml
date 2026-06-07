@@ -32,7 +32,7 @@ let extract_type_from_expr ~state expr ~debug ~source ~kind_file ~full ~pos =
           match typ with
           | ExtractedType t -> Some t
           | TypeExpr t ->
-            Type_utils.extract_type t ~env ~package:full.package
+            Type_utils.extract_type t ~env ~package:full.package ~state
             |> Type_utils.get_extracted_type
         in
         extracted_type
@@ -480,7 +480,9 @@ module Expand_catch_all_for_variants = struct
           match inner_type with
           | ExtractedType t -> Some t
           | TypeExpr t -> (
-            match Type_utils.extract_type ~env ~package:full.package t with
+            match
+              Type_utils.extract_type ~env ~package:full.package t ~state
+            with
             | None -> None
             | Some (t, _) -> Some t)
         in
@@ -626,7 +628,7 @@ module Exhaustive_switch = struct
         let exhaustive_switch =
           extracted_type_to_exhaustive_cases
             ~env:(Shared_types.Query_env.from_file full.file)
-            ~full extracted_type
+            ~full ~state extracted_type
         in
         match exhaustive_switch with
         | None -> ()
@@ -651,7 +653,7 @@ module Exhaustive_switch = struct
         let exhaustive_switch =
           extracted_type_to_exhaustive_cases
             ~env:(Shared_types.Query_env.from_file full.file)
-            ~full extracted_type
+            ~full ~state extracted_type
         in
         match exhaustive_switch with
         | None -> ()

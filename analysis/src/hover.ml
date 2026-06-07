@@ -66,8 +66,7 @@ type extracted_type = {
   loc: Warnings.loc;
 }
 
-let find_relevant_types_from_type ?state ~file ~package typ =
-  let state = Option.value state ~default:package.state in
+let find_relevant_types_from_type ~state ~file ~package typ =
   (* Expand definitions of types mentioned in typ.
      If typ itself is a record or variant, search its body *)
   let env = Query_env.from_file file in
@@ -111,13 +110,12 @@ let find_relevant_types_from_type ?state ~file ~package typ =
   let constructors = Shared.find_type_constructors types_to_search in
   constructors |> List.filter_map (from_constructor_path ~env:env_to_search)
 
-let expand_types ?state ~file ~package ~supports_markdown_links typ =
-  let state = Option.value state ~default:package.state in
+let expand_types ~state ~file ~package ~supports_markdown_links typ =
   match find_relevant_types_from_type ~state typ ~file ~package with
   | {decl; path} :: _
     when Res_parsetree_viewer.has_inline_record_definition_attribute
            decl.type_attributes ->
-    (* We print inline record types just with their definition, not the constr pointing 
+    (* We print inline record types just with their definition, not the constr pointing
     to them, since that doesn't make sense to show the user. *)
     ( [
         Markdown.code_block
@@ -162,9 +160,8 @@ let expand_types ?state ~file ~package ~supports_markdown_links typ =
       `Default )
 
 (* Produces a hover with relevant types expanded in the main type being hovered. *)
-let hover_with_expanded_types ?state ~file ~package ~supports_markdown_links
+let hover_with_expanded_types ~state ~file ~package ~supports_markdown_links
     ?docstring ?constructor typ =
-  let state = Option.value state ~default:package.state in
   let expanded_types, expansion_type =
     expand_types ~state ~file ~package ~supports_markdown_links typ
   in
@@ -194,6 +191,7 @@ let get_hover_via_completions ~state ~debug ~source ~kind_file ~pos ~for_hover
     ~supports_markdown_links ~full =
   match
     Completions.get_completions ~debug ~source ~kind_file ~pos ~for_hover ~full
+      ~state
   with
   | None -> None
   | Some (completions, ({file; package} as full), scope) -> (
@@ -238,8 +236,7 @@ let get_hover_via_completions ~state ~debug ~source ~kind_file ~pos ~for_hover
       | None -> None)
     | _ -> None)
 
-let new_hover ?state ~full:{file; package} ~supports_markdown_links loc_item =
-  let state = Option.value state ~default:package.state in
+let new_hover ~state ~full:{file; package} ~supports_markdown_links loc_item =
   match loc_item.loc_type with
   | TypeDefinition (name, decl, _stamp) -> (
     let type_def = Markdown.code_block (Shared.decl_to_string name decl) in

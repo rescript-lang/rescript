@@ -278,9 +278,9 @@ let field_to_field_doc (field : Shared_types.field) : field_doc =
     deprecated = field.deprecated;
   }
 
-let type_detail typ ~env ~full =
+let type_detail typ ~env ~full ~state =
   let open Shared_types in
-  match Type_utils.extract_type_from_resolved_type ~env ~full typ with
+  match Type_utils.extract_type_from_resolved_type ~env ~full ~state typ with
   | Some (Trecord {fields}) ->
     Some (Record {field_docs = fields |> List.map field_to_field_doc})
   | Some (Tvariant {constructors}) ->
@@ -470,7 +470,7 @@ let extract_docs ~entry_point_file ~debug =
                                 typ.decl |> Shared.decl_to_string item.name;
                               name = item.name;
                               deprecated = item.deprecated;
-                              detail = type_detail typ ~full ~env;
+                              detail = type_detail typ ~full ~env ~state;
                               source;
                             })
                      | Module {type_ = Ident p; is_module_type = false} ->
@@ -482,7 +482,7 @@ let extract_docs ~entry_point_file ~debug =
                        let items, internal_docstrings =
                          match
                            Process_cmt.file_for_module ~package:full.package
-                             alias_to_module
+                             ~state alias_to_module
                          with
                          | None -> ([], [])
                          | Some file ->
@@ -554,7 +554,7 @@ let extract_docs ~entry_point_file ~debug =
                        let module_type_id_path =
                          match
                            Process_cmt.file_for_module ~package:full.package
-                             ident_module_path
+                             ~state ident_module_path
                            |> Option.is_none
                          with
                          | false -> []

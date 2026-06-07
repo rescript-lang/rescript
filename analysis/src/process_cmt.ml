@@ -793,8 +793,7 @@ let file_for_cmt ~state ~module_name ~cmt ~uri =
       Hashtbl.replace state.cmt_cache cmt file;
       Some file)
 
-let file_for_module ?state module_name ~package =
-  let state = Option.value state ~default:package.state in
+let file_for_module ~state module_name ~package =
   match Hashtbl.find_opt package.paths_for_module module_name with
   | Some paths ->
     let uri = get_uri paths in
