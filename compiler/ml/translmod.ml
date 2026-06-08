@@ -486,7 +486,9 @@ let transl_implementation module_name (str, cc) =
 
 let report_error ppf = function
   | Fragile_pattern_in_toplevel ->
-    Format.fprintf ppf "@[Such fragile pattern not allowed in the toplevel@]"
+    Format.fprintf ppf
+      "@[This pattern can fail to match, so it is not allowed in a top-level \
+       `let` binding.@]"
 
 let () =
   Location.register_error_of_exn (function

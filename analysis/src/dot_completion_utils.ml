@@ -8,9 +8,9 @@ let filter_record_fields ~env ~record_as_string ~prefix ~exact fields =
                 ~kind:(Shared_types.Completion.Field (field, record_as_string)))
          else None)
 
-let field_completions_for_dot_completion ?pos_of_dot typ ~env ~package ~prefix
-    ~exact =
-  let as_object = typ |> Type_utils.extract_object_type ~env ~package in
+let field_completions_for_dot_completion ?pos_of_dot typ ~env ~state ~package
+    ~prefix ~exact =
+  let as_object = typ |> Type_utils.extract_object_type ~env ~state ~package in
   match as_object with
   | Some (obj_env, obj) ->
     (* Handle obj completion via dot *)
@@ -33,7 +33,7 @@ let field_completions_for_dot_completion ?pos_of_dot typ ~env ~package ~prefix
                            pos_of_dot)))
            else None)
   | None -> (
-    match typ |> Type_utils.extract_record_type ~env ~package with
+    match typ |> Type_utils.extract_record_type ~env ~state ~package with
     | Some (env, fields, typ_decl) ->
       fields
       |> filter_record_fields ~env ~prefix ~exact

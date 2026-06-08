@@ -7,5 +7,4 @@
   3 [2m│[0m 
   4 [2m│[0m let _ = f("x")
 
-  %@return directive *_to_opt expect return type to be 
-syntax wise `_ option` for safety
+  This @return directive requires the external's return type to be an option, e.g. `option<int>`.

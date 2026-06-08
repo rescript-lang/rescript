@@ -8,4 +8,4 @@
   [1;31m3[0m [2m│[0m let [1;31mGadt.Pack(_x)[0m = value
   4 [2m│[0m 
 
-  Unexpected existential
+  This pattern introduces an existential type from a GADT constructor, which is not allowed here. Match on it inside a switch instead.

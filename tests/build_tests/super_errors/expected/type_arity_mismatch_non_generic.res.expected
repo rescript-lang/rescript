@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/type_arity_mismatch_non_generic.res[0m:[2m1:8-24[0m
+
+  [1;31m1[0m [2m│[0m let x: [1;31mint<string, bool>[0m = 1
+  2 [2m│[0m 
+
+  The type `int` is not generic so expects no arguments,
+  but is here given 2 arguments.
+  Have you tried removing the angular brackets `<` and `>` and the
+  arguments within them and just writing `int` instead?

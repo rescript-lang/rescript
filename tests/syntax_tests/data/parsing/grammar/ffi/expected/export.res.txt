@@ -6,7 +6,7 @@
   2 │ 
   3 │ export type t = int and export s = string
 
-  consecutive statements on a line must be separated by ';' or a newline
+  Consecutive statements on a line must be separated by ';' or a newline
 
 
   Syntax error!
@@ -18,7 +18,7 @@
   4 │ export type t = int and s = string
   5 │ type t = int and export s = string
 
-  consecutive statements on a line must be separated by ';' or a newline
+  Consecutive statements on a line must be separated by ';' or a newline
 
 
   Syntax error!
@@ -30,7 +30,7 @@
   6 │ 
   7 │ export let callback = _ => Js.log("Clicked")
 
-  consecutive statements on a line must be separated by ';' or a newline
+  Consecutive statements on a line must be separated by ';' or a newline
 
 
   Syntax error!

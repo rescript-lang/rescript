@@ -35,7 +35,7 @@ let set_project_root_from_cwd () =
     | None -> run_config.project_root
     | Some s -> s)
 
-let set_re_script_project_root = lazy (set_project_root_from_cwd ())
+let set_rescript_project_root = lazy (set_project_root_from_cwd ())
 
 module Config = struct
   let read_suppress conf =

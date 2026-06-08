@@ -2,7 +2,7 @@
 
 let is_braced_expr = Res_parsetree_viewer.is_braced_expr
 
-let extract_type_from_expr expr ~debug ~source ~kind_file ~full ~pos =
+let extract_type_from_expr ~state expr ~debug ~source ~kind_file ~full ~pos =
   match
     expr.Parsetree.pexp_loc
     |> Completion_front_end.find_type_of_expression_at_loc ~debug ~source
@@ -13,18 +13,18 @@ let extract_type_from_expr expr ~debug ~source ~kind_file ~full ~pos =
     let env = Shared_types.Query_env.from_file full.Shared_types.file in
     let completions =
       completable
-      |> Completion_back_end.process_completable ~debug ~full ~pos ~scope ~env
-           ~for_hover:true
+      |> Completion_back_end.process_completable ~state ~debug ~full ~pos ~scope
+           ~env ~for_hover:true
     in
     let raw_opens = Scope.get_raw_opens scope in
     match completions with
     | {env} :: _ -> (
       let opens =
-        Completion_back_end.get_opens ~debug ~raw_opens ~package:full.package
-          ~env
+        Completion_back_end.get_opens ~state ~debug ~raw_opens
+          ~package:full.package ~env
       in
       match
-        Completion_back_end.completions_get_completion_type2 ~debug ~full
+        Completion_back_end.completions_get_completion_type2 ~state ~debug ~full
           ~raw_opens ~opens ~pos completions
       with
       | Some (typ, _env) ->
@@ -32,7 +32,7 @@ let extract_type_from_expr expr ~debug ~source ~kind_file ~full ~pos =
           match typ with
           | ExtractedType t -> Some t
           | TypeExpr t ->
-            Type_utils.extract_type t ~env ~package:full.package
+            Type_utils.extract_type t ~env ~package:full.package ~state
             |> Type_utils.get_extracted_type
         in
         extracted_type
@@ -385,8 +385,8 @@ module Expand_catch_all_for_variants = struct
     in
     {Ast_iterator.default_iterator with expr}
 
-  let xform ~source ~kind_file ~path ~pos ~full ~structure ~code_actions ~debug
-      =
+  let xform ~state ~source ~kind_file ~path ~pos ~full ~structure ~code_actions
+      ~debug =
     let result = ref None in
     let iterator = mk_iterator ~pos ~result in
     iterator.structure iterator structure;
@@ -421,7 +421,7 @@ module Expand_catch_all_for_variants = struct
       let current_constructor_names = get_current_constructor_names cases in
       match
         switch_expr
-        |> extract_type_from_expr ~debug ~source ~kind_file ~full
+        |> extract_type_from_expr ~state ~debug ~source ~kind_file ~full
              ~pos:(Pos.of_lexing switch_expr.pexp_loc.loc_end)
       with
       | Some (Tvariant {constructors}) ->
@@ -480,7 +480,9 @@ module Expand_catch_all_for_variants = struct
           match inner_type with
           | ExtractedType t -> Some t
           | TypeExpr t -> (
-            match Type_utils.extract_type ~env ~package:full.package t with
+            match
+              Type_utils.extract_type ~env ~package:full.package t ~state
+            with
             | None -> None
             | Some (t, _) -> Some t)
         in
@@ -592,7 +594,7 @@ module Exhaustive_switch = struct
     in
     {Ast_iterator.default_iterator with expr}
 
-  let xform ~print_expr ~path ~source ~kind_file ~pos ~full ~structure
+  let xform ~state ~print_expr ~path ~source ~kind_file ~pos ~full ~structure
       ~code_actions ~debug =
     (* TODO: Adapt to '(' as leading/trailing character (skip one col, it's not included in the AST) *)
     let result = ref None in
@@ -617,7 +619,7 @@ module Exhaustive_switch = struct
     | Some (Selection {expr}) -> (
       match
         expr
-        |> extract_type_from_expr ~debug ~source ~kind_file ~full
+        |> extract_type_from_expr ~state ~debug ~source ~kind_file ~full
              ~pos:(Pos.of_lexing expr.pexp_loc.loc_start)
       with
       | None -> ()
@@ -626,7 +628,7 @@ module Exhaustive_switch = struct
         let exhaustive_switch =
           extracted_type_to_exhaustive_cases
             ~env:(Shared_types.Query_env.from_file full.file)
-            ~full extracted_type
+            ~full ~state extracted_type
         in
         match exhaustive_switch with
         | None -> ()
@@ -643,7 +645,7 @@ module Exhaustive_switch = struct
     | Some (Switch {switch_expr; completion_expr; pos}) -> (
       match
         completion_expr
-        |> extract_type_from_expr ~debug ~source ~kind_file ~full ~pos
+        |> extract_type_from_expr ~state ~debug ~source ~kind_file ~full ~pos
       with
       | None -> ()
       | Some extracted_type -> (
@@ -651,7 +653,7 @@ module Exhaustive_switch = struct
         let exhaustive_switch =
           extracted_type_to_exhaustive_cases
             ~env:(Shared_types.Query_env.from_file full.file)
-            ~full extracted_type
+            ~full ~state extracted_type
         in
         match exhaustive_switch with
         | None -> ()
@@ -912,7 +914,8 @@ let parse_interface ~source =
   in
   (structure, print_signature_item)
 
-let extract_code_actions ~path ~start_pos ~end_pos ~source ~kind_file ~debug =
+let extract_code_actions ~state ~path ~start_pos ~end_pos ~source ~kind_file
+    ~debug =
   let pos = start_pos in
   let code_actions = ref [] in
   match kind_file with
@@ -931,13 +934,13 @@ let extract_code_actions ~path ~start_pos ~end_pos ~source ~kind_file ~debug =
 
     (* This Code Action needs type info *)
     let () =
-      match Cmt.load_full_cmt_from_path ~path with
+      match Cmt.load_full_cmt_from_path ~state ~path with
       | Some full ->
         Add_type_annotation.xform ~path ~pos ~full ~structure ~code_actions
           ~debug;
-        Expand_catch_all_for_variants.xform ~path ~source ~kind_file ~pos ~full
-          ~structure ~code_actions ~debug;
-        Exhaustive_switch.xform ~print_expr ~path ~source ~kind_file
+        Expand_catch_all_for_variants.xform ~state ~path ~source ~kind_file ~pos
+          ~full ~structure ~code_actions ~debug;
+        Exhaustive_switch.xform ~state ~print_expr ~path ~source ~kind_file
           ~pos:
             (if start_pos = end_pos then Single start_pos
              else Range (start_pos, end_pos))

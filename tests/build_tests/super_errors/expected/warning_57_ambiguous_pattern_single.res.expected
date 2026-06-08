@@ -9,4 +9,4 @@
   5 [2m│[0m   }
 
   Ambiguous or-pattern variables under guard;
-variable n may match different arguments. (See manual section 8.5)
+variable n may match different arguments.

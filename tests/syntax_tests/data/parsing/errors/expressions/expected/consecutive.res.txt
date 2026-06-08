@@ -6,7 +6,7 @@
   2 │ 
   3 │ let f = (g, h) => {
 
-  consecutive statements on a line must be separated by ';' or a newline
+  Consecutive statements on a line must be separated by ';' or a newline
 
 
   Syntax error!
