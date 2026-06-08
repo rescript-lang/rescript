@@ -623,7 +623,7 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
         "Ill defined attribute %@set_index (arity of 3)"
   | {set_index = true} ->
     Bs_syntaxerr.err loc
-      (Conflict_ffi_attribute "Attribute found that conflicts with %@set_index")
+      (Conflict_ffi_attribute "Attribute found that conflicts with @set_index")
   | {
    get_index = true;
    val_name = None;
@@ -649,7 +649,7 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
         arg_type_specs_length
   | {get_index = true} ->
     Bs_syntaxerr.err loc
-      (Conflict_ffi_attribute "Attribute found that conflicts with %@get_index")
+      (Conflict_ffi_attribute "Attribute found that conflicts with @get_index")
   | {
    module_as_val = Some external_module_name;
    get_index = false;
@@ -750,7 +750,7 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
     else Js_call {splice; name; external_module_name; scopes; tagged_template}
   | {call_name = Some _} ->
     Bs_syntaxerr.err loc
-      (Conflict_ffi_attribute "Attribute found that conflicts with %@val")
+      (Conflict_ffi_attribute "Attribute found that conflicts with @val")
   | {
    val_name = Some {name; source = _};
    external_module_name;
@@ -777,7 +777,7 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
     Js_var {name; external_module_name; scopes}
   | {val_name = Some _} ->
     Bs_syntaxerr.err loc
-      (Conflict_ffi_attribute "Attribute found that conflicts with %@val")
+      (Conflict_ffi_attribute "Attribute found that conflicts with @val")
   | {
    splice;
    scopes;
@@ -856,7 +856,7 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
     Js_new {name; external_module_name; splice; scopes}
   | {new_name = Some _} ->
     Bs_syntaxerr.err loc
-      (Conflict_ffi_attribute "Attribute found that conflicts with %@new")
+      (Conflict_ffi_attribute "Attribute found that conflicts with @new")
   | {
    set_name = Some {name; source = _};
    val_name = None;

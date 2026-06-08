@@ -2,8 +2,10 @@ open Shared_types
 type cursor_at_arg = Unlabelled of int | Labelled of string
 
 (* Produces the doc string shown below the signature help for each parameter. *)
-let docs_for_label type_expr ~file ~package ~supports_markdown_links =
-  let types = Hover.find_relevant_types_from_type ~file ~package type_expr in
+let docs_for_label type_expr ~file ~state ~package ~supports_markdown_links =
+  let types =
+    Hover.find_relevant_types_from_type ~state ~file ~package type_expr
+  in
   let type_names = types |> List.map (fun {Hover.name} -> name) in
   let type_definitions =
     types
@@ -33,7 +35,7 @@ let docs_for_label type_expr ~file ~package ~supports_markdown_links =
   in
   type_definitions |> String.concat "\n"
 
-let find_function_type ~debug ~source ~kind_file ~pos ~full =
+let find_function_type ~debug ~source ~kind_file ~pos ~full ~state =
   (* Start by looking at the typed info at the loc of the fn *)
   match full with
   | None -> None
@@ -44,7 +46,7 @@ let find_function_type ~debug ~source ~kind_file ~pos ~full =
       match References.get_loc_item ~full ~pos ~debug:false with
       | Some {loc_type = Typed (_, type_expr, loc_kind)} -> (
         let docstring =
-          match References.defined_for_loc ~file ~package loc_kind with
+          match References.defined_for_loc ~file ~package ~state loc_kind with
           | None -> []
           | Some (docstring, _) -> docstring
         in
@@ -52,7 +54,8 @@ let find_function_type ~debug ~source ~kind_file ~pos ~full =
           Printf.printf "[sig_help_fn] Found loc item: %s.\n"
             (Shared.type_to_string type_expr);
         match
-          Type_utils.extract_function_type2 ~env ~package:full.package type_expr
+          Type_utils.extract_function_type2 ~env ~package:full.package ~state
+            type_expr
         with
         | args, _tRet, _ when args <> [] ->
           Some (args, docstring, type_expr, package, env, file)
@@ -87,7 +90,7 @@ let find_function_type ~debug ~source ~kind_file ~pos ~full =
             Some
               ( completable
                 |> Completion_back_end.process_completable ~debug ~full ~pos
-                     ~scope ~env ~for_hover:true,
+                     ~scope ~state ~env ~for_hover:true,
                 env,
                 package,
                 file ))
@@ -95,7 +98,7 @@ let find_function_type ~debug ~source ~kind_file ~pos ~full =
       match completables with
       | Some ({kind = Value type_expr; docstring} :: _, env, package, file) ->
         let args, _, _ =
-          Type_utils.extract_function_type2 type_expr ~env ~package
+          Type_utils.extract_function_type2 type_expr ~env ~state ~package
         in
         Some (args, docstring, type_expr, package, env, file)
       | _ -> None))
@@ -181,14 +184,16 @@ type constructor_info = {
   args: constructor_args;
 }
 
-let find_constructor_args ~full ~env ~constructor_name loc =
+let find_constructor_args ~full ~env ~state ~constructor_name loc =
   match
     References.get_loc_item ~debug:false ~full
       ~pos:(Pos.of_lexing loc.Location.loc_end)
   with
   | None -> None
   | Some {loc_type = Typed (_, typ_expr, _)} -> (
-    match Type_utils.extract_type ~env ~package:full.package typ_expr with
+    match
+      Type_utils.extract_type ~env ~state ~package:full.package typ_expr
+    with
     | Some ((Toption (_, TypeExpr t) as extracted_type), _) -> (
       match constructor_name with
       | "Some" ->
@@ -238,7 +243,7 @@ let find_constructor_args ~full ~env ~constructor_name loc =
   | _ -> None
 
 let signature_help ~debug ~source ~kind_file ~pos
-    ~allow_for_constructor_payloads ~full =
+    ~allow_for_constructor_payloads ~full ~state =
   match source with
   | "" -> None
   | text -> (
@@ -429,7 +434,9 @@ let signature_help ~debug ~source ~kind_file ~pos
       | Some (_, `FunctionCall (arg_at_cursor, exp, _extractedArgs)) -> (
         (* Not looking for the cursor position after this, but rather the target function expression's loc. *)
         let pos = exp.pexp_loc |> Loc.end_ in
-        match find_function_type ~source ~kind_file ~debug ~pos ~full with
+        match
+          find_function_type ~source ~kind_file ~debug ~pos ~full ~state
+        with
         | Some (args, docstring, type_expr, package, _env, file) ->
           if debug then
             Printf.printf "argAtCursor: %s\n"
@@ -499,7 +506,7 @@ let signature_help ~debug ~source ~kind_file ~pos
                        Lsp.Types.MarkupContent.create
                          ~kind:Lsp.Types.MarkupKind.Markdown
                          ~value:
-                           (docs_for_label ~supports_markdown_links ~file
+                           (docs_for_label ~supports_markdown_links ~file ~state
                               ~package label_typ_expr)
                    in
                    Lsp.Types.ParameterInformation.create
@@ -547,7 +554,7 @@ let signature_help ~debug ~source ~kind_file ~pos
           let env = Query_env.from_file file in
           let constructor_name = Longident.last lid.txt in
           match
-            find_constructor_args ~full ~env ~constructor_name
+            find_constructor_args ~full ~state ~env ~constructor_name
               {lid.loc with loc_start = lid.loc.loc_end}
           with
           | None ->
@@ -584,7 +591,7 @@ let signature_help ~debug ~source ~kind_file ~pos
                   (`SingleArg
                      ( typ |> Shared.type_to_string,
                        docs_for_label ~file:full.file ~package:full.package
-                         ~supports_markdown_links typ ))
+                         ~state ~supports_markdown_links typ ))
               | Args args ->
                 let offset = ref 0 in
                 Some
@@ -600,7 +607,7 @@ let signature_help ~debug ~source ~kind_file ~pos
                             ( arg_text,
                               docs_for_label ~file:full.file
                                 ~package:full.package ~supports_markdown_links
-                                typ,
+                                ~state typ,
                               (start_offset, end_offset) ))))
             in
             let label =

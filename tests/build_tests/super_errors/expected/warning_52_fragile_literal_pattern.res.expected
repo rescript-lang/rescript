@@ -10,4 +10,4 @@
 
   Code should not depend on the actual values of
 this constructor's arguments. They are only for information
-and may change in future versions. (See manual section 8.5)
+and may change in future versions.

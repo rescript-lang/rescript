@@ -8,4 +8,4 @@
   [1;31m4[0m [2m│[0m [1;31m  }[0m
   5 [2m│[0m 
 
-  None of the patterns in this 'match' expression match values.
+  None of the patterns in this switch match values.

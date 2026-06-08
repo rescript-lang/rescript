@@ -782,7 +782,7 @@ let file_for_cmt_infos ~module_name ~uri
     {uri; module_name = cmt_modname; stamps = env.stamps; structure}
   | _ -> File.create module_name uri
 
-let file_for_cmt ~module_name ~cmt ~uri =
+let file_for_cmt ~state ~module_name ~cmt ~uri =
   match Hashtbl.find_opt state.cmt_cache cmt with
   | Some file -> Some file
   | None -> (
@@ -793,13 +793,13 @@ let file_for_cmt ~module_name ~cmt ~uri =
       Hashtbl.replace state.cmt_cache cmt file;
       Some file)
 
-let file_for_module module_name ~package =
+let file_for_module ~state module_name ~package =
   match Hashtbl.find_opt package.paths_for_module module_name with
   | Some paths ->
     let uri = get_uri paths in
     let cmt = get_cmt_path ~uri paths in
     Log.log ("fileForModule " ^ show_paths paths);
-    file_for_cmt ~cmt ~module_name ~uri
+    file_for_cmt ~state ~cmt ~module_name ~uri
   | None ->
     Log.log ("No path for module " ^ module_name);
     None

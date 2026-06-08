@@ -373,7 +373,7 @@ let message = function
     Printf.sprintf "this open statement shadows the %s %s (which is later used)"
       kind s
   | Attribute_payload (a, s) ->
-    Printf.sprintf "illegal payload for attribute '%s'.\n%s" a s
+    Printf.sprintf "illegal payload for attribute @%s.\n%s" a s
   | No_cmi_file (name, None) ->
     "no cmi file was found in path for module " ^ name
   | No_cmi_file (name, Some msg) ->
@@ -383,14 +383,14 @@ let message = function
     Printf.sprintf
       "Code should not depend on the actual values of\n\
        this constructor's arguments. They are only for information\n\
-       and may change in future versions. (See manual section 8.5)"
+       and may change in future versions."
   | Unreachable_case ->
     "this match case is unreachable.\n\
      Consider replacing it with a refutation case '<pat> -> .'"
   | Misplaced_attribute attr_name ->
-    Printf.sprintf "the %S attribute cannot appear in this context" attr_name
+    Printf.sprintf "the @%s attribute cannot appear in this context" attr_name
   | Duplicated_attribute attr_name ->
-    Printf.sprintf "the %S attribute is used more than once on this expression"
+    Printf.sprintf "the @%s attribute is used more than once on this expression"
       attr_name
   | Ambiguous_pattern vars ->
     let msg =
@@ -398,11 +398,11 @@ let message = function
       match vars with
       | [] -> assert false
       | [x] -> "variable " ^ x
-      | _ :: _ -> "variables " ^ String.concat "," vars
+      | _ :: _ -> "variables " ^ String.concat ", " vars
     in
     Printf.sprintf
       "Ambiguous or-pattern variables under guard;\n\
-       %s may match different arguments. (See manual section 8.5)"
+       %s may match different arguments."
       msg
   | Unused_module s -> "unused module " ^ s ^ "."
   | Constraint_on_gadt ->

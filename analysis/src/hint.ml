@@ -4,7 +4,7 @@ type inlay_hint_kind = Type
 let inlay_kind_to_lsp_inlay_hint = function
   | Type -> Lsp.Types.InlayHintKind.Type
 
-let loc_item_to_type_hint ~full:{file; package} loc_item =
+let loc_item_to_type_hint ~state ~full:{file; package} loc_item =
   match loc_item.loc_type with
   | Constant t ->
     Some
@@ -22,7 +22,7 @@ let loc_item_to_type_hint ~full:{file; package} loc_item =
       |> Str.global_replace (Str.regexp "[\r\n\t]") ""
     in
     Some
-      (match References.defined_for_loc ~file ~package loc_kind with
+      (match References.defined_for_loc ~state ~file ~package loc_kind with
       | None -> from_type t
       | Some (_, res) -> (
         match res with
@@ -31,7 +31,7 @@ let loc_item_to_type_hint ~full:{file; package} loc_item =
         | `Field -> from_type t))
   | _ -> None
 
-let inlay ~source ~kind_file ~pos ~max_length ~full ~debug =
+let inlay ~source ~kind_file ~pos ~max_length ~full ~state ~debug =
   let maxlen = try Some (int_of_string max_length) with Failure _ -> None in
   let hints = ref [] in
   let start_line, end_line = pos in
@@ -95,7 +95,7 @@ let inlay ~source ~kind_file ~pos ~max_length ~full ~debug =
                  Lsp.Types.Position.create ~line:range.start.line
                    ~character:range.end_.character
                in
-               match loc_item_to_type_hint loc_item ~full with
+               match loc_item_to_type_hint loc_item ~state ~full with
                | Some label -> (
                  let kind = inlay_kind_to_lsp_inlay_hint hint_kind in
                  let label = ": " ^ label in

@@ -58,7 +58,7 @@ and find_in_module ~(env : Query_env.t) module_ path =
       | None -> None
       | Some {item} -> find_in_module ~env item full_path)
 
-let rec resolve_path ~env ~path ~package =
+let rec resolve_path ~state ~env ~path ~package =
   Log.log ("resolvePath path:" ^ path_to_string path);
   match resolve_path_inner ~env ~path with
   | None -> None
@@ -69,10 +69,11 @@ let rec resolve_path ~env ~path ~package =
       Log.log
         ("resolvePath Global path:" ^ path_to_string full_path ^ " module:"
        ^ module_name);
-      match Process_cmt.file_for_module ~package module_name with
+      match Process_cmt.file_for_module ~state ~package module_name with
       | None -> None
       | Some file ->
-        resolve_path ~env:(Query_env.from_file file) ~path:full_path ~package))
+        resolve_path ~state ~env:(Query_env.from_file file) ~path:full_path
+          ~package))
 
 let from_compiler_path ~(env : Query_env.t) path : resolution =
   match make_path ~env path with
@@ -82,14 +83,14 @@ let from_compiler_path ~(env : Query_env.t) path : resolution =
   | Exported (env, name) -> Exported (env, name)
   | Global (module_name, full_path) -> Global (module_name, full_path)
 
-let resolve_module_from_compiler_path ~env ~package path =
+let resolve_module_from_compiler_path ~state ~env ~package path =
   match from_compiler_path ~env path with
   | Global (module_name, path) -> (
-    match Process_cmt.file_for_module ~package module_name with
+    match Process_cmt.file_for_module ~state ~package module_name with
     | None -> None
     | Some file -> (
       let env = Query_env.from_file file in
-      match resolve_path ~env ~package ~path with
+      match resolve_path ~state ~env ~package ~path with
       | None -> None
       | Some (env, name) -> (
         match Exported.find env.exported Exported.Module name with
@@ -103,7 +104,7 @@ let resolve_module_from_compiler_path ~env ~package path =
     | None -> None
     | Some declared -> Some (env, Some declared))
   | GlobalMod module_name -> (
-    match Process_cmt.file_for_module ~package module_name with
+    match Process_cmt.file_for_module ~state ~package module_name with
     | None -> None
     | Some file ->
       let env = Query_env.from_file file in
@@ -117,15 +118,15 @@ let resolve_module_from_compiler_path ~env ~package path =
       | None -> None
       | Some declared -> Some (env, Some declared)))
 
-let resolve_from_compiler_path ~env ~package path =
+let resolve_from_compiler_path ~state ~env ~package path =
   match from_compiler_path ~env path with
   | Global (module_name, path) -> (
     let res =
-      match Process_cmt.file_for_module ~package module_name with
+      match Process_cmt.file_for_module ~state ~package module_name with
       | None -> None
       | Some file ->
         let env = Query_env.from_file file in
-        resolve_path ~env ~package ~path
+        resolve_path ~state ~env ~package ~path
     in
     match res with
     | None -> NotFound
@@ -135,15 +136,17 @@ let resolve_from_compiler_path ~env ~package path =
   | NotFound -> NotFound
   | Exported (env, name) -> Exported (env, name)
 
-let rec get_source_uri ~(env : Query_env.t) ~package (path : Module_path.t) =
+let rec get_source_uri ~state ~(env : Query_env.t) ~package
+    (path : Module_path.t) =
   match path with
   | File (uri, _moduleName) -> uri
   | NotVisible -> env.file.uri
   | IncludedModule (path, inner) -> (
     Log.log "INCLUDED MODULE";
-    match resolve_module_from_compiler_path ~env ~package path with
+    match resolve_module_from_compiler_path ~state ~env ~package path with
     | None ->
       Log.log "NOT FOUND";
-      get_source_uri ~env ~package inner
+      get_source_uri ~state ~env ~package inner
     | Some (env, _declared) -> env.file.uri)
-  | ExportedModule {module_path = inner} -> get_source_uri ~env ~package inner
+  | ExportedModule {module_path = inner} ->
+    get_source_uri ~state ~env ~package inner

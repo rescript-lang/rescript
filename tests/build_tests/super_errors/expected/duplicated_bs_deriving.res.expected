@@ -6,4 +6,4 @@
   2 [2m│[0m type t = One | Two
   3 [2m│[0m 
 
-  duplicate @deriving attribute
+  Duplicate @deriving attribute; a type can only have one.

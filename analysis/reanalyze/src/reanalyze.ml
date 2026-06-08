@@ -102,7 +102,7 @@ let collect_cmt_file_paths ~cmt_root : string list =
     in
     walk_sub_dirs ""
   | None ->
-    Lazy.force Paths.set_re_script_project_root;
+    Lazy.force Paths.set_rescript_project_root;
     (* Prefer explicit scan plan emitted by rewatch (v2 `.sourcedirs.json`).
        This supports monorepos without reanalyze-side package resolution. *)
     let scan_plan = Paths.read_cmt_scan () in

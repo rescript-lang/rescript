@@ -6,5 +6,5 @@
   2 [2m│[0m 
   3 [2m│[0m let _ = f(1)
 
-  Not a valid type for %@unwrap. Type must be an inline variant (closed), and
+  Not a valid type for @unwrap. Type must be an inline variant (closed), and
 each constructor must have an argument.

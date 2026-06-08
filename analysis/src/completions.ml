@@ -1,5 +1,5 @@
 let get_completions ~debug ~source ~kind_file ~pos ~for_hover
-    ~(full : Shared_types.full option) =
+    ~(full : Shared_types.full option) ~state =
   match source with
   | "" -> None
   | source -> (
@@ -24,7 +24,7 @@ let get_completions ~debug ~source ~kind_file ~pos ~for_hover
         let env = Shared_types.Query_env.from_file full.file in
         let completables =
           completable
-          |> Completion_back_end.process_completable ~debug ~full ~pos ~scope
-               ~env ~for_hover
+          |> Completion_back_end.process_completable ~debug ~full ~state ~pos
+               ~scope ~env ~for_hover
         in
         Some (completables, full, scope)))

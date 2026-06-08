@@ -6,4 +6,4 @@
   2 [2m│[0m external f: string => int = "f"
   3 [2m│[0m 
 
-  Not supported return directive
+  Unsupported @return directive. Supported directives are `null_to_opt`, `null_undefined_to_opt` (or `nullable`), and `identity`.

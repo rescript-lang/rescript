@@ -1885,7 +1885,8 @@ let report_error ppf = function
     fprintf ppf "This expression is not a packed module. It has type@ %a"
       type_expr ty
   | Incomplete_packed_module ty ->
-    fprintf ppf "The type of this packed module contains variables:@ %a"
+    fprintf ppf
+      "The type of this first-class module still contains type variables:@ %a"
       type_expr ty
   | Scoping_pack (lid, ty) ->
     fprintf ppf "The type %a in this module cannot be exported.@ " longident lid;

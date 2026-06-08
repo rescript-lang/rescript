@@ -472,7 +472,7 @@ let check_recursive_bindings valbinds =
 let report_error ppf = function
   | Illegal_letrec_expr ->
     Format.fprintf ppf
-      "This kind of expression is not allowed as right-hand side of `let rec'"
+      "This kind of expression is not allowed as right-hand side of `let rec`"
 
 let () =
   Location.register_error_of_exn (function

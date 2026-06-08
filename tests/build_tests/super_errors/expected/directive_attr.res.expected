@@ -5,4 +5,4 @@
   [1;31m1[0m [2m│[0m [1;31m@@directive[0m
   2 [2m│[0m 
 
-  expect string literal
+  Expected a string literal.

@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/bs_conflict_attributes_unwrap.res[0m:[2m1:13-19[0m
+
+  [1;31m1[0m [2m│[0m external f: [1;31m@ignore[0m @unwrap [#A | #B] => unit = "f"
+  2 [2m│[0m 
+  3 [2m│[0m let _ = f(#A)
+
+  Conflicting attributes: @ignore, @unwrap cannot be combined; use only one.

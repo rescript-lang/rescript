@@ -239,7 +239,7 @@ and traverse_expr_tuple_items tuple_items ~next_expr_path
     else None
   | v, _ -> v
 
-let pretty_print_fn_template_arg_name ?current_index ~env ~full
+let pretty_print_fn_template_arg_name ?current_index ~env ~state ~full
     (arg_typ : Types.type_expr) =
   let index_text =
     match current_index with
@@ -249,7 +249,7 @@ let pretty_print_fn_template_arg_name ?current_index ~env ~full
   let default_var_name = "v" ^ index_text in
   let arg_typ, suffix, _env =
     Type_utils.dig_to_relevant_template_name_type ~env ~package:full.package
-      arg_typ
+      ~state arg_typ
   in
   match arg_typ |> Type_utils.path_from_type_expr with
   | None -> default_var_name

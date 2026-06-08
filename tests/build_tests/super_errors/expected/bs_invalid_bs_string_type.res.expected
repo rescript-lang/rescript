@@ -6,4 +6,4 @@
   2 [2m│[0m 
   3 [2m│[0m let _ = f(#A)
 
-  Not a valid type for %@string
+  Not a valid type for @string

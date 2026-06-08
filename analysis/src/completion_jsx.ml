@@ -207,11 +207,11 @@ let html_elements =
     ("wbr", "Represents a line break opportunity.", false);
   ]
 
-let get_jsx_labels ~component_path ~find_type_of_value ~package =
+let get_jsx_labels ~component_path ~find_type_of_value ~package ~state =
   match component_path @ ["make"] |> find_type_of_value with
   | Some (typ, make_env) ->
     let get_fields ~path ~type_args =
-      match References.dig_constructor ~env:make_env ~package path with
+      match References.dig_constructor ~env:make_env ~state ~package path with
       | Some
           ( env,
             {
@@ -285,10 +285,10 @@ type jsx_props = {
   children_start: (int * int) option;
 }
 
-(** 
+(**
 <div muted= />
 
-This is a special case for JSX props, where the above code is parsed 
+This is a special case for JSX props, where the above code is parsed
 as <div muted=//, a regexp literal. We leverage that fact to trigger completion
 for the JSX prop value.
 

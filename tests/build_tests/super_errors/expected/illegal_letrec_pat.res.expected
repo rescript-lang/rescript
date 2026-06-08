@@ -16,4 +16,4 @@
   2 [2m│[0m let _ = x + y
   3 [2m│[0m 
 
-  Only variables are allowed as left-hand side of `let rec'
+  Only variables are allowed as left-hand side of `let rec`
