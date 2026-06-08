@@ -965,3 +965,106 @@ let extract_exp_apply_args ~args =
     | [] -> List.rev acc
   in
   args |> process_args ~acc:[]
+
+let state_to_yojson (state : state) =
+  let option_to_yojson f = function
+    | None -> `Null
+    | Some value -> f value
+  in
+
+  let string_set_to_yojson set =
+    `List (set |> File_set.elements |> List.map (fun value -> `String value))
+  in
+
+  let path_to_yojson path = `List (List.map (fun item -> `String item) path) in
+
+  let paths_to_yojson = function
+    | Impl {cmt; res} ->
+      `Assoc
+        [("kind", `String "Impl"); ("cmt", `String cmt); ("res", `String res)]
+    | Namespace {cmt} ->
+      `Assoc [("kind", `String "Namespace"); ("cmt", `String cmt)]
+    | IntfAndImpl {cmti; resi; cmt; res} ->
+      `Assoc
+        [
+          ("kind", `String "IntfAndImpl");
+          ("cmti", `String cmti);
+          ("resi", `String resi);
+          ("cmt", `String cmt);
+          ("res", `String res);
+        ]
+  in
+
+  let paths_for_module_to_yojson paths_for_module =
+    paths_for_module |> Hashtbl.to_seq
+    |> Seq.map (fun (file, paths) -> (file, paths_to_yojson paths))
+    |> List.of_seq
+    |> fun fields -> `Assoc fields
+  in
+
+  let autocomplete_to_yojson autocomplete =
+    autocomplete |> Misc.String_map.bindings
+    |> List.map (fun (name, files) ->
+           (name, `List (List.map (fun file -> `String file) files)))
+    |> fun fields -> `Assoc fields
+  in
+
+  let package_to_yojson (package : package) =
+    let major, minor = package.rescript_version in
+    `Assoc
+      [
+        ( "generic_jsx_module",
+          option_to_yojson
+            (fun value -> `String value)
+            package.generic_jsx_module );
+        ("suffix", `String package.suffix);
+        ("root_path", `String package.root_path);
+        ("project_files", string_set_to_yojson package.project_files);
+        ("dependencies_files", string_set_to_yojson package.dependencies_files);
+        ("paths_for_module", paths_for_module_to_yojson package.paths_for_module);
+        ( "namespace",
+          option_to_yojson (fun value -> `String value) package.namespace );
+        ("opens", `List (List.map path_to_yojson package.opens));
+        ( "rescript_version",
+          `Assoc [("major", `Int major); ("minor", `Int minor)] );
+        ("autocomplete", autocomplete_to_yojson package.autocomplete);
+      ]
+  in
+
+  let file_to_yojson (file : File.t) =
+    `Assoc
+      [
+        ("uri", `String (file.uri |> Lsp.Uri.to_string));
+        ("module_name", `String file.module_name);
+        ("stamps_count", `Int (List.length (Stamps.get_entries file.stamps)));
+        ("structure_name", `String file.structure.name);
+        ( "structure_docstring",
+          `List (List.map (fun value -> `String value) file.structure.docstring)
+        );
+        ("structure_items_count", `Int (List.length file.structure.items));
+      ]
+  in
+
+  let cmt_cache =
+    state.cmt_cache |> Hashtbl.to_seq
+    |> Seq.map (fun (file_path, file) -> (file_path, file_to_yojson file))
+    |> List.of_seq
+  in
+
+  let root_for_uri =
+    state.root_for_uri |> Hashtbl.to_seq |> List.of_seq
+    |> List.map (fun (uri, str) -> [(Lsp.Uri.to_string uri, `String str)])
+    |> List.flatten
+  in
+
+  let packages_by_root =
+    state.packages_by_root |> Hashtbl.to_seq |> List.of_seq
+    |> List.map (fun (root, package) -> (root, package_to_yojson package))
+  in
+
+  `Assoc
+    [
+      ("cmt_cache", `Assoc cmt_cache);
+      ("root_for_uri", `Assoc root_for_uri);
+      ("packages_by_root", `Assoc packages_by_root);
+    ]
