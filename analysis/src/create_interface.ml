@@ -319,11 +319,11 @@ let print_signature ~extractor ~signature =
   process_signature ~indent:"" signature;
   Buffer.contents buf
 
-let command ~state ~path ~cmi_file =
+let command ~path ~cmi_file =
   match Shared.try_read_cmi cmi_file with
   | Some cmi_info ->
     (* For reading the config *)
-    ignore (Cmt.load_full_cmt_from_path ~state ~path);
+    let _ = Cmt.load_full_cmt_from_path ~path in
     let extractor = Source_file_extractor.create ~path in
     print_signature ~extractor ~signature:cmi_info.cmi_sign
   | None -> ""

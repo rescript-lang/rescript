@@ -16,11 +16,11 @@ let filter_by_cursor cursor (loc : Warnings.loc) : bool =
 
 type filter = Cursor of (int * int) | Loc of Loc.t
 
-let dump ~state ?filter rescript_json cmt_path =
+let dump ?filter rescript_json cmt_path =
   let uri = Uri.from_path (Filename.remove_extension cmt_path ^ ".res") in
   let package =
     let uri = Uri.from_path rescript_json in
-    Packages.get_package ~state ~uri |> Option.get
+    Packages.get_package ~uri |> Option.get
   in
   let module_name =
     Build_system.namespaced_name package.namespace

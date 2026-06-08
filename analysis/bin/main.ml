@@ -92,7 +92,6 @@ Options:
 |}
 
 let main () =
-  let state = Shared_types.create_state () in
   let args = Array.to_list Sys.argv in
   let debug_level, args =
     match args with
@@ -119,7 +118,7 @@ let main () =
   | [_; "cache-project"; root_path] -> (
     Cfg.read_project_config_cache := false;
     let uri = Uri.from_path root_path in
-    match Packages.get_package ~state ~uri with
+    match Packages.get_package ~uri with
     | Some package -> Cache.cache_project package
     | None -> print_endline "\"ERR\"")
   | [_; "cache-delete"; root_path] -> (
@@ -137,20 +136,18 @@ let main () =
     print_header_info path line col;
     Cli.completion ~debug ~path
       ~pos:(int_of_string line, int_of_string col)
-      ~current_file ~state
+      ~current_file
   | [_; "completionResolve"; path; module_path] ->
-    Cli.completion_resolve ~state ~path ~module_path
+    Cli.completion_resolve ~path ~module_path
   | [_; "definition"; path; line; col] ->
-    Cli.definition ~state ~path
-      ~pos:(int_of_string line, int_of_string col)
-      ~debug
+    Cli.definition ~path ~pos:(int_of_string line, int_of_string col) ~debug
   | [_; "typeDefinition"; path; line; col] ->
-    Cli.type_definition ~state ~path
+    Cli.type_definition ~path
       ~pos:(int_of_string line, int_of_string col)
       ~debug
   | [_; "documentSymbol"; path] -> Cli.document_symbol ~path
   | [_; "hover"; path; line; col; current_file; supports_markdown_links] ->
-    Cli.hover ~state ~path
+    Cli.hover ~path
       ~pos:(int_of_string line, int_of_string col)
       ~current_file ~debug
       ~supports_markdown_links:
@@ -166,7 +163,7 @@ let main () =
    current_file;
    allow_for_constructor_payloads;
   ] ->
-    Cli.signature_help ~state ~path
+    Cli.signature_help ~path
       ~pos:(int_of_string line, int_of_string col)
       ~current_file ~debug
       ~allow_for_constructor_payloads:
@@ -174,14 +171,14 @@ let main () =
         | "true" -> true
         | _ -> false)
   | [_; "inlayHint"; path; line_start; line_end; max_length] ->
-    Cli.inlayhint ~state ~path
+    Cli.inlayhint ~path
       ~pos:(int_of_string line_start, int_of_string line_end)
       ~max_length ~debug
-  | [_; "codeLens"; path] -> Cli.code_lens ~state ~path ~debug
+  | [_; "codeLens"; path] -> Cli.code_lens ~path ~debug
   | [
    _; "codeAction"; path; start_line; start_col; end_line; end_col; current_file;
   ] ->
-    Cli.code_action ~state ~path
+    Cli.code_action ~path
       ~start_pos:(int_of_string start_line, int_of_string start_col)
       ~end_pos:(int_of_string end_line, int_of_string end_col)
       ~current_file ~debug
@@ -200,27 +197,23 @@ let main () =
     |> print_endline
   | [_; "diagnosticSyntax"; path] -> Cli.diagnostic_syntax ~path
   | [_; "references"; path; line; col] ->
-    Cli.references ~state ~path
-      ~pos:(int_of_string line, int_of_string col)
-      ~debug
+    Cli.references ~path ~pos:(int_of_string line, int_of_string col) ~debug
   | [_; "prepareRename"; path; line; col] ->
-    Cli.prepare_rename ~state ~path
-      ~pos:(int_of_string line, int_of_string col)
-      ~debug
+    Cli.prepare_rename ~path ~pos:(int_of_string line, int_of_string col) ~debug
   | [_; "rename"; path; line; col; new_name] ->
-    Cli.rename ~state ~path
+    Cli.rename ~path
       ~pos:(int_of_string line, int_of_string col)
       ~new_name ~debug
   | [_; "semanticTokens"; current_file] ->
     Cli.semantic_tokens ~path:current_file
   | [_; "createInterface"; path; cmi_file] ->
-    `String (Create_interface.command ~state ~path ~cmi_file)
+    `String (Create_interface.command ~path ~cmi_file)
     |> Yojson.Safe.pretty_to_string ~std:true
     |> print_endline
-  | [_; "format"; path] -> Cli.format ~state ~path
-  | [_; "test"; path] -> Cli.test ~state ~path
+  | [_; "format"; path] -> Cli.format ~path
+  | [_; "test"; path] -> Cli.test ~path
   | [_; "cmt"; rescript_json; cmt_path] ->
-    Cmt_viewer.dump ~state rescript_json cmt_path
+    Cmt_viewer.dump rescript_json cmt_path
   | args when List.mem "-h" args || List.mem "--help" args -> prerr_endline help
   | _ ->
     prerr_endline help;

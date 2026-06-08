@@ -745,14 +745,13 @@ let migrate ~entry_point_file ~output_mode =
     | true -> Unix.realpath entry_point_file
     | false -> entry_point_file
   in
-  let state = Shared_types.create_state () in
   let result =
     if Filename.check_suffix path ".res" then
       let parser =
         Res_driver.parsing_engine.parse_implementation ~for_printer:true
       in
       let {Res_driver.parsetree; comments; source} = parser ~filename:path in
-      match Cmt.load_cmt_infos_from_path ~state ~path with
+      match Cmt.load_cmt_infos_from_path ~path with
       | None ->
         Error
           (Printf.sprintf
@@ -785,7 +784,7 @@ let migrate ~entry_point_file ~output_mode =
         parser ~filename:path
       in
 
-      match Cmt.load_cmt_infos_from_path ~state ~path with
+      match Cmt.load_cmt_infos_from_path ~path with
       | None ->
         Error
           (Printf.sprintf
