@@ -1,14 +1,13 @@
-let completion ~state ~debug ~source ~kind_file ~pos ~full =
+let completion ~debug ~source ~kind_file ~pos ~full =
   match
     Completions.get_completions ~debug ~source ~kind_file ~pos ~full
       ~for_hover:false
   with
   | None -> []
   | Some (completions, full, _) ->
-    completions
-    |> List.map (Completion_back_end.completion_to_item ~state ~full)
+    completions |> List.map (Completion_back_end.completion_to_item ~full)
 
-let completion_resolve ~state ~(full : Shared_types.full option) ~module_path =
+let completion_resolve ~(full : Shared_types.full option) ~module_path =
   (* We ignore the internal module path as of now because there's currently
      no use case for it. But, if we wanted to move resolving documentation
      for regular modules and not just file modules to the completionResolve
@@ -26,9 +25,7 @@ let completion_resolve ~state ~(full : Shared_types.full option) ~module_path =
         Printf.printf "[completion_resolve] Could not load cmt\n";
       None
     | Some full -> (
-      match
-        Process_cmt.file_for_module ~state ~package:full.package module_name
-      with
+      match Process_cmt.file_for_module ~package:full.package module_name with
       | None ->
         if Debug.verbose () then
           Printf.printf "[completion_resolve] Did not find file for module %s\n"
@@ -44,7 +41,7 @@ let completion_resolve ~state ~(full : Shared_types.full option) ~module_path =
          (Lsp.Types.MarkupContent.create ~kind:Lsp.Types.MarkupKind.Markdown
             ~value))
 
-let hover ~state ~source ~kind_file ~pos ~supports_markdown_links ~full ~debug =
+let hover ~source ~kind_file ~pos ~supports_markdown_links ~full ~debug =
   let result =
     match full with
     | None -> None
@@ -55,7 +52,7 @@ let hover ~state ~source ~kind_file ~pos ~supports_markdown_links ~full ~debug =
           Printf.printf
             "Nothing at that position. Now trying to use completion.\n";
         match
-          Hover.get_hover_via_completions ~debug ~source ~kind_file ~pos ~state
+          Hover.get_hover_via_completions ~debug ~source ~kind_file ~pos
             ~for_hover:true ~supports_markdown_links ~full:(Some full)
         with
         | None -> None
@@ -66,9 +63,7 @@ let hover ~state ~source ~kind_file ~pos ~supports_markdown_links ~full ~debug =
           | LModule _ | TopLevelModule _ -> true
           | TypeDefinition _ | Typed _ | Constant _ -> false
         in
-        let uri_loc_opt =
-          References.definition_for_loc_item ~state ~full loc_item
-        in
+        let uri_loc_opt = References.definition_for_loc_item ~full loc_item in
         let skip_zero =
           match uri_loc_opt with
           | None -> false
@@ -82,7 +77,7 @@ let hover ~state ~source ~kind_file ~pos ~supports_markdown_links ~full ~debug =
             && pos_is_zero loc.loc_end
         in
         if skip_zero then None
-        else Hover.new_hover ~state ~supports_markdown_links ~full loc_item)
+        else Hover.new_hover ~supports_markdown_links ~full loc_item)
   in
   match result with
   | None -> None
@@ -95,12 +90,12 @@ let hover ~state ~source ~kind_file ~pos ~supports_markdown_links ~full ~debug =
                  ~kind:Lsp.Types.MarkupKind.Markdown ~value))
          ())
 
-let signature_help ~state:_ ~source ~kind_file ~pos
-    ~allow_for_constructor_payloads ~full ~debug =
+let signature_help ~source ~kind_file ~pos ~allow_for_constructor_payloads ~full
+    ~debug =
   Signature_help.signature_help ~debug ~source ~kind_file ~pos
     ~allow_for_constructor_payloads ~full
 
-let definition ~state ~full ~pos ~debug =
+let definition ~full ~pos ~debug =
   let location_opt =
     match full with
     | None -> None
@@ -108,7 +103,7 @@ let definition ~state ~full ~pos ~debug =
       match References.get_loc_item ~full ~pos ~debug with
       | None -> None
       | Some loc_item -> (
-        match References.definition_for_loc_item ~state ~full loc_item with
+        match References.definition_for_loc_item ~full loc_item with
         | None -> None
         | Some (uri, loc) when not loc.loc_ghost ->
           let is_interface = full.file.uri |> Uri.is_interface in
@@ -135,7 +130,7 @@ let definition ~state ~full ~pos ~debug =
   in
   location_opt
 
-let type_definition ~state ~full ~pos ~debug =
+let type_definition ~full ~pos ~debug =
   let maybe_location =
     match full with
     | None -> None
@@ -143,7 +138,7 @@ let type_definition ~state ~full ~pos ~debug =
       match References.get_loc_item ~full ~pos ~debug with
       | None -> None
       | Some loc_item -> (
-        match References.type_definition_for_loc_item ~state ~full loc_item with
+        match References.type_definition_for_loc_item ~full loc_item with
         | None -> None
         | Some (uri, loc) ->
           Some
@@ -153,7 +148,7 @@ let type_definition ~state ~full ~pos ~debug =
   in
   maybe_location
 
-let references ~state ~full ~pos ~debug =
+let references ~full ~pos ~debug =
   let all_locs =
     match full with
     | None -> []
@@ -162,7 +157,7 @@ let references ~state ~full ~pos ~debug =
       | None -> []
       | Some loc_item ->
         let all_references =
-          References.all_references_for_loc_item ~state ~full loc_item
+          References.all_references_for_loc_item ~full loc_item
         in
         all_references
         |> List.fold_left
@@ -181,7 +176,7 @@ let references ~state ~full ~pos ~debug =
   in
   all_locs
 
-let rename ~state ~full ~pos ~new_name ~debug =
+let rename ~full ~pos ~new_name ~debug =
   let result =
     match full with
     | None -> None
@@ -190,7 +185,7 @@ let rename ~state ~full ~pos ~new_name ~debug =
       | None -> None
       | Some loc_item ->
         let all_references =
-          References.all_references_for_loc_item ~state ~full loc_item
+          References.all_references_for_loc_item ~full loc_item
         in
         let references_to_toplevel_modules =
           all_references
@@ -266,7 +261,7 @@ type prepare_rename_result = {
   placeholder: string option;
 }
 
-let prepare_rename ~state:_ ~full ~pos ~debug =
+let prepare_rename ~full ~pos ~debug =
   match full with
   | None -> None
   | Some full -> (
@@ -283,7 +278,7 @@ let prepare_rename ~state:_ ~full ~pos ~debug =
       in
       Some {range; placeholder = placeholder_opt})
 
-let format ~state:_ ~source ~kind_file =
+let format ~source ~kind_file =
   let create_range text =
     let lines = text |> String.split_on_char '\n' in
     let lines_len = List.length lines in

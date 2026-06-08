@@ -34,9 +34,9 @@ let full_from_module_uri ~package ~module_name ~uri ~paths =
     let cmt = get_cmt_path ~uri paths in
     full_for_cmt ~module_name ~package ~uri cmt
 
-let full_from_uri ~state ~uri =
+let full_from_uri ~uri =
   let path = Uri.to_path uri in
-  match Packages.get_package ~state ~uri with
+  match Packages.get_package ~uri with
   | None -> None
   | Some package -> (
     let module_name =
@@ -53,13 +53,13 @@ let full_from_uri ~state ~uri =
         prerr_endline ("can't find module " ^ module_name);
         None))
 
-let full_from_module ?state:_ ~package ~module_name =
+let full_from_module ~package ~module_name =
   Option.bind (Hashtbl.find_opt package.paths_for_module module_name)
   @@ fun paths ->
   let uri = get_uri paths in
   full_from_module_uri ~package ~module_name ~uri ~paths
 
-let fulls_from_module ?state:_ ~package ~module_name =
+let fulls_from_module ~package ~module_name =
   match Hashtbl.find_opt package.paths_for_module module_name with
   | None -> []
   | Some paths ->
@@ -68,13 +68,13 @@ let fulls_from_module ?state:_ ~package ~module_name =
     |> List.filter_map (fun uri ->
            full_from_module_uri ~package ~module_name ~uri ~paths)
 
-let load_full_cmt_from_path ~state ~path =
+let load_full_cmt_from_path ~path =
   let uri = Uri.from_path path in
-  full_from_uri ~state ~uri
+  full_from_uri ~uri
 
-let load_cmt_infos_from_path ~state ~path =
+let load_cmt_infos_from_path ~path =
   let uri = Uri.from_path path in
-  match Packages.get_package ~state ~uri with
+  match Packages.get_package ~uri with
   | None -> None
   | Some package -> (
     let module_name =

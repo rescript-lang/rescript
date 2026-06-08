@@ -82,8 +82,7 @@ let main () =
     let root_path =
       if Filename.is_relative root then Unix.realpath root else root
     in
-    let state = Analysis.Shared_types.create_state () in
-    match Analysis.Packages.new_bs_package ~state ~root_path with
+    match Analysis.Packages.new_bs_package ~root_path with
     | None ->
       log_and_exit
         (Error
