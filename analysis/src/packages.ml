@@ -14,7 +14,7 @@ let make_paths_for_module ~project_files_and_paths ~dependencies_files_and_paths
 
 let override_rescript_version = ref None
 
-let get_re_script_version () =
+let get_rescript_version () =
   match !override_rescript_version with
   | Some override_rescript_version -> override_rescript_version
   | None -> (
@@ -45,7 +45,7 @@ let new_bs_package ~root_path =
     match Yojson_helpers.from_string_opt raw with
     | Some config -> (
       let namespace = Find_files.get_namespace config in
-      let rescript_version = get_re_script_version () in
+      let rescript_version = get_rescript_version () in
       let suffix =
         match config |> Yojson_helpers.get "suffix" with
         | Some (`String suffix) -> suffix
@@ -206,7 +206,7 @@ let find_root ~uri packages_by_root =
   in
   loop (if Sys.is_directory path then path else Filename.dirname path)
 
-let get_package ~uri =
+let get_package ~state ~uri =
   let open Shared_types in
   if Hashtbl.mem state.root_for_uri uri then
     Some

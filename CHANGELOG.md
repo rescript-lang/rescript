@@ -60,6 +60,7 @@
 - Catalog every named compiler error variant in `tests/ERROR_VARIANTS.md` and add fixtures for the remaining reachable ones. https://github.com/rescript-lang/rescript/pull/8446
 - Remove dead and unreachable compiler error and warning variants; add fixtures for the ones found to be reachable. https://github.com/rescript-lang/rescript/pull/8459
 - Convert OCaml codebase to snake case format. https://github.com/rescript-lang/rescript/pull/8456
+- Analysis refactor: remove global state `Shared_types.state`. https://github.com/rescript-lang/rescript/pull/8465
 
 
 # 13.0.0-alpha.4
