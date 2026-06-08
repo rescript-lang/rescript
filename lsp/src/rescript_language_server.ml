@@ -91,16 +91,45 @@ let on_initialize (params : InitializeParams.t) (server : State.t Server.t) =
   in
   let state = State.initialize state ~params ~diagnostics in
   let initialization_info = initialization params.capabilities in
+
+  let package =
+    Analysis.Packages.new_bs_package
+      ~root_path:(State.workspace_root state |> Uri.to_path)
+  in
+
+  let state = {state with package} in
+
   (initialization_info, state)
 
 let on_request (Client_request.E request) (server : State.t Server.t) =
+  let load_full uri (state : State.t) =
+    match state.status with
+    | Initialized _ -> (
+      let path = uri |> Uri.to_path in
+      match state.package with
+      | Some package -> (
+        let module_name =
+          Analysis.Build_system.namespaced_name package.namespace
+            (Analysis.Find_files.get_name path)
+        in
+        match
+          Analysis.Cmt.full_for_incremental_cmt ~package ~module_name ~uri
+        with
+        | Some cmt_info -> Some cmt_info
+        | None -> (
+          match Hashtbl.find_opt package.paths_for_module module_name with
+          | Some paths ->
+            let cmt = Analysis.Shared_types.get_cmt_path ~uri paths in
+            Analysis.Cmt.full_for_cmt ~module_name ~package ~uri cmt
+          | None -> None))
+      | None -> None)
+    | Uninitialized -> None
+  in
+
+  let ok value = Ok (Client_request.yojson_of_result request value) in
+
   let state = Server.state server in
   let analysis_state = state.analysis_state in
-  let load_full uri =
-    Analysis.Cmt.load_full_cmt_from_path ~state:analysis_state
-      ~path:(DocumentUri.to_path uri)
-  in
-  let ok value = Ok (Client_request.yojson_of_result request value) in
 
   match request with
   | Client_request.Initialize params ->
@@ -108,7 +137,7 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     (ok initialization_info, state)
   | TextDocumentHover {position; textDocument = {uri}} ->
     let source = (Document_store.get ~uri state.store).text in
-    let full = load_full uri in
+    let full = load_full uri state in
     let hover =
       Analysis.Commands.hover ~state:analysis_state ~source
         ~kind_file:(Document.kind uri)
@@ -120,7 +149,7 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     (ok hover, state)
   | TextDocumentCompletion {textDocument = {uri}; position} ->
     let source = (Document_store.get ~uri state.store).text in
-    let full = load_full uri in
+    let full = load_full uri state in
     let comp =
       Analysis.Commands.completion ~state:analysis_state ~debug:false ~source
         ~kind_file:(Document.kind uri)
@@ -140,10 +169,7 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
           let module_path = List.assoc_opt "modulePath" fields in
           match (file_path, module_path) with
           | Some (`String file_path), Some (`String module_path) ->
-            let full =
-              Analysis.Cmt.load_full_cmt_from_path ~state:analysis_state
-                ~path:file_path
-            in
+            let full = load_full (Uri.of_path file_path) state in
             let documentation =
               Analysis.Commands.completion_resolve ~state:analysis_state ~full
                 ~module_path
@@ -156,7 +182,7 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     (ok (resp |> Option.value ~default:item), state)
   | SignatureHelp {textDocument = {uri}; position} ->
     let source = (Document_store.get ~uri state.store).text in
-    let full = load_full uri in
+    let full = load_full uri state in
     let resp =
       match
         Analysis.Commands.signature_help ~state:analysis_state ~source
@@ -169,7 +195,7 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     in
     (ok resp, state)
   | TextDocumentDefinition {textDocument = {uri}; position} ->
-    let full = load_full uri in
+    let full = load_full uri state in
     let resp =
       match
         Analysis.Commands.definition ~state:analysis_state ~full
@@ -181,7 +207,7 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     in
     (ok resp, state)
   | TextDocumentTypeDefinition {textDocument = {uri}; position} ->
-    let full = load_full uri in
+    let full = load_full uri state in
     let resp =
       match
         Analysis.Commands.type_definition ~state:analysis_state ~full
@@ -193,7 +219,7 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     in
     (ok resp, state)
   | TextDocumentReferences {textDocument = {uri}; position} ->
-    let full = load_full uri in
+    let full = load_full uri state in
     let resp =
       Analysis.Commands.references ~state:analysis_state ~full
         ~pos:(position.line, position.character)
@@ -203,7 +229,7 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
   | DocumentSymbol {textDocument = {uri}} -> (
     (* NOTE: Client side bug. For some reason, Neovim requests the document symbol before sending the TextDocumentDidOpen notification. *)
     match Document_store.get_opt ~uri state.store with
-    | None -> (ok None, state)
+    | None -> (ok (Some (`DocumentSymbol [])), state)
     | Some {text} ->
       let resp =
         Analysis.Document_symbol.get_symbols ~source:text
@@ -223,7 +249,7 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     (ok (Some resp), state)
   | TextDocumentCodeLens {textDocument = {uri}} ->
     let source = (Document_store.get ~uri state.store).text in
-    let full = load_full uri in
+    let full = load_full uri state in
     let resp =
       Analysis.Hint.code_lens ~source ~kind_file:(Document.kind uri) ~full
         ~debug:false
@@ -231,9 +257,10 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     (ok (resp |> Option.value ~default:[]), state)
   | InlayHint {textDocument = {uri}; range = {start; end_}} ->
     let source = (Document_store.get ~uri state.store).text in
-    let full = load_full uri in
+    let full = load_full uri state in
     let resp =
-      Analysis.Hint.inlay ~source ~kind_file:(Document.kind uri) ~full
+      Analysis.Hint.inlay ~state:analysis_state ~source
+        ~kind_file:(Document.kind uri) ~full
         ~pos:(start.line, end_.line) (* TODO: max_length should be a config *)
         ~max_length:(string_of_int 25) ~debug:false
     in
@@ -246,7 +273,7 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     in
     (ok (Some resp), state)
   | TextDocumentRename {textDocument = {uri}; position; newName} ->
-    let full = load_full uri in
+    let full = load_full uri state in
     let resp =
       match
         Analysis.Commands.rename ~state:analysis_state ~full
@@ -258,10 +285,10 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     in
     (ok resp, state)
   | TextDocumentPrepareRename {textDocument = {uri}; position} ->
-    let full = load_full uri in
+    let full = load_full uri state in
     let resp =
       match
-        Analysis.Commands.prepare_rename ~state:analysis_state ~full
+        Analysis.Commands.prepare_rename ~full
           ~pos:(position.line, position.character)
           ~debug:false
       with
@@ -273,10 +300,7 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     let source = (Document_store.get ~uri state.store).text in
 
     let resp =
-      match
-        Analysis.Commands.format ~state:analysis_state ~source
-          ~kind_file:(Document.kind uri)
-      with
+      match Analysis.Commands.format ~source ~kind_file:(Document.kind uri) with
       | Ok text_edit -> Some text_edit
       | Error _ -> None
     in
@@ -400,5 +424,8 @@ let on_notification notification (server : State.t Server.t) =
     state
 
 let listen ~input ~output ~fs =
-  let state = State.create ~store:(Document_store.create ()) ~fs in
+  let state =
+    State.create ~store:(Document_store.create ()) ~fs ~package:None
+      ~analysis_state:(Analysis.Shared_types.create_state ())
+  in
   Server.listen ~input ~output ~on_request ~on_notification ~state
