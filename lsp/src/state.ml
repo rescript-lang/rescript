@@ -38,17 +38,17 @@ let workspace_root t =
     | None -> assert false
     | Some uri -> uri)
 
-let to_yojson (t : t) : Yojson.Safe.t =
+let to_yojson ?(minimal : bool = true) (t : t) : Yojson.Safe.t =
   let document_store_to_yojson (store : Document_store.t) =
     store.documents |> Hashtbl.to_seq
     |> Seq.map (fun (uri, {Document_store.text; version}) ->
            ( Lsp.Uri.to_string uri,
              `Assoc
-               [
-                 ("version", `Int version);
-                 ("text_length", `Int (String.length text));
-                 (* ("text", `String text); *)
-               ] ))
+               ([
+                  ("version", `Int version);
+                  ("text_length", `Int (String.length text));
+                ]
+               @ if not minimal then [("text", `String text)] else []) ))
     |> List.of_seq
     |> fun fields -> `Assoc fields
   in
@@ -64,19 +64,20 @@ let to_yojson (t : t) : Yojson.Safe.t =
 
   let status_to_yojson = function
     | Uninitialized -> `Assoc [("kind", `String "Uninitialized")]
-    | Initialized {diagnostics} ->
+    | Initialized {params; diagnostics} ->
       `Assoc
-        [
-          ("kind", `String "Initialized");
-          (* ("params", InitializeParams.yojson_of_t params); *)
-          ("diagnostics", diagnostics_to_yojson diagnostics);
-        ]
+        ([
+           ("kind", `String "Initialized");
+           ("diagnostics", diagnostics_to_yojson diagnostics);
+         ]
+        @
+        if not minimal then [("params", InitializeParams.yojson_of_t params)]
+        else [])
   in
 
   `Assoc
     [
       ("status", status_to_yojson t.status);
       ("store", document_store_to_yojson t.store);
-      ("fs", `String "<opaque>");
-      (* ("analysis_state", Analysis.Shared_types.state_to_yojson t.analysis_state); *)
+      ("analysis_state", Analysis.Shared_types.state_to_yojson t.analysis_state);
     ]
