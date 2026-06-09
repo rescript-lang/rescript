@@ -148,7 +148,7 @@ let main () =
     Cli.type_definition ~state ~path
       ~pos:(int_of_string line, int_of_string col)
       ~debug
-  | [_; "documentSymbol"; path] -> Document_symbol.command ~path
+  | [_; "documentSymbol"; path] -> Cli.document_symbol ~path
   | [_; "hover"; path; line; col; current_file; supports_markdown_links] ->
     Cli.hover ~state ~path
       ~pos:(int_of_string line, int_of_string col)
@@ -174,6 +174,9 @@ let main () =
         | "true" -> true
         | _ -> false)
   | [_; "inlayHint"; path; line_start; line_end; max_length] ->
+    let max_length =
+      try Some (int_of_string max_length) with Failure _ -> None
+    in
     Cli.inlayhint ~state ~path
       ~pos:(int_of_string line_start, int_of_string line_end)
       ~max_length ~debug
@@ -214,9 +217,7 @@ let main () =
   | [_; "semanticTokens"; current_file] ->
     Cli.semantic_tokens ~path:current_file
   | [_; "createInterface"; path; cmi_file] ->
-    `String (Create_interface.command ~state ~path ~cmi_file)
-    |> Yojson.Safe.pretty_to_string ~std:true
-    |> print_endline
+    Cli.create_interface ~path ~cmi_file
   | [_; "format"; path] -> Cli.format ~path
   | [_; "test"; path] -> Cli.test ~state ~path
   | [_; "cmt"; rescript_json; cmt_path] ->

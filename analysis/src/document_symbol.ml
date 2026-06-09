@@ -1,6 +1,6 @@
 (* https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_documentSymbol *)
 
-let command ~path =
+let get_symbols ~source ~kind_file =
   let symbols = ref [] in
   let add_symbol name loc kind =
     if
@@ -115,17 +115,18 @@ let command ~path =
     }
   in
 
-  (if Filename.check_suffix path ".res" then
+  (if kind_file = Files.Res then
      let parser =
-       Res_driver.parsing_engine.parse_implementation ~for_printer:false
+       Res_driver.parsing_engine.parse_implementation_from_source
+         ~for_printer:false
      in
-     let {Res_driver.parsetree = structure} = parser ~filename:path in
+     let {Res_driver.parsetree = structure} = parser ~source in
      iterator.structure iterator structure |> ignore
    else
      let parser =
-       Res_driver.parsing_engine.parse_interface ~for_printer:false
+       Res_driver.parsing_engine.parse_interface_from_source ~for_printer:false
      in
-     let {Res_driver.parsetree = signature} = parser ~filename:path in
+     let {Res_driver.parsetree = signature} = parser ~source in
      iterator.signature iterator signature |> ignore);
   let is_inside
       ({
@@ -182,9 +183,4 @@ let command ~path =
       |> add_sorted_symbols_to_children ~sorted_symbols:rest
   in
   let sorted_symbols = !symbols |> List.sort compare_symbol in
-  let symbols_with_children =
-    [] |> add_sorted_symbols_to_children ~sorted_symbols
-  in
-  `List (symbols_with_children |> List.map Lsp.Types.DocumentSymbol.yojson_of_t)
-  |> Yojson.Safe.pretty_to_string ~std:true
-  |> print_endline
+  [] |> add_sorted_symbols_to_children ~sorted_symbols

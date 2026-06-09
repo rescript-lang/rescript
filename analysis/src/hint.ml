@@ -32,7 +32,6 @@ let loc_item_to_type_hint ~state ~full:{file; package} loc_item =
   | _ -> None
 
 let inlay ~source ~kind_file ~pos ~max_length ~full ~state ~debug =
-  let maxlen = try Some (int_of_string max_length) with Failure _ -> None in
   let hints = ref [] in
   let start_line, end_line = pos in
   let push loc kind =
@@ -103,7 +102,7 @@ let inlay ~source ~kind_file ~pos ~max_length ~full ~state ~debug =
                    Lsp.Types.InlayHint.create ~position ~kind ~paddingLeft:true
                      ~paddingRight:false ~label:(`String label) ()
                  in
-                 match maxlen with
+                 match max_length with
                  | Some value ->
                    if String.length label > value then None else Some result
                  | None -> Some result)
