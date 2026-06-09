@@ -377,10 +377,9 @@ jobs:
         if: runner.os != 'Windows'
         run: make -C tests/gentype_tests/typescript-react-example clean test
 
-      # Skip tests on Windows because OCaml Eio process operations is not supported on Windows yet
+      # The Makefile skip some tests on Windows because OCaml Eio process operations is not supported on Windows yet
       # Eio.Stdenv.process_mgr raise a error, see https://github.com/ocaml-multicore/eio/blob/37d6e67f7e25b43e4a66574ed98838c79f1a21b4/lib_eio_windows/eio_windows.ml#L36
       - name: Run LSP tests
-        if: runner.os != 'Windows'
         run: opam exec -- make test-lsp
 
       # On Windows, after running setup-ocaml (if it wasn't cached yet or the cache couldn't be restored),
