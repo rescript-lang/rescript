@@ -2522,7 +2522,7 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
       if is_tagged_template then (
         (* Backtick tagged-template syntax: the tag must be a value of the
            builtin [taggedTemplate<'param, 'output>] type. The parser desugars
-           [tag`a ${x} b`] into [tag([|"a"; " b"|], [|x|])], so the two
+           [tag`a ${x} b`] into [tag([|"a "; " b"|], [|x|])], so the two
            arguments are the string parts and the interpolated values. *)
         let param_ty = newvar () in
         let output_ty = newvar () in
