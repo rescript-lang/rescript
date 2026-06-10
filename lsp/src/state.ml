@@ -38,7 +38,8 @@ let workspace_root t =
     | None -> assert false
     | Some uri -> uri)
 
-let to_yojson ?(minimal : bool = true) (t : t) : Yojson.Safe.t =
+let to_yojson (t : t) : Yojson.Safe.t =
+  let minimal = true in
   let document_store_to_yojson (store : Document_store.t) =
     store.documents |> Hashtbl.to_seq
     |> Seq.map (fun (uri, {Document_store.text; version}) ->

@@ -74,10 +74,54 @@ let initialization (_client_capabilities : ClientCapabilities.t) =
 let get_updated_diagnostics_from_log (state : State.t) =
   let workspace_root = State.workspace_root state in
   let diagnostics =
-    Compiler.collect_diagnostics_from_log_using_source_dirs workspace_root state
+    Diagnostics.collect_diagnostics_from_log_using_source_dirs workspace_root
+      state.fs
     |> Diagnostics.to_lsp_format workspace_root state.store
   in
   Diagnostics.overwrite ~new_diagnostics:diagnostics (State.diagnostics state)
+
+let discover_subpackages_and_populate (state : State.t) =
+  let ( /+ ) = Filename.concat in
+  let workspace_root = State.workspace_root state in
+
+  let resolve_node_modules_paths =
+    match state.package with
+    | Some {dependencies} ->
+      let paths =
+        dependencies
+        |> List.map (fun dep_name ->
+               let path =
+                 (workspace_root |> Uri.to_path) /+ "node_modules" /+ dep_name
+               in
+               Unix.realpath path)
+      in
+      Some paths
+    | None -> None
+  in
+
+  (match state.package with
+  | Some package ->
+    Hashtbl.add state.analysis_state.root_for_uri workspace_root
+      package.root_path;
+    Hashtbl.add state.analysis_state.packages_by_root package.root_path package
+  | None -> ());
+
+  (match resolve_node_modules_paths with
+  | Some node_modules_paths ->
+    node_modules_paths
+    |> List.iter (fun node_module_path ->
+           let uri = Uri.of_path node_module_path in
+           match
+             Analysis.Packages.new_bs_package ~root_path:node_module_path
+           with
+           | Some package ->
+             Hashtbl.add state.analysis_state.root_for_uri uri package.root_path;
+             Hashtbl.add state.analysis_state.packages_by_root package.root_path
+               package
+           | None -> ());
+    ()
+  | None -> ())
+  |> ignore
 
 let on_initialize (params : InitializeParams.t) (server : State.t Server.t) =
   let state = Server.state server in
@@ -99,9 +143,16 @@ let on_initialize (params : InitializeParams.t) (server : State.t Server.t) =
 
   let state = {state with package} in
 
+  state |> discover_subpackages_and_populate;
+
+  Server.show_message_notification
+    (State.to_yojson state |> Yojson.Safe.pretty_to_string)
+    server;
+
   (initialization_info, state)
 
 let on_request (Client_request.E request) (server : State.t Server.t) =
+  (* FIX: Deve buscar for root_uri *)
   let load_full uri (state : State.t) =
     match state.status with
     | Initialized _ -> (
@@ -160,22 +211,21 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
   | CompletionItemResolve item ->
     let resp =
       match (item.documentation, item.data) with
-      (* documentation === null && item.data != null (https://github.com/rescript-lang/rescript-vscode/blob/2bc69d29ed92e19b14054952bafe9d4af7bd4c4b/server/src/server.ts#L958-L970)
+      (*
+        documentation === null && item.data != null
+        See https://github.com/rescript-lang/rescript-vscode/blob/2bc69d29ed92e19b14054952bafe9d4af7bd4c4b/server/src/server.ts#L958-L970
       *)
-      | None, Some (`Assoc _) -> (
-        match item.data with
-        | Some (`Assoc fields) -> (
-          let file_path = List.assoc_opt "filePath" fields in
-          let module_path = List.assoc_opt "modulePath" fields in
-          match (file_path, module_path) with
-          | Some (`String file_path), Some (`String module_path) ->
-            let full = load_full (Uri.of_path file_path) state in
-            let documentation =
-              Analysis.Commands.completion_resolve ~state:analysis_state ~full
-                ~module_path
-            in
-            Some {item with documentation}
-          | _ -> None)
+      | None, Some (`Assoc fields) -> (
+        let file_path = List.assoc_opt "filePath" fields in
+        let module_path = List.assoc_opt "modulePath" fields in
+        match (file_path, module_path) with
+        | Some (`String file_path), Some (`String module_path) ->
+          let full = load_full (Uri.of_path file_path) state in
+          let documentation =
+            Analysis.Commands.completion_resolve ~state:analysis_state ~full
+              ~module_path
+          in
+          Some {item with documentation}
         | _ -> None)
       | _ -> None
     in
@@ -361,9 +411,11 @@ let on_notification notification (server : State.t Server.t) =
            ~kind_file:(Document.kind uri))
     in
 
-    Diagnostics.append ~new_diagnostics:syntax_erros_diagnostics diagnostics
-    |> Diagnostics.send;
+    let diagnostics =
+      Diagnostics.append ~new_diagnostics:syntax_erros_diagnostics diagnostics
+    in
 
+    diagnostics |> Diagnostics.send;
     {state with store} |> State.update_diagnostics diagnostics
   | TextDocumentDidClose {textDocument = {uri; _}} ->
     let store = Document_store.remove ~uri state.store in
