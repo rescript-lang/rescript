@@ -16,10 +16,13 @@
 
 - Make `Jsx.component` abstract. https://github.com/rescript-lang/rescript/pull/8390
 - Drop Node.js version 20.x support, as it is reaching EOL. https://github.com/rescript-lang/rescript/pull/8401
+- Remove the `@taggedTemplate` decorator in favor of the new first-class `taggedTemplate<'param, 'output>` builtin type. Using the decorator, or backtick tagged-template syntax on a value that is not a `taggedTemplate`, is now a compile error pointing to the new binding form. https://github.com/rescript-lang/rescript/pull/8461
 
 #### :eyeglasses: Spec Compliance
 
 #### :rocket: New Feature
+
+- Add a first-class `taggedTemplate<'param, 'output>` builtin type and the `TaggedTemplate` stdlib module (`TaggedTemplate.make`). Tagged-template tags are now tracked through the type system, so they emit real JS tagged-template syntax across module boundaries, when passed as first-class values, and when constructed at runtime by a factory (e.g. `postgres`). https://github.com/rescript-lang/rescript/pull/8461
 
 #### :bug: Bug fix
 
@@ -61,7 +64,7 @@
 - Remove dead and unreachable compiler error and warning variants; add fixtures for the ones found to be reachable. https://github.com/rescript-lang/rescript/pull/8459
 - Convert OCaml codebase to snake case format. https://github.com/rescript-lang/rescript/pull/8456
 - Analysis refactor: remove global state `Shared_types.state`. https://github.com/rescript-lang/rescript/pull/8465
-
+- Refactor analysis CLI helpers to use source input. https://github.com/rescript-lang/rescript/pull/8466
 
 # 13.0.0-alpha.4
 

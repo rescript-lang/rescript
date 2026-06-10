@@ -12,7 +12,7 @@ function assertEqual(a, b) {
     RE_EXN_ID: "Assert_failure",
     _1: [
       "Stdlib.res",
-      160,
+      161,
       4
     ],
     Error: new Error()
@@ -80,6 +80,8 @@ let Result;
 let $$String;
 
 let $$Symbol;
+
+let TaggedTemplate;
 
 let Type;
 
@@ -168,6 +170,7 @@ exports.$$RegExp = $$RegExp;
 exports.Result = Result;
 exports.$$String = $$String;
 exports.$$Symbol = $$Symbol;
+exports.TaggedTemplate = TaggedTemplate;
 exports.Type = Type;
 exports.Iterable = Iterable;
 exports.$$Iterator = $$Iterator;

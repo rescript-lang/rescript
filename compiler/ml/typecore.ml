@@ -96,6 +96,7 @@ type error =
   | Type_params_not_supported of Longident.t
   | Field_access_on_dict_type
   | Jsx_not_enabled
+  | Tagged_template_non_tag of type_expr
 
 exception Error of Location.t * Env.t * error
 exception Error_forward of Location.error
@@ -2513,10 +2514,70 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
       if transformed_jsx then Some JsxComponent
       else type_clash_context_from_function sexp sfunct
     in
+    let is_tagged_template =
+      Ext_list.exists sexp.pexp_attributes (fun ({txt}, _) ->
+          txt = "res.taggedTemplate")
+    in
     let args, ty_res, fully_applied =
-      match translate_unified_ops env funct sargs with
-      | Some (targs, result_type) -> (targs, result_type, true)
-      | None -> type_application ~context total_app env funct sargs
+      if is_tagged_template then (
+        (* Backtick tagged-template syntax: the tag must be a value of the
+           builtin [taggedTemplate<'param, 'output>] type. The parser desugars
+           [tag`a ${x} b`] into [tag([|"a "; " b"|], [|x|])], so the two
+           arguments are the string parts and the interpolated values. *)
+        let param_ty = newvar () in
+        let output_ty = newvar () in
+        (try
+           unify env
+             (instance env funct.exp_type)
+             (newconstr Predef.path_tagged_template [param_ty; output_ty])
+         with Unify _ ->
+           raise
+             (Error (funct.exp_loc, env, Tagged_template_non_tag funct.exp_type)));
+        match sargs with
+        | [(Nolabel, strings); (Nolabel, values)] ->
+          let typed_strings =
+            type_expect ~context:None env strings
+              (Predef.type_array Predef.type_string)
+          in
+          (* Type each interpolated value directly against [param_ty] with a
+             tagged-template-specific clash context, rather than routing the
+             desugared values array through the generic array typing (which
+             would report a confusing "array item" type error for what the user
+             wrote as a [${...}] interpolation). *)
+          let typed_values =
+            match values.pexp_desc with
+            | Pexp_array interpolations ->
+              let typed_interpolations =
+                List.map
+                  (fun interp ->
+                    type_expect ~context:(Some TaggedTemplateValue) env interp
+                      param_ty)
+                  interpolations
+              in
+              re
+                {
+                  exp_desc = Texp_array typed_interpolations;
+                  exp_loc = values.pexp_loc;
+                  exp_extra = [];
+                  exp_type = newconstr Predef.path_array [param_ty];
+                  exp_attributes = values.pexp_attributes;
+                  exp_env = env;
+                }
+            (* The parser always desugars the interpolated values into an array
+               literal, so any other shape is a compiler invariant violation. *)
+            | _ -> assert false
+          in
+          ( [
+              (Asttypes.Nolabel, Some typed_strings);
+              (Asttypes.Nolabel, Some typed_values);
+            ],
+            output_ty,
+            true )
+        | _ -> assert false)
+      else
+        match translate_unified_ops env funct sargs with
+        | Some (targs, result_type) -> (targs, result_type, true)
+        | None -> type_application ~context total_app env funct sargs
     in
     end_def ();
     unify_var env (newvar ()) funct.exp_type;
@@ -4660,6 +4721,12 @@ let report_error env loc ppf error =
       fprintf ppf "@ @[It only accepts %i %s; here, it's called with more.@]@]"
         accepts_count
         (if accepts_count == 1 then "argument" else "arguments")
+    | Tconstr (path, _, _) when Path.same path Predef.path_tagged_template ->
+      fprintf ppf
+        "@[<v>@[<2>This is a tagged-template tag of type@ @{<info>%a@}@]@,\
+         It can't be called like a function. Use it with backtick syntax \
+         instead, e.g. @{<info>tag`SELECT ${id}`@}.@]"
+        type_expr typ
     | _ ->
       fprintf ppf
         "@[<v>@[<2>This can't be called, it's not a function.@]@,\
@@ -4989,6 +5056,20 @@ let report_error env loc ppf error =
     fprintf ppf
       "Cannot compile JSX expression because JSX support is not enabled. Add \
        \"jsx\" settings to rescript.json to enable JSX support."
+  | Tagged_template_non_tag typ ->
+    fprintf ppf
+      "@[<v>This value is used with tagged template (backtick) syntax, but it \
+       has type@ @{<info>%a@}@ which is not a @{<info>taggedTemplate@}.@,\
+       @,\
+       Tagged template syntax now requires a value of type \
+       @{<info>taggedTemplate<'param, 'output>@}:@,\
+       @,\
+      \  - To bind a JavaScript tag function, annotate the @{<info>external@} \
+       with @{<info>taggedTemplate<...>@} instead of using the removed \
+       @{<info>@@taggedTemplate@} decorator.@,\
+      \  - To use a ReScript function as a tag, lift it with \
+       @{<info>TaggedTemplate.make@}.@]"
+      type_expr typ
 
 let report_error env loc ppf err =
   Printtyp.wrap_printing_env env (fun () -> report_error env loc ppf err)

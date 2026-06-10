@@ -59,7 +59,6 @@ type external_spec =
       external_module_name: external_module_name option;
       splice: bool;
       scopes: string list;
-      tagged_template: bool;
     }
   | Js_send of {name: string; splice: bool; js_send_scopes: string list}
     (* we know it is a js send, but what will happen if you pass an ocaml objct *)
@@ -194,9 +193,7 @@ let check_ffi ?loc ffi : bool =
     upgrade (is_package_relative_path external_module_name.bundle);
     check_external_module_name external_module_name
   | Js_new {external_module_name; name; splice = _; scopes = _}
-  | Js_call
-      {external_module_name; name; splice = _; scopes = _; tagged_template = _}
-    ->
+  | Js_call {external_module_name; name; splice = _; scopes = _} ->
     Ext_option.iter external_module_name (fun external_module_name ->
         upgrade (is_package_relative_path external_module_name.bundle));
     Ext_option.iter external_module_name (fun name ->

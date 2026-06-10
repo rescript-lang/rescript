@@ -718,6 +718,24 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
           [lambda],
           loc )
     | None -> lambda)
+  | Texp_apply {funct; args = oargs}
+    when List.exists
+           (fun (attr, _) -> attr.txt = "res.taggedTemplate")
+           e.exp_attributes ->
+    (* Backtick tagged-template syntax on a value of the builtin
+       [taggedTemplate<'param, 'output>] type. Typecore has already checked the
+       tag's type, so here we just emit a real JS tagged-template literal,
+       regardless of how the tag value was obtained (external, let-binding,
+       function parameter, factory result, cross-module). *)
+    let strings, values =
+      match oargs with
+      | [(_, Some strings); (_, Some values)] -> (strings, values)
+      | _ -> assert false
+    in
+    Lprim
+      ( Ptagged_template,
+        [transl_exp funct; transl_exp strings; transl_exp values],
+        e.exp_loc )
   | Texp_apply
       {
         funct =

@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/tagged_template_decorator_removed.res[0m:[2m1:1-15[0m
+
+  [1;31m1[0m [2m│[0m [1;31m@taggedTemplate[0m
+  2 [2m│[0m external sql: (array<string>, array<string>) => string = "sql"
+  3 [2m│[0m 
+
+  The @taggedTemplate decorator has been removed. Bind the external with the builtin taggedTemplate<'param, 'output> type instead, e.g. `@module("x") external sql: taggedTemplate<'a, string> = "sql"`. The tag can then be used with backtick syntax across module boundaries and as a first-class value.

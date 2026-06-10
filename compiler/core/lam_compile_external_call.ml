@@ -271,32 +271,7 @@ let translate_ffi ?(transformed_jsx = false) (cxt : Lam_compile_context.t)
     arg_types (ffi : External_ffi_types.external_spec)
     (args : J.expression list) ~dynamic_import =
   match ffi with
-  | Js_call
-      {external_module_name; name; splice : _; scopes; tagged_template = true}
-    -> (
-    let fn =
-      translate_scoped_module_val external_module_name name scopes
-        ~dynamic_import
-    in
-    match args with
-    | [
-     {expression_desc = Array (strings, _); _};
-     {expression_desc = Array (values, _); _};
-    ] ->
-      E.tagged_template fn strings values
-    | _ ->
-      let args, eff, dynamic = assemble_args_has_splice arg_types args in
-      let args = if dynamic then E.variadic_args args else args in
-      add_eff eff
-        (E.call ~info:(Js_call_info.na_full_call transformed_jsx) fn args))
-  | Js_call
-      {
-        external_module_name = module_name;
-        name = fn;
-        splice;
-        scopes;
-        tagged_template = false;
-      } ->
+  | Js_call {external_module_name = module_name; name = fn; splice; scopes} ->
     let fn =
       translate_scoped_module_val module_name fn scopes ~dynamic_import
     in

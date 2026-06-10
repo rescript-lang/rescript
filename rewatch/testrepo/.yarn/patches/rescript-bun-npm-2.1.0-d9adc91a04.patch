@@ -68,7 +68,7 @@ index a71a6648ed36cb57849fc77a050117da8d6e438f..a253551552458d668d8ace7013f9ee16
 +@send external values: t => IteratorObject.t<string, unit, unknown> = "entries"
  @send external forEach: (t, (string, string, t) => unit) => unit = "forEach"
 diff --git a/src/Globals.res b/src/Globals.res
-index 8a19eb175c173d06fc19686f3f7171210960a6b8..cb2b967407f318e0783101e7e57c79db7717d978 100644
+index 8a19eb175c173d06fc19686f3f7171210960a6b8..d001c984dc2109ef89d2a8964a6e3856adbd2a93 100644
 --- a/src/Globals.res
 +++ b/src/Globals.res
 @@ -145,9 +145,9 @@ module Headers = {
@@ -137,6 +137,19 @@ index 8a19eb175c173d06fc19686f3f7171210960a6b8..cb2b967407f318e0783101e7e57c79db
  
    /**
       * Read from stdout as a string
+@@ -2227,8 +2230,8 @@ module Shell = {
+   external escape: string => string = "escape"
+ }
+ 
+-@module("bun") @taggedTemplate
+-external sh: (array<string>, array<string>) => ShellPromise.t = "$"
++@module("bun")
++external sh: taggedTemplate<string, ShellPromise.t> = "$"
+ 
+-@module("bun") @taggedTemplate
+-external shExpr: (array<string>, array<ShellExpression.t>) => ShellPromise.t = "$"
++@module("bun")
++external shExpr: taggedTemplate<ShellExpression.t, ShellPromise.t> = "$"
 diff --git a/src/HTMLRewriter.res b/src/HTMLRewriter.res
 index 5260b585d144bd1a51074f5f3811501ba4efc47e..8e2cbdc5b5ab1e3516be81b56dd952bfc43c1a56 100644
 --- a/src/HTMLRewriter.res

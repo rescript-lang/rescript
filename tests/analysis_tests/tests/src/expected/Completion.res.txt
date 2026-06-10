@@ -2572,6 +2572,12 @@ Path T
     "tags": []
   },
   {
+    "detail": "module TaggedTemplate",
+    "kind": 9,
+    "label": "TaggedTemplate",
+    "tags": []
+  },
+  {
     "detail": "module TimeoutId",
     "kind": 9,
     "label": "TimeoutId",

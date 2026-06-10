@@ -65,14 +65,16 @@ and ident_unknown = ident_create "unknown"
 
 and ident_promise = ident_create "promise"
 
+and ident_tagged_template = ident_create "taggedTemplate"
+
 type test = For_sure_yes | For_sure_no | NA
 
 let type_is_builtin_path_but_option (p : Path.t) : test =
   match p with
   | Pident {stamp} when stamp = ident_option.stamp -> For_sure_no
   | Pident {stamp} when stamp = ident_unit.stamp -> For_sure_no
-  | Pident {stamp} when stamp >= ident_int.stamp && stamp <= ident_promise.stamp
-    ->
+  | Pident {stamp}
+    when stamp >= ident_int.stamp && stamp <= ident_tagged_template.stamp ->
     For_sure_yes
   | _ -> NA
 
@@ -111,6 +113,8 @@ and path_unkonwn = Pident ident_unknown
 and path_extension_constructor = Pident ident_extension_constructor
 
 and path_promise = Pident ident_promise
+
+and path_tagged_template = Pident ident_tagged_template
 
 let type_int = newgenty (Tconstr (path_int, [], ref Mnil))
 
@@ -363,6 +367,14 @@ let common_initial_env add_type add_extension empty_env =
       type_arity = 1;
       type_variance = [Variance.covariant];
     }
+  and decl_tagged_template =
+    let tvar1, tvar2 = (newgenvar (), newgenvar ()) in
+    {
+      decl_abstr with
+      type_params = [tvar1; tvar2];
+      type_arity = 2;
+      type_variance = [Variance.full; Variance.full];
+    }
   in
 
   let add_exception id l =
@@ -397,6 +409,7 @@ let common_initial_env add_type add_extension empty_env =
   |> add_type ident_option decl_option
   |> add_type ident_result decl_result
   |> add_type ident_promise decl_promise
+  |> add_type ident_tagged_template decl_tagged_template
   |> add_type ident_array decl_array
   |> add_type ident_iterable decl_iterable
   |> add_type ident_async_iterable decl_async_iterable

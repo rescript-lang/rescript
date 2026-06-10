@@ -1,0 +1,17 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/tagged_template_non_tag.res[0m:[2m10:11-13[0m
+
+   8 [2m│[0m }
+   9 [2m│[0m 
+  [1;31m10[0m [2m│[0m let res = [1;31mfoo[0m`| 5 × 10 = ${5} |`
+  11 [2m│[0m 
+
+  This value is used with tagged template (backtick) syntax, but it has type
+  [1;33m(array<string>, array<int>) => string[0m
+  which is not a [1;33mtaggedTemplate[0m.
+  
+  Tagged template syntax now requires a value of type [1;33mtaggedTemplate<'param, 'output>[0m:
+  
+    - To bind a JavaScript tag function, annotate the [1;33mexternal[0m with [1;33mtaggedTemplate<...>[0m instead of using the removed [1;33m@taggedTemplate[0m decorator.
+    - To use a ReScript function as a tag, lift it with [1;33mTaggedTemplate.make[0m.

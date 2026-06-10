@@ -204,10 +204,10 @@ __metadata:
 
 "rescript-bun@patch:rescript-bun@npm%3A2.1.0#~/.yarn/patches/rescript-bun-npm-2.1.0-d9adc91a04.patch":
   version: 2.1.0
-  resolution: "rescript-bun@patch:rescript-bun@npm%3A2.1.0#~/.yarn/patches/rescript-bun-npm-2.1.0-d9adc91a04.patch::version=2.1.0&hash=685f4a"
+  resolution: "rescript-bun@patch:rescript-bun@npm%3A2.1.0#~/.yarn/patches/rescript-bun-npm-2.1.0-d9adc91a04.patch::version=2.1.0&hash=05b3ce"
   peerDependencies:
     rescript: ">= 12.0.0-alpha.4"
-  checksum: 10c0/d7d8ee95a3e8fa66ffa63f17bd90d88c4ea9029246dcd9c0519787de5bbc1ca73b061cc1052cd6239e53e2dff3d2ae298fcef244f5e167b6cda35692bdd64337
+  checksum: 10c0/bbc6b65d58a6bbfa556d915d2a43a76e8abbf2cae6d90ce8ffd1dad8d8d02f87b83936a8243393584667a6dd45ea8869150e4ef90b34ea63394fdc2e47ce3716
   languageName: node
   linkType: hard
 

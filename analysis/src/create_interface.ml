@@ -1,9 +1,4 @@
 module Source_file_extractor = struct
-  let create ~path =
-    match Files.read_file path with
-    | None -> [||]
-    | Some text -> text |> String.split_on_char '\n' |> Array.of_list
-
   let extract lines ~pos_start ~pos_end =
     let line_start, col_start = pos_start in
     let line_end, col_end = pos_end in
@@ -319,11 +314,9 @@ let print_signature ~extractor ~signature =
   process_signature ~indent:"" signature;
   Buffer.contents buf
 
-let command ~state ~path ~cmi_file =
+let command ~source ~cmi_file =
   match Shared.try_read_cmi cmi_file with
   | Some cmi_info ->
-    (* For reading the config *)
-    ignore (Cmt.load_full_cmt_from_path ~state ~path);
-    let extractor = Source_file_extractor.create ~path in
-    print_signature ~extractor ~signature:cmi_info.cmi_sign
-  | None -> ""
+    let extractor = source |> String.split_on_char '\n' |> Array.of_list in
+    Ok (print_signature ~extractor ~signature:cmi_info.cmi_sign)
+  | None -> Error ("Failed to read cmi file " ^ cmi_file)

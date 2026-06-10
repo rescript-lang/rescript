@@ -53,6 +53,7 @@ val path_dict : Path.t
 val path_bigint : Path.t
 val path_extension_constructor : Path.t
 val path_promise : Path.t
+val path_tagged_template : Path.t
 
 val path_match_failure : Path.t
 val path_assert_failure : Path.t

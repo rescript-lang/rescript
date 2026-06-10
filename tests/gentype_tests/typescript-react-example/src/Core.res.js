@@ -42,6 +42,14 @@ function promise1(x) {
   return x;
 }
 
+function taggedTemplate0(x) {
+  return x;
+}
+
+function taggedTemplate1(x) {
+  return x;
+}
+
 function date0(x) {
   return x;
 }
@@ -113,6 +121,8 @@ export {
   dict1,
   promise0,
   promise1,
+  taggedTemplate0,
+  taggedTemplate1,
   date0,
   date1,
   bigint0,

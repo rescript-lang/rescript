@@ -1,5 +1,4 @@
 Xform not_compiled/DocTemplate.res 3:3
-can't find module DocTemplate
 Hit: Add Documentation template
 
 TextDocumentEdit: DocTemplate.res
@@ -17,7 +16,6 @@ type rec t = A | B
 and e = C
 
 Xform not_compiled/DocTemplate.res 6:15
-can't find module DocTemplate
 Hit: Add Documentation template
 
 TextDocumentEdit: DocTemplate.res
@@ -33,7 +31,6 @@ newText:
 @unboxed type name = Name(string)
 
 Xform not_compiled/DocTemplate.res 8:4
-can't find module DocTemplate
 Hit: Add Documentation template
 
 TextDocumentEdit: DocTemplate.res
@@ -49,7 +46,6 @@ newText:
 let a = 1
 
 Xform not_compiled/DocTemplate.res 10:4
-can't find module DocTemplate
 Hit: Add Documentation template
 
 TextDocumentEdit: DocTemplate.res
@@ -65,7 +61,6 @@ newText:
 let inc = x => x + 1
 
 Xform not_compiled/DocTemplate.res 12:7
-can't find module DocTemplate
 Hit: Add Documentation template
 
 TextDocumentEdit: DocTemplate.res
@@ -109,7 +104,6 @@ newText:
 
 
 Xform not_compiled/DocTemplate.res 14:6
-can't find module DocTemplate
 Hit: Add Documentation template
 
 TextDocumentEdit: DocTemplate.res
@@ -149,7 +143,6 @@ newText:
 
 
 Xform not_compiled/DocTemplate.res 18:2
-can't find module DocTemplate
 Hit: Add Documentation template
 
 TextDocumentEdit: DocTemplate.res

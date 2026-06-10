@@ -12,7 +12,7 @@ function assertEqual(a, b) {
     RE_EXN_ID: "Assert_failure",
     _1: [
       "Stdlib.res",
-      160,
+      161,
       4
     ],
     Error: new Error()
@@ -80,6 +80,8 @@ let Result;
 let $$String;
 
 let $$Symbol;
+
+let TaggedTemplate;
 
 let Type;
 
@@ -169,6 +171,7 @@ export {
   Result,
   $$String,
   $$Symbol,
+  TaggedTemplate,
   Type,
   Iterable,
   $$Iterator,
