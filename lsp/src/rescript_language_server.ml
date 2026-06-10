@@ -287,13 +287,14 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
       in
       (ok (Some (`DocumentSymbol resp)), state))
   | CodeAction {textDocument = {uri}; range = {start; end_}} ->
+    let full = load_full uri state in
     let source = (Document_store.get ~uri state.store).text in
     let resp =
       Analysis.Xform.extract_code_actions ~state:analysis_state
         ~path:(Uri.to_path uri)
         ~start_pos:(start.line, start.character)
         ~end_pos:(end_.line, end_.character)
-        ~source ~kind_file:(Document.kind uri) ~debug:false
+        ~source ~kind_file:(Document.kind uri) ~full ~debug:false
       |> List.map (fun ca -> `CodeAction ca)
     in
     (ok (Some resp), state)
@@ -312,7 +313,7 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
       Analysis.Hint.inlay ~state:analysis_state ~source
         ~kind_file:(Document.kind uri) ~full
         ~pos:(start.line, end_.line) (* TODO: max_length should be a config *)
-        ~max_length:(string_of_int 25) ~debug:false
+        ~max_length:(Some 25) ~debug:false
     in
     (ok resp, state)
   | SemanticTokensFull {textDocument = {uri}} ->
