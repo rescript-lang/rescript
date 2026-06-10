@@ -172,12 +172,23 @@ let new_bs_package ~root_path =
              |> List.rev_append opens_from_compiler_flags
              |> List.map (fun path -> path @ ["place holder"])
            in
+           let dependencies =
+             match config |> Yojson_helpers.get "dependencies" with
+             | Some (`List deps) ->
+               deps
+               |> List.filter_map (fun (x : Yojson.Safe.t) ->
+                      match x with
+                      | `String name -> Some name
+                      | _ -> None)
+             | _ -> []
+           in
            {
              generic_jsx_module;
              suffix;
              rescript_version;
              root_path;
              project_files;
+             dependencies;
              dependencies_files;
              paths_for_module;
              opens;

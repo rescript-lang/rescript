@@ -530,6 +530,7 @@ and package = {
   suffix: string;
   root_path: file_path;
   project_files: File_set.t;
+  dependencies: string list;
   dependencies_files: File_set.t;
   paths_for_module: (file, paths) Hashtbl.t;
   namespace: string option;
