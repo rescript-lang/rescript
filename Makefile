@@ -240,9 +240,8 @@ checkformat: | $(YARN_INSTALL_STAMP)
 # Suites covered: the `scripts/test.js -all` suites (mocha/build/ounit/
 # docstrings), the syntax tests (compiler/syntax, via the instrumented
 # res_parser), the gentype tests (compiler/gentype, via the instrumented
-# bsc) and the analysis + tools tests (analysis/, via the instrumented
-# rescript-editor-analysis and rescript-tools). The reanalyze tests are
-# excluded — see the coverage-run target for why.
+# bsc) and the analysis + tools tests, including reanalyze (analysis/, via
+# the instrumented rescript-editor-analysis and rescript-tools).
 #
 # Outputs (under _coverage/):
 #   html/index.html  — human-browsable line-level report
@@ -300,18 +299,19 @@ coverage-lib: coverage-prepare
 #   - analysis tests run the instrumented `rescript-editor-analysis` and tools
 #     tests the instrumented `rescript-tools` (which links analysis + reanalyze),
 #     both from _build/install/default/bin — adding coverage for analysis/.
-# We deliberately run the analysis suite's `test-analysis-binary` target rather
-# than its full `test`: the reanalyze tests invoke the binary via `dune exec`,
-# which would rebuild it *uninstrumented* (and strip instrumentation from the
-# shared _build artifacts mid-run), so they produce no coverage and would
-# corrupt the instrumented build for later suites.
+# The reanalyze tests (run by the analysis suite's full `test`) invoke the
+# binary via `dune exec`, which would otherwise rebuild it *uninstrumented*.
+# Setting DUNE_INSTRUMENT_WITH=bisect_ppx (the env-var form of
+# `--instrument-with`) makes that `dune exec` match the config coverage-build
+# already used, so it runs the instrumented binary — no rebuild, no coverage
+# gap, and no de-instrumentation of the shared _build artifacts.
 .PHONY: coverage-run
 coverage-run: coverage-lib
 	$(COVERAGE_TEST_ENV) node scripts/test.js -all
 	$(COVERAGE_TEST_ENV) ROUNDTRIP_TEST=1 ./scripts/test_syntax.sh
 	$(COVERAGE_TEST_ENV) make -C tests/gentype_tests/typescript-react-example clean test
 	$(COVERAGE_TEST_ENV) make -C tests/gentype_tests/stdlib-no-shims clean test
-	$(COVERAGE_TEST_ENV) make -C tests/analysis_tests clean test-analysis-binary
+	$(COVERAGE_TEST_ENV) DUNE_INSTRUMENT_WITH=bisect_ppx make -C tests/analysis_tests clean test
 	$(COVERAGE_TEST_ENV) make -C tests/tools_tests clean test
 
 .PHONY: coverage-report
