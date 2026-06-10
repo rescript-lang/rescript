@@ -83,27 +83,35 @@ let get_updated_diagnostics_from_log (state : State.t) =
 let discover_subpackages_and_populate (state : State.t) =
   let ( /+ ) = Filename.concat in
   let workspace_root = State.workspace_root state in
+  let analysis_state = State.analysis_state state in
+  let package = State.package state in
 
   let resolve_node_modules_paths =
-    match state.package with
+    match package with
     | Some {dependencies} ->
       let paths =
         dependencies
-        |> List.map (fun dep_name ->
-               let path =
-                 (workspace_root |> Uri.to_path) /+ "node_modules" /+ dep_name
+        |> List.filter_map (fun dep_name ->
+               let node_modules =
+                 (workspace_root |> Uri.to_path) /+ "node_modules"
                in
-               Unix.realpath path)
+               let path = node_modules /+ dep_name in
+               if Analysis.Files.exists path then Some (Unix.realpath path)
+               else
+                 let rescript = node_modules /+ "rescript" in
+                 if Analysis.Files.exists rescript then
+                   let real_path = Unix.realpath rescript /+ dep_name in
+                   Some real_path
+                 else None)
       in
       Some paths
     | None -> None
   in
 
-  (match state.package with
+  (match package with
   | Some package ->
-    Hashtbl.add state.analysis_state.root_for_uri workspace_root
-      package.root_path;
-    Hashtbl.add state.analysis_state.packages_by_root package.root_path package
+    Hashtbl.add analysis_state.root_for_uri workspace_root package.root_path;
+    Hashtbl.add analysis_state.packages_by_root package.root_path package
   | None -> ());
 
   (match resolve_node_modules_paths with
@@ -115,8 +123,8 @@ let discover_subpackages_and_populate (state : State.t) =
              Analysis.Packages.new_bs_package ~root_path:node_module_path
            with
            | Some package ->
-             Hashtbl.add state.analysis_state.root_for_uri uri package.root_path;
-             Hashtbl.add state.analysis_state.packages_by_root package.root_path
+             Hashtbl.add analysis_state.root_for_uri uri package.root_path;
+             Hashtbl.add analysis_state.packages_by_root package.root_path
                package
            | None -> ());
     ()
@@ -127,21 +135,36 @@ let on_initialize (params : InitializeParams.t) (server : State.t Server.t) =
   let state = Server.state server in
 
   let diagnostics =
-    Diagnostics.create ~diagnostics:Diagnostics.Uri_map.empty
+    Diagnostics.create ~diagnostics:(Diagnostics.empty ())
       ~send:(fun publish_diagnostics_params ->
         Server.notification
           (Server_notification.PublishDiagnostics publish_diagnostics_params)
           server)
   in
-  let state = State.initialize state ~params ~diagnostics in
-  let initialization_info = initialization params.capabilities in
+
+  let analysis_state = Analysis.Shared_types.create_state () in
 
   let package =
-    Analysis.Packages.new_bs_package
-      ~root_path:(State.workspace_root state |> Uri.to_path)
+    let root_path =
+      Helpers.workspace_root_uri_of_initialize_params params |> Uri.to_path
+    in
+    match Analysis.Packages.new_bs_package ~root_path with
+    | Some p -> Some p
+    | None ->
+      let message =
+        Printf.sprintf
+          "Failed to initialize context for project. Could not find a \
+           rescript.json file in %s or another error"
+          root_path
+      in
+      Server.show_message_notification ~kind:MessageType.Error message server;
+      None
   in
 
-  let state = {state with package} in
+  let state =
+    State.initialize state ~params ~diagnostics ~package ~analysis_state
+  in
+  let initialization_info = initialization params.capabilities in
 
   state |> discover_subpackages_and_populate;
 
@@ -152,12 +175,47 @@ let on_initialize (params : InitializeParams.t) (server : State.t Server.t) =
   (initialization_info, state)
 
 let on_request (Client_request.E request) (server : State.t Server.t) =
-  (* FIX: Deve buscar for root_uri *)
   let load_full uri (state : State.t) =
+    (* Return the package whose root contains [path].
+       When multiple package roots match, the longest root is selected so nested
+       workspace packages resolve to the most specific package. Returns [None] when
+       [path] is outside every known package root. *)
+    let package_for_path t ~path =
+      let analysis_state = State.analysis_state t in
+
+      let path_matches_root ~path ~root =
+        let is_sep = function
+          | '/' | '\\' -> true
+          | _ -> false
+        in
+        let root_len = String.length root in
+        let path_len = String.length path in
+        root_len > 0
+        && (path = root
+           || path_len > root_len
+              && String.starts_with ~prefix:root path
+              && (is_sep root.[root_len - 1] || is_sep path.[root_len]))
+      in
+
+      analysis_state.packages_by_root |> Hashtbl.to_seq
+      |> Seq.fold_left
+           (fun best (root, package) ->
+             if path_matches_root ~path ~root then
+               match best with
+               | None -> Some (root, package)
+               | Some (best_root, _) ->
+                 if String.length root > String.length best_root then
+                   Some (root, package)
+                 else best
+             else best)
+           None
+      |> Option.map snd
+    in
+
     match state.status with
     | Initialized _ -> (
       let path = uri |> Uri.to_path in
-      match state.package with
+      match package_for_path state ~path with
       | Some package -> (
         let module_name =
           Analysis.Build_system.namespaced_name package.namespace
@@ -180,7 +238,6 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
   let ok value = Ok (Client_request.yojson_of_result request value) in
 
   let state = Server.state server in
-  let analysis_state = state.analysis_state in
 
   match request with
   | Client_request.Initialize params ->
@@ -190,8 +247,9 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     let source = (Document_store.get ~uri state.store).text in
     let full = load_full uri state in
     let hover =
-      Analysis.Commands.hover ~state:analysis_state ~source
-        ~kind_file:(Document.kind uri)
+      Analysis.Commands.hover
+        ~state:(State.analysis_state state)
+        ~source ~kind_file:(Document.kind uri)
         ~pos:(position.line, position.character)
         ~debug:false
           (* TODO: supports_markdown_links should be get from client capabilities *)
@@ -201,9 +259,11 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
   | TextDocumentCompletion {textDocument = {uri}; position} ->
     let source = (Document_store.get ~uri state.store).text in
     let full = load_full uri state in
+
     let comp =
-      Analysis.Commands.completion ~state:analysis_state ~debug:false ~source
-        ~kind_file:(Document.kind uri)
+      Analysis.Commands.completion
+        ~state:(State.analysis_state state)
+        ~debug:false ~source ~kind_file:(Document.kind uri)
         ~pos:(position.line, position.character)
         ~full
     in
@@ -222,8 +282,9 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
         | Some (`String file_path), Some (`String module_path) ->
           let full = load_full (Uri.of_path file_path) state in
           let documentation =
-            Analysis.Commands.completion_resolve ~state:analysis_state ~full
-              ~module_path
+            Analysis.Commands.completion_resolve
+              ~state:(State.analysis_state state)
+              ~full ~module_path
           in
           Some {item with documentation}
         | _ -> None)
@@ -235,8 +296,9 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     let full = load_full uri state in
     let resp =
       match
-        Analysis.Commands.signature_help ~state:analysis_state ~source
-          ~kind_file:(Document.kind uri)
+        Analysis.Commands.signature_help
+          ~state:(State.analysis_state state)
+          ~source ~kind_file:(Document.kind uri)
           ~pos:(position.line, position.character)
           ~full ~allow_for_constructor_payloads:true ~debug:false
       with
@@ -248,7 +310,9 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     let full = load_full uri state in
     let resp =
       match
-        Analysis.Commands.definition ~state:analysis_state ~full
+        Analysis.Commands.definition
+          ~state:(State.analysis_state state)
+          ~full
           ~pos:(position.line, position.character)
           ~debug:false
       with
@@ -260,7 +324,9 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     let full = load_full uri state in
     let resp =
       match
-        Analysis.Commands.type_definition ~state:analysis_state ~full
+        Analysis.Commands.type_definition
+          ~state:(State.analysis_state state)
+          ~full
           ~pos:(position.line, position.character)
           ~debug:false
       with
@@ -271,7 +337,9 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
   | TextDocumentReferences {textDocument = {uri}; position} ->
     let full = load_full uri state in
     let resp =
-      Analysis.Commands.references ~state:analysis_state ~full
+      Analysis.Commands.references
+        ~state:(State.analysis_state state)
+        ~full
         ~pos:(position.line, position.character)
         ~debug:false
     in
@@ -290,7 +358,8 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     let full = load_full uri state in
     let source = (Document_store.get ~uri state.store).text in
     let resp =
-      Analysis.Xform.extract_code_actions ~state:analysis_state
+      Analysis.Xform.extract_code_actions
+        ~state:(State.analysis_state state)
         ~path:(Uri.to_path uri)
         ~start_pos:(start.line, start.character)
         ~end_pos:(end_.line, end_.character)
@@ -310,8 +379,9 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     let source = (Document_store.get ~uri state.store).text in
     let full = load_full uri state in
     let resp =
-      Analysis.Hint.inlay ~state:analysis_state ~source
-        ~kind_file:(Document.kind uri) ~full
+      Analysis.Hint.inlay
+        ~state:(State.analysis_state state)
+        ~source ~kind_file:(Document.kind uri) ~full
         ~pos:(start.line, end_.line) (* TODO: max_length should be a config *)
         ~max_length:(Some 25) ~debug:false
     in
@@ -327,7 +397,9 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     let full = load_full uri state in
     let resp =
       match
-        Analysis.Commands.rename ~state:analysis_state ~full
+        Analysis.Commands.rename
+          ~state:(State.analysis_state state)
+          ~full
           ~pos:(position.line, position.character)
           ~new_name:newName ~debug:false
       with
@@ -477,8 +549,5 @@ let on_notification notification (server : State.t Server.t) =
     state
 
 let listen ~input ~output ~fs =
-  let state =
-    State.create ~store:(Document_store.create ()) ~fs ~package:None
-      ~analysis_state:(Analysis.Shared_types.create_state ())
-  in
+  let state = State.create ~store:(Document_store.create ()) ~fs in
   Server.listen ~input ~output ~on_request ~on_notification ~state
