@@ -244,6 +244,7 @@ Source: [typecore.ml:27](../compiler/ml/typecore.ml).
 | `Type_params_not_supported` | ✓ | `variant_spread_pattern_type_params.res` | Pattern-level variant spread (`| ...a as v`) where `a` has type params; typedecl path covered by `variant_spread_type_parameters.res`. |
 | `Field_access_on_dict_type` | ✓ | `field_access_on_dict_type.res` | |
 | `Jsx_not_enabled` | ☐ (needs harness flag) | — | typecore.ml:218/3470. Fires when JSX is used without `-bs-jsx N`. The `super_errors` runner hard-codes `-bs-jsx 4` in `bscFlags`; adding a per-fixture opt-out (e.g. a `.opts` sidecar) would expose this. Until then, it's reachable in real code but blocked at the harness level. |
+| `Tagged_template_non_tag` | ✓ | `tagged_template_non_tag.res` | Backtick tagged-template syntax used on a value whose type is not `taggedTemplate<'param, 'output>`. |
 
 ---
 

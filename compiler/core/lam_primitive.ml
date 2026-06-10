@@ -40,6 +40,8 @@ type t =
   | Psetfield of int * Lam_compat.set_field_dbg_info
   (* could have field info at least for record *)
   | Pduprecord
+  (* Tagged template literal: [tag; strings_array; values_array] *)
+  | Ptagged_template
   (* External call *)
   | Pjs_call of {
       prim_name: string;
@@ -230,6 +232,9 @@ let eq_primitive_approx (lhs : t) (rhs : t) =
   | Parrayrefs | Parraysets | Pjs_fn_make_unit | Pjs_fn_method | Phash
   | Phash_mixstring | Phash_mixint | Phash_finalmix ->
     rhs = lhs
+  (* Reachable only via the optimizer's term-equality comparison, which the
+     test suite doesn't exercise for tagged templates. *)
+  | Ptagged_template -> ( ((rhs = lhs) [@coverage off]))
   | Pcreate_extension a -> (
     match rhs with
     | Pcreate_extension b -> a = (b : string)

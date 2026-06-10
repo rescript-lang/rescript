@@ -56,7 +56,6 @@ type external_spec =
       external_module_name: external_module_name option;
       splice: bool;
       scopes: string list;
-      tagged_template: bool;
     }
   | Js_send of {name: string; splice: bool; js_send_scopes: string list}
     (* we know it is a js send, but what will happen if you pass an ocaml objct *)
