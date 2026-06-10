@@ -238,7 +238,8 @@ checkformat: | $(YARN_INSTALL_STAMP)
 #   make clean-coverage   # remove coverage artifacts
 #
 # Suites covered: the `scripts/test.js -all` suites (mocha/build/ounit/
-# docstrings) plus the gentype tests (compiler/gentype, via the instrumented
+# docstrings), the syntax tests (compiler/syntax, via the instrumented
+# res_parser), the gentype tests (compiler/gentype, via the instrumented
 # bsc) and the analysis + tools tests (analysis/, via the instrumented
 # rescript-editor-analysis and rescript-tools). The reanalyze tests are
 # excluded — see the coverage-run target for why.
@@ -291,6 +292,9 @@ coverage-lib: coverage-prepare
 # Run the test suites that exercise the instrumented toolchain. Each suite
 # shells out to a binary that `coverage-build` instrumented:
 #   - `node scripts/test.js -all` drives bsc (mocha/build/ounit/docstrings).
+#   - the syntax tests drive the instrumented `res_parser` from
+#     _build/install/default/bin, adding coverage for compiler/syntax.
+#     ROUNDTRIP_TEST=1 matches Linux CI and also exercises the printer paths.
 #   - gentype tests compile via `rescript build`, i.e. the instrumented bsc in
 #     BIN_DIR, so they add coverage for compiler/gentype.
 #   - analysis tests run the instrumented `rescript-editor-analysis` and tools
@@ -304,6 +308,7 @@ coverage-lib: coverage-prepare
 .PHONY: coverage-run
 coverage-run: coverage-lib
 	$(COVERAGE_TEST_ENV) node scripts/test.js -all
+	$(COVERAGE_TEST_ENV) ROUNDTRIP_TEST=1 ./scripts/test_syntax.sh
 	$(COVERAGE_TEST_ENV) make -C tests/gentype_tests/typescript-react-example clean test
 	$(COVERAGE_TEST_ENV) make -C tests/gentype_tests/stdlib-no-shims clean test
 	$(COVERAGE_TEST_ENV) make -C tests/analysis_tests clean test-analysis-binary
