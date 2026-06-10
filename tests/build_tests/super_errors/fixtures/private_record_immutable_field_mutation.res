@@ -1,5 +1,4 @@
 module PrivateRecord: {
-  @allowMutation
   type t = private {mutable value: int, name: string}
   let make: int => t
 } = {

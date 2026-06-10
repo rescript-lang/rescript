@@ -1,4 +1,3 @@
-@allowMutation
 type t = private {
   mutable value: int,
   name: string,

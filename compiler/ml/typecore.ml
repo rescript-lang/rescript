@@ -57,7 +57,6 @@ type error =
       string * Longident.t * (Path.t * Path.t) * (Path.t * Path.t) list
   | Undefined_method of type_expr * string * string list option
   | Private_type of type_expr
-  | Private_label of Longident.t * type_expr
   | Not_subtype of
       Ctype.type_pairs * Ctype.type_pairs * Ctype.subtype_context option
   | Too_many_arguments of bool * type_expr
@@ -316,6 +315,13 @@ let extract_concrete_record env ty =
   match extract_concrete_typedecl env ty with
   | p0, p, {type_kind = Type_record (fields, repr)} -> (p0, p, fields, repr)
   | _ -> raise Not_found
+
+let is_private_record_field env label =
+  match extract_concrete_typedecl env label.lbl_res with
+  | _, _, {type_kind = Type_record _; type_private = Private} -> true
+  | _ -> false
+  | exception Not_found -> false
+
 let extract_concrete_variant env ty =
   match extract_concrete_typedecl env ty with
   | p0, p, {type_kind = Type_variant cstrs} -> (p0, p, cstrs)
@@ -2952,6 +2958,9 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
     unify_exp ~context:None env record ty_record;
     if label.lbl_mut = Immutable then
       raise (Error (loc, env, Label_not_mutable lid.txt));
+    if label.lbl_private = Private && is_private_record_field env label then
+      Location.prerr_warning lid.loc
+        (Warnings.Bs_private_record_mutation (Longident.last lid.txt));
     Builtin_attributes.check_deprecated_mutable lid.loc label.lbl_attributes
       (Longident.last lid.txt);
     rue
@@ -3636,24 +3645,8 @@ and type_label_exp ~call_context create env loc ty_expected
     end_def ();
     (* Generalize information merged from ty_expected *)
     generalize_structure ty_arg);
-  (if label.lbl_private = Private then
-     if create then raise (Error (loc, env, Private_type ty_expected))
-     else
-       let allow_private_assignment =
-         match extract_concrete_typedecl env label.lbl_res with
-         | ( _,
-             _,
-             {
-               type_kind = Type_record _;
-               type_private = Private;
-               type_attributes;
-             } ) ->
-           Builtin_attributes.has_allow_mutation type_attributes
-         | _ -> false
-         | exception Not_found -> false
-       in
-       if not allow_private_assignment then
-         raise (Error (lid.loc, env, Private_label (lid.txt, ty_expected))));
+  if label.lbl_private = Private && create then
+    raise (Error (loc, env, Private_type ty_expected));
   let arg =
     let snap = if vars = [] then None else Some (Btype.snapshot ()) in
     let field_name = Longident.last lid.txt in
@@ -4842,9 +4835,6 @@ let report_error env loc ppf error =
       "In this type, the locally bound module name %s escapes its scope" id
   | Private_type ty ->
     fprintf ppf "Cannot create values of the private type %a" type_expr ty
-  | Private_label (lid, ty) ->
-    fprintf ppf "Cannot assign field %a of the private type %a" longident lid
-      type_expr ty
   | Not_a_variant_type lid ->
     fprintf ppf "The type %a@ is not a variant type" longident lid
   | Incoherent_label_order ->
