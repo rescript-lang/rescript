@@ -78,7 +78,9 @@ let code_action ~state ~path ~start_pos ~end_pos ~current_file ~debug =
   | None -> print_null ()
   | Some source ->
     Xform.extract_code_actions ~state ~path ~start_pos ~end_pos ~source
-      ~kind_file ~debug
+      ~kind_file
+      ~full:(Cmt.load_full_cmt_from_path ~state ~path)
+      ~debug
     |> List.map (fun c -> Lsp.Types.CodeAction.yojson_of_t c)
     |> print_list
 
@@ -160,6 +162,25 @@ let semantic_tokens ~path =
     let kind_file = Files.classify_source_file path in
     let tokens = Semantic_tokens.semantic_tokens ~source ~kind_file in
     Lsp.Types.SemanticTokens.yojson_of_t tokens |> print_string
+
+let document_symbol ~path =
+  match Files.read_file path with
+  | None -> print_null ()
+  | Some source ->
+    let kind_file = Files.classify_source_file path in
+    let symbols = Document_symbol.get_symbols ~source ~kind_file in
+    print_list (symbols |> List.map Lsp.Types.DocumentSymbol.yojson_of_t)
+
+let create_interface ~path ~cmi_file =
+  let result =
+    match Files.read_file path with
+    | None -> ""
+    | Some source -> (
+      match Create_interface.command ~source ~cmi_file with
+      | Ok content -> content
+      | Error _ -> "")
+  in
+  Printf.printf "%s" result
 
 let test ~state ~path =
   Uri.strip_path := true;
@@ -247,7 +268,7 @@ let test ~state ~path =
             Dce_command.command ()
           | "doc" ->
             print_endline ("DocumentSymbol " ^ path);
-            Document_symbol.command ~path
+            document_symbol ~path
           | "hig" ->
             print_endline ("Highlight " ^ path);
             let source = Files.read_file path |> Option.get in
@@ -281,7 +302,7 @@ let test ~state ~path =
               let dir = dirname path in
               dir ++ parent_dir_name ++ "lib" ++ "bs" ++ "src" ++ name
             in
-            Printf.printf "%s" (Create_interface.command ~state ~path ~cmi_file)
+            create_interface ~path ~cmi_file
           | "ref" ->
             print_endline
               ("References " ^ path ^ " " ^ string_of_int line ^ ":"
@@ -323,10 +344,11 @@ let test ~state ~path =
             let source =
               Files.read_file current_file |> Option.value ~default:""
             in
+            let full = Cmt.load_full_cmt_from_path ~state ~path in
             let kind_file = Files.classify_source_file current_file in
             let code_actions =
               Xform.extract_code_actions ~state ~path ~start_pos ~end_pos
-                ~source ~kind_file ~debug:true
+                ~source ~kind_file ~full ~debug:true
             in
             Sys.remove current_file;
             code_actions
@@ -404,8 +426,8 @@ let test ~state ~path =
             print_endline
               ("Inlay Hint " ^ path ^ " " ^ string_of_int line_start ^ ":"
              ^ string_of_int line_end);
-            inlayhint ~state ~path ~pos:(line_start, line_end) ~max_length:"25"
-              ~debug:false
+            inlayhint ~state ~path ~pos:(line_start, line_end)
+              ~max_length:(Some 25) ~debug:false
           | "cle" ->
             print_endline ("Code Lens " ^ path);
             code_lens ~state ~path ~debug:false
