@@ -2,21 +2,19 @@ open Lsp.Types
 
 type status =
   | Uninitialized
-  | Initialized of {params: InitializeParams.t; diagnostics: Diagnostics.t}
+  | Initialized of {
+      params: InitializeParams.t;
+      diagnostics: Diagnostics.t;
+      analysis_state: Analysis.Shared_types.state;
+      package: Analysis.Shared_types.package option;
+    }
 
-type t = {
-  status: status;
-  store: Document_store.t;
-  fs: Eio.Fs.dir_ty Eio.Path.t;
-  analysis_state: Analysis.Shared_types.state;
-  package: Analysis.Shared_types.package option;
-}
+type t = {status: status; store: Document_store.t; fs: Eio.Fs.dir_ty Eio.Path.t}
 
-let create ~store ~fs ~package ~analysis_state =
-  {status = Uninitialized; store; fs; package; analysis_state}
+let create ~store ~fs = {status = Uninitialized; store; fs}
 
-let initialize t ~params ~diagnostics =
-  {t with status = Initialized {params; diagnostics}}
+let initialize t ~params ~diagnostics ~analysis_state ~package =
+  {t with status = Initialized {params; diagnostics; analysis_state; package}}
 
 let diagnostics t =
   match t.status with
@@ -27,16 +25,30 @@ let diagnostics t =
 let update_diagnostics diagnostics t =
   match t.status with
   | Uninitialized -> assert false
-  | Initialized {params; _} ->
-    {t with status = Initialized {params; diagnostics}}
+  | Initialized {params; analysis_state; package} ->
+    {t with status = Initialized {params; analysis_state; package; diagnostics}}
+
+let analysis_state t =
+  match t.status with
+  | Uninitialized -> assert false
+  | Initialized {analysis_state} -> analysis_state
+
+let package t =
+  match t.status with
+  | Uninitialized -> assert false
+  | Initialized {package} -> package
+
+let update_package package t =
+  match t.status with
+  | Uninitialized -> assert false
+  | Initialized {params; diagnostics; analysis_state} ->
+    {t with status = Initialized {params; analysis_state; package; diagnostics}}
 
 let workspace_root t =
   match t.status with
   | Uninitialized -> assert false
-  | Initialized init -> (
-    match init.params.rootUri with
-    | None -> assert false
-    | Some uri -> uri)
+  | Initialized init ->
+    Helpers.workspace_root_uri_of_initialize_params init.params
 
 let to_yojson (t : t) : Yojson.Safe.t =
   let minimal = true in
@@ -80,5 +92,6 @@ let to_yojson (t : t) : Yojson.Safe.t =
     [
       ("status", status_to_yojson t.status);
       ("store", document_store_to_yojson t.store);
-      ("analysis_state", Analysis.Shared_types.state_to_yojson t.analysis_state);
+      ( "analysis_state",
+        Analysis.Shared_types.state_to_yojson (analysis_state t) );
     ]

@@ -8,11 +8,11 @@ type t = {
   send: PublishDiagnosticsParams.t -> unit;
 }
 
+let empty () = Uri_map.empty
+
 let create ~diagnostics ~send = {diagnostics; send}
 
-let from_uri ~uri (d : Diagnostic.t list) =
-  let map = Uri_map.empty in
-  Uri_map.add uri d map
+let from_uri ~uri (d : Diagnostic.t list) = Uri_map.add uri d (empty ())
 
 (* Compiler log diagnostics are a full snapshot of the latest build output.
    Overwrite the previous compiler log diagnostics so files that disappeared
