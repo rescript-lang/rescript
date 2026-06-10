@@ -303,8 +303,10 @@ coverage-lib: coverage-prepare
 # binary via `dune exec`, which would otherwise rebuild it *uninstrumented*.
 # Setting DUNE_INSTRUMENT_WITH=bisect_ppx (the env-var form of
 # `--instrument-with`) makes that `dune exec` match the config coverage-build
-# already used, so it runs the instrumented binary — no rebuild, no coverage
-# gap, and no de-instrumentation of the shared _build artifacts.
+# already used, so it runs the instrumented binary — no rebuild, no
+# de-instrumentation of the shared _build artifacts. (The reanalyze library
+# also carries its own bisect_ppx instrumentation stanza so its source is
+# counted, not just the analysis/tools code it links.)
 .PHONY: coverage-run
 coverage-run: coverage-lib
 	$(COVERAGE_TEST_ENV) node scripts/test.js -all
