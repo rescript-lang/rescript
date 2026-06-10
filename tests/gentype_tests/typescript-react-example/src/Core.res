@@ -29,6 +29,12 @@ let promise0 = (x: promise<string>) => x
 let promise1 = (x: Promise.t<string>) => x
 
 @genType
+let taggedTemplate0 = (x: taggedTemplate<string, string>) => x
+
+@genType
+let taggedTemplate1 = (x: TaggedTemplate.t<string, string>) => x
+
+@genType
 let date0 = (x: Js.Date.t) => x
 
 @genType

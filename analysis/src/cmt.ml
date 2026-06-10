@@ -50,7 +50,8 @@ let full_from_uri ~state ~uri =
         let cmt = get_cmt_path ~uri paths in
         full_for_cmt ~module_name ~package ~uri cmt
       | None ->
-        prerr_endline ("can't find module " ^ module_name);
+        if Debug.verbose () then
+          prerr_endline ("can't find module " ^ module_name);
         None))
 
 let full_from_module ~package ~module_name =

@@ -915,7 +915,7 @@ let parse_interface ~source =
   (structure, print_signature_item)
 
 let extract_code_actions ~state ~path ~start_pos ~end_pos ~source ~kind_file
-    ~debug =
+    ~full ~debug =
   let pos = start_pos in
   let code_actions = ref [] in
   match kind_file with
@@ -934,7 +934,7 @@ let extract_code_actions ~state ~path ~start_pos ~end_pos ~source ~kind_file
 
     (* This Code Action needs type info *)
     let () =
-      match Cmt.load_full_cmt_from_path ~state ~path with
+      match full with
       | Some full ->
         Add_type_annotation.xform ~path ~pos ~full ~structure ~code_actions
           ~debug;

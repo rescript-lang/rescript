@@ -1,9 +1,11 @@
 open Mocha
 open Test_utils
 
+// A tag bound with the builtin `taggedTemplate` type. No decorator needed: the
+// type is what makes the compiler emit real JS tagged-template syntax.
 module Pg = {
-  @module("./tagged_template_lib.js") @taggedTemplate
-  external sql: (array<string>, array<string>) => string = "sql"
+  @module("./tagged_template_lib.js")
+  external sql: taggedTemplate<string, string> = "sql"
 }
 
 let table = "users"
@@ -11,29 +13,78 @@ let id = "5"
 
 let queryWithModule = Pg.sql`SELECT * FROM ${table} WHERE id = ${id}`
 
+// The tag still emits backticks when used through `open` (i.e. once it has
+// crossed the module boundary as a value of the `taggedTemplate` type).
 open Pg
 let query = sql`
 " SELECT * FROM ${table} WHERE id = ${id}`
 
-@module("./tagged_template_lib.js") @taggedTemplate
-external length: (array<string>, array<int>) => int = "length"
+@module("./tagged_template_lib.js")
+external length: taggedTemplate<int, int> = "length"
 
 let extraLength = 10
 let length = length`hello ${extraLength} what's the total length? Is it ${3}?`
 
-let foo = (strings, values) => {
-  let res = ref("")
-  let valueCount = Belt.Array.length(values)
-  for i in 0 to valueCount - 1 {
-    res :=
-      res.contents ++
-      strings->Array.getUnsafe(i) ++
-      Js.Int.toString(values->Array.getUnsafe(i) * 10)
-  }
-  res.contents ++ strings->Array.getUnsafe(valueCount)
+// A tag constructed at runtime by a factory (postgres-style), where the factory
+// returns the tag value.
+@module("./tagged_template_lib.js")
+external makeSql: string => taggedTemplate<string, string> = "makeSql"
+
+let prefixedSql = makeSql("PREFIX ")
+let factoryQuery = prefixedSql`SELECT * FROM ${table}`
+
+// A tag bound to a *bare* (non-relative) import specifier, rather than a
+// `./relative.js` path. `#tagged-template-pg` resolves via the Node `imports`
+// map in this package's package.json to a mock that throws unless it receives a
+// real `TemplateStringsArray`, so a passing result proves the call site emitted
+// real tagged-template syntax against the bare import.
+@module("#tagged-template-pg")
+external pg: string => taggedTemplate<string, string> = "default"
+
+let pgSql = pg("PG: ")
+let bareImportQuery = pgSql`SELECT * FROM ${table}`
+
+// The tag flows through a function parameter and is still emitted as a real
+// tagged template at the call site inside the function.
+let runQuery = (tag: taggedTemplate<string, string>) => tag`SELECT id = ${id}`
+let paramQuery = runQuery(Pg.sql)
+
+// A ReScript-authored tag, lifted into the type with `TaggedTemplate.make`, is
+// usable as a tag too.
+type params = I(int) | S(string)
+
+let s = TaggedTemplate.make((strings, parameters) => {
+  Array.reduceWithIndex(parameters, Array.getUnsafe(strings, 0), (acc, param, i) => {
+    let suffix = Array.getUnsafe(strings, i + 1)
+    let p = switch param {
+    | I(i) => Int.toString(i)
+    | S(s) => s
+    }
+    acc ++ p ++ suffix
+  })
+})
+
+let greeting = s`hello ${S("Ada")} you're ${I(36)} years old!`
+
+// A `taggedTemplate` value defined in another module, consumed here with
+// backtick syntax. `Tagged_template_binding` only exposes `sql`'s type, yet the
+// call site still emits a real tagged template.
+let crossModuleQuery = Tagged_template_binding.sql`SELECT * FROM ${table}`
+
+// Proof that the compiler emits a *real* JS tagged template (a frozen
+// `TemplateStringsArray` with `.raw`) rather than a plain/variadic function
+// call. `rawTag` inspects the argument it receives.
+type rawCall = {
+  hasRaw: bool,
+  raw: array<string>,
+  cooked: array<string>,
+  values: array<int>,
 }
 
-let res = foo`| 5 × 10 = ${5} |`
+@module("./tagged_template_lib.js")
+external rawTag: taggedTemplate<int, rawCall> = "rawTag"
+
+let rawResult = rawTag`a ${1} b ${2} c`
 
 describe("tagged templates", () => {
   test("with externals, it should return a string with the correct interpolations", () =>
@@ -52,9 +103,34 @@ describe("tagged templates", () => {
 
   test("with externals, it should return the result of the function", () => eq(__LOC__, length, 52))
 
+  test("with a runtime-constructed tag (factory), it should emit tagged-template syntax", () =>
+    eq(__LOC__, factoryQuery, "PREFIX SELECT * FROM 'users'")
+  )
+
+  test("with a tag from a bare package import, it should emit tagged-template syntax", () =>
+    // The mock throws if not called as a real tagged template, so reaching this
+    // assertion at all already proves backtick syntax was emitted.
+    eq(__LOC__, bareImportQuery, "PG: SELECT * FROM 'users'")
+  )
+
+  test("with a tag passed as a function argument, it should emit tagged-template syntax", () =>
+    eq(__LOC__, paramQuery, "SELECT id = '5'")
+  )
+
+  test("with a tag imported from another module, it should emit tagged-template syntax", () =>
+    eq(__LOC__, crossModuleQuery, "X: SELECT * FROM 'users'")
+  )
+
+  test("it should call the tag as a real tagged template (TemplateStringsArray with .raw)", () => {
+    eq(__LOC__, rawResult.hasRaw, true)
+    eq(__LOC__, rawResult.cooked, ["a ", " b ", " c"])
+    eq(__LOC__, rawResult.raw, ["a ", " b ", " c"])
+    eq(__LOC__, rawResult.values, [1, 2])
+  })
+
   test(
-    "with rescript function, it should return a string with the correct encoding and interpolations",
-    () => eq(__LOC__, res, "| 5 × 10 = 50 |"),
+    "with a ReScript tag lifted via TaggedTemplate.make, it should return the correct interpolation",
+    () => eq(__LOC__, greeting, "hello Ada you're 36 years old!"),
   )
 
   test(

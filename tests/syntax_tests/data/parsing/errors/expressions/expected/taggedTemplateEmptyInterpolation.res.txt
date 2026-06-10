@@ -1,0 +1,13 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/expressions/taggedTemplateEmptyInterpolation.res:1:29
+
+  1 │ let q = sql`SELECT * FROM ${}`
+
+  It seems that this expression block is empty
+
+let q =
+  ((sql
+      [|(({js|SELECT * FROM |js})[@res.template ]);(({js||js})
+        [@res.template ])|] [|([%rescript.exprhole ])|])
+  [@res.taggedTemplate ])

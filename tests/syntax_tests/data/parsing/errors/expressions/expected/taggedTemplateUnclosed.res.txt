@@ -1,0 +1,13 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/expressions/taggedTemplateUnclosed.res:1:49
+
+  1 │ let q = sql`SELECT * FROM users WHERE id = ${id}
+
+  Did you forget to close this template expression with a backtick?
+
+let q =
+  ((sql
+      [|(({js|SELECT * FROM users WHERE id = |js})
+        [@res.template ]);(({js||js})[@res.template ])|] [|id|])
+  [@res.taggedTemplate ])

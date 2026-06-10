@@ -5,5 +5,8 @@
     "@rescript/react": "workspace:^",
     "rescript": "workspace:^"
   },
-  "type": "module"
+  "type": "module",
+  "imports": {
+    "#tagged-template-pg": "./src/tagged_template_pg_mock.js"
+  }
 }
