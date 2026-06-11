@@ -81,11 +81,9 @@ let handle_constructor txt =
   match txt with
   | Longident.Lident name -> name
   | Ldot (_left, name) -> name
-  | Lapply (_, _) -> assert false
 
 let rec lid_is_complex (lid : Longident.t) =
   match lid with
-  | Lapply _ -> true
   | Ldot (lid, _) -> lid_is_complex lid
   | _ -> false
 

@@ -15,7 +15,7 @@
 
 (** Long identifiers, used in parsetree. *)
 
-type t = Lident of string | Ldot of t * string | Lapply of t * t
+type t = Lident of string | Ldot of t * string
 
 val cmp : t -> t -> int
 val flatten : t -> string list
