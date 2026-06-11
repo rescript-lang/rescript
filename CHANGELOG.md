@@ -66,6 +66,7 @@
 - Convert OCaml codebase to snake case format. https://github.com/rescript-lang/rescript/pull/8456
 - Analysis refactor: remove global state `Shared_types.state`. https://github.com/rescript-lang/rescript/pull/8465
 - Refactor analysis CLI helpers to use source input. https://github.com/rescript-lang/rescript/pull/8466
+- Include syntax, gentype, analysis, tools, and reanalyze tests in coverage reports. https://github.com/rescript-lang/rescript/pull/8467
 
 # 13.0.0-alpha.4
 

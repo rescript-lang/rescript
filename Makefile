@@ -237,6 +237,12 @@ checkformat: | $(YARN_INSTALL_STAMP)
 #   make coverage         # run full test suite, generate report
 #   make clean-coverage   # remove coverage artifacts
 #
+# Suites covered: the `scripts/test.js -all` suites (mocha/build/ounit/
+# docstrings), the syntax tests (compiler/syntax, via the instrumented
+# res_parser), the gentype tests (compiler/gentype, via the instrumented
+# bsc) and the analysis + tools tests, including reanalyze (analysis/, via
+# the instrumented rescript-editor-analysis and rescript-tools).
+#
 # Outputs (under _coverage/):
 #   html/index.html  — human-browsable line-level report
 #   coverage.json    — Coveralls-format JSON, queryable with jq:
@@ -253,6 +259,10 @@ COVERAGE_FILES_DIR := $(COVERAGE_DIR)/files
 COVERAGE_HTML_DIR := $(COVERAGE_DIR)/html
 COVERAGE_JSON := $(COVERAGE_DIR)/coverage.json
 COVERAGE_BISECT_PREFIX := $(abspath $(COVERAGE_FILES_DIR))/bisect
+# Env that makes instrumented binaries append their counters to the shared
+# coverage prefix. bisect_ppx adds a unique per-process suffix, so many
+# concurrent `bsc` / analysis processes accumulate without colliding.
+COVERAGE_TEST_ENV := BISECT_FILE=$(COVERAGE_BISECT_PREFIX) BISECT_SILENT=YES
 
 # Re-builds the toolchain with bisect_ppx instrumentation and swaps the
 # instrumented binaries into BIN_DIR so any test runner that shells out to
@@ -278,10 +288,33 @@ coverage-lib: coverage-prepare
 		yarn workspace @rescript/runtime build
 	rm -f $(COVERAGE_BISECT_PREFIX)-discard*.coverage
 
+# Run the test suites that exercise the instrumented toolchain. Each suite
+# shells out to a binary that `coverage-build` instrumented:
+#   - `node scripts/test.js -all` drives bsc (mocha/build/ounit/docstrings).
+#   - the syntax tests drive the instrumented `res_parser` from
+#     _build/install/default/bin, adding coverage for compiler/syntax.
+#     ROUNDTRIP_TEST=1 matches Linux CI and also exercises the printer paths.
+#   - gentype tests compile via `rescript build`, i.e. the instrumented bsc in
+#     BIN_DIR, so they add coverage for compiler/gentype.
+#   - analysis tests run the instrumented `rescript-editor-analysis` and tools
+#     tests the instrumented `rescript-tools` (which links analysis + reanalyze),
+#     both from _build/install/default/bin — adding coverage for analysis/.
+# The reanalyze tests (run by the analysis suite's full `test`) invoke the
+# binary via `dune exec`, which would otherwise rebuild it *uninstrumented*.
+# Setting DUNE_INSTRUMENT_WITH=bisect_ppx (the env-var form of
+# `--instrument-with`) makes that `dune exec` match the config coverage-build
+# already used, so it runs the instrumented binary — no rebuild, no
+# de-instrumentation of the shared _build artifacts. (The reanalyze library
+# also carries its own bisect_ppx instrumentation stanza so its source is
+# counted, not just the analysis/tools code it links.)
 .PHONY: coverage-run
 coverage-run: coverage-lib
-	BISECT_FILE=$(COVERAGE_BISECT_PREFIX) BISECT_SILENT=YES \
-		node scripts/test.js -all
+	$(COVERAGE_TEST_ENV) node scripts/test.js -all
+	$(COVERAGE_TEST_ENV) ROUNDTRIP_TEST=1 ./scripts/test_syntax.sh
+	$(COVERAGE_TEST_ENV) make -C tests/gentype_tests/typescript-react-example clean test
+	$(COVERAGE_TEST_ENV) make -C tests/gentype_tests/stdlib-no-shims clean test
+	$(COVERAGE_TEST_ENV) DUNE_INSTRUMENT_WITH=bisect_ppx make -C tests/analysis_tests clean test
+	$(COVERAGE_TEST_ENV) make -C tests/tools_tests clean test
 
 .PHONY: coverage-report
 coverage-report:
