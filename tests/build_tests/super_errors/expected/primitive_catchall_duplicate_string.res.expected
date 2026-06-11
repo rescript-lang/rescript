@@ -1,0 +1,5 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/primitive_catchall_duplicate_string.res[0m
+
+  At most one string catch-all (@as(string)) is allowed per variant
