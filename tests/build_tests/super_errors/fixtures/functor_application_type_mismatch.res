@@ -1,11 +1,15 @@
-module type S = {type t}
+module type S = {
+  type t
+}
 
 module F = (X: S) => {
   type t = X.t
   let make = (x: X.t): X.t => x
 }
 
-module IntS = {type t = int}
+module IntS = {
+  type t = int
+}
 
 module App = F(IntS)
 
