@@ -67,7 +67,7 @@
 - Analysis refactor: remove global state `Shared_types.state`. https://github.com/rescript-lang/rescript/pull/8465
 - Refactor analysis CLI helpers to use source input. https://github.com/rescript-lang/rescript/pull/8466
 - Include syntax, gentype, analysis, tools, and reanalyze tests in coverage reports. https://github.com/rescript-lang/rescript/pull/8467
-- Remove the unreachable `Longident.Lapply` constructor (OCaml's applicative-functor path syntax `F(X).t`, which ReScript's grammar cannot produce). https://github.com/rescript-lang/rescript/pull/8468
+- Remove the unreachable `Longident.Lapply` constructor (OCaml's applicative-functor path syntax `F(X).t`, which ReScript's grammar cannot produce). https://github.com/rescript-lang/rescript/pull/8469
 
 # 13.0.0-alpha.4
 
