@@ -1,0 +1,10 @@
+
+  [1;33mWarning number 111[0m
+  [36m/.../fixtures/private_record_mutation.res[0m:[2m10:6-10[0m
+
+   8 [2m│[0m 
+   9 [2m│[0m let item = PrivateRecord.make(1)
+  [1;33m10[0m [2m│[0m item.[1;33mvalue[0m = 2
+  11 [2m│[0m 
+
+  Mutation of private record field "value".
