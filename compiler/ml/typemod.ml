@@ -1696,7 +1696,6 @@ let type_package env m p nl =
   let rec mkpath mp = function
     | Lident name -> Pdot (mp, name, nopos)
     | Ldot (m, name) -> Pdot (mkpath mp m, name, nopos)
-    | _ -> assert false
   in
   let tl' =
     List.map
