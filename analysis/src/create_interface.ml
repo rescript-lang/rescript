@@ -263,12 +263,6 @@ let print_signature ~extractor ~signature =
       in
       Buffer.add_string buf (indent ^ new_item_str ^ "\n");
       process_signature ~indent items
-    | Sig_class _ :: items ->
-      (* not needed *)
-      process_signature ~indent items
-    | Sig_class_type _ :: items ->
-      (* not needed *)
-      process_signature ~indent items
     | [] -> ()
   and process_module_type ~indent (mt : Types.module_type) =
     match mt with
