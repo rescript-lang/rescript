@@ -3352,10 +3352,12 @@ let memq_warn t visited =
 let rec lid_of_path ?(hash = "") = function
   | Path.Pident id -> Longident.Lident (hash ^ Ident.name id)
   | Path.Pdot (p1, s, _) -> Longident.Ldot (lid_of_path p1, hash ^ s)
-  (* Functor-application paths (Path.Papply) only arise from applicative
-     functors, which ReScript's surface syntax cannot express as a path; no
-     such path reaches this type-path conversion. *)
-  | Path.Papply _ -> assert false
+  (* Applicative-functor application paths (Path.Papply) are produced
+     internally (applicative functors are on by default) even though ReScript's
+     surface syntax cannot reference such a path directly. Render the
+     application by name (e.g. "F(Arg)") rather than aborting, so any diagnostic
+     that reaches here degrades gracefully instead of crashing the compiler. *)
+  | Path.Papply _ as p -> Longident.Lident (hash ^ Path.name p)
 
 let find_cltype_for_path env p =
   let cl_path = Env.lookup_type (lid_of_path ~hash:"#" p) env in
