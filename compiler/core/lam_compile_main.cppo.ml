@@ -130,10 +130,11 @@ let _j = Js_pass_debug.dump
 (** Actually simplify_lets is kind of global optimization since it requires you to know whether 
     it's used or not 
 *)
-let compile  
+let compile
+    ?(typedtree : Typedtree.structure option)
     (output_prefix : string)
     export_idents
-    (lam : Lambda.lambda)  = 
+    (lam : Lambda.lambda)  =
   let export_ident_sets = Set_ident.of_list export_idents in 
   (* To make toplevel happy - reentrant for js-demo *)
   let () = 
@@ -222,7 +223,7 @@ let compile
       Ext_filename.new_extension !Location.input_name ".d.ts"
     in
     Ext_fmt.with_file_as_pp dts_name (fun ppf ->
-        Lam_ts_emit.emit_decls ppf groups meta.exports)
+        Lam_ts_emit.emit_decls ?typedtree ppf groups meta.exports)
   end;
 
 #ifndef RELEASE

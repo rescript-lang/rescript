@@ -149,7 +149,7 @@ let after_parsing_impl ppf outputprefix (ast : Parsetree.structure) =
          in
          let js_program =
            print_if_pipe ppf Clflags.dump_rawlambda Printlambda.lambda lambda
-           |> Lam_compile_main.compile outputprefix exports
+           |> Lam_compile_main.compile ~typedtree outputprefix exports
          in
          if not !Js_config.cmj_only then
            Lam_compile_main.lambda_as_module js_program outputprefix);
