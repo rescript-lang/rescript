@@ -119,20 +119,20 @@ let add_required_modules ( x : Ident.t list) (meta : Lam_stats.t) =
          field read — we mark it as an alias so downstream passes can inline the
          original expression and drop the temporary. *)
       Lam.let_ Alias param ty arg l
-   | Strict, Lfunction _, _ ->
-       (* If we eagerly evaluate a function binding such as
-           `{ let makeGreeting = () => "hi"; ... }`, we end up allocating the
-           closure immediately. Downgrading `Strict` to `StrictOpt` preserves the
-           original laziness while still letting later passes inline when safe. *)
-       Lam.let_ StrictOpt param ty arg l
-   | Strict, _, _ when Lam_analysis.no_side_effects arg ->
-       (* A strict binding whose expression has no side effects — think
-           `{ let x = computePure(); use(x); }` — can be relaxed to `StrictOpt`.
-           This keeps the original semantics yet allows downstream passes to skip
-           evaluating `x` when it turns out to be unused. *)
-       Lam.let_ StrictOpt param ty arg l
-   | kind, _, _ ->
-       Lam.let_ kind param ty arg l
+  | Strict, Lfunction _, _ ->
+    (* If we eagerly evaluate a function binding such as
+        `{ let makeGreeting = () => "hi"; ... }`, we end up allocating the
+        closure immediately. Downgrading `Strict` to `StrictOpt` preserves the
+        original laziness while still letting later passes inline when safe. *)
+    Lam.let_ StrictOpt param ty arg l
+  | Strict, _, _ when Lam_analysis.no_side_effects arg ->
+    (* A strict binding whose expression has no side effects — think
+        `{ let x = computePure(); use(x); }` — can be relaxed to `StrictOpt`.
+        This keeps the original semantics yet allows downstream passes to skip
+        evaluating `x` when it turns out to be unused. *)
+    Lam.let_ StrictOpt param ty arg l
+  | kind, _, _ ->
+    Lam.let_ kind param ty arg l
 
 let alias_ident_or_global (meta : Lam_stats.t) (k:Ident.t) (v:Ident.t) 
     (v_kind : Lam_id_kind.t)  =

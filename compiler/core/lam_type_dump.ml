@@ -38,15 +38,13 @@ let collect (lam : Lam.t) : unit =
       List.iter (fun (_, l) -> walk l) bindings;
       walk body
     | Lprim {args; _} -> List.iter walk args
-    | Lswitch (arg, sw) ->
+    | Lswitch (arg, sw) -> (
       walk arg;
       List.iter (fun (_, l) -> walk l) sw.sw_consts;
       List.iter (fun (_, l) -> walk l) sw.sw_blocks;
-      (match sw.sw_failaction with
+      match sw.sw_failaction with
       | Some l -> walk l
-      | None -> ());
-      List.iter (fun (_, l) -> walk l) sw.sw_consts;
-      List.iter (fun (_, l) -> walk l) sw.sw_blocks
+      | None -> ())
     | Lstringswitch (arg, cases, default) -> (
       walk arg;
       List.iter (fun (_, l) -> walk l) cases;
