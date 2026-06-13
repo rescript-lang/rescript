@@ -196,7 +196,7 @@ jobs:
           key: ${{ steps.coverage-build-state-key.outputs.value }}
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v6
+        uses: codecov/codecov-action@v7
         with:
           files: _coverage/coverage.json
           fail_ci_if_error: false
