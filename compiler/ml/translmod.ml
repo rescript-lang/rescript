@@ -53,7 +53,7 @@ let transl_type_extension env rootpath (tyext : Typedtree.type_extension) body :
           (field_path rootpath ext.ext_id)
           ext
       in
-      Lambda.Llet (Strict, Pgenval, ext.ext_id, lam, body))
+      Lambda.Llet (Strict, ext.ext_id, None, lam, body))
     tyext.tyext_constructors body
 
 (* Compile a coercion *)
@@ -89,7 +89,7 @@ and apply_coercion_result loc strict funct param arg cc_res =
   Lambda.name_lambda strict funct (fun id ->
       Lfunction
         {
-          params = [param];
+          params = [(param, None)];
           attr = {Lambda.default_function_attribute with is_a_functor = true};
           loc;
           body =
@@ -101,7 +101,9 @@ and apply_coercion_result loc strict funct param arg cc_res =
                    ap_args = [arg];
                    ap_inlined = Default_inline;
                    ap_transformed_jsx = false;
+                   ap_result_type = None;
                  });
+          ty = None;
         })
 
 and wrap_id_pos_list loc id_pos_list get_field lam =
@@ -116,8 +118,8 @@ and wrap_id_pos_list loc id_pos_list get_field lam =
           let id'' = Ident.create (Ident.name id') in
           ( Lambda.Llet
               ( Alias,
-                Pgenval,
                 id'',
+                None,
                 apply_coercion loc Alias c (get_field (Ident.name id') pos),
                 lam ),
             Ident.add id' (Lambda.Lvar id'') s )
@@ -234,11 +236,11 @@ let rec compile_functor mexp coercion root_path loc =
   let arg = apply_coercion loc_ Alias arg_coercion (Lvar param') in
   let body =
     Lambda.Llet
-      (Alias, Pgenval, param, arg, transl_module res_coercion body_path body)
+      (Alias, param, None, arg, transl_module res_coercion body_path body)
   in
   Lambda.Lfunction
     {
-      params = [param'];
+      params = [(param', None)];
       attr =
         {
           inline = inline_attribute;
@@ -250,6 +252,7 @@ let rec compile_functor mexp coercion root_path loc =
         };
       loc;
       body;
+      ty = None;
     }
 
 (* Compile a module expression *)
@@ -278,6 +281,7 @@ and transl_module cc rootpath mexp =
              ap_args = [transl_module ccarg None arg];
              ap_inlined = inlined_attribute;
              ap_transformed_jsx = false;
+             ap_result_type = None;
            })
     | Tmod_constraint (arg, _, _, ccarg) ->
       transl_module (compose_coercions cc ccarg) rootpath arg
@@ -385,8 +389,8 @@ and transl_structure loc fields cc rootpath final_env = function
       in
       ( Llet
           ( Strict,
-            Pgenval,
             id,
+            None,
             Translcore.transl_extension_constructor item.str_env path ext,
             body ),
         size )
@@ -404,7 +408,7 @@ and transl_structure loc fields cc rootpath final_env = function
         Translattribute.add_inline_attribute module_body mb.mb_loc
           mb.mb_attributes
       in
-      (Llet (pure_module mb.mb_expr, Pgenval, id, module_body, body), size)
+      (Llet (pure_module mb.mb_expr, id, None, module_body, body), size)
     | Tstr_recmodule bindings ->
       let ext_fields =
         List.rev_append (List.map (fun mb -> mb.mb_id) bindings) fields
@@ -429,8 +433,8 @@ and transl_structure loc fields cc rootpath final_env = function
           let body, size = rebind_idents (pos + 1) (id :: newfields) ids in
           ( Llet
               ( Alias,
-                Pgenval,
                 id,
+                None,
                 Lprim
                   ( Pfield (pos, Fld_module {name = Ident.name id}),
                     [Lvar mid],
@@ -441,8 +445,8 @@ and transl_structure loc fields cc rootpath final_env = function
       let body, size = rebind_idents 0 fields ids in
       ( Llet
           ( pure_module modl,
-            Pgenval,
             mid,
+            None,
             transl_module Tcoerce_none None modl,
             body ),
         size )
@@ -457,11 +461,11 @@ let _ = Translcore.transl_module := transl_module
 
 (* Compile an implementation *)
 
-let transl_implementation module_name (str, cc) =
+let transl_implementation module_name env (str, cc) =
   export_identifiers := [];
   let module_id = Ident.create_persistent module_name in
   let body, _ = transl_struct Location.none [] cc (global_path module_id) str in
-  (body, !export_identifiers)
+  (env, body, !export_identifiers)
 
 (* Build the list of value identifiers defined by a toplevel structure
    (excluding primitive declarations). *)

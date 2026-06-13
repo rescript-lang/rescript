@@ -113,7 +113,8 @@ let simple_beta_reduce params body args =
         | _ -> f
       in
       let result =
-        Hash_ident.fold param_hash (Lam.apply f new_args ap_info)
+        Hash_ident.fold param_hash
+          (Lam.apply ~ap_result_type:None f new_args ap_info)
           (fun _param stat acc ->
             let {lambda; used} = stat in
             if not used then Lam.seq lambda acc else acc)

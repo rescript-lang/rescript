@@ -46,6 +46,7 @@ and apply = private {
   ap_args: t list;
   ap_info: ap_info;
   ap_transformed_jsx: bool;
+  ap_result_type: Types.type_expr option;
 }
 
 and lfunction = {
@@ -53,6 +54,7 @@ and lfunction = {
   params: ident list;
   body: t;
   attr: Lambda.function_attribute;
+  ty: Types.type_expr option;
 }
 
 and prim_info = private {
@@ -67,7 +69,7 @@ and t = private
   | Lconst of Lam_constant.t
   | Lapply of apply
   | Lfunction of lfunction
-  | Llet of Lam_compat.let_kind * ident * t * t
+  | Llet of Lam_compat.let_kind * ident * Types.type_expr option * t * t
   | Lletrec of (ident * t) list * t
   | Lprim of prim_info
   | Lswitch of t * lambda_switch
@@ -113,16 +115,23 @@ val global_module : ?dynamic_import:bool -> ident -> t
 
 val const : Lam_constant.t -> t
 
-val apply : ?ap_transformed_jsx:bool -> t -> t list -> ap_info -> t
+val apply :
+  ?ap_transformed_jsx:bool ->
+  ap_result_type:Types.type_expr option ->
+  t ->
+  t list ->
+  ap_info ->
+  t
 
 val function_ :
   attr:Lambda.function_attribute ->
   arity:int ->
   params:ident list ->
   body:t ->
+  ty:Types.type_expr option ->
   t
 
-val let_ : Lam_compat.let_kind -> ident -> t -> t -> t
+val let_ : Lam_compat.let_kind -> ident -> Types.type_expr option -> t -> t -> t
 
 val letrec : (ident * t) list -> t -> t
 

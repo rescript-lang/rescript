@@ -102,7 +102,7 @@ let rec no_side_effects (lam : Lam.t) : bool =
     (* byte swap *)
     | Parraysets | Parraysetu | Poffsetref _ | Praise | Psetfield _ ->
       false)
-  | Llet (_, _, arg, body) -> no_side_effects arg && no_side_effects body
+  | Llet (_, _, _, arg, body) -> no_side_effects arg && no_side_effects body
   | Lswitch (_, _) -> false
   | Lstringswitch (_, _, _) -> false
   | Lstaticraise _ -> false
@@ -149,7 +149,7 @@ let rec size (lam : Lam.t) =
     match lam with
     | Lvar _ -> 1
     | Lconst c -> size_constant c
-    | Llet (_, _, l1, l2) -> 1 + size l1 + size l2
+    | Llet (_, _, _, l1, l2) -> 1 + size l1 + size l2
     | Lletrec _ -> really_big ()
     | Lprim
         {

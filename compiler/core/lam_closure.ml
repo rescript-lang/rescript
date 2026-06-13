@@ -80,7 +80,7 @@ let free_variables (export_idents : Set_ident.t) (params : stats Map_ident.t)
     | Lfunction {params; body} ->
       local_add_list params;
       iter sink_pos body (* Do we need continue *)
-    | Llet (_, id, arg, body) ->
+    | Llet (_, id, _, arg, body) ->
       iter top arg;
       local_add id;
       iter sink_pos body

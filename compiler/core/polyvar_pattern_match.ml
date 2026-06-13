@@ -109,7 +109,7 @@ let call_switcher_variant_constr (loc : Location.t) (fail : lam option)
   let v = Ident.create "variant" in
   Llet
     ( Alias,
-      Pgenval,
       v,
+      None,
       Lprim (Pfield (0, Fld_poly_var_tag), [arg], loc),
       call_switcher_variant_constant loc fail (Lvar v) int_lambda_list names )

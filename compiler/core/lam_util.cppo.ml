@@ -109,33 +109,30 @@ let add_required_modules ( x : Ident.t list) (meta : Lam_stats.t) =
          with `value`. This only happens for primitives that are pure and do not
          allocate new blocks, so evaluation order and side effects stay the same. *)
       Lam.prim ~primitive ~args:[arg] loc
-  | _, _, Lapply { ap_func = fn; ap_args = [ Lvar w ]; ap_info; ap_transformed_jsx }
+  | _, _, Lapply { ap_func = fn; ap_args = [ Lvar w ]; ap_info; ap_transformed_jsx; ap_result_type }
       when Ident.same w param && not (Lam_hit.hit_variable param fn) ->
-      (* For a function call such as `{ let x = value; someFn(x) }`, we can
-         rewrite to `someFn(value)` as long as the callee does not capture `x`.
-         This removes the temporary binding while preserving the call semantics. *)
-      Lam.apply fn [arg] ap_info ~ap_transformed_jsx
+      Lam.apply ~ap_result_type fn [arg] ap_info ~ap_transformed_jsx
   | (Strict | StrictOpt), arg, _ when is_safe_to_alias arg ->
       (* `Strict` and `StrictOpt` bindings both evaluate the RHS immediately
          (with `StrictOpt` allowing later elimination if unused). When that RHS
          is pure — `{ let x = Some(value); ... }`, `{ let x = 3; ... }`, or a module
          field read — we mark it as an alias so downstream passes can inline the
          original expression and drop the temporary. *)
-      Lam.let_ Alias param arg l
+      Lam.let_ Alias param None arg l
   | Strict, Lfunction _, _ ->
       (* If we eagerly evaluate a function binding such as
          `{ let makeGreeting = () => "hi"; ... }`, we end up allocating the
          closure immediately. Downgrading `Strict` to `StrictOpt` preserves the
          original laziness while still letting later passes inline when safe. *)
-      Lam.let_ StrictOpt param arg l
+      Lam.let_ StrictOpt param None arg l
   | Strict, _, _ when Lam_analysis.no_side_effects arg ->
       (* A strict binding whose expression has no side effects — think
          `{ let x = computePure(); use(x); }` — can be relaxed to `StrictOpt`.
          This keeps the original semantics yet allows downstream passes to skip
          evaluating `x` when it turns out to be unused. *)
-      Lam.let_ StrictOpt param arg l
+      Lam.let_ StrictOpt param None arg l
   | kind, _, _ ->
-      Lam.let_ kind param arg l
+      Lam.let_ kind param None arg l
 
 let alias_ident_or_global (meta : Lam_stats.t) (k:Ident.t) (v:Ident.t) 
     (v_kind : Lam_id_kind.t)  =

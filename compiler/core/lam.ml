@@ -31,7 +31,7 @@ type ap_info = {
   ap_status: apply_status;
 }
 
-module Types = struct
+module Lam_types = struct
   type lambda_switch = {
     sw_consts_full: bool;
     (* TODO: refine its representation *)
@@ -47,6 +47,7 @@ module Types = struct
     params: ident list;
     body: t;
     attr: Lambda.function_attribute;
+    ty: Types.type_expr option;
   }
 
   (*
@@ -86,6 +87,7 @@ module Types = struct
     ap_args: t list;
     ap_info: ap_info;
     ap_transformed_jsx: bool;
+    ap_result_type: Types.type_expr option;
   }
 
   and t =
@@ -94,7 +96,7 @@ module Types = struct
     | Lconst of Lam_constant.t
     | Lapply of apply
     | Lfunction of lfunction
-    | Llet of Lam_compat.let_kind * ident * t * t
+    | Llet of Lam_compat.let_kind * ident * Types.type_expr option * t * t
     | Lletrec of (ident * t) list * t
     | Lprim of prim_info
     | Lswitch of t * lambda_switch
@@ -115,7 +117,7 @@ module Types = struct
 end
 
 module X = struct
-  type lambda_switch = Types.lambda_switch = {
+  type lambda_switch = Lam_types.lambda_switch = {
     sw_consts_full: bool;
     sw_consts: (int * t) list;
     sw_blocks_full: bool;
@@ -124,33 +126,35 @@ module X = struct
     sw_names: Ast_untagged_variants.switch_names option;
   }
 
-  and prim_info = Types.prim_info = {
+  and prim_info = Lam_types.prim_info = {
     primitive: Lam_primitive.t;
     args: t list;
     loc: Location.t;
   }
 
-  and apply = Types.apply = {
+  and apply = Lam_types.apply = {
     ap_func: t;
     ap_args: t list;
     ap_info: ap_info;
     ap_transformed_jsx: bool;
+    ap_result_type: Types.type_expr option;
   }
 
-  and lfunction = Types.lfunction = {
+  and lfunction = Lam_types.lfunction = {
     arity: int;
     params: ident list;
     body: t;
     attr: Lambda.function_attribute;
+    ty: Types.type_expr option;
   }
 
-  and t = Types.t =
+  and t = Lam_types.t =
     | Lvar of ident
     | Lglobal_module of ident * bool
     | Lconst of Lam_constant.t
     | Lapply of apply
     | Lfunction of lfunction
-    | Llet of Lam_compat.let_kind * ident * t * t
+    | Llet of Lam_compat.let_kind * ident * Types.type_expr option * t * t
     | Lletrec of (ident * t) list * t
     | Lprim of prim_info
     | Lswitch of t * lambda_switch
@@ -170,24 +174,24 @@ module X = struct
   (* | Lsend of Lam_compat.meth_kind * t * t * t list * Location.t *)
 end
 
-include Types
+include Lam_types
 
 (** apply [f] to direct successor which has type [Lam.t] *)
 
 let inner_map (l : t) (f : t -> X.t) : X.t =
   match l with
   | Lvar (_ : ident) | Lconst (_ : Lam_constant.t) -> ((* Obj.magic *) l : X.t)
-  | Lapply {ap_func; ap_args; ap_info; ap_transformed_jsx} ->
+  | Lapply {ap_func; ap_args; ap_info; ap_transformed_jsx; ap_result_type} ->
     let ap_func = f ap_func in
     let ap_args = Ext_list.map ap_args f in
-    Lapply {ap_func; ap_args; ap_info; ap_transformed_jsx}
-  | Lfunction {body; arity; params; attr} ->
+    Lapply {ap_func; ap_args; ap_info; ap_transformed_jsx; ap_result_type}
+  | Lfunction {body; arity; params; attr; ty} ->
     let body = f body in
-    Lfunction {body; arity; params; attr}
-  | Llet (str, id, arg, body) ->
+    Lfunction {body; arity; params; attr; ty}
+  | Llet (str, id, ty, arg, body) ->
     let arg = f arg in
     let body = f body in
-    Llet (str, id, arg, body)
+    Llet (str, id, ty, arg, body)
   | Lletrec (decl, body) ->
     let body = f body in
     let decl = Ext_list.map_snd decl f in
@@ -307,7 +311,8 @@ let rec is_eta_conversion_exn params inner_args outer_args : t list =
   | _, _, _ -> raise_notrace Not_simple_form
 
 (** FIXME: more robust inlining check later, we should inline it before we add stub code*)
-let rec apply ?(ap_transformed_jsx = false) fn args (ap_info : ap_info) : t =
+let rec apply ?(ap_transformed_jsx = false)
+    ~(ap_result_type : Types.type_expr option) fn args (ap_info : ap_info) : t =
   match fn with
   | Lfunction
       {
@@ -328,7 +333,14 @@ let rec apply ?(ap_transformed_jsx = false) fn args (ap_info : ap_info) : t =
       Lprim
         {primitive = wrap; args = [Lprim {primitive_call with args; loc}]; loc}
     | exception Not_simple_form ->
-      Lapply {ap_func = fn; ap_args = args; ap_info; ap_transformed_jsx})
+      Lapply
+        {
+          ap_func = fn;
+          ap_args = args;
+          ap_info;
+          ap_transformed_jsx;
+          ap_result_type;
+        })
   | Lfunction
       {
         params;
@@ -337,7 +349,14 @@ let rec apply ?(ap_transformed_jsx = false) fn args (ap_info : ap_info) : t =
     match is_eta_conversion_exn params inner_args args with
     | args -> Lprim {primitive_call with args; loc = ap_info.ap_loc}
     | exception _ ->
-      Lapply {ap_func = fn; ap_args = args; ap_info; ap_transformed_jsx})
+      Lapply
+        {
+          ap_func = fn;
+          ap_args = args;
+          ap_info;
+          ap_transformed_jsx;
+          ap_result_type;
+        })
   | Lfunction
       {
         params;
@@ -350,17 +369,37 @@ let rec apply ?(ap_transformed_jsx = false) fn args (ap_info : ap_info) : t =
     | args ->
       Lsequence (Lprim {primitive_call with args; loc = ap_info.ap_loc}, const)
     | exception _ ->
-      Lapply {ap_func = fn; ap_args = args; ap_info; ap_transformed_jsx}
+      Lapply
+        {
+          ap_func = fn;
+          ap_args = args;
+          ap_info;
+          ap_transformed_jsx;
+          ap_result_type;
+        }
       (* | Lfunction {params;body} when Ext_list.same_length params args ->
           Ext_list.fold_right2 (fun p arg acc ->
             Llet(Strict,p,arg,acc)
           ) params args body *)
       (* TODO: more rigirous analysis on [let_kind] *))
-  | Llet (kind, id, e, (Lfunction _ as fn)) ->
-    Llet (kind, id, e, apply fn args ap_info ~ap_transformed_jsx)
+  | Llet (kind, id, ty, e, (Lfunction _ as fn)) ->
+    Llet
+      ( kind,
+        id,
+        ty,
+        e,
+        apply fn args ap_info ~ap_transformed_jsx ~ap_result_type )
   (* | Llet (kind0, id0, e0, Llet (kind,id, e, (Lfunction _ as fn))) ->
      Llet(kind0,id0,e0,Llet (kind, id, e, apply fn args loc status)) *)
-  | _ -> Lapply {ap_func = fn; ap_args = args; ap_info; ap_transformed_jsx}
+  | _ ->
+    Lapply
+      {
+        ap_func = fn;
+        ap_args = args;
+        ap_info;
+        ap_transformed_jsx;
+        ap_result_type;
+      }
 
 let rec eq_approx (l1 : t) (l2 : t) =
   match l1 with
@@ -419,7 +458,7 @@ let rec eq_approx (l1 : t) (l2 : t) =
            (fun ((k : string), v) (k2, v2) -> k = k2 && eq_approx v v2)
     | _ -> false)
   | Lfunction _
-  | Llet (_, _, _, _)
+  | Llet (_, _, _, _, _)
   | Lletrec _ | Lswitch _ | Lstaticcatch _ | Ltrywith _
   | Lfor (_, _, _, _, _)
   | Lfor_of (_, _, _)
@@ -475,10 +514,10 @@ let global_module ?(dynamic_import = false) id =
   Lglobal_module (id, dynamic_import)
 let const ct : t = Lconst ct
 
-let function_ ~attr ~arity ~params ~body : t =
-  Lfunction {arity; params; body; attr}
+let function_ ~attr ~arity ~params ~body ~ty : t =
+  Lfunction {arity; params; body; attr; ty}
 
-let let_ kind id e body : t = Llet (kind, id, e, body)
+let let_ kind id ty e body : t = Llet (kind, id, ty, e, body)
 let letrec bindings body : t = Lletrec (bindings, body)
 let while_ a b : t = Lwhile (a, b)
 let try_ body id handler : t = Ltrywith (body, id, handler)

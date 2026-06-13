@@ -472,24 +472,25 @@ let transl_primitive loc p env ty =
       let param = Ident.create "prim" in
       Lfunction
         {
-          params = [param];
+          params = [(param, None)];
           attr = default_function_attribute;
           loc;
           body = Lprim (Pmakeblock Blk_tuple, [lam; Lvar param], loc);
+          ty = Some ty;
         }
     | _ -> assert false)
   | _ ->
     let rec make_params n total =
       if n <= 0 then []
       else
-        Ident.create ("prim" ^ string_of_int (total - n))
+        (Ident.create ("prim" ^ string_of_int (total - n)), None)
         :: make_params (n - 1) total
     in
     let prim_arity = p.prim_arity in
     if p.prim_from_constructor || prim_arity = 0 then Lprim (prim, [], loc)
     else
       let params =
-        if prim_arity = 1 then [Ident.create "prim"]
+        if prim_arity = 1 then [(Ident.create "prim", None)]
         else make_params prim_arity prim_arity
       in
       Lfunction
@@ -497,7 +498,8 @@ let transl_primitive loc p env ty =
           params;
           attr = default_function_attribute;
           loc;
-          body = Lprim (prim, List.map (fun id -> Lvar id) params, loc);
+          body = Lprim (prim, List.map (fun (id, _) -> Lvar id) params, loc);
+          ty = Some ty;
         }
 
 let transl_primitive_application loc prim env ty args =
@@ -701,7 +703,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
       }
     in
     let loc = e.exp_loc in
-    let lambda = Lfunction {params; body; attr; loc} in
+    let lambda = Lfunction {params; body; attr; loc; ty = Some e.exp_type} in
     match arity with
     | Some arity ->
       let prim =
@@ -755,7 +757,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
         let inlined, _ =
           Translattribute.get_and_remove_inlined_attribute funct
         in
-        transl_apply ~inlined ~transformed_jsx f args' e.exp_loc
+        transl_apply ~inlined ~transformed_jsx e.exp_type f args' e.exp_loc
     in
     let args =
       List.map
@@ -807,7 +809,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
       else None
     in
     transl_apply ~inlined ~uncurried_partial_application ~transformed_jsx
-      (transl_exp funct) oargs e.exp_loc
+      e.exp_type (transl_exp funct) oargs e.exp_loc
   | Texp_match (arg, pat_expr_list, exn_pat_expr_list, partial) ->
     transl_match e arg pat_expr_list exn_pat_expr_list partial
   | Texp_try (body, pat_expr_list) ->
@@ -949,12 +951,12 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
     Lsend (nm, obj, e.exp_loc)
   | Texp_letmodule (id, _loc, modl, body) ->
     let defining_expr = !transl_module Tcoerce_none None modl in
-    Llet (Strict, Pgenval, id, defining_expr, transl_exp body)
+    Llet (Strict, id, None, defining_expr, transl_exp body)
   | Texp_letexception (cd, body) ->
     Llet
       ( Strict,
-        Pgenval,
         cd.ext_id,
+        None,
         transl_extension_constructor e.exp_env None cd,
         transl_exp body )
   | Texp_pack modl -> !transl_module Tcoerce_none None modl
@@ -989,8 +991,8 @@ and transl_case_try {c_lhs; c_guard; c_rhs} =
 and transl_cases_try cases = List.map transl_case_try cases
 
 and transl_apply ?(inlined = Default_inline)
-    ?(uncurried_partial_application = None) ?(transformed_jsx = false) lam sargs
-    loc =
+    ?(uncurried_partial_application = None) ?(transformed_jsx = false)
+    (result_type : Types.type_expr) lam sargs loc =
   let lapply ap_func ap_args =
     Lapply
       {
@@ -999,6 +1001,7 @@ and transl_apply ?(inlined = Default_inline)
         ap_args;
         ap_inlined = inlined;
         ap_transformed_jsx = transformed_jsx;
+        ap_result_type = Some result_type;
       }
   in
   let rec build_apply lam args = function
@@ -1022,19 +1025,20 @@ and transl_apply ?(inlined = Default_inline)
       and id_arg = Ident.create "param" in
       let body =
         match build_apply handle ((Lvar id_arg, optional) :: args') l with
-        | Lfunction {params = ids; body = lam; attr; loc} ->
-          Lfunction {params = id_arg :: ids; body = lam; attr; loc}
+        | Lfunction {params = ids; body = lam; attr; loc; ty} ->
+          Lfunction {params = (id_arg, None) :: ids; body = lam; attr; loc; ty}
         | lam ->
           Lfunction
             {
-              params = [id_arg];
+              params = [(id_arg, None)];
               body = lam;
               attr = default_function_attribute;
               loc;
+              ty = Some result_type;
             }
       in
       List.fold_left
-        (fun body (id, lam) -> Llet (Strict, Pgenval, id, lam, body))
+        (fun body (id, lam) -> Llet (Strict, id, None, lam, body))
         body !defs
     | (Some arg, optional) :: l -> build_apply lam ((arg, optional) :: args) l
     | [] -> lapply lam (List.rev_map fst args)
@@ -1048,13 +1052,14 @@ and transl_apply ?(inlined = Default_inline)
         | _, Some e -> Some (transl_exp e)
         | _, None ->
           let id_arg = Ident.create "none" in
-          none_ids := id_arg :: !none_ids;
+          none_ids := (id_arg, None) :: !none_ids;
           Some (Lvar id_arg))
     in
     let extra_ids =
-      Array.init extra_arity (fun _ -> Ident.create "extra") |> Array.to_list
+      Array.init extra_arity (fun _ -> (Ident.create "extra", None))
+      |> Array.to_list
     in
-    let extra_args = Ext_list.map extra_ids (fun id -> Lvar id) in
+    let extra_args = Ext_list.map extra_ids (fun (id, _) -> Lvar id) in
     let ap_args = args @ extra_args in
     let l0 =
       Lapply
@@ -1064,6 +1069,7 @@ and transl_apply ?(inlined = Default_inline)
           ap_inlined = inlined;
           ap_loc = loc;
           ap_transformed_jsx = transformed_jsx;
+          ap_result_type = Some result_type;
         }
     in
     Lfunction
@@ -1072,6 +1078,7 @@ and transl_apply ?(inlined = Default_inline)
         body = l0;
         attr = default_function_attribute;
         loc;
+        ty = Some result_type;
       }
   | _ ->
     (build_apply lam []
@@ -1103,11 +1110,11 @@ and transl_function loc partial param case =
     let params, body, return_unit =
       transl_function exp.exp_loc partial' param' case
     in
-    ( param :: params,
+    ( (param, Some pat.pat_type) :: params,
       Matching.for_function loc None (Lvar param) [(pat, body)] partial,
       return_unit )
   | {c_rhs = {exp_env; exp_type}; _} ->
-    ( [param],
+    ( [(param, Some case.c_lhs.pat_type)],
       Matching.for_function loc None (Lvar param) [transl_case case] partial,
       is_base_type exp_env exp_type Predef.path_unit )
 
@@ -1256,7 +1263,8 @@ and transl_record loc env fields repres opt_init_expr =
       match opt_init_expr with
       | None -> lam
       | Some init_expr ->
-        Llet (Strict, Pgenval, init_id, transl_exp init_expr, lam)
+        Llet
+          (Strict, init_id, Some init_expr.exp_type, transl_exp init_expr, lam)
     else
       (* Take a shallow copy of the init record, then mutate the fields
          of the copy *)
@@ -1283,8 +1291,8 @@ and transl_record loc env fields repres opt_init_expr =
       | Some init_expr ->
         Llet
           ( Strict,
-            Pgenval,
             copy_id,
+            Some init_expr.exp_type,
             Lprim (Pduprecord, [transl_exp init_expr], loc),
             Array.fold_left update_field (Lvar copy_id) fields ))
 

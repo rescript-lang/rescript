@@ -179,7 +179,7 @@ let handle_exports (meta : Lam_stats.t) (lambda_exports : Lam.t list)
 let rec flatten (acc : Lam_group.t list) (lam : Lam.t) :
     Lam.t * Lam_group.t list =
   match lam with
-  | Llet (str, id, arg, body) ->
+  | Llet (str, id, _, arg, body) ->
     let res, l = flatten acc arg in
     flatten (Single (str, id, res) :: l) body
   | Lletrec (bind_args, body) -> flatten (Recursive bind_args :: acc) body

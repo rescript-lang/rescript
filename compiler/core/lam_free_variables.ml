@@ -44,7 +44,7 @@ let pass_free_variables (l : Lam.t) : Set_ident.t =
     | Lfunction {body; params} ->
       free body;
       Ext_list.iter params (fun param -> fv := Set_ident.remove !fv param)
-    | Llet (_str, id, arg, body) ->
+    | Llet (_str, id, _, arg, body) ->
       free arg;
       free body;
       fv := Set_ident.remove !fv id

@@ -14,7 +14,7 @@
 (**
         [no_bounded_varaibles lambda]
         checks if [lambda] contains bounded variable, for
-        example [Llet (str,id,arg,body) ] will fail such check.
+        example [Llet (str,id,_,arg,body) ] will fail such check.
         This is used to indicate such lambda expression if it is okay
         to inline directly since if it contains bounded variables it
         must be rebounded before inlining
@@ -198,16 +198,16 @@ let subst_helper (subst : subst_tbl) (query : int -> int) (lam : Lam.t) : Lam.t
               Map_ident.add t x (Lam.var y))
         in
         Ext_list.fold_right2 ys ls (Lam_subst.subst env handler) (fun y l r ->
-            Lam.let_ Strict y l r)
+            Lam.let_ Strict y None l r)
       | None -> Lam.staticraise i ls)
     | Lvar _ | Lconst _ -> lam
-    | Lapply {ap_func; ap_args; ap_info; ap_transformed_jsx} ->
-      Lam.apply (simplif ap_func)
+    | Lapply {ap_func; ap_args; ap_info; ap_transformed_jsx; ap_result_type} ->
+      Lam.apply ~ap_result_type (simplif ap_func)
         (Ext_list.map ap_args simplif)
         ap_info ~ap_transformed_jsx
-    | Lfunction {arity; params; body; attr} ->
-      Lam.function_ ~arity ~params ~body:(simplif body) ~attr
-    | Llet (kind, v, l1, l2) -> Lam.let_ kind v (simplif l1) (simplif l2)
+    | Lfunction {arity; params; body; attr; ty} ->
+      Lam.function_ ~arity ~params ~body:(simplif body) ~attr ~ty
+    | Llet (kind, v, ty, l1, l2) -> Lam.let_ kind v ty (simplif l1) (simplif l2)
     | Lletrec (bindings, body) ->
       Lam.letrec (Ext_list.map_snd bindings simplif) (simplif body)
     | Lglobal_module _ -> lam

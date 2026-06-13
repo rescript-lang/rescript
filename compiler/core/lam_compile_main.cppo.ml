@@ -210,9 +210,20 @@ let compile
 #endif    
   in
 
-  let ({Lam_coercion.groups = groups } as coerced_input , meta) = 
+  if !Clflags.dump_lamtypes then
+    Lam_type_dump.collect lam;
+
+  let ({Lam_coercion.groups = groups; export_map = _} as coerced_input , meta) = 
     Lam_coercion.coerce_and_group_big_lambda  meta lam
   in 
+
+  if !Clflags.emit_typedefs then begin
+    let dts_name =
+      Ext_filename.new_extension !Location.input_name ".d.ts"
+    in
+    Ext_fmt.with_file_as_pp dts_name (fun ppf ->
+        Lam_ts_emit.emit_decls ppf groups meta.exports)
+  end;
 
 #ifndef RELEASE
 let () =

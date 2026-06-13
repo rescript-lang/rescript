@@ -18,12 +18,13 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lam.t =
   let rec simplif (lam : Lam.t) =
     match lam with
     | Lvar v -> Hash_ident.find_default subst v lam
-    | Llet ((Strict | Alias | StrictOpt), v, Lvar w, l2) ->
+    | Llet ((Strict | Alias | StrictOpt), v, _, Lvar w, l2) ->
       Hash_ident.add subst v (simplif (Lam.var w));
       simplif l2
     | Llet
         ( (Strict as kind),
           v,
+          _,
           Lprim
             {
               primitive = Pmakeblock (0, _, Mutable) as primitive;
@@ -41,7 +42,7 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lam.t =
         Lam_util.refine_let ~kind v
           (Lam.prim ~primitive ~args:[slinit] loc)
           slbody)
-    | Llet (Alias, v, l1, l2) -> (
+    | Llet (Alias, v, ty, l1, l2) -> (
       (* For alias, [l1] is pure, we can always inline,
           when captured, we should avoid recomputation
       *)
@@ -66,12 +67,12 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lam.t =
       | _, Lconst (Const_string {s; delim = None}) ->
         (* only "" added for later inlining *)
         Hash_ident.add string_table v s;
-        Lam.let_ Alias v l1 (simplif l2)
+        Lam.let_ Alias v ty l1 (simplif l2)
       (* we need move [simplif l2] later, since adding Hash does have side effect *)
       | _ ->
-        Lam.let_ Alias v (simplif l1) (simplif l2)
+        Lam.let_ Alias v ty (simplif l1) (simplif l2)
         (* for Alias, in most cases [l1] is already simplified *))
-    | Llet ((StrictOpt as kind), v, l1, lbody) -> (
+    | Llet ((StrictOpt as kind), v, ty, l1, lbody) -> (
       if
         (* can not be inlined since [l1] depend on the store
            {[
@@ -115,10 +116,10 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lam.t =
           | Lconst (Const_string {s; delim = None}) ->
             Hash_ident.add string_table v s;
             (* we need move [simplif lbody] later, since adding Hash does have side effect *)
-            Lam.let_ Alias v l1 (simplif lbody)
+            Lam.let_ Alias v ty l1 (simplif lbody)
           | _ -> Lam_util.refine_let ~kind v l1 (simplif lbody))
         (* TODO: check if it is correct rollback to [StrictOpt]? *))
-    | Llet (((Strict | Variable) as kind), v, l1, l2) -> (
+    | Llet (((Strict | Variable) as kind), v, ty, l1, l2) -> (
       if not (used v) then
         let l1 = simplif l1 in
         let l2 = simplif l2 in
@@ -129,7 +130,7 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lam.t =
         match (kind, l1) with
         | Strict, Lconst (Const_string {s; delim = None}) ->
           Hash_ident.add string_table v s;
-          Lam.let_ Alias v l1 (simplif l2)
+          Lam.let_ Alias v ty l1 (simplif l2)
         | _ -> Lam_util.refine_let ~kind v l1 (simplif l2))
     | Lsequence (l1, l2) -> Lam.seq (simplif l1) (simplif l2)
     | Lapply
@@ -144,11 +145,18 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lam.t =
       (*   *\) *)
       (*   when  Ext_list.same_length params  args -> *)
       (*   simplif (Lam_beta_reduce.beta_reduce params body args) *)
-    | Lapply {ap_func = l1; ap_args = ll; ap_info; ap_transformed_jsx} ->
-      Lam.apply (simplif l1) (Ext_list.map ll simplif) ap_info
+    | Lapply
+        {
+          ap_func = l1;
+          ap_args = ll;
+          ap_info;
+          ap_transformed_jsx;
+          ap_result_type;
+        } ->
+      Lam.apply ~ap_result_type (simplif l1) (Ext_list.map ll simplif) ap_info
         ~ap_transformed_jsx
-    | Lfunction {arity; params; body; attr} ->
-      Lam.function_ ~arity ~params ~body:(simplif body) ~attr
+    | Lfunction {arity; params; body; attr; ty} ->
+      Lam.function_ ~arity ~params ~body:(simplif body) ~attr ~ty
     | Lconst _ -> lam
     | Lletrec (bindings, body) ->
       Lam.letrec (Ext_list.map_snd bindings simplif) (simplif body)

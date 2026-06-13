@@ -129,12 +129,12 @@ let collect_occurs lam : occ_tbl =
       count Map_ident.empty l1;
       count Map_ident.empty l2
     | Lvar v -> add_one_use bv v
-    | Llet (_, v, Lvar w, l2) ->
+    | Llet (_, v, _, Lvar w, l2) ->
       (* v will be replaced by w in l2, so each occurrence of v in l2
          increases w's refcount *)
       count (bind_var bv v) l2;
       inherit_use bv w v
-    | Llet (kind, v, l1, l2) ->
+    | Llet (kind, v, _, l1, l2) ->
       count (bind_var bv v) l2;
       (* count [l2] first,
          If v is unused, l1 will be removed, so don't count its variables *)

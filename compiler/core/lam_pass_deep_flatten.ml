@@ -28,7 +28,8 @@
 
 let rec eliminate_tuple (id : Ident.t) (lam : Lam.t) acc =
   match lam with
-  | Llet (Alias, v, Lprim {primitive = Pfield (i, _); args = [Lvar tuple]}, e2)
+  | Llet
+      (Alias, v, _, Lprim {primitive = Pfield (i, _); args = [Lvar tuple]}, e2)
     when Ident.same tuple id ->
     eliminate_tuple id e2 (Map_int.add acc i v)
   (* it is okay to have duplicates*)
@@ -121,6 +122,7 @@ let deep_flatten (lam : Lam.t) : Lam.t =
     | Llet
         ( str,
           id,
+          _,
           (Lprim
              {
                primitive = Pnull_to_opt | Pnull_undefined_to_opt;
@@ -131,6 +133,7 @@ let deep_flatten (lam : Lam.t) : Lam.t =
     | Llet
         ( str,
           id,
+          _,
           Lprim
             {
               primitive = (Pnull_to_opt | Pnull_undefined_to_opt) as primitive;
@@ -139,13 +142,13 @@ let deep_flatten (lam : Lam.t) : Lam.t =
           body ) ->
       let new_id = Ident.rename id in
       flatten acc
-        (Lam.let_ str new_id arg
-           (Lam.let_ Alias id
+        (Lam.let_ str new_id None arg
+           (Lam.let_ Alias id None
               (Lam.prim ~primitive
                  ~args:[Lam.var new_id]
                  Location.none (* FIXME*))
               body))
-    | Llet (str, id, arg, body) -> (
+    | Llet (str, id, _, arg, body) -> (
       (*
                          {[ let match = (a,b,c)
                            let d = (match/1)
@@ -221,16 +224,24 @@ let deep_flatten (lam : Lam.t) : Lam.t =
     (*           can we switch to the tupled backend? *\) *)
     (*   when  List.length params = List.length args -> *)
     (*       aux (beta_reduce params body args) *)
-    | Lapply {ap_func = l1; ap_args = ll; ap_info; ap_transformed_jsx} ->
-      Lam.apply (aux l1) (Ext_list.map ll aux) ap_info ~ap_transformed_jsx
+    | Lapply
+        {
+          ap_func = l1;
+          ap_args = ll;
+          ap_info;
+          ap_transformed_jsx;
+          ap_result_type;
+        } ->
+      Lam.apply ~ap_result_type (aux l1) (Ext_list.map ll aux) ap_info
+        ~ap_transformed_jsx
     (* This kind of simple optimizations should be done each time
        and as early as possible *)
     | Lglobal_module _ -> lam
     | Lprim {primitive; args; loc} ->
       let args = Ext_list.map args aux in
       Lam.prim ~primitive ~args loc
-    | Lfunction {arity; params; body; attr} ->
-      Lam.function_ ~arity ~params ~body:(aux body) ~attr
+    | Lfunction {arity; params; body; attr; ty} ->
+      Lam.function_ ~arity ~params ~body:(aux body) ~attr ~ty
     | Lswitch
         ( l,
           {
