@@ -1545,7 +1545,7 @@ let compile output_prefix =
         else {outer_ap_info with ap_inlined}
       in
       compile_lambda lambda_cxt
-        (Lam.apply ap_func
+        (Lam.apply ~ap_result_type:appinfo.ap_result_type ap_func
            (Ext_list.append ap_args appinfo.ap_args)
            ap_info ~ap_transformed_jsx)
     (* External function call: it can not be tailcall in this case*)
@@ -1859,7 +1859,7 @@ let compile output_prefix =
                  }
                  body)))
     | Lapply appinfo -> compile_apply appinfo lambda_cxt
-    | Llet (let_kind, id, arg, body) ->
+    | Llet (let_kind, id, _, arg, body) ->
       (* Order matters..  see comment below in [Lletrec] *)
       let args_code =
         compile_lambda

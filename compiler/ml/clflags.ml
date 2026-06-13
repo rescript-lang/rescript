@@ -38,6 +38,10 @@ and dump_rawlambda = ref false (* -drawlambda *)
 
 and dump_lambda = ref false (* -dlambda *)
 
+and dump_lamtypes = ref false (* -dlamtypes *)
+
+and emit_typedefs = ref false (* -emit-typedefs *)
+
 and only_parse = ref false (* -only-parse *)
 
 and editor_mode = ref false (* -editor-mode *)

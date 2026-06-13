@@ -33,12 +33,14 @@ let subst (s : Lam.t Map_ident.t) lam =
     match x with
     | Lvar id -> Map_ident.find_default s id x
     | Lconst _ -> x
-    | Lapply {ap_func; ap_args; ap_info} ->
-      Lam.apply (subst_aux ap_func) (Ext_list.map ap_args subst_aux) ap_info
-    | Lfunction {arity; params; body; attr} ->
-      Lam.function_ ~arity ~params ~body:(subst_aux body) ~attr
-    | Llet (str, id, arg, body) ->
-      Lam.let_ str id (subst_aux arg) (subst_aux body)
+    | Lapply {ap_func; ap_args; ap_info; ap_result_type} ->
+      Lam.apply ~ap_result_type (subst_aux ap_func)
+        (Ext_list.map ap_args subst_aux)
+        ap_info
+    | Lfunction {arity; params; body; attr; ty} ->
+      Lam.function_ ~arity ~params ~body:(subst_aux body) ~attr ~ty
+    | Llet (str, id, ty, arg, body) ->
+      Lam.let_ str id ty (subst_aux arg) (subst_aux body)
     | Lletrec (decl, body) ->
       Lam.letrec (Ext_list.map decl subst_decl) (subst_aux body)
     | Lprim {primitive; args; loc} ->

@@ -86,7 +86,7 @@ let exception_id_destructed (l : Lam.t) (fv : Ident.t) : bool =
     | Lstaticcatch (e1, (_, _vars), e2) -> hit e1 || hit e2
     | Ltrywith (e1, _exn, e2) -> hit e1 || hit e2
     | Lfunction {body; params = _} -> hit body
-    | Llet (_str, _id, arg, body) -> hit arg || hit body
+    | Llet (_str, _id, _, arg, body) -> hit arg || hit body
     | Lletrec (decl, body) -> hit body || hit_list_snd decl
     | Lfor (_v, e1, e2, _dir, e3) -> hit e1 || hit e2 || hit e3
     | Lfor_of (_v, e1, e2) | Lfor_await_of (_v, e1, e2) -> hit e1 || hit e2
@@ -326,21 +326,22 @@ let rec rename_optional_parameters map params (body : Lambda.lambda) =
   match body with
   | Llet
       ( k,
-        value_kind,
         id,
+        ty,
         Lifthenelse
           ( Lprim (p, [Lvar ({name = "*opt*"} as opt)], p_loc),
             Lprim (p1, [Lvar ({name = "*opt*"} as opt2)], x_loc),
             f ),
         rest )
-    when Ident.same opt opt2 && List.mem opt params ->
+    when Ident.same opt opt2
+         && List.exists (fun (p, _) -> Ident.same p opt) params ->
     let map, rest = rename_optional_parameters map params rest in
     let new_id = Ident.create (id.name ^ "Opt") in
     ( Map_ident.add map opt new_id,
       Lambda.Llet
         ( k,
-          value_kind,
           id,
+          ty,
           Lifthenelse
             ( Lprim (p, [Lvar new_id], p_loc),
               Lprim (p1, [Lvar new_id], x_loc),
@@ -379,7 +380,7 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
     match lam with
     | Lvar x -> Lam.var (Hash_ident.find_default alias_tbl x x)
     | Lconst x -> Lam.const (Lam_constant_convert.convert_constant x)
-    | Lapply {ap_func = Lsend (name, obj, loc); ap_args}
+    | Lapply {ap_func = Lsend (name, obj, loc); ap_args; _}
       when Ext_string.ends_with name Literals.setter_suffix ->
       let obj = convert_aux obj in
       let args = obj :: Ext_list.map ap_args convert_aux in
@@ -402,25 +403,27 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
           ap_loc = loc;
           ap_inlined;
           ap_transformed_jsx;
+          ap_result_type;
         } ->
-      (* we need do this eargly in case [aux fn] add some wrapper *)
       Lam.apply (convert_aux fn)
         (Ext_list.map args convert_aux)
         {ap_loc = loc; ap_inlined; ap_status = App_uncurry}
-        ~ap_transformed_jsx
-    | Lfunction {params; body; attr} ->
+        ~ap_transformed_jsx ~ap_result_type
+    | Lfunction {params; body; attr; ty} ->
       let new_map, body =
         rename_optional_parameters Map_ident.empty params body
       in
+      let strip_types params = Ext_list.map params fst in
       if Map_ident.is_empty new_map then
-        Lam.function_ ~attr ~arity:(List.length params) ~params
-          ~body:(convert_aux body)
+        Lam.function_ ~attr ~arity:(List.length params)
+          ~params:(strip_types params) ~body:(convert_aux body) ~ty
       else
         let params =
-          Ext_list.map params (fun x -> Map_ident.find_default new_map x x)
+          Ext_list.map params (fun (x, _ty) ->
+              (Map_ident.find_default new_map x x, _ty))
         in
-        Lam.function_ ~attr ~arity:(List.length params) ~params
-          ~body:(convert_aux body)
+        Lam.function_ ~attr ~arity:(List.length params)
+          ~params:(strip_types params) ~body:(convert_aux body) ~ty
     | Llet (_, _, _, Lprim (Pgetglobal id, args, _), _body) when dynamic_import
       ->
       (*
@@ -437,7 +440,7 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
       may_depend may_depends (Lam_module_ident.of_ml ~dynamic_import id);
       assert (args = []);
       Lam.global_module ~dynamic_import id
-    | Llet (kind, Pgenval, id, e, body) (*FIXME*) -> convert_let kind id e body
+    | Llet (kind, id, ty, e, body) -> convert_let kind id ty e body
     | Lletrec (bindings, body) ->
       let bindings = Ext_list.map_snd bindings convert_aux in
       let body = convert_aux body in
@@ -500,7 +503,7 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
       if exception_id_destructed handler id then
         let new_id = Ident.create ("raw_" ^ id.name) in
         Lam.try_ body new_id
-          (Lam.let_ StrictOpt id
+          (Lam.let_ StrictOpt id None
              (prim ~primitive:Pwrap_exn ~args:[Lam.var new_id] Location.none)
              handler)
       else Lam.try_ body id handler
@@ -517,14 +520,14 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
     | Lfor_await_of (id, iterable, body) ->
       Lam.for_await_of id (convert_aux iterable) (convert_aux body)
     | Lassign (id, body) -> Lam.assign id (convert_aux body)
-  and convert_let (kind : Lam_compat.let_kind) id (e : Lambda.lambda) body :
-      Lam.t =
+  and convert_let (kind : Lam_compat.let_kind) id (ty : Types.type_expr option)
+      (e : Lambda.lambda) body : Lam.t =
     match (kind, e) with
     | Alias, Lvar u ->
       let new_u = Hash_ident.find_default alias_tbl u u in
       Hash_ident.add alias_tbl id new_u;
       if Set_ident.mem exports id then
-        Lam.let_ kind id (Lam.var new_u) (convert_aux body)
+        Lam.let_ kind id ty (Lam.var new_u) (convert_aux body)
       else convert_aux body
     | _, _ -> (
       let new_e = convert_aux e in
@@ -564,7 +567,7 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
             sw_consts =
               Ext_list.map sw_consts (fun (i, act) -> (i - offset, act));
           }
-      | _ -> Lam.let_ kind id new_e new_body)
+      | _ -> Lam.let_ kind id ty new_e new_body)
   and convert_pipe (f : Lambda.lambda) (x : Lambda.lambda) outer_loc =
     let x = convert_aux x in
     let f = convert_aux f in
@@ -582,8 +585,8 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
       when Ext_list.for_all2_no_exn inner_args params lam_is_var
            && Ext_list.length_larger_than_n inner_args args 1 ->
       Lam.prim ~primitive ~args:(Ext_list.append_one args x) outer_loc
-    | Lapply {ap_func; ap_args; ap_info; ap_transformed_jsx} ->
-      Lam.apply ~ap_transformed_jsx ap_func
+    | Lapply {ap_func; ap_args; ap_info; ap_transformed_jsx; ap_result_type} ->
+      Lam.apply ~ap_transformed_jsx ~ap_result_type ap_func
         (Ext_list.append_one ap_args x)
         {
           ap_loc = outer_loc;
@@ -591,7 +594,7 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
           ap_status = App_na;
         }
     | _ ->
-      Lam.apply f [x]
+      Lam.apply ~ap_result_type:None f [x]
         {ap_loc = outer_loc; ap_inlined = Default_inline; ap_status = App_na}
   and convert_switch (e : Lambda.lambda) (s : Lambda.lambda_switch) =
     let e = convert_aux e in

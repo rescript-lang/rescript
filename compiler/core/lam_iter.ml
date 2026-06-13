@@ -33,7 +33,7 @@ let inner_iter (l : t) (f : t -> unit) : unit =
     f ap_func;
     List.iter f ap_args
   | Lfunction {body; arity = _; params = _} -> f body
-  | Llet (_str, _id, arg, body) ->
+  | Llet (_str, _id, _, arg, body) ->
     f arg;
     f body
   | Lletrec (decl, body) ->
@@ -94,7 +94,7 @@ let inner_exists (l : t) (f : t -> bool) : bool =
   | Lapply {ap_func; ap_args; ap_info = _} ->
     f ap_func || Ext_list.exists ap_args f
   | Lfunction {body; arity = _; params = _} -> f body
-  | Llet (_str, _id, arg, body) -> f arg || f body
+  | Llet (_str, _id, _, arg, body) -> f arg || f body
   | Lletrec (decl, body) -> f body || Ext_list.exists_snd decl f
   | Lswitch
       ( arg,

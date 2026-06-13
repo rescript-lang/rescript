@@ -52,7 +52,13 @@ val field_flatten_get :
 val alias_ident_or_global :
   Lam_stats.t -> Ident.t -> Ident.t -> Lam_id_kind.t -> unit
 
-val refine_let : kind:Lam_compat.let_kind -> Ident.t -> Lam.t -> Lam.t -> Lam.t
+val refine_let :
+  kind:Lam_compat.let_kind ->
+  ty:Types.type_expr option ->
+  Ident.t ->
+  Lam.t ->
+  Lam.t ->
+  Lam.t
 
 val dump : string -> Lam.t -> unit
 (** [dump] when {!Js_config.is_same_file}*)

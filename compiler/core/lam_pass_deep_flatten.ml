@@ -28,7 +28,8 @@
 
 let rec eliminate_tuple (id : Ident.t) (lam : Lam.t) acc =
   match lam with
-  | Llet (Alias, v, Lprim {primitive = Pfield (i, _); args = [Lvar tuple]}, e2)
+  | Llet
+      (Alias, v, _, Lprim {primitive = Pfield (i, _); args = [Lvar tuple]}, e2)
     when Ident.same tuple id ->
     eliminate_tuple id e2 (Map_int.add acc i v)
   (* it is okay to have duplicates*)
@@ -105,7 +106,8 @@ let lambda_of_groups ~(rev_bindings : Lam_group.t list) (result : Lam.t) : Lam.t
   Ext_list.fold_left rev_bindings result (fun acc x ->
       match x with
       | Nop l -> Lam.seq l acc
-      | Single (kind, ident, lam) -> Lam_util.refine_let ~kind ident lam acc
+      | Single (kind, ident, ty, lam) ->
+        Lam_util.refine_let ~kind ~ty ident lam acc
       | Recursive bindings -> Lam.letrec bindings acc)
 
 (* TODO:
@@ -121,16 +123,18 @@ let deep_flatten (lam : Lam.t) : Lam.t =
     | Llet
         ( str,
           id,
+          ty,
           (Lprim
              {
                primitive = Pnull_to_opt | Pnull_undefined_to_opt;
                args = [Lvar _];
              } as arg),
           body ) ->
-      flatten (Single (str, id, aux arg) :: acc) body
+      flatten (Single (str, id, ty, aux arg) :: acc) body
     | Llet
         ( str,
           id,
+          ty,
           Lprim
             {
               primitive = (Pnull_to_opt | Pnull_undefined_to_opt) as primitive;
@@ -139,13 +143,13 @@ let deep_flatten (lam : Lam.t) : Lam.t =
           body ) ->
       let new_id = Ident.rename id in
       flatten acc
-        (Lam.let_ str new_id arg
-           (Lam.let_ Alias id
+        (Lam.let_ str new_id None arg
+           (Lam.let_ Alias id ty
               (Lam.prim ~primitive
                  ~args:[Lam.var new_id]
                  Location.none (* FIXME*))
               body))
-    | Llet (str, id, arg, body) -> (
+    | Llet (str, id, ty, arg, body) -> (
       (*
                          {[ let match = (a,b,c)
                            let d = (match/1)
@@ -164,10 +168,10 @@ let deep_flatten (lam : Lam.t) : Lam.t =
             (Ext_list.fold_left_with_offset args accux 0 (fun arg acc i ->
                  match Map_int.find_opt tuple_mapping i with
                  | None -> Lam_group.nop_cons arg acc
-                 | Some key -> Lam_group.single str key arg :: acc))
+                 | Some key -> Lam_group.single str key None arg :: acc))
             body
-        | None -> flatten (Single (str, id, res) :: accux) body)
-      | _ -> flatten (Single (str, id, res) :: accux) body)
+        | None -> flatten (Single (str, id, ty, res) :: accux) body)
+      | _ -> flatten (Single (str, id, ty, res) :: accux) body)
     | Lletrec (bind_args, body) ->
       flatten (Recursive (Ext_list.map_snd bind_args aux) :: acc) body
     | Lsequence (l, r) ->
@@ -204,7 +208,7 @@ let deep_flatten (lam : Lam.t) : Lam.t =
               ((id, lam) :: inner_recursive_bindings, wrap, true)
             else
               ( inner_recursive_bindings,
-                Lam_group.Single (Strict, id, lam) :: wrap,
+                Lam_group.Single (Strict, id, None, lam) :: wrap,
                 false ))
       in
       lambda_of_groups
@@ -221,16 +225,24 @@ let deep_flatten (lam : Lam.t) : Lam.t =
     (*           can we switch to the tupled backend? *\) *)
     (*   when  List.length params = List.length args -> *)
     (*       aux (beta_reduce params body args) *)
-    | Lapply {ap_func = l1; ap_args = ll; ap_info; ap_transformed_jsx} ->
-      Lam.apply (aux l1) (Ext_list.map ll aux) ap_info ~ap_transformed_jsx
+    | Lapply
+        {
+          ap_func = l1;
+          ap_args = ll;
+          ap_info;
+          ap_transformed_jsx;
+          ap_result_type;
+        } ->
+      Lam.apply ~ap_result_type (aux l1) (Ext_list.map ll aux) ap_info
+        ~ap_transformed_jsx
     (* This kind of simple optimizations should be done each time
        and as early as possible *)
     | Lglobal_module _ -> lam
     | Lprim {primitive; args; loc} ->
       let args = Ext_list.map args aux in
       Lam.prim ~primitive ~args loc
-    | Lfunction {arity; params; body; attr} ->
-      Lam.function_ ~arity ~params ~body:(aux body) ~attr
+    | Lfunction {arity; params; body; attr; ty} ->
+      Lam.function_ ~arity ~params ~body:(aux body) ~attr ~ty
     | Lswitch
         ( l,
           {
