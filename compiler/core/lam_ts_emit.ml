@@ -13,15 +13,15 @@ let rec type_expr_to_ts (ty : Types.type_expr) : string =
   | Tarrow ({lbl = Nolabel; typ = arg_ty}, ret_ty, _, _) ->
     let arg = type_expr_to_ts arg_ty in
     let ret = type_expr_to_ts ret_ty in
-    "(" ^ arg ^ ") => " ^ ret
+    "(_: " ^ arg ^ ") => " ^ ret
   | Tarrow ({lbl = Labelled {txt = l}; typ = arg_ty}, ret_ty, _, _) ->
     let arg = type_expr_to_ts arg_ty in
     let ret = type_expr_to_ts ret_ty in
-    l ^ ": " ^ arg ^ " => " ^ ret
+    "(" ^ l ^ ": " ^ arg ^ ") => " ^ ret
   | Tarrow ({lbl = Optional {txt = l}; typ = arg_ty}, ret_ty, _, _) ->
     let arg = type_expr_to_ts arg_ty in
     let ret = type_expr_to_ts ret_ty in
-    l ^ "?: " ^ arg ^ " => " ^ ret
+    "(" ^ l ^ "?: " ^ arg ^ ") => " ^ ret
   | Ttuple tys -> "[" ^ String.concat ", " (List.map type_expr_to_ts tys) ^ "]"
   | Tconstr (path, args, _) ->
     let name = path_to_ts path in
