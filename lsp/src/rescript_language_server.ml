@@ -419,15 +419,95 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
       | None -> None
     in
     (ok resp, state)
-  | TextDocumentFormatting {textDocument = {uri}} ->
+  | TextDocumentFormatting {textDocument = {uri}} -> (
     let source = (Document_store.get ~uri state.store).text in
+    let kind_file = Document.kind uri in
 
-    let resp =
-      match Analysis.Commands.format ~source ~kind_file:(Document.kind uri) with
-      | Ok text_edit -> Some text_edit
-      | Error _ -> None
+    let format ~source =
+      let full_document_text_edit text =
+        let lines = String.split_on_char '\n' text in
+        let end_line, end_character =
+          match List.rev lines with
+          | [] -> (0, 0)
+          | last_line :: rest -> (List.length rest, String.length last_line)
+        in
+        let range =
+          Range.create
+            ~start:(Position.create ~line:0 ~character:0)
+            ~end_:(Position.create ~line:end_line ~character:end_character)
+        in
+        [TextEdit.create ~range ~newText:text]
+      in
+
+      let read_all_from_channel channel =
+        let buffer = Buffer.create 4096 in
+        let bytes = Bytes.create 4096 in
+        let rec loop () =
+          match input channel bytes 0 (Bytes.length bytes) with
+          | 0 -> Buffer.contents buffer
+          | read ->
+            Buffer.add_subbytes buffer bytes 0 read;
+            loop ()
+        in
+        loop ()
+      in
+
+      let process_status_to_string = function
+        | Unix.WEXITED code -> Printf.sprintf "exited with code %d" code
+        | Unix.WSIGNALED signal -> Printf.sprintf "killed by signal %d" signal
+        | Unix.WSTOPPED signal -> Printf.sprintf "stopped by signal %d" signal
+      in
+
+      (* TODO: Run with Eio_unix.run_in_systhread? *)
+      let executable =
+        let executable_name =
+          if Sys.win32 then "rescript.cmd" else "rescript"
+        in
+        let root_path = State.workspace_root state |> Uri.to_path in
+        let ( /+ ) = Filename.concat in
+        root_path /+ "node_modules" /+ ".bin" /+ executable_name
+      in
+      let extension_name = Document.to_string kind_file in
+      let stdin, stdout =
+        Unix.open_process_args executable
+          [|executable; "format"; "--stdin"; "." ^ extension_name|]
+      in
+      let close_process_noerr () =
+        try ignore (Unix.close_process (stdin, stdout)) with _ -> ()
+      in
+      try
+        output_string stdout source;
+        close_out stdout;
+        let formatted = read_all_from_channel stdin in
+        match Unix.close_process (stdin, stdout) with
+        | Unix.WEXITED 0 -> Ok (full_document_text_edit formatted)
+        | status ->
+          Error
+            (Printf.sprintf "%s %s" executable
+               (process_status_to_string status))
+      with exn ->
+        close_out_noerr stdout;
+        close_in_noerr stdin;
+        close_process_noerr ();
+        Error (Printexc.to_string exn)
     in
-    (ok resp, state)
+
+    match
+      Analysis.Diagnostics.document_syntax ~source ~kind_file |> List.is_empty
+    with
+    | true -> (
+      match format ~source with
+      | Ok formatted -> (ok (Some formatted), state)
+      | Error message ->
+        let err =
+          Jsonrpc.Response.Error.make
+            ~message:("Failed to run rescript format using. " ^ message)
+            ~code:InternalError ()
+        in
+        (Error err, state))
+    | false ->
+      (* If document has syntax errors respond with null *)
+      (ok None, state))
   | Shutdown -> (ok (), state)
   | DebugTextDocumentGet _ | DebugEcho _ | WorkspaceSymbol _
   | CodeActionResolve _ | ExecuteCommand _ | TextDocumentColor _
