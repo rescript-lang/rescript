@@ -2,7 +2,11 @@ open Lsp
 open Types
 
 module From_diagnostics : sig
-  val get : Diagnostics.diagnostics -> CodeAction.t list Diagnostics.Uri_map.t
+  val get :
+    uri:Uri.t ->
+    diagnostics:Diagnostic.t list ->
+    source:string ->
+    CodeAction.t list
 end = struct
   let diagnostic_message (diagnostic : Diagnostic.t) =
     match diagnostic.message with
@@ -227,22 +231,18 @@ end = struct
     in
     diagnostic |> diagnostic_message |> String.split_on_char '\n' |> loop
 
-  let simple_add_missing_cases ~uri ~(diagnostic : Diagnostic.t) =
+  let simple_add_missing_cases ~uri ~(diagnostic : Diagnostic.t) ~source =
     let prefix = "You forgot to handle a possible case here, for example:" in
-    let file_path = Uri.to_path uri in
     let make_code_action hint =
-      match Analysis.Files.read_file file_path with
+      match
+        Analysis.Codemod.transform_opt ~source
+          ~pos:(diagnostic.range.start.line, diagnostic.range.start.character)
+          ~debug:false ~typ:Analysis.Codemod.AddMissingCases ~hint
+      with
       | None -> None
-      | Some source -> (
-        match
-          Analysis.Codemod.transform_opt ~source
-            ~pos:(diagnostic.range.start.line, diagnostic.range.start.character)
-            ~debug:false ~typ:Analysis.Codemod.AddMissingCases ~hint
-        with
-        | None -> None
-        | Some new_switch_code ->
-          quick_fix ~uri ~diagnostic ~title:"Insert missing cases"
-            ~edits:(replace_text diagnostic.range new_switch_code))
+      | Some new_switch_code ->
+        quick_fix ~uri ~diagnostic ~title:"Insert missing cases"
+          ~edits:(replace_text diagnostic.range new_switch_code)
     in
     let rec loop lines =
       match lines with
@@ -405,7 +405,7 @@ end = struct
     in
     loop lines
 
-  let extractor ~uri ~diagnostic =
+  let extractor ~uri ~diagnostic ~source =
     let code_actions = ref [] in
 
     let append code_action =
@@ -418,17 +418,20 @@ end = struct
     wrap_in_some ~uri ~diagnostic |> append;
     simple_conversion ~uri ~diagnostic |> append;
     apply_uncurried ~uri ~diagnostic |> append;
-    simple_add_missing_cases ~uri ~diagnostic |> append;
+    simple_add_missing_cases ~uri ~diagnostic ~source |> append;
     simple_type_mismatches ~uri ~diagnostic |> append;
     add_undefined_record_fields_v10 ~uri ~diagnostic |> append;
     add_undefined_record_fields_v11 ~uri ~diagnostic |> append;
 
     !code_actions
 
-  let get diagnostics =
+  let get ~uri ~diagnostics ~source =
     diagnostics
+    |> List.map (fun diagnostic -> extractor ~uri ~diagnostic ~source)
+    |> List.flatten
+  (* diagnostics
     |> Diagnostics.Uri_map.mapi (fun uri diagnostics ->
            diagnostics
            |> List.map (fun diagnostic -> extractor ~uri ~diagnostic)
-           |> List.flatten)
+           |> List.flatten) *)
 end
