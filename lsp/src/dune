@@ -1,6 +1,6 @@
 (library
  (name rescript_language_server)
- (libraries lsp eio analysis)
+ (libraries lsp eio analysis str)
  (inline_tests)
  (preprocess
   (pps ppx_expect))

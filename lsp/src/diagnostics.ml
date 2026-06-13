@@ -3,10 +3,9 @@ open Lsp.Types
 
 module Uri_map = Map.Make (Uri)
 
-type t = {
-  diagnostics: Diagnostic.t list Uri_map.t;
-  send: PublishDiagnosticsParams.t -> unit;
-}
+type diagnostics = Diagnostic.t list Uri_map.t
+
+type t = {diagnostics: diagnostics; send: PublishDiagnosticsParams.t -> unit}
 
 let empty () = Uri_map.empty
 
@@ -18,7 +17,7 @@ let from_uri ~uri (d : Diagnostic.t list) = Uri_map.add uri d (empty ())
    Overwrite the previous compiler log diagnostics so files that disappeared
    from the new log receive an empty diagnostic list and stale errors are
    cleared in the client. *)
-let overwrite ~(new_diagnostics : Diagnostic.t list Uri_map.t) t =
+let overwrite ~(new_diagnostics : diagnostics) t =
   let diagnostics =
     Uri_map.merge
       (fun _ existing incoming ->
@@ -31,7 +30,7 @@ let overwrite ~(new_diagnostics : Diagnostic.t list Uri_map.t) t =
   in
   {t with diagnostics}
 
-let append ~(new_diagnostics : Diagnostic.t list Uri_map.t) t =
+let append ~(new_diagnostics : diagnostics) t =
   let diagnostics =
     Uri_map.merge
       (fun _ existing incoming ->
