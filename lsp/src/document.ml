@@ -9,3 +9,9 @@ let kind uri =
          ~message:"unsupported file extension"
          ~data:(`Assoc [("extension", `String other)])
          ())
+
+let to_string (kind : kind) =
+  match kind with
+  | Res -> "res"
+  | Resi -> "resi"
+  | Other -> assert false
