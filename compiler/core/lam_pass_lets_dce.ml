@@ -36,10 +36,10 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lam.t =
       let slbody = simplif lbody in
       try
         (* TODO: record all references variables *)
-        Lam_util.refine_let ~kind:Variable v slinit
+        Lam_util.refine_let ~kind:Variable ~ty:None v slinit
           (Lam_pass_eliminate_ref.eliminate_ref v slbody)
       with Lam_pass_eliminate_ref.Real_reference ->
-        Lam_util.refine_let ~kind v
+        Lam_util.refine_let ~kind ~ty:None v
           (Lam.prim ~primitive ~args:[slinit] loc)
           slbody)
     | Llet (Alias, v, ty, l1, l2) -> (
@@ -104,10 +104,10 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lam.t =
           let slbody = simplif lbody in
           try
             (* TODO: record all references variables *)
-            Lam_util.refine_let ~kind:Variable v slinit
+            Lam_util.refine_let ~kind:Variable ~ty:None v slinit
               (Lam_pass_eliminate_ref.eliminate_ref v slbody)
           with Lam_pass_eliminate_ref.Real_reference ->
-            Lam_util.refine_let ~kind v
+            Lam_util.refine_let ~kind ~ty:None v
               (Lam.prim ~primitive ~args:[slinit] loc)
               slbody)
         | _ -> (
@@ -117,7 +117,7 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lam.t =
             Hash_ident.add string_table v s;
             (* we need move [simplif lbody] later, since adding Hash does have side effect *)
             Lam.let_ Alias v ty l1 (simplif lbody)
-          | _ -> Lam_util.refine_let ~kind v l1 (simplif lbody))
+          | _ -> Lam_util.refine_let ~kind ~ty:None v l1 (simplif lbody))
         (* TODO: check if it is correct rollback to [StrictOpt]? *))
     | Llet (((Strict | Variable) as kind), v, ty, l1, l2) -> (
       if not (used v) then
@@ -131,7 +131,7 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lam.t =
         | Strict, Lconst (Const_string {s; delim = None}) ->
           Hash_ident.add string_table v s;
           Lam.let_ Alias v ty l1 (simplif l2)
-        | _ -> Lam_util.refine_let ~kind v l1 (simplif l2))
+        | _ -> Lam_util.refine_let ~kind ~ty:None v l1 (simplif l2))
     | Lsequence (l1, l2) -> Lam.seq (simplif l1) (simplif l2)
     | Lapply
         {ap_func = Lfunction ({params; body} as lfunction); ap_args = args; _}

@@ -106,7 +106,8 @@ let lambda_of_groups ~(rev_bindings : Lam_group.t list) (result : Lam.t) : Lam.t
   Ext_list.fold_left rev_bindings result (fun acc x ->
       match x with
       | Nop l -> Lam.seq l acc
-      | Single (kind, ident, lam) -> Lam_util.refine_let ~kind ident lam acc
+      | Single (kind, ident, ty, lam) ->
+        Lam_util.refine_let ~kind ~ty ident lam acc
       | Recursive bindings -> Lam.letrec bindings acc)
 
 (* TODO:
@@ -122,18 +123,18 @@ let deep_flatten (lam : Lam.t) : Lam.t =
     | Llet
         ( str,
           id,
-          _,
+          ty,
           (Lprim
              {
                primitive = Pnull_to_opt | Pnull_undefined_to_opt;
                args = [Lvar _];
              } as arg),
           body ) ->
-      flatten (Single (str, id, aux arg) :: acc) body
+      flatten (Single (str, id, ty, aux arg) :: acc) body
     | Llet
         ( str,
           id,
-          _,
+          ty,
           Lprim
             {
               primitive = (Pnull_to_opt | Pnull_undefined_to_opt) as primitive;
@@ -143,12 +144,12 @@ let deep_flatten (lam : Lam.t) : Lam.t =
       let new_id = Ident.rename id in
       flatten acc
         (Lam.let_ str new_id None arg
-           (Lam.let_ Alias id None
+           (Lam.let_ Alias id ty
               (Lam.prim ~primitive
                  ~args:[Lam.var new_id]
                  Location.none (* FIXME*))
               body))
-    | Llet (str, id, _, arg, body) -> (
+    | Llet (str, id, ty, arg, body) -> (
       (*
                          {[ let match = (a,b,c)
                            let d = (match/1)
@@ -167,10 +168,10 @@ let deep_flatten (lam : Lam.t) : Lam.t =
             (Ext_list.fold_left_with_offset args accux 0 (fun arg acc i ->
                  match Map_int.find_opt tuple_mapping i with
                  | None -> Lam_group.nop_cons arg acc
-                 | Some key -> Lam_group.single str key arg :: acc))
+                 | Some key -> Lam_group.single str key None arg :: acc))
             body
-        | None -> flatten (Single (str, id, res) :: accux) body)
-      | _ -> flatten (Single (str, id, res) :: accux) body)
+        | None -> flatten (Single (str, id, ty, res) :: accux) body)
+      | _ -> flatten (Single (str, id, ty, res) :: accux) body)
     | Lletrec (bind_args, body) ->
       flatten (Recursive (Ext_list.map_snd bind_args aux) :: acc) body
     | Lsequence (l, r) ->
@@ -207,7 +208,7 @@ let deep_flatten (lam : Lam.t) : Lam.t =
               ((id, lam) :: inner_recursive_bindings, wrap, true)
             else
               ( inner_recursive_bindings,
-                Lam_group.Single (Strict, id, lam) :: wrap,
+                Lam_group.Single (Strict, id, None, lam) :: wrap,
                 false ))
       in
       lambda_of_groups

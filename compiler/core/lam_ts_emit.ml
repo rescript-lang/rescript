@@ -55,18 +55,14 @@ let emit_decls ppf (groups : Lam_group.t list) (exports : Ident.t list) =
   let export_set = Set_ident.of_list exports in
   let walk_group (group : Lam_group.t) =
     match group with
-    | Lam_group.Single (_, id, lam) when Set_ident.mem export_set id -> (
+    | Lam_group.Single (_, id, ty, lam) when Set_ident.mem export_set id -> (
       let ts_ty =
-        match lam with
-        | Lam.Llet (_, _, ty, _, _) -> (
-          match ty with
-          | Some ty -> Some (type_expr_to_ts ty)
-          | None -> None)
-        | Lam.Lfunction {ty; _} -> (
-          match ty with
-          | Some ty -> Some (type_expr_to_ts ty)
-          | None -> None)
-        | _ -> None
+        match ty with
+        | Some ty -> Some (type_expr_to_ts ty)
+        | None -> (
+          match lam with
+          | Lam.Lfunction {ty = Some ty; _} -> Some (type_expr_to_ts ty)
+          | _ -> None)
       in
       let is_fn = function_arity lam in
       match (is_fn, ts_ty) with

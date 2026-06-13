@@ -2806,7 +2806,7 @@ let for_let loc param pat body =
     (* This eliminates a useless variable (and stack slot in bytecode)
        for "let _ = ...". See #6865. *)
     Lsequence (param, body)
-  | Tpat_var (id, _) ->
+  | Tpat_var (id, _) | Tpat_alias ({pat_desc = Tpat_any}, id, _) ->
     (* fast path, and keep track of simple bindings to unboxable numbers *)
     Llet (Strict, id, Some pat.pat_type, param, body)
   | _ -> simple_for_let loc param pat body

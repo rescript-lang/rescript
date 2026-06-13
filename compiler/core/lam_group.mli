@@ -23,7 +23,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 type t =
-  | Single of Lam_compat.let_kind * Ident.t * Lam.t
+  | Single of Lam_compat.let_kind * Ident.t * Types.type_expr option * Lam.t
   | Recursive of (Ident.t * Lam.t) list
   | Nop of Lam.t
 
@@ -31,6 +31,7 @@ type t =
 
 val pp_group : Format.formatter -> t -> unit
 
-val single : Lam_compat.let_kind -> Ident.t -> Lam.t -> t
+val single :
+  Lam_compat.let_kind -> Ident.t -> Types.type_expr option -> Lam.t -> t
 
 val nop_cons : Lam.t -> t list -> t list

@@ -45,7 +45,7 @@ let remove export_idents (rest : Lam_group.t list) : Lam_group.t list =
   let initial_idents =
     Ext_list.fold_left rest export_idents (fun acc x ->
         match x with
-        | Single (kind, id, lam) -> (
+        | Single (kind, id, _ty, lam) -> (
           Hash_ident.add ident_free_vars id
             (Lam_free_variables.pass_free_variables lam);
           match kind with
@@ -68,7 +68,7 @@ let remove export_idents (rest : Lam_group.t list) : Lam_group.t list =
   let visited = transitive_closure initial_idents ident_free_vars in
   Ext_list.fold_left rest [] (fun acc x ->
       match x with
-      | Single (_, id, _) ->
+      | Single (_, id, _, _) ->
         if Hash_set_ident.mem visited id then x :: acc else acc
       | Nop _ -> x :: acc
       | Recursive bindings -> (

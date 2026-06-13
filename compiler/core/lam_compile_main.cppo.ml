@@ -56,7 +56,7 @@ let compile_group output_prefix (meta : Lam_stats.t)
      so it should be safe
   *)
 
-  | Single (kind, id, lam) -> 
+  | Single (kind, id, _ty, lam) ->
     (* let lam = Optimizer.simplify_lets [] lam in  *)
     (* can not apply again, it's wrong USE it with care*)
     (* ([Js_stmt_make.comment (Gen_of_env.query_type id  env )], None)  ++ *)
@@ -93,7 +93,7 @@ let compile_group output_prefix (meta : Lam_stats.t)
 let no_side_effects (rest : Lam_group.t list) : string option = 
   Ext_list.find_opt rest (fun x -> 
       match x with 
-      | Single(kind,id,body) -> 
+      | Single (kind, id, _ty, body) -> 
         begin 
           match kind with 
           | Strict | Variable -> 
