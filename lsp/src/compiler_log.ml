@@ -181,15 +181,25 @@ end = struct
          1 │ let a = 1
          2 │ let b = "hi"
          11 | ......Todos {
-            |         ...TodoItem
          46 ┆ module Input = {
+
+       Unnumbered OCaml gutter continuation lines are handled by
+       [message_from_lines] only after a numbered source line has started an
+       excerpt. A diagnostic message can itself start with [|], for example
+       missing pattern-match cases.
     *)
     let rescript_re = Str.regexp "^[ \t]*[0-9]+[ \t]*│" in
     let rescript_rei_re = Str.regexp "^[ \t]*[0-9]+[ \t]*┆" in
-    let ocaml_re = Str.regexp "^[ \t]*\\([0-9]+[ \t]*\\)?|" in
+    let ocaml_re = Str.regexp "^[ \t]*[0-9]+[ \t]*|" in
     Str.string_match rescript_re line 0
     || Str.string_match rescript_rei_re line 0
     || Str.string_match ocaml_re line 0
+
+  let is_source_continuation_line line =
+    Str.string_match (Str.regexp "^[ \t]*|") line 0
+
+  let is_source_excerpt_line line =
+    is_source_code_line line || is_source_continuation_line line
 
   let trim_empty_edges lines =
     let rec drop_start = function
@@ -224,7 +234,7 @@ end = struct
       | [] -> None
       | line :: rest -> (
         let content = String.trim line in
-        if is_blank content || is_source_code_line content then loop rest
+        if is_blank content || is_source_excerpt_line content then loop rest
         else
           match content with
           | other when String.starts_with ~prefix:"Warning " other ->
@@ -252,7 +262,7 @@ end = struct
       | [] -> Unknow
       | line :: rest ->
         let content = String.trim line in
-        if is_blank content || is_source_code_line content then loop rest
+        if is_blank content || is_source_excerpt_line content then loop rest
         else if String.starts_with ~prefix:"Warning " content then Warning
         else if String.starts_with ~prefix:"Error" content then Unknow
         else loop rest
@@ -1069,6 +1079,135 @@ let%expect_test "parse log" =
         "start": { "character": 40, "line": 0 }
       },
       "severity": 1,
+      "source": "ReScript"
+    }
+    |}];
+
+  let example_log_10 =
+    {|#Start(1781383030890)
+
+    Warning number 8 (configured as error)
+    /home/pedro/Desktop/projects/rescript-lang.org/apps/docs/app/DocsRoutes.res:6:3-9:3
+
+     4 │
+     5 │ let f = (a: t) => {
+     6 │   switch a {
+     7 │   | A => ()
+     8 │   | B => ()
+     9 │   }
+    10 │ }
+    11 │
+
+    You forgot to handle a possible case here, for example:
+    | C
+
+
+    Warning number 37
+    /home/pedro/Desktop/projects/rescript-lang.org/apps/docs/app/DocsRoutes.res:3:1-18
+
+    1 │ open ReactRouter.Routes
+    2 │
+    3 │ type t = A | B | C
+    4 │
+    5 │ let f = (a: t) => {
+
+    constructor A is never used to build values.
+  (However, this constructor appears in patterns.)
+
+
+    Warning number 37
+    /home/pedro/Desktop/projects/rescript-lang.org/apps/docs/app/DocsRoutes.res:3:1-18
+
+    1 │ open ReactRouter.Routes
+    2 │
+    3 │ type t = A | B | C
+    4 │
+    5 │ let f = (a: t) => {
+
+    constructor B is never used to build values.
+  (However, this constructor appears in patterns.)
+
+
+    Warning number 37
+    /home/pedro/Desktop/projects/rescript-lang.org/apps/docs/app/DocsRoutes.res:3:1-18
+
+    1 │ open ReactRouter.Routes
+    2 │
+    3 │ type t = A | B | C
+    4 │
+    5 │ let f = (a: t) => {
+
+    unused constructor C.
+
+
+    Warning number 32
+    /home/pedro/Desktop/projects/rescript-lang.org/apps/docs/app/DocsRoutes.res:5:5
+
+    3 │ type t = A | B | C
+    4 │
+    5 │ let f = (a: t) => {
+    6 │   switch a {
+    7 │   | A => ()
+
+    unused value f.
+
+  #Done(1781383030936)|}
+  in
+  Parse.parse_log_content example_log_10 |> print_logs;
+  [%expect
+    {|
+    Warning - Full_path(/home/pedro/Desktop/projects/rescript-lang.org/apps/docs/app/DocsRoutes.res)
+    {
+      "message": "You forgot to handle a possible case here, for example:\n| C",
+      "range": {
+        "end": { "character": 3, "line": 8 },
+        "start": { "character": 2, "line": 5 }
+      },
+      "severity": 2,
+      "source": "ReScript"
+    }
+
+    Warning - Full_path(/home/pedro/Desktop/projects/rescript-lang.org/apps/docs/app/DocsRoutes.res)
+    {
+      "message": "constructor A is never used to build values.\n(However, this constructor appears in patterns.)",
+      "range": {
+        "end": { "character": 18, "line": 2 },
+        "start": { "character": 0, "line": 2 }
+      },
+      "severity": 2,
+      "source": "ReScript"
+    }
+
+    Warning - Full_path(/home/pedro/Desktop/projects/rescript-lang.org/apps/docs/app/DocsRoutes.res)
+    {
+      "message": "constructor B is never used to build values.\n(However, this constructor appears in patterns.)",
+      "range": {
+        "end": { "character": 18, "line": 2 },
+        "start": { "character": 0, "line": 2 }
+      },
+      "severity": 2,
+      "source": "ReScript"
+    }
+
+    Warning - Full_path(/home/pedro/Desktop/projects/rescript-lang.org/apps/docs/app/DocsRoutes.res)
+    {
+      "message": "unused constructor C.",
+      "range": {
+        "end": { "character": 18, "line": 2 },
+        "start": { "character": 0, "line": 2 }
+      },
+      "severity": 2,
+      "source": "ReScript"
+    }
+
+    Warning - Full_path(/home/pedro/Desktop/projects/rescript-lang.org/apps/docs/app/DocsRoutes.res)
+    {
+      "message": "unused value f.",
+      "range": {
+        "end": { "character": 5, "line": 4 },
+        "start": { "character": 4, "line": 4 }
+      },
+      "severity": 2,
       "source": "ReScript"
     }
     |}]

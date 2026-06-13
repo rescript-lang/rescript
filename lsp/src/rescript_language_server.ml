@@ -354,16 +354,23 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
           ~kind_file:(Document.kind uri)
       in
       (ok (Some (`DocumentSymbol resp)), state))
-  | CodeAction {textDocument = {uri}; range = {start; end_}} ->
+  | CodeAction
+      {textDocument = {uri}; range = {start; end_}; context = {diagnostics}} ->
     let full = load_full uri state in
     let source = (Document_store.get ~uri state.store).text in
-    let resp =
+    let code_actions_from_compiler_log =
+      Code_actions.From_diagnostics.get ~uri ~diagnostics ~source
+    in
+    let code_actions_from_analysis =
       Analysis.Xform.extract_code_actions
         ~state:(State.analysis_state state)
         ~path:(Uri.to_path uri)
         ~start_pos:(start.line, start.character)
         ~end_pos:(end_.line, end_.character)
         ~source ~kind_file:(Document.kind uri) ~full ~debug:false
+    in
+    let resp =
+      code_actions_from_compiler_log @ code_actions_from_analysis
       |> List.map (fun ca -> `CodeAction ca)
     in
     (ok (Some resp), state)
