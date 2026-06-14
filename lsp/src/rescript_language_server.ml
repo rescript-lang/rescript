@@ -55,6 +55,12 @@ let initialization (_client_capabilities : ClientCapabilities.t) =
   let codeActionProvider =
     `CodeActionOptions (CodeActionOptions.create ~resolveProvider:false ())
   in
+  let executeCommandProvider =
+    ExecuteCommandOptions.create
+      ~commands:[Custom_requests.Open_compiled_file.command_name]
+      ()
+  in
+
   let capabilities =
     ServerCapabilities.create ~textDocumentSync ~completionProvider
       ~codeLensProvider ~hoverProvider:(`Bool true) ~signatureHelpProvider
@@ -62,7 +68,7 @@ let initialization (_client_capabilities : ClientCapabilities.t) =
       ~definitionProvider:(`Bool true) ~typeDefinitionProvider:(`Bool true)
       ~codeActionProvider ~documentSymbolProvider:(`Bool true)
       ~referencesProvider:(`Bool true) ~documentFormattingProvider:(`Bool true)
-      ()
+      ~executeCommandProvider ()
   in
   let serverInfo =
     let version = "2.0.0-aplha.1" in
@@ -182,9 +188,6 @@ let on_initialize (params : InitializeParams.t) (server : State.t Server.t) =
     State.initialize state ~params ~diagnostics ~analysis_state ~compiler_config
   in
   let initialization_info = initialization params.capabilities in
-
-  state |> discover_subpackages_and_populate;
-
   (initialization_info, state)
 
 let on_request (Client_request.E request) (server : State.t Server.t) =
@@ -366,8 +369,24 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
         ~end_pos:(end_.line, end_.character)
         ~source ~kind_file:(Document.kind uri) ~full ~debug:false
     in
+    let other_actions =
+      match Custom_requests.Open_compiled_file.create ~uri ~state with
+      | None -> []
+      | Some uri ->
+        let title = "Open compiled js file" in
+        [
+          CodeAction.create
+            ~command:
+              (Command.create
+                 ~arguments:[`String (Uri.to_string uri)]
+                 ~command:Custom_requests.Open_compiled_file.command_name ~title
+                 ())
+            ~title ();
+        ]
+    in
     let resp =
       code_actions_from_compiler_log @ code_actions_from_analysis
+      @ other_actions
       |> List.map (fun ca -> `CodeAction ca)
     in
     (ok (Some resp), state)
@@ -517,11 +536,23 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
       (* If document has syntax errors respond with null *)
       (ok None, state))
   | Shutdown -> (ok (), state)
+  | ExecuteCommand {command; arguments} ->
+    let ( = ) = String.equal in
+    if command = Custom_requests.Open_compiled_file.command_name then
+      match arguments with
+      | Some [`String uri] ->
+        Server.request
+          (Server_request.ShowDocumentRequest
+             (ShowDocumentParams.create ~takeFocus:true ~uri:(Uri.of_string uri)
+                ()))
+          server
+      | _ -> ()
+    else ();
+    (ok `Null, state)
   | DebugTextDocumentGet _ | DebugEcho _ | WorkspaceSymbol _
-  | CodeActionResolve _ | ExecuteCommand _ | TextDocumentColor _
-  | TextDocumentColorPresentation _ | TextDocumentCodeLensResolve _
-  | TextDocumentHighlight _ | TextDocumentFoldingRange _
-  | TextDocumentLinkResolve _ | TextDocumentLink _
+  | CodeActionResolve _ | TextDocumentColor _ | TextDocumentColorPresentation _
+  | TextDocumentCodeLensResolve _ | TextDocumentHighlight _
+  | TextDocumentFoldingRange _ | TextDocumentLinkResolve _ | TextDocumentLink _
   | WillSaveWaitUntilTextDocument _ | TextDocumentRangeFormatting _
   | TextDocumentOnTypeFormatting _ | SelectionRange _
   | TextDocumentImplementation _ | SemanticTokensDelta _ | TextDocumentMoniker _
