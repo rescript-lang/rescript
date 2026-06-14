@@ -9,9 +9,15 @@ type status =
       package: Analysis.Shared_types.package option;
     }
 
-type t = {status: status; store: Document_store.t; fs: Eio.Fs.dir_ty Eio.Path.t}
+type t = {
+  status: status;
+  store: Document_store.t;
+  configuration: Configuration.t;
+  fs: Eio.Fs.dir_ty Eio.Path.t;
+}
 
-let create ~store ~fs = {status = Uninitialized; store; fs}
+let create ~store ~configuration ~fs =
+  {status = Uninitialized; store; configuration; fs}
 
 let initialize t ~params ~diagnostics ~analysis_state ~package =
   {t with status = Initialized {params; diagnostics; analysis_state; package}}

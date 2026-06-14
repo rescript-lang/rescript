@@ -90,5 +90,6 @@
   (>= 1.3))
  analysis
  dune
+ ppx_deriving_yojson
  (ppx_expect
   (and :with-test (= v0.17.2)))))

@@ -168,10 +168,6 @@ let on_initialize (params : InitializeParams.t) (server : State.t Server.t) =
 
   state |> discover_subpackages_and_populate;
 
-  Server.show_message_notification
-    (State.to_yojson state |> Yojson.Safe.pretty_to_string)
-    server;
-
   (initialization_info, state)
 
 let on_request (Client_request.E request) (server : State.t Server.t) =
@@ -252,8 +248,8 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
         ~source ~kind_file:(Document.kind uri)
         ~pos:(position.line, position.character)
         ~debug:false
-          (* TODO: supports_markdown_links should be get from client capabilities *)
-        ~supports_markdown_links:false ~full
+        ~supports_markdown_links:
+          state.configuration.hover.support_markdown_links ~full
     in
     (ok hover, state)
   | TextDocumentCompletion {textDocument = {uri}; position} ->
@@ -291,21 +287,27 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
       | _ -> None
     in
     (ok (resp |> Option.value ~default:item), state)
-  | SignatureHelp {textDocument = {uri}; position} ->
-    let source = (Document_store.get ~uri state.store).text in
-    let full = load_full uri state in
-    let resp =
-      match
-        Analysis.Commands.signature_help
-          ~state:(State.analysis_state state)
-          ~source ~kind_file:(Document.kind uri)
-          ~pos:(position.line, position.character)
-          ~full ~allow_for_constructor_payloads:true ~debug:false
-      with
-      | Some s -> s
-      | None -> SignatureHelp.create ~signatures:[] ()
-    in
-    (ok resp, state)
+  | SignatureHelp {textDocument = {uri}; position} -> (
+    match state.configuration.signature_help.enable with
+    | true ->
+      let source = (Document_store.get ~uri state.store).text in
+      let full = load_full uri state in
+      let resp =
+        match
+          Analysis.Commands.signature_help
+            ~state:(State.analysis_state state)
+            ~source ~kind_file:(Document.kind uri)
+            ~pos:(position.line, position.character)
+            ~full
+            ~allow_for_constructor_payloads:
+              state.configuration.signature_help.for_constructor_payloads
+            ~debug:false
+        with
+        | Some s -> s
+        | None -> SignatureHelp.create ~signatures:[] ()
+      in
+      (ok resp, state)
+    | false -> (ok (SignatureHelp.create ~signatures:[] ()), state))
   | TextDocumentDefinition {textDocument = {uri}; position} ->
     let full = load_full uri state in
     let resp =
@@ -375,24 +377,28 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     in
     (ok (Some resp), state)
   | TextDocumentCodeLens {textDocument = {uri}} ->
-    let source = (Document_store.get ~uri state.store).text in
-    let full = load_full uri state in
-    let resp =
-      Analysis.Hint.code_lens ~source ~kind_file:(Document.kind uri) ~full
-        ~debug:false
-    in
-    (ok (resp |> Option.value ~default:[]), state)
+    if state.configuration.code_lens then
+      let source = (Document_store.get ~uri state.store).text in
+      let full = load_full uri state in
+      let resp =
+        Analysis.Hint.code_lens ~source ~kind_file:(Document.kind uri) ~full
+          ~debug:false
+      in
+      (ok (resp |> Option.value ~default:[]), state)
+    else (ok [], state)
   | InlayHint {textDocument = {uri}; range = {start; end_}} ->
-    let source = (Document_store.get ~uri state.store).text in
-    let full = load_full uri state in
-    let resp =
-      Analysis.Hint.inlay
-        ~state:(State.analysis_state state)
-        ~source ~kind_file:(Document.kind uri) ~full
-        ~pos:(start.line, end_.line) (* TODO: max_length should be a config *)
-        ~max_length:(Some 25) ~debug:false
-    in
-    (ok resp, state)
+    if state.configuration.inlay_hints.enable then
+      let source = (Document_store.get ~uri state.store).text in
+      let full = load_full uri state in
+      let resp =
+        Analysis.Hint.inlay
+          ~state:(State.analysis_state state)
+          ~source ~kind_file:(Document.kind uri) ~full
+          ~pos:(start.line, end_.line)
+          ~max_length:state.configuration.inlay_hints.max_length ~debug:false
+      in
+      (ok resp, state)
+    else (ok None, state)
   | SemanticTokensFull {textDocument = {uri}} ->
     let source = (Document_store.get ~uri state.store).text in
     let resp =
@@ -623,10 +629,24 @@ let on_notification notification (server : State.t Server.t) =
     let diagnostics = get_updated_diagnostics_from_log state in
     diagnostics |> Diagnostics.send;
     state |> State.update_diagnostics diagnostics
-  | ChangeConfiguration _ | ChangeWorkspaceFolders _ | CancelRequest _
-  | DidSaveTextDocument _ | DidCreateFiles _ | DidDeleteFiles _
-  | DidRenameFiles _ | WillSaveTextDocument _ | WorkDoneProgressCancel _
-  | WorkDoneProgress _ | NotebookDocumentDidOpen _ | NotebookDocumentDidChange _
+  | ChangeConfiguration _ ->
+    (* workspace/didChangeConfiguration only signals that settings may have
+       changed. The LSP configuration model is pull-based, so the server should
+       ignore this notification payload and fetch the scoped settings it needs
+       with workspace/configuration.
+
+       See https://github.com/microsoft/language-server-protocol/issues/567#issuecomment-448538082
+    *)
+    Server.request
+      (Server_request.WorkspaceConfiguration
+         (ConfigurationParams.create
+            ~items:[ConfigurationItem.create ~section:"rescript" ()]))
+      server;
+    state
+  | ChangeWorkspaceFolders _ | CancelRequest _ | DidSaveTextDocument _
+  | DidCreateFiles _ | DidDeleteFiles _ | DidRenameFiles _
+  | WillSaveTextDocument _ | WorkDoneProgressCancel _ | WorkDoneProgress _
+  | NotebookDocumentDidOpen _ | NotebookDocumentDidChange _
   | NotebookDocumentDidSave _ | NotebookDocumentDidClose _ | SetTrace _ ->
     state
   | UnknownNotification {method_} ->
@@ -635,6 +655,38 @@ let on_notification notification (server : State.t Server.t) =
       server;
     state
 
+let on_response
+    (Server.Response_result (request, result) : Server.response_result)
+    (server : State.t Server.t) =
+  let request_error_message = function
+    | Server.Response_error error -> error.message
+    | Server.Decode_error exn -> Printexc.to_string exn
+  in
+
+  let state = Server.state server in
+
+  match (request, result) with
+  | Server_request.WorkspaceConfiguration _, result -> (
+    match result with
+    | Ok [settings] -> (
+      match Configuration.of_yojson settings with
+      | Ok configuration -> {state with configuration}
+      | Error _ -> state)
+    | Ok _ ->
+      Server.show_message_notification ~kind:MessageType.Error
+        "Invalid rescript.settings. Received a list" server;
+      state
+    | Error err ->
+      Server.show_message_notification ~kind:MessageType.Error
+        ("Error on response of workspace/configuration request: "
+       ^ request_error_message err)
+        server;
+      state)
+  | _ -> state
+
 let listen ~input ~output ~fs =
-  let state = State.create ~store:(Document_store.create ()) ~fs in
-  Server.listen ~input ~output ~on_request ~on_notification ~state
+  let state =
+    State.create ~store:(Document_store.create ())
+      ~configuration:Configuration.default ~fs
+  in
+  Server.listen ~input ~output ~on_request ~on_notification ~on_response ~state

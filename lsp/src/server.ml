@@ -106,6 +106,15 @@ end
 
 module Request_id_table = Hashtbl.Make (Request_id)
 
+type request_error =
+  | Response_error of Jsonrpc.Response.Error.t
+  | Decode_error of exn
+
+type response_result =
+  | Response_result :
+      'a Lsp.Server_request.t * ('a, request_error) result
+      -> response_result
+
 type pending_request = Pending : 'a Lsp.Server_request.t -> pending_request
 
 type request_context = {
@@ -129,21 +138,29 @@ let request request server =
   server.request_context.next_id <- server.request_context.next_id + 1;
   Request_id_table.add server.request_context.pending id (Pending request);
   let request = Lsp.Server_request.to_jsonrpc_request request ~id in
-  Io.await @@ Lsp_Io.write server.channel @@ Request request
+  try Io.await @@ Lsp_Io.write server.channel @@ Request request
+  with exn ->
+    Request_id_table.remove server.request_context.pending id;
+    raise exn
 
 let handle_response (response : Jsonrpc.Response.t) server =
   match
     Request_id_table.find_opt server.request_context.pending response.id
   with
-  | None -> ()
+  | None -> None
   | Some (Pending request) -> (
     Request_id_table.remove server.request_context.pending response.id;
     match response.result with
-    | Ok json -> (
-      match Lsp.Server_request.response_of_json request json with
-      | _ -> ()
-      | exception _ -> ())
-    | Error _ -> ())
+    | Ok json ->
+      let result =
+        match Lsp.Server_request.response_of_json request json with
+        | response -> Ok response
+        | exception exn -> Error (Decode_error exn)
+      in
+      Some (Response_result (request, result))
+    | Error err ->
+      let result = Error (Response_error err) in
+      Some (Response_result (request, result)))
 
 let log_message_notification ?(kind = Lsp.Types.MessageType.Debug) message
     server =
@@ -190,7 +207,7 @@ let rec input_loop ~input ~state with_ =
   | exception _ -> failwith "Server.input_loop"
   | None -> ()
 
-let listen ~input ~output ~on_request ~on_notification ~state =
+let listen ~input ~output ~on_request ~on_notification ~on_response ~state =
   let lifecycle = ref Awaiting_initialize in
   let handle_request server request =
     match !lifecycle with
@@ -256,11 +273,15 @@ let listen ~input ~output ~on_request ~on_notification ~state =
                 | `Notification notification ->
                   handle_notification server notification)
               state calls
-          | Response response ->
-            handle_response response server;
-            state
+          | Response response -> (
+            match handle_response response server with
+            | Some response -> on_response response server
+            | None -> state)
           | Batch_response responses ->
-            List.iter
-              (fun response -> handle_response response server)
-              responses;
-            state))
+            List.fold_left
+              (fun state response ->
+                let server = {channel; state; request_context} in
+                match handle_response response server with
+                | Some response -> on_response response server
+                | None -> state)
+              state responses))
