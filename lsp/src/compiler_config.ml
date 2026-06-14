@@ -194,10 +194,11 @@ module Parse = struct
     prin_config (of_yojson json_3);
     [%expect
       {|
-        name=@rescript-lang/guide
-        namespace=false
-        package_specs=none
-        suffix=none |}]
+      name=rescript-lang.org-monorepo
+      namespace=none
+      package_specs=other
+      suffix=.jsx
+      |}]
 end
 
 module Uri_map = Map.Make (Lsp.Uri)
