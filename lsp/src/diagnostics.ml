@@ -90,7 +90,7 @@ let to_lsp_format (workspace_root : DocumentUri.t)
 
                  let end_line, end_character =
                    match List.rev lines with
-                   | [] -> (0, 0)
+                   | [] -> (0, String.length "let a" - 1)
                    | last_line :: rest ->
                      let line_count = List.length rest in
                      (line_count - 1, String.length last_line - 1)
