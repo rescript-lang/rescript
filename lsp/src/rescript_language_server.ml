@@ -80,11 +80,30 @@ let get_updated_diagnostics_from_log (state : State.t) =
   in
   Diagnostics.overwrite ~new_diagnostics:diagnostics (State.diagnostics state)
 
-let discover_subpackages_and_populate (state : State.t) =
+(* This intentionally mutates [analysis_state] in place. The analysis layer keeps
+   package discovery tables as mutable hash tables so later requests can resolve
+   files and modules without rebuilding package metadata. That makes this
+   function unsafe in the usual functional sense: callers must provide a fresh
+   per-server analysis state or accept that repeated calls append/overwrite
+   package roots as a side effect. *)
+let discover_subpackages_and_populate ~workspace_root
+    ~(analysis_state : Analysis.Shared_types.state) ~server =
   let ( /+ ) = Filename.concat in
-  let workspace_root = State.workspace_root state in
-  let analysis_state = State.analysis_state state in
-  let package = State.package state in
+
+  let package =
+    let root_path = workspace_root |> Uri.to_path in
+    match Analysis.Packages.new_bs_package ~root_path with
+    | Some p -> Some p
+    | None ->
+      let message =
+        Printf.sprintf
+          "Failed to initialize context for project. Could not find a \
+           rescript.json file in %s or another error"
+          root_path
+      in
+      Server.show_message_notification ~kind:MessageType.Error message server;
+      None
+  in
 
   let resolve_node_modules_paths =
     match package with
@@ -144,25 +163,23 @@ let on_initialize (params : InitializeParams.t) (server : State.t Server.t) =
 
   let analysis_state = Analysis.Shared_types.create_state () in
 
-  let package =
-    let root_path =
-      Helpers.workspace_root_uri_of_initialize_params params |> Uri.to_path
-    in
-    match Analysis.Packages.new_bs_package ~root_path with
-    | Some p -> Some p
-    | None ->
-      let message =
-        Printf.sprintf
-          "Failed to initialize context for project. Could not find a \
-           rescript.json file in %s or another error"
-          root_path
-      in
-      Server.show_message_notification ~kind:MessageType.Error message server;
-      None
+  let workspace_root = Helpers.workspace_root_uri_of_initialize_params params in
+
+  discover_subpackages_and_populate ~workspace_root ~analysis_state ~server;
+
+  let compiler_config =
+    analysis_state.packages_by_root |> Hashtbl.to_seq
+    |> Seq.filter_map (fun (root_path, _) ->
+           match Compiler_config.parse ~root:root_path ~fs:state.fs with
+           | Ok config -> Some (Uri.of_path root_path, config)
+           | Error _ ->
+             (* TODO: Send notification? *)
+             None)
+    |> Compiler_config.Uri_map.of_seq
   in
 
   let state =
-    State.initialize state ~params ~diagnostics ~package ~analysis_state
+    State.initialize state ~params ~diagnostics ~analysis_state ~compiler_config
   in
   let initialization_info = initialization params.capabilities in
 
@@ -178,34 +195,12 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
        [path] is outside every known package root. *)
     let package_for_path t ~path =
       let analysis_state = State.analysis_state t in
-
-      let path_matches_root ~path ~root =
-        let is_sep = function
-          | '/' | '\\' -> true
-          | _ -> false
-        in
-        let root_len = String.length root in
-        let path_len = String.length path in
-        root_len > 0
-        && (path = root
-           || path_len > root_len
-              && String.starts_with ~prefix:root path
-              && (is_sep root.[root_len - 1] || is_sep path.[root_len]))
+      let roots =
+        analysis_state.packages_by_root |> Hashtbl.to_seq_keys |> List.of_seq
       in
-
-      analysis_state.packages_by_root |> Hashtbl.to_seq
-      |> Seq.fold_left
-           (fun best (root, package) ->
-             if path_matches_root ~path ~root then
-               match best with
-               | None -> Some (root, package)
-               | Some (best_root, _) ->
-                 if String.length root > String.length best_root then
-                   Some (root, package)
-                 else best
-             else best)
-           None
-      |> Option.map snd
+      match Helpers.best_root_match ~path roots with
+      | Some root -> Hashtbl.find_opt analysis_state.packages_by_root root
+      | None -> None
     in
 
     match state.status with

@@ -1,5 +1,5 @@
 open Lsp
-open Lsp.Types
+open Types
 
 module Uri_map = Map.Make (Uri)
 

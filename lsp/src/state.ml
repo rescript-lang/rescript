@@ -6,7 +6,7 @@ type status =
       params: InitializeParams.t;
       diagnostics: Diagnostics.t;
       analysis_state: Analysis.Shared_types.state;
-      package: Analysis.Shared_types.package option;
+      compiler_config: Compiler_config.t;
     }
 
 type t = {
@@ -19,8 +19,11 @@ type t = {
 let create ~store ~configuration ~fs =
   {status = Uninitialized; store; configuration; fs}
 
-let initialize t ~params ~diagnostics ~analysis_state ~package =
-  {t with status = Initialized {params; diagnostics; analysis_state; package}}
+let initialize t ~params ~diagnostics ~analysis_state ~compiler_config =
+  {
+    t with
+    status = Initialized {params; diagnostics; analysis_state; compiler_config};
+  }
 
 let diagnostics t =
   match t.status with
@@ -31,24 +34,22 @@ let diagnostics t =
 let update_diagnostics diagnostics t =
   match t.status with
   | Uninitialized -> assert false
-  | Initialized {params; analysis_state; package} ->
-    {t with status = Initialized {params; analysis_state; package; diagnostics}}
+  | Initialized {params; analysis_state; compiler_config} ->
+    {
+      t with
+      status =
+        Initialized {params; analysis_state; diagnostics; compiler_config};
+    }
 
 let analysis_state t =
   match t.status with
   | Uninitialized -> assert false
   | Initialized {analysis_state} -> analysis_state
 
-let package t =
+let compiler_config t =
   match t.status with
   | Uninitialized -> assert false
-  | Initialized {package} -> package
-
-let update_package package t =
-  match t.status with
-  | Uninitialized -> assert false
-  | Initialized {params; diagnostics; analysis_state} ->
-    {t with status = Initialized {params; analysis_state; package; diagnostics}}
+  | Initialized {compiler_config} -> compiler_config
 
 let workspace_root t =
   match t.status with
