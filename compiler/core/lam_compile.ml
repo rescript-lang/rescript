@@ -1834,6 +1834,59 @@ let compile output_prefix =
       in
       Js_output.output_of_block_and_expression lambda_cxt.continuation args_code
         exp
+  and collect_dup_overrides (copy_id : Ident.t) (lam : Lam.t)
+      (acc : (Lam_compat.set_field_dbg_info * Lam.t) list) :
+      (Lam_compat.set_field_dbg_info * Lam.t) list option =
+    match lam with
+    | Lsequence
+        ( Lprim
+            {primitive = Psetfield (_, fld_info); args = [Lvar id'; value]; _},
+          rest )
+      when Ident.same id' copy_id ->
+      collect_dup_overrides copy_id rest ((fld_info, value) :: acc)
+    | Lvar id' when Ident.same id' copy_id -> Some acc
+    | _ -> None
+  and try_compile_record_spread (lambda_cxt : Lam_compile_context.t)
+      (id : Ident.t) (arg : Lam.t) (body : Lam.t) : Js_output.t option =
+    match arg with
+    | Lprim {primitive = Pduprecord; args = [init]; _} -> (
+      match collect_dup_overrides id body [] with
+      | None -> None
+      | Some overrides ->
+        let need_value_cxt =
+          {lambda_cxt with continuation = NeedValue Not_tail}
+        in
+        let init_output = compile_lambda need_value_cxt init in
+        let init_val =
+          match init_output.value with
+          | Some v -> v
+          | None -> assert false
+        in
+        let blocks, props =
+          List.fold_left
+            (fun (blocks, props)
+                 ((fld_info : Lam_compat.set_field_dbg_info), value_lam) ->
+              let val_output = compile_lambda need_value_cxt value_lam in
+              let val_val =
+                match val_output.value with
+                | Some v -> v
+                | None -> assert false
+              in
+              let name =
+                match fld_info with
+                | Fld_record_set name
+                | Fld_record_inline_set name
+                | Fld_record_extension_set name ->
+                  name
+              in
+              (blocks @ val_output.block, (Js_op.Lit name, val_val) :: props))
+            (init_output.block, []) overrides
+        in
+        Some
+          (Js_output.output_of_block_and_expression lambda_cxt.continuation
+             blocks
+             (E.obj ~dup:init_val (List.rev props))))
+    | _ -> None
   and compile_lambda (lambda_cxt : Lam_compile_context.t) (cur_lam : Lam.t) :
       Js_output.t =
     match cur_lam with
@@ -1859,14 +1912,17 @@ let compile output_prefix =
                  }
                  body)))
     | Lapply appinfo -> compile_apply appinfo lambda_cxt
-    | Llet (let_kind, id, arg, body) ->
-      (* Order matters..  see comment below in [Lletrec] *)
-      let args_code =
-        compile_lambda
-          {lambda_cxt with continuation = Declare (let_kind, id)}
-          arg
-      in
-      Js_output.append_output args_code (compile_lambda lambda_cxt body)
+    | Llet (let_kind, id, arg, body) -> (
+      match try_compile_record_spread lambda_cxt id arg body with
+      | Some output -> output
+      | None ->
+        (* Order matters..  see comment below in [Lletrec] *)
+        let args_code =
+          compile_lambda
+            {lambda_cxt with continuation = Declare (let_kind, id)}
+            arg
+        in
+        Js_output.append_output args_code (compile_lambda lambda_cxt body))
     | Lletrec (id_args, body) ->
       (* There is a bug in our current design,
          it requires compile args first (register that some objects are jsidentifiers)
