@@ -30,6 +30,11 @@ let diagnostics t =
   | Uninitialized -> assert false
   | Initialized init -> init.diagnostics
 
+let params t =
+  match t.status with
+  | Uninitialized -> assert false
+  | Initialized init -> init.params
+
 (* NOTE: rewrite this? *)
 let update_diagnostics diagnostics t =
   match t.status with

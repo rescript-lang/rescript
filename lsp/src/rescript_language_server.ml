@@ -370,19 +370,27 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
         ~source ~kind_file:(Document.kind uri) ~full ~debug:false
     in
     let other_actions =
-      match Custom_requests.Open_compiled_file.create ~uri ~state with
-      | None -> []
-      | Some uri ->
-        let title = "Open compiled js file" in
-        [
-          CodeAction.create
-            ~command:
-              (Command.create
-                 ~arguments:[`String (Uri.to_string uri)]
-                 ~command:Custom_requests.Open_compiled_file.command_name ~title
-                 ())
-            ~title ();
-        ]
+      let client_support_window_show_document =
+        match (State.params state).capabilities.window with
+        | Some {showDocument = Some {support}} -> support = true
+        | _ -> false
+      in
+      match client_support_window_show_document with
+      | true -> (
+        match Custom_requests.Open_compiled_file.create ~uri ~state with
+        | None -> []
+        | Some uri ->
+          let title = "Open compiled js file" in
+          [
+            CodeAction.create
+              ~command:
+                (Command.create
+                   ~arguments:[`String (Uri.to_string uri)]
+                   ~command:Custom_requests.Open_compiled_file.command_name
+                   ~title ())
+              ~title ();
+          ])
+      | false -> []
     in
     let resp =
       code_actions_from_compiler_log @ code_actions_from_analysis
