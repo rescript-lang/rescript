@@ -6,19 +6,10 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [CompletionSupport, TestComponent] on
 Path CompletionSupport.TestComponent.make
-[{
-    "label": "true",
-    "kind": 4,
-    "tags": [],
-    "detail": "bool",
-    "documentation": null
-  }, {
-    "label": "false",
-    "kind": 4,
-    "tags": [],
-    "detail": "bool",
-    "documentation": null
-  }]
+[
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
+]
 
 Complete src/CompletionJsxProps.res 3:48
 posCursor:[3:48] posNoWhite:[3:47] Found expr:[3:11->3:48]
@@ -28,20 +19,25 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [CompletionSupport, TestComponent] on
 Path CompletionSupport.TestComponent.make
-[{
-    "label": "true",
-    "kind": 4,
-    "tags": [],
+[
+  {
     "detail": "bool",
-    "documentation": null,
-    "sortText": "A true"
-  }, {
-    "label": "typeof",
-    "kind": 12,
-    "tags": [],
+    "kind": 4,
+    "label": "true",
+    "sortText": "A true",
+    "tags": []
+  },
+  {
     "detail": "'a => Type.t",
-    "documentation": {"kind": "markdown", "value": "\n`typeof(value)` exposes JavaScript's `typeof` operator and returns a `Type.t` enum.\nIt helps you inspect values that come from JavaScript APIs.\n\n## Examples\n\n```rescript\ntypeof(1) == #number\ntypeof(\"a\") == #string\n```\n"}
-  }]
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`typeof(value)` exposes JavaScript's `typeof` operator and returns a `Type.t` enum.\nIt helps you inspect values that come from JavaScript APIs.\n\n## Examples\n\n```rescript\ntypeof(1) == #number\ntypeof(\"a\") == #string\n```\n"
+    },
+    "kind": 12,
+    "label": "typeof",
+    "tags": []
+  }
+]
 
 Complete src/CompletionJsxProps.res 6:50
 posCursor:[6:50] posNoWhite:[6:49] Found expr:[6:11->6:50]
@@ -51,93 +47,103 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [CompletionSupport, TestComponent] test
 Path CompletionSupport.TestComponent.make
-[{
-    "label": "Two",
-    "kind": 4,
-    "tags": [],
+[
+  {
     "detail": "Two",
-    "documentation": {"kind": "markdown", "value": "```rescript\nTwo\n```\n\n```rescript\ntype testVariant = One | Two | Three(int)\n```"},
-    "sortText": "A Two",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nTwo\n```\n\n```rescript\ntype testVariant = One | Two | Three(int)\n```"
+    },
     "insertText": "{Two}",
-    "insertTextFormat": 2
-  }, {
-    "label": "Three(_)",
+    "insertTextFormat": 2,
     "kind": 4,
-    "tags": [],
+    "label": "Two",
+    "sortText": "A Two",
+    "tags": []
+  },
+  {
     "detail": "Three(int)",
-    "documentation": {"kind": "markdown", "value": "```rescript\nThree(int)\n```\n\n```rescript\ntype testVariant = One | Two | Three(int)\n```"},
-    "sortText": "A Three(_)",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nThree(int)\n```\n\n```rescript\ntype testVariant = One | Two | Three(int)\n```"
+    },
     "insertText": "{Three($0)}",
-    "insertTextFormat": 2
-  }, {
-    "label": "TypedArray",
-    "kind": 9,
-    "tags": [],
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Three(_)",
+    "sortText": "A Three(_)",
+    "tags": []
+  },
+  {
     "detail": "module TypedArray",
-    "documentation": null
-  }, {
-    "label": "TimeoutId",
     "kind": 9,
-    "tags": [],
+    "label": "TypedArray",
+    "tags": []
+  },
+  {
+    "detail": "module TaggedTemplate",
+    "kind": 9,
+    "label": "TaggedTemplate",
+    "tags": []
+  },
+  {
     "detail": "module TimeoutId",
-    "documentation": null
-  }, {
-    "label": "Type",
     "kind": 9,
-    "tags": [],
-    "detail": "module Type",
-    "documentation": null
-  }, {
-    "label": "TableclothMap",
-    "kind": 9,
-    "tags": [],
-    "detail": "module TableclothMap",
-    "documentation": null,
+    "label": "TimeoutId",
+    "tags": []
+  },
+  { "detail": "module Type", "kind": 9, "label": "Type", "tags": [] },
+  {
     "data": {
       "modulePath": "TableclothMap",
       "filePath": "src/CompletionJsxProps.res"
-    }
-  }, {
-    "label": "TypeArgCtx",
+    },
+    "detail": "module TableclothMap",
     "kind": 9,
-    "tags": [],
-    "detail": "module TypeArgCtx",
-    "documentation": null,
+    "label": "TableclothMap",
+    "tags": []
+  },
+  {
     "data": {
       "modulePath": "TypeArgCtx",
       "filePath": "src/CompletionJsxProps.res"
-    }
-  }, {
-    "label": "TypeAtPosCompletion",
+    },
+    "detail": "module TypeArgCtx",
     "kind": 9,
-    "tags": [],
-    "detail": "module TypeAtPosCompletion",
-    "documentation": null,
+    "label": "TypeArgCtx",
+    "tags": []
+  },
+  {
     "data": {
       "modulePath": "TypeAtPosCompletion",
       "filePath": "src/CompletionJsxProps.res"
-    }
-  }, {
-    "label": "TypeConstraint",
+    },
+    "detail": "module TypeAtPosCompletion",
     "kind": 9,
-    "tags": [],
-    "detail": "module TypeConstraint",
-    "documentation": null,
+    "label": "TypeAtPosCompletion",
+    "tags": []
+  },
+  {
     "data": {
       "modulePath": "TypeConstraint",
       "filePath": "src/CompletionJsxProps.res"
-    }
-  }, {
-    "label": "TypeDefinition",
+    },
+    "detail": "module TypeConstraint",
     "kind": 9,
-    "tags": [],
-    "detail": "module TypeDefinition",
-    "documentation": null,
+    "label": "TypeConstraint",
+    "tags": []
+  },
+  {
     "data": {
       "modulePath": "TypeDefinition",
       "filePath": "src/CompletionJsxProps.res"
-    }
-  }]
+    },
+    "detail": "module TypeDefinition",
+    "kind": 9,
+    "label": "TypeDefinition",
+    "tags": []
+  }
+]
 
 Complete src/CompletionJsxProps.res 9:52
 posCursor:[9:52] posNoWhite:[9:51] Found expr:[9:11->9:52]
@@ -147,39 +153,56 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [CompletionSupport, TestComponent] polyArg
 Path CompletionSupport.TestComponent.make
-[{
-    "label": "#one",
-    "kind": 4,
-    "tags": [],
+[
+  {
     "detail": "#one",
-    "documentation": {"kind": "markdown", "value": "```rescript\n#one\n```\n\n```rescript\n[#one | #three(int, bool) | #two | #two2]\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\n#one\n```\n\n```rescript\n[#one | #three(int, bool) | #two | #two2]\n```"
+    },
     "insertText": "{#one}",
-    "insertTextFormat": 2
-  }, {
-    "label": "#three(_, _)",
+    "insertTextFormat": 2,
     "kind": 4,
-    "tags": [],
+    "label": "#one",
+    "tags": []
+  },
+  {
     "detail": "#three(int, bool)",
-    "documentation": {"kind": "markdown", "value": "```rescript\n#three(int, bool)\n```\n\n```rescript\n[#one | #three(int, bool) | #two | #two2]\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\n#three(int, bool)\n```\n\n```rescript\n[#one | #three(int, bool) | #two | #two2]\n```"
+    },
     "insertText": "{#three(${1:_}, ${2:_})}",
-    "insertTextFormat": 2
-  }, {
-    "label": "#two",
+    "insertTextFormat": 2,
     "kind": 4,
-    "tags": [],
+    "label": "#three(_, _)",
+    "tags": []
+  },
+  {
     "detail": "#two",
-    "documentation": {"kind": "markdown", "value": "```rescript\n#two\n```\n\n```rescript\n[#one | #three(int, bool) | #two | #two2]\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\n#two\n```\n\n```rescript\n[#one | #three(int, bool) | #two | #two2]\n```"
+    },
     "insertText": "{#two}",
-    "insertTextFormat": 2
-  }, {
-    "label": "#two2",
+    "insertTextFormat": 2,
     "kind": 4,
-    "tags": [],
+    "label": "#two",
+    "tags": []
+  },
+  {
     "detail": "#two2",
-    "documentation": {"kind": "markdown", "value": "```rescript\n#two2\n```\n\n```rescript\n[#one | #three(int, bool) | #two | #two2]\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\n#two2\n```\n\n```rescript\n[#one | #three(int, bool) | #two | #two2]\n```"
+    },
     "insertText": "{#two2}",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "#two2",
+    "tags": []
+  }
+]
 
 Complete src/CompletionJsxProps.res 12:54
 posCursor:[12:54] posNoWhite:[12:53] Found expr:[12:11->12:54]
@@ -189,31 +212,44 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [CompletionSupport, TestComponent] polyArg
 Path CompletionSupport.TestComponent.make
-[{
-    "label": "#three(_, _)",
-    "kind": 4,
-    "tags": [],
+[
+  {
     "detail": "#three(int, bool)",
-    "documentation": {"kind": "markdown", "value": "```rescript\n#three(int, bool)\n```\n\n```rescript\n[#one | #three(int, bool) | #two | #two2]\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\n#three(int, bool)\n```\n\n```rescript\n[#one | #three(int, bool) | #two | #two2]\n```"
+    },
     "insertText": "{three(${1:_}, ${2:_})}",
-    "insertTextFormat": 2
-  }, {
-    "label": "#two",
+    "insertTextFormat": 2,
     "kind": 4,
-    "tags": [],
+    "label": "#three(_, _)",
+    "tags": []
+  },
+  {
     "detail": "#two",
-    "documentation": {"kind": "markdown", "value": "```rescript\n#two\n```\n\n```rescript\n[#one | #three(int, bool) | #two | #two2]\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\n#two\n```\n\n```rescript\n[#one | #three(int, bool) | #two | #two2]\n```"
+    },
     "insertText": "{two}",
-    "insertTextFormat": 2
-  }, {
-    "label": "#two2",
+    "insertTextFormat": 2,
     "kind": 4,
-    "tags": [],
+    "label": "#two",
+    "tags": []
+  },
+  {
     "detail": "#two2",
-    "documentation": {"kind": "markdown", "value": "```rescript\n#two2\n```\n\n```rescript\n[#one | #three(int, bool) | #two | #two2]\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\n#two2\n```\n\n```rescript\n[#one | #three(int, bool) | #two | #two2]\n```"
+    },
     "insertText": "{two2}",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "#two2",
+    "tags": []
+  }
+]
 
 Complete src/CompletionJsxProps.res 15:22
 posCursor:[15:22] posNoWhite:[15:21] Found expr:[15:11->15:25]
@@ -224,19 +260,10 @@ Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [div] muted
 Path ReactDOM.domProps
 Path JsxDOM.domProps
-[{
-    "label": "true",
-    "kind": 4,
-    "tags": [],
-    "detail": "bool",
-    "documentation": null
-  }, {
-    "label": "false",
-    "kind": 4,
-    "tags": [],
-    "detail": "bool",
-    "documentation": null
-  }]
+[
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
+]
 
 Complete src/CompletionJsxProps.res 18:29
 posCursor:[18:29] posNoWhite:[18:28] Found expr:[18:11->18:32]
@@ -247,16 +274,17 @@ Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [div] onMouseEnter
 Path ReactDOM.domProps
 Path JsxDOM.domProps
-[{
-    "label": "event => event",
-    "kind": 12,
-    "tags": [],
+[
+  {
     "detail": "JsxEvent.Mouse.t => unit",
-    "documentation": null,
-    "sortText": "A",
     "insertText": "{${1:event} => ${0:event}}",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "event => event",
+    "sortText": "A",
+    "tags": []
+  }
+]
 
 Complete src/CompletionJsxProps.res 22:52
 posCursor:[22:52] posNoWhite:[22:51] Found expr:[22:11->22:52]
@@ -266,16 +294,21 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [CompletionSupport, TestComponent] testArr
 Path CompletionSupport.TestComponent.make
-[{
-    "label": "[]",
-    "kind": 12,
-    "tags": [],
+[
+  {
     "detail": "testVariant",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype testVariant = One | Two | Three(int)\n```"},
-    "sortText": "A",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype testVariant = One | Two | Three(int)\n```"
+    },
     "insertText": "{[$0]}",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "[]",
+    "sortText": "A",
+    "tags": []
+  }
+]
 
 Complete src/CompletionJsxProps.res 26:54
 posCursor:[26:54] posNoWhite:[26:53] Found expr:[26:11->26:56]
@@ -285,31 +318,44 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [CompletionSupport, TestComponent] testArr
 Path CompletionSupport.TestComponent.make
-[{
-    "label": "One",
-    "kind": 4,
-    "tags": [],
+[
+  {
     "detail": "One",
-    "documentation": {"kind": "markdown", "value": "```rescript\nOne\n```\n\n```rescript\ntype testVariant = One | Two | Three(int)\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nOne\n```\n\n```rescript\ntype testVariant = One | Two | Three(int)\n```"
+    },
     "insertText": "One",
-    "insertTextFormat": 2
-  }, {
-    "label": "Two",
+    "insertTextFormat": 2,
     "kind": 4,
-    "tags": [],
+    "label": "One",
+    "tags": []
+  },
+  {
     "detail": "Two",
-    "documentation": {"kind": "markdown", "value": "```rescript\nTwo\n```\n\n```rescript\ntype testVariant = One | Two | Three(int)\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nTwo\n```\n\n```rescript\ntype testVariant = One | Two | Three(int)\n```"
+    },
     "insertText": "Two",
-    "insertTextFormat": 2
-  }, {
-    "label": "Three(_)",
+    "insertTextFormat": 2,
     "kind": 4,
-    "tags": [],
+    "label": "Two",
+    "tags": []
+  },
+  {
     "detail": "Three(int)",
-    "documentation": {"kind": "markdown", "value": "```rescript\nThree(int)\n```\n\n```rescript\ntype testVariant = One | Two | Three(int)\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nThree(int)\n```\n\n```rescript\ntype testVariant = One | Two | Three(int)\n```"
+    },
     "insertText": "Three($0)",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Three(_)",
+    "tags": []
+  }
+]
 
 Complete src/CompletionJsxProps.res 31:53
 posCursor:[31:53] posNoWhite:[31:52] Found expr:[31:11->31:54]
@@ -319,39 +365,56 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [CompletionSupport, TestComponent] polyArg
 Path CompletionSupport.TestComponent.make
-[{
-    "label": "#one",
-    "kind": 4,
-    "tags": [],
+[
+  {
     "detail": "#one",
-    "documentation": {"kind": "markdown", "value": "```rescript\n#one\n```\n\n```rescript\n[#one | #three(int, bool) | #two | #two2]\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\n#one\n```\n\n```rescript\n[#one | #three(int, bool) | #two | #two2]\n```"
+    },
     "insertText": "#one",
-    "insertTextFormat": 2
-  }, {
-    "label": "#three(_, _)",
+    "insertTextFormat": 2,
     "kind": 4,
-    "tags": [],
+    "label": "#one",
+    "tags": []
+  },
+  {
     "detail": "#three(int, bool)",
-    "documentation": {"kind": "markdown", "value": "```rescript\n#three(int, bool)\n```\n\n```rescript\n[#one | #three(int, bool) | #two | #two2]\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\n#three(int, bool)\n```\n\n```rescript\n[#one | #three(int, bool) | #two | #two2]\n```"
+    },
     "insertText": "#three(${1:_}, ${2:_})",
-    "insertTextFormat": 2
-  }, {
-    "label": "#two",
+    "insertTextFormat": 2,
     "kind": 4,
-    "tags": [],
+    "label": "#three(_, _)",
+    "tags": []
+  },
+  {
     "detail": "#two",
-    "documentation": {"kind": "markdown", "value": "```rescript\n#two\n```\n\n```rescript\n[#one | #three(int, bool) | #two | #two2]\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\n#two\n```\n\n```rescript\n[#one | #three(int, bool) | #two | #two2]\n```"
+    },
     "insertText": "#two",
-    "insertTextFormat": 2
-  }, {
-    "label": "#two2",
+    "insertTextFormat": 2,
     "kind": 4,
-    "tags": [],
+    "label": "#two",
+    "tags": []
+  },
+  {
     "detail": "#two2",
-    "documentation": {"kind": "markdown", "value": "```rescript\n#two2\n```\n\n```rescript\n[#one | #three(int, bool) | #two | #two2]\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\n#two2\n```\n\n```rescript\n[#one | #three(int, bool) | #two | #two2]\n```"
+    },
     "insertText": "#two2",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "#two2",
+    "tags": []
+  }
+]
 
 Complete src/CompletionJsxProps.res 34:49
 posCursor:[34:49] posNoWhite:[34:48] Found expr:[34:11->34:50]
@@ -361,25 +424,20 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [CompletionSupport, TestComponent] on
 Path CompletionSupport.TestComponent.make
-[{
-    "label": "true",
-    "kind": 4,
-    "tags": [],
-    "detail": "bool",
-    "documentation": null
-  }, {
-    "label": "tsomeVar",
-    "kind": 12,
-    "tags": [],
-    "detail": "[> #two]",
-    "documentation": null
-  }, {
-    "label": "typeof",
-    "kind": 12,
-    "tags": [],
+[
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "[> #two]", "kind": 12, "label": "tsomeVar", "tags": [] },
+  {
     "detail": "'a => Type.t",
-    "documentation": {"kind": "markdown", "value": "\n`typeof(value)` exposes JavaScript's `typeof` operator and returns a `Type.t` enum.\nIt helps you inspect values that come from JavaScript APIs.\n\n## Examples\n\n```rescript\ntypeof(1) == #number\ntypeof(\"a\") == #string\n```\n"}
-  }]
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`typeof(value)` exposes JavaScript's `typeof` operator and returns a `Type.t` enum.\nIt helps you inspect values that come from JavaScript APIs.\n\n## Examples\n\n```rescript\ntypeof(1) == #number\ntypeof(\"a\") == #string\n```\n"
+    },
+    "kind": 12,
+    "label": "typeof",
+    "tags": []
+  }
+]
 
 Complete src/CompletionJsxProps.res 44:44
 posCursor:[44:44] posNoWhite:[44:43] Found expr:[44:11->44:44]
@@ -389,21 +447,30 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [CompletableComponentLazy] status
 Path CompletableComponentLazy.make
-[{
-    "label": "On",
-    "kind": 4,
-    "tags": [],
+[
+  {
     "detail": "On",
-    "documentation": {"kind": "markdown", "value": "```rescript\nOn\n```\n\n```rescript\ntype status = On | Off\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nOn\n```\n\n```rescript\ntype status = On | Off\n```"
+    },
     "insertText": "{On}",
-    "insertTextFormat": 2
-  }, {
-    "label": "Off",
+    "insertTextFormat": 2,
     "kind": 4,
-    "tags": [],
+    "label": "On",
+    "tags": []
+  },
+  {
     "detail": "Off",
-    "documentation": {"kind": "markdown", "value": "```rescript\nOff\n```\n\n```rescript\ntype status = On | Off\n```"},
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nOff\n```\n\n```rescript\ntype status = On | Off\n```"
+    },
     "insertText": "{Off}",
-    "insertTextFormat": 2
-  }]
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Off",
+    "tags": []
+  }
+]
 

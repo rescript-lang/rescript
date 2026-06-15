@@ -5,7 +5,7 @@
   1 │ open Foo exception Bar
   2 │ 
 
-  consecutive statements on a line must be separated by ';' or a newline
+  Consecutive statements on a line must be separated by ';' or a newline
 
 open Foo
 exception Bar 

@@ -1,0 +1,25 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/include_value_type_mismatch.res[0m:[2m3:5-5:1[0m
+
+  1 [2m│[0m module M: {
+  2 [2m│[0m   let x: int
+  [1;31m3[0m [2m│[0m } = [1;31m{[0m
+  [1;31m4[0m [2m│[0m [1;31m  let x = "wrong"[0m
+  [1;31m5[0m [2m│[0m [1;31m}[0m
+  6 [2m│[0m 
+
+  Signature mismatch:
+  Modules do not match:
+    {
+  let x: string
+}
+  is not included in
+    {
+  let x: int
+}
+  Values do not match: let x: string is not included in let x: int
+  [36m/.../fixtures/include_value_type_mismatch.res[0m:[2m2:3-12[0m:
+    Expected declaration
+  [36m/.../fixtures/include_value_type_mismatch.res[0m:[2m4:7[0m:
+    Actual declaration

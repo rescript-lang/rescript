@@ -57,7 +57,6 @@ type error =
       string * Longident.t * (Path.t * Path.t) * (Path.t * Path.t) list
   | Undefined_method of type_expr * string * string list option
   | Private_type of type_expr
-  | Private_label of Longident.t * type_expr
   | Not_subtype of
       Ctype.type_pairs * Ctype.type_pairs * Ctype.subtype_context option
   | Too_many_arguments of bool * type_expr
@@ -69,12 +68,10 @@ type error =
   | Modules_not_allowed
   | Cannot_infer_signature
   | Not_a_packed_module of type_expr
-  | Recursive_local_constraint of (type_expr * type_expr) list
   | Unexpected_existential
   | Unqualified_gadt_pattern of Path.t * string
   | Invalid_interval
   | Invalid_for_loop_index
-  | Invalid_for_of_pattern
   | No_value_clauses
   | Exception_pattern_below_toplevel
   | Inlined_record_escape
@@ -98,6 +95,7 @@ type error =
   | Type_params_not_supported of Longident.t
   | Field_access_on_dict_type
   | Jsx_not_enabled
+  | Tagged_template_non_tag of type_expr
 
 exception Error of Location.t * Env.t * error
 exception Error_forward of Location.error
@@ -318,6 +316,12 @@ let extract_concrete_record env ty =
   | p0, p, {type_kind = Type_record (fields, repr)} -> (p0, p, fields, repr)
   | _ -> raise Not_found
 
+let is_private_record_field env label =
+  match extract_concrete_typedecl env label.lbl_res with
+  | _, _, {type_kind = Type_record _; type_private = Private} -> true
+  | _ -> false
+  | exception Not_found -> false
+
 let extract_concrete_variant env ty =
   match extract_concrete_typedecl env ty with
   | p0, p, {type_kind = Type_variant cstrs} -> (p0, p, cstrs)
@@ -336,17 +340,14 @@ let check_optional_attr env ld optional loc =
 
 (* unification inside type_pat*)
 let unify_pat_types loc env ty ty' =
-  try unify env ty ty' with
-  | Unify trace -> raise (Error (loc, env, Pattern_type_clash trace))
-  | Tags (l1, l2) ->
-    raise (Typetexp.Error (loc, env, Typetexp.Variant_tags (l1, l2)))
+  try unify env ty ty'
+  with Unify trace -> raise (Error (loc, env, Pattern_type_clash trace))
 
 (* unification inside type_exp and type_expect *)
 let unify_exp_types ~context loc env ty expected_ty =
-  try unify env ty expected_ty with
-  | Unify trace -> raise (Error (loc, env, Expr_type_clash {trace; context}))
-  | Tags (l1, l2) ->
-    raise (Typetexp.Error (loc, env, Typetexp.Variant_tags (l1, l2)))
+  try unify env ty expected_ty
+  with Unify trace ->
+    raise (Error (loc, env, Expr_type_clash {trace; context}))
 
 (* level at which to create the local type declarations *)
 let newtype_level = ref None
@@ -361,12 +362,8 @@ let unify_pat_types_gadt loc env ty ty' =
     | None -> assert false
     | Some x -> x
   in
-  try unify_gadt ~newtype_level env ty ty' with
-  | Unify trace -> raise (Error (loc, !env, Pattern_type_clash trace))
-  | Tags (l1, l2) ->
-    raise (Typetexp.Error (loc, !env, Typetexp.Variant_tags (l1, l2)))
-  | Unification_recursive_abbrev trace ->
-    raise (Error (loc, !env, Recursive_local_constraint trace))
+  try unify_gadt ~newtype_level env ty ty'
+  with Unify trace -> raise (Error (loc, !env, Pattern_type_clash trace))
 
 (* Creating new conjunctive types is not allowed when typing patterns *)
 
@@ -832,7 +829,7 @@ let report_arity_mismatch ~arity_a ~arity_b ppf =
 (* Records *)
 let label_of_kind kind = if kind = "record" then "field" else "constructor"
 
-module NameChoice (Name : sig
+module Name_choice (Name : sig
   type t
   val type_kind : string
   val get_name : t -> string
@@ -954,7 +951,7 @@ let wrap_disambiguate kind ty f x =
   with Error (loc, env, Wrong_name ("", _, tk, tp, name, valid_names)) ->
     raise (Error (loc, env, Wrong_name (kind, ty, tk, tp, name, valid_names)))
 
-module Label = NameChoice (struct
+module Label = Name_choice (struct
   type t = label_description
   let type_kind = "record"
   let get_name lbl = lbl.lbl_name
@@ -1147,7 +1144,7 @@ let check_recordpat_labels ~get_jsx_component_error_info loc lbl_pat_list closed
 
 (* Constructors *)
 
-module Constructor = NameChoice (struct
+module Constructor = Name_choice (struct
   type t = constructor_description
   let type_kind = "variant"
   let get_name cstr = cstr.cstr_name
@@ -1537,10 +1534,7 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
       begin_def ();
       let vars, ty_arg, ty_res = instance_label false label in
       if vars = [] then end_def ();
-      (try unify_pat_types loc !env ty_res record_ty
-       with Unify trace ->
-         raise
-           (Error (label_lid.loc, !env, Label_mismatch (label_lid.txt, trace))));
+      unify_pat_types loc !env ty_res record_ty;
       type_pat sarg ty_arg (fun arg ->
           if vars <> [] then (
             end_def ();
@@ -2043,13 +2037,12 @@ let check_univars env expans kind exp ty_expected vars =
            Less_general (kind, [(ty, ty); (ty_expected, ty_expected)]) ))
 
 (* Check that a type is not a function *)
-let check_application_result env statement exp =
-  let loc = exp.exp_loc in
+let check_application_result env exp =
   match (expand_head env exp.exp_type).desc with
   | Tarrow _ -> Location.prerr_warning exp.exp_loc Warnings.Partial_application
   | Tvar _ -> ()
   | Tconstr (p, _, _) when Path.same p Predef.path_unit -> ()
-  | _ -> if statement then Location.prerr_warning loc Warnings.Statement_type
+  | _ -> ()
 
 (* Check that a type is generalizable at some level *)
 let generalizable level ty =
@@ -2285,10 +2278,6 @@ let rec lower_args env seen ty_fun =
       (try unify_var env (newvar ()) arg.typ with Unify _ -> assert false);
       lower_args env (ty :: seen) ty_fun
     | _ -> ()
-
-let not_function env ty =
-  let ls, tvar = list_labels env ty in
-  ls = [] && not tvar
 
 let extract_function_name funct =
   match funct.exp_desc with
@@ -2530,10 +2519,70 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
       if transformed_jsx then Some JsxComponent
       else type_clash_context_from_function sexp sfunct
     in
+    let is_tagged_template =
+      Ext_list.exists sexp.pexp_attributes (fun ({txt}, _) ->
+          txt = "res.taggedTemplate")
+    in
     let args, ty_res, fully_applied =
-      match translate_unified_ops env funct sargs with
-      | Some (targs, result_type) -> (targs, result_type, true)
-      | None -> type_application ~context total_app env funct sargs
+      if is_tagged_template then (
+        (* Backtick tagged-template syntax: the tag must be a value of the
+           builtin [taggedTemplate<'param, 'output>] type. The parser desugars
+           [tag`a ${x} b`] into [tag([|"a "; " b"|], [|x|])], so the two
+           arguments are the string parts and the interpolated values. *)
+        let param_ty = newvar () in
+        let output_ty = newvar () in
+        (try
+           unify env
+             (instance env funct.exp_type)
+             (newconstr Predef.path_tagged_template [param_ty; output_ty])
+         with Unify _ ->
+           raise
+             (Error (funct.exp_loc, env, Tagged_template_non_tag funct.exp_type)));
+        match sargs with
+        | [(Nolabel, strings); (Nolabel, values)] ->
+          let typed_strings =
+            type_expect ~context:None env strings
+              (Predef.type_array Predef.type_string)
+          in
+          (* Type each interpolated value directly against [param_ty] with a
+             tagged-template-specific clash context, rather than routing the
+             desugared values array through the generic array typing (which
+             would report a confusing "array item" type error for what the user
+             wrote as a [${...}] interpolation). *)
+          let typed_values =
+            match values.pexp_desc with
+            | Pexp_array interpolations ->
+              let typed_interpolations =
+                List.map
+                  (fun interp ->
+                    type_expect ~context:(Some TaggedTemplateValue) env interp
+                      param_ty)
+                  interpolations
+              in
+              re
+                {
+                  exp_desc = Texp_array typed_interpolations;
+                  exp_loc = values.pexp_loc;
+                  exp_extra = [];
+                  exp_type = newconstr Predef.path_array [param_ty];
+                  exp_attributes = values.pexp_attributes;
+                  exp_env = env;
+                }
+            (* The parser always desugars the interpolated values into an array
+               literal, so any other shape is a compiler invariant violation. *)
+            | _ -> assert false
+          in
+          ( [
+              (Asttypes.Nolabel, Some typed_strings);
+              (Asttypes.Nolabel, Some typed_values);
+            ],
+            output_ty,
+            true )
+        | _ -> assert false)
+      else
+        match translate_unified_ops env funct sargs with
+        | Some (targs, result_type) -> (targs, result_type, true)
+        | None -> type_application ~context total_app env funct sargs
     in
     end_def ();
     unify_var env (newvar ()) funct.exp_type;
@@ -2909,6 +2958,9 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
     unify_exp ~context:None env record ty_record;
     if label.lbl_mut = Immutable then
       raise (Error (loc, env, Label_not_mutable lid.txt));
+    if label.lbl_private = Private && is_private_record_field env label then
+      Location.prerr_warning lid.loc
+        (Warnings.Bs_private_record_mutation (Longident.last lid.txt));
     Builtin_attributes.check_deprecated_mutable lid.loc label.lbl_attributes
       (Longident.last lid.txt);
     rue
@@ -3117,7 +3169,12 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
             val_kind = Val_reg;
             Types.val_loc = loc;
           } env ~check:(fun s -> Warnings.Unused_for_index s)
-      | _ -> raise (Error (param.ppat_loc, env, Invalid_for_of_pattern))
+      | _ ->
+        (* unreachable: the parser's normalize_for_of_pattern
+           (compiler/syntax/src/res_core.ml:3841) catches every non-var,
+           non-`_` pattern, emits a syntax error, and replaces the pattern
+           with Ppat_any before the typer runs *)
+        assert false
     in
     let body =
       with_depth loop_depth (fun () ->
@@ -3149,7 +3206,12 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
             val_kind = Val_reg;
             Types.val_loc = loc;
           } env ~check:(fun s -> Warnings.Unused_for_index s)
-      | _ -> raise (Error (param.ppat_loc, env, Invalid_for_of_pattern))
+      | _ ->
+        (* unreachable: the parser's normalize_for_of_pattern
+           (compiler/syntax/src/res_core.ml:3841) catches every non-var,
+           non-`_` pattern, emits a syntax error, and replaces the pattern
+           with Ppat_any before the typer runs *)
+        assert false
     in
     let body =
       with_depth loop_depth (fun () ->
@@ -3471,12 +3533,6 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
 
 and type_function ?in_function ~arity ~async loc attrs env ty_expected_ l
     caselist =
-  let state = Warnings.backup () in
-  (* Disable Unerasable_optional_argument for uncurried functions *)
-  let unerasable_optional_argument =
-    Warnings.number Unerasable_optional_argument
-  in
-  Warnings.parse_options false ("-" ^ string_of_int unerasable_optional_argument);
   let ty_expected =
     match arity with
     | None -> ty_expected_
@@ -3521,15 +3577,11 @@ and type_function ?in_function ~arity ~async loc attrs env ty_expected_ l
           ty_arg ty_res true loc caselist)
   in
   let case = List.hd cases in
-  if is_optional l && not_function env ty_res then
-    Location.prerr_warning case.c_lhs.pat_loc
-      Warnings.Unerasable_optional_argument;
   let param = name_pattern "param" cases in
   let exp_type =
     instance env
       (newgenty (Tarrow ({lbl = l; typ = ty_arg}, ty_res, Cok, arity)))
   in
-  Warnings.restore state;
   re
     {
       exp_desc =
@@ -3593,9 +3645,8 @@ and type_label_exp ~call_context create env loc ty_expected
     end_def ();
     (* Generalize information merged from ty_expected *)
     generalize_structure ty_arg);
-  if label.lbl_private = Private then
-    if create then raise (Error (loc, env, Private_type ty_expected))
-    else raise (Error (lid.loc, env, Private_label (lid.txt, ty_expected)));
+  if label.lbl_private = Private && create then
+    raise (Error (loc, env, Private_type ty_expected));
   let arg =
     let snap = if vars = [] then None else Some (Btype.snapshot ()) in
     let field_name = Longident.last lid.txt in
@@ -3980,7 +4031,7 @@ and type_application ~context total_app env funct (sargs : sargs) :
       Location.prerr_warning exp.exp_loc Warnings.Partial_application
     | Tvar _ ->
       Delayed_checks.add_delayed_check (fun () ->
-          check_application_result env false exp)
+          check_application_result env exp)
     | _ -> ());
     ([(Nolabel, Some exp)], ty_res, false)
   | _ ->
@@ -4507,21 +4558,19 @@ let type_expression ~context env sexp =
   Typetexp.reset_type_variables ();
   begin_def ();
   let exp = type_exp ~context env sexp in
-  (if Warnings.is_active (Bs_toplevel_expression_unit None) then
-     try unify env exp.exp_type (instance_def Predef.type_unit) with
-     | Unify _ ->
-       let buffer = Buffer.create 10 in
-       let formatter = Format.formatter_of_buffer buffer in
-       Printtyp.type_expr formatter exp.exp_type;
-       Format.pp_print_flush formatter ();
-       let return_type = Buffer.contents buffer in
-       Location.prerr_warning sexp.pexp_loc
-         (Bs_toplevel_expression_unit
-            (match sexp.pexp_desc with
-            | Pexp_apply _ -> Some (return_type, FunctionCall)
-            | _ -> Some (return_type, Other)))
-     | Tags _ ->
-       Location.prerr_warning sexp.pexp_loc (Bs_toplevel_expression_unit None));
+  if Warnings.is_active (Bs_toplevel_expression_unit None) then (
+    try unify env exp.exp_type (instance_def Predef.type_unit)
+    with Unify _ ->
+      let buffer = Buffer.create 10 in
+      let formatter = Format.formatter_of_buffer buffer in
+      Printtyp.type_expr formatter exp.exp_type;
+      Format.pp_print_flush formatter ();
+      let return_type = Buffer.contents buffer in
+      Location.prerr_warning sexp.pexp_loc
+        (Bs_toplevel_expression_unit
+           (match sexp.pexp_desc with
+           | Pexp_apply _ -> Some (return_type, FunctionCall)
+           | _ -> Some (return_type, Other))));
   end_def ();
   if not (is_nonexpansive exp) then generalize_expansive env exp.exp_type;
   generalize exp.exp_type;
@@ -4631,7 +4680,7 @@ let report_error env loc ppf error =
             (Ident.name id))
       (function ppf -> fprintf ppf "but on the right-hand side it has type")
   | Multiply_bound_variable name ->
-    fprintf ppf "Variable %s is bound several times in this matching" name
+    fprintf ppf "Variable %s is bound several times in this pattern" name
   | Orpat_vars (id, valid_idents) ->
     fprintf ppf "Variable %s must occur on both sides of this | pattern"
       (Ident.name id);
@@ -4679,10 +4728,16 @@ let report_error env loc ppf error =
       fprintf ppf "@ @[It only accepts %i %s; here, it's called with more.@]@]"
         accepts_count
         (if accepts_count == 1 then "argument" else "arguments")
+    | Tconstr (path, _, _) when Path.same path Predef.path_tagged_template ->
+      fprintf ppf
+        "@[<v>@[<2>This is a tagged-template tag of type@ @{<info>%a@}@]@,\
+         It can't be called like a function. Use it with backtick syntax \
+         instead, e.g. @{<info>tag`SELECT ${id}`@}.@]"
+        type_expr typ
     | _ ->
       fprintf ppf
         "@[<v>@[<2>This can't be called, it's not a function.@]@,\
-         The function has type: %a@]"
+         It has type: %a@]"
         type_expr typ)
   | Apply_wrong_label (l, ty) ->
     let print_message ppf = function
@@ -4780,9 +4835,6 @@ let report_error env loc ppf error =
       "In this type, the locally bound module name %s escapes its scope" id
   | Private_type ty ->
     fprintf ppf "Cannot create values of the private type %a" type_expr ty
-  | Private_label (lid, ty) ->
-    fprintf ppf "Cannot assign field %a of the private type %a" longident lid
-      type_expr ty
   | Not_a_variant_type lid ->
     fprintf ppf "The type %a@ is not a variant type" longident lid
   | Incoherent_label_order ->
@@ -4801,25 +4853,21 @@ let report_error env loc ppf error =
   | Not_a_packed_module ty ->
     fprintf ppf "This expression is packed module, but the expected type is@ %a"
       type_expr ty
-  | Recursive_local_constraint trace ->
-    (* modified *)
-    super_report_unification_error ppf env trace
-      (function
-        | ppf -> fprintf ppf "Recursive local constraint when unifying")
-      (function ppf -> fprintf ppf "with")
-  | Unexpected_existential -> fprintf ppf "Unexpected existential"
+  | Unexpected_existential ->
+    fprintf ppf
+      "This pattern introduces an existential type from a GADT constructor, \
+       which is not allowed here. Match on it inside a switch instead."
   | Unqualified_gadt_pattern (tpath, name) ->
-    fprintf ppf "@[The GADT constructor %s of type %a@ %s.@]" name Printtyp.path
-      tpath "must be qualified in this pattern"
+    fprintf ppf
+      "@[The GADT constructor %s of type %a@ must be written with its module \
+       prefix in this pattern.@]"
+      name Printtyp.path tpath
   | Invalid_interval ->
     fprintf ppf "@[Only character intervals are supported in patterns.@]"
   | Invalid_for_loop_index ->
     fprintf ppf "@[Invalid for-loop index: only variables and _ are allowed.@]"
-  | Invalid_for_of_pattern ->
-    fprintf ppf
-      "@[Invalid for...of binding: only variables and _ are allowed.@]"
   | No_value_clauses ->
-    fprintf ppf "None of the patterns in this 'match' expression match values."
+    fprintf ppf "None of the patterns in this switch match values."
   | Exception_pattern_below_toplevel ->
     fprintf ppf
       "@[Exception patterns must be at the top level of a match case.@]"
@@ -4851,7 +4899,7 @@ let report_error env loc ppf error =
   | Unknown_literal (n, m) ->
     fprintf ppf "Unknown modifier '%c' for literal %s%c" m n m
   | Illegal_letrec_pat ->
-    fprintf ppf "Only variables are allowed as left-hand side of `let rec'"
+    fprintf ppf "Only variables are allowed as left-hand side of `let rec`"
   | Empty_record_literal ->
     fprintf ppf
       "Empty record literal {} should be type annotated or used in a record \
@@ -5002,7 +5050,7 @@ let report_error env loc ppf error =
       name type_expr typ
   | Type_params_not_supported lid ->
     fprintf ppf
-      "The type %a@ has type parameters, but type parameters is not supported \
+      "The type %a@ has type parameters, but type parameters are not supported \
        here."
       longident lid
   | Field_access_on_dict_type ->
@@ -5012,6 +5060,20 @@ let report_error env loc ppf error =
     fprintf ppf
       "Cannot compile JSX expression because JSX support is not enabled. Add \
        \"jsx\" settings to rescript.json to enable JSX support."
+  | Tagged_template_non_tag typ ->
+    fprintf ppf
+      "@[<v>This value is used with tagged template (backtick) syntax, but it \
+       has type@ @{<info>%a@}@ which is not a @{<info>taggedTemplate@}.@,\
+       @,\
+       Tagged template syntax now requires a value of type \
+       @{<info>taggedTemplate<'param, 'output>@}:@,\
+       @,\
+      \  - To bind a JavaScript tag function, annotate the @{<info>external@} \
+       with @{<info>taggedTemplate<...>@} instead of using the removed \
+       @{<info>@@taggedTemplate@} decorator.@,\
+      \  - To use a ReScript function as a tag, lift it with \
+       @{<info>TaggedTemplate.make@}.@]"
+      type_expr typ
 
 let report_error env loc ppf err =
   Printtyp.wrap_printing_env env (fun () -> report_error env loc ppf err)

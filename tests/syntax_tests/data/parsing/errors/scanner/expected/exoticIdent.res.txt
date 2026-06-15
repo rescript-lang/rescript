@@ -90,7 +90,7 @@
    9 │ c" = 1
   10 │ 
 
-  consecutive statements on a line must be separated by ';' or a newline
+  Consecutive statements on a line must be separated by ';' or a newline
 
 type nonrec \""
 type nonrec \"" = int

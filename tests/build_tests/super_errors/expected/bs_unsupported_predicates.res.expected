@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/bs_unsupported_predicates.res[0m:[2m1:19-23[0m
+
+  [1;31m1[0m [2m│[0m type t = {..@get({[1;31mweird[0m: true}) "x": int}
+  2 [2m│[0m 
+
+  Unsupported predicates

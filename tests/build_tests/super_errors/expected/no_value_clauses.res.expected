@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/no_value_clauses.res[0m:[2m2:3-4:3[0m
+
+  1 [2m│[0m let f = x =>
+  [1;31m2[0m [2m│[0m   [1;31mswitch x {[0m
+  [1;31m3[0m [2m│[0m [1;31m  | exception Not_found => 1[0m
+  [1;31m4[0m [2m│[0m [1;31m  }[0m
+  5 [2m│[0m 
+
+  None of the patterns in this switch match values.

@@ -14,11 +14,14 @@ let suites =
       Ounit_string_tests.suites;
       Ounit_int_vec_tests.suites;
       Ounit_ident_mask_tests.suites;
+      Ounit_lid_of_path_tests.suites;
       Ounit_utf8_test.suites;
       Ounit_unicode_tests.suites;
       Ounit_util_tests.suites;
       Ounit_js_analyzer_tests.suites;
       Ounit_jsx_loc_tests.suites;
+      Ounit_analysis_config_tests.suites;
+      Ounit_analysis_references_tests.suites;
     ]
 
 let _ = OUnit.run_test_tt_main suites

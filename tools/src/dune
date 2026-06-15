@@ -1,5 +1,7 @@
 (library
  (name tools)
+ (instrumentation
+  (backend bisect_ppx))
  (flags
   (-w "+6+26+27+32+33+39"))
- (libraries analysis cmarkit))
+ (libraries analysis cmarkit yojson))

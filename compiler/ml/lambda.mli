@@ -275,6 +275,7 @@ type primitive =
   | Pjs_fn_make of int
   | Pjs_fn_make_unit
   | Pjs_fn_method
+  | Ptagged_template
 
 and comparison = Ceq | Cneq | Clt | Cgt | Cle | Cge
 
@@ -390,8 +391,8 @@ val lambda_module_alias : lambda
 val name_lambda : let_kind -> lambda -> (Ident.t -> lambda) -> lambda
 
 val iter : (lambda -> unit) -> lambda -> unit
-module IdentSet : Set.S with type elt = Ident.t
-val free_variables : lambda -> IdentSet.t
+module Ident_set : Set.S with type elt = Ident.t
+val free_variables : lambda -> Ident_set.t
 
 val transl_normal_path : Path.t -> lambda (* Path.t is already normal *)
 

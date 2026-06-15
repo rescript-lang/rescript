@@ -1,19 +1,50 @@
 (library
  (name ext)
  (wrapped false)
- (preprocess
-  (action
-   (run
-    %{bin:cppo}
-    -V
-    OCAML:%{ocaml_version}
-    %{env:CPPO_FLAGS=}
-    %{input-file})))
+ (instrumentation
+  (backend bisect_ppx))
  (flags
   (:standard -w +a-4-42-40-9-48-70))
  (foreign_stubs
   (language c)
   (names ext_basic_hash_stubs)))
+
+(rule
+ (target bs_hash_stubs.ml)
+ (deps bs_hash_stubs.cppo.ml)
+ (action
+  (run %{bin:cppo} %{env:CPPO_FLAGS=} %{deps} -o %{target})))
+
+(rule
+ (target js_reserved_map.ml)
+ (deps js_reserved_map.cppo.ml)
+ (action
+  (run
+   %{bin:cppo}
+   -V
+   OCAML:%{ocaml_version}
+   %{env:CPPO_FLAGS=}
+   %{deps}
+   -o
+   %{target})))
+
+(rule
+ (target ext_sys.ml)
+ (deps ext_sys.cppo.ml)
+ (action
+  (run %{bin:cppo} %{env:CPPO_FLAGS=} %{deps} -o %{target})))
+
+(rule
+ (target ext_string.ml)
+ (deps ext_string.cppo.ml)
+ (action
+  (run %{bin:cppo} %{env:CPPO_FLAGS=} %{deps} -o %{target})))
+
+(rule
+ (target ext_string.mli)
+ (deps ext_string.cppo.mli)
+ (action
+  (run %{bin:cppo} %{env:CPPO_FLAGS=} %{deps} -o %{target})))
 
 (rule
  (targets hash_set_string.ml)

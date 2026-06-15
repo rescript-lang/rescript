@@ -1,0 +1,49 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/include_modtype_infos_mismatch.res[0m:[2m5:5-9:1[0m
+
+   3 [2m│[0m     let x: int
+   4 [2m│[0m   }
+   [1;31m5[0m [2m│[0m } = [1;31m{[0m
+   [1;31m6[0m [2m│[0m [1;31m  module type T = {[0m
+   [1;31m7[0m [2m│[0m [1;31m    let x: string[0m
+   [1;31m8[0m [2m│[0m [1;31m  }[0m
+   [1;31m9[0m [2m│[0m [1;31m}[0m
+  10 [2m│[0m 
+
+  Signature mismatch:
+  Modules do not match:
+    {
+  module type T = {
+    let x: string
+  }
+}
+  is not included in
+    {
+  module type T = {
+    let x: int
+  }
+}
+  Module type declarations do not match:
+    module type T = {
+  let x: string
+}
+  does not match
+    module type T = {
+  let x: int
+}
+  At position module type T = <here>
+  Modules do not match:
+    {
+  let x: string
+}
+  is not included in
+    {
+  let x: int
+}
+  At position module type T = <here>
+  Values do not match: let x: string is not included in let x: int
+  [36m/.../fixtures/include_modtype_infos_mismatch.res[0m:[2m3:5-14[0m:
+    Expected declaration
+  [36m/.../fixtures/include_modtype_infos_mismatch.res[0m:[2m7:5-17[0m:
+    Actual declaration

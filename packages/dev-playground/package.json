@@ -1,0 +1,22 @@
+{
+  "private": true,
+  "name": "dev-playground",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "stage-local-bundle": "node scripts/stage-local-bundle.mjs",
+    "stage-master-bundle": "node scripts/stage-local-bundle.mjs master --clear-other-bundles",
+    "prepare-pages-site": "node scripts/prepare-pages-site.mjs",
+    "res:build": "rescript",
+    "res:watch": "rescript -w",
+    "dev": "vite --host 127.0.0.1",
+    "build": "rescript && vite build",
+    "preview": "vite preview --host 127.0.0.1"
+  },
+  "dependencies": {
+    "@rescript/runtime": "12.3.0",
+    "rescript": "12.3.0",
+    "vite": "^8.0.14",
+    "xote": "6.1.1"
+  }
+}

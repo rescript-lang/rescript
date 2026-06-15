@@ -1,6 +1,18 @@
 Definition src/DefinitionWithInterface.resi 0:4
-{"uri": "DefinitionWithInterface.res", "range": {"start": {"line": 0, "character": 4}, "end": {"line": 0, "character": 5}}}
+{
+  "range": {
+    "end": { "character": 5, "line": 0 },
+    "start": { "character": 4, "line": 0 }
+  },
+  "uri": "file:///DefinitionWithInterface.resi"
+}
 
 Definition src/DefinitionWithInterface.resi 6:6
-{"uri": "DefinitionWithInterface.res", "range": {"start": {"line": 9, "character": 6}, "end": {"line": 9, "character": 7}}}
+{
+  "range": {
+    "end": { "character": 12, "line": 6 },
+    "start": { "character": 2, "line": 6 }
+  },
+  "uri": "file:///DefinitionWithInterface.resi"
+}
 

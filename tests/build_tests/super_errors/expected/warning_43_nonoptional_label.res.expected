@@ -1,0 +1,9 @@
+
+  [1;33mWarning number 43[0m
+  [36m/.../fixtures/warning_43_nonoptional_label.res[0m:[2m2:15-21[0m
+
+  1 [2m│[0m let f = (~x) => x
+  [1;33m2[0m [2m│[0m let _ = f(~x=?[1;33mSome(1)[0m)
+  3 [2m│[0m 
+
+  the label x is not optional.

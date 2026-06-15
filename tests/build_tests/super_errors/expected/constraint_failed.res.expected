@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/constraint_failed.res[0m:[2m3:14-19[0m
+
+  1 [2m│[0m type t<'a> = 'a constraint 'a = int
+  2 [2m│[0m 
+  [1;31m3[0m [2m│[0m type bad = t<[1;31mstring[0m>
+  4 [2m│[0m 
+
+  This type string should be an instance of type int

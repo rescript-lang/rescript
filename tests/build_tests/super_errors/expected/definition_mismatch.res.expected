@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/definition_mismatch.res[0m:[2m1:1-26[0m
+
+  [1;31m1[0m [2m│[0m [1;31mtype t = list<int> = Empty[0m
+  2 [2m│[0m 
+
+  This variant or record definition does not match that of type list<int>
+  They have different arities.

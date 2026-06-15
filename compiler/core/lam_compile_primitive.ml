@@ -94,6 +94,16 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
     match args with
     | fn :: rest -> E.call ~info:call_info fn rest
     | _ -> assert false)
+  | Ptagged_template -> (
+    (* [tag; strings_array; values_array] -> tag`...` *)
+    match args with
+    | [
+     fn;
+     {expression_desc = Array (strings, _); _};
+     {expression_desc = Array (values, _); _};
+    ] ->
+      E.tagged_template fn strings values
+    | _ -> assert false)
   | Pnull_to_opt -> (
     match args with
     | [e] -> (

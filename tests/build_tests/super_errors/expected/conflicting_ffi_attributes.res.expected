@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/conflicting_ffi_attributes.res[0m:[2m1:1-2:50[0m
+
+  [1;31m1[0m [2m│[0m [1;31m@val @send[0m
+  [1;31m2[0m [2m│[0m [1;31mexternal doThing: (string, int) => int = "doThing"[0m
+  3 [2m│[0m 
+  4 [2m│[0m let _ = doThing("x", 1)
+
+  Conflicting attributes: Attribute found that conflicts with @val

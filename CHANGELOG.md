@@ -14,18 +14,29 @@
 
 #### :boom: Breaking Change
 
-- Make Jsx.component abstract. https://github.com/rescript-lang/rescript/pull/8390
+- Make `Jsx.component` abstract. https://github.com/rescript-lang/rescript/pull/8390
+- Drop Node.js version 20.x support, as it is reaching EOL. https://github.com/rescript-lang/rescript/pull/8401
+- Remove the `@taggedTemplate` decorator in favor of the new first-class `taggedTemplate<'param, 'output>` builtin type. Using the decorator, or backtick tagged-template syntax on a value that is not a `taggedTemplate`, is now a compile error pointing to the new binding form. https://github.com/rescript-lang/rescript/pull/8461
 
 #### :eyeglasses: Spec Compliance
 
 #### :rocket: New Feature
+
+- Add a first-class `taggedTemplate<'param, 'output>` builtin type and the `TaggedTemplate` stdlib module (`TaggedTemplate.make`). Tagged-template tags are now tracked through the type system, so they emit real JS tagged-template syntax across module boundaries, when passed as first-class values, and when constructed at runtime by a factory (e.g. `postgres`). https://github.com/rescript-lang/rescript/pull/8461
+- Make mutation of private record mutable fields a configurable warning instead of a hard error. https://github.com/rescript-lang/rescript/pull/8366
 
 #### :bug: Bug fix
 
 - Fix directive `@warning("-102")` not working. https://github.com/rescript-lang/rescript/pull/8322
 - Fix duplicated comments in `for`..`of` formatter. https://github.com/rescript-lang/rescript/pull/8395
 - Fix issue where warning 56 would blow up with `dict{}` patterns. https://github.com/rescript-lang/rescript/pull/8403
-- Acquire rewatch build lock before initialization. https://github.com/rescript-lang/rescript/pull/8409
+- Rewatch build lock fixes. https://github.com/rescript-lang/rescript/pull/8409 https://github.com/rescript-lang/rescript/pull/8410 https://github.com/rescript-lang/rescript/pull/8413 https://github.com/rescript-lang/rescript/pull/8424
+- Rewatch: treat transitive workspace dependencies as local packages in monorepo roots. https://github.com/rescript-lang/rescript/pull/8411
+- Rewatch: use a single timestamp per compile pass. https://github.com/rescript-lang/rescript/pull/8428
+- Fix rewatch warning replay after early compile errors. https://github.com/rescript-lang/rescript/pull/8408
+- Fix formatting of trailing comments before `=` in let bindings. https://github.com/rescript-lang/rescript/pull/8444
+- Fix analysis namespace parsing after the Yojson migration. https://github.com/rescript-lang/rescript/pull/8454
+- Fix namespaced reference lookup in editor analysis. https://github.com/rescript-lang/rescript/pull/8455
 
 #### :memo: Documentation
 
@@ -36,10 +47,27 @@
 - Build system: Add OpenTelemetry tracing support for cli commands. https://github.com/rescript-lang/rescript/pull/8370
 - Use a single vendored @rescript/react package across the repo. https://github.com/rescript-lang/rescript/pull/7525
 - Improve deprecated attribute extraction and support record form. https://github.com/rescript-lang/rescript/pull/8396
+- Refactor analysis to decouple I/O from core logic. https://github.com/rescript-lang/rescript/pull/8426
+- Deprecate `Stdlib_Error` and `Stdlib_Exn` modules in favor of `JsError/JsExn`. https://github.com/rescript-lang/rescript/pull/8404
+- Remove vendored `Json` library and use `yojson` and `lsp` library for analysis. https://github.com/rescript-lang/rescript/pull/8436
+- Improve clarity of various error and warning messages. https://github.com/rescript-lang/rescript/pull/8460
 
 #### :house: Internal
 
 - Remove `Primitive_option.toUndefined`; use `valFromOption` for optional ffi args. https://github.com/rescript-lang/rescript/pull/8380
+- Add a developer playground for testing the current compiler bundle locally and deploy the latest `master` build to GitHub Pages. https://github.com/rescript-lang/rescript/pull/8435
+- Expand `super_errors` fixture coverage for warnings and errors. https://github.com/rescript-lang/rescript/pull/8429
+- Run `super_errors` fixtures in parallel (~2.4× faster locally). https://github.com/rescript-lang/rescript/pull/8430
+- Expand `super_errors` fixture coverage for the remaining reachable single-file error variants. https://github.com/rescript-lang/rescript/pull/8432
+- Cache OPAM env, rewatch build, and instrumented dune state in the coverage workflow. https://github.com/rescript-lang/rescript/pull/8434
+- Add a multi-file fixture harness (`super_errors_multi`) for cross-module errors and warnings. https://github.com/rescript-lang/rescript/pull/8433
+- Catalog every named compiler error variant in `tests/ERROR_VARIANTS.md` and add fixtures for the remaining reachable ones. https://github.com/rescript-lang/rescript/pull/8446
+- Remove dead and unreachable compiler error and warning variants; add fixtures for the ones found to be reachable. https://github.com/rescript-lang/rescript/pull/8459
+- Convert OCaml codebase to snake case format. https://github.com/rescript-lang/rescript/pull/8456
+- Analysis refactor: remove global state `Shared_types.state`. https://github.com/rescript-lang/rescript/pull/8465
+- Refactor analysis CLI helpers to use source input. https://github.com/rescript-lang/rescript/pull/8466
+- Include syntax, gentype, analysis, tools, and reanalyze tests in coverage reports. https://github.com/rescript-lang/rescript/pull/8467
+- Remove the unreachable `Longident.Lapply` constructor (OCaml's applicative-functor path syntax `F(X).t`, which ReScript's grammar cannot produce). https://github.com/rescript-lang/rescript/pull/8469
 
 # 13.0.0-alpha.4
 

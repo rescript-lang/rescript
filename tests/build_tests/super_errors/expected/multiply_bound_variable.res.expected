@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/multiply_bound_variable.res[0m:[2m1:9[0m
+
+  [1;31m1[0m [2m│[0m let (x, [1;31mx[0m) = (1, 2)
+  2 [2m│[0m let _ = x
+  3 [2m│[0m 
+
+  Variable x is bound several times in this pattern

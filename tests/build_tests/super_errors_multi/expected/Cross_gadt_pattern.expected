@@ -1,0 +1,13 @@
+===== User.res =====
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/Cross_gadt_pattern/User.res[0m:[2m3:5-7[0m
+
+  1 [2m│[0m let bad: Gadt.t<int> => string = x =>
+  2 [2m│[0m   switch x {
+  [1;31m3[0m [2m│[0m   | [1;31mInt[0m(n) => n
+  4 [2m│[0m   | Pair(_, _) => "pair"
+  5 [2m│[0m   }
+
+  The GADT constructor Int of type Gadt.t
+  must be written with its module prefix in this pattern.

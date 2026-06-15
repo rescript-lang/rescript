@@ -26,13 +26,11 @@ type untagged_variant = OnlyOneUnknown | AtMostOneObject | AtMostOneArray
 
 type error =
   | Unsupported_predicates
-  | Conflict_bs_bs_this_bs_meth
   | Duplicated_bs_deriving
-  | Conflict_attributes
+  | Conflict_attributes of string list
   | Expect_int_literal
   | Expect_string_literal
   | Expect_int_or_string_or_json_literal
-  | Unhandled_poly_type
   | Invalid_underscore_type_in_external
   | Invalid_bs_string_type
   | Invalid_bs_int_type

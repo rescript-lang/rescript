@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/type_arity_mismatch.res[0m:[2m1:9-26[0m
+
+  [1;31m1[0m [2m│[0m let xs: [1;31marray<int, string>[0m = []
+  2 [2m│[0m 
+
+  The type constructor `array` expects 1 type argument, but is given 2

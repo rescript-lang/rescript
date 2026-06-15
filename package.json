@@ -41,7 +41,7 @@
     "provenance": true
   },
   "engines": {
-    "node": ">=20.11.0"
+    "node": ">=22"
   },
   "bin": {
     "bsc": "cli/bsc.js",
@@ -91,12 +91,13 @@
     "@types/node": "^25.0.3",
     "@types/semver": "^7.7.0",
     "@yarnpkg/types": "^4.0.1",
-    "mocha": "11.7.5",
+    "mocha": "11.7.6",
     "nyc": "18.0.0",
     "semver": "^7.7.2",
     "typescript": "6.0.3"
   },
   "workspaces": [
+    "packages/dev-playground",
     "packages/playground",
     "packages/@rescript/*",
     "tests/dependencies/**",

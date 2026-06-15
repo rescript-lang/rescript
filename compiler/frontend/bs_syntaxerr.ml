@@ -26,13 +26,11 @@ type untagged_variant = OnlyOneUnknown | AtMostOneObject | AtMostOneArray
 
 type error =
   | Unsupported_predicates
-  | Conflict_bs_bs_this_bs_meth
   | Duplicated_bs_deriving
-  | Conflict_attributes
+  | Conflict_attributes of string list
   | Expect_int_literal
   | Expect_string_literal
   | Expect_int_or_string_or_json_literal
-  | Unhandled_poly_type
   | Invalid_underscore_type_in_external
   | Invalid_bs_string_type
   | Invalid_bs_int_type
@@ -53,38 +51,43 @@ type error =
 let pp_error fmt err =
   Format.pp_print_string fmt
     (match err with
-    | Misplaced_label_syntax -> "Label syntax is not support in this position"
+    | Misplaced_label_syntax -> "Label syntax is not supported in this position"
     (*
     let fn x = ((##) x ~hi)  ~lo:1 ~hi:2 
     *)
     | Optional_in_uncurried_bs_attribute ->
       "Uncurried function doesn't support optional arguments yet"
     | Expect_opt_in_bs_return_to_opt ->
-      "%@return directive *_to_opt expect return type to be \n\
-       syntax wise `_ option` for safety"
-    | Not_supported_directive_in_bs_return -> "Not supported return directive"
+      "This @return directive requires the external's return type to be an \
+       option, e.g. `option<int>`."
+    | Not_supported_directive_in_bs_return ->
+      "Unsupported @return directive. Supported directives are `null_to_opt`, \
+       `null_undefined_to_opt` (or `nullable`), and `identity`."
     | Illegal_attribute -> "Illegal attributes"
-    | Unsupported_predicates -> "unsupported predicates"
-    | Conflict_bs_bs_this_bs_meth ->
-      "%@this and %@bs can not be applied at the same time"
-    | Duplicated_bs_deriving -> "duplicate @deriving attribute"
-    | Conflict_attributes -> "conflicting attributes "
-    | Expect_string_literal -> "expect string literal "
-    | Expect_int_literal -> "expect int literal "
+    | Unsupported_predicates -> "Unsupported predicates"
+    | Duplicated_bs_deriving ->
+      "Duplicate @deriving attribute; a type can only have one."
+    | Conflict_attributes names ->
+      Printf.sprintf
+        "Conflicting attributes: %s cannot be combined; use only one."
+        (String.concat ", " (List.map (fun n -> "@" ^ n) names))
+    | Expect_string_literal -> "Expected a string literal."
+    | Expect_int_literal ->
+      "The @as payload on an @int variant must be an integer literal, e.g. \
+       @as(42)."
     | Expect_int_or_string_or_json_literal ->
-      "expect int, string literal or json literal {json|text here|json} "
-    | Unhandled_poly_type -> "Unhandled poly type"
+      "The @as payload must be an integer, string, or JSON literal."
     | Invalid_underscore_type_in_external ->
       "_ is not allowed in combination with external optional type"
-    | Invalid_bs_string_type -> "Not a valid type for %@string"
-    | Invalid_bs_int_type -> "Not a valid type for %@int"
+    | Invalid_bs_string_type -> "Not a valid type for @string"
+    | Invalid_bs_int_type -> "Not a valid type for @int"
     | Invalid_bs_unwrap_type ->
-      "Not a valid type for %@unwrap. Type must be an inline variant (closed), \
+      "Not a valid type for @unwrap. Type must be an inline variant (closed), \
        and\n\
        each constructor must have an argument."
     | Conflict_ffi_attribute str -> "Conflicting attributes: " ^ str
     | Bs_this_simple_pattern ->
-      "%@this expect its pattern variable to be simple form"
+      "@this expects its first parameter to be a simple variable (or `_`)."
     | Experimental_feature_not_enabled feature ->
       Printf.sprintf
         "Experimental feature not enabled: %s. Enable it by setting \"%s\" to \

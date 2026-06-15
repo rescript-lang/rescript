@@ -1,0 +1,13 @@
+
+  [1;33mWarning number 52[0m
+  [36m/.../fixtures/warning_52_fragile_literal_pattern.res[0m:[2m3:22-26[0m
+
+  1 [2m│[0m let describe = e =>
+  2 [2m│[0m   switch e {
+  [1;33m3[0m [2m│[0m   | Invalid_argument([1;33m"Foo"[0m) => "specific"
+  4 [2m│[0m   | _ => "other"
+  5 [2m│[0m   }
+
+  Code should not depend on the actual values of
+this constructor's arguments. They are only for information
+and may change in future versions.

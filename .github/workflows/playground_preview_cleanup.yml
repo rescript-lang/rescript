@@ -1,0 +1,28 @@
+name: Playground Preview Cleanup
+
+on:
+  pull_request_target:
+    branches: [master]
+    types: [closed]
+
+jobs:
+  cleanup:
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Setup Rclone
+        uses: cometkim/rclone-actions/setup-rclone@main
+
+      - name: Configure Rclone remote
+        uses: cometkim/rclone-actions/configure-remote/s3-provider@main
+        with:
+          name: rescript
+          provider: Cloudflare
+          endpoint: https://${{ vars.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
+          access-key-id: ${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}
+          secret-access-key: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
+          acl: private
+
+      - name: Delete preview bundle
+        continue-on-error: true
+        run: rclone purge "rescript:cdn-assets/dev-playground-bundles/pr-${{ github.event.pull_request.number }}"

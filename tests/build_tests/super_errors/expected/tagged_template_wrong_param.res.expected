@@ -1,0 +1,13 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/tagged_template_wrong_param.res[0m:[2m6:51-62[0m
+
+  4 [2m│[0m external sql: taggedTemplate<int, string> = "sql"
+  5 [2m│[0m 
+  [1;31m6[0m [2m│[0m let result = sql`SELECT * FROM users WHERE id = ${[1;31m"not-an-int"[0m}`
+  7 [2m│[0m 
+
+  This interpolated value has type: [1;31mstring[0m
+  But this tag expects interpolations of type: [1;33mint[0m
+  
+  You can convert [1;33mstring[0m to [1;33mint[0m with [1;33mInt.fromString[0m.

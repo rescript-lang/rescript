@@ -1,0 +1,11 @@
+===== User.res =====
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/Modules_not_allowed_toplevel/User.res[0m:[2m8:5-13[0m
+
+  6 [2m│[0m   )
+  7 [2m│[0m 
+  [1;31m8[0m [2m│[0m let [1;31mmodule(M)[0m = make()
+  9 [2m│[0m 
+
+  Modules are not allowed in this pattern.

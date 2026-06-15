@@ -1,0 +1,19 @@
+===== Foo.res =====
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/Iface_field_optional_mismatch/Foo.res[0m:[2m1:1-28[0m
+
+  [1;31m1[0m [2m│[0m [1;31mtype t = {a: int, b: string}[0m
+  2 [2m│[0m 
+
+  The implementation /.../fixtures/Iface_field_optional_mismatch/Foo.res
+  does not match the interface /.../fixtures/Iface_field_optional_mismatch/foo.cmi:
+  Type declarations do not match:
+    type t = {a: int, b: string}
+  is not included in
+    type t = {a: int, b?: string}
+  [36m/.../fixtures/Iface_field_optional_mismatch/Foo.resi[0m:[2m1:1-29[0m:
+    Expected declaration
+  [36m/.../fixtures/Iface_field_optional_mismatch/Foo.res[0m:[2m1:1-28[0m:
+    Actual declaration
+  The optional attribute of field b is different.

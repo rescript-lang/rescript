@@ -29,21 +29,13 @@ type loc = {
 type top_level_unit_help = FunctionCall | Other
 
 type t =
-  | Comment_start (*  1 *)
-  | Comment_not_end (*  2 *)
   | Deprecated of string * loc * loc * bool (*  3 *)
   | Fragile_match of string (*  4 *)
   | Partial_application (*  5 *)
-  | Method_override of string list (*  7 *)
   | Partial_match of string (*  8 *)
   | Non_closed_record_pattern of string (*  9 *)
-  | Statement_type (* 10 *)
   | Unused_match (* 11 *)
   | Unused_pat (* 12 *)
-  | Instance_variable_override of string list (* 13 *)
-  | Illegal_backslash (* 14 *)
-  | Implicit_public_methods of string list (* 15 *)
-  | Unerasable_optional_argument (* 16 *)
   | Unused_argument (* 20 *)
   | Nonreturning_statement (* 21 *)
   | Preprocessor of string (* 22 *)
@@ -53,7 +45,6 @@ type t =
   | Unused_var of string (* 26 *)
   | Unused_var_strict of string (* 27 *)
   | Wildcard_arg_to_constant_constr (* 28 *)
-  | Eol_in_string (* 29 *)
   | Duplicate_definitions of string * string * string * string (*30 *)
   | Unused_value_declaration of string (* 32 *)
   | Unused_open of string (* 33 *)
@@ -67,9 +58,7 @@ type t =
   | Open_shadow_identifier of string * string (* 44 *)
   | Open_shadow_label_constructor of string * string (* 45 *)
   | Attribute_payload of string * string (* 47 *)
-  | Eliminated_optional_arguments of string list (* 48 *)
   | No_cmi_file of string * string option (* 49 *)
-  | Bad_docstring of bool (* 50 *)
   | Fragile_literal_pattern (* 52 *)
   | Misplaced_attribute of string (* 53 *)
   | Duplicated_attribute of string (* 54 *)
@@ -81,13 +70,11 @@ type t =
   | Bs_polymorphic_comparison (* 102 *)
   | Bs_ffi_warning of string (* 103 *)
   | Bs_derive_warning of string (* 104 *)
-  | Bs_fragile_external of string (* 105 *)
-  | Bs_unimplemented_primitive of string (* 106 *)
   | Bs_integer_literal_overflow (* 107 *)
-  | Bs_uninterpreted_delimiters of string (* 108 *)
   | Bs_toplevel_expression_unit of
       (string * top_level_unit_help) option (* 109 *)
   | Bs_todo of string option (* 110 *)
+  | Bs_private_record_mutation of string (* 111 *)
 
 (* If you remove a warning, leave a hole in the numbering.  NEVER change
    the numbers of existing warnings.
@@ -96,21 +83,13 @@ type t =
 *)
 
 let number = function
-  | Comment_start -> 1
-  | Comment_not_end -> 2
   | Deprecated _ -> 3
   | Fragile_match _ -> 4
   | Partial_application -> 5
-  | Method_override _ -> 7
   | Partial_match _ -> 8
   | Non_closed_record_pattern _ -> 9
-  | Statement_type -> 10
   | Unused_match -> 11
   | Unused_pat -> 12
-  | Instance_variable_override _ -> 13
-  | Illegal_backslash -> 14
-  | Implicit_public_methods _ -> 15
-  | Unerasable_optional_argument -> 16
   | Unused_argument -> 20
   | Nonreturning_statement -> 21
   | Preprocessor _ -> 22
@@ -120,7 +99,6 @@ let number = function
   | Unused_var _ -> 26
   | Unused_var_strict _ -> 27
   | Wildcard_arg_to_constant_constr -> 28
-  | Eol_in_string -> 29
   | Duplicate_definitions _ -> 30
   | Unused_value_declaration _ -> 32
   | Unused_open _ -> 33
@@ -134,9 +112,7 @@ let number = function
   | Open_shadow_identifier _ -> 44
   | Open_shadow_label_constructor _ -> 45
   | Attribute_payload _ -> 47
-  | Eliminated_optional_arguments _ -> 48
   | No_cmi_file _ -> 49
-  | Bad_docstring _ -> 50
   | Fragile_literal_pattern -> 52
   | Misplaced_attribute _ -> 53
   | Duplicated_attribute _ -> 54
@@ -148,14 +124,12 @@ let number = function
   | Bs_polymorphic_comparison -> 102
   | Bs_ffi_warning _ -> 103
   | Bs_derive_warning _ -> 104
-  | Bs_fragile_external _ -> 105
-  | Bs_unimplemented_primitive _ -> 106
   | Bs_integer_literal_overflow -> 107
-  | Bs_uninterpreted_delimiters _ -> 108
   | Bs_toplevel_expression_unit _ -> 109
   | Bs_todo _ -> 110
+  | Bs_private_record_mutation _ -> 111
 
-let last_warning_number = 110
+let last_warning_number = 111
 
 let letter_all =
   let rec loop i = if i = 0 then [] else i :: loop (i - 1) in
@@ -297,8 +271,6 @@ let reset () =
 let () = reset ()
 
 let message = function
-  | Comment_start -> "this is the start of a comment."
-  | Comment_not_end -> "this is not the end of a comment."
   | Deprecated (s, _, _, can_be_automigrated) ->
     (* Reduce \r\n to \n:
          - Prevents any \r characters being printed on Unix when processing
@@ -321,12 +293,6 @@ let message = function
      It will remain exhaustive when constructors are added to type " ^ s ^ "."
   | Partial_application ->
     "this function application is partial,\nmaybe some arguments are missing."
-  | Method_override [lab] -> "the method " ^ lab ^ " is overridden."
-  | Method_override (cname :: slist) ->
-    String.concat " "
-      ("the following methods are overridden by the class" :: cname :: ":\n "
-     :: slist)
-  | Method_override [] -> assert false
   | Partial_match "" ->
     "You forgot to handle a possible case here, though we don't have more \
      information on the value."
@@ -335,42 +301,8 @@ let message = function
   | Non_closed_record_pattern s ->
     "the following labels are not bound in this record pattern: " ^ s
     ^ "\nEither bind these labels explicitly or add ', _' to the pattern."
-  | Statement_type ->
-    "This expression returns a value, but you're not doing anything with it. \
-     If this is on purpose, wrap it with `ignore`."
   | Unused_match -> "this match case is unused."
   | Unused_pat -> "this sub-pattern is unused."
-  | Instance_variable_override [lab] ->
-    "the instance variable " ^ lab ^ " is overridden.\n"
-    ^ "The behaviour changed in ocaml 3.10 (previous behaviour was hiding.)"
-  | Instance_variable_override (cname :: slist) ->
-    String.concat " "
-      ("the following instance variables are overridden by the class" :: cname
-     :: ":\n " :: slist)
-    ^ "\nThe behaviour changed in ocaml 3.10 (previous behaviour was hiding.)"
-  | Instance_variable_override [] -> assert false
-  | Illegal_backslash -> "illegal backslash escape in string."
-  | Implicit_public_methods l ->
-    "the following private methods were made public implicitly:\n "
-    ^ String.concat " " l ^ "."
-  | Unerasable_optional_argument ->
-    String.concat ""
-      [
-        "This optional parameter in final position will, in practice, not be \
-         optional.\n";
-        "  Reorder the parameters so that at least one non-optional one is in \
-         final position or, if all parameters are optional, insert a final \
-         ().\n\n";
-        "  Explanation: If the final parameter is optional, it'd be unclear \
-         whether a function application that omits it should be considered \
-         fully applied, or partially applied. Imagine writing `let title = \
-         display(\"hello!\")`, only to realize `title` isn't your desired \
-         result, but a curried call that takes a final optional argument, e.g. \
-         `~showDate`.\n\n";
-        "  Formal rule: an optional argument is considered intentionally \
-         omitted when the 1st positional (i.e. neither labeled nor optional) \
-         argument defined after it is passed in.";
-      ]
   | Unused_argument -> "this argument will not be used by the function."
   | Nonreturning_statement ->
     "This statement does not continue execution; following code is unreachable."
@@ -398,8 +330,6 @@ let message = function
       v v
   | Wildcard_arg_to_constant_constr ->
     "wildcard pattern given as argument to a constant constructor"
-  | Eol_in_string ->
-    "unescaped end-of-line in a string constant (non-portable code)"
   | Duplicate_definitions (kind, cname, tc1, tc2) ->
     Printf.sprintf "the %s %s is defined in both types %s and %s." kind cname
       tc1 tc2
@@ -445,31 +375,24 @@ let message = function
     Printf.sprintf "this open statement shadows the %s %s (which is later used)"
       kind s
   | Attribute_payload (a, s) ->
-    Printf.sprintf "illegal payload for attribute '%s'.\n%s" a s
-  | Eliminated_optional_arguments sl ->
-    Printf.sprintf "implicit elimination of optional argument%s %s"
-      (if List.length sl = 1 then "" else "s")
-      (String.concat ", " sl)
+    Printf.sprintf "illegal payload for attribute @%s.\n%s" a s
   | No_cmi_file (name, None) ->
     "no cmi file was found in path for module " ^ name
   | No_cmi_file (name, Some msg) ->
     Printf.sprintf "no valid cmi file was found in path for module %s. %s" name
       msg
-  | Bad_docstring unattached ->
-    if unattached then "unattached documentation comment (ignored)"
-    else "ambiguous documentation comment"
   | Fragile_literal_pattern ->
     Printf.sprintf
       "Code should not depend on the actual values of\n\
        this constructor's arguments. They are only for information\n\
-       and may change in future versions. (See manual section 8.5)"
+       and may change in future versions."
   | Unreachable_case ->
     "this match case is unreachable.\n\
      Consider replacing it with a refutation case '<pat> -> .'"
   | Misplaced_attribute attr_name ->
-    Printf.sprintf "the %S attribute cannot appear in this context" attr_name
+    Printf.sprintf "the @%s attribute cannot appear in this context" attr_name
   | Duplicated_attribute attr_name ->
-    Printf.sprintf "the %S attribute is used more than once on this expression"
+    Printf.sprintf "the @%s attribute is used more than once on this expression"
       attr_name
   | Ambiguous_pattern vars ->
     let msg =
@@ -477,11 +400,11 @@ let message = function
       match vars with
       | [] -> assert false
       | [x] -> "variable " ^ x
-      | _ :: _ -> "variables " ^ String.concat "," vars
+      | _ :: _ -> "variables " ^ String.concat ", " vars
     in
     Printf.sprintf
       "Ambiguous or-pattern variables under guard;\n\
-       %s may match different arguments. (See manual section 8.5)"
+       %s may match different arguments."
       msg
   | Unused_module s -> "unused module " ^ s ^ "."
   | Constraint_on_gadt ->
@@ -495,15 +418,8 @@ let message = function
     "Polymorphic comparison introduced (maybe unsafe)"
   | Bs_ffi_warning s -> "FFI warning: " ^ s
   | Bs_derive_warning s -> "@deriving warning: " ^ s
-  | Bs_fragile_external s ->
-    s
-    ^ " : using an empty string as a shorthand to infer the external's name \
-       from the value's name is dangerous when refactoring, and therefore \
-       deprecated"
-  | Bs_unimplemented_primitive s -> "Unimplemented primitive used: " ^ s
   | Bs_integer_literal_overflow ->
     "Integer literal exceeds the range of representable integers of type int"
-  | Bs_uninterpreted_delimiters s -> "Uninterpreted delimiters " ^ s
   | Bs_toplevel_expression_unit help ->
     Printf.sprintf
       "This%sis at the top level and is expected to return `unit`. But it's \
@@ -539,6 +455,8 @@ let message = function
     ^ "\n\n\
       \  This code is not implemented yet and will crash at runtime. Make sure \
        you implement this before running the code."
+  | Bs_private_record_mutation field_name ->
+    Printf.sprintf "Mutation of private record field %S." field_name
 
 let sub_locs = function
   | Deprecated (_, def, use, _) ->
@@ -581,8 +499,6 @@ let check_fatal () =
 
 let descriptions =
   [
-    (1, "Suspicious-looking start-of-comment mark.");
-    (2, "Suspicious-looking end-of-comment mark.");
     (3, "Deprecated feature.");
     ( 4,
       "Fragile pattern matching: matching that will remain complete even\n\
@@ -591,18 +507,10 @@ let descriptions =
     ( 5,
       "Partially applied function: expression whose result has function\n\
       \    type and is ignored." );
-    (7, "Method overridden.");
     (8, "Partial match: missing cases in pattern-matching.");
     (9, "Missing fields in a record pattern.");
-    ( 10,
-      "Expression on the left-hand side of a sequence that doesn't have type\n\
-      \    \"unit\" (and that is not a function, see warning number 5)." );
     (11, "Redundant case in a pattern matching (unused match case).");
     (12, "Redundant sub-pattern in a pattern-matching.");
-    (13, "Instance variable overridden.");
-    (14, "Illegal backslash escape in a string constant.");
-    (15, "Private method made public implicitly.");
-    (16, "Unerasable optional argument.");
     (17, "Undeclared virtual method.");
     (18, "Non-principal type.");
     (19, "Type without principality.");
@@ -623,7 +531,6 @@ let descriptions =
       \    \"let\" nor \"as\", and doesn't start with an underscore (\"_\")\n\
       \    character." );
     (28, "Wildcard pattern given as argument to a constant constructor.");
-    (29, "Unescaped end-of-line in a string constant (non-portable code).");
     ( 30,
       "Two labels or constructors of the same name are defined in two\n\
       \    mutually recursive types." );
@@ -642,9 +549,7 @@ let descriptions =
     (45, "Open statement shadows an already defined label or constructor.");
     (46, "Error in environment variable.");
     (47, "Illegal attribute payload.");
-    (48, "Implicit elimination of optional arguments.");
     (49, "Absent cmi file when looking up module alias.");
-    (50, "Unexpected documentation comment.");
     (52, "Fragile constant pattern.");
     (53, "Attribute cannot appear in this context");
     (54, "Attribute used more than once on an expression");
@@ -658,16 +563,12 @@ let descriptions =
     (102, "Polymorphic comparison introduced (maybe unsafe)");
     (103, "Fragile FFI definitions");
     (104, "@deriving warning with customized message ");
-    ( 105,
-      "External name is inferred from val name is unsafe from refactoring when \
-       changing value name" );
-    (106, "Unimplemented primitive used:");
     ( 107,
       "Integer literal exceeds the range of representable integers of type int"
     );
-    (108, "Uninterpreted delimiters (for unicode)");
     (109, "Toplevel expression has unit type");
     (110, "Todo found");
+    (111, "Mutation of private record field");
   ]
 
 let help_warnings () =

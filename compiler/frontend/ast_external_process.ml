@@ -166,7 +166,6 @@ type external_desc = {
   get_name: bundle_source option;
   mk_obj: bool;
   return_wrapper: External_ffi_types.return_wrapper;
-  tagged_template: bool;
 }
 
 let init_st =
@@ -185,7 +184,6 @@ let init_st =
     get_name = None;
     mk_obj = false;
     return_wrapper = Return_unset;
-    tagged_template = false;
   }
 
 let return_wrapper loc (txt : string) : External_ffi_types.return_wrapper =
@@ -353,7 +351,13 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
                between unset/set
             *)
             | scopes -> {st with scopes})
-          | "taggedTemplate" -> {st with splice = true; tagged_template = true}
+          | "taggedTemplate" ->
+            Location.raise_errorf ~loc
+              "The @@taggedTemplate decorator has been removed. Bind the \
+               external with the builtin taggedTemplate<'param, 'output> type \
+               instead, e.g. `@@module(\"x\") external sql: taggedTemplate<'a, \
+               string> = \"sql\"`. The tag can then be used with backtick \
+               syntax across module boundaries and as a first-class value."
           | "variadic" -> {st with splice = true}
           | "send" ->
             {st with val_send = Some (name_from_payload_or_prim ~loc payload)}
@@ -423,7 +427,6 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
    get_name = None;
    get_index = false;
    return_wrapper = Return_unset;
-   tagged_template = _;
    set_index = false;
    mk_obj = _;
    scopes =
@@ -614,7 +617,6 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
    get_name = None;
    return_wrapper = _;
    mk_obj = _;
-   tagged_template = _;
   } ->
     if arg_type_specs_length = 3 then
       Js_set_index {js_set_index_scopes = scopes}
@@ -623,7 +625,7 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
         "Ill defined attribute %@set_index (arity of 3)"
   | {set_index = true} ->
     Bs_syntaxerr.err loc
-      (Conflict_ffi_attribute "Attribute found that conflicts with %@set_index")
+      (Conflict_ffi_attribute "Attribute found that conflicts with @set_index")
   | {
    get_index = true;
    val_name = None;
@@ -639,7 +641,6 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
    set_index = false;
    mk_obj = _;
    return_wrapper = _;
-   tagged_template = _;
   } ->
     if arg_type_specs_length = 2 then
       Js_get_index {js_get_index_scopes = scopes}
@@ -649,7 +650,7 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
         arg_type_specs_length
   | {get_index = true} ->
     Bs_syntaxerr.err loc
-      (Conflict_ffi_attribute "Attribute found that conflicts with %@get_index")
+      (Conflict_ffi_attribute "Attribute found that conflicts with @get_index")
   | {
    module_as_val = Some external_module_name;
    get_index = false;
@@ -666,7 +667,6 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
    set_index = false;
    return_wrapper = _;
    mk_obj = _;
-   tagged_template = _;
   } -> (
     match (arg_types_ty, new_name, val_name) with
     | [], None, _ -> Js_module_as_var external_module_name
@@ -708,7 +708,6 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
    mk_obj = _;
    (* mk_obj is always false *)
    return_wrapper = _;
-   tagged_template;
   } ->
     let name = prim_name_or_pval_prim.name in
     if arg_type_specs_length = 0 then
@@ -716,12 +715,10 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
          {[
            external ff : int -> int [@bs] = "" [@@module "xx"]
          ]}
-         FIXME: splice is not supported here 
+         FIXME: splice is not supported here
       *)
       Js_var {name; external_module_name = None; scopes}
-    else
-      Js_call
-        {splice; name; external_module_name = None; scopes; tagged_template}
+    else Js_call {splice; name; external_module_name = None; scopes}
   | {
    call_name = Some {name; source = _};
    splice;
@@ -737,7 +734,6 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
    get_name = None;
    mk_obj = _;
    return_wrapper = _;
-   tagged_template;
   } ->
     if arg_type_specs_length = 0 then
       (*
@@ -747,10 +743,10 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
         *)
       Js_var {name; external_module_name; scopes}
       (*FIXME: splice is not supported here *)
-    else Js_call {splice; name; external_module_name; scopes; tagged_template}
+    else Js_call {splice; name; external_module_name; scopes}
   | {call_name = Some _} ->
     Bs_syntaxerr.err loc
-      (Conflict_ffi_attribute "Attribute found that conflicts with %@val")
+      (Conflict_ffi_attribute "Attribute found that conflicts with @val")
   | {
    val_name = Some {name; source = _};
    external_module_name;
@@ -766,7 +762,6 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
    return_wrapper = _;
    splice = false;
    scopes;
-   tagged_template = _;
   } ->
     (*
          if no_arguments -->
@@ -777,7 +772,7 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
     Js_var {name; external_module_name; scopes}
   | {val_name = Some _} ->
     Bs_syntaxerr.err loc
-      (Conflict_ffi_attribute "Attribute found that conflicts with %@val")
+      (Conflict_ffi_attribute "Attribute found that conflicts with @val")
   | {
    splice;
    scopes;
@@ -793,7 +788,6 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
    get_name = None;
    mk_obj = _;
    return_wrapper = _;
-   tagged_template;
   } ->
     let name = prim_name_or_pval_prim.name in
     if arg_type_specs_length = 0 then
@@ -803,7 +797,7 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
          ]}
       *)
       Js_var {name; external_module_name; scopes}
-    else Js_call {splice; name; external_module_name; scopes; tagged_template}
+    else Js_call {splice; name; external_module_name; scopes}
   | {
    val_send = Some {name; source = _};
    splice;
@@ -819,7 +813,6 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
    external_module_name = None;
    mk_obj = _;
    return_wrapper = _;
-   tagged_template = _;
   } -> (
     (* PR #2162 - since when we assemble arguments the first argument in
        [@@send] is ignored
@@ -851,12 +844,11 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
    scopes;
    mk_obj = _;
    return_wrapper = _;
-   tagged_template = _;
   } ->
     Js_new {name; external_module_name; splice; scopes}
   | {new_name = Some _} ->
     Bs_syntaxerr.err loc
-      (Conflict_ffi_attribute "Attribute found that conflicts with %@new")
+      (Conflict_ffi_attribute "Attribute found that conflicts with @new")
   | {
    set_name = Some {name; source = _};
    val_name = None;
@@ -872,7 +864,6 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
    mk_obj = _;
    return_wrapper = _;
    scopes;
-   tagged_template = _;
   } ->
     if arg_type_specs_length = 2 then
       Js_set {js_set_scopes = scopes; js_set_name = name}
@@ -896,7 +887,6 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
    mk_obj = _;
    return_wrapper = _;
    scopes;
-   tagged_template = _;
   } ->
     if arg_type_specs_length = 1 then
       (* Check if the first argument is unit, which is invalid for @get *)

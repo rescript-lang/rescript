@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/bs_expect_opt_in_bs_return_to_opt.res[0m:[2m1:1-2:31[0m
+
+  [1;31m1[0m [2m│[0m [1;31m@return(null_to_opt)[0m
+  [1;31m2[0m [2m│[0m [1;31mexternal f: string => int = "f"[0m
+  3 [2m│[0m 
+  4 [2m│[0m let _ = f("x")
+
+  This @return directive requires the external's return type to be an option, e.g. `option<int>`.

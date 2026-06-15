@@ -1,5 +1,5 @@
 module Doc = Res_doc
-module CommentTable = Res_comments_table
+module Comment_table = Res_comments_table
 
 let print_engine =
   Res_driver.
@@ -7,8 +7,14 @@ let print_engine =
       print_implementation =
         (fun ~width:_ ~filename:_ ~comments:_ structure ->
           Printast.implementation Format.std_formatter structure);
+      print_implementation_from_source =
+        (fun ~width:_ ~source:_ ~comments:_ structure ->
+          Printast.implementation Format.std_formatter structure);
       print_interface =
         (fun ~width:_ ~filename:_ ~comments:_ signature ->
+          Printast.interface Format.std_formatter signature);
+      print_interface_from_source =
+        (fun ~width:_ ~source:_ ~comments:_ signature ->
           Printast.interface Format.std_formatter signature);
     }
 
@@ -46,7 +52,7 @@ end = struct
     Doc.to_string ~width:80 doc
 end
 
-module SexpAst = struct
+module Sexp_ast = struct
   open Parsetree
 
   let map_empty ~f items =
@@ -70,8 +76,6 @@ module SexpAst = struct
       | Longident.Lident ident -> Sexp.list [Sexp.atom "Lident"; string ident]
       | Longident.Ldot (lident, txt) ->
         Sexp.list [Sexp.atom "Ldot"; loop lident; string txt]
-      | Longident.Lapply (l1, l2) ->
-        Sexp.list [Sexp.atom "Lapply"; loop l1; loop l2]
     in
     Sexp.list [Sexp.atom "longident"; loop l]
 
@@ -962,24 +966,40 @@ module SexpAst = struct
         print_implementation =
           (fun ~width:_ ~filename:_ ~comments:_ parsetree ->
             parsetree |> structure |> Sexp.to_string |> print_string);
+        print_implementation_from_source =
+          (fun ~width:_ ~source:_ ~comments:_ parsetree ->
+            parsetree |> structure |> Sexp.to_string |> print_string);
         print_interface =
           (fun ~width:_ ~filename:_ ~comments:_ parsetree ->
+            parsetree |> signature |> Sexp.to_string |> print_string);
+        print_interface_from_source =
+          (fun ~width:_ ~source:_ ~comments:_ parsetree ->
             parsetree |> signature |> Sexp.to_string |> print_string);
       }
 end
 
-let sexp_print_engine = SexpAst.print_engine
+let sexp_print_engine = Sexp_ast.print_engine
 
 let comments_print_engine =
   {
     Res_driver.print_implementation =
       (fun ~width:_ ~filename:_ ~comments s ->
-        let cmt_tbl = CommentTable.make () in
-        CommentTable.walk_structure s cmt_tbl comments;
-        CommentTable.log cmt_tbl);
-    print_interface =
+        let cmt_tbl = Comment_table.make () in
+        Comment_table.walk_structure s cmt_tbl comments;
+        Comment_table.log cmt_tbl);
+    Res_driver.print_implementation_from_source =
+      (fun ~width:_ ~source:_ ~comments s ->
+        let cmt_tbl = Comment_table.make () in
+        Comment_table.walk_structure s cmt_tbl comments;
+        Comment_table.log cmt_tbl);
+    Res_driver.print_interface =
       (fun ~width:_ ~filename:_ ~comments s ->
-        let cmt_tbl = CommentTable.make () in
-        CommentTable.walk_signature s cmt_tbl comments;
-        CommentTable.log cmt_tbl);
+        let cmt_tbl = Comment_table.make () in
+        Comment_table.walk_signature s cmt_tbl comments;
+        Comment_table.log cmt_tbl);
+    Res_driver.print_interface_from_source =
+      (fun ~width:_ ~source:_ ~comments s ->
+        let cmt_tbl = Comment_table.make () in
+        Comment_table.walk_signature s cmt_tbl comments;
+        Comment_table.log cmt_tbl);
   }

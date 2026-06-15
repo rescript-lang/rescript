@@ -1,13 +1,13 @@
 module M = {
-    type t = promise<string>
+  type t = promise<string>
 
-    let a = (_t:t) => 4
-    let b = (_:t) => "c"
-    let xyz = (_:t, p:int) => p + 1
+  let a = (_t: t) => 4
+  let b = (_: t) => "c"
+  let xyz = (_: t, p: int) => p + 1
 }
 
-@module("meh") @taggedTemplate
-external meh: (array<string>, array<string>) => M.t = "default"
+@module("meh")
+external meh: taggedTemplate<string, M.t> = "default"
 
 let w = meh``
 

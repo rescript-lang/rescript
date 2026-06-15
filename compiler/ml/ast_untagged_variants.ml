@@ -73,9 +73,10 @@ let report_error ppf =
   function
   | InvalidVariantAsAnnotation ->
     fprintf ppf
-      "A variant case annotation @as(...) must be a string or integer, \
-       boolean, null, undefined"
-  | Duplicated_bs_as -> fprintf ppf "duplicate @as "
+      "A variant case annotation @as(...) must be a string, integer, boolean, \
+       null, or undefined."
+  | Duplicated_bs_as ->
+    fprintf ppf "Duplicate @as annotation; only one @as is allowed here."
   | InvalidVariantTagAnnotation ->
     fprintf ppf "A variant tag annotation @tag(...) must be a string"
   | InvalidUntaggedVariantDefinition untagged_variant ->
@@ -346,11 +347,11 @@ let is_nullary_variant (x : Types.constructor_arguments) =
 
 let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
     ~(blocks : (Location.t * block) list) =
-  let module StringSet = Set.Make (String) in
-  let string_literals_consts = ref StringSet.empty in
-  let string_literals_blocks = ref StringSet.empty in
-  let nonstring_literals_consts = ref StringSet.empty in
-  let nonstring_literals_blocks = ref StringSet.empty in
+  let module String_set = Set.Make (String) in
+  let string_literals_consts = ref String_set.empty in
+  let string_literals_blocks = ref String_set.empty in
+  let nonstring_literals_consts = ref String_set.empty in
+  let nonstring_literals_blocks = ref String_set.empty in
   let instance_types = Hashtbl.create 1 in
   let function_types = ref 0 in
   let object_types = ref 0 in
@@ -363,17 +364,17 @@ let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
     let set =
       if is_const then string_literals_consts else string_literals_blocks
     in
-    if StringSet.mem s !set then
+    if String_set.mem s !set then
       raise (Error (loc, InvalidUntaggedVariantDefinition (DuplicateLiteral s)));
-    set := StringSet.add s !set
+    set := String_set.add s !set
   in
   let add_nonstring_literal ~is_const ~loc s =
     let set =
       if is_const then nonstring_literals_consts else nonstring_literals_blocks
     in
-    if StringSet.mem s !set then
+    if String_set.mem s !set then
       raise (Error (loc, InvalidUntaggedVariantDefinition (DuplicateLiteral s)));
-    set := StringSet.add s !set
+    set := String_set.add s !set
   in
   let invariant loc name =
     if !unknown_types <> 0 && List.length blocks <> 1 then
@@ -399,8 +400,8 @@ let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
       raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneBoolean));
     if
       !boolean_types > 0
-      && (StringSet.mem "true" !nonstring_literals_consts
-         || StringSet.mem "false" !nonstring_literals_consts)
+      && (String_set.mem "true" !nonstring_literals_consts
+         || String_set.mem "false" !nonstring_literals_consts)
     then raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneBoolean));
     ()
   in
@@ -525,7 +526,7 @@ let has_undefined_literal attrs = process_tag_type attrs = Some Undefined
 
 let block_is_object ~env attrs = get_block_type ~env attrs = Some ObjectType
 
-module DynamicChecks = struct
+module Dynamic_checks = struct
   type op = EqEqEq | NotEqEq | Or | And
   type 'a t =
     | BinOp of op * 'a t * 'a t

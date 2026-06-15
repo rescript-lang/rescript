@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/UntaggedTagFieldNameConflict.res[0m:[2m3:3-18[0m
+
+  1 [2m│[0m @tag("kind")
+  2 [2m│[0m type t =
+  [1;31m3[0m [2m│[0m   [1;31m| A({kind: int})[0m
+  4 [2m│[0m   | B({other: string})
+  5 [2m│[0m 
+
+  Constructor "A": the @tag name "kind" conflicts with the runtime value of inline record field "kind". Use a different @tag name or rename the field.

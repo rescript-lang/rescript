@@ -79,10 +79,10 @@ let rec add_inline_attribute (expr : Lambda.lambda) loc attributes =
   | Lprim (((Pjs_fn_make _ | Pjs_fn_make_unit) as p), [e], l), _ ->
     Lambda.Lprim (p, [add_inline_attribute e loc attributes], l)
   | expr, Always_inline ->
-    Location.prerr_warning loc (Warnings.Misplaced_attribute "inline1");
+    Location.prerr_warning loc (Warnings.Misplaced_attribute "inline");
     expr
   | expr, Never_inline ->
-    Location.prerr_warning loc (Warnings.Misplaced_attribute "inline2");
+    Location.prerr_warning loc (Warnings.Misplaced_attribute "inline");
     expr
 
 (* Get the [@inlined] attribute payload (or default if not present).

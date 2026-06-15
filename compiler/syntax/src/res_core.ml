@@ -2,8 +2,8 @@ module Doc = Res_doc
 module Grammar = Res_grammar
 module Token = Res_token
 module Diagnostics = Res_diagnostics
-module CommentTable = Res_comments_table
-module ResPrinter = Res_printer
+module Comment_table = Res_comments_table
+module Res_printer = Res_printer
 module Scanner = Res_scanner
 module Parser = Res_parser
 
@@ -118,7 +118,7 @@ module Recover = struct
     check p.breadcrumbs
 end
 
-module ErrorMessages = struct
+module Error_messages = struct
   let list_pattern_spread =
     "List pattern matches only supports one `...` spread, at the end.\n\
      Explanation: a list spread at the tail is efficient, but a spread in the \
@@ -183,7 +183,7 @@ module ErrorMessages = struct
           [
             Doc.hard_line;
             Doc.hard_line;
-            ResPrinter.print_expression switch_expr CommentTable.empty;
+            Res_printer.print_expression switch_expr Comment_table.empty;
           ];
       ]
     |> Doc.to_string ~width:80
@@ -260,7 +260,7 @@ module ErrorMessages = struct
     "Spreading JSX children is no longer supported."
 end
 
-module InExternal = struct
+module In_external = struct
   let status = ref false
 end
 
@@ -764,7 +764,7 @@ let parse_hash_ident ~start_pos p =
       match suffix with
       | Some _ ->
         Parser.err p
-          (Diagnostics.message (ErrorMessages.poly_var_int_with_suffix i))
+          (Diagnostics.message (Error_messages.poly_var_int_with_suffix i))
       | None -> ()
     in
     Parser.next p;
@@ -772,7 +772,7 @@ let parse_hash_ident ~start_pos p =
   | Eof ->
     Parser.err ~start_pos p (Diagnostics.unexpected p.token p.breadcrumbs);
     ("", mk_loc start_pos p.prev_end_pos)
-  | _ -> parse_ident ~start_pos ~msg:ErrorMessages.variant_ident p
+  | _ -> parse_ident ~start_pos ~msg:Error_messages.variant_ident p
 
 (* Ldot (Ldot (Lident "Foo", "Bar"), "baz") *)
 let parse_value_path p =
@@ -1098,7 +1098,7 @@ let parse_template_constant ~prefix (p : Parser.t) =
     in
     skip_tokens ();
     Parser.err ~start_pos ~end_pos:p.prev_end_pos p
-      (Diagnostics.message ErrorMessages.string_interpolation_in_pattern);
+      (Diagnostics.message Error_messages.string_interpolation_in_pattern);
     Pconst_string ("", None)
 
 let parse_comma_delimited_region p ~grammar ~closing ~f =
@@ -1342,7 +1342,7 @@ let rec parse_pattern ?(alias = true) ?(or_ = true) p =
               | Some _ ->
                 Parser.err p
                   (Diagnostics.message
-                     (ErrorMessages.poly_var_int_with_suffix i))
+                     (Error_messages.poly_var_int_with_suffix i))
               | None -> ()
             in
             Parser.next p;
@@ -1351,7 +1351,7 @@ let rec parse_pattern ?(alias = true) ?(or_ = true) p =
             Parser.err ~start_pos p
               (Diagnostics.unexpected p.token p.breadcrumbs);
             ("", mk_loc start_pos p.prev_end_pos)
-          | _ -> parse_ident ~msg:ErrorMessages.variant_ident ~start_pos p
+          | _ -> parse_ident ~msg:Error_messages.variant_ident ~start_pos p
         in
         match p.Parser.token with
         | Lparen -> parse_variant_pattern_args p ident start_pos attrs
@@ -1501,7 +1501,7 @@ and parse_record_pattern_row_field ~attrs p =
       (pat, optional)
     | Equal ->
       Parser.err ~start_pos:p.start_pos ~end_pos:p.end_pos p
-        (Diagnostics.message ErrorMessages.record_pattern_field_missing_colon);
+        (Diagnostics.message Error_messages.record_pattern_field_missing_colon);
       Parser.next p;
       let optional = parse_optional_label p in
       let pat = parse_pattern p in
@@ -1536,7 +1536,7 @@ and parse_record_pattern_row p =
     if Token.is_keyword p.token then (
       match
         recover_keyword_field_name_if_probably_field p
-          ~mk_message:ErrorMessages.keyword_field_in_pattern
+          ~mk_message:Error_messages.keyword_field_in_pattern
       with
       | Some (recovered_field_name, loc) ->
         Parser.expect Colon p;
@@ -1548,7 +1548,7 @@ and parse_record_pattern_row p =
         Some (false, PatField {lid = field; x = pat; opt = optional})
       | None ->
         emit_keyword_field_error p
-          ~mk_message:ErrorMessages.keyword_field_in_pattern;
+          ~mk_message:Error_messages.keyword_field_in_pattern;
         None)
     else None
 
@@ -1574,7 +1574,7 @@ and parse_record_pattern ~attrs p =
           (if has_spread then
              let pattern = field.x in
              Parser.err ~start_pos:pattern.Parsetree.ppat_loc.loc_start p
-               (Diagnostics.message ErrorMessages.record_pattern_spread));
+               (Diagnostics.message Error_messages.record_pattern_spread));
           (field :: fields, flag)
         | PatUnderscore -> (fields, flag))
       ([], flag) raw_fields
@@ -1593,7 +1593,7 @@ and parse_tuple_pattern ~attrs ~first ~start_pos p =
     match patterns with
     | [_] ->
       Parser.err ~start_pos ~end_pos:p.prev_end_pos p
-        (Diagnostics.message ErrorMessages.tuple_single_element)
+        (Diagnostics.message Error_messages.tuple_single_element)
     | _ -> ()
   in
   let loc = mk_loc start_pos p.prev_end_pos in
@@ -1649,7 +1649,7 @@ and parse_list_pattern ~start_pos ~attrs p =
   let filter_spread (has_spread, pattern) =
     if has_spread then (
       Parser.err ~start_pos:pattern.Parsetree.ppat_loc.loc_start p
-        (Diagnostics.message ErrorMessages.list_pattern_spread);
+        (Diagnostics.message Error_messages.list_pattern_spread);
       pattern)
     else pattern
   in
@@ -1668,11 +1668,11 @@ and parse_dict_pattern_row p =
   | String s ->
     let loc = mk_loc p.start_pos p.end_pos in
     Parser.next p;
-    let fieldName = Location.mkloc (Longident.Lident s) loc in
+    let field_name = Location.mkloc (Longident.Lident s) loc in
     Parser.expect Colon p;
     let optional = parse_optional_label p in
     let pat = parse_pattern p in
-    Some {Parsetree.lid = fieldName; x = pat; opt = optional}
+    Some {Parsetree.lid = field_name; x = pat; opt = optional}
   | _ -> None
 
 and parse_dict_pattern ~start_pos ~attrs (p : Parser.t) =
@@ -1692,7 +1692,7 @@ and parse_array_pattern ~attrs p =
   let patterns =
     parse_comma_delimited_region p ~grammar:Grammar.PatternList
       ~closing:Rbracket
-      ~f:(parse_non_spread_pattern ~msg:ErrorMessages.array_pattern_spread)
+      ~f:(parse_non_spread_pattern ~msg:Error_messages.array_pattern_spread)
   in
   Parser.expect Rbracket p;
   let loc = mk_loc start_pos p.prev_end_pos in
@@ -1963,7 +1963,7 @@ and parse_parameter p =
             in
             Parser.err ~start_pos ~end_pos:p.prev_end_pos p
               (Diagnostics.message
-                 (ErrorMessages.missing_tilde_labeled_parameter lbl_name));
+                 (Error_messages.missing_tilde_labeled_parameter lbl_name));
             Asttypes.Optional {txt = lbl_name; loc = lbl_loc}
           | lbl -> lbl
         in
@@ -2667,10 +2667,10 @@ and over_parse_constrained_or_coerced_or_arrow_expression p expr =
                       [
                         Doc.line;
                         Doc.text "1) ";
-                        ResPrinter.print_expression arrow1 CommentTable.empty;
+                        Res_printer.print_expression arrow1 Comment_table.empty;
                         Doc.line;
                         Doc.text "2) ";
-                        ResPrinter.print_expression arrow2 CommentTable.empty;
+                        Res_printer.print_expression arrow2 Comment_table.empty;
                       ]);
                ])
           |> Doc.to_string ~width:80
@@ -2695,9 +2695,9 @@ and over_parse_constrained_or_coerced_or_arrow_expression p expr =
                        (Doc.concat
                           [
                             Doc.line;
-                            ResPrinter.add_parens
-                              (ResPrinter.print_expression expr
-                                 CommentTable.empty);
+                            Res_printer.add_parens
+                              (Res_printer.print_expression expr
+                                 Comment_table.empty);
                           ]);
                    ])
              |> Doc.to_string ~width:80))
@@ -2817,7 +2817,7 @@ and parse_let_bindings ~unwrap ~attrs ~start_pos p =
   let end_pos = p.Parser.start_pos in
   if rec_flag = Asttypes.Recursive && unwrap then
     Parser.err ~start_pos ~end_pos p
-      (Diagnostics.message ErrorMessages.experimental_let_unwrap_rec);
+      (Diagnostics.message Error_messages.experimental_let_unwrap_rec);
   let add_unwrap_attr ~unwrap ~start_pos ~end_pos attrs =
     if unwrap then
       ( {Asttypes.txt = "let.unwrap"; loc = mk_loc start_pos end_pos},
@@ -2874,7 +2874,7 @@ and parse_jsx_opening_or_self_closing_element (* start of the opening < *)
     let children = parse_jsx_children p in
     let closing_tag_start =
       match p.token with
-      | LessThan when Scanner.peekSlash p.scanner ->
+      | LessThan when Scanner.peek_slash p.scanner ->
         let pos = p.start_pos in
         (* Move to slash *)
         Parser.next p;
@@ -3083,7 +3083,7 @@ and parse_jsx_children p : Parsetree.jsx_children =
   let rec loop p children =
     match p.Parser.token with
     | Token.Eof -> children
-    | LessThan when Scanner.peekSlash p.scanner -> children
+    | LessThan when Scanner.peek_slash p.scanner -> children
     | LessThan ->
       (* Imagine: <div> <Navbar /> <
        * is `<` the start of a jsx-child? <div …
@@ -3104,7 +3104,7 @@ and parse_jsx_children p : Parsetree.jsx_children =
   match p.Parser.token with
   | DotDotDot ->
     Parser.err ~start_pos:p.start_pos ~end_pos:p.end_pos p
-      (Diagnostics.message ErrorMessages.spread_children_no_longer_supported);
+      (Diagnostics.message Error_messages.spread_children_no_longer_supported);
     Parser.next p;
     [parse_primary_expr ~operand:(parse_atomic_expr p) ~no_call:true p]
   | _ -> List.rev (loop p [])
@@ -3128,7 +3128,7 @@ and parse_braced_or_record_expr p =
   | token when Token.is_keyword token -> (
     match
       recover_keyword_field_name_if_probably_field p
-        ~mk_message:ErrorMessages.keyword_field_in_expr
+        ~mk_message:Error_messages.keyword_field_in_expr
     with
     | Some (recovered_field_name, loc) ->
       Parser.expect Colon p;
@@ -3177,7 +3177,7 @@ and parse_braced_or_record_expr p =
       expr
     | Equal ->
       Parser.err ~start_pos:p.start_pos ~end_pos:p.end_pos p
-        (Diagnostics.message ErrorMessages.record_field_missing_colon);
+        (Diagnostics.message Error_messages.record_field_missing_colon);
       Parser.next p;
       let field_expr = parse_expr p in
       Parser.optional p Comma |> ignore;
@@ -3283,7 +3283,7 @@ and parse_braced_or_record_expr p =
           expr)
       | Equal -> (
         Parser.err ~start_pos:p.start_pos ~end_pos:p.end_pos p
-          (Diagnostics.message ErrorMessages.record_field_missing_colon);
+          (Diagnostics.message Error_messages.record_field_missing_colon);
         Parser.next p;
         let optional = parse_optional_label p in
         let field_expr = parse_expr p in
@@ -3447,7 +3447,7 @@ and parse_record_expr_row_with_string_key p :
       Some {lid = field; x = field_expr; opt = false}
     | Equal ->
       Parser.err ~start_pos:p.start_pos ~end_pos:p.end_pos p
-        (Diagnostics.message ErrorMessages.record_field_missing_colon);
+        (Diagnostics.message Error_messages.record_field_missing_colon);
       Parser.next p;
       let field_expr = parse_expr p in
       Some {lid = field; x = field_expr; opt = false}
@@ -3466,7 +3466,7 @@ and parse_record_expr_row p :
   let () =
     match p.Parser.token with
     | Token.DotDotDot ->
-      Parser.err p (Diagnostics.message ErrorMessages.record_expr_spread);
+      Parser.err p (Diagnostics.message Error_messages.record_expr_spread);
       Parser.next p
     | _ -> ()
   in
@@ -3482,7 +3482,7 @@ and parse_record_expr_row p :
       Some {lid = field; x = field_expr; opt = optional}
     | Equal ->
       Parser.err ~start_pos:p.start_pos ~end_pos:p.end_pos p
-        (Diagnostics.message ErrorMessages.record_field_missing_colon);
+        (Diagnostics.message Error_messages.record_field_missing_colon);
       Parser.next p;
       let optional = parse_optional_label p in
       let field_expr = parse_expr p in
@@ -3513,7 +3513,7 @@ and parse_record_expr_row p :
     if Token.is_keyword p.token then (
       match
         recover_keyword_field_name_if_probably_field p
-          ~mk_message:ErrorMessages.keyword_field_in_expr
+          ~mk_message:Error_messages.keyword_field_in_expr
       with
       | Some (recovered_field_name, loc) ->
         Parser.expect Colon p;
@@ -3525,7 +3525,7 @@ and parse_record_expr_row p :
         Some {lid = field; x = field_expr; opt = optional}
       | None ->
         emit_keyword_field_error p
-          ~mk_message:ErrorMessages.keyword_field_in_expr;
+          ~mk_message:Error_messages.keyword_field_in_expr;
         None)
     else None
 
@@ -3546,7 +3546,7 @@ and parse_dict_expr_part p =
       Some (`Row (field, field_expr))
     | Equal ->
       Parser.err ~start_pos:p.start_pos ~end_pos:p.end_pos p
-        (Diagnostics.message ErrorMessages.dict_field_missing_colon);
+        (Diagnostics.message Error_messages.dict_field_missing_colon);
       Parser.next p;
       let field_expr = parse_expr p in
       Some (`Row (field, field_expr))
@@ -3664,7 +3664,7 @@ and parse_expr_block_item p =
     let _ = parse_type_definition_or_extension ~attrs p in
     Parser.end_region p;
     Parser.err ~start_pos:type_start ~end_pos:p.prev_end_pos p
-      (Diagnostics.message ErrorMessages.type_definition_in_function);
+      (Diagnostics.message Error_messages.type_definition_in_function);
     parse_newline_or_semicolon_expr_block p;
     parse_expr_block p
   | _ ->
@@ -3831,7 +3831,7 @@ and parse_if_or_if_let_expression p =
       let if_let_expr = parse_if_let_expr start_pos p in
       Parser.err ~start_pos:if_let_expr.pexp_loc.loc_start
         ~end_pos:if_let_expr.pexp_loc.loc_end p
-        (Diagnostics.message (ErrorMessages.experimental_if_let if_let_expr));
+        (Diagnostics.message (Error_messages.experimental_if_let if_let_expr));
       if_let_expr
     | _ -> parse_if_expr start_pos p
   in
@@ -4151,14 +4151,14 @@ and parse_argument2 p : argument option =
             | Question ->
               Parser.err ~start_pos:colon_start ~end_pos:colon_end p
                 (Diagnostics.message
-                   ErrorMessages.optional_labelled_argument_missing_equal);
+                   Error_messages.optional_labelled_argument_missing_equal);
               Parser.next p;
               let expr = parse_constrained_or_coerced_expr p in
               (Asttypes.Optional {txt = ident; loc = named_arg_loc}, expr)
             | _ ->
               Parser.err ~start_pos:colon_start ~end_pos:colon_end p
                 (Diagnostics.message
-                   ErrorMessages.labelled_argument_missing_equal);
+                   Error_messages.labelled_argument_missing_equal);
               let expr =
                 match p.Parser.token with
                 | Underscore
@@ -4350,7 +4350,7 @@ and parse_tuple_expr ~first ~start_pos p =
     match exprs with
     | [_] ->
       Parser.err ~start_pos ~end_pos:p.prev_end_pos p
-        (Diagnostics.message ErrorMessages.tuple_single_element)
+        (Diagnostics.message Error_messages.tuple_single_element)
     | _ -> ()
   in
   let loc = mk_loc start_pos p.prev_end_pos in
@@ -4422,13 +4422,13 @@ and parse_dict_expr ~start_pos p =
   let to_key_value_pair
       (record_item : Longident.t Location.loc * Parsetree.expression) =
     match record_item with
-    | ( {Location.txt = Longident.Lident key; loc = keyLoc},
+    | ( {Location.txt = Longident.Lident key; loc = key_loc},
         ({pexp_loc = value_loc} as value_expr) ) ->
       Some
         (Ast_helper.Exp.tuple
-           ~loc:(mk_loc keyLoc.loc_start value_loc.loc_end)
+           ~loc:(mk_loc key_loc.loc_start value_loc.loc_end)
            [
-             Ast_helper.Exp.constant ~loc:keyLoc (Pconst_string (key, None));
+             Ast_helper.Exp.constant ~loc:key_loc (Pconst_string (key, None));
              value_expr;
            ])
     | _ -> None
@@ -4595,7 +4595,7 @@ and parse_type_var_list p =
     | SingleQuote ->
       Parser.next p;
       let lident, loc =
-        parse_ident ~msg:ErrorMessages.type_param ~start_pos:p.start_pos p
+        parse_ident ~msg:Error_messages.type_param ~start_pos:p.start_pos p
       in
       let var = Location.mkloc lident loc in
       loop p (var :: vars)
@@ -4627,7 +4627,7 @@ and parse_atomic_typ_expr ?current_type_name_path ?inline_types_context ~attrs p
           Parser.err ~start_pos:p.start_pos p
             (Diagnostics.unexpected p.Parser.token p.breadcrumbs);
           ("", mk_loc p.start_pos p.prev_end_pos))
-        else parse_ident ~msg:ErrorMessages.type_var ~start_pos:p.start_pos p
+        else parse_ident ~msg:Error_messages.type_var ~start_pos:p.start_pos p
       in
       maybe_track_inline_type_param inline_types_context ident loc;
       Ast_helper.Typ.var ~loc ~attrs ident
@@ -4681,7 +4681,7 @@ and parse_atomic_typ_expr ?current_type_name_path ?inline_types_context ~attrs p
       if number_of_inline_records_in_args > 1 then
         Parser.err ~start_pos ~end_pos:p.prev_end_pos p
           (Diagnostics.message
-             ErrorMessages.multiple_inline_record_definitions_at_same_path);
+             Error_messages.multiple_inline_record_definitions_at_same_path);
       Ast_helper.Typ.constr
         ~loc:(mk_loc start_pos p.prev_end_pos)
         ~attrs constr args
@@ -4805,7 +4805,8 @@ and parse_record_or_object_type ?current_type_name_path ?inline_types_context
       match p.token with
       | Lident _ ->
         Parser.err p
-          (Diagnostics.message ErrorMessages.forbidden_inline_record_declaration)
+          (Diagnostics.message
+             Error_messages.forbidden_inline_record_declaration)
       | _ -> ()
     in
     let fields =
@@ -4823,7 +4824,7 @@ and parse_type_alias p typ =
     Parser.next p;
     Parser.expect SingleQuote p;
     let ident, _loc =
-      parse_ident ~msg:ErrorMessages.type_param ~start_pos:p.start_pos p
+      parse_ident ~msg:Error_messages.type_param ~start_pos:p.start_pos p
     in
     (* TODO: how do we parse attributes here? *)
     Ast_helper.Typ.alias
@@ -4887,7 +4888,7 @@ and parse_type_parameter ?current_type_name_path ?inline_types_context
         let () =
           let error =
             Diagnostics.message
-              (ErrorMessages.missing_tilde_labeled_parameter name)
+              (Error_messages.missing_tilde_labeled_parameter name)
           in
           Parser.err ~start_pos:loc.loc_start ~end_pos:loc.loc_end p error
         in
@@ -5034,7 +5035,7 @@ and parse_es6_arrow_type ?current_type_name_path ?inline_types_context ~attrs p
               let has_as =
                 Ext_list.exists typ.ptyp_attributes (fun (x, _) -> x.txt = "as")
               in
-              if !InExternal.status && typ_is_any && has_as then arity - 1
+              if !In_external.status && typ_is_any && has_as then arity - 1
               else arity
             | _ -> arity
           in
@@ -5166,7 +5167,7 @@ and parse_tuple_type ~attrs ~first ~start_pos p =
     match typexprs with
     | [_] ->
       Parser.err ~start_pos ~end_pos:p.prev_end_pos p
-        (Diagnostics.message ErrorMessages.tuple_single_element)
+        (Diagnostics.message Error_messages.tuple_single_element)
     | _ -> ()
   in
   let tuple_loc = mk_loc start_pos p.prev_end_pos in
@@ -5213,7 +5214,7 @@ and parse_type_constructor_args ?inline_types_context ?current_type_name_path
                    (Doc.concat
                       [
                         Doc.line;
-                        ResPrinter.print_typ_expr typ CommentTable.empty;
+                        Res_printer.print_typ_expr typ Comment_table.empty;
                       ]);
                ])
           |> Doc.to_string ~width:80
@@ -5241,7 +5242,7 @@ and parse_string_field_declaration p =
     | Colon -> Parser.next p
     | Equal ->
       Parser.err ~start_pos:p.start_pos ~end_pos:p.end_pos p
-        (Diagnostics.message ErrorMessages.record_type_field_missing_colon);
+        (Diagnostics.message Error_messages.record_type_field_missing_colon);
       Parser.next p
     | _ -> Parser.expect ~grammar:Grammar.TypeExpression Colon p);
     let typ = parse_poly_type_expr p in
@@ -5253,14 +5254,14 @@ and parse_string_field_declaration p =
   | Lident name ->
     let name_loc = mk_loc p.start_pos p.end_pos in
     Parser.err p
-      (Diagnostics.message (ErrorMessages.object_quoted_field_name name));
+      (Diagnostics.message (Error_messages.object_quoted_field_name name));
     Parser.next p;
     let field_name = Location.mkloc name name_loc in
     (match p.Parser.token with
     | Colon -> Parser.next p
     | Equal ->
       Parser.err ~start_pos:p.start_pos ~end_pos:p.end_pos p
-        (Diagnostics.message ErrorMessages.record_type_field_missing_colon);
+        (Diagnostics.message Error_messages.record_type_field_missing_colon);
       Parser.next p
     | _ -> Parser.expect ~grammar:Grammar.TypeExpression Colon p);
     let typ = parse_poly_type_expr p in
@@ -5293,7 +5294,7 @@ and parse_field_declaration ?current_type_name_path ?inline_types_context p =
       parse_poly_type_expr ?current_type_name_path ?inline_types_context p
     | Equal ->
       Parser.err ~start_pos:p.start_pos ~end_pos:p.end_pos p
-        (Diagnostics.message ErrorMessages.record_type_field_missing_colon);
+        (Diagnostics.message Error_messages.record_type_field_missing_colon);
       Parser.next p;
       let current_type_name_path =
         extend_current_type_name_path current_type_name_path name.txt
@@ -5342,7 +5343,7 @@ and parse_field_declaration_region ?current_type_name_path ?inline_types_context
         parse_poly_type_expr ?current_type_name_path ?inline_types_context p
       | Equal ->
         Parser.err ~start_pos:p.start_pos ~end_pos:p.end_pos p
-          (Diagnostics.message ErrorMessages.record_type_field_missing_colon);
+          (Diagnostics.message Error_messages.record_type_field_missing_colon);
         Parser.next p;
         parse_poly_type_expr ?current_type_name_path ?inline_types_context p
       | _ ->
@@ -5356,7 +5357,7 @@ and parse_field_declaration_region ?current_type_name_path ?inline_types_context
     if Token.is_keyword p.token then (
       match
         recover_keyword_field_name_if_probably_field p
-          ~mk_message:ErrorMessages.keyword_field_in_type
+          ~mk_message:Error_messages.keyword_field_in_type
       with
       | Some (recovered_field_name, name_loc) ->
         let optional = parse_optional_label p in
@@ -5369,7 +5370,7 @@ and parse_field_declaration_region ?current_type_name_path ?inline_types_context
         Some (Ast_helper.Type.field ~attrs ~loc ~mut ~optional name typ)
       | None ->
         emit_keyword_field_error p
-          ~mk_message:ErrorMessages.keyword_field_in_type;
+          ~mk_message:Error_messages.keyword_field_in_type;
         None)
     else (
       if attrs <> [] then
@@ -5767,7 +5768,7 @@ and parse_type_param p =
         Parser.err ~start_pos:p.start_pos p
           (Diagnostics.unexpected p.Parser.token p.breadcrumbs);
         ("", mk_loc p.start_pos p.prev_end_pos))
-      else parse_ident ~msg:ErrorMessages.type_param ~start_pos:p.start_pos p
+      else parse_ident ~msg:Error_messages.type_param ~start_pos:p.start_pos p
     in
     Some (Ast_helper.Typ.var ~loc ident, variance)
   | Underscore ->
@@ -5779,7 +5780,7 @@ and parse_type_param p =
       (Diagnostics.message
          ("Type params start with a singlequote: '" ^ Token.to_string token));
     let ident, loc =
-      parse_ident ~msg:ErrorMessages.type_param ~start_pos:p.start_pos p
+      parse_ident ~msg:Error_messages.type_param ~start_pos:p.start_pos p
     in
     Some (Ast_helper.Typ.var ~loc ident, variance)
   | _token -> None
@@ -5818,9 +5819,9 @@ and parse_type_params ~parent p =
                         Doc.line;
                         Doc.concat
                           [
-                            ResPrinter.print_longident parent.Location.txt;
-                            ResPrinter.print_type_params params
-                              CommentTable.empty;
+                            Res_printer.print_longident parent.Location.txt;
+                            Res_printer.print_type_params params
+                              Comment_table.empty;
                           ];
                       ]);
                ])
@@ -6554,7 +6555,7 @@ and parse_type_definition_or_extension ~attrs p =
       | Lident _ -> ()
       | longident ->
         Parser.err ~start_pos:name.loc.loc_start ~end_pos:name.loc.loc_end p
-          (longident |> ErrorMessages.type_declaration_name_longident
+          (longident |> Error_messages.type_declaration_name_longident
          |> Diagnostics.message)
     in
     let current_type_name_path = Longident.flatten name.txt in
@@ -6582,13 +6583,13 @@ and parse_type_definition_or_extension ~attrs p =
 
 (* external value-name : typexp = external-declaration *)
 and parse_external_def ~attrs ~start_pos p =
-  let in_external = !InExternal.status in
-  InExternal.status := true;
+  let in_external = !In_external.status in
+  In_external.status := true;
   Parser.leave_breadcrumb p Grammar.External;
   Fun.protect
     ~finally:(fun () ->
       Parser.eat_breadcrumb p;
-      InExternal.status := in_external)
+      In_external.status := in_external)
     (fun () ->
       Parser.expect Token.External p;
       let name, loc = parse_lident p in
@@ -6688,7 +6689,7 @@ and parse_newline_or_semicolon_structure p =
     else
       Parser.err ~start_pos:p.prev_end_pos ~end_pos:p.end_pos p
         (Diagnostics.message
-           "consecutive statements on a line must be separated by ';' or a \
+           "Consecutive statements on a line must be separated by ';' or a \
             newline")
   | _ -> ()
 
@@ -6790,7 +6791,7 @@ and parse_structure_item_region pending_structure_items p =
       match attrs with
       | (({Asttypes.loc = attr_loc}, _) as attr) :: _ ->
         Parser.err ~start_pos:attr_loc.loc_start ~end_pos:attr_loc.loc_end p
-          (Diagnostics.message (ErrorMessages.attribute_without_node attr));
+          (Diagnostics.message (Error_messages.attribute_without_node attr));
         let expr = parse_expr p in
         Some
           (Ast_helper.Str.eval
@@ -7358,7 +7359,7 @@ and parse_signature_item_region pending_signature_items p =
     | Let {unwrap} ->
       if unwrap then (
         Parser.err ~start_pos ~end_pos:p.Parser.end_pos p
-          (Diagnostics.message ErrorMessages.experimental_let_unwrap_sig);
+          (Diagnostics.message Error_messages.experimental_let_unwrap_sig);
         Parser.next p);
       Parser.begin_region p;
       let value_desc = parse_sign_let_desc ~attrs p in
@@ -7463,7 +7464,7 @@ and parse_signature_item_region pending_signature_items p =
       match attrs with
       | (({Asttypes.loc = attr_loc}, _) as attr) :: _ ->
         Parser.err ~start_pos:attr_loc.loc_start ~end_pos:attr_loc.loc_end p
-          (Diagnostics.message (ErrorMessages.attribute_without_node attr));
+          (Diagnostics.message (Error_messages.attribute_without_node attr));
         Some Recover.default_signature_item
       | _ -> None))
 [@@progress Parser.next, Parser.expect]

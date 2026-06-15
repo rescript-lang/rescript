@@ -1,0 +1,18 @@
+===== Foo.resi =====
+
+  [1;31mSyntax error![0m
+  [36m/.../fixtures/Iface_not_compiled/Foo.resi[0m:[2m1:12[0m
+
+  [1;31m1[0m [2m│[0m let v: int [1;31m=[0m
+  2 [2m│[0m 
+
+  I'm not sure what to parse here when looking at "=".
+
+
+===== Foo.res =====
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/Iface_not_compiled/Foo.res[0m
+
+  Could not find the .cmi file for interface
+  /.../fixtures/Iface_not_compiled/Foo.resi.

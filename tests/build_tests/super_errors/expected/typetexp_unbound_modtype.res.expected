@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/typetexp_unbound_modtype.res[0m:[2m1:17-33[0m
+
+  [1;31m1[0m [2m│[0m module type T = [1;31mMissingModuleType[0m
+  2 [2m│[0m 
+
+  Unbound module type MissingModuleType

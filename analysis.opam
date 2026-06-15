@@ -7,10 +7,12 @@ license: "LGPL-3.0-or-later"
 homepage: "https://github.com/rescript-lang/rescript-compiler"
 bug-reports: "https://github.com/rescript-lang/rescript-compiler/issues"
 depends: [
+  "dune" {>= "3.17"}
   "ocaml" {>= "5.0.0"}
   "cppo" {= "1.8.0"}
-  "dune" {>= "3.17"}
   "odoc" {with-doc}
+  "lsp" {>= "1.23.0"}
+  "yojson" {= "3.0.0"}
 ]
 build: [
   ["dune" "subst"] {dev}

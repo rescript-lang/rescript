@@ -204,6 +204,15 @@ $(PLAYGROUND_CMI_BUILD_STAMP): $(RUNTIME_BUILD_STAMP)
 playground-test: playground
 	yarn workspace playground test
 
+dev-playground-stage: playground
+	yarn workspace dev-playground stage-local-bundle
+
+dev-playground: dev-playground-stage
+	yarn workspace dev-playground dev
+
+dev-playground-build: dev-playground-stage
+	yarn workspace dev-playground build
+
 # Builds the playground, runs some e2e tests and releases the playground to the
 # Cloudflare R2 (requires Rclone `rescript:` remote)
 playground-release: playground-test
@@ -217,6 +226,125 @@ format: | $(YARN_INSTALL_STAMP)
 checkformat: | $(YARN_INSTALL_STAMP)
 	./scripts/format_check.sh
 
+# Coverage (bisect_ppx)
+#
+# Requires the `bisect_ppx` opam package (>= 2.8.0) in your switch:
+#   opam install bisect_ppx
+# or pull it in via the rescript dev-setup deps:
+#   opam install . --deps-only --with-dev-setup
+#
+# Quick start:
+#   make coverage         # run full test suite, generate report
+#   make clean-coverage   # remove coverage artifacts
+#
+# Suites covered: the `scripts/test.js -all` suites (mocha/build/ounit/
+# docstrings), the syntax tests (compiler/syntax, via the instrumented
+# res_parser), the gentype tests (compiler/gentype, via the instrumented
+# bsc) and the analysis + tools tests, including reanalyze (analysis/, via
+# the instrumented rescript-editor-analysis and rescript-tools).
+#
+# Outputs (under _coverage/):
+#   html/index.html  — human-browsable line-level report
+#   coverage.json    — Coveralls-format JSON, queryable with jq:
+#                      { source_files: [{ name, coverage: [null|N, ...] }] }
+#                      null = not instrumented, 0 = uncovered, N > 0 = hit count
+#                      e.g. uncovered line numbers in one file:
+#                      jq -r --arg f compiler/ml/typecore.ml \
+#                        '.source_files[] | select(.name==$f) | .coverage
+#                         | to_entries[] | select(.value==0) | (.key+1)' \
+#                        _coverage/coverage.json
+
+COVERAGE_DIR := _coverage
+COVERAGE_FILES_DIR := $(COVERAGE_DIR)/files
+COVERAGE_HTML_DIR := $(COVERAGE_DIR)/html
+COVERAGE_JSON := $(COVERAGE_DIR)/coverage.json
+COVERAGE_BISECT_PREFIX := $(abspath $(COVERAGE_FILES_DIR))/bisect
+# Env that makes instrumented binaries append their counters to the shared
+# coverage prefix. bisect_ppx adds a unique per-process suffix, so many
+# concurrent `bsc` / analysis processes accumulate without colliding.
+COVERAGE_TEST_ENV := BISECT_FILE=$(COVERAGE_BISECT_PREFIX) BISECT_SILENT=YES
+
+# Re-builds the toolchain with bisect_ppx instrumentation and swaps the
+# instrumented binaries into BIN_DIR so any test runner that shells out to
+# `bsc` produces .coverage files.
+.PHONY: coverage-build
+coverage-build: | $(YARN_INSTALL_STAMP)
+	dune build --instrument-with bisect_ppx
+	@$(foreach bin,$(COMPILER_DUNE_BINS),touch $(bin);)
+	@$(foreach bin,$(COMPILER_BIN_NAMES), \
+		cp $(DUNE_BIN_DIR)/$(bin)$(PLATFORM_EXE_EXT) $(BIN_DIR)/$(bin).exe && \
+		chmod 755 $(BIN_DIR)/$(bin).exe;)
+
+.PHONY: coverage-prepare
+coverage-prepare: clean-coverage coverage-build
+	mkdir -p $(COVERAGE_FILES_DIR)
+
+# Build the runtime with the instrumented bsc so subsequent test runs have
+# a fresh stdlib. Coverage from the runtime build is discarded so reports
+# only reflect what the tests exercised.
+.PHONY: coverage-lib
+coverage-lib: coverage-prepare
+	BISECT_FILE=$(COVERAGE_BISECT_PREFIX)-discard BISECT_SILENT=YES \
+		yarn workspace @rescript/runtime build
+	rm -f $(COVERAGE_BISECT_PREFIX)-discard*.coverage
+
+# Run the test suites that exercise the instrumented toolchain. Each suite
+# shells out to a binary that `coverage-build` instrumented:
+#   - `node scripts/test.js -all` drives bsc (mocha/build/ounit/docstrings).
+#   - the syntax tests drive the instrumented `res_parser` from
+#     _build/install/default/bin, adding coverage for compiler/syntax.
+#     ROUNDTRIP_TEST=1 matches Linux CI and also exercises the printer paths.
+#   - gentype tests compile via `rescript build`, i.e. the instrumented bsc in
+#     BIN_DIR, so they add coverage for compiler/gentype.
+#   - analysis tests run the instrumented `rescript-editor-analysis` and tools
+#     tests the instrumented `rescript-tools` (which links analysis + reanalyze),
+#     both from _build/install/default/bin — adding coverage for analysis/.
+# The reanalyze tests (run by the analysis suite's full `test`) invoke the
+# binary via `dune exec`, which would otherwise rebuild it *uninstrumented*.
+# Setting DUNE_INSTRUMENT_WITH=bisect_ppx (the env-var form of
+# `--instrument-with`) makes that `dune exec` match the config coverage-build
+# already used, so it runs the instrumented binary — no rebuild, no
+# de-instrumentation of the shared _build artifacts. (The reanalyze library
+# also carries its own bisect_ppx instrumentation stanza so its source is
+# counted, not just the analysis/tools code it links.)
+.PHONY: coverage-run
+coverage-run: coverage-lib
+	$(COVERAGE_TEST_ENV) node scripts/test.js -all
+	$(COVERAGE_TEST_ENV) ROUNDTRIP_TEST=1 ./scripts/test_syntax.sh
+	$(COVERAGE_TEST_ENV) make -C tests/gentype_tests/typescript-react-example clean test
+	$(COVERAGE_TEST_ENV) make -C tests/gentype_tests/stdlib-no-shims clean test
+	$(COVERAGE_TEST_ENV) DUNE_INSTRUMENT_WITH=bisect_ppx make -C tests/analysis_tests clean test
+	$(COVERAGE_TEST_ENV) make -C tests/tools_tests clean test
+
+.PHONY: coverage-report
+coverage-report:
+	bisect-ppx-report html \
+		--coverage-path $(COVERAGE_FILES_DIR) \
+		--ignore-missing-files \
+		-o $(COVERAGE_HTML_DIR)
+	bisect-ppx-report coveralls \
+		--coverage-path $(COVERAGE_FILES_DIR) \
+		--ignore-missing-files \
+		$(COVERAGE_JSON)
+	bisect-ppx-report summary \
+		--coverage-path $(COVERAGE_FILES_DIR)
+	@echo ""
+	@echo "HTML report: $(COVERAGE_HTML_DIR)/index.html"
+	@echo "JSON data:   $(COVERAGE_JSON)"
+
+# Drop instrumented binaries and the compiler build stamp so the next
+# `make` / `make test` rebuilds uninstrumented toolchain artifacts
+# instead of silently reusing the bisect_ppx-instrumented ones left in
+# BIN_DIR by `coverage-build`.
+.PHONY: coverage
+coverage: coverage-run coverage-report
+	rm -f $(COMPILER_EXES) $(COMPILER_BUILD_STAMP)
+
+.PHONY: clean-coverage
+clean-coverage:
+	rm -rf $(COVERAGE_DIR)
+	find . -name 'bisect*.coverage' -not -path './_build/*' -delete
+
 # Clean
 
 clean-gentype:
@@ -225,7 +353,7 @@ clean-gentype:
 
 clean-tests: clean-gentype
 
-clean: clean-lib clean-compiler clean-rewatch
+clean: clean-lib clean-compiler clean-rewatch clean-coverage
 
 dev-container:
 	docker build -t rescript-dev-container docker

@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/invalid_type_variable_name.res[0m:[2m1:9-16[0m
+
+  [1;31m1[0m [2m│[0m type t<'[1;31m_invalid[0m> = list<'_invalid>
+  2 [2m│[0m 
+
+  The type variable name '_invalid is not allowed; type variable names cannot start with an underscore.

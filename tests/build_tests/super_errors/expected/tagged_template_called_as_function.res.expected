@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/tagged_template_called_as_function.res[0m:[2m7:14-16[0m
+
+  5 [2m│[0m external sql: taggedTemplate<string, string> = "sql"
+  6 [2m│[0m 
+  [1;31m7[0m [2m│[0m let result = [1;31msql[0m(["SELECT * FROM users WHERE id = ", ""], ["5"])
+  8 [2m│[0m 
+
+  This is a tagged-template tag of type [1;33mtaggedTemplate<string, string>[0m
+  It can't be called like a function. Use it with backtick syntax instead, e.g. [1;33mtag`SELECT ${id}`[0m.

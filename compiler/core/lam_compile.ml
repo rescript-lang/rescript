@@ -883,12 +883,12 @@ let compile output_prefix =
       let check =
         match (i, j) with
         | Some tag_type, _ ->
-          Ast_untagged_variants.DynamicChecks.add_runtime_type_check ~tag_type
+          Ast_untagged_variants.Dynamic_checks.add_runtime_type_check ~tag_type
             ~has_null_case ~block_cases (Expr x) (Expr y)
         | _, Some tag_type ->
-          Ast_untagged_variants.DynamicChecks.add_runtime_type_check ~tag_type
+          Ast_untagged_variants.Dynamic_checks.add_runtime_type_check ~tag_type
             ~has_null_case ~block_cases (Expr y) (Expr x)
-        | _ -> Ast_untagged_variants.DynamicChecks.( == ) (Expr x) (Expr y)
+        | _ -> Ast_untagged_variants.Dynamic_checks.( == ) (Expr x) (Expr y)
       in
       E.emit_check check
     in

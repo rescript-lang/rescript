@@ -1,5 +1,7 @@
 (library
  (name analysis)
+ (instrumentation
+  (backend bisect_ppx))
  (flags
   (-w "+6+26+27+32+33+39"))
- (libraries unix str ext ml jsonlib syntax reanalyze))
+ (libraries unix str ext ml yojson lsp syntax reanalyze))
