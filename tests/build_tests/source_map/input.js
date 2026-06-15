@@ -378,10 +378,7 @@ async function assertNodeStackTraceUsesSourceMap() {
     const Demo = require("./lib/bs/src/Demo.cjs");
     Demo.unicodeCrash();
   `;
-  const { status, stderr } = await node("--enable-source-maps", [
-    "-e",
-    script,
-  ]);
+  const { status, stderr } = await node("--enable-source-maps", ["-e", script]);
 
   assert.notEqual(status, 0, "Node source map stack test should throw");
   assert.match(
