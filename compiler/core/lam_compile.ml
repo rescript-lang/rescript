@@ -1880,12 +1880,12 @@ let compile output_prefix =
                   name
               in
               (blocks @ val_output.block, (Js_op.Lit name, val_val) :: props))
-            (init_output.block, []) overrides
+            (init_output.block, []) (List.rev overrides)
         in
         Some
           (Js_output.output_of_block_and_expression lambda_cxt.continuation
              blocks
-             (E.obj ~dup:init_val (List.rev props))))
+             (E.obj ~dup:init_val props)))
     | _ -> None
   and compile_lambda (lambda_cxt : Lam_compile_context.t) (cur_lam : Lam.t) :
       Js_output.t =
