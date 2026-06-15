@@ -6,7 +6,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { setup } from "#dev/process";
 
-const { bsc, execBuildOrThrow, execClean } = setup(import.meta.dirname);
+const { bsc, execBuildOrThrow, execClean, node } = setup(import.meta.dirname);
 
 const base64VlqChars =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -108,22 +108,44 @@ function mapFromInlineComment(js, filename) {
   return JSON.parse(Buffer.from(match[1], "base64").toString("utf8"));
 }
 
-const sourcePath = path.join(import.meta.dirname, "src", "Demo.res");
-const source = await fs.readFile(sourcePath, "utf8");
+const moduleNames = ["Demo", "Helper"];
+const outputFilenames = moduleNames.flatMap(moduleName => [
+  `${moduleName}.cjs`,
+  `${moduleName}.mjs`,
+]);
+
+const demoSourcePath = path.join(import.meta.dirname, "src", "Demo.res");
+const demoSource = await fs.readFile(demoSourcePath, "utf8");
+const helperSourcePath = path.join(import.meta.dirname, "src", "Helper.res");
+const helperSource = await fs.readFile(helperSourcePath, "utf8");
 const configPath = path.join(import.meta.dirname, "rescript.json");
 const originalConfig = await fs.readFile(configPath, "utf8");
-const originalDebuggerPositions = findTokenPositions(source, "%debugger");
+const originalDebuggerPositions = findTokenPositions(demoSource, "%debugger");
 assert.equal(originalDebuggerPositions.length, 2);
 const originalRaiseErrorPositions = findTokenPositions(
-  source,
+  demoSource,
   "Js.Exn.raiseError",
 );
 assert.equal(originalRaiseErrorPositions.length, 2);
-const originalPipeCallPositions = findTokenPositions(source, "input->fn");
+const originalPipeCallPositions = findTokenPositions(demoSource, "input->fn");
 assert.equal(originalPipeCallPositions.length, 1);
 const originalPatternBranchPositions = [
-  findSingleTokenPosition(source, "Int.toString(value)"),
-  findSingleTokenPosition(source, "Int.toString(left + right)"),
+  findSingleTokenPosition(demoSource, "Int.toString(value)"),
+  findSingleTokenPosition(demoSource, "Int.toString(left + right)"),
+];
+const originalHelperRaiseErrorPositions = findTokenPositions(
+  helperSource,
+  "Js.Exn.raiseError",
+);
+assert.equal(originalHelperRaiseErrorPositions.length, 1);
+const originalHelperPipeCallPositions = findTokenPositions(
+  helperSource,
+  "value->fn",
+);
+assert.equal(originalHelperPipeCallPositions.length, 1);
+const originalHelperPatternBranchPositions = [
+  findSingleTokenPosition(helperSource, 'payload.label ++ ":empty"'),
+  findSingleTokenPosition(helperSource, "Int.toString(count)"),
 ];
 
 function configWithSourceMap(sourceMap) {
@@ -143,7 +165,7 @@ function configWithMode(mode) {
 }
 
 async function removeGeneratedMapFiles() {
-  for (const filename of ["Demo.cjs", "Demo.mjs"]) {
+  for (const filename of outputFilenames) {
     await fs.rm(path.join(import.meta.dirname, "src", `${filename}.map`), {
       force: true,
     });
@@ -154,8 +176,38 @@ async function removeGeneratedMapFiles() {
   }
 }
 
+function moduleNameFromFilename(filename) {
+  return filename.slice(0, filename.indexOf("."));
+}
+
+function sourceMapFixture(filename) {
+  switch (moduleNameFromFilename(filename)) {
+    case "Demo":
+      return {
+        sourceName: "Demo.res",
+        sourceContentMarker: "let add = (a, b)",
+        raiseErrorPositions: originalRaiseErrorPositions,
+        pipeCallPositions: originalPipeCallPositions,
+        patternBranchPositions: originalPatternBranchPositions,
+        debuggerPositions: originalDebuggerPositions,
+      };
+    case "Helper":
+      return {
+        sourceName: "Helper.res",
+        sourceContentMarker: "let multiply = (left, right)",
+        raiseErrorPositions: originalHelperRaiseErrorPositions,
+        pipeCallPositions: originalHelperPipeCallPositions,
+        patternBranchPositions: originalHelperPatternBranchPositions,
+        debuggerPositions: [],
+      };
+    default:
+      throw new Error(`Unknown source map fixture for ${filename}`);
+  }
+}
+
 function assertSourceMap(filename, js, map, options = {}) {
   const { expectSourcesContent = true, sourceRoot = undefined } = options;
+  const fixture = sourceMapFixture(filename);
   assert.equal(map.version, 3);
   assert.equal(map.file, filename);
   assert.ok(map.mappings.length > 0, `${filename}.map should include mappings`);
@@ -169,12 +221,14 @@ function assertSourceMap(filename, js, map, options = {}) {
     assert.equal(map.sourceRoot, sourceRoot);
   }
   assert.ok(
-    map.sources.some(source => source.endsWith("Demo.res")),
-    `${filename}.map should include Demo.res, got ${map.sources.join(", ")}`,
+    map.sources.some(source => source.endsWith(fixture.sourceName)),
+    `${filename}.map should include ${fixture.sourceName}, got ${map.sources.join(", ")}`,
   );
   if (expectSourcesContent) {
     assert.ok(
-      map.sourcesContent.some(content => content.includes("let add = (a, b)")),
+      map.sourcesContent.some(content =>
+        content.includes(fixture.sourceContentMarker),
+      ),
       `${filename}.map should include source contents`,
     );
   } else {
@@ -186,12 +240,19 @@ function assertSourceMap(filename, js, map, options = {}) {
   }
 
   const generatedDebuggerPositions = findTokenPositions(js, "debugger");
-  assert.equal(generatedDebuggerPositions.length, 2);
+  assert.equal(
+    generatedDebuggerPositions.length,
+    fixture.debuggerPositions.length,
+  );
 
   const decodedMappings = decodeMappings(map.mappings);
   const generatedRaiseErrorPositions = findTokenPositions(
     js,
     "Stdlib_Exn.raiseError",
+  );
+  assert.equal(
+    generatedRaiseErrorPositions.length,
+    fixture.raiseErrorPositions.length,
   );
   assert.deepEqual(
     generatedRaiseErrorPositions.map(position => {
@@ -205,30 +266,30 @@ function assertSourceMap(filename, js, map, options = {}) {
         `${filename}.map should include an exact mapping for raiseError at ${position.line}:${position.column}`,
       );
       assert.ok(
-        map.sources[mapping.sourceIndex].endsWith("Demo.res"),
-        `${filename}.map raiseError mapping should point to Demo.res`,
+        map.sources[mapping.sourceIndex].endsWith(fixture.sourceName),
+        `${filename}.map raiseError mapping should point to ${fixture.sourceName}`,
       );
       return {
         line: mapping.originalLine,
         column: mapping.originalColumn,
       };
     }),
-    originalRaiseErrorPositions,
+    fixture.raiseErrorPositions,
   );
 
   for (const [label, positions] of [
-    ["pipe call", originalPipeCallPositions],
-    ["pattern branch", originalPatternBranchPositions],
+    ["pipe call", fixture.pipeCallPositions],
+    ["pattern branch", fixture.patternBranchPositions],
   ]) {
     for (const position of positions) {
       const mapping = decodedMappings.find(
         decoded =>
           decoded.originalLine === position.line &&
-          map.sources[decoded.sourceIndex].endsWith("Demo.res"),
+          map.sources[decoded.sourceIndex].endsWith(fixture.sourceName),
       );
       assert.ok(
         mapping,
-        `${filename}.map should include a ${label} mapping for Demo.res:${position.line}`,
+        `${filename}.map should include a ${label} mapping for ${fixture.sourceName}:${position.line}`,
       );
     }
   }
@@ -251,13 +312,13 @@ function assertSourceMap(filename, js, map, options = {}) {
       line: mapping.originalLine,
       column: mapping.originalColumn,
     })),
-    originalDebuggerPositions,
+    fixture.debuggerPositions,
   );
   assert.ok(
     debuggerMappings.every(mapping =>
-      map.sources[mapping.sourceIndex].endsWith("Demo.res"),
+      map.sources[mapping.sourceIndex].endsWith(fixture.sourceName),
     ),
-    `${filename}.map debugger mappings should point to Demo.res`,
+    `${filename}.map debugger mappings should point to ${fixture.sourceName}`,
   );
 }
 
@@ -265,16 +326,18 @@ async function assertLinkedOutput() {
   await fs.writeFile(configPath, configWithMode("linked"));
   await execBuildOrThrow();
 
-  for (const filename of ["Demo.cjs", "Demo.mjs"]) {
+  for (const filename of outputFilenames) {
     const jsPath = path.join(import.meta.dirname, "lib", "bs", "src", filename);
     const mapPath = `${jsPath}.map`;
 
     const js = await fs.readFile(jsPath, "utf8");
-    assert.match(
-      js,
-      /\/\* @__PURE__ \*\/Primitive_exceptions\.create/,
-      `${filename} should preserve real JS comments while source maps are enabled`,
-    );
+    if (filename.startsWith("Demo.")) {
+      assert.match(
+        js,
+        /\/\* @__PURE__ \*\/Primitive_exceptions\.create/,
+        `${filename} should preserve real JS comments while source maps are enabled`,
+      );
+    }
     assert.match(
       js,
       new RegExp(`//# sourceMappingURL=${filename.replace(".", "\\.")}\\.map`),
@@ -286,6 +349,8 @@ async function assertLinkedOutput() {
       JSON.parse(await fs.readFile(mapPath, "utf8")),
     );
   }
+
+  await assertNodeStackTraceUsesSourceMap();
 }
 
 async function assertInlineStdoutOutput() {
@@ -295,7 +360,7 @@ async function assertInlineStdoutOutput() {
       "inline",
       "-bs-source-map-sources-content",
       "true",
-      sourcePath,
+      demoSourcePath,
     ],
     { throwOnFail: true },
   );
@@ -308,6 +373,24 @@ async function assertInlineStdoutOutput() {
   assertSourceMap("Demo.js", stdout, mapFromInlineComment(stdout, "stdout"));
 }
 
+async function assertNodeStackTraceUsesSourceMap() {
+  const script = `
+    const Demo = require("./lib/bs/src/Demo.cjs");
+    Demo.unicodeCrash();
+  `;
+  const { status, stderr } = await node("--enable-source-maps", [
+    "-e",
+    script,
+  ]);
+
+  assert.notEqual(status, 0, "Node source map stack test should throw");
+  assert.match(
+    stderr,
+    /Demo\.res:\d+:\d+/,
+    `Node stack trace should point to Demo.res, got:\n${stderr}`,
+  );
+}
+
 async function assertHiddenOutput() {
   const sourceRoot = "rescript://source-map-test/";
   await removeGeneratedMapFiles();
@@ -317,7 +400,7 @@ async function assertHiddenOutput() {
   );
   await execBuildOrThrow();
 
-  for (const filename of ["Demo.cjs", "Demo.mjs"]) {
+  for (const filename of outputFilenames) {
     const jsPath = path.join(import.meta.dirname, "lib", "bs", "src", filename);
     const mapPath = `${jsPath}.map`;
 
@@ -341,7 +424,7 @@ async function assertDisabledOutput() {
   await fs.writeFile(configPath, configWithSourceMap(false));
   await execBuildOrThrow();
 
-  for (const filename of ["Demo.cjs", "Demo.mjs"]) {
+  for (const filename of outputFilenames) {
     const jsPath = path.join(import.meta.dirname, "lib", "bs", "src", filename);
     const mapPath = `${jsPath}.map`;
 
@@ -366,7 +449,7 @@ async function assertInlineOutput() {
   );
   await execBuildOrThrow();
 
-  for (const filename of ["Demo.cjs", "Demo.mjs"]) {
+  for (const filename of outputFilenames) {
     const jsPath = path.join(import.meta.dirname, "lib", "bs", "src", filename);
     const mapPath = `${jsPath}.map`;
 
