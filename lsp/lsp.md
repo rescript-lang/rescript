@@ -39,6 +39,7 @@ The main objective is to first maintain resource parity with the current server.
     - This lets the server publish syntax errors on `TextDocumentDidChange` and provide instant feedback.
   - [x] Compiler-log diagnostics from `.compiler.log` - server feature
     - [ ] Add more tests cases, see `compiler_log.ml`. See `tests/build_tests` for more examples.
+    - [ ] Remove support to parse OCaml message
   - [x] Monorepo diagnostics via `.sourcedirs.json` - server feature
     - Require ReScript v12.1.0. In this version `.sourcedirs.json` is always generated with `build_root` field for each subpackage.
   - [ ] Add warning number on message diagnostic.
@@ -238,6 +239,51 @@ local capabilities = vim.lsp.protocol.make_client_capabilities()
 -- Enable workspace.didChangeWatchedFiles capabilities
 capabilities.workspace.didChangeWatchedFiles.dynamicRegistration = true
 
+---@param client vim.lsp.Client
+---@param bufnr integer
+local dump_server_state = function(client, bufnr)
+  client:exec_cmd({
+    title = 'ReScript Dump server state',
+    command = 'rescript/dumpServerState',
+  }, { bufnr = bufnr }, function(err, result)
+    if err then
+      vim.notify(tostring(err), vim.log.levels.ERROR)
+      return
+    end
+
+    if not result or type(result.content) ~= 'string' then
+      vim.notify('Invalid server response', vim.log.levels.ERROR)
+      return
+    end
+
+    local content = result.content
+
+    -- Create an listed scratch buffer.
+    local dump_buf = vim.api.nvim_create_buf(true, true)
+
+    vim.api.nvim_buf_set_name(
+      dump_buf,
+      'rescriptls://rescript-dump-server-state'
+    )
+
+    -- Do not specify the file type to avoid freezing with syntax highlighting using Treesitter. The state is a large JSON file.
+    vim.bo[dump_buf].buftype = 'nofile'
+    vim.bo[dump_buf].bufhidden = 'wipe'
+    vim.bo[dump_buf].swapfile = false
+
+    -- Open it in the current window.
+    vim.api.nvim_set_current_buf(dump_buf)
+
+    -- Fill buffer with content.
+    local lines = vim.split(content, '\n', { plain = true })
+    vim.api.nvim_buf_set_lines(dump_buf, 0, -1, false, lines)
+
+    -- Optional: make it read-only after writing.
+    vim.bo[dump_buf].modifiable = false
+    vim.bo[dump_buf].readonly = true
+  end)
+end
+
 if new_rescript_ls_installed then
   -- Dot notation defines a new configuration instead of extending one with
   -- vim.lsp.config(name, cfg).
@@ -272,7 +318,19 @@ if new_rescript_ls_installed then
         on_dir(git_dir or lock_file_dir)
       end
     end,
-    on_attach = on_attach,
+    ---@param client vim.lsp.Client
+    ---@param bufnr integer
+    on_attach = function(client, bufnr)
+      vim.api.nvim_buf_create_user_command(
+        bufnr,
+        'LspDumpServerState',
+        function()
+          dump_server_state(client, bufnr)
+        end,
+        { desc = 'rescriptls: Dump server state' }
+      )
+      on_attach(client, bufnr)
+    end,
     capabilities = capabilities,
     settings = {
       rescript = {
@@ -292,7 +350,42 @@ if new_rescript_ls_installed then
     },
   }
 else
-  vim.lsp.config('rescriptls', {on_attach = on_attach, capabilities = capabilities})
+  vim.lsp.config('rescriptls', {
+    init_options = {
+      extensionConfiguration = {
+        askToStartBuild = false,
+        codeLens = false,
+        signatureHelp = {
+          enable = true,
+        },
+        inlayHints = {
+          enable = true,
+        },
+        incrementalTypechecking = {
+          enabled = true,
+        },
+      },
+    },
+    on_attach = function(client, bufnr)
+      local ok, rescript_tools = pcall(require, 'rescript-tools')
+      if ok then
+        local commands = {
+          ResOpenCompiled = rescript_tools.open_compiled,
+          ResCreateInterface = rescript_tools.create_interface,
+          ResSwitchImplInt = rescript_tools.switch_impl_intf,
+        }
+        for name, fn in pairs(commands) do
+          vim.api.nvim_buf_create_user_command(
+            bufnr,
+            name,
+            fn,
+            { desc = 'ReScript LSP: ' .. name }
+          )
+        end
+      end
+      on_attach(client, bufnr)
+    end,
+  })
 end
 ```
 
