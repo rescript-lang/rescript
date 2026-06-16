@@ -21,11 +21,13 @@ let get_build_roots_from_json json =
   in
   build_roots
 
-let get_build_roots_from_file path =
-  try
-    let content = Eio.Path.load path in
-    Yojson.Safe.from_string content |> get_build_roots_from_json
-  with _ -> None
+let get_build_roots_from_file ~fs path =
+  match Fs.load ~fs path with
+  | Some content -> (
+    match Yojson.Safe.from_string content with
+    | json -> get_build_roots_from_json json
+    | exception _ -> None)
+  | None -> None
 
 let%expect_test "get_build_roots" =
   let print_build_roots result =

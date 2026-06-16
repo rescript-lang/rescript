@@ -63,17 +63,15 @@ let workspace_root t =
     Helpers.workspace_root_uri_of_initialize_params init.params
 
 let to_yojson (t : t) : Yojson.Safe.t =
-  let minimal = true in
   let document_store_to_yojson (store : Document_store.t) =
     store.documents |> Hashtbl.to_seq
     |> Seq.map (fun (uri, {Document_store.text; version}) ->
            ( Lsp.Uri.to_string uri,
              `Assoc
-               ([
-                  ("version", `Int version);
-                  ("text_length", `Int (String.length text));
-                ]
-               @ if not minimal then [("text", `String text)] else []) ))
+               [
+                 ("version", `Int version);
+                 ("text_length", `Int (String.length text));
+               ] ))
     |> List.of_seq
     |> fun fields -> `Assoc fields
   in
@@ -87,17 +85,24 @@ let to_yojson (t : t) : Yojson.Safe.t =
     |> fun fields -> `Assoc fields
   in
 
+  let compiler_config_to_yojson (compiler_config : Compiler_config.t) =
+    compiler_config |> Compiler_config.Uri_map.to_seq
+    |> Seq.map (fun (uri, config) ->
+           (Lsp.Uri.to_string uri, Compiler_config.Parse.to_yojson config))
+    |> List.of_seq
+    |> fun fields -> `Assoc fields
+  in
+
   let status_to_yojson = function
     | Uninitialized -> `Assoc [("kind", `String "Uninitialized")]
-    | Initialized {params; diagnostics} ->
+    | Initialized {params; diagnostics; compiler_config} ->
       `Assoc
-        ([
-           ("kind", `String "Initialized");
-           ("diagnostics", diagnostics_to_yojson diagnostics);
-         ]
-        @
-        if not minimal then [("params", InitializeParams.yojson_of_t params)]
-        else [])
+        [
+          ("kind", `String "Initialized");
+          ("params", InitializeParams.yojson_of_t params);
+          ("diagnostics", diagnostics_to_yojson diagnostics);
+          ("compiler_config", compiler_config_to_yojson compiler_config);
+        ]
   in
 
   `Assoc
