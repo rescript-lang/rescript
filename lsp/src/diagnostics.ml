@@ -86,6 +86,7 @@ let to_lsp_format (workspace_root : DocumentUri.t)
                match Document_store.get_opt ~uri doc_store with
                | None -> diagnostic_entry.diagnostic.range
                | Some {text} ->
+                 (* TODO: Revisit this *)
                  let lines = String.split_on_char '\n' text in
 
                  let end_line, end_character =

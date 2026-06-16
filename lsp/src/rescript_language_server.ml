@@ -295,9 +295,8 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
       | _ -> None
     in
     (ok (resp |> Option.value ~default:item), state)
-  | SignatureHelp {textDocument = {uri}; position} -> (
-    match state.configuration.signature_help.enable with
-    | true ->
+  | SignatureHelp {textDocument = {uri}; position} ->
+    if state.configuration.signature_help.enable then
       let source = (Document_store.get ~uri state.store).text in
       let full = load_full uri state in
       let resp =
@@ -315,7 +314,7 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
         | None -> SignatureHelp.create ~signatures:[] ()
       in
       (ok resp, state)
-    | false -> (ok (SignatureHelp.create ~signatures:[] ()), state))
+    else (ok (SignatureHelp.create ~signatures:[] ()), state)
   | TextDocumentDefinition {textDocument = {uri}; position} ->
     let full = load_full uri state in
     let resp =
