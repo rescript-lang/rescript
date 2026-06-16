@@ -120,15 +120,14 @@ let rec print_pattern pattern ~pos ~indentation =
            ^ ": "
            ^ print_pattern pat ~pos ~indentation:(indentation + 2))
       |> String.concat "\n")
-    ^
-    (match rest with
-    | None -> ""
-    | Some rest ->
-      "\n"
-      ^ add_indentation (indentation + 1)
-      ^ "rest:\n"
-      ^ add_indentation (indentation + 2)
-      ^ print_record_pattern_rest rest ~pos)
+    ^ (match rest with
+      | None -> ""
+      | Some rest ->
+        "\n"
+        ^ add_indentation (indentation + 1)
+        ^ "rest:\n"
+        ^ add_indentation (indentation + 2)
+        ^ print_record_pattern_rest rest ~pos)
     ^ "\n"
     ^ add_indentation indentation
     ^ ")"

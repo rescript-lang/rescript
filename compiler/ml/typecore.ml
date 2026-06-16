@@ -5098,7 +5098,7 @@ let report_error env loc ppf error =
        with @{<info>taggedTemplate<...>@} instead of using the removed \
        @{<info>@@taggedTemplate@} decorator.@,\
       \  - To use a ReScript function as a tag, lift it with \
-      @{<info>TaggedTemplate.make@}.@]"
+       @{<info>TaggedTemplate.make@}.@]"
       type_expr typ
   | Record_rest err -> Typecore_record_rest.report_error ppf err
 
