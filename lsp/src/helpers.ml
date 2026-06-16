@@ -17,22 +17,22 @@ let workspace_root_uri_of_initialize_params (params : InitializeParams.t) =
       ("Failed to find a root path. Initialize params received: "
       ^ Yojson.Safe.pretty_to_string (InitializeParams.yojson_of_t params))
 
-(** Return the most specific root from [entries] that contains [path].
+(* Return the most specific root from [entries] that contains [path].
 
-    Matching is done on path boundaries, so [/repo/packages/app] matches
-    [/repo/packages/app/src/A.res], but it does not match
-    [/repo/packages/application/src/A.res].
+  Matching is done on path boundaries, so [/repo/packages/app] matches
+  [/repo/packages/app/src/A.res], but it does not match
+  [/repo/packages/application/src/A.res].
 
-    If multiple roots match, the longest root wins. This matters in monorepos
-    where a file can be under both the workspace root and a nested package root.
+  If multiple roots match, the longest root wins. This matters in monorepos
+  where a file can be under both the workspace root and a nested package root.
 
-    Examples:
-    - [best_root_match ~path:"/repo/packages/app/src/A.res"
-         ["/repo"; "/repo/packages/app"]]
-      returns [Some "/repo/packages/app"].
-    - [best_root_match ~path:"/repo/packages/application/src/A.res"
-         ["/repo/packages/app"]]
-      returns [None]. *)
+  Examples:
+  - [best_root_match ~path:"/repo/packages/app/src/A.res"
+        ["/repo"; "/repo/packages/app"]]
+    returns [Some "/repo/packages/app"].
+  - [best_root_match ~path:"/repo/packages/application/src/A.res"
+        ["/repo/packages/app"]]
+    returns [None]. *)
 let best_root_match ~path entries =
   let path_matches_root ~path ~root =
     let is_sep = function
@@ -127,12 +127,12 @@ let get_cmi_file ~(uri : Uri.t) ~(compiler_config : Compiler_config.t)
           let open Filename in
           let ( /+ ) = concat in
           let relative_path = relative_to ~root:package_root_path path in
-          let sub_folders = dirname relative_path in
+          let sources_dir = dirname relative_path in
           let cmi =
             let res_file = basename relative_path ^ suffix_to_append in
             remove_extension res_file ^ ".cmi"
           in
-          package_root_path /+ "lib" /+ "bs" /+ sub_folders /+ cmi
+          package_root_path /+ "lib" /+ "bs" /+ sources_dir /+ cmi
         in
         let result =
           match Fs.exists ~follow:false ~fs cmi_file with
@@ -188,13 +188,13 @@ let get_compiled_file ~(uri : Uri.t) ~(compiler_config : Compiler_config.t)
             *)
             (* app/GuideHome.res *)
             let relative_path = relative_to ~root:package_root_path path in
-            let sub_folders = dirname relative_path in
+            let sources_dir = dirname relative_path in
             let js_file =
               let res_file = basename relative_path in
               remove_extension res_file ^ suffix
             in
             Some
-              (package_root_path /+ "lib" /+ js_folder /+ sub_folders /+ js_file)
+              (package_root_path /+ "lib" /+ js_folder /+ sources_dir /+ js_file)
           | None -> None
       in
       match file_path with

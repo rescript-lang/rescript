@@ -110,10 +110,13 @@ let discover_subpackages_and_populate ~workspace_root
     match Analysis.Packages.new_bs_package ~root_path with
     | Some p -> Some p
     | None ->
+      (* TODO: When the server starts and the project hasn't been built, (example,
+         right after cloning a repo), almost all features will not work.
+         We can use DidChangeWatchedFiles notification to initialize `analysis_state` *)
       let message =
         Printf.sprintf
-          "Failed to initialize context for project. Could not find a \
-           rescript.json file in %s or another error"
+          "Failed to initialize the context for the project at %s. Try \
+           building the project then restart the server"
           root_path
       in
       Server.show_message_notification ~kind:MessageType.Error message server;
@@ -202,10 +205,6 @@ let on_initialize (params : InitializeParams.t) (server : State.t Server.t) =
 
 let on_request (Client_request.E request) (server : State.t Server.t) =
   let load_full uri (state : State.t) =
-    (* Return the package whose root contains [path].
-       When multiple package roots match, the longest root is selected so nested
-       workspace packages resolve to the most specific package. Returns [None] when
-       [path] is outside every known package root. *)
     let package_for_path t ~path =
       let analysis_state = State.analysis_state t in
       let roots =
@@ -346,6 +345,7 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     in
     (ok resp, state)
   | TextDocumentReferences {textDocument = {uri}; position} ->
+    (* TODO: Bug on Neovim and zed *)
     let full = load_full uri state in
     let resp =
       Analysis.Commands.references
@@ -388,9 +388,9 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
       in
 
       let open_compiled_file =
-        match client_support_window_show_document with
-        | true -> Code_actions.Open_compiled_file.create ~uri ~state
-        | false -> []
+        if client_support_window_show_document then
+          Code_actions.Open_compiled_file.create ~uri ~state
+        else []
       in
 
       let create_interface_file =
@@ -475,10 +475,12 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     let format ~source =
       let full_document_text_edit text =
         let lines = String.split_on_char '\n' text in
+        (* TODO: Revisit this *)
         let end_line, end_character =
           match List.rev lines with
           | [] -> (0, 0)
-          | last_line :: rest -> (List.length rest, String.length last_line)
+          | last_line :: rest ->
+            (List.length rest - 1, String.length last_line - 1)
         in
         let range =
           Range.create
@@ -769,6 +771,7 @@ let on_notification notification (server : State.t Server.t) =
       server;
     state
 
+(* TODO: Revisit this *)
 let on_response
     (Server.Response_result (request, result) : Server.response_result)
     (server : State.t Server.t) =
