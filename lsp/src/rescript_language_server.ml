@@ -57,7 +57,13 @@ let initialization (_client_capabilities : ClientCapabilities.t) =
   in
   let executeCommandProvider =
     ExecuteCommandOptions.create
-      ~commands:[Custom_requests.Open_compiled_file.command_name]
+      ~commands:
+        [
+          Execute_commands.create_interface;
+          Execute_commands.open_compiled;
+          Execute_commands.switch_implementation_interface;
+          Execute_commands.dump_server_state;
+        ]
       ()
   in
 
@@ -76,6 +82,9 @@ let initialization (_client_capabilities : ClientCapabilities.t) =
       ()
   in
   InitializeResult.create ~capabilities ~serverInfo ()
+
+let make_error ?(code = Jsonrpc.Response.Error.Code.InternalError) message =
+  Jsonrpc.Response.Error.make ~message ~code ()
 
 let get_updated_diagnostics_from_log (state : State.t) =
   let workspace_root = State.workspace_root state in
@@ -121,6 +130,7 @@ let discover_subpackages_and_populate ~workspace_root
                  (workspace_root |> Uri.to_path) /+ "node_modules"
                in
                let path = node_modules /+ dep_name in
+               (* TODO: Replace with fs.ml module *)
                if Analysis.Files.exists path then Some (Unix.realpath path)
                else
                  let rescript = node_modules /+ "rescript" in
@@ -230,6 +240,7 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
   in
 
   let ok value = Ok (Client_request.yojson_of_result request value) in
+  let error ?code message = Error (make_error ?code message) in
 
   let state = Server.state server in
 
@@ -375,22 +386,25 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
         | Some {showDocument = Some {support}} -> support = true
         | _ -> false
       in
-      match client_support_window_show_document with
-      | true -> (
-        match Custom_requests.Open_compiled_file.create ~uri ~state with
-        | None -> []
-        | Some uri ->
-          let title = "Open compiled js file" in
-          [
-            CodeAction.create
-              ~command:
-                (Command.create
-                   ~arguments:[`String (Uri.to_string uri)]
-                   ~command:Custom_requests.Open_compiled_file.command_name
-                   ~title ())
-              ~title ();
-          ])
-      | false -> []
+
+      let open_compiled_file =
+        match client_support_window_show_document with
+        | true -> Code_actions.Open_compiled_file.create ~uri ~state
+        | false -> []
+      in
+
+      let create_interface_file =
+        Code_actions.Create_interface_file.create ~uri ~state
+      in
+
+      let switch_implementation_interface_file =
+        if client_support_window_show_document then
+          Code_actions.Switch_implementation_interface_file.create ~uri ~state
+        else []
+      in
+
+      open_compiled_file @ create_interface_file
+      @ switch_implementation_interface_file
     in
     let resp =
       code_actions_from_compiler_log @ code_actions_from_analysis
@@ -534,29 +548,93 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
       match format ~source with
       | Ok formatted -> (ok (Some formatted), state)
       | Error message ->
-        let err =
-          Jsonrpc.Response.Error.make
-            ~message:("Failed to run rescript format using. " ^ message)
-            ~code:InternalError ()
-        in
-        (Error err, state))
+        (error ("Failed to run rescript format using. " ^ message), state))
     | false ->
       (* If document has syntax errors respond with null *)
       (ok None, state))
   | Shutdown -> (ok (), state)
   | ExecuteCommand {command; arguments} ->
-    let ( = ) = String.equal in
-    if command = Custom_requests.Open_compiled_file.command_name then
-      match arguments with
-      | Some [`String uri] ->
+    let request_show_document ~uri ~takeFocus =
+      let client_support_window_show_document =
+        match (State.params state).capabilities.window with
+        | Some {showDocument = Some {support}} -> support = true
+        | _ -> false
+      in
+      if client_support_window_show_document then (
         Server.request
           (Server_request.ShowDocumentRequest
-             (ShowDocumentParams.create ~takeFocus:true ~uri:(Uri.of_string uri)
-                ()))
-          server
-      | _ -> ()
-    else ();
-    (ok `Null, state)
+             (ShowDocumentParams.create ~takeFocus ~uri ()))
+          server;
+        (ok `Null, state))
+      else
+        (* TODO: Send window/showMessage? *)
+        let message =
+          match (State.params state).clientInfo with
+          | Some {name; version} ->
+            Printf.sprintf
+              "The client %s (version %s) dont support window/showDocument \
+               request"
+              name
+              (Option.value version ~default:"unknown")
+          | None -> "The client dont support window/showDocument request"
+        in
+        (error message, state)
+    in
+
+    if String.equal command Execute_commands.open_compiled then
+      match arguments with
+      | Some [`String uri] ->
+        request_show_document ~uri:(Uri.of_string uri) ~takeFocus:true
+      | _ ->
+        ( error
+            (Printf.sprintf
+               "Invalid arguments for workspace/executeCommand %s. Expected a \
+                list of string: [uri]"
+               Execute_commands.open_compiled),
+          state )
+    else if String.equal command Execute_commands.create_interface then
+      match arguments with
+      | Some [`String uri; `String cmi_uri] -> (
+        match
+          Custom_requests.Create_interface_file.create ~uri:(Uri.of_string uri)
+            ~cmi_uri:(Uri.of_string cmi_uri) ~state
+        with
+        | Ok uri -> request_show_document ~uri ~takeFocus:true
+        | Error _ ->
+          (* TODO: Send window/showMessage?. If user dont build the project the cmi file dont exists *)
+          ( error
+              (Printf.sprintf "Failed to create interface file for %s and %s"
+                 uri cmi_uri),
+            state ))
+      | _ ->
+        ( error
+            (Printf.sprintf
+               "Invalid arguments for workspace/executeCommand %s. Expected a \
+                list of string: [uri, cmi_uri]"
+               Execute_commands.create_interface),
+          state )
+    else if
+      String.equal command Execute_commands.switch_implementation_interface
+    then
+      match arguments with
+      | Some [`String uri] ->
+        request_show_document ~uri:(Uri.of_string uri) ~takeFocus:true
+      | _ ->
+        ( error
+            (Printf.sprintf
+               "Invalid arguments for workspace/executeCommand %s. Expected a \
+                list of string: [uri]"
+               Execute_commands.switch_implementation_interface),
+          state )
+    else if String.equal command Execute_commands.dump_server_state then
+      let json = State.to_yojson state |> Yojson.Safe.pretty_to_string in
+      let response = `Assoc [("content", `String json)] in
+      (ok response, state)
+    else
+      ( error
+          (Printf.sprintf
+             "Unknown command %s for workspace/executeCommand request" command),
+        state )
   | DebugTextDocumentGet _ | DebugEcho _ | WorkspaceSymbol _
   | CodeActionResolve _ | TextDocumentColor _ | TextDocumentColorPresentation _
   | TextDocumentCodeLensResolve _ | TextDocumentHighlight _
@@ -573,19 +651,21 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
   | TextDocumentRangesFormatting _ | TextDocumentPrepareTypeHierarchy _
   | TypeHierarchySupertypes _ | TypeHierarchySubtypes _
   | TextDocumentDeclaration _ ->
-    let err =
-      Jsonrpc.Response.Error.make ~message:"Request not supported yet!"
-        ~code:InternalError ()
-    in
-    (Error err, state)
-  | UnknownRequest {meth} ->
-    let err =
-      Jsonrpc.Response.Error.make
-        ~code:Jsonrpc.Response.Error.Code.InvalidRequest
-        ~message:(Printf.sprintf "Unknown request %s" meth)
-        ()
-    in
-    (Error err, state)
+    (error "Request not supported yet!", state)
+  | UnknownRequest {meth; params} -> (
+    let open Custom_requests in
+    match
+      List.assoc_opt meth
+        [
+          (Create_interface_file.meth, Create_interface_file.on_request);
+          (Open_compiled_file.meth, Open_compiled_file.on_request);
+        ]
+    with
+    | Some handler -> (handler ~params ~state, state)
+    | None ->
+      ( error ?code:(Some Jsonrpc.Response.Error.Code.InvalidRequest)
+          (Printf.sprintf "Unknown request %s" meth),
+        state ))
 
 let on_notification notification (server : State.t Server.t) =
   let state = Server.state server in

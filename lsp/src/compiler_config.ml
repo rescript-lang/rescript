@@ -207,20 +207,19 @@ type t = Parse.t Uri_map.t
 
 let parse ~root ~fs =
   let ( /+ ) = Filename.concat in
-  let ( / ) = Eio.Path.( / ) in
   let rescript_json = root /+ "rescript.json" in
-  let content =
-    try Ok (Eio.Path.load (fs / rescript_json))
-    with _ -> Error ("Failed to read rescript.json file at " ^ rescript_json)
-  in
-  match content with
-  | Ok content -> (
-    let json = Yojson.Safe.from_string content in
-    match Parse.of_yojson json with
-    | Ok s -> Ok s
-    | Error _ -> Error ("Failed to parse rescript.json at " ^ rescript_json))
-  | Error e -> Error e
+  match Fs.load ~fs rescript_json with
+  | Some content -> (
+    match Yojson.Safe.from_string content with
+    | json -> (
+      match Parse.of_yojson json with
+      | Ok s -> Ok s
+      | Error _ -> Error ("Failed to parse rescript.json at " ^ rescript_json))
+    | exception _ -> Error ("Failed to parse rescript.json at " ^ rescript_json)
+    )
+  | None -> Error ("Failed to read rescript.json file at " ^ rescript_json)
 
+(* TODO: Rename this function *)
 let get_suffix_and_folder (config : Parse.t) =
   let default_suffix = ".js" in
   let default_in_source = false in
@@ -241,9 +240,13 @@ let get_suffix_and_folder (config : Parse.t) =
         folder_name module_,
         default_in_source )
     | Module_format_object {module_; suffix; in_source} :: _ ->
-      ( suffix
-        |> Option.value
-             ~default:(config.suffix |> Option.value ~default:default_suffix),
+      let suffix =
+        match (suffix, config.suffix) with
+        | Some s, _ -> s
+        | None, Some s -> s
+        | _ -> default_suffix
+      in
+      ( suffix,
         folder_name module_,
         in_source |> Option.value ~default:default_in_source ))
   | None ->

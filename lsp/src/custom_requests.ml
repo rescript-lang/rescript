@@ -1,79 +1,130 @@
 open Lsp
 
+let make_error ?(code = Jsonrpc.Response.Error.Code.InternalError) message =
+  Jsonrpc.Response.Error.make ~message ~code ()
+
 module Open_compiled_file = struct
-  let command_name = "rescript.openCompiled"
   let meth = "textDocument/openCompiled"
   let create ~(uri : Uri.t) ~(state : State.t) =
-    let compiler_config = State.compiler_config state in
-    let config_roots =
-      compiler_config |> Compiler_config.Uri_map.to_seq
-      |> Seq.map (fun (uri, config) -> (uri |> Uri.to_path, config))
-      |> List.of_seq |> List.map fst
+    let compiled_uri =
+      Helpers.get_compiled_file ~uri
+        ~compiler_config:(State.compiler_config state)
+        ~fs:state.fs
+        ~workspace_root:(State.workspace_root state)
     in
+    match compiled_uri with
+    | Some uri -> Ok uri
+    | None -> Error ("Failed to get compiled file for " ^ Uri.to_path uri)
 
-    let config =
+  (* Custom request to open compiled file
+
+    Request params:
+     {
+        "uri": Uri.t
+     }
+
+     Response:
+     {
+        "uri": Uri.t
+     }
+  *)
+  let on_request ~(params : Jsonrpc.Structured.t option) ~(state : State.t) =
+    let r =
+      match params with
+      | Some (`Assoc fields) -> (
+        match List.assoc_opt "uri" fields with
+        | Some (`String uri) -> (
+          let uri = Uri.of_string uri in
+          match create ~uri ~state with
+          | Ok uri -> Ok (`Assoc [("uri", `String (uri |> Uri.to_string))])
+          | Error message ->
+            Error (make_error ?code:(Some InternalError) message))
+        | _ ->
+          Error
+            (make_error ?code:(Some InvalidParams)
+               "Invalid params for request textDocument/createInterfaceFile"))
+      | _ ->
+        Error
+          (make_error ?code:(Some InvalidParams)
+             "Invalid params for request textDocument/createInterfaceFile")
+    in
+    r
+end
+
+module Create_interface_file = struct
+  let meth = "textDocument/createInterface"
+
+  let create ~uri ~cmi_uri ~(state : State.t) =
+    match Document.kind uri with
+    | Res -> (
       match
-        config_roots
-        |> Helpers.best_root_match
-             ~path:(State.workspace_root state |> Uri.to_path)
+        Analysis.Create_interface.command
+          ~source:(Document_store.get ~uri state.store).text
+          ~cmi_file:(cmi_uri |> Uri.to_path)
       with
-      | Some root ->
-        Compiler_config.Uri_map.find_opt (Uri.of_path root) compiler_config
-      | None -> None
-    in
-    match config with
-    | Some config ->
-      let suffix, js_folder, in_source =
-        Compiler_config.get_suffix_and_folder config
-      in
-
-      let ( /+ ) = Filename.concat in
-
-      let js_file_path =
-        let path = Uri.to_path uri in
-
-        let file_path =
-          if in_source then
-            let filename = Filename.basename path in
-            let js_file = Filename.remove_extension filename ^ suffix in
-            Some (Filename.dirname path /+ js_file)
-          else
-            match Helpers.best_root_match ~path config_roots with
-            | Some package_root_path ->
-              (*
-                Some example with sources
-                package_root_path: /home/pedro/Desktop/projects/rescript-lang.org/apps/guide
-                path:              /home/pedro/Desktop/projects/rescript-lang.org/apps/guide/app/GuideHome.res
-                compiled js:       /home/pedro/Desktop/projects/rescript-lang.org/apps/guide/lib/es6/app/GuideHome.jsx
-              *)
-              let relative_to ~root path =
-                let root =
-                  if String.ends_with ~suffix:"/" root then root else root ^ "/"
-                in
-
-                if String.starts_with ~prefix:root path then
-                  let root_len = String.length root in
-                  String.sub path root_len (String.length path - root_len)
-                else path
-              in
-              (* app/GuideHome.res *)
-              let relative_path = relative_to ~root:package_root_path path in
-              let sub_folders = Filename.dirname relative_path in
-              let js_file =
-                let res_file = Filename.basename relative_path in
-                Filename.remove_extension res_file ^ suffix
-              in
-              Some
-                (package_root_path /+ "lib" /+ js_folder /+ sub_folders
-               /+ js_file)
-            | None -> None
+      | Ok content ->
+        let resi_file = Uri.to_path uri ^ "i" in
+        let () =
+          Fs.save ~append:false ~create:(`Or_truncate 0o644) ~fs:state.fs
+            resi_file content
         in
-        match file_path with
-        | Some file_path when Analysis.Files.exists file_path ->
-          Some (file_path |> Uri.of_path)
-        | _ -> None
-      in
+        Ok (Uri.of_path resi_file)
+      | Error e -> Error e)
+    | _ ->
+      Error
+        (Printf.sprintf
+           "Invalid file to create interface for %s. Expected a .res file"
+           (Uri.to_string uri))
 
-      js_file_path
-    | None -> None
+  (* Custom request to create a interface file.
+
+    Request params:
+     {
+        "uri": Uri.t
+     }
+
+     Response:
+     {
+        "uri": Uri.t
+     }
+  *)
+  let on_request ~(params : Jsonrpc.Structured.t option) ~(state : State.t) =
+    let r =
+      match params with
+      | Some (`Assoc fields) -> (
+        match List.assoc_opt "uri" fields with
+        | Some (`String uri) ->
+          let uri = Uri.of_string uri in
+          let cmi_file =
+            Helpers.get_cmi_file ~uri ~fs:state.fs
+              ~compiler_config:(State.compiler_config state)
+              ~workspace_root:(State.workspace_root state)
+          in
+          let result =
+            match cmi_file with
+            | Some cmi_file ->
+              let response =
+                match create ~uri ~cmi_uri:(Uri.of_path cmi_file) ~state with
+                | Ok uri ->
+                  Ok (`Assoc [("uri", `String (uri |> Uri.to_string))])
+                | Error message ->
+                  Error (make_error ?code:(Some InternalError) message)
+              in
+              response
+            | None ->
+              Error
+                (make_error ?code:(Some InternalError)
+                   "Failed to find cmi file to create interface file")
+          in
+          result
+        | _ ->
+          Error
+            (make_error ?code:(Some InvalidParams)
+               "Invalid params for request textDocument/createInterfaceFile"))
+      | _ ->
+        Error
+          (make_error ?code:(Some InvalidParams)
+             "Invalid params for request textDocument/createInterfaceFile")
+    in
+    r
 end

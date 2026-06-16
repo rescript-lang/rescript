@@ -435,3 +435,93 @@ end = struct
            |> List.map (fun diagnostic -> extractor ~uri ~diagnostic)
            |> List.flatten) *)
 end
+
+module Open_compiled_file = struct
+  let create ~(uri : Uri.t) ~(state : State.t) =
+    let compiled_uri =
+      Helpers.get_compiled_file ~uri
+        ~compiler_config:(State.compiler_config state)
+        ~fs:state.fs
+        ~workspace_root:(State.workspace_root state)
+    in
+    match compiled_uri with
+    | Some uri ->
+      let title = "Open compiled file" in
+      [
+        CodeAction.create
+          ~command:
+            (Command.create
+               ~arguments:[`String (Uri.to_string uri)]
+               ~command:Execute_commands.open_compiled ~title ())
+          ~title ();
+      ]
+    | None -> []
+end
+
+module Create_interface_file = struct
+  let create ~uri ~(state : State.t) =
+    let should_create =
+      match Document.kind uri with
+      | Res ->
+        not (Fs.exists ~fs:state.fs ~follow:false (Uri.to_path uri ^ "i"))
+      | _ -> false
+    in
+
+    let cmi_file =
+      Helpers.get_cmi_file ~uri ~fs:state.fs
+        ~compiler_config:(State.compiler_config state)
+        ~workspace_root:(State.workspace_root state)
+    in
+
+    match (should_create, cmi_file) with
+    | true, Some cmi_file ->
+      let title = "Create interface file" in
+      [
+        CodeAction.create
+          ~command:
+            (Command.create
+               ~arguments:
+                 [
+                   `String (Uri.to_string uri);
+                   `String (Uri.of_path cmi_file |> Uri.to_string);
+                 ]
+               ~command:Execute_commands.create_interface ~title ())
+          ~title ();
+      ]
+    | _ -> []
+end
+
+module Switch_implementation_interface_file = struct
+  let create ~uri ~(state : State.t) =
+    match Document.kind uri with
+    | Res ->
+      let target = Uri.to_path uri ^ "i" in
+      if Fs.exists ~follow:false ~fs:state.fs target then
+        let title = "Switch to interface file" in
+        [
+          CodeAction.create
+            ~command:
+              (Command.create
+                 ~arguments:[`String (Uri.of_path target |> Uri.to_string)]
+                 ~command:Execute_commands.switch_implementation_interface
+                 ~title ())
+            ~title ();
+        ]
+      else []
+    | Resi ->
+      let target = (Uri.to_path uri |> Filename.remove_extension) ^ ".res" in
+      if Fs.exists ~follow:false ~fs:state.fs target then
+        let title = "Switch to implementation file" in
+        [
+          CodeAction.create
+            ~command:
+              (Command.create
+                 ~arguments:[`String (Uri.of_path target |> Uri.to_string)]
+                 ~command:Execute_commands.switch_implementation_interface
+                 ~title ())
+            ~title ();
+        ]
+      else []
+    (* TODO: I can have a resi file without a res file *)
+    | _ -> []
+end

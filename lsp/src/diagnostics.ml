@@ -118,23 +118,24 @@ let to_lsp_format (workspace_root : DocumentUri.t)
 
 let collect_diagnostics_from_log_using_source_dirs workspace_root fs =
   let ( /+ ) = Filename.concat in
-  let ( / ) = Eio.Path.( / ) in
   let workspace_root_path = workspace_root |> Lsp.Types.DocumentUri.to_path in
   let path =
     workspace_root_path /+ Constants.compiler_dir_partial_path
     /+ Constants.sources_dirs
   in
-  let build_roots = Source_dirs.get_build_roots_from_file (fs / path) in
+  let build_roots = Source_dirs.get_build_roots_from_file ~fs path in
   let diagnostics =
     match build_roots with
     | Some build_roots ->
       build_roots
-      |> List.map (fun build_root ->
+      |> List.filter_map (fun build_root ->
              let compiler_log_path =
                workspace_root_path /+ build_root /+ Constants.compiler_log
              in
-             let content = Eio.Path.load (fs / compiler_log_path) in
-             Compiler_log.Parse.parse_log_content content)
+             match Fs.load ~fs compiler_log_path with
+             | Some content ->
+               Some (Compiler_log.Parse.parse_log_content content)
+             | None -> None)
       |> List.flatten
     | None -> []
   in
