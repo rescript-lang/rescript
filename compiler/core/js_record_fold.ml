@@ -89,6 +89,21 @@ let property_map : 'a. ('a, property_map) fn =
 
 let length_object : 'a. ('a, length_object) fn = unknown
 
+let record_rest_field : 'a. ('a, record_rest_field) fn =
+ fun _self st {record_rest_ident; _} ->
+  option _self.ident _self st record_rest_ident
+
+let object_rest_param : 'a. ('a, object_rest_param) fn =
+ fun _self st {object_rest_fields; object_rest_rest} ->
+  let st = list record_rest_field _self st object_rest_fields in
+  let st = _self.ident _self st object_rest_rest in
+  st
+
+let param : 'a. ('a, param) fn =
+ fun _self st -> function
+  | Ident_param id -> _self.ident _self st id
+  | Object_rest_param rest -> object_rest_param _self st rest
+
 let expression_desc : 'a. ('a, expression_desc) fn =
  fun _self st -> function
   | Length (_x0, _x1) ->
@@ -165,7 +180,7 @@ let expression_desc : 'a. ('a, expression_desc) fn =
     let st = _self.vident _self st _x0 in
     st
   | Fun {params; body} ->
-    let st = list _self.ident _self st params in
+    let st = list param _self st params in
     let st = _self.block _self st body in
     st
   | Str _ -> st
@@ -195,6 +210,9 @@ let expression_desc : 'a. ('a, expression_desc) fn =
     st
   | Spread _x0 ->
     let st = _self.expression _self st _x0 in
+    st
+  | Record_rest (_x0, _x1) ->
+    let st = _self.expression _self st _x1 in
     st
 
 let for_ident_expression : 'a. ('a, for_ident_expression) fn =

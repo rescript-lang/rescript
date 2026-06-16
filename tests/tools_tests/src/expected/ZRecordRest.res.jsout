@@ -2,10 +2,9 @@
 'use strict';
 
 
-function extract(param) {
-  let rest = ((({name: __unused0, ...__rest}) => __rest))(param);
+function extract({name, ...rest}) {
   return [
-    param.name,
+    name,
     rest
   ];
 }

@@ -33,6 +33,8 @@ let describeConfig = (c: config) =>
   | {name, ...subConfig as rest} => (name, rest)
   }
 
+let getNameAndSubConfig = ({name, ...subConfig as subConfig}: config) => (name, subConfig)
+
 let getAliasedRest = ({name: _, ...aliasedSubConfig as rest}: config) => rest
 let getNamespacedRest = ({name: _, ...SubConfig.t as rest}: config) => rest
 

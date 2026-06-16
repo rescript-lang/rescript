@@ -78,6 +78,11 @@ let inline_call (immutable_list : bool list) params (args : J.expression list)
     let obj = substitue_variables map in
     obj.block obj block
 
+let simple_params_exn params =
+  match J.params_as_idents params with
+  | Some params -> params
+  | None -> assert false
+
 (** There is a side effect when traversing dead code, since 
     we assume that substitue a node would mark a node as dead node,
 
@@ -182,13 +187,16 @@ let subst (export_set : Set_ident.t) stats =
                  ident_info = {used_stats = Once_pure};
                  ident = _;
                } as v)
-            when Ext_list.same_length params args ->
+            when match J.params_as_idents params with
+                 | Some params -> Ext_list.same_length params args
+                 | None -> false ->
             Js_op_util.update_used_stats v.ident_info Dead_pure;
             let no_tailcall = Js_fun_env.no_tailcall env in
             let processed_blocks =
               self.block self body
               (* see #278 before changes*)
             in
+            let params = simple_params_exn params in
             inline_call no_tailcall params args processed_blocks
           (* Ext_list.fold_right2
              params args  processed_blocks
@@ -222,12 +230,15 @@ let subst (export_set : Set_ident.t) stats =
                };
          };
         ]
-          when Ext_list.same_length params args ->
+          when match J.params_as_idents params with
+               | Some params -> Ext_list.same_length params args
+               | None -> false ->
           let no_tailcall = Js_fun_env.no_tailcall env in
           let processed_blocks =
             self.block self body
             (* see #278 before changes*)
           in
+          let params = simple_params_exn params in
           inline_call no_tailcall params args processed_blocks
         | x :: xs -> self.statement self x :: self.block self xs
         | [] -> []);

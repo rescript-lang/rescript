@@ -1,5 +1,5 @@
 
-  [1;33mWarning number 111[0m
+  [1;33mWarning number 112[0m
   [36m/.../fixtures/record_rest_empty_warning.res[0m:[2m3:16-26[0m
 
   1 [2m│[0m type source = {a: int, b?: string}

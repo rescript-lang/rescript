@@ -77,6 +77,18 @@ and property_map = (property_name * expression) list
 and length_object = Js_op.length_object
 and delim = External_arg_spec.delim = DNone | DStarJ | DNoQuotes | DBackQuotes
 
+and record_rest_field = {
+  record_rest_label: string;
+  record_rest_ident: ident option;
+}
+
+and object_rest_param = {
+  object_rest_fields: record_rest_field list;
+  object_rest_rest: ident;
+}
+
+and param = Ident_param of ident | Object_rest_param of object_rest_param
+
 and expression_desc =
   | Length of expression * length_object
   | Is_null_or_undefined of expression  (** where we use a trick [== null ] *)
@@ -132,7 +144,7 @@ and expression_desc =
   | Var of vident
   | Fun of {
       is_method: bool;
-      params: ident list;
+      params: param list;
       body: block;
       env: Js_fun_env.t;
       return_unit: bool;
@@ -165,6 +177,7 @@ and expression_desc =
   | Null
   | Await of expression
   | Spread of expression
+  | Record_rest of record_rest_field list * expression
 
 and for_ident_expression = expression
 (* pure*)
@@ -327,6 +340,9 @@ and deps_program = {
         finish_ident_expression;
         property_map;
         length_object;
+        record_rest_field;
+        object_rest_param;
+        param;
         (* for_ident; *)
         required_modules;
         case_clause;
@@ -337,3 +353,23 @@ FIXME: customize for each code generator
 for each code generator, we can provide a white-list
 so that we can achieve the optimal
 *)
+
+let record_rest_field_idents fields =
+  List.filter_map (fun {record_rest_ident} -> record_rest_ident) fields
+
+let object_rest_param_idents {object_rest_fields; object_rest_rest} =
+  object_rest_rest :: record_rest_field_idents object_rest_fields
+
+let param_idents = function
+  | Ident_param id -> [id]
+  | Object_rest_param param -> object_rest_param_idents param
+
+let params_idents params = List.concat_map param_idents params
+
+let params_as_idents params =
+  let rec aux acc = function
+    | [] -> Some (List.rev acc)
+    | Ident_param id :: rest -> aux (id :: acc) rest
+    | Object_rest_param _ :: _ -> None
+  in
+  aux [] params

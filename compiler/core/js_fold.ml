@@ -83,6 +83,26 @@ class fold =
 
     method length_object : length_object -> 'self_type = unknown _self
 
+    method record_rest_field : record_rest_field -> 'self_type =
+      fun {record_rest_ident = _x0; _} ->
+        let _self = option (fun _self -> _self#ident) _self _x0 in
+        _self
+
+    method object_rest_param : object_rest_param -> 'self_type =
+      fun {object_rest_fields = _x0; object_rest_rest = _x1} ->
+        let _self = list (fun _self -> _self#record_rest_field) _self _x0 in
+        let _self = _self#ident _x1 in
+        _self
+
+    method param : param -> 'self_type =
+      function
+      | Ident_param _x0 ->
+        let _self = _self#ident _x0 in
+        _self
+      | Object_rest_param _x0 ->
+        let _self = _self#object_rest_param _x0 in
+        _self
+
     method expression_desc : expression_desc -> 'self_type =
       function
       | Length (_x0, _x1) ->
@@ -159,7 +179,7 @@ class fold =
         let _self = _self#vident _x0 in
         _self
       | Fun {params = x1; body = x2} ->
-        let _self = list (fun _self -> _self#ident) _self x1 in
+        let _self = list (fun _self -> _self#param) _self x1 in
         let _self = _self#block x2 in
         _self
       | Str _ -> _self
@@ -189,6 +209,9 @@ class fold =
         _self
       | Spread _x0 ->
         let _self = _self#expression _x0 in
+        _self
+      | Record_rest (_x0, _x1) ->
+        let _self = _self#expression _x1 in
         _self
 
     method for_ident_expression : for_ident_expression -> 'self_type =

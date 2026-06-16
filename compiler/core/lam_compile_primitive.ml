@@ -612,26 +612,12 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
   | Precord_rest excluded -> (
     match args with
     | [e1] ->
-      (* Generate: (({field1: __unused0, ...__rest}) => __rest)(source)
-         This uses JS destructuring to cleanly extract the rest while
-         safely handling quoted property names and the empty-exclusion case. *)
-      let excluded_bindings =
-        List.mapi
-          (fun i field ->
-            let field = Js_dump_property.property_key (Js_op.Lit field) in
-            Printf.sprintf "%s: __unused%d" field i)
-          excluded
-      in
-      let destructured =
-        match excluded_bindings with
-        | [] -> "...__rest"
-        | _ -> String.concat ", " excluded_bindings ^ ", ...__rest"
-      in
-      let code = Printf.sprintf "(({%s}) => __rest)" destructured in
-      E.call
-        ~info:{arity = Full; call_info = Call_na; call_transformed_jsx = false}
-        (E.raw_js_code (Exp (Js_function {arity = 1; arrow = true})) code)
-        [e1]
+      E.record_rest
+        (List.map
+           (fun record_rest_label ->
+             {J.record_rest_label; record_rest_ident = None})
+           excluded)
+        e1
     | _ -> assert false)
   | Phash -> (
     match args with
