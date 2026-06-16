@@ -19,6 +19,8 @@ env:
 jobs:
   coverage:
     runs-on: ubuntu-24.04-arm
+    permissions:
+      id-token: write
     env:
       OS: ubuntu-24.04-arm
       OCAML_COMPILER: 5.3.0
@@ -200,4 +202,4 @@ jobs:
         with:
           files: _coverage/coverage.json
           fail_ci_if_error: false
-          token: ${{ secrets.CODECOV_TOKEN }}
+          use_oidc: true
