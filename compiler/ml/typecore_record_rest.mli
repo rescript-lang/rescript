@@ -13,6 +13,7 @@ type error =
       source_runtime_name: string;
       rest_runtime_name: string;
     }
+  | Unboxed_record
 
 exception Error of Location.t * Env.t * error
 

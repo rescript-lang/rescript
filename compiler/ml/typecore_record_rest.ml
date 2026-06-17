@@ -14,6 +14,7 @@ type error =
       source_runtime_name: string;
       rest_runtime_name: string;
     }
+  | Unboxed_record
 
 exception Error of Location.t * Env.t * error
 
@@ -79,6 +80,12 @@ let source_fields_of_decl (fields : label_declaration list) =
       })
     fields
 
+let source_fields_and_repr ~env ~loc decl =
+  match decl.type_kind with
+  | Type_record (_, Record_unboxed _) -> raise_error loc env Unboxed_record
+  | Type_record (fields, repr) -> (source_fields_of_decl fields, repr)
+  | _ -> assert false
+
 let resolve_source_record ~env ~unify_pat_types ~loc ~record_ty
     ~(rest_type_lid : Longident.t Location.loc) ~rest_type_expr ~rest_decl =
   match
@@ -88,15 +95,10 @@ let resolve_source_record ~env ~unify_pat_types ~loc ~record_ty
            record_ty)
     with Not_found -> None
   with
-  | Some source_decl -> (
-    match source_decl.type_kind with
-    | Type_record (fields, repr) -> (source_fields_of_decl fields, repr)
-    | _ -> assert false)
-  | None -> (
+  | Some source_decl -> source_fields_and_repr ~env ~loc source_decl
+  | None ->
     unify_pat_types rest_type_lid.loc env record_ty rest_type_expr;
-    match rest_decl.type_kind with
-    | Type_record (fields, repr) -> (source_fields_of_decl fields, repr)
-    | _ -> assert false)
+    source_fields_and_repr ~env ~loc:rest_type_lid.loc rest_decl
 
 let runtime_excluded_labels ~explicit_runtime_labels source_repr =
   match source_repr with
@@ -147,6 +149,8 @@ let type_record_pat_rest ~env ~pattern_force ~loc ~record_ty ~lbl_pat_list ~rest
     | Some rest_decl -> (
       check_not_private rest_type_lid.loc rest_type_expr rest_decl;
       match rest_decl.type_kind with
+      | Type_record (_, Record_unboxed _) ->
+        raise_error rest_type_lid.loc env Unboxed_record
       | Type_record _ -> rest_decl
       | _ -> raise_error rest_type_lid.loc env (Not_record rest_type_lid.txt))
     | None -> raise_error rest_type_lid.loc env (Not_record rest_type_lid.txt)
@@ -297,3 +301,5 @@ let report_error ppf = function
        in the source record type it is `%s`. Runtime representations must \
        match."
       field Printtyp.longident rest_type rest_runtime_name source_runtime_name
+  | Unboxed_record ->
+    fprintf ppf "Record rest patterns cannot be used with unboxed record types."
