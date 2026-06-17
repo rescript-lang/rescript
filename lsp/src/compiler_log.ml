@@ -3,7 +3,7 @@ module Parse : sig
 
   type entry =
     | Syntax_error
-    | Warning
+    | Warning of int
     | Common_error (* type error, value can't be found *)
     | Circular_dependency
     | Unknow
@@ -20,7 +20,7 @@ end = struct
 
   type entry =
     | Syntax_error
-    | Warning
+    | Warning of int
     | Common_error
     | Circular_dependency
     | Unknow
@@ -250,12 +250,24 @@ end = struct
     String.starts_with ~prefix:"Warning " content
     || String.starts_with ~prefix:"Error" content
 
+  let warning_number_from_line line =
+    let line = String.trim line in
+    let warning_number_re = Str.regexp "^Warning number[ \t]+\\([0-9]+\\)" in
+    let warning_re = Str.regexp "^Warning[ \t]+\\([0-9]+\\)" in
+    if Str.string_match warning_number_re line 0 then
+      Some (Str.matched_group 1 line |> int_of_string)
+    else if Str.string_match warning_re line 0 then
+      Some (Str.matched_group 1 line |> int_of_string)
+    else None
+
   let kind_from_title title =
     match title with
     | "Syntax error!" -> Syntax_error
     | "We've found a bug for you!" -> Common_error
-    | other when String.starts_with ~prefix:"Warning number" other -> Warning
-    | _ -> Unknow
+    | other -> (
+      match warning_number_from_line other with
+      | Some number -> Warning number
+      | None -> Unknow)
 
   let kind_from_message lines =
     let rec loop = function
@@ -263,7 +275,10 @@ end = struct
       | line :: rest ->
         let content = String.trim line in
         if is_blank content || is_source_excerpt_line content then loop rest
-        else if String.starts_with ~prefix:"Warning " content then Warning
+        else if String.starts_with ~prefix:"Warning " content then
+          match warning_number_from_line content with
+          | Some number -> Warning number
+          | None -> Unknow
         else if String.starts_with ~prefix:"Error" content then Unknow
         else loop rest
     in
@@ -501,7 +516,7 @@ let%expect_test "parse log" =
            print_endline
              ((match entry.entry with
               | Syntax_error -> "Syntax_error"
-              | Warning -> "Warning"
+              | Warning number -> Printf.sprintf "Warning %d" number
               | Unknow -> "Unknow"
               | Circular_dependency -> "Circular_dependency"
               | Common_error -> "Common_error")
@@ -565,7 +580,7 @@ let%expect_test "parse log" =
       "source": "ReScript"
     }
 
-    Warning - Full_path(/Users/chenglou/github/reason-react/src/test.res)
+    Warning 8 - Full_path(/Users/chenglou/github/reason-react/src/test.res)
     {
       "message": "You forgot to handle a possible case here, for example:\nSome _",
       "range": {
@@ -687,7 +702,7 @@ let%expect_test "parse log" =
   Parse.parse_log_content example_log_3 |> print_logs;
   [%expect
     {|
-    Warning - Full_path(/home/pedro/Desktop/rescript-apollo-client/EXAMPLES/src/fragmentsUsage/Fragments.res)
+    Warning 22 - Full_path(/home/pedro/Desktop/rescript-apollo-client/EXAMPLES/src/fragmentsUsage/Fragments.res)
     {
       "message": "Warning 22 [preprocessor]: Field \"allTodos\" has been deprecated. Reason: null",
       "range": {
@@ -698,7 +713,7 @@ let%expect_test "parse log" =
       "source": "ReScript"
     }
 
-    Warning - Full_path(/home/pedro/Desktop/rescript-apollo-client/EXAMPLES/src/clientUsage/PromiseChaining.res)
+    Warning 22 - Full_path(/home/pedro/Desktop/rescript-apollo-client/EXAMPLES/src/clientUsage/PromiseChaining.res)
     {
       "message": "Warning 22 [preprocessor]: Field \"allTodos\" has been deprecated. Reason: null",
       "range": {
@@ -709,7 +724,7 @@ let%expect_test "parse log" =
       "source": "ReScript"
     }
 
-    Warning - Full_path(/home/pedro/Desktop/rescript-apollo-client/EXAMPLES/src/clientUsage/ClientBasics.res)
+    Warning 22 - Full_path(/home/pedro/Desktop/rescript-apollo-client/EXAMPLES/src/clientUsage/ClientBasics.res)
     {
       "message": "Warning 22 [preprocessor]: Field \"allTodos\" has been deprecated. Reason: null",
       "range": {
@@ -720,7 +735,7 @@ let%expect_test "parse log" =
       "source": "ReScript"
     }
 
-    Warning - Full_path(/home/pedro/Desktop/rescript-apollo-client/EXAMPLES/src/docs/Docs.res)
+    Warning 22 - Full_path(/home/pedro/Desktop/rescript-apollo-client/EXAMPLES/src/docs/Docs.res)
     {
       "message": "Warning 22 [preprocessor]: Field \"allTodos\" has been deprecated. Reason: null",
       "range": {
@@ -731,7 +746,7 @@ let%expect_test "parse log" =
       "source": "ReScript"
     }
 
-    Warning - Full_path(/home/pedro/Desktop/rescript-apollo-client/EXAMPLES/src/fragmentsUsage/Query_Fragments.res)
+    Warning 22 - Full_path(/home/pedro/Desktop/rescript-apollo-client/EXAMPLES/src/fragmentsUsage/Query_Fragments.res)
     {
       "message": "Warning 22 [preprocessor]: Field \"allTodos\" has been deprecated. Reason: null",
       "range": {
@@ -742,7 +757,7 @@ let%expect_test "parse log" =
       "source": "ReScript"
     }
 
-    Warning - Full_path(/home/pedro/Desktop/rescript-apollo-client/EXAMPLES/src/hooksUsage/Mutation.res)
+    Warning 22 - Full_path(/home/pedro/Desktop/rescript-apollo-client/EXAMPLES/src/hooksUsage/Mutation.res)
     {
       "message": "Warning 22 [preprocessor]: Field \"allTodos\" has been deprecated. Reason: null",
       "range": {
@@ -753,7 +768,7 @@ let%expect_test "parse log" =
       "source": "ReScript"
     }
 
-    Warning - Full_path(/home/pedro/Desktop/rescript-apollo-client/EXAMPLES/src/hooksUsage/Query_Lazy.res)
+    Warning 22 - Full_path(/home/pedro/Desktop/rescript-apollo-client/EXAMPLES/src/hooksUsage/Query_Lazy.res)
     {
       "message": "Warning 22 [preprocessor]: Field \"allTodos\" has been deprecated. Reason: null",
       "range": {
@@ -764,7 +779,7 @@ let%expect_test "parse log" =
       "source": "ReScript"
     }
 
-    Warning - Full_path(/home/pedro/Desktop/rescript-apollo-client/EXAMPLES/src/hooksUsage/Query_OverlySimple.res)
+    Warning 22 - Full_path(/home/pedro/Desktop/rescript-apollo-client/EXAMPLES/src/hooksUsage/Query_OverlySimple.res)
     {
       "message": "Warning 22 [preprocessor]: Field \"allTodos\" has been deprecated. Reason: null",
       "range": {
@@ -775,7 +790,7 @@ let%expect_test "parse log" =
       "source": "ReScript"
     }
 
-    Warning - Full_path(/home/pedro/Desktop/rescript-apollo-client/EXAMPLES/src/hooksUsage/Query_SubscribeToMore.res)
+    Warning 22 - Full_path(/home/pedro/Desktop/rescript-apollo-client/EXAMPLES/src/hooksUsage/Query_SubscribeToMore.res)
     {
       "message": "Warning 22 [preprocessor]: Field \"allTodos\" has been deprecated. Reason: null",
       "range": {
@@ -786,7 +801,7 @@ let%expect_test "parse log" =
       "source": "ReScript"
     }
 
-    Warning - Full_path(/home/pedro/Desktop/rescript-apollo-client/EXAMPLES/src/hooksUsage/Query_Typical.res)
+    Warning 22 - Full_path(/home/pedro/Desktop/rescript-apollo-client/EXAMPLES/src/hooksUsage/Query_Typical.res)
     {
       "message": "Warning 22 [preprocessor]: Field \"allTodos\" has been deprecated. Reason: null",
       "range": {
@@ -863,7 +878,7 @@ let%expect_test "parse log" =
   Parse.parse_log_content example_log_4 |> print_logs;
   [%expect
     {|
-    Warning - Full_path(/home/misha/projects/productionmason/web/auth/src/ErrorHandlingMiddleware.res)
+    Warning 33 - Full_path(/home/misha/projects/productionmason/web/auth/src/ErrorHandlingMiddleware.res)
     {
       "message": "unused open CommonBase.",
       "range": {
@@ -874,7 +889,7 @@ let%expect_test "parse log" =
       "source": "ReScript"
     }
 
-    Warning - Full_path(/home/misha/projects/productionmason/web/auth/src/config/Config.res)
+    Warning 27 - Full_path(/home/misha/projects/productionmason/web/auth/src/config/Config.res)
     {
       "message": "unused variable config.",
       "range": {
@@ -885,7 +900,7 @@ let%expect_test "parse log" =
       "source": "ReScript"
     }
 
-    Warning - Full_path(/home/misha/projects/productionmason/web/auth/src/express-handler/ExpressHandler.re)
+    Warning 34 - Full_path(/home/misha/projects/productionmason/web/auth/src/express-handler/ExpressHandler.re)
     {
       "message": "unused type t.",
       "range": {
@@ -896,7 +911,7 @@ let%expect_test "parse log" =
       "source": "ReScript"
     }
 
-    Warning - Full_path(/home/misha/projects/productionmason/web/auth/src/express-handler/ExpressHandler.re)
+    Warning 32 - Full_path(/home/misha/projects/productionmason/web/auth/src/express-handler/ExpressHandler.re)
     {
       "message": "unused value t_encode.",
       "range": {
@@ -1156,7 +1171,7 @@ let%expect_test "parse log" =
   Parse.parse_log_content example_log_10 |> print_logs;
   [%expect
     {|
-    Warning - Full_path(/home/pedro/Desktop/projects/rescript-lang.org/apps/docs/app/DocsRoutes.res)
+    Warning 8 - Full_path(/home/pedro/Desktop/projects/rescript-lang.org/apps/docs/app/DocsRoutes.res)
     {
       "message": "You forgot to handle a possible case here, for example:\n| C",
       "range": {
@@ -1167,7 +1182,7 @@ let%expect_test "parse log" =
       "source": "ReScript"
     }
 
-    Warning - Full_path(/home/pedro/Desktop/projects/rescript-lang.org/apps/docs/app/DocsRoutes.res)
+    Warning 37 - Full_path(/home/pedro/Desktop/projects/rescript-lang.org/apps/docs/app/DocsRoutes.res)
     {
       "message": "constructor A is never used to build values.\n(However, this constructor appears in patterns.)",
       "range": {
@@ -1178,7 +1193,7 @@ let%expect_test "parse log" =
       "source": "ReScript"
     }
 
-    Warning - Full_path(/home/pedro/Desktop/projects/rescript-lang.org/apps/docs/app/DocsRoutes.res)
+    Warning 37 - Full_path(/home/pedro/Desktop/projects/rescript-lang.org/apps/docs/app/DocsRoutes.res)
     {
       "message": "constructor B is never used to build values.\n(However, this constructor appears in patterns.)",
       "range": {
@@ -1189,7 +1204,7 @@ let%expect_test "parse log" =
       "source": "ReScript"
     }
 
-    Warning - Full_path(/home/pedro/Desktop/projects/rescript-lang.org/apps/docs/app/DocsRoutes.res)
+    Warning 37 - Full_path(/home/pedro/Desktop/projects/rescript-lang.org/apps/docs/app/DocsRoutes.res)
     {
       "message": "unused constructor C.",
       "range": {
@@ -1200,7 +1215,7 @@ let%expect_test "parse log" =
       "source": "ReScript"
     }
 
-    Warning - Full_path(/home/pedro/Desktop/projects/rescript-lang.org/apps/docs/app/DocsRoutes.res)
+    Warning 32 - Full_path(/home/pedro/Desktop/projects/rescript-lang.org/apps/docs/app/DocsRoutes.res)
     {
       "message": "unused value f.",
       "range": {
