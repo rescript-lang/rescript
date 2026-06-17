@@ -37,6 +37,7 @@
 - Fix formatting of trailing comments before `=` in let bindings. https://github.com/rescript-lang/rescript/pull/8444
 - Fix analysis namespace parsing after the Yojson migration. https://github.com/rescript-lang/rescript/pull/8454
 - Fix namespaced reference lookup in editor analysis. https://github.com/rescript-lang/rescript/pull/8455
+- Fix analysis segmentation fault for references after https://github.com/rescript-lang/rescript/pull/7887. https://github.com/rescript-lang/rescript/pull/8477
 
 #### :memo: Documentation
 
