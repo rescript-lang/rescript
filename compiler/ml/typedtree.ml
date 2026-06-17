@@ -460,8 +460,9 @@ let rec bound_idents pat =
     (* Invariant : both arguments binds the same variables *)
     bound_idents p1
   | Tpat_record (_, _, Some rest) ->
-    (* Rest ident is added via enter_variable during type checking,
-       but we also need it in bound_idents for Lambda compilation *)
+    (* Record rest is stored on Tpat_record, not as a child Tpat_var that
+       iter_pattern_desc can visit. Add it here so Lambda compilation sees the
+       binding. *)
     idents := (rest.rest_ident, rest.rest_name) :: !idents;
     iter_pattern_desc bound_idents pat.pat_desc
   | d -> iter_pattern_desc bound_idents d
