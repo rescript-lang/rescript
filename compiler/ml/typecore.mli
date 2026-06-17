@@ -90,7 +90,6 @@ type error =
       string * Longident.t * (Path.t * Path.t) * (Path.t * Path.t) list
   | Undefined_method of type_expr * string * string list option
   | Private_type of type_expr
-  | Private_label of Longident.t * type_expr
   | Not_subtype of
       Ctype.type_pairs * Ctype.type_pairs * Ctype.subtype_context option
   | Too_many_arguments of bool * type_expr

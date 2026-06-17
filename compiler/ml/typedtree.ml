@@ -119,14 +119,17 @@ and expression_desc =
       * expression
       * direction_flag
       * expression
-  | Texp_for_of of Ident.t * Parsetree.pattern * expression * expression
-  | Texp_for_await_of of Ident.t * Parsetree.pattern * expression * expression
   | Texp_send of expression * meth * expression option
   | Texp_letmodule of Ident.t * string loc * module_expr * expression
   | Texp_letexception of extension_constructor * expression
   | Texp_assert of expression
   | Texp_pack of module_expr
   | Texp_extension_constructor of Longident.t loc * Path.t
+  (* Keep new expression constructors at the end. CMT files are marshalled by
+     runtime constructor tag, so inserting constructors before existing ones
+     breaks analysis when it reads CMTs produced by older compiler versions. *)
+  | Texp_for_of of Ident.t * Parsetree.pattern * expression * expression
+  | Texp_for_await_of of Ident.t * Parsetree.pattern * expression * expression
 
 and meth = Tmeth_name of string
 

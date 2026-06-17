@@ -55,7 +55,6 @@ let rec lookup_map lid m =
   match lid with
   | Lident s -> String_map.find s m
   | Ldot (l, s) -> String_map.find s (get_map (lookup_map l m))
-  | Lapply _ -> raise Not_found
 
 (* Collect free module identifiers in the a.s.t. *)
 
@@ -73,9 +72,6 @@ let rec add_path bv ?(p = []) = function
       prerr_endline "";*)
     add_names free
   | Ldot (l, s) -> add_path bv ~p:(s :: p) l
-  | Lapply (l1, l2) ->
-    add_path bv l1;
-    add_path bv l2
 
 let open_module bv lid =
   match lookup_map lid bv with

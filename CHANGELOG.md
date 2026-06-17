@@ -23,6 +23,7 @@
 #### :rocket: New Feature
 
 - Add a first-class `taggedTemplate<'param, 'output>` builtin type and the `TaggedTemplate` stdlib module (`TaggedTemplate.make`). Tagged-template tags are now tracked through the type system, so they emit real JS tagged-template syntax across module boundaries, when passed as first-class values, and when constructed at runtime by a factory (e.g. `postgres`). https://github.com/rescript-lang/rescript/pull/8461
+- Make mutation of private record mutable fields a configurable warning instead of a hard error. https://github.com/rescript-lang/rescript/pull/8366
 
 #### :bug: Bug fix
 
@@ -36,6 +37,7 @@
 - Fix formatting of trailing comments before `=` in let bindings. https://github.com/rescript-lang/rescript/pull/8444
 - Fix analysis namespace parsing after the Yojson migration. https://github.com/rescript-lang/rescript/pull/8454
 - Fix namespaced reference lookup in editor analysis. https://github.com/rescript-lang/rescript/pull/8455
+- Fix analysis segmentation fault for references after https://github.com/rescript-lang/rescript/pull/7887. https://github.com/rescript-lang/rescript/pull/8477
 
 #### :memo: Documentation
 
@@ -65,6 +67,8 @@
 - Convert OCaml codebase to snake case format. https://github.com/rescript-lang/rescript/pull/8456
 - Analysis refactor: remove global state `Shared_types.state`. https://github.com/rescript-lang/rescript/pull/8465
 - Refactor analysis CLI helpers to use source input. https://github.com/rescript-lang/rescript/pull/8466
+- Include syntax, gentype, analysis, tools, and reanalyze tests in coverage reports. https://github.com/rescript-lang/rescript/pull/8467
+- Remove the unreachable `Longident.Lapply` constructor (OCaml's applicative-functor path syntax `F(X).t`, which ReScript's grammar cannot produce). https://github.com/rescript-lang/rescript/pull/8469
 
 # 13.0.0-alpha.4
 
