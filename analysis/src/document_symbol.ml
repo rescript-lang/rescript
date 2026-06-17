@@ -10,8 +10,8 @@ let get_symbols ~source ~kind_file =
     then
       let range = Utils.cmt_loc_to_range loc in
       let symbol =
-        Lsp.Types.DocumentSymbol.create ~name ~range ~selectionRange:range
-          ~children:[] ~kind ()
+        Lsp.Types.DocumentSymbol.create ~name ~range ~selectionRange:range ~kind
+          ()
       in
       symbols := symbol :: !symbols
   in
@@ -165,13 +165,14 @@ let get_symbols ~source ~kind_file =
     | [] -> [symbol]
     | last :: rest ->
       if is_inside symbol last then
-        match last.children with
-        | Some c ->
-          let new_last =
-            {last with children = Some (c |> add_symbol_to_children ~symbol)}
-          in
-          new_last :: rest
-        | _ -> rest
+        let children = last.children |> Option.value ~default:[] in
+        let new_last =
+          {
+            last with
+            children = Some (children |> add_symbol_to_children ~symbol);
+          }
+        in
+        new_last :: rest
       else symbol :: children
   in
   let rec add_sorted_symbols_to_children ~sorted_symbols children =
