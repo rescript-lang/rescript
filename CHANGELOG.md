@@ -24,6 +24,7 @@
 
 - Add a first-class `taggedTemplate<'param, 'output>` builtin type and the `TaggedTemplate` stdlib module (`TaggedTemplate.make`). Tagged-template tags are now tracked through the type system, so they emit real JS tagged-template syntax across module boundaries, when passed as first-class values, and when constructed at runtime by a factory (e.g. `postgres`). https://github.com/rescript-lang/rescript/pull/8461
 - Make mutation of private record mutable fields a configurable warning instead of a hard error. https://github.com/rescript-lang/rescript/pull/8366
+- Add support for pattern matching/destructuring of record rest. https://github.com/rescript-lang/rescript/pull/8317
 
 #### :bug: Bug fix
 
@@ -118,7 +119,6 @@
 - Reanalyze: add glob pattern support for suppress/unsuppress configurations (e.g., `"src/generated/**"`). https://github.com/rescript-lang/rescript/pull/8277
 - Add optional `~locales` and `~options` parameters to `String.localeCompare`. https://github.com/rescript-lang/rescript/pull/8287
 - Support inline records in external definitions. https://github.com/rescript-lang/rescript/pull/8304
-- Add support for pattern matching/destructuring of record rest. https://github.com/rescript-lang/rescript/pull/8317
 
 #### :bug: Bug fix
 
