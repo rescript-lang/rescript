@@ -126,20 +126,13 @@ let item_ident_name = function
   | Sig_typext (id, d, _) -> (id, d.ext_loc, Field_typext (Ident.name id))
   | Sig_module (id, d, _) -> (id, d.md_loc, Field_module (Ident.name id))
   | Sig_modtype (id, d) -> (id, d.mtd_loc, Field_modtype (Ident.name id))
-  | Sig_class () -> assert false
-  | Sig_class_type () -> assert false
 
 let is_runtime_component = function
   | Sig_value (_, {val_kind = Val_prim _})
   | Sig_type (_, _, _)
-  | Sig_modtype (_, _)
-  | Sig_class_type () ->
+  | Sig_modtype (_, _) ->
     false
-  | Sig_value (_, _)
-  | Sig_typext (_, _, _)
-  | Sig_module (_, _, _)
-  | Sig_class () ->
-    true
+  | Sig_value (_, _) | Sig_typext (_, _, _) | Sig_module (_, _, _) -> true
 
 (* Print a coercion *)
 
@@ -301,7 +294,6 @@ and signatures ~loc env cxt subst sig1 sig2 =
       | Sig_modtype (i, _)
       | Sig_type (i, _, _) ->
         Ident.name i
-      | Sig_class () | Sig_class_type () -> assert false
     in
     List.fold_right
       (fun item fields ->
@@ -360,8 +352,7 @@ and signatures ~loc env cxt subst sig1 sig2 =
           | Sig_module _ -> Subst.add_module id2 (Pident id1) subst
           | Sig_modtype _ ->
             Subst.add_modtype id2 (Mty_ident (Pident id1)) subst
-          | Sig_value _ | Sig_typext _ | Sig_class _ | Sig_class_type () ->
-            subst
+          | Sig_value _ | Sig_typext _ -> subst
         in
         pair_components new_subst ((item1, item2, pos1) :: paired) unpaired rem
       | exception Not_found ->
@@ -399,8 +390,6 @@ and signature_components ~loc old_env env cxt subst paired =
   | (Sig_modtype (id1, info1), Sig_modtype (_id2, info2), _pos) :: rem ->
     modtype_infos ~loc env cxt subst id1 info1 info2;
     comps_rec rem
-  | (Sig_class (), Sig_class (), _) :: _ -> assert false
-  | (Sig_class_type (), Sig_class_type (), _pos) :: _ -> assert false
   | _ -> assert false
 
 and module_declarations ~loc env cxt subst id1 md1 md2 =
