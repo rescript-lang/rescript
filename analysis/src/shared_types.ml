@@ -1021,6 +1021,8 @@ let state_to_yojson (state : state) =
         ("suffix", `String package.suffix);
         ("root_path", `String package.root_path);
         ("project_files", string_set_to_yojson package.project_files);
+        ( "dependencies",
+          `List (package.dependencies |> List.map (fun x -> `String x)) );
         ("dependencies_files", string_set_to_yojson package.dependencies_files);
         ("paths_for_module", paths_for_module_to_yojson package.paths_for_module);
         ( "namespace",
