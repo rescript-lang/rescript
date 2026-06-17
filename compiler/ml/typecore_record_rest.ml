@@ -113,6 +113,9 @@ let runtime_excluded_labels ~explicit_runtime_labels source_repr =
     else tag_name :: explicit_runtime_labels
   | _ -> explicit_runtime_labels
 
+(* Type a record-rest pattern by resolving its annotation, checking that the
+   rest record can be formed from the source record, and returning the typed
+   rest binding plus the runtime labels to remove from the generated object. *)
 let type_record_pat_rest ~env ~pattern_force ~loc ~record_ty ~lbl_pat_list ~rest
     ~enter_variable ~unify_pat_types ~check_not_private =
   let rest_type_lid, rest_type_args_syntax =
