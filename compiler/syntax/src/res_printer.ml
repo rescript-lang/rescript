@@ -416,10 +416,6 @@ let print_listi ~get_loc ~nodes ~print ?(ignore_empty_lines = false)
 let rec print_longident_aux accu = function
   | Longident.Lident s -> Doc.text s :: accu
   | Ldot (lid, s) -> print_longident_aux (Doc.text s :: accu) lid
-  | Lapply (lid1, lid2) ->
-    let d1 = Doc.join ~sep:Doc.dot (print_longident_aux [] lid1) in
-    let d2 = Doc.join ~sep:Doc.dot (print_longident_aux [] lid2) in
-    Doc.concat [d1; Doc.lparen; d2; Doc.rparen] :: accu
 
 let print_longident = function
   | Longident.Lident txt -> Doc.text txt
@@ -529,30 +525,22 @@ let pending_inline_record_definitions inline_record_definitions =
       else None)
 
 let print_lident l =
-  let flat_lid_opt lid =
+  let flat_lid lid =
     let rec flat accu = function
-      | Longident.Lident s -> Some (s :: accu)
+      | Longident.Lident s -> s :: accu
       | Ldot (lid, s) -> flat (s :: accu) lid
-      | Lapply (_, _) -> None
     in
     flat [] lid
   in
   match l with
   | Longident.Lident txt -> print_ident_like txt
   | Longident.Ldot (path, txt) ->
-    let doc =
-      match flat_lid_opt path with
-      | Some txts ->
-        Doc.concat
-          [
-            Doc.join ~sep:Doc.dot (List.map Doc.text txts);
-            Doc.dot;
-            print_ident_like txt;
-          ]
-      | None -> Doc.text "printLident: Longident.Lapply is not supported"
-    in
-    doc
-  | Lapply (_, _) -> Doc.text "printLident: Longident.Lapply is not supported"
+    Doc.concat
+      [
+        Doc.join ~sep:Doc.dot (List.map Doc.text (flat_lid path));
+        Doc.dot;
+        print_ident_like txt;
+      ]
 
 let print_longident_location l cmt_tbl =
   let doc = print_longident l.Location.txt in

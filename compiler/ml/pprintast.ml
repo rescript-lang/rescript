@@ -238,7 +238,6 @@ let paren :
 let rec longident f = function
   | Lident s -> protect_ident f s
   | Ldot (y, s) -> protect_longident f longident y s
-  | Lapply (y, s) -> pp f "%a(%a)" longident y longident s
 
 let longident_loc f x = pp f "%a" longident x.txt
 

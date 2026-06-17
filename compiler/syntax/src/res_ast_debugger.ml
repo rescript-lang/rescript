@@ -76,8 +76,6 @@ module Sexp_ast = struct
       | Longident.Lident ident -> Sexp.list [Sexp.atom "Lident"; string ident]
       | Longident.Ldot (lident, txt) ->
         Sexp.list [Sexp.atom "Ldot"; loop lident; string txt]
-      | Longident.Lapply (l1, l2) ->
-        Sexp.list [Sexp.atom "Lapply"; loop l1; loop l2]
     in
     Sexp.list [Sexp.atom "longident"; loop l]
 

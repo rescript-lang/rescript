@@ -127,7 +127,6 @@ let emit_longident ?(backwards = false) ?(jsx = false)
     match lid with
     | Longident.Lident txt -> txt :: acc
     | Ldot (lid, txt) -> flatten (txt :: acc) lid
-    | _ -> acc
   in
   let rec loop pos segments =
     match segments with

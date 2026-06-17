@@ -74,6 +74,7 @@ type t =
   | Bs_toplevel_expression_unit of
       (string * top_level_unit_help) option (* 109 *)
   | Bs_todo of string option (* 110 *)
+  | Bs_private_record_mutation of string (* 111 *)
 
 (* If you remove a warning, leave a hole in the numbering.  NEVER change
    the numbers of existing warnings.
@@ -126,8 +127,9 @@ let number = function
   | Bs_integer_literal_overflow -> 107
   | Bs_toplevel_expression_unit _ -> 109
   | Bs_todo _ -> 110
+  | Bs_private_record_mutation _ -> 111
 
-let last_warning_number = 110
+let last_warning_number = 111
 
 let letter_all =
   let rec loop i = if i = 0 then [] else i :: loop (i - 1) in
@@ -453,6 +455,8 @@ let message = function
     ^ "\n\n\
       \  This code is not implemented yet and will crash at runtime. Make sure \
        you implement this before running the code."
+  | Bs_private_record_mutation field_name ->
+    Printf.sprintf "Mutation of private record field %S." field_name
 
 let sub_locs = function
   | Deprecated (_, def, use, _) ->
@@ -564,6 +568,7 @@ let descriptions =
     );
     (109, "Toplevel expression has unit type");
     (110, "Todo found");
+    (111, "Mutation of private record field");
   ]
 
 let help_warnings () =

@@ -1322,7 +1322,6 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
                   }
               in
               set_result (Cpath context_path)
-            | Lapply _ -> ()
           else if Loc.end_ e.pexp_loc = pos_before_cursor then
             match expr_to_context_path ~in_jsx_context:!in_jsx_context e with
             | Some context_path ->

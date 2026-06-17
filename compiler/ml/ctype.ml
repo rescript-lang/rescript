@@ -2113,7 +2113,6 @@ let rec concat_longident lid1 =
   function
   | Lident s -> Ldot (lid1, s)
   | Ldot (lid2, s) -> Ldot (concat_longident lid1 lid2, s)
-  | Lapply (lid2, lid) -> Lapply (concat_longident lid1 lid2, lid)
 
 let nondep_instance env level id ty =
   let ty = !nondep_type' env id ty in
@@ -3353,8 +3352,12 @@ let memq_warn t visited =
 let rec lid_of_path ?(hash = "") = function
   | Path.Pident id -> Longident.Lident (hash ^ Ident.name id)
   | Path.Pdot (p1, s, _) -> Longident.Ldot (lid_of_path p1, hash ^ s)
-  | Path.Papply (p1, p2) ->
-    Longident.Lapply (lid_of_path ~hash p1, lid_of_path p2)
+  (* Applicative-functor application paths (Path.Papply) are produced
+     internally (applicative functors are on by default) even though ReScript's
+     surface syntax cannot reference such a path directly. Render the
+     application by name (e.g. "F(Arg)") rather than aborting, so any diagnostic
+     that reaches here degrades gracefully instead of crashing the compiler. *)
+  | Path.Papply _ as p -> Longident.Lident (hash ^ Path.name p)
 
 let find_cltype_for_path env p =
   let cl_path = Env.lookup_type (lid_of_path ~hash:"#" p) env in

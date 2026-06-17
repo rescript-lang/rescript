@@ -35,7 +35,6 @@ let print_res_poly_identifier : (string -> string) ref =
 let rec longident ppf = function
   | Lident s -> pp_print_string ppf s
   | Ldot (p, s) -> fprintf ppf "%a.%s" longident p s
-  | Lapply (p1, p2) -> fprintf ppf "%a(%a)" longident p1 longident p2
 
 (* Print an identifier *)
 

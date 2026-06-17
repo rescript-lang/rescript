@@ -81,28 +81,7 @@ let rec narrow_unbound_lid_error : 'a. _ -> _ -> _ -> _ -> 'a =
       raise (Error (loc, env, Access_functor_as_structure mlid))
     | Mty_alias (_, p) ->
       raise (Error (loc, env, Cannot_scrape_alias (mlid, p)))
-    | _ -> ())
-  | Longident.Lapply (flid, mlid) -> (
-    check_module flid;
-    let fmd = Env.find_module (Env.lookup_module ~load:true flid env) env in
-    (match Env.scrape_alias env fmd.md_type with
-    | Mty_signature _ ->
-      (* unreachable: this branch handles Longident.Lapply paths, but
-         Lapply has no construction site in compiler/syntax/src/ — ReScript's
-         type-level applicative-functor syntax (OCaml's M(X).t) isn't part
-         of the grammar *)
-      assert false
-    | Mty_alias (_, p) ->
-      raise (Error (loc, env, Cannot_scrape_alias (flid, p)))
-    | _ -> ());
-    check_module mlid;
-    let mmd = Env.find_module (Env.lookup_module ~load:true mlid env) env in
-    match Env.scrape_alias env mmd.md_type with
-    | Mty_alias (_, p) ->
-      raise (Error (loc, env, Cannot_scrape_alias (mlid, p)))
-    | _ ->
-      (* unreachable: same Lapply path as above *)
-      assert false));
+    | _ -> ()));
   raise (Error (loc, env, make_error lid))
 
 let find_component (lookup : ?loc:_ -> _) make_error env loc lid =
@@ -746,7 +725,6 @@ let super_spellcheck ppf fold env lid =
     Misc.spellcheck env name
   in
   match lid with
-  | Longident.Lapply _ -> false
   | Longident.Lident s -> did_you_mean ppf (fun _ -> choices None s)
   | Longident.Ldot (r, s) -> did_you_mean ppf (fun _ -> choices (Some r) s)
 
@@ -756,7 +734,6 @@ let spellcheck ppf fold env lid =
     Misc.spellcheck env name
   in
   match lid with
-  | Longident.Lapply _ -> ()
   | Longident.Lident s -> Misc.did_you_mean ppf (fun () -> choices ~path:None s)
   | Longident.Ldot (r, s) ->
     Misc.did_you_mean ppf (fun () -> choices ~path:(Some r) s)

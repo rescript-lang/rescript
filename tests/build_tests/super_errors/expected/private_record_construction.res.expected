@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/private_record_construction.res[0m:[2m9:30-39[0m
+
+   7 [2m│[0m }
+   8 [2m│[0m 
+   [1;31m9[0m [2m│[0m let _item: PrivateRecord.t = [1;31m{value: 1}[0m
+  10 [2m│[0m 
+
+  Cannot create values of the private type PrivateRecord.t

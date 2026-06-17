@@ -432,7 +432,6 @@ and structure_components = {
 
 and functor_components = {
   fcomp_param: Ident.t; (* Formal parameter *)
-  fcomp_arg: module_type option; (* Argument signature *)
   fcomp_res: module_type; (* Result signature *)
   fcomp_cache: (Path.t, module_components) Hashtbl.t; (* For memoization *)
   fcomp_subst_cache: (Path.t, module_type) Hashtbl.t;
@@ -1013,20 +1012,6 @@ let rec lookup_module_descr_aux ?loc lid env =
       let descr, pos = Tbl.find_str s c.comp_components in
       (Pdot (p, s, pos), descr)
     | Functor_comps _ -> raise Not_found)
-  | Lapply (l1, l2) -> (
-    let p1, desc1 = lookup_module_descr ?loc l1 env in
-    let p2 = lookup_module ~load:true ?loc l2 env in
-    let {md_type = mty2} = find_module p2 env in
-    match get_components desc1 with
-    | Functor_comps f ->
-      let loc =
-        match loc with
-        | Some l -> l
-        | None -> Location.none
-      in
-      Misc.may (!check_modtype_inclusion ~loc env mty2 p2) f.fcomp_arg;
-      (Papply (p1, p2), !components_of_functor_appl' f env p1 p2)
-    | Structure_comps _ -> raise Not_found)
 
 and lookup_module_descr ?loc lid env =
   let ((p, comps) as res) = lookup_module_descr_aux ?loc lid env in
@@ -1073,21 +1058,6 @@ and lookup_module ~load ?loc lid env : Path.t =
       report_deprecated ?loc p comps.deprecated;
       p
     | Functor_comps _ -> raise Not_found)
-  | Lapply (l1, l2) -> (
-    let p1, desc1 = lookup_module_descr ?loc l1 env in
-    let p2 = lookup_module ~load:true ?loc l2 env in
-    let {md_type = mty2} = find_module p2 env in
-    let p = Papply (p1, p2) in
-    match get_components desc1 with
-    | Functor_comps f ->
-      let loc =
-        match loc with
-        | Some l -> l
-        | None -> Location.none
-      in
-      Misc.may (!check_modtype_inclusion ~loc env mty2 p2) f.fcomp_arg;
-      p
-    | Structure_comps _ -> raise Not_found)
 
 let lookup proj1 proj2 ?loc lid env =
   match lid with
@@ -1099,7 +1069,6 @@ let lookup proj1 proj2 ?loc lid env =
       let data, pos = Tbl.find_str s (proj2 c) in
       (Pdot (p, s, pos), data)
     | Functor_comps _ -> raise Not_found)
-  | Lapply _ -> raise Not_found
 
 let lookup_all_simple proj1 proj2 shadow ?loc lid env =
   match lid with
@@ -1119,7 +1088,6 @@ let lookup_all_simple proj1 proj2 shadow ?loc lid env =
       let comps = try Tbl.find_str s (proj2 c) with Not_found -> [] in
       List.map (fun data -> (data, fun () -> ())) comps
     | Functor_comps _ -> raise Not_found)
-  | Lapply _ -> raise Not_found
 
 let has_local_constraints env = not (Path_map.is_empty env.local_constraints)
 
@@ -1588,14 +1556,13 @@ and components_of_module_maker (env, sub, path, mty) =
         | Sig_class_type () -> assert false)
       sg pl;
     Some (Structure_comps c)
-  | Mty_functor (param, ty_arg, ty_res) ->
+  | Mty_functor (param, _ty_arg, ty_res) ->
     Some
       (Functor_comps
          {
            fcomp_param = param;
-           (* fcomp_arg and fcomp_res must be prefixed eagerly, because
-              they are interpreted in the outer environment *)
-           fcomp_arg = may_map (Subst.modtype sub) ty_arg;
+           (* fcomp_res must be prefixed eagerly, because it is interpreted
+              in the outer environment *)
            fcomp_res = Subst.modtype sub ty_res;
            fcomp_cache = Hashtbl.create 17;
            fcomp_subst_cache = Hashtbl.create 17;

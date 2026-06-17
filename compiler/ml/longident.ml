@@ -13,7 +13,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type t = Lident of string | Ldot of t * string | Lapply of t * t
+type t = Lident of string | Ldot of t * string
 let rec cmp : t -> t -> int =
  fun a b ->
   if a == b then 0
@@ -26,24 +26,16 @@ let rec cmp : t -> t -> int =
       match cmp a c with
       | 0 -> compare b d
       | n -> n)
-    | Ldot _, _ -> -1
-    | _, Ldot _ -> 1
-    | Lapply (a, b), Lapply (c, d) -> (
-      match cmp a c with
-      | 0 -> cmp b d
-      | n -> n)
 
 let rec flat accu = function
   | Lident s -> s :: accu
   | Ldot (lid, s) -> flat (s :: accu) lid
-  | Lapply (_, _) -> Misc.fatal_error "Longident.flat"
 
 let flatten lid = flat [] lid
 
 let last = function
   | Lident s -> s
   | Ldot (_, s) -> s
-  | Lapply (_, _) -> Misc.fatal_error "Longident.last"
 
 let rec split_at_dots s pos =
   try

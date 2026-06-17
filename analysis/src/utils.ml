@@ -77,7 +77,6 @@ let flatten_long_ident ?(jsx = false) ?(cut_at_offset = None) lid =
       else if jsx && txt = "createElement" then (path, offset)
       else if txt = "_" then (extend_path "" path, offset + 1)
       else (extend_path txt path, offset + 1 + String.length txt)
-    | Lapply _ -> ([], 0)
   in
   let path, _ = loop lid in
   List.rev path
@@ -169,7 +168,6 @@ let rec get_unqualified_name txt =
   match txt with
   | Longident.Lident field_name -> field_name
   | Ldot (t, _) -> get_unqualified_name t
-  | _ -> ""
 
 let indent n text =
   let spaces = String.make n ' ' in

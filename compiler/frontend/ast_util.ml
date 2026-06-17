@@ -36,7 +36,7 @@ let record_as_js_object loc (self : Bs_ast_mapper.mapper)
           ( {Asttypes.loc; txt = x} :: labels,
             (x, self.expr self e) :: args,
             i + 1 )
-        | Ldot _ | Lapply _ -> Location.raise_errorf ~loc "invalid js label ")
+        | Ldot _ -> Location.raise_errorf ~loc "invalid js label ")
   in
   Ast_external_mk.local_external_obj loc
     ~pval_prim:(Ast_external_process.pval_prim_of_labels labels)
