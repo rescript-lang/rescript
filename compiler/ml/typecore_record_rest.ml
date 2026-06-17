@@ -15,6 +15,7 @@ type error =
       rest_runtime_name: string;
     }
   | Unboxed_record
+  | Mutable_source_record
 
 exception Error of Location.t * Env.t * error
 
@@ -80,10 +81,16 @@ let source_fields_of_decl (fields : label_declaration list) =
       })
     fields
 
+let has_mutable_field fields =
+  Ext_list.exists fields (fun (field : label_declaration) ->
+      field.ld_mutable = Mutable)
+
 let source_fields_and_repr ~env ~loc decl =
   match decl.type_kind with
   | Type_record (_, Record_unboxed _) -> raise_error loc env Unboxed_record
-  | Type_record (fields, repr) -> (source_fields_of_decl fields, repr)
+  | Type_record (fields, repr) ->
+    if has_mutable_field fields then raise_error loc env Mutable_source_record;
+    (source_fields_of_decl fields, repr)
   | _ -> assert false
 
 let resolve_source_record ~env ~unify_pat_types ~loc ~record_ty
@@ -306,3 +313,6 @@ let report_error ppf = function
       field Printtyp.longident rest_type rest_runtime_name source_runtime_name
   | Unboxed_record ->
     fprintf ppf "Record rest patterns cannot be used with unboxed record types."
+  | Mutable_source_record ->
+    fprintf ppf
+      "Record rest patterns cannot be used on records with mutable fields."

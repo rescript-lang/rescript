@@ -14,6 +14,7 @@ type error =
       rest_runtime_name: string;
     }
   | Unboxed_record
+  | Mutable_source_record
 
 exception Error of Location.t * Env.t * error
 
