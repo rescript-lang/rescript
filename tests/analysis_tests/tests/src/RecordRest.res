@@ -11,6 +11,7 @@ let getVersion = (config: config) =>
   }
 
 let {name: _, ...SubConfig.t as localRest} = {name: "v", version: "1"}
+//                 ^ast
 
 //^hin
 //^hig

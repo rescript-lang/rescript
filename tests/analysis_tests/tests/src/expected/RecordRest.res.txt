@@ -7,6 +7,28 @@ Definition src/RecordRest.res 8:4
   "uri": "file:///RecordRest.res"
 }
 
+Dump AST src/RecordRest.res 12:19
+
+Source:
+// let {name: _, ...SubConfig.t as localRest} = {name: "v", version: "1"}
+//                 ^ast
+
+<*>Pstr_value(
+  value:
+    <*>Ppat_record(
+      fields:
+        name: Ppat_any
+      rest:
+        localRest as <*>Ptyp_constr(<*>SubConfig.t)
+    )
+  expr:
+    Pexp_record(
+      fields:
+        name: Pexp_constant(Pconst_string(v))
+        version: Pexp_constant(Pconst_string(1))
+    )
+)
+
 Inlay Hint src/RecordRest.res 1:34
 [
   {

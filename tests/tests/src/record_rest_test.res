@@ -39,9 +39,21 @@ let getAliasedRest = ({name: _, ...aliasedSubConfig as rest}: config) => rest
 let getNamespacedRest = ({name: _, ...SubConfig.t as rest}: config) => rest
 
 let getRenamedRest = ({name: _, ...subConfig as rest}: renamedConfig) => rest
+let getRenamedNameAndRest = ({name, ...subConfig as rest}: renamedConfig) => (name, rest)
 
 let getName = ({name, ...subConfig as _rest}: config) => name
 let getWholeConfig = ({...config as rest}: config) => rest
+let makeConfig = (): config => {name: "call", version: "4.5", debug: true}
+let getCallResultRest = () => {
+  let {name: _, ...subConfig as rest} = makeConfig()
+  rest
+}
+
+let getNameRestAndOriginalVersion = ({name, ...subConfig as rest} as original: config) => (
+  name,
+  rest,
+  original.version,
+)
 
 type fullProps = {
   className?: string,
@@ -184,6 +196,14 @@ describe(__MODULE__, () => {
     )
   })
 
+  test("record rest can return a field renamed with @as alongside the rest", () => {
+    eq(
+      __LOC__,
+      getRenamedNameAndRest({name: "renamed", version: "3.25", debug: false}),
+      ("renamed", {version: "3.25", debug: false}),
+    )
+  })
+
   test("empty-field rest pattern still binds the whole record", () => {
     eq(
       __LOC__,
@@ -216,6 +236,18 @@ describe(__MODULE__, () => {
       __LOC__,
       getTupleRest((({name: "tuple", version: "4.0", debug: false}: config), 1)),
       {version: "4.0", debug: false},
+    )
+  })
+
+  test("record rest works when the source is not a bare identifier", () => {
+    eq(__LOC__, getCallResultRest(), {version: "4.5", debug: true})
+  })
+
+  test("record rest keeps the original parameter alias usable", () => {
+    eq(
+      __LOC__,
+      getNameRestAndOriginalVersion({name: "original", version: "4.75", debug: false}),
+      ("original", {version: "4.75", debug: false}, "4.75"),
     )
   })
 
