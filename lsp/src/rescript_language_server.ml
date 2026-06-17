@@ -739,6 +739,12 @@ let on_notification notification (server : State.t Server.t) =
        stale errors are cleared and cross-package diagnostics stay in sync. *)
     let diagnostics = get_updated_diagnostics_from_log state in
     diagnostics |> Diagnostics.send;
+
+    Server.notification
+      (Server_notification.UnknownNotification
+         (Jsonrpc.Notification.create ~method_:"rescript/compilationFinished" ()))
+      server;
+
     state |> State.update_diagnostics diagnostics
   | ChangeConfiguration _ ->
     (* workspace/didChangeConfiguration only signals that settings may have
