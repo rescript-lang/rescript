@@ -60,10 +60,10 @@ The main objective is to first maintain resource parity with the current server.
 - [x] `textDocument/typeDefinition` - client request
 - [ ] `textDocument/implementation` - client request - **It will not be implemented for now.**
 - [x] `textDocument/references` - client request
-  - 🐛 Neovim and Zed kill the server. I need to investigate.
+  - 🐛 Neovim and Zed kill the server. I need to investigate. Fixed in https://github.com/rescript-lang/rescript/pull/8477
 - [ ] `textDocument/documentHighlight` - client request - **It will not be implemented for now.**
-- [ ] `textDocument/documentSymbol` - client request
-  - 🐛 Zed doesn't show the symbols on the panel. It works on Neovim
+- [x] `textDocument/documentSymbol` - client request
+  - Zed need set the config `"document_symbols": "on"`. When enabled, tree-sitter is not used for document symbols.
 - [ ] `workspace/symbol` - client request - **It will not be implemented for now.**
 - [x] `textDocument/codeAction` - client request
   - [x] Code actions from analysis
