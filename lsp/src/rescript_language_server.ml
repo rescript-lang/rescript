@@ -66,7 +66,6 @@ let initialization (_client_capabilities : ClientCapabilities.t) =
         ]
       ()
   in
-
   let capabilities =
     ServerCapabilities.create ~textDocumentSync ~completionProvider
       ~codeLensProvider ~hoverProvider:(`Bool true) ~signatureHelpProvider
@@ -354,16 +353,13 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
         ~debug:false
     in
     (ok (Some resp), state)
-  | DocumentSymbol {textDocument = {uri}} -> (
-    (* NOTE: Client side bug. For some reason, Neovim requests the document symbol before sending the TextDocumentDidOpen notification. *)
-    match Document_store.get_opt ~uri state.store with
-    | None -> (ok (Some (`DocumentSymbol [])), state)
-    | Some {text} ->
-      let resp =
-        Analysis.Document_symbol.get_symbols ~source:text
-          ~kind_file:(Document.kind uri)
-      in
-      (ok (Some (`DocumentSymbol resp)), state))
+  | DocumentSymbol {textDocument = {uri}} ->
+    let source = (Document_store.get ~uri state.store).text in
+    let resp =
+      Analysis.Document_symbol.get_symbols ~source
+        ~kind_file:(Document.kind uri)
+    in
+    (ok (Some (`DocumentSymbol resp)), state)
   | CodeAction
       {textDocument = {uri}; range = {start; end_}; context = {diagnostics}} ->
     let full = load_full uri state in
