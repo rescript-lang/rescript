@@ -3,7 +3,7 @@ module Parse : sig
 
   type entry =
     | Syntax_error
-    | Warning of int
+    | Warning of {number: int; configured_as_error: bool}
     | Common_error (* type error, value can't be found *)
     | Circular_dependency
     | Unknow
@@ -20,7 +20,7 @@ end = struct
 
   type entry =
     | Syntax_error
-    | Warning of int
+    | Warning of {number: int; configured_as_error: bool}
     | Common_error
     | Circular_dependency
     | Unknow
@@ -229,6 +229,25 @@ end = struct
     in
     loop (loc_index - 1)
 
+  let warning_from_line line =
+    let line = String.trim line in
+    let warning_number_re = Str.regexp "^Warning number[ \t]+\\([0-9]+\\)" in
+    let warning_re = Str.regexp "^Warning[ \t]+\\([0-9]+\\)" in
+    let configured_as_error =
+      try
+        ignore
+          (Str.search_forward
+             (Str.regexp_string "(configured as error)")
+             line 0);
+        true
+      with Not_found -> false
+    in
+    if Str.string_match warning_number_re line 0 then
+      Some (Str.matched_group 1 line |> int_of_string, configured_as_error)
+    else if Str.string_match warning_re line 0 then
+      Some (Str.matched_group 1 line |> int_of_string, configured_as_error)
+    else None
+
   let severity_from_message lines =
     let rec loop = function
       | [] -> None
@@ -250,23 +269,14 @@ end = struct
     String.starts_with ~prefix:"Warning " content
     || String.starts_with ~prefix:"Error" content
 
-  let warning_number_from_line line =
-    let line = String.trim line in
-    let warning_number_re = Str.regexp "^Warning number[ \t]+\\([0-9]+\\)" in
-    let warning_re = Str.regexp "^Warning[ \t]+\\([0-9]+\\)" in
-    if Str.string_match warning_number_re line 0 then
-      Some (Str.matched_group 1 line |> int_of_string)
-    else if Str.string_match warning_re line 0 then
-      Some (Str.matched_group 1 line |> int_of_string)
-    else None
-
   let kind_from_title title =
     match title with
     | "Syntax error!" -> Syntax_error
     | "We've found a bug for you!" -> Common_error
     | other -> (
-      match warning_number_from_line other with
-      | Some number -> Warning number
+      match warning_from_line other with
+      | Some (number, configured_as_error) ->
+        Warning {number; configured_as_error}
       | None -> Unknow)
 
   let kind_from_message lines =
@@ -276,8 +286,9 @@ end = struct
         let content = String.trim line in
         if is_blank content || is_source_excerpt_line content then loop rest
         else if String.starts_with ~prefix:"Warning " content then
-          match warning_number_from_line content with
-          | Some number -> Warning number
+          match warning_from_line content with
+          | Some (number, configured_as_error) ->
+            Warning {number; configured_as_error}
           | None -> Unknow
         else if String.starts_with ~prefix:"Error" content then Unknow
         else loop rest
@@ -472,7 +483,7 @@ end = struct
               match content with
               | "Syntax error!" | "We've found a bug for you!" ->
                 Some Lsp.Types.DiagnosticSeverity.Error
-              | other when String.starts_with ~prefix:"Warning number" other ->
+              | other when String.starts_with ~prefix:"Warning " other ->
                 Some Lsp.Types.DiagnosticSeverity.Warning
               | _ -> None)
             | None -> None)
@@ -516,7 +527,10 @@ let%expect_test "parse log" =
            print_endline
              ((match entry.entry with
               | Syntax_error -> "Syntax_error"
-              | Warning number -> Printf.sprintf "Warning %d" number
+              | Warning {number; configured_as_error} ->
+                if configured_as_error then
+                  Printf.sprintf "Warning %d (configured as error)" number
+                else Printf.sprintf "Warning %d" number
               | Unknow -> "Unknow"
               | Circular_dependency -> "Circular_dependency"
               | Common_error -> "Common_error")
@@ -1171,7 +1185,7 @@ let%expect_test "parse log" =
   Parse.parse_log_content example_log_10 |> print_logs;
   [%expect
     {|
-    Warning 8 - Full_path(/home/pedro/Desktop/projects/rescript-lang.org/apps/docs/app/DocsRoutes.res)
+    Warning 8 (configured as error) - Full_path(/home/pedro/Desktop/projects/rescript-lang.org/apps/docs/app/DocsRoutes.res)
     {
       "message": "You forgot to handle a possible case here, for example:\n| C",
       "range": {
@@ -1223,6 +1237,328 @@ let%expect_test "parse log" =
         "start": { "character": 4, "line": 4 }
       },
       "severity": 2,
+      "source": "ReScript"
+    }
+    |}];
+
+  let example_log_10 =
+    {|#Start(1780630901455)
+
+        We've found a bug for you!
+          tests/build_tests/super_errors/fixtures/access_record_field_on_option.res:12:15
+
+          10 │ }
+          11 │
+          12 │ let f = X.x.c.d
+          13 │
+
+          You're trying to access the record field d, but the value you're trying to access it on is an option.
+          You need to unwrap the option first before accessing the record field.
+
+          Possible solutions:
+          - Use Option.map to transform the option: xx->Option.map(field => field.d)
+          - Or use Option.getOr with a default: xx->Option.getOr(defaultRecord).d
+
+        #Done(1781383030936)|}
+  in
+
+  Parse.parse_log_content example_log_10 |> print_logs;
+  [%expect
+    {|
+    Common_error - Relative_path(tests/build_tests/super_errors/fixtures/access_record_field_on_option.res)
+    {
+      "message": "You're trying to access the record field d, but the value you're trying to access it on is an option.\nYou need to unwrap the option first before accessing the record field.\n\nPossible solutions:\n- Use Option.map to transform the option: xx->Option.map(field => field.d)\n- Or use Option.getOr with a default: xx->Option.getOr(defaultRecord).d",
+      "range": {
+        "end": { "character": 15, "line": 11 },
+        "start": { "character": 14, "line": 11 }
+      },
+      "severity": 1,
+      "source": "ReScript"
+    }
+    |}];
+
+  let example_log_11 =
+    {|#Start(1780630901455)
+
+        We've found a bug for you!
+        tests/build_tests/super_errors/fixtures/arity_mismatch.res:2:21-27
+
+        1 │ let makeVar = (~f, ()) => 34
+        2 │ let makeVariables = makeVar(~f=f => f)
+        3 │
+
+        This function call is incorrect.
+        The function has type:
+        (~f: 'a => 'a, unit) => int
+
+        - The function takes 1 unlabelled argument, but is called with none
+
+
+        We've found a bug for you!
+        tests/build_tests/super_errors/fixtures/array_item_type_mismatch.res:1:16-22
+
+        1 │ let x = [1, 2, "hello"]
+        2 │
+
+        This array item has type: string
+        But this array is expected to have items of type: int
+
+        Arrays can only contain items of the same type.
+
+        Possible solutions:
+        - Convert all values in the array to the same type.
+        - Use a tuple, if your array is of fixed length. Tuples can mix types freely, and compiles to a JavaScript array. Example of a tuple: `let myTuple = (10, "hello", 15.5, true)
+
+        You can convert string to int with Int.fromString.
+
+        We've found a bug for you!
+        tests/build_tests/super_errors/fixtures/include_extension_constructors_mismatch.res:4:5-7:1
+
+        2 │   type t = ..
+        3 │   type t += E(int)
+        4 │ } = {
+        5 │   type t = ..
+        6 │   type t += E(string)
+        7 │ }
+        8 │
+
+        Signature mismatch:
+        Modules do not match:
+          {
+        type t = ..
+        type t += E(string)
+      }
+        is not included in
+          {
+        type t = ..
+        type t += E(int)
+      }
+        Extension declarations do not match:
+          type t +=  E(string)
+        is not included in
+          type t +=  E(int)
+        tests/build_tests/super_errors/fixtures/include_extension_constructors_mismatch.res:3:13-18:
+          Expected declaration
+        tests/build_tests/super_errors/fixtures/include_extension_constructors_mismatch.res:6:13-21:
+          Actual declaration
+
+        We've found a bug for you!
+        tests/build_tests/super_errors/fixtures/functor_apply_arg_mismatch.res:13:22-29
+
+        11 │ }
+        12 │
+        13 │ module Result = Make(Concrete)
+        14 │ let _ = Result.bar
+        15 │
+
+        Signature mismatch:
+        Modules do not match: {
+        let unrelated: string
+      } is not included in HasFoo
+        The value `foo' is required but not provided
+        tests/build_tests/super_errors/fixtures/functor_apply_arg_mismatch.res:2:3-14:
+          Expected declaration
+
+        We've found a bug for you!
+        tests/build_tests/super_errors/fixtures/include_missing_field.res:4:5-6:1
+
+        2 │   let x: int
+        3 │   let y: string
+        4 │ } = {
+        5 │   let x = 1
+        6 │ }
+        7 │
+
+        Signature mismatch:
+        Modules do not match:
+          {
+        let x: int
+      }
+        is not included in
+          {
+        let x: int
+        let y: string
+      }
+        The value `y' is required but not provided
+        tests/build_tests/super_errors/fixtures/include_missing_field.res:3:3-15:
+          Expected declaration
+
+        We've found a bug for you!
+        tests/build_tests/super_errors/fixtures/include_modtype_infos_mismatch.res:5:5-9:1
+
+          3 │     let x: int
+          4 │   }
+          5 │ } = {
+          6 │   module type T = {
+          7 │     let x: string
+          8 │   }
+          9 │ }
+        10 │
+
+        Signature mismatch:
+        Modules do not match:
+          {
+        module type T = {
+          let x: string
+        }
+      }
+        is not included in
+          {
+        module type T = {
+          let x: int
+        }
+      }
+        Module type declarations do not match:
+          module type T = {
+        let x: string
+      }
+        does not match
+          module type T = {
+        let x: int
+      }
+        At position module type T = <here>
+        Modules do not match:
+          {
+        let x: string
+      }
+        is not included in
+          {
+        let x: int
+      }
+        At position module type T = <here>
+        Values do not match: let x: string is not included in let x: int
+        tests/build_tests/super_errors/fixtures/include_modtype_infos_mismatch.res:3:5-14:
+          Expected declaration
+        tests/build_tests/super_errors/fixtures/include_modtype_infos_mismatch.res:7:5-17:
+          Actual declaration
+
+      #Done(1781383030936)|}
+  in
+
+  Parse.parse_log_content example_log_11 |> print_logs;
+  [%expect
+    {|
+    Common_error - Relative_path(tests/build_tests/super_errors/fixtures/arity_mismatch.res)
+    {
+      "message": "This function call is incorrect.\nThe function has type:\n(~f: 'a => 'a, unit) => int\n\n- The function takes 1 unlabelled argument, but is called with none",
+      "range": {
+        "end": { "character": 27, "line": 1 },
+        "start": { "character": 20, "line": 1 }
+      },
+      "severity": 1,
+      "source": "ReScript"
+    }
+
+    Common_error - Relative_path(tests/build_tests/super_errors/fixtures/array_item_type_mismatch.res)
+    {
+      "message": "This array item has type: string\nBut this array is expected to have items of type: int\n\nArrays can only contain items of the same type.\n\nPossible solutions:\n- Convert all values in the array to the same type.\n- Use a tuple, if your array is of fixed length. Tuples can mix types freely, and compiles to a JavaScript array. Example of a tuple: `let myTuple = (10, \"hello\", 15.5, true)\n\nYou can convert string to int with Int.fromString.",
+      "range": {
+        "end": { "character": 22, "line": 0 },
+        "start": { "character": 15, "line": 0 }
+      },
+      "severity": 1,
+      "source": "ReScript"
+    }
+
+    Common_error - Relative_path(tests/build_tests/super_errors/fixtures/include_extension_constructors_mismatch.res)
+    {
+      "message": "Signature mismatch:\nModules do not match:\n{\ntype t = ..\ntype t += E(string)\n}\nis not included in\n{\ntype t = ..\ntype t += E(int)\n}\nExtension declarations do not match:\ntype t +=  E(string)\nis not included in\ntype t +=  E(int)\ntests/build_tests/super_errors/fixtures/include_extension_constructors_mismatch.res:3:13-18:\nExpected declaration\ntests/build_tests/super_errors/fixtures/include_extension_constructors_mismatch.res:6:13-21:\nActual declaration",
+      "range": {
+        "end": { "character": 1, "line": 6 },
+        "start": { "character": 4, "line": 3 }
+      },
+      "severity": 1,
+      "source": "ReScript"
+    }
+
+    Common_error - Relative_path(tests/build_tests/super_errors/fixtures/functor_apply_arg_mismatch.res)
+    {
+      "message": "Signature mismatch:\nModules do not match: {\nlet unrelated: string\n} is not included in HasFoo\nThe value `foo' is required but not provided\ntests/build_tests/super_errors/fixtures/functor_apply_arg_mismatch.res:2:3-14:\nExpected declaration",
+      "range": {
+        "end": { "character": 29, "line": 12 },
+        "start": { "character": 21, "line": 12 }
+      },
+      "severity": 1,
+      "source": "ReScript"
+    }
+
+    Common_error - Relative_path(tests/build_tests/super_errors/fixtures/include_missing_field.res)
+    {
+      "message": "Signature mismatch:\nModules do not match:\n{\nlet x: int\n}\nis not included in\n{\nlet x: int\nlet y: string\n}\nThe value `y' is required but not provided\ntests/build_tests/super_errors/fixtures/include_missing_field.res:3:3-15:\nExpected declaration",
+      "range": {
+        "end": { "character": 1, "line": 5 },
+        "start": { "character": 4, "line": 3 }
+      },
+      "severity": 1,
+      "source": "ReScript"
+    }
+
+    Common_error - Relative_path(tests/build_tests/super_errors/fixtures/include_modtype_infos_mismatch.res)
+    {
+      "message": "Signature mismatch:\nModules do not match:\n{\nmodule type T = {\nlet x: string\n}\n}\nis not included in\n{\nmodule type T = {\nlet x: int\n}\n}\nModule type declarations do not match:\nmodule type T = {\nlet x: string\n}\ndoes not match\nmodule type T = {\nlet x: int\n}\nAt position module type T = <here>\nModules do not match:\n{\nlet x: string\n}\nis not included in\n{\nlet x: int\n}\nAt position module type T = <here>\nValues do not match: let x: string is not included in let x: int\ntests/build_tests/super_errors/fixtures/include_modtype_infos_mismatch.res:3:5-14:\nExpected declaration\ntests/build_tests/super_errors/fixtures/include_modtype_infos_mismatch.res:7:5-17:\nActual declaration",
+      "range": {
+        "end": { "character": 1, "line": 8 },
+        "start": { "character": 4, "line": 4 }
+      },
+      "severity": 1,
+      "source": "ReScript"
+    }
+    |}];
+
+  let example_log_12 =
+    {|#Start(1781743112207)
+    Error in build_warn_as_error:
+
+      Warning number 110 (configured as error)
+      /home/pedro/Desktop/projects/rescript-compiler/tests/build_tests/build_warn_as_error/src/Demo.res:1:17-21
+
+      1 │ let todo = _ => %todo
+      2 │
+
+      Todo found.
+
+      This code is not implemented yet and will crash at runtime. Make sure you implement this before running the code.
+
+    #Done(1781743112217)|}
+  in
+
+  Parse.parse_log_content example_log_12 |> print_logs;
+  [%expect
+    {|
+    Warning 110 (configured as error) - Full_path(/home/pedro/Desktop/projects/rescript-compiler/tests/build_tests/build_warn_as_error/src/Demo.res)
+    {
+      "message": "Todo found.\n\nThis code is not implemented yet and will crash at runtime. Make sure you implement this before running the code.",
+      "range": {
+        "end": { "character": 21, "line": 0 },
+        "start": { "character": 16, "line": 0 }
+      },
+      "severity": 2,
+      "source": "ReScript"
+    }
+    |}];
+
+  let example_log_13 =
+    {|#Start(1781744629915)
+    
+      We've found a bug for you!
+      /home/pedro/Desktop/projects/rescript-compiler/tests/build_tests/gpr_978/src/gpr_978_module.res
+    
+      M is exported twice
+    
+    #Done(1781744629934)|}
+  in
+
+  Parse.parse_log_content example_log_13 |> print_logs;
+  [%expect
+    {|
+    Common_error - Full_path(/home/pedro/Desktop/projects/rescript-compiler/tests/build_tests/gpr_978/src/gpr_978_module.res)
+    {
+      "message": "M is exported twice",
+      "range": {
+        "end": { "character": 0, "line": 0 },
+        "start": { "character": 0, "line": 0 }
+      },
+      "severity": 1,
       "source": "ReScript"
     }
     |}]
