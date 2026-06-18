@@ -61,6 +61,36 @@ let to_lsp_format (workspace_root : DocumentUri.t)
     (doc_store : Document_store.t) diagnostics =
   let workspace_root_path = workspace_root |> DocumentUri.to_path in
 
+  let expand_range (uri : Uri.t) (range : Range.t) =
+    let shortest_possible_code = "let a=1" in
+
+    match Document_store.get_opt ~uri doc_store with
+    | None ->
+      let is_zero =
+        range.start.line = 0 && range.start.line = 0 && range.end_.line = 0
+        && range.end_.character = 0
+      in
+      if is_zero then
+        {
+          range with
+          end_ =
+            {line = 0; character = String.length shortest_possible_code - 1};
+        }
+      else range
+    | Some {text} ->
+      (* TODO: Revisit this *)
+      let lines = String.split_on_char '\n' text in
+
+      let line, character =
+        match List.rev lines with
+        | [] -> (0, String.length shortest_possible_code - 1)
+        | last_line :: rest ->
+          let line_count = List.length rest in
+          (line_count - 1, String.length last_line - 1)
+      in
+      {range with end_ = {line; character}}
+  in
+
   let diagnostics_sanitized =
     diagnostics
     |> List.filter_map
@@ -80,37 +110,42 @@ let to_lsp_format (workspace_root : DocumentUri.t)
              (* Circular dependency diagnostics are special-cased because the compiler log
                 does not point at a precise source range. When the document is open, we expand
                 the diagnostic range to cover the whole document so the editor can display a
-                file-level diagnostic. If the document is not open, we modify the range to [(0,0), (0,6)].*)
-             let range =
-               match Document_store.get_opt ~uri doc_store with
-               | None -> diagnostic_entry.diagnostic.range
-               | Some {text} ->
-                 (* TODO: Revisit this *)
-                 let lines = String.split_on_char '\n' text in
-
-                 let end_line, end_character =
-                   match List.rev lines with
-                   | [] -> (0, String.length "let a=1" - 1)
-                   | last_line :: rest ->
-                     let line_count = List.length rest in
-                     (line_count - 1, String.length last_line - 1)
-                 in
-                 Range.create
-                   ~start:(Position.create ~line:0 ~character:0)
-                   ~end_:
-                     (Position.create ~line:end_line ~character:end_character)
+                file-level diagnostic.*)
+             let diagnostic =
+               {
+                 diagnostic_entry.diagnostic with
+                 range = expand_range uri diagnostic_entry.diagnostic.range;
+               }
              in
-             let diagnostic = {diagnostic_entry.diagnostic with range} in
              Some (uri, diagnostic)
-           | Warning warning_number ->
-             let warning_msg = "Warning " ^ string_of_int warning_number in
+           | Warning {number; configured_as_error} ->
+             let warning_msg = "Warning " ^ string_of_int number in
              let message =
                match diagnostic_entry.diagnostic.message with
-               | `String m -> `String (m ^ warning_msg)
-               | `MarkupContent {value} -> `String (value ^ warning_msg)
+               | `String m -> m
+               | `MarkupContent {value} -> value
              in
-             Some (uri, {diagnostic_entry.diagnostic with message})
-           | Common_error | Unknow -> Some (uri, diagnostic_entry.diagnostic))
+             let severity =
+               match diagnostic_entry.diagnostic.severity with
+               | Some DiagnosticSeverity.Warning when configured_as_error ->
+                 Some DiagnosticSeverity.Error
+               | other -> other
+             in
+             Some
+               ( uri,
+                 {
+                   diagnostic_entry.diagnostic with
+                   message = `String (message ^ warning_msg);
+                   range = expand_range uri diagnostic_entry.diagnostic.range;
+                   severity;
+                 } )
+           | Common_error | Unknow ->
+             Some
+               ( uri,
+                 {
+                   diagnostic_entry.diagnostic with
+                   range = expand_range uri diagnostic_entry.diagnostic.range;
+                 } ))
   in
 
   diagnostics_sanitized
