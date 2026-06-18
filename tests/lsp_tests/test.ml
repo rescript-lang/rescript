@@ -50,7 +50,8 @@ module Client = struct
     let stdin_r, stdin_w = Eio_unix.pipe sw in
     let stdout_r, stdout_w = Eio_unix.pipe sw in
     let proc =
-      Eio.Process.spawn ~sw mgr ~stdin:stdin_r ~stdout:stdout_w ~executable []
+      Eio.Process.spawn ~sw mgr ~stdin:stdin_r ~stdout:stdout_w ~executable
+        [executable; "--stdio"]
     in
     Eio.Resource.close stdin_r;
     Eio.Resource.close stdout_w;

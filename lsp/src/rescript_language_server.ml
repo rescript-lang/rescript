@@ -1,6 +1,8 @@
 open Lsp
 open Types
 
+let version = Version.version
+
 let initialization (_client_capabilities : ClientCapabilities.t) =
   let textDocumentSync =
     `TextDocumentSyncOptions
@@ -76,7 +78,6 @@ let initialization (_client_capabilities : ClientCapabilities.t) =
       ~executeCommandProvider ()
   in
   let serverInfo =
-    let version = "2.0.0-aplha.1" in
     InitializeResult.create_serverInfo ~name:"rescript-language-server" ~version
       ()
   in
