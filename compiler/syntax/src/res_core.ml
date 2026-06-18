@@ -1522,8 +1522,10 @@ and parse_record_pattern_row p =
   let attrs = parse_attributes p in
   match p.Parser.token with
   | DotDotDot -> (
+    let rest_start_pos = p.Parser.start_pos in
     Parser.next p;
-    let start_pos = p.Parser.start_pos in
+    let start_pos = rest_start_pos in
+    let rest_name_start_pos = p.Parser.start_pos in
     let has_type_annotation =
       Parser.lookahead p (fun p ->
           ignore (parse_atomic_typ_expr ~attrs:[] p);
@@ -1560,7 +1562,9 @@ and parse_record_pattern_row p =
             PatRest
               {
                 Parsetree.rest_loc = loc;
-                rest_name = Location.mkloc ident loc;
+                rest_name =
+                  Location.mkloc ident
+                    (mk_loc rest_name_start_pos p.prev_end_pos);
                 rest_type = None;
               } )
       | _ ->

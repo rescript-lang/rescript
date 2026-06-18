@@ -29,7 +29,7 @@ Explanation: since records have a known, fixed shape, a spread like `{a, ...b}` 
 
 
   Syntax error!
-  syntax_tests/data/parsing/errors/other/spread.res:4:9-18
+  syntax_tests/data/parsing/errors/other/spread.res:4:6-18
 
   2 │ 
   3 │ let record = {...x, ...y}

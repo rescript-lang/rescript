@@ -144,22 +144,33 @@ let suites =
            match transformed.expression_desc with
            | Fun
                {
-                 params =
-                   [
-                     Object_rest_param
-                       {
-                         object_rest_fields =
-                           [
-                             {
-                               record_rest_label = "name";
-                               record_rest_ident = Some ignored;
-                             };
-                           ];
-                         object_rest_rest = rest;
-                       };
-                   ];
+                 params = [Ident_param transformed_param];
                  body =
                    [
+                     {
+                       statement_desc =
+                         Variable
+                           {
+                             ident = rest;
+                             value =
+                               Some
+                                 {
+                                   expression_desc =
+                                     Record_rest
+                                       ( [
+                                           {
+                                             record_rest_label = "name";
+                                             record_rest_ident = Some ignored;
+                                           };
+                                         ],
+                                         {expression_desc = Var (Id source); _}
+                                       );
+                                   _;
+                                 };
+                             _;
+                           };
+                       _;
+                     };
                      {
                        statement_desc =
                          Return {expression_desc = Var (Id returned); _};
@@ -168,8 +179,10 @@ let suites =
                    ];
                  _;
                } ->
+             OUnit.assert_bool __LOC__ (Ident.same param transformed_param);
              OUnit.assert_equal "__unused0" (Ident.name ignored);
              OUnit.assert_equal "rest" (Ident.name rest);
+             OUnit.assert_bool __LOC__ (Ident.same param source);
              OUnit.assert_bool __LOC__ (Ident.same rest returned)
            | _ -> OUnit.assert_failure __LOC__ );
          ( __LOC__ >:: fun _ ->

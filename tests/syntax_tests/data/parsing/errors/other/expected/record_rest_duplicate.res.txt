@@ -1,6 +1,6 @@
 
   Syntax error!
-  syntax_tests/data/parsing/errors/other/record_rest_duplicate.res:1:9-51
+  syntax_tests/data/parsing/errors/other/record_rest_duplicate.res:1:6-51
 
   1 │ let {...Config.t as first, ...Config.t as second} = myRecord
   2 │ 

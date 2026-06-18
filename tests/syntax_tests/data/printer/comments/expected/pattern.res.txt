@@ -58,6 +58,11 @@ let /* before */ {
   /* c3 */ age /* c4 */: /* c5 */ ageInYears /* c6 */,
 } /* after */ = {name: "steve", age: 31}
 
+let /* before */ {
+  /* c0 */ name /* c1 */,
+  /* before rest */ .../* before type */ SubConfig.t /* after type */ as /* before name */ rest /* after rest */,
+} /* after */ = config
+
 // Ppat_or
 let /* b1 */ Blue /* b2 */ | /* c1 */ Red /* c2 */ = color
 let /* b1 */ Blue /* b2 */ | /* c1 */ Red /* c2 */ | /* d1 */ Green /* d2 */ = color
