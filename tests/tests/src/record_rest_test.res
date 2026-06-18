@@ -7,19 +7,19 @@ type config = {
   debug: bool,
 }
 
-type subConfig = {
+type restConfig = {
   version: string,
   debug: bool,
 }
 
-module SubConfig = {
+module RestConfig = {
   type t = {
     version: string,
     debug: bool,
   }
 }
 
-type aliasedSubConfig = subConfig
+type aliasedRestConfig = restConfig
 
 type renamedConfig = {
   @as("user-name")
@@ -30,26 +30,26 @@ type renamedConfig = {
 
 let describeConfig = (c: config) =>
   switch c {
-  | {name, ...subConfig as rest} => (name, rest)
+  | {name, ...restConfig as rest} => (name, rest)
   }
 
-let getNameAndSubConfig = ({name, ...subConfig as subConfig}: config) => (name, subConfig)
+let getNameAndRestConfig = ({name, ...restConfig as restConfig}: config) => (name, restConfig)
 
-let getAliasedRest = ({name: _, ...aliasedSubConfig as rest}: config) => rest
-let getNamespacedRest = ({name: _, ...SubConfig.t as rest}: config) => rest
+let getAliasedRest = ({name: _, ...aliasedRestConfig as rest}: config) => rest
+let getNamespacedRest = ({name: _, ...RestConfig.t as rest}: config) => rest
 
-let getRenamedRest = ({name: _, ...subConfig as rest}: renamedConfig) => rest
-let getRenamedNameAndRest = ({name, ...subConfig as rest}: renamedConfig) => (name, rest)
+let getRenamedRest = ({name: _, ...restConfig as rest}: renamedConfig) => rest
+let getRenamedNameAndRest = ({name, ...restConfig as rest}: renamedConfig) => (name, rest)
 
-let getName = ({name, ...subConfig as _rest}: config) => name
+let getName = ({name, ...restConfig as _rest}: config) => name
 let getWholeConfig = ({...config as rest}: config) => rest
 let makeConfig = (): config => {name: "call", version: "4.5", debug: true}
 let getCallResultRest = () => {
-  let {name: _, ...subConfig as rest} = makeConfig()
+  let {name: _, ...restConfig as rest} = makeConfig()
   rest
 }
 
-let getNameRestAndOriginalVersion = ({name, ...subConfig as rest} as original: config) => (
+let getNameRestAndOriginalVersion = ({name, ...restConfig as rest} as original: config) => (
   name,
   rest,
   original.version,
@@ -84,12 +84,12 @@ type wrapped =
   | Wrap(config)
   | Mirror(config)
 
-let getTupleRest = (({name: _, ...subConfig as rest}, _): (config, int)) => rest
+let getTupleRest = (({name: _, ...restConfig as rest}, _): (config, int)) => rest
 
 let getWrappedRest = wrapped =>
   switch wrapped {
-  | Wrap({name: _, ...subConfig as rest})
-  | Mirror({name: _, ...subConfig as rest}) => rest
+  | Wrap({name: _, ...restConfig as rest})
+  | Mirror({name: _, ...restConfig as rest}) => rest
   }
 
 type inlineWrapped =
@@ -98,8 +98,8 @@ type inlineWrapped =
 
 let getInlineWrappedRest = wrapped =>
   switch wrapped {
-  | InlineWrap({name: _, ...subConfig as rest})
-  | InlineMirror({name: _, ...subConfig as rest}) => rest
+  | InlineWrap({name: _, ...restConfig as rest})
+  | InlineMirror({name: _, ...restConfig as rest}) => rest
   }
 
 type renamedInlineWrapped =
@@ -118,8 +118,8 @@ type renamedInlineWrapped =
 
 let getRenamedInlineWrappedRest = wrapped =>
   switch wrapped {
-  | RenamedInlineWrap({name: _, ...subConfig as rest})
-  | RenamedInlineMirror({name: _, ...subConfig as rest}) => rest
+  | RenamedInlineWrap({name: _, ...restConfig as rest})
+  | RenamedInlineMirror({name: _, ...restConfig as rest}) => rest
   }
 
 @tag("kind")
@@ -129,8 +129,8 @@ type customTaggedInlineWrapped =
 
 let getCustomTaggedInlineWrappedRest = wrapped =>
   switch wrapped {
-  | CustomInlineWrap({name: _, ...subConfig as rest})
-  | CustomInlineMirror({name: _, ...subConfig as rest}) => rest
+  | CustomInlineWrap({name: _, ...restConfig as rest})
+  | CustomInlineMirror({name: _, ...restConfig as rest}) => rest
   }
 
 @tag("custom-tag")
@@ -140,13 +140,13 @@ type dashedTaggedInlineWrapped =
 
 let getDashedTaggedInlineWrappedRest = wrapped =>
   switch wrapped {
-  | DashedInlineWrap({name: _, ...subConfig as rest})
-  | DashedInlineMirror({name: _, ...subConfig as rest}) => rest
+  | DashedInlineWrap({name: _, ...restConfig as rest})
+  | DashedInlineMirror({name: _, ...restConfig as rest}) => rest
   }
 
 describe(__MODULE__, () => {
   test("let binding captures record rest value", () => {
-    let {name, ...subConfig as rest} = ({name: "test", version: "1.0", debug: true}: config)
+    let {name, ...restConfig as rest} = ({name: "test", version: "1.0", debug: true}: config)
     eq(__LOC__, name, "test")
     eq(__LOC__, rest, {version: "1.0", debug: true})
   })
@@ -178,7 +178,7 @@ describe(__MODULE__, () => {
       {version: "3.15", debug: true},
     )
 
-    let {name: _, ...SubConfig.t as rest} = (
+    let {name: _, ...RestConfig.t as rest} = (
       {
         name: "namespaced-let",
         version: "3.16",
@@ -330,7 +330,7 @@ describe(__MODULE__, () => {
 
   test("strict directive functions keep record rest destructuring in the body", () => {
     let strictDirectiveRest =
-      @directive("'use strict'") ({name: _, ...subConfig as rest}: config) => rest
+      @directive("'use strict'") ({name: _, ...restConfig as rest}: config) => rest
 
     eq(
       __LOC__,

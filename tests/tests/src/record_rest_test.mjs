@@ -3,7 +3,7 @@
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
 
-let SubConfig = {};
+let RestConfig = {};
 
 function describeConfig(c) {
   let {name, ...rest} = c;
@@ -13,11 +13,11 @@ function describeConfig(c) {
   ];
 }
 
-function getNameAndSubConfig(param) {
-  let {name, ...subConfig} = param;
+function getNameAndRestConfig(param) {
+  let {name, ...restConfig} = param;
   return [
     name,
-    subConfig
+    restConfig
   ];
 }
 
@@ -391,9 +391,9 @@ Mocha.describe("Record_rest_test", () => {
 });
 
 export {
-  SubConfig,
+  RestConfig,
   describeConfig,
-  getNameAndSubConfig,
+  getNameAndRestConfig,
   getAliasedRest,
   getNamespacedRest,
   getRenamedRest,
