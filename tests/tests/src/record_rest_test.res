@@ -327,4 +327,15 @@ describe(__MODULE__, () => {
       {version: "12.0", debug: false},
     )
   })
+
+  test("strict directive functions keep record rest destructuring in the body", () => {
+    let strictDirectiveRest =
+      @directive("'use strict'") ({name: _, ...subConfig as rest}: config) => rest
+
+    eq(
+      __LOC__,
+      strictDirectiveRest({name: "strict", version: "13.0", debug: false}),
+      {version: "13.0", debug: false},
+    )
+  })
 })

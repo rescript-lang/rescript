@@ -2,7 +2,8 @@
 'use strict';
 
 
-function extract({name, ...rest}) {
+function extract(param) {
+  let {name, ...rest} = param;
   return [
     name,
     rest

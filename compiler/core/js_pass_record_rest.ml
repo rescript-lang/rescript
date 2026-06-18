@@ -1,4 +1,5 @@
 module E = Js_exp_make
+module S = Js_stmt_make
 open J
 
 let field_ident_name i label =
@@ -6,18 +7,6 @@ let field_ident_name i label =
   else "__rest_field" ^ string_of_int i
 
 let ignored_ident i = Ext_ident.create ("__unused" ^ string_of_int i)
-
-let uses_ident ident block =
-  let found = ref false in
-  let obj =
-    {
-      Js_record_iter.super with
-      ident =
-        (fun _ candidate -> if Ident.same ident candidate then found := true);
-    }
-  in
-  obj.block obj block;
-  !found
 
 let materialize_fields source fields tail =
   match source.J.expression_desc with
@@ -122,34 +111,8 @@ let pass =
         | Fun ({is_method = false; params = [Ident_param param]; body} as fun_)
           ->
           let body = self.block self body in
-          let params, body =
+          let body =
             match body with
-            | {
-                statement_desc =
-                  Variable
-                    {
-                      ident = rest;
-                      value =
-                        Some
-                          {
-                            expression_desc =
-                              Record_rest
-                                (fields, {expression_desc = Var (Id source); _});
-                            _;
-                          };
-                      _;
-                    };
-                _;
-              }
-              :: tail
-              when Ident.name param = "param"
-                   && Ident.same param source
-                   && not (uses_ident param tail) ->
-              ( [
-                  Object_rest_param
-                    {object_rest_fields = fields; object_rest_rest = rest};
-                ],
-                tail )
             | [
              {
                statement_desc =
@@ -176,14 +139,15 @@ let pass =
                     };
                   ]
               in
-              ( [
-                  Object_rest_param
-                    {object_rest_fields = fields; object_rest_rest = rest};
-                ],
-                body )
-            | _ -> (fun_.params, body)
+              S.define_variable ~kind:Strict rest
+                {
+                  rest_expr with
+                  expression_desc = Record_rest (fields, source_expr);
+                }
+              :: body
+            | _ -> body
           in
-          {expr with expression_desc = Fun {fun_ with params; body}}
+          {expr with expression_desc = Fun {fun_ with body}}
         | Fun ({body} as fun_) ->
           let body = self.block self body in
           {expr with expression_desc = Fun {fun_ with body}}

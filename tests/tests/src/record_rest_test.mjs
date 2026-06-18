@@ -13,26 +13,31 @@ function describeConfig(c) {
   ];
 }
 
-function getNameAndSubConfig({name, ...subConfig}) {
+function getNameAndSubConfig(param) {
+  let {name, ...subConfig} = param;
   return [
     name,
     subConfig
   ];
 }
 
-function getAliasedRest({name: __unused0, ...rest}) {
+function getAliasedRest(param) {
+  let {name: __unused0, ...rest} = param;
   return rest;
 }
 
-function getNamespacedRest({name: __unused0, ...rest}) {
+function getNamespacedRest(param) {
+  let {name: __unused0, ...rest} = param;
   return rest;
 }
 
-function getRenamedRest({"user-name": __unused0, ...rest}) {
+function getRenamedRest(param) {
+  let {"user-name": __unused0, ...rest} = param;
   return rest;
 }
 
-function getRenamedNameAndRest({"user-name": __rest_field0, ...rest}) {
+function getRenamedNameAndRest(param) {
+  let {"user-name": __rest_field0, ...rest} = param;
   return [
     __rest_field0,
     rest
@@ -43,7 +48,8 @@ function getName(param) {
   return param.name;
 }
 
-function getWholeConfig({...rest}) {
+function getWholeConfig(param) {
+  let {...rest} = param;
   return rest;
 }
 
@@ -72,11 +78,13 @@ function getNameRestAndOriginalVersion(original) {
   ];
 }
 
-function extractClassName({className: __unused0, ...rest}) {
+function extractClassName(param) {
+  let {className: __unused0, ...rest} = param;
   return rest;
 }
 
-function getValue({id: __unused0, ...rest}) {
+function getValue(param) {
+  let {id: __unused0, ...rest} = param;
   return rest;
 }
 
@@ -362,6 +370,21 @@ Mocha.describe("Record_rest_test", () => {
       debug: false
     }), {
       version: "12.0",
+      debug: false
+    });
+  });
+  Mocha.test("strict directive functions keep record rest destructuring in the body", () => {
+    let strictDirectiveRest = param => {
+      'use strict';
+      let {name: __unused0, ...rest} = param;
+      return rest;
+    };
+    Test_utils.eq("File \"record_rest_test.res\", line 336, characters 6-13", strictDirectiveRest({
+      name: "strict",
+      version: "13.0",
+      debug: false
+    }), {
+      version: "13.0",
       debug: false
     });
   });
