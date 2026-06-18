@@ -156,8 +156,13 @@ let rec pattern_variables : Typedtree.pattern -> Ident.t list =
   | Tpat_construct (_, _, pats) -> List.concat (List.map pattern_variables pats)
   | Tpat_variant (_, Some pat, _) -> pattern_variables pat
   | Tpat_variant (_, None, _) -> []
-  | Tpat_record (fields, _, _rest) ->
-    List.concat (List.map (fun (_, _, p, _) -> pattern_variables p) fields)
+  | Tpat_record (fields, _, rest) -> (
+    let fields =
+      List.concat (List.map (fun (_, _, p, _) -> pattern_variables p) fields)
+    in
+    match rest with
+    | None -> fields
+    | Some {rest_ident; _} -> rest_ident :: fields)
   | Tpat_array pats -> List.concat (List.map pattern_variables pats)
   | Tpat_or (l, r, _) -> pattern_variables l @ pattern_variables r
 
