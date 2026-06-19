@@ -226,23 +226,25 @@ let collect_diagnostics_from_log_using_source_dirs workspace_root fs =
     workspace_root_path /+ Constants.compiler_dir_partial_path
     /+ Constants.sources_dirs
   in
-  let build_roots = Source_dirs.get_build_roots_from_file ~fs path in
-  let diagnostics =
-    match build_roots with
-    | Some build_roots ->
-      build_roots
-      |> List.filter_map (fun build_root ->
-             let compiler_log_path =
-               workspace_root_path /+ build_root /+ Constants.compiler_log
-             in
-             match Fs.load ~fs compiler_log_path with
-             | Some content ->
-               Some (Compiler_log.Parse.parse_log_content content)
-             | None -> None)
-      |> List.flatten
-    | None -> []
+  (* .sourcedirs.json is the source of truth for compiler-log locations. It is
+     written by the build system and includes every build root that can emit a
+     .compiler.log. Fall back to the root log only when that metadata is missing
+     or empty, so opening a document can still publish the last known diagnostics
+     from older or partial builds. *)
+  let build_roots =
+    match Source_dirs.get_build_roots_from_file ~fs path with
+    | Some build_r -> build_r
+    | _ -> []
   in
-  diagnostics
+  build_roots
+  |> List.filter_map (fun build_root ->
+         let compiler_log_path =
+           workspace_root_path /+ build_root /+ Constants.compiler_log
+         in
+         match Fs.load ~fs compiler_log_path with
+         | Some content -> Some (Compiler_log.Parse.parse_log_content content)
+         | None -> None)
+  |> List.flatten
 
 let%expect_test "compiler syntax diagnostics don't clear type diagnostics" =
   let workspace_root = Uri.of_path "/workspace" in
