@@ -805,13 +805,20 @@ let on_response
     | Ok [settings] -> (
       match Configuration.of_yojson settings with
       | Ok configuration -> {state with configuration}
-      | Error _ -> state)
+      | Error _ ->
+        Server.log_message_notification ~kind:MessageType.Error
+          ("Faield to parse rescript settings: "
+          ^ Yojson.Safe.pretty_to_string settings)
+          server;
+        state)
     | Ok _ ->
-      Server.show_message_notification ~kind:MessageType.Error
-        "Invalid rescript.settings. Received a list" server;
+      Server.log_message_notification ~kind:MessageType.Error
+        "Invalid rescript settings. The server not received a list with one \
+         element"
+        server;
       state
     | Error err ->
-      Server.show_message_notification ~kind:MessageType.Error
+      Server.log_message_notification ~kind:MessageType.Error
         ("Error on response of workspace/configuration request: "
        ^ request_error_message err)
         server;
