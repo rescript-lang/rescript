@@ -3,7 +3,7 @@ open Types
 
 let version = Version.version
 
-let initialization (_client_capabilities : ClientCapabilities.t) =
+let initialization () =
   let textDocumentSync =
     `TextDocumentSyncOptions
       (TextDocumentSyncOptions.create ~openClose:true
@@ -105,14 +105,20 @@ let discover_subpackages_and_populate ~workspace_root
     ~(analysis_state : Analysis.Shared_types.state) ~server =
   let ( /+ ) = Filename.concat in
 
-  let package =
+  let root_package =
     let root_path = workspace_root |> Uri.to_path in
     match Analysis.Packages.new_bs_package ~root_path with
     | Some p -> Some p
     | None ->
       (* TODO: When the server starts and the project hasn't been built, (example,
          right after cloning a repo), almost all features will not work.
-         We can use DidChangeWatchedFiles notification to initialize `analysis_state` *)
+         Some solution to explore:
+         - Leave it as is, let the server running and show message
+         - Show window message and kill the server
+         - Run `rescript build` on server
+         - We can use DidChangeWatchedFiles notification to initialize `analysis_state`
+           when `compiler.log` changes
+         *)
       let message =
         Printf.sprintf
           "Failed to initialize the context for the project at %s. Try \
@@ -124,7 +130,7 @@ let discover_subpackages_and_populate ~workspace_root
   in
 
   let resolve_node_modules_paths =
-    match package with
+    match root_package with
     | Some {dependencies} ->
       let paths =
         dependencies
@@ -146,10 +152,12 @@ let discover_subpackages_and_populate ~workspace_root
     | None -> None
   in
 
-  (match package with
-  | Some package ->
-    Hashtbl.add analysis_state.root_for_uri workspace_root package.root_path;
-    Hashtbl.add analysis_state.packages_by_root package.root_path package
+  (match root_package with
+  | Some root_package ->
+    Hashtbl.add analysis_state.root_for_uri workspace_root
+      root_package.root_path;
+    Hashtbl.add analysis_state.packages_by_root root_package.root_path
+      root_package
   | None -> ());
 
   (match resolve_node_modules_paths with
@@ -200,7 +208,7 @@ let on_initialize (params : InitializeParams.t) (server : State.t Server.t) =
   let state =
     State.initialize state ~params ~diagnostics ~analysis_state ~compiler_config
   in
-  let initialization_info = initialization params.capabilities in
+  let initialization_info = initialization () in
   (initialization_info, state)
 
 let on_request (Client_request.E request) (server : State.t Server.t) =
@@ -344,7 +352,6 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     in
     (ok resp, state)
   | TextDocumentReferences {textDocument = {uri}; position} ->
-    (* TODO: Bug on Neovim and zed *)
     let full = load_full uri state in
     let resp =
       Analysis.Commands.references
