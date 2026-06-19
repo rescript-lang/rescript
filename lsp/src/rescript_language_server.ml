@@ -773,7 +773,7 @@ let on_notification notification (server : State.t Server.t) =
     Server.request
       (Server_request.WorkspaceConfiguration
          (ConfigurationParams.create
-            ~items:[ConfigurationItem.create ~section:"rescript" ()]))
+            ~items:[ConfigurationItem.create ~section:"rescript.settings" ()]))
       server;
     state
   | ChangeWorkspaceFolders _ | CancelRequest _ | DidSaveTextDocument _
