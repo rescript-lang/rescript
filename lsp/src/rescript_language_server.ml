@@ -741,7 +741,6 @@ let on_notification notification (server : State.t Server.t) =
     Server.request (Server_request.ClientRegisterCapability params) server;
 
     state
-  | Exit -> state
   | DidChangeWatchedFiles _ ->
     (* Do not limit diagnostics to the path reported by
        DidChangeWatchedFilesParams. In monorepos, a build in one subpackage
@@ -776,6 +775,7 @@ let on_notification notification (server : State.t Server.t) =
             ~items:[ConfigurationItem.create ~section:"rescript.settings" ()]))
       server;
     state
+  | Exit -> state
   | ChangeWorkspaceFolders _ | CancelRequest _ | DidSaveTextDocument _
   | DidCreateFiles _ | DidDeleteFiles _ | DidRenameFiles _
   | WillSaveTextDocument _ | WorkDoneProgressCancel _ | WorkDoneProgress _
