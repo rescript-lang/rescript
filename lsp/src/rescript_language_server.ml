@@ -756,6 +756,11 @@ let on_notification notification (server : State.t Server.t) =
          (Jsonrpc.Notification.create ~method_:"rescript/compilationFinished" ()))
       server;
 
+    (match (State.params state).capabilities.workspace with
+    | Some {codeLens = Some {refreshSupport = Some true}} ->
+      Server.request Server_request.CodeLensRefresh server
+    | _ -> ());
+
     state |> State.update_diagnostics diagnostics
   | ChangeConfiguration _ ->
     (* workspace/didChangeConfiguration only signals that settings may have
