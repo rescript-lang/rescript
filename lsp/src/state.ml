@@ -77,7 +77,7 @@ let to_yojson (t : t) : Yojson.Safe.t =
   in
 
   let diagnostics_to_yojson (diagnostics : Diagnostics.t) =
-    diagnostics.diagnostics |> Diagnostics.Uri_map.to_seq
+    diagnostics |> Diagnostics.diagnostics |> Diagnostics.Uri_map.to_seq
     |> Seq.map (fun (uri, diagnostics) ->
            ( Lsp.Uri.to_string uri,
              `List (List.map Diagnostic.yojson_of_t diagnostics) ))

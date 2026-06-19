@@ -92,14 +92,14 @@ let initialization () =
 let make_error ?(code = Jsonrpc.Response.Error.Code.InternalError) message =
   Jsonrpc.Response.Error.make ~message ~code ()
 
-let get_updated_diagnostics_from_log (state : State.t) =
+let get_updated_diagnostics_from_log (state : State.t) diagnostics =
   let workspace_root = State.workspace_root state in
-  let diagnostics =
+  let compiler_log =
     Diagnostics.collect_diagnostics_from_log_using_source_dirs workspace_root
       state.fs
-    |> Diagnostics.to_lsp_format workspace_root state.store
   in
-  Diagnostics.overwrite ~new_diagnostics:diagnostics (State.diagnostics state)
+  Diagnostics.update_from_compiler_log ~workspace_root ~doc_store:state.store
+    compiler_log diagnostics
 
 (* This intentionally mutates [analysis_state] in place. The analysis layer keeps
    package discovery tables as mutable hash tables so later requests can resolve
@@ -275,7 +275,7 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     in
     (ok hover, state)
   | TextDocumentDiagnostic {textDocument = {uri}} ->
-    let diagnostics = (State.diagnostics state).diagnostics in
+    let diagnostics = State.diagnostics state |> Diagnostics.diagnostics in
     let items =
       Diagnostics.Uri_map.find_opt uri diagnostics |> Option.value ~default:[]
     in
@@ -707,16 +707,14 @@ let on_notification notification (server : State.t Server.t) =
       {textDocument = {uri; text; version; _}} ->
     let store = Document_store.add ~uri ~text ~version state.store in
 
-    let compiler_diagnostics = get_updated_diagnostics_from_log state in
-    let syntax_erros_diagnostics =
-      Diagnostics.from_uri ~uri
-        (Analysis.Diagnostics.document_syntax
-           ~source:(Document_store.get ~uri store).text
-           ~kind_file:(Document.kind uri))
-    in
     let diagnostics =
-      Diagnostics.append ~new_diagnostics:syntax_erros_diagnostics
-        compiler_diagnostics
+      State.diagnostics state
+      |> get_updated_diagnostics_from_log state
+      |> Diagnostics.update_syntax ~uri
+           ~new_diagnostics:
+             (Analysis.Diagnostics.document_syntax
+                ~source:(Document_store.get ~uri store).text
+                ~kind_file:(Document.kind uri))
     in
     diagnostics |> Diagnostics.send;
 
@@ -727,24 +725,25 @@ let on_notification notification (server : State.t Server.t) =
       | {text} :: _ -> Document_store.update ~uri ~text ~version state.store
       | [] -> state.store
     in
-    let compiler_diagnostics = get_updated_diagnostics_from_log state in
-    let syntax_erros_diagnostics =
-      Diagnostics.from_uri ~uri
-        (Analysis.Diagnostics.document_syntax
-           ~source:(Document_store.get ~uri store).text
-           ~kind_file:(Document.kind uri))
-    in
-
     let diagnostics =
-      Diagnostics.append ~new_diagnostics:syntax_erros_diagnostics
-        compiler_diagnostics
+      State.diagnostics state
+      |> get_updated_diagnostics_from_log state
+      |> Diagnostics.update_syntax ~uri
+           ~new_diagnostics:
+             (Analysis.Diagnostics.document_syntax
+                ~source:(Document_store.get ~uri store).text
+                ~kind_file:(Document.kind uri))
     in
 
     diagnostics |> Diagnostics.send;
     {state with store} |> State.update_diagnostics diagnostics
   | TextDocumentDidClose {textDocument = {uri; _}} ->
     let store = Document_store.remove ~uri state.store in
-    let diagnostics = get_updated_diagnostics_from_log state in
+    let diagnostics =
+      State.diagnostics state
+      |> Diagnostics.clear_syntax ~uri
+      |> get_updated_diagnostics_from_log state
+    in
     diagnostics |> Diagnostics.send;
     {state with store} |> State.update_diagnostics diagnostics
   | Initialized ->
@@ -784,7 +783,9 @@ let on_notification notification (server : State.t Server.t) =
        can change diagnostics that should be shown for files in another
        subpackage. Re-read every compiler log listed in .sourcedirs.json so
        stale errors are cleared and cross-package diagnostics stay in sync. *)
-    let diagnostics = get_updated_diagnostics_from_log state in
+    let diagnostics =
+      State.diagnostics state |> get_updated_diagnostics_from_log state
+    in
     diagnostics |> Diagnostics.send;
 
     Server.notification

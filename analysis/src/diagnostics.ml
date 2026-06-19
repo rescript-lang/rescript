@@ -17,7 +17,7 @@ let document_syntax ~source ~kind_file =
                  (Lsp.Types.Position.create ~line:(endline - 1)
                     ~character:endcol)
            in
-           Lsp.Types.Diagnostic.create ~range
+           Lsp.Types.Diagnostic.create ~range ~source:"ReScript"
              ~message:(`String (Res_diagnostics.explain diagnostic))
              ~severity:Lsp.Types.DiagnosticSeverity.Error ())
   in
