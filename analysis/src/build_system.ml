@@ -8,6 +8,10 @@ let ( /+ ) = Filename.concat
 (*
 Editor tooling can more accurately resolve the runtime path and will try and pass it via an environment variable.
 Example path: "test-stdlib/node_modules/.pnpm/@rescript+runtime@12.0.0-rc.4/node_modules/@rescript/runtime"
+
+RESCRIPT_RUNTIME is still useful as a fallback for compiler development, but
+using it first makes LSP navigation jump into the server checkout instead of the
+project's node_modules.
 *)
 
 let get_runtime_dir root_path =
