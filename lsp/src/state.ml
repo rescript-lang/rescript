@@ -99,9 +99,9 @@ let to_yojson (t : t) : Yojson.Safe.t =
       `Assoc
         [
           ("kind", `String "Initialized");
-          ("params", InitializeParams.yojson_of_t params);
           ("diagnostics", diagnostics_to_yojson diagnostics);
           ("compiler_config", compiler_config_to_yojson compiler_config);
+          ("params", InitializeParams.yojson_of_t params);
         ]
   in
 
@@ -109,6 +109,7 @@ let to_yojson (t : t) : Yojson.Safe.t =
     [
       ("status", status_to_yojson t.status);
       ("store", document_store_to_yojson t.store);
+      ("configuration", Configuration.to_yojson t.configuration);
       ( "analysis_state",
         Analysis.Shared_types.state_to_yojson (analysis_state t) );
     ]
