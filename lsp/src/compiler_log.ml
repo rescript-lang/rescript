@@ -405,6 +405,9 @@ end = struct
     in
     loop 0 []
 
+  let replace_double_newline message =
+    Str.global_replace (Str.regexp "\n\n") "\n" message
+
   let make_diagnostic ?severity ~range ~message () =
     (* -1 because lsp line and col is 0 based *)
     let minus_one v = if v == 0 then v else v - 1 in
@@ -419,7 +422,8 @@ end = struct
              (Lsp.Types.Position.create
                 ~line:(range.end_pos.line |> minus_one)
                 ~character:range.end_pos.col))
-      ~message:(`String message) ()
+      ~message:(`String (replace_double_newline message))
+      ()
 
   let parse_log_content (content : string) =
     let lines = split_lines content in
@@ -1039,7 +1043,7 @@ let%expect_test "parse log" =
     {|
     Common_error - Full_path(/tmp/my-rescript-app/src/Demo.res)
     {
-      "message": "The value a can't be found in Other\n\nFAILED: cannot make progress due to previous errors.",
+      "message": "The value a can't be found in Other\nFAILED: cannot make progress due to previous errors.",
       "range": {
         "end": { "character": 15, "line": 0 },
         "start": { "character": 8, "line": 0 }
@@ -1102,7 +1106,7 @@ let%expect_test "parse log" =
     {|
     Common_error - Full_path(/home/pedro/Desktop/projects/lsp-test/src/ArrayUtils.res)
     {
-      "message": "This has type: string\nBut it's being compared to something of type: int\n\nYou can only compare things of the same type.\n\nYou can convert string to int with Int.fromString.",
+      "message": "This has type: string\nBut it's being compared to something of type: int\nYou can only compare things of the same type.\nYou can convert string to int with Int.fromString.",
       "range": {
         "end": { "character": 43, "line": 0 },
         "start": { "character": 40, "line": 0 }
@@ -1267,7 +1271,7 @@ let%expect_test "parse log" =
     {|
     Common_error - Relative_path(tests/build_tests/super_errors/fixtures/access_record_field_on_option.res)
     {
-      "message": "You're trying to access the record field d, but the value you're trying to access it on is an option.\nYou need to unwrap the option first before accessing the record field.\n\nPossible solutions:\n- Use Option.map to transform the option: xx->Option.map(field => field.d)\n- Or use Option.getOr with a default: xx->Option.getOr(defaultRecord).d",
+      "message": "You're trying to access the record field d, but the value you're trying to access it on is an option.\nYou need to unwrap the option first before accessing the record field.\nPossible solutions:\n- Use Option.map to transform the option: xx->Option.map(field => field.d)\n- Or use Option.getOr with a default: xx->Option.getOr(defaultRecord).d",
       "range": {
         "end": { "character": 15, "line": 11 },
         "start": { "character": 14, "line": 11 }
@@ -1440,7 +1444,7 @@ let%expect_test "parse log" =
     {|
     Common_error - Relative_path(tests/build_tests/super_errors/fixtures/arity_mismatch.res)
     {
-      "message": "This function call is incorrect.\nThe function has type:\n(~f: 'a => 'a, unit) => int\n\n- The function takes 1 unlabelled argument, but is called with none",
+      "message": "This function call is incorrect.\nThe function has type:\n(~f: 'a => 'a, unit) => int\n- The function takes 1 unlabelled argument, but is called with none",
       "range": {
         "end": { "character": 27, "line": 1 },
         "start": { "character": 20, "line": 1 }
@@ -1451,7 +1455,7 @@ let%expect_test "parse log" =
 
     Common_error - Relative_path(tests/build_tests/super_errors/fixtures/array_item_type_mismatch.res)
     {
-      "message": "This array item has type: string\nBut this array is expected to have items of type: int\n\nArrays can only contain items of the same type.\n\nPossible solutions:\n- Convert all values in the array to the same type.\n- Use a tuple, if your array is of fixed length. Tuples can mix types freely, and compiles to a JavaScript array. Example of a tuple: `let myTuple = (10, \"hello\", 15.5, true)\n\nYou can convert string to int with Int.fromString.",
+      "message": "This array item has type: string\nBut this array is expected to have items of type: int\nArrays can only contain items of the same type.\nPossible solutions:\n- Convert all values in the array to the same type.\n- Use a tuple, if your array is of fixed length. Tuples can mix types freely, and compiles to a JavaScript array. Example of a tuple: `let myTuple = (10, \"hello\", 15.5, true)\nYou can convert string to int with Int.fromString.",
       "range": {
         "end": { "character": 22, "line": 0 },
         "start": { "character": 15, "line": 0 }
@@ -1527,7 +1531,7 @@ let%expect_test "parse log" =
     {|
     Warning 110 (configured as error) - Full_path(/home/pedro/Desktop/projects/rescript-compiler/tests/build_tests/build_warn_as_error/src/Demo.res)
     {
-      "message": "Todo found.\n\nThis code is not implemented yet and will crash at runtime. Make sure you implement this before running the code.",
+      "message": "Todo found.\nThis code is not implemented yet and will crash at runtime. Make sure you implement this before running the code.",
       "range": {
         "end": { "character": 21, "line": 0 },
         "start": { "character": 16, "line": 0 }
