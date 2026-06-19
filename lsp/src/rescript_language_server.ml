@@ -68,6 +68,12 @@ let initialization () =
         ]
       ()
   in
+  (* TODO: Support interFileDependencies? *)
+  let diagnosticProvider =
+    `DiagnosticOptions
+      (DiagnosticOptions.create ~workspaceDiagnostics:false
+         ~interFileDependencies:false ())
+  in
   let capabilities =
     ServerCapabilities.create ~textDocumentSync ~completionProvider
       ~codeLensProvider ~hoverProvider:(`Bool true) ~signatureHelpProvider
@@ -75,7 +81,7 @@ let initialization () =
       ~definitionProvider:(`Bool true) ~typeDefinitionProvider:(`Bool true)
       ~codeActionProvider ~documentSymbolProvider:(`Bool true)
       ~referencesProvider:(`Bool true) ~documentFormattingProvider:(`Bool true)
-      ~executeCommandProvider ()
+      ~executeCommandProvider ~diagnosticProvider ()
   in
   let serverInfo =
     InitializeResult.create_serverInfo ~name:"rescript-language-server" ~version
@@ -268,6 +274,16 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
           state.configuration.hover.support_markdown_links ~full
     in
     (ok hover, state)
+  | TextDocumentDiagnostic {textDocument = {uri}} ->
+    let diagnostics = (State.diagnostics state).diagnostics in
+    let items =
+      Diagnostics.Uri_map.find_opt uri diagnostics |> Option.value ~default:[]
+    in
+    let resp =
+      `RelatedFullDocumentDiagnosticReport
+        (RelatedFullDocumentDiagnosticReport.create ~items ())
+    in
+    (ok resp, state)
   | TextDocumentCompletion {textDocument = {uri}; position} ->
     let source = (Document_store.get ~uri state.store).text in
     let full = load_full uri state in
@@ -549,18 +565,26 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
         Error (Printexc.to_string exn)
     in
 
-    match
-      Analysis.Diagnostics.document_syntax ~source ~kind_file |> List.is_empty
-    with
-    | true -> (
+    let document_has_syntax_error =
+      let engine = Res_driver.parsing_engine in
+      match kind_file with
+      | Res ->
+        (engine.parse_implementation_from_source ~for_printer:false ~source)
+          .invalid
+      | Resi ->
+        (engine.parse_interface_from_source ~for_printer:false ~source).invalid
+      | _ -> true
+    in
+
+    match document_has_syntax_error with
+    | false -> (
       match format ~source with
       | Ok formatted -> (ok (Some formatted), state)
       | Error message ->
         (error ("Failed to run rescript format using. " ^ message), state))
-    | false ->
+    | true ->
       (* If document has syntax errors respond with null *)
       (ok None, state))
-  | Shutdown -> (ok (), state)
   | ExecuteCommand {command; arguments} ->
     let request_show_document ~uri ~takeFocus =
       let client_support_window_show_document =
@@ -643,6 +667,7 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
           (Printf.sprintf
              "Unknown command %s for workspace/executeCommand request" command),
         state )
+  | Shutdown -> (ok (), state)
   | DebugTextDocumentGet _ | DebugEcho _ | WorkspaceSymbol _
   | CodeActionResolve _ | TextDocumentColor _ | TextDocumentColorPresentation _
   | TextDocumentCodeLensResolve _ | TextDocumentHighlight _
@@ -653,9 +678,8 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
   | TextDocumentPrepareCallHierarchy _ | CallHierarchyIncomingCalls _
   | CallHierarchyOutgoingCalls _ | SemanticTokensRange _ | LinkedEditingRange _
   | WillCreateFiles _ | WillRenameFiles _ | WillDeleteFiles _
-  | InlayHintResolve _ | TextDocumentDiagnostic _
-  | TextDocumentInlineCompletion _ | TextDocumentInlineValue _
-  | WorkspaceSymbolResolve _ | WorkspaceDiagnostic _
+  | InlayHintResolve _ | TextDocumentInlineCompletion _
+  | TextDocumentInlineValue _ | WorkspaceSymbolResolve _ | WorkspaceDiagnostic _
   | TextDocumentRangesFormatting _ | TextDocumentPrepareTypeHierarchy _
   | TypeHierarchySupertypes _ | TypeHierarchySubtypes _
   | TextDocumentDeclaration _ ->
@@ -682,8 +706,20 @@ let on_notification notification (server : State.t Server.t) =
   | Client_notification.TextDocumentDidOpen
       {textDocument = {uri; text; version; _}} ->
     let store = Document_store.add ~uri ~text ~version state.store in
-    let diagnostics = get_updated_diagnostics_from_log state in
+
+    let compiler_diagnostics = get_updated_diagnostics_from_log state in
+    let syntax_erros_diagnostics =
+      Diagnostics.from_uri ~uri
+        (Analysis.Diagnostics.document_syntax
+           ~source:(Document_store.get ~uri store).text
+           ~kind_file:(Document.kind uri))
+    in
+    let diagnostics =
+      Diagnostics.append ~new_diagnostics:syntax_erros_diagnostics
+        compiler_diagnostics
+    in
     diagnostics |> Diagnostics.send;
+
     {state with store} |> State.update_diagnostics diagnostics
   | TextDocumentDidChange {contentChanges; textDocument = {uri; version}} ->
     let store =
@@ -691,7 +727,7 @@ let on_notification notification (server : State.t Server.t) =
       | {text} :: _ -> Document_store.update ~uri ~text ~version state.store
       | [] -> state.store
     in
-    let diagnostics = get_updated_diagnostics_from_log state in
+    let compiler_diagnostics = get_updated_diagnostics_from_log state in
     let syntax_erros_diagnostics =
       Diagnostics.from_uri ~uri
         (Analysis.Diagnostics.document_syntax
@@ -700,7 +736,8 @@ let on_notification notification (server : State.t Server.t) =
     in
 
     let diagnostics =
-      Diagnostics.append ~new_diagnostics:syntax_erros_diagnostics diagnostics
+      Diagnostics.append ~new_diagnostics:syntax_erros_diagnostics
+        compiler_diagnostics
     in
 
     diagnostics |> Diagnostics.send;
