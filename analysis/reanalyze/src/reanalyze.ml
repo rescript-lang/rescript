@@ -347,12 +347,17 @@ let run_analysis ~dce_config ~cmt_root ~reactive_collection ~reactive_merge
                   Cross_file_items_store.compute_optional_args_state
                     cross_file_store ~find_decl ~is_live
                 in
+                let direct_optional_arg_calls =
+                  Cross_file_items_store.compute_live_direct_optional_arg_calls
+                    cross_file_store ~find_decl ~is_live
+                in
                 (* Iterate live declarations and check for optional args issues *)
                 let issues = ref [] in
                 Reactive_solver.iter_live_decls ~t:solver (fun decl ->
                     let decl_issues =
-                      Dead_optional_args.check ~optional_args_state ~ann_store
-                        ~config:dce_config decl
+                      Dead_optional_args.check ~optional_args_state
+                        ~direct_optional_arg_calls ~ann_store ~config:dce_config
+                        decl
                     in
                     issues := List.rev_append decl_issues !issues);
                 List.rev !issues
@@ -399,14 +404,21 @@ let run_analysis ~dce_config ~cmt_root ~reactive_collection ~reactive_merge
                 ~find_decl:(Declaration_store.find_opt decl_store)
                 ~is_live
             in
+            let direct_optional_arg_calls =
+              Cross_file_items_store.compute_live_direct_optional_arg_calls
+                cross_file_store
+                ~find_decl:(Declaration_store.find_opt decl_store)
+                ~is_live
+            in
             (* Collect optional args issues only for live declarations *)
             let optional_args_issues =
               Declaration_store.fold
                 (fun _pos decl acc ->
                   if Decl.is_live decl then
                     let issues =
-                      Dead_optional_args.check ~optional_args_state ~ann_store
-                        ~config:dce_config decl
+                      Dead_optional_args.check ~optional_args_state
+                        ~direct_optional_arg_calls ~ann_store ~config:dce_config
+                        decl
                     in
                     List.rev_append issues acc
                   else acc)
