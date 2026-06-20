@@ -534,10 +534,12 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
       (* TODO: Run with Eio_unix.run_in_systhread? *)
       let executable =
         let executable_name =
+          (* TODO: On Windows the command is rescript.cmd? *)
           if Sys.win32 then "rescript.cmd" else "rescript"
         in
         let root_path = State.workspace_root state |> Uri.to_path in
         let ( /+ ) = Filename.concat in
+        (* TODO: This works with all package manager? Refactor to handle with erros? *)
         root_path /+ "node_modules" /+ ".bin" /+ executable_name
       in
       let extension_name = Document.to_string kind_file in
@@ -573,7 +575,7 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
           .invalid
       | Resi ->
         (engine.parse_interface_from_source ~for_printer:false ~source).invalid
-      | _ -> true
+      | _ -> assert false
     in
 
     match document_has_syntax_error with
@@ -583,6 +585,7 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
       | Error message ->
         (error ("Failed to run rescript format using. " ^ message), state))
     | true ->
+      (* TODO: Return error or show window/message? *)
       (* If document has syntax errors respond with null *)
       (ok None, state))
   | ExecuteCommand {command; arguments} ->
@@ -851,7 +854,7 @@ let on_response
       | Ok configuration -> {state with configuration}
       | Error _ ->
         Server.log_message_notification ~kind:MessageType.Error
-          ("Faield to parse rescript settings: "
+          ("Failed to parse rescript settings: "
           ^ Yojson.Safe.pretty_to_string settings)
           server;
         state)

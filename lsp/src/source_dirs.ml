@@ -1,3 +1,4 @@
+(* TODO: Switch to ppx *)
 let get_build_roots_from_json json =
   let build_roots =
     match json with
