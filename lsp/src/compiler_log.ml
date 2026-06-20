@@ -8,13 +8,11 @@ module Parse : sig
     | Circular_dependency
     | Unknow
 
-  type range = Empty | Range of Lsp.Types.Range.t
-
   type diagnostic_entry = {
     kind: kind;
     path: path;
     message: string;
-    range: range;
+    range: Lsp.Types.Range.t option;
   }
 
   val parse_log_content : string -> diagnostic_entry list
@@ -32,13 +30,11 @@ end = struct
     | Circular_dependency
     | Unknow
 
-  type range = Empty | Range of Lsp.Types.Range.t
-
   type diagnostic_entry = {
     kind: kind;
     path: path;
     message: string;
-    range: range;
+    range: Lsp.Types.Range.t option;
   }
 
   type location_format = Path_location | File_location
@@ -381,7 +377,7 @@ end = struct
                      path = filepath_of_path filepath;
                      kind = Circular_dependency;
                      message;
-                     range = Empty;
+                     range = None;
                    })
           in
           loop (next_i + 1) (List.rev_append entries acc)
@@ -395,7 +391,7 @@ end = struct
                      path = filepath_of_path filepath;
                      kind = Circular_dependency;
                      message;
-                     range = Empty;
+                     range = None;
                    })
           in
           loop (i + 1) (List.rev_append entries acc)
@@ -407,13 +403,13 @@ end = struct
     Str.global_replace (Str.regexp "\n\n") "\n" message
 
   let range_of_parsed_range = function
-    | None -> Empty
+    | None -> None
     | Some range ->
       (* Compiler log locations are 1-based, while LSP locations are 0-based.
          End columns are already exclusive in compiler output, so only line
          numbers and start columns are shifted. *)
       let minus_one v = max 0 (v - 1) in
-      Range
+      Some
         (Lsp.Types.Range.create
            ~start:
              (Lsp.Types.Position.create
@@ -504,8 +500,8 @@ let%expect_test "parse log" =
   let diagnostic_of_entry (entry : Parse.diagnostic_entry) =
     let range =
       match entry.range with
-      | Empty -> `String "Empty"
-      | Range range -> Lsp.Types.Range.yojson_of_t range
+      | None -> `String "None"
+      | Some range -> Lsp.Types.Range.yojson_of_t range
     in
     Yojson.Safe.pretty_to_string
       (`Assoc [("message", `String entry.message); ("range", range)])
