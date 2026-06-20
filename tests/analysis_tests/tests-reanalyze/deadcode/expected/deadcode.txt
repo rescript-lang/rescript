@@ -88,6 +88,14 @@
   addValueDeclaration +notification CreateErrorHandler2.res:3:6 path:+CreateErrorHandler2.Error2
   addValueReference CreateErrorHandler2.res:3:6 --> CreateErrorHandler2.res:3:21
   addValueReference ErrorHandler.resi:3:2 --> CreateErrorHandler2.res:3:6
+  Scanning CrossFileOptionalArgProvider.cmt Source:CrossFileOptionalArgProvider.res
+  addValueDeclaration +formatDate CrossFileOptionalArgProvider.res:1:4 path:+CrossFileOptionalArgProvider
+  addValueReference CrossFileOptionalArgProvider.res:1:4 --> CrossFileOptionalArgProvider.res:1:26
+  Scanning CrossFileOptionalArgValueUse.cmt Source:CrossFileOptionalArgValueUse.res
+  addValueDeclaration +liveReturnCaller CrossFileOptionalArgValueUse.res:1:4 path:+CrossFileOptionalArgValueUse
+  addValueReference CrossFileOptionalArgValueUse.res:1:4 --> CrossFileOptionalArgProvider.res:1:4
+  DeadOptionalArgs.addReferences liveReturnCaller called with optional argNames: argNamesMaybe: CrossFileOptionalArgValueUse.res:5:8
+  addValueReference CrossFileOptionalArgValueUse.res:5:8 --> CrossFileOptionalArgValueUse.res:1:4
   Scanning DeadCodeImplementation.cmt Source:DeadCodeImplementation.res
   addValueDeclaration +x DeadCodeImplementation.res:2:6 path:+DeadCodeImplementation.M
   addValueReference DeadCodeInterface.res:2:2 --> DeadCodeImplementation.res:2:6
@@ -2034,9 +2042,9 @@
   
 Forward Liveness Analysis
 
-    decls: 719
-    roots(external targets): 148
-    decl-deps: decls_with_out=429 edges_to_decls=308
+    decls: 721
+    roots(external targets): 149
+    decl-deps: decls_with_out=431 edges_to_decls=309
 
     Root (external ref): Value +FirstClassModules.M.InnerModule2.+k
     Root (external ref): VariantCase DeadRT.moduleAccessPath.Root
@@ -2143,6 +2151,7 @@ Forward Liveness Analysis
     Root (annotated): Value +TestImport.+innerStuffContents
     Root (external ref): Value +ModuleExceptionBug.+ddjdj
     Root (annotated): Value +TransitiveType1.+convert
+    Root (external ref): Value +CrossFileOptionalArgValueUse.+liveReturnCaller
     Root (annotated): Value +ImportHooks.+make
     Root (external ref): VariantCase +Unison.break_.IfNeed
     Root (external ref): Value +DeadTest.+make
@@ -2377,7 +2386,7 @@ Forward Liveness Analysis
     Root (annotated): Value +UseImportJsValue.+useGetProp
     Root (annotated): Value +Hooks.+functionWithRenamedArgs
   
-  335 roots found
+  336 roots found
 
     Propagate: DeadRT.moduleAccessPath.Root -> +DeadRT.moduleAccessPath.Root
     Propagate: +TypeReexportCrossFileB.reexportedRecord.usedField -> +TypeReexportCrossFileA.originalRecord.usedField
@@ -2395,6 +2404,7 @@ Forward Liveness Analysis
     Propagate: DeadTypeTest.deadType.OnlyInInterface -> +DeadTypeTest.deadType.OnlyInInterface
     Propagate: +TopLevelOptionalArgValueUse.+liveCaller -> +TopLevelOptionalArgValueUse.+formatDate
     Propagate: +TypeReexport.UseReexported.reexportedType.usedField -> +TypeReexport.UseReexported.originalType.usedField
+    Propagate: +CrossFileOptionalArgValueUse.+liveReturnCaller -> +CrossFileOptionalArgProvider.+formatDate
     Propagate: +TopLevelOptionalArgValueUse.+liveEscapeCaller -> +TopLevelOptionalArgValueUse.+formatDateEscapes
     Propagate: +TopLevelOptionalArgValueUse.+liveEscapeCaller -> +TopLevelOptionalArgValueUse.+takesFn
     Propagate: +References.+get -> +References.R.+get
@@ -2440,7 +2450,7 @@ Forward Liveness Analysis
     Propagate: +DeadTest.MM.+x -> +DeadTest.MM.+y
     Propagate: +ImportJsValue.AbsoluteValue.+getAbs -> +ImportJsValue.AbsoluteValue.+getAbs
   
-  60 declarations marked live via propagation
+  61 declarations marked live via propagation
 
   Dead VariantCase +AutoAnnotate.variant.R
   Dead RecordLabel +AutoAnnotate.record.variant
@@ -2521,6 +2531,12 @@ Forward Liveness Analysis
         -> +ContextOptionalArgs.ComponentNotUsingAction.+make
   Live (external ref) Value +CreateErrorHandler1.Error1.+notification
   Live (external ref) Value +CreateErrorHandler2.Error2.+notification
+  Live (propagated) Value +CrossFileOptionalArgProvider.+formatDate
+      deps: in=1 (live=1 dead=0) out=0
+        <- +CrossFileOptionalArgValueUse.+liveReturnCaller (live)
+  Live (external ref) Value +CrossFileOptionalArgValueUse.+liveReturnCaller
+      deps: in=0 (live=0 dead=0) out=1
+        -> +CrossFileOptionalArgProvider.+formatDate
   Live (external ref) Value +DeadCodeImplementation.M.+x
   Live (external ref) Exception +DeadExn.Etoplevel
       deps: in=1 (live=0 dead=1) out=0
