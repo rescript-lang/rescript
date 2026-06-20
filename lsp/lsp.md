@@ -2,7 +2,7 @@
 
 This branch introduces a standalone ReScript LSP server (`rescript-language-server`) built on top of the existing `analysis` library. It's a separate, OCaml-side exploration alongside the Rust/rewatch-based experiment in #8243, the two share the same goal (a LSP server for ReScript) but approach it from different ends of the toolchain.
 
-# Why an OCaml LSP server is a good fit?
+## Why rewrite server in OCaml is a good fit?
 
 The editor features are already implemented in the OCaml analysis library. Hover,
 completion, references, rename, document symbols, code actions, and diagnostics
@@ -252,7 +252,7 @@ interface Settings {
   - VSCode: https://github.com/rescript-lang/rescript-vscode/pull/1183
   - Zed: https://github.com/rescript-lang/rescript-zed/pull/24
 - Neovim client
-  - Users using `mason.nvim` can install the server using `MasonInstall rescript-language-server@alpha --force`
+  - Users using `mason.nvim` can install the server using `MasonInstall rescript-language-server@dev --force`
   - Neovim users need to make an adjustment to their LSP setup. See [Neovim setup](#neovim-setup)
 - Features/fixes are merged into `lsp` until we get a stable language server. When we have a stable version we merge `lsp` into `master`.
 
