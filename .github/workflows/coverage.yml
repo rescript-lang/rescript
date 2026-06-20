@@ -37,7 +37,7 @@ jobs:
         run: yarn install
 
       - name: Install system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@v1.4.3
+        uses: awalsh128/cache-apt-pkgs-action@v1.6.1
         with:
           packages: bubblewrap darcs g++-multilib gcc-multilib mercurial musl-tools rsync cmake
           version: v4
