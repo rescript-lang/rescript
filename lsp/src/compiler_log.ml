@@ -878,7 +878,7 @@ let%expect_test "parse log" =
     }
 
     Warning 32 - Full_path(/home/misha/projects/productionmason/web/auth/src/express-handler/ExpressHandler.re)
-    { "message": "unused value t_encode.", "range": "Empty" }
+    { "message": "unused value t_encode.", "range": "None" }
 
     Common_error - Full_path(/home/misha/projects/productionmason/web/auth/tests/Auth_Test.res)
     {
@@ -909,13 +909,13 @@ let%expect_test "parse log" =
     Circular_dependency - Relative_path(src/Demo.res)
     {
       "message": "Can't continue... Found a circular dependency in your code:\nDemo (src/Demo.res)\n→ Other (src/Other.res)\n→ Demo (src/Demo.res)\nPossible solutions:\n- Extract shared code into a new module both depend on.",
-      "range": "Empty"
+      "range": "None"
     }
 
     Circular_dependency - Relative_path(src/Other.res)
     {
       "message": "Can't continue... Found a circular dependency in your code:\nDemo (src/Demo.res)\n→ Other (src/Other.res)\n→ Demo (src/Demo.res)\nPossible solutions:\n- Extract shared code into a new module both depend on.",
-      "range": "Empty"
+      "range": "None"
     }
     |}];
 
@@ -931,13 +931,13 @@ let%expect_test "parse log" =
     Circular_dependency - Relative_path(src/Demo.res)
     {
       "message": "FAILED: dependency cycle: src/Demo.cmj -> src/Other.cmj -> src/Demo.cmj.",
-      "range": "Empty"
+      "range": "None"
     }
 
     Circular_dependency - Relative_path(src/Other.res)
     {
       "message": "FAILED: dependency cycle: src/Demo.cmj -> src/Other.cmj -> src/Demo.cmj.",
-      "range": "Empty"
+      "range": "None"
     }
     |}];
 
@@ -1442,7 +1442,7 @@ let%expect_test "parse log" =
   [%expect
     {|
     Common_error - Full_path(/home/pedro/Desktop/projects/rescript-compiler/tests/build_tests/gpr_978/src/gpr_978_module.res)
-    { "message": "M is exported twice", "range": "Empty" }
+    { "message": "M is exported twice", "range": "None" }
     |}];
 
   let example_log_14 =
