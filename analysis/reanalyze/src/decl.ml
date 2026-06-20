@@ -1,18 +1,13 @@
 (** Declaration types for dead code analysis. *)
 
 module Kind = struct
-  type optional_args_report =
-    | NoOptionalArgReport
-    | ReportOptionalArgs
-    | ReportOptionalArgsIfDirectCall
-
   type t =
     | Exception
     | RecordLabel
     | VariantCase
     | Value of {
         is_toplevel: bool;
-        mutable optional_args_report: optional_args_report;
+        mutable reports_optional_args: bool;
         mutable optional_args: Optional_args.t;
         side_effects: bool;
       }
