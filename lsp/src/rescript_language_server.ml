@@ -819,7 +819,7 @@ let on_notification notification (server : State.t Server.t) =
     Server.request
       (Server_request.WorkspaceConfiguration
          (ConfigurationParams.create
-            ~items:[ConfigurationItem.create ~section:"rescript.settings" ()]))
+            ~items:[ConfigurationItem.create ~section:"rescript" ()]))
       server;
     state
   | Exit -> state
