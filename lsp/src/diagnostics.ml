@@ -83,26 +83,19 @@ let to_lsp_format ?(include_syntax = false) ?(include_non_syntax = true)
     =
   let workspace_root_path = workspace_root |> DocumentUri.to_path in
 
-  let expand_range (uri : Uri.t) (range : Range.t) =
+  let fallback_range uri =
     let shortest_possible_code = "let a=1" in
+    let start = Position.create ~line:0 ~character:0 in
 
     match Document_store.get_opt ~uri doc_store with
     | None ->
-      let is_zero =
-        range.start.line = 0 && range.start.line = 0 && range.end_.line = 0
-        && range.end_.character = 0
-      in
-      if is_zero then
-        {
-          range with
-          end_ =
-            {line = 0; character = String.length shortest_possible_code - 1};
-        }
-      else range
+      Range.create ~start
+        ~end_:
+          (Position.create ~line:0
+             ~character:(String.length shortest_possible_code - 1))
     | Some {text} ->
       (* TODO: Revisit this *)
       let lines = String.split_on_char '\n' text in
-
       let line, character =
         match List.rev lines with
         | [] -> (0, String.length shortest_possible_code - 1)
@@ -110,75 +103,61 @@ let to_lsp_format ?(include_syntax = false) ?(include_non_syntax = true)
           let line_count = List.length rest in
           (line_count - 1, String.length last_line - 1)
       in
-      {range with end_ = {line; character}}
+      Range.create ~start ~end_:(Position.create ~line ~character)
+  in
+
+  let range_of_entry uri = function
+    | Compiler_log.Parse.Empty -> fallback_range uri
+    | Compiler_log.Parse.Range range -> range
+  in
+
+  let severity_of_kind = function
+    | Compiler_log.Parse.Syntax_error | Common_error | Circular_dependency ->
+      Some DiagnosticSeverity.Error
+    | Warning {configured_as_error = true} -> Some DiagnosticSeverity.Error
+    | Warning {configured_as_error = false} -> Some DiagnosticSeverity.Warning
+    | Unknow -> None
+  in
+
+  let diagnostic_of_entry uri (entry : Compiler_log.Parse.diagnostic_entry) =
+    let message =
+      match entry.kind with
+      | Warning {number} -> entry.message ^ "Warning " ^ string_of_int number
+      | _ -> entry.message
+    in
+    Diagnostic.create
+      ?severity:(severity_of_kind entry.kind)
+      ~source:"ReScript"
+      ~range:(range_of_entry uri entry.range)
+      ~message:(`String message) ()
   in
 
   let diagnostics_sanitized =
     diagnostics
-    |> List.filter_map
-         (fun
-           (filepath, (diagnostic_entry : Compiler_log.Parse.diagnostic_entry))
-         ->
+    |> List.filter_map (fun (entry : Compiler_log.Parse.diagnostic_entry) ->
            let uri =
-             match filepath with
+             match entry.path with
              | Compiler_log.Parse.Relative_path p ->
                DocumentUri.of_path (Filename.concat workspace_root_path p)
              | Full_path p -> DocumentUri.of_path p
            in
 
-           match diagnostic_entry.entry with
+           match entry.kind with
            | Syntax_error ->
              if
                include_syntax
                && Option.is_none (Document_store.get_opt ~uri doc_store)
-             then Some (uri, diagnostic_entry.diagnostic)
+             then Some (uri, diagnostic_of_entry uri entry)
              else None
            | Circular_dependency ->
              if not include_non_syntax then None
              else
-               (* Circular dependency diagnostics are special-cased because the compiler log
-                does not point at a precise source range. When the document is open, we expand
-                the diagnostic range to cover the whole document so the editor can display a
-                file-level diagnostic.*)
-               let diagnostic =
-                 {
-                   diagnostic_entry.diagnostic with
-                   range = expand_range uri diagnostic_entry.diagnostic.range;
-                 }
-               in
-               Some (uri, diagnostic)
-           | Warning {number; configured_as_error} ->
+               (* Circular dependency diagnostics are file-level diagnostics:
+                  the compiler log has a path but no precise source range. *)
+               Some (uri, diagnostic_of_entry uri entry)
+           | Warning _ | Common_error | Unknow ->
              if not include_non_syntax then None
-             else
-               let warning_msg = "Warning " ^ string_of_int number in
-               let message =
-                 match diagnostic_entry.diagnostic.message with
-                 | `String m -> m
-                 | `MarkupContent {value} -> value
-               in
-               let severity =
-                 match diagnostic_entry.diagnostic.severity with
-                 | Some DiagnosticSeverity.Warning when configured_as_error ->
-                   Some DiagnosticSeverity.Error
-                 | other -> other
-               in
-               Some
-                 ( uri,
-                   {
-                     diagnostic_entry.diagnostic with
-                     message = `String (message ^ warning_msg);
-                     range = expand_range uri diagnostic_entry.diagnostic.range;
-                     severity;
-                   } )
-           | Common_error | Unknow ->
-             if not include_non_syntax then None
-             else
-               Some
-                 ( uri,
-                   {
-                     diagnostic_entry.diagnostic with
-                     range = expand_range uri diagnostic_entry.diagnostic.range;
-                   } ))
+             else Some (uri, diagnostic_of_entry uri entry))
   in
 
   diagnostics_sanitized
@@ -194,8 +173,8 @@ let to_lsp_format ?(include_syntax = false) ?(include_non_syntax = true)
 let has_non_syntax_diagnostics diagnostics =
   diagnostics
   |> List.exists
-       (fun (_, (diagnostic_entry : Compiler_log.Parse.diagnostic_entry)) ->
-         match diagnostic_entry.entry with
+       (fun (diagnostic_entry : Compiler_log.Parse.diagnostic_entry) ->
+         match diagnostic_entry.kind with
          | Syntax_error -> false
          | Warning _ | Circular_dependency | Common_error | Unknow -> true)
 
@@ -259,9 +238,9 @@ let%expect_test "compiler syntax diagnostics don't clear type diagnostics" =
   let diagnostic message =
     Diagnostic.create ~range ~message:(`String message) ()
   in
-  let entry uri entry message =
-    ( Compiler_log.Parse.Full_path (Uri.to_path uri),
-      {Compiler_log.Parse.entry; diagnostic = diagnostic message} )
+  let entry uri kind message =
+    let open Compiler_log.Parse in
+    {kind; path = Full_path (Uri.to_path uri); message; range = Range range}
   in
   let print t =
     diagnostics t
