@@ -14,7 +14,12 @@ let add_function_reference ~config ~decls ~cross_file ~(loc_from : Location.t)
       | _ -> false
     in
     let should_add =
-      has_optional_arg_state pos_from && has_optional_arg_state pos_to
+      if
+        pos_to.pos_fname <> pos_from.pos_fname
+        && (file_is_implementation_of pos_to.pos_fname pos_from.pos_fname
+           || file_is_implementation_of pos_from.pos_fname pos_to.pos_fname)
+      then has_optional_arg_state pos_to
+      else has_optional_arg_state pos_from && has_optional_arg_state pos_to
     in
     if should_add then (
       if config.Dce_config.cli.debug then
@@ -73,10 +78,19 @@ let add_references ~config ~cross_file ~(loc_from : Location.t)
 
 (** Check for optional args issues. Returns issues instead of logging.
     Uses optional_args_state map for final computed state. *)
-let check ~optional_args_state ~ann_store ~config:_ decl : Issue.t list =
+let check ~optional_args_state ~direct_optional_arg_calls ~ann_store ~config:_
+    decl : Issue.t list =
+  let should_report_optional_args =
+    let open Decl.Kind in
+    match decl.Decl.decl_kind with
+    | Value {optional_args_report = ReportOptionalArgs} -> true
+    | Value {optional_args_report = ReportOptionalArgsIfDirectCall} ->
+      Pos_set.mem decl.pos direct_optional_arg_calls
+    | _ -> false
+  in
   match decl with
-  | {Decl.decl_kind = Value {reports_optional_args = true; optional_args}}
-    when active ()
+  | {Decl.decl_kind = Value {optional_args}}
+    when active () && should_report_optional_args
          && not
               (Annotation_store.is_annotated_gentype_or_live ann_store decl.pos)
     ->

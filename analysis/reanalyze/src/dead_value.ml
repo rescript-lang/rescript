@@ -27,27 +27,28 @@ let collect_value_binding ~config ~decls ~file ~(current_binding : Location.t)
         ({pat_desc = Tpat_any}, id, {loc = {loc_start; loc_ghost} as loc})
       when (not loc_ghost) && not vb.vb_loc.loc_ghost ->
       let name = Ident.name id |> Name.create ~is_interface:false in
-      let optional_args, reports_optional_args =
+      let optional_args, optional_args_report =
+        let open Decl.Kind in
         match vb.vb_expr.exp_desc with
         | Texp_function {arity = Some arity; _} ->
           ( vb.vb_expr.exp_type
             |> (fun texpr ->
-                 Dead_optional_args.from_type_expr_with_arity texpr arity)
+            Dead_optional_args.from_type_expr_with_arity texpr arity)
             |> Optional_args.from_list,
-            true )
+            ReportOptionalArgs )
         | Texp_function _ ->
           ( vb.vb_expr.exp_type |> Dead_optional_args.from_type_expr
             |> Optional_args.from_list,
-            true )
+            ReportOptionalArgs )
         | _ ->
           ( vb.vb_expr.exp_type |> Dead_optional_args.from_type_expr
             |> Optional_args.from_list,
-            false )
+            NoOptionalArgReport )
       in
       let exists =
         match Declarations.find_opt_builder decls loc_start with
         | Some {decl_kind = Value r} ->
-          r.reports_optional_args <- reports_optional_args;
+          r.optional_args_report <- optional_args_report;
           r.optional_args <- optional_args;
           true
         | _ -> false
@@ -64,8 +65,8 @@ let collect_value_binding ~config ~decls ~file ~(current_binding : Location.t)
          let side_effects = Side_effects.check_expr vb.vb_expr in
          name
          |> add_value_declaration ~config ~decls ~file ~is_toplevel ~loc
-              ~module_loc:module_path.loc ~reports_optional_args
-              ~optional_args ~path ~side_effects);
+              ~module_loc:module_path.loc ~optional_args_report ~optional_args
+              ~path ~side_effects);
       (match Declarations.find_opt_builder decls loc_start with
       | None -> ()
       | Some decl ->
@@ -124,10 +125,76 @@ let process_optional_args ~config ~cross_file ~exp_type ~(loc_from : Location.t)
     |> Dead_optional_args.add_references ~config ~cross_file ~loc_from ~loc_to
          ~binding ~path)
 
-let rec collect_expr ~config ~refs ~file_deps ~cross_file
+let value_use_target_pos (e : Typedtree.expression) =
+  match e.exp_desc with
+  | Texp_ident (_, _, {Types.val_loc = {loc_ghost = false; _} as loc_to}) ->
+    Some loc_to.loc_start
+  | Texp_let
+      ( Nonrecursive,
+        [
+          {
+            vb_pat = {pat_desc = Tpat_var (id_arg, _)};
+            vb_expr =
+              {
+                Typedtree.exp_desc =
+                  Texp_ident
+                    (_, _, {Types.val_loc = {loc_ghost = false; _} as loc_to});
+                _;
+              };
+            _;
+          };
+        ],
+        {
+          Typedtree.exp_desc =
+            Texp_function
+              {
+                case =
+                  {
+                    c_lhs = {pat_desc = Tpat_var (eta_arg, _)};
+                    c_rhs =
+                      {
+                        Typedtree.exp_desc =
+                          Texp_apply
+                            {funct = {exp_desc = Texp_ident (id_arg2, _, _)}; _};
+                        _;
+                      };
+                    _;
+                  };
+                _;
+              };
+          _;
+        } )
+    when Ident.name id_arg = "arg"
+         && Ident.name eta_arg = "eta"
+         && Path.name id_arg2 = "arg" ->
+    Some loc_to.loc_start
+  | _ -> None
+
+let rec collect_expr ~config ~decls ~refs ~file_deps ~cross_file
     ~(last_binding : Location.t) super self (e : Typedtree.expression) =
   let loc_from = e.exp_loc in
   let binding = last_binding in
+  let require_direct_optional_arg_call pos =
+    match Declarations.find_opt_builder decls pos with
+    | Some
+        ({
+           decl_kind =
+             Value
+               ({optional_args_report = Decl.Kind.ReportOptionalArgs} as
+                value_kind);
+         } as decl) ->
+      Declarations.replace_builder decls pos
+        {
+          decl with
+          decl_kind =
+            Value
+              {
+                value_kind with
+                optional_args_report = Decl.Kind.ReportOptionalArgsIfDirectCall;
+              };
+        }
+    | _ -> ()
+  in
   (match e.exp_desc with
   | Texp_ident (_path, _, {Types.val_loc = {loc_ghost = false; _} as loc_to}) ->
     (* if Path.name _path = "rc" then assert false; *)
@@ -157,7 +224,14 @@ let rec collect_expr ~config ~refs ~file_deps ~cross_file
     args
     |> process_optional_args ~config ~cross_file ~exp_type
          ~loc_from:(loc_from : Location.t)
-         ~binding:last_binding ~loc_to ~path
+         ~binding:last_binding ~loc_to ~path;
+    args
+    |> List.iter (fun (_, arg) ->
+           match arg with
+           | Some arg ->
+             arg |> value_use_target_pos
+             |> Option.iter require_direct_optional_arg_call
+           | _ -> ())
   | Texp_let
       ( (* generated for functions with optional args *)
         Nonrecursive,
@@ -224,13 +298,17 @@ let rec collect_expr ~config ~refs ~file_deps ~cross_file
     fields
     |> Array.iter (fun (_, record_label_definition, _) ->
            match record_label_definition with
-           | Typedtree.Overridden (_, ({exp_loc} as e)) when exp_loc.loc_ghost
-             ->
-             (* Punned field in OCaml projects has ghost location in expression *)
-             let e = {e with exp_loc = {exp_loc with loc_ghost = false}} in
-             collect_expr ~config ~refs ~file_deps ~cross_file ~last_binding
-               super self e
-             |> ignore
+           | Typedtree.Overridden (_, e) -> (
+             e |> value_use_target_pos
+             |> Option.iter require_direct_optional_arg_call;
+             match e with
+             | {exp_loc; _} when exp_loc.loc_ghost ->
+               (* Punned field in OCaml projects has ghost location in expression *)
+               let e = {e with exp_loc = {exp_loc with loc_ghost = false}} in
+               collect_expr ~config ~decls ~refs ~file_deps ~cross_file
+                 ~last_binding super self e
+               |> ignore
+             | _ -> ())
            | _ -> ())
   | _ -> ());
   super.Tast_mapper.expr self e
@@ -366,8 +444,10 @@ let rec process_signature_item ~config ~decls ~file ~do_types ~do_values
           val_type |> Dead_optional_args.from_type_expr
           |> Optional_args.from_list
         in
-        let reports_optional_args =
-          not (Optional_args.is_empty optional_args)
+        let optional_args_report =
+          if Optional_args.is_empty optional_args then
+            Decl.Kind.NoOptionalArgReport
+          else Decl.Kind.ReportOptionalArgs
         in
 
         (* if Ident.name id = "someValue" then
@@ -375,7 +455,7 @@ let rec process_signature_item ~config ~decls ~file ~do_types ~do_values
         Ident.name id
         |> Name.create ~is_interface:false
         |> add_value_declaration ~config ~decls ~file ~loc ~module_loc
-             ~reports_optional_args ~optional_args ~path ~side_effects:false
+             ~optional_args_report ~optional_args ~path ~side_effects:false
   | Sig_module (id, {Types.md_type = module_type; md_loc = module_loc}, _)
   | Sig_modtype (id, {Types.mtd_type = Some module_type; mtd_loc = module_loc})
     ->
@@ -409,8 +489,8 @@ let traverse_structure ~config ~decls ~refs ~file_deps ~cross_file ~file
         expr =
           (fun _self e ->
             e
-            |> collect_expr ~config ~refs ~file_deps ~cross_file ~last_binding
-                 super mapper);
+            |> collect_expr ~config ~decls ~refs ~file_deps ~cross_file
+                 ~last_binding super mapper);
         pat =
           (fun _self p ->
             p

@@ -28,3 +28,10 @@ val compute_optional_args_state :
   is_live:(Lexing.position -> bool) ->
   Optional_args_state.t
 (** Compute optional args state from calls and function references *)
+
+val compute_live_direct_optional_arg_calls :
+  t ->
+  find_decl:(Lexing.position -> Decl.t option) ->
+  is_live:(Lexing.position -> bool) ->
+  Pos_set.t
+(** Compute live optional-arg call targets that hit reporting declarations directly *)
