@@ -65,22 +65,3 @@ let compute_optional_args_state (store : t) ~find_decl ~is_live :
           set_state pos_from updated_from;
           set_state pos_to updated_to));
   state
-
-let compute_live_direct_optional_arg_calls (store : t) ~find_decl ~is_live :
-    Pos_set.t =
-  let direct_calls = ref Pos_set.empty in
-  iter_optional_arg_calls store (fun {Cross_file_items.pos_from; pos_to; _} ->
-      if is_live pos_from then
-        match find_decl pos_to with
-        | Some
-            {
-              Decl.decl_kind =
-                Value
-                  {
-                    optional_args_report =
-                      Decl.Kind.ReportOptionalArgsIfDirectCall;
-                  };
-            } ->
-          direct_calls := Pos_set.add pos_to !direct_calls
-        | _ -> ());
-  !direct_calls

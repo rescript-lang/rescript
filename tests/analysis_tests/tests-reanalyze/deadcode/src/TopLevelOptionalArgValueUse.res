@@ -1,6 +1,5 @@
-/* Repro for the optional-arg ownership regression on fix-reanalyze.
-   Passing a function with optional args as a first-class value in a top-level
-   eval should not suppress warnings on the function declaration itself. */
+/* Passing a function with optional args as a first-class value must suppress
+   optional-arg warnings even when the function also has a direct call. */
 
 let formatDate = (~fmt=?, s) => s
 
@@ -11,4 +10,3 @@ takesFn(formatDate)
 let liveCaller = () => formatDate("2024-01-01")
 
 let _ = liveCaller()
-
