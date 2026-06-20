@@ -5,6 +5,7 @@ let formatDate = (~fmt=?, s) => s
 let formatDateEscapes = (~fmt=?, s) => s
 let formatDateReturn = (~fmt=?, s) => s
 let formatDateTuple = (~fmt=?, s) => s
+let formatDateForwarded = (~fmt=?, s) => s
 
 let takesFn = _ => ()
 
@@ -25,7 +26,12 @@ let liveTupleCaller = () => {
   (formatDateTuple, "tuple")
 }
 
+let liveForwardingCaller = (~fmt=?) => {
+  formatDateForwarded(~fmt?, "2024-01-01")
+}
+
 let _ = liveCaller()
 let _ = liveEscapeCaller()
 let _ = liveReturnCaller()
 let _ = liveTupleCaller()
+let _ = liveForwardingCaller()
