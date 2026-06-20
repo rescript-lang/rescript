@@ -735,7 +735,13 @@ let on_notification notification (server : State.t Server.t) =
                 ~kind_file:(Document.kind uri))
     in
 
-    diagnostics |> Diagnostics.send;
+    (* Syntax diagnostics for open buffers are served by textDocument/diagnostic.
+       Do not push them here as publishDiagnostics too, otherwise clients that
+       support pull diagnostics can show duplicates on every change. Ensure the
+       changed URI is still published with an empty/non-syntax result so any
+       previously pushed syntax diagnostics are cleared. *)
+    diagnostics
+    |> Diagnostics.send ~include_syntax:false ~force_publish_uris:[uri];
     {state with store} |> State.update_diagnostics diagnostics
   | TextDocumentDidClose {textDocument = {uri; _}} ->
     let store = Document_store.remove ~uri state.store in
