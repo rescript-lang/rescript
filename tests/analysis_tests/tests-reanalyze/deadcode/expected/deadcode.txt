@@ -1504,22 +1504,33 @@
   Scanning TopLevelOptionalArgValueUse.cmt Source:TopLevelOptionalArgValueUse.res
   addValueDeclaration +formatDate TopLevelOptionalArgValueUse.res:4:4 path:+TopLevelOptionalArgValueUse
   addValueDeclaration +formatDateEscapes TopLevelOptionalArgValueUse.res:5:4 path:+TopLevelOptionalArgValueUse
-  addValueDeclaration +takesFn TopLevelOptionalArgValueUse.res:7:4 path:+TopLevelOptionalArgValueUse
-  addValueDeclaration +deadEscape TopLevelOptionalArgValueUse.res:9:4 path:+TopLevelOptionalArgValueUse
-  addValueDeclaration +liveCaller TopLevelOptionalArgValueUse.res:11:4 path:+TopLevelOptionalArgValueUse
-  addValueDeclaration +liveEscapeCaller TopLevelOptionalArgValueUse.res:13:4 path:+TopLevelOptionalArgValueUse
+  addValueDeclaration +formatDateReturn TopLevelOptionalArgValueUse.res:6:4 path:+TopLevelOptionalArgValueUse
+  addValueDeclaration +formatDateTuple TopLevelOptionalArgValueUse.res:7:4 path:+TopLevelOptionalArgValueUse
+  addValueDeclaration +takesFn TopLevelOptionalArgValueUse.res:9:4 path:+TopLevelOptionalArgValueUse
+  addValueDeclaration +deadEscape TopLevelOptionalArgValueUse.res:11:4 path:+TopLevelOptionalArgValueUse
+  addValueDeclaration +liveCaller TopLevelOptionalArgValueUse.res:13:4 path:+TopLevelOptionalArgValueUse
+  addValueDeclaration +liveEscapeCaller TopLevelOptionalArgValueUse.res:15:4 path:+TopLevelOptionalArgValueUse
+  addValueDeclaration +liveReturnCaller TopLevelOptionalArgValueUse.res:20:4 path:+TopLevelOptionalArgValueUse
+  addValueDeclaration +liveTupleCaller TopLevelOptionalArgValueUse.res:24:4 path:+TopLevelOptionalArgValueUse
   addValueReference TopLevelOptionalArgValueUse.res:4:4 --> TopLevelOptionalArgValueUse.res:4:26
   addValueReference TopLevelOptionalArgValueUse.res:5:4 --> TopLevelOptionalArgValueUse.res:5:33
-  addValueReference TopLevelOptionalArgValueUse.res:9:4 --> TopLevelOptionalArgValueUse.res:4:4
-  addValueReference TopLevelOptionalArgValueUse.res:9:4 --> TopLevelOptionalArgValueUse.res:7:4
-  DeadOptionalArgs.addReferences formatDate called with optional argNames: argNamesMaybe: TopLevelOptionalArgValueUse.res:11:23
+  addValueReference TopLevelOptionalArgValueUse.res:6:4 --> TopLevelOptionalArgValueUse.res:6:32
+  addValueReference TopLevelOptionalArgValueUse.res:7:4 --> TopLevelOptionalArgValueUse.res:7:31
   addValueReference TopLevelOptionalArgValueUse.res:11:4 --> TopLevelOptionalArgValueUse.res:4:4
-  DeadOptionalArgs.addReferences formatDateEscapes called with optional argNames: argNamesMaybe: TopLevelOptionalArgValueUse.res:15:2
-  addValueReference TopLevelOptionalArgValueUse.res:13:4 --> TopLevelOptionalArgValueUse.res:5:4
-  addValueReference TopLevelOptionalArgValueUse.res:13:4 --> TopLevelOptionalArgValueUse.res:5:4
-  addValueReference TopLevelOptionalArgValueUse.res:13:4 --> TopLevelOptionalArgValueUse.res:7:4
-  addValueReference TopLevelOptionalArgValueUse.res:18:8 --> TopLevelOptionalArgValueUse.res:11:4
-  addValueReference TopLevelOptionalArgValueUse.res:19:8 --> TopLevelOptionalArgValueUse.res:13:4
+  addValueReference TopLevelOptionalArgValueUse.res:11:4 --> TopLevelOptionalArgValueUse.res:9:4
+  DeadOptionalArgs.addReferences formatDate called with optional argNames: argNamesMaybe: TopLevelOptionalArgValueUse.res:13:23
+  addValueReference TopLevelOptionalArgValueUse.res:13:4 --> TopLevelOptionalArgValueUse.res:4:4
+  DeadOptionalArgs.addReferences formatDateEscapes called with optional argNames: argNamesMaybe: TopLevelOptionalArgValueUse.res:17:2
+  addValueReference TopLevelOptionalArgValueUse.res:15:4 --> TopLevelOptionalArgValueUse.res:5:4
+  addValueReference TopLevelOptionalArgValueUse.res:15:4 --> TopLevelOptionalArgValueUse.res:5:4
+  addValueReference TopLevelOptionalArgValueUse.res:15:4 --> TopLevelOptionalArgValueUse.res:9:4
+  addValueReference TopLevelOptionalArgValueUse.res:20:4 --> TopLevelOptionalArgValueUse.res:6:4
+  addValueReference TopLevelOptionalArgValueUse.res:24:4 --> TopLevelOptionalArgValueUse.res:7:4
+  addValueReference TopLevelOptionalArgValueUse.res:28:8 --> TopLevelOptionalArgValueUse.res:13:4
+  addValueReference TopLevelOptionalArgValueUse.res:29:8 --> TopLevelOptionalArgValueUse.res:15:4
+  DeadOptionalArgs.addReferences liveReturnCaller called with optional argNames: argNamesMaybe: TopLevelOptionalArgValueUse.res:30:8
+  addValueReference TopLevelOptionalArgValueUse.res:30:8 --> TopLevelOptionalArgValueUse.res:20:4
+  addValueReference TopLevelOptionalArgValueUse.res:31:8 --> TopLevelOptionalArgValueUse.res:24:4
   Scanning TransitiveType1.cmt Source:TransitiveType1.res
   addValueDeclaration +convert TransitiveType1.res:2:4 path:+TransitiveType1
   addValueDeclaration +convertAlias TransitiveType1.res:5:4 path:+TransitiveType1
@@ -2023,9 +2034,9 @@
   
 Forward Liveness Analysis
 
-    decls: 715
-    roots(external targets): 146
-    decl-deps: decls_with_out=425 edges_to_decls=306
+    decls: 719
+    roots(external targets): 148
+    decl-deps: decls_with_out=429 edges_to_decls=308
 
     Root (external ref): Value +FirstClassModules.M.InnerModule2.+k
     Root (external ref): VariantCase DeadRT.moduleAccessPath.Root
@@ -2048,7 +2059,6 @@ Forward Liveness Analysis
     Root (external ref): Value +OptionalArgsLiveDead.+liveCaller
     Root (annotated): RecordLabel +ImportHookDefault.props.renderMe
     Root (annotated): Value +TypeParams3.+test
-    Root (external ref): Value +TopLevelOptionalArgValueUse.+liveCaller
     Root (annotated): Value +Variants.+sunday
     Root (annotated): Value +NestedModules.Universe.Nested2.Nested3.+nested3Value
     Root (external ref): RecordLabel +Unison.t.doc
@@ -2062,7 +2072,6 @@ Forward Liveness Analysis
     Root (annotated): Value +Uncurried.+uncurried3
     Root (external ref): Value +Newton.+f
     Root (external ref): RecordLabel +Records.record.v
-    Root (external ref): Value +TopLevelOptionalArgValueUse.+liveEscapeCaller
     Root (external ref): VariantCase +DeadTest.VariantUsedOnlyInImplementation.t.A
     Root (external ref): Value +ContextOptionalArgs.ComponentUsingAction.+make
     Root (external ref): RecordLabel +Records.person.address
@@ -2119,6 +2128,7 @@ Forward Liveness Analysis
     Root (external ref): Value +FirstClassModules.M.InnerModule3.+k3
     Root (external ref): Value +ContextOptionalArgs.ComponentNotUsingAction.+dispatchNotification
     Root (external ref): RecordLabel +Records.coord.x
+    Root (external ref): Value +TopLevelOptionalArgValueUse.+liveCaller
     Root (annotated): RecordLabel +DeadTypeTest.record.y
     Root (annotated): Value +TestImport.+defaultValue
     Root (external ref): Value +OptArg.+threeArgs
@@ -2138,6 +2148,7 @@ Forward Liveness Analysis
     Root (external ref): Value +DeadTest.+make
     Root (annotated): Value +Records.+testMyRecBsAs
     Root (external ref): RecordLabel +DeadTest.inlineRecord.IR.c
+    Root (external ref): Value +TopLevelOptionalArgValueUse.+liveEscapeCaller
     Root (annotated): Value +Records.+origin
     Root (annotated): Value +Variants.+onlySunday
     Root (annotated): Value +Docstrings.+treeU
@@ -2315,10 +2326,12 @@ Forward Liveness Analysis
     Root (annotated): Value +Variants.+monday
     Root (annotated): Value +VariantsWithPayload.+printVariantWithPayloads
     Root (annotated): Value +Unboxed.+r2Test
+    Root (external ref): Value +TopLevelOptionalArgValueUse.+liveTupleCaller
     Root (external ref): RecordLabel +Records.coord.y
     Root (external ref): RecordLabel +DeadTest.record.xxx
     Root (annotated): Value +FirstClassModules.+firstClassModule
     Root (external ref): RecordLabel +Hooks.props.vehicle
+    Root (external ref): Value +TopLevelOptionalArgValueUse.+liveReturnCaller
     Root (annotated): Value +ImportJsValue.+useGetAbs
     Root (external ref): Value +JsxV4.C.+make
     Root (external ref): RecordLabel +Types.selfRecursive.self
@@ -2364,18 +2377,15 @@ Forward Liveness Analysis
     Root (annotated): Value +UseImportJsValue.+useGetProp
     Root (annotated): Value +Hooks.+functionWithRenamedArgs
   
-  333 roots found
+  335 roots found
 
     Propagate: DeadRT.moduleAccessPath.Root -> +DeadRT.moduleAccessPath.Root
     Propagate: +TypeReexportCrossFileB.reexportedRecord.usedField -> +TypeReexportCrossFileA.originalRecord.usedField
     Propagate: +DeadTypeTest.deadType.OnlyInImplementation -> DeadTypeTest.deadType.OnlyInImplementation
     Propagate: +OptionalArgsLiveDead.+liveCaller -> +OptionalArgsLiveDead.+formatDate
-    Propagate: +TopLevelOptionalArgValueUse.+liveCaller -> +TopLevelOptionalArgValueUse.+formatDate
     Propagate: +Newton.+f -> +Newton.+-
     Propagate: +Newton.+f -> +Newton.++
     Propagate: +Newton.+f -> +Newton.+*
-    Propagate: +TopLevelOptionalArgValueUse.+liveEscapeCaller -> +TopLevelOptionalArgValueUse.+formatDateEscapes
-    Propagate: +TopLevelOptionalArgValueUse.+liveEscapeCaller -> +TopLevelOptionalArgValueUse.+takesFn
     Propagate: +DeadTest.VariantUsedOnlyInImplementation.t.A -> +DeadTest.VariantUsedOnlyInImplementation.t.A
     Propagate: +ContextOptionalArgs.ComponentUsingAction.+make -> +ContextOptionalArgs.NotificationProvider.+useNotification
     Propagate: +DeadTest.+thisIsMarkedLive -> +DeadTest.+thisIsKeptAlive
@@ -2383,7 +2393,10 @@ Forward Liveness Analysis
     Propagate: +Hooks.+default -> +Hooks.+make
     Propagate: InnerModuleTypes.I.t.Foo -> +InnerModuleTypes.I.t.Foo
     Propagate: DeadTypeTest.deadType.OnlyInInterface -> +DeadTypeTest.deadType.OnlyInInterface
+    Propagate: +TopLevelOptionalArgValueUse.+liveCaller -> +TopLevelOptionalArgValueUse.+formatDate
     Propagate: +TypeReexport.UseReexported.reexportedType.usedField -> +TypeReexport.UseReexported.originalType.usedField
+    Propagate: +TopLevelOptionalArgValueUse.+liveEscapeCaller -> +TopLevelOptionalArgValueUse.+formatDateEscapes
+    Propagate: +TopLevelOptionalArgValueUse.+liveEscapeCaller -> +TopLevelOptionalArgValueUse.+takesFn
     Propagate: +References.+get -> +References.R.+get
     Propagate: ErrorHandler.Make.+notify -> +ErrorHandler.Make.+notify
     Propagate: +References.+make -> +References.R.+make
@@ -2406,6 +2419,8 @@ Forward Liveness Analysis
     Propagate: +OptArg.+wrapfourArgs -> +OptArg.+fourArgs
     Propagate: +DeadRT.moduleAccessPath.Kaboom -> DeadRT.moduleAccessPath.Kaboom
     Propagate: DeadValueTest.+valueAlive -> +DeadValueTest.+valueAlive
+    Propagate: +TopLevelOptionalArgValueUse.+liveTupleCaller -> +TopLevelOptionalArgValueUse.+formatDateTuple
+    Propagate: +TopLevelOptionalArgValueUse.+liveReturnCaller -> +TopLevelOptionalArgValueUse.+formatDateReturn
     Propagate: +ImportJsValue.+useGetAbs -> +ImportJsValue.AbsoluteValue.+getAbs
     Propagate: +TypeReexport.VariantUseOriginal.reexportedType.A -> +TypeReexport.VariantUseOriginal.originalType.A
     Propagate: +TypeReexport.OnlyReexportedDead.reexportedType.usedField -> +TypeReexport.OnlyReexportedDead.originalType.usedField
@@ -2425,7 +2440,7 @@ Forward Liveness Analysis
     Propagate: +DeadTest.MM.+x -> +DeadTest.MM.+y
     Propagate: +ImportJsValue.AbsoluteValue.+getAbs -> +ImportJsValue.AbsoluteValue.+getAbs
   
-  58 declarations marked live via propagation
+  60 declarations marked live via propagation
 
   Dead VariantCase +AutoAnnotate.variant.R
   Dead RecordLabel +AutoAnnotate.record.variant
@@ -3807,6 +3822,12 @@ Forward Liveness Analysis
   Live (propagated) Value +TopLevelOptionalArgValueUse.+formatDateEscapes
       deps: in=1 (live=1 dead=0) out=0
         <- +TopLevelOptionalArgValueUse.+liveEscapeCaller (live)
+  Live (propagated) Value +TopLevelOptionalArgValueUse.+formatDateReturn
+      deps: in=1 (live=1 dead=0) out=0
+        <- +TopLevelOptionalArgValueUse.+liveReturnCaller (live)
+  Live (propagated) Value +TopLevelOptionalArgValueUse.+formatDateTuple
+      deps: in=1 (live=1 dead=0) out=0
+        <- +TopLevelOptionalArgValueUse.+liveTupleCaller (live)
   Live (propagated) Value +TopLevelOptionalArgValueUse.+takesFn
       deps: in=2 (live=1 dead=1) out=0
         <- +TopLevelOptionalArgValueUse.+deadEscape (dead)
@@ -3822,6 +3843,12 @@ Forward Liveness Analysis
       deps: in=0 (live=0 dead=0) out=2
         -> +TopLevelOptionalArgValueUse.+formatDateEscapes
         -> +TopLevelOptionalArgValueUse.+takesFn
+  Live (external ref) Value +TopLevelOptionalArgValueUse.+liveReturnCaller
+      deps: in=0 (live=0 dead=0) out=1
+        -> +TopLevelOptionalArgValueUse.+formatDateReturn
+  Live (external ref) Value +TopLevelOptionalArgValueUse.+liveTupleCaller
+      deps: in=0 (live=0 dead=0) out=1
+        -> +TopLevelOptionalArgValueUse.+formatDateTuple
   Live (annotated) Value +TransitiveType1.+convert
   Live (annotated) Value +TransitiveType1.+convertAlias
   Dead Value +TransitiveType2.+convertT2
@@ -5183,7 +5210,7 @@ Forward Liveness Analysis
   toPayload.result is a record label never used to read a value
 
   Warning Dead Value
-  TopLevelOptionalArgValueUse.res:9:1-42
+  TopLevelOptionalArgValueUse.res:11:1-42
   deadEscape is never used
 
   Warning Dead Module

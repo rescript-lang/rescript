@@ -124,52 +124,7 @@ let process_optional_args ~config ~cross_file ~exp_type ~(loc_from : Location.t)
     |> Dead_optional_args.add_references ~config ~cross_file ~loc_from ~loc_to
          ~binding ~path)
 
-let value_use_target_pos (e : Typedtree.expression) =
-  match e.exp_desc with
-  | Texp_ident (_, _, {Types.val_loc = {loc_ghost = false; _} as loc_to}) ->
-    Some loc_to.loc_start
-  | Texp_let
-      ( Nonrecursive,
-        [
-          {
-            vb_pat = {pat_desc = Tpat_var (id_arg, _)};
-            vb_expr =
-              {
-                Typedtree.exp_desc =
-                  Texp_ident
-                    (_, _, {Types.val_loc = {loc_ghost = false; _} as loc_to});
-                _;
-              };
-            _;
-          };
-        ],
-        {
-          Typedtree.exp_desc =
-            Texp_function
-              {
-                case =
-                  {
-                    c_lhs = {pat_desc = Tpat_var (eta_arg, _)};
-                    c_rhs =
-                      {
-                        Typedtree.exp_desc =
-                          Texp_apply
-                            {funct = {exp_desc = Texp_ident (id_arg2, _, _)}; _};
-                        _;
-                      };
-                    _;
-                  };
-                _;
-              };
-          _;
-        } )
-    when Ident.name id_arg = "arg"
-         && Ident.name eta_arg = "eta"
-         && Path.name id_arg2 = "arg" ->
-    Some loc_to.loc_start
-  | _ -> None
-
-let rec collect_expr ~config ~decls ~refs ~file_deps ~cross_file
+let rec collect_expr ~config ~decls ~refs ~file_deps ~cross_file ~callee_locs
     ~(last_binding : Location.t) super self (e : Typedtree.expression) =
   let loc_from = e.exp_loc in
   let binding = last_binding in
@@ -180,13 +135,18 @@ let rec collect_expr ~config ~decls ~refs ~file_deps ~cross_file
         ~pos_to
     | _ -> ()
   in
-  let add_optional_arg_value_escape_from_expr arg =
-    let pos_from =
-      if binding = Location.none then loc_from.loc_start else binding.loc_start
-    in
-    arg |> value_use_target_pos
-    |> Option.iter (add_optional_arg_value_escape pos_from)
+  let rec remove_first target = function
+    | [] -> []
+    | x :: xs when x = target -> xs
+    | x :: xs -> x :: remove_first target xs
   in
+  let callee_loc_opt =
+    match e.exp_desc with
+    | Texp_apply {funct = {exp_desc = Texp_ident (_, _, _); exp_loc}; _} ->
+      Some exp_loc
+    | _ -> None
+  in
+  Option.iter (fun loc -> callee_locs := loc :: !callee_locs) callee_loc_opt;
   (match e.exp_desc with
   | Texp_ident (_path, _, {Types.val_loc = {loc_ghost = false; _} as loc_to}) ->
     (* if Path.name _path = "rc" then assert false; *)
@@ -199,9 +159,15 @@ let rec collect_expr ~config ~decls ~refs ~file_deps ~cross_file
           (loc_to.loc_start |> Pos.to_string);
       References.add_value_ref refs ~pos_to:loc_to.loc_start
         ~pos_from:Location.none.loc_start)
-    else
+    else (
       add_value_reference ~config ~refs ~file_deps ~binding
-        ~add_file_reference:true ~loc_from ~loc_to
+        ~add_file_reference:true ~loc_from ~loc_to;
+      if not (List.mem loc_from !callee_locs) then
+        let pos_from =
+          if binding = Location.none then loc_from.loc_start
+          else binding.loc_start
+        in
+        add_optional_arg_value_escape pos_from loc_to.loc_start)
   | Texp_apply
       {
         funct =
@@ -216,12 +182,7 @@ let rec collect_expr ~config ~decls ~refs ~file_deps ~cross_file
     args
     |> process_optional_args ~config ~cross_file ~exp_type
          ~loc_from:(loc_from : Location.t)
-         ~binding:last_binding ~loc_to ~path;
-    args
-    |> List.iter (fun (_, arg) ->
-           match arg with
-           | Some arg -> add_optional_arg_value_escape_from_expr arg
-           | _ -> ())
+         ~binding:last_binding ~loc_to ~path
   | Texp_let
       ( (* generated for functions with optional args *)
         Nonrecursive,
@@ -289,18 +250,21 @@ let rec collect_expr ~config ~decls ~refs ~file_deps ~cross_file
     |> Array.iter (fun (_, record_label_definition, _) ->
            match record_label_definition with
            | Typedtree.Overridden (_, e) -> (
-             add_optional_arg_value_escape_from_expr e;
              match e with
              | {exp_loc; _} when exp_loc.loc_ghost ->
                (* Punned field in OCaml projects has ghost location in expression *)
                let e = {e with exp_loc = {exp_loc with loc_ghost = false}} in
                collect_expr ~config ~decls ~refs ~file_deps ~cross_file
-                 ~last_binding super self e
+                 ~callee_locs ~last_binding super self e
                |> ignore
              | _ -> ())
            | _ -> ())
   | _ -> ());
-  super.Tast_mapper.expr self e
+  let result = super.Tast_mapper.expr self e in
+  Option.iter
+    (fun loc -> callee_locs := remove_first loc !callee_locs)
+    callee_loc_opt;
+  result
 
 (*
   type k. is a locally abstract type
@@ -467,6 +431,7 @@ let rec process_signature_item ~config ~decls ~file ~do_types ~do_values
 (* Traverse the AST *)
 let traverse_structure ~config ~decls ~refs ~file_deps ~cross_file ~file
     ~do_types ~do_externals (structure : Typedtree.structure) : unit =
+  let callee_locs = ref [] in
   let rec create_mapper (last_binding : Location.t)
       (module_path : Module_path.t) =
     let super = Tast_mapper.default in
@@ -477,7 +442,7 @@ let traverse_structure ~config ~decls ~refs ~file_deps ~cross_file ~file
           (fun _self e ->
             e
             |> collect_expr ~config ~decls ~refs ~file_deps ~cross_file
-                 ~last_binding super mapper);
+                 ~callee_locs ~last_binding super mapper);
         pat =
           (fun _self p ->
             p

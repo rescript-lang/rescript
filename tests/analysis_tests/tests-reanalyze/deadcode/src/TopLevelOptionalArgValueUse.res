@@ -3,6 +3,8 @@
 
 let formatDate = (~fmt=?, s) => s
 let formatDateEscapes = (~fmt=?, s) => s
+let formatDateReturn = (~fmt=?, s) => s
+let formatDateTuple = (~fmt=?, s) => s
 
 let takesFn = _ => ()
 
@@ -15,5 +17,15 @@ let liveEscapeCaller = () => {
   formatDateEscapes("2024-01-01")
 }
 
+let liveReturnCaller = () => {
+  formatDateReturn
+}
+
+let liveTupleCaller = () => {
+  (formatDateTuple, "tuple")
+}
+
 let _ = liveCaller()
 let _ = liveEscapeCaller()
+let _ = liveReturnCaller()
+let _ = liveTupleCaller()
